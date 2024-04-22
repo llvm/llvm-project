@@ -3129,12 +3129,14 @@ SDValue AMDGPUTargetLowering::lowerCTLZResults(SDValue Op,
 
   auto const NumBits = ResultVT.getFixedSizeInBits();
   auto NumExtBits = DAG.getConstant(32u - NumBits, SL, MVT::i32);
-  auto NewOp = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Arg);
+  auto NewOp = SDValue();
 
   if (Opc == ISD::CTLZ_ZERO_UNDEF) {
+    NewOp = DAG.getNode(ISD::ANY_EXTEND, SL, MVT::i32, Arg);
     NewOp = DAG.getNode(ISD::SHL, SL, MVT::i32, NewOp, NumExtBits);
     NewOp = DAG.getNode(Opc, SL, MVT::i32, NewOp);
   } else {
+    NewOp = DAG.getNode(ISD::ZERO_EXTEND, SL, MVT::i32, Arg);
     NewOp = DAG.getNode(Opc, SL, MVT::i32, NewOp);
     NewOp = DAG.getNode(ISD::SUB, SL, MVT::i32, NewOp, NumExtBits);
   }

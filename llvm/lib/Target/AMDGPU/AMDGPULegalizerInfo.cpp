@@ -1270,7 +1270,30 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .custom();
 
   // The 64-bit versions produce 32-bit results, but only on the SALU.
-  getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF})
+//  getActionDefinitionsBuilder({G_CTLZ_ZERO_UNDEF, G_CTTZ_ZERO_UNDEF})
+//    .legalFor({{S32, S32}, {S32, S64}})
+//    .clampScalar(0, S32, S32)
+//    .clampScalar(1, S32, S64)
+//    .scalarize(0)
+//    .widenScalarToNextPow2(0, 32)
+//    .widenScalarToNextPow2(1, 32);
+
+  getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
+    .legalFor({{S32, S32}, {S32, S64}})
+    .customFor({{S32, S8}, {S32, S16}})
+    .clampScalar(0, S32, S32)
+    .clampScalar(1, S32, S64)
+    .scalarize(0)
+    .widenScalarToNextPow2(0, 32)
+    .widenScalarToNextPow2(1, 32);
+//    .custom();
+
+//    .legalFor({S32})
+//    .customFor({S64})
+//    .clampScalar(0, S32, S64)
+//    .scalarize(0);
+
+  getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF)
     .legalFor({{S32, S32}, {S32, S64}})
     .clampScalar(0, S32, S32)
     .clampScalar(1, S32, S64)
@@ -2128,6 +2151,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTTZ:
     return legalizeCTLZ_CTTZ(MI, MRI, B);
+  case TargetOpcode::G_CTLZ_ZERO_UNDEF:
+    return legalizeCTLZ_ZERO_UNDEF(MI, MRI, B);
   case TargetOpcode::G_INTRINSIC_FPTRUNC_ROUND:
     return legalizeFPTruncRound(MI, B);
   case TargetOpcode::G_STACKSAVE:
@@ -4143,6 +4168,29 @@ bool AMDGPULegalizerInfo::legalizeCTLZ_CTTZ(MachineInstr &MI,
 
   MI.eraseFromParent();
   return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI,
+                                                  MachineRegisterInfo &MRI,
+                                                  MachineIRBuilder &B) const {
+  auto Dst = MI.getOperand(0).getReg();
+  auto Src = MI.getOperand(1).getReg();
+  auto DstTy = MRI.getType(Dst);
+  auto SrcTy = MRI.getType(Src);
+  auto NumBits = SrcTy.getSizeInBits();
+
+  assert(NumBits < 32u);
+
+  auto ShiftAmt = B.buildConstant(S32, 32u - NumBits);
+  Src = B.buildAnyExt(S32, {Src}).getReg(0u);
+  Src = B.buildLShr(S32, {Src}, ShiftAmt).getReg(0u);
+  B.buildInstr(AMDGPU::G_AMDGPU_FFBH_U32, {Dst}, {Src});
+  MI.eraseFromParent();
+  return true;
+
+  // LocalAccum = B.buildZExt(S32, CarryIn[0]).getReg(0);
+  // auto ShiftAmt = B.buildConstant(S32, Shift);
+  // AndMaskSrc = B.buildLShr(S32, LiveIn, ShiftAmt).getReg(0);
 }
 
 // Check that this is a G_XOR x, -1
