@@ -4188,8 +4188,11 @@ void Fortran::lower::attachDeclarePostDeallocAction(
   std::stringstream fctName;
   fctName << converter.mangleName(sym) << declarePostDeallocSuffix.str();
   mlir::Operation *op = &builder.getInsertionBlock()->back();
-  if (mlir::isa<fir::ResultOp>(*op))
+  if (auto resOp = mlir::dyn_cast<fir::ResultOp>(*op)) {
+    assert(resOp.getOperands().size() == 0 &&
+           "expect only fir.result op with no operand");
     op = op->getPrevNode();
+  }
   assert(op && "expect operation to attach the post deallocation action");
   if (op->hasAttr(mlir::acc::getDeclareActionAttrName())) {
     auto attr = op->getAttrOfType<mlir::acc::DeclareActionAttr>(
