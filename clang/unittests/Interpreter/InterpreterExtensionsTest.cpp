@@ -108,14 +108,14 @@ TEST(InterpreterExtensionsTest, ExecutorCreateReset) {
   llvm::Error ErrOut = llvm::Error::success();
   TestCreateResetExecutor Interp(cantFail(CB.CreateCpp()), ErrOut);
   cantFail(std::move(ErrOut));
+  EXPECT_THAT_ERROR(Interp.testCreateExecutor(),
+                    llvm::FailedWithMessage("Operation failed. "
+                                            "Execution engine exists"));
+  Interp.resetExecutor();
   EXPECT_THAT_ERROR(Interp.testCreateJITBuilderError(),
                     llvm::FailedWithMessage("TestError"));
   cantFail(Interp.testCreateExecutor());
   Interp.resetExecutor();
-  cantFail(Interp.testCreateExecutor());
-  EXPECT_THAT_ERROR(Interp.testCreateExecutor(),
-                    llvm::FailedWithMessage("Operation failed. "
-                                            "Execution engine exists"));
 }
 
 class RecordRuntimeIBMetrics : public Interpreter {
@@ -173,16 +173,14 @@ class CustomJBInterpreter : public Interpreter {
   CustomJITBuilderCreatorFunction JBCreator = nullptr;
 
 public:
-  CustomJBInterpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &ErrOut)
-      : Interpreter(std::move(CI), ErrOut) {}
+  CustomJBInterpreter(std::unique_ptr<CompilerInstance> CI,
+                      CustomJITBuilderCreatorFunction JBCreator,
+                      llvm::Error &ErrOut)
+      : Interpreter(std::move(CI), ErrOut), JBCreator(std::move(JBCreator)) {}
 
   ~CustomJBInterpreter() override {
     // Skip cleanUp() because it would trigger LLJIT default dtors
     Interpreter::ResetExecutor();
-  }
-
-  void setCustomJITBuilderCreator(CustomJITBuilderCreatorFunction Fn) {
-    JBCreator = std::move(Fn);
   }
 
   llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
@@ -207,9 +205,8 @@ TEST(InterpreterExtensionsTest, DefaultCrossJIT) {
   CB.SetTargetTriple("armv6-none-eabi");
   auto CI = cantFail(CB.CreateCpp());
   llvm::Error ErrOut = llvm::Error::success();
-  CustomJBInterpreter Interp(std::move(CI), ErrOut);
+  CustomJBInterpreter Interp(std::move(CI), nullptr, ErrOut);
   cantFail(std::move(ErrOut));
-  cantFail(Interp.CreateExecutor());
 }
 
 #ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
@@ -225,14 +222,11 @@ TEST(InterpreterExtensionsTest, CustomCrossJIT) {
   IncrementalCompilerBuilder CB;
   CB.SetTargetTriple(TargetTriple);
   auto CI = cantFail(CB.CreateCpp());
-  llvm::Error ErrOut = llvm::Error::success();
-  CustomJBInterpreter Interp(std::move(CI), ErrOut);
-  cantFail(std::move(ErrOut));
 
   using namespace llvm::orc;
   LLJIT *JIT = nullptr;
   std::vector<std::unique_ptr<llvm::MemoryBuffer>> Objs;
-  Interp.setCustomJITBuilderCreator([&]() {
+  auto JBCreator = [&]() {
     auto JTMB = JITTargetMachineBuilder(llvm::Triple(TargetTriple));
     JTMB.setCPU("cortex-m0plus");
     auto JB = std::make_unique<LLJITBuilder>();
@@ -249,11 +243,15 @@ TEST(InterpreterExtensionsTest, CustomCrossJIT) {
       return llvm::Error::success();
     });
     return JB;
-  });
+  };
+
+  llvm::Error ErrOut = llvm::Error::success();
+  CustomJBInterpreter Interp(std::move(CI), std::move(JBCreator), ErrOut);
+  cantFail(std::move(ErrOut));
 
   EXPECT_EQ(0U, Objs.size());
-  cantFail(Interp.CreateExecutor());
   cantFail(Interp.ParseAndExecute("int a = 1;"));
+  ASSERT_NE(JIT, nullptr); // But it is, because JBCreator was never called
   ExecutorAddr Addr = cantFail(JIT->lookup("a"));
   EXPECT_NE(0U, Addr.getValue());
   EXPECT_EQ(1U, Objs.size());
