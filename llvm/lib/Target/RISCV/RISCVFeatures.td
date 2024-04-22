@@ -13,14 +13,14 @@
 // Subclass of SubtargetFeature to be used when the feature is also a RISC-V
 // extension. Extensions have a version and may be experimental.
 //
-// name      - Name of the extension in lower case.q
-// major     - Major version of extension
-// minor     - Minor version of extension
+// name      - Name of the extension in lower case.
+// major     - Major version of extension.
+// minor     - Minor version of extension.
 // fieldname - name of field to create in RISCVSubtarget.
-// desc      - Description of extension
+// desc      - Description of extension.
 // implies   - Extensions or features implied by this extension.
 // value     - Value to assign to the field in RISCVSubtarget when this
-//             extension is enabled. Usually "true".
+//             extension is enabled. Usually "true", but can be changed.
 class RISCVExtension<string name, int major, int minor, string fieldname,
                      string desc, list<SubtargetFeature> implies = [],
                      string value = "true">
@@ -31,7 +31,7 @@ class RISCVExtension<string name, int major, int minor, string fieldname,
   // MinorVersion - The minor version for this extension.
   int MinorVersion = minor;
 
-  // Experimental - Does this extension require -menable-experimental-extensions
+  // Experimental - Does extension require -menable-experimental-extensions.
   bit Experimental = false;
 }
 
