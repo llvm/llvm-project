@@ -5014,7 +5014,7 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
 
   if (!ModularCodegenDecls.empty())
     Stream.EmitRecord(MODULAR_CODEGEN_DECLS, ModularCodegenDecls);
-  
+
   // Write the record containing tentative definitions.
   RecordData TentativeDefinitions;
   AddLazyVectorEmiitedDecls(*this, SemaRef.TentativeDefinitions,
@@ -5135,7 +5135,7 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
   }
   if (!UndefinedButUsed.empty())
     Stream.EmitRecord(UNDEFINED_BUT_USED, UndefinedButUsed);
-  
+
   // Write all delete-expressions that we would like to
   // analyze later in AST.
   RecordData DeleteExprsToAnalyze;
