@@ -730,9 +730,12 @@ public:
 
   mlir::Value createLoad(mlir::Location loc, Address addr) {
     auto ptrTy = addr.getPointer().getType().dyn_cast<mlir::cir::PointerType>();
-    return create<mlir::cir::LoadOp>(
-        loc, addr.getElementType(),
-        createElementBitCast(loc, addr, ptrTy.getPointee()).getPointer());
+    if (addr.getElementType() != ptrTy.getPointee())
+      addr = addr.withPointer(
+          createPtrBitcast(addr.getPointer(), addr.getElementType()));
+
+    return create<mlir::cir::LoadOp>(loc, addr.getElementType(),
+                                     addr.getPointer());
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Type ty,

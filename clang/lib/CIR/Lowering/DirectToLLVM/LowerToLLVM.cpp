@@ -2195,6 +2195,41 @@ public:
   }
 };
 
+class CIRAtomicXchgLowering
+    : public mlir::OpConversionPattern<mlir::cir::AtomicXchg> {
+public:
+  using OpConversionPattern<mlir::cir::AtomicXchg>::OpConversionPattern;
+
+  mlir::LLVM::AtomicOrdering
+  getLLVMAtomicOrder(mlir::cir::MemOrder memo) const {
+    switch (memo) {
+    case mlir::cir::MemOrder::Relaxed:
+      return mlir::LLVM::AtomicOrdering::monotonic;
+    case mlir::cir::MemOrder::Consume:
+    case mlir::cir::MemOrder::Acquire:
+      return mlir::LLVM::AtomicOrdering::acquire;
+    case mlir::cir::MemOrder::Release:
+      return mlir::LLVM::AtomicOrdering::release;
+    case mlir::cir::MemOrder::AcquireRelease:
+      return mlir::LLVM::AtomicOrdering::acq_rel;
+    case mlir::cir::MemOrder::SequentiallyConsistent:
+      return mlir::LLVM::AtomicOrdering::seq_cst;
+    }
+    llvm_unreachable("shouldn't get here");
+  }
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::AtomicXchg op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // FIXME: add syncscope.
+    auto llvmOrder = getLLVMAtomicOrder(adaptor.getMemOrder());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::AtomicRMWOp>(
+        op, mlir::LLVM::AtomicBinOp::xchg, adaptor.getPtr(), adaptor.getVal(),
+        llvmOrder);
+    return mlir::success();
+  }
+};
+
 class CIRAtomicFetchLowering
     : public mlir::OpConversionPattern<mlir::cir::AtomicFetch> {
 public:
@@ -2835,15 +2870,16 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
   patterns.add<
       CIRCmpOpLowering, CIRBitClrsbOpLowering, CIRBitClzOpLowering,
       CIRBitCtzOpLowering, CIRBitFfsOpLowering, CIRBitParityOpLowering,
-      CIRBitPopcountOpLowering, CIRAtomicFetchLowering, CIRByteswapOpLowering,
-      CIRBrCondOpLowering, CIRPtrStrideOpLowering, CIRCallLowering,
-      CIRUnaryOpLowering, CIRBinOpLowering, CIRShiftOpLowering, CIRLoadLowering,
-      CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering,
-      CIRCastOpLowering, CIRGlobalOpLowering, CIRGetGlobalOpLowering,
-      CIRVAStartLowering, CIRVAEndLowering, CIRVACopyLowering, CIRVAArgLowering,
-      CIRBrOpLowering, CIRGetMemberOpLowering, CIRSwitchFlatOpLowering,
-      CIRPtrDiffOpLowering, CIRCopyOpLowering, CIRMemCpyOpLowering,
-      CIRFAbsOpLowering, CIRExpectOpLowering, CIRVTableAddrPointOpLowering,
+      CIRBitPopcountOpLowering, CIRAtomicXchgLowering, CIRAtomicFetchLowering,
+      CIRByteswapOpLowering, CIRBrCondOpLowering, CIRPtrStrideOpLowering,
+      CIRCallLowering, CIRUnaryOpLowering, CIRBinOpLowering, CIRShiftOpLowering,
+      CIRLoadLowering, CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering,
+      CIRFuncLowering, CIRCastOpLowering, CIRGlobalOpLowering,
+      CIRGetGlobalOpLowering, CIRVAStartLowering, CIRVAEndLowering,
+      CIRVACopyLowering, CIRVAArgLowering, CIRBrOpLowering,
+      CIRGetMemberOpLowering, CIRSwitchFlatOpLowering, CIRPtrDiffOpLowering,
+      CIRCopyOpLowering, CIRMemCpyOpLowering, CIRFAbsOpLowering,
+      CIRExpectOpLowering, CIRVTableAddrPointOpLowering,
       CIRVectorCreateLowering, CIRVectorInsertLowering,
       CIRVectorExtractLowering, CIRVectorCmpOpLowering, CIRVectorSplatLowering,
       CIRVectorTernaryLowering, CIRVectorShuffleIntsLowering,

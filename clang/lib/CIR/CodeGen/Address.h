@@ -64,7 +64,7 @@ public:
   /// Return address with different pointer, but same element type and
   /// alignment.
   Address withPointer(mlir::Value NewPointer,
-                      KnownNonNull_t IsKnownNonNull) const {
+                      KnownNonNull_t IsKnownNonNull = NotKnownNonNull) const {
     return Address(NewPointer, getElementType(), getAlignment(),
                    IsKnownNonNull);
   }
