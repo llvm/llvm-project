@@ -578,7 +578,7 @@ static void EmitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
      << "[][" << MaxLeafCount + 2 << "] = {\n";
   for (size_t I = 0, E = Directives.size(); I != E; ++I) {
     auto &Leaves = LeafTable[Ordering[I]];
-    OS << "    " << GetDirectiveName(DirLang, Directives[Leaves[0]]);
+    OS << "    {" << GetDirectiveName(DirLang, Directives[Leaves[0]]);
     OS << ", static_cast<" << DirectiveType << ">(" << Leaves[1] << "),";
     for (size_t I = 2, E = Leaves.size(); I != E; ++I) {
       int Idx = Leaves[I];
@@ -587,7 +587,7 @@ static void EmitLeafTable(const DirectiveLanguage &DirLang, raw_ostream &OS,
       else
         OS << " static_cast<" << DirectiveType << ">(-1),";
     }
-    OS << '\n';
+    OS << "},\n";
   }
   OS << "};\n\n";
 
