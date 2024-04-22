@@ -1209,4 +1209,16 @@ constexpr int externvar1() { // both-error {{never produces a constant expressio
 namespace Extern {
   constexpr extern char Oops = 1;
   static_assert(Oops == 1, "");
+
+#if __cplusplus >= 201402L
+  struct NonLiteral {
+    NonLiteral() {}
+  };
+  NonLiteral nl;
+  constexpr NonLiteral &ExternNonLiteralVarDecl() {
+    extern NonLiteral nl;
+    return nl;
+  }
+  static_assert(&ExternNonLiteralVarDecl() == &nl, "");
+#endif
 }
