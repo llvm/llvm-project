@@ -774,8 +774,8 @@ enabled sub-projects. Nearly all of these variable names begin with
   jobs, and you need to consider their memory requirements when
   in a memory-limited environment. Using a
   ``-DLLVM_RAM_PER_LINK_JOB=10000`` is a good approximation. On ELF
-  platforms also consider using ``LLVM_USE_SPLIT_DWARF`` to reduce
-  link-time-memory pressure.
+  platforms debug builds can reduce link-time memory pressure by also
+  using ``LLVM_USE_SPLIT_DWARF``.
 
 **LLVM_REVERSE_ITERATION**:BOOL
   If enabled, all supported unordered llvm containers would be iterated in
