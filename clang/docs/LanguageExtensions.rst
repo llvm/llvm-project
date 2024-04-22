@@ -5571,3 +5571,17 @@ but the expression has no runtime effects.
 Type- and value-dependent expressions are not supported yet.
 
 This facility is designed to aid with testing name lookup machinery.
+
+Predefined Macros
+=================
+
+`__GCC_DESTRUCTIVE_SIZE` and `__GCC_CONSTRUCTIVE_SIZE`
+------------------------------------------------------
+Specify the mimum offset between two objects to avoid false sharing and the
+maximum size of contiguous memory to promote true sharing, respectively. These
+macros are predefined in all C and C++ language modes.
+
+**Note: the values the macros expand to are not stable between releases of Clang
+and do not need to match the values produced by GCC, so these macros should not
+be used from header files because they may not be stable across multiple TUs
+(the values may vary based on compiler version as well as CPU tuning).**
