@@ -1602,8 +1602,8 @@ static void CheckReduce(
     if (const auto *expr{operation->UnwrapExpr()}) {
       if (const auto *designator{
               std::get_if<evaluate::ProcedureDesignator>(&expr->u)}) {
-        procChars =
-            characteristics::Procedure::Characterize(*designator, context);
+        procChars = characteristics::Procedure::Characterize(
+            *designator, context, /*emitError=*/true);
       } else if (const auto *ref{
                      std::get_if<evaluate::ProcedureRef>(&expr->u)}) {
         procChars = characteristics::Procedure::Characterize(*ref, context);

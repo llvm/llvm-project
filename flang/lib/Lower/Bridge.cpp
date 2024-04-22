@@ -3700,7 +3700,8 @@ private:
     using DummyAttr = Fortran::evaluate::characteristics::DummyDataObject::Attr;
     if (auto procedure =
             Fortran::evaluate::characteristics::Procedure::Characterize(
-                userDefinedAssignment.proc(), getFoldingContext()))
+                userDefinedAssignment.proc(), getFoldingContext(),
+                /*emitError=*/false))
       if (!procedure->dummyArguments.empty())
         if (const auto *dataArg = std::get_if<
                 Fortran::evaluate::characteristics::DummyDataObject>(
