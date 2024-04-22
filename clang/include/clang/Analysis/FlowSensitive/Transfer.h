@@ -53,8 +53,7 @@ private:
 /// Requirements:
 ///
 ///  `S` must not be `ParenExpr` or `ExprWithCleanups`.
-void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env,
-              Environment::ValueModel &Model);
+void transfer(const StmtToEnvMap &StmtToEnv, const Stmt &S, Environment &Env);
 
 } // namespace dataflow
 } // namespace clang
