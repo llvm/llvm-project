@@ -1,5 +1,5 @@
-// RUN: mlir-opt -linalg-transpose-matmul -cse -canonicalize -split-input-file %s | FileCheck %s --check-prefixes=CHECK,TRANSPOSE-A
-// RUN: mlir-opt -linalg-transpose-matmul=transpose-a=false -cse -canonicalize -split-input-file %s | FileCheck %s --check-prefixes=CHECK,TRANSPOSE-B
+// RUN: mlir-opt -transform-preload-library='transform-library-paths=%p/transpose-matmul-a.mlir' -transform-interpreter -split-input-file %s | FileCheck %s --check-prefixes=CHECK,TRANSPOSE-A
+// RUN: mlir-opt -transform-preload-library='transform-library-paths=%p/transpose-matmul-b.mlir' -transform-interpreter -split-input-file %s | FileCheck %s --check-prefixes=CHECK,TRANSPOSE-B
 
 // CHECK-LABEL:   func.func @matmul_static(
 // CHECK-SAME:                             %[[A:.*]]: tensor<16x8xf32>,

@@ -141,13 +141,4 @@ def LinalgDetensorizePass : InterfacePass<"linalg-detensorize", "FunctionOpInter
   ];
 }
 
-def LinalgTransposeMatmulPass : Pass<"linalg-transpose-matmul"> {
-  let summary = "Converts Linalg matmul ops to transposed variants.";
-  let dependentDialects = ["linalg::LinalgDialect"];
-  let options = [
-    Option<"transposeA", "transpose-a", "bool", /*default=*/"true",
-           "If true transpose A (default), otherwise transpose B.">
-  ];
-}
-
 #endif // MLIR_DIALECT_LINALG_PASSES

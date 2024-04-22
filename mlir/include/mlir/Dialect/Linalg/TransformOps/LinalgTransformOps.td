@@ -73,6 +73,21 @@ def ApplyTilingCanonicalizationPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyTransposeMatmulPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.transpose_matmul",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns to convert Linalg matmul ops to transposed variants.
+
+    By default the A matrix is transposed, set `transpose_a=false` to transpose
+    B matrix.
+  }];
+
+  let arguments = (ins DefaultValuedAttr<BoolAttr, "true">:$transpose_a);
+
+  let assemblyFormat = "(`transpose_a` `=` $transpose_a^)? attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//

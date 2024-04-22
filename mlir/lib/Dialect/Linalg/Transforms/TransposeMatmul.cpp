@@ -9,15 +9,9 @@
 // transposition transformation.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_LINALGTRANSPOSEMATMULPASS
-#include "mlir/Dialect/Linalg/Passes.h.inc"
-} // namespace mlir
 
 #define DEBUG_TYPE "linalg-transpose-matmul"
 
@@ -36,8 +30,8 @@ namespace {
 /// By default A is transposed. If `transposeA` is set to false then B is
 /// transposed.
 struct TransposeMatmul final : public OpRewritePattern<linalg::MatmulOp> {
-  TransposeMatmul(MLIRContext *ctx, bool transposeA, PatternBenefit benefit = 1)
-      : OpRewritePattern(ctx, benefit), transposeA(transposeA) {}
+  TransposeMatmul(MLIRContext *ctx, bool transposeA)
+      : OpRewritePattern(ctx), transposeA(transposeA) {}
 
   LogicalResult matchAndRewrite(linalg::MatmulOp matmulOp,
                                 PatternRewriter &rewriter) const override {
@@ -56,12 +50,11 @@ struct TransposeMatmul final : public OpRewritePattern<linalg::MatmulOp> {
       dynamicDims.push_back(rewriter.create<tensor::DimOp>(loc, input, 0));
 
     auto shape = type.getShape();
-    SmallVector<int64_t> transposedShape{shape[1], shape[0]};
     Value empty = rewriter.create<tensor::EmptyOp>(
-        loc, transposedShape, type.getElementType(), dynamicDims);
-    static constexpr std::array<int64_t, 2> perm = {1, 0};
-    auto transposeOp =
-        rewriter.create<linalg::TransposeOp>(loc, input, empty, perm);
+        loc, ArrayRef<int64_t>{shape[1], shape[0]}, type.getElementType(),
+        dynamicDims);
+    auto transposeOp = rewriter.create<linalg::TransposeOp>(
+        loc, input, empty, ArrayRef<int64_t>{1, 0});
     if (transposeA)
       rewriter.replaceOpWithNewOp<linalg::MatmulTransposeAOp>(
           matmulOp, matmulOp.getResultTypes(),
@@ -92,9 +85,8 @@ private:
 /// `transposeA` is set to false then B is transposed.
 struct TransposeBatchMatmul final
     : public OpRewritePattern<linalg::BatchMatmulOp> {
-  TransposeBatchMatmul(MLIRContext *ctx, bool transposeA,
-                       PatternBenefit benefit = 1)
-      : OpRewritePattern(ctx, benefit), transposeA(transposeA) {}
+  TransposeBatchMatmul(MLIRContext *ctx, bool transposeA)
+      : OpRewritePattern(ctx), transposeA(transposeA) {}
 
   LogicalResult matchAndRewrite(linalg::BatchMatmulOp batchMatmulOp,
                                 PatternRewriter &rewriter) const override {
@@ -115,12 +107,11 @@ struct TransposeBatchMatmul final
       dynamicDims.push_back(rewriter.create<tensor::DimOp>(loc, input, 1));
 
     auto shape = type.getShape();
-    SmallVector<int64_t> transposedShape{shape[0], shape[2], shape[1]};
     Value empty = rewriter.create<tensor::EmptyOp>(
-        loc, transposedShape, type.getElementType(), dynamicDims);
-    static constexpr std::array<int64_t, 3> perm = {0, 2, 1};
-    auto transposeOp =
-        rewriter.create<linalg::TransposeOp>(loc, input, empty, perm);
+        loc, ArrayRef<int64_t>{shape[2], shape[1], shape[0]},
+        type.getElementType(), dynamicDims);
+    auto transposeOp = rewriter.create<linalg::TransposeOp>(
+        loc, input, empty, ArrayRef<int64_t>{2, 1, 0});
     if (transposeA)
       rewriter.replaceOpWithNewOp<linalg::BatchMatmulTransposeAOp>(
           batchMatmulOp, batchMatmulOp.getResultTypes(),
@@ -145,17 +136,3 @@ void mlir::linalg::populateTransposeMatmulPatterns(RewritePatternSet &patterns,
   patterns.add<TransposeMatmul, TransposeBatchMatmul>(patterns.getContext(),
                                                       transposeA);
 }
-
-namespace {
-struct LinalgTransposeMatmulPass
-    : public impl::LinalgTransposeMatmulPassBase<LinalgTransposeMatmulPass> {
-  using impl::LinalgTransposeMatmulPassBase<
-      LinalgTransposeMatmulPass>::LinalgTransposeMatmulPassBase;
-  void runOnOperation() override {
-    Operation *op = getOperation();
-    RewritePatternSet patterns(op->getContext());
-    populateTransposeMatmulPatterns(patterns, transposeA);
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
-  }
-};
-} // namespace

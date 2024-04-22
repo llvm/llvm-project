@@ -199,6 +199,11 @@ void transform::ApplyTilingCanonicalizationPatternsOp::populatePatterns(
   linalg::populateLinalgTilingCanonicalizationPatterns(patterns);
 }
 
+void transform::ApplyTransposeMatmulPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateTransposeMatmulPatterns(patterns, getTransposeA());
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
