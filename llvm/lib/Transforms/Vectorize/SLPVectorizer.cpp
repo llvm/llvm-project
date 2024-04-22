@@ -12229,7 +12229,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
   auto *VecTy = FixedVectorType::get(ScalarTy, E->Scalars.size());
   switch (ShuffleOrOp) {
     case Instruction::PHI: {
-      assert((E->ReorderIndices.empty() ||
+      assert((E->ReorderIndices.empty() || !E->ReuseShuffleIndices.empty() ||
               E != VectorizableTree.front().get() ||
               !E->UserTreeIndices.empty()) &&
              "PHI reordering is free.");
@@ -14530,7 +14530,8 @@ bool BoUpSLP::collectValuesToDemote(
         return !all_of(V->users(), [=](User *U) {
           return getTreeEntry(U) ||
                  (UserIgnoreList && UserIgnoreList->contains(U)) ||
-                 (U->getType()->isSized() && !U->getType()->isScalableTy() &&
+                 (!isa<CmpInst>(U) && U->getType()->isSized() &&
+                  !U->getType()->isScalableTy() &&
                   DL->getTypeSizeInBits(U->getType()) <= BitWidth);
         }) && !IsPotentiallyTruncated(V, BitWidth);
       }))

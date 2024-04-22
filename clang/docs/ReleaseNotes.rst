@@ -179,6 +179,9 @@ C23 Feature Support
 - Clang now supports `N3018 The constexpr specifier for object definitions`
   <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3018.htm>`_.
 
+- Properly promote bit-fields of bit-precise integer types to the field's type
+  rather than to ``int``. #GH87641
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -538,6 +541,8 @@ Bug Fixes to C++ Support
 - Fix an issue caused by not handling invalid cases when substituting into the parameter mapping of a constraint. Fixes (#GH86757).
 - Fixed a bug that prevented member function templates of class templates declared with a deduced return type
   from being explicitly specialized for a given implicit instantiation of the class template.
+- Fixed a crash when ``this`` is used in a dependent class scope function template specialization
+  that instantiates to a static member function.
 
 - Fix crash when inheriting from a cv-qualified type. Fixes #GH35603
 - Fix a crash when the using enum declaration uses an anonymous enumeration. Fixes (#GH86790).
