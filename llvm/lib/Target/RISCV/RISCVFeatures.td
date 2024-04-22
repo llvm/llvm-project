@@ -18,7 +18,8 @@
 // minor     - Minor version of extension.
 // desc      - Description of extension.
 // implies   - Extensions or features implied by this extension.
-// fieldname - name of field to create in RISCVSubtarget.
+// fieldname - name of field to create in RISCVSubtarget. By default replaces
+//             uses the record name by replacing Feature with Has.
 // value     - Value to assign to the field in RISCVSubtarget when this
 //             extension is enabled. Usually "true", but can be changed.
 class RISCVExtension<string name, int major, int minor, string desc,
@@ -599,7 +600,7 @@ def FeatureStdExtZk
 
 def FeatureStdExtZvl32b : RISCVExtension<"zvl32b", 1, 0,
                                          "'Zvl' (Minimum Vector Length) 32", [],
-                                          "ZvlLen", "32">;
+                                         "ZvlLen", "32">;
 
 foreach i = { 6-16 } in {
   defvar I = !shl(1, i);
@@ -607,7 +608,7 @@ foreach i = { 6-16 } in {
       RISCVExtension<"zvl"#I#"b", 1, 0,
                      "'Zvl' (Minimum Vector Length) "#I,
                      [!cast<RISCVExtension>("FeatureStdExtZvl"#!srl(I, 1)#"b")],
-                      "ZvlLen", !cast<string>(I)>;
+                     "ZvlLen", !cast<string>(I)>;
 }
 
 def FeatureStdExtZve32x
