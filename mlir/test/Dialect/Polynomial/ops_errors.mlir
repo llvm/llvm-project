@@ -7,6 +7,7 @@ module {
     %two = arith.constant 2 : i32
     %coeffs1 = tensor.from_elements %two, %two : tensor<2xi32>
     // expected-error@below {{is too large to fit in the coefficients}}
+    // expected-note@below {{rescaled to fit}}
     %poly = polynomial.from_tensor %coeffs1 : tensor<2xi32> -> !polynomial.polynomial<#ring>
     return
   }

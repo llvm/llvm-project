@@ -35,12 +35,14 @@ LogicalResult FromTensorOp::verify() {
   unsigned polyDegree = ring.getPolynomialModulus().getPolynomial().getDegree();
   bool compatible = tensorShape.size() == 1 && tensorShape[0] <= polyDegree;
   if (!compatible) {
-    return emitOpError()
-           << "input type " << getInput().getType()
-           << " does not match output type " << getOutput().getType()
-           << ". The input type must be a tensor of shape [d] where d "
-              "is at most the degree of the polynomialModulus of "
-              "the output type's ring attribute.";
+    InFlightDiagnostic diag = emitOpError()
+                              << "input type " << getInput().getType()
+                              << " does not match output type "
+                              << getOutput().getType();
+    diag.attachNote() << "The input type must be a tensor of shape [d] where d "
+                         "is at most the degree of the polynomialModulus of "
+                         "the output type's ring attribute.";
+    return diag;
   }
 
   APInt coefficientModulus = ring.getCoefficientModulus().getValue();
@@ -48,12 +50,14 @@ LogicalResult FromTensorOp::verify() {
   unsigned inputBitWidth = getInput().getType().getElementTypeBitWidth();
 
   if (inputBitWidth > cmodBitWidth) {
-    return emitOpError() << "input tensor element type "
-                         << getInput().getType().getElementType()
-                         << " is too large to fit in the coefficients of "
-                         << getOutput().getType()
-                         << ". The input tensor's elements must be rescaled"
-                            " to fit before using from_tensor.";
+    InFlightDiagnostic diag = emitOpError()
+                              << "input tensor element type "
+                              << getInput().getType().getElementType()
+                              << " is too large to fit in the coefficients of "
+                              << getOutput().getType();
+    diag.attachNote() << "The input tensor's elements must be rescaled"
+                         " to fit before using from_tensor.";
+    return diag;
   }
 
   return success();
@@ -62,34 +66,40 @@ LogicalResult FromTensorOp::verify() {
 LogicalResult ToTensorOp::verify() {
   ArrayRef<int64_t> tensorShape = getOutput().getType().getShape();
   unsigned polyDegree = getInput()
-                        .getType()
-                        .getRing()
-                        .getPolynomialModulus()
-                        .getPolynomial()
-                        .getDegree();
+                            .getType()
+                            .getRing()
+                            .getPolynomialModulus()
+                            .getPolynomial()
+                            .getDegree();
   bool compatible = tensorShape.size() == 1 && tensorShape[0] == polyDegree;
 
-  return compatible
-             ? success()
-             : emitOpError()
-                   << "input type " << getInput().getType()
-                   << " does not match output type " << getOutput().getType()
-                   << ". The input type must be a tensor of shape [d] where d "
-                      "is exactly the degree of the polynomialModulus of "
-                      "the output type's ring attribute.";
+  if (!compatible) {
+    InFlightDiagnostic diag = emitOpError()
+                              << "input type " << getInput().getType()
+                              << " does not match output type "
+                              << getOutput().getType();
+    diag.attachNote() << "The input type must be a tensor of shape [d] where d "
+                         "is at most the degree of the polynomialModulus of "
+                         "the output type's ring attribute.";
+    return diag;
+  }
+  return success();
 }
 
 LogicalResult MonomialMulOp::verify() {
   RingAttr ring = getInput().getType().getRing();
-  ArrayRef<Monomial> idealTerms = ring.getPolynomialModulus().getPolynomial().getTerms();
+  ArrayRef<Monomial> idealTerms =
+      ring.getPolynomialModulus().getPolynomial().getTerms();
   bool compatible =
       idealTerms.size() == 2 &&
       (idealTerms[0].coefficient == -1 && idealTerms[0].exponent == 0) &&
       (idealTerms[1].coefficient == 1);
 
-  return compatible ? success()
-                    : emitOpError()
-                          << "ring type " << ring
-                          << " is not supported yet. The ring "
-                             "must be of the form (x^n - 1) for some n";
+  if (!compatible) {
+    InFlightDiagnostic diag = emitOpError()
+                              << "unsupported ring type: " << ring;
+    diag.attachNote() << "The ring must be of the form (x^n - 1) for some n";
+    return diag;
+  }
+  return success();
 }
