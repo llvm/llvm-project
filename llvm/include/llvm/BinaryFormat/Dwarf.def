@@ -203,7 +203,7 @@ HANDLE_DW_TAG(0x0040, shared_type, 3, DWARF, DW_KIND_TYPE)
 // New in DWARF v4:
 HANDLE_DW_TAG(0x0041, type_unit, 4, DWARF, DW_KIND_NONE)
 HANDLE_DW_TAG(0x0042, rvalue_reference_type, 4, DWARF, DW_KIND_TYPE)
-HANDLE_DW_TAG(0x0043, template_alias, 4, DWARF, DW_KIND_NONE)
+HANDLE_DW_TAG(0x0043, template_alias, 4, DWARF, DW_KIND_TYPE)
 // New in DWARF v5:
 HANDLE_DW_TAG(0x0044, coarray_type, 5, DWARF, DW_KIND_TYPE)
 HANDLE_DW_TAG(0x0045, generic_subrange, 5, DWARF, DW_KIND_NONE)
