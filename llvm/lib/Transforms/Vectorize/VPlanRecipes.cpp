@@ -132,6 +132,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrementForPart:
     case VPInstruction::PtrAdd:
+    case VPInstruction::HeaderMask:
       return false;
     default:
       return true;

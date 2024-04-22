@@ -1180,6 +1180,9 @@ public:
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
     PtrAdd,
+    // An abstract representation of the vector loops header mask, to be lowered
+    // later depending on target preference.
+    HeaderMask,
   };
 
 private:
