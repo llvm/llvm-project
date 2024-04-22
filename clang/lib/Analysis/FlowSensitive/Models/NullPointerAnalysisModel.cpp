@@ -366,17 +366,9 @@ void matchAddressofExpr(const Expr *expr,
 void matchPtrArgFunctionExpr(const CallExpr *fncall,
                              const MatchFinder::MatchResult &Result,
                              Environment &Env) {
-  // Inner storageloc, inner type
-  fncall->dump();
-  
   for (const auto *Arg : fncall->arguments()) {
-    // WrappedArg->dump();
-    // const auto *Arg = WrappedArg->IgnoreCasts();
-    Arg->dump();
-
     // FIXME: Add handling for reference types as arguments
     if (Arg->getType()->isPointerType()) {
-      llvm::errs() << (int)Env.getValue(*Arg)->getKind();
       PointerValue *OuterValue = cast_or_null<PointerValue>(
           Env.getValue(*Arg));
 
