@@ -831,7 +831,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
       Previous.isNot(TT_TableGenDAGArgOpenerToBreak) &&
       !(Current.MacroParent && Previous.MacroParent) &&
       (Current.isNot(TT_LineComment) ||
-       Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen))) {
+       (Style.AlignTrailingComments.Kind != FormatStyle::TCAS_Leave &&
+        Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen)))) {
     CurrentState.Indent = State.Column + Spaces;
     CurrentState.IsAligned = true;
   }
