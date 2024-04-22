@@ -31,11 +31,11 @@ class TestAttrWithFormatAttr;
 /// FieldInfo represents a field in the StructType data type. It is used as a
 /// parameter in TestTypeDefs.td.
 struct FieldInfo {
-  ::llvm::StringRef name;
-  ::mlir::Type type;
+  llvm::StringRef name;
+  mlir::Type type;
 
   // Custom allocation called from generated constructor code
-  FieldInfo allocateInto(::mlir::TypeStorageAllocator &alloc) const {
+  FieldInfo allocateInto(mlir::TypeStorageAllocator &alloc) const {
     return FieldInfo{alloc.copyInto(name), type};
   }
 };
