@@ -160,7 +160,7 @@ class Polynomial_BinaryOp<string mnemonic, list<Trait> traits = []> :
     Polynomial_Op<mnemonic, !listconcat(traits, [Pure, SameOperandsAndResultType, ElementwiseMappable])> {
   let arguments = (ins PolynomialLike:$lhs, PolynomialLike:$rhs);
   let results = (outs PolynomialLike:$result);
-  let assemblyFormat = "operands attr-dict `:` qualified(type($result))";
+  let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
 def Polynomial_AddOp : Polynomial_BinaryOp<"add", [Commutative]> {
@@ -266,7 +266,7 @@ def Polynomial_MulScalarOp : Polynomial_Op<"mul_scalar", [
   let results = (outs
     PolynomialLike:$output
   );
-  let assemblyFormat = "operands attr-dict `:` qualified(type($polynomial)) `,` type($scalar)";
+  let assemblyFormat = "operands attr-dict `:` type($polynomial) `,` type($scalar)";
   let hasVerifier = 1;
 }
 
@@ -290,7 +290,7 @@ def Polynomial_LeadingTermOp: Polynomial_Op<"leading_term"> {
   }];
   let arguments = (ins Polynomial_PolynomialType:$input);
   let results = (outs Index:$degree, AnyInteger:$coefficient);
-  let assemblyFormat = "operands attr-dict `:` qualified(type($input)) `->` `(` type($degree) `,` type($coefficient) `)`";
+  let assemblyFormat = "operands attr-dict `:` type($input) `->` `(` type($degree) `,` type($coefficient) `)`";
 }
 
 def Polynomial_MonomialOp: Polynomial_Op<"monomial"> {
@@ -356,7 +356,7 @@ def Polynomial_FromTensorOp : Polynomial_Op<"from_tensor", [Pure]> {
   let arguments = (ins RankedTensorOf<[AnyInteger]>:$input);
   let results = (outs Polynomial_PolynomialType:$output);
 
-  let assemblyFormat = "$input attr-dict `:` type($input) `->` qualified(type($output))";
+  let assemblyFormat = "$input attr-dict `:` type($input) `->` type($output)";
 
   let builders = [
     // Builder that infers coefficient modulus from tensor bit width,
@@ -395,7 +395,7 @@ def Polynomial_ToTensorOp : Polynomial_Op<"to_tensor", [Pure]> {
   }];
   let arguments = (ins Polynomial_PolynomialType:$input);
   let results = (outs RankedTensorOf<[AnyInteger]>:$output);
-  let assemblyFormat = "$input attr-dict `:` qualified(type($input)) `->` type($output)";
+  let assemblyFormat = "$input attr-dict `:` type($input) `->` type($output)";
 
   let hasVerifier = 1;
 }
@@ -413,7 +413,7 @@ def Polynomial_ConstantOp : Polynomial_Op<"constant", [Pure]> {
   }];
   let arguments = (ins Polynomial_PolynomialAttr:$input);
   let results = (outs Polynomial_PolynomialType:$output);
-  let assemblyFormat = "$input attr-dict `:` qualified(type($output))";
+  let assemblyFormat = "$input attr-dict `:` type($output)";
 }
 
 #endif // POLYNOMIAL_OPS
