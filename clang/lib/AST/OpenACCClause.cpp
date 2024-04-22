@@ -82,6 +82,48 @@ OpenACCClause::child_range OpenACCClause::children() {
   return child_range(child_iterator(), child_iterator());
 }
 
+OpenACCNumWorkersClause::OpenACCNumWorkersClause(SourceLocation BeginLoc,
+                                                 SourceLocation LParenLoc,
+                                                 Expr *IntExpr,
+                                                 SourceLocation EndLoc)
+    : OpenACCClauseWithSingleIntExpr(OpenACCClauseKind::NumWorkers, BeginLoc,
+                                     LParenLoc, IntExpr, EndLoc) {
+  assert((!IntExpr || IntExpr->isInstantiationDependent() ||
+          IntExpr->getType()->isIntegerType()) &&
+         "Condition expression type not scalar/dependent");
+}
+
+OpenACCNumWorkersClause *
+OpenACCNumWorkersClause::Create(const ASTContext &C, SourceLocation BeginLoc,
+                                SourceLocation LParenLoc, Expr *IntExpr,
+                                SourceLocation EndLoc) {
+  void *Mem = C.Allocate(sizeof(OpenACCNumWorkersClause),
+                         alignof(OpenACCNumWorkersClause));
+  return new (Mem)
+      OpenACCNumWorkersClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
+}
+
+OpenACCVectorLengthClause::OpenACCVectorLengthClause(SourceLocation BeginLoc,
+                                                     SourceLocation LParenLoc,
+                                                     Expr *IntExpr,
+                                                     SourceLocation EndLoc)
+    : OpenACCClauseWithSingleIntExpr(OpenACCClauseKind::VectorLength, BeginLoc,
+                                     LParenLoc, IntExpr, EndLoc) {
+  assert((!IntExpr || IntExpr->isInstantiationDependent() ||
+          IntExpr->getType()->isIntegerType()) &&
+         "Condition expression type not scalar/dependent");
+}
+
+OpenACCVectorLengthClause *
+OpenACCVectorLengthClause::Create(const ASTContext &C, SourceLocation BeginLoc,
+                                  SourceLocation LParenLoc, Expr *IntExpr,
+                                  SourceLocation EndLoc) {
+  void *Mem = C.Allocate(sizeof(OpenACCVectorLengthClause),
+                         alignof(OpenACCVectorLengthClause));
+  return new (Mem)
+      OpenACCVectorLengthClause(BeginLoc, LParenLoc, IntExpr, EndLoc);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenACC clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -97,4 +139,14 @@ void OpenACCClausePrinter::VisitSelfClause(const OpenACCSelfClause &C) {
   OS << "self";
   if (const Expr *CondExpr = C.getConditionExpr())
     OS << "(" << CondExpr << ")";
+}
+
+void OpenACCClausePrinter::VisitNumWorkersClause(
+    const OpenACCNumWorkersClause &C) {
+  OS << "num_workers(" << C.getIntExpr() << ")";
+}
+
+void OpenACCClausePrinter::VisitVectorLengthClause(
+    const OpenACCVectorLengthClause &C) {
+  OS << "vector_length(" << C.getIntExpr() << ")";
 }

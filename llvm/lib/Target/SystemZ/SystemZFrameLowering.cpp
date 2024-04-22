@@ -896,6 +896,19 @@ SystemZXPLINKFrameLowering::SystemZXPLINKFrameLowering()
     RegSpillOffsets[Entry.Reg] = Entry.Offset;
 }
 
+int SystemZXPLINKFrameLowering::getOrCreateFramePointerSaveIndex(
+    MachineFunction &MF) const {
+  SystemZMachineFunctionInfo *ZFI = MF.getInfo<SystemZMachineFunctionInfo>();
+  int FI = ZFI->getFramePointerSaveIndex();
+  if (!FI) {
+    MachineFrameInfo &MFFrame = MF.getFrameInfo();
+    FI = MFFrame.CreateFixedObject(8, 0, false);
+    MFFrame.setStackID(FI, TargetStackID::NoAlloc);
+    ZFI->setFramePointerSaveIndex(FI);
+  }
+  return FI;
+}
+
 // Checks if the function is a potential candidate for being a XPLeaf routine.
 static bool isXPLeafCandidate(const MachineFunction &MF) {
   const MachineFrameInfo &MFFrame = MF.getFrameInfo();
@@ -991,6 +1004,9 @@ bool SystemZXPLINKFrameLowering::assignCalleeSavedSpillSlots(
   Register HighGPR = 0;
   int HighOffset = -1;
 
+  // Query index of the saved frame pointer.
+  int FPSI = MFI->getFramePointerSaveIndex();
+
   for (auto &CS : CSI) {
     Register Reg = CS.getReg();
     int Offset = RegSpillOffsets[Reg];
@@ -1013,7 +1029,10 @@ bool SystemZXPLINKFrameLowering::assignCalleeSavedSpillSlots(
         // the bottom of the stack and are not truly part of the "normal" stack
         // frame. Mark the frame index as NoAlloc to indicate it as such.
         unsigned RegSize = 8;
-        int FrameIdx = MFFrame.CreateFixedSpillStackObject(RegSize, Offset);
+        int FrameIdx =
+            (FPSI && Offset == 0)
+                ? FPSI
+                : MFFrame.CreateFixedSpillStackObject(RegSize, Offset);
         CS.setFrameIdx(FrameIdx);
         MFFrame.setStackID(FrameIdx, TargetStackID::NoAlloc);
       }
@@ -1467,15 +1486,16 @@ void SystemZXPLINKFrameLowering::determineFrameLayout(
   StackSize += Regs->getCallFrameSize();
   MFFrame.setStackSize(StackSize);
 
-  // We now know the stack size. Create the fixed spill stack objects for the
-  // register save area now. This has no impact on the stack frame layout, as
-  // this is already computed. However, it makes sure that all callee saved
-  // registers have a valid frame index assigned.
-  const unsigned RegSize = MF.getDataLayout().getPointerSize();
-  for (auto &CS : MFFrame.getCalleeSavedInfo()) {
-    int Offset = RegSpillOffsets[CS.getReg()];
-    if (Offset >= 0)
-      CS.setFrameIdx(
-          MFFrame.CreateFixedSpillStackObject(RegSize, Offset - StackSize));
+  // We now know the stack size. Update the stack objects for the register save
+  // area now. This has no impact on the stack frame layout, as this is already
+  // computed. However, it makes sure that all callee saved registers have a
+  // valid offset assigned.
+  for (int FrameIdx = MFFrame.getObjectIndexBegin(); FrameIdx != 0;
+       ++FrameIdx) {
+    if (MFFrame.getStackID(FrameIdx) == TargetStackID::NoAlloc) {
+      int64_t SPOffset = MFFrame.getObjectOffset(FrameIdx);
+      SPOffset -= StackSize;
+      MFFrame.setObjectOffset(FrameIdx, SPOffset);
+    }
   }
 }

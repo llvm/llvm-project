@@ -24944,7 +24944,7 @@ ExprResult SemaOpenMP::ActOnOMPIteratorExpr(Scope *S,
       // Check for conflicting previous declaration.
       DeclarationNameInfo NameInfo(VD->getDeclName(), D.DeclIdentLoc);
       LookupResult Previous(SemaRef, NameInfo, Sema::LookupOrdinaryName,
-                            Sema::ForVisibleRedeclaration);
+                            RedeclarationKind::ForVisibleRedeclaration);
       Previous.suppressDiagnostics();
       SemaRef.LookupName(Previous, S);
 
