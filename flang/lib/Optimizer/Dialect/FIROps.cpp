@@ -3904,9 +3904,8 @@ mlir::ParseResult parseCUFKernelValues(
     mlir::OpAsmParser &parser,
     llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &values,
     llvm::SmallVectorImpl<mlir::Type> &types) {
-  if (mlir::succeeded(parser.parseOptionalStar())) {
+  if (mlir::succeeded(parser.parseOptionalStar()))
     return mlir::success();
-  }
 
   if (mlir::succeeded(parser.parseOptionalLParen())) {
     if (mlir::failed(parser.parseCommaSeparatedList(
