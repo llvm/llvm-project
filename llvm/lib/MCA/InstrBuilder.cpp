@@ -454,7 +454,6 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
     const MCOperand &Op = MCI.getOperand(OpIndex);
     if (!Op.isReg())
       continue;
-
     if (MRI.isConstant(Op.getReg()))
       continue;
 
@@ -760,7 +759,7 @@ InstrBuilder::createInstruction(const MCInst &MCI,
     RegID = WD.isImplicitWrite() ? WD.RegisterID
                                  : MCI.getOperand(WD.OpIndex).getReg();
     // Check if this is a optional definition that references NoReg.
-    if (WD.IsOptionalDef && !RegID) {
+    if ((WD.IsOptionalDef && !RegID) || MRI.isConstant(RegID)) {
       ++WriteIndex;
       continue;
     }

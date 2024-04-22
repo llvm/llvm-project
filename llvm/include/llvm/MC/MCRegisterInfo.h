@@ -127,8 +127,8 @@ struct MCRegisterDesc {
   /// for every register unit.
   uint16_t RegUnitLaneMasks;
 
-  // Returns true for constant registers
-  bool Constant;
+  // Is true for constant registers.
+  bool IsConstant;
 };
 
 /// MCRegisterInfo base class - We assume that the target defines a static
@@ -385,9 +385,8 @@ public:
     return RegStrings + get(RegNo).Name;
   }
 
-  bool isConstant(MCRegister RegNo) const {
-    return get(RegNo).Constant && MCRegister::isPhysicalRegister(RegNo.id());
-  }
+  /// Returns true if the given register is constant.
+  bool isConstant(MCRegister RegNo) const { return get(RegNo).IsConstant; }
 
   /// Return the number of registers this target has (useful for
   /// sizing arrays holding per register information)
