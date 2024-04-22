@@ -5565,10 +5565,6 @@ public:
                         ArrayRef<Expr *> Arg, SourceLocation RParenLoc,
                         Expr *Config = nullptr, bool IsExecConfig = false,
                         ADLCallKind UsesADL = ADLCallKind::NotADL);
-  /// `Fn` may be a null pointer.
-  void ModifyCallExprArguments(Expr *Fn, SourceLocation LParenLoc,
-                               SmallVectorImpl<Expr *> &ArgExprs,
-                               SourceLocation RParenLoc);
 
   ExprResult ActOnCastExpr(Scope *S, SourceLocation LParenLoc, Declarator &D,
                            ParsedType &Ty, SourceLocation RParenLoc,
@@ -5671,18 +5667,9 @@ public:
                               SourceLocation RPLoc, StringLiteral *Filename,
                               StringLiteral *BinaryData);
 
-  IntegerLiteral *ExpandSinglePPEmbedExpr(PPEmbedExpr *PPEmbed,
-                                          bool FirstElement = true);
-
   PPEmbedExpr::Action
   CheckExprListForPPEmbedExpr(ArrayRef<Expr *> ExprList,
                               std::optional<QualType> MaybeInitType);
-  PPEmbedExpr::Action
-  ExpandPPEmbedExprInExprList(ArrayRef<Expr *> ExprList,
-                              SmallVectorImpl<Expr *> &OutputExprList,
-                              bool ClearOutputFirst = true);
-  PPEmbedExpr::Action
-  ExpandPPEmbedExprInExprList(SmallVectorImpl<Expr *> &OutputList);
 
   // Build a potentially resolved SourceLocExpr.
   ExprResult BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
@@ -9030,10 +9017,6 @@ public:
       bool Typename, SourceLocation EllipsisLoc, IdentifierInfo *ParamName,
       SourceLocation ParamNameLoc, unsigned Depth, unsigned Position,
       SourceLocation EqualLoc, ParsedTemplateArgument DefaultArg);
-
-  void ModifyTemplateArguments(
-      const TemplateTy &Template,
-      SmallVectorImpl<ParsedTemplateArgument> &TemplateArgs);
 
   TemplateParameterList *ActOnTemplateParameterList(
       unsigned Depth, SourceLocation ExportLoc, SourceLocation TemplateLoc,

@@ -2207,7 +2207,6 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       } else {
         Expr *Fn = LHS.get();
         SourceLocation RParLoc = Tok.getLocation();
-        Actions.ModifyCallExprArguments(Fn, Loc, ArgExprs, RParLoc);
         LHS = Actions.ActOnCallExpr(getCurScope(), Fn, Loc, ArgExprs, RParLoc,
                                     ExecConfig);
         if (LHS.isInvalid()) {
@@ -3572,6 +3571,17 @@ ExprResult Parser::ParseFoldExpression(ExprResult LHS,
                                   T.getCloseLocation());
 }
 
+void Parser::ExpandEmbedDirective(SmallVectorImpl<Expr *> &Exprs) {
+  EmbedAnnotationData *Data =
+      reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
+  SourceLocation StartLoc = ConsumeAnnotationToken();
+  ASTContext &Context = Actions.getASTContext();
+  for (auto Byte : Data->BinaryData) {
+    Exprs.push_back(IntegerLiteral::Create(Context, llvm::APInt(CHAR_BIT, Byte),
+                                           Context.UnsignedCharTy, StartLoc));
+  }
+}
+
 /// ParseExpressionList - Used for C/C++ (argument-)expression-list.
 ///
 /// \verbatim
@@ -3607,8 +3617,17 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
     if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
       Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
       Expr = ParseBraceInitializer();
-    } else
+    } else if (Tok.is(tok::annot_embed)) {
+      ExpandEmbedDirective(Exprs);
+      if (Tok.isNot(tok::comma))
+        break;
+      Token Comma = Tok;
+      ConsumeToken();
+      checkPotentialAngleBracketDelimiter(Comma);
+      continue;
+    } else {
       Expr = ParseAssignmentExpression();
+    }
 
     if (EarlyTypoCorrection)
       Expr = Actions.CorrectDelayedTyposInExpr(Expr);
