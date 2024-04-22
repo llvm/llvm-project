@@ -1020,7 +1020,7 @@ def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
     The `emitc.global` operation declares or defines a named global variable.
     The backing memory for the variable is allocated statically and is
     described by the type of the variable.
-    Optionally, and `initial_value` can be provided.
+    Optionally, an `initial_value` can be provided.
     Internal linkage can be specified using the `staticSpecifier` unit attribute
     and external linkage can be specified using the `externSpecifier` unit attribute.
     Note that the default linkage without those two keywords depends on whether
