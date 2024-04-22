@@ -210,7 +210,7 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
   AssumedTemplateKind AssumedTemplate;
   LookupResult R(*this, TName, Name.getBeginLoc(), LookupOrdinaryName);
   if (LookupTemplateName(R, S, SS, ObjectType, EnteringContext,
-                         MemberOfUnknownSpecialization, SourceLocation(),
+                         /*RequiredTemplate=*/SourceLocation(),
                          &AssumedTemplate,
                          /*AllowTypoCorrection=*/!Disambiguation))
     return TNK_Non_template;
@@ -377,20 +377,6 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
                               RequiredTemplateKind RequiredTemplate,
                               AssumedTemplateKind *ATK,
                               bool AllowTypoCorrection) {
-  bool MemberOfUnknownSpecialization;
-  return LookupTemplateName(Found, S, SS, ObjectType, EnteringContext,
-                            MemberOfUnknownSpecialization, RequiredTemplate,
-                            ATK, AllowTypoCorrection);
-}
-
-bool Sema::LookupTemplateName(LookupResult &Found,
-                              Scope *S, CXXScopeSpec &SS,
-                              QualType ObjectType,
-                              bool EnteringContext,
-                              bool &MemberOfUnknownSpecialization,
-                              RequiredTemplateKind RequiredTemplate,
-                              AssumedTemplateKind *ATK,
-                              bool AllowTypoCorrection) {
   if (ATK)
     *ATK = AssumedTemplateKind::None;
 
@@ -400,7 +386,6 @@ bool Sema::LookupTemplateName(LookupResult &Found,
   Found.setTemplateNameLookup(true);
 
   // Determine where to perform name lookup
-  MemberOfUnknownSpecialization = false;
   DeclContext *LookupCtx = nullptr;
   bool IsDependent = false;
   if (!ObjectType.isNull()) {
@@ -557,7 +542,6 @@ bool Sema::LookupTemplateName(LookupResult &Found,
   FilterAcceptableTemplateNames(Found, AllowFunctionTemplatesInLookup);
   if (Found.empty()) {
     if (IsDependent) {
-      MemberOfUnknownSpecialization = true;
       Found.setNotFoundInCurrentInstantiation();
       return false;
     }
