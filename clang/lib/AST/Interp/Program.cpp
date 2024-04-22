@@ -108,27 +108,23 @@ Pointer Program::getPtrGlobal(unsigned Idx) const {
 }
 
 std::optional<unsigned> Program::getGlobal(const ValueDecl *VD) {
-  auto It = GlobalIndices.find(VD);
-  if (It != GlobalIndices.end())
+  if (auto It = GlobalIndices.find(VD); It != GlobalIndices.end())
     return It->second;
 
   // Find any previous declarations which were already evaluated.
   std::optional<unsigned> Index;
-  for (const Decl *P = VD; P; P = P->getPreviousDecl()) {
-    auto It = GlobalIndices.find(P);
-    if (It != GlobalIndices.end()) {
+  for (const Decl *P = VD->getPreviousDecl(); P; P = P->getPreviousDecl()) {
+    if (auto It = GlobalIndices.find(P); It != GlobalIndices.end()) {
       Index = It->second;
       break;
     }
   }
 
   // Map the decl to the existing index.
-  if (Index) {
+  if (Index)
     GlobalIndices[VD] = *Index;
-    return std::nullopt;
-  }
 
-  return Index;
+  return std::nullopt;
 }
 
 std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
