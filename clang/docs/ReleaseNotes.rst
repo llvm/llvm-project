@@ -248,6 +248,13 @@ Modified Compiler Flags
        f3 *c = (f3 *)x;
      }
 
+- Added a new diagnostic flag ``-Wpointer-integer-ordered-compare`` which is
+  grouped under ``-Wpointer-integer-compare`` and moved previously
+  ungrouped diagnostics ``ext_typecheck_ordered_comparison_of_pointer_integer``,
+  ``ext_typecheck_ordered_comparison_of_pointer_and_zero`` under
+  ``-Wpointer-integer-ordered-compare``.This also resolves false negative
+  for comparison between pointers and literal zero.  Fixes #GH88090
+
 
 Removed Compiler Flags
 -------------------------

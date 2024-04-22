@@ -7274,9 +7274,11 @@ def err_typecheck_sub_ptr_compatible : Error<
   "%diff{$ and $ are not pointers to compatible types|"
   "pointers to incompatible types}0,1">;
 def ext_typecheck_ordered_comparison_of_pointer_integer : ExtWarn<
-  "ordered comparison between pointer and integer (%0 and %1)">;
+  "ordered comparison between pointer and integer (%0 and %1)">,
+  InGroup<PointerIntegerOrderedCompare>;
 def ext_typecheck_ordered_comparison_of_pointer_and_zero : Extension<
-  "ordered comparison between pointer and zero (%0 and %1) is an extension">;
+  "ordered comparison between pointer and zero (%0 and %1) is an extension">,
+  InGroup<PointerIntegerOrderedCompare>;
 def err_typecheck_ordered_comparison_of_pointer_and_zero : Error<
   "ordered comparison between pointer and zero (%0 and %1)">;
 def err_typecheck_three_way_comparison_of_pointer_and_zero : Error<
@@ -7301,7 +7303,7 @@ def err_typecheck_comparison_of_fptr_to_void : Error<
   "equality comparison between function pointer and void pointer (%0 and %1)">;
 def ext_typecheck_comparison_of_pointer_integer : ExtWarn<
   "comparison between pointer and integer (%0 and %1)">,
-  InGroup<DiagGroup<"pointer-integer-compare">>;
+  InGroup<PointerIntegerCompare>;
 def err_typecheck_comparison_of_pointer_integer : Error<
   "comparison between pointer and integer (%0 and %1)">;
 def ext_typecheck_comparison_of_distinct_pointers : ExtWarn<
