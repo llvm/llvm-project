@@ -29,7 +29,7 @@ class Header:
     file somewhere in the directory tree with root at
     ``$LLVM_PROJECT_ROOT/libc/include/llvm-libc-macros``.  Docgen expects that
     if a macro is implemented, that it appears in a string
-    ``#define MACRO_NAME`` in some ``*-macros.h`` file in the directory tree..
+    ``#define MACRO_NAME`` in some ``*-macros.h`` file in the directory tree.
     Docgen searches for this string in the file to set the implementation status
     shown in the generated rst docs rendered as html for display at
     <libc.llvm.org>.
