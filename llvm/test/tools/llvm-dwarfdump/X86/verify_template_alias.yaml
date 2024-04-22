@@ -1,4 +1,4 @@
-# yaml2obj %s | llvm-dwarfdump --verify -
+# RUN: yaml2obj %s | llvm-dwarfdump --verify -
 
 ## Check --verify doesn't fail when a DW_AT_type references a
 ## DW_TAG_template_alias.
