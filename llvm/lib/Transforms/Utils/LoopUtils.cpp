@@ -1930,7 +1930,15 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
   if (!TI || !TI->isConditional())
     return {};
 
-  auto *CondI = dyn_cast<CmpInst>(TI->getCondition());
+  Instruction *CondI = nullptr;
+  CondI = dyn_cast<CmpInst>(TI->getCondition());
+
+  if (!CondI) {
+    CondI = dyn_cast<TruncInst>(TI->getCondition());
+    if (CondI && CondI->getType() != Type::getInt1Ty(TI->getContext())) {
+      return {};
+    }
+  }
   // The case with the condition outside the loop should already be handled
   // earlier.
   if (!CondI || !L.contains(CondI))
