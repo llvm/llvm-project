@@ -1450,7 +1450,7 @@ void RewriteInstance::registerFragments() {
           continue;
         }
       }
-      BC->errs() << "BOLT-ERROR: parent function not found for " << Name
+      BC->errs() << "BOLT-ERROR: parent function not found for " << Function
                  << '\n';
       exit(1);
     }
