@@ -16853,13 +16853,13 @@ bool Expr::EvaluateCharRangeAsString(std::string &Result,
   if (!::EvaluateInteger(SizeExpression, SizeValue, Info))
     return false;
 
-  int64_t Size = SizeValue.getExtValue();
+  uint64_t Size = SizeValue.getZExtValue();
 
   if (!::EvaluatePointer(PtrExpression, String, Info))
     return false;
 
   QualType CharTy = PtrExpression->getType()->getPointeeType();
-  for (int64_t I = 0; I < Size; ++I) {
+  for (uint64_t I = 0; I < Size; ++I) {
     APValue Char;
     if (!handleLValueToRValueConversion(Info, PtrExpression, CharTy, String,
                                         Char))
