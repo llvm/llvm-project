@@ -13,6 +13,7 @@
 #include "RISCVTargetMachine.h"
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "RISCV.h"
+#include "RISCVLoopIdiomRecognize.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVTargetObjectFile.h"
 #include "RISCVTargetTransformInfo.h"
@@ -33,6 +34,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO.h"
@@ -583,4 +585,22 @@ bool RISCVTargetMachine::parseMachineFunctionInfo(
       static_cast<const yaml::RISCVMachineFunctionInfo &>(MFI);
   PFS.MF.getInfo<RISCVMachineFunctionInfo>()->initializeBaseYamlFields(YamlMFI);
   return false;
+}
+
+void RISCVTargetMachine::registerPassBuilderCallbacks(
+    PassBuilder &PB, bool PopulateClassToPassNames) {
+  PB.registerPipelineParsingCallback(
+      [](StringRef PassName, LoopPassManager &PM,
+         ArrayRef<PassBuilder::PipelineElement>) {
+        if (PassName == "riscv-loop-idiom") {
+          PM.addPass(RISCVLoopIdiomRecognizePass());
+          return true;
+        }
+        return false;
+      });
+
+  PB.registerLateLoopOptimizationsEPCallback(
+      [=](LoopPassManager &LPM, OptimizationLevel Level) {
+        LPM.addPass(RISCVLoopIdiomRecognizePass());
+      });
 }
