@@ -55,7 +55,7 @@ static int64_t getRankOf(Value val) {
   if (auto ty = llvm::dyn_cast<ShapedType>(type))
     return ty.getRank();
   return 0;
-};
+}
 
 static bool isReadHintOrNone(const CachePolicyAttr &attr) {
   if (!attr)
@@ -127,7 +127,7 @@ LogicalResult CreateNdDescOp::verify() {
 
   // check source type matches the rank if it is a memref.
   // It also should have the same ElementType as TensorDesc.
-  auto memrefTy = getSourceType().dyn_cast<MemRefType>();
+  auto memrefTy = dyn_cast<MemRefType>(getSourceType());
   if (memrefTy) {
     invalidRank |= (memrefTy.getRank() != rank);
     invalidElemTy |= memrefTy.getElementType() != getElementType();

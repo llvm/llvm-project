@@ -1057,7 +1057,8 @@ bool OverloadCandidateSet::OperatorRewriteInfo::shouldAddReversed(
 
 void OverloadCandidateSet::destroyCandidates() {
   for (iterator i = begin(), e = end(); i != e; ++i) {
-    delete[] i->Conversions.data();
+    for (auto &C : i->Conversions)
+      C.~ImplicitConversionSequence();
     if (!i->Viable && i->FailureKind == ovl_fail_bad_deduction)
       i->DeductionFailure.Destroy();
   }
@@ -1065,6 +1066,8 @@ void OverloadCandidateSet::destroyCandidates() {
 
 void OverloadCandidateSet::clear(CandidateSetKind CSK) {
   destroyCandidates();
+  SlabAllocator.Reset();
+  NumInlineBytesUsed = 0;
   Candidates.clear();
   Functions.clear();
   Kind = CSK;
@@ -6560,11 +6563,14 @@ diagnoseNoViableConversion(Sema &SemaRef, SourceLocation Loc, Expr *&From,
                                                        HadMultipleCandidates);
     if (Result.isInvalid())
       return true;
-    // Record usage of conversion in an implicit cast.
-    From = ImplicitCastExpr::Create(SemaRef.Context, Result.get()->getType(),
-                                    CK_UserDefinedConversion, Result.get(),
-                                    nullptr, Result.get()->getValueKind(),
-                                    SemaRef.CurFPFeatureOverrides());
+
+    // Replace the conversion with a RecoveryExpr, so we don't try to
+    // instantiate it later, but can further diagnose here.
+    Result = SemaRef.CreateRecoveryExpr(From->getBeginLoc(), From->getEndLoc(),
+                                        From, Result.get()->getType());
+    if (Result.isInvalid())
+      return true;
+    From = Result.get();
   }
   return false;
 }
@@ -6980,7 +6986,7 @@ void Sema::AddOverloadCandidate(
   Candidate.RewriteKind =
       CandidateSet.getRewriteInfo().getRewriteKind(Function, PO);
   Candidate.IsSurrogate = false;
-  Candidate.IsADLCandidate = static_cast<unsigned>(IsADLCandidate);
+  Candidate.IsADLCandidate = IsADLCandidate;
   Candidate.IgnoreObjectArgument = false;
   Candidate.ExplicitCallArguments = Args.size();
 
@@ -7812,7 +7818,7 @@ void Sema::AddTemplateOverloadCandidate(
     Candidate.RewriteKind =
       CandidateSet.getRewriteInfo().getRewriteKind(Candidate.Function, PO);
     Candidate.IsSurrogate = false;
-    Candidate.IsADLCandidate = static_cast<unsigned>(IsADLCandidate);
+    Candidate.IsADLCandidate = IsADLCandidate;
     // Ignore the object argument if there is one, since we don't have an object
     // type.
     Candidate.IgnoreObjectArgument =
@@ -14122,8 +14128,7 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
       return ExprError();
     return SemaRef.BuildResolvedCallExpr(
         Res.get(), FDecl, LParenLoc, Args, RParenLoc, ExecConfig,
-        /*IsExecConfig=*/false,
-        static_cast<CallExpr::ADLCallKind>((*Best)->IsADLCandidate));
+        /*IsExecConfig=*/false, (*Best)->IsADLCandidate);
   }
 
   case OR_No_Viable_Function: {
@@ -14182,8 +14187,7 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
       return ExprError();
     return SemaRef.BuildResolvedCallExpr(
         Res.get(), FDecl, LParenLoc, Args, RParenLoc, ExecConfig,
-        /*IsExecConfig=*/false,
-        static_cast<CallExpr::ADLCallKind>((*Best)->IsADLCandidate));
+        /*IsExecConfig=*/false, (*Best)->IsADLCandidate);
   }
   }
 
@@ -14257,20 +14261,14 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
                                   OverloadResult, AllowTypoCorrection);
 }
 
-static bool IsOverloaded(const UnresolvedSetImpl &Functions) {
-  return Functions.size() > 1 ||
-         (Functions.size() == 1 &&
-          isa<FunctionTemplateDecl>((*Functions.begin())->getUnderlyingDecl()));
-}
-
 ExprResult Sema::CreateUnresolvedLookupExpr(CXXRecordDecl *NamingClass,
                                             NestedNameSpecifierLoc NNSLoc,
                                             DeclarationNameInfo DNI,
                                             const UnresolvedSetImpl &Fns,
                                             bool PerformADL) {
   return UnresolvedLookupExpr::Create(Context, NamingClass, NNSLoc, DNI,
-                                      PerformADL, IsOverloaded(Fns),
-                                      Fns.begin(), Fns.end());
+                                      PerformADL, Fns.begin(), Fns.end(),
+                                      /*KnownDependent=*/false);
 }
 
 ExprResult Sema::BuildCXXMemberCallExpr(Expr *E, NamedDecl *FoundDecl,
@@ -14490,8 +14488,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
       Args[0] = Input;
       CallExpr *TheCall = CXXOperatorCallExpr::Create(
           Context, Op, FnExpr.get(), ArgsArray, ResultTy, VK, OpLoc,
-          CurFPFeatureOverrides(),
-          static_cast<CallExpr::ADLCallKind>(Best->IsADLCandidate));
+          CurFPFeatureOverrides(), Best->IsADLCandidate);
 
       if (CheckCallReturnType(FnDecl->getReturnType(), OpLoc, TheCall, FnDecl))
         return ExprError();
@@ -14506,7 +14503,7 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
       // operator node.
       ExprResult InputRes = PerformImplicitConversion(
           Input, Best->BuiltinParamTypes[0], Best->Conversions[0], AA_Passing,
-          CCK_ForBuiltinOverloadedOp);
+          CheckedConversionKind::ForBuiltinOverloadedOp);
       if (InputRes.isInvalid())
         return ExprError();
       Input = InputRes.get();
@@ -14909,8 +14906,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         // members; CodeGen should take care not to emit the this pointer.
         TheCall = CXXOperatorCallExpr::Create(
             Context, ChosenOp, FnExpr.get(), Args, ResultTy, VK, OpLoc,
-            CurFPFeatureOverrides(),
-            static_cast<CallExpr::ADLCallKind>(Best->IsADLCandidate));
+            CurFPFeatureOverrides(), Best->IsADLCandidate);
 
         if (const auto *Method = dyn_cast<CXXMethodDecl>(FnDecl);
             Method && Method->isImplicitObjectMemberFunction()) {
@@ -14990,14 +14986,14 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         // operator node.
         ExprResult ArgsRes0 = PerformImplicitConversion(
             Args[0], Best->BuiltinParamTypes[0], Best->Conversions[0],
-            AA_Passing, CCK_ForBuiltinOverloadedOp);
+            AA_Passing, CheckedConversionKind::ForBuiltinOverloadedOp);
         if (ArgsRes0.isInvalid())
           return ExprError();
         Args[0] = ArgsRes0.get();
 
         ExprResult ArgsRes1 = PerformImplicitConversion(
             Args[1], Best->BuiltinParamTypes[1], Best->Conversions[1],
-            AA_Passing, CCK_ForBuiltinOverloadedOp);
+            AA_Passing, CheckedConversionKind::ForBuiltinOverloadedOp);
         if (ArgsRes1.isInvalid())
           return ExprError();
         Args[1] = ArgsRes1.get();
@@ -15368,14 +15364,14 @@ ExprResult Sema::CreateOverloadedArraySubscriptExpr(SourceLocation LLoc,
         // operator node.
         ExprResult ArgsRes0 = PerformImplicitConversion(
             Args[0], Best->BuiltinParamTypes[0], Best->Conversions[0],
-            AA_Passing, CCK_ForBuiltinOverloadedOp);
+            AA_Passing, CheckedConversionKind::ForBuiltinOverloadedOp);
         if (ArgsRes0.isInvalid())
           return ExprError();
         Args[0] = ArgsRes0.get();
 
         ExprResult ArgsRes1 = PerformImplicitConversion(
             Args[1], Best->BuiltinParamTypes[1], Best->Conversions[1],
-            AA_Passing, CCK_ForBuiltinOverloadedOp);
+            AA_Passing, CheckedConversionKind::ForBuiltinOverloadedOp);
         if (ArgsRes1.isInvalid())
           return ExprError();
         Args[1] = ArgsRes1.get();

@@ -622,7 +622,7 @@ struct BuiltinDumpStructGenerator {
     for (auto *D : RD->decls()) {
       auto *IFD = dyn_cast<IndirectFieldDecl>(D);
       auto *FD = IFD ? IFD->getAnonField() : dyn_cast<FieldDecl>(D);
-      if (!FD || FD->isUnnamedBitfield() || FD->isAnonymousStructOrUnion())
+      if (!FD || FD->isUnnamedBitField() || FD->isAnonymousStructOrUnion())
         continue;
 
       llvm::SmallString<20> Format = llvm::StringRef("%s%s %s ");
@@ -3233,6 +3233,17 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (BuiltinCountZeroBitsGeneric(*this, TheCall))
       return ExprError();
     break;
+
+  case Builtin::BI__builtin_allow_runtime_check: {
+    Expr *Arg = TheCall->getArg(0);
+    // Check if the argument is a string literal.
+    if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts())) {
+      Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
+          << Arg->getSourceRange();
+      return ExprError();
+    }
+    break;
+  }
   }
 
   if (getLangOpts().HLSL && CheckHLSLBuiltinFunctionCall(BuiltinID, TheCall))
@@ -3496,11 +3507,15 @@ bool Sema::ParseSVEImmChecks(
 static ArmStreamingType getArmStreamingFnType(const FunctionDecl *FD) {
   if (FD->hasAttr<ArmLocallyStreamingAttr>())
     return ArmStreaming;
-  if (const auto *T = FD->getType()->getAs<FunctionProtoType>()) {
-    if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask)
-      return ArmStreaming;
-    if (T->getAArch64SMEAttributes() & FunctionType::SME_PStateSMCompatibleMask)
-      return ArmStreamingCompatible;
+  if (const Type *Ty = FD->getType().getTypePtrOrNull()) {
+    if (const auto *FPT = Ty->getAs<FunctionProtoType>()) {
+      if (FPT->getAArch64SMEAttributes() &
+          FunctionType::SME_PStateSMEnabledMask)
+        return ArmStreaming;
+      if (FPT->getAArch64SMEAttributes() &
+          FunctionType::SME_PStateSMCompatibleMask)
+        return ArmStreamingCompatible;
+    }
   }
   return ArmNonStreaming;
 }
