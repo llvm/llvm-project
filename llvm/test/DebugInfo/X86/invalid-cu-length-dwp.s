@@ -4,7 +4,7 @@
 ## llvm-dwarfdump used to crash with this input because of an invalid size
 ## of the compilation unit contribution in the .debug_cu_index section.
 
-# CHECK: warning: DWARF package unit at offset 0x00000000 has an inconsistent index
+# CHECK: warning: DWARF package unit at offset 0x00000000 has an inconsistent index (expected: 23, actual: 24)
 
     .section .debug_abbrev.dwo, "e", @progbits
 .LAbbrBegin:

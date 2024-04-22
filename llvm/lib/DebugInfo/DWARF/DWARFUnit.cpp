@@ -349,12 +349,19 @@ Error DWARFUnitHeader::applyIndexEntry(const DWARFUnitIndex::Entry *Entry) {
                              Offset);
 
   auto *UnitContrib = IndexEntry->getContribution();
-  if (!UnitContrib ||
-      UnitContrib->getLength() != (getLength() + getUnitLengthFieldByteSize()))
+  if (!UnitContrib)
     return createStringError(errc::invalid_argument,
                              "DWARF package unit at offset 0x%8.8" PRIx64
-                             " has an inconsistent index",
+                             " has no contribution index",
                              Offset);
+
+  uint64_t IndexLength = getLength() + getUnitLengthFieldByteSize();
+  if (UnitContrib->getLength() != IndexLength)
+    return createStringError(errc::invalid_argument,
+                             "DWARF package unit at offset 0x%8.8" PRIx64
+                             " has an inconsistent index (expected: %" PRIu64
+                             ", actual: %" PRIu64 ")",
+                             Offset, UnitContrib->getLength(), IndexLength);
 
   auto *AbbrEntry = IndexEntry->getContribution(DW_SECT_ABBREV);
   if (!AbbrEntry)
