@@ -66,9 +66,12 @@ template <unsigned BitWidth = 0> struct specific_intval {
       if (const auto *C = dyn_cast<Constant>(V))
         CI = dyn_cast_or_null<ConstantInt>(
             C->getSplatValue(/*AllowPoison=*/false));
+    if (!CI)
+      return false;
 
-    return CI && APInt::isSameValue(CI->getValue(), Val) &&
-           (BitWidth == 0 || CI->getBitWidth() == BitWidth);
+    assert((BitWidth == 0 || CI->getBitWidth() == BitWidth) &&
+           "Trying the match constant with unexpected bitwidth.");
+    return APInt::isSameValue(CI->getValue(), Val);
   }
 };
 
