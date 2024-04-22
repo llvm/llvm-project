@@ -79,13 +79,15 @@ def ApplyTransposeMatmulPatternsOp : Op<Transform_Dialect,
   let description = [{
     Collects patterns to convert Linalg matmul ops to transposed variants.
 
-    By default the A matrix is transposed, set `transpose_a=false` to transpose
-    B matrix.
+    By default the LHS matrix is transposed. Set `inputToTranspose=<rhs>` to
+    instead transpose RHS matrix.
   }];
 
-  let arguments = (ins DefaultValuedAttr<BoolAttr, "true">:$transpose_a);
+  let arguments = (ins
+    DefaultValuedAttr<TransposeMatmulInput,
+                      "TransposeMatmulInput::lhs">:$inputToTranspose);
 
-  let assemblyFormat = "(`transpose_a` `=` $transpose_a^)? attr-dict";
+  let assemblyFormat = "(`<` $inputToTranspose^ `>`)? attr-dict";
 }
 
 //===----------------------------------------------------------------------===//

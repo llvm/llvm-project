@@ -1618,7 +1618,7 @@ void populateSplitReductionPattern(
 
 /// Patterns to convert Linalg matmul ops to transposed variants.
 void populateTransposeMatmulPatterns(RewritePatternSet &patterns,
-                                     bool transposeA = true);
+                                     bool transposeLHS = true);
 
 } // namespace linalg
 } // namespace mlir

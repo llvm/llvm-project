@@ -27,11 +27,11 @@ namespace {
 ///
 ///   linalg.matmul_transpose_a(linalg.transpose(a), b)
 ///
-/// By default A is transposed. If `transposeA` is set to false then B is
-/// transposed.
+/// By default the LHS is transposed. Set `transposeLHS=false` to
+/// transpose RHS instead.
 struct TransposeMatmul final : public OpRewritePattern<linalg::MatmulOp> {
-  TransposeMatmul(MLIRContext *ctx, bool transposeA)
-      : OpRewritePattern(ctx), transposeA(transposeA) {}
+  TransposeMatmul(MLIRContext *ctx, bool transposeLHS)
+      : OpRewritePattern(ctx), transposeLHS(transposeLHS) {}
 
   LogicalResult matchAndRewrite(linalg::MatmulOp matmulOp,
                                 PatternRewriter &rewriter) const override {
@@ -40,7 +40,7 @@ struct TransposeMatmul final : public OpRewritePattern<linalg::MatmulOp> {
           matmulOp, "only matmul ops with tensors are supported");
 
     Location loc = matmulOp.getLoc();
-    Value input = matmulOp.getInputs()[transposeA ? 0 : 1];
+    Value input = matmulOp.getInputs()[transposeLHS ? 0 : 1];
     auto type = cast<ShapedType>(input.getType());
 
     SmallVector<Value> dynamicDims;
@@ -49,28 +49,29 @@ struct TransposeMatmul final : public OpRewritePattern<linalg::MatmulOp> {
     if (type.isDynamicDim(0))
       dynamicDims.push_back(rewriter.create<tensor::DimOp>(loc, input, 0));
 
-    auto shape = type.getShape();
+    ArrayRef<int64_t> shape = type.getShape();
     Value empty = rewriter.create<tensor::EmptyOp>(
         loc, ArrayRef<int64_t>{shape[1], shape[0]}, type.getElementType(),
         dynamicDims);
     auto transposeOp = rewriter.create<linalg::TransposeOp>(
         loc, input, empty, ArrayRef<int64_t>{1, 0});
-    if (transposeA)
+    if (transposeLHS) {
       rewriter.replaceOpWithNewOp<linalg::MatmulTransposeAOp>(
           matmulOp, matmulOp.getResultTypes(),
           ValueRange{transposeOp->getResult(0), matmulOp.getInputs()[1]},
           matmulOp.getOutputs());
-    else
+    } else {
       rewriter.replaceOpWithNewOp<linalg::MatmulTransposeBOp>(
           matmulOp, matmulOp.getResultTypes(),
           ValueRange{matmulOp.getInputs()[0], transposeOp->getResult(0)},
           matmulOp.getOutputs());
+    }
 
     return success();
   }
 
 private:
-  bool transposeA;
+  bool transposeLHS;
 };
 
 /// Pattern to replace
@@ -81,12 +82,12 @@ private:
 ///
 ///   linalg.batch_matmul_transpose_a(linalg.transpose(a), b)
 ///
-/// Only the non-batch dimensions are transposed. By default A is transposed. If
-/// `transposeA` is set to false then B is transposed.
+/// Only the non-batch dimensions are transposed. By default the LHS is
+/// transposed. Set `transposeLHS=false` to transpose RHS instead.
 struct TransposeBatchMatmul final
     : public OpRewritePattern<linalg::BatchMatmulOp> {
-  TransposeBatchMatmul(MLIRContext *ctx, bool transposeA)
-      : OpRewritePattern(ctx), transposeA(transposeA) {}
+  TransposeBatchMatmul(MLIRContext *ctx, bool transposeLHS)
+      : OpRewritePattern(ctx), transposeLHS(transposeLHS) {}
 
   LogicalResult matchAndRewrite(linalg::BatchMatmulOp batchMatmulOp,
                                 PatternRewriter &rewriter) const override {
@@ -95,7 +96,7 @@ struct TransposeBatchMatmul final
           batchMatmulOp, "only matmul ops with tensors are supported");
 
     Location loc = batchMatmulOp.getLoc();
-    Value input = batchMatmulOp.getInputs()[transposeA ? 0 : 1];
+    Value input = batchMatmulOp.getInputs()[transposeLHS ? 0 : 1];
     auto type = cast<ShapedType>(input.getType());
 
     SmallVector<Value> dynamicDims;
@@ -106,33 +107,34 @@ struct TransposeBatchMatmul final
     if (type.isDynamicDim(1))
       dynamicDims.push_back(rewriter.create<tensor::DimOp>(loc, input, 1));
 
-    auto shape = type.getShape();
+    ArrayRef<int64_t> shape = type.getShape();
     Value empty = rewriter.create<tensor::EmptyOp>(
-        loc, ArrayRef<int64_t>{shape[2], shape[1], shape[0]},
+        loc, ArrayRef<int64_t>{shape[0], shape[2], shape[1]},
         type.getElementType(), dynamicDims);
     auto transposeOp = rewriter.create<linalg::TransposeOp>(
-        loc, input, empty, ArrayRef<int64_t>{2, 1, 0});
-    if (transposeA)
+        loc, input, empty, ArrayRef<int64_t>{0, 2, 1});
+    if (transposeLHS) {
       rewriter.replaceOpWithNewOp<linalg::BatchMatmulTransposeAOp>(
           batchMatmulOp, batchMatmulOp.getResultTypes(),
           ValueRange{transposeOp->getResult(0), batchMatmulOp.getInputs()[1]},
           batchMatmulOp.getOutputs());
-    else
+    } else {
       rewriter.replaceOpWithNewOp<linalg::BatchMatmulTransposeBOp>(
           batchMatmulOp, batchMatmulOp.getResultTypes(),
           ValueRange{batchMatmulOp.getInputs()[0], transposeOp->getResult(0)},
           batchMatmulOp.getOutputs());
+    }
 
     return success();
   }
 
 private:
-  bool transposeA;
+  bool transposeLHS;
 };
 } // namespace
 
 void mlir::linalg::populateTransposeMatmulPatterns(RewritePatternSet &patterns,
-                                                   bool transposeA) {
+                                                   bool transposeLHS) {
   patterns.add<TransposeMatmul, TransposeBatchMatmul>(patterns.getContext(),
-                                                      transposeA);
+                                                      transposeLHS);
 }

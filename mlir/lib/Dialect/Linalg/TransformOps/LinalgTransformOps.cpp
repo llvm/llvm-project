@@ -201,7 +201,8 @@ void transform::ApplyTilingCanonicalizationPatternsOp::populatePatterns(
 
 void transform::ApplyTransposeMatmulPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  linalg::populateTransposeMatmulPatterns(patterns, getTransposeA());
+  bool transposeLHS = getInputToTranspose() == TransposeMatmulInput::lhs;
+  linalg::populateTransposeMatmulPatterns(patterns, transposeLHS);
 }
 
 //===----------------------------------------------------------------------===//
