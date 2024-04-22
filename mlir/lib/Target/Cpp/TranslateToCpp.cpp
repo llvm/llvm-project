@@ -1016,8 +1016,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
         "with multiple blocks needs variables declared at top");
   }
 
-  if (llvm::any_of(functionOp.getResultTypes(),
-                   [](Type type) { return isa<ArrayType>(type); })) {
+  if (llvm::any_of(functionOp.getResultTypes(), llvm::IsaPred<ArrayType>)) {
     return functionOp.emitOpError() << "cannot emit array type as result type";
   }
 
@@ -1121,7 +1120,7 @@ CppEmitter::CppEmitter(raw_ostream &os, bool declareVariablesAtTop)
 std::string CppEmitter::getSubscriptName(emitc::SubscriptOp op) {
   std::string out;
   llvm::raw_string_ostream ss(out);
-  ss << getOrCreateName(op.getArray());
+  ss << getOrCreateName(op.getValue());
   for (auto index : op.getIndices()) {
     ss << "[" << getOrCreateName(index) << "]";
   }
@@ -1619,7 +1618,7 @@ LogicalResult CppEmitter::emitTypes(Location loc, ArrayRef<Type> types) {
 }
 
 LogicalResult CppEmitter::emitTupleType(Location loc, ArrayRef<Type> types) {
-  if (llvm::any_of(types, [](Type type) { return isa<ArrayType>(type); })) {
+  if (llvm::any_of(types, llvm::IsaPred<ArrayType>)) {
     return emitError(loc, "cannot emit tuple of array type");
   }
   os << "std::tuple<";

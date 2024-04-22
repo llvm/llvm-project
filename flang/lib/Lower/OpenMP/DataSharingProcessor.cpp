@@ -23,11 +23,13 @@ namespace Fortran {
 namespace lower {
 namespace omp {
 
-void DataSharingProcessor::processStep1() {
+void DataSharingProcessor::processStep1(
+    mlir::omp::PrivateClauseOps *clauseOps,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms) {
   collectSymbolsForPrivatization();
   collectDefaultSymbols();
-  privatize();
-  defaultPrivatize();
+  privatize(clauseOps, privateSyms);
+  defaultPrivatize(clauseOps, privateSyms);
   insertBarrier();
 }
 
@@ -99,7 +101,8 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
       collectOmpObjectListSymbol(firstPrivateClause->v, privatizedSymbols);
     } else if (const auto &lastPrivateClause =
                    std::get_if<omp::clause::Lastprivate>(&clause.u)) {
-      collectOmpObjectListSymbol(lastPrivateClause->v, privatizedSymbols);
+      const ObjectList &objects = std::get<ObjectList>(lastPrivateClause->t);
+      collectOmpObjectListSymbol(objects, privatizedSymbols);
       hasLastPrivateOp = true;
     } else if (std::get_if<omp::clause::Collapse>(&clause.u)) {
       hasCollapse = true;
@@ -133,7 +136,7 @@ void DataSharingProcessor::insertBarrier() {
 
 void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
   bool cmpCreated = false;
-  mlir::OpBuilder::InsertPoint localInsPt = firOpBuilder.saveInsertionPoint();
+  mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
   for (const omp::Clause &clause : clauses) {
     if (clause.id != llvm::omp::OMPC_lastprivate)
       continue;
@@ -200,12 +203,11 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
           // Lastprivate operation is inserted at the end
           // of the lexically last section in the sections
           // construct
-          mlir::OpBuilder::InsertPoint unstructuredSectionsIP =
-              firOpBuilder.saveInsertionPoint();
+          mlir::OpBuilder::InsertionGuard unstructuredSectionsGuard(
+              firOpBuilder);
           mlir::Operation *lastOper = op->getRegion(0).back().getTerminator();
           firOpBuilder.setInsertionPoint(lastOper);
           lastPrivIP = firOpBuilder.saveInsertionPoint();
-          firOpBuilder.restoreInsertionPoint(unstructuredSectionsIP);
         }
       }
     } else if (mlir::isa<mlir::omp::WsloopOp>(op)) {
@@ -265,7 +267,6 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
            "simd/worksharing-loop");
     }
   }
-  firOpBuilder.restoreInsertionPoint(localInsPt);
 }
 
 void DataSharingProcessor::collectSymbols(
@@ -286,25 +287,28 @@ void DataSharingProcessor::collectSymbols(
 }
 
 void DataSharingProcessor::collectDefaultSymbols() {
+  using DataSharingAttribute = omp::clause::Default::DataSharingAttribute;
   for (const omp::Clause &clause : clauses) {
     if (const auto *defaultClause =
             std::get_if<omp::clause::Default>(&clause.u)) {
-      if (defaultClause->v == omp::clause::Default::Type::Private)
+      if (defaultClause->v == DataSharingAttribute::Private)
         collectSymbols(Fortran::semantics::Symbol::Flag::OmpPrivate);
-      else if (defaultClause->v == omp::clause::Default::Type::Firstprivate)
+      else if (defaultClause->v == DataSharingAttribute::Firstprivate)
         collectSymbols(Fortran::semantics::Symbol::Flag::OmpFirstPrivate);
     }
   }
 }
 
-void DataSharingProcessor::privatize() {
+void DataSharingProcessor::privatize(
+    mlir::omp::PrivateClauseOps *clauseOps,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms) {
   for (const Fortran::semantics::Symbol *sym : privatizedSymbols) {
     if (const auto *commonDet =
             sym->detailsIf<Fortran::semantics::CommonBlockDetails>()) {
       for (const auto &mem : commonDet->objects())
-        doPrivatize(&*mem);
+        doPrivatize(&*mem, clauseOps, privateSyms);
     } else
-      doPrivatize(sym);
+      doPrivatize(sym, clauseOps, privateSyms);
   }
 }
 
@@ -321,7 +325,9 @@ void DataSharingProcessor::copyLastPrivatize(mlir::Operation *op) {
     }
 }
 
-void DataSharingProcessor::defaultPrivatize() {
+void DataSharingProcessor::defaultPrivatize(
+    mlir::omp::PrivateClauseOps *clauseOps,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms) {
   for (const Fortran::semantics::Symbol *sym : defaultSymbols) {
     if (!Fortran::semantics::IsProcedure(*sym) &&
         !sym->GetUltimate().has<Fortran::semantics::DerivedTypeDetails>() &&
@@ -329,11 +335,14 @@ void DataSharingProcessor::defaultPrivatize() {
         !symbolsInNestedRegions.contains(sym) &&
         !symbolsInParentRegions.contains(sym) &&
         !privatizedSymbols.contains(sym))
-      doPrivatize(sym);
+      doPrivatize(sym, clauseOps, privateSyms);
   }
 }
 
-void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
+void DataSharingProcessor::doPrivatize(
+    const Fortran::semantics::Symbol *sym,
+    mlir::omp::PrivateClauseOps *clauseOps,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *privateSyms) {
   if (!useDelayedPrivatization) {
     cloneSymbol(sym);
     copyFirstPrivateSymbol(sym);
@@ -361,7 +370,7 @@ void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
                 uniquePrivatizerName))
       return existingPrivatizer;
 
-    auto ip = firOpBuilder.saveInsertionPoint();
+    mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
     firOpBuilder.setInsertionPoint(&moduleOp.getBodyRegion().front(),
                                    moduleOp.getBodyRegion().front().begin());
     auto result = firOpBuilder.create<mlir::omp::PrivateClauseOp>(
@@ -413,14 +422,16 @@ void DataSharingProcessor::doPrivatize(const Fortran::semantics::Symbol *sym) {
     }
 
     symTable->popScope();
-    firOpBuilder.restoreInsertionPoint(ip);
     return result;
   }();
 
-  delayedPrivatizationInfo.privatizers.push_back(
-      mlir::SymbolRefAttr::get(privatizerOp));
-  delayedPrivatizationInfo.originalAddresses.push_back(hsb.getAddr());
-  delayedPrivatizationInfo.symbols.push_back(sym);
+  if (clauseOps) {
+    clauseOps->privatizers.push_back(mlir::SymbolRefAttr::get(privatizerOp));
+    clauseOps->privateVars.push_back(hsb.getAddr());
+  }
+
+  if (privateSyms)
+    privateSyms->push_back(sym);
 }
 
 } // namespace omp

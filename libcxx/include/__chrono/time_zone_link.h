@@ -14,10 +14,11 @@
 
 #include <version>
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
 #  include <__compare/strong_order.h>
 #  include <__config>
+#  include <__utility/private_constructor_tag.h>
 #  include <string>
 #  include <string_view>
 
@@ -37,9 +38,8 @@ namespace chrono {
 
 class time_zone_link {
 public:
-  struct __constructor_tag;
   _LIBCPP_NODISCARD_EXT
-  _LIBCPP_HIDE_FROM_ABI explicit time_zone_link(__constructor_tag&&, string_view __name, string_view __target)
+  _LIBCPP_HIDE_FROM_ABI explicit time_zone_link(__private_constructor_tag, string_view __name, string_view __target)
       : __name_{__name}, __target_{__target} {}
 
   _LIBCPP_HIDE_FROM_ABI time_zone_link(time_zone_link&&)            = default;
@@ -74,6 +74,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
 #endif // _LIBCPP___CHRONO_TIME_ZONE_LINK_H

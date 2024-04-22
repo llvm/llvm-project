@@ -500,6 +500,15 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
               .addReg(Incr, RegState::Kill)
               .addImm(ShiftImm);
         }
+      } else {
+        // and OldVal, OldVal, Mask
+        // and Incr, Incr, Mask
+        BuildMI(loopMBB, DL, TII->get(Mips::AND), OldVal)
+            .addReg(OldVal)
+            .addReg(Mask);
+        BuildMI(loopMBB, DL, TII->get(Mips::AND), Incr)
+            .addReg(Incr)
+            .addReg(Mask);
       }
     }
     // unsigned: sltu Scratch4, oldVal, Incr

@@ -181,7 +181,7 @@ define i32 @test_simplify15(i64 %x) {
 ;
 ; TARGET-LABEL: @test_simplify15(
 ; TARGET-NEXT:    [[CTTZ:%.*]] = call i64 @llvm.cttz.i64(i64 %x, i1 true), !range !1
-; TARGET-NEXT:    [[TMP1:%.*]] = trunc i64 [[CTTZ]] to i32
+; TARGET-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i64 [[CTTZ]] to i32
 ; TARGET-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 1
 ; TARGET-NEXT:    [[TMP3:%.*]] = icmp eq i64 %x, 0
 ; TARGET-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i32 0, i32 [[TMP2]]

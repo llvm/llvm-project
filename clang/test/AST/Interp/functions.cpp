@@ -185,6 +185,21 @@ namespace FunctionReturnType {
   constexpr int (*invalidFnPtr)() = m;
   static_assert(invalidFnPtr() == 5, ""); // both-error {{not an integral constant expression}} \
                                           // both-note {{non-constexpr function 'm'}}
+
+
+namespace ToBool {
+  void mismatched(int x) {}
+  typedef void (*callback_t)(int);
+  void foo() {
+    callback_t callback = (callback_t)mismatched; // warns
+    /// Casts a function pointer to a boolean and then back to a function pointer.
+    /// This is extracted from test/Sema/callingconv-cast.c
+    callback = (callback_t)!mismatched; // both-warning {{address of function 'mismatched' will always evaluate to 'true'}} \
+                                        // both-note {{prefix with the address-of operator to silence this warning}}
+  }
+}
+
+
 }
 
 namespace Comparison {
@@ -569,9 +584,20 @@ namespace VariadicOperator {
 namespace WeakCompare {
   [[gnu::weak]]void weak_method();
   static_assert(weak_method != nullptr, ""); // both-error {{not an integral constant expression}} \
-                                         // both-note {{comparison against address of weak declaration '&weak_method' can only be performed at runtim}}
+                                             // both-note {{comparison against address of weak declaration '&weak_method' can only be performed at runtim}}
 
   constexpr auto A = &weak_method;
   static_assert(A != nullptr, ""); // both-error {{not an integral constant expression}} \
-                               // both-note {{comparison against address of weak declaration '&weak_method' can only be performed at runtim}}
+                                   // both-note {{comparison against address of weak declaration '&weak_method' can only be performed at runtim}}
+}
+
+namespace FromIntegral {
+#if __cplusplus >= 202002L
+  typedef double (*DoubleFn)();
+  int a[(int)DoubleFn((void*)-1)()]; // both-error {{not allowed at file scope}} \
+                                    // both-warning {{variable length arrays}}
+  int b[(int)DoubleFn((void*)(-1 + 1))()]; // both-error {{not allowed at file scope}} \
+                                           // expected-note {{evaluates to a null function pointer}} \
+                                           // both-warning {{variable length arrays}}
+#endif
 }

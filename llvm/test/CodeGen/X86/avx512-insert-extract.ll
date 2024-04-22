@@ -1050,11 +1050,9 @@ define zeroext i8 @test_extractelement_v32i1(<32 x i8> %a, <32 x i8> %b) nounwin
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpminub %xmm1, %xmm0, %xmm1
 ; KNL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
-; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
-; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; KNL-NEXT:    kshiftrw $2, %k0, %k0
-; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    vpextrb $2, %xmm0, %eax
+; KNL-NEXT:    notb %al
+; KNL-NEXT:    movzbl %al, %eax
 ; KNL-NEXT:    andl $1, %eax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -1081,11 +1079,9 @@ define zeroext i8 @test_extractelement_v64i1(<64 x i8> %a, <64 x i8> %b) nounwin
 ; KNL-NEXT:    vpminub %ymm1, %ymm0, %ymm1
 ; KNL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
-; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
-; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    kmovw %k0, %ecx
+; KNL-NEXT:    vpextrb $15, %xmm0, %eax
+; KNL-NEXT:    notb %al
+; KNL-NEXT:    movzbl %al, %ecx
 ; KNL-NEXT:    andl $1, %ecx
 ; KNL-NEXT:    movl $4, %eax
 ; KNL-NEXT:    subl %ecx, %eax
@@ -1116,15 +1112,10 @@ define zeroext i8 @extractelement_v64i1_alt(<64 x i8> %a, <64 x i8> %b) nounwind
 ; KNL-NEXT:    vpminub %ymm1, %ymm0, %ymm1
 ; KNL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; KNL-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
-; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
-; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
-; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    movb $4, %cl
-; KNL-NEXT:    subb %al, %cl
-; KNL-NEXT:    movzbl %cl, %eax
+; KNL-NEXT:    vpextrb $15, %xmm0, %eax
+; KNL-NEXT:    notb %al
+; KNL-NEXT:    addb $4, %al
+; KNL-NEXT:    movzbl %al, %eax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;

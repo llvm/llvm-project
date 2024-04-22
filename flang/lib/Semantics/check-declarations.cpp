@@ -951,9 +951,9 @@ void CheckHelper::CheckObjectEntity(
       break;
     case common::CUDADataAttr::Managed:
       if (!IsAutomatic(symbol) && !IsAllocatable(symbol) &&
-          !details.isDummy()) {
+          !details.isDummy() && !evaluate::IsExplicitShape(symbol)) {
         messages_.Say(
-            "Object '%s' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, or a dummy argument"_err_en_US,
+            "Object '%s' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, explicit shape, or a dummy argument"_err_en_US,
             symbol.name());
       }
       break;
@@ -980,6 +980,13 @@ void CheckHelper::CheckObjectEntity(
       } else if (!inDeviceSubprogram) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(SHARED) must be declared in a device subprogram"_err_en_US,
+            symbol.name());
+      }
+      break;
+    case common::CUDADataAttr::Unified:
+      if ((!subpDetails || inDeviceSubprogram) && !isComponent) {
+        messages_.Say(
+            "Object '%s' with ATTRIBUTES(UNIFIED) must be declared in a host subprogram"_err_en_US,
             symbol.name());
       }
       break;
@@ -1030,9 +1037,10 @@ void CheckHelper::CheckObjectEntity(
             parser::ToUpperCaseLetters(common::EnumToString(attr)));
       }
     } else if (!subpDetails && symbol.owner().kind() != Scope::Kind::Module &&
-        symbol.owner().kind() != Scope::Kind::MainProgram) {
+        symbol.owner().kind() != Scope::Kind::MainProgram &&
+        symbol.owner().kind() != Scope::Kind::BlockConstruct) {
       messages_.Say(
-          "ATTRIBUTES(%s) may apply only to module, host subprogram, or device subprogram data"_err_en_US,
+          "ATTRIBUTES(%s) may apply only to module, host subprogram, block, or device subprogram data"_err_en_US,
           parser::ToUpperCaseLetters(common::EnumToString(attr)));
     }
   }
@@ -2346,7 +2354,14 @@ void CheckHelper::CheckProcBinding(
         "Intrinsic procedure '%s' is not a specific intrinsic permitted for use in the definition of binding '%s'"_err_en_US,
         binding.symbol().name(), symbol.name());
   }
-  if (const Symbol *overridden{FindOverriddenBinding(symbol)}) {
+  bool isInaccessibleDeferred{false};
+  if (const Symbol *
+      overridden{FindOverriddenBinding(symbol, isInaccessibleDeferred)}) {
+    if (isInaccessibleDeferred) {
+      SayWithDeclaration(*overridden,
+          "Override of PRIVATE DEFERRED '%s' must appear in its module"_err_en_US,
+          symbol.name());
+    }
     if (overridden->attrs().test(Attr::NON_OVERRIDABLE)) {
       SayWithDeclaration(*overridden,
           "Override of NON_OVERRIDABLE '%s' is not permitted"_err_en_US,

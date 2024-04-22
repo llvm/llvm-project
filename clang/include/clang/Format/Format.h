@@ -414,6 +414,21 @@ struct FormatStyle {
   /// \version 17
   ShortCaseStatementsAlignmentStyle AlignConsecutiveShortCaseStatements;
 
+  /// Style of aligning consecutive TableGen DAGArg operator colons.
+  /// If enabled, align the colon inside DAGArg which have line break inside.
+  /// This works only when TableGenBreakInsideDAGArg is BreakElements or
+  /// BreakAll and the DAGArg is not excepted by
+  /// TableGenBreakingDAGArgOperators's effect.
+  /// \code
+  ///   let dagarg = (ins
+  ///       a  :$src1,
+  ///       aa :$src2,
+  ///       aaa:$src3
+  ///   )
+  /// \endcode
+  /// \version 19
+  AlignConsecutiveStyle AlignConsecutiveTableGenBreakingDAGArgColons;
+
   /// Style of aligning consecutive TableGen cond operator colons.
   /// Align the colons of cases inside !cond operators.
   /// \code
@@ -2207,6 +2222,20 @@ struct FormatStyle {
   /// The break constructor initializers style to use.
   /// \version 5
   BreakConstructorInitializersStyle BreakConstructorInitializers;
+
+  /// If ``true``, clang-format will always break before function definition
+  /// parameters.
+  /// \code
+  ///    true:
+  ///    void functionDefinition(
+  ///             int A, int B) {}
+  ///
+  ///    false:
+  ///    void functionDefinition(int A, int B) {}
+  ///
+  /// \endcode
+  /// \version 19
+  bool BreakFunctionDefinitionParameters;
 
   /// Break after each annotation on a field in Java files.
   /// \code{.java}
@@ -4879,6 +4908,8 @@ struct FormatStyle {
            AlignConsecutiveMacros == R.AlignConsecutiveMacros &&
            AlignConsecutiveShortCaseStatements ==
                R.AlignConsecutiveShortCaseStatements &&
+           AlignConsecutiveTableGenBreakingDAGArgColons ==
+               R.AlignConsecutiveTableGenBreakingDAGArgColons &&
            AlignConsecutiveTableGenCondOperatorColons ==
                R.AlignConsecutiveTableGenCondOperatorColons &&
            AlignConsecutiveTableGenDefinitionColons ==
@@ -4921,6 +4952,8 @@ struct FormatStyle {
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
+           BreakFunctionDefinitionParameters ==
+               R.BreakFunctionDefinitionParameters &&
            BreakInheritanceList == R.BreakInheritanceList &&
            BreakStringLiterals == R.BreakStringLiterals &&
            BreakTemplateDeclarations == R.BreakTemplateDeclarations &&

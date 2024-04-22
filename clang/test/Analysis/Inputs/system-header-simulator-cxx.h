@@ -1111,13 +1111,24 @@ ostream &operator<<(ostream &, const string &);
 template <class T>
 ostream &operator<<(ostream &, const std::unique_ptr<T> &);
 #endif
+
+template <class CharT>
+class basic_istream;
+
+using istream = basic_istream<char>;
+
+extern std::istream cin;
+
+istream &getline(istream &, string &, char);
+istream &getline(istream &, string &);
 } // namespace std
 
-#ifdef TEST_INLINABLE_ALLOCATORS
 namespace std {
   void *malloc(size_t);
   void free(void *);
-}
+} // namespace std
+
+#ifdef TEST_INLINABLE_ALLOCATORS
 void* operator new(std::size_t size, const std::nothrow_t&) throw() { return std::malloc(size); }
 void* operator new[](std::size_t size, const std::nothrow_t&) throw() { return std::malloc(size); }
 void operator delete(void* ptr, const std::nothrow_t&) throw() { std::free(ptr); }

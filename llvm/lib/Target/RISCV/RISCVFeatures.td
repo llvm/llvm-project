@@ -15,9 +15,11 @@
 def FeatureStdExtI
     : SubtargetFeature<"i", "HasStdExtI", "true",
                        "'I' (Base Integer Instruction Set)">;
-def HasStdExtI : Predicate<"Subtarget->hasStdExtI()">,
-                 AssemblerPredicate<(all_of FeatureStdExtI),
-                                    "'I' (Base Integer Instruction Set)">;
+
+def FeatureStdExtE
+    : SubtargetFeature<"e", "HasStdExtE", "true",
+                       "Implements RV{32,64}E (provides 16 rather than 32 GPRs)">;
+
 def FeatureStdExtZic64b
     : SubtargetFeature<"zic64b", "HasStdExtZic64b", "true",
                        "'Zic64b' (Cache Block Size Is 64 Bytes)">;
@@ -104,7 +106,7 @@ def FeatureStdExtZihpm
                        "'Zihpm' (Hardware Performance Counters)",
                        [FeatureStdExtZicsr]>;
 
-def FeatureStdExtZimop : SubtargetFeature<"experimental-zimop", "HasStdExtZimop", "true",
+def FeatureStdExtZimop : SubtargetFeature<"zimop", "HasStdExtZimop", "true",
                                           "'Zimop' (May-Be-Operations)">;
 def HasStdExtZimop : Predicate<"Subtarget->hasStdExtZimop()">,
                      AssemblerPredicate<(all_of FeatureStdExtZimop),
@@ -207,6 +209,10 @@ def HasStdExtAOrZalrsc
       AssemblerPredicate<(any_of FeatureStdExtA, FeatureStdExtZalrsc),
                          "'A' (Atomic Instructions) or "
                          "'Zalrsc' (Load-Reserved/Store-Conditional)">;
+
+def FeatureStdExtZama16b
+    : SubtargetFeature<"zama16b", "HasStdExtZama16b", "true",
+                       "'Zama16b' (Atomic 16-byte misaligned loads, stores and AMOs)">;
 
 def FeatureStdExtZawrs : SubtargetFeature<"zawrs", "HasStdExtZawrs", "true",
                                           "'Zawrs' (Wait on Reservation Set)">;
@@ -390,7 +396,7 @@ def HasStdExtCOrZcfOrZce
                          "'C' (Compressed Instructions) or "
                          "'Zcf' (Compressed Single-Precision Floating-Point Instructions)">;
 
-def FeatureStdExtZcmop : SubtargetFeature<"experimental-zcmop", "HasStdExtZcmop", "true",
+def FeatureStdExtZcmop : SubtargetFeature<"zcmop", "HasStdExtZcmop", "true",
                                           "'Zcmop' (Compressed May-Be-Operations)",
                                           [FeatureStdExtZca]>;
 def HasStdExtZcmop : Predicate<"Subtarget->hasStdExtZcmop()">,
@@ -1160,12 +1166,6 @@ def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
 defvar RV32 = DefaultMode;
 def RV64           : HwMode<"+64bit", [IsRV64]>;
 
-def FeatureRVE
-    : SubtargetFeature<"e", "IsRVE", "true",
-                       "Implements RV{32,64}E (provides 16 rather than 32 GPRs)">;
-def IsRVE : Predicate<"Subtarget->isRVE()">,
-            AssemblerPredicate<(all_of FeatureRVE)>;
-
 def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",
                        "Enable Linker relaxation.">;
@@ -1183,10 +1183,15 @@ def FeatureTrailingSeqCstFence : SubtargetFeature<"seq-cst-trailing-fence",
                                           "true",
                                           "Enable trailing fence for seq-cst store.">;
 
-def FeatureFastUnalignedAccess
-   : SubtargetFeature<"fast-unaligned-access", "HasFastUnalignedAccess",
-                      "true", "Has reasonably performant unaligned "
-                      "loads and stores (both scalar and vector)">;
+def FeatureUnalignedScalarMem
+   : SubtargetFeature<"unaligned-scalar-mem", "EnableUnalignedScalarMem",
+                      "true", "Has reasonably performant unaligned scalar "
+                      "loads and stores">;
+
+def FeatureUnalignedVectorMem
+   : SubtargetFeature<"unaligned-vector-mem", "EnableUnalignedVectorMem",
+                      "true", "Has reasonably performant unaligned vector "
+                      "loads and stores">;
 
 def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
@@ -1225,6 +1230,10 @@ def TuneNoSinkSplatOperands
     : SubtargetFeature<"no-sink-splat-operands", "SinkSplatOperands",
                        "false", "Disable sink splat operands to enable .vx, .vf,"
                        ".wx, and .wf instructions">;
+
+def TunePreferWInst
+    : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
+                       "Prefer instructions with W suffix">;
 
 def TuneConditionalCompressedMoveFusion
     : SubtargetFeature<"conditional-cmv-fusion", "HasConditionalCompressedMoveFusion",
