@@ -514,16 +514,17 @@ public:
   using hash_value_type = uint64_t;
   using offset_type = uint64_t;
 
-  // Pointer to the memprof schema to use for the generator. Unlike the reader
-  // we must use a default constructor with no params for the writer trait so we
-  // have a public member which must be initialized by the user.
-  MemProfSchema *Schema = nullptr;
+private:
+  // Pointer to the memprof schema to use for the generator.
+  const MemProfSchema *Schema;
   // The MemProf version to use for the serialization.
   IndexedVersion Version;
 
+public:
   // We do not support the default constructor, which does not set Version.
   RecordWriterTrait() = delete;
-  RecordWriterTrait(IndexedVersion V) : Version(V) {}
+  RecordWriterTrait(const MemProfSchema *Schema, IndexedVersion V)
+      : Schema(Schema), Version(V) {}
 
   static hash_value_type ComputeHash(key_type_ref K) { return K; }
 
@@ -651,8 +652,8 @@ public:
   EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
     using namespace support;
     endian::Writer LE(Out, llvm::endianness::little);
+    // We do not explicitly emit the key length because it is a constant.
     offset_type N = sizeof(K);
-    LE.write<offset_type>(N);
     offset_type M = sizeof(FrameId) * V.size();
     LE.write<offset_type>(M);
     return std::make_pair(N, M);
@@ -696,8 +697,8 @@ public:
   ReadKeyDataLength(const unsigned char *&D) {
     using namespace support;
 
-    offset_type KeyLen =
-        endian::readNext<offset_type, llvm::endianness::little>(D);
+    // We do not explicitly read the key length because it is a constant.
+    offset_type KeyLen = sizeof(external_key_type);
     offset_type DataLen =
         endian::readNext<offset_type, llvm::endianness::little>(D);
     return std::make_pair(KeyLen, DataLen);

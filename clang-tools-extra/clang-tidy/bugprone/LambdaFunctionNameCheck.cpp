@@ -8,7 +8,9 @@
 
 #include "LambdaFunctionNameCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
@@ -56,6 +58,8 @@ private:
   LambdaFunctionNameCheck::SourceRangeSet* SuppressMacroExpansions;
 };
 
+AST_MATCHER(CXXMethodDecl, isInLambda) { return Node.getParent()->isLambda(); }
+
 } // namespace
 
 LambdaFunctionNameCheck::LambdaFunctionNameCheck(StringRef Name,
@@ -69,9 +73,13 @@ void LambdaFunctionNameCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void LambdaFunctionNameCheck::registerMatchers(MatchFinder *Finder) {
-  // Match on PredefinedExprs inside a lambda.
-  Finder->addMatcher(predefinedExpr(hasAncestor(lambdaExpr())).bind("E"),
-                     this);
+  Finder->addMatcher(
+      cxxMethodDecl(isInLambda(),
+                    hasBody(forEachDescendant(
+                        predefinedExpr(hasAncestor(cxxMethodDecl().bind("fn")))
+                            .bind("E"))),
+                    equalsBoundNode("fn")),
+      this);
 }
 
 void LambdaFunctionNameCheck::registerPPCallbacks(

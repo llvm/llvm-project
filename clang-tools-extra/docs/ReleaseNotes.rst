@@ -155,6 +155,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/inc-dec-in-conditions>` check to ignore code
   within unevaluated contexts, such as ``decltype``.
 
+- Improved :doc:`bugprone-lambda-function-name<clang-tidy/checks/bugprone/lambda-function-name>`
+  check by ignoring ``__func__`` macro in lambda captures, initializers of
+  default parameters and nested function declarations.
+
 - Improved :doc:`bugprone-non-zero-enum-to-bool-conversion
   <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by
   eliminating false positives resulting from direct usage of bitwise operators

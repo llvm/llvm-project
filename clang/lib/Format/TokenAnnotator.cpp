@@ -1543,6 +1543,7 @@ private:
         return false;
       if (Line.MustBeDeclaration && Contexts.size() == 1 &&
           !Contexts.back().IsExpression && !Line.startsWith(TT_ObjCProperty) &&
+          !Line.startsWith(tok::l_paren) &&
           !Tok->isOneOf(TT_TypeDeclarationParen, TT_RequiresExpressionLParen)) {
         if (const auto *Previous = Tok->Previous;
             !Previous ||
@@ -2726,8 +2727,10 @@ private:
       }
     }
 
-    if (Tok.Next->isOneOf(tok::question, tok::ampamp))
+    if (Tok.Next->is(tok::question) ||
+        (Tok.Next->is(tok::ampamp) && !Tok.Previous->isTypeName(IsCpp))) {
       return false;
+    }
 
     // `foreach((A a, B b) in someList)` should not be seen as a cast.
     if (Tok.Next->is(Keywords.kw_in) && Style.isCSharp())
