@@ -1710,9 +1710,9 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
         return NItem;
       };
 
-  SmallVector<InstLane> Start;
-  for (unsigned M = 0; M < Ty->getNumElements(); ++M)
-    Start.push_back(LookThroughShuffles(&I, M));
+  SmallVector<InstLane> Start(Ty->getNumElements());
+  for (unsigned M = 0, E = Ty->getNumElements(); M < E; ++M)
+    Start[M] = LookThroughShuffles(&I, M);
 
   SmallVector<SmallVector<InstLane>> Worklist;
   Worklist.push_back(Start);
@@ -1753,10 +1753,12 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
             return true;
           if (auto *I = dyn_cast<Instruction>(IL.first); I && !I->hasOneUse())
             return false;
-          return IL.first->getValueID() == Item[0].first->getValueID() &&
-                 (!isa<IntrinsicInst>(IL.first) ||
-                  cast<IntrinsicInst>(IL.first)->getIntrinsicID() ==
-                      cast<IntrinsicInst>(Item[0].first)->getIntrinsicID());
+          if (IL.first->getValueID() != Item[0].first->getValueID())
+            return false;
+          auto *II = dyn_cast<IntrinsicInst>(IL.first);
+          return !II ||
+                 II->getIntrinsicID() ==
+                     cast<IntrinsicInst>(Item[0].first)->getIntrinsicID();
         }))
       return false;
 
@@ -1773,7 +1775,7 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
 
   // If we got this far, we know the shuffles are superfluous and can be
   // removed. Scan through again and generate the new tree of instructions.
-  std::function<Value *(ArrayRef<InstLane>)> generate =
+  std::function<Value *(ArrayRef<InstLane>)> Generate =
       [&](ArrayRef<InstLane> Item) -> Value * {
     if (IdentityLeafs.contains(Item[0].first) &&
         all_of(drop_begin(enumerate(Item)), [&](const auto &E) {
@@ -1781,7 +1783,8 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
                                       E.value().second == (int)E.index());
         })) {
       return Item[0].first;
-    } else if (SplatLeafs.contains(Item[0].first)) {
+    }
+    if (SplatLeafs.contains(Item[0].first)) {
       if (auto ILI = dyn_cast<Instruction>(Item[0].first))
         Builder.SetInsertPoint(*ILI->getInsertionPointAfterDef());
       else if (isa<Argument>(Item[0].first))
@@ -1791,20 +1794,19 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
     }
 
     auto *I = cast<Instruction>(Item[0].first);
-    SmallVector<Value *> Ops;
-    unsigned E = I->getNumOperands();
-    for (unsigned Idx = 0; Idx < E; Idx++)
-      Ops.push_back(generate(GenerateInstLaneVectorFromOperand(Item, Idx)));
+    SmallVector<Value *> Ops(I->getNumOperands());
+    for (unsigned Idx = 0, E = I->getNumOperands(); Idx < E; Idx++)
+      Ops[Idx] = Generate(GenerateInstLaneVectorFromOperand(Item, Idx));
     Builder.SetInsertPoint(I);
     if (auto BI = dyn_cast<BinaryOperator>(I))
       return Builder.CreateBinOp((Instruction::BinaryOps)BI->getOpcode(),
                                  Ops[0], Ops[1]);
-    if (auto UI = dyn_cast<UnaryOperator>(I))
-      return Builder.CreateUnOp((Instruction::UnaryOps)UI->getOpcode(), Ops[0]);
-    llvm_unreachable("Unhandled instruction in generate");
+    assert(isa<UnaryInstruction>(I) &&
+           "Unexpected instruction type in Generate");
+    return Builder.CreateUnOp((Instruction::UnaryOps)I->getOpcode(), Ops[0]);
   };
 
-  Value *V = generate(Start);
+  Value *V = Generate(Start);
   replaceValue(I, *V);
   return true;
 }
