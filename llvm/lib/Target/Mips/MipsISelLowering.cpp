@@ -457,6 +457,13 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::FREM,              MVT::f32,   Expand);
   setOperationAction(ISD::FREM,              MVT::f64,   Expand);
 
+  // Lower ISD::FMINIMUM and ISD::FMAXIMUM for hard FP targets.
+  if (!Subtarget.useSoftFloat()) {
+    setOperationAction(ISD::FMINIMUM, MVT::f32, Custom);
+    setOperationAction(ISD::FMAXIMUM, MVT::f32, Custom);
+    setOperationAction(ISD::FMINIMUM, MVT::f64, Custom);
+    setOperationAction(ISD::FMAXIMUM, MVT::f64, Custom);
+  }
   // Lower f16 conversion operations into library calls
   setOperationAction(ISD::FP16_TO_FP,        MVT::f32,   Expand);
   setOperationAction(ISD::FP_TO_FP16,        MVT::f32,   Expand);
@@ -1267,6 +1274,9 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::STORE:              return lowerSTORE(Op, DAG);
   case ISD::EH_DWARF_CFA:       return lowerEH_DWARF_CFA(Op, DAG);
   case ISD::FP_TO_SINT:         return lowerFP_TO_SINT(Op, DAG);
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
+    return lowerFMINIMUM_FMAXIMUM(Op, DAG);
   }
   return SDValue();
 }
@@ -2523,6 +2533,94 @@ SDValue MipsTargetLowering::lowerFABS(SDValue Op, SelectionDAG &DAG) const {
     return lowerFABS64(Op, DAG, Subtarget.hasExtractInsert());
 
   return lowerFABS32(Op, DAG, Subtarget.hasExtractInsert());
+}
+
+SDValue MipsTargetLowering::lowerFMINIMUM_FMAXIMUM(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  // Get information about X and Y:
+  // VT of the operand, the operand itself and its length,
+  // The possibility of X or Y being a NaN.
+  EVT VT = Op.getValueType();
+  assert(
+      (VT == MVT::f32 || VT == MVT::f64) &&
+      "Unsupported float point type or operands are not floating point values");
+  // Used to compare an operand to zero.
+  EVT IVT = VT.changeTypeToInteger();
+  // Whether it is fminimum or fmaximum.
+  ISD::NodeType CmpOp = (ISD::NodeType)Op->getOpcode();
+  bool IsMaxOp = (CmpOp == ISD::FMAXIMUM);
+  SDValue X = Op->getOperand(0);
+  SDValue Y = Op->getOperand(1);
+  // The constructed DAG.
+  SDValue MinMax;
+  // Location of current node.
+  SDLoc Loc(Op);
+  // VT for the usage of SETCC op.
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT SetCCType =
+      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+
+  bool IsXNeverNaN = DAG.isKnownNeverNaN(X);
+  bool IsYNeverNaN = DAG.isKnownNeverNaN(Y);
+  bool NaNMightPresent = (!IsXNeverNaN || !IsYNeverNaN);
+  bool IsXNeverZero = DAG.isKnownNeverZeroFloat(X);
+  bool IsYNeverZero = DAG.isKnownNeverZeroFloat(Y);
+  bool ZeroMightPresent = (!IsXNeverZero || !IsYNeverZero);
+  // Note that on Pre-R6 targets fmin and fmax will be replaced with SetCC.
+  if (Subtarget.hasMips32r6() || Subtarget.hasMips64r6()) {
+    // We have matched min.s/d and max.s/d to their corresponding SDAG
+    // operations.
+    MinMax =
+        DAG.getNode((IsMaxOp ? ISD::FMAXNUM : ISD::FMINNUM), Loc, VT, X, Y);
+  } else {
+    // Otherwise, use SETCC.
+    SDValue SetCCCmp =
+        DAG.getSetCC(Loc, SetCCType, X, Y,
+                     IsMaxOp ? ISD::CondCode::SETGT : ISD::CondCode::SETLT);
+    MinMax = DAG.getSelect(Loc, VT, SetCCCmp, X, Y);
+  }
+  // Add NaN related checks.
+  if (NaNMightPresent) {
+    // If either X or Y is NaN, return NaN.
+    APFloat APNaN = APFloat::getNaN(DAG.EVTToAPFloatSemantics(VT));
+    SDValue TstNaN = DAG.getSetCC(Loc, SetCCType, X, Y, ISD::CondCode::SETUO);
+    MinMax = DAG.getSelect(Loc, VT, TstNaN, DAG.getConstantFP(APNaN, Loc, VT),
+                           MinMax);
+  }
+  // Add zero related checks.
+  if (ZeroMightPresent) {
+    // Check if both X and Y are zeroes.
+    // MIPS ignores signage of zeroes when comparing against zeroes, so -0.0 ==
+    // +0.0.
+    APFloat FPZero = APFloat::getZero(DAG.EVTToAPFloatSemantics(VT));
+    SDValue ConstFPZero = DAG.getConstantFP(FPZero, Loc, VT);
+    SDValue Res = DAG.getNode(ISD::FADD, Loc, VT, X, Y);
+    SDValue TstZeroes =
+        DAG.getSetCC(Loc, SetCCType, Res, ConstFPZero, ISD::CondCode::SETEQ);
+    SDValue IsXSigned;
+
+    if (VT.getSizeInBits() == 64 && Subtarget.isGP32bit()) {
+      // Extract the higher 32 bits, and compare like how 64-bit does.
+      SDValue ConstInt32Zero = DAG.getConstant(0, Loc, MVT::i32);
+      SDValue XHiInt = DAG.getNode(MipsISD::ExtractElementF64, Loc, MVT::i32, X,
+                                   DAG.getConstant(1, Loc, MVT::i32));
+      IsXSigned = DAG.getSetCC(Loc, SetCCType, XHiInt, ConstInt32Zero,
+                               ISD::CondCode::SETLT);
+    } else {
+      SDValue ConstIntZero = DAG.getConstant(0, Loc, IVT);
+      // Check if X is signed.
+      // Bitcast X to an integer, and see if it is -(U)INT_MAX (compared to 0).
+      SDValue XInt = DAG.getNode(ISD::BITCAST, Loc, IVT, X);
+      IsXSigned = DAG.getSetCC(Loc, SetCCType, XInt, ConstIntZero,
+                               ISD::CondCode::SETLT);
+    }
+    // Return Y if X and Y are both zeroes and X == -0.0, if op is max;
+    // Otherwise return Y.
+    SDValue XOrY = IsMaxOp ? DAG.getSelect(Loc, VT, IsXSigned, Y, X)
+                           : DAG.getSelect(Loc, VT, IsXSigned, X, Y);
+    MinMax = DAG.getSelect(Loc, VT, TstZeroes, XOrY, MinMax);
+  }
+  return MinMax;
 }
 
 SDValue MipsTargetLowering::
