@@ -401,9 +401,8 @@ define i1 @udiv_x_by_const_cmp_x(i32 %x) {
 
 define <2 x i1> @udiv_x_by_const_cmp_x_non_splat(<2 x i32> %x) {
 ; CHECK-LABEL: @udiv_x_by_const_cmp_x_non_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv <2 x i32> [[X:%.*]], <i32 123, i32 -123>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <2 x i32> [[TMP1]], [[X]]
-; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
 ;
   %1 = udiv <2 x i32> %x, <i32 123, i32 -123>
   %2 = icmp slt <2 x i32> %1, %x
@@ -413,9 +412,8 @@ define <2 x i1> @udiv_x_by_const_cmp_x_non_splat(<2 x i32> %x) {
 
 define <2 x i1> @sdiv_x_by_const_cmp_x_non_splat(<2 x i32> %x) {
 ; CHECK-LABEL: @sdiv_x_by_const_cmp_x_non_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <2 x i32> [[X:%.*]], <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], [[X]]
-; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i32> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
 ;
   %1 = sdiv <2 x i32> %x, <i32 2, i32 3>
   %2 = icmp eq <2 x i32> %1, %x
@@ -446,8 +444,7 @@ define <4 x i1> @lshr_by_const_cmp_sle_value(<4 x i32> %x) {
 
 define <4 x i1> @lshr_by_const_cmp_sle_value_non_splat(<4 x i32> %x) {
 ; CHECK-LABEL: @lshr_by_const_cmp_sle_value_non_splat(
-; CHECK-NEXT:    [[V:%.*]] = lshr <4 x i32> [[X:%.*]], <i32 3, i32 3, i32 3, i32 5>
-; CHECK-NEXT:    [[R:%.*]] = icmp sle <4 x i32> [[V]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt <4 x i32> [[X:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %v = lshr <4 x i32> %x, <i32 3, i32 3, i32 3, i32 5>
@@ -458,8 +455,7 @@ define <4 x i1> @lshr_by_const_cmp_sle_value_non_splat(<4 x i32> %x) {
 
 define <4 x i1> @ashr_by_const_cmp_sge_value_non_splat(<4 x i32> %x) {
 ; CHECK-LABEL: @ashr_by_const_cmp_sge_value_non_splat(
-; CHECK-NEXT:    [[V:%.*]] = ashr <4 x i32> [[X:%.*]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    [[R:%.*]] = icmp sge <4 x i32> [[V]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt <4 x i32> [[X:%.*]], <i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %v = ashr <4 x i32> %x, <i32 1, i32 2, i32 3, i32 4>

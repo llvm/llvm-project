@@ -7128,34 +7128,30 @@ Instruction *InstCombinerImpl::foldICmpCommutative(ICmpInst::Predicate Pred,
     return replaceInstUsesWith(CxtI, V);
 
   // Folding (X / Y) pred X => X swap(pred) 0 for constant Y other than 0 or 1
+  auto CheckUGT1 = [](const APInt &Divisor) { return Divisor.ugt(1); };
   {
-    const APInt *Divisor;
-    if (match(Op0, m_UDiv(m_Specific(Op1), m_APInt(Divisor))) &&
-        Divisor->ugt(1)) {
+    if (match(Op0, m_UDiv(m_Specific(Op1), m_CheckedInt(CheckUGT1)))) {
       return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
                           Constant::getNullValue(Op1->getType()));
     }
 
     if (!ICmpInst::isUnsigned(Pred) &&
-        match(Op0, m_SDiv(m_Specific(Op1), m_APInt(Divisor))) &&
-        Divisor->ugt(1)) {
+        match(Op0, m_SDiv(m_Specific(Op1), m_CheckedInt(CheckUGT1)))) {
       return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
                           Constant::getNullValue(Op1->getType()));
     }
   }
 
   // Another case of this fold is (X >> Y) pred X => X swap(pred) 0 if Y != 0
+  auto CheckNE0 = [](const APInt &Shift) { return !Shift.isZero(); };
   {
-    const APInt *Shift;
-    if (match(Op0, m_LShr(m_Specific(Op1), m_APInt(Shift))) &&
-        !Shift->isZero()) {
+    if (match(Op0, m_LShr(m_Specific(Op1), m_CheckedInt(CheckNE0)))) {
       return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
                           Constant::getNullValue(Op1->getType()));
     }
 
     if ((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SGE) &&
-        match(Op0, m_AShr(m_Specific(Op1), m_APInt(Shift))) &&
-        !Shift->isZero()) {
+        match(Op0, m_AShr(m_Specific(Op1), m_CheckedInt(CheckNE0)))) {
       return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
                           Constant::getNullValue(Op1->getType()));
     }
