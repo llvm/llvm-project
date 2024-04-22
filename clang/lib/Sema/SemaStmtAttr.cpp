@@ -109,7 +109,7 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
     SetHints(LoopHintAttr::Unroll, LoopHintAttr::Disable);
   } else if (PragmaName == "unroll") {
     // #pragma unroll N
-    if (ValueExpr) {
+    if (ValueExpr && !ValueExpr->isValueDependent()) {
       llvm::APSInt ValueAPS;
       ExprResult R = S.VerifyIntegerConstantExpression(ValueExpr, &ValueAPS);
       assert(!R.isInvalid() && "unroll count value must be a valid value, it's "
