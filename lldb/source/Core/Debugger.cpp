@@ -1115,9 +1115,6 @@ void Debugger::RunIOHandlerSync(const IOHandlerSP &reader_sp) {
   IOHandlerSP top_reader_sp = reader_sp;
 
   while (top_reader_sp) {
-    if (!top_reader_sp)
-      break;
-
     top_reader_sp->Run();
 
     // Don't unwind past the starting point.
