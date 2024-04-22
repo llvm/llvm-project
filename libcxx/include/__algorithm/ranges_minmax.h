@@ -52,7 +52,7 @@ struct __fn {
   template <class _Type,
             class _Proj                                                      = identity,
             indirect_strict_weak_order<projected<const _Type*, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr ranges::minmax_result<const _Type&>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr ranges::minmax_result<const _Type&>
   operator()(_LIBCPP_LIFETIMEBOUND const _Type& __a,
              _LIBCPP_LIFETIMEBOUND const _Type& __b,
              _Comp __comp = {},
@@ -65,7 +65,7 @@ struct __fn {
   template <copyable _Type,
             class _Proj                                                      = identity,
             indirect_strict_weak_order<projected<const _Type*, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr ranges::minmax_result<_Type>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr ranges::minmax_result<_Type>
   operator()(initializer_list<_Type> __il, _Comp __comp = {}, _Proj __proj = {}) const {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __il.begin() != __il.end(), "initializer_list has to contain at least one element");
@@ -77,7 +77,7 @@ struct __fn {
             class _Proj                                                            = identity,
             indirect_strict_weak_order<projected<iterator_t<_Range>, _Proj>> _Comp = ranges::less>
     requires indirectly_copyable_storable<iterator_t<_Range>, range_value_t<_Range>*>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr ranges::minmax_result<range_value_t<_Range>>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr ranges::minmax_result<range_value_t<_Range>>
   operator()(_Range&& __r, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __first  = ranges::begin(__r);
     auto __last   = ranges::end(__r);

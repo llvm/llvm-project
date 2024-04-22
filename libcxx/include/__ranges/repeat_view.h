@@ -229,13 +229,13 @@ namespace views {
 namespace __repeat {
 struct __fn {
   template <class _Tp>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Tp&& __value)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Tp&& __value)
     noexcept(noexcept(ranges::repeat_view(std::forward<_Tp>(__value))))
     -> decltype(      ranges::repeat_view(std::forward<_Tp>(__value)))
     { return          ranges::repeat_view(std::forward<_Tp>(__value)); }
 
   template <class _Tp, class _Bound>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Tp&& __value, _Bound&& __bound_sentinel)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Tp&& __value, _Bound&& __bound_sentinel)
     noexcept(noexcept(ranges::repeat_view(std::forward<_Tp>(__value), std::forward<_Bound>(__bound_sentinel))))
     -> decltype(      ranges::repeat_view(std::forward<_Tp>(__value), std::forward<_Bound>(__bound_sentinel)))
     { return          ranges::repeat_view(std::forward<_Tp>(__value), std::forward<_Bound>(__bound_sentinel)); }

@@ -79,6 +79,10 @@ Deprecations and Removals
   in language modes prior to C++20. If you are using these features prior to C++20, please update to ``-std=c++20``.
   In LLVM 20, the C++20 synchronization library will be removed entirely in language modes prior to C++20.
 
+- ``_LIBCPP_DISABLE_NODISCARD_EXT`` has been removed. ``[[nodiscard]]`` applications are now unconditional.
+  This decision is based on LEWGs discussion on `P3122 <https://wg21.link/P3122>` and `P3162 <https://wg21.link/P3162>`
+  to not use ``[[nodiscard]]`` in the standard.
+
 - TODO: The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable that was used to enable the safe mode has been deprecated and setting
   it triggers an error; use the ``LIBCXX_HARDENING_MODE`` CMake variable with the value ``extensive`` instead. Similarly,
   the ``_LIBCPP_ENABLE_ASSERTIONS`` macro has been deprecated (setting it to ``1`` still enables the extensive mode in

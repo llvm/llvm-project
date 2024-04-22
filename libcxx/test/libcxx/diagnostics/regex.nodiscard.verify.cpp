@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Test that _LIBCPP_NODISCARD_AFTER_CXX17 works
-// #define _LIBCPP_NODISCARD_AFTER_CXX17 [[nodiscard]]
-
 // UNSUPPORTED: c++03
-// UNSUPPORTED: (c++11 || c++14 || c++17) && !stdlib=libc++
 
-#include <__config>
+// UNSUPPORTED: no-localization
 
-_LIBCPP_NODISCARD_AFTER_CXX17 int foo() { return 6; }
+// check that <regex> functions are marked [[nodiscard]]
 
-void f() {
-    foo(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#include <regex>
+
+void test() {
+  std::cmatch match_result;
+  match_result.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }

@@ -6,17 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Test that _LIBCPP_NODISCARD_EXT is not defined to [[nodiscard]] when
-// _LIBCPP_DISABLE_NODISCARD_EXT is defined
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_NODISCARD_EXT
+// check that <functional> functions are marked [[nodiscard]]
 
-#include <__config>
+#include <functional>
 
-_LIBCPP_NODISCARD_EXT int foo() { return 42; }
+#include "test_macros.h"
 
-int main(int, char**) {
-  foo(); // OK.
-
-  return 0;
+void test() {
+  int i = 0;
+  std::identity()(i); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 }
