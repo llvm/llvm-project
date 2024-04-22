@@ -56,6 +56,13 @@ public:
   BuiltinVaListKind getBuiltinVaListKind() const override;
   bool setCPU(const std::string &Name) override;
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
+
+  virtual unsigned hardwareDestructiveInterferenceSize() const override {
+    return 32;
+  }
+  virtual unsigned hardwareConstructiveInterferenceSize() const override {
+    return 32;
+  }
 };
 
 } // namespace targets

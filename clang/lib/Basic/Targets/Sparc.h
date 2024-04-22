@@ -140,6 +140,13 @@ public:
     CPU = getCPUKind(Name);
     return CPU != CK_GENERIC;
   }
+
+  virtual unsigned hardwareDestructiveInterferenceSize() const override {
+    return 32;
+  }
+  virtual unsigned hardwareConstructiveInterferenceSize() const override {
+    return 32;
+  }
 };
 
 // SPARC v8 is the 32-bit mode selected by Triple::sparc.

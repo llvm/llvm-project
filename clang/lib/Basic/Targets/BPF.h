@@ -113,6 +113,13 @@ public:
     StringRef CPUName(Name);
     return isValidCPUName(CPUName);
   }
+
+  virtual unsigned hardwareDestructiveInterferenceSize() const override {
+    return 32;
+  }
+  virtual unsigned hardwareConstructiveInterferenceSize() const override {
+    return 32;
+  }
 };
 } // namespace targets
 } // namespace clang

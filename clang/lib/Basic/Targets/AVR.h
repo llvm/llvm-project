@@ -175,6 +175,13 @@ public:
   std::optional<std::string> handleAsmEscapedChar(char EscChar) const override;
   StringRef getABI() const override { return ABI; }
 
+  virtual unsigned hardwareDestructiveInterferenceSize() const override {
+    return 32;
+  }
+  virtual unsigned hardwareConstructiveInterferenceSize() const override {
+    return 32;
+  }
+
 protected:
   std::string CPU;
   StringRef ABI;

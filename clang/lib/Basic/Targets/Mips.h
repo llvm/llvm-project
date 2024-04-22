@@ -431,6 +431,13 @@ public:
 
   bool validateTarget(DiagnosticsEngine &Diags) const override;
   bool hasBitIntType() const override { return true; }
+
+  virtual unsigned hardwareDestructiveInterferenceSize() const override {
+    return 32;
+  }
+  virtual unsigned hardwareConstructiveInterferenceSize() const override {
+    return 32;
+  }
 };
 } // namespace targets
 } // namespace clang

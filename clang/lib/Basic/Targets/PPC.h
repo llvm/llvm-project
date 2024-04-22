@@ -422,6 +422,13 @@ public:
     // This is the ELF definition
     return TargetInfo::PowerABIBuiltinVaList;
   }
+
+  virtual unsigned hardwareDestructiveInterferenceSize() const override {
+    return 32;
+  }
+  virtual unsigned hardwareConstructiveInterferenceSize() const override {
+    return 32;
+  }
 };
 
 // Note: ABI differences may eventually require us to have a separate
@@ -501,6 +508,13 @@ public:
     default:
       return CCCR_Warning;
     }
+  }
+
+  virtual unsigned hardwareDestructiveInterferenceSize() const override {
+    return 128;
+  }
+  virtual unsigned hardwareConstructiveInterferenceSize() const override {
+    return 128;
   }
 };
 
