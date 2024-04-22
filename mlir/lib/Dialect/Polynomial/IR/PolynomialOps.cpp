@@ -84,3 +84,23 @@ LogicalResult ToTensorOp::verify() {
                        "the output type's ring attribute.";
   return diag;
 }
+
+LogicalResult MulScalarOp::verify() {
+  Type argType = getPolynomial().getType();
+  PolynomialType polyType;
+
+  if (auto shapedPolyType = dyn_cast<ShapedType>(argType)) {
+    polyType = dyn_cast<PolynomialType>(shapedPolyType.getElementType());
+  } else {
+    polyType = cast<PolynomialType>(argType);
+  }
+
+  Type coefficientType = polyType.getRing().getCoefficientType();
+
+  if (coefficientType != getScalar().getType())
+    return emitOpError() << "polynomial coefficient type " << coefficientType
+                         << " does not match scalar type "
+                         << getScalar().getType();
+
+  return success();
+}

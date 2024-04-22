@@ -255,7 +255,7 @@ def Polynomial_MulScalarOp : Polynomial_Op<"mul_scalar", [
     #ring = #polynomial.ring<coefficientType=i32, coefficientModulus=65536, polynomialModulus=#poly>
     %0 = polynomial.constant #polynomial.polynomial<1 + x**2> : !polynomial.polynomial<#ring>
     %1 = arith.constant 3 : i32
-    %2 = polynomial.mul_scalar %0, %1 : (!polynomial.polynomial<#ring>, i32) -> !polynomial.polynomial<#ring>
+    %2 = polynomial.mul_scalar %0, %1 : !polynomial.polynomial<#ring>, i32
     ```
   }];
 
@@ -267,6 +267,7 @@ def Polynomial_MulScalarOp : Polynomial_Op<"mul_scalar", [
     PolynomialLike:$output
   );
   let assemblyFormat = "operands attr-dict `:` qualified(type($polynomial)) `,` type($scalar)";
+  let hasVerifier = 1;
 }
 
 def Polynomial_LeadingTermOp: Polynomial_Op<"leading_term"> {
