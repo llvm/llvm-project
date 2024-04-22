@@ -50,6 +50,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/UnifiedOnDiskCache.h"
+#include "OnDiskCommon.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/CAS/OnDiskKeyValueDB.h"
 #include "llvm/Support/Errc.h"
@@ -182,7 +183,7 @@ UnifiedOnDiskCache::open(StringRef RootPath, std::optional<uint64_t> SizeLimit,
   // from creating a new chain (essentially while a \p UnifiedOnDiskCache
   // instance holds a shared lock the storage for the primary directory will
   // grow unrestricted).
-  if (std::error_code EC = sys::fs::lockFile(LockFD, /*Exclusive=*/false))
+  if (std::error_code EC = lockFileThreadSafe(LockFD, /*Exclusive=*/false))
     return createFileError(PathBuf, EC);
 
   SmallVector<std::string, 4> DBDirs;
@@ -295,7 +296,7 @@ Error UnifiedOnDiskCache::close(bool CheckSizeLimit) {
   UpstreamKVDB.reset();
   PrimaryGraphDB.reset();
   UpstreamGraphDB = nullptr;
-  if (std::error_code EC = sys::fs::unlockFile(LockFD))
+  if (std::error_code EC = unlockFileThreadSafe(LockFD))
     return createFileError(RootPath, EC);
 
   if (!ExceededSizeLimit)
@@ -305,13 +306,13 @@ Error UnifiedOnDiskCache::close(bool CheckSizeLimit) {
   // exclusive lock in order to create a new primary directory for next time
   // this \p UnifiedOnDiskCache path is opened.
 
-  if (std::error_code EC = sys::fs::tryLockFile(
+  if (std::error_code EC = tryLockFileThreadSafe(
           LockFD, std::chrono::milliseconds(0), /*Exclusive=*/true)) {
     if (EC == errc::no_lock_available)
       return Error::success(); // couldn't get exclusive lock, give up.
     return createFileError(RootPath, EC);
   }
-  auto _2 = make_scope_exit([&]() { sys::fs::unlockFile(LockFD); });
+  auto _2 = make_scope_exit([&]() { unlockFileThreadSafe(LockFD); });
 
   // Managed to get an exclusive lock which means there are no other open
   // \p UnifiedOnDiskCache instances for the same path, so we can safely start a

@@ -23,6 +23,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrefixMapper.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <system_error>
@@ -64,6 +65,7 @@ static int putCacheKey(ObjectStore &CAS, ActionCache &AC,
 static int getCacheResult(ObjectStore &CAS, ActionCache &AC, const CASID &ID);
 static int validateObject(ObjectStore &CAS, const CASID &ID);
 static int ingestCasIDFile(cas::ObjectStore &CAS, ArrayRef<std::string> CASIDs);
+static int checkLockFiles(StringRef CASPath);
 
 int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
@@ -101,6 +103,7 @@ int main(int Argc, char **Argv) {
     Import,
     PutCacheKey,
     GetCacheResult,
+    CheckLockFiles,
     Validate,
   };
   cl::opt<CommandKind> Command(
@@ -126,6 +129,8 @@ int main(int Argc, char **Argv) {
                      "set a value for a cache key"),
           clEnumValN(GetCacheResult, "get-cache-result",
                      "get the result value from a cache key"),
+          clEnumValN(CheckLockFiles, "check-lock-files",
+                     "Test file locking behaviour of on-disk CAS"),
           clEnumValN(Validate, "validate", "validate the object for CASID")),
       cl::init(CommandKind::Invalid));
 
@@ -140,6 +145,9 @@ int main(int Argc, char **Argv) {
   if (CASPath.empty())
     ExitOnErr(
         createStringError(inconvertibleErrorCode(), "missing --cas=<path>"));
+
+  if (Command == CheckLockFiles)
+    return checkLockFiles(CASPath);
 
   std::shared_ptr<ObjectStore> CAS;
   std::shared_ptr<ActionCache> AC;
@@ -656,6 +664,45 @@ static int getCacheResult(ObjectStore &CAS, ActionCache &AC, const CASID &ID) {
     return 1;
   }
   outs() << *Result << "\n";
+  return 0;
+}
+
+static int checkLockFiles(StringRef CASPath) {
+  ExitOnError ExitOnErr("llvm-cas: check-lock-files: ");
+
+  SmallString<128> DataPoolPath(CASPath);
+  sys::path::append(DataPoolPath, "v1.1/v8.data");
+
+  auto OpenCASAndGetDataPoolSize = [&]() -> Expected<uint64_t> {
+    auto Result = createOnDiskUnifiedCASDatabases(CASPath);
+    if (!Result)
+      return Result.takeError();
+
+    sys::fs::file_status DataStat;
+    if (std::error_code EC = sys::fs::status(DataPoolPath, DataStat))
+      ExitOnErr(createFileError(DataPoolPath, EC));
+    return DataStat.getSize();
+  };
+
+  // Get the normal size of an open CAS data pool to compare against later.
+  uint64_t OpenSize = ExitOnErr(OpenCASAndGetDataPoolSize());
+
+  DefaultThreadPool Pool;
+  for (int i = 0; i < 1000; ++i) {
+    Pool.async([&, i] {
+      uint64_t DataPoolSize = ExitOnErr(OpenCASAndGetDataPoolSize());
+      if (DataPoolSize < OpenSize)
+        ExitOnErr(createStringError(
+            inconvertibleErrorCode(),
+            StringRef("CAS data file size (" + std::to_string(DataPoolSize) +
+                      ") is smaller than expected (" +
+                      std::to_string(OpenSize) + ") in iteration " +
+                      std::to_string(i))));
+    });
+  }
+
+  Pool.wait();
+
   return 0;
 }
 
