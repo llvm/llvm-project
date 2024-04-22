@@ -2,15 +2,12 @@
 ; RUN: opt < %s -passes=vector-combine -S -mtriple=x86_64-- -mattr=sse2 | FileCheck %s
 ; RUN: opt < %s -passes=vector-combine -S -mtriple=x86_64-- -mattr=avx2 | FileCheck %s
 
-; TODO: fold to identity
+; fold to identity
 
 define <8 x i32> @concat_extract_subvectors(<8 x i32> %x) {
 ; CHECK-LABEL: define <8 x i32> @concat_extract_subvectors(
 ; CHECK-SAME: <8 x i32> [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[LO:%.*]] = shufflevector <8 x i32> [[X]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[HI:%.*]] = shufflevector <8 x i32> [[X]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[CONCAT:%.*]] = shufflevector <4 x i32> [[LO]], <4 x i32> [[HI]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    ret <8 x i32> [[CONCAT]]
+; CHECK-NEXT:    ret <8 x i32> [[X]]
 ;
   %lo = shufflevector <8 x i32> %x, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %hi = shufflevector <8 x i32> %x, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -34,15 +31,12 @@ define <8 x i32> @concat_extract_subvectors_undef(<8 x i32> %x) {
   ret <8 x i32> %concat
 }
 
-; negative test - shuffle contains poision
+; shuffle contains poison
 
 define <8 x i32> @concat_extract_subvectors_poison(<8 x i32> %x) {
 ; CHECK-LABEL: define <8 x i32> @concat_extract_subvectors_poison(
 ; CHECK-SAME: <8 x i32> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[LO:%.*]] = shufflevector <8 x i32> [[X]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 8>
-; CHECK-NEXT:    [[HI:%.*]] = shufflevector <8 x i32> [[X]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 8>
-; CHECK-NEXT:    [[CONCAT:%.*]] = shufflevector <4 x i32> [[LO]], <4 x i32> [[HI]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    ret <8 x i32> [[CONCAT]]
+; CHECK-NEXT:    ret <8 x i32> [[X]]
 ;
   %lo = shufflevector <8 x i32> %x, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 8>
   %hi = shufflevector <8 x i32> %x, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 8>
