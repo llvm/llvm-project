@@ -12,12 +12,16 @@
 #error "No not include assembly.h in non-asm sources"
 #endif
 
+#define GLUE2_(a, b) a##b
+#define GLUE(a, b) GLUE2_(a, b)
+#define SYMBOL_NAME(name) GLUE(__USER_LABEL_PREFIX__, name)
+
 #if defined(__ELF__) && (defined(__GNU__) || defined(__FreeBSD__) ||           \
                          defined(__Fuchsia__) || defined(__linux__))
 
 // clang-format off
 #define NO_EXEC_STACK_DIRECTIVE .section .note.GNU-stack, "", @progbits
-#define SYMBOL_IS_FUNC(name) .type name, %function
+#define SYMBOL_IS_FUNC(name) .type SYMBOL_NAME(name), %function
 // clang-format on
 
 #else // !ELF

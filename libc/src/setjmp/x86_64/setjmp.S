@@ -15,14 +15,14 @@
 // aka _ZN22__llvm_libc_19_0_0_git6setjmpEP9__jmp_buf
 // aka __llvm_libc_19_0_0_git::setjmp(__jmp_buf*)
 
-.global setjmp
-.global LIBC_NAMESPACE_setjmp
+.global SYMBOL_NAME(setjmp)
+.global SYMBOL_NAME(LIBC_NAMESPACE_setjmp)
 
 SYMBOL_IS_FUNC(setjmp)
 SYMBOL_IS_FUNC(LIBC_NAMESPACE_setjmp)
 
-setjmp:
-LIBC_NAMESPACE_setjmp:
+SYMBOL_NAME(setjmp):
+SYMBOL_NAME(LIBC_NAMESPACE_setjmp):
 
   mov %rbx, RBX_OFFSET(%rdi)
   mov %rbp, RBP_OFFSET(%rdi)
