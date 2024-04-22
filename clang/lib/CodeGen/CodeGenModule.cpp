@@ -2680,9 +2680,9 @@ void CodeGenModule::CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
   bool EmittedMDIdGeneralized = false;
   if (CodeGenOpts.CallGraphSection &&
       (!F->hasLocalLinkage() ||
-       F->getFunction().hasAddressTaken(nullptr, /* IgnoreCallbackUses */ true,
-                                        /* IgnoreAssumeLikeCalls */ true,
-                                        /* IgnoreLLVMUsed */ false))) {
+       F->getFunction().hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/ true,
+                                        /*IgnoreAssumeLikeCalls=*/ true,
+                                        /*IgnoreLLVMUsed=*/ false))) {
     F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(FD->getType()));
     EmittedMDIdGeneralized = true;
   }
