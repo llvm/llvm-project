@@ -52,20 +52,8 @@ public:
   }
 
 protected:
-  class OverridableDispatcher : public InPlaceTaskDispatcher {
-  public:
-    OverridableDispatcher(CoreAPIsBasedStandardTest &Parent) : Parent(Parent) {}
-    void dispatch(std::unique_ptr<Task> T) override;
-
-  private:
-    CoreAPIsBasedStandardTest &Parent;
-  };
-
-  std::unique_ptr<llvm::orc::ExecutorProcessControl>
-  makeEPC(std::shared_ptr<SymbolStringPool> SSP);
-
   std::shared_ptr<SymbolStringPool> SSP = std::make_shared<SymbolStringPool>();
-  ExecutionSession ES{makeEPC(SSP)};
+  ExecutionSession ES{std::make_unique<UnsupportedExecutorProcessControl>(SSP)};
   JITDylib &JD = ES.createBareJITDylib("JD");
   SymbolStringPtr Foo = ES.intern("foo");
   SymbolStringPtr Bar = ES.intern("bar");
@@ -79,7 +67,6 @@ protected:
   ExecutorSymbolDef BarSym{BarAddr, JITSymbolFlags::Exported};
   ExecutorSymbolDef BazSym{BazAddr, JITSymbolFlags::Exported};
   ExecutorSymbolDef QuxSym{QuxAddr, JITSymbolFlags::Exported};
-  unique_function<void(std::unique_ptr<Task>)> DispatchOverride;
 };
 
 } // end namespace orc
