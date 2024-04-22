@@ -2711,7 +2711,7 @@ void CodeGenModule::CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
 void CodeGenModule::CreateFunctionTypeMetadataForIcall(const QualType &QT,
                                                        llvm::CallBase *CB) {
   // Only if needed for call graph section and only for indirect calls.
-  if (!(CodeGenOpts.CallGraphSection && CB && CB->isIndirectCall()))
+  if (!CodeGenOpts.CallGraphSection || !CB || !CB->isIndirectCall())
     return;
 
   auto *MD = CreateMetadataIdentifierGeneralized(QT);
