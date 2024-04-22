@@ -54,7 +54,7 @@ namespace clang {
 /// where size is the size of the array dimension. When the lower-bound is
 /// absent it defaults to 0.
 namespace OMPArraySectionIndices {
-  enum { BASE, LOWER_BOUND, LENGTH, STRIDE, END_EXPR };
+enum { BASE, LOWER_BOUND, LENGTH, STRIDE, END_EXPR };
 }
 class OMPArraySectionExpr
     : public ArraySectionExprBase<OMPArraySectionIndices::END_EXPR,
