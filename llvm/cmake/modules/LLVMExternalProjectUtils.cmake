@@ -430,9 +430,4 @@ function(llvm_ExternalProject_Add name source_dir)
       set_target_properties(${target} PROPERTIES FOLDER "${ARG_FOLDER}")
     endif ()
   endforeach()
-
-  #set_target_folder(
-  #  TARGETS ${name} install-${name} ${name}-clobber ${name}-clear ${name}-clean ${ARG_EXTRA_TARGETS}
-  #  FOLDER "${ARG_FOLDE}"
-  #)
 endfunction()
