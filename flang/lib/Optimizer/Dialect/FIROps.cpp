@@ -3926,7 +3926,7 @@ mlir::ParseResult parseCUFKernelValues(
     if (parser.parseOperand(values.emplace_back()))
       return mlir::failure();
     auto builder = parser.getBuilder();
-    types.emplace_back(builder.getType<mlir::IntegerType>(32));
+    types.emplace_back(builder.getI32Type());
     return mlir::success();
   }
   return mlir::success();
