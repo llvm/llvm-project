@@ -657,6 +657,8 @@ private:
 
 } // namespace __visitation
 
+// Adding semi-colons in macro expansions helps clang-format to do a better job.
+// This macro is used to avoid compilation errors due to "stray" semi-colons.
 #  define _LIBCPP_EAT_SEMICOLON static_assert(true, "")
 
 template <size_t _Index, class _Tp>
