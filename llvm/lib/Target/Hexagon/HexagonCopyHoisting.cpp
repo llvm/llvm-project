@@ -10,15 +10,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonTargetMachine.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -67,7 +65,6 @@ public:
 
   MachineFunction *MFN;
   MachineRegisterInfo *MRI;
-  StringMap<MachineInstr *> CopyMI;
   std::vector<DenseMap<std::pair<Register, Register>, MachineInstr *>>
       CopyMIList;
 };
@@ -150,11 +147,6 @@ void HexagonCopyHoisting::addMItoCopyList(MachineInstr *MI) {
       MRI->getRegClass(SrcReg) != &Hexagon::IntRegsRegClass)
     return;
 
-  StringRef Key;
-  SmallString<256> TmpData("");
-  (void)Twine(Register::virtReg2Index(DstReg)).toStringRef(TmpData);
-  TmpData += '=';
-  Key = Twine(Register::virtReg2Index(SrcReg)).toStringRef(TmpData);
   BBCopyInst.insert(std::pair(std::pair(SrcReg, DstReg), MI));
 #ifndef NDEBUG
   LLVM_DEBUG(dbgs() << "\tAdding Copy Instr to the list: " << MI << "\n");
