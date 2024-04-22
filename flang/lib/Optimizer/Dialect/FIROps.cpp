@@ -3907,7 +3907,7 @@ mlir::ParseResult parseCUFKernelValues(
   if (mlir::succeeded(parser.parseOptionalStar()))
     return mlir::success();
 
-  if (parser.parseOptionalLParen()) {
+  if (mlir::succeeded(parser.parseOptionalLParen())) {
     if (mlir::failed(parser.parseCommaSeparatedList(
             mlir::AsmParser::Delimiter::None, [&]() {
               if (parser.parseOperand(values.emplace_back()))
@@ -3915,11 +3915,17 @@ mlir::ParseResult parseCUFKernelValues(
               return mlir::success();
             })))
       return mlir::failure();
+    auto builder = parser.getBuilder();
+    for (size_t i = 0; i < values.size(); i++) {
+      types.emplace_back(builder.getI32Type());
+    }
     if (parser.parseRParen())
       return mlir::failure();
   } else {
     if (parser.parseOperand(values.emplace_back()))
       return mlir::failure();
+    auto builder = parser.getBuilder();
+    types.emplace_back(builder.getI32Type());
     return mlir::success();
   }
   return mlir::success();
