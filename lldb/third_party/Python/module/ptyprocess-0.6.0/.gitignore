@@ -1,7 +1,0 @@
-__pycache__
-*.pyc
-
-/build/
-/dist/
-MANIFEST
-docs/_build/
