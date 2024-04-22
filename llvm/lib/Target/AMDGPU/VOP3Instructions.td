@@ -1088,6 +1088,8 @@ class Cvt_Scale_FP4FP8BF8ToF16F32_Pat<SDPatternOperator node, VOP3_Pseudo inst, 
 >;
 def : Cvt_Scale_FP4FP8BF8ToF16F32_Pat<int_amdgcn_cvt_scalef32_f32_fp8, V_CVT_SCALEF32_F32_FP8_e64, f32>;
 def : Cvt_Scale_FP4FP8BF8ToF16F32_Pat<int_amdgcn_cvt_scalef32_f32_bf8, V_CVT_SCALEF32_F32_BF8_e64, f32>;
+def : Cvt_Scale_FP4FP8BF8ToF16F32_Pat<int_amdgcn_cvt_scalef32_pk_f16_fp4, V_CVT_SCALEF32_PK_F16_FP4_e64, v2f16>;
+def : Cvt_Scale_FP4FP8BF8ToF16F32_Pat<int_amdgcn_cvt_scalef32_pk_bf16_fp4, V_CVT_SCALEF32_PK_BF16_FP4_e64, v2bf16>;
 
 class Cvt_Scale_FP8BF8ToF16_Pat<SDPatternOperator node, VOP3_Pseudo inst, int dst_sel> : GCNPat<
     (v2f16 (node v2f16:$vdst_in, i32:$src0, f32:$src1, timm:$src_sel, dst_sel)),

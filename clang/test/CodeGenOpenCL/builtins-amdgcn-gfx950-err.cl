@@ -17,7 +17,7 @@ typedef float __attribute__((ext_vector_type(2))) float2;
 typedef __bf16 __attribute__((ext_vector_type(2))) bfloat2;
 
 void test(global uint* out, uint a, uint b, global half2* out_v2f16, global float* out_f32, float scale, global short2* out_v2i16, float src0, float src1,
-          global float2* out_v2f32, half2 src0_v2f16, bfloat2 src0_v2bf16) {
+          global float2* out_v2f32, half2 src0_v2f16, bfloat2 src0_v2bf16, global bfloat2* out_v2bf16) {
   *out = __builtin_amdgcn_prng_b32(a); // expected-error{{'__builtin_amdgcn_prng_b32' needs target feature prng-inst}}
   *out = __builtin_amdgcn_permlane16_swap(a, b, false, false); // expected-error{{'__builtin_amdgcn_permlane16_swap' needs target feature permlane16-swap}}
   *out = __builtin_amdgcn_permlane32_swap(a, b, false, false); // expected-error{{'__builtin_amdgcn_permlane32_swap' needs target feature permlane32-swap}}
@@ -35,4 +35,6 @@ void test(global uint* out, uint a, uint b, global half2* out_v2f16, global floa
   *out_v2i16 = __builtin_amdgcn_cvt_scalef32_pk_bf8_bf16(*out_v2i16, src0_v2bf16, scale, true); // expected-error{{'__builtin_amdgcn_cvt_scalef32_pk_bf8_bf16' needs target feature bf8-cvt-scale-insts}}
   *out_v2f32 = __builtin_amdgcn_cvt_scalef32_pk_f32_fp4(a, scale, 3); // expected-error{{'__builtin_amdgcn_cvt_scalef32_pk_f32_fp4' needs target feature fp4-cvt-scale-insts}}
   *out = __builtin_amdgcn_cvt_scalef32_pk_fp4_f32(*out, src0, src1, scale, 3); // expected-error{{'__builtin_amdgcn_cvt_scalef32_pk_fp4_f32' needs target feature fp4-cvt-scale-insts}}
+  *out_v2f16 = __builtin_amdgcn_cvt_scalef32_pk_f16_fp4(a, scale, 3); // expected-error{{'__builtin_amdgcn_cvt_scalef32_pk_f16_fp4' needs target feature fp4-cvt-scale-insts}}
+  *out_v2bf16 = __builtin_amdgcn_cvt_scalef32_pk_bf16_fp4(a, scale, 3); // expected-error{{'__builtin_amdgcn_cvt_scalef32_pk_bf16_fp4' needs target feature fp4-cvt-scale-insts}}
 }

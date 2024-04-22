@@ -167,7 +167,7 @@ void test_permlane32_swap(__global int* out, int old, int src, bool X) {
 
 void test_cvt_scalef32(global half2* out_v2f16, global float* out_f32, uint src, float scale, int index, bool X,
                        global short2* out_v2i16, float src0, float src1, global float2* out_v2f32,
-                       half2 src0_v2f16, bfloat2 src0_v2bf16, global uint* out) {
+                       half2 src0_v2f16, bfloat2 src0_v2bf16, global uint* out, global bfloat2* out_v2bf16) {
   *out_v2f16 = __builtin_amdgcn_cvt_scalef32_f16_fp8(*out_v2f16, src, scale, index, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_f16_fp8' must be a constant integer}}
   *out_f32 = __builtin_amdgcn_cvt_scalef32_f32_fp8(src, scale, index); // // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_f32_fp8' must be a constant integer}}
   *out_v2f16 = __builtin_amdgcn_cvt_scalef32_f16_bf8(*out_v2f16, src, scale, index, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_f16_bf8' must be a constant integer}}
@@ -182,4 +182,6 @@ void test_cvt_scalef32(global half2* out_v2f16, global float* out_f32, uint src,
   *out_v2i16 = __builtin_amdgcn_cvt_scalef32_pk_bf8_bf16(*out_v2i16, src0_v2bf16, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_bf8_bf16' must be a constant integer}}
   *out_v2f32 = __builtin_amdgcn_cvt_scalef32_pk_f32_fp4(src, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_f32_fp4' must be a constant integer}}
   *out = __builtin_amdgcn_cvt_scalef32_pk_fp4_f32(*out, src0, src1, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_fp4_f32' must be a constant integer}}
+  *out_v2f16 = __builtin_amdgcn_cvt_scalef32_pk_f16_fp4(src, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_f16_fp4' must be a constant integer}}
+  *out_v2bf16 = __builtin_amdgcn_cvt_scalef32_pk_bf16_fp4(src, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_bf16_fp4' must be a constant integer}}
 }
