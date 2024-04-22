@@ -2068,3 +2068,25 @@ cond.end:                                         ; preds = %entry, %cond.false
   %conv = sext i3 %cond to i8
   ret i8 %conv
 }
+
+; Don't create a table with an unknown type
+define { i8, i8 } @test_unknown_result_type(i8 %n) {
+; CHECK-LABEL: @test_unknown_result_type(
+; CHECK-NEXT: entry:
+; CHECK-NEXT: switch
+entry:
+  switch i8 %n, label %sw.default [
+    i8 0, label %return
+    i8 1, label %return
+    i8 2, label %return
+  ]
+
+sw.default:                                       ; preds = %entry
+  %0 = insertvalue { i8, i8 } undef, i8 0, 0
+  %1 = insertvalue { i8, i8 } %0, i8 1, 1
+  br label %return
+
+return:                                           ; preds = %sw.default, %entry, %entry, %entry
+  %retval.0 = phi { i8, i8 } [ undef, %entry ], [ undef, %entry ], [ undef, %entry ], [ %1, %sw.default ]
+  ret { i8, i8 } %retval.0
+}
