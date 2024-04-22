@@ -53,91 +53,45 @@ namespace clang {
 /// When the length is absent it defaults to ⌈(size − lower-bound)/stride⌉,
 /// where size is the size of the array dimension. When the lower-bound is
 /// absent it defaults to 0.
-class OMPArraySectionExpr : public Expr {
+namespace OMPArraySectionIndices {
   enum { BASE, LOWER_BOUND, LENGTH, STRIDE, END_EXPR };
-  Stmt *SubExprs[END_EXPR];
-  SourceLocation ColonLocFirst;
+}
+class OMPArraySectionExpr
+    : public ArraySectionExprBase<OMPArraySectionIndices::END_EXPR,
+                                  /*AllowNullExprs=*/true> {
   SourceLocation ColonLocSecond;
-  SourceLocation RBracketLoc;
 
 public:
   OMPArraySectionExpr(Expr *Base, Expr *LowerBound, Expr *Length, Expr *Stride,
                       QualType Type, ExprValueKind VK, ExprObjectKind OK,
                       SourceLocation ColonLocFirst,
                       SourceLocation ColonLocSecond, SourceLocation RBracketLoc)
-      : Expr(OMPArraySectionExprClass, Type, VK, OK),
-        ColonLocFirst(ColonLocFirst), ColonLocSecond(ColonLocSecond),
-        RBracketLoc(RBracketLoc) {
-    SubExprs[BASE] = Base;
-    SubExprs[LOWER_BOUND] = LowerBound;
-    SubExprs[LENGTH] = Length;
-    SubExprs[STRIDE] = Stride;
+      : ArraySectionExprBase(OMPArraySectionExprClass, Base, LowerBound, Length,
+                             Type, VK, OK, ColonLocFirst, RBracketLoc) {
+    setSubExpr(OMPArraySectionIndices::STRIDE, Stride);
     setDependence(computeDependence(this));
   }
 
   /// Create an empty array section expression.
   explicit OMPArraySectionExpr(EmptyShell Shell)
-      : Expr(OMPArraySectionExprClass, Shell) {}
-
-  /// An array section can be written only as Base[LowerBound:Length].
-
-  /// Get base of the array section.
-  Expr *getBase() { return cast<Expr>(SubExprs[BASE]); }
-  const Expr *getBase() const { return cast<Expr>(SubExprs[BASE]); }
-  /// Set base of the array section.
-  void setBase(Expr *E) { SubExprs[BASE] = E; }
+      : ArraySectionExprBase(OMPArraySectionExprClass, Shell) {}
 
   /// Return original type of the base expression for array section.
   static QualType getBaseOriginalType(const Expr *Base);
 
-  /// Get lower bound of array section.
-  Expr *getLowerBound() { return cast_or_null<Expr>(SubExprs[LOWER_BOUND]); }
-  const Expr *getLowerBound() const {
-    return cast_or_null<Expr>(SubExprs[LOWER_BOUND]);
-  }
-  /// Set lower bound of the array section.
-  void setLowerBound(Expr *E) { SubExprs[LOWER_BOUND] = E; }
-
-  /// Get length of array section.
-  Expr *getLength() { return cast_or_null<Expr>(SubExprs[LENGTH]); }
-  const Expr *getLength() const { return cast_or_null<Expr>(SubExprs[LENGTH]); }
-  /// Set length of the array section.
-  void setLength(Expr *E) { SubExprs[LENGTH] = E; }
-
   /// Get stride of array section.
-  Expr *getStride() { return cast_or_null<Expr>(SubExprs[STRIDE]); }
-  const Expr *getStride() const { return cast_or_null<Expr>(SubExprs[STRIDE]); }
-  /// Set length of the array section.
-  void setStride(Expr *E) { SubExprs[STRIDE] = E; }
-
-  SourceLocation getBeginLoc() const LLVM_READONLY {
-    return getBase()->getBeginLoc();
+  Expr *getStride() { return getSubExpr(OMPArraySectionIndices::STRIDE); }
+  const Expr *getStride() const {
+    return getSubExpr(OMPArraySectionIndices::STRIDE);
   }
-  SourceLocation getEndLoc() const LLVM_READONLY { return RBracketLoc; }
-
-  SourceLocation getColonLocFirst() const { return ColonLocFirst; }
-  void setColonLocFirst(SourceLocation L) { ColonLocFirst = L; }
+  /// Set length of the array section.
+  void setStride(Expr *E) { setSubExpr(OMPArraySectionIndices::STRIDE, E); }
 
   SourceLocation getColonLocSecond() const { return ColonLocSecond; }
   void setColonLocSecond(SourceLocation L) { ColonLocSecond = L; }
 
-  SourceLocation getRBracketLoc() const { return RBracketLoc; }
-  void setRBracketLoc(SourceLocation L) { RBracketLoc = L; }
-
-  SourceLocation getExprLoc() const LLVM_READONLY {
-    return getBase()->getExprLoc();
-  }
-
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OMPArraySectionExprClass;
-  }
-
-  child_range children() {
-    return child_range(&SubExprs[BASE], &SubExprs[END_EXPR]);
-  }
-
-  const_child_range children() const {
-    return const_child_range(&SubExprs[BASE], &SubExprs[END_EXPR]);
   }
 };
 

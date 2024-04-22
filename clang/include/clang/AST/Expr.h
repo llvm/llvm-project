@@ -6610,6 +6610,111 @@ public:
 
 };
 
+// This is a sub-class for OpenMP and OpenACC array sections. OpenACC uses a
+// very small subset of the functionality, so this class only exposes the things
+// the two have in common. This type is not expected to be used directly,
+// instead it is inherited from by the OMP and OpenACC variants.
+//
+// This type does not capture a 'stride', only a lower-bound and length (plus
+// the base expression), but provides room via a template argument to get
+// additional ones.
+template<unsigned NumSubExprs, bool AllowNullExprs>
+class ArraySectionExprBase : public Expr {
+  enum {BASE, LOWER_BOUND, LENGTH, END_EXPR = NumSubExprs};
+  Stmt *SubExprs[END_EXPR];
+  SourceLocation ColonLocFirst;
+  SourceLocation RBracketLoc;
+
+  protected:
+    ArraySectionExprBase(StmtClass SC, Expr *Base, Expr *LowerBound,
+                         Expr *Length, QualType Type, ExprValueKind VK,
+                         ExprObjectKind OK, SourceLocation ColonLocFirst,
+                         SourceLocation RBracketLoc)
+        : Expr(SC, Type, VK, OK), ColonLocFirst(ColonLocFirst),
+          RBracketLoc(RBracketLoc) {
+      setBase(Base);
+      setLowerBound(LowerBound);
+      setLength(Length);
+    }
+
+    explicit ArraySectionExprBase(StmtClass SC, EmptyShell Shell)
+        : Expr(SC, Shell) {}
+
+    void setSubExpr(unsigned Idx, Expr *SubExpr) {
+      assert(Idx > LENGTH &&
+             "setting sub expression owned by ArraySectionExprBase: Should be "
+             "using the direct 'setter' functions");
+      assert((SubExpr || AllowNullExprs) && "Null expression when not allowed");
+      SubExprs[Idx] = SubExpr;
+    }
+
+    Expr *getSubExpr(unsigned Idx) {
+      assert(Idx > LENGTH &&
+             "getting sub expression owned by ArraySectionExprBase: Should be "
+             "using the direct 'getter' functions");
+      return cast_or_null<Expr>(SubExprs[Idx]);
+    }
+    const Expr *getSubExpr(unsigned Idx) const {
+      assert(Idx > LENGTH &&
+             "getting sub expression owned by ArraySectionExprBase: Should be "
+             "using the direct 'getter' functions");
+      return cast_or_null<Expr>(SubExprs[Idx]);
+    }
+
+  public:
+  /// Get base of the array section.
+  Expr *getBase() { return cast<Expr>(SubExprs[BASE]); }
+  const Expr *getBase() const { return cast<Expr>(SubExprs[BASE]); }
+  /// Set base of the array section.
+  void setBase(Expr *E) {
+    assert((E || AllowNullExprs) && "Null expression when not allowed");
+    SubExprs[BASE] = E;
+  }
+
+  /// Get lower bound of array section.
+  Expr *getLowerBound() { return cast_or_null<Expr>(SubExprs[LOWER_BOUND]); }
+  const Expr *getLowerBound() const {
+    return cast_or_null<Expr>(SubExprs[LOWER_BOUND]);
+  }
+  /// Set lower bound of the array section.
+  void setLowerBound(Expr *E) {
+    assert((E || AllowNullExprs) && "Null expression when not allowed");
+    SubExprs[LOWER_BOUND] = E;
+  }
+
+  /// Get length of array section.
+  Expr *getLength() { return cast_or_null<Expr>(SubExprs[LENGTH]); }
+  const Expr *getLength() const { return cast_or_null<Expr>(SubExprs[LENGTH]); }
+  /// Set length of the array section.
+  void setLength(Expr *E) {
+    assert((E || AllowNullExprs) && "Null expression when not allowed");
+    SubExprs[LENGTH] = E;
+  }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return getBase()->getBeginLoc();
+  }
+
+  SourceLocation getEndLoc() const LLVM_READONLY { return RBracketLoc; }
+
+  SourceLocation getColonLocFirst() const { return ColonLocFirst; }
+  void setColonLocFirst(SourceLocation L) { ColonLocFirst = L; }
+
+  SourceLocation getRBracketLoc() const { return RBracketLoc; }
+  void setRBracketLoc(SourceLocation L) { RBracketLoc = L; }
+
+  SourceLocation getExprLoc() const LLVM_READONLY {
+    return getBase()->getExprLoc();
+  }
+    child_range children() {
+      return child_range(&SubExprs[BASE], &SubExprs[END_EXPR]);
+    }
+
+    const_child_range children() const {
+      return const_child_range(&SubExprs[BASE], &SubExprs[END_EXPR]);
+    }
+};
+
 /// Frontend produces RecoveryExprs on semantic errors that prevent creating
 /// other well-formed expressions. E.g. when type-checking of a binary operator
 /// fails, we cannot produce a BinaryOperator expression. Instead, we can choose
