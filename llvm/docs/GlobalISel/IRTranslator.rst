@@ -62,8 +62,8 @@ splitting large types into smaller ones, introducing sign/zero extensions etc.
 In order to share as much of this code as possible between the different
 backends, ``CallLowering`` makes available a few helpers and interfaces:
 
-* ``ArgInfo`` - used for formal arguments, but also return values, call
-  parameters and call returns; contains info such as the IR type, the virtual
+* ``ArgInfo`` - used for formal arguments, but also return values, actual
+  arguments and call results; contains info such as the IR type, the virtual
   registers etc; large values will likely have to be split into several
   ``ArgInfo`` objects (``CallLowering::splitToValueTypes`` can help with that);
 
@@ -71,8 +71,8 @@ backends, ``CallLowering`` makes available a few helpers and interfaces:
   :ref:`backend-calling-convs`), to decide where to put each
   ``ArgInfo`` (physical register or stack); backends can use the provided
   ``IncomingValueAssigner`` (for formal arguments and call results) and
-  ``OutgoingValueAssigner`` (for call parameters and function returns), but it's
-  also possible to subclass them;
+  ``OutgoingValueAssigner`` (for actual arguments and function returns), but
+  it's also possible to subclass them;
 
 * ``ValueHandler`` - inserts the necessary instructions for putting each value
   where it belongs; it has pure virtual methods for assigning values to
