@@ -30,9 +30,9 @@ void FromTensorOp::build(OpBuilder &builder, OperationState &result,
 }
 
 LogicalResult FromTensorOp::verify() {
-  auto tensorShape = getInput().getType().getShape();
-  auto ring = getOutput().getType().getRing();
-  auto polyDegree = ring.getPolynomialModulus().getPolynomial().getDegree();
+  ArrayRef<int64_t> tensorShape = getInput().getType().getShape();
+  RingAttr ring = getOutput().getType().getRing();
+  unsigned polyDegree = ring.getPolynomialModulus().getPolynomial().getDegree();
   bool compatible = tensorShape.size() == 1 && tensorShape[0] <= polyDegree;
   if (!compatible) {
     return emitOpError()
@@ -60,8 +60,8 @@ LogicalResult FromTensorOp::verify() {
 }
 
 LogicalResult ToTensorOp::verify() {
-  auto tensorShape = getOutput().getType().getShape();
-  auto polyDegree = getInput()
+  ArrayRef<int64_t> tensorShape = getOutput().getType().getShape();
+  unsigned polyDegree = getInput()
                         .getType()
                         .getRing()
                         .getPolynomialModulus()
@@ -80,8 +80,8 @@ LogicalResult ToTensorOp::verify() {
 }
 
 LogicalResult MonomialMulOp::verify() {
-  auto ring = getInput().getType().getRing();
-  auto idealTerms = ring.getPolynomialModulus().getPolynomial().getTerms();
+  RingAttr ring = getInput().getType().getRing();
+  ArrayRef<Monomial> idealTerms = ring.getPolynomialModulus().getPolynomial().getTerms();
   bool compatible =
       idealTerms.size() == 2 &&
       (idealTerms[0].coefficient == -1 && idealTerms[0].exponent == 0) &&
