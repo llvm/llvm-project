@@ -1333,10 +1333,10 @@ arguments.
 
   %val = load i32, ptr %in, align 4, !amdgpu.last.use !{}
 
-'``amdgpu.no.remote.memory.access``' Metadata
+'``amdgpu.no.remote.memory``' Metadata
 ---------------------------------------------
 
-Asserts a memory access does not access bytes in host memory, or
+Asserts a memory operation does not access bytes in host memory, or
 remote connected peer device memory (the address must be device
 local). This is intended for use with :ref:`atomicrmw <i_atomicrmw>`
 and other atomic instructions. This is required to emit a native
@@ -1353,12 +1353,12 @@ cases. This will typically be used in conjunction with
 
 .. code-block:: llvm
 
-  ; Indicates the access does not access fine-grained memory, or
+  ; Indicates the atomic does not access fine-grained memory, or
   ; remote device memory.
-  %old0 = atomicrmw sub ptr %ptr0, i32 1 acquire, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory.access !0
+  %old0 = atomicrmw sub ptr %ptr0, i32 1 acquire, !amdgpu.no.fine.grained.memory !0, !amdgpu.no.remote.memory !0
 
-  ; Indicates the access does not access peer device memory.
-  %old2 = atomicrmw sub ptr %ptr2, i32 1 acquire, !amdgpu.no.remote.memory.access !0
+  ; Indicates the atomic does not access peer device memory.
+  %old2 = atomicrmw sub ptr %ptr2, i32 1 acquire, !amdgpu.no.remote.memory !0
 
   !0 = !{}
 
