@@ -943,7 +943,7 @@ AtomicRMWInst *AtomicExpandImpl::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
 
   if (Op == AtomicRMWInst::And)
     NewOperand =
-        Builder.CreateOr(PMV.Inv_Mask, ValOperand_Shifted, "AndOperand");
+        Builder.CreateOr(ValOperand_Shifted, PMV.Inv_Mask, "AndOperand");
   else
     NewOperand = ValOperand_Shifted;
 
