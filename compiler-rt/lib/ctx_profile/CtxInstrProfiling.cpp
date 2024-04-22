@@ -18,6 +18,8 @@
 
 using namespace __ctx_profile;
 
+// FIXME(mtrofin): use malloc / mmap instead of sanitizer common APIs to reduce
+// the dependency on the latter.
 Arena *Arena::allocateNewArena(size_t Size, Arena *Prev) {
   assert(!Prev || Prev->Next == nullptr);
   Arena *NewArena =
