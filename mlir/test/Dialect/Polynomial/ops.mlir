@@ -67,6 +67,13 @@ module {
     return
   }
 
+  func.func @test_monic_monomial_mul() {
+    %five = arith.constant 5 : index
+    %0 = polynomial.constant #one_plus_x_squared : !polynomial.polynomial<#ring1>
+    %1 = polynomial.monic_monomial_mul %0, %five : (!polynomial.polynomial<#ring1>, index) -> !polynomial.polynomial<#ring1>
+    return
+  }
+
   func.func @test_constant() {
     %0 = polynomial.constant #one_plus_x_squared : !polynomial.polynomial<#ring1>
     %1 = polynomial.constant <1 + x**2> : !polynomial.polynomial<#ring1>

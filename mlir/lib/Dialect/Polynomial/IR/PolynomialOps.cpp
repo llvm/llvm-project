@@ -85,7 +85,7 @@ LogicalResult ToTensorOp::verify() {
   return diag;
 }
 
-LogicalResult MonomialMulOp::verify() {
+LogicalResult MonicMonomialMulOp::verify() {
   RingAttr ring = getInput().getType().getRing();
   ArrayRef<Monomial> idealTerms =
       ring.getPolynomialModulus().getPolynomial().getTerms();
