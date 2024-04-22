@@ -18,8 +18,8 @@
 .global setjump
 .global LIBC_NAMESPACE_setjump
 
-.type setjump, @function
-.type LIBC_NAMESPACE_setjump, @function
+SYMBOL_IS_FUNC(setjump)
+SYMBOL_IS_FUNC(LIBC_NAMESPACE_setjump)
 
 setjump:
 LIBC_NAMESPACE_setjump:
