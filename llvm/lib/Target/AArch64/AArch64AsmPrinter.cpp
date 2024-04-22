@@ -573,7 +573,7 @@ void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
     std::string SymName = "__hwasan_check_x" + utostr(Reg - AArch64::X0) + "_" +
                           utostr(AccessInfo);
     if (IsFixedShadow) {
-      SymName += "_" + utostr(FixedShadowOffset);
+      SymName += "_fixed_" + utostr(FixedShadowOffset);
     }
     if (IsShort)
       SymName += "_short_v2";

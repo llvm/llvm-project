@@ -9,7 +9,7 @@ define ptr @f1(ptr %x0, ptr %x1) {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __hwasan_check_x1_1_4398046511104
+; CHECK-NEXT:    bl __hwasan_check_x1_1_fixed_4398046511104
 ; CHECK-NEXT:    mov x0, x1
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -23,7 +23,7 @@ define ptr @f2(ptr %x0, ptr %x1) {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __hwasan_check_x0_2_4398046511104_short_v2
+; CHECK-NEXT:    bl __hwasan_check_x0_2_fixed_4398046511104_short_v2
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr %x0, i32 2, i64 4398046511104)
@@ -37,7 +37,7 @@ define void @f3(ptr %x0, ptr %x1) {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __hwasan_check_x1_67043328_4398046511104
+; CHECK-NEXT:    bl __hwasan_check_x1_67043328_fixed_4398046511104
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   call void @llvm.hwasan.check.memaccess.fixedshadow(ptr %x1, i32 67043328, i64 4398046511104)
@@ -51,7 +51,7 @@ define void @f4(ptr %x0, ptr %x1) {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl __hwasan_check_x1_16777232_4398046511104_short_v2
+; CHECK-NEXT:    bl __hwasan_check_x1_16777232_fixed_4398046511104_short_v2
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr %x1, i32 16777232, i64 4398046511104)
@@ -61,11 +61,11 @@ define void @f4(ptr %x0, ptr %x1) {
 declare void @llvm.hwasan.check.memaccess.fixedshadow(ptr, i32, i64)
 declare void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr, i32, i64)
 
-; CHECK:      .section .text.hot,"axG",@progbits,__hwasan_check_x0_2_4398046511104_short_v2,comdat
-; CHECK-NEXT: .type __hwasan_check_x0_2_4398046511104_short_v2,@function
-; CHECK-NEXT: .weak __hwasan_check_x0_2_4398046511104_short_v2
-; CHECK-NEXT: .hidden __hwasan_check_x0_2_4398046511104_short_v2
-; CHECK-NEXT: __hwasan_check_x0_2_4398046511104_short_v2:
+; CHECK:      .section .text.hot,"axG",@progbits,__hwasan_check_x0_2_fixed_4398046511104_short_v2,comdat
+; CHECK-NEXT: .type __hwasan_check_x0_2_fixed_4398046511104_short_v2,@function
+; CHECK-NEXT: .weak __hwasan_check_x0_2_fixed_4398046511104_short_v2
+; CHECK-NEXT: .hidden __hwasan_check_x0_2_fixed_4398046511104_short_v2
+; CHECK-NEXT: __hwasan_check_x0_2_fixed_4398046511104_short_v2:
 ; CHECK-NEXT: sbfx x16, x0, #4, #52
 ; CHECK-NEXT: mov x17, #4398046511104
 ; CHECK-NEXT: ldrb w16, [x17, x16]
@@ -93,11 +93,11 @@ declare void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr, i32, i6
 ; CHECK-NEXT: br  x16
 
 
-; CHECK:      .section .text.hot,"axG",@progbits,__hwasan_check_x1_1_4398046511104,comdat
-; CHECK-NEXT: .type __hwasan_check_x1_1_4398046511104,@function
-; CHECK-NEXT: .weak __hwasan_check_x1_1_4398046511104
-; CHECK-NEXT: .hidden __hwasan_check_x1_1_4398046511104
-; CHECK-NEXT: __hwasan_check_x1_1_4398046511104:
+; CHECK:      .section .text.hot,"axG",@progbits,__hwasan_check_x1_1_fixed_4398046511104,comdat
+; CHECK-NEXT: .type __hwasan_check_x1_1_fixed_4398046511104,@function
+; CHECK-NEXT: .weak __hwasan_check_x1_1_fixed_4398046511104
+; CHECK-NEXT: .hidden __hwasan_check_x1_1_fixed_4398046511104
+; CHECK-NEXT: __hwasan_check_x1_1_fixed_4398046511104:
 ; CHECK-NEXT: sbfx x16, x1, #4, #52
 ; CHECK-NEXT: mov x17, #4398046511104
 ; CHECK-NEXT: ldrb w16, [x17, x16]
@@ -114,7 +114,7 @@ declare void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr, i32, i6
 ; CHECK-NEXT: ldr x16, [x16, :got_lo12:__hwasan_tag_mismatch]
 ; CHECK-NEXT: br  x16
 
-; CHECK:      __hwasan_check_x1_67043328_4398046511104:
+; CHECK:      __hwasan_check_x1_67043328_fixed_4398046511104:
 ; CHECK-NEXT: sbfx x16, x1, #4, #52
 ; CHECK-NEXT: mov x17, #4398046511104
 ; CHECK-NEXT: ldrb w16, [x17, x16]
@@ -132,7 +132,7 @@ declare void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr, i32, i6
 ; CHECK-NEXT: mov x1, #0
 ; CHECK-NEXT: b __hwasan_tag_mismatch
 
-; CHECK:      __hwasan_check_x1_16777232_4398046511104_short_v2:
+; CHECK:      __hwasan_check_x1_16777232_fixed_4398046511104_short_v2:
 ; CHECK-NEXT: sbfx	x16, x1, #4, #52
 ; CHECK-NEXT: mov x17, #4398046511104
 ; CHECK-NEXT: ldrb w16, [x17, x16]
