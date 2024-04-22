@@ -2314,6 +2314,8 @@ are listed below.
    on ELF targets when using the integrated assembler. This flag currently
    only has an effect on ELF targets.
 
+.. _funique_internal_linkage_names:
+
 .. option:: -f[no]-unique-internal-linkage-names
 
    Controls whether Clang emits a unique (best-effort) symbol name for internal
@@ -2451,15 +2453,27 @@ usual build cycle when using sample profilers for optimization:
 
    .. code-block:: console
 
-     $ clang++ -O2 -gline-tables-only -fdebug-info-for-profiling -funique-internal-linkage-names code.cc -o code
+     $ clang++ -O2 -gline-tables-only \
+       -fdebug-info-for-profiling -funique-internal-linkage-names \
+       code.cc -o code
 
    While MSVC-style targets default to CodeView debug information, DWARF debug
    information is required to generate source-level LLVM profiles. Use
    ``-gdwarf`` to include DWARF debug information:
 
-   .. code-block:: console
+   .. code-block:: winbatch
 
-     $ clang-cl -O2 -gdwarf -gline-tables-only /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names code.cc -o code -fuse-ld=lld -link -debug:dwarf
+     $ clang-cl -O2 -gdwarf -gline-tables-only ^
+       /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
+       code.cc -o code -fuse-ld=lld -link -debug:dwarf
+
+.. note::
+
+   :ref:`-funique-internal-linkage-names <funique_internal_linkage_names>`
+   generates unique names based on given command-line source file paths. If
+   your build system uses absolute source paths and these paths may change
+   between steps 1 and 4, then the uniqued function names may change and result
+   in unused profile data. Consider omitting this option in such cases.
 
 2. Run the executable under a sampling profiler. The specific profiler
    you use does not really matter, as long as its output can be converted
@@ -2531,11 +2545,13 @@ usual build cycle when using sample profilers for optimization:
    that executes faster than the original one. Note that you are not
    required to build the code with the exact same arguments that you
    used in the first step. The only requirement is that you build the code
-   with ``-gline-tables-only`` and ``-fprofile-sample-use``.
+   with the same debug info options and ``-fprofile-sample-use``.
 
    .. code-block:: console
 
-     $ clang++ -O2 -gline-tables-only -fprofile-sample-use=code.prof code.cc -o code
+     $ clang++ -O2 -gline-tables-only \
+       -fdebug-info-for-profiling -funique-internal-linkage-names \
+       -fprofile-sample-use=code.prof code.cc -o code
 
   [OPTIONAL] Sampling-based profiles can have inaccuracies or missing block/
   edge counters. The profile inference algorithm (profi) can be used to infer
@@ -2545,6 +2561,7 @@ usual build cycle when using sample profilers for optimization:
   .. code-block:: console
 
     $ clang++ -O2 -gline-tables-only -fprofile-sample-use=code.prof \
+      -fdebug-info-for-profiling -funique-internal-linkage-names \
       -fsample-profile-use-profi code.cc -o code
 
 Sample Profile Formats
