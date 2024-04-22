@@ -2,7 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse2 | FileCheck %s --check-prefixes=SSE,SSE2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4.1 | FileCheck %s --check-prefixes=SSE,SSE41
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-SLOW
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2,+tuning-fast-per-element-vector-shift | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+xop,+avx | FileCheck %s --check-prefixes=XOP,XOPAVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+xop,+avx2 | FileCheck %s --check-prefixes=XOP,XOPAVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq | FileCheck %s --check-prefixes=AVX512,AVX512DQ
@@ -431,10 +432,21 @@ define <2 x i64> @splatvar_shift_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; SSE-NEXT:    psllq %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: splatvar_shift_v2i64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpsllq %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: splatvar_shift_v2i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsllq %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-SLOW-LABEL: splatvar_shift_v2i64:
+; AVX2-SLOW:       # %bb.0:
+; AVX2-SLOW-NEXT:    vpsllq %xmm1, %xmm0, %xmm0
+; AVX2-SLOW-NEXT:    retq
+;
+; AVX2-FAST-LABEL: splatvar_shift_v2i64:
+; AVX2-FAST:       # %bb.0:
+; AVX2-FAST-NEXT:    vpbroadcastq %xmm1, %xmm1
+; AVX2-FAST-NEXT:    vpsllvq %xmm1, %xmm0, %xmm0
+; AVX2-FAST-NEXT:    retq
 ;
 ; XOP-LABEL: splatvar_shift_v2i64:
 ; XOP:       # %bb.0:
@@ -474,11 +486,23 @@ define <4 x i32> @splatvar_shift_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; SSE41-NEXT:    pslld %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: splatvar_shift_v4i32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
-; AVX-NEXT:    vpslld %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: splatvar_shift_v4i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; AVX1-NEXT:    vpslld %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-SLOW-LABEL: splatvar_shift_v4i32:
+; AVX2-SLOW:       # %bb.0:
+; AVX2-SLOW-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; AVX2-SLOW-NEXT:    vpslld %xmm1, %xmm0, %xmm0
+; AVX2-SLOW-NEXT:    retq
+;
+; AVX2-FAST-LABEL: splatvar_shift_v4i32:
+; AVX2-FAST:       # %bb.0:
+; AVX2-FAST-NEXT:    vpbroadcastd %xmm1, %xmm1
+; AVX2-FAST-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0
+; AVX2-FAST-NEXT:    retq
 ;
 ; XOP-LABEL: splatvar_shift_v4i32:
 ; XOP:       # %bb.0:
@@ -682,11 +706,24 @@ define <2 x i64> @splatvar_modulo_shift_v2i64(<2 x i64> %a, <2 x i64> %b) nounwi
 ; SSE-NEXT:    psllq %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: splatvar_modulo_shift_v2i64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX-NEXT:    vpsllq %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: splatvar_modulo_shift_v2i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpsllq %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-SLOW-LABEL: splatvar_modulo_shift_v2i64:
+; AVX2-SLOW:       # %bb.0:
+; AVX2-SLOW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-SLOW-NEXT:    vpsllq %xmm1, %xmm0, %xmm0
+; AVX2-SLOW-NEXT:    retq
+;
+; AVX2-FAST-LABEL: splatvar_modulo_shift_v2i64:
+; AVX2-FAST:       # %bb.0:
+; AVX2-FAST-NEXT:    vpbroadcastq %xmm1, %xmm1
+; AVX2-FAST-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-FAST-NEXT:    vpsllvq %xmm1, %xmm0, %xmm0
+; AVX2-FAST-NEXT:    retq
 ;
 ; XOP-LABEL: splatvar_modulo_shift_v2i64:
 ; XOP:       # %bb.0:
@@ -724,11 +761,25 @@ define <4 x i32> @splatvar_modulo_shift_v4i32(<4 x i32> %a, <4 x i32> %b) nounwi
 ; SSE-NEXT:    pslld %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: splatvar_modulo_shift_v4i32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX-NEXT:    vpslld %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: splatvar_modulo_shift_v4i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpslld %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-SLOW-LABEL: splatvar_modulo_shift_v4i32:
+; AVX2-SLOW:       # %bb.0:
+; AVX2-SLOW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX2-SLOW-NEXT:    vpslld %xmm1, %xmm0, %xmm0
+; AVX2-SLOW-NEXT:    retq
+;
+; AVX2-FAST-LABEL: splatvar_modulo_shift_v4i32:
+; AVX2-FAST:       # %bb.0:
+; AVX2-FAST-NEXT:    vpbroadcastd %xmm1, %xmm1
+; AVX2-FAST-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [31,31,31,31]
+; AVX2-FAST-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX2-FAST-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0
+; AVX2-FAST-NEXT:    retq
 ;
 ; XOP-LABEL: splatvar_modulo_shift_v4i32:
 ; XOP:       # %bb.0:
@@ -1337,4 +1388,116 @@ define <16 x i8> @splatconstant_shift_v16i8(<16 x i8> %a) nounwind {
 ; X86-SSE-NEXT:    retl
   %shift = shl <16 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
   ret <16 x i8> %shift
+}
+
+define <4 x i32> @shift_splat_vec4i32(<4 x i32> %x, i32 %s) {
+; SSE-LABEL: shift_splat_vec4i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movd %edi, %xmm1
+; SSE-NEXT:    pslld %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: shift_splat_vec4i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovd %edi, %xmm1
+; AVX1-NEXT:    vpslld %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-SLOW-LABEL: shift_splat_vec4i32:
+; AVX2-SLOW:       # %bb.0:
+; AVX2-SLOW-NEXT:    vmovd %edi, %xmm1
+; AVX2-SLOW-NEXT:    vpslld %xmm1, %xmm0, %xmm0
+; AVX2-SLOW-NEXT:    retq
+;
+; AVX2-FAST-LABEL: shift_splat_vec4i32:
+; AVX2-FAST:       # %bb.0:
+; AVX2-FAST-NEXT:    vmovd %edi, %xmm1
+; AVX2-FAST-NEXT:    vpbroadcastd %xmm1, %xmm1
+; AVX2-FAST-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0
+; AVX2-FAST-NEXT:    retq
+;
+; XOP-LABEL: shift_splat_vec4i32:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vmovd %edi, %xmm1
+; XOP-NEXT:    vpslld %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    retq
+;
+; AVX512-LABEL: shift_splat_vec4i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovd %edi, %xmm1
+; AVX512-NEXT:    vpslld %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+;
+; AVX512VL-LABEL: shift_splat_vec4i32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovd %edi, %xmm1
+; AVX512VL-NEXT:    vpslld %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    retq
+;
+; X86-SSE-LABEL: shift_splat_vec4i32:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    pslld %xmm1, %xmm0
+; X86-SSE-NEXT:    retl
+  %vec = insertelement <4 x i32> poison, i32 %s, i64 0
+  %splat = shufflevector <4 x i32> %vec, <4 x i32> poison, <4 x i32> zeroinitializer
+  %shr = shl <4 x i32> %x, %splat
+  ret <4 x i32> %shr
+}
+
+define <2 x i64> @shift_splat_zext_vec2i64(<2 x i64> %x, i32 %s) {
+; SSE-LABEL: shift_splat_zext_vec2i64:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movd %edi, %xmm1
+; SSE-NEXT:    psllq %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: shift_splat_zext_vec2i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovd %edi, %xmm1
+; AVX1-NEXT:    vpsllq %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-SLOW-LABEL: shift_splat_zext_vec2i64:
+; AVX2-SLOW:       # %bb.0:
+; AVX2-SLOW-NEXT:    vmovd %edi, %xmm1
+; AVX2-SLOW-NEXT:    vpsllq %xmm1, %xmm0, %xmm0
+; AVX2-SLOW-NEXT:    retq
+;
+; AVX2-FAST-LABEL: shift_splat_zext_vec2i64:
+; AVX2-FAST:       # %bb.0:
+; AVX2-FAST-NEXT:    vmovd %edi, %xmm1
+; AVX2-FAST-NEXT:    vpbroadcastd %xmm1, %xmm1
+; AVX2-FAST-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; AVX2-FAST-NEXT:    vpsllvq %xmm1, %xmm0, %xmm0
+; AVX2-FAST-NEXT:    retq
+;
+; XOP-LABEL: shift_splat_zext_vec2i64:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vmovd %edi, %xmm1
+; XOP-NEXT:    vpsllq %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    retq
+;
+; AVX512-LABEL: shift_splat_zext_vec2i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovd %edi, %xmm1
+; AVX512-NEXT:    vpsllq %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+;
+; AVX512VL-LABEL: shift_splat_zext_vec2i64:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovd %edi, %xmm1
+; AVX512VL-NEXT:    vpsllq %xmm1, %xmm0, %xmm0
+; AVX512VL-NEXT:    retq
+;
+; X86-SSE-LABEL: shift_splat_zext_vec2i64:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE-NEXT:    psllq %xmm1, %xmm0
+; X86-SSE-NEXT:    retl
+  %vec = insertelement <2 x i32> poison, i32 %s, i64 0
+  %splat = shufflevector <2 x i32> %vec, <2 x i32> poison, <2 x i32> zeroinitializer
+  %zext = zext <2 x i32> %splat to <2 x i64>
+  %shr = shl <2 x i64> %x, %zext
+  ret <2 x i64> %shr
 }
