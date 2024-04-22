@@ -260,3 +260,31 @@ AG ag = {1};
 // CHECK:   |-TemplateArgument type 'int'
 // CHECK:   | `-BuiltinType {{.*}} 'int'
 // CHECK:   `-ParmVarDecl {{.*}} 'int'
+
+template <typename D>
+requires (sizeof(D) == 4)
+struct Foo {
+  Foo(D);
+};
+
+template <typename U>
+using AFoo = Foo<G<U>>;
+// Verify that the require-clause from the Foo deduction guide is transformed.
+// The D occurrence should be rewritten to G<type-parameter-0-0>.
+//
+// CHECK-LABEL: Dumping <deduction guide for AFoo>
+// CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for AFoo>
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 0 U
+// CHECK-NEXT: |-ParenExpr {{.*}} 'bool'
+// CHECK-NEXT: | `-BinaryOperator {{.*}} 'bool' '=='
+// CHECK-NEXT: |   |-UnaryExprOrTypeTraitExpr {{.*}} 'G<type-parameter-0-0>'
+// CHECK-NEXT: |   `-ImplicitCastExpr {{.*}}
+// CHECK-NEXT: |     `-IntegerLiteral {{.*}}
+// CHECK-NEXT: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for AFoo> 'auto (G<type-parameter-0-0>) -> Foo<G<type-parameter-0-0>>'
+// CHECK-NEXT: | `-ParmVarDecl {{.*}} 'G<type-parameter-0-0>'
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for AFoo> 'auto (G<int>) -> Foo<G<int>>' implicit_instantiation
+// CHECK-NEXT:   |-TemplateArgument type 'int'
+// CHECK-NEXT:   | `-BuiltinType {{.*}} 'int'
+// CHECK-NEXT:   `-ParmVarDecl {{.*}} 'G<int>'
+
+AFoo aa(G<int>{});
