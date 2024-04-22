@@ -13,9 +13,9 @@
 
 namespace clang::tidy::bugprone {
 
-/// Detects the function which returns the const reference parameter as const
-/// reference. This might causes potential use after free errors if the caller
-/// uses xvalue as arguments.
+/// Detects return statements that return constant reference parameter as
+/// constant reference. This may cause use-after-free errors if the caller uses
+/// xvalue as arguments.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/return-const-ref-from-parameter.html

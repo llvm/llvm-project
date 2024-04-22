@@ -3,12 +3,12 @@
 bugprone-return-const-ref-from-parameter
 ========================================
 
-Detects the function which returns the const reference parameter as const
-reference. This might causes potential use after free errors if the caller
-uses xvalue as arguments.
+Detects return statements that return constant reference parameter as constant
+reference. This may cause use-after-free errors if the caller uses xvalue as
+arguments.
 
-In C++, const reference parameters can accept xvalues which will be destructed
-after the call. When the function returns such a parameter also as const reference,
+In C++, constant reference parameters can accept xvalues which will be destructed
+after the call. When the function returns such a parameter also as constant reference,
 then the returned reference can be used after the object it refers to has been
 destroyed.
 

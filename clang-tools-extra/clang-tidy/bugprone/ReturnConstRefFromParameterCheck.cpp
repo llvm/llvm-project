@@ -27,8 +27,8 @@ void ReturnConstRefFromParameterCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *R = Result.Nodes.getNodeAs<ReturnStmt>("ret");
   diag(R->getRetValue()->getBeginLoc(),
-       "return const reference parameter cause potential use-after-free "
-       "when function accepts immediately constructed value.");
+       "returning a constant reference parameter may cause a use-after-free "
+       "when the parameter is constructed from a temporary");
 }
 
 } // namespace clang::tidy::bugprone
