@@ -39,8 +39,21 @@ if (OPENMP_ENABLE_LIBOMPTARGET)
   endif()
 endif()
 
-# TODO: Leftover from the move, could probably be just LLVM_LIBDIR_SUFFIX everywhere.
-set(OFFLOAD_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}")
+if(OPENMP_STANDALONE_BUILD)
+  set(OFFLOAD_LIBDIR_SUFFIX "" CACHE STRING
+    "Suffix of lib installation directory, e.g. 64 => lib64")
+  set(OFFLOAD_INSTALL_LIBDIR "lib${OFFLOAD_LIBDIR_SUFFIX}" CACHE STRING
+      "Path where built offload libraries should be installed.")
+else()
+  # When building in tree we install the runtime according to the LLVM settings.
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+    set(OFFLOAD_INSTALL_LIBDIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE STRING
+      "Path where built offload libraries should be installed.")
+  else()
+    set(OFFLOAD_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}" CACHE STRING
+      "Path where built offload libraries should be installed.")
+  endif()
+endif()
 
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 
