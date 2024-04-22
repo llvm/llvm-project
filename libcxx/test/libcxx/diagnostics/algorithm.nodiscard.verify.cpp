@@ -8,22 +8,13 @@
 
 // UNSUPPORTED: c++03
 
-// Test that entities declared [[nodiscard]] as an extension by libc++, are
-// actually declared as such when _LIBCPP_DISABLE_NODISCARD_EXT is not specified.
+// check that <algorithm> functions are marked [[nodiscard]]
 
-// All entities to which libc++ applies [[nodiscard]] as an extension should
-// be tested here and in nodiscard_extensions.pass.cpp. They should also
-// be listed in `UsingLibcxx.rst` in the documentation for the extension.
-
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// clang-format off
 
 #include <algorithm>
-#include <bit> // bit_cast
-#include <cstddef> // to_integer
-#include <functional> // identity
+#include <functional>
 #include <iterator>
-#include <memory>
-#include <utility> // to_underlying
 
 #include "test_macros.h"
 
@@ -31,7 +22,7 @@ struct P {
   bool operator()(int) const { return false; }
 };
 
-void test_algorithms() {
+void test() {
   int arr[1] = { 1 };
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -111,9 +102,6 @@ void test_algorithms() {
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::find(std::begin(arr), std::end(arr), 1);
-
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::get_temporary_buffer<int>(1);
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::includes(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr));
@@ -297,57 +285,100 @@ void test_algorithms() {
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::upper_bound(std::begin(arr), std::end(arr), 1, std::greater<int>());
-}
-
-template<class LV, class RV>
-void test_template_cast_wrappers(LV&& lv, RV&& rv) {
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::forward<LV>(lv);
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::forward<RV>(rv);
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::move(lv);
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::move(rv);
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::move_if_noexcept(lv);
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::move_if_noexcept(rv);
-
-#if TEST_STD_VER >= 17
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::as_const(lv);
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::as_const(rv);
-#endif
 
 #if TEST_STD_VER >= 20
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::identity()(lv);
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::identity()(rv);
+  int range[1];
+  int* iter = range;
+  auto pred = [](auto...) { return true; };
+  std::ranges::adjacent_find(range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::adjacent_find(iter, iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::all_of(range, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::all_of(iter, iter, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::any_of(range, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::any_of(iter, iter, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::binary_search(range, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::binary_search(iter, iter, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::clamp(1, 2, 3); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::count_if(range, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::count_if(iter, iter, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::count(range, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::count(iter, iter, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::equal_range(range, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::equal_range(iter, iter, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::equal(range, range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::equal(iter, iter, iter, iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find_end(range, range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find_end(iter, iter, iter, iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find_first_of(range, range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find_first_of(iter, iter, iter, iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find_if_not(range, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find_if_not(iter, iter, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find_if(range, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find_if(iter, iter, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find(range, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::find(iter, iter, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::includes(range, range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::includes(iter, iter, iter, iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::is_heap_until(range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::is_heap_until(iter, iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::is_heap(range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::is_heap(iter, iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::is_partitioned(range, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::is_partitioned(iter, iter, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::is_permutation(range, range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::is_permutation(iter, iter, iter, iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::is_sorted_until(range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::is_sorted_until(iter, iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::is_sorted(range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::is_sorted(iter, iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::lexicographical_compare(range, range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::lexicographical_compare(iter, iter, iter, iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::lower_bound(range, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::lower_bound(iter, iter, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::max_element(range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::max_element(iter, iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::max(1, 2); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::max({1, 2, 3}); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::max(range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::minmax_element(range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::minmax_element(iter, iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::minmax(1, 2); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::minmax({1, 2, 3}); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::minmax(range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::mismatch(range, range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::mismatch(iter, iter, iter, iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::none_of(range, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::none_of(iter, iter, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::remove_if(range, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::remove_if(iter, iter, pred); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::remove(range, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::remove(iter, iter, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::search_n(range, 1, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::search_n(iter, iter, 1, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::search(range, range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::search(iter, iter, iter, iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::unique(range); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::unique(iter, iter); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::upper_bound(range, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::upper_bound(iter, iter, 1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
-}
 
-void test_nontemplate_cast_wrappers()
-{
-#if TEST_STD_VER > 14
-  std::byte b{42};
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::to_integer<int>(b);
+#if TEST_STD_VER >= 23
+  std::ranges::contains(range, 1);
+  // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::contains(iter, iter, 1);
+  // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::contains_subrange(range, range);
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::contains_subrange(iter, iter, iter, iter);
+  // expected-warning@-1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::fold_left(range, 0, std::plus());
+  // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::fold_left(iter, iter, 0, std::plus());
+  // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::fold_left_with_iter(range, 0, std::plus());
+  // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::fold_left_with_iter(iter, iter, 0, std::plus());
+  // expected-warning@-1{{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
-
-#if TEST_STD_VER > 20
-  enum E { Apple, Orange } e = Apple;
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::to_underlying(e);
-#endif
-}
-
-void f() {
-  test_algorithms();
-
-  int i = 42;
-  test_template_cast_wrappers(i, std::move(i));
-  test_nontemplate_cast_wrappers();
 }

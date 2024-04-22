@@ -38,15 +38,15 @@ namespace chrono {
 
 class time_zone_link {
 public:
-  _LIBCPP_NODISCARD_EXT
+  [[nodiscard]]
   _LIBCPP_HIDE_FROM_ABI explicit time_zone_link(__private_constructor_tag, string_view __name, string_view __target)
       : __name_{__name}, __target_{__target} {}
 
   _LIBCPP_HIDE_FROM_ABI time_zone_link(time_zone_link&&)            = default;
   _LIBCPP_HIDE_FROM_ABI time_zone_link& operator=(time_zone_link&&) = default;
 
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI string_view name() const noexcept { return __name_; }
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI string_view target() const noexcept { return __target_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string_view name() const noexcept { return __name_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string_view target() const noexcept { return __target_; }
 
 private:
   string __name_;
@@ -56,12 +56,12 @@ private:
   string __target_;
 };
 
-_LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline bool
+[[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline bool
 operator==(const time_zone_link& __x, const time_zone_link& __y) noexcept {
   return __x.name() == __y.name();
 }
 
-_LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline strong_ordering
+[[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline strong_ordering
 operator<=>(const time_zone_link& __x, const time_zone_link& __y) noexcept {
   return __x.name() <=> __y.name();
 }

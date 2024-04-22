@@ -61,7 +61,7 @@ template <class _ExecutionPolicy,
           class _Predicate,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI bool
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool
 is_partitioned(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "is_partitioned requires ForwardIterators");
   auto __res = std::__is_partitioned(__policy, std::move(__first), std::move(__last), std::move(__pred));

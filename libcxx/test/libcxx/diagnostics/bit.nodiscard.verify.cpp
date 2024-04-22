@@ -10,6 +10,8 @@
 
 // check that <bit> functions are marked [[nodiscard]]
 
+// clang-format off
+
 #include <bit>
 
 #include "test_macros.h"
