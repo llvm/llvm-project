@@ -64,7 +64,6 @@
 #include <cstdint>
 #include <map>
 #include <memory>
-#include <optional>
 
 using namespace llvm;
 
