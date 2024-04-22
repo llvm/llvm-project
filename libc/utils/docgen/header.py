@@ -8,6 +8,7 @@
 from pathlib import Path
 from typing import Generator
 
+
 class Header:
     """
     Maintains implementation information about a standard header file:

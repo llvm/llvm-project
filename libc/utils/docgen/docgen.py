@@ -19,7 +19,7 @@ from header import Header
 class DocgenAPIFormatError(Exception):
     """Raised on fatal formatting errors with a description of a formatting error"""
 
-    
+
 def check_api(header: Header, api: Dict):
     """
     Checks that docgen json files are properly formatted. If there are any
