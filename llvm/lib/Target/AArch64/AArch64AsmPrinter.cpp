@@ -642,7 +642,7 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
     if (IsFixedShadow) {
       // Aarch64 makes it difficult to embed large constants in the code.
       // Fortuitously, kShadowBaseAlignment == 32, so we use the 32-bit
-      // right-shift option in the MOV instruction. Combined with the 16-bit
+      // left-shift option in the MOV instruction. Combined with the 16-bit
       // immediate, this is enough to represent any offset up to 2**48.
       OutStreamer->emitInstruction(MCInstBuilder(AArch64::MOVZXi)
                                        .addReg(AArch64::X17)
