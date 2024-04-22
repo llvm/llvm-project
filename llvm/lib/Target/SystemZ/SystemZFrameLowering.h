@@ -107,7 +107,7 @@ public:
   }
 
   // Return the offset of the return address.
-  virtual int getReturnAddressOffset(MachineFunction &MF) const override {
+  int getReturnAddressOffset(MachineFunction &MF) const override {
     return (usePackedStack(MF) ? -2 : 14) * getPointerSize();
   }
 
@@ -161,7 +161,7 @@ public:
   }
 
   // Return the offset of the return address.
-  virtual int getReturnAddressOffset(MachineFunction &MF) const override {
+  int getReturnAddressOffset(MachineFunction &MF) const override {
     return 3 * getPointerSize();
   }
 
