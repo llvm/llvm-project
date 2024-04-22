@@ -60,10 +60,18 @@ static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
     if (MArch.empty())
       MArch = getMArch(*Rec);
 
-    const bool FastUnalignedAccess =
+    bool FastScalarUnalignedAccess =
         any_of(Rec->getValueAsListOfDefs("Features"), [&](auto &Feature) {
-          return Feature->getValueAsString("Name") == "fast-unaligned-access";
+          return Feature->getValueAsString("Name") == "unaligned-scalar-mem";
         });
+
+    bool FastVectorUnalignedAccess =
+        any_of(Rec->getValueAsListOfDefs("Features"), [&](auto &Feature) {
+          return Feature->getValueAsString("Name") == "unaligned-vector-mem";
+        });
+
+    bool FastUnalignedAccess =
+        FastScalarUnalignedAccess && FastVectorUnalignedAccess;
 
     OS << "PROC(" << Rec->getName() << ", "
        << "{\"" << Rec->getValueAsString("Name") << "\"}, "
@@ -74,7 +82,6 @@ static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   OS << "#ifndef TUNE_PROC\n"
      << "#define TUNE_PROC(ENUM, NAME)\n"
      << "#endif\n\n";
-  OS << "TUNE_PROC(GENERIC, \"generic\")\n";
 
   for (const Record *Rec :
        RK.getAllDerivedDefinitions("RISCVTuneProcessorModel")) {

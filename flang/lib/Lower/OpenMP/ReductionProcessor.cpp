@@ -220,12 +220,12 @@ mlir::Value ReductionProcessor::createScalarCombiner(
   switch (redId) {
   case ReductionIdentifier::MAX:
     reductionOp =
-        getReductionOperation<mlir::arith::MaximumFOp, mlir::arith::MaxSIOp>(
+        getReductionOperation<mlir::arith::MaxNumFOp, mlir::arith::MaxSIOp>(
             builder, type, loc, op1, op2);
     break;
   case ReductionIdentifier::MIN:
     reductionOp =
-        getReductionOperation<mlir::arith::MinimumFOp, mlir::arith::MinSIOp>(
+        getReductionOperation<mlir::arith::MinNumFOp, mlir::arith::MinSIOp>(
             builder, type, loc, op1, op2);
     break;
   case ReductionIdentifier::IOR:
@@ -486,9 +486,8 @@ createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
     assert(cstNeedsDealloc.has_value() &&
            "createTempFromMold decides this statically");
     if (cstNeedsDealloc.has_value() && *cstNeedsDealloc != false) {
-      auto insPt = builder.saveInsertionPoint();
+      mlir::OpBuilder::InsertionGuard guard(builder);
       createReductionCleanupRegion(builder, loc, reductionDecl);
-      builder.restoreInsertionPoint(insPt);
     }
 
     // Put the temporary inside of a box:
@@ -574,6 +573,11 @@ void ReductionProcessor::addDeclareReduction(
     llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
         *reductionSymbols) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  if (std::get<std::optional<omp::clause::Reduction::ReductionModifier>>(
+          reduction.t))
+    TODO(currentLocation, "Reduction modifiers are not supported");
+
   mlir::omp::DeclareReductionOp decl;
   const auto &redOperatorList{
       std::get<omp::clause::Reduction::ReductionIdentifiers>(reduction.t)};

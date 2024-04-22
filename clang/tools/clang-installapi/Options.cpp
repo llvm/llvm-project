@@ -261,6 +261,11 @@ bool Options::processLinkerOptions(InputArgList &Args) {
 
   LinkerOpts.IsDylib = Args.hasArg(drv::OPT_dynamiclib);
 
+  for (auto *Arg : Args.filtered(drv::OPT_alias_list)) {
+    LinkerOpts.AliasLists.emplace_back(Arg->getValue());
+    Arg->claim();
+  }
+
   LinkerOpts.AppExtensionSafe = Args.hasFlag(
       drv::OPT_fapplication_extension, drv::OPT_fno_application_extension,
       /*Default=*/LinkerOpts.AppExtensionSafe);
@@ -372,7 +377,7 @@ bool Options::addFilePaths(InputArgList &Args, PathSeq &Headers,
       }
       // Sort headers to ensure deterministic behavior.
       sort(*InputHeadersOrErr);
-      for (std::string &H : *InputHeadersOrErr)
+      for (StringRef H : *InputHeadersOrErr)
         Headers.emplace_back(std::move(H));
     } else
       Headers.emplace_back(Path);
@@ -684,13 +689,30 @@ InstallAPIContext Options::createContext() {
     return Ctx;
   Ctx.Reexports = Reexports;
 
+  // Collect symbols from alias lists.
+  AliasMap Aliases;
+  for (const StringRef ListPath : LinkerOpts.AliasLists) {
+    auto Buffer = FM->getBufferForFile(ListPath);
+    if (auto Err = Buffer.getError()) {
+      Diags->Report(diag::err_cannot_open_file) << ListPath << Err.message();
+      return Ctx;
+    }
+    Expected<AliasMap> Result = parseAliasList(Buffer.get());
+    if (!Result) {
+      Diags->Report(diag::err_cannot_read_alias_list)
+          << ListPath << toString(Result.takeError());
+      return Ctx;
+    }
+    Aliases.insert(Result.get().begin(), Result.get().end());
+  }
+
   // Attempt to find umbrella headers by capturing framework name.
   StringRef FrameworkName;
   if (!LinkerOpts.IsDylib)
     FrameworkName = getFrameworkNameFromInstallName(LinkerOpts.InstallName);
 
   // Process inputs.
-  for (const std::string &ListPath : DriverOpts.FileLists) {
+  for (const StringRef ListPath : DriverOpts.FileLists) {
     auto Buffer = FM->getBufferForFile(ListPath);
     if (auto Err = Buffer.getError()) {
       Diags->Report(diag::err_cannot_open_file) << ListPath << Err.message();
@@ -849,7 +871,7 @@ InstallAPIContext Options::createContext() {
   }
 
   Ctx.Verifier = std::make_unique<DylibVerifier>(
-      std::move(*Slices), std::move(ReexportedIFs), Diags,
+      std::move(*Slices), std::move(ReexportedIFs), std::move(Aliases), Diags,
       DriverOpts.VerifyMode, DriverOpts.Zippered, DriverOpts.Demangle,
       DriverOpts.DSYMPath);
   return Ctx;

@@ -47,7 +47,10 @@ add_public_tablegen_target(MLIRTestOpsSyntaxIncGen)
 add_mlir_library(MLIRTestDialect
   TestAttributes.cpp
   TestDialect.cpp
+  TestFormatUtils.cpp
   TestInterfaces.cpp
+  TestOpDefs.cpp
+  TestOps.cpp
   TestPatterns.cpp
   TestTraits.cpp
   TestTypes.cpp
@@ -85,6 +88,7 @@ add_mlir_library(MLIRTestDialect
   MLIRTensorDialect
   MLIRTransformUtils
   MLIRTransforms
+  MLIRValueBoundsOpInterface
 )
 
 add_mlir_translation_library(MLIRTestFromLLVMIRTranslation

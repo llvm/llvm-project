@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_AST_OPENACCCLAUSE_H
 #define LLVM_CLANG_AST_OPENACCCLAUSE_H
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/StmtIterator.h"
 #include "clang/Basic/OpenACCKinds.h"
 
 namespace clang {
@@ -34,6 +35,17 @@ public:
 
   static bool classof(const OpenACCClause *) { return true; }
 
+  using child_iterator = StmtIterator;
+  using const_child_iterator = ConstStmtIterator;
+  using child_range = llvm::iterator_range<child_iterator>;
+  using const_child_range = llvm::iterator_range<const_child_iterator>;
+
+  child_range children();
+  const_child_range children() const {
+    auto Children = const_cast<OpenACCClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
   virtual ~OpenACCClause() = default;
 };
 
@@ -49,6 +61,13 @@ protected:
 
 public:
   SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
 };
 
 /// A 'default' clause, has the optional 'none' or 'present' argument.
@@ -81,6 +100,167 @@ public:
                                       SourceLocation EndLoc);
 };
 
+/// Represents one of the handful of classes that has an optional/required
+/// 'condition' expression as an argument.
+class OpenACCClauseWithCondition : public OpenACCClauseWithParams {
+  Expr *ConditionExpr = nullptr;
+
+protected:
+  OpenACCClauseWithCondition(OpenACCClauseKind K, SourceLocation BeginLoc,
+                             SourceLocation LParenLoc, Expr *ConditionExpr,
+                             SourceLocation EndLoc)
+      : OpenACCClauseWithParams(K, BeginLoc, LParenLoc, EndLoc),
+        ConditionExpr(ConditionExpr) {}
+
+public:
+  bool hasConditionExpr() const { return ConditionExpr; }
+  const Expr *getConditionExpr() const { return ConditionExpr; }
+  Expr *getConditionExpr() { return ConditionExpr; }
+
+  child_range children() {
+    if (ConditionExpr)
+      return child_range(reinterpret_cast<Stmt **>(&ConditionExpr),
+                         reinterpret_cast<Stmt **>(&ConditionExpr + 1));
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    if (ConditionExpr)
+      return const_child_range(
+          reinterpret_cast<Stmt *const *>(&ConditionExpr),
+          reinterpret_cast<Stmt *const *>(&ConditionExpr + 1));
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
+/// An 'if' clause, which has a required condition expression.
+class OpenACCIfClause : public OpenACCClauseWithCondition {
+protected:
+  OpenACCIfClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                  Expr *ConditionExpr, SourceLocation EndLoc);
+
+public:
+  static OpenACCIfClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                 SourceLocation LParenLoc, Expr *ConditionExpr,
+                                 SourceLocation EndLoc);
+};
+
+/// A 'self' clause, which has an optional condition expression.
+class OpenACCSelfClause : public OpenACCClauseWithCondition {
+  OpenACCSelfClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                    Expr *ConditionExpr, SourceLocation EndLoc);
+
+public:
+  static OpenACCSelfClause *Create(const ASTContext &C, SourceLocation BeginLoc,
+                                   SourceLocation LParenLoc,
+                                   Expr *ConditionExpr, SourceLocation EndLoc);
+};
+
+/// Represents a clause that has one or more IntExprs.  It does not own the
+/// IntExprs, but provides 'children' and other accessors.
+class OpenACCClauseWithIntExprs : public OpenACCClauseWithParams {
+  MutableArrayRef<Expr *> IntExprs;
+
+protected:
+  OpenACCClauseWithIntExprs(OpenACCClauseKind K, SourceLocation BeginLoc,
+                            SourceLocation LParenLoc, SourceLocation EndLoc)
+      : OpenACCClauseWithParams(K, BeginLoc, LParenLoc, EndLoc) {}
+
+  /// Used only for initialization, the leaf class can initialize this to
+  /// trailing storage.
+  void setIntExprs(MutableArrayRef<Expr *> NewIntExprs) {
+    assert(IntExprs.empty() && "Cannot change IntExprs list");
+    IntExprs = NewIntExprs;
+  }
+
+  /// Gets the entire list of integer expressions, but leave it to the
+  /// individual clauses to expose this how they'd like.
+  llvm::ArrayRef<Expr *> getIntExprs() const { return IntExprs; }
+
+public:
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(IntExprs.begin()),
+                       reinterpret_cast<Stmt **>(IntExprs.end()));
+  }
+
+  const_child_range children() const {
+    child_range Children =
+        const_cast<OpenACCClauseWithIntExprs *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+};
+
+class OpenACCNumGangsClause final
+    : public OpenACCClauseWithIntExprs,
+      public llvm::TrailingObjects<OpenACCNumGangsClause, Expr *> {
+
+  OpenACCNumGangsClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                        ArrayRef<Expr *> IntExprs, SourceLocation EndLoc)
+      : OpenACCClauseWithIntExprs(OpenACCClauseKind::NumGangs, BeginLoc,
+                                  LParenLoc, EndLoc) {
+    std::uninitialized_copy(IntExprs.begin(), IntExprs.end(),
+                            getTrailingObjects<Expr *>());
+    setIntExprs(MutableArrayRef(getTrailingObjects<Expr *>(), IntExprs.size()));
+  }
+
+public:
+  static OpenACCNumGangsClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
+
+  llvm::ArrayRef<Expr *> getIntExprs() {
+    return OpenACCClauseWithIntExprs::getIntExprs();
+  }
+
+  llvm::ArrayRef<Expr *> getIntExprs() const {
+    return OpenACCClauseWithIntExprs::getIntExprs();
+  }
+};
+
+/// Represents one of a handful of clauses that have a single integer
+/// expression.
+class OpenACCClauseWithSingleIntExpr : public OpenACCClauseWithIntExprs {
+  Expr *IntExpr;
+
+protected:
+  OpenACCClauseWithSingleIntExpr(OpenACCClauseKind K, SourceLocation BeginLoc,
+                                 SourceLocation LParenLoc, Expr *IntExpr,
+                                 SourceLocation EndLoc)
+      : OpenACCClauseWithIntExprs(K, BeginLoc, LParenLoc, EndLoc),
+        IntExpr(IntExpr) {
+    setIntExprs(MutableArrayRef<Expr *>{&this->IntExpr, 1});
+  }
+
+public:
+  bool hasIntExpr() const { return !getIntExprs().empty(); }
+  const Expr *getIntExpr() const {
+    return hasIntExpr() ? getIntExprs()[0] : nullptr;
+  }
+
+  Expr *getIntExpr() { return hasIntExpr() ? getIntExprs()[0] : nullptr; };
+};
+
+class OpenACCNumWorkersClause : public OpenACCClauseWithSingleIntExpr {
+  OpenACCNumWorkersClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                          Expr *IntExpr, SourceLocation EndLoc);
+
+public:
+  static OpenACCNumWorkersClause *Create(const ASTContext &C,
+                                         SourceLocation BeginLoc,
+                                         SourceLocation LParenLoc,
+                                         Expr *IntExpr, SourceLocation EndLoc);
+};
+
+class OpenACCVectorLengthClause : public OpenACCClauseWithSingleIntExpr {
+  OpenACCVectorLengthClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                            Expr *IntExpr, SourceLocation EndLoc);
+
+public:
+  static OpenACCVectorLengthClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         Expr *IntExpr, SourceLocation EndLoc);
+};
+
 template <class Impl> class OpenACCClauseVisitor {
   Impl &getDerived() { return static_cast<Impl &>(*this); }
 
@@ -95,59 +275,25 @@ public:
       return;
 
     switch (C->getClauseKind()) {
-    case OpenACCClauseKind::Default:
-      VisitOpenACCDefaultClause(*cast<OpenACCDefaultClause>(C));
-      return;
-    case OpenACCClauseKind::Finalize:
-    case OpenACCClauseKind::IfPresent:
-    case OpenACCClauseKind::Seq:
-    case OpenACCClauseKind::Independent:
-    case OpenACCClauseKind::Auto:
-    case OpenACCClauseKind::Worker:
-    case OpenACCClauseKind::Vector:
-    case OpenACCClauseKind::NoHost:
-    case OpenACCClauseKind::If:
-    case OpenACCClauseKind::Self:
-    case OpenACCClauseKind::Copy:
-    case OpenACCClauseKind::UseDevice:
-    case OpenACCClauseKind::Attach:
-    case OpenACCClauseKind::Delete:
-    case OpenACCClauseKind::Detach:
-    case OpenACCClauseKind::Device:
-    case OpenACCClauseKind::DevicePtr:
-    case OpenACCClauseKind::DeviceResident:
-    case OpenACCClauseKind::FirstPrivate:
-    case OpenACCClauseKind::Host:
-    case OpenACCClauseKind::Link:
-    case OpenACCClauseKind::NoCreate:
-    case OpenACCClauseKind::Present:
-    case OpenACCClauseKind::Private:
-    case OpenACCClauseKind::CopyOut:
-    case OpenACCClauseKind::CopyIn:
-    case OpenACCClauseKind::Create:
-    case OpenACCClauseKind::Reduction:
-    case OpenACCClauseKind::Collapse:
-    case OpenACCClauseKind::Bind:
-    case OpenACCClauseKind::VectorLength:
-    case OpenACCClauseKind::NumGangs:
-    case OpenACCClauseKind::NumWorkers:
-    case OpenACCClauseKind::DeviceNum:
-    case OpenACCClauseKind::DefaultAsync:
-    case OpenACCClauseKind::DeviceType:
-    case OpenACCClauseKind::DType:
-    case OpenACCClauseKind::Async:
-    case OpenACCClauseKind::Tile:
-    case OpenACCClauseKind::Gang:
-    case OpenACCClauseKind::Wait:
-    case OpenACCClauseKind::Invalid:
+#define VISIT_CLAUSE(CLAUSE_NAME)                                              \
+  case OpenACCClauseKind::CLAUSE_NAME:                                         \
+    Visit##CLAUSE_NAME##Clause(*cast<OpenACC##CLAUSE_NAME##Clause>(C));        \
+    return;
+#include "clang/Basic/OpenACCClauses.def"
+
+    default:
       llvm_unreachable("Clause visitor not yet implemented");
     }
     llvm_unreachable("Invalid Clause kind");
   }
 
-  void VisitOpenACCDefaultClause(const OpenACCDefaultClause &Clause) {
-    return getDerived().VisitOpenACCDefaultClause(Clause);
+#define VISIT_CLAUSE(CLAUSE_NAME)                                              \
+  void Visit##CLAUSE_NAME##Clause(                                             \
+      const OpenACC##CLAUSE_NAME##Clause &Clause) {                            \
+    return getDerived().Visit##CLAUSE_NAME##Clause(Clause);                    \
   }
+
+#include "clang/Basic/OpenACCClauses.def"
 };
 
 class OpenACCClausePrinter final
@@ -165,7 +311,9 @@ public:
   }
   OpenACCClausePrinter(raw_ostream &OS) : OS(OS) {}
 
-  void VisitOpenACCDefaultClause(const OpenACCDefaultClause &Clause);
+#define VISIT_CLAUSE(CLAUSE_NAME)                                              \
+  void Visit##CLAUSE_NAME##Clause(const OpenACC##CLAUSE_NAME##Clause &Clause);
+#include "clang/Basic/OpenACCClauses.def"
 };
 
 } // namespace clang

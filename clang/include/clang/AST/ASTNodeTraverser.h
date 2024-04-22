@@ -243,7 +243,8 @@ public:
   void Visit(const OpenACCClause *C) {
     getNodeDelegate().AddChild([=] {
       getNodeDelegate().Visit(C);
-      // TODO OpenACC: Switch on clauses that have children, and add them.
+      for (const auto *S : C->children())
+        Visit(S);
     });
   }
 
@@ -848,6 +849,12 @@ public:
       Visit(D);
     for (auto *R : E->getRequirements())
       Visit(R);
+  }
+
+  void VisitTypeTraitExpr(const TypeTraitExpr *E) {
+    // Argument types are not children of the TypeTraitExpr.
+    for (auto *A : E->getArgs())
+      Visit(A->getType());
   }
 
   void VisitLambdaExpr(const LambdaExpr *Node) {

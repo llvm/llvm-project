@@ -251,11 +251,10 @@ using SectionsClauseOps = detail::Clauses<AllocateClauseOps, NowaitClauseOps,
                                           PrivateClauseOps, ReductionClauseOps>;
 
 // TODO `linear` clause.
-using SimdLoopClauseOps =
-    detail::Clauses<AlignedClauseOps, CollapseClauseOps, IfClauseOps,
-                    LoopRelatedOps, NontemporalClauseOps, OrderClauseOps,
-                    PrivateClauseOps, ReductionClauseOps, SafelenClauseOps,
-                    SimdlenClauseOps>;
+using SimdClauseOps =
+    detail::Clauses<AlignedClauseOps, IfClauseOps, NontemporalClauseOps,
+                    OrderClauseOps, PrivateClauseOps, ReductionClauseOps,
+                    SafelenClauseOps, SimdlenClauseOps>;
 
 using SingleClauseOps = detail::Clauses<AllocateClauseOps, CopyprivateClauseOps,
                                         NowaitClauseOps, PrivateClauseOps>;
@@ -284,11 +283,10 @@ using TaskgroupClauseOps =
     detail::Clauses<AllocateClauseOps, TaskReductionClauseOps>;
 
 using TaskloopClauseOps =
-    detail::Clauses<AllocateClauseOps, CollapseClauseOps, FinalClauseOps,
-                    GrainsizeClauseOps, IfClauseOps, InReductionClauseOps,
-                    LoopRelatedOps, MergeableClauseOps, NogroupClauseOps,
-                    NumTasksClauseOps, PriorityClauseOps, PrivateClauseOps,
-                    ReductionClauseOps, UntiedClauseOps>;
+    detail::Clauses<AllocateClauseOps, FinalClauseOps, GrainsizeClauseOps,
+                    IfClauseOps, InReductionClauseOps, MergeableClauseOps,
+                    NogroupClauseOps, NumTasksClauseOps, PriorityClauseOps,
+                    PrivateClauseOps, ReductionClauseOps, UntiedClauseOps>;
 
 using TaskwaitClauseOps = detail::Clauses<DependClauseOps, NowaitClauseOps>;
 
