@@ -200,14 +200,14 @@ define <16 x i16> @shuf_and_v16i16_yy_expensive_shuf(<16 x i16> %x, <16 x i16> %
   ret <16 x i16> %r
 }
 
-; TODO: negative test - don't fold shuffle(divrem(x,y),divrem(z,w)) if mask contains poison (PR89390)
+; negative test - don't fold shuffle(divrem(x,y),divrem(z,w)) if mask contains poison (PR89390)
 
 define <4 x i32> @shuf_srem_v4i32_poison(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: define <4 x i32> @shuf_srem_v4i32_poison(
 ; CHECK-SAME: <4 x i32> [[A0:%.*]], <4 x i32> [[A1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[A1]], <4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32> <i32 0, i32 poison, i32 6, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[A0]], <4 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 2, i32 3>
-; CHECK-NEXT:    [[R:%.*]] = srem <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[SREM0:%.*]] = srem <4 x i32> [[A1]], [[A0]]
+; CHECK-NEXT:    [[SREM1:%.*]] = srem <4 x i32> <i32 1, i32 1, i32 1, i32 1>, [[A0]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[SREM0]], <4 x i32> [[SREM1]], <4 x i32> <i32 0, i32 poison, i32 6, i32 3>
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %srem0 = srem <4 x i32> %a1, %a0
