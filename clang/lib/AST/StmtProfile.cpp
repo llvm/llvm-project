@@ -2497,6 +2497,12 @@ void OpenACCClauseProfiler::VisitSelfClause(const OpenACCSelfClause &Clause) {
     Profiler.VisitStmt(Clause.getConditionExpr());
 }
 
+void OpenACCClauseProfiler::VisitNumGangsClause(
+    const OpenACCNumGangsClause &Clause) {
+  for (auto *E : Clause.getIntExprs())
+    Profiler.VisitStmt(E);
+}
+
 void OpenACCClauseProfiler::VisitNumWorkersClause(
     const OpenACCNumWorkersClause &Clause) {
   assert(Clause.hasIntExpr() && "num_workers clause requires a valid int expr");

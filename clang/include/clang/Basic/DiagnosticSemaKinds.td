@@ -12293,4 +12293,9 @@ def note_acc_int_expr_conversion
     : Note<"conversion to %select{integral|enumeration}0 type %1">;
 def err_acc_int_expr_multiple_conversions
     : Error<"multiple conversions from expression type %0 to an integral type">;
+def err_acc_num_gangs_num_args
+    : Error<"%select{no|too many}0 integer expression arguments provided to "
+            "OpenACC 'num_gangs' "
+            "%select{|clause: '%1' directive expects maximum of %2, %3 were "
+            "provided}0">;
 } // end of sema component.
