@@ -965,7 +965,10 @@ AtomicRMWInst *AtomicExpandImpl::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
   AtomicRMWInst *NewAI = Builder.CreateAtomicRMW(
       Op, PMV.AlignedAddr, NewOperand, PMV.AlignedAddrAlignment,
       AI->getOrdering(), AI->getSyncScopeID());
-  // TODO: Preserve metadata
+
+  // TODO: Do we need to drop noundef? We widened the operation and could be
+  // loading undefined bits.
+  NewAI->copyMetadata(*AI);
 
   Value *FinalOldResult = extractMaskedValue(Builder, NewAI, PMV);
   AI->replaceAllUsesWith(FinalOldResult);

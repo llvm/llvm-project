@@ -189,7 +189,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_drop_md(ptr addrspace(1) %ptr, i
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !noundef [[META0:![0-9]+]], !some.unknown.md [[META0]]
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
@@ -203,7 +203,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4_drop_md(ptr addrspace(1) 
 ; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_drop_md(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !noundef [[META0]], !some.unknown.md [[META0]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
@@ -224,7 +224,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_preserve_mmra(ptr addrspace(1) %
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !mmra [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !noundef [[META0]], !mmra [[META1:![0-9]+]]
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
@@ -238,7 +238,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_mmra(ptr addrspa
 ; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_mmra(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !mmra [[META0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !noundef [[META0]], !mmra [[META1]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
@@ -306,7 +306,7 @@ define i16 @test_atomicrmw_and_i16_global_agent__amdgpu_no_remote_memory(ptr add
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
@@ -319,7 +319,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4__amdgpu_no_remote_memory(
 ; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4__amdgpu_no_remote_memory(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
@@ -339,7 +339,7 @@ define i16 @test_atomicrmw_and_i16_global_agent__amdgpu_no_fine_grained_memory(p
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
@@ -352,7 +352,7 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4__amdgpu_no_fine_grained_m
 ; CHECK-LABEL: @test_atomicrmw_and_i16_global_agent_align4__amdgpu_no_fine_grained_memory(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
