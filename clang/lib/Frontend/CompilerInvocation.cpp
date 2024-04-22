@@ -1556,6 +1556,9 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
                llvm::DICompileUnit::DebugNameTableKind::Default))
     GenerateArg(Consumer, OPT_gpubnames);
 
+  if (Opts.DebugTemplateAlias)
+    GenerateArg(Consumer, OPT_gtemplate_alias);
+
   auto TNK = Opts.getDebugSimpleTemplateNames();
   if (TNK != llvm::codegenoptions::DebugTemplateNamesKind::Full) {
     if (TNK == llvm::codegenoptions::DebugTemplateNamesKind::Simple)
@@ -1826,6 +1829,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
                    (Opts.OptimizationLevel > 1));
   Opts.BinutilsVersion =
       std::string(Args.getLastArgValue(OPT_fbinutils_version_EQ));
+
+  Opts.DebugTemplateAlias = Args.hasArg(OPT_gtemplate_alias);
 
   Opts.DebugNameTable = static_cast<unsigned>(
       Args.hasArg(OPT_ggnu_pubnames)
@@ -3655,6 +3660,9 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   case LangOptions::ClangABI::Ver17:
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "17.0");
     break;
+  case LangOptions::ClangABI::Ver18:
+    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "18.0");
+    break;
   case LangOptions::ClangABI::Latest:
     break;
   }
@@ -4162,6 +4170,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         Opts.setClangABICompat(LangOptions::ClangABI::Ver15);
       else if (Major <= 17)
         Opts.setClangABICompat(LangOptions::ClangABI::Ver17);
+      else if (Major <= 18)
+        Opts.setClangABICompat(LangOptions::ClangABI::Ver18);
     } else if (Ver != "latest") {
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();

@@ -2918,26 +2918,9 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   // to get this right here so that we don't end up making a
   // spuriously dependent expression if we're inside a dependent
   // instance method.
-  if (getLangOpts().CPlusPlus && !R.empty() &&
-      (*R.begin())->isCXXClassMember()) {
-    bool MightBeImplicitMember;
-    if (!IsAddressOfOperand)
-      MightBeImplicitMember = true;
-    else if (!SS.isEmpty())
-      MightBeImplicitMember = false;
-    else if (R.isOverloadedResult())
-      MightBeImplicitMember = false;
-    else if (R.isUnresolvableResult())
-      MightBeImplicitMember = true;
-    else
-      MightBeImplicitMember = isa<FieldDecl>(R.getFoundDecl()) ||
-                              isa<IndirectFieldDecl>(R.getFoundDecl()) ||
-                              isa<MSPropertyDecl>(R.getFoundDecl());
-
-    if (MightBeImplicitMember)
-      return BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc,
-                                             R, TemplateArgs, S);
-  }
+  if (isPotentialImplicitMemberAccess(SS, R, IsAddressOfOperand))
+    return BuildPossibleImplicitMemberExpr(SS, TemplateKWLoc, R, TemplateArgs,
+                                           S);
 
   if (TemplateArgs || TemplateKWLoc.isValid()) {
 
@@ -3471,12 +3454,10 @@ ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
   // we've picked a target.
   R.suppressDiagnostics();
 
-  UnresolvedLookupExpr *ULE
-    = UnresolvedLookupExpr::Create(Context, R.getNamingClass(),
-                                   SS.getWithLocInContext(Context),
-                                   R.getLookupNameInfo(),
-                                   NeedsADL, R.isOverloadedResult(),
-                                   R.begin(), R.end());
+  UnresolvedLookupExpr *ULE = UnresolvedLookupExpr::Create(
+      Context, R.getNamingClass(), SS.getWithLocInContext(Context),
+      R.getLookupNameInfo(), NeedsADL, R.begin(), R.end(),
+      /*KnownDependent=*/false);
 
   return ULE;
 }
@@ -3902,7 +3883,7 @@ static Expr *BuildFloatingLiteral(Sema &S, NumericLiteralParser &Literal,
   return FloatingLiteral::Create(S.Context, Val, isExact, Ty, Loc);
 }
 
-bool Sema::CheckLoopHintExpr(Expr *E, SourceLocation Loc) {
+bool Sema::CheckLoopHintExpr(Expr *E, SourceLocation Loc, bool AllowZero) {
   assert(E && "Invalid expression");
 
   if (E->isValueDependent())
@@ -3920,7 +3901,13 @@ bool Sema::CheckLoopHintExpr(Expr *E, SourceLocation Loc) {
   if (R.isInvalid())
     return true;
 
-  bool ValueIsPositive = ValueAPS.isStrictlyPositive();
+  // GCC allows the value of unroll count to be 0.
+  // https://gcc.gnu.org/onlinedocs/gcc/Loop-Specific-Pragmas.html says
+  // "The values of 0 and 1 block any unrolling of the loop."
+  // The values doesn't have to be strictly positive in '#pragma GCC unroll' and
+  // '#pragma unroll' cases.
+  bool ValueIsPositive =
+      AllowZero ? ValueAPS.isNonNegative() : ValueAPS.isStrictlyPositive();
   if (!ValueIsPositive || ValueAPS.getActiveBits() > 31) {
     Diag(E->getExprLoc(), diag::err_requires_positive_value)
         << toString(ValueAPS, 10) << ValueIsPositive;
@@ -17575,6 +17562,12 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
     if (Converted.isInvalid())
       return Converted;
     E = Converted.get();
+    // The 'explicit' case causes us to get a RecoveryExpr.  Give up here so we
+    // don't try to evaluate it later. We also don't want to return the
+    // RecoveryExpr here, as it results in this call succeeding, thus callers of
+    // this function will attempt to use 'Value'.
+    if (isa<RecoveryExpr>(E))
+      return ExprError();
     if (!E->getType()->isIntegralOrUnscopedEnumerationType())
       return ExprError();
   } else if (!E->getType()->isIntegralOrUnscopedEnumerationType()) {
