@@ -7887,6 +7887,23 @@ it will contain a list of ids, including the ids of the callsites in the
 full inline sequence, in order from the leaf-most call's id to the outermost
 inlined call.
 
+'``unsafealloc``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``unsafealloc`` metadata is used to indicate that this alloca
+should be moved to the unsafe stack. This metadata only makes sense if
+the containing function has the ``safestack`` attribute (and thus has
+`SafeStack <https://clang.llvm.org/docs/SafeStack.html>`_
+enabled). The metadata is only used as a flag, so the associated node
+must be empty.
+
+Example:
+
+.. code-block:: text
+
+    %x = alloca [16 x i8], !unsafealloc !0
+    !0 = !{}
+
 Module Flags Metadata
 =====================
 
