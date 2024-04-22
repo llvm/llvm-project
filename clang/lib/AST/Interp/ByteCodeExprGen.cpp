@@ -1351,6 +1351,8 @@ bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   if (const auto *FD = dyn_cast<FieldDecl>(Member)) {
     const RecordDecl *RD = FD->getParent();
     const Record *R = getRecord(RD);
+    if (!R)
+      return false;
     const Record::Field *F = R->getField(FD);
     // Leave a pointer to the field on the stack.
     if (F->Decl->getType()->isReferenceType())
