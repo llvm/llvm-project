@@ -50,6 +50,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/SHA256.h"
 #include "llvm/Support/raw_ostream.h"
@@ -68,7 +69,8 @@ using namespace llvm;
 namespace {
 
 static cl::opt<float> LargeKernelFactor(
-    "amdgpu-module-splitting-large-kernel-threshold", cl::init(2.0), cl::Hidden,
+    "amdgpu-module-splitting-large-kernel-threshold", cl::init(2.0f),
+    cl::Hidden,
     cl::desc(
         "consider a kernel as large and needing special treatment when it "
         "exceeds the average cost of a partition by this factor; e;g. 2.0 "
@@ -76,7 +78,7 @@ static cl::opt<float> LargeKernelFactor(
         "an average partition; 0 disables large kernels handling entirely"));
 
 static cl::opt<float> LargeKernelOverlapForMerge(
-    "amdgpu-module-splitting-large-kernel-merge-overlap", cl::init(0.8),
+    "amdgpu-module-splitting-large-kernel-merge-overlap", cl::init(0.8f),
     cl::Hidden,
     cl::desc("defines how much overlap between two large kernel's dependencies "
              "is needed to put them in the same partition"));
@@ -112,7 +114,7 @@ static std::string getName(const Value &V) {
   if (!*HideNames)
     return V.getName().str();
   return toHex(SHA256::hash(arrayRefFromStringRef(V.getName())),
-               /*LowerCase*/ true);
+               /*LowerCase=*/true);
 }
 
 /// Main logging helper.
@@ -168,18 +170,19 @@ public:
 
     // If a log directory is specified, create a new file with a unique name in
     // that directory.
-    SmallString<0> FilePath;
     int Fd;
-    std::string LogFile = (LogDir + "/" + "Module-%%-%%-%%-%%-%%-%%-%%.txt");
-    if (auto Err = sys::fs::createUniqueFile(LogFile, Fd, FilePath)) {
-      dbgs() << LogFile << "\n";
+    SmallString<0> PathTemplate;
+    SmallString<0> RealPath;
+    sys::path::append(PathTemplate, LogDir, "Module-%%-%%-%%-%%-%%-%%-%%.txt");
+    if (auto Err =
+            sys::fs::createUniqueFile(PathTemplate.str(), Fd, RealPath)) {
       std::string Msg =
           "Failed to create log file at '" + LogDir + "': " + Err.message();
       report_fatal_error(StringRef(Msg),
                          /*CrashDiag=*/false);
     }
 
-    FileOS = std::make_unique<raw_fd_ostream>(Fd, /*shouldClose*/ true);
+    FileOS = std::make_unique<raw_fd_ostream>(Fd, /*shouldClose=*/true);
   }
 
   bool hasLogFile() const { return FileOS != nullptr; }
@@ -304,15 +307,23 @@ static void addAllDependencies(SplitModuleLogger &SML, const CallGraph &CG,
   SmallVector<const Function *> WorkList({&Fn});
   while (!WorkList.empty()) {
     const auto &CurFn = *WorkList.pop_back_val();
+    assert(!CurFn.isDeclaration());
 
     // Scan for an indirect call. If such a call is found, we have to
     // conservatively assume this can call all non-entrypoint functions in the
     // module.
-    for (const auto &BB : CurFn) {
-      for (const auto &I : BB) {
-        const auto *CB = dyn_cast<CallBase>(&I);
-        if (!CB || !CB->isIndirectCall())
-          continue;
+
+    for (auto &CGEntry : *CG[&CurFn]) {
+      auto *CGNode = CGEntry.second;
+      auto *Callee = CGNode->getFunction();
+      if (!Callee) {
+        // Functions have an edge towards CallsExternalNode if they're external
+        // declarations, or if they do an indirect call. As we only process
+        // definitions here, we know this means the function has an indirect
+        // call. We then have to conservatively assume this can call all
+        // non-entrypoint functions in the module.
+        if (CGNode != CG.getCallsExternalNode())
+          continue; // this is another function-less node we don't care about.
 
         SML << "Indirect call detected in " << getName(CurFn)
             << " - treating all non-entrypoint functions as "
@@ -323,15 +334,8 @@ static void addAllDependencies(SplitModuleLogger &SML, const CallGraph &CG,
         HadIndirectCall = true;
         return;
       }
-    }
-
-    for (auto &CGEntry : *CG[&CurFn]) {
-      auto *Callee = CGEntry.second->getFunction();
-      if (!Callee)
-        continue;
 
       assert(!AMDGPU::isKernelCC(Callee));
-
       if (Callee->isDeclaration())
         continue;
 
@@ -399,7 +403,7 @@ static float calculateOverlap(const DenseSet<const Function *> &A,
       ++NumCommon;
   }
 
-  return float(NumCommon) / Total.size();
+  return static_cast<float>(NumCommon) / Total.size();
 }
 
 /// Performs all of the partitioning work on \p M.
