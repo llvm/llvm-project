@@ -14,8 +14,8 @@ Macros
 
   * - Function
     - Implemented
-    - C23 Standard Section
-    - POSIX 2018 Standard Section
+    - C Standard
+    - POSIX Standard
   * - FE_ALL_EXCEPT
     - |check|
     - 7.6.12
@@ -103,8 +103,8 @@ Functions
 
   * - Function
     - Implemented
-    - C23 Standard Section
-    - POSIX 2018 Standard Section
+    - C Standard
+    - POSIX Standard
   * - fe_dec_getround
     -
     - 7.6.5.3

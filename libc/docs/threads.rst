@@ -14,8 +14,8 @@ Macros
 
   * - Function
     - Implemented
-    - C23 Standard Section
-    - POSIX 2018 Standard Section
+    - C Standard
+    - POSIX Standard
   * - ONCE_FLAG_INIT
     -
     - 7.28.1.3
@@ -35,8 +35,8 @@ Functions
 
   * - Function
     - Implemented
-    - C23 Standard Section
-    - POSIX 2018 Standard Section
+    - C Standard
+    - POSIX Standard
   * - call_once
     - |check|
     - 7.28.2.1

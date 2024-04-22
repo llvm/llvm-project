@@ -14,8 +14,8 @@ Macros
 
   * - Function
     - Implemented
-    - C23 Standard Section
-    - POSIX 2018 Standard Section
+    - C Standard
+    - POSIX Standard
   * - __STDC_ENDIAN_BIG__
     - |check|
     - 7.18.2.2
@@ -99,8 +99,8 @@ Functions
 
   * - Function
     - Implemented
-    - C23 Standard Section
-    - POSIX 2018 Standard Section
+    - C Standard
+    - POSIX Standard
   * - stdc_bit_ceil_uc
     - |check|
     - 7.18.16

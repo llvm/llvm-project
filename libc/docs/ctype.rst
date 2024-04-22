@@ -14,8 +14,8 @@ Functions
 
   * - Function
     - Implemented
-    - C23 Standard Section
-    - POSIX 2018 Standard Section
+    - C Standard
+    - POSIX Standard
   * - isalnum
     - |check|
     - 7.4.1.1
