@@ -1443,15 +1443,16 @@ void RewriteInstance::registerFragments() {
         AmbiguousFragments.emplace_back(ParentName, &Function);
         continue;
       }
-      assert(BD);
-      const uint64_t Address = BD->getAddress();
-      BinaryFunction *BF = BC->getBinaryFunctionAtAddress(Address);
-      if (!BF) {
-        BC->errs() << "BOLT-ERROR: parent function not found for " << Name
-                   << '\n';
-        exit(1);
+      if (BD) {
+        const uint64_t Address = BD->getAddress();
+        if (BinaryFunction *BF = BC->getBinaryFunctionAtAddress(Address)) {
+          BC->registerFragment(Function, *BF);
+          continue;
+        }
       }
-      BC->registerFragment(Function, *BF);
+      BC->errs() << "BOLT-ERROR: parent function not found for " << Name
+                 << '\n';
+      exit(1);
     }
   }
 
@@ -1507,15 +1508,16 @@ void RewriteInstance::registerFragments() {
     }
 
     // No local parent is found, use global parent function.
-    if (!ParentAddress) {
-      BinaryData *ParentBD = BC->getBinaryDataByName(ParentName);
-      assert(ParentBD);
-      ParentAddress = ParentBD->getAddress();
-    }
+    if (!ParentAddress)
+      if (BinaryData *ParentBD = BC->getBinaryDataByName(ParentName))
+        ParentAddress = ParentBD->getAddress();
 
-    BinaryFunction *ParentBF = BC->getBinaryFunctionAtAddress(ParentAddress);
-    assert(ParentBF);
-    BC->registerFragment(*BF, *ParentBF);
+    if (BinaryFunction *ParentBF = BC->getBinaryFunctionAtAddress(ParentAddress)) {
+      BC->registerFragment(*BF, *ParentBF);
+      continue;
+    }
+    BC->errs() << "BOLT-ERROR: parent function not found for " << *BF << '\n';
+    exit(1);
   }
 }
 

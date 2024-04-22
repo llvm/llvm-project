@@ -490,7 +490,7 @@ private:
   /// Store all non-zero symbols in this map for a quick address lookup.
   std::map<uint64_t, llvm::object::SymbolRef> FileSymRefs;
 
-  /// FILE symbols.
+  /// FILE symbols used for disambiguating split function parents.
   std::vector<object::DataRefImpl> FileSymbols;
 
   std::unique_ptr<DWARFRewriter> DebugInfoRewriter;
