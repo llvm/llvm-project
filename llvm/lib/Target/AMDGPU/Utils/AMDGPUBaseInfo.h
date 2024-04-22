@@ -685,6 +685,9 @@ public:
   // Return index of BitOp3 operand or -1.
   int getBitOp3OperandIdx() const;
 
+  // Retuns if this is opcode with swapped src0 and src1.
+  bool isRevOpcode() const;
+
 private:
   bool hasMandatoryLiteralAt(unsigned CompSrcIdx) const {
     assert(CompSrcIdx < Component::MAX_SRC_NUM);
@@ -747,6 +750,9 @@ private:
   static constexpr unsigned SINGLE_MC_SRC_IDX[4][3] =
       {{1, 2, 3}, {2, 3, 4}, {2, 4, 5}, {2, 4, 6}};
 
+  // Map for V_LSHL_ADD_U64 to V_DUAL_LSHLREV_ADD_U64.
+  static constexpr unsigned SINGLE_REVOPC_MC_SRC_IDX[3] = {2, 1, 3};
+
   // Parsed operands of regular instructions are ordered as follows:
   //   Mnemo dst src0 [vsrc1 ...]
   // Parsed VOPD operands are ordered as follows:
@@ -763,19 +769,24 @@ private:
   const ComponentProps PrevComp;
   const unsigned VOPD3ModsNum;
   const int BitOp3Idx; // Index of bitop3 operand or -1
+  const bool IsRevOpcode; // This is V_DUAL_LSHLREV_ADD_U64 with src0 and src1
+                          // swapped vs V_LSHL_ADD_U64.
 
 public:
   // Create layout for COMPONENT_X or SINGLE component.
-  ComponentLayout(ComponentKind Kind, unsigned VOPD3ModsNum, int BitOp3Idx)
-      : Kind(Kind), VOPD3ModsNum(VOPD3ModsNum), BitOp3Idx(BitOp3Idx) {
+  ComponentLayout(ComponentKind Kind, unsigned VOPD3ModsNum, int BitOp3Idx,
+                  bool IsRevOpcode)
+      : Kind(Kind), VOPD3ModsNum(VOPD3ModsNum), BitOp3Idx(BitOp3Idx),
+        IsRevOpcode(IsRevOpcode) {
     assert(Kind == ComponentKind::SINGLE || Kind == ComponentKind::COMPONENT_X);
   }
 
   // Create layout for COMPONENT_Y which depends on COMPONENT_X layout.
   ComponentLayout(const ComponentProps &OpXProps, unsigned VOPD3ModsNum,
-                  int BitOp3Idx)
+                  int BitOp3Idx, bool IsRevOpcode)
       : Kind(ComponentKind::COMPONENT_Y), PrevComp(OpXProps),
-        VOPD3ModsNum(VOPD3ModsNum), BitOp3Idx(BitOp3Idx) {}
+        VOPD3ModsNum(VOPD3ModsNum), BitOp3Idx(BitOp3Idx),
+        IsRevOpcode(IsRevOpcode) {}
 
 public:
   // Return the index of dst operand in MCInst operands.
@@ -788,9 +799,13 @@ public:
     if (Kind == SINGLE && CompSrcIdx == 2 && BitOp3Idx != -1)
       return BitOp3Idx;
 
-    if (VOPD3)
-      return SINGLE_MC_SRC_IDX[VOPD3ModsNum][CompSrcIdx] + getPrevCompSrcNum() +
-             getPrevCompVOPD3ModsNum() + (Kind != SINGLE ? 1 : 0);
+    if (VOPD3) {
+      unsigned Idx = (IsRevOpcode && Kind == SINGLE)
+                         ? SINGLE_REVOPC_MC_SRC_IDX[CompSrcIdx]
+                         : SINGLE_MC_SRC_IDX[VOPD3ModsNum][CompSrcIdx];
+      return Idx + getPrevCompSrcNum() + getPrevCompVOPD3ModsNum() +
+             (Kind != SINGLE ? 1 : 0);
+    }
 
     return SINGLE_MC_SRC_IDX[0][CompSrcIdx] + getPrevCompSrcNum() +
            (Kind != SINGLE ? 1 : 0);
@@ -827,14 +842,15 @@ public:
                 ComponentKind Kind = ComponentKind::SINGLE,
                 bool VOP3Layout = false)
       : ComponentProps(OpDesc, VOP3Layout),
-        ComponentLayout(Kind, getCompVOPD3ModsNum(), getBitOp3OperandIdx()) {}
+        ComponentLayout(Kind, getCompVOPD3ModsNum(), getBitOp3OperandIdx(),
+                        isRevOpcode()) {}
 
   // Create ComponentInfo for COMPONENT_Y which depends on COMPONENT_X layout.
   ComponentInfo(const MCInstrDesc &OpDesc, const ComponentProps &OpXProps,
                 bool VOP3Layout = false)
       : ComponentProps(OpDesc, VOP3Layout),
         ComponentLayout(OpXProps, getCompVOPD3ModsNum(),
-                        getBitOp3OperandIdx()) {}
+                        getBitOp3OperandIdx(), isRevOpcode()) {}
 
   // Map component operand index to parsed operand index.
   // Return 0 if the specified operand does not exist.
