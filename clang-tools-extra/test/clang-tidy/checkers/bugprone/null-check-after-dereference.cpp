@@ -168,24 +168,21 @@ int fncall_reassignment(int *fncall_reassigned) {
     // CHECK-MESSAGES: :[[@LINE-4]]:3: note: one of the locations where the pointer's value cannot be null
     *fncall_reassigned = 42;
   }
-  
-  ptr_fn(&fncall_reassigned);
-
-  if (fncall_reassigned) {
-    // FIXME: References of a pointer passed to external functions do not invalidate its value
-    // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: pointer value is checked even though it cannot be null at this point
-    // CHECK-MESSAGES: :[[@LINE-8]]:5: note: one of the locations where the pointer's value cannot be null
-    *fncall_reassigned = 42;
-  }
-
-  *fncall_reassigned = 42;
 
   ref_fn(fncall_reassigned);
 
   if (fncall_reassigned) {
     // FIXME: References of a pointer passed to external functions do not invalidate its value
     // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: pointer value is checked even though it cannot be null at this point
-    // CHECK-MESSAGES: :[[@LINE-19]]:5: note: one of the locations where the pointer's value cannot be null
+    *fncall_reassigned = 42;
+  }
+
+  *fncall_reassigned = 42;
+  
+  ptr_fn(&fncall_reassigned);
+
+  if (fncall_reassigned) {
+    // no-warning
     *fncall_reassigned = 42;
   }
   
@@ -194,8 +191,7 @@ int fncall_reassignment(int *fncall_reassigned) {
 
   if (fncall_reassigned) {
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: pointer value is checked even though it cannot be null at this point
-    // FIXME: Better note tag support, preferably after the reassignment/refresh
-    // CHECK-MESSAGES: :[[@LINE-29]]:5: note: one of the locations where the pointer's value cannot be null
+    // CHECK-MESSAGES: :[[@LINE-4]]:3: note: one of the locations where the pointer's value cannot be null
     *fncall_reassigned = 42;
     return *fncall_reassigned;
   } else {

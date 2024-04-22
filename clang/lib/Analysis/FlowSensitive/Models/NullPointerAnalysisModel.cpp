@@ -99,8 +99,9 @@ auto addressofMatcher() {
 }
 
 auto functionCallMatcher() {
-  return callExpr(hasDeclaration(functionDecl(returns(isAnyPointer()))))
-      .bind(kVar);
+  return callExpr(
+      callee(functionDecl(hasAnyParameter(anyOf(hasType(pointerType()),
+                                                hasType(referenceType()))))));
 }
 
 auto assignMatcher() {
@@ -362,6 +363,49 @@ void matchAddressofExpr(const Expr *expr,
   RootValue->setProperty(kIsNonnull, Env.getBoolLiteralValue(true));
 }
 
+void matchPtrArgFunctionExpr(const CallExpr *fncall,
+                             const MatchFinder::MatchResult &Result,
+                             Environment &Env) {
+  // Inner storageloc, inner type
+  fncall->dump();
+  
+  for (const auto *Arg : fncall->arguments()) {
+    // WrappedArg->dump();
+    // const auto *Arg = WrappedArg->IgnoreCasts();
+    Arg->dump();
+
+    // FIXME: Add handling for reference types as arguments
+    if (Arg->getType()->isPointerType()) {
+      llvm::errs() << (int)Env.getValue(*Arg)->getKind();
+      PointerValue *OuterValue = cast_or_null<PointerValue>(
+          Env.getValue(*Arg));
+
+      if (!OuterValue)
+        continue;
+
+      QualType InnerType = Arg->getType()->getPointeeType();
+      if (!InnerType->isPointerType())
+        continue;
+
+      StorageLocation &InnerLoc = OuterValue->getPointeeLoc();
+      
+      PointerValue *InnerValue =
+          cast_or_null<PointerValue>(Env.getValue(InnerLoc));
+
+      if (!InnerValue)
+        continue;
+      
+      Value *NewValue = Env.createValue(InnerType);
+      assert(NewValue && "Failed to re-initialize a pointer's value");
+
+      Env.setValue(InnerLoc, *NewValue);
+
+    // FIXME: Recursively invalidate all member pointers of eg. a struct
+    // Should be part of the framework, most likely.
+    }
+  }
+}
+
 void matchAnyPointerExpr(const Expr *fncall,
                          const MatchFinder::MatchResult &Result,
                          Environment &Env) {
@@ -502,7 +546,7 @@ auto buildTransferMatchSwitch() {
       .CaseOfCFGStmt<Stmt>(arrowMatcher(), matchDereferenceExpr)
       .CaseOfCFGStmt<Expr>(nullptrMatcher(), matchNullptrExpr)
       .CaseOfCFGStmt<Expr>(addressofMatcher(), matchAddressofExpr)
-      .CaseOfCFGStmt<Expr>(functionCallMatcher(), matchAnyPointerExpr)
+      .CaseOfCFGStmt<CallExpr>(functionCallMatcher(), matchPtrArgFunctionExpr)
       .CaseOfCFGStmt<Expr>(anyPointerMatcher(), matchAnyPointerExpr)
       .CaseOfCFGStmt<Expr>(castExprMatcher(), matchNullCheckExpr)
       .CaseOfCFGStmt<Expr>(nullCheckExprMatcher(), matchNullCheckExpr)
@@ -586,12 +630,14 @@ void NullPointerAnalysisModel::join(QualType Type, const Value &Val1,
       case SR::False:
         return MergedEnv.getBoolLiteralValue(false);
       case SR::Unknown:
-        if (MergedEnv.proves(MergedEnv.arena().makeEquals(LHSVar->formula(),
-                                                          RHSVar->formula())))
-          return *LHSVar;
-
-        return MergedEnv.makeTopBoolValue();
+        break;
       }
+    }
+
+    if (LHSVar && RHSVar &&
+        MergedEnv.proves(MergedEnv.arena().makeEquals(LHSVar->formula(),
+                                                      RHSVar->formula()))) {
+      return *LHSVar;
     }
 
     return MergedEnv.makeTopBoolValue();
@@ -600,10 +646,16 @@ void NullPointerAnalysisModel::join(QualType Type, const Value &Val1,
   BoolValue &NonnullValue = MergeValues(kIsNonnull);
   BoolValue &NullValue = MergeValues(kIsNull);
 
-  MergedVal.setProperty(kIsNonnull, NonnullValue);
-  MergedVal.setProperty(kIsNull, NullValue);
-
-  MergedEnv.assume(MergedEnv.makeOr(NonnullValue, NullValue).formula());
+  if (&NonnullValue == &MergedEnv.makeTopBoolValue() ||
+      &NullValue == &MergedEnv.makeTopBoolValue()) {
+    MergedVal.setProperty(kIsNonnull, MergedEnv.makeTopBoolValue());
+    MergedVal.setProperty(kIsNull, MergedEnv.makeTopBoolValue());
+  } else {
+    MergedVal.setProperty(kIsNonnull, NonnullValue);
+    MergedVal.setProperty(kIsNull, NullValue);
+  
+    MergedEnv.assume(MergedEnv.makeOr(NonnullValue, NullValue).formula());
+  }
 }
 
 ComparisonResult NullPointerAnalysisModel::compare(QualType Type,
