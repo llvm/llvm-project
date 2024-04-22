@@ -13139,31 +13139,55 @@ Value *BoUpSLP::vectorizeTree(
       assert(Vec->getType()->isIntOrIntVectorTy() &&
              PrevVec->getType()->isIntOrIntVectorTy() &&
              "Expected integer vector types only.");
-      std::optional<std::pair<unsigned long, bool>> Res;
-      if (const TreeEntry *BaseTE = getTreeEntry(TE->Scalars.front())) {
-        SmallVector<const TreeEntry *> BaseTEs;
-        if (BaseTE->isSame(TE->Scalars))
-          BaseTEs.push_back(BaseTE);
-        auto It = MultiNodeScalars.find(TE->Scalars.front());
-        if (It != MultiNodeScalars.end()) {
-          for (const TreeEntry *MNTE : It->getSecond())
-            if (MNTE->isSame(TE->Scalars))
-              BaseTEs.push_back(MNTE);
+      std::optional<bool> IsSigned;
+      for (Value *V : TE->Scalars) {
+        if (const TreeEntry *BaseTE = getTreeEntry(V)) {
+          auto It = MinBWs.find(BaseTE);
+          if (It != MinBWs.end()) {
+            IsSigned = IsSigned.value_or(false) || It->second.second;
+            if (*IsSigned)
+              break;
+          }
+          for (const TreeEntry *MNTE : MultiNodeScalars.lookup(V)) {
+            auto It = MinBWs.find(MNTE);
+            if (It != MinBWs.end()) {
+              IsSigned = IsSigned.value_or(false) || It->second.second;
+              if (*IsSigned)
+                break;
+            }
+          }
+          if (IsSigned.value_or(false))
+            break;
+          // Scan through gather nodes.
+          for (const TreeEntry *BVE : ValueToGatherNodes.lookup(V)) {
+            auto It = MinBWs.find(BVE);
+            if (It != MinBWs.end()) {
+              IsSigned = IsSigned.value_or(false) || It->second.second;
+              if (*IsSigned)
+                break;
+            }
+          }
+          if (IsSigned.value_or(false))
+            break;
+          if (auto *EE = dyn_cast<ExtractElementInst>(V)) {
+            IsSigned =
+                IsSigned.value_or(false) ||
+                !isKnownNonNegative(EE->getVectorOperand(), SimplifyQuery(*DL));
+            continue;
+          }
+          if (IsSigned.value_or(false))
+            break;
         }
-        const auto *BaseIt = find_if(BaseTEs, [&](const TreeEntry *BaseTE) {
-          return MinBWs.contains(BaseTE);
-        });
-        if (BaseIt != BaseTEs.end())
-          Res = MinBWs.lookup(*BaseIt);
       }
-      if (!Res) {
-        assert(MinBWs.contains(TE->UserTreeIndices.front().UserTE) &&
-               "Expected user in MinBWs.");
-        Res = MinBWs.lookup(TE->UserTreeIndices.front().UserTE);
+      if (IsSigned.value_or(false)) {
+        // Final attempt - check user node.
+        auto It = MinBWs.find(TE->UserTreeIndices.front().UserTE);
+        if (It != MinBWs.end())
+          IsSigned = It->second.second;
       }
-      assert(Res && "Expected user node or perfect diamond match in MinBWs.");
-      bool IsSigned = Res->second;
-      Vec = Builder.CreateIntCast(Vec, PrevVec->getType(), IsSigned);
+      assert(IsSigned &&
+             "Expected user node or perfect diamond match in MinBWs.");
+      Vec = Builder.CreateIntCast(Vec, PrevVec->getType(), *IsSigned);
     }
     PrevVec->replaceAllUsesWith(Vec);
     PostponedValues.try_emplace(Vec).first->second.push_back(TE);
