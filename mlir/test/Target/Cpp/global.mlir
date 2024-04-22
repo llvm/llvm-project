@@ -25,9 +25,12 @@ emitc.global static @static_var : f32
 emitc.global static @static_const : f32 = 3.0
 // CHECK: static float static_const = 3.000000000e+00f;
 
+emitc.global @opaque_init : !emitc.opaque<"char"> = #emitc.opaque<"CHAR_MIN">
+// CHECK: char opaque_init = CHAR_MIN;
+
 func.func @use_global(%i: index) -> f32 {
   %0 = emitc.get_global @myglobal : !emitc.array<2xf32>
-  %1 = emitc.subscript %0[%i] : <2xf32>, index
+  %1 = emitc.subscript %0[%i] : (!emitc.array<2xf32>, index) -> f32
   return %1 : f32
   // CHECK-LABEL: use_global
   // CHECK-SAME: (size_t [[V1:.*]])

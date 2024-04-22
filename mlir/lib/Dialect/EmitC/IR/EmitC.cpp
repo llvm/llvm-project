@@ -1015,14 +1015,18 @@ parseEmitCGlobalOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
   if (parser.parseAttribute(initialValue, getInitializerTypeForGlobal(type)))
     return failure();
 
-  if (!llvm::isa<ElementsAttr, IntegerAttr, FloatAttr>(initialValue))
+  if (!llvm::isa<ElementsAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>(
+          initialValue))
     return parser.emitError(parser.getNameLoc())
-           << "initial value should be a unit, integer, float or elements "
+           << "initial value should be a integer, float, elements or opaque "
               "attribute";
   return success();
 }
 
 LogicalResult GlobalOp::verify() {
+  if (!isSupportedEmitCType(getType())) {
+    return emitOpError("expected valid emitc type");
+  }
   if (getInitialValue().has_value()) {
     Attribute initValue = getInitialValue().value();
     // Check that the type of the initial value is compatible with the type of
@@ -1048,10 +1052,9 @@ LogicalResult GlobalOp::verify() {
         return emitOpError("initial value expected to be of type ")
                << getType() << ", but was of type " << floatAttr.getType();
       }
-    } else {
-      return emitOpError(
-                 "initial value should be a unit, integer, float or elements "
-                 "attribute, but got ")
+    } else if (!isa<emitc::OpaqueAttr>(initValue)) {
+      return emitOpError("initial value should be a integer, float, elements "
+                         "or opaque attribute, but got ")
              << initValue;
     }
   }

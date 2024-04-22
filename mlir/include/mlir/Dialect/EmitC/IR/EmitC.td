@@ -1079,7 +1079,7 @@ def EmitC_GetGlobalOp : EmitC_Op<"get_global",
   }];
 
   let arguments = (ins FlatSymbolRefAttr:$name);
-  let results = (outs AnyType:$result);
+  let results = (outs EmitCType:$result);
   let assemblyFormat = "$name `:` type($result) attr-dict";
 }
 
