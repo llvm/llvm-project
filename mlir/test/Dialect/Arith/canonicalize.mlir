@@ -2818,6 +2818,15 @@ func.func @extsi_i0() -> i16 {
   return %extsi : i16
 }
 
+// CHECK-LABEL: @extui_i0
+//       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i16
+//       CHECK:   return %[[ZERO]] : i16
+func.func @extui_i0() -> i16 {
+  %c0 = arith.constant 0 : i0
+  %extui = arith.extui %c0 : i0 to i16
+  return %extui : i16
+}
+
 // CHECK-LABEL: @trunc_i0
 //       CHECK:   %[[ZERO:.*]] = arith.constant 0 : i0
 //       CHECK:   return %[[ZERO]] : i0
