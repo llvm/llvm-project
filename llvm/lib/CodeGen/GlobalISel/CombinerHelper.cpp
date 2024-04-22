@@ -5197,12 +5197,8 @@ bool CombinerHelper::matchUDivByConst(MachineInstr &MI) {
       return false;
   }
 
-  auto CheckEltValue = [&](const Constant *C) {
-    if (auto *CI = dyn_cast_or_null<ConstantInt>(C))
-      return !CI->isZero();
-    return false;
-  };
-  return matchUnaryPredicate(MRI, RHS, CheckEltValue);
+  return matchUnaryPredicate(
+      MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
 }
 
 void CombinerHelper::applyUDivByConst(MachineInstr &MI) {
@@ -5232,7 +5228,7 @@ bool CombinerHelper::matchSDivByConst(MachineInstr &MI) {
   // If the sdiv has an 'exact' flag we can use a simpler lowering.
   if (MI.getFlag(MachineInstr::MIFlag::IsExact)) {
     return matchUnaryPredicate(
-        MRI, RHS, [](const Constant *C) { return C && !C->isZeroValue(); });
+        MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
   }
 
   // Don't support the general case for now.
