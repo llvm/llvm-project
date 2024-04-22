@@ -66,9 +66,9 @@ namespace llvm::omp {
 ArrayRef<Directive> getLeafConstructs(Directive D) {
   auto Idx = static_cast<std::size_t>(D);
   if (Idx >= Directive_enumSize)
-    return std::nullopt;
+    return {};
   const auto *Row = LeafConstructTable[LeafConstructTableOrdering[Idx]];
-  return ArrayRef(&Row[2], static_cast<int>(Row[1]));
+  return ArrayRef(&Row[2], &Row[2] + static_cast<int>(Row[1]));
 }
 
 ArrayRef<Directive> getLeafConstructsOrSelf(Directive D) {
