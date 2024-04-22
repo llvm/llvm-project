@@ -1347,9 +1347,13 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
       SI->swapProfMetadata();
       break;
     }
-    case Instruction::Br:
-      cast<BranchInst>(U)->swapSuccessors(); // swaps prof metadata too
+    case Instruction::Br: {
+      BranchInst *BI = cast<BranchInst>(U);
+      BI->swapSuccessors(); // swaps prof metadata too
+      if (BPI)
+        BPI->swapSuccEdgesProbabilities(BI->getParent());
       break;
+    }
     case Instruction::Xor:
       replaceInstUsesWith(cast<Instruction>(*U), I);
       // Add to worklist for DCE.
@@ -3525,6 +3529,8 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
   if (match(Cond, m_Not(m_Value(X))) && !isa<Constant>(X)) {
     // Swap Destinations and condition...
     BI.swapSuccessors();
+    if (BPI)
+      BPI->swapSuccEdgesProbabilities(BI.getParent());
     return replaceOperand(BI, 0, X);
   }
 
@@ -3538,6 +3544,8 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
     Value *NotX = Builder.CreateNot(X, "not." + X->getName());
     Value *Or = Builder.CreateLogicalOr(NotX, Y);
     BI.swapSuccessors();
+    if (BPI)
+      BPI->swapSuccEdgesProbabilities(BI.getParent());
     return replaceOperand(BI, 0, Or);
   }
 
@@ -3554,6 +3562,8 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
     auto *Cmp = cast<CmpInst>(Cond);
     Cmp->setPredicate(CmpInst::getInversePredicate(Pred));
     BI.swapSuccessors();
+    if (BPI)
+      BPI->swapSuccEdgesProbabilities(BI.getParent());
     Worklist.push(Cmp);
     return &BI;
   }
@@ -5248,7 +5258,8 @@ static bool combineInstructionsOverFunction(
     Function &F, InstructionWorklist &Worklist, AliasAnalysis *AA,
     AssumptionCache &AC, TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
     DominatorTree &DT, OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
-    ProfileSummaryInfo *PSI, LoopInfo *LI, const InstCombineOptions &Opts) {
+    BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI, LoopInfo *LI,
+    const InstCombineOptions &Opts) {
   auto &DL = F.getParent()->getDataLayout();
 
   /// Builder - This is an IRBuilder that automatically inserts new
@@ -5286,7 +5297,7 @@ static bool combineInstructionsOverFunction(
                       << F.getName() << "\n");
 
     InstCombinerImpl IC(Worklist, Builder, F.hasMinSize(), AA, AC, TLI, TTI, DT,
-                        ORE, BFI, PSI, DL, LI);
+                        ORE, BFI, BPI, PSI, DL, LI);
     IC.MaxArraySizeForCombine = MaxArraySize;
     bool MadeChangeInThisIteration = IC.prepareWorklist(F, RPOT);
     MadeChangeInThisIteration |= IC.run();
@@ -5347,9 +5358,10 @@ PreservedAnalyses InstCombinePass::run(Function &F,
       MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   auto *BFI = (PSI && PSI->hasProfileSummary()) ?
       &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
+  auto *BPI = AM.getCachedResult<BranchProbabilityAnalysis>(F);
 
   if (!combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                       BFI, PSI, LI, Options))
+                                       BFI, BPI, PSI, LI, Options))
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
 
@@ -5396,9 +5408,14 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
       (PSI && PSI->hasProfileSummary()) ?
       &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI() :
       nullptr;
+  BranchProbabilityInfo *BPI = nullptr;
+  if (auto *WrapperPass =
+          getAnalysisIfAvailable<BranchProbabilityInfoWrapperPass>())
+    BPI = &WrapperPass->getBPI();
 
   return combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                         BFI, PSI, LI, InstCombineOptions());
+                                         BFI, BPI, PSI, LI,
+                                         InstCombineOptions());
 }
 
 char InstructionCombiningPass::ID = 0;
