@@ -2165,7 +2165,7 @@ mlir::ParseResult fir::DoLoopOp::parse(mlir::OpAsmParser &parser,
 }
 
 fir::DoLoopOp fir::getForInductionVarOwner(mlir::Value val) {
-  auto ivArg = val.dyn_cast<mlir::BlockArgument>();
+  auto ivArg = mlir::dyn_cast<mlir::BlockArgument>(val);
   if (!ivArg)
     return {};
   assert(ivArg.getOwner() && "unlinked block argument");
@@ -3777,7 +3777,7 @@ valueCheckFirAttributes(mlir::Value value,
       if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(definingOp))
         value = loadOp.getMemref();
   // If this is a function argument, look in the argument attributes.
-  if (auto blockArg = value.dyn_cast<mlir::BlockArgument>()) {
+  if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(value)) {
     if (blockArg.getOwner() && blockArg.getOwner()->isEntryBlock())
       if (auto funcOp = mlir::dyn_cast<mlir::func::FuncOp>(
               blockArg.getOwner()->getParentOp()))
