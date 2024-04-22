@@ -543,6 +543,7 @@ private:
   void WriteTypeAbbrevs();
   void WriteType(QualType T);
 
+  bool isLookupResultExternal(StoredDeclsList &Result, DeclContext *DC);
   bool isLookupResultEntirelyExternalOrUnreachable(StoredDeclsList &Result,
                                                    DeclContext *DC);
 

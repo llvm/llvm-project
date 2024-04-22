@@ -4003,6 +4003,12 @@ public:
 
 } // namespace
 
+bool ASTWriter::isLookupResultExternal(StoredDeclsList &Result,
+                                       DeclContext *DC) {
+  return Result.hasExternalDecls() &&
+         DC->hasNeedToReconcileExternalVisibleStorage();
+}
+
 bool ASTWriter::isLookupResultEntirelyExternalOrUnreachable(
     StoredDeclsList &Result, DeclContext *DC) {
   for (auto *D : Result.getLookupResult()) {
@@ -4061,7 +4067,7 @@ ASTWriter::GenerateNameLookupTable(const DeclContext *ConstDC,
     // isLookupResultEntirelyExternalOrUnreachable here. But due to bug we have
     // to test isLookupResultExternal here. See
     // https://github.com/llvm/llvm-project/issues/61065 for details.
-    if (GeneratingReducedBMI ||
+    if ((GeneratingReducedBMI || isLookupResultExternal(Result, DC)) &&
         isLookupResultEntirelyExternalOrUnreachable(Result, DC))
       continue;
 
