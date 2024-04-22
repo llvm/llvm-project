@@ -2045,6 +2045,11 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
 
   ScalarEvolution &SE = *PSE.getSE();
   auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
+
+  // If the distance between the acecsses is larger than their absolute stride
+  // multiplied by the backedge taken count, the accesses are independet, i.e.
+  // they are far enough appart that accesses won't access the same location
+  // across all loop ierations.
   if (HasSameSize && CommonStride &&
       isSafeDependenceDistance(DL, SE, *(PSE.getBackedgeTakenCount()), *Dist,
                                *CommonStride, TypeByteSize))
@@ -2057,6 +2062,8 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     const APInt &Val = C->getAPInt();
     int64_t Distance = Val.getSExtValue();
 
+    // If the distance between accesses and their strides are known constants,
+    // check whether the accesses interlace each other.
     if (std::abs(Distance) > 0 && CommonStride && *CommonStride > 1 &&
         HasSameSize &&
         areStridedAccessesIndependent(std::abs(Distance), *CommonStride,
@@ -2080,9 +2087,14 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     }
 
     bool IsTrueDataDependence = (AIsWrite && !BIsWrite);
-    // There is no need to update MaxSafeVectorWidthInBits after call to
-    // couldPreventStoreLoadForward, even if it changed MinDepDistBytes,
-    // since a forward dependency will allow vectorization using any width.
+    // Check if the first access writes to a location that is read in a later
+    // iteration, where the distance between them is not a multiple of a vector
+    // factor and relatively small.
+    //
+    // NOTE: There is no need to update MaxSafeVectorWidthInBits after call to
+    // couldPreventStoreLoadForward, even if it changed MinDepDistBytes, since a
+    // forward dependency will allow vectorization using any width.
+
     if (IsTrueDataDependence && EnableForwardingConflictDetection) {
       if (!C) {
         // TODO: Relax requirement that there is a common stride to retry with
