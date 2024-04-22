@@ -1067,25 +1067,15 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   }
 
   case tok::annot_embed: {
+    // We've met #embed in a context where a single value is expected. Take last
+    // element from #embed data as if it were a comma expression.
     EmbedAnnotationData *Data =
         reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
     SourceLocation StartLoc = ConsumeAnnotationToken();
     ASTContext &Context = Actions.getASTContext();
-    auto CreateStringLiteralFromStringRef = [&](StringRef Str, QualType Ty) {
-      llvm::APSInt ArraySize =
-          Context.MakeIntValue(Str.size(), Context.getSizeType());
-      QualType ArrayTy = Context.getConstantArrayType(
-          Ty, ArraySize, nullptr, ArraySizeModifier::Normal, 0);
-      return StringLiteral::Create(Context, Str, StringLiteralKind::Ordinary,
-                                   false, ArrayTy, StartLoc);
-    };
-
-    StringLiteral *FileNameArg =
-        CreateStringLiteralFromStringRef(Data->FileName, Context.CharTy);
-    StringLiteral *BinaryDataArg = CreateStringLiteralFromStringRef(
-        Data->BinaryData, Context.UnsignedCharTy);
-    Res = Actions.ActOnPPEmbedExpr(StartLoc, StartLoc, StartLoc, FileNameArg,
-                                   BinaryDataArg);
+    return IntegerLiteral::Create(
+        Context, llvm::APInt(CHAR_BIT, Data->BinaryData.back()),
+        Context.UnsignedCharTy, StartLoc);
   } break;
 
   case tok::kw___super:

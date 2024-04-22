@@ -425,6 +425,30 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator(
   return ExprError();
 }
 
+ExprResult Parser::createEmbedExpr() {
+  assert(Tok.getKind() == tok::annot_embed);
+  EmbedAnnotationData *Data =
+      reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
+  SourceLocation StartLoc = ConsumeAnnotationToken();
+  ASTContext &Context = Actions.getASTContext();
+  auto CreateStringLiteralFromStringRef = [&](StringRef Str, QualType Ty) {
+    llvm::APSInt ArraySize =
+        Context.MakeIntValue(Str.size(), Context.getSizeType());
+    QualType ArrayTy = Context.getConstantArrayType(
+        Ty, ArraySize, nullptr, ArraySizeModifier::Normal, 0);
+    return StringLiteral::Create(Context, Str, StringLiteralKind::Ordinary,
+                                 false, ArrayTy, StartLoc);
+  };
+
+  StringLiteral *FileNameArg =
+      CreateStringLiteralFromStringRef(Data->FileName, Context.CharTy);
+  StringLiteral *BinaryDataArg = CreateStringLiteralFromStringRef(
+      Data->BinaryData, Context.UnsignedCharTy);
+  ExprResult Res = Actions.ActOnPPEmbedExpr(StartLoc, StartLoc, StartLoc,
+                                            FileNameArg, BinaryDataArg);
+  return Res;
+}
+
 /// ParseBraceInitializer - Called when parsing an initializer that has a
 /// leading open brace.
 ///
@@ -498,6 +522,8 @@ ExprResult Parser::ParseBraceInitializer() {
     ExprResult SubElt;
     if (MayBeDesignationStart())
       SubElt = ParseInitializerWithPotentialDesignator(DesignatorCompletion);
+    else if (Tok.getKind() == tok::annot_embed)
+      SubElt = createEmbedExpr();
     else
       SubElt = ParseInitializer();
 

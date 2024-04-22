@@ -17067,30 +17067,6 @@ ExprResult Sema::ActOnPPEmbedExpr(SourceLocation BuiltinLoc,
       PPEmbedExpr(Context, Filename, BinaryData, BuiltinLoc, RPLoc, CurContext);
 }
 
-IntegerLiteral *Sema::ExpandSinglePPEmbedExpr(PPEmbedExpr *PPEmbed,
-                                              bool FirstElement) {
-  assert((PPEmbed->getDataElementCount(Context) == 1 || !FirstElement) &&
-         "Data should only contain a single element");
-  StringLiteral *DataLiteral = PPEmbed->getDataStringLiteral();
-  QualType ElementTy = PPEmbed->getType();
-  const size_t TargetWidth = Context.getTypeSize(ElementTy);
-  const size_t BytesPerElement = CHAR_BIT / TargetWidth;
-  StringRef Data = DataLiteral->getBytes();
-  Data = Data.substr(FirstElement ? 0 : Data.size() - 1, 1);
-  SmallVector<uint64_t, 4> ByteVals{};
-  for (size_t ValIndex = 0; ValIndex < BytesPerElement; ++ValIndex) {
-    if ((ValIndex % sizeof(uint64_t)) == 0) {
-      ByteVals.push_back(0);
-    }
-    const unsigned char DataByte = Data[ValIndex];
-    ByteVals.back() |=
-        (static_cast<uint64_t>(DataByte) << (ValIndex * CHAR_BIT));
-  }
-  ArrayRef<uint64_t> ByteValsRef(ByteVals);
-  return IntegerLiteral::Create(Context, llvm::APInt(TargetWidth, ByteValsRef),
-                                ElementTy, DataLiteral->getBeginLoc());
-}
-
 PPEmbedExpr::Action
 Sema::CheckExprListForPPEmbedExpr(ArrayRef<Expr *> ExprList,
                                   std::optional<QualType> MaybeInitType) {

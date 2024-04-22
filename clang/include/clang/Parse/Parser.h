@@ -2077,6 +2077,7 @@ private:
     QualType PreferredBaseType;
   };
   ExprResult ParseInitializerWithPotentialDesignator(DesignatorCompletionInfo);
+  ExprResult createEmbedExpr();
 
   //===--------------------------------------------------------------------===//
   // clang Expressions

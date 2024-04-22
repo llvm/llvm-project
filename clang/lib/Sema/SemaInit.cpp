@@ -504,35 +504,30 @@ class InitListChecker {
 
   Expr *HandleEmbed(PPEmbedExpr *Embed, const InitializedEntity &Entity) {
     Expr *Result = nullptr;
-    // Expand single-element embed as pure integer literal.
-    if (Embed->getDataElementCount(SemaRef.Context) == 1) {
-      Result = SemaRef.ExpandSinglePPEmbedExpr(Embed);
-    } else {
-      // Otherwise undrestand which part of embed we'd like to reference.
-      if (!CurEmbed) {
-        CurEmbed = Embed;
-        CurEmbedIndex = 0;
-      }
-      // Reference just one if we're initializing a single scalar.
-      uint64_t ElsCount = 1;
-      // Otherwise try to fill whole array with embed data.
-      if (Entity.getKind() == InitializedEntity::EK_ArrayElement) {
-        ValueDecl *ArrDecl = Entity.getParent()->getDecl();
-        auto *AType = SemaRef.Context.getAsArrayType(ArrDecl->getType());
-        assert(AType && "expected array type when initializing array");
-        ElsCount = Embed->getDataElementCount(SemaRef.Context);
-        if (const auto *CAType = dyn_cast<ConstantArrayType>(AType))
-          ElsCount = std::min(CAType->getSize().getZExtValue(),
-                              ElsCount - CurEmbedIndex);
-      }
+    // Undrestand which part of embed we'd like to reference.
+    if (!CurEmbed) {
+      CurEmbed = Embed;
+      CurEmbedIndex = 0;
+    }
+    // Reference just one if we're initializing a single scalar.
+    uint64_t ElsCount = 1;
+    // Otherwise try to fill whole array with embed data.
+    if (Entity.getKind() == InitializedEntity::EK_ArrayElement) {
+      ValueDecl *ArrDecl = Entity.getParent()->getDecl();
+      auto *AType = SemaRef.Context.getAsArrayType(ArrDecl->getType());
+      assert(AType && "expected array type when initializing array");
+      ElsCount = Embed->getDataElementCount(SemaRef.Context);
+      if (const auto *CAType = dyn_cast<ConstantArrayType>(AType))
+        ElsCount = std::min(CAType->getSize().getZExtValue(),
+                            ElsCount - CurEmbedIndex);
+    }
 
-      Result = new (SemaRef.Context)
-          EmbedSubscriptExpr(Embed->getType(), Embed, CurEmbedIndex, ElsCount);
-      CurEmbedIndex += ElsCount;
-      if (CurEmbedIndex >= Embed->getDataElementCount(SemaRef.Context)) {
-        CurEmbed = nullptr;
-        CurEmbedIndex = 0;
-      }
+    Result = new (SemaRef.Context)
+        EmbedSubscriptExpr(Embed->getType(), Embed, CurEmbedIndex, ElsCount);
+    CurEmbedIndex += ElsCount;
+    if (CurEmbedIndex >= Embed->getDataElementCount(SemaRef.Context)) {
+      CurEmbed = nullptr;
+      CurEmbedIndex = 0;
     }
     return Result;
   }
@@ -6274,17 +6269,8 @@ void InitializationSequence::InitializeFrom(Sema &S,
           S.CheckConversionToObjCLiteral(DestType, Initializer))
         Args[0] = Initializer;
     }
-    if (!isa<InitListExpr>(Initializer)) {
+    if (!isa<InitListExpr>(Initializer))
       SourceType = Initializer->getType();
-      if (auto *Embed = dyn_cast<PPEmbedExpr>(Initializer)) {
-        if (Embed->getDataElementCount(S.Context) == 1) {
-          // Expand single-element embed as pure integer literal.
-          // Otherwise there will be an error.
-          // TODO: why?
-          Initializer = S.ExpandSinglePPEmbedExpr(Embed);
-        }
-      }
-    }
   }
 
   //     - If the initializer is a (non-parenthesized) braced-init-list, the
@@ -9123,15 +9109,6 @@ ExprResult InitializationSequence::Perform(Sema &S,
         }
       }
       Expr *Init = CurInit.get();
-      if (auto *Embed = dyn_cast<PPEmbedExpr>(Init->IgnoreParenImpCasts())) {
-        // We can have a comma expression in case of embed with multiple data
-        // elements, the comma expression results are the right-most operand.
-        // So just reference the last data element.
-        Init = new (S.Context) EmbedSubscriptExpr(
-            Embed->getType(), Embed, Embed->getDataElementCount(S.Context) - 1,
-            /*ElsCount*/ 1);
-      }
-
       CheckedConversionKind CCK =
           Kind.isCStyleCast()       ? CheckedConversionKind::CStyleCast
           : Kind.isFunctionalCast() ? CheckedConversionKind::FunctionalCast
@@ -9298,14 +9275,6 @@ ExprResult InitializationSequence::Perform(Sema &S,
     case SK_CAssignment: {
       QualType SourceType = CurInit.get()->getType();
       Expr *Init = CurInit.get();
-      if (auto *Embed = dyn_cast<PPEmbedExpr>(Init->IgnoreParenImpCasts())) {
-        // We can have a comma expression in case of embed with multiple data
-        // elements, the comma expression results are the right-most operand.
-        // So just reference the last data element.
-        Init = new (S.Context) EmbedSubscriptExpr(
-            Embed->getType(), Embed, Embed->getDataElementCount(S.Context) - 1,
-            /*ElsCount*/ 1);
-      }
 
       // Save off the initial CurInit in case we need to emit a diagnostic
       ExprResult InitialCurInit = Init;
