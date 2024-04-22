@@ -851,6 +851,12 @@ public:
       Visit(R);
   }
 
+  void VisitTypeTraitExpr(const TypeTraitExpr *E) {
+    // Argument types are not children of the TypeTraitExpr.
+    for (auto *A : E->getArgs())
+      Visit(A->getType());
+  }
+
   void VisitLambdaExpr(const LambdaExpr *Node) {
     if (Traversal == TK_IgnoreUnlessSpelledInSource) {
       for (unsigned I = 0, N = Node->capture_size(); I != N; ++I) {
