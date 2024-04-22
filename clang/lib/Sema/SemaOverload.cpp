@@ -14261,12 +14261,6 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
                                   OverloadResult, AllowTypoCorrection);
 }
 
-static bool IsOverloaded(const UnresolvedSetImpl &Functions) {
-  return Functions.size() > 1 ||
-         (Functions.size() == 1 &&
-          isa<FunctionTemplateDecl>((*Functions.begin())->getUnderlyingDecl()));
-}
-
 ExprResult Sema::CreateUnresolvedLookupExpr(CXXRecordDecl *NamingClass,
                                             NestedNameSpecifierLoc NNSLoc,
                                             DeclarationNameInfo DNI,
