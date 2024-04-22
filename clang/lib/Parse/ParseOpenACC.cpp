@@ -654,7 +654,7 @@ Parser::ParseOpenACCIntExpr(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
 
 bool Parser::ParseOpenACCIntExprList(OpenACCDirectiveKind DK,
                                      OpenACCClauseKind CK, SourceLocation Loc,
-                                     llvm::SmallVector<Expr *> &IntExprs) {
+                                     llvm::SmallVectorImpl<Expr *> &IntExprs) {
   OpenACCIntExprParseResult CurResult = ParseOpenACCIntExpr(DK, CK, Loc);
 
   if (!CurResult.first.isUsable() &&

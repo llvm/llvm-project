@@ -3659,7 +3659,7 @@ private:
   /// 'int-expr's.
   bool ParseOpenACCIntExprList(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                                SourceLocation Loc,
-                               llvm::SmallVector<Expr *> &IntExprs);
+                               llvm::SmallVectorImpl<Expr *> &IntExprs);
   /// Parses the 'device-type-list', which is a list of identifiers.
   bool ParseOpenACCDeviceTypeList();
   /// Parses the 'async-argument', which is an integral value with two
