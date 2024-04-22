@@ -1430,7 +1430,7 @@ define <2 x i1> @test_sign_pos_vec(<2 x float> %x) {
 
 define i32 @test_inf_only(float nofpclass(nan sub norm zero) %x) {
 ; CHECK-LABEL: @test_inf_only(
-; CHECK-NEXT:    ret i32 2130706432
+; CHECK-NEXT:    ret i32 2139095040
 ;
   %y = bitcast float %x to i32
   %and = and i32 %y, 2147483647
@@ -1439,7 +1439,7 @@ define i32 @test_inf_only(float nofpclass(nan sub norm zero) %x) {
 
 define i16 @test_inf_only_bfloat(bfloat nofpclass(nan sub norm zero) %x) {
 ; CHECK-LABEL: @test_inf_only_bfloat(
-; CHECK-NEXT:    ret i16 32512
+; CHECK-NEXT:    ret i16 32640
 ;
   %y = bitcast bfloat %x to i16
   %and = and i16 %y, 32767
@@ -1448,9 +1448,7 @@ define i16 @test_inf_only_bfloat(bfloat nofpclass(nan sub norm zero) %x) {
 
 define i128 @test_inf_only_ppc_fp128(ppc_fp128 nofpclass(nan sub norm zero) %x) {
 ; CHECK-LABEL: @test_inf_only_ppc_fp128(
-; CHECK-NEXT:    [[Y:%.*]] = bitcast ppc_fp128 [[X:%.*]] to i128
-; CHECK-NEXT:    [[AND:%.*]] = and i128 [[Y]], 170141183460469231731687303715884105727
-; CHECK-NEXT:    ret i128 [[AND]]
+; CHECK-NEXT:    ret i128 9218868437227405312
 ;
   %y = bitcast ppc_fp128 %x to i128
   %and = and i128 %y, 170141183460469231731687303715884105727
@@ -1468,9 +1466,7 @@ define i32 @test_zero_only(float nofpclass(nan sub norm inf) %x) {
 
 define i80 @test_zero_only_non_ieee(x86_fp80 nofpclass(nan sub norm inf) %x) {
 ; CHECK-LABEL: @test_zero_only_non_ieee(
-; CHECK-NEXT:    [[TMP1:%.*]] = call x86_fp80 @llvm.fabs.f80(x86_fp80 [[X:%.*]])
-; CHECK-NEXT:    [[AND:%.*]] = bitcast x86_fp80 [[TMP1]] to i80
-; CHECK-NEXT:    ret i80 [[AND]]
+; CHECK-NEXT:    ret i80 0
 ;
   %y = bitcast x86_fp80 %x to i80
   %and = and i80 %y, 604462909807314587353087
@@ -1488,7 +1484,9 @@ define i32 @test_inf_nan_only(float nofpclass(sub norm zero) %x) {
 
 define i32 @test_sub_zero_only(float nofpclass(nan norm inf) %x) {
 ; CHECK-LABEL: @test_sub_zero_only(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y]], 2130706432
+; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %y = bitcast float %x to i32
   %and = and i32 %y, 2130706432
@@ -1497,7 +1495,9 @@ define i32 @test_sub_zero_only(float nofpclass(nan norm inf) %x) {
 
 define i32 @test_inf_zero_only(float nofpclass(nan norm sub) %x) {
 ; CHECK-LABEL: @test_inf_zero_only(
-; CHECK-NEXT:    ret i32 0
+; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y]], 8388608
+; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %y = bitcast float %x to i32
   %and = and i32 %y, 16777215
@@ -1566,6 +1566,24 @@ if.then:
 
 if.else:
   ret i1 false
+}
+
+define i32 @test_snan_only(float nofpclass(qnan sub norm zero inf) %x) {
+; CHECK-LABEL: @test_snan_only(
+; CHECK-NEXT:    ret i32 0
+;
+  %y = bitcast float %x to i32
+  %and = and i32 %y, 4194304
+  ret i32 %and
+}
+
+define i32 @test_qnan_only(float nofpclass(snan sub norm zero inf) %x) {
+; CHECK-LABEL: @test_qnan_only(
+; CHECK-NEXT:    ret i32 4194304
+;
+  %y = bitcast float %x to i32
+  %and = and i32 %y, 4194304
+  ret i32 %and
 }
 
 declare void @use(i1)

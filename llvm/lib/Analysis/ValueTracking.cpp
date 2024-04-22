@@ -1115,31 +1115,52 @@ static void computeKnownBitsFromOperator(const Operator *I,
     // Handle bitcast from floating point to integer.
     if (match(I, m_ElementWiseBitCast(m_Value(V))) &&
         V->getType()->isFPOrFPVectorTy()) {
+      Type *FPType = V->getType()->getScalarType();
       KnownFPClass Result = computeKnownFPClass(V, fcAllFlags, Depth + 1, Q);
+      FPClassTest FPClasses = Result.KnownFPClasses;
+
+      if (Result.isKnownNever(fcNormal | fcSubnormal)) {
+        Known.Zero.setAllBits();
+        Known.One.setAllBits();
+
+        if (FPClasses & fcSNan) {
+          APInt Payload = APInt::getAllOnes(FPType->getScalarSizeInBits());
+          Known = Known.intersectWith(KnownBits::makeConstant(
+              APFloat::getSNaN(FPType->getFltSemantics()).bitcastToAPInt()));
+          Known = Known.intersectWith(KnownBits::makeConstant(
+              APFloat::getSNaN(FPType->getFltSemantics(), &Payload)
+                  .bitcastToAPInt()));
+        }
+
+        if (FPClasses & fcQNan) {
+          APInt Payload = APInt::getAllOnes(FPType->getScalarSizeInBits());
+          Known = Known.intersectWith(KnownBits::makeConstant(
+              APFloat::getQNaN(FPType->getFltSemantics()).bitcastToAPInt()));
+          Known = Known.intersectWith(KnownBits::makeConstant(
+              APFloat::getQNaN(FPType->getFltSemantics(), &Payload)
+                  .bitcastToAPInt()));
+        }
+
+        if (FPClasses & fcInf)
+          Known = Known.intersectWith(KnownBits::makeConstant(
+              APFloat::getInf(FPType->getFltSemantics()).bitcastToAPInt()));
+
+        if (FPClasses & fcZero)
+          Known = Known.intersectWith(KnownBits::makeConstant(
+              APInt::getZero(FPType->getScalarSizeInBits())));
+      }
+
       if (Result.SignBit) {
         if (*Result.SignBit)
           Known.makeNegative();
         else
           Known.makeNonNegative();
+      } else {
+        Known.Zero.clearSignBit();
+        Known.One.clearSignBit();
       }
 
-      Type *FPType = V->getType()->getScalarType();
-      if (FPType->isIEEELikeFPTy()) {
-        int MantissaWidth = FPType->getFPMantissaWidth();
-        assert(MantissaWidth != -1 && "Invalid mantissa width");
-        if (Result.isKnownOnly(fcInf)) {
-          Known.Zero.setLowBits(MantissaWidth);
-          Known.One.setBits(MantissaWidth, BitWidth - 1);
-        } else if (Result.isKnownOnly(fcZero)) {
-          Known.Zero.setLowBits(BitWidth - 1);
-        } else if (Result.isKnownOnly(fcInf | fcNan)) {
-          Known.One.setBits(MantissaWidth, BitWidth - 1);
-        } else if (Result.isKnownOnly(fcSubnormal | fcZero)) {
-          Known.Zero.setBits(MantissaWidth, BitWidth - 1);
-        } else if (Result.isKnownOnly(fcInf | fcZero)) {
-          Known.Zero.setLowBits(MantissaWidth);
-        }
-      }
+      assert(!Known.hasConflict() && "Bits known to be one AND zero?");
 
       break;
     }
