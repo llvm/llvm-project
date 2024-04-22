@@ -244,3 +244,27 @@ define i1 @test_fcmp_select_const_const_multiuse(double %x) {
   %cmp2 = fcmp oeq double %sel, 0.000000e+00
   ret i1 %cmp2
 }
+
+define i1 @test_fcmp_select_const_const_unordered(double %x) {
+; CHECK-LABEL: @test_fcmp_select_const_const_unordered(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ord double [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp1 = fcmp uno double %x, 0.000000e+00
+  %sel = select i1 %cmp1, double 0xFFFFFFFFFFFFFFFF, double 0.000000e+00
+  %cmp2 = fcmp oeq double %sel, 0.000000e+00
+  ret i1 %cmp2
+}
+
+define i1 @test_fcmp_select_var_const_unordered(double %x, double %y) {
+; CHECK-LABEL: @test_fcmp_select_var_const_unordered(
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ult double [[X:%.*]], 0x3E80000000000000
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt double [[Y:%.*]], 0x3E80000000000000
+; CHECK-NEXT:    [[CMP2:%.*]] = select i1 [[CMP1]], i1 [[TMP1]], i1 false
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %cmp1 = fcmp ult double %x, 0x3E80000000000000
+  %sel = select i1 %cmp1, double %y, double 0.000000e+00
+  %cmp2 = fcmp ugt double %sel, 0x3E80000000000000
+  ret i1 %cmp2
+}
