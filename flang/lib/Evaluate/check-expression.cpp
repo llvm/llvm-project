@@ -666,8 +666,8 @@ public:
             "' not allowed for derived type components or type parameter"
             " values";
       }
-      if (auto procChars{
-              characteristics::Procedure::Characterize(x.proc(), context_)}) {
+      if (auto procChars{characteristics::Procedure::Characterize(
+              x.proc(), context_, /*emitError=*/true)}) {
         const auto iter{std::find_if(procChars->dummyArguments.begin(),
             procChars->dummyArguments.end(),
             [](const characteristics::DummyArgument &dummy) {
@@ -856,8 +856,8 @@ public:
   Result operator()(const Substring &) const { return std::nullopt; }
 
   Result operator()(const ProcedureRef &x) const {
-    if (auto chars{
-            characteristics::Procedure::Characterize(x.proc(), context_)}) {
+    if (auto chars{characteristics::Procedure::Characterize(
+            x.proc(), context_, /*emitError=*/true)}) {
       if (chars->functionResult) {
         const auto &result{*chars->functionResult};
         if (!result.IsProcedurePointer()) {
@@ -1103,8 +1103,8 @@ public:
           }
         }
       }
-      if (auto chars{
-              characteristics::Procedure::Characterize(proc, context_)}) {
+      if (auto chars{characteristics::Procedure::Characterize(
+              proc, context_, /*emitError=*/true)}) {
         if (!chars->CanBeCalledViaImplicitInterface()) {
           if (severity_) {
             auto msg{
