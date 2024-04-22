@@ -229,6 +229,7 @@ int main() {
   // expected-error@-2 {{no template named '__add_pointer'}}
   // expected-note@#add_pointer {{'add_pointer' declared here}}
   // expected-error-re@-4 {{no type named 'type' in '{{.*}}std::add_pointer<{{.*}}A>'}}
+
   __add_pointer<A>::type ptr2;
   // expected-error@-1 {{no template named '__add_pointer'}}
   // expected-error-re@-2 {{no type named 'type' in '{{.*}}std::add_pointer<{{.*}}A>'}}
@@ -249,8 +250,8 @@ template <typename T1> struct A {
   void foo(T2) {}
 
   void foo() {
-    C<T1>::template Type<2>;  // #templated-decl-as-expression
-    // expected-error@#templated-decl-as-expression {{'C<float>::Type' is expected to be a non-type template, but instantiated to a class template}}}
+    C<T1>::template Type<2>;
+    // expected-error@-1 {{'C<float>::Type' is expected to be a non-type template, but instantiated to a class template}}}
     // expected-note@#ClassTemplate {{class template declared here}}
 
     foo(C<T1>::Type<2>); // expected-error {{expected expression}}
