@@ -1520,5 +1520,8 @@ def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInCon
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;
 
+// Warnings related to _BitInt extension
+def BitIntExtension : DiagGroup<"bit-int-extension">;
+
 // Warnings about misuse of ExtractAPI options.
 def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
