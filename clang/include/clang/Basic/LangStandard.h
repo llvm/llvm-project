@@ -132,8 +132,9 @@ public:
 
   /// hasRawStringLiterals - Language supports R"()" raw string literals.
   bool hasRawStringLiterals() const {
-    // GCC supports raw string literals in C, but not in C++ before C++11.
-    return isCPlusPlus11() || (!isCPlusPlus() && isGNUMode());
+    // GCC supports raw string literals in C99 and later, but not in C++
+    // before C++11.
+    return isCPlusPlus11() || (!isCPlusPlus() && isC99() && isGNUMode());
   }
 
   /// isGNUMode - Language includes GNU extensions.

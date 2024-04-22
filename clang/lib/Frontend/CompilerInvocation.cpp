@@ -610,6 +610,15 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     LangOpts.NewAlignOverride = 0;
   }
 
+  // The -f[no-]raw-string-literals option is only valid in C.
+  if ((Args.hasArg(OPT_fraw_string_literals) ||
+       Args.hasArg(OPT_fno_raw_string_literals)) &&
+      LangOpts.CPlusPlus) {
+    Diags.Report(diag::warn_drv_fraw_string_literals_in_cxx)
+        << bool(LangOpts.RawStringLiterals);
+    LangOpts.RawStringLiterals = LangOpts.CPlusPlus11;
+  }
+
   // Prevent the user from specifying both -fsycl-is-device and -fsycl-is-host.
   if (LangOpts.SYCLIsDevice && LangOpts.SYCLIsHost)
     Diags.Report(diag::err_drv_argument_not_allowed_with) << "-fsycl-is-device"

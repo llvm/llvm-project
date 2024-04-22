@@ -44,7 +44,8 @@ C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
 - Clang now supports raw string literals in ``-std=gnuXY`` mode as an extension in
-  C. This behaviour can also be overridden using ``-f[no-]raw-string-literals``.
+  C99 and later. This behaviour can also be overridden using ``-f[no-]raw-string-literals``.
+  Support of raw string literals in C++ is not affected. Fixes (#GH85703).
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
