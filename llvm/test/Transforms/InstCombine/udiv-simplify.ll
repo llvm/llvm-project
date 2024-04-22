@@ -100,8 +100,9 @@ define i8 @udiv_demanded_low_bits_set(i8 %a) {
 
 define i8 @udiv_large_value(i8 %a) {
 ; CHECK-LABEL: @udiv_large_value(
-; CHECK-NEXT:    [[O:%.*]] = or i8 [[A:%.*]], -76
-; CHECK-NEXT:    [[U:%.*]] = udiv i8 [[A]], [[O]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[A:%.*]], -76
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], -76
+; CHECK-NEXT:    [[U:%.*]] = zext i1 [[TMP2]] to i8
 ; CHECK-NEXT:    ret i8 [[U]]
 ;
   %o = or i8 %a, 180

@@ -1491,12 +1491,18 @@ Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
   }
 
   // Op0 / C where C is large (negative) --> zext (Op0 >= C)
-  // TODO: Could use isKnownNegative() to handle non-constant values.
   Type *Ty = I.getType();
   if (match(Op1, m_Negative())) {
     Value *Cmp = Builder.CreateICmpUGE(Op0, Op1);
     return CastInst::CreateZExtOrBitCast(Cmp, Ty);
   }
+
+  KnownBits Known = computeKnownBits(Op1, 0, &I);
+  if (Known.isNegative()) {
+    Value *Cmp = Builder.CreateICmpUGE(Op0, Op1);
+    return CastInst::CreateZExtOrBitCast(Cmp, Ty);
+  }
+
   // Op0 / (sext i1 X) --> zext (Op0 == -1) (if X is 0, the div is undefined)
   if (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
     Value *Cmp = Builder.CreateICmpEQ(Op0, ConstantInt::getAllOnesValue(Ty));
