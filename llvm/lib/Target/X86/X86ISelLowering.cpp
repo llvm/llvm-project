@@ -18920,6 +18920,30 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
   llvm_unreachable("TLS not implemented for this target.");
 }
 
+bool X86TargetLowering::addressingModeSupportsTLS(const GlobalValue &GV) const {
+  if (Subtarget.is64Bit() && Subtarget.isTargetELF()) {
+    const TargetMachine &TM = getTargetMachine();
+    TLSModel::Model Model = TM.getTLSModel(&GV);
+    switch (Model) {
+    case TLSModel::LocalExec:
+    case TLSModel::InitialExec:
+      // We can include the %fs segment register in addressing modes.
+      return true;
+    case TLSModel::LocalDynamic:
+    case TLSModel::GeneralDynamic:
+      // These models do not result in %fs relative addresses unless
+      // TLS descriptior are used.
+      //
+      // Even in the case of TLS descriptors we currently have no way to model
+      // the difference between %fs access and the computations needed for the
+      // offset and returning `true` for TLS-desc currently duplicates both
+      // which is detrimental :-/
+      return false;
+    }
+  }
+  return false;
+}
+
 /// Lower SRA_PARTS and friends, which return two i32 values
 /// and take a 2 x i32 value to shift plus a shift amount.
 /// TODO: Can this be moved to general expansion code?
@@ -29806,6 +29830,7 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
   if (VT.isVector()) {
     APInt APIntShiftAmt;
     bool IsCstSplat = X86::isConstantSplat(Amt, APIntShiftAmt);
+    unsigned NumElts = VT.getVectorNumElements();
 
     if (Subtarget.hasVBMI2() && EltSizeInBits > 8) {
       if (IsFSHR)
@@ -29834,6 +29859,29 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
       uint64_t ShiftAmt = APIntShiftAmt.urem(EltSizeInBits);
       uint64_t ShXAmt = IsFSHR ? (EltSizeInBits - ShiftAmt) : ShiftAmt;
       uint64_t ShYAmt = IsFSHR ? ShiftAmt : (EltSizeInBits - ShiftAmt);
+      assert((ShXAmt + ShYAmt) == EltSizeInBits && "Illegal funnel shift");
+
+      if (EltSizeInBits == 8 && ShXAmt > 1 &&
+          (Subtarget.hasXOP() || useVPTERNLOG(Subtarget, VT))) {
+        // For vXi8 cases on Subtargets that can perform VPCMOV/VPTERNLOG
+        // bit-select - lower using vXi16 shifts and then perform the bitmask at
+        // the original vector width to handle cases where we split.
+        MVT WideVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
+        APInt MaskX = APInt::getHighBitsSet(8, 8 - ShXAmt);
+        APInt MaskY = APInt::getLowBitsSet(8, 8 - ShYAmt);
+        SDValue ShX =
+            DAG.getNode(ISD::SHL, DL, WideVT, DAG.getBitcast(WideVT, Op0),
+                        DAG.getShiftAmountConstant(ShXAmt, WideVT, DL));
+        SDValue ShY =
+            DAG.getNode(ISD::SRL, DL, WideVT, DAG.getBitcast(WideVT, Op1),
+                        DAG.getShiftAmountConstant(ShYAmt, WideVT, DL));
+        ShX = DAG.getNode(ISD::AND, DL, VT, DAG.getBitcast(VT, ShX),
+                          DAG.getConstant(MaskX, DL, VT));
+        ShY = DAG.getNode(ISD::AND, DL, VT, DAG.getBitcast(VT, ShY),
+                          DAG.getConstant(MaskY, DL, VT));
+        return DAG.getNode(ISD::OR, DL, VT, ShX, ShY);
+      }
+
       SDValue ShX = DAG.getNode(ISD::SHL, DL, VT, Op0,
                                 DAG.getShiftAmountConstant(ShXAmt, VT, DL));
       SDValue ShY = DAG.getNode(ISD::SRL, DL, VT, Op1,
@@ -29850,7 +29898,6 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
       return SDValue();
 
     unsigned ShiftOpc = IsFSHR ? ISD::SRL : ISD::SHL;
-    unsigned NumElts = VT.getVectorNumElements();
     MVT ExtSVT = MVT::getIntegerVT(2 * EltSizeInBits);
     MVT ExtVT = MVT::getVectorVT(ExtSVT, NumElts / 2);
 
@@ -51793,6 +51840,17 @@ static SDValue detectPMADDUBSW(SDValue In, EVT VT, SelectionDAG &DAG,
         ZExtIn != N10In || SExtIn != N11In)
       return SDValue();
   }
+
+  auto ExtractVec = [&DAG, &DL, NumElems](SDValue &Ext) {
+    EVT ExtVT = Ext.getValueType();
+    if (ExtVT.getVectorNumElements() != NumElems * 2) {
+      MVT NVT = MVT::getVectorVT(MVT::i8, NumElems * 2);
+      Ext = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NVT, Ext,
+                        DAG.getIntPtrConstant(0, DL));
+    }
+  };
+  ExtractVec(ZExtIn);
+  ExtractVec(SExtIn);
 
   auto PMADDBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
                          ArrayRef<SDValue> Ops) {
