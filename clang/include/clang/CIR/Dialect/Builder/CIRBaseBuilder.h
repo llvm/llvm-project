@@ -66,11 +66,14 @@ public:
     return ::mlir::cir::VoidType::get(getContext());
   }
 
-  mlir::cir::PointerType getVoidPtrTy(unsigned AddrSpace = 0) {
-    if (AddrSpace)
-      llvm_unreachable("address space is NYI");
-    return ::mlir::cir::PointerType::get(
-        getContext(), ::mlir::cir::VoidType::get(getContext()));
+  mlir::cir::PointerType getPointerTo(mlir::Type ty,
+                                      unsigned addressSpace = 0) {
+    assert(!addressSpace && "address space is NYI");
+    return mlir::cir::PointerType::get(getContext(), ty);
+  }
+
+  mlir::cir::PointerType getVoidPtrTy(unsigned addressSpace = 0) {
+    return getPointerTo(::mlir::cir::VoidType::get(getContext()), addressSpace);
   }
 
   mlir::Value createNot(mlir::Value value) {
@@ -171,31 +174,34 @@ public:
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
 
+  mlir::Value createCast(mlir::Location loc, mlir::cir::CastKind kind,
+                         mlir::Value src, mlir::Type newTy) {
+    if (newTy == src.getType())
+      return src;
+    return create<mlir::cir::CastOp>(loc, newTy, kind, src);
+  }
+
   mlir::Value createCast(mlir::cir::CastKind kind, mlir::Value src,
                          mlir::Type newTy) {
     if (newTy == src.getType())
       return src;
-    return create<mlir::cir::CastOp>(src.getLoc(), newTy, kind, src);
+    return createCast(src.getLoc(), kind, src, newTy);
   }
 
   mlir::Value createIntCast(mlir::Value src, mlir::Type newTy) {
-    return create<mlir::cir::CastOp>(src.getLoc(), newTy,
-                                     mlir::cir::CastKind::integral, src);
+    return createCast(mlir::cir::CastKind::integral, src, newTy);
   }
 
   mlir::Value createIntToPtr(mlir::Value src, mlir::Type newTy) {
-    return create<mlir::cir::CastOp>(src.getLoc(), newTy,
-                                     mlir::cir::CastKind::int_to_ptr, src);
+    return createCast(mlir::cir::CastKind::int_to_ptr, src, newTy);
   }
 
   mlir::Value createPtrToInt(mlir::Value src, mlir::Type newTy) {
-    return create<mlir::cir::CastOp>(src.getLoc(), newTy,
-                                     mlir::cir::CastKind::ptr_to_int, src);
+    return createCast(mlir::cir::CastKind::ptr_to_int, src, newTy);
   }
 
   mlir::Value createPtrToBoolCast(mlir::Value v) {
-    return create<mlir::cir::CastOp>(v.getLoc(), getBoolTy(),
-                                     mlir::cir::CastKind::ptr_to_bool, v);
+    return createCast(mlir::cir::CastKind::ptr_to_bool, v, getBoolTy());
   }
 
   // TODO(cir): the following function was introduced to keep in sync with LLVM
@@ -224,10 +230,12 @@ public:
 
   mlir::Value createBitcast(mlir::Location loc, mlir::Value src,
                             mlir::Type newTy) {
-    if (newTy == src.getType())
-      return src;
-    return create<mlir::cir::CastOp>(loc, newTy, mlir::cir::CastKind::bitcast,
-                                     src);
+    return createCast(loc, mlir::cir::CastKind::bitcast, src, newTy);
+  }
+
+  mlir::Value createPtrBitcast(mlir::Value src, mlir::Type newPointeeTy) {
+    assert(src.getType().isa<mlir::cir::PointerType>() && "expected ptr src");
+    return createBitcast(src, getPointerTo(newPointeeTy));
   }
 
   mlir::Value createPtrIsNull(mlir::Value ptr) {
@@ -257,11 +265,6 @@ public:
     // it simple.
     return mlir::IntegerAttr::get(mlir::IntegerType::get(ctx, 64),
                                   size.getQuantity());
-  }
-
-  mlir::cir::PointerType getPointerTo(mlir::Type ty,
-                                      unsigned addressSpace = 0) {
-    return mlir::cir::PointerType::get(getContext(), ty);
   }
 
   /// Create a do-while operation.

@@ -811,8 +811,8 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeGlobalDeclaration(GlobalDecl GD) {
   return arrangeFunctionDeclaration(FD);
 }
 
-// UpdateCompletedType - When we find the full definition for a TagDecl,
-// replace the 'opaque' type we previously made for it if applicable.
+// When we find the full definition for a TagDecl, replace the 'opaque' type we
+// previously made for it if applicable.
 void CIRGenTypes::UpdateCompletedType(const TagDecl *TD) {
   // If this is an enum being completed, then we flush all non-struct types
   // from the cache. This allows function types and other things that may be
@@ -849,7 +849,7 @@ void CIRGenTypes::UpdateCompletedType(const TagDecl *TD) {
     llvm_unreachable("NYI");
 }
 
-/// getCIRGenRecordLayout - Return record layout info for the given record decl.
+/// Return record layout info for the given record decl.
 const CIRGenRecordLayout &
 CIRGenTypes::getCIRGenRecordLayout(const RecordDecl *RD) {
   const auto *Key = Context.getTagDeclType(RD).getTypePtr();
