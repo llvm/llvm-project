@@ -63,8 +63,6 @@ public:
   /// set the shift state to the initial state.
   /// Otherwise this is a no-op.
   virtual std::error_code flush() const = 0;
-
-  virtual std::error_code flush(SmallVectorImpl<char> &Result) const = 0;
 };
 } // namespace details
 
@@ -139,10 +137,6 @@ public:
   }
 
   std::error_code flush() const { return Converter->flush(); }
-
-  std::error_code flush(SmallVectorImpl<char> &Result) const {
-    return Converter->flush(Result);
-  }
 };
 
 } // namespace llvm
