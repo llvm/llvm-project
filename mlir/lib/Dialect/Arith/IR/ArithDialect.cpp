@@ -48,9 +48,9 @@ void arith::ArithDialect::initialize() {
 #include "mlir/Dialect/Arith/IR/ArithOpsAttributes.cpp.inc"
       >();
   addInterfaces<ArithInlinerInterface>();
-  declarePromisedInterface<ArithDialect, ConvertToLLVMPatternInterface>();
-  declarePromisedInterface<SelectOp,
-                           bufferization::BufferDeallocationOpInterface>();
+  declarePromisedInterface<ConvertToLLVMPatternInterface, ArithDialect>();
+  declarePromisedInterface<bufferization::BufferDeallocationOpInterface,
+                           SelectOp>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface, ConstantOp,
                             IndexCastOp, SelectOp>();
   declarePromisedInterfaces<ValueBoundsOpInterface, AddIOp, ConstantOp, SubIOp,

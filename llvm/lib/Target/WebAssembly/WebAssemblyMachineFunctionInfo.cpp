@@ -111,10 +111,10 @@ void llvm::valTypesFromMVTs(ArrayRef<MVT> In,
     Out.push_back(WebAssembly::toValType(Ty));
 }
 
-std::unique_ptr<wasm::WasmSignature>
-llvm::signatureFromMVTs(const SmallVectorImpl<MVT> &Results,
+wasm::WasmSignature *
+llvm::signatureFromMVTs(MCContext &Ctx, const SmallVectorImpl<MVT> &Results,
                         const SmallVectorImpl<MVT> &Params) {
-  auto Sig = std::make_unique<wasm::WasmSignature>();
+  auto Sig = Ctx.createWasmSignature();
   valTypesFromMVTs(Results, Sig->Returns);
   valTypesFromMVTs(Params, Sig->Params);
   return Sig;

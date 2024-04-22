@@ -744,7 +744,7 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
               // Box is not present. Populate bound values with default values.
               llvm::SmallVector<mlir::Value> boundValues;
               mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-              mlir::Value mOne = builder.createIntegerConstant(loc, idxTy, -1);
+              mlir::Value mOne = builder.createMinusOneInteger(loc, idxTy);
               for (unsigned dim = 0; dim < dataExv.rank(); ++dim) {
                 boundValues.push_back(zero); // lb
                 boundValues.push_back(mOne); // ub

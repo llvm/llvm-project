@@ -40,7 +40,7 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
                      StringRef ABIName) {
   auto TargetABI = getTargetABI(ABIName);
   bool IsRV64 = TT.isArch64Bit();
-  bool IsRVE = FeatureBits[RISCV::FeatureRVE];
+  bool IsRVE = FeatureBits[RISCV::FeatureStdExtE];
 
   if (!ABIName.empty() && TargetABI == ABI_Unknown) {
     errs()
@@ -235,7 +235,5 @@ void RISCVZC::printRlist(unsigned SlistEncode, raw_ostream &OS) {
   }
   OS << "}";
 }
-
-void RISCVZC::printSpimm(int64_t Spimm, raw_ostream &OS) { OS << Spimm; }
 
 } // namespace llvm

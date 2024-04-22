@@ -25,13 +25,26 @@ int32_t omp_vprintf(const char *Format, void *Arguments, uint32_t) {
 } // namespace impl
 #pragma omp end declare variant
 
-// We do not have a vprintf implementation for AMD GPU yet so we use a stub.
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
+
+#ifdef OMPTARGET_HAS_LIBC
+// TODO: Remove this handling once we have varargs support.
+extern "C" struct FILE *stdout;
+extern "C" int32_t rpc_fprintf(FILE *, const char *, void *, uint64_t);
+
+namespace impl {
+int32_t omp_vprintf(const char *Format, void *Arguments, uint32_t Size) {
+  return rpc_fprintf(stdout, Format, Arguments, Size);
+}
+} // namespace impl
+#else
+// We do not have a vprintf implementation for AMD GPU so we use a stub.
 namespace impl {
 int32_t omp_vprintf(const char *Format, void *Arguments, uint32_t) {
   return -1;
 }
 } // namespace impl
+#endif
 #pragma omp end declare variant
 
 extern "C" {
