@@ -10,12 +10,106 @@
 #
 ##===----------------------------------------------------------------------===##
 
-if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
-  message(FATAL_ERROR "Direct configuration not supported, please use parent directory!")
+cmake_minimum_required(VERSION 3.20.0)
+
+if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
+  set(OPENMP_STANDALONE_BUILD TRUE)
+  project(offload C CXX ASM)
 endif()
 
-# Add cmake directory to search for custom cmake functions.
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules ${CMAKE_MODULE_PATH})
+set(ENABLE_LIBOMPTARGET ON)
+# Currently libomptarget cannot be compiled on Windows or MacOS X.
+# Since the device plugins are only supported on Linux anyway,
+# there is no point in trying to compile libomptarget on other OSes.
+# 32-bit systems are not supported either.
+if (APPLE OR WIN32 OR NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+  set(ENABLE_LIBOMPTARGET OFF)
+endif()
+
+option(OPENMP_ENABLE_LIBOMPTARGET "Enable building libomptarget for offloading."
+       ${ENABLE_LIBOMPTARGET})
+if (OPENMP_ENABLE_LIBOMPTARGET)
+  # Check that the library can actually be built.
+  if (APPLE OR WIN32)
+    message(FATAL_ERROR "libomptarget cannot be built on Windows and MacOS X!")
+  elseif (NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+    message(FATAL_ERROR "Host compiler must support C++17 to build libomptarget!")
+  elseif (NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+    message(FATAL_ERROR "libomptarget on 32-bit systems are not supported!")
+  endif()
+endif()
+
+# TODO: Leftover from the move, could probably be just LLVM_LIBDIR_SUFFIX everywhere.
+set(OFFLOAD_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}")
+
+set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+
+# Add path for custom modules
+list(INSERT CMAKE_MODULE_PATH 0
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules"
+  "${LLVM_COMMON_CMAKE_UTILS}/Modules"
+  )
+
+if (OPENMP_STANDALONE_BUILD)
+  # CMAKE_BUILD_TYPE was not set, default to Release.
+  if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+  endif()
+
+  # Group common settings.
+  set(OPENMP_ENABLE_WERROR FALSE CACHE BOOL
+    "Enable -Werror flags to turn warnings into errors for supporting compilers.")
+  set(OPENMP_LIBDIR_SUFFIX "" CACHE STRING
+    "Suffix of lib installation directory, e.g. 64 => lib64")
+  # Do not use OPENMP_LIBDIR_SUFFIX directly, use OPENMP_INSTALL_LIBDIR.
+  set(OPENMP_INSTALL_LIBDIR "lib${OPENMP_LIBDIR_SUFFIX}")
+
+  # Group test settings.
+  set(OPENMP_TEST_C_COMPILER ${CMAKE_C_COMPILER} CACHE STRING
+    "C compiler to use for testing OpenMP runtime libraries.")
+  set(OPENMP_TEST_CXX_COMPILER ${CMAKE_CXX_COMPILER} CACHE STRING
+    "C++ compiler to use for testing OpenMP runtime libraries.")
+  set(OPENMP_TEST_Fortran_COMPILER ${CMAKE_Fortran_COMPILER} CACHE STRING
+    "FORTRAN compiler to use for testing OpenMP runtime libraries.")
+  set(OPENMP_LLVM_TOOLS_DIR "" CACHE PATH "Path to LLVM tools for testing.")
+
+  set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
+  set(CMAKE_CXX_STANDARD_REQUIRED NO)
+  set(CMAKE_CXX_EXTENSIONS NO)
+else()
+  set(OPENMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
+  # If building in tree, we honor the same install suffix LLVM uses.
+  set(OPENMP_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}")
+
+  if (NOT MSVC)
+    set(OPENMP_TEST_C_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
+    set(OPENMP_TEST_CXX_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++)
+  else()
+    set(OPENMP_TEST_C_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang.exe)
+    set(OPENMP_TEST_CXX_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++.exe)
+  endif()
+
+  # Check for flang
+  if (NOT MSVC)
+    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang-new)
+  else()
+    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang-new.exe)
+  endif()
+
+  # Set fortran test compiler if flang is found
+  if (EXISTS "${OPENMP_TEST_Fortran_COMPILER}")
+    message("Using local flang build at ${OPENMP_TEST_Fortran_COMPILER}")
+  else()
+    unset(OPENMP_TEST_Fortran_COMPILER)
+  endif()
+
+  # If not standalone, set CMAKE_CXX_STANDARD but don't set the global cache value,
+  # only set it locally for OpenMP.
+  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD_REQUIRED NO)
+  set(CMAKE_CXX_EXTENSIONS NO)
+endif()
 
 # Set the path of all resulting libraries to a unified location so that it can
 # be used for testing.
@@ -35,6 +129,9 @@ include(LibomptargetUtils)
 
 # Get dependencies for the different components of the project.
 include(LibomptargetGetDependencies)
+
+# Set up testing infrastructure.
+include(OpenMPTesting)
 
 # LLVM source tree is required at build time for libomptarget
 if (NOT LIBOMPTARGET_LLVM_INCLUDE_DIRS)
@@ -101,6 +198,58 @@ if (LIBOMPTARGET_USE_LTO)
   list(APPEND offload_link_flags ${CMAKE_CXX_COMPILE_OPTIONS_IPO})
 endif()
 
+if(OPENMP_STANDALONE_BUILD)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    execute_process(
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      COMMAND ${CMAKE_CXX_COMPILER} --print-resource-dir
+      RESULT_VARIABLE COMMAND_RETURN_CODE
+      OUTPUT_VARIABLE COMPILER_RESOURCE_DIR
+    )
+  endif()
+
+  set(LIBOMP_HAVE_OMPT_SUPPORT FALSE)
+  set(LIBOMP_OMPT_SUPPORT FALSE)
+
+  find_path (
+    LIBOMP_OMP_TOOLS_INCLUDE_DIR
+    NAMES
+      omp-tools.h
+    HINTS
+    ${COMPILER_RESOURCE_DIR}/include
+    ${CMAKE_INSTALL_PREFIX}/include
+  )
+
+  if(LIBOMP_OMP_TOOLS_INCLUDE_DIR)
+    set(LIBOMP_HAVE_OMPT_SUPPORT TRUE)
+    set(LIBOMP_OMPT_SUPPORT TRUE)
+  endif()
+
+  # LLVM_LIBRARY_DIRS set by find_package(LLVM) in LibomptargetGetDependencies
+  find_library (
+    LIBOMP_STANDALONE
+    NAMES
+      omp
+    HINTS
+      ${CMAKE_INSTALL_PREFIX}/lib
+      ${LLVM_LIBRARY_DIRS}
+    REQUIRED
+  )
+# Check LIBOMP_HAVE_VERSION_SCRIPT_FLAG
+  include(LLVMCheckCompilerLinkerFlag)
+  if(NOT APPLE)
+    llvm_check_compiler_linker_flag(C "-Wl,--version-script=${CMAKE_CURRENT_LIST_DIR}/../openmp/runtime/src/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  endif()
+
+  macro(pythonize_bool var)
+  if (${var})
+    set(${var} True)
+  else()
+    set(${var} False)
+  endif()
+  endmacro()
+endif()
+
 # OMPT support for libomptarget
 # Follow host OMPT support and check if host support has been requested.
 # LIBOMP_HAVE_OMPT_SUPPORT indicates whether host OMPT support has been implemented.
@@ -127,13 +276,10 @@ pythonize_bool(LIBOMPTARGET_GPU_LIBC_SUPPORT)
 
 set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 message(STATUS "OpenMP tools dir in libomptarget: ${LIBOMP_OMP_TOOLS_INCLUDE_DIR}")
-include_directories(${LIBOMP_OMP_TOOLS_INCLUDE_DIR})
+if(LIBOMP_OMP_TOOLS_INCLUDE_DIR)
+  include_directories(${LIBOMP_OMP_TOOLS_INCLUDE_DIR})
+endif()
 
-# Definitions for testing, for reuse when testing libomptarget-nvptx.
-set(LIBOMPTARGET_OPENMP_HEADER_FOLDER "${LIBOMP_INCLUDE_DIR}" CACHE STRING
-  "Path to folder containing omp.h")
-set(LIBOMPTARGET_OPENMP_HOST_RTL_FOLDER "${LIBOMP_LIBRARY_DIR}" CACHE STRING
-  "Path to folder containing libomp.so, and libLLVMSupport.so with profiling enabled")
 set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
   "Path to folder containing llvm library libomptarget.so")
 set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_INTDIR}" CACHE STRING
