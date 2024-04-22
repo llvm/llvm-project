@@ -51,9 +51,6 @@ public:
     return (exponent.ult(other.exponent));
   }
 
-  // Prints polynomial to 'os'.
-  void print(raw_ostream &os) const;
-
   friend ::llvm::hash_code hash_value(const Monomial &arg);
 
 public:
