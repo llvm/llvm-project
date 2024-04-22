@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/assembly.h"
+
 #define paste(ns) _ZN22 ## ns ## 6setjmpEP9__jmp_buf
 #define expand(x) paste(x)
 #define LIBC_NAMESPACE_setjump expand(LIBC_NAMESPACE)
@@ -47,4 +49,4 @@ LIBC_NAMESPACE_setjump:
 .size setjump, . - setjump
 .size LIBC_NAMESPACE_setjump, . - LIBC_NAMESPACE_setjump
 
-.section .note.GNU-stack, "", @progbits
+NO_EXEC_STACK_DIRECTIVE
