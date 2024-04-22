@@ -244,6 +244,105 @@ public:
   }
 };
 
+class CIRSwitchOpFlattening
+    : public mlir::OpRewritePattern<mlir::cir::SwitchOp> {
+public:
+  using OpRewritePattern<mlir::cir::SwitchOp>::OpRewritePattern;
+
+  inline void rewriteYieldOp(mlir::PatternRewriter &rewriter,
+                             mlir::cir::YieldOp yieldOp,
+                             mlir::Block *destination) const {
+    rewriter.setInsertionPoint(yieldOp);
+    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldOp, yieldOp.getOperands(),
+                                                 destination);
+  }
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::SwitchOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    // Empty switch statement: just erase it.
+    if (!op.getCases().has_value() || op.getCases()->empty()) {
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
+
+    // Create exit block.
+    rewriter.setInsertionPointAfter(op);
+    auto *exitBlock =
+        rewriter.splitBlock(rewriter.getBlock(), rewriter.getInsertionPoint());
+
+    // Allocate required data structures (disconsider default case in
+    // vectors).
+    llvm::SmallVector<mlir::APInt, 8> caseValues;
+    llvm::SmallVector<mlir::Block *, 8> caseDestinations;
+    llvm::SmallVector<mlir::ValueRange, 8> caseOperands;
+
+    // Initialize default case as optional.
+    mlir::Block *defaultDestination = exitBlock;
+    mlir::ValueRange defaultOperands = exitBlock->getArguments();
+
+    // Track fallthrough between cases.
+    mlir::cir::YieldOp fallthroughYieldOp = nullptr;
+
+    // Digest the case statements values and bodies.
+    for (size_t i = 0; i < op.getCases()->size(); ++i) {
+      auto &region = op.getRegion(i);
+      auto caseAttr = op.getCases()->getValue()[i].cast<mlir::cir::CaseAttr>();
+
+      // Found default case: save destination and operands.
+      if (caseAttr.getKind().getValue() == mlir::cir::CaseOpKind::Default) {
+        defaultDestination = &region.front();
+        defaultOperands = region.getArguments();
+      } else {
+        // AnyOf cases kind can have multiple values, hence the loop below.
+        for (auto &value : caseAttr.getValue()) {
+          caseValues.push_back(value.cast<mlir::cir::IntAttr>().getValue());
+          caseOperands.push_back(region.getArguments());
+          caseDestinations.push_back(&region.front());
+        }
+      }
+
+      // Previous case is a fallthrough: branch it to this case.
+      if (fallthroughYieldOp) {
+        rewriteYieldOp(rewriter, fallthroughYieldOp, &region.front());
+        fallthroughYieldOp = nullptr;
+      }
+
+      for (auto &blk : region.getBlocks()) {
+        if (blk.getNumSuccessors())
+          continue;
+
+        // Handle switch-case yields.
+        if (auto yieldOp = dyn_cast<mlir::cir::YieldOp>(blk.getTerminator()))
+          fallthroughYieldOp = yieldOp;
+      }
+
+      // Handle break statements.
+      walkRegionSkipping<mlir::cir::LoopOpInterface, mlir::cir::SwitchOp>(
+          region, [&](mlir::Operation *op) {
+            if (isa<mlir::cir::BreakOp>(op))
+              lowerTerminator(op, exitBlock, rewriter);
+          });
+
+      // Extract region contents before erasing the switch op.
+      rewriter.inlineRegionBefore(region, exitBlock);
+    }
+
+    // Last case is a fallthrough: branch it to exit.
+    if (fallthroughYieldOp) {
+      rewriteYieldOp(rewriter, fallthroughYieldOp, exitBlock);
+      fallthroughYieldOp = nullptr;
+    }
+
+    // Set switch op to branch to the newly created blocks.
+    rewriter.setInsertionPoint(op);
+    rewriter.replaceOpWithNewOp<mlir::cir::SwitchFlatOp>(
+        op, op.getCondition(), defaultDestination, defaultOperands, caseValues,
+        caseDestinations, caseOperands);
+
+    return mlir::success();
+  }
+};
 class CIRTernaryOpFlattening
     : public mlir::OpRewritePattern<mlir::cir::TernaryOp> {
 public:
@@ -294,9 +393,10 @@ public:
 };
 
 void populateFlattenCFGPatterns(RewritePatternSet &patterns) {
-  patterns.add<CIRIfFlattening, CIRLoopOpInterfaceFlattening,
-               CIRScopeOpFlattening, CIRTernaryOpFlattening>(
-      patterns.getContext());
+  patterns
+      .add<CIRIfFlattening, CIRLoopOpInterfaceFlattening, CIRScopeOpFlattening,
+           CIRSwitchOpFlattening, CIRTernaryOpFlattening>(
+          patterns.getContext());
 }
 
 void FlattenCFGPass::runOnOperation() {
@@ -306,7 +406,7 @@ void FlattenCFGPass::runOnOperation() {
   // Collect operations to apply patterns.
   SmallVector<Operation *, 16> ops;
   getOperation()->walk<mlir::WalkOrder::PostOrder>([&](Operation *op) {
-    if (isa<IfOp, ScopeOp, LoopOpInterface, TernaryOp>(op))
+    if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp>(op))
       ops.push_back(op);
   });
 

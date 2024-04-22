@@ -1,0 +1,207 @@
+// RUN: cir-opt %s -cir-flatten-cfg -o - | FileCheck %s
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+module {
+  cir.func @shouldFlatSwitchWithDefault(%arg0: !s8i) {
+    cir.switch (%arg0 : !s8i) [
+    case (equal, 1) {
+      cir.break
+    },
+    case (default) {
+      cir.break
+    }
+    ]
+    cir.return
+  }
+// CHECK:  cir.func @shouldFlatSwitchWithDefault(%arg0: !s8i) {
+// CHECK:    cir.switch.flat %arg0 : !s8i, ^bb[[#DEFAULT:]] [
+// CHECK:      1: ^bb[[#CASE1:]]
+// CHECK:    ]
+// CHECK:  ^bb[[#CASE1]]:
+// CHECK:    cir.br ^bb3
+// CHECK:  ^bb[[#DEFAULT]]:
+// CHECK:    cir.br ^bb[[#EXIT:]]
+// CHECK:  ^bb[[#EXIT]]:
+// CHECK:    cir.return
+// CHECK:  }
+
+  cir.func @shouldFlatSwitchWithoutDefault(%arg0: !s32i) {
+    cir.switch (%arg0 : !s32i) [
+    case (equal, 1) {
+      cir.break
+    }
+    ]    
+    cir.return
+  }
+// CHECK:  cir.func @shouldFlatSwitchWithoutDefault(%arg0: !s32i) {
+// CHECK:    cir.switch.flat %arg0 : !s32i, ^bb[[#EXIT:]] [
+// CHECK:      1: ^bb[[#CASE1:]]
+// CHECK:    ]
+// CHECK:  ^bb[[#CASE1]]:
+// CHECK:    cir.br ^bb[[#EXIT]]
+// CHECK:  ^bb[[#EXIT]]:
+// CHECK:    cir.return
+// CHECK:  }
+
+
+  cir.func @shouldFlatSwitchWithImplicitFallthrough(%arg0: !s64i) {
+    cir.switch (%arg0 : !s64i) [
+    case (anyof, [1, 2] : !s64i) {
+      cir.break
+    }
+    ]    
+    cir.return
+  }
+// CHECK:  cir.func @shouldFlatSwitchWithImplicitFallthrough(%arg0: !s64i) {
+// CHECK:    cir.switch.flat %arg0 : !s64i, ^bb[[#EXIT:]] [
+// CHECK:      1: ^bb[[#CASE1N2:]],
+// CHECK:      2: ^bb[[#CASE1N2]]
+// CHECK:    ]
+// CHECK:  ^bb[[#CASE1N2]]:
+// CHECK:    cir.br ^bb[[#EXIT]]
+// CHECK:  ^bb[[#EXIT]]:
+// CHECK:    cir.return
+// CHECK:  }
+
+
+
+  cir.func @shouldFlatSwitchWithExplicitFallthrough(%arg0: !s64i) {
+      cir.switch (%arg0 : !s64i) [
+      case (equal, 1 : !s64i) { // case 1 has its own region
+        cir.yield // fallthrough to case 2
+      },      
+      case (equal, 2 : !s64i) {
+        cir.break
+      }      
+      ]      
+    cir.return
+  }
+// CHECK:  cir.func @shouldFlatSwitchWithExplicitFallthrough(%arg0: !s64i) {
+// CHECK:    cir.switch.flat %arg0 : !s64i, ^bb[[#EXIT:]] [
+// CHECK:      1: ^bb[[#CASE1:]],
+// CHECK:      2: ^bb[[#CASE2:]]
+// CHECK:    ]
+// CHECK:  ^bb[[#CASE1]]:
+// CHECK:    cir.br ^bb[[#CASE2]]
+// CHECK:  ^bb[[#CASE2]]:
+// CHECK:    cir.br ^bb[[#EXIT]]
+// CHECK:  ^bb[[#EXIT]]:
+// CHECK:    cir.return
+// CHECK:  }
+
+  cir.func @shouldFlatSwitchWithFallthroughToExit(%arg0: !s64i) {
+      cir.switch (%arg0 : !s64i) [
+      case (equal, 1 : !s64i) {
+        cir.yield // fallthrough to exit
+      }      
+      ]   
+    cir.return
+  }
+// CHECK:  cir.func @shouldFlatSwitchWithFallthroughToExit(%arg0: !s64i) {
+// CHECK:    cir.switch.flat %arg0 : !s64i, ^bb[[#EXIT:]] [
+// CHECK:      1: ^bb[[#CASE1:]]
+// CHECK:    ]
+// CHECK:  ^bb[[#CASE1]]:
+// CHECK:    cir.br ^bb[[#EXIT]]
+// CHECK:  ^bb[[#EXIT]]:
+// CHECK:    cir.return
+// CHECK:  }
+
+  cir.func @shouldDropEmptySwitch(%arg0: !s64i) {
+    cir.switch (%arg0 : !s64i) [
+    ]
+    // CHECK-NOT: llvm.switch
+    cir.return
+  }
+// CHECK:      cir.func @shouldDropEmptySwitch(%arg0: !s64i) 
+// CHECK-NOT:    cir.switch.flat
+
+
+  cir.func @shouldFlatMultiBlockCase(%arg0: !s32i) {
+    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["a", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
+    cir.scope {
+      %1 = cir.load %0 : cir.ptr <!s32i>, !s32i
+      cir.switch (%1 : !s32i) [
+      case (equal, 3) {
+        cir.return
+      ^bb1:  // no predecessors
+        cir.break
+      }
+      ] 
+    }
+    cir.return
+  }
+
+// CHECK:  cir.func @shouldFlatMultiBlockCase(%arg0: !s32i) {
+// CHECK:     %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["a", init] {alignment = 4 : i64}
+// CHECK:     cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
+// CHECK:     cir.br ^bb1
+// CHECK:   ^bb1:  // pred: ^bb0
+// CHECK:     %1 = cir.load %0 : cir.ptr <!s32i>, !s32i
+// CHECK:     cir.switch.flat %1 : !s32i, ^bb4 [
+// CHECK:       3: ^bb2
+// CHECK:     ]
+// CHECK:   ^bb2:  // pred: ^bb1
+// CHECK:     cir.return
+// CHECK:   ^bb3:  // no predecessors
+// CHECK:     cir.br ^bb4
+// CHECK:   ^bb4:  // 2 preds: ^bb1, ^bb3
+// CHECK:     cir.br ^bb5
+// CHECK:   ^bb5:  // pred: ^bb4
+// CHECK:     cir.return
+// CHECK:   }
+
+
+   cir.func @shouldFlatNestedBreak(%arg0: !s32i, %arg1: !s32i) -> !s32i {
+    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["x", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["y", init] {alignment = 4 : i64}
+    %2 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
+    cir.store %arg1, %1 : !s32i, cir.ptr <!s32i>
+    cir.scope {
+      %5 = cir.load %0 : cir.ptr <!s32i>, !s32i
+      cir.switch (%5 : !s32i) [
+      case (equal, 0) {
+        cir.scope {
+          %6 = cir.load %1 : cir.ptr <!s32i>, !s32i
+          %7 = cir.const(#cir.int<0> : !s32i) : !s32i
+          %8 = cir.cmp(ge, %6, %7) : !s32i, !s32i
+          %9 = cir.cast(int_to_bool, %8 : !s32i), !cir.bool
+          cir.if %9 {
+            cir.break
+          }
+        }
+        cir.break
+      }
+      ] 
+    } 
+    %3 = cir.const(#cir.int<3> : !s32i) : !s32i
+    cir.store %3, %2 : !s32i, cir.ptr <!s32i>
+    %4 = cir.load %2 : cir.ptr <!s32i>, !s32i
+    cir.return %4 : !s32i 
+  }
+// CHECK:  cir.func @shouldFlatNestedBreak(%arg0: !s32i, %arg1: !s32i) -> !s32i {
+// CHECK:    cir.switch.flat %3 : !s32i, ^bb7 [
+// CHECK:      0: ^bb2
+// CHECK:    ]
+// CHECK:  ^bb2:  // pred: ^bb1
+// CHECK:    cir.br ^bb3
+// CHECK:  ^bb3:  // pred: ^bb2
+// CHECK:    cir.brcond {{%.*}} ^bb4, ^bb5
+// CHECK:  ^bb4:  // pred: ^bb3
+// CHECK:    cir.br ^bb7
+// CHECK:  ^bb5:  // pred: ^bb3
+// CHECK:    cir.br ^bb6
+// CHECK:  ^bb6:  // pred: ^bb5
+// CHECK:    cir.br ^bb7
+// CHECK:  ^bb7:  // 3 preds: ^bb1, ^bb4, ^bb6
+// CHECK:    cir.br ^bb8
+// CHECK:  ^bb8:  // pred: ^bb7    
+// CHECK:    cir.return %9 : !s32i
+// CHECK:  }
+
+}
