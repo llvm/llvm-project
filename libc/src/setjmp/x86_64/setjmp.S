@@ -11,18 +11,18 @@
 
 #define paste(ns) _ZN22 ## ns ## 6setjmpEP9__jmp_buf
 #define expand(x) paste(x)
-#define LIBC_NAMESPACE_setjump expand(LIBC_NAMESPACE)
+#define LIBC_NAMESPACE_setjmp expand(LIBC_NAMESPACE)
 // aka _ZN22__llvm_libc_19_0_0_git6setjmpEP9__jmp_buf
 // aka __llvm_libc_19_0_0_git::setjmp(__jmp_buf*)
 
-.global setjump
-.global LIBC_NAMESPACE_setjump
+.global setjmp
+.global LIBC_NAMESPACE_setjmp
 
-SYMBOL_IS_FUNC(setjump)
-SYMBOL_IS_FUNC(LIBC_NAMESPACE_setjump)
+SYMBOL_IS_FUNC(setjmp)
+SYMBOL_IS_FUNC(LIBC_NAMESPACE_setjmp)
 
-setjump:
-LIBC_NAMESPACE_setjump:
+setjmp:
+LIBC_NAMESPACE_setjmp:
 
   mov %rbx, RBX_OFFSET(%rdi)
   mov %rbp, RBP_OFFSET(%rdi)
@@ -37,7 +37,7 @@ LIBC_NAMESPACE_setjump:
   xor %eax, %eax
   ret
 
-.size setjump, . - setjump
-.size LIBC_NAMESPACE_setjump, . - LIBC_NAMESPACE_setjump
+.size setjmp, . - setjmp
+.size LIBC_NAMESPACE_setjmp, . - LIBC_NAMESPACE_setjmp
 
 NO_EXEC_STACK_DIRECTIVE
