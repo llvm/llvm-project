@@ -3604,6 +3604,45 @@ def IsConstantOp : CIR_Op<"is_constant", [Pure]> {
   }];
 }
 
+
+def SwitchFlatOp : CIR_Op<"switch.flat", [AttrSizedOperandSegments, Terminator]> {
+
+  let description = [{
+    The `cir.switch.flat` operation is a region-less and simplified version of the `cir.switch`.
+    It's representation is closer to LLVM IR dialect than the C/C++ language feature.
+  }];
+
+  let arguments = (ins
+    CIR_IntType:$condition,
+    Variadic<AnyType>:$defaultOperands,
+    VariadicOfVariadic<AnyType, "case_operand_segments">:$caseOperands,
+    ArrayAttr:$case_values,
+    DenseI32ArrayAttr:$case_operand_segments
+  );
+
+  let successors = (successor
+    AnySuccessor:$defaultDestination,
+    VariadicSuccessor<AnySuccessor>:$caseDestinations
+  );
+
+  let assemblyFormat = [{
+    $condition `:` type($condition) `,`
+    $defaultDestination (`(` $defaultOperands^ `:` type($defaultOperands) `)`)?
+    custom<SwitchFlatOpCases>(ref(type($condition)), $case_values, $caseDestinations,
+                                   $caseOperands, type($caseOperands))
+    attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$condition,
+      "Block *":$defaultDestination,
+      "ValueRange":$defaultOperands,
+      CArg<"ArrayRef<APInt>", "{}">:$caseValues,
+      CArg<"BlockRange", "{}">:$caseDestinations,
+      CArg<"ArrayRef<ValueRange>", "{}">:$caseOperands)>
+  ];
+}
+
 //===----------------------------------------------------------------------===//
 // Atomic operations
 //===----------------------------------------------------------------------===//

@@ -17,6 +17,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIRLoopOpInterface.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <numeric>
 #include <optional>
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -1220,6 +1221,100 @@ void SwitchOp::build(
   OpBuilder::InsertionGuard guardSwitch(builder);
   result.addOperands({cond});
   switchBuilder(builder, result.location, result);
+}
+
+//===----------------------------------------------------------------------===//
+// SwitchFlatOp
+//===----------------------------------------------------------------------===//
+
+void SwitchFlatOp::build(OpBuilder &builder, OperationState &result,
+                         Value value, Block *defaultDestination,
+                         ValueRange defaultOperands, ArrayRef<APInt> caseValues,
+                         BlockRange caseDestinations,
+                         ArrayRef<ValueRange> caseOperands) {
+
+  std::vector<mlir::Attribute> caseValuesAttrs;
+  for (auto &val : caseValues) {
+    caseValuesAttrs.push_back(mlir::cir::IntAttr::get(value.getType(), val));
+  }
+  auto attrs = ArrayAttr::get(builder.getContext(), caseValuesAttrs);
+
+  build(builder, result, value, defaultOperands, caseOperands, attrs,
+        defaultDestination, caseDestinations);
+}
+
+/// <cases> ::= `[` (case (`,` case )* )? `]`
+/// <case>  ::= integer `:` bb-id (`(` ssa-use-and-type-list `)`)?
+static ParseResult parseSwitchFlatOpCases(
+    OpAsmParser &parser, Type flagType, mlir::ArrayAttr &caseValues,
+    SmallVectorImpl<Block *> &caseDestinations,
+    SmallVectorImpl<SmallVector<OpAsmParser::UnresolvedOperand>> &caseOperands,
+    SmallVectorImpl<SmallVector<Type>> &caseOperandTypes) {
+  if (failed(parser.parseLSquare()))
+    return failure();
+  if (succeeded(parser.parseOptionalRSquare()))
+    return success();
+  SmallVector<mlir::Attribute> values;
+
+  auto parseCase = [&]() {
+    int64_t value = 0;
+    if (failed(parser.parseInteger(value)))
+      return failure();
+
+    values.push_back(IntAttr::get(flagType, value));
+
+    Block *destination;
+    SmallVector<OpAsmParser::UnresolvedOperand> operands;
+    SmallVector<Type> operandTypes;
+    if (parser.parseColon() || parser.parseSuccessor(destination))
+      return failure();
+    if (!parser.parseOptionalLParen()) {
+      if (parser.parseOperandList(operands, OpAsmParser::Delimiter::None,
+                                  /*allowResultNumber=*/false) ||
+          parser.parseColonTypeList(operandTypes) || parser.parseRParen())
+        return failure();
+    }
+    caseDestinations.push_back(destination);
+    caseOperands.emplace_back(operands);
+    caseOperandTypes.emplace_back(operandTypes);
+    return success();
+  };
+  if (failed(parser.parseCommaSeparatedList(parseCase)))
+    return failure();
+
+  caseValues = ArrayAttr::get(flagType.getContext(), values);
+
+  return parser.parseRSquare();
+}
+
+static void printSwitchFlatOpCases(OpAsmPrinter &p, SwitchFlatOp op,
+                                   Type flagType, mlir::ArrayAttr caseValues,
+                                   SuccessorRange caseDestinations,
+                                   OperandRangeRange caseOperands,
+                                   const TypeRangeRange &caseOperandTypes) {
+  p << '[';
+  p.printNewline();
+  if (!caseValues) {
+    p << ']';
+    return;
+  }
+
+  size_t index = 0;
+  llvm::interleave(
+      llvm::zip(caseValues, caseDestinations),
+      [&](auto i) {
+        p << "  ";
+        mlir::Attribute a = std::get<0>(i);
+        p << a.cast<mlir::cir::IntAttr>().getValue();
+        p << ": ";
+        p.printSuccessorAndUseList(std::get<1>(i), caseOperands[index++]);
+      },
+      [&] {
+        p << ',';
+        p.printNewline();
+      });
+  p.printNewline();
+  p << ']';
 }
 
 //===----------------------------------------------------------------------===//

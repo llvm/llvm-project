@@ -78,15 +78,6 @@ namespace direct {
 
 namespace {
 
-/// Lowers operations with the terminator trait that have a single successor.
-void lowerTerminator(mlir::Operation *op, mlir::Block *dest,
-                     mlir::ConversionPatternRewriter &rewriter) {
-  assert(op->hasTrait<mlir::OpTrait::IsTerminator>() && "not a terminator");
-  mlir::OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPoint(op);
-  rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(op, dest);
-}
-
 /// Walks a region while skipping operations of type `Ops`. This ensures the
 /// callback is not applied to said operations and its children.
 template <typename... Ops>
@@ -1507,101 +1498,39 @@ public:
   }
 };
 
-class CIRSwitchOpLowering
-    : public mlir::OpConversionPattern<mlir::cir::SwitchOp> {
+class CIRSwitchFlatOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::SwitchFlatOp> {
 public:
-  using OpConversionPattern<mlir::cir::SwitchOp>::OpConversionPattern;
-
-  inline void rewriteYieldOp(mlir::ConversionPatternRewriter &rewriter,
-                             mlir::cir::YieldOp yieldOp,
-                             mlir::Block *destination) const {
-    rewriter.setInsertionPoint(yieldOp);
-    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldOp, yieldOp.getOperands(),
-                                                 destination);
-  }
+  using OpConversionPattern<mlir::cir::SwitchFlatOp>::OpConversionPattern;
 
   mlir::LogicalResult
-  matchAndRewrite(mlir::cir::SwitchOp op, OpAdaptor adaptor,
+  matchAndRewrite(mlir::cir::SwitchFlatOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    // Empty switch statement: just erase it.
-    if (!op.getCases().has_value() || op.getCases()->empty()) {
-      rewriter.eraseOp(op);
-      return mlir::success();
+
+    llvm::SmallVector<mlir::APInt, 8> caseValues;
+    if (op.getCaseValues()) {
+      for (auto val : op.getCaseValues()) {
+        auto intAttr = dyn_cast<mlir::cir::IntAttr>(val);
+        caseValues.push_back(intAttr.getValue());
+      }
     }
 
-    // Create exit block.
-    rewriter.setInsertionPointAfter(op);
-    auto *exitBlock =
-        rewriter.splitBlock(rewriter.getBlock(), rewriter.getInsertionPoint());
-
-    // Allocate required data structures (disconsider default case in
-    // vectors).
-    llvm::SmallVector<mlir::APInt, 8> caseValues;
     llvm::SmallVector<mlir::Block *, 8> caseDestinations;
     llvm::SmallVector<mlir::ValueRange, 8> caseOperands;
 
-    // Initialize default case as optional.
-    mlir::Block *defaultDestination = exitBlock;
-    mlir::ValueRange defaultOperands = exitBlock->getArguments();
-
-    // Track fallthrough between cases.
-    mlir::cir::YieldOp fallthroughYieldOp = nullptr;
-
-    // Digest the case statements values and bodies.
-    for (size_t i = 0; i < op.getCases()->size(); ++i) {
-      auto &region = op.getRegion(i);
-      auto caseAttr = op.getCases()->getValue()[i].cast<mlir::cir::CaseAttr>();
-
-      // Found default case: save destination and operands.
-      if (caseAttr.getKind().getValue() == mlir::cir::CaseOpKind::Default) {
-        defaultDestination = &region.front();
-        defaultOperands = region.getArguments();
-      } else {
-        // AnyOf cases kind can have multiple values, hence the loop below.
-        for (auto &value : caseAttr.getValue()) {
-          caseValues.push_back(value.cast<mlir::cir::IntAttr>().getValue());
-          caseOperands.push_back(region.getArguments());
-          caseDestinations.push_back(&region.front());
-        }
-      }
-
-      // Previous case is a fallthrough: branch it to this case.
-      if (fallthroughYieldOp) {
-        rewriteYieldOp(rewriter, fallthroughYieldOp, &region.front());
-        fallthroughYieldOp = nullptr;
-      }
-
-      for (auto &blk : region.getBlocks()) {
-        if (blk.getNumSuccessors())
-          continue;
-
-        // Handle switch-case yields.
-        if (auto yieldOp = dyn_cast<mlir::cir::YieldOp>(blk.getTerminator()))
-          fallthroughYieldOp = yieldOp;
-      }
-
-      // Handle break statements.
-      walkRegionSkipping<mlir::cir::LoopOpInterface, mlir::cir::SwitchOp>(
-          region, [&](mlir::Operation *op) {
-            if (isa<mlir::cir::BreakOp>(op))
-              lowerTerminator(op, exitBlock, rewriter);
-          });
-
-      // Extract region contents before erasing the switch op.
-      rewriter.inlineRegionBefore(region, exitBlock);
+    for (auto x : op.getCaseDestinations()) {
+      caseDestinations.push_back(x);
     }
 
-    // Last case is a fallthrough: branch it to exit.
-    if (fallthroughYieldOp) {
-      rewriteYieldOp(rewriter, fallthroughYieldOp, exitBlock);
-      fallthroughYieldOp = nullptr;
+    for (auto x : op.getCaseOperands()) {
+      caseOperands.push_back(x);
     }
 
     // Set switch op to branch to the newly created blocks.
     rewriter.setInsertionPoint(op);
     rewriter.replaceOpWithNewOp<mlir::LLVM::SwitchOp>(
-        op, adaptor.getCondition(), defaultDestination, defaultOperands,
-        caseValues, caseDestinations, caseOperands);
+        op, adaptor.getCondition(), op.getDefaultDestination(),
+        op.getDefaultOperands(), caseValues, caseDestinations, caseOperands);
     return mlir::success();
   }
 };
@@ -2912,7 +2841,7 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering,
       CIRCastOpLowering, CIRGlobalOpLowering, CIRGetGlobalOpLowering,
       CIRVAStartLowering, CIRVAEndLowering, CIRVACopyLowering, CIRVAArgLowering,
-      CIRBrOpLowering, CIRGetMemberOpLowering, CIRSwitchOpLowering,
+      CIRBrOpLowering, CIRGetMemberOpLowering, CIRSwitchFlatOpLowering,
       CIRPtrDiffOpLowering, CIRCopyOpLowering, CIRMemCpyOpLowering,
       CIRFAbsOpLowering, CIRExpectOpLowering, CIRVTableAddrPointOpLowering,
       CIRVectorCreateLowering, CIRVectorInsertLowering,
