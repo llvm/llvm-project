@@ -11,8 +11,8 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/properties/architectures.h"
-#include "test/UnitTest/FPExceptMatcher.h"
 #include "test/UnitTest/FEnvSafeTest.h"
+#include "test/UnitTest/FPExceptMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include "excepts.h"

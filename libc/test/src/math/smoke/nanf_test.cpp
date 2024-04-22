@@ -8,8 +8,8 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/nanf.h"
-#include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/FEnvSafeTest.h"
+#include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include <signal.h>
 

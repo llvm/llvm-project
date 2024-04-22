@@ -11,8 +11,8 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/FEnvSafeTest.h"
+#include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/math_macros.h"
@@ -22,7 +22,8 @@ static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
                                           FE_TONEAREST};
 
 template <typename F, typename I, bool TestModes = false>
-class RoundToIntegerTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
+class RoundToIntegerTestTemplate
+    : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   typedef I (*RoundToIntegerFunc)(F);
 

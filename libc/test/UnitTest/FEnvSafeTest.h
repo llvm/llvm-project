@@ -29,7 +29,7 @@ protected:
     fenv_t before;
     FEnvSafeTest &test;
 
-   public:
+  public:
     explicit PreserveFEnv(FEnvSafeTest *self) : test{*self} {
       test.get_fenv(before);
     }

@@ -12,8 +12,8 @@
 #include "src/__support/CPP/limits.h" // INT_MAX
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/NormalFloat.h"
-#include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/FEnvSafeTest.h"
+#include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include <stdint.h>

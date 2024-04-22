@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_ROUNDEVENTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_ROUNDEVENTEST_H
 
-#include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/FEnvSafeTest.h"
+#include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 

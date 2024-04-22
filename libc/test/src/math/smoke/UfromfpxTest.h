@@ -9,8 +9,8 @@
 #ifndef LIBC_TEST_SRC_MATH_SMOKE_UFROMFPXTEST_H
 #define LIBC_TEST_SRC_MATH_SMOKE_UFROMFPXTEST_H
 
-#include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/FEnvSafeTest.h"
+#include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 template <typename T>

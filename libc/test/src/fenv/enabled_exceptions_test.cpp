@@ -12,8 +12,8 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/properties/architectures.h"
-#include "test/UnitTest/FPExceptMatcher.h"
 #include "test/UnitTest/FEnvSafeTest.h"
+#include "test/UnitTest/FPExceptMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/fenv_macros.h"
@@ -26,7 +26,8 @@ using LlvmLibcExceptionStatusTest = LIBC_NAMESPACE::testing::FEnvSafeTest;
 // This test enables an exception and verifies that raising that exception
 // triggers SIGFPE.
 TEST_F(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
-#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) || defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+#if defined(LIBC_TARGET_ARCH_IS_ANY_ARM) ||                                    \
+    defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
   // Few Arm HW implementations do not trap exceptions. We skip this test
   // completely on such HW.
   //
@@ -38,7 +39,7 @@ TEST_F(LlvmLibcExceptionStatusTest, RaiseAndCrash) {
   LIBC_NAMESPACE::fputil::enable_except(FE_DIVBYZERO);
   if (LIBC_NAMESPACE::fputil::get_except() == 0)
     return;
-#endif  // Architectures where exception trapping is not supported
+#endif // Architectures where exception trapping is not supported
 
   // TODO: Install a floating point exception handler and verify that the
   // the expected exception was raised. One will have to longjmp back from

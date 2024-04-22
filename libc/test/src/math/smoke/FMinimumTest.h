@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINIMUMTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMINIMUMTEST_H
 
-#include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/FEnvSafeTest.h"
+#include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 template <typename T>
