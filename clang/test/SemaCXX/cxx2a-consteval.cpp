@@ -1051,21 +1051,23 @@ int f() {
 
 namespace GH57682 {
 void test() {
-  constexpr auto l1 = []() consteval { // expected-note  {{declared here}}
+  constexpr auto l1 = []() consteval { // expected-error {{cannot take address of consteval call operator of '(lambda at}} \
+                                       // expected-note 2 {{declared here}}
         return 3;
   };
-  constexpr int (*f1)(void) = l1; // expected-error {{constexpr variable 'f1' must be initialized by a constant expression}} \
-                                  // expected-note  {{pointer to a consteval declaration is not a constant expression}}
 
+  int (*f1)(void) = l1;
+
+  constexpr int (*f2)(void) = l1; // expected-error {{constexpr variable 'f2' must be initialized by a constant expression}} \
+                                  // expected-note  {{pointer to a consteval declaration is not a constant expression}}
 
   constexpr auto lstatic = []() static consteval { // expected-note  {{declared here}} \
                                                    // expected-warning {{extension}}
         return 3;
   };
-  constexpr int (*f2)(void) = lstatic; // expected-error {{constexpr variable 'f2' must be initialized by a constant expression}} \
+  constexpr int (*f3)(void) = lstatic; // expected-error {{constexpr variable 'f3' must be initialized by a constant expression}} \
                                        // expected-note  {{pointer to a consteval declaration is not a constant expression}}
-
-}
+  };
 }
 
 namespace GH60286 {

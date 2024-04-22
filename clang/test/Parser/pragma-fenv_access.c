@@ -32,9 +32,6 @@ int main(void) {
   CONST int not_too_big = 255;
   CONST float fnot_too_big = not_too_big;
   CONST int too_big = 0x7ffffff0;
-#if defined(CPP)
-//expected-warning@+2{{implicit conversion}}
-#endif
   CONST float fbig = too_big; // inexact
 #if !defined(CPP)
 #define static_assert _Static_assert
