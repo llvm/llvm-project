@@ -113,7 +113,17 @@ option(OPENMP_ENABLE_LIBOMP_PROFILING "Enable time profiling for libomp." OFF)
 
 # Header install location
 if(${OPENMP_STANDALONE_BUILD})
-  set(LIBOMP_HEADERS_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}")
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    execute_process(
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      COMMAND ${CMAKE_CXX_COMPILER} --print-resource-dir
+      RESULT_VARIABLE COMMAND_RETURN_CODE
+      OUTPUT_VARIABLE COMPILER_RESOURCE_DIR
+    )
+    set(LIBOMP_HEADERS_INSTALL_PATH "${COMPILER_RESOURCE_DIR}/include")
+  else()
+    set(LIBOMP_HEADERS_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}")
+  endif()
 else()
   include(GetClangResourceDir)
   get_clang_resource_dir(LIBOMP_HEADERS_INSTALL_PATH SUBDIR include)
@@ -122,19 +132,6 @@ endif()
 # Build host runtime library, after LIBOMPTARGET variables are set since they are needed
 # to enable time profiling support in the OpenMP runtime.
 add_subdirectory(runtime)
-
-if (OPENMP_ENABLE_LIBOMPTARGET)
-  # Check that the library can actually be built.
-  if (APPLE OR WIN32)
-    message(FATAL_ERROR "libomptarget cannot be built on Windows and MacOS X!")
-  elseif (NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-    message(FATAL_ERROR "Host compiler must support C++17 to build libomptarget!")
-  elseif (NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-    message(FATAL_ERROR "libomptarget on 32-bit systems are not supported!")
-  endif()
-
-  add_subdirectory(libomptarget)
-endif()
 
 set(ENABLE_OMPT_TOOLS ON)
 # Currently tools are not tested well on Windows or MacOS X.
@@ -147,6 +144,10 @@ option(OPENMP_ENABLE_OMPT_TOOLS "Enable building ompt based tools for OpenMP."
 if (OPENMP_ENABLE_OMPT_TOOLS)
   add_subdirectory(tools)
 endif()
+
+# Propagate OMPT support to offload
+set(LIBOMP_HAVE_OMPT_SUPPORT ${LIBOMP_HAVE_OMPT_SUPPORT} PARENT_SCOPE)
+set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${LIBOMP_OMP_TOOLS_INCLUDE_DIR} PARENT_SCOPE)
 
 option(OPENMP_MSVC_NAME_SCHEME "Build dll with MSVC naming scheme." OFF)
 
