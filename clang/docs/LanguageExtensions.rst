@@ -1642,7 +1642,8 @@ The following type trait primitives are supported by Clang. Those traits marked
   were made trivially relocatable via the ``clang::trivial_abi`` attribute.
 * ``__is_trivially_equality_comparable`` (Clang): Returns true if comparing two
   objects of the provided type is known to be equivalent to comparing their
-  value representations.
+  object representations. Note that types containing padding bytes are never
+  trivially equality comparable.
 * ``__is_unbounded_array`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_union`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_unsigned`` (C++, Embarcadero):
