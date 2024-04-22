@@ -13139,9 +13139,30 @@ Value *BoUpSLP::vectorizeTree(
       assert(Vec->getType()->isIntOrIntVectorTy() &&
              PrevVec->getType()->isIntOrIntVectorTy() &&
              "Expected integer vector types only.");
-      assert(MinBWs.contains(TE->UserTreeIndices.front().UserTE) &&
-             "Expected user in MinBWs.");
-      bool IsSigned = MinBWs.lookup(TE->UserTreeIndices.front().UserTE).second;
+      std::optional<std::pair<unsigned long, bool>> Res;
+      if (const TreeEntry *BaseTE = getTreeEntry(TE->Scalars.front())) {
+        SmallVector<const TreeEntry *> BaseTEs;
+        if (BaseTE->isSame(TE->Scalars))
+          BaseTEs.push_back(BaseTE);
+        auto It = MultiNodeScalars.find(TE->Scalars.front());
+        if (It != MultiNodeScalars.end()) {
+          for (const TreeEntry *MNTE : It->getSecond())
+            if (MNTE->isSame(TE->Scalars))
+              BaseTEs.push_back(MNTE);
+        }
+        const auto *BaseIt = find_if(BaseTEs, [&](const TreeEntry *BaseTE) {
+          return MinBWs.contains(BaseTE);
+        });
+        if (BaseIt != BaseTEs.end())
+          Res = MinBWs.lookup(*BaseIt);
+      }
+      if (!Res) {
+        assert(MinBWs.contains(TE->UserTreeIndices.front().UserTE) &&
+               "Expected user in MinBWs.");
+        Res = MinBWs.lookup(TE->UserTreeIndices.front().UserTE);
+      }
+      assert(Res && "Expected user node or perfect diamond match in MinBWs.");
+      bool IsSigned = Res->second;
       Vec = Builder.CreateIntCast(Vec, PrevVec->getType(), IsSigned);
     }
     PrevVec->replaceAllUsesWith(Vec);
@@ -14447,7 +14468,8 @@ bool BoUpSLP::collectValuesToDemote(
       ++BitWidth1;
     if (auto *I = dyn_cast<Instruction>(V)) {
       APInt Mask = DB->getDemandedBits(I);
-      unsigned BitWidth2 = Mask.getBitWidth() - Mask.countl_zero();
+      unsigned BitWidth2 =
+          std::max<unsigned>(1, Mask.getBitWidth() - Mask.countl_zero());
       while (!IsSigned && BitWidth2 < OrigBitWidth) {
         APInt Mask = APInt::getBitsSetFrom(OrigBitWidth, BitWidth2 - 1);
         if (MaskedValueIsZero(V, Mask, SimplifyQuery(*DL)))

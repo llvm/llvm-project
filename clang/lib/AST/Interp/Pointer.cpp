@@ -23,7 +23,7 @@ Pointer::Pointer(Block *Pointee)
     : Pointer(Pointee, Pointee->getDescriptor()->getMetadataSize(),
               Pointee->getDescriptor()->getMetadataSize()) {}
 
-Pointer::Pointer(Block *Pointee, unsigned BaseAndOffset)
+Pointer::Pointer(Block *Pointee, uint64_t BaseAndOffset)
     : Pointer(Pointee, BaseAndOffset, BaseAndOffset) {}
 
 Pointer::Pointer(const Pointer &P)
@@ -34,7 +34,7 @@ Pointer::Pointer(const Pointer &P)
     PointeeStorage.BS.Pointee->addPointer(this);
 }
 
-Pointer::Pointer(Block *Pointee, unsigned Base, unsigned Offset)
+Pointer::Pointer(Block *Pointee, unsigned Base, uint64_t Offset)
     : Offset(Offset), StorageKind(Storage::Block) {
   assert((Base == RootPtrMark || Base % alignof(void *) == 0) && "wrong base");
 
@@ -139,9 +139,10 @@ APValue Pointer::toAPValue() const {
   else
     llvm_unreachable("Invalid allocation type");
 
-  if (isDummy() || isUnknownSizeArray() || Desc->asExpr())
+  if (isDummy() || isUnknownSizeArray() || Desc->asExpr()) {
     return APValue(Base, CharUnits::Zero(), Path,
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
+  }
 
   // TODO: compute the offset into the object.
   CharUnits Offset = CharUnits::Zero();

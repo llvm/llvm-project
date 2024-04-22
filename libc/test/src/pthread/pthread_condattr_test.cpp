@@ -6,16 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-macros/generic-error-number-macros.h" // EINVAL
+#include "include/llvm-libc-macros/time-macros.h" // CLOCK_REALTIME, CLOCK_MONOTONIC
+#include "src/pthread/pthread_condattr_destroy.h"
+#include "src/pthread/pthread_condattr_getclock.h"
+#include "src/pthread/pthread_condattr_getpshared.h"
+#include "src/pthread/pthread_condattr_init.h"
+#include "src/pthread/pthread_condattr_setclock.h"
+#include "src/pthread/pthread_condattr_setpshared.h"
 #include "test/UnitTest/Test.h"
 
-#include <errno.h>
-#include <pthread.h>
-#include <time.h>
+// TODO: https://github.com/llvm/llvm-project/issues/88997
+#include <pthread.h> // PTHREAD_PROCESS_PRIVATE, PTHREAD_PROCESS_SHARED
 
 TEST(LlvmLibcPThreadCondAttrTest, InitAndDestroy) {
   pthread_condattr_t cond;
-  ASSERT_EQ(pthread_condattr_init(&cond), 0);
-  ASSERT_EQ(pthread_condattr_destroy(&cond), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_init(&cond), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_destroy(&cond), 0);
 }
 
 TEST(LlvmLibcPThreadCondAttrTest, GetDefaultValues) {
@@ -26,12 +33,12 @@ TEST(LlvmLibcPThreadCondAttrTest, GetDefaultValues) {
   // Invalid value.
   int pshared = 42;
 
-  ASSERT_EQ(pthread_condattr_init(&cond), 0);
-  ASSERT_EQ(pthread_condattr_getclock(&cond, &clock), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_init(&cond), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_getclock(&cond, &clock), 0);
   ASSERT_EQ(clock, CLOCK_REALTIME);
-  ASSERT_EQ(pthread_condattr_getpshared(&cond, &pshared), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_getpshared(&cond, &pshared), 0);
   ASSERT_EQ(pshared, PTHREAD_PROCESS_PRIVATE);
-  ASSERT_EQ(pthread_condattr_destroy(&cond), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_destroy(&cond), 0);
 }
 
 TEST(LlvmLibcPThreadCondAttrTest, SetGoodValues) {
@@ -42,14 +49,17 @@ TEST(LlvmLibcPThreadCondAttrTest, SetGoodValues) {
   // Invalid value.
   int pshared = 42;
 
-  ASSERT_EQ(pthread_condattr_init(&cond), 0);
-  ASSERT_EQ(pthread_condattr_setclock(&cond, CLOCK_MONOTONIC), 0);
-  ASSERT_EQ(pthread_condattr_getclock(&cond, &clock), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_init(&cond), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_setclock(&cond, CLOCK_MONOTONIC),
+            0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_getclock(&cond, &clock), 0);
   ASSERT_EQ(clock, CLOCK_MONOTONIC);
-  ASSERT_EQ(pthread_condattr_setpshared(&cond, PTHREAD_PROCESS_SHARED), 0);
-  ASSERT_EQ(pthread_condattr_getpshared(&cond, &pshared), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_setpshared(&cond,
+                                                        PTHREAD_PROCESS_SHARED),
+            0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_getpshared(&cond, &pshared), 0);
   ASSERT_EQ(pshared, PTHREAD_PROCESS_SHARED);
-  ASSERT_EQ(pthread_condattr_destroy(&cond), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_destroy(&cond), 0);
 }
 
 TEST(LlvmLibcPThreadCondAttrTest, SetBadValues) {
@@ -60,12 +70,13 @@ TEST(LlvmLibcPThreadCondAttrTest, SetBadValues) {
   // Invalid value.
   int pshared = 42;
 
-  ASSERT_EQ(pthread_condattr_init(&cond), 0);
-  ASSERT_EQ(pthread_condattr_setclock(&cond, clock), EINVAL);
-  ASSERT_EQ(pthread_condattr_getclock(&cond, &clock), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_init(&cond), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_setclock(&cond, clock), EINVAL);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_getclock(&cond, &clock), 0);
   ASSERT_EQ(clock, CLOCK_REALTIME);
-  ASSERT_EQ(pthread_condattr_setpshared(&cond, pshared), EINVAL);
-  ASSERT_EQ(pthread_condattr_getpshared(&cond, &pshared), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_setpshared(&cond, pshared),
+            EINVAL);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_getpshared(&cond, &pshared), 0);
   ASSERT_EQ(pshared, PTHREAD_PROCESS_PRIVATE);
-  ASSERT_EQ(pthread_condattr_destroy(&cond), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_condattr_destroy(&cond), 0);
 }

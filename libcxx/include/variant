@@ -909,8 +909,8 @@ protected:
       __a.__value = std::forward<_Arg>(__arg);
     } else {
       struct {
-        _LIBCPP_HIDE_FROM_ABI void operator()(true_type) const { __this->__emplace<_Ip>(std::forward<_Arg>(__arg)); }
-        _LIBCPP_HIDE_FROM_ABI void operator()(false_type) const {
+        _LIBCPP_HIDDEN void operator()(true_type) const { __this->__emplace<_Ip>(std::forward<_Arg>(__arg)); }
+        _LIBCPP_HIDDEN void operator()(false_type) const {
           __this->__emplace<_Ip>(_Tp(std::forward<_Arg>(__arg)));
         }
         __assignment* __this;
