@@ -232,6 +232,10 @@ LibcxxStdSliceArraySyntheticFrontEndCreator(CXXSyntheticChildren *,
                                             lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *
+LibcxxStdProxyArraySyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                            lldb::ValueObjectSP);
+
+SyntheticChildrenFrontEnd *
 LibcxxStdListSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                       lldb::ValueObjectSP);
 

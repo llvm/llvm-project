@@ -309,6 +309,16 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_OverloadedOperatorLParen);
   EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_FunctionLBrace);
   EXPECT_TOKEN(Tokens[11], tok::amp, TT_PointerOrReference);
+
+  Tokens = annotate("if (new && num) {\n"
+                    "  new = 1;\n"
+                    "}\n"
+                    "if (!delete && num) {\n"
+                    "  delete = 1;\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 26u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[16], tok::ampamp, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -588,6 +598,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   auto Tokens = annotate("(void)p;");
   ASSERT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::r_paren, TT_CastRParen);
+
+  Tokens = annotate("(uint32_t)&&label;");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::r_paren, TT_CastRParen);
+  EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_UnaryOperator);
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_Unknown);
 
   Tokens = annotate("auto x = (Foo)p;");
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
@@ -2839,15 +2855,6 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   ASSERT_EQ(Tokens.size(), 18u) << Tokens;
   EXPECT_BRACE_KIND(Tokens[8], BK_BracedInit);
   EXPECT_BRACE_KIND(Tokens[16], BK_BracedInit);
-}
-
-TEST_F(TokenAnnotatorTest, StreamOperator) {
-  auto Tokens = annotate("\"foo\\n\" << aux << \"foo\\n\" << \"foo\";");
-  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
-  EXPECT_FALSE(Tokens[1]->MustBreakBefore);
-  EXPECT_FALSE(Tokens[3]->MustBreakBefore);
-  // Only break between string literals if the former ends with \n.
-  EXPECT_TRUE(Tokens[5]->MustBreakBefore);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {

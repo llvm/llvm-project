@@ -89,10 +89,10 @@ public:
     PointeeStorage.Int.Desc = nullptr;
   }
   Pointer(Block *B);
-  Pointer(Block *B, unsigned BaseAndOffset);
+  Pointer(Block *B, uint64_t BaseAndOffset);
   Pointer(const Pointer &P);
   Pointer(Pointer &&P);
-  Pointer(uint64_t Address, const Descriptor *Desc, unsigned Offset = 0)
+  Pointer(uint64_t Address, const Descriptor *Desc, uint64_t Offset = 0)
       : Offset(Offset), StorageKind(Storage::Int) {
     PointeeStorage.Int.Value = Address;
     PointeeStorage.Int.Desc = Desc;
@@ -134,14 +134,14 @@ public:
   std::optional<APValue> toRValue(const Context &Ctx) const;
 
   /// Offsets a pointer inside an array.
-  [[nodiscard]] Pointer atIndex(unsigned Idx) const {
+  [[nodiscard]] Pointer atIndex(uint64_t Idx) const {
     if (isIntegralPointer())
       return Pointer(asIntPointer().Value, asIntPointer().Desc, Idx);
 
     if (asBlockPointer().Base == RootPtrMark)
       return Pointer(asBlockPointer().Pointee, RootPtrMark,
                      getDeclDesc()->getSize());
-    unsigned Off = Idx * elemSize();
+    uint64_t Off = Idx * elemSize();
     if (getFieldDesc()->ElemDesc)
       Off += sizeof(InlineDescriptor);
     else
@@ -241,13 +241,10 @@ public:
 
   /// Checks if the pointer is null.
   bool isZero() const {
-    if (Offset != 0)
-      return false;
-
     if (isBlockPointer())
       return asBlockPointer().Pointee == nullptr;
     assert(isIntegralPointer());
-    return asIntPointer().Value == 0;
+    return asIntPointer().Value == 0 && Offset == 0;
   }
   /// Checks if the pointer is live.
   bool isLive() const {
@@ -633,7 +630,7 @@ private:
   friend class DeadBlock;
   friend struct InitMap;
 
-  Pointer(Block *Pointee, unsigned Base, unsigned Offset);
+  Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
 
   /// Returns the embedded descriptor preceding a field.
   InlineDescriptor *getInlineDesc() const {
@@ -659,7 +656,7 @@ private:
   }
 
   /// Offset into the storage.
-  unsigned Offset = 0;
+  uint64_t Offset = 0;
 
   /// Previous link in the pointer chain.
   Pointer *Prev = nullptr;

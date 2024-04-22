@@ -378,7 +378,7 @@ OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
   if (!rhs)
     return {};
 
-  ArrayAttr arrayAttr = rhs.dyn_cast<ArrayAttr>();
+  ArrayAttr arrayAttr = dyn_cast<ArrayAttr>(rhs);
   if (!arrayAttr || arrayAttr.size() != 2)
     return {};
 

@@ -4239,7 +4239,7 @@ bool ScalarEvolution::canReuseInstruction(
       return false;
 
     // If the instruction can't create poison, we can recurse to its operands.
-    if (I->hasPoisonGeneratingFlagsOrMetadata())
+    if (I->hasPoisonGeneratingAnnotations())
       DropPoisonGeneratingInsts.push_back(I);
 
     for (Value *Op : I->operands())
@@ -6900,7 +6900,7 @@ const ConstantRange &ScalarEvolution::getRangeRef(
         uint64_t Rem = MaxVal.urem(Align);
         MaxVal -= APInt(BitWidth, Rem);
         APInt MinVal = APInt::getZero(BitWidth);
-        if (llvm::isKnownNonZero(V, /*Depth=*/0, DL))
+        if (llvm::isKnownNonZero(V, DL))
           MinVal = Align;
         ConservativeResult = ConservativeResult.intersectWith(
             ConstantRange::getNonEmpty(MinVal, MaxVal + 1), RangeType);

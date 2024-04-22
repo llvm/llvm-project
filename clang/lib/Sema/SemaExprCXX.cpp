@@ -4266,7 +4266,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                 AssignmentAction Action,
                                 CheckedConversionKind CCK) {
   // C++ [over.match.oper]p7: [...] operands of class type are converted [...]
-  if (CCK == CCK_ForBuiltinOverloadedOp && !From->getType()->isRecordType())
+  if (CCK == CheckedConversionKind::ForBuiltinOverloadedOp &&
+      !From->getType()->isRecordType())
     return From;
 
   switch (ICS.getKind()) {
@@ -4327,7 +4328,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
       // C++ [over.match.oper]p7:
       //   [...] the second standard conversion sequence of a user-defined
       //   conversion sequence is not applied.
-      if (CCK == CCK_ForBuiltinOverloadedOp)
+      if (CCK == CheckedConversionKind::ForBuiltinOverloadedOp)
         return From;
 
       return PerformImplicitConversion(From, ToType, ICS.UserDefined.After,
@@ -4368,7 +4369,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                 const StandardConversionSequence& SCS,
                                 AssignmentAction Action,
                                 CheckedConversionKind CCK) {
-  bool CStyle = (CCK == CCK_CStyleCast || CCK == CCK_FunctionalCast);
+  bool CStyle = (CCK == CheckedConversionKind::CStyleCast ||
+                 CCK == CheckedConversionKind::FunctionalCast);
 
   // Overall FIXME: we are recomputing too many types here and doing far too
   // much extra work. What this means is that we need to keep track of more
@@ -8445,7 +8447,7 @@ ExprResult Sema::IgnoredValueConversions(Expr *E) {
     // unnecessary temporary objects. If we skip this step, IR generation is
     // able to synthesize the storage for itself in the aggregate case, and
     // adding the extra node to the AST is just clutter.
-    if (isInMaterializeTemporaryObjectContext() && getLangOpts().CPlusPlus17 &&
+    if (isInLifetimeExtendingContext() && getLangOpts().CPlusPlus17 &&
         E->isPRValue() && !E->getType()->isVoidType()) {
       ExprResult Res = TemporaryMaterializationConversion(E);
       if (Res.isInvalid())
@@ -9154,7 +9156,7 @@ Sema::CheckMicrosoftIfExistsSymbol(Scope *S,
 
   // Do the redeclaration lookup in the current scope.
   LookupResult R(*this, TargetNameInfo, Sema::LookupAnyName,
-                 Sema::NotForRedeclaration);
+                 RedeclarationKind::NotForRedeclaration);
   LookupParsedName(R, S, &SS);
   R.suppressDiagnostics();
 

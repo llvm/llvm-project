@@ -135,6 +135,7 @@ add_unittest_framework_library(
     LibcTest
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fenv_impl
+    libc.hdr.types.fenv_t
 )
 
 add_unittest_framework_library(

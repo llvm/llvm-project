@@ -2458,6 +2458,11 @@ static bool mustSkipTailPadding(TargetCXXABI ABI, const CXXRecordDecl *RD) {
 }
 
 static bool isMsLayout(const ASTContext &Context) {
+  // Check if it's CUDA device compilation; ensure layout consistency with host.
+  if (Context.getLangOpts().CUDA && Context.getLangOpts().CUDAIsDevice &&
+      Context.getAuxTargetInfo())
+    return Context.getAuxTargetInfo()->getCXXABI().isMicrosoft();
+
   return Context.getTargetInfo().getCXXABI().isMicrosoft();
 }
 
