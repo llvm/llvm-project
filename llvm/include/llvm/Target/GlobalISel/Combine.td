@@ -443,14 +443,20 @@ def select_constant_cmp: GICombineRule<
 // TODO: handle compares (currently not marked as isCommutable)
 def commute_int_constant_to_rhs : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_ADD, G_MUL, G_AND, G_OR, G_XOR):$root,
+  (match (wip_match_opcode G_ADD, G_MUL, G_AND, G_OR, G_XOR,
+                           G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_UADDO, G_SADDO,
+                           G_UMULO, G_SMULO, G_UMULH, G_SMULH,
+                           G_UADDSAT, G_SADDSAT, G_SMULFIX, G_UMULFIX,
+                           G_SMULFIXSAT, G_UMULFIXSAT):$root,
     [{ return Helper.matchCommuteConstantToRHS(*${root}); }]),
   (apply [{ Helper.applyCommuteBinOpOperands(*${root}); }])
 >;
 
 def commute_fp_constant_to_rhs : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_FADD, G_FMUL):$root,
+  (match (wip_match_opcode G_FADD, G_FMUL, G_FMINNUM, G_FMAXNUM,
+                           G_FMINNUM_IEEE, G_FMAXNUM_IEEE,
+                           G_FMINIMUM, G_FMAXIMUM):$root,
     [{ return Helper.matchCommuteFPConstantToRHS(*${root}); }]),
   (apply [{ Helper.applyCommuteBinOpOperands(*${root}); }])
 >;

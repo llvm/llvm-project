@@ -321,6 +321,7 @@ add_gen_header(
     .llvm-libc-types.__pthread_start_t
     .llvm-libc-types.__pthread_tss_dtor_t
     .llvm-libc-types.pthread_attr_t
+    .llvm-libc-types.pthread_condattr_t
     .llvm-libc-types.pthread_mutex_t
     .llvm-libc-types.pthread_mutexattr_t
     .llvm-libc-types.pthread_t
@@ -379,6 +380,7 @@ add_gen_header(
     .llvm-libc-types.struct_epoll_event
     .llvm-libc-types.struct_epoll_data
     .llvm-libc-types.sigset_t
+    .llvm-libc-macros.sys_epoll_macros
 )
 
 add_gen_header(

@@ -4325,10 +4325,7 @@ AArch64FrameLowering::inlineStackProbeLoopExactMultiple(
   ExitMBB->transferSuccessorsAndUpdatePHIs(&MBB);
   MBB.addSuccessor(LoopMBB);
   // Update liveins.
-  bool anyChange = false;
-  do {
-    anyChange = recomputeLiveIns(*ExitMBB) || recomputeLiveIns(*LoopMBB);
-  } while (anyChange);
+  fullyRecomputeLiveIns({ExitMBB, LoopMBB});
 
   return ExitMBB->begin();
 }

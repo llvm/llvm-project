@@ -452,7 +452,7 @@ define i64 @test21(i32 %x) {
 define i16 @test22(i32 %x) {
 ; CHECK-LABEL: @test22(
 ; CHECK-NEXT:    [[X_LOBIT:%.*]] = ashr i32 [[X:%.*]], 31
-; CHECK-NEXT:    [[RETVAL:%.*]] = trunc i32 [[X_LOBIT]] to i16
+; CHECK-NEXT:    [[RETVAL:%.*]] = trunc nsw i32 [[X_LOBIT]] to i16
 ; CHECK-NEXT:    ret i16 [[RETVAL]]
 ;
   %t = icmp slt i32 %x, 0
@@ -1665,37 +1665,37 @@ define float @copysign3(float %x) {
   ret float %r
 }
 
-define <2 x float> @copysign_vec_undef(<2 x float> %x) {
-; CHECK-LABEL: @copysign_vec_undef(
+define <2 x float> @copysign_vec_poison(<2 x float> %x) {
+; CHECK-LABEL: @copysign_vec_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x float> [[X:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %i = bitcast <2 x float> %x to <2 x i32>
   %isneg = icmp ugt <2 x i32> %i, <i32 2147483647, i32 2147483647>
-  %r = select arcp nnan <2 x i1> %isneg, <2 x float> <float 42.0, float undef>, <2 x float> <float -42.0, float -42.0>
+  %r = select arcp nnan <2 x i1> %isneg, <2 x float> <float 42.0, float poison>, <2 x float> <float -42.0, float -42.0>
   ret <2 x float> %r
 }
 
-define <2 x float> @copysign_vec_undef1(<2 x float> %x) {
-; CHECK-LABEL: @copysign_vec_undef1(
+define <2 x float> @copysign_vec_poison1(<2 x float> %x) {
+; CHECK-LABEL: @copysign_vec_poison1(
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %i = bitcast <2 x float> %x to <2 x i32>
   %isneg = icmp ult <2 x i32> %i, <i32 2147483648, i32 2147483648>
-  %r = select arcp nnan <2 x i1> %isneg, <2 x float> <float 42.0, float 42.0>, <2 x float> <float undef, float -42.0>
+  %r = select arcp nnan <2 x i1> %isneg, <2 x float> <float 42.0, float 42.0>, <2 x float> <float poison, float -42.0>
   ret <2 x float> %r
 }
 
-define <2 x float> @copysign_vec_undef3(<2 x float> %x) {
-; CHECK-LABEL: @copysign_vec_undef3(
+define <2 x float> @copysign_vec_poison3(<2 x float> %x) {
+; CHECK-LABEL: @copysign_vec_poison3(
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %i = bitcast <2 x float> %x to <2 x i32>
   %isneg = icmp ugt <2 x i32> %i, <i32 2147483647, i32 2147483647>
-  %r = select arcp nnan <2 x i1> %isneg, <2 x float> <float -42.0, float undef>, <2 x float> <float +42.0, float undef>
+  %r = select arcp nnan <2 x i1> %isneg, <2 x float> <float -42.0, float poison>, <2 x float> <float +42.0, float poison>
   ret <2 x float> %r
 }
 
@@ -3109,45 +3109,46 @@ define <4 x i32> @mul_select_eq_zero_vector(<4 x i32> %x, <4 x i32> %y) {
 }
 
 ; Check that a select is folded into multiplication if condition's operand
-; is a vector consisting of zeros and undefs.
-; select (<k x elt> x == {0, undef, ...}), <k x elt> 0, <k x elt> x * y --> freeze(y) * x
-define <2 x i32> @mul_select_eq_undef_vector(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @mul_select_eq_undef_vector(
-; CHECK-NEXT:    [[Y_FR:%.*]] = freeze <2 x i32> [[Y:%.*]]
+; is a vector consisting of zeros and poisons.
+; select (<k x elt> x == {0, poison, ...}), <k x elt> 0, <k x elt> x * y --> freeze(y) * x
+define <2 x i32> @mul_select_eq_poison_vector(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @mul_select_eq_poison_vector(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[Y_FR:%.*]], <i32 0, i32 poison>
 ; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[Y_FR]], [[X:%.*]]
-; CHECK-NEXT:    ret <2 x i32> [[M]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C]], <2 x i32> <i32 0, i32 42>, <2 x i32> [[M]]
+; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
-  %c = icmp eq <2 x i32> %x, <i32 0, i32 undef>
+  %c = icmp eq <2 x i32> %x, <i32 0, i32 poison>
   %m = mul <2 x i32> %x, %y
   %r = select <2 x i1> %c, <2 x i32> <i32 0, i32 42>, <2 x i32> %m
   ret <2 x i32> %r
 }
 
 ; Check that a select is folded into multiplication if other select's operand
-; is a vector consisting of zeros and undefs.
-; select (<k x elt> x == 0), <k x elt> {0, undef, ...}, <k x elt> x * y --> freeze(y) * x
-define <2 x i32> @mul_select_eq_zero_sel_undef_vector(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @mul_select_eq_zero_sel_undef_vector(
+; is a vector consisting of zeros and poisons.
+; select (<k x elt> x == 0), <k x elt> {0, poison, ...}, <k x elt> x * y --> freeze(y) * x
+define <2 x i32> @mul_select_eq_zero_sel_poison_vector(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @mul_select_eq_zero_sel_poison_vector(
 ; CHECK-NEXT:    [[Y_FR:%.*]] = freeze <2 x i32> [[Y:%.*]]
 ; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[Y_FR]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[M]]
 ;
   %c = icmp eq <2 x i32> %x, zeroinitializer
   %m = mul <2 x i32> %x, %y
-  %r = select <2 x i1> %c, <2 x i32> <i32 0, i32 undef>, <2 x i32> %m
+  %r = select <2 x i1> %c, <2 x i32> <i32 0, i32 poison>, <2 x i32> %m
   ret <2 x i32> %r
 }
 
 ; Negative test: select should not be folded into mul because
 ; condition's operand and select's operand do not merge into zero vector.
-define <2 x i32> @mul_select_eq_undef_vector_not_merging_to_zero(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @mul_select_eq_undef_vector_not_merging_to_zero(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 0, i32 undef>
+define <2 x i32> @mul_select_eq_poison_vector_not_merging_to_zero(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @mul_select_eq_poison_vector_not_merging_to_zero(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 0, i32 poison>
 ; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C]], <2 x i32> <i32 1, i32 0>, <2 x i32> [[M]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
-  %c = icmp eq <2 x i32> %x, <i32 0, i32 undef>
+  %c = icmp eq <2 x i32> %x, <i32 0, i32 poison>
   %m = mul <2 x i32> %x, %y
   %r = select <2 x i1> %c, <2 x i32> <i32 1, i32 0>, <2 x i32> %m
   ret <2 x i32> %r

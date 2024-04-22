@@ -56,17 +56,6 @@ public:
                                 PatternRewriter &rewrite) const override;
 };
 
-/// Transforms type-inconsistent stores, aka stores where the type hint of
-/// the address contradicts the value stored, by inserting a bitcast if
-/// possible.
-class BitcastStores : public OpRewritePattern<StoreOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(StoreOp store,
-                                PatternRewriter &rewriter) const override;
-};
-
 /// Splits GEPs with more than two indices into multiple GEPs with exactly
 /// two indices. The created GEPs are then guaranteed to index into only
 /// one aggregate at a time.

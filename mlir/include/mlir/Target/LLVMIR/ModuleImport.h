@@ -47,7 +47,7 @@ class LoopAnnotationImporter;
 class ModuleImport {
 public:
   ModuleImport(ModuleOp mlirModule, std::unique_ptr<llvm::Module> llvmModule,
-               bool emitExpensiveWarnings);
+               bool emitExpensiveWarnings, bool importEmptyDICompositeTypes);
 
   /// Calls the LLVMImportInterface initialization that queries the registered
   /// dialect interfaces for the supported LLVM IR intrinsics and metadata kinds

@@ -2596,9 +2596,8 @@ ParseStatus RISCVAsmParser::parseZcmpStackAdj(OperandVector &Operands,
   unsigned Spimm = 0;
   unsigned RlistVal = static_cast<RISCVOperand *>(Operands[1].get())->Rlist.Val;
 
-  bool IsEABI = isRVE();
   if (Negative != ExpectNegative ||
-      !RISCVZC::getSpimm(RlistVal, Spimm, StackAdjustment, isRV64(), IsEABI))
+      !RISCVZC::getSpimm(RlistVal, Spimm, StackAdjustment, isRV64()))
     return ParseStatus::NoMatch;
   Operands.push_back(RISCVOperand::createSpimm(Spimm << 4, S));
   getLexer().Lex();

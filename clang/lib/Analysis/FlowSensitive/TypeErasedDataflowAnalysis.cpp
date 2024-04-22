@@ -367,19 +367,12 @@ builtinTransferInitializer(const CFGInitializer &Elt,
       return;
 
     ParentLoc->setChild(*Member, InitExprLoc);
-  } else if (auto *InitExprVal = Env.getValue(*InitExpr)) {
+    // Record-type initializers construct themselves directly into the result
+    // object, so there is no need to handle them here.
+  } else if (!Member->getType()->isRecordType()) {
     assert(MemberLoc != nullptr);
-    if (Member->getType()->isRecordType()) {
-      auto *InitValStruct = cast<RecordValue>(InitExprVal);
-      // FIXME: Rather than performing a copy here, we should really be
-      // initializing the field in place. This would require us to propagate the
-      // storage location of the field to the AST node that creates the
-      // `RecordValue`.
-      copyRecord(InitValStruct->getLoc(),
-                 *cast<RecordStorageLocation>(MemberLoc), Env);
-    } else {
+    if (auto *InitExprVal = Env.getValue(*InitExpr))
       Env.setValue(*MemberLoc, *InitExprVal);
-    }
   }
 }
 

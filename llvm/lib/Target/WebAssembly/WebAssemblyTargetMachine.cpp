@@ -291,6 +291,17 @@ private:
     bool Stripped = false;
     for (auto &GV : M.globals()) {
       if (GV.isThreadLocal()) {
+        // replace `@llvm.threadlocal.address.pX(GV)` with `GV`.
+        for (Use &U : make_early_inc_range(GV.uses())) {
+          if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U.getUser())) {
+            if (II->getIntrinsicID() == Intrinsic::threadlocal_address &&
+                II->getArgOperand(0) == &GV) {
+              II->replaceAllUsesWith(&GV);
+              II->eraseFromParent();
+            }
+          }
+        }
+
         Stripped = true;
         GV.setThreadLocal(false);
       }

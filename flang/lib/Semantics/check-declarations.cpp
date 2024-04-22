@@ -948,6 +948,11 @@ void CheckHelper::CheckObjectEntity(
             "Component '%s' with ATTRIBUTES(DEVICE) must also be allocatable"_err_en_US,
             symbol.name());
       }
+      if (IsAssumedSizeArray(symbol)) {
+        messages_.Say(
+            "Object '%s' with ATTRIBUTES(DEVICE) may not be assumed size"_err_en_US,
+            symbol.name());
+      }
       break;
     case common::CUDADataAttr::Managed:
       if (!IsAutomatic(symbol) && !IsAllocatable(symbol) &&
@@ -980,6 +985,13 @@ void CheckHelper::CheckObjectEntity(
       } else if (!inDeviceSubprogram) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(SHARED) must be declared in a device subprogram"_err_en_US,
+            symbol.name());
+      }
+      break;
+    case common::CUDADataAttr::Unified:
+      if ((!subpDetails || inDeviceSubprogram) && !isComponent) {
+        messages_.Say(
+            "Object '%s' with ATTRIBUTES(UNIFIED) must be declared in a host subprogram"_err_en_US,
             symbol.name());
       }
       break;
@@ -1030,9 +1042,10 @@ void CheckHelper::CheckObjectEntity(
             parser::ToUpperCaseLetters(common::EnumToString(attr)));
       }
     } else if (!subpDetails && symbol.owner().kind() != Scope::Kind::Module &&
-        symbol.owner().kind() != Scope::Kind::MainProgram) {
+        symbol.owner().kind() != Scope::Kind::MainProgram &&
+        symbol.owner().kind() != Scope::Kind::BlockConstruct) {
       messages_.Say(
-          "ATTRIBUTES(%s) may apply only to module, host subprogram, or device subprogram data"_err_en_US,
+          "ATTRIBUTES(%s) may apply only to module, host subprogram, block, or device subprogram data"_err_en_US,
           parser::ToUpperCaseLetters(common::EnumToString(attr)));
     }
   }
