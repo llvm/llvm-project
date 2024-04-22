@@ -5399,9 +5399,6 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
     if (Op1.isNonZero() && Op0.isNonZero())
       return true;
 
-    if (KnownBits::smax(Op0, Op1).isNonZero())
-      return true;
-
     return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
            isKnownNeverZero(Op.getOperand(0), Depth + 1);
   }
@@ -5415,9 +5412,6 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
       return true;
 
     if (Op1.isNonZero() && Op0.isNonZero())
-      return true;
-
-    if (KnownBits::smin(Op0, Op1).isNonZero())
       return true;
 
     return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
@@ -9915,6 +9909,18 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
     }
     break;
   }
+  case ISD::SADDO_CARRY:
+  case ISD::UADDO_CARRY:
+  case ISD::SSUBO_CARRY:
+  case ISD::USUBO_CARRY:
+    assert(VTList.NumVTs == 2 && Ops.size() == 3 &&
+           "Invalid add/sub overflow op!");
+    assert(VTList.VTs[0].isInteger() && VTList.VTs[1].isInteger() &&
+           Ops[0].getValueType() == Ops[1].getValueType() &&
+           Ops[0].getValueType() == VTList.VTs[0] &&
+           Ops[2].getValueType() == VTList.VTs[1] &&
+           "Binary operator types must match!");
+    break;
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI: {
     assert(VTList.NumVTs == 2 && Ops.size() == 2 && "Invalid mul lo/hi op!");

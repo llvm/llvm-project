@@ -233,3 +233,33 @@ _Static_assert(funcp == (void*)0, ""); // all-error {{failed due to requirement 
                                        // pedantic-warning {{expression is not an integer constant expression}}
 _Static_assert(funcp == (void*)123, ""); // pedantic-warning {{equality comparison between function pointer and void pointer}} \
                                          // pedantic-warning {{expression is not an integer constant expression}}
+
+void unaryops(void) {
+  (void)(++(struct x {unsigned x;}){3}.x);
+  (void)(--(struct y {unsigned x;}){3}.x);
+  (void)(++(struct z {float x;}){3}.x);
+  (void)(--(struct w {float x;}){3}.x);
+
+  (void)((struct xx {unsigned x;}){3}.x++);
+  (void)((struct yy {unsigned x;}){3}.x--);
+  (void)((struct zz {float x;}){3}.x++);
+  (void)((struct ww {float x;}){3}.x--);
+}
+
+/// This used to fail because we didn't properly mark the struct
+/// initialized through a CompoundLiteralExpr as initialized.
+struct TestStruct {
+  int a;
+  int b;
+};
+int Y __attribute__((annotate(
+  "GlobalValAnnotationWithArgs",
+  42,
+  (struct TestStruct) { .a = 1, .b = 2 }
+)));
+
+#ifdef __SIZEOF_INT128__
+const int *p = &b;
+const __int128 K = (__int128)(int*)0;
+const unsigned __int128 KU = (unsigned __int128)(int*)0;
+#endif

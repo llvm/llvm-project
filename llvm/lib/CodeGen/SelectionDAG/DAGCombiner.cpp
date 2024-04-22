@@ -457,7 +457,7 @@ namespace {
     SDValue visitAND(SDNode *N);
     SDValue visitANDLike(SDValue N0, SDValue N1, SDNode *N);
     SDValue visitOR(SDNode *N);
-    SDValue visitORLike(SDValue N0, SDValue N1, SDNode *N);
+    SDValue visitORLike(SDValue N0, SDValue N1, const SDLoc &DL);
     SDValue visitXOR(SDNode *N);
     SDValue SimplifyVCastOp(SDNode *N, const SDLoc &DL);
     SDValue SimplifyVBinOp(SDNode *N, const SDLoc &DL);
@@ -2831,9 +2831,9 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
 
   // (x - y) + -1  ->  add (xor y, -1), x
   if (N0.getOpcode() == ISD::SUB && N0.hasOneUse() &&
-      isAllOnesOrAllOnesSplat(N1)) {
-    SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, N0.getOperand(1), N1);
-    return DAG.getNode(ISD::ADD, DL, VT, Xor, N0.getOperand(0));
+      isAllOnesOrAllOnesSplat(N1, /*AllowUndefs=*/true)) {
+    SDValue Not = DAG.getNOT(DL, N0.getOperand(1), VT);
+    return DAG.getNode(ISD::ADD, DL, VT, Not, N0.getOperand(0));
   }
 
   if (SDValue Combined = visitADDLikeCommutative(N0, N1, N))
@@ -3359,7 +3359,7 @@ SDValue DAGCombiner::visitUADDO_CARRY(SDNode *N) {
 }
 
 /**
- * If we are facing some sort of diamond carry propapagtion pattern try to
+ * If we are facing some sort of diamond carry propagation pattern try to
  * break it up to generate something like:
  *   (uaddo_carry X, 0, (uaddo_carry A, B, Z):Carry)
  *
@@ -3400,7 +3400,7 @@ static SDValue combineUADDO_CARRYDiamond(DAGCombiner &Combiner,
     Z = Carry0.getOperand(2);
   } else if (Carry0.getOpcode() == ISD::UADDO &&
              isOneConstant(Carry0.getOperand(1))) {
-    EVT VT = Combiner.getSetCCResultType(Carry0.getValueType());
+    EVT VT = Carry0->getValueType(1);
     Z = DAG.getConstant(1, SDLoc(Carry0.getOperand(1)), VT);
   } else {
     // We couldn't find a suitable Z.
@@ -3520,6 +3520,8 @@ static SDValue combineCarryDiamond(SelectionDAG &DAG, const TargetLowering &TLI,
     return SDValue();
 
   SDLoc DL(N);
+  CarryIn = DAG.getBoolExtOrTrunc(CarryIn, DL, Carry1->getValueType(1),
+                                  Carry1->getValueType(0));
   SDValue Merged =
       DAG.getNode(NewOp, DL, Carry1->getVTList(), Carry0.getOperand(0),
                   Carry0.getOperand(1), CarryIn);
@@ -7564,9 +7566,8 @@ SDValue DAGCombiner::MatchBSwapHWord(SDNode *N, SDValue N0, SDValue N1) {
 
 /// This contains all DAGCombine rules which reduce two values combined by
 /// an Or operation to a single value \see visitANDLike().
-SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, SDNode *N) {
+SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, const SDLoc &DL) {
   EVT VT = N1.getValueType();
-  SDLoc DL(N);
 
   // fold (or x, undef) -> -1
   if (!LegalOperations && (N0.isUndef() || N1.isUndef()))
@@ -7654,23 +7655,17 @@ static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
     }
   }
 
-  if (N0.getOpcode() == ISD::XOR) {
-    // fold or (xor x, y), x --> or x, y
-    //      or (xor x, y), (x and/or y) --> or x, y
-    SDValue N00 = N0.getOperand(0);
-    SDValue N01 = N0.getOperand(1);
-    if (N00 == N1)
-      return DAG.getNode(ISD::OR, SDLoc(N), VT, N01, N1);
-    if (N01 == N1)
-      return DAG.getNode(ISD::OR, SDLoc(N), VT, N00, N1);
+  SDValue X, Y;
 
-    if (N1.getOpcode() == ISD::AND || N1.getOpcode() == ISD::OR) {
-      SDValue N10 = N1.getOperand(0);
-      SDValue N11 = N1.getOperand(1);
-      if ((N00 == N10 && N01 == N11) || (N00 == N11 && N01 == N10))
-        return DAG.getNode(ISD::OR, SDLoc(N), VT, N00, N01);
-    }
-  }
+  // fold or (xor X, N1), N1 --> or X, N1
+  if (sd_match(N0, m_Xor(m_Value(X), m_Specific(N1))))
+    return DAG.getNode(ISD::OR, SDLoc(N), VT, X, N1);
+
+  // fold or (xor x, y), (x and/or y) --> or x, y
+  if (sd_match(N0, m_Xor(m_Value(X), m_Value(Y))) &&
+      (sd_match(N1, m_And(m_Specific(X), m_Specific(Y))) ||
+       sd_match(N1, m_Or(m_Specific(X), m_Specific(Y)))))
+    return DAG.getNode(ISD::OR, SDLoc(N), VT, X, Y);
 
   if (SDValue R = foldLogicOfShifts(N, N0, N1, DAG))
     return R;
@@ -7700,23 +7695,24 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N1.getValueType();
+  SDLoc DL(N);
 
   // x | x --> x
   if (N0 == N1)
     return N0;
 
   // fold (or c1, c2) -> c1|c2
-  if (SDValue C = DAG.FoldConstantArithmetic(ISD::OR, SDLoc(N), VT, {N0, N1}))
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::OR, DL, VT, {N0, N1}))
     return C;
 
   // canonicalize constant to RHS
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
-    return DAG.getNode(ISD::OR, SDLoc(N), VT, N1, N0);
+    return DAG.getNode(ISD::OR, DL, VT, N1, N0);
 
   // fold vector ops
   if (VT.isVector()) {
-    if (SDValue FoldedVOp = SimplifyVBinOp(N, SDLoc(N)))
+    if (SDValue FoldedVOp = SimplifyVBinOp(N, DL))
       return FoldedVOp;
 
     // fold (or x, 0) -> x, vector edition
@@ -7726,7 +7722,7 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
     // fold (or x, -1) -> -1, vector edition
     if (ISD::isConstantSplatVectorAllOnes(N1.getNode()))
       // do not return N1, because undef node may exist in N1
-      return DAG.getAllOnesConstant(SDLoc(N), N1.getValueType());
+      return DAG.getAllOnesConstant(DL, N1.getValueType());
 
     // fold (or (shuf A, V_0, MA), (shuf B, V_0, MB)) -> (shuf A, B, Mask)
     // Do this only if the resulting type / shuffle is legal.
@@ -7776,10 +7772,8 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
         if (CanFold) {
           SDValue NewLHS = ZeroN00 ? N0.getOperand(1) : N0.getOperand(0);
           SDValue NewRHS = ZeroN10 ? N1.getOperand(1) : N1.getOperand(0);
-
           SDValue LegalShuffle =
-              TLI.buildLegalVectorShuffle(VT, SDLoc(N), NewLHS, NewRHS,
-                                          Mask, DAG);
+              TLI.buildLegalVectorShuffle(VT, DL, NewLHS, NewRHS, Mask, DAG);
           if (LegalShuffle)
             return LegalShuffle;
         }
@@ -7806,7 +7800,7 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
   if (SDValue R = foldAndOrOfSETCC(N, DAG))
     return R;
 
-  if (SDValue Combined = visitORLike(N0, N1, N))
+  if (SDValue Combined = visitORLike(N0, N1, DL))
     return Combined;
 
   if (SDValue Combined = combineCarryDiamond(DAG, TLI, N0, N1, N))
@@ -7819,12 +7813,12 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
     return BSwap;
 
   // reassociate or
-  if (SDValue ROR = reassociateOps(ISD::OR, SDLoc(N), N0, N1, N->getFlags()))
+  if (SDValue ROR = reassociateOps(ISD::OR, DL, N0, N1, N->getFlags()))
     return ROR;
 
   // Fold or(vecreduce(x), vecreduce(y)) -> vecreduce(or(x, y))
-  if (SDValue SD = reassociateReduction(ISD::VECREDUCE_OR, ISD::OR, SDLoc(N),
-                                        VT, N0, N1))
+  if (SDValue SD =
+          reassociateReduction(ISD::VECREDUCE_OR, ISD::OR, DL, VT, N0, N1))
     return SD;
 
   // Canonicalize (or (and X, c1), c2) -> (and (or X, c2), c1|c2)
@@ -7838,7 +7832,7 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
                                                  {N1, N0.getOperand(1)})) {
       SDValue IOR = DAG.getNode(ISD::OR, SDLoc(N0), VT, N0.getOperand(0), N1);
       AddToWorklist(IOR.getNode());
-      return DAG.getNode(ISD::AND, SDLoc(N), VT, COR, IOR);
+      return DAG.getNode(ISD::AND, DL, VT, COR, IOR);
     }
   }
 
@@ -7853,7 +7847,7 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
       return V;
 
   // See if this is some rotate idiom.
-  if (SDValue Rot = MatchRotate(N0, N1, SDLoc(N)))
+  if (SDValue Rot = MatchRotate(N0, N1, DL))
     return Rot;
 
   if (SDValue Load = MatchLoadCombine(N))
@@ -11532,7 +11526,7 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
                              N2_2, Flags);
         }
         // Otherwise see if we can optimize to a better pattern.
-        if (SDValue Combined = visitORLike(N0, N2_0, N))
+        if (SDValue Combined = visitORLike(N0, N2_0, DL))
           return DAG.getNode(ISD::SELECT, DL, N1.getValueType(), Combined, N1,
                              N2_2, Flags);
       }
@@ -24478,7 +24472,8 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     unsigned NumSubElts = NVT.getVectorMinNumElements();
     if (InsIdx <= ExtIdx && (ExtIdx + NumSubElts) <= (InsIdx + NumInsElts) &&
         TLI.isExtractSubvectorCheap(NVT, InsSubVT, ExtIdx - InsIdx) &&
-        InsSubVT.isFixedLengthVector() && NVT.isFixedLengthVector())
+        InsSubVT.isFixedLengthVector() && NVT.isFixedLengthVector() &&
+        V.getValueType().isFixedLengthVector())
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NVT, InsSub,
                          DAG.getVectorIdxConstant(ExtIdx - InsIdx, DL));
   }

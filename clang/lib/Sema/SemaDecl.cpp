@@ -12408,12 +12408,22 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
   }
 
   // Check if the function definition uses any AArch64 SME features without
-  // having the '+sme' feature enabled.
+  // having the '+sme' feature enabled and warn user if sme locally streaming
+  // function returns or uses arguments with VL-based types.
   if (DeclIsDefn) {
     const auto *Attr = NewFD->getAttr<ArmNewAttr>();
     bool UsesSM = NewFD->hasAttr<ArmLocallyStreamingAttr>();
     bool UsesZA = Attr && Attr->isNewZA();
     bool UsesZT0 = Attr && Attr->isNewZT0();
+
+    if (NewFD->hasAttr<ArmLocallyStreamingAttr>()) {
+      if (NewFD->getReturnType()->isSizelessVectorType() ||
+          llvm::any_of(NewFD->parameters(), [](ParmVarDecl *P) {
+            return P->getOriginalType()->isSizelessVectorType();
+          }))
+        Diag(NewFD->getLocation(),
+             diag::warn_sme_locally_streaming_has_vl_args_returns);
+    }
     if (const auto *FPT = NewFD->getType()->getAs<FunctionProtoType>()) {
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       UsesSM |=
@@ -19529,6 +19539,13 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
   // Okay, we successfully defined 'Record'.
   if (Record) {
     bool Completed = false;
+    if (S) {
+      Scope *Parent = S->getParent();
+      if (Parent && Parent->isTypeAliasScope() &&
+          Parent->isTemplateParamScope())
+        Record->setInvalidDecl();
+    }
+
     if (CXXRecord) {
       if (!CXXRecord->isInvalidDecl()) {
         // Set access bits correctly on the directly-declared conversions.
@@ -19676,7 +19693,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
                                       E = Record->field_end();
            (NonBitFields == 0 || ZeroSize) && I != E; ++I) {
         IsEmpty = false;
-        if (I->isUnnamedBitfield()) {
+        if (I->isUnnamedBitField()) {
           if (!I->isZeroLengthBitField(Context))
             ZeroSize = false;
         } else {
