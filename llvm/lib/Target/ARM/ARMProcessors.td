@@ -2,6 +2,101 @@ class ProcNoItin<string Name, list<SubtargetFeature> Features>
   : Processor<Name, NoItineraries, Features>;
 
 //===----------------------------------------------------------------------===//
+// ARM Processor subtarget features.
+//
+
+def ProcA5      : SubtargetFeature<"a5", "ARMProcFamily", "CortexA5",
+                                   "Cortex-A5 ARM processors", []>;
+def ProcA7      : SubtargetFeature<"a7", "ARMProcFamily", "CortexA7",
+                                   "Cortex-A7 ARM processors", []>;
+def ProcA8      : SubtargetFeature<"a8", "ARMProcFamily", "CortexA8",
+                                   "Cortex-A8 ARM processors", []>;
+def ProcA9      : SubtargetFeature<"a9", "ARMProcFamily", "CortexA9",
+                                   "Cortex-A9 ARM processors", []>;
+def ProcA12     : SubtargetFeature<"a12", "ARMProcFamily", "CortexA12",
+                                   "Cortex-A12 ARM processors", []>;
+def ProcA15     : SubtargetFeature<"a15", "ARMProcFamily", "CortexA15",
+                                   "Cortex-A15 ARM processors", []>;
+def ProcA17     : SubtargetFeature<"a17", "ARMProcFamily", "CortexA17",
+                                   "Cortex-A17 ARM processors", []>;
+def ProcA32     : SubtargetFeature<"a32", "ARMProcFamily", "CortexA32",
+                                   "Cortex-A32 ARM processors", []>;
+def ProcA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
+                                   "Cortex-A35 ARM processors", []>;
+def ProcA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
+                                   "Cortex-A53 ARM processors", []>;
+def ProcA55     : SubtargetFeature<"a55", "ARMProcFamily", "CortexA55",
+                                   "Cortex-A55 ARM processors", []>;
+def ProcA57     : SubtargetFeature<"a57", "ARMProcFamily", "CortexA57",
+                                   "Cortex-A57 ARM processors", []>;
+def ProcA72     : SubtargetFeature<"a72", "ARMProcFamily", "CortexA72",
+                                   "Cortex-A72 ARM processors", []>;
+def ProcA73     : SubtargetFeature<"a73", "ARMProcFamily", "CortexA73",
+                                   "Cortex-A73 ARM processors", []>;
+def ProcA75     : SubtargetFeature<"a75", "ARMProcFamily", "CortexA75",
+                                   "Cortex-A75 ARM processors", []>;
+def ProcA76     : SubtargetFeature<"a76", "ARMProcFamily", "CortexA76",
+                                   "Cortex-A76 ARM processors", []>;
+def ProcA77     : SubtargetFeature<"a77", "ARMProcFamily", "CortexA77",
+                                   "Cortex-A77 ARM processors", []>;
+def ProcA78     : SubtargetFeature<"cortex-a78", "ARMProcFamily", "CortexA78",
+                                   "Cortex-A78 ARM processors", []>;
+def ProcA78AE   : SubtargetFeature<"cortex-a78ae", "ARMProcFamily", "CortexA78AE",
+                                   "Cortex-A78AE ARM processors", []>;
+def ProcA78C    : SubtargetFeature<"a78c", "ARMProcFamily", "CortexA78C",
+                                   "Cortex-A78C ARM processors", []>;
+def ProcA710    : SubtargetFeature<"cortex-a710", "ARMProcFamily",
+                                   "CortexA710", "Cortex-A710 ARM processors", []>;
+def ProcX1      : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
+                                   "Cortex-X1 ARM processors", []>;
+def ProcX1C     : SubtargetFeature<"cortex-x1c", "ARMProcFamily", "CortexX1C",
+                                   "Cortex-X1C ARM processors", []>;
+
+def ProcV1      : SubtargetFeature<"neoverse-v1", "ARMProcFamily",
+                                   "NeoverseV1", "Neoverse-V1 ARM processors", []>;
+
+def ProcKrait   : SubtargetFeature<"krait", "ARMProcFamily", "Krait",
+                                   "Qualcomm Krait processors", []>;
+def ProcKryo    : SubtargetFeature<"kryo", "ARMProcFamily", "Kryo",
+                                   "Qualcomm Kryo processors", []>;
+def ProcSwift   : SubtargetFeature<"swift", "ARMProcFamily", "Swift",
+                                   "Swift ARM processors", []>;
+
+def ProcExynos  : SubtargetFeature<"exynos", "ARMProcFamily", "Exynos",
+                                   "Samsung Exynos processors",
+                                   [FeatureZCZeroing,
+                                    FeatureUseWideStrideVFP,
+                                    FeatureSplatVFPToNeon,
+                                    FeatureSlowVGETLNi32,
+                                    FeatureSlowVDUP32,
+                                    FeatureSlowFPBrcc,
+                                    FeatureProfUnpredicate,
+                                    FeatureHWDivThumb,
+                                    FeatureHWDivARM,
+                                    FeatureHasSlowFPVMLx,
+                                    FeatureHasSlowFPVFMx,
+                                    FeatureHasRetAddrStack,
+                                    FeatureFuseLiterals,
+                                    FeatureFuseAES,
+                                    FeatureExpandMLx,
+                                    FeatureCrypto,
+                                    FeatureCRC]>;
+
+def ProcR4      : SubtargetFeature<"r4", "ARMProcFamily", "CortexR4",
+                                   "Cortex-R4 ARM processors", []>;
+def ProcR5      : SubtargetFeature<"r5", "ARMProcFamily", "CortexR5",
+                                   "Cortex-R5 ARM processors", []>;
+def ProcR7      : SubtargetFeature<"r7", "ARMProcFamily", "CortexR7",
+                                   "Cortex-R7 ARM processors", []>;
+def ProcR52     : SubtargetFeature<"r52", "ARMProcFamily", "CortexR52",
+                                   "Cortex-R52 ARM processors", []>;
+
+def ProcM3      : SubtargetFeature<"m3", "ARMProcFamily", "CortexM3",
+                                   "Cortex-M3 ARM processors", []>;
+def ProcM7      : SubtargetFeature<"m7", "ARMProcFamily", "CortexM7",
+                                   "Cortex-M7 ARM processors", []>;
+
+//===----------------------------------------------------------------------===//
 // ARM processors
 //
 // Dummy CPU, used to target architectures
