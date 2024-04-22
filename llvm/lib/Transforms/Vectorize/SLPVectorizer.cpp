@@ -14530,7 +14530,8 @@ bool BoUpSLP::collectValuesToDemote(
         return !all_of(V->users(), [=](User *U) {
           return getTreeEntry(U) ||
                  (UserIgnoreList && UserIgnoreList->contains(U)) ||
-                 (U->getType()->isSized() && !U->getType()->isScalableTy() &&
+                 (!isa<CmpInst>(U) && U->getType()->isSized() &&
+                  !U->getType()->isScalableTy() &&
                   DL->getTypeSizeInBits(U->getType()) <= BitWidth);
         }) && !IsPotentiallyTruncated(V, BitWidth);
       }))
