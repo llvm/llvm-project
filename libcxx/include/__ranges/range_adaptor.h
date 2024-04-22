@@ -36,6 +36,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
 
+namespace ranges {
+
 // CRTP base that one can derive from in order to be considered a range adaptor closure
 // by the library. When deriving from this class, a pipe operator will be provided to
 // make the following hold:
@@ -58,36 +60,37 @@ _Tp __derived_from_range_adaptor_closure(__range_adaptor_closure<_Tp>*);
 
 template <class _Tp>
 concept _RangeAdaptorClosure = !ranges::range<remove_cvref_t<_Tp>> && requires {
-  { __derived_from_range_adaptor_closure((remove_cvref_t<_Tp>*)nullptr) } -> same_as<remove_cvref_t<_Tp>>;
+  // Ensure that `remove_cvref_t<_Tp>` is derived from `__range_adaptor_closure<remove_cvref_t<_Tp>>` and isn't derived
+  // from `__range_adaptor_closure<U>` for any other type `U`.
+  { ranges::__derived_from_range_adaptor_closure((remove_cvref_t<_Tp>*)nullptr) } -> same_as<remove_cvref_t<_Tp>>;
 };
+
+template <ranges::range _Range, _RangeAdaptorClosure _Closure>
+  requires invocable<_Closure, _Range>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto)
+operator|(_Range&& __range, _Closure&& __closure) noexcept(is_nothrow_invocable_v<_Closure, _Range>) {
+  return std::invoke(std::forward<_Closure>(__closure), std::forward<_Range>(__range));
+}
+
+template <_RangeAdaptorClosure _Closure, _RangeAdaptorClosure _OtherClosure>
+  requires constructible_from<decay_t<_Closure>, _Closure> && constructible_from<decay_t<_OtherClosure>, _OtherClosure>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator|(_Closure&& __c1, _OtherClosure&& __c2) noexcept(
+    is_nothrow_constructible_v<decay_t<_Closure>, _Closure> &&
+    is_nothrow_constructible_v<decay_t<_OtherClosure>, _OtherClosure>) {
+  return __range_adaptor_closure_t(std::__compose(std::forward<_OtherClosure>(__c2), std::forward<_Closure>(__c1)));
+}
 
 template <class _Tp>
   requires is_class_v<_Tp> && same_as<_Tp, remove_cv_t<_Tp>>
-struct __range_adaptor_closure {
-  template <ranges::range _Range, _RangeAdaptorClosure _Closure>
-    requires same_as<_Tp, remove_cvref_t<_Closure>> && invocable<_Closure, _Range>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto)
-  operator|(_Range&& __range, _Closure&& __closure) noexcept(is_nothrow_invocable_v<_Closure, _Range>) {
-    return std::invoke(std::forward<_Closure>(__closure), std::forward<_Range>(__range));
-  }
-
-  template <_RangeAdaptorClosure _Closure, _RangeAdaptorClosure _OtherClosure>
-    requires same_as<_Tp, remove_cvref_t<_Closure>> && constructible_from<decay_t<_Closure>, _Closure> &&
-             constructible_from<decay_t<_OtherClosure>, _OtherClosure>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator|(_Closure&& __c1, _OtherClosure&& __c2) noexcept(
-      is_nothrow_constructible_v<decay_t<_Closure>, _Closure> &&
-      is_nothrow_constructible_v<decay_t<_OtherClosure>, _OtherClosure>) {
-    return __range_adaptor_closure_t(std::__compose(std::forward<_OtherClosure>(__c2), std::forward<_Closure>(__c1)));
-  }
-};
+struct __range_adaptor_closure {};
 
 #  if _LIBCPP_STD_VER >= 23
-namespace ranges {
 template <class _Tp>
   requires is_class_v<_Tp> && same_as<_Tp, remove_cv_t<_Tp>>
 class range_adaptor_closure : public __range_adaptor_closure<_Tp> {};
-} // namespace ranges
 #  endif // _LIBCPP_STD_VER >= 23
+
+} // namespace ranges
 
 #endif // _LIBCPP_STD_VER >= 20
 

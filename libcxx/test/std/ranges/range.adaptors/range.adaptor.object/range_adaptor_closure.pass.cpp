@@ -18,18 +18,18 @@
 #include "test_range.h"
 
 template <class T>
-concept DeriveFromRangeAdaptorClosure = requires { typename std::ranges::range_adaptor_closure<T>; };
-static_assert(!DeriveFromRangeAdaptorClosure<int>);
+concept CanDeriveFromRangeAdaptorClosure = requires { typename std::ranges::range_adaptor_closure<T>; };
+static_assert(!CanDeriveFromRangeAdaptorClosure<int>);
 
-struct t {};
-static_assert(DeriveFromRangeAdaptorClosure<t>);
-static_assert(!DeriveFromRangeAdaptorClosure<t&>);
-static_assert(!DeriveFromRangeAdaptorClosure<const t>);
-static_assert(!DeriveFromRangeAdaptorClosure<volatile t>);
-static_assert(!DeriveFromRangeAdaptorClosure<const volatile t&&>);
+struct Foo {};
+static_assert(CanDeriveFromRangeAdaptorClosure<Foo>);
+static_assert(!CanDeriveFromRangeAdaptorClosure<Foo&>);
+static_assert(!CanDeriveFromRangeAdaptorClosure<const Foo>);
+static_assert(!CanDeriveFromRangeAdaptorClosure<volatile Foo>);
+static_assert(!CanDeriveFromRangeAdaptorClosure<const volatile Foo&&>);
 
 struct incomplete_t;
-static_assert(DeriveFromRangeAdaptorClosure<incomplete_t>);
+static_assert(CanDeriveFromRangeAdaptorClosure<incomplete_t>);
 
 using range_t = std::vector<int>;
 
@@ -71,7 +71,7 @@ struct not_derived_from_3 : std::ranges::range_adaptor_closure<callable> {
 };
 static_assert(!RangeAdaptorClosure<not_derived_from_3>);
 
-// `not_derived_from_4` doesn't derive from a unique `std::ranges::range_adaptor_closure`
+// `not_derived_from_4` doesn't derive from exactly one specialization of `std::ranges::range_adaptor_closure`
 struct not_derived_from_4
     : std::ranges::range_adaptor_closure<not_derived_from_4>,
       std::ranges::range_adaptor_closure<callable> {
