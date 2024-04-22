@@ -1448,7 +1448,7 @@ void RewriteInstance::registerFragments() {
       const uint64_t Address = BD->getAddress();
       BinaryFunction *BF = BC->getBinaryFunctionAtAddress(Address);
       if (!BF) {
-        BC->errs() << "BOLT-ERROR: parent function not found for " << Function
+        BC->errs() << "BOLT-ERROR: parent function not found for " << Name
                    << '\n';
         exit(1);
       }
@@ -1478,7 +1478,7 @@ void RewriteInstance::registerFragments() {
     }
   }
 
-  for (auto &[ParentName, BF]: AmbiguousFragments) {
+  for (auto &[ParentName, BF] : AmbiguousFragments) {
     const uint64_t Address = BF->getAddress();
 
     // Get fragment's own symbol
