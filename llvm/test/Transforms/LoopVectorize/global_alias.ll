@@ -491,101 +491,22 @@ for.end:                                          ; preds = %for.body
   ret i32 %1
 }
 
-; /// Different objects, swapped induction, alias at the end
-; int noAlias15 (int a) {
-;   int i;
-;   for (i=0; i<SIZE; i++)
-;     Foo.A[i] = Foo.B[SIZE-i-1] + a;
-;   return Foo.A[a];
-; }
-; CHECK-LABEL: define i32 @noAlias15(
-; CHECK:      vector.memcheck:
-; CHECK-NEXT:    br i1 false, label %scalar.ph, label %vector.ph
-; CHECK: add nsw <4 x i32>
-; CHECK: ret
-
-define i32 @noAlias15(i32 %a) nounwind {
-entry:
-  br label %for.body
-
-for.body:                                         ; preds = %entry, %for.body
-  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %sub1 = sub nuw nsw i32 99, %i.05
-  %arrayidx = getelementptr inbounds %struct.anon, ptr @Foo, i32 0, i32 2, i32 %sub1
-  %0 = load i32, ptr %arrayidx, align 4
-  %add = add nsw i32 %0, %a
-  %arrayidx2 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %i.05
-  store i32 %add, ptr %arrayidx2, align 4
-  %inc = add nuw nsw i32 %i.05, 1
-  %exitcond.not = icmp eq i32 %inc, 100
-  br i1 %exitcond.not, label %for.end, label %for.body
-
-for.end:                                          ; preds = %for.body
-  %arrayidx3 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %a
-  %1 = load i32, ptr %arrayidx3, align 4
-  ret i32 %1
-}
-
-; /// Different objects, swapped induction, alias at the beginning
-; int noAlias16 (int a) {
-;   int i;
-;   for (i=0; i<SIZE; i++)
-;     Foo.A[SIZE-i-1] = Foo.B[i] + a;
-;   return Foo.A[a];
-; }
-; CHECK-LABEL: define i32 @noAlias16(
-; CHECK:      entry:
-; CHECK-NEXT:   br i1 false, label %scalar.ph, label %vector.ph
-
-; CHECK: add nsw <4 x i32>
-; CHECK: ret
-
-define i32 @noAlias16(i32 %a) nounwind {
-entry:
-  br label %for.body
-
-for.body:                                         ; preds = %entry, %for.body
-  %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds %struct.anon, ptr @Foo, i32 0, i32 2, i32 %i.05
-  %0 = load i32, ptr %arrayidx, align 4
-  %add = add nsw i32 %0, %a
-  %sub1 = sub nuw nsw i32 99, %i.05
-  %arrayidx2 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %sub1
-  store i32 %add, ptr %arrayidx2, align 4
-  %inc = add nuw nsw i32 %i.05, 1
-  %exitcond.not = icmp eq i32 %inc, 100
-  br i1 %exitcond.not, label %for.end, label %for.body
-
-for.end:                                          ; preds = %for.body
-  %arrayidx3 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %a
-  %1 = load i32, ptr %arrayidx3, align 4
-  ret i32 %1
-}
-
 
 ;; === Now, the tests that we could vectorize with induction changes or run-time checks ===
 
 
 ; /// Different objects, swapped induction, alias at the end
-; int mayAlias01 (int a, int N) {
+; int mayAlias01 (int a) {
 ;   int i;
-;   for (i=0; i<N; i++)
+;   for (i=0; i<SIZE; i++)
 ;     Foo.A[i] = Foo.B[SIZE-i-1] + a;
 ;   return Foo.A[a];
 ; }
 ; CHECK-LABEL: define i32 @mayAlias01(
-; CHECK:      vector.memcheck:
-; CHECK-NEXT:   [[MUL:%.+]] = shl i32 %N, 2
-; CHECK-NEXT:   [[SCEVGEP0:%.+]] = getelementptr i8, ptr @Foo, i32 [[MUL]]
-; CHECK-NEXT:   [[SUB:%.+]] = sub i32 804, [[MUL]]
-; CHECK-NEXT:   [[SCEVGEP1:%.+]] = getelementptr i8, ptr @Foo, i32 [[SUB]]
-; CHECK-NEXT:   [[BOUND:%.+]] = icmp ult ptr [[SCEVGEP1]], [[SCEVGEP0]]
-; CHECK-NEXT:   br i1 [[BOUND]], label %scalar.ph, label %vector.ph
-
-; CHECK:       add nsw <4 x i32>
+; CHECK-NOT: add nsw <4 x i32>
 ; CHECK: ret
 
-define i32 @mayAlias01(i32 %a, i32 %N) nounwind {
+define i32 @mayAlias01(i32 %a) nounwind {
 entry:
   br label %for.body
 
@@ -598,7 +519,7 @@ for.body:                                         ; preds = %entry, %for.body
   %arrayidx2 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %i.05
   store i32 %add, ptr %arrayidx2, align 4
   %inc = add nuw nsw i32 %i.05, 1
-  %exitcond.not = icmp eq i32 %inc, %N
+  %exitcond.not = icmp eq i32 %inc, 100
   br i1 %exitcond.not, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
@@ -608,20 +529,17 @@ for.end:                                          ; preds = %for.body
 }
 
 ; /// Different objects, swapped induction, alias at the beginning
-; int mayAlias02 (int a, int N) {
+; int mayAlias02 (int a) {
 ;   int i;
-;   for (i=0; i<N; i++)
+;   for (i=0; i<SIZE; i++)
 ;     Foo.A[SIZE-i-1] = Foo.B[i] + a;
 ;   return Foo.A[a];
 ; }
 ; CHECK-LABEL: define i32 @mayAlias02(
-; CHECK:      vector.memcheck:
-; CHECK-NEXT:   br i1 false, label %scalar.ph, label %vector.ph
-
-; CHECK: add nsw <4 x i32>
+; CHECK-NOT: add nsw <4 x i32>
 ; CHECK: ret
 
-define i32 @mayAlias02(i32 %a, i32 %N) nounwind {
+define i32 @mayAlias02(i32 %a) nounwind {
 entry:
   br label %for.body
 
@@ -634,7 +552,7 @@ for.body:                                         ; preds = %entry, %for.body
   %arrayidx2 = getelementptr inbounds [100 x i32], ptr @Foo, i32 0, i32 %sub1
   store i32 %add, ptr %arrayidx2, align 4
   %inc = add nuw nsw i32 %i.05, 1
-  %exitcond.not = icmp eq i32 %inc, %N
+  %exitcond.not = icmp eq i32 %inc, 100
   br i1 %exitcond.not, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body

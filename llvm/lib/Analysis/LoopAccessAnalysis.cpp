@@ -1996,10 +1996,11 @@ getDependenceDistanceStrideAndSize(
                                    InnermostLoop))
     return MemoryDepChecker::Dependence::IndirectUnsafe;
 
-  // Need accesses with constant stride. We don't want to vectorize
-  // "A[B[i]] += ..." and similar code or pointer arithmetic that could wrap
-  // in the address space.
-  if (!StrideAPtr || !StrideBPtr) {
+  // Need accesses with constant strides and the same direction. We don't want
+  // to vectorize "A[B[i]] += ..." and similar code or pointer arithmetic that
+  // could wrap in the address space.
+  if (!StrideAPtr || !StrideBPtr || (StrideAPtr > 0 && StrideBPtr < 0) ||
+      (StrideAPtr < 0 && StrideBPtr > 0)) {
     LLVM_DEBUG(dbgs() << "Pointer access with non-constant stride\n");
     return MemoryDepChecker::Dependence::Unknown;
   }
@@ -2075,7 +2076,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
 
   // Negative distances are not plausible dependencies.
   if (SE.isKnownNonPositive(Dist)) {
-    if (!SE.isKnownNegative(Dist)) {
+    if (SE.isKnownNonNegative(Dist)) {
       if (HasSameSize) {
         // Write to the same location with the same size.
         return Dependence::Forward;
