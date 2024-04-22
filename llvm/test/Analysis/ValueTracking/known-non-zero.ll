@@ -1452,9 +1452,7 @@ define i1 @trunc_nsw_non_zero(i8 %x) {
 ; CHECK-LABEL: @trunc_nsw_non_zero(
 ; CHECK-NEXT:    [[X_NE_Z:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NE_Z]])
-; CHECK-NEXT:    [[V:%.*]] = trunc nsw i8 [[X]] to i4
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i4 [[V]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %x_ne_z = icmp ne i8 %x, 0
   call void @llvm.assume(i1 %x_ne_z)
@@ -1465,10 +1463,7 @@ define i1 @trunc_nsw_non_zero(i8 %x) {
 
 define i1 @trunc_nuw_non_zero(i8 %xx) {
 ; CHECK-LABEL: @trunc_nuw_non_zero(
-; CHECK-NEXT:    [[X:%.*]] = add nuw i8 [[XX:%.*]], 1
-; CHECK-NEXT:    [[V:%.*]] = trunc nuw i8 [[X]] to i4
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i4 [[V]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x = add nuw i8 %xx, 1
   %v = trunc nuw i8 %x to i4
