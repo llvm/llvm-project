@@ -24,7 +24,7 @@ using namespace llvm;
 // This is almost the same as RISCVFeatures::parseFeatureBits, except that we
 // get feature name from feature records instead of feature bits.
 static void printMArch(raw_ostream &OS, const Record &Rec) {
-  std::map<std::string, std::pair<unsigned, unsigned>,
+  std::map<std::string, RISCVISAInfo::ExtensionVersion,
            RISCVISAInfo::ExtensionComparator>
       Extensions;
   unsigned XLen = 0;
@@ -35,7 +35,7 @@ static void printMArch(raw_ostream &OS, const Record &Rec) {
     if (Feature->isSubClassOf("RISCVExtension")) {
       unsigned Major = Feature->getValueAsInt("MajorVersion");
       unsigned Minor = Feature->getValueAsInt("MinorVersion");
-      Extensions.try_emplace(FeatureName.str(), Major, Minor);
+      Extensions[FeatureName.str()] = {Major, Minor};
     } else if (FeatureName == "64bit") {
       assert(XLen == 0 && "Already determined XLen");
       XLen = 64;
@@ -51,7 +51,7 @@ static void printMArch(raw_ostream &OS, const Record &Rec) {
 
   ListSeparator LS("_");
   for (auto const &Ext : Extensions)
-    OS << LS << Ext.first << Ext.second.first << 'p' << Ext.second.second;
+    OS << LS << Ext.first << Ext.second.Major << 'p' << Ext.second.Minor;
 }
 
 static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
