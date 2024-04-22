@@ -1423,8 +1423,7 @@ void RewriteInstance::registerFragments() {
     BinaryFunction &Function = BFI.second;
     if (!Function.isFragment())
       continue;
-    for (MCSymbol *Symbol : Function.Symbols) {
-      StringRef Name = Symbol->getName();
+    for (StringRef Name : Function.getNames()) {
       StringRef BaseName, Suffix;
       std::tie(BaseName, Suffix) = Name.split('/');
       const size_t ColdSuffixPos = BaseName.find(".cold");
