@@ -257,12 +257,12 @@ define i32 @udiv_div_by_180(i32 %x)
 ;
 ; GISEL-LABEL: udiv_div_by_180:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    ubfx w8, w0, #2, #6
-; GISEL-NEXT:    mov w9, #27671 // =0x6c17
-; GISEL-NEXT:    movk w9, #5825, lsl #16
+; GISEL-NEXT:    uxtb w8, w0
+; GISEL-NEXT:    mov w9, #5826 // =0x16c2
+; GISEL-NEXT:    movk w9, #364, lsl #16
 ; GISEL-NEXT:    umull x8, w8, w9
-; GISEL-NEXT:    lsr x8, x8, #32
-; GISEL-NEXT:    lsr w0, w8, #2
+; GISEL-NEXT:    lsr x0, x8, #32
+; GISEL-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; GISEL-NEXT:    ret
 {
   %truncate = and i32 %x, 255
