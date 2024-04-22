@@ -1553,15 +1553,12 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
 
     auto &AVL = MI.getOperand(1);
     auto &PrevAVL = PrevMI.getOperand(1);
-    assert(!AVL.isReg() || !AVL.getReg().isVirtual() ||
-           MRI.hasOneDef(AVL.getReg()));
-    assert(!PrevAVL.isReg() || !PrevAVL.getReg().isVirtual() ||
-           MRI.hasOneDef(PrevAVL.getReg()));
 
     // If the AVL is a register, we need to make sure MI's AVL dominates PrevMI.
     // For now just check that PrevMI uses the same virtual register.
     if (AVL.isReg() && AVL.getReg() != RISCV::X0 &&
-        (!PrevAVL.isReg() || PrevAVL.getReg() != AVL.getReg()))
+        (!MRI.hasOneDef(AVL.getReg()) || !PrevAVL.isReg() ||
+         PrevAVL.getReg() != AVL.getReg()))
       return false;
   }
 
