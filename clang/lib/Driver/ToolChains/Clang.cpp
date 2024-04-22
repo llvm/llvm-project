@@ -847,6 +847,16 @@ static bool UseRelaxAll(Compilation &C, const ArgList &Args) {
   if (Arg *A = Args.getLastArg(options::OPT_O_Group))
     RelaxDefault = A->getOption().matches(options::OPT_O0);
 
+  // RISC-V requires an indirect jump for offsets larger than 1MiB. This cannot
+  // be done by assembler branch relaxation as it needs a free temporary
+  // register. Because of this, branch relaxation is handled by a MachineIR
+  // pass before the assembler. Forcing assembler branch relaxation for -O0
+  // makes the MachineIR branch relaxation inaccurate and it will miss cases
+  // where an indirect branch is necessary. To avoid this issue we are
+  // sacrificing the compile time improvement of using -mrelax-all for -O0.
+  if (C.getDefaultToolChain().getTriple().isRISCV())
+    RelaxDefault = false;
+
   if (RelaxDefault) {
     RelaxDefault = false;
     for (const auto &Act : C.getActions()) {
