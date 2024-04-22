@@ -1,7 +1,7 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o - | \
 # RUN:   llvm-dwarfdump -debug-info - 2>&1 | FileCheck %s
 
-# CHECK: warning: DWARF package unit at offset 0x00000000 mising abbreviation column
+# CHECK: warning: DWARF package unit at offset 0x00000000 missing abbreviation column
 
     .section .debug_abbrev.dwo, "e", @progbits
 .LAbbrBegin:

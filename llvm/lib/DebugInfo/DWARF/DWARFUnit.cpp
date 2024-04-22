@@ -366,8 +366,8 @@ Error DWARFUnitHeader::applyIndexEntry(const DWARFUnitIndex::Entry *Entry) {
   auto *AbbrEntry = IndexEntry->getContribution(DW_SECT_ABBREV);
   if (!AbbrEntry)
     return createStringError(errc::invalid_argument,
-                             "DWARF package unit at offset 0x%8.8 " PRIx64
-                             " mising abbreviation column",
+                             "DWARF package unit at offset 0x%8.8" PRIx64
+                             " missing abbreviation column",
                              Offset);
 
   AbbrOffset = AbbrEntry->getOffset();
