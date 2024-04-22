@@ -662,6 +662,18 @@ public:
       // The conditional operator can evaluate to either of the values of the
       // two branches. To model this, join these two values together to yield
       // the result of the conditional operator.
+      // Note: Most joins happen in `computeBlockInputState()`, but this case is
+      // different:
+      // - `computeBlockInputState()` (which in turn calls `Environment::join()`
+      //   joins values associated with the _same_ expression or storage
+      //   location, then associates the joined value with that expression or
+      //   storage location. This join has nothing to do with transfer --
+      //   instead, it joins together the results of performing transfer on two
+      //   different blocks.
+      // - Here, we join values associated with _different_ expressions (the
+      //   true and false branch), then associate the joined value with a third
+      //   expression (the conditional operator itself). This join is what it
+      //   means to perform transfer on the conditional operator.
       if (Value *Val = Environment::joinValues(
               S->getType(), TrueEnv->getValue(*S->getTrueExpr()), *TrueEnv,
               FalseEnv->getValue(*S->getFalseExpr()), *FalseEnv, Env, Model))
