@@ -685,7 +685,7 @@ struct S {
   static void j(this S s); // expected-error {{an explicit object parameter cannot appear in a static function}}
 };
 
-void nonmember(this S s); // expected-error{{an explicit object parameter cannot appear in a non-member function}}
+void nonmember(this S s); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
 
 int test() {
   S s;
