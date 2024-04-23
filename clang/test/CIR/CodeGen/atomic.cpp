@@ -215,8 +215,34 @@ void fi2c(atomic_int *i) {
   atomic_store(i, 1);
 }
 
+struct S {
+  double x;
+};
+
 // CHECK-LABEL: @_Z4fi2cPU7_Atomici
 // CHECK: cir.store atomic(seq_cst)
 
 // LLVM-LABEL: @_Z4fi2cPU7_Atomici
 // LLVM: store atomic i32 {{.*}} seq_cst, align 4
+
+void fd3(struct S *a, struct S *b, struct S *c) {
+  __atomic_exchange(a, b, c, memory_order_seq_cst);
+}
+
+// CHECK-LABEL: @_Z3fd3P1SS0_S0_
+// CHECK: cir.atomic.xchg({{.*}} : !cir.ptr<!ty_22S22>, {{.*}} : !u64i, seq_cst) : !u64i
+
+// FIXME: CIR is producing an over alignment of 8, only 4 needed.
+// LLVM-LABEL: @_Z3fd3P1SS0_S0_
+// LLVM:      [[A_ADDR:%.*]] = alloca ptr
+// LLVM-NEXT: [[B_ADDR:%.*]] = alloca ptr
+// LLVM-NEXT: [[C_ADDR:%.*]] = alloca ptr
+// LLVM-NEXT: store ptr {{.*}}, ptr [[A_ADDR]]
+// LLVM-NEXT: store ptr {{.*}}, ptr [[B_ADDR]]
+// LLVM-NEXT: store ptr {{.*}}, ptr [[C_ADDR]]
+// LLVM-NEXT: [[LOAD_A_PTR:%.*]] = load ptr, ptr [[A_ADDR]]
+// LLVM-NEXT: [[LOAD_B_PTR:%.*]] = load ptr, ptr [[B_ADDR]]
+// LLVM-NEXT: [[LOAD_C_PTR:%.*]] = load ptr, ptr [[C_ADDR]]
+// LLVM-NEXT: [[LOAD_B:%.*]] = load i64, ptr [[LOAD_B_PTR]]
+// LLVM-NEXT: [[RESULT:%.*]] = atomicrmw xchg ptr [[LOAD_A_PTR]], i64 [[LOAD_B]] seq_cst
+// LLVM-NEXT: store i64 [[RESULT]], ptr [[LOAD_C_PTR]]
