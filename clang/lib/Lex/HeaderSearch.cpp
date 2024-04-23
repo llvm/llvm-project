@@ -1441,6 +1441,10 @@ void HeaderSearch::MarkFileModuleHeader(FileEntryRef FE,
   HFI.isCompilingModuleHeader |= isCompilingModuleHeader;
 }
 
+void HeaderSearch::EnteredTextualFile(FileEntryRef File) {
+  getFileInfo(File).isCompilingModuleHeader = true;
+}
+
 bool HeaderSearch::ShouldEnterIncludeFile(Preprocessor &PP,
                                           FileEntryRef File, bool isImport,
                                           bool ModulesEnabled, Module *M,

@@ -2609,6 +2609,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   }
 
   assert(!IsImportDecl && "failed to diagnose missing module for import decl");
+  HeaderInfo.EnteredTextualFile(*File);
   return {ImportAction::None};
 }
 
