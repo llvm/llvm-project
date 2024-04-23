@@ -1466,6 +1466,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void materializeChecks() {
 #ifndef NDEBUG
+    // For assert below.
     SmallPtrSet<Instruction *, 16> Done;
 #endif
 
@@ -1473,7 +1474,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
          I != InstrumentationList.end();) {
       auto OrigIns = I->OrigIns;
       // Checks are grouped by the original instruction. We call all
-      // `insertShadowCheck` for an instruction atonce.
+      // `insertShadowCheck` for an instruction at once.
       assert(Done.insert(OrigIns).second);
       auto J = std::find_if(I + 1, InstrumentationList.end(),
                             [OrigIns](const ShadowOriginAndInsertPoint &R) {
