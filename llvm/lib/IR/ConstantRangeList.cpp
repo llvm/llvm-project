@@ -36,6 +36,16 @@ void ConstantRangeList::insert(const ConstantRange &NewRange) {
   if (std::find(Ranges.begin(), Ranges.end(), NewRange) != Ranges.end()) {
     return;
   }
+  if (size() == 1) {
+    // With all above checks (front/back/size), this branch means "NewRanges"
+    // overlaps with the singleton range in the list.
+    const ConstantRange &CurRange = Ranges.front();
+    APInt NewLower = APIntOps::smin(CurRange.getLower(), NewRange.getLower());
+    APInt NewUpper = APIntOps::smax(CurRange.getUpper(), NewRange.getUpper());
+    Ranges.clear();
+    Ranges.push_back(ConstantRange(NewLower, NewUpper));
+    return;
+  }
 
   // Slow insert.
   auto LowerBound =
@@ -71,3 +81,10 @@ void ConstantRangeList::print(raw_ostream &OS) const {
     OS << "(" << CR.getLower() << ", " << CR.getUpper() << ")";
   });
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void ConstantRangeList::dump() const {
+  print(dbgs());
+  dbgs() << '\n';
+}
+#endif

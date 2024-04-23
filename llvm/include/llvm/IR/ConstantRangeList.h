@@ -77,6 +77,7 @@ public:
 
   /// Print out the ranges to a stream.
   void print(raw_ostream &OS) const;
+  void dump() const;
 };
 
 } // end namespace llvm
