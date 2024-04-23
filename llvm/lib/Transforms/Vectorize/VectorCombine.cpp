@@ -1566,6 +1566,8 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
                            m_Mask(OuterMask))))
     return false;
 
+  auto *ShufI0 = dyn_cast<Instruction>(I.getOperand(0));
+  auto *ShufI1 = dyn_cast<Instruction>(I.getOperand(1));
   auto *ShuffleDstTy = dyn_cast<FixedVectorType>(I.getType());
   auto *ShuffleSrcTy = dyn_cast<FixedVectorType>(V0->getType());
   auto *ShuffleImmTy = dyn_cast<FixedVectorType>(I.getOperand(0)->getType());
@@ -1607,14 +1609,15 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
 
   InstructionCost OldCost =
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, ShuffleSrcTy,
-                         InnerMask0, CostKind) +
+                         InnerMask0, CostKind, 0, nullptr, {V0, U0}, ShufI0) +
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, ShuffleSrcTy,
-                         InnerMask1, CostKind) +
+                         InnerMask1, CostKind, 0, nullptr, {V1, U1}, ShufI1) +
       TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleImmTy,
-                         OuterMask, CostKind, 0, nullptr, std::nullopt, &I);
+                         OuterMask, CostKind, 0, nullptr, {ShufI0, ShufI1}, &I);
 
-  InstructionCost NewCost = TTI.getShuffleCost(
-      TargetTransformInfo::SK_PermuteTwoSrc, ShuffleSrcTy, NewMask, CostKind);
+  InstructionCost NewCost =
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleSrcTy,
+                         NewMask, CostKind, 0, nullptr, {V0, V1});
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two shuffles: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost

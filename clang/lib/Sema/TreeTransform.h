@@ -11163,6 +11163,32 @@ void OpenACCClauseTransform<Derived>::VisitSelfClause(
 }
 
 template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitNumGangsClause(
+    const OpenACCNumGangsClause &C) {
+  llvm::SmallVector<Expr *> InstantiatedIntExprs;
+
+  for (Expr *CurIntExpr : C.getIntExprs()) {
+    ExprResult Res = Self.TransformExpr(CurIntExpr);
+
+    if (!Res.isUsable())
+      return;
+
+    Res = Self.getSema().OpenACC().ActOnIntExpr(OpenACCDirectiveKind::Invalid,
+                                                C.getClauseKind(),
+                                                C.getBeginLoc(), Res.get());
+    if (!Res.isUsable())
+      return;
+
+    InstantiatedIntExprs.push_back(Res.get());
+  }
+
+  ParsedClause.setIntExprDetails(InstantiatedIntExprs);
+  NewClause = OpenACCNumGangsClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getIntExprs(),
+      ParsedClause.getEndLoc());
+}
+template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitNumWorkersClause(
     const OpenACCNumWorkersClause &C) {
   Expr *IntExpr = const_cast<Expr *>(C.getIntExpr());
@@ -12917,6 +12943,19 @@ TreeTransform<Derived>::TransformCXXNewExpr(CXXNewExpr *E) {
     ArraySize = NewArraySize.get();
   }
 
+  // Per C++0x [expr.new]p5, the type being constructed may be a
+  // typedef of an array type.
+  QualType AllocType = AllocTypeInfo->getType();
+  if (ArraySize && E->isTypeDependent()) {
+    if (const ConstantArrayType *Array =
+            SemaRef.Context.getAsConstantArrayType(AllocType)) {
+      ArraySize = IntegerLiteral::Create(SemaRef.Context, Array->getSize(),
+                                         SemaRef.Context.getSizeType(),
+                                         E->getBeginLoc());
+      AllocType = Array->getElementType();
+    }
+  }
+
   // Transform the placement arguments (if any).
   bool ArgumentChanged = false;
   SmallVector<Expr*, 8> PlacementArgs;
@@ -12978,7 +13017,6 @@ TreeTransform<Derived>::TransformCXXNewExpr(CXXNewExpr *E) {
     return E;
   }
 
-  QualType AllocType = AllocTypeInfo->getType();
   if (!ArraySize) {
     // If no array size was specified, but the new expression was
     // instantiated with an array type (e.g., "new T" where T is

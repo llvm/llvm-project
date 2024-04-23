@@ -1126,6 +1126,9 @@ public:
   void
   buildExternalUses(const ExtraValueToDebugLocsMap &ExternallyUsedValues = {});
 
+  /// Transforms graph nodes to target specific representations, if profitable.
+  void transformNodes();
+
   /// Clear the internal data structures that are created by 'buildTree'.
   void deleteTree() {
     VectorizableTree.clear();
@@ -7813,6 +7816,43 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
   return std::make_pair(ScalarCost, VecCost);
 }
 
+void BoUpSLP::transformNodes() {
+  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  for (std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+    TreeEntry &E = *TE.get();
+    switch (E.getOpcode()) {
+    case Instruction::Load: {
+      Type *ScalarTy = E.getMainOp()->getType();
+      auto *VecTy = FixedVectorType::get(ScalarTy, E.Scalars.size());
+      Align CommonAlignment = computeCommonAlignment<LoadInst>(E.Scalars);
+      // Check if profitable to represent consecutive load + reverse as strided
+      // load with stride -1.
+      if (isReverseOrder(E.ReorderIndices) &&
+          TTI->isLegalStridedLoadStore(VecTy, CommonAlignment)) {
+        SmallVector<int> Mask;
+        inversePermutation(E.ReorderIndices, Mask);
+        auto *BaseLI = cast<LoadInst>(E.Scalars.back());
+        InstructionCost OriginalVecCost =
+            TTI->getMemoryOpCost(Instruction::Load, VecTy, BaseLI->getAlign(),
+                                 BaseLI->getPointerAddressSpace(), CostKind,
+                                 TTI::OperandValueInfo()) +
+            ::getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, Mask, CostKind);
+        InstructionCost StridedCost = TTI->getStridedMemoryOpCost(
+            Instruction::Load, VecTy, BaseLI->getPointerOperand(),
+            /*VariableMask=*/false, CommonAlignment, CostKind, BaseLI);
+        if (StridedCost < OriginalVecCost)
+          // Strided load is more profitable than consecutive load + reverse -
+          // transform the node to strided load.
+          E.State = TreeEntry::StridedVectorize;
+      }
+      break;
+    }
+    default:
+      break;
+    }
+  }
+}
+
 /// Merges shuffle masks and emits final shuffle instruction, if required. It
 /// supports shuffling of 2 input vectors. It implements lazy shuffles emission,
 /// when the actual shuffle instruction is generated only if this is actually
@@ -9600,6 +9640,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   bool IsAllowedSingleBVNode =
       VectorizableTree.size() > 1 ||
       (VectorizableTree.size() == 1 && VectorizableTree.front()->getOpcode() &&
+       !VectorizableTree.front()->isAltShuffle() &&
        VectorizableTree.front()->getOpcode() != Instruction::PHI &&
        VectorizableTree.front()->getOpcode() != Instruction::GetElementPtr &&
        allSameBlock(VectorizableTree.front()->Scalars));
@@ -10992,7 +11033,10 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
                         isUsedOutsideBlock(V);
                }) ||
         (E->State == TreeEntry::NeedToGather && E->Idx == 0 &&
-         all_of(E->Scalars, IsaPred<ExtractElementInst, UndefValue>)))
+         all_of(E->Scalars, [](Value *V) {
+           return isa<ExtractElementInst, UndefValue>(V) ||
+                  areAllOperandsNonInsts(V);
+         })))
       Res.second = FindLastInst();
     else
       Res.second = FindFirstInst();
@@ -15189,6 +15233,7 @@ bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
   R.buildExternalUses();
 
   R.computeMinimumValueSizes();
+  R.transformNodes();
 
   InstructionCost Cost = R.getTreeCost();
 
@@ -15567,6 +15612,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       R.buildExternalUses();
 
       R.computeMinimumValueSizes();
+      R.transformNodes();
       InstructionCost Cost = R.getTreeCost();
       CandidateFound = true;
       MinCost = std::min(MinCost, Cost);
@@ -16563,6 +16609,7 @@ public:
         V.buildExternalUses(LocalExternallyUsedValues);
 
         V.computeMinimumValueSizes();
+        V.transformNodes();
 
         // Estimate cost.
         InstructionCost TreeCost = V.getTreeCost(VL);
