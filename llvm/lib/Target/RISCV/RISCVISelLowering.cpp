@@ -13416,27 +13416,11 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   uint64_t MulAmt = CNode->getZExtValue();
 
-  for (uint64_t Divisor : {3, 5, 9}) {
-    if (MulAmt % Divisor != 0)
-      continue;
-    uint64_t MulAmt2 = MulAmt / Divisor;
-    // 3/5/9 * 2^N -> shXadd (sll X, C), (sll X, C)
-    // Matched in tablegen, avoid perturbing patterns.
-    if (isPowerOf2_64(MulAmt2))
+  // 3/5/9 * 2^N -> shXadd (sll X, C), (sll X, C)
+  // Matched in tablegen, avoid perturbing patterns.
+  for (uint64_t Divisor : {3, 5, 9})
+    if (MulAmt % Divisor == 0 && isPowerOf2_64(MulAmt / Divisor))
       return SDValue();
-
-    // 3/5/9 * 3/5/9 -> shXadd (shYadd X, X), (shYadd X, X)
-    if (MulAmt2 == 3 || MulAmt2 == 5 || MulAmt2 == 9) {
-      SDLoc DL(N);
-      SDValue X = DAG.getFreeze(N->getOperand(0));
-      SDValue Mul359 =
-          DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                      DAG.getTargetConstant(Log2_64(Divisor - 1), DL, VT), X);
-      return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                         DAG.getTargetConstant(Log2_64(MulAmt2 - 1), DL, VT),
-                         Mul359);
-    }
-  }
 
   // If this is a power 2 + 2/4/8, we can use a shift followed by a single
   // shXadd. First check if this a sum of two power of 2s because that's
@@ -13456,24 +13440,23 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
   }
 
   // 2^(1,2,3) * 3,5,9 + 1 -> (shXadd (shYadd x, x), x)
-  // This is the two instruction form, there are also three instruction
-  // variants we could implement.  e.g.
-  //   (2^(1,2,3) * 3,5,9 + 1) << C2
-  //   2^(C1>3) * 3,5,9 +/- 1
-  for (uint64_t Divisor : {3, 5, 9}) {
-    uint64_t C = MulAmt - 1;
-    if (C <= Divisor)
-      continue;
-    unsigned TZ = llvm::countr_zero(C);
-    if ((C >> TZ) == Divisor && (TZ == 1 || TZ == 2 || TZ == 3)) {
-      SDLoc DL(N);
-      SDValue X = DAG.getFreeze(N->getOperand(0));
-      SDValue Mul359 =
-          DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
-                      DAG.getTargetConstant(Log2_64(Divisor - 1), DL, VT), X);
-      return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
-                         DAG.getTargetConstant(TZ, DL, VT), X);
-    }
+  // Matched in tablegen, avoid perturbing patterns.
+  switch (MulAmt) {
+  case 11:
+  case 13:
+  case 19:
+  case 21:
+  case 25:
+  case 27:
+  case 29:
+  case 37:
+  case 41:
+  case 45:
+  case 73:
+  case 91:
+    return SDValue();
+  default:
+    break;
   }
 
   // 2^n + 2/4/8 + 1 -> (add (shl X, C1), (shXadd X, X))
@@ -19686,7 +19669,6 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(LLA)
   NODE_NAME_CASE(ADD_TPREL)
   NODE_NAME_CASE(MULHSU)
-  NODE_NAME_CASE(SHL_ADD)
   NODE_NAME_CASE(SLLW)
   NODE_NAME_CASE(SRAW)
   NODE_NAME_CASE(SRLW)
