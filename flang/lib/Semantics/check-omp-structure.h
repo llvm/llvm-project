@@ -163,8 +163,8 @@ private:
   void CheckDependArraySection(
       const common::Indirection<parser::ArrayElement> &, const parser::Name &);
   bool IsDataRefTypeParamInquiry(const parser::DataRef *dataRef);
-  void CheckIsVarPartOfAnotherVar(
-      const parser::CharBlock &source, const parser::OmpObjectList &objList);
+  void CheckIsVarPartOfAnotherVar(const parser::CharBlock &source,
+      const parser::OmpObjectList &objList, llvm::StringRef clause = "");
   void CheckThreadprivateOrDeclareTargetVar(
       const parser::OmpObjectList &objList);
   void CheckSymbolNames(
