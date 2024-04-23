@@ -16650,7 +16650,7 @@ void PPCTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       SDValue LHS = Op.getOperand(0);
       SDValue RHS = Op.getOperand(1);
       if (isNullConstant(LHS) && isNullConstant(RHS))
-        Known.Zero = ~1U;
+        Known.Zero = ~1ULL;
     }
     break;
   }
