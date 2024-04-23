@@ -185,9 +185,9 @@ RISCVInstructionSelector::selectShiftMask(MachineOperand &Root) const {
   //
   // According to RISC-V's ISA manual, SLL, SRL, and SRA ignore other bits than
   // the lowest log2(XLEN) bits of register rs2. As for the above pattern, if
-  // the lowest bits of register rd and rs2 of G_AND are the same, then it can
-  // be eliminated. Given register rs1 or rs2 holding a constant (the mask),
-  // there are two cases G_ADD can be erased:
+  // the lowest log2(XLEN) bits of register rd and rs2 of G_AND are the same,
+  // then it can be eliminated. Given register rs1 or rs2 holding a constant
+  // (the and mask), there are two cases G_AND can be erased:
   //
   // 1. the lowest log2(XLEN) bits of the and mask are all set
   // 2. the bits of the register being masked are already unset (zero set)
