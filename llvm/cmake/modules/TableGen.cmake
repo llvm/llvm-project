@@ -167,7 +167,8 @@ function(add_public_tablegen_target target)
   if(LLVM_COMMON_DEPENDS)
     add_dependencies(${target} ${LLVM_COMMON_DEPENDS})
   endif()
-  set_target_properties(${target} PROPERTIES FOLDER "Tablegenning")
+  get_subproject_title(subproject_title)
+  set_target_properties(${target} PROPERTIES FOLDER "${subproject_title}/Tablegenning/Targets")
   set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} ${target} PARENT_SCOPE)
 endfunction()
 
@@ -179,6 +180,8 @@ macro(add_tablegen target project)
 
   add_llvm_executable(${target} DISABLE_LLVM_LINK_LLVM_DYLIB
     ${ADD_TABLEGEN_UNPARSED_ARGUMENTS})
+  get_subproject_title(subproject_title)
+  set_target_properties(${target} PROPERTIES FOLDER "${subproject_title}/Tablegenning")
   set(LLVM_LINK_COMPONENTS ${${target}_OLD_LLVM_LINK_COMPONENTS})
 
   set(${project}_TABLEGEN_DEFAULT "${target}")
@@ -217,6 +220,8 @@ macro(add_tablegen target project)
       set(${project}_TABLEGEN_EXE ${${project}_TABLEGEN_EXE} PARENT_SCOPE)
 
       add_custom_target(${target}-host DEPENDS ${${project}_TABLEGEN_EXE})
+      get_subproject_title(subproject_title)
+      set_target_properties(${target}-host PROPERTIES FOLDER "${subproject_title}/Native")
       set(${project}_TABLEGEN_TARGET ${target}-host PARENT_SCOPE)
 
       # If we're using the host tablegen, and utils were not requested, we have no

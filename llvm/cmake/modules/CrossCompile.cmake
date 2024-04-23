@@ -45,6 +45,8 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
 
   add_custom_target(CREATE_${project_name}_${target_name}
     DEPENDS ${${project_name}_${target_name}_BUILD})
+  get_subproject_title(subproject_title)
+  set_target_properties(CREATE_${project_name}_${target_name} PROPERTIES FOLDER "${subproject_title}/Native")
 
   # Escape semicolons in the targets list so that cmake doesn't expand
   # them to spaces.
@@ -98,6 +100,8 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
 
   add_custom_target(CONFIGURE_${project_name}_${target_name}
     DEPENDS ${${project_name}_${target_name}_BUILD}/CMakeCache.txt)
+  get_subproject_title(subproject_title)
+  set_target_properties(CONFIGURE_${project_name}_${target_name} PROPERTIES FOLDER "${subproject_title}/Native")
 
 endfunction()
 
