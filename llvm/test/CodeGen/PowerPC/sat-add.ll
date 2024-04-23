@@ -158,10 +158,9 @@ define i64 @unsigned_sat_constant_i64_using_cmp_sum(i64 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:    addic 3, 3, 42
-; CHECK-NEXT:    addze 4, 4
-; CHECK-NEXT:    andi. 4, 4, 1
+; CHECK-NEXT:    addze. 4, 4
 ; CHECK-NEXT:    li 4, -1
-; CHECK-NEXT:    iselgt 3, 4, 3
+; CHECK-NEXT:    iseleq 3, 3, 4
 ; CHECK-NEXT:    blr
   %a = add i64 %x, 42
   %c = icmp ugt i64 %x, %a
@@ -174,10 +173,9 @@ define i64 @unsigned_sat_constant_i64_using_cmp_notval(i64 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:    addic 3, 3, 42
-; CHECK-NEXT:    addze 4, 4
-; CHECK-NEXT:    andi. 4, 4, 1
+; CHECK-NEXT:    addze. 4, 4
 ; CHECK-NEXT:    li 4, -1
-; CHECK-NEXT:    iselgt 3, 4, 3
+; CHECK-NEXT:    iseleq 3, 3, 4
 ; CHECK-NEXT:    blr
   %a = add i64 %x, 42
   %c = icmp ugt i64 %x, -43
@@ -352,10 +350,9 @@ define i64 @unsigned_sat_variable_i64_using_cmp_sum(i64 %x, i64 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addc 3, 3, 4
 ; CHECK-NEXT:    li 4, 0
-; CHECK-NEXT:    addze 4, 4
-; CHECK-NEXT:    andi. 4, 4, 1
+; CHECK-NEXT:    addze. 4, 4
 ; CHECK-NEXT:    li 4, -1
-; CHECK-NEXT:    iselgt 3, 4, 3
+; CHECK-NEXT:    iseleq 3, 3, 4
 ; CHECK-NEXT:    blr
   %a = add i64 %x, %y
   %c = icmp ugt i64 %x, %a
@@ -868,10 +865,8 @@ define i64 @unsigned_sat_constant_i64_with_single_use(i64 %x) {
 ; CHECK-NEXT:    li 4, 4
 ; CHECK-NEXT:    subc 3, 3, 4
 ; CHECK-NEXT:    li 4, 0
-; CHECK-NEXT:    addze 4, 4
-; CHECK-NEXT:    andi. 4, 4, 1
-; CHECK-NEXT:    li 4, 0
-; CHECK-NEXT:    iselgt 3, 3, 4
+; CHECK-NEXT:    addze. 4, 4
+; CHECK-NEXT:    iseleq 3, 0, 3
 ; CHECK-NEXT:    blr
   %umin = call i64 @llvm.umin.i64(i64 %x, i64 4)
   %sub = sub i64 %x, %umin

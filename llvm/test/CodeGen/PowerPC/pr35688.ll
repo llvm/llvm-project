@@ -10,9 +10,17 @@ define void @ec_GFp_nistp256_points_mul() {
 ; CHECK-NEXT:    ld 3, 0(3)
 ; CHECK-NEXT:    subfic 4, 3, 0
 ; CHECK-NEXT:    li 4, 0
+; CHECK-NEXT:    addze 5, 4
+; CHECK-NEXT:    addic 6, 5, -1
+; CHECK-NEXT:    subfe 5, 6, 5
+; CHECK-NEXT:    addic 5, 5, -1
 ; CHECK-NEXT:    subfze 5, 4
 ; CHECK-NEXT:    sradi 5, 5, 63
 ; CHECK-NEXT:    subc 3, 5, 3
+; CHECK-NEXT:    addze 3, 4
+; CHECK-NEXT:    addic 6, 3, -1
+; CHECK-NEXT:    subfe 3, 6, 3
+; CHECK-NEXT:    addic 3, 3, -1
 ; CHECK-NEXT:    subfe 3, 4, 5
 ; CHECK-NEXT:    sradi 3, 3, 63
 ; CHECK-NEXT:    std 3, 0(3)

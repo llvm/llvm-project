@@ -16,10 +16,8 @@ define void @test() nounwind comdat {
 ; CHECK-NEXT:    ld 3, 0(3)
 ; CHECK-NEXT:    ld 30, 32(1)
 ; CHECK-NEXT:    subc 3, 3, 30
-; CHECK-NEXT:    addze 4, 4
-; CHECK-NEXT:    andi. 4, 4, 1
-; CHECK-NEXT:    li 4, 0
-; CHECK-NEXT:    iselgt 3, 3, 4
+; CHECK-NEXT:    addze. 4, 4
+; CHECK-NEXT:    iseleq 3, 0, 3
 ; CHECK-NEXT:    addi 29, 3, 1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %forcond
