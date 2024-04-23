@@ -802,7 +802,8 @@ size_t SymbolFileCTF::ParseFunctions(CompileUnit &cu) {
       }
 
       Type *arg_type = ResolveTypeUID(arg_uid);
-      arg_types.push_back(arg_type->GetFullCompilerType());
+      arg_types.push_back(arg_type ? arg_type->GetFullCompilerType()
+                                   : CompilerType());
     }
 
     if (symbol) {
@@ -813,8 +814,9 @@ size_t SymbolFileCTF::ParseFunctions(CompileUnit &cu) {
 
       // Create function type.
       CompilerType func_type = m_ast->CreateFunctionType(
-          ret_type->GetFullCompilerType(), arg_types.data(), arg_types.size(),
-          is_variadic, 0, clang::CallingConv::CC_C);
+          ret_type ? ret_type->GetFullCompilerType() : CompilerType(),
+          arg_types.data(), arg_types.size(), is_variadic, 0,
+          clang::CallingConv::CC_C);
       lldb::user_id_t function_type_uid = m_types.size() + 1;
       TypeSP type_sp =
           MakeType(function_type_uid, symbol->GetName(), 0, nullptr,
