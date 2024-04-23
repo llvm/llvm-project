@@ -996,8 +996,6 @@ static unsigned numGlobalVarSummaries(const ModuleSummaryIndex &Index,
                                       T &Cont) {
   unsigned NumGVS = 0;
   for (auto &[GUID, Type] : Cont) {
-    assert(Type == GlobalValueSummary::Definition &&
-           "Declaration type doesn't exist yet");
     if (isGlobalVarSummary(Index, GUID))
       ++NumGVS;
   }
@@ -1092,9 +1090,8 @@ void llvm::ComputeCrossModuleImport(
         // we convert such variables initializers to "zeroinitializer".
         // See processGlobalForThinLTO.
         if (!Index.isWriteOnly(GVS))
-          for (const auto &VI : GVS->refs()) {
+          for (const auto &VI : GVS->refs())
             NewExports.try_emplace(VI, GlobalValueSummary::Declaration);
-          }
       } else {
         auto *FS = cast<FunctionSummary>(S);
         for (const auto &Edge : FS->calls())
