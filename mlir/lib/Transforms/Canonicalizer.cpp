@@ -33,6 +33,7 @@ struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {
       : config(config) {
     this->topDownProcessingEnabled = config.useTopDownTraversal;
     this->enableRegionSimplification = config.enableRegionSimplification;
+    this->cseConstants = config.cseConstants;
     this->maxIterations = config.maxIterations;
     this->maxNumRewrites = config.maxNumRewrites;
     this->disabledPatterns = disabledPatterns;
@@ -45,6 +46,7 @@ struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {
     // Set the config from possible pass options set in the meantime.
     config.useTopDownTraversal = topDownProcessingEnabled;
     config.enableRegionSimplification = enableRegionSimplification;
+    config.cseConstants = cseConstants;
     config.maxIterations = maxIterations;
     config.maxNumRewrites = maxNumRewrites;
 
