@@ -1,5 +1,5 @@
 add_custom_target(LLDBUnitTests)
-set_target_properties(LLDBUnitTests PROPERTIES FOLDER "lldb tests")
+set_target_properties(LLDBUnitTests PROPERTIES FOLDER "LLDB/Tests")
 
 add_dependencies(lldb-unit-test-deps LLDBUnitTests)
 

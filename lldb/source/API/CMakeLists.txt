@@ -193,7 +193,6 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
                     "Only the SB API is guaranteed to be stable.")
     add_llvm_symbol_exports(liblldb "${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}")
   endif()
-  set_target_properties(liblldb_exports PROPERTIES FOLDER "lldb misc")
 elseif (LLDB_EXPORT_ALL_SYMBOLS)
   MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
 
@@ -232,7 +231,7 @@ elseif (LLDB_EXPORT_ALL_SYMBOLS)
   )
 
   add_llvm_symbol_exports(liblldb ${exported_symbol_file})
-  set_target_properties(liblldb_exports PROPERTIES FOLDER "lldb misc")
+  set_target_properties(liblldb PROPERTIES FOLDER "LLDB/Misc")
 endif()
 
 if (NOT MSVC)
