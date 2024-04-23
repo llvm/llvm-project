@@ -606,7 +606,11 @@ private:
 
   /// An array of lexical contents of a declaration context, as a sequence of
   /// Decl::Kind, DeclID pairs.
-  using LexicalContents = ArrayRef<llvm::support::unaligned_uint32_t>;
+  using unalighed_decl_id_t =
+      llvm::support::detail::packed_endian_specific_integral<
+          serialization::DeclID, llvm::endianness::native,
+          llvm::support::unaligned>;
+  using LexicalContents = ArrayRef<unalighed_decl_id_t>;
 
   /// Map from a DeclContext to its lexical contents.
   llvm::DenseMap<const DeclContext*, std::pair<ModuleFile*, LexicalContents>>
@@ -1093,8 +1097,8 @@ private:
   ///
   /// The declarations on the identifier chain for these identifiers will be
   /// loaded once the recursive loading has completed.
-  llvm::MapVector<IdentifierInfo *, SmallVector<uint32_t, 4>>
-    PendingIdentifierInfos;
+  llvm::MapVector<IdentifierInfo *, SmallVector<serialization::DeclID, 4>>
+      PendingIdentifierInfos;
 
   /// The set of lookup results that we have faked in order to support
   /// merging of partially deserialized decls but that we have not yet removed.
@@ -1913,22 +1917,22 @@ public:
   /// Resolve a declaration ID into a declaration, potentially
   /// building a new declaration.
   Decl *GetDecl(serialization::DeclID ID);
-  Decl *GetExternalDecl(uint32_t ID) override;
+  Decl *GetExternalDecl(serialization::DeclID ID) override;
 
   /// Resolve a declaration ID into a declaration. Return 0 if it's not
   /// been loaded yet.
   Decl *GetExistingDecl(serialization::DeclID ID);
 
   /// Reads a declaration with the given local ID in the given module.
-  Decl *GetLocalDecl(ModuleFile &F, uint32_t LocalID) {
+  Decl *GetLocalDecl(ModuleFile &F, serialization::DeclID LocalID) {
     return GetDecl(getGlobalDeclID(F, LocalID));
   }
 
   /// Reads a declaration with the given local ID in the given module.
   ///
   /// \returns The requested declaration, casted to the given return type.
-  template<typename T>
-  T *GetLocalDeclAs(ModuleFile &F, uint32_t LocalID) {
+  template <typename T>
+  T *GetLocalDeclAs(ModuleFile &F, serialization::DeclID LocalID) {
     return cast_or_null<T>(GetLocalDecl(F, LocalID));
   }
 
@@ -2120,9 +2124,10 @@ public:
   void LoadSelector(Selector Sel);
 
   void SetIdentifierInfo(unsigned ID, IdentifierInfo *II);
-  void SetGloballyVisibleDecls(IdentifierInfo *II,
-                               const SmallVectorImpl<uint32_t> &DeclIDs,
-                               SmallVectorImpl<Decl *> *Decls = nullptr);
+  void
+  SetGloballyVisibleDecls(IdentifierInfo *II,
+                          const SmallVectorImpl<serialization::DeclID> &DeclIDs,
+                          SmallVectorImpl<Decl *> *Decls = nullptr);
 
   /// Report a diagnostic.
   DiagnosticBuilder Diag(unsigned DiagID) const;
