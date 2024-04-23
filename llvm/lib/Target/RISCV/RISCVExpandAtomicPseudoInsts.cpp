@@ -291,7 +291,7 @@ static void doAtomicBinOpExpansion(const RISCVInstrInfo *TII, MachineInstr &MI,
   BuildMI(LoopMBB, DL, TII->get(getSCForRMW(Ordering, Width, STI)), ScratchReg)
       .addReg(AddrReg)
       .addReg(ScratchReg);
-  BuildMI(LoopMBB, DL, TII->get(RISCV::BNE))
+  BuildMI(LoopMBB, DL, TII->get(RISCV::PseudoBNE))
       .addReg(ScratchReg)
       .addReg(RISCV::X0)
       .addMBB(LoopMBB);
@@ -379,7 +379,7 @@ static void doMaskedAtomicBinOpExpansion(const RISCVInstrInfo *TII,
   BuildMI(LoopMBB, DL, TII->get(getSCForRMW32(Ordering, STI)), ScratchReg)
       .addReg(AddrReg)
       .addReg(ScratchReg);
-  BuildMI(LoopMBB, DL, TII->get(RISCV::BNE))
+  BuildMI(LoopMBB, DL, TII->get(RISCV::PseudoBNE))
       .addReg(ScratchReg)
       .addReg(RISCV::X0)
       .addMBB(LoopMBB);
@@ -498,7 +498,7 @@ bool RISCVExpandAtomicPseudo::expandAtomicMinMaxOp(
     llvm_unreachable("Unexpected AtomicRMW BinOp");
   case AtomicRMWInst::Max: {
     insertSext(TII, DL, LoopHeadMBB, Scratch2Reg, MI.getOperand(6).getReg());
-    BuildMI(LoopHeadMBB, DL, TII->get(RISCV::BGE))
+    BuildMI(LoopHeadMBB, DL, TII->get(RISCV::PseudoBGE))
         .addReg(Scratch2Reg)
         .addReg(IncrReg)
         .addMBB(LoopTailMBB);
@@ -506,20 +506,20 @@ bool RISCVExpandAtomicPseudo::expandAtomicMinMaxOp(
   }
   case AtomicRMWInst::Min: {
     insertSext(TII, DL, LoopHeadMBB, Scratch2Reg, MI.getOperand(6).getReg());
-    BuildMI(LoopHeadMBB, DL, TII->get(RISCV::BGE))
+    BuildMI(LoopHeadMBB, DL, TII->get(RISCV::PseudoBGE))
         .addReg(IncrReg)
         .addReg(Scratch2Reg)
         .addMBB(LoopTailMBB);
     break;
   }
   case AtomicRMWInst::UMax:
-    BuildMI(LoopHeadMBB, DL, TII->get(RISCV::BGEU))
+    BuildMI(LoopHeadMBB, DL, TII->get(RISCV::PseudoBGEU))
         .addReg(Scratch2Reg)
         .addReg(IncrReg)
         .addMBB(LoopTailMBB);
     break;
   case AtomicRMWInst::UMin:
-    BuildMI(LoopHeadMBB, DL, TII->get(RISCV::BGEU))
+    BuildMI(LoopHeadMBB, DL, TII->get(RISCV::PseudoBGEU))
         .addReg(IncrReg)
         .addReg(Scratch2Reg)
         .addMBB(LoopTailMBB);
@@ -539,7 +539,7 @@ bool RISCVExpandAtomicPseudo::expandAtomicMinMaxOp(
   BuildMI(LoopTailMBB, DL, TII->get(getSCForRMW32(Ordering, STI)), Scratch1Reg)
       .addReg(AddrReg)
       .addReg(Scratch1Reg);
-  BuildMI(LoopTailMBB, DL, TII->get(RISCV::BNE))
+  BuildMI(LoopTailMBB, DL, TII->get(RISCV::PseudoBNE))
       .addReg(Scratch1Reg)
       .addReg(RISCV::X0)
       .addMBB(LoopHeadMBB);
@@ -594,7 +594,7 @@ bool tryToFoldBNEOnCmpXchgResult(MachineBasicBlock &MBB,
   }
 
   // Match BNE DestReg, MaskReg.
-  if (MBBI == E || MBBI->getOpcode() != RISCV::BNE)
+  if (MBBI == E || MBBI->getOpcode() != RISCV::PseudoBNE)
     return false;
   Register BNEOp0 = MBBI->getOperand(0).getReg();
   Register BNEOp1 = MBBI->getOperand(1).getReg();

@@ -183,7 +183,9 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   default:
     llvm_unreachable("Opcode not expected!");
   case RISCV::C_BEQZ:
+  case RISCV::PseudoC_BEQZ:
   case RISCV::C_BNEZ:
+  case RISCV::PseudoC_BNEZ:
   case RISCV::C_J:
   case RISCV::C_JAL: {
     [[maybe_unused]] bool Success = RISCVRVC::uncompress(Res, Inst, STI);
@@ -358,9 +360,18 @@ unsigned RISCVAsmBackend::getRelaxedOpcode(unsigned Op) const {
     return RISCV::BEQ;
   case RISCV::C_BNEZ:
     return RISCV::BNE;
+  // Compression in RISCVAsmPrinter is not aware of branch distance so we need
+  // to uncompress the PseudoC_BEQZ/BNEZ here.
+  case RISCV::PseudoC_BEQZ:
+    return RISCV::PseudoBEQ;
+  case RISCV::PseudoC_BNEZ:
+    return RISCV::PseudoBNE;
   case RISCV::C_J:
   case RISCV::C_JAL: // fall through.
     return RISCV::JAL;
+  // NOTE: We do not relax the CodeGenOnly PseudoBEQ and friends to
+  // PseudoLongBEQ here. They were already relaxed by the BranchRelaxation pass
+  // as needed.
   case RISCV::BEQ:
     return RISCV::PseudoLongBEQ;
   case RISCV::BNE:

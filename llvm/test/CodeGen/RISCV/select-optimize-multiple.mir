@@ -52,7 +52,7 @@ body:             |
     ; RV32I-NEXT: [[COPY3:%[0-9]+]]:gpr = COPY $x10
     ; RV32I-NEXT: [[ANDI:%[0-9]+]]:gpr = ANDI [[COPY3]], 1
     ; RV32I-NEXT: [[COPY4:%[0-9]+]]:gpr = COPY $x0
-    ; RV32I-NEXT: BNE [[ANDI]], [[COPY4]], %bb.2
+    ; RV32I-NEXT: PseudoBNE [[ANDI]], [[COPY4]], %bb.2
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: .1:
     ; RV32I-NEXT: {{  $}}
@@ -61,7 +61,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[PHI:%[0-9]+]]:gpr = PHI [[COPY2]], %bb.0, [[COPY1]], %bb.1
     ; RV32I-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[PHI]], 1
-    ; RV32I-NEXT: BNE [[ANDI]], [[COPY4]], %bb.4
+    ; RV32I-NEXT: PseudoBNE [[ANDI]], [[COPY4]], %bb.4
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: .3:
     ; RV32I-NEXT: {{  $}}
@@ -70,6 +70,7 @@ body:             |
     ; RV32I-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[PHI]], killed [[PHI1]]
     ; RV32I-NEXT: $x10 = COPY [[ADD]]
     ; RV32I-NEXT: PseudoRET implicit $x10
+    ;
     ; RV64I-LABEL: name: cmov_interleaved_bad
     ; RV64I: successors: %bb.1, %bb.2
     ; RV64I-NEXT: liveins: $x10, $x11, $x12, $x13
@@ -80,7 +81,7 @@ body:             |
     ; RV64I-NEXT: [[COPY3:%[0-9]+]]:gpr = COPY $x10
     ; RV64I-NEXT: [[ANDI:%[0-9]+]]:gpr = ANDI [[COPY3]], 1
     ; RV64I-NEXT: [[COPY4:%[0-9]+]]:gpr = COPY $x0
-    ; RV64I-NEXT: BNE [[ANDI]], [[COPY4]], %bb.2
+    ; RV64I-NEXT: PseudoBNE [[ANDI]], [[COPY4]], %bb.2
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: .1:
     ; RV64I-NEXT: {{  $}}
@@ -89,7 +90,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[PHI:%[0-9]+]]:gpr = PHI [[COPY2]], %bb.0, [[COPY1]], %bb.1
     ; RV64I-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[PHI]], 1
-    ; RV64I-NEXT: BNE [[ANDI]], [[COPY4]], %bb.4
+    ; RV64I-NEXT: PseudoBNE [[ANDI]], [[COPY4]], %bb.4
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: .3:
     ; RV64I-NEXT: {{  $}}
@@ -152,7 +153,7 @@ body:             |
     ; RV32I-NEXT: [[COPY4:%[0-9]+]]:gpr = COPY $x0
     ; RV32I-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[COPY3]], 1
     ; RV32I-NEXT: DBG_VALUE [[ADDI]], $noreg
-    ; RV32I-NEXT: BNE [[ANDI]], [[COPY4]], %bb.2
+    ; RV32I-NEXT: PseudoBNE [[ANDI]], [[COPY4]], %bb.2
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: .1:
     ; RV32I-NEXT: {{  $}}
@@ -164,6 +165,7 @@ body:             |
     ; RV32I-NEXT: [[ADD:%[0-9]+]]:gpr = ADD [[PHI]], killed [[PHI1]]
     ; RV32I-NEXT: $x10 = COPY [[ADD]]
     ; RV32I-NEXT: PseudoRET implicit $x10
+    ;
     ; RV64I-LABEL: name: cmov_interleaved_debug_value
     ; RV64I: successors: %bb.1, %bb.2
     ; RV64I-NEXT: liveins: $x10, $x11, $x12, $x13
@@ -176,7 +178,7 @@ body:             |
     ; RV64I-NEXT: [[COPY4:%[0-9]+]]:gpr = COPY $x0
     ; RV64I-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[COPY3]], 1
     ; RV64I-NEXT: DBG_VALUE [[ADDI]], $noreg
-    ; RV64I-NEXT: BNE [[ANDI]], [[COPY4]], %bb.2
+    ; RV64I-NEXT: PseudoBNE [[ANDI]], [[COPY4]], %bb.2
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: .1:
     ; RV64I-NEXT: {{  $}}

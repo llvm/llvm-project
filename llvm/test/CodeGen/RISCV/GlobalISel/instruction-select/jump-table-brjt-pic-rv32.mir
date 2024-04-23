@@ -63,7 +63,7 @@ body:             |
   ; CHECK-NEXT:   [[ADDI6:%[0-9]+]]:gpr = ADDI $x0, 4
   ; CHECK-NEXT:   [[ADDI7:%[0-9]+]]:gpr = ADDI $x0, 1000
   ; CHECK-NEXT:   [[ADDI8:%[0-9]+]]:gpr = ADDI [[COPY]], -1
-  ; CHECK-NEXT:   BLTU [[ADDI]], [[ADDI8]], %bb.8
+  ; CHECK-NEXT:   PseudoBLTU [[ADDI]], [[ADDI8]], %bb.8
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.entry:
   ; CHECK-NEXT:   successors: %bb.2(0x15555555), %bb.3(0x15555555), %bb.4(0x15555555), %bb.5(0x15555555), %bb.6(0x15555555), %bb.7(0x15555555)

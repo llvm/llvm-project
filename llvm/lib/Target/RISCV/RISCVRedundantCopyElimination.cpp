@@ -141,8 +141,8 @@ bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
     return false;
 
   MachineBasicBlock::iterator CondBr = PredMBB->getFirstTerminator();
-  assert((CondBr->getOpcode() == RISCV::BEQ ||
-          CondBr->getOpcode() == RISCV::BNE) &&
+  assert((CondBr->getOpcode() == RISCV::PseudoBEQ ||
+          CondBr->getOpcode() == RISCV::PseudoBNE) &&
          "Unexpected opcode");
   assert(CondBr->getOperand(0).getReg() == TargetReg && "Unexpected register");
 

@@ -16,7 +16,7 @@ body:             |
   ; RV32I-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x11
   ; RV32I-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x12
   ; RV32I-NEXT:   [[ANDI:%[0-9]+]]:gpr = ANDI [[COPY]], 1
-  ; RV32I-NEXT:   BNE [[ANDI]], $x0, %bb.2
+  ; RV32I-NEXT:   PseudoBNE [[ANDI]], $x0, %bb.2
   ; RV32I-NEXT:   PseudoBR %bb.1
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT: bb.1:
@@ -58,7 +58,7 @@ body:             |
   ; RV32I-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x11
   ; RV32I-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x12
   ; RV32I-NEXT:   [[ANDI:%[0-9]+]]:gpr = ANDI [[COPY]], 1
-  ; RV32I-NEXT:   BNE [[ANDI]], $x0, %bb.2
+  ; RV32I-NEXT:   PseudoBNE [[ANDI]], $x0, %bb.2
   ; RV32I-NEXT:   PseudoBR %bb.1
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT: bb.1:

@@ -16,72 +16,72 @@ body:             |
   ; RV32I-NEXT:   [[COPY1:%[0-9]+]]:gpr = COPY $x11
   ; RV32I-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY $x12
   ; RV32I-NEXT:   [[LW:%[0-9]+]]:gpr = LW [[COPY1]], 0 :: (volatile load (s32))
-  ; RV32I-NEXT:   BEQ [[LW]], [[COPY]], %bb.14
+  ; RV32I-NEXT:   PseudoBEQ [[LW]], [[COPY]], %bb.14
   ; RV32I-NEXT:   PseudoBR %bb.1
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT: bb.1:
   ; RV32I-NEXT:   [[LW1:%[0-9]+]]:gpr = LW [[COPY1]], 0 :: (volatile load (s32))
-  ; RV32I-NEXT:   BNE [[LW1]], [[COPY]], %bb.14
+  ; RV32I-NEXT:   PseudoBNE [[LW1]], [[COPY]], %bb.14
   ; RV32I-NEXT:   PseudoBR %bb.2
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT: bb.2:
   ; RV32I-NEXT:   [[LW2:%[0-9]+]]:gpr = LW [[COPY1]], 0 :: (volatile load (s32))
-  ; RV32I-NEXT:   BLT [[LW2]], [[COPY]], %bb.14
+  ; RV32I-NEXT:   PseudoBLT [[LW2]], [[COPY]], %bb.14
   ; RV32I-NEXT:   PseudoBR %bb.3
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT: bb.3:
   ; RV32I-NEXT:   [[LW3:%[0-9]+]]:gpr = LW [[COPY1]], 0 :: (volatile load (s32))
-  ; RV32I-NEXT:   BGE [[LW3]], [[COPY]], %bb.14
+  ; RV32I-NEXT:   PseudoBGE [[LW3]], [[COPY]], %bb.14
   ; RV32I-NEXT:   PseudoBR %bb.4
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT: bb.4:
   ; RV32I-NEXT:   [[LW4:%[0-9]+]]:gpr = LW [[COPY1]], 0 :: (volatile load (s32))
-  ; RV32I-NEXT:   BLTU [[LW4]], [[COPY]], %bb.14
+  ; RV32I-NEXT:   PseudoBLTU [[LW4]], [[COPY]], %bb.14
   ; RV32I-NEXT:   PseudoBR %bb.5
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT: bb.5:
   ; RV32I-NEXT:   [[LW5:%[0-9]+]]:gpr = LW [[COPY1]], 0 :: (volatile load (s32))
-  ; RV32I-NEXT:   BGEU [[LW5]], [[COPY]], %bb.14
+  ; RV32I-NEXT:   PseudoBGEU [[LW5]], [[COPY]], %bb.14
   ; RV32I-NEXT:   PseudoBR %bb.6
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT: bb.6:
   ; RV32I-NEXT:   [[LW6:%[0-9]+]]:gpr = LW [[COPY1]], 0 :: (volatile load (s32))
-  ; RV32I-NEXT:   BLT [[COPY]], [[LW6]], %bb.14
+  ; RV32I-NEXT:   PseudoBLT [[COPY]], [[LW6]], %bb.14
   ; RV32I-NEXT:   PseudoBR %bb.7
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT: bb.7:
   ; RV32I-NEXT:   [[LW7:%[0-9]+]]:gpr = LW [[COPY1]], 0 :: (volatile load (s32))
-  ; RV32I-NEXT:   BGE [[COPY]], [[LW7]], %bb.14
+  ; RV32I-NEXT:   PseudoBGE [[COPY]], [[LW7]], %bb.14
   ; RV32I-NEXT:   PseudoBR %bb.8
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT: bb.8:
   ; RV32I-NEXT:   [[LW8:%[0-9]+]]:gpr = LW [[COPY1]], 0 :: (volatile load (s32))
-  ; RV32I-NEXT:   BLTU [[COPY]], [[LW8]], %bb.14
+  ; RV32I-NEXT:   PseudoBLTU [[COPY]], [[LW8]], %bb.14
   ; RV32I-NEXT:   PseudoBR %bb.9
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT: bb.9:
   ; RV32I-NEXT:   [[LW9:%[0-9]+]]:gpr = LW [[COPY1]], 0 :: (volatile load (s32))
-  ; RV32I-NEXT:   BGEU [[COPY]], [[LW9]], %bb.14
+  ; RV32I-NEXT:   PseudoBGEU [[COPY]], [[LW9]], %bb.14
   ; RV32I-NEXT:   PseudoBR %bb.10
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT: bb.10:
   ; RV32I-NEXT:   [[LW10:%[0-9]+]]:gpr = LW [[COPY1]], 0 :: (volatile load (s32))
   ; RV32I-NEXT:   [[ANDI:%[0-9]+]]:gpr = ANDI [[COPY2]], 1
-  ; RV32I-NEXT:   BNE [[ANDI]], $x0, %bb.14
+  ; RV32I-NEXT:   PseudoBNE [[ANDI]], $x0, %bb.14
   ; RV32I-NEXT:   PseudoBR %bb.11
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT: bb.11:
   ; RV32I-NEXT:   successors: %bb.14(0x50000000), %bb.12(0x30000000)
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT:   [[LW11:%[0-9]+]]:gpr = LW [[COPY1]], 0 :: (volatile load (s32))
-  ; RV32I-NEXT:   BGE [[LW11]], $x0, %bb.14
+  ; RV32I-NEXT:   PseudoBGE [[LW11]], $x0, %bb.14
   ; RV32I-NEXT:   PseudoBR %bb.12
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT: bb.12:
   ; RV32I-NEXT:   successors: %bb.14(0x30000000), %bb.13(0x50000000)
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT:   [[LW12:%[0-9]+]]:gpr = LW [[COPY1]], 0 :: (volatile load (s32))
-  ; RV32I-NEXT:   BGE $x0, [[LW12]], %bb.14
+  ; RV32I-NEXT:   PseudoBGE $x0, [[LW12]], %bb.14
   ; RV32I-NEXT:   PseudoBR %bb.13
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT: bb.13:
