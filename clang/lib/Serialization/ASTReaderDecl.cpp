@@ -3142,7 +3142,7 @@ public:
 
   OMPTraitInfo *readOMPTraitInfo() { return Reader.readOMPTraitInfo(); }
 
-  template <typename T> T *GetLocalDeclAs(uint32_t LocalID) {
+  template <typename T> T *GetLocalDeclAs(DeclID LocalID) {
     return Reader.GetLocalDeclAs<T>(LocalID);
   }
 };

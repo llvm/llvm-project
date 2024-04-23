@@ -65,6 +65,8 @@ using IdentifierID = uint32_t;
 /// discovery), with values below NUM_PREDEF_DECL_IDS being reserved.
 /// At the start of a chain of precompiled headers, declaration ID 1 is
 /// used for the translation unit declaration.
+///
+/// FIXME: Merge with Decl::DeclID
 using DeclID = uint32_t;
 
 // FIXME: Turn these into classes so we can have some type safety when
