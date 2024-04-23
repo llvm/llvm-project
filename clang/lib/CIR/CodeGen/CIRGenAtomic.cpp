@@ -630,7 +630,8 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
 
   case AtomicExpr::AO__atomic_exchange:
   case AtomicExpr::AO__scoped_atomic_exchange:
-    llvm_unreachable("NYI");
+    Val1 = buildPointerWithAlignment(E->getVal1());
+    Dest = buildPointerWithAlignment(E->getVal2());
     break;
 
   case AtomicExpr::AO__atomic_compare_exchange:
