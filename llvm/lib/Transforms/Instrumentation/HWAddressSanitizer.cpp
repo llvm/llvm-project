@@ -949,7 +949,8 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
             M, UseShortGranules
                    ? Intrinsic::hwasan_check_memaccess_shortgranules_fixedshadow
                    : Intrinsic::hwasan_check_memaccess_fixedshadow),
-        {Ptr, ConstantInt::get(Int32Ty, AccessInfo), ConstantInt::get(Int64Ty, Mapping.Offset)});
+        {Ptr, ConstantInt::get(Int32Ty, AccessInfo),
+         ConstantInt::get(Int64Ty, Mapping.Offset)});
   else
     IRB.CreateCall(Intrinsic::getDeclaration(
                        M, UseShortGranules
