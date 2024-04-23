@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
+#include <optional>
 #include <string>
 
 using namespace clang::driver;
@@ -36,6 +37,11 @@ bool isLegalShaderModel(Triple &T) {
     return false;
   if (Version.getSubminor())
     return false;
+
+  // DXIL Version should be set as SubArch
+  if (T.getSubArch() == Triple::NoSubArch) {
+    return false;
+  }
 
   auto Kind = T.getEnvironment();
 
@@ -136,9 +142,8 @@ std::optional<std::string> tryParseProfile(StringRef Profile) {
     break;
   }
   if (SubArch == llvm::Triple::NoSubArch) {
-    report_fatal_error(
-        "No DXIL version found for specified Shader Model version",
-        /*gen_crash_diag*/ false);
+    // No DXIL Version corresponding to specified Shader Model version found
+    return std::nullopt;
   }
   T.setArch(Triple::ArchType::dxil, SubArch);
   T.setOSName(Triple::getOSTypeName(Triple::OSType::ShaderModel).str() +

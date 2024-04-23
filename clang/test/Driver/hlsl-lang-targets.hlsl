@@ -39,6 +39,9 @@
 // Invaliddxil target with no version number
 // RUN: not %clang -target dxil--shadermodel6.2-msvc %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-TARGET %s
 
+// Invalid target profile
+// RUN: not %clang_dxc  -Tlib_6_9 -fcgl -Fo - %s 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID-PROFILE
+
 // Non-dxil targets
 //
 // RUN: not %clang -target x86_64-unknown-unknown %s -S -o /dev/null 2>&1 | FileCheck --check-prefix=CHECK-BAD-TARGET %s
@@ -52,6 +55,7 @@
 // CHECK-BAD-ENV: error: shader stage '{{.*}}' in target '{{.*}}' is invalid for HLSL code generation
 // CHECK-BAD-ENV-DRV: error: version '{{.*}}' in target triple '{{.*}}' is invalid
 // CHECK-BAD-TARGET: error: HLSL code generation is unsupported for target '{{.*}}'
+// CHECK-INVALID-PROFILE: error: invalid profile : {{.*}}
 
 [shader("pixel")]
 void main() {}
