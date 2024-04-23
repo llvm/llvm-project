@@ -115,8 +115,8 @@ New checks
 - New :doc:`bugprone-return-const-ref-from-parameter
   <clang-tidy/checks/bugprone/return-const-ref-from-parameter>` check.
 
-  Detects return statements that return constant reference parameter as constant
-  reference. This may cause use-after-free errors if the caller uses xvalue as
+  Detects return statements that return a constant reference parameter as constant
+  reference. This may cause use-after-free errors if the caller uses xvalues as
   arguments.
 
 - New :doc:`bugprone-suspicious-stringview-data-usage
