@@ -211,18 +211,18 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
               Target.getAccessVariant() == MCSymbolRefExpr::VK_GOTPCREL)
                  ? ELF::R_AARCH64_GOTPCREL32
                  : R_CLS(ABS32);
-    case FK_Data_8:
+    case FK_Data_8: {
+      bool IsAuth = (RefKind == AArch64MCExpr::VK_AUTH ||
+                     RefKind == AArch64MCExpr::VK_AUTHADDR);
       if (IsILP32) {
         Ctx.reportError(Fixup.getLoc(),
-                        "ILP32 8 byte absolute data "
-                        "relocation not supported (LP64 eqv: ABS64)");
+                        Twine("ILP32 8 byte absolute data "
+                              "relocation not supported (LP64 eqv: ") +
+                            (IsAuth ? "AUTH_ABS64" : "ABS64") + Twine(')'));
         return ELF::R_AARCH64_NONE;
-      } else {
-        if (RefKind == AArch64MCExpr::VK_AUTH ||
-            RefKind == AArch64MCExpr::VK_AUTHADDR)
-          return ELF::R_AARCH64_AUTH_ABS64;
-        return ELF::R_AARCH64_ABS64;
       }
+      return (IsAuth ? ELF::R_AARCH64_AUTH_ABS64 : ELF::R_AARCH64_ABS64);
+    }
     case AArch64::fixup_aarch64_add_imm12:
       if (RefKind == AArch64MCExpr::VK_DTPREL_HI12)
         return R_CLS(TLSLD_ADD_DTPREL_HI12);
