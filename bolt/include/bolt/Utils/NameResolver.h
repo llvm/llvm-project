@@ -28,14 +28,14 @@ class NameResolver {
   static constexpr char Sep = '/';
 
 public:
-  /// Return the counter for a given \p Name.
-  uint64_t getCounter(StringRef Name) const {
+  /// Return the number of uniquified versions of a given \p Name.
+  uint64_t getUniquifiedNameCount(StringRef Name) const {
     if (Counters.contains(Name))
       return Counters.at(Name);
     return 0;
   }
 
-  /// Return unique version of the \p Name in the form "Name<Sep><Number>".
+  /// Return unique version of the \p Name in the form "Name<Sep><ID>".
   std::string getUniqueName(StringRef Name, const uint64_t ID) const {
     return (Name + Twine(Sep) + Twine(ID)).str();
   }

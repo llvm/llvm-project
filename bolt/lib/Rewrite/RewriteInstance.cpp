@@ -1426,18 +1426,19 @@ void RewriteInstance::registerFragments() {
     if (!Function.isFragment())
       continue;
     for (StringRef Name : Function.getNames()) {
-      StringRef BaseName, Suffix;
-      std::tie(BaseName, Suffix) = Name.split('/');
+      StringRef BaseName = NR.restore(Name);
+      const bool IsGlobal = BaseName == Name;
       const size_t ColdSuffixPos = BaseName.find(".cold");
       if (ColdSuffixPos == StringRef::npos)
         continue;
       StringRef ParentName = BaseName.substr(0, ColdSuffixPos);
       const BinaryData *BD = BC->getBinaryDataByName(ParentName);
-      const uint64_t NumPossibleLocalParents = NR.getCounter(ParentName);
+      const uint64_t NumPossibleLocalParents =
+          NR.getUniquifiedNameCount(ParentName);
       // The most common case: single local parent fragment.
       if (!BD && NumPossibleLocalParents == 1) {
         BD = BC->getBinaryDataByName(NR.getUniqueName(ParentName, 1));
-      } else if (BD && (!NumPossibleLocalParents || Suffix.empty())) {
+      } else if (BD && (!NumPossibleLocalParents || IsGlobal)) {
         // Global parent and either no local candidates (second most common), or
         // the fragment is global as well (uncommon).
       } else {
@@ -1446,8 +1447,7 @@ void RewriteInstance::registerFragments() {
         continue;
       }
       if (BD) {
-        const uint64_t Address = BD->getAddress();
-        BinaryFunction *BF = BC->getBinaryFunctionAtAddress(Address);
+        BinaryFunction *BF = BC->getFunctionForSymbol(BD->getSymbol());
         if (BF) {
           BC->registerFragment(Function, *BF);
           continue;
