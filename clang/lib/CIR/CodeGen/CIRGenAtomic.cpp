@@ -315,6 +315,68 @@ static mlir::cir::IntAttr getConstOpIntAttr(mlir::Value v) {
   return constVal;
 }
 
+static bool isCstWeak(mlir::Value weakVal, uint64_t &val) {
+  auto intAttr = getConstOpIntAttr(weakVal);
+  if (!intAttr)
+    return false;
+  val = intAttr.getUInt();
+  return true;
+}
+
+static void buildAtomicCmpXchg(CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak,
+                               Address Dest, Address Ptr, Address Val1,
+                               Address Val2, uint64_t Size,
+                               mlir::cir::MemOrder SuccessOrder,
+                               mlir::cir::MemOrder FailureOrder,
+                               llvm::SyncScope::ID Scope) {
+  llvm_unreachable("NYI");
+}
+
+/// Given an ordering required on success, emit all possible cmpxchg
+/// instructions to cope with the provided (but possibly only dynamically known)
+/// FailureOrder.
+static void buildAtomicCmpXchgFailureSet(
+    CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak, Address Dest, Address Ptr,
+    Address Val1, Address Val2, mlir::Value FailureOrderVal, uint64_t Size,
+    mlir::cir::MemOrder SuccessOrder, llvm::SyncScope::ID Scope) {
+
+  mlir::cir::MemOrder FailureOrder;
+  if (auto ordAttr = getConstOpIntAttr(FailureOrderVal)) {
+    // We should not ever get to a case where the ordering isn't a valid CABI
+    // value, but it's hard to enforce that in general.
+    auto ord = ordAttr.getUInt();
+    if (!mlir::cir::isValidCIRAtomicOrderingCABI(ord)) {
+      FailureOrder = mlir::cir::MemOrder::Relaxed;
+    } else {
+      switch ((mlir::cir::MemOrder)ord) {
+      case mlir::cir::MemOrder::Relaxed:
+        // 31.7.2.18: "The failure argument shall not be memory_order_release
+        // nor memory_order_acq_rel". Fallback to monotonic.
+      case mlir::cir::MemOrder::Release:
+      case mlir::cir::MemOrder::AcquireRelease:
+        FailureOrder = mlir::cir::MemOrder::Relaxed;
+        break;
+      case mlir::cir::MemOrder::Consume:
+      case mlir::cir::MemOrder::Acquire:
+        FailureOrder = mlir::cir::MemOrder::Acquire;
+        break;
+      case mlir::cir::MemOrder::SequentiallyConsistent:
+        FailureOrder = mlir::cir::MemOrder::SequentiallyConsistent;
+        break;
+      }
+    }
+    // Prior to c++17, "the failure argument shall be no stronger than the
+    // success argument". This condition has been lifted and the only
+    // precondition is 31.7.2.18. Effectively treat this as a DR and skip
+    // language version checks.
+    buildAtomicCmpXchg(CGF, E, IsWeak, Dest, Ptr, Val1, Val2, Size,
+                       SuccessOrder, FailureOrder, Scope);
+    return;
+  }
+
+  llvm_unreachable("NYI");
+}
+
 static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
                           Address Ptr, Address Val1, Address Val2,
                           mlir::Value IsWeak, mlir::Value FailureOrder,
@@ -348,7 +410,13 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__atomic_compare_exchange_n:
   case AtomicExpr::AO__scoped_atomic_compare_exchange:
   case AtomicExpr::AO__scoped_atomic_compare_exchange_n: {
-    llvm_unreachable("NYI");
+    uint64_t weakVal;
+    if (isCstWeak(IsWeak, weakVal)) {
+      buildAtomicCmpXchgFailureSet(CGF, E, weakVal, Dest, Ptr, Val1, Val2,
+                                   FailureOrder, Size, Order, Scope);
+    } else {
+      llvm_unreachable("NYI");
+    }
     return;
   }
   case AtomicExpr::AO__c11_atomic_load:
@@ -644,7 +712,20 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
   case AtomicExpr::AO__opencl_atomic_compare_exchange_strong:
   case AtomicExpr::AO__scoped_atomic_compare_exchange:
   case AtomicExpr::AO__scoped_atomic_compare_exchange_n:
-    llvm_unreachable("NYI");
+    Val1 = buildPointerWithAlignment(E->getVal1());
+    if (E->getOp() == AtomicExpr::AO__atomic_compare_exchange ||
+        E->getOp() == AtomicExpr::AO__scoped_atomic_compare_exchange)
+      Val2 = buildPointerWithAlignment(E->getVal2());
+    else {
+      llvm_unreachable("NYI");
+    }
+    OrderFail = buildScalarExpr(E->getOrderFail());
+    if (E->getOp() == AtomicExpr::AO__atomic_compare_exchange_n ||
+        E->getOp() == AtomicExpr::AO__atomic_compare_exchange ||
+        E->getOp() == AtomicExpr::AO__scoped_atomic_compare_exchange_n ||
+        E->getOp() == AtomicExpr::AO__scoped_atomic_compare_exchange) {
+      IsWeak = buildScalarExpr(E->getWeak());
+    }
     break;
 
   case AtomicExpr::AO__c11_atomic_fetch_add:
@@ -739,7 +820,7 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
     if (ShouldCastToIntPtrTy)
       Dest = Atomics.castToAtomicIntPointer(Dest);
   } else if (E->isCmpXChg())
-    llvm_unreachable("NYI");
+    Dest = CreateMemTemp(RValTy, getLoc(E->getSourceRange()), "cmpxchg.bool");
   else if (!RValTy->isVoidType()) {
     Dest = Atomics.CreateTempAlloca();
     if (ShouldCastToIntPtrTy)
