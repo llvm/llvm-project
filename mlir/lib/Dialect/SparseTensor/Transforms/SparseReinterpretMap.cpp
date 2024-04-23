@@ -502,7 +502,7 @@ private:
     for (const AffineExpr l : order.getResults()) {
       unsigned loopId = llvm::cast<AffineDimExpr>(l).getPosition();
       auto itTp =
-          linalgOp.getIteratorTypes()[loopId].cast<linalg::IteratorTypeAttr>();
+          cast<linalg::IteratorTypeAttr>(linalgOp.getIteratorTypes()[loopId]);
       if (linalg::isReductionIterator(itTp.getValue()))
         break; // terminate at first reduction
       nest++;

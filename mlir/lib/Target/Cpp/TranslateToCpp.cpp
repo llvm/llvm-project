@@ -154,6 +154,9 @@ struct CppEmitter {
   /// any result type could not be converted.
   LogicalResult emitAssignPrefix(Operation &op);
 
+  /// Emits a global variable declaration or definition.
+  LogicalResult emitGlobalVariable(GlobalOp op);
+
   /// Emits a label for the block.
   LogicalResult emitLabel(Block &block);
 
@@ -345,6 +348,12 @@ static LogicalResult printOperation(CppEmitter &emitter,
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::GlobalOp globalOp) {
+
+  return emitter.emitGlobalVariable(globalOp);
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::AssignOp assignOp) {
   OpResult result = assignOp.getVar().getDefiningOp()->getResult(0);
 
@@ -352,6 +361,13 @@ static LogicalResult printOperation(CppEmitter &emitter,
     return failure();
 
   return emitter.emitOperand(assignOp.getValue());
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    emitc::GetGlobalOp op) {
+  // Add name to cache so that `hasValueInScope` works.
+  emitter.getOrCreateName(op.getResult());
+  return success();
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
@@ -1119,6 +1135,9 @@ StringRef CppEmitter::getOrCreateName(Value val) {
     if (auto subscript =
             dyn_cast_if_present<emitc::SubscriptOp>(val.getDefiningOp())) {
       valueMapper.insert(val, getSubscriptName(subscript));
+    } else if (auto getGlobal = dyn_cast_if_present<emitc::GetGlobalOp>(
+                   val.getDefiningOp())) {
+      valueMapper.insert(val, getGlobal.getName().str());
     } else {
       valueMapper.insert(val, formatv("v{0}", ++valueInScopeCount.top()));
     }
@@ -1384,6 +1403,30 @@ LogicalResult CppEmitter::emitVariableDeclaration(OpResult result,
   return success();
 }
 
+LogicalResult CppEmitter::emitGlobalVariable(GlobalOp op) {
+  if (op.getExternSpecifier())
+    os << "extern ";
+  else if (op.getStaticSpecifier())
+    os << "static ";
+  if (op.getConstSpecifier())
+    os << "const ";
+
+  if (failed(emitVariableDeclaration(op->getLoc(), op.getType(),
+                                     op.getSymName()))) {
+    return failure();
+  }
+
+  std::optional<Attribute> initialValue = op.getInitialValue();
+  if (initialValue) {
+    os << " = ";
+    if (failed(emitAttribute(op->getLoc(), *initialValue)))
+      return failure();
+  }
+
+  os << ";";
+  return success();
+}
+
 LogicalResult CppEmitter::emitAssignPrefix(Operation &op) {
   // If op is being emitted as part of an expression, bail out.
   if (getEmittedExpression())
@@ -1444,11 +1487,11 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::CallOpaqueOp, emitc::CastOp, emitc::CmpOp,
                 emitc::ConditionalOp, emitc::ConstantOp, emitc::DeclareFuncOp,
                 emitc::DivOp, emitc::ExpressionOp, emitc::ForOp, emitc::FuncOp,
-                emitc::IfOp, emitc::IncludeOp, emitc::LogicalAndOp,
-                emitc::LogicalNotOp, emitc::LogicalOrOp, emitc::MulOp,
-                emitc::RemOp, emitc::ReturnOp, emitc::SubOp, emitc::SubscriptOp,
-                emitc::UnaryMinusOp, emitc::UnaryPlusOp, emitc::VariableOp,
-                emitc::VerbatimOp>(
+                emitc::GlobalOp, emitc::GetGlobalOp, emitc::IfOp,
+                emitc::IncludeOp, emitc::LogicalAndOp, emitc::LogicalNotOp,
+                emitc::LogicalOrOp, emitc::MulOp, emitc::RemOp, emitc::ReturnOp,
+                emitc::SubOp, emitc::SubscriptOp, emitc::UnaryMinusOp,
+                emitc::UnaryPlusOp, emitc::VariableOp, emitc::VerbatimOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
           .Case<func::CallOp, func::FuncOp, func::ReturnOp>(
@@ -1461,7 +1504,7 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
   if (failed(status))
     return failure();
 
-  if (isa<emitc::LiteralOp, emitc::SubscriptOp>(op))
+  if (isa<emitc::LiteralOp, emitc::SubscriptOp, emitc::GetGlobalOp>(op))
     return success();
 
   if (getEmittedExpression() ||

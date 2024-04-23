@@ -51,8 +51,9 @@ template <typename Class> struct bind_ty {
 };
 
 /// Match a specified integer value or vector of all elements of that
-/// value.
-struct specific_intval {
+/// value. \p BitWidth optionally specifies the bitwidth to match. If it is 0,
+/// the matched constant can have any bitwidth.
+template <unsigned BitWidth = 0> struct specific_intval {
   APInt Val;
 
   specific_intval(APInt V) : Val(std::move(V)) {}
@@ -66,14 +67,19 @@ struct specific_intval {
       if (const auto *C = dyn_cast<Constant>(V))
         CI = dyn_cast_or_null<ConstantInt>(
             C->getSplatValue(/*AllowPoison=*/false));
-
-    return CI && APInt::isSameValue(CI->getValue(), Val);
+    if (!CI)
+      return false;
+    return (BitWidth == 0 || CI->getBitWidth() == BitWidth) &&
+           APInt::isSameValue(CI->getValue(), Val);
   }
 };
 
-inline specific_intval m_SpecificInt(uint64_t V) {
-  return specific_intval(APInt(64, V));
+inline specific_intval<0> m_SpecificInt(uint64_t V) {
+  return specific_intval<0>(APInt(64, V));
 }
+
+inline specific_intval<1> m_False() { return specific_intval<1>(APInt(64, 0)); }
+inline specific_intval<1> m_True() { return specific_intval<1>(APInt(64, 1)); }
 
 /// Matching combinators
 template <typename LTy, typename RTy> struct match_combine_or {
@@ -208,10 +214,10 @@ struct LogicalRecipe_match {
                                         RecipeTys...>::match(R))
         return false;
       if (Opcode == Instruction::And) {
-        if (!m_SpecificInt(0).match(R->getOperand(2)))
+        if (!m_False().match(R->getOperand(2)))
           return false;
       } else if (Opcode == Instruction::Or) {
-        if (!m_SpecificInt(1).match(R->getOperand(1)))
+        if (!m_True().match(R->getOperand(1)))
           return false;
       } else {
         llvm_unreachable("unsupported opcode");

@@ -96,6 +96,9 @@ struct ReferencedDecls {
 /// Returns declarations that are declared in or referenced from `FD`.
 ReferencedDecls getReferencedDecls(const FunctionDecl &FD);
 
+/// Returns declarations that are declared in or referenced from `S`.
+ReferencedDecls getReferencedDecls(const Stmt &S);
+
 } // namespace dataflow
 } // namespace clang
 

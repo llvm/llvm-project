@@ -198,6 +198,10 @@ Changes to the LLVM tools
   documentation for SPGO
   <https://clang.llvm.org/docs/UsersManual.html#using-sampling-profilers>`_.
 
+* llvm-readelf's ``-r`` output for RELR has been improved.
+  (`#89162 <https://github.com/llvm/llvm-project/pull/89162>`_)
+  ``--raw-relr`` has been removed.
+
 Changes to LLDB
 ---------------------------------
 
