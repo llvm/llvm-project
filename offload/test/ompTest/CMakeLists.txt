@@ -50,6 +50,13 @@ add_llvm_library(omptest
   NO_INSTALL_RPATH
 )
 
+# Don't override an externally defined RPATH
+if(NOT DEFINED CMAKE_INSTALL_RPATH)
+  set_target_properties(omptest PROPERTIES INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib:$ORIGIN/../../lib" BUILD_RPATH "$ORIGIN")
+else()
+  set_target_properties(omptest PROPERTIES INSTALL_RPATH ${CMAKE_INSTALL_RPATH} BUILD_RPATH ${CMAKE_INSTALL_RPATH})
+endif()
+
 # Include local include directory, so we do not need relative paths
 include_directories(./include)
 target_compile_features(omptest PRIVATE cxx_std_17)
