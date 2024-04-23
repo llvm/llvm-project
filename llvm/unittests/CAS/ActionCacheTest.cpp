@@ -74,6 +74,7 @@ TEST_P(CASTest, ActionCacheRewrite) {
   ASSERT_THAT_ERROR(Cache->put(*ID1, *ID1), Succeeded());
 }
 
+#if LLVM_ENABLE_ONDISK_CAS
 TEST(OnDiskActionCache, ActionCacheResultInvalid) {
   unittest::TempDir Temp("on-disk-cache", /*Unique=*/true);
   std::unique_ptr<ObjectStore> CAS1 = createInMemoryCAS();
@@ -106,6 +107,7 @@ TEST(OnDiskActionCache, ActionCacheResultInvalid) {
   // Write a different value will cause error.
   ASSERT_THAT_ERROR(Cache2->put(*ID3, *ID3), Failed());
 }
+#endif
 
 TEST_P(CASTest, ActionCacheAsync) {
   std::shared_ptr<ObjectStore> CAS = createObjectStore();
