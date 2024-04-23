@@ -5097,7 +5097,7 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
       DeclsToCheckForDeferredDiags.push_back(getDeclID(D));
   if (!DeclsToCheckForDeferredDiags.empty())
     Stream.EmitRecord(DECLS_TO_CHECK_FOR_DEFERRED_DIAGS,
-        DeclsToCheckForDeferredDiags);
+                      DeclsToCheckForDeferredDiags);
 
   // Write the record containing CUDA-specific declaration references.
   RecordData CUDASpecialDeclRefs;
