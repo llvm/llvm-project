@@ -41,3 +41,18 @@ define <vscale x 4 x i32> @no_bsl_fold(<vscale x 4 x i32> %a, <vscale x 4 x i32>
   %c = or <vscale x 4 x i32> %1, %2
   ret <vscale x 4 x i32> %c
 }
+
+define <vscale x 4 x i32> @nbsl(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
+; CHECK-LABEL: nbsl:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z2.s, #0x7fffffff
+; CHECK-NEXT:    nbsl z2.d, z2.d, z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, z2.d
+; CHECK-NEXT:    ret
+  %1 = and <vscale x 4 x i32> %a, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 2147483647, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %2 = and <vscale x 4 x i32> %b, shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 -2147483648, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+  %3 = or <vscale x 4 x i32> %1, %2
+  %4 = icmp eq <vscale x 4 x i32> %3, zeroinitializer
+  %5 = zext <vscale x 4 x i1> %4 to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %5
+}
