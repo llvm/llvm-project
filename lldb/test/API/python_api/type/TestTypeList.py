@@ -18,7 +18,7 @@ class TypeAndTypeListTestCase(TestBase):
         self.source = "main.cpp"
         self.line = line_number(self.source, "// Break at this line")
 
-    def _find_nested_type_in_Task_pointer(self, pointer_type):
+    def _find_nested_type_in_Pointer_template_arg(self, pointer_type):
         self.assertTrue(pointer_type)
         self.DebugSBType(pointer_type)
         pointer_info_type = pointer_type.template_args[1]
@@ -168,8 +168,10 @@ class TypeAndTypeListTestCase(TestBase):
 
         # Check that FindDirectNestedType works with types from module and
         # expression ASTs.
-        self._find_nested_type_in_Task_pointer(frame0.FindVariable("pointer").GetType())
-        self._find_nested_type_in_Task_pointer(
+        self._find_nested_type_in_Pointer_template_arg(
+            frame0.FindVariable("pointer").GetType()
+        )
+        self._find_nested_type_in_Pointer_template_arg(
             frame0.EvaluateExpression("pointer").GetType()
         )
 
