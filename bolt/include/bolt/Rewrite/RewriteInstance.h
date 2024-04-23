@@ -491,7 +491,7 @@ private:
   std::map<uint64_t, llvm::object::SymbolRef> FileSymRefs;
 
   /// FILE symbols used for disambiguating split function parents.
-  std::vector<SymbolRef> FileSymbols;
+  std::vector<ELFSymbolRef> FileSymbols;
 
   std::unique_ptr<DWARFRewriter> DebugInfoRewriter;
 

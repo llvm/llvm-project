@@ -1471,19 +1471,17 @@ void RewriteInstance::registerFragments() {
 
   // The first global symbol is identified by the symbol table sh_info value.
   // Used as local symbol search stopping point.
-  uint32_t FirstGlobal{0};
   auto *ELF64LEFile = cast<ELF64LEObjectFile>(InputFile);
   const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
-  for (const auto &Sec : cantFail(Obj.sections())) {
-    if (Sec.sh_type == ELF::SHT_SYMTAB) {
-      FirstGlobal = Sec.sh_info;
-      break;
-    }
-  }
-  if (FirstGlobal == 0) {
+  auto *SymTab = llvm::find_if(cantFail(Obj.sections()), [](const auto &Sec) {
+    return Sec.sh_type == ELF::SHT_SYMTAB;
+  });
+  assert(SymTab);
+  if (!SymTab->sh_info) {
     BC->errs() << "BOLT-ERROR: malformed SYMTAB sh_info\n";
     exit(1);
   }
+  ELFSymbolRef FirstGlobal = ELF64LEFile->toSymbolRef(SymTab, SymTab->sh_info);
 
   for (auto &[ParentName, BF] : AmbiguousFragments) {
     const uint64_t Address = BF->getAddress();
@@ -1498,25 +1496,21 @@ void RewriteInstance::registerFragments() {
     }
 
     // Find containing FILE symbol
-    SymbolRef Symbol = SymIt->second;
-    auto FSI =
-        llvm::upper_bound(FileSymbols, Symbol, [](SymbolRef A, SymbolRef B) {
-          return A.getRawDataRefImpl().d.b < B.getRawDataRefImpl().d.b;
-        });
+    ELFSymbolRef Symbol = SymIt->second;
+    auto FSI = llvm::upper_bound(FileSymbols, Symbol);
     if (FSI == FileSymbols.begin()) {
       BC->errs() << "BOLT-ERROR: owning FILE symbol not found for symbol "
                  << cantFail(Symbol.getName()) << '\n';
       exit(1);
     }
 
-    uint32_t StopSymbolNum = FirstGlobal;
+    ELFSymbolRef StopSymbol = FirstGlobal;
     if (FSI != FileSymbols.end())
-      StopSymbolNum = FSI->getRawDataRefImpl().d.b;
+      StopSymbol = *FSI;
 
     uint64_t ParentAddress{0};
     // Iterate over local file symbols and check symbol names to match parent.
-    for (SymbolRef Symbol(FSI[-1]);
-         Symbol.getRawDataRefImpl().d.b != StopSymbolNum; Symbol.moveNext()) {
+    for (ELFSymbolRef Symbol(FSI[-1]); Symbol < StopSymbol; Symbol.moveNext()) {
       if (cantFail(Symbol.getName()) == ParentName) {
         ParentAddress = cantFail(Symbol.getAddress());
         break;
