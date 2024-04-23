@@ -3,7 +3,8 @@
 modernize-min-max-use-initializer-list
 ======================================
 
-Replaces nested ``std::min`` and ``std::max`` calls with an initializer list where applicable.
+Replaces nested ``std::min`` and ``std::max`` calls with an initializer list 
+where applicable.
 
 For instance, consider the following code:
 
@@ -20,9 +21,12 @@ The check will transform the above code to:
 Performance Considerations
 ==========================
 
-While this check simplifies the code and makes it more readable, it may cause performance degradation for non-trivial types due to the need to copy objects into the initializer list.
+While this check simplifies the code and makes it more readable, it may cause 
+performance degradation for non-trivial types due to the need to copy objects 
+into the initializer list.
 
-To avoid this, it is recommended to use `std::ref` or `std::cref` for non-trivial types:
+To avoid this, it is recommended to use `std::ref` or `std::cref` for 
+non-trivial types:
 
 .. code-block:: cpp
 
@@ -42,4 +46,5 @@ Options
 
 .. option:: IgnoreTrivialTypesOfSizeAbove
 
-   An integer specifying the size (in bytes) above which trivial types are ignored. Default is `32`.
+   An integer specifying the size (in bytes) above which trivial types are 
+ignored. Default is `32`.

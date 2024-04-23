@@ -80,27 +80,26 @@ static SmallVector<FixItHint>
 generateReplacements(const MatchFinder::MatchResult &Match,
                      const CallExpr *TopCall, const FindArgsResult &Result,
                      const bool IgnoreNonTrivialTypes,
-                     const unsigned long IgnoreTrivialTypesOfSizeAbove) {
+                     const long IgnoreTrivialTypesOfSizeAbove) {
   SmallVector<FixItHint> FixItHints;
+  const SourceManager &SourceMngr = *Match.SourceManager;
+  const LangOptions &LanguageOpts = Match.Context->getLangOpts();
 
   const QualType ResultType = TopCall->getDirectCallee()
                                   ->getReturnType()
+                                  .getCanonicalType()
                                   .getNonReferenceType()
-                                  .getUnqualifiedType()
-                                  .getCanonicalType();
+                                  .getUnqualifiedType();
 
   // check if the type is trivial
-  const bool isResultTypeTrivial = Match.Context->getBaseElementType(ResultType)
-                                       .isTrivialType(*Match.Context);
-  const SourceManager &SourceMngr = *Match.SourceManager;
-  const LangOptions &LanguageOpts = Match.Context->getLangOpts();
+  const bool isResultTypeTrivial = ResultType.isTrivialType(*Match.Context);
 
   if ((!isResultTypeTrivial && IgnoreNonTrivialTypes))
     return FixItHints;
 
   if (isResultTypeTrivial &&
       // size in bits divided by 8 to get bytes
-      Match.Context->getTypeSize(ResultType) / 8 >
+      Match.Context->getTypeSizeInChars(ResultType).getQuantity() >
           IgnoreTrivialTypesOfSizeAbove)
     return FixItHints;
 
@@ -112,8 +111,8 @@ generateReplacements(const MatchFinder::MatchResult &Match,
       // check if typecast is required
       const QualType ArgType = Arg->IgnoreParenImpCasts()
                                    ->getType()
-                                   .getUnqualifiedType()
-                                   .getCanonicalType();
+                                   .getCanonicalType()
+                                   .getUnqualifiedType();
 
       if (ArgType == ResultType)
         continue;
@@ -122,11 +121,11 @@ generateReplacements(const MatchFinder::MatchResult &Match,
           CharSourceRange::getTokenRange(Arg->getSourceRange()), SourceMngr,
           LanguageOpts);
 
-      Twine Replacement = llvm::Twine("static_cast<")
-                              .concat(ResultType.getAsString(LanguageOpts))
-                              .concat(">(")
-                              .concat(ArgText)
-                              .concat(")");
+      const auto Replacement = Twine("static_cast<")
+                                   .concat(ResultType.getAsString(LanguageOpts))
+                                   .concat(">(")
+                                   .concat(ArgText)
+                                   .concat(")");
 
       FixItHints.push_back(FixItHint::CreateReplacement(Arg->getSourceRange(),
                                                         Replacement.str()));
@@ -200,7 +199,7 @@ MinMaxUseInitializerListCheck::MinMaxUseInitializerListCheck(
     : ClangTidyCheck(Name, Context),
       IgnoreNonTrivialTypes(Options.get("IgnoreNonTrivialTypes", true)),
       IgnoreTrivialTypesOfSizeAbove(
-          Options.get("IgnoreTrivialTypesOfSizeAbove", 32UL)),
+          Options.get("IgnoreTrivialTypesOfSizeAbove", 32L)),
       Inserter(Options.getLocalOrGlobal("IncludeStyle",
                                         utils::IncludeSorter::IS_LLVM),
                areDiagsSelfContained()) {}

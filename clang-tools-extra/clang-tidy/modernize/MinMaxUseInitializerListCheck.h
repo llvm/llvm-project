@@ -47,7 +47,7 @@ public:
 
 private:
   bool IgnoreNonTrivialTypes;
-  unsigned long IgnoreTrivialTypesOfSizeAbove;
+  long IgnoreTrivialTypesOfSizeAbove;
   utils::IncludeInserter Inserter;
 };
 
