@@ -1474,7 +1474,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       auto OrigIns = I->OrigIns;
       // Checks are grouped by the original instruction. We call all
       // `insertShadowCheck` for an instruction atonce.
-      //assert(Done.insert(OrigIns).second);
+      assert(Done.insert(OrigIns).second);
       auto J = std::find_if(I + 1, InstrumentationList.end(),
                             [OrigIns](const ShadowOriginAndInsertPoint &R) {
                               return OrigIns != R.OrigIns;
