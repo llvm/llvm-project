@@ -509,12 +509,12 @@ void sme_no_streaming_with_vl_arg(__SVInt8_t a) { }
 
 __SVInt8_t sme_no_streaming_returns_vl(void) { __SVInt8_t r; return r; }
 
-// expected-warning@+2 {{passing a VL-dependent argument to a __arm_locally_streaming function. The streaming and non-streaming vector lengths may be different}}
-// expected-cpp-warning@+1 {{passing a VL-dependent argument to a __arm_locally_streaming function. The streaming and non-streaming vector lengths may be different}}
+// expected-warning@+2 {{passing a VL-dependent argument to a locally streaming function is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime}}
+// expected-cpp-warning@+1 {{passing a VL-dependent argument to a locally streaming function is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime}}
 __arm_locally_streaming void sme_locally_streaming_with_vl_arg(__SVInt8_t a) { }
 
-// expected-warning@+2 {{returning a VL-dependent argument from a __arm_locally_streaming function. The streaming and non-streaming vector lengths may be different}}
-// expected-cpp-warning@+1 {{returning a VL-dependent argument from a __arm_locally_streaming function. The streaming and non-streaming vector lengths may be different}}
+// expected-warning@+2 {{returning a VL-dependent argument from a locally streaming function is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime}}
+// expected-cpp-warning@+1 {{returning a VL-dependent argument from a locally streaming function is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime}}
 __arm_locally_streaming __SVInt8_t sme_locally_streaming_returns_vl(void) { __SVInt8_t r; return r; }
 
 void sme_no_streaming_calling_streaming_with_vl_args() {
