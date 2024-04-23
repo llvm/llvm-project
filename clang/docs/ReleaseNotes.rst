@@ -557,9 +557,11 @@ Bug Fixes to C++ Support
 - Fix a crash in requires expression with templated base class member function. Fixes (#GH84020).
 - Fix a crash caused by defined struct in a type alias template when the structure
   has fields with dependent type. Fixes (#GH75221).
+- Fix placement new initializes typedef array with correct size. Fixes (#GH41441).
 - Fix the Itanium mangling of lambdas defined in a member of a local class (#GH88906)
 - Fixed a crash when trying to evaluate a user-defined ``static_assert`` message whose ``size()``
   function returns a large or negative value. Fixes (#GH89407).
+- Fixed a use-after-free bug in parsing of type constraints with default arguments that involve lambdas. (#GH67235)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -658,6 +660,12 @@ CUDA Support
 
 AIX Support
 ^^^^^^^^^^^
+
+- Introduced the ``-maix-small-local-dynamic-tls`` option to produce a faster
+  access sequence for local-dynamic TLS variables where the offset from the TLS
+  base is encoded as an immediate operand.
+  This access sequence is not used for TLS variables larger than 32KB, and is
+  currently only supported on 64-bit mode.
 
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
