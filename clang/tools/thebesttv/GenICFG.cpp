@@ -176,9 +176,12 @@ void generateICFG(const CompilationDatabase &cb) {
     for (auto &cmd : allCmds) {
         int ret = generateASTDump(cmd);
         if (ret == 0) {
-            goodCnt++;
             bool result = updateICFGWithASTDump(cmd.Filename);
-            requireTrue(result == true);
+            if (result == true) {
+                goodCnt++;
+            } else {
+                badCnt++;
+            }
         } else {
             badCnt++;
         }
