@@ -3021,24 +3021,22 @@ AArch64TargetLowering::EmitExpandZABuffer(MachineInstr &MI,
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::RDSVLI_XI), RDSVL)
       .addImm(1);
 
-  // Allocate the ZA buffer
-  Register BufferSize = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::MADDXrrr), BufferSize)
-      .addReg(RDSVL)
-      .addReg(RDSVL)
-      .addReg(AArch64::XZR);
-  Register BufferAddr = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-  Register SPCopy = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), SPCopy)
+  Register SP = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), SP)
       .addReg(AArch64::SP);
-  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STACKALLOC), BufferAddr)
-      .addReg(BufferSize)
-      .addReg(SPCopy);
-  MFI.CreateVariableSizedObject(Align(16), nullptr);
 
-  // expand pseudo in expand pass or remove pseudo and remove stack object
+  // Allocate a lazy-save buffer object of size SVL.B * SVL.B (worst-case)
+  Register MSub = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::MSUBXrrr), MSub)
+      .addReg(RDSVL)
+      .addReg(RDSVL)
+      .addReg(SP);
+  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), AArch64::SP)
+      .addReg(MSub);
 
+  // Allocate an additional TPIDR2 object on the stack (16 bytes)
   unsigned TPIDR2Object = TPIDR2->FrameIndex;
+  MFI.CreateVariableSizedObject(Align(16), nullptr);
 
   Register Zero32 = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
   MachineInstrBuilder Wzr =
@@ -3047,7 +3045,7 @@ AArch64TargetLowering::EmitExpandZABuffer(MachineInstr &MI,
 
   // Store the buffer pointer to the TPIDR2 stack object.
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRXui))
-      .addReg(BufferAddr)
+      .addReg(MSub)
       .addFrameIndex(TPIDR2Object)
       .addImm(0);
   // Set the reserved bytes (10-15) to zero

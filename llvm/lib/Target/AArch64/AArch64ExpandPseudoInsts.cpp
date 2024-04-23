@@ -1166,22 +1166,6 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   default:
     break;
 
-  case AArch64::STACKALLOC: {
-    Register Dest = MI.getOperand(0).getReg();
-    Register Src = MI.getOperand(1).getReg();
-    Register SPCopy = MI.getOperand(2).getReg();
-    BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::SUBXrs), Dest)
-        .addReg(SPCopy)
-        .add(MI.getOperand(1))
-        .addImm(0);
-    BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADDXri))
-        .addReg(AArch64::SP, RegState::Define)
-        .addReg(Dest)
-        .addImm(0)
-        .addImm(0);
-    MI.eraseFromParent();
-    return true;
-  }
   case AArch64::BSPv8i8:
   case AArch64::BSPv16i8: {
     Register DstReg = MI.getOperand(0).getReg();
