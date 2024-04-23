@@ -46,27 +46,6 @@ struct AllOverlapPositions : EnumValuesAsTuple<AllOverlapPositions, OverlapPosit
   static constexpr const char* Names[] = {"None", "Front", "Interlaced"};
 };
 
-// functor that moves elements from an iterator range into a new Container instance
-template <typename Container>
-struct MoveInto {
-  template <class It>
-  [[nodiscard]] static Container operator()(It first, It last) {
-    Container out;
-    std::move(first, last, std::inserter(out, out.begin()));
-    return out;
-  }
-};
-
-// lightweight wrapping around fillValues() which puts a little effort into
-// making that would be contiguous when sorted non-contiguous in memory
-template <typename T>
-std::vector<T> getVectorOfRandom(size_t N) {
-  std::vector<T> v;
-  fillValues(v, N, Order::Random);
-  sortValues(v, Order::Random);
-  return std::vector<T>(v);
-}
-
 // forward_iterator wrapping which, for each increment, moves the underlying iterator forward Stride elements
 template <typename Wrapped>
 struct StridedFwdIt {
@@ -101,8 +80,31 @@ struct StridedFwdIt {
 template <typename Wrapped>
 StridedFwdIt(Wrapped, unsigned) -> StridedFwdIt<Wrapped>;
 
-// realistically, data won't all be nicely contiguous in a container
+// functor that moves elements from an iterator range into a new Container instance
+template <typename Container>
+struct MoveInto {
+  template <class It>
+  [[nodiscard]] static Container operator()(It first, It last) {
+    Container out;
+    std::move(first, last, std::inserter(out, out.begin()));
+    return out;
+  }
+};
+
+template <typename T>
+std::vector<T> getVectorOfRandom(size_t N) {
+  std::vector<T> v;
+  fillValues(v, N, Order::Random);
+  sortValues(v, Order::Random);
+  return std::vector<T>(v);
+}
+
+// realistically, data won't all be nicely contiguous in a container,
 // we'll go through some effort to ensure that it's shuffled through memory
+// this is especially important for containers with non-contiguous element
+// storage, but it will affect even a std::vector, because when you copy a
+// std::vector<std::string> the underlying data storage position for the char
+// arrays of the copy are likely to have high locality
 template <class Container>
 std::pair<Container, Container> genCacheUnfriendlyData(size_t size1, size_t size2, OverlapPosition pos) {
   using ValueType = typename Container::value_type;
@@ -116,7 +118,7 @@ std::pair<Container, Container> genCacheUnfriendlyData(size_t size1, size_t size
   }
 
   // all other overlap types will have to copy some part of the data, but if
-  // we copy after sorting it will likely have high cache locality, so we sort
+  // we copy after sorting it will likely have high locality, so we sort
   // each copy separately
   auto copy = src;
   std::sort(src.begin(), src.end());
