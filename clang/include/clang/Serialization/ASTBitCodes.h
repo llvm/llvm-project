@@ -65,6 +65,8 @@ using IdentifierID = uint32_t;
 /// discovery), with values below NUM_PREDEF_DECL_IDS being reserved.
 /// At the start of a chain of precompiled headers, declaration ID 1 is
 /// used for the translation unit declaration.
+///
+/// FIXME: Merge with Decl::DeclID
 using DeclID = uint32_t;
 
 // FIXME: Turn these into classes so we can have some type safety when
@@ -2055,35 +2057,6 @@ enum CtorInitializerType {
 
 /// Kinds of cleanup objects owned by ExprWithCleanups.
 enum CleanupObjectKind { COK_Block, COK_CompoundLiteral };
-
-/// Describes the redeclarations of a declaration.
-struct LocalRedeclarationsInfo {
-  // The ID of the first declaration
-  DeclID FirstID;
-
-  // Offset into the array of redeclaration chains.
-  unsigned Offset;
-
-  friend bool operator<(const LocalRedeclarationsInfo &X,
-                        const LocalRedeclarationsInfo &Y) {
-    return X.FirstID < Y.FirstID;
-  }
-
-  friend bool operator>(const LocalRedeclarationsInfo &X,
-                        const LocalRedeclarationsInfo &Y) {
-    return X.FirstID > Y.FirstID;
-  }
-
-  friend bool operator<=(const LocalRedeclarationsInfo &X,
-                         const LocalRedeclarationsInfo &Y) {
-    return X.FirstID <= Y.FirstID;
-  }
-
-  friend bool operator>=(const LocalRedeclarationsInfo &X,
-                         const LocalRedeclarationsInfo &Y) {
-    return X.FirstID >= Y.FirstID;
-  }
-};
 
 /// Describes the categories of an Objective-C class.
 struct ObjCCategoriesInfo {

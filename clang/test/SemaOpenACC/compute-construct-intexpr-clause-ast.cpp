@@ -88,6 +88,34 @@ void NormalUses() {
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: CompoundStmt
+
+#pragma acc parallel num_gangs(some_int(), some_long(), some_short())
+  while(true){}
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: num_gangs clause
+  // CHECK-NEXT: CallExpr{{.*}}'int'
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'int (*)()' <FunctionToPointerDecay>
+  // CHECK-NEXT: DeclRefExpr{{.*}}'int ()' lvalue Function{{.*}} 'some_int' 'int ()'
+  // CHECK-NEXT: CallExpr{{.*}}'long'
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'long (*)()' <FunctionToPointerDecay>
+  // CHECK-NEXT: DeclRefExpr{{.*}}'long ()' lvalue Function{{.*}} 'some_long' 'long ()'
+  // CHECK-NEXT: CallExpr{{.*}}'short'
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'short (*)()' <FunctionToPointerDecay>
+  // CHECK-NEXT: DeclRefExpr{{.*}}'short ()' lvalue Function{{.*}} 'some_short' 'short ()'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
+
+#pragma acc kernels num_gangs(some_int())
+  while(true){}
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}kernels
+  // CHECK-NEXT: num_gangs clause
+  // CHECK-NEXT: CallExpr{{.*}}'int'
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'int (*)()' <FunctionToPointerDecay>
+  // CHECK-NEXT: DeclRefExpr{{.*}}'int ()' lvalue Function{{.*}} 'some_int' 'int ()'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
 }
 
 template<typename T, typename U>
@@ -186,6 +214,31 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: CompoundStmt
+
+#pragma acc kernels num_gangs(u)
+  while(true){}
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}kernels
+  // CHECK-NEXT: num_gangs clause
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'U' lvalue ParmVar{{.*}} 'u' 'U'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
+
+#pragma acc parallel num_gangs(u, U::value)
+  while(true){}
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: num_gangs clause
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'U' lvalue ParmVar{{.*}} 'u' 'U'
+  // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'U'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
+
+
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}}EndMarker
+  int EndMarker;
 
   // Check the instantiated versions of the above.
   // CHECK-NEXT: FunctionDecl{{.*}} used TemplUses 'void (CorrectConvert, HasInt)' implicit_instantiation
@@ -288,6 +341,32 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: CompoundStmt
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}kernels
+  // CHECK-NEXT: num_gangs clause
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'char' <UserDefinedConversion>
+  // CHECK-NEXT: CXXMemberCallExpr{{.*}}'char'
+  // CHECK-NEXT: MemberExpr{{.*}} '<bound member function type>' .operator char
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'HasInt' lvalue ParmVar
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: num_gangs clause
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'char' <UserDefinedConversion>
+  // CHECK-NEXT: CXXMemberCallExpr{{.*}}'char'
+  // CHECK-NEXT: MemberExpr{{.*}} '<bound member function type>' .operator char
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'HasInt' lvalue ParmVar
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <LValueToRValue>
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'const int' lvalue Var{{.*}} 'value' 'const int'
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'HasInt'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: CompoundStmt
+
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl{{.*}}EndMarker
 }
 
 struct HasInt {
