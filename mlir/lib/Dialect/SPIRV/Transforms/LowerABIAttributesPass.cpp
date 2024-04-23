@@ -157,7 +157,7 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
       // Erase workgroup size.
       entryPointAttr = spirv::EntryPointABIAttr::get(
           entryPointAttr.getContext(), DenseI32ArrayAttr(),
-          entryPointAttr.getSubgroupSize());
+          entryPointAttr.getSubgroupSize(), entryPointAttr.getTargetWidth());
     }
   }
   if (std::optional<int> subgroupSize = entryPointAttr.getSubgroupSize()) {
@@ -170,10 +170,24 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
       // Erase subgroup size.
       entryPointAttr = spirv::EntryPointABIAttr::get(
           entryPointAttr.getContext(), entryPointAttr.getWorkgroupSize(),
-          std::nullopt);
+          std::nullopt, entryPointAttr.getTargetWidth());
     }
   }
-  if (entryPointAttr.getWorkgroupSize() || entryPointAttr.getSubgroupSize())
+  if (std::optional<int> targetWidth = entryPointAttr.getTargetWidth()) {
+    std::optional<ArrayRef<spirv::Capability>> caps =
+        spirv::getCapabilities(spirv::ExecutionMode::SignedZeroInfNanPreserve);
+    if (!caps || targetEnv.allows(*caps)) {
+      builder.create<spirv::ExecutionModeOp>(
+          funcOp.getLoc(), funcOp,
+          spirv::ExecutionMode::SignedZeroInfNanPreserve, *targetWidth);
+      // Erase target width.
+      entryPointAttr = spirv::EntryPointABIAttr::get(
+          entryPointAttr.getContext(), entryPointAttr.getWorkgroupSize(),
+          entryPointAttr.getSubgroupSize(), std::nullopt);
+    }
+  }
+  if (entryPointAttr.getWorkgroupSize() || entryPointAttr.getSubgroupSize() ||
+      entryPointAttr.getTargetWidth())
     funcOp->setAttr(entryPointAttrName, entryPointAttr);
   else
     funcOp->removeAttr(entryPointAttrName);

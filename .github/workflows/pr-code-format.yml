@@ -1,4 +1,8 @@
 name: "Check code formatting"
+
+permissions:
+  contents: read
+
 on:
   pull_request:
     branches:

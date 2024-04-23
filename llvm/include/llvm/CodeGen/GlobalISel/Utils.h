@@ -555,5 +555,9 @@ void eraseInstr(MachineInstr &MI, MachineRegisterInfo &MRI,
 /// debug users of \p MI by writing the effect of \p MI in a DIExpression.
 void salvageDebugInfo(const MachineRegisterInfo &MRI, MachineInstr &MI);
 
+/// Returns whether opcode \p Opc is a pre-isel generic floating-point opcode,
+/// having only floating-point operands.
+bool isPreISelGenericFloatingPointOpcode(unsigned Opc);
+
 } // End namespace llvm.
 #endif

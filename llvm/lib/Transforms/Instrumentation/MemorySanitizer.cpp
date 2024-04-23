@@ -212,6 +212,9 @@ using namespace llvm;
 DEBUG_COUNTER(DebugInsertCheck, "msan-insert-check",
               "Controls which checks to insert");
 
+DEBUG_COUNTER(DebugInstrumentInstruction, "msan-instrument-instruction",
+              "Controls which instruction to instrument");
+
 static const unsigned kOriginSize = 4;
 static const Align kMinOriginAlignment = Align(4);
 static const Align kShadowTLSAlignment = Align(8);
@@ -1040,8 +1043,8 @@ void MemorySanitizer::initializeModule(Module &M) {
   OriginTy = IRB.getInt32Ty();
   PtrTy = IRB.getPtrTy();
 
-  ColdCallWeights = MDBuilder(*C).createBranchWeights(1, 1000);
-  OriginStoreWeights = MDBuilder(*C).createBranchWeights(1, 1000);
+  ColdCallWeights = MDBuilder(*C).createUnlikelyBranchWeights();
+  OriginStoreWeights = MDBuilder(*C).createUnlikelyBranchWeights();
 
   if (!CompileKernel) {
     if (TrackOrigins)
@@ -1336,7 +1339,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  // Returns true if Debug Location curresponds to multiple warnings.
+  // Returns true if Debug Location corresponds to multiple warnings.
   bool shouldDisambiguateWarningLocation(const DebugLoc &DebugLoc) {
     if (MS.TrackOrigins < 2)
       return false;
@@ -2131,8 +2134,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     OrderingTable[(int)AtomicOrderingCABI::seq_cst] =
         (int)AtomicOrderingCABI::seq_cst;
 
-    return ConstantDataVector::get(IRB.getContext(),
-                                   ArrayRef(OrderingTable, NumOrderings));
+    return ConstantDataVector::get(IRB.getContext(), OrderingTable);
   }
 
   AtomicOrdering addAcquireOrdering(AtomicOrdering a) {
@@ -2166,8 +2168,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     OrderingTable[(int)AtomicOrderingCABI::seq_cst] =
         (int)AtomicOrderingCABI::seq_cst;
 
-    return ConstantDataVector::get(IRB.getContext(),
-                                   ArrayRef(OrderingTable, NumOrderings));
+    return ConstantDataVector::get(IRB.getContext(), OrderingTable);
   }
 
   // ------------------- Visitors.
@@ -2178,6 +2179,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Don't want to visit if we're in the prologue
     if (isInPrologue(I))
       return;
+    if (!DebugCounter::shouldExecute(DebugInstrumentInstruction)) {
+      LLVM_DEBUG(dbgs() << "Skipping instruction: " << I << "\n");
+      // We still need to set the shadow and origin to clean values.
+      setShadow(&I, getCleanShadow(&I));
+      setOrigin(&I, getCleanOrigin());
+      return;
+    }
     InstVisitor<MemorySanitizerVisitor>::visit(I);
   }
 
@@ -3715,8 +3723,32 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(&I, 0));
   }
 
+  void handleArithmeticWithOverflow(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *Shadow0 = getShadow(&I, 0);
+    Value *Shadow1 = getShadow(&I, 1);
+    Value *ShadowElt0 = IRB.CreateOr(Shadow0, Shadow1);
+    Value *ShadowElt1 =
+        IRB.CreateICmpNE(ShadowElt0, getCleanShadow(ShadowElt0));
+
+    Value *Shadow = PoisonValue::get(getShadowTy(&I));
+    Shadow = IRB.CreateInsertValue(Shadow, ShadowElt0, 0);
+    Shadow = IRB.CreateInsertValue(Shadow, ShadowElt1, 1);
+
+    setShadow(&I, Shadow);
+    setOriginForNaryOp(I);
+  }
+
   void visitIntrinsicInst(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
+    case Intrinsic::uadd_with_overflow:
+    case Intrinsic::sadd_with_overflow:
+    case Intrinsic::usub_with_overflow:
+    case Intrinsic::ssub_with_overflow:
+    case Intrinsic::umul_with_overflow:
+    case Intrinsic::smul_with_overflow:
+      handleArithmeticWithOverflow(I);
+      break;
     case Intrinsic::abs:
       handleAbsIntrinsic(I);
       break;

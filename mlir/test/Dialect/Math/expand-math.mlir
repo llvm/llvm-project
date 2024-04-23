@@ -610,3 +610,51 @@ func.func @math_fpowi_scalar_zero(%0 : f32) -> f32 {
 //  CHECK:         return %[[RET]] : f32
 
 // -----
+
+// CHECK-LABEL:   func.func @math_fpowi_to_powf_tensor
+func.func @math_fpowi_to_powf_tensor(%0 : tensor<8xf32>, %1: tensor<8xi32>) -> tensor<8xf32> {
+  %2 = math.fpowi %0, %1 : tensor<8xf32>, tensor<8xi32>
+  return %2 : tensor<8xf32>
+}
+// CHECK-SAME: (%[[ARG0:.*]]: tensor<8xf32>, %[[ARG1:.*]]: tensor<8xi32>) -> tensor<8xf32> {
+// CHECK:        %[[CSTNEG1:.*]] = arith.constant dense<-1.000000e+00> : tensor<8xf32>
+// CHECK:        %[[CST2:.*]] = arith.constant dense<2.000000e+00> : tensor<8xf32>
+// CHECK:        %[[CST0:.*]] = arith.constant dense<0.000000e+00> : tensor<8xf32>
+// CHECK:        %[[TOFP:.*]] = arith.sitofp %[[ARG1]] : tensor<8xi32> to tensor<8xf32>
+// CHECK:        %[[SQ:.*]] = arith.mulf %[[ARG0]], %[[ARG0]] : tensor<8xf32>
+// CHECK:        %[[DIV:.*]] = arith.divf %[[TOFP]], %[[CST2]] : tensor<8xf32>
+// CHECK:        %[[LG:.*]] = math.log %[[SQ]] : tensor<8xf32>
+// CHECK:        %[[MUL:.*]] = arith.mulf %[[DIV]], %[[LG]] : tensor<8xf32>
+// CHECK:        %[[EXP:.*]] = math.exp %[[MUL]] : tensor<8xf32>
+// CHECK:        %[[MUL1:.*]] = arith.mulf %[[EXP]], %[[CSTNEG1]] : tensor<8xf32>
+// CHECK:        %[[REM:.*]] = arith.remf %[[TOFP]], %[[CST2]] : tensor<8xf32>
+// CHECK:        %[[CMPF:.*]] = arith.cmpf olt, %[[ARG0]], %[[CST0]] : tensor<8xf32>
+// CHECK:        %[[CMPF1:.*]] = arith.cmpf one, %[[REM]], %[[CST0]] : tensor<8xf32>
+// CHECK:        %[[AND:.*]] = arith.andi %[[CMPF1]], %[[CMPF]] : tensor<8xi1>
+// CHECK:        %[[SEL:.*]] = arith.select %[[AND]], %[[MUL1]], %[[EXP]] : tensor<8xi1>, tensor<8xf32>
+// CHECK:      return %[[SEL]] : tensor<8xf32>
+
+// -----
+
+// CHECK-LABEL:   func.func @math_fpowi_to_powf_scalar
+func.func @math_fpowi_to_powf_scalar(%0 : f32, %1: i64) -> f32 {
+  %2 = math.fpowi %0, %1 : f32, i64
+  return %2 : f32
+}
+// CHECK-SAME: (%[[ARG0:.*]]: f32, %[[ARG1:.*]]: i64) -> f32 {
+// CHECK:        %[[CSTNEG1:.*]] = arith.constant -1.000000e+00 : f32
+// CHECK:        %[[CST2:.*]] = arith.constant 2.000000e+00 : f32
+// CHECK:        %[[CST0:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:        %[[TOFP:.*]] = arith.sitofp %[[ARG1]] : i64 to f32
+// CHECK:        %[[SQ:.*]] = arith.mulf %[[ARG0]], %[[ARG0]] : f32
+// CHECK:        %[[DIV:.*]] = arith.divf %[[TOFP]], %[[CST2]] : f32
+// CHECK:        %[[LG:.*]] = math.log %[[SQ]] : f32
+// CHECK:        %[[MUL:.*]] = arith.mulf %[[DIV]], %[[LG]] : f32
+// CHECK:        %[[EXP:.*]] = math.exp %[[MUL]] : f32
+// CHECK:        %[[MUL1:.*]] = arith.mulf %[[EXP]], %[[CSTNEG1]] : f32
+// CHECK:        %[[REM:.*]] = arith.remf %[[TOFP]], %[[CST2]] : f32
+// CHECK:        %[[CMPF:.*]] = arith.cmpf olt, %[[ARG0]], %[[CST0]] : f32
+// CHECK:        %[[CMPF1:.*]] = arith.cmpf one, %[[REM]], %[[CST0]] : f32
+// CHECK:        %[[AND:.*]] = arith.andi %[[CMPF1]], %[[CMPF]] : i1
+// CHECK:        %[[SEL:.*]] = arith.select %[[AND]], %[[MUL1]], %[[EXP]] : f32
+// CHECK:       return %[[SEL]] : f32

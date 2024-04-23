@@ -2,6 +2,7 @@
 ; REQUIRES: host-byteorder-little-endian
 
 ; -global-isel=1 is unsupported.
+; XFAIL: target=loongarch{{.*}}
 ; XFAIL: target=nvptx{{.*}}
 ; XFAIL: target=sparc{{.*}}
 ; XFAIL: target=hexagon-{{.*}}

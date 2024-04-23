@@ -178,8 +178,7 @@ SampleProfileProber::SampleProfileProber(Function &Func,
   DenseSet<BasicBlock *> BlocksAndCallsToIgnore;
   computeBlocksToIgnore(BlocksToIgnore, BlocksAndCallsToIgnore);
 
-  computeProbeIdForBlocks(BlocksToIgnore);
-  computeProbeIdForCallsites(BlocksAndCallsToIgnore);
+  computeProbeId(BlocksToIgnore, BlocksAndCallsToIgnore);
   computeCFGHash(BlocksToIgnore);
 }
 
@@ -300,27 +299,20 @@ void SampleProfileProber::computeCFGHash(
                     << ", Hash = " << FunctionHash << "\n");
 }
 
-void SampleProfileProber::computeProbeIdForBlocks(
-    const DenseSet<BasicBlock *> &BlocksToIgnore) {
-  for (auto &BB : *F) {
-    if (BlocksToIgnore.contains(&BB))
-      continue;
-    BlockProbeIds[&BB] = ++LastProbeId;
-  }
-}
-
-void SampleProfileProber::computeProbeIdForCallsites(
+void SampleProfileProber::computeProbeId(
+    const DenseSet<BasicBlock *> &BlocksToIgnore,
     const DenseSet<BasicBlock *> &BlocksAndCallsToIgnore) {
   LLVMContext &Ctx = F->getContext();
   Module *M = F->getParent();
 
   for (auto &BB : *F) {
+    if (!BlocksToIgnore.contains(&BB))
+      BlockProbeIds[&BB] = ++LastProbeId;
+
     if (BlocksAndCallsToIgnore.contains(&BB))
       continue;
     for (auto &I : BB) {
-      if (!isa<CallBase>(I))
-        continue;
-      if (isa<IntrinsicInst>(&I))
+      if (!isa<CallBase>(I) || isa<IntrinsicInst>(&I))
         continue;
 
       // The current implementation uses the lower 16 bits of the discriminator

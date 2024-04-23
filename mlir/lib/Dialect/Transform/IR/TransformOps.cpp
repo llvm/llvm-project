@@ -396,6 +396,13 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
       static_cast<RewriterBase::Listener *>(rewriter.getListener());
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
 
+  config.maxIterations = getMaxIterations() == static_cast<uint64_t>(-1)
+                             ? GreedyRewriteConfig::kNoLimit
+                             : getMaxIterations();
+  config.maxNumRewrites = getMaxNumRewrites() == static_cast<uint64_t>(-1)
+                              ? GreedyRewriteConfig::kNoLimit
+                              : getMaxNumRewrites();
+
   // Apply patterns and CSE repetitively until a fixpoint is reached. If no CSE
   // was requested, apply the greedy pattern rewrite only once. (The greedy
   // pattern rewrite driver already iterates to a fixpoint internally.)
@@ -1608,7 +1615,7 @@ transform::GetTypeOp::apply(transform::TransformRewriter &rewriter,
     }
     params.push_back(TypeAttr::get(type));
   }
-  results.setParams(getResult().cast<OpResult>(), params);
+  results.setParams(cast<OpResult>(getResult()), params);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -2210,14 +2217,14 @@ transform::NumAssociationsOp::apply(transform::TransformRewriter &rewriter,
             llvm_unreachable("unknown kind of transform dialect type");
             return 0;
           });
-  results.setParams(getNum().cast<OpResult>(),
+  results.setParams(cast<OpResult>(getNum()),
                     rewriter.getI64IntegerAttr(numAssociations));
   return DiagnosedSilenceableFailure::success();
 }
 
 LogicalResult transform::NumAssociationsOp::verify() {
   // Verify that the result type accepts an i64 attribute as payload.
-  auto resultType = getNum().getType().cast<TransformParamTypeInterface>();
+  auto resultType = cast<TransformParamTypeInterface>(getNum().getType());
   return resultType
       .checkPayload(getLoc(), {Builder(getContext()).getI64IntegerAttr(0)})
       .checkAndReport();

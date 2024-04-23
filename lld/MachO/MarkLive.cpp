@@ -110,10 +110,10 @@ void MarkLiveImpl<RecordWhyLive>::addSym(
     if (!config->whyLive.empty() && config->whyLive.match(s->getName()))
       printWhyLive(s, prev);
   if (auto *d = dyn_cast<Defined>(s)) {
-    if (d->isec)
-      enqueue(d->isec, d->value, prev);
-    if (d->unwindEntry)
-      enqueue(d->unwindEntry, 0, prev);
+    if (d->isec())
+      enqueue(d->isec(), d->value, prev);
+    if (d->unwindEntry())
+      enqueue(d->unwindEntry(), 0, prev);
   }
 }
 
@@ -179,7 +179,7 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
           if (s->isLive()) {
             InputSection *referentIsec = nullptr;
             if (auto *d = dyn_cast<Defined>(s))
-              referentIsec = d->isec;
+              referentIsec = d->isec();
             enqueue(isec, 0, makeEntry(referentIsec, nullptr));
           }
         } else {

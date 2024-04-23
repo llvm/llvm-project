@@ -13,6 +13,7 @@
 #include "ABIInfo.h"
 #include "CGCUDARuntime.h"
 #include "CGCXXABI.h"
+#include "CGHLSLRuntime.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenCLRuntime.h"
 #include "CGRecordLayout.h"
@@ -825,29 +826,32 @@ const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
     ASTContext &Ctx, const RecordDecl *RD, StringRef Name, uint64_t &Offset) {
   const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
       getLangOpts().getStrictFlexArraysLevel();
-  unsigned FieldNo = 0;
-  bool IsUnion = RD->isUnion();
+  uint32_t FieldNo = 0;
 
-  for (const Decl *D : RD->decls()) {
-    if (const auto *Field = dyn_cast<FieldDecl>(D);
-        Field && (Name.empty() || Field->getNameAsString() == Name) &&
+  if (RD->isImplicit())
+    return nullptr;
+
+  for (const FieldDecl *FD : RD->fields()) {
+    if ((Name.empty() || FD->getNameAsString() == Name) &&
         Decl::isFlexibleArrayMemberLike(
-            Ctx, Field, Field->getType(), StrictFlexArraysLevel,
+            Ctx, FD, FD->getType(), StrictFlexArraysLevel,
             /*IgnoreTemplateOrMacroSubstitution=*/true)) {
       const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
       Offset += Layout.getFieldOffset(FieldNo);
-      return Field;
+      return FD;
     }
 
-    if (const auto *Record = dyn_cast<RecordDecl>(D))
-      if (const FieldDecl *Field =
-              FindFlexibleArrayMemberField(Ctx, Record, Name, Offset)) {
+    QualType Ty = FD->getType();
+    if (Ty->isRecordType()) {
+      if (const FieldDecl *Field = FindFlexibleArrayMemberField(
+              Ctx, Ty->getAsRecordDecl(), Name, Offset)) {
         const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
         Offset += Layout.getFieldOffset(FieldNo);
         return Field;
       }
+    }
 
-    if (!IsUnion && isa<FieldDecl>(D))
+    if (!RD->isUnion())
       ++FieldNo;
   }
 
@@ -857,14 +861,13 @@ const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
 static unsigned CountCountedByAttrs(const RecordDecl *RD) {
   unsigned Num = 0;
 
-  for (const Decl *D : RD->decls()) {
-    if (const auto *FD = dyn_cast<FieldDecl>(D);
-        FD && FD->getType()->isCountAttributedType()) {
+  for (const FieldDecl *FD : RD->fields()) {
+    if (FD->getType()->isCountAttributedType())
       return ++Num;
-    }
 
-    if (const auto *Rec = dyn_cast<RecordDecl>(D))
-      Num += CountCountedByAttrs(Rec);
+    QualType Ty = FD->getType();
+    if (Ty->isRecordType())
+      Num += CountCountedByAttrs(Ty->getAsRecordDecl());
   }
 
   return Num;
@@ -3434,6 +3437,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     OperandBundleDefT<Value *> OBD("separate_storage", Values);
     Builder.CreateAssumption(ConstantInt::getTrue(getLLVMContext()), {OBD});
     return RValue::get(nullptr);
+  }
+  case Builtin::BI__builtin_allow_runtime_check: {
+    StringRef Kind =
+        cast<StringLiteral>(E->getArg(0)->IgnoreParenCasts())->getString();
+    LLVMContext &Ctx = CGM.getLLVMContext();
+    llvm::Value *Allow = Builder.CreateCall(
+        CGM.getIntrinsic(llvm::Intrinsic::allow_runtime_check),
+        llvm::MetadataAsValue::get(Ctx, llvm::MDString::get(Ctx, Kind)));
+    return RValue::get(Allow);
   }
   case Builtin::BI__arithmetic_fence: {
     // Create the builtin call if FastMath is selected, and the target
@@ -7281,8 +7293,6 @@ static const std::pair<unsigned, unsigned> NEONEquivalentIntrinsicMap[] = {
   { NEON::BI__builtin_neon_vabdq_f16, NEON::BI__builtin_neon_vabdq_v, },
   { NEON::BI__builtin_neon_vabs_f16, NEON::BI__builtin_neon_vabs_v, },
   { NEON::BI__builtin_neon_vabsq_f16, NEON::BI__builtin_neon_vabsq_v, },
-  { NEON::BI__builtin_neon_vbsl_f16, NEON::BI__builtin_neon_vbsl_v, },
-  { NEON::BI__builtin_neon_vbslq_f16, NEON::BI__builtin_neon_vbslq_v, },
   { NEON::BI__builtin_neon_vcage_f16, NEON::BI__builtin_neon_vcage_v, },
   { NEON::BI__builtin_neon_vcageq_f16, NEON::BI__builtin_neon_vcageq_v, },
   { NEON::BI__builtin_neon_vcagt_f16, NEON::BI__builtin_neon_vcagt_v, },
@@ -7301,8 +7311,6 @@ static const std::pair<unsigned, unsigned> NEONEquivalentIntrinsicMap[] = {
   { NEON::BI__builtin_neon_vclezq_f16, NEON::BI__builtin_neon_vclezq_v, },
   { NEON::BI__builtin_neon_vcltz_f16, NEON::BI__builtin_neon_vcltz_v, },
   { NEON::BI__builtin_neon_vcltzq_f16, NEON::BI__builtin_neon_vcltzq_v, },
-  { NEON::BI__builtin_neon_vext_f16, NEON::BI__builtin_neon_vext_v, },
-  { NEON::BI__builtin_neon_vextq_f16, NEON::BI__builtin_neon_vextq_v, },
   { NEON::BI__builtin_neon_vfma_f16, NEON::BI__builtin_neon_vfma_v, },
   { NEON::BI__builtin_neon_vfma_lane_f16, NEON::BI__builtin_neon_vfma_lane_v, },
   { NEON::BI__builtin_neon_vfma_laneq_f16, NEON::BI__builtin_neon_vfma_laneq_v, },
@@ -7405,12 +7413,6 @@ static const std::pair<unsigned, unsigned> NEONEquivalentIntrinsicMap[] = {
   { NEON::BI__builtin_neon_vst4_lane_bf16, NEON::BI__builtin_neon_vst4_lane_v },
   { NEON::BI__builtin_neon_vst4q_bf16, NEON::BI__builtin_neon_vst4q_v },
   { NEON::BI__builtin_neon_vst4q_lane_bf16, NEON::BI__builtin_neon_vst4q_lane_v },
-  { NEON::BI__builtin_neon_vtrn_f16, NEON::BI__builtin_neon_vtrn_v, },
-  { NEON::BI__builtin_neon_vtrnq_f16, NEON::BI__builtin_neon_vtrnq_v, },
-  { NEON::BI__builtin_neon_vuzp_f16, NEON::BI__builtin_neon_vuzp_v, },
-  { NEON::BI__builtin_neon_vuzpq_f16, NEON::BI__builtin_neon_vuzpq_v, },
-  { NEON::BI__builtin_neon_vzip_f16, NEON::BI__builtin_neon_vzip_v, },
-  { NEON::BI__builtin_neon_vzipq_f16, NEON::BI__builtin_neon_vzipq_v, },
   // The mangling rules cause us to have one ID for each type for vldap1(q)_lane
   // and vstl1(q)_lane, but codegen is equivalent for all of them. Choose an
   // arbitrary one to be handled as tha canonical variation.
@@ -17297,6 +17299,16 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     Value *Op2 = EmitScalarExpr(E->getArg(2));
     Value *Op3 = EmitScalarExpr(E->getArg(3));
+    // rldimi is 64-bit instruction, expand the intrinsic before isel to
+    // leverage peephole and avoid legalization efforts.
+    if (BuiltinID == PPC::BI__builtin_ppc_rldimi &&
+        !getTarget().getTriple().isPPC64()) {
+      Function *F = CGM.getIntrinsic(Intrinsic::fshl, Op0->getType());
+      Op2 = Builder.CreateZExt(Op2, Int64Ty);
+      Value *Shift = Builder.CreateCall(F, {Op0, Op0, Op2});
+      return Builder.CreateOr(Builder.CreateAnd(Shift, Op3),
+                              Builder.CreateAnd(Op1, Builder.CreateNot(Op3)));
+    }
     return Builder.CreateCall(
         CGM.getIntrinsic(BuiltinID == PPC::BI__builtin_ppc_rldimi
                              ? Intrinsic::ppc_rldimi
@@ -18182,11 +18194,19 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return nullptr;
 
   switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_elementwise_all: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateIntrinsic(
+        /*ReturnType=*/llvm::Type::getInt1Ty(getLLVMContext()),
+        CGM.getHLSLRuntime().getAllIntrinsic(), ArrayRef<Value *>{Op0}, nullptr,
+        "hlsl.all");
+  }
   case Builtin::BI__builtin_hlsl_elementwise_any: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     return Builder.CreateIntrinsic(
         /*ReturnType=*/llvm::Type::getInt1Ty(getLLVMContext()),
-        Intrinsic::dx_any, ArrayRef<Value *>{Op0}, nullptr, "dx.any");
+        CGM.getHLSLRuntime().getAnyIntrinsic(), ArrayRef<Value *>{Op0}, nullptr,
+        "hlsl.any");
   }
   case Builtin::BI__builtin_hlsl_elementwise_clamp: {
     Value *OpX = EmitScalarExpr(E->getArg(0));
@@ -18247,8 +18267,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("lerp operand must have a float representation");
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/X->getType(), Intrinsic::dx_lerp,
-        ArrayRef<Value *>{X, Y, S}, nullptr, "dx.lerp");
+        /*ReturnType=*/X->getType(), CGM.getHLSLRuntime().getLerpIntrinsic(),
+        ArrayRef<Value *>{X, Y, S}, nullptr, "hlsl.lerp");
   }
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
@@ -18276,28 +18296,43 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *M = EmitScalarExpr(E->getArg(0));
     Value *A = EmitScalarExpr(E->getArg(1));
     Value *B = EmitScalarExpr(E->getArg(2));
-    if (E->getArg(0)->getType()->hasFloatingRepresentation()) {
+    if (E->getArg(0)->getType()->hasFloatingRepresentation())
       return Builder.CreateIntrinsic(
           /*ReturnType*/ M->getType(), Intrinsic::fmuladd,
-          ArrayRef<Value *>{M, A, B}, nullptr, "dx.fmad");
-    }
+          ArrayRef<Value *>{M, A, B}, nullptr, "hlsl.fmad");
+
     if (E->getArg(0)->getType()->hasSignedIntegerRepresentation()) {
-      return Builder.CreateIntrinsic(
-          /*ReturnType*/ M->getType(), Intrinsic::dx_imad,
-          ArrayRef<Value *>{M, A, B}, nullptr, "dx.imad");
+      if (CGM.getTarget().getTriple().getArch() == llvm::Triple::dxil)
+        return Builder.CreateIntrinsic(
+            /*ReturnType*/ M->getType(), Intrinsic::dx_imad,
+            ArrayRef<Value *>{M, A, B}, nullptr, "dx.imad");
+
+      Value *Mul = Builder.CreateNSWMul(M, A);
+      return Builder.CreateNSWAdd(Mul, B);
     }
     assert(E->getArg(0)->getType()->hasUnsignedIntegerRepresentation());
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/M->getType(), Intrinsic::dx_umad,
-        ArrayRef<Value *>{M, A, B}, nullptr, "dx.umad");
+    if (CGM.getTarget().getTriple().getArch() == llvm::Triple::dxil)
+      return Builder.CreateIntrinsic(
+          /*ReturnType=*/M->getType(), Intrinsic::dx_umad,
+          ArrayRef<Value *>{M, A, B}, nullptr, "dx.umad");
+
+    Value *Mul = Builder.CreateNUWMul(M, A);
+    return Builder.CreateNUWAdd(Mul, B);
   }
   case Builtin::BI__builtin_hlsl_elementwise_rcp: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("rcp operand must have a float representation");
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/Op0->getType(), Intrinsic::dx_rcp,
-        ArrayRef<Value *>{Op0}, nullptr, "dx.rcp");
+    llvm::Type *Ty = Op0->getType();
+    llvm::Type *EltTy = Ty->getScalarType();
+    Constant *One =
+        Ty->isVectorTy()
+            ? ConstantVector::getSplat(
+                  ElementCount::getFixed(
+                      dyn_cast<FixedVectorType>(Ty)->getNumElements()),
+                  ConstantFP::get(EltTy, 1.0))
+            : ConstantFP::get(EltTy, 1.0);
+    return Builder.CreateFDiv(One, Op0, "hlsl.rcp");
   }
   case Builtin::BI__builtin_hlsl_elementwise_rsqrt: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

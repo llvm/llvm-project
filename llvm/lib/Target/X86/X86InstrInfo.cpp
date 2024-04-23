@@ -6276,10 +6276,10 @@ static bool hasPartialRegUpdate(unsigned Opcode, const X86Subtarget &Subtarget,
   case X86::RCPSSm:
   case X86::RCPSSr_Int:
   case X86::RCPSSm_Int:
-  case X86::ROUNDSDr:
-  case X86::ROUNDSDm:
-  case X86::ROUNDSSr:
-  case X86::ROUNDSSm:
+  case X86::ROUNDSDri:
+  case X86::ROUNDSDmi:
+  case X86::ROUNDSSri:
+  case X86::ROUNDSSmi:
   case X86::RSQRTSSr:
   case X86::RSQRTSSm:
   case X86::RSQRTSSr_Int:
@@ -6778,14 +6778,14 @@ static bool hasUndefRegUpdate(unsigned Opcode, unsigned OpNum,
   case X86::VRCPSSr_Int:
   case X86::VRCPSSm:
   case X86::VRCPSSm_Int:
-  case X86::VROUNDSDr:
-  case X86::VROUNDSDm:
-  case X86::VROUNDSDr_Int:
-  case X86::VROUNDSDm_Int:
-  case X86::VROUNDSSr:
-  case X86::VROUNDSSm:
-  case X86::VROUNDSSr_Int:
-  case X86::VROUNDSSm_Int:
+  case X86::VROUNDSDri:
+  case X86::VROUNDSDmi:
+  case X86::VROUNDSDri_Int:
+  case X86::VROUNDSDmi_Int:
+  case X86::VROUNDSSri:
+  case X86::VROUNDSSmi:
+  case X86::VROUNDSSri_Int:
+  case X86::VROUNDSSmi_Int:
   case X86::VRSQRTSSr:
   case X86::VRSQRTSSr_Int:
   case X86::VRSQRTSSm:
@@ -7516,8 +7516,8 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VRCPSSr_Int:
     case X86::RSQRTSSr_Int:
     case X86::VRSQRTSSr_Int:
-    case X86::ROUNDSSr_Int:
-    case X86::VROUNDSSr_Int:
+    case X86::ROUNDSSri_Int:
+    case X86::VROUNDSSri_Int:
     case X86::COMISSrr_Int:
     case X86::VCOMISSrr_Int:
     case X86::VCOMISSZrr_Int:
@@ -7685,8 +7685,8 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::VCVTSD2USI64Zrr_Int:
     case X86::VCVTTSD2USIZrr_Int:
     case X86::VCVTTSD2USI64Zrr_Int:
-    case X86::ROUNDSDr_Int:
-    case X86::VROUNDSDr_Int:
+    case X86::ROUNDSDri_Int:
+    case X86::VROUNDSDri_Int:
     case X86::COMISDrr_Int:
     case X86::VCOMISDrr_Int:
     case X86::VCOMISDZrr_Int:
@@ -10578,7 +10578,7 @@ void X86InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
 }
 
 bool X86InstrInfo::getMachineCombinerPatterns(
-    MachineInstr &Root, SmallVectorImpl<MachineCombinerPattern> &Patterns,
+    MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
     bool DoRegPressureReduce) const {
   unsigned Opc = Root.getOpcode();
   switch (Opc) {
@@ -10587,7 +10587,7 @@ bool X86InstrInfo::getMachineCombinerPatterns(
   case X86::VPDPWSSDYrr:
   case X86::VPDPWSSDYrm: {
     if (!Subtarget.hasFastDPWSSD()) {
-      Patterns.push_back(MachineCombinerPattern::DPWSSD);
+      Patterns.push_back(X86MachineCombinerPattern::DPWSSD);
       return true;
     }
     break;
@@ -10599,8 +10599,8 @@ bool X86InstrInfo::getMachineCombinerPatterns(
   case X86::VPDPWSSDZr:
   case X86::VPDPWSSDZm: {
    if (Subtarget.hasBWI() && !Subtarget.hasFastDPWSSD()) {
-      Patterns.push_back(MachineCombinerPattern::DPWSSD);
-      return true;
+     Patterns.push_back(X86MachineCombinerPattern::DPWSSD);
+     return true;
     }
     break;
   }
@@ -10700,7 +10700,7 @@ genAlternativeDpCodeSequence(MachineInstr &Root, const TargetInstrInfo &TII,
 }
 
 void X86InstrInfo::genAlternativeCodeSequence(
-    MachineInstr &Root, MachineCombinerPattern Pattern,
+    MachineInstr &Root, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
     DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
@@ -10710,7 +10710,7 @@ void X86InstrInfo::genAlternativeCodeSequence(
     TargetInstrInfo::genAlternativeCodeSequence(Root, Pattern, InsInstrs,
                                                 DelInstrs, InstrIdxForVirtReg);
     return;
-  case MachineCombinerPattern::DPWSSD:
+  case X86MachineCombinerPattern::DPWSSD:
     genAlternativeDpCodeSequence(Root, *this, InsInstrs, DelInstrs,
                                  InstrIdxForVirtReg);
     return;

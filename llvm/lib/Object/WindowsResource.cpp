@@ -12,6 +12,7 @@
 
 #include "llvm/Object/WindowsResource.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/WindowsMachineFlag.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -978,19 +979,17 @@ void WindowsResourceCOFFWriter::writeFirstSectionRelocations() {
         reinterpret_cast<coff_relocation *>(BufferStart + CurrentOffset);
     Reloc->VirtualAddress = RelocationAddresses[i];
     Reloc->SymbolTableIndex = NextSymbolIndex++;
-    switch (MachineType) {
-    case COFF::IMAGE_FILE_MACHINE_ARMNT:
+    switch (getMachineArchType(MachineType)) {
+    case Triple::thumb:
       Reloc->Type = COFF::IMAGE_REL_ARM_ADDR32NB;
       break;
-    case COFF::IMAGE_FILE_MACHINE_AMD64:
+    case Triple::x86_64:
       Reloc->Type = COFF::IMAGE_REL_AMD64_ADDR32NB;
       break;
-    case COFF::IMAGE_FILE_MACHINE_I386:
+    case Triple::x86:
       Reloc->Type = COFF::IMAGE_REL_I386_DIR32NB;
       break;
-    case COFF::IMAGE_FILE_MACHINE_ARM64:
-    case COFF::IMAGE_FILE_MACHINE_ARM64EC:
-    case COFF::IMAGE_FILE_MACHINE_ARM64X:
+    case Triple::aarch64:
       Reloc->Type = COFF::IMAGE_REL_ARM64_ADDR32NB;
       break;
     default:

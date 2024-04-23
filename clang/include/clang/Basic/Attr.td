@@ -324,13 +324,10 @@ class Spelling<string name, string variety, int version = 1> {
 }
 
 class GNU<string name> : Spelling<name, "GNU">;
-class Declspec<string name> : Spelling<name, "Declspec"> {
-  bit PrintOnLeft = 1;
-}
+class Declspec<string name> : Spelling<name, "Declspec">;
 class Microsoft<string name> : Spelling<name, "Microsoft">;
 class CXX11<string namespace, string name, int version = 1>
     : Spelling<name, "CXX11", version> {
-  bit CanPrintOnLeft = 0;
   string Namespace = namespace;
 }
 class C23<string namespace, string name, int version = 1>
@@ -371,8 +368,8 @@ class Clang<string name, bit allowInC = 1, int version = 1>
   bit AllowInC = allowInC;
 }
 
-// HLSL Semantic spellings
-class HLSLSemantic<string name> : Spelling<name, "HLSLSemantic">;
+// HLSL Annotation spellings
+class HLSLAnnotation<string name> : Spelling<name, "HLSLAnnotation">;
 
 class Accessor<string name, list<Spelling> spellings> {
   string Name = name;
@@ -596,12 +593,6 @@ class AttrSubjectMatcherAggregateRule<AttrSubject subject> {
 def SubjectMatcherForNamed : AttrSubjectMatcherAggregateRule<Named>;
 
 class Attr {
-  // Specifies that when printed, this attribute is meaningful on the
-  // 'left side' of the declaration.
-  bit CanPrintOnLeft = 1;
-  // Specifies that when printed, this attribute is required to be printed on
-  // the 'left side' of the declaration.
-  bit PrintOnLeft = 0;
   // The various ways in which an attribute can be spelled in source
   list<Spelling> Spellings;
   // The things to which an attribute can appertain
@@ -937,7 +928,6 @@ def AVRSignal : InheritableAttr, TargetSpecificAttr<TargetAVR> {
 }
 
 def AsmLabel : InheritableAttr {
-  let CanPrintOnLeft = 0;
   let Spellings = [CustomKeyword<"asm">, CustomKeyword<"__asm__">];
   let Args = [
     // Label specifies the mangled name for the decl.
@@ -1566,7 +1556,6 @@ def AllocSize : InheritableAttr {
 }
 
 def EnableIf : InheritableAttr {
-  let CanPrintOnLeft = 0;
   // Does not have a [[]] spelling because this attribute requires the ability
   // to parse function arguments but the attribute is not written in the type
   // position.
@@ -3203,7 +3192,6 @@ def Unavailable : InheritableAttr {
 }
 
 def DiagnoseIf : InheritableAttr {
-  let CanPrintOnLeft = 0;
   // Does not have a [[]] spelling because this attribute requires the ability
   // to parse function arguments but the attribute is not written in the type
   // position.
@@ -4402,14 +4390,14 @@ def HLSLNumThreads: InheritableAttr {
 }
 
 def HLSLSV_GroupIndex: HLSLAnnotationAttr {
-  let Spellings = [HLSLSemantic<"SV_GroupIndex">];
+  let Spellings = [HLSLAnnotation<"SV_GroupIndex">];
   let Subjects = SubjectList<[ParmVar, GlobalVar]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_GroupIndexDocs];
 }
 
 def HLSLResourceBinding: InheritableAttr {
-  let Spellings = [HLSLSemantic<"register">];
+  let Spellings = [HLSLAnnotation<"register">];
   let Subjects = SubjectList<[HLSLBufferObj, ExternalGlobalVar]>;
   let LangOpts = [HLSL];
   let Args = [StringArgument<"Slot">, StringArgument<"Space", 1>];
@@ -4417,7 +4405,7 @@ def HLSLResourceBinding: InheritableAttr {
 }
 
 def HLSLSV_DispatchThreadID: HLSLAnnotationAttr {
-  let Spellings = [HLSLSemantic<"SV_DispatchThreadID">];
+  let Spellings = [HLSLAnnotation<"SV_DispatchThreadID">];
   let Subjects = SubjectList<[ParmVar, Field]>;
   let LangOpts = [HLSL];
   let Documentation = [HLSLSV_DispatchThreadIDDocs];

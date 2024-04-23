@@ -187,7 +187,7 @@ public:
     LLVM_DEBUG(llvm::dbgs() << "popset: " << *op << '\n');
     auto popFn = [&](auto rop) {
       assert(val && "op must have a result value");
-      auto resNum = val.cast<mlir::OpResult>().getResultNumber();
+      auto resNum = mlir::cast<mlir::OpResult>(val).getResultNumber();
       llvm::SmallVector<mlir::Value> results;
       rop.resultToSourceOps(results, resNum);
       for (auto u : results)
@@ -296,7 +296,7 @@ public:
     visited.insert(val);
 
     // Process a block argument.
-    if (auto ba = val.dyn_cast<mlir::BlockArgument>()) {
+    if (auto ba = mlir::dyn_cast<mlir::BlockArgument>(val)) {
       collectArrayMentionFrom(ba);
       return;
     }
@@ -728,7 +728,7 @@ conservativeCallConflict(llvm::ArrayRef<mlir::Operation *> reaches) {
       if (auto callee =
               call.getCallableForCallee().dyn_cast<mlir::SymbolRefAttr>()) {
         auto module = op->getParentOfType<mlir::ModuleOp>();
-        return isInternalPorcedure(
+        return isInternalProcedure(
             module.lookupSymbol<mlir::func::FuncOp>(callee));
       }
     return false;

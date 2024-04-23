@@ -598,7 +598,7 @@ createMacroKernel(isl::schedule_node Node,
 /// @param MMI Parameters of the matrix multiplication operands.
 /// @return The size of the widest type of the matrix multiplication operands
 ///         in bytes, including alignment padding.
-static uint64_t getMatMulAlignTypeSize(MatMulInfoTy MMI) {
+static uint64_t getMatMulAlignTypeSize(const MatMulInfoTy &MMI) {
   auto *S = MMI.A->getStatement()->getParent();
   auto &DL = S->getFunction().getParent()->getDataLayout();
   auto ElementSizeA = DL.getTypeAllocSize(MMI.A->getElementType());
@@ -613,7 +613,7 @@ static uint64_t getMatMulAlignTypeSize(MatMulInfoTy MMI) {
 /// @param MMI Parameters of the matrix multiplication operands.
 /// @return The size of the widest type of the matrix multiplication operands
 ///         in bits.
-static uint64_t getMatMulTypeSize(MatMulInfoTy MMI) {
+static uint64_t getMatMulTypeSize(const MatMulInfoTy &MMI) {
   auto *S = MMI.A->getStatement()->getParent();
   auto &DL = S->getFunction().getParent()->getDataLayout();
   auto ElementSizeA = DL.getTypeSizeInBits(MMI.A->getElementType());
@@ -635,7 +635,7 @@ static uint64_t getMatMulTypeSize(MatMulInfoTy MMI) {
 /// @return The structure of type MicroKernelParamsTy.
 /// @see MicroKernelParamsTy
 static MicroKernelParamsTy getMicroKernelParams(const TargetTransformInfo *TTI,
-                                                MatMulInfoTy MMI) {
+                                                const MatMulInfoTy &MMI) {
   assert(TTI && "The target transform info should be provided.");
 
   // Nvec - Number of double-precision floating-point numbers that can be hold
@@ -712,7 +712,7 @@ static void getTargetCacheParameters(const llvm::TargetTransformInfo *TTI) {
 static MacroKernelParamsTy
 getMacroKernelParams(const llvm::TargetTransformInfo *TTI,
                      const MicroKernelParamsTy &MicroKernelParams,
-                     MatMulInfoTy MMI) {
+                     const MatMulInfoTy &MMI) {
   getTargetCacheParameters(TTI);
   // According to www.cs.utexas.edu/users/flame/pubs/TOMS-BLIS-Analytical.pdf,
   // it requires information about the first two levels of a cache to determine
