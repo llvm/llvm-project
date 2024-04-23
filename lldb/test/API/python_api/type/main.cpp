@@ -27,6 +27,7 @@ public:
     enum E : unsigned char {} e;
     union U {
     } u;
+    static constexpr long static_constexpr_field = 47;
     Task(int i, Task *n):
         id(i),
         next(n),
