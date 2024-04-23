@@ -1,4 +1,4 @@
-# REQUIRES: x86
+# REQUIRES: x86, system-linux
 # RUN: rm -rf %t && mkdir %t && cd %t
 
 ## Test errors in the header.

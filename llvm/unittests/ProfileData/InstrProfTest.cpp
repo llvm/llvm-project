@@ -471,7 +471,7 @@ TEST_F(InstrProfTest, test_memprof_v0) {
   };
 
   const memprof::MemProfRecord WantRecord(IndexedMR, IdToFrameCallback);
-  ASSERT_FALSE(LastUnmappedFrameId.has_value())
+  ASSERT_EQ(LastUnmappedFrameId, std::nullopt)
       << "could not map frame id: " << *LastUnmappedFrameId;
   EXPECT_THAT(WantRecord, EqualsRecord(Record));
 }
@@ -607,22 +607,20 @@ TEST_F(InstrProfTest, test_memprof_merge) {
   ASSERT_THAT_ERROR(RecordOr.takeError(), Succeeded());
   const memprof::MemProfRecord &Record = RecordOr.get();
 
-  memprof::FrameId LastUnmappedFrameId = 0;
-  bool HasFrameMappingError = false;
+  std::optional<memprof::FrameId> LastUnmappedFrameId;
 
   auto IdToFrameCallback = [&](const memprof::FrameId Id) {
     auto Iter = IdToFrameMap.find(Id);
     if (Iter == IdToFrameMap.end()) {
       LastUnmappedFrameId = Id;
-      HasFrameMappingError = true;
       return memprof::Frame(0, 0, 0, false);
     }
     return Iter->second;
   };
 
   const memprof::MemProfRecord WantRecord(IndexedMR, IdToFrameCallback);
-  ASSERT_FALSE(HasFrameMappingError)
-      << "could not map frame id: " << LastUnmappedFrameId;
+  ASSERT_EQ(LastUnmappedFrameId, std::nullopt)
+      << "could not map frame id: " << *LastUnmappedFrameId;
   EXPECT_THAT(WantRecord, EqualsRecord(Record));
 }
 
