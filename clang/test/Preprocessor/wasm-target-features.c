@@ -181,9 +181,10 @@
 // BLEEDING-EDGE-DAG:#define __wasm_mutable_globals__ 1{{$}}
 // BLEEDING-EDGE-DAG:#define __wasm_tail_call__ 1{{$}}
 // BLEEDING-EDGE-DAG:#define __wasm_multimemory__ 1{{$}}
+// BLEEDING-EDGE-DAG:#define __wasm_multivalue__ 1{{$}}
+// BLEEDING-EDGE-DAG:#define __wasm_reference_types__ 1{{$}}
 // BLEEDING-EDGE-NOT:#define __wasm_exception_handling__ 1{{$}}
 // BLEEDING-EDGE-NOT:#define __wasm_multivalue__ 1{{$}}
-// BLEEDING-EDGE-NOT:#define __wasm_reference_types__ 1{{$}}
 // BLEEDING-EDGE-NOT:#define __wasm_extended_const__ 1{{$}}
 // BLEEDING-EDGE-NOT:#define __wasm_relaxed_simd__ 1{{$}}
 
