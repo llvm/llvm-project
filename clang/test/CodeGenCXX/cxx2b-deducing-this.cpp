@@ -182,3 +182,66 @@ auto dothing(int num)
   fun();
 }
 }
+
+namespace GH87210 {
+template <typename... Ts>
+struct Overloaded : Ts... {
+  using Ts::operator()...;
+};
+
+template <typename... Ts>
+Overloaded(Ts...) -> Overloaded<Ts...>;
+
+// CHECK-LABEL: define dso_local void @_ZN7GH872101fEv()
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[X:%.*]] = alloca i32
+// CHECK-NEXT:    [[Over:%.*]] = alloca %"{{.*}}Overloaded"
+// CHECK:         call noundef ptr @"_ZZN7GH872101fEvENH3$_0clINS_10OverloadedIJS0_EEEEEDaRT_"(ptr {{.*}} [[Over]])
+void f() {
+  int x;
+  Overloaded o {
+    // CHECK: define internal noundef ptr @"_ZZN7GH872101fEvENH3$_0clINS_10OverloadedIJS0_EEEEEDaRT_"(ptr {{.*}} [[Self:%.*]])
+    // CHECK-NEXT:  entry:
+    // CHECK-NEXT:    [[SelfAddr:%.*]] = alloca ptr
+    // CHECK-NEXT:    store ptr [[Self]], ptr [[SelfAddr]]
+    // CHECK-NEXT:    [[SelfPtr:%.*]] = load ptr, ptr [[SelfAddr]]
+    // CHECK-NEXT:    [[XRef:%.*]] = getelementptr inbounds %{{.*}}, ptr [[SelfPtr]], i32 0, i32 0
+    // CHECK-NEXT:    [[X:%.*]] = load ptr, ptr [[XRef]]
+    // CHECK-NEXT:    ret ptr [[X]]
+    [&](this auto& self) {
+      return &x;
+    }
+  };
+  o();
+}
+
+void g() {
+  int x;
+  Overloaded o {
+    [=](this auto& self) {
+      return x;
+    }
+  };
+  o();
+}
+}
+
+namespace GH89541 {
+// Same as above; just check that this doesn't crash.
+int one = 1;
+auto factory(int& x = one) {
+  return [&](this auto self) {
+    x;
+  };
+};
+
+using Base = decltype(factory());
+struct Derived : Base {
+  Derived() : Base(factory()) {}
+};
+
+void f() {
+  Derived d;
+  d();
+}
+}

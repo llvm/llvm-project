@@ -4684,6 +4684,29 @@ LValue CodeGenFunction::EmitLValueForLambdaField(const FieldDecl *Field,
     else
       LambdaLV = MakeAddrLValue(AddrOfExplicitObject,
                                 D->getType().getNonReferenceType());
+
+    // Make sure we have an lvalue to the lambda itself and not a derived class.
+    auto *ThisTy = D->getType().getNonReferenceType()->getAsCXXRecordDecl();
+    auto *LambdaTy = cast<CXXRecordDecl>(Field->getParent());
+    if (ThisTy != LambdaTy) {
+      CXXBasePaths Paths(/*FindAmbiguities=*/false, /*RecordPaths=*/true,
+                         /*DetectVirtual=*/false);
+
+      [[maybe_unused]] bool Derived = ThisTy->isDerivedFrom(LambdaTy, Paths);
+      assert(Derived && "Type not derived from lambda type?");
+
+      const CXXBasePath *Path = &Paths.front();
+      CXXCastPath BasePathArray;
+      for (unsigned I = 0, E = Path->size(); I != E; ++I)
+        BasePathArray.push_back(
+            const_cast<CXXBaseSpecifier *>((*Path)[I].Base));
+
+      Address Base = GetAddressOfBaseClass(
+          LambdaLV.getAddress(*this), ThisTy, BasePathArray.begin(),
+          BasePathArray.end(), /*NullCheckValue=*/false, SourceLocation());
+
+      LambdaLV = MakeAddrLValue(Base, QualType{LambdaTy->getTypeForDecl(), 0});
+    }
   } else {
     QualType LambdaTagType = getContext().getTagDeclType(Field->getParent());
     LambdaLV = MakeNaturalAlignAddrLValue(ThisValue, LambdaTagType);
