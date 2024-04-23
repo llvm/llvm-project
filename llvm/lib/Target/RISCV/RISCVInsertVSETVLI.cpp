@@ -616,7 +616,7 @@ public:
     if (SEWLMULRatioOnly)
       return false;
 
-    if (Used.VLAny && !hasSameAVL(Require))
+    if (Used.VLAny && !(hasSameAVL(Require) && hasSameVLMAX(Require)))
       return false;
 
     if (Used.VLZeroness && !hasEquallyZeroAVL(Require, MRI))
@@ -1538,6 +1538,9 @@ void RISCVInsertVSETVLI::doLocalPostpass(MachineBasicBlock &MBB) {
 
     if (!isVectorConfigInstr(MI)) {
       doUnion(Used, getDemanded(MI, MRI, ST));
+      if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VL) ||
+          MI.modifiesRegister(RISCV::VTYPE))
+        NextMI = nullptr;
       continue;
     }
 

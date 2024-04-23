@@ -13430,10 +13430,11 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     if (ScaleShift >= 1 && ScaleShift < 4) {
       unsigned ShiftAmt = Log2_64((MulAmt & (MulAmt - 1)));
       SDLoc DL(N);
-      SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                                   DAG.getConstant(ShiftAmt, DL, VT));
-      SDValue Shift2 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                                   DAG.getConstant(ScaleShift, DL, VT));
+      SDValue X = DAG.getFreeze(N->getOperand(0));
+      SDValue Shift1 =
+          DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
+      SDValue Shift2 =
+          DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ScaleShift, DL, VT));
       return DAG.getNode(ISD::ADD, DL, VT, Shift1, Shift2);
     }
   }
@@ -13464,13 +13465,13 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     if (ScaleShift >= 1 && ScaleShift < 4) {
       unsigned ShiftAmt = Log2_64(((MulAmt - 1) & (MulAmt - 2)));
       SDLoc DL(N);
-      SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                                   DAG.getConstant(ShiftAmt, DL, VT));
-      SDValue Shift2 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                                   DAG.getConstant(ScaleShift, DL, VT));
-      return DAG.getNode(
-          ISD::ADD, DL, VT, Shift1,
-          DAG.getNode(ISD::ADD, DL, VT, Shift2, N->getOperand(0)));
+      SDValue X = DAG.getFreeze(N->getOperand(0));
+      SDValue Shift1 =
+          DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
+      SDValue Shift2 =
+          DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ScaleShift, DL, VT));
+      return DAG.getNode(ISD::ADD, DL, VT, Shift1,
+                         DAG.getNode(ISD::ADD, DL, VT, Shift2, X));
     }
   }
 
@@ -18951,7 +18952,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
   case CallingConv::RISCV_VectorCall:
     break;
   case CallingConv::GHC:
-    if (Subtarget.isRVE())
+    if (Subtarget.hasStdExtE())
       report_fatal_error("GHC calling convention is not supported on RVE!");
     if (!Subtarget.hasStdExtFOrZfinx() || !Subtarget.hasStdExtDOrZdinx())
       report_fatal_error("GHC calling convention requires the (Zfinx/F) and "
@@ -19189,7 +19190,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   CCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
 
   if (CallConv == CallingConv::GHC) {
-    if (Subtarget.isRVE())
+    if (Subtarget.hasStdExtE())
       report_fatal_error("GHC calling convention is not supported on RVE!");
     ArgCCInfo.AnalyzeCallOperands(Outs, RISCV::CC_RISCV_GHC);
   } else

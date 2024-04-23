@@ -36,7 +36,6 @@ class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
   bool useF32FTZ() const;
   bool allowFMA() const;
   bool allowUnsafeFPMath() const;
-  bool useShortPointers() const;
 
 public:
   static char ID;

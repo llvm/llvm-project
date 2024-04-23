@@ -541,6 +541,10 @@ let hasSideEffects = 1, Defs = [CC] in
 let hasSideEffects = 1, Defs = [CC] in
   def TPI : StoreInherentS<"tpi", 0xB236, null_frag, 0>;
 
+// Test pending external interruption.
+let hasSideEffects = 1, Defs = [CC], Predicates = [FeatureTestPendingExternalInterruption] in
+  def TPEI : UnaryRRE<"tpei", 0xB9A1, null_frag, GR64, GR64>;
+
 // Set address limit.
 let hasSideEffects = 1, Uses = [R1L] in
   def SAL : SideEffectInherentS<"sal", 0xB237, null_frag>;

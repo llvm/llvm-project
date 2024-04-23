@@ -21,8 +21,8 @@ entry:
   %0 = load half, ptr %p0.addr, align 2
   %1 = load half, ptr %p1.addr, align 2
   %2 = load half, ptr %p2.addr, align 2
-  %dx.fmad = call half @llvm.fmuladd.f16(half %0, half %1, half %2)
-  ret half %dx.fmad
+  %hlsl.fmad = call half @llvm.fmuladd.f16(half %0, half %1, half %2)
+  ret half %hlsl.fmad
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
@@ -40,8 +40,8 @@ entry:
   %0 = load float, ptr %p0.addr, align 4
   %1 = load float, ptr %p1.addr, align 4
   %2 = load float, ptr %p2.addr, align 4
-  %dx.fmad = call float @llvm.fmuladd.f32(float %0, float %1, float %2)
-  ret float %dx.fmad
+  %hlsl.fmad = call float @llvm.fmuladd.f32(float %0, float %1, float %2)
+  ret float %hlsl.fmad
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
@@ -59,8 +59,8 @@ entry:
   %0 = load double, ptr %p0.addr, align 8
   %1 = load double, ptr %p1.addr, align 8
   %2 = load double, ptr %p2.addr, align 8
-  %dx.fmad = call double @llvm.fmuladd.f64(double %0, double %1, double %2)
-  ret double %dx.fmad
+  %hlsl.fmad = call double @llvm.fmuladd.f64(double %0, double %1, double %2)
+  ret double %hlsl.fmad
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)

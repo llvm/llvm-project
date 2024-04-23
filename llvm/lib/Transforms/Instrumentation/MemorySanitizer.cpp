@@ -1040,8 +1040,8 @@ void MemorySanitizer::initializeModule(Module &M) {
   OriginTy = IRB.getInt32Ty();
   PtrTy = IRB.getPtrTy();
 
-  ColdCallWeights = MDBuilder(*C).createBranchWeights(1, 1000);
-  OriginStoreWeights = MDBuilder(*C).createBranchWeights(1, 1000);
+  ColdCallWeights = MDBuilder(*C).createUnlikelyBranchWeights();
+  OriginStoreWeights = MDBuilder(*C).createUnlikelyBranchWeights();
 
   if (!CompileKernel) {
     if (TrackOrigins)
@@ -2131,8 +2131,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     OrderingTable[(int)AtomicOrderingCABI::seq_cst] =
         (int)AtomicOrderingCABI::seq_cst;
 
-    return ConstantDataVector::get(IRB.getContext(),
-                                   ArrayRef(OrderingTable, NumOrderings));
+    return ConstantDataVector::get(IRB.getContext(), OrderingTable);
   }
 
   AtomicOrdering addAcquireOrdering(AtomicOrdering a) {
@@ -2166,8 +2165,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     OrderingTable[(int)AtomicOrderingCABI::seq_cst] =
         (int)AtomicOrderingCABI::seq_cst;
 
-    return ConstantDataVector::get(IRB.getContext(),
-                                   ArrayRef(OrderingTable, NumOrderings));
+    return ConstantDataVector::get(IRB.getContext(), OrderingTable);
   }
 
   // ------------------- Visitors.
