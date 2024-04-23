@@ -9636,8 +9636,15 @@ static SDValue combineShiftOfShiftedLogic(SDNode *Shift, SelectionDAG &DAG) {
     if (ShiftAmtVal->getBitWidth() != C1Val.getBitWidth())
       return false;
 
+    // The fold is not valid if the sum of the shift values doesn't fit in the
+    // given shift amount type.
+    bool Overflow = false;
+    APInt NewShiftAmt = C1Val.uadd_ov(*ShiftAmtVal, Overflow);
+    if (Overflow)
+      return false;
+
     // The fold is not valid if the sum of the shift values exceeds bitwidth.
-    if ((*ShiftAmtVal + C1Val).uge(V.getScalarValueSizeInBits()))
+    if (NewShiftAmt.uge(V.getScalarValueSizeInBits()))
       return false;
 
     return true;
