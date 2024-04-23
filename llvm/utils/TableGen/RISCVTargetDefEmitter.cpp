@@ -17,6 +17,102 @@
 
 using namespace llvm;
 
+static StringRef getExtensionName(const Record *R) {
+  StringRef Name = R->getValueAsString("Name");
+  Name.consume_front("experimental-");
+  return Name;
+}
+
+namespace {
+
+struct LessRecordExtensionName {
+  bool operator()(const Record *Rec1, const Record *Rec2) const {
+    return getExtensionName(Rec1) < getExtensionName(Rec2);
+  }
+};
+
+} // end anonymous namespace
+
+static void printExtensionTable(raw_ostream &OS,
+                                const std::vector<Record *> &Extensions,
+                                bool Experimental) {
+  OS << "static const RISCVSupportedExtension Supported";
+  if (Experimental)
+    OS << "Experimental";
+  OS << "Extensions[] = {\n";
+
+  for (Record *R : Extensions) {
+    if (R->getValueAsBit("Experimental") != Experimental)
+      continue;
+
+    OS << "    {\"" << getExtensionName(R) << "\", {"
+       << R->getValueAsInt("MajorVersion") << ", "
+       << R->getValueAsInt("MinorVersion") << "}},\n";
+  }
+
+  OS << "};\n\n";
+}
+
+// Get the extension name from the Record name. This gives the canonical
+// capitalization.
+static StringRef getExtensionNameFromRecordName(const Record *R) {
+  StringRef Name = R->getName();
+  if (!Name.consume_front("FeatureStdExt"))
+    Name.consume_front("FeatureVendor");
+
+  return Name;
+}
+
+static void emitRISCVExtensions(RecordKeeper &Records, raw_ostream &OS) {
+  OS << "#ifdef GET_SUPPORTED_EXTENSIONS\n";
+  OS << "#undef GET_SUPPORTED_EXTENSIONS\n";
+
+  std::vector<Record *> Extensions =
+      Records.getAllDerivedDefinitions("RISCVExtension");
+  llvm::sort(Extensions, LessRecordExtensionName());
+
+  printExtensionTable(OS, Extensions, /*Experimental=*/false);
+  printExtensionTable(OS, Extensions, /*Experimental=*/true);
+
+  OS << "#endif // GET_SUPPORTED_EXTENSIONS\n\n";
+
+  OS << "#ifdef GET_IMPLIED_EXTENSIONS\n";
+  OS << "#undef GET_IMPLIED_EXTENSIONS\n";
+
+  for (Record *Ext : Extensions) {
+    auto ImpliesList = Ext->getValueAsListOfDefs("Implies");
+    if (ImpliesList.empty())
+      continue;
+
+    OS << "static const char *ImpliedExts"
+       << getExtensionNameFromRecordName(Ext) << "[] = {";
+
+    ListSeparator LS(", ");
+    for (auto *ImpliedExt : ImpliesList) {
+      if (!ImpliedExt->isSubClassOf("RISCVExtension"))
+        continue;
+
+      OS << LS << '"' << getExtensionName(ImpliedExt) << '"';
+    }
+
+    OS << "};\n";
+  }
+
+  OS << "\nstatic constexpr ImpliedExtsEntry ImpliedExts[] = {\n";
+  for (Record *Ext : Extensions) {
+    auto ImpliesList = Ext->getValueAsListOfDefs("Implies");
+    if (ImpliesList.empty())
+      continue;
+
+    OS << "    {{\"" << getExtensionName(Ext) << "\"}, {ImpliedExts"
+       << getExtensionNameFromRecordName(Ext) << "}},\n";
+  }
+
+  OS << "};\n\n";
+
+  OS << "#endif // GET_IMPLIED_EXTENSIONS\n\n";
+}
+
 // We can generate march string from target features as what has been described
 // in RISC-V ISA specification (version 20191213) 'Chapter 27. ISA Extension
 // Naming Conventions'.
@@ -54,7 +150,7 @@ static void printMArch(raw_ostream &OS, const Record &Rec) {
     OS << LS << Ext.first << Ext.second.Major << 'p' << Ext.second.Minor;
 }
 
-static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
+static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
   OS << "#ifndef PROC\n"
      << "#define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_UNALIGNED_ACCESS)\n"
      << "#endif\n\n";
@@ -99,6 +195,11 @@ static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   }
 
   OS << "\n#undef TUNE_PROC\n";
+}
+
+static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
+  emitRISCVExtensions(RK, OS);
+  emitRISCVProcs(RK, OS);
 }
 
 static TableGen::Emitter::Opt X("gen-riscv-target-def", EmitRISCVTargetDef,
