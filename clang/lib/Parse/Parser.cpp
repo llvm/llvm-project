@@ -1500,6 +1500,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     return Actions.ActOnFinishFunctionBody(Res, nullptr, false);
   }
 
+  Sema::FPFeaturesStateRAII SaveFPFeatures(Actions);
+
   if (Tok.is(tok::kw_try))
     return ParseFunctionTryBlock(Res, BodyScope);
 

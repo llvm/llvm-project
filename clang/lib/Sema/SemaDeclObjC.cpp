@@ -495,6 +495,10 @@ void Sema::ActOnStartOfObjCMethodDef(Scope *FnBodyScope, Decl *D) {
       }
     }
   }
+
+  // Some function attributes (like OptimizeNoneAttr) need actions before
+  // parsing body started.
+  applyFunctionAttributesBeforeParsingBody(D);
 }
 
 namespace {
