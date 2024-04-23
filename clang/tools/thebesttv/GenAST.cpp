@@ -154,7 +154,10 @@ int generateASTDump(const CompileCommand &cmd) {
 }
 
 std::unique_ptr<ASTUnit> loadFromASTDump(std::string AstDumpPath) {
-    requireTrue(fileExists(AstDumpPath), "AST dump not found: " + AstDumpPath);
+    if (!fileExists(AstDumpPath)) {
+        logger.error("AST dump not found: {}", AstDumpPath);
+        return nullptr;
+    }
 
     auto PCHContainerOps = std::make_shared<PCHContainerOperations>();
     auto Diags = CompilerInstance::createDiagnostics(new DiagnosticOptions());
