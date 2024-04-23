@@ -13,18 +13,43 @@ entry:
 define float @multi_bb_stpidr2_save_required(i32 %a, float %b, float %c) "aarch64_inout_za" {
 ; CHECK-LABEL: multi_bb_stpidr2_save_required:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    mul x8, x8, x8
+; CHECK-NEXT:    sub x8, x9, x8
+; CHECK-NEXT:    mov sp, x8
+; CHECK-NEXT:    sub x9, x29, #16
+; CHECK-NEXT:    str x8, [x9]
+; CHECK-NEXT:    strh wzr, [x9, #10]
+; CHECK-NEXT:    str wzr, [x9, #12]
 ; CHECK-NEXT:    cbz w0, .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %use_b
 ; CHECK-NEXT:    fmov s1, #4.00000000
 ; CHECK-NEXT:    fadd s0, s0, s1
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    b .LBB1_5
 ; CHECK-NEXT:  .LBB1_2: // %use_c
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    fmov s0, s1
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    sturh w8, [x29, #-8]
+; CHECK-NEXT:    msr TPIDR2_EL0, x9
 ; CHECK-NEXT:    bl cosf
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    smstart za
+; CHECK-NEXT:    mrs x8, TPIDR2_EL0
+; CHECK-NEXT:    sub x0, x29, #16
+; CHECK-NEXT:    cbnz x8, .LBB1_4
+; CHECK-NEXT:  // %bb.3: // %use_c
+; CHECK-NEXT:    bl __arm_tpidr2_restore
+; CHECK-NEXT:  .LBB1_4: // %use_c
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:  .LBB1_5: // %exit
+; CHECK-NEXT:    mov sp, x29
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %cmp = icmp ne i32 %a, 0
   br i1 %cmp, label %use_b, label %use_c
