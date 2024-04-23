@@ -1005,11 +1005,11 @@ TEST_F(CoreAPIsStandardTest, RedefineBoundWeakSymbol) {
 
 TEST_F(CoreAPIsStandardTest, DefineMaterializingSymbol) {
   bool ExpectNoMoreMaterialization = false;
-  ES.setDispatchTask([&](std::unique_ptr<Task> T) {
+  DispatchOverride = [&](std::unique_ptr<Task> T) {
     if (ExpectNoMoreMaterialization && isa<MaterializationTask>(*T))
       ADD_FAILURE() << "Unexpected materialization";
     T->run();
-  });
+  };
 
   auto MU = std::make_unique<SimpleMaterializationUnit>(
       SymbolFlagsMap({{Foo, FooSym.getFlags()}}),
@@ -1403,7 +1403,7 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
 
   std::mutex WorkThreadsMutex;
   std::vector<std::thread> WorkThreads;
-  ES.setDispatchTask([&](std::unique_ptr<Task> T) {
+  DispatchOverride = [&](std::unique_ptr<Task> T) {
     std::promise<void> WaitP;
     std::lock_guard<std::mutex> Lock(WorkThreadsMutex);
     WorkThreads.push_back(
@@ -1412,7 +1412,7 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
           T->run();
         }));
     WaitP.set_value();
-  });
+  };
 
   cantFail(JD.define(absoluteSymbols({{Foo, FooSym}})));
 
