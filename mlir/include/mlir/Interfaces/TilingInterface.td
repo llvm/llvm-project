@@ -63,7 +63,7 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           The method returns the operation that is the tiled
           implementation.
         }],
-        /*retType=*/"FailureOr<::mlir::TilingResult>",
+        /*retType=*/"FailureOr<TilingResult>",
         /*methodName=*/"getTiledImplementation",
         /*args=*/(ins
             "OpBuilder &":$b,
@@ -82,34 +82,15 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           by the tiled implementation. Expects the same `offsets` and `sizes` as
           used to obtain the tiled implementation of the operation.
         }],
-        /*retType=*/"::mlir::LogicalResult",
+        /*retType=*/"LogicalResult",
         /*methodName=*/"getResultTilePosition",
         /*args=*/(ins
           "OpBuilder &":$b,
           "unsigned":$resultNumber,
           "ArrayRef<OpFoldResult> ":$offsets,
           "ArrayRef<OpFoldResult> ":$sizes,
-          "SmallVectorImpl<OpFoldResult> &":$resultOffsets,
-          "SmallVectorImpl<OpFoldResult> &":$resultSizes),
-        /*methodBody=*/"",
-        /*defaultImplementation=*/[{
-          return failure();
-        }]
-      >,
-      InterfaceMethod<
-        /*desc=*/[{
-          Method to return the position of iteration domain tile computed by the
-          tiled operation.
-        }],
-        /*retType=*/"::mlir::LogicalResult",
-        /*methodName=*/"getIterationDomainTileFromOperandTile",
-        /*args=*/(ins
-          "OpBuilder &":$b,
-          "unsigned":$operandNumber,
-          "ArrayRef<OpFoldResult> ":$offsets,
-          "ArrayRef<OpFoldResult> ":$sizes,
-          "SmallVectorImpl<OpFoldResult> &":$iterDomainOffsets,
-          "SmallVectorImpl<OpFoldResult> &":$iterDomainSizes),
+          "SmallVector<OpFoldResult> &":$resultOffsets,
+          "SmallVector<OpFoldResult> &":$resultSizes),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return failure();
@@ -138,47 +119,11 @@ def TilingInterface : OpInterface<"TilingInterface"> {
             iteration space).
           - `sizes` provides the size of the tile.
         }],
-        /*retType=*/"FailureOr<::mlir::TilingResult>",
+        /*retType=*/"FailureOr<TilingResult>",
         /*methodName=*/"generateResultTileValue",
         /*args=*/(ins
           "OpBuilder &":$b,
           "unsigned":$resultNumber,
-          "ArrayRef<OpFoldResult>":$offsets,
-          "ArrayRef<OpFoldResult>":$sizes),
-        /*methodBody=*/"",
-        /*defaultImplementation=*/[{
-          return failure();
-        }]
-      >,
-      InterfaceMethod<
-        /*desc=*/[{
-          Method to generate the tiled implementation of an operation from
-          operand tile position.
-
-          Generates the IR that computes the tiled implementation of an
-          operation from operand tile.  The `offsets` and `sizes`
-          describe the tile of the operand required. This is different from
-          `getTiledImplementation` which generates the tiled
-          implementation of the operation given a tile of the
-          iteration space. This method generates a tiled
-          implementation of the operation based on the tile of the
-          operand required. This method enables consumer fusion by using
-          tile and fuse. The method returns failure if the operation
-          can't be tiled to generate the operand tile. In practical terms
-          this implies it cannot be tiled and fused with its producers.
-
-          - `offsets` provides the offset of the tile in the coordinate system
-            of the original iteration space, i.e., if an iteration space
-            dimension had non-zero offset, it must be included in the offset
-            provided here (as opposed to zero-based offset "relative" to the
-            iteration space).
-          - `sizes` provides the size of the tile.
-        }],
-        /*retType=*/"FailureOr<::mlir::TilingResult>",
-        /*methodName=*/"getTiledImplementationFromOperandTile",
-        /*args=*/(ins
-          "OpBuilder &":$b,
-          "unsigned":$operandNumber,
           "ArrayRef<OpFoldResult>":$offsets,
           "ArrayRef<OpFoldResult>":$sizes),
         /*methodBody=*/"",
@@ -197,7 +142,7 @@ def TilingInterface : OpInterface<"TilingInterface"> {
           transformations are done, this method can be used to lower to scalar
           code that can then be lowered to LLVM or SPIR-V dialects.
         }],
-        /*retType=*/"::mlir::LogicalResult",
+        /*retType=*/"LogicalResult",
         /*methodName=*/"generateScalarImplementation",
         /*args=*/(ins
             "OpBuilder &":$b,
