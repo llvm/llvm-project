@@ -342,7 +342,7 @@ SymbolFileCTF::CreateInteger(const CTFInteger &ctf_integer) {
 
   CompilerType compiler_type = m_ast->GetBasicType(basic_type);
 
-  if (basic_type != eBasicTypeVoid) {
+  if (basic_type != eBasicTypeVoid && basic_type != eBasicTypeBool) {
     // Make sure the type we got is an integer type.
     bool compiler_type_is_signed = false;
     if (!compiler_type.IsIntegerType(compiler_type_is_signed))
