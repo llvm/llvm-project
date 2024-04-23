@@ -131,7 +131,7 @@ public:
 protected:
   friend class SBType;
 
-  SBTypeStaticField(lldb_private::CompilerDecl decl);
+  explicit SBTypeStaticField(lldb_private::CompilerDecl decl);
 
   std::unique_ptr<lldb_private::CompilerDecl> m_opaque_up;
 };

@@ -28,12 +28,14 @@ public:
     union U {
     } u;
     static constexpr long static_constexpr_field = 47;
+    static int static_mutable_field;
     Task(int i, Task *n):
         id(i),
         next(n),
         type(TASK_TYPE_1)
     {}
 };
+int Task::static_mutable_field = 42;
 
 template <unsigned Value> struct PointerInfo {
   enum Masks1 { pointer_mask };

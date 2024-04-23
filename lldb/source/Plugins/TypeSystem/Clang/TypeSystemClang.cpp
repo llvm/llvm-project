@@ -9113,17 +9113,17 @@ CompilerType TypeSystemClang::DeclGetFunctionArgumentType(void *opaque_decl,
 
 Scalar TypeSystemClang::DeclGetConstantValue(void *opaque_decl) {
   clang::Decl *decl = static_cast<clang::Decl *>(opaque_decl);
-  if (clang::VarDecl *var_decl = llvm::dyn_cast<clang::VarDecl>(decl)) {
-    clang::Expr *init_expr = var_decl->getInit();
-    if (!init_expr)
-      return Scalar();
-    std::optional<llvm::APSInt> value =
-        init_expr->getIntegerConstantExpr(getASTContext());
-    if (!value)
-      return Scalar();
-    return Scalar(*value);
-  }
-  return Scalar();
+  clang::VarDecl *var_decl = llvm::dyn_cast<clang::VarDecl>(decl);
+  if (!var_decl)
+    return Scalar();
+  clang::Expr *init_expr = var_decl->getInit();
+  if (!init_expr)
+    return Scalar();
+  std::optional<llvm::APSInt> value =
+      init_expr->getIntegerConstantExpr(getASTContext());
+  if (!value)
+    return Scalar();
+  return Scalar(*value);
 }
 
 // CompilerDeclContext functions

@@ -33,7 +33,7 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertTrue(pointer_masks2_type)
         self.DebugSBType(pointer_masks2_type)
 
-    def _find_static_constexpr_field_in_Task_pointer(self, task_pointer):
+    def _find_static_field_in_Task_pointer(self, task_pointer):
         self.assertTrue(task_pointer)
         self.DebugSBType(task_pointer)
 
@@ -51,6 +51,13 @@ class TypeAndTypeListTestCase(TestBase):
         value = static_constexpr_field.GetConstantValue(self.target())
         self.DebugSBValue(value)
         self.assertEqual(value.GetValueAsSigned(), 47)
+
+        static_mutable_field = task_type.GetStaticFieldWithName("static_mutable_field")
+        self.assertTrue(static_mutable_field)
+        self.assertEqual(static_mutable_field.GetName(), "static_mutable_field")
+        self.assertEqual(static_mutable_field.GetType().GetName(), "int")
+
+        self.assertFalse(static_mutable_field.GetConstantValue(self.target()))
 
     @skipIf(compiler="clang", compiler_version=["<", "17.0"])
     def test(self):
@@ -194,10 +201,10 @@ class TypeAndTypeListTestCase(TestBase):
             frame0.EvaluateExpression("pointer").GetType()
         )
 
-        self._find_static_constexpr_field_in_Task_pointer(
+        self._find_static_field_in_Task_pointer(
             frame0.FindVariable("task_head").GetType()
         )
-        self._find_static_constexpr_field_in_Task_pointer(
+        self._find_static_field_in_Task_pointer(
             frame0.EvaluateExpression("task_head").GetType()
         )
 
