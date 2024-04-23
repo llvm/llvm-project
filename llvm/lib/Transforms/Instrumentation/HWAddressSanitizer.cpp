@@ -938,7 +938,7 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
   // representable.
   // In particular, an offset of 4TB (1024 << 32) is representable, and
   // ought to be good enough for anybody.
-  if (TargetTriple.isAArch64() && ClMappingOffset.getNumOccurrences() > 0) {
+  if (TargetTriple.isAArch64() && Mapping.Offset != kDynamicShadowSentinel) {
     uint16_t offset_shifted = Mapping.Offset >> 32;
     useFixedShadowIntrinsic = (uint64_t)offset_shifted << 32 == Mapping.Offset;
   }
