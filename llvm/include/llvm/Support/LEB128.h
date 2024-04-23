@@ -135,7 +135,7 @@ inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
   uint64_t Value = 0;
   unsigned Shift = 0;
   do {
-    if (LLVM_UNLIKELY(p == end)) {
+    if (LLVM_UNLIKELY(p >= end)) {
       if (error)
         *error = "malformed uleb128, extends past end";
       Value = 0;
@@ -170,7 +170,7 @@ inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr,
   unsigned Shift = 0;
   uint8_t Byte;
   do {
-    if (LLVM_UNLIKELY(p == end)) {
+    if (LLVM_UNLIKELY(p >= end)) {
       if (error)
         *error = "malformed sleb128, extends past end";
       if (n)
