@@ -743,49 +743,68 @@ public:
 private:
   CallInst *getReductionIntrinsic(Intrinsic::ID ID, Value *Src);
 
+  // Helper function for creating VP reduce intrinsic call.
+  CallInst *getReductionIntrinsic(Intrinsic::ID ID, Value *Acc, Value *Src,
+                                  Value *Mask, Value *EVL);
+
 public:
   /// Create a sequential vector fadd reduction intrinsic of the source vector.
   /// The first parameter is a scalar accumulator value. An unordered reduction
   /// can be created by adding the reassoc fast-math flag to the resulting
   /// sequential reduction.
   CallInst *CreateFAddReduce(Value *Acc, Value *Src);
+  CallInst *CreateFAddReduce(Value *Acc, Value *Src, Value *EVL,
+                             Value *Mask = nullptr);
 
   /// Create a sequential vector fmul reduction intrinsic of the source vector.
   /// The first parameter is a scalar accumulator value. An unordered reduction
   /// can be created by adding the reassoc fast-math flag to the resulting
   /// sequential reduction.
   CallInst *CreateFMulReduce(Value *Acc, Value *Src);
+  CallInst *CreateFMulReduce(Value *Acc, Value *Src, Value *EVL,
+                             Value *Mask = nullptr);
 
   /// Create a vector int add reduction intrinsic of the source vector.
   CallInst *CreateAddReduce(Value *Src);
+  CallInst *CreateAddReduce(Value *Src, Value *EVL, Value *Mask = nullptr);
 
   /// Create a vector int mul reduction intrinsic of the source vector.
   CallInst *CreateMulReduce(Value *Src);
+  CallInst *CreateMulReduce(Value *Src, Value *EVL, Value *Mask = nullptr);
 
   /// Create a vector int AND reduction intrinsic of the source vector.
   CallInst *CreateAndReduce(Value *Src);
+  CallInst *CreateAndReduce(Value *Src, Value *EVL, Value *Mask = nullptr);
 
   /// Create a vector int OR reduction intrinsic of the source vector.
   CallInst *CreateOrReduce(Value *Src);
+  CallInst *CreateOrReduce(Value *Src, Value *EVL, Value *Mask = nullptr);
 
   /// Create a vector int XOR reduction intrinsic of the source vector.
   CallInst *CreateXorReduce(Value *Src);
+  CallInst *CreateXorReduce(Value *Src, Value *EVL, Value *Mask = nullptr);
 
   /// Create a vector integer max reduction intrinsic of the source
   /// vector.
   CallInst *CreateIntMaxReduce(Value *Src, bool IsSigned = false);
+  CallInst *CreateIntMaxReduce(Value *Src, Value *EVL, bool IsSigned = false,
+                               Value *Mask = nullptr);
 
   /// Create a vector integer min reduction intrinsic of the source
   /// vector.
   CallInst *CreateIntMinReduce(Value *Src, bool IsSigned = false);
+  CallInst *CreateIntMinReduce(Value *Src, Value *EVL, bool IsSigned = false,
+                               Value *Mask = nullptr);
 
   /// Create a vector float max reduction intrinsic of the source
   /// vector.
   CallInst *CreateFPMaxReduce(Value *Src);
+  CallInst *CreateFPMaxReduce(Value *Src, Value *EVL, Value *Mask = nullptr);
 
   /// Create a vector float min reduction intrinsic of the source
   /// vector.
   CallInst *CreateFPMinReduce(Value *Src);
+  CallInst *CreateFPMinReduce(Value *Src, Value *EVL, Value *Mask = nullptr);
 
   /// Create a vector float maximum reduction intrinsic of the source
   /// vector. This variant follows the NaN and signed zero semantic of

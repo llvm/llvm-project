@@ -394,6 +394,9 @@ Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src, unsigned Op,
 /// Fast-math-flags are propagated using the IRBuilder's setting.
 Value *createSimpleTargetReduction(IRBuilderBase &B, Value *Src,
                                    RecurKind RdxKind);
+Value *createSimpleTargetReduction(IRBuilderBase &B, Value *Src,
+                                   RecurKind RdxKind, Value *EVL,
+                                   Value *Mask = nullptr);
 
 /// Create a target reduction of the given vector \p Src for a reduction of the
 /// kind RecurKind::IAnyOf or RecurKind::FAnyOf. The reduction operation is
@@ -414,6 +417,9 @@ Value *createTargetReduction(IRBuilderBase &B, const RecurrenceDescriptor &Desc,
 Value *createOrderedReduction(IRBuilderBase &B,
                               const RecurrenceDescriptor &Desc, Value *Src,
                               Value *Start);
+Value *createOrderedReduction(IRBuilderBase &B,
+                              const RecurrenceDescriptor &Desc, Value *Src,
+                              Value *Start, Value *EVL, Value *Mask = nullptr);
 
 /// Get the intersection (logical and) of all of the potential IR flags
 /// of each scalar operation (VL) that will be converted into a vector (I).
