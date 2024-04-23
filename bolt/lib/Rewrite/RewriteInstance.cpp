@@ -1433,10 +1433,10 @@ void RewriteInstance::registerFragments() {
         continue;
       StringRef ParentName = BaseName.substr(0, ColdSuffixPos);
       const BinaryData *BD = BC->getBinaryDataByName(ParentName);
-      uint64_t NumPossibleLocalParents = NR.getNumDuplicates(ParentName);
+      const uint64_t NumPossibleLocalParents = NR.getCounter(ParentName);
       // The most common case: single local parent fragment.
       if (!BD && NumPossibleLocalParents == 1) {
-        BD = BC->getBinaryDataByName((Twine(ParentName) + "/1").str());
+        BD = BC->getBinaryDataByName(NR.getUniqueName(ParentName, 1));
       } else if (BD && (!NumPossibleLocalParents || Suffix.empty())) {
         // Global parent and either no local candidates (second most common), or
         // the fragment is global as well (uncommon).
@@ -1465,7 +1465,7 @@ void RewriteInstance::registerFragments() {
   if (!BC->hasSymbolsWithFileName()) {
     BC->errs() << "BOLT-ERROR: input file has split functions but does not "
                   "have FILE symbols. If the binary was stripped, preserve "
-                  "FILE symbols with --keep-file-symbols strip option.";
+                  "FILE symbols with --keep-file-symbols strip option";
     exit(1);
   }
 
@@ -1480,21 +1480,35 @@ void RewriteInstance::registerFragments() {
       break;
     }
   }
+  if (FirstGlobal == 0) {
+    BC->errs() << "BOLT-ERROR: malformed SYMTAB sh_info\n";
+    exit(1);
+  }
 
   for (auto &[ParentName, BF] : AmbiguousFragments) {
     const uint64_t Address = BF->getAddress();
 
     // Get fragment's own symbol
     const auto SymIt = FileSymRefs.find(Address);
-    assert(SymIt != FileSymRefs.end());
+    if (SymIt == FileSymRefs.end()) {
+      BC->errs()
+          << "BOLT-ERROR: symbol lookup failed for function at address 0x"
+          << Twine::utohexstr(Address) << '\n';
+      exit(1);
+    }
 
     // Find containing FILE symbol
-    auto FSI =
-        llvm::upper_bound(FileSymbols, SymIt->second.getRawDataRefImpl(),
-                          [](const DataRefImpl &A, const DataRefImpl &B) {
-                            return A.d.b < B.d.b;
-                          });
-    assert(FSI != FileSymbols.begin());
+    SymbolRef Symbol = SymIt->second;
+    DataRefImpl DRI = Symbol.getRawDataRefImpl();
+    auto FSI = llvm::upper_bound(
+        FileSymbols, DRI, [](const DataRefImpl &A, const DataRefImpl &B) {
+          return A.d.b < B.d.b;
+        });
+    if (FSI == FileSymbols.begin()) {
+      BC->errs() << "BOLT-ERROR: owning FILE symbol not found for symbol "
+                 << cantFail(Symbol.getName()) << '\n';
+      exit(1);
+    }
 
     uint32_t StopSymbolNum = FirstGlobal;
     if (FSI != FileSymbols.end())
