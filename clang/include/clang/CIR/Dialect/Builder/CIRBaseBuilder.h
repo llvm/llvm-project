@@ -81,6 +81,11 @@ public:
                                       mlir::cir::UnaryOpKind::Not, value);
   }
 
+  mlir::cir::CmpOp createCompare(mlir::Location loc, mlir::cir::CmpOpKind kind,
+                                 mlir::Value lhs, mlir::Value rhs) {
+    return create<mlir::cir::CmpOp>(loc, getBoolTy(), kind, lhs, rhs);
+  }
+
   mlir::Value createBinop(mlir::Value lhs, mlir::cir::BinOpKind kind,
                           const llvm::APInt &rhs) {
     return create<mlir::cir::BinOp>(

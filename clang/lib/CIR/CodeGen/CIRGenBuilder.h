@@ -594,11 +594,6 @@ public:
     return create<mlir::cir::ContinueOp>(loc);
   }
 
-  mlir::cir::CmpOp createCompare(mlir::Location loc, mlir::cir::CmpOpKind kind,
-                                 mlir::Value lhs, mlir::Value rhs) {
-    return create<mlir::cir::CmpOp>(loc, getBoolTy(), kind, lhs, rhs);
-  }
-
   mlir::cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
                                    mlir::Value src, mlir::Value len) {
     return create<mlir::cir::MemCpyOp>(loc, dst, src, len);

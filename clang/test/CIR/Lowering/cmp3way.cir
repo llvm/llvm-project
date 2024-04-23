@@ -1,0 +1,40 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir  | FileCheck %s -check-prefix=LLVM
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+
+#cmp3way_info = #cir.cmp3way_info<strong, lt = -1, eq = 0, gt = 1>
+
+module {
+  cir.func @test_scmp(%arg0 : !s32i, %arg1 : !s32i) -> !s8i {
+    %0 = cir.cmp3way(%arg0 : !s32i, %arg1, #cmp3way_info) : !s8i
+    cir.return %0 : !s8i
+  }
+
+  //      MLIR: llvm.func @test_scmp(%arg0: i32, %arg1: i32) -> i8
+  // MLIR-NEXT:   %0 = llvm.call_intrinsic "llvm.scmp.i8.i32"(%arg0, %arg1) : (i32, i32) -> i8
+  // MLIR-NEXT:   llvm.return %0 : i8
+  // MLIR-NEXT: }
+
+  //      LLVM: define i8 @test_scmp(i32 %0, i32 %1)
+  // LLVM-NEXT:   %[[#RET:]] = call i8 @llvm.scmp.i8.i32(i32 %0, i32 %1)
+  // LLVM-NEXT:   ret i8 %[[#RET]]
+  // LLVM-NEXT: }
+
+  cir.func @test_ucmp(%arg0 : !u32i, %arg1 : !u32i) -> !s8i {
+    %0 = cir.cmp3way(%arg0 : !u32i, %arg1, #cmp3way_info) : !s8i
+    cir.return %0 : !s8i
+  }
+
+  //      MLIR: llvm.func @test_ucmp(%arg0: i32, %arg1: i32) -> i8
+  // MLIR-NEXT:   %0 = llvm.call_intrinsic "llvm.ucmp.i8.i32"(%arg0, %arg1) : (i32, i32) -> i8
+  // MLIR-NEXT:   llvm.return %0 : i8
+  // MLIR-NEXT: }
+
+  //      LLVM: define i8 @test_ucmp(i32 %0, i32 %1)
+  // LLVM-NEXT:   %[[#RET:]] = call i8 @llvm.ucmp.i8.i32(i32 %0, i32 %1)
+  // LLVM-NEXT:   ret i8 %[[#RET]]
+  // LLVM-NEXT: }
+}

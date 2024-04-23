@@ -4,6 +4,21 @@
 namespace std {
 inline namespace __1 {
 
+#ifdef NON_CANONICAL_CMP_RESULTS
+
+// exposition only
+enum class _EqResult : unsigned char {
+  __equal = 2,
+  __equiv = __equal,
+};
+
+enum class _OrdResult : signed char {
+  __less = 1,
+  __greater = 3
+};
+
+#else
+
 // exposition only
 enum class _EqResult : unsigned char {
   __equal = 0,
@@ -14,6 +29,8 @@ enum class _OrdResult : signed char {
   __less = -1,
   __greater = 1
 };
+
+#endif
 
 enum class _NCmpResult : signed char {
   __unordered = -127

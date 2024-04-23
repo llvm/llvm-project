@@ -1328,6 +1328,18 @@ def CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
   }];
 
   let hasVerifier = 0;
+
+  let extraClassDeclaration = [{
+    /// Determine whether this three-way comparison produces a strong ordering.
+    bool isStrongOrdering() {
+      return getInfo().getOrdering() == mlir::cir::CmpOrdering::Strong;
+    }
+
+    /// Determine whether this three-way comparison compares integral operands.
+    bool isIntegralComparison() {
+      return getLhs().getType().isa<mlir::cir::IntType>();
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
