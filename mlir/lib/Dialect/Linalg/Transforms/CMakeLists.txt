@@ -27,7 +27,6 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   NamedOpConversions.cpp
   Padding.cpp
   Promotion.cpp
-  RuntimeOpVerification.cpp
   Specialize.cpp
   Split.cpp
   SplitReduction.cpp

@@ -20,6 +20,25 @@
 
 using namespace mlir;
 
+/// Generate an error message string for the given op and the specified error.
+static std::string generateErrorMessage(Operation *op, const std::string &msg) {
+  std::string buffer;
+  llvm::raw_string_ostream stream(buffer);
+  OpPrintingFlags flags;
+  // We may generate a lot of error messages and so we need to ensure the
+  // printing is fast.
+  flags.elideLargeElementsAttrs();
+  flags.printGenericOpForm();
+  flags.skipRegions();
+  flags.useLocalScope();
+  stream << "ERROR: Runtime op verification failed\n";
+  op->print(stream, flags);
+  stream << "\n^ " << msg;
+  stream << "\nLocation: ";
+  op->getLoc().print(stream);
+  return stream.str();
+}
+
 namespace mlir {
 namespace memref {
 namespace {
@@ -43,10 +62,8 @@ struct CastOpInterface
           builder.create<arith::ConstantIndexOp>(loc, resultType.getRank());
       Value isSameRank = builder.create<arith::CmpIOp>(
           loc, arith::CmpIPredicate::eq, srcRank, resultRank);
-      builder.create<cf::AssertOp>(
-          loc, isSameRank,
-          RuntimeVerifiableOpInterface::generateErrorMessage(op,
-                                                             "rank mismatch"));
+      builder.create<cf::AssertOp>(loc, isSameRank,
+                                   generateErrorMessage(op, "rank mismatch"));
     }
 
     // Get source offset and strides. We do not have an op to get offsets and
@@ -84,8 +101,8 @@ struct CastOpInterface
           loc, arith::CmpIPredicate::eq, srcDimSz, resultDimSz);
       builder.create<cf::AssertOp>(
           loc, isSameSz,
-          RuntimeVerifiableOpInterface::generateErrorMessage(
-              op, "size mismatch of dim " + std::to_string(it.index())));
+          generateErrorMessage(op, "size mismatch of dim " +
+                                       std::to_string(it.index())));
     }
 
     // Get result offset and strides.
@@ -102,10 +119,8 @@ struct CastOpInterface
           builder.create<arith::ConstantIndexOp>(loc, resultOffset);
       Value isSameOffset = builder.create<arith::CmpIOp>(
           loc, arith::CmpIPredicate::eq, srcOffset, resultOffsetVal);
-      builder.create<cf::AssertOp>(
-          loc, isSameOffset,
-          RuntimeVerifiableOpInterface::generateErrorMessage(
-              op, "offset mismatch"));
+      builder.create<cf::AssertOp>(loc, isSameOffset,
+                                   generateErrorMessage(op, "offset mismatch"));
     }
 
     // Check strides.
@@ -122,8 +137,8 @@ struct CastOpInterface
           loc, arith::CmpIPredicate::eq, srcStride, resultStrideVal);
       builder.create<cf::AssertOp>(
           loc, isSameStride,
-          RuntimeVerifiableOpInterface::generateErrorMessage(
-              op, "stride mismatch of dim " + std::to_string(it.index())));
+          generateErrorMessage(op, "stride mismatch of dim " +
+                                       std::to_string(it.index())));
     }
   }
 };
@@ -163,9 +178,7 @@ struct LoadStoreOpInterface
                 : andOp;
     }
     builder.create<cf::AssertOp>(
-        loc, assertCond,
-        RuntimeVerifiableOpInterface::generateErrorMessage(
-            op, "out-of-bounds access"));
+        loc, assertCond, generateErrorMessage(op, "out-of-bounds access"));
   }
 };
 
@@ -235,7 +248,7 @@ struct ReinterpretCastOpInterface
 
     builder.create<cf::AssertOp>(
         loc, assertCond,
-        RuntimeVerifiableOpInterface::generateErrorMessage(
+        generateErrorMessage(
             op,
             "result of reinterpret_cast is out-of-bounds of the base memref"));
   }
@@ -280,8 +293,8 @@ struct SubViewOpInterface
 
     builder.create<cf::AssertOp>(
         loc, assertCond,
-        RuntimeVerifiableOpInterface::generateErrorMessage(
-            op, "subview is out-of-bounds of the base memref"));
+        generateErrorMessage(op,
+                             "subview is out-of-bounds of the base memref"));
   }
 };
 
@@ -321,9 +334,8 @@ struct ExpandShapeOpInterface
           builder.create<arith::ConstantIndexOp>(loc, 0));
       builder.create<cf::AssertOp>(
           loc, isModZero,
-          RuntimeVerifiableOpInterface::generateErrorMessage(
-              op, "static result dims in reassoc group do not "
-                  "divide src dim evenly"));
+          generateErrorMessage(op, "static result dims in reassoc group do not "
+                                   "divide src dim evenly"));
     }
   }
 };
