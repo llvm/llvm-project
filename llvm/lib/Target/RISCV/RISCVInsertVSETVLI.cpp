@@ -817,7 +817,7 @@ public:
   StringRef getPassName() const override { return RISCV_COALESCE_VSETVLI_NAME; }
 
 private:
-  bool coalesceVSETVLIs(MachineBasicBlock &MF);
+  bool coalesceVSETVLIs(MachineBasicBlock &MBB);
 };
 
 } // end anonymous namespace
