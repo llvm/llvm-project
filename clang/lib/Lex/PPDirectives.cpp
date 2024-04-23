@@ -2015,11 +2015,10 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
       SrcMgr::CharacteristicKind FileCharacter =
           SourceMgr.getFileCharacteristic(FilenameTok.getLocation());
       if (SuggestedModule)
-        Callbacks->InclusionDirective(HashLoc, IncludeTok, Filename, isAngled,
-                                      FilenameRange, OptionalFileEntryRef(),
-                                      /*SearchPath=*/"", /*RelativePath=*/"",
-                                      SuggestedModule,
-                                      /*ModuleImported=*/true, FileCharacter);
+        Callbacks->InclusionDirective(
+            HashLoc, IncludeTok, Filename, isAngled, FilenameRange, FileRef,
+            /*SearchPath=*/"", /*RelativePath=*/"", SuggestedModule,
+            /*ModuleImported=*/true, FileCharacter);
       else
         Callbacks->InclusionDirective(
             HashLoc, IncludeTok, Filename, isAngled, FilenameRange, FileRef,
@@ -2101,7 +2100,14 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
           return;
       }
 
-      InclusionCallback({}, Imported);
+      // PPCallback for IncludeDirective. Using the AST file as the FileEntry in
+      // the callback to indicate this is not a missing header. Note this is not
+      // the same behavior as non-include-tree build where the FileEntry is for
+      // the header file.
+      // FIXME: Need to clarify what `File` means in the callback, and if that
+      // can be the module file entry instead of header file entry.
+      Module *M = Imported;
+      InclusionCallback(M->getASTFile(), Imported);
       makeModuleVisible(Imported, EndLoc);
       if (IncludeTok.getIdentifierInfo()->getPPKeywordID() !=
           tok::pp___include_macros)
