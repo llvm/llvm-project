@@ -9640,6 +9640,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   bool IsAllowedSingleBVNode =
       VectorizableTree.size() > 1 ||
       (VectorizableTree.size() == 1 && VectorizableTree.front()->getOpcode() &&
+       !VectorizableTree.front()->isAltShuffle() &&
        VectorizableTree.front()->getOpcode() != Instruction::PHI &&
        VectorizableTree.front()->getOpcode() != Instruction::GetElementPtr &&
        allSameBlock(VectorizableTree.front()->Scalars));
@@ -11032,7 +11033,10 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
                         isUsedOutsideBlock(V);
                }) ||
         (E->State == TreeEntry::NeedToGather && E->Idx == 0 &&
-         all_of(E->Scalars, IsaPred<ExtractElementInst, UndefValue>)))
+         all_of(E->Scalars, [](Value *V) {
+           return isa<ExtractElementInst, UndefValue>(V) ||
+                  areAllOperandsNonInsts(V);
+         })))
       Res.second = FindLastInst();
     else
       Res.second = FindFirstInst();

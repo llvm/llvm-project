@@ -5,7 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv64 %s -o %t
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYM
 
-# SYM: 0000000000000004  0 NOTYPE LOCAL  DEFAULT [[#]] .L0{{$}}
+# SYM: 0000000000000004  0 NOTYPE LOCAL  DEFAULT [[#]] .L0 {{$}}
 # SYM: 0000000000000000  0 NOTYPE GLOBAL DEFAULT [[#]] foo
 
 ## Make sure we test at an address larger than or equal to an empty name symbol.

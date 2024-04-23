@@ -17,10 +17,10 @@
 # CHECK:      Symbol table '.symtab' contains 15 entries:
 # CHECK-NEXT:    Num:    Value  Size Type    Bind   Vis       Ndx Name
 # CHECK-NEXT:      0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND
-# CHECK-NEXT:      1: 00000000     0 NOTYPE  LOCAL  DEFAULT     2 .L0
-# CHECK:           3: 00000004     0 NOTYPE  LOCAL  DEFAULT     2 .L0
-# CHECK:           9: 0001016e     0 NOTYPE  LOCAL  DEFAULT     2 .L0
-# CHECK:          11: 00010178     0 NOTYPE  LOCAL  DEFAULT     2 .L0
+# CHECK-NEXT:      1: 00000000     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
+# CHECK:           3: 00000004     0 NOTYPE  LOCAL  DEFAULT     2 .L0{{$}}
+# CHECK:           9: 0001016e     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
+# CHECK:          11: 00010178     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
 
 # CHECK-DWARFDUMP: DW_CFA_advance_loc1: 104
 # CHECK-DWARFDUMP-NEXT: DW_CFA_def_cfa_offset: +8
@@ -37,8 +37,8 @@
 test:
         .cfi_startproc
         nop
-## Even if the label shares the name with temporary symbols generated for .eh_frame,
-## the assembler does not conflate it with temporary symbols.
+## This looks similar to fake label names ".L0 ". Even if this is ".L0 ",
+## the assembler will not conflate it with fake labels.
 .L0:
         .zero 100, 0x90
         .cfi_def_cfa_offset 8

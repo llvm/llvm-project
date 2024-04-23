@@ -2351,11 +2351,11 @@ class ReplaceRegAction : public MatchAction {
 public:
   ReplaceRegAction(unsigned OldInsnID, unsigned OldOpIdx, unsigned NewInsnId,
                    unsigned NewOpIdx)
-      : MatchAction(AK_EraseInst), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
+      : MatchAction(AK_ReplaceReg), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
         NewInsnId(NewInsnId), NewOpIdx(NewOpIdx) {}
 
   ReplaceRegAction(unsigned OldInsnID, unsigned OldOpIdx, unsigned TempRegID)
-      : MatchAction(AK_EraseInst), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
+      : MatchAction(AK_ReplaceReg), OldInsnID(OldInsnID), OldOpIdx(OldOpIdx),
         TempRegID(TempRegID) {}
 
   static bool classof(const MatchAction *A) {
