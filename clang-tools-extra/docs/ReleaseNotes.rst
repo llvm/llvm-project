@@ -102,6 +102,8 @@ Improvements to clang-tidy
   similar fashion to what `-header-filter` does for header files.
 - Improved :program:`check_clang_tidy.py` script. Added argument `-export-fixes`
   to aid in clang-tidy and test development.
+- Fixed bug where big values for unsigned check options overflowed into negative values
+  when being printed with ``--dump-config``.
 
 - Fixed ``--verify-config`` option not properly parsing checks when using the 
   literal operator in the ``.clang-tidy`` config.
