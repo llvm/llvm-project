@@ -566,8 +566,7 @@ createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
     }
 
     // Create the private copy from the initial fir.box:
-    mlir::Value loadedBox =
-        builder.loadIfRef(loc, blockArg);
+    mlir::Value loadedBox = builder.loadIfRef(loc, blockArg);
     hlfir::Entity source = hlfir::Entity{loadedBox};
 
     // Allocating on the heap in case the whole reduction is nested inside of a
