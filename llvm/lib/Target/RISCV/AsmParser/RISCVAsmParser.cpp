@@ -117,7 +117,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
 
   ParseStatus parseDirective(AsmToken DirectiveID) override;
 
-  bool parseVTypeToken(StringRef Identifier, VTypeState &State, unsigned &Sew,
+  bool parseVTypeToken(const AsmToken &Tok, VTypeState &State, unsigned &Sew,
                        unsigned &Lmul, bool &Fractional, bool &TailAgnostic,
                        bool &MaskAgnostic);
   bool generateVTypeError(SMLoc ErrorLoc);
@@ -2125,10 +2125,15 @@ ParseStatus RISCVAsmParser::parseJALOffset(OperandVector &Operands) {
   return parseImmediate(Operands);
 }
 
-bool RISCVAsmParser::parseVTypeToken(StringRef Identifier, VTypeState &State,
+bool RISCVAsmParser::parseVTypeToken(const AsmToken &Tok, VTypeState &State,
                                      unsigned &Sew, unsigned &Lmul,
                                      bool &Fractional, bool &TailAgnostic,
                                      bool &MaskAgnostic) {
+  if (Tok.isNot(AsmToken::Identifier))
+    return true;
+
+  StringRef Identifier = Tok.getIdentifier();
+
   switch (State) {
   case VTypeState_SEW:
     if (!Identifier.consume_front("e"))
@@ -2187,24 +2192,14 @@ ParseStatus RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
 
   VTypeState State = VTypeState_SEW;
 
-  if (getLexer().isNot(AsmToken::Identifier))
-    return ParseStatus::NoMatch;
-
-  StringRef Identifier = getTok().getIdentifier();
-
-  if (parseVTypeToken(Identifier, State, Sew, Lmul, Fractional, TailAgnostic,
+  if (parseVTypeToken(getTok(), State, Sew, Lmul, Fractional, TailAgnostic,
                       MaskAgnostic))
     return ParseStatus::NoMatch;
 
   getLexer().Lex();
 
   while (parseOptionalToken(AsmToken::Comma)) {
-    if (getLexer().isNot(AsmToken::Identifier))
-      break;
-
-    Identifier = getTok().getIdentifier();
-
-    if (parseVTypeToken(Identifier, State, Sew, Lmul, Fractional, TailAgnostic,
+    if (parseVTypeToken(getTok(), State, Sew, Lmul, Fractional, TailAgnostic,
                         MaskAgnostic))
       break;
 
