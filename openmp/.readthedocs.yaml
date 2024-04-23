@@ -1,0 +1,18 @@
+# Read the Docs configuration file
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+version: 2
+
+sphinx:
+  configuration: openmp/docs/conf.py
+
+formats: [htmlzip, pdf, epub]
+
+python:
+  install:
+  - requirements: openmp/docs/sphinx/requirements.txt
+
+build:
+  os: ubuntu-22.04
+  tools:
+    python: "3.10"

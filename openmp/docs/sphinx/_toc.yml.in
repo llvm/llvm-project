@@ -1,0 +1,11 @@
+defaults:
+  numbered: False
+root: index
+subtrees:
+- caption: Reference
+  entries:
+    - file: CommandLineArgumentReference
+- caption: About
+  entries:
+    - file: ReleaseNotes
+    - file: SupportAndFAQ
