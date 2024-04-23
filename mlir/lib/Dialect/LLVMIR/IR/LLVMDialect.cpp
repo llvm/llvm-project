@@ -2831,7 +2831,8 @@ LogicalResult SExtOp::verify() { return verifyExtOp<SExtOp>(*this); }
 
 /// Folds a cast op that can be chained.
 template <typename T>
-static Value foldChainableCast(T castOp, typename T::FoldAdaptor adaptor) {
+static OpFoldResult foldChainableCast(T castOp,
+                                      typename T::FoldAdaptor adaptor) {
   // cast(x : T0, T0) -> x
   if (castOp.getArg().getType() == castOp.getType())
     return castOp.getArg();
