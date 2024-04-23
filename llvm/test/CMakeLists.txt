@@ -73,6 +73,7 @@ set(LLVM_TEST_DEPENDS
           llvm-c-test
           llvm-cat
           llvm-cfi-verify
+          llvm-cgdata
           llvm-config
           llvm-cov
           llvm-cvtres
