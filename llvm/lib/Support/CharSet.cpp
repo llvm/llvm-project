@@ -90,7 +90,6 @@ public:
 
   std::error_code convert(StringRef Source, SmallVectorImpl<char> &Result,
                           bool ShouldAutoFlush) const override;
-  std::error_code flush() const override;
 };
 
 std::error_code CharSetConverterTable::convert(StringRef Source,
@@ -103,10 +102,6 @@ std::error_code CharSetConverterTable::convert(StringRef Source,
     return ConverterEBCDIC::convertToEBCDIC(Source, Result);
   }
   llvm_unreachable("Invalid ConvType!");
-  return std::error_code();
-}
-
-std::error_code CharSetConverterTable::flush() const {
   return std::error_code();
 }
 
@@ -137,7 +132,6 @@ public:
 
   std::error_code convert(StringRef Source, SmallVectorImpl<char> &Result,
                           bool ShouldAutoFlush) const override;
-  std::error_code flush() const override;
 };
 
 std::error_code CharSetConverterICU::convert(StringRef Source,
@@ -180,8 +174,6 @@ std::error_code CharSetConverterICU::convert(StringRef Source,
   return std::error_code();
 }
 
-std::error_code CharSetConverterICU::flush() const { return std::error_code(); }
-
 #elif defined(HAVE_ICONV)
 class CharSetConverterIconv : public details::CharSetConverterImplBase {
   iconv_t ConvDesc;
@@ -191,7 +183,6 @@ public:
 
   std::error_code convert(StringRef Source, SmallVectorImpl<char> &Result,
                           bool ShouldAutoFlush) const override;
-  std::error_code flush() const override;
 };
 
 std::error_code CharSetConverterIconv::convert(StringRef Source,
@@ -240,14 +231,6 @@ std::error_code CharSetConverterIconv::convert(StringRef Source,
 
   // Re-adjust size to actual size.
   Result.resize(Capacity - OutputLength);
-  return std::error_code();
-}
-
-std::error_code CharSetConverterIconv::flush() const {
-  size_t Ret = iconv(ConvDesc, nullptr, nullptr, nullptr, nullptr);
-  if (Ret == static_cast<size_t>(-1)) {
-    return std::error_code(errno, std::generic_category());
-  }
   return std::error_code();
 }
 
