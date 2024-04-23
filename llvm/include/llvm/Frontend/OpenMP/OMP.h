@@ -20,6 +20,10 @@
 namespace llvm::omp {
 ArrayRef<Directive> getLeafConstructs(Directive D);
 Directive getCompoundConstruct(ArrayRef<Directive> Parts);
+
+bool isLeafConstruct(Directive D);
+bool isCompositeConstruct(Directive D);
+bool isCombinedConstruct(Directive D);
 } // namespace llvm::omp
 
 #endif // LLVM_FRONTEND_OPENMP_OMP_H
