@@ -10,7 +10,7 @@
 # RUN:         --call-scale=2 --data=%t.fdata --reorder-blocks=ext-tsp
 # RUN: llvm-objdump --syms %t.bolt | FileCheck %s --check-prefix=CHECK-SYMS-WARM
 
-# CHECK-SYMS-WARM: [[#%X,VALUE:0]] l df *ABS* [[#%X,SIZE:0]] bolt-synthetic
+# CHECK-SYMS-WARM: 0000000000000000 l df *ABS* 0000000000000000 bolt_cold.o
 # CHECK-SYMS-WARM: .text.warm
 # CHECK-SYMS-WARM-SAME: chain.warm
 # CHECK-SYMS-WARM: .text.cold
