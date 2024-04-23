@@ -124,6 +124,7 @@ std::pair<Container, Container> genCacheUnfriendlyData(size_t size1, size_t size
 
   switch (pos) {
   case OverlapPosition::None:
+    // we like -Wswitch :)
     break;
 
   case OverlapPosition::Front:
@@ -135,7 +136,7 @@ std::pair<Container, Container> genCacheUnfriendlyData(size_t size1, size_t size
     return std::make_pair(move_into(StridedFwdIt(src.begin(), stride1), StridedFwdIt(src.end(), stride1)),
                           move_into(StridedFwdIt(copy.begin(), stride2), StridedFwdIt(copy.end(), stride2)));
   }
-  abort();
+  std::abort(); // would be std::unreachable() if it could
   return std::pair<Container, Container>();
 }
 
