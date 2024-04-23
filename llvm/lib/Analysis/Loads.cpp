@@ -712,22 +712,25 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
 
 // Returns true if a use is either in an ICmp/PtrToInt or a Phi/Select that only
 // feeds into them.
-static bool isPointerUseReplacable(const Use &U, int MaxLookup = 6) {
-  if (MaxLookup == 0)
-    return false;
+static bool isPointerUseReplacable(const Use &U) {
+  unsigned Limit = 40;
+  SmallVector<const User *> Worklist({U.getUser()});
+  SmallPtrSet<const User *, 8> Visited;
 
-  const User *User = U.getUser();
-  if (isa<ICmpInst>(User))
-    return true;
-  if (isa<PtrToIntInst>(User))
-    return true;
-  if (isa<PHINode, SelectInst>(User) &&
-      all_of(User->uses(), [&](const Use &Use) {
-        return isPointerUseReplacable(Use, MaxLookup - 1);
-      }))
-    return true;
+  while (!Worklist.empty() && --Limit) {
+    auto *User = Worklist.pop_back_val();
+    Visited.insert(User);
+    if (isa<ICmpInst, PtrToIntInst>(User))
+      continue;
+    if (isa<PHINode, SelectInst>(User)) {
+      for (const auto &Use : User->uses())
+        if (!Visited.contains(Use.getUser()))
+          Worklist.push_back(Use.getUser());
+    } else
+      return false;
+  }
 
-  return false;
+  return Limit;
 }
 
 // Returns true if `To` is a null pointer, constant dereferenceable pointer or
