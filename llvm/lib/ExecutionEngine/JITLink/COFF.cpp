@@ -13,8 +13,8 @@
 #include "llvm/ExecutionEngine/JITLink/COFF.h"
 
 #include "llvm/BinaryFormat/COFF.h"
-#include "llvm/ExecutionEngine/JITLink/COFF_x86_64.h"
 #include "llvm/ExecutionEngine/JITLink/COFF_arm64.h"
+#include "llvm/ExecutionEngine/JITLink/COFF_x86_64.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -114,7 +114,7 @@ createLinkGraphFromCOFFObject(MemoryBufferRef ObjectBuffer) {
   case COFF::IMAGE_FILE_MACHINE_AMD64:
     return createLinkGraphFromCOFFObject_x86_64(ObjectBuffer);
   case COFF::IMAGE_FILE_MACHINE_ARM64:
-      return createLinkGraphFromCOFFObject_arm64(ObjectBuffer);
+    return createLinkGraphFromCOFFObject_arm64(ObjectBuffer);
   default:
     return make_error<JITLinkError>(
         "Unsupported target machine architecture in COFF object " +

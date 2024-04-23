@@ -72,7 +72,6 @@ private:
     return Error::success();
   }
 
-#pragma optimize("", off)
   Error addSingleRelocation(const object::RelocationRef &Rel,
                             const object::SectionRef &FixupSect,
                             Block &BlockToFix) {
@@ -158,7 +157,6 @@ private:
 
     return Error::success();
   }
-#pragma optimize("", on)
 
 public:
   COFFLinkGraphBuilder_arm64(const object::COFFObjectFile &Obj, const Triple T,
