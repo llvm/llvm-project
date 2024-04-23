@@ -48,4 +48,8 @@ void test(global uint* out, uint a, uint b, global half2* out_v2f16, global floa
   *out_v32f16 = __builtin_amdgcn_cvt_scalef32_pk32_f16_bf6(src_v6i32, scale); // expected-error{{'__builtin_amdgcn_cvt_scalef32_pk32_f16_bf6' needs target feature fp6bf6-cvt-scale-insts}}
   *out_v32bf16 = __builtin_amdgcn_cvt_scalef32_pk32_bf16_fp6(src_v6i32, scale); // expected-error{{'__builtin_amdgcn_cvt_scalef32_pk32_bf16_fp6' needs target feature fp6bf6-cvt-scale-insts}}
   *out_v32bf16 = __builtin_amdgcn_cvt_scalef32_pk32_bf16_bf6(src_v6i32, scale); // expected-error{{'__builtin_amdgcn_cvt_scalef32_pk32_bf16_bf6' needs target feature fp6bf6-cvt-scale-insts}}
+  *out_v2f16 = __builtin_amdgcn_cvt_scalef32_pk_f16_fp8(a, scale, true); // expected-error{{'__builtin_amdgcn_cvt_scalef32_pk_f16_fp8' needs target feature fp8-cvt-scale-insts}}
+  *out_v2f16 = __builtin_amdgcn_cvt_scalef32_pk_f16_bf8(a, scale, true); // expected-error{{'__builtin_amdgcn_cvt_scalef32_pk_f16_bf8' needs target feature bf8-cvt-scale-insts}}
+  *out_v2bf16 = __builtin_amdgcn_cvt_scalef32_pk_bf16_fp8(a, scale, true); // expected-error{{'__builtin_amdgcn_cvt_scalef32_pk_bf16_fp8' needs target feature fp8-cvt-scale-insts}}
+  *out_v2bf16 = __builtin_amdgcn_cvt_scalef32_pk_bf16_bf8(a, scale, true); // expected-error{{'__builtin_amdgcn_cvt_scalef32_pk_bf16_bf8' needs target feature bf8-cvt-scale-insts}}
 }

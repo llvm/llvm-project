@@ -184,4 +184,9 @@ void test_cvt_scalef32(global half2* out_v2f16, global float* out_f32, uint src,
   *out = __builtin_amdgcn_cvt_scalef32_pk_fp4_f32(*out, src0, src1, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_fp4_f32' must be a constant integer}}
   *out_v2f16 = __builtin_amdgcn_cvt_scalef32_pk_f16_fp4(src, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_f16_fp4' must be a constant integer}}
   *out_v2bf16 = __builtin_amdgcn_cvt_scalef32_pk_bf16_fp4(src, scale, index); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_bf16_fp4' must be a constant integer}}
+  *out_v2f16 = __builtin_amdgcn_cvt_scalef32_pk_f16_fp8(src, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_f16_fp8' must be a constant integer}}
+  *out_v2f16 = __builtin_amdgcn_cvt_scalef32_pk_f16_bf8(src, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_f16_bf8' must be a constant integer}}
+  *out_v2bf16 = __builtin_amdgcn_cvt_scalef32_pk_bf16_fp8(src, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_bf16_fp8' must be a constant integer}}
+  *out_v2bf16 = __builtin_amdgcn_cvt_scalef32_pk_bf16_bf8(src, scale, X); // expected-error{{argument to '__builtin_amdgcn_cvt_scalef32_pk_bf16_bf8' must be a constant integer}}
+
 }

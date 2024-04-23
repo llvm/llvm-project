@@ -959,3 +959,107 @@ void test_cvt_scalef32_pk32_bf16_fpbf6(global bfloat32 *out, uint6 src, float sc
   *out = __builtin_amdgcn_cvt_scalef32_pk32_bf16_fp6(src, scale);
   *out = __builtin_amdgcn_cvt_scalef32_pk32_bf16_bf6(src, scale);
 }
+
+// CHECK-LABEL: @test_cvt_scalef32_pk_f16_fp8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SCALE_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[SRC:%.*]], ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    store float [[SCALE:%.*]], ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x half> @llvm.amdgcn.cvt.scalef32.pk.f16.fp8(i32 [[TMP0]], float [[TMP1]], i1 true)
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x half> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP6:%.*]] = call <2 x half> @llvm.amdgcn.cvt.scalef32.pk.f16.fp8(i32 [[TMP4]], float [[TMP5]], i1 false)
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x half> [[TMP6]], ptr addrspace(1) [[TMP7]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_cvt_scalef32_pk_f16_fp8(global half2* out, unsigned int src, float scale)
+{
+  *out = __builtin_amdgcn_cvt_scalef32_pk_f16_fp8(src, scale, true);
+  *out = __builtin_amdgcn_cvt_scalef32_pk_f16_fp8(src, scale, false);
+}
+
+// CHECK-LABEL: @test_cvt_scalef32_pk_f16_bf8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SCALE_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[SRC:%.*]], ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    store float [[SCALE:%.*]], ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x half> @llvm.amdgcn.cvt.scalef32.pk.f16.bf8(i32 [[TMP0]], float [[TMP1]], i1 true)
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x half> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP6:%.*]] = call <2 x half> @llvm.amdgcn.cvt.scalef32.pk.f16.bf8(i32 [[TMP4]], float [[TMP5]], i1 false)
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x half> [[TMP6]], ptr addrspace(1) [[TMP7]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_cvt_scalef32_pk_f16_bf8(global half2* out, unsigned int src, float scale)
+{
+  *out = __builtin_amdgcn_cvt_scalef32_pk_f16_bf8(src, scale, true);
+  *out = __builtin_amdgcn_cvt_scalef32_pk_f16_bf8(src, scale, false);
+}
+
+// CHECK-LABEL: @test_cvt_scalef32_pk_bf16_fp8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SCALE_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[SRC:%.*]], ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    store float [[SCALE:%.*]], ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x bfloat> @llvm.amdgcn.cvt.scalef32.pk.bf16.fp8(i32 [[TMP0]], float [[TMP1]], i1 true)
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x bfloat> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP6:%.*]] = call <2 x bfloat> @llvm.amdgcn.cvt.scalef32.pk.bf16.fp8(i32 [[TMP4]], float [[TMP5]], i1 false)
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x bfloat> [[TMP6]], ptr addrspace(1) [[TMP7]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_cvt_scalef32_pk_bf16_fp8(global bfloat2* out, unsigned int src, float scale)
+{
+  *out = __builtin_amdgcn_cvt_scalef32_pk_bf16_fp8(src, scale, true);
+  *out = __builtin_amdgcn_cvt_scalef32_pk_bf16_fp8(src, scale, false);
+}
+
+// CHECK-LABEL: @test_cvt_scalef32_pk_bf16_bf8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SCALE_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[SRC:%.*]], ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    store float [[SCALE:%.*]], ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call <2 x bfloat> @llvm.amdgcn.cvt.scalef32.pk.bf16.bf8(i32 [[TMP0]], float [[TMP1]], i1 true)
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x bfloat> [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(5) [[SRC_ADDR]], align 4
+// CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr addrspace(5) [[SCALE_ADDR]], align 4
+// CHECK-NEXT:    [[TMP6:%.*]] = call <2 x bfloat> @llvm.amdgcn.cvt.scalef32.pk.bf16.bf8(i32 [[TMP4]], float [[TMP5]], i1 false)
+// CHECK-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x bfloat> [[TMP6]], ptr addrspace(1) [[TMP7]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_cvt_scalef32_pk_bf16_bf8(global bfloat2* out, unsigned int src, float scale)
+{
+  *out = __builtin_amdgcn_cvt_scalef32_pk_bf16_bf8(src, scale, true);
+  *out = __builtin_amdgcn_cvt_scalef32_pk_bf16_bf8(src, scale, false);
+}
