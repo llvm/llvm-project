@@ -24,7 +24,7 @@ TEST(InPlaceTaskDispatchTest, GenericNamedTask) {
 
 #if LLVM_ENABLE_THREADS
 TEST(DynamicThreadPoolDispatchTest, GenericNamedTask) {
-  auto D = std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt);
+  auto D = std::make_unique<DynamicThreadPoolTaskDispatcher>();
   std::promise<bool> P;
   auto F = P.get_future();
   D->dispatch(makeGenericNamedTask(
