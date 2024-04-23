@@ -180,6 +180,7 @@ tools.extend(
         "llvm-addr2line",
         "llvm-bcanalyzer",
         "llvm-bitcode-strip",
+        "llvm-cgdata",
         "llvm-config",
         "llvm-cov",
         "llvm-ctxprof-util",
