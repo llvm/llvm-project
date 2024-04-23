@@ -30,13 +30,13 @@ vsm4r.vs v8, v16
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      20
-# CHECK-NEXT: Total Cycles:      24
+# CHECK-NEXT: Total Cycles:      47
 # CHECK-NEXT: Total uOps:        20
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.83
-# CHECK-NEXT: IPC:               0.83
-# CHECK-NEXT: Block RThroughput: 24.0
+# CHECK-NEXT: uOps Per Cycle:    0.43
+# CHECK-NEXT: IPC:               0.43
+# CHECK-NEXT: Block RThroughput: 48.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -48,25 +48,25 @@ vsm4r.vs v8, v16
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     0.50                        vsm4k.vi	v4, v8, 8
-# CHECK-NEXT:  1      1     0.50                        vsm4r.vv	v4, v8
-# CHECK-NEXT:  1      1     0.50                        vsm4r.vs	v4, v8
+# CHECK-NEXT:  1      3     1.00                        vsm4k.vi	v4, v8, 8
+# CHECK-NEXT:  1      3     1.00                        vsm4r.vv	v4, v8
+# CHECK-NEXT:  1      3     1.00                        vsm4r.vs	v4, v8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     0.50                        vsm4k.vi	v4, v8, 8
-# CHECK-NEXT:  1      1     0.50                        vsm4r.vv	v4, v8
-# CHECK-NEXT:  1      1     0.50                        vsm4r.vs	v4, v8
+# CHECK-NEXT:  1      3     1.00                        vsm4k.vi	v4, v8, 8
+# CHECK-NEXT:  1      3     1.00                        vsm4r.vv	v4, v8
+# CHECK-NEXT:  1      3     1.00                        vsm4r.vs	v4, v8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                        vsm4k.vi	v4, v8, 8
-# CHECK-NEXT:  1      1     1.00                        vsm4r.vv	v4, v8
-# CHECK-NEXT:  1      1     1.00                        vsm4r.vs	v4, v8
+# CHECK-NEXT:  1      3     2.00                        vsm4k.vi	v4, v8, 8
+# CHECK-NEXT:  1      3     2.00                        vsm4r.vv	v4, v8
+# CHECK-NEXT:  1      3     2.00                        vsm4r.vs	v4, v8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     2.00                        vsm4k.vi	v4, v8, 8
-# CHECK-NEXT:  1      1     2.00                        vsm4r.vv	v4, v8
-# CHECK-NEXT:  1      1     2.00                        vsm4r.vs	v4, v8
+# CHECK-NEXT:  1      3     4.00                        vsm4k.vi	v4, v8, 8
+# CHECK-NEXT:  1      3     4.00                        vsm4r.vv	v4, v8
+# CHECK-NEXT:  1      3     4.00                        vsm4r.vs	v4, v8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     4.00                        vsm4k.vi	v8, v16, 8
-# CHECK-NEXT:  1      1     4.00                        vsm4r.vv	v8, v16
-# CHECK-NEXT:  1      1     4.00                        vsm4r.vs	v8, v16
+# CHECK-NEXT:  1      3     8.00                        vsm4k.vi	v8, v16, 8
+# CHECK-NEXT:  1      3     8.00                        vsm4r.vv	v8, v16
+# CHECK-NEXT:  1      3     8.00                        vsm4r.vs	v8, v16
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SiFiveP600Div
@@ -88,27 +88,27 @@ vsm4r.vs v8, v16
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -      -     5.00    -      -      -      -      -      -     21.00  27.00   -      -      -
+# CHECK-NEXT:  -      -      -      -     5.00    -      -      -      -      -      -     48.00   -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsm4k.vi	v4, v8, 8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vsm4k.vi	v4, v8, 8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vsm4r.vv	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vsm4r.vs	v4, v8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsm4k.vi	v4, v8, 8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsm4r.vv	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vsm4k.vi	v4, v8, 8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vsm4r.vv	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vsm4r.vs	v4, v8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     vsm4k.vi	v4, v8, 8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vsm4k.vi	v4, v8, 8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vsm4r.vv	v4, v8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     vsm4r.vs	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vsm4r.vs	v4, v8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vsm4k.vi	v4, v8, 8
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vsm4r.vv	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vsm4r.vv	v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vsm4r.vs	v4, v8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vsm4k.vi	v8, v16, 8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vsm4k.vi	v8, v16, 8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vsm4r.vv	v8, v16
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vsm4r.vs	v8, v16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vsm4r.vs	v8, v16

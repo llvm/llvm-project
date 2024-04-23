@@ -25,13 +25,13 @@ vsm3c.vi  v8, v16, 8
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      15
-# CHECK-NEXT: Total Cycles:      14
+# CHECK-NEXT: Total Cycles:      31
 # CHECK-NEXT: Total uOps:        15
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    1.07
-# CHECK-NEXT: IPC:               1.07
-# CHECK-NEXT: Block RThroughput: 16.0
+# CHECK-NEXT: uOps Per Cycle:    0.48
+# CHECK-NEXT: IPC:               0.48
+# CHECK-NEXT: Block RThroughput: 32.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -43,20 +43,20 @@ vsm3c.vi  v8, v16, 8
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     0.50                        vsm3me.vv	v4, v8, v12
-# CHECK-NEXT:  1      1     0.50                        vsm3c.vi	v4, v8, 8
+# CHECK-NEXT:  1      3     1.00                        vsm3me.vv	v4, v8, v12
+# CHECK-NEXT:  1      3     1.00                        vsm3c.vi	v4, v8, 8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     0.50                        vsm3me.vv	v4, v8, v12
-# CHECK-NEXT:  1      1     0.50                        vsm3c.vi	v4, v8, 8
+# CHECK-NEXT:  1      3     1.00                        vsm3me.vv	v4, v8, v12
+# CHECK-NEXT:  1      3     1.00                        vsm3c.vi	v4, v8, 8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                        vsm3me.vv	v4, v8, v12
-# CHECK-NEXT:  1      1     1.00                        vsm3c.vi	v4, v8, 8
+# CHECK-NEXT:  1      3     2.00                        vsm3me.vv	v4, v8, v12
+# CHECK-NEXT:  1      3     2.00                        vsm3c.vi	v4, v8, 8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     2.00                        vsm3me.vv	v4, v8, v12
-# CHECK-NEXT:  1      1     2.00                        vsm3c.vi	v4, v8, 8
+# CHECK-NEXT:  1      3     4.00                        vsm3me.vv	v4, v8, v12
+# CHECK-NEXT:  1      3     4.00                        vsm3c.vi	v4, v8, 8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     4.00                        vsm3me.vv	v8, v16, v24
-# CHECK-NEXT:  1      1     4.00                        vsm3c.vi	v8, v16, 8
+# CHECK-NEXT:  1      3     8.00                        vsm3me.vv	v8, v16, v24
+# CHECK-NEXT:  1      3     8.00                        vsm3c.vi	v8, v16, 8
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SiFiveP600Div
@@ -78,22 +78,22 @@ vsm3c.vi  v8, v16, 8
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -      -     5.00    -      -      -      -      -      -     16.00  16.00   -      -      -
+# CHECK-NEXT:  -      -      -      -     5.00    -      -      -      -      -      -     32.00   -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsm3me.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vsm3me.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vsm3c.vi	v4, v8, 8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsm3me.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vsm3me.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vsm3c.vi	v4, v8, 8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     vsm3me.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vsm3me.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vsm3c.vi	v4, v8, 8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vsm3me.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vsm3me.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vsm3c.vi	v4, v8, 8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vsm3me.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vsm3me.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vsm3c.vi	v8, v16, 8
