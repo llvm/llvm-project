@@ -80,17 +80,6 @@ struct StridedFwdIt {
 template <typename Wrapped>
 StridedFwdIt(Wrapped, unsigned) -> StridedFwdIt<Wrapped>;
 
-// functor that moves elements from an iterator range into a new Container instance
-template <typename Container>
-struct MoveInto {
-  template <class It>
-  [[nodiscard]] static Container operator()(It first, It last) {
-    Container out;
-    std::move(first, last, std::inserter(out, out.begin()));
-    return out;
-  }
-};
-
 template <typename T>
 std::vector<T> getVectorOfRandom(size_t N) {
   std::vector<T> v;
@@ -108,7 +97,11 @@ std::vector<T> getVectorOfRandom(size_t N) {
 template <class Container>
 std::pair<Container, Container> genCacheUnfriendlyData(size_t size1, size_t size2, OverlapPosition pos) {
   using ValueType = typename Container::value_type;
-  const MoveInto<Container> move_into;
+  auto move_into = [](auto first, auto last) {
+      Container out;
+      std::move(first, last, std::inserter(out, out.begin()));
+      return out;
+  };
   const auto src_size        = pos == OverlapPosition::None ? size1 + size2 : std::max(size1, size2);
   std::vector<ValueType> src = getVectorOfRandom<ValueType>(src_size);
 
