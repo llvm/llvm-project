@@ -12817,8 +12817,8 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
   SDValue NS = (C0 < C1) ? N0->getOperand(0) : N1->getOperand(0);
   SDValue NL = (C0 > C1) ? N0->getOperand(0) : N1->getOperand(0);
-  SDValue SHADD =
-      DAG.getNode(RISCVISD::SHL_ADD, DL, VT, NL, DAG.getConstant(Diff, DL, VT), NS);
+  SDValue SHADD = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, NL,
+                              DAG.getConstant(Diff, DL, VT), NS);
   return DAG.getNode(ISD::SHL, DL, VT, SHADD, DAG.getConstant(Bits, DL, VT));
 }
 
