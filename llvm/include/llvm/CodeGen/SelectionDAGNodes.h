@@ -452,6 +452,13 @@ public:
   bool hasNoFPExcept() const { return NoFPExcept; }
   bool hasUnpredictable() const { return Unpredictable; }
 
+  bool hasAny() const {
+    return NoUnsignedWrap || NoSignedWrap || Exact || Disjoint || NonNeg ||
+           NoNaNs || NoInfs || NoSignedZeros || AllowReciprocal ||
+           AllowContract || ApproximateFuncs || AllowReassociation ||
+           NoFPExcept || Unpredictable;
+  }
+
   /// Clear any flags in this flag set that aren't also set in Flags. All
   /// flags will be cleared if Flags are undefined.
   void intersectWith(const SDNodeFlags Flags) {
