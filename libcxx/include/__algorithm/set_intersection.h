@@ -44,7 +44,7 @@ struct __set_intersection_result {
 };
 
 template <class _AlgPolicy, class _Compare, class _InIter1, class _Sent1, class _InIter2, class _Sent2, class _OutIter>
-struct _LIBCPP_NODISCARD_EXT __set_intersector {
+struct _LIBCPP_NODISCARD __set_intersector {
   _InIter1& __first1_;
   const _Sent1& __last1_;
   _InIter2& __first2_;
@@ -62,7 +62,7 @@ struct _LIBCPP_NODISCARD_EXT __set_intersector {
         __result_(__result),
         __comp_(__comp) {}
 
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
       __set_intersection_result<_InIter1, _InIter2, _OutIter>
       operator()() {
     while (__first2_ != __last2_) {
@@ -142,7 +142,7 @@ template <class _AlgPolicy,
           class _InForwardIter2,
           class _Sent2,
           class _OutIter>
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     __set_intersection_result<_InForwardIter1, _InForwardIter2, _OutIter>
     __set_intersection(
         _InForwardIter1 __first1,
@@ -166,7 +166,7 @@ template <class _AlgPolicy,
           class _InInputIter2,
           class _Sent2,
           class _OutIter>
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     __set_intersection_result<_InInputIter1, _InInputIter2, _OutIter>
     __set_intersection(
         _InInputIter1 __first1,
@@ -210,7 +210,7 @@ public:
 };
 
 template <class _AlgPolicy, class _Compare, class _InIter1, class _Sent1, class _InIter2, class _Sent2, class _OutIter>
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     __set_intersection_result<_InIter1, _InIter2, _OutIter>
     __set_intersection(
         _InIter1 __first1, _Sent1 __last1, _InIter2 __first2, _Sent2 __last2, _OutIter __result, _Compare&& __comp) {

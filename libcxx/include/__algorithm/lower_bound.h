@@ -28,7 +28,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _Iter, class _Type, class _Proj, class _Comp>
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter __lower_bound_bisecting(
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter __lower_bound_bisecting(
     _Iter __first,
     const _Type& __value,
     typename iterator_traits<_Iter>::difference_type __len,
@@ -58,7 +58,7 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter 
 // one-sided version will yield O(n) operations on both counts, with a \Omega(log(n)) bound on the number of
 // comparisons.
 template <class _AlgPolicy, class _Iter, class _Sent, class _Type, class _Proj, class _Comp>
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter
 __lower_bound_onesided(_Iter __first, _Sent __last, const _Type& __value, _Comp& __comp, _Proj& __proj) {
   // static_assert(std::is_base_of<std::forward_iterator_tag, typename _IterOps<_AlgPolicy>::template
   // __iterator_category<_Iter>>::value,
@@ -88,7 +88,7 @@ __lower_bound_onesided(_Iter __first, _Sent __last, const _Type& __value, _Comp&
 }
 
 template <class _AlgPolicy, class _RandIter, class _Sent, class _Type, class _Proj, class _Comp>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandIter
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandIter
 __lower_bound(_RandIter __first, _Sent __last, const _Type& __value, _Comp& __comp, _Proj& __proj) {
   const auto __dist = _IterOps<_AlgPolicy>::distance(__first, __last);
   return std::__lower_bound_bisecting<_AlgPolicy>(__first, __value, __dist, __comp, __proj);
