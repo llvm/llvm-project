@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/Support/RISCVISAUtils.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
@@ -24,8 +24,8 @@ using namespace llvm;
 // This is almost the same as RISCVFeatures::parseFeatureBits, except that we
 // get feature name from feature records instead of feature bits.
 static void printMArch(raw_ostream &OS, const Record &Rec) {
-  std::map<std::string, RISCVISAInfo::ExtensionVersion,
-           RISCVISAInfo::ExtensionComparator>
+  std::map<std::string, RISCVISAUtils::ExtensionVersion,
+           RISCVISAUtils::ExtensionComparator>
       Extensions;
   unsigned XLen = 0;
 

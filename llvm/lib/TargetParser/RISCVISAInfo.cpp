@@ -1,4 +1,4 @@
-//===-- RISCVISAInfo.cpp - RISC-V Arch String Parser ------------*- C++ -*-===//
+//===-- RISCVISAInfo.cpp - RISC-V Arch String Parser ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -29,7 +29,7 @@ namespace {
 struct RISCVSupportedExtension {
   const char *Name;
   /// Supported version.
-  RISCVISAInfo::ExtensionVersion Version;
+  RISCVISAUtils::ExtensionVersion Version;
 
   bool operator<(const RISCVSupportedExtension &RHS) const {
     return StringRef(Name) < StringRef(RHS.Name);
@@ -42,8 +42,6 @@ struct RISCVProfile {
 };
 
 } // end anonymous namespace
-
-static constexpr StringLiteral AllStdExts = "mafdqlcbkjtpvnh";
 
 static const char *RISCVGImplications[] = {
   "i", "m", "a", "f", "d", "zicsr", "zifencei"
@@ -370,7 +368,7 @@ struct LessExtName {
 };
 } // namespace
 
-static std::optional<RISCVISAInfo::ExtensionVersion>
+static std::optional<RISCVISAUtils::ExtensionVersion>
 findDefaultVersion(StringRef ExtName) {
   // Find default version of an extension.
   // TODO: We might set default version based on profile or ISA spec.
@@ -387,7 +385,7 @@ findDefaultVersion(StringRef ExtName) {
 }
 
 void RISCVISAInfo::addExtension(StringRef ExtName,
-                                RISCVISAInfo::ExtensionVersion Version) {
+                                RISCVISAUtils::ExtensionVersion Version) {
   Exts[ExtName.str()] = Version;
 }
 
@@ -411,7 +409,7 @@ static StringRef getExtensionType(StringRef Ext) {
   return StringRef();
 }
 
-static std::optional<RISCVISAInfo::ExtensionVersion>
+static std::optional<RISCVISAUtils::ExtensionVersion>
 isExperimentalExtension(StringRef Ext) {
   auto I =
       llvm::lower_bound(SupportedExperimentalExtensions, Ext, LessExtName());
@@ -466,78 +464,6 @@ bool RISCVISAInfo::hasExtension(StringRef Ext) const {
     return false;
 
   return Exts.count(Ext.str()) != 0;
-}
-
-// We rank extensions in the following order:
-// -Single letter extensions in canonical order.
-// -Unknown single letter extensions in alphabetical order.
-// -Multi-letter extensions starting with 'z' sorted by canonical order of
-//  the second letter then sorted alphabetically.
-// -Multi-letter extensions starting with 's' in alphabetical order.
-// -(TODO) Multi-letter extensions starting with 'zxm' in alphabetical order.
-// -X extensions in alphabetical order.
-// These flags are used to indicate the category. The first 6 bits store the
-// single letter extension rank for single letter and multi-letter extensions
-// starting with 'z'.
-enum RankFlags {
-  RF_Z_EXTENSION = 1 << 6,
-  RF_S_EXTENSION = 1 << 7,
-  RF_X_EXTENSION = 1 << 8,
-};
-
-// Get the rank for single-letter extension, lower value meaning higher
-// priority.
-static unsigned singleLetterExtensionRank(char Ext) {
-  assert(Ext >= 'a' && Ext <= 'z');
-  switch (Ext) {
-  case 'i':
-    return 0;
-  case 'e':
-    return 1;
-  }
-
-  size_t Pos = AllStdExts.find(Ext);
-  if (Pos != StringRef::npos)
-    return Pos + 2; // Skip 'e' and 'i' from above.
-
-  // If we got an unknown extension letter, then give it an alphabetical
-  // order, but after all known standard extensions.
-  return 2 + AllStdExts.size() + (Ext - 'a');
-}
-
-// Get the rank for multi-letter extension, lower value meaning higher
-// priority/order in canonical order.
-static unsigned getExtensionRank(const std::string &ExtName) {
-  assert(ExtName.size() >= 1);
-  switch (ExtName[0]) {
-  case 's':
-    return RF_S_EXTENSION;
-  case 'z':
-    assert(ExtName.size() >= 2);
-    // `z` extension must be sorted by canonical order of second letter.
-    // e.g. zmx has higher rank than zax.
-    return RF_Z_EXTENSION | singleLetterExtensionRank(ExtName[1]);
-  case 'x':
-    return RF_X_EXTENSION;
-  default:
-    assert(ExtName.size() == 1);
-    return singleLetterExtensionRank(ExtName[0]);
-  }
-}
-
-// Compare function for extension.
-// Only compare the extension name, ignore version comparison.
-bool RISCVISAInfo::compareExtension(const std::string &LHS,
-                                    const std::string &RHS) {
-  unsigned LHSRank = getExtensionRank(LHS);
-  unsigned RHSRank = getExtensionRank(RHS);
-
-  // If the ranks differ, pick the lower rank.
-  if (LHSRank != RHSRank)
-    return LHSRank < RHSRank;
-
-  // If the rank is same, it must be sorted by lexicographic order.
-  return LHS < RHS;
 }
 
 std::vector<std::string> RISCVISAInfo::toFeatures(bool AddAllExtensions,
@@ -808,7 +734,7 @@ static Error splitExtsByUnderscore(StringRef Exts,
 
 static Error processMultiLetterExtension(
     StringRef RawExt,
-    MapVector<std::string, RISCVISAInfo::ExtensionVersion,
+    MapVector<std::string, RISCVISAUtils::ExtensionVersion,
               std::map<std::string, unsigned>> &SeenExtMap,
     bool IgnoreUnknown, bool EnableExperimentalExtension,
     bool ExperimentalExtensionVersionCheck) {
@@ -854,7 +780,7 @@ static Error processMultiLetterExtension(
 
 static Error processSingleLetterExtension(
     StringRef &RawExt,
-    MapVector<std::string, RISCVISAInfo::ExtensionVersion,
+    MapVector<std::string, RISCVISAUtils::ExtensionVersion,
               std::map<std::string, unsigned>> &SeenExtMap,
     bool IgnoreUnknown, bool EnableExperimentalExtension,
     bool ExperimentalExtensionVersionCheck) {
@@ -930,7 +856,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
 
   unsigned XLen = HasRV64 ? 64 : 32;
   std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
-  MapVector<std::string, RISCVISAInfo::ExtensionVersion,
+  MapVector<std::string, RISCVISAUtils::ExtensionVersion,
             std::map<std::string, unsigned>>
       SeenExtMap;
 
@@ -1007,7 +933,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   for (auto &Ext : SplitExts) {
     StringRef CurrExt = Ext;
     while (!CurrExt.empty()) {
-      if (AllStdExts.contains(CurrExt.front())) {
+      if (RISCVISAUtils::AllStdExts.contains(CurrExt.front())) {
         if (auto E = processSingleLetterExtension(
                 CurrExt, SeenExtMap, IgnoreUnknown, EnableExperimentalExtension,
                 ExperimentalExtensionVersionCheck))
@@ -1041,7 +967,7 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   // Check all Extensions are supported.
   for (auto &SeenExtAndVers : SeenExtMap) {
     const std::string &ExtName = SeenExtAndVers.first;
-    RISCVISAInfo::ExtensionVersion ExtVers = SeenExtAndVers.second;
+    RISCVISAUtils::ExtensionVersion ExtVers = SeenExtAndVers.second;
 
     if (!RISCVISAInfo::isSupportedExtension(ExtName))
       return getStringErrorForInvalidExt(ExtName);
