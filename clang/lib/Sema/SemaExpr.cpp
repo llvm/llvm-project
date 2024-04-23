@@ -14644,6 +14644,17 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
             return QualType();
           }
 
+          // C++11 [expr.unary.op] p4:
+          // A pointer to member is only formed when an explicit & is used and
+          // its operand is a qualified-id not enclosed in parentheses.
+          if (isa<ParenExpr>(OrigOp.get())) {
+            // `op->getEndLoc()` is the last part of the qualified-id.
+            // For example, "baz" in "foo::bar::baz".
+            Diag(op->getEndLoc(), diag::err_invalid_non_static_member_use)
+                << dcl->getDeclName() << op->getSourceRange();
+            return QualType();
+          }
+
           while (cast<RecordDecl>(Ctx)->isAnonymousStructOrUnion())
             Ctx = Ctx->getParent();
 

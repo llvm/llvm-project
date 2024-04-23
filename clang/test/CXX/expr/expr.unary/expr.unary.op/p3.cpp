@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only %s -verify 
-// expected-no-diagnostics
 
 namespace rdar10544564 {
   // Check that we don't attempt to use an overloaded operator& when
@@ -26,4 +25,21 @@ namespace rdar10544564 {
   X Y::*data_mem_ptr = &Y::member;
   X (Y::*func_mem_ptr1)() = &Y::memfunc1;
   X (Y::*func_mem_ptr2)() = &Y::memfunc2;
+}
+
+namespace test2 {
+  struct A {
+    int val;
+    void func() {}
+  };
+
+  void test() {
+    decltype(&(A::val)) ptr1; // expected-error {{invalid use of non-static data member 'val'}}
+    int A::* ptr2 = &(A::val); // expected-error {{invalid use of non-static data member 'val'}}
+
+    // FIXME: Error messages in these cases are less than clear, we can do
+    // better.
+    int size = sizeof(&(A::func)); // expected-error {{call to non-static member function without an object argument}}
+    void (A::* ptr3)() = &(A::func); // expected-error {{call to non-static member function without an object argument}}
+  }
 }
