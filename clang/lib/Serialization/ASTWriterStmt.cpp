@@ -2083,7 +2083,6 @@ void ASTStmtWriter::VisitUnresolvedMemberExpr(UnresolvedMemberExpr *E) {
 void ASTStmtWriter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
   VisitOverloadExpr(E);
   CurrentPackingBits.addBit(E->requiresADL());
-  CurrentPackingBits.addBit(E->isOverloaded());
   Record.AddDeclRef(E->getNamingClass());
   Code = serialization::EXPR_CXX_UNRESOLVED_LOOKUP;
 }
