@@ -817,7 +817,7 @@ public:
   StringRef getPassName() const override { return RISCV_COALESCE_VSETVLI_NAME; }
 
 private:
-  bool runOnBasicBlock(MachineBasicBlock &MF);
+  bool coalesceVSETVLIs(MachineBasicBlock &MF);
 };
 
 } // end anonymous namespace
@@ -1568,7 +1568,7 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
   return areCompatibleVTYPEs(PriorVType, VType, Used);
 }
 
-bool RISCVCoalesceVSETVLI::runOnBasicBlock(MachineBasicBlock &MBB) {
+bool RISCVCoalesceVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) {
   MachineInstr *NextMI = nullptr;
   // We can have arbitrary code in successors, so VL and VTYPE
   // must be considered demanded.
@@ -1767,7 +1767,7 @@ bool RISCVCoalesceVSETVLI::runOnMachineFunction(MachineFunction &MF) {
 
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF)
-    Changed |= runOnBasicBlock(MBB);
+    Changed |= coalesceVSETVLIs(MBB);
 
   return Changed;
 }
