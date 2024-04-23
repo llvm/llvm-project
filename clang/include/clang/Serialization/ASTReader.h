@@ -1938,7 +1938,7 @@ public:
   Decl *GetExistingDecl(serialization::DeclID ID);
 
   /// Reads a declaration with the given local ID in the given module.
-  Decl *GetLocalDecl(ModuleFile &F, serialization::DeclID LocalID) {
+  Decl *GetLocalDecl(ModuleFile &F, serialization::LocalDeclID LocalID) {
     return GetDecl(getGlobalDeclID(F, LocalID));
   }
 
@@ -1946,7 +1946,7 @@ public:
   ///
   /// \returns The requested declaration, casted to the given return type.
   template <typename T>
-  T *GetLocalDeclAs(ModuleFile &F, serialization::DeclID LocalID) {
+  T *GetLocalDeclAs(ModuleFile &F, serialization::LocalDeclID LocalID) {
     return cast_or_null<T>(GetLocalDecl(F, LocalID));
   }
 
