@@ -58,20 +58,10 @@ define <4 x double> @broadcast_load_v2f64_v4f64(ptr %src) {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <2 x double> %load, <2 x double> poison, <4 x i32> zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x double> %bcst
 ;
-; AVX1-LABEL: 'broadcast_load_v2f64_v4f64'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <2 x double>, ptr %src, align 16
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bcst = shufflevector <2 x double> %load, <2 x double> poison, <4 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x double> %bcst
-;
-; AVX2-LABEL: 'broadcast_load_v2f64_v4f64'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <2 x double>, ptr %src, align 16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <2 x double> %load, <2 x double> poison, <4 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x double> %bcst
-;
-; AVX512-LABEL: 'broadcast_load_v2f64_v4f64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <2 x double>, ptr %src, align 16
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <2 x double> %load, <2 x double> poison, <4 x i32> zeroinitializer
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x double> %bcst
+; AVX-LABEL: 'broadcast_load_v2f64_v4f64'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <2 x double>, ptr %src, align 16
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <2 x double> %load, <2 x double> poison, <4 x i32> zeroinitializer
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x double> %bcst
 ;
   %load = load <2 x double>, ptr %src
   %bcst = shufflevector <2 x double> %load, <2 x double> poison, <4 x i32> zeroinitializer
@@ -94,20 +84,10 @@ define <8 x double> @broadcast_load_v2f64_v8f64(ptr %src) {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <2 x double> %load, <2 x double> poison, <8 x i32> zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x double> %bcst
 ;
-; AVX1-LABEL: 'broadcast_load_v2f64_v8f64'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <2 x double>, ptr %src, align 16
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bcst = shufflevector <2 x double> %load, <2 x double> poison, <8 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x double> %bcst
-;
-; AVX2-LABEL: 'broadcast_load_v2f64_v8f64'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <2 x double>, ptr %src, align 16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <2 x double> %load, <2 x double> poison, <8 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x double> %bcst
-;
-; AVX512-LABEL: 'broadcast_load_v2f64_v8f64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <2 x double>, ptr %src, align 16
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <2 x double> %load, <2 x double> poison, <8 x i32> zeroinitializer
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x double> %bcst
+; AVX-LABEL: 'broadcast_load_v2f64_v8f64'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <2 x double>, ptr %src, align 16
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <2 x double> %load, <2 x double> poison, <8 x i32> zeroinitializer
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x double> %bcst
 ;
   %load = load <2 x double>, ptr %src
   %bcst = shufflevector <2 x double> %load, <2 x double> poison, <8 x i32> zeroinitializer
@@ -207,7 +187,7 @@ define <4 x float> @broadcast_load_v4f32_v4f32(ptr %src) {
 ;
 ; AVX-LABEL: 'broadcast_load_v4f32_v4f32'
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <4 x float>, ptr %src, align 16
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <4 x float> %load, <4 x float> poison, <4 x i32> zeroinitializer
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <4 x float> %load, <4 x float> poison, <4 x i32> zeroinitializer
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %bcst
 ;
   %load = load <4 x float>, ptr %src
@@ -221,20 +201,10 @@ define <8 x float> @broadcast_load_v4f32_v8f32(ptr %src) {
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <4 x float> %load, <4 x float> poison, <8 x i32> zeroinitializer
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x float> %bcst
 ;
-; AVX1-LABEL: 'broadcast_load_v4f32_v8f32'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <4 x float>, ptr %src, align 16
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bcst = shufflevector <4 x float> %load, <4 x float> poison, <8 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x float> %bcst
-;
-; AVX2-LABEL: 'broadcast_load_v4f32_v8f32'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <4 x float>, ptr %src, align 16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <4 x float> %load, <4 x float> poison, <8 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x float> %bcst
-;
-; AVX512-LABEL: 'broadcast_load_v4f32_v8f32'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <4 x float>, ptr %src, align 16
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <4 x float> %load, <4 x float> poison, <8 x i32> zeroinitializer
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x float> %bcst
+; AVX-LABEL: 'broadcast_load_v4f32_v8f32'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <4 x float>, ptr %src, align 16
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <4 x float> %load, <4 x float> poison, <8 x i32> zeroinitializer
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x float> %bcst
 ;
   %load = load <4 x float>, ptr %src
   %bcst = shufflevector <4 x float> %load, <4 x float> poison, <8 x i32> zeroinitializer
@@ -247,20 +217,10 @@ define <16 x float> @broadcast_load_v4f32_v16f32(ptr %src) {
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <4 x float> %load, <4 x float> poison, <16 x i32> zeroinitializer
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x float> %bcst
 ;
-; AVX1-LABEL: 'broadcast_load_v4f32_v16f32'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <4 x float>, ptr %src, align 16
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bcst = shufflevector <4 x float> %load, <4 x float> poison, <16 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x float> %bcst
-;
-; AVX2-LABEL: 'broadcast_load_v4f32_v16f32'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <4 x float>, ptr %src, align 16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <4 x float> %load, <4 x float> poison, <16 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x float> %bcst
-;
-; AVX512-LABEL: 'broadcast_load_v4f32_v16f32'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <4 x float>, ptr %src, align 16
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <4 x float> %load, <4 x float> poison, <16 x i32> zeroinitializer
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x float> %bcst
+; AVX-LABEL: 'broadcast_load_v4f32_v16f32'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <4 x float>, ptr %src, align 16
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <4 x float> %load, <4 x float> poison, <16 x i32> zeroinitializer
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x float> %bcst
 ;
   %load = load <4 x float>, ptr %src
   %bcst = shufflevector <4 x float> %load, <4 x float> poison, <16 x i32> zeroinitializer
@@ -275,7 +235,7 @@ define <2 x i64> @broadcast_load_v2i64_v2i64(ptr %src) {
 ;
 ; AVX-LABEL: 'broadcast_load_v2i64_v2i64'
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <2 x i64>, ptr %src, align 16
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <2 x i64> %load, <2 x i64> poison, <2 x i32> zeroinitializer
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <2 x i64> %load, <2 x i64> poison, <2 x i32> zeroinitializer
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x i64> %bcst
 ;
   %load = load <2 x i64>, ptr %src
@@ -293,20 +253,10 @@ define <4 x i64> @broadcast_load_v2i64_v4i64(ptr %src) {
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <2 x i64> %load, <2 x i64> poison, <4 x i32> zeroinitializer
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %bcst
 ;
-; AVX1-LABEL: 'broadcast_load_v2i64_v4i64'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <2 x i64>, ptr %src, align 16
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bcst = shufflevector <2 x i64> %load, <2 x i64> poison, <4 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %bcst
-;
-; AVX2-LABEL: 'broadcast_load_v2i64_v4i64'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <2 x i64>, ptr %src, align 16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <2 x i64> %load, <2 x i64> poison, <4 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %bcst
-;
-; AVX512-LABEL: 'broadcast_load_v2i64_v4i64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <2 x i64>, ptr %src, align 16
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <2 x i64> %load, <2 x i64> poison, <4 x i32> zeroinitializer
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %bcst
+; AVX-LABEL: 'broadcast_load_v2i64_v4i64'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <2 x i64>, ptr %src, align 16
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <2 x i64> %load, <2 x i64> poison, <4 x i32> zeroinitializer
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %bcst
 ;
   %load = load <2 x i64>, ptr %src
   %bcst = shufflevector <2 x i64> %load, <2 x i64> poison, <4 x i32> zeroinitializer
@@ -319,20 +269,10 @@ define <8 x i64> @broadcast_load_v2i64_v8i64(ptr %src) {
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <2 x i64> %load, <2 x i64> poison, <8 x i32> zeroinitializer
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %bcst
 ;
-; AVX1-LABEL: 'broadcast_load_v2i64_v8i64'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <2 x i64>, ptr %src, align 16
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bcst = shufflevector <2 x i64> %load, <2 x i64> poison, <8 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %bcst
-;
-; AVX2-LABEL: 'broadcast_load_v2i64_v8i64'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <2 x i64>, ptr %src, align 16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <2 x i64> %load, <2 x i64> poison, <8 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %bcst
-;
-; AVX512-LABEL: 'broadcast_load_v2i64_v8i64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <2 x i64>, ptr %src, align 16
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <2 x i64> %load, <2 x i64> poison, <8 x i32> zeroinitializer
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %bcst
+; AVX-LABEL: 'broadcast_load_v2i64_v8i64'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <2 x i64>, ptr %src, align 16
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <2 x i64> %load, <2 x i64> poison, <8 x i32> zeroinitializer
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i64> %bcst
 ;
   %load = load <2 x i64>, ptr %src
   %bcst = shufflevector <2 x i64> %load, <2 x i64> poison, <8 x i32> zeroinitializer
@@ -351,7 +291,7 @@ define <4 x i32> @broadcast_load_v4i32_v4i32(ptr %src) {
 ;
 ; AVX-LABEL: 'broadcast_load_v4i32_v4i32'
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <4 x i32>, ptr %src, align 16
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <4 x i32> %load, <4 x i32> poison, <4 x i32> zeroinitializer
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <4 x i32> %load, <4 x i32> poison, <4 x i32> zeroinitializer
 ; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %bcst
 ;
   %load = load <4 x i32>, ptr %src
@@ -365,20 +305,10 @@ define <8 x i32> @broadcast_load_v4i32_v8i32(ptr %src) {
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <4 x i32> %load, <4 x i32> poison, <8 x i32> zeroinitializer
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %bcst
 ;
-; AVX1-LABEL: 'broadcast_load_v4i32_v8i32'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <4 x i32>, ptr %src, align 16
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bcst = shufflevector <4 x i32> %load, <4 x i32> poison, <8 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %bcst
-;
-; AVX2-LABEL: 'broadcast_load_v4i32_v8i32'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <4 x i32>, ptr %src, align 16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <4 x i32> %load, <4 x i32> poison, <8 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %bcst
-;
-; AVX512-LABEL: 'broadcast_load_v4i32_v8i32'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <4 x i32>, ptr %src, align 16
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <4 x i32> %load, <4 x i32> poison, <8 x i32> zeroinitializer
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %bcst
+; AVX-LABEL: 'broadcast_load_v4i32_v8i32'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <4 x i32>, ptr %src, align 16
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <4 x i32> %load, <4 x i32> poison, <8 x i32> zeroinitializer
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i32> %bcst
 ;
   %load = load <4 x i32>, ptr %src
   %bcst = shufflevector <4 x i32> %load, <4 x i32> poison, <8 x i32> zeroinitializer
@@ -391,20 +321,10 @@ define <16 x i32> @broadcast_load_v4i32_v16i32(ptr %src) {
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <4 x i32> %load, <4 x i32> poison, <16 x i32> zeroinitializer
 ; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %bcst
 ;
-; AVX1-LABEL: 'broadcast_load_v4i32_v16i32'
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <4 x i32>, ptr %src, align 16
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %bcst = shufflevector <4 x i32> %load, <4 x i32> poison, <16 x i32> zeroinitializer
-; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %bcst
-;
-; AVX2-LABEL: 'broadcast_load_v4i32_v16i32'
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <4 x i32>, ptr %src, align 16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <4 x i32> %load, <4 x i32> poison, <16 x i32> zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %bcst
-;
-; AVX512-LABEL: 'broadcast_load_v4i32_v16i32'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <4 x i32>, ptr %src, align 16
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <4 x i32> %load, <4 x i32> poison, <16 x i32> zeroinitializer
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %bcst
+; AVX-LABEL: 'broadcast_load_v4i32_v16i32'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <4 x i32>, ptr %src, align 16
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <4 x i32> %load, <4 x i32> poison, <16 x i32> zeroinitializer
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i32> %bcst
 ;
   %load = load <4 x i32>, ptr %src
   %bcst = shufflevector <4 x i32> %load, <4 x i32> poison, <16 x i32> zeroinitializer
@@ -431,10 +351,20 @@ define <8 x i16> @broadcast_load_v8i16_v8i16(ptr %src) {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <8 x i16> %load, <8 x i16> poison, <8 x i32> zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %bcst
 ;
-; AVX-LABEL: 'broadcast_load_v8i16_v8i16'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <8 x i16>, ptr %src, align 16
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <8 x i16> %load, <8 x i16> poison, <8 x i32> zeroinitializer
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %bcst
+; AVX1-LABEL: 'broadcast_load_v8i16_v8i16'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <8 x i16>, ptr %src, align 16
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <8 x i16> %load, <8 x i16> poison, <8 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %bcst
+;
+; AVX2-LABEL: 'broadcast_load_v8i16_v8i16'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <8 x i16>, ptr %src, align 16
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <8 x i16> %load, <8 x i16> poison, <8 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %bcst
+;
+; AVX512-LABEL: 'broadcast_load_v8i16_v8i16'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <8 x i16>, ptr %src, align 16
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <8 x i16> %load, <8 x i16> poison, <8 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <8 x i16> %bcst
 ;
   %load = load <8 x i16>, ptr %src
   %bcst = shufflevector <8 x i16> %load, <8 x i16> poison, <8 x i32> zeroinitializer
@@ -464,12 +394,12 @@ define <16 x i16> @broadcast_load_v8i16_v16i16(ptr %src) {
 ;
 ; AVX2-LABEL: 'broadcast_load_v8i16_v16i16'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <8 x i16>, ptr %src, align 16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <8 x i16> %load, <8 x i16> poison, <16 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <8 x i16> %load, <8 x i16> poison, <16 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i16> %bcst
 ;
 ; AVX512-LABEL: 'broadcast_load_v8i16_v16i16'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <8 x i16>, ptr %src, align 16
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <8 x i16> %load, <8 x i16> poison, <16 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <8 x i16> %load, <8 x i16> poison, <16 x i32> zeroinitializer
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i16> %bcst
 ;
   %load = load <8 x i16>, ptr %src
@@ -500,12 +430,12 @@ define <32 x i16> @broadcast_load_v8i16_v32i16(ptr %src) {
 ;
 ; AVX2-LABEL: 'broadcast_load_v8i16_v32i16'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <8 x i16>, ptr %src, align 16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <8 x i16> %load, <8 x i16> poison, <32 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <8 x i16> %load, <8 x i16> poison, <32 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <32 x i16> %bcst
 ;
 ; AVX512-LABEL: 'broadcast_load_v8i16_v32i16'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <8 x i16>, ptr %src, align 16
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <8 x i16> %load, <8 x i16> poison, <32 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <8 x i16> %load, <8 x i16> poison, <32 x i32> zeroinitializer
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <32 x i16> %bcst
 ;
   %load = load <8 x i16>, ptr %src
@@ -533,10 +463,20 @@ define <16 x i8> @broadcast_load_v16i8_v16i8(ptr %src) {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <16 x i8> %load, <16 x i8> poison, <16 x i32> zeroinitializer
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %bcst
 ;
-; AVX-LABEL: 'broadcast_load_v16i8_v16i8'
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <16 x i8>, ptr %src, align 16
-; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <16 x i8> %load, <16 x i8> poison, <16 x i32> zeroinitializer
-; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %bcst
+; AVX1-LABEL: 'broadcast_load_v16i8_v16i8'
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <16 x i8>, ptr %src, align 16
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <16 x i8> %load, <16 x i8> poison, <16 x i32> zeroinitializer
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %bcst
+;
+; AVX2-LABEL: 'broadcast_load_v16i8_v16i8'
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <16 x i8>, ptr %src, align 16
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <16 x i8> %load, <16 x i8> poison, <16 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %bcst
+;
+; AVX512-LABEL: 'broadcast_load_v16i8_v16i8'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <16 x i8>, ptr %src, align 16
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <16 x i8> %load, <16 x i8> poison, <16 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i8> %bcst
 ;
   %load = load <16 x i8>, ptr %src
   %bcst = shufflevector <16 x i8> %load, <16 x i8> poison, <16 x i32> zeroinitializer
@@ -566,12 +506,12 @@ define <32 x i8> @broadcast_load_v16i8_v32i8(ptr %src) {
 ;
 ; AVX2-LABEL: 'broadcast_load_v16i8_v32i8'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <16 x i8>, ptr %src, align 16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <16 x i8> %load, <16 x i8> poison, <32 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <16 x i8> %load, <16 x i8> poison, <32 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <32 x i8> %bcst
 ;
 ; AVX512-LABEL: 'broadcast_load_v16i8_v32i8'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <16 x i8>, ptr %src, align 16
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <16 x i8> %load, <16 x i8> poison, <32 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <16 x i8> %load, <16 x i8> poison, <32 x i32> zeroinitializer
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <32 x i8> %bcst
 ;
   %load = load <16 x i8>, ptr %src
@@ -602,12 +542,12 @@ define <64 x i8> @broadcast_load_v16i8_v64i8(ptr %src) {
 ;
 ; AVX2-LABEL: 'broadcast_load_v16i8_v64i8'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <16 x i8>, ptr %src, align 16
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <16 x i8> %load, <16 x i8> poison, <64 x i32> zeroinitializer
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <16 x i8> %load, <16 x i8> poison, <64 x i32> zeroinitializer
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <64 x i8> %bcst
 ;
 ; AVX512-LABEL: 'broadcast_load_v16i8_v64i8'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %load = load <16 x i8>, ptr %src, align 16
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bcst = shufflevector <16 x i8> %load, <16 x i8> poison, <64 x i32> zeroinitializer
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %bcst = shufflevector <16 x i8> %load, <16 x i8> poison, <64 x i32> zeroinitializer
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <64 x i8> %bcst
 ;
   %load = load <16 x i8>, ptr %src
