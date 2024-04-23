@@ -5287,7 +5287,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // Check for auto functions and trailing return type and adjust the
       // return type accordingly.
       if (!D.isInvalidType()) {
-        auto isClassType = [&](CXXScopeSpec& SS) {
+        auto isClassType = [&](CXXScopeSpec &SS) {
           // If there already was an problem with the scope; don’t issue another
           // error about the explicit object parameter.
           return SS.isInvalid() ||
