@@ -443,8 +443,12 @@ public:
   bool isGlobalSReg32() const { return isImmTy(ImmTyGlobalSReg32); }
   bool isGlobalSReg64() const { return isImmTy(ImmTyGlobalSReg64); }
   bool isBitOp3() const { return isImmTy(ImmTyBitOp3) && isUInt<8>(getImm()); }
-  bool isScaleSel() const { return isImmTy(ImmTyScaleSel) && isUInt<3>(getImm()); }
-  bool isByteSel() const { return isImmTy(ImmTyByteSel) && isUInt<2>(getImm()); }
+  bool isScaleSel() const {
+    return isImmTy(ImmTyScaleSel) && isUInt<3>(getImm());
+  }
+  bool isByteSel() const {
+    return isImmTy(ImmTyByteSel) && isUInt<2>(getImm());
+  }
 
   bool isRegOrImm() const {
     return isReg() || isImm();
@@ -9170,8 +9174,8 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
 
   if (Opc == AMDGPU::V_CVT_SR_BF8_F32_vi ||
       Opc == AMDGPU::V_CVT_SR_FP8_F32_vi ||
-      Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_gfx12 ||
-      Opc == AMDGPU::V_CVT_SR_FP8_F32_e64_gfx12 ||
+      Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_gfx12 ||
+      Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_gfx12 ||
       Opc == AMDGPU::V_CVT_F16_FP8_e64_gfx1210 ||
       Opc == AMDGPU::V_CVT_F16_BF8_e64_gfx1210) {
     // Placeholder for src1_mods or src2_mods
@@ -9189,7 +9193,11 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
         Opc == AMDGPU::V_CVT_F16_FP8_e64_dpp_gfx1210 ||
         Opc == AMDGPU::V_CVT_F16_FP8_e64_dpp8_gfx1210 ||
         Opc == AMDGPU::V_CVT_F16_BF8_e64_dpp_gfx1210 ||
-        Opc == AMDGPU::V_CVT_F16_BF8_e64_dpp8_gfx1210||
+        Opc == AMDGPU::V_CVT_F16_BF8_e64_dpp8_gfx1210 ||
+        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp_gfx12 ||
+        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp8_gfx12 ||
+        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp_gfx12 ||
+        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx12 ||
         Opc == AMDGPU::V_CVT_SR_FP8_F16_e64_dpp_gfx1210 ||
         Opc == AMDGPU::V_CVT_SR_FP8_F16_e64_dpp8_gfx1210 ||
         Opc == AMDGPU::V_CVT_SR_BF8_F16_e64_dpp_gfx1210 ||
@@ -9760,10 +9768,11 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
       Inst.addOperand(Inst.getOperand(0));
     }
 
-    bool IsVOP3CvtSrDpp = Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp8_gfx12 ||
-                          Opc == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp8_gfx12 ||
-                          Opc == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp_gfx12 ||
-                          Opc == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp_gfx12;
+    bool IsVOP3CvtSrDpp =
+        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp8_gfx12 ||
+        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp8_gfx12 ||
+        Opc == AMDGPU::V_CVT_SR_BF8_F32_gfx12_e64_dpp_gfx12 ||
+        Opc == AMDGPU::V_CVT_SR_FP8_F32_gfx12_e64_dpp_gfx12;
     bool IsVOP3CvtFP8Dpp = Opc == AMDGPU::V_CVT_F16_FP8_e64_dpp_gfx1210 ||
                            Opc == AMDGPU::V_CVT_F16_FP8_e64_dpp8_gfx1210 ||
                            Opc == AMDGPU::V_CVT_F16_BF8_e64_dpp_gfx1210 ||
