@@ -138,11 +138,22 @@ struct PortableMemInfoBlock {
     return !operator==(Other);
   }
 
-  static constexpr size_t serializedSize() {
+  static size_t serializedSize(const MemProfSchema &Schema) {
     size_t Result = 0;
-#define MIBEntryDef(NameTag, Name, Type) Result += sizeof(Type);
+
+    for (const Meta Id : Schema) {
+      switch (Id) {
+#define MIBEntryDef(NameTag, Name, Type)                                       \
+  case Meta::Name: {                                                           \
+    Result += sizeof(Type);                                                    \
+  } break;
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
+      default:
+        llvm_unreachable("Unknown meta type id, invalid input?");
+      }
+    }
+
     return Result;
   }
 
@@ -292,7 +303,8 @@ struct IndexedAllocationInfo {
       : CallStack(CS.begin(), CS.end()), CSId(CSId), Info(MB) {}
 
   // Returns the size in bytes when this allocation info struct is serialized.
-  size_t serializedSize(IndexedVersion Version) const;
+  size_t serializedSize(const MemProfSchema &Schema,
+                        IndexedVersion Version) const;
 
   bool operator==(const IndexedAllocationInfo &Other) const {
     if (Other.Info != Info)
@@ -367,7 +379,8 @@ struct IndexedMemProfRecord {
     CallSites.append(Other.CallSites);
   }
 
-  size_t serializedSize(IndexedVersion Version) const;
+  size_t serializedSize(const MemProfSchema &Schema,
+                        IndexedVersion Version) const;
 
   bool operator==(const IndexedMemProfRecord &Other) const {
     if (Other.AllocSites != AllocSites)
@@ -535,7 +548,7 @@ public:
     endian::Writer LE(Out, llvm::endianness::little);
     offset_type N = sizeof(K);
     LE.write<offset_type>(N);
-    offset_type M = V.serializedSize(Version);
+    offset_type M = V.serializedSize(*Schema, Version);
     LE.write<offset_type>(M);
     return std::make_pair(N, M);
   }
