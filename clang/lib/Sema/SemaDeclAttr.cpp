@@ -7355,10 +7355,10 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
       PrintingPolicy PP = S.getPrintingPolicy();
       std::string typestr = QualType::getAsString(QT.split(), PP);
 
-      if (Slot[0] != 'b' && Slot[0] != 'c' && Slot[0] != 'i')
+      if (Slot[0] != 't')
         S.Diag(ArgLoc,
                diag::err_hlsl_mismatching_register_builtin_type_and_name)
-            << Slot.substr(0, 1) << typestr << "'b, c, or i";
+            << Slot.substr(0, 1) << typestr << "'t'";
       return;
     }
 

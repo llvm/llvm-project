@@ -20,22 +20,22 @@ RWBuffer<int> b : register(t2, space1);
 // NOT YET IMPLEMENTED : {{invalid register name prefix 't' for register type 'RWTexture3D' (expected 'u')}}
 // NOT YET IMPLEMENTED RWTexture3D<float4> RWT3D_u1 : register(t1)
 
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'b' for register type 'Texture2DMS' (expected 't' or 's')}}
-// NOT YET IMPLEMENTED TextureCube TCube_b2 : register(B2);
+// NOT YET IMPLEMENTED : {{invalid register name prefix 'b' for register type 'TextureCube' (expected 't')}}
+// NOT YET IMPLEMENTED TextureCube <float>  t8 : register(b8);
 
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'b' for register type 'Texture2DMS' (expected 't')}}
+// NOT YET IMPLEMENTED : {{invalid register name prefix 'b' for register type 'TextureCubeArray' (expected 't')}}
 // NOT YET IMPLEMENTED TextureCubeArray TCubeArray_t2 : register(b2);
 
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'b' for register type 'Texture2DMS' (expected 't' or 's')}}
+// NOT YET IMPLEMENTED : {{invalid register name prefix 'b' for register type 'Texture1DArray' (expected 't')}}
 // NOT YET IMPLEMENTED Texture1DArray T1DArray_t2 : register(b2);
 
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'Texture2DMS' (expected 't' or 's')}}
+// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'Texture2DArray' (expected 't')}}
 // NOT YET IMPLEMENTED Texture2DArray T2DArray_b2 : register(B2);
 
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'Texture2DMS' (expected 'b' or 'c' or 'i')}}
+// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'Texture2DMSArray' (expected 't')}}
 // NOT YET IMPLEMENTED Texture2DMSArray<float4> msTextureArray : register(t2, space2);
 
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'TCubeArray_f2' (expected 't' or 's')}}
+// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'TextureCubeArray' (expected 't')}}
 // NOT YET IMPLEMENTED TextureCubeArray TCubeArray_f2 : register(u2);
 
 // NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'TypedBuffer' (expected 't')}}
@@ -59,10 +59,10 @@ tbuffer f : register(s2, space1) {}
 
 // NOT YET IMPLEMENTED : RTAccelerationStructure doesn't have any example tests in DXC
 
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'FeedbackTexture2D' (expected 'b' or 'c' or 'i')}}
+// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'FeedbackTexture2D' (expected 't')}}
 // NOT YET IMPLEMENTED FeedbackTexture2D<float> FBTex2D[3][] : register(u0, space26);
 
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'FeedbackTexture2DArray' (expected 'b' or 'c' or 'i')}}
+// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'FeedbackTexture2DArray' (expected 't')}}
 // NOT YET IMPLEMENTED FeedbackTexture2DArray<float> FBTex2DArr[3][2][] : register(u0, space27);
 
 
