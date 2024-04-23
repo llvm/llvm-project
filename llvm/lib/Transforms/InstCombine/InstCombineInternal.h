@@ -433,7 +433,7 @@ private:
   Value *foldAndOrOfICmpsOfAndWithPow2(ICmpInst *LHS, ICmpInst *RHS,
                                        Instruction *CxtI, bool IsAnd,
                                        bool IsLogical = false);
-  Value *matchSelectFromAndOr(Value *A, Value *C, Value *B, Value *D,
+  Value *matchSelectFromAndOr(Value *valA, Value *valB, Value *valC, Value *valD,
                               bool InvertFalseVal = false);
   Value *getSelectCondition(Value *A, Value *B, bool ABIsTheSame);
 
