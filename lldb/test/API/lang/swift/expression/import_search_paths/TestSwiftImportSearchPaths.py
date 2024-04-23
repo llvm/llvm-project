@@ -30,22 +30,19 @@ class TestSwiftImportSearchPaths(lldbtest.TestBase):
             self, 'break here', lldb.SBFileSpec('main.swift'),
             extra_images=['Direct', self.getBuildArtifact('hidden/libIndirect')])
 
-        log = self.getBuildArtifact("types.log")
-        self.expect('settings show '
-                    + 'target.experimental')
-        self.expect("log enable lldb types -f " + log)
+        types_log = self.getBuildArtifact("types.log")
+        self.expect("log enable lldb types -f " + types_log)
         self.expect("expr -- x.inner.hidden", substrs=['=', '42'])
-
-        import io, re
-        logfile = io.open(log, "r", encoding='utf-8')
-        sanity = 0
-        found = 0
-        for line in logfile:
-            if re.match(r'.*SwiftASTContextForModule\("a\.out"\)::LogConfiguration\(\).*hidden$',
-                        line.strip('\n')):
-                sanity += 1
-            elif re.match(r'.*SwiftASTContextForExpressions::LogConfiguration\(\).*hidden$',
-                          line.strip('\n')):
-                found += 1
-        self.assertEqual(sanity, 1)
-        self.assertEqual(found, 1 if flag == 'true' else 0)
+        if flag == 'true':
+            prefix = 'POSITIVE'
+        else:
+            prefix = 'NEGATIVE'
+        self.filecheck('platform shell cat "%s"' % types_log, __file__,
+                       '--check-prefix=CHECK_MOD_'+prefix)
+        self.filecheck('platform shell cat "%s"' % types_log, __file__,
+                       '--check-prefix=CHECK_EXP_'+prefix)
+# CHECK_MOD_POSITIVE: SwiftASTContextForModule("a.out")::LogConfiguration(){{.*hidden$}}
+# CHECK_MOD_NEGATIVE: SwiftASTContextForModule("a.out")::LogConfiguration(){{.*hidden$}}
+# CHECK_EXP_POSITIVE: SwiftASTContextForExpressions::LogConfiguration(){{.*hidden$}}
+# CHECK_EXP_NEGATIVE-NOT: SwiftASTContextForExpressions::LogConfiguration(){{.*hidden$}}
+# CHECK_EXP_NEGATIVE: SwiftASTContextForExpressions::LogConfiguration(){{.*}}Extra clang arguments
