@@ -107,7 +107,8 @@ def : ProcessorModel<"mvp", NoSchedModel, []>;
 // consideration given to available support in relevant engines and tools, and
 // the importance of the features.
 def : ProcessorModel<"generic", NoSchedModel,
-                      [FeatureSignExt, FeatureMutableGlobals]>;
+                      [FeatureNontrappingFPToInt, FeatureSignExt,
+                       FeatureMutableGlobals]>;
 
 // Latest and greatest experimental version of WebAssembly. Bugs included!
 def : ProcessorModel<"bleeding-edge", NoSchedModel,

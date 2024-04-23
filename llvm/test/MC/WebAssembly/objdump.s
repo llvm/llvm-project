@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -o %t.o -mattr=+simd128,+nontrapping-fptoint,+exception-handling < %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -o %t.o -mattr=+simd128,+exception-handling < %s
 # RUN: llvm-objdump --triple=wasm32-unknown-unknown -d %t.o | FileCheck %s
 
 test0:
