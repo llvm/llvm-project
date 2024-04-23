@@ -855,4 +855,9 @@ using U = int (S::*)(this int); // expected-error {{an explicit object parameter
 int h(this int); // expected-error {{an explicit object parameter is not allowed here}}
 
 int S::f(this S) { return 1; }
+
+namespace a {
+void f();
+};
+void a::f(this auto) {} // expected-error {{an explicit object parameter is not allowed here}}
 }

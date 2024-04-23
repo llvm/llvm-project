@@ -5287,6 +5287,13 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // Check for auto functions and trailing return type and adjust the
       // return type accordingly.
       if (!D.isInvalidType()) {
+        auto isClassType = [&](CXXScopeSpec& SS) {
+          // If there already was an problem with the scope; don’t issue another
+          // error about the explicit object parameter.
+          return SS.isInvalid() ||
+                 isa_and_present<CXXRecordDecl>(S.computeDeclContext(SS));
+        };
+
         // [dcl.fct]p6:
         //
         // An explicit-object-parameter-declaration is a parameter-declaration
@@ -5309,7 +5316,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
              D.getInnermostNonParenChunk() != &DeclType) &&
 
             // Allow out-of-line definitions if we have a scope spec.
-            D.getCXXScopeSpec().isEmpty()) {
+            !isClassType(D.getCXXScopeSpec())) {
           S.Diag(First->getBeginLoc(),
                  diag::err_explicit_object_parameter_invalid)
               << First->getSourceRange();
