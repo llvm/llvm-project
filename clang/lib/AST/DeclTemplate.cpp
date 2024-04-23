@@ -337,7 +337,7 @@ void RedeclarableTemplateDecl::loadLazySpecializationsImpl() const {
   CommonBase *CommonBasePtr = getMostRecentDecl()->getCommonPtr();
   if (CommonBasePtr->LazySpecializations) {
     ASTContext &Context = getASTContext();
-    uint32_t *Specs = CommonBasePtr->LazySpecializations;
+    Decl::DeclID *Specs = CommonBasePtr->LazySpecializations;
     CommonBasePtr->LazySpecializations = nullptr;
     for (uint32_t I = 0, N = *Specs++; I != N; ++I)
       (void)Context.getExternalSource()->GetExternalDecl(Specs[I]);

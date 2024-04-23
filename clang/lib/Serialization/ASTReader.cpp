@@ -954,14 +954,14 @@ ASTSelectorLookupTrait::ReadData(Selector, const unsigned char* d,
   // Load instance methods
   for (unsigned I = 0; I != NumInstanceMethods; ++I) {
     if (ObjCMethodDecl *Method = Reader.GetLocalDeclAs<ObjCMethodDecl>(
-            F, endian::readNext<uint32_t, llvm::endianness::little>(d)))
+            F, endian::readNext<DeclID, llvm::endianness::little>(d)))
       Result.Instance.push_back(Method);
   }
 
   // Load factory methods
   for (unsigned I = 0; I != NumFactoryMethods; ++I) {
     if (ObjCMethodDecl *Method = Reader.GetLocalDeclAs<ObjCMethodDecl>(
-            F, endian::readNext<uint32_t, llvm::endianness::little>(d)))
+            F, endian::readNext<DeclID, llvm::endianness::little>(d)))
       Result.Factory.push_back(Method);
   }
 
@@ -1088,10 +1088,10 @@ IdentifierInfo *ASTIdentifierLookupTrait::ReadData(const internal_key_type& k,
   // Read all of the declarations visible at global scope with this
   // name.
   if (DataLen > 0) {
-    SmallVector<uint32_t, 4> DeclIDs;
-    for (; DataLen > 0; DataLen -= 4)
+    SmallVector<DeclID, 4> DeclIDs;
+    for (; DataLen > 0; DataLen -= sizeof(DeclID))
       DeclIDs.push_back(Reader.getGlobalDeclID(
-          F, endian::readNext<uint32_t, llvm::endianness::little>(d)));
+          F, endian::readNext<DeclID, llvm::endianness::little>(d)));
     Reader.SetGloballyVisibleDecls(II, DeclIDs);
   }
 
@@ -1211,8 +1211,8 @@ void ASTDeclContextNameLookupTrait::ReadDataInto(internal_key_type,
                                                  data_type_builder &Val) {
   using namespace llvm::support;
 
-  for (unsigned NumDecls = DataLen / 4; NumDecls; --NumDecls) {
-    uint32_t LocalID = endian::readNext<uint32_t, llvm::endianness::little>(d);
+  for (unsigned NumDecls = DataLen / sizeof(DeclID); NumDecls; --NumDecls) {
+    DeclID LocalID = endian::readNext<DeclID, llvm::endianness::little>(d);
     Val.insert(Reader.getGlobalDeclID(F, LocalID));
   }
 }
@@ -1259,9 +1259,8 @@ bool ASTReader::ReadLexicalDeclContextStorage(ModuleFile &M,
   if (!Lex.first) {
     Lex = std::make_pair(
         &M, llvm::ArrayRef(
-                reinterpret_cast<const llvm::support::unaligned_uint32_t *>(
-                    Blob.data()),
-                Blob.size() / 4));
+                reinterpret_cast<const unalighed_decl_id_t *>(Blob.data()),
+                Blob.size() / sizeof(DeclID)));
   }
   DC->setHasExternalLexicalStorage(true);
   return false;
@@ -3389,9 +3388,8 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
     case TU_UPDATE_LEXICAL: {
       DeclContext *TU = ContextObj->getTranslationUnitDecl();
       LexicalContents Contents(
-          reinterpret_cast<const llvm::support::unaligned_uint32_t *>(
-              Blob.data()),
-          static_cast<unsigned int>(Blob.size() / 4));
+          reinterpret_cast<const unalighed_decl_id_t *>(Blob.data()),
+          static_cast<unsigned int>(Blob.size() / sizeof(DeclID)));
       TULexicalDecls.push_back(std::make_pair(&F, Contents));
       TU->setHasExternalLexicalStorage(true);
       break;
@@ -6010,7 +6008,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
     case SUBMODULE_INITIALIZERS: {
       if (!ContextObj)
         break;
-      SmallVector<uint32_t, 16> Inits;
+      SmallVector<DeclID, 16> Inits;
       for (auto &ID : Record)
         Inits.push_back(getGlobalDeclID(F, ID));
       ContextObj->addLazyModuleInitializers(CurrentModule, Inits);
@@ -7517,9 +7515,7 @@ ASTRecordReader::readASTTemplateArgumentListInfo() {
   return ASTTemplateArgumentListInfo::Create(getContext(), Result);
 }
 
-Decl *ASTReader::GetExternalDecl(uint32_t ID) {
-  return GetDecl(ID);
-}
+Decl *ASTReader::GetExternalDecl(DeclID ID) { return GetDecl(ID); }
 
 void ASTReader::CompleteRedeclChain(const Decl *D) {
   if (NumCurrentElementsDeserializing) {
@@ -7660,8 +7656,8 @@ ASTReader::getGlobalDeclID(ModuleFile &F, LocalDeclID LocalID) const {
   if (!F.ModuleOffsetMap.empty())
     ReadModuleOffsetMap(F);
 
-  ContinuousRangeMap<uint32_t, int, 2>::iterator I
-    = F.DeclRemap.find(LocalID - NUM_PREDEF_DECL_IDS);
+  ContinuousRangeMap<DeclID, int, 2>::iterator I =
+      F.DeclRemap.find(LocalID - NUM_PREDEF_DECL_IDS);
   assert(I != F.DeclRemap.end() && "Invalid index into decl index remap");
 
   return LocalID + I->second;
@@ -8833,10 +8829,9 @@ void ASTReader::SetIdentifierInfo(IdentifierID ID, IdentifierInfo *II) {
 /// \param Decls if non-null, this vector will be populated with the set of
 /// deserialized declarations. These declarations will not be pushed into
 /// scope.
-void
-ASTReader::SetGloballyVisibleDecls(IdentifierInfo *II,
-                              const SmallVectorImpl<uint32_t> &DeclIDs,
-                                   SmallVectorImpl<Decl *> *Decls) {
+void ASTReader::SetGloballyVisibleDecls(IdentifierInfo *II,
+                                        const SmallVectorImpl<DeclID> &DeclIDs,
+                                        SmallVectorImpl<Decl *> *Decls) {
   if (NumCurrentElementsDeserializing && !Decls) {
     PendingIdentifierInfos[II].append(DeclIDs.begin(), DeclIDs.end());
     return;
@@ -9560,7 +9555,7 @@ void ASTReader::finishPendingActions() {
 
     while (!PendingIdentifierInfos.empty()) {
       IdentifierInfo *II = PendingIdentifierInfos.back().first;
-      SmallVector<uint32_t, 4> DeclIDs =
+      SmallVector<DeclID, 4> DeclIDs =
           std::move(PendingIdentifierInfos.back().second);
       PendingIdentifierInfos.pop_back();
 

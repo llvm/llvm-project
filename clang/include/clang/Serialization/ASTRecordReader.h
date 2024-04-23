@@ -143,8 +143,7 @@ public:
   /// Reads a declaration with the given local ID in the given module.
   ///
   /// \returns The requested declaration, casted to the given return type.
-  template<typename T>
-  T *GetLocalDeclAs(uint32_t LocalID) {
+  template <typename T> T *GetLocalDeclAs(serialization::LocalDeclID LocalID) {
     return cast_or_null<T>(Reader->GetLocalDecl(*F, LocalID));
   }
 

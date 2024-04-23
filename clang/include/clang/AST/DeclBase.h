@@ -239,6 +239,9 @@ public:
     ModulePrivate
   };
 
+  /// An ID number that refers to a declaration in an AST file.
+  using DeclID = uint32_t;
+
 protected:
   /// The next declaration within the same lexical
   /// DeclContext. These pointers form the linked list that is
@@ -348,8 +351,6 @@ protected:
   /// If 0, we have not computed the linkage of this declaration.
   LLVM_PREFERRED_TYPE(Linkage)
   mutable unsigned CacheValidAndLinkage : 3;
-
-  using DeclID = uint32_t;
 
   /// Allocate memory for a deserialized declaration.
   ///
@@ -778,9 +779,9 @@ public:
 
   /// Retrieve the global declaration ID associated with this
   /// declaration, which specifies where this Decl was loaded from.
-  unsigned getGlobalID() const {
+  DeclID getGlobalID() const {
     if (isFromASTFile())
-      return *((const unsigned*)this - 1);
+      return *((const DeclID *)this - 1);
     return 0;
   }
 

@@ -455,7 +455,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// initialization of another module).
   struct PerModuleInitializers {
     llvm::SmallVector<Decl*, 4> Initializers;
-    llvm::SmallVector<uint32_t, 4> LazyInitializers;
+    llvm::SmallVector<Decl::DeclID, 4> LazyInitializers;
 
     void resolve(ASTContext &Ctx);
   };
@@ -1059,7 +1059,7 @@ public:
   /// or an ImportDecl nominating another module that has initializers.
   void addModuleInitializer(Module *M, Decl *Init);
 
-  void addLazyModuleInitializers(Module *M, ArrayRef<uint32_t> IDs);
+  void addLazyModuleInitializers(Module *M, ArrayRef<Decl::DeclID> IDs);
 
   /// Get the initializations to perform when importing a module, if any.
   ArrayRef<Decl*> getModuleInitializers(Module *M);
