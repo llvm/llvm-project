@@ -399,6 +399,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
       break;
     case OpenACCClauseKind::If:
     case OpenACCClauseKind::Self:
+    case OpenACCClauseKind::NumGangs:
     case OpenACCClauseKind::NumWorkers:
     case OpenACCClauseKind::VectorLength:
       // The condition expression will be printed as a part of the 'children',

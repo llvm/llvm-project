@@ -1571,21 +1571,21 @@ multiclass VOP3_Real_Base<GFXGen Gen, bits<10> op, string opName = NAME,
                           bit isSingle = 0> {
   defvar ps = !cast<VOP_Pseudo>(opName#"_e64");
   let IsSingle = !or(isSingle, ps.Pfl.IsSingle) in {
-  if ps.Pfl.HasOpSel then {
-    if ps.Pfl.IsFP8DstByteSel then {
-      def _e64#Gen.Suffix :
-        VOP3_Real_Gen<ps, Gen>,
-        VOP3FP8OpSel_dst_bytesel_gfx11_gfx12<op, ps.Pfl>;
+    if ps.Pfl.HasOpSel then {
+      if ps.Pfl.IsFP8DstByteSel then {
+        def _e64#Gen.Suffix :
+          VOP3_Real_Gen<ps, Gen>,
+          VOP3FP8OpSel_dst_bytesel_gfx11_gfx12<op, ps.Pfl>;
+      } else {
+        def _e64#Gen.Suffix :
+          VOP3_Real_Gen<ps, Gen>,
+          VOP3OpSel_gfx11_gfx12<op, ps.Pfl>;
+      }
     } else {
       def _e64#Gen.Suffix :
         VOP3_Real_Gen<ps, Gen>,
-        VOP3OpSel_gfx11_gfx12<op, ps.Pfl>;
+        VOP3e_gfx11_gfx12<op, ps.Pfl>;
     }
-  }
-  if !not(ps.Pfl.HasOpSel) then
-    def _e64#Gen.Suffix :
-      VOP3_Real_Gen<ps, Gen>,
-      VOP3e_gfx11_gfx12<op, ps.Pfl>;
   }
 }
 
@@ -1608,15 +1608,14 @@ multiclass VOP3_Real_with_name<GFXGen Gen, bits<10> op, string opName,
       def _e64#Gen.Suffix :
         VOP3_Real_Gen<ps, Gen>,
         VOP3FP8OpSel_gfx11_gfx12<op, ps.Pfl>;
+    } else if ps.Pfl.HasOpSel then {
+      def _e64#Gen.Suffix :
+        VOP3_Real_Gen<ps, Gen>,
+        VOP3OpSel_gfx11_gfx12<op, ps.Pfl>;
     } else {
-      if ps.Pfl.HasOpSel then
-        def _e64#Gen.Suffix :
-          VOP3_Real_Gen<ps, Gen>,
-          VOP3OpSel_gfx11_gfx12<op, ps.Pfl>;
-      if !not(ps.Pfl.HasOpSel) then
-        def _e64#Gen.Suffix :
-          VOP3_Real_Gen<ps, Gen>,
-          VOP3e_gfx11_gfx12<op, ps.Pfl>;
+      def _e64#Gen.Suffix :
+        VOP3_Real_Gen<ps, Gen>,
+        VOP3e_gfx11_gfx12<op, ps.Pfl>;
     }
   }
   if !ne(ps.Mnemonic, asmName) then
