@@ -58,12 +58,14 @@ end program
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
-! ALL-NEXT: Pipeline Collection : ['func.func', 'omp.declare_reduction']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction']
+! ALL-NEXT:   'fir.global' Pipeline
+! ALL-NEXT:     CFGConversion
 ! ALL-NEXT:   'func.func' Pipeline
 ! ALL-NEXT:     PolymorphicOpConversion
-! ALL-NEXT:     CFGConversionOnFunc
+! ALL-NEXT:     CFGConversion
 ! ALL-NEXT:   'omp.declare_reduction' Pipeline
-! ALL-NEXT:     CFGConversionOnReduction
+! ALL-NEXT:     CFGConversion
 ! ALL-NEXT: SCFToControlFlow
 ! ALL-NEXT: Canonicalizer
 ! ALL-NEXT: SimplifyRegionLite
