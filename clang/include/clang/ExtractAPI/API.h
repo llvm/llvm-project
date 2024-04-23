@@ -374,6 +374,7 @@ private:
   APIRecord::RecordKind Kind;
   mutable APIRecord *First = nullptr;
   mutable APIRecord *Last = nullptr;
+  bool IsWellFormed() const;
 
 protected:
   friend class APISet;

@@ -54,7 +54,13 @@ RecordContext *APIRecord::castToRecordContext(const APIRecord *Record) {
   }
 }
 
+bool RecordContext::IsWellFormed() const {
+  // Check that First and Last are both null or both non-null.
+  return (First == nullptr) == (Last == nullptr);
+}
+
 void RecordContext::stealRecordChain(RecordContext &Other) {
+  assert(IsWellFormed());
   // If we don't have an empty chain append Other's chain into ours.
   if (First)
     Last->NextInContext = Other.First;
@@ -69,6 +75,7 @@ void RecordContext::stealRecordChain(RecordContext &Other) {
 }
 
 void RecordContext::addToRecordChain(APIRecord *Record) const {
+  assert(IsWellFormed());
   if (!First) {
     First = Record;
     Last = Record;
