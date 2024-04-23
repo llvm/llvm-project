@@ -462,7 +462,7 @@ public:
   serialization::DeclID BaseDeclID = 0;
 
   /// Remapping table for declaration IDs in this module.
-  ContinuousRangeMap<uint32_t, int, 2> DeclRemap;
+  ContinuousRangeMap<serialization::DeclID, int, 2> DeclRemap;
 
   /// Mapping from the module files that this module file depends on
   /// to the base declaration ID for that module as it is understood within this
