@@ -106,6 +106,7 @@ void registerTestLinalgDropUnitDims();
 void registerTestLinalgElementwiseFusion();
 void registerTestLinalgGreedyFusion();
 void registerTestLinalgTransforms();
+void registerTestLinalgFuseConsumer();
 void registerTestLivenessAnalysisPass();
 void registerTestLivenessPass();
 void registerTestLoopFusion();
@@ -235,6 +236,7 @@ void registerTestPasses() {
   mlir::test::registerTestLinalgElementwiseFusion();
   mlir::test::registerTestLinalgGreedyFusion();
   mlir::test::registerTestLinalgTransforms();
+  mlir::test::registerTestLinalgFuseConsumer();
   mlir::test::registerTestLivenessAnalysisPass();
   mlir::test::registerTestLivenessPass();
   mlir::test::registerTestLoopFusion();

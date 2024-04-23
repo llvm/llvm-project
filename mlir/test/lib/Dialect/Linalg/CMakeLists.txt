@@ -7,6 +7,7 @@ add_mlir_library(MLIRLinalgTestPasses
   TestLinalgFusionTransforms.cpp
   TestLinalgTransforms.cpp
   TestPadFusion.cpp
+  TestLinalgFuseConsumer.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
