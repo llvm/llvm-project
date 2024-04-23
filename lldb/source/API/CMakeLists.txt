@@ -231,7 +231,6 @@ elseif (LLDB_EXPORT_ALL_SYMBOLS)
   )
 
   add_llvm_symbol_exports(liblldb ${exported_symbol_file})
-  set_target_properties(liblldb PROPERTIES FOLDER "LLDB/Misc")
 endif()
 
 if (NOT MSVC)
