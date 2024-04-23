@@ -747,6 +747,8 @@ foreach i = {1,2,3} in {
   defvar shxadd_uw = !cast<Instruction>("SH"#i#"ADD_UW");
   def : Pat<(i64 (add_like_non_imm12 (shl (and GPR:$rs1, 0xFFFFFFFF), (i64 i)), (XLenVT GPR:$rs2))),
             (shxadd_uw GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (riscv_shl_add (and GPR:$rs1, 0xFFFFFFFF), (i64 i), GPR:$rs2)),
+            (shxadd_uw GPR:$rs1, GPR:$rs2)>;
 }
 
 def : Pat<(i64 (add_like_non_imm12 (and (shl GPR:$rs1, (i64 1)), 0x1FFFFFFFF), (XLenVT GPR:$rs2))),
