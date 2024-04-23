@@ -30,12 +30,11 @@ public:
 
   // Acquires ownership of the mutex object `m` without attempting to lock
   // it. The behavior is undefined if the current thread does not hold the
-  // lock on `m`. Does not call `m.lock` upon resource acquisition.
+  // lock on `m`. Does not call `m.lock()` upon resource acquisition.
   lock_guard(MutexType &m, adopt_lock_t t) : mutex(m) {}
 
   ~lock_guard() { mutex.unlock(); }
 
-private:
   // non-copyable
   lock_guard &operator=(const lock_guard &) = delete;
   lock_guard(const lock_guard &) = delete;

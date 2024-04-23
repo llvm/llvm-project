@@ -27,16 +27,16 @@ struct Mutex {
   Mutex() : locked(false), double_locked(false), double_unlocked(false) {}
 
   void lock() {
-    if (locked) {
+    if (locked)
       double_locked = true;
-    }
+      
     locked = true;
   }
 
   void unlock() {
-    if (!locked) {
+    if (!locked)
       double_unlocked = true;
-    }
+
     locked = false;
   }
 };
