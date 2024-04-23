@@ -340,13 +340,6 @@ gentbl_filegroup(
     tbl_outs = [
         (
             [
-                "-gen-python-enum-bindings",
-                "-bind-dialect=async",
-            ],
-            "mlir/dialects/_async_enum_gen.py",
-        ),
-        (
-            [
                 "-gen-python-op-bindings",
                 "-bind-dialect=async",
             ],
