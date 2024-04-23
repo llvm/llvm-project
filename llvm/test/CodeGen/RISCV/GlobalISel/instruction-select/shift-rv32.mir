@@ -191,19 +191,9 @@ body:             |
 
 ---
 name:            srl_and_needed
-alignment:       2
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
-  - { id: 4, class: gprb }
-liveins:
-  - { reg: '$x10' }
-  - { reg: '$x11' }
 body:             |
   bb.1.entry:
     liveins: $x10, $x11
@@ -228,21 +218,9 @@ body:             |
 
 ---
 name:            srl_and_eliminated
-alignment:       2
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: gprb }
-  - { id: 1, class: gprb }
-  - { id: 2, class: gprb }
-  - { id: 3, class: gprb }
-  - { id: 4, class: gprb }
-  - { id: 5, class: gprb }
-  - { id: 6, class: gprb }
-liveins:
-  - { reg: '$x10' }
-  - { reg: '$x11' }
 body:             |
   bb.1.entry:
     liveins: $x10, $x11
