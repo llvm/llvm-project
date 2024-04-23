@@ -31,6 +31,7 @@ public:
   string &what() { return S; }
 };
 
+#define YK_OUTLINE_FNATTR "yk_outline"
 const char *SectionName = ".yk_ir";
 const uint32_t Magic = 0xedd5f00d;
 const uint32_t Version = 0;
@@ -705,6 +706,8 @@ private:
     serialiseString(F.getName());
     // type_idx:
     OutStreamer.emitSizeT(typeIndex(F.getFunctionType()));
+    // outline:
+    OutStreamer.emitInt8(F.hasFnAttribute(YK_OUTLINE_FNATTR));
     // num_blocks:
     OutStreamer.emitSizeT(F.size());
     // blocks:
