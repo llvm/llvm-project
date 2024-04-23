@@ -948,11 +948,6 @@ void CheckHelper::CheckObjectEntity(
             "Component '%s' with ATTRIBUTES(DEVICE) must also be allocatable"_err_en_US,
             symbol.name());
       }
-      if (IsAssumedSizeArray(symbol)) {
-        messages_.Say(
-            "Object '%s' with ATTRIBUTES(DEVICE) may not be assumed size"_err_en_US,
-            symbol.name());
-      }
       break;
     case common::CUDADataAttr::Managed:
       if (!IsAutomatic(symbol) && !IsAllocatable(symbol) &&
@@ -1441,10 +1436,6 @@ void CheckHelper::CheckSubprogram(
   }
   if (cudaAttrs && *cudaAttrs != common::CUDASubprogramAttrs::Host) {
     // CUDA device subprogram checks
-    if (symbol.attrs().HasAny({Attr::RECURSIVE, Attr::PURE, Attr::ELEMENTAL})) {
-      messages_.Say(symbol.name(),
-          "A device subprogram may not be RECURSIVE, PURE, or ELEMENTAL"_err_en_US);
-    }
     if (ClassifyProcedure(symbol) == ProcedureDefinitionClass::Internal) {
       messages_.Say(symbol.name(),
           "A device subprogram may not be an internal subprogram"_err_en_US);

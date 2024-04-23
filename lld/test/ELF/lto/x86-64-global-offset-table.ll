@@ -1,5 +1,5 @@
 ; REQUIRES: x86
-;; LTO-generated felocatable files may reference _GLOBAL_OFFSET_TABLE_ while
+;; LTO-generated relocatable files may reference _GLOBAL_OFFSET_TABLE_ while
 ;; the IR does not mention _GLOBAL_OFFSET_TABLE_.
 ;; Test that there is no spurious "undefined symbol" error.
 
