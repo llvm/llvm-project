@@ -182,7 +182,7 @@ public:
   /// Reads a declaration ID from the given position in this record.
   ///
   /// \returns The declaration ID read from the record, adjusted to a global ID.
-  serialization::DeclID readDeclID() {
+  serialization::GlobalDeclID readDeclID() {
     return Reader->ReadDeclID(*F, Record, Idx);
   }
 
