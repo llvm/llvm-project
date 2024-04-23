@@ -51,7 +51,8 @@ template <typename Class> struct bind_ty {
 };
 
 /// Match a specified integer value or vector of all elements of that
-/// value.
+/// value. \p BitWidth optionally specifies the bitwidth the matched constant
+/// must have. If it is 0, the matched constant can have any bitwidth.
 template <unsigned BitWidth = 0> struct specific_intval {
   APInt Val;
 
