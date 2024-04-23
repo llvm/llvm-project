@@ -29,7 +29,7 @@ struct Mutex {
   void lock() {
     if (locked)
       double_locked = true;
-      
+
     locked = true;
   }
 
