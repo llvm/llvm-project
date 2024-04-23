@@ -1699,6 +1699,9 @@ bool RISCVInstrInfo::areRVVInstsReassociable(const MachineInstr &MI1,
   };
 
   // PassThru
+  // TODO: Potentially we can loosen the condition to consider Root (MI1) to be
+  // associable with Prev (MI2) if Root has NoReg as passthru. In which case we
+  // also need to loosen the condition on vector policies between these.
   if (!checkRegOperand(1))
     return false;
 
