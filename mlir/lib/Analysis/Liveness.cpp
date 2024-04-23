@@ -74,9 +74,8 @@ struct BlockInfoBuilder {
         useValues.insert(operand);
       for (Region &region : op->getRegions())
         for (Block &child : region.getBlocks())
-          for (BlockArgument arg : child.getArguments()) {
+          for (BlockArgument arg : child.getArguments())
             defValues.insert(arg);
-          }
     });
     llvm::set_subtract(useValues, defValues);
   }
