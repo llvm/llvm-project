@@ -2824,8 +2824,9 @@ bool RISCVAsmParser::parseDirectiveOption() {
         break;
       }
 
-      auto Ext = llvm::lower_bound(RISCVFeatureKV, Arch);
-      if (Ext == std::end(RISCVFeatureKV) || StringRef(Ext->Key) != Arch ||
+      std::string &&Feature = RISCVISAInfo::getTargetFeatureForExtension(Arch);
+      auto Ext = llvm::lower_bound(RISCVFeatureKV, Feature);
+      if (Ext == std::end(RISCVFeatureKV) || StringRef(Ext->Key) != Feature ||
           !RISCVISAInfo::isSupportedExtension(Arch)) {
         if (isDigit(Arch.back()))
           return Error(
@@ -2834,7 +2835,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
         return Error(Loc, "unknown extension feature");
       }
 
-      Args.emplace_back(Type, Ext->Key);
+      Args.emplace_back(Type, Arch.str());
 
       if (Type == RISCVOptionArchArgType::Plus) {
         FeatureBitset OldFeatureBits = STI->getFeatureBits();
