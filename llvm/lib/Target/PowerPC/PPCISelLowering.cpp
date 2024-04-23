@@ -11733,23 +11733,30 @@ SDValue PPCTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
 }
 
 static SDValue ConvertCarryValueToCarryFlag(EVT SumType, SDValue Value,
-                                            SelectionDAG &DAG) {
+                                            SelectionDAG &DAG,
+                                            const PPCSubtarget &STI) {
   SDLoc DL(Value);
-  Value = DAG.getNode(ISD::SELECT, DL, SumType, Value,
-                      DAG.getConstant(1, DL, SumType),
-                      DAG.getConstant(0, DL, SumType));
+  if (STI.useCRBits())
+    Value = DAG.getNode(ISD::SELECT, DL, SumType, Value,
+                        DAG.getConstant(1, DL, SumType),
+                        DAG.getConstant(0, DL, SumType));
+  else
+    Value = DAG.getZExtOrTrunc(Value, DL, SumType);
   SDValue Sum = DAG.getNode(PPCISD::ADDC, DL, DAG.getVTList(SumType, MVT::i32),
                             Value, DAG.getAllOnesConstant(DL, SumType));
   return Sum.getValue(1);
 }
 
 static SDValue ConvertCarryFlagToCarryValue(EVT SumType, SDValue Flag,
-                                            EVT CarryType, SelectionDAG &DAG) {
+                                            EVT CarryType, SelectionDAG &DAG,
+                                            const PPCSubtarget &STI) {
   SDLoc DL(Flag);
   SDValue Zero = DAG.getConstant(0, DL, SumType);
   SDValue Carry = DAG.getNode(
       PPCISD::ADDE, DL, DAG.getVTList(SumType, MVT::i32), Zero, Zero, Flag);
-  return DAG.getSetCC(DL, CarryType, Carry, Zero, ISD::SETNE);
+  if (STI.useCRBits())
+    return DAG.getSetCC(DL, CarryType, Carry, Zero, ISD::SETNE);
+  return DAG.getZExtOrTrunc(Carry, DL, CarryType);
 }
 
 SDValue PPCTargetLowering::LowerADDSUBO(SDValue Op, SelectionDAG &DAG) const {
@@ -11762,8 +11769,8 @@ SDValue PPCTargetLowering::LowerADDSUBO(SDValue Op, SelectionDAG &DAG) const {
   Opc = IsAdd ? PPCISD::ADDC : PPCISD::SUBC;
   SDValue Sum = DAG.getNode(Opc, DL, DAG.getVTList(VT, MVT::i32),
                             N->getOperand(0), N->getOperand(1));
-  SDValue Carry =
-      ConvertCarryFlagToCarryValue(VT, Sum.getValue(1), CarryType, DAG);
+  SDValue Carry = ConvertCarryFlagToCarryValue(VT, Sum.getValue(1), CarryType,
+                                               DAG, Subtarget);
   if (!IsAdd)
     Carry = DAG.getNode(ISD::XOR, DL, CarryType, Carry,
                         DAG.getAllOnesConstant(DL, CarryType));
@@ -11783,10 +11790,11 @@ SDValue PPCTargetLowering::LowerADDSUBO_CARRY(SDValue Op,
   if (!IsAdd)
     CarryOp = DAG.getNode(ISD::XOR, DL, CarryOp.getValueType(), CarryOp,
                           DAG.getAllOnesConstant(DL, CarryOp.getValueType()));
-  CarryOp = ConvertCarryValueToCarryFlag(VT, CarryOp, DAG);
+  CarryOp = ConvertCarryValueToCarryFlag(VT, CarryOp, DAG, Subtarget);
   SDValue Sum = DAG.getNode(Opc, DL, DAG.getVTList(VT, MVT::i32),
                             Op.getOperand(0), Op.getOperand(1), CarryOp);
-  CarryOp = ConvertCarryFlagToCarryValue(VT, Sum.getValue(1), CarryType, DAG);
+  CarryOp = ConvertCarryFlagToCarryValue(VT, Sum.getValue(1), CarryType, DAG,
+                                         Subtarget);
   if (!IsAdd)
     CarryOp = DAG.getNode(ISD::XOR, DL, CarryOp.getValueType(), CarryOp,
                           DAG.getAllOnesConstant(DL, CarryOp.getValueType()));
