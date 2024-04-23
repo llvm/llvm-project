@@ -48,7 +48,7 @@ coro::LowererBase::LowererBase(Module &M)
 //    call ptr @llvm.coro.subfn.addr(ptr %Arg, i8 %index)
 
 CallInst *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
-                                        Instruction *InsertPt) {
+                                           Instruction *InsertPt) {
   auto *IndexVal = ConstantInt::get(Type::getInt8Ty(Context), Index);
   auto *Fn = Intrinsic::getDeclaration(&TheModule, Intrinsic::coro_subfn_addr);
 
