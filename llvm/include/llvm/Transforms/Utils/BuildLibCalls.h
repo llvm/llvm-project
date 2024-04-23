@@ -62,6 +62,9 @@ namespace llvm {
                      LibFunc TheLibFunc, AttributeList AttributeList,
                      FunctionType *Invalid, ArgsTy... Args) = delete;
 
+  // Handle -mregparm for the given function.
+  void markRegisterParameterAttributes(Function *F);
+
   /// Check whether the library function is available on target and also that
   /// it in the current Module is a Function with the right type.
   bool isLibFuncEmittable(const Module *M, const TargetLibraryInfo *TLI,
