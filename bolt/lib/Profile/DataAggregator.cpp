@@ -86,7 +86,6 @@ MaxSamples("max-samples",
   cl::Hidden,
   cl::cat(AggregatorCategory));
 
-extern cl::opt<bool> NeverPrint;
 extern cl::opt<opts::ProfileFormatKind> ProfileFormat;
 extern cl::opt<std::string> SaveProfile;
 
@@ -613,8 +612,7 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
         if (std::error_code EC = writeBATYAML(BC, opts::SaveProfile))
           report_error("cannot create output data file", EC);
     }
-    PrintProgramStats PPS(opts::NeverPrint);
-    BC.logBOLTErrorsAndQuitOnFatal(PPS.runOnFunctions(BC));
+    BC.logBOLTErrorsAndQuitOnFatal(PrintProgramStats().runOnFunctions(BC));
   }
 
   return Error::success();
