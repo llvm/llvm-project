@@ -701,40 +701,40 @@ public:
                                   const ExecutionContext &exe_ctx,
                                   const EvaluateExpressionOptions &options);
 
+  /// Given an address either create a value object containing the value at
+  /// that address, or create a value object containing the address itself
+  /// (pointer value), depending on whether the parameter 'do_deref' is true or
+  /// false.
   static lldb::ValueObjectSP
   CreateValueObjectFromAddress(llvm::StringRef name, uint64_t address,
                                const ExecutionContext &exe_ctx,
-                               CompilerType type);
+                               CompilerType type, bool do_deref = true);
 
   static lldb::ValueObjectSP
   CreateValueObjectFromData(llvm::StringRef name, const DataExtractor &data,
                             const ExecutionContext &exe_ctx, CompilerType type);
 
-  static lldb::ValueObjectSP
-  CreateValueObjectFromBytes(lldb::TargetSP target_sp, const void *bytes,
-                             CompilerType type);
-
-  static lldb::ValueObjectSP CreateValueObjectFromBytes(lldb::TargetSP target,
-                                                        const void *bytes,
-                                                        lldb::BasicType type);
-
+  /// Create a value object containing the given APInt value.
   static lldb::ValueObjectSP CreateValueObjectFromAPInt(lldb::TargetSP target,
                                                         const llvm::APInt &v,
-                                                        CompilerType type);
+                                                        CompilerType type,
+                                                        llvm::StringRef name);
 
+  /// Create a value object containing the given APFloat value.
   static lldb::ValueObjectSP
   CreateValueObjectFromAPFloat(lldb::TargetSP target, const llvm::APFloat &v,
-                               CompilerType type);
+                               CompilerType type, llvm::StringRef name);
 
-  static lldb::ValueObjectSP CreateValueObjectFromPointer(lldb::TargetSP target,
-                                                          uintptr_t addr,
-                                                          CompilerType type);
-
+  /// Create a value object containing the given boolean value.
   static lldb::ValueObjectSP CreateValueObjectFromBool(lldb::TargetSP target,
-                                                       bool value);
+                                                       bool value,
+                                                       llvm::StringRef name);
 
+  /// Create a nullptr value object with the specified type (must be a
+  /// nullptr type).
   static lldb::ValueObjectSP CreateValueObjectFromNullptr(lldb::TargetSP target,
-                                                          CompilerType type);
+                                                          CompilerType type,
+                                                          llvm::StringRef name);
 
   lldb::ValueObjectSP Persist();
 
