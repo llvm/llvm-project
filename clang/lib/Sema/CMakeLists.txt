@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   Core
+  Demangle
   FrontendHLSL
   FrontendOpenMP
   MC

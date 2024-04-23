@@ -92,6 +92,7 @@
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm-linux-androideabi \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --rtlib=compiler-rt \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-RT-ANDROID %s
 // CHECK-LD-RT-ANDROID-NOT: warning:
@@ -262,6 +263,7 @@
 // RUN: %clang -static -### %s -no-pie 2>&1 \
 // RUN:     --target=aarch64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-ANDROID-STATIC %s
 // CHECK-CLANG-ANDROID-STATIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-CLANG-ANDROID-STATIC: "--start-group" "{{[^"]*}}{{/|\\\\}}libclang_rt.builtins.a" "-l:libunwind.a" "-lc" "--end-group"
