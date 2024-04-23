@@ -1,3 +1,5 @@
+set(LLVM_SUBPROJECT_TITLE "BOLT")
+
 include(ExternalProject)
 
 set(BOLT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
