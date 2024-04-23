@@ -1021,11 +1021,11 @@ def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
     The backing memory for the variable is allocated statically and is
     described by the type of the variable.
     Optionally, an `initial_value` can be provided.
-    Internal linkage can be specified using the `staticSpecifier` unit attribute
-    and external linkage can be specified using the `externSpecifier` unit attribute.
+    Internal linkage can be specified using the `static_specifier` unit attribute
+    and external linkage can be specified using the `extern_specifier` unit attribute.
     Note that the default linkage without those two keywords depends on whether
     the target is C or C++ and whether the global variable is `const`.
-    The global variable can also be marked constant using the `constSpecifier`
+    The global variable can also be marked constant using the `const_specifier`
     unit attribute. Writing to such constant global variables is
     undefined.
 
