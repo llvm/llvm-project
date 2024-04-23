@@ -13,7 +13,7 @@ unittest("LLVMFrontendTests") {
   ]
   sources = [
     "OpenACCTest.cpp",
-    "OpenMPComposeTest.cpp",
+    "OpenMPCompositionTest.cpp",
     "OpenMPContextTest.cpp",
     "OpenMPIRBuilderTest.cpp",
     "OpenMPParsingTest.cpp",
