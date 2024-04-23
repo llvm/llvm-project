@@ -97,10 +97,10 @@ std::vector<T> getVectorOfRandom(size_t N) {
 template <class Container>
 std::pair<Container, Container> genCacheUnfriendlyData(size_t size1, size_t size2, OverlapPosition pos) {
   using ValueType = typename Container::value_type;
-  auto move_into = [](auto first, auto last) {
-      Container out;
-      std::move(first, last, std::inserter(out, out.begin()));
-      return out;
+  auto move_into  = [](auto first, auto last) {
+    Container out;
+    std::move(first, last, std::inserter(out, out.begin()));
+    return out;
   };
   const auto src_size        = pos == OverlapPosition::None ? size1 + size2 : std::max(size1, size2);
   std::vector<ValueType> src = getVectorOfRandom<ValueType>(src_size);

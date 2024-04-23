@@ -98,8 +98,8 @@ struct _IterOps<_ClassicAlgPolicy> {
 private:
   // advance with sentinel, a la std::ranges::advance -- InputIterator specialization
   template <class _InputIter>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static __difference_type<_InputIter>
-  __advance_to(_InputIter& __iter, __difference_type<_InputIter> __count, const _InputIter& __sentinel, input_iterator_tag) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static __difference_type<_InputIter> __advance_to(
+      _InputIter& __iter, __difference_type<_InputIter> __count, const _InputIter& __sentinel, input_iterator_tag) {
     __difference_type<_InputIter> __dist = 0;
     for (; __dist < __count && __iter != __sentinel; ++__dist)
       ++__iter;
@@ -109,7 +109,10 @@ private:
   // advance with sentinel, a la std::ranges::advance -- BidirectionalIterator specialization
   template <class _BiDirIter>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static __difference_type<_BiDirIter>
-  __advance_to(_BiDirIter& __iter, __difference_type<_BiDirIter> __count, const _BiDirIter& __sentinel, bidirectional_iterator_tag) {
+  __advance_to(_BiDirIter& __iter,
+               __difference_type<_BiDirIter> __count,
+               const _BiDirIter& __sentinel,
+               bidirectional_iterator_tag) {
     __difference_type<_BiDirIter> __dist = 0;
     if (__count >= 0)
       for (; __dist < __count && __iter != __sentinel; ++__dist)
@@ -123,7 +126,10 @@ private:
   // advance with sentinel, a la std::ranges::advance -- RandomIterator specialization
   template <class _RandIter>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static __difference_type<_RandIter>
-  __advance_to(_RandIter& __iter, __difference_type<_RandIter> __count, const _RandIter& __sentinel, random_access_iterator_tag) {
+  __advance_to(_RandIter& __iter,
+               __difference_type<_RandIter> __count,
+               const _RandIter& __sentinel,
+               random_access_iterator_tag) {
     auto __dist = _IterOps::distance(__iter, __sentinel);
     _LIBCPP_ASSERT_VALID_INPUT_RANGE(
         __count == 0 || (__dist < 0) == (__count < 0), "__sentinel must precede __iter when __count < 0");
