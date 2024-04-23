@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -66,6 +67,12 @@ public:
         SymbolTable::UseRange funcUses = *funcOp.getSymbolUses(op);
         for (SymbolTable::SymbolUse use : funcUses) {
           Operation *callOp = use.getUser();
+          if (mlir::isa<func::FuncOp>(callOp)) {
+            // Do not delete internal procedures holding the symbol of their
+            // Fortran host procedure as attribute.
+            callOp->removeAttr(fir::getHostSymbolAttrName());
+            continue;
+          }
           // If the callOp has users then replace them with Undef values.
           if (!callOp->use_empty()) {
             SmallVector<Value> undefResults;
