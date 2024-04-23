@@ -110,6 +110,10 @@ getLeafOrCompositeConstructs(Directive D, SmallVectorImpl<Directive> &Output) {
       assert(Comp != OMPD_unknown);
       Output.push_back(Comp);
       Iter = Range.end();
+      // As of now, a composite construct must contain all constituent leaf
+      // constructs from some point until the end of all constituent leaf
+      // constructs.
+      assert(Iter == Leafs.end() && "Malformed directive");
     }
   } while (Iter != Leafs.end());
 
