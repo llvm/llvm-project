@@ -633,6 +633,8 @@ public:
               [&](const auto &name) {},
           },
           ompObj.u);
+
+      ResolveOmpObject(ompObj, ompFlag);
     }
   }
 
