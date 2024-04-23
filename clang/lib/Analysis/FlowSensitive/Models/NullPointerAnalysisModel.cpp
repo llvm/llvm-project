@@ -224,7 +224,7 @@ Value *getValue(const Expr &Var, Environment &Env) {
 
   initializeRootValue(*RootValue, Env);
 
-  setGLValue(Var, *RootValue, Env);
+  setUnknownValue(Var, *RootValue, Env);
 
   return RootValue;
 }
@@ -395,6 +395,15 @@ void matchPtrArgFunctionExpr(const CallExpr *fncall,
     // FIXME: Recursively invalidate all member pointers of eg. a struct
     // Should be part of the framework, most likely.
     }
+  }
+
+  if (fncall->getCallReturnType(*Result.Context)->isPointerType()) {
+    Value *RootValue = Env.createValue( 
+        fncall->getCallReturnType(*Result.Context));
+    if (!RootValue)
+      return;
+
+    setUnknownValue(*fncall, *RootValue, Env);
   }
 }
 
