@@ -107,14 +107,14 @@ for.inc:                                          ; preds = %for.cond5
   br label %for.cond5
 }
 
-define void @e() {
+define void @e(ptr %p) {
 ; CHECK-LABEL: @e(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[FOR_COND]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr null, align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[TMP0]] to i1
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[FOR_END_SPLIT:%.*]], label [[FOR_END_SPLIT_US:%.*]]
 ; CHECK:       for.end.split.us:
@@ -122,7 +122,7 @@ define void @e() {
 ; CHECK:       g.us:
 ; CHECK-NEXT:    br label [[G_SPLIT_US6:%.*]]
 ; CHECK:       for.cond1.us1:
-; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr null, align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[P]], align 2
 ; CHECK-NEXT:    [[TOBOOL4_NOT_US:%.*]] = trunc i16 [[TMP2]] to i1
 ; CHECK-NEXT:    br i1 [[TOBOOL4_NOT_US]], label [[FOR_COND5_PREHEADER_US4:%.*]], label [[G_LOOPEXIT_US:%.*]]
 ; CHECK:       for.cond5.us2:
@@ -143,7 +143,7 @@ define void @e() {
 ; CHECK:       g.loopexit:
 ; CHECK-NEXT:    br label [[G]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       g:
-; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr null, align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[P]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i16 [[TMP3]] to i1
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[G_SPLIT_US:%.*]], label [[G_SPLIT:%.*]]
 ; CHECK:       g.split.us:
@@ -164,7 +164,7 @@ define void @e() {
 ; CHECK:       for.cond1.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND1]], !llvm.loop [[LOOP3]]
 ; CHECK:       for.cond1:
-; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr null, align 2
+; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[P]], align 2
 ; CHECK-NEXT:    [[TOBOOL4_NOT:%.*]] = trunc i16 [[TMP5]] to i1
 ; CHECK-NEXT:    br i1 [[TOBOOL4_NOT]], label [[FOR_COND5_PREHEADER:%.*]], label [[G_LOOPEXIT:%.*]]
 ; CHECK:       for.cond5.preheader:
@@ -188,7 +188,7 @@ g:                                                ; preds = %for.cond1, %for.end
   br label %for.cond1
 
 for.cond1:                                        ; preds = %for.cond5, %g
-  %0 = load i16, ptr null, align 2
+  %0 = load i16, ptr %p, align 2
   %tobool4.not = trunc i16 %0 to i1
   br i1 %tobool4.not, label %for.cond5, label %g
 

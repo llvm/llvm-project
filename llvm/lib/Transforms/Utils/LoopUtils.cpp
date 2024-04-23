@@ -1931,7 +1931,7 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
     return {};
 
   Instruction *CondI = dyn_cast<CmpInst>(TI->getCondition());
-  if (!CondI){
+  if (!CondI) {
     CondI = dyn_cast<TruncInst>(TI->getCondition());
     if (CondI && CondI->getType() != Type::getInt1Ty(TI->getContext()))
       return {};
