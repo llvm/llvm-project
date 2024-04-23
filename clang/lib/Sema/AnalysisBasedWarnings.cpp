@@ -2385,7 +2385,7 @@ public:
 // =============================================================================
 
 // Temporary feature enablement
-#define FX_ANALYZER_ENABLED 0
+#define FX_ANALYZER_ENABLED 1
 
 #if FX_ANALYZER_ENABLED
 
@@ -2453,37 +2453,14 @@ static bool functionIsVerifiable(const FunctionDecl *FD) {
   return true;
 }
 
-#if 0
 /// A mutable set of FunctionEffect, for use in places where any conditions
 /// have been resolved or can be ignored.
 class EffectSet {
-  SmallVector<FunctionEffect, 4> Impl;
-public:
-  EffectSet() = default;
-
-  operator ArrayRef<FunctionEffect>() const { return Impl; }
-
-  using iterator = const FunctionEffect *;
-  iterator begin() const { return Impl.begin(); }
-  iterator end() const { return Impl.end(); }
-
-  void insert(const FunctionEffect &Effect);
-  void insert(const EffectSet &Set);
-  void insertIgnoringConditions(ArrayRef<FunctionEffectWithCondition> Arr);
-
-  void dump(llvm::raw_ostream &OS) const;
-
-  static EffectSet difference(ArrayRef<FunctionEffect> LHS, ArrayRef<FunctionEffect> RHS);
-};
-#endif
-
-/// A mutable set of FunctionEffect, for use in places where any conditions
-/// have been resolved or can be ignored.
-// (This implementation optimizes footprint. As long as FunctionEffect is only 1
-// byte, and there are only 2 possible effects, this is more than sufficient. In
-// AnalysisBasedWarnings, we hold one of these for every function visited,
-// which, due to inference, can be many more functions than have effects.)
-class EffectSet {
+  // This implementation optimizes footprint. As long as FunctionEffect is only
+  // 1 byte, and there are only 2 possible effects, this is more than
+  // sufficient. In AnalysisBasedWarnings, we hold one of these for every
+  // function visited, which, due to inference, can be many more functions than
+  // have declared effects.
   template <typename T, typename SizeT, SizeT Capacity> struct FixedVector {
     SizeT Count = 0;
     T Items[Capacity] = {};
@@ -2592,9 +2569,10 @@ struct CondEffectSet {
 
   CondEffectSet(Sema &SemaRef, FunctionEffectsRef FX) {
     for (const auto Item : FX) {
-      if (Expr *Cond = Item.Cond) {
+      if (Expr *Cond = Item.Cond.expr()) {
         FunctionEffectMode Mode = FunctionEffectMode::None;
-        ExprResult ER = SemaRef.ActOnEffectExpression(Cond, Mode, /*RequireConstexpr=*/true);
+        ExprResult ER = SemaRef.ActOnEffectExpression(
+            Cond, Mode, /*RequireConstexpr=*/true);
         if (ER.isInvalid() || Mode == FunctionEffectMode::Dependent)
           continue;
         if (Mode == FunctionEffectMode::False) {
@@ -2618,7 +2596,8 @@ struct CallableInfo {
   CondEffectSet Effects;
   CallType CType = CallType::Unknown;
 
-  CallableInfo(Sema &SemaRef, const Decl &CD, SpecialFuncType FT = SpecialFuncType::None)
+  CallableInfo(Sema &SemaRef, const Decl &CD,
+               SpecialFuncType FT = SpecialFuncType::None)
       : CDecl(&CD), FuncType(FT) {
     // llvm::errs() << "CallableInfo " << name() << "\n";
     FunctionEffectsRef FXRef;
@@ -2783,16 +2762,16 @@ public:
     EffectSet FX;
 
     for (const auto &effect : AllInferrableEffectsToVerify) {
-      if (effect.canInferOnFunction(*CInfo.CDecl) && !CInfo.Effects.EffectsExplicitlyAbsent.contains(effect)) {
+      if (effect.canInferOnFunction(*CInfo.CDecl) &&
+          !CInfo.Effects.EffectsExplicitlyAbsent.contains(effect)) {
         FX.insert(effect);
       } else {
         // Add a diagnostic for this effect if a caller were to
         // try to infer it.
         auto &diag =
             InferrableEffectToFirstDiagnostic.getOrInsertDefault(effect);
-        diag =
-            Diagnostic(effect, DiagnosticID::DeclDisallowsInference,
-                       CInfo.CDecl->getLocation());
+        diag = Diagnostic(effect, DiagnosticID::DeclDisallowsInference,
+                          CInfo.CDecl->getLocation());
       }
     }
     // FX is now the set of inferrable effects which are not prohibited
@@ -2915,7 +2894,7 @@ const Decl *CanonicalFunctionDecl(const Decl *D) {
 
 // ==========
 class Analyzer {
-  constexpr static int DebugLogLevel = 3;
+  constexpr static int DebugLogLevel = 0;
   // --
   Sema &Sem;
 
@@ -3206,8 +3185,8 @@ private:
             !(Flags & FunctionEffect::FE_InferrableOnCallees)) {
           if (Callee.FuncType == SpecialFuncType::None) {
             PFA.checkAddDiagnostic(
-                Inferring,
-                {Effect, DiagnosticID::CallsDeclWithoutEffect, CallLoc, Callee.CDecl});
+                Inferring, {Effect, DiagnosticID::CallsDeclWithoutEffect,
+                            CallLoc, Callee.CDecl});
           } else {
             PFA.checkAddDiagnostic(
                 Inferring, {Effect, DiagnosticID::AllocatesMemory, CallLoc});
@@ -3254,7 +3233,7 @@ private:
       switch (Diag.ID) {
       case DiagnosticID::None:
       case DiagnosticID::DeclDisallowsInference: // shouldn't happen
-                                                           // here
+                                                 // here
         llvm_unreachable("Unexpected diagnostic kind");
         break;
       case DiagnosticID::AllocatesMemory:
@@ -3311,9 +3290,11 @@ private:
               S.Diag(Callee->getLocation(),
                      diag::note_func_effect_call_func_ptr)
                   << effectName;
-            } else if (CalleeInfo.Effects.EffectsExplicitlyAbsent.contains(Diag.Effect)) {
-              S.Diag(Callee->getLocation(), diag::note_func_effect_call_disallows_inference)
-                << effectName;
+            } else if (CalleeInfo.Effects.EffectsExplicitlyAbsent.contains(
+                           Diag.Effect)) {
+              S.Diag(Callee->getLocation(),
+                     diag::note_func_effect_call_disallows_inference)
+                  << effectName;
             } else {
               S.Diag(Callee->getLocation(), diag::note_func_effect_call_extern)
                   << effectName;

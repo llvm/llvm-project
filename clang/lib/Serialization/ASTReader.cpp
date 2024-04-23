@@ -8233,7 +8233,7 @@ void ASTReader::InitializeSema(Sema &S) {
         FX = BD->getFunctionEffects();
       }
       if (!FX.empty()) {
-        SemaObj->AllEffectsToVerify.insertIgnoringConditions(FX);
+        SemaObj->addDeclWithEffects(D, FX);
       }
     }
     DeclsWithEffectsToVerify.clear();

@@ -6239,7 +6239,7 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
   // Transform any function effects with unevaluated conditions.
   // Hold this set in a local for the rest of this function, since EPI
   // is going to hold a FunctionEffectsRef pointing into it.
-  std::optional <FunctionEffectSet> NewFX;
+  std::optional<FunctionEffectSet> NewFX;
 #if XFORM_FALSE_FX_TO_SUGAR
   SmallVector<Attr *> TypeAttrsToAdd;
 #endif
@@ -6248,7 +6248,7 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
     EnterExpressionEvaluationContext Unevaluated(
         getSema(), Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
-    for (unsigned Idx = 0, Count = FXConds.size(); Idx != Count; ) {
+    for (unsigned Idx = 0, Count = FXConds.size(); Idx != Count;) {
       if (Expr *CondExpr = FXConds[Idx].expr()) {
         ExprResult NewExpr = getDerived().TransformExpr(CondExpr);
         if (NewExpr.isInvalid())
@@ -6277,7 +6277,8 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
         // If it is now a constant of 'true', we can discard it because a null
         // condition in FunctionEffectSet means true. If the expression is still
         //  dependent or constant 'false', just propagate it into the new EPI.
-        FunctionEffectCondition Cond(Mode == FunctionEffectMode::True ? nullptr : NewExpr.get());
+        FunctionEffectCondition Cond(
+            Mode == FunctionEffectMode::True ? nullptr : NewExpr.get());
         NewFX->replaceCondition(Idx, Cond.expr());
 #endif
       }
@@ -6309,7 +6310,8 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
   // be transformed to FunctionProtoType.
   if (!TypeAttrsToAdd.empty()) {
     for (Attr *A : TypeAttrsToAdd) {
-      QualType QT = SemaRef.Context.getAttributedType(A->getKind(), Result, Result);
+      QualType QT =
+          SemaRef.Context.getAttributedType(A->getKind(), Result, Result);
       llvm::outs() << "transformed " << Result << " -> " << QT;
       Result = QT;
       AttributedTypeLoc ATL = TLB.push<AttributedTypeLoc>(Result);

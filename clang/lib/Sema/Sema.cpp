@@ -593,15 +593,9 @@ void Sema::diagnoseFunctionEffectConversion(QualType DstType, QualType SrcType,
   const auto SrcFX = FunctionEffectsRef::get(SrcType);
   const auto DstFX = FunctionEffectsRef::get(DstType);
   if (SrcFX != DstFX) {
-    for (const auto &Item : FunctionEffectSet::differences(SrcFX, DstFX)) {
-      const FunctionEffect &Effect = Item.first.Effect;
-      const bool Adding = Item.second;
-      if (Effect.shouldDiagnoseConversion(Adding, SrcType, SrcFX, DstType,
-                                          DstFX)) {
-        Diag(Loc, Adding ? diag::warn_invalid_add_func_effects
-                         : diag::warn_invalid_remove_func_effects)
-            << Effect.name();
-      }
+    for (const auto &Diff : FunctionEffectSet::differences(SrcFX, DstFX)) {
+      if (Diff.shouldDiagnoseConversion(SrcType, SrcFX, DstType, DstFX))
+        Diag(Loc, diag::warn_invalid_add_func_effects) << Diff.effectName();
     }
   }
 }

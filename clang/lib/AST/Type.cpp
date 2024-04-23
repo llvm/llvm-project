@@ -3654,7 +3654,8 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
       auto *DestConds = getTrailingObjects<FunctionEffectCondition>();
       std::copy(SrcConds.begin(), SrcConds.end(), DestConds);
 
-      assert(isCanonicalUnqualified()); // TODO: because I don't understand this yet...
+      assert(isCanonicalUnqualified()); // TODO: because I don't understand this
+                                        // yet...
       addDependence(TypeDependence::DependentInstantiation);
     }
   }
@@ -5053,57 +5054,93 @@ StringRef FunctionEffect::name() const {
   llvm_unreachable("unknown effect kind");
 }
 
-bool FunctionEffect::shouldDiagnoseConversion(
-    bool Adding, QualType OldType, const FunctionEffectsRef &OldFX,
-    QualType NewType, const FunctionEffectsRef &NewFX) const {
+bool FunctionEffectDiff::shouldDiagnoseConversion(
+    QualType SrcType, const FunctionEffectsRef &SrcFX, QualType DstType,
+    const FunctionEffectsRef &DstFX) const {
 
-  switch (kind()) {
-  case Kind::NonAllocating:
+  switch (EffectKind) {
+  case FunctionEffect::Kind::NonAllocating:
     // nonallocating can't be added (spoofed) during a conversion, unless we
     // have nonblocking
-    if (Adding) {
-      for (const auto &CFE : OldFX) {
-        if (CFE.Effect.kind() == Kind::NonBlocking)
+    if (DiffKind == Kind::Added) {
+      for (const auto &CFE : SrcFX) {
+        if (CFE.Effect.kind() == FunctionEffect::Kind::NonBlocking)
           return false;
       }
     }
     [[fallthrough]];
-  case Kind::NonBlocking:
-    // nonblocking can't be added (spoofed) during a conversion
-    return Adding;
-  case Kind::None:
+  case FunctionEffect::Kind::NonBlocking:
+    // nonblocking can't be added (spoofed) during a conversion.
+    switch (DiffKind) {
+    case Kind::Added:
+      return true;
+    case Kind::Removed:
+      return false;
+    case Kind::AssertToDeny:
+      // effect asserted -> denied: no diagnostic.
+      return false;
+    case Kind::DenyToAssert:
+      // effect denied -> asserted: diagnose.
+      return true;
+    case Kind::ConditionMismatch:
+      return true; // TODO: ???
+    }
+  case FunctionEffect::Kind::None:
     break;
   }
   llvm_unreachable("unknown effect kind");
 }
 
-bool FunctionEffect::shouldDiagnoseRedeclaration(
-    bool Adding, const FunctionDecl &OldFunction,
-    const FunctionEffectsRef &OldFX, const FunctionDecl &NewFunction,
-    const FunctionEffectsRef &NewFX) const {
-  switch (kind()) {
-  case Kind::NonAllocating:
-  case Kind::NonBlocking:
+bool FunctionEffectDiff::shouldDiagnoseRedeclaration(
+    const FunctionDecl &OldFunction, const FunctionEffectsRef &OldFX,
+    const FunctionDecl &NewFunction, const FunctionEffectsRef &NewFX) const {
+  switch (EffectKind) {
+  case FunctionEffect::Kind::NonAllocating:
+  case FunctionEffect::Kind::NonBlocking:
     // nonblocking/nonallocating can't be removed in a redeclaration
-    // adding -> false, removing -> true (diagnose)
-    return !Adding;
-  case Kind::None:
+    switch (DiffKind) {
+    case Kind::Added:
+      return false; // No diagnostic.
+    case Kind::Removed:
+      return true; // Issue diagnostic
+    case Kind::DenyToAssert:
+    case Kind::AssertToDeny:
+    case Kind::ConditionMismatch:
+      // All these forms of mismatches are diagnosed.
+      return true;
+    }
+  case FunctionEffect::Kind::None:
     break;
   }
   llvm_unreachable("unknown effect kind");
 }
 
-FunctionEffect::OverrideResult FunctionEffect::shouldDiagnoseMethodOverride(
-    bool Adding, const CXXMethodDecl &OldMethod,
-    const FunctionEffectsRef &OldFX, const CXXMethodDecl &NewMethod,
-    const FunctionEffectsRef &NewFX) const {
-  switch (kind()) {
-  case Kind::NonAllocating:
-  case Kind::NonBlocking:
-    // if added on an override, that's fine and not diagnosed.
-    // if missing from an override (removed), propagate from base to derived.
-    return Adding ? OverrideResult::Ignore : OverrideResult::Merge;
-  case Kind::None:
+FunctionEffectDiff::OverrideResult
+FunctionEffectDiff::shouldDiagnoseMethodOverride(
+    const CXXMethodDecl &OldMethod, const FunctionEffectsRef &OldFX,
+    const CXXMethodDecl &NewMethod, const FunctionEffectsRef &NewFX) const {
+  switch (EffectKind) {
+  case FunctionEffect::Kind::NonAllocating:
+  case FunctionEffect::Kind::NonBlocking:
+    switch (DiffKind) {
+
+    // If added on an override, that's fine and not diagnosed.
+    case Kind::Added:
+      return OverrideResult::NoAction;
+
+    // If missing from an override (removed), propagate from base to derived.
+    case Kind::Removed:
+      return OverrideResult::MergeAdded;
+
+    // If there's a mismatch involving the effect's polarity or condition,
+    // issue a warning.
+    case Kind::DenyToAssert:
+    case Kind::AssertToDeny:
+    case Kind::ConditionMismatch:
+      return OverrideResult::Warn;
+    }
+
+  case FunctionEffect::Kind::None:
     break;
   }
   llvm_unreachable("unknown effect kind");
@@ -5172,7 +5209,7 @@ void FunctionEffectsRef::Profile(llvm::FoldingSetNodeID &ID) const {
 
   ID.AddInteger(size() | (HasConds << 31u));
   for (unsigned Idx = 0, Count = Effects.size(); Idx != Count; ++Idx) {
-    ID.AddInteger(llvm::to_underlying(Effects[Idx].kind()));
+    ID.AddInteger(Effects[Idx].toOpaqueInt32());
     if (HasConds)
       ID.AddPointer(Conditions[Idx].expr());
   }
@@ -5183,12 +5220,13 @@ void FunctionEffectSet::insert(FunctionEffect Effect, Expr *Cond) {
   unsigned Idx = 0;
   for (unsigned Count = Effects.size(); Idx != Count; ++Idx) {
     const auto &IterEffect = Effects[Idx];
-    if (IterEffect == Effect) {
-      // TODO: Is it okay to assume the caller has already diagnosed
-      // any potential conflict with conditions here?
+    if (IterEffect.kind() == Effect.kind()) {
+      // It's possible here to have incompatible combinations of polarity
+      // (asserted/denied) and condition; for now, we keep whichever came
+      // though this should be improved.
       return;
     }
-    if (Effect < IterEffect)
+    if (Effect.kind() < IterEffect.kind())
       break;
   }
 
@@ -5219,8 +5257,10 @@ void FunctionEffectSet::replaceCondition(unsigned Idx, Expr *Cond) {
 void FunctionEffectSet::erase(unsigned Idx) {
   assert(Idx < Effects.size());
   Effects.erase(Effects.begin() + Idx);
-  if (!Conditions.empty())
+  if (!Conditions.empty()) {
+    assert(Idx < Conditions.size());
     Conditions.erase(Conditions.begin() + Idx);
+  }
 }
 
 FunctionEffectSet FunctionEffectSet::getUnion(FunctionEffectsRef LHS,
@@ -5245,19 +5285,6 @@ FunctionEffectSet::differences(const FunctionEffectsRef &Old,
   FunctionEffectsRef::iterator PNew = New.begin();
   FunctionEffectsRef::iterator NewEnd = New.end();
 
-  auto compare = [](const FunctionEffectWithCondition &LHS,
-                    const FunctionEffectWithCondition &RHS) {
-    if (LHS.Effect < RHS.Effect)
-      return -1;
-    if (LHS.Effect > RHS.Effect)
-      return 1;
-    if (LHS.Cond.expr() < RHS.Cond.expr())
-      return -1;
-    if (RHS.Cond.expr() < LHS.Cond.expr())
-      return 1;
-    return 0;
-  };
-
   while (true) {
     int cmp = 0;
     if (POld == OldEnd) {
@@ -5266,51 +5293,52 @@ FunctionEffectSet::differences(const FunctionEffectsRef &Old,
       cmp = 1;
     } else if (PNew == NewEnd)
       cmp = -1;
-    else
-      cmp = compare(*POld, *PNew);
+    else {
+      FunctionEffectWithCondition Old = *POld;
+      FunctionEffectWithCondition New = *PNew;
+      if (Old.Effect.kind() < New.Effect.kind())
+        cmp = -1;
+      else if (New.Effect.kind() < Old.Effect.kind())
+        cmp = 1;
+      else {
+        cmp = 0;
+        if (Old.Cond.expr() != New.Cond.expr()) {
+          // TODO: Cases where the expressions are equivalent but
+          // don't have the same identity.
+          Result.push_back(FunctionEffectDiff{
+              Old.Effect.kind(), FunctionEffectDiff::Kind::ConditionMismatch,
+              Old, New});
+        } else if (!Old.Effect.isDenied() && New.Effect.isDenied()) {
+          Result.push_back(FunctionEffectDiff{
+              Old.Effect.kind(), FunctionEffectDiff::Kind::AssertToDeny, Old,
+              New});
+        } else if (Old.Effect.isDenied() && !New.Effect.isDenied()) {
+          Result.push_back(FunctionEffectDiff{
+              Old.Effect.kind(), FunctionEffectDiff::Kind::DenyToAssert, Old,
+              New});
+        }
+      }
+    }
 
     if (cmp < 0) {
       // removal
-      Result.push_back({*POld, false});
+      FunctionEffectWithCondition Old = *POld;
+      Result.push_back(FunctionEffectDiff{
+          Old.Effect.kind(), FunctionEffectDiff::Kind::Removed, Old, {}});
       ++POld;
     } else if (cmp > 0) {
       // addition
-      Result.push_back({*PNew, true});
+      FunctionEffectWithCondition New = *PNew;
+      Result.push_back(FunctionEffectDiff{
+          New.Effect.kind(), FunctionEffectDiff::Kind::Added, {}, New});
       ++PNew;
     } else {
       ++POld;
       ++PNew;
     }
   }
-
   return Result;
 }
-
-#if 0
-FunctionEffectSet
-FunctionEffectSet::difference(FunctionEffectsRef LHS,
-                                  FunctionEffectsRef RHS) {
-  FunctionEffectSet Result;
-  std::set_difference(LHS.begin(), LHS.end(), RHS.begin(), RHS.end(),
-                      std::back_inserter(Result.Impl));
-  return Result;
-}
-
-void FunctionEffectSet::insert(FunctionEffectsRef Arr) {
-  // TODO: For large RHS sets, use set_union or a custom insert-in-place
-  for (const auto &CFE : Arr) {
-    insert(CFE);
-  }
-}
-
-void FunctionEffectSet::insertIgnoringConditions(
-    FunctionEffectsRef Arr) {
-  // TODO: For large RHS sets, use set_union or a custom insert-in-place
-  for (const auto &CFE : Arr) {
-    insert(FunctionEffectWithCondition(CFE.effect().kind(), nullptr));
-  }
-}
-#endif
 
 LLVM_DUMP_METHOD void FunctionEffectsRef::dump(llvm::raw_ostream &OS) const {
   OS << "Effects{";
@@ -5321,7 +5349,7 @@ LLVM_DUMP_METHOD void FunctionEffectsRef::dump(llvm::raw_ostream &OS) const {
     else
       First = false;
     OS << CFE.Effect.name();
-    if (Expr * E = CFE.Cond.expr()) {
+    if (Expr *E = CFE.Cond.expr()) {
       OS << '(';
       E->dump();
       OS << ')';

@@ -4438,34 +4438,20 @@ public:
 
 class Decl;
 class CXXMethodDecl;
+struct FunctionEffectDiff;
 class FunctionEffectsRef;
 class FunctionEffectSet;
 
-/*
-  TODO: Idea about how to move most of the FunctionEffect business out of
-  Type.h, thus removing these forward declarations.
-
-  - Keep FunctionEffect itself here but make it more minimal. Don't define flags
-  or any behaviors, just the Kind and an accessor.
-  - Keep FunctionEffectCondition here.
-  - Make FunctionProtoType and ExtProtoInfo use only ArrayRef<FunctionEffect>
-  and ArrayRef<FunctionEffectCondition>.
-  - Somewhere in Sema, define ExtFunctionEffect, which holds a FunctionEffect
-    and has all the behavior-related methods.
-  - There too, define the containers. FunctionEffectsRef can have a
-  constructor or factory method that initializes itself from a
-  FunctionProtoType.
-*/
-
 /// Represents an abstract function effect, using just an enumeration describing
-/// its kind.
+/// its kind and a bool "denied", which indicates that the effect is asserted
+/// NOT to apply (preventing inference of the effect).
 class FunctionEffect {
 public:
   /// Identifies the particular effect.
   enum class Kind : uint8_t {
-    None,
-    NonBlocking,
-    NonAllocating,
+    None = 0,
+    NonBlocking = 1,
+    NonAllocating = 2,
   };
 
   /// Flags describing some behaviors of the effect.
@@ -4483,32 +4469,38 @@ public:
     FE_ExcludeThreadLocalVars = 0x20
   };
 
-  /// Describes the result of effects differing between a base class's virtual
-  /// method and an overriding method in a subclass.
-  enum class OverrideResult {
-    Ignore,
-    Warn,
-    Merge // Base method's effects are merged with those of the override.
-  };
-
 private:
-  Kind FKind = Kind::None;
+  LLVM_PREFERRED_TYPE(Kind)
+  unsigned FKind : 2;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsDenied : 1;
 
   // Expansion: for hypothetical TCB+types, there could be one Kind for TCB,
   // then ~16(?) bits "SubKind" to map to a specific named TCB. SubKind would
   // be considered for uniqueness.
 
 public:
-  FunctionEffect() = default;
+  FunctionEffect() : FKind(unsigned(Kind::None)), IsDenied(false) {}
 
-  explicit FunctionEffect(Kind K) : FKind(K) {}
+  FunctionEffect(Kind K, bool IsDenied)
+      : FKind(unsigned(K)), IsDenied(IsDenied) {}
 
   /// The kind of the effect.
-  Kind kind() const { return FKind; }
+  Kind kind() const { return Kind(FKind); }
+
+  /// Whether the effect is being denied (as opposed to asserted).
+  bool isDenied() const { return IsDenied; }
+
+  /// For serialization.
+  uint32_t toOpaqueInt32() const { return (FKind << 1) | IsDenied; }
+  static FunctionEffect fromOpaqueInt32(uint32_t Value) {
+    return FunctionEffect(Kind(Value >> 1), Value & 1);
+  }
 
   /// Flags describing some behaviors of the effect.
   Flags flags() const {
-    switch (FKind) {
+    switch (kind()) {
     case Kind::NonBlocking:
       return FE_InferrableOnCallees | FE_ExcludeThrow | FE_ExcludeCatch |
              FE_ExcludeObjCMessageSend | FE_ExcludeStaticLocalVars |
@@ -4526,28 +4518,6 @@ public:
   /// The description printed in diagnostics, e.g. 'nonblocking'.
   StringRef name() const;
 
-  /// Return true if adding or removing the effect as part of a type conversion
-  /// should generate a diagnostic.
-  bool shouldDiagnoseConversion(bool Adding, QualType OldType,
-                                const FunctionEffectsRef &OldFX,
-                                QualType NewType,
-                                const FunctionEffectsRef &NewFX) const;
-
-  /// Return true if adding or removing the effect in a redeclaration should
-  /// generate a diagnostic.
-  bool shouldDiagnoseRedeclaration(bool Adding, const FunctionDecl &OldFunction,
-                                   const FunctionEffectsRef &OldFX,
-                                   const FunctionDecl &NewFunction,
-                                   const FunctionEffectsRef &NewFX) const;
-
-  /// Return true if adding or removing the effect in a C++ virtual method
-  /// override should generate a diagnostic.
-  OverrideResult
-  shouldDiagnoseMethodOverride(bool Adding, const CXXMethodDecl &OldMethod,
-                               const FunctionEffectsRef &OldFX,
-                               const CXXMethodDecl &NewMethod,
-                               const FunctionEffectsRef &NewFX) const;
-
   /// Return true if the effect is allowed to be inferred on the callee,
   /// which is either a FunctionDecl or BlockDecl.
   /// This is only used if the effect has FE_InferrableOnCallees flag set.
@@ -4563,16 +4533,13 @@ public:
                                   ArrayRef<FunctionEffect> CalleeFX) const;
 
   friend bool operator==(const FunctionEffect &LHS, const FunctionEffect &RHS) {
-    return LHS.FKind == RHS.FKind;
+    return LHS.FKind == RHS.FKind && LHS.IsDenied == RHS.IsDenied;
   }
   friend bool operator!=(const FunctionEffect &LHS, const FunctionEffect &RHS) {
     return !(LHS == RHS);
   }
   friend bool operator<(const FunctionEffect &LHS, const FunctionEffect &RHS) {
     return LHS.FKind < RHS.FKind;
-  }
-  friend bool operator>(const FunctionEffect &LHS, const FunctionEffect &RHS) {
-    return LHS.FKind > RHS.FKind;
   }
 };
 
@@ -4600,6 +4567,55 @@ struct FunctionEffectWithCondition {
   FunctionEffectCondition Cond;
 };
 
+struct FunctionEffectDiff {
+  enum class Kind {
+    Added,
+    Removed,
+    AssertToDeny,
+    DenyToAssert,
+    ConditionMismatch
+  };
+
+  FunctionEffect::Kind EffectKind;
+  Kind DiffKind;
+  FunctionEffectWithCondition Old; // invalid when Added
+  FunctionEffectWithCondition New; // invalid when Removed
+
+  StringRef effectName() const {
+    if (Old.Effect.kind() != FunctionEffect::Kind::None)
+      return Old.Effect.name();
+    return New.Effect.name();
+  }
+
+  /// Describes the result of effects differing between a base class's virtual
+  /// method and an overriding method in a subclass.
+  enum class OverrideResult {
+    NoAction,
+    Warn,
+    MergeAdded // Merge an added effect
+  };
+
+  /// Return true if adding or removing the effect as part of a type conversion
+  /// should generate a diagnostic.
+  bool shouldDiagnoseConversion(QualType SrcType,
+                                const FunctionEffectsRef &SrcFX,
+                                QualType DstType,
+                                const FunctionEffectsRef &DstFX) const;
+
+  /// Return true if adding or removing the effect in a redeclaration should
+  /// generate a diagnostic.
+  bool shouldDiagnoseRedeclaration(const FunctionDecl &OldFunction,
+                                   const FunctionEffectsRef &OldFX,
+                                   const FunctionDecl &NewFunction,
+                                   const FunctionEffectsRef &NewFX) const;
+
+  /// Return true if adding or removing the effect in a C++ virtual method
+  /// override should generate a diagnostic.
+  OverrideResult shouldDiagnoseMethodOverride(
+      const CXXMethodDecl &OldMethod, const FunctionEffectsRef &OldFX,
+      const CXXMethodDecl &NewMethod, const FunctionEffectsRef &NewFX) const;
+};
+
 /// Support iteration in parallel through a pair of FunctionEffect and
 /// FunctionEffectCondition containers.
 template <typename Container> class FunctionEffectIterator {
@@ -4624,7 +4640,8 @@ public:
   FunctionEffectWithCondition operator*() const {
     const bool HasConds = !Outer.Conditions.empty();
     return FunctionEffectWithCondition{Outer.Effects[Idx],
-                              HasConds ? Outer.Conditions[Idx] : FunctionEffectCondition()};
+                                       HasConds ? Outer.Conditions[Idx]
+                                                : FunctionEffectCondition()};
   }
 };
 
@@ -4632,6 +4649,8 @@ public:
 /// them. The effects and conditions reside in memory not managed by this object
 /// (typically, trailing objects in FunctionProtoType, or borrowed references
 /// from a FunctionEffectSet).
+///
+/// Invariant: there is never more than one instance of any given effect.
 class FunctionEffectsRef {
   ArrayRef<FunctionEffect> Effects;
 
@@ -4677,6 +4696,10 @@ public:
 
 /// A mutable set of FunctionEffects and possibly conditions attached to them.
 /// Used transitorily within Sema to compare and merge effects on declarations.
+///
+/// Invariant: there is never more than one instance of any given effect. This
+/// is asserted in insert and getUnion; it is the caller's responsibility to
+/// diagnose this.
 class FunctionEffectSet {
   SmallVector<FunctionEffect> Effects;
   // The vector of conditions is either empty or has the same size
@@ -4702,6 +4725,7 @@ public:
   void dump(llvm::raw_ostream &OS) const;
 
   // Mutators
+
   void insert(FunctionEffect Effect, Expr *Cond);
   void insert(const FunctionEffectsRef &Set);
   void insertIgnoringConditions(const FunctionEffectsRef &Set);
@@ -4710,15 +4734,14 @@ public:
   void erase(unsigned Idx);
 
   // Set operations
+  static FunctionEffectSet getUnion(FunctionEffectsRef LHS,
+                                    FunctionEffectsRef RHS);
 
-  using Differences =
-      SmallVector<std::pair<FunctionEffectWithCondition, /*added=*/bool>>;
+  using Differences = SmallVector<FunctionEffectDiff>;
+
   /// Caller should short-circuit by checking for equality first.
   static Differences differences(const FunctionEffectsRef &Old,
                                  const FunctionEffectsRef &New);
-
-  static FunctionEffectSet getUnion(FunctionEffectsRef LHS,
-                                    FunctionEffectsRef RHS);
 };
 
 /// Represents a prototype with parameter type info, e.g.

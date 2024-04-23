@@ -223,9 +223,7 @@ public:
   }
 
   void writeFunctionEffect(FunctionEffect E) {
-    static_assert(sizeof(FunctionEffect::Kind) <= sizeof(uint32_t),
-                  "update this if the value size changes");
-    asImpl().writeUInt32(llvm::to_underlying(E.kind()));
+    asImpl().writeUInt32(E.toOpaqueInt32());
   }
 
   void writeFunctionEffectCondition(FunctionEffectCondition CE) {

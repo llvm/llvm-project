@@ -245,10 +245,8 @@ public:
   }
 
   FunctionEffect readFunctionEffect() {
-    static_assert(sizeof(FunctionEffect::Kind) <= sizeof(uint32_t),
-                  "update this if size changes");
     uint32_t value = asImpl().readUInt32();
-    return FunctionEffect(static_cast<FunctionEffect::Kind>(value));
+    return FunctionEffect::fromOpaqueInt32(value);
   }
 
   FunctionEffectCondition readFunctionEffectCondition() {

@@ -3925,14 +3925,11 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   QualType OldQTypeForComparison = OldQType;
   if (OldFX != NewFX) {
     const auto Diffs = FunctionEffectSet::differences(OldFX, NewFX);
-    for (const auto &Item : Diffs) {
-      const FunctionEffect &Effect = Item.first.Effect;
-      const bool Adding = Item.second;
-      if (Effect.shouldDiagnoseRedeclaration(Adding, *Old, OldFX, *New,
-                                             NewFX)) {
+    for (const auto &Diff : Diffs) {
+      if (Diff.shouldDiagnoseRedeclaration(*Old, OldFX, *New, NewFX)) {
         Diag(New->getLocation(),
              diag::warn_mismatched_func_effect_redeclaration)
-            << Effect.name();
+            << Diff.effectName();
         Diag(Old->getLocation(), diag::note_previous_declaration);
       }
     }
@@ -11153,6 +11150,10 @@ void Sema::maybeAddDeclWithEffects(const Decl *D,
     return;
   }
 
+  addDeclWithEffects(D, FX);
+}
+
+void Sema::addDeclWithEffects(const Decl *D, const FunctionEffectsRef &FX) {
   // Ignore any conditions when building the list of effects.
   AllEffectsToVerify.insertIgnoringConditions(FX);
 

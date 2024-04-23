@@ -4505,17 +4505,6 @@ unsigned FunctionDecl::getODRHash() {
   return ODRHash;
 }
 
-// Effects may differ between declarations, but they should be propagated from
-// old to new on any redeclaration, so it suffices to look at
-// getMostRecentDecl().
-FunctionEffectsRef FunctionDecl::getFunctionEffects() const {
-  if (const auto *FPT =
-          getMostRecentDecl()->getType()->getAs<FunctionProtoType>()) {
-    return FPT->getFunctionEffects();
-  }
-  return {};
-}
-
 //===----------------------------------------------------------------------===//
 // FieldDecl Implementation
 //===----------------------------------------------------------------------===//
@@ -5238,15 +5227,6 @@ bool BlockDecl::capturesVariable(const VarDecl *variable) const {
 
 SourceRange BlockDecl::getSourceRange() const {
   return SourceRange(getLocation(), Body ? Body->getEndLoc() : getLocation());
-}
-
-FunctionEffectsRef BlockDecl::getFunctionEffects() const {
-  if (auto *TSI = getSignatureAsWritten()) {
-    if (auto *FPT = TSI->getType()->getAs<FunctionProtoType>()) {
-      return FPT->getFunctionEffects();
-    }
-  }
-  return {};
 }
 
 //===----------------------------------------------------------------------===//

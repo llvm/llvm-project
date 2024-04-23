@@ -218,8 +218,8 @@ namespace {
     // nonallocating(cond). Manual logic for finding previous attributes would
     // be more complex, unless we transformed nonblocking/nonallocating(false)
     // into distinct separate attributes from the ones which are parsed.
-    FunctionEffectMode parsedNonBlocking : 2;
-    FunctionEffectMode parsedNonAllocating : 2;
+    FunctionEffectMode parsedNonBlocking;
+    FunctionEffectMode parsedNonAllocating;
 
   public:
     TypeProcessingState(Sema &sema, Declarator &declarator)
@@ -354,9 +354,15 @@ namespace {
     bool didParseNoDeref() const { return parsedNoDeref; }
 
     void setParsedNonBlocking(FunctionEffectMode v) { parsedNonBlocking = v; }
-    FunctionEffectMode getParsedNonBlocking() const { return parsedNonBlocking; }
-    void setParsedNonAllocating(FunctionEffectMode v) { parsedNonAllocating = v; }
-    FunctionEffectMode getParsedNonAllocating() const { return parsedNonAllocating; }
+    FunctionEffectMode getParsedNonBlocking() const {
+      return parsedNonBlocking;
+    }
+    void setParsedNonAllocating(FunctionEffectMode v) {
+      parsedNonAllocating = v;
+    }
+    FunctionEffectMode getParsedNonAllocating() const {
+      return parsedNonAllocating;
+    }
 
     ~TypeProcessingState() {
       if (savedAttrs.empty())
@@ -7977,8 +7983,8 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
   llvm_unreachable("unexpected attribute kind!");
 }
 
-ExprResult Sema::ActOnEffectExpression(Expr *CondExpr, FunctionEffectMode &Mode, bool RequireConstexpr)
-{
+ExprResult Sema::ActOnEffectExpression(Expr *CondExpr, FunctionEffectMode &Mode,
+                                       bool RequireConstexpr) {
   // see checkFunctionConditionAttr, Sema::CheckCXXBooleanCondition
   if (RequireConstexpr || !CondExpr->isTypeDependent()) {
     ExprResult E = PerformContextuallyConvertToBool(CondExpr);
@@ -8071,8 +8077,8 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
   };
 
   const FunctionEffectMode PrevState = isNonBlocking
-                                      ? TPState.getParsedNonBlocking()
-                                      : TPState.getParsedNonAllocating();
+                                           ? TPState.getParsedNonBlocking()
+                                           : TPState.getParsedNonAllocating();
   if (PrevState != FunctionEffectMode::None) {
     // Only one attribute per constraint is allowed.
     return incompatible(isNonBlocking, PrevState);
@@ -8112,11 +8118,13 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
   // FunctionEffectsRef attached to a FunctionProtoType.
   const FunctionEffect NewEffect(isNonBlocking
                                      ? FunctionEffect::Kind::NonBlocking
-                                     : FunctionEffect::Kind::NonAllocating);
+                                     : FunctionEffect::Kind::NonAllocating,
+                                 /*IsDenied=*/false);
 
   FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
   FunctionEffectSet FX(EPI.FunctionEffects);
-  FX.insert(NewEffect, NewState == FunctionEffectMode::Dependent ? CondExpr : nullptr);
+  FX.insert(NewEffect,
+            NewState == FunctionEffectMode::Dependent ? CondExpr : nullptr);
   EPI.FunctionEffects = FunctionEffectsRef(FX);
 
   QualType newtype = S.Context.getFunctionType(FPT->getReturnType(),

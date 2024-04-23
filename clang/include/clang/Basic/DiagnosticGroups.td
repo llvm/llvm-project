@@ -1521,3 +1521,4 @@ def PerfConstraintImpliesNoexcept : DiagGroup<"perf-constraint-implies-noexcept"
 
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;
+

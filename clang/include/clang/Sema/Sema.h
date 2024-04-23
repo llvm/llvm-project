@@ -421,7 +421,7 @@ enum class TemplateDeductionResult {
 };
 
 /// Used with attributes/effects with a boolean condition, e.g. `nonblocking`.
-enum class FunctionEffectMode {
+enum class FunctionEffectMode : uint8_t {
   None,     // effect is not present
   False,    // effect(false)
   True,     // effect(true)
@@ -964,11 +964,14 @@ public:
   /// Potentially add a FunctionDecl or BlockDecl to DeclsWithEffectsToVerify.
   void maybeAddDeclWithEffects(const Decl *D, const FunctionEffectsRef &FX);
 
-  /// Try to parse the conditional expression attached to an effect attribute 
+  /// Unconditionally add a Decl to DeclsWithEfffectsToVerify.
+  void addDeclWithEffects(const Decl *D, const FunctionEffectsRef &FX);
+
+  /// Try to parse the conditional expression attached to an effect attribute
   /// (e.g. 'nonblocking'). (c.f. Sema::ActOnNoexceptSpec). If RequireConstexpr,
   /// then this will fail if the expression is dependent.
   ExprResult ActOnEffectExpression(Expr *CondExpr, FunctionEffectMode &Mode,
-    bool RequireConstexpr = false);
+                                   bool RequireConstexpr = false);
 
   // ----- function effects --- where ?????
 

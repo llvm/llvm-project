@@ -18295,7 +18295,7 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
 
   if (OldFT->hasExtParameterInfos()) {
     for (unsigned I = 0, E = OldFT->getNumParams(); I != E; ++I)
-      // A parameter of the overriding method should be annotated with noescape
+      // A parameter of the overriding method should  be annotated with noescape
       // if the corresponding parameter of the overridden method is annotated.
       if (OldFT->getExtParameterInfo(I).isNoEscape() &&
           !NewFT->getExtParameterInfo(I).isNoEscape()) {
@@ -18326,39 +18326,33 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
 
   // Virtual overrides: check for matching effects.
   const auto OldFX = Old->getFunctionEffects();
-  const auto NewFX = New->getFunctionEffects();
+  const auto NewFXOrig = New->getFunctionEffects();
 
-  if (OldFX != NewFX) {
+  if (OldFX != NewFXOrig) {
+    FunctionEffectSet NewFX(NewFXOrig);
     const auto Diffs = FunctionEffectSet::differences(OldFX, NewFX);
-    bool AnyDiags = false;
-
-    for (const auto &Item : Diffs) {
-      const FunctionEffect &Effect = Item.first.Effect;
-      const bool Adding = Item.second;
-      switch (Effect.shouldDiagnoseMethodOverride(Adding, *Old, OldFX, *New,
-                                                  NewFX)) {
-      case FunctionEffect::OverrideResult::Ignore:
+    for (const auto &Diff : Diffs) {
+      switch (Diff.shouldDiagnoseMethodOverride(*Old, OldFX, *New, NewFX)) {
+      case FunctionEffectDiff::OverrideResult::NoAction:
         break;
-      case FunctionEffect::OverrideResult::Warn:
+      case FunctionEffectDiff::OverrideResult::Warn:
         Diag(New->getLocation(), diag::warn_mismatched_func_effect_override)
-            << Effect.name();
-        Diag(Old->getLocation(), diag::note_overridden_virtual_function);
-        // TODO: It would be nice to have a FIXIT here!
-        AnyDiags = true;
+            << Diff.effectName();
+        Diag(Old->getLocation(), diag::note_overridden_virtual_function)
+            << Old->getReturnTypeSourceRange();
         break;
-      case FunctionEffect::OverrideResult::Merge: {
-        auto MergedFX = FunctionEffectSet::getUnion(OldFX, NewFX);
-
+      case FunctionEffectDiff::OverrideResult::MergeAdded: {
+        NewFX.insert(Diff.New.Effect, Diff.New.Cond.expr());
+        const auto *NewFT = New->getType()->castAs<FunctionProtoType>();
         FunctionProtoType::ExtProtoInfo EPI = NewFT->getExtProtoInfo();
-        EPI.FunctionEffects = FunctionEffectsRef(MergedFX);
+        EPI.FunctionEffects = FunctionEffectsRef(NewFX);
         QualType ModQT = Context.getFunctionType(NewFT->getReturnType(),
                                                  NewFT->getParamTypes(), EPI);
         New->setType(ModQT);
-      } break;
+        break;
+      }
       }
     }
-    if (AnyDiags)
-      return true;
   }
 
   CallingConv NewCC = NewFT->getCallConv(), OldCC = OldFT->getCallConv();
