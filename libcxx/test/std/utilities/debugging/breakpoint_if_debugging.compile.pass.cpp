@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
-// XFAIL: LIBCXX-AIX-FIXME, LIBCXX-PICOLIBC-FIXME
+// XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // <debugging>
 

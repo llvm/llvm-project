@@ -13,7 +13,7 @@
 // gdbclient.py, ndk-gdb.py, gdbserver), and the Android organization doesn't
 // support gdb anymore, favoring lldb instead.
 // UNSUPPORTED: android, linux && no-filesystem && no-localization
-// XFAIL: LIBCXX-AIX-FIXME, LIBCXX-PICOLIBC-FIXME
+// XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // RUN: "%{gdb}" %t.exe -ex "source %S/is_debugger_present_with_debugger_gdb.py" --silent

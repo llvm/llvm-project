@@ -512,6 +512,22 @@ DEFAULT_FEATURES += [
     )
 ]
 
+# Detect whether dbx is on the system.
+def check_dbx(cfg):
+    dbx_path = shutil.which("dbx")
+    if dbx_path is None:
+        return False
+
+    return True
+
+
+DEFAULT_FEATURES += [
+    Feature(
+        name="host-has-dbx",
+        when=check_dbx,
+        actions=[AddSubstitution("%{dbx}", lambda cfg: shutil.which("dbx"))],
+    )
+]
 
 # Detect whether GDB is on the system, has Python scripting and supports
 # adding breakpoint commands. If so add a substitution to access it.

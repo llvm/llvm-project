@@ -29,6 +29,16 @@
 #  include <csignal>
 #  include <fstream>
 #  include <string>
+#elif defined(_AIX)
+#  include <charconv>
+#  include <csignal>
+#  include <cstring>
+#  include <fcntl.h>
+#  include <sys/mman.h>
+#  include <sys/proc.h>
+#  include <sys/procfs.h>
+#  include <sys/types.h>
+#  include <unistd.h>
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -41,7 +51,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 static void __breakpoint() noexcept { DebugBreak(); }
 
-#  elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__linux__)
+#  elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__linux__) || defined(_AIX)
 
 static void __breakpoint() {
 #    if __has_builtin(__builtin_debugtrap)
@@ -138,6 +148,37 @@ static bool __is_debugger_present() noexcept {
 
   return false;
 #    endif // _LIBCPP_HAS_NO_FILESYSTEM
+}
+
+#  elif defined(_AIX)
+
+_LIBCPP_HIDE_FROM_ABI bool __is_debugger_present() noexcept {
+  // Get the status information of a process by memory mapping the file /proc/PID/status.
+  // https://www.ibm.com/docs/en/aix/7.3?topic=files-proc-file
+  char filename[] = "/proc/4294967295/status";
+  if (auto [ptr, ec] = to_chars(filename + 6, filename + 16, getpid()); ec == std::errc()) {
+    strcpy(ptr, "/status");
+  } else {
+    _LIBCPP_ASSERT_INTERNAL(false, "Could not convert pid to cstring.");
+    return false;
+  }
+
+  int fd = open(filename, O_RDONLY);
+  if (fd < 0) {
+    _LIBCPP_ASSERT_INTERNAL(false, "Could not open '/proc/{pid}/status' for reading.");
+    return false;
+  }
+
+  pstatus_t status;
+  if (read(fd, &status, sizeof(pstatus_t)) < static_cast<ssize_t>(sizeof(pstatus_t))) {
+    _LIBCPP_ASSERT_INTERNAL(false, "Could not read from '/proc/{pid}/status'.");
+    return false;
+  }
+
+  if (status.pr_flag & STRC)
+    return true;
+
+  return false;
 }
 
 #  else
