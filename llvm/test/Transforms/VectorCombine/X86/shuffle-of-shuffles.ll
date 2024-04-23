@@ -43,3 +43,23 @@ define <8 x i32> @concat_extract_subvectors_poison(<8 x i32> %x) {
   %concat = shufflevector <4 x i32> %lo, <4 x i32> %hi, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i32> %concat
 }
+
+; broadcast loads are free on AVX (and blends are much cheap than general 2-operand shuffles)
+
+define  <4 x double> @blend_broadcasts_v4f64(ptr %p0, ptr %p1)  {
+; CHECK-LABEL: define <4 x double> @blend_broadcasts_v4f64(
+; CHECK-SAME: ptr [[P0:%.*]], ptr [[P1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[LD0:%.*]] = load <4 x double>, ptr [[P0]], align 32
+; CHECK-NEXT:    [[LD1:%.*]] = load <4 x double>, ptr [[P1]], align 32
+; CHECK-NEXT:    [[BCST0:%.*]] = shufflevector <4 x double> [[LD0]], <4 x double> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BCST1:%.*]] = shufflevector <4 x double> [[LD1]], <4 x double> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BLEND:%.*]] = shufflevector <4 x double> [[BCST0]], <4 x double> [[BCST1]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+; CHECK-NEXT:    ret <4 x double> [[BLEND]]
+;
+  %ld0 = load <4 x double>, ptr %p0, align 32
+  %ld1 = load <4 x double>, ptr %p1, align 32
+  %bcst0 = shufflevector <4 x double> %ld0, <4 x double> undef, <4 x i32> zeroinitializer
+  %bcst1 = shufflevector <4 x double> %ld1, <4 x double> undef, <4 x i32> zeroinitializer
+  %blend = shufflevector <4 x double> %bcst0, <4 x double> %bcst1, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+  ret <4 x double> %blend
+}
