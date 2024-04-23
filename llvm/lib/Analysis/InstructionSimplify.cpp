@@ -7238,6 +7238,14 @@ const SimplifyQuery getBestSimplifyQuery(AnalysisManager<T, TArgs...> &AM,
 }
 template const SimplifyQuery getBestSimplifyQuery(AnalysisManager<Function> &,
                                                   Function &);
+
+bool SimplifyQuery::isUndefValue(Value *V) const {
+  if (!CanUseUndef)
+    return false;
+
+  return match(V, m_Undef());
+}
+
 } // namespace llvm
 
 void InstSimplifyFolder::anchor() {}

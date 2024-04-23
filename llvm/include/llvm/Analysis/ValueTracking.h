@@ -20,6 +20,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/FMF.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Intrinsics.h"
 #include <cassert>
