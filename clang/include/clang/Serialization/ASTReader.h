@@ -504,7 +504,7 @@ private:
   static_assert(std::is_same_v<serialization::DeclID, Decl::DeclID>);
 
   using GlobalDeclMapType =
-      ContinuousRangeMap<serialization::DeclID, ModuleFile *, 4>;
+      ContinuousRangeMap<serialization::GlobalDeclID, ModuleFile *, 4>;
 
   /// Mapping from global declaration IDs to the module in which the
   /// declaration resides.
@@ -513,14 +513,14 @@ private:
   using FileOffset = std::pair<ModuleFile *, uint64_t>;
   using FileOffsetsTy = SmallVector<FileOffset, 2>;
   using DeclUpdateOffsetsMap =
-      llvm::DenseMap<serialization::DeclID, FileOffsetsTy>;
+      llvm::DenseMap<serialization::GlobalDeclID, FileOffsetsTy>;
 
   /// Declarations that have modifications residing in a later file
   /// in the chain.
   DeclUpdateOffsetsMap DeclUpdateOffsets;
 
   using DelayedNamespaceOffsetMapTy = llvm::DenseMap<
-      serialization::DeclID,
+      serialization::GlobalDeclID,
       std::pair</*LexicalOffset*/ uint64_t, /*VisibleOffset*/ uint64_t>>;
 
   /// Mapping from global declaration IDs to the lexical and visible block
@@ -606,7 +606,11 @@ private:
 
   /// An array of lexical contents of a declaration context, as a sequence of
   /// Decl::Kind, DeclID pairs.
-  using LexicalContents = ArrayRef<llvm::support::unaligned_uint32_t>;
+  using unalighed_decl_id_t =
+      llvm::support::detail::packed_endian_specific_integral<
+          serialization::DeclID, llvm::endianness::native,
+          llvm::support::unaligned>;
+  using LexicalContents = ArrayRef<unalighed_decl_id_t>;
 
   /// Map from a DeclContext to its lexical contents.
   llvm::DenseMap<const DeclContext*, std::pair<ModuleFile*, LexicalContents>>
@@ -631,7 +635,7 @@ private:
 
   /// Updates to the visible declarations of declaration contexts that
   /// haven't been loaded yet.
-  llvm::DenseMap<serialization::DeclID, DeclContextVisibleUpdates>
+  llvm::DenseMap<serialization::GlobalDeclID, DeclContextVisibleUpdates>
       PendingVisibleUpdates;
 
   /// The set of C++ or Objective-C classes that have forward
@@ -658,7 +662,8 @@ private:
   /// Read the record that describes the visible contents of a DC.
   bool ReadVisibleDeclContextStorage(ModuleFile &M,
                                      llvm::BitstreamCursor &Cursor,
-                                     uint64_t Offset, serialization::DeclID ID);
+                                     uint64_t Offset,
+                                     serialization::GlobalDeclID ID);
 
   /// A vector containing identifiers that have already been
   /// loaded.
@@ -811,21 +816,26 @@ private:
   /// This contains the data loaded from all EAGERLY_DESERIALIZED_DECLS blocks
   /// in the chain. The referenced declarations are deserialized and passed to
   /// the consumer eagerly.
-  SmallVector<serialization::DeclID, 16> EagerlyDeserializedDecls;
+  SmallVector<serialization::GlobalDeclID, 16> EagerlyDeserializedDecls;
 
   /// The IDs of all tentative definitions stored in the chain.
   ///
   /// Sema keeps track of all tentative definitions in a TU because it has to
   /// complete them and pass them on to CodeGen. Thus, tentative definitions in
   /// the PCH chain must be eagerly deserialized.
-  SmallVector<serialization::DeclID, 16> TentativeDefinitions;
+  SmallVector<serialization::GlobalDeclID, 16> TentativeDefinitions;
 
   /// The IDs of all CXXRecordDecls stored in the chain whose VTables are
   /// used.
   ///
   /// CodeGen has to emit VTables for these records, so they have to be eagerly
   /// deserialized.
-  SmallVector<serialization::DeclID, 64> VTableUses;
+  struct VTableUse {
+    serialization::GlobalDeclID ID;
+    SourceLocation::UIntTy RawLoc;
+    bool Used;
+  };
+  SmallVector<VTableUse> VTableUses;
 
   /// A snapshot of the pending instantiations in the chain.
   ///
@@ -833,7 +843,11 @@ private:
   /// end of the TU. It consists of a pair of values for every pending
   /// instantiation where the first value is the ID of the decl and the second
   /// is the instantiation location.
-  SmallVector<serialization::DeclID, 64> PendingInstantiations;
+  struct PendingInstantiation {
+    serialization::GlobalDeclID ID;
+    SourceLocation::UIntTy RawLoc;
+  };
+  SmallVector<PendingInstantiation, 64> PendingInstantiations;
 
   //@}
 
@@ -843,11 +857,11 @@ private:
 
   /// A snapshot of Sema's unused file-scoped variable tracking, for
   /// generating warnings.
-  SmallVector<serialization::DeclID, 16> UnusedFileScopedDecls;
+  SmallVector<serialization::GlobalDeclID, 16> UnusedFileScopedDecls;
 
   /// A list of all the delegating constructors we've seen, to diagnose
   /// cycles.
-  SmallVector<serialization::DeclID, 4> DelegatingCtorDecls;
+  SmallVector<serialization::GlobalDeclID, 4> DelegatingCtorDecls;
 
   /// Method selectors used in a @selector expression. Used for
   /// implementation of -Wselector.
@@ -860,7 +874,7 @@ private:
   /// The IDs of type aliases for ext_vectors that exist in the chain.
   ///
   /// Used by Sema for finding sugared names for ext_vectors in diagnostics.
-  SmallVector<serialization::DeclID, 4> ExtVectorDecls;
+  SmallVector<serialization::GlobalDeclID, 4> ExtVectorDecls;
 
   //@}
 
@@ -871,7 +885,7 @@ private:
   /// The IDs of all potentially unused typedef names in the chain.
   ///
   /// Sema tracks these to emit warnings.
-  SmallVector<serialization::DeclID, 16> UnusedLocalTypedefNameCandidates;
+  SmallVector<serialization::GlobalDeclID, 16> UnusedLocalTypedefNameCandidates;
 
   /// Our current depth in #pragma cuda force_host_device begin/end
   /// macros.
@@ -880,7 +894,7 @@ private:
   /// The IDs of the declarations Sema stores directly.
   ///
   /// Sema tracks a few important decls, such as namespace std, directly.
-  SmallVector<serialization::DeclID, 4> SemaDeclRefs;
+  SmallVector<serialization::GlobalDeclID, 4> SemaDeclRefs;
 
   /// The IDs of the types ASTContext stores directly.
   ///
@@ -891,7 +905,7 @@ private:
   ///
   /// The AST context tracks a few important decls, currently cudaConfigureCall,
   /// directly.
-  SmallVector<serialization::DeclID, 2> CUDASpecialDeclRefs;
+  SmallVector<serialization::GlobalDeclID, 2> CUDASpecialDeclRefs;
 
   /// The floating point pragma option settings.
   SmallVector<uint64_t, 1> FPPragmaOptions;
@@ -940,11 +954,15 @@ private:
   llvm::DenseMap<const Decl *, std::set<std::string>> OpenCLDeclExtMap;
 
   /// A list of the namespaces we've seen.
-  SmallVector<serialization::DeclID, 4> KnownNamespaces;
+  SmallVector<serialization::GlobalDeclID, 4> KnownNamespaces;
 
   /// A list of undefined decls with internal linkage followed by the
   /// SourceLocation of a matching ODR-use.
-  SmallVector<serialization::DeclID, 8> UndefinedButUsed;
+  struct UndefinedButUsedDecl {
+    serialization::GlobalDeclID ID;
+    SourceLocation::UIntTy RawLoc;
+  };
+  SmallVector<UndefinedButUsedDecl, 8> UndefinedButUsed;
 
   /// Delete expressions to analyze at the end of translation unit.
   SmallVector<uint64_t, 8> DelayedDeleteExprs;
@@ -956,7 +974,8 @@ private:
   /// The IDs of all decls to be checked for deferred diags.
   ///
   /// Sema tracks these to emit deferred diags.
-  llvm::SmallSetVector<serialization::DeclID, 4> DeclsToCheckForDeferredDiags;
+  llvm::SmallSetVector<serialization::GlobalDeclID, 4>
+      DeclsToCheckForDeferredDiags;
 
 private:
   struct ImportedSubmodule {
@@ -1093,8 +1112,8 @@ private:
   ///
   /// The declarations on the identifier chain for these identifiers will be
   /// loaded once the recursive loading has completed.
-  llvm::MapVector<IdentifierInfo *, SmallVector<uint32_t, 4>>
-    PendingIdentifierInfos;
+  llvm::MapVector<IdentifierInfo *, SmallVector<serialization::GlobalDeclID, 4>>
+      PendingIdentifierInfos;
 
   /// The set of lookup results that we have faked in order to support
   /// merging of partially deserialized decls but that we have not yet removed.
@@ -1221,7 +1240,7 @@ private:
   SmallVector<ObjCInterfaceDecl *, 16> ObjCClassesLoaded;
 
   using KeyDeclsMap =
-      llvm::DenseMap<Decl *, SmallVector<serialization::DeclID, 2>>;
+      llvm::DenseMap<Decl *, SmallVector<serialization::GlobalDeclID, 2>>;
 
   /// A mapping from canonical declarations to the set of global
   /// declaration IDs for key declaration that have been merged with that
@@ -1430,7 +1449,7 @@ private:
   QualType readTypeRecord(unsigned Index);
   RecordLocation TypeCursorForIndex(unsigned Index);
   void LoadedDecl(unsigned Index, Decl *D);
-  Decl *ReadDeclRecord(serialization::DeclID ID);
+  Decl *ReadDeclRecord(serialization::GlobalDeclID ID);
   void markIncompleteDeclChain(Decl *D);
 
   /// Returns the most recent declaration of a declaration (which must be
@@ -1438,7 +1457,7 @@ private:
   /// merged into its redecl chain.
   Decl *getMostRecentExistingDecl(Decl *D);
 
-  RecordLocation DeclCursorForID(serialization::DeclID ID,
+  RecordLocation DeclCursorForID(serialization::GlobalDeclID ID,
                                  SourceLocation &Location);
   void loadDeclUpdateRecords(PendingUpdateRecord &Record);
   void loadPendingDeclChain(Decl *D, uint64_t LocalOffset);
@@ -1897,8 +1916,8 @@ public:
 
   /// Map from a local declaration ID within a given module to a
   /// global declaration ID.
-  serialization::DeclID getGlobalDeclID(ModuleFile &F,
-                                      serialization::LocalDeclID LocalID) const;
+  serialization::GlobalDeclID
+  getGlobalDeclID(ModuleFile &F, serialization::LocalDeclID LocalID) const;
 
   /// Returns true if global DeclID \p ID originated from module \p M.
   bool isDeclIDFromModule(serialization::GlobalDeclID ID, ModuleFile &M) const;
@@ -1912,23 +1931,23 @@ public:
 
   /// Resolve a declaration ID into a declaration, potentially
   /// building a new declaration.
-  Decl *GetDecl(serialization::DeclID ID);
-  Decl *GetExternalDecl(uint32_t ID) override;
+  Decl *GetDecl(serialization::GlobalDeclID ID);
+  Decl *GetExternalDecl(Decl::DeclID ID) override;
 
   /// Resolve a declaration ID into a declaration. Return 0 if it's not
   /// been loaded yet.
-  Decl *GetExistingDecl(serialization::DeclID ID);
+  Decl *GetExistingDecl(serialization::GlobalDeclID ID);
 
   /// Reads a declaration with the given local ID in the given module.
-  Decl *GetLocalDecl(ModuleFile &F, uint32_t LocalID) {
+  Decl *GetLocalDecl(ModuleFile &F, serialization::LocalDeclID LocalID) {
     return GetDecl(getGlobalDeclID(F, LocalID));
   }
 
   /// Reads a declaration with the given local ID in the given module.
   ///
   /// \returns The requested declaration, casted to the given return type.
-  template<typename T>
-  T *GetLocalDeclAs(ModuleFile &F, uint32_t LocalID) {
+  template <typename T>
+  T *GetLocalDeclAs(ModuleFile &F, serialization::LocalDeclID LocalID) {
     return cast_or_null<T>(GetLocalDecl(F, LocalID));
   }
 
@@ -1939,14 +1958,14 @@ public:
   /// module file.
   serialization::DeclID
   mapGlobalIDToModuleFileGlobalID(ModuleFile &M,
-                                  serialization::DeclID GlobalID);
+                                  serialization::GlobalDeclID GlobalID);
 
   /// Reads a declaration ID from the given position in a record in the
   /// given module.
   ///
   /// \returns The declaration ID read from the record, adjusted to a global ID.
-  serialization::DeclID ReadDeclID(ModuleFile &F, const RecordData &Record,
-                                   unsigned &Idx);
+  serialization::GlobalDeclID
+  ReadDeclID(ModuleFile &F, const RecordData &Record, unsigned &Idx);
 
   /// Reads a declaration from the given position in a record in the
   /// given module.
@@ -2120,9 +2139,10 @@ public:
   void LoadSelector(Selector Sel);
 
   void SetIdentifierInfo(unsigned ID, IdentifierInfo *II);
-  void SetGloballyVisibleDecls(IdentifierInfo *II,
-                               const SmallVectorImpl<uint32_t> &DeclIDs,
-                               SmallVectorImpl<Decl *> *Decls = nullptr);
+  void SetGloballyVisibleDecls(
+      IdentifierInfo *II,
+      const SmallVectorImpl<serialization::GlobalDeclID> &DeclIDs,
+      SmallVectorImpl<Decl *> *Decls = nullptr);
 
   /// Report a diagnostic.
   DiagnosticBuilder Diag(unsigned DiagID) const;
@@ -2363,7 +2383,7 @@ public:
 
   // Contains the IDs for declarations that were requested before we have
   // access to a Sema object.
-  SmallVector<uint64_t, 16> PreloadedDeclIDs;
+  SmallVector<serialization::GlobalDeclID, 16> PreloadedDeclIDs;
 
   /// Retrieve the semantic analysis object used to analyze the
   /// translation unit in which the precompiled header is being

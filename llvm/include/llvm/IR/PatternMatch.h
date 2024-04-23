@@ -151,6 +151,11 @@ struct undef_match {
 /// neither undef nor poison, the aggregate is not matched.
 inline auto m_Undef() { return undef_match(); }
 
+/// Match an arbitrary UndefValue constant.
+inline class_match<UndefValue> m_UndefValue() {
+  return class_match<UndefValue>();
+}
+
 /// Match an arbitrary poison constant.
 inline class_match<PoisonValue> m_Poison() {
   return class_match<PoisonValue>();
@@ -776,6 +781,9 @@ inline bind_ty<const WithOverflowInst>
 m_WithOverflowInst(const WithOverflowInst *&I) {
   return I;
 }
+
+/// Match an UndefValue, capturing the value if we match.
+inline bind_ty<UndefValue> m_UndefValue(UndefValue *&U) { return U; }
 
 /// Match a Constant, capturing the value if we match.
 inline bind_ty<Constant> m_Constant(Constant *&C) { return C; }
