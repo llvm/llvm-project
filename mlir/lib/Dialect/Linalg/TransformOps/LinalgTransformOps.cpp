@@ -3434,11 +3434,9 @@ DiagnosedSilenceableFailure transform::TransposeMatmulOp::applyToOne(
           .Case([&](linalg::BatchMatmulOp op) {
             return transposeBatchMatmul(rewriter, op, transposeLHS);
           })
-          .Default([&](Operation *op) {
-            return rewriter.notifyMatchFailure(op, "not supported");
-          });
+          .Default([&](Operation *op) { return failure(); });
   if (failed(maybeTransformed))
-    return emitDefaultSilenceableFailure(target);
+    return emitSilenceableFailure(target->getLoc()) << "not supported";
   // Handle to the new Matmul operation with transposed filters
   results.push_back(*maybeTransformed);
   return DiagnosedSilenceableFailure::success();
