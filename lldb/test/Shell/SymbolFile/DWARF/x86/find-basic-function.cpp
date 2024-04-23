@@ -59,6 +59,11 @@
 // RUN: lldb-test symbols --name=not_there --find=function %t | \
 // RUN:   FileCheck --check-prefix=EMPTY %s
 
+/// Test a per-module index built by lld.
+// RUN: ld.lld --debug-names %t.o -o %t
+// RUN: lldb-test symbols --name=foo --find=function --function-flags=base %t | \
+// RUN:   FileCheck --check-prefix=BASE %s
+
 // NAMES: Name: .debug_names
 
 // BASE: Found 4 functions:
