@@ -474,7 +474,7 @@ public:
   llvm::DenseMap<ModuleFile *, serialization::DeclID> GlobalToLocalDeclIDs;
 
   /// Array of file-level DeclIDs sorted by file.
-  const serialization::DeclID *FileSortedDecls = nullptr;
+  const serialization::LocalDeclID *FileSortedDecls = nullptr;
   unsigned NumFileSortedDecls = 0;
 
   /// Array of category list location information within this

@@ -69,10 +69,81 @@ using IdentifierID = uint32_t;
 /// FIXME: Merge with Decl::DeclID
 using DeclID = uint32_t;
 
-// FIXME: Turn these into classes so we can have some type safety when
-// we go from local ID to global and vice-versa.
-using LocalDeclID = DeclID;
-using GlobalDeclID = DeclID;
+class LocalDeclID {
+public:
+  explicit LocalDeclID(DeclID ID) : ID(ID) {}
+
+  DeclID get() const { return ID; }
+
+private:
+  DeclID ID;
+};
+
+/// Wrapper class for DeclID. This is helpful to not mix the use of LocalDeclID
+/// and GlobalDeclID to improve the type safety.
+class GlobalDeclID {
+public:
+  GlobalDeclID() : ID(0) {}
+  explicit GlobalDeclID(DeclID ID) : ID(ID) {}
+
+  DeclID get() const { return ID; }
+
+  explicit operator DeclID() const { return ID; }
+
+  friend bool operator==(const GlobalDeclID &LHS, const GlobalDeclID &RHS) {
+    return LHS.ID == RHS.ID;
+  }
+  friend bool operator!=(const GlobalDeclID &LHS, const GlobalDeclID &RHS) {
+    return LHS.ID != RHS.ID;
+  }
+  // We may sort the global decl ID.
+  friend bool operator<(const GlobalDeclID &LHS, const GlobalDeclID &RHS) {
+    return LHS.ID < RHS.ID;
+  }
+  friend bool operator>(const GlobalDeclID &LHS, const GlobalDeclID &RHS) {
+    return LHS.ID > RHS.ID;
+  }
+  friend bool operator<=(const GlobalDeclID &LHS, const GlobalDeclID &RHS) {
+    return LHS.ID <= RHS.ID;
+  }
+  friend bool operator>=(const GlobalDeclID &LHS, const GlobalDeclID &RHS) {
+    return LHS.ID >= RHS.ID;
+  }
+
+private:
+  DeclID ID;
+};
+
+/// A helper iterator adaptor to convert the iterators to `SmallVector<DeclID>`
+/// to the iterators to `SmallVector<GlobalDeclID>`.
+class GlobalDeclIDIterator
+    : public llvm::iterator_adaptor_base<GlobalDeclIDIterator, const DeclID *,
+                                         std::forward_iterator_tag,
+                                         GlobalDeclID> {
+public:
+  GlobalDeclIDIterator() : iterator_adaptor_base(nullptr) {}
+
+  GlobalDeclIDIterator(const DeclID *ID) : iterator_adaptor_base(ID) {}
+
+  value_type operator*() const { return GlobalDeclID(*I); }
+
+  bool operator==(const GlobalDeclIDIterator &RHS) const { return I == RHS.I; }
+};
+
+/// A helper iterator adaptor to convert the iterators to
+/// `SmallVector<GlobalDeclID>` to the iterators to `SmallVector<DeclID>`.
+class DeclIDIterator
+    : public llvm::iterator_adaptor_base<DeclIDIterator, const GlobalDeclID *,
+                                         std::forward_iterator_tag, DeclID> {
+public:
+  DeclIDIterator() : iterator_adaptor_base(nullptr) {}
+
+  DeclIDIterator(const GlobalDeclID *ID) : iterator_adaptor_base(ID) {}
+
+  value_type operator*() const { return DeclID(*I); }
+
+  bool operator==(const DeclIDIterator &RHS) const { return I == RHS.I; }
+};
 
 /// An ID number that refers to a type in an AST file.
 ///
@@ -2156,6 +2227,27 @@ template <> struct DenseMapInfo<clang::serialization::DeclarationNameKey> {
 
   static bool isEqual(const clang::serialization::DeclarationNameKey &L,
                       const clang::serialization::DeclarationNameKey &R) {
+    return L == R;
+  }
+};
+
+template <> struct DenseMapInfo<clang::serialization::GlobalDeclID> {
+  using DeclID = clang::serialization::DeclID;
+  using GlobalDeclID = clang::serialization::GlobalDeclID;
+
+  static GlobalDeclID getEmptyKey() {
+    return GlobalDeclID(DenseMapInfo<DeclID>::getEmptyKey());
+  }
+
+  static GlobalDeclID getTombstoneKey() {
+    return GlobalDeclID(DenseMapInfo<DeclID>::getTombstoneKey());
+  }
+
+  static unsigned getHashValue(const GlobalDeclID &Key) {
+    return DenseMapInfo<DeclID>::getHashValue(Key.get());
+  }
+
+  static bool isEqual(const GlobalDeclID &L, const GlobalDeclID &R) {
     return L == R;
   }
 };
