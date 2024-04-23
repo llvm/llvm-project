@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// XFAIL: (clang || apple-clang) && stdlib=libc++
+// XFAIL: (clang-17 || clang-18 || apple-clang-15) && stdlib=libc++
 
 #include <new>
 
