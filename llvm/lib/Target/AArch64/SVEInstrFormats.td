@@ -5387,7 +5387,8 @@ class sve_int_while_rr<bits<2> sz8_64, bits<4> opc, string asm,
   let isWhile = 1;
 }
 
-multiclass sve_int_while4_rr<bits<3> opc, string asm, SDPatternOperator op> {
+multiclass sve_int_while4_rr<bits<3> opc, string asm, SDPatternOperator op,
+                             SDPatternOperator rev_op> {
   def _B : sve_int_while_rr<0b00, { 0, opc }, asm, GPR32, PPR8>;
   def _H : sve_int_while_rr<0b01, { 0, opc }, asm, GPR32, PPR16>;
   def _S : sve_int_while_rr<0b10, { 0, opc }, asm, GPR32, PPR32>;
@@ -5397,9 +5398,19 @@ multiclass sve_int_while4_rr<bits<3> opc, string asm, SDPatternOperator op> {
   def : SVE_2_Op_Pat<nxv8i1,  op, i32, i32, !cast<Instruction>(NAME # _H)>;
   def : SVE_2_Op_Pat<nxv4i1,  op, i32, i32, !cast<Instruction>(NAME # _S)>;
   def : SVE_2_Op_Pat<nxv2i1,  op, i32, i32, !cast<Instruction>(NAME # _D)>;
+
+  def : Pat<(nxv16i1 (vector_reverse (rev_op i32:$op2, i32:$op1))),
+            (!cast<Instruction>(NAME # "_B") $op1, $op2)>;
+  def : Pat<(nxv8i1 (vector_reverse (rev_op i32:$op2, i32:$op1))),
+            (!cast<Instruction>(NAME # "_H") $op1, $op2)>;
+  def : Pat<(nxv4i1 (vector_reverse (rev_op i32:$op2, i32:$op1))),
+            (!cast<Instruction>(NAME # "_S") $op1, $op2)>;
+  def : Pat<(nxv2i1 (vector_reverse (rev_op i32:$op2, i32:$op1))),
+            (!cast<Instruction>(NAME # "_D") $op1, $op2)>;
 }
 
-multiclass sve_int_while8_rr<bits<3> opc, string asm, SDPatternOperator op> {
+multiclass sve_int_while8_rr<bits<3> opc, string asm, SDPatternOperator op,
+                             SDPatternOperator rev_op> {
   def _B : sve_int_while_rr<0b00, { 1, opc }, asm, GPR64, PPR8>;
   def _H : sve_int_while_rr<0b01, { 1, opc }, asm, GPR64, PPR16>;
   def _S : sve_int_while_rr<0b10, { 1, opc }, asm, GPR64, PPR32>;
@@ -5409,6 +5420,15 @@ multiclass sve_int_while8_rr<bits<3> opc, string asm, SDPatternOperator op> {
   def : SVE_2_Op_Pat<nxv8i1,  op, i64, i64, !cast<Instruction>(NAME # _H)>;
   def : SVE_2_Op_Pat<nxv4i1,  op, i64, i64, !cast<Instruction>(NAME # _S)>;
   def : SVE_2_Op_Pat<nxv2i1,  op, i64, i64, !cast<Instruction>(NAME # _D)>;
+
+  def : Pat<(nxv16i1 (vector_reverse (rev_op i64:$op2, i64:$op1))),
+            (!cast<Instruction>(NAME # "_B") $op1, $op2)>;
+  def : Pat<(nxv8i1 (vector_reverse (rev_op i64:$op2, i64:$op1))),
+            (!cast<Instruction>(NAME # "_H") $op1, $op2)>;
+  def : Pat<(nxv4i1 (vector_reverse (rev_op i64:$op2, i64:$op1))),
+            (!cast<Instruction>(NAME # "_S") $op1, $op2)>;
+  def : Pat<(nxv2i1 (vector_reverse (rev_op i64:$op2, i64:$op1))),
+            (!cast<Instruction>(NAME # "_D") $op1, $op2)>;
 }
 
 class sve2_int_while_rr<bits<2> sz8_64, bits<1> rw, string asm,
