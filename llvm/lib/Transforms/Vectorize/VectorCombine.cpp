@@ -113,6 +113,7 @@ private:
   bool scalarizeLoadExtract(Instruction &I);
   bool foldShuffleOfBinops(Instruction &I);
   bool foldShuffleOfCastops(Instruction &I);
+  bool foldShuffleOfShuffles(Instruction &I);
   bool foldShuffleFromReductions(Instruction &I);
   bool foldTruncFromReductions(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
@@ -1405,6 +1406,11 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
       B0->getOpcode() != B1->getOpcode() || B0->getType() != VecTy)
     return false;
 
+  // Don't introduce poison into div/rem.
+  if (any_of(Mask, [](int M) { return M == PoisonMaskElem; }) &&
+      B0->isIntDivRem())
+    return false;
+
   // Try to replace a binop with a shuffle if the shuffle is not costly.
   // The new shuffle will choose from a single, common operand, so it may be
   // cheaper than the existing two-operand shuffle.
@@ -1544,6 +1550,89 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
 
   Worklist.pushValue(Shuf);
   replaceValue(I, *Cast);
+  return true;
+}
+
+/// Try to convert "shuffle (shuffle x, undef), (shuffle y, undef)"
+/// into "shuffle x, y".
+bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
+  Value *V0, *V1;
+  UndefValue *U0, *U1;
+  ArrayRef<int> OuterMask, InnerMask0, InnerMask1;
+  if (!match(&I, m_Shuffle(m_OneUse(m_Shuffle(m_Value(V0), m_UndefValue(U0),
+                                              m_Mask(InnerMask0))),
+                           m_OneUse(m_Shuffle(m_Value(V1), m_UndefValue(U1),
+                                              m_Mask(InnerMask1))),
+                           m_Mask(OuterMask))))
+    return false;
+
+  auto *ShufI0 = dyn_cast<Instruction>(I.getOperand(0));
+  auto *ShufI1 = dyn_cast<Instruction>(I.getOperand(1));
+  auto *ShuffleDstTy = dyn_cast<FixedVectorType>(I.getType());
+  auto *ShuffleSrcTy = dyn_cast<FixedVectorType>(V0->getType());
+  auto *ShuffleImmTy = dyn_cast<FixedVectorType>(I.getOperand(0)->getType());
+  if (!ShuffleDstTy || !ShuffleSrcTy || !ShuffleImmTy ||
+      V0->getType() != V1->getType())
+    return false;
+
+  unsigned NumSrcElts = ShuffleSrcTy->getNumElements();
+  unsigned NumImmElts = ShuffleImmTy->getNumElements();
+
+  // Bail if either inner masks reference a RHS undef arg.
+  if ((!isa<PoisonValue>(U0) &&
+       any_of(InnerMask0, [&](int M) { return M >= (int)NumSrcElts; })) ||
+      (!isa<PoisonValue>(U1) &&
+       any_of(InnerMask1, [&](int M) { return M >= (int)NumSrcElts; })))
+    return false;
+
+  // Merge shuffles - replace index to the RHS poison arg with PoisonMaskElem,
+  SmallVector<int, 16> NewMask(OuterMask.begin(), OuterMask.end());
+  for (int &M : NewMask) {
+    if (0 <= M && M < (int)NumImmElts) {
+      M = (InnerMask0[M] >= (int)NumSrcElts) ? PoisonMaskElem : InnerMask0[M];
+    } else if (M >= (int)NumImmElts) {
+      if (InnerMask1[M - NumImmElts] >= (int)NumSrcElts)
+        M = PoisonMaskElem;
+      else
+        M = InnerMask1[M - NumImmElts] + (V0 == V1 ? 0 : NumSrcElts);
+    }
+  }
+
+  // Have we folded to an Identity shuffle?
+  if (ShuffleVectorInst::isIdentityMask(NewMask, NumSrcElts)) {
+    replaceValue(I, *V0);
+    return true;
+  }
+
+  // Try to merge the shuffles if the new shuffle is not costly.
+  TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+
+  InstructionCost OldCost =
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, ShuffleSrcTy,
+                         InnerMask0, CostKind, 0, nullptr, {V0, U0}, ShufI0) +
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, ShuffleSrcTy,
+                         InnerMask1, CostKind, 0, nullptr, {V1, U1}, ShufI1) +
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleImmTy,
+                         OuterMask, CostKind, 0, nullptr, {ShufI0, ShufI1}, &I);
+
+  InstructionCost NewCost =
+      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleSrcTy,
+                         NewMask, CostKind, 0, nullptr, {V0, V1});
+
+  LLVM_DEBUG(dbgs() << "Found a shuffle feeding two shuffles: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+  if (NewCost > OldCost)
+    return false;
+
+  // Clear unused sources to poison.
+  if (none_of(NewMask, [&](int M) { return 0 <= M && M < (int)NumSrcElts; }))
+    V0 = PoisonValue::get(ShuffleSrcTy);
+  if (none_of(NewMask, [&](int M) { return (int)NumSrcElts <= M; }))
+    V1 = PoisonValue::get(ShuffleSrcTy);
+
+  Value *Shuf = Builder.CreateShuffleVector(V0, V1, NewMask);
+  replaceValue(I, *Shuf);
   return true;
 }
 
@@ -2102,6 +2191,7 @@ bool VectorCombine::run() {
       case Instruction::ShuffleVector:
         MadeChange |= foldShuffleOfBinops(I);
         MadeChange |= foldShuffleOfCastops(I);
+        MadeChange |= foldShuffleOfShuffles(I);
         MadeChange |= foldSelectShuffle(I);
         break;
       case Instruction::BitCast:
