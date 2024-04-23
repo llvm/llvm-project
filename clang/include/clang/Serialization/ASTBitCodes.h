@@ -2058,35 +2058,6 @@ enum CtorInitializerType {
 /// Kinds of cleanup objects owned by ExprWithCleanups.
 enum CleanupObjectKind { COK_Block, COK_CompoundLiteral };
 
-/// Describes the redeclarations of a declaration.
-struct LocalRedeclarationsInfo {
-  // The ID of the first declaration
-  DeclID FirstID;
-
-  // Offset into the array of redeclaration chains.
-  unsigned Offset;
-
-  friend bool operator<(const LocalRedeclarationsInfo &X,
-                        const LocalRedeclarationsInfo &Y) {
-    return X.FirstID < Y.FirstID;
-  }
-
-  friend bool operator>(const LocalRedeclarationsInfo &X,
-                        const LocalRedeclarationsInfo &Y) {
-    return X.FirstID > Y.FirstID;
-  }
-
-  friend bool operator<=(const LocalRedeclarationsInfo &X,
-                         const LocalRedeclarationsInfo &Y) {
-    return X.FirstID <= Y.FirstID;
-  }
-
-  friend bool operator>=(const LocalRedeclarationsInfo &X,
-                         const LocalRedeclarationsInfo &Y) {
-    return X.FirstID >= Y.FirstID;
-  }
-};
-
 /// Describes the categories of an Objective-C class.
 struct ObjCCategoriesInfo {
   // The ID of the definition
