@@ -32,6 +32,7 @@
 #define LLVM_ANALYSIS_INSTRUCTIONSIMPLIFY_H
 
 #include "llvm/Analysis/SimplifyQuery.h"
+#include "llvm/IR/FPEnv.h"
 
 namespace llvm {
 
@@ -44,6 +45,7 @@ class DataLayout;
 class DominatorTree;
 class Function;
 class Instruction;
+class LoadInst;
 struct LoopStandardAnalysisResults;
 class Pass;
 template <class T, unsigned n> class SmallSetVector;
