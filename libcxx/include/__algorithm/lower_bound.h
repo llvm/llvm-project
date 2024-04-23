@@ -71,7 +71,7 @@ __lower_bound_onesided(_Iter __first, _Sent __last, const _Type& __value, _Comp&
   using _Distance = typename iterator_traits<_Iter>::difference_type;
   for (_Distance __step = 1; __first != __last; __step <<= 1) {
     auto __it   = __first;
-    auto __dist = __step - _IterOps<_AlgPolicy>::advance(__it, __step, __last);
+    auto __dist = __step - _IterOps<_AlgPolicy>::__advance_to(__it, __step, __last);
     // once we reach the last range where needle can be we must start
     // looking inwards, bisecting that range
     if (__it == __last || !std::__invoke(__comp, std::__invoke(__proj, *__it), __value)) {
