@@ -42,6 +42,54 @@ Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
 void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
   auto *BufDecl = cast<HLSLBufferDecl>(Dcl);
   BufDecl->setRBraceLoc(RBrace);
+
+  // Validate packoffset.
+  llvm::SmallVector<std::pair<VarDecl *, HLSLPackOffsetAttr *>> PackOffsetVec;
+  bool HasPackOffset = false;
+  bool HasNonPackOffset = false;
+  for (auto *Field : BufDecl->decls()) {
+    VarDecl *Var = dyn_cast<VarDecl>(Field);
+    if (!Var)
+      continue;
+    if (Field->hasAttr<HLSLPackOffsetAttr>()) {
+      PackOffsetVec.emplace_back(Var, Field->getAttr<HLSLPackOffsetAttr>());
+      HasPackOffset = true;
+    } else {
+      HasNonPackOffset = true;
+    }
+  }
+
+  if (HasPackOffset && HasNonPackOffset) {
+    Diag(BufDecl->getLocation(), diag::err_hlsl_packoffset_mix);
+  } else if (HasPackOffset) {
+    ASTContext &Context = getASTContext();
+    // Make sure no overlap in packoffset.
+    llvm::SmallDenseMap<VarDecl *, std::pair<unsigned, unsigned>>
+        PackOffsetRanges;
+    for (auto &Pair : PackOffsetVec) {
+      VarDecl *Var = Pair.first;
+      HLSLPackOffsetAttr *Attr = Pair.second;
+      unsigned Size = Context.getTypeSize(Var->getType());
+      unsigned Begin = Attr->getOffset() * 32;
+      unsigned End = Begin + Size;
+      for (auto &Range : PackOffsetRanges) {
+        VarDecl *OtherVar = Range.first;
+        unsigned OtherBegin = Range.second.first;
+        unsigned OtherEnd = Range.second.second;
+        if (Begin < OtherEnd && OtherBegin < Begin) {
+          Diag(Var->getLocation(), diag::err_hlsl_packoffset_overlap)
+              << Var << OtherVar;
+          break;
+        } else if (OtherBegin < End && Begin < OtherBegin) {
+          Diag(Var->getLocation(), diag::err_hlsl_packoffset_overlap)
+              << Var << OtherVar;
+          break;
+        }
+      }
+      PackOffsetRanges[Var] = std::make_pair(Begin, End);
+    }
+  }
+
   SemaRef.PopDeclContext();
 }
 

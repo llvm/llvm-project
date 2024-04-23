@@ -4372,6 +4372,13 @@ def HLSLResourceBinding: InheritableAttr {
   let Documentation = [HLSLResourceBindingDocs];
 }
 
+def HLSLPackOffset: HLSLAnnotationAttr {
+  let Spellings = [HLSLAnnotation<"packoffset">];
+  let LangOpts = [HLSL];
+  let Args = [IntArgument<"Offset">];
+  let Documentation = [HLSLPackOffsetDocs];
+}
+
 def HLSLSV_DispatchThreadID: HLSLAnnotationAttr {
   let Spellings = [HLSLAnnotation<"SV_DispatchThreadID">];
   let Subjects = SubjectList<[ParmVar, Field]>;
