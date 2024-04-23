@@ -803,7 +803,7 @@ Expected<uint32_t> ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
       StringRef Name = *NameOrErr;
       // Mark empty name symbols (used for label differences) and mapping
       // symbols.
-      if (Name.empty() || Name.starts_with("$d") || Name.starts_with("$x"))
+      if (Name == ".L0" || Name.starts_with("$d") || Name.starts_with("$x"))
         Result |= SymbolRef::SF_FormatSpecific;
     } else {
       // TODO: Actually report errors helpfully.
