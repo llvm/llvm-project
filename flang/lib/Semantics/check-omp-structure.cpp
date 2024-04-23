@@ -2286,6 +2286,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
     CheckReductionTypeList(x);
   }
 }
+
 bool OmpStructureChecker::CheckReductionOperators(
     const parser::OmpClause::Reduction &x) {
 
@@ -2355,6 +2356,16 @@ void OmpStructureChecker::CheckReductionTypeList(
   // is not private in the parallel region that it binds to.
   if (llvm::omp::nestedReduceWorkshareAllowedSet.test(GetContext().directive)) {
     CheckSharedBindingInOuterContext(ompObjectList);
+  }
+
+  SymbolSourceMap symbols;
+  GetSymbolsInObjectList(ompObjectList, symbols);
+  for (auto &[symbol, source] : symbols) {
+    if (IsProcedurePointer(*symbol)) {
+      context_.Say(source,
+          "A procedure pointer '%s' must not appear in a REDUCTION clause."_err_en_US,
+          symbol->name());
+    }
   }
 }
 

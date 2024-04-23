@@ -166,9 +166,9 @@ namespace {
 
 std::optional<std::set<const FileEntry *>>
 GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
-  // Without implicit module map search, there's no good reason to know about
-  // any module maps that are not affecting.
-  if (!PP.getHeaderSearchInfo().getHeaderSearchOpts().ImplicitModuleMaps)
+  if (!PP.getHeaderSearchInfo()
+           .getHeaderSearchOpts()
+           .ModulesPruneNonAffectingModuleMaps)
     return std::nullopt;
 
   SmallVector<const Module *> ModulesToProcess{RootModule};
@@ -7657,6 +7657,14 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
       AddStmt(const_cast<Expr *>(SC->getConditionExpr()));
     return;
   }
+  case OpenACCClauseKind::NumGangs: {
+    const auto *NGC = cast<OpenACCNumGangsClause>(C);
+    writeSourceLocation(NGC->getLParenLoc());
+    writeUInt32(NGC->getIntExprs().size());
+    for (Expr *E : NGC->getIntExprs())
+      AddStmt(E);
+    return;
+  }
   case OpenACCClauseKind::NumWorkers: {
     const auto *NWC = cast<OpenACCNumWorkersClause>(C);
     writeSourceLocation(NWC->getLParenLoc());
@@ -7697,7 +7705,6 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::Reduction:
   case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
-  case OpenACCClauseKind::NumGangs:
   case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:
   case OpenACCClauseKind::DeviceType:

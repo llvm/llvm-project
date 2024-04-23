@@ -79,13 +79,13 @@ def process(args, path):
                 return 1
 
             sub = subprocess.run(
-                ["sh", "-euo", "pipefail", "gen"],
+                ["sh", "-eu", "gen"],
                 capture_output=True,
                 # Don't encode the directory information to the Clang output.
                 # Remove unneeded details (.ident) as well.
                 env=dict(
                     os.environ,
-                    CCC_OVERRIDE_OPTIONS="#+-fno-ident",
+                    CCC_OVERRIDE_OPTIONS="#^-fno-ident",
                     PWD="/proc/self/cwd",
                 ),
             )
