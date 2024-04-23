@@ -170,16 +170,16 @@ define <4 x i32> @shuf_mul_v4i32_yy_use2(<4 x i32> %x, <4 x i32> %y, <4 x i32> %
 
 ; negative test - must have matching operand
 
-define <4 x float> @shuf_fadd_v4f32_no_common_op(<4 x float> %x, <4 x float> %y, <4 x float> %z, <4 x float> %w) {
-; CHECK-LABEL: define <4 x float> @shuf_fadd_v4f32_no_common_op(
+define <4 x float> @shuf_fdiv_v4f32_no_common_op(<4 x float> %x, <4 x float> %y, <4 x float> %z, <4 x float> %w) {
+; CHECK-LABEL: define <4 x float> @shuf_fdiv_v4f32_no_common_op(
 ; CHECK-SAME: <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]], <4 x float> [[W:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[B0:%.*]] = fadd <4 x float> [[X]], [[Y]]
-; CHECK-NEXT:    [[B1:%.*]] = fadd <4 x float> [[Z]], [[W]]
+; CHECK-NEXT:    [[B0:%.*]] = fdiv <4 x float> [[X]], [[Y]]
+; CHECK-NEXT:    [[B1:%.*]] = fdiv <4 x float> [[Z]], [[W]]
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[B0]], <4 x float> [[B1]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
-  %b0 = fadd <4 x float> %x, %y
-  %b1 = fadd <4 x float> %z, %w
+  %b0 = fdiv <4 x float> %x, %y
+  %b1 = fdiv <4 x float> %z, %w
   %r = shufflevector <4 x float> %b0, <4 x float> %b1, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   ret <4 x float> %r
 }
