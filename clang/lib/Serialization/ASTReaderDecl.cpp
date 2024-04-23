@@ -3140,7 +3140,7 @@ public:
 
   OMPTraitInfo *readOMPTraitInfo() { return Reader.readOMPTraitInfo(); }
 
-  template <typename T> T *GetLocalDeclAs(DeclID LocalID) {
+  template <typename T> T *GetLocalDeclAs(LocalDeclID LocalID) {
     return Reader.GetLocalDeclAs<T>(LocalID);
   }
 };
@@ -4327,7 +4327,7 @@ void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {
   // we should instead generate one loop per kind and dispatch up-front?
   Decl *MostRecent = FirstLocal;
   for (unsigned I = 0, N = Record.size(); I != N; ++I) {
-    auto *D = GetLocalDecl(*M, Record[N - I - 1]);
+    auto *D = GetLocalDecl(*M, LocalDeclID(Record[N - I - 1]));
     ASTDeclReader::attachPreviousDecl(*this, D, MostRecent, CanonDecl);
     MostRecent = D;
   }
@@ -4437,7 +4437,7 @@ namespace {
       M.ObjCCategories[Offset++] = 0; // Don't try to deserialize again
       for (unsigned I = 0; I != N; ++I)
         add(cast_or_null<ObjCCategoryDecl>(
-              Reader.GetLocalDecl(M, M.ObjCCategories[Offset++])));
+            Reader.GetLocalDecl(M, LocalDeclID(M.ObjCCategories[Offset++]))));
       return true;
     }
   };
