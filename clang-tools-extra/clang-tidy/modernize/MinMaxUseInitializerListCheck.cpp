@@ -60,16 +60,12 @@ static FindArgsResult findArgs(const CallExpr *Call) {
 
       return Result;
     }
+    Result.Args = SmallVector<const Expr *>(Call->arguments());
   } else {
     // if it has 3 arguments then the last will be the comparison
     Result.Compare = *(std::next(Call->arguments().begin(), 2));
-  }
-
-  if (Result.Compare)
     Result.Args = SmallVector<const Expr *>(llvm::drop_end(Call->arguments()));
-  else
-    Result.Args = SmallVector<const Expr *>(Call->arguments());
-
+  }
   Result.First = Result.Args.front();
   Result.Last = Result.Args.back();
 
@@ -80,7 +76,7 @@ static SmallVector<FixItHint>
 generateReplacements(const MatchFinder::MatchResult &Match,
                      const CallExpr *TopCall, const FindArgsResult &Result,
                      const bool IgnoreNonTrivialTypes,
-                     const long IgnoreTrivialTypesOfSizeAbove) {
+                     const std::uint64_t IgnoreTrivialTypesOfSizeAbove) {
   SmallVector<FixItHint> FixItHints;
   const SourceManager &SourceMngr = *Match.SourceManager;
   const LangOptions &LanguageOpts = Match.Context->getLangOpts();
@@ -98,7 +94,6 @@ generateReplacements(const MatchFinder::MatchResult &Match,
     return FixItHints;
 
   if (isResultTypeTrivial &&
-      // size in bits divided by 8 to get bytes
       Match.Context->getTypeSizeInChars(ResultType).getQuantity() >
           IgnoreTrivialTypesOfSizeAbove)
     return FixItHints;
@@ -125,11 +120,11 @@ generateReplacements(const MatchFinder::MatchResult &Match,
                                    .concat(ResultType.getAsString(LanguageOpts))
                                    .concat(">(")
                                    .concat(ArgText)
-                                   .concat(")");
+                                   .concat(")")
+                                   .str();
 
-      FixItHints.push_back(FixItHint::CreateReplacement(Arg->getSourceRange(),
-                                                        Replacement.str()));
-
+      FixItHints.push_back(
+          FixItHint::CreateReplacement(Arg->getSourceRange(), Replacement));
       continue;
     }
 

@@ -47,7 +47,7 @@ public:
 
 private:
   bool IgnoreNonTrivialTypes;
-  long IgnoreTrivialTypesOfSizeAbove;
+  std::uint64_t IgnoreTrivialTypesOfSizeAbove;
   utils::IncludeInserter Inserter;
 };
 

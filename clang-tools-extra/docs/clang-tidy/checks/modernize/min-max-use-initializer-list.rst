@@ -47,4 +47,4 @@ Options
 .. option:: IgnoreTrivialTypesOfSizeAbove
 
    An integer specifying the size (in bytes) above which trivial types are 
-ignored. Default is `32`.
+  ignored. Default is `32`.
