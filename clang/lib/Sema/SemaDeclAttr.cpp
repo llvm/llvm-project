@@ -7344,11 +7344,23 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
     return;
 
   llvm::hlsl::ResourceClass DeclResourceClass;
-  StringRef varTy = "";
+  StringRef VarTy = "";
   if (SamplerUAVOrSRV) {
     const Type *Ty = SamplerUAVOrSRV->getType()->getPointeeOrArrayElementType();
     if (!Ty)
-      llvm_unreachable("Resource class should have an element type.");
+      llvm_unreachable("Resource class must have an element type.");
+
+    if (const BuiltinType *BTy = dyn_cast<BuiltinType>(Ty)) {
+      QualType QT = SamplerUAVOrSRV->getType();
+      PrintingPolicy PP = S.getPrintingPolicy();
+      std::string typestr = QualType::getAsString(QT.split(), PP);
+
+      if (Slot[0] != 'b' && Slot[0] != 'c' && Slot[0] != 'i')
+        S.Diag(ArgLoc,
+               diag::err_hlsl_mismatching_register_builtin_type_and_name)
+            << Slot.substr(0, 1) << typestr << "'b, c, or i";
+      return;
+    }
 
     const CXXRecordDecl *TheRecordDecl = Ty->getAsCXXRecordDecl();
     if (!TheRecordDecl)
@@ -7363,42 +7375,49 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
       llvm_unreachable("Resource class should have a resource attribute.");
 
     DeclResourceClass = Attr->getResourceClass();
-    varTy = TheRecordDecl->getName();
+    VarTy = TheRecordDecl->getName();
   } else {
     if (CBufferOrTBuffer->isCBuffer()) {
       DeclResourceClass = llvm::hlsl::ResourceClass::CBuffer;
-      varTy = "cbuffer";
+      VarTy = "cbuffer";
     } else {
-      DeclResourceClass = llvm::hlsl::ResourceClass::CBuffer;
-      varTy = "tbuffer";
+      DeclResourceClass = llvm::hlsl::ResourceClass::TBuffer;
+      VarTy = "tbuffer";
     }
   }
   switch (DeclResourceClass) {
   case llvm::hlsl::ResourceClass::SRV: {
     if (Slot[0] != 't')
-      S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_type_and_name)
-          << Slot.substr(0, 1) << varTy
+      S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_resource_type_and_name)
+          << Slot.substr(0, 1) << VarTy
           << (unsigned)llvm::hlsl::ResourceClass::SRV;
     break;
   }
   case llvm::hlsl::ResourceClass::UAV: {
     if (Slot[0] != 'u')
-      S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_type_and_name)
-          << Slot.substr(0, 1) << varTy
+      S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_resource_type_and_name)
+          << Slot.substr(0, 1) << VarTy
           << (unsigned)llvm::hlsl::ResourceClass::UAV;
     break;
   }
   case llvm::hlsl::ResourceClass::CBuffer: {
     if (Slot[0] != 'b')
-      S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_type_and_name)
-          << Slot.substr(0, 1) << varTy
+      S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_resource_type_and_name)
+          << Slot.substr(0, 1) << VarTy
           << (unsigned)llvm::hlsl::ResourceClass::CBuffer;
+    break;
+  }
+  case llvm::hlsl::ResourceClass::TBuffer: {
+    if (Slot[0] != 't')
+      S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_resource_type_and_name)
+          << Slot.substr(0, 1) << VarTy
+          << (unsigned)llvm::hlsl::ResourceClass::TBuffer;
     break;
   }
   case llvm::hlsl::ResourceClass::Sampler: {
     if (Slot[0] != 's')
-      S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_type_and_name)
-          << Slot.substr(0, 1) << varTy
+      S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_resource_type_and_name)
+          << Slot.substr(0, 1) << VarTy
           << (unsigned)llvm::hlsl::ResourceClass::Sampler;
     break;
   }

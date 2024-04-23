@@ -477,8 +477,8 @@ void HLSLExternalSemaSource::defineTrivialHLSLTypes() {
 }
 
 /// Set up common members and attributes for buffer types
-static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
-                                              ResourceClass RC) {
+static BuiltinTypeDeclBuilder setupBufferHandle(CXXRecordDecl *Decl, Sema &S,
+                                                ResourceClass RC) {
   return BuiltinTypeDeclBuilder(Decl)
       .addHandleMember()
       .addDefaultHandleConstructor(S, RC);
@@ -494,7 +494,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
           .Record;
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV)
+    setupBufferHandle(Decl, *SemaPtr, ResourceClass::UAV)
         .addArraySubscriptOperators()
         .completeDefinition();
   });
@@ -506,7 +506,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
                                  /*IsROV=*/true)
           .Record;
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
-    setupBufferType(Decl, *SemaPtr, ResourceClass::UAV)
+    setupBufferHandle(Decl, *SemaPtr, ResourceClass::UAV)
         .addArraySubscriptOperators()
         .completeDefinition();
   });

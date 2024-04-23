@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
 
 // the below will cause an llvm unreachable, because RWBuffers don't have resource attributes yet
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'b' for register type 'RWBuffer' (expected 'u')}}
-// NOT YET IMPLEMENTED RWBuffer<int> a : register(b2, space1);
+// expected-error@+1  {{invalid register name prefix 'b' for register resource type 'RWBuffer' (expected 'u')}}
+RWBuffer<int> a : register(b2, space1);
 
 // the below will cause an llvm unreachable, because RWBuffers don't have resource attributes yet
-// NOT YET IMPLEMENTED : {{invalid register name prefix 't' for register type 'RWBuffer' (expected 'u')}}
-// NOT YET IMPLEMENTED RWBuffer<int> b : register(t2, space1);
+// expected-error@+1  {{invalid register name prefix 't' for register resource type 'RWBuffer' (expected 'u')}}
+RWBuffer<int> b : register(t2, space1);
 
 // NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'Texture1D' (expected 't')}}
 // NOT YET IMPLEMENTED Texture1D<float> tex : register(u3);
@@ -47,14 +47,14 @@
 // NOT YET IMPLEMENTED : {{invalid register name prefix 't' for register type 'StructuredBuffer' (expected 'u')}}
 // NOT YET IMPLEMENTED StructuredBuffer ROVStructuredBuff_t2  : register(T2);
 
-// expected-error@+1 {{invalid register name prefix 's' for register type 'cbuffer' (expected 'b')}}
+// expected-error@+1 {{invalid register name prefix 's' for register resource type 'cbuffer' (expected 'b')}}
 cbuffer f : register(s2, space1) {}
 
 // NOT YET IMPLEMENTED : {{invalid register name prefix 't' for register type 'Sampler' (expected 's')}}
 // Can this type just be Sampler instead of SamplerState?
 // NOT YET IMPLEMENTED SamplerState MySampler : register(t3, space1);
 
-// expected-error@+1 {{invalid register name prefix 's' for register type 'tbuffer' (expected 'b')}}
+// expected-error@+1 {{invalid register name prefix 's' for register resource type 'tbuffer' (expected 't')}}
 tbuffer f : register(s2, space1) {}
 
 // NOT YET IMPLEMENTED : RTAccelerationStructure doesn't have any example tests in DXC
