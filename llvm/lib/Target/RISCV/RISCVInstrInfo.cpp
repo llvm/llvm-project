@@ -361,15 +361,12 @@ void RISCVInstrInfo::copyPhysRegVector(
     return {RISCVII::LMUL_1, RISCV::VRRegClass, RISCV::VMV1R_V,
             RISCV::PseudoVMV_V_V_M1, RISCV::PseudoVMV_V_I_M1};
   };
-  auto FindRegWithEncoding = [&TRI](const TargetRegisterClass &RegClass,
-                                    uint16_t Encoding) {
-    ArrayRef<MCPhysReg> Regs = RegClass.getRegisters();
-    const auto *FoundReg = llvm::find_if(Regs, [&](MCPhysReg Reg) {
-      return TRI->getEncodingValue(Reg) == Encoding;
-    });
-    // We should be always able to find one valid register.
-    assert(FoundReg != Regs.end());
-    return *FoundReg;
+  auto FindRegWithEncoding = [TRI](const TargetRegisterClass &RegClass,
+                                   uint16_t Encoding) {
+    MCRegister Reg = RISCV::V0 + Encoding;
+    if (&RegClass == &RISCV::VRRegClass)
+      return Reg;
+    return TRI->getMatchingSuperReg(Reg, RISCV::sub_vrm1_0, &RegClass);
   };
   while (I != NumRegs) {
     // For non-segment copying, we only do this once as the registers are always
@@ -1585,10 +1582,10 @@ void RISCVInstrInfo::finalizeInsInstrs(
   MachineFunction &MF = *Root.getMF();
 
   for (auto *NewMI : InsInstrs) {
-    assert(static_cast<unsigned>(RISCV::getNamedOperandIdx(
-               NewMI->getOpcode(), RISCV::OpName::frm)) ==
-               NewMI->getNumOperands() &&
-           "Instruction has unexpected number of operands");
+    // We'd already added the FRM operand.
+    if (static_cast<unsigned>(RISCV::getNamedOperandIdx(
+            NewMI->getOpcode(), RISCV::OpName::frm)) != NewMI->getNumOperands())
+      continue;
     MachineInstrBuilder MIB(MF, NewMI);
     MIB.add(FRM);
     if (FRM.getImm() == RISCVFPRndMode::DYN)

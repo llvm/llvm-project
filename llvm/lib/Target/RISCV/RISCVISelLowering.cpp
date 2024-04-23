@@ -1924,7 +1924,7 @@ bool RISCVTargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   // replace. If we don't support unaligned scalar mem, prefer the constant
   // pool.
   // TODO: Can the caller pass down the alignment?
-  if (!Subtarget.hasFastUnalignedAccess())
+  if (!Subtarget.enableUnalignedScalarMem())
     return true;
 
   // Prefer to keep the load if it would require many instructions.
@@ -13416,11 +13416,27 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   uint64_t MulAmt = CNode->getZExtValue();
 
-  // 3/5/9 * 2^N -> shXadd (sll X, C), (sll X, C)
-  // Matched in tablegen, avoid perturbing patterns.
-  for (uint64_t Divisor : {3, 5, 9})
-    if (MulAmt % Divisor == 0 && isPowerOf2_64(MulAmt / Divisor))
+  for (uint64_t Divisor : {3, 5, 9}) {
+    if (MulAmt % Divisor != 0)
+      continue;
+    uint64_t MulAmt2 = MulAmt / Divisor;
+    // 3/5/9 * 2^N -> shXadd (sll X, C), (sll X, C)
+    // Matched in tablegen, avoid perturbing patterns.
+    if (isPowerOf2_64(MulAmt2))
       return SDValue();
+
+    // 3/5/9 * 3/5/9 -> shXadd (shYadd X, X), (shYadd X, X)
+    if (MulAmt2 == 3 || MulAmt2 == 5 || MulAmt2 == 9) {
+      SDLoc DL(N);
+      SDValue X = DAG.getFreeze(N->getOperand(0));
+      SDValue Mul359 =
+          DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                      DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
+      return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
+                         DAG.getConstant(Log2_64(MulAmt2 - 1), DL, VT),
+                         Mul359);
+    }
+  }
 
   // If this is a power 2 + 2/4/8, we can use a shift followed by a single
   // shXadd. First check if this a sum of two power of 2s because that's
@@ -13430,31 +13446,33 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     if (ScaleShift >= 1 && ScaleShift < 4) {
       unsigned ShiftAmt = Log2_64((MulAmt & (MulAmt - 1)));
       SDLoc DL(N);
-      SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                                   DAG.getConstant(ShiftAmt, DL, VT));
-      SDValue Shift2 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                                   DAG.getConstant(ScaleShift, DL, VT));
-      return DAG.getNode(ISD::ADD, DL, VT, Shift1, Shift2);
+      SDValue X = DAG.getFreeze(N->getOperand(0));
+      SDValue Shift1 =
+          DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
+      return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                         DAG.getConstant(ScaleShift, DL, VT), Shift1);
     }
   }
 
   // 2^(1,2,3) * 3,5,9 + 1 -> (shXadd (shYadd x, x), x)
-  // Matched in tablegen, avoid perturbing patterns.
-  switch (MulAmt) {
-  case 11:
-  case 13:
-  case 19:
-  case 21:
-  case 25:
-  case 27:
-  case 37:
-  case 41:
-  case 45:
-  case 73:
-  case 91:
-    return SDValue();
-  default:
-    break;
+  // This is the two instruction form, there are also three instruction
+  // variants we could implement.  e.g.
+  //   (2^(1,2,3) * 3,5,9 + 1) << C2
+  //   2^(C1>3) * 3,5,9 +/- 1
+  for (uint64_t Divisor : {3, 5, 9}) {
+    uint64_t C = MulAmt - 1;
+    if (C <= Divisor)
+      continue;
+    unsigned TZ = llvm::countr_zero(C);
+    if ((C >> TZ) == Divisor && (TZ == 1 || TZ == 2 || TZ == 3)) {
+      SDLoc DL(N);
+      SDValue X = DAG.getFreeze(N->getOperand(0));
+      SDValue Mul359 =
+          DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                      DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
+      return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Mul359,
+                         DAG.getConstant(TZ, DL, VT), X);
+    }
   }
 
   // 2^n + 2/4/8 + 1 -> (add (shl X, C1), (shXadd X, X))
@@ -13463,13 +13481,12 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     if (ScaleShift >= 1 && ScaleShift < 4) {
       unsigned ShiftAmt = Log2_64(((MulAmt - 1) & (MulAmt - 2)));
       SDLoc DL(N);
-      SDValue Shift1 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                                   DAG.getConstant(ShiftAmt, DL, VT));
-      SDValue Shift2 = DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
-                                   DAG.getConstant(ScaleShift, DL, VT));
-      return DAG.getNode(
-          ISD::ADD, DL, VT, Shift1,
-          DAG.getNode(ISD::ADD, DL, VT, Shift2, N->getOperand(0)));
+      SDValue X = DAG.getFreeze(N->getOperand(0));
+      SDValue Shift1 =
+          DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
+      return DAG.getNode(ISD::ADD, DL, VT, Shift1,
+                         DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
+                                     DAG.getConstant(ScaleShift, DL, VT), X));
     }
   }
 
@@ -15852,7 +15869,7 @@ static bool matchIndexAsWiderOp(EVT VT, SDValue Index, SDValue Mask,
   if (WiderElementSize > ST.getELen()/8)
     return false;
 
-  if (!ST.hasFastUnalignedAccess() && BaseAlign < WiderElementSize)
+  if (!ST.enableUnalignedVectorMem() && BaseAlign < WiderElementSize)
     return false;
 
   for (unsigned i = 0; i < Index->getNumOperands(); i++) {
@@ -18966,7 +18983,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
   case CallingConv::RISCV_VectorCall:
     break;
   case CallingConv::GHC:
-    if (Subtarget.isRVE())
+    if (Subtarget.hasStdExtE())
       report_fatal_error("GHC calling convention is not supported on RVE!");
     if (!Subtarget.hasStdExtFOrZfinx() || !Subtarget.hasStdExtDOrZdinx())
       report_fatal_error("GHC calling convention requires the (Zfinx/F) and "
@@ -19204,7 +19221,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   CCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
 
   if (CallConv == CallingConv::GHC) {
-    if (Subtarget.isRVE())
+    if (Subtarget.hasStdExtE())
       report_fatal_error("GHC calling convention is not supported on RVE!");
     ArgCCInfo.AnalyzeCallOperands(Outs, RISCV::CC_RISCV_GHC);
   } else
@@ -19683,6 +19700,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(LLA)
   NODE_NAME_CASE(ADD_TPREL)
   NODE_NAME_CASE(MULHSU)
+  NODE_NAME_CASE(SHL_ADD)
   NODE_NAME_CASE(SLLW)
   NODE_NAME_CASE(SRAW)
   NODE_NAME_CASE(SRLW)
@@ -20678,8 +20696,8 @@ bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
     unsigned *Fast) const {
   if (!VT.isVector()) {
     if (Fast)
-      *Fast = Subtarget.hasFastUnalignedAccess();
-    return Subtarget.hasFastUnalignedAccess();
+      *Fast = Subtarget.enableUnalignedScalarMem();
+    return Subtarget.enableUnalignedScalarMem();
   }
 
   // All vector implementations must support element alignment
@@ -20695,8 +20713,8 @@ bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
   // misaligned accesses.  TODO: Work through the codegen implications of
   // allowing such accesses to be formed, and considered fast.
   if (Fast)
-    *Fast = Subtarget.hasFastUnalignedAccess();
-  return Subtarget.hasFastUnalignedAccess();
+    *Fast = Subtarget.enableUnalignedVectorMem();
+  return Subtarget.enableUnalignedVectorMem();
 }
 
 
@@ -20731,7 +20749,7 @@ EVT RISCVTargetLowering::getOptimalMemOpType(const MemOp &Op,
 
   // Do we have sufficient alignment for our preferred VT?  If not, revert
   // to largest size allowed by our alignment criteria.
-  if (PreferredVT != MVT::i8 && !Subtarget.hasFastUnalignedAccess()) {
+  if (PreferredVT != MVT::i8 && !Subtarget.enableUnalignedVectorMem()) {
     Align RequiredAlign(PreferredVT.getStoreSize());
     if (Op.isFixedDstAlign())
       RequiredAlign = std::min(RequiredAlign, Op.getDstAlign());
@@ -20923,7 +20941,7 @@ bool RISCVTargetLowering::isLegalStridedLoadStore(EVT DataType,
   if (!isLegalElementTypeForRVV(ScalarType))
     return false;
 
-  if (!Subtarget.hasFastUnalignedAccess() &&
+  if (!Subtarget.enableUnalignedVectorMem() &&
       Alignment < ScalarType.getStoreSize())
     return false;
 

@@ -1171,11 +1171,36 @@ def : Pat<(int_nvvm_sqrt_f Float32Regs:$a),
 def INT_NVVM_RSQRT_APPROX_FTZ_F
   : F_MATH_1<"rsqrt.approx.ftz.f32 \t$dst, $src0;", Float32Regs, Float32Regs,
     int_nvvm_rsqrt_approx_ftz_f>;
+def INT_NVVM_RSQRT_APPROX_FTZ_D
+  : F_MATH_1<"rsqrt.approx.ftz.f64 \t$dst, $src0;", Float64Regs, Float64Regs,
+    int_nvvm_rsqrt_approx_ftz_d>;
+
 def INT_NVVM_RSQRT_APPROX_F : F_MATH_1<"rsqrt.approx.f32 \t$dst, $src0;",
   Float32Regs, Float32Regs, int_nvvm_rsqrt_approx_f>;
 def INT_NVVM_RSQRT_APPROX_D : F_MATH_1<"rsqrt.approx.f64 \t$dst, $src0;",
   Float64Regs, Float64Regs, int_nvvm_rsqrt_approx_d>;
 
+// 1.0f / sqrt_approx -> rsqrt_approx
+def: Pat<(fdiv FloatConst1, (int_nvvm_sqrt_approx_f Float32Regs:$a)),
+         (INT_NVVM_RSQRT_APPROX_F Float32Regs:$a)>,
+         Requires<[doRsqrtOpt]>;
+def: Pat<(fdiv FloatConst1, (int_nvvm_sqrt_approx_ftz_f Float32Regs:$a)),
+         (INT_NVVM_RSQRT_APPROX_FTZ_F Float32Regs:$a)>,
+         Requires<[doRsqrtOpt]>;
+// same for int_nvvm_sqrt_f when non-precision sqrt is requested
+def: Pat<(fdiv FloatConst1, (int_nvvm_sqrt_f Float32Regs:$a)),
+         (INT_NVVM_RSQRT_APPROX_F Float32Regs:$a)>,
+         Requires<[doRsqrtOpt, do_SQRTF32_APPROX, doNoF32FTZ]>;
+def: Pat<(fdiv FloatConst1, (int_nvvm_sqrt_f Float32Regs:$a)),
+         (INT_NVVM_RSQRT_APPROX_FTZ_F Float32Regs:$a)>,
+         Requires<[doRsqrtOpt, do_SQRTF32_APPROX, doF32FTZ]>;
+
+def: Pat<(fdiv FloatConst1, (fsqrt Float32Regs:$a)),
+         (INT_NVVM_RSQRT_APPROX_F Float32Regs:$a)>,
+         Requires<[doRsqrtOpt, do_SQRTF32_APPROX, doNoF32FTZ]>;
+def: Pat<(fdiv FloatConst1, (fsqrt Float32Regs:$a)),
+         (INT_NVVM_RSQRT_APPROX_FTZ_F Float32Regs:$a)>,
+         Requires<[doRsqrtOpt, do_SQRTF32_APPROX, doF32FTZ]>;
 //
 // Add
 //
@@ -2407,46 +2432,45 @@ defm INT_PTX_LDG_G_v4f32_ELE
   : VLDG_G_ELE_V4<"v4.f32 \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", Float32Regs>;
 
 
-multiclass NG_TO_G<string Str, Intrinsic Intrin> {
-   def _yes : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
+multiclass NG_TO_G<string Str, Intrinsic Intrin, Predicate ShortPtr> {
+   def "" : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
           !strconcat("cvta.", Str, ".u32 \t$result, $src;"),
       [(set Int32Regs:$result, (Intrin Int32Regs:$src))]>;
-   def _yes_64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
+   def _64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
           !strconcat("cvta.", Str, ".u64 \t$result, $src;"),
       [(set Int64Regs:$result, (Intrin Int64Regs:$src))]>;
-   def _yes_6432 : NVPTXInst<(outs Int64Regs:$result), (ins Int32Regs:$src),
+   def _6432 : NVPTXInst<(outs Int64Regs:$result), (ins Int32Regs:$src),
           "{{ .reg .b64 %tmp;\n\t"
           #"  cvt.u64.u32 \t%tmp, $src;\n\t"
           #"  cvta." # Str # ".u64 \t$result, %tmp; }}",
       [(set Int64Regs:$result, (Intrin Int32Regs:$src))]>,
-      Requires<[useShortPtr]>;
+      Requires<[ShortPtr]>;
 }
 
-multiclass G_TO_NG<string Str, Intrinsic Intrin> {
-   def _yes : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
+multiclass G_TO_NG<string Str, Intrinsic Intrin, Predicate ShortPtr> {
+   def "" : NVPTXInst<(outs Int32Regs:$result), (ins Int32Regs:$src),
           !strconcat("cvta.to.", Str, ".u32 \t$result, $src;"),
       [(set Int32Regs:$result, (Intrin Int32Regs:$src))]>;
-   def _yes_64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
+   def _64 : NVPTXInst<(outs Int64Regs:$result), (ins Int64Regs:$src),
           !strconcat("cvta.to.", Str, ".u64 \t$result, $src;"),
       [(set Int64Regs:$result, (Intrin Int64Regs:$src))]>;
-   def _yes_3264 : NVPTXInst<(outs Int32Regs:$result), (ins Int64Regs:$src),
+   def _3264 : NVPTXInst<(outs Int32Regs:$result), (ins Int64Regs:$src),
           "{{ .reg .b64 %tmp;\n\t"
           #"  cvta.to." # Str # ".u64 \t%tmp, $src;\n\t"
           #"  cvt.u32.u64 \t$result, %tmp; }}",
       [(set Int32Regs:$result, (Intrin Int64Regs:$src))]>,
-      Requires<[useShortPtr]>;
+      Requires<[ShortPtr]>;
 }
 
-defm cvta_local  : NG_TO_G<"local", int_nvvm_ptr_local_to_gen>;
-defm cvta_shared : NG_TO_G<"shared", int_nvvm_ptr_shared_to_gen>;
-defm cvta_global : NG_TO_G<"global", int_nvvm_ptr_global_to_gen>;
-defm cvta_const  : NG_TO_G<"const", int_nvvm_ptr_constant_to_gen>;
+defm cvta_local  : NG_TO_G<"local", int_nvvm_ptr_local_to_gen, useShortPtrLocal>;
+defm cvta_shared : NG_TO_G<"shared", int_nvvm_ptr_shared_to_gen, useShortPtrShared>;
+defm cvta_global : NG_TO_G<"global", int_nvvm_ptr_global_to_gen, False>;
+defm cvta_const  : NG_TO_G<"const", int_nvvm_ptr_constant_to_gen, useShortPtrConst>;
 
-defm cvta_to_local   : G_TO_NG<"local", int_nvvm_ptr_gen_to_local>;
-defm cvta_to_shared : G_TO_NG<"shared", int_nvvm_ptr_gen_to_shared>;
-defm cvta_to_global : G_TO_NG<"global", int_nvvm_ptr_gen_to_global>;
-defm cvta_to_const  : G_TO_NG<"const", int_nvvm_ptr_gen_to_constant>;
-
+defm cvta_to_local  : G_TO_NG<"local", int_nvvm_ptr_gen_to_local, useShortPtrLocal>;
+defm cvta_to_shared : G_TO_NG<"shared", int_nvvm_ptr_gen_to_shared, useShortPtrShared>;
+defm cvta_to_global : G_TO_NG<"global", int_nvvm_ptr_gen_to_global, False>;
+defm cvta_to_const  : G_TO_NG<"const", int_nvvm_ptr_gen_to_constant, useShortPtrConst>;
 
 // nvvm.ptr.gen.to.param
 def nvvm_ptr_gen_to_param : NVPTXInst<(outs Int32Regs:$result),

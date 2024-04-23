@@ -13896,16 +13896,14 @@ SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,
                        DAG.getVectorIdxConstant(0, DL));
       Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Vec0,
                        DAG.getVectorIdxConstant(NumElts / 2, DL));
-      if (Idx < (NumElts / 2)) {
-        SDValue NewLo = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, HalfVT, Lo, Vec1,
-                                    DAG.getVectorIdxConstant(Idx, DL));
-        return DAG.getNode(AArch64ISD::UZP1, DL, VT, NewLo, Hi);
-      } else {
-        SDValue NewHi =
-            DAG.getNode(ISD::INSERT_SUBVECTOR, DL, HalfVT, Hi, Vec1,
-                        DAG.getVectorIdxConstant(Idx - (NumElts / 2), DL));
-        return DAG.getNode(AArch64ISD::UZP1, DL, VT, Lo, NewHi);
-      }
+      if (Idx < (NumElts / 2))
+        Lo = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, HalfVT, Lo, Vec1,
+                         DAG.getVectorIdxConstant(Idx, DL));
+      else
+        Hi = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, HalfVT, Hi, Vec1,
+                         DAG.getVectorIdxConstant(Idx - (NumElts / 2), DL));
+
+      return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
     }
 
     // Ensure the subvector is half the size of the main vector.
@@ -17927,11 +17925,11 @@ static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       } else
         continue;
 
-      if (!ISD::isBuildVectorAllZeros(Sub.getOperand(0).getNode()))
+      if (!ISD::isConstantSplatVectorAllZeros(Sub.getOperand(0).getNode()))
         continue;
 
       // Constant ones is always righthand operand of the Add.
-      if (!ISD::isBuildVectorAllOnes(Add.getOperand(1).getNode()))
+      if (!ISD::isConstantSplatVectorAllOnes(Add.getOperand(1).getNode()))
         continue;
 
       if (Sub.getOperand(1) != Add.getOperand(0))

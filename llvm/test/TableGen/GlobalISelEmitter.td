@@ -110,7 +110,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: PredicateBitset MyTargetInstructionSelector::
 // CHECK-NEXT:  computeAvailableModuleFeatures(const MyTargetSubtarget *Subtarget) const {
-// CHECK-NEXT:    PredicateBitset Features;
+// CHECK-NEXT:    PredicateBitset Features{};
 // CHECK-NEXT:    if (Subtarget->hasA())
 // CHECK-NEXT:      Features.set(Feature_HasABit);
 // CHECK-NEXT:    if (Subtarget->hasB())
@@ -120,7 +120,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: PredicateBitset MyTargetInstructionSelector::
 // CHECK-NEXT:  computeAvailableFunctionFeatures(const MyTargetSubtarget *Subtarget, const MachineFunction *MF) const {
-// CHECK-NEXT:    PredicateBitset Features;
+// CHECK-NEXT:    PredicateBitset Features{};
 // CHECK-NEXT:    if (Subtarget->hasC())
 // CHECK-NEXT:      Features.set(Feature_HasCBit);
 // CHECK-NEXT:    return Features;
@@ -518,7 +518,7 @@ def : Pat<(frag GPR32:$src1, complex:$src2, complex:$src3),
 // R00O-NEXT:  GIM_Reject,
 // R00O:       // Label [[DEFAULT_NUM]]: @[[DEFAULT]]
 // R00O-NEXT:  GIM_Reject,
-// R00O-NEXT:  }; // Size: 2023 bytes
+// R00O-NEXT:  }; // Size: 2027 bytes
 
 def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, GPR32:$src4),
                  [(set GPR32:$dst,

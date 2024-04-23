@@ -6325,8 +6325,11 @@ static bool AddDirtyPages(const MemoryRegionInfo &region,
 // ranges.
 static void AddRegion(const MemoryRegionInfo &region, bool try_dirty_pages,
                       Process::CoreFileMemoryRanges &ranges) {
-  // Don't add empty ranges or ranges with no permissions.
-  if (region.GetRange().GetByteSize() == 0 || region.GetLLDBPermissions() == 0)
+  // Don't add empty ranges.
+  if (region.GetRange().GetByteSize() == 0)
+    return;
+  // Don't add ranges with no read permissions.
+  if ((region.GetLLDBPermissions() & lldb::ePermissionsReadable) == 0)
     return;
   if (try_dirty_pages && AddDirtyPages(region, ranges))
     return;

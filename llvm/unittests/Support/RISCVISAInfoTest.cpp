@@ -769,6 +769,7 @@ R"(All available -march extensions for RISC-V
     za128rs              1.0
     za64rs               1.0
     zacas                1.0
+    zama16b              1.0
     zawrs                1.0
     zfa                  1.0
     zfh                  1.0
