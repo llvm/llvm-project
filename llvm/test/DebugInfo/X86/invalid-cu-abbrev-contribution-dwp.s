@@ -1,10 +1,7 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o - | \
 # RUN:   llvm-dwarfdump -debug-info - 2>&1 | FileCheck %s
 
-## llvm-dwarfdump used to crash with this input because of an invalid size
-## of the compilation unit contribution in the .debug_cu_index section.
-
-# CHECK: warning: DWARF package unit at offset 0x00000000 has an inconsistent index (expected: 23, actual: 24)
+# CHECK: warning: DWARF package unit at offset 0x00000000 missing abbreviation column
 
     .section .debug_abbrev.dwo, "e", @progbits
 .LAbbrBegin:
@@ -36,7 +33,7 @@
 ## Header:
     .short 2                    # Version
     .space 2                    # Padding
-    .long 2                     # Section count
+    .long 1                     # Section count (Invalid, should be 2)
     .long 1                     # Unit count
     .long 4                     # Slot count
 ## Hash Table of Signatures:
@@ -52,10 +49,10 @@
 ## Table of Section Offsets:
 ## Row 0:
     .long 1                     # DW_SECT_INFO
-    .long 3                     # DW_SECT_ABBREV
+#    .long 3                     # DW_SECT_ABBREV (Intentionally omitted)
 ## Row 1:
     .long .LCUBegin-.debug_info.dwo     # Offset in .debug_info.dwo
-    .long .LAbbrBegin-.debug_abbrev.dwo # Offset in .debug_abbrev.dwo
+#    .long .LAbbrBegin-.debug_abbrev.dwo # Offset in .debug_abbrev.dwo (Intentionally omitted)
 ## Table of Section Sizes:
-    .long .LCUEnd-.LCUBegin-1           # Size of the contribution in .debug_info.dwo (invalid)
-    .long .LAbbrEnd-.LAbbrBegin
+    .long .LCUEnd-.LCUBegin           # Size of the contribution in .debug_info.dwo
+    .long .LAbbrEnd-.LAbbrBegin       # Size of the contribution in .debug_abbrev.dwo (Intentionally omitted)

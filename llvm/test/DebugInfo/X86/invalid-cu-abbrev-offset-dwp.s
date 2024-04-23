@@ -1,10 +1,7 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o - | \
 # RUN:   llvm-dwarfdump -debug-info - 2>&1 | FileCheck %s
 
-## llvm-dwarfdump used to crash with this input because of an invalid size
-## of the compilation unit contribution in the .debug_cu_index section.
-
-# CHECK: warning: DWARF package unit at offset 0x00000000 has an inconsistent index (expected: 23, actual: 24)
+# CHECK: warning: DWARF package unit at offset 0x00000000 has a non-zero abbreviation offset
 
     .section .debug_abbrev.dwo, "e", @progbits
 .LAbbrBegin:
@@ -25,7 +22,7 @@
     .long .LCUEnd-.LCUVersion   # Length
 .LCUVersion:
     .short 4                    # Version
-    .long 0                     # Abbrev offset
+    .long 1                     # Abbrev offset (Invalid, should be 0)
     .byte 4                     # Address size
     .uleb128 1                  # Abbrev [1] DW_TAG_compile_unit
     .asciz "a.c"                # DW_AT_name
@@ -57,5 +54,5 @@
     .long .LCUBegin-.debug_info.dwo     # Offset in .debug_info.dwo
     .long .LAbbrBegin-.debug_abbrev.dwo # Offset in .debug_abbrev.dwo
 ## Table of Section Sizes:
-    .long .LCUEnd-.LCUBegin-1           # Size of the contribution in .debug_info.dwo (invalid)
+    .long .LCUEnd-.LCUBegin
     .long .LAbbrEnd-.LAbbrBegin
