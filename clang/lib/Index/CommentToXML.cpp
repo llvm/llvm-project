@@ -1052,6 +1052,9 @@ void CommentASTToXMLConverter::visitFullComment(const FullComment *C) {
       }
       if (AA->getUnavailable())
         Result << "<Unavailable/>";
+
+      // HEKOTA TODO add Environment here
+      
       Result << "</Availability>";
     }
   }

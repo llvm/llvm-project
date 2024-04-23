@@ -3819,6 +3819,9 @@ def note_cannot_use_trivial_abi_reason : Note<
 // Availability attribute
 def warn_availability_unknown_platform : Warning<
   "unknown platform %0 in availability macro">, InGroup<Availability>;
+def warn_availability_unknown_environment : Warning<
+  "unknown environment %0 in availability macro">, InGroup<Availability>;
+
 def warn_availability_version_ordering : Warning<
   "feature cannot be %select{introduced|deprecated|obsoleted}0 in %1 version "
   "%2 before it was %select{introduced|deprecated|obsoleted}3 in version %4; "
@@ -3851,7 +3854,7 @@ def warn_availability_fuchsia_unavailable_minor : Warning<
   InGroup<Availability>;
 
 def warn_unguarded_availability :
-  Warning<"%0 is only available on %1 %2 or newer">,
+  Warning<"%0 %select{is only|is not}5 available %select{|in %4 environment }3on %1 %2 %select{or newer|}5">,
   InGroup<UnguardedAvailability>, DefaultIgnore;
 def warn_unguarded_availability_new :
   Warning<warn_unguarded_availability.Summary>,

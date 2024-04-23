@@ -39,6 +39,7 @@
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/ExpressionTraits.h"
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/OpenCLOptions.h"
 #include "clang/Basic/PragmaKinds.h"
@@ -3623,7 +3624,9 @@ public:
                         VersionTuple Introduced, VersionTuple Deprecated,
                         VersionTuple Obsoleted, bool IsUnavailable,
                         StringRef Message, bool IsStrict, StringRef Replacement,
-                        AvailabilityMergeKind AMK, int Priority);
+                        AvailabilityMergeKind AMK, int Priority,
+                        IdentifierInfo *IIEnvironment);
+  
   TypeVisibilityAttr *
   mergeTypeVisibilityAttr(Decl *D, const AttributeCommonInfo &CI,
                           TypeVisibilityAttr::VisibilityType Vis);
