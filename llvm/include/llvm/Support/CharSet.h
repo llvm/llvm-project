@@ -62,7 +62,6 @@ public:
   /// If the destination character set is a stateful character set,
   /// set the shift state to the initial state.
   /// Otherwise this is a no-op.
-  virtual std::error_code flush() const = 0;
 };
 } // namespace details
 
@@ -135,8 +134,6 @@ public:
       return std::string(Result);
     return EC;
   }
-
-  std::error_code flush() const { return Converter->flush(); }
 };
 
 } // namespace llvm
