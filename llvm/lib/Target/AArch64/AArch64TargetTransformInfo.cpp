@@ -4160,9 +4160,10 @@ bool AArch64TTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) {
   return NumInsns >= SVETailFoldInsnThreshold;
 }
 
-InstructionCost AArch64TTIImpl::getScalingFactorCost(
-    Type *Ty, GlobalValue *BaseGV, int64_t BaseOffset, bool HasBaseReg,
-    int64_t Scale, unsigned AddrSpace, int64_t ScalableOffset) const {
+InstructionCost
+AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
+                                     StackOffset BaseOffset, bool HasBaseReg,
+                                     int64_t Scale, unsigned AddrSpace) const {
   // Scaling factors are not free at all.
   // Operands                     | Rt Latency
   // -------------------------------------------
@@ -4172,10 +4173,10 @@ InstructionCost AArch64TTIImpl::getScalingFactorCost(
   // Rt, [Xn, Wm, <extend> #imm]  |
   TargetLoweringBase::AddrMode AM;
   AM.BaseGV = BaseGV;
-  AM.BaseOffs = BaseOffset;
+  AM.BaseOffs = BaseOffset.getFixed();
   AM.HasBaseReg = HasBaseReg;
   AM.Scale = Scale;
-  AM.ScalableOffset = ScalableOffset;
+  AM.ScalableOffset = BaseOffset.getScalable();
   if (getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace))
     // Scale represents reg2 * scale, thus account for 1 if
     // it is not equal to 0 or 1.

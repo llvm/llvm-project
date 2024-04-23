@@ -403,15 +403,14 @@ public:
   }
 
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
-                                       int64_t BaseOffset, bool HasBaseReg,
-                                       int64_t Scale, unsigned AddrSpace,
-                                       int64_t ScalableOffset) {
+                                       StackOffset BaseOffset, bool HasBaseReg,
+                                       int64_t Scale, unsigned AddrSpace) {
     TargetLoweringBase::AddrMode AM;
     AM.BaseGV = BaseGV;
-    AM.BaseOffs = BaseOffset;
+    AM.BaseOffs = BaseOffset.getFixed();
     AM.HasBaseReg = HasBaseReg;
     AM.Scale = Scale;
-    AM.ScalableOffset = ScalableOffset;
+    AM.ScalableOffset = BaseOffset.getScalable();
     if (getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace))
       return 0;
     return -1;
