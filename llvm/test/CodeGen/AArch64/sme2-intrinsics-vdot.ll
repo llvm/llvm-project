@@ -8,9 +8,7 @@ target triple="aarch64-linux-gnu"
 define void @test_fvdot_lane_za32_vg1x2_nxv8f16(i32 %slice, <vscale x 8 x half> %zn1, <vscale x 8 x half> %zn2, <vscale x 8 x half> %zm) #0 {
 ; CHECK-LABEL: test_fvdot_lane_za32_vg1x2_nxv8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fvdot za.s[w8, 0, vgx2], { z0.h, z1.h }, z2.h[3]
 ; CHECK-NEXT:    fvdot za.s[w8, 7, vgx2], { z0.h, z1.h }, z2.h[3]
 ; CHECK-NEXT:    ret
@@ -26,9 +24,7 @@ define void @test_fvdot_lane_za32_vg1x2_nxv8f16(i32 %slice, <vscale x 8 x half> 
 define void @test_fvdot_lane_za32_vg1x2_nxv8bf16(i32 %slice, <vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat> %zn2, <vscale x 8 x bfloat> %zm) #0 {
 ; CHECK-LABEL: test_fvdot_lane_za32_vg1x2_nxv8bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    bfvdot za.s[w8, 0, vgx2], { z0.h, z1.h }, z2.h[3]
 ; CHECK-NEXT:    bfvdot za.s[w8, 7, vgx2], { z0.h, z1.h }, z2.h[3]
 ; CHECK-NEXT:    ret
@@ -44,9 +40,7 @@ define void @test_fvdot_lane_za32_vg1x2_nxv8bf16(i32 %slice, <vscale x 8 x bfloa
 define void @test_svdot_lane_za32_vg1x2_nxv8i16(i32 %slice, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zm) #0 {
 ; CHECK-LABEL: test_svdot_lane_za32_vg1x2_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    svdot za.s[w8, 0, vgx2], { z0.h, z1.h }, z2.h[3]
 ; CHECK-NEXT:    svdot za.s[w8, 7, vgx2], { z0.h, z1.h }, z2.h[3]
 ; CHECK-NEXT:    ret
@@ -59,11 +53,7 @@ define void @test_svdot_lane_za32_vg1x2_nxv8i16(i32 %slice, <vscale x 8 x i16> %
 define void @test_svdot_lane_za32_vg1x4_nxv16i8(i32 %slice, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4, <vscale x 16 x i8> %zm) #0 {
 ; CHECK-LABEL: test_svdot_lane_za32_vg1x4_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    svdot za.s[w8, 0, vgx4], { z0.b - z3.b }, z4.b[3]
 ; CHECK-NEXT:    svdot za.s[w8, 7, vgx4], { z0.b - z3.b }, z4.b[3]
 ; CHECK-NEXT:    ret
@@ -76,11 +66,7 @@ define void @test_svdot_lane_za32_vg1x4_nxv16i8(i32 %slice, <vscale x 16 x i8> %
 define void @test_svdot_lane_za64_vg1x4_nxv8i16(i32 %slice, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3, <vscale x 8 x i16> %zn4, <vscale x 8 x i16> %zm) #1 {
 ; CHECK-LABEL: test_svdot_lane_za64_vg1x4_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    svdot za.d[w8, 0, vgx4], { z0.h - z3.h }, z4.h[1]
 ; CHECK-NEXT:    svdot za.d[w8, 7, vgx4], { z0.h - z3.h }, z4.h[1]
 ; CHECK-NEXT:    ret
@@ -121,41 +107,36 @@ entry:
 define void @svdot_form_4x_tuple(ptr %ptr, i64 %stride) #0 {
 ; CHECK-LABEL: svdot_form_4x_tuple:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    stp d15, d14, [sp, #-64]! // 16-byte Folded Spill
-; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str d14, [sp, #-48]! // 8-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    lsl x9, x1, #1
-; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    ld1b { z17.b, z21.b, z25.b, z29.b }, pn8/z, [x0]
 ; CHECK-NEXT:    ld1b { z16.b, z20.b, z24.b, z28.b }, pn8/z, [x0, x1]
-; CHECK-NEXT:    ld1b { z18.b, z22.b, z26.b, z30.b }, pn8/z, [x0, x9]
+; CHECK-NEXT:    ld1b { z2.b, z6.b, z10.b, z14.b }, pn8/z, [x0, x9]
 ; CHECK-NEXT:    add x9, x9, x1
-; CHECK-NEXT:    ld1b { z8.b - z11.b }, pn8/z, [x0, x9]
 ; CHECK-NEXT:    mov z0.d, z17.d
-; CHECK-NEXT:    mov z4.d, z21.d
-; CHECK-NEXT:    mov z12.d, z25.d
 ; CHECK-NEXT:    mov z1.d, z16.d
+; CHECK-NEXT:    ld1b { z16.b - z19.b }, pn8/z, [x0, x9]
+; CHECK-NEXT:    mov z4.d, z21.d
 ; CHECK-NEXT:    mov z5.d, z20.d
-; CHECK-NEXT:    mov z13.d, z24.d
-; CHECK-NEXT:    mov z2.d, z18.d
-; CHECK-NEXT:    mov z6.d, z22.d
-; CHECK-NEXT:    mov z14.d, z26.d
-; CHECK-NEXT:    mov z3.d, z8.d
-; CHECK-NEXT:    mov z7.d, z9.d
-; CHECK-NEXT:    mov z15.d, z10.d
-; CHECK-NEXT:    mov z8.d, z29.d
-; CHECK-NEXT:    mov z9.d, z28.d
+; CHECK-NEXT:    mov z8.d, z25.d
+; CHECK-NEXT:    mov z9.d, z24.d
+; CHECK-NEXT:    mov z3.d, z16.d
+; CHECK-NEXT:    mov z7.d, z17.d
+; CHECK-NEXT:    mov z11.d, z18.d
+; CHECK-NEXT:    mov z16.d, z29.d
+; CHECK-NEXT:    mov z17.d, z28.d
+; CHECK-NEXT:    mov z18.d, z14.d
 ; CHECK-NEXT:    svdot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
-; CHECK-NEXT:    mov z10.d, z30.d
 ; CHECK-NEXT:    svdot za.s[w8, 0, vgx4], { z4.b - z7.b }, z0.b[0]
-; CHECK-NEXT:    svdot za.s[w8, 0, vgx4], { z12.b - z15.b }, z0.b[0]
 ; CHECK-NEXT:    svdot za.s[w8, 0, vgx4], { z8.b - z11.b }, z0.b[0]
-; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #64 // 16-byte Folded Reload
+; CHECK-NEXT:    svdot za.s[w8, 0, vgx4], { z16.b - z19.b }, z0.b[0]
+; CHECK-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr d14, [sp], #48 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
@@ -196,9 +177,7 @@ entry:
 define void @test_uvdot_lane_za32_vg1x2_nxv8i16(i32 %slice, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zm) #0 {
 ; CHECK-LABEL: test_uvdot_lane_za32_vg1x2_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    uvdot za.s[w8, 0, vgx2], { z0.h, z1.h }, z2.h[3]
 ; CHECK-NEXT:    uvdot za.s[w8, 7, vgx2], { z0.h, z1.h }, z2.h[3]
 ; CHECK-NEXT:    ret
@@ -211,11 +190,7 @@ define void @test_uvdot_lane_za32_vg1x2_nxv8i16(i32 %slice, <vscale x 8 x i16> %
 define void @test_uvdot_lane_za32_vg1x4_nxv16i8(i32 %slice, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4, <vscale x 16 x i8> %zm) #0 {
 ; CHECK-LABEL: test_uvdot_lane_za32_vg1x4_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    uvdot za.s[w8, 0, vgx4], { z0.b - z3.b }, z4.b[3]
 ; CHECK-NEXT:    uvdot za.s[w8, 7, vgx4], { z0.b - z3.b }, z4.b[3]
 ; CHECK-NEXT:    ret
@@ -228,11 +203,7 @@ define void @test_uvdot_lane_za32_vg1x4_nxv16i8(i32 %slice, <vscale x 16 x i8> %
 define void @test_uvdot_lane_za64_vg1x4_nxv8i16(i32 %slice, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zn3, <vscale x 8 x i16> %zn4, <vscale x 8 x i16> %zm) #1 {
 ; CHECK-LABEL: test_uvdot_lane_za64_vg1x4_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    uvdot za.d[w8, 0, vgx4], { z0.h - z3.h }, z4.h[1]
 ; CHECK-NEXT:    uvdot za.d[w8, 7, vgx4], { z0.h - z3.h }, z4.h[1]
 ; CHECK-NEXT:    ret
@@ -273,41 +244,36 @@ entry:
 define void @uvdot_form_4x_tuple(ptr %ptr, i64 %stride) #0 {
 ; CHECK-LABEL: uvdot_form_4x_tuple:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    stp d15, d14, [sp, #-64]! // 16-byte Folded Spill
-; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str d14, [sp, #-48]! // 8-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    lsl x9, x1, #1
-; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    ld1b { z17.b, z21.b, z25.b, z29.b }, pn8/z, [x0]
 ; CHECK-NEXT:    ld1b { z16.b, z20.b, z24.b, z28.b }, pn8/z, [x0, x1]
-; CHECK-NEXT:    ld1b { z18.b, z22.b, z26.b, z30.b }, pn8/z, [x0, x9]
+; CHECK-NEXT:    ld1b { z2.b, z6.b, z10.b, z14.b }, pn8/z, [x0, x9]
 ; CHECK-NEXT:    add x9, x9, x1
-; CHECK-NEXT:    ld1b { z8.b - z11.b }, pn8/z, [x0, x9]
 ; CHECK-NEXT:    mov z0.d, z17.d
-; CHECK-NEXT:    mov z4.d, z21.d
-; CHECK-NEXT:    mov z12.d, z25.d
 ; CHECK-NEXT:    mov z1.d, z16.d
+; CHECK-NEXT:    ld1b { z16.b - z19.b }, pn8/z, [x0, x9]
+; CHECK-NEXT:    mov z4.d, z21.d
 ; CHECK-NEXT:    mov z5.d, z20.d
-; CHECK-NEXT:    mov z13.d, z24.d
-; CHECK-NEXT:    mov z2.d, z18.d
-; CHECK-NEXT:    mov z6.d, z22.d
-; CHECK-NEXT:    mov z14.d, z26.d
-; CHECK-NEXT:    mov z3.d, z8.d
-; CHECK-NEXT:    mov z7.d, z9.d
-; CHECK-NEXT:    mov z15.d, z10.d
-; CHECK-NEXT:    mov z8.d, z29.d
-; CHECK-NEXT:    mov z9.d, z28.d
+; CHECK-NEXT:    mov z8.d, z25.d
+; CHECK-NEXT:    mov z9.d, z24.d
+; CHECK-NEXT:    mov z3.d, z16.d
+; CHECK-NEXT:    mov z7.d, z17.d
+; CHECK-NEXT:    mov z11.d, z18.d
+; CHECK-NEXT:    mov z16.d, z29.d
+; CHECK-NEXT:    mov z17.d, z28.d
+; CHECK-NEXT:    mov z18.d, z14.d
 ; CHECK-NEXT:    uvdot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
-; CHECK-NEXT:    mov z10.d, z30.d
 ; CHECK-NEXT:    uvdot za.s[w8, 0, vgx4], { z4.b - z7.b }, z0.b[0]
-; CHECK-NEXT:    uvdot za.s[w8, 0, vgx4], { z12.b - z15.b }, z0.b[0]
 ; CHECK-NEXT:    uvdot za.s[w8, 0, vgx4], { z8.b - z11.b }, z0.b[0]
-; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #64 // 16-byte Folded Reload
+; CHECK-NEXT:    uvdot za.s[w8, 0, vgx4], { z16.b - z19.b }, z0.b[0]
+; CHECK-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr d14, [sp], #48 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
@@ -348,11 +314,7 @@ entry:
 define void @test_suvdot_lane_za32_vg1x4_nxv16i8(i32 %slice, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4, <vscale x 16 x i8> %zm) #0 {
 ; CHECK-LABEL: test_suvdot_lane_za32_vg1x4_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    suvdot za.s[w8, 0, vgx4], { z0.b - z3.b }, z4.b[3]
 ; CHECK-NEXT:    suvdot za.s[w8, 7, vgx4], { z0.b - z3.b }, z4.b[3]
 ; CHECK-NEXT:    ret
@@ -365,41 +327,36 @@ define void @test_suvdot_lane_za32_vg1x4_nxv16i8(i32 %slice, <vscale x 16 x i8> 
 define void @suvdot_form_4x_tuple(ptr %ptr, i64 %stride) #0 {
 ; CHECK-LABEL: suvdot_form_4x_tuple:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    stp d15, d14, [sp, #-64]! // 16-byte Folded Spill
-; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str d14, [sp, #-48]! // 8-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    lsl x9, x1, #1
-; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    ld1b { z17.b, z21.b, z25.b, z29.b }, pn8/z, [x0]
 ; CHECK-NEXT:    ld1b { z16.b, z20.b, z24.b, z28.b }, pn8/z, [x0, x1]
-; CHECK-NEXT:    ld1b { z18.b, z22.b, z26.b, z30.b }, pn8/z, [x0, x9]
+; CHECK-NEXT:    ld1b { z2.b, z6.b, z10.b, z14.b }, pn8/z, [x0, x9]
 ; CHECK-NEXT:    add x9, x9, x1
-; CHECK-NEXT:    ld1b { z8.b - z11.b }, pn8/z, [x0, x9]
 ; CHECK-NEXT:    mov z0.d, z17.d
-; CHECK-NEXT:    mov z4.d, z21.d
-; CHECK-NEXT:    mov z12.d, z25.d
 ; CHECK-NEXT:    mov z1.d, z16.d
+; CHECK-NEXT:    ld1b { z16.b - z19.b }, pn8/z, [x0, x9]
+; CHECK-NEXT:    mov z4.d, z21.d
 ; CHECK-NEXT:    mov z5.d, z20.d
-; CHECK-NEXT:    mov z13.d, z24.d
-; CHECK-NEXT:    mov z2.d, z18.d
-; CHECK-NEXT:    mov z6.d, z22.d
-; CHECK-NEXT:    mov z14.d, z26.d
-; CHECK-NEXT:    mov z3.d, z8.d
-; CHECK-NEXT:    mov z7.d, z9.d
-; CHECK-NEXT:    mov z15.d, z10.d
-; CHECK-NEXT:    mov z8.d, z29.d
-; CHECK-NEXT:    mov z9.d, z28.d
+; CHECK-NEXT:    mov z8.d, z25.d
+; CHECK-NEXT:    mov z9.d, z24.d
+; CHECK-NEXT:    mov z3.d, z16.d
+; CHECK-NEXT:    mov z7.d, z17.d
+; CHECK-NEXT:    mov z11.d, z18.d
+; CHECK-NEXT:    mov z16.d, z29.d
+; CHECK-NEXT:    mov z17.d, z28.d
+; CHECK-NEXT:    mov z18.d, z14.d
 ; CHECK-NEXT:    suvdot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
-; CHECK-NEXT:    mov z10.d, z30.d
 ; CHECK-NEXT:    suvdot za.s[w8, 0, vgx4], { z4.b - z7.b }, z0.b[0]
-; CHECK-NEXT:    suvdot za.s[w8, 0, vgx4], { z12.b - z15.b }, z0.b[0]
 ; CHECK-NEXT:    suvdot za.s[w8, 0, vgx4], { z8.b - z11.b }, z0.b[0]
-; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #64 // 16-byte Folded Reload
+; CHECK-NEXT:    suvdot za.s[w8, 0, vgx4], { z16.b - z19.b }, z0.b[0]
+; CHECK-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr d14, [sp], #48 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
@@ -440,11 +397,7 @@ entry:
 define void @test_usvdot_lane_za32_vg1x4_nxv16i8(i32 %slice, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zn3, <vscale x 16 x i8> %zn4, <vscale x 16 x i8> %zm) #0 {
 ; CHECK-LABEL: test_usvdot_lane_za32_vg1x4_nxv16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    usvdot za.s[w8, 0, vgx4], { z0.b - z3.b }, z4.b[3]
 ; CHECK-NEXT:    usvdot za.s[w8, 7, vgx4], { z0.b - z3.b }, z4.b[3]
 ; CHECK-NEXT:    ret
@@ -457,41 +410,36 @@ define void @test_usvdot_lane_za32_vg1x4_nxv16i8(i32 %slice, <vscale x 16 x i8> 
 define void @usvdot_form_4x_tuple(ptr %ptr, i64 %stride) #0 {
 ; CHECK-LABEL: usvdot_form_4x_tuple:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    stp d15, d14, [sp, #-64]! // 16-byte Folded Spill
-; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    str d14, [sp, #-48]! // 8-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    lsl x9, x1, #1
-; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NEXT:    ld1b { z17.b, z21.b, z25.b, z29.b }, pn8/z, [x0]
 ; CHECK-NEXT:    ld1b { z16.b, z20.b, z24.b, z28.b }, pn8/z, [x0, x1]
-; CHECK-NEXT:    ld1b { z18.b, z22.b, z26.b, z30.b }, pn8/z, [x0, x9]
+; CHECK-NEXT:    ld1b { z2.b, z6.b, z10.b, z14.b }, pn8/z, [x0, x9]
 ; CHECK-NEXT:    add x9, x9, x1
-; CHECK-NEXT:    ld1b { z8.b - z11.b }, pn8/z, [x0, x9]
 ; CHECK-NEXT:    mov z0.d, z17.d
-; CHECK-NEXT:    mov z4.d, z21.d
-; CHECK-NEXT:    mov z12.d, z25.d
 ; CHECK-NEXT:    mov z1.d, z16.d
+; CHECK-NEXT:    ld1b { z16.b - z19.b }, pn8/z, [x0, x9]
+; CHECK-NEXT:    mov z4.d, z21.d
 ; CHECK-NEXT:    mov z5.d, z20.d
-; CHECK-NEXT:    mov z13.d, z24.d
-; CHECK-NEXT:    mov z2.d, z18.d
-; CHECK-NEXT:    mov z6.d, z22.d
-; CHECK-NEXT:    mov z14.d, z26.d
-; CHECK-NEXT:    mov z3.d, z8.d
-; CHECK-NEXT:    mov z7.d, z9.d
-; CHECK-NEXT:    mov z15.d, z10.d
-; CHECK-NEXT:    mov z8.d, z29.d
-; CHECK-NEXT:    mov z9.d, z28.d
+; CHECK-NEXT:    mov z8.d, z25.d
+; CHECK-NEXT:    mov z9.d, z24.d
+; CHECK-NEXT:    mov z3.d, z16.d
+; CHECK-NEXT:    mov z7.d, z17.d
+; CHECK-NEXT:    mov z11.d, z18.d
+; CHECK-NEXT:    mov z16.d, z29.d
+; CHECK-NEXT:    mov z17.d, z28.d
+; CHECK-NEXT:    mov z18.d, z14.d
 ; CHECK-NEXT:    usvdot za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
-; CHECK-NEXT:    mov z10.d, z30.d
 ; CHECK-NEXT:    usvdot za.s[w8, 0, vgx4], { z4.b - z7.b }, z0.b[0]
-; CHECK-NEXT:    usvdot za.s[w8, 0, vgx4], { z12.b - z15.b }, z0.b[0]
 ; CHECK-NEXT:    usvdot za.s[w8, 0, vgx4], { z8.b - z11.b }, z0.b[0]
-; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp], #64 // 16-byte Folded Reload
+; CHECK-NEXT:    usvdot za.s[w8, 0, vgx4], { z16.b - z19.b }, z0.b[0]
+; CHECK-NEXT:    ldp d9, d8, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr d14, [sp], #48 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call target("aarch64.svcount") @llvm.aarch64.sve.ptrue.c8()
