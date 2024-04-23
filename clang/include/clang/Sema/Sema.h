@@ -3084,6 +3084,7 @@ public:
   Decl *ActOnStartOfFunctionDef(Scope *S, Decl *D,
                                 SkipBodyInfo *SkipBody = nullptr,
                                 FnBodyKind BodyKind = FnBodyKind::Other);
+  void applyFunctionAttributesBeforeParsingBody(Decl *FD);
 
   /// Determine whether we can delay parsing the body of a function or
   /// function template until it is used, assuming we don't care about emitting
