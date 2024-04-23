@@ -23,6 +23,8 @@ add_libc_test(
   DEPENDS
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fpbits_str
+    libc.src.__support.integer_literals
+    libc.src.__support.sign
 )
 
 add_fp_unittest(

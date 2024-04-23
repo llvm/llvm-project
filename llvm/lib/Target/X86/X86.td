@@ -683,6 +683,12 @@ def TuningFastGather
     : SubtargetFeature<"fast-gather", "HasFastGather", "true",
                        "Indicates if gather is reasonably fast (this is true for Skylake client and all AVX-512 CPUs)">;
 
+// Generate vpdpwssd instead of vpmaddwd+vpaddd sequence.
+def TuningFastDPWSSD
+    : SubtargetFeature<
+          "fast-dpwssd", "HasFastDPWSSD", "true",
+          "Prefer vpdpwssd instruction over vpmaddwd+vpaddd instruction sequence">;
+
 def TuningPreferNoGather
     : SubtargetFeature<"prefer-no-gather", "PreferGather", "false",
                        "Prefer no gather instructions">;
@@ -1237,8 +1243,6 @@ def ProcessorFeatures {
   // Gracemont
   list<SubtargetFeature> GRTTuning = [TuningMacroFusion,
                                       TuningSlow3OpsLEA,
-                                      TuningSlowDivide32,
-                                      TuningSlowDivide64,
                                       TuningFastScalarFSQRT,
                                       TuningFastVectorFSQRT,
                                       TuningFast15ByteNOP,
@@ -1504,7 +1508,11 @@ def ProcessorFeatures {
     !listconcat(ZN2Tuning, ZN3AdditionalTuning);
   list<SubtargetFeature> ZN3Features =
     !listconcat(ZN2Features, ZN3AdditionalFeatures);
-  list<SubtargetFeature> ZN4Tuning = ZN3Tuning;
+
+
+  list<SubtargetFeature> ZN4AdditionalTuning = [TuningFastDPWSSD];
+  list<SubtargetFeature> ZN4Tuning =
+    !listconcat(ZN3Tuning, ZN4AdditionalTuning);
   list<SubtargetFeature> ZN4AdditionalFeatures = [FeatureAVX512,
                                                   FeatureEVEX512,
                                                   FeatureCDI,
@@ -1701,10 +1709,6 @@ foreach P = ["goldmont_plus", "goldmont-plus"] in {
 }
 def : ProcModel<"tremont", SLMModel, ProcessorFeatures.TRMFeatures,
                 ProcessorFeatures.TRMTuning>;
-foreach P = ["sierraforest", "grandridge"] in {
-  def : ProcModel<P, AlderlakePModel, ProcessorFeatures.SRFFeatures,
-                ProcessorFeatures.TRMTuning>;
-}
 
 // "Arrandale" along with corei3 and corei5
 foreach P = ["nehalem", "corei7", "core_i7_sse4_2"] in {
@@ -1779,6 +1783,10 @@ def : ProcModel<"alderlake", AlderlakePModel,
 // FIXME: Use Gracemont Schedule Model when it is ready.
 def : ProcModel<"gracemont", AlderlakePModel,
                 ProcessorFeatures.ADLFeatures, ProcessorFeatures.GRTTuning>;
+foreach P = ["sierraforest", "grandridge"] in {
+  def : ProcModel<P, AlderlakePModel, ProcessorFeatures.SRFFeatures,
+                ProcessorFeatures.GRTTuning>;
+}
 def : ProcModel<"raptorlake", AlderlakePModel,
                 ProcessorFeatures.ADLFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"meteorlake", AlderlakePModel,

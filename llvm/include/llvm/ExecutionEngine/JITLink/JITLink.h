@@ -567,7 +567,7 @@ public:
   orc::ExecutorAddrDiff getOffset() const { return Offset; }
 
   void setOffset(orc::ExecutorAddrDiff NewOffset) {
-    assert(NewOffset < getBlock().getSize() && "Offset out of range");
+    assert(NewOffset <= getBlock().getSize() && "Offset out of range");
     Offset = NewOffset;
   }
 
@@ -1007,6 +1007,16 @@ public:
             GetEdgeKindNameFunction GetEdgeKindName)
       : LinkGraph(std::move(Name), TT, SubtargetFeatures(), PointerSize,
                   Endianness, GetEdgeKindName) {}
+
+  LinkGraph(std::string Name, const Triple &TT,
+            GetEdgeKindNameFunction GetEdgeKindName)
+      : LinkGraph(std::move(Name), TT, SubtargetFeatures(),
+                  Triple::getArchPointerBitWidth(TT.getArch()) / 8,
+                  TT.isLittleEndian() ? endianness::little : endianness::big,
+                  GetEdgeKindName) {
+    assert(!(Triple::getArchPointerBitWidth(TT.getArch()) % 8) &&
+           "Arch bitwidth is not a multiple of 8");
+  }
 
   LinkGraph(const LinkGraph &) = delete;
   LinkGraph &operator=(const LinkGraph &) = delete;

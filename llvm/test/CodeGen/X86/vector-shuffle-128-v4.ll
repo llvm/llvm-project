@@ -2012,24 +2012,18 @@ define <4 x i32> @extract3_insert0_v4i32_7123(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE2-LABEL: extract3_insert0_v4i32_7123:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,3,3,3]
-; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: extract3_insert0_v4i32_7123:
 ; SSE3:       # %bb.0:
 ; SSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,3,3,3]
-; SSE3-NEXT:    movd %xmm1, %eax
-; SSE3-NEXT:    movd %eax, %xmm1
 ; SSE3-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: extract3_insert0_v4i32_7123:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[3,3,3,3]
-; SSSE3-NEXT:    movd %xmm1, %eax
-; SSSE3-NEXT:    movd %eax, %xmm1
 ; SSSE3-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; SSSE3-NEXT:    retq
 ;

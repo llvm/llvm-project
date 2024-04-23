@@ -47,8 +47,12 @@ int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
   // attributes. We support those, but not through the typical attribute
   // machinery that goes through TableGen. We support this in all OpenMP modes
   // so long as double square brackets are enabled.
-  if (LangOpts.OpenMP && ScopeName == "omp")
-    return (Name == "directive" || Name == "sequence") ? 1 : 0;
+  //
+  // Other OpenMP attributes (e.g. [[omp::assume]]) are handled via the
+  // regular attribute parsing machinery.
+  if (LangOpts.OpenMP && ScopeName == "omp" &&
+      (Name == "directive" || Name == "sequence"))
+    return 1;
 
   int res = hasAttributeImpl(Syntax, Name, ScopeName, Target, LangOpts);
   if (res)

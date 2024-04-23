@@ -452,6 +452,9 @@ llvm::raw_ostream &operator<<(
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const ProcEntityDetails &x) {
   if (x.procInterface_) {
+    if (x.rawProcInterface_ != x.procInterface_) {
+      os << ' ' << x.rawProcInterface_->name() << " ->";
+    }
     os << ' ' << x.procInterface_->name();
   } else {
     DumpType(os, x.type());

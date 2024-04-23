@@ -21,6 +21,7 @@
 #include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/PerfSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/VTuneSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -30,9 +31,11 @@
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
+#include "llvm/ExecutionEngine/Orc/SectCreate.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderVTune.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -147,6 +150,10 @@ static cl::opt<bool> PerfSupport("perf-support",
                                  cl::init(false), cl::Hidden,
                                  cl::cat(JITLinkCategory));
 
+static cl::opt<bool> VTuneSupport("vtune-support",
+                                  cl::desc("Enable vtune profiling support"),
+                                  cl::init(false), cl::Hidden,
+                                  cl::cat(JITLinkCategory));
 static cl::opt<bool>
     NoProcessSymbols("no-process-syms",
                      cl::desc("Do not resolve to llvm-jitlink process symbols"),
@@ -161,6 +168,12 @@ static cl::list<std::string>
     Aliases("alias",
             cl::desc("Inject symbol aliases (syntax: <alias-name>=<aliasee>)"),
             cl::cat(JITLinkCategory));
+
+static cl::list<std::string>
+    SectCreate("sectcreate",
+               cl::desc("given <sectname>,<filename>[@<sym>=<offset>,...]  "
+                        "add the content of <filename> to <sectname>"),
+               cl::cat(JITLinkCategory));
 
 static cl::list<std::string> TestHarnesses("harness", cl::Positional,
                                            cl::desc("Test harness files"),
@@ -257,7 +270,10 @@ static LLVM_ATTRIBUTE_USED void linkComponents() {
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n'
          << (void *)&llvm_orc_registerJITLoaderPerfStart << '\n'
          << (void *)&llvm_orc_registerJITLoaderPerfEnd << '\n'
-         << (void *)&llvm_orc_registerJITLoaderPerfImpl << '\n';
+         << (void *)&llvm_orc_registerJITLoaderPerfImpl << '\n'
+         << (void *)&llvm_orc_registerVTuneImpl << '\n'
+         << (void *)&llvm_orc_unregisterVTuneImpl << '\n'
+         << (void *)&llvm_orc_test_registerVTuneImpl << '\n';
 }
 
 static bool UseTestResultOverride = false;
@@ -997,6 +1013,14 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
         this->ES.getExecutorProcessControl(), *ProcessSymsJD, true, true)));
   }
 
+  if (VTuneSupport && TT.isOSBinFormatELF()) {
+    ObjLayer.addPlugin(ExitOnErr(DebugInfoPreservationPlugin::Create()));
+    ObjLayer.addPlugin(ExitOnErr(
+        VTuneSupportPlugin::Create(this->ES.getExecutorProcessControl(),
+                                   *ProcessSymsJD, /*EmitDebugInfo=*/true,
+                                   /*TestMode=*/true)));
+  }
+
   // Set up the platform.
   if (!OrcRuntime.empty()) {
     assert(ProcessSymsJD && "ProcessSymsJD should have been set");
@@ -1666,6 +1690,57 @@ static Error addAliases(Session &S,
   return Error::success();
 }
 
+static Error addSectCreates(Session &S,
+                            const std::map<unsigned, JITDylib *> &IdxToJD) {
+  for (auto SCItr = SectCreate.begin(), SCEnd = SectCreate.end();
+       SCItr != SCEnd; ++SCItr) {
+
+    unsigned SCArgIdx = SectCreate.getPosition(SCItr - SectCreate.begin());
+    auto &JD = *std::prev(IdxToJD.lower_bound(SCArgIdx))->second;
+
+    StringRef SCArg(*SCItr);
+
+    auto [SectAndFileName, ExtraSymbolsString] = SCArg.split('@');
+    auto [SectName, FileName] = SectAndFileName.rsplit(',');
+    if (SectName.empty())
+      return make_error<StringError>("In -sectcreate=" + SCArg +
+                                         ", filename component cannot be empty",
+                                     inconvertibleErrorCode());
+    if (FileName.empty())
+      return make_error<StringError>("In -sectcreate=" + SCArg +
+                                         ", filename component cannot be empty",
+                                     inconvertibleErrorCode());
+
+    auto Content = MemoryBuffer::getFile(FileName);
+    if (!Content)
+      return createFileError(FileName, errorCodeToError(Content.getError()));
+
+    SectCreateMaterializationUnit::ExtraSymbolsMap ExtraSymbols;
+    while (!ExtraSymbolsString.empty()) {
+      StringRef NextSymPair;
+      std::tie(NextSymPair, ExtraSymbolsString) = ExtraSymbolsString.split(',');
+
+      auto [Sym, OffsetString] = NextSymPair.split('=');
+      size_t Offset;
+
+      if (OffsetString.getAsInteger(0, Offset))
+        return make_error<StringError>("In -sectcreate=" + SCArg + ", " +
+                                           OffsetString +
+                                           " is not a valid integer",
+                                       inconvertibleErrorCode());
+
+      ExtraSymbols[S.ES.intern(Sym)] = {JITSymbolFlags::Exported, Offset};
+    }
+
+    if (auto Err = JD.define(std::make_unique<SectCreateMaterializationUnit>(
+            S.ObjLayer, SectName.str(), MemProt::Read, 16, std::move(*Content),
+            std::move(ExtraSymbols))))
+      return Err;
+  }
+
+  return Error::success();
+}
+
 static Error addTestHarnesses(Session &S) {
   LLVM_DEBUG(dbgs() << "Adding test harness objects...\n");
   for (auto HarnessFile : TestHarnesses) {
@@ -2014,6 +2089,9 @@ static Error addSessionInputs(Session &S) {
     return Err;
 
   if (auto Err = addAliases(S, IdxToJD))
+    return Err;
+
+  if (auto Err = addSectCreates(S, IdxToJD))
     return Err;
 
   if (!TestHarnesses.empty())

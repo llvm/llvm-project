@@ -1,13 +1,8 @@
 // RUN: mlir-opt %s \
-// RUN:   -transform-interpreter \
-// RUN:   -test-transform-dialect-erase-schedule \
+// RUN:   -transform-interpreter -test-transform-dialect-erase-schedule \
 // RUN:   -lower-vector-mask \
 // RUN:   -one-shot-bufferize="bufferize-function-boundaries" \
-// RUN:   -enable-arm-streaming="streaming-mode=streaming-locally za-mode=new-za" \
-// RUN:   -convert-vector-to-arm-sme -convert-arith-to-arm-sme \
-// RUN:   -allocate-arm-sme-tiles -convert-arm-sme-to-scf \
-// RUN:   -convert-arm-sme-to-llvm -cse -canonicalize \
-// RUN:   -test-lower-to-llvm | \
+// RUN:   -test-lower-to-arm-sme -test-lower-to-llvm | \
 // RUN: %mcr_aarch64_cmd \
 // RUN:   -e=entry -entry-point-result=void \
 // RUN:   -march=aarch64 -mattr="+sve,+sme" \
@@ -93,7 +88,7 @@ func.func @entry() {
   }
 
   // CHECK: SME: END OF TEST OUTPUT
-  vector.print str "SME: END OF TEST OUTPUT"
+  vector.print str "SME: END OF TEST OUTPUT\n"
 
   return
 }

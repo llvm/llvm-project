@@ -29,7 +29,7 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 static bool isDummyArgument(mlir::Value v) {
-  auto blockArg{v.dyn_cast<mlir::BlockArgument>()};
+  auto blockArg{mlir::dyn_cast<mlir::BlockArgument>(v)};
   if (!blockArg)
     return false;
 
@@ -333,8 +333,10 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
           else
             type = SourceKind::Global;
 
-          if (fir::valueHasFirAttribute(v,
-                                        fir::GlobalOp::getTargetAttrNameStr()))
+          auto globalOpName = mlir::OperationName(
+              fir::GlobalOp::getOperationName(), defOp->getContext());
+          if (fir::valueHasFirAttribute(
+                  v, fir::GlobalOp::getTargetAttrName(globalOpName)))
             attributes.set(Attribute::Target);
 
           // TODO: Take followBoxAddr into account when setting the pointer

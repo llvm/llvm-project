@@ -5,7 +5,7 @@
 ; RUN: llc %s -o - -mtriple=m68k -mcpu=M68030 | FileCheck %s --check-prefix=ATOMIC
 ; RUN: llc %s -o - -mtriple=m68k -mcpu=M68040 | FileCheck %s --check-prefix=ATOMIC
 
-define i8 @atomic_load_i8_unordered(i8 *%a) nounwind {
+define i8 @atomic_load_i8_unordered(ptr %a) nounwind {
 ; NO-ATOMIC-LABEL: atomic_load_i8_unordered:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.l (4,%sp), %a0
@@ -17,11 +17,11 @@ define i8 @atomic_load_i8_unordered(i8 *%a) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.b (%a0), %d0
 ; ATOMIC-NEXT:    rts
-  %1 = load atomic i8, i8* %a unordered, align 1
+  %1 = load atomic i8, ptr %a unordered, align 1
   ret i8 %1
 }
 
-define i8 @atomic_load_i8_monotonic(i8 *%a) nounwind {
+define i8 @atomic_load_i8_monotonic(ptr %a) nounwind {
 ; NO-ATOMIC-LABEL: atomic_load_i8_monotonic:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.l (4,%sp), %a0
@@ -33,11 +33,11 @@ define i8 @atomic_load_i8_monotonic(i8 *%a) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.b (%a0), %d0
 ; ATOMIC-NEXT:    rts
-  %1 = load atomic i8, i8* %a monotonic, align 1
+  %1 = load atomic i8, ptr %a monotonic, align 1
   ret i8 %1
 }
 
-define i8 @atomic_load_i8_acquire(i8 *%a) nounwind {
+define i8 @atomic_load_i8_acquire(ptr %a) nounwind {
 ; NO-ATOMIC-LABEL: atomic_load_i8_acquire:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.l (4,%sp), %a0
@@ -49,11 +49,11 @@ define i8 @atomic_load_i8_acquire(i8 *%a) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.b (%a0), %d0
 ; ATOMIC-NEXT:    rts
-  %1 = load atomic i8, i8* %a acquire, align 1
+  %1 = load atomic i8, ptr %a acquire, align 1
   ret i8 %1
 }
 
-define i8 @atomic_load_i8_seq_cst(i8 *%a) nounwind {
+define i8 @atomic_load_i8_seq_cst(ptr %a) nounwind {
 ; NO-ATOMIC-LABEL: atomic_load_i8_seq_cst:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.l (4,%sp), %a0
@@ -65,11 +65,11 @@ define i8 @atomic_load_i8_seq_cst(i8 *%a) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.b (%a0), %d0
 ; ATOMIC-NEXT:    rts
-  %1 = load atomic i8, i8* %a seq_cst, align 1
+  %1 = load atomic i8, ptr %a seq_cst, align 1
   ret i8 %1
 }
 
-define i16 @atomic_load_i16_unordered(i16 *%a) nounwind {
+define i16 @atomic_load_i16_unordered(ptr %a) nounwind {
 ; NO-ATOMIC-LABEL: atomic_load_i16_unordered:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.l (4,%sp), %a0
@@ -81,11 +81,11 @@ define i16 @atomic_load_i16_unordered(i16 *%a) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.w (%a0), %d0
 ; ATOMIC-NEXT:    rts
-  %1 = load atomic i16, i16* %a unordered, align 2
+  %1 = load atomic i16, ptr %a unordered, align 2
   ret i16 %1
 }
 
-define i16 @atomic_load_i16_monotonic(i16 *%a) nounwind {
+define i16 @atomic_load_i16_monotonic(ptr %a) nounwind {
 ; NO-ATOMIC-LABEL: atomic_load_i16_monotonic:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.l (4,%sp), %a0
@@ -97,11 +97,11 @@ define i16 @atomic_load_i16_monotonic(i16 *%a) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.w (%a0), %d0
 ; ATOMIC-NEXT:    rts
-  %1 = load atomic i16, i16* %a monotonic, align 2
+  %1 = load atomic i16, ptr %a monotonic, align 2
   ret i16 %1
 }
 
-define i16 @atomic_load_i16_acquire(i16 *%a) nounwind {
+define i16 @atomic_load_i16_acquire(ptr %a) nounwind {
 ; NO-ATOMIC-LABEL: atomic_load_i16_acquire:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.l (4,%sp), %a0
@@ -113,11 +113,11 @@ define i16 @atomic_load_i16_acquire(i16 *%a) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.w (%a0), %d0
 ; ATOMIC-NEXT:    rts
-  %1 = load atomic i16, i16* %a acquire, align 2
+  %1 = load atomic i16, ptr %a acquire, align 2
   ret i16 %1
 }
 
-define i16 @atomic_load_i16_seq_cst(i16 *%a) nounwind {
+define i16 @atomic_load_i16_seq_cst(ptr %a) nounwind {
 ; NO-ATOMIC-LABEL: atomic_load_i16_seq_cst:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.l (4,%sp), %a0
@@ -129,11 +129,11 @@ define i16 @atomic_load_i16_seq_cst(i16 *%a) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.w (%a0), %d0
 ; ATOMIC-NEXT:    rts
-  %1 = load atomic i16, i16* %a seq_cst, align 2
+  %1 = load atomic i16, ptr %a seq_cst, align 2
   ret i16 %1
 }
 
-define i32 @atomic_load_i32_unordered(i32 *%a) nounwind {
+define i32 @atomic_load_i32_unordered(ptr %a) nounwind {
 ; NO-ATOMIC-LABEL: atomic_load_i32_unordered:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.l (4,%sp), %a0
@@ -145,11 +145,11 @@ define i32 @atomic_load_i32_unordered(i32 *%a) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.l (%a0), %d0
 ; ATOMIC-NEXT:    rts
-  %1 = load atomic i32, i32* %a unordered, align 4
+  %1 = load atomic i32, ptr %a unordered, align 4
   ret i32 %1
 }
 
-define i32 @atomic_load_i32_monotonic(i32 *%a) nounwind {
+define i32 @atomic_load_i32_monotonic(ptr %a) nounwind {
 ; NO-ATOMIC-LABEL: atomic_load_i32_monotonic:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.l (4,%sp), %a0
@@ -161,11 +161,11 @@ define i32 @atomic_load_i32_monotonic(i32 *%a) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.l (%a0), %d0
 ; ATOMIC-NEXT:    rts
-  %1 = load atomic i32, i32* %a monotonic, align 4
+  %1 = load atomic i32, ptr %a monotonic, align 4
   ret i32 %1
 }
 
-define i32 @atomic_load_i32_acquire(i32 *%a) nounwind {
+define i32 @atomic_load_i32_acquire(ptr %a) nounwind {
 ; NO-ATOMIC-LABEL: atomic_load_i32_acquire:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.l (4,%sp), %a0
@@ -177,11 +177,11 @@ define i32 @atomic_load_i32_acquire(i32 *%a) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.l (%a0), %d0
 ; ATOMIC-NEXT:    rts
-  %1 = load atomic i32, i32* %a acquire, align 4
+  %1 = load atomic i32, ptr %a acquire, align 4
   ret i32 %1
 }
 
-define i32 @atomic_load_i32_seq_cst(i32 *%a) nounwind {
+define i32 @atomic_load_i32_seq_cst(ptr %a) nounwind {
 ; NO-ATOMIC-LABEL: atomic_load_i32_seq_cst:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.l (4,%sp), %a0
@@ -193,11 +193,11 @@ define i32 @atomic_load_i32_seq_cst(i32 *%a) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.l (%a0), %d0
 ; ATOMIC-NEXT:    rts
-  %1 = load atomic i32, i32* %a seq_cst, align 4
+  %1 = load atomic i32, ptr %a seq_cst, align 4
   ret i32 %1
 }
 
-define i64 @atomic_load_i64_unordered(i64 *%a) nounwind {
+define i64 @atomic_load_i64_unordered(ptr %a) nounwind {
 ; NO-ATOMIC-LABEL: atomic_load_i64_unordered:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    suba.l #12, %sp
@@ -215,11 +215,11 @@ define i64 @atomic_load_i64_unordered(i64 *%a) nounwind {
 ; ATOMIC-NEXT:    jsr __atomic_load_8@PLT
 ; ATOMIC-NEXT:    adda.l #12, %sp
 ; ATOMIC-NEXT:    rts
-  %1 = load atomic i64, i64* %a unordered, align 8
+  %1 = load atomic i64, ptr %a unordered, align 8
   ret i64 %1
 }
 
-define i64 @atomic_load_i64_monotonic(i64 *%a) nounwind {
+define i64 @atomic_load_i64_monotonic(ptr %a) nounwind {
 ; NO-ATOMIC-LABEL: atomic_load_i64_monotonic:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    suba.l #12, %sp
@@ -237,11 +237,11 @@ define i64 @atomic_load_i64_monotonic(i64 *%a) nounwind {
 ; ATOMIC-NEXT:    jsr __atomic_load_8@PLT
 ; ATOMIC-NEXT:    adda.l #12, %sp
 ; ATOMIC-NEXT:    rts
-  %1 = load atomic i64, i64* %a monotonic, align 8
+  %1 = load atomic i64, ptr %a monotonic, align 8
   ret i64 %1
 }
 
-define i64 @atomic_load_i64_acquire(i64 *%a) nounwind {
+define i64 @atomic_load_i64_acquire(ptr %a) nounwind {
 ; NO-ATOMIC-LABEL: atomic_load_i64_acquire:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    suba.l #12, %sp
@@ -259,11 +259,11 @@ define i64 @atomic_load_i64_acquire(i64 *%a) nounwind {
 ; ATOMIC-NEXT:    jsr __atomic_load_8@PLT
 ; ATOMIC-NEXT:    adda.l #12, %sp
 ; ATOMIC-NEXT:    rts
-  %1 = load atomic i64, i64* %a acquire, align 8
+  %1 = load atomic i64, ptr %a acquire, align 8
   ret i64 %1
 }
 
-define i64 @atomic_load_i64_seq_cst(i64 *%a) nounwind {
+define i64 @atomic_load_i64_seq_cst(ptr %a) nounwind {
 ; NO-ATOMIC-LABEL: atomic_load_i64_seq_cst:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    suba.l #12, %sp
@@ -281,11 +281,11 @@ define i64 @atomic_load_i64_seq_cst(i64 *%a) nounwind {
 ; ATOMIC-NEXT:    jsr __atomic_load_8@PLT
 ; ATOMIC-NEXT:    adda.l #12, %sp
 ; ATOMIC-NEXT:    rts
-  %1 = load atomic i64, i64* %a seq_cst, align 8
+  %1 = load atomic i64, ptr %a seq_cst, align 8
   ret i64 %1
 }
 
-define void @atomic_store_i8_unordered(i8 *%a, i8 %val) nounwind {
+define void @atomic_store_i8_unordered(ptr %a, i8 %val) nounwind {
 ; NO-ATOMIC-LABEL: atomic_store_i8_unordered:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.b (11,%sp), %d0
@@ -299,11 +299,11 @@ define void @atomic_store_i8_unordered(i8 *%a, i8 %val) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.b %d0, (%a0)
 ; ATOMIC-NEXT:    rts
-  store atomic i8 %val, i8* %a unordered, align 1
+  store atomic i8 %val, ptr %a unordered, align 1
   ret void
 }
 
-define void @atomic_store_i8_monotonic(i8 *%a, i8 %val) nounwind {
+define void @atomic_store_i8_monotonic(ptr %a, i8 %val) nounwind {
 ; NO-ATOMIC-LABEL: atomic_store_i8_monotonic:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.b (11,%sp), %d0
@@ -317,11 +317,11 @@ define void @atomic_store_i8_monotonic(i8 *%a, i8 %val) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.b %d0, (%a0)
 ; ATOMIC-NEXT:    rts
-  store atomic i8 %val, i8* %a monotonic, align 1
+  store atomic i8 %val, ptr %a monotonic, align 1
   ret void
 }
 
-define void @atomic_store_i8_release(i8 *%a, i8 %val) nounwind {
+define void @atomic_store_i8_release(ptr %a, i8 %val) nounwind {
 ; NO-ATOMIC-LABEL: atomic_store_i8_release:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.b (11,%sp), %d0
@@ -335,11 +335,11 @@ define void @atomic_store_i8_release(i8 *%a, i8 %val) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.b %d0, (%a0)
 ; ATOMIC-NEXT:    rts
-  store atomic i8 %val, i8* %a release, align 1
+  store atomic i8 %val, ptr %a release, align 1
   ret void
 }
 
-define void @atomic_store_i8_seq_cst(i8 *%a, i8 %val) nounwind {
+define void @atomic_store_i8_seq_cst(ptr %a, i8 %val) nounwind {
 ; NO-ATOMIC-LABEL: atomic_store_i8_seq_cst:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.b (11,%sp), %d0
@@ -353,11 +353,11 @@ define void @atomic_store_i8_seq_cst(i8 *%a, i8 %val) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.b %d0, (%a0)
 ; ATOMIC-NEXT:    rts
-  store atomic i8 %val, i8* %a seq_cst, align 1
+  store atomic i8 %val, ptr %a seq_cst, align 1
   ret void
 }
 
-define void @atomic_store_i16_unordered(i16 *%a, i16 %val) nounwind {
+define void @atomic_store_i16_unordered(ptr %a, i16 %val) nounwind {
 ; NO-ATOMIC-LABEL: atomic_store_i16_unordered:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.w (10,%sp), %d0
@@ -371,11 +371,11 @@ define void @atomic_store_i16_unordered(i16 *%a, i16 %val) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.w %d0, (%a0)
 ; ATOMIC-NEXT:    rts
-  store atomic i16 %val, i16* %a unordered, align 2
+  store atomic i16 %val, ptr %a unordered, align 2
   ret void
 }
 
-define void @atomic_store_i16_monotonic(i16 *%a, i16 %val) nounwind {
+define void @atomic_store_i16_monotonic(ptr %a, i16 %val) nounwind {
 ; NO-ATOMIC-LABEL: atomic_store_i16_monotonic:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.w (10,%sp), %d0
@@ -389,11 +389,11 @@ define void @atomic_store_i16_monotonic(i16 *%a, i16 %val) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.w %d0, (%a0)
 ; ATOMIC-NEXT:    rts
-  store atomic i16 %val, i16* %a monotonic, align 2
+  store atomic i16 %val, ptr %a monotonic, align 2
   ret void
 }
 
-define void @atomic_store_i16_release(i16 *%a, i16 %val) nounwind {
+define void @atomic_store_i16_release(ptr %a, i16 %val) nounwind {
 ; NO-ATOMIC-LABEL: atomic_store_i16_release:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.w (10,%sp), %d0
@@ -407,11 +407,11 @@ define void @atomic_store_i16_release(i16 *%a, i16 %val) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.w %d0, (%a0)
 ; ATOMIC-NEXT:    rts
-  store atomic i16 %val, i16* %a release, align 2
+  store atomic i16 %val, ptr %a release, align 2
   ret void
 }
 
-define void @atomic_store_i16_seq_cst(i16 *%a, i16 %val) nounwind {
+define void @atomic_store_i16_seq_cst(ptr %a, i16 %val) nounwind {
 ; NO-ATOMIC-LABEL: atomic_store_i16_seq_cst:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.w (10,%sp), %d0
@@ -425,11 +425,11 @@ define void @atomic_store_i16_seq_cst(i16 *%a, i16 %val) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.w %d0, (%a0)
 ; ATOMIC-NEXT:    rts
-  store atomic i16 %val, i16* %a seq_cst, align 2
+  store atomic i16 %val, ptr %a seq_cst, align 2
   ret void
 }
 
-define void @atomic_store_i32_unordered(i32 *%a, i32 %val) nounwind {
+define void @atomic_store_i32_unordered(ptr %a, i32 %val) nounwind {
 ; NO-ATOMIC-LABEL: atomic_store_i32_unordered:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.l (8,%sp), %d0
@@ -443,11 +443,11 @@ define void @atomic_store_i32_unordered(i32 *%a, i32 %val) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.l %d0, (%a0)
 ; ATOMIC-NEXT:    rts
-  store atomic i32 %val, i32* %a unordered, align 4
+  store atomic i32 %val, ptr %a unordered, align 4
   ret void
 }
 
-define void @atomic_store_i32_monotonic(i32 *%a, i32 %val) nounwind {
+define void @atomic_store_i32_monotonic(ptr %a, i32 %val) nounwind {
 ; NO-ATOMIC-LABEL: atomic_store_i32_monotonic:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.l (8,%sp), %d0
@@ -461,11 +461,11 @@ define void @atomic_store_i32_monotonic(i32 *%a, i32 %val) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.l %d0, (%a0)
 ; ATOMIC-NEXT:    rts
-  store atomic i32 %val, i32* %a monotonic, align 4
+  store atomic i32 %val, ptr %a monotonic, align 4
   ret void
 }
 
-define void @atomic_store_i32_release(i32 *%a, i32 %val) nounwind {
+define void @atomic_store_i32_release(ptr %a, i32 %val) nounwind {
 ; NO-ATOMIC-LABEL: atomic_store_i32_release:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.l (8,%sp), %d0
@@ -479,11 +479,11 @@ define void @atomic_store_i32_release(i32 *%a, i32 %val) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.l %d0, (%a0)
 ; ATOMIC-NEXT:    rts
-  store atomic i32 %val, i32* %a release, align 4
+  store atomic i32 %val, ptr %a release, align 4
   ret void
 }
 
-define void @atomic_store_i32_seq_cst(i32 *%a, i32 %val) nounwind {
+define void @atomic_store_i32_seq_cst(ptr %a, i32 %val) nounwind {
 ; NO-ATOMIC-LABEL: atomic_store_i32_seq_cst:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    move.l (8,%sp), %d0
@@ -497,11 +497,11 @@ define void @atomic_store_i32_seq_cst(i32 *%a, i32 %val) nounwind {
 ; ATOMIC-NEXT:    move.l (4,%sp), %a0
 ; ATOMIC-NEXT:    move.l %d0, (%a0)
 ; ATOMIC-NEXT:    rts
-  store atomic i32 %val, i32* %a seq_cst, align 4
+  store atomic i32 %val, ptr %a seq_cst, align 4
   ret void
 }
 
-define void @atomic_store_i64_unordered(i64 *%a, i64 %val) nounwind {
+define void @atomic_store_i64_unordered(ptr %a, i64 %val) nounwind {
 ; NO-ATOMIC-LABEL: atomic_store_i64_unordered:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    suba.l #20, %sp
@@ -523,11 +523,11 @@ define void @atomic_store_i64_unordered(i64 *%a, i64 %val) nounwind {
 ; ATOMIC-NEXT:    jsr __atomic_store_8@PLT
 ; ATOMIC-NEXT:    adda.l #20, %sp
 ; ATOMIC-NEXT:    rts
-  store atomic i64 %val, i64* %a unordered, align 8
+  store atomic i64 %val, ptr %a unordered, align 8
   ret void
 }
 
-define void @atomic_store_i64_monotonic(i64 *%a, i64 %val) nounwind {
+define void @atomic_store_i64_monotonic(ptr %a, i64 %val) nounwind {
 ; NO-ATOMIC-LABEL: atomic_store_i64_monotonic:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    suba.l #20, %sp
@@ -549,11 +549,11 @@ define void @atomic_store_i64_monotonic(i64 *%a, i64 %val) nounwind {
 ; ATOMIC-NEXT:    jsr __atomic_store_8@PLT
 ; ATOMIC-NEXT:    adda.l #20, %sp
 ; ATOMIC-NEXT:    rts
-  store atomic i64 %val, i64* %a monotonic, align 8
+  store atomic i64 %val, ptr %a monotonic, align 8
   ret void
 }
 
-define void @atomic_store_i64_release(i64 *%a, i64 %val) nounwind {
+define void @atomic_store_i64_release(ptr %a, i64 %val) nounwind {
 ; NO-ATOMIC-LABEL: atomic_store_i64_release:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    suba.l #20, %sp
@@ -575,11 +575,11 @@ define void @atomic_store_i64_release(i64 *%a, i64 %val) nounwind {
 ; ATOMIC-NEXT:    jsr __atomic_store_8@PLT
 ; ATOMIC-NEXT:    adda.l #20, %sp
 ; ATOMIC-NEXT:    rts
-  store atomic i64 %val, i64* %a release, align 8
+  store atomic i64 %val, ptr %a release, align 8
   ret void
 }
 
-define void @atomic_store_i64_seq_cst(i64 *%a, i64 %val) nounwind {
+define void @atomic_store_i64_seq_cst(ptr %a, i64 %val) nounwind {
 ; NO-ATOMIC-LABEL: atomic_store_i64_seq_cst:
 ; NO-ATOMIC:       ; %bb.0:
 ; NO-ATOMIC-NEXT:    suba.l #20, %sp
@@ -601,6 +601,6 @@ define void @atomic_store_i64_seq_cst(i64 *%a, i64 %val) nounwind {
 ; ATOMIC-NEXT:    jsr __atomic_store_8@PLT
 ; ATOMIC-NEXT:    adda.l #20, %sp
 ; ATOMIC-NEXT:    rts
-  store atomic i64 %val, i64* %a seq_cst, align 8
+  store atomic i64 %val, ptr %a seq_cst, align 8
   ret void
 }

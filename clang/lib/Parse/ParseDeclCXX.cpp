@@ -140,6 +140,14 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
       SkipUntil(tok::semi);
       return nullptr;
     }
+    if (!ExtraNSs.empty()) {
+      Diag(ExtraNSs.front().NamespaceLoc,
+           diag::err_unexpected_qualified_namespace_alias)
+          << SourceRange(ExtraNSs.front().NamespaceLoc,
+                         ExtraNSs.back().IdentLoc);
+      SkipUntil(tok::semi);
+      return nullptr;
+    }
     if (attrLoc.isValid())
       Diag(attrLoc, diag::err_unexpected_namespace_attributes_alias);
     if (InlineLoc.isValid())
@@ -608,7 +616,7 @@ bool Parser::ParseUsingDeclarator(DeclaratorContext Context,
   }
 
   // Parse nested-name-specifier.
-  IdentifierInfo *LastII = nullptr;
+  const IdentifierInfo *LastII = nullptr;
   if (ParseOptionalCXXScopeSpecifier(D.SS, /*ObjectType=*/nullptr,
                                      /*ObjectHasErrors=*/false,
                                      /*EnteringContext=*/false,
@@ -791,6 +799,11 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
     ProhibitAttributes(PrefixAttrs);
 
     Decl *DeclFromDeclSpec = nullptr;
+    Scope *CurScope = getCurScope();
+    if (CurScope)
+      CurScope->setFlags(Scope::ScopeFlags::TypeAliasScope |
+                         CurScope->getFlags());
+
     Decl *AD = ParseAliasDeclarationAfterDeclarator(
         TemplateInfo, UsingLoc, D, DeclEnd, AS, Attrs, &DeclFromDeclSpec);
     return Actions.ConvertDeclToDeclGroup(AD, DeclFromDeclSpec);
@@ -968,9 +981,9 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
   // Save the token name used for static assertion.
   const char *TokName = Tok.getName();
 
-  if (Tok.is(tok::kw__Static_assert) && !getLangOpts().C11)
-    Diag(Tok, diag::ext_c11_feature) << Tok.getName();
-  if (Tok.is(tok::kw_static_assert)) {
+  if (Tok.is(tok::kw__Static_assert))
+    diagnoseUseOfC11Keyword(Tok);
+  else if (Tok.is(tok::kw_static_assert)) {
     if (!getLangOpts().CPlusPlus) {
       if (getLangOpts().C23)
         Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
@@ -1494,6 +1507,15 @@ void Parser::ParseMicrosoftInheritanceClassAttributes(ParsedAttributes &attrs) {
   }
 }
 
+void Parser::ParseNullabilityClassAttributes(ParsedAttributes &attrs) {
+  while (Tok.is(tok::kw__Nullable)) {
+    IdentifierInfo *AttrName = Tok.getIdentifierInfo();
+    auto Kind = Tok.getKind();
+    SourceLocation AttrNameLoc = ConsumeToken();
+    attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0, Kind);
+  }
+}
+
 /// Determine whether the following tokens are valid after a type-specifier
 /// which could be a standalone declaration. This will conservatively return
 /// true if there's any doubt, and is appropriate for insert-';' fixits.
@@ -1675,15 +1697,21 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
 
   ParsedAttributes attrs(AttrFactory);
   // If attributes exist after tag, parse them.
-  MaybeParseAttributes(PAKM_CXX11 | PAKM_Declspec | PAKM_GNU, attrs);
-
-  // Parse inheritance specifiers.
-  if (Tok.isOneOf(tok::kw___single_inheritance, tok::kw___multiple_inheritance,
-                  tok::kw___virtual_inheritance))
-    ParseMicrosoftInheritanceClassAttributes(attrs);
-
-  // Allow attributes to precede or succeed the inheritance specifiers.
-  MaybeParseAttributes(PAKM_CXX11 | PAKM_Declspec | PAKM_GNU, attrs);
+  for (;;) {
+    MaybeParseAttributes(PAKM_CXX11 | PAKM_Declspec | PAKM_GNU, attrs);
+    // Parse inheritance specifiers.
+    if (Tok.isOneOf(tok::kw___single_inheritance,
+                    tok::kw___multiple_inheritance,
+                    tok::kw___virtual_inheritance)) {
+      ParseMicrosoftInheritanceClassAttributes(attrs);
+      continue;
+    }
+    if (Tok.is(tok::kw__Nullable)) {
+      ParseNullabilityClassAttributes(attrs);
+      continue;
+    }
+    break;
+  }
 
   // Source location used by FIXIT to insert misplaced
   // C++11 attributes
@@ -2069,7 +2097,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   TypeResult TypeResult = true;      // invalid
 
   bool Owned = false;
-  Sema::SkipBodyInfo SkipBody;
+  SkipBodyInfo SkipBody;
   if (TemplateId) {
     // Explicit specialization, class template partial specialization,
     // or explicit instantiation.
@@ -3374,6 +3402,7 @@ ExprResult Parser::ParseCXXMemberInitializer(Decl *D, bool IsFunction,
               << 1 /* delete */;
         else
           Diag(ConsumeToken(), diag::err_deleted_non_function);
+        SkipDeletedFunctionBody();
         return ExprError();
       }
     } else if (Tok.is(tok::kw_default)) {
@@ -4528,6 +4557,61 @@ static bool IsBuiltInOrStandardCXX11Attribute(IdentifierInfo *AttrName,
   }
 }
 
+/// Parse the argument to C++23's [[assume()]] attribute.
+bool Parser::ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs,
+                                        IdentifierInfo *AttrName,
+                                        SourceLocation AttrNameLoc,
+                                        SourceLocation *EndLoc) {
+  assert(Tok.is(tok::l_paren) && "Not a C++11 attribute argument list");
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  T.consumeOpen();
+
+  // [dcl.attr.assume]: The expression is potentially evaluated.
+  EnterExpressionEvaluationContext Unevaluated(
+      Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+
+  TentativeParsingAction TPA(*this);
+  ExprResult Res(
+      Actions.CorrectDelayedTyposInExpr(ParseConditionalExpression()));
+  if (Res.isInvalid()) {
+    TPA.Commit();
+    SkipUntil(tok::r_paren, tok::r_square, StopAtSemi | StopBeforeMatch);
+    if (Tok.is(tok::r_paren))
+      T.consumeClose();
+    return true;
+  }
+
+  if (!Tok.isOneOf(tok::r_paren, tok::r_square)) {
+    // Emit a better diagnostic if this is an otherwise valid expression that
+    // is not allowed here.
+    TPA.Revert();
+    Res = ParseExpression();
+    if (!Res.isInvalid()) {
+      auto *E = Res.get();
+      Diag(E->getExprLoc(), diag::err_assume_attr_expects_cond_expr)
+          << AttrName << FixItHint::CreateInsertion(E->getBeginLoc(), "(")
+          << FixItHint::CreateInsertion(PP.getLocForEndOfToken(E->getEndLoc()),
+                                        ")")
+          << E->getSourceRange();
+    }
+
+    T.consumeClose();
+    return true;
+  }
+
+  TPA.Commit();
+  ArgsUnion Assumption = Res.get();
+  auto RParen = Tok.getLocation();
+  T.consumeClose();
+  Attrs.addNew(AttrName, SourceRange(AttrNameLoc, RParen), nullptr,
+               SourceLocation(), &Assumption, 1, ParsedAttr::Form::CXX11());
+
+  if (EndLoc)
+    *EndLoc = RParen;
+
+  return false;
+}
+
 /// ParseCXX11AttributeArgs -- Parse a C++11 attribute-argument-clause.
 ///
 /// [C++11] attribute-argument-clause:
@@ -4579,7 +4663,9 @@ bool Parser::ParseCXX11AttributeArgs(
     return true;
   }
 
-  if (ScopeName && ScopeName->isStr("omp")) {
+  // [[omp::directive]] and [[omp::sequence]] need special handling.
+  if (ScopeName && ScopeName->isStr("omp") &&
+      (AttrName->isStr("directive") || AttrName->isStr("sequence"))) {
     Diag(AttrNameLoc, getLangOpts().OpenMP >= 51
                           ? diag::warn_omp51_compat_attributes
                           : diag::ext_omp_attributes);
@@ -4596,7 +4682,12 @@ bool Parser::ParseCXX11AttributeArgs(
   if (ScopeName && (ScopeName->isStr("clang") || ScopeName->isStr("_Clang")))
     NumArgs = ParseClangAttributeArgs(AttrName, AttrNameLoc, Attrs, EndLoc,
                                       ScopeName, ScopeLoc, Form);
-  else
+  // So does C++23's assume() attribute.
+  else if (!ScopeName && AttrName->isStr("assume")) {
+    if (ParseCXXAssumeAttributeArg(Attrs, AttrName, AttrNameLoc, EndLoc))
+      return true;
+    NumArgs = 1;
+  } else
     NumArgs = ParseAttributeArgsCommon(AttrName, AttrNameLoc, Attrs, EndLoc,
                                        ScopeName, ScopeLoc, Form);
 
@@ -4661,10 +4752,12 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
                                                   CachedTokens &OpenMPTokens,
                                                   SourceLocation *EndLoc) {
   if (Tok.is(tok::kw_alignas)) {
-    if (getLangOpts().C23)
-      Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
-    else
-      Diag(Tok.getLocation(), diag::warn_cxx98_compat_alignas);
+    // alignas is a valid token in C23 but it is not an attribute, it's a type-
+    // specifier-qualifier, which means it has different parsing behavior. We
+    // handle this in ParseDeclarationSpecifiers() instead of here in C. We
+    // should not get here for C any longer.
+    assert(getLangOpts().CPlusPlus && "'alignas' is not an attribute in C");
+    Diag(Tok.getLocation(), diag::warn_cxx98_compat_alignas);
     ParseAlignmentSpecifier(Attrs, EndLoc);
     return;
   }

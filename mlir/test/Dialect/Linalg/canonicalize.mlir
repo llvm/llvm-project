@@ -102,17 +102,16 @@ func.func @tensor.cast.unranked(%a : tensor<*xf32>, %b : tensor<*xf32>, %c : ten
 // -----
 
 // CHECK-LABEL: func @linalg_effects(
-//  CHECK-SAME:     %[[A:[a-z0-9]*]]: tensor<?x?xf32>
-//  CHECK-SAME:     %[[B:[a-z0-9]*]]: memref<?x?xf32>
-//  CHECK-SAME:     %[[C:[a-z0-9]*]]: tensor<?x?xf32>
-func.func @linalg_effects(%a : tensor<?x?xf32>, %b : memref<?x?xf32>, %c : tensor<?x?xf32>) {
+func.func @linalg_effects(
+    %a : tensor<?x?xf32>, %b : tensor<?x?xf32>, %c : tensor<?x?xf32>,
+    %d : memref<?x?xf32>, %e : memref<?x?xf32>, %f : memref<?x?xf32>) {
   // CHECK-NOT:   %{{.*}} = linalg.matmul
-  %t = linalg.matmul ins(%a, %b : tensor<?x?xf32>, memref<?x?xf32>)
+  %t = linalg.matmul ins(%a, %b : tensor<?x?xf32>, tensor<?x?xf32>)
                     outs(%c : tensor<?x?xf32>) -> tensor<?x?xf32>
 
   // CHECK:   linalg.matmul
-  linalg.matmul ins(%a, %c : tensor<?x?xf32>, tensor<?x?xf32>)
-               outs(%b : memref<?x?xf32>)
+  linalg.matmul ins(%d, %e : memref<?x?xf32>, memref<?x?xf32>)
+               outs(%f : memref<?x?xf32>)
   return
 }
 
@@ -889,11 +888,11 @@ func.func @fold_multi_use_generic_op_with_consumer(%arg0 : tensor<?x?x?xf32>) ->
 // -----
 
 #map = affine_map<(d0) -> (d0)>
-func.func @identity_mixed(%arg0 : tensor<?xf32>, %arg1: memref<?xf32>) {
+func.func @identity_buffer(%arg0 : memref<?xf32>, %arg1: memref<?xf32>) {
   linalg.generic {
     indexing_maps = [#map, #map],
     iterator_types = ["parallel"]
-  } ins(%arg0 : tensor<?xf32>)
+  } ins(%arg0 : memref<?xf32>)
     outs(%arg1 : memref<?xf32>) {
   ^bb0(%arg2 : f32, %arg3 : f32):
     linalg.yield %arg2 : f32
@@ -901,14 +900,13 @@ func.func @identity_mixed(%arg0 : tensor<?xf32>, %arg1: memref<?xf32>) {
   return
 }
 
-// There was a crash in EraseIdentityGenericOp for generic with mixed semantics.
-// For now, check generic remained unchanged.
-// CHECK-LABEL: func @identity_mixed
-//  CHECK-SAME:     (%[[ARG1:.*]]: tensor<?xf32>, %[[ARG2:.*]]: memref<?xf32>)
+// Do not erase ops with buffer semantics.
+// CHECK-LABEL: func @identity_buffer
+//  CHECK-SAME:     (%[[ARG1:.*]]: memref<?xf32>, %[[ARG2:.*]]: memref<?xf32>)
 //       CHECK:     linalg.generic {
 //  CHECK-SAME:    indexing_maps = [#map, #map],
 //  CHECK-SAME:    iterator_types = ["parallel"]
-//  CHECK-SAME:  } ins(%[[ARG1]] : tensor<?xf32>)
+//  CHECK-SAME:  } ins(%[[ARG1]] : memref<?xf32>)
 //  CHECK-SAME:    outs(%[[ARG2]] : memref<?xf32>) {
 
 // -----
@@ -916,12 +914,12 @@ func.func @identity_mixed(%arg0 : tensor<?xf32>, %arg1: memref<?xf32>) {
 // Just make sure that we don't crash.
 
 // CHECK-LABEL: func @dedeplicate_regression_test
-func.func @dedeplicate_regression_test(%0: tensor<4xf32>, %1: memref<4xf32>) {
+func.func @dedeplicate_regression_test(%0: tensor<4xf32>, %1: tensor<4xf32>) {
   %36 = linalg.generic
     {indexing_maps = [affine_map<(d0) -> (d0)>,
                       affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
      iterator_types = ["parallel"]}
-    ins(%1, %1 : memref<4xf32>, memref<4xf32>)
+    ins(%1, %1 : tensor<4xf32>, tensor<4xf32>)
     outs(%0 : tensor<4xf32>) {
   ^bb0(%in: f32, %in_24: f32, %out: f32):
     linalg.yield %in : f32
@@ -934,31 +932,6 @@ func.func @dedeplicate_regression_test(%0: tensor<4xf32>, %1: memref<4xf32>) {
   } -> tensor<4xf32>
   return
 }
-
-// -----
-
-#map = affine_map<(d0) -> (d0)>
-func.func @cast_producer_mixed(%arg0 : tensor<5xf32>, %arg1: memref<?xf32>) {
-  %0 = tensor.cast %arg0 : tensor<5xf32> to tensor<?xf32>
-  linalg.generic {
-    indexing_maps = [#map, #map],
-    iterator_types = ["parallel"]
-  } ins(%0 : tensor<?xf32>)
-    outs(%arg1 : memref<?xf32>) {
-  ^bb0(%arg2 : f32, %arg3 : f32):
-    linalg.yield %arg2 : f32
-  }
-  return
-}
-
-// We need a mixed linalg as a bridge between tensor and memref worlds.
-// CHECK-LABEL: func @cast_producer_mixed
-//  CHECK-SAME:     (%[[ARG1:.*]]: tensor<5xf32>, %[[ARG2:.*]]: memref<?xf32>)
-//       CHECK:     linalg.generic {
-//  CHECK-SAME:    indexing_maps = [#map, #map],
-//  CHECK-SAME:    iterator_types = ["parallel"]
-//  CHECK-SAME:  } ins(%[[ARG1]] : tensor<5xf32>)
-//  CHECK-SAME:    outs(%[[ARG2]] : memref<?xf32>) {
 
 // -----
 
@@ -1017,3 +990,64 @@ func.func @canonicalize_fill_to_copy_dest(%arg0 : tensor<?x?xf32>, %arg1 : tenso
   %copy = linalg.copy ins(%arg1 : tensor<?x?xf32>) outs(%fill : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %copy : tensor<?x?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @canonicalize_fill_to_transpose_input(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?x?xf32>)
+//       CHECK:   %[[ZERO:.+]] = arith.constant 0.0
+//       CHECK:   linalg.fill ins(%[[ZERO]] : f32) outs(%[[ARG1]] : tensor<?x?xf32>)
+func.func @canonicalize_fill_to_transpose_input(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %fill = linalg.fill ins(%c0 : f32) outs(%arg0 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %transpose = linalg.transpose ins(%fill : tensor<?x?xf32>) outs(%arg1 : tensor<?x?xf32>) permutation = [1, 0]
+  return %transpose : tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @broadcast_same_shape(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<2x3xf32>
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<2x3xf32>)
+//       CHECK-NOT:   linalg.broadcast
+//       CHECK:       return %[[ARG0]] : tensor<2x3xf32>
+func.func @broadcast_same_shape(%input: tensor<2x3xf32>, %init: tensor<2x3xf32>) -> tensor<2x3xf32> {
+  %0 = linalg.broadcast ins(%input: tensor<2x3xf32>) outs(%init: tensor<2x3xf32>) dimensions = []
+  return %0 : tensor<2x3xf32>
+}
+
+// ----
+
+func.func @transpose_1d(%input: tensor<16xf32>,
+                        %init: tensor<16xf32>) -> tensor<16xf32> {
+  %transpose = linalg.transpose
+      ins(%input:tensor<16xf32>)
+      outs(%init:tensor<16xf32>)
+      permutation = [0]
+  func.return %transpose : tensor<16xf32>
+}
+
+// CHECK-LABEL: func @transpose_1d(
+//  CHECK-SAME:     %[[INPUT:[a-zA-Z0-9]+]]: tensor<16xf32>,
+//  CHECK-SAME:     %[[INIT:[a-zA-Z0-9]+]]: tensor<16xf32>)
+//   CHECK-NOT:   linalg.transpose
+//       CHECK:   return %[[INPUT]] : tensor<16xf32>
+
+// -----
+
+func.func @transpose_identity_perm(%input: tensor<16x32x64xf32>,
+                                   %init: tensor<16x32x64xf32>) -> tensor<16x32x64xf32> {
+  %transpose = linalg.transpose
+      ins(%input:tensor<16x32x64xf32>)
+      outs(%init:tensor<16x32x64xf32>)
+      permutation = [0, 1, 2]
+  func.return %transpose : tensor<16x32x64xf32>
+}
+
+// CHECK-LABEL: func @transpose_identity_perm(
+//  CHECK-SAME:     %[[INPUT:[a-zA-Z0-9]+]]: tensor<16x32x64xf32>,
+//  CHECK-SAME:     %[[INIT:[a-zA-Z0-9]+]]: tensor<16x32x64xf32>)
+//   CHECK-NOT:   linalg.transpose
+//       CHECK:   return %[[INPUT]] : tensor<16x32x64xf32>
+

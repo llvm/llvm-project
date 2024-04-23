@@ -4,9 +4,9 @@
 define void @fdiv_v8f32(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: fdiv_v8f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvfdiv.s $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvfdiv.s $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -20,9 +20,9 @@ entry:
 define void @fdiv_v4f64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: fdiv_v4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvfdiv.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvfdiv.d $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

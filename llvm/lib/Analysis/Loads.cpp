@@ -99,7 +99,8 @@ static bool isDereferenceableAndAlignedPointer(
                                                           CheckForFreed));
   if (KnownDerefBytes.getBoolValue() && KnownDerefBytes.uge(Size) &&
       !CheckForFreed)
-    if (!CheckForNonNull || isKnownNonZero(V, DL, 0, AC, CtxI, DT)) {
+    if (!CheckForNonNull ||
+        isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI))) {
       // As we recursed through GEPs to get here, we've incrementally checked
       // that each step advanced by a multiple of the alignment. If our base is
       // properly aligned, then the original offset accessed must also be.
@@ -133,7 +134,8 @@ static bool isDereferenceableAndAlignedPointer(
     if (getObjectSize(V, ObjSize, DL, TLI, Opts)) {
       APInt KnownDerefBytes(Size.getBitWidth(), ObjSize);
       if (KnownDerefBytes.getBoolValue() && KnownDerefBytes.uge(Size) &&
-          isKnownNonZero(V, DL, 0, AC, CtxI, DT) && !V->canBeFreed()) {
+          isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI)) &&
+          !V->canBeFreed()) {
         // As we recursed through GEPs to get here, we've incrementally
         // checked that each step advanced by a multiple of the alignment. If
         // our base is properly aligned, then the original offset accessed
@@ -364,7 +366,7 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
 
   if (Size.getBitWidth() > 64)
     return false;
-  const uint64_t LoadSize = Size.getZExtValue();
+  const TypeSize LoadSize = TypeSize::getFixed(Size.getZExtValue());
 
   // Otherwise, be a little bit aggressive by scanning the local block where we
   // want to check to see if the pointer is already being loaded or stored
@@ -414,11 +416,11 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, APInt &Size,
 
     // Handle trivial cases.
     if (AccessedPtr == V &&
-        LoadSize <= DL.getTypeStoreSize(AccessedTy))
+        TypeSize::isKnownLE(LoadSize, DL.getTypeStoreSize(AccessedTy)))
       return true;
 
     if (AreEquivalentAddressValues(AccessedPtr->stripPointerCasts(), V) &&
-        LoadSize <= DL.getTypeStoreSize(AccessedTy))
+        TypeSize::isKnownLE(LoadSize, DL.getTypeStoreSize(AccessedTy)))
       return true;
   }
   return false;

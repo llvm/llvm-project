@@ -174,7 +174,10 @@ bool isSpelled(SourceLocation Loc, const NamedDecl &ND) {
   auto Name = ND.getDeclName();
   const auto NameKind = Name.getNameKind();
   if (NameKind != DeclarationName::Identifier &&
-      NameKind != DeclarationName::CXXConstructorName)
+      NameKind != DeclarationName::CXXConstructorName &&
+      NameKind != DeclarationName::ObjCZeroArgSelector &&
+      NameKind != DeclarationName::ObjCOneArgSelector &&
+      NameKind != DeclarationName::ObjCMultiArgSelector)
     return false;
   const auto &AST = ND.getASTContext();
   const auto &SM = AST.getSourceManager();
@@ -182,8 +185,10 @@ bool isSpelled(SourceLocation Loc, const NamedDecl &ND) {
   clang::Token Tok;
   if (clang::Lexer::getRawToken(Loc, Tok, SM, LO))
     return false;
-  auto StrName = Name.getAsString();
-  return clang::Lexer::getSpelling(Tok, SM, LO) == StrName;
+  auto TokSpelling = clang::Lexer::getSpelling(Tok, SM, LO);
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(&ND))
+    return TokSpelling == MD->getSelector().getNameForSlot(0);
+  return TokSpelling == Name.getAsString();
 }
 } // namespace
 
@@ -404,7 +409,7 @@ private:
     // Framework headers are spelled as <FrameworkName/Foo.h>, not
     // "path/FrameworkName.framework/Headers/Foo.h".
     auto &HS = PP->getHeaderSearchInfo();
-    if (const auto *HFI = HS.getExistingFileInfo(*FE, /*WantExternal*/ false))
+    if (const auto *HFI = HS.getExistingFileInfo(*FE))
       if (!HFI->Framework.empty())
         if (auto Spelling =
                 getFrameworkHeaderIncludeSpelling(*FE, HFI->Framework, HS))

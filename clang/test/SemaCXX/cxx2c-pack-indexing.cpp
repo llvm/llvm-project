@@ -135,3 +135,28 @@ using Splice = typename SpliceImpl<Tl, Il>::type;
 using type = Splice<TL<char, short, long, double>, IL<1, 2>>;
 static_assert(is_same<type, TL<short, long>>);
 }
+
+
+namespace GH81697 {
+
+template<class... Ts> struct tuple {
+    int __x0;
+};
+
+template<auto I, class... Ts>
+Ts...[I]& get(tuple<Ts...>& t) {
+  return t.__x0;
+}
+
+void f() {
+  tuple<int> x;
+  get<0>(x);
+}
+
+}
+
+namespace GH88929 {
+    bool b = a...[0];  // expected-error {{use of undeclared identifier 'a'}}
+    using E = P...[0]; // expected-error {{unknown type name 'P'}} \
+                       // expected-error {{expected ';' after alias declaration}}
+}

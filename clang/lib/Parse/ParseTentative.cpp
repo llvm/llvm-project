@@ -79,9 +79,9 @@ bool Parser::isCXXDeclarationStatement(
             getCurScope(), *II, Tok.getLocation(), SS, /*Template=*/nullptr);
         if (Actions.isCurrentClassName(*II, getCurScope(), &SS) ||
             isDeductionGuide) {
-          if (isConstructorDeclarator(/*Unqualified=*/SS.isEmpty(),
-                                      isDeductionGuide,
-                                      DeclSpec::FriendSpecified::No))
+          if (isConstructorDeclarator(
+                  /*Unqualified=*/SS.isEmpty(), isDeductionGuide,
+                  /*IsFriend=*/DeclSpec::FriendSpecified::No))
             return true;
         } else if (SS.isNotEmpty()) {
           // If the scope is not empty, it could alternatively be something like
@@ -737,7 +737,8 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
 Parser::CXX11AttributeKind
 Parser::isCXX11AttributeSpecifier(bool Disambiguate,
                                   bool OuterMightBeMessageSend) {
-  if (Tok.is(tok::kw_alignas))
+  // alignas is an attribute specifier in C++ but not in C23.
+  if (Tok.is(tok::kw_alignas) && !getLangOpts().C23)
     return CAK_AttributeSpecifier;
 
   if (Tok.isRegularKeywordAttribute())
@@ -1841,6 +1842,9 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
 #include "clang/Basic/TransformTypeTraits.def"
     return TPResult::True;
 
+  // C11 _Alignas
+  case tok::kw__Alignas:
+    return TPResult::True;
   // C11 _Atomic
   case tok::kw__Atomic:
     return TPResult::True;

@@ -42,8 +42,11 @@ static bool isSafeDecreasingBound(const SCEV *Start, const SCEV *BoundSCEV,
   ICmpInst::Predicate BoundPred =
       IsSigned ? CmpInst::ICMP_SGT : CmpInst::ICMP_UGT;
 
+  auto StartLG = SE.applyLoopGuards(Start, L);
+  auto BoundLG = SE.applyLoopGuards(BoundSCEV, L);
+
   if (LatchBrExitIdx == 1)
-    return SE.isLoopEntryGuardedByCond(L, BoundPred, Start, BoundSCEV);
+    return SE.isLoopEntryGuardedByCond(L, BoundPred, StartLG, BoundLG);
 
   assert(LatchBrExitIdx == 0 && "LatchBrExitIdx should be either 0 or 1");
 
@@ -54,10 +57,10 @@ static bool isSafeDecreasingBound(const SCEV *Start, const SCEV *BoundSCEV,
   const SCEV *Limit = SE.getMinusSCEV(SE.getConstant(Min), StepPlusOne);
 
   const SCEV *MinusOne =
-      SE.getMinusSCEV(BoundSCEV, SE.getOne(BoundSCEV->getType()));
+      SE.getMinusSCEV(BoundLG, SE.getOne(BoundLG->getType()));
 
-  return SE.isLoopEntryGuardedByCond(L, BoundPred, Start, MinusOne) &&
-         SE.isLoopEntryGuardedByCond(L, BoundPred, BoundSCEV, Limit);
+  return SE.isLoopEntryGuardedByCond(L, BoundPred, StartLG, MinusOne) &&
+         SE.isLoopEntryGuardedByCond(L, BoundPred, BoundLG, Limit);
 }
 
 /// Given a loop with an increasing induction variable, is it possible to
@@ -86,8 +89,11 @@ static bool isSafeIncreasingBound(const SCEV *Start, const SCEV *BoundSCEV,
   ICmpInst::Predicate BoundPred =
       IsSigned ? CmpInst::ICMP_SLT : CmpInst::ICMP_ULT;
 
+  auto StartLG = SE.applyLoopGuards(Start, L);
+  auto BoundLG = SE.applyLoopGuards(BoundSCEV, L);
+
   if (LatchBrExitIdx == 1)
-    return SE.isLoopEntryGuardedByCond(L, BoundPred, Start, BoundSCEV);
+    return SE.isLoopEntryGuardedByCond(L, BoundPred, StartLG, BoundLG);
 
   assert(LatchBrExitIdx == 0 && "LatchBrExitIdx should be 0 or 1");
 
@@ -97,9 +103,9 @@ static bool isSafeIncreasingBound(const SCEV *Start, const SCEV *BoundSCEV,
                        : APInt::getMaxValue(BitWidth);
   const SCEV *Limit = SE.getMinusSCEV(SE.getConstant(Max), StepMinusOne);
 
-  return (SE.isLoopEntryGuardedByCond(L, BoundPred, Start,
-                                      SE.getAddExpr(BoundSCEV, Step)) &&
-          SE.isLoopEntryGuardedByCond(L, BoundPred, BoundSCEV, Limit));
+  return (SE.isLoopEntryGuardedByCond(L, BoundPred, StartLG,
+                                      SE.getAddExpr(BoundLG, Step)) &&
+          SE.isLoopEntryGuardedByCond(L, BoundPred, BoundLG, Limit));
 }
 
 /// Returns estimate for max latch taken count of the loop of the narrowest
@@ -644,7 +650,7 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
   // value of the same PHI nodes if/when we continue execution.
   for (PHINode &PN : LS.Header->phis()) {
     PHINode *NewPHI = PHINode::Create(PN.getType(), 2, PN.getName() + ".copy",
-                                      BranchToContinuation);
+                                      BranchToContinuation->getIterator());
 
     NewPHI->addIncoming(PN.getIncomingValueForBlock(Preheader), Preheader);
     NewPHI->addIncoming(PN.getIncomingValueForBlock(LS.Latch),
@@ -653,7 +659,7 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
   }
 
   RRI.IndVarEnd = PHINode::Create(IndVarBase->getType(), 2, "indvar.end",
-                                  BranchToContinuation);
+                                  BranchToContinuation->getIterator());
   RRI.IndVarEnd->addIncoming(IndVarStart, Preheader);
   RRI.IndVarEnd->addIncoming(IndVarBase, RRI.ExitSelector);
 

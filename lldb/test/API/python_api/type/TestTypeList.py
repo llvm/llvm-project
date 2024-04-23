@@ -18,6 +18,22 @@ class TypeAndTypeListTestCase(TestBase):
         self.source = "main.cpp"
         self.line = line_number(self.source, "// Break at this line")
 
+    def _find_nested_type_in_Pointer_template_arg(self, pointer_type):
+        self.assertTrue(pointer_type)
+        self.DebugSBType(pointer_type)
+        pointer_info_type = pointer_type.template_args[1]
+        self.assertTrue(pointer_info_type)
+        self.DebugSBType(pointer_info_type)
+
+        pointer_masks1_type = pointer_info_type.FindDirectNestedType("Masks1")
+        self.assertTrue(pointer_masks1_type)
+        self.DebugSBType(pointer_masks1_type)
+
+        pointer_masks2_type = pointer_info_type.FindDirectNestedType("Masks2")
+        self.assertTrue(pointer_masks2_type)
+        self.DebugSBType(pointer_masks2_type)
+
+    @skipIf(compiler="clang", compiler_version=["<", "17.0"])
     def test(self):
         """Exercise SBType and SBTypeList API."""
         d = {"EXE": self.exe_name}
@@ -54,7 +70,7 @@ class TypeAndTypeListTestCase(TestBase):
                 % type_list.GetSize()
             )
         # a second Task make be scared up by the Objective-C runtime
-        self.assertTrue(len(type_list) >= 1)
+        self.assertGreaterEqual(len(type_list), 1)
         for type in type_list:
             self.assertTrue(type)
             self.DebugSBType(type)
@@ -133,7 +149,7 @@ class TypeAndTypeListTestCase(TestBase):
         self.DebugSBType(union_type)
 
         # Check that we don't find indirectly nested types
-        self.assertTrue(enum_type.size == 1)
+        self.assertEqual(enum_type.size, 1)
 
         invalid_type = task_type.FindDirectNestedType("E2")
         self.assertFalse(invalid_type)
@@ -149,6 +165,15 @@ class TypeAndTypeListTestCase(TestBase):
 
         invalid_type = task_type.FindDirectNestedType(None)
         self.assertFalse(invalid_type)
+
+        # Check that FindDirectNestedType works with types from module and
+        # expression ASTs.
+        self._find_nested_type_in_Pointer_template_arg(
+            frame0.FindVariable("pointer").GetType()
+        )
+        self._find_nested_type_in_Pointer_template_arg(
+            frame0.EvaluateExpression("pointer").GetType()
+        )
 
         # We'll now get the child member 'id' from 'task_head'.
         id = task_head.GetChildMemberWithName("id")
@@ -192,7 +217,7 @@ class TypeAndTypeListTestCase(TestBase):
             int_scoped_enum_type = scoped_enum_type.GetEnumerationIntegerType()
             self.assertTrue(int_scoped_enum_type)
             self.DebugSBType(int_scoped_enum_type)
-            self.assertEquals(int_scoped_enum_type.GetName(), "int")
+            self.assertEqual(int_scoped_enum_type.GetName(), "int")
 
             enum_uchar = target.FindFirstType("EnumUChar")
             self.assertTrue(enum_uchar)
@@ -200,4 +225,4 @@ class TypeAndTypeListTestCase(TestBase):
             int_enum_uchar = enum_uchar.GetEnumerationIntegerType()
             self.assertTrue(int_enum_uchar)
             self.DebugSBType(int_enum_uchar)
-            self.assertEquals(int_enum_uchar.GetName(), "unsigned char")
+            self.assertEqual(int_enum_uchar.GetName(), "unsigned char")

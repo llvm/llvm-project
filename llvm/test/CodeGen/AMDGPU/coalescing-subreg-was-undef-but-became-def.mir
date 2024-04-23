@@ -16,17 +16,17 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef %4.sub2:sgpr_128 = S_MOV_B32 0
-  ; CHECK-NEXT:   dead undef %7.sub0:sgpr_128 = S_MOV_B32 0
+  ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub2:sgpr_128 = S_MOV_B32 0
+  ; CHECK-NEXT:   dead undef [[S_MOV_B32_1:%[0-9]+]].sub0:sgpr_128 = S_MOV_B32 0
   ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit undef $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %4.sub0:sgpr_128 = S_MOV_B32 -1
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_128 = S_MOV_B32 -1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   S_NOP 0, implicit %4
+  ; CHECK-NEXT:   S_NOP 0, implicit [[S_MOV_B32_]]
   bb.0:
     successors: %bb.1, %bb.2
 

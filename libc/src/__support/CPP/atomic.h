@@ -71,10 +71,11 @@ public:
 
   T load(MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
          [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
-    if constexpr (LIBC_HAS_BUILTIN(__scoped_atomic_load_n))
-      return __scoped_atomic_load_n(&val, int(mem_ord), (int)(mem_scope));
-    else
-      return __atomic_load_n(&val, int(mem_ord));
+#if __has_builtin(__scoped_atomic_load_n)
+    return __scoped_atomic_load_n(&val, int(mem_ord), (int)(mem_scope));
+#else
+    return __atomic_load_n(&val, int(mem_ord));
+#endif
   }
 
   // Atomic store.
@@ -85,10 +86,11 @@ public:
 
   void store(T rhs, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
              [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
-    if constexpr (LIBC_HAS_BUILTIN(__scoped_atomic_store_n))
-      __scoped_atomic_store_n(&val, rhs, int(mem_ord), (int)(mem_scope));
-    else
-      __atomic_store_n(&val, rhs, int(mem_ord));
+#if __has_builtin(__scoped_atomic_store_n)
+    __scoped_atomic_store_n(&val, rhs, int(mem_ord), (int)(mem_scope));
+#else
+    __atomic_store_n(&val, rhs, int(mem_ord));
+#endif
   }
 
   // Atomic compare exchange
@@ -101,47 +103,51 @@ public:
 
   T exchange(T desired, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
              [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
-    if constexpr (LIBC_HAS_BUILTIN(__scoped_atomic_exchange_n))
-      return __scoped_atomic_exchange_n(&val, desired, int(mem_ord),
-                                        (int)(mem_scope));
-    else
-      return __atomic_exchange_n(&val, desired, int(mem_ord));
+#if __has_builtin(__scoped_atomic_exchange_n)
+    return __scoped_atomic_exchange_n(&val, desired, int(mem_ord),
+                                      (int)(mem_scope));
+#else
+    return __atomic_exchange_n(&val, desired, int(mem_ord));
+#endif
   }
 
   T fetch_add(T increment, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
               [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
-    if constexpr (LIBC_HAS_BUILTIN(__scoped_atomic_fetch_add))
-      return __scoped_atomic_fetch_add(&val, increment, int(mem_ord),
-                                       (int)(mem_scope));
-    else
-      return __atomic_fetch_add(&val, increment, int(mem_ord));
+#if __has_builtin(__scoped_atomic_fetch_add)
+    return __scoped_atomic_fetch_add(&val, increment, int(mem_ord),
+                                     (int)(mem_scope));
+#else
+    return __atomic_fetch_add(&val, increment, int(mem_ord));
+#endif
   }
 
   T fetch_or(T mask, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
              [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
-    if constexpr (LIBC_HAS_BUILTIN(__scoped_atomic_fetch_or))
-      return __scoped_atomic_fetch_or(&val, mask, int(mem_ord),
-                                      (int)(mem_scope));
-    else
-      return __atomic_fetch_or(&val, mask, int(mem_ord));
+#if __has_builtin(__scoped_atomic_fetch_or)
+    return __scoped_atomic_fetch_or(&val, mask, int(mem_ord), (int)(mem_scope));
+#else
+    return __atomic_fetch_or(&val, mask, int(mem_ord));
+#endif
   }
 
   T fetch_and(T mask, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
               [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
-    if constexpr (LIBC_HAS_BUILTIN(__scoped_atomic_fetch_and))
-      return __scoped_atomic_fetch_and(&val, mask, int(mem_ord),
-                                       (int)(mem_scope));
-    else
-      return __atomic_fetch_and(&val, mask, int(mem_ord));
+#if __has_builtin(__scoped_atomic_fetch_and)
+    return __scoped_atomic_fetch_and(&val, mask, int(mem_ord),
+                                     (int)(mem_scope));
+#else
+    return __atomic_fetch_and(&val, mask, int(mem_ord));
+#endif
   }
 
   T fetch_sub(T decrement, MemoryOrder mem_ord = MemoryOrder::SEQ_CST,
               [[maybe_unused]] MemoryScope mem_scope = MemoryScope::DEVICE) {
-    if constexpr (LIBC_HAS_BUILTIN(__scoped_atomic_fetch_sub))
-      return __scoped_atomic_fetch_sub(&val, decrement, int(mem_ord),
-                                       (int)(mem_scope));
-    else
-      return __atomic_fetch_sub(&val, decrement, int(mem_ord));
+#if __has_builtin(__scoped_atomic_fetch_sub)
+    return __scoped_atomic_fetch_sub(&val, decrement, int(mem_ord),
+                                     (int)(mem_scope));
+#else
+    return __atomic_fetch_sub(&val, decrement, int(mem_ord));
+#endif
   }
 
   // Set the value without using an atomic operation. This is useful
@@ -150,14 +156,27 @@ public:
 };
 
 // Issue a thread fence with the given memory ordering.
-LIBC_INLINE void atomic_thread_fence(MemoryOrder mem_ord) {
+LIBC_INLINE void atomic_thread_fence([[maybe_unused]] MemoryOrder mem_ord) {
 // The NVPTX backend currently does not support atomic thread fences so we use a
 // full system fence instead.
 #ifdef LIBC_TARGET_ARCH_IS_NVPTX
-  (void)mem_ord;
   __nvvm_membar_sys();
 #else
-  __atomic_thread_fence(int(mem_ord));
+  __atomic_thread_fence(static_cast<int>(mem_ord));
+#endif
+}
+
+// Establishes memory synchronization ordering of non-atomic and relaxed atomic
+// accesses, as instructed by order, between a thread and a signal handler
+// executed on the same thread. This is equivalent to atomic_thread_fence,
+// except no instructions for memory ordering are issued. Only reordering of
+// the instructions by the compiler is suppressed as order instructs.
+LIBC_INLINE void atomic_signal_fence([[maybe_unused]] MemoryOrder mem_ord) {
+#if __has_builtin(__atomic_signal_fence)
+  __atomic_signal_fence(static_cast<int>(mem_ord));
+#else
+  // if the builtin is not ready, use asm as a full compiler barrier.
+  asm volatile("" ::: "memory");
 #endif
 }
 

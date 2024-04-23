@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 ! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
 
 ! This test checks the lowering of atomic capture

@@ -437,11 +437,18 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   if (MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening))
     markSuperRegs(Reserved, AArch64::W16);
 
+  // FFR is modelled as global state that cannot be allocated.
+  if (MF.getSubtarget<AArch64Subtarget>().hasSVE())
+    Reserved.set(AArch64::FFR);
+
   // SME tiles are not allocatable.
   if (MF.getSubtarget<AArch64Subtarget>().hasSME()) {
     for (MCPhysReg SubReg : subregs_inclusive(AArch64::ZA))
       Reserved.set(SubReg);
   }
+
+  // VG cannot be allocated
+  Reserved.set(AArch64::VG);
 
   if (MF.getSubtarget<AArch64Subtarget>().hasSME2()) {
     for (MCSubRegIterator SubReg(AArch64::ZT0, this, /*self=*/true);
@@ -450,6 +457,7 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   }
 
   markSuperRegs(Reserved, AArch64::FPCR);
+  markSuperRegs(Reserved, AArch64::FPSR);
 
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
     markSuperRegs(Reserved, AArch64::X27);
@@ -1063,4 +1071,9 @@ bool AArch64RegisterInfo::shouldCoalesce(
   }
 
   return true;
+}
+
+bool AArch64RegisterInfo::shouldAnalyzePhysregInMachineLoopInfo(
+    MCRegister R) const {
+  return R == AArch64::VG;
 }

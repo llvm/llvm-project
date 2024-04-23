@@ -16,6 +16,7 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 // Represents the Construct/Directive kind of a pragma directive. Note the
@@ -65,8 +66,9 @@ enum class OpenACCDirectiveKind {
   Invalid,
 };
 
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
-                                             OpenACCDirectiveKind K) {
+template <typename StreamTy>
+inline StreamTy &printOpenACCDirectiveKind(StreamTy &Out,
+                                           OpenACCDirectiveKind K) {
   switch (K) {
   case OpenACCDirectiveKind::Parallel:
     return Out << "parallel";
@@ -132,6 +134,22 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
     return Out << "<invalid>";
   }
   llvm_unreachable("Uncovered directive kind");
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCDirectiveKind K) {
+  return printOpenACCDirectiveKind(Out, K);
+}
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
+                                     OpenACCDirectiveKind K) {
+  return printOpenACCDirectiveKind(Out, K);
+}
+
+inline bool isOpenACCComputeDirectiveKind(OpenACCDirectiveKind K) {
+  return K == OpenACCDirectiveKind::Parallel ||
+         K == OpenACCDirectiveKind::Serial ||
+         K == OpenACCDirectiveKind::Kernels;
 }
 
 enum class OpenACCAtomicKind {
@@ -253,8 +271,8 @@ enum class OpenACCClauseKind {
   Invalid,
 };
 
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
-                                             OpenACCClauseKind K) {
+template <typename StreamTy>
+inline StreamTy &printOpenACCClauseKind(StreamTy &Out, OpenACCClauseKind K) {
   switch (K) {
   case OpenACCClauseKind::Finalize:
     return Out << "finalize";
@@ -387,6 +405,17 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
   }
   llvm_unreachable("Uncovered clause kind");
 }
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCClauseKind K) {
+  return printOpenACCClauseKind(Out, K);
+}
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
+                                     OpenACCClauseKind K) {
+  return printOpenACCClauseKind(Out, K);
+}
+
 enum class OpenACCDefaultClauseKind {
   /// 'none' option.
   None,
@@ -395,6 +424,30 @@ enum class OpenACCDefaultClauseKind {
   /// Not a valid option.
   Invalid,
 };
+
+template <typename StreamTy>
+inline StreamTy &printOpenACCDefaultClauseKind(StreamTy &Out,
+                                               OpenACCDefaultClauseKind K) {
+  switch (K) {
+  case OpenACCDefaultClauseKind::None:
+    return Out << "none";
+  case OpenACCDefaultClauseKind::Present:
+    return Out << "present";
+  case OpenACCDefaultClauseKind::Invalid:
+    return Out << "<invalid>";
+  }
+  llvm_unreachable("Unknown OpenACCDefaultClauseKind enum");
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &Out,
+                                             OpenACCDefaultClauseKind K) {
+  return printOpenACCDefaultClauseKind(Out, K);
+}
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &Out,
+                                     OpenACCDefaultClauseKind K) {
+  return printOpenACCDefaultClauseKind(Out, K);
+}
 
 enum class OpenACCReductionOperator {
   /// '+'.

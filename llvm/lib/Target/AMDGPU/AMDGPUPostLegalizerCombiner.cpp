@@ -83,6 +83,9 @@ public:
   matchRcpSqrtToRsq(MachineInstr &MI,
                     std::function<void(MachineIRBuilder &)> &MatchInfo) const;
 
+  bool matchFDivSqrtToRsqF16(MachineInstr &MI) const;
+  void applyFDivSqrtToRsqF16(MachineInstr &MI, const Register &X) const;
+
   // FIXME: Should be able to have 2 separate matchdatas rather than custom
   // struct boilerplate.
   struct CvtF32UByteMatchInfo {
@@ -332,6 +335,26 @@ bool AMDGPUPostLegalizerCombinerImpl::matchRcpSqrtToRsq(
     return true;
   }
   return false;
+}
+
+bool AMDGPUPostLegalizerCombinerImpl::matchFDivSqrtToRsqF16(
+    MachineInstr &MI) const {
+  Register Sqrt = MI.getOperand(2).getReg();
+  return MRI.hasOneNonDBGUse(Sqrt);
+}
+
+void AMDGPUPostLegalizerCombinerImpl::applyFDivSqrtToRsqF16(
+    MachineInstr &MI, const Register &X) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Y = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  uint32_t Flags = MI.getFlags();
+  Register RSQ = B.buildIntrinsic(Intrinsic::amdgcn_rsq, {DstTy})
+                     .addUse(X)
+                     .setMIFlags(Flags)
+                     .getReg(0);
+  B.buildFMul(Dst, RSQ, Y, Flags);
+  MI.eraseFromParent();
 }
 
 bool AMDGPUPostLegalizerCombinerImpl::matchCvtF32UByteN(

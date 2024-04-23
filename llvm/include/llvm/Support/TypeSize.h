@@ -321,8 +321,6 @@ class TypeSize : public details::FixedOrScalableQuantity<TypeSize, uint64_t> {
       : FixedOrScalableQuantity(V) {}
 
 public:
-  constexpr TypeSize() : FixedOrScalableQuantity(0, false) {}
-
   constexpr TypeSize(ScalarTy Quantity, bool Scalable)
       : FixedOrScalableQuantity(Quantity, Scalable) {}
 
@@ -335,6 +333,7 @@ public:
   static constexpr TypeSize getScalable(ScalarTy MinimumSize) {
     return TypeSize(MinimumSize, true);
   }
+  static constexpr TypeSize getZero() { return TypeSize(0, false); }
 
   // All code for this class below this point is needed because of the
   // temporary implicit conversion to uint64_t. The operator overloads are

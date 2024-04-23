@@ -19,6 +19,7 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
+#include <type_traits>
 
 #define DisableOption(DOName, DOOption, DODescription) \
   static llvm::cl::opt<bool> disable##DOName("disable-" DOOption, \
@@ -76,7 +77,7 @@ static llvm::cl::opt<bool> useOldAliasTags("use-old-alias-tags",
 #if !defined(FLANG_EXCLUDE_CODEGEN)
 DisableOption(CodeGenRewrite, "codegen-rewrite", "rewrite FIR for codegen");
 DisableOption(TargetRewrite, "target-rewrite", "rewrite FIR for target");
-DisableOption(DebugFoundation, "debug-foundation", "Add debug foundation");
+DisableOption(DebugInfo, "debug-info", "Add debug info");
 DisableOption(FirToLlvmIr, "fir-to-llvmir", "FIR to LLVM-IR dialect");
 DisableOption(LlvmIrToLlvm, "llvm", "conversion to LLVM");
 DisableOption(BoxedProcedureRewrite, "boxed-procedure-rewrite",
@@ -85,6 +86,29 @@ DisableOption(BoxedProcedureRewrite, "boxed-procedure-rewrite",
 
 DisableOption(ExternalNameConversion, "external-name-interop",
     "convert names with external convention");
+
+// TODO: remove once these are used for non-codegen passes
+#if !defined(FLANG_EXCLUDE_CODEGEN)
+using PassConstructor = std::unique_ptr<mlir::Pass>();
+
+template <typename OP>
+void addNestedPassToOps(mlir::PassManager &pm, PassConstructor ctor) {
+  pm.addNestedPass<OP>(ctor());
+}
+
+template <typename OP, typename... OPS,
+    typename = std::enable_if_t<sizeof...(OPS) != 0>>
+void addNestedPassToOps(mlir::PassManager &pm, PassConstructor ctor) {
+  addNestedPassToOps<OP>(pm, ctor);
+  addNestedPassToOps<OPS...>(pm, ctor);
+}
+
+void addNestedPassToAllTopLevelOperations(
+    mlir::PassManager &pm, PassConstructor ctor) {
+  addNestedPassToOps<mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
+      fir::GlobalOp>(pm, ctor);
+}
+#endif
 
 /// Generic for adding a pass to the pass manager if it is not disabled.
 template <typename F>
@@ -123,7 +147,9 @@ static void addCanonicalizerPassWithoutRegionSimplification(
 
 inline void addCfgConversionPass(mlir::PassManager &pm) {
   addNestedPassConditionally<mlir::func::FuncOp>(
-      pm, disableCfgConversion, fir::createFirToCfgPass);
+      pm, disableCfgConversion, fir::createFirToCfgOnFuncPass);
+  addNestedPassConditionally<mlir::omp::DeclareReductionOp>(
+      pm, disableCfgConversion, fir::createFirToCfgOnReductionPass);
 }
 
 inline void addAVC(
@@ -153,9 +179,9 @@ inline void addTargetRewritePass(mlir::PassManager &pm) {
   });
 }
 
-inline void addDebugFoundationPass(mlir::PassManager &pm) {
-  addPassConditionally(pm, disableDebugFoundation,
-      [&]() { return fir::createAddDebugFoundationPass(); });
+inline void addDebugInfoPass(mlir::PassManager &pm) {
+  addPassConditionally(
+      pm, disableDebugInfo, [&]() { return fir::createAddDebugInfoPass(); });
 }
 
 inline void addFIRToLLVMPass(
@@ -286,7 +312,7 @@ inline void createDebugPasses(
   // Currently only -g1, -g, -gline-tables-only supported
   switch (debugLevel) {
   case llvm::codegenoptions::DebugLineTablesOnly:
-    addDebugFoundationPass(pm);
+    addDebugInfoPass(pm);
     return;
   case llvm::codegenoptions::NoDebugInfo:
     return;
@@ -294,7 +320,7 @@ inline void createDebugPasses(
     // TODO: Add cases and passes for other debug options.
     // All other debug options not implemented yet, currently emits warning
     // and generates as much debug information as possible.
-    addDebugFoundationPass(pm);
+    addDebugInfoPass(pm);
     return;
   }
 }
@@ -302,9 +328,7 @@ inline void createDebugPasses(
 inline void createDefaultFIRCodeGenPassPipeline(
     mlir::PassManager &pm, MLIRToLLVMPassPipelineConfig config) {
   fir::addBoxedProcedurePass(pm);
-  pm.addNestedPass<mlir::func::FuncOp>(
-      fir::createAbstractResultOnFuncOptPass());
-  pm.addNestedPass<fir::GlobalOp>(fir::createAbstractResultOnGlobalOptPass());
+  addNestedPassToAllTopLevelOperations(pm, fir::createAbstractResultOpt);
   fir::addCodeGenRewritePass(pm);
   fir::addTargetRewritePass(pm);
   fir::addExternalNameConversionPass(pm, config.Underscoring);
@@ -316,15 +340,22 @@ inline void createDefaultFIRCodeGenPassPipeline(
   // Add function attributes
   fir::FunctionAttrTypes functionAttrs;
 
-  if (config.FramePointerKind != llvm::FramePointerKind::None) {
+  if (config.FramePointerKind != llvm::FramePointerKind::None ||
+      config.NoInfsFPMath || config.NoNaNsFPMath || config.ApproxFuncFPMath ||
+      config.NoSignedZerosFPMath || config.UnsafeFPMath) {
     if (config.FramePointerKind == llvm::FramePointerKind::NonLeaf)
       functionAttrs.framePointerKind =
           mlir::LLVM::framePointerKind::FramePointerKind::NonLeaf;
-    else
+    else if (config.FramePointerKind == llvm::FramePointerKind::All)
       functionAttrs.framePointerKind =
           mlir::LLVM::framePointerKind::FramePointerKind::All;
+    else
+      functionAttrs.framePointerKind =
+          mlir::LLVM::framePointerKind::FramePointerKind::None;
 
-    pm.addPass(fir::createFunctionAttrPass(functionAttrs));
+    pm.addPass(fir::createFunctionAttrPass(functionAttrs, config.NoInfsFPMath,
+        config.NoNaNsFPMath, config.ApproxFuncFPMath,
+        config.NoSignedZerosFPMath, config.UnsafeFPMath));
   }
 
   fir::addFIRToLLVMPass(pm, config);

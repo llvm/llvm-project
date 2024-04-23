@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -verify %s
+// RUN: %clang_cc1 -std=c++20 -ferror-limit 0 -verify %s
 
 namespace PR47043 {
   template<typename T> concept True = true;
@@ -1084,4 +1084,41 @@ template void Struct<void>::foo<>();
 template void Struct<void>::bar<>();
 template int Struct<void>::field<1, 2>;
 
+}
+
+namespace GH64808 {
+
+template <class T> struct basic_sender {
+  T func;
+  basic_sender(T) : func(T()) {}
+};
+
+auto a = basic_sender{[](auto... __captures) {
+  return []() // #note-a-1
+    requires((__captures, ...), false) // #note-a-2
+  {};
+}()};
+
+auto b = basic_sender{[](auto... __captures) {
+  return []()
+    requires([](int, double) { return true; }(decltype(__captures)()...))
+  {};
+}(1, 2.33)};
+
+void foo() {
+  a.func();
+  // expected-error@-1{{no matching function for call}}
+  // expected-note@#note-a-1{{constraints not satisfied}}
+  // expected-note@#note-a-2{{evaluated to false}}
+  b.func();
+}
+
+} // namespace GH64808
+
+namespace GH86757_1 {
+template <typename...> concept b = false;
+template <typename> concept c = b<>;
+template <typename d> concept f = c< d >;
+template <f> struct e; // expected-note {{}}
+template <f d> struct e<d>; // expected-error {{class template partial specialization is not more specialized than the primary template}}
 }

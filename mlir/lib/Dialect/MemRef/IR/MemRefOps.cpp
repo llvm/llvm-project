@@ -1080,7 +1080,37 @@ struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
     auto reshape = dim.getSource().getDefiningOp<ReshapeOp>();
 
     if (!reshape)
-      return failure();
+      return rewriter.notifyMatchFailure(
+          dim, "Dim op is not defined by a reshape op.");
+
+    // dim of a memref reshape can be folded if dim.getIndex() dominates the
+    // reshape. Instead of using `DominanceInfo` (which is usually costly) we
+    // cheaply check that either of the following conditions hold:
+    //      1. dim.getIndex() is defined in the same block as reshape but before
+    //      reshape.
+    //      2. dim.getIndex() is defined in a parent block of
+    //      reshape.
+
+    // Check condition 1
+    if (dim.getIndex().getParentBlock() == reshape->getBlock()) {
+      if (auto *definingOp = dim.getIndex().getDefiningOp()) {
+        if (reshape->isBeforeInBlock(definingOp)) {
+          return rewriter.notifyMatchFailure(
+              dim,
+              "dim.getIndex is not defined before reshape in the same block.");
+        }
+      } // else dim.getIndex is a block argument to reshape->getBlock and
+        // dominates reshape
+    }   // Check condition 2
+    else if (dim->getBlock() != reshape->getBlock() &&
+             !dim.getIndex().getParentRegion()->isProperAncestor(
+                 reshape->getParentRegion())) {
+      // If dim and reshape are in the same block but dim.getIndex() isn't, we
+      // already know dim.getIndex() dominates reshape without calling
+      // `isProperAncestor`
+      return rewriter.notifyMatchFailure(
+          dim, "dim.getIndex does not dominate reshape.");
+    }
 
     // Place the load directly after the reshape to ensure that the shape memref
     // was not mutated.
@@ -1420,6 +1450,7 @@ OpFoldResult ExtractStridedMetadataOp::getConstifiedMixedOffset() {
 
 void GenericAtomicRMWOp::build(OpBuilder &builder, OperationState &result,
                                Value memref, ValueRange ivs) {
+  OpBuilder::InsertionGuard g(builder);
   result.addOperands(memref);
   result.addOperands(ivs);
 
@@ -1428,7 +1459,7 @@ void GenericAtomicRMWOp::build(OpBuilder &builder, OperationState &result,
     result.addTypes(elementType);
 
     Region *bodyRegion = result.addRegion();
-    bodyRegion->push_back(new Block());
+    builder.createBlock(bodyRegion);
     bodyRegion->addArgument(elementType, memref.getLoc());
   }
 }
@@ -2223,9 +2254,13 @@ LogicalResult ExpandShapeOp::verify() {
   MemRefType srcType = getSrcType();
   MemRefType resultType = getResultType();
 
-  if (srcType.getRank() >= resultType.getRank())
-    return emitOpError("expected rank expansion, but found source rank ")
-           << srcType.getRank() << " >= result rank " << resultType.getRank();
+  if (srcType.getRank() > resultType.getRank()) {
+    auto r0 = srcType.getRank();
+    auto r1 = resultType.getRank();
+    return emitOpError("has source rank ")
+           << r0 << " and result rank " << r1 << ". This is not an expansion ("
+           << r0 << " > " << r1 << ").";
+  }
 
   // Verify result shape.
   if (failed(verifyCollapsedShape(getOperation(), srcType.getShape(),
@@ -2377,9 +2412,13 @@ LogicalResult CollapseShapeOp::verify() {
   MemRefType srcType = getSrcType();
   MemRefType resultType = getResultType();
 
-  if (srcType.getRank() <= resultType.getRank())
-    return emitOpError("expected rank reduction, but found source rank ")
-           << srcType.getRank() << " <= result rank " << resultType.getRank();
+  if (srcType.getRank() < resultType.getRank()) {
+    auto r0 = srcType.getRank();
+    auto r1 = resultType.getRank();
+    return emitOpError("has source rank ")
+           << r0 << " and result rank " << r1 << ". This is not a collapse ("
+           << r0 << " < " << r1 << ").";
+  }
 
   // Verify result shape.
   if (failed(verifyCollapsedShape(getOperation(), resultType.getShape(),

@@ -33,10 +33,13 @@
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -527,6 +530,13 @@ Sema::ActOnCaseStmt(SourceLocation CaseLoc, ExprResult LHSVal,
     return StmtError();
   }
 
+  if (LangOpts.OpenACC &&
+      getCurScope()->isInOpenACCComputeConstructScope(Scope::SwitchScope)) {
+    Diag(CaseLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*branch*/ 0 << /*into*/ 1;
+    return StmtError();
+  }
+
   auto *CS = CaseStmt::Create(Context, LHSVal.get(), RHSVal.get(),
                               CaseLoc, DotDotDotLoc, ColonLoc);
   getCurFunction()->SwitchStack.back().getPointer()->addSwitchCase(CS);
@@ -544,6 +554,13 @@ Sema::ActOnDefaultStmt(SourceLocation DefaultLoc, SourceLocation ColonLoc,
   if (getCurFunction()->SwitchStack.empty()) {
     Diag(DefaultLoc, diag::err_default_not_in_switch);
     return SubStmt;
+  }
+
+  if (LangOpts.OpenACC &&
+      getCurScope()->isInOpenACCComputeConstructScope(Scope::SwitchScope)) {
+    Diag(DefaultLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*branch*/ 0 << /*into*/ 1;
+    return StmtError();
   }
 
   DefaultStmt *DS = new (Context) DefaultStmt(DefaultLoc, ColonLoc, SubStmt);
@@ -566,6 +583,11 @@ Sema::ActOnLabelStmt(SourceLocation IdentLoc, LabelDecl *TheDecl,
       !Context.getSourceManager().isInSystemHeader(IdentLoc))
     Diag(IdentLoc, diag::warn_reserved_extern_symbol)
         << TheDecl << static_cast<int>(Status);
+
+  // If this label is in a compute construct scope, we need to make sure we
+  // check gotos in/out.
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    setFunctionHasBranchProtectedScope();
 
   // Otherwise, things are good.  Fill in the declaration and return it.
   LabelStmt *LS = new (Context) LabelStmt(IdentLoc, TheDecl, SubStmt);
@@ -2256,11 +2278,9 @@ Sema::CheckObjCForCollectionOperand(SourceLocation forLoc, Expr *collection) {
     // Otherwise, if we have any useful type information, check that
     // the type declares the appropriate method.
   } else if (iface || !objectType->qual_empty()) {
-    IdentifierInfo *selectorIdents[] = {
-      &Context.Idents.get("countByEnumeratingWithState"),
-      &Context.Idents.get("objects"),
-      &Context.Idents.get("count")
-    };
+    const IdentifierInfo *selectorIdents[] = {
+        &Context.Idents.get("countByEnumeratingWithState"),
+        &Context.Idents.get("objects"), &Context.Idents.get("count")};
     Selector selector = Context.Selectors.getSelector(3, &selectorIdents[0]);
 
     ObjCMethodDecl *method = nullptr;
@@ -2326,7 +2346,8 @@ Sema::ActOnObjCForCollectionStmt(SourceLocation ForLoc,
         FirstType = QualType();
         TemplateDeductionResult Result = DeduceAutoType(
             D->getTypeSourceInfo()->getTypeLoc(), DeducedInit, FirstType, Info);
-        if (Result != TDK_Success && Result != TDK_AlreadyDiagnosed)
+        if (Result != TemplateDeductionResult::Success &&
+            Result != TemplateDeductionResult::AlreadyDiagnosed)
           DiagnoseAutoDeductionFailure(D, DeducedInit);
         if (FirstType.isNull()) {
           D->setInvalidDecl();
@@ -2394,9 +2415,10 @@ static bool FinishForRangeVarDecl(Sema &SemaRef, VarDecl *Decl, Expr *Init,
     SemaRef.Diag(Loc, DiagID) << Init->getType();
   } else {
     TemplateDeductionInfo Info(Init->getExprLoc());
-    Sema::TemplateDeductionResult Result = SemaRef.DeduceAutoType(
+    TemplateDeductionResult Result = SemaRef.DeduceAutoType(
         Decl->getTypeSourceInfo()->getTypeLoc(), Init, InitType, Info);
-    if (Result != Sema::TDK_Success && Result != Sema::TDK_AlreadyDiagnosed)
+    if (Result != TemplateDeductionResult::Success &&
+        Result != TemplateDeductionResult::AlreadyDiagnosed)
       SemaRef.Diag(Loc, DiagID) << Init->getType();
   }
 
@@ -3076,7 +3098,7 @@ StmtResult Sema::BuildCXXForRangeStmt(
   // In OpenMP loop region loop control variable must be private. Perform
   // analysis of first part (if any).
   if (getLangOpts().OpenMP >= 50 && BeginDeclStmt.isUsable())
-    ActOnOpenMPLoopInitialization(ForLoc, BeginDeclStmt.get());
+    OpenMP().ActOnOpenMPLoopInitialization(ForLoc, BeginDeclStmt.get());
 
   return new (Context) CXXForRangeStmt(
       InitStmt, RangeDS, cast_or_null<DeclStmt>(BeginDeclStmt.get()),
@@ -3302,6 +3324,12 @@ StmtResult Sema::ActOnGotoStmt(SourceLocation GotoLoc,
                                SourceLocation LabelLoc,
                                LabelDecl *TheDecl) {
   setFunctionHasBranchIntoScope();
+
+  // If this goto is in a compute construct scope, we need to make sure we check
+  // gotos in/out.
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    setFunctionHasBranchProtectedScope();
+
   TheDecl->markUsed(Context);
   return new (Context) GotoStmt(TheDecl, GotoLoc, LabelLoc);
 }
@@ -3330,6 +3358,11 @@ Sema::ActOnIndirectGotoStmt(SourceLocation GotoLoc, SourceLocation StarLoc,
 
   setFunctionHasIndirectGoto();
 
+  // If this goto is in a compute construct scope, we need to make sure we
+  // check gotos in/out.
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    setFunctionHasBranchProtectedScope();
+
   return new (Context) IndirectGotoStmt(GotoLoc, StarLoc, E);
 }
 
@@ -3354,6 +3387,15 @@ Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope) {
     // initialization of that variable.
     return StmtError(Diag(ContinueLoc, diag::err_continue_from_cond_var_init));
   }
+
+  // A 'continue' that would normally have execution continue on a block outside
+  // of a compute construct counts as 'branching out of' the compute construct,
+  // so diagnose here.
+  if (S->isOpenACCComputeConstructScope())
+    return StmtError(
+        Diag(ContinueLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*branch*/ 0 << /*out of */ 0);
+
   CheckJumpOutOfSEHFinally(*this, ContinueLoc, *S);
 
   return new (Context) ContinueStmt(ContinueLoc);
@@ -3369,6 +3411,21 @@ Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope) {
   if (S->isOpenMPLoopScope())
     return StmtError(Diag(BreakLoc, diag::err_omp_loop_cannot_use_stmt)
                      << "break");
+
+  // OpenACC doesn't allow 'break'ing from a compute construct, so diagnose if
+  // we are trying to do so.  This can come in 2 flavors: 1-the break'able thing
+  // (besides the compute construct) 'contains' the compute construct, at which
+  // point the 'break' scope will be the compute construct.  Else it could be a
+  // loop of some sort that has a direct parent of the compute construct.
+  // However, a 'break' in a 'switch' marked as a compute construct doesn't
+  // count as 'branch out of' the compute construct.
+  if (S->isOpenACCComputeConstructScope() ||
+      (S->isLoopScope() && S->getParent() &&
+       S->getParent()->isOpenACCComputeConstructScope()))
+    return StmtError(
+        Diag(BreakLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*branch*/ 0 << /*out of */ 0);
+
   CheckJumpOutOfSEHFinally(*this, BreakLoc, *S);
 
   return new (Context) BreakStmt(BreakLoc);
@@ -3865,14 +3922,14 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
     TemplateDeductionResult Res = DeduceAutoType(
         OrigResultType, RetExpr, Deduced, Info, /*DependentDeduction=*/false,
         /*IgnoreConstraints=*/false, &FailedTSC);
-    if (Res != TDK_Success && FD->isInvalidDecl())
+    if (Res != TemplateDeductionResult::Success && FD->isInvalidDecl())
       return true;
     switch (Res) {
-    case TDK_Success:
+    case TemplateDeductionResult::Success:
       break;
-    case TDK_AlreadyDiagnosed:
+    case TemplateDeductionResult::AlreadyDiagnosed:
       return true;
-    case TDK_Inconsistent: {
+    case TemplateDeductionResult::Inconsistent: {
       //  If a function with a declared return type that contains a placeholder
       //  type has multiple return statements, the return type is deduced for
       //  each return statement. [...] if the type deduced is not the same in
@@ -3923,6 +3980,12 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
       RetValExp, nullptr, /*RecoverUncorrectedTypos=*/true);
   if (RetVal.isInvalid())
     return StmtError();
+
+  if (getCurScope()->isInOpenACCComputeConstructScope())
+    return StmtError(
+        Diag(ReturnLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*return*/ 1 << /*out of */ 0);
+
   StmtResult R =
       BuildReturnStmt(ReturnLoc, RetVal.get(), /*AllowRecovery=*/true);
   if (R.isInvalid() || ExprEvalContexts.back().isDiscardedStatementContext())
@@ -4381,6 +4444,7 @@ Sema::ActOnObjCAutoreleasePoolStmt(SourceLocation AtLoc, Stmt *Body) {
 namespace {
 class CatchHandlerType {
   QualType QT;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsPointer : 1;
 
   // This is a special constructor to be used only with DenseMapInfo's
@@ -4512,8 +4576,8 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
 
   // Exceptions aren't allowed in CUDA device code.
   if (getLangOpts().CUDA)
-    CUDADiagIfDeviceCode(TryLoc, diag::err_cuda_device_exceptions)
-        << "try" << CurrentCUDATarget();
+    CUDA().DiagIfDeviceCode(TryLoc, diag::err_cuda_device_exceptions)
+        << "try" << llvm::to_underlying(CUDA().CurrentTarget());
 
   if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
     Diag(TryLoc, diag::err_omp_simd_region_cannot_use_stmt) << "try";
@@ -4759,7 +4823,8 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
       assert(Cap.isVariableCapture() && "unknown kind of capture");
 
       if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP)
-        S.setOpenMPCaptureKind(Field, Cap.getVariable(), RSI->OpenMPLevel);
+        S.OpenMP().setOpenMPCaptureKind(Field, Cap.getVariable(),
+                                        RSI->OpenMPLevel);
 
       Captures.push_back(CapturedStmt::Capture(
           Cap.getLocation(),

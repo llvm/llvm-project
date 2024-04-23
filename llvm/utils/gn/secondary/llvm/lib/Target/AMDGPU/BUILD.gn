@@ -157,6 +157,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPULegalizerInfo.cpp",
     "AMDGPULibCalls.cpp",
     "AMDGPULibFunc.cpp",
+    "AMDGPULowerBufferFatPointers.cpp",
     "AMDGPULowerKernelArguments.cpp",
     "AMDGPULowerKernelAttributes.cpp",
     "AMDGPULowerModuleLDSPass.cpp",

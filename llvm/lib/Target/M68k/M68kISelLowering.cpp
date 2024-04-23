@@ -939,6 +939,7 @@ SDValue M68kTargetLowering::LowerFormalArguments(
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
     assert(VA.getValNo() != LastVal && "Same value in different locations");
+    (void)LastVal;
 
     LastVal = VA.getValNo();
 

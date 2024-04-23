@@ -28,7 +28,7 @@ TEST(LlvmLibcChmodTest, ChangeAndOpen) {
   constexpr const char *TEST_FILE = "testdata/fchmod.test";
   const char WRITE_DATA[] = "test data";
   constexpr ssize_t WRITE_SIZE = ssize_t(sizeof(WRITE_DATA));
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_APPEND | O_WRONLY);
   ASSERT_GT(fd, 0);
@@ -46,7 +46,7 @@ TEST(LlvmLibcChmodTest, ChangeAndOpen) {
   // Opening for writing should fail.
   EXPECT_EQ(LIBC_NAMESPACE::open(TEST_FILE, O_APPEND | O_WRONLY), -1);
   ASSERT_ERRNO_FAILURE();
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   // But opening for reading should succeed.
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_APPEND | O_RDONLY);
   EXPECT_GT(fd, 0);
@@ -57,8 +57,8 @@ TEST(LlvmLibcChmodTest, ChangeAndOpen) {
 }
 
 TEST(LlvmLibcChmodTest, NonExistentFile) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_EQ(LIBC_NAMESPACE::fchmod(-1, S_IRUSR), -1);
   ASSERT_ERRNO_FAILURE();
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
 }

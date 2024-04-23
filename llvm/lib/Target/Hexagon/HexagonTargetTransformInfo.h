@@ -103,14 +103,6 @@ public:
     return true;
   }
 
-  InstructionCost getScalarizationOverhead(VectorType *Ty,
-                                           const APInt &DemandedElts,
-                                           bool Insert, bool Extract,
-                                           TTI::TargetCostKind CostKind);
-  InstructionCost
-  getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
-                                   ArrayRef<Type *> Tys,
-                                   TTI::TargetCostKind CostKind);
   InstructionCost getCallInstrCost(Function *F, Type *RetTy,
                                    ArrayRef<Type *> Tys,
                                    TTI::TargetCostKind CostKind);
@@ -130,7 +122,8 @@ public:
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
                                  Type *SubTp,
-                                 ArrayRef<const Value *> Args = std::nullopt);
+                                 ArrayRef<const Value *> Args = std::nullopt,
+                                 const Instruction *CxtI = nullptr);
   InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
                                          Align Alignment,

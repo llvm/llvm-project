@@ -129,8 +129,8 @@ awareness of. For such changes, the following should be done:
 
 .. warning::
 
-  Phabricator is deprecated and will be switched to read-only mode in October
-  2023, for new code contributions use :ref:`GitHub Pull Requests <github-reviews>`.
+  Phabricator is deprecated is available in read-only mode,
+  for new code contributions use :ref:`GitHub Pull Requests <github-reviews>`.
   This section contains old information that needs to be updated.
 
 * When performing the code review for the change, please add any applicable

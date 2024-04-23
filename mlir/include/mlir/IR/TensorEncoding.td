@@ -34,8 +34,8 @@ def VerifiableTensorEncoding : AttrInterface<"VerifiableTensorEncoding"> {
       /*retTy=*/"::mlir::LogicalResult",
       /*methodName=*/"verifyEncoding",
       /*args=*/(ins
-        "ArrayRef<int64_t>":$shape,
-        "Type":$elementType,
+        "::mlir::ArrayRef<int64_t>":$shape,
+        "::mlir::Type":$elementType,
         "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
     >,
   ];

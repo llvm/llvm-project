@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLEXR_H
+#define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLEXR_H
+
 #include "PlatformRemoteDarwinDevice.h"
 
 namespace lldb_private {
@@ -36,3 +39,5 @@ protected:
   llvm::StringRef GetPlatformName() override;
 };
 } // namespace lldb_private
+
+#endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLEXR_H

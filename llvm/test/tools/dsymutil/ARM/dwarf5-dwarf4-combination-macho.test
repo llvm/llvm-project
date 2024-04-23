@@ -221,8 +221,8 @@ CHECK-NEXT: Name Index @ 0x0 {
 CHECK-NEXT:   Header {
 ; FIXME: when the parallel dwarf linker is able to generate DW_IDX_parent,
 ; these headers should be the same.
-WITH-PARENTS-NEXT: Length: 0xC8
-NO-PARENTS-NEXT:   Length: 0xC4
+WITH-PARENTS-NEXT: Length: 0xC0
+NO-PARENTS-NEXT:   Length: 0xBC
 CHECK-NEXT:     Format: DWARF32
 CHECK-NEXT:     Version: 5
 CHECK-NEXT:     CU count: 2
@@ -230,7 +230,7 @@ CHECK-NEXT:     Local TU count: 0
 CHECK-NEXT:     Foreign TU count: 0
 CHECK-NEXT:     Bucket count: 5
 CHECK-NEXT:     Name count: 5
-WITH-PARENTS-NEXT:     Abbreviations table size: 0x17
-NO-PARENTS-NEXT:       Abbreviations table size: 0x13
+WITH-PARENTS-NEXT:     Abbreviations table size: 0x15
+NO-PARENTS-NEXT:       Abbreviations table size: 0x11
 CHECK-NEXT:     Augmentation: 'LLVM0700'
 CHECK-NEXT:   }

@@ -54,7 +54,7 @@ entry:
   %h = alloca float, align 4, !DIAssignID !32
   call void @llvm.dbg.assign(metadata i1 undef, metadata !31, metadata !DIExpression(), metadata !32, metadata ptr %h, metadata !DIExpression()), !dbg !33
   %0 = bitcast ptr %h to ptr, !dbg !34
-  call void @llvm.lifetime.start.p0i8(i64 4, ptr nonnull %0) #4, !dbg !34
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %0) #4, !dbg !34
   call void @_Zml1aRf(ptr nonnull align 4 dereferenceable(4) %h), !dbg !35
   %1 = load float, ptr %h, align 4, !dbg !36
   %tobool = fcmp une float %1, 0.000000e+00, !dbg !36
@@ -72,13 +72,13 @@ if.end:                                           ; preds = %if.else, %if.then
   %storemerge.in = getelementptr inbounds %class.e, ptr %this, i64 0, i32 1, !dbg !45
   %storemerge = load float, ptr %storemerge.in, align 4, !dbg !45
   store float %storemerge, ptr %h, align 4, !dbg !45, !DIAssignID !43
-  call void @llvm.lifetime.end.p0i8(i64 4, ptr nonnull %0) #4, !dbg !48
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %0) #4, !dbg !48
   ret void, !dbg !48
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 declare !dbg !49 dso_local void @_Zml1aRf(ptr nonnull align 4 dereferenceable(4)) local_unnamed_addr #2
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #3
 
 !llvm.dbg.cu = !{!2}

@@ -278,7 +278,7 @@ entry:
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_pow_half
 ; GCN-POSTLINK: call fast float @_Z3powff(float %tmp, float 5.000000e-01)
-; GCN-PRELINK: %__pow2sqrt = tail call fast float @_Z4sqrtf(float %tmp)
+; GCN-PRELINK: %__pow2sqrt = tail call fast float @llvm.sqrt.f32(float %tmp)
 define amdgpu_kernel void @test_pow_half(ptr addrspace(1) nocapture %a) {
 entry:
   %arrayidx = getelementptr inbounds float, ptr addrspace(1) %a, i64 1
@@ -476,7 +476,7 @@ declare float @_Z5rootnfi(float, i32)
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_rootn_2
 ; GCN-POSTLINK: call fast float @_Z5rootnfi(float %tmp, i32 2)
-; GCN-PRELINK: %__rootn2sqrt = tail call fast float @_Z4sqrtf(float %tmp)
+; GCN-PRELINK: %__rootn2sqrt = tail call fast float @llvm.sqrt.f32(float %tmp)
 define amdgpu_kernel void @test_rootn_2(ptr addrspace(1) nocapture %a) {
 entry:
   %tmp = load float, ptr addrspace(1) %a, align 4
@@ -838,5 +838,5 @@ entry:
 ; GCN-PRELINK: declare float @_Z4cbrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY:[0-9]+]]
 
 ; GCN-PRELINK-DAG: attributes #[[$NOUNWIND]] = { nounwind }
-; GCN-PRELINK-DAG: attributes #[[$NOUNWIND_READONLY]] = { nofree nounwind memory(read) }
+; GCN-PRELINK-DAG: attributes #[[$NOUNWIND_READONLY]] = { nounwind memory(read) }
 attributes #0 = { nounwind }

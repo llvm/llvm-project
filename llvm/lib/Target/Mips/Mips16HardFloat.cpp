@@ -414,7 +414,7 @@ static bool fixupFPReturnAndCall(Function &F, Module *M,
             C, Attribute::getWithMemoryEffects(C, MemoryEffects::none()));
         A = A.addFnAttribute(C, Attribute::NoInline);
         FunctionCallee F = (M->getOrInsertFunction(Name, A, MyVoid, T));
-        CallInst::Create(F, Params, "", &I);
+        CallInst::Create(F, Params, "", I.getIterator());
       } else if (const CallInst *CI = dyn_cast<CallInst>(&I)) {
         FunctionType *FT = CI->getFunctionType();
         Function *F_ =  CI->getCalledFunction();

@@ -30,6 +30,89 @@ declare <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v16i32(<vscale x 4 x i32>
 declare <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv16i32(<vscale x 16 x i32>, i64)
 declare <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32>, <vscale x 4 x i32>, i64)
 
+define void @vector_insert_extract_idxzero_128b() #1 {
+; CHECK-LABEL: 'vector_insert_extract_idxzero_128b'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %insert_legal_fixed_into_scalable = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %extract_legal_fixed_from_scalable = call <2 x double> @llvm.vector.extract.v2f64.nxv2f64(<vscale x 2 x double> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %insert_nxv16i1_nxv2i1 = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv2i1(<vscale x 16 x i1> undef, <vscale x 2 x i1> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %extract_nxv4i1_nxv16i1 = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %extract_v8i1_nxv8i1 = call <8 x i1> @llvm.vector.extract.v8i1.nxv8i1(<vscale x 8 x i1> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %insert_v2f32_nxv2f32 = call <vscale x 2 x float> @llvm.vector.insert.nxv2f32.v2f32(<vscale x 2 x float> undef, <2 x float> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %extract_v4f16_nxv4f16 = call <4 x half> @llvm.vector.extract.v4f16.nxv4f16(<vscale x 4 x half> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %insert_nxv2f32_nxv4f32 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv2f32(<vscale x 4 x float> undef, <vscale x 2 x float> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %extract_nxv4f32_nxv8f32 = call <vscale x 4 x float> @llvm.vector.extract.nxv4f32.nxv8f32(<vscale x 8 x float> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'vector_insert_extract_idxzero_128b'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %insert_legal_fixed_into_scalable = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> undef, i64 0)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %extract_legal_fixed_from_scalable = call <2 x double> @llvm.vector.extract.v2f64.nxv2f64(<vscale x 2 x double> undef, i64 0)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %insert_nxv16i1_nxv2i1 = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv2i1(<vscale x 16 x i1> undef, <vscale x 2 x i1> undef, i64 0)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %extract_nxv4i1_nxv16i1 = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> undef, i64 0)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %extract_v8i1_nxv8i1 = call <8 x i1> @llvm.vector.extract.v8i1.nxv8i1(<vscale x 8 x i1> undef, i64 0)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %insert_v2f32_nxv2f32 = call <vscale x 2 x float> @llvm.vector.insert.nxv2f32.v2f32(<vscale x 2 x float> undef, <2 x float> undef, i64 0)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %extract_v4f16_nxv4f16 = call <4 x half> @llvm.vector.extract.v4f16.nxv4f16(<vscale x 4 x half> undef, i64 0)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %insert_nxv2f32_nxv4f32 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv2f32(<vscale x 4 x float> undef, <vscale x 2 x float> undef, i64 0)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %extract_nxv4f32_nxv8f32 = call <vscale x 4 x float> @llvm.vector.extract.nxv4f32.nxv8f32(<vscale x 8 x float> undef, i64 0)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %insert_legal_fixed_into_scalable = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> undef, i64 0)
+  %extract_legal_fixed_from_scalable = call <2 x double> @llvm.vector.extract.v2f64.nxv2f64(<vscale x 2 x double> undef, i64 0)
+  %insert_nxv16i1_nxv2i1 = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.v2i1(<vscale x 16 x i1> undef, <vscale x 2 x i1> undef, i64 0)
+  %extract_nxv4i1_nxv16i1 = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> undef, i64 0)
+  %extract_v8i1_nxv8i1 = call <8 x i1> @llvm.vector.extract.v8i1.nxv8i1(<vscale x 8 x i1> undef, i64 0)
+  %insert_v2f32_nxv2f32 = call <vscale x 2 x float> @llvm.vector.insert.nxv2f32.v2f32(<vscale x 2 x float> undef, <2 x float> undef, i64 0)
+  %extract_v4f16_nxv4f16 = call <4 x half> @llvm.vector.extract.v4f16.nxv4f16(<vscale x 4 x half> undef, i64 0)
+  %insert_nxv2f32_nxv4f32 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv2f32(<vscale x 4 x float> undef, <vscale x 2 x float> undef, i64 0)
+  %extract_nxv4f32_nxv8f32 = call <vscale x 4 x float> @llvm.vector.extract.nxv4f32.nxv8f32(<vscale x 8 x float> undef, i64 0)
+  ret void
+}
+declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float>, <4 x float>, i64)
+declare <2 x double> @llvm.vector.extract.v2f64.nxv2f64(<vscale x 2 x double>, i64)
+declare <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.v2i1(<vscale x 16 x i1>, <vscale x 2 x i1>, i64)
+declare <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1>, i64)
+declare <vscale x 2 x float> @llvm.vector.insert.nxv2f32.v2f32(<vscale x 2 x float>, <2 x float>, i64)
+declare <4 x half> @llvm.vector.extract.v4f16.nxv4f16(<vscale x 4 x half>, i64)
+declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv2f32(<vscale x 4 x float>, <vscale x 2 x float>, i64)
+declare <vscale x 4 x float> @llvm.vector.extract.nxv4f32.nxv8f32(<vscale x 8 x float>, i64)
+
+define void @vector_insert_extract_idxzero_256b() #2 {
+; CHECK-LABEL: 'vector_insert_extract_idxzero_256b'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %insert_legal_fixed_into_scalable = call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v16i16(<vscale x 8 x i16> undef, <16 x i16> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %extract_legal_fixed_from_scalable = call <8 x float> @llvm.vector.extract.v8f32.nxv4f32(<vscale x 4 x float> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %insert_nxv16i1_nxv2i1 = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv2i1(<vscale x 16 x i1> undef, <vscale x 2 x i1> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %extract_nxv4i1_nxv16i1 = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %extract_v8i1_nxv8i1 = call <8 x i1> @llvm.vector.extract.v8i1.nxv8i1(<vscale x 8 x i1> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %insert_v2f32_nxv2f32 = call <vscale x 2 x float> @llvm.vector.insert.nxv2f32.v2f32(<vscale x 2 x float> undef, <2 x float> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %extract_v4f16_nxv4f16 = call <4 x half> @llvm.vector.extract.v4f16.nxv4f16(<vscale x 4 x half> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %insert_nxv2f32_nxv4f32 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv2f32(<vscale x 4 x float> undef, <vscale x 2 x float> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %extract_nxv4f32_nxv8f32 = call <vscale x 4 x float> @llvm.vector.extract.nxv4f32.nxv8f32(<vscale x 8 x float> undef, i64 0)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; TYPE_BASED_ONLY-LABEL: 'vector_insert_extract_idxzero_256b'
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %insert_legal_fixed_into_scalable = call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v16i16(<vscale x 8 x i16> undef, <16 x i16> undef, i64 0)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %extract_legal_fixed_from_scalable = call <8 x float> @llvm.vector.extract.v8f32.nxv4f32(<vscale x 4 x float> undef, i64 0)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %insert_nxv16i1_nxv2i1 = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv2i1(<vscale x 16 x i1> undef, <vscale x 2 x i1> undef, i64 0)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %extract_nxv4i1_nxv16i1 = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> undef, i64 0)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %extract_v8i1_nxv8i1 = call <8 x i1> @llvm.vector.extract.v8i1.nxv8i1(<vscale x 8 x i1> undef, i64 0)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %insert_v2f32_nxv2f32 = call <vscale x 2 x float> @llvm.vector.insert.nxv2f32.v2f32(<vscale x 2 x float> undef, <2 x float> undef, i64 0)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %extract_v4f16_nxv4f16 = call <4 x half> @llvm.vector.extract.v4f16.nxv4f16(<vscale x 4 x half> undef, i64 0)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %insert_nxv2f32_nxv4f32 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv2f32(<vscale x 4 x float> undef, <vscale x 2 x float> undef, i64 0)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Invalid cost for instruction: %extract_nxv4f32_nxv8f32 = call <vscale x 4 x float> @llvm.vector.extract.nxv4f32.nxv8f32(<vscale x 8 x float> undef, i64 0)
+; TYPE_BASED_ONLY-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %insert_legal_fixed_into_scalable = call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v16i16(<vscale x 8 x i16> undef, <16 x i16> undef, i64 0)
+  %extract_legal_fixed_from_scalable = call <8 x float> @llvm.vector.extract.v8f32.nx4f32(<vscale x 4 x float> undef, i64 0)
+  %insert_nxv16i1_nxv2i1 = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.v2i1(<vscale x 16 x i1> undef, <vscale x 2 x i1> undef, i64 0)
+  %extract_nxv4i1_nxv16i1 = call <vscale x 4 x i1> @llvm.vector.extract.nxv4i1.nxv16i1(<vscale x 16 x i1> undef, i64 0)
+  %extract_v8i1_nxv8i1 = call <8 x i1> @llvm.vector.extract.v8i1.nxv8i1(<vscale x 8 x i1> undef, i64 0)
+  %insert_v2f32_nxv2f32 = call <vscale x 2 x float> @llvm.vector.insert.nxv2f32.v2f32(<vscale x 2 x float> undef, <2 x float> undef, i64 0)
+  %extract_v4f16_nxv4f16 = call <4 x half> @llvm.vector.extract.v4f16.nxv4f16(<vscale x 4 x half> undef, i64 0)
+  %insert_nxv2f32_nxv4f32 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv2f32(<vscale x 4 x float> undef, <vscale x 2 x float> undef, i64 0)
+  %extract_nxv4f32_nxv8f32 = call <vscale x 4 x float> @llvm.vector.extract.nxv4f32.nxv8f32(<vscale x 8 x float> undef, i64 0)
+  ret void
+}
+declare <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v16i16(<vscale x 8 x i16>, <16 x i16>, i64)
+declare <8 x float> @llvm.vector.extract.v8f32.nxv4f32(<vscale x 4 x float>, i64)
 
 define void @reductions(<vscale x 4 x i32> %v0, <vscale x 4 x i64> %v1, <vscale x 4 x float> %v2, <vscale x 4 x double> %v3) {
 ; CHECK-LABEL: 'reductions'
@@ -746,7 +829,7 @@ define <vscale x 8 x i32> @masked_gather_nxv8i32(<vscale x 8 x ptr> %ld, <vscale
 
 define <4 x i32> @masked_gather_v4i32(<4 x ptr> %ld, <4 x i1> %masks, <4 x i32> %passthru) {
 ; CHECK-LABEL: 'masked_gather_v4i32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_gather_v4i32'
@@ -759,7 +842,7 @@ define <4 x i32> @masked_gather_v4i32(<4 x ptr> %ld, <4 x i1> %masks, <4 x i32> 
 
 define <1 x i128> @masked_gather_v1i128(<1 x ptr> %ld, <1 x i1> %masks, <1 x i128> %passthru) {
 ; CHECK-LABEL: 'masked_gather_v1i128'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> %ld, i32 0, <1 x i1> %masks, <1 x i128> %passthru)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> %ld, i32 0, <1 x i1> %masks, <1 x i128> %passthru)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <1 x i128> %res
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_gather_v1i128'
@@ -800,7 +883,7 @@ define void @masked_scatter_nxv8i32(<vscale x 8 x i32> %data, <vscale x 8 x ptr>
 
 define void @masked_scatter_v4i32(<4 x i32> %data, <4 x ptr> %ptrs, <4 x i1> %masks) {
 ; CHECK-LABEL: 'masked_scatter_v4i32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> %ptrs, i32 0, <4 x i1> %masks)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> %ptrs, i32 0, <4 x i1> %masks)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_scatter_v4i32'
@@ -814,7 +897,7 @@ define void @masked_scatter_v4i32(<4 x i32> %data, <4 x ptr> %ptrs, <4 x i1> %ma
 
 define void @masked_scatter_v1i128(<1 x i128> %data, <1 x ptr> %ptrs, <1 x i1> %masks) {
 ; CHECK-LABEL: 'masked_scatter_v1i128'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> %ptrs, i32 0, <1 x i1> %masks)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> %ptrs, i32 0, <1 x i1> %masks)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_scatter_v1i128'
@@ -864,3 +947,5 @@ declare void @llvm.masked.scatter.v4i32(<4 x i32> %data, <4 x ptr> %ptrs, i32 %a
 declare void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> %ptrs, i32 %align, <1 x i1> %masks)
 
 attributes #0 = { "target-features"="+sve,+bf16" }
+attributes #1 = { "target-features"="+sve" vscale_range(1,16) }
+attributes #2 = { "target-features"="+sve" vscale_range(2, 16) }

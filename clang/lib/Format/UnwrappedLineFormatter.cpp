@@ -796,8 +796,12 @@ private:
       }
     }
 
-    if (const auto *LastNonComment = Line.getLastNonComment();
-        LastNonComment && LastNonComment->is(tok::l_brace)) {
+    if (Line.endsWith(tok::l_brace)) {
+      if (Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Never &&
+          Line.First->is(TT_BlockLBrace)) {
+        return 0;
+      }
+
       if (IsSplitBlock && Line.First == Line.Last &&
           I > AnnotatedLines.begin() &&
           (I[-1]->endsWith(tok::kw_else) || IsCtrlStmt(*I[-1]))) {
@@ -1221,7 +1225,7 @@ private:
     // While not empty, take first element and follow edges.
     while (!Queue.empty()) {
       // Quit if we still haven't found a solution by now.
-      if (Count > 25000000)
+      if (Count > 25'000'000)
         return 0;
 
       Penalty = Queue.top().first.first;
@@ -1235,7 +1239,7 @@ private:
 
       // Cut off the analysis of certain solutions if the analysis gets too
       // complex. See description of IgnoreStackForComparison.
-      if (Count > 50000)
+      if (Count > 50'000)
         Node->State.IgnoreStackForComparison = true;
 
       if (!Seen.insert(&Node->State).second) {

@@ -185,3 +185,30 @@ let Predicates = [HasStdExtZabha, HasStdExtZacas] in {
 defm AMOCAS_B : AMO_cas_aq_rl<0b00101, 0b000, "amocas.b", GPR>;
 defm AMOCAS_H : AMO_cas_aq_rl<0b00101, 0b001, "amocas.h", GPR>;
 }
+
+/// AMOs
+
+defm : AMOPat<"atomic_swap_8", "AMOSWAP_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_add_8", "AMOADD_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_and_8", "AMOAND_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_or_8", "AMOOR_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_xor_8", "AMOXOR_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_max_8", "AMOMAX_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_min_8", "AMOMIN_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_umax_8", "AMOMAXU_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_umin_8", "AMOMINU_B", XLenVT, [HasStdExtZabha]>;
+
+defm : AMOPat<"atomic_swap_16", "AMOSWAP_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_add_16", "AMOADD_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_and_16", "AMOAND_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_or_16", "AMOOR_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_xor_16", "AMOXOR_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_max_16", "AMOMAX_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_min_16", "AMOMIN_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_umax_16", "AMOMAXU_H", XLenVT, [HasStdExtZabha]>;
+defm : AMOPat<"atomic_load_umin_16", "AMOMINU_H", XLenVT, [HasStdExtZabha]>;
+
+/// AMOCAS
+
+defm : AMOCASPat<"atomic_cmp_swap_8", "AMOCAS_B", XLenVT, [HasStdExtZabha]>;
+defm : AMOCASPat<"atomic_cmp_swap_16", "AMOCAS_H", XLenVT, [HasStdExtZabha]>;

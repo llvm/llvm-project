@@ -67,6 +67,10 @@ defm compress_debug_sections:
   Eq<"compress-debug-sections", "Compress DWARF debug sections">,
   MetaVarName<"[none,zlib,zstd]">;
 
+defm compress_sections: EEq<"compress-sections",
+  "Compress non-SHF_ALLOC output sections matching <section-glob>">,
+  MetaVarName<"<section-glob>=[none|zlib|zstd]">;
+
 defm defsym: Eq<"defsym", "Define a symbol alias">, MetaVarName<"<symbol>=<value>">;
 
 defm optimize_bb_jumps: BB<"optimize-bb-jumps",
@@ -148,6 +152,12 @@ def : Flag<["--"], "no-color-diagnostics">, Alias<color_diagnostics>, AliasArgs<
 
 def cref: FF<"cref">,
   HelpText<"Output cross reference table. If -Map is specified, print to the map file">;
+
+defm debug_names: BB<"debug-names",
+    "Generate a merged .debug_names section",
+    "Do not generate a merged .debug_names section (default)">;
+
+defm default_script: EEq<"default-script", "In the absence of --script, read this default linker script">;
 
 defm demangle: B<"demangle",
     "Demangle symbol names (default)",
@@ -307,6 +317,9 @@ def no_dynamic_linker: F<"no-dynamic-linker">,
 
 def noinhibit_exec: F<"noinhibit-exec">,
   HelpText<"Retain the executable output file whenever it is still usable">;
+
+def no_warn_mismatch: F<"no-warn-mismatch">,
+  HelpText<"Suppress errors for certain unknown seciton types">;
 
 def no_nmagic: F<"no-nmagic">, MetaVarName<"<magic>">,
   HelpText<"Page align sections (default)">;
@@ -544,6 +557,7 @@ HelpText<"Format diagnostics for Visual Studio compatibility">;
 def package_metadata: JJ<"package-metadata=">, HelpText<"Emit package metadata note">;
 
 // Aliases
+def: Separate<["-"], "dT">, Alias<default_script>, HelpText<"Alias for --default-script">;
 def: Separate<["-"], "f">, Alias<auxiliary>, HelpText<"Alias for --auxiliary">;
 def: F<"call_shared">, Alias<Bdynamic>, HelpText<"Alias for --Bdynamic">;
 def: F<"dy">, Alias<Bdynamic>, HelpText<"Alias for --Bdynamic">;
@@ -749,7 +763,6 @@ def: FF<"no-add-needed">;
 def: F<"no-copy-dt-needed-entries">;
 def: F<"no-ctors-in-init-array">;
 def: F<"no-keep-memory">;
-def: F<"no-warn-mismatch">;
 def: Separate<["--", "-"], "rpath-link">;
 def: J<"rpath-link=">;
 def: F<"secure-plt">;

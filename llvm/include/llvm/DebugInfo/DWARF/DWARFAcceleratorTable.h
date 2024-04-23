@@ -562,6 +562,17 @@ public:
     uint64_t getEntryOffset() const { return EntryOffset; }
   };
 
+  /// Offsets for the start of various important tables from the start of the
+  /// section.
+  struct DWARFDebugNamesOffsets {
+    uint64_t CUsBase;
+    uint64_t BucketsBase;
+    uint64_t HashesBase;
+    uint64_t StringOffsetsBase;
+    uint64_t EntryOffsetsBase;
+    uint64_t EntriesBase;
+  };
+
   /// Represents a single accelerator table within the DWARF v5 .debug_names
   /// section.
   class NameIndex {
@@ -572,12 +583,7 @@ public:
     // Base of the whole unit and of various important tables, as offsets from
     // the start of the section.
     uint64_t Base;
-    uint64_t CUsBase;
-    uint64_t BucketsBase;
-    uint64_t HashesBase;
-    uint64_t StringOffsetsBase;
-    uint64_t EntryOffsetsBase;
-    uint64_t EntriesBase;
+    DWARFDebugNamesOffsets Offsets;
 
     void dumpCUs(ScopedPrinter &W) const;
     void dumpLocalTUs(ScopedPrinter &W) const;
@@ -598,6 +604,12 @@ public:
   public:
     NameIndex(const DWARFDebugNames &Section, uint64_t Base)
         : Section(Section), Base(Base) {}
+
+    /// Returns Hdr field
+    Header getHeader() const { return Hdr; }
+
+    /// Returns Offsets field
+    DWARFDebugNamesOffsets getOffsets() const { return Offsets; }
 
     /// Reads offset of compilation unit CU. CU is 0-based.
     uint64_t getCUOffset(uint32_t CU) const;
@@ -638,7 +650,7 @@ public:
     /// Returns the Entry at the relative `Offset` from the start of the Entry
     /// pool.
     Expected<Entry> getEntryAtRelativeOffset(uint64_t Offset) const {
-      auto OffsetFromSection = Offset + this->EntriesBase;
+      auto OffsetFromSection = Offset + this->Offsets.EntriesBase;
       return getEntry(&OffsetFromSection);
     }
 
@@ -792,6 +804,14 @@ public:
   /// there is no Name Index covering that unit.
   const NameIndex *getCUNameIndex(uint64_t CUOffset);
 };
+
+/// Calculates the starting offsets for various sections within the
+/// .debug_names section.
+namespace dwarf {
+DWARFDebugNames::DWARFDebugNamesOffsets
+findDebugNamesOffsets(uint64_t EndOfHeaderOffset,
+                      const DWARFDebugNames::Header &Hdr);
+}
 
 /// If `Name` is the name of a templated function that includes template
 /// parameters, returns a substring of `Name` containing no template

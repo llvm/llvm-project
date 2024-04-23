@@ -670,9 +670,7 @@ const MCPhysReg *X86TargetLowering::getScratchRegisters(CallingConv::ID) const {
 }
 
 ArrayRef<MCPhysReg> X86TargetLowering::getRoundingControlRegisters() const {
-  // FIXME: We should def X86::FPCW for x87 as well. But it affects a lot of lit
-  // tests at the moment, which is not what we expected.
-  static const MCPhysReg RCRegs[] = {X86::MXCSR};
+  static const MCPhysReg RCRegs[] = {X86::FPCW, X86::MXCSR};
   return RCRegs;
 }
 
@@ -1257,6 +1255,7 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   case CallingConv::C:
   case CallingConv::Win64:
   case CallingConv::X86_64_SysV:
+  case CallingConv::PreserveNone:
   // Callee pop conventions:
   case CallingConv::X86_ThisCall:
   case CallingConv::X86_StdCall:
@@ -1906,6 +1905,16 @@ SDValue X86TargetLowering::LowerFormalArguments(
       MRI.disableCalleeSavedRegister(Pair.first);
   }
 
+  if (CallingConv::PreserveNone == CallConv)
+    for (unsigned I = 0, E = Ins.size(); I != E; ++I) {
+      if (Ins[I].Flags.isSwiftSelf() || Ins[I].Flags.isSwiftAsync() ||
+          Ins[I].Flags.isSwiftError()) {
+        errorUnsupported(DAG, dl,
+                         "Swift attributes can't be used with preserve_none");
+        break;
+      }
+    }
+
   return Chain;
 }
 
@@ -2215,7 +2224,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
       const TargetOptions &Options = DAG.getTarget().Options;
       if (Options.EmitCallSiteInfo)
-        CSInfo.emplace_back(VA.getLocReg(), I);
+        CSInfo.ArgRegPairs.emplace_back(VA.getLocReg(), I);
       if (isVarArg && IsWin64) {
         // Win64 ABI requires argument XMM reg to be copied to the corresponding
         // shadow reg if callee is a varargs function.
@@ -2556,6 +2565,16 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                InGlue, dl);
     InGlue = Chain.getValue(1);
   }
+
+  if (CallingConv::PreserveNone == CallConv)
+    for (unsigned I = 0, E = Outs.size(); I != E; ++I) {
+      if (Outs[I].Flags.isSwiftSelf() || Outs[I].Flags.isSwiftAsync() ||
+          Outs[I].Flags.isSwiftError()) {
+        errorUnsupported(DAG, dl,
+                         "Swift attributes can't be used with preserve_none");
+        break;
+      }
+    }
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.

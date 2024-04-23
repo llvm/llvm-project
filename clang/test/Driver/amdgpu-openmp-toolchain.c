@@ -11,7 +11,7 @@
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-llvm-bc"{{.*}}"-x" "c"
 // CHECK: "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}}"-target-cpu" "gfx906"{{.*}}"-fcuda-is-device"{{.*}}
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-obj"
-// CHECK: clang-linker-wrapper{{.*}}"--"{{.*}} "-o" "a.out"
+// CHECK: clang-linker-wrapper{{.*}} "-o" "a.out"
 
 // RUN:   %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PHASES %s

@@ -56,18 +56,16 @@ void write_global_i64(vint64m1_t v) { global_i64 = v; }
 
 // CHECK-64-LABEL: @write_global_bool1(
 // CHECK-64-NEXT:  entry:
-// CHECK-64-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 64 x i1>, align 8
-// CHECK-64-NEXT:    store <vscale x 64 x i1> [[V:%.*]], ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA7:![0-9]+]]
-// CHECK-64-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA4]]
-// CHECK-64-NEXT:    store <8 x i8> [[TMP0]], ptr @global_bool1, align 8, !tbaa [[TBAA4]]
+// CHECK-64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 64 x i1> [[V:%.*]] to <vscale x 8 x i8>
+// CHECK-64-NEXT:    [[CAST_FIXED:%.*]] = tail call <8 x i8> @llvm.vector.extract.v8i8.nxv8i8(<vscale x 8 x i8> [[TMP0]], i64 0)
+// CHECK-64-NEXT:    store <8 x i8> [[CAST_FIXED]], ptr @global_bool1, align 8, !tbaa [[TBAA4]]
 // CHECK-64-NEXT:    ret void
 //
 // CHECK-256-LABEL: @write_global_bool1(
 // CHECK-256-NEXT:  entry:
-// CHECK-256-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 64 x i1>, align 8
-// CHECK-256-NEXT:    store <vscale x 64 x i1> [[V:%.*]], ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA7:![0-9]+]]
-// CHECK-256-NEXT:    [[TMP0:%.*]] = load <32 x i8>, ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA4]]
-// CHECK-256-NEXT:    store <32 x i8> [[TMP0]], ptr @global_bool1, align 8, !tbaa [[TBAA4]]
+// CHECK-256-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 64 x i1> [[V:%.*]] to <vscale x 8 x i8>
+// CHECK-256-NEXT:    [[CAST_FIXED:%.*]] = tail call <32 x i8> @llvm.vector.extract.v32i8.nxv8i8(<vscale x 8 x i8> [[TMP0]], i64 0)
+// CHECK-256-NEXT:    store <32 x i8> [[CAST_FIXED]], ptr @global_bool1, align 8, !tbaa [[TBAA4]]
 // CHECK-256-NEXT:    ret void
 //
 void write_global_bool1(vbool1_t v) { global_bool1 = v; }
@@ -92,7 +90,7 @@ void write_global_bool4(vbool4_t v) { global_bool4 = v; }
 // CHECK-256-LABEL: @write_global_bool32(
 // CHECK-256-NEXT:  entry:
 // CHECK-256-NEXT:    [[SAVED_VALUE:%.*]] = alloca <vscale x 2 x i1>, align 1
-// CHECK-256-NEXT:    store <vscale x 2 x i1> [[V:%.*]], ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA9:![0-9]+]]
+// CHECK-256-NEXT:    store <vscale x 2 x i1> [[V:%.*]], ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA7:![0-9]+]]
 // CHECK-256-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr [[SAVED_VALUE]], align 1, !tbaa [[TBAA4]]
 // CHECK-256-NEXT:    store <1 x i8> [[TMP0]], ptr @global_bool32, align 1, !tbaa [[TBAA4]]
 // CHECK-256-NEXT:    ret void
@@ -120,18 +118,16 @@ vint64m1_t read_global_i64() { return global_i64; }
 
 // CHECK-64-LABEL: @read_global_bool1(
 // CHECK-64-NEXT:  entry:
-// CHECK-64-NEXT:    [[SAVED_VALUE:%.*]] = alloca <8 x i8>, align 8
 // CHECK-64-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr @global_bool1, align 8, !tbaa [[TBAA4]]
-// CHECK-64-NEXT:    store <8 x i8> [[TMP0]], ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA4]]
-// CHECK-64-NEXT:    [[TMP1:%.*]] = load <vscale x 64 x i1>, ptr [[SAVED_VALUE]], align 8, !tbaa [[TBAA4]]
+// CHECK-64-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v8i8(<vscale x 8 x i8> undef, <8 x i8> [[TMP0]], i64 0)
+// CHECK-64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 8 x i8> [[CAST_SCALABLE]] to <vscale x 64 x i1>
 // CHECK-64-NEXT:    ret <vscale x 64 x i1> [[TMP1]]
 //
 // CHECK-256-LABEL: @read_global_bool1(
 // CHECK-256-NEXT:  entry:
-// CHECK-256-NEXT:    [[SAVED_VALUE:%.*]] = alloca <32 x i8>, align 32
 // CHECK-256-NEXT:    [[TMP0:%.*]] = load <32 x i8>, ptr @global_bool1, align 8, !tbaa [[TBAA4]]
-// CHECK-256-NEXT:    store <32 x i8> [[TMP0]], ptr [[SAVED_VALUE]], align 32, !tbaa [[TBAA4]]
-// CHECK-256-NEXT:    [[TMP1:%.*]] = load <vscale x 64 x i1>, ptr [[SAVED_VALUE]], align 32, !tbaa [[TBAA4]]
+// CHECK-256-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> undef, <32 x i8> [[TMP0]], i64 0)
+// CHECK-256-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 8 x i8> [[CAST_SCALABLE]] to <vscale x 64 x i1>
 // CHECK-256-NEXT:    ret <vscale x 64 x i1> [[TMP1]]
 //
 vbool1_t read_global_bool1() { return global_bool1; }

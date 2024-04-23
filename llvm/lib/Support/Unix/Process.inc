@@ -86,7 +86,7 @@ Expected<unsigned> Process::getPageSize() {
 #error Cannot get the page size on this machine
 #endif
   if (page_size == -1)
-    return errorCodeToError(std::error_code(errno, std::generic_category()));
+    return errorCodeToError(errnoAsErrorCode());
 
   return static_cast<unsigned>(page_size);
 }
@@ -143,7 +143,26 @@ void Process::GetTimeUsage(TimePoint<> &elapsed,
 void Process::PreventCoreFiles() {
 #if HAVE_SETRLIMIT
   struct rlimit rlim;
-  rlim.rlim_cur = rlim.rlim_max = 0;
+  getrlimit(RLIMIT_CORE, &rlim);
+#ifdef __linux__
+  // On Linux, if the kernel.core_pattern sysctl starts with a '|' (i.e. it
+  // is being piped to a coredump handler such as systemd-coredumpd), the
+  // kernel ignores RLIMIT_CORE (since we aren't creating a file in the file
+  // system) except for the magic value of 1, which disables coredumps when
+  // piping. 1 byte is too small for any kind of valid core dump, so it
+  // also disables coredumps if kernel.core_pattern creates files directly.
+  // While most piped coredump handlers do respect the crashing processes'
+  // RLIMIT_CORE, this is notable not the case for Debian's systemd-coredump
+  // due to a local patch that changes sysctl.d/50-coredump.conf to ignore
+  // the specified limit and instead use RLIM_INFINITY.
+  //
+  // The alternative to using RLIMIT_CORE=1 would be to use prctl() with the
+  // PR_SET_DUMPABLE flag, however that also prevents ptrace(), so makes it
+  // impossible to attach a debugger.
+  rlim.rlim_cur = std::min<rlim_t>(1, rlim.rlim_max);
+#else
+  rlim.rlim_cur = 0;
+#endif
   setrlimit(RLIMIT_CORE, &rlim);
 #endif
 
@@ -216,7 +235,7 @@ std::error_code Process::FixupStandardFileDescriptors() {
       assert(errno && "expected errno to be set if fstat failed!");
       // fstat should return EBADF if the file descriptor is closed.
       if (errno != EBADF)
-        return std::error_code(errno, std::generic_category());
+        return errnoAsErrorCode();
     }
     // if fstat succeeds, move on to the next FD.
     if (!errno)
@@ -228,13 +247,13 @@ std::error_code Process::FixupStandardFileDescriptors() {
       // RetryAfterSignal when open is overloaded, such as in Bionic.
       auto Open = [&]() { return ::open("/dev/null", O_RDWR); };
       if ((NullFD = RetryAfterSignal(-1, Open)) < 0)
-        return std::error_code(errno, std::generic_category());
+        return errnoAsErrorCode();
     }
 
     if (NullFD == StandardFD)
       FDC.keepOpen();
     else if (dup2(NullFD, StandardFD) < 0)
-      return std::error_code(errno, std::generic_category());
+      return errnoAsErrorCode();
   }
   return std::error_code();
 }
@@ -243,7 +262,7 @@ std::error_code Process::SafelyCloseFileDescriptor(int FD) {
   // Create a signal set filled with *all* signals.
   sigset_t FullSet, SavedSet;
   if (sigfillset(&FullSet) < 0 || sigfillset(&SavedSet) < 0)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 
     // Atomically swap our current signal mask with a full mask.
 #if LLVM_ENABLE_THREADS
@@ -251,7 +270,7 @@ std::error_code Process::SafelyCloseFileDescriptor(int FD) {
     return std::error_code(EC, std::generic_category());
 #else
   if (sigprocmask(SIG_SETMASK, &FullSet, &SavedSet) < 0)
-    return std::error_code(errno, std::generic_category());
+    return errnoAsErrorCode();
 #endif
   // Attempt to close the file descriptor.
   // We need to save the error, if one occurs, because our subsequent call to

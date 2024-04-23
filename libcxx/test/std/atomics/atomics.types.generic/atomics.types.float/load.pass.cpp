@@ -76,7 +76,7 @@ void test_impl() {
     }
   }
 
-  // memory_order::comsume
+  // memory_order::consume
   {
     std::unique_ptr<T> p = std::make_unique<T>(T(0.0));
     MaybeVolatile<std::atomic<T>> at(T(0.0));

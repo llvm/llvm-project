@@ -23,6 +23,7 @@ struct PhdrEntry;
 
 struct CompressedData {
   std::unique_ptr<SmallVector<uint8_t, 0>[]> shards;
+  uint32_t type = 0;
   uint32_t numShards = 0;
   uint32_t checksum = 0;
   uint64_t uncompressedSize;
@@ -116,11 +117,12 @@ public:
   void sortInitFini();
   void sortCtorsDtors();
 
+  // Used for implementation of --compress-debug-sections and
+  // --compress-sections.
+  CompressedData compressed;
+
 private:
   SmallVector<InputSection *, 0> storage;
-
-  // Used for implementation of --compress-debug-sections option.
-  CompressedData compressed;
 
   std::array<uint8_t, 4> getFiller();
 };

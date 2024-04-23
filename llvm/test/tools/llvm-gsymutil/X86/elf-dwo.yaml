@@ -15,8 +15,8 @@
 
 ## WARNING-QUIET: Input file: {{.*\.yaml\.tmp}}
 ## WARNING-QUIET: Output file (x86_64): {{.*\.yaml\.tmp\.gsym}}
-## WARNING-QUIET: warning: Unable to retrieve DWO .debug_info section for some object files. (Remove the --quiet flag for full output)
 ## WARNING-QUIET: Pruned 0 functions, ended with 10 total
+## WARNING-QUIET: warning: Unable to retrieve DWO .debug_info section for some object files. (Remove the --quiet flag for full output)
 
 
 

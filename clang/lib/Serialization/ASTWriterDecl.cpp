@@ -40,11 +40,14 @@ namespace clang {
     serialization::DeclCode Code;
     unsigned AbbrevToUse;
 
+    bool GeneratingReducedBMI = false;
+
   public:
     ASTDeclWriter(ASTWriter &Writer, ASTContext &Context,
-                  ASTWriter::RecordDataImpl &Record)
+                  ASTWriter::RecordDataImpl &Record, bool GeneratingReducedBMI)
         : Writer(Writer), Context(Context), Record(Writer, Record),
-          Code((serialization::DeclCode)0), AbbrevToUse(0) {}
+          Code((serialization::DeclCode)0), AbbrevToUse(0),
+          GeneratingReducedBMI(GeneratingReducedBMI) {}
 
     uint64_t Emit(Decl *D) {
       if (!Code)
@@ -270,6 +273,34 @@ namespace clang {
   };
 }
 
+bool clang::CanElideDeclDef(const Decl *D) {
+  if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+    if (FD->isInlined() || FD->isConstexpr())
+      return false;
+
+    if (FD->isDependentContext())
+      return false;
+
+    if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return false;
+  }
+
+  if (auto *VD = dyn_cast<VarDecl>(D)) {
+    if (!VD->getDeclContext()->getRedeclContext()->isFileContext() ||
+        VD->isInline() || VD->isConstexpr() || isa<ParmVarDecl>(VD) ||
+        // Constant initialized variable may not affect the ABI, but they
+        // may be used in constant evaluation in the frontend, so we have
+        // to remain them.
+        VD->hasConstantInitialization())
+      return false;
+
+    if (VD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return false;
+  }
+
+  return true;
+}
+
 void ASTDeclWriter::Visit(Decl *D) {
   DeclVisitor<ASTDeclWriter>::Visit(D);
 
@@ -285,9 +316,12 @@ void ASTDeclWriter::Visit(Decl *D) {
   // have been written. We want it last because we will not read it back when
   // retrieving it from the AST, we'll just lazily set the offset.
   if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-    Record.push_back(FD->doesThisDeclarationHaveABody());
-    if (FD->doesThisDeclarationHaveABody())
-      Record.AddFunctionDefinition(FD);
+    if (!GeneratingReducedBMI || !CanElideDeclDef(FD)) {
+      Record.push_back(FD->doesThisDeclarationHaveABody());
+      if (FD->doesThisDeclarationHaveABody())
+        Record.AddFunctionDefinition(FD);
+    } else
+      Record.push_back(0);
   }
 
   // Similar to FunctionDecls, handle VarDecl's initializer here and write it
@@ -295,7 +329,10 @@ void ASTDeclWriter::Visit(Decl *D) {
   // we have finished recursive deserialization, because it can recursively
   // refer back to the variable.
   if (auto *VD = dyn_cast<VarDecl>(D)) {
-    Record.AddVarDeclInit(VD);
+    if (!GeneratingReducedBMI || !CanElideDeclDef(VD))
+      Record.AddVarDeclInit(VD);
+    else
+      Record.push_back(0);
   }
 
   // And similarly for FieldDecls. We already serialized whether there is a
@@ -488,13 +525,15 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
   BitsPacker EnumDeclBits;
   EnumDeclBits.addBits(D->getNumPositiveBits(), /*BitWidth=*/8);
   EnumDeclBits.addBits(D->getNumNegativeBits(), /*BitWidth=*/8);
+  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
+  EnumDeclBits.addBit(ShouldSkipCheckingODR);
   EnumDeclBits.addBit(D->isScoped());
   EnumDeclBits.addBit(D->isScopedUsingClassTag());
   EnumDeclBits.addBit(D->isFixed());
   Record.push_back(EnumDeclBits);
 
   // We only perform ODR checks for decls not in GMF.
-  if (!shouldSkipCheckingODR(D))
+  if (!ShouldSkipCheckingODR)
     Record.push_back(D->getODRHash());
 
   if (MemberSpecializationInfo *MemberInfo = D->getMemberSpecializationInfo()) {
@@ -678,6 +717,8 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   // FIXME: stable encoding
   FunctionDeclBits.addBits(llvm::to_underlying(D->getLinkageInternal()), 3);
   FunctionDeclBits.addBits((uint32_t)D->getStorageClass(), /*BitWidth=*/3);
+  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
+  FunctionDeclBits.addBit(ShouldSkipCheckingODR);
   FunctionDeclBits.addBit(D->isInlineSpecified());
   FunctionDeclBits.addBit(D->isInlined());
   FunctionDeclBits.addBit(D->hasSkippedBody());
@@ -704,11 +745,18 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
     Record.AddSourceLocation(D->getDefaultLoc());
 
   // We only perform ODR checks for decls not in GMF.
-  if (!shouldSkipCheckingODR(D))
+  if (!ShouldSkipCheckingODR)
     Record.push_back(D->getODRHash());
 
-  if (D->isDefaulted()) {
-    if (auto *FDI = D->getDefaultedFunctionInfo()) {
+  if (D->isDefaulted() || D->isDeletedAsWritten()) {
+    if (auto *FDI = D->getDefalutedOrDeletedInfo()) {
+      // Store both that there is an DefaultedOrDeletedInfo and whether it
+      // contains a DeletedMessage.
+      StringLiteral *DeletedMessage = FDI->getDeletedMessage();
+      Record.push_back(1 | (DeletedMessage ? 2 : 0));
+      if (DeletedMessage)
+        Record.AddStmt(DeletedMessage);
+
       Record.push_back(FDI->getUnqualifiedLookups().size());
       for (DeclAccessPair P : FDI->getUnqualifiedLookups()) {
         Record.AddDeclRef(P.getDecl());
@@ -1677,6 +1725,15 @@ void ASTDeclWriter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
   if (D->isFirstDecl())
     AddTemplateSpecializations(D);
+
+  // Force emitting the corresponding deduction guide in reduced BMI mode.
+  // Otherwise, the deduction guide may be optimized out incorrectly.
+  if (Writer.isGeneratingReducedBMI()) {
+    auto Name = Context.DeclarationNames.getCXXDeductionGuideName(D);
+    for (auto *DG : D->getDeclContext()->noload_lookup(Name))
+      Writer.GetDeclRef(DG);
+  }
+
   Code = serialization::DECL_CLASS_TEMPLATE;
 }
 
@@ -1879,6 +1936,7 @@ void ASTDeclWriter::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
     Record.push_back(D->getNumExpansionTemplateParameters());
 
   VisitTemplateDecl(D);
+  Record.push_back(D->wasDeclaredWithTypename());
   // TemplateParmPosition.
   Record.push_back(D->getDepth());
   Record.push_back(D->getPosition());
@@ -1920,8 +1978,22 @@ void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
                 "You need to update the serializer after you change the "
                 "DeclContextBits");
 
-  Record.AddOffset(Writer.WriteDeclContextLexicalBlock(Context, DC));
-  Record.AddOffset(Writer.WriteDeclContextVisibleBlock(Context, DC));
+  uint64_t LexicalOffset = 0;
+  uint64_t VisibleOffset = 0;
+
+  if (Writer.isGeneratingReducedBMI() && isa<NamespaceDecl>(DC) &&
+      cast<NamespaceDecl>(DC)->isFromExplicitGlobalModule()) {
+    // In reduced BMI, delay writing lexical and visible block for namespace
+    // in the global module fragment. See the comments of DelayedNamespace for
+    // details.
+    Writer.DelayedNamespace.push_back(cast<NamespaceDecl>(DC));
+  } else {
+    LexicalOffset = Writer.WriteDeclContextLexicalBlock(Context, DC);
+    VisibleOffset = Writer.WriteDeclContextVisibleBlock(Context, DC);
+  }
+
+  Record.AddOffset(LexicalOffset);
+  Record.AddOffset(VisibleOffset);
 }
 
 const Decl *ASTWriter::getFirstLocalDecl(const Decl *D) {
@@ -2137,12 +2209,13 @@ getFunctionDeclAbbrev(serialization::DeclCode Code) {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 11)); // IDNS
   Abv->Add(BitCodeAbbrevOp(
       BitCodeAbbrevOp::Fixed,
-      27)); // Packed Function Bits: StorageClass, Inline, InlineSpecified,
+      28)); // Packed Function Bits: StorageClass, Inline, InlineSpecified,
             // VirtualAsWritten, Pure, HasInheritedProto, HasWrittenProto,
             // Deleted, Trivial, TrivialForCall, Defaulted, ExplicitlyDefaulted,
             // IsIneligibleOrNotSelected, ImplicitReturnZero, Constexpr,
             // UsesSEHTry, SkippedBody, MultiVersion, LateParsed,
-            // FriendConstraintRefersToEnclosingTemplate, Linkage
+            // FriendConstraintRefersToEnclosingTemplate, Linkage,
+            // ShouldSkipCheckingODR
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));    // LocEnd
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // ODRHash
   // This Array slurps the rest of the record. Fortunately we want to encode
@@ -2269,7 +2342,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // AddTypeRef
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // IntegerType
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // getPromotionType
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 19)); // Enum Decl Bits
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 20)); // Enum Decl Bits
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));// ODRHash
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // InstantiatedMembEnum
   // DC
@@ -2724,7 +2797,7 @@ void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
   assert(ID >= FirstDeclID && "invalid decl ID");
 
   RecordData Record;
-  ASTDeclWriter W(*this, Context, Record);
+  ASTDeclWriter W(*this, Context, Record, GeneratingReducedBMI);
 
   // Build a record for this declaration
   W.Visit(D);

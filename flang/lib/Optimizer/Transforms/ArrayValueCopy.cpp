@@ -187,7 +187,7 @@ public:
     LLVM_DEBUG(llvm::dbgs() << "popset: " << *op << '\n');
     auto popFn = [&](auto rop) {
       assert(val && "op must have a result value");
-      auto resNum = val.cast<mlir::OpResult>().getResultNumber();
+      auto resNum = mlir::cast<mlir::OpResult>(val).getResultNumber();
       llvm::SmallVector<mlir::Value> results;
       rop.resultToSourceOps(results, resNum);
       for (auto u : results)
@@ -296,7 +296,7 @@ public:
     visited.insert(val);
 
     // Process a block argument.
-    if (auto ba = val.dyn_cast<mlir::BlockArgument>()) {
+    if (auto ba = mlir::dyn_cast<mlir::BlockArgument>(val)) {
       collectArrayMentionFrom(ba);
       return;
     }
@@ -573,6 +573,8 @@ static bool conflictOnLoad(llvm::ArrayRef<mlir::Operation *> reach,
   for (auto *op : reach)
     if (auto ld = mlir::dyn_cast<ArrayLoadOp>(op)) {
       mlir::Type ldTy = ld.getMemref().getType();
+      auto globalOpName = mlir::OperationName(fir::GlobalOp::getOperationName(),
+                                              ld.getContext());
       if (ld.getMemref() == addr) {
         if (mutuallyExclusiveSliceRange(ld, st))
           continue;
@@ -588,14 +590,17 @@ static bool conflictOnLoad(llvm::ArrayRef<mlir::Operation *> reach,
         if (optimize && !hasPointerType(ldTy) &&
             !valueMayHaveFirAttributes(
                 ld.getMemref(),
-                {getTargetAttrName(), GlobalOp::getTargetAttrNameStr()}))
+                {getTargetAttrName(),
+                 fir::GlobalOp::getTargetAttrName(globalOpName).strref()}))
           continue;
 
         return true;
       } else if (hasPointerType(ldTy)) {
         if (optimize && !storeHasPointerType &&
             !valueMayHaveFirAttributes(
-                addr, {getTargetAttrName(), GlobalOp::getTargetAttrNameStr()}))
+                addr,
+                {getTargetAttrName(),
+                 fir::GlobalOp::getTargetAttrName(globalOpName).strref()}))
           continue;
 
         return true;
@@ -723,7 +728,7 @@ conservativeCallConflict(llvm::ArrayRef<mlir::Operation *> reaches) {
       if (auto callee =
               call.getCallableForCallee().dyn_cast<mlir::SymbolRefAttr>()) {
         auto module = op->getParentOfType<mlir::ModuleOp>();
-        return isInternalPorcedure(
+        return isInternalProcedure(
             module.lookupSymbol<mlir::func::FuncOp>(callee));
       }
     return false;

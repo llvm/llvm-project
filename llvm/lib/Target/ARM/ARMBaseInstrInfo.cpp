@@ -3710,7 +3710,7 @@ unsigned ARMBaseInstrInfo::getNumLDMAddresses(const MachineInstr &MI) const {
   for (MachineInstr::mmo_iterator I = MI.memoperands_begin(),
                                   E = MI.memoperands_end();
        I != E; ++I) {
-    Size += (*I)->getSize();
+    Size += (*I)->getSize().getValue();
   }
   // FIXME: The scheduler currently can't handle values larger than 16. But
   // the values can actually go up to 32 for floating-point load/store

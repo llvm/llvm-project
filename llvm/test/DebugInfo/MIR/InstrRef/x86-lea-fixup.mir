@@ -74,7 +74,7 @@ body:             |
     renamable $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
     renamable $ecx = nsw ADD32rr renamable $ecx, renamable $eax, implicit-def dead $eflags, implicit killed $rax, implicit killed $rcx, implicit-def $rcx, debug-instr-number 1
     ; ATOM: LEA64_32r {{.*}} debug-instr-number 2
-    renamable $eax = MOV32rm killed renamable $rcx, 1, $noreg, 0, $noreg :: (load (s32) from `i32 *undef`)
+    renamable $eax = MOV32rm killed renamable $rcx, 1, $noreg, 0, $noreg :: (load (s32) from `ptr undef`)
     RET64 $eax
 
 ...

@@ -487,6 +487,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         Add &= ~NotAllowedWithExecuteOnly;
       if (CfiCrossDso)
         Add &= ~SanitizerKind::CFIMFCall;
+      // -fsanitize=undefined does not expand to signed-integer-overflow in
+      // -fwrapv (implied by -fno-strict-overflow) mode.
+      if (Add & SanitizerKind::UndefinedGroup) {
+        bool S = Args.hasFlagNoClaim(options::OPT_fno_strict_overflow,
+                                     options::OPT_fstrict_overflow, false);
+        if (Args.hasFlagNoClaim(options::OPT_fwrapv, options::OPT_fno_wrapv, S))
+          Add &= ~SanitizerKind::SignedIntegerOverflow;
+      }
       Add &= Supported;
 
       if (Add & SanitizerKind::Fuzzer)

@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s --sparse-assembler                 | FileCheck %s --check-prefix=CHECK-HI
 // RUN: mlir-opt %s --sparse-assembler \
+// RUN:             --inline                           | FileCheck %s --check-prefix=CHECK-INL
+// RUN: mlir-opt %s --sparse-assembler \
 // RUN:             --linalg-generalize-named-ops \
 // RUN:             --linalg-fuse-elementwise-ops \
 // RUN:             --sparsification-and-bufferization | FileCheck %s --check-prefix=CHECK-MID
@@ -20,7 +22,13 @@
 // CHECK-HI:       func.func private @_internal_main
 // CHECK-HI:         linalg.matmul
 // CHECK-HI:         return
-//
+
+// CHECK-INL-LABEL: func.func @main
+// CHECK-INL:         sparse_tensor.assemble
+// CHECK-INL:         linalg.matmul
+// CHECK-INL:         return
+// CHECK-INL-NOT:   func.func private @_internal_main
+
 // CHECK-MID-LABEL: func.func @main
 // CHECK-MID:          memref.load
 // CHECK-MID:          call @_internal_main

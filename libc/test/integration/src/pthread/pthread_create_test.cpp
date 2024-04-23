@@ -332,7 +332,7 @@ static void run_failure_tests() {
 }
 
 TEST_MAIN() {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   run_success_tests();
   run_failure_tests();
   return 0;
