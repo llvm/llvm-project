@@ -93,7 +93,7 @@ def Polynomial_RingAttr : Polynomial_Attr<"Ring", "ring"> {
     integral, whose coefficients are taken modulo some statically known modulus
     (`coefficientModulus`).
 
-    Additionally, a polynomial ring can specify an _polynomialModulus_, which converts
+    Additionally, a polynomial ring can specify a _polynomialModulus_, which converts
     polynomial arithmetic to the analogue of modular integer arithmetic, where
     each polynomial is represented as its remainder when dividing by the
     modulus. For single-variable polynomials, an "polynomialModulus" is always specificed
