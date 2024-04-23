@@ -365,7 +365,7 @@ public:
 };
 
 class LLVM_LIBRARY_VISIBILITY SPIRV64AMDGCNTargetInfo
-  : public BaseSPIRVTargetInfo {
+    : public BaseSPIRVTargetInfo {
 public:
   SPIRV64AMDGCNTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : BaseSPIRVTargetInfo(Triple, Opts) {
