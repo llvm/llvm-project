@@ -10,7 +10,7 @@ define amdgpu_gs void @test_fptrunc_round_upward(float %a, i32 %data0, <4 x i32>
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; CHECK-NEXT:    global_store_short v[6:7], v0, off
 ; CHECK-NEXT:    s_endpgm
-  %res = call half @llvm.fptrunc.round(float %a, metadata !"round.upward")
+  %res = call half @llvm.fptrunc.round.f16.f32(float %a, metadata !"round.upward")
   store half %res, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -22,7 +22,7 @@ define amdgpu_gs void @test_fptrunc_round_downward(float %a, i32 %data0, <4 x i3
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; CHECK-NEXT:    global_store_short v[6:7], v0, off
 ; CHECK-NEXT:    s_endpgm
-  %res = call half @llvm.fptrunc.round(float %a, metadata !"round.downward")
+  %res = call half @llvm.fptrunc.round.f16.f32(float %a, metadata !"round.downward")
   store half %res, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -40,13 +40,13 @@ define amdgpu_gs void @test_fptrunc_round_upward_multiple_calls(float %a, float 
 ; CHECK-NEXT:    v_add_f16_e32 v0, v1, v0
 ; CHECK-NEXT:    global_store_short v[7:8], v0, off
 ; CHECK-NEXT:    s_endpgm
-  %res1 = call half @llvm.fptrunc.round(float %a, metadata !"round.upward")
-  %res2 = call half @llvm.fptrunc.round(float %b, metadata !"round.upward")
-  %res3 = call half @llvm.fptrunc.round(float %b, metadata !"round.downward")
+  %res1 = call half @llvm.fptrunc.round.f16.f32(float %a, metadata !"round.upward")
+  %res2 = call half @llvm.fptrunc.round.f16.f32(float %b, metadata !"round.upward")
+  %res3 = call half @llvm.fptrunc.round.f16.f32(float %b, metadata !"round.downward")
   %res4 = fadd half %res1, %res2
   %res5 = fadd half %res3, %res4
   store half %res5, ptr addrspace(1) %out, align 4
   ret void
 }
 
-declare half @llvm.fptrunc.round(float, metadata)
+declare half @llvm.fptrunc.round.f16.f32(float, metadata)
