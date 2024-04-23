@@ -4921,6 +4921,9 @@ directory. Using the example installation above, this would mean passing
 If the user links the program with the ``clang`` or ``clang-cl`` drivers, the
 driver will pass this flag for them.
 
+The auto-linking can be disabled with -fno-rtlib-defaultlib. If that flag is
+used, pass the complete flag to required libraries as described for ASan below.
+
 If the linker cannot find the appropriate library, it will emit an error like
 this::
 
