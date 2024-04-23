@@ -5288,7 +5288,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // return type accordingly.
       if (!D.isInvalidType()) {
         auto isClassType = [&](CXXScopeSpec &SS) {
-          // If there already was an problem with the scope; don’t issue another
+          // If there already was an problem with the scope, don’t issue another
           // error about the explicit object parameter.
           return SS.isInvalid() ||
                  isa_and_present<CXXRecordDecl>(S.computeDeclContext(SS));
@@ -5320,7 +5320,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             // because it's easier that way.
             (C != DeclaratorContext::Member || !IsFunctionDecl) &&
 
-            // Allow out-of-line definitions if we have a scope spec.
+            // Allow out-of-line definitions of member functions.
             !isClassType(D.getCXXScopeSpec())) {
           if (IsFunctionDecl)
             S.Diag(First->getBeginLoc(),
