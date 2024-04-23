@@ -730,7 +730,7 @@ static bool isPointerUseReplacable(const Use &U) {
       return false;
   }
 
-  return Limit;
+  return Limit != 0;
 }
 
 // Returns true if `To` is a null pointer, constant dereferenceable pointer or
