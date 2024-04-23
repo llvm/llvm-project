@@ -1418,6 +1418,8 @@ void RewriteInstance::registerFragments() {
   if (!BC->HasSplitFunctions)
     return;
 
+  // Process fragments with ambiguous parents separately as they are typically a
+  // vanishing minority of cases and require expensive symbol table lookups.
   std::vector<std::pair<StringRef, BinaryFunction *>> AmbiguousFragments;
   for (auto &BFI : BC->getBinaryFunctions()) {
     BinaryFunction &Function = BFI.second;
@@ -1445,7 +1447,8 @@ void RewriteInstance::registerFragments() {
       }
       if (BD) {
         const uint64_t Address = BD->getAddress();
-        if (BinaryFunction *BF = BC->getBinaryFunctionAtAddress(Address)) {
+        BinaryFunction *BF = BC->getBinaryFunctionAtAddress(Address);
+        if (BF) {
           BC->registerFragment(Function, *BF);
           continue;
         }
