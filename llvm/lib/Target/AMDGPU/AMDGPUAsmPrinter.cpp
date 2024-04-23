@@ -22,6 +22,7 @@
 #include "AMDKernelCodeT.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
+#include "MCTargetDesc/AMDGPUMCKernelDescriptor.h"
 #include "MCTargetDesc/AMDGPUTargetStreamer.h"
 #include "R600AsmPrinter.h"
 #include "SIMachineFunctionInfo.h"
@@ -428,38 +429,43 @@ uint16_t AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
   return KernelCodeProperties;
 }
 
-amdhsa::kernel_descriptor_t AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(
-    const MachineFunction &MF,
-    const SIProgramInfo &PI) const {
+MCKernelDescriptor
+AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
+                                            const SIProgramInfo &PI) const {
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
   const Function &F = MF.getFunction();
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  MCContext &Ctx = MF.getContext();
 
-  amdhsa::kernel_descriptor_t KernelDescriptor;
-  memset(&KernelDescriptor, 0x0, sizeof(KernelDescriptor));
+  MCKernelDescriptor KernelDescriptor;
 
   assert(isUInt<32>(PI.ScratchSize));
   assert(isUInt<32>(PI.getComputePGMRSrc1(STM)));
   assert(isUInt<32>(PI.getComputePGMRSrc2()));
 
-  KernelDescriptor.group_segment_fixed_size = PI.LDSSize;
-  KernelDescriptor.private_segment_fixed_size = PI.ScratchSize;
+  KernelDescriptor.group_segment_fixed_size =
+      MCConstantExpr::create(PI.LDSSize, Ctx);
+  KernelDescriptor.private_segment_fixed_size =
+      MCConstantExpr::create(PI.ScratchSize, Ctx);
 
   Align MaxKernArgAlign;
-  KernelDescriptor.kernarg_size = STM.getKernArgSegmentSize(F, MaxKernArgAlign);
+  KernelDescriptor.kernarg_size = MCConstantExpr::create(
+      STM.getKernArgSegmentSize(F, MaxKernArgAlign), Ctx);
 
-  KernelDescriptor.compute_pgm_rsrc1 = PI.getComputePGMRSrc1(STM);
-  KernelDescriptor.compute_pgm_rsrc2 = PI.getComputePGMRSrc2();
-  KernelDescriptor.kernel_code_properties = getAmdhsaKernelCodeProperties(MF);
+  KernelDescriptor.compute_pgm_rsrc1 =
+      MCConstantExpr::create(PI.getComputePGMRSrc1(STM), Ctx);
+  KernelDescriptor.compute_pgm_rsrc2 =
+      MCConstantExpr::create(PI.getComputePGMRSrc2(), Ctx);
+  KernelDescriptor.kernel_code_properties =
+      MCConstantExpr::create(getAmdhsaKernelCodeProperties(MF), Ctx);
 
   assert(STM.hasGFX90AInsts() || CurrentProgramInfo.ComputePGMRSrc3GFX90A == 0);
-  if (STM.hasGFX90AInsts())
-    KernelDescriptor.compute_pgm_rsrc3 =
-      CurrentProgramInfo.ComputePGMRSrc3GFX90A;
+  KernelDescriptor.compute_pgm_rsrc3 = MCConstantExpr::create(
+      STM.hasGFX90AInsts() ? CurrentProgramInfo.ComputePGMRSrc3GFX90A : 0, Ctx);
 
-  if (AMDGPU::hasKernargPreload(STM))
-    KernelDescriptor.kernarg_preload =
-        static_cast<uint16_t>(Info->getNumKernargPreloadedSGPRs());
+  KernelDescriptor.kernarg_preload = MCConstantExpr::create(
+      AMDGPU::hasKernargPreload(STM) ? Info->getNumKernargPreloadedSGPRs() : 0,
+      Ctx);
 
   return KernelDescriptor;
 }
@@ -868,8 +874,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   ProgInfo.SGPRBlocks = IsaInfo::getNumSGPRBlocks(
       &STM, ProgInfo.NumSGPRsForWavesPerEU);
-  ProgInfo.VGPRBlocks = IsaInfo::getNumVGPRBlocks(
-      &STM, ProgInfo.NumVGPRsForWavesPerEU);
+  ProgInfo.VGPRBlocks =
+      IsaInfo::getEncodedNumVGPRBlocks(&STM, ProgInfo.NumVGPRsForWavesPerEU);
 
   const SIModeRegisterDefaults Mode = MFI->getMode();
 
@@ -1033,6 +1039,27 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
   OutStreamer->emitInt32(MFI->getNumSpilledVGPRs());
 }
 
+// Helper function to add common PAL Metadata 3.0+
+static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
+                                  const SIProgramInfo &CurrentProgramInfo,
+                                  CallingConv::ID CC, const GCNSubtarget &ST) {
+  if (ST.hasIEEEMode())
+    MD->setHwStage(CC, ".ieee_mode", (bool)CurrentProgramInfo.IEEEMode);
+
+  MD->setHwStage(CC, ".wgp_mode", (bool)CurrentProgramInfo.WgpMode);
+  MD->setHwStage(CC, ".mem_ordered", (bool)CurrentProgramInfo.MemOrdered);
+
+  if (AMDGPU::isCompute(CC)) {
+    MD->setHwStage(CC, ".trap_present",
+                   (bool)CurrentProgramInfo.TrapHandlerEnable);
+    MD->setHwStage(CC, ".excp_en", CurrentProgramInfo.EXCPEnable);
+
+    MD->setHwStage(CC, ".lds_size",
+                   (unsigned)(CurrentProgramInfo.LdsSize *
+                              getLdsDwGranularity(ST) * sizeof(uint32_t)));
+  }
+}
+
 // This is the equivalent of EmitProgramInfoSI above, but for when the OS type
 // is AMDPAL.  It stores each compute/SPI register setting and other PAL
 // metadata items into the PALMD::Metadata, combining with any provided by the
@@ -1064,24 +1091,8 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
     }
   } else {
     MD->setHwStage(CC, ".debug_mode", (bool)CurrentProgramInfo.DebugMode);
-    MD->setHwStage(CC, ".ieee_mode", (bool)CurrentProgramInfo.IEEEMode);
-    MD->setHwStage(CC, ".wgp_mode", (bool)CurrentProgramInfo.WgpMode);
-    MD->setHwStage(CC, ".mem_ordered", (bool)CurrentProgramInfo.MemOrdered);
-
-    if (AMDGPU::isCompute(CC)) {
-      MD->setHwStage(CC, ".scratch_en", (bool)CurrentProgramInfo.ScratchEnable);
-      MD->setHwStage(CC, ".trap_present",
-                     (bool)CurrentProgramInfo.TrapHandlerEnable);
-
-      // EXCPEnMSB?
-      const unsigned LdsDwGranularity = 128;
-      MD->setHwStage(CC, ".lds_size",
-                     (unsigned)(CurrentProgramInfo.LdsSize * LdsDwGranularity *
-                                sizeof(uint32_t)));
-      MD->setHwStage(CC, ".excp_en", CurrentProgramInfo.EXCPEnable);
-    } else {
-      MD->setHwStage(CC, ".scratch_en", (bool)CurrentProgramInfo.ScratchEnable);
-    }
+    MD->setHwStage(CC, ".scratch_en", (bool)CurrentProgramInfo.ScratchEnable);
+    EmitPALMetadataCommon(MD, CurrentProgramInfo, CC, STM);
   }
 
   // ScratchSize is in bytes, 16 aligned.
@@ -1135,10 +1146,15 @@ void AMDGPUAsmPrinter::emitPALFunctionMetadata(const MachineFunction &MF) {
   MD->setFunctionScratchSize(FnName, MFI.getStackSize());
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
-  // Set compute registers
-  MD->setRsrc1(CallingConv::AMDGPU_CS,
-               CurrentProgramInfo.getPGMRSrc1(CallingConv::AMDGPU_CS, ST));
-  MD->setRsrc2(CallingConv::AMDGPU_CS, CurrentProgramInfo.getComputePGMRSrc2());
+  if (MD->getPALMajorVersion() < 3) {
+    // Set compute registers
+    MD->setRsrc1(CallingConv::AMDGPU_CS,
+                 CurrentProgramInfo.getPGMRSrc1(CallingConv::AMDGPU_CS, ST));
+    MD->setRsrc2(CallingConv::AMDGPU_CS,
+                 CurrentProgramInfo.getComputePGMRSrc2());
+  } else {
+    EmitPALMetadataCommon(MD, CurrentProgramInfo, CallingConv::AMDGPU_CS, ST);
+  }
 
   // Set optional info
   MD->setFunctionLdsSize(FnName, CurrentProgramInfo.LDSSize);

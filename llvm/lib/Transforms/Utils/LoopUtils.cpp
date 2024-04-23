@@ -468,6 +468,7 @@ llvm::collectChildrenInLoop(DomTreeNode *N, const Loop *CurLoop) {
 
 bool llvm::isAlmostDeadIV(PHINode *PN, BasicBlock *LatchBlock, Value *Cond) {
   int LatchIdx = PN->getBasicBlockIndex(LatchBlock);
+  assert(LatchIdx != -1 && "LatchBlock is not a case in this PHINode");
   Value *IncV = PN->getIncomingValue(LatchIdx);
 
   for (User *U : PN->users())
@@ -604,7 +605,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
   // Use a map to unique and a vector to guarantee deterministic ordering.
   llvm::SmallDenseSet<DebugVariable, 4> DeadDebugSet;
   llvm::SmallVector<DbgVariableIntrinsic *, 4> DeadDebugInst;
-  llvm::SmallVector<DPValue *, 4> DeadDPValues;
+  llvm::SmallVector<DbgVariableRecord *, 4> DeadDbgVariableRecords;
 
   if (ExitBlock) {
     // Given LCSSA form is satisfied, we should not have users of instructions
@@ -630,17 +631,17 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
           U.set(Poison);
         }
 
-        // RemoveDIs: do the same as below for DPValues.
+        // RemoveDIs: do the same as below for DbgVariableRecords.
         if (Block->IsNewDbgInfoFormat) {
-          for (DPValue &DPV : llvm::make_early_inc_range(
-                   DPValue::filter(I.getDbgValueRange()))) {
-            DebugVariable Key(DPV.getVariable(), DPV.getExpression(),
-                              DPV.getDebugLoc().get());
+          for (DbgVariableRecord &DVR : llvm::make_early_inc_range(
+                   filterDbgVars(I.getDbgRecordRange()))) {
+            DebugVariable Key(DVR.getVariable(), DVR.getExpression(),
+                              DVR.getDebugLoc().get());
             if (!DeadDebugSet.insert(Key).second)
               continue;
-            // Unlinks the DPV from it's container, for later insertion.
-            DPV.removeFromParent();
-            DeadDPValues.push_back(&DPV);
+            // Unlinks the DVR from it's container, for later insertion.
+            DVR.removeFromParent();
+            DeadDbgVariableRecords.push_back(&DVR);
           }
         }
 
@@ -672,11 +673,11 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
       DVI->moveBefore(*ExitBlock, InsertDbgValueBefore);
 
     // Due to the "head" bit in BasicBlock::iterator, we're going to insert
-    // each DPValue right at the start of the block, wheras dbg.values would be
-    // repeatedly inserted before the first instruction. To replicate this
-    // behaviour, do it backwards.
-    for (DPValue *DPV : llvm::reverse(DeadDPValues))
-      ExitBlock->insertDPValueBefore(DPV, InsertDbgValueBefore);
+    // each DbgVariableRecord right at the start of the block, wheras dbg.values
+    // would be repeatedly inserted before the first instruction. To replicate
+    // this behaviour, do it backwards.
+    for (DbgVariableRecord *DVR : llvm::reverse(DeadDbgVariableRecords))
+      ExitBlock->insertDbgRecordBefore(DVR, InsertDbgValueBefore);
   }
 
   // Remove the block from the reference counting scheme, so that we can

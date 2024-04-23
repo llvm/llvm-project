@@ -4,6 +4,7 @@
 
 // CHECK: #pragma clang attribute supports the following attributes:
 // CHECK-NEXT: AMDGPUFlatWorkGroupSize (SubjectMatchRule_function)
+// CHECK-NEXT: AMDGPUMaxNumWorkGroups (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumSGPR (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumVGPR (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUWavesPerEU (SubjectMatchRule_function)
@@ -19,7 +20,6 @@
 // CHECK-NEXT: ArcWeakrefUnavailable (SubjectMatchRule_objc_interface)
 // CHECK-NEXT: ArmBuiltinAlias (SubjectMatchRule_function)
 // CHECK-NEXT: AssumeAligned (SubjectMatchRule_objc_method, SubjectMatchRule_function)
-// CHECK-NEXT: Assumption (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: Availability ((SubjectMatchRule_record, SubjectMatchRule_enum, SubjectMatchRule_enum_constant, SubjectMatchRule_field, SubjectMatchRule_function, SubjectMatchRule_namespace, SubjectMatchRule_objc_category, SubjectMatchRule_objc_implementation, SubjectMatchRule_objc_interface, SubjectMatchRule_objc_method, SubjectMatchRule_objc_property, SubjectMatchRule_objc_protocol, SubjectMatchRule_record, SubjectMatchRule_type_alias, SubjectMatchRule_variable))
 // CHECK-NEXT: AvailableOnlyInDefaultEvalMethod (SubjectMatchRule_type_alias)
 // CHECK-NEXT: BPFPreserveAccessIndex (SubjectMatchRule_record)
@@ -127,6 +127,7 @@
 // CHECK-NEXT: NoThrow (SubjectMatchRule_hasType_functionType)
 // CHECK-NEXT: NoUwtable (SubjectMatchRule_hasType_functionType)
 // CHECK-NEXT: NotTailCalled (SubjectMatchRule_function)
+// CHECK-NEXT: OMPAssume (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: OSConsumed (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: OSReturnsNotRetained (SubjectMatchRule_function, SubjectMatchRule_objc_method, SubjectMatchRule_objc_property, SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: OSReturnsRetained (SubjectMatchRule_function, SubjectMatchRule_objc_method, SubjectMatchRule_objc_property, SubjectMatchRule_variable_is_parameter)

@@ -98,8 +98,6 @@ bool getUseCtors();
 
 bool getDisableIntegratedAS();
 
-bool getRelaxELFRelocations();
-
 bool getDataSections();
 std::optional<bool> getExplicitDataSections();
 

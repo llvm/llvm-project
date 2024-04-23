@@ -595,4 +595,4 @@ attributes #1 = { nounwind "amdgpu-num-vgpr"="8" }
 attributes #2 = { nounwind "frame-pointer"="all" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

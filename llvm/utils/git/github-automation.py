@@ -24,18 +24,19 @@ Hi!
 
 This issue may be a good introductory issue for people new to working on LLVM. If you would like to work on this issue, your first steps are:
 
-1. In the comments of the issue, request for it to be assigned to you.
-2. Fix the issue locally.
-3. [Run the test suite](https://llvm.org/docs/TestingGuide.html#unit-and-regression-tests) locally. Remember that the subdirectories under `test/` create fine-grained testing targets, so you can e.g. use `make check-clang-ast` to only run Clang's AST tests.
-4. Create a Git commit.
-5. Run [`git clang-format HEAD~1`](https://clang.llvm.org/docs/ClangFormat.html#git-integration) to format your changes.
-6. Open a [pull request](https://github.com/llvm/llvm-project/pulls) to the [upstream repository](https://github.com/llvm/llvm-project) on GitHub. Detailed instructions can be found [in GitHub's documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request).
+1. Check that no other contributor has already been assigned to this issue. If you believe that no one is actually working on it despite an assignment, ping the person. After one week without a response, the assignee may be changed.
+1. In the comments of this issue, request for it to be assigned to you, or just create a [pull request](https://github.com/llvm/llvm-project/pulls) after following the steps below. [Mention](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue) this issue in the description of the pull request.
+1. Fix the issue locally.
+1. [Run the test suite](https://llvm.org/docs/TestingGuide.html#unit-and-regression-tests) locally. Remember that the subdirectories under `test/` create fine-grained testing targets, so you can e.g. use `make check-clang-ast` to only run Clang's AST tests.
+1. Create a Git commit.
+1. Run [`git clang-format HEAD~1`](https://clang.llvm.org/docs/ClangFormat.html#git-integration) to format your changes.
+1. Open a [pull request](https://github.com/llvm/llvm-project/pulls) to the [upstream repository](https://github.com/llvm/llvm-project) on GitHub. Detailed instructions can be found [in GitHub's documentation](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request). [Mention](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue) this issue in the description of the pull request.
 
 If you have any further questions about this issue, don't hesitate to ask via a comment in the thread below.
 """
 
 
-def _get_curent_team(team_name, teams) -> Optional[github.Team.Team]:
+def _get_current_team(team_name, teams) -> Optional[github.Team.Team]:
     for team in teams:
         if team_name == team.name.lower():
             return team
@@ -69,7 +70,7 @@ class IssueSubscriber:
         self._team_name = "issue-subscribers-{}".format(label_name).lower()
 
     def run(self) -> bool:
-        team = _get_curent_team(self.team_name, self.org.get_teams())
+        team = _get_current_team(self.team_name, self.org.get_teams())
         if not team:
             print(f"couldn't find team named {self.team_name}")
             return False
@@ -124,7 +125,7 @@ class PRSubscriber:
 
     def run(self) -> bool:
         patch = None
-        team = _get_curent_team(self.team_name, self.org.get_teams())
+        team = _get_current_team(self.team_name, self.org.get_teams())
         if not team:
             print(f"couldn't find team named {self.team_name}")
             return False
@@ -200,7 +201,7 @@ Author: {self.pr.user.name} ({self.pr.user.login})
             )
         return True
 
-    def _get_curent_team(self) -> Optional[github.Team.Team]:
+    def _get_current_team(self) -> Optional[github.Team.Team]:
         for team in self.org.get_teams():
             if self.team_name == team.name.lower():
                 return team
@@ -280,7 +281,7 @@ class PRBuildbotInformation:
 @{self.author} Congratulations on having your first Pull Request (PR) merged into the LLVM Project!
 
 Your changes will be combined with recent changes from other authors, then tested
-by our [build bots](https://lab.llvm.org/buildbot/). If there is a problem with a build, you may recieve a report in an email or a comment on this PR.
+by our [build bots](https://lab.llvm.org/buildbot/). If there is a problem with a build, you may receive a report in an email or a comment on this PR.
 
 Please check whether problems have been caused by your change specifically, as
 the builds can include changes from many authors. It is not uncommon for your
@@ -586,7 +587,7 @@ class ReleaseWorkflow:
                 body=body,
                 base=release_branch_for_issue,
                 head=head,
-                maintainer_can_modify=False,
+                maintainer_can_modify=True,
             )
 
             pull.as_issue().edit(milestone=self.issue.milestone)
@@ -616,22 +617,20 @@ class ReleaseWorkflow:
     def execute_command(self) -> bool:
         """
         This function reads lines from STDIN and executes the first command
-        that it finds.  The 2 supported commands are:
-        /cherry-pick commit0 <commit1> <commit2> <...>
-        /branch <owner>/<repo>/<branch>
+        that it finds.  The supported command is:
+        /cherry-pick< ><:> commit0 <commit1> <commit2> <...>
         """
         for line in sys.stdin:
             line.rstrip()
-            m = re.search(r"/([a-z-]+)\s(.+)", line)
+            m = re.search(r"/cherry-pick\s*:? *(.*)", line)
             if not m:
                 continue
-            command = m.group(1)
-            args = m.group(2)
 
-            if command == "cherry-pick":
-                arg_list = args.split()
-                commits = list(map(lambda a: extract_commit_hash(a), arg_list))
-                return self.create_branch(commits)
+            args = m.group(1)
+
+            arg_list = args.split()
+            commits = list(map(lambda a: extract_commit_hash(a), arg_list))
+            return self.create_branch(commits)
 
         print("Do not understand input:")
         print(sys.stdin.readlines())
@@ -640,7 +639,7 @@ class ReleaseWorkflow:
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--token", type=str, required=True, help="GitHub authentiation token"
+    "--token", type=str, required=True, help="GitHub authentication token"
 )
 parser.add_argument(
     "--repo",
@@ -670,7 +669,7 @@ release_workflow_parser.add_argument(
     "--llvm-project-dir",
     type=str,
     default=".",
-    help="directory containing the llvm-project checout",
+    help="directory containing the llvm-project checkout",
 )
 release_workflow_parser.add_argument(
     "--issue-number", type=int, required=True, help="The issue number to update"

@@ -405,32 +405,23 @@ public:
   }
 };
 
-/// Helper to determine if type T has a member called rbegin().
-template <typename Ty> class has_rbegin_impl {
-  using yes = char[1];
-  using no = char[2];
+namespace detail {
+template <typename Range>
+using check_has_free_function_rbegin =
+    decltype(adl_rbegin(std::declval<Range &>()));
 
-  template <typename Inner>
-  static yes& test(Inner *I, decltype(I->rbegin()) * = nullptr);
-
-  template <typename>
-  static no& test(...);
-
-public:
-  static const bool value = sizeof(test<Ty>(nullptr)) == sizeof(yes);
-};
-
-/// Metafunction to determine if T& or T has a member called rbegin().
-template <typename Ty>
-struct has_rbegin : has_rbegin_impl<std::remove_reference_t<Ty>> {};
+template <typename Range>
+static constexpr bool HasFreeFunctionRBegin =
+    is_detected<check_has_free_function_rbegin, Range>::value;
+} // namespace detail
 
 // Returns an iterator_range over the given container which iterates in reverse.
 template <typename ContainerTy> auto reverse(ContainerTy &&C) {
-  if constexpr (has_rbegin<ContainerTy>::value)
-    return make_range(C.rbegin(), C.rend());
+  if constexpr (detail::HasFreeFunctionRBegin<ContainerTy>)
+    return make_range(adl_rbegin(C), adl_rend(C));
   else
-    return make_range(std::make_reverse_iterator(std::end(C)),
-                      std::make_reverse_iterator(std::begin(C)));
+    return make_range(std::make_reverse_iterator(adl_end(C)),
+                      std::make_reverse_iterator(adl_begin(C)));
 }
 
 /// An iterator adaptor that filters the elements of given inner iterators.
@@ -1945,6 +1936,19 @@ auto partition(R &&Range, UnaryPredicate P) {
   return std::partition(adl_begin(Range), adl_end(Range), P);
 }
 
+/// Provide wrappers to std::binary_search which take ranges instead of having
+/// to pass begin/end explicitly.
+template <typename R, typename T> auto binary_search(R &&Range, T &&Value) {
+  return std::binary_search(adl_begin(Range), adl_end(Range),
+                            std::forward<T>(Value));
+}
+
+template <typename R, typename T, typename Compare>
+auto binary_search(R &&Range, T &&Value, Compare C) {
+  return std::binary_search(adl_begin(Range), adl_end(Range),
+                            std::forward<T>(Value), C);
+}
+
 /// Provide wrappers to std::lower_bound which take ranges instead of having to
 /// pass begin/end explicitly.
 template <typename R, typename T> auto lower_bound(R &&Range, T &&Value) {
@@ -1969,6 +1973,22 @@ template <typename R, typename T, typename Compare>
 auto upper_bound(R &&Range, T &&Value, Compare C) {
   return std::upper_bound(adl_begin(Range), adl_end(Range),
                           std::forward<T>(Value), C);
+}
+
+template <typename R> auto min_element(R &&Range) {
+  return std::min_element(adl_begin(Range), adl_end(Range));
+}
+
+template <typename R, typename Compare> auto min_element(R &&Range, Compare C) {
+  return std::min_element(adl_begin(Range), adl_end(Range), C);
+}
+
+template <typename R> auto max_element(R &&Range) {
+  return std::max_element(adl_begin(Range), adl_end(Range));
+}
+
+template <typename R, typename Compare> auto max_element(R &&Range, Compare C) {
+  return std::max_element(adl_begin(Range), adl_end(Range), C);
 }
 
 template <typename R>
@@ -2122,7 +2142,7 @@ template <typename Container, typename UnaryFunctor, typename NullaryFunctor,
               !std::is_constructible<StringRef, NullaryFunctor>::value>>
 inline void interleave(const Container &c, UnaryFunctor each_fn,
                        NullaryFunctor between_fn) {
-  interleave(c.begin(), c.end(), each_fn, between_fn);
+  interleave(adl_begin(c), adl_end(c), each_fn, between_fn);
 }
 
 /// Overload of interleave for the common case of string separator.
@@ -2130,7 +2150,7 @@ template <typename Container, typename UnaryFunctor, typename StreamT,
           typename T = detail::ValueOfRange<Container>>
 inline void interleave(const Container &c, StreamT &os, UnaryFunctor each_fn,
                        const StringRef &separator) {
-  interleave(c.begin(), c.end(), each_fn, [&] { os << separator; });
+  interleave(adl_begin(c), adl_end(c), each_fn, [&] { os << separator; });
 }
 template <typename Container, typename StreamT,
           typename T = detail::ValueOfRange<Container>>

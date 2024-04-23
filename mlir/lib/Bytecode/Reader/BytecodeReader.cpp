@@ -1854,22 +1854,18 @@ BytecodeReader::Impl::parseOpName(EncodingReader &reader,
   // Check to see if this operation name has already been resolved. If we
   // haven't, load the dialect and build the operation name.
   if (!opName->opName) {
-    // Load the dialect and its version.
-    DialectReader dialectReader(attrTypeReader, stringReader, resourceReader,
-                                dialectsMap, reader, version);
-    if (failed(opName->dialect->load(dialectReader, getContext())))
-      return failure();
     // If the opName is empty, this is because we use to accept names such as
     // `foo` without any `.` separator. We shouldn't tolerate this in textual
     // format anymore but for now we'll be backward compatible. This can only
     // happen with unregistered dialects.
     if (opName->name.empty()) {
-      if (opName->dialect->getLoadedDialect())
-        return emitError(fileLoc) << "has an empty opname for dialect '"
-                                  << opName->dialect->name << "'\n";
-
       opName->opName.emplace(opName->dialect->name, getContext());
     } else {
+      // Load the dialect and its version.
+      DialectReader dialectReader(attrTypeReader, stringReader, resourceReader,
+                                  dialectsMap, reader, version);
+      if (failed(opName->dialect->load(dialectReader, getContext())))
+        return failure();
       opName->opName.emplace((opName->dialect->name + "." + opName->name).str(),
                              getContext());
     }

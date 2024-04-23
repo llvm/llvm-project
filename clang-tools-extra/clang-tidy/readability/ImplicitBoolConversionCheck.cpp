@@ -81,8 +81,7 @@ void fixGenericExprCastToBool(DiagnosticBuilder &Diag,
 
   const Expr *SubExpr = Cast->getSubExpr();
 
-  bool NeedInnerParens =
-      SubExpr != nullptr && utils::fixit::areParensNeededForStatement(*SubExpr);
+  bool NeedInnerParens = utils::fixit::areParensNeededForStatement(*SubExpr);
   bool NeedOuterParens =
       Parent != nullptr && utils::fixit::areParensNeededForStatement(*Parent);
 

@@ -66,6 +66,7 @@ public:
     CortexA76,
     CortexA77,
     CortexA78,
+    CortexA78AE,
     CortexA78C,
     CortexA710,
     CortexA715,
@@ -353,6 +354,9 @@ public:
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            unsigned NumRegionInstrs) const override;
+  void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
+                             SDep &Dep,
+                             const TargetSchedModel *SchedModel) const override;
 
   bool enableEarlyIfConversion() const override;
 

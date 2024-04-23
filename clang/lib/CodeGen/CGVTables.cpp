@@ -201,14 +201,13 @@ CodeGenFunction::GenerateVarArgsThunk(llvm::Function *Fn,
 
   // Find the first store of "this", which will be to the alloca associated
   // with "this".
-  Address ThisPtr =
-      Address(&*AI, ConvertTypeForMem(MD->getFunctionObjectParameterType()),
-              CGM.getClassPointerAlignment(MD->getParent()));
+  Address ThisPtr = makeNaturalAddressForPointer(
+      &*AI, MD->getFunctionObjectParameterType(),
+      CGM.getClassPointerAlignment(MD->getParent()));
   llvm::BasicBlock *EntryBB = &Fn->front();
   llvm::BasicBlock::iterator ThisStore =
       llvm::find_if(*EntryBB, [&](llvm::Instruction &I) {
-        return isa<llvm::StoreInst>(I) &&
-               I.getOperand(0) == ThisPtr.getPointer();
+        return isa<llvm::StoreInst>(I) && I.getOperand(0) == &*AI;
       });
   assert(ThisStore != EntryBB->end() &&
          "Store of this should be in entry block?");

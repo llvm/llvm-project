@@ -424,4 +424,4 @@ attributes #2 = { nounwind readnone }
 attributes #3 = { nounwind "amdgpu-32bit-address-high-bits"="0xffff8000" }
 
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

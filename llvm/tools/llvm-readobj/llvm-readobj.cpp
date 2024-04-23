@@ -95,6 +95,7 @@ static bool Addrsig;
 static bool All;
 static bool ArchSpecificInfo;
 static bool BBAddrMap;
+static bool PrettyPGOAnalysisMap;
 bool ExpandRelocs;
 static bool CGProfile;
 static bool Decompress;
@@ -133,7 +134,6 @@ static bool Memtag;
 static bool NeededLibraries;
 static bool Notes;
 static bool ProgramHeaders;
-bool RawRelr;
 static bool SectionGroups;
 static bool VersionInfo;
 
@@ -212,6 +212,11 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::All = Args.hasArg(OPT_all);
   opts::ArchSpecificInfo = Args.hasArg(OPT_arch_specific);
   opts::BBAddrMap = Args.hasArg(OPT_bb_addr_map);
+  opts::PrettyPGOAnalysisMap = Args.hasArg(OPT_pretty_pgo_analysis_map);
+  if (opts::PrettyPGOAnalysisMap && !opts::BBAddrMap)
+    WithColor::warning(errs(), ToolName)
+        << "--bb-addr-map must be enabled for --pretty-pgo-analysis-map to "
+           "have an effect\n";
   opts::CGProfile = Args.hasArg(OPT_cg_profile);
   opts::Decompress = Args.hasArg(OPT_decompress);
   opts::Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, false);
@@ -267,7 +272,6 @@ static void parseOptions(const opt::InputArgList &Args) {
   opts::Notes = Args.hasArg(OPT_notes);
   opts::PrettyPrint = Args.hasArg(OPT_pretty_print);
   opts::ProgramHeaders = Args.hasArg(OPT_program_headers);
-  opts::RawRelr = Args.hasArg(OPT_raw_relr);
   opts::SectionGroups = Args.hasArg(OPT_section_groups);
   if (Arg *A = Args.getLastArg(OPT_sort_symbols_EQ)) {
     std::string SortKeysString = A->getValue();
@@ -466,7 +470,7 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
     if (opts::CGProfile)
       Dumper->printCGProfile();
     if (opts::BBAddrMap)
-      Dumper->printBBAddrMaps();
+      Dumper->printBBAddrMaps(opts::PrettyPGOAnalysisMap);
     if (opts::Addrsig)
       Dumper->printAddrsig();
     if (opts::Notes)

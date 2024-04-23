@@ -131,9 +131,9 @@ endfunction(get_fq_dep_list_without_flag)
 
 # Check if a `flag` is set
 function(check_flag result flag_name)
-  list(FIND ARGN ${flag_name}_FLAG has_flag)
+  list(FIND ARGN ${flag_name} has_flag)
   if(${has_flag} LESS 0)
-    list(FIND ARGN "${flag_name}_FLAG__ONLY" has_flag)
+    list(FIND ARGN "${flag_name}__ONLY" has_flag)
   endif()
   if(${has_flag} GREATER -1)
     set(${result} TRUE PARENT_SCOPE)

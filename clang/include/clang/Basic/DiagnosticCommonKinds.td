@@ -45,6 +45,11 @@ def note_using : Note<"using">;
 def note_possibility : Note<"one possibility">;
 def note_also_found : Note<"also found">;
 
+def warn_next_larger_fp_type_same_size_than_fp : Warning<
+  "higher precision floating-point type size has the same size than "
+  "floating-point type size">,
+  InGroup<DiagGroup<"higher-precision-fp">>;
+
 // Parse && Lex
 
 let CategoryName = "Lexical or Preprocessor Issue" in {
@@ -229,6 +234,9 @@ def err_cxx23_size_t_suffix: Error<
 def err_size_t_literal_too_large: Error<
   "%select{signed |}0'size_t' literal is out of range of possible "
   "%select{signed |}0'size_t' values">;
+def ext_cxx_bitint_suffix : Extension<
+  "'_BitInt' suffix for literals is a Clang extension">,
+  InGroup<BitIntExtension>;
 def ext_c23_bitint_suffix : ExtWarn<
   "'_BitInt' suffix for literals is a C23 extension">,
   InGroup<C23>;
@@ -356,6 +364,8 @@ def warn_target_unrecognized_env : Warning<
 def warn_knl_knm_isa_support_removed : Warning<
   "KNL, KNM related Intel Xeon Phi CPU's specific ISA's supports will be removed in LLVM 19.">,
   InGroup<DiagGroup<"knl-knm-isa-support-removed">>;
+def err_target_unsupported_abi_with_fpu : Error<
+  "'%0' ABI is not supported with FPU">;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;

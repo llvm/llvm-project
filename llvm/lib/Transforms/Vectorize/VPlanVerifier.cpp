@@ -135,9 +135,6 @@ static bool hasDuplicates(const SmallVectorImpl<VPBlockBase *> &VPBlockVec) {
 
 static bool verifyBlock(const VPBlockBase *VPB, const VPDominatorTree &VPDT) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
-  if (VPBB && !verifyVPBasicBlock(VPBB, VPDT))
-    return false;
-
   // Check block's condition bit.
   if (VPB->getNumSuccessors() > 1 ||
       (VPBB && VPBB->getParent() && VPBB->isExiting() &&
@@ -196,7 +193,7 @@ static bool verifyBlock(const VPBlockBase *VPB, const VPDominatorTree &VPDT) {
       return false;
     }
   }
-  return true;
+  return !VPBB || verifyVPBasicBlock(VPBB, VPDT);
 }
 
 /// Helper function that verifies the CFG invariants of the VPBlockBases within

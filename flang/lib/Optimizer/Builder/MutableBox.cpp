@@ -674,7 +674,7 @@ void fir::factory::disassociateMutableBox(fir::FirOpBuilder &builder,
     // 7.3.2.3 point 7. The dynamic type of a disassociated pointer is the
     // same as its declared type.
     auto boxTy = box.getBoxTy().dyn_cast<fir::BaseBoxType>();
-    auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(boxTy.getEleTy());
+    auto eleTy = fir::unwrapPassByRefType(boxTy.getEleTy());
     mlir::Type derivedType = fir::getDerivedType(eleTy);
     if (auto recTy = derivedType.dyn_cast<fir::RecordType>()) {
       fir::runtime::genNullifyDerivedType(builder, loc, box.getAddr(), recTy,

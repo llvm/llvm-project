@@ -1048,7 +1048,7 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                       name->symbol->GetUltimate().owner();
                   if (!curScope.IsTopLevel()) {
                     const semantics::Scope &declScope =
-                        GetProgramUnitContaining(curScope);
+                        GetProgramUnitOrBlockConstructContaining(curScope);
                     const semantics::Symbol *sym{
                         declScope.parent().FindSymbol(name->symbol->name())};
                     if (sym &&
@@ -2286,10 +2286,11 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
     CheckReductionTypeList(x);
   }
 }
+
 bool OmpStructureChecker::CheckReductionOperators(
     const parser::OmpClause::Reduction &x) {
 
-  const auto &definedOp{std::get<0>(x.v.t)};
+  const auto &definedOp{std::get<parser::OmpReductionOperator>(x.v.t)};
   bool ok = false;
   common::visit(
       common::visitors{
@@ -2355,6 +2356,16 @@ void OmpStructureChecker::CheckReductionTypeList(
   // is not private in the parallel region that it binds to.
   if (llvm::omp::nestedReduceWorkshareAllowedSet.test(GetContext().directive)) {
     CheckSharedBindingInOuterContext(ompObjectList);
+  }
+
+  SymbolSourceMap symbols;
+  GetSymbolsInObjectList(ompObjectList, symbols);
+  for (auto &[symbol, source] : symbols) {
+    if (IsProcedurePointer(*symbol)) {
+      context_.Say(source,
+          "A procedure pointer '%s' must not appear in a REDUCTION clause."_err_en_US,
+          symbol->name());
+    }
   }
 }
 
@@ -2948,7 +2959,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDevicePtr &x) {
         if (name->symbol) {
           if (!(IsBuiltinCPtr(*(name->symbol)))) {
             context_.Say(itr->second->source,
-                "'%s' in USE_DEVICE_PTR clause must be of type C_PTR"_err_en_US,
+                "Use of non-C_PTR type '%s' in USE_DEVICE_PTR is deprecated, use USE_DEVICE_ADDR instead"_warn_en_US,
                 name->ToString());
           } else {
             useDevicePtrNameList.push_back(*name);

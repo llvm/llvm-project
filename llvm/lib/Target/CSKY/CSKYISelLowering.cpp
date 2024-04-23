@@ -649,8 +649,7 @@ SDValue CSKYTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = S->getGlobal();
-    bool IsLocal =
-        getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV);
+    bool IsLocal = getTargetMachine().shouldAssumeDSOLocal(GV);
 
     if (isPositionIndependent() || !Subtarget.has2E3()) {
       IsRegCall = true;
@@ -662,8 +661,7 @@ SDValue CSKYTargetLowering::LowerCall(CallLoweringInfo &CLI,
           cast<GlobalAddressSDNode>(Callee), Ty, DAG, CSKYII::MO_None));
     }
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    bool IsLocal = getTargetMachine().shouldAssumeDSOLocal(
-        *MF.getFunction().getParent(), nullptr);
+    bool IsLocal = getTargetMachine().shouldAssumeDSOLocal(nullptr);
 
     if (isPositionIndependent() || !Subtarget.has2E3()) {
       IsRegCall = true;
@@ -1153,7 +1151,7 @@ SDValue CSKYTargetLowering::LowerGlobalAddress(SDValue Op,
   int64_t Offset = N->getOffset();
 
   const GlobalValue *GV = N->getGlobal();
-  bool IsLocal = getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV);
+  bool IsLocal = getTargetMachine().shouldAssumeDSOLocal(GV);
   SDValue Addr = getAddr<GlobalAddressSDNode, false>(N, DAG, IsLocal);
 
   // In order to maximise the opportunity for common subexpression elimination,

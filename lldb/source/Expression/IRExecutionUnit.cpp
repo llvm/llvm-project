@@ -201,7 +201,7 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
                                       UINT32_MAX, false, false);
 
   InstructionList &instruction_list = disassembler_sp->GetInstructionList();
-  instruction_list.Dump(&stream, true, true, /*show_control_flow_kind=*/true,
+  instruction_list.Dump(&stream, true, true, /*show_control_flow_kind=*/false,
                         &exe_ctx);
 
   return ret;
@@ -212,18 +212,17 @@ struct IRExecDiagnosticHandler : public llvm::DiagnosticHandler {
   Status *err;
   IRExecDiagnosticHandler(Status *err) : err(err) {}
   bool handleDiagnostics(const llvm::DiagnosticInfo &DI) override {
-    if (DI.getKind() == llvm::DK_SrcMgr) {
+    if (DI.getSeverity() == llvm::DS_Error) {
       const auto &DISM = llvm::cast<llvm::DiagnosticInfoSrcMgr>(DI);
       if (err && err->Success()) {
         err->SetErrorToGenericError();
         err->SetErrorStringWithFormat(
-            "Inline assembly error: %s",
+            "IRExecution error: %s",
             DISM.getSMDiag().getMessage().str().c_str());
       }
-      return true;
     }
 
-    return false;
+    return true;
   }
 };
 } // namespace
@@ -432,7 +431,9 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
     }
 
     m_failed_lookups.clear();
-
+    ss.PutCString(
+        "\nHint: The expression tried to call a function that is not present "
+        "in the target, perhaps because it was optimized out by the compiler.");
     error.SetErrorString(ss.GetString());
 
     return;

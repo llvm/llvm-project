@@ -4,7 +4,7 @@ def BsdExtensions : StandardSpec<"BSDExtensions"> {
       [], // Macros
       [], // Types
       [], // Enumerations
-      [ 
+      [
         FunctionSpec<
             "strlcat",
             RetValSpec<SizeTType>,

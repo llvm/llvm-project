@@ -1,5 +1,5 @@
 // REQUIRES: hexagon-registered-target
-// RUN: %clang_cc1 -triple hexagon-unknown-elf -target-cpu hexagonv65 -target-feature +hvxv65 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple hexagon-unknown-elf -target-cpu hexagonv65 -target-feature +hvxv65 -target-feature +hvx-length128b -emit-llvm %s -o - | FileCheck %s
 
 void test() {
   int v64 __attribute__((__vector_size__(64)));

@@ -28,6 +28,7 @@ module m
   !WARNING: Attribute 'EXTERNAL' cannot be used more than once
   real, external, external :: externFunc
   !WARNING: Attribute 'INTRINSIC' cannot be used more than once
+  !ERROR: An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement
   real, intrinsic, bind(c), intrinsic :: cos
   !WARNING: Attribute 'BIND(C)' cannot be used more than once
   integer, bind(c), volatile, bind(c) :: bindVar

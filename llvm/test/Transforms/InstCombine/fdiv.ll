@@ -90,7 +90,7 @@ define <vscale x 2 x float> @exact_inverse_scalable_splat(<vscale x 2 x float> %
 ; CHECK-NEXT:    [[DIV:%.*]] = fmul <vscale x 2 x float> [[X:%.*]], shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> poison, float 2.500000e-01, i64 0), <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x float> [[DIV]]
 ;
-  %div = fdiv <vscale x 2 x float> %x, shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float 4.0, i64 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer)
+  %div = fdiv <vscale x 2 x float> %x, splat (float 4.0)
   ret <vscale x 2 x float> %div
 }
 
@@ -141,12 +141,12 @@ define <2 x float> @not_exact_inverse_vec_arcp(<2 x float> %x) {
   ret <2 x float> %div
 }
 
-define <2 x float> @not_exact_inverse_vec_arcp_with_undef_elt(<2 x float> %x) {
-; CHECK-LABEL: @not_exact_inverse_vec_arcp_with_undef_elt(
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv arcp <2 x float> [[X:%.*]], <float undef, float 3.000000e+00>
+define <2 x float> @not_exact_inverse_vec_arcp_with_poison_elt(<2 x float> %x) {
+; CHECK-LABEL: @not_exact_inverse_vec_arcp_with_poison_elt(
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv arcp <2 x float> [[X:%.*]], <float poison, float 3.000000e+00>
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
-  %div = fdiv arcp <2 x float> %x, <float undef, float 3.0>
+  %div = fdiv arcp <2 x float> %x, <float poison, float 3.0>
   ret <2 x float> %div
 }
 
@@ -333,13 +333,13 @@ define <2 x float> @unary_fneg_fneg_vec(<2 x float> %x, <2 x float> %y) {
   ret <2 x float> %div
 }
 
-define <2 x float> @fneg_fneg_vec_undef_elts(<2 x float> %x, <2 x float> %y) {
-; CHECK-LABEL: @fneg_fneg_vec_undef_elts(
+define <2 x float> @fneg_fneg_vec_poison_elts(<2 x float> %x, <2 x float> %y) {
+; CHECK-LABEL: @fneg_fneg_vec_poison_elts(
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
-  %xneg = fsub <2 x float> <float undef, float -0.0>, %x
-  %yneg = fsub <2 x float> <float -0.0, float undef>, %y
+  %xneg = fsub <2 x float> <float poison, float -0.0>, %x
+  %yneg = fsub <2 x float> <float -0.0, float poison>, %y
   %div = fdiv <2 x float> %xneg, %yneg
   ret <2 x float> %div
 }
@@ -404,12 +404,12 @@ define <2 x float> @unary_fneg_dividend_constant_divisor_vec(<2 x float> %x) {
   ret <2 x float> %div
 }
 
-define <2 x float> @fneg_dividend_constant_divisor_vec_undef_elt(<2 x float> %x) {
-; CHECK-LABEL: @fneg_dividend_constant_divisor_vec_undef_elt(
+define <2 x float> @fneg_dividend_constant_divisor_vec_poison_elt(<2 x float> %x) {
+; CHECK-LABEL: @fneg_dividend_constant_divisor_vec_poison_elt(
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv ninf <2 x float> [[X:%.*]], <float -3.000000e+00, float 8.000000e+00>
 ; CHECK-NEXT:    ret <2 x float> [[DIV]]
 ;
-  %neg = fsub <2 x float> <float undef, float -0.0>, %x
+  %neg = fsub <2 x float> <float poison, float -0.0>, %x
   %div = fdiv ninf <2 x float> %neg, <float 3.0, float -8.0>
   ret <2 x float> %div
 }

@@ -27,9 +27,9 @@ public:
 
   ~LibcxxStdSpanSyntheticFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   /// Determines properties of the std::span<> associated with this object
   //
@@ -73,14 +73,14 @@ lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::
     Update();
 }
 
-size_t lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::
-    CalculateNumChildren() {
+llvm::Expected<uint32_t> lldb_private::formatters::
+    LibcxxStdSpanSyntheticFrontEnd::CalculateNumChildren() {
   return m_num_elements;
 }
 
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::GetChildAtIndex(
-    size_t idx) {
+    uint32_t idx) {
   if (!m_start)
     return {};
 

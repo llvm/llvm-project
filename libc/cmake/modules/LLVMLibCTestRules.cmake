@@ -111,7 +111,7 @@ function(create_libc_unittest fq_target_name)
 
   cmake_parse_arguments(
     "LIBC_UNITTEST"
-    "NO_RUN_POSTBUILD" # Optional arguments
+    "NO_RUN_POSTBUILD;C_TEST" # Optional arguments
     "SUITE;CXX_STANDARD" # Single value arguments
     "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;LINK_LIBRARIES;FLAGS" # Multi-value arguments
     ${ARGN}
@@ -126,11 +126,14 @@ function(create_libc_unittest fq_target_name)
   endif()
 
   get_fq_deps_list(fq_deps_list ${LIBC_UNITTEST_DEPENDS})
-  list(APPEND fq_deps_list libc.src.__support.StringUtil.error_to_string
-                           libc.test.UnitTest.ErrnoSetterMatcher)
+  if(NOT LIBC_UNITTEST_C_TEST)
+    list(APPEND fq_deps_list libc.src.__support.StringUtil.error_to_string
+                             libc.test.UnitTest.ErrnoSetterMatcher)
+  endif()
   list(REMOVE_DUPLICATES fq_deps_list)
 
-  _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_FLAGS}")
+  _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
+                                   "${LIBC_UNITTEST_FLAGS}")
   list(APPEND compile_options ${LIBC_UNITTEST_COMPILE_OPTIONS})
 
   if(SHOW_INTERMEDIATE_OBJECTS)
@@ -214,7 +217,9 @@ function(create_libc_unittest fq_target_name)
   )
 
   # LibcUnitTest should not depend on anything in LINK_LIBRARIES.
-  list(APPEND link_libraries LibcDeathTestExecutors.unit LibcTest.unit)
+  if(NOT LIBC_UNITTEST_C_TEST)
+    list(APPEND link_libraries LibcDeathTestExecutors.unit LibcTest.unit)
+  endif()
 
   target_link_libraries(${fq_build_target_name} PRIVATE ${link_libraries})
 
@@ -318,8 +323,8 @@ function(add_libc_fuzzer target_name)
   target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
 
-  target_link_libraries(${fq_target_name} PRIVATE 
-    ${link_object_files} 
+  target_link_libraries(${fq_target_name} PRIVATE
+    ${link_object_files}
     ${LIBC_FUZZER_LINK_LIBRARIES}
   )
 
@@ -352,7 +357,7 @@ endif()
 # system libc are linked in to the final executable. The final exe is fully
 # statically linked. The libc that the final exe links to consists of only
 # the object files of the DEPENDS targets.
-# 
+#
 # Usage:
 #   add_integration_test(
 #     <target name>
@@ -462,14 +467,16 @@ function(add_integration_test test_name)
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
 
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-    target_link_options(${fq_build_target_name} PRIVATE 
+    target_link_options(${fq_build_target_name} PRIVATE
+      ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
       -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
       "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
       "-Wl,-mllvm,-amdhsa-code-object-version=${LIBC_GPU_CODE_OBJECT_VERSION}")
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     # We need to use the internal object versions for NVPTX.
     set(internal_suffix ".__internal__")
-    target_link_options(${fq_build_target_name} PRIVATE 
+    target_link_options(${fq_build_target_name} PRIVATE
+      ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
       "-Wl,--suppress-stack-size-warning"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
@@ -593,9 +600,11 @@ function(add_libc_hermetic_test test_name)
   get_object_files_for_test(
       link_object_files skipped_entrypoints_list ${fq_deps_list})
   if(skipped_entrypoints_list)
-    set(msg "Skipping hermetic test ${fq_target_name} as it has missing deps: "
-            "${skipped_entrypoints_list}.")
-    message(STATUS ${msg})
+    if(LIBC_CMAKE_VERBOSE_LOGGING)
+      set(msg "Skipping hermetic test ${fq_target_name} as it has missing deps: "
+              "${skipped_entrypoints_list}.")
+      message(STATUS ${msg})
+    endif()
     return()
   endif()
   list(REMOVE_DUPLICATES link_object_files)
@@ -643,14 +652,16 @@ function(add_libc_hermetic_test test_name)
   endforeach()
 
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-    target_link_options(${fq_build_target_name} PRIVATE 
-      -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
+    target_link_options(${fq_build_target_name} PRIVATE
+      ${LIBC_COMPILE_OPTIONS_DEFAULT}
+      -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto -Wno-multi-gpu
       "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
       "-Wl,-mllvm,-amdhsa-code-object-version=${LIBC_GPU_CODE_OBJECT_VERSION}")
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     # We need to use the internal object versions for NVPTX.
     set(internal_suffix ".__internal__")
-    target_link_options(${fq_build_target_name} PRIVATE 
+    target_link_options(${fq_build_target_name} PRIVATE
+      ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
       "-Wl,--suppress-stack-size-warning"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")

@@ -231,27 +231,36 @@ ParamValue *DerivedTypeSpec::FindParameter(SourceName target) {
       const_cast<const DerivedTypeSpec *>(this)->FindParameter(target));
 }
 
-bool DerivedTypeSpec::Match(const DerivedTypeSpec &that) const {
-  if (&typeSymbol_ != &that.typeSymbol_) {
-    return false;
-  }
-  for (const auto &pair : parameters_) {
-    const Symbol *tpSym{scope_ ? scope_->FindSymbol(pair.first) : nullptr};
-    const auto *tpDetails{
-        tpSym ? tpSym->detailsIf<TypeParamDetails>() : nullptr};
-    if (!tpDetails) {
-      return false;
-    }
-    if (tpDetails->attr() != common::TypeParamAttr::Kind) {
-      continue;
-    }
-    const ParamValue &value{pair.second};
-    auto iter{that.parameters_.find(pair.first)};
-    if (iter == that.parameters_.end() || iter->second != value) {
-      return false;
+static bool MatchKindParams(const Symbol &typeSymbol,
+    const DerivedTypeSpec &thisSpec, const DerivedTypeSpec &thatSpec) {
+  for (auto ref : typeSymbol.get<DerivedTypeDetails>().paramDecls()) {
+    if (ref->get<TypeParamDetails>().attr() == common::TypeParamAttr::Kind) {
+      const auto *thisValue{thisSpec.FindParameter(ref->name())};
+      const auto *thatValue{thatSpec.FindParameter(ref->name())};
+      if (!thisValue || !thatValue || *thisValue != *thatValue) {
+        return false;
+      }
     }
   }
-  return true;
+  if (const DerivedTypeSpec *
+      parent{typeSymbol.GetParentTypeSpec(typeSymbol.scope())}) {
+    return MatchKindParams(parent->typeSymbol(), thisSpec, thatSpec);
+  } else {
+    return true;
+  }
+}
+
+bool DerivedTypeSpec::MatchesOrExtends(const DerivedTypeSpec &that) const {
+  const Symbol *typeSymbol{&typeSymbol_};
+  while (typeSymbol != &that.typeSymbol_) {
+    if (const DerivedTypeSpec *
+        parent{typeSymbol->GetParentTypeSpec(typeSymbol->scope())}) {
+      typeSymbol = &parent->typeSymbol_;
+    } else {
+      return false;
+    }
+  }
+  return MatchKindParams(*typeSymbol, *this, that);
 }
 
 class InstantiateHelper {

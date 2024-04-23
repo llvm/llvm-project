@@ -16,10 +16,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-#include <tuple>
 #include <array>
-#include <type_traits>
 #include <cassert>
+#include <tuple>
+#include <utility>
 
 #include "test_macros.h"
 

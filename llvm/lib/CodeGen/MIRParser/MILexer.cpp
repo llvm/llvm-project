@@ -213,6 +213,8 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("nuw", MIToken::kw_nuw)
       .Case("nsw", MIToken::kw_nsw)
       .Case("exact", MIToken::kw_exact)
+      .Case("nneg", MIToken::kw_nneg)
+      .Case("disjoint", MIToken::kw_disjoint)
       .Case("nofpexcept", MIToken::kw_nofpexcept)
       .Case("unpredictable", MIToken::kw_unpredictable)
       .Case("debug-location", MIToken::kw_debug_location)

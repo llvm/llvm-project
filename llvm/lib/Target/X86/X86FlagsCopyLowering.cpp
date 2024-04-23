@@ -604,7 +604,8 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
         }
 
         // Otherwise we can just rewrite in-place.
-        if (X86::getCondFromCMov(MI) != X86::COND_INVALID) {
+        if (X86::getCondFromCMov(MI) != X86::COND_INVALID ||
+            X86::getCondFromCFCMov(MI) != X86::COND_INVALID) {
           rewriteCMov(*TestMBB, TestPos, TestLoc, MI, *FlagUse, CondRegs);
         } else if (getCondFromFCMOV(MI.getOpcode()) != X86::COND_INVALID) {
           rewriteFCMov(*TestMBB, TestPos, TestLoc, MI, *FlagUse, CondRegs);
@@ -829,7 +830,9 @@ void X86FlagsCopyLoweringPass::rewriteCMov(MachineBasicBlock &TestMBB,
                                            MachineOperand &FlagUse,
                                            CondRegArray &CondRegs) {
   // First get the register containing this specific condition.
-  X86::CondCode Cond = X86::getCondFromCMov(CMovI);
+  X86::CondCode Cond = X86::getCondFromCMov(CMovI) == X86::COND_INVALID
+                           ? X86::getCondFromCFCMov(CMovI)
+                           : X86::getCondFromCMov(CMovI);
   unsigned CondReg;
   bool Inverted;
   std::tie(CondReg, Inverted) =

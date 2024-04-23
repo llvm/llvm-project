@@ -937,7 +937,7 @@ class MapAnyOfMatcherDescriptor : public MatcherDescriptor {
 public:
   MapAnyOfMatcherDescriptor(ASTNodeKind CladeNodeKind,
                             std::vector<ASTNodeKind> NodeKinds)
-      : CladeNodeKind(CladeNodeKind), NodeKinds(NodeKinds) {}
+      : CladeNodeKind(CladeNodeKind), NodeKinds(std::move(NodeKinds)) {}
 
   VariantMatcher create(SourceRange NameRange, ArrayRef<ParserValue> Args,
                         Diagnostics *Error) const override {
@@ -1026,7 +1026,7 @@ public:
     }
 
     return std::make_unique<MapAnyOfMatcherDescriptor>(CladeNodeKind,
-                                                       NodeKinds);
+                                                       std::move(NodeKinds));
   }
 
   bool isVariadic() const override { return true; }

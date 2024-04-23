@@ -188,8 +188,10 @@ public:
   const BBAddrMap &getAddrMap() const { return AddrMap; }
 
   // Returns the PGO string associated with the entry of index `PGOBBEntryIndex`
-  // in `PGOMap`.
-  std::string constructPGOLabelString(size_t PGOBBEntryIndex) const {
+  // in `PGOMap`. If PrettyPGOAnalysis is true, prints BFI as relative frequency
+  // and BPI as percentage. Otherwise raw values are displayed.
+  std::string constructPGOLabelString(size_t PGOBBEntryIndex,
+                                      bool PrettyPGOAnalysis) const {
     if (!PGOMap.FeatEnable.hasPGOAnalysis())
       return "";
     std::string PGOString;
@@ -211,7 +213,12 @@ public:
           PGOMap.BBEntries[PGOBBEntryIndex];
 
       if (PGOMap.FeatEnable.BBFreq) {
-        PGOSS << "Frequency: " << Twine(PGOBBEntry.BlockFreq.getFrequency());
+        PGOSS << "Frequency: ";
+        if (PrettyPGOAnalysis)
+          printRelativeBlockFreq(PGOSS, PGOMap.BBEntries.front().BlockFreq,
+                                 PGOBBEntry.BlockFreq);
+        else
+          PGOSS << Twine(PGOBBEntry.BlockFreq.getFrequency());
         if (PGOMap.FeatEnable.BrProb && PGOBBEntry.Successors.size() > 0) {
           PGOSS << ", ";
         }
@@ -220,9 +227,12 @@ public:
         PGOSS << "Successors: ";
         interleaveComma(
             PGOBBEntry.Successors, PGOSS,
-            [&PGOSS](const PGOAnalysisMap::PGOBBEntry::SuccessorEntry &SE) {
+            [&](const PGOAnalysisMap::PGOBBEntry::SuccessorEntry &SE) {
               PGOSS << "BB" << SE.ID << ":";
-              PGOSS.write_hex(SE.Prob.getNumerator());
+              if (PrettyPGOAnalysis)
+                PGOSS << "[" << SE.Prob << "]";
+              else
+                PGOSS.write_hex(SE.Prob.getNumerator());
             });
       }
     }
@@ -331,6 +341,7 @@ static bool HasStopAddressFlag;
 
 bool objdump::SymbolTable;
 static bool SymbolizeOperands;
+static bool PrettyPGOAnalysisMap;
 static bool DynamicSymbolTable;
 std::string objdump::TripleName;
 bool objdump::UnwindInfo;
@@ -1410,8 +1421,8 @@ static void collectBBAddrMapLabels(
 
     std::string LabelString = ("BB" + Twine(BBEntry.ID)).str();
     Labels[BBAddress].push_back(
-        {LabelString,
-         FunctionMap->constructPGOLabelString(NumBBEntriesBeforeRange + I)});
+        {LabelString, FunctionMap->constructPGOLabelString(
+                          NumBBEntriesBeforeRange + I, PrettyPGOAnalysisMap)});
   }
 }
 
@@ -2040,41 +2051,46 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       for (size_t SHI = 0; SHI < SymbolsHere.size(); ++SHI) {
         SymbolInfoTy Symbol = SymbolsHere[SHI];
 
-        auto Status = DT->DisAsm->onSymbolStart(
-            Symbol, Size, Bytes.slice(Start, End - Start), SectionAddr + Start,
-            CommentStream);
+        Expected<bool> RespondedOrErr = DT->DisAsm->onSymbolStart(
+            Symbol, Size, Bytes.slice(Start, End - Start), SectionAddr + Start);
 
-        if (!Status) {
-          // If onSymbolStart returns std::nullopt, that means it didn't trigger
-          // any interesting handling for this symbol. Try the other symbols
-          // defined at this address.
+        if (RespondedOrErr && !*RespondedOrErr) {
+          // This symbol didn't trigger any interesting handling. Try the other
+          // symbols defined at this address.
           continue;
         }
 
-        if (*Status == MCDisassembler::Fail) {
-          // If onSymbolStart returns Fail, that means it identified some kind
-          // of special data at this address, but wasn't able to disassemble it
-          // meaningfully. So we fall back to disassembling the failed region
-          // as bytes, assuming that the target detected the failure before
-          // printing anything.
-          //
-          // Return values Success or SoftFail (i.e no 'real' failure) are
-          // expected to mean that the target has emitted its own output.
-          //
-          // Either way, 'Size' will have been set to the amount of data
-          // covered by whatever prologue the target identified. So we advance
-          // our own position to beyond that. Sometimes that will be the entire
-          // distance to the next symbol, and sometimes it will be just a
-          // prologue and we should start disassembling instructions from where
-          // it left off.
-          outs() << DT->Context->getAsmInfo()->getCommentString()
-                 << " error in decoding " << SymNamesHere[SHI]
-                 << " : decoding failed region as bytes.\n";
-          for (uint64_t I = 0; I < Size; ++I) {
-            outs() << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
-                   << "\n";
+        // If onSymbolStart returned an Error, that means it identified some
+        // kind of special data at this address, but wasn't able to disassemble
+        // it meaningfully. So we fall back to printing the error out and
+        // disassembling the failed region as bytes, assuming that the target
+        // detected the failure before printing anything.
+        if (!RespondedOrErr) {
+          std::string ErrMsgStr = toString(RespondedOrErr.takeError());
+          StringRef ErrMsg = ErrMsgStr;
+          do {
+            StringRef Line;
+            std::tie(Line, ErrMsg) = ErrMsg.split('\n');
+            outs() << DT->Context->getAsmInfo()->getCommentString()
+                   << " error decoding " << SymNamesHere[SHI] << ": " << Line
+                   << '\n';
+          } while (!ErrMsg.empty());
+
+          if (Size) {
+            outs() << DT->Context->getAsmInfo()->getCommentString()
+                   << " decoding failed region as bytes\n";
+            for (uint64_t I = 0; I < Size; ++I)
+              outs() << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
+                     << '\n';
           }
         }
+
+        // Regardless of whether onSymbolStart returned an Error or true, 'Size'
+        // will have been set to the amount of data covered by whatever prologue
+        // the target identified. So we advance our own position to beyond that.
+        // Sometimes that will be the entire distance to the next symbol, and
+        // sometimes it will be just a prologue and we should start
+        // disassembling instructions from where it left off.
         Start += Size;
         break;
       }
@@ -2103,13 +2119,6 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           (*Symbols[SI - 1].XCOFFSymInfo.StorageMappingClass == XCOFF::XMC_PR);
 
       formatted_raw_ostream FOS(outs());
-
-      // FIXME: Workaround for bug in formatted_raw_ostream. Color escape codes
-      // are (incorrectly) written directly to the unbuffered raw_ostream
-      // wrapped by the formatted_raw_ostream.
-      if (DisassemblyColor == ColorOutput::Enable ||
-          DisassemblyColor == ColorOutput::Auto)
-        FOS.SetUnbuffered();
 
       std::unordered_map<uint64_t, std::string> AllLabels;
       std::unordered_map<uint64_t, std::vector<BBAddrMapLabel>> BBAddrMapLabels;
@@ -3473,6 +3482,10 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   HasStopAddressFlag = InputArgs.hasArg(OBJDUMP_stop_address_EQ);
   SymbolTable = InputArgs.hasArg(OBJDUMP_syms);
   SymbolizeOperands = InputArgs.hasArg(OBJDUMP_symbolize_operands);
+  PrettyPGOAnalysisMap = InputArgs.hasArg(OBJDUMP_pretty_pgo_analysis_map);
+  if (PrettyPGOAnalysisMap && !SymbolizeOperands)
+    reportCmdLineWarning("--symbolize-operands must be enabled for "
+                         "--pretty-pgo-analysis-map to have an effect");
   DynamicSymbolTable = InputArgs.hasArg(OBJDUMP_dynamic_syms);
   TripleName = InputArgs.getLastArgValue(OBJDUMP_triple_EQ).str();
   UnwindInfo = InputArgs.hasArg(OBJDUMP_unwind_info);

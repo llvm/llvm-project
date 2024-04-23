@@ -503,18 +503,20 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       Exec, CmdArgs, Inputs, Output));
 }
 
-static bool shouldIncludePTX(const ArgList &Args, const char *gpu_arch) {
-  bool includePTX = true;
-  for (Arg *A : Args) {
-    if (!(A->getOption().matches(options::OPT_cuda_include_ptx_EQ) ||
-          A->getOption().matches(options::OPT_no_cuda_include_ptx_EQ)))
-      continue;
+static bool shouldIncludePTX(const ArgList &Args, StringRef InputArch) {
+  // The new driver does not include PTX by default to avoid overhead.
+  bool includePTX = !Args.hasFlag(options::OPT_offload_new_driver,
+                                  options::OPT_no_offload_new_driver, false);
+  for (Arg *A : Args.filtered(options::OPT_cuda_include_ptx_EQ,
+                              options::OPT_no_cuda_include_ptx_EQ)) {
     A->claim();
     const StringRef ArchStr = A->getValue();
-    if (ArchStr == "all" || ArchStr == gpu_arch) {
-      includePTX = A->getOption().matches(options::OPT_cuda_include_ptx_EQ);
-      continue;
-    }
+    if (A->getOption().matches(options::OPT_cuda_include_ptx_EQ) &&
+        (ArchStr == "all" || ArchStr == InputArch))
+      includePTX = true;
+    else if (A->getOption().matches(options::OPT_no_cuda_include_ptx_EQ) &&
+             (ArchStr == "all" || ArchStr == InputArch))
+      includePTX = false;
   }
   return includePTX;
 }
@@ -608,6 +610,10 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add paths specified in LIBRARY_PATH environment variable as -L options.
   addDirectoryList(Args, CmdArgs, "-L", "LIBRARY_PATH");
+
+  // Add standard library search paths passed on the command line.
+  Args.AddAllArgs(CmdArgs, options::OPT_L);
+  getToolChain().AddFilePathLibArgs(Args, CmdArgs);
 
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =
@@ -744,10 +750,12 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     if (!llvm::is_contained(*DAL, A))
       DAL->append(A);
 
-  // TODO: We should accept 'generic' as a valid architecture.
   if (!DAL->hasArg(options::OPT_march_EQ) && OffloadKind != Action::OFK_None) {
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
                       CudaArchToString(CudaArch::CudaDefault));
+  } else if (DAL->getLastArgValue(options::OPT_march_EQ) == "generic" &&
+             OffloadKind == Action::OFK_None) {
+    DAL->eraseArg(options::OPT_march_EQ);
   } else if (DAL->getLastArgValue(options::OPT_march_EQ) == "native") {
     auto GPUsOrErr = getSystemGPUArchs(Args);
     if (!GPUsOrErr) {
@@ -899,7 +907,7 @@ void CudaToolChain::addClangTargetOptions(
       return;
 
     addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, GpuArch.str(),
-                       getTriple());
+                       getTriple(), HostTC);
   }
 }
 
@@ -982,7 +990,10 @@ CudaToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   }
 
   for (Arg *A : Args) {
-    DAL->append(A);
+    // Make sure flags are not duplicated.
+    if (!llvm::is_contained(*DAL, A)) {
+      DAL->append(A);
+    }
   }
 
   if (!BoundArch.empty()) {

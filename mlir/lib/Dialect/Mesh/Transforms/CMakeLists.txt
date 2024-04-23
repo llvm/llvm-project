@@ -17,7 +17,9 @@ add_mlir_dialect_library(MLIRMeshTransforms
   MLIRArithDialect
   MLIRArithUtils
   MLIRControlFlowDialect
+  MLIRControlFlowInterfaces
   MLIRFuncDialect
+  MLIRFunctionInterfaces
   MLIRIR
   MLIRMeshDialect
   MLIRPass

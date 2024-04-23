@@ -20,7 +20,7 @@
 #include "deltas/ReduceAttributes.h"
 #include "deltas/ReduceBasicBlocks.h"
 #include "deltas/ReduceDIMetadata.h"
-#include "deltas/ReduceDPValues.h"
+#include "deltas/ReduceDbgRecords.h"
 #include "deltas/ReduceFunctionBodies.h"
 #include "deltas/ReduceFunctions.h"
 #include "deltas/ReduceGlobalObjects.h"

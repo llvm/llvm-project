@@ -14,9 +14,12 @@
 #include "flang/Evaluate/expression.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/BuiltinModules.h"
+#include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/StatementContext.h"
+#include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -380,10 +383,21 @@ static mlir::Value genStructureComponentInit(
   }
 
   if (Fortran::semantics::IsPointer(sym)) {
-    if (Fortran::semantics::IsProcedure(sym))
-      TODO(loc, "procedure pointer component initial value");
-    mlir::Value initialTarget =
-        Fortran::lower::genInitialDataTarget(converter, loc, componentTy, expr);
+    mlir::Value initialTarget;
+    if (Fortran::semantics::IsProcedure(sym)) {
+      if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(expr))
+        initialTarget =
+            fir::factory::createNullBoxProc(builder, loc, componentTy);
+      else {
+        Fortran::lower::SymMap globalOpSymMap;
+        Fortran::lower::StatementContext stmtCtx;
+        auto box{getBase(Fortran::lower::convertExprToAddress(
+            loc, converter, expr, globalOpSymMap, stmtCtx))};
+        initialTarget = builder.createConvert(loc, componentTy, box);
+      }
+    } else
+      initialTarget = Fortran::lower::genInitialDataTarget(converter, loc,
+                                                           componentTy, expr);
     res = builder.create<fir::InsertValueOp>(
         loc, recTy, res, initialTarget,
         builder.getArrayAttr(field.getAttributes()));

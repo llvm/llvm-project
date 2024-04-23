@@ -64,7 +64,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVDisassembler() {
 static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, uint32_t RegNo,
                                            uint64_t Address,
                                            const MCDisassembler *Decoder) {
-  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureRVE);
+  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
 
   if (RegNo >= 32 || (IsRVE && RegNo >= 16))
     return MCDisassembler::Fail;
@@ -595,6 +595,14 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     TRY_TO_DECODE_FEATURE(
         RISCV::FeatureVendorXSfvfnrclipxfqf, DecoderTableXSfvfnrclipxfqf32,
         "SiFive FP32-to-int8 Ranged Clip Instructions opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSiFivecdiscarddlone,
+                          DecoderTableXSiFivecdiscarddlone32,
+                          "SiFive sf.cdiscard.d.l1 custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSiFivecflushdlone,
+                          DecoderTableXSiFivecflushdlone32,
+                          "SiFive sf.cflush.d.l1 custom opcode table");
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSfcease, DecoderTableXSfcease32,
+                          "SiFive sf.cease custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbitmanip,
                           DecoderTableXCVbitmanip32,
                           "CORE-V Bit Manipulation custom opcode table");

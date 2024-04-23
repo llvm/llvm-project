@@ -91,8 +91,6 @@ define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
-
-; CHECK-NOT: vector.body:
 ;
 entry:
   br label %loop
