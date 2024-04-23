@@ -152,16 +152,15 @@ PPC_LNX_CPU("power10",47)
   #define SYS_CALL 3
 #endif
 
-// The value of SUPPORT_METHOD can be AIX_BUILTIN_PPC_TRUE,
-// AIX_BUILTIN_PPC_FALSE, USE_SYS_CONF, SYS_CALL.
-// When the value of SUPPORT_METHOD is set to USE_SYS_CONF, the return value
-// depends on comparing VALUE with the specified data member of
-// _system_configuration at INDEX, where the data member is masked by Mask.
-// When the SUPPORT_METHOD value is set to SYS_CALL, the return value depends
-// on comparing a VALUE with the return value of calling `getsystemcfg`
-//  with the parameter INDEX, which is then masked by Mask.
-// AIX_BUILTIN_PPC_TRUE and AIX_BUILTIN_PPC_FALSE are for features
-// that are supported or unsupported on all systems respectively.
+// The value of SUPPORT_METHOD can be:
+//   AIX_BUILTIN_PPC_TRUE : feature supported
+//   AIX_BUILTIN_PPC_FALSE : feature not supported
+//   USE_SYS_CONF : return value depends on comparing VALUE with the specified
+//                  data member of _system_configuration at INDEX, where the
+//                  data member is masked by Mask.
+//   SYS_CALL : return value depends on comparing a VALUE with the return value
+//              of calling `getsystemcfg` with the parameter INDEX, which is
+//              then masked by Mask.
 
 #ifndef PPC_AIX_CPU
   #define PPC_AIX_CPU(NAME, SUPPORT_METHOD, INDEX, COMPARE_OP, VALUE)
