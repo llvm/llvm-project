@@ -470,17 +470,19 @@ static uint64_t writeMemProfRecords(
 // Serialize MemProfFrameData.  Return FrameTableOffset.
 static uint64_t writeMemProfFrames(
     ProfOStream &OS,
-    llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData) {
+    llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData,
+    memprof::IndexedVersion Version) {
+  memprof::FrameWriterTrait FrameWriter(Version);
   OnDiskChainedHashTableGenerator<memprof::FrameWriterTrait>
       FrameTableGenerator;
   for (auto &[FrameId, Frame] : MemProfFrameData) {
     // Insert the key (frame id) and value (frame contents).
-    FrameTableGenerator.insert(FrameId, Frame);
+    FrameTableGenerator.insert(FrameId, Frame, FrameWriter);
   }
   // Release the memory of this MapVector as it is no longer needed.
   MemProfFrameData.clear();
 
-  return FrameTableGenerator.Emit(OS.OS);
+  return FrameTableGenerator.Emit(OS.OS, FrameWriter);
 }
 
 static uint64_t writeMemProfCallStacks(
@@ -514,7 +516,8 @@ static Error writeMemProfV0(
       writeMemProfRecords(OS, MemProfRecordData, &Schema, memprof::Version0);
 
   uint64_t FramePayloadOffset = OS.tell();
-  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfFrameData);
+  uint64_t FrameTableOffset =
+      writeMemProfFrames(OS, MemProfFrameData, memprof::Version0);
 
   uint64_t Header[] = {RecordTableOffset, FramePayloadOffset, FrameTableOffset};
   OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
@@ -540,7 +543,8 @@ static Error writeMemProfV1(
       writeMemProfRecords(OS, MemProfRecordData, &Schema, memprof::Version1);
 
   uint64_t FramePayloadOffset = OS.tell();
-  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfFrameData);
+  uint64_t FrameTableOffset =
+      writeMemProfFrames(OS, MemProfFrameData, memprof::Version1);
 
   uint64_t Header[] = {RecordTableOffset, FramePayloadOffset, FrameTableOffset};
   OS.patch({{HeaderUpdatePos, Header, std::size(Header)}});
@@ -570,7 +574,8 @@ static Error writeMemProfV2(
       writeMemProfRecords(OS, MemProfRecordData, &Schema, memprof::Version2);
 
   uint64_t FramePayloadOffset = OS.tell();
-  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfFrameData);
+  uint64_t FrameTableOffset =
+      writeMemProfFrames(OS, MemProfFrameData, memprof::Version2);
 
   uint64_t CallStackPayloadOffset = OS.tell();
   uint64_t CallStackTableOffset =

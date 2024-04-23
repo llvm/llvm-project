@@ -578,14 +578,21 @@ public:
 
   static hash_value_type ComputeHash(key_type_ref K) { return K; }
 
-  static std::pair<offset_type, offset_type>
+  FrameWriterTrait() = delete;
+  FrameWriterTrait(IndexedVersion Version) : Version(Version) {}
+
+  std::pair<offset_type, offset_type>
   EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
     using namespace support;
     endian::Writer LE(Out, llvm::endianness::little);
     offset_type N = sizeof(K);
-    LE.write<offset_type>(N);
-    offset_type M = V.serializedSize();
-    LE.write<offset_type>(M);
+    offset_type M = Frame::serializedSize();
+    // Starting with Version2, we do not explicitly emit the key/data lengths
+    // because they are constants.
+    if (Version < Version2) {
+      LE.write<offset_type>(N);
+      LE.write<offset_type>(M);
+    }
     return std::make_pair(N, M);
   }
 
@@ -599,6 +606,10 @@ public:
                 offset_type /*Unused*/) {
     V.serialize(Out);
   }
+
+private:
+  // Holds the MemProf version.
+  IndexedVersion Version;
 };
 
 // Trait for reading frame mappings from the on-disk hash table.
@@ -610,6 +621,9 @@ public:
   using hash_value_type = FrameId;
   using offset_type = uint64_t;
 
+  FrameLookupTrait() = delete;
+  FrameLookupTrait(IndexedVersion Version) : Version(Version) {}
+
   static bool EqualKey(internal_key_type A, internal_key_type B) {
     return A == B;
   }
@@ -618,14 +632,18 @@ public:
 
   hash_value_type ComputeHash(internal_key_type K) { return K; }
 
-  static std::pair<offset_type, offset_type>
+  std::pair<offset_type, offset_type>
   ReadKeyDataLength(const unsigned char *&D) {
     using namespace support;
 
     offset_type KeyLen =
-        endian::readNext<offset_type, llvm::endianness::little>(D);
+        Version < Version2
+            ? endian::readNext<offset_type, llvm::endianness::little>(D)
+            : sizeof(FrameId);
     offset_type DataLen =
-        endian::readNext<offset_type, llvm::endianness::little>(D);
+        Version < Version2
+            ? endian::readNext<offset_type, llvm::endianness::little>(D)
+            : Frame::serializedSize();
     return std::make_pair(KeyLen, DataLen);
   }
 
@@ -638,6 +656,10 @@ public:
                      offset_type /*Unused*/) {
     return Frame::deserialize(D);
   }
+
+private:
+  // Holds the MemProf version.
+  IndexedVersion Version;
 };
 
 // Trait for writing call stacks to the on-disk hash table.

@@ -1272,7 +1272,7 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
   MemProfFrameTable.reset(MemProfFrameHashTable::Create(
       /*Buckets=*/Start + FrameTableOffset,
       /*Payload=*/Start + FramePayloadOffset,
-      /*Base=*/Start));
+      /*Base=*/Start, memprof::FrameLookupTrait(Version)));
 
   if (Version >= memprof::Version2)
     MemProfCallStackTable.reset(MemProfCallStackHashTable::Create(
