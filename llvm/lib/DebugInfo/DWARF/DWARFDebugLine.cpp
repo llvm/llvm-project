@@ -389,9 +389,25 @@ Error DWARFDebugLine::Prologue::parse(
 
   if (getVersion() >= 5) {
     FormParams.AddrSize = DebugLineData.getU8(Cursor);
-    assert((!Cursor || DebugLineData.getAddressSize() == 0 ||
-            DebugLineData.getAddressSize() == getAddressSize()) &&
-           "Line table header and data extractor disagree");
+    const uint8_t DataAddrSize = DebugLineData.getAddressSize();
+    const uint8_t PrologueAddrSize = getAddressSize();
+    if (Cursor) {
+      if (DataAddrSize == 0) {
+        if (PrologueAddrSize != 4 && PrologueAddrSize != 8) {
+          RecoverableErrorHandler(createStringError(
+              errc::not_supported,
+              "parsing line table prologue at offset 0x%8.8" PRIx64
+              ": invalid address size %" PRIu8,
+              PrologueOffset, PrologueAddrSize));
+        }
+      } else if (DataAddrSize != PrologueAddrSize) {
+        RecoverableErrorHandler(createStringError(
+            errc::not_supported,
+            "parsing line table prologue at offset 0x%8.8" PRIx64 ": address "
+            "size %" PRIu8 " doesn't match architecture address size %" PRIu8,
+            PrologueOffset, PrologueAddrSize, DataAddrSize));
+      }
+    }
     SegSelectorSize = DebugLineData.getU8(Cursor);
   }
 
@@ -1370,9 +1386,10 @@ bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
       FirstRowIndex = findRowInSeq(CurSeq, Address);
 
     // Figure out the last row in the range.
+    // end_sequence tags can be at EndAddr
     uint32_t LastRowIndex =
-        findRowInSeq(CurSeq, {EndAddr - 1, Address.SectionIndex});
-    if (LastRowIndex == UnknownRowIndex)
+        findRowInSeq(CurSeq, {EndAddr, Address.SectionIndex});
+    if (LastRowIndex == UnknownRowIndex || !Rows[LastRowIndex].EndSequence)
       LastRowIndex = CurSeq.LastRowIndex - 1;
 
     assert(FirstRowIndex != UnknownRowIndex);
@@ -1456,7 +1473,7 @@ bool DWARFDebugLine::Prologue::getFileNameByIndex(
 
   // sys::path::append skips empty strings.
   sys::path::append(FilePath, Style, IncludeDir, FileName);
-  Result = std::string(FilePath.str());
+  Result = std::string(FilePath);
   return true;
 }
 

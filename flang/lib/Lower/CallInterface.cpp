@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/CallInterface.h"
+#include "flang/Common/Fortran.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/Mangler.h"
@@ -19,6 +20,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include <optional>
@@ -87,6 +89,11 @@ bool Fortran::lower::CallerInterface::isIndirectCall() const {
 }
 
 bool Fortran::lower::CallerInterface::requireDispatchCall() const {
+  // Procedure pointer component reference do not require dispatch, but
+  // have PASS/NOPASS argument.
+  if (const Fortran::semantics::Symbol *sym = procRef.proc().GetSymbol())
+    if (Fortran::semantics::IsPointer(*sym))
+      return false;
   // calls with NOPASS attribute still have their component so check if it is
   // polymorphic.
   if (const Fortran::evaluate::Component *component =
@@ -127,12 +134,21 @@ Fortran::lower::CallerInterface::getPassArgIndex() const {
   return passArg;
 }
 
-const Fortran::semantics::Symbol *
-Fortran::lower::CallerInterface::getIfIndirectCallSymbol() const {
+mlir::Value Fortran::lower::CallerInterface::getIfPassedArg() const {
+  if (std::optional<unsigned> passArg = getPassArgIndex()) {
+    assert(actualInputs.size() > *passArg && actualInputs[*passArg] &&
+           "passed arg was not set yet");
+    return actualInputs[*passArg];
+  }
+  return {};
+}
+
+const Fortran::evaluate::ProcedureDesignator *
+Fortran::lower::CallerInterface::getIfIndirectCall() const {
   if (const Fortran::semantics::Symbol *symbol = procRef.proc().GetSymbol())
     if (Fortran::semantics::IsPointer(*symbol) ||
         Fortran::semantics::IsDummy(*symbol))
-      return symbol;
+      return &procRef.proc();
   return nullptr;
 }
 
@@ -202,7 +218,7 @@ Fortran::lower::CallerInterface::characterize() const {
       converter.getFoldingContext();
   std::optional<Fortran::evaluate::characteristics::Procedure> characteristic =
       Fortran::evaluate::characteristics::Procedure::Characterize(
-          procRef.proc(), foldingContext);
+          procRef.proc(), foldingContext, /*emitError=*/false);
   assert(characteristic && "Failed to get characteristic from procRef");
   // The characteristic may not contain the argument characteristic if the
   // ProcedureDesignator has no interface, or may mismatch in case of implicit
@@ -294,21 +310,22 @@ bool Fortran::lower::CallerInterface::verifyActualInputs() const {
   return true;
 }
 
-void Fortran::lower::CallerInterface::walkResultLengths(
-    ExprVisitor visitor) const {
-  assert(characteristic && "characteristic was not computed");
-  const Fortran::evaluate::characteristics::FunctionResult &result =
-      characteristic->functionResult.value();
-  const Fortran::evaluate::characteristics::TypeAndShape *typeAndShape =
-      result.GetTypeAndShape();
-  assert(typeAndShape && "no result type");
-  Fortran::evaluate::DynamicType dynamicType = typeAndShape->type();
-  // Visit result length specification expressions that are explicit.
+mlir::Value
+Fortran::lower::CallerInterface::getInput(const PassedEntity &passedEntity) {
+  return actualInputs[passedEntity.firArgument];
+}
+
+static void walkLengths(
+    const Fortran::evaluate::characteristics::TypeAndShape &typeAndShape,
+    const Fortran::lower::CallerInterface::ExprVisitor &visitor,
+    Fortran::lower::AbstractConverter &converter) {
+  Fortran::evaluate::DynamicType dynamicType = typeAndShape.type();
+  // Visit length specification expressions that are explicit.
   if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
     if (std::optional<Fortran::evaluate::ExtentExpr> length =
             dynamicType.GetCharLength())
-      visitor(toEvExpr(*length));
-  } else if (dynamicType.category() == common::TypeCategory::Derived &&
+      visitor(toEvExpr(*length), /*assumedSize=*/false);
+  } else if (dynamicType.category() == Fortran::common::TypeCategory::Derived &&
              !dynamicType.IsUnlimitedPolymorphic()) {
     const Fortran::semantics::DerivedTypeSpec &derivedTypeSpec =
         dynamicType.GetDerivedTypeSpec();
@@ -318,11 +335,33 @@ void Fortran::lower::CallerInterface::walkResultLengths(
   }
 }
 
+void Fortran::lower::CallerInterface::walkResultLengths(
+    const ExprVisitor &visitor) const {
+  assert(characteristic && "characteristic was not computed");
+  const Fortran::evaluate::characteristics::FunctionResult &result =
+      characteristic->functionResult.value();
+  const Fortran::evaluate::characteristics::TypeAndShape *typeAndShape =
+      result.GetTypeAndShape();
+  assert(typeAndShape && "no result type");
+  return walkLengths(*typeAndShape, visitor, converter);
+}
+
+void Fortran::lower::CallerInterface::walkDummyArgumentLengths(
+    const PassedEntity &passedEntity, const ExprVisitor &visitor) const {
+  if (!passedEntity.characteristics)
+    return;
+  if (const auto *dummy =
+          std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
+              &passedEntity.characteristics->u))
+    walkLengths(dummy->type, visitor, converter);
+}
+
 // Compute extent expr from shapeSpec of an explicit shape.
-// TODO: Allow evaluate shape analysis to work in a mode where it disregards
-// the non-constant aspects when building the shape to avoid having this here.
 static Fortran::evaluate::ExtentExpr
 getExtentExpr(const Fortran::semantics::ShapeSpec &shapeSpec) {
+  if (shapeSpec.ubound().isStar())
+    // F'2023 18.5.3 point 5.
+    return Fortran::evaluate::ExtentExpr{-1};
   const auto &ubound = shapeSpec.ubound().GetExplicit();
   const auto &lbound = shapeSpec.lbound().GetExplicit();
   assert(lbound && ubound && "shape must be explicit");
@@ -330,20 +369,27 @@ getExtentExpr(const Fortran::semantics::ShapeSpec &shapeSpec) {
          Fortran::evaluate::ExtentExpr{1};
 }
 
+static void
+walkExtents(const Fortran::semantics::Symbol &symbol,
+            const Fortran::lower::CallerInterface::ExprVisitor &visitor) {
+  if (const auto *objectDetails =
+          symbol.detailsIf<Fortran::semantics::ObjectEntityDetails>())
+    if (objectDetails->shape().IsExplicitShape() ||
+        Fortran::semantics::IsAssumedSizeArray(symbol))
+      for (const Fortran::semantics::ShapeSpec &shapeSpec :
+           objectDetails->shape())
+        visitor(Fortran::evaluate::AsGenericExpr(getExtentExpr(shapeSpec)),
+                /*assumedSize=*/shapeSpec.ubound().isStar());
+}
+
 void Fortran::lower::CallerInterface::walkResultExtents(
-    ExprVisitor visitor) const {
+    const ExprVisitor &visitor) const {
   // Walk directly the result symbol shape (the characteristic shape may contain
   // descriptor inquiries to it that would fail to lower on the caller side).
   const Fortran::semantics::SubprogramDetails *interfaceDetails =
       getInterfaceDetails();
   if (interfaceDetails) {
-    const Fortran::semantics::Symbol &result = interfaceDetails->result();
-    if (const auto *objectDetails =
-            result.detailsIf<Fortran::semantics::ObjectEntityDetails>())
-      if (objectDetails->shape().IsExplicitShape())
-        for (const Fortran::semantics::ShapeSpec &shapeSpec :
-             objectDetails->shape())
-          visitor(Fortran::evaluate::AsGenericExpr(getExtentExpr(shapeSpec)));
+    walkExtents(interfaceDetails->result(), visitor);
   } else {
     if (procRef.Rank() != 0)
       fir::emitFatalError(
@@ -352,19 +398,41 @@ void Fortran::lower::CallerInterface::walkResultExtents(
   }
 }
 
-bool Fortran::lower::CallerInterface::mustMapInterfaceSymbols() const {
+void Fortran::lower::CallerInterface::walkDummyArgumentExtents(
+    const PassedEntity &passedEntity, const ExprVisitor &visitor) const {
+  const Fortran::semantics::SubprogramDetails *interfaceDetails =
+      getInterfaceDetails();
+  if (!interfaceDetails)
+    return;
+  const Fortran::semantics::Symbol *dummy = getDummySymbol(passedEntity);
+  assert(dummy && "dummy symbol was not set");
+  walkExtents(*dummy, visitor);
+}
+
+bool Fortran::lower::CallerInterface::mustMapInterfaceSymbolsForResult() const {
   assert(characteristic && "characteristic was not computed");
   const std::optional<Fortran::evaluate::characteristics::FunctionResult>
       &result = characteristic->functionResult;
   if (!result || result->CanBeReturnedViaImplicitInterface() ||
-      !getInterfaceDetails())
+      !getInterfaceDetails() || result->IsProcedurePointer())
     return false;
   bool allResultSpecExprConstant = true;
-  auto visitor = [&](const Fortran::lower::SomeExpr &e) {
+  auto visitor = [&](const Fortran::lower::SomeExpr &e, bool) {
     allResultSpecExprConstant &= Fortran::evaluate::IsConstantExpr(e);
   };
   walkResultLengths(visitor);
   walkResultExtents(visitor);
+  return !allResultSpecExprConstant;
+}
+
+bool Fortran::lower::CallerInterface::mustMapInterfaceSymbolsForDummyArgument(
+    const PassedEntity &arg) const {
+  bool allResultSpecExprConstant = true;
+  auto visitor = [&](const Fortran::lower::SomeExpr &e, bool) {
+    allResultSpecExprConstant &= Fortran::evaluate::IsConstantExpr(e);
+  };
+  walkDummyArgumentLengths(arg, visitor);
+  walkDummyArgumentExtents(arg, visitor);
   return !allResultSpecExprConstant;
 }
 
@@ -385,11 +453,34 @@ mlir::Value Fortran::lower::CallerInterface::getArgumentValue(
   return actualInputs[mlirArgIndex];
 }
 
+const Fortran::semantics::Symbol *
+Fortran::lower::CallerInterface::getDummySymbol(
+    const PassedEntity &passedEntity) const {
+  const Fortran::semantics::SubprogramDetails *ifaceDetails =
+      getInterfaceDetails();
+  if (!ifaceDetails)
+    return nullptr;
+  std::size_t argPosition = 0;
+  for (const auto &arg : getPassedArguments()) {
+    if (&arg == &passedEntity)
+      break;
+    ++argPosition;
+  }
+  if (argPosition >= ifaceDetails->dummyArgs().size())
+    return nullptr;
+  return ifaceDetails->dummyArgs()[argPosition];
+}
+
 mlir::Type Fortran::lower::CallerInterface::getResultStorageType() const {
   if (passedResult)
     return fir::dyn_cast_ptrEleTy(inputs[passedResult->firArgument].type);
   assert(saveResult && !outputs.empty());
   return outputs[0].type;
+}
+
+mlir::Type Fortran::lower::CallerInterface::getDummyArgumentType(
+    const PassedEntity &passedEntity) const {
+  return inputs[passedEntity.firArgument].type;
 }
 
 const Fortran::semantics::Symbol &
@@ -484,13 +575,6 @@ mlir::Value Fortran::lower::CalleeInterface::getHostAssociatedTuple() const {
   return converter.hostAssocTupleValue();
 }
 
-void Fortran::lower::CalleeInterface::setFuncAttrs(
-    mlir::func::FuncOp func) const {
-  if (funit.parentHasHostAssoc())
-    func->setAttr(fir::getInternalProcedureAttrName(),
-                  mlir::UnitAttr::get(func->getContext()));
-}
-
 //===----------------------------------------------------------------------===//
 // CallInterface implementation: this part is common to both caller and callee.
 //===----------------------------------------------------------------------===//
@@ -498,6 +582,34 @@ void Fortran::lower::CalleeInterface::setFuncAttrs(
 static void addSymbolAttribute(mlir::func::FuncOp func,
                                const Fortran::semantics::Symbol &sym,
                                mlir::MLIRContext &mlirContext) {
+  const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+  // The link between an internal procedure and its host procedure is lost
+  // in FIR if the host is BIND(C) since the internal mangling will not
+  // allow retrieving the host bind(C) name, and therefore func.func symbol.
+  // Preserve it as an attribute so that this can be later retrieved.
+  if (Fortran::semantics::ClassifyProcedure(ultimate) ==
+      Fortran::semantics::ProcedureDefinitionClass::Internal) {
+    if (ultimate.owner().kind() ==
+        Fortran::semantics::Scope::Kind::Subprogram) {
+      if (const Fortran::semantics::Symbol *hostProcedure =
+              ultimate.owner().symbol()) {
+        std::string hostName = Fortran::lower::mangle::mangleName(
+            *hostProcedure, /*keepExternalInScope=*/true);
+        func->setAttr(
+            fir::getHostSymbolAttrName(),
+            mlir::SymbolRefAttr::get(
+                &mlirContext, mlir::StringAttr::get(&mlirContext, hostName)));
+      }
+    } else if (ultimate.owner().kind() ==
+               Fortran::semantics::Scope::Kind::MainProgram) {
+      func->setAttr(fir::getHostSymbolAttrName(),
+                    mlir::SymbolRefAttr::get(
+                        &mlirContext,
+                        mlir::StringAttr::get(
+                            &mlirContext, fir::NameUniquer::doProgramEntry())));
+    }
+  }
+
   // Only add this on bind(C) functions for which the symbol is not reflected in
   // the current context.
   if (!Fortran::semantics::IsBindCProcedure(sym))
@@ -506,6 +618,57 @@ static void addSymbolAttribute(mlir::func::FuncOp func,
       Fortran::lower::mangle::mangleName(sym, /*keepExternalInScope=*/true);
   func->setAttr(fir::getSymbolAttrName(),
                 mlir::StringAttr::get(&mlirContext, name));
+}
+
+static void
+setCUDAAttributes(mlir::func::FuncOp func,
+                  const Fortran::semantics::Symbol *sym,
+                  std::optional<Fortran::evaluate::characteristics::Procedure>
+                      characteristic) {
+  if (characteristic && characteristic->cudaSubprogramAttrs) {
+    func.getOperation()->setAttr(
+        fir::getCUDAAttrName(),
+        fir::getCUDAProcAttribute(func.getContext(),
+                                  *characteristic->cudaSubprogramAttrs));
+  }
+
+  if (sym) {
+    if (auto details =
+            sym->GetUltimate()
+                .detailsIf<Fortran::semantics::SubprogramDetails>()) {
+      mlir::Type i64Ty = mlir::IntegerType::get(func.getContext(), 64);
+      if (!details->cudaLaunchBounds().empty()) {
+        assert(details->cudaLaunchBounds().size() >= 2 &&
+               "expect at least 2 values");
+        auto maxTPBAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[0]);
+        auto minBPMAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[1]);
+        mlir::IntegerAttr ubAttr;
+        if (details->cudaLaunchBounds().size() > 2)
+          ubAttr =
+              mlir::IntegerAttr::get(i64Ty, details->cudaLaunchBounds()[2]);
+        func.getOperation()->setAttr(
+            fir::getCUDALaunchBoundsAttrName(),
+            fir::CUDALaunchBoundsAttr::get(func.getContext(), maxTPBAttr,
+                                           minBPMAttr, ubAttr));
+      }
+
+      if (!details->cudaClusterDims().empty()) {
+        assert(details->cudaClusterDims().size() == 3 && "expect 3 values");
+        auto xAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[0]);
+        auto yAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[1]);
+        auto zAttr =
+            mlir::IntegerAttr::get(i64Ty, details->cudaClusterDims()[2]);
+        func.getOperation()->setAttr(
+            fir::getCUDAClusterDimsAttrName(),
+            fir::CUDAClusterDimsAttr::get(func.getContext(), xAttr, yAttr,
+                                          zAttr));
+      }
+    }
+  }
 }
 
 /// Declare drives the different actions to be performed while analyzing the
@@ -525,11 +688,13 @@ void Fortran::lower::CallInterface<T>::declare() {
   if (!side().isIndirectCall()) {
     std::string name = side().getMangledName();
     mlir::ModuleOp module = converter.getModuleOp();
-    func = fir::FirOpBuilder::getNamedFunction(module, name);
+    mlir::SymbolTable *symbolTable = converter.getMLIRSymbolTable();
+    func = fir::FirOpBuilder::getNamedFunction(module, symbolTable, name);
     if (!func) {
       mlir::Location loc = side().getCalleeLocation();
       mlir::FunctionType ty = genFunctionType();
-      func = fir::FirOpBuilder::createFunction(loc, module, name, ty);
+      func =
+          fir::FirOpBuilder::createFunction(loc, module, name, ty, symbolTable);
       if (const Fortran::semantics::Symbol *sym = side().getProcedureSymbol()) {
         if (side().isMainProgram()) {
           func->setAttr(fir::getSymbolAttrName(),
@@ -542,7 +707,8 @@ void Fortran::lower::CallInterface<T>::declare() {
       for (const auto &placeHolder : llvm::enumerate(inputs))
         if (!placeHolder.value().attributes.empty())
           func.setArgAttrs(placeHolder.index(), placeHolder.value().attributes);
-      side().setFuncAttrs(func);
+
+      setCUDAAttributes(func, side().getProcedureSymbol(), characteristic);
     }
   }
 }
@@ -774,9 +940,13 @@ private:
   void handleImplicitResult(
       const Fortran::evaluate::characteristics::FunctionResult &result,
       bool isBindC) {
-    if (result.IsProcedurePointer())
-      TODO(interface.converter.getCurrentLocation(),
-           "procedure pointer result not yet handled");
+    if (auto proc{result.IsProcedurePointer()}) {
+      mlir::Type mlirType = fir::BoxProcType::get(
+          &mlirContext, getProcedureType(*proc, interface.converter));
+      addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
+                   Property::Value);
+      return;
+    }
     const Fortran::evaluate::characteristics::TypeAndShape *typeAndShape =
         result.GetTypeAndShape();
     assert(typeAndShape && "expect type for non proc pointer result");
@@ -853,9 +1023,8 @@ private:
   getRefType(Fortran::evaluate::DynamicType dynamicType,
              const Fortran::evaluate::characteristics::DummyDataObject &obj) {
     mlir::Type type = translateDynamicType(dynamicType);
-    fir::SequenceType::Shape bounds = getBounds(obj.type.shape());
-    if (!bounds.empty())
-      type = fir::SequenceType::get(bounds, type);
+    if (std::optional<fir::SequenceType::Shape> bounds = getBounds(obj.type))
+      type = fir::SequenceType::get(*bounds, type);
     return fir::ReferenceType::get(type);
   }
 
@@ -898,42 +1067,11 @@ private:
     }
   }
 
-  // Define when an explicit argument must be passed in a fir.box.
-  bool dummyRequiresBox(
-      const Fortran::evaluate::characteristics::DummyDataObject &obj,
-      bool isBindC) {
-    using ShapeAttr = Fortran::evaluate::characteristics::TypeAndShape::Attr;
-    using ShapeAttrs = Fortran::evaluate::characteristics::TypeAndShape::Attrs;
-    constexpr ShapeAttrs shapeRequiringBox = {
-        ShapeAttr::AssumedShape, ShapeAttr::DeferredShape,
-        ShapeAttr::AssumedRank, ShapeAttr::Coarray};
-    if ((obj.type.attrs() & shapeRequiringBox).any())
-      // Need to pass shape/coshape info in fir.box.
-      return true;
-    if (obj.type.type().IsPolymorphic() && !obj.type.type().IsAssumedType())
-      // Need to pass dynamic type info in fir.box.
-      return true;
-    if (const Fortran::semantics::DerivedTypeSpec *derived =
-            Fortran::evaluate::GetDerivedTypeSpec(obj.type.type()))
-      if (const Fortran::semantics::Scope *scope = derived->scope())
-        // Need to pass length type parameters in fir.box if any.
-        return scope->IsDerivedTypeWithLengthParameter();
-    if (isBindC && obj.type.type().IsAssumedLengthCharacter())
-      return true; // Fortran 2018 18.3.6 point 2 (5)
-    return false;
-  }
-
   mlir::Type
   translateDynamicType(const Fortran::evaluate::DynamicType &dynamicType) {
     Fortran::common::TypeCategory cat = dynamicType.category();
     // DERIVED
     if (cat == Fortran::common::TypeCategory::Derived) {
-      // TODO is kept under experimental flag until feature is complete.
-      if (dynamicType.IsPolymorphic() &&
-          !getConverter().getLoweringOptions().getPolymorphicTypeImpl())
-        TODO(interface.converter.getCurrentLocation(),
-             "support for polymorphic types");
-
       if (dynamicType.IsUnlimitedPolymorphic())
         return mlir::NoneType::get(&mlirContext);
       return getConverter().genType(dynamicType.GetDerivedTypeSpec());
@@ -963,8 +1101,11 @@ private:
     };
     if (obj.attrs.test(Attrs::Optional))
       addMLIRAttr(fir::getOptionalAttrName());
-    if (obj.attrs.test(Attrs::Asynchronous))
-      TODO(loc, "ASYNCHRONOUS in procedure interface");
+    // Skipping obj.attrs.test(Attrs::Asynchronous), this does not impact the
+    // way the argument is passed given flang implement asynch IO synchronously.
+    // TODO: it would be safer to treat them as volatile because since Fortran
+    // 2018 asynchronous can also be used for C defined asynchronous user
+    // processes (see 18.10.4 Asynchronous communication).
     if (obj.attrs.test(Attrs::Contiguous))
       addMLIRAttr(fir::getContiguousAttrName());
     if (obj.attrs.test(Attrs::Value))
@@ -973,14 +1114,16 @@ private:
       TODO(loc, "VOLATILE in procedure interface");
     if (obj.attrs.test(Attrs::Target))
       addMLIRAttr(fir::getTargetAttrName());
+    if (obj.cudaDataAttr)
+      attrs.emplace_back(
+          mlir::StringAttr::get(&mlirContext, fir::getCUDAAttrName()),
+          fir::getCUDADataAttribute(&mlirContext, obj.cudaDataAttr));
 
     // TODO: intents that require special care (e.g finalization)
 
     using ShapeAttr = Fortran::evaluate::characteristics::TypeAndShape::Attr;
     const Fortran::evaluate::characteristics::TypeAndShape::Attrs &shapeAttrs =
         obj.type.attrs();
-    if (shapeAttrs.test(ShapeAttr::AssumedRank))
-      TODO(loc, "assumed rank in procedure interface");
     if (shapeAttrs.test(ShapeAttr::Coarray))
       TODO(loc, "coarray: dummy argument coarray in procedure interface");
 
@@ -989,9 +1132,8 @@ private:
 
     Fortran::evaluate::DynamicType dynamicType = obj.type.type();
     mlir::Type type = translateDynamicType(dynamicType);
-    fir::SequenceType::Shape bounds = getBounds(obj.type.shape());
-    if (!bounds.empty())
-      type = fir::SequenceType::get(bounds, type);
+    if (std::optional<fir::SequenceType::Shape> bounds = getBounds(obj.type))
+      type = fir::SequenceType::get(*bounds, type);
     if (obj.attrs.test(Attrs::Allocatable))
       type = fir::HeapType::get(type);
     if (obj.attrs.test(Attrs::Pointer))
@@ -1005,7 +1147,7 @@ private:
       addFirOperand(boxRefType, nextPassedArgPosition(), Property::MutableBox,
                     attrs);
       addPassedArg(PassEntityBy::MutableBox, entity, characteristics);
-    } else if (dummyRequiresBox(obj, isBindC)) {
+    } else if (obj.IsPassedByDescriptor(isBindC)) {
       // Pass as fir.box or fir.class
       if (isValueAttr &&
           !getConverter().getLoweringOptions().getLowerToHighLevelFIR())
@@ -1014,14 +1156,22 @@ private:
       addPassedArg(PassEntityBy::Box, entity, characteristics);
     } else if (dynamicType.category() ==
                Fortran::common::TypeCategory::Character) {
-      // Pass as fir.box_char
-      mlir::Type boxCharTy =
-          fir::BoxCharType::get(&mlirContext, dynamicType.kind());
-      addFirOperand(boxCharTy, nextPassedArgPosition(), Property::BoxChar,
-                    attrs);
-      addPassedArg(isValueAttr ? PassEntityBy::CharBoxValueAttribute
-                               : PassEntityBy::BoxChar,
-                   entity, characteristics);
+      if (isValueAttr && isBindC) {
+        // Pass as fir.char<1>
+        mlir::Type charTy =
+            fir::CharacterType::getSingleton(&mlirContext, dynamicType.kind());
+        addFirOperand(charTy, nextPassedArgPosition(), Property::Value, attrs);
+        addPassedArg(PassEntityBy::Value, entity, characteristics);
+      } else {
+        // Pass as fir.box_char
+        mlir::Type boxCharTy =
+            fir::BoxCharType::get(&mlirContext, dynamicType.kind());
+        addFirOperand(boxCharTy, nextPassedArgPosition(), Property::BoxChar,
+                      attrs);
+        addPassedArg(isValueAttr ? PassEntityBy::CharBoxValueAttribute
+                                 : PassEntityBy::BoxChar,
+                     entity, characteristics);
+      }
     } else {
       // Pass as fir.ref unless it's by VALUE and BIND(C). Also pass-by-value
       // for numerical/logical scalar without OPTIONAL so that the behavior is
@@ -1101,39 +1251,40 @@ private:
       const Fortran::evaluate::characteristics::FunctionResult &result) {
     using Attr = Fortran::evaluate::characteristics::FunctionResult::Attr;
     mlir::Type mlirType;
-    if (auto proc{result.IsProcedurePointer()})
+    if (auto proc{result.IsProcedurePointer()}) {
       mlirType = fir::BoxProcType::get(
           &mlirContext, getProcedureType(*proc, interface.converter));
-    else {
-      const Fortran::evaluate::characteristics::TypeAndShape *typeAndShape =
-          result.GetTypeAndShape();
-      assert(typeAndShape && "expect type for non proc pointer result");
-      mlirType = translateDynamicType(typeAndShape->type());
-      fir::SequenceType::Shape bounds = getBounds(typeAndShape->shape());
-      const auto *resTypeAndShape{result.GetTypeAndShape()};
-      bool resIsPolymorphic =
-          resTypeAndShape && resTypeAndShape->type().IsPolymorphic();
-      bool resIsAssumedType =
-          resTypeAndShape && resTypeAndShape->type().IsAssumedType();
-      if (!bounds.empty())
-        mlirType = fir::SequenceType::get(bounds, mlirType);
-      if (result.attrs.test(Attr::Allocatable))
-        mlirType = fir::wrapInClassOrBoxType(
-            fir::HeapType::get(mlirType), resIsPolymorphic, resIsAssumedType);
-      if (result.attrs.test(Attr::Pointer))
-        mlirType =
-            fir::wrapInClassOrBoxType(fir::PointerType::get(mlirType),
-                                      resIsPolymorphic, resIsAssumedType);
+      addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
+                   Property::Value);
+      return;
+    }
+    const Fortran::evaluate::characteristics::TypeAndShape *typeAndShape =
+        result.GetTypeAndShape();
+    assert(typeAndShape && "expect type for non proc pointer result");
+    mlirType = translateDynamicType(typeAndShape->type());
+    const auto *resTypeAndShape{result.GetTypeAndShape()};
+    bool resIsPolymorphic =
+        resTypeAndShape && resTypeAndShape->type().IsPolymorphic();
+    bool resIsAssumedType =
+        resTypeAndShape && resTypeAndShape->type().IsAssumedType();
+    if (std::optional<fir::SequenceType::Shape> bounds =
+            getBounds(*typeAndShape))
+      mlirType = fir::SequenceType::get(*bounds, mlirType);
+    if (result.attrs.test(Attr::Allocatable))
+      mlirType = fir::wrapInClassOrBoxType(fir::HeapType::get(mlirType),
+                                           resIsPolymorphic, resIsAssumedType);
+    if (result.attrs.test(Attr::Pointer))
+      mlirType = fir::wrapInClassOrBoxType(fir::PointerType::get(mlirType),
+                                           resIsPolymorphic, resIsAssumedType);
 
-      if (fir::isa_char(mlirType)) {
-        // Character scalar results must be passed as arguments in lowering so
-        // that an assumed length character function callee can access the
-        // result length. A function with a result requiring an explicit
-        // interface does not have to be compatible with assumed length
-        // function, but most compilers supports it.
-        handleImplicitCharacterResult(typeAndShape->type());
-        return;
-      }
+    if (fir::isa_char(mlirType)) {
+      // Character scalar results must be passed as arguments in lowering so
+      // that an assumed length character function callee can access the
+      // result length. A function with a result requiring an explicit
+      // interface does not have to be compatible with assumed length
+      // function, but most compilers supports it.
+      handleImplicitCharacterResult(typeAndShape->type());
+      return;
     }
 
     addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
@@ -1143,9 +1294,17 @@ private:
     setSaveResult();
   }
 
-  fir::SequenceType::Shape getBounds(const Fortran::evaluate::Shape &shape) {
+  // Return nullopt for scalars, empty vector for assumed rank, and a vector
+  // with the shape (may contain unknown extents) for arrays.
+  std::optional<fir::SequenceType::Shape> getBounds(
+      const Fortran::evaluate::characteristics::TypeAndShape &typeAndShape) {
+    using ShapeAttr = Fortran::evaluate::characteristics::TypeAndShape::Attr;
+    if (typeAndShape.shape().empty() &&
+        !typeAndShape.attrs().test(ShapeAttr::AssumedRank))
+      return std::nullopt;
     fir::SequenceType::Shape bounds;
-    for (const std::optional<Fortran::evaluate::ExtentExpr> &extent : shape) {
+    for (const std::optional<Fortran::evaluate::ExtentExpr> &extent :
+         typeAndShape.shape()) {
       fir::SequenceType::Extent bound = fir::SequenceType::getUnknownExtent();
       if (std::optional<std::int64_t> i = toInt64(extent))
         bound = *i;
@@ -1328,6 +1487,17 @@ bool Fortran::lower::CallInterface<
 }
 
 template <typename T>
+bool Fortran::lower::CallInterface<
+    T>::PassedEntity::isSequenceAssociatedDescriptor() const {
+  if (!characteristics || passBy != PassEntityBy::Box)
+    return false;
+  const auto *dummy =
+      std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
+          &characteristics->u);
+  return dummy && dummy->type.CanBeSequenceAssociated();
+}
+
+template <typename T>
 void Fortran::lower::CallInterface<T>::determineInterface(
     bool isImplicit,
     const Fortran::evaluate::characteristics::Procedure &procedure) {
@@ -1401,7 +1571,7 @@ public:
                    Fortran::lower::AbstractConverter &c)
       : CallInterface{c}, procDesignator{&procDes},
         proc{Fortran::evaluate::characteristics::Procedure::Characterize(
-                 procDes, converter.getFoldingContext())
+                 procDes, converter.getFoldingContext(), /*emitError=*/false)
                  .value()} {}
   /// Does the procedure characteristics being translated have alternate
   /// returns ?
@@ -1448,10 +1618,6 @@ public:
   getCallDescription() const {
     return proc;
   }
-
-  /// Set internal procedure attribute on MLIR function. Internal procedure
-  /// are defined in the current file and will not go through SignatureBuilder.
-  void setFuncAttrs(mlir::func::FuncOp) const {}
 
   /// This is not the description of an indirect call.
   static constexpr bool isIndirectCall() { return false; }
@@ -1504,7 +1670,8 @@ mlir::func::FuncOp Fortran::lower::getOrDeclareFunction(
     Fortran::lower::AbstractConverter &converter) {
   mlir::ModuleOp module = converter.getModuleOp();
   std::string name = getProcMangledName(proc, converter);
-  mlir::func::FuncOp func = fir::FirOpBuilder::getNamedFunction(module, name);
+  mlir::func::FuncOp func = fir::FirOpBuilder::getNamedFunction(
+      module, converter.getMLIRSymbolTable(), name);
   if (func)
     return func;
 
@@ -1529,7 +1696,7 @@ bool Fortran::lower::mustPassLengthWithDummyProcedure(
     Fortran::lower::AbstractConverter &converter) {
   std::optional<Fortran::evaluate::characteristics::Procedure> characteristics =
       Fortran::evaluate::characteristics::Procedure::Characterize(
-          procedure, converter.getFoldingContext());
+          procedure, converter.getFoldingContext(), /*emitError=*/false);
   return ::mustPassLengthWithDummyProcedure(characteristics);
 }
 

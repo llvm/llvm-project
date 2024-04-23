@@ -179,6 +179,27 @@ llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 
 // -----
 
+// CHECK-LABEL: define void @test_omp_parallel_attrs()
+llvm.func @test_omp_parallel_attrs() -> () attributes {
+  target_cpu = "x86-64",
+  target_features = #llvm.target_features<["+mmx", "+sse"]>
+} {
+  // CHECK: call void{{.*}}@__kmpc_fork_call{{.*}}@[[OMP_OUTLINED_FN:.*]])
+  omp.parallel {
+    omp.barrier
+    omp.terminator
+  }
+
+  llvm.return
+}
+
+// CHECK: define {{.*}} @[[OMP_OUTLINED_FN]]{{.*}} #[[ATTRS:[0-9]+]]
+// CHECK: attributes #[[ATTRS]] = {
+// CHECK-SAME: "target-cpu"="x86-64"
+// CHECK-SAME: "target-features"="+mmx,+sse"
+
+// -----
+
 // CHECK-LABEL: define void @test_omp_parallel_3()
 llvm.func @test_omp_parallel_3() -> () {
   // CHECK: [[OMP_THREAD_3_1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @{{[0-9]+}})
@@ -617,10 +638,10 @@ llvm.func @test_omp_wsloop_guided_simd(%lb : i64, %ub : i64, %step : i64) -> () 
 
 // -----
 
-// CHECK-LABEL: @simdloop_simple
-llvm.func @simdloop_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr) {
-  "omp.simdloop" (%lb, %ub, %step) ({
-    ^bb0(%iv: i64):
+// CHECK-LABEL: @simd_simple
+llvm.func @simd_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr) {
+  "omp.simd" () ({
+    omp.loop_nest (%iv) : i64 = (%lb) to (%ub) step (%step) {
       %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
       // The form of the emitted IR is controlled by OpenMPIRBuilder and
       // tested there. Just check that the right metadata is added.
@@ -628,8 +649,9 @@ llvm.func @simdloop_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr) 
       %4 = llvm.getelementptr %arg0[%iv] : (!llvm.ptr, i64) -> !llvm.ptr, f32
       llvm.store %3, %4 : f32, !llvm.ptr
       omp.yield
-  }) {operandSegmentSizes = array<i32: 1,1,1,0,0,0>} :
-    (i64, i64, i64) -> ()
+    }
+    "omp.terminator"() : () -> ()
+  }) : () -> ()
 
   llvm.return
 }
@@ -638,34 +660,36 @@ llvm.func @simdloop_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr) 
 
 // -----
 
-// CHECK-LABEL: @simdloop_simple_multiple
-llvm.func @simdloop_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr, %arg1: !llvm.ptr) {
-  omp.simdloop for (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
-    %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
-    // The form of the emitted IR is controlled by OpenMPIRBuilder and
-    // tested there. Just check that the right metadata is added and collapsed
-    // loop bound is generated (Collapse clause is represented as a loop with
-    // list of indices, bounds and steps where the size of the list is equal
-    // to the collapse value.)
-    // CHECK: icmp slt i64
-    // CHECK-COUNT-3: select
-    // CHECK: %[[TRIPCOUNT0:.*]] = select
-    // CHECK: br label %[[PREHEADER:.*]]
-    // CHECK: [[PREHEADER]]:
-    // CHECK: icmp slt i64
-    // CHECK-COUNT-3: select
-    // CHECK: %[[TRIPCOUNT1:.*]] = select
-    // CHECK: mul nuw i64 %[[TRIPCOUNT0]], %[[TRIPCOUNT1]]
-    // CHECK: br label %[[COLLAPSED_PREHEADER:.*]]
-    // CHECK: [[COLLAPSED_PREHEADER]]:
-    // CHECK: br label %[[COLLAPSED_HEADER:.*]]
-    // CHECK: llvm.access.group
-    // CHECK-NEXT: llvm.access.group
-    %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    llvm.store %3, %4 : f32, !llvm.ptr
-    llvm.store %3, %5 : f32, !llvm.ptr
-    omp.yield
+// CHECK-LABEL: @simd_simple_multiple
+llvm.func @simd_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr, %arg1: !llvm.ptr) {
+  omp.simd {
+    omp.loop_nest (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
+      %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
+      // The form of the emitted IR is controlled by OpenMPIRBuilder and
+      // tested there. Just check that the right metadata is added and collapsed
+      // loop bound is generated (Collapse clause is represented as a loop with
+      // list of indices, bounds and steps where the size of the list is equal
+      // to the collapse value.)
+      // CHECK: icmp slt i64
+      // CHECK-COUNT-3: select
+      // CHECK: %[[TRIPCOUNT0:.*]] = select
+      // CHECK: br label %[[PREHEADER:.*]]
+      // CHECK: [[PREHEADER]]:
+      // CHECK: icmp slt i64
+      // CHECK-COUNT-3: select
+      // CHECK: %[[TRIPCOUNT1:.*]] = select
+      // CHECK: mul nuw i64 %[[TRIPCOUNT0]], %[[TRIPCOUNT1]]
+      // CHECK: br label %[[COLLAPSED_PREHEADER:.*]]
+      // CHECK: [[COLLAPSED_PREHEADER]]:
+      // CHECK: br label %[[COLLAPSED_HEADER:.*]]
+      // CHECK: llvm.access.group
+      // CHECK-NEXT: llvm.access.group
+      %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+      %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+      llvm.store %3, %4 : f32, !llvm.ptr
+      llvm.store %3, %5 : f32, !llvm.ptr
+      omp.yield
+    }
   }
   llvm.return
 }
@@ -674,19 +698,21 @@ llvm.func @simdloop_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 :
 
 // -----
 
-// CHECK-LABEL: @simdloop_simple_multiple_simdlen
-llvm.func @simdloop_simple_multiple_simdlen(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr, %arg1: !llvm.ptr) {
-  omp.simdloop simdlen(2) for (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
-    %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
-    // The form of the emitted IR is controlled by OpenMPIRBuilder and
-    // tested there. Just check that the right metadata is added.
-    // CHECK: llvm.access.group
-    // CHECK-NEXT: llvm.access.group
-    %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    llvm.store %3, %4 : f32, !llvm.ptr
-    llvm.store %3, %5 : f32, !llvm.ptr
-    omp.yield
+// CHECK-LABEL: @simd_simple_multiple_simdlen
+llvm.func @simd_simple_multiple_simdlen(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr, %arg1: !llvm.ptr) {
+  omp.simd simdlen(2) {
+    omp.loop_nest (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
+      %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
+      // The form of the emitted IR is controlled by OpenMPIRBuilder and
+      // tested there. Just check that the right metadata is added.
+      // CHECK: llvm.access.group
+      // CHECK-NEXT: llvm.access.group
+      %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+      %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+      llvm.store %3, %4 : f32, !llvm.ptr
+      llvm.store %3, %5 : f32, !llvm.ptr
+      omp.yield
+    }
   }
   llvm.return
 }
@@ -696,15 +722,17 @@ llvm.func @simdloop_simple_multiple_simdlen(%lb1 : i64, %ub1 : i64, %step1 : i64
 
 // -----
 
-// CHECK-LABEL: @simdloop_simple_multiple_safelen
-llvm.func @simdloop_simple_multiple_safelen(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr, %arg1: !llvm.ptr) {
-  omp.simdloop safelen(2) for (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
-    %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
-    %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    llvm.store %3, %4 : f32, !llvm.ptr
-    llvm.store %3, %5 : f32, !llvm.ptr
-    omp.yield
+// CHECK-LABEL: @simd_simple_multiple_safelen
+llvm.func @simd_simple_multiple_safelen(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr, %arg1: !llvm.ptr) {
+  omp.simd safelen(2) {
+    omp.loop_nest (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
+      %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
+      %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+      %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+      llvm.store %3, %4 : f32, !llvm.ptr
+      llvm.store %3, %5 : f32, !llvm.ptr
+      omp.yield
+    }
   }
   llvm.return
 }
@@ -713,15 +741,17 @@ llvm.func @simdloop_simple_multiple_safelen(%lb1 : i64, %ub1 : i64, %step1 : i64
 
 // -----
 
-// CHECK-LABEL: @simdloop_simple_multiple_simdlen_safelen
-llvm.func @simdloop_simple_multiple_simdlen_safelen(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr, %arg1: !llvm.ptr) {
-  omp.simdloop simdlen(1) safelen(2) for (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
-    %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
-    %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-    llvm.store %3, %4 : f32, !llvm.ptr
-    llvm.store %3, %5 : f32, !llvm.ptr
-    omp.yield
+// CHECK-LABEL: @simd_simple_multiple_simdlen_safelen
+llvm.func @simd_simple_multiple_simdlen_safelen(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 : i64, %ub2 : i64, %step2 : i64, %arg0: !llvm.ptr, %arg1: !llvm.ptr) {
+  omp.simd simdlen(1) safelen(2) {
+    omp.loop_nest (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
+      %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
+      %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+      %5 = llvm.getelementptr %arg1[%iv2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+      llvm.store %3, %4 : f32, !llvm.ptr
+      llvm.store %3, %5 : f32, !llvm.ptr
+      omp.yield
+    }
   }
   llvm.return
 }
@@ -730,8 +760,8 @@ llvm.func @simdloop_simple_multiple_simdlen_safelen(%lb1 : i64, %ub1 : i64, %ste
 
 // -----
 
-// CHECK-LABEL: @simdloop_if
-llvm.func @simdloop_if(%arg0: !llvm.ptr {fir.bindc_name = "n"}, %arg1: !llvm.ptr {fir.bindc_name = "threshold"}) {
+// CHECK-LABEL: @simd_if
+llvm.func @simd_if(%arg0: !llvm.ptr {fir.bindc_name = "n"}, %arg1: !llvm.ptr {fir.bindc_name = "threshold"}) {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.alloca %0 x i32 {adapt.valuebyref, in_type = i32, operandSegmentSizes = array<i32: 0, 0>} : (i64) -> !llvm.ptr
   %2 = llvm.mlir.constant(1 : i64) : i64
@@ -742,12 +772,14 @@ llvm.func @simdloop_if(%arg0: !llvm.ptr {fir.bindc_name = "n"}, %arg1: !llvm.ptr
   %7 = llvm.load %arg0 : !llvm.ptr -> i32
   %8 = llvm.load %arg1 : !llvm.ptr -> i32
   %9 = llvm.icmp "sge" %7, %8 : i32
-  omp.simdloop   if(%9) for  (%arg2) : i32 = (%4) to (%5) inclusive step (%6) {
-    // The form of the emitted IR is controlled by OpenMPIRBuilder and
-    // tested there. Just check that the right metadata is added.
-    // CHECK: llvm.access.group
-    llvm.store %arg2, %1 : i32, !llvm.ptr
-    omp.yield
+  omp.simd if(%9) {
+    omp.loop_nest (%arg2) : i32 = (%4) to (%5) inclusive step (%6) {
+      // The form of the emitted IR is controlled by OpenMPIRBuilder and
+      // tested there. Just check that the right metadata is added.
+      // CHECK: llvm.access.group
+      llvm.store %arg2, %1 : i32, !llvm.ptr
+      omp.yield
+    }
   }
   llvm.return
 }
@@ -1170,7 +1202,7 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
 
   // CHECK: [[OMP_THREAD:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
   // CHECK-NEXT:  call void @__kmpc_ordered(ptr @[[GLOB1]], i32 [[OMP_THREAD]])
-  omp.ordered_region {
+  omp.ordered.region {
     omp.terminator
   // CHECK: call void @__kmpc_end_ordered(ptr @[[GLOB1]], i32 [[OMP_THREAD]])
   }
@@ -1178,7 +1210,7 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
   omp.wsloop ordered(0)
   for (%arg7) : i32 = (%arg0) to (%arg1) step (%arg2) {
     // CHECK:  call void @__kmpc_ordered(ptr @[[GLOB3:[0-9]+]], i32 [[OMP_THREAD2:%.*]])
-    omp.ordered_region  {
+    omp.ordered.region  {
       omp.terminator
     // CHECK: call void @__kmpc_end_ordered(ptr @[[GLOB3]], i32 [[OMP_THREAD2]])
     }
@@ -2165,6 +2197,43 @@ llvm.func @single_nowait(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
 
 // -----
 
+llvm.func @copy_i32(!llvm.ptr, !llvm.ptr)
+llvm.func @copy_f32(!llvm.ptr, !llvm.ptr)
+
+// CHECK-LABEL: @single_copyprivate
+// CHECK-SAME: (ptr %[[ip:.*]], ptr %[[fp:.*]])
+llvm.func @single_copyprivate(%ip: !llvm.ptr, %fp: !llvm.ptr) {
+  // CHECK: %[[didit_addr:.*]] = alloca i32
+  // CHECK: store i32 0, ptr %[[didit_addr]]
+  // CHECK: call i32 @__kmpc_single
+  omp.single copyprivate(%ip -> @copy_i32 : !llvm.ptr, %fp -> @copy_f32 : !llvm.ptr) {
+    // CHECK: %[[i:.*]] = load i32, ptr %[[ip]]
+    %i = llvm.load %ip : !llvm.ptr -> i32
+    // CHECK: %[[i2:.*]] = add i32 %[[i]], %[[i]]
+    %i2 = llvm.add %i, %i : i32
+    // CHECK: store i32 %[[i2]], ptr %[[ip]]
+    llvm.store %i2, %ip : i32, !llvm.ptr
+    // CHECK: %[[f:.*]] = load float, ptr %[[fp]]
+    %f = llvm.load %fp : !llvm.ptr -> f32
+    // CHECK: %[[f2:.*]] = fadd float %[[f]], %[[f]]
+    %f2 = llvm.fadd %f, %f : f32
+    // CHECK: store float %[[f2]], ptr %[[fp]]
+    llvm.store %f2, %fp : f32, !llvm.ptr
+    // CHECK: store i32 1, ptr %[[didit_addr]]
+    // CHECK: call void @__kmpc_end_single
+    // CHECK: %[[didit:.*]] = load i32, ptr %[[didit_addr]]
+    // CHECK: call void @__kmpc_copyprivate({{.*}}, ptr %[[ip]], ptr @copy_i32, i32 %[[didit]])
+    // CHECK: %[[didit2:.*]] = load i32, ptr %[[didit_addr]]
+    // CHECK: call void @__kmpc_copyprivate({{.*}}, ptr %[[fp]], ptr @copy_f32, i32 %[[didit2]])
+    // CHECK-NOT: call void @__kmpc_barrier
+    omp.terminator
+  }
+  // CHECK: ret void
+  llvm.return
+}
+
+// -----
+
 // CHECK: @_QFsubEx = internal global i32 undef
 // CHECK: @_QFsubEx.cache = common global ptr null
 
@@ -2235,6 +2304,28 @@ llvm.func @omp_task(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
 // CHECK:   br label %[[exit_stub:[^, ]+]]
 // CHECK: [[exit_stub]]:
 // CHECK:   ret void
+
+// -----
+
+// CHECK-LABEL: define void @omp_task_attrs()
+llvm.func @omp_task_attrs() -> () attributes {
+  target_cpu = "x86-64",
+  target_features = #llvm.target_features<["+mmx", "+sse"]>
+} {
+  // CHECK: %[[task_data:.*]] = call {{.*}}@__kmpc_omp_task_alloc{{.*}}@[[outlined_fn:.*]])
+  // CHECK: call {{.*}}@__kmpc_omp_task(
+  // CHECK-SAME: ptr %[[task_data]]
+  omp.task {
+    omp.terminator
+  }
+
+  llvm.return
+}
+
+// CHECK: define {{.*}} @[[outlined_fn]]{{.*}} #[[attrs:[0-9]+]]
+// CHECK: attributes #[[attrs]] = {
+// CHECK-SAME: "target-cpu"="x86-64"
+// CHECK-SAME: "target-features"="+mmx,+sse"
 
 // -----
 
@@ -2530,6 +2621,16 @@ module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, 
 
 // -----
 
+// CHECK-NOT: @__omp_rtl_debug_kind = weak_odr hidden constant i32 0
+// CHECK-NOT: @__omp_rtl_assume_teams_oversubscription = weak_odr hidden constant i32 1
+// CHECK-NOT: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden constant i32 0
+// CHECK-NOT: @__omp_rtl_assume_no_thread_state = weak_odr hidden constant i32 1
+// CHECK-NOT: @__omp_rtl_assume_no_nested_parallelism = weak_odr hidden constant i32 0
+module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, assume_no_thread_state = true,
+                                          no_gpu_lib=true>} {}
+
+// -----
+
 module attributes {omp.is_target_device = false} {
   // CHECK: define void @filter_nohost
   llvm.func @filter_nohost() -> ()
@@ -2691,10 +2792,4 @@ llvm.func @omp_task_if(%boolexpr: i1) {
 
 // -----
 
-// Check that OpenMP requires flags are registered by a global constructor.
-// CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }]
-// CHECK-SAME: [{ i32, ptr, ptr } { i32 0, ptr @[[REG_FN:.*]], ptr null }]
-// CHECK: define {{.*}} @[[REG_FN]]({{.*}})
-// CHECK-NOT: }
-// CHECK:   call void @__tgt_register_requires(i64 10)
 module attributes {omp.requires = #omp<clause_requires reverse_offload|unified_shared_memory>} {}

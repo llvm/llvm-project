@@ -170,6 +170,11 @@ def AMDGPUfmax3 : SDNode<"AMDGPUISD::FMAX3", SDTFPTernaryOp,
   [/*SDNPCommutative, SDNPAssociative*/]
 >;
 
+// out = max(a, b, c) a, b and c are floats. Operation is IEEE2019 compliant.
+def AMDGPUfmaximum3 : SDNode<"AMDGPUISD::FMAXIMUM3", SDTFPTernaryOp,
+  [/*SDNPCommutative, SDNPAssociative*/]
+>;
+
 // out = max(a, b, c) a, b, and c are signed ints
 def AMDGPUsmax3 : SDNode<"AMDGPUISD::SMAX3", AMDGPUDTIntTernaryOp,
   [/*SDNPCommutative, SDNPAssociative*/]
@@ -182,6 +187,11 @@ def AMDGPUumax3 : SDNode<"AMDGPUISD::UMAX3", AMDGPUDTIntTernaryOp,
 
 // out = min(a, b, c) a, b and c are floats
 def AMDGPUfmin3 : SDNode<"AMDGPUISD::FMIN3", SDTFPTernaryOp,
+  [/*SDNPCommutative, SDNPAssociative*/]
+>;
+
+// out = min(a, b, c) a, b and c are floats. Operation is IEEE2019 compliant.
+def AMDGPUfminimum3 : SDNode<"AMDGPUISD::FMINIMUM3", SDTFPTernaryOp,
   [/*SDNPCommutative, SDNPAssociative*/]
 >;
 

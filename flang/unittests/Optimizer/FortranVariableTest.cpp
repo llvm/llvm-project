@@ -49,7 +49,8 @@ TEST_F(FortranVariableTest, SimpleScalar) {
   auto name = mlir::StringAttr::get(&context, "x");
   auto declare = builder->create<fir::DeclareOp>(loc, addr.getType(), addr,
       /*shape=*/mlir::Value{}, /*typeParams=*/std::nullopt, name,
-      /*fortran_attrs=*/fir::FortranVariableFlagsAttr{});
+      /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
+      /*cuda_attr=*/fir::CUDADataAttributeAttr{});
 
   fir::FortranVariableOpInterface fortranVariable = declare;
   EXPECT_FALSE(fortranVariable.isArray());
@@ -74,7 +75,8 @@ TEST_F(FortranVariableTest, CharacterScalar) {
   auto name = mlir::StringAttr::get(&context, "x");
   auto declare = builder->create<fir::DeclareOp>(loc, addr.getType(), addr,
       /*shape=*/mlir::Value{}, typeParams, name,
-      /*fortran_attrs=*/fir::FortranVariableFlagsAttr{});
+      /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
+      /*cuda_attr=*/fir::CUDADataAttributeAttr{});
 
   fir::FortranVariableOpInterface fortranVariable = declare;
   EXPECT_FALSE(fortranVariable.isArray());
@@ -104,7 +106,8 @@ TEST_F(FortranVariableTest, SimpleArray) {
   auto name = mlir::StringAttr::get(&context, "x");
   auto declare = builder->create<fir::DeclareOp>(loc, addr.getType(), addr,
       shape, /*typeParams*/ std::nullopt, name,
-      /*fortran_attrs=*/fir::FortranVariableFlagsAttr{});
+      /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
+      /*cuda_attr=*/fir::CUDADataAttributeAttr{});
 
   fir::FortranVariableOpInterface fortranVariable = declare;
   EXPECT_TRUE(fortranVariable.isArray());
@@ -134,7 +137,8 @@ TEST_F(FortranVariableTest, CharacterArray) {
   auto name = mlir::StringAttr::get(&context, "x");
   auto declare = builder->create<fir::DeclareOp>(loc, addr.getType(), addr,
       shape, typeParams, name,
-      /*fortran_attrs=*/fir::FortranVariableFlagsAttr{});
+      /*fortran_attrs=*/fir::FortranVariableFlagsAttr{},
+      /*cuda_attr=*/fir::CUDADataAttributeAttr{});
 
   fir::FortranVariableOpInterface fortranVariable = declare;
   EXPECT_TRUE(fortranVariable.isArray());

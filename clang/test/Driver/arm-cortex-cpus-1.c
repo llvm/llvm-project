@@ -478,3 +478,20 @@
 // RUN: %clang -target arm -march=armebv9.4a -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V94A %s
 // RUN: %clang -target arm -march=armebv9.4-a -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V94A %s
 // CHECK-BE-V94A: "-cc1"{{.*}} "-triple" "armebv9.4{{.*}}" "-target-cpu" "generic"
+
+// RUN: %clang -target armv9.5a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V95A %s
+// RUN: %clang -target arm -march=armv9.5a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V95A %s
+// RUN: %clang -target arm -march=armv9.5-a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V95A %s
+// RUN: %clang -target arm -march=armv9.5a -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V95A %s
+// RUN: %clang -target armv9.5a -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V95A %s
+// RUN: %clang -target arm -march=armv9.5a -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V95A %s
+// RUN: %clang -target arm -mlittle-endian -march=armv9.5-a -mlittle-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-V95A %s
+// CHECK-V95A: "-cc1"{{.*}} "-triple" "armv9.5{{.*}}" "-target-cpu" "generic"
+
+// RUN: %clang -target armebv9.5a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V95A %s
+// RUN: %clang -target armv9.5a -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V95A %s
+// RUN: %clang -target armeb -march=armebv9.5a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V95A %s
+// RUN: %clang -target armeb -march=armebv9.5-a -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V95A %s
+// RUN: %clang -target arm -march=armebv9.5a -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V95A %s
+// RUN: %clang -target arm -march=armebv9.5-a -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=CHECK-BE-V95A %s
+// CHECK-BE-V95A: "-cc1"{{.*}} "-triple" "armebv9.5{{.*}}" "-target-cpu" "generic"

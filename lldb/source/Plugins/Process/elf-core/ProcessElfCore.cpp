@@ -99,7 +99,7 @@ bool ProcessElfCore::CanDebug(lldb::TargetSP target_sp,
 ProcessElfCore::ProcessElfCore(lldb::TargetSP target_sp,
                                lldb::ListenerSP listener_sp,
                                const FileSpec &core_file)
-    : PostMortemProcess(target_sp, listener_sp), m_core_file(core_file) {}
+    : PostMortemProcess(target_sp, listener_sp, core_file) {}
 
 // Destructor
 ProcessElfCore::~ProcessElfCore() {
@@ -261,8 +261,8 @@ Status ProcessElfCore::DoLoadCore() {
       exe_module_spec.GetFileSpec().SetFile(m_nt_file_entries[0].path,
                                             FileSpec::Style::native);
       if (exe_module_spec.GetFileSpec()) {
-        exe_module_sp = GetTarget().GetOrCreateModule(exe_module_spec, 
-                                                      true /* notify */);
+        exe_module_sp =
+            GetTarget().GetOrCreateModule(exe_module_spec, true /* notify */);
         if (exe_module_sp)
           GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
       }
@@ -832,7 +832,7 @@ llvm::Error ProcessElfCore::parseOpenBSDNotes(llvm::ArrayRef<CoreNote> notes) {
   for (const auto &note : notes) {
     // OpenBSD per-thread information is stored in notes named "OpenBSD@nnn" so
     // match on the initial part of the string.
-    if (!llvm::StringRef(note.info.n_name).startswith("OpenBSD"))
+    if (!llvm::StringRef(note.info.n_name).starts_with("OpenBSD"))
       continue;
 
     switch (note.info.n_type) {

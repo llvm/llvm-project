@@ -271,9 +271,9 @@ IndirectBranchInfo::IndirectBranchInfo(MCInst &Inst, MCPlusBuilder &MIB) {
   }
 }
 
-void RetpolineInsertion::runOnFunctions(BinaryContext &BC) {
+Error RetpolineInsertion::runOnFunctions(BinaryContext &BC) {
   if (!opts::InsertRetpolines)
-    return;
+    return Error::success();
 
   assert(BC.isX86() &&
          "retpoline insertion not supported for target architecture");
@@ -327,10 +327,11 @@ void RetpolineInsertion::runOnFunctions(BinaryContext &BC) {
       }
     }
   }
-  outs() << "BOLT-INFO: The number of created retpoline functions is : "
-         << CreatedRetpolines.size()
-         << "\nBOLT-INFO: The number of retpolined branches is : "
-         << RetpolinedBranches << "\n";
+  BC.outs() << "BOLT-INFO: The number of created retpoline functions is : "
+            << CreatedRetpolines.size()
+            << "\nBOLT-INFO: The number of retpolined branches is : "
+            << RetpolinedBranches << "\n";
+  return Error::success();
 }
 
 } // namespace bolt

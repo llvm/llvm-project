@@ -71,7 +71,7 @@ void StaticVerifierFunctionEmitter::emitPatternConstraints(
 
 StringRef StaticVerifierFunctionEmitter::getTypeConstraintFn(
     const Constraint &constraint) const {
-  auto it = typeConstraints.find(constraint);
+  const auto *it = typeConstraints.find(constraint);
   assert(it != typeConstraints.end() && "expected to find a type constraint");
   return it->second;
 }
@@ -80,14 +80,14 @@ StringRef StaticVerifierFunctionEmitter::getTypeConstraintFn(
 // be uniqued, return std::nullopt if one was not found.
 std::optional<StringRef> StaticVerifierFunctionEmitter::getAttrConstraintFn(
     const Constraint &constraint) const {
-  auto it = attrConstraints.find(constraint);
+  const auto *it = attrConstraints.find(constraint);
   return it == attrConstraints.end() ? std::optional<StringRef>()
                                      : StringRef(it->second);
 }
 
 StringRef StaticVerifierFunctionEmitter::getSuccessorConstraintFn(
     const Constraint &constraint) const {
-  auto it = successorConstraints.find(constraint);
+  const auto *it = successorConstraints.find(constraint);
   assert(it != successorConstraints.end() &&
          "expected to find a sucessor constraint");
   return it->second;
@@ -95,7 +95,7 @@ StringRef StaticVerifierFunctionEmitter::getSuccessorConstraintFn(
 
 StringRef StaticVerifierFunctionEmitter::getRegionConstraintFn(
     const Constraint &constraint) const {
-  auto it = regionConstraints.find(constraint);
+  const auto *it = regionConstraints.find(constraint);
   assert(it != regionConstraints.end() &&
          "expected to find a region constraint");
   return it->second;
@@ -261,7 +261,7 @@ std::string StaticVerifierFunctionEmitter::getUniqueName(StringRef kind,
 void StaticVerifierFunctionEmitter::collectConstraint(ConstraintMap &map,
                                                       StringRef kind,
                                                       Constraint constraint) {
-  auto it = map.find(constraint);
+  auto *it = map.find(constraint);
   if (it == map.end())
     map.insert({constraint, getUniqueName(kind, map.size())});
 }

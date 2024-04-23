@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mlgo"
+description = "Tooling for ML in LLVM"
+readme = "README.md"
+requires-python = ">=3.8,<3.11"
+dynamic = ["version"]
+license = {text = "Apache-2.0 WITH LLVM-exception"}
+classifiers = [
+  "License :: OSI Approved :: Apache Software License"
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "mlgo.__version__"}
+
+[project.scripts]
+combine_training_corpus = "mlgo.combine_training_corpus:entrypoint"
+extract_ir = "mlgo.extract_ir:entrypoint"
+make_corpus = "mlgo.make_corpus:entrypoint"

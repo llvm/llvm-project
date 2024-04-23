@@ -26,7 +26,9 @@
 #include "lldb/Expression/Expression.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
+#include "lldb/Symbol/Type.h"
 #include "lldb/lldb-private.h"
+#include "lldb/lldb-types.h"
 
 class PDBASTParser;
 
@@ -42,23 +44,6 @@ class DWARFASTParser;
 namespace npdb {
   class PdbAstBuilder;
 } // namespace npdb
-
-/// A SmallBitVector that represents a set of source languages (\p
-/// lldb::LanguageType).  Each lldb::LanguageType is represented by
-/// the bit with the position of its enumerator. The largest
-/// LanguageType is < 64, so this is space-efficient and on 64-bit
-/// architectures a LanguageSet can be completely stack-allocated.
-struct LanguageSet {
-  llvm::SmallBitVector bitvector;
-  LanguageSet();
-
-  /// If the set contains a single language only, return it.
-  std::optional<lldb::LanguageType> GetSingularLanguage();
-  void Insert(lldb::LanguageType language);
-  bool Empty() const;
-  size_t Size() const;
-  bool operator[](unsigned i) const;
-};
 
 /// Interface for representing a type system.
 ///
@@ -122,6 +107,9 @@ public:
   virtual CompilerType DeclGetFunctionArgumentType(void *opaque_decl,
                                                    size_t arg_idx);
 
+  virtual std::vector<lldb_private::CompilerContext>
+  DeclGetCompilerContext(void *opaque_decl);
+
   virtual CompilerType GetTypeForDecl(void *opaque_decl) = 0;
 
   // CompilerDeclContext functions
@@ -145,6 +133,9 @@ public:
   /// Returns the direct parent context of specified type
   virtual CompilerDeclContext
   GetCompilerDeclContextForType(const CompilerType &type);
+
+  virtual std::vector<lldb_private::CompilerContext>
+  DeclContextGetCompilerContext(void *opaque_decl_ctx);
 
   // Tests
 #ifndef NDEBUG
@@ -310,9 +301,10 @@ public:
 
   virtual lldb::Format GetFormat(lldb::opaque_compiler_type_t type) = 0;
 
-  virtual uint32_t GetNumChildren(lldb::opaque_compiler_type_t type,
-                                  bool omit_empty_base_classes,
-                                  const ExecutionContext *exe_ctx) = 0;
+  virtual llvm::Expected<uint32_t>
+  GetNumChildren(lldb::opaque_compiler_type_t type,
+                 bool omit_empty_base_classes,
+                 const ExecutionContext *exe_ctx) = 0;
 
   virtual CompilerType GetBuiltinTypeByName(ConstString name);
 
@@ -371,6 +363,12 @@ public:
   virtual size_t GetIndexOfChildMemberWithName(
       lldb::opaque_compiler_type_t type, llvm::StringRef name,
       bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) = 0;
+
+  virtual CompilerType
+  GetDirectNestedTypeWithName(lldb::opaque_compiler_type_t type,
+                              llvm::StringRef name) {
+    return CompilerType();
+  }
 
   virtual bool IsTemplateType(lldb::opaque_compiler_type_t type);
 

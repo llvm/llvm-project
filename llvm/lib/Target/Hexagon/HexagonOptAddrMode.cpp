@@ -47,6 +47,8 @@ static cl::opt<int> CodeGrowthLimit("hexagon-amode-growth-limit",
   cl::Hidden, cl::init(0), cl::desc("Code growth limit for address mode "
   "optimization"));
 
+extern cl::opt<unsigned> RDFFuncBlockLimit;
+
 namespace llvm {
 
   FunctionPass *createHexagonOptAddrMode();
@@ -855,6 +857,14 @@ bool HexagonOptAddrMode::processBlock(NodeAddr<BlockNode *> BA) {
 bool HexagonOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
+
+  // Perform RDF optimizations only if number of basic blocks in the
+  // function is less than the limit
+  if (MF.size() > RDFFuncBlockLimit) {
+    LLVM_DEBUG(dbgs() << "Skipping " << getPassName()
+                      << ": too many basic blocks\n");
+    return false;
+  }
 
   bool Changed = false;
   auto &HST = MF.getSubtarget<HexagonSubtarget>();

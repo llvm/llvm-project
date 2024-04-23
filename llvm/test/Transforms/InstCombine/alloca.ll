@@ -41,7 +41,7 @@ define void @test() {
   call void (...) @use( ptr %Z )
   %size = load i32, ptr @int
   %A = alloca {{}}, i32 %size
-  call void (...) @use( {{}}* %A )
+  call void (...) @use( ptr %A )
   ret void
 }
 

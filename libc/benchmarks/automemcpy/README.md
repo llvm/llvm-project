@@ -17,7 +17,7 @@ git clone https://github.com/Z3Prover/z3.git
 python scripts/mk_make.py --prefix=<Z3_INSTALL_DIR>
 cd build
 make -j
-make install 
+make install
 ```
 
 ## Configuration
@@ -68,7 +68,7 @@ Make sure to save the results of the benchmark as a json file.
      By default, each function is benchmarked for at least one second, here we lower it to 200ms.
 
  - `--benchmark_filter="BM_Memset|BM_Bzero"`
- 
+
      By default, all functions are benchmarked, here we restrict them to `memset` and `bzero`.
 
 Other options might be useful, use `--help` for more information.

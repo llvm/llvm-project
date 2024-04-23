@@ -15,8 +15,8 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
-#include "src/__support/UInt128.h"
 #include "src/__support/common.h"
+#include "src/__support/uint128.h"
 
 namespace LIBC_NAMESPACE {
 namespace fputil {
@@ -27,27 +27,28 @@ template <typename T> struct SpecialLongDouble {
   static constexpr bool VALUE = false;
 };
 
-#if defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 template <> struct SpecialLongDouble<long double> {
   static constexpr bool VALUE = true;
 };
-#endif // LIBC_LONG_DOUBLE_IS_X86_FLOAT80
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
 template <typename T>
 LIBC_INLINE void normalize(int &exponent,
-                           typename FPBits<T>::UIntType &mantissa) {
-  const int shift = cpp::countl_zero(mantissa) -
-                    (8 * sizeof(mantissa) - 1 - MantissaWidth<T>::VALUE);
+                           typename FPBits<T>::StorageType &mantissa) {
+  const int shift =
+      cpp::countl_zero(mantissa) -
+      (8 * static_cast<int>(sizeof(mantissa)) - 1 - FPBits<T>::FRACTION_LEN);
   exponent -= shift;
   mantissa <<= shift;
 }
 
-#ifdef LIBC_LONG_DOUBLE_IS_FLOAT64
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
 template <>
 LIBC_INLINE void normalize<long double>(int &exponent, uint64_t &mantissa) {
   normalize<double>(exponent, mantissa);
 }
-#elif !defined(LIBC_LONG_DOUBLE_IS_X86_FLOAT80)
+#elif !defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
 template <>
 LIBC_INLINE void normalize<long double>(int &exponent, UInt128 &mantissa) {
   const uint64_t hi_bits = static_cast<uint64_t>(mantissa >> 64);
@@ -71,33 +72,30 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
     return x86::sqrt(x);
   } else {
     // IEEE floating points formats.
-    using UIntType = typename FPBits<T>::UIntType;
-    constexpr UIntType ONE = UIntType(1) << MantissaWidth<T>::VALUE;
+    using FPBits_t = typename fputil::FPBits<T>;
+    using StorageType = typename FPBits_t::StorageType;
+    constexpr StorageType ONE = StorageType(1) << FPBits_t::FRACTION_LEN;
+    constexpr auto FLT_NAN = FPBits_t::quiet_nan().get_val();
 
-    FPBits<T> bits(x);
+    FPBits_t bits(x);
 
-    if (bits.is_inf_or_nan()) {
-      if (bits.get_sign() && (bits.get_mantissa() == 0)) {
-        // sqrt(-Inf) = NaN
-        return FPBits<T>::build_quiet_nan(ONE >> 1);
-      } else {
-        // sqrt(NaN) = NaN
-        // sqrt(+Inf) = +Inf
-        return x;
-      }
-    } else if (bits.is_zero()) {
+    if (bits == FPBits_t::inf(Sign::POS) || bits.is_zero() || bits.is_nan()) {
+      // sqrt(+Inf) = +Inf
       // sqrt(+0) = +0
       // sqrt(-0) = -0
+      // sqrt(NaN) = NaN
+      // sqrt(-NaN) = -NaN
       return x;
-    } else if (bits.get_sign()) {
-      // sqrt( negative numbers ) = NaN
-      return FPBits<T>::build_quiet_nan(ONE >> 1);
+    } else if (bits.is_neg()) {
+      // sqrt(-Inf) = NaN
+      // sqrt(-x) = NaN
+      return FLT_NAN;
     } else {
       int x_exp = bits.get_exponent();
-      UIntType x_mant = bits.get_mantissa();
+      StorageType x_mant = bits.get_mantissa();
 
       // Step 1a: Normalize denormal input and append hidden bit to the mantissa
-      if (bits.get_biased_exponent() == 0) {
+      if (bits.is_subnormal()) {
         ++x_exp; // let x_exp be the correct exponent of ONE bit.
         internal::normalize<T>(x_exp, x_mant);
       } else {
@@ -122,12 +120,12 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
       // So the nth digit y_n of the mantissa of sqrt(x) can be found by:
       //   y_n = 1 if 2*r(n-1) >= 2*y(n - 1) + 2^(-n-1)
       //         0 otherwise.
-      UIntType y = ONE;
-      UIntType r = x_mant - ONE;
+      StorageType y = ONE;
+      StorageType r = x_mant - ONE;
 
-      for (UIntType current_bit = ONE >> 1; current_bit; current_bit >>= 1) {
+      for (StorageType current_bit = ONE >> 1; current_bit; current_bit >>= 1) {
         r <<= 1;
-        UIntType tmp = (y << 1) + current_bit; // 2*y(n - 1) + 2^(-n-1)
+        StorageType tmp = (y << 1) + current_bit; // 2*y(n - 1) + 2^(-n-1)
         if (r >= tmp) {
           r -= tmp;
           y += current_bit;
@@ -138,16 +136,17 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
       bool lsb = static_cast<bool>(y & 1); // Least significant bit
       bool rb = false;                     // Round bit
       r <<= 2;
-      UIntType tmp = (y << 2) + 1;
+      StorageType tmp = (y << 2) + 1;
       if (r >= tmp) {
         r -= tmp;
         rb = true;
       }
 
       // Remove hidden bit and append the exponent field.
-      x_exp = ((x_exp >> 1) + FPBits<T>::EXPONENT_BIAS);
+      x_exp = ((x_exp >> 1) + FPBits_t::EXP_BIAS);
 
-      y = (y - ONE) | (static_cast<UIntType>(x_exp) << MantissaWidth<T>::VALUE);
+      y = (y - ONE) |
+          (static_cast<StorageType>(x_exp) << FPBits_t::FRACTION_LEN);
 
       switch (quick_get_round()) {
       case FE_TONEAREST:

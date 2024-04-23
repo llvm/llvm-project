@@ -45,8 +45,16 @@ void test_A(int *p) {
   asm volatile("" :: "A"(*p));
 }
 
-void test_S(void) {
-// CHECK-LABEL: define{{.*}} void @test_S()
-// CHECK: call void asm sideeffect "", "S"(ptr nonnull @f)
-  asm volatile("" :: "S"(&f));
+extern int var, arr[2][2];
+struct Pair { int a, b; } pair;
+
+// CHECK-LABEL: test_s(
+// CHECK:         call void asm sideeffect "// $0 $1 $2", "s,s,s"(ptr nonnull @var, ptr nonnull getelementptr inbounds ([2 x [2 x i32]], ptr @arr, {{.*}}), ptr nonnull @test_s)
+// CHECK:         call void asm sideeffect "// $0", "s"(ptr nonnull getelementptr inbounds (%struct.Pair, ptr @pair, {{.*}}))
+// CHECK:         call void asm sideeffect "// $0 $1 $2", "S,S,S"(ptr nonnull @var, ptr nonnull getelementptr inbounds ([2 x [2 x i32]], ptr @arr, {{.*}}), ptr nonnull @test_s)
+void test_s(void) {
+  asm("// %0 %1 %2" :: "s"(&var), "s"(&arr[1][1]), "s"(test_s));
+  asm("// %0" :: "s"(&pair.b));
+
+  asm("// %0 %1 %2" :: "S"(&var), "S"(&arr[1][1]), "S"(test_s));
 }

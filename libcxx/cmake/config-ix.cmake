@@ -1,5 +1,6 @@
 include(CMakePushCheckState)
 include(CheckLibraryExists)
+include(CheckSymbolExists)
 include(LLVMCheckCompilerLinkerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
@@ -45,7 +46,9 @@ else()
   endif()
 endif()
 
-if (CXX_SUPPORTS_NOSTDLIBXX_FLAG OR C_SUPPORTS_NODEFAULTLIBS_FLAG)
+# Only link against compiler-rt manually if we use -nodefaultlibs, since
+# otherwise the compiler will do the right thing on its own.
+if (NOT CXX_SUPPORTS_NOSTDLIBXX_FLAG AND C_SUPPORTS_NODEFAULTLIBS_FLAG)
   if (LIBCXX_USE_COMPILER_RT)
     include(HandleCompilerRT)
     find_compiler_rt_library(builtins LIBCXX_BUILTINS_LIBRARY
@@ -73,6 +76,9 @@ if (CXX_SUPPORTS_NOSTDLIBXX_FLAG OR C_SUPPORTS_NODEFAULTLIBS_FLAG)
                         moldname mingwex msvcrt)
     list(APPEND CMAKE_REQUIRED_LIBRARIES ${MINGW_LIBRARIES})
   endif()
+endif()
+
+if (CXX_SUPPORTS_NOSTDLIBXX_FLAG OR C_SUPPORTS_NODEFAULTLIBS_FLAG)
   if (CMAKE_C_FLAGS MATCHES -fsanitize OR CMAKE_CXX_FLAGS MATCHES -fsanitize)
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fno-sanitize=all")
   endif ()
@@ -92,6 +98,8 @@ int main(void) { return 0; }
   cmake_pop_check_state()
 endif()
 
+check_symbol_exists(__PICOLIBC__ "string.h" PICOLIBC)
+
 # Check libraries
 if(WIN32 AND NOT MINGW)
   # TODO(compnerd) do we want to support an emulation layer that allows for the
@@ -108,6 +116,10 @@ elseif(FUCHSIA)
   set(LIBCXX_HAS_RT_LIB NO)
   check_library_exists(atomic __atomic_fetch_add_8 "" LIBCXX_HAS_ATOMIC_LIB)
 elseif(ANDROID)
+  set(LIBCXX_HAS_PTHREAD_LIB NO)
+  set(LIBCXX_HAS_RT_LIB NO)
+  set(LIBCXX_HAS_ATOMIC_LIB NO)
+elseif(PICOLIBC)
   set(LIBCXX_HAS_PTHREAD_LIB NO)
   set(LIBCXX_HAS_RT_LIB NO)
   set(LIBCXX_HAS_ATOMIC_LIB NO)

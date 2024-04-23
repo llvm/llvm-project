@@ -9,7 +9,12 @@
 
 #if !defined(__cplusplus) || (defined(_MSC_VER) && !_NATIVE_WCHAR_T_DEFINED)
 
-#ifndef _WCHAR_T
+/*
+ * When -fbuiltin-headers-in-system-modules is set this is a non-modular header
+ * and needs to behave as if it was textual.
+ */
+#if !defined(_WCHAR_T) ||                                                      \
+    (__has_feature(modules) && !__building_module(_Builtin_stddef))
 #define _WCHAR_T
 
 #ifdef _MSC_EXTENSIONS

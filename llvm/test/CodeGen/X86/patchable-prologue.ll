@@ -32,7 +32,8 @@ define void @f0() "patchable-function"="prologue-short-redirect" {
 
 define void @f1() "patchable-function"="prologue-short-redirect" "frame-pointer"="all" {
 ; CHECK-LABEL: _f1
-; CHECK-NEXT: ff f5 	pushq	%rbp
+; CHECK-NEXT: 66 90     nop
+; CHECK-NEXT: 55		pushq	%rbp
 
 ; CHECK-ALIGN: 	.p2align	4, 0x90
 ; CHECK-ALIGN: _f1:
@@ -47,6 +48,7 @@ define void @f1() "patchable-function"="prologue-short-redirect" "frame-pointer"
 ; 64: f1:
 ; 64-NEXT: .seh_proc f1
 ; 64-NEXT: # %bb.0:
+; 64-NEXT: xchgw %ax, %ax
 ; 64-NEXT: pushq   %rbp
 		
   ret void
@@ -189,5 +191,22 @@ do.body:                                          ; preds = %do.body, %entry
   %tobool.not = icmp eq i8 %inc, 0
   br i1 %tobool.not, label %do.end, label %do.body
 do.end:                                           ; preds = %do.body
+  ret void
+}
+
+
+; Test that inline asm is properly hotpatched. We currently don't examine the
+; asm instruction when printing it, thus we always emit patching NOPs.
+
+; 64: inline_asm:
+; 64-NEXT: # %bb.0:
+; 64-NEXT: xchgw   %ax, %ax                        # encoding: [0x66,0x90]
+; 64-NEXT: #APP
+; 64-NEXT: int3                                    # encoding: [0xcc]
+; 64-NEXT: #NO_APP
+
+define dso_local void @inline_asm() "patchable-function"="prologue-short-redirect" {
+entry:
+  call void asm sideeffect "int3", "~{dirflag},~{fpsr},~{flags}"()
   ret void
 }

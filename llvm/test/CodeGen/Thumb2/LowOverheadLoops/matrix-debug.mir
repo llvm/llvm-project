@@ -2,14 +2,14 @@
 # RUN: llc -mtriple=thumbv8.1m.main -mattr=+mve -run-pass=arm-low-overhead-loops %s -o - | FileCheck %s
 
 --- |
-  define dso_local arm_aapcscc void @test_debug(i32 %d, i32* %e, i16* nocapture readonly %k, i16* nocapture readonly %l) !dbg !15 {
+  define dso_local arm_aapcscc void @test_debug(i32 %d, ptr %e, ptr nocapture readonly %k, ptr nocapture readonly %l) !dbg !15 {
   entry:
     call void @llvm.dbg.value(metadata i32 %d, metadata !23, metadata !DIExpression()), !dbg !32
-    call void @llvm.dbg.value(metadata i32* %e, metadata !24, metadata !DIExpression()), !dbg !32
-    call void @llvm.dbg.value(metadata i16* %k, metadata !25, metadata !DIExpression()), !dbg !32
-    call void @llvm.dbg.value(metadata i16* %l, metadata !26, metadata !DIExpression()), !dbg !32
+    call void @llvm.dbg.value(metadata ptr %e, metadata !24, metadata !DIExpression()), !dbg !32
+    call void @llvm.dbg.value(metadata ptr %k, metadata !25, metadata !DIExpression()), !dbg !32
+    call void @llvm.dbg.value(metadata ptr %l, metadata !26, metadata !DIExpression()), !dbg !32
     call void @llvm.dbg.value(metadata i16 0, metadata !29, metadata !DIExpression()), !dbg !32
-    %call = tail call arm_aapcscc signext i16 @get_input(i32 %d, i32* %e, i16 signext 0) #4, !dbg !33
+    %call = tail call arm_aapcscc signext i16 @get_input(i32 %d, ptr %e, i16 signext 0) #4, !dbg !33
     call void @llvm.dbg.value(metadata i16 %call, metadata !28, metadata !DIExpression()), !dbg !32
     call void @llvm.dbg.value(metadata i32 0, metadata !30, metadata !DIExpression()), !dbg !32
     %cmp30 = icmp sgt i32 %d, 0, !dbg !34
@@ -20,52 +20,52 @@
     br label %for.cond1.preheader.us, !dbg !37
 
   for.cond1.preheader.us:                           ; preds = %for.cond1.preheader.us.preheader, %for.cond1.for.inc9_crit_edge.us
-    %lsr.iv2 = phi i16* [ %k, %for.cond1.preheader.us.preheader ], [ %9, %for.cond1.for.inc9_crit_edge.us ]
+    %lsr.iv2 = phi ptr [ %k, %for.cond1.preheader.us.preheader ], [ %9, %for.cond1.for.inc9_crit_edge.us ]
     %i.031.us = phi i32 [ %inc10.us, %for.cond1.for.inc9_crit_edge.us ], [ 0, %for.cond1.preheader.us.preheader ]
     call void @llvm.dbg.value(metadata i32 %i.031.us, metadata !30, metadata !DIExpression()), !dbg !32
     call void @llvm.dbg.value(metadata i32 0, metadata !31, metadata !DIExpression()), !dbg !32
-    %arrayidx7.us = getelementptr inbounds i32, i32* %e, i32 %i.031.us, !dbg !38
-    %arrayidx7.promoted.us = load i32, i32* %arrayidx7.us, align 4, !dbg !41
+    %arrayidx7.us = getelementptr inbounds i32, ptr %e, i32 %i.031.us, !dbg !38
+    %arrayidx7.promoted.us = load i32, ptr %arrayidx7.us, align 4, !dbg !41
     %start = call i32 @llvm.start.loop.iterations.i32(i32 %d), !dbg !46
     br label %for.body3.us, !dbg !46
 
   for.body3.us:                                     ; preds = %for.body3.us, %for.cond1.preheader.us
-    %lsr.iv5 = phi i16* [ %scevgep6, %for.body3.us ], [ %lsr.iv2, %for.cond1.preheader.us ], !dbg !32
-    %lsr.iv1 = phi i16* [ %scevgep, %for.body3.us ], [ %l, %for.cond1.preheader.us ], !dbg !32
+    %lsr.iv5 = phi ptr [ %scevgep6, %for.body3.us ], [ %lsr.iv2, %for.cond1.preheader.us ], !dbg !32
+    %lsr.iv1 = phi ptr [ %scevgep, %for.body3.us ], [ %l, %for.cond1.preheader.us ], !dbg !32
     %add829.us = phi i32 [ %arrayidx7.promoted.us, %for.cond1.preheader.us ], [ %add8.us, %for.body3.us ], !dbg !32
     %1 = phi i32 [ %start, %for.cond1.preheader.us ], [ %4, %for.body3.us ], !dbg !32
     call void @llvm.dbg.value(metadata i32 undef, metadata !31, metadata !DIExpression()), !dbg !32
-    %2 = load i16, i16* %lsr.iv5, align 2, !dbg !47
+    %2 = load i16, ptr %lsr.iv5, align 2, !dbg !47
     %conv.us = sext i16 %2 to i32, !dbg !47
-    %3 = load i16, i16* %lsr.iv1, align 2, !dbg !50
+    %3 = load i16, ptr %lsr.iv1, align 2, !dbg !50
     %conv5.us = sext i16 %3 to i32, !dbg !50
     %mul6.us = mul nsw i32 %conv5.us, %conv.us, !dbg !51
     %add8.us = add nsw i32 %mul6.us, %add829.us, !dbg !41
     call void @llvm.dbg.value(metadata i32 undef, metadata !31, metadata !DIExpression(DW_OP_plus_uconst, 1, DW_OP_stack_value)), !dbg !32
-    %scevgep = getelementptr i16, i16* %lsr.iv1, i32 1, !dbg !52
-    %scevgep6 = getelementptr i16, i16* %lsr.iv5, i32 1, !dbg !52
+    %scevgep = getelementptr i16, ptr %lsr.iv1, i32 1, !dbg !52
+    %scevgep6 = getelementptr i16, ptr %lsr.iv5, i32 1, !dbg !52
     %4 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %1, i32 1), !dbg !46
     %5 = icmp ne i32 %4, 0, !dbg !46
     br i1 %5, label %for.body3.us, label %for.cond1.for.inc9_crit_edge.us, !dbg !46, !llvm.loop !53
 
   for.cond1.for.inc9_crit_edge.us:                  ; preds = %for.body3.us
-    %6 = bitcast i16* %lsr.iv2 to i1*
+    %6 = bitcast ptr %lsr.iv2 to ptr
     %sunkaddr = mul i32 %i.031.us, 4, !dbg !41
-    %7 = bitcast i32* %e to i8*, !dbg !41
-    %sunkaddr7 = getelementptr inbounds i8, i8* %7, i32 %sunkaddr, !dbg !41
-    %8 = bitcast i8* %sunkaddr7 to i32*, !dbg !41
-    store i32 %add8.us, i32* %8, align 4, !dbg !41
+    %7 = bitcast ptr %e to ptr, !dbg !41
+    %sunkaddr7 = getelementptr inbounds i8, ptr %7, i32 %sunkaddr, !dbg !41
+    %8 = bitcast ptr %sunkaddr7 to ptr, !dbg !41
+    store i32 %add8.us, ptr %8, align 4, !dbg !41
     %inc10.us = add nuw nsw i32 %i.031.us, 1, !dbg !55
     call void @llvm.dbg.value(metadata i32 %inc10.us, metadata !30, metadata !DIExpression()), !dbg !32
-    %scevgep4 = getelementptr i1, i1* %6, i32 %0, !dbg !37
-    %9 = bitcast i1* %scevgep4 to i16*, !dbg !37
+    %scevgep4 = getelementptr i1, ptr %6, i32 %0, !dbg !37
+    %9 = bitcast ptr %scevgep4 to ptr, !dbg !37
     %exitcond33 = icmp eq i32 %inc10.us, %d, !dbg !34
     br i1 %exitcond33, label %for.end11, label %for.cond1.preheader.us, !dbg !37, !llvm.loop !56
 
   for.end11:                                        ; preds = %for.cond1.for.inc9_crit_edge.us, %entry
     ret void, !dbg !58
   }
-  declare !dbg !4 dso_local arm_aapcscc signext i16 @get_input(i32, i32*, i16 signext)
+  declare !dbg !4 dso_local arm_aapcscc signext i16 @get_input(i32, ptr, i16 signext)
   declare void @llvm.dbg.value(metadata, metadata, metadata)
   declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)

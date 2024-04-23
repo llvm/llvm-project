@@ -9,6 +9,7 @@
 #include "RISCVMatInt.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/MathExtras.h"
 using namespace llvm;
 
@@ -434,6 +435,43 @@ InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
     }
   }
   return Res;
+}
+
+void generateMCInstSeq(int64_t Val, const MCSubtargetInfo &STI,
+                       MCRegister DestReg, SmallVectorImpl<MCInst> &Insts) {
+  RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Val, STI);
+
+  MCRegister SrcReg = RISCV::X0;
+  for (RISCVMatInt::Inst &Inst : Seq) {
+    switch (Inst.getOpndKind()) {
+    case RISCVMatInt::Imm:
+      Insts.push_back(MCInstBuilder(Inst.getOpcode())
+                          .addReg(DestReg)
+                          .addImm(Inst.getImm()));
+      break;
+    case RISCVMatInt::RegX0:
+      Insts.push_back(MCInstBuilder(Inst.getOpcode())
+                          .addReg(DestReg)
+                          .addReg(SrcReg)
+                          .addReg(RISCV::X0));
+      break;
+    case RISCVMatInt::RegReg:
+      Insts.push_back(MCInstBuilder(Inst.getOpcode())
+                          .addReg(DestReg)
+                          .addReg(SrcReg)
+                          .addReg(SrcReg));
+      break;
+    case RISCVMatInt::RegImm:
+      Insts.push_back(MCInstBuilder(Inst.getOpcode())
+                          .addReg(DestReg)
+                          .addReg(SrcReg)
+                          .addImm(Inst.getImm()));
+      break;
+    }
+
+    // Only the first instruction has X0 as its source.
+    SrcReg = DestReg;
+  }
 }
 
 InstSeq generateTwoRegInstSeq(int64_t Val, const MCSubtargetInfo &STI,

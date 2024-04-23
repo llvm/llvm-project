@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-TFILD %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -combiner-tokenfactor-inline-limit=7 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-TFIL7 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-TFILD %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -combiner-tokenfactor-inline-limit=7 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN-TFIL7 %s
 
 
 ; GCN-LABEL: {{^}}token_factor_inline_limit_test:

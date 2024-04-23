@@ -18,8 +18,9 @@
 
 namespace Fortran::runtime {
 extern "C" {
+RT_EXT_API_GROUP_BEGIN
 
-void RTNAME(AllocatableInitIntrinsic)(Descriptor &descriptor,
+void RTDEF(AllocatableInitIntrinsic)(Descriptor &descriptor,
     TypeCategory category, int kind, int rank, int corank) {
   INTERNAL_CHECK(corank == 0);
   descriptor.Establish(TypeCode{category, kind},
@@ -27,45 +28,42 @@ void RTNAME(AllocatableInitIntrinsic)(Descriptor &descriptor,
       CFI_attribute_allocatable);
 }
 
-void RTNAME(AllocatableInitCharacter)(Descriptor &descriptor,
+void RTDEF(AllocatableInitCharacter)(Descriptor &descriptor,
     SubscriptValue length, int kind, int rank, int corank) {
   INTERNAL_CHECK(corank == 0);
   descriptor.Establish(
       kind, length, nullptr, rank, nullptr, CFI_attribute_allocatable);
 }
 
-void RTNAME(AllocatableInitDerived)(Descriptor &descriptor,
+void RTDEF(AllocatableInitDerived)(Descriptor &descriptor,
     const typeInfo::DerivedType &derivedType, int rank, int corank) {
   INTERNAL_CHECK(corank == 0);
   descriptor.Establish(
       derivedType, nullptr, rank, nullptr, CFI_attribute_allocatable);
 }
 
-void RTNAME(AllocatableInitIntrinsicForAllocate)(Descriptor &descriptor,
+void RTDEF(AllocatableInitIntrinsicForAllocate)(Descriptor &descriptor,
     TypeCategory category, int kind, int rank, int corank) {
-  if (descriptor.IsAllocated()) {
-    return;
+  if (!descriptor.IsAllocated()) {
+    RTNAME(AllocatableInitIntrinsic)(descriptor, category, kind, rank, corank);
   }
-  RTNAME(AllocatableInitIntrinsic)(descriptor, category, kind, rank, corank);
 }
 
-void RTNAME(AllocatableInitCharacterForAllocate)(Descriptor &descriptor,
+void RTDEF(AllocatableInitCharacterForAllocate)(Descriptor &descriptor,
     SubscriptValue length, int kind, int rank, int corank) {
-  if (descriptor.IsAllocated()) {
-    return;
+  if (!descriptor.IsAllocated()) {
+    RTNAME(AllocatableInitCharacter)(descriptor, length, kind, rank, corank);
   }
-  RTNAME(AllocatableInitCharacter)(descriptor, length, kind, rank, corank);
 }
 
-void RTNAME(AllocatableInitDerivedForAllocate)(Descriptor &descriptor,
+void RTDEF(AllocatableInitDerivedForAllocate)(Descriptor &descriptor,
     const typeInfo::DerivedType &derivedType, int rank, int corank) {
-  if (descriptor.IsAllocated()) {
-    return;
+  if (!descriptor.IsAllocated()) {
+    RTNAME(AllocatableInitDerived)(descriptor, derivedType, rank, corank);
   }
-  RTNAME(AllocatableInitDerived)(descriptor, derivedType, rank, corank);
 }
 
-std::int32_t RTNAME(MoveAlloc)(Descriptor &to, Descriptor &from,
+std::int32_t RTDEF(MoveAlloc)(Descriptor &to, Descriptor &from,
     const typeInfo::DerivedType *derivedType, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
@@ -110,52 +108,55 @@ std::int32_t RTNAME(MoveAlloc)(Descriptor &to, Descriptor &from,
   return StatOk;
 }
 
-void RTNAME(AllocatableSetBounds)(Descriptor &descriptor, int zeroBasedDim,
+void RTDEF(AllocatableSetBounds)(Descriptor &descriptor, int zeroBasedDim,
     SubscriptValue lower, SubscriptValue upper) {
   INTERNAL_CHECK(zeroBasedDim >= 0 && zeroBasedDim < descriptor.rank());
-  descriptor.GetDimension(zeroBasedDim).SetBounds(lower, upper);
-  // The byte strides are computed when the object is allocated.
-}
-
-void RTNAME(AllocatableSetDerivedLength)(
-    Descriptor &descriptor, int which, SubscriptValue x) {
-  DescriptorAddendum *addendum{descriptor.Addendum()};
-  INTERNAL_CHECK(addendum != nullptr);
-  addendum->SetLenParameterValue(which, x);
-}
-
-void RTNAME(AllocatableApplyMold)(
-    Descriptor &descriptor, const Descriptor &mold, int rank) {
-  if (descriptor.IsAllocated()) {
-    // 9.7.1.3 Return so the error can be emitted by AllocatableAllocate.
-    return;
+  if (descriptor.IsAllocatable() && !descriptor.IsAllocated()) {
+    descriptor.GetDimension(zeroBasedDim).SetBounds(lower, upper);
+    // The byte strides are computed when the object is allocated.
   }
-  descriptor.ApplyMold(mold, rank);
 }
 
-int RTNAME(AllocatableAllocate)(Descriptor &descriptor, bool hasStat,
+void RTDEF(AllocatableSetDerivedLength)(
+    Descriptor &descriptor, int which, SubscriptValue x) {
+  if (descriptor.IsAllocatable() && !descriptor.IsAllocated()) {
+    DescriptorAddendum *addendum{descriptor.Addendum()};
+    INTERNAL_CHECK(addendum != nullptr);
+    addendum->SetLenParameterValue(which, x);
+  }
+}
+
+void RTDEF(AllocatableApplyMold)(
+    Descriptor &descriptor, const Descriptor &mold, int rank) {
+  if (descriptor.IsAllocatable() && !descriptor.IsAllocated()) {
+    descriptor.ApplyMold(mold, rank);
+  }
+}
+
+int RTDEF(AllocatableAllocate)(Descriptor &descriptor, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   if (!descriptor.IsAllocatable()) {
     return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);
-  }
-  if (descriptor.IsAllocated()) {
+  } else if (descriptor.IsAllocated()) {
     return ReturnError(terminator, StatBaseNotNull, errMsg, hasStat);
-  }
-  int stat{ReturnError(terminator, descriptor.Allocate(), errMsg, hasStat)};
-  if (stat == StatOk) {
-    if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
-      if (const auto *derived{addendum->derivedType()}) {
-        if (!derived->noInitializationNeeded()) {
-          stat = Initialize(descriptor, *derived, terminator, hasStat, errMsg);
+  } else {
+    int stat{ReturnError(terminator, descriptor.Allocate(), errMsg, hasStat)};
+    if (stat == StatOk) {
+      if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
+        if (const auto *derived{addendum->derivedType()}) {
+          if (!derived->noInitializationNeeded()) {
+            stat =
+                Initialize(descriptor, *derived, terminator, hasStat, errMsg);
+          }
         }
       }
     }
+    return stat;
   }
-  return stat;
 }
 
-int RTNAME(AllocatableAllocateSource)(Descriptor &alloc,
+int RTDEF(AllocatableAllocateSource)(Descriptor &alloc,
     const Descriptor &source, bool hasStat, const Descriptor *errMsg,
     const char *sourceFile, int sourceLine) {
   int stat{RTNAME(AllocatableAllocate)(
@@ -167,22 +168,22 @@ int RTNAME(AllocatableAllocateSource)(Descriptor &alloc,
   return stat;
 }
 
-int RTNAME(AllocatableDeallocate)(Descriptor &descriptor, bool hasStat,
+int RTDEF(AllocatableDeallocate)(Descriptor &descriptor, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   if (!descriptor.IsAllocatable()) {
     return ReturnError(terminator, StatInvalidDescriptor, errMsg, hasStat);
-  }
-  if (!descriptor.IsAllocated()) {
+  } else if (!descriptor.IsAllocated()) {
     return ReturnError(terminator, StatBaseNull, errMsg, hasStat);
+  } else {
+    return ReturnError(terminator,
+        descriptor.Destroy(
+            /*finalize=*/true, /*destroyPointers=*/false, &terminator),
+        errMsg, hasStat);
   }
-  return ReturnError(terminator,
-      descriptor.Destroy(
-          /*finalize=*/true, /*destroyPointers=*/false, &terminator),
-      errMsg, hasStat);
 }
 
-int RTNAME(AllocatableDeallocatePolymorphic)(Descriptor &descriptor,
+int RTDEF(AllocatableDeallocatePolymorphic)(Descriptor &descriptor,
     const typeInfo::DerivedType *derivedType, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   int stat{RTNAME(AllocatableDeallocate)(
@@ -202,7 +203,7 @@ int RTNAME(AllocatableDeallocatePolymorphic)(Descriptor &descriptor,
   return stat;
 }
 
-void RTNAME(AllocatableDeallocateNoFinal)(
+void RTDEF(AllocatableDeallocateNoFinal)(
     Descriptor &descriptor, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   if (!descriptor.IsAllocatable()) {
@@ -217,5 +218,7 @@ void RTNAME(AllocatableDeallocateNoFinal)(
 }
 
 // TODO: AllocatableCheckLengthParameter
+
+RT_EXT_API_GROUP_END
 }
 } // namespace Fortran::runtime

@@ -2,7 +2,7 @@
 Test lldb command aliases.
 """
 
-import unittest2
+import unittest
 import os
 import lldb
 from lldbsuite.test.decorators import *
@@ -17,13 +17,13 @@ class LaunchInTerminalTestCase(TestBase):
     @skipUnlessDarwin
     # If the test is being run under sudo, the spawned terminal won't retain that elevated
     # privilege so it can't open the socket to talk back to the test case
-    @unittest2.skipIf(
+    @unittest.skipIf(
         hasattr(os, "geteuid") and os.geteuid() == 0, "test cannot be run as root"
     )
     # Do we need to disable this test if the testsuite is being run on a remote system?
     # This env var is only defined when the shell is running in a local mac
     # terminal window
-    @unittest2.skipUnless(
+    @unittest.skipUnless(
         "TERM_PROGRAM" in os.environ, "test must be run on local system"
     )
     @no_debug_info_test

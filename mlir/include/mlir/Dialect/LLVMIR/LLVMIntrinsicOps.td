@@ -274,9 +274,9 @@ def LLVM_NoAliasScopeDeclOp
   let assemblyFormat = "$scope attr-dict";
 }
 
-//===----------------------------------------------------------------------===//
-// Lifetime Markers
-//===----------------------------------------------------------------------===//
+//
+// Memory marker intrinsics.
+//
 
 /// Base operation for lifetime markers. The LLVM intrinsics require the size
 /// operand to be an immediate. In MLIR it is encoded as an attribute.
@@ -290,6 +290,111 @@ class LLVM_LifetimeBaseOp<string opName> : LLVM_ZeroResultIntrOp<opName, [1],
 
 def LLVM_LifetimeStartOp : LLVM_LifetimeBaseOp<"lifetime.start">;
 def LLVM_LifetimeEndOp : LLVM_LifetimeBaseOp<"lifetime.end">;
+
+def LLVM_InvariantStartOp : LLVM_OneResultIntrOp<"invariant.start", [], [1],
+    [DeclareOpInterfaceMethods<PromotableOpInterface>],
+    /*requiresFastmath=*/0, /*immArgPositions=*/[0],
+    /*immArgAttrNames=*/["size"]> {
+  let arguments = (ins I64Attr:$size, LLVM_AnyPointer:$ptr);
+  let results = (outs LLVM_DefaultPointer:$res);
+  let assemblyFormat = "$size `,` $ptr attr-dict `:` qualified(type($ptr))";
+}
+
+def LLVM_InvariantEndOp : LLVM_ZeroResultIntrOp<"invariant.end", [2],
+    [DeclareOpInterfaceMethods<PromotableOpInterface>],
+    /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
+    /*immArgPositions=*/[1], /*immArgAttrNames=*/["size"]> {
+  let arguments = (ins LLVM_DefaultPointer:$start,
+                       I64Attr:$size,
+                       LLVM_AnyPointer:$ptr);
+  let assemblyFormat = "$start `,` $size `,` $ptr attr-dict `:` "
+      "qualified(type($ptr))";
+}
+
+// Constrained Floating-Point Intrinsics.
+
+class LLVM_ConstrainedIntr<string mnem, int numArgs,
+                           bit overloadedResult, list<int> overloadedOperands,
+                           bit hasRoundingMode>
+    : LLVM_OneResultIntrOp<"experimental.constrained." # mnem,
+                           /*overloadedResults=*/
+                           !cond(!gt(overloadedResult, 0) : [0],
+                                 true : []),
+                           overloadedOperands,
+                           /*traits=*/[Pure, DeclareOpInterfaceMethods<FPExceptionBehaviorOpInterface>]
+                           # !cond(
+                               !gt(hasRoundingMode, 0) : [DeclareOpInterfaceMethods<RoundingModeOpInterface>],
+                               true : []),
+                           /*requiresFastmath=*/0,
+                           /*immArgPositions=*/[],
+                           /*immArgAttrNames=*/[]> {
+  dag regularArgs = !dag(ins, !listsplat(LLVM_Type, numArgs), !foreach(i, !range(numArgs), "arg_" #i));
+  dag attrArgs = !con(!cond(!gt(hasRoundingMode, 0) : (ins ValidRoundingModeAttr:$roundingmode),
+                            true : (ins)),
+                      (ins FPExceptionBehaviorAttr:$fpExceptionBehavior));
+  let arguments = !con(regularArgs, attrArgs);
+  let llvmBuilder = [{
+    SmallVector<llvm::Value *> args =
+      moduleTranslation.lookupValues(opInst.getOperands());
+    SmallVector<llvm::Type *> overloadedTypes; }] #
+    !cond(!gt(overloadedResult, 0) : [{
+    // Take into account overloaded result type.
+    overloadedTypes.push_back($_resultType); }],
+    // No overloaded result type.
+          true : "") # [{
+    llvm::transform(ArrayRef<unsigned>}] # overloadedOperandsCpp # [{,
+                    std::back_inserter(overloadedTypes),
+                    [&args](unsigned index) { return args[index]->getType(); });
+    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Function *callee =
+      llvm::Intrinsic::getDeclaration(module,
+        llvm::Intrinsic::experimental_constrained_}] #
+    mnem # [{, overloadedTypes); }] #
+    !cond(!gt(hasRoundingMode, 0) : [{
+    // Get rounding mode using interface.
+    llvm::RoundingMode rounding =
+        moduleTranslation.translateRoundingMode($roundingmode); }],
+          true : [{
+    // No rounding mode.
+    std::optional<llvm::RoundingMode> rounding; }]) # [{
+    llvm::fp::ExceptionBehavior except =
+      moduleTranslation.translateFPExceptionBehavior($fpExceptionBehavior);
+    $res = builder.CreateConstrainedFPCall(callee, args, "", rounding, except);
+  }];
+  let mlirBuilder = [{
+    SmallVector<Value> mlirOperands;
+    SmallVector<NamedAttribute> mlirAttrs;
+    if (failed(moduleImport.convertIntrinsicArguments(
+        llvmOperands.take_front( }] # numArgs # [{),
+        {}, {}, mlirOperands, mlirAttrs))) {
+      return failure();
+    }
+
+    FPExceptionBehaviorAttr fpExceptionBehaviorAttr =
+        $_fpExceptionBehavior_attr($fpExceptionBehavior);
+    mlirAttrs.push_back(
+        $_builder.getNamedAttr(
+            $_qualCppClassName::getFPExceptionBehaviorAttrName(),
+            fpExceptionBehaviorAttr)); }] #
+    !cond(!gt(hasRoundingMode, 0) : [{
+    RoundingModeAttr roundingModeAttr = $_roundingMode_attr($roundingmode);
+    mlirAttrs.push_back(
+        $_builder.getNamedAttr($_qualCppClassName::getRoundingModeAttrName(),
+                               roundingModeAttr));
+    }], true : "") # [{
+    $res = $_builder.create<$_qualCppClassName>($_location,
+      $_resultType, mlirOperands, mlirAttrs);
+  }];
+}
+
+def LLVM_ConstrainedFPTruncIntr
+    : LLVM_ConstrainedIntr<"fptrunc", /*numArgs=*/1,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[0],
+        /*hasRoundingMode=*/1> {
+  let assemblyFormat = [{
+    $arg_0 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0) `to` type(results)
+  }];
+}
 
 // Intrinsics with multiple returns.
 
@@ -415,6 +520,14 @@ def LLVM_CoroResumeOp : LLVM_IntrOp<"coro.resume", [], [], [], 0> {
   let assemblyFormat = "$handle attr-dict `:` qualified(type($handle))";
 }
 
+def LLVM_CoroPromiseOp : LLVM_IntrOp<"coro.promise", [], [], [], 1> {
+  let arguments = (ins LLVM_AnyPointer:$handle,
+                       I32:$align,
+                       I1:$from);
+  let results = (outs LLVM_AnyPointer:$res);
+  let assemblyFormat = "$handle `,` $align `,` $from attr-dict `:` functional-type(operands, results)";
+}
+
 //
 // Debug function intrinsics.
 //
@@ -449,8 +562,10 @@ class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
   }];
 }
 
-def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr",
-    [DeclareOpInterfaceMethods<PromotableOpInterface>]> {
+def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr", [
+    DeclareOpInterfaceMethods<PromotableOpInterface, [
+      "requiresReplacedValues", "visitReplacedValues"
+    ]>]> {
   let summary = "Describes how the address relates to a source language variable.";
   let arguments = (ins
     LLVM_AnyPointer:$addr,
@@ -485,7 +600,11 @@ def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
       });
   }];
   let mlirBuilder = [{
-    $_op = $_builder.create<$_qualCppClassName>($_location, $_label_attr($label));
+    DILabelAttr labelAttr = $_label_attr($label);
+    // Drop the intrinsic if the label translation fails due to cylic metadata.
+    if (!labelAttr)
+      return success();
+    $_op = $_builder.create<$_qualCppClassName>($_location, labelAttr);
   }];
   let assemblyFormat = "$label attr-dict";
 }
@@ -494,19 +613,19 @@ def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
 // Variadic function intrinsics.
 //
 
-def LLVM_VaStartOp : LLVM_ZeroResultIntrOp<"vastart">,
+def LLVM_VaStartOp : LLVM_ZeroResultIntrOp<"vastart", [0]>,
                      Arguments<(ins LLVM_AnyPointer:$arg_list)> {
   let assemblyFormat = "$arg_list attr-dict `:` qualified(type($arg_list))";
   let summary = "Initializes `arg_list` for subsequent variadic argument extractions.";
 }
 
-def LLVM_VaCopyOp : LLVM_ZeroResultIntrOp<"vacopy">,
+def LLVM_VaCopyOp : LLVM_ZeroResultIntrOp<"vacopy", [0]>,
                     Arguments<(ins LLVM_AnyPointer:$dest_list, LLVM_AnyPointer:$src_list)> {
   let assemblyFormat = "$src_list `to` $dest_list attr-dict `:` type(operands)";
   let summary = "Copies the current argument position from `src_list` to `dest_list`.";
 }
 
-def LLVM_VaEndOp : LLVM_ZeroResultIntrOp<"vaend">,
+def LLVM_VaEndOp : LLVM_ZeroResultIntrOp<"vaend", [0]>,
                    Arguments<(ins LLVM_AnyPointer:$arg_list)> {
   let assemblyFormat = "$arg_list attr-dict `:` qualified(type($arg_list))";
   let summary = "Destroys `arg_list`, which has been initialized by `intr.vastart` or `intr.vacopy`.";
@@ -940,6 +1059,20 @@ def LLVM_vector_extract
     }
   }];
 }
+
+def LLVM_experimental_vector_interleave2
+    : LLVM_OneResultIntrOp<"experimental.vector.interleave2",
+        /*overloadedResults=*/[0], /*overloadedOperands=*/[],
+        /*traits=*/[
+          Pure, AllTypesMatch<["vec1", "vec2"]>,
+          PredOpTrait<
+            "result has twice as many elements as 'vec1'",
+            And<[CPred<"getVectorNumElements($res.getType()) == "
+                       "getVectorNumElements($vec1.getType()) * 2">,
+                 CPred<"getVectorElementType($vec1.getType()) == "
+                       "getVectorElementType($res.getType())">]>>,
+        ]>,
+        Arguments<(ins LLVM_AnyVector:$vec1, LLVM_AnyVector:$vec2)>;
 
 //
 // LLVM Vector Predication operations.

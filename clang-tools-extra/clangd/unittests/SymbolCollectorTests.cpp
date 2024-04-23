@@ -105,6 +105,9 @@ MATCHER(refRange, "") {
 MATCHER_P2(OverriddenBy, Subject, Object, "") {
   return arg == Relation{Subject.ID, RelationKind::OverriddenBy, Object.ID};
 }
+MATCHER(isSpelled, "") {
+  return static_cast<bool>(arg.Kind & RefKind::Spelled);
+}
 ::testing::Matcher<const std::vector<Ref> &>
 haveRanges(const std::vector<Range> Ranges) {
   return ::testing::UnorderedPointwise(refRange(), Ranges);
@@ -522,6 +525,47 @@ TEST_F(SymbolCollectorTest, templateArgs) {
           Contains(AllOf(qName("Foz"), templateArgs("<T, T>"),
                          declRange(Header.range("parampacktempltemplpartial")),
                          forCodeCompletion(false)))));
+}
+
+TEST_F(SymbolCollectorTest, ObjCRefs) {
+  Annotations Header(R"(
+  @interface Person
+  - (void)$talk[[talk]];
+  - (void)$say[[say]]:(id)something;
+  @end
+  @interface Person (Category)
+  - (void)categoryMethod;
+  - (void)multiArg:(id)a method:(id)b;
+  @end
+  )");
+  Annotations Main(R"(
+  @implementation Person
+  - (void)$talk[[talk]] {}
+  - (void)$say[[say]]:(id)something {}
+  @end
+
+  void fff(Person *p) {
+    [p $talk[[talk]]];
+    [p $say[[say]]:0];
+    [p categoryMethod];
+    [p multiArg:0 method:0];
+  }
+  )");
+  CollectorOpts.RefFilter = RefKind::All;
+  CollectorOpts.CollectMainFileRefs = true;
+  TestFileName = testPath("test.m");
+  runSymbolCollector(Header.code(), Main.code(),
+                     {"-fblocks", "-xobjective-c++", "-Wno-objc-root-class"});
+  EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "Person::talk").ID,
+                                  haveRanges(Main.ranges("talk")))));
+  EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "Person::say:").ID,
+                                  haveRanges(Main.ranges("say")))));
+  EXPECT_THAT(Refs,
+              Contains(Pair(findSymbol(Symbols, "Person::categoryMethod").ID,
+                            ElementsAre(isSpelled()))));
+  EXPECT_THAT(Refs,
+              Contains(Pair(findSymbol(Symbols, "Person::multiArg:method:").ID,
+                            ElementsAre(isSpelled()))));
 }
 
 TEST_F(SymbolCollectorTest, ObjCSymbols) {
@@ -1917,14 +1961,14 @@ TEST_F(SymbolCollectorTest, UndefOfModuleMacro) {
     #undef X
     )cpp";
   TU.AdditionalFiles["foo.h"] = "#define X 1";
-  TU.AdditionalFiles["module.map"] = R"cpp(
+  TU.AdditionalFiles["module.modulemap"] = R"cpp(
     module foo {
      header "foo.h"
      export *
    }
    )cpp";
   TU.ExtraArgs.push_back("-fmodules");
-  TU.ExtraArgs.push_back("-fmodule-map-file=" + testPath("module.map"));
+  TU.ExtraArgs.push_back("-fmodule-map-file=" + testPath("module.modulemap"));
   TU.OverlayRealFileSystemForModules = true;
 
   TU.build();

@@ -13,7 +13,7 @@ class TestProgressReporting(TestBase):
         TestBase.setUp(self)
         self.broadcaster = self.dbg.GetBroadcaster()
         self.listener = lldbutil.start_listening_from(
-            self.broadcaster, lldb.SBDebugger.eBroadcastBitProgress
+            self.broadcaster, lldb.eBroadcastBitProgress
         )
 
     def test_dwarf_symbol_loading_progress_report(self):
@@ -39,3 +39,5 @@ class TestProgressReporting(TestBase):
         progress_data = lldb.SBDebugger.GetProgressDataFromEvent(event)
         message = progress_data.GetValueForKey("message").GetStringValue(100)
         self.assertGreater(len(message), 0)
+        details = progress_data.GetValueForKey("details").GetStringValue(100)
+        self.assertGreater(len(details), 0)

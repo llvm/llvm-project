@@ -36,6 +36,7 @@ class DXILResourcePrinterPass : public PassInfoMixin<DXILResourcePrinterPass> {
 public:
   explicit DXILResourcePrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  static bool isRequired() { return true; }
 };
 
 /// The legacy pass manager's analysis pass to compute DXIL resource

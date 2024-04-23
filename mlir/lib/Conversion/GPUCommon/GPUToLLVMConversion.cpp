@@ -668,7 +668,7 @@ static int32_t getCuSparseLtDataTypeFrom(Type type) {
 static int32_t getCuSparseDataTypeFrom(Type type) {
   if (llvm::isa<ComplexType>(type)) {
     // get the element type
-    auto elementType = type.cast<ComplexType>().getElementType();
+    auto elementType = cast<ComplexType>(type).getElementType();
     if (elementType.isBF16())
       return 15; // CUDA_C_16BF
     if (elementType.isF16())
@@ -918,8 +918,7 @@ LogicalResult ConvertAsyncYieldToGpuRuntimeCallPattern::matchAndRewrite(
   for (auto stream : streams)
     streamDestroyCallBuilder.create(loc, rewriter, {stream});
 
-  rewriter.updateRootInPlace(yieldOp,
-                             [&] { yieldOp->setOperands(newOperands); });
+  rewriter.modifyOpInPlace(yieldOp, [&] { yieldOp->setOperands(newOperands); });
   return success();
 }
 
@@ -1042,13 +1041,14 @@ Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateParamsArray(
   auto arrayPtr = builder.create<LLVM::AllocaOp>(
       loc, llvmPointerType, llvmPointerType, arraySize, /*alignment=*/0);
   for (const auto &en : llvm::enumerate(arguments)) {
+    const auto index = static_cast<int32_t>(en.index());
     Value fieldPtr =
         builder.create<LLVM::GEPOp>(loc, llvmPointerType, structType, structPtr,
-                                    ArrayRef<LLVM::GEPArg>{0, en.index()});
+                                    ArrayRef<LLVM::GEPArg>{0, index});
     builder.create<LLVM::StoreOp>(loc, en.value(), fieldPtr);
-    auto elementPtr = builder.create<LLVM::GEPOp>(
-        loc, llvmPointerType, llvmPointerType, arrayPtr,
-        ArrayRef<LLVM::GEPArg>{en.index()});
+    auto elementPtr =
+        builder.create<LLVM::GEPOp>(loc, llvmPointerType, llvmPointerType,
+                                    arrayPtr, ArrayRef<LLVM::GEPArg>{index});
     builder.create<LLVM::StoreOp>(loc, fieldPtr, elementPtr);
   }
   return arrayPtr;
@@ -1334,8 +1334,9 @@ LogicalResult ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::SetDefaultDeviceOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Location loc = op.getLoc();
-  setDefaultDeviceCallBuilder.create(loc, rewriter, {adaptor.getDevIndex()});
-  rewriter.replaceOp(op, {});
+  auto call = setDefaultDeviceCallBuilder.create(loc, rewriter,
+                                                 {adaptor.getDevIndex()});
+  rewriter.replaceOp(op, call);
   return success();
 }
 

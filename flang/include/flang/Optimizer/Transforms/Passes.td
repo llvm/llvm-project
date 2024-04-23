@@ -16,8 +16,8 @@
 
 include "mlir/Pass/PassBase.td"
 
-class AbstractResultOptBase<string optExt, string operation> 
-  : Pass<"abstract-result-on-" # optExt # "-opt", operation> {
+def AbstractResultOpt
+  : Pass<"abstract-result"> {
   let summary = "Convert fir.array, fir.box and fir.rec function result to "
                 "function argument";
   let description = [{
@@ -33,14 +33,6 @@ class AbstractResultOptBase<string optExt, string operation>
            "Pass fir.array<T> result as fir.box<fir.array<T>> argument instead"
            " of fir.ref<fir.array<T>>.">
   ];
-}
-
-def AbstractResultOnFuncOpt : AbstractResultOptBase<"func", "mlir::func::FuncOp"> {
-  let constructor = "::fir::createAbstractResultOnFuncOptPass()";
-}
-
-def AbstractResultOnGlobalOpt : AbstractResultOptBase<"global", "fir::GlobalOp"> {
-  let constructor = "::fir::createAbstractResultOnGlobalOptPass()";
 }
 
 def AffineDialectPromotion : Pass<"promote-to-affine", "::mlir::func::FuncOp"> {
@@ -145,7 +137,8 @@ def CharacterConversion : Pass<"character-conversion"> {
   ];
 }
 
-def CFGConversion : Pass<"cfg-conversion", "::mlir::func::FuncOp"> {
+class CFGConversionBase<string optExt, string operation>
+  : Pass<"cfg-conversion-on-" # optExt # "-opt", operation> {
   let summary = "Convert FIR structured control flow ops to CFG ops.";
   let description = [{
     Transform the `fir.do_loop`, `fir.if`, `fir.iterate_while` and
@@ -154,7 +147,6 @@ def CFGConversion : Pass<"cfg-conversion", "::mlir::func::FuncOp"> {
 
     This pass is required before code gen to the LLVM IR dialect.
   }];
-  let constructor = "::fir::createFirToCfgPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect"
   ];
@@ -163,6 +155,14 @@ def CFGConversion : Pass<"cfg-conversion", "::mlir::func::FuncOp"> {
            /*default=*/"false",
            "force the body of a loop to execute at least once">
   ];
+}
+
+def CFGConversionOnFunc : CFGConversionBase<"func", "mlir::func::FuncOp"> {
+  let constructor = "::fir::createFirToCfgOnFuncPass()";
+}
+
+def CFGConversionOnReduction : CFGConversionBase<"reduce", "mlir::omp::DeclareReductionOp"> {
+  let constructor = "::fir::createFirToCfgOnReductionPass()";
 }
 
 def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
@@ -193,12 +193,12 @@ def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> 
 
 // This needs to be a "mlir::ModuleOp" pass, because we are creating debug for
 // the module in this pass.
-def AddDebugFoundation : Pass<"add-debug-foundation", "mlir::ModuleOp"> {
-  let summary = "Add the foundation for debug info";
+def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
+  let summary = "Add the debug info";
   let description = [{
-    Add the foundation for emitting debug info that can be understood by llvm.
+    Emit debug info that can be understood by llvm.
   }];
-  let constructor = "::fir::createAddDebugFoundationPass()";
+  let constructor = "::fir::createAddDebugInfoPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::LLVM::LLVMDialect"
   ];
@@ -318,6 +318,18 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
+def OMPDescriptorMapInfoGenPass
+    : Pass<"omp-descriptor-map-info-gen", "mlir::func::FuncOp"> {
+  let summary = "expands OpenMP MapInfo operations containing descriptors";
+  let description = [{
+    Expands MapInfo operations containing descriptor types into multiple 
+    MapInfo's for each pointer element in the descriptor that requires 
+    explicit individual mapping by the OpenMP runtime.
+  }];
+  let constructor = "::fir::createOMPDescriptorMapInfoGenPass()";
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+}
+
 def OMPMarkDeclareTargetPass
     : Pass<"omp-mark-declare-target", "mlir::ModuleOp"> {
   let summary = "Marks all functions called by an OpenMP declare target function as declare target";
@@ -347,6 +359,42 @@ def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
            "vector scale range">,
   ];
   let constructor = "::fir::createVScaleAttrPass()";
+}
+
+def FunctionAttr : Pass<"function-attr", "mlir::func::FuncOp"> {
+  let summary = "Pass that adds function attributes expected at LLVM IR level";
+  let description = [{ This feature introduces a general attribute aimed at
+     customizing function characteristics. 
+     Options include:
+     Add "frame-pointer" attribute to functions: Set an attribute for the frame 
+     pointer on functions, to avoid saving the frame pointer in a register in 
+     functions where it is unnecessary. This eliminates the need for
+     instructions to save, establish, and restore frame pointers, while also
+     freeing up an additional register in numerous functions. However, this
+     approach can make debugging unfeasible on certain machines.
+  }];
+  let options = [
+    Option<"framePointerKind", "frame-pointer",
+           "mlir::LLVM::framePointerKind::FramePointerKind", 
+           /*default=*/"mlir::LLVM::framePointerKind::FramePointerKind{}",
+           "frame pointer">,
+    Option<"noInfsFPMath", "no-infs-fp-math",
+           "bool", /*default=*/"false",
+           "Set the no-infs-fp-math attribute on functions in the module.">,
+    Option<"noNaNsFPMath", "no-nans-fp-math",
+           "bool", /*default=*/"false",
+           "Set the no-nans-fp-math attribute on functions in the module.">,
+    Option<"approxFuncFPMath", "approx-func-fp-math",
+           "bool", /*default=*/"false",
+           "Set the approx-func-fp-math attribute on functions in the module.">,
+    Option<"noSignedZerosFPMath", "no-signed-zeros-fp-math",
+           "bool", /*default=*/"false",
+           "Set the no-signed-zeros-fp-math attribute on functions in the module.">,
+    Option<"unsafeFPMath", "unsafe-fp-math",
+           "bool", /*default=*/"false",
+           "Set the unsafe-fp-math attribute on functions in the module.">,
+  ];
+  let constructor = "::fir::createFunctionAttrPass()";
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

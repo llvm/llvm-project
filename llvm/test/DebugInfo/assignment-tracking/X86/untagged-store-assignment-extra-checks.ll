@@ -1,6 +1,10 @@
 ; RUN: llc %s -stop-after=finalize-isel -o - \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
 
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-after=finalize-isel -o - \
+; RUN: | FileCheck %s --implicit-check-not=DBG_
+
 ;; Similarly to untagged-store-assignment-outside-variable.ll this test checks
 ;; that out of bounds stores that have no DIAssignID are interpreted correctly
 ;; (see inline comments and checks). Hand-written IR.

@@ -6,7 +6,7 @@
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -S -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
-#include <arm_sme_draft_spec_subject_to_change.h>
+#include <arm_sme.h>
 
 // CHECK-LABEL: @test_svzero_zt(
 // CHECK-NEXT:  entry:
@@ -18,6 +18,6 @@
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sme.zero.zt(i32 0)
 // CPP-CHECK-NEXT:    ret void
 //
-void test_svzero_zt(void) __arm_streaming_compatible __arm_shared_za {
+void test_svzero_zt(void) __arm_streaming_compatible __arm_out("zt0") {
   svzero_zt(0);
 }

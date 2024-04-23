@@ -78,11 +78,11 @@ define <2 x i8> @shl_vec(<2 x i8> %x) {
   ret <2 x i8> %ret
 }
 
-define <3 x i8> @shl_vec_undef(<3 x i8> %x) {
-; CHECK-LABEL: @shl_vec_undef(
-; CHECK-NEXT:    ret <3 x i8> <i8 -1, i8 undef, i8 -1>
+define <3 x i8> @shl_vec_poison(<3 x i8> %x) {
+; CHECK-LABEL: @shl_vec_poison(
+; CHECK-NEXT:    ret <3 x i8> <i8 -1, i8 poison, i8 -1>
 ;
-  %ret = shl nuw <3 x i8> <i8 -1, i8 undef, i8 -1>, %x
+  %ret = shl nuw <3 x i8> <i8 -1, i8 poison, i8 -1>, %x
   ret <3 x i8> %ret
 }
 

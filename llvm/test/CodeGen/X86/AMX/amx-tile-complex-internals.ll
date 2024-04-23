@@ -3,7 +3,7 @@
 ; RUN: -mattr=+amx-complex \
 ; RUN: -verify-machineinstrs | FileCheck %s
 
-define void @test_amx(i8* %pointer, i8* %base, i64 %stride) {
+define void @test_amx(ptr %pointer, ptr %base, i64 %stride) {
 ; CHECK-LABEL: test_amx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
@@ -27,21 +27,21 @@ define void @test_amx(i8* %pointer, i8* %base, i64 %stride) {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 
-  %a = call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 8, i8* %base, i64 %stride)
+  %a = call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 8, ptr %base, i64 %stride)
   %b = call x86_amx @llvm.x86.tilezero.internal(i16 8, i16 8)
   %c = call x86_amx @llvm.x86.tilezero.internal(i16 8, i16 8)
 
   %c1 = call x86_amx @llvm.x86.tcmmimfp16ps.internal(i16 8, i16 8, i16 8, x86_amx %c, x86_amx %a, x86_amx %b)
   %c2 = call x86_amx @llvm.x86.tcmmrlfp16ps.internal(i16 8, i16 8, i16 8, x86_amx %c1, x86_amx %a, x86_amx %b)
 
-  call void @llvm.x86.tilestored64.internal(i16 8, i16 8, i8* %pointer, i64 %stride, x86_amx %c2)
+  call void @llvm.x86.tilestored64.internal(i16 8, i16 8, ptr %pointer, i64 %stride, x86_amx %c2)
   ret void
 }
 
 declare x86_amx @llvm.x86.tilezero.internal(i16, i16)
-declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, i8*, i64)
-declare x86_amx @llvm.x86.tileloaddt164.internal(i16, i16, i8*, i64)
-declare void @llvm.x86.tilestored64.internal(i16, i16, i8*, i64, x86_amx)
+declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, ptr, i64)
+declare x86_amx @llvm.x86.tileloaddt164.internal(i16, i16, ptr, i64)
+declare void @llvm.x86.tilestored64.internal(i16, i16, ptr, i64, x86_amx)
 
 declare x86_amx @llvm.x86.tcmmimfp16ps.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
 declare x86_amx @llvm.x86.tcmmrlfp16ps.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)

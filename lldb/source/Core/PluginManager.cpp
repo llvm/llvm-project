@@ -821,7 +821,7 @@ PluginManager::GetPlatformCreateCallbackForPluginName(llvm::StringRef name) {
 void PluginManager::AutoCompletePlatformName(llvm::StringRef name,
                                              CompletionRequest &request) {
   for (const auto &instance : GetPlatformInstances().GetInstances()) {
-    if (instance.name.startswith(name))
+    if (instance.name.starts_with(name))
       request.AddCompletion(instance.name);
   }
 }
@@ -869,7 +869,7 @@ PluginManager::GetProcessCreateCallbackForPluginName(llvm::StringRef name) {
 void PluginManager::AutoCompleteProcessName(llvm::StringRef name,
                                             CompletionRequest &request) {
   for (const auto &instance : GetProcessInstances().GetInstances()) {
-    if (instance.name.startswith(name))
+    if (instance.name.starts_with(name))
       request.AddCompletion(instance.name, instance.description);
   }
 }

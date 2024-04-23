@@ -28,13 +28,13 @@ define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; RV32I-NEXT:  # %bb.1: # %bb2
 ; RV32I-NEXT:  .Ltmp0:
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call bar@plt
+; RV32I-NEXT:    call bar
 ; RV32I-NEXT:  .Ltmp1:
 ; RV32I-NEXT:    j .LBB0_3
 ; RV32I-NEXT:  .LBB0_2: # %bb1
 ; RV32I-NEXT:  .Ltmp2:
 ; RV32I-NEXT:    mv a0, s0
-; RV32I-NEXT:    call foo@plt
+; RV32I-NEXT:    call foo
 ; RV32I-NEXT:  .Ltmp3:
 ; RV32I-NEXT:  .LBB0_3: # %end2
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -48,7 +48,7 @@ define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; RV32I-NEXT:    mv a0, s0
 ; RV32I-NEXT:    call callee
 ; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    call _Unwind_Resume@plt
+; RV32I-NEXT:    call _Unwind_Resume
 ;
 ; RV64I-LABEL: caller:
 ; RV64I:       # %bb.0: # %entry
@@ -65,13 +65,13 @@ define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; RV64I-NEXT:  # %bb.1: # %bb2
 ; RV64I-NEXT:  .Ltmp0:
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call bar@plt
+; RV64I-NEXT:    call bar
 ; RV64I-NEXT:  .Ltmp1:
 ; RV64I-NEXT:    j .LBB0_3
 ; RV64I-NEXT:  .LBB0_2: # %bb1
 ; RV64I-NEXT:  .Ltmp2:
 ; RV64I-NEXT:    mv a0, s0
-; RV64I-NEXT:    call foo@plt
+; RV64I-NEXT:    call foo
 ; RV64I-NEXT:  .Ltmp3:
 ; RV64I-NEXT:  .LBB0_3: # %end2
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -85,7 +85,7 @@ define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call callee
 ; RV64I-NEXT:    mv a0, s1
-; RV64I-NEXT:    call _Unwind_Resume@plt
+; RV64I-NEXT:    call _Unwind_Resume
 entry:
   %0 = icmp eq ptr %p, null
   br i1 %0, label %bb1, label %bb2

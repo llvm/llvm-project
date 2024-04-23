@@ -4,6 +4,9 @@
 //
 // RUN: %clang_cc1 -std=c++20 %t/foo.cppm -emit-module-interface -o %t/foo.pcm
 // RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -fsyntax-only -verify
+
+// RUN: %clang_cc1 -std=c++20 %t/foo.cppm -emit-reduced-module-interface -o %t/foo.pcm
+// RUN: %clang_cc1 -std=c++20 -fprebuilt-module-path=%t %t/Use.cpp -fsyntax-only -verify
 //
 //--- bar.h
 struct bar_base {

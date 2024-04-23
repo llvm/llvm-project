@@ -1,6 +1,7 @@
 // RUN: %clang_profgen -o %t -O3 %s
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
+// RUN: llvm-profdata show --all-functions %t.profdata | FileCheck %s --check-prefix=PROFCNT
 // RUN: %clang_profuse=%t.profdata -o - -S -emit-llvm %s | FileCheck %s --check-prefix=COMMON --check-prefix=ORIG
 //
 // RUN: rm -fr %t.dir1
@@ -8,6 +9,7 @@
 // RUN: env LLVM_PROFILE_FILE=%t.dir1/profraw_e_%1m %run %t
 // RUN: env LLVM_PROFILE_FILE=%t.dir1/profraw_e_%1m %run %t
 // RUN: llvm-profdata merge -o %t.em.profdata %t.dir1
+// RUN: llvm-profdata show --all-functions %t.em.profdata | FileCheck %s --check-prefix=PROFCNT
 // RUN: %clang_profuse=%t.em.profdata -o - -S -emit-llvm %s | FileCheck %s --check-prefix=COMMON --check-prefix=MERGE
 //
 // RUN: rm -fr %t.dir2
@@ -16,6 +18,7 @@
 // RUN: %run %t.merge
 // RUN: %run %t.merge
 // RUN: llvm-profdata merge -o %t.m.profdata %t.dir2/
+// RUN: llvm-profdata show --all-functions %t.m.profdata | FileCheck %s --check-prefix=PROFCNT
 // RUN: %clang_profuse=%t.m.profdata -o - -S -emit-llvm %s | FileCheck %s --check-prefix=COMMON --check-prefix=MERGE
 //
 // Test that merging is enabled by default with -fprofile-generate=
@@ -27,6 +30,7 @@
 // RUN: %run %t.merge3
 // RUN: %run %t.merge3
 // RUN: llvm-profdata merge -o %t.m3.profdata %t.dir3/
+// RUN: llvm-profdata show --all-functions %t.m3.profdata | FileCheck %s --check-prefix=PROFCNT
 // RUN: %clang_profuse=%t.m3.profdata -O0 -o - -S -emit-llvm %s | FileCheck %s --check-prefix=COMMON --check-prefix=PGOMERGE
 //
 // Test that merging is enabled by default with -fprofile-generate
@@ -40,6 +44,7 @@
 // RUN: %run %t.dir4/merge4
 // RUN: rm -f %t.dir4/merge4*
 // RUN: llvm-profdata merge -o %t.m4.profdata ./
+// RUN: llvm-profdata show --all-functions %t.m4.profdata | FileCheck %s --check-prefix=PROFCNT
 // RUN: %clang_profuse=%t.m4.profdata -O0 -o - -S -emit-llvm %s | FileCheck %s --check-prefix=COMMON  --check-prefix=PGOMERGE
 
 /// Test that the merge pool size can be larger than 10.
@@ -48,6 +53,13 @@
 // RUN: env LLVM_PROFILE_FILE=%t.dir5/e_%20m.profraw %run %t
 // RUN: not ls %t.dir5/e_%20m.profraw
 // RUN: ls %t.dir5/e_*.profraw | count 1
+
+// Test that all three functions have counters in the profile.
+// PROFCNT-DAG: begin
+// PROFCNT-DAG: end
+// PROFCNT-DAG: main
+// PROFCNT: Functions shown: 3
+// PROFCNT: Total functions: 3
 
 int begin(int i) {
   // COMMON: br i1 %{{.*}}, label %{{.*}}, label %{{.*}}, !prof ![[PD1:[0-9]+]]

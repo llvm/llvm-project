@@ -1,10 +1,7 @@
-// https://github.com/llvm/llvm-project/issues/60678
-// XFAIL: glibc-2.37
-
 // RUN: %clang_dfsan %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
 // RUN: %clang_dfsan -DSTRICT_DATA_DEPENDENCIES %s -o %t && %run %t
 // RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false -DSTRICT_DATA_DEPENDENCIES %s -o %t && %run %t
-// RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
+// RUN: %clang_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 -mllvm -dfsan-combine-pointer-labels-on-load=false -no-pie %s -o %t && DFSAN_OPTIONS="strict_data_dependencies=0" %run %t
 //
 // Tests custom implementations of various glibc functions.
 
@@ -178,7 +175,7 @@ void test_stat() {
 
   s.st_dev = i;
   SAVE_ORIGINS(s)
-  ret = stat("/nonexistent", &s);
+  ret = stat("/nonexistent_581cb021aba7", &s);
   assert(-1 == ret);
   ASSERT_ZERO_LABEL(ret);
   ASSERT_LABEL(s.st_dev, i_label);

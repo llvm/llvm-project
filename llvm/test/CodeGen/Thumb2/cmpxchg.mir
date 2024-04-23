@@ -10,7 +10,6 @@ body: |
     ; CHECK: successors: %bb.1(0x80000000)
     ; CHECK-NEXT: liveins: $r0_r1, $r4_r5, $r3, $lr
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .1:
     ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.2(0x40000000)
     ; CHECK-NEXT: liveins: $r4, $r5, $r3
@@ -40,7 +39,6 @@ body: |
     ; CHECK-LABEL: name: func2
     ; CHECK: successors: %bb.1(0x80000000)
     ; CHECK-NEXT: liveins: $r1, $r2, $r3, $r12, $lr
-    ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .1:
     ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.2(0x40000000)

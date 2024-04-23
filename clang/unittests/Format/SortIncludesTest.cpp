@@ -976,6 +976,112 @@ TEST_F(SortIncludesTest,
   EXPECT_EQ(Code, sort(Code, "input.h", 0));
 }
 
+TEST_F(SortIncludesTest, MainIncludeChar) {
+  std::string Code = "#include <a>\n"
+                     "#include \"quote/input.h\"\n"
+                     "#include <angle-bracket/input.h>\n";
+
+  // Default behavior
+  EXPECT_EQ("#include \"quote/input.h\"\n"
+            "#include <a>\n"
+            "#include <angle-bracket/input.h>\n",
+            sort(Code, "input.cc", 1));
+
+  Style.MainIncludeChar = tooling::IncludeStyle::MICD_Quote;
+  EXPECT_EQ("#include \"quote/input.h\"\n"
+            "#include <a>\n"
+            "#include <angle-bracket/input.h>\n",
+            sort(Code, "input.cc", 1));
+
+  Style.MainIncludeChar = tooling::IncludeStyle::MICD_AngleBracket;
+  EXPECT_EQ("#include <angle-bracket/input.h>\n"
+            "#include \"quote/input.h\"\n"
+            "#include <a>\n",
+            sort(Code, "input.cc", 1));
+}
+
+TEST_F(SortIncludesTest, MainIncludeCharAnyPickQuote) {
+  Style.MainIncludeChar = tooling::IncludeStyle::MICD_Any;
+  EXPECT_EQ("#include \"input.h\"\n"
+            "#include <a>\n"
+            "#include <b>\n",
+            sort("#include <a>\n"
+                 "#include \"input.h\"\n"
+                 "#include <b>\n",
+                 "input.cc", 1));
+}
+
+TEST_F(SortIncludesTest, MainIncludeCharAnyPickAngleBracket) {
+  Style.MainIncludeChar = tooling::IncludeStyle::MICD_Any;
+  EXPECT_EQ("#include <input.h>\n"
+            "#include <a>\n"
+            "#include <b>\n",
+            sort("#include <a>\n"
+                 "#include <input.h>\n"
+                 "#include <b>\n",
+                 "input.cc", 1));
+}
+
+TEST_F(SortIncludesTest, MainIncludeCharQuoteAndRegroup) {
+  Style.IncludeCategories = {
+      {"lib-a", 1, 0, false}, {"lib-b", 2, 0, false}, {"lib-c", 3, 0, false}};
+  Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
+  Style.MainIncludeChar = tooling::IncludeStyle::MICD_Quote;
+
+  EXPECT_EQ("#include \"lib-b/input.h\"\n"
+            "\n"
+            "#include <lib-a/h-1.h>\n"
+            "#include <lib-a/h-3.h>\n"
+            "#include <lib-a/input.h>\n"
+            "\n"
+            "#include <lib-b/h-1.h>\n"
+            "#include <lib-b/h-3.h>\n"
+            "\n"
+            "#include <lib-c/h-1.h>\n"
+            "#include <lib-c/h-2.h>\n"
+            "#include <lib-c/h-3.h>\n",
+            sort("#include <lib-c/h-1.h>\n"
+                 "#include <lib-c/h-2.h>\n"
+                 "#include <lib-c/h-3.h>\n"
+                 "#include <lib-b/h-1.h>\n"
+                 "#include \"lib-b/input.h\"\n"
+                 "#include <lib-b/h-3.h>\n"
+                 "#include <lib-a/h-1.h>\n"
+                 "#include <lib-a/input.h>\n"
+                 "#include <lib-a/h-3.h>\n",
+                 "input.cc"));
+}
+
+TEST_F(SortIncludesTest, MainIncludeCharAngleBracketAndRegroup) {
+  Style.IncludeCategories = {
+      {"lib-a", 1, 0, false}, {"lib-b", 2, 0, false}, {"lib-c", 3, 0, false}};
+  Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
+  Style.MainIncludeChar = tooling::IncludeStyle::MICD_AngleBracket;
+
+  EXPECT_EQ("#include <lib-a/input.h>\n"
+            "\n"
+            "#include <lib-a/h-1.h>\n"
+            "#include <lib-a/h-3.h>\n"
+            "\n"
+            "#include \"lib-b/input.h\"\n"
+            "#include <lib-b/h-1.h>\n"
+            "#include <lib-b/h-3.h>\n"
+            "\n"
+            "#include <lib-c/h-1.h>\n"
+            "#include <lib-c/h-2.h>\n"
+            "#include <lib-c/h-3.h>\n",
+            sort("#include <lib-c/h-1.h>\n"
+                 "#include <lib-c/h-2.h>\n"
+                 "#include <lib-c/h-3.h>\n"
+                 "#include <lib-b/h-1.h>\n"
+                 "#include \"lib-b/input.h\"\n"
+                 "#include <lib-b/h-3.h>\n"
+                 "#include <lib-a/h-1.h>\n"
+                 "#include <lib-a/input.h>\n"
+                 "#include <lib-a/h-3.h>\n",
+                 "input.cc"));
+}
+
 TEST_F(SortIncludesTest, DoNotRegroupGroupsInGoogleObjCStyle) {
   FmtStyle = getGoogleStyle(FormatStyle::LK_ObjC);
 

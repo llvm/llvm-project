@@ -17,7 +17,7 @@
 // _LIBCPP_BUILDING_LIBRARY to change the definition in the headers.
 
 #include <__config>
-#include <__threading_support>
+#include <__thread/support.h>
 
 #if _LIBCPP_ABI_VERSION == 1 || !defined(_LIBCPP_HAS_TRIVIAL_MUTEX_DESTRUCTION)
 #  define NEEDS_MUTEX_DESTRUCTOR
@@ -26,23 +26,17 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifdef NEEDS_MUTEX_DESTRUCTOR
-class _LIBCPP_EXPORTED_FROM_ABI mutex
-{
-    __libcpp_mutex_t __m_ = _LIBCPP_MUTEX_INITIALIZER;
+class _LIBCPP_EXPORTED_FROM_ABI mutex {
+  __libcpp_mutex_t __m_ = _LIBCPP_MUTEX_INITIALIZER;
 
 public:
-    _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI
-    constexpr mutex() = default;
-    mutex(const mutex&) = delete;
-    mutex& operator=(const mutex&) = delete;
-    ~mutex() noexcept;
+  _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI constexpr mutex() = default;
+  mutex(const mutex&)                                           = delete;
+  mutex& operator=(const mutex&)                                = delete;
+  ~mutex() noexcept;
 };
 
-
-mutex::~mutex() noexcept
-{
-    __libcpp_mutex_destroy(&__m_);
-}
+mutex::~mutex() noexcept { __libcpp_mutex_destroy(&__m_); }
 #endif // !NEEDS_MUTEX_DESTRUCTOR
 
 _LIBCPP_END_NAMESPACE_STD

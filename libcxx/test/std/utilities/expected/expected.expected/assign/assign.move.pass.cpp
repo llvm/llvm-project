@@ -258,6 +258,29 @@ constexpr bool test() {
     assert(e1.error().data_ == 10);
     assert(oldState.moveAssignCalled);
   }
+
+  // CheckForInvalidWrites
+  {
+    {
+      CheckForInvalidWrites<true> e1(std::unexpect);
+      CheckForInvalidWrites<true> e2;
+
+      e1 = std::move(e2);
+
+      assert(e1.check());
+      assert(e2.check());
+    }
+    {
+      CheckForInvalidWrites<false> e1(std::unexpect);
+      CheckForInvalidWrites<false> e2;
+
+      e1 = std::move(e2);
+
+      assert(e1.check());
+      assert(e2.check());
+    }
+  }
+
   return true;
 }
 

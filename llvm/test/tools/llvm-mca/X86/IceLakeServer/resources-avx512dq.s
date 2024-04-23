@@ -753,30 +753,30 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  4      22    3.00    *                   vpmullq	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT:  3      15    3.00                        vpmullq	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  4      22    3.00    *                   vpmullq	(%rax), %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      4     0.50                        vrangepd	$ab, %zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  2      11    0.50    *                   vrangepd	$ab, (%rax), %zmm17, %zmm19
-# CHECK-NEXT:  2      11    0.50    *                   vrangepd	$ab, (%rax){1to8}, %zmm17, %zmm19
-# CHECK-NEXT:  1      4     0.50                        vrangepd	$ab, %zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  2      11    0.50    *                   vrangepd	$ab, (%rax), %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  2      11    0.50    *                   vrangepd	$ab, (%rax){1to8}, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  1      4     0.50                        vrangepd	$ab, %zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  2      11    0.50    *                   vrangepd	$ab, (%rax), %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  2      11    0.50    *                   vrangepd	$ab, (%rax){1to8}, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      4     0.50                        vrangepd	$ab, {sae}, %zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  1      4     0.50                        vrangepd	$ab, {sae}, %zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  1      4     0.50                        vrangepd	$ab, {sae}, %zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      4     0.50                        vrangeps	$ab, %zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  2      11    0.50    *                   vrangeps	$ab, (%rax), %zmm17, %zmm19
-# CHECK-NEXT:  2      11    0.50    *                   vrangeps	$ab, (%rax){1to16}, %zmm17, %zmm19
-# CHECK-NEXT:  1      4     0.50                        vrangeps	$ab, %zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  2      11    0.50    *                   vrangeps	$ab, (%rax), %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  2      11    0.50    *                   vrangeps	$ab, (%rax){1to16}, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  1      4     0.50                        vrangeps	$ab, %zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  2      11    0.50    *                   vrangeps	$ab, (%rax), %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  2      11    0.50    *                   vrangeps	$ab, (%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  1      4     0.50                        vrangeps	$ab, {sae}, %zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  1      4     0.50                        vrangeps	$ab, {sae}, %zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  1      4     0.50                        vrangeps	$ab, {sae}, %zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      4     1.00                        vrangepd	$ab, %zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  2      11    1.00    *                   vrangepd	$ab, (%rax), %zmm17, %zmm19
+# CHECK-NEXT:  2      11    1.00    *                   vrangepd	$ab, (%rax){1to8}, %zmm17, %zmm19
+# CHECK-NEXT:  1      4     1.00                        vrangepd	$ab, %zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  2      11    1.00    *                   vrangepd	$ab, (%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  2      11    1.00    *                   vrangepd	$ab, (%rax){1to8}, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  1      4     1.00                        vrangepd	$ab, %zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      11    1.00    *                   vrangepd	$ab, (%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      11    1.00    *                   vrangepd	$ab, (%rax){1to8}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      4     1.00                        vrangepd	$ab, {sae}, %zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  1      4     1.00                        vrangepd	$ab, {sae}, %zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  1      4     1.00                        vrangepd	$ab, {sae}, %zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      4     1.00                        vrangeps	$ab, %zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  2      11    1.00    *                   vrangeps	$ab, (%rax), %zmm17, %zmm19
+# CHECK-NEXT:  2      11    1.00    *                   vrangeps	$ab, (%rax){1to16}, %zmm17, %zmm19
+# CHECK-NEXT:  1      4     1.00                        vrangeps	$ab, %zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  2      11    1.00    *                   vrangeps	$ab, (%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  2      11    1.00    *                   vrangeps	$ab, (%rax){1to16}, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  1      4     1.00                        vrangeps	$ab, %zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      11    1.00    *                   vrangeps	$ab, (%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  2      11    1.00    *                   vrangeps	$ab, (%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  1      4     1.00                        vrangeps	$ab, {sae}, %zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  1      4     1.00                        vrangeps	$ab, {sae}, %zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  1      4     1.00                        vrangeps	$ab, {sae}, %zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  1      4     0.50                        vrangesd	$ab, %xmm16, %xmm17, %xmm19
 # CHECK-NEXT:  2      10    0.50    *                   vrangesd	$ab, (%rax), %xmm17, %xmm19
 # CHECK-NEXT:  1      4     0.50                        vrangesd	$ab, %xmm16, %xmm17, %xmm19 {%k1}
@@ -872,7 +872,7 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -     197.25 73.25  102.00 102.00 5.50   209.25 0.25   5.50   5.50   5.50
+# CHECK-NEXT:  -      -     209.25 73.25  102.00 102.00 5.50   197.25 0.25   5.50   5.50   5.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -1162,30 +1162,30 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -     3.00    -     0.50   0.50    -      -      -      -      -      -     vpmullq	(%rax), %zmm17, %zmm19 {%k1}
 # CHECK-NEXT:  -      -     3.00    -      -      -      -      -      -      -      -      -     vpmullq	%zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     3.00    -     0.50   0.50    -      -      -      -      -      -     vpmullq	(%rax), %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vrangepd	$ab, %zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vrangepd	$ab, (%rax), %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vrangepd	$ab, (%rax){1to8}, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vrangepd	$ab, %zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vrangepd	$ab, (%rax), %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vrangepd	$ab, (%rax){1to8}, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vrangepd	$ab, %zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vrangepd	$ab, (%rax), %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vrangepd	$ab, (%rax){1to8}, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vrangepd	$ab, {sae}, %zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vrangepd	$ab, {sae}, %zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vrangepd	$ab, {sae}, %zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vrangeps	$ab, %zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vrangeps	$ab, (%rax), %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vrangeps	$ab, (%rax){1to16}, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vrangeps	$ab, %zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vrangeps	$ab, (%rax), %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vrangeps	$ab, (%rax){1to16}, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vrangeps	$ab, %zmm16, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vrangeps	$ab, (%rax), %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vrangeps	$ab, (%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
-# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vrangeps	$ab, {sae}, %zmm16, %zmm17, %zmm19
-# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vrangeps	$ab, {sae}, %zmm16, %zmm17, %zmm19 {%k1}
-# CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     vrangeps	$ab, {sae}, %zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     vrangepd	$ab, %zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     vrangepd	$ab, (%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     vrangepd	$ab, (%rax){1to8}, %zmm17, %zmm19
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     vrangepd	$ab, %zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     vrangepd	$ab, (%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     vrangepd	$ab, (%rax){1to8}, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     vrangepd	$ab, %zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     vrangepd	$ab, (%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     vrangepd	$ab, (%rax){1to8}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     vrangepd	$ab, {sae}, %zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     vrangepd	$ab, {sae}, %zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     vrangepd	$ab, {sae}, %zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     vrangeps	$ab, %zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     vrangeps	$ab, (%rax), %zmm17, %zmm19
+# CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     vrangeps	$ab, (%rax){1to16}, %zmm17, %zmm19
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     vrangeps	$ab, %zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     vrangeps	$ab, (%rax), %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     vrangeps	$ab, (%rax){1to16}, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     vrangeps	$ab, %zmm16, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     vrangeps	$ab, (%rax), %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -      -      -      -      -      -     vrangeps	$ab, (%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     vrangeps	$ab, {sae}, %zmm16, %zmm17, %zmm19
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     vrangeps	$ab, {sae}, %zmm16, %zmm17, %zmm19 {%k1}
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     vrangeps	$ab, {sae}, %zmm16, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -      -      -     vrangesd	$ab, %xmm16, %xmm17, %xmm19
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -      -      -      -      -      -     vrangesd	$ab, (%rax), %xmm17, %xmm19
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -      -      -      -      -      -     vrangesd	$ab, %xmm16, %xmm17, %xmm19 {%k1}

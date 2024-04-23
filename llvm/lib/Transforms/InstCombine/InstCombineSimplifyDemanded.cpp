@@ -552,9 +552,21 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     if (DemandedFromOps.isSubsetOf(LHSKnown.Zero))
       return I->getOperand(1);
 
+    // (add X, C) --> (xor X, C) IFF C is equal to the top bit of the DemandMask
+    {
+      const APInt *C;
+      if (match(I->getOperand(1), m_APInt(C)) &&
+          C->isOneBitSet(DemandedMask.getActiveBits() - 1)) {
+        IRBuilderBase::InsertPointGuard Guard(Builder);
+        Builder.SetInsertPoint(I);
+        return Builder.CreateXor(I->getOperand(0), ConstantInt::get(VTy, *C));
+      }
+    }
+
     // Otherwise just compute the known bits of the result.
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
-    Known = KnownBits::computeForAddSub(true, NSW, LHSKnown, RHSKnown);
+    bool NUW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
+    Known = KnownBits::computeForAddSub(true, NSW, NUW, LHSKnown, RHSKnown);
     break;
   }
   case Instruction::Sub: {
@@ -587,7 +599,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
     // Otherwise just compute the known bits of the result.
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
-    Known = KnownBits::computeForAddSub(false, NSW, LHSKnown, RHSKnown);
+    bool NUW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
+    Known = KnownBits::computeForAddSub(false, NSW, NUW, LHSKnown, RHSKnown);
     break;
   }
   case Instruction::Mul: {
@@ -629,25 +642,46 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
                                                     DemandedMask, Known))
             return R;
 
-      // TODO: If we only want bits that already match the signbit then we don't
-      // need to shift.
+      // Do not simplify if shl is part of funnel-shift pattern
+      if (I->hasOneUse()) {
+        auto *Inst = dyn_cast<Instruction>(I->user_back());
+        if (Inst && Inst->getOpcode() == BinaryOperator::Or) {
+          if (auto Opt = convertOrOfShiftsToFunnelShift(*Inst)) {
+            auto [IID, FShiftArgs] = *Opt;
+            if ((IID == Intrinsic::fshl || IID == Intrinsic::fshr) &&
+                FShiftArgs[0] == FShiftArgs[1])
+              return nullptr;
+          }
+        }
+      }
 
-      // If we can pre-shift a right-shifted constant to the left without
-      // losing any high bits amd we don't demand the low bits, then eliminate
-      // the left-shift:
-      // (C >> X) << LeftShiftAmtC --> (C << RightShiftAmtC) >> X
-      uint64_t ShiftAmt = SA->getLimitedValue(BitWidth-1);
-      Value *X;
-      Constant *C;
-      if (DemandedMask.countr_zero() >= ShiftAmt &&
-          match(I->getOperand(0), m_LShr(m_ImmConstant(C), m_Value(X)))) {
-        Constant *LeftShiftAmtC = ConstantInt::get(VTy, ShiftAmt);
-        Constant *NewC = ConstantFoldBinaryOpOperands(Instruction::Shl, C,
-                                                      LeftShiftAmtC, DL);
-        if (ConstantFoldBinaryOpOperands(Instruction::LShr, NewC, LeftShiftAmtC,
-                                         DL) == C) {
-          Instruction *Lshr = BinaryOperator::CreateLShr(NewC, X);
-          return InsertNewInstWith(Lshr, I->getIterator());
+      // We only want bits that already match the signbit then we don't
+      // need to shift.
+      uint64_t ShiftAmt = SA->getLimitedValue(BitWidth - 1);
+      if (DemandedMask.countr_zero() >= ShiftAmt) {
+        if (I->hasNoSignedWrap()) {
+          unsigned NumHiDemandedBits = BitWidth - DemandedMask.countr_zero();
+          unsigned SignBits =
+              ComputeNumSignBits(I->getOperand(0), Depth + 1, CxtI);
+          if (SignBits > ShiftAmt && SignBits - ShiftAmt >= NumHiDemandedBits)
+            return I->getOperand(0);
+        }
+
+        // If we can pre-shift a right-shifted constant to the left without
+        // losing any high bits and we don't demand the low bits, then eliminate
+        // the left-shift:
+        // (C >> X) << LeftShiftAmtC --> (C << LeftShiftAmtC) >> X
+        Value *X;
+        Constant *C;
+        if (match(I->getOperand(0), m_LShr(m_ImmConstant(C), m_Value(X)))) {
+          Constant *LeftShiftAmtC = ConstantInt::get(VTy, ShiftAmt);
+          Constant *NewC = ConstantFoldBinaryOpOperands(Instruction::Shl, C,
+                                                        LeftShiftAmtC, DL);
+          if (ConstantFoldBinaryOpOperands(Instruction::LShr, NewC,
+                                           LeftShiftAmtC, DL) == C) {
+            Instruction *Lshr = BinaryOperator::CreateLShr(NewC, X);
+            return InsertNewInstWith(Lshr, I->getIterator());
+          }
         }
       }
 
@@ -688,6 +722,19 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     const APInt *SA;
     if (match(I->getOperand(1), m_APInt(SA))) {
       uint64_t ShiftAmt = SA->getLimitedValue(BitWidth-1);
+
+      // Do not simplify if lshr is part of funnel-shift pattern
+      if (I->hasOneUse()) {
+        auto *Inst = dyn_cast<Instruction>(I->user_back());
+        if (Inst && Inst->getOpcode() == BinaryOperator::Or) {
+          if (auto Opt = convertOrOfShiftsToFunnelShift(*Inst)) {
+            auto [IID, FShiftArgs] = *Opt;
+            if ((IID == Intrinsic::fshl || IID == Intrinsic::fshr) &&
+                FShiftArgs[0] == FShiftArgs[1])
+              return nullptr;
+          }
+        }
+      }
 
       // If we are just demanding the shifted sign bit and below, then this can
       // be treated as an ASHR in disguise.
@@ -791,6 +838,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         return InsertNewInstWith(LShr, I->getIterator());
       } else if (Known.One[BitWidth-ShiftAmt-1]) { // New bits are known one.
         Known.One |= HighBits;
+        // SignBits may be out-of-sync with Known.countMinSignBits(). Mask out
+        // high bits of Known.Zero to avoid conflicts.
+        Known.Zero &= ~HighBits;
       }
     } else {
       computeKnownBits(I, Known, Depth, CxtI);
@@ -954,6 +1004,44 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         if (ShrinkDemandedConstant(
                 I, 1, (DemandedMask & ~LHSKnown.Zero).zextOrTrunc(MaskWidth)))
           return I;
+
+        // Combine:
+        // (ptrmask (getelementptr i8, ptr p, imm i), imm mask)
+        //   -> (ptrmask (getelementptr i8, ptr p, imm (i & mask)), imm mask)
+        // where only the low bits known to be zero in the pointer are changed
+        Value *InnerPtr;
+        uint64_t GEPIndex;
+        uint64_t PtrMaskImmediate;
+        if (match(I, m_Intrinsic<Intrinsic::ptrmask>(
+                         m_PtrAdd(m_Value(InnerPtr), m_ConstantInt(GEPIndex)),
+                         m_ConstantInt(PtrMaskImmediate)))) {
+
+          LHSKnown = computeKnownBits(InnerPtr, Depth + 1, I);
+          if (!LHSKnown.isZero()) {
+            const unsigned trailingZeros = LHSKnown.countMinTrailingZeros();
+            uint64_t PointerAlignBits = (uint64_t(1) << trailingZeros) - 1;
+
+            uint64_t HighBitsGEPIndex = GEPIndex & ~PointerAlignBits;
+            uint64_t MaskedLowBitsGEPIndex =
+                GEPIndex & PointerAlignBits & PtrMaskImmediate;
+
+            uint64_t MaskedGEPIndex = HighBitsGEPIndex | MaskedLowBitsGEPIndex;
+
+            if (MaskedGEPIndex != GEPIndex) {
+              auto *GEP = cast<GetElementPtrInst>(II->getArgOperand(0));
+              Builder.SetInsertPoint(I);
+              Type *GEPIndexType =
+                  DL.getIndexType(GEP->getPointerOperand()->getType());
+              Value *MaskedGEP = Builder.CreateGEP(
+                  GEP->getSourceElementType(), InnerPtr,
+                  ConstantInt::get(GEPIndexType, MaskedGEPIndex),
+                  GEP->getName(), GEP->isInBounds());
+
+              replaceOperand(*I, 0, MaskedGEP);
+              return I;
+            }
+          }
+        }
 
         break;
       }
@@ -1166,7 +1254,9 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
       return I->getOperand(1);
 
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
-    Known = KnownBits::computeForAddSub(/*Add*/ true, NSW, LHSKnown, RHSKnown);
+    bool NUW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
+    Known =
+        KnownBits::computeForAddSub(/*Add=*/true, NSW, NUW, LHSKnown, RHSKnown);
     computeKnownBitsFromContext(I, Known, Depth, SQ.getWithInstruction(CxtI));
     break;
   }
@@ -1181,8 +1271,10 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
       return I->getOperand(0);
 
     bool NSW = cast<OverflowingBinaryOperator>(I)->hasNoSignedWrap();
+    bool NUW = cast<OverflowingBinaryOperator>(I)->hasNoUnsignedWrap();
     computeKnownBits(I->getOperand(0), LHSKnown, Depth + 1, CxtI);
-    Known = KnownBits::computeForAddSub(/*Add*/ false, NSW, LHSKnown, RHSKnown);
+    Known = KnownBits::computeForAddSub(/*Add=*/false, NSW, NUW, LHSKnown,
+                                        RHSKnown);
     computeKnownBitsFromContext(I, Known, Depth, SQ.getWithInstruction(CxtI));
     break;
   }
@@ -1308,8 +1400,8 @@ Value *InstCombinerImpl::simplifyShrShlDemandedBits(
 }
 
 /// The specified value produces a vector with any number of elements.
-/// This method analyzes which elements of the operand are undef or poison and
-/// returns that information in UndefElts.
+/// This method analyzes which elements of the operand are poison and
+/// returns that information in PoisonElts.
 ///
 /// DemandedElts contains the set of elements that are actually used by the
 /// caller, and by default (AllowMultipleUsers equals false) the value is
@@ -1322,7 +1414,7 @@ Value *InstCombinerImpl::simplifyShrShlDemandedBits(
 /// returned.  This returns null if no change was made.
 Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
                                                     APInt DemandedElts,
-                                                    APInt &UndefElts,
+                                                    APInt &PoisonElts,
                                                     unsigned Depth,
                                                     bool AllowMultipleUsers) {
   // Cannot analyze scalable type. The number of vector elements is not a
@@ -1334,18 +1426,18 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   APInt EltMask(APInt::getAllOnes(VWidth));
   assert((DemandedElts & ~EltMask) == 0 && "Invalid DemandedElts!");
 
-  if (match(V, m_Undef())) {
-    // If the entire vector is undef or poison, just return this info.
-    UndefElts = EltMask;
+  if (match(V, m_Poison())) {
+    // If the entire vector is poison, just return this info.
+    PoisonElts = EltMask;
     return nullptr;
   }
 
   if (DemandedElts.isZero()) { // If nothing is demanded, provide poison.
-    UndefElts = EltMask;
+    PoisonElts = EltMask;
     return PoisonValue::get(V->getType());
   }
 
-  UndefElts = 0;
+  PoisonElts = 0;
 
   if (auto *C = dyn_cast<Constant>(V)) {
     // Check if this is identity. If so, return 0 since we are not simplifying
@@ -1359,7 +1451,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     for (unsigned i = 0; i != VWidth; ++i) {
       if (!DemandedElts[i]) {   // If not demanded, set to poison.
         Elts.push_back(Poison);
-        UndefElts.setBit(i);
+        PoisonElts.setBit(i);
         continue;
       }
 
@@ -1367,8 +1459,8 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       if (!Elt) return nullptr;
 
       Elts.push_back(Elt);
-      if (isa<UndefValue>(Elt))   // Already undef or poison.
-        UndefElts.setBit(i);
+      if (isa<PoisonValue>(Elt)) // Already poison.
+        PoisonElts.setBit(i);
     }
 
     // If we changed the constant, return it.
@@ -1389,7 +1481,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       // They'll be handled when it's their turn to be visited by
       // the main instcombine process.
       if (Depth != 0)
-        // TODO: Just compute the UndefElts information recursively.
+        // TODO: Just compute the PoisonElts information recursively.
         return nullptr;
 
       // Conservatively assume that all elements are needed.
@@ -1411,8 +1503,8 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     }
   };
 
-  APInt UndefElts2(VWidth, 0);
-  APInt UndefElts3(VWidth, 0);
+  APInt PoisonElts2(VWidth, 0);
+  APInt PoisonElts3(VWidth, 0);
   switch (I->getOpcode()) {
   default: break;
 
@@ -1438,17 +1530,17 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       if (i == 0 ? match(I->getOperand(i), m_Undef())
                  : match(I->getOperand(i), m_Poison())) {
         // If the entire vector is undefined, just return this info.
-        UndefElts = EltMask;
+        PoisonElts = EltMask;
         return nullptr;
       }
       if (I->getOperand(i)->getType()->isVectorTy()) {
-        APInt UndefEltsOp(VWidth, 0);
-        simplifyAndSetOp(I, i, DemandedElts, UndefEltsOp);
+        APInt PoisonEltsOp(VWidth, 0);
+        simplifyAndSetOp(I, i, DemandedElts, PoisonEltsOp);
         // gep(x, undef) is not undef, so skip considering idx ops here
         // Note that we could propagate poison, but we can't distinguish between
         // undef & poison bits ATM
         if (i == 0)
-          UndefElts |= UndefEltsOp;
+          PoisonElts |= PoisonEltsOp;
       }
     }
 
@@ -1461,7 +1553,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     if (!Idx) {
       // Note that we can't propagate undef elt info, because we don't know
       // which elt is getting updated.
-      simplifyAndSetOp(I, 0, DemandedElts, UndefElts2);
+      simplifyAndSetOp(I, 0, DemandedElts, PoisonElts2);
       break;
     }
 
@@ -1476,7 +1568,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     // was extracted from the same index in another vector with the same type,
     // replace this insert with that other vector.
     // Note: This is attempted before the call to simplifyAndSetOp because that
-    //       may change UndefElts to a value that does not match with Vec.
+    //       may change PoisonElts to a value that does not match with Vec.
     Value *Vec;
     if (PreInsertDemandedElts == 0 &&
         match(I->getOperand(1),
@@ -1485,7 +1577,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       return Vec;
     }
 
-    simplifyAndSetOp(I, 0, PreInsertDemandedElts, UndefElts);
+    simplifyAndSetOp(I, 0, PreInsertDemandedElts, PoisonElts);
 
     // If this is inserting an element that isn't demanded, remove this
     // insertelement.
@@ -1495,7 +1587,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     }
 
     // The inserted element is defined.
-    UndefElts.clearBit(IdxNo);
+    PoisonElts.clearBit(IdxNo);
     break;
   }
   case Instruction::ShuffleVector: {
@@ -1509,17 +1601,17 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     // operand.
     if (all_of(Shuffle->getShuffleMask(), [](int Elt) { return Elt == 0; }) &&
         DemandedElts.isAllOnes()) {
-      if (!match(I->getOperand(1), m_Undef())) {
+      if (!isa<PoisonValue>(I->getOperand(1))) {
         I->setOperand(1, PoisonValue::get(I->getOperand(1)->getType()));
         MadeChange = true;
       }
       APInt LeftDemanded(OpWidth, 1);
-      APInt LHSUndefElts(OpWidth, 0);
-      simplifyAndSetOp(I, 0, LeftDemanded, LHSUndefElts);
-      if (LHSUndefElts[0])
-        UndefElts = EltMask;
+      APInt LHSPoisonElts(OpWidth, 0);
+      simplifyAndSetOp(I, 0, LeftDemanded, LHSPoisonElts);
+      if (LHSPoisonElts[0])
+        PoisonElts = EltMask;
       else
-        UndefElts.clearAllBits();
+        PoisonElts.clearAllBits();
       break;
     }
 
@@ -1538,11 +1630,11 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       }
     }
 
-    APInt LHSUndefElts(OpWidth, 0);
-    simplifyAndSetOp(I, 0, LeftDemanded, LHSUndefElts);
+    APInt LHSPoisonElts(OpWidth, 0);
+    simplifyAndSetOp(I, 0, LeftDemanded, LHSPoisonElts);
 
-    APInt RHSUndefElts(OpWidth, 0);
-    simplifyAndSetOp(I, 1, RightDemanded, RHSUndefElts);
+    APInt RHSPoisonElts(OpWidth, 0);
+    simplifyAndSetOp(I, 1, RightDemanded, RHSPoisonElts);
 
     // If this shuffle does not change the vector length and the elements
     // demanded by this shuffle are an identity mask, then this shuffle is
@@ -1568,7 +1660,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
         return Shuffle->getOperand(0);
     }
 
-    bool NewUndefElts = false;
+    bool NewPoisonElts = false;
     unsigned LHSIdx = -1u, LHSValIdx = -1u;
     unsigned RHSIdx = -1u, RHSValIdx = -1u;
     bool LHSUniform = true;
@@ -1576,23 +1668,23 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     for (unsigned i = 0; i < VWidth; i++) {
       unsigned MaskVal = Shuffle->getMaskValue(i);
       if (MaskVal == -1u) {
-        UndefElts.setBit(i);
+        PoisonElts.setBit(i);
       } else if (!DemandedElts[i]) {
-        NewUndefElts = true;
-        UndefElts.setBit(i);
+        NewPoisonElts = true;
+        PoisonElts.setBit(i);
       } else if (MaskVal < OpWidth) {
-        if (LHSUndefElts[MaskVal]) {
-          NewUndefElts = true;
-          UndefElts.setBit(i);
+        if (LHSPoisonElts[MaskVal]) {
+          NewPoisonElts = true;
+          PoisonElts.setBit(i);
         } else {
           LHSIdx = LHSIdx == -1u ? i : OpWidth;
           LHSValIdx = LHSValIdx == -1u ? MaskVal : OpWidth;
           LHSUniform = LHSUniform && (MaskVal == i);
         }
       } else {
-        if (RHSUndefElts[MaskVal - OpWidth]) {
-          NewUndefElts = true;
-          UndefElts.setBit(i);
+        if (RHSPoisonElts[MaskVal - OpWidth]) {
+          NewPoisonElts = true;
+          PoisonElts.setBit(i);
         } else {
           RHSIdx = RHSIdx == -1u ? i : OpWidth;
           RHSValIdx = RHSValIdx == -1u ? MaskVal - OpWidth : OpWidth;
@@ -1635,11 +1727,11 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
         return New;
       }
     }
-    if (NewUndefElts) {
+    if (NewPoisonElts) {
       // Add additional discovered undefs.
       SmallVector<int, 16> Elts;
       for (unsigned i = 0; i < VWidth; ++i) {
-        if (UndefElts[i])
+        if (PoisonElts[i])
           Elts.push_back(PoisonMaskElem);
         else
           Elts.push_back(Shuffle->getMaskValue(i));
@@ -1654,12 +1746,12 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     // on the current demanded elements.
     SelectInst *Sel = cast<SelectInst>(I);
     if (Sel->getCondition()->getType()->isVectorTy()) {
-      // TODO: We are not doing anything with UndefElts based on this call.
+      // TODO: We are not doing anything with PoisonElts based on this call.
       // It is overwritten below based on the other select operands. If an
       // element of the select condition is known undef, then we are free to
       // choose the output value from either arm of the select. If we know that
       // one of those values is undef, then the output can be undef.
-      simplifyAndSetOp(I, 0, DemandedElts, UndefElts);
+      simplifyAndSetOp(I, 0, DemandedElts, PoisonElts);
     }
 
     // Next, see if we can transform the arms of the select.
@@ -1681,12 +1773,12 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       }
     }
 
-    simplifyAndSetOp(I, 1, DemandedLHS, UndefElts2);
-    simplifyAndSetOp(I, 2, DemandedRHS, UndefElts3);
+    simplifyAndSetOp(I, 1, DemandedLHS, PoisonElts2);
+    simplifyAndSetOp(I, 2, DemandedRHS, PoisonElts3);
 
     // Output elements are undefined if the element from each arm is undefined.
     // TODO: This can be improved. See comment in select condition handling.
-    UndefElts = UndefElts2 & UndefElts3;
+    PoisonElts = PoisonElts2 & PoisonElts3;
     break;
   }
   case Instruction::BitCast: {
@@ -1695,7 +1787,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     if (!VTy) break;
     unsigned InVWidth = cast<FixedVectorType>(VTy)->getNumElements();
     APInt InputDemandedElts(InVWidth, 0);
-    UndefElts2 = APInt(InVWidth, 0);
+    PoisonElts2 = APInt(InVWidth, 0);
     unsigned Ratio;
 
     if (VWidth == InVWidth) {
@@ -1724,25 +1816,25 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       break;
     }
 
-    simplifyAndSetOp(I, 0, InputDemandedElts, UndefElts2);
+    simplifyAndSetOp(I, 0, InputDemandedElts, PoisonElts2);
 
     if (VWidth == InVWidth) {
-      UndefElts = UndefElts2;
+      PoisonElts = PoisonElts2;
     } else if ((VWidth % InVWidth) == 0) {
       // If the number of elements in the output is a multiple of the number of
       // elements in the input then an output element is undef if the
       // corresponding input element is undef.
       for (unsigned OutIdx = 0; OutIdx != VWidth; ++OutIdx)
-        if (UndefElts2[OutIdx / Ratio])
-          UndefElts.setBit(OutIdx);
+        if (PoisonElts2[OutIdx / Ratio])
+          PoisonElts.setBit(OutIdx);
     } else if ((InVWidth % VWidth) == 0) {
       // If the number of elements in the input is a multiple of the number of
       // elements in the output then an output element is undef if all of the
       // corresponding input elements are undef.
       for (unsigned OutIdx = 0; OutIdx != VWidth; ++OutIdx) {
-        APInt SubUndef = UndefElts2.lshr(OutIdx * Ratio).zextOrTrunc(Ratio);
+        APInt SubUndef = PoisonElts2.lshr(OutIdx * Ratio).zextOrTrunc(Ratio);
         if (SubUndef.popcount() == Ratio)
-          UndefElts.setBit(OutIdx);
+          PoisonElts.setBit(OutIdx);
       }
     } else {
       llvm_unreachable("Unimp");
@@ -1751,7 +1843,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   }
   case Instruction::FPTrunc:
   case Instruction::FPExt:
-    simplifyAndSetOp(I, 0, DemandedElts, UndefElts);
+    simplifyAndSetOp(I, 0, DemandedElts, PoisonElts);
     break;
 
   case Instruction::Call: {
@@ -1774,18 +1866,18 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
             DemandedPassThrough.clearBit(i);
         }
       if (II->getIntrinsicID() == Intrinsic::masked_gather)
-        simplifyAndSetOp(II, 0, DemandedPtrs, UndefElts2);
-      simplifyAndSetOp(II, 3, DemandedPassThrough, UndefElts3);
+        simplifyAndSetOp(II, 0, DemandedPtrs, PoisonElts2);
+      simplifyAndSetOp(II, 3, DemandedPassThrough, PoisonElts3);
 
       // Output elements are undefined if the element from both sources are.
       // TODO: can strengthen via mask as well.
-      UndefElts = UndefElts2 & UndefElts3;
+      PoisonElts = PoisonElts2 & PoisonElts3;
       break;
     }
     default: {
       // Handle target specific intrinsics
       std::optional<Value *> V = targetSimplifyDemandedVectorEltsIntrinsic(
-          *II, DemandedElts, UndefElts, UndefElts2, UndefElts3,
+          *II, DemandedElts, PoisonElts, PoisonElts2, PoisonElts3,
           simplifyAndSetOp);
       if (V)
         return *V;
@@ -1830,14 +1922,16 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
         Value *ShufOp = MatchShufAsOp0 ? X : Y;
         Value *OtherOp = MatchShufAsOp0 ? Y : X;
         for (User *U : OtherOp->users()) {
-          auto Shuf = m_Shuffle(m_Specific(ShufOp), m_Value(), m_ZeroMask());
+          ArrayRef<int> Mask;
+          auto Shuf = m_Shuffle(m_Specific(ShufOp), m_Value(), m_Mask(Mask));
           if (BO->isCommutative()
                   ? match(U, m_c_BinOp(Opcode, Shuf, m_Specific(OtherOp)))
                   : MatchShufAsOp0
                         ? match(U, m_BinOp(Opcode, Shuf, m_Specific(OtherOp)))
                         : match(U, m_BinOp(Opcode, m_Specific(OtherOp), Shuf)))
-            if (DT.dominates(U, I))
-              return U;
+            if (match(Mask, m_ZeroMask()) && Mask[0] != PoisonMaskElem)
+              if (DT.dominates(U, I))
+                return U;
         }
         return nullptr;
       };
@@ -1848,18 +1942,154 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
         return ShufBO;
     }
 
-    simplifyAndSetOp(I, 0, DemandedElts, UndefElts);
-    simplifyAndSetOp(I, 1, DemandedElts, UndefElts2);
+    simplifyAndSetOp(I, 0, DemandedElts, PoisonElts);
+    simplifyAndSetOp(I, 1, DemandedElts, PoisonElts2);
 
     // Output elements are undefined if both are undefined. Consider things
     // like undef & 0. The result is known zero, not undef.
-    UndefElts &= UndefElts2;
+    PoisonElts &= PoisonElts2;
   }
 
-  // If we've proven all of the lanes undef, return an undef value.
+  // If we've proven all of the lanes poison, return a poison value.
   // TODO: Intersect w/demanded lanes
-  if (UndefElts.isAllOnes())
-    return UndefValue::get(I->getType());
+  if (PoisonElts.isAllOnes())
+    return PoisonValue::get(I->getType());
 
   return MadeChange ? I : nullptr;
+}
+
+/// For floating-point classes that resolve to a single bit pattern, return that
+/// value.
+static Constant *getFPClassConstant(Type *Ty, FPClassTest Mask) {
+  switch (Mask) {
+  case fcPosZero:
+    return ConstantFP::getZero(Ty);
+  case fcNegZero:
+    return ConstantFP::getZero(Ty, true);
+  case fcPosInf:
+    return ConstantFP::getInfinity(Ty);
+  case fcNegInf:
+    return ConstantFP::getInfinity(Ty, true);
+  case fcNone:
+    return PoisonValue::get(Ty);
+  default:
+    return nullptr;
+  }
+}
+
+Value *InstCombinerImpl::SimplifyDemandedUseFPClass(
+    Value *V, const FPClassTest DemandedMask, KnownFPClass &Known,
+    unsigned Depth, Instruction *CxtI) {
+  assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
+  Type *VTy = V->getType();
+
+  assert(Known == KnownFPClass() && "expected uninitialized state");
+
+  if (DemandedMask == fcNone)
+    return isa<UndefValue>(V) ? nullptr : PoisonValue::get(VTy);
+
+  if (Depth == MaxAnalysisRecursionDepth)
+    return nullptr;
+
+  Instruction *I = dyn_cast<Instruction>(V);
+  if (!I) {
+    // Handle constants and arguments
+    Known = computeKnownFPClass(V, fcAllFlags, CxtI, Depth + 1);
+    Value *FoldedToConst =
+        getFPClassConstant(VTy, DemandedMask & Known.KnownFPClasses);
+    return FoldedToConst == V ? nullptr : FoldedToConst;
+  }
+
+  if (!I->hasOneUse())
+    return nullptr;
+
+  // TODO: Should account for nofpclass/FastMathFlags on current instruction
+  switch (I->getOpcode()) {
+  case Instruction::FNeg: {
+    if (SimplifyDemandedFPClass(I, 0, llvm::fneg(DemandedMask), Known,
+                                Depth + 1))
+      return I;
+    Known.fneg();
+    break;
+  }
+  case Instruction::Call: {
+    CallInst *CI = cast<CallInst>(I);
+    switch (CI->getIntrinsicID()) {
+    case Intrinsic::fabs:
+      if (SimplifyDemandedFPClass(I, 0, llvm::inverse_fabs(DemandedMask), Known,
+                                  Depth + 1))
+        return I;
+      Known.fabs();
+      break;
+    case Intrinsic::arithmetic_fence:
+      if (SimplifyDemandedFPClass(I, 0, DemandedMask, Known, Depth + 1))
+        return I;
+      break;
+    case Intrinsic::copysign: {
+      // Flip on more potentially demanded classes
+      const FPClassTest DemandedMaskAnySign = llvm::unknown_sign(DemandedMask);
+      if (SimplifyDemandedFPClass(I, 0, DemandedMaskAnySign, Known, Depth + 1))
+        return I;
+
+      if ((DemandedMask & fcPositive) == fcNone) {
+        // Roundabout way of replacing with fneg(fabs)
+        I->setOperand(1, ConstantFP::get(VTy, -1.0));
+        return I;
+      }
+
+      if ((DemandedMask & fcNegative) == fcNone) {
+        // Roundabout way of replacing with fabs
+        I->setOperand(1, ConstantFP::getZero(VTy));
+        return I;
+      }
+
+      KnownFPClass KnownSign =
+          computeKnownFPClass(I->getOperand(1), fcAllFlags, CxtI, Depth + 1);
+      Known.copysign(KnownSign);
+      break;
+    }
+    default:
+      Known = computeKnownFPClass(I, ~DemandedMask, CxtI, Depth + 1);
+      break;
+    }
+
+    break;
+  }
+  case Instruction::Select: {
+    KnownFPClass KnownLHS, KnownRHS;
+    if (SimplifyDemandedFPClass(I, 2, DemandedMask, KnownRHS, Depth + 1) ||
+        SimplifyDemandedFPClass(I, 1, DemandedMask, KnownLHS, Depth + 1))
+      return I;
+
+    if (KnownLHS.isKnownNever(DemandedMask))
+      return I->getOperand(2);
+    if (KnownRHS.isKnownNever(DemandedMask))
+      return I->getOperand(1);
+
+    // TODO: Recognize clamping patterns
+    Known = KnownLHS | KnownRHS;
+    break;
+  }
+  default:
+    Known = computeKnownFPClass(I, ~DemandedMask, CxtI, Depth + 1);
+    break;
+  }
+
+  return getFPClassConstant(VTy, DemandedMask & Known.KnownFPClasses);
+}
+
+bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
+                                               FPClassTest DemandedMask,
+                                               KnownFPClass &Known,
+                                               unsigned Depth) {
+  Use &U = I->getOperandUse(OpNo);
+  Value *NewVal =
+      SimplifyDemandedUseFPClass(U.get(), DemandedMask, Known, Depth, I);
+  if (!NewVal)
+    return false;
+  if (Instruction *OpInst = dyn_cast<Instruction>(U))
+    salvageDebugInfo(*OpInst);
+
+  replaceUse(U, NewVal);
+  return true;
 }

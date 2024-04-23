@@ -40,7 +40,7 @@ endif()
 if( MSVC OR MINGW )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
-  set(system_libs ${system_libs} psapi shell32 ole32 uuid advapi32)
+  set(system_libs ${system_libs} psapi shell32 ole32 uuid advapi32 ws2_32)
 elseif( CMAKE_HOST_UNIX )
   if( HAVE_LIBRT )
     set(system_libs ${system_libs} rt)
@@ -65,14 +65,14 @@ elseif( CMAKE_HOST_UNIX )
     set(system_libs ${system_libs} m)
   endif()
   if( UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "SunOS" )
-    set(system_libs ${system_libs} kstat)
+    set(system_libs ${system_libs} kstat socket)
   endif()
   if( FUCHSIA )
     set(system_libs ${system_libs} zircon)
   endif()
   if ( HAIKU )
     add_compile_definitions(_BSD_SOURCE)
-    set(system_libs ${system_libs} bsd)
+    set(system_libs ${system_libs} bsd network)
   endif()
 endif( MSVC OR MINGW )
 
@@ -176,6 +176,7 @@ add_llvm_component_library(LLVMSupport
   ELFAttributes.cpp
   Error.cpp
   ErrorHandling.cpp
+  ExponentialBackoff.cpp
   ExtensibleRTTI.cpp
   FileCollector.cpp
   FileUtilities.cpp
@@ -187,6 +188,8 @@ add_llvm_component_library(LLVMSupport
   GlobPattern.cpp
   GraphWriter.cpp
   Hashing.cpp
+  HexagonAttributeParser.cpp
+  HexagonAttributes.cpp
   InitLLVM.cpp
   InstructionCost.cpp
   IntEqClasses.cpp
@@ -252,6 +255,7 @@ add_llvm_component_library(LLVMSupport
   YAMLTraits.cpp
   raw_os_ostream.cpp
   raw_ostream.cpp
+  raw_socket_stream.cpp
   regcomp.c
   regerror.c
   regexec.c
