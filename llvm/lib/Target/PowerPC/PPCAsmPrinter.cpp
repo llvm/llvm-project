@@ -878,8 +878,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLE;
       if (Model == TLSModel::InitialExec)
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE;
-      // On AIX, TLS model heuristics may have turned local-dynamic accesses
-      // into initial-exec accesses.
+      // On AIX, TLS model opt may have turned local-dynamic accesses into
+      // initial-exec accesses.
       PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
       if (Model == TLSModel::LocalDynamic &&
           FuncInfo->isAIXFuncUseTLSIEForLD()) {
@@ -2959,8 +2959,8 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
     // Setup the csect for the current TC entry. If the variant kind is
     // VK_PPC_AIX_TLSGDM the entry represents the region handle, we create a
     // new symbol to prefix the name with a dot.
-    // If TLS model heuristic is turned on, create a new symbol to prefix the
-    // name with a dot.
+    // If TLS model opt is turned on, create a new symbol to prefix the name
+    // with a dot.
     if (I.first.second == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM ||
         (Subtarget->hasAIXShLibTLSModelOpt() &&
          I.first.second == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD)) {
