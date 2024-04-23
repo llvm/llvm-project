@@ -11749,7 +11749,7 @@ static SDValue ConvertCarryFlagToCarryValue(EVT SumType, SDValue Flag,
   SDValue Zero = DAG.getConstant(0, DL, SumType);
   SDValue Carry = DAG.getNode(
       PPCISD::ADDE, DL, DAG.getVTList(SumType, MVT::i32), Zero, Zero, Flag);
-  return DAG.getSetCC(DL, CarryType, Carry, Zero, ISD::SETUGT);
+  return DAG.getSetCC(DL, CarryType, Carry, Zero, ISD::SETNE);
 }
 
 SDValue PPCTargetLowering::LowerADDSUBO(SDValue Op, SelectionDAG &DAG) const {
