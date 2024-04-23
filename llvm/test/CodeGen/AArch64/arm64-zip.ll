@@ -139,6 +139,78 @@ define <16 x i8> @vzipQi8_undef(ptr %A, ptr %B) nounwind {
   ret <16 x i8> %tmp5
 }
 
+define <8 x i16> @vzip1_undef_01(<8 x i16> %A, <8 x i16> %B) nounwind {
+; CHECK-LABEL: vzip1_undef_01:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1.8h v0, v0, v1
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x i16> %A, <8 x i16> %B, <8 x i32> <i32 undef, i32 undef, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
+  ret <8 x i16> %s
+}
+
+define <8 x i16> @vzip1_undef_0(<8 x i16> %A, <8 x i16> %B) nounwind {
+; CHECK-LABEL: vzip1_undef_0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1.8h v0, v0, v1
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x i16> %A, <8 x i16> %B, <8 x i32> <i32 undef, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
+  ret <8 x i16> %s
+}
+
+define <8 x i16> @vzip1_undef_1(<8 x i16> %A, <8 x i16> %B) nounwind {
+; CHECK-LABEL: vzip1_undef_1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1.8h v0, v0, v1
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x i16> %A, <8 x i16> %B, <8 x i32> <i32 0, i32 undef, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
+  ret <8 x i16> %s
+}
+
+define <8 x i16> @vzip1_undef_012(<8 x i16> %A, <8 x i16> %B) nounwind {
+; CHECK-LABEL: vzip1_undef_012:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1.8h v0, v0, v1
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x i16> %A, <8 x i16> %B, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 9, i32 2, i32 10, i32 3, i32 11>
+  ret <8 x i16> %s
+}
+
+define <8 x i16> @vzip2_undef_01(<8 x i16> %A, <8 x i16> %B) nounwind {
+; CHECK-LABEL: vzip2_undef_01:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip2.8h v0, v0, v1
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x i16> %A, <8 x i16> %B, <8 x i32> <i32 undef, i32 undef, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  ret <8 x i16> %s
+}
+
+define <8 x i16> @vzip2_undef_0(<8 x i16> %A, <8 x i16> %B) nounwind {
+; CHECK-LABEL: vzip2_undef_0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip2.8h v0, v0, v1
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x i16> %A, <8 x i16> %B, <8 x i32> <i32 undef, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  ret <8 x i16> %s
+}
+
+define <8 x i16> @vzip2_undef_1(<8 x i16> %A, <8 x i16> %B) nounwind {
+; CHECK-LABEL: vzip2_undef_1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip2.8h v0, v0, v1
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x i16> %A, <8 x i16> %B, <8 x i32> <i32 4, i32 undef, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  ret <8 x i16> %s
+}
+
+define <8 x i16> @vzip2_undef_012(<8 x i16> %A, <8 x i16> %B) nounwind {
+; CHECK-LABEL: vzip2_undef_012:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip2.8h v0, v0, v1
+; CHECK-NEXT:    ret
+  %s = shufflevector <8 x i16> %A, <8 x i16> %B, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 13, i32 6, i32 14, i32 7, i32 15>
+  ret <8 x i16> %s
+}
+
 define <16 x i8> @combine_v16i8(<8 x i8> %0, <8 x i8> %1) {
 ; CHECK-LABEL: combine_v16i8:
 ; CHECK:       // %bb.0:
@@ -251,9 +323,9 @@ define <16 x i8> @combine_v8i16_8first(<8 x i8> %0, <8 x i8> %1) {
 ; CHECK-LABEL: combine_v8i16_8first:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1_q2
-; CHECK-NEXT:    adrp x8, .LCPI17_0
+; CHECK-NEXT:    adrp x8, .LCPI25_0
 ; CHECK-NEXT:    fmov d2, d0
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI17_0]
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI25_0]
 ; CHECK-NEXT:    tbl.16b v0, { v1, v2 }, v3
 ; CHECK-NEXT:    ret
   %3 = shufflevector <8 x i8> %1, <8 x i8> %0, <16 x i32> <i32 8, i32 0, i32 9, i32 1, i32 10, i32 2, i32 11, i32 3, i32 12, i32 4, i32 13, i32 5, i32 14, i32 6, i32 15, i32 7>
@@ -266,9 +338,9 @@ define <16 x i8> @combine_v8i16_8firstundef(<8 x i8> %0, <8 x i8> %1) {
 ; CHECK-LABEL: combine_v8i16_8firstundef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1_q2
-; CHECK-NEXT:    adrp x8, .LCPI18_0
+; CHECK-NEXT:    adrp x8, .LCPI26_0
 ; CHECK-NEXT:    fmov d2, d0
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI18_0]
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI26_0]
 ; CHECK-NEXT:    tbl.16b v0, { v1, v2 }, v3
 ; CHECK-NEXT:    ret
   %3 = shufflevector <8 x i8> %1, <8 x i8> %0, <16 x i32> <i32 8, i32 0, i32 9, i32 1, i32 10, i32 2, i32 11, i32 3, i32 12, i32 4, i32 13, i32 5, i32 14, i32 6, i32 15, i32 undef>

@@ -1008,8 +1008,8 @@ void CodeGenFunction::EmitNewArrayInitializer(
   const Expr *Init = E->getInitializer();
   Address EndOfInit = Address::invalid();
   QualType::DestructionKind DtorKind = ElementType.isDestructedType();
-  CleanupDeactivationScope deactivation(*this);
-  bool pushedCleanup = false;
+  EHScopeStack::stable_iterator Cleanup;
+  llvm::Instruction *CleanupDominator = nullptr;
 
   CharUnits ElementSize = getContext().getTypeSizeInChars(ElementType);
   CharUnits ElementAlign =
@@ -1105,24 +1105,19 @@ void CodeGenFunction::EmitNewArrayInitializer(
     }
 
     // Enter a partial-destruction Cleanup if necessary.
-    if (DtorKind) {
-      AllocaTrackerRAII AllocaTracker(*this);
+    if (needsEHCleanup(DtorKind)) {
       // In principle we could tell the Cleanup where we are more
       // directly, but the control flow can get so varied here that it
       // would actually be quite complex.  Therefore we go through an
       // alloca.
-      llvm::Instruction *DominatingIP =
-          Builder.CreateFlagLoad(llvm::ConstantInt::getNullValue(Int8PtrTy));
       EndOfInit = CreateTempAlloca(BeginPtr.getType(), getPointerAlign(),
                                    "array.init.end");
+      CleanupDominator =
+          Builder.CreateStore(BeginPtr.emitRawPointer(*this), EndOfInit);
       pushIrregularPartialArrayCleanup(BeginPtr.emitRawPointer(*this),
                                        EndOfInit, ElementType, ElementAlign,
                                        getDestroyer(DtorKind));
-      cast<EHCleanupScope>(*EHStack.find(EHStack.stable_begin()))
-          .AddAuxAllocas(AllocaTracker.Take());
-      DeferredDeactivationCleanupStack.push_back(
-          {EHStack.stable_begin(), DominatingIP});
-      pushedCleanup = true;
+      Cleanup = EHStack.stable_begin();
     }
 
     CharUnits StartAlign = CurPtr.getAlignment();
@@ -1169,6 +1164,9 @@ void CodeGenFunction::EmitNewArrayInitializer(
   // initialization.
   llvm::ConstantInt *ConstNum = dyn_cast<llvm::ConstantInt>(NumElements);
   if (ConstNum && ConstNum->getZExtValue() <= InitListElements) {
+    // If there was a Cleanup, deactivate it.
+    if (CleanupDominator)
+      DeactivateCleanupBlock(Cleanup, CleanupDominator);
     return;
   }
 
@@ -1237,7 +1235,7 @@ void CodeGenFunction::EmitNewArrayInitializer(
         if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RType->getDecl()))
           NumElements = CXXRD->getNumBases();
         for (auto *Field : RType->getDecl()->fields())
-          if (!Field->isUnnamedBitfield())
+          if (!Field->isUnnamedBitField())
             ++NumElements;
         // FIXME: Recurse into nested InitListExprs.
         if (ILE->getNumInits() == NumElements)
@@ -1283,14 +1281,13 @@ void CodeGenFunction::EmitNewArrayInitializer(
     Builder.CreateStore(CurPtr.emitRawPointer(*this), EndOfInit);
 
   // Enter a partial-destruction Cleanup if necessary.
-  if (!pushedCleanup && needsEHCleanup(DtorKind)) {
-    llvm::Instruction *DominatingIP =
-        Builder.CreateFlagLoad(llvm::ConstantInt::getNullValue(Int8PtrTy));
-    pushRegularPartialArrayCleanup(BeginPtr.emitRawPointer(*this),
-                                   CurPtr.emitRawPointer(*this), ElementType,
+  if (!CleanupDominator && needsEHCleanup(DtorKind)) {
+    llvm::Value *BeginPtrRaw = BeginPtr.emitRawPointer(*this);
+    llvm::Value *CurPtrRaw = CurPtr.emitRawPointer(*this);
+    pushRegularPartialArrayCleanup(BeginPtrRaw, CurPtrRaw, ElementType,
                                    ElementAlign, getDestroyer(DtorKind));
-    DeferredDeactivationCleanupStack.push_back(
-        {EHStack.stable_begin(), DominatingIP});
+    Cleanup = EHStack.stable_begin();
+    CleanupDominator = Builder.CreateUnreachable();
   }
 
   // Emit the initializer into this element.
@@ -1298,7 +1295,10 @@ void CodeGenFunction::EmitNewArrayInitializer(
                           AggValueSlot::DoesNotOverlap);
 
   // Leave the Cleanup if we entered one.
-  deactivation.ForceDeactivate();
+  if (CleanupDominator) {
+    DeactivateCleanupBlock(Cleanup, CleanupDominator);
+    CleanupDominator->eraseFromParent();
+  }
 
   // Advance to the next element by adjusting the pointer type as necessary.
   llvm::Value *NextPtr = Builder.CreateConstInBoundsGEP1_32(

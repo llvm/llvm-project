@@ -8,8 +8,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbutil
-
-from functionalities.libsanitizers.util import no_libsanitizers
+from lldbsuite.test_event.build_exception import BuildError
 
 class AsanTestCase(TestBase):
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
@@ -21,7 +20,10 @@ class AsanTestCase(TestBase):
 
     @skipIf(oslist=no_match(["macosx"]))
     def test_libsanitizers_asan(self):
-        self.build(make_targets=["libsanitizers"])
+        try:
+            self.build(make_targets=["libsanitizers"])
+        except BuildError as e:
+            self.skipTest("failed to build with libsanitizers")
         self.libsanitizer_tests()
 
     def setUp(self):
@@ -35,9 +37,6 @@ class AsanTestCase(TestBase):
     # Test line numbers: rdar://126237493
     def libsanitizer_tests(self):
         target = self.createTestTarget()
-
-        if no_libsanitizers(self):
-            self.skipTest("libsanitizers not found")
 
         self.runCmd(
             "env SanitizersAddress=1 MallocSanitizerZone=1 MallocSecureAllocator=0"

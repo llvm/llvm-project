@@ -194,6 +194,12 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return false;
 
     PrimType T = classifyPrim(CE->getType());
+    if (T == PT_IntAP)
+      return this->emitCastPointerIntegralAP(Ctx.getBitWidth(CE->getType()),
+                                             CE);
+    if (T == PT_IntAPS)
+      return this->emitCastPointerIntegralAPS(Ctx.getBitWidth(CE->getType()),
+                                              CE);
     return this->emitCastPointerIntegral(T, CE);
   }
 
@@ -395,6 +401,35 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
       if (!this->emitInitElem(DestElemT, I, CE))
         return false;
     }
+    return true;
+  }
+
+  case CK_VectorSplat: {
+    assert(!classify(CE->getType()));
+    assert(classify(SubExpr->getType()));
+    assert(CE->getType()->isVectorType());
+
+    if (DiscardResult)
+      return this->discard(SubExpr);
+
+    assert(Initializing); // FIXME: Not always correct.
+    const auto *VT = CE->getType()->getAs<VectorType>();
+    PrimType ElemT = classifyPrim(SubExpr);
+    unsigned ElemOffset = allocateLocalPrimitive(
+        SubExpr, ElemT, /*IsConst=*/true, /*IsExtended=*/false);
+
+    if (!this->visit(SubExpr))
+      return false;
+    if (!this->emitSetLocal(ElemT, ElemOffset, CE))
+      return false;
+
+    for (unsigned I = 0; I != VT->getNumElements(); ++I) {
+      if (!this->emitGetLocal(ElemT, ElemOffset, CE))
+        return false;
+      if (!this->emitInitElem(ElemT, I, CE))
+        return false;
+    }
+
     return true;
   }
 
@@ -893,11 +928,25 @@ bool ByteCodeExprGen<Emitter>::VisitImplicitValueInitExpr(const ImplicitValueIni
     return true;
   }
 
-  if (QT->isAnyComplexType()) {
+  if (const auto *ComplexTy = E->getType()->getAs<ComplexType>()) {
     assert(Initializing);
-    QualType ElemQT = QT->getAs<ComplexType>()->getElementType();
+    QualType ElemQT = ComplexTy->getElementType();
     PrimType ElemT = classifyPrim(ElemQT);
     for (unsigned I = 0; I < 2; ++I) {
+      if (!this->visitZeroInitializer(ElemT, ElemQT, E))
+        return false;
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    return true;
+  }
+
+  if (const auto *VecT = E->getType()->getAs<VectorType>()) {
+    unsigned NumVecElements = VecT->getNumElements();
+    QualType ElemQT = VecT->getElementType();
+    PrimType ElemT = classifyPrim(ElemQT);
+
+    for (unsigned I = 0; I < NumVecElements; ++I) {
       if (!this->visitZeroInitializer(ElemT, ElemQT, E))
         return false;
       if (!this->emitInitElem(ElemT, I, E))
@@ -942,6 +991,11 @@ bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
   unsigned InitIndex = 0;
   for (const Expr *Init : Inits) {
+    // Skip unnamed bitfields.
+    while (InitIndex < R->getNumFields() &&
+           R->getField(InitIndex)->Decl->isUnnamedBitField())
+      ++InitIndex;
+
     if (!this->emitDupPtr(E))
       return false;
 
@@ -1064,13 +1118,13 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
     return true;
   }
 
-  if (T->isAnyComplexType()) {
+  if (const auto *ComplexTy = E->getType()->getAs<ComplexType>()) {
     unsigned NumInits = E->getNumInits();
 
     if (NumInits == 1)
       return this->delegate(E->inits()[0]);
 
-    QualType ElemQT = E->getType()->getAs<ComplexType>()->getElementType();
+    QualType ElemQT = ComplexTy->getElementType();
     PrimType ElemT = classifyPrim(ElemQT);
     if (NumInits == 0) {
       // Zero-initialize both elements.
@@ -1303,6 +1357,8 @@ bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
   if (const auto *FD = dyn_cast<FieldDecl>(Member)) {
     const RecordDecl *RD = FD->getParent();
     const Record *R = getRecord(RD);
+    if (!R)
+      return false;
     const Record::Field *F = R->getField(FD);
     // Leave a pointer to the field on the stack.
     if (F->Decl->getType()->isReferenceType())
@@ -1809,7 +1865,7 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundLiteralExpr(
   const Expr *Init = E->getInitializer();
   if (Initializing) {
     // We already have a value, just initialize that.
-    return this->visitInitializer(Init);
+    return this->visitInitializer(Init) && this->emitFinishInit(E);
   }
 
   std::optional<PrimType> T = classify(E->getType());
@@ -1828,7 +1884,7 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundLiteralExpr(
         return this->emitInitGlobal(*T, *GlobalIndex, E);
       }
 
-      return this->visitInitializer(Init);
+      return this->visitInitializer(Init) && this->emitFinishInit(E);
     }
 
     return false;
@@ -1857,7 +1913,7 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundLiteralExpr(
       }
       return this->emitInit(*T, E);
     } else {
-      if (!this->visitInitializer(Init))
+      if (!this->visitInitializer(Init) || !this->emitFinishInit(E))
         return false;
     }
 
@@ -3177,15 +3233,20 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
         return false;
       if (!this->emitAddf(getRoundingMode(E), E))
         return false;
-      return this->emitStoreFloat(E);
+      if (!this->emitStoreFloat(E))
+        return false;
+    } else {
+      assert(isIntegralType(*T));
+      if (!this->emitLoad(*T, E))
+        return false;
+      if (!this->emitConst(1, E))
+        return false;
+      if (!this->emitAdd(*T, E))
+        return false;
+      if (!this->emitStore(*T, E))
+        return false;
     }
-    if (!this->emitLoad(*T, E))
-      return false;
-    if (!this->emitConst(1, E))
-      return false;
-    if (!this->emitAdd(*T, E))
-      return false;
-    return this->emitStore(*T, E);
+    return E->isGLValue() || this->emitLoadPop(*T, E);
   }
   case UO_PreDec: { // --x
     if (!this->visit(SubExpr))
@@ -3216,15 +3277,20 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
         return false;
       if (!this->emitSubf(getRoundingMode(E), E))
         return false;
-      return this->emitStoreFloat(E);
+      if (!this->emitStoreFloat(E))
+        return false;
+    } else {
+      assert(isIntegralType(*T));
+      if (!this->emitLoad(*T, E))
+        return false;
+      if (!this->emitConst(1, E))
+        return false;
+      if (!this->emitSub(*T, E))
+        return false;
+      if (!this->emitStore(*T, E))
+        return false;
     }
-    if (!this->emitLoad(*T, E))
-      return false;
-    if (!this->emitConst(1, E))
-      return false;
-    if (!this->emitSub(*T, E))
-      return false;
-    return this->emitStore(*T, E);
+    return E->isGLValue() || this->emitLoadPop(*T, E);
   }
   case UO_LNot: // !x
     if (DiscardResult)

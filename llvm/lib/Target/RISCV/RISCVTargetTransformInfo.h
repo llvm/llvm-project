@@ -228,7 +228,7 @@ public:
       return false;
 
     EVT ElemType = DataTypeVT.getScalarType();
-    if (!ST->hasFastUnalignedAccess() && Alignment < ElemType.getStoreSize())
+    if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
     return TLI->isLegalElementTypeForRVV(ElemType);
@@ -253,7 +253,7 @@ public:
       return false;
 
     EVT ElemType = DataTypeVT.getScalarType();
-    if (!ST->hasFastUnalignedAccess() && Alignment < ElemType.getStoreSize())
+    if (!ST->enableUnalignedVectorMem() && Alignment < ElemType.getStoreSize())
       return false;
 
     return TLI->isLegalElementTypeForRVV(ElemType);

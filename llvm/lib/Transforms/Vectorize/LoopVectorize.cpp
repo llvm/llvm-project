@@ -545,11 +545,6 @@ public:
   // Return true if any runtime check is added.
   bool areSafetyChecksAdded() { return AddedSafetyChecks; }
 
-  /// A type for vectorized values in the new loop. Each value from the
-  /// original loop, when vectorized, is represented by UF vector values in the
-  /// new unrolled loop, where UF is the unroll factor.
-  using VectorParts = SmallVector<Value *, 2>;
-
   /// A helper function to scalarize a single Instruction in the innermost loop.
   /// Generates a sequence of scalar instances for each lane between \p MinLane
   /// and \p MaxLane, times each part between \p MinPart and \p MaxPart,
@@ -615,9 +610,6 @@ protected:
   /// update their users.
   void fixFixedOrderRecurrence(VPFirstOrderRecurrencePHIRecipe *PhiR,
                                VPTransformState &State);
-
-  /// Create code for the loop exit value of the reduction.
-  void fixReduction(VPReductionPHIRecipe *Phi, VPTransformState &State);
 
   /// Iteratively sink the scalarized operands of a predicated instruction into
   /// the block that was created for it.
@@ -3051,8 +3043,9 @@ PHINode *InnerLoopVectorizer::createInductionResumeValue(
   }
 
   // Create phi nodes to merge from the  backedge-taken check block.
-  PHINode *BCResumeVal = PHINode::Create(OrigPhi->getType(), 3, "bc.resume.val",
-                                         LoopScalarPreHeader->getFirstNonPHI());
+  PHINode *BCResumeVal =
+      PHINode::Create(OrigPhi->getType(), 3, "bc.resume.val",
+                      LoopScalarPreHeader->getTerminator()->getIterator());
   // Copy original phi DL over to the new one.
   BCResumeVal->setDebugLoc(OrigPhi->getDebugLoc());
 
@@ -3873,6 +3866,13 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
              IsDirectLoadStoreFromPtrIndvar(Ind, I);
     });
     if (!ScalarInd)
+      continue;
+
+    // If the induction variable update is a fixed-order recurrence, neither the
+    // induction variable or its update should be marked scalar after
+    // vectorization.
+    auto *IndUpdatePhi = dyn_cast<PHINode>(IndUpdate);
+    if (IndUpdatePhi && Legal->isFixedOrderRecurrence(IndUpdatePhi))
       continue;
 
     // Determine if all users of the induction variable update instruction are
@@ -5821,7 +5821,8 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
         // invalid scalarization costs.
         // Do not apply discount logic if hacked cost is needed
         // for emulated masked memrefs.
-        if (!VF.isScalable() && !useEmulatedMaskMemRefHack(&I, VF) &&
+        if (!isScalarAfterVectorization(&I, VF) && !VF.isScalable() &&
+            !useEmulatedMaskMemRefHack(&I, VF) &&
             computePredInstDiscount(&I, ScalarCosts, VF) >= 0)
           ScalarCostsVF.insert(ScalarCosts.begin(), ScalarCosts.end());
         // Remember that BB will remain after vectorization.
@@ -7450,6 +7451,7 @@ static void createAndCollectMergePhiForReduction(
   auto *PhiR = cast<VPReductionPHIRecipe>(RedResult->getOperand(0));
   const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
 
+  TrackingVH<Value> ReductionStartValue = RdxDesc.getRecurrenceStartValue();
   Value *FinalValue =
       State.get(RedResult, VPIteration(State.UF - 1, VPLane::getFirstLane()));
   auto *ResumePhi =
@@ -7474,7 +7476,7 @@ static void createAndCollectMergePhiForReduction(
       BCBlockPhi->addIncoming(ResumePhi->getIncomingValueForBlock(Incoming),
                               Incoming);
     else
-      BCBlockPhi->addIncoming(RdxDesc.getRecurrenceStartValue(), Incoming);
+      BCBlockPhi->addIncoming(ReductionStartValue, Incoming);
   }
 
   auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
@@ -7767,10 +7769,11 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton(
 
   // Now, compare the remaining count and if there aren't enough iterations to
   // execute the vectorized epilogue skip to the scalar part.
-  LoopVectorPreHeader->setName("vec.epilog.ph");
-  BasicBlock *VecEpilogueIterationCountCheck =
-      SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->begin(), DT, LI,
-                 nullptr, "vec.epilog.iter.check", true);
+  BasicBlock *VecEpilogueIterationCountCheck = LoopVectorPreHeader;
+  VecEpilogueIterationCountCheck->setName("vec.epilog.iter.check");
+  LoopVectorPreHeader =
+      SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
+                 LI, nullptr, "vec.epilog.ph");
   emitMinimumVectorEpilogueIterCountCheck(LoopScalarPreHeader,
                                           VecEpilogueIterationCountCheck);
 
@@ -8086,7 +8089,7 @@ void VPRecipeBuilder::createBlockInMask(BasicBlock *BB) {
   BlockMaskCache[BB] = BlockMask;
 }
 
-VPWidenMemoryInstructionRecipe *
+VPWidenMemoryRecipe *
 VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
                                   VFRange &Range) {
   assert((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
@@ -8131,12 +8134,12 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     Ptr = VectorPtr;
   }
   if (LoadInst *Load = dyn_cast<LoadInst>(I))
-    return new VPWidenMemoryInstructionRecipe(*Load, Ptr, Mask, Consecutive,
-                                              Reverse, I->getDebugLoc());
+    return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
+                                 I->getDebugLoc());
 
   StoreInst *Store = cast<StoreInst>(I);
-  return new VPWidenMemoryInstructionRecipe(
-      *Store, Ptr, Operands[0], Mask, Consecutive, Reverse, I->getDebugLoc());
+  return new VPWidenStoreRecipe(*Store, Ptr, Operands[0], Mask, Consecutive,
+                                Reverse, I->getDebugLoc());
 }
 
 /// Creates a VPWidenIntOrFpInductionRecpipe for \p Phi. If needed, it will also
@@ -8775,13 +8778,12 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
   for (const auto *IG : InterleaveGroups) {
-    auto *Recipe = cast<VPWidenMemoryInstructionRecipe>(
-        RecipeBuilder.getRecipe(IG->getInsertPos()));
+    auto *Recipe =
+        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getInsertPos()));
     SmallVector<VPValue *, 4> StoredValues;
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (auto *SI = dyn_cast_or_null<StoreInst>(IG->getMember(i))) {
-        auto *StoreR =
-            cast<VPWidenMemoryInstructionRecipe>(RecipeBuilder.getRecipe(SI));
+        auto *StoreR = cast<VPWidenStoreRecipe>(RecipeBuilder.getRecipe(SI));
         StoredValues.push_back(StoreR->getStoredValue());
       }
 
@@ -8893,10 +8895,6 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
 // A ComputeReductionResult recipe is added to the middle block, also for
 // in-loop reductions which compute their result in-loop, because generating
 // the subsequent bc.merge.rdx phi is driven by ComputeReductionResult recipes.
-//
-// Adjust AnyOf reductions; replace the reduction phi for the selected value
-// with a boolean reduction phi node to check if the condition is true in any
-// iteration. The final value is selected by the final ComputeReductionResult.
 void LoopVectorizationPlanner::adjustRecipesForReductions(
     VPBasicBlock *LatchVPBB, VPlanPtr &Plan, VPRecipeBuilder &RecipeBuilder,
     ElementCount MinVF) {
@@ -9071,41 +9069,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       continue;
 
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-    // Adjust AnyOf reductions; replace the reduction phi for the selected value
-    // with a boolean reduction phi node to check if the condition is true in
-    // any iteration. The final value is selected by the final
-    // ComputeReductionResult.
-    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(
-            RdxDesc.getRecurrenceKind())) {
-      auto *Select = cast<VPRecipeBase>(*find_if(PhiR->users(), [](VPUser *U) {
-        return isa<VPWidenSelectRecipe>(U) ||
-               (isa<VPReplicateRecipe>(U) &&
-                cast<VPReplicateRecipe>(U)->getUnderlyingInstr()->getOpcode() ==
-                    Instruction::Select);
-      }));
-      VPValue *Cmp = Select->getOperand(0);
-      // If the compare is checking the reduction PHI node, adjust it to check
-      // the start value.
-      if (VPRecipeBase *CmpR = Cmp->getDefiningRecipe()) {
-        for (unsigned I = 0; I != CmpR->getNumOperands(); ++I)
-          if (CmpR->getOperand(I) == PhiR)
-            CmpR->setOperand(I, PhiR->getStartValue());
-      }
-      VPBuilder::InsertPointGuard Guard(Builder);
-      Builder.setInsertPoint(Select);
-
-      // If the true value of the select is the reduction phi, the new value is
-      // selected if the negated condition is true in any iteration.
-      if (Select->getOperand(1) == PhiR)
-        Cmp = Builder.createNot(Cmp);
-      VPValue *Or = Builder.createOr(PhiR, Cmp);
-      Select->getVPSingleValue()->replaceAllUsesWith(Or);
-
-      // Convert the reduction phi to operate on bools.
-      PhiR->setOperand(0, Plan->getOrAddLiveIn(ConstantInt::getFalse(
-                              OrigLoop->getHeader()->getContext())));
-    }
-
     // If tail is folded by masking, introduce selects between the phi
     // and the live-out instruction of each reduction, at the beginning of the
     // dedicated latch block.
@@ -9138,9 +9101,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // then extend the loop exit value to enable InstCombine to evaluate the
     // entire expression in the smaller type.
     Type *PhiTy = PhiR->getStartValue()->getLiveInIRValue()->getType();
-    if (MinVF.isVector() && PhiTy != RdxDesc.getRecurrenceType() &&
-        !RecurrenceDescriptor::isAnyOfRecurrenceKind(
-            RdxDesc.getRecurrenceKind())) {
+    if (MinVF.isVector() && PhiTy != RdxDesc.getRecurrenceType()) {
       assert(!PhiR->isInLoop() && "Unexpected truncated inloop reduction!");
       Type *RdxTy = RdxDesc.getRecurrenceType();
       auto *Trunc =
@@ -9363,180 +9324,160 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
       State.ILV->scalarizeInstruction(UI, this, VPIteration(Part, Lane), State);
 }
 
-/// Creates either vp_store or vp_scatter intrinsics calls to represent
-/// predicated store/scatter.
-static Instruction *
-lowerStoreUsingVectorIntrinsics(IRBuilderBase &Builder, Value *Addr,
-                                Value *StoredVal, bool IsScatter, Value *Mask,
-                                Value *EVL, const Align &Alignment) {
-  CallInst *Call;
-  if (IsScatter) {
-    Call = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),
-                                   Intrinsic::vp_scatter,
-                                   {StoredVal, Addr, Mask, EVL});
-  } else {
-    VectorBuilder VBuilder(Builder);
-    VBuilder.setEVL(EVL).setMask(Mask);
-    Call = cast<CallInst>(VBuilder.createVectorInstruction(
-        Instruction::Store, Type::getVoidTy(EVL->getContext()),
-        {StoredVal, Addr}));
+void VPWidenLoadRecipe::execute(VPTransformState &State) {
+  auto *LI = cast<LoadInst>(&Ingredient);
+
+  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
+  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+  bool CreateGather = !isConsecutive();
+
+  auto &Builder = State.Builder;
+  State.setDebugLocFrom(getDebugLoc());
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    Value *NewLI;
+    Value *Mask = nullptr;
+    if (auto *VPMask = getMask()) {
+      // Mask reversal is only needed for non-all-one (null) masks, as reverse
+      // of a null all-one mask is a null mask.
+      Mask = State.get(VPMask, Part);
+      if (isReverse())
+        Mask = Builder.CreateVectorReverse(Mask, "reverse");
+    }
+
+    Value *Addr = State.get(getAddr(), Part, /*IsScalar*/ !CreateGather);
+    if (CreateGather) {
+      NewLI = Builder.CreateMaskedGather(DataTy, Addr, Alignment, Mask, nullptr,
+                                         "wide.masked.gather");
+    } else if (Mask) {
+      NewLI = Builder.CreateMaskedLoad(DataTy, Addr, Alignment, Mask,
+                                       PoisonValue::get(DataTy),
+                                       "wide.masked.load");
+    } else {
+      NewLI = Builder.CreateAlignedLoad(DataTy, Addr, Alignment, "wide.load");
+    }
+    // Add metadata to the load, but setVectorValue to the reverse shuffle.
+    State.addMetadata(NewLI, LI);
+    if (Reverse)
+      NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
+    State.set(this, NewLI, Part);
   }
-  Call->addParamAttr(
-      1, Attribute::getWithAlignment(Call->getContext(), Alignment));
-  return Call;
 }
 
-/// Creates either vp_load or vp_gather intrinsics calls to represent
-/// predicated load/gather.
-static Instruction *lowerLoadUsingVectorIntrinsics(IRBuilderBase &Builder,
-                                                   VectorType *DataTy,
-                                                   Value *Addr, bool IsGather,
-                                                   Value *Mask, Value *EVL,
-                                                   const Align &Alignment) {
-  CallInst *Call;
-  if (IsGather) {
-    Call =
+void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
+  assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
+                          "explicit vector length.");
+  // FIXME: Support reverse loading after vp_reverse is added.
+  assert(!isReverse() && "Reverse loads are not implemented yet.");
+
+  auto *LI = cast<LoadInst>(&Ingredient);
+
+  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
+  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+  bool CreateGather = !isConsecutive();
+
+  auto &Builder = State.Builder;
+  State.setDebugLocFrom(getDebugLoc());
+  CallInst *NewLI;
+  Value *EVL = State.get(getEVL(), VPIteration(0, 0));
+  Value *Addr = State.get(getAddr(), 0, !CreateGather);
+  Value *Mask = getMask()
+                    ? State.get(getMask(), 0)
+                    : Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  if (CreateGather) {
+    NewLI =
         Builder.CreateIntrinsic(DataTy, Intrinsic::vp_gather, {Addr, Mask, EVL},
                                 nullptr, "wide.masked.gather");
   } else {
     VectorBuilder VBuilder(Builder);
     VBuilder.setEVL(EVL).setMask(Mask);
-    Call = cast<CallInst>(VBuilder.createVectorInstruction(
+    NewLI = cast<CallInst>(VBuilder.createVectorInstruction(
         Instruction::Load, DataTy, Addr, "vp.op.load"));
   }
-  Call->addParamAttr(
-      0, Attribute::getWithAlignment(Call->getContext(), Alignment));
-  return Call;
+  NewLI->addParamAttr(
+      0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
+  State.addMetadata(NewLI, LI);
+  State.set(this, NewLI, 0);
 }
 
-void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
-  VPValue *StoredValue = isStore() ? getStoredValue() : nullptr;
+void VPWidenStoreRecipe::execute(VPTransformState &State) {
+  auto *SI = cast<StoreInst>(&Ingredient);
 
-  // Attempt to issue a wide load.
-  LoadInst *LI = dyn_cast<LoadInst>(&Ingredient);
-  StoreInst *SI = dyn_cast<StoreInst>(&Ingredient);
-
-  assert((LI || SI) && "Invalid Load/Store instruction");
-  assert((!SI || StoredValue) && "No stored value provided for widened store");
-  assert((!LI || !StoredValue) && "Stored value provided for widened load");
-
-  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
-
-  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
+  VPValue *StoredVPValue = getStoredValue();
+  bool CreateScatter = !isConsecutive();
   const Align Alignment = getLoadStoreAlignment(&Ingredient);
-  bool CreateGatherScatter = !isConsecutive();
 
   auto &Builder = State.Builder;
-  InnerLoopVectorizer::VectorParts BlockInMaskParts(State.UF);
-  bool isMaskRequired = getMask();
-  if (isMaskRequired) {
-    // Mask reversal is only needed for non-all-one (null) masks, as reverse of
-    // a null all-one mask is a null mask.
-    for (unsigned Part = 0; Part < State.UF; ++Part) {
-      Value *Mask = State.get(getMask(), Part);
+  State.setDebugLocFrom(getDebugLoc());
+
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    Instruction *NewSI = nullptr;
+    Value *Mask = nullptr;
+    if (auto *VPMask = getMask()) {
+      // Mask reversal is only needed for non-all-one (null) masks, as reverse
+      // of a null all-one mask is a null mask.
+      Mask = State.get(VPMask, Part);
       if (isReverse())
         Mask = Builder.CreateVectorReverse(Mask, "reverse");
-      BlockInMaskParts[Part] = Mask;
     }
-  }
 
-  // Handle Stores:
-  if (SI) {
-    State.setDebugLocFrom(getDebugLoc());
-
-    for (unsigned Part = 0; Part < State.UF; ++Part) {
-      Instruction *NewSI = nullptr;
-      Value *StoredVal = State.get(StoredValue, Part);
-      // TODO: split this into several classes for better design.
-      if (State.EVL) {
-        assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
-                                "explicit vector length.");
-        assert(cast<VPInstruction>(State.EVL)->getOpcode() ==
-                   VPInstruction::ExplicitVectorLength &&
-               "EVL must be VPInstruction::ExplicitVectorLength.");
-        Value *EVL = State.get(State.EVL, VPIteration(0, 0));
-        // If EVL is not nullptr, then EVL must be a valid value set during plan
-        // creation, possibly default value = whole vector register length. EVL
-        // is created only if TTI prefers predicated vectorization, thus if EVL
-        // is not nullptr it also implies preference for predicated
-        // vectorization.
-        // FIXME: Support reverse store after vp_reverse is added.
-        Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
-        NewSI = lowerStoreUsingVectorIntrinsics(
-            Builder, State.get(getAddr(), Part, !CreateGatherScatter),
-            StoredVal, CreateGatherScatter, MaskPart, EVL, Alignment);
-      } else if (CreateGatherScatter) {
-        Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
-        Value *VectorGep = State.get(getAddr(), Part);
-        NewSI = Builder.CreateMaskedScatter(StoredVal, VectorGep, Alignment,
-                                            MaskPart);
-      } else {
-        if (isReverse()) {
-          // If we store to reverse consecutive memory locations, then we need
-          // to reverse the order of elements in the stored value.
-          StoredVal = Builder.CreateVectorReverse(StoredVal, "reverse");
-          // We don't want to update the value in the map as it might be used in
-          // another expression. So don't call resetVectorValue(StoredVal).
-        }
-        auto *VecPtr = State.get(getAddr(), Part, /*IsScalar*/ true);
-        if (isMaskRequired)
-          NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr, Alignment,
-                                            BlockInMaskParts[Part]);
-        else
-          NewSI = Builder.CreateAlignedStore(StoredVal, VecPtr, Alignment);
-      }
-      State.addMetadata(NewSI, SI);
+    Value *StoredVal = State.get(StoredVPValue, Part);
+    if (isReverse()) {
+      // If we store to reverse consecutive memory locations, then we need
+      // to reverse the order of elements in the stored value.
+      StoredVal = Builder.CreateVectorReverse(StoredVal, "reverse");
+      // We don't want to update the value in the map as it might be used in
+      // another expression. So don't call resetVectorValue(StoredVal).
     }
-    return;
+    Value *Addr = State.get(getAddr(), Part, /*IsScalar*/ !CreateScatter);
+    if (CreateScatter)
+      NewSI = Builder.CreateMaskedScatter(StoredVal, Addr, Alignment, Mask);
+    else if (Mask)
+      NewSI = Builder.CreateMaskedStore(StoredVal, Addr, Alignment, Mask);
+    else
+      NewSI = Builder.CreateAlignedStore(StoredVal, Addr, Alignment);
+    State.addMetadata(NewSI, SI);
   }
+}
 
-  // Handle loads.
-  assert(LI && "Must have a load instruction");
+void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
+  assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
+                          "explicit vector length.");
+  // FIXME: Support reverse loading after vp_reverse is added.
+  assert(!isReverse() && "Reverse store are not implemented yet.");
+
+  auto *SI = cast<StoreInst>(&Ingredient);
+
+  VPValue *StoredValue = getStoredValue();
+  bool CreateScatter = !isConsecutive();
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+
+  auto &Builder = State.Builder;
   State.setDebugLocFrom(getDebugLoc());
-  for (unsigned Part = 0; Part < State.UF; ++Part) {
-    Value *NewLI;
-    // TODO: split this into several classes for better design.
-    if (State.EVL) {
-      assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
-                              "explicit vector length.");
-      assert(cast<VPInstruction>(State.EVL)->getOpcode() ==
-                 VPInstruction::ExplicitVectorLength &&
-             "EVL must be VPInstruction::ExplicitVectorLength.");
-      Value *EVL = State.get(State.EVL, VPIteration(0, 0));
-      // If EVL is not nullptr, then EVL must be a valid value set during plan
-      // creation, possibly default value = whole vector register length. EVL
-      // is created only if TTI prefers predicated vectorization, thus if EVL
-      // is not nullptr it also implies preference for predicated
-      // vectorization.
-      // FIXME: Support reverse loading after vp_reverse is added.
-      Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
-      NewLI = lowerLoadUsingVectorIntrinsics(
-          Builder, DataTy, State.get(getAddr(), Part, !CreateGatherScatter),
-          CreateGatherScatter, MaskPart, EVL, Alignment);
-    } else if (CreateGatherScatter) {
-      Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
-      Value *VectorGep = State.get(getAddr(), Part);
-      NewLI = Builder.CreateMaskedGather(DataTy, VectorGep, Alignment, MaskPart,
-                                         nullptr, "wide.masked.gather");
-      State.addMetadata(NewLI, LI);
-    } else {
-      auto *VecPtr = State.get(getAddr(), Part, /*IsScalar*/ true);
-      if (isMaskRequired)
-        NewLI = Builder.CreateMaskedLoad(
-            DataTy, VecPtr, Alignment, BlockInMaskParts[Part],
-            PoisonValue::get(DataTy), "wide.masked.load");
-      else
-        NewLI =
-            Builder.CreateAlignedLoad(DataTy, VecPtr, Alignment, "wide.load");
 
-      // Add metadata to the load, but setVectorValue to the reverse shuffle.
-      State.addMetadata(NewLI, LI);
-      if (Reverse)
-        NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
-    }
-
-    State.set(getVPSingleValue(), NewLI, Part);
+  CallInst *NewSI = nullptr;
+  Value *StoredVal = State.get(StoredValue, 0);
+  Value *EVL = State.get(getEVL(), VPIteration(0, 0));
+  // FIXME: Support reverse store after vp_reverse is added.
+  Value *Mask = getMask()
+                    ? State.get(getMask(), 0)
+                    : Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  Value *Addr = State.get(getAddr(), 0, !CreateScatter);
+  if (CreateScatter) {
+    NewSI = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),
+                                    Intrinsic::vp_scatter,
+                                    {StoredVal, Addr, Mask, EVL});
+  } else {
+    VectorBuilder VBuilder(Builder);
+    VBuilder.setEVL(EVL).setMask(Mask);
+    NewSI = cast<CallInst>(VBuilder.createVectorInstruction(
+        Instruction::Store, Type::getVoidTy(EVL->getContext()),
+        {StoredVal, Addr}));
   }
+  NewSI->addParamAttr(
+      1, Attribute::getWithAlignment(NewSI->getContext(), Alignment));
+  State.addMetadata(NewSI, SI);
 }
 
 // Determine how to lower the scalar epilogue, which depends on 1) optimising
@@ -9722,7 +9663,7 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
   }
 
   // The scalar cost should only be 0 when vectorizing with a user specified VF/IC. In those cases, runtime checks should always be generated.
-  double ScalarC = *VF.ScalarCost.getValue();
+  uint64_t ScalarC = *VF.ScalarCost.getValue();
   if (ScalarC == 0)
     return true;
 
@@ -9749,7 +9690,7 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
   //   RtC + VecC * (TC / VF) + EpiC <  ScalarC * TC
   //
   // Now we can compute the minimum required trip count TC as
-  //   (RtC + EpiC) / (ScalarC - (VecC / VF)) < TC
+  //   VF * (RtC + EpiC) / (ScalarC * VF - VecC) < TC
   //
   // For now we assume the epilogue cost EpiC = 0 for simplicity. Note that
   // the computations are performed on doubles, not integers and the result
@@ -9761,9 +9702,9 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
       AssumedMinimumVscale = *VScale;
     IntVF *= AssumedMinimumVscale;
   }
-  double VecCOverVF = double(*VF.Cost.getValue()) / IntVF;
-  double RtC = *CheckCost.getValue();
-  double MinTC1 = RtC / (ScalarC - VecCOverVF);
+  uint64_t RtC = *CheckCost.getValue();
+  uint64_t Div = ScalarC * IntVF - *VF.Cost.getValue();
+  uint64_t MinTC1 = Div == 0 ? 0 : divideCeil(RtC * IntVF, Div);
 
   // Second, compute a minimum iteration count so that the cost of the
   // runtime checks is only a fraction of the total scalar loop cost. This
@@ -9772,12 +9713,12 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
   // * TC. To bound the runtime check to be a fraction 1/X of the scalar
   // cost, compute
   //   RtC < ScalarC * TC * (1 / X)  ==>  RtC * X / ScalarC < TC
-  double MinTC2 = RtC * 10 / ScalarC;
+  uint64_t MinTC2 = divideCeil(RtC * 10, ScalarC);
 
   // Now pick the larger minimum. If it is not a multiple of VF and a scalar
   // epilogue is allowed, choose the next closest multiple of VF. This should
   // partly compensate for ignoring the epilogue cost.
-  uint64_t MinTC = std::ceil(std::max(MinTC1, MinTC2));
+  uint64_t MinTC = std::max(MinTC1, MinTC2);
   if (SEL == CM_ScalarEpilogueAllowed)
     MinTC = alignTo(MinTC, IntVF);
   VF.MinProfitableTripCount = ElementCount::getFixed(MinTC);
@@ -10181,19 +10122,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
           Value *ResumeV = nullptr;
           // TODO: Move setting of resume values to prepareToExecute.
           if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
-            const RecurrenceDescriptor &RdxDesc =
-                ReductionPhi->getRecurrenceDescriptor();
-            RecurKind RK = RdxDesc.getRecurrenceKind();
-            ResumeV = ReductionResumeValues.find(&RdxDesc)->second;
-            if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
-              // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
-              // start value; compare the final value from the main vector loop
-              // to the start value.
-              IRBuilder<> Builder(
-                  cast<Instruction>(ResumeV)->getParent()->getFirstNonPHI());
-              ResumeV = Builder.CreateICmpNE(ResumeV,
-                                             RdxDesc.getRecurrenceStartValue());
-            }
+            ResumeV = ReductionResumeValues
+                          .find(&ReductionPhi->getRecurrenceDescriptor())
+                          ->second;
           } else {
             // Create induction resume values for both widened pointer and
             // integer/fp inductions and update the start value of the induction

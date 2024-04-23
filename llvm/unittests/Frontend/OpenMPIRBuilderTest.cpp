@@ -2097,7 +2097,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdlenSafelen) {
   }));
 }
 
-TEST_F(OpenMPIRBuilderTest, ApplySimdLoopIf) {
+TEST_F(OpenMPIRBuilderTest, ApplySimdIf) {
   OpenMPIRBuilder OMPBuilder(*M);
   IRBuilder<> Builder(BB);
   MapVector<Value *, Value *> AlignedVars;
