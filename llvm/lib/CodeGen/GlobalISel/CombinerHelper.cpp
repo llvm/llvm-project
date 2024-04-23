@@ -5099,6 +5099,8 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
   auto &MIB = Builder;
 
   bool UseNPQ = false;
+  bool UsePreShift = false;
+  bool UsePostShift = false;
   SmallVector<Register, 16> PreShifts, PostShifts, MagicFactors, NPQFactors;
 
   auto BuildUDIVPattern = [&](const Constant *C) {
@@ -5111,26 +5113,29 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
 
     // Magic algorithm doesn't work for division by 1. We need to emit a select
     // at the end.
-    // TODO: Use undef values for divisor of 1.
-    if (!Divisor.isOne()) {
-
-      // UnsignedDivisionByConstantInfo doesn't work correctly if leading zeros
-      // in the dividend exceeds the leading zeros for the divisor.
-      UnsignedDivisionByConstantInfo magics =
-          UnsignedDivisionByConstantInfo::get(
-              Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()));
-
-      Magic = std::move(magics.Magic);
-
-      assert(magics.PreShift < Divisor.getBitWidth() &&
-             "We shouldn't generate an undefined shift!");
-      assert(magics.PostShift < Divisor.getBitWidth() &&
-             "We shouldn't generate an undefined shift!");
-      assert((!magics.IsAdd || magics.PreShift == 0) && "Unexpected pre-shift");
-      PreShift = magics.PreShift;
-      PostShift = magics.PostShift;
-      SelNPQ = magics.IsAdd;
+    if (Divisor.isOne()) {
+      PreShifts.push_back(MIB.buildUndef(ScalarShiftAmtTy).getReg(0));
+      MagicFactors.push_back(MIB.buildUndef(ScalarTy).getReg(0));
+      NPQFactors.push_back(MIB.buildUndef(ScalarTy).getReg(0));
+      PostShifts.push_back(MIB.buildUndef(ScalarShiftAmtTy).getReg(0));
+      return true;
     }
+
+    // UnsignedDivisionByConstantInfo doesn't work correctly if leading zeros
+    // in the dividend exceeds the leading zeros for the divisor.
+    UnsignedDivisionByConstantInfo magics = UnsignedDivisionByConstantInfo::get(
+        Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()));
+
+    Magic = std::move(magics.Magic);
+
+    assert(magics.PreShift < Divisor.getBitWidth() &&
+           "We shouldn't generate an undefined shift!");
+    assert(magics.PostShift < Divisor.getBitWidth() &&
+           "We shouldn't generate an undefined shift!");
+    assert((!magics.IsAdd || magics.PreShift == 0) && "Unexpected pre-shift");
+    PreShift = magics.PreShift;
+    PostShift = magics.PostShift;
+    SelNPQ = magics.IsAdd;
 
     PreShifts.push_back(
         MIB.buildConstant(ScalarShiftAmtTy, PreShift).getReg(0));
@@ -5143,6 +5148,8 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
     PostShifts.push_back(
         MIB.buildConstant(ScalarShiftAmtTy, PostShift).getReg(0));
     UseNPQ |= SelNPQ;
+    UsePreShift |= PreShift != 0;
+    UsePostShift |= magics.PostShift != 0;
     return true;
   };
 
@@ -5167,7 +5174,9 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
   }
 
   Register Q = LHS;
-  Q = MIB.buildLShr(Ty, Q, PreShift).getReg(0);
+
+  if (UsePreShift)
+    Q = MIB.buildLShr(Ty, Q, PreShift).getReg(0);
 
   // Multiply the numerator (operand 0) by the magic value.
   Q = MIB.buildUMulH(Ty, Q, MagicFactor).getReg(0);
@@ -5185,7 +5194,8 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
     Q = MIB.buildAdd(Ty, NPQ, Q).getReg(0);
   }
 
-  Q = MIB.buildLShr(Ty, Q, PostShift).getReg(0);
+  if (UsePostShift)
+    Q = MIB.buildLShr(Ty, Q, PostShift).getReg(0);
   auto One = MIB.buildConstant(Ty, 1);
   auto IsOne = MIB.buildICmp(
       CmpInst::Predicate::ICMP_EQ,
