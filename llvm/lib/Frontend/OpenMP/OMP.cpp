@@ -84,4 +84,29 @@ Directive getCompoundConstruct(ArrayRef<Directive> Parts) {
     return Found;
   return OMPD_unknown;
 }
+
+bool isLeafConstruct(Directive D) { return getLeafConstructs(D).empty(); }
+
+bool isCompositeConstruct(Directive D) {
+  // OpenMP Spec 5.2: [17.3, 8-9]
+  // If directive-name-A and directive-name-B both correspond to loop-
+  // associated constructs then directive-name is a composite construct
+  llvm::ArrayRef<Directive> Leafs{getLeafConstructs(D)};
+  if (Leafs.empty())
+    return false;
+  if (getDirectiveAssociation(Leafs.front()) != Association::Loop)
+    return false;
+
+  size_t numLoopConstructs =
+      llvm::count_if(Leafs.drop_front(), [](Directive L) {
+        return getDirectiveAssociation(L) == Association::Loop;
+      });
+  return numLoopConstructs != 0;
+}
+
+bool isCombinedConstruct(Directive D) {
+  // OpenMP Spec 5.2: [17.3, 9-10]
+  // Otherwise directive-name is a combined construct.
+  return !getLeafConstructs(D).empty() && !isCompositeConstruct(D);
+}
 } // namespace llvm::omp

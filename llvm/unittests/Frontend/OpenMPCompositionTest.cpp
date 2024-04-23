@@ -1,4 +1,4 @@
-//===- llvm/unittests/Frontend/OpenMPComposeTest.cpp ----------------------===//
+//===- llvm/unittests/Frontend/OpenMPCompositionTest.cpp ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -38,4 +38,31 @@ TEST(Composition, GetCompoundConstruct) {
   ASSERT_EQ(C6, OMPD_parallel_for_simd);
   Directive C7 = getCompoundConstruct({OMPD_do, OMPD_simd});
   ASSERT_EQ(C7, OMPD_do_simd); // Make sure it's not OMPD_end_do_simd
+}
+
+TEST(Composition, IsLeafConstruct) {
+  ASSERT_TRUE(isLeafConstruct(OMPD_loop));
+  ASSERT_TRUE(isLeafConstruct(OMPD_teams));
+  ASSERT_FALSE(isLeafConstruct(OMPD_for_simd));
+  ASSERT_FALSE(isLeafConstruct(OMPD_distribute_simd));
+  ASSERT_FALSE(isLeafConstruct(OMPD_parallel_for));
+}
+
+TEST(Composition, IsCompositeConstruct) {
+  ASSERT_TRUE(isCompositeConstruct(OMPD_distribute_simd));
+  ASSERT_FALSE(isCompositeConstruct(OMPD_for));
+  ASSERT_TRUE(isCompositeConstruct(OMPD_for_simd));
+  // directive-name-A = "parallel", directive-name-B = "for simd",
+  // only directive-name-B is loop-associated, so this is not a
+  // composite construct, even though "for simd" is.
+  ASSERT_FALSE(isCompositeConstruct(OMPD_parallel_for_simd));
+}
+
+TEST(Composition, IsCombinedConstruct) {
+  // "parallel for simd" is a combined construct, see comment in
+  // IsCompositeConstruct.
+  ASSERT_TRUE(isCombinedConstruct(OMPD_parallel_for_simd));
+  ASSERT_FALSE(isCombinedConstruct(OMPD_for_simd));
+  ASSERT_TRUE(isCombinedConstruct(OMPD_parallel_for));
+  ASSERT_FALSE(isCombinedConstruct(OMPD_parallel));
 }
