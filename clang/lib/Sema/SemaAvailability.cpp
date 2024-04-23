@@ -26,17 +26,18 @@
 using namespace clang;
 using namespace sema;
 
-static bool hasMatchingEnvironmentOrNone(const ASTContext &Context, const AvailabilityAttr *AA) {
+static bool hasMatchingEnvironmentOrNone(const ASTContext &Context,
+                                         const AvailabilityAttr *AA) {
   IdentifierInfo *IIEnvironment = AA->getEnvironment();
   auto Environment = Context.getTargetInfo().getTriple().getEnvironment();
-  if (!IIEnvironment || Environment == llvm::Triple::UnknownEnvironment) 
+  if (!IIEnvironment || Environment == llvm::Triple::UnknownEnvironment)
     return true;
-  
+
   llvm::Triple::EnvironmentType ET =
       AvailabilityAttr::getEnvironmentType(IIEnvironment->getName());
   return Environment == ET;
 }
-  
+
 static const AvailabilityAttr *getAttrForPlatform(ASTContext &Context,
                                                   const Decl *D) {
   AvailabilityAttr const *PartialMatch = nullptr;
@@ -137,11 +138,9 @@ ShouldDiagnoseAvailabilityOfDecl(Sema &S, const NamedDecl *D,
 /// whether we should emit a diagnostic for \c K and \c DeclVersion in
 /// the context of \c Ctx. For example, we should emit an unavailable diagnostic
 /// in a deprecated context, but not the other way around.
-static bool
-ShouldDiagnoseAvailabilityInContext(Sema &S, AvailabilityResult K, 
-                                    VersionTuple DeclVersion, 
-                                    const IdentifierInfo* DeclEnv, Decl *Ctx,
-                                    const NamedDecl *OffendingDecl) {
+static bool ShouldDiagnoseAvailabilityInContext(
+    Sema &S, AvailabilityResult K, VersionTuple DeclVersion,
+    const IdentifierInfo *DeclEnv, Decl *Ctx, const NamedDecl *OffendingDecl) {
   assert(K != AR_Available && "Expected an unavailable declaration here!");
 
   // If this was defined using CF_OPTIONS, etc. then ignore the diagnostic.
@@ -160,7 +159,8 @@ ShouldDiagnoseAvailabilityInContext(Sema &S, AvailabilityResult K,
   auto CheckContext = [&](const Decl *C) {
     if (K == AR_NotYetIntroduced) {
       if (const AvailabilityAttr *AA = getAttrForPlatform(S.Context, C))
-        if (AA->getIntroduced() >= DeclVersion && AA->getEnvironment() == DeclEnv )
+        if (AA->getIntroduced() >= DeclVersion &&
+            AA->getEnvironment() == DeclEnv)
           return true;
     } else if (K == AR_Deprecated) {
       if (C->isDeprecated())
@@ -401,7 +401,8 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     // later.
     assert(AA != nullptr && "expecting valid availability attribute");
     VersionTuple Introduced = AA->getIntroduced();
-    bool EnvironmentMatches = hasMatchingEnvironmentOrNone(S.getASTContext(), AA);
+    bool EnvironmentMatches =
+        hasMatchingEnvironmentOrNone(S.getASTContext(), AA);
 
     bool UseNewWarning = shouldDiagnoseAvailabilityByDefault(
         S.Context, S.Context.getTargetInfo().getPlatformMinVersion(),
@@ -813,13 +814,13 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
 
     // If the context of this function is less available than D, we should not
     // emit a diagnostic.
-    if (!ShouldDiagnoseAvailabilityInContext(SemaRef, Result, Introduced, 
+    if (!ShouldDiagnoseAvailabilityInContext(SemaRef, Result, Introduced,
                                              AA->getEnvironment(), Ctx,
                                              OffendingDecl))
       return;
 
     // HEKOTA: use  different error message when !environmentMatches ?
-    // 
+    //
     // We would like to emit the diagnostic even if -Wunguarded-availability is
     // not specified for deployment targets >= to iOS 11 or equivalent or
     // for declarations that were introduced in iOS 11 (macOS 10.13, ...) or

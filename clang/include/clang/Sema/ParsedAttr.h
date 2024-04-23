@@ -73,10 +73,10 @@ struct AvailabilityData {
 
   AvailabilityData(const AvailabilityChange &Introduced,
                    const AvailabilityChange &Deprecated,
-                   const AvailabilityChange &Obsoleted,
-                   SourceLocation Strict, const Expr *ReplaceExpr,
-                   const IdentifierLoc *EnvironmentLoc)
-    : StrictLoc(Strict), Replacement(ReplaceExpr), EnvironmentLoc(EnvironmentLoc) {
+                   const AvailabilityChange &Obsoleted, SourceLocation Strict,
+                   const Expr *ReplaceExpr, const IdentifierLoc *EnvironmentLoc)
+      : StrictLoc(Strict), Replacement(ReplaceExpr),
+        EnvironmentLoc(EnvironmentLoc) {
     Changes[IntroducedSlot] = Introduced;
     Changes[DeprecatedSlot] = Deprecated;
     Changes[ObsoletedSlot] = Obsoleted;

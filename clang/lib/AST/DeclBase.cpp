@@ -667,7 +667,8 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
   if (!A->getIntroduced().empty() &&
       EnclosingVersion < A->getIntroduced()) {
     IdentifierInfo *IIEnv = A->getEnvironment();
-    StringRef TargetEnv = Context.getTargetInfo().getTriple().getEnvironmentName();
+    StringRef TargetEnv =
+        Context.getTargetInfo().getTriple().getEnvironmentName();
     StringRef EnvName = AvailabilityAttr::getPrettyEnviromentName(TargetEnv);
     // Matching environment or no environment on attribute
     if (!IIEnv || (!TargetEnv.empty() && IIEnv->getName() == TargetEnv)) {
@@ -675,8 +676,8 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
         Message->clear();
         llvm::raw_string_ostream Out(*Message);
         VersionTuple VTI(A->getIntroduced());
-        Out << "introduced in " << PrettyPlatformName << " "
-            << VTI << EnvName << HintMessage;
+        Out << "introduced in " << PrettyPlatformName << " " << VTI << EnvName
+            << HintMessage;
       }
     }
     // Non-matching environment or no environment on target
@@ -684,8 +685,8 @@ static AvailabilityResult CheckAvailability(ASTContext &Context,
       if (Message) {
         Message->clear();
         llvm::raw_string_ostream Out(*Message);
-        Out << "not available on " << PrettyPlatformName << " "
-            << EnvName << HintMessage;
+        Out << "not available on " << PrettyPlatformName << " " << EnvName
+            << HintMessage;
       }
     }
 

@@ -3619,15 +3619,13 @@ public:
   bool CheckAttrTarget(const ParsedAttr &CurrAttr);
   bool CheckAttrNoArgs(const ParsedAttr &CurrAttr);
 
-  AvailabilityAttr *
-  mergeAvailabilityAttr(NamedDecl *D, const AttributeCommonInfo &CI,
-                        IdentifierInfo *Platform, bool Implicit,
-                        VersionTuple Introduced, VersionTuple Deprecated,
-                        VersionTuple Obsoleted, bool IsUnavailable,
-                        StringRef Message, bool IsStrict, StringRef Replacement,
-                        AvailabilityMergeKind AMK, int Priority,
-                        IdentifierInfo *IIEnvironment);
-  
+  AvailabilityAttr *mergeAvailabilityAttr(
+      NamedDecl *D, const AttributeCommonInfo &CI, IdentifierInfo *Platform,
+      bool Implicit, VersionTuple Introduced, VersionTuple Deprecated,
+      VersionTuple Obsoleted, bool IsUnavailable, StringRef Message,
+      bool IsStrict, StringRef Replacement, AvailabilityMergeKind AMK,
+      int Priority, IdentifierInfo *IIEnvironment);
+
   TypeVisibilityAttr *
   mergeTypeVisibilityAttr(Decl *D, const AttributeCommonInfo &CI,
                           TypeVisibilityAttr::VisibilityType Vis);
