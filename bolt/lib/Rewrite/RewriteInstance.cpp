@@ -840,7 +840,7 @@ void RewriteInstance::discoverFileObjects() {
       continue;
 
     if (cantFail(Symbol.getType()) == SymbolRef::ST_File) {
-      FileSymbols.emplace_back(Symbol.getRawDataRefImpl());
+      FileSymbols.emplace_back(Symbol);
       StringRef Name =
           cantFail(std::move(NameOrError), "cannot get symbol name for file");
       // Ignore Clang LTO artificial FILE symbol as it is not always generated,
@@ -1499,10 +1499,9 @@ void RewriteInstance::registerFragments() {
 
     // Find containing FILE symbol
     SymbolRef Symbol = SymIt->second;
-    DataRefImpl DRI = Symbol.getRawDataRefImpl();
-    auto FSI = llvm::upper_bound(
-        FileSymbols, DRI, [](const DataRefImpl &A, const DataRefImpl &B) {
-          return A.d.b < B.d.b;
+    auto FSI =
+        llvm::upper_bound(FileSymbols, Symbol, [](SymbolRef A, SymbolRef B) {
+          return A.getRawDataRefImpl().d.b < B.getRawDataRefImpl().d.b;
         });
     if (FSI == FileSymbols.begin()) {
       BC->errs() << "BOLT-ERROR: owning FILE symbol not found for symbol "
@@ -1512,11 +1511,11 @@ void RewriteInstance::registerFragments() {
 
     uint32_t StopSymbolNum = FirstGlobal;
     if (FSI != FileSymbols.end())
-      StopSymbolNum = FSI->d.b;
+      StopSymbolNum = FSI->getRawDataRefImpl().d.b;
 
     uint64_t ParentAddress{0};
     // Iterate over local file symbols and check symbol names to match parent.
-    for (SymbolRef Symbol(FSI[-1], InputFile);
+    for (SymbolRef Symbol(FSI[-1]);
          Symbol.getRawDataRefImpl().d.b != StopSymbolNum; Symbol.moveNext()) {
       if (cantFail(Symbol.getName()) == ParentName) {
         ParentAddress = cantFail(Symbol.getAddress());
