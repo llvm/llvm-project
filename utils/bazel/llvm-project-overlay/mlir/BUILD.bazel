@@ -6,6 +6,7 @@
 #   The MLIR "Multi-Level Intermediate Representation" Compiler Infrastructure
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load(
     ":build_defs.bzl",
     "cc_headers_only",
@@ -27,6 +28,18 @@ exports_files([
     "run_lit.sh",
     "utils/textmate/mlir.json",
 ])
+
+bool_flag(
+    name = "enable_cuda",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "enable_cuda_config",
+    flag_values = {
+        ":enable_cuda": "True",
+    },
+)
 
 expand_template(
     name = "mlir_config_h_gen",
