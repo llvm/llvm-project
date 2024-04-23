@@ -371,6 +371,6 @@ def warn_missing_symbol_graph_dir : Warning<
   InGroup<ExtractAPIMisuse>;
 
 def err_ast_action_on_llvm_ir : Error<
-  "cannot apply AST actions to LLVM IR file '%0'">, 
+  "cannot apply AST actions to LLVM IR file '%0'">,
   DefaultFatal;
 }
