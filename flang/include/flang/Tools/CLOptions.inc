@@ -179,9 +179,27 @@ inline void addTargetRewritePass(mlir::PassManager &pm) {
   });
 }
 
-inline void addDebugInfoPass(mlir::PassManager &pm) {
-  addPassConditionally(
-      pm, disableDebugInfo, [&]() { return fir::createAddDebugInfoPass(); });
+inline mlir::LLVM::DIEmissionKind getEmissionKind(
+    llvm::codegenoptions::DebugInfoKind kind) {
+  switch (kind) {
+  case llvm::codegenoptions::DebugInfoKind::FullDebugInfo:
+    return mlir::LLVM::DIEmissionKind::Full;
+  case llvm::codegenoptions::DebugInfoKind::DebugLineTablesOnly:
+    return mlir::LLVM::DIEmissionKind::LineTablesOnly;
+  default:
+    return mlir::LLVM::DIEmissionKind::None;
+  }
+}
+
+inline void addDebugInfoPass(mlir::PassManager &pm,
+    llvm::codegenoptions::DebugInfoKind debugLevel,
+    llvm::OptimizationLevel optLevel, llvm::StringRef inputFilename) {
+  fir::AddDebugInfoOptions options;
+  options.debugLevel = getEmissionKind(debugLevel);
+  options.isOptimized = optLevel != llvm::OptimizationLevel::O0;
+  options.inputFilename = inputFilename;
+  addPassConditionally(pm, disableDebugInfo,
+      [&]() { return fir::createAddDebugInfoPass(options); });
 }
 
 inline void addFIRToLLVMPass(
@@ -307,32 +325,21 @@ inline void createOpenMPFIRPassPipeline(
 }
 
 #if !defined(FLANG_EXCLUDE_CODEGEN)
-inline void createDebugPasses(
-    mlir::PassManager &pm, llvm::codegenoptions::DebugInfoKind debugLevel) {
-  // Currently only -g1, -g, -gline-tables-only supported
-  switch (debugLevel) {
-  case llvm::codegenoptions::DebugLineTablesOnly:
-    addDebugInfoPass(pm);
-    return;
-  case llvm::codegenoptions::NoDebugInfo:
-    return;
-  default:
-    // TODO: Add cases and passes for other debug options.
-    // All other debug options not implemented yet, currently emits warning
-    // and generates as much debug information as possible.
-    addDebugInfoPass(pm);
-    return;
-  }
+inline void createDebugPasses(mlir::PassManager &pm,
+    llvm::codegenoptions::DebugInfoKind debugLevel,
+    llvm::OptimizationLevel OptLevel, llvm::StringRef inputFilename) {
+  if (debugLevel != llvm::codegenoptions::NoDebugInfo)
+    addDebugInfoPass(pm, debugLevel, OptLevel, inputFilename);
 }
 
-inline void createDefaultFIRCodeGenPassPipeline(
-    mlir::PassManager &pm, MLIRToLLVMPassPipelineConfig config) {
+inline void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
+    MLIRToLLVMPassPipelineConfig config, llvm::StringRef inputFilename = {}) {
   fir::addBoxedProcedurePass(pm);
   addNestedPassToAllTopLevelOperations(pm, fir::createAbstractResultOpt);
   fir::addCodeGenRewritePass(pm);
   fir::addTargetRewritePass(pm);
   fir::addExternalNameConversionPass(pm, config.Underscoring);
-  fir::createDebugPasses(pm, config.DebugInfo);
+  fir::createDebugPasses(pm, config.DebugInfo, config.OptLevel, inputFilename);
 
   if (config.VScaleMin != 0)
     pm.addPass(fir::createVScaleAttrPass({config.VScaleMin, config.VScaleMax}));
@@ -366,15 +373,16 @@ inline void createDefaultFIRCodeGenPassPipeline(
 /// \param pm - MLIR pass manager that will hold the pipeline definition
 /// \param optLevel - optimization level used for creating FIR optimization
 ///   passes pipeline
-inline void createMLIRToLLVMPassPipeline(
-    mlir::PassManager &pm, const MLIRToLLVMPassPipelineConfig &config) {
+inline void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
+    const MLIRToLLVMPassPipelineConfig &config,
+    llvm::StringRef inputFilename = {}) {
   fir::createHLFIRToFIRPassPipeline(pm, config.OptLevel);
 
   // Add default optimizer pass pipeline.
   fir::createDefaultFIROptimizerPassPipeline(pm, config);
 
   // Add codegen pass pipeline.
-  fir::createDefaultFIRCodeGenPassPipeline(pm, config);
+  fir::createDefaultFIRCodeGenPassPipeline(pm, config, inputFilename);
 }
 #undef FLANG_EXCLUDE_CODEGEN
 #endif
