@@ -18763,19 +18763,28 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
 
   // scheduling builtins
   case AMDGPU::BI__builtin_amdgcn_sched_group_barrier: {
-    return E->getNumArgs() == 3
-               ? Builder.CreateCall(
-                     CGM.getIntrinsic(Intrinsic::amdgcn_sched_group_barrier),
-                     {EmitScalarExpr(E->getArg(0)),
-                      EmitScalarExpr(E->getArg(1)),
-                      EmitScalarExpr(E->getArg(2))})
-               : Builder.CreateCall(
-                     CGM.getIntrinsic(
-                         Intrinsic::amdgcn_sched_group_barrier_rule),
-                     {EmitScalarExpr(E->getArg(0)),
-                      EmitScalarExpr(E->getArg(1)),
-                      EmitScalarExpr(E->getArg(2)),
-                      EmitScalarExpr(E->getArg(3))});
+    if (E->getNumArgs() == 3)
+      return Builder.CreateCall(
+          CGM.getIntrinsic(Intrinsic::amdgcn_sched_group_barrier),
+          {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1)),
+           EmitScalarExpr(E->getArg(2))});
+
+    uint64_t Mask = 0;
+    for (unsigned I = 3; I < E->getNumArgs(); I++) {
+      auto NextArg = EmitScalarExpr(E->getArg(I));
+      auto ArgLiteral = cast<ConstantInt>(NextArg)->getZExtValue();
+      if (ArgLiteral > 63) {
+        CGM.Error(E->getExprLoc(),
+                  getContext().BuiltinInfo.getName(BuiltinID).str() +
+                      " RuleID must be within [0,63].");
+      }
+      Mask |= (uint64_t)1 << ArgLiteral;
+    }
+
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::amdgcn_sched_group_barrier_rule),
+        {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1)),
+         EmitScalarExpr(E->getArg(2)), llvm::ConstantInt::get(Int64Ty, Mask)});
   }
 
   // r600 intrinsics

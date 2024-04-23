@@ -404,8 +404,8 @@ def SCHED_GROUP_BARRIER : SPseudoInstSI<
 
 def SCHED_GROUP_BARRIER_RULE : SPseudoInstSI<
   (outs),
-  (ins i32imm:$mask, i32imm:$size, i32imm:$syncid, i32imm:$ruleid),
-  [(int_amdgcn_sched_group_barrier_rule (i32 timm:$mask), (i32 timm:$size), (i32 timm:$syncid), (i32 timm:$ruleid))]> {
+  (ins i32imm:$mask, i32imm:$size, i32imm:$syncid, i64imm:$rulemask),
+  [(int_amdgcn_sched_group_barrier_rule (i32 timm:$mask), (i32 timm:$size), (i32 timm:$syncid), (i64 timm:$rulemask))]> {
   let SchedRW = [];
   let hasNoSchedulingInfo = 1;
   let hasSideEffects = 1;

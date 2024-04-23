@@ -2342,7 +2342,8 @@ private:
   // An array of rule constuctors. These are to be used by
   // SCHED_GROUP_BARRIER_RULE with the RuleID argument being
   // an index into this array.
-  std::vector<function_ref<std::shared_ptr<InstructionRule>(unsigned)>>
+  std::vector<function_ref<std::shared_ptr<InstructionRule>(
+      unsigned, const SIInstrInfo *)>>
       SchedGroupBarrierRuleCallBacks;
 
   // Organize lists of SchedGroups by their SyncID. SchedGroups /
@@ -2676,6 +2677,7 @@ IGroupLPDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
 }
 
 void IGroupLPDAGMutation::addSchedGroupBarrierRules() {
+
   /// Whether or not the instruction has no true data predecessors
   /// with opcode \p Opc.
   class NoOpcDataPred : public InstructionRule {
@@ -2718,19 +2720,19 @@ void IGroupLPDAGMutation::addSchedGroupBarrierRules() {
   };
 
   SchedGroupBarrierRuleCallBacks = {
-      [&](unsigned SGID) {
+      [](unsigned SGID, const SIInstrInfo *TII) {
         return std::make_shared<NoOpcWARPred>(AMDGPU::V_CNDMASK_B32_e64, TII,
                                               SGID, false);
       },
-      [&](unsigned SGID) {
+      [](unsigned SGID, const SIInstrInfo *TII) {
         return std::make_shared<NoOpcWARPred>(AMDGPU::V_PERM_B32_e64, TII, SGID,
                                               false);
       },
-      [&](unsigned SGID) {
+      [](unsigned SGID, const SIInstrInfo *TII) {
         return std::make_shared<NoOpcDataPred>(AMDGPU::V_CNDMASK_B32_e64, TII,
                                                SGID, false);
       },
-      [&](unsigned SGID) {
+      [](unsigned SGID, const SIInstrInfo *TII) {
         return std::make_shared<NoOpcDataPred>(AMDGPU::V_PERM_B32_e64, TII,
                                                SGID, false);
       }};
@@ -2747,23 +2749,32 @@ void IGroupLPDAGMutation::initSchedGroupBarrierPipelineStage(
   int32_t SGMask = SGB.getOperand(0).getImm();
   int32_t Size = SGB.getOperand(1).getImm();
   int32_t SyncID = SGB.getOperand(2).getImm();
-  std::optional<int32_t> RuleID =
+  std::optional<uint64_t> RuleMask =
       (SGB.getOpcode() == AMDGPU::SCHED_GROUP_BARRIER_RULE)
           ? SGB.getOperand(3).getImm()
           : std::optional<int32_t>(std::nullopt);
 
-  // Sanitize the input
-  if (RuleID && (!SchedGroupBarrierRuleCallBacks.size() ||
-                 *RuleID > (int)(SchedGroupBarrierRuleCallBacks.size() - 1))) {
-    RuleID = std::nullopt;
-    llvm_unreachable("Bad rule ID!");
-  }
-
   auto SG = &SyncedSchedGroups[SyncID].emplace_back((SchedGroupMask)SGMask,
                                                     Size, SyncID, DAG, TII);
-  if (RuleID)
-    SG->addRule(SchedGroupBarrierRuleCallBacks[*RuleID](SG->getSGID()));
+  // Process the input mask
+  if (RuleMask) {
+    uint64_t TheMask = *RuleMask;
+    unsigned NextID = 0;
+    while (TheMask) {
+      if (!(TheMask & 0x1)) {
+        TheMask >>= 1;
+        ++NextID;
+        continue;
+      }
+      if ((!SchedGroupBarrierRuleCallBacks.size() ||
+           NextID > SchedGroupBarrierRuleCallBacks.size() - 1))
+        llvm_unreachable("Bad rule ID!");
 
+      SG->addRule(SchedGroupBarrierRuleCallBacks[NextID](SG->getSGID(), TII));
+      TheMask >>= 1;
+      ++NextID;
+    }
+  }
   SG->initSchedGroup(RIter, SyncedInstrs[SG->getSyncID()]);
 }
 

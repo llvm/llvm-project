@@ -301,7 +301,7 @@ multiclass SCHED_GROUP_BARRIER_I {
   def NAME:   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
     [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, IntrNoMem, IntrHasSideEffects,
     IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
-  def _rule:   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+  def _rule:   Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i64_ty],
     [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, IntrNoMem, IntrHasSideEffects,
     IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 }
