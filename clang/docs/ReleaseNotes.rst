@@ -539,6 +539,8 @@ Bug Fixes to C++ Support
 - Clang now correctly tracks type dependence of by-value captures in lambdas with an explicit
   object parameter.
   Fixes (#GH70604), (#GH79754), (#GH84163), (#GH84425), (#GH86054), (#GH86398), and (#GH86399).
+- Clang now diagnoses explicit object parameters in member pointers and other contexts where they should not appear.
+  Fixes (#GH85992).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
