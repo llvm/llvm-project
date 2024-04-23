@@ -321,6 +321,8 @@ public:
 
   RecordContext(APIRecord::RecordKind Kind) : Kind(Kind) {}
 
+  /// Append \p Other children chain into ours and empty out Other's record
+  /// chain.
   void stealRecordChain(RecordContext &Other);
 
   APIRecord::RecordKind getKind() const { return Kind; }

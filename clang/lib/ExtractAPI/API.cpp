@@ -55,8 +55,15 @@ RecordContext *APIRecord::castToRecordContext(const APIRecord *Record) {
 }
 
 void RecordContext::stealRecordChain(RecordContext &Other) {
-  First = Other.First;
+  // If we don't have an empty chain append Other's chain into ours.
+  if (First)
+    Last->NextInContext = Other.First;
+  else
+    First = Other.First;
+
   Last = Other.Last;
+
+  // Delete Other's chain to ensure we don't accidentally traverse it.
   Other.First = nullptr;
   Other.Last = nullptr;
 }
