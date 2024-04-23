@@ -89,28 +89,28 @@ struct _IterOps<_ClassicAlgPolicy> {
   // advance with sentinel, a la std::ranges::advance
   // it's unclear whether _Iter has a difference_type and whether that's signed, so we play it safe:
   // use the incoming type for returning and steer clear of negative overflows
-  template <class _Iter, class _Distance>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static _Distance
-  __advance_to(_Iter& __iter, _Distance __count, const _Iter& __sentinel) {
+  template <class _Iter>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static __difference_type<_Iter>
+  __advance_to(_Iter& __iter, __difference_type<_Iter> __count, const _Iter& __sentinel) {
     return _IterOps::__advance_to(__iter, __count, __sentinel, typename iterator_traits<_Iter>::iterator_category());
   }
 
 private:
   // advance with sentinel, a la std::ranges::advance -- InputIterator specialization
-  template <class _InputIter, class _Distance>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static _Distance
-  __advance_to(_InputIter& __iter, _Distance __count, const _InputIter& __sentinel, input_iterator_tag) {
-    _Distance __dist = _Distance();
+  template <class _InputIter>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static __difference_type<_InputIter>
+  __advance_to(_InputIter& __iter, __difference_type<_InputIter> __count, const _InputIter& __sentinel, input_iterator_tag) {
+    __difference_type<_InputIter> __dist = 0;
     for (; __dist < __count && __iter != __sentinel; ++__dist)
       ++__iter;
     return __count - __dist;
   }
 
   // advance with sentinel, a la std::ranges::advance -- BidirectionalIterator specialization
-  template <class _BiDirIter, class _Distance>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static _Distance
-  __advance_to(_BiDirIter& __iter, _Distance __count, const _BiDirIter& __sentinel, bidirectional_iterator_tag) {
-    _Distance __dist = _Distance();
+  template <class _BiDirIter>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static __difference_type<_BiDirIter>
+  __advance_to(_BiDirIter& __iter, __difference_type<_BiDirIter> __count, const _BiDirIter& __sentinel, bidirectional_iterator_tag) {
+    __difference_type<_BiDirIter> __dist = 0;
     if (__count >= 0)
       for (; __dist < __count && __iter != __sentinel; ++__dist)
         ++__iter;
@@ -121,9 +121,9 @@ private:
   }
 
   // advance with sentinel, a la std::ranges::advance -- RandomIterator specialization
-  template <class _RandIter, class _Distance>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static _Distance
-  __advance_to(_RandIter& __iter, _Distance __count, const _RandIter& __sentinel, random_access_iterator_tag) {
+  template <class _RandIter>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static __difference_type<_RandIter>
+  __advance_to(_RandIter& __iter, __difference_type<_RandIter> __count, const _RandIter& __sentinel, random_access_iterator_tag) {
     auto __dist = _IterOps::distance(__iter, __sentinel);
     _LIBCPP_ASSERT_VALID_INPUT_RANGE(
         __count == 0 || (__dist < 0) == (__count < 0), "__sentinel must precede __iter when __count < 0");
