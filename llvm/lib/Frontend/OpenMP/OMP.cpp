@@ -33,9 +33,18 @@ getFirstCompositeRange(iterator_range<ArrayRef<Directive>::iterator> Leafs) {
   // otherwise directive-name is a combined construct.
   //
   // In the list of leaf constructs, find the first loop-associated construct,
-  // this is the beginning of the range. Then, starting from the immediately
-  // following leaf construct, find the first sequence of adjacent loop-
-  // -associated constructs. The last of those is the last one of the range.
+  // this is the beginning of the returned range. Then, starting from the
+  // immediately following leaf construct, find the first sequence of adjacent
+  // loop-associated constructs. The last of those is the last one of the
+  // range, that is, the end of the range is one past that element.
+  // If such a sequence of adjacent loop-associated directives does not exist,
+  // return an empty range.
+  //
+  // The end of the returned range (including empty range) is intended to be
+  // a point from which the search for the next range could resume.
+  //
+  // Consequently, this function can't return a range with a single leaf
+  // construct in it.
 
   auto firstLoopAssociated =
       [](iterator_range<ArrayRef<Directive>::iterator> List) {
@@ -46,14 +55,16 @@ getFirstCompositeRange(iterator_range<ArrayRef<Directive>::iterator> Leafs) {
         return List.end();
       };
 
+  auto Empty = llvm::make_range(Leafs.end(), Leafs.end());
+
   auto Begin = firstLoopAssociated(Leafs);
   if (Begin == Leafs.end())
-    return llvm::make_range(Leafs.end(), Leafs.end());
+    return Empty;
 
   auto End =
       firstLoopAssociated(llvm::make_range(std::next(Begin), Leafs.end()));
   if (End == Leafs.end())
-    return llvm::make_range(Begin, std::next(Begin));
+    return Empty;
 
   for (; End != Leafs.end(); ++End) {
     if (getDirectiveAssociation(*End) != Association::Loop)
@@ -98,8 +109,8 @@ getLeafOrCompositeConstructs(Directive D, SmallVectorImpl<Directive> &Output) {
           getCompoundConstruct(ArrayTy(Range.begin(), Range.end()));
       assert(Comp != OMPD_unknown);
       Output.push_back(Comp);
+      Iter = Range.end();
     }
-    Iter = Range.end();
   } while (Iter != Leafs.end());
 
   return Output;
