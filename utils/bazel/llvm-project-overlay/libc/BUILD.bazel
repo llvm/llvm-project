@@ -3213,7 +3213,7 @@ libc_support_library(
 libc_support_library(
     name = "printf_mock_parser",
     hdrs = ["src/stdio/printf_core/parser.h"],
-    defines = ["LIBC_COPT_MOCK_ARG_LIST"],
+    local_defines = ["LIBC_COPT_MOCK_ARG_LIST"],
     deps = [
         ":__support_arg_list",
         ":__support_common",
