@@ -61,6 +61,8 @@ static void addParantheses(const BinaryOperator *BinOp,
     const clang::SourceLocation StartLoc = BinOp->getBeginLoc();
     const clang::SourceLocation EndLoc =
         clang::Lexer::getLocForEndOfToken(BinOp->getEndLoc(), 0, SM, LangOpts);
+    if (EndLoc.isInvalid())
+      return;
 
     Check->diag(StartLoc,
                 "'%0' has higher precedence than '%1'; add parentheses to "
