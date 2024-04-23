@@ -14,7 +14,7 @@ function(add_polly_unittest test_name)
     target_link_libraries(${test_name} PRIVATE gtest_main gtest)
     add_dependencies(PollyUnitTests ${test_name})
 
-    set_property(TARGET ${test_name} PROPERTY FOLDER "Polly")
+    set_property(TARGET ${test_name} PROPERTY FOLDER "Polly/Tests/Unittests")
   endif()
 
   if(LLVM_LINK_LLVM_DYLIB AND LLVM_POLLY_LINK_INTO_TOOLS)
