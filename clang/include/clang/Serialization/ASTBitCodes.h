@@ -69,9 +69,18 @@ using IdentifierID = uint32_t;
 /// FIXME: Merge with Decl::DeclID
 using DeclID = uint32_t;
 
-// FIXME: Turn these into classes so we can have some type safety when
+class LocalDeclID {
+public:
+  explicit LocalDeclID(DeclID ID) : ID(ID) {}
+
+  DeclID get() const { return ID; }
+
+private:
+  DeclID ID;
+};
+
+// FIXME: Turn GlobalDeclID into class so we can have some type safety when
 // we go from local ID to global and vice-versa.
-using LocalDeclID = DeclID;
 using GlobalDeclID = DeclID;
 
 /// An ID number that refers to a type in an AST file.

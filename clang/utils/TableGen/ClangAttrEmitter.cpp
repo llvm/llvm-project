@@ -107,7 +107,7 @@ static std::string ReadPCHRecord(StringRef type) {
   return StringSwitch<std::string>(type)
       .EndsWith("Decl *", "Record.GetLocalDeclAs<" +
                               std::string(type.data(), 0, type.size() - 1) +
-                              ">(Record.readInt())")
+                              ">(LocalDeclID(Record.readInt()))")
       .Case("TypeSourceInfo *", "Record.readTypeSourceInfo()")
       .Case("Expr *", "Record.readExpr()")
       .Case("IdentifierInfo *", "Record.readIdentifier()")
