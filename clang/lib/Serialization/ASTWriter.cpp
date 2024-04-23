@@ -241,7 +241,7 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
 
     const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
     if (!HFI || (!HFI->isCompilingModuleHeader &&
-                 (HFI->isModuleHeader || !PP.alreadyIncluded(*File))))
+                 (HFI->isModuleHeader || !HFI->IsLocallyIncluded)))
       continue;
 
     for (const auto &KH : HS.findResolvedModulesForHeader(*File))
