@@ -202,6 +202,25 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::LLVM::LLVMDialect"
   ];
+  let options = [
+    Option<"debugLevel", "debug-level",
+           "mlir::LLVM::DIEmissionKind",
+           /*default=*/"mlir::LLVM::DIEmissionKind::Full",
+           "debug level",
+           [{::llvm::cl::values(
+            clEnumValN(mlir::LLVM::DIEmissionKind::Full, "Full", "Emit full debug info"),
+            clEnumValN(mlir::LLVM::DIEmissionKind::LineTablesOnly, "LineTablesOnly", "Emit line tables only"),
+            clEnumValN(mlir::LLVM::DIEmissionKind::None, "None", "Emit no debug information")
+          )}]
+           >,
+    Option<"isOptimized", "is-optimized",
+           "bool", /*default=*/"false",
+           "is optimized.">,
+    Option<"inputFilename", "file-name",
+           "std::string",
+           /*default=*/"std::string{}",
+           "name of the input source file">,
+  ];
 }
 
 // This needs to be a "mlir::ModuleOp" pass, because it inserts simplified
