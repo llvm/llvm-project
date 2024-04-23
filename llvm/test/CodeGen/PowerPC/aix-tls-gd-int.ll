@@ -627,14 +627,14 @@ entry:
 
 ; External symbol reference checks for .__tls_get_addr/.__tls_get_mod
 
-; SMALL32: .extern .__tls_get_addr[PR]
-; SMALL32: .extern .__tls_get_mod[PR]
-; SMALL64: .extern .__tls_get_addr[PR]
-; SMALL64: .extern .__tls_get_mod[PR]
-; LARGE32: .extern .__tls_get_addr[PR]
-; LARGE32: .extern .__tls_get_mod[PR]
-; LARGE64: .extern .__tls_get_addr[PR]
-; LARGE64: .extern .__tls_get_mod[PR]
+; SMALL32: .extern .{{__tls_get_addr|__tls_get_mod}}[PR]
+; SMALL32: .extern .{{__tls_get_addr|__tls_get_mod}}[PR]
+; SMALL64: .extern .{{__tls_get_addr|__tls_get_mod}}[PR]
+; SMALL64: .extern .{{__tls_get_addr|__tls_get_mod}}[PR]
+; LARGE32: .extern .{{__tls_get_addr|__tls_get_mod}}[PR]
+; LARGE32: .extern .{{__tls_get_addr|__tls_get_mod}}[PR]
+; LARGE64: .extern .{{__tls_get_addr|__tls_get_mod}}[PR]
+; LARGE64: .extern .{{__tls_get_addr|__tls_get_mod}}[PR]
 
 ; TOC entry checks
 
