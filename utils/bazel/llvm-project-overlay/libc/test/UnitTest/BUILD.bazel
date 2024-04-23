@@ -65,10 +65,12 @@ libc_support_library(
 libc_support_library(
     name = "fp_test_helpers",
     srcs = [
+        "FEnvSafeTest.cpp",
         "FPExceptMatcher.cpp",
         "RoundingModeUtils.cpp",
     ],
     hdrs = [
+        "FEnvSafeTest.h",
         "FPExceptMatcher.h",
         "FPMatcher.h",
         "RoundingModeUtils.h",
@@ -87,8 +89,8 @@ libc_support_library(
         "//libc:__support_fputil_fpbits_str",
         "//libc:__support_fputil_rounding_mode",
         "//libc:hdr_math_macros",
-	"//libc:hdr_fenv_macros",
-	"//libc:types_fenv_t",
+	    "//libc:hdr_fenv_macros",
+	    "//libc:types_fenv_t",
     ],
 )
 
