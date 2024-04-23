@@ -11834,6 +11834,15 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCSelfClause::Create(getContext(), BeginLoc, LParenLoc,
                                      CondExpr, EndLoc);
   }
+  case OpenACCClauseKind::NumGangs: {
+    SourceLocation LParenLoc = readSourceLocation();
+    unsigned NumClauses = readInt();
+    llvm::SmallVector<Expr *> IntExprs;
+    for (unsigned I = 0; I < NumClauses; ++I)
+      IntExprs.push_back(readSubExpr());
+    return OpenACCNumGangsClause::Create(getContext(), BeginLoc, LParenLoc,
+                                         IntExprs, EndLoc);
+  }
   case OpenACCClauseKind::NumWorkers: {
     SourceLocation LParenLoc = readSourceLocation();
     Expr *IntExpr = readSubExpr();
@@ -11874,7 +11883,6 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::Reduction:
   case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
-  case OpenACCClauseKind::NumGangs:
   case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:
   case OpenACCClauseKind::DeviceType:
