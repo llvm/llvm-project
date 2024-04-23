@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX908 %s
-; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX90A %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX908 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX90A %s
 
 ; GCN-LABEL: {{^}}max_12regs_13a_used:
 ; GCN-NOT: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
@@ -75,31 +75,31 @@ use:
 ; GCN: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
 
 ; GFX908-DAG:  v_accvgpr_read_b32 v5, a0 ; Reload Reuse
-; GFX908-DAG:  buffer_store_dword v5, off, s[{{[0-9:]+}}], 0 offset:4 ; 4-byte Folded Spill
+; GFX908-DAG:  buffer_store_dword v5, off, s[{{[0-9:]+}}], 0 ; 4-byte Folded Spill
 ; GFX908-DAG:  v_accvgpr_read_b32 v5, a1 ; Reload Reuse
-; GFX908-DAG:  buffer_store_dword v5, off, s[{{[0-9:]+}}], 0 offset:8 ; 4-byte Folded Spill
+; GFX908-DAG:  buffer_store_dword v5, off, s[{{[0-9:]+}}], 0 offset:4 ; 4-byte Folded Spill
 ; GFX908-DAG:  v_accvgpr_read_b32 v5, a2 ; Reload Reuse
-; GFX908-DAG:  buffer_store_dword v5, off, s[{{[0-9:]+}}], 0 offset:12 ; 4-byte Folded Spill
+; GFX908-DAG:  buffer_store_dword v5, off, s[{{[0-9:]+}}], 0 offset:8 ; 4-byte Folded Spill
 ; GFX908-DAG:  v_accvgpr_read_b32 v5, a3 ; Reload Reuse
-; GFX908-DAG:  buffer_store_dword v5, off, s[{{[0-9:]+}}], 0 offset:16 ; 4-byte Folded Spill
+; GFX908-DAG:  buffer_store_dword v5, off, s[{{[0-9:]+}}], 0 offset:12 ; 4-byte Folded Spill
 
-; GFX90A-DAG:  buffer_store_dword a0, off, s[{{[0-9:]+}}], 0 offset:4 ; 4-byte Folded Spill
-; GFX90A-DAG:  buffer_store_dword a1, off, s[{{[0-9:]+}}], 0 offset:8 ; 4-byte Folded Spill
-; GFX90A-DAG:  buffer_store_dword a2, off, s[{{[0-9:]+}}], 0 offset:12 ; 4-byte Folded Spill
-; GFX90A-DAG:  buffer_store_dword a3, off, s[{{[0-9:]+}}], 0 offset:16 ; 4-byte Folded Spill
+; GFX90A-DAG:  buffer_store_dword a0, off, s[{{[0-9:]+}}], 0 ; 4-byte Folded Spill
+; GFX90A-DAG:  buffer_store_dword a1, off, s[{{[0-9:]+}}], 0 offset:4 ; 4-byte Folded Spill
+; GFX90A-DAG:  buffer_store_dword a2, off, s[{{[0-9:]+}}], 0 offset:8 ; 4-byte Folded Spill
+; GFX90A-DAG:  buffer_store_dword a3, off, s[{{[0-9:]+}}], 0 offset:12 ; 4-byte Folded Spill
 
 ; GCN:  v_mfma_f32_4x4x1f32 a[0:3], v{{[0-9]+}}, v{{[0-9]+}}, a[0:3]
 
-; GFX908-DAG:  buffer_load_dword v0, off, s[{{[0-9:]+}}], 0 offset:4 ; 4-byte Folded Reload
-; GFX908-DAG:  buffer_load_dword v1, off, s[{{[0-9:]+}}], 0 offset:8 ; 4-byte Folded Reload
-; GFX908-DAG:  buffer_load_dword v2, off, s[{{[0-9:]+}}], 0 offset:12 ; 4-byte Folded Reload
-; GFX908-DAG:  buffer_load_dword v3, off, s[{{[0-9:]+}}], 0 offset:16 ; 4-byte Folded Reload
+; GFX908-DAG:  buffer_load_dword v0, off, s[{{[0-9:]+}}], 0 ; 4-byte Folded Reload
+; GFX908-DAG:  buffer_load_dword v1, off, s[{{[0-9:]+}}], 0 offset:4 ; 4-byte Folded Reload
+; GFX908-DAG:  buffer_load_dword v2, off, s[{{[0-9:]+}}], 0 offset:8 ; 4-byte Folded Reload
+; GFX908-DAG:  buffer_load_dword v3, off, s[{{[0-9:]+}}], 0 offset:12 ; 4-byte Folded Reload
 ; GFX908: global_store_dwordx4 v[{{[0-9:]+}}], v[0:3], off
 
-; GFX90A-DAG:  buffer_load_dword v2, off, s[4:7], 0 offset:4 ; 4-byte Folded Reload
-; GFX90A-DAG:  buffer_load_dword v3, off, s[4:7], 0 offset:8 ; 4-byte Folded Reload
-; GFX90A-DAG:  buffer_load_dword v4, off, s[4:7], 0 offset:12 ; 4-byte Folded Reload
-; GFX90A-DAG:  buffer_load_dword v5, off, s[4:7], 0 offset:16 ; 4-byte Folded Reload
+; GFX90A-DAG:  buffer_load_dword v2, off, s[4:7], 0 ; 4-byte Folded Reload
+; GFX90A-DAG:  buffer_load_dword v3, off, s[4:7], 0 offset:4 ; 4-byte Folded Reload
+; GFX90A-DAG:  buffer_load_dword v4, off, s[4:7], 0 offset:8 ; 4-byte Folded Reload
+; GFX90A-DAG:  buffer_load_dword v5, off, s[4:7], 0 offset:12 ; 4-byte Folded Reload
 ; GFX90A:  global_store_dwordx4 v[0:1], v[2:5], off
 
 ; GCN: ScratchSize: 20

@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=riscv64 < %s | FileCheck %s -check-prefix=RV64I
 ; RUN: llc -mtriple=riscv64 -mattr=+xventanacondops < %s | FileCheck %s -check-prefix=RV64XVENTANACONDOPS
 ; RUN: llc -mtriple=riscv64 -mattr=+xtheadcondmov < %s | FileCheck %s -check-prefix=RV64XTHEADCONDMOV
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-zicond < %s | FileCheck %s -check-prefix=RV32ZICOND
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-zicond < %s | FileCheck %s -check-prefix=RV64ZICOND
+; RUN: llc -mtriple=riscv32 -mattr=+zicond < %s | FileCheck %s -check-prefix=RV32ZICOND
+; RUN: llc -mtriple=riscv64 -mattr=+zicond < %s | FileCheck %s -check-prefix=RV64ZICOND
 
 define i32 @shl32(i32 %x, i32 %y, i1 %c) {
 ; RV32I-LABEL: shl32:

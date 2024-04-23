@@ -42,6 +42,7 @@ public:
     A64FX,
     Ampere1,
     Ampere1A,
+    Ampere1B,
     AppleA7,
     AppleA10,
     AppleA11,
@@ -65,6 +66,7 @@ public:
     CortexA76,
     CortexA77,
     CortexA78,
+    CortexA78AE,
     CortexA78C,
     CortexA710,
     CortexA715,
@@ -200,6 +202,9 @@ public:
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override { return usePostRAScheduler(); }
+
+  bool enableMachinePipeliner() const override;
+  bool useDFAforSMS() const override { return false; }
 
   /// Returns ARM processor family.
   /// Avoid this function! CPU specifics should be kept local to this class
@@ -349,6 +354,9 @@ public:
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            unsigned NumRegionInstrs) const override;
+  void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
+                             SDep &Dep,
+                             const TargetSchedModel *SchedModel) const override;
 
   bool enableEarlyIfConversion() const override;
 
@@ -359,6 +367,7 @@ public:
     case CallingConv::C:
     case CallingConv::Fast:
     case CallingConv::Swift:
+    case CallingConv::SwiftTail:
       return isTargetWindows();
     case CallingConv::Win64:
       return true;
@@ -394,6 +403,7 @@ public:
   void mirFileLoaded(MachineFunction &MF) const override;
 
   bool hasSVEorSME() const { return hasSVE() || hasSME(); }
+  bool hasSVE2orSME() const { return hasSVE2() || hasSME(); }
 
   // Return the known range for the bit length of SVE data registers. A value
   // of 0 means nothing is known about that particular limit beyong what's
@@ -433,13 +443,13 @@ public:
 
   const char* getChkStkName() const {
     if (isWindowsArm64EC())
-      return "__chkstk_arm64ec";
+      return "#__chkstk_arm64ec";
     return "__chkstk";
   }
 
   const char* getSecurityCheckCookieName() const {
     if (isWindowsArm64EC())
-      return "__security_check_cookie_arm64ec";
+      return "#__security_check_cookie_arm64ec";
     return "__security_check_cookie";
   }
 

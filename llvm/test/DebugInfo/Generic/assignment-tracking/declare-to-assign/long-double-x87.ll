@@ -1,4 +1,5 @@
 ; RUN: opt %s -S -passes=declare-to-assign -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=declare-to-assign -o - | FileCheck %s
 
 ;; Generated from this C++:
 ;; long double get();

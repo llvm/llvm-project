@@ -122,6 +122,26 @@ void ppc::getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   ppc::ReadGOTPtrMode ReadGOT = ppc::getPPCReadGOTPtrMode(D, Triple, Args);
   if (ReadGOT == ppc::ReadGOTPtrMode::SecurePlt)
     Features.push_back("+secure-plt");
+
+  bool UseSeparateSections = isUseSeparateSections(Triple);
+  bool HasDefaultDataSections = Triple.isOSBinFormatXCOFF();
+  if (Args.hasArg(options::OPT_maix_small_local_exec_tls) ||
+      Args.hasArg(options::OPT_maix_small_local_dynamic_tls)) {
+    if (!Triple.isOSAIX() || !Triple.isArch64Bit())
+      D.Diag(diag::err_opt_not_valid_on_target)
+          << "-maix-small-local-[exec|dynamic]-tls";
+
+    // The -maix-small-local-[exec|dynamic]-tls option should only be used with
+    // -fdata-sections, as having data sections turned off with this option
+    // is not ideal for performance. Moreover, the
+    // small-local-[exec|dynamic]-tls region is a limited resource, and should
+    // not be used for variables that may be replaced.
+    if (!Args.hasFlag(options::OPT_fdata_sections,
+                      options::OPT_fno_data_sections,
+                      UseSeparateSections || HasDefaultDataSections))
+      D.Diag(diag::err_drv_argument_only_allowed_with)
+          << "-maix-small-local-[exec|dynamic]-tls" << "-fdata-sections";
+  }
 }
 
 ppc::ReadGOTPtrMode ppc::getPPCReadGOTPtrMode(const Driver &D, const llvm::Triple &Triple,

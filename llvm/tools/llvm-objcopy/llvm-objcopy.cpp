@@ -42,7 +42,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/Path.h"
@@ -122,6 +121,7 @@ static Error executeObjcopyOnRawBinary(ConfigManager &ConfigMgr,
   case FileFormat::Binary:
   case FileFormat::IHex:
   case FileFormat::Unspecified:
+  case FileFormat::SREC:
     Expected<const ELFConfig &> ELFConfig = ConfigMgr.getELFConfig();
     if (!ELFConfig)
       return ELFConfig.takeError();
@@ -224,7 +224,6 @@ static Error executeObjcopy(ConfigManager &ConfigMgr) {
 }
 
 int llvm_objcopy_main(int argc, char **argv, const llvm::ToolContext &) {
-  InitLLVM X(argc, argv);
   ToolName = argv[0];
 
   // Expand response files.

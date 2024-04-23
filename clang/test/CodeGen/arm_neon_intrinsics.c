@@ -2650,7 +2650,7 @@ uint64x2_t test_vdupq_lane_u64(uint64x1_t a) {
 }
 
 // CHECK-LABEL: @test_vdup_n_u8(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i8> undef, i8 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i8> poison, i8 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i8> [[VECINIT_I]], i8 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i8> [[VECINIT1_I]], i8 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i8> [[VECINIT2_I]], i8 %a, i32 3
@@ -2664,7 +2664,7 @@ uint8x8_t test_vdup_n_u8(uint8_t a) {
 }
 
 // CHECK-LABEL: @test_vdup_n_u16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %a, i32 3
@@ -2674,7 +2674,7 @@ uint16x4_t test_vdup_n_u16(uint16_t a) {
 }
 
 // CHECK-LABEL: @test_vdup_n_u32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %a, i32 1
 // CHECK:   ret <2 x i32> [[VECINIT1_I]]
 uint32x2_t test_vdup_n_u32(uint32_t a) {
@@ -2682,7 +2682,7 @@ uint32x2_t test_vdup_n_u32(uint32_t a) {
 }
 
 // CHECK-LABEL: @test_vdup_n_s8(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i8> undef, i8 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i8> poison, i8 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i8> [[VECINIT_I]], i8 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i8> [[VECINIT1_I]], i8 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i8> [[VECINIT2_I]], i8 %a, i32 3
@@ -2696,7 +2696,7 @@ int8x8_t test_vdup_n_s8(int8_t a) {
 }
 
 // CHECK-LABEL: @test_vdup_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %a, i32 3
@@ -2706,7 +2706,7 @@ int16x4_t test_vdup_n_s16(int16_t a) {
 }
 
 // CHECK-LABEL: @test_vdup_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %a, i32 1
 // CHECK:   ret <2 x i32> [[VECINIT1_I]]
 int32x2_t test_vdup_n_s32(int32_t a) {
@@ -2714,7 +2714,7 @@ int32x2_t test_vdup_n_s32(int32_t a) {
 }
 
 // CHECK-LABEL: @test_vdup_n_p8(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i8> undef, i8 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i8> poison, i8 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i8> [[VECINIT_I]], i8 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i8> [[VECINIT1_I]], i8 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i8> [[VECINIT2_I]], i8 %a, i32 3
@@ -2728,7 +2728,7 @@ poly8x8_t test_vdup_n_p8(poly8_t a) {
 }
 
 // CHECK-LABEL: @test_vdup_n_p16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %a, i32 3
@@ -2739,7 +2739,7 @@ poly16x4_t test_vdup_n_p16(poly16_t a) {
 
 // CHECK-LABEL: @test_vdup_n_f16(
 // CHECK:   [[TMP0:%.*]] = load half, ptr %a, align 2
-// CHECK:   [[VECINIT:%.*]] = insertelement <4 x half> undef, half [[TMP0]], i32 0
+// CHECK:   [[VECINIT:%.*]] = insertelement <4 x half> poison, half [[TMP0]], i32 0
 // CHECK:   [[VECINIT1:%.*]] = insertelement <4 x half> [[VECINIT]], half [[TMP0]], i32 1
 // CHECK:   [[VECINIT2:%.*]] = insertelement <4 x half> [[VECINIT1]], half [[TMP0]], i32 2
 // CHECK:   [[VECINIT3:%.*]] = insertelement <4 x half> [[VECINIT2]], half [[TMP0]], i32 3
@@ -2749,7 +2749,7 @@ float16x4_t test_vdup_n_f16(float16_t *a) {
 }
 
 // CHECK-LABEL: @test_vdup_n_f32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x float> undef, float %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x float> poison, float %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x float> [[VECINIT_I]], float %a, i32 1
 // CHECK:   ret <2 x float> [[VECINIT1_I]]
 float32x2_t test_vdup_n_f32(float32_t a) {
@@ -2757,7 +2757,7 @@ float32x2_t test_vdup_n_f32(float32_t a) {
 }
 
 // CHECK-LABEL: @test_vdupq_n_u8(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <16 x i8> undef, i8 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <16 x i8> poison, i8 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <16 x i8> [[VECINIT_I]], i8 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <16 x i8> [[VECINIT1_I]], i8 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <16 x i8> [[VECINIT2_I]], i8 %a, i32 3
@@ -2779,7 +2779,7 @@ uint8x16_t test_vdupq_n_u8(uint8_t a) {
 }
 
 // CHECK-LABEL: @test_vdupq_n_u16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i16> [[VECINIT_I]], i16 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i16> [[VECINIT1_I]], i16 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i16> [[VECINIT2_I]], i16 %a, i32 3
@@ -2793,7 +2793,7 @@ uint16x8_t test_vdupq_n_u16(uint16_t a) {
 }
 
 // CHECK-LABEL: @test_vdupq_n_u32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> undef, i32 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> poison, i32 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i32> [[VECINIT_I]], i32 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i32> [[VECINIT1_I]], i32 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i32> [[VECINIT2_I]], i32 %a, i32 3
@@ -2803,7 +2803,7 @@ uint32x4_t test_vdupq_n_u32(uint32_t a) {
 }
 
 // CHECK-LABEL: @test_vdupq_n_s8(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <16 x i8> undef, i8 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <16 x i8> poison, i8 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <16 x i8> [[VECINIT_I]], i8 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <16 x i8> [[VECINIT1_I]], i8 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <16 x i8> [[VECINIT2_I]], i8 %a, i32 3
@@ -2825,7 +2825,7 @@ int8x16_t test_vdupq_n_s8(int8_t a) {
 }
 
 // CHECK-LABEL: @test_vdupq_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i16> [[VECINIT_I]], i16 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i16> [[VECINIT1_I]], i16 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i16> [[VECINIT2_I]], i16 %a, i32 3
@@ -2839,7 +2839,7 @@ int16x8_t test_vdupq_n_s16(int16_t a) {
 }
 
 // CHECK-LABEL: @test_vdupq_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> undef, i32 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> poison, i32 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i32> [[VECINIT_I]], i32 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i32> [[VECINIT1_I]], i32 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i32> [[VECINIT2_I]], i32 %a, i32 3
@@ -2849,7 +2849,7 @@ int32x4_t test_vdupq_n_s32(int32_t a) {
 }
 
 // CHECK-LABEL: @test_vdupq_n_p8(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <16 x i8> undef, i8 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <16 x i8> poison, i8 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <16 x i8> [[VECINIT_I]], i8 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <16 x i8> [[VECINIT1_I]], i8 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <16 x i8> [[VECINIT2_I]], i8 %a, i32 3
@@ -2871,7 +2871,7 @@ poly8x16_t test_vdupq_n_p8(poly8_t a) {
 }
 
 // CHECK-LABEL: @test_vdupq_n_p16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i16> [[VECINIT_I]], i16 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i16> [[VECINIT1_I]], i16 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i16> [[VECINIT2_I]], i16 %a, i32 3
@@ -2886,7 +2886,7 @@ poly16x8_t test_vdupq_n_p16(poly16_t a) {
 
 // CHECK-LABEL: @test_vdupq_n_f16(
 // CHECK:   [[TMP0:%.*]] = load half, ptr %a, align 2
-// CHECK:   [[VECINIT:%.*]] = insertelement <8 x half> undef, half [[TMP0]], i32 0
+// CHECK:   [[VECINIT:%.*]] = insertelement <8 x half> poison, half [[TMP0]], i32 0
 // CHECK:   [[VECINIT1:%.*]] = insertelement <8 x half> [[VECINIT]], half [[TMP0]], i32 1
 // CHECK:   [[VECINIT2:%.*]] = insertelement <8 x half> [[VECINIT1]], half [[TMP0]], i32 2
 // CHECK:   [[VECINIT3:%.*]] = insertelement <8 x half> [[VECINIT2]], half [[TMP0]], i32 3
@@ -2900,7 +2900,7 @@ float16x8_t test_vdupq_n_f16(float16_t *a) {
 }
 
 // CHECK-LABEL: @test_vdupq_n_f32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x float> undef, float %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x float> poison, float %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x float> [[VECINIT_I]], float %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x float> [[VECINIT1_I]], float %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x float> [[VECINIT2_I]], float %a, i32 3
@@ -2910,7 +2910,7 @@ float32x4_t test_vdupq_n_f32(float32_t a) {
 }
 
 // CHECK-LABEL: @test_vdup_n_s64(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x i64> undef, i64 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x i64> poison, i64 %a, i32 0
 // CHECK:   [[ADD_I:%.*]] = add <1 x i64> [[VECINIT_I]], [[VECINIT_I]]
 // CHECK:   ret <1 x i64> [[ADD_I]]
 int64x1_t test_vdup_n_s64(int64_t a) {
@@ -2919,7 +2919,7 @@ int64x1_t test_vdup_n_s64(int64_t a) {
 }
 
 // CHECK-LABEL: @test_vdup_n_u64(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x i64> undef, i64 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x i64> poison, i64 %a, i32 0
 // CHECK:   [[ADD_I:%.*]] = add <1 x i64> [[VECINIT_I]], [[VECINIT_I]]
 // CHECK:   ret <1 x i64> [[ADD_I]]
 int64x1_t test_vdup_n_u64(uint64_t a) {
@@ -2928,7 +2928,7 @@ int64x1_t test_vdup_n_u64(uint64_t a) {
 }
 
 // CHECK-LABEL: @test_vdupq_n_s64(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i64> undef, i64 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i64> poison, i64 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i64> [[VECINIT_I]], i64 %a, i32 1
 // CHECK:   [[ADD_I:%.*]] = add <2 x i64> [[VECINIT1_I]], [[VECINIT1_I]]
 // CHECK:   ret <2 x i64> [[ADD_I]]
@@ -2938,7 +2938,7 @@ int64x2_t test_vdupq_n_s64(int64_t a) {
 }
 
 // CHECK-LABEL: @test_vdupq_n_u64(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i64> undef, i64 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i64> poison, i64 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i64> [[VECINIT_I]], i64 %a, i32 1
 // CHECK:   [[ADD_I:%.*]] = add <2 x i64> [[VECINIT1_I]], [[VECINIT1_I]]
 // CHECK:   ret <2 x i64> [[ADD_I]]
@@ -6761,7 +6761,7 @@ uint64x2_t test_vmlal_lane_u32(uint64x2_t a, uint32x2_t b, uint32x2_t c) {
 }
 
 // CHECK-LABEL: @test_vmlal_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %c, i32 3
@@ -6775,7 +6775,7 @@ int32x4_t test_vmlal_n_s16(int32x4_t a, int16x4_t b, int16_t c) {
 }
 
 // CHECK-LABEL: @test_vmlal_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %c, i32 1
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> [[VECINIT1_I]] to <8 x i8>
@@ -6787,7 +6787,7 @@ int64x2_t test_vmlal_n_s32(int64x2_t a, int32x2_t b, int32_t c) {
 }
 
 // CHECK-LABEL: @test_vmlal_n_u16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %c, i32 3
@@ -6801,7 +6801,7 @@ uint32x4_t test_vmlal_n_u16(uint32x4_t a, uint16x4_t b, uint16_t c) {
 }
 
 // CHECK-LABEL: @test_vmlal_n_u32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %c, i32 1
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> [[VECINIT1_I]] to <8 x i8>
@@ -6923,7 +6923,7 @@ float32x4_t test_vmlaq_lane_f32(float32x4_t a, float32x4_t b, float32x2_t c) {
 }
 
 // CHECK-LABEL: @test_vmla_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %c, i32 3
@@ -6935,7 +6935,7 @@ int16x4_t test_vmla_n_s16(int16x4_t a, int16x4_t b, int16_t c) {
 }
 
 // CHECK-LABEL: @test_vmla_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %c, i32 1
 // CHECK:   [[MUL_I:%.*]] = mul <2 x i32> %b, [[VECINIT1_I]]
 // CHECK:   [[ADD_I:%.*]] = add <2 x i32> %a, [[MUL_I]]
@@ -6945,7 +6945,7 @@ int32x2_t test_vmla_n_s32(int32x2_t a, int32x2_t b, int32_t c) {
 }
 
 // CHECK-LABEL: @test_vmla_n_u16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %c, i32 3
@@ -6957,7 +6957,7 @@ uint16x4_t test_vmla_n_u16(uint16x4_t a, uint16x4_t b, uint16_t c) {
 }
 
 // CHECK-LABEL: @test_vmla_n_u32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %c, i32 1
 // CHECK:   [[MUL_I:%.*]] = mul <2 x i32> %b, [[VECINIT1_I]]
 // CHECK:   [[ADD_I:%.*]] = add <2 x i32> %a, [[MUL_I]]
@@ -6967,7 +6967,7 @@ uint32x2_t test_vmla_n_u32(uint32x2_t a, uint32x2_t b, uint32_t c) {
 }
 
 // CHECK-LABEL: @test_vmla_n_f32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x float> undef, float %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x float> poison, float %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x float> [[VECINIT_I]], float %c, i32 1
 // CHECK:   [[MUL_I:%.*]] = fmul <2 x float> %b, [[VECINIT1_I]]
 // CHECK:   [[ADD_I:%.*]] = fadd <2 x float> %a, [[MUL_I]]
@@ -6977,7 +6977,7 @@ float32x2_t test_vmla_n_f32(float32x2_t a, float32x2_t b, float32_t c) {
 }
 
 // CHECK-LABEL: @test_vmlaq_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i16> [[VECINIT_I]], i16 %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i16> [[VECINIT1_I]], i16 %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i16> [[VECINIT2_I]], i16 %c, i32 3
@@ -6993,7 +6993,7 @@ int16x8_t test_vmlaq_n_s16(int16x8_t a, int16x8_t b, int16_t c) {
 }
 
 // CHECK-LABEL: @test_vmlaq_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> undef, i32 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> poison, i32 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i32> [[VECINIT_I]], i32 %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i32> [[VECINIT1_I]], i32 %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i32> [[VECINIT2_I]], i32 %c, i32 3
@@ -7005,7 +7005,7 @@ int32x4_t test_vmlaq_n_s32(int32x4_t a, int32x4_t b, int32_t c) {
 }
 
 // CHECK-LABEL: @test_vmlaq_n_u16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i16> [[VECINIT_I]], i16 %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i16> [[VECINIT1_I]], i16 %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i16> [[VECINIT2_I]], i16 %c, i32 3
@@ -7021,7 +7021,7 @@ uint16x8_t test_vmlaq_n_u16(uint16x8_t a, uint16x8_t b, uint16_t c) {
 }
 
 // CHECK-LABEL: @test_vmlaq_n_u32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> undef, i32 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> poison, i32 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i32> [[VECINIT_I]], i32 %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i32> [[VECINIT1_I]], i32 %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i32> [[VECINIT2_I]], i32 %c, i32 3
@@ -7033,7 +7033,7 @@ uint32x4_t test_vmlaq_n_u32(uint32x4_t a, uint32x4_t b, uint32_t c) {
 }
 
 // CHECK-LABEL: @test_vmlaq_n_f32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x float> undef, float %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x float> poison, float %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x float> [[VECINIT_I]], float %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x float> [[VECINIT1_I]], float %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x float> [[VECINIT2_I]], float %c, i32 3
@@ -7265,7 +7265,7 @@ uint64x2_t test_vmlsl_lane_u32(uint64x2_t a, uint32x2_t b, uint32x2_t c) {
 }
 
 // CHECK-LABEL: @test_vmlsl_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %c, i32 3
@@ -7279,7 +7279,7 @@ int32x4_t test_vmlsl_n_s16(int32x4_t a, int16x4_t b, int16_t c) {
 }
 
 // CHECK-LABEL: @test_vmlsl_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %c, i32 1
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> [[VECINIT1_I]] to <8 x i8>
@@ -7291,7 +7291,7 @@ int64x2_t test_vmlsl_n_s32(int64x2_t a, int32x2_t b, int32_t c) {
 }
 
 // CHECK-LABEL: @test_vmlsl_n_u16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %c, i32 3
@@ -7305,7 +7305,7 @@ uint32x4_t test_vmlsl_n_u16(uint32x4_t a, uint16x4_t b, uint16_t c) {
 }
 
 // CHECK-LABEL: @test_vmlsl_n_u32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %c, i32 1
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %b to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> [[VECINIT1_I]] to <8 x i8>
@@ -7427,7 +7427,7 @@ float32x4_t test_vmlsq_lane_f32(float32x4_t a, float32x4_t b, float32x2_t c) {
 }
 
 // CHECK-LABEL: @test_vmls_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %c, i32 3
@@ -7439,7 +7439,7 @@ int16x4_t test_vmls_n_s16(int16x4_t a, int16x4_t b, int16_t c) {
 }
 
 // CHECK-LABEL: @test_vmls_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %c, i32 1
 // CHECK:   [[MUL_I:%.*]] = mul <2 x i32> %b, [[VECINIT1_I]]
 // CHECK:   [[SUB_I:%.*]] = sub <2 x i32> %a, [[MUL_I]]
@@ -7449,7 +7449,7 @@ int32x2_t test_vmls_n_s32(int32x2_t a, int32x2_t b, int32_t c) {
 }
 
 // CHECK-LABEL: @test_vmls_n_u16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %c, i32 3
@@ -7461,7 +7461,7 @@ uint16x4_t test_vmls_n_u16(uint16x4_t a, uint16x4_t b, uint16_t c) {
 }
 
 // CHECK-LABEL: @test_vmls_n_u32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %c, i32 1
 // CHECK:   [[MUL_I:%.*]] = mul <2 x i32> %b, [[VECINIT1_I]]
 // CHECK:   [[SUB_I:%.*]] = sub <2 x i32> %a, [[MUL_I]]
@@ -7471,7 +7471,7 @@ uint32x2_t test_vmls_n_u32(uint32x2_t a, uint32x2_t b, uint32_t c) {
 }
 
 // CHECK-LABEL: @test_vmls_n_f32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x float> undef, float %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x float> poison, float %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x float> [[VECINIT_I]], float %c, i32 1
 // CHECK:   [[MUL_I:%.*]] = fmul <2 x float> %b, [[VECINIT1_I]]
 // CHECK:   [[SUB_I:%.*]] = fsub <2 x float> %a, [[MUL_I]]
@@ -7481,7 +7481,7 @@ float32x2_t test_vmls_n_f32(float32x2_t a, float32x2_t b, float32_t c) {
 }
 
 // CHECK-LABEL: @test_vmlsq_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i16> [[VECINIT_I]], i16 %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i16> [[VECINIT1_I]], i16 %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i16> [[VECINIT2_I]], i16 %c, i32 3
@@ -7497,7 +7497,7 @@ int16x8_t test_vmlsq_n_s16(int16x8_t a, int16x8_t b, int16_t c) {
 }
 
 // CHECK-LABEL: @test_vmlsq_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> undef, i32 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> poison, i32 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i32> [[VECINIT_I]], i32 %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i32> [[VECINIT1_I]], i32 %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i32> [[VECINIT2_I]], i32 %c, i32 3
@@ -7509,7 +7509,7 @@ int32x4_t test_vmlsq_n_s32(int32x4_t a, int32x4_t b, int32_t c) {
 }
 
 // CHECK-LABEL: @test_vmlsq_n_u16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i16> [[VECINIT_I]], i16 %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i16> [[VECINIT1_I]], i16 %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i16> [[VECINIT2_I]], i16 %c, i32 3
@@ -7525,7 +7525,7 @@ uint16x8_t test_vmlsq_n_u16(uint16x8_t a, uint16x8_t b, uint16_t c) {
 }
 
 // CHECK-LABEL: @test_vmlsq_n_u32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> undef, i32 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> poison, i32 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i32> [[VECINIT_I]], i32 %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i32> [[VECINIT1_I]], i32 %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i32> [[VECINIT2_I]], i32 %c, i32 3
@@ -7537,7 +7537,7 @@ uint32x4_t test_vmlsq_n_u32(uint32x4_t a, uint32x4_t b, uint32_t c) {
 }
 
 // CHECK-LABEL: @test_vmlsq_n_f32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x float> undef, float %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x float> poison, float %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x float> [[VECINIT_I]], float %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x float> [[VECINIT1_I]], float %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x float> [[VECINIT2_I]], float %c, i32 3
@@ -7643,7 +7643,7 @@ uint32x2_t test_vmovn_u64(uint64x2_t a) {
 }
 
 // CHECK-LABEL: @test_vmov_n_u8(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i8> undef, i8 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i8> poison, i8 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i8> [[VECINIT_I]], i8 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i8> [[VECINIT1_I]], i8 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i8> [[VECINIT2_I]], i8 %a, i32 3
@@ -7657,7 +7657,7 @@ uint8x8_t test_vmov_n_u8(uint8_t a) {
 }
 
 // CHECK-LABEL: @test_vmov_n_u16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %a, i32 3
@@ -7667,7 +7667,7 @@ uint16x4_t test_vmov_n_u16(uint16_t a) {
 }
 
 // CHECK-LABEL: @test_vmov_n_u32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %a, i32 1
 // CHECK:   ret <2 x i32> [[VECINIT1_I]]
 uint32x2_t test_vmov_n_u32(uint32_t a) {
@@ -7675,7 +7675,7 @@ uint32x2_t test_vmov_n_u32(uint32_t a) {
 }
 
 // CHECK-LABEL: @test_vmov_n_s8(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i8> undef, i8 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i8> poison, i8 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i8> [[VECINIT_I]], i8 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i8> [[VECINIT1_I]], i8 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i8> [[VECINIT2_I]], i8 %a, i32 3
@@ -7689,7 +7689,7 @@ int8x8_t test_vmov_n_s8(int8_t a) {
 }
 
 // CHECK-LABEL: @test_vmov_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %a, i32 3
@@ -7699,7 +7699,7 @@ int16x4_t test_vmov_n_s16(int16_t a) {
 }
 
 // CHECK-LABEL: @test_vmov_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %a, i32 1
 // CHECK:   ret <2 x i32> [[VECINIT1_I]]
 int32x2_t test_vmov_n_s32(int32_t a) {
@@ -7707,7 +7707,7 @@ int32x2_t test_vmov_n_s32(int32_t a) {
 }
 
 // CHECK-LABEL: @test_vmov_n_p8(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i8> undef, i8 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i8> poison, i8 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i8> [[VECINIT_I]], i8 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i8> [[VECINIT1_I]], i8 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i8> [[VECINIT2_I]], i8 %a, i32 3
@@ -7721,7 +7721,7 @@ poly8x8_t test_vmov_n_p8(poly8_t a) {
 }
 
 // CHECK-LABEL: @test_vmov_n_p16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %a, i32 3
@@ -7732,7 +7732,7 @@ poly16x4_t test_vmov_n_p16(poly16_t a) {
 
 // CHECK-LABEL: @test_vmov_n_f16(
 // CHECK:   [[TMP0:%.*]] = load half, ptr %a, align 2
-// CHECK:   [[VECINIT:%.*]] = insertelement <4 x half> undef, half [[TMP0]], i32 0
+// CHECK:   [[VECINIT:%.*]] = insertelement <4 x half> poison, half [[TMP0]], i32 0
 // CHECK:   [[VECINIT1:%.*]] = insertelement <4 x half> [[VECINIT]], half [[TMP0]], i32 1
 // CHECK:   [[VECINIT2:%.*]] = insertelement <4 x half> [[VECINIT1]], half [[TMP0]], i32 2
 // CHECK:   [[VECINIT3:%.*]] = insertelement <4 x half> [[VECINIT2]], half [[TMP0]], i32 3
@@ -7742,7 +7742,7 @@ float16x4_t test_vmov_n_f16(float16_t *a) {
 }
 
 // CHECK-LABEL: @test_vmov_n_f32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x float> undef, float %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x float> poison, float %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x float> [[VECINIT_I]], float %a, i32 1
 // CHECK:   ret <2 x float> [[VECINIT1_I]]
 float32x2_t test_vmov_n_f32(float32_t a) {
@@ -7750,7 +7750,7 @@ float32x2_t test_vmov_n_f32(float32_t a) {
 }
 
 // CHECK-LABEL: @test_vmovq_n_u8(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <16 x i8> undef, i8 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <16 x i8> poison, i8 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <16 x i8> [[VECINIT_I]], i8 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <16 x i8> [[VECINIT1_I]], i8 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <16 x i8> [[VECINIT2_I]], i8 %a, i32 3
@@ -7772,7 +7772,7 @@ uint8x16_t test_vmovq_n_u8(uint8_t a) {
 }
 
 // CHECK-LABEL: @test_vmovq_n_u16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i16> [[VECINIT_I]], i16 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i16> [[VECINIT1_I]], i16 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i16> [[VECINIT2_I]], i16 %a, i32 3
@@ -7786,7 +7786,7 @@ uint16x8_t test_vmovq_n_u16(uint16_t a) {
 }
 
 // CHECK-LABEL: @test_vmovq_n_u32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> undef, i32 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> poison, i32 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i32> [[VECINIT_I]], i32 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i32> [[VECINIT1_I]], i32 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i32> [[VECINIT2_I]], i32 %a, i32 3
@@ -7796,7 +7796,7 @@ uint32x4_t test_vmovq_n_u32(uint32_t a) {
 }
 
 // CHECK-LABEL: @test_vmovq_n_s8(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <16 x i8> undef, i8 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <16 x i8> poison, i8 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <16 x i8> [[VECINIT_I]], i8 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <16 x i8> [[VECINIT1_I]], i8 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <16 x i8> [[VECINIT2_I]], i8 %a, i32 3
@@ -7818,7 +7818,7 @@ int8x16_t test_vmovq_n_s8(int8_t a) {
 }
 
 // CHECK-LABEL: @test_vmovq_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i16> [[VECINIT_I]], i16 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i16> [[VECINIT1_I]], i16 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i16> [[VECINIT2_I]], i16 %a, i32 3
@@ -7832,7 +7832,7 @@ int16x8_t test_vmovq_n_s16(int16_t a) {
 }
 
 // CHECK-LABEL: @test_vmovq_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> undef, i32 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> poison, i32 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i32> [[VECINIT_I]], i32 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i32> [[VECINIT1_I]], i32 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i32> [[VECINIT2_I]], i32 %a, i32 3
@@ -7842,7 +7842,7 @@ int32x4_t test_vmovq_n_s32(int32_t a) {
 }
 
 // CHECK-LABEL: @test_vmovq_n_p8(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <16 x i8> undef, i8 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <16 x i8> poison, i8 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <16 x i8> [[VECINIT_I]], i8 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <16 x i8> [[VECINIT1_I]], i8 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <16 x i8> [[VECINIT2_I]], i8 %a, i32 3
@@ -7864,7 +7864,7 @@ poly8x16_t test_vmovq_n_p8(poly8_t a) {
 }
 
 // CHECK-LABEL: @test_vmovq_n_p16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i16> [[VECINIT_I]], i16 %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i16> [[VECINIT1_I]], i16 %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i16> [[VECINIT2_I]], i16 %a, i32 3
@@ -7879,7 +7879,7 @@ poly16x8_t test_vmovq_n_p16(poly16_t a) {
 
 // CHECK-LABEL: @test_vmovq_n_f16(
 // CHECK:   [[TMP0:%.*]] = load half, ptr %a, align 2
-// CHECK:   [[VECINIT:%.*]] = insertelement <8 x half> undef, half [[TMP0]], i32 0
+// CHECK:   [[VECINIT:%.*]] = insertelement <8 x half> poison, half [[TMP0]], i32 0
 // CHECK:   [[VECINIT1:%.*]] = insertelement <8 x half> [[VECINIT]], half [[TMP0]], i32 1
 // CHECK:   [[VECINIT2:%.*]] = insertelement <8 x half> [[VECINIT1]], half [[TMP0]], i32 2
 // CHECK:   [[VECINIT3:%.*]] = insertelement <8 x half> [[VECINIT2]], half [[TMP0]], i32 3
@@ -7893,7 +7893,7 @@ float16x8_t test_vmovq_n_f16(float16_t *a) {
 }
 
 // CHECK-LABEL: @test_vmovq_n_f32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x float> undef, float %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x float> poison, float %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x float> [[VECINIT_I]], float %a, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x float> [[VECINIT1_I]], float %a, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x float> [[VECINIT2_I]], float %a, i32 3
@@ -7903,7 +7903,7 @@ float32x4_t test_vmovq_n_f32(float32_t a) {
 }
 
 // CHECK-LABEL: @test_vmov_n_s64(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x i64> undef, i64 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x i64> poison, i64 %a, i32 0
 // CHECK:   [[ADD_I:%.*]] = add <1 x i64> [[VECINIT_I]], [[VECINIT_I]]
 // CHECK:   ret <1 x i64> [[ADD_I]]
 int64x1_t test_vmov_n_s64(int64_t a) {
@@ -7912,7 +7912,7 @@ int64x1_t test_vmov_n_s64(int64_t a) {
 }
 
 // CHECK-LABEL: @test_vmov_n_u64(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x i64> undef, i64 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <1 x i64> poison, i64 %a, i32 0
 // CHECK:   [[ADD_I:%.*]] = add <1 x i64> [[VECINIT_I]], [[VECINIT_I]]
 // CHECK:   ret <1 x i64> [[ADD_I]]
 uint64x1_t test_vmov_n_u64(uint64_t a) {
@@ -7921,7 +7921,7 @@ uint64x1_t test_vmov_n_u64(uint64_t a) {
 }
 
 // CHECK-LABEL: @test_vmovq_n_s64(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i64> undef, i64 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i64> poison, i64 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i64> [[VECINIT_I]], i64 %a, i32 1
 // CHECK:   ret <2 x i64> [[VECINIT1_I]]
 int64x2_t test_vmovq_n_s64(int64_t a) {
@@ -7929,7 +7929,7 @@ int64x2_t test_vmovq_n_s64(int64_t a) {
 }
 
 // CHECK-LABEL: @test_vmovq_n_u64(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i64> undef, i64 %a, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i64> poison, i64 %a, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i64> [[VECINIT_I]], i64 %a, i32 1
 // CHECK:   ret <2 x i64> [[VECINIT1_I]]
 uint64x2_t test_vmovq_n_u64(uint64_t a) {
@@ -8140,7 +8140,7 @@ uint64x2_t test_vmull_lane_u32(uint32x2_t a, uint32x2_t b) {
 }
 
 // CHECK-LABEL: @test_vmull_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %b, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %b, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %b, i32 3
@@ -8153,7 +8153,7 @@ int32x4_t test_vmull_n_s16(int16x4_t a, int16_t b) {
 }
 
 // CHECK-LABEL: @test_vmull_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %b, i32 1
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> [[VECINIT1_I]] to <8 x i8>
@@ -8164,7 +8164,7 @@ int64x2_t test_vmull_n_s32(int32x2_t a, int32_t b) {
 }
 
 // CHECK-LABEL: @test_vmull_n_u16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %b, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %b, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %b, i32 3
@@ -8177,7 +8177,7 @@ uint32x4_t test_vmull_n_u16(uint16x4_t a, uint16_t b) {
 }
 
 // CHECK-LABEL: @test_vmull_n_u32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %b, i32 1
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> [[VECINIT1_I]] to <8 x i8>
@@ -8302,7 +8302,7 @@ uint32x4_t test_vmulq_lane_u32(uint32x4_t a, uint32x2_t b) {
 }
 
 // CHECK-LABEL: @test_vmul_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %b, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %b, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %b, i32 3
@@ -8313,7 +8313,7 @@ int16x4_t test_vmul_n_s16(int16x4_t a, int16_t b) {
 }
 
 // CHECK-LABEL: @test_vmul_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %b, i32 1
 // CHECK:   [[MUL_I:%.*]] = mul <2 x i32> %a, [[VECINIT1_I]]
 // CHECK:   ret <2 x i32> [[MUL_I]]
@@ -8322,7 +8322,7 @@ int32x2_t test_vmul_n_s32(int32x2_t a, int32_t b) {
 }
 
 // CHECK-LABEL: @test_vmul_n_f32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x float> undef, float %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x float> poison, float %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x float> [[VECINIT_I]], float %b, i32 1
 // CHECK:   [[MUL_I:%.*]] = fmul <2 x float> %a, [[VECINIT1_I]]
 // CHECK:   ret <2 x float> [[MUL_I]]
@@ -8331,7 +8331,7 @@ float32x2_t test_vmul_n_f32(float32x2_t a, float32_t b) {
 }
 
 // CHECK-LABEL: @test_vmul_n_u16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %b, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %b, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %b, i32 3
@@ -8342,7 +8342,7 @@ uint16x4_t test_vmul_n_u16(uint16x4_t a, uint16_t b) {
 }
 
 // CHECK-LABEL: @test_vmul_n_u32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %b, i32 1
 // CHECK:   [[MUL_I:%.*]] = mul <2 x i32> %a, [[VECINIT1_I]]
 // CHECK:   ret <2 x i32> [[MUL_I]]
@@ -8351,7 +8351,7 @@ uint32x2_t test_vmul_n_u32(uint32x2_t a, uint32_t b) {
 }
 
 // CHECK-LABEL: @test_vmulq_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i16> [[VECINIT_I]], i16 %b, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i16> [[VECINIT1_I]], i16 %b, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i16> [[VECINIT2_I]], i16 %b, i32 3
@@ -8366,7 +8366,7 @@ int16x8_t test_vmulq_n_s16(int16x8_t a, int16_t b) {
 }
 
 // CHECK-LABEL: @test_vmulq_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> undef, i32 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> poison, i32 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i32> [[VECINIT_I]], i32 %b, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i32> [[VECINIT1_I]], i32 %b, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i32> [[VECINIT2_I]], i32 %b, i32 3
@@ -8377,7 +8377,7 @@ int32x4_t test_vmulq_n_s32(int32x4_t a, int32_t b) {
 }
 
 // CHECK-LABEL: @test_vmulq_n_f32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x float> undef, float %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x float> poison, float %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x float> [[VECINIT_I]], float %b, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x float> [[VECINIT1_I]], float %b, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x float> [[VECINIT2_I]], float %b, i32 3
@@ -8388,7 +8388,7 @@ float32x4_t test_vmulq_n_f32(float32x4_t a, float32_t b) {
 }
 
 // CHECK-LABEL: @test_vmulq_n_u16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i16> [[VECINIT_I]], i16 %b, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i16> [[VECINIT1_I]], i16 %b, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i16> [[VECINIT2_I]], i16 %b, i32 3
@@ -8403,7 +8403,7 @@ uint16x8_t test_vmulq_n_u16(uint16x8_t a, uint16_t b) {
 }
 
 // CHECK-LABEL: @test_vmulq_n_u32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> undef, i32 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> poison, i32 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i32> [[VECINIT_I]], i32 %b, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i32> [[VECINIT1_I]], i32 %b, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i32> [[VECINIT2_I]], i32 %b, i32 3
@@ -9444,7 +9444,7 @@ int64x2_t test_vqdmlal_lane_s32(int64x2_t a, int32x2_t b, int32x2_t c) {
 }
 
 // CHECK-LABEL: @test_vqdmlal_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %c, i32 3
@@ -9459,7 +9459,7 @@ int32x4_t test_vqdmlal_n_s16(int32x4_t a, int16x4_t b, int16_t c) {
 }
 
 // CHECK-LABEL: @test_vqdmlal_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %c, i32 1
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> %b to <8 x i8>
@@ -9522,7 +9522,7 @@ int64x2_t test_vqdmlsl_lane_s32(int64x2_t a, int32x2_t b, int32x2_t c) {
 }
 
 // CHECK-LABEL: @test_vqdmlsl_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %c, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %c, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %c, i32 3
@@ -9537,7 +9537,7 @@ int32x4_t test_vqdmlsl_n_s16(int32x4_t a, int16x4_t b, int16_t c) {
 }
 
 // CHECK-LABEL: @test_vqdmlsl_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %c, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %c, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %c, i32 1
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> %b to <8 x i8>
@@ -9642,7 +9642,7 @@ int32x4_t test_vqdmulhq_lane_s32(int32x4_t a, int32x2_t b) {
 }
 
 // CHECK-LABEL: @test_vqdmulh_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %b, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %b, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %b, i32 3
@@ -9656,7 +9656,7 @@ int16x4_t test_vqdmulh_n_s16(int16x4_t a, int16_t b) {
 }
 
 // CHECK-LABEL: @test_vqdmulh_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %b, i32 1
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> [[VECINIT1_I]] to <8 x i8>
@@ -9668,7 +9668,7 @@ int32x2_t test_vqdmulh_n_s32(int32x2_t a, int32_t b) {
 }
 
 // CHECK-LABEL: @test_vqdmulhq_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i16> [[VECINIT_I]], i16 %b, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i16> [[VECINIT1_I]], i16 %b, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i16> [[VECINIT2_I]], i16 %b, i32 3
@@ -9686,7 +9686,7 @@ int16x8_t test_vqdmulhq_n_s16(int16x8_t a, int16_t b) {
 }
 
 // CHECK-LABEL: @test_vqdmulhq_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> undef, i32 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> poison, i32 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i32> [[VECINIT_I]], i32 %b, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i32> [[VECINIT1_I]], i32 %b, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i32> [[VECINIT2_I]], i32 %b, i32 3
@@ -9746,7 +9746,7 @@ int64x2_t test_vqdmull_lane_s32(int32x2_t a, int32x2_t b) {
 }
 
 // CHECK-LABEL: @test_vqdmull_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %b, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %b, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %b, i32 3
@@ -9760,7 +9760,7 @@ int32x4_t test_vqdmull_n_s16(int16x4_t a, int16_t b) {
 }
 
 // CHECK-LABEL: @test_vqdmull_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %b, i32 1
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> [[VECINIT1_I]] to <8 x i8>
@@ -9992,7 +9992,7 @@ int32x4_t test_vqrdmulhq_lane_s32(int32x4_t a, int32x2_t b) {
 }
 
 // CHECK-LABEL: @test_vqrdmulh_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> undef, i16 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i16> [[VECINIT_I]], i16 %b, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i16> [[VECINIT1_I]], i16 %b, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i16> [[VECINIT2_I]], i16 %b, i32 3
@@ -10006,7 +10006,7 @@ int16x4_t test_vqrdmulh_n_s16(int16x4_t a, int16_t b) {
 }
 
 // CHECK-LABEL: @test_vqrdmulh_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> undef, i32 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x i32> [[VECINIT_I]], i32 %b, i32 1
 // CHECK:   [[TMP0:%.*]] = bitcast <2 x i32> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <2 x i32> [[VECINIT1_I]] to <8 x i8>
@@ -10018,7 +10018,7 @@ int32x2_t test_vqrdmulh_n_s32(int32x2_t a, int32_t b) {
 }
 
 // CHECK-LABEL: @test_vqrdmulhq_n_s16(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> undef, i16 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <8 x i16> poison, i16 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <8 x i16> [[VECINIT_I]], i16 %b, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <8 x i16> [[VECINIT1_I]], i16 %b, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <8 x i16> [[VECINIT2_I]], i16 %b, i32 3
@@ -10036,7 +10036,7 @@ int16x8_t test_vqrdmulhq_n_s16(int16x8_t a, int16_t b) {
 }
 
 // CHECK-LABEL: @test_vqrdmulhq_n_s32(
-// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> undef, i32 %b, i32 0
+// CHECK:   [[VECINIT_I:%.*]] = insertelement <4 x i32> poison, i32 %b, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <4 x i32> [[VECINIT_I]], i32 %b, i32 1
 // CHECK:   [[VECINIT2_I:%.*]] = insertelement <4 x i32> [[VECINIT1_I]], i32 %b, i32 2
 // CHECK:   [[VECINIT3_I:%.*]] = insertelement <4 x i32> [[VECINIT2_I]], i32 %b, i32 3

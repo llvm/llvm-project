@@ -105,6 +105,10 @@ def LLVM_aarch64_sme_sumopa_wide : ArmSME_IntrMopOverloadedOp<"sumopa.wide">;
 def LLVM_aarch64_sme_sumops_wide : ArmSME_IntrMopOverloadedOp<"sumops.wide">;
 def LLVM_aarch64_sme_usmopa_wide : ArmSME_IntrMopOverloadedOp<"usmopa.wide">;
 def LLVM_aarch64_sme_usmops_wide : ArmSME_IntrMopOverloadedOp<"usmops.wide">;
+def LLVM_aarch64_sme_smopa_za32 : ArmSME_IntrMopOverloadedOp<"smopa.za32">;
+def LLVM_aarch64_sme_umopa_za32 : ArmSME_IntrMopOverloadedOp<"umopa.za32">;
+def LLVM_aarch64_sme_smops_za32 : ArmSME_IntrMopOverloadedOp<"smops.za32">;
+def LLVM_aarch64_sme_umops_za32 : ArmSME_IntrMopOverloadedOp<"umops.za32">;
 
 class ArmSME_IntrLoadStoreOp<string mnemonic>
     : ArmSME_IntrOp<mnemonic,
@@ -186,5 +190,18 @@ def LLVM_aarch64_sme_write_vert : LLVM_aarch64_sme_write<"vert">;
 
 def LLVM_aarch64_sme_read_horiz : LLVM_aarch64_sme_read<"horiz">;
 def LLVM_aarch64_sme_read_vert : LLVM_aarch64_sme_read<"vert">;
+
+class ArmSME_IntrCountOp<string mnemonic>
+    : ArmSME_IntrOp<mnemonic,
+                    /*immArgPositions=*/[],
+                    /*immArgAttrNames=*/[],
+                    /*overloadedOperands=*/[],
+                    /*traits*/[PredOpTrait<"`res` is i64", TypeIsPred<"res", I64>>],
+                    /*numResults=*/1, /*overloadedResults=*/[]>;
+
+def LLVM_aarch64_sme_cntsb : ArmSME_IntrCountOp<"cntsb">;
+def LLVM_aarch64_sme_cntsh : ArmSME_IntrCountOp<"cntsh">;
+def LLVM_aarch64_sme_cntsw : ArmSME_IntrCountOp<"cntsw">;
+def LLVM_aarch64_sme_cntsd : ArmSME_IntrCountOp<"cntsd">;
 
 #endif // ARMSME_INTRINSIC_OPS

@@ -35,14 +35,14 @@
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
   target triple = "arm64-apple-ios10.0.0"
 
-  %struct.fat_ptr = type { i32*, i32*, i32* }
+  %struct.fat_ptr = type { ptr, ptr, ptr }
 
-  define i32 @bar(%struct.fat_ptr* nocapture readonly %f) local_unnamed_addr !dbg !13 {
+  define i32 @bar(ptr nocapture readonly %f) local_unnamed_addr !dbg !13 {
   entry:
-    call void @llvm.dbg.declare(metadata %struct.fat_ptr* %f, metadata !23, metadata !DIExpression()), !dbg !24
-    %ptr2 = bitcast %struct.fat_ptr* %f to i32**, !dbg !25
-    %0 = load i32*, i32** %ptr2, align 8, !dbg !25
-    %1 = load i32, i32* %0, align 4, !dbg !31
+    call void @llvm.dbg.declare(metadata ptr %f, metadata !23, metadata !DIExpression()), !dbg !24
+    %ptr2 = bitcast ptr %f to ptr, !dbg !25
+    %0 = load ptr, ptr %ptr2, align 8, !dbg !25
+    %1 = load i32, ptr %0, align 4, !dbg !31
     %call = tail call i32 @baz(i32 %1), !dbg !34
     %call1 = tail call i32 @baz(i32 %call), !dbg !35
     ret i32 %call1, !dbg !36

@@ -218,12 +218,6 @@ def create_parser():
         help="Leave logs/traces even for successful test runs (useful for creating reference log files during debugging.)",
     )
     group.add_argument(
-        "--codesign-identity",
-        metavar="Codesigning identity",
-        default="lldb_codesign",
-        help="The codesigning identity to use",
-    )
-    group.add_argument(
         "--build-dir",
         dest="test_build_dir",
         metavar="Test build directory",

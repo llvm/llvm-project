@@ -148,8 +148,9 @@ class RegisterVariableTestCase(TestBase):
             )
 
         # Validate that we verified at least one register variable
-        self.assertTrue(
-            register_variables_count > 0,
+        self.assertGreater(
+            register_variables_count,
+            0,
             "expected to verify at least one variable in a register",
         )
         self.trace(

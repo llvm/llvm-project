@@ -172,7 +172,7 @@ struct ExpressionFormatParameterisedFixture
   }
 
   std::string padWithLeadingZeros(StringRef NumStr) const {
-    bool Negative = NumStr.startswith("-");
+    bool Negative = NumStr.starts_with("-");
     if (NumStr.size() - unsigned(Negative) >= Precision)
       return NumStr.str();
 

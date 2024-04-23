@@ -1,8 +1,5 @@
 ## Check how yaml2obj produces .llvm_bb_addr_map sections.
 
-## Fails on windows (https://github.com/llvm/llvm-project/issues/60013).
-# UNSUPPORTED: system-windows
-
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-readobj --sections --section-data %t1 | FileCheck %s
 
@@ -56,6 +53,21 @@
 # CHECK-NEXT:     0000: 02002000 00000000 0000020D 010203
 # CHECK-NEXT:   )
 
+# Case 7: Specify empty BBRanges.
+# CHECK:        Name: .llvm_bb_addr_map (1)
+# CHECK:        SectionData (
+# CHECK-NEXT:     0000: 020000
+# CHECK-NEXT:   )
+
+# Case 8: Specify empty BBRanges with multi-bb-range.
+# CHECK:        Name: .llvm_bb_addr_map (1)
+# CHECK:        SectionData (
+# CHECK-NEXT:     0000: 020800
+# CHECK-NEXT:   )
+
+
+
+
 --- !ELF
 FileHeader:
   Class: ELFCLASS64
@@ -89,12 +101,13 @@ Sections:
     Type: SHT_LLVM_BB_ADDR_MAP
     Entries:
       - Version: 2
-        Address: 0x0000000000000020
-        BBEntries:
-          - ID:            11
-            AddressOffset: 0x00000001
-            Size:          0x00000002
-            Metadata:      0x00000003
+        BBRanges:
+          - BaseAddress: 0x0000000000000020
+            BBEntries:
+              - ID:            11
+                AddressOffset: 0x00000001
+                Size:          0x00000002
+                Metadata:      0x00000003
 
 ## 5) When specifying the description with Entries, the 'Address' field will be
 ##    zero when omitted.
@@ -102,11 +115,12 @@ Sections:
     Type: SHT_LLVM_BB_ADDR_MAP
     Entries:
       - Version: 2
-        BBEntries:
-          - ID:            12
-            AddressOffset: 0x00000001
-            Size:          0x00000002
-            Metadata:      0x00000003
+        BBRanges:
+          - BBEntries:
+            - ID:            12
+              AddressOffset: 0x00000001
+              Size:          0x00000002
+              Metadata:      0x00000003
 
 ## 6) We can override the NumBlocks field with a value different from the
 ##    actual number of BB Entries.
@@ -114,13 +128,31 @@ Sections:
     Type: SHT_LLVM_BB_ADDR_MAP
     Entries:
       - Version:   2
-        Address:   0x0000000000000020
-        NumBlocks: 2
-        BBEntries:
-          - ID:            13
-            AddressOffset: 0x00000001
-            Size:          0x00000002
-            Metadata:      0x00000003
+        BBRanges:
+          - BaseAddress:   0x0000000000000020
+            NumBlocks: 2
+            BBEntries:
+             - ID:            13
+               AddressOffset: 0x00000001
+               Size:          0x00000002
+               Metadata:      0x00000003
+
+## 7) We can produce a SHT_LLVM_BB_ADDR_MAP section from a description
+##    with one entry with empty BBRanges.
+  - Name: '.llvm_bb_addr_map (7)'
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version: 2
+        BBRanges: []
+
+## 8) We can produce a SHT_LLVM_BB_ADDR_MAP section from a multi-bb-range
+##    description with one entry with empty BBRanges.
+  - Name: '.llvm_bb_addr_map (8)'
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Entries:
+      - Version: 2
+        Feature: 0x8
+        BBRanges: []
 
 ## Check we can't use Entries at the same time as either Content or Size.
 # RUN: not yaml2obj --docnum=2 -DCONTENT="00" %s 2>&1 | FileCheck %s --check-prefix=INVALID

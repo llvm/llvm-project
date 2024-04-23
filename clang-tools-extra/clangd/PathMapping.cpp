@@ -21,7 +21,7 @@ std::optional<std::string> doPathMapping(llvm::StringRef S,
                                          PathMapping::Direction Dir,
                                          const PathMappings &Mappings) {
   // Return early to optimize for the common case, wherein S is not a file URI
-  if (!S.startswith("file://"))
+  if (!S.starts_with("file://"))
     return std::nullopt;
   auto Uri = URI::parse(S);
   if (!Uri) {

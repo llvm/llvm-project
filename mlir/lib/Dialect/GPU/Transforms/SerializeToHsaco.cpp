@@ -11,11 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Config/mlir-config.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
 
-#if MLIR_GPU_TO_HSACO_PASS_ENABLE
+#if MLIR_ENABLE_ROCM_CONVERSIONS
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
@@ -201,9 +202,9 @@ SerializeToHsacoPass::translateToLLVMIR(llvm::LLVMContext &llvmContext) {
       StringRef funcName = f.getName();
       if ("printf" == funcName)
         needOpenCl = true;
-      if (funcName.startswith("__ockl_"))
+      if (funcName.starts_with("__ockl_"))
         needOckl = true;
-      if (funcName.startswith("__ocml_"))
+      if (funcName.starts_with("__ocml_"))
         needOcml = true;
     }
   }
@@ -253,7 +254,7 @@ SerializeToHsacoPass::translateToLLVMIR(llvm::LLVMContext &llvmContext) {
   if (needOcml || needOckl) {
     addControlConstant("__oclc_wavefrontsize64", 1, 8);
     StringRef chipSet = this->chip.getValue();
-    if (chipSet.startswith("gfx"))
+    if (chipSet.starts_with("gfx"))
       chipSet = chipSet.substr(3);
     uint32_t minor =
         llvm::APInt(32, chipSet.substr(chipSet.size() - 2), 16).getZExtValue();
@@ -264,7 +265,7 @@ SerializeToHsacoPass::translateToLLVMIR(llvm::LLVMContext &llvmContext) {
 
     // This constant must always match the default code object ABI version
     // of the AMDGPU backend.
-    addControlConstant("__oclc_ABI_version", 400, 32);
+    addControlConstant("__oclc_ABI_version", 500, 32);
   }
 
   // Determine libraries we need to link - order matters due to dependencies
@@ -339,7 +340,6 @@ LogicalResult SerializeToHsacoPass::assembleIsa(const std::string &isa,
       target->createMCRegInfo(this->triple));
   std::unique_ptr<llvm::MCAsmInfo> mai(
       target->createMCAsmInfo(*mri, this->triple, mcOptions));
-  mai->setRelaxELFRelocations(true);
   std::unique_ptr<llvm::MCSubtargetInfo> sti(
       target->createMCSubtargetInfo(this->triple, this->chip, this->features));
 
@@ -454,6 +454,6 @@ std::unique_ptr<Pass> mlir::createGpuSerializeToHsacoPass(StringRef triple,
                                                 optLevel);
 }
 
-#else  // MLIR_GPU_TO_HSACO_PASS_ENABLE
+#else  // MLIR_ENABLE_ROCM_CONVERSIONS
 void mlir::registerGpuSerializeToHsacoPass() {}
-#endif // MLIR_GPU_TO_HSACO_PASS_ENABLE
+#endif // MLIR_ENABLE_ROCM_CONVERSIONS

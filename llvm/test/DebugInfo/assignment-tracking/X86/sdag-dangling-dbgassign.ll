@@ -1,7 +1,16 @@
 ; RUN: llc %s -stop-before finalize-isel -o - \
 ; RUN:    -experimental-debug-variable-locations=false \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-before finalize-isel -o - \
+; RUN:    -experimental-debug-variable-locations=false \
+; RUN: | FileCheck %s --check-prefixes=CHECK,DBGVALUE
 ; RUN: llc %s -stop-before finalize-isel -o - \
+; RUN:    -experimental-debug-variable-locations=true \
+; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
+
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-before finalize-isel -o - \
 ; RUN:    -experimental-debug-variable-locations=true \
 ; RUN: | FileCheck %s --check-prefixes=CHECK,INSTRREF
 

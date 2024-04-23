@@ -452,7 +452,7 @@ void RegReAssign::setupConservativePass(
   });
 }
 
-void RegReAssign::runOnFunctions(BinaryContext &BC) {
+Error RegReAssign::runOnFunctions(BinaryContext &BC) {
   RegScore = std::vector<int64_t>(BC.MRI->getNumRegs(), 0);
   RankedRegs = std::vector<size_t>(BC.MRI->getNumRegs(), 0);
 
@@ -480,18 +480,20 @@ void RegReAssign::runOnFunctions(BinaryContext &BC) {
   }
 
   if (FuncsChanged.empty()) {
-    outs() << "BOLT-INFO: Reg Reassignment Pass: no changes were made.\n";
-    return;
+    BC.outs() << "BOLT-INFO: Reg Reassignment Pass: no changes were made.\n";
+    return Error::success();
   }
   if (opts::UpdateDebugSections)
-    outs() << "BOLT-WARNING: You used -reg-reassign and -update-debug-sections."
-           << " Some registers were changed but associated AT_LOCATION for "
-           << "impacted variables were NOT updated! This operation is "
-           << "currently unsupported by BOLT.\n";
-  outs() << "BOLT-INFO: Reg Reassignment Pass Stats:\n";
-  outs() << "\t   " << FuncsChanged.size() << " functions affected.\n";
-  outs() << "\t   " << StaticBytesSaved << " static bytes saved.\n";
-  outs() << "\t   " << DynBytesSaved << " dynamic bytes saved.\n";
+    BC.outs()
+        << "BOLT-WARNING: You used -reg-reassign and -update-debug-sections."
+        << " Some registers were changed but associated AT_LOCATION for "
+        << "impacted variables were NOT updated! This operation is "
+        << "currently unsupported by BOLT.\n";
+  BC.outs() << "BOLT-INFO: Reg Reassignment Pass Stats:\n";
+  BC.outs() << "\t   " << FuncsChanged.size() << " functions affected.\n";
+  BC.outs() << "\t   " << StaticBytesSaved << " static bytes saved.\n";
+  BC.outs() << "\t   " << DynBytesSaved << " dynamic bytes saved.\n";
+  return Error::success();
 }
 
 } // namespace bolt

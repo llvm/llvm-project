@@ -142,7 +142,8 @@ public:
 
   /// Attaches module-level metadata for functions marked as kernels.
   LogicalResult
-  amendOperation(Operation *op, NamedAttribute attribute,
+  amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
+                 NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final {
     auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
     if (!func)
@@ -162,20 +163,18 @@ public:
           ->addOperand(llvmMetadataNode);
     };
     if (attribute.getName() == NVVM::NVVMDialect::getMaxntidAttrName()) {
-      if (!dyn_cast<ArrayAttr>(attribute.getValue()))
+      if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
-      SmallVector<int64_t> values =
-          extractFromIntegerArrayAttr<int64_t>(attribute.getValue());
+      auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
       generateMetadata(values[0], NVVM::NVVMDialect::getMaxntidXName());
       if (values.size() > 1)
         generateMetadata(values[1], NVVM::NVVMDialect::getMaxntidYName());
       if (values.size() > 2)
         generateMetadata(values[2], NVVM::NVVMDialect::getMaxntidZName());
     } else if (attribute.getName() == NVVM::NVVMDialect::getReqntidAttrName()) {
-      if (!dyn_cast<ArrayAttr>(attribute.getValue()))
+      if (!dyn_cast<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
-      SmallVector<int64_t> values =
-          extractFromIntegerArrayAttr<int64_t>(attribute.getValue());
+      auto values = cast<DenseI32ArrayAttr>(attribute.getValue());
       generateMetadata(values[0], NVVM::NVVMDialect::getReqntidXName());
       if (values.size() > 1)
         generateMetadata(values[1], NVVM::NVVMDialect::getReqntidYName());
@@ -199,6 +198,62 @@ public:
           llvm::MDNode::get(llvmContext, llvmMetadataKernel);
       moduleTranslation.getOrInsertNamedModuleMetadata("nvvm.annotations")
           ->addOperand(llvmMetadataNode);
+    }
+    return success();
+  }
+
+  LogicalResult
+  convertParameterAttr(LLVMFuncOp funcOp, int argIdx, NamedAttribute attribute,
+                       LLVM::ModuleTranslation &moduleTranslation) const final {
+
+    llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
+    llvm::Function *llvmFunc =
+        moduleTranslation.lookupFunction(funcOp.getName());
+    llvm::NamedMDNode *nvvmAnnotations =
+        moduleTranslation.getOrInsertNamedModuleMetadata("nvvm.annotations");
+
+    if (attribute.getName() == NVVM::NVVMDialect::getGridConstantAttrName()) {
+      llvm::MDNode *gridConstantMetaData = nullptr;
+
+      // Check if a 'grid_constant' metadata node exists for the given function
+      for (llvm::MDNode *opnd : llvm::reverse(nvvmAnnotations->operands())) {
+        if (opnd->getNumOperands() == 3 &&
+            opnd->getOperand(0) == llvm::ValueAsMetadata::get(llvmFunc) &&
+            opnd->getOperand(1) ==
+                llvm::MDString::get(llvmContext, "grid_constant")) {
+          gridConstantMetaData = opnd;
+          break;
+        }
+      }
+
+      // 'grid_constant' is a function-level meta data node with a list of
+      // integers, where each integer n denotes that the nth parameter has the
+      // grid_constant annotation (numbering from 1). This requires aggregating
+      // the indices of the individual parameters that have this attribute.
+      llvm::Type *i32 = llvm::IntegerType::get(llvmContext, 32);
+      if (gridConstantMetaData == nullptr) {
+        // Create a new 'grid_constant' metadata node
+        SmallVector<llvm::Metadata *> gridConstMetadata = {
+            llvm::ValueAsMetadata::getConstant(
+                llvm::ConstantInt::get(i32, argIdx + 1))};
+        llvm::Metadata *llvmMetadata[] = {
+            llvm::ValueAsMetadata::get(llvmFunc),
+            llvm::MDString::get(llvmContext, "grid_constant"),
+            llvm::MDNode::get(llvmContext, gridConstMetadata)};
+        llvm::MDNode *llvmMetadataNode =
+            llvm::MDNode::get(llvmContext, llvmMetadata);
+        nvvmAnnotations->addOperand(llvmMetadataNode);
+      } else {
+        // Append argIdx + 1 to the 'grid_constant' argument list
+        if (auto argList =
+                dyn_cast<llvm::MDTuple>(gridConstantMetaData->getOperand(2))) {
+          llvm::TempMDTuple clonedArgList = argList->clone();
+          clonedArgList->push_back((llvm::ValueAsMetadata::getConstant(
+              llvm::ConstantInt::get(i32, argIdx + 1))));
+          gridConstantMetaData->replaceOperandWith(
+              2, llvm::MDNode::replaceWithUniqued(std::move(clonedArgList)));
+        }
+      }
     }
     return success();
   }

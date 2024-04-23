@@ -93,16 +93,24 @@ AArch64FunctionInfo::AArch64FunctionInfo(const Function &F,
   // TODO: skip functions that have no instrumented allocas for optimization
   IsMTETagged = F.hasFnAttribute(Attribute::SanitizeMemTag);
 
-  if (!F.hasFnAttribute("branch-target-enforcement")) {
-    if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
-            F.getParent()->getModuleFlag("branch-target-enforcement")))
-      BranchTargetEnforcement = BTE->getZExtValue();
-  } else {
-    const StringRef BTIEnable =
-        F.getFnAttribute("branch-target-enforcement").getValueAsString();
-    assert(BTIEnable == "true" || BTIEnable == "false");
-    BranchTargetEnforcement = BTIEnable == "true";
-  }
+  // BTI/PAuthLR may be set either on the function or the module. Set Bool from
+  // either the function attribute or module attribute, depending on what is
+  // set.
+  // Note: the module attributed is numeric (0 or 1) but the function attribute
+  // is stringy ("true" or "false").
+  auto TryFnThenModule = [&](StringRef AttrName, bool &Bool) {
+    if (F.hasFnAttribute(AttrName)) {
+      const StringRef V = F.getFnAttribute(AttrName).getValueAsString();
+      assert(V.equals_insensitive("true") || V.equals_insensitive("false"));
+      Bool = V.equals_insensitive("true");
+    } else if (const auto *ModVal = mdconst::extract_or_null<ConstantInt>(
+                   F.getParent()->getModuleFlag(AttrName))) {
+      Bool = ModVal->getZExtValue();
+    }
+  };
+
+  TryFnThenModule("branch-target-enforcement", BranchTargetEnforcement);
+  TryFnThenModule("branch-protection-pauth-lr", BranchProtectionPAuthLR);
 
   // The default stack probe size is 4096 if the function has no
   // stack-probe-size attribute. This is a safe default because it is the

@@ -318,7 +318,7 @@ class BinaryFn:
 
     Examples:
     - max -> `arith.MaxSIOp`
-    - max_unsinged -> `arith.MaxUIOp`
+    - max_unsigned -> `arith.MaxUIOp`
     """
 
     add = BinaryFnType("add")

@@ -23,6 +23,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -113,23 +114,23 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
   switch (resolver_type) {
   case FileLineResolver:
     result_sp = BreakpointResolverFileLine::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case AddressResolver:
     result_sp = BreakpointResolverAddress::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case NameResolver:
     result_sp = BreakpointResolverName::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case FileRegexResolver:
     result_sp = BreakpointResolverFileRegex::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case PythonResolver:
     result_sp = BreakpointResolverScripted::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+        *subclass_options, error);
     break;
   case ExceptionResolver:
     error.SetErrorString("Exception resolvers are hard.");
@@ -203,8 +204,15 @@ void BreakpointResolver::SetSCMatchesByLine(
     SearchFilter &filter, SymbolContextList &sc_list, bool skip_prologue,
     llvm::StringRef log_ident, uint32_t line, std::optional<uint16_t> column) {
   llvm::SmallVector<SymbolContext, 16> all_scs;
-  for (uint32_t i = 0; i < sc_list.GetSize(); ++i)
-    all_scs.push_back(sc_list[i]);
+
+  for (const auto &sc : sc_list) {
+    if (Language::GetGlobalLanguageProperties()
+            .GetEnableFilterForLineBreakpoints())
+      if (Language *lang = Language::FindPlugin(sc.GetLanguage());
+          lang && lang->IgnoreForLineBreakpoints(sc))
+        continue;
+    all_scs.push_back(sc);
+  }
 
   while (all_scs.size()) {
     uint32_t closest_line = UINT32_MAX;
@@ -213,8 +221,9 @@ void BreakpointResolver::SetSCMatchesByLine(
     auto &match = all_scs[0];
     auto worklist_begin = std::partition(
         all_scs.begin(), all_scs.end(), [&](const SymbolContext &sc) {
-          if (sc.line_entry.file == match.line_entry.file ||
-              sc.line_entry.original_file == match.line_entry.original_file) {
+          if (sc.line_entry.GetFile() == match.line_entry.GetFile() ||
+              *sc.line_entry.original_file_sp ==
+                  *match.line_entry.original_file_sp) {
             // When a match is found, keep track of the smallest line number.
             closest_line = std::min(closest_line, sc.line_entry.line);
             return false;

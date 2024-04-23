@@ -59,7 +59,7 @@ public:
   bool isVariable() const { return !isValue(); }
   bool isMutableBox() const { return hlfir::isBoxAddressType(getType()); }
   bool isProcedurePointer() const {
-    return hlfir::isBoxProcAddressType(getType());
+    return fir::isBoxProcAddressType(getType());
   }
   bool isBoxAddressOrValue() const {
     return hlfir::isBoxAddressOrValueType(getType());
@@ -70,6 +70,9 @@ public:
 
   /// Is this an array or an assumed ranked entity?
   bool isArray() const { return getRank() != 0; }
+
+  /// Is this an assumed ranked entity?
+  bool isAssumedRank() const { return getRank() == -1; }
 
   /// Return the rank of this entity or -1 if it is an assumed rank.
   int getRank() const {
@@ -227,14 +230,15 @@ translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
 /// on the IR.
 fir::ExtendedValue
 translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                         fir::FortranVariableOpInterface fortranVariable);
+                         fir::FortranVariableOpInterface fortranVariable,
+                         bool forceHlfirBase = false);
 
 /// Generate declaration for a fir::ExtendedValue in memory.
-fir::FortranVariableOpInterface genDeclare(mlir::Location loc,
-                                           fir::FirOpBuilder &builder,
-                                           const fir::ExtendedValue &exv,
-                                           llvm::StringRef name,
-                                           fir::FortranVariableFlagsAttr flags);
+fir::FortranVariableOpInterface
+genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
+           const fir::ExtendedValue &exv, llvm::StringRef name,
+           fir::FortranVariableFlagsAttr flags,
+           fir::CUDADataAttributeAttr cudaAttr = {});
 
 /// Generate an hlfir.associate to build a variable from an expression value.
 /// The type of the variable must be provided so that scalar logicals are
@@ -404,15 +408,15 @@ mlir::Value inlineElementalOp(
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToValue(mlir::Location loc, fir::FirOpBuilder &builder,
-               const hlfir::Entity &entity);
+               hlfir::Entity entity);
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToAddress(mlir::Location loc, fir::FirOpBuilder &builder,
-                 const hlfir::Entity &entity, mlir::Type targetType);
+                 hlfir::Entity entity, mlir::Type targetType);
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
-             const hlfir::Entity &entity, mlir::Type targetType);
+             hlfir::Entity entity, mlir::Type targetType);
 
 /// Clone an hlfir.elemental_addr into an hlfir.elemental value.
 hlfir::ElementalOp cloneToElementalOp(mlir::Location loc,
@@ -429,6 +433,11 @@ bool elementalOpMustProduceTemp(hlfir::ElementalOp elemental);
 std::pair<hlfir::Entity, mlir::Value>
 createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
                    hlfir::Entity mold);
+
+// TODO: this does not support polymorphic molds
+hlfir::Entity createStackTempFromMold(mlir::Location loc,
+                                      fir::FirOpBuilder &builder,
+                                      hlfir::Entity mold);
 
 hlfir::EntityWithAttributes convertCharacterKind(mlir::Location loc,
                                                  fir::FirOpBuilder &builder,

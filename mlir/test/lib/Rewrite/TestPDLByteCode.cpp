@@ -30,6 +30,50 @@ static LogicalResult customMultiEntityVariadicConstraint(
   return success();
 }
 
+// Custom constraint that returns a value if the op is named test.success_op
+static LogicalResult customValueResultConstraint(PatternRewriter &rewriter,
+                                                 PDLResultList &results,
+                                                 ArrayRef<PDLValue> args) {
+  auto *op = args[0].cast<Operation *>();
+  if (op->getName().getStringRef() == "test.success_op") {
+    StringAttr customAttr = rewriter.getStringAttr("test.success");
+    results.push_back(customAttr);
+    return success();
+  }
+  return failure();
+}
+
+// Custom constraint that returns a type if the op is named test.success_op
+static LogicalResult customTypeResultConstraint(PatternRewriter &rewriter,
+                                                PDLResultList &results,
+                                                ArrayRef<PDLValue> args) {
+  auto *op = args[0].cast<Operation *>();
+  if (op->getName().getStringRef() == "test.success_op") {
+    results.push_back(rewriter.getF32Type());
+    return success();
+  }
+  return failure();
+}
+
+// Custom constraint that returns a type range of variable length if the op is
+// named test.success_op
+static LogicalResult customTypeRangeResultConstraint(PatternRewriter &rewriter,
+                                                     PDLResultList &results,
+                                                     ArrayRef<PDLValue> args) {
+  auto *op = args[0].cast<Operation *>();
+  int numTypes = cast<IntegerAttr>(args[1].cast<Attribute>()).getInt();
+
+  if (op->getName().getStringRef() == "test.success_op") {
+    SmallVector<Type> types;
+    for (int i = 0; i < numTypes; i++) {
+      types.push_back(rewriter.getF32Type());
+    }
+    results.push_back(TypeRange(types));
+    return success();
+  }
+  return failure();
+}
+
 // Custom creator invoked from PDL.
 static Operation *customCreate(PatternRewriter &rewriter, Operation *op) {
   return rewriter.create(OperationState(op->getLoc(), "test.success"));
@@ -102,6 +146,12 @@ struct TestPDLByteCodePass
                                           customMultiEntityConstraint);
     pdlPattern.registerConstraintFunction("multi_entity_var_constraint",
                                           customMultiEntityVariadicConstraint);
+    pdlPattern.registerConstraintFunction("op_constr_return_attr",
+                                          customValueResultConstraint);
+    pdlPattern.registerConstraintFunction("op_constr_return_type",
+                                          customTypeResultConstraint);
+    pdlPattern.registerConstraintFunction("op_constr_return_type_range",
+                                          customTypeRangeResultConstraint);
     pdlPattern.registerRewriteFunction("creator", customCreate);
     pdlPattern.registerRewriteFunction("var_creator",
                                        customVariadicResultCreate);

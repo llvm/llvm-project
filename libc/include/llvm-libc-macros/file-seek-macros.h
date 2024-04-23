@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_MACROS_FILE_SEEK_MACROS_H
-#define __LLVM_LIBC_MACROS_FILE_SEEK_MACROS_H
+#ifndef LLVM_LIBC_MACROS_FILE_SEEK_MACROS_H
+#define LLVM_LIBC_MACROS_FILE_SEEK_MACROS_H
 
 #define SEEK_SET 0
 #define SEEK_CUR 1
 #define SEEK_END 2
 
-#endif // __LLVM_LIBC_MACROS_FILE_SEEK_MACROS_H
+#endif // LLVM_LIBC_MACROS_FILE_SEEK_MACROS_H

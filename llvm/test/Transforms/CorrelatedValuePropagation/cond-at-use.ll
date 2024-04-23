@@ -567,3 +567,66 @@ define i16 @cond_value_may_not_well_defined(i16 %x) {
   %sel = select i1 %cmp, i16 %and, i16 24
   ret i16 %sel
 }
+
+define i16 @and_elide_poison_flags(i16 noundef %a) {
+; CHECK-LABEL: @and_elide_poison_flags(
+; CHECK-NEXT:    [[X:%.*]] = add nuw i16 [[A:%.*]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X]], 8
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[X]], i16 24
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %x = add nuw i16 %a, 1
+  %and = and i16 %x, 7
+  %cmp = icmp ult i16 %x, 8
+  %sel = select i1 %cmp, i16 %and, i16 24
+  ret i16 %sel
+}
+
+define i16 @and_elide_poison_flags_missing_noundef(i16 %a) {
+; CHECK-LABEL: @and_elide_poison_flags_missing_noundef(
+; CHECK-NEXT:    [[X:%.*]] = add nuw i16 [[A:%.*]], 1
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X]], 8
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i16 [[AND]], i16 24
+; CHECK-NEXT:    ret i16 [[SEL]]
+;
+  %x = add nuw i16 %a, 1
+  %and = and i16 %x, 7
+  %cmp = icmp ult i16 %x, 8
+  %sel = select i1 %cmp, i16 %and, i16 24
+  ret i16 %sel
+}
+
+define i32 @pr87854(i32 noundef %x.1, i32 noundef %i) {
+; CHECK-LABEL: @pr87854(
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[X_1:%.*]], -1
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    [[INBOUNDS:%.*]] = icmp ult i32 [[I:%.*]], [[X_1]]
+; CHECK-NEXT:    [[NEXT:%.*]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[INBOUNDS]], i32 [[NEXT]], i32 -1
+; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
+;
+  %cond = icmp sgt i32 %x.1, -1
+  tail call void @llvm.assume(i1 %cond)
+  %inbounds = icmp ult i32 %i, %x.1
+  %next = add i32 %i, 1
+  %spec.select = select i1 %inbounds, i32 %next, i32 -1
+  ret i32 %spec.select
+}
+
+define i64 @test_shl_nsw_at_use(i64 noundef %x) {
+; CHECK-LABEL: @test_shl_nsw_at_use(
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[X:%.*]], 2147483648
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[ADD]], 4294967296
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i64 [[X]], 32
+; CHECK-NEXT:    [[SHR:%.*]] = ashr exact i64 [[SHL]], 32
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i64 [[SHR]], i64 0
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  %add = add i64 %x, 2147483648
+  %cmp = icmp ult i64 %add, 4294967296
+  %shl = shl i64 %x, 32
+  %shr = ashr exact i64 %shl, 32
+  %res = select i1 %cmp, i64 %shr, i64 0
+  ret i64 %res
+}

@@ -19,6 +19,8 @@
 ...
 ---
 name: foo
+frameInfo:
+  adjustsStack:    true
 body: |
   bb.0 (%ir-block.0):
     ; CHECK-LABEL: name: foo

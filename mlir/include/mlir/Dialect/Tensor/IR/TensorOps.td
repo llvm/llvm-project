@@ -1098,21 +1098,18 @@ class Tensor_ReassociativeReshapeOp<string mnemonic, list<Trait> traits = []> :
 def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
   let summary = "operation to produce a tensor with a higher rank";
   let description = [{
-    The `tensor.expand_shape` op produces a new tensor with a higher
-    rank whose sizes are a reassociation of the original `src`.
+    The `tensor.expand_shape` op produces a tensor of higher (or equal)
+    rank than the operand `src` whose dimension sizes are a reassociation of
+    `src`.
 
-    A reassociation is defined as a continuous grouping of dimensions and is
-    represented with an array of DenseI64ArrayAttr attribute.
+    A reassociation is defined as a continuous grouping of dimensions. It is
+    represented with an array of DenseI64ArrayAttr attribute. Entries in the
+    array are referred to as reassociation maps.
 
-    The verification rule is that the reassociation maps are applied to the
-    result tensor with the higher rank to obtain the operand tensor with the
-    smaller rank.
+    The reassociation maps are applied to the result shape to obtain the operand
+    shape.
 
-    The operand tensor type of a reshape can be zero-ranked if the result
-    tensor type is statically shaped with all dimensions being unit extent. In
-    such cases the reassociation map is empty.
-
-    Examples:
+    Example:
 
     ```mlir
     // Dimension expansion i -> (i', j') and (k) -> (k')
@@ -1150,21 +1147,15 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
 def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
   let summary = "operation to produce a tensor with a smaller rank";
   let description = [{
-    The `tensor.collapse_shape` op produces a new tensor with a smaller
-    rank whose sizes are a reassociation of the original `src`.
+    The `tensor.collapse_shape` op produces a new tensor of lower (or equal)
+    rank whose dimension sizes are a reassociation of the original `src` dimensions.
 
     A reassociation is defined as a continuous grouping of dimensions and is
-    represented with an array of DenseI64ArrayAttr attribute.
+    represented by an array of DenseI64ArrayAttr attribute. The reassociation
+    maps are applied to the operand shape to obtain the result shape.
 
-    The verification rule is that the reassociation maps are applied to the
-    operand tensor with the higher rank to obtain the result tensor with the
-    smaller rank.
 
-    The result tensor type of a reshape can be zero-ranked if the operand
-    tensor type is statically shaped with all dimensions being unit extent. In
-    such case the reassociation map is empty.
-
-    Examples:
+    Example:
 
     ```mlir
     // Dimension collapse (i, j) -> i' and k -> k'
@@ -1373,7 +1364,7 @@ def Tensor_PadOp : Tensor_Op<"pad", [
       unsigned count = staticAttrs.size();
       for (unsigned idx = 0; idx < count; ++idx) {
         if (ShapedType::isDynamic(staticAttrs[idx]))
-          res.push_back(values[numDynamic++]);
+          res.push_back(getAsOpFoldResult(values[numDynamic++]));
         else
           res.push_back(builder.getI64IntegerAttr(staticAttrs[idx]));
       }
@@ -1728,6 +1719,7 @@ def Tensor_ScatterOp : Tensor_Op<"scatter", [
 
 def Tensor_SplatOp : Tensor_Op<"splat", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
     Pure,
     TypesMatchWith<"operand type matches element type of result",
                    "aggregate", "input",
@@ -1736,38 +1728,56 @@ def Tensor_SplatOp : Tensor_Op<"splat", [
   let summary = "tensor splat or broadcast operation";
   let description = [{
     Broadcast the operand to all elements of the result tensor. The operand is
-    required to be of integer/index/float type, and the result tensor must be
-    statically shaped.
+    required to be of integer/index/float type.
 
-    Example:
+    An additional argument of type `index` must be provided for each dynamic
+    dimension present in the result type.
+
+    Example for a statically shaped tensor:
 
     ```mlir
-    %s = arith.constant 10.1 : f32
+    %s = arith.constant 1.0 : f32
     %t = tensor.splat %s : tensor<8x16xf32>
     ```
 
-    TODO: This operation is easy to extend to broadcast to dynamically shaped
-          tensors:
+    Example for a tensor containing dynamic dimensions:
 
     ```mlir
-    // Broadcasts %s to a 2-d dynamically shaped tensor, with %m, %n binding
-    // to the sizes of the two dynamic dimensions.
-    %m = "foo"() : () -> (index)
-    %n = "bar"() : () -> (index)
-    %t = tensor.splat %s [%m, %n] : tensor<?x?xf32>
+    // Broadcasts %s to a 3D dynamically shaped tensor, with %m and %n binding
+    // to dimensions 0 and 2 of the resulting tensor, respectively.
+    %m = arith.constant 10 : index
+    %n = arith.constant 30 : index
+    %t = tensor.splat %s[%m, %n] : tensor<?x20x?xf32>
     ```
   }];
 
   let arguments = (ins AnyTypeOf<[AnySignlessInteger, Index, AnyFloat],
-                                 "integer/index/float type">:$input);
-  let results = (outs AnyStaticShapeTensor:$aggregate);
+                                 "integer/index/float type">:$input,
+                       Variadic<Index>:$dynamicSizes);
+  let results = (outs AnyRankedTensor:$aggregate);
 
   let builders = [
-    OpBuilder<(ins "Value":$element, "Type":$aggregateType),
-    [{ build($_builder, $_state, aggregateType, element); }]>];
-  let assemblyFormat = "$input attr-dict `:` type($aggregate)";
+    // Build with an explicit result type and a list of values corresponding
+    // to the dynamic sizes present in the result type.
+    OpBuilder<(ins "Value":$element,
+                   "Type":$aggregateType,
+                   CArg<"ValueRange", "{}">:$dynamicSizes)>,
+
+    // Build with a result tensor shape and a list of values corresponding to
+    // the elements in the result tensor shape set to ShapedType::kDynamic.
+    OpBuilder<(ins "Value":$element,
+                   "ArrayRef<int64_t>":$staticShape,
+                   CArg<"ValueRange", "{}">:$dynamicSizes)>,
+
+    // Build with mixed static/dynamic sizes, where an attribute represents
+    // a static dimension and a value represents a dynamic dimension.
+    OpBuilder<(ins "Value":$element, "ArrayRef<OpFoldResult>":$sizes)>
+  ];
+
+  let assemblyFormat = "$input (`[` $dynamicSizes^ `]`)? attr-dict `:` type($aggregate)";
 
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1822,13 +1832,10 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
     and optionally transposes the tiled source tensor dimensions.
 
     `inner_dims_pos` (mandatory) specifies `k` source tensor dimensions that are
-    being tiled, where `0 < k <= n`. The order of the dimensions matters: the
-    tiled dimensions (of size `inner_tiles`) are added to the end of the result
-    tensor in the order in which they appear in `inner_dims_pos`.
-
-    `inner_dims_pos` (mandatory) specifies `k` source tensor dimensions that are
     being tiled, where `0 < k <= n`. The order of the dimensions matters:
-    `inner_dims_pos[i]` specifies the source tensor dimension tiled by
+     - The tiled dimensions (of size `inner_tiles`) are added to the end of the result
+    tensor in the order in which they appear in `inner_dims_pos`.
+     - `inner_dims_pos[i]` specifies the source tensor dimension tiled by
     `inner_tiles[i]`.
 
     `inner_tiles` (mandatory) specifies `k` tile sizes. These tile sizes
@@ -1927,11 +1934,12 @@ def Tensor_PackOp : Tensor_RelayoutOp<"pack", [
 
     // Returns true if we have enough static information to catch undefined
     // behavior when the tile size does not divide perfectly the dimension of
-    // the input tensor. If a given dimension or a tile associated with it is
-    // dynamic, the dimension is not considered as we don't have enough static
-    // information to understand if the tile perfectly divides that dimension.
+    // the input tensor. Detecting UB requires that the input size and either
+    // corresponding tile or output size are static.
     static bool requirePaddingValue(ArrayRef<int64_t> inputShape,
                                     ArrayRef<int64_t> innerDimsPos,
+                                    ArrayRef<int64_t> outputShape,
+                                    ArrayRef<int64_t> outerDimsPerm,
                                     ArrayRef<OpFoldResult> innerTiles);
 
     static Value createDestinationTensor(OpBuilder &b, Location loc,

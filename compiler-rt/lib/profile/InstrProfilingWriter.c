@@ -250,9 +250,14 @@ COMPILER_RT_VISIBILITY int lprofWriteData(ProfDataWriter *Writer,
   const char *BitmapEnd = __llvm_profile_end_bitmap();
   const char *NamesBegin = __llvm_profile_begin_names();
   const char *NamesEnd = __llvm_profile_end_names();
+  const VTableProfData *VTableBegin = __llvm_profile_begin_vtables();
+  const VTableProfData *VTableEnd = __llvm_profile_end_vtables();
+  const char *VNamesBegin = __llvm_profile_begin_vtabnames();
+  const char *VNamesEnd = __llvm_profile_end_vtabnames();
   return lprofWriteDataImpl(Writer, DataBegin, DataEnd, CountersBegin,
                             CountersEnd, BitmapBegin, BitmapEnd, VPDataReader,
-                            NamesBegin, NamesEnd, SkipNameDataWrite);
+                            NamesBegin, NamesEnd, VTableBegin, VTableEnd,
+                            VNamesBegin, VNamesEnd, SkipNameDataWrite);
 }
 
 COMPILER_RT_VISIBILITY int
@@ -261,7 +266,9 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
                    const char *CountersBegin, const char *CountersEnd,
                    const char *BitmapBegin, const char *BitmapEnd,
                    VPDataReaderType *VPDataReader, const char *NamesBegin,
-                   const char *NamesEnd, int SkipNameDataWrite) {
+                   const char *NamesEnd, const VTableProfData *VTableBegin,
+                   const VTableProfData *VTableEnd, const char *VNamesBegin,
+                   const char *VNamesEnd, int SkipNameDataWrite) {
   /* Calculate size of sections. */
   const uint64_t DataSectionSize =
       __llvm_profile_get_data_size(DataBegin, DataEnd);
@@ -273,6 +280,12 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
   const uint64_t NumBitmapBytes =
       __llvm_profile_get_num_bitmap_bytes(BitmapBegin, BitmapEnd);
   const uint64_t NamesSize = __llvm_profile_get_name_size(NamesBegin, NamesEnd);
+  const uint64_t NumVTables =
+      __llvm_profile_get_num_vtable(VTableBegin, VTableEnd);
+  const uint64_t VTableSectionSize =
+      __llvm_profile_get_vtable_section_size(VTableBegin, VTableEnd);
+  const uint64_t VNamesSize =
+      __llvm_profile_get_name_size(VNamesBegin, VNamesEnd);
 
   /* Create the header. */
   __llvm_profile_header Header;
@@ -280,11 +293,15 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
   /* Determine how much padding is needed before/after the counters and after
    * the names. */
   uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
-      PaddingBytesAfterNames, PaddingBytesAfterBitmapBytes;
-  __llvm_profile_get_padding_sizes_for_counters(
-      DataSectionSize, CountersSectionSize, NumBitmapBytes, NamesSize,
-      &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
-      &PaddingBytesAfterBitmapBytes, &PaddingBytesAfterNames);
+      PaddingBytesAfterBitmapBytes, PaddingBytesAfterNames,
+      PaddingBytesAfterVTable, PaddingBytesAfterVNames;
+  if (__llvm_profile_get_padding_sizes_for_counters(
+          DataSectionSize, CountersSectionSize, NumBitmapBytes, NamesSize,
+          VTableSectionSize, VNamesSize, &PaddingBytesBeforeCounters,
+          &PaddingBytesAfterCounters, &PaddingBytesAfterBitmapBytes,
+          &PaddingBytesAfterNames, &PaddingBytesAfterVTable,
+          &PaddingBytesAfterVNames) == -1)
+    return -1;
 
   {
 /* Initialize header structure.  */
@@ -323,7 +340,11 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
       {BitmapBegin, sizeof(uint8_t), NumBitmapBytes, 0},
       {NULL, sizeof(uint8_t), PaddingBytesAfterBitmapBytes, 1},
       {SkipNameDataWrite ? NULL : NamesBegin, sizeof(uint8_t), NamesSize, 0},
-      {NULL, sizeof(uint8_t), PaddingBytesAfterNames, 1}};
+      {NULL, sizeof(uint8_t), PaddingBytesAfterNames, 1},
+      {VTableBegin, sizeof(uint8_t), VTableSectionSize, 0},
+      {NULL, sizeof(uint8_t), PaddingBytesAfterVTable, 1},
+      {SkipNameDataWrite ? NULL : VNamesBegin, sizeof(uint8_t), VNamesSize, 0},
+      {NULL, sizeof(uint8_t), PaddingBytesAfterVNames, 1}};
   if (Writer->Write(Writer, IOVecData, sizeof(IOVecData) / sizeof(*IOVecData)))
     return -1;
 

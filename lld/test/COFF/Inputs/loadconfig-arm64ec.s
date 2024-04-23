@@ -1,4 +1,4 @@
-        .section .rdata,"dr"
+        .section .00cfg,"dr"
         .globl _load_config_used
         .p2align 3, 0
 _load_config_used:

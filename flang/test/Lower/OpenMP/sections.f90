@@ -1,3 +1,5 @@
+! REQUIRES: openmp_runtime
+
 ! This test checks the lowering of OpenMP sections construct with several clauses present
 
 ! RUN: %flang_fc1 -flang-experimental-hlfir -emit-hlfir -fopenmp %s -o - | FileCheck %s
@@ -7,8 +9,8 @@
 !CHECK:   %[[COUNT:.*]] = fir.address_of(@_QFEcount) : !fir.ref<i32>
 !CHECK:   %[[COUNT_DECL:.*]]:2 = hlfir.declare %[[COUNT]] {uniq_name = "_QFEcount"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:   %[[ETA:.*]] = fir.alloca f32 {bindc_name = "eta", uniq_name = "_QFEeta"}
-!CHECK:   %[[CONST_1:.*]] = arith.constant 1 : i32
-!CHECK:   omp.sections allocate(%[[CONST_1]] : i32 -> %[[COUNT_DECL]]#1 : !fir.ref<i32>)  {
+!CHECK:   %[[CONST_1:.*]] = arith.constant 4 : i64
+!CHECK:   omp.sections allocate(%[[CONST_1]] : i64 -> %[[COUNT_DECL]]#1 : !fir.ref<i32>)  {
 !CHECK:     omp.section {
 !CHECK:       %[[PRIVATE_ETA:.*]] = fir.alloca f32 {bindc_name = "eta", pinned, uniq_name = "_QFEeta"}
 !CHECK:       %[[PRIVATE_ETA_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_ETA]] {uniq_name = "_QFEeta"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
@@ -141,11 +143,11 @@ subroutine lastprivate()
 !CHECK: omp.section {
 !CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFlastprivateEx"}
 !CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFlastprivateEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-!CHECK: %[[TRUE:.*]] = arith.constant true
 !CHECK: %[[TEMP:.*]] = fir.load %[[PRIVATE_X_DECL]]#0 : !fir.ref<i32>
 !CHECK: %[[CONST:.*]] = arith.constant 1 : i32
 !CHECK: %[[RESULT:.*]] = arith.addi %[[TEMP]], %[[CONST]] : i32
 !CHECK: hlfir.assign %[[RESULT]] to %[[PRIVATE_X_DECL]]#0 : i32, !fir.ref<i32>
+!CHECK: %[[TRUE:.*]] = arith.constant true
 !CHECK: fir.if %[[TRUE]] {
 !CHECK: %[[TEMP1:.*]] = fir.load %[[PRIVATE_X_DECL]]#0 : !fir.ref<i32>
 !CHECK: hlfir.assign %[[TEMP1]] to %[[X_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
@@ -180,11 +182,11 @@ subroutine lastprivate()
 !CHECK: %[[TEMP:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
 !CHECK: hlfir.assign %[[TEMP]] to %[[PRIVATE_X_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
 !CHECK: omp.barrier
-!CHECK: %[[TRUE:.*]] = arith.constant true
 !CHECK: %[[TEMP:.*]] = fir.load %[[PRIVATE_X_DECL]]#0 : !fir.ref<i32>
 !CHECK: %[[CONST:.*]] = arith.constant 1 : i32
 !CHECK: %[[RESULT:.*]] = arith.addi %[[TEMP]], %[[CONST]] : i32
 !CHECK: hlfir.assign %[[RESULT]] to %[[PRIVATE_X_DECL]]#0 : i32, !fir.ref<i32>
+!CHECK: %[[TRUE:.*]] = arith.constant true
 !CHECK: fir.if %[[TRUE]] {
 !CHECK: %[[TEMP:.*]] = fir.load %[[PRIVATE_X_DECL]]#0 : !fir.ref<i32>
 !CHECK: hlfir.assign %[[TEMP]] to %[[X_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
@@ -219,11 +221,11 @@ subroutine lastprivate()
 !CHECK: %[[TEMP:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
 !CHECK: hlfir.assign %[[TEMP]] to %[[PRIVATE_X_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
 !CHECK: omp.barrier
-!CHECK: %[[TRUE:.*]] = arith.constant true
 !CHECK: %[[TEMP:.*]] = fir.load %[[PRIVATE_X_DECL]]#0 : !fir.ref<i32>
 !CHECK: %[[CONST:.*]] = arith.constant 1 : i32
 !CHECK: %[[RESULT:.*]] = arith.addi %[[TEMP]], %[[CONST]] : i32
 !CHECK: hlfir.assign %[[RESULT]] to %[[PRIVATE_X_DECL]]#0 : i32, !fir.ref<i32>
+!CHECK: %[[TRUE:.*]] = arith.constant true
 !CHECK: fir.if %[[TRUE]] {
 !CHECK: %[[TEMP:.*]] = fir.load %[[PRIVATE_X_DECL]]#0 : !fir.ref<i32>
 !CHECK: hlfir.assign %[[TEMP]] to %[[X_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>

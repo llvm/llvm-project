@@ -16,9 +16,9 @@ define void @main() local_unnamed_addr #0 {
 
 ; <label>:1:                                      ; preds = %1, %0
   %2 = phi i64 [ 0, %0 ], [ %7, %1 ]
-  %3 = getelementptr inbounds [10 x %0], [10 x %0]* bitcast (<{ <{ i64, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8 }>, <{ i64, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8 }>, <{ i64, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8 }>, <{ i64, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8 }>, <{ i64, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8 }>, <{ i64, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8 }>, <{ i64, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8 }>, <{ i64, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8 }>, <{ i64, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8 }>, <{ i64, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8 }> }>* @g_101 to [10 x %0]*), i64 0, i64 %2, i32 1
-  %4 = bitcast [11 x i8]* %3 to i88*
-  %5 = load i88, i88* %4, align 1
+  %3 = getelementptr inbounds [10 x %0], ptr @g_101, i64 0, i64 %2, i32 1
+  %4 = bitcast ptr %3 to ptr
+  %5 = load i88, ptr %4, align 1
   %6 = icmp ult i88 %5, 2361183241434822606848
   %7 = add nuw nsw i64 %2, 1
   br label %1

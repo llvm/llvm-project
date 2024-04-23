@@ -1,5 +1,5 @@
-// RUN: fir-opt --cfg-conversion="always-execute-loop-body=true" %s | FileCheck %s
-// RUN: fir-opt --cfg-conversion %s | FileCheck %s --check-prefix=NOOPT
+// RUN: fir-opt --cfg-conversion-on-func-opt="always-execute-loop-body=true" %s | FileCheck %s
+// RUN: fir-opt --cfg-conversion-on-func-opt %s | FileCheck %s --check-prefix=NOOPT
 
 func.func @x(%addr : !fir.ref<index>) {
   %bound = arith.constant 452 : index

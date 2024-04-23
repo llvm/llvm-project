@@ -155,28 +155,27 @@ define <2 x i32> @_parity_of_not_vec(<2 x i32> %x) {
   ret <2 x i32> %r
 }
 
-define <2 x i32> @_parity_of_not_undef(<2 x i32> %x) {
-; CHECK-LABEL: @_parity_of_not_undef(
+define <2 x i32> @_parity_of_not_poison(<2 x i32> %x) {
+; CHECK-LABEL: @_parity_of_not_poison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]]), !range [[RNG1]]
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[TMP1]], <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
-  %neg = xor <2 x i32> %x, <i32 undef ,i32 -1>
+  %neg = xor <2 x i32> %x, <i32 poison ,i32 -1>
   %cnt = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %neg)
   %r = and <2 x i32> %cnt, <i32 1 ,i32 1>
   ret <2 x i32> %r
 }
 
-define <2 x i32> @_parity_of_not_undef2(<2 x i32> %x) {
-; CHECK-LABEL: @_parity_of_not_undef2(
-; CHECK-NEXT:    [[NEG:%.*]] = xor <2 x i32> [[X:%.*]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[CNT:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[NEG]]), !range [[RNG1]]
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[CNT]], <i32 1, i32 undef>
+define <2 x i32> @_parity_of_not_poison2(<2 x i32> %x) {
+; CHECK-LABEL: @_parity_of_not_poison2(
+; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[CNT]], <i32 1, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %neg = xor <2 x i32> %x, <i32 -1 ,i32 -1>
   %cnt = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %neg)
-  %r = and <2 x i32> %cnt, <i32 1 ,i32 undef>
+  %r = and <2 x i32> %cnt, <i32 1 ,i32 poison>
   ret <2 x i32> %r
 }
 
@@ -397,7 +396,7 @@ define i32 @parity_xor_trunc(i64 %arg, i64 %arg1) {
 ; CHECK-LABEL: @parity_xor_trunc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[ARG1:%.*]], [[ARG:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP1]]), !range [[RNG5:![0-9]+]]
-; CHECK-NEXT:    [[I4:%.*]] = trunc i64 [[TMP2]] to i32
+; CHECK-NEXT:    [[I4:%.*]] = trunc nuw nsw i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[I5:%.*]] = and i32 [[I4]], 1
 ; CHECK-NEXT:    ret i32 [[I5]]
 ;

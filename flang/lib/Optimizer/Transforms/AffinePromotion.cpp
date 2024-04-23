@@ -63,7 +63,7 @@ struct AffineFunctionAnalysis {
 } // namespace
 
 static bool analyzeCoordinate(mlir::Value coordinate, mlir::Operation *op) {
-  if (auto blockArg = coordinate.dyn_cast<mlir::BlockArgument>()) {
+  if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(coordinate)) {
     if (isa<fir::DoLoopOp>(blockArg.getOwner()->getParentOp()))
       return true;
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: array coordinate is not a "
@@ -224,7 +224,7 @@ private:
     if (auto op = value.getDefiningOp<mlir::arith::ConstantOp>())
       if (auto intConstant = op.getValue().dyn_cast<IntegerAttr>())
         return toAffineExpr(intConstant.getInt());
-    if (auto blockArg = value.dyn_cast<mlir::BlockArgument>()) {
+    if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(value)) {
       affineArgs.push_back(value);
       if (isa<fir::DoLoopOp>(blockArg.getOwner()->getParentOp()) ||
           isa<mlir::affine::AffineForOp>(blockArg.getOwner()->getParentOp()))
@@ -464,15 +464,15 @@ public:
     auto affineFor = loopAndIndex.first;
     auto inductionVar = loopAndIndex.second;
 
-    rewriter.startRootUpdate(affineFor.getOperation());
+    rewriter.startOpModification(affineFor.getOperation());
     affineFor.getBody()->getOperations().splice(
         std::prev(affineFor.getBody()->end()), loopOps, loopOps.begin(),
         std::prev(loopOps.end()));
-    rewriter.finalizeRootUpdate(affineFor.getOperation());
+    rewriter.finalizeOpModification(affineFor.getOperation());
 
-    rewriter.startRootUpdate(loop.getOperation());
+    rewriter.startOpModification(loop.getOperation());
     loop.getInductionVar().replaceAllUsesWith(inductionVar);
-    rewriter.finalizeRootUpdate(loop.getOperation());
+    rewriter.finalizeOpModification(loop.getOperation());
 
     rewriteMemoryOps(affineFor.getBody(), rewriter);
 
@@ -561,7 +561,7 @@ public:
     auto affineIf = rewriter.create<affine::AffineIfOp>(
         op.getLoc(), affineCondition.getIntegerSet(),
         affineCondition.getAffineArgs(), !op.getElseRegion().empty());
-    rewriter.startRootUpdate(affineIf);
+    rewriter.startOpModification(affineIf);
     affineIf.getThenBlock()->getOperations().splice(
         std::prev(affineIf.getThenBlock()->end()), ifOps, ifOps.begin(),
         std::prev(ifOps.end()));
@@ -571,7 +571,7 @@ public:
           std::prev(affineIf.getElseBlock()->end()), otherOps, otherOps.begin(),
           std::prev(otherOps.end()));
     }
-    rewriter.finalizeRootUpdate(affineIf);
+    rewriter.finalizeOpModification(affineIf);
     rewriteMemoryOps(affineIf.getBody(), rewriter);
 
     LLVM_DEBUG(llvm::dbgs() << "AffineIfConversion: if converted to:\n";

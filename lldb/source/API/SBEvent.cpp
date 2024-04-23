@@ -24,7 +24,8 @@ using namespace lldb_private;
 SBEvent::SBEvent() { LLDB_INSTRUMENT_VA(this); }
 
 SBEvent::SBEvent(uint32_t event_type, const char *cstr, uint32_t cstr_len)
-    : m_event_sp(new Event(event_type, new EventDataBytes(cstr, cstr_len))),
+    : m_event_sp(new Event(
+          event_type, new EventDataBytes(llvm::StringRef(cstr, cstr_len)))),
       m_opaque_ptr(m_event_sp.get()) {
   LLDB_INSTRUMENT_VA(this, event_type, cstr, cstr_len);
 }

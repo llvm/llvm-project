@@ -8,17 +8,17 @@
   define void @test1() {
   entry:
     %a = alloca i32, align 4
-    %0 = call i8* @llvm.returnaddress(i32 0)
-    %1 = ptrtoint i8* %0 to i64
+    %0 = call ptr @llvm.returnaddress(i32 0)
+    %1 = ptrtoint ptr %0 to i64
     %conv = trunc i64 %1 to i32
-    store i32 %conv, i32* %a, align 4
-    %2 = load i32, i32* %a, align 4
+    store i32 %conv, ptr %a, align 4
+    %2 = load i32, ptr %a, align 4
     call void (i32, ...) @vararg(i32 signext 0, i32 signext %2)
     ret void
   }
 
   ; Function Attrs: nofree nosync nounwind readnone willreturn
-  declare i8* @llvm.returnaddress(i32 immarg) #0
+  declare ptr @llvm.returnaddress(i32 immarg) #0
 
   attributes #0 = { nofree nosync nounwind readnone willreturn }
 
@@ -44,7 +44,7 @@ frameInfo:
   stackSize:       0
   offsetAdjustment: 0
   maxAlignment:    4
-  adjustsStack:    false
+  adjustsStack:    true
   hasCalls:        true
   stackProtector:  ''
   maxCallFrameSize: 4294967295
@@ -79,7 +79,7 @@ body:             |
     ; CHECK-NEXT: SW renamable $x1, $x2, 4 :: (store (s32) into %ir.a)
     ; CHECK-NEXT: renamable $x11 = ADDIW killed renamable $x1, 0
     ; CHECK-NEXT: $x10 = COPY $x0
-    ; CHECK-NEXT: PseudoCALL target-flags(riscv-plt) @vararg, csr_ilp32_lp64, implicit-def dead $x1, implicit killed $x10, implicit $x11, implicit-def $x2
+    ; CHECK-NEXT: PseudoCALL target-flags(riscv-call) @vararg, csr_ilp32_lp64, implicit-def dead $x1, implicit killed $x10, implicit $x11, implicit-def $x2
     ; CHECK-NEXT: $x1 = LD $x2, 8 :: (load (s64) from %stack.1)
     ; CHECK-NEXT: $x2 = frame-destroy ADDI $x2, 16
     ; CHECK-NEXT: PseudoRET
@@ -87,7 +87,7 @@ body:             |
     renamable $x11 = ADDIW killed renamable $x1, 0
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $x2, implicit $x2
     $x10 = COPY $x0
-    PseudoCALL target-flags(riscv-plt) @vararg, csr_ilp32_lp64, implicit-def dead $x1, implicit killed $x10, implicit $x11, implicit-def $x2
+    PseudoCALL target-flags(riscv-call) @vararg, csr_ilp32_lp64, implicit-def dead $x1, implicit killed $x10, implicit $x11, implicit-def $x2
     ADJCALLSTACKUP 0, 0, implicit-def dead $x2, implicit $x2
     PseudoRET
 

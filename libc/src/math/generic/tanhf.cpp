@@ -23,8 +23,9 @@ constexpr double LOG2_E_EXP2_6 = ExpBase::LOG2_B * 2.0;
 LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
-  uint32_t x_u = xbits.uintval();
-  uint32_t x_abs = x_u & FPBits::FloatProp::EXP_MANT_MASK;
+  uint32_t x_abs = xbits.abs().uintval();
+
+  const int sign_index = xbits.is_neg() ? 1 : 0;
 
   // When |x| >= 15, or x is inf or nan, or |x| <= 0.078125
   if (LIBC_UNLIKELY((x_abs >= 0x4170'0000U) || (x_abs <= 0x3da0'0000U))) {
@@ -58,13 +59,10 @@ LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
 
     constexpr float SIGNS[2][2] = {{1.0f, -0x1.0p-25f}, {-1.0f, 0x1.0p-25f}};
 
-    bool sign = xbits.get_sign();
-    int idx = static_cast<int>(sign);
-
     if (LIBC_UNLIKELY(xbits.is_inf()))
-      return SIGNS[idx][0];
+      return SIGNS[sign_index][0];
 
-    return SIGNS[idx][0] + SIGNS[idx][1];
+    return SIGNS[sign_index][0] + SIGNS[sign_index][1];
   }
 
   // Range reduction: e^(2x) = 2^(hi + mid) * e^lo
@@ -84,13 +82,13 @@ LLVM_LIBC_FUNCTION(float, tanhf, (float x)) {
   constexpr double HALF_WAY[2] = {-0.5, 0.5};
 
   mk = static_cast<int>(
-      fputil::multiply_add(xd, -LOG2_E_EXP2_6, HALF_WAY[xbits.get_sign()]));
+      fputil::multiply_add(xd, -LOG2_E_EXP2_6, HALF_WAY[sign_index]));
   k = static_cast<double>(-mk);
 #endif // LIBC_TARGET_CPU_HAS_NEAREST_INT
   // -hi = floor(-k * 2^(-MID_BITS))
   // exp_mhi = shift -hi to the exponent field of double precision.
   int64_t exp_mhi = static_cast<int64_t>(mk >> ExpBase::MID_BITS)
-                    << fputil::FloatProperties<double>::MANTISSA_WIDTH;
+                    << fputil::FPBits<double>::FRACTION_LEN;
   // mh = 2^(-hi - mid)
   int64_t mh_bits = ExpBase::EXP_2_MID[mk & ExpBase::MID_MASK] + exp_mhi;
   double mh = fputil::FPBits<double>(uint64_t(mh_bits)).get_val();

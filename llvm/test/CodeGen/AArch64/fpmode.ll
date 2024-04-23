@@ -63,11 +63,8 @@ define void @func_reset_fpmode_soft() #0 {
 ;
 ; GIS-LABEL: func_reset_fpmode_soft:
 ; GIS:       // %bb.0: // %entry
-; GIS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; GIS-NEXT:    mov x0, #-1 // =0xffffffffffffffff
-; GIS-NEXT:    bl fesetmode
-; GIS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; GIS-NEXT:    ret
+; GIS-NEXT:    b fesetmode
 entry:
   call void @llvm.reset.fpmode()
   ret void

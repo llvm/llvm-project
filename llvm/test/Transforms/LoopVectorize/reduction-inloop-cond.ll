@@ -850,8 +850,8 @@ define float @cond_cond(ptr noalias %src1, ptr noalias %src2, ptr noalias %cond,
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE6]]
 ; CHECK:       pred.load.continue6:
 ; CHECK-NEXT:    [[TMP24:%.*]] = phi <4 x float> [ [[TMP19]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP23]], [[PRED_LOAD_IF5]] ]
-; CHECK-NEXT:    [[TMP25:%.*]] = select <4 x i1> [[TMP4]], <4 x float> [[TMP24]], <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>
-; CHECK-NEXT:    [[PREDPHI:%.*]] = fadd fast <4 x float> [[VEC_PHI]], [[TMP25]]
+; CHECK-NEXT:    [[TMP25:%.*]] = fadd fast <4 x float> [[TMP24]], [[VEC_PHI]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP4]], <4 x float> [[TMP25]], <4 x float> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = fcmp fast oeq <4 x float> [[WIDE_LOAD]], <float 7.000000e+00, float 7.000000e+00, float 7.000000e+00, float 7.000000e+00>
 ; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i1> [[TMP26]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP27]], label [[PRED_LOAD_IF7:%.*]], label [[PRED_LOAD_CONTINUE8:%.*]]
@@ -889,8 +889,8 @@ define float @cond_cond(ptr noalias %src1, ptr noalias %src2, ptr noalias %cond,
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE14]]
 ; CHECK:       pred.load.continue14:
 ; CHECK-NEXT:    [[TMP46:%.*]] = phi <4 x float> [ [[TMP41]], [[PRED_LOAD_CONTINUE12]] ], [ [[TMP45]], [[PRED_LOAD_IF13]] ]
-; CHECK-NEXT:    [[TMP47:%.*]] = select <4 x i1> [[TMP26]], <4 x float> [[TMP46]], <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>
-; CHECK-NEXT:    [[PREDPHI15]] = fadd fast <4 x float> [[PREDPHI]], [[TMP47]]
+; CHECK-NEXT:    [[TMP47:%.*]] = fadd fast <4 x float> [[TMP46]], [[PREDPHI]]
+; CHECK-NEXT:    [[PREDPHI15]] = select <4 x i1> [[TMP26]], <4 x float> [[TMP47]], <4 x float> [[PREDPHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP48:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP48]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]

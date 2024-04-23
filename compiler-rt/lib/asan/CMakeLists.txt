@@ -71,7 +71,6 @@ SET(ASAN_HEADERS
   asan_interface.inc
   asan_interface_internal.h
   asan_internal.h
-  asan_lock.h
   asan_mapping.h
   asan_poisoning.h
   asan_premap_shadow.h
@@ -86,6 +85,9 @@ SET(ASAN_HEADERS
 include_directories(..)
 
 set(ASAN_CFLAGS ${SANITIZER_COMMON_CFLAGS})
+
+append_list_if(MSVC /Zl ASAN_CFLAGS)
+
 set(ASAN_COMMON_DEFINITIONS ${COMPILER_RT_ASAN_SHADOW_SCALE_DEFINITION})
 
 append_rtti_flag(OFF ASAN_CFLAGS)

@@ -26,8 +26,6 @@ SkipDeclarations["cwchar"] = ["std::FILE"]
 # The operators are added for private types like __iom_t10.
 SkipDeclarations["iomanip"] = ["std::operator<<", "std::operator>>"]
 
-SkipDeclarations["iosfwd"] = ["std::ios_base", "std::vector"]
-
 # This header also provides declarations in the namespace that might be
 # an error.
 SkipDeclarations["filesystem"] = [
@@ -54,17 +52,12 @@ SkipDeclarations["random"] = [
     "std::operator==",
 ]
 
-# Declared in the forward header since std::string uses std::allocator
-SkipDeclarations["string"] = ["std::allocator"]
 # TODO MODULES remove zombie names
 # https://libcxx.llvm.org/Status/Cxx20.html#note-p0619
 SkipDeclarations["memory"] = [
     "std::return_temporary_buffer",
     "std::get_temporary_buffer",
 ]
-
-# TODO MODULES this should be part of ios instead
-SkipDeclarations["streambuf"] = ["std::basic_ios"]
 
 # include/__type_traits/is_swappable.h
 SkipDeclarations["type_traits"] = [
@@ -93,7 +86,6 @@ ExtraDeclarations["system_error"] = ["std::operator<<"]
 ExtraHeader = dict()
 # locale has a file and not a subdirectory
 ExtraHeader["locale"] = "v1/__locale$"
-ExtraHeader["thread"] = "v1/__threading_support$"
 ExtraHeader["ranges"] = "v1/__fwd/subrange.h$"
 
 # The extra header is needed since two headers are required to provide the
@@ -113,18 +105,20 @@ class module_test_generator:
     clang_tidy_plugin: str
     compiler: str
     compiler_flags: str
+    module: str
 
     def write_lit_configuration(self):
         print(
             f"""\
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-std-modules
 // UNSUPPORTED: clang-modules-build
 
 // REQUIRES: has-clang-tidy
 
 // The GCC compiler flags are not always compatible with clang-tidy.
 // UNSUPPORTED: gcc
+
+// MODULE_DEPENDENCIES: {self.module}
 
 // RUN: echo -n > {self.tmp_prefix}.all_partitions
 """
@@ -141,14 +135,6 @@ class module_test_generator:
                 f"#  include <{header}>{nl}"
                 f"#endif{nl}"
             )
-        elif header == "chrono":
-            # When localization is disabled the header string is not included.
-            # When string is included chrono's operator""s is a named declaration
-            #   using std::chrono_literals::operator""s;
-            # else it is a named declaration
-            #   using std::operator""s;
-            # TODO MODULES investigate why
-            include = f"#include <string>{nl}#include <chrono>{nl}"
         else:
             include = f"#include <{header}>{nl}"
 

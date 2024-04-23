@@ -13,7 +13,7 @@ define void @mustalias_due_to_index_size(ptr %ptr) {
   load i8, ptr %ptr
   %gep.1 = getelementptr i8, ptr %ptr, i64 4294967296
   store i8 0, ptr %gep.1
-  %gep.2 = getelementptr i8, i8* %ptr, i64 0
+  %gep.2 = getelementptr i8, ptr %ptr, i64 0
   store i8 1, ptr %gep.2
   ret void
 }

@@ -84,6 +84,8 @@ protected:
                             SDNodeFlags Flags) const;
   SDValue lowerFEXP(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue lowerCTLZResults(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG, bool Signed) const;
@@ -449,6 +451,8 @@ enum NodeType : unsigned {
   FMED3,
   SMED3,
   UMED3,
+  FMAXIMUM3,
+  FMINIMUM3,
   FDOT2,
   URECIP,
   DIV_SCALE,
@@ -565,6 +569,10 @@ enum NodeType : unsigned {
   BUFFER_LOAD_FORMAT_TFE,
   BUFFER_LOAD_FORMAT_D16,
   SBUFFER_LOAD,
+  SBUFFER_LOAD_BYTE,
+  SBUFFER_LOAD_UBYTE,
+  SBUFFER_LOAD_SHORT,
+  SBUFFER_LOAD_USHORT,
   BUFFER_STORE,
   BUFFER_STORE_BYTE,
   BUFFER_STORE_SHORT,
@@ -585,8 +593,10 @@ enum NodeType : unsigned {
   BUFFER_ATOMIC_CMPSWAP,
   BUFFER_ATOMIC_CSUB,
   BUFFER_ATOMIC_FADD,
+  BUFFER_ATOMIC_FADD_BF16,
   BUFFER_ATOMIC_FMIN,
   BUFFER_ATOMIC_FMAX,
+  BUFFER_ATOMIC_COND_SUB_U32,
 
   LAST_AMDGPU_ISD_NUMBER
 };

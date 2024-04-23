@@ -107,11 +107,16 @@ subroutine p12
   type t2
     integer c2
   end type
+  type, bind(c) :: t3
+    integer c3
+  end type
   type(t1) :: x1
   type(t2) :: x2
+  type(t3) :: x3
   pointer(a, x1)
-  !ERROR: Type of Cray pointee 'x2' is a non-sequence derived type
+  !WARNING: Type of Cray pointee 'x2' is a derived type that is neither SEQUENCE nor BIND(C)
   pointer(b, x2)
+  pointer(c, x3)
 end
 
 subroutine p13
@@ -120,4 +125,13 @@ subroutine p13
   subroutine s
     pointer(ip, x) ! ok, local declaration
   end
+end
+
+subroutine p14
+  real :: r
+  block
+    asynchronous :: r
+    !ERROR: PARAMETER attribute not allowed on 'r'
+    parameter (r = 1.0)
+  end block
 end
