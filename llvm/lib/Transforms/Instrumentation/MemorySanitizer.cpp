@@ -1336,7 +1336,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  // Returns true if Debug Location curresponds to multiple warnings.
+  // Returns true if Debug Location corresponds to multiple warnings.
   bool shouldDisambiguateWarningLocation(const DebugLoc &DebugLoc) {
     if (MS.TrackOrigins < 2)
       return false;
