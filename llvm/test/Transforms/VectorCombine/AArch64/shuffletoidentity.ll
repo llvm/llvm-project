@@ -5,7 +5,7 @@ target triple = "aarch64"
 
 define <8 x i8> @trivial(<8 x i8> %a) {
 ; CHECK-LABEL: @trivial(
-; CHECK-NEXT:    ret <8 x i8> [[R:%.*]]
+; CHECK-NEXT:    ret <8 x i8> [[A:%.*]]
 ;
   %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %at = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
