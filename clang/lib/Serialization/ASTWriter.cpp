@@ -187,8 +187,8 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
       continue;
 
     const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
-    if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader) ||
-        (HFI->isTextualModuleHeader && !PP.alreadyIncluded(*File)))
+    if (!HFI || (!HFI->isCompilingModuleHeader &&
+                 (HFI->isModuleHeader || !PP.alreadyIncluded(*File))))
       continue;
 
     for (const auto &KH : HS.findResolvedModulesForHeader(*File)) {
@@ -238,8 +238,6 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
     CollectIncludingMapsFromAncestors(CurrentModule);
     for (const Module *ImportedModule : CurrentModule->Imports)
       CollectIncludingMapsFromAncestors(ImportedModule);
-    for (const Module *UsedModule : CurrentModule->DirectUses)
-      CollectIncludingMapsFromAncestors(UsedModule);
     for (const Module *UndeclaredModule : CurrentModule->UndeclaredUses)
       CollectIncludingMapsFromAncestors(UndeclaredModule);
   }
@@ -2061,11 +2059,11 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     // changed since it was loaded. Also skip it if it's for a modular header
     // from a different module; in that case, we rely on the module(s)
     // containing the header to provide this information. Also skip it if it's
-    // for a textual header from a different module that has not been included;
-    // in that case, we don't need the information at all.
+    // for any header not from this module that has not been included; in that
+    // case, we don't need the information at all.
     const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
-    if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader) ||
-        (HFI->isTextualModuleHeader && !PP->alreadyIncluded(*File)))
+    if (!HFI || (!HFI->isCompilingModuleHeader &&
+                 (HFI->isModuleHeader || !PP->alreadyIncluded(*File))))
       continue;
 
     // Massage the file path into an appropriate form.
