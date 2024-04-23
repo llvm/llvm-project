@@ -884,18 +884,19 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
 
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
+  using namespace llvm::VPlanPatternMatch;
   // Try to remove redundant blend recipes.
   if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
     VPValue *Inc0 = Blend->getIncomingValue(0);
     for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
-      if (Inc0 != Blend->getIncomingValue(I))
+      if (Inc0 != Blend->getIncomingValue(I) &&
+          !match(Blend->getMask(I), m_False()))
         return;
     Blend->replaceAllUsesWith(Inc0);
     Blend->eraseFromParent();
     return;
   }
 
-  using namespace llvm::VPlanPatternMatch;
   VPValue *A;
   if (match(&R, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
     VPValue *Trunc = R.getVPSingleValue();
