@@ -180,6 +180,30 @@ public:
 /// are not linearizable.
 bool isLinearizableVector(VectorType type);
 
+/// Create a TransferReadOp from `source` with static shape `readShape`. If the
+/// vector type for the read is not the same as the type of `source`, then a
+/// mask is created on the read, if use of mask is specified or the bounds on a
+/// dimension are different.
+///
+/// `useInBoundsInsteadOfMasking` if false, the inBoundsVal values are set
+/// properly, based on
+///   the rank dimensions of the source and destination tensors. And that is
+///   what determines if masking is done.
+///
+/// Note that the internal `vector::TransferReadOp` always read at indices zero
+/// for each dimension of the passed in tensor.
+Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
+                             ArrayRef<int64_t> readShape, Value padValue,
+                             bool useInBoundsInsteadOfMasking = true);
+
+/// Returns success if `inputVectorSizes` is a valid masking configuraion for
+/// given `shape`, i.e., it meets:
+///   1. The numbers of elements in both array are equal.
+///   2. `inputVectorSizes` does not have dynamic dimensions.
+///   3. All the values in `inputVectorSizes` are greater than or equal to
+///      static sizes in `shape`.
+LogicalResult isValidMaskedInputVector(ArrayRef<int64_t> shape,
+                                       ArrayRef<int64_t> inputVectorSizes);
 } // namespace vector
 
 /// Constructs a permutation map of invariant memref indices to vector

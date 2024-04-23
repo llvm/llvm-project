@@ -1410,46 +1410,6 @@ static SmallVector<int64_t> getTiledPackShape(tensor::PackOp packOp,
   return applyPermutation(destShape, tensor::getPackInverseDestPerm(packOp));
 }
 
-/// Create a TransferReadOp from `source` with static shape `readShape`. If the
-/// vector type for the read is not the same as the type of `source`, then a
-/// mask is created on the read.  If `doMasking` parameter is set to false we
-/// update the `inBounds` attribute instead of masking.
-static Value createReadOrMaskedRead(OpBuilder &builder, Location loc,
-                                    Value source, ArrayRef<int64_t> readShape,
-                                    Value padValue, bool doMasking = true) {
-  assert(llvm::none_of(readShape,
-                       [](int64_t s) { return s == ShapedType::kDynamic; }));
-  auto sourceShape = dyn_cast<ShapedType>(source.getType()).getShape();
-  assert(sourceShape.size() == readShape.size());
-  auto maskType = VectorType::get(readShape, builder.getI1Type());
-  auto vectorType = VectorType::get(readShape, padValue.getType());
-  int64_t readRank = readShape.size();
-  auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
-  SmallVector<bool> inBoundsVal(readRank, true);
-  if (!doMasking) {
-    // Update the inBounds attribute.
-    for (unsigned i = 0; i < readRank; i++)
-      inBoundsVal[i] = sourceShape[i] == readShape[i];
-  }
-  auto transferReadOp = builder.create<vector::TransferReadOp>(
-      loc,
-      /*vectorType=*/vectorType,
-      /*source=*/source,
-      /*indices=*/SmallVector<Value>(readRank, zero),
-      /*padding=*/padValue,
-      /*inBounds=*/inBoundsVal);
-
-  if (llvm::equal(readShape, sourceShape) || !doMasking) {
-    return transferReadOp;
-  }
-  SmallVector<OpFoldResult> mixedSourceDims =
-      tensor::getMixedSizes(builder, loc, source);
-  Value mask =
-      builder.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
-  return mlir::vector::maskOperation(builder, transferReadOp, mask)
-      ->getResult(0);
-}
-
 /// Given an input, the mixed destSizes, and the vector sizes for vectorization,
 /// create an empty destination tensor and create a TransferWriteOp from the
 /// input to the empty tensor. If the destination shape is not the same as the
@@ -1539,11 +1499,11 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
   // If the input vector sizes are not provided, then the vector sizes are
   // determined by the result tensor shape. In case the vector sizes aren't
   // provided, we update the inBounds attribute instead of masking.
-  bool doMasking = true;
+  bool useInBoundsInsteadOfMasking = true;
   if (inputVectorSizes.empty()) {
     ArrayRef<int64_t> resultTensorShape = packOp.getDestType().getShape();
     inputVectorSizes = resultTensorShape.take_front(packOp.getSourceRank());
-    doMasking = false;
+    useInBoundsInsteadOfMasking = false;
   }
 
   // Create masked TransferReadOp.
@@ -1556,8 +1516,9 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
                              invertPermutationVector(outerDimsPerm));
   for (auto [idx, size] : enumerate(innerTiles))
     inputShape[innerDimsPos[idx]] *= size;
-  auto maskedRead = createReadOrMaskedRead(rewriter, loc, packOp.getSource(),
-                                           inputShape, padValue, doMasking);
+  auto maskedRead = vector::createReadOrMaskedRead(
+      rewriter, loc, packOp.getSource(), inputShape, padValue,
+      useInBoundsInsteadOfMasking);
 
   // Create ShapeCastOp.
   SmallVector<int64_t> destShape(inputVectorSizes);
@@ -1649,7 +1610,7 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, tensor::UnPackOp unpackOp,
 
   // Read result, mask if necessary. If transferReadOp shape is not equal
   // to shape of source, then a mask is necessary.
-  Value readResult = createReadOrMaskedRead(
+  Value readResult = vector::createReadOrMaskedRead(
       rewriter, loc, unpackOp.getSource(),
       ArrayRef<int64_t>(readMaskShape.begin(), readMaskShape.end()), padValue);
 
@@ -1707,8 +1668,8 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
           .reifyResultShapes(rewriter, reifiedReturnShapes);
   (void)status; // prevent unused variable warning on non-assert builds
   assert(succeeded(status) && "failed to reify result shapes");
-  auto maskedRead = createReadOrMaskedRead(rewriter, loc, padOp.getSource(),
-                                           inputVectorSizes, padValue);
+  auto maskedRead = vector::createReadOrMaskedRead(
+      rewriter, loc, padOp.getSource(), inputVectorSizes, padValue);
   Operation *write = createWriteOrMaskedWrite(
       rewriter, loc, maskedRead, reifiedReturnShapes[0], inputVectorSizes);
   newResults.push_back(write->getResult(0));
@@ -1781,41 +1742,6 @@ vectorizeDynamicLinalgOpPrecondition(linalg::LinalgOp op,
   return success();
 }
 
-/// Returns success if `inputVectorSizes` is a valid masking configuraion for
-/// given `shape`, i.e., it meets:
-///   1. The numbers of elements in both array are equal.
-///   2. `inputVectorSizes` does not have dynamic dimensions.
-///   3. All the values in `inputVectorSizes` are greater than or equal to
-///      static sizes in `shape`.
-static LogicalResult
-isValidMaskedInputVector(ArrayRef<int64_t> shape,
-                         ArrayRef<int64_t> inputVectorSizes) {
-  LDBG("Iteration space static sizes:");
-  LLVM_DEBUG(llvm::interleaveComma(shape, llvm::dbgs()));
-  LLVM_DEBUG(llvm::dbgs() << "\n");
-
-  if (inputVectorSizes.size() != shape.size()) {
-    LDBG("Input vector sizes don't match the number of loops");
-    return failure();
-  }
-  if (ShapedType::isDynamicShape(inputVectorSizes)) {
-    LDBG("Input vector sizes can't have dynamic dimensions");
-    return failure();
-  }
-  if (!llvm::all_of(llvm::zip(shape, inputVectorSizes),
-                    [](std::tuple<int64_t, int64_t> sizePair) {
-                      int64_t staticSize = std::get<0>(sizePair);
-                      int64_t inputSize = std::get<1>(sizePair);
-                      return ShapedType::isDynamic(staticSize) ||
-                             staticSize <= inputSize;
-                    })) {
-    LDBG("Input vector sizes must be greater than or equal to iteration space "
-         "static sizes");
-    return failure();
-  }
-  return success();
-}
-
 /// Need to check if the inner-tiles are static/constant.
 static LogicalResult
 vectorizeUnPackOpPrecondition(tensor::UnPackOp unpackOp,
@@ -1829,7 +1755,7 @@ vectorizeUnPackOpPrecondition(tensor::UnPackOp unpackOp,
   }
   llvm::ArrayRef<int64_t> resultShape = unpackOp.getDestType().getShape();
   if (!inputVectorSizes.empty() &&
-      failed(isValidMaskedInputVector(resultShape, inputVectorSizes)))
+      failed(vector::isValidMaskedInputVector(resultShape, inputVectorSizes)))
     return failure();
 
   return success();
@@ -1843,8 +1769,8 @@ static LogicalResult vectorizeLinalgOpPrecondition(
     return failure();
   // Check API contract for input vector sizes.
   if (!inputVectorSizes.empty() &&
-      failed(isValidMaskedInputVector(linalgOp.getStaticLoopRanges(),
-                                      inputVectorSizes)))
+      failed(vector::isValidMaskedInputVector(linalgOp.getStaticLoopRanges(),
+                                              inputVectorSizes)))
     return failure();
 
   if (linalgOp.hasDynamicShape() && failed(vectorizeDynamicLinalgOpPrecondition(
@@ -1920,7 +1846,7 @@ vectorizePackOpPrecondition(tensor::PackOp packOp,
   }
 
   if (!satisfyEmptyCond &&
-      failed(isValidMaskedInputVector(
+      failed(vector::isValidMaskedInputVector(
           resultTensorShape.take_front(packOp.getSourceRank()),
           inputVectorSizes)))
     return failure();
@@ -1945,7 +1871,8 @@ vectorizePadOpPrecondition(tensor::PadOp padOp,
   }
 
   ArrayRef<int64_t> resultTensorShape = padOp.getResultType().getShape();
-  if (failed(isValidMaskedInputVector(resultTensorShape, inputVectorSizes)))
+  if (failed(vector::isValidMaskedInputVector(resultTensorShape,
+                                              inputVectorSizes)))
     return failure();
 
   if (llvm::any_of(padOp.getLow(), [](Value v) {
