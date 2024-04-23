@@ -301,16 +301,34 @@ static void genBoxCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
                            ReductionProcessor::ReductionIdentifier redId,
                            fir::BaseBoxType boxTy, mlir::Value lhs,
                            mlir::Value rhs) {
-  fir::SequenceType seqTy =
-      mlir::dyn_cast_or_null<fir::SequenceType>(boxTy.getEleTy());
-  // TODO: support allocatable arrays: !fir.box<!fir.heap<!fir.array<...>>>
-  if (!seqTy || seqTy.hasUnknownShape())
+  fir::SequenceType seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(
+      fir::unwrapRefType(boxTy.getEleTy()));
+  fir::HeapType heapTy =
+      mlir::dyn_cast_or_null<fir::HeapType>(boxTy.getEleTy());
+  if ((!seqTy || seqTy.hasUnknownShape()) && !heapTy)
     TODO(loc, "Unsupported boxed type in OpenMP reduction");
 
   // load fir.ref<fir.box<...>>
   mlir::Value lhsAddr = lhs;
   lhs = builder.create<fir::LoadOp>(loc, lhs);
   rhs = builder.create<fir::LoadOp>(loc, rhs);
+
+  if (heapTy && !seqTy) {
+    // get box contents (heap pointers)
+    lhs = builder.create<fir::BoxAddrOp>(loc, lhs);
+    rhs = builder.create<fir::BoxAddrOp>(loc, rhs);
+    mlir::Value lhsValAddr = lhs;
+
+    // load heap pointers
+    lhs = builder.create<fir::LoadOp>(loc, lhs);
+    rhs = builder.create<fir::LoadOp>(loc, rhs);
+
+    mlir::Value result = ReductionProcessor::createScalarCombiner(
+        builder, loc, redId, heapTy.getEleTy(), lhs, rhs);
+    builder.create<fir::StoreOp>(loc, result, lhsValAddr);
+    builder.create<mlir::omp::YieldOp>(loc, lhsAddr);
+    return;
+  }
 
   const unsigned rank = seqTy.getDimension();
   llvm::SmallVector<mlir::Value> extents;
@@ -337,6 +355,10 @@ static void genBoxCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
       builder.create<fir::ShapeShiftOp>(loc, shapeShiftTy, lbAndExtents);
 
   // Iterate over array elements, applying the equivalent scalar reduction:
+
+  // F2018 5.4.10.2: Unallocated allocatable variables may not be referenced
+  // and so no null check is needed here before indexing into the (possibly
+  // allocatable) arrays.
 
   // A hlfir::elemental here gets inlined with a temporary so create the
   // loop nest directly.
@@ -412,9 +434,11 @@ createReductionCleanupRegion(fir::FirOpBuilder &builder, mlir::Location loc,
 
   mlir::Type valTy = fir::unwrapRefType(redTy);
   if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(valTy)) {
-    mlir::Type innerTy = fir::extractSequenceType(boxTy);
-    if (!mlir::isa<fir::SequenceType>(innerTy))
-      typeError();
+    if (!mlir::isa<fir::HeapType>(boxTy.getEleTy())) {
+      mlir::Type innerTy = fir::extractSequenceType(boxTy);
+      if (!mlir::isa<fir::SequenceType>(innerTy))
+        typeError();
+    }
 
     mlir::Value arg = block->getArgument(0);
     arg = builder.loadIfRef(loc, arg);
@@ -443,6 +467,19 @@ createReductionCleanupRegion(fir::FirOpBuilder &builder, mlir::Location loc,
   typeError();
 }
 
+// like fir::unwrapSeqOrBoxedSeqType except it also works for non-sequence boxes
+static mlir::Type unwrapSeqOrBoxedType(mlir::Type ty) {
+  if (auto seqTy = ty.dyn_cast<fir::SequenceType>())
+    return seqTy.getEleTy();
+  if (auto boxTy = ty.dyn_cast<fir::BaseBoxType>()) {
+    auto eleTy = fir::unwrapRefType(boxTy.getEleTy());
+    if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>())
+      return seqTy.getEleTy();
+    return eleTy;
+  }
+  return ty;
+}
+
 static mlir::Value
 createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
                           mlir::omp::DeclareReductionOp &reductionDecl,
@@ -450,7 +487,7 @@ createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
                           mlir::Type type, bool isByRef) {
   mlir::Type ty = fir::unwrapRefType(type);
   mlir::Value initValue = ReductionProcessor::getReductionInitValue(
-      loc, fir::unwrapSeqOrBoxedSeqType(ty), redId, builder);
+      loc, unwrapSeqOrBoxedType(ty), redId, builder);
 
   if (fir::isa_trivial(ty)) {
     if (isByRef) {
@@ -462,15 +499,69 @@ createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
     return initValue;
   }
 
+  // check if an allocatable box is unallocated. If so, initialize the boxAlloca
+  // to be unallocated e.g.
+  // %box_alloca = fir.alloca !fir.box<!fir.heap<...>>
+  // %addr = fir.box_addr %box
+  // if (%addr == 0) {
+  //   %nullbox = fir.embox %addr
+  //   fir.store %nullbox to %box_alloca
+  // } else {
+  //   // ...
+  //   fir.store %something to %box_alloca
+  // }
+  // omp.yield %box_alloca
+  mlir::Value blockArg =
+      builder.loadIfRef(loc, builder.getBlock()->getArgument(0));
+  auto handleNullAllocatable = [&](mlir::Value boxAlloca) -> fir::IfOp {
+    mlir::Value addr = builder.create<fir::BoxAddrOp>(loc, blockArg);
+    mlir::Value isNotAllocated = builder.genIsNullAddr(loc, addr);
+    fir::IfOp ifOp = builder.create<fir::IfOp>(loc, isNotAllocated,
+                                               /*withElseRegion=*/true);
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    // just embox the null address and return
+    mlir::Value nullBox = builder.create<fir::EmboxOp>(loc, ty, addr);
+    builder.create<fir::StoreOp>(loc, nullBox, boxAlloca);
+    return ifOp;
+  };
+
   // all arrays are boxed
   if (auto boxTy = mlir::dyn_cast_or_null<fir::BaseBoxType>(ty)) {
-    assert(isByRef && "passing arrays by value is unsupported");
-    // TODO: support allocatable arrays: !fir.box<!fir.heap<!fir.array<...>>>
-    mlir::Type innerTy = fir::extractSequenceType(boxTy);
+    assert(isByRef && "passing boxes by value is unsupported");
+    bool isAllocatable = mlir::isa<fir::HeapType>(boxTy.getEleTy());
+    mlir::Value boxAlloca = builder.create<fir::AllocaOp>(loc, ty);
+    mlir::Type innerTy = fir::unwrapRefType(boxTy.getEleTy());
+    if (fir::isa_trivial(innerTy)) {
+      // boxed non-sequence value e.g. !fir.box<!fir.heap<i32>>
+      if (!isAllocatable)
+        TODO(loc, "Reduction of non-allocatable trivial typed box");
+
+      fir::IfOp ifUnallocated = handleNullAllocatable(boxAlloca);
+
+      builder.setInsertionPointToStart(&ifUnallocated.getElseRegion().front());
+      mlir::Value valAlloc = builder.create<fir::AllocMemOp>(loc, innerTy);
+      builder.createStoreWithConvert(loc, initValue, valAlloc);
+      mlir::Value box = builder.create<fir::EmboxOp>(loc, ty, valAlloc);
+      builder.create<fir::StoreOp>(loc, box, boxAlloca);
+
+      auto insPt = builder.saveInsertionPoint();
+      createReductionCleanupRegion(builder, loc, reductionDecl);
+      builder.restoreInsertionPoint(insPt);
+      builder.setInsertionPointAfter(ifUnallocated);
+      return boxAlloca;
+    }
+    innerTy = fir::extractSequenceType(boxTy);
     if (!mlir::isa<fir::SequenceType>(innerTy))
       TODO(loc, "Unsupported boxed type for reduction");
+
+    fir::IfOp ifUnallocated{nullptr};
+    if (isAllocatable) {
+      ifUnallocated = handleNullAllocatable(boxAlloca);
+      builder.setInsertionPointToStart(&ifUnallocated.getElseRegion().front());
+    }
+
     // Create the private copy from the initial fir.box:
-    hlfir::Entity source = hlfir::Entity{builder.getBlock()->getArgument(0)};
+    hlfir::Entity source = hlfir::Entity{blockArg};
 
     // Allocating on the heap in case the whole reduction is nested inside of a
     // loop
@@ -478,9 +569,10 @@ createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
     // work by inserting stacksave/stackrestore around the reduction in
     // openmpirbuilder
     auto [temp, needsDealloc] = createTempFromMold(loc, builder, source);
-    // if needsDealloc isn't statically false, add cleanup region. TODO: always
+    // if needsDealloc isn't statically false, add cleanup region. Always
     // do this for allocatable boxes because they might have been re-allocated
     // in the body of the loop/parallel region
+
     std::optional<int64_t> cstNeedsDealloc =
         fir::getIntIfConstant(needsDealloc);
     assert(cstNeedsDealloc.has_value() &&
@@ -488,13 +580,18 @@ createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
     if (cstNeedsDealloc.has_value() && *cstNeedsDealloc != false) {
       mlir::OpBuilder::InsertionGuard guard(builder);
       createReductionCleanupRegion(builder, loc, reductionDecl);
+    } else {
+      assert(!isAllocatable && "Allocatable arrays must be heap allocated");
     }
 
     // Put the temporary inside of a box:
     hlfir::Entity box = hlfir::genVariableBox(loc, builder, temp);
-    builder.create<hlfir::AssignOp>(loc, initValue, box);
-    mlir::Value boxAlloca = builder.create<fir::AllocaOp>(loc, ty);
-    builder.create<fir::StoreOp>(loc, box, boxAlloca);
+    // hlfir::genVariableBox removes fir.heap<> around the element type
+    mlir::Value convertedBox = builder.createConvert(loc, ty, box.getBase());
+    builder.create<hlfir::AssignOp>(loc, initValue, convertedBox);
+    builder.create<fir::StoreOp>(loc, convertedBox, boxAlloca);
+    if (ifUnallocated)
+      builder.setInsertionPointAfter(ifUnallocated);
     return boxAlloca;
   }
 
