@@ -8,7 +8,7 @@
 //
 // This tablegen backend exports information about CPUs, FPUs, architectures,
 // and features into a common format that can be used by both TargetParser and
-// the ARM backend.
+// the ARM and AArch64 backends.
 //
 //===----------------------------------------------------------------------===//
 
@@ -44,24 +44,20 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
      << "#endif\n\n";
   const StringSet<> ARMProcFamilyVals =
       gatherSubtargetFeatureFieldValues("ARMProcFamily");
-  for (const StringRef &Family : ARMProcFamilyVals.keys()) {
+  for (const StringRef &Family : ARMProcFamilyVals.keys())
     OS << "ARM_PROCESSOR_FAMILY(" << Family << ")\n";
-  }
-  OS << "\n#undef ARM_PROCESSOR_FAMILY\n";
-  OS << "\n";
+  OS << "\n#undef ARM_PROCESSOR_FAMILY\n\n";
 
   OS << "#ifndef ARM_ARCHITECTURE\n"
      << "#define ARM_ARCHITECTURE(ENUM)\n"
      << "#endif\n\n";
   // This should correspond to instances of the Architecture tablegen class.
   const StringSet<> ARMArchVals = gatherSubtargetFeatureFieldValues("ARMArch");
-  for (const StringRef &Arch : ARMArchVals.keys()) {
+  for (const StringRef &Arch : ARMArchVals.keys())
     OS << "ARM_ARCHITECTURE(" << Arch << ")\n";
-  }
-  OS << "\n#undef ARM_ARCHITECTURE\n";
-  OS << "\n";
+  OS << "\n#undef ARM_ARCHITECTURE\n\n";
 }
 
 static TableGen::Emitter::Opt
     X("gen-arm-target-def", EmitARMTargetDef,
-      "Generate the ARM Architecture information header.");
+      "Generate the ARM or AArch64 Architecture information header.");
