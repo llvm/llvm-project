@@ -73,6 +73,23 @@ def ApplyTilingCanonicalizationPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyTransposeMatmulPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.transpose_matmul",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns to convert Linalg matmul ops to transposed variants.
+
+    By default the LHS matrix is transposed. Set `inputToTranspose=<rhs>` to
+    instead transpose RHS matrix.
+  }];
+
+  let arguments = (ins
+    DefaultValuedAttr<TransposeMatmulInput,
+                      "TransposeMatmulInput::lhs">:$inputToTranspose);
+
+  let assemblyFormat = "(`<` $inputToTranspose^ `>`)? attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
