@@ -3884,7 +3884,8 @@ public:
 
   data_type ImportData(const reader::ASTDeclContextNameLookupTrait::data_type &FromReader) {
     unsigned Start = DeclIDs.size();
-    llvm::append_range(DeclIDs, FromReader);
+    DeclIDs.insert(DeclIDs.end(), DeclIDIterator(FromReader.begin()),
+                   DeclIDIterator(FromReader.end()));
     return std::make_pair(Start, DeclIDs.size());
   }
 
