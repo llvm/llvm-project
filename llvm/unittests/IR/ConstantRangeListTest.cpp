@@ -16,20 +16,26 @@ namespace {
 using ConstantRangeListTest = ::testing::Test;
 
 TEST_F(ConstantRangeListTest, Basics) {
-  ConstantRangeList CRL1;
-  CRL1.insert(0, 4);
-  CRL1.insert(8, 12);
-  EXPECT_FALSE(CRL1.empty());
+  ConstantRangeList CRL1a;
+  CRL1a.insert(0, 12);
+  EXPECT_FALSE(CRL1a.empty());
+
+  ConstantRangeList CRL1b;
+  CRL1b.insert(0, 4);
+  CRL1b.insert(4, 8);
+  CRL1b.insert(8, 12);
+  EXPECT_TRUE(CRL1a == CRL1b);
+
+  ConstantRangeList CRL1c;
+  CRL1c.insert(0, 4);
+  CRL1c.insert(8, 12);
+  CRL1c.insert(4, 8);
+  EXPECT_TRUE(CRL1a == CRL1c);
 
   ConstantRangeList CRL2;
-  CRL2.insert(0, 4);
+  CRL2.insert(-4, 0);
   CRL2.insert(8, 12);
-  EXPECT_TRUE(CRL1 == CRL2);
-
-  ConstantRangeList CRL3;
-  CRL3.insert(-4, 0);
-  CRL3.insert(8, 12);
-  EXPECT_TRUE(CRL1 != CRL3);
+  EXPECT_TRUE(CRL1a != CRL2);
 }
 
 TEST_F(ConstantRangeListTest, Insert) {

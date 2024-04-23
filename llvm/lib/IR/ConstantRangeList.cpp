@@ -45,7 +45,8 @@ void ConstantRangeList::insert(const ConstantRange &NewRange) {
                        });
   SmallVector<ConstantRange, 2> ExistingTail(LowerBound, Ranges.end());
   Ranges.erase(LowerBound, Ranges.end());
-  if (!Ranges.empty() && NewRange.getLower().slt(Ranges.back().getUpper())) {
+  // "sle" instead of "slt" to merge consecutive ranges.
+  if (!Ranges.empty() && NewRange.getLower().sle(Ranges.back().getUpper())) {
     APInt NewLower = Ranges.back().getLower();
     APInt NewUpper =
         APIntOps::smax(NewRange.getUpper(), Ranges.back().getUpper());
