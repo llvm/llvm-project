@@ -377,7 +377,7 @@ public:
 
       // Determine the length of the key and the data.
       const std::pair<offset_type, offset_type> &L =
-          InfoPtr->ReadKeyDataLength(Items);
+          Info::ReadKeyDataLength(Items);
       offset_type ItemLen = L.first + L.second;
 
       // Compare the hashes.  If they are not the same, skip the entry entirely.

@@ -471,16 +471,12 @@ public:
 
   hash_value_type ComputeHash(uint64_t K) { return K; }
 
-  std::pair<offset_type, offset_type>
+  static std::pair<offset_type, offset_type>
   ReadKeyDataLength(const unsigned char *&D) {
     using namespace support;
 
-    // Starting with Version2, we don't read the key length because it is a
-    // constant.
     offset_type KeyLen =
-        Version < Version2
-            ? endian::readNext<offset_type, llvm::endianness::little>(D)
-            : sizeof(uint64_t);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     offset_type DataLen =
         endian::readNext<offset_type, llvm::endianness::little>(D);
     return std::make_pair(KeyLen, DataLen);
@@ -538,9 +534,7 @@ public:
 
     endian::Writer LE(Out, llvm::endianness::little);
     offset_type N = sizeof(K);
-    // Starting with Version2, we omit the key length because it is a constant.
-    if (Version < Version2)
-      LE.write<offset_type>(N);
+    LE.write<offset_type>(N);
     offset_type M = V.serializedSize(Version);
     LE.write<offset_type>(M);
     return std::make_pair(N, M);
