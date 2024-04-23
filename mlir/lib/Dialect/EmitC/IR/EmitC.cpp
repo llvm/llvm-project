@@ -882,13 +882,6 @@ LogicalResult emitc::SubscriptOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// TableGen'd op method definitions
-//===----------------------------------------------------------------------===//
-
-#define GET_OP_CLASSES
-#include "mlir/Dialect/EmitC/IR/EmitC.cpp.inc"
-
-//===----------------------------------------------------------------------===//
 // EmitC Enums
 //===----------------------------------------------------------------------===//
 
@@ -987,3 +980,114 @@ LogicalResult mlir::emitc::OpaqueType::verify(
   }
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// GlobalOp
+//===----------------------------------------------------------------------===//
+static void printEmitCGlobalOpTypeAndInitialValue(OpAsmPrinter &p, GlobalOp op,
+                                                  TypeAttr type,
+                                                  Attribute initialValue) {
+  p << type;
+  if (initialValue) {
+    p << " = ";
+    p.printAttributeWithoutType(initialValue);
+  }
+}
+
+static Type getInitializerTypeForGlobal(Type type) {
+  if (auto array = llvm::dyn_cast<ArrayType>(type))
+    return RankedTensorType::get(array.getShape(), array.getElementType());
+  return type;
+}
+
+static ParseResult
+parseEmitCGlobalOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
+                                      Attribute &initialValue) {
+  Type type;
+  if (parser.parseType(type))
+    return failure();
+
+  typeAttr = TypeAttr::get(type);
+
+  if (parser.parseOptionalEqual())
+    return success();
+
+  if (parser.parseAttribute(initialValue, getInitializerTypeForGlobal(type)))
+    return failure();
+
+  if (!llvm::isa<ElementsAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>(
+          initialValue))
+    return parser.emitError(parser.getNameLoc())
+           << "initial value should be a integer, float, elements or opaque "
+              "attribute";
+  return success();
+}
+
+LogicalResult GlobalOp::verify() {
+  if (!isSupportedEmitCType(getType())) {
+    return emitOpError("expected valid emitc type");
+  }
+  if (getInitialValue().has_value()) {
+    Attribute initValue = getInitialValue().value();
+    // Check that the type of the initial value is compatible with the type of
+    // the global variable.
+    if (auto elementsAttr = llvm::dyn_cast<ElementsAttr>(initValue)) {
+      auto arrayType = llvm::dyn_cast<ArrayType>(getType());
+      if (!arrayType)
+        return emitOpError("expected array type, but got ") << getType();
+
+      Type initType = elementsAttr.getType();
+      Type tensorType = getInitializerTypeForGlobal(getType());
+      if (initType != tensorType) {
+        return emitOpError("initial value expected to be of type ")
+               << getType() << ", but was of type " << initType;
+      }
+    } else if (auto intAttr = dyn_cast<IntegerAttr>(initValue)) {
+      if (intAttr.getType() != getType()) {
+        return emitOpError("initial value expected to be of type ")
+               << getType() << ", but was of type " << intAttr.getType();
+      }
+    } else if (auto floatAttr = dyn_cast<FloatAttr>(initValue)) {
+      if (floatAttr.getType() != getType()) {
+        return emitOpError("initial value expected to be of type ")
+               << getType() << ", but was of type " << floatAttr.getType();
+      }
+    } else if (!isa<emitc::OpaqueAttr>(initValue)) {
+      return emitOpError("initial value should be a integer, float, elements "
+                         "or opaque attribute, but got ")
+             << initValue;
+    }
+  }
+  if (getStaticSpecifier() && getExternSpecifier()) {
+    return emitOpError("cannot have both static and extern specifiers");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetGlobalOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // Verify that the type matches the type of the global variable.
+  auto global =
+      symbolTable.lookupNearestSymbolFrom<GlobalOp>(*this, getNameAttr());
+  if (!global)
+    return emitOpError("'")
+           << getName() << "' does not reference a valid emitc.global";
+
+  Type resultType = getResult().getType();
+  if (global.getType() != resultType)
+    return emitOpError("result type ")
+           << resultType << " does not match type " << global.getType()
+           << " of the global @" << getName();
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// TableGen'd op method definitions
+//===----------------------------------------------------------------------===//
+
+#define GET_OP_CLASSES
+#include "mlir/Dialect/EmitC/IR/EmitC.cpp.inc"
