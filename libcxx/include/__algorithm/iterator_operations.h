@@ -125,8 +125,8 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 static _Distance
   __advance(_RandIter& __iter, _Distance __count, const _RandIter& __sentinel, random_access_iterator_tag) {
     auto __dist = _IterOps::distance(__iter, __sentinel);
-    _LIBCPP_ASSERT_UNCATEGORIZED(
-        __count == 0 || (__dist < 0) == (__count < 0), "__sentinel must precede __iter when __count<0");
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+        __count == 0 || (__dist < 0) == (__count < 0), "__sentinel must precede __iter when __count < 0");
     if (__count < 0)
       __dist = __dist > __count ? __dist : __count;
     else
