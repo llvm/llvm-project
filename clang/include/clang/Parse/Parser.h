@@ -313,7 +313,15 @@ class Parser : public CodeCompletionHandler {
   /// top-level declaration is finished.
   SmallVector<TemplateIdAnnotation *, 16> TemplateIds;
 
+  /// Don't destroy template annotations in MaybeDestroyTemplateIds even if
+  /// we're at the end of a declaration. Instead, we defer the destruction until
+  /// after a top-level declaration.
+  /// Use DelayTemplateIdDestructionRAII rather than setting it directly.
+  bool DelayTemplateIdDestruction = false;
+
   void MaybeDestroyTemplateIds() {
+    if (DelayTemplateIdDestruction)
+      return;
     if (!TemplateIds.empty() &&
         (Tok.is(tok::eof) || !PP.mightHavePendingAnnotationTokens()))
       DestroyTemplateIds();
@@ -327,6 +335,22 @@ class Parser : public CodeCompletionHandler {
 
     DestroyTemplateIdAnnotationsRAIIObj(Parser &Self) : Self(Self) {}
     ~DestroyTemplateIdAnnotationsRAIIObj() { Self.MaybeDestroyTemplateIds(); }
+  };
+
+  struct DelayTemplateIdDestructionRAII {
+    Parser &Self;
+    bool PrevDelayTemplateIdDestruction;
+
+    DelayTemplateIdDestructionRAII(Parser &Self,
+                                   bool DelayTemplateIdDestruction) noexcept
+        : Self(Self),
+          PrevDelayTemplateIdDestruction(Self.DelayTemplateIdDestruction) {
+      Self.DelayTemplateIdDestruction = DelayTemplateIdDestruction;
+    }
+
+    ~DelayTemplateIdDestructionRAII() noexcept {
+      Self.DelayTemplateIdDestruction = PrevDelayTemplateIdDestruction;
+    }
   };
 
   /// Identifiers which have been declared within a tentative parse.
