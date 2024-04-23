@@ -162,7 +162,7 @@ def is_header(file):
 
 
 def is_public_header(header):
-    return not header.startswith("__")
+    return "__" not in header and not header.startswith("ext/")
 
 
 def is_modulemap_header(header):
