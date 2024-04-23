@@ -79,6 +79,9 @@ public:
   // scalar access [simd.mask.subscr]
   _LIBCPP_HIDE_FROM_ABI reference operator[](size_t __i) noexcept { return reference(__s_, __i); }
   _LIBCPP_HIDE_FROM_ABI value_type operator[](size_t __i) const noexcept { return __s_.__get(__i); }
+
+  // unary operators
+  _LIBCPP_HIDE_FROM_ABI simd_mask operator!() const noexcept { return simd_mask(_Impl::__negate(__s_), __storage_tag); }
 };
 
 template <class _Tp, class _Abi>
