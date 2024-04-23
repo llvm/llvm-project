@@ -57,6 +57,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/Casting.h"
@@ -1984,6 +1985,16 @@ public:
   }
 };
 
+static mlir::LLVM::CallIntrinsicOp
+createCallLLVMIntrinsicOp(mlir::ConversionPatternRewriter &rewriter,
+                          mlir::Location loc, const llvm::Twine &intrinsicName,
+                          mlir::Type resultTy, mlir::ValueRange operands) {
+  auto intrinsicNameAttr =
+      mlir::StringAttr::get(rewriter.getContext(), intrinsicName);
+  return rewriter.create<mlir::LLVM::CallIntrinsicOp>(
+      loc, resultTy, intrinsicNameAttr, operands);
+}
+
 static mlir::Value createLLVMBitOp(mlir::Location loc,
                                    const llvm::Twine &llvmIntrinBaseName,
                                    mlir::Type resultTy, mlir::Value operand,
@@ -1996,8 +2007,6 @@ static mlir::Value createLLVMBitOp(mlir::Location loc,
       llvmIntrinBaseName.concat(".i")
           .concat(std::to_string(operandIntTy.getWidth()))
           .str();
-  auto llvmIntrinNameAttr =
-      mlir::StringAttr::get(rewriter.getContext(), llvmIntrinName);
 
   // Note that LLVM intrinsic calls to bit intrinsics have the same type as the
   // operand.
@@ -2005,12 +2014,12 @@ static mlir::Value createLLVMBitOp(mlir::Location loc,
   if (poisonZeroInputFlag.has_value()) {
     auto poisonZeroInputValue = rewriter.create<mlir::LLVM::ConstantOp>(
         loc, rewriter.getI1Type(), static_cast<int64_t>(*poisonZeroInputFlag));
-    op = rewriter.create<mlir::LLVM::CallIntrinsicOp>(
-        loc, operand.getType(), llvmIntrinNameAttr,
-        mlir::ValueRange{operand, poisonZeroInputValue});
+    op = createCallLLVMIntrinsicOp(rewriter, loc, llvmIntrinName,
+                                   operand.getType(),
+                                   {operand, poisonZeroInputValue});
   } else {
-    op = rewriter.create<mlir::LLVM::CallIntrinsicOp>(
-        loc, operand.getType(), llvmIntrinNameAttr, operand);
+    op = createCallLLVMIntrinsicOp(rewriter, loc, llvmIntrinName,
+                                   operand.getType(), operand);
   }
 
   mlir::Value result = op->getResult(0);
@@ -2864,6 +2873,68 @@ class CIRIsConstantOpLowering
   }
 };
 
+class CIRCmpThreeWayOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::CmpThreeWayOp> {
+public:
+  using mlir::OpConversionPattern<
+      mlir::cir::CmpThreeWayOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::CmpThreeWayOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    if (!op.isIntegralComparison() || !op.isStrongOrdering()) {
+      op.emitError() << "unsupported three-way comparison type";
+      return mlir::failure();
+    }
+
+    auto cmpInfo = op.getInfo();
+    assert(cmpInfo.getLt() == -1 && cmpInfo.getEq() == 0 &&
+           cmpInfo.getGt() == 1);
+
+    auto operandTy = op.getLhs().getType().cast<mlir::cir::IntType>();
+    auto resultTy = op.getType();
+    auto llvmIntrinsicName = getLLVMIntrinsicName(
+        operandTy.isSigned(), operandTy.getWidth(), resultTy.getWidth());
+
+    rewriter.setInsertionPoint(op);
+
+    auto llvmLhs = adaptor.getLhs();
+    auto llvmRhs = adaptor.getRhs();
+    auto llvmResultTy = getTypeConverter()->convertType(resultTy);
+    auto callIntrinsicOp =
+        createCallLLVMIntrinsicOp(rewriter, op.getLoc(), llvmIntrinsicName,
+                                  llvmResultTy, {llvmLhs, llvmRhs});
+
+    rewriter.replaceOp(op, callIntrinsicOp);
+    return mlir::success();
+  }
+
+private:
+  static std::string getLLVMIntrinsicName(bool signedCmp, unsigned operandWidth,
+                                          unsigned resultWidth) {
+    // The intrinsic's name takes the form:
+    // `llvm.<scmp|ucmp>.i<resultWidth>.i<operandWidth>`
+
+    std::string result = "llvm.";
+
+    if (signedCmp)
+      result.append("scmp.");
+    else
+      result.append("ucmp.");
+
+    // Result type part.
+    result.push_back('i');
+    result.append(std::to_string(resultWidth));
+    result.push_back('.');
+
+    // Operand type part.
+    result.push_back('i');
+    result.append(std::to_string(operandWidth));
+
+    return result;
+  }
+};
+
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRReturnLowering>(patterns.getContext());
@@ -2886,8 +2957,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
       CIRVectorShuffleVecLowering, CIRStackSaveLowering,
       CIRStackRestoreLowering, CIRUnreachableLowering, CIRTrapLowering,
       CIRInlineAsmOpLowering, CIRSetBitfieldLowering, CIRGetBitfieldLowering,
-      CIRPrefetchLowering, CIRObjSizeOpLowering, CIRIsConstantOpLowering>(
-      converter, patterns.getContext());
+      CIRPrefetchLowering, CIRObjSizeOpLowering, CIRIsConstantOpLowering,
+      CIRCmpThreeWayOpLowering>(converter, patterns.getContext());
 }
 
 namespace {

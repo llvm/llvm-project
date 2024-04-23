@@ -265,9 +265,81 @@ FuncOp LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(GlobalOp op) {
   return f;
 }
 
+static void canonicalizeIntrinsicThreeWayCmp(CIRBaseBuilderTy &builder,
+                                             CmpThreeWayOp op) {
+  auto loc = op->getLoc();
+  auto cmpInfo = op.getInfo();
+
+  if (cmpInfo.getLt() == -1 && cmpInfo.getEq() == 0 && cmpInfo.getGt() == 1) {
+    // The comparison is already in canonicalized form.
+    return;
+  }
+
+  auto canonicalizedCmpInfo =
+      mlir::cir::CmpThreeWayInfoAttr::get(builder.getContext(), -1, 0, 1);
+  mlir::Value result =
+      builder
+          .create<mlir::cir::CmpThreeWayOp>(loc, op.getType(), op.getLhs(),
+                                            op.getRhs(), canonicalizedCmpInfo)
+          .getResult();
+
+  auto compareAndYield = [&](mlir::Value input, int64_t test,
+                             int64_t yield) -> mlir::Value {
+    // Create a conditional branch that tests whether `input` is equal to
+    // `test`. If `input` is equal to `test`, yield `yield`. Otherwise, yield
+    // `input` as is.
+    auto testValue = builder.getConstant(
+        loc, mlir::cir::IntAttr::get(input.getType(), test));
+    auto yieldValue = builder.getConstant(
+        loc, mlir::cir::IntAttr::get(input.getType(), yield));
+    auto eqToTest =
+        builder.createCompare(loc, mlir::cir::CmpOpKind::eq, input, testValue);
+    return builder
+        .create<mlir::cir::TernaryOp>(
+            loc, eqToTest,
+            [&](OpBuilder &, Location) {
+              builder.create<mlir::cir::YieldOp>(loc,
+                                                 mlir::ValueRange{yieldValue});
+            },
+            [&](OpBuilder &, Location) {
+              builder.create<mlir::cir::YieldOp>(loc, mlir::ValueRange{input});
+            })
+        ->getResult(0);
+  };
+
+  if (cmpInfo.getLt() != -1)
+    result = compareAndYield(result, -1, cmpInfo.getLt());
+
+  if (cmpInfo.getEq() != 0)
+    result = compareAndYield(result, 0, cmpInfo.getEq());
+
+  if (cmpInfo.getGt() != 1)
+    result = compareAndYield(result, 1, cmpInfo.getGt());
+
+  op.replaceAllUsesWith(result);
+  op.erase();
+}
+
 void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
+
+  if (op.isIntegralComparison() && op.isStrongOrdering()) {
+    // For three-way comparisons on integral operands that produce strong
+    // ordering, we can generate potentially better code with the `llvm.scmp.*`
+    // and `llvm.ucmp.*` intrinsics. Thus we don't replace these comparisons
+    // here. They will be lowered directly to LLVMIR during the LLVM lowering
+    // pass.
+    //
+    // But we still need to take a step here. `llvm.scmp.*` and `llvm.ucmp.*`
+    // returns -1, 0, or 1 to represent lt, eq, and gt, which are the
+    // "canonicalized" result values of three-way comparisons. However,
+    // `cir.cmp3way` may not produce canonicalized result. We need to
+    // canonicalize the comparison if necessary. This is what we're doing in
+    // this special branch.
+    canonicalizeIntrinsicThreeWayCmp(builder, op);
+    return;
+  }
 
   auto loc = op->getLoc();
   auto cmpInfo = op.getInfo();
