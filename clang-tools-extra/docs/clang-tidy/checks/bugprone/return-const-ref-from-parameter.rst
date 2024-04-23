@@ -4,7 +4,7 @@ bugprone-return-const-ref-from-parameter
 ========================================
 
 Detects return statements that return a constant reference parameter as constant
-reference. This may cause use-after-free errors if the caller uses xvalue as
+reference. This may cause use-after-free errors if the caller uses xvalues as
 arguments.
 
 In C++, constant reference parameters can accept xvalues which will be destructed
