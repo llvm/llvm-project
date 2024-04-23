@@ -1489,6 +1489,7 @@ def FeatureISAVersion11_Generic: FeatureSet<
     [FeatureMSAALoadDstSelBug,
      FeatureVALUTransUseHazard,
      FeatureUserSGPRInit16Bug,
+     FeaturePrivEnabledTrap2NopBug,
      FeatureRequiresCOV6])>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<
