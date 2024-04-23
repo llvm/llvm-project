@@ -641,7 +641,6 @@ private:
 
   void serialiseBlock(BasicBlock &BB, ValueLoweringMap &VLMap,
                       unsigned &BBIdx) {
-    // Keep the instruction skipping logic in one place.
     auto ShouldSkipInstr = [](Instruction *I) {
       // Skip non-semantic instrucitons for now.
       //
@@ -661,25 +660,15 @@ private:
       return false;
     };
 
-    // Count instructions.
-    //
-    // FIXME: I don't like this much:
-    //
-    //  - Assumes one LLVM instruction becomes exactly one Yk IR instruction.
-    //  - Requires a second loop to count ahead of time.
-    //
-    // Can we emit the instrucitons into a temp buffer and keep a running count
-    // of how many instructions we generated instead?
-    size_t NumInstrs = 0;
-    for (Instruction &I : BB) {
-      if (ShouldSkipInstr(&I)) {
-        continue;
-      }
-      NumInstrs++;
-    }
-
     // num_instrs:
-    OutStreamer.emitSizeT(NumInstrs);
+    //
+    // We don't know how many instructions there will be in advance, so what we
+    // do is emit a placeholder field (in the form of a symbol value) which is
+    // patched up (assigned) later.
+    MCContext &MCtxt = OutStreamer.getContext();
+    MCSymbol *NumInstrsSym = MCtxt.createTempSymbol();
+    OutStreamer.emitSymbolValue(NumInstrsSym, sizeof(size_t));
+
     // instrs:
     unsigned InstIdx = 0;
     for (Instruction &I : BB) {
@@ -689,8 +678,10 @@ private:
       serialiseInst(&I, VLMap, BBIdx, InstIdx);
     }
 
-    // Check we emitted the number of instructions that we promised.
-    assert(InstIdx == NumInstrs);
+    // Now that we have finished serialising instructions, we know how many
+    // there are and we can patch up the "number of instructions" field.
+    OutStreamer.emitAssignment(NumInstrsSym,
+                               MCConstantExpr::create(InstIdx, MCtxt));
 
     BBIdx++;
   }
