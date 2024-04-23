@@ -19,7 +19,6 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Lex/Token.h"
-#include "clang/Sema/DeclSpec.h"
 #include "clang/Serialization/ASTRecordWriter.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 using namespace clang;
@@ -1839,6 +1838,7 @@ void ASTStmtWriter::VisitCXXThisExpr(CXXThisExpr *E) {
   VisitExpr(E);
   Record.AddSourceLocation(E->getLocation());
   Record.push_back(E->isImplicit());
+  Record.push_back(E->isCapturedByCopyInLambdaWithExplicitObjectParameter());
 
   Code = serialization::EXPR_CXX_THIS;
 }
@@ -2082,7 +2082,6 @@ void ASTStmtWriter::VisitUnresolvedMemberExpr(UnresolvedMemberExpr *E) {
 void ASTStmtWriter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
   VisitOverloadExpr(E);
   CurrentPackingBits.addBit(E->requiresADL());
-  CurrentPackingBits.addBit(E->isOverloaded());
   Record.AddDeclRef(E->getNamingClass());
   Code = serialization::EXPR_CXX_UNRESOLVED_LOOKUP;
 }
@@ -2820,6 +2819,7 @@ void ASTStmtWriter::VisitOMPTeamsGenericLoopDirective(
 void ASTStmtWriter::VisitOMPTargetTeamsGenericLoopDirective(
     OMPTargetTeamsGenericLoopDirective *D) {
   VisitOMPLoopDirective(D);
+  Record.writeBool(D->canBeParallelFor());
   Code = serialization::STMT_OMP_TARGET_TEAMS_GENERIC_LOOP_DIRECTIVE;
 }
 

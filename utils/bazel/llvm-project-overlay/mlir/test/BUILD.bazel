@@ -421,6 +421,7 @@ cc_library(
         "//mlir:TranslateLib",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
+        "//mlir:ValueBoundsOpInterface",
         "//mlir:ViewLikeInterface",
     ],
 )
@@ -644,6 +645,7 @@ cc_library(
         "lib/Dialect/Affine/*.cpp",
     ]),
     deps = [
+        ":TestDialect",
         "//llvm:Support",
         "//mlir:AffineAnalysis",
         "//mlir:AffineDialect",

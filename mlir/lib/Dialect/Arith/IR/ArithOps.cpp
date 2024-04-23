@@ -213,6 +213,15 @@ LogicalResult arith::ConstantOp::verify() {
     return emitOpError(
         "value must be an integer, float, or elements attribute");
   }
+
+  // Note, we could relax this for vectors with 1 scalable dim, e.g.:
+  //  * arith.constant dense<[[3, 3], [1, 1]]> : vector<2 x [2] x i32>
+  // However, this would most likely require updating the lowerings to LLVM.
+  auto vecType = dyn_cast<VectorType>(type);
+  if (vecType && vecType.isScalable() && !isa<SplatElementsAttr>(getValue()))
+    return emitOpError(
+        "intializing scalable vectors with elements attribute is not supported"
+        " unless it's a vector splat");
   return success();
 }
 

@@ -1340,7 +1340,7 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
                              /* AllowRefinement */ false,
                              &DropFlags) == TrueVal) {
     for (Instruction *I : DropFlags) {
-      I->dropPoisonGeneratingFlagsAndMetadata();
+      I->dropPoisonGeneratingAnnotations();
       Worklist.add(I);
     }
 
@@ -1621,7 +1621,7 @@ static Instruction *foldSelectZeroOrOnes(ICmpInst *Cmp, Value *TVal,
     return nullptr;
 
   const APInt *CmpC;
-  if (!match(Cmp->getOperand(1), m_APIntAllowUndef(CmpC)))
+  if (!match(Cmp->getOperand(1), m_APIntAllowPoison(CmpC)))
     return nullptr;
 
   // (X u< 2) ? -X : -1 --> sext (X != 0)
@@ -2489,8 +2489,8 @@ static Instruction *foldSelectToCopysign(SelectInst &Sel,
   // Match select ?, TC, FC where the constants are equal but negated.
   // TODO: Generalize to handle a negated variable operand?
   const APFloat *TC, *FC;
-  if (!match(TVal, m_APFloatAllowUndef(TC)) ||
-      !match(FVal, m_APFloatAllowUndef(FC)) ||
+  if (!match(TVal, m_APFloatAllowPoison(TC)) ||
+      !match(FVal, m_APFloatAllowPoison(FC)) ||
       !abs(*TC).bitwiseIsEqual(abs(*FC)))
     return nullptr;
 
@@ -2720,7 +2720,7 @@ static Instruction *foldSelectWithSRem(SelectInst &SI, InstCombinerImpl &IC,
   // %cnd = icmp slt i32 %rem, 0
   // %add = add i32 %rem, %n
   // %sel = select i1 %cnd, i32 %add, i32 %rem
-  if (match(TrueVal, m_Add(m_Value(RemRes), m_Value(Remainder))) &&
+  if (match(TrueVal, m_Add(m_Specific(RemRes), m_Value(Remainder))) &&
       match(RemRes, m_SRem(m_Value(Op), m_Specific(Remainder))) &&
       IC.isKnownToBeAPowerOfTwo(Remainder, /*OrZero*/ true) &&
       FalseVal == RemRes)
@@ -2939,17 +2939,17 @@ foldRoundUpIntegerWithPow2Alignment(SelectInst &SI,
   // FIXME: we could support non non-splats here.
 
   const APInt *LowBitMaskCst;
-  if (!match(XLowBits, m_And(m_Specific(X), m_APIntAllowUndef(LowBitMaskCst))))
+  if (!match(XLowBits, m_And(m_Specific(X), m_APIntAllowPoison(LowBitMaskCst))))
     return nullptr;
 
   // Match even if the AND and ADD are swapped.
   const APInt *BiasCst, *HighBitMaskCst;
   if (!match(XBiasedHighBits,
-             m_And(m_Add(m_Specific(X), m_APIntAllowUndef(BiasCst)),
-                   m_APIntAllowUndef(HighBitMaskCst))) &&
+             m_And(m_Add(m_Specific(X), m_APIntAllowPoison(BiasCst)),
+                   m_APIntAllowPoison(HighBitMaskCst))) &&
       !match(XBiasedHighBits,
-             m_Add(m_And(m_Specific(X), m_APIntAllowUndef(HighBitMaskCst)),
-                   m_APIntAllowUndef(BiasCst))))
+             m_Add(m_And(m_Specific(X), m_APIntAllowPoison(HighBitMaskCst)),
+                   m_APIntAllowPoison(BiasCst))))
     return nullptr;
 
   if (!LowBitMaskCst->isMask())
@@ -2965,7 +2965,8 @@ foldRoundUpIntegerWithPow2Alignment(SelectInst &SI,
     return nullptr;
 
   if (!XBiasedHighBits->hasOneUse()) {
-    if (*BiasCst == *LowBitMaskCst)
+    // We can't directly return XBiasedHighBits if it is more poisonous.
+    if (*BiasCst == *LowBitMaskCst && impliesPoison(XBiasedHighBits, X))
       return XBiasedHighBits;
     return nullptr;
   }
@@ -3091,6 +3092,13 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
       return BinaryOperator::CreateOr(CondVal, FalseVal);
     }
 
+    if (match(CondVal, m_OneUse(m_Select(m_Value(A), m_One(), m_Value(B)))) &&
+        impliesPoison(FalseVal, B)) {
+      // (A || B) || C --> A || (B | C)
+      return replaceInstUsesWith(
+          SI, Builder.CreateLogicalOr(A, Builder.CreateOr(B, FalseVal)));
+    }
+
     if (auto *LHS = dyn_cast<FCmpInst>(CondVal))
       if (auto *RHS = dyn_cast<FCmpInst>(FalseVal))
         if (Value *V = foldLogicOfFCmps(LHS, RHS, /*IsAnd*/ false,
@@ -3130,6 +3138,13 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     if (impliesPoison(TrueVal, CondVal)) {
       // Change: A = select B, C, false --> A = and B, C
       return BinaryOperator::CreateAnd(CondVal, TrueVal);
+    }
+
+    if (match(CondVal, m_OneUse(m_Select(m_Value(A), m_Value(B), m_Zero()))) &&
+        impliesPoison(TrueVal, B)) {
+      // (A && B) && C --> A && (B & C)
+      return replaceInstUsesWith(
+          SI, Builder.CreateLogicalAnd(A, Builder.CreateAnd(B, TrueVal)));
     }
 
     if (auto *LHS = dyn_cast<FCmpInst>(CondVal))

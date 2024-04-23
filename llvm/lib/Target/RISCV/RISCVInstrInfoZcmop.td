@@ -20,13 +20,7 @@ class CMOPInst<bits<3> imm3, string opcodestr>
   let Inst{12-11} = 0;
 }
 
-// CMOP1, CMOP5 is used by Zicfiss.
-let Predicates = [HasStdExtZcmop, NoHasStdExtZicfiss] in {
-  def CMOP1 : CMOPInst<0, "cmop.1">, Sched<[]>;
-  def CMOP5 : CMOPInst<2, "cmop.5">, Sched<[]>;
-}
-
-foreach n = [3, 7, 9, 11, 13, 15] in {
+foreach n = [1, 3, 5, 7, 9, 11, 13, 15] in {
   let Predicates = [HasStdExtZcmop] in
-  def CMOP # n : CMOPInst<!srl(n, 1), "cmop." # n>, Sched<[]>;
+  def C_MOP # n : CMOPInst<!srl(n, 1), "c.mop." # n>, Sched<[]>;
 }

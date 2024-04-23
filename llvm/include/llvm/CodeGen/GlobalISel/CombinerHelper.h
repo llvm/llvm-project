@@ -237,6 +237,11 @@ public:
   /// or an implicit_def if \p Ops is empty.
   void applyCombineConcatVectors(MachineInstr &MI, SmallVector<Register> &Ops);
 
+  bool matchCombineShuffleConcat(MachineInstr &MI, SmallVector<Register> &Ops);
+  /// Replace \p MI with a flattened build_vector with \p Ops
+  /// or an implicit_def if \p Ops is empty.
+  void applyCombineShuffleConcat(MachineInstr &MI, SmallVector<Register> &Ops);
+
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
   /// Returns true if MI changed.
   ///

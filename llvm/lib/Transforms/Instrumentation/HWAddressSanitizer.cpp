@@ -21,6 +21,7 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
@@ -186,9 +187,9 @@ static cl::opt<int> ClHotPercentileCutoff("hwasan-percentile-cutoff-hot",
                                           cl::desc("Hot percentile cuttoff."));
 
 static cl::opt<float>
-    ClRandomSkipRate("hwasan-random-skip-rate",
+    ClRandomSkipRate("hwasan-random-rate",
                      cl::desc("Probability value in the range [0.0, 1.0] "
-                              "to skip instrumentation of a function."));
+                              "to keep instrumentation of a function."));
 
 STATISTIC(NumTotalFuncs, "Number of total funcs");
 STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
@@ -292,8 +293,8 @@ public:
       : M(M), SSI(SSI) {
     this->Recover = optOr(ClRecover, Recover);
     this->CompileKernel = optOr(ClEnableKhwasan, CompileKernel);
-    this->Rng =
-        ClRandomSkipRate.getNumOccurrences() ? M.createRNG("hwasan") : nullptr;
+    this->Rng = ClRandomSkipRate.getNumOccurrences() ? M.createRNG(DEBUG_TYPE)
+                                                     : nullptr;
 
     initializeModule();
   }
@@ -910,7 +911,7 @@ HWAddressSanitizer::insertShadowTagCheck(Value *Ptr, Instruction *InsertBefore,
 
   R.TagMismatchTerm = SplitBlockAndInsertIfThen(
       TagMismatch, InsertBefore, false,
-      MDBuilder(*C).createBranchWeights(1, 100000), &DTU, LI);
+      MDBuilder(*C).createUnlikelyBranchWeights(), &DTU, LI);
 
   return R;
 }
@@ -951,7 +952,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
       IRB.CreateICmpUGT(TCI.MemTag, ConstantInt::get(Int8Ty, 15));
   Instruction *CheckFailTerm = SplitBlockAndInsertIfThen(
       OutOfShortGranuleTagRange, TCI.TagMismatchTerm, !Recover,
-      MDBuilder(*C).createBranchWeights(1, 100000), &DTU, LI);
+      MDBuilder(*C).createUnlikelyBranchWeights(), &DTU, LI);
 
   IRB.SetInsertPoint(TCI.TagMismatchTerm);
   Value *PtrLowBits = IRB.CreateTrunc(IRB.CreateAnd(TCI.PtrLong, 15), Int8Ty);
@@ -959,7 +960,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
       PtrLowBits, ConstantInt::get(Int8Ty, (1 << AccessSizeIndex) - 1));
   Value *PtrLowBitsOOB = IRB.CreateICmpUGE(PtrLowBits, TCI.MemTag);
   SplitBlockAndInsertIfThen(PtrLowBitsOOB, TCI.TagMismatchTerm, false,
-                            MDBuilder(*C).createBranchWeights(1, 100000), &DTU,
+                            MDBuilder(*C).createUnlikelyBranchWeights(), &DTU,
                             LI, CheckFailTerm->getParent());
 
   IRB.SetInsertPoint(TCI.TagMismatchTerm);
@@ -968,7 +969,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   Value *InlineTag = IRB.CreateLoad(Int8Ty, InlineTagAddr);
   Value *InlineTagMismatch = IRB.CreateICmpNE(TCI.PtrTag, InlineTag);
   SplitBlockAndInsertIfThen(InlineTagMismatch, TCI.TagMismatchTerm, false,
-                            MDBuilder(*C).createBranchWeights(1, 100000), &DTU,
+                            MDBuilder(*C).createUnlikelyBranchWeights(), &DTU,
                             LI, CheckFailTerm->getParent());
 
   IRB.SetInsertPoint(CheckFailTerm);
@@ -1492,23 +1493,42 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
   return true;
 }
 
+static void emitRemark(const Function &F, OptimizationRemarkEmitter &ORE,
+                       bool Skip) {
+  if (Skip) {
+    ORE.emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "Skip", &F)
+             << "Skipped: F=" << ore::NV("Function", &F);
+    });
+  } else {
+    ORE.emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "Sanitize", &F)
+             << "Sanitized: F=" << ore::NV("Function", &F);
+    });
+  }
+}
+
 bool HWAddressSanitizer::selectiveInstrumentationShouldSkip(
     Function &F, FunctionAnalysisManager &FAM) const {
-  if (ClRandomSkipRate.getNumOccurrences()) {
-    std::bernoulli_distribution D(ClRandomSkipRate);
-    return (D(*Rng));
-  }
-  if (!ClHotPercentileCutoff.getNumOccurrences())
-    return false;
-  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  ProfileSummaryInfo *PSI =
-      MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  if (!PSI || !PSI->hasProfileSummary()) {
-    ++NumNoProfileSummaryFuncs;
-    return false;
-  }
-  return PSI->isFunctionHotInCallGraphNthPercentile(
-      ClHotPercentileCutoff, &F, FAM.getResult<BlockFrequencyAnalysis>(F));
+  bool Skip = [&]() {
+    if (ClRandomSkipRate.getNumOccurrences()) {
+      std::bernoulli_distribution D(ClRandomSkipRate);
+      return !D(*Rng);
+    }
+    if (!ClHotPercentileCutoff.getNumOccurrences())
+      return false;
+    auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+    ProfileSummaryInfo *PSI =
+        MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+    if (!PSI || !PSI->hasProfileSummary()) {
+      ++NumNoProfileSummaryFuncs;
+      return false;
+    }
+    return PSI->isFunctionHotInCallGraphNthPercentile(
+        ClHotPercentileCutoff, &F, FAM.getResult<BlockFrequencyAnalysis>(F));
+  }();
+  emitRemark(F, FAM.getResult<OptimizationRemarkEmitterAnalysis>(F), Skip);
+  return Skip;
 }
 
 void HWAddressSanitizer::sanitizeFunction(Function &F,

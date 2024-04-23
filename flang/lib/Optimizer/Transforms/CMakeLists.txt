@@ -14,7 +14,7 @@ add_flang_library(FIRTransforms
   SimplifyRegionLite.cpp
   AlgebraicSimplification.cpp
   SimplifyIntrinsics.cpp
-  AddDebugFoundation.cpp
+  AddDebugInfo.cpp
   PolymorphicOpConversion.cpp
   LoopVersioning.cpp
   OMPDescriptorMapInfoGen.cpp

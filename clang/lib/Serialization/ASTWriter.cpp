@@ -65,6 +65,7 @@
 #include "clang/Sema/IdentifierResolver.h"
 #include "clang/Sema/ObjCMethodList.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/Weak.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTReader.h"
@@ -163,8 +164,13 @@ static TypeCode getTypeCodeForTypeClass(Type::TypeClass id) {
 
 namespace {
 
-std::set<const FileEntry *> GetAffectingModuleMaps(const Preprocessor &PP,
-                                                   Module *RootModule) {
+std::optional<std::set<const FileEntry *>>
+GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
+  if (!PP.getHeaderSearchInfo()
+           .getHeaderSearchOpts()
+           .ModulesPruneNonAffectingModuleMaps)
+    return std::nullopt;
+
   SmallVector<const Module *> ModulesToProcess{RootModule};
 
   const HeaderSearch &HS = PP.getHeaderSearchInfo();
@@ -180,8 +186,7 @@ std::set<const FileEntry *> GetAffectingModuleMaps(const Preprocessor &PP,
     if (!File)
       continue;
 
-    const HeaderFileInfo *HFI =
-        HS.getExistingFileInfo(*File, /*WantExternal*/ false);
+    const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
     if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader))
       continue;
 
@@ -865,6 +870,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(WEAK_UNDECLARED_IDENTIFIERS);
   RECORD(PENDING_IMPLICIT_INSTANTIATIONS);
   RECORD(UPDATE_VISIBLE);
+  RECORD(DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD);
   RECORD(DECL_UPDATE_OFFSETS);
   RECORD(DECL_UPDATES);
   RECORD(CUDA_SPECIAL_DECL_REFS);
@@ -2047,14 +2053,12 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     if (!File)
       continue;
 
-    // Get the file info. This will load info from the external source if
-    // necessary. Skip emitting this file if we have no information on it
-    // as a header file (in which case HFI will be null) or if it hasn't
+    // Get the file info. Skip emitting this file if we have no information on
+    // it as a header file (in which case HFI will be null) or if it hasn't
     // changed since it was loaded. Also skip it if it's for a modular header
     // from a different module; in that case, we rely on the module(s)
     // containing the header to provide this information.
-    const HeaderFileInfo *HFI =
-        HS.getExistingFileInfo(*File, /*WantExternal*/!Chain);
+    const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
     if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader))
       continue;
 
@@ -3024,10 +3028,12 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
       Stream.EmitRecordWithBlob(ConfigMacroAbbrev, Record, CM);
     }
 
-    // Emit the initializers, if any.
+    // Emit the reachable initializers.
+    // The initializer may only be unreachable in reduced BMI.
     RecordData Inits;
     for (Decl *D : Context->getModuleInitializers(Mod))
-      Inits.push_back(GetDeclRef(D));
+      if (wasDeclEmitted(D))
+        Inits.push_back(GetDeclRef(D));
     if (!Inits.empty())
       Stream.EmitRecord(SUBMODULE_INITIALIZERS, Inits);
 
@@ -3206,6 +3212,9 @@ uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
   uint64_t Offset = Stream.GetCurrentBitNo();
   SmallVector<uint32_t, 128> KindDeclPairs;
   for (const auto *D : DC->decls()) {
+    if (DoneWritingDeclsAndTypes && !wasDeclEmitted(D))
+      continue;
+
     KindDeclPairs.push_back(D->getKind());
     KindDeclPairs.push_back(GetDeclRef(D));
   }
@@ -3624,7 +3633,7 @@ class ASTIdentifierTableTrait {
   }
 
 public:
-  using key_type = IdentifierInfo *;
+  using key_type = const IdentifierInfo *;
   using key_type_ref = key_type;
 
   using data_type = IdentID;
@@ -3656,7 +3665,7 @@ public:
   }
 
   std::pair<unsigned, unsigned>
-  EmitKeyDataLength(raw_ostream& Out, IdentifierInfo* II, IdentID ID) {
+  EmitKeyDataLength(raw_ostream &Out, const IdentifierInfo *II, IdentID ID) {
     // Record the location of the identifier data. This is used when generating
     // the mapping from persistent IDs to strings.
     Writer.SetIdentifierOffset(II, Out.tell());
@@ -3683,13 +3692,12 @@ public:
     return emitULEBKeyDataLength(KeyLen, DataLen, Out);
   }
 
-  void EmitKey(raw_ostream& Out, const IdentifierInfo* II,
-               unsigned KeyLen) {
+  void EmitKey(raw_ostream &Out, const IdentifierInfo *II, unsigned KeyLen) {
     Out.write(II->getNameStart(), KeyLen);
   }
 
-  void EmitData(raw_ostream& Out, IdentifierInfo* II,
-                IdentID ID, unsigned) {
+  void EmitData(raw_ostream &Out, const IdentifierInfo *II, IdentID ID,
+                unsigned) {
     using namespace llvm::support;
 
     endian::Writer LE(Out, llvm::endianness::little);
@@ -3771,13 +3779,14 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
     // for identifiers that appear here for the first time.
     IdentifierOffsets.resize(NextIdentID - FirstIdentID);
     for (auto IdentIDPair : IdentifierIDs) {
-      auto *II = const_cast<IdentifierInfo *>(IdentIDPair.first);
+      const IdentifierInfo *II = IdentIDPair.first;
       IdentID ID = IdentIDPair.second;
       assert(II && "NULL identifier in identifier table");
+
       // Write out identifiers if either the ID is local or the identifier has
       // changed since it was loaded.
-      if (ID >= FirstIdentID || !Chain || !II->isFromAST()
-          || II->hasChangedSinceDeserialization() ||
+      if (ID >= FirstIdentID || !Chain || !II->isFromAST() ||
+          II->hasChangedSinceDeserialization() ||
           (Trait.needDecls() &&
            II->hasFETokenInfoChangedSinceDeserialization()))
         Generator.insert(II, ID, Trait);
@@ -3860,8 +3869,14 @@ public:
   data_type getData(const Coll &Decls) {
     unsigned Start = DeclIDs.size();
     for (NamedDecl *D : Decls) {
-      DeclIDs.push_back(
-          Writer.GetDeclRef(getDeclForLocalLookup(Writer.getLangOpts(), D)));
+      NamedDecl *DeclForLocalLookup =
+          getDeclForLocalLookup(Writer.getLangOpts(), D);
+
+      if (Writer.getDoneWritingDeclsAndTypes() &&
+          !Writer.wasDeclEmitted(DeclForLocalLookup))
+        continue;
+
+      DeclIDs.push_back(Writer.GetDeclRef(DeclForLocalLookup));
     }
     return std::make_pair(Start, DeclIDs.size());
   }
@@ -3970,11 +3985,20 @@ bool ASTWriter::isLookupResultExternal(StoredDeclsList &Result,
          DC->hasNeedToReconcileExternalVisibleStorage();
 }
 
-bool ASTWriter::isLookupResultEntirelyExternal(StoredDeclsList &Result,
-                                               DeclContext *DC) {
-  for (auto *D : Result.getLookupResult())
-    if (!getDeclForLocalLookup(getLangOpts(), D)->isFromASTFile())
-      return false;
+bool ASTWriter::isLookupResultEntirelyExternalOrUnreachable(
+    StoredDeclsList &Result, DeclContext *DC) {
+  for (auto *D : Result.getLookupResult()) {
+    auto *LocalD = getDeclForLocalLookup(getLangOpts(), D);
+    if (LocalD->isFromASTFile())
+      continue;
+
+    // We can only be sure whether the local declaration is reachable
+    // after we done writing the declarations and types.
+    if (DoneWritingDeclsAndTypes && !wasDeclEmitted(LocalD))
+      continue;
+
+    return false;
+  }
 
   return true;
 }
@@ -4012,8 +4036,17 @@ ASTWriter::GenerateNameLookupTable(const DeclContext *ConstDC,
     // don't need to write an entry for the name at all. If we can't
     // write out a lookup set without performing more deserialization,
     // just skip this entry.
-    if (isLookupResultExternal(Result, DC) &&
-        isLookupResultEntirelyExternal(Result, DC))
+    //
+    // Also in reduced BMI, we'd like to avoid writing unreachable
+    // declarations in GMF, so we need to avoid writing declarations
+    // that entirely external or unreachable.
+    //
+    // FIMXE: It looks sufficient to test
+    // isLookupResultEntirelyExternalOrUnreachable here. But due to bug we have
+    // to test isLookupResultExternal here. See
+    // https://github.com/llvm/llvm-project/issues/61065 for details.
+    if ((GeneratingReducedBMI || isLookupResultExternal(Result, DC)) &&
+        isLookupResultEntirelyExternalOrUnreachable(Result, DC))
       continue;
 
     // We also skip empty results. If any of the results could be external and
@@ -4204,9 +4237,15 @@ uint64_t ASTWriter::WriteDeclContextVisibleBlock(ASTContext &Context,
         continue;
       }
 
-      for (NamedDecl *ND : Result)
-        if (!ND->isFromASTFile())
-          GetDeclRef(ND);
+      for (NamedDecl *ND : Result) {
+        if (ND->isFromASTFile())
+          continue;
+
+        if (DoneWritingDeclsAndTypes && !wasDeclEmitted(ND))
+          continue;
+
+        GetDeclRef(ND);
+      }
     }
 
     return 0;
@@ -4297,8 +4336,8 @@ void ASTWriter::WriteOpenCLExtensions(Sema &SemaRef) {
   Stream.EmitRecord(OPENCL_EXTENSIONS, Record);
 }
 void ASTWriter::WriteCUDAPragmas(Sema &SemaRef) {
-  if (SemaRef.ForceCUDAHostDeviceDepth > 0) {
-    RecordData::value_type Record[] = {SemaRef.ForceCUDAHostDeviceDepth};
+  if (SemaRef.CUDA().ForceHostDeviceDepth > 0) {
+    RecordData::value_type Record[] = {SemaRef.CUDA().ForceHostDeviceDepth};
     Stream.EmitRecord(CUDA_PRAGMA_FORCE_HOST_DEVICE_DEPTH, Record);
   }
 }
@@ -4695,11 +4734,19 @@ ASTFileSignature ASTWriter::WriteAST(Sema &SemaRef, StringRef OutputFile,
 }
 
 template<typename Vector>
-static void AddLazyVectorDecls(ASTWriter &Writer, Vector &Vec,
-                               ASTWriter::RecordData &Record) {
+static void AddLazyVectorDecls(ASTWriter &Writer, Vector &Vec) {
   for (typename Vector::iterator I = Vec.begin(nullptr, true), E = Vec.end();
        I != E; ++I) {
-    Writer.AddDeclRef(*I, Record);
+    Writer.GetDeclRef(*I);
+  }
+}
+
+template <typename Vector>
+static void AddLazyVectorEmiitedDecls(ASTWriter &Writer, Vector &Vec,
+                                      ASTWriter::RecordData &Record) {
+  for (typename Vector::iterator I = Vec.begin(nullptr, true), E = Vec.end();
+       I != E; ++I) {
+    Writer.AddEmittedDeclRef(*I, Record);
   }
 }
 
@@ -4735,8 +4782,16 @@ void ASTWriter::computeNonAffectingInputFiles() {
     if (!Cache->OrigEntry)
       continue;
 
-    if (!isModuleMap(File.getFileCharacteristic()) ||
-        llvm::is_contained(AffectingModuleMaps, *Cache->OrigEntry))
+    // Don't prune anything other than module maps.
+    if (!isModuleMap(File.getFileCharacteristic()))
+      continue;
+
+    // Don't prune module maps if all are guaranteed to be affecting.
+    if (!AffectingModuleMaps)
+      continue;
+
+    // Don't prune module maps that are affecting.
+    if (llvm::is_contained(*AffectingModuleMaps, *Cache->OrigEntry))
       continue;
 
     IsSLocAffecting[I] = false;
@@ -4788,24 +4843,10 @@ void ASTWriter::computeNonAffectingInputFiles() {
   FileMgr.trackVFSUsage(false);
 }
 
-ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
-                                         Module *WritingModule) {
-  using namespace llvm;
+void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
+  ASTContext &Context = SemaRef.Context;
 
   bool isModule = WritingModule != nullptr;
-
-  // Make sure that the AST reader knows to finalize itself.
-  if (Chain)
-    Chain->finalizeForWriting();
-
-  ASTContext &Context = SemaRef.Context;
-  Preprocessor &PP = SemaRef.PP;
-
-  // This needs to be done very early, since everything that writes
-  // SourceLocations or FileIDs depends on it.
-  computeNonAffectingInputFiles();
-
-  writeUnhashedControlBlock(PP, Context);
 
   // Set up predefined declaration IDs.
   auto RegisterPredefDecl = [&] (Decl *D, PredefinedDeclIDs ID) {
@@ -4841,23 +4882,299 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   RegisterPredefDecl(Context.TypePackElementDecl,
                      PREDEF_DECL_TYPE_PACK_ELEMENT_ID);
 
-  // Build a record containing all of the tentative definitions in this file, in
+  const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
+
+  // Force all top level declarations to be emitted.
+  //
+  // We start emitting top level declarations from the module purview to
+  // implement the eliding unreachable declaration feature.
+  for (const auto *D : TU->noload_decls()) {
+    if (D->isFromASTFile())
+      continue;
+
+    if (GeneratingReducedBMI) {
+      if (D->isFromExplicitGlobalModule())
+        continue;
+
+      // Don't force emitting static entities.
+      //
+      // Technically, all static entities shouldn't be in reduced BMI. The
+      // language also specifies that the program exposes TU-local entities
+      // is ill-formed. However, in practice, there are a lot of projects
+      // uses `static inline` in the headers. So we can't get rid of all
+      // static entities in reduced BMI now.
+      if (auto *ND = dyn_cast<NamedDecl>(D);
+          ND && ND->getFormalLinkage() == Linkage::Internal)
+        continue;
+    }
+
+    GetDeclRef(D);
+  }
+
+  if (GeneratingReducedBMI)
+    return;
+
+  // Writing all of the tentative definitions in this file, in
   // TentativeDefinitions order.  Generally, this record will be empty for
   // headers.
   RecordData TentativeDefinitions;
-  AddLazyVectorDecls(*this, SemaRef.TentativeDefinitions, TentativeDefinitions);
+  AddLazyVectorDecls(*this, SemaRef.TentativeDefinitions);
 
-  // Build a record containing all of the file scoped decls in this file.
+  // Writing all of the file scoped decls in this file.
+  if (!isModule)
+    AddLazyVectorDecls(*this, SemaRef.UnusedFileScopedDecls);
+
+  // Writing all of the delegating constructors we still need
+  // to resolve.
+  if (!isModule)
+    AddLazyVectorDecls(*this, SemaRef.DelegatingCtorDecls);
+
+  // Writing all of the ext_vector declarations.
+  AddLazyVectorDecls(*this, SemaRef.ExtVectorDecls);
+
+  // Writing all of the VTable uses information.
+  if (!SemaRef.VTableUses.empty())
+    for (unsigned I = 0, N = SemaRef.VTableUses.size(); I != N; ++I)
+      GetDeclRef(SemaRef.VTableUses[I].first);
+
+  // Writing all of the UnusedLocalTypedefNameCandidates.
+  for (const TypedefNameDecl *TD : SemaRef.UnusedLocalTypedefNameCandidates)
+    GetDeclRef(TD);
+
+  // Writing all of pending implicit instantiations.
+  for (const auto &I : SemaRef.PendingInstantiations)
+    GetDeclRef(I.first);
+  assert(SemaRef.PendingLocalImplicitInstantiations.empty() &&
+         "There are local ones at end of translation unit!");
+
+  // Writing some declaration references.
+  if (SemaRef.StdNamespace || SemaRef.StdBadAlloc || SemaRef.StdAlignValT) {
+    GetDeclRef(SemaRef.getStdNamespace());
+    GetDeclRef(SemaRef.getStdBadAlloc());
+    GetDeclRef(SemaRef.getStdAlignValT());
+  }
+
+  if (Context.getcudaConfigureCallDecl())
+    GetDeclRef(Context.getcudaConfigureCallDecl());
+
+  // Writing all of the known namespaces.
+  for (const auto &I : SemaRef.KnownNamespaces)
+    if (!I.second)
+      GetDeclRef(I.first);
+
+  // Writing all used, undefined objects that require definitions.
+  SmallVector<std::pair<NamedDecl *, SourceLocation>, 16> Undefined;
+  SemaRef.getUndefinedButUsed(Undefined);
+  for (const auto &I : Undefined)
+    GetDeclRef(I.first);
+
+  // Writing all delete-expressions that we would like to
+  // analyze later in AST.
+  if (!isModule)
+    for (const auto &DeleteExprsInfo :
+         SemaRef.getMismatchingDeleteExpressions())
+      GetDeclRef(DeleteExprsInfo.first);
+
+  // Make sure visible decls, added to DeclContexts previously loaded from
+  // an AST file, are registered for serialization. Likewise for template
+  // specializations added to imported templates.
+  for (const auto *I : DeclsToEmitEvenIfUnreferenced)
+    GetDeclRef(I);
+  DeclsToEmitEvenIfUnreferenced.clear();
+
+  // Make sure all decls associated with an identifier are registered for
+  // serialization, if we're storing decls with identifiers.
+  if (!WritingModule || !getLangOpts().CPlusPlus) {
+    llvm::SmallVector<const IdentifierInfo*, 256> IIs;
+    for (const auto &ID : SemaRef.PP.getIdentifierTable()) {
+      const IdentifierInfo *II = ID.second;
+      if (!Chain || !II->isFromAST() || II->hasChangedSinceDeserialization())
+        IIs.push_back(II);
+    }
+    // Sort the identifiers to visit based on their name.
+    llvm::sort(IIs, llvm::deref<std::less<>>());
+    for (const IdentifierInfo *II : IIs)
+      for (const Decl *D : SemaRef.IdResolver.decls(II))
+        GetDeclRef(D);
+  }
+
+  // Write all of the DeclsToCheckForDeferredDiags.
+  for (auto *D : SemaRef.DeclsToCheckForDeferredDiags)
+    GetDeclRef(D);
+}
+
+void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
+  ASTContext &Context = SemaRef.Context;
+
+  bool isModule = WritingModule != nullptr;
+
+  // Write the record containing external, unnamed definitions.
+  if (!EagerlyDeserializedDecls.empty())
+    Stream.EmitRecord(EAGERLY_DESERIALIZED_DECLS, EagerlyDeserializedDecls);
+
+  if (!ModularCodegenDecls.empty())
+    Stream.EmitRecord(MODULAR_CODEGEN_DECLS, ModularCodegenDecls);
+
+  // Write the record containing tentative definitions.
+  RecordData TentativeDefinitions;
+  AddLazyVectorEmiitedDecls(*this, SemaRef.TentativeDefinitions,
+                            TentativeDefinitions);
+  if (!TentativeDefinitions.empty())
+    Stream.EmitRecord(TENTATIVE_DEFINITIONS, TentativeDefinitions);
+
+  // Write the record containing unused file scoped decls.
   RecordData UnusedFileScopedDecls;
   if (!isModule)
-    AddLazyVectorDecls(*this, SemaRef.UnusedFileScopedDecls,
-                       UnusedFileScopedDecls);
+    AddLazyVectorEmiitedDecls(*this, SemaRef.UnusedFileScopedDecls,
+                              UnusedFileScopedDecls);
+  if (!UnusedFileScopedDecls.empty())
+    Stream.EmitRecord(UNUSED_FILESCOPED_DECLS, UnusedFileScopedDecls);
 
-  // Build a record containing all of the delegating constructors we still need
-  // to resolve.
+  // Write the record containing ext_vector type names.
+  RecordData ExtVectorDecls;
+  AddLazyVectorEmiitedDecls(*this, SemaRef.ExtVectorDecls, ExtVectorDecls);
+  if (!ExtVectorDecls.empty())
+    Stream.EmitRecord(EXT_VECTOR_DECLS, ExtVectorDecls);
+
+  // Write the record containing VTable uses information.
+  RecordData VTableUses;
+  if (!SemaRef.VTableUses.empty()) {
+    for (unsigned I = 0, N = SemaRef.VTableUses.size(); I != N; ++I) {
+      CXXRecordDecl *D = SemaRef.VTableUses[I].first;
+      if (!wasDeclEmitted(D))
+        continue;
+
+      AddDeclRef(D, VTableUses);
+      AddSourceLocation(SemaRef.VTableUses[I].second, VTableUses);
+      VTableUses.push_back(SemaRef.VTablesUsed[D]);
+    }
+    Stream.EmitRecord(VTABLE_USES, VTableUses);
+  }
+
+  // Write the record containing potentially unused local typedefs.
+  RecordData UnusedLocalTypedefNameCandidates;
+  for (const TypedefNameDecl *TD : SemaRef.UnusedLocalTypedefNameCandidates)
+    AddEmittedDeclRef(TD, UnusedLocalTypedefNameCandidates);
+  if (!UnusedLocalTypedefNameCandidates.empty())
+    Stream.EmitRecord(UNUSED_LOCAL_TYPEDEF_NAME_CANDIDATES,
+                      UnusedLocalTypedefNameCandidates);
+
+  // Write the record containing pending implicit instantiations.
+  RecordData PendingInstantiations;
+  for (const auto &I : SemaRef.PendingInstantiations) {
+    if (!wasDeclEmitted(I.first))
+      continue;
+
+    AddDeclRef(I.first, PendingInstantiations);
+    AddSourceLocation(I.second, PendingInstantiations);
+  }
+  if (!PendingInstantiations.empty())
+    Stream.EmitRecord(PENDING_IMPLICIT_INSTANTIATIONS, PendingInstantiations);
+
+  // Write the record containing declaration references of Sema.
+  RecordData SemaDeclRefs;
+  if (SemaRef.StdNamespace || SemaRef.StdBadAlloc || SemaRef.StdAlignValT) {
+    auto AddEmittedDeclRefOrZero = [this, &SemaDeclRefs](Decl *D) {
+      if (!D || !wasDeclEmitted(D))
+        SemaDeclRefs.push_back(0);
+      else
+        SemaDeclRefs.push_back(getDeclID(D));
+    };
+
+    AddEmittedDeclRefOrZero(SemaRef.getStdNamespace());
+    AddEmittedDeclRefOrZero(SemaRef.getStdBadAlloc());
+    AddEmittedDeclRefOrZero(SemaRef.getStdAlignValT());
+  }
+  if (!SemaDeclRefs.empty())
+    Stream.EmitRecord(SEMA_DECL_REFS, SemaDeclRefs);
+
+  // Write the record containing decls to be checked for deferred diags.
+  SmallVector<serialization::DeclID, 64> DeclsToCheckForDeferredDiags;
+  for (auto *D : SemaRef.DeclsToCheckForDeferredDiags)
+    if (wasDeclEmitted(D))
+      DeclsToCheckForDeferredDiags.push_back(getDeclID(D));
+  if (!DeclsToCheckForDeferredDiags.empty())
+    Stream.EmitRecord(DECLS_TO_CHECK_FOR_DEFERRED_DIAGS,
+        DeclsToCheckForDeferredDiags);
+
+  // Write the record containing CUDA-specific declaration references.
+  RecordData CUDASpecialDeclRefs;
+  if (auto *CudaCallDecl = Context.getcudaConfigureCallDecl();
+      CudaCallDecl && wasDeclEmitted(CudaCallDecl)) {
+    AddDeclRef(CudaCallDecl, CUDASpecialDeclRefs);
+    Stream.EmitRecord(CUDA_SPECIAL_DECL_REFS, CUDASpecialDeclRefs);
+  }
+
+  // Write the delegating constructors.
   RecordData DelegatingCtorDecls;
   if (!isModule)
-    AddLazyVectorDecls(*this, SemaRef.DelegatingCtorDecls, DelegatingCtorDecls);
+    AddLazyVectorEmiitedDecls(*this, SemaRef.DelegatingCtorDecls,
+                              DelegatingCtorDecls);
+  if (!DelegatingCtorDecls.empty())
+    Stream.EmitRecord(DELEGATING_CTORS, DelegatingCtorDecls);
+
+  // Write the known namespaces.
+  RecordData KnownNamespaces;
+  for (const auto &I : SemaRef.KnownNamespaces) {
+    if (!I.second && wasDeclEmitted(I.first))
+      AddDeclRef(I.first, KnownNamespaces);
+  }
+  if (!KnownNamespaces.empty())
+    Stream.EmitRecord(KNOWN_NAMESPACES, KnownNamespaces);
+
+  // Write the undefined internal functions and variables, and inline functions.
+  RecordData UndefinedButUsed;
+  SmallVector<std::pair<NamedDecl *, SourceLocation>, 16> Undefined;
+  SemaRef.getUndefinedButUsed(Undefined);
+  for (const auto &I : Undefined) {
+    if (!wasDeclEmitted(I.first))
+      continue;
+
+    AddDeclRef(I.first, UndefinedButUsed);
+    AddSourceLocation(I.second, UndefinedButUsed);
+  }
+  if (!UndefinedButUsed.empty())
+    Stream.EmitRecord(UNDEFINED_BUT_USED, UndefinedButUsed);
+
+  // Write all delete-expressions that we would like to
+  // analyze later in AST.
+  RecordData DeleteExprsToAnalyze;
+  if (!isModule) {
+    for (const auto &DeleteExprsInfo :
+         SemaRef.getMismatchingDeleteExpressions()) {
+      if (!wasDeclEmitted(DeleteExprsInfo.first))
+        continue;
+
+      AddDeclRef(DeleteExprsInfo.first, DeleteExprsToAnalyze);
+      DeleteExprsToAnalyze.push_back(DeleteExprsInfo.second.size());
+      for (const auto &DeleteLoc : DeleteExprsInfo.second) {
+        AddSourceLocation(DeleteLoc.first, DeleteExprsToAnalyze);
+        DeleteExprsToAnalyze.push_back(DeleteLoc.second);
+      }
+    }
+  }
+  if (!DeleteExprsToAnalyze.empty())
+    Stream.EmitRecord(DELETE_EXPRS_TO_ANALYZE, DeleteExprsToAnalyze);
+}
+
+ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
+                                         Module *WritingModule) {
+  using namespace llvm;
+
+  bool isModule = WritingModule != nullptr;
+
+  // Make sure that the AST reader knows to finalize itself.
+  if (Chain)
+    Chain->finalizeForWriting();
+
+  ASTContext &Context = SemaRef.Context;
+  Preprocessor &PP = SemaRef.PP;
+
+  // This needs to be done very early, since everything that writes
+  // SourceLocations or FileIDs depends on it.
+  computeNonAffectingInputFiles();
+
+  writeUnhashedControlBlock(PP, Context);
 
   // Write the set of weak, undeclared identifiers. We always write the
   // entire table, since later PCH files in a PCH chain are only interested in
@@ -4873,79 +5190,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
     }
   }
 
-  // Build a record containing all of the ext_vector declarations.
-  RecordData ExtVectorDecls;
-  AddLazyVectorDecls(*this, SemaRef.ExtVectorDecls, ExtVectorDecls);
-
-  // Build a record containing all of the VTable uses information.
-  RecordData VTableUses;
-  if (!SemaRef.VTableUses.empty()) {
-    for (unsigned I = 0, N = SemaRef.VTableUses.size(); I != N; ++I) {
-      AddDeclRef(SemaRef.VTableUses[I].first, VTableUses);
-      AddSourceLocation(SemaRef.VTableUses[I].second, VTableUses);
-      VTableUses.push_back(SemaRef.VTablesUsed[SemaRef.VTableUses[I].first]);
-    }
-  }
-
-  // Build a record containing all of the UnusedLocalTypedefNameCandidates.
-  RecordData UnusedLocalTypedefNameCandidates;
-  for (const TypedefNameDecl *TD : SemaRef.UnusedLocalTypedefNameCandidates)
-    AddDeclRef(TD, UnusedLocalTypedefNameCandidates);
-
-  // Build a record containing all of pending implicit instantiations.
-  RecordData PendingInstantiations;
-  for (const auto &I : SemaRef.PendingInstantiations) {
-    AddDeclRef(I.first, PendingInstantiations);
-    AddSourceLocation(I.second, PendingInstantiations);
-  }
-  assert(SemaRef.PendingLocalImplicitInstantiations.empty() &&
-         "There are local ones at end of translation unit!");
-
-  // Build a record containing some declaration references.
-  RecordData SemaDeclRefs;
-  if (SemaRef.StdNamespace || SemaRef.StdBadAlloc || SemaRef.StdAlignValT) {
-    AddDeclRef(SemaRef.getStdNamespace(), SemaDeclRefs);
-    AddDeclRef(SemaRef.getStdBadAlloc(), SemaDeclRefs);
-    AddDeclRef(SemaRef.getStdAlignValT(), SemaDeclRefs);
-  }
-
-  RecordData CUDASpecialDeclRefs;
-  if (Context.getcudaConfigureCallDecl()) {
-    AddDeclRef(Context.getcudaConfigureCallDecl(), CUDASpecialDeclRefs);
-  }
-
-  // Build a record containing all of the known namespaces.
-  RecordData KnownNamespaces;
-  for (const auto &I : SemaRef.KnownNamespaces) {
-    if (!I.second)
-      AddDeclRef(I.first, KnownNamespaces);
-  }
-
-  // Build a record of all used, undefined objects that require definitions.
-  RecordData UndefinedButUsed;
-
-  SmallVector<std::pair<NamedDecl *, SourceLocation>, 16> Undefined;
-  SemaRef.getUndefinedButUsed(Undefined);
-  for (const auto &I : Undefined) {
-    AddDeclRef(I.first, UndefinedButUsed);
-    AddSourceLocation(I.second, UndefinedButUsed);
-  }
-
-  // Build a record containing all delete-expressions that we would like to
-  // analyze later in AST.
-  RecordData DeleteExprsToAnalyze;
-
-  if (!isModule) {
-    for (const auto &DeleteExprsInfo :
-         SemaRef.getMismatchingDeleteExpressions()) {
-      AddDeclRef(DeleteExprsInfo.first, DeleteExprsToAnalyze);
-      DeleteExprsToAnalyze.push_back(DeleteExprsInfo.second.size());
-      for (const auto &DeleteLoc : DeleteExprsInfo.second) {
-        AddSourceLocation(DeleteLoc.first, DeleteExprsToAnalyze);
-        DeleteExprsToAnalyze.push_back(DeleteLoc.second);
-      }
-    }
-  }
+  PrepareWritingSpecialDecls(SemaRef);
 
   // Write the control block
   WriteControlBlock(PP, Context, isysroot);
@@ -4961,57 +5206,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   {
     RecordData Record = {VERSION_MAJOR};
     Stream.EmitRecord(METADATA_OLD_FORMAT, Record);
-  }
-
-  const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
-
-  // Force all top level declarations to be emitted.
-  for (const auto *D : TU->noload_decls())
-    if (!D->isFromASTFile())
-      GetDeclRef(D);
-
-  // If the translation unit has an anonymous namespace, and we don't already
-  // have an update block for it, write it as an update block.
-  // FIXME: Why do we not do this if there's already an update block?
-  if (NamespaceDecl *NS = TU->getAnonymousNamespace()) {
-    ASTWriter::UpdateRecord &Record = DeclUpdates[TU];
-    if (Record.empty())
-      Record.push_back(DeclUpdate(UPD_CXX_ADDED_ANONYMOUS_NAMESPACE, NS));
-  }
-
-  // Add update records for all mangling numbers and static local numbers.
-  // These aren't really update records, but this is a convenient way of
-  // tagging this rare extra data onto the declarations.
-  for (const auto &Number : Context.MangleNumbers)
-    if (!Number.first->isFromASTFile())
-      DeclUpdates[Number.first].push_back(DeclUpdate(UPD_MANGLING_NUMBER,
-                                                     Number.second));
-  for (const auto &Number : Context.StaticLocalNumbers)
-    if (!Number.first->isFromASTFile())
-      DeclUpdates[Number.first].push_back(DeclUpdate(UPD_STATIC_LOCAL_NUMBER,
-                                                     Number.second));
-
-  // Make sure visible decls, added to DeclContexts previously loaded from
-  // an AST file, are registered for serialization. Likewise for template
-  // specializations added to imported templates.
-  for (const auto *I : DeclsToEmitEvenIfUnreferenced) {
-    GetDeclRef(I);
-  }
-
-  // Make sure all decls associated with an identifier are registered for
-  // serialization, if we're storing decls with identifiers.
-  if (!WritingModule || !getLangOpts().CPlusPlus) {
-    llvm::SmallVector<const IdentifierInfo*, 256> IIs;
-    for (const auto &ID : PP.getIdentifierTable()) {
-      const IdentifierInfo *II = ID.second;
-      if (!Chain || !II->isFromAST() || II->hasChangedSinceDeserialization())
-        IIs.push_back(II);
-    }
-    // Sort the identifiers to visit based on their name.
-    llvm::sort(IIs, llvm::deref<std::less<>>());
-    for (const IdentifierInfo *II : IIs)
-      for (const Decl *D : SemaRef.IdResolver.decls(II))
-        GetDeclRef(D);
   }
 
   // For method pool in the module, if it contains an entry for a selector,
@@ -5104,11 +5298,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
                               Buffer.data(), Buffer.size());
   }
 
-  // Build a record containing all of the DeclsToCheckForDeferredDiags.
-  SmallVector<serialization::DeclID, 64> DeclsToCheckForDeferredDiags;
-  for (auto *D : SemaRef.DeclsToCheckForDeferredDiags)
-    DeclsToCheckForDeferredDiags.push_back(GetDeclRef(D));
-
   WriteDeclAndTypes(Context);
 
   WriteFileDeclIDsMap();
@@ -5130,70 +5319,12 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
   Stream.EmitRecord(SPECIAL_TYPES, SpecialTypes);
 
-  // Write the record containing external, unnamed definitions.
-  if (!EagerlyDeserializedDecls.empty())
-    Stream.EmitRecord(EAGERLY_DESERIALIZED_DECLS, EagerlyDeserializedDecls);
-
-  if (!ModularCodegenDecls.empty())
-    Stream.EmitRecord(MODULAR_CODEGEN_DECLS, ModularCodegenDecls);
-
-  // Write the record containing tentative definitions.
-  if (!TentativeDefinitions.empty())
-    Stream.EmitRecord(TENTATIVE_DEFINITIONS, TentativeDefinitions);
-
-  // Write the record containing unused file scoped decls.
-  if (!UnusedFileScopedDecls.empty())
-    Stream.EmitRecord(UNUSED_FILESCOPED_DECLS, UnusedFileScopedDecls);
+  WriteSpecialDeclRecords(SemaRef);
 
   // Write the record containing weak undeclared identifiers.
   if (!WeakUndeclaredIdentifiers.empty())
     Stream.EmitRecord(WEAK_UNDECLARED_IDENTIFIERS,
                       WeakUndeclaredIdentifiers);
-
-  // Write the record containing ext_vector type names.
-  if (!ExtVectorDecls.empty())
-    Stream.EmitRecord(EXT_VECTOR_DECLS, ExtVectorDecls);
-
-  // Write the record containing VTable uses information.
-  if (!VTableUses.empty())
-    Stream.EmitRecord(VTABLE_USES, VTableUses);
-
-  // Write the record containing potentially unused local typedefs.
-  if (!UnusedLocalTypedefNameCandidates.empty())
-    Stream.EmitRecord(UNUSED_LOCAL_TYPEDEF_NAME_CANDIDATES,
-                      UnusedLocalTypedefNameCandidates);
-
-  // Write the record containing pending implicit instantiations.
-  if (!PendingInstantiations.empty())
-    Stream.EmitRecord(PENDING_IMPLICIT_INSTANTIATIONS, PendingInstantiations);
-
-  // Write the record containing declaration references of Sema.
-  if (!SemaDeclRefs.empty())
-    Stream.EmitRecord(SEMA_DECL_REFS, SemaDeclRefs);
-
-  // Write the record containing decls to be checked for deferred diags.
-  if (!DeclsToCheckForDeferredDiags.empty())
-    Stream.EmitRecord(DECLS_TO_CHECK_FOR_DEFERRED_DIAGS,
-        DeclsToCheckForDeferredDiags);
-
-  // Write the record containing CUDA-specific declaration references.
-  if (!CUDASpecialDeclRefs.empty())
-    Stream.EmitRecord(CUDA_SPECIAL_DECL_REFS, CUDASpecialDeclRefs);
-
-  // Write the delegating constructors.
-  if (!DelegatingCtorDecls.empty())
-    Stream.EmitRecord(DELEGATING_CTORS, DelegatingCtorDecls);
-
-  // Write the known namespaces.
-  if (!KnownNamespaces.empty())
-    Stream.EmitRecord(KNOWN_NAMESPACES, KnownNamespaces);
-
-  // Write the undefined internal functions and variables, and inline functions.
-  if (!UndefinedButUsed.empty())
-    Stream.EmitRecord(UNDEFINED_BUT_USED, UndefinedButUsed);
-
-  if (!DeleteExprsToAnalyze.empty())
-    Stream.EmitRecord(DELETE_EXPRS_TO_ANALYZE, DeleteExprsToAnalyze);
 
   if (!WritingModule) {
     // Write the submodules that were imported, if any.
@@ -5259,6 +5390,41 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   return backpatchSignature();
 }
 
+void ASTWriter::EnteringModulePurview() {
+  // In C++20 named modules, all entities before entering the module purview
+  // lives in the GMF.
+  if (GeneratingReducedBMI)
+    DeclUpdatesFromGMF.swap(DeclUpdates);
+}
+
+// Add update records for all mangling numbers and static local numbers.
+// These aren't really update records, but this is a convenient way of
+// tagging this rare extra data onto the declarations.
+void ASTWriter::AddedManglingNumber(const Decl *D, unsigned Number) {
+  if (D->isFromASTFile())
+    return;
+
+  DeclUpdates[D].push_back(DeclUpdate(UPD_MANGLING_NUMBER, Number));
+}
+void ASTWriter::AddedStaticLocalNumbers(const Decl *D, unsigned Number) {
+  if (D->isFromASTFile())
+    return;
+
+  DeclUpdates[D].push_back(DeclUpdate(UPD_STATIC_LOCAL_NUMBER, Number));
+}
+
+void ASTWriter::AddedAnonymousNamespace(const TranslationUnitDecl *TU,
+                                        NamespaceDecl *AnonNamespace) {
+  // If the translation unit has an anonymous namespace, and we don't already
+  // have an update block for it, write it as an update block.
+  // FIXME: Why do we not do this if there's already an update block?
+  if (NamespaceDecl *NS = TU->getAnonymousNamespace()) {
+    ASTWriter::UpdateRecord &Record = DeclUpdates[TU];
+    if (Record.empty())
+      Record.push_back(DeclUpdate(UPD_CXX_ADDED_ANONYMOUS_NAMESPACE, NS));
+  }
+}
+
 void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
   // Keep writing types, declarations, and declaration update records
   // until we've emitted all of them.
@@ -5278,24 +5444,59 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
         WriteDecl(Context, DOT.getDecl());
     }
   } while (!DeclUpdates.empty());
-  Stream.ExitBlock();
 
   DoneWritingDeclsAndTypes = true;
+
+  // DelayedNamespace is only meaningful in reduced BMI.
+  // See the comments of DelayedNamespace for details.
+  assert(DelayedNamespace.empty() || GeneratingReducedBMI);
+  RecordData DelayedNamespaceRecord;
+  for (NamespaceDecl *NS : DelayedNamespace) {
+    uint64_t LexicalOffset = WriteDeclContextLexicalBlock(Context, NS);
+    uint64_t VisibleOffset = WriteDeclContextVisibleBlock(Context, NS);
+
+    // Write the offset relative to current block.
+    if (LexicalOffset)
+      LexicalOffset -= DeclTypesBlockStartOffset;
+
+    if (VisibleOffset)
+      VisibleOffset -= DeclTypesBlockStartOffset;
+
+    DelayedNamespaceRecord.push_back(getDeclID(NS));
+    DelayedNamespaceRecord.push_back(LexicalOffset);
+    DelayedNamespaceRecord.push_back(VisibleOffset);
+  }
+
+  // The process of writing lexical and visible block for delayed namespace
+  // shouldn't introduce any new decls, types or update to emit.
+  assert(DeclTypesToEmit.empty());
+  assert(DeclUpdates.empty());
+
+  Stream.ExitBlock();
 
   // These things can only be done once we've written out decls and types.
   WriteTypeDeclOffsets();
   if (!DeclUpdatesOffsetsRecord.empty())
     Stream.EmitRecord(DECL_UPDATE_OFFSETS, DeclUpdatesOffsetsRecord);
 
+  if (!DelayedNamespaceRecord.empty())
+    Stream.EmitRecord(DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD,
+                      DelayedNamespaceRecord);
+
   const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
   // Create a lexical update block containing all of the declarations in the
   // translation unit that do not come from other AST files.
   SmallVector<uint32_t, 128> NewGlobalKindDeclPairs;
   for (const auto *D : TU->noload_decls()) {
-    if (!D->isFromASTFile()) {
-      NewGlobalKindDeclPairs.push_back(D->getKind());
-      NewGlobalKindDeclPairs.push_back(GetDeclRef(D));
-    }
+    if (D->isFromASTFile())
+      continue;
+
+    // In reduced BMI, skip unreached declarations.
+    if (!wasDeclEmitted(D))
+      continue;
+
+    NewGlobalKindDeclPairs.push_back(D->getKind());
+    NewGlobalKindDeclPairs.push_back(GetDeclRef(D));
   }
 
   auto Abv = std::make_shared<llvm::BitCodeAbbrev>();
@@ -5758,6 +5959,13 @@ TypeID ASTWriter::getTypeID(QualType T) const {
   });
 }
 
+void ASTWriter::AddEmittedDeclRef(const Decl *D, RecordDataImpl &Record) {
+  if (!wasDeclEmitted(D))
+    return;
+
+  Record.push_back(GetDeclRef(D));
+}
+
 void ASTWriter::AddDeclRef(const Decl *D, RecordDataImpl &Record) {
   Record.push_back(GetDeclRef(D));
 }
@@ -5767,6 +5975,14 @@ DeclID ASTWriter::GetDeclRef(const Decl *D) {
 
   if (!D) {
     return 0;
+  }
+
+  // If the DeclUpdate from the GMF gets touched, emit it.
+  if (auto *Iter = DeclUpdatesFromGMF.find(D);
+      Iter != DeclUpdatesFromGMF.end()) {
+    for (DeclUpdate &Update : Iter->second)
+      DeclUpdates[D].push_back(Update);
+    DeclUpdatesFromGMF.erase(Iter);
   }
 
   // If D comes from an AST file, its declaration ID is already known and
@@ -5802,6 +6018,21 @@ DeclID ASTWriter::getDeclID(const Decl *D) {
 
   assert(DeclIDs.contains(D) && "Declaration not emitted!");
   return DeclIDs[D];
+}
+
+bool ASTWriter::wasDeclEmitted(const Decl *D) const {
+  assert(D);
+
+  assert(DoneWritingDeclsAndTypes &&
+         "wasDeclEmitted should only be called after writing declarations");
+
+  if (D->isFromASTFile())
+    return true;
+
+  bool Emitted = DeclIDs.contains(D);
+  assert((Emitted || GeneratingReducedBMI) &&
+         "The declaration can only be omitted in reduced BMI.");
+  return Emitted;
 }
 
 void ASTWriter::associateDeclWithFile(const Decl *D, DeclID ID) {
@@ -6082,7 +6313,7 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
 
   BitsPacker DefinitionBits;
 
-  bool ShouldSkipCheckingODR = D->shouldSkipCheckingODR();
+  bool ShouldSkipCheckingODR = shouldSkipCheckingODR(D);
   DefinitionBits.addBit(ShouldSkipCheckingODR);
 
 #define FIELD(Name, Width, Merge)                                              \
@@ -7406,7 +7637,46 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   writeSourceLocation(C->getEndLoc());
 
   switch (C->getClauseKind()) {
-  case OpenACCClauseKind::Default:
+  case OpenACCClauseKind::Default: {
+    const auto *DC = cast<OpenACCDefaultClause>(C);
+    writeSourceLocation(DC->getLParenLoc());
+    writeEnum(DC->getDefaultClauseKind());
+    return;
+  }
+  case OpenACCClauseKind::If: {
+    const auto *IC = cast<OpenACCIfClause>(C);
+    writeSourceLocation(IC->getLParenLoc());
+    AddStmt(const_cast<Expr *>(IC->getConditionExpr()));
+    return;
+  }
+  case OpenACCClauseKind::Self: {
+    const auto *SC = cast<OpenACCIfClause>(C);
+    writeSourceLocation(SC->getLParenLoc());
+    writeBool(SC->hasConditionExpr());
+    if (SC->hasConditionExpr())
+      AddStmt(const_cast<Expr *>(SC->getConditionExpr()));
+    return;
+  }
+  case OpenACCClauseKind::NumGangs: {
+    const auto *NGC = cast<OpenACCNumGangsClause>(C);
+    writeSourceLocation(NGC->getLParenLoc());
+    writeUInt32(NGC->getIntExprs().size());
+    for (Expr *E : NGC->getIntExprs())
+      AddStmt(E);
+    return;
+  }
+  case OpenACCClauseKind::NumWorkers: {
+    const auto *NWC = cast<OpenACCNumWorkersClause>(C);
+    writeSourceLocation(NWC->getLParenLoc());
+    AddStmt(const_cast<Expr *>(NWC->getIntExpr()));
+    return;
+  }
+  case OpenACCClauseKind::VectorLength: {
+    const auto *NWC = cast<OpenACCVectorLengthClause>(C);
+    writeSourceLocation(NWC->getLParenLoc());
+    AddStmt(const_cast<Expr *>(NWC->getIntExpr()));
+    return;
+  }
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Seq:
@@ -7415,8 +7685,6 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::Worker:
   case OpenACCClauseKind::Vector:
   case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::If:
-  case OpenACCClauseKind::Self:
   case OpenACCClauseKind::Copy:
   case OpenACCClauseKind::UseDevice:
   case OpenACCClauseKind::Attach:
@@ -7437,9 +7705,6 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::Reduction:
   case OpenACCClauseKind::Collapse:
   case OpenACCClauseKind::Bind:
-  case OpenACCClauseKind::VectorLength:
-  case OpenACCClauseKind::NumGangs:
-  case OpenACCClauseKind::NumWorkers:
   case OpenACCClauseKind::DeviceNum:
   case OpenACCClauseKind::DefaultAsync:
   case OpenACCClauseKind::DeviceType:

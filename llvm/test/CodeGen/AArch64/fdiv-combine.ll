@@ -171,8 +171,8 @@ entry:
 define <vscale x 2 x double> @splat_fdiv_nxv2f64(double %D, <vscale x 2 x double> %a) #1 {
 ; CHECK-LABEL: splat_fdiv_nxv2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z0.d, d0
 ; CHECK-NEXT:    fdivr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    ret

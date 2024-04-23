@@ -368,7 +368,7 @@ public:
 // A pass requires all MachineFunctionProperties.
 // DO NOT USE THIS EXCEPT FOR TESTING!
 class RequireAllMachineFunctionPropertiesPass
-    : public MachinePassInfoMixin<RequireAllMachineFunctionPropertiesPass> {
+    : public PassInfoMixin<RequireAllMachineFunctionPropertiesPass> {
 public:
   PreservedAnalyses run(MachineFunction &, MachineFunctionAnalysisManager &) {
     return PreservedAnalyses::none();

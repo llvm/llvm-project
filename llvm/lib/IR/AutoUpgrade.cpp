@@ -5267,6 +5267,14 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
   F.removeRetAttrs(AttributeFuncs::typeIncompatible(F.getReturnType()));
   for (auto &Arg : F.args())
     Arg.removeAttrs(AttributeFuncs::typeIncompatible(Arg.getType()));
+
+  // Older versions of LLVM treated an "implicit-section-name" attribute
+  // similarly to directly setting the section on a Function.
+  if (Attribute A = F.getFnAttribute("implicit-section-name");
+      A.isValid() && A.isStringAttribute()) {
+    F.setSection(A.getValueAsString());
+    F.removeFnAttr("implicit-section-name");
+  }
 }
 
 static bool isOldLoopArgument(Metadata *MD) {
@@ -5333,10 +5341,11 @@ MDNode *llvm::upgradeInstructionLoopAttachment(MDNode &N) {
 
 std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
   Triple T(TT);
-  // The only data layout upgrades needed for pre-GCN are setting the address
-  // space of globals to 1.
-  if (T.isAMDGPU() && !T.isAMDGCN() && !DL.contains("-G") &&
-      !DL.starts_with("G")) {
+  // The only data layout upgrades needed for pre-GCN, SPIR or SPIRV are setting
+  // the address space of globals to 1. This does not apply to SPIRV Logical.
+  if (((T.isAMDGPU() && !T.isAMDGCN()) ||
+       (T.isSPIR() || (T.isSPIRV() && !T.isSPIRVLogical()))) &&
+      !DL.contains("-G") && !DL.starts_with("G")) {
     return DL.empty() ? std::string("G1") : (DL + "-G1").str();
   }
 

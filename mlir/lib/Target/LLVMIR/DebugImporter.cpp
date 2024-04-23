@@ -26,9 +26,11 @@ using namespace mlir;
 using namespace mlir::LLVM;
 using namespace mlir::LLVM::detail;
 
-DebugImporter::DebugImporter(ModuleOp mlirModule)
+DebugImporter::DebugImporter(ModuleOp mlirModule,
+                             bool dropDICompositeTypeElements)
     : recursionPruner(mlirModule.getContext()),
-      context(mlirModule.getContext()), mlirModule(mlirModule) {}
+      context(mlirModule.getContext()), mlirModule(mlirModule),
+      dropDICompositeTypeElements(dropDICompositeTypeElements) {}
 
 Location DebugImporter::translateFuncLocation(llvm::Function *func) {
   llvm::DISubprogram *subprogram = func->getSubprogram();
@@ -56,18 +58,27 @@ DIBasicTypeAttr DebugImporter::translateImpl(llvm::DIBasicType *node) {
 DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
   std::optional<DIEmissionKind> emissionKind =
       symbolizeDIEmissionKind(node->getEmissionKind());
+  std::optional<DINameTableKind> nameTableKind = symbolizeDINameTableKind(
+      static_cast<
+          std::underlying_type_t<llvm::DICompileUnit::DebugNameTableKind>>(
+          node->getNameTableKind()));
   return DICompileUnitAttr::get(
       context, getOrCreateDistinctID(node), node->getSourceLanguage(),
       translate(node->getFile()), getStringAttrOrNull(node->getRawProducer()),
-      node->isOptimized(), emissionKind.value());
+      node->isOptimized(), emissionKind.value(), nameTableKind.value());
 }
 
 DICompositeTypeAttr DebugImporter::translateImpl(llvm::DICompositeType *node) {
   std::optional<DIFlags> flags = symbolizeDIFlags(node->getFlags());
   SmallVector<DINodeAttr> elements;
-  for (llvm::DINode *element : node->getElements()) {
-    assert(element && "expected a non-null element type");
-    elements.push_back(translate(element));
+
+  // A vector always requires an element.
+  bool isVectorType = flags && bitEnumContainsAll(*flags, DIFlags::Vector);
+  if (isVectorType || !dropDICompositeTypeElements) {
+    for (llvm::DINode *element : node->getElements()) {
+      assert(element && "expected a non-null element type");
+      elements.push_back(translate(element));
+    }
   }
   // Drop the elements parameter if any of the elements are invalid.
   if (llvm::is_contained(elements, nullptr))

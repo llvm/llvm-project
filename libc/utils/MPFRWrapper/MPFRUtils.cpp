@@ -15,7 +15,6 @@
 #include "test/UnitTest/FPMatcher.h"
 
 #include "hdr/math_macros.h"
-#include <fenv.h>
 #include <memory>
 #include <stdint.h>
 
