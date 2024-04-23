@@ -603,6 +603,8 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
   // to be re-used for method bodies as well.
   ParseScope FnScope(this, Scope::FnScope | Scope::DeclScope |
                                Scope::CompoundStmtScope);
+  Sema::FPFeaturesStateRAII SaveFPFeatures(Actions);
+
   Actions.ActOnStartOfFunctionDef(getCurScope(), LM.D);
 
   if (Tok.is(tok::kw_try)) {

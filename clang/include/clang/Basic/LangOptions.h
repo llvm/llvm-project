@@ -878,6 +878,8 @@ public:
   /// Return difference with the given option set.
   FPOptionsOverride getChangesFrom(const FPOptions &Base) const;
 
+  void applyChanges(FPOptionsOverride FPO);
+
   // We can define most of the accessors automatically:
 #define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
   TYPE get##NAME() const {                                                     \
@@ -959,6 +961,11 @@ public:
       setAllowFPContractAcrossStatement();
   }
 
+  void setDisallowOptimizations() {
+    setFPPreciseEnabled(true);
+    setDisallowFPContract();
+  }
+
   storage_type getAsOpaqueInt() const {
     return (static_cast<storage_type>(Options.getAsOpaqueInt())
             << FPOptions::StorageBitSize) |
@@ -1013,6 +1020,10 @@ inline FPOptionsOverride FPOptions::getChangesFrom(const FPOptions &Base) const 
   if (Value == Base.Value)
     return FPOptionsOverride();
   return getChangesSlow(Base);
+}
+
+inline void FPOptions::applyChanges(FPOptionsOverride FPO) {
+  *this = FPO.applyOverrides(*this);
 }
 
 /// Describes the kind of translation unit being processed.

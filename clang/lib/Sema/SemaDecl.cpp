@@ -15899,6 +15899,11 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     FD->setInvalidDecl();
     return D;
   }
+
+  // Some function attributes (like OptimizeNoneAttr) need actions before
+  // parsing body started.
+  applyFunctionAttributesBeforeParsingBody(D);
+
   // We want to attach documentation to original Decl (which might be
   // a function template).
   ActOnDocumentableDecl(D);
@@ -15908,6 +15913,20 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     Diag(FD->getLocation(), diag::warn_function_def_in_objc_container);
 
   return D;
+}
+
+void Sema::applyFunctionAttributesBeforeParsingBody(Decl *FD) {
+  if (!FD || FD->isInvalidDecl())
+    return;
+  if (auto *TD = dyn_cast<FunctionTemplateDecl>(FD))
+    FD = TD->getTemplatedDecl();
+  if (FD && FD->hasAttr<OptimizeNoneAttr>()) {
+    FPOptionsOverride FPO;
+    FPO.setDisallowOptimizations();
+    CurFPFeatures.applyChanges(FPO);
+    FpPragmaStack.CurrentValue =
+        CurFPFeatures.getChangesFrom(FPOptions(LangOpts));
+  }
 }
 
 /// Given the set of return statements within a function body,

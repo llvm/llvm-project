@@ -3736,6 +3736,7 @@ void Parser::ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod) {
   ParseScope BodyScope(this, (parseMethod ? Scope::ObjCMethodScope : 0) |
                                  Scope::FnScope | Scope::DeclScope |
                                  Scope::CompoundStmtScope);
+  Sema::FPFeaturesStateRAII SaveFPFeatures(Actions);
 
   // Tell the actions module that we have entered a method or c-function definition
   // with the specified Declarator for the method/function.
