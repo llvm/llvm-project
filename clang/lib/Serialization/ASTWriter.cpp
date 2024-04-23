@@ -171,35 +171,9 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
            .ModulesPruneNonAffectingModuleMaps)
     return std::nullopt;
 
-  SmallVector<const Module *> ModulesToProcess{RootModule};
-
   const HeaderSearch &HS = PP.getHeaderSearchInfo();
-
-  SmallVector<OptionalFileEntryRef, 16> FilesByUID;
-  HS.getFileMgr().GetUniqueIDMapping(FilesByUID);
-
-  if (FilesByUID.size() > HS.header_file_size())
-    FilesByUID.resize(HS.header_file_size());
-
-  for (unsigned UID = 0, LastUID = FilesByUID.size(); UID != LastUID; ++UID) {
-    OptionalFileEntryRef File = FilesByUID[UID];
-    if (!File)
-      continue;
-
-    const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
-    if (!HFI || (!HFI->isCompilingModuleHeader &&
-                 (HFI->isModuleHeader || !PP.alreadyIncluded(*File))))
-      continue;
-
-    for (const auto &KH : HS.findResolvedModulesForHeader(*File)) {
-      if (!KH.getModule())
-        continue;
-      ModulesToProcess.push_back(KH.getModule());
-    }
-  }
-
   const ModuleMap &MM = HS.getModuleMap();
-  SourceManager &SourceMgr = PP.getSourceManager();
+  const SourceManager &SourceMgr = PP.getSourceManager();
 
   std::set<const FileEntry *> ModuleMaps;
   auto CollectIncludingModuleMaps = [&](FileID FID, FileEntryRef F) {
@@ -234,12 +208,45 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
     }
   };
 
-  for (const Module *CurrentModule : ModulesToProcess) {
+  // Handle all the affecting modules referenced from the root module.
+
+  std::queue<const Module *> Q;
+  Q.push(RootModule);
+  while (!Q.empty()) {
+    const Module *CurrentModule = Q.front();
+    Q.pop();
+
     CollectIncludingMapsFromAncestors(CurrentModule);
     for (const Module *ImportedModule : CurrentModule->Imports)
       CollectIncludingMapsFromAncestors(ImportedModule);
     for (const Module *UndeclaredModule : CurrentModule->UndeclaredUses)
       CollectIncludingMapsFromAncestors(UndeclaredModule);
+
+    for (auto *M : CurrentModule->submodules())
+      Q.push(M);
+  }
+
+  // Handle textually-included headers that belong to other modules.
+
+  SmallVector<OptionalFileEntryRef, 16> FilesByUID;
+  HS.getFileMgr().GetUniqueIDMapping(FilesByUID);
+
+  if (FilesByUID.size() > HS.header_file_size())
+    FilesByUID.resize(HS.header_file_size());
+
+  for (unsigned UID = 0, LastUID = FilesByUID.size(); UID != LastUID; ++UID) {
+    OptionalFileEntryRef File = FilesByUID[UID];
+    if (!File)
+      continue;
+
+    const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
+    if (!HFI || (!HFI->isCompilingModuleHeader &&
+                 (HFI->isModuleHeader || !PP.alreadyIncluded(*File))))
+      continue;
+
+    for (const auto &KH : HS.findResolvedModulesForHeader(*File))
+      if (const Module *M = KH.getModule())
+        CollectIncludingMapsFromAncestors(M);
   }
 
   return ModuleMaps;
