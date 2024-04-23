@@ -420,6 +420,9 @@ Bug Fixes in This Version
 - Fixed a regression in CTAD that a friend declaration that befriends itself may cause
   incorrect constraint substitution. (#GH86769).
 
+- Fixed bug in which the body of a consteval lambda within a template was not parsed as within an
+  immediate function context.
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
