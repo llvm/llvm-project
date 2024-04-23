@@ -128,8 +128,8 @@ T tmain(T argc) {
 #pragma omp target update from(x, (m+1)[2]) // le45-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
 #pragma omp target update from(s7.i, s7.a[:3])
 #pragma omp target update from(s7.s6[1].aa[0:5])
-#pragma omp target update from(x, s7.s6[:5].aa[6]) // expected-error {{OpenMP array section is not allowed here}}
-#pragma omp target update from(x, s7.s6[:5].aa[:6]) // expected-error {{OpenMP array section is not allowed here}}
+#pragma omp target update from(x, s7.s6[:5].aa[6]) // expected-error {{array section is not allowed here}}
+#pragma omp target update from(x, s7.s6[:5].aa[:6]) // expected-error {{array section is not allowed here}}
 #pragma omp target update from(s7.p[:10])
 #pragma omp target update from(x, s7.bfa) // expected-error {{bit fields cannot be used to specify storage in a 'from' clause}}
 #pragma omp target update from(x, s7.p[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
@@ -184,8 +184,8 @@ int main(int argc, char **argv) {
 #pragma omp target update from(x, (m+1)[2]) // // le45-error {{expected expression containing only member accesses and/or array sections based on named variables}}
 #pragma omp target update from(s7.i, s7.a[:3])
 #pragma omp target update from(s7.s6[1].aa[0:5])
-#pragma omp target update from(x, s7.s6[:5].aa[6]) // expected-error {{OpenMP array section is not allowed here}}
-#pragma omp target update from(x, s7.s6[:5].aa[:6]) // expected-error {{OpenMP array section is not allowed here}}
+#pragma omp target update from(x, s7.s6[:5].aa[6]) // expected-error {{array section is not allowed here}}
+#pragma omp target update from(x, s7.s6[:5].aa[:6]) // expected-error {{array section is not allowed here}}
 #pragma omp target update from(s7.p[:10])
 #pragma omp target update from(x, s7.bfa) // expected-error {{bit fields cannot be used to specify storage in a 'from' clause}}
 #pragma omp target update from(x, s7.p[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}

@@ -46,7 +46,7 @@ int main(int argc, char **argv, char *env[]) {
   #pragma omp task affinity (argv[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
   #pragma omp task affinity (argv[3:4:1]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
   #pragma omp task affinity(a[0:1]) // expected-error {{subscripted value is not an array or pointer}}
-  #pragma omp task affinity(argv[argv[:2]:1]) // expected-error {{OpenMP array section is not allowed here}}
+  #pragma omp task affinity(argv[argv[:2]:1]) // expected-error {{array section is not allowed here}}
   #pragma omp task affinity(argv[0:][:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
   #pragma omp task affinity(env[0:][:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is an array of unknown bound}}
   #pragma omp task affinity(argv[ : argc][1 : argc - 1])

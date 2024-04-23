@@ -82,7 +82,7 @@ int tmain(T argc, S **argv, R *env[]) {
   foo();
   #pragma omp target enter data map(to: i) depend(in:a[0:1]) // expected-error {{subscripted value is not an array or pointer}}
   foo();
-  #pragma omp target enter data map(to: i) depend(in:argv[argv[:2]:1]) // expected-error {{OpenMP array section is not allowed here}}
+  #pragma omp target enter data map(to: i) depend(in:argv[argv[:2]:1]) // expected-error {{array section is not allowed here}}
   foo();
   #pragma omp target enter data map(to: i) depend(in:argv[0:][:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
   foo();
@@ -157,7 +157,7 @@ int main(int argc, char **argv, char *env[]) {
   foo();
   #pragma omp target enter data map(to: i) depend(in:a[0:1]) // expected-error {{subscripted value is not an array or pointer}}
   foo();
-  #pragma omp target enter data map(to: i) depend(in:argv[argv[:2]:1]) // expected-error {{OpenMP array section is not allowed here}}
+  #pragma omp target enter data map(to: i) depend(in:argv[argv[:2]:1]) // expected-error {{array section is not allowed here}}
   foo();
   #pragma omp target enter data map(to: i) depend(in:argv[0:][:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
   foo();

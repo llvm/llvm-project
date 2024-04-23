@@ -88,7 +88,7 @@ int main(int argc, char **argv, char *env[]) {
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target parallel for simd depend(in:a[0:1]) // expected-error {{subscripted value is not an array or pointer}}
   for (i = 0; i < argc; ++i) foo();
-  #pragma omp target parallel for simd depend(in:argv[argv[:2]:1]) // expected-error {{OpenMP array section is not allowed here}}
+  #pragma omp target parallel for simd depend(in:argv[argv[:2]:1]) // expected-error {{array section is not allowed here}}
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target parallel for simd depend(in:argv[0:][:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
   for (i = 0; i < argc; ++i) foo();
