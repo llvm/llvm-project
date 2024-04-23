@@ -960,9 +960,12 @@ struct OperationState {
   /// Regions that the op will hold.
   SmallVector<std::unique_ptr<Region>, 1> regions;
 
-  // If we're creating an unregistered operation, this Attribute is used to
-  // build the properties. Otherwise it is ignored. For registered operations
-  // see the `getOrAddProperties` method.
+  /// This Attribute is used to opaquely construct the properties of the
+  /// operation. If we're creating an unregistered operation, the Attribute is
+  /// used as-is as the Properties storage of the operation. Otherwise, the
+  /// operation properties are constructed opaquely using its
+  /// `setPropertiesFromAttr` hook. Note that `getOrAddProperties` is the
+  /// preferred method to construct properties from C++.
   Attribute propertiesAttr;
 
 private:
