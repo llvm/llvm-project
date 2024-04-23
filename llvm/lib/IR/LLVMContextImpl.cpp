@@ -36,6 +36,7 @@ using namespace llvm;
 LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
     : DiagHandler(std::make_unique<DiagnosticHandler>()),
       VoidTy(C, Type::VoidTyID), LabelTy(C, Type::LabelTyID),
+      Float8E4M3FNTy(C, Type::Float8E4M3FNTyID), Float8E5M2Ty(C, Type::Float8E5M2TyID),
       HalfTy(C, Type::HalfTyID), BFloatTy(C, Type::BFloatTyID),
       FloatTy(C, Type::FloatTyID), DoubleTy(C, Type::DoubleTyID),
       MetadataTy(C, Type::MetadataTyID), TokenTy(C, Type::TokenTyID),

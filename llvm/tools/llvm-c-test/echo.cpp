@@ -73,10 +73,14 @@ struct TypeCloner {
     switch (Kind) {
       case LLVMVoidTypeKind:
         return LLVMVoidTypeInContext(Ctx);
+      case LLVMFloat8E5M2TypeKind:
+        return LLVMFloat8E5M2TypeInContext(Ctx);
+      case LLVMFloat8E4M3FNTypeKind:
+        return LLVMFloat8E4M3FNTypeInContext(Ctx);
       case LLVMHalfTypeKind:
         return LLVMHalfTypeInContext(Ctx);
       case LLVMBFloatTypeKind:
-        return LLVMHalfTypeInContext(Ctx);
+        return LLVMBFloatTypeInContext(Ctx);
       case LLVMFloatTypeKind:
         return LLVMFloatTypeInContext(Ctx);
       case LLVMDoubleTypeKind:

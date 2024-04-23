@@ -559,6 +559,10 @@ LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty) {
   switch (unwrap(Ty)->getTypeID()) {
   case Type::VoidTyID:
     return LLVMVoidTypeKind;
+  case Type::Float8E4M3FNTyID:
+    return LLVMFloat8E4M3FNTypeKind;
+  case Type::Float8E5M2TyID:
+    return LLVMFloat8E5M2TypeKind;
   case Type::HalfTyID:
     return LLVMHalfTypeKind;
   case Type::BFloatTyID:
@@ -683,7 +687,12 @@ unsigned LLVMGetIntTypeWidth(LLVMTypeRef IntegerTy) {
 }
 
 /*--.. Operations on real types ............................................--*/
-
+LLVMTypeRef LLVMFloat8E4M3FNTypeInContext(LLVMContextRef C) {
+  return (LLVMTypeRef)Type::getFloat8E4M3FNTy(*unwrap(C));
+}
+LLVMTypeRef LLVMFloat8E5M2TypeInContext(LLVMContextRef C) {
+  return (LLVMTypeRef)Type::getFloat8E5M2Ty(*unwrap(C));
+}
 LLVMTypeRef LLVMHalfTypeInContext(LLVMContextRef C) {
   return (LLVMTypeRef) Type::getHalfTy(*unwrap(C));
 }
@@ -712,6 +721,12 @@ LLVMTypeRef LLVMX86AMXTypeInContext(LLVMContextRef C) {
   return (LLVMTypeRef) Type::getX86_AMXTy(*unwrap(C));
 }
 
+LLVMTypeRef LLVMFloat8E4M3FNType(void) {
+  return LLVMFloat8E4M3FNTypeInContext(LLVMGetGlobalContext());
+}
+LLVMTypeRef LLVMFloat8E5M2Type(void) {
+  return LLVMFloat8E5M2TypeInContext(LLVMGetGlobalContext());
+}
 LLVMTypeRef LLVMHalfType(void) {
   return LLVMHalfTypeInContext(LLVMGetGlobalContext());
 }
@@ -1520,8 +1535,8 @@ double LLVMConstRealGetDouble(LLVMValueRef ConstantVal, LLVMBool *LosesInfo) {
   ConstantFP *cFP = unwrap<ConstantFP>(ConstantVal) ;
   Type *Ty = cFP->getType();
 
-  if (Ty->isHalfTy() || Ty->isBFloatTy() || Ty->isFloatTy() ||
-      Ty->isDoubleTy()) {
+  if (Ty->isFloat8E4M3FNTy() || Ty->isFloat8E5M2Ty() || Ty->isHalfTy() ||
+      Ty->isBFloatTy() || Ty->isFloatTy() || Ty->isDoubleTy()) {
     *LosesInfo = false;
     return cFP->getValueAPF().convertToDouble();
   }

@@ -1139,6 +1139,22 @@ TYPE_CODE_VOID Record
 
 The ``VOID`` record (code 2) adds a ``void`` type to the type table.
 
+TYPE_CODE_Float8E5M2 Record
+^^^^^^^^^^^^^^^^^^^^^
+
+``[Float8E5M2]``
+
+The ``Float8E5M2`` record (code 27) adds a ``float8e5m2`` (8-bit floating point)
+type to the type table.
+
+TYPE_CODE_Float8E4M3FN Record
+^^^^^^^^^^^^^^^^^^^^^
+
+``[Float8E4M3FN]``
+
+The ``Float8E4M3FN`` record (code 28) adds a ``float8e4m3fn`` (8-bit floating
+point) type to the type table.
+
 TYPE_CODE_HALF Record
 ^^^^^^^^^^^^^^^^^^^^^
 

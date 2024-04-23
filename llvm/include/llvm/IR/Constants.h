@@ -733,6 +733,7 @@ public:
   /// number of bits of the type contained in the passed in ArrayRef.
   /// (i.e. half or bfloat for 16bits, float for 32bits, double for 64bits) Note
   /// that this can return a ConstantAggregateZero object.
+  static Constant *getFP(Type *ElementType, ArrayRef<uint8_t> Elts);
   static Constant *getFP(Type *ElementType, ArrayRef<uint16_t> Elts);
   static Constant *getFP(Type *ElementType, ArrayRef<uint32_t> Elts);
   static Constant *getFP(Type *ElementType, ArrayRef<uint64_t> Elts);
@@ -805,6 +806,7 @@ public:
   /// number of bits of the type contained in the passed in ArrayRef.
   /// (i.e. half or bfloat for 16bits, float for 32bits, double for 64bits) Note
   /// that this can return a ConstantAggregateZero object.
+  static Constant *getFP(Type *ElementType, ArrayRef<uint8_t> Elts);
   static Constant *getFP(Type *ElementType, ArrayRef<uint16_t> Elts);
   static Constant *getFP(Type *ElementType, ArrayRef<uint32_t> Elts);
   static Constant *getFP(Type *ElementType, ArrayRef<uint64_t> Elts);
