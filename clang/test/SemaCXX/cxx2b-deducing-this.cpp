@@ -5,7 +5,7 @@
 void f(this); // expected-error{{variable has incomplete type 'void'}} \
               // expected-error{{invalid use of 'this' outside of a non-static member function}}
 
-void g(this auto); // expected-error{{an explicit object parameter is not allowed here}}
+void g(this auto); // expected-error{{an explicit object parameter cannot appear in a non-member function}}
 
 auto l1 = [] (this auto) static {}; // expected-error{{an explicit object parameter cannot appear in a static lambda}}
 auto l2 = [] (this auto) mutable {}; // expected-error{{a lambda with an explicit object parameter cannot be mutable}}
@@ -685,7 +685,7 @@ struct S {
   static void j(this S s); // expected-error {{an explicit object parameter cannot appear in a static function}}
 };
 
-void nonmember(this S s); // expected-error {{an explicit object parameter is not allowed here}}
+void nonmember(this S s); // expected-error{{an explicit object parameter cannot appear in a non-member function}}
 
 int test() {
   S s;
@@ -847,17 +847,24 @@ struct S {
 
   int f(this S);
   int ((g))(this S);
+  friend int h(this S); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
   int h(int x, int (*)(this S)); // expected-error {{an explicit object parameter is not allowed here}}
+
+  struct T {
+    int f(this T);
+  };
+
+  friend int T::f(this T);
 };
 
 using T = int (*)(this int); // expected-error {{an explicit object parameter is not allowed here}}
 using U = int (S::*)(this int); // expected-error {{an explicit object parameter is not allowed here}}
-int h(this int); // expected-error {{an explicit object parameter is not allowed here}}
+int h(this int); // expected-error {{an explicit object parameter cannot appear in a non-member function}}
 
 int S::f(this S) { return 1; }
 
 namespace a {
 void f();
 };
-void a::f(this auto) {} // expected-error {{an explicit object parameter is not allowed here}}
+void a::f(this auto) {} // expected-error {{an explicit object parameter cannot appear in a non-member function}}
 }

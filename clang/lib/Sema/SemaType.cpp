@@ -5308,18 +5308,30 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             FTI.NumParams
                 ? dyn_cast_if_present<ParmVarDecl>(FTI.Params[0].Param)
                 : nullptr;
+
+        auto IsFunctionDecl = D.getInnermostNonParenChunk() == &DeclType;
         if (First && First->isExplicitObjectParameter() &&
             C != DeclaratorContext::LambdaExpr &&
 
             // Either not a member or nested declarator in a member.
-            (C != DeclaratorContext::Member ||
-             D.getInnermostNonParenChunk() != &DeclType) &&
+            //
+            // Note that e.g. 'static' or 'friend' declarations are accepted
+            // here; we diagnose them later when we build the member function
+            // because it's easier that way.
+            (C != DeclaratorContext::Member || !IsFunctionDecl) &&
 
             // Allow out-of-line definitions if we have a scope spec.
             !isClassType(D.getCXXScopeSpec())) {
-          S.Diag(First->getBeginLoc(),
-                 diag::err_explicit_object_parameter_invalid)
-              << First->getSourceRange();
+          if (IsFunctionDecl)
+            S.Diag(First->getBeginLoc(),
+                   diag::err_explicit_object_parameter_nonmember)
+                << /*non-member*/ 2 << /*function*/ 0
+                << First->getSourceRange();
+          else
+            S.Diag(First->getBeginLoc(),
+                   diag::err_explicit_object_parameter_invalid)
+                << First->getSourceRange();
+
           D.setInvalidType();
           AreDeclaratorChunksValid = false;
         }

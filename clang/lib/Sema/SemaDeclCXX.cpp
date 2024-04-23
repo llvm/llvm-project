@@ -11459,6 +11459,23 @@ void Sema::CheckExplicitObjectMemberFunction(Declarator &D,
     D.setInvalidType();
   }
 
+  // Handle the following case:
+  //
+  // struct S {
+  //   struct T {
+  //     int f(this T);
+  //   };
+  //
+  //   friend int T::f(this T); // Allow this.
+  //   friend int f(this S);    // But disallow this.
+  // };
+  if (D.getDeclSpec().isFriendSpecified() && D.getCXXScopeSpec().isEmpty()) {
+    Diag(ExplicitObjectParam->getBeginLoc(),
+         diag::err_explicit_object_parameter_nonmember)
+        << D.getSourceRange() << /*non-member=*/2 << IsLambda;
+    D.setInvalidType();
+  }
+
   if (IsLambda && FTI.hasMutableQualifier()) {
     Diag(ExplicitObjectParam->getBeginLoc(),
          diag::err_explicit_object_parameter_mutable)
