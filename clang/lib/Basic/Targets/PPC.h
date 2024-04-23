@@ -61,6 +61,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool HasROPProtect = false;
   bool HasPrivileged = false;
   bool HasAIXSmallLocalExecTLS = false;
+  bool HasAIXSmallLocalDynamicTLS = false;
   bool HasVSX = false;
   bool UseCRBits = false;
   bool HasP8Vector = false;
