@@ -734,6 +734,8 @@ static bool isPointerUseReplacable(const Use &U, int MaxLookup = 6) {
 // both pointers have the same underlying objects.
 static bool isPointerAlwaysReplaceable(const Value *From, const Value *To,
                                        const DataLayout &DL) {
+  // This is not strictly correct, but we do it for now to retain important
+  // optimizations.
   if (isa<ConstantPointerNull>(To))
     return true;
   if (isa<Constant>(To) &&

@@ -2458,12 +2458,16 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
     // LHS always has at least one use that is not dominated by Root, this will
     // never do anything if LHS has only one use.
     if (!LHS->hasOneUse()) {
+      // Create a callback that captures the DL.
+      auto canReplacePointersCallBack = [&DL](const Use &U, const Value *To) {
+        return canReplacePointersInUseIfEqual(U, To, DL);
+      };
       unsigned NumReplacements =
           DominatesByEdge
-              ? replaceDominatedUsesWithIf(LHS, RHS, DL, *DT, Root,
-                                           canReplacePointersInUseIfEqual)
-              : replaceDominatedUsesWithIf(LHS, RHS, DL, *DT, Root.getStart(),
-                                           canReplacePointersInUseIfEqual);
+              ? replaceDominatedUsesWithIf(LHS, RHS, *DT, Root,
+                                           canReplacePointersCallBack)
+              : replaceDominatedUsesWithIf(LHS, RHS, *DT, Root.getStart(),
+                                           canReplacePointersCallBack);
 
       if (NumReplacements > 0) {
         Changed = true;
@@ -2527,8 +2531,8 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
         if (NotCmp && isa<Instruction>(NotCmp)) {
           unsigned NumReplacements =
               DominatesByEdge
-                  ? replaceDominatedUsesWith(NotCmp, NotVal, DL, *DT, Root)
-                  : replaceDominatedUsesWith(NotCmp, NotVal, DL, *DT,
+                  ? replaceDominatedUsesWith(NotCmp, NotVal, *DT, Root)
+                  : replaceDominatedUsesWith(NotCmp, NotVal, *DT,
                                              Root.getStart());
           Changed |= NumReplacements > 0;
           NumGVNEqProp += NumReplacements;
