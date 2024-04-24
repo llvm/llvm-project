@@ -1998,7 +1998,7 @@ llvm::Value *getSizeInBytes(DataLayout &dl, const mlir::Type &type,
         if (auto boundOp = mlir::dyn_cast_if_present<mlir::omp::MapBoundsOp>(
                 bounds.getDefiningOp())) {
           // The below calculation for the size to be mapped calculated from the
-          // map_info's bounds is: (elemCount * [UB - LB] + 1), later we
+          // map.info's bounds is: (elemCount * [UB - LB] + 1), later we
           // multiply by the underlying element types byte size to get the full
           // size to be offloaded based on the bounds
           elementCount = builder.CreateMul(
@@ -2086,58 +2086,51 @@ void collectMapDataFromMapOperands(MapInfoData &mapData,
 static int getMapDataMemberIdx(MapInfoData &mapData,
                                mlir::omp::MapInfoOp memberOp) {
   auto *res = llvm::find(mapData.MapClause, memberOp);
-  assert(res != mapData.MapClause.end());
+  assert(res != mapData.MapClause.end() &&
+         "MapInfoOp for member not found in MapData, cannot return index");
   return std::distance(mapData.MapClause.begin(), res);
 }
 
 static mlir::omp::MapInfoOp
 getFirstOrLastMappedMemberPtr(mlir::omp::MapInfoOp mapInfo, bool first) {
+  mlir::DenseIntElementsAttr indexAttr = mapInfo.getMembersIndexAttr();
+
   // Only 1 member has been mapped, we can return it.
-  if (mapInfo.getMembersIndex()->size() == 1)
+  if (indexAttr.size() == 1)
     if (auto mapOp = mlir::dyn_cast<mlir::omp::MapInfoOp>(
             mapInfo.getMembers()[0].getDefiningOp()))
       return mapOp;
 
-  std::vector<size_t> indices(
-      mapInfo.getMembersIndexAttr().getShapedType().getShape()[0]);
+  llvm::ArrayRef<int64_t> shape = indexAttr.getShapedType().getShape();
+  std::vector<size_t> indices(shape[0]);
   std::iota(indices.begin(), indices.end(), 0);
 
   llvm::sort(
       indices.begin(), indices.end(), [&](const size_t a, const size_t b) {
         for (int i = 0;
-             i < mapInfo.getMembersIndexAttr().getShapedType().getShape()[1];
+             i < shape[1];
              ++i) {
-          int aIndex =
-              mapInfo.getMembersIndexAttr()
-                  .getValues<int32_t>()[a * mapInfo.getMembersIndexAttr()
-                                                .getShapedType()
-                                                .getShape()[1] +
-                                        i];
-          int bIndex =
-              mapInfo.getMembersIndexAttr()
-                  .getValues<int32_t>()[b * mapInfo.getMembersIndexAttr()
-                                                .getShapedType()
-                                                .getShape()[1] +
-                                        i];
+          int aIndex = indexAttr.getValues<int32_t>()[a * shape[1] + i];
+          int bIndex = indexAttr.getValues<int32_t>()[b * shape[1] + i];
 
-          // As we have iterated to a stage where both indices are invalid
-          // we likely have the same member index, possibly the same member
-          // being mapped, return the first.
-          if (aIndex == -1 && bIndex == -1)
+          if (aIndex != -1 && bIndex == -1)
+            return false;
+
+          if (aIndex == -1 && bIndex != -1)
             return true;
 
           if (aIndex == -1)
-            return true;
+            return first;
 
           if (bIndex == -1)
-            return false;
+            return !first;
 
           // A is earlier in the record type layout than B
           if (aIndex < bIndex)
-            return true;
+            return first;
 
           if (bIndex < aIndex)
-            return false;
+            return !first;
         }
 
         // iterated the entire list and couldn't make a decision, all elements
@@ -2146,14 +2139,8 @@ getFirstOrLastMappedMemberPtr(mlir::omp::MapInfoOp mapInfo, bool first) {
         return true;
       });
 
-  if (auto mapOp = mlir::dyn_cast<mlir::omp::MapInfoOp>(
-          mapInfo.getMembers()[((first) ? indices.front() : indices.back())]
-              .getDefiningOp()))
-    return mapOp;
-
-  assert(false && "getFirstOrLastMappedMemberPtr could not find approproaite "
-                  "map information");
-  return {};
+    return llvm::cast<mlir::omp::MapInfoOp>(
+          mapInfo.getMembers()[indices.front()].getDefiningOp());
 }
 
 /// This function calculates the array/pointer offset for map data provided
@@ -2262,8 +2249,8 @@ calculateBoundsOffset(LLVM::ModuleTranslation &moduleTranslation,
 // with it) to indicate that a member is part of this parent and should be
 // treated by the runtime as such. Important to achieve the correct mapping.
 //
-// This function borrows a lot from it's Clang parallel function
-// emitCombinedEntry inside of CGOpenMPRuntime.cpp
+// This function borrows a lot from Clang's emitCombinedEntry function
+// inside of CGOpenMPRuntime.cpp
 static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
     LLVM::ModuleTranslation &moduleTranslation, llvm::IRBuilderBase &builder,
     llvm::OpenMPIRBuilder &ompBuilder, DataLayout &dl,
@@ -2288,7 +2275,7 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
   // data by the descriptor (which itself, is a structure containing
   // runtime information on the dynamically allocated data).
   auto parentClause =
-      mlir::dyn_cast<mlir::omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
+      llvm::cast<mlir::omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
 
   llvm::Value *lowAddr, *highAddr;
   if (!parentClause.getPartialMap()) {
@@ -2321,11 +2308,11 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
       /*isSigned=*/false);
   combinedInfo.Sizes.push_back(size);
 
-  // TODO: This will need expanded to include the whole host of logic for the
-  // map flags that Clang currently supports (e.g. it hsould take the map flag
-  // of the parent map flag, remove the OMP_MAP_TARGET_PARAM and do some further
-  // case specific flag modifications), for the moment it handles what we
-  // support as expected.
+  // TODO: This will need to be expanded to include the whole host of logic for
+  // the map flags that Clang currently supports (e.g. it should take the map
+  // flag of the parent map flag, remove the OMP_MAP_TARGET_PARAM and do some
+  // further case specific flag modifications). For the moment, it handles what
+  // we support as expected.
   llvm::omp::OpenMPOffloadMappingFlags mapFlag =
       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
 
@@ -2337,7 +2324,7 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
   // the parent/top level container (same as above effectively, except
   // with a fixed initial compile time size and seperate maptype which
   // indicates the true mape type (tofrom etc.). This parent mapping is
-  // only relevant if the structure in it's totality is being mapped,
+  // only relevant if the structure in its totality is being mapped,
   // otherwise the above suffices.
   if (!parentClause.getPartialMap()) {
     combinedInfo.Types.emplace_back(mapFlag);
@@ -2381,17 +2368,17 @@ static void processMapMembersWithParent(
     uint64_t mapDataIndex, llvm::omp::OpenMPOffloadMappingFlags memberOfFlag) {
 
   auto parentClause =
-      mlir::dyn_cast<mlir::omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
+      llvm::cast<mlir::omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
 
   for (auto mappedMembers : parentClause.getMembers()) {
     auto memberClause =
-        mlir::dyn_cast<mlir::omp::MapInfoOp>(mappedMembers.getDefiningOp());
+        llvm::cast<mlir::omp::MapInfoOp>(mappedMembers.getDefiningOp());
     int memberDataIdx = getMapDataMemberIdx(mapData, memberClause);
 
     assert(memberDataIdx >= 0 && "could not find mapped member of structure");
 
     // Same MemberOfFlag to indicate its link with parent and other members
-    // of
+    // of.
     auto mapFlag =
         llvm::omp::OpenMPOffloadMappingFlags(memberClause.getMapType().value());
     mapFlag &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
@@ -2420,7 +2407,7 @@ processIndividualMap(MapInfoData &mapData, size_t mapDataIdx,
   // marked with OMP_MAP_PTR_AND_OBJ instead.
   auto mapFlag = mapData.Types[mapDataIdx];
   auto mapInfoOp =
-      dyn_cast<mlir::omp::MapInfoOp>(mapData.MapClause[mapDataIdx]);
+      llvm::cast<mlir::omp::MapInfoOp>(mapData.MapClause[mapDataIdx]);
 
   bool isPtrTy = checkIfPointerMap(mapInfoOp);
   if (isPtrTy)
@@ -2456,13 +2443,13 @@ static void processMapWithMembersOf(
     llvm::OpenMPIRBuilder::MapInfosTy &combinedInfo, MapInfoData &mapData,
     uint64_t mapDataIndex, bool isTargetParams) {
   auto parentClause =
-      mlir::dyn_cast<mlir::omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
+      llvm::cast<mlir::omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
 
-  // If we have a partial map (no parent referneced in the map clauses of the
+  // If we have a partial map (no parent referenced in the map clauses of the
   // directive, only members) and only a single member, we do not need to bind
   // the map of the member to the parent, we can pass the member seperately.
   if (parentClause.getMembers().size() == 1 && parentClause.getPartialMap()) {
-    auto memberClause = mlir::dyn_cast<mlir::omp::MapInfoOp>(
+    auto memberClause = llvm::cast<mlir::omp::MapInfoOp>(
         parentClause.getMembers()[0].getDefiningOp());
     int memberDataIdx = getMapDataMemberIdx(mapData, memberClause);
     // Note: Clang treats arrays with explicit bounds that fall into this

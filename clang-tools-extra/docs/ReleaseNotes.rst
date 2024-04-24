@@ -102,6 +102,11 @@ Improvements to clang-tidy
   similar fashion to what `-header-filter` does for header files.
 - Improved :program:`check_clang_tidy.py` script. Added argument `-export-fixes`
   to aid in clang-tidy and test development.
+- Fixed bug where big values for unsigned check options overflowed into negative values
+  when being printed with ``--dump-config``.
+
+- Fixed ``--verify-config`` option not properly parsing checks when using the 
+  literal operator in the ``.clang-tidy`` config.
 
 New checks
 ^^^^^^^^^^
@@ -154,6 +159,10 @@ Changes in existing checks
 - Improved :doc:`bugprone-inc-dec-in-conditions
   <clang-tidy/checks/bugprone/inc-dec-in-conditions>` check to ignore code
   within unevaluated contexts, such as ``decltype``.
+
+- Improved :doc:`bugprone-lambda-function-name<clang-tidy/checks/bugprone/lambda-function-name>`
+  check by ignoring ``__func__`` macro in lambda captures, initializers of
+  default parameters and nested function declarations.
 
 - Improved :doc:`bugprone-non-zero-enum-to-bool-conversion
   <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by

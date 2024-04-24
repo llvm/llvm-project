@@ -51,7 +51,7 @@ func.func @omp_terminator() -> () {
   omp.terminator
 }
 
-func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i32) -> () {
+func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i32, %idx : index) -> () {
   // CHECK: omp.parallel if(%{{.*}}) num_threads(%{{.*}} : i32) allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>)
   "omp.parallel" (%if_cond, %num_threads, %data_var, %data_var) ({
 
@@ -84,6 +84,24 @@ func.func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : i
   "omp.parallel" (%data_var, %data_var) ({
     omp.terminator
   }) {operandSegmentSizes = array<i32: 0,0,1,1,0,0>} : (memref<i32>, memref<i32>) -> ()
+
+  // CHECK: omp.distribute
+  omp.distribute {
+    // CHECK-NEXT: omp.parallel
+    omp.parallel {
+      // CHECK-NEXT: omp.wsloop
+      // TODO Remove induction variables from omp.wsloop.
+      omp.wsloop for (%iv) : index = (%idx) to (%idx) step (%idx) {
+        // CHECK-NEXT: omp.loop_nest
+        omp.loop_nest (%iv2) : index = (%idx) to (%idx) step (%idx) {
+          omp.yield
+        }
+        omp.terminator
+      }
+      omp.terminator
+    }
+    omp.terminator
+  }
 
   return
 }

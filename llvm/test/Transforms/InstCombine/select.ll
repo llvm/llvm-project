@@ -2926,8 +2926,8 @@ define i8 @select_replacement_loop3(i32 noundef %x) {
 define i16 @select_replacement_loop4(i16 noundef %p_12) {
 ; CHECK-LABEL: @select_replacement_loop4(
 ; CHECK-NEXT:    [[AND1:%.*]] = and i16 [[P_12:%.*]], 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i16 [[P_12]], 2
-; CHECK-NEXT:    [[AND3:%.*]] = select i1 [[CMP2]], i16 [[AND1]], i16 0
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp ult i16 [[P_12]], 2
+; CHECK-NEXT:    [[AND3:%.*]] = select i1 [[CMP21]], i16 [[AND1]], i16 0
 ; CHECK-NEXT:    ret i16 [[AND3]]
 ;
   %cmp1 = icmp ult i16 %p_12, 2
@@ -3113,8 +3113,8 @@ define <4 x i32> @mul_select_eq_zero_vector(<4 x i32> %x, <4 x i32> %y) {
 ; select (<k x elt> x == {0, poison, ...}), <k x elt> 0, <k x elt> x * y --> freeze(y) * x
 define <2 x i32> @mul_select_eq_poison_vector(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @mul_select_eq_poison_vector(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[Y_FR:%.*]], <i32 0, i32 poison>
-; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i32> [[X:%.*]], <i32 0, i32 poison>
+; CHECK-NEXT:    [[M:%.*]] = mul <2 x i32> [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C]], <2 x i32> <i32 0, i32 42>, <2 x i32> [[M]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
@@ -3828,6 +3828,26 @@ entry:
   %and1 = and i32 %or, %not
   %cond = select i1 %cmp, i32 %xor, i32 %and1
   ret i32 %cond
+}
+
+; FIXME: This is a miscompile.
+define <2 x i32> @src_and_eq_C_xor_OrAndNotC_vec_poison(<2 x i32> %0, <2 x i32> %1, <2 x i32> %2) {
+; CHECK-LABEL: @src_and_eq_C_xor_OrAndNotC_vec_poison(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[TMP1:%.*]], [[TMP0:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i32> [[TMP2:%.*]], <i32 -1, i32 poison>
+; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[OR]], [[NOT]]
+; CHECK-NEXT:    ret <2 x i32> [[AND1]]
+;
+entry:
+  %and = and <2 x i32> %1, %0
+  %cmp = icmp eq <2 x i32> %and, %2
+  %xor = xor <2 x i32> %1, %0
+  %or = or <2 x i32> %1, %0
+  %not = xor <2 x i32> %2, <i32 -1, i32 poison>
+  %and1 = and <2 x i32> %or, %not
+  %cond = select <2 x i1> %cmp, <2 x i32> %xor, <2 x i32> %and1
+  ret <2 x i32> %cond
 }
 
 define i32 @src_and_eq_C_xor_orxorC(i32 %x, i32 %y, i32 %c) {

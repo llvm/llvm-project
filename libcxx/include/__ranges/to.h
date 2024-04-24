@@ -85,7 +85,7 @@ concept __always_false = false;
 // `ranges::to` base template -- the `_Container` type is a simple type template parameter.
 template <class _Container, input_range _Range, class... _Args>
   requires(!view<_Container>)
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _Container to(_Range&& __range, _Args&&... __args) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Container to(_Range&& __range, _Args&&... __args) {
   // Mandates: C is a cv-unqualified class type.
   static_assert(!is_const_v<_Container>, "The target container cannot be const-qualified, please remove the const");
   static_assert(
@@ -192,7 +192,7 @@ struct _Deducer {
 // `ranges::to` specialization -- `_Container` is a template template parameter requiring deduction to figure out the
 // container element type.
 template <template <class...> class _Container, input_range _Range, class... _Args>
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto to(_Range&& __range, _Args&&... __args) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto to(_Range&& __range, _Args&&... __args) {
   using _DeduceExpr = typename _Deducer<_Container, _Range, _Args...>::type;
   return ranges::to<_DeduceExpr>(std::forward<_Range>(__range), std::forward<_Args>(__args)...);
 }
@@ -201,7 +201,7 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto to(_Range&& __range, 
 // parameter.
 template <class _Container, class... _Args>
   requires(!view<_Container>)
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto to(_Args&&... __args) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto to(_Args&&... __args) {
   // Mandates: C is a cv-unqualified class type.
   static_assert(!is_const_v<_Container>, "The target container cannot be const-qualified, please remove the const");
   static_assert(
@@ -219,7 +219,7 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto to(_Args&&... __args)
 // Range adaptor closure object 2 -- wrapping the `ranges::to` version where `_Container` is a template template
 // parameter.
 template <template <class...> class _Container, class... _Args>
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto to(_Args&&... __args) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto to(_Args&&... __args) {
   // clang-format off
   auto __to_func = []<input_range _Range, class... _Tail,
                       class _DeducedExpr = typename _Deducer<_Container, _Range, _Tail...>::type>
