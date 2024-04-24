@@ -197,6 +197,7 @@ private:
   Preprocessor &preprocessor_;
   AllSources &allSources_;
   common::LanguageFeatureControl features_;
+  bool backslashFreeFormContinuation_{false};
   bool inFixedForm_{false};
   int fixedFormColumnLimit_{72};
   Encoding encoding_{Encoding::UTF_8};
