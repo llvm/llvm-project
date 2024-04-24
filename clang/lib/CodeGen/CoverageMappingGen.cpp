@@ -45,6 +45,11 @@ static llvm::cl::opt<bool> EmptyLineCommentCoverage(
                    "disable it on test)"),
     llvm::cl::init(true), llvm::cl::Hidden);
 
+static llvm::cl::opt<bool> CallsEndCoverageRegion(
+    "calls-end-coverage-region",
+    llvm::cl::desc("Force a coverage region end after every call expression"),
+    llvm::cl::init(false), llvm::cl::Hidden);
+
 llvm::cl::opt<bool> SystemHeadersCoverage(
     "system-headers-coverage",
     llvm::cl::desc("Enable collecting coverage from system headers"),
@@ -1484,7 +1489,7 @@ struct CounterCoverageMappingBuilder
     // Terminate the region when we hit a noreturn function.
     // (This is helpful dealing with switch statements.)
     QualType CalleeType = E->getCallee()->getType();
-    if (getFunctionExtInfo(*CalleeType).getNoReturn())
+    if (CallsEndCoverageRegion || getFunctionExtInfo(*CalleeType).getNoReturn())
       terminateRegion(E);
   }
 
