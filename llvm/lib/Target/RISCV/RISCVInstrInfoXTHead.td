@@ -539,7 +539,7 @@ let Predicates = [HasVendorXTHeadBa] in {
 def : Pat<(add (XLenVT GPR:$rs1), (shl GPR:$rs2, uimm2:$uimm2)),
           (TH_ADDSL GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 def : Pat<(XLenVT (riscv_shl_add GPR:$rs1, uimm2:$uimm2, GPR:$rs2)),
-          (TH_ADDSL GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
+          (TH_ADDSL GPR:$rs2, GPR:$rs1, uimm2:$uimm2)>;
 
 // Reuse complex patterns from StdExtZba
 def : Pat<(add_non_imm12 sh1add_op:$rs1, (XLenVT GPR:$rs2)),
