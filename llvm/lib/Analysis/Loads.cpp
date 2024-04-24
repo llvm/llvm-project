@@ -719,14 +719,13 @@ static bool isPointerUseReplacable(const Use &U) {
 
   while (!Worklist.empty() && --Limit) {
     auto *User = Worklist.pop_back_val();
-    Visited.insert(User);
+    if (!Visited.insert(User).second)
+      continue;
     if (isa<ICmpInst, PtrToIntInst>(User))
       continue;
-    if (isa<PHINode, SelectInst>(User)) {
-      for (const auto &Use : User->uses())
-        if (!Visited.contains(Use.getUser()))
-          Worklist.push_back(Use.getUser());
-    } else
+    if (isa<PHINode, SelectInst>(User))
+      Worklist.append(User->user_begin(), User->user_end());
+    else
       return false;
   }
 

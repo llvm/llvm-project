@@ -105,7 +105,7 @@ define void @f(i32* %p1, i32* %p2, i64 %i) {
   EXPECT_TRUE(canReplacePointersIfEqual(BasedOnP1, P1, DL));
   EXPECT_FALSE(canReplacePointersIfEqual(BasedOnP1, P2, DL));
 
-  // // We can replace two arbitrary pointers in icmp and ptrtoint instructions.
+  // We can replace two arbitrary pointers in icmp and ptrtoint instructions.
   auto P1UseIter = P1->use_begin();
   const Use &PtrToIntUse = *P1UseIter;
   const Use &IcmpUse = *++P1UseIter;
