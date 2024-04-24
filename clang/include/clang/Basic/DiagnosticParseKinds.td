@@ -1056,10 +1056,20 @@ def ext_decl_attrs_on_lambda : ExtWarn<
 def ext_lambda_missing_parens : ExtWarn<
   "lambda without a parameter clause is a C++23 extension">,
   InGroup<CXX23>;
+
 def warn_cxx20_compat_decl_attrs_on_lambda : Warning<
   "%select{an attribute specifier sequence|%1}0 in this position "
   "is incompatible with C++ standards before C++23">,
   InGroup<CXXPre23Compat>, DefaultIgnore;
+
+def ext_decl_attrs_on_binding : ExtWarn<
+  "an attribute specifier sequence attached to a structured binding declaration "
+  "is a C++2c extension">, InGroup<CXX26>;
+
+def warn_cxx23_compat_decl_attrs_on_binding : Warning<
+  "an attribute specifier sequence attached to a structured binding declaration "
+  "is incompatible with C++ standards before C++2c">,
+  InGroup<CXXPre26Compat>, DefaultIgnore;
 
 // C++17 lambda expressions
 def err_expected_star_this_capture : Error<

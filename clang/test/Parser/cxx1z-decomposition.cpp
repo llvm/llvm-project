@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx17 -fcxx-exceptions
-// RUN: %clang_cc1 -std=c++2b %s -verify=expected,cxx2b -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx17,pre2c -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++2b %s -verify=expected,cxx2b,pre2c,post2b -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++2c %s -verify=expected,cxx2c,post2b -fcxx-exceptions
 // RUN: not %clang_cc1 -std=c++17 %s -emit-llvm-only -fcxx-exceptions
 
 struct S { int a, b, c; };
@@ -58,7 +59,7 @@ namespace OtherDecl {
 namespace GoodSpecifiers {
   void f() {
     int n[1];
-    const volatile auto &[a] = n; // cxx2b-warning {{volatile qualifier in structured binding declaration is deprecated}}
+    const volatile auto &[a] = n; // post2b-warning {{volatile qualifier in structured binding declaration is deprecated}}
   }
 }
 
@@ -97,8 +98,8 @@ namespace BadSpecifiers {
     S [a] = s; // expected-error {{cannot be declared with type 'S'}}
     decltype(auto) [b] = s; // expected-error {{cannot be declared with type 'decltype(auto)'}}
     auto ([c2]) = s; // cxx17-error {{decomposition declaration cannot be declared with parenthese}} \
-                     // cxx2b-error {{use of undeclared identifier 'c2'}} \
-                     // cxx2b-error {{expected body of lambda expression}} \
+                     // post2b-error {{use of undeclared identifier 'c2'}} \
+                     // post2b-error {{expected body of lambda expression}} \
 
     // FIXME: This error is not very good.
     auto [d]() = s; // expected-error {{expected ';'}} expected-error {{expected expression}}
@@ -119,9 +120,6 @@ namespace BadSpecifiers {
     [[]] auto [ok_3] = s;
     alignas(S) auto [ok_4] = s;
 
-    // ... but not after the identifier or declarator.
-    // FIXME: These errors are not very good.
-    auto [bad_attr_1 [[]]] = s; // expected-error {{attribute list cannot appear here}} expected-error 2{{}}
     auto [bad_attr_2] [[]] = s; // expected-error {{expected ';'}} expected-error {{}}
   }
 }
@@ -155,4 +153,28 @@ namespace Init {
     S [goodish3] = { 4 }; // expected-error {{cannot be declared with type 'S'}}
     S [goodish4] { 4 }; // expected-error {{cannot be declared with type 'S'}}
   }
+}
+
+
+namespace attributes {
+
+struct S{
+    int a;
+    int b = 0;
+};
+
+void err() {
+    auto [[]] = S{0}; // expected-error {{expected unqualified-id}}
+    auto [ alignas(42) a, foo ] = S{0}; // expected-error {{an attribute list cannot appear here}}
+    auto [ c, [[]] d ] = S{0}; // expected-error {{an attribute list cannot appear here}}
+    auto [ e, alignas(42) f ] = S{0}; // expected-error {{an attribute list cannot appear here}}
+}
+
+void ok() {
+    auto [ a alignas(42) [[]], b alignas(42) [[]]] = S{0}; // expected-error 2{{'alignas' attribute only applies to variables, data members and tag types}} \
+                                                           // pre2c-warning  2{{an attribute specifier sequence attached to a structured binding declaration is a C++2c extension}}
+    auto [ c [[]] alignas(42), d [[]] alignas(42) [[]]] = S{0}; // expected-error 2{{'alignas' attribute only applies to variables, data members and tag types}} \
+                                                                // pre2c-warning  2{{an attribute specifier sequence attached to a structured binding declaration is a C++2c extension}}
+}
+
 }
