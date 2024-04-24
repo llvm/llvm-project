@@ -4851,13 +4851,6 @@ void Verifier::visitMMRAMetadata(Instruction &I, MDNode *MD) {
   Check(canInstructionHaveMMRAs(I),
         "!mmra metadata attached to unexpected instruction kind", I, MD);
 
-  const auto IsLeaf = [](const Metadata *CurMD) {
-    const MDNode *Tuple = dyn_cast<MDTuple>(CurMD);
-    return Tuple && Tuple->getNumOperands() == 2 &&
-           isa<MDString>(Tuple->getOperand(0)) &&
-           isa<MDString>(Tuple->getOperand(1));
-  };
-
   // MMRA Metadata should either be a tag, e.g. !{!"foo", !"bar"}, or a
   // list of tags such as !2 in the following example:
   //    !0 = !{!"a", !"b"}
