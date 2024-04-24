@@ -2204,6 +2204,94 @@ public:
   }
 };
 
+class CIRAtomicCmpXchgLowering
+    : public mlir::OpConversionPattern<mlir::cir::AtomicCmpXchg> {
+public:
+  using OpConversionPattern<mlir::cir::AtomicCmpXchg>::OpConversionPattern;
+
+  mlir::LLVM::AtomicOrdering
+  getLLVMAtomicOrder(mlir::cir::MemOrder memo) const {
+    switch (memo) {
+    case mlir::cir::MemOrder::Relaxed:
+      return mlir::LLVM::AtomicOrdering::monotonic;
+    case mlir::cir::MemOrder::Consume:
+    case mlir::cir::MemOrder::Acquire:
+      return mlir::LLVM::AtomicOrdering::acquire;
+    case mlir::cir::MemOrder::Release:
+      return mlir::LLVM::AtomicOrdering::release;
+    case mlir::cir::MemOrder::AcquireRelease:
+      return mlir::LLVM::AtomicOrdering::acq_rel;
+    case mlir::cir::MemOrder::SequentiallyConsistent:
+      return mlir::LLVM::AtomicOrdering::seq_cst;
+    }
+    llvm_unreachable("shouldn't get here");
+  }
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::AtomicCmpXchg op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // This basic block is the exit point of the operation, we should end up
+    // here regardless of whether or not the operation succeeded.
+    mlir::Block *continueBB = nullptr;
+    {
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      continueBB = rewriter.splitBlock(rewriter.getInsertionBlock(),
+                                       std::next(op->getIterator()));
+    }
+
+    const auto llvmTy = getTypeConverter()->convertType(
+        op.getExpected().getType().cast<mlir::cir::PointerType>().getPointee());
+    auto expected = rewriter.create<mlir::LLVM::LoadOp>(op.getLoc(), llvmTy,
+                                                        adaptor.getExpected(),
+                                                        /*alignment=*/0);
+    auto desired = rewriter.create<mlir::LLVM::LoadOp>(op.getLoc(), llvmTy,
+                                                       adaptor.getDesired(),
+                                                       /*alignment=*/0);
+
+    // FIXME: add syncscope.
+    auto cmpxchg = rewriter.create<mlir::LLVM::AtomicCmpXchgOp>(
+        op.getLoc(), adaptor.getPtr(), expected, desired,
+        getLLVMAtomicOrder(adaptor.getSuccOrder()),
+        getLLVMAtomicOrder(adaptor.getFailOrder()));
+    cmpxchg.setWeak(adaptor.getWeak());
+    cmpxchg.setVolatile_(adaptor.getIsVolatile());
+
+    // Check result and apply stores accordingly.
+    auto old = rewriter.create<mlir::LLVM::ExtractValueOp>(
+        op.getLoc(), cmpxchg.getResult(), 0);
+    auto cmp = rewriter.create<mlir::LLVM::ExtractValueOp>(
+        op.getLoc(), cmpxchg.getResult(), 1);
+
+    // This basic block is used to hold the store instruction if the operation
+    // failed. Create it here and populate CondBrOp.
+    mlir::Block *storeExpectedBB = nullptr;
+    {
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      storeExpectedBB = rewriter.createBlock(cmpxchg->getParentRegion());
+    }
+
+    rewriter.create<mlir::LLVM::CondBrOp>(op.getLoc(), cmp, continueBB,
+                                          storeExpectedBB, mlir::ValueRange{});
+
+    // Fill in storeExpectedBB
+    rewriter.setInsertionPoint(storeExpectedBB, storeExpectedBB->begin());
+    rewriter.create<mlir::LLVM::StoreOp>(op.getLoc(), old,
+                                         adaptor.getExpected(),
+                                         /*alignment=*/0,
+                                         /* volatile */ false,
+                                         /* nontemporal */ false);
+    rewriter.create<mlir::LLVM::BrOp>(op.getLoc(), continueBB);
+
+    // Fill in continueBB
+    // Zero-extend the cmp result so it matches the bool type on the other side.
+    rewriter.setInsertionPoint(continueBB, continueBB->begin());
+    auto extCmp = rewriter.create<mlir::LLVM::ZExtOp>(
+        op.getLoc(), rewriter.getI8Type(), cmp);
+    rewriter.replaceOp(op, extCmp);
+    return mlir::success();
+  }
+};
+
 class CIRAtomicXchgLowering
     : public mlir::OpConversionPattern<mlir::cir::AtomicXchg> {
 public:
@@ -2941,16 +3029,16 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
   patterns.add<
       CIRCmpOpLowering, CIRBitClrsbOpLowering, CIRBitClzOpLowering,
       CIRBitCtzOpLowering, CIRBitFfsOpLowering, CIRBitParityOpLowering,
-      CIRBitPopcountOpLowering, CIRAtomicXchgLowering, CIRAtomicFetchLowering,
-      CIRByteswapOpLowering, CIRBrCondOpLowering, CIRPtrStrideOpLowering,
-      CIRCallLowering, CIRUnaryOpLowering, CIRBinOpLowering, CIRShiftOpLowering,
-      CIRLoadLowering, CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering,
-      CIRFuncLowering, CIRCastOpLowering, CIRGlobalOpLowering,
-      CIRGetGlobalOpLowering, CIRVAStartLowering, CIRVAEndLowering,
-      CIRVACopyLowering, CIRVAArgLowering, CIRBrOpLowering,
-      CIRGetMemberOpLowering, CIRSwitchFlatOpLowering, CIRPtrDiffOpLowering,
-      CIRCopyOpLowering, CIRMemCpyOpLowering, CIRFAbsOpLowering,
-      CIRExpectOpLowering, CIRVTableAddrPointOpLowering,
+      CIRBitPopcountOpLowering, CIRAtomicCmpXchgLowering, CIRAtomicXchgLowering,
+      CIRAtomicFetchLowering, CIRByteswapOpLowering, CIRBrCondOpLowering,
+      CIRPtrStrideOpLowering, CIRCallLowering, CIRUnaryOpLowering,
+      CIRBinOpLowering, CIRShiftOpLowering, CIRLoadLowering,
+      CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering, CIRFuncLowering,
+      CIRCastOpLowering, CIRGlobalOpLowering, CIRGetGlobalOpLowering,
+      CIRVAStartLowering, CIRVAEndLowering, CIRVACopyLowering, CIRVAArgLowering,
+      CIRBrOpLowering, CIRGetMemberOpLowering, CIRSwitchFlatOpLowering,
+      CIRPtrDiffOpLowering, CIRCopyOpLowering, CIRMemCpyOpLowering,
+      CIRFAbsOpLowering, CIRExpectOpLowering, CIRVTableAddrPointOpLowering,
       CIRVectorCreateLowering, CIRVectorInsertLowering,
       CIRVectorExtractLowering, CIRVectorCmpOpLowering, CIRVectorSplatLowering,
       CIRVectorTernaryLowering, CIRVectorShuffleIntsLowering,
