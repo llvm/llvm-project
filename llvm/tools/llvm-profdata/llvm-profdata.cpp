@@ -308,6 +308,11 @@ cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
                clEnumValN(memprof::Version1, "1", "version 1"),
                clEnumValN(memprof::Version2, "2", "version 2")));
 
+cl::opt<bool> MemProfFullSchema("memprof-full-schema", cl::Hidden,
+                                cl::sub(MergeSubcommand),
+                                cl::desc("Serialize the full schema"),
+                                cl::init(false));
+
 // Options specific to overlap subcommand.
 cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
                                   cl::desc("<base profile file>"),
@@ -600,7 +605,7 @@ struct WriterContext {
                 SmallSet<instrprof_error, 4> &WriterErrorCodes,
                 uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
       : Writer(IsSparse, ReservoirSize, MaxTraceLength, DoWritePrevVersion,
-               MemProfVersionRequested),
+               MemProfVersionRequested, MemProfFullSchema),
         ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
 };
 
