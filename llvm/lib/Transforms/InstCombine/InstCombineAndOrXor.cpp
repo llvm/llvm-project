@@ -3146,9 +3146,8 @@ Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B,
 /// When InvertFalseVal is set to true, we try to match the pattern
 /// where we have peeked through a 'not' op and A and C are the same:
 /// (A & B) | ~(A | D) --> (A & B) | (~A & ~D) --> A' ? B : ~D
-Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *B,
-                                              Value *C, Value *D,
-                                              bool InvertFalseVal) {
+Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *B, Value *C,
+                                              Value *D, bool InvertFalseVal) {
   // The potential condition of the select may be bitcasted. In that case, look
   // through its bitcast and the corresponding bitcast of the 'not' condition.
   Type *OrigType = A->getType();
