@@ -802,11 +802,17 @@ def B : JoinedOrSeparate<["-"], "B">, MetaVarName<"<prefix>">,
     HelpText<"Search $prefix$file for executables, libraries, and data files. "
     "If $prefix is a directory, search $prefix/$file">;
 def gcc_install_dir_EQ : Joined<["--"], "gcc-install-dir=">,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Use GCC installation in the specified directory. The directory ends with path components like 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
   "Note: executables (e.g. ld) used by the compiler are not overridden by the selected GCC installation">;
 def gcc_toolchain : Joined<["--"], "gcc-toolchain=">, Flags<[NoXarchOption]>,
-  HelpText<"Specify a directory where Clang can find 'include' and 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
-  "Clang will use the GCC installation with the largest version">;
+  Visibility<[ClangOption, FlangOption]>,
+  HelpText<
+    "Specify a directory where Clang can find 'include' and 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
+    "Clang will use the GCC installation with the largest version">,
+  HelpTextForVariants<[FlangOption],
+    "Specify a directory where Flang can find 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
+    "Flang will use the GCC installation with the largest version">;
 def gcc_triple_EQ : Joined<["--"], "gcc-triple=">,
   HelpText<"Search for the GCC installation with the specified triple.">;
 def CC : Flag<["-"], "CC">, Visibility<[ClangOption, CC1Option]>,
@@ -1001,7 +1007,8 @@ def : Joined<["-"], "Xclang=">, Group<CompileOnly_Group>,
 def Xcuda_fatbinary : Separate<["-"], "Xcuda-fatbinary">,
   HelpText<"Pass <arg> to fatbinary invocation">, MetaVarName<"<arg>">;
 def Xcuda_ptxas : Separate<["-"], "Xcuda-ptxas">,
-  HelpText<"Pass <arg> to the ptxas assembler">, MetaVarName<"<arg>">;
+  HelpText<"Pass <arg> to the ptxas assembler">, MetaVarName<"<arg>">,
+  Visibility<[ClangOption, CLOption]>;
 def Xopenmp_target : Separate<["-"], "Xopenmp-target">, Group<CompileOnly_Group>,
   HelpText<"Pass <arg> to the target offloading toolchain.">, MetaVarName<"<arg>">;
 def Xopenmp_target_EQ : JoinedAndSeparate<["-"], "Xopenmp-target=">, Group<CompileOnly_Group>,
@@ -1338,7 +1345,8 @@ def hip_link : Flag<["--"], "hip-link">, Group<opencl_Group>,
   HelpText<"Link clang-offload-bundler bundles for HIP">;
 def no_hip_rt: Flag<["-"], "no-hip-rt">, Group<hip_Group>,
   HelpText<"Do not link against HIP runtime libraries">;
-def rocm_path_EQ : Joined<["--"], "rocm-path=">, Group<hip_Group>,
+def rocm_path_EQ : Joined<["--"], "rocm-path=">,
+  Visibility<[FlangOption]>, Group<hip_Group>,
   HelpText<"ROCm installation path, used for finding and automatically linking required bitcode libraries.">;
 def hip_path_EQ : Joined<["--"], "hip-path=">, Group<hip_Group>,
   HelpText<"HIP runtime installation path, used for finding HIP version and adding HIP include path.">;
@@ -1446,7 +1454,7 @@ def dD : Flag<["-"], "dD">, Group<d_Group>, Visibility<[ClangOption, CC1Option]>
 def dI : Flag<["-"], "dI">, Group<d_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Print include directives in -E mode in addition to normal output">,
   MarshallingInfoFlag<PreprocessorOutputOpts<"ShowIncludeDirectives">>;
-def dM : Flag<["-"], "dM">, Group<d_Group>, Visibility<[ClangOption, CC1Option]>,
+def dM : Flag<["-"], "dM">, Group<d_Group>, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Print macro definitions in -E mode instead of normal output">;
 def dead__strip : Flag<["-"], "dead_strip">;
 def dependency_file : Separate<["-"], "dependency-file">,
@@ -1501,6 +1509,7 @@ def end_no_unused_arguments : Flag<["--"], "end-no-unused-arguments">,
 def interface_stub_version_EQ : JoinedOrSeparate<["-"], "interface-stub-version=">,
   Visibility<[ClangOption, CC1Option]>;
 def exported__symbols__list : Separate<["-"], "exported_symbols_list">;
+def alias_list : Separate<["-"], "alias_list">, Flags<[LinkerInput]>;
 def extract_api : Flag<["-"], "extract-api">,
   Visibility<[ClangOption, CC1Option]>, Group<Action_Group>,
   HelpText<"Extract API information">;
@@ -3032,6 +3041,7 @@ defm prebuilt_implicit_modules : BoolFOption<"prebuilt-implicit-modules",
 
 def fmodule_output_EQ : Joined<["-"], "fmodule-output=">,
   Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoString<FrontendOpts<"ModuleOutputPath">>,
   HelpText<"Save intermediate module file results when compiling a standard C++ module unit.">;
 def fmodule_output : Flag<["-"], "fmodule-output">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CC1Option]>,
@@ -3044,6 +3054,11 @@ defm skip_odr_check_in_gmf : BoolOption<"f", "skip-odr-check-in-gmf",
   NegFlag<SetFalse, [], [CC1Option],
           "Perform ODR checks for decls in the global module fragment.">>,
   Group<f_Group>;
+
+def modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Generate the reduced BMI">,
+  MarshallingInfoFlag<FrontendOpts<"GenReducedBMI">>;
 
 def fmodules_prune_interval : Joined<["-"], "fmodules-prune-interval=">, Group<i_Group>,
   Visibility<[ClangOption, CC1Option]>, MetaVarName<"<seconds>">,
@@ -3089,6 +3104,11 @@ defm modules_skip_header_search_paths : BoolFOption<"modules-skip-header-search-
     HeaderSearchOpts<"ModulesSkipHeaderSearchPaths">, DefaultFalse,
     PosFlag<SetTrue, [], [], "Disable writing header search paths">,
     NegFlag<SetFalse>, BothFlags<[], [CC1Option]>>;
+def fno_modules_prune_non_affecting_module_map_files :
+    Flag<["-"], "fno-modules-prune-non-affecting-module-map-files">,
+    Group<f_Group>, Flags<[]>, Visibility<[CC1Option]>,
+    MarshallingInfoNegativeFlag<HeaderSearchOpts<"ModulesPruneNonAffectingModuleMaps">>,
+    HelpText<"Do not prune non-affecting module map files when writing module files">;
 
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,
@@ -3407,17 +3427,24 @@ def fopenmp : Flag<["-"], "fopenmp">, Group<f_Group>,
   HelpText<"Parse OpenMP pragmas and generate parallel code.">;
 def fno_openmp : Flag<["-"], "fno-openmp">, Group<f_Group>,
   Flags<[NoArgumentUnused]>;
+class OpenMPVersionHelp<string program, string default> {
+  string str = !strconcat(
+    "Set OpenMP version (e.g. 45 for OpenMP 4.5, 51 for OpenMP 5.1). Default value is ",
+    default, " for ", program);
+}
 def fopenmp_version_EQ : Joined<["-"], "fopenmp-version=">, Group<f_Group>,
   Flags<[NoArgumentUnused]>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-  HelpText<"Set OpenMP version (e.g. 45 for OpenMP 4.5, 51 for OpenMP 5.1). Default value is 51 for Clang">;
+  HelpText<OpenMPVersionHelp<"Clang", "51">.str>,
+  HelpTextForVariants<[FlangOption, FC1Option], OpenMPVersionHelp<"Flang", "11">.str>;
 defm openmp_extensions: BoolFOption<"openmp-extensions",
   LangOpts<"OpenMPExtensions">, DefaultTrue,
   PosFlag<SetTrue, [NoArgumentUnused], [ClangOption, CC1Option],
           "Enable all Clang extensions for OpenMP directives and clauses">,
   NegFlag<SetFalse, [NoArgumentUnused], [ClangOption, CC1Option],
           "Disable all Clang extensions for OpenMP directives and clauses">>;
-def fopenmp_EQ : Joined<["-"], "fopenmp=">, Group<f_Group>;
+def fopenmp_EQ : Joined<["-"], "fopenmp=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def fopenmp_use_tls : Flag<["-"], "fopenmp-use-tls">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>;
 def fnoopenmp_use_tls : Flag<["-"], "fnoopenmp-use-tls">, Group<f_Group>,
@@ -4295,6 +4322,8 @@ def gsplit_dwarf_EQ : Joined<["-"], "gsplit-dwarf=">, Group<g_flags_Group>,
   Values<"split,single">;
 def gno_split_dwarf : Flag<["-"], "gno-split-dwarf">, Group<g_flags_Group>,
   Visibility<[ClangOption, CLOption, DXCOption]>;
+def gtemplate_alias : Flag<["-"], "gtemplate-alias">, Group<g_flags_Group>, Visibility<[ClangOption, CC1Option]>;
+def gno_template_alias : Flag<["-"], "gno-template-alias">, Group<g_flags_Group>, Visibility<[ClangOption]>;
 def gsimple_template_names : Flag<["-"], "gsimple-template-names">, Group<g_flags_Group>;
 def gsimple_template_names_EQ
     : Joined<["-"], "gsimple-template-names=">,
@@ -4731,9 +4760,9 @@ def munaligned_symbols : Flag<["-"], "munaligned-symbols">, Group<m_Group>,
   HelpText<"Expect external char-aligned symbols to be without ABI alignment (SystemZ only)">;
 def mno_unaligned_symbols : Flag<["-"], "mno-unaligned-symbols">, Group<m_Group>,
   HelpText<"Expect external char-aligned symbols to be without ABI alignment (SystemZ only)">;
-def mstrict_align : Flag<["-"], "mstrict-align">,
+def mstrict_align : Flag<["-"], "mstrict-align">, Group<m_Group>,
   HelpText<"Force all memory accesses to be aligned (AArch64/LoongArch/RISC-V only)">;
-def mno_strict_align : Flag<["-"], "mno-strict-align">,
+def mno_strict_align : Flag<["-"], "mno-strict-align">, Group<m_Group>,
   HelpText<"Allow memory accesses to be unaligned (AArch64/LoongArch/RISC-V only)">;
 def mno_thumb : Flag<["-"], "mno-thumb">, Group<m_arm_Features_Group>;
 def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
@@ -4906,6 +4935,9 @@ defm tgsplit : SimpleMFlag<"tgsplit", "Enable", "Disable",
 defm wavefrontsize64 : SimpleMFlag<"wavefrontsize64",
   "Specify wavefront size 64", "Specify wavefront size 32",
   " mode (AMDGPU only)">;
+defm amdgpu_precise_memory_op
+    : SimpleMFlag<"amdgpu-precise-memory-op", "Enable", "Disable",
+                  " precise memory mode (AMDGPU only)">;
 
 defm unsafe_fp_atomics : BoolMOption<"unsafe-fp-atomics",
   TargetOpts<"AllowAMDGPUUnsafeFPAtomics">, DefaultFalse,
@@ -5010,6 +5042,12 @@ defm regnames : BoolMOption<"regnames",
 def maix_small_local_exec_tls : Flag<["-"], "maix-small-local-exec-tls">,
   Group<m_ppc_Features_Group>,
   HelpText<"Produce a faster access sequence for local-exec TLS variables "
+           "where the offset from the TLS base is encoded as an "
+           "immediate operand (AIX 64-bit only). "
+           "This access sequence is not used for variables larger than 32KB.">;
+def maix_small_local_dynamic_tls : Flag<["-"], "maix-small-local-dynamic-tls">,
+  Group<m_ppc_Features_Group>,
+  HelpText<"Produce a faster access sequence for local-dynamic TLS variables "
            "where the offset from the TLS base is encoded as an "
            "immediate operand (AIX 64-bit only). "
            "This access sequence is not used for variables larger than 32KB.">;
@@ -5455,21 +5493,23 @@ def rdynamic : Flag<["-"], "rdynamic">, Group<Link_Group>,
   Visibility<[ClangOption, FlangOption]>;
 def resource_dir : Separate<["-"], "resource-dir">,
   Flags<[NoXarchOption, HelpHidden]>,
-  Visibility<[ClangOption, CC1Option, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FlangOption, FC1Option]>,
   HelpText<"The directory which holds the compiler resource files">,
   MarshallingInfoString<HeaderSearchOpts<"ResourceDir">>;
 def resource_dir_EQ : Joined<["-"], "resource-dir=">, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   Alias<resource_dir>;
 def rpath : Separate<["-"], "rpath">, Flags<[LinkerInput]>, Group<Link_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 def rtlib_EQ : Joined<["-", "--"], "rtlib=">, Visibility<[ClangOption, CLOption]>,
   HelpText<"Compiler runtime library to use">;
 def frtlib_add_rpath: Flag<["-"], "frtlib-add-rpath">, Flags<[NoArgumentUnused]>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Add -rpath with architecture-specific resource directory to the linker flags. "
   "When --hip-link is specified, also add -rpath with HIP runtime library directory to the linker flags">;
 def fno_rtlib_add_rpath: Flag<["-"], "fno-rtlib-add-rpath">,
   Flags<[NoArgumentUnused]>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Do not add -rpath with architecture-specific resource directory to the linker flags. "
   "When --hip-link is specified, do not add -rpath with HIP runtime library directory to the linker flags">;
 def offload_add_rpath: Flag<["--"], "offload-add-rpath">,
@@ -8325,14 +8365,15 @@ def _SLASH_FI : CLJoinedOrSeparate<"FI">,
 def _SLASH_Fe : CLJoined<"Fe">,
   HelpText<"Set output executable file name">,
   MetaVarName<"<file or dir/>">;
-def _SLASH_Fe_COLON : CLJoined<"Fe:">, Alias<_SLASH_Fe>;
+def _SLASH_Fe_COLON : CLJoinedOrSeparate<"Fe:">, Alias<_SLASH_Fe>;
 def _SLASH_Fi : CLCompileJoined<"Fi">,
   HelpText<"Set preprocess output file name (with /P)">,
   MetaVarName<"<file>">;
+def _SLASH_Fi_COLON : CLJoinedOrSeparate<"Fi:">, Alias<_SLASH_Fi>;
 def _SLASH_Fo : CLCompileJoined<"Fo">,
   HelpText<"Set output object file (with /c)">,
   MetaVarName<"<file or dir/>">;
-def _SLASH_Fo_COLON : CLCompileJoined<"Fo:">, Alias<_SLASH_Fo>;
+def _SLASH_Fo_COLON : CLCompileJoinedOrSeparate<"Fo:">, Alias<_SLASH_Fo>;
 def _SLASH_guard : CLJoined<"guard:">,
   HelpText<"Enable Control Flow Guard with /guard:cf, or only the table with /guard:cf,nochecks. "
            "Enable EH Continuation Guard with /guard:ehcont">;
@@ -8427,6 +8468,7 @@ def _SLASH_Zc_dllexportInlines_ : CLFlag<"Zc:dllexportInlines-">,
   HelpText<"Do not dllexport/dllimport inline member functions of dllexport/import classes">;
 def _SLASH_Fp : CLJoined<"Fp">,
   HelpText<"Set pch file name (with /Yc and /Yu)">, MetaVarName<"<file>">;
+def _SLASH_Fp_COLON : CLJoinedOrSeparate<"Fp:">, Alias<_SLASH_Fp>;
 
 def _SLASH_Gd : CLFlag<"Gd">,
   HelpText<"Set __cdecl as a default calling convention">;

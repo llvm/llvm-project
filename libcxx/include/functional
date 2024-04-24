@@ -207,6 +207,12 @@ binary_negate<Predicate> not2(const Predicate& pred);
 template <class F>
 constexpr unspecified not_fn(F&& f); // C++17, constexpr in C++20
 
+// [func.bind.partial], function templates bind_front and bind_back
+template<class F, class... Args>
+  constexpr unspecified bind_front(F&&, Args&&...); // C++20
+template<class F, class... Args>
+  constexpr unspecified bind_back(F&&, Args&&...);  // C++23
+
 template<class T> struct is_bind_expression;
 template<class T> struct is_placeholder;
 

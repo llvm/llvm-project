@@ -120,7 +120,8 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (T->isBooleanType())
     return PT_Bool;
 
-  if (T->isAnyComplexType())
+  // We map these to primitive arrays.
+  if (T->isAnyComplexType() || T->isVectorType())
     return std::nullopt;
 
   if (T->isSignedIntegerOrEnumerationType()) {

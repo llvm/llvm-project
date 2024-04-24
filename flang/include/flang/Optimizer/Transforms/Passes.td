@@ -16,8 +16,8 @@
 
 include "mlir/Pass/PassBase.td"
 
-class AbstractResultOptBase<string optExt, string operation> 
-  : Pass<"abstract-result-on-" # optExt # "-opt", operation> {
+def AbstractResultOpt
+  : Pass<"abstract-result"> {
   let summary = "Convert fir.array, fir.box and fir.rec function result to "
                 "function argument";
   let description = [{
@@ -33,14 +33,6 @@ class AbstractResultOptBase<string optExt, string operation>
            "Pass fir.array<T> result as fir.box<fir.array<T>> argument instead"
            " of fir.ref<fir.array<T>>.">
   ];
-}
-
-def AbstractResultOnFuncOpt : AbstractResultOptBase<"func", "mlir::func::FuncOp"> {
-  let constructor = "::fir::createAbstractResultOnFuncOptPass()";
-}
-
-def AbstractResultOnGlobalOpt : AbstractResultOptBase<"global", "fir::GlobalOp"> {
-  let constructor = "::fir::createAbstractResultOnGlobalOptPass()";
 }
 
 def AffineDialectPromotion : Pass<"promote-to-affine", "::mlir::func::FuncOp"> {
@@ -201,12 +193,12 @@ def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> 
 
 // This needs to be a "mlir::ModuleOp" pass, because we are creating debug for
 // the module in this pass.
-def AddDebugFoundation : Pass<"add-debug-foundation", "mlir::ModuleOp"> {
-  let summary = "Add the foundation for debug info";
+def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
+  let summary = "Add the debug info";
   let description = [{
-    Add the foundation for emitting debug info that can be understood by llvm.
+    Emit debug info that can be understood by llvm.
   }];
-  let constructor = "::fir::createAddDebugFoundationPass()";
+  let constructor = "::fir::createAddDebugInfoPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::LLVM::LLVMDialect"
   ];
