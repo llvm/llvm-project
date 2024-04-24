@@ -114,6 +114,8 @@ namespace Intrinsic {
       MMX,
       Token,
       Metadata,
+      Float8E4M3FN,
+      FLoat8E5M2,
       Half,
       BFloat,
       Float,

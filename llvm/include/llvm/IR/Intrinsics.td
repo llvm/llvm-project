@@ -320,6 +320,8 @@ def IIT_I2 : IIT_Int<2, 57>;
 def IIT_I4 : IIT_Int<4, 58>;
 def IIT_AARCH64_SVCOUNT : IIT_VT<aarch64svcount, 59>;
 def IIT_V6 : IIT_Vec<6, 60>;
+def IIT_F8E4M3FN : IIT_VT<f8e4m3fn, 61>;
+def IIT_F8E5M2 : IIT_VT<f8e5m2, 62>;
 }
 
 defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
@@ -552,6 +554,17 @@ def llvm_v16i64_ty     : LLVMType<v16i64>;   // 16 x i64
 def llvm_v32i64_ty     : LLVMType<v32i64>;   // 32 x i64
 
 def llvm_v1i128_ty     : LLVMType<v1i128>;   //  1 x i128
+
+def llvm_v2f8e4m3fn_ty    : LLVMType<v2f8e4m3fn>;    //  2 x f8e4m3 (__f8e4m3fn)
+def llvm_v4f8e4m3fn_ty    : LLVMType<v4f8e4m3fn>;    //  4 x f8e4m3 (__f8e4m3fn)
+def llvm_v8f8e4m3fn_ty    : LLVMType<v8f8e4m3fn>;    //  8 x f8e4m3 (__f8e4m3fn)
+def llvm_v16f8e4m3fn_ty   : LLVMType<v16f8e4m3fn>;   // 16 x f8e4m3 (__f8e4m3fn)
+def llvm_v32f8e4m3fn_ty   : LLVMType<v32f8e4m3fn>;   // 32 x f8e4m3 (__f8e4m3fn)
+def llvm_v2f8e5m2_ty      : LLVMType<v2f8e5m2>;      //  2 x f8e5m2 (__f8e5m2)
+def llvm_v4f8e5m2_ty      : LLVMType<v4f8e5m2>;      //  4 x f8e5m2 (__f8e5m2)
+def llvm_v8f8e5m2_ty      : LLVMType<v8f8e5m2>;      //  8 x f8e5m2 (__f8e5m2)
+def llvm_v16f8e5m2_ty     : LLVMType<v16f8e5m2>;     // 16 x f8e5m2 (__f8e5m2)
+def llvm_v32f8e5m2_ty     : LLVMType<v32f8e5m2>;     // 32 x f8e5m2 (__f8e5m2)
 
 def llvm_v2f16_ty      : LLVMType<v2f16>;    //  2 x half (__fp16)
 def llvm_v4f16_ty      : LLVMType<v4f16>;    //  4 x half (__fp16)
