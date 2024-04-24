@@ -24,3 +24,9 @@
 // RUN:   -L. -fconvergent-functions %s 2>&1 | FileCheck -check-prefix=MCPU %s
 // LTO: clang{{.*}} "-flto=full"{{.*}}"-fconvergent-functions"
 // MCPU: ld.lld{{.*}}"-L."{{.*}}"-plugin-opt=mcpu=gfx906"
+
+// We do not suppor the BFD linker, but we should be able to override the
+// default even if it will error during linking.
+// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
+// RUN:   -fuse-ld=bfd %s 2>&1 | FileCheck -check-prefixes=LD %s
+// LD: ld.bfd"
