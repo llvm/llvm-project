@@ -2350,8 +2350,8 @@ static Instruction *canonicalizeGEPOfConstGEPI8(GetElementPtrInst &GEP,
   APInt NewOffset = TypeSize * *C2 + *C1;
   if (NewOffset.isZero() ||
       (Src->hasOneUse() && GEP.getOperand(1)->hasOneUse())) {
-    Value *GEPConst = IC.Builder.CreateGEP(IC.Builder.getInt8Ty(), Base,
-                                           IC.Builder.getInt(NewOffset));
+    Value *GEPConst =
+        IC.Builder.CreatePtrAdd(Base, IC.Builder.getInt(NewOffset));
     return GetElementPtrInst::Create(BaseType, GEPConst, VarIndex);
   }
 
