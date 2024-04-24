@@ -9126,8 +9126,8 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
                           AMDGPUOperand::ImmTyScaleSel);
 
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::byte_sel)) {
-    assert(AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_in));
-    Inst.addOperand(Inst.getOperand(0));
+    if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_in))
+      Inst.addOperand(Inst.getOperand(0));
     addOptionalImmOperand(Inst, Operands, OptionalIdx,
                           AMDGPUOperand::ImmTyByteSel);
   }
@@ -9871,12 +9871,8 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool I
         Op.addImmOperands(Inst, 1);
       } else if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
         Op.addRegWithFPInputModsOperands(Inst, 2);
-        if (Opc == AMDGPU::V_CVT_F32_BF8_dpp_gfx12 ||
-            Opc == AMDGPU::V_CVT_F32_FP8_dpp_gfx12 ||
-            Opc == AMDGPU::V_CVT_F16_FP8_dpp_gfx1210 ||
+        if (Opc == AMDGPU::V_CVT_F16_FP8_dpp_gfx1210 ||
             Opc == AMDGPU::V_CVT_F16_BF8_dpp_gfx1210 ||
-            Opc == AMDGPU::V_CVT_F32_BF8_dpp8_gfx12 ||
-            Opc == AMDGPU::V_CVT_F32_FP8_dpp8_gfx12 ||
             Opc == AMDGPU::V_CVT_F16_FP8_dpp8_gfx1210 ||
             Opc == AMDGPU::V_CVT_F16_BF8_dpp8_gfx1210) {
           // Add dummy src1
@@ -9893,12 +9889,8 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool I
     } else {
       if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
         Op.addRegWithFPInputModsOperands(Inst, 2);
-        if (Opc == AMDGPU::V_CVT_F32_BF8_dpp_gfx12 ||
-            Opc == AMDGPU::V_CVT_F32_FP8_dpp_gfx12 ||
-            Opc == AMDGPU::V_CVT_F16_FP8_dpp_gfx1210 ||
+        if (Opc == AMDGPU::V_CVT_F16_FP8_dpp_gfx1210 ||
             Opc == AMDGPU::V_CVT_F16_BF8_dpp_gfx1210 ||
-            Opc == AMDGPU::V_CVT_F32_BF8_dpp8_gfx12 ||
-            Opc == AMDGPU::V_CVT_F32_FP8_dpp8_gfx12 ||
             Opc == AMDGPU::V_CVT_F16_FP8_dpp8_gfx1210 ||
             Opc == AMDGPU::V_CVT_F16_BF8_dpp8_gfx1210) {
           // Add dummy src1

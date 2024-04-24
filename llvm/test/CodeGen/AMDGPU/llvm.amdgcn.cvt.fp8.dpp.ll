@@ -15,9 +15,7 @@ define amdgpu_cs float @test_cvt_f32_bf8_byte0(i32 %a) {
 define amdgpu_cs float @test_cvt_f32_bf8_byte1(i32 %a) {
 ; GCN-LABEL: test_cvt_f32_bf8_byte1:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mov_b32_dpp v0, v0 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_cvt_f32_bf8_e64 v0, v0 op_sel:[0,1]
+; GCN-NEXT:    v_cvt_f32_bf8_e64_dpp v0, v0 byte_sel:1 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GCN-NEXT:    ; return to shader part epilog
   %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %a, i32 228, i32 15, i32 15, i1 1)
   %ret = tail call float @llvm.amdgcn.cvt.f32.bf8(i32 %tmp0, i32 1)
@@ -27,9 +25,7 @@ define amdgpu_cs float @test_cvt_f32_bf8_byte1(i32 %a) {
 define amdgpu_cs float @test_cvt_f32_bf8_byte2(i32 %a) {
 ; GCN-LABEL: test_cvt_f32_bf8_byte2:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mov_b32_dpp v0, v0 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_cvt_f32_bf8_e64 v0, v0 op_sel:[1,0]
+; GCN-NEXT:    v_cvt_f32_bf8_e64_dpp v0, v0 byte_sel:2 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GCN-NEXT:    ; return to shader part epilog
   %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %a, i32 228, i32 15, i32 15, i1 1)
   %ret = tail call float @llvm.amdgcn.cvt.f32.bf8(i32 %tmp0, i32 2)
@@ -39,9 +35,7 @@ define amdgpu_cs float @test_cvt_f32_bf8_byte2(i32 %a) {
 define amdgpu_cs float @test_cvt_f32_fp8_byte3(i32 %a) {
 ; GCN-LABEL: test_cvt_f32_fp8_byte3:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_mov_b32_dpp v0, v0 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_cvt_f32_fp8_e64 v0, v0 op_sel:[1,1]
+; GCN-NEXT:    v_cvt_f32_fp8_e64_dpp v0, v0 byte_sel:3 quad_perm:[0,1,2,3] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GCN-NEXT:    ; return to shader part epilog
   %tmp0 = call i32 @llvm.amdgcn.mov.dpp.i32(i32 %a, i32 228, i32 15, i32 15, i1 1)
   %ret = tail call float @llvm.amdgcn.cvt.f32.fp8(i32 %tmp0, i32 3)
