@@ -18,5 +18,13 @@ config.test_exec_root = os.path.join("@COMPILER_RT_BINARY_DIR@",
 
 config.test_source_root = config.test_exec_root
 
-if config.enable_per_target_runtime_dir and config.target_arch != config.host_arch:
-    config.compiler_rt_libdir = re.sub(r'/i386(?=-[^/]+$)', '/x86_64', config.compiler_rt_libdir)
+# When LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=on, the initial value of
+# config.compiler_rt_libdir (COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR) has the
+# host triple as the trailing path component. The value is incorrect for i386
+# tests on x86_64 hosts and vice versa.  But, since only x86_64 is enabled as
+# target, and we don't support different environments for building and,
+# respectivelly, running tests, we shouldn't see this case.
+assert config.enable_per_target_runtime_dir and config.target_arch == config.host_arch
+
+if not config.parallelism_group:
+  config.parallelism_group = 'shadow-memory'
