@@ -446,6 +446,7 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
       fracDigits = sizeof buffer_ - 2; // sign & NUL
     }
   }
+  bool emitTrailingZeroes{!(flags & decimal::Minimize)};
   // Multiple conversions may be needed to get the right number of
   // effective rounded fractional digits.
   bool canIncrease{true};
@@ -526,11 +527,18 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
     }
     int digitsBeforePoint{std::max(0, std::min(expo, convertedDigits))};
     int zeroesBeforePoint{std::max(0, expo - digitsBeforePoint)};
+    if (zeroesBeforePoint > 0 && (flags & decimal::Minimize)) {
+      // If a minimized result looks like an integer, emit all of
+      // its digits rather than clipping some to zeroes.
+      // This can happen with HUGE(0._2) == 65504._2.
+      flags &= ~decimal::Minimize;
+      continue;
+    }
     int zeroesAfterPoint{std::min(fracDigits, std::max(0, -expo))};
     int digitsAfterPoint{convertedDigits - digitsBeforePoint};
-    int trailingZeroes{flags & decimal::Minimize
-            ? 0
-            : std::max(0, fracDigits - (zeroesAfterPoint + digitsAfterPoint))};
+    int trailingZeroes{emitTrailingZeroes
+            ? std::max(0, fracDigits - (zeroesAfterPoint + digitsAfterPoint))
+            : 0};
     if (digitsBeforePoint + zeroesBeforePoint + zeroesAfterPoint +
             digitsAfterPoint + trailingZeroes ==
         0) {
