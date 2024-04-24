@@ -50,6 +50,8 @@ Update on required toolchains to build LLVM
 Changes to the LLVM IR
 ----------------------
 
+- Added Memory Model Relaxation Annotations (MMRAs).
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -133,7 +135,7 @@ Changes to the C API
   functions for accessing the values in a blockaddress constant.
 
 * Added ``LLVMConstStringInContext2`` function, which better matches the C++
-  API by using ``size_t`` for string length. Deprecated ``LLVMConstStringInContext``. 
+  API by using ``size_t`` for string length. Deprecated ``LLVMConstStringInContext``.
 
 * Added the following functions for accessing a function's prefix data:
 
