@@ -2204,28 +2204,27 @@ public:
   }
 };
 
+static mlir::LLVM::AtomicOrdering getLLVMAtomicOrder(mlir::cir::MemOrder memo) {
+  switch (memo) {
+  case mlir::cir::MemOrder::Relaxed:
+    return mlir::LLVM::AtomicOrdering::monotonic;
+  case mlir::cir::MemOrder::Consume:
+  case mlir::cir::MemOrder::Acquire:
+    return mlir::LLVM::AtomicOrdering::acquire;
+  case mlir::cir::MemOrder::Release:
+    return mlir::LLVM::AtomicOrdering::release;
+  case mlir::cir::MemOrder::AcquireRelease:
+    return mlir::LLVM::AtomicOrdering::acq_rel;
+  case mlir::cir::MemOrder::SequentiallyConsistent:
+    return mlir::LLVM::AtomicOrdering::seq_cst;
+  }
+  llvm_unreachable("shouldn't get here");
+}
+
 class CIRAtomicCmpXchgLowering
     : public mlir::OpConversionPattern<mlir::cir::AtomicCmpXchg> {
 public:
   using OpConversionPattern<mlir::cir::AtomicCmpXchg>::OpConversionPattern;
-
-  mlir::LLVM::AtomicOrdering
-  getLLVMAtomicOrder(mlir::cir::MemOrder memo) const {
-    switch (memo) {
-    case mlir::cir::MemOrder::Relaxed:
-      return mlir::LLVM::AtomicOrdering::monotonic;
-    case mlir::cir::MemOrder::Consume:
-    case mlir::cir::MemOrder::Acquire:
-      return mlir::LLVM::AtomicOrdering::acquire;
-    case mlir::cir::MemOrder::Release:
-      return mlir::LLVM::AtomicOrdering::release;
-    case mlir::cir::MemOrder::AcquireRelease:
-      return mlir::LLVM::AtomicOrdering::acq_rel;
-    case mlir::cir::MemOrder::SequentiallyConsistent:
-      return mlir::LLVM::AtomicOrdering::seq_cst;
-    }
-    llvm_unreachable("shouldn't get here");
-  }
 
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::AtomicCmpXchg op, OpAdaptor adaptor,
@@ -2283,7 +2282,8 @@ public:
     rewriter.create<mlir::LLVM::BrOp>(op.getLoc(), continueBB);
 
     // Fill in continueBB
-    // Zero-extend the cmp result so it matches the bool type on the other side.
+    // Zero-extend the cmp result so it matches the bool type on the other
+    // side.
     rewriter.setInsertionPoint(continueBB, continueBB->begin());
     auto extCmp = rewriter.create<mlir::LLVM::ZExtOp>(
         op.getLoc(), rewriter.getI8Type(), cmp);
@@ -2296,24 +2296,6 @@ class CIRAtomicXchgLowering
     : public mlir::OpConversionPattern<mlir::cir::AtomicXchg> {
 public:
   using OpConversionPattern<mlir::cir::AtomicXchg>::OpConversionPattern;
-
-  mlir::LLVM::AtomicOrdering
-  getLLVMAtomicOrder(mlir::cir::MemOrder memo) const {
-    switch (memo) {
-    case mlir::cir::MemOrder::Relaxed:
-      return mlir::LLVM::AtomicOrdering::monotonic;
-    case mlir::cir::MemOrder::Consume:
-    case mlir::cir::MemOrder::Acquire:
-      return mlir::LLVM::AtomicOrdering::acquire;
-    case mlir::cir::MemOrder::Release:
-      return mlir::LLVM::AtomicOrdering::release;
-    case mlir::cir::MemOrder::AcquireRelease:
-      return mlir::LLVM::AtomicOrdering::acq_rel;
-    case mlir::cir::MemOrder::SequentiallyConsistent:
-      return mlir::LLVM::AtomicOrdering::seq_cst;
-    }
-    llvm_unreachable("shouldn't get here");
-  }
 
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::AtomicXchg op, OpAdaptor adaptor,
@@ -2331,24 +2313,6 @@ class CIRAtomicFetchLowering
     : public mlir::OpConversionPattern<mlir::cir::AtomicFetch> {
 public:
   using OpConversionPattern<mlir::cir::AtomicFetch>::OpConversionPattern;
-
-  mlir::LLVM::AtomicOrdering
-  getLLVMAtomicOrder(mlir::cir::MemOrder memo) const {
-    switch (memo) {
-    case mlir::cir::MemOrder::Relaxed:
-      return mlir::LLVM::AtomicOrdering::monotonic;
-    case mlir::cir::MemOrder::Consume:
-    case mlir::cir::MemOrder::Acquire:
-      return mlir::LLVM::AtomicOrdering::acquire;
-    case mlir::cir::MemOrder::Release:
-      return mlir::LLVM::AtomicOrdering::release;
-    case mlir::cir::MemOrder::AcquireRelease:
-      return mlir::LLVM::AtomicOrdering::acq_rel;
-    case mlir::cir::MemOrder::SequentiallyConsistent:
-      return mlir::LLVM::AtomicOrdering::seq_cst;
-    }
-    llvm_unreachable("shouldn't get here");
-  }
 
   mlir::Value buildPostOp(mlir::cir::AtomicFetch op, OpAdaptor adaptor,
                           mlir::ConversionPatternRewriter &rewriter,
