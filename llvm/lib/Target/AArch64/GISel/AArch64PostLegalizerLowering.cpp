@@ -36,6 +36,7 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -473,6 +474,55 @@ void applyEXT(MachineInstr &MI, ShuffleVectorPseudo &MatchInfo) {
                           {MatchInfo.SrcOps[0], MatchInfo.SrcOps[1], Cst});
   }
   MI.eraseFromParent();
+}
+
+bool matchNonConstInsert(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_INSERT_VECTOR_ELT);
+
+  auto ValAndVReg =
+      getIConstantVRegValWithLookThrough(MI.getOperand(3).getReg(), MRI);
+  return !ValAndVReg;
+}
+
+void applyNonConstInsert(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &Builder) {
+  auto &Insert = cast<GInsertVectorElement>(MI);
+  Builder.setInstrAndDebugLoc(Insert);
+
+  Register Offset = Insert.getIndexReg();
+  LLT VecTy = MRI.getType(Insert.getReg(0));
+  LLT EltTy = MRI.getType(Insert.getElementReg());
+  LLT IdxTy = MRI.getType(Insert.getIndexReg());
+
+  // Create a stack slot and store the vector into it
+  MachineFunction &MF = Builder.getMF();
+  Align Alignment(
+      std::min<uint64_t>(VecTy.getSizeInBytes().getKnownMinValue(), 16));
+  int FrameIdx = MF.getFrameInfo().CreateStackObject(VecTy.getSizeInBytes(),
+                                                     Alignment, false);
+  LLT FramePtrTy = LLT::pointer(0, 64);
+  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FrameIdx);
+  auto StackTemp = Builder.buildFrameIndex(FramePtrTy, FrameIdx);
+
+  Builder.buildStore(Insert.getOperand(1), StackTemp, PtrInfo, Align(8));
+
+  // Get the pointer to the element, and be sure not to hit undefined behavior
+  // if the index is out of bounds.
+  assert(isPowerOf2_64(VecTy.getNumElements()) &&
+         "Expected a power-2 vector size");
+  auto Mask = Builder.buildConstant(IdxTy, VecTy.getNumElements() - 1);
+  Register And = Builder.buildAnd(IdxTy, Offset, Mask).getReg(0);
+  auto EltSize = Builder.buildConstant(IdxTy, EltTy.getSizeInBytes());
+  Register Mul = Builder.buildMul(IdxTy, And, EltSize).getReg(0);
+  Register EltPtr =
+      Builder.buildPtrAdd(MRI.getType(StackTemp.getReg(0)), StackTemp, Mul)
+          .getReg(0);
+
+  // Write the inserted element
+  Builder.buildStore(Insert.getElementReg(), EltPtr, PtrInfo, Align(1));
+  // Reload the whole vector.
+  Builder.buildLoad(Insert.getReg(0), StackTemp, PtrInfo, Align(8));
+  Insert.eraseFromParent();
 }
 
 /// Match a G_SHUFFLE_VECTOR with a mask which corresponds to a
