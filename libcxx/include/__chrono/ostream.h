@@ -15,6 +15,7 @@
 #include <__chrono/duration.h>
 #include <__chrono/file_clock.h>
 #include <__chrono/hh_mm_ss.h>
+#include <__chrono/local_info.h>
 #include <__chrono/month.h>
 #include <__chrono/month_weekday.h>
 #include <__chrono/monthday.h>
@@ -263,7 +264,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const hh_mm_ss<_Duration> __hms
   return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%T}"), __hms);
 }
 
-#  if !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+#  if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
@@ -280,7 +281,28 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const sys_info& __info) {
              __abbrev);
 }
 
-#  endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_TZDB)
+template <class _CharT, class _Traits>
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const local_info& __info) {
+  auto __result = [&]() -> basic_string<_CharT> {
+    switch (__info.result) {
+    case local_info::unique:
+      return _LIBCPP_STATICALLY_WIDEN(_CharT, "unique");
+    case local_info::nonexistent:
+      return _LIBCPP_STATICALLY_WIDEN(_CharT, "non-existent");
+    case local_info::ambiguous:
+      return _LIBCPP_STATICALLY_WIDEN(_CharT, "ambiguous");
+
+    default:
+      return std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "unspecified result ({})"), __info.result);
+    };
+  };
+
+  return __os << std::format(
+             _LIBCPP_STATICALLY_WIDEN(_CharT, "{}: {{{}, {}}}"), __result(), __info.first, __info.second);
+}
+
+#  endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
 } // namespace chrono
 

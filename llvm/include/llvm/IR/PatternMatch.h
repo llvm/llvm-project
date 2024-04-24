@@ -151,6 +151,11 @@ struct undef_match {
 /// neither undef nor poison, the aggregate is not matched.
 inline auto m_Undef() { return undef_match(); }
 
+/// Match an arbitrary UndefValue constant.
+inline class_match<UndefValue> m_UndefValue() {
+  return class_match<UndefValue>();
+}
+
 /// Match an arbitrary poison constant.
 inline class_match<PoisonValue> m_Poison() {
   return class_match<PoisonValue>();
@@ -406,7 +411,8 @@ template <typename Predicate> struct api_pred_ty : public Predicate {
       }
     if (V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
-        if (auto *CI = dyn_cast_or_null<ConstantInt>(C->getSplatValue()))
+        if (auto *CI = dyn_cast_or_null<ConstantInt>(
+                C->getSplatValue(/*AllowPoison=*/true)))
           if (this->isValue(CI->getValue())) {
             Res = &CI->getValue();
             return true;
@@ -775,6 +781,9 @@ inline bind_ty<const WithOverflowInst>
 m_WithOverflowInst(const WithOverflowInst *&I) {
   return I;
 }
+
+/// Match an UndefValue, capturing the value if we match.
+inline bind_ty<UndefValue> m_UndefValue(UndefValue *&U) { return U; }
 
 /// Match a Constant, capturing the value if we match.
 inline bind_ty<Constant> m_Constant(Constant *&C) { return C; }

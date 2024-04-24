@@ -100,12 +100,7 @@ static cl::opt<int>
                                "of delta passes (default=5)"),
                       cl::init(5), cl::cat(LLVMReduceOptions));
 
-static cl::opt<bool> TryUseNewDbgInfoFormat(
-    "try-experimental-debuginfo-iterators",
-    cl::desc("Enable debuginfo iterator positions, if they're built in"),
-    cl::init(false));
-
-extern cl::opt<bool> UseNewDbgInfoFormat;
+extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
 
 static codegen::RegisterCodeGenFlags CGF;
 
@@ -146,16 +141,10 @@ static std::pair<StringRef, bool> determineOutputType(bool IsMIR,
 int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
   const StringRef ToolName(Argv[0]);
+  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
 
   cl::HideUnrelatedOptions({&LLVMReduceOptions, &getColorCategory()});
   cl::ParseCommandLineOptions(Argc, Argv, "LLVM automatic testcase reducer.\n");
-
-  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
-  // new debug-info format.
-  if (TryUseNewDbgInfoFormat) {
-    // Turn the new debug-info format on.
-    UseNewDbgInfoFormat = true;
-  }
 
   if (Argc == 1) {
     cl::PrintHelpMessage();
