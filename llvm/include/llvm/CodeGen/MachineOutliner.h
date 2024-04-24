@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineStableHash.h"
 #include <initializer_list>
 
 namespace llvm {
@@ -274,6 +275,41 @@ public:
   OutlinedFunction() = delete;
   virtual ~OutlinedFunction() = default;
 };
+
+/// The information necessary to create an outlined function that is matched
+/// globally.
+struct GlobalOutlinedFunction : public OutlinedFunction {
+  GlobalOutlinedFunction(OutlinedFunction &OF, unsigned GlobalOccurrenceCount)
+      : OutlinedFunction(OF.Candidates, OF.SequenceSize, OF.FrameOverhead,
+                         OF.FrameConstructionID),
+        GlobalOccurrenceCount(GlobalOccurrenceCount) {}
+
+  unsigned GlobalOccurrenceCount;
+
+  /// Return the number of times that appear globally.
+  /// Global outlining candidate is uniquely created per each match, but this
+  /// might be erased out when it's overlapped with the previous outlining
+  /// instance.
+  unsigned getOccurrenceCount() const override {
+    assert(Candidates.size() <= 1);
+    return Candidates.empty() ? 0 : GlobalOccurrenceCount;
+  }
+
+  /// Return the outlining cost using the global occurrence count
+  /// with the same cost as the first (unique) candidate.
+  unsigned getOutliningCost() const override {
+    assert(Candidates.size() <= 1);
+    unsigned CallOverhead =
+        Candidates.empty()
+            ? 0
+            : Candidates[0].getCallOverhead() * getOccurrenceCount();
+    return CallOverhead + SequenceSize + FrameOverhead;
+  }
+
+  GlobalOutlinedFunction() = delete;
+  ~GlobalOutlinedFunction() = default;
+};
+
 } // namespace outliner
 } // namespace llvm
 
