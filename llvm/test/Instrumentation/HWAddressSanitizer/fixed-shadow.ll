@@ -12,7 +12,7 @@ define i8 @test_load8(ptr %a) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr inttoptr (i64 4398046511104 to ptr))
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 0)
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 0, i64 4398046511104)
 ; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i8 [[B]]
 ;
@@ -26,7 +26,7 @@ define i16 @test_load16(ptr %a) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr inttoptr (i64 4398046511104 to ptr))
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 1)
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 1, i64 4398046511104)
 ; CHECK-NEXT:    [[B:%.*]] = load i16, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i16 [[B]]
 ;
@@ -40,7 +40,7 @@ define i32 @test_load32(ptr %a) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr inttoptr (i64 4398046511104 to ptr))
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 2)
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 2, i64 4398046511104)
 ; CHECK-NEXT:    [[B:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
@@ -54,7 +54,7 @@ define i64 @test_load64(ptr %a) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr inttoptr (i64 4398046511104 to ptr))
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 3)
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 3, i64 4398046511104)
 ; CHECK-NEXT:    [[B:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    ret i64 [[B]]
 ;
@@ -68,7 +68,7 @@ define i128 @test_load128(ptr %a) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr inttoptr (i64 4398046511104 to ptr))
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 4)
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 4, i64 4398046511104)
 ; CHECK-NEXT:    [[B:%.*]] = load i128, ptr [[A]], align 16
 ; CHECK-NEXT:    ret i128 [[B]]
 ;
@@ -97,7 +97,7 @@ define void @test_store8(ptr %a, i8 %b) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr inttoptr (i64 4398046511104 to ptr))
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 16)
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 16, i64 4398046511104)
 ; CHECK-NEXT:    store i8 [[B]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -111,7 +111,7 @@ define void @test_store16(ptr %a, i16 %b) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]], i16 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr inttoptr (i64 4398046511104 to ptr))
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 17)
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 17, i64 4398046511104)
 ; CHECK-NEXT:    store i16 [[B]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -125,7 +125,7 @@ define void @test_store32(ptr %a, i32 %b) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr inttoptr (i64 4398046511104 to ptr))
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 18)
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 18, i64 4398046511104)
 ; CHECK-NEXT:    store i32 [[B]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -139,7 +139,7 @@ define void @test_store64(ptr %a, i64 %b) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]], i64 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr inttoptr (i64 4398046511104 to ptr))
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 19)
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 19, i64 4398046511104)
 ; CHECK-NEXT:    store i64 [[B]], ptr [[A]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -153,7 +153,7 @@ define void @test_store128(ptr %a, i128 %b) sanitize_hwaddress {
 ; CHECK-SAME: (ptr [[A:%.*]], i128 [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr inttoptr (i64 4398046511104 to ptr))
-; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules(ptr [[DOTHWASAN_SHADOW]], ptr [[A]], i32 20)
+; CHECK-NEXT:    call void @llvm.hwasan.check.memaccess.shortgranules.fixedshadow(ptr [[A]], i32 20, i64 4398046511104)
 ; CHECK-NEXT:    store i128 [[B]], ptr [[A]], align 16
 ; CHECK-NEXT:    ret void
 ;
