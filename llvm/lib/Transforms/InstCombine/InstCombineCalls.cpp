@@ -606,14 +606,13 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
       return IC.replaceOperand(II, 1, IC.Builder.getTrue());
   }
 
-  // Add range metadata since known bits can't completely reflect what we know.
-  auto *IT = cast<IntegerType>(Op0->getType()->getScalarType());
-  if (IT && IT->getBitWidth() != 1 && !II.getMetadata(LLVMContext::MD_range)) {
-    Metadata *LowAndHigh[] = {
-        ConstantAsMetadata::get(ConstantInt::get(IT, DefiniteZeros)),
-        ConstantAsMetadata::get(ConstantInt::get(IT, PossibleZeros + 1))};
-    II.setMetadata(LLVMContext::MD_range,
-                   MDNode::get(II.getContext(), LowAndHigh));
+  // Add range attribute since known bits can't completely reflect what we know.
+  unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
+  if (BitWidth != 1 && !II.hasRetAttr(Attribute::Range) &&
+      !II.getMetadata(LLVMContext::MD_range)) {
+    ConstantRange Range(APInt(BitWidth, DefiniteZeros),
+                        APInt(BitWidth, PossibleZeros + 1));
+    II.addRangeRetAttr(Range);
     return &II;
   }
 
@@ -685,16 +684,12 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
                                                   Constant::getNullValue(Ty)),
                             Ty);
 
-  // Add range metadata since known bits can't completely reflect what we know.
-  auto *IT = cast<IntegerType>(Ty->getScalarType());
-  unsigned MinCount = Known.countMinPopulation();
-  unsigned MaxCount = Known.countMaxPopulation();
-  if (IT->getBitWidth() != 1 && !II.getMetadata(LLVMContext::MD_range)) {
-    Metadata *LowAndHigh[] = {
-        ConstantAsMetadata::get(ConstantInt::get(IT, MinCount)),
-        ConstantAsMetadata::get(ConstantInt::get(IT, MaxCount + 1))};
-    II.setMetadata(LLVMContext::MD_range,
-                   MDNode::get(II.getContext(), LowAndHigh));
+  // Add range attribute since known bits can't completely reflect what we know.
+  if (BitWidth != 1 && !II.hasRetAttr(Attribute::Range) &&
+      !II.getMetadata(LLVMContext::MD_range)) {
+    ConstantRange Range(APInt(BitWidth, Known.countMinPopulation()),
+                        APInt(BitWidth, Known.countMaxPopulation() + 1));
+    II.addRangeRetAttr(Range);
     return &II;
   }
 
