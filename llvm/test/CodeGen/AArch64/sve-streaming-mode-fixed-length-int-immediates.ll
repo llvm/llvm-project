@@ -221,8 +221,8 @@ define void @ashr_v4i64(ptr %a) {
 define void @icmp_eq_v32i8(ptr %a) {
 ; CHECK-LABEL: icmp_eq_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    cmpeq p1.b, p0/z, z0.b, #7
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z1.b, #7
 ; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
@@ -241,8 +241,8 @@ define void @icmp_eq_v32i8(ptr %a) {
 define void @icmp_sge_v16i16(ptr %a) {
 ; CHECK-LABEL: icmp_sge_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    cmpge p1.h, p0/z, z0.h, #15
 ; CHECK-NEXT:    cmpge p0.h, p0/z, z1.h, #15
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
@@ -261,8 +261,8 @@ define void @icmp_sge_v16i16(ptr %a) {
 define void @icmp_sgt_v8i32(ptr %a) {
 ; CHECK-LABEL: icmp_sgt_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    cmpgt p1.s, p0/z, z0.s, #-8
 ; CHECK-NEXT:    cmpgt p0.s, p0/z, z1.s, #-8
 ; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
@@ -281,8 +281,8 @@ define void @icmp_sgt_v8i32(ptr %a) {
 define void @icmp_ult_v4i64(ptr %a) {
 ; CHECK-LABEL: icmp_ult_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    cmplo p1.d, p0/z, z0.d, #63
 ; CHECK-NEXT:    cmplo p0.d, p0/z, z1.d, #63
 ; CHECK-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff

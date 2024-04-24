@@ -838,8 +838,11 @@ lldb::BasicType TypeSystemClang::GetBasicTypeEnumeration(llvm::StringRef name) {
       {"__int128_t", eBasicTypeInt128},
       {"__uint128_t", eBasicTypeUnsignedInt128},
 
-      // Miscellaneous
+      // "bool"
       {"bool", eBasicTypeBool},
+      {"_Bool", eBasicTypeBool},
+
+      // Miscellaneous
       {"float", eBasicTypeFloat},
       {"double", eBasicTypeDouble},
       {"long double", eBasicTypeLongDouble},
@@ -6995,6 +6998,36 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
     }
   }
   return UINT32_MAX;
+}
+
+CompilerType
+TypeSystemClang::GetDirectNestedTypeWithName(lldb::opaque_compiler_type_t type,
+                                             llvm::StringRef name) {
+  if (!type || name.empty())
+    return CompilerType();
+
+  clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
+  const clang::Type::TypeClass type_class = qual_type->getTypeClass();
+
+  switch (type_class) {
+  case clang::Type::Record: {
+    if (!GetCompleteType(type))
+      return CompilerType();
+    const clang::RecordType *record_type =
+        llvm::cast<clang::RecordType>(qual_type.getTypePtr());
+    const clang::RecordDecl *record_decl = record_type->getDecl();
+
+    clang::DeclarationName decl_name(&getASTContext().Idents.get(name));
+    for (NamedDecl *decl : record_decl->lookup(decl_name)) {
+      if (auto *tag_decl = dyn_cast<clang::TagDecl>(decl))
+        return GetType(getASTContext().getTagDeclType(tag_decl));
+    }
+    break;
+  }
+  default:
+    break;
+  }
+  return CompilerType();
 }
 
 bool TypeSystemClang::IsTemplateType(lldb::opaque_compiler_type_t type) {

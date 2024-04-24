@@ -369,7 +369,7 @@ macro(construct_compiler_rt_default_triple)
   endif()
 
   if ("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
-    execute_process(COMMAND ${CMAKE_C_COMPILER} --target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE} -print-effective-triple
+    execute_process(COMMAND ${CMAKE_C_COMPILER} --target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE} -print-target-triple
                     OUTPUT_VARIABLE COMPILER_RT_DEFAULT_TARGET_TRIPLE
                     OUTPUT_STRIP_TRAILING_WHITESPACE)
   endif()

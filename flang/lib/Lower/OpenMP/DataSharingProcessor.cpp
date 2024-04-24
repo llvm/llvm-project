@@ -142,7 +142,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
                  : nullptr;
 
   bool cmpCreated = false;
-  mlir::OpBuilder::InsertPoint localInsPt = firOpBuilder.saveInsertionPoint();
+  mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
   for (const omp::Clause &clause : clauses) {
     if (clause.id != llvm::omp::OMPC_lastprivate)
       continue;
@@ -209,12 +209,11 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
           // Lastprivate operation is inserted at the end
           // of the lexically last section in the sections
           // construct
-          mlir::OpBuilder::InsertPoint unstructuredSectionsIP =
-              firOpBuilder.saveInsertionPoint();
+          mlir::OpBuilder::InsertionGuard unstructuredSectionsGuard(
+              firOpBuilder);
           mlir::Operation *lastOper = op->getRegion(0).back().getTerminator();
           firOpBuilder.setInsertionPoint(lastOper);
           lastPrivIP = firOpBuilder.saveInsertionPoint();
-          firOpBuilder.restoreInsertionPoint(unstructuredSectionsIP);
         }
       }
     } else if (mlir::isa<mlir::omp::WsloopOp>(op)) {
@@ -275,7 +274,6 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
            "simd/worksharing-loop");
     }
   }
-  firOpBuilder.restoreInsertionPoint(localInsPt);
 }
 
 void DataSharingProcessor::collectSymbols(
@@ -379,7 +377,7 @@ void DataSharingProcessor::doPrivatize(
                 uniquePrivatizerName))
       return existingPrivatizer;
 
-    auto ip = firOpBuilder.saveInsertionPoint();
+    mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
     firOpBuilder.setInsertionPoint(&moduleOp.getBodyRegion().front(),
                                    moduleOp.getBodyRegion().front().begin());
     auto result = firOpBuilder.create<mlir::omp::PrivateClauseOp>(
@@ -431,7 +429,6 @@ void DataSharingProcessor::doPrivatize(
     }
 
     symTable->popScope();
-    firOpBuilder.restoreInsertionPoint(ip);
     return result;
   }();
 
