@@ -730,7 +730,7 @@ void RuleMatcher::optimize() {
   auto EraseRootIt = Actions.end();
   auto It = Actions.begin();
   while (It != Actions.end()) {
-    if(const auto* EI = dyn_cast<EraseInstAction>(It->get())) {
+    if (const auto *EI = dyn_cast<EraseInstAction>(It->get())) {
       unsigned InstID = EI->getInsnID();
       if (!AlreadySeenEraseInsts.insert(InstID).second) {
         It = Actions.erase(It);
