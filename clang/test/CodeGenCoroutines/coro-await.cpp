@@ -370,7 +370,8 @@ extern "C" void TestTailcall() {
   // ---------------------------
   // Call coro.await.suspend
   // ---------------------------
-  // CHECK-NEXT: call void @llvm.coro.await.suspend.handle(ptr %[[AWAITABLE]], ptr %[[FRAME]], ptr @__await_suspend_wrapper_TestTailcall_await)
+  // Note: The call must not be nounwind since the resumed function could throw.
+  // CHECK-NEXT: call void @llvm.coro.await.suspend.handle(ptr %[[AWAITABLE]], ptr %[[FRAME]], ptr @__await_suspend_wrapper_TestTailcall_await){{$}}
   // CHECK-NEXT: %[[OUTCOME:.+]] = call i8 @llvm.coro.suspend(token %[[SUSPEND_ID]], i1 false)
   // CHECK-NEXT: switch i8 %[[OUTCOME]], label %[[RET_BB:.+]] [
   // CHECK-NEXT:   i8 0, label %[[READY_BB]]

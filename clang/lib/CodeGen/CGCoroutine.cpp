@@ -278,7 +278,11 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
 
   llvm::Function *AwaitSuspendIntrinsic = CGF.CGM.getIntrinsic(AwaitSuspendIID);
 
-  const auto AwaitSuspendCanThrow = StmtCanThrow(S.getSuspendExpr());
+  // SuspendHandle might throw since it also resumes the returned handle.
+  const bool AwaitSuspendCanThrow =
+      SuspendReturnType ==
+          CoroutineSuspendExpr::SuspendReturnType::SuspendHandle ||
+      StmtCanThrow(S.getSuspendExpr());
 
   llvm::CallBase *SuspendRet = nullptr;
   // FIXME: add call attributes?
