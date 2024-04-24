@@ -19,8 +19,8 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #if defined(__MVS__)
-#include <sys/shm.h>
 #include "llvm/Support/BLAKE3.h"
+#include <sys/shm.h>
 #endif
 #include <unistd.h>
 #endif
@@ -152,7 +152,7 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
 #if defined(LLVM_ON_UNIX)
 
 #if defined(__MVS__)
-    // TODO Is it possible to change the protection level?
+      // TODO Is it possible to change the protection level?
 #else
     int NativeProt = 0;
     if ((Segment.RAG.Prot & MemProt::Read) == MemProt::Read)

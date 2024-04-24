@@ -17,8 +17,8 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #if defined(__MVS__)
-#include <sys/shm.h>
 #include "llvm/Support/BLAKE3.h"
+#include <sys/shm.h>
 #endif
 #include <unistd.h>
 #elif defined(_WIN32)
