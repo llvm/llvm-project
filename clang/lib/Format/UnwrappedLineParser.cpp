@@ -365,11 +365,11 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
       nextToken();
       continue;
     }
-    tok::TokenKind kind = FormatTok->Tok.getKind();
-    if (FormatTok->getType() == TT_MacroBlockBegin)
-      kind = tok::l_brace;
-    else if (FormatTok->getType() == TT_MacroBlockEnd)
-      kind = tok::r_brace;
+    tok::TokenKind Kind = FormatTok->Tok.getKind();
+    if (FormatTok->is(TT_MacroBlockBegin))
+      Kind = tok::l_brace;
+    else if (FormatTok->is(TT_MacroBlockEnd))
+      Kind = tok::r_brace;
 
     auto ParseDefault = [this, OpeningBrace, IfKind, &IfLBrace, &HasDoWhile,
                          &HasLabel, &StatementCount] {
@@ -380,7 +380,7 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
       assert(StatementCount > 0 && "StatementCount overflow!");
     };
 
-    switch (kind) {
+    switch (Kind) {
     case tok::comment:
       nextToken();
       addUnwrappedLine();
@@ -395,9 +395,10 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
         ParseDefault();
         continue;
       }
-      if (!InRequiresExpression && FormatTok->isNot(TT_MacroBlockBegin) &&
-          tryToParseBracedList()) {
-        continue;
+      if (!InRequiresExpression && FormatTok->isNot(TT_MacroBlockBegin)) {
+        if (tryToParseBracedList())
+          continue;
+        FormatTok->setFinalizedType(TT_BlockLBrace);
       }
       parseBlock();
       ++StatementCount;
@@ -427,11 +428,7 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
       break;
     case tok::kw_default: {
       unsigned StoredPosition = Tokens->getPosition();
-      FormatToken *Next;
-      do {
-        Next = Tokens->getNextToken();
-        assert(Next);
-      } while (Next->is(tok::comment));
+      auto *Next = Tokens->getNextNonComment();
       FormatTok = Tokens->setPosition(StoredPosition);
       if (Next->isNot(tok::colon)) {
         // default not followed by ':' is not a case label; treat it like
@@ -495,20 +492,19 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
   };
   SmallVector<StackEntry, 8> LBraceStack;
   assert(Tok->is(tok::l_brace));
+
   do {
-    // Get next non-comment, non-preprocessor token.
-    FormatToken *NextTok;
-    do {
-      NextTok = Tokens->getNextToken();
-    } while (NextTok->is(tok::comment));
-    if (!Style.isTableGen()) {
-      // InTableGen, '#' is like binary operator. Not a preprocessor directive.
-      while (NextTok->is(tok::hash) && !Line->InMacroBody) {
-        NextTok = Tokens->getNextToken();
+    auto *NextTok = Tokens->getNextNonComment();
+
+    if (!Line->InMacroBody && !Style.isTableGen()) {
+      // Skip PPDirective lines and comments.
+      while (NextTok->is(tok::hash)) {
         do {
           NextTok = Tokens->getNextToken();
-        } while (NextTok->is(tok::comment) ||
-                 (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof)));
+        } while (NextTok->NewlinesBefore == 0 && NextTok->isNot(tok::eof));
+
+        while (NextTok->is(tok::comment))
+          NextTok = Tokens->getNextToken();
       }
     }
 
@@ -543,16 +539,6 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
         if (Style.Language == FormatStyle::LK_Proto) {
           ProbablyBracedList = NextTok->isOneOf(tok::comma, tok::r_square);
         } else {
-          // Skip NextTok over preprocessor lines, otherwise we may not
-          // properly diagnose the block as a braced intializer
-          // if the comma separator appears after the pp directive.
-          while (NextTok->is(tok::hash)) {
-            ScopedMacroState MacroState(*Line, Tokens, NextTok);
-            do {
-              NextTok = Tokens->getNextToken();
-            } while (NextTok->isNot(tok::eof));
-          }
-
           // Using OriginalColumn to distinguish between ObjC methods and
           // binary operators is a bit hacky.
           bool NextIsObjCMethod = NextTok->isOneOf(tok::plus, tok::minus) &&
@@ -611,6 +597,16 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
             NextTok = Tokens->getNextToken();
             ProbablyBracedList = NextTok->isNot(tok::l_square);
           }
+
+          // Cpp macro definition body that is a nonempty braced list or block:
+          if (IsCpp && Line->InMacroBody && PrevTok != FormatTok &&
+              !FormatTok->Previous && NextTok->is(tok::eof) &&
+              // A statement can end with only `;` (simple statement), a block
+              // closing brace (compound statement), or `:` (label statement).
+              // If PrevTok is a block opening brace, Tok ends an empty block.
+              !PrevTok->isOneOf(tok::semi, BK_Block, tok::colon)) {
+            ProbablyBracedList = true;
+          }
         }
         if (ProbablyBracedList) {
           Tok->setBlockKind(BK_BracedInit);
@@ -640,6 +636,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
     default:
       break;
     }
+
     PrevTok = Tok;
     Tok = NextTok;
   } while (Tok->isNot(tok::eof) && !LBraceStack.empty());
@@ -822,8 +819,11 @@ FormatToken *UnwrappedLineParser::parseBlock(bool MustBeDeclaration,
     return IfLBrace;
   }
 
-  if (FormatTok->is(tok::r_brace) && Tok->is(TT_NamespaceLBrace))
-    FormatTok->setFinalizedType(TT_NamespaceRBrace);
+  if (FormatTok->is(tok::r_brace)) {
+    FormatTok->setBlockKind(BK_Block);
+    if (Tok->is(TT_NamespaceLBrace))
+      FormatTok->setFinalizedType(TT_NamespaceRBrace);
+  }
 
   const bool IsFunctionRBrace =
       FormatTok->is(tok::r_brace) && Tok->is(TT_FunctionLBrace);
@@ -3277,8 +3277,8 @@ void UnwrappedLineParser::parseSwitch() {
 }
 
 // Operators that can follow a C variable.
-static bool isCOperatorFollowingVar(tok::TokenKind kind) {
-  switch (kind) {
+static bool isCOperatorFollowingVar(tok::TokenKind Kind) {
+  switch (Kind) {
   case tok::ampamp:
   case tok::ampequal:
   case tok::arrow:
@@ -3913,6 +3913,8 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   const FormatToken &InitialToken = *FormatTok;
   nextToken();
 
+  const FormatToken *ClassName = nullptr;
+  bool IsDerived = false;
   auto IsNonMacroIdentifier = [](const FormatToken *Tok) {
     return Tok->is(tok::identifier) && Tok->TokenText != Tok->TokenText.upper();
   };
@@ -3937,15 +3939,35 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     }
     if (FormatTok->is(tok::l_square) && handleCppAttributes())
       continue;
+    const auto *Previous = FormatTok;
     nextToken();
-    // We can have macros in between 'class' and the class name.
-    if (!IsNonMacroIdentifier(FormatTok->Previous) &&
-        FormatTok->is(tok::l_paren)) {
-      parseParens();
+    switch (FormatTok->Tok.getKind()) {
+    case tok::l_paren:
+      // We can have macros in between 'class' and the class name.
+      if (!IsNonMacroIdentifier(Previous))
+        parseParens();
+      break;
+    case tok::coloncolon:
+      break;
+    default:
+      if (!ClassName && Previous->is(tok::identifier))
+        ClassName = Previous;
     }
   }
 
+  auto IsListInitialization = [&] {
+    if (!ClassName || IsDerived)
+      return false;
+    assert(FormatTok->is(tok::l_brace));
+    const auto *Prev = FormatTok->getPreviousNonComment();
+    assert(Prev);
+    return Prev != ClassName && Prev->is(tok::identifier) &&
+           Prev->isNot(Keywords.kw_final) && tryToParseBracedList();
+  };
+
   if (FormatTok->isOneOf(tok::colon, tok::less)) {
+    if (FormatTok->is(tok::colon))
+      IsDerived = true;
     int AngleNestingLevel = 0;
     do {
       if (FormatTok->is(tok::less))
@@ -3958,6 +3980,8 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
         break;
       }
       if (FormatTok->is(tok::l_brace)) {
+        if (AngleNestingLevel == 0 && IsListInitialization())
+          return;
         calculateBraceTypes(/*ExpectClassBody=*/true);
         if (!tryToParseBracedList())
           break;
@@ -4002,6 +4026,8 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     }
   };
   if (FormatTok->is(tok::l_brace)) {
+    if (IsListInitialization())
+      return;
     auto [OpenBraceType, ClosingBraceType] = GetBraceTypes(InitialToken);
     FormatTok->setFinalizedType(OpenBraceType);
     if (ParseAsExpr) {
@@ -4706,14 +4732,13 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
   do {
     FormatTok = Tokens->getNextToken();
     assert(FormatTok);
-    while (FormatTok->getType() == TT_ConflictStart ||
-           FormatTok->getType() == TT_ConflictEnd ||
-           FormatTok->getType() == TT_ConflictAlternative) {
-      if (FormatTok->getType() == TT_ConflictStart)
+    while (FormatTok->isOneOf(TT_ConflictStart, TT_ConflictEnd,
+                              TT_ConflictAlternative)) {
+      if (FormatTok->is(TT_ConflictStart))
         conditionalCompilationStart(/*Unreachable=*/false);
-      else if (FormatTok->getType() == TT_ConflictAlternative)
+      else if (FormatTok->is(TT_ConflictAlternative))
         conditionalCompilationAlternative();
-      else if (FormatTok->getType() == TT_ConflictEnd)
+      else if (FormatTok->is(TT_ConflictEnd))
         conditionalCompilationEnd();
       FormatTok = Tokens->getNextToken();
       FormatTok->MustBreakBefore = true;

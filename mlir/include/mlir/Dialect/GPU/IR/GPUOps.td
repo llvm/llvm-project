@@ -161,7 +161,7 @@ def GPU_SubgroupIdOp : GPU_Op<"subgroup_id", [
       Pure, DeclareOpInterfaceMethods<InferIntRangeInterface>]>,
     Arguments<(ins)>, Results<(outs Index:$result)> {
   let description = [{
-    Returns the subgroup id, i.e. the index of the current subgroup within the
+    Returns the subgroup id, i.e., the index of the current subgroup within the
     workgroup.
 
     Example:
@@ -1089,8 +1089,8 @@ def AnyIntegerOrFloatOr1DVector :
 def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]> {
   let summary = "Reduce values among subgroup.";
   let description = [{
-    The `subgroup_reduce` op reduces the value of every work item across a
-    subgroup. The result is equal for all work items of a subgroup.
+    The `subgroup_reduce` op reduces the value of every lane (work item) across
+    a subgroup. The result is equal for all lanes.
 
     When the reduced value is of a vector type, each vector element is reduced
     independently. Only 1-d vector types are allowed.
@@ -1102,8 +1102,8 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]
     %2 = gpu.subgroup_reduce add %b : (vector<4xf16>) -> (vector<4xf16>)
     ```
 
-    If `uniform` flag is set either none or all work items of a subgroup
-    need to execute this op in convergence. The reduction operation must be one
+    If `uniform` flag is set either none or all lanes of a subgroup need to execute
+    this op in convergence. The reduction operation must be one
     of:
     *  Integer types: `add`, `mul`, `minui`, `minsi`, `maxui`, `maxsi`, `and`,
        `or`, `xor`
@@ -1155,30 +1155,64 @@ def GPU_ShuffleOp : GPU_Op<
     Results<(outs I32I64F32OrF64:$shuffleResult, I1:$valid)> {
   let summary = "Shuffles values within a subgroup.";
   let description = [{
-    The "shuffle" op moves values to a different invocation within the same
-    subgroup.
+    The "shuffle" op moves values to a across lanes (a.k.a., invocations,
+    work items) within the same subgroup. The `width` argument specifies the
+    number of lanes that participate in the shuffle, and must be uniform
+    across all lanes. Further, the first `width` lanes of the subgroup must
+    be active.
 
-    Example:
+    The intepretation of the `offset` arguments depends on the selected
+    `mode`.
+
+    Returns the `shuffleResult` and `true` if the current lane id is smaller
+    than `width`, and an unspecified value and `false` otherwise.
+
+    `xor` example:
 
     ```mlir
-    %1, %2 = gpu.shuffle %0, %offset, %width xor : f32
+    %1, %2 = gpu.shuffle xor %0, %offset, %width : f32
     ```
 
-    For lane k returns the value from lane `k ^ offset` and `true` if that lane
-    is smaller than %width. Otherwise it returns an unspecified value and
-    `false`. A lane is the index of an invocation relative to its subgroup.
+    For lane `k`, returns the value `%0` from lane `k ^ offset`. Every lane
+    trades value with exactly one other lane.
 
-    The width specifies the number of invocations that participate in the
-    shuffle. The width needs to be the same for all invocations that participate
-    in the shuffle. Exactly the first `width` invocations of a subgroup need to
-    execute this op in convergence.
+    `down` example:
+
+    ```mlir
+    %cst1 = arith.constant 1 : i32
+    %3, %4 = gpu.shuffle down %0, %cst1, %width : f32
+    ```
+
+    For lane `k`, returns the value from lane `(k + 1) % width`.
+
+    `up` example:
+
+    ```mlir
+    %cst1 = arith.constant 1 : i32
+    %5, %6 = gpu.shuffle up %0, %cst1, %width : f32
+    ```
+
+    For lane `k`, returns the value from lane `(k - 1) % width`.
+
+    `idx` example:
+
+    ```mlir
+    %cst0 = arith.constant 0 : i32
+    %7, %8 = gpu.shuffle idx %0, %cst0, %width : f32
+    ```
+
+    Broadcasts the value from lane 0 to all lanes.
   }];
+
+  let assemblyFormat = [{
+    $mode $value `,` $offset `,` $width attr-dict `:` type($value)
+  }];
+
   let builders = [
     // Helper function that creates a shuffle with constant offset/width.
     OpBuilder<(ins "Value":$value, "int32_t":$offset, "int32_t":$width,
                    "ShuffleMode":$mode)>
   ];
-  let assemblyFormat = "$mode $value `,` $offset `,` $width attr-dict `:` type($value)";
 }
 
 def GPU_BarrierOp : GPU_Op<"barrier"> {

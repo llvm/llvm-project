@@ -740,7 +740,7 @@ void is_bounded_array(int n) {
   static_assert(!__is_bounded_array(cvoid *));
 
   int t32[n];
-  (void)__is_bounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported for '__is_bounded_array'}}
+  (void)__is_bounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported in '__is_bounded_array'}}
 }
 
 void is_unbounded_array(int n) {
@@ -772,7 +772,7 @@ void is_unbounded_array(int n) {
   static_assert(!__is_unbounded_array(cvoid *));
 
   int t32[n];
-  (void)__is_unbounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported for '__is_unbounded_array'}}
+  (void)__is_unbounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported in '__is_unbounded_array'}}
 }
 
 void is_referenceable() {
@@ -1622,7 +1622,7 @@ enum class EnumClassLayout {};
 enum EnumForward : int;
 enum class EnumClassForward;
 
-struct CStructIncomplete;
+struct CStructIncomplete; // #CStructIncomplete
 
 struct CStructNested {
   int a;
@@ -1719,6 +1719,20 @@ struct StructWithAnonUnion3 {
   } u;
 };
 
+struct CStructWithArrayAtTheEnd {
+  int a;
+  int b[4];
+};
+
+struct CStructWithFMA {
+  int c;
+  int d[];
+};
+
+struct CStructWithFMA2 {
+  int e;
+  int f[];
+};
 
 void is_layout_compatible(int n)
 {
@@ -1726,7 +1740,7 @@ void is_layout_compatible(int n)
   static_assert(!__is_layout_compatible(void, int));
   static_assert(__is_layout_compatible(void, const void));
   static_assert(__is_layout_compatible(void, volatile void));
-  static_assert(__is_layout_compatible(const int, volatile int));
+  static_assert(__is_layout_compatible(const void, volatile void));
   static_assert(__is_layout_compatible(int, int));
   static_assert(__is_layout_compatible(int, const int));
   static_assert(__is_layout_compatible(int, volatile int));
@@ -1741,8 +1755,11 @@ void is_layout_compatible(int n)
   static_assert(!__is_layout_compatible(unsigned char, signed char));
   static_assert(__is_layout_compatible(int[], int[]));
   static_assert(__is_layout_compatible(int[2], int[2]));
-  static_assert(!__is_layout_compatible(int[n], int[2])); // FIXME: VLAs should be rejected
-  static_assert(!__is_layout_compatible(int[n], int[n])); // FIXME: VLAs should be rejected
+  static_assert(!__is_layout_compatible(int[n], int[2]));
+  // expected-error@-1 {{variable length arrays are not supported in '__is_layout_compatible'}}
+  static_assert(!__is_layout_compatible(int[n], int[n]));
+  // expected-error@-1 {{variable length arrays are not supported in '__is_layout_compatible'}}
+  // expected-error@-2 {{variable length arrays are not supported in '__is_layout_compatible'}}
   static_assert(__is_layout_compatible(int&, int&));
   static_assert(!__is_layout_compatible(int&, char&));
   static_assert(__is_layout_compatible(void(int), void(int)));
@@ -1798,15 +1815,118 @@ void is_layout_compatible(int n)
   static_assert(__is_layout_compatible(EnumLayout, EnumClassLayout));
   static_assert(__is_layout_compatible(EnumForward, EnumForward));
   static_assert(__is_layout_compatible(EnumForward, EnumClassForward));
-  // Layout compatibility for enums might be relaxed in the future. See https://github.com/cplusplus/CWG/issues/39#issuecomment-1184791364
+  static_assert(__is_layout_compatible(CStructIncomplete, CStructIncomplete));
+  // expected-error@-1 {{incomplete type 'CStructIncomplete' where a complete type is required}}
+  //   expected-note@#CStructIncomplete {{forward declaration of 'CStructIncomplete'}}
+  // expected-error@-3 {{incomplete type 'CStructIncomplete' where a complete type is required}}
+  //   expected-note@#CStructIncomplete {{forward declaration of 'CStructIncomplete'}}
+  static_assert(!__is_layout_compatible(CStruct, CStructIncomplete));
+  // expected-error@-1 {{incomplete type 'CStructIncomplete' where a complete type is required}}
+  //   expected-note@#CStructIncomplete {{forward declaration of 'CStructIncomplete'}}
+  static_assert(__is_layout_compatible(CStructIncomplete[2], CStructIncomplete[2]));
+  // expected-error@-1 {{incomplete type 'CStructIncomplete[2]' where a complete type is required}}
+  //   expected-note@#CStructIncomplete {{forward declaration of 'CStructIncomplete'}}
+  // expected-error@-3 {{incomplete type 'CStructIncomplete[2]' where a complete type is required}}
+  //   expected-note@#CStructIncomplete {{forward declaration of 'CStructIncomplete'}}
+  static_assert(__is_layout_compatible(CStructIncomplete[], CStructIncomplete[]));
+  static_assert(!__is_layout_compatible(CStructWithArrayAtTheEnd, CStructWithFMA));
+  static_assert(__is_layout_compatible(CStructWithFMA, CStructWithFMA));
+  static_assert(__is_layout_compatible(CStructWithFMA, CStructWithFMA2));
+  // Layout compatibility rules for enums might be relaxed in the future. See https://github.com/cplusplus/CWG/issues/39#issuecomment-1184791364
   static_assert(!__is_layout_compatible(EnumLayout, int));
   static_assert(!__is_layout_compatible(EnumClassLayout, int));
   static_assert(!__is_layout_compatible(EnumForward, int));
   static_assert(!__is_layout_compatible(EnumClassForward, int));
-  // FIXME: the following should be rejected (array of unknown bound and void are the only allowed incomplete types)
-  static_assert(__is_layout_compatible(CStructIncomplete, CStructIncomplete)); 
-  static_assert(!__is_layout_compatible(CStruct, CStructIncomplete));
-  static_assert(__is_layout_compatible(CStructIncomplete[2], CStructIncomplete[2]));
+}
+
+namespace IPIBO {
+struct Base {};
+struct Base2 {};
+struct Base3 : Base {};
+struct Base3Virtual : virtual Base {};
+struct Derived : Base {};
+struct DerivedIndirect : Base3 {};
+struct DerivedMultiple : Base, Base2 {};
+struct DerivedAmbiguous : Base, Base3 {};
+/* expected-warning@-1 {{direct base 'Base' is inaccessible due to ambiguity:
+    struct IPIBO::DerivedAmbiguous -> Base
+    struct IPIBO::DerivedAmbiguous -> Base3 -> Base}} */
+struct DerivedPrivate : private Base {};
+struct DerivedVirtual : virtual Base {};
+
+union Union {};
+union UnionIncomplete;
+struct StructIncomplete; // #StructIncomplete
+
+void is_pointer_interconvertible_base_of(int n)
+{
+  static_assert(__is_pointer_interconvertible_base_of(Base, Derived));
+  static_assert(!__is_pointer_interconvertible_base_of(Base2, Derived));
+  static_assert(__is_pointer_interconvertible_base_of(Base, DerivedIndirect));
+  static_assert(__is_pointer_interconvertible_base_of(Base, DerivedMultiple));
+  static_assert(__is_pointer_interconvertible_base_of(Base2, DerivedMultiple));
+  static_assert(!__is_pointer_interconvertible_base_of(Base3, DerivedMultiple));
+  static_assert(!__is_pointer_interconvertible_base_of(Base, DerivedAmbiguous));
+  static_assert(__is_pointer_interconvertible_base_of(Base, DerivedPrivate));
+  static_assert(!__is_pointer_interconvertible_base_of(Base, DerivedVirtual));
+  static_assert(!__is_pointer_interconvertible_base_of(Union, Union));
+  static_assert(!__is_pointer_interconvertible_base_of(UnionIncomplete, UnionIncomplete));
+  static_assert(__is_pointer_interconvertible_base_of(StructIncomplete, StructIncomplete));
+  static_assert(__is_pointer_interconvertible_base_of(StructIncomplete, const StructIncomplete));
+  static_assert(__is_pointer_interconvertible_base_of(StructIncomplete, volatile StructIncomplete));
+  static_assert(__is_pointer_interconvertible_base_of(const StructIncomplete, volatile StructIncomplete));
+  static_assert(!__is_pointer_interconvertible_base_of(StructIncomplete, Derived));
+  static_assert(!__is_pointer_interconvertible_base_of(Base, StructIncomplete));
+  // expected-error@-1 {{incomplete type 'StructIncomplete' where a complete type is required}}
+  //   expected-note@#StructIncomplete {{forward declaration of 'IPIBO::StructIncomplete'}}
+  static_assert(!__is_pointer_interconvertible_base_of(CStruct2, CppStructNonStandardByBase2));
+  static_assert(!__is_pointer_interconvertible_base_of(void, void));
+  static_assert(!__is_pointer_interconvertible_base_of(void, int));
+  static_assert(!__is_pointer_interconvertible_base_of(void, const void));
+  static_assert(!__is_pointer_interconvertible_base_of(void, volatile void));
+  static_assert(!__is_pointer_interconvertible_base_of(const void, volatile void));
+  static_assert(!__is_pointer_interconvertible_base_of(int, int));
+  static_assert(!__is_pointer_interconvertible_base_of(int, const int));
+  static_assert(!__is_pointer_interconvertible_base_of(int, volatile int));
+  static_assert(!__is_pointer_interconvertible_base_of(const int, volatile int));
+  static_assert(!__is_pointer_interconvertible_base_of(int *, int * __restrict));
+  static_assert(!__is_pointer_interconvertible_base_of(int, _Atomic int));
+  static_assert(!__is_pointer_interconvertible_base_of(_Atomic(int), _Atomic int));
+  static_assert(!__is_pointer_interconvertible_base_of(int, unsigned int));
+  static_assert(!__is_pointer_interconvertible_base_of(char, unsigned char));
+  static_assert(!__is_pointer_interconvertible_base_of(char, signed char));
+  static_assert(!__is_pointer_interconvertible_base_of(unsigned char, signed char));
+  using function_type = void();
+  using function_type2 = void(char);
+  static_assert(!__is_pointer_interconvertible_base_of(const function_type, const function_type));
+  // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
+  // expected-warning@-2 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
+  static_assert(!__is_pointer_interconvertible_base_of(function_type, const function_type));
+  // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
+  static_assert(!__is_pointer_interconvertible_base_of(const function_type, const function_type2));
+  // expected-warning@-1 {{'const' qualifier on function type 'function_type' (aka 'void ()') has no effect}}
+  // expected-warning@-2 {{'const' qualifier on function type 'function_type2' (aka 'void (char)') has no effect}}
+  static_assert(!__is_pointer_interconvertible_base_of(int CStruct2::*, int CStruct2::*));
+  static_assert(!__is_pointer_interconvertible_base_of(int CStruct2::*, char CStruct2::*));
+  static_assert(!__is_pointer_interconvertible_base_of(void(CStruct2::*)(int), void(CStruct2::*)(int)));
+  static_assert(!__is_pointer_interconvertible_base_of(void(CStruct2::*)(int), void(CStruct2::*)(char)));
+  static_assert(!__is_pointer_interconvertible_base_of(int[], int[]));
+  static_assert(!__is_pointer_interconvertible_base_of(int[], double[]));
+  static_assert(!__is_pointer_interconvertible_base_of(int[2], int[2]));
+  static_assert(!__is_pointer_interconvertible_base_of(int[n], int[2]));
+  // expected-error@-1 {{variable length arrays are not supported in '__is_pointer_interconvertible_base_of'}}
+  static_assert(!__is_pointer_interconvertible_base_of(int[n], int[n]));
+  // expected-error@-1 {{variable length arrays are not supported in '__is_pointer_interconvertible_base_of'}}
+  // expected-error@-2 {{variable length arrays are not supported in '__is_pointer_interconvertible_base_of'}}
+  static_assert(!__is_pointer_interconvertible_base_of(int&, int&));
+  static_assert(!__is_pointer_interconvertible_base_of(int&, char&));
+  static_assert(!__is_pointer_interconvertible_base_of(void(int), void(int)));
+  static_assert(!__is_pointer_interconvertible_base_of(void(int), void(char)));
+  static_assert(!__is_pointer_interconvertible_base_of(void(&)(int), void(&)(int)));
+  static_assert(!__is_pointer_interconvertible_base_of(void(&)(int), void(&)(char)));
+  static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(int)));
+  static_assert(!__is_pointer_interconvertible_base_of(void(*)(int), void(*)(char)));
+}
 }
 
 void is_signed()
