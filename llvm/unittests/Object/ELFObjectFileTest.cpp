@@ -1504,3 +1504,39 @@ Sections:
                "SHT_RELA section with index 1: failed to get a "
                "relocated section: invalid section index: 255");
 }
+
+TEST(ELFObjectFileTest, ELFSymbolRefLess) {
+  SmallString<0> Storage;
+  Expected<ELFObjectFile<ELF64LE>> ElfOrErr = toBinary<ELF64LE>(Storage, R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+)");
+
+  ASSERT_THAT_EXPECTED(ElfOrErr, Succeeded());
+  const ELFObjectFile<ELF64LE> &Obj = *ElfOrErr;
+
+  llvm::object::DataRefImpl Data1;
+  Data1.d.a = 0x00000000;
+  Data1.d.b = 0x00000001;
+  SymbolRef Symbol1(Data1, &Obj);
+  ELFSymbolRef ELFSymbol1(Symbol1);
+
+  llvm::object::DataRefImpl Data2;
+  Data2.d.a = 0x00000000;
+  Data2.d.b = 0x00000100;
+  SymbolRef Symbol2(Data2, &Obj);
+  ELFSymbolRef ELFSymbol2(Symbol2);
+
+  // SymbolRef operator< uses std::memcmp treating the union as char string.
+  if (llvm::sys::IsLittleEndianHost)
+    EXPECT_FALSE(Symbol1 < Symbol2);
+  else
+    EXPECT_TRUE(Symbol1 < Symbol2);
+
+  // ELFSymbolRef operator< compares struct fields.
+  EXPECT_TRUE(ELFSymbol1 < ELFSymbol2);
+}
