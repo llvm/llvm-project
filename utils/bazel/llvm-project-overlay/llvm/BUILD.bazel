@@ -636,6 +636,7 @@ cc_binary(
     name = "llvm-min-tblgen",
     srcs = [
         "utils/TableGen/Attributes.cpp",
+        "utils/TableGen/ARMTargetDefEmitter.cpp",
         "utils/TableGen/Basic/CodeGenIntrinsics.cpp",
         "utils/TableGen/Basic/CodeGenIntrinsics.h",
         "utils/TableGen/Basic/SDNodeProperties.cpp",
@@ -1232,6 +1233,30 @@ cc_library(
 )
 
 gentbl(
+    name = "ARMTargetParserDefGen",
+    tbl_outs = [("-gen-arm-target-def", "include/llvm/TargetParser/ARMTargetParserDef.inc")],
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Target/ARM/ARM.td",
+    td_srcs = [
+        ":common_target_td_sources",
+    ] + glob([
+        "lib/Target/ARM/**/*.td",
+    ]),
+)
+
+gentbl(
+    name = "AArch64TargetParserDefGen",
+    tbl_outs = [("-gen-arm-target-def", "include/llvm/TargetParser/AArch64TargetParserDef.inc")],
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/Target/AArch64/AArch64.td",
+    td_srcs = [
+        ":common_target_td_sources",
+    ] + glob([
+        "lib/Target/AArch64/**/*.td",
+    ]),
+)
+
+gentbl(
     name = "RISCVTargetParserDefGen",
     tbl_outs = [("-gen-riscv-target-def", "include/llvm/TargetParser/RISCVTargetParserDef.inc")],
     tblgen = ":llvm-min-tblgen",
@@ -1261,6 +1286,8 @@ cc_library(
     copts = llvm_copts,
     includes = ["include"],
     textual_hdrs = [
+        "include/llvm/TargetParser/ARMTargetParserDef.inc",
+        "include/llvm/TargetParser/AArch64TargetParserDef.inc",
         "include/llvm/TargetParser/RISCVTargetParserDef.inc",
     ] + glob([
         "include/llvm/TargetParser/*.def",
@@ -4607,11 +4634,16 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
+        ":AllTargetsAsmParsers",
+        ":AllTargetsCodeGens",
         ":BitWriter",
         ":Core",
         ":IRPrinter",
         ":IRReader",
+        ":MC",
         ":Support",
+        ":Target",
+        ":TargetParser",
         ":TransformUtils",
     ],
 )

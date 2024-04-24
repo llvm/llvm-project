@@ -1477,10 +1477,15 @@ static void CheckMaxMin(const characteristics::Procedure &proc,
         if (arguments[j]) {
           if (const auto *expr{arguments[j]->UnwrapExpr()};
               expr && evaluate::MayBePassedAsAbsentOptional(*expr)) {
-            if (auto thisType{expr->GetType()};
-                thisType && *thisType != typeAndShape->type()) {
-              messages.Say(arguments[j]->sourceLocation(),
-                  "An actual argument to MAX/MIN requiring data conversion may not be OPTIONAL, POINTER, or ALLOCATABLE"_err_en_US);
+            if (auto thisType{expr->GetType()}) {
+              if (thisType->category() == TypeCategory::Character &&
+                  typeAndShape->type().category() == TypeCategory::Character &&
+                  thisType->kind() == typeAndShape->type().kind()) {
+                // don't care about lengths
+              } else if (*thisType != typeAndShape->type()) {
+                messages.Say(arguments[j]->sourceLocation(),
+                    "An actual argument to MAX/MIN requiring data conversion may not be OPTIONAL, POINTER, or ALLOCATABLE"_err_en_US);
+              }
             }
           }
         }
@@ -1597,8 +1602,8 @@ static void CheckReduce(
     if (const auto *expr{operation->UnwrapExpr()}) {
       if (const auto *designator{
               std::get_if<evaluate::ProcedureDesignator>(&expr->u)}) {
-        procChars =
-            characteristics::Procedure::Characterize(*designator, context);
+        procChars = characteristics::Procedure::Characterize(
+            *designator, context, /*emitError=*/true);
       } else if (const auto *ref{
                      std::get_if<evaluate::ProcedureRef>(&expr->u)}) {
         procChars = characteristics::Procedure::Characterize(*ref, context);

@@ -293,8 +293,8 @@ public:
       : M(M), SSI(SSI) {
     this->Recover = optOr(ClRecover, Recover);
     this->CompileKernel = optOr(ClEnableKhwasan, CompileKernel);
-    this->Rng =
-        ClRandomSkipRate.getNumOccurrences() ? M.createRNG("hwasan") : nullptr;
+    this->Rng = ClRandomSkipRate.getNumOccurrences() ? M.createRNG(DEBUG_TYPE)
+                                                     : nullptr;
 
     initializeModule();
   }
@@ -911,7 +911,7 @@ HWAddressSanitizer::insertShadowTagCheck(Value *Ptr, Instruction *InsertBefore,
 
   R.TagMismatchTerm = SplitBlockAndInsertIfThen(
       TagMismatch, InsertBefore, false,
-      MDBuilder(*C).createBranchWeights(1, 100000), &DTU, LI);
+      MDBuilder(*C).createUnlikelyBranchWeights(), &DTU, LI);
 
   return R;
 }
@@ -930,11 +930,33 @@ void HWAddressSanitizer::instrumentMemAccessOutline(Value *Ptr, bool IsWrite,
 
   IRBuilder<> IRB(InsertBefore);
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  IRB.CreateCall(Intrinsic::getDeclaration(
-                     M, UseShortGranules
-                            ? Intrinsic::hwasan_check_memaccess_shortgranules
-                            : Intrinsic::hwasan_check_memaccess),
-                 {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
+  bool useFixedShadowIntrinsic = false;
+  // The memaccess fixed shadow intrinsic is only supported on AArch64,
+  // which allows a 16-bit immediate to be left-shifted by 32.
+  // Since kShadowBaseAlignment == 32, and Linux by default will not
+  // mmap above 48-bits, practically any valid shadow offset is
+  // representable.
+  // In particular, an offset of 4TB (1024 << 32) is representable, and
+  // ought to be good enough for anybody.
+  if (TargetTriple.isAArch64() && Mapping.Offset != kDynamicShadowSentinel) {
+    uint16_t offset_shifted = Mapping.Offset >> 32;
+    useFixedShadowIntrinsic = (uint64_t)offset_shifted << 32 == Mapping.Offset;
+  }
+
+  if (useFixedShadowIntrinsic)
+    IRB.CreateCall(
+        Intrinsic::getDeclaration(
+            M, UseShortGranules
+                   ? Intrinsic::hwasan_check_memaccess_shortgranules_fixedshadow
+                   : Intrinsic::hwasan_check_memaccess_fixedshadow),
+        {Ptr, ConstantInt::get(Int32Ty, AccessInfo),
+         ConstantInt::get(Int64Ty, Mapping.Offset)});
+  else
+    IRB.CreateCall(Intrinsic::getDeclaration(
+                       M, UseShortGranules
+                              ? Intrinsic::hwasan_check_memaccess_shortgranules
+                              : Intrinsic::hwasan_check_memaccess),
+                   {ShadowBase, Ptr, ConstantInt::get(Int32Ty, AccessInfo)});
 }
 
 void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
@@ -952,7 +974,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
       IRB.CreateICmpUGT(TCI.MemTag, ConstantInt::get(Int8Ty, 15));
   Instruction *CheckFailTerm = SplitBlockAndInsertIfThen(
       OutOfShortGranuleTagRange, TCI.TagMismatchTerm, !Recover,
-      MDBuilder(*C).createBranchWeights(1, 100000), &DTU, LI);
+      MDBuilder(*C).createUnlikelyBranchWeights(), &DTU, LI);
 
   IRB.SetInsertPoint(TCI.TagMismatchTerm);
   Value *PtrLowBits = IRB.CreateTrunc(IRB.CreateAnd(TCI.PtrLong, 15), Int8Ty);
@@ -960,7 +982,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
       PtrLowBits, ConstantInt::get(Int8Ty, (1 << AccessSizeIndex) - 1));
   Value *PtrLowBitsOOB = IRB.CreateICmpUGE(PtrLowBits, TCI.MemTag);
   SplitBlockAndInsertIfThen(PtrLowBitsOOB, TCI.TagMismatchTerm, false,
-                            MDBuilder(*C).createBranchWeights(1, 100000), &DTU,
+                            MDBuilder(*C).createUnlikelyBranchWeights(), &DTU,
                             LI, CheckFailTerm->getParent());
 
   IRB.SetInsertPoint(TCI.TagMismatchTerm);
@@ -969,7 +991,7 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   Value *InlineTag = IRB.CreateLoad(Int8Ty, InlineTagAddr);
   Value *InlineTagMismatch = IRB.CreateICmpNE(TCI.PtrTag, InlineTag);
   SplitBlockAndInsertIfThen(InlineTagMismatch, TCI.TagMismatchTerm, false,
-                            MDBuilder(*C).createBranchWeights(1, 100000), &DTU,
+                            MDBuilder(*C).createUnlikelyBranchWeights(), &DTU,
                             LI, CheckFailTerm->getParent());
 
   IRB.SetInsertPoint(CheckFailTerm);
