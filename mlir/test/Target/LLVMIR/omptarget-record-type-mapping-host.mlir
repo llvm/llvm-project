@@ -1,9 +1,9 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 // This test checks the offload sizes, map types and base pointers and pointers
-// provided to the OpenMP kernel argument structure are correct when lowering 
-// to LLVM-IR from MLIR when performing explicit member mapping of a recrod type
-// (C++/C class/structure, Fortran derived type) where only members of the record 
+// provided to the OpenMP kernel argument structure are correct when lowering
+// to LLVM-IR from MLIR when performing explicit member mapping of a record type
+// (C++/C class/structure, Fortran derived type) where only members of the record
 // type are mapped.
 
 module attributes {omp.is_target_device = false} {

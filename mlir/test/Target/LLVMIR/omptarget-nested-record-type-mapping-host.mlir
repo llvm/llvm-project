@@ -1,10 +1,10 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 // This test checks the offload sizes, map types and base pointers and pointers
-// provided to the OpenMP kernel argument structure are correct when lowering 
-// to LLVM-IR from MLIR when performing explicit member mapping of a recrod type
-// that includes another nested record type (C++/C class/structure, Fortran 
-// derived type) where members of both the nested and outer record type have 
+// provided to the OpenMP kernel argument structure are correct when lowering
+// to LLVM-IR from MLIR when performing explicit member mapping of a record type
+// that includes another nested record type (C++/C class/structure, Fortran
+// derived type) where members of both the nested and outer record type have
 // members mapped.
 
 module attributes {omp.is_target_device = false} {
@@ -57,7 +57,7 @@ llvm.func @_QQmain() {
 // CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR_2]], align 8
 // CHECK: %[[PTR_ARR_2:.*]] = getelementptr inbounds [4 x ptr], ptr %.offload_ptrs, i32 0, i32 1
 // CHECK: store ptr %[[MEMBER_ACCESS_1]], ptr %[[PTR_ARR_2]], align 8
-  
+
 // CHECK: %[[BASE_PTR_ARR_3:.*]] = getelementptr inbounds [4 x ptr], ptr %.offload_baseptrs, i32 0, i32 2
 // CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR_3]], align 8
 // CHECK: %[[PTR_ARR_3:.*]] = getelementptr inbounds [4 x ptr], ptr %.offload_ptrs, i32 0, i32 2
@@ -67,4 +67,3 @@ llvm.func @_QQmain() {
 // CHECK: store ptr %[[ALLOCA]], ptr %[[BASE_PTR_ARR_4]], align 8
 // CHECK: %[[PTR_ARR_4:.*]] = getelementptr inbounds [4 x ptr], ptr %.offload_ptrs, i32 0, i32 3
 // CHECK: store ptr %[[LAST_MEMBER]], ptr %[[PTR_ARR_4]], align 8
- 
