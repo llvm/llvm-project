@@ -4855,8 +4855,8 @@ public:
   StringLiteral *getFilenameStringLiteral() const { return Data->Filename; }
   StringLiteral *getDataStringLiteral() const { return Data->BinaryData; }
   EmbedDataStorage *getData() const { return Data; }
-  unsigned getStartingElementPos() const { return Begin; }
 
+  unsigned getStartingElementPos() const { return Begin; }
   size_t getDataElementCount() const {
     return NumOfElements;
   }
@@ -4944,17 +4944,6 @@ public:
 
   ChildElementIter<true> begin() const {
     return ChildElementIter<true>(const_cast<EmbedExpr *>(this));
-  }
-
-  template <typename Foo, typename... Targs>
-  bool doForEachDataElement(Foo F, unsigned &StartingIndexInArray,
-                            Targs... Fargs) {
-    for (auto It : underlying_data_elements()) {
-      if (!F(It, StartingIndexInArray, Fargs...))
-        return false;
-      StartingIndexInArray++;
-    }
-    return true;
   }
 
   template <typename Foo, typename... Targs>
