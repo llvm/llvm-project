@@ -1995,7 +1995,7 @@ TEST_F(PatternMatchTest, VScale) {
   EXPECT_TRUE(match(PtrToInt2, m_VScale()));
 }
 
-TEST_F(PatternMatchTest, NotForbidUndef) {
+TEST_F(PatternMatchTest, NotForbidPoison) {
   Type *ScalarTy = IRB.getInt8Ty();
   Type *VectorTy = FixedVectorType::get(ScalarTy, 3);
   Constant *ScalarUndef = UndefValue::get(ScalarTy);
@@ -2020,23 +2020,33 @@ TEST_F(PatternMatchTest, NotForbidUndef) {
   Value *X;
   EXPECT_TRUE(match(Not, m_Not(m_Value(X))));
   EXPECT_TRUE(match(X, m_Zero()));
+  X = nullptr;
+  EXPECT_TRUE(match(Not, m_NotForbidPoison(m_Value(X))));
+  EXPECT_TRUE(match(X, m_Zero()));
 
   Value *NotCommute = IRB.CreateXor(VectorOnes, VectorZero);
   Value *Y;
   EXPECT_TRUE(match(NotCommute, m_Not(m_Value(Y))));
   EXPECT_TRUE(match(Y, m_Zero()));
+  Y = nullptr;
+  EXPECT_TRUE(match(NotCommute, m_NotForbidPoison(m_Value(Y))));
+  EXPECT_TRUE(match(Y, m_Zero()));
 
   Value *NotWithUndefs = IRB.CreateXor(VectorZero, VectorMixedUndef);
   EXPECT_FALSE(match(NotWithUndefs, m_Not(m_Value())));
+  EXPECT_FALSE(match(NotWithUndefs, m_NotForbidPoison(m_Value())));
 
   Value *NotWithPoisons = IRB.CreateXor(VectorZero, VectorMixedPoison);
   EXPECT_TRUE(match(NotWithPoisons, m_Not(m_Value())));
+  EXPECT_FALSE(match(NotWithPoisons, m_NotForbidPoison(m_Value())));
 
   Value *NotWithUndefsCommute = IRB.CreateXor(VectorMixedUndef, VectorZero);
   EXPECT_FALSE(match(NotWithUndefsCommute, m_Not(m_Value())));
+  EXPECT_FALSE(match(NotWithUndefsCommute, m_NotForbidPoison(m_Value())));
 
   Value *NotWithPoisonsCommute = IRB.CreateXor(VectorMixedPoison, VectorZero);
   EXPECT_TRUE(match(NotWithPoisonsCommute, m_Not(m_Value())));
+  EXPECT_FALSE(match(NotWithPoisonsCommute, m_NotForbidPoison(m_Value())));
 }
 
 template <typename T> struct MutableConstTest : PatternMatchTest { };
