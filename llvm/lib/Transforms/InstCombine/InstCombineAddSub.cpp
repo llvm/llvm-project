@@ -1178,10 +1178,10 @@ Value *InstCombinerImpl::SimplifyAddWithRemainder(BinaryOperator &I) {
   APInt DivOpC;
   if (MatchRem(Rem, X, C0, IsSigned) &&
       MatchDiv(Div, DivOpV, DivOpC, IsSigned) && X == DivOpV && C0 == DivOpC) {
-    if (!isGuaranteedNotToBeUndef(X, &AC, &I, &DT))
-      return nullptr;
     APInt NewC = C1 - C2 * C0;
     if (!NewC.isZero() && !Rem->hasOneUse())
+      return nullptr;
+    if (!isGuaranteedNotToBeUndef(X, &AC, &I, &DT))
       return nullptr;
     Value *MulXC2 = Builder.CreateMul(X, ConstantInt::get(X->getType(), C2));
     if (NewC.isZero())
