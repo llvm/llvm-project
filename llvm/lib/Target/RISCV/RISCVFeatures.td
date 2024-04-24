@@ -1016,8 +1016,7 @@ def HasVendorXTHeadCmo : Predicate<"Subtarget->hasVendorXTHeadCmo()">,
 
 def FeatureVendorXTHeadFMemIdx
     : RISCVExtension<"xtheadfmemidx", 1, 0,
-                     "'xtheadfmemidx' (T-Head FP Indexed Memory Operations)",
-                     [FeatureStdExtF]>;
+                     "'xtheadfmemidx' (T-Head FP Indexed Memory Operations)">;
 def HasVendorXTHeadFMemIdx : Predicate<"Subtarget->hasVendorXTHeadFMemIdx()">,
                              AssemblerPredicate<(all_of FeatureVendorXTHeadFMemIdx),
                                  "'xtheadfmemidx' (T-Head FP Indexed Memory Operations)">;
