@@ -329,7 +329,24 @@ static void buildAtomicCmpXchg(CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak,
                                mlir::cir::MemOrder SuccessOrder,
                                mlir::cir::MemOrder FailureOrder,
                                llvm::SyncScope::ID Scope) {
-  llvm_unreachable("NYI");
+  auto &builder = CGF.getBuilder();
+  auto loc = CGF.getLoc(E->getSourceRange());
+  mlir::Value Expected = Val1.getPointer();
+  mlir::Value Desired = Val2.getPointer();
+
+  // The approach here is a bit different from traditional LLVM codegen: we pass
+  // the pointers instead, and let the operation hide the details of storing the
+  // old value into expected in case of failure (handled during LLVM lowering).
+  auto boolTy = builder.getBoolTy();
+  auto cmpxchg = builder.create<mlir::cir::AtomicCmpXchg>(
+      loc, boolTy, Ptr.getPointer(), Expected, Desired, SuccessOrder,
+      FailureOrder);
+  cmpxchg.setIsVolatile(E->isVolatile());
+  cmpxchg.setWeak(IsWeak);
+
+  // Update the memory at Dest with Cmp's value.
+  CGF.buildStoreOfScalar(cmpxchg.getCmp(),
+                         CGF.makeAddrLValue(Dest, E->getType()));
 }
 
 /// Given an ordering required on success, emit all possible cmpxchg
@@ -716,9 +733,8 @@ RValue CIRGenFunction::buildAtomicExpr(AtomicExpr *E) {
     if (E->getOp() == AtomicExpr::AO__atomic_compare_exchange ||
         E->getOp() == AtomicExpr::AO__scoped_atomic_compare_exchange)
       Val2 = buildPointerWithAlignment(E->getVal2());
-    else {
-      llvm_unreachable("NYI");
-    }
+    else
+      Val2 = buildValToTemp(*this, E->getVal2());
     OrderFail = buildScalarExpr(E->getOrderFail());
     if (E->getOp() == AtomicExpr::AO__atomic_compare_exchange_n ||
         E->getOp() == AtomicExpr::AO__atomic_compare_exchange ||

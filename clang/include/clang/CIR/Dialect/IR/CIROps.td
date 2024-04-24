@@ -3738,6 +3738,37 @@ def AtomicXchg : CIR_Op<"atomic.xchg", [Pure, SameSecondOperandAndResultType]> {
   let hasVerifier = 0;
 }
 
+def AtomicCmpXchg : CIR_Op<"atomic.cmp_xchg", [Pure]> {
+  let summary = "Atomic compare exchange";
+  let description = [{
+    C/C++ Atomic compare and exchange. Example:
+
+  }];
+  let results = (outs CIR_BoolType:$cmp);
+  let arguments = (ins CIR_PointerType:$ptr,
+                       CIR_PointerType:$expected,
+                       CIR_AnyType:$desired,
+                       Arg<MemOrder, "success memory order">:$succ_order,
+                       Arg<MemOrder, "failure memory order">:$fail_order,
+                       UnitAttr:$weak,
+                       UnitAttr:$is_volatile);
+
+  let assemblyFormat = [{
+    `(`
+    $ptr `:` qualified(type($ptr)) `,`
+    $expected `:` type($expected) `,`
+    $desired `:` type($desired) `,`
+    `success` `=`  $succ_order `,`
+    `failure` `=`  $fail_order
+    `)`
+    (`weak` $weak^)?
+    (`volatile` $is_volatile^)?
+    `:` type($cmp) attr-dict
+  }];
+
+  let hasVerifier = 0;
+}
+
 //===----------------------------------------------------------------------===//
 // Operations Lowered Directly to LLVM IR
 //
