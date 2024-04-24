@@ -83,3 +83,16 @@ constexpr struct T t[] = {
 #embed <numbers.txt>
 };
 static_assert(t[0].s.x == '2');
+
+constexpr int func(int i, int) { return i; }
+static_assert(
+  func(
+#embed <jk.txt>
+  ) == 'j');
+
+template <int N>
+struct ST {};
+
+ST<
+#embed <jk.txt> limit(1)
+> st;
