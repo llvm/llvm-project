@@ -494,7 +494,6 @@ define void @saxpy_vec_demanded_fields(i64 %n, float %a, ptr nocapture readonly 
 ; CHECK-NEXT:    beqz a3, .LBB9_2
 ; CHECK-NEXT:  .LBB9_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a1)
 ; CHECK-NEXT:    vle32.v v16, (a2)
 ; CHECK-NEXT:    slli a4, a3, 2

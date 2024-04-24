@@ -808,8 +808,8 @@ public:
 private:
   bool needVSETVLI(const MachineInstr &MI, const VSETVLIInfo &Require,
                    const VSETVLIInfo &CurInfo) const;
-  bool needVSETVLIPHI(const VSETVLIInfo &Require,
-                      const MachineBasicBlock &MBB) const;
+  bool needVSETVLIPHI(const VSETVLIInfo &Require, const MachineBasicBlock &MBB,
+                      const DemandedFields &Used) const;
   void insertVSETVLI(MachineBasicBlock &MBB, MachineInstr &MI,
                      const VSETVLIInfo &Info, const VSETVLIInfo &PrevInfo);
   void insertVSETVLI(MachineBasicBlock &MBB,
@@ -1318,7 +1318,8 @@ void RISCVInsertVSETVLI::computeIncomingVLVTYPE(const MachineBasicBlock &MBB) {
 // be unneeded if the AVL is a phi node where all incoming values are VL
 // outputs from the last VSETVLI in their respective basic blocks.
 bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
-                                        const MachineBasicBlock &MBB) const {
+                                        const MachineBasicBlock &MBB,
+                                        const DemandedFields &Used) const {
   if (DisableInsertVSETVLPHIOpt)
     return true;
 
@@ -1350,10 +1351,14 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
     if (DefInfo != PBBExit)
       return true;
 
-    // Require has the same VL as PBBExit, so if the exit from the
-    // predecessor has the VTYPE we are looking for we might be able
-    // to avoid a VSETVLI.
-    if (PBBExit.isUnknown() || !PBBExit.hasSameVTYPE(Require))
+    // Make sure Require has the same VLMAX as the predecessor block,
+    // otherwise the VL might be different.
+    if (PBBExit.isUnknown() || !PBBExit.hasSameVLMAX(Require))
+      return true;
+
+    // If the exit from the predecessor has the VTYPE we are looking
+    // for we might be able to avoid a VSETVLI.
+    if (!PBBExit.hasCompatibleVTYPE(Used, Require))
       return true;
   }
 
@@ -1392,7 +1397,8 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
         // wouldn't be used and VL/VTYPE registers are correct.  Note that
         // we *do* need to model the state as if it changed as while the
         // register contents are unchanged, the abstract model can change.
-        if (!PrefixTransparent || needVSETVLIPHI(CurInfo, MBB))
+        if (!PrefixTransparent ||
+            needVSETVLIPHI(CurInfo, MBB, getDemanded(MI, MRI, ST)))
           insertVSETVLI(MBB, MI, CurInfo, PrevInfo);
         PrefixTransparent = false;
       }
