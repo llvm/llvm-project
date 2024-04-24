@@ -4667,7 +4667,8 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
 LValue CodeGenFunction::EmitLValueForLambdaField(const FieldDecl *Field,
                                                  llvm::Value *ThisValue) {
   bool HasExplicitObjectParameter = false;
-  if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(CurCodeDecl)) {
+  const auto *MD = dyn_cast_if_present<CXXMethodDecl>(CurCodeDecl);
+  if (MD) {
     HasExplicitObjectParameter = MD->isExplicitObjectMemberFunction();
     assert(MD->getParent()->isLambda());
     assert(MD->getParent() == Field->getParent());
@@ -4689,22 +4690,10 @@ LValue CodeGenFunction::EmitLValueForLambdaField(const FieldDecl *Field,
     auto *ThisTy = D->getType().getNonReferenceType()->getAsCXXRecordDecl();
     auto *LambdaTy = cast<CXXRecordDecl>(Field->getParent());
     if (ThisTy != LambdaTy) {
-      CXXBasePaths Paths(/*FindAmbiguities=*/false, /*RecordPaths=*/true,
-                         /*DetectVirtual=*/false);
-
-      [[maybe_unused]] bool Derived = ThisTy->isDerivedFrom(LambdaTy, Paths);
-      assert(Derived && "Type not derived from lambda type?");
-
-      const CXXBasePath *Path = &Paths.front();
-      CXXCastPath BasePathArray;
-      for (unsigned I = 0, E = Path->size(); I != E; ++I)
-        BasePathArray.push_back(
-            const_cast<CXXBaseSpecifier *>((*Path)[I].Base));
-
+      const CXXCastPath &BasePathArray = getContext().LambdaCastPaths.at(MD);
       Address Base = GetAddressOfBaseClass(
           LambdaLV.getAddress(*this), ThisTy, BasePathArray.begin(),
           BasePathArray.end(), /*NullCheckValue=*/false, SourceLocation());
-
       LambdaLV = MakeAddrLValue(Base, QualType{LambdaTy->getTypeForDecl(), 0});
     }
   } else {

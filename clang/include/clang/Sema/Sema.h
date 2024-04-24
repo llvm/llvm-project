@@ -7144,7 +7144,9 @@ public:
       StorageClass SC, ArrayRef<ParmVarDecl *> Params,
       bool HasExplicitResultType);
 
-  void DiagnoseInvalidExplicitObjectParameterInLambda(CXXMethodDecl *Method);
+  /// Returns true if the explicit object parameter was invalid.
+  bool DiagnoseInvalidExplicitObjectParameterInLambda(CXXMethodDecl *Method,
+                                                      SourceLocation CallLoc);
 
   /// Perform initialization analysis of the init-capture and perform
   /// any implicit conversions such as an lvalue-to-rvalue conversion if
