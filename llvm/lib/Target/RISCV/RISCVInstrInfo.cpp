@@ -1727,7 +1727,7 @@ bool RISCVInstrInfo::areRVVInstsReassociable(const MachineInstr &MI1,
           break;
       }
 
-      if (It->definesRegister(RISCV::V0, TRI)) {
+      if (It->modifiesRegister(RISCV::V0, TRI)) {
         Register SrcReg = It->getOperand(1).getReg();
         // If it's not VReg it'll be more difficult to track its defs, so
         // bailing out here just to be safe.
@@ -1844,8 +1844,7 @@ void RISCVInstrInfo::getReassociateOperandIndices(
     const MachineInstr &Root, unsigned Pattern,
     std::array<unsigned, 5> &OperandIndices) const {
   TargetInstrInfo::getReassociateOperandIndices(Root, Pattern, OperandIndices);
-  if (isVectorAssociativeAndCommutative(Root) ||
-      isVectorAssociativeAndCommutative(Root, /*Invert=*/true)) {
+  if (RISCV::getRVVMCOpcode(Root.getOpcode())) {
     // Skip the passthrough operand, so increment all indices by one.
     for (unsigned I = 0; I < 5; ++I)
       ++OperandIndices[I];
