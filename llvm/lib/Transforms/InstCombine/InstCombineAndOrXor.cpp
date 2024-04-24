@@ -4433,23 +4433,13 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
     // ~(C >>s Y) --> ~C >>u Y (when inverting the replicated sign bits)
     Constant *C;
     if (match(NotVal, m_AShr(m_Constant(C), m_Value(Y))) &&
-        match(C, m_Negative())) {
-      // We matched a negative constant, so propagating undef is unsafe.
-      // Clamp undef elements to -1.
-      Type *EltTy = Ty->getScalarType();
-      C = Constant::replaceUndefsWith(C, ConstantInt::getAllOnesValue(EltTy));
+        match(C, m_Negative()))
       return BinaryOperator::CreateLShr(ConstantExpr::getNot(C), Y);
-    }
 
     // ~(C >>u Y) --> ~C >>s Y (when inverting the replicated sign bits)
     if (match(NotVal, m_LShr(m_Constant(C), m_Value(Y))) &&
-        match(C, m_NonNegative())) {
-      // We matched a non-negative constant, so propagating undef is unsafe.
-      // Clamp undef elements to 0.
-      Type *EltTy = Ty->getScalarType();
-      C = Constant::replaceUndefsWith(C, ConstantInt::getNullValue(EltTy));
+        match(C, m_NonNegative()))
       return BinaryOperator::CreateAShr(ConstantExpr::getNot(C), Y);
-    }
 
     // ~(X + C) --> ~C - X
     if (match(NotVal, m_Add(m_Value(X), m_ImmConstant(C))))

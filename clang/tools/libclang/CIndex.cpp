@@ -2795,6 +2795,18 @@ void OpenACCClauseEnqueue::VisitSelfClause(const OpenACCSelfClause &C) {
   if (C.hasConditionExpr())
     Visitor.AddStmt(C.getConditionExpr());
 }
+void OpenACCClauseEnqueue::VisitNumWorkersClause(
+    const OpenACCNumWorkersClause &C) {
+  Visitor.AddStmt(C.getIntExpr());
+}
+void OpenACCClauseEnqueue::VisitVectorLengthClause(
+    const OpenACCVectorLengthClause &C) {
+  Visitor.AddStmt(C.getIntExpr());
+}
+void OpenACCClauseEnqueue::VisitNumGangsClause(const OpenACCNumGangsClause &C) {
+  for (Expr *IE : C.getIntExprs())
+    Visitor.AddStmt(IE);
+}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {

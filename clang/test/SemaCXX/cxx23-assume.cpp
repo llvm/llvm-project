@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++23  -x c++ %s -verify
 // RUN: %clang_cc1 -std=c++20 -pedantic -x c++ %s -verify=ext,expected
+// RUN: %clang_cc1 -std=c++23  -x c++ %s -verify -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -pedantic -x c++ %s -verify=ext,expected -fexperimental-new-constant-interpreter
 
 struct A{};
 struct B{ explicit operator bool() { return true; } };

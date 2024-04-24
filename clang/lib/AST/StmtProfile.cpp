@@ -2496,6 +2496,25 @@ void OpenACCClauseProfiler::VisitSelfClause(const OpenACCSelfClause &Clause) {
   if (Clause.hasConditionExpr())
     Profiler.VisitStmt(Clause.getConditionExpr());
 }
+
+void OpenACCClauseProfiler::VisitNumGangsClause(
+    const OpenACCNumGangsClause &Clause) {
+  for (auto *E : Clause.getIntExprs())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitNumWorkersClause(
+    const OpenACCNumWorkersClause &Clause) {
+  assert(Clause.hasIntExpr() && "num_workers clause requires a valid int expr");
+  Profiler.VisitStmt(Clause.getIntExpr());
+}
+
+void OpenACCClauseProfiler::VisitVectorLengthClause(
+    const OpenACCVectorLengthClause &Clause) {
+  assert(Clause.hasIntExpr() &&
+         "vector_length clause requires a valid int expr");
+  Profiler.VisitStmt(Clause.getIntExpr());
+}
 } // namespace
 
 void StmtProfiler::VisitOpenACCComputeConstruct(
