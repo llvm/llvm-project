@@ -56,7 +56,7 @@ int main(int, char**) {
     {
         new_called = delete_called = 0;
         OverAligned* dummy_data_block = new (std::nothrow) OverAligned[3];
-        OverAligned* x = DoNotOptimize(dummy_data_block);
+        OverAligned* x                = DoNotOptimize(dummy_data_block);
         ASSERT_WITH_OPERATOR_NEW_FALLBACKS(static_cast<void*>(x) == DummyData);
         ASSERT_WITH_OPERATOR_NEW_FALLBACKS(new_called == 1);
 

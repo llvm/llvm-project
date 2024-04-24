@@ -49,7 +49,7 @@ int main(int, char**) {
     {
         new_called = delete_called = 0;
         OverAligned* dummy_data_block = new OverAligned[3];
-        OverAligned* x             = DoNotOptimize(dummy_data_block);
+        OverAligned* x                = DoNotOptimize(dummy_data_block);
         assert(static_cast<void*>(x) == DummyData);
         assert(new_called == 1);
 
