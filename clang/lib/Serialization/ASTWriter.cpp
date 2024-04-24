@@ -3238,7 +3238,7 @@ uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
     return 0;
 
   uint64_t Offset = Stream.GetCurrentBitNo();
-  SmallVector<uint32_t, 128> KindDeclPairs;
+  SmallVector<DeclID, 128> KindDeclPairs;
   for (const auto *D : DC->decls()) {
     if (DoneWritingDeclsAndTypes && !wasDeclEmitted(D))
       continue;
@@ -3376,11 +3376,11 @@ public:
     for (const ObjCMethodList *Method = &Methods.Instance; Method;
          Method = Method->getNext())
       if (ShouldWriteMethodListNode(Method))
-        DataLen += 4;
+        DataLen += sizeof(DeclID);
     for (const ObjCMethodList *Method = &Methods.Factory; Method;
          Method = Method->getNext())
       if (ShouldWriteMethodListNode(Method))
-        DataLen += 4;
+        DataLen += sizeof(DeclID);
     return emitULEBKeyDataLength(KeyLen, DataLen, Out);
   }
 
@@ -3438,11 +3438,11 @@ public:
     for (const ObjCMethodList *Method = &Methods.Instance; Method;
          Method = Method->getNext())
       if (ShouldWriteMethodListNode(Method))
-        LE.write<uint32_t>(Writer.getDeclID(Method->getMethod()));
+        LE.write<DeclID>(Writer.getDeclID(Method->getMethod()));
     for (const ObjCMethodList *Method = &Methods.Factory; Method;
          Method = Method->getNext())
       if (ShouldWriteMethodListNode(Method))
-        LE.write<uint32_t>(Writer.getDeclID(Method->getMethod()));
+        LE.write<DeclID>(Writer.getDeclID(Method->getMethod()));
 
     assert(Out.tell() - Start == DataLen && "Data length is wrong");
   }
@@ -3713,7 +3713,8 @@ public:
         DataLen += 4; // MacroDirectives offset.
 
       if (NeedDecls)
-        DataLen += std::distance(IdResolver.begin(II), IdResolver.end()) * 4;
+        DataLen += std::distance(IdResolver.begin(II), IdResolver.end()) *
+                   sizeof(DeclID);
     }
     return emitULEBKeyDataLength(KeyLen, DataLen, Out);
   }
@@ -3759,7 +3760,7 @@ public:
       // Only emit declarations that aren't from a chained PCH, though.
       SmallVector<NamedDecl *, 16> Decls(IdResolver.decls(II));
       for (NamedDecl *D : llvm::reverse(Decls))
-        LE.write<uint32_t>(
+        LE.write<DeclID>(
             Writer.getDeclID(getDeclForLocalLookup(PP.getLangOpts(), D)));
     }
   }
@@ -3952,8 +3953,8 @@ public:
       break;
     }
 
-    // 4 bytes for each DeclID.
-    unsigned DataLen = 4 * (Lookup.second - Lookup.first);
+    // length of DeclIDs.
+    unsigned DataLen = sizeof(DeclID) * (Lookup.second - Lookup.first);
 
     return emitULEBKeyDataLength(KeyLen, DataLen, Out);
   }
@@ -3996,7 +3997,7 @@ public:
     endian::Writer LE(Out, llvm::endianness::little);
     uint64_t Start = Out.tell(); (void)Start;
     for (unsigned I = Lookup.first, N = Lookup.second; I != N; ++I)
-      LE.write<uint32_t>(DeclIDs[I]);
+      LE.write<DeclID>(DeclIDs[I]);
     assert(Out.tell() - Start == DataLen && "Data length is wrong");
   }
 };
@@ -5483,7 +5484,7 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
   const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
   // Create a lexical update block containing all of the declarations in the
   // translation unit that do not come from other AST files.
-  SmallVector<uint32_t, 128> NewGlobalKindDeclPairs;
+  SmallVector<DeclID, 128> NewGlobalKindDeclPairs;
   for (const auto *D : TU->noload_decls()) {
     if (D->isFromASTFile())
       continue;
