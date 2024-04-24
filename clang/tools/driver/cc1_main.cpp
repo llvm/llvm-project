@@ -41,7 +41,6 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -51,6 +50,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include <cstdio>
 
 #ifdef CLANG_HAVE_RLIMITS

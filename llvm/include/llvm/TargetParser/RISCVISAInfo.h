@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/RISCVISAUtils.h"
 
 #include <map>
 #include <string>
@@ -25,24 +26,10 @@ public:
   RISCVISAInfo(const RISCVISAInfo &) = delete;
   RISCVISAInfo &operator=(const RISCVISAInfo &) = delete;
 
-  /// Represents the major and version number components of a RISC-V extension.
-  struct ExtensionVersion {
-    unsigned Major;
-    unsigned Minor;
-  };
-
-  static bool compareExtension(const std::string &LHS, const std::string &RHS);
-
-  /// Helper class for OrderedExtensionMap.
-  struct ExtensionComparator {
-    bool operator()(const std::string &LHS, const std::string &RHS) const {
-      return compareExtension(LHS, RHS);
-    }
-  };
-
   /// OrderedExtensionMap is std::map, it's specialized to keep entries
   /// in canonical order of extension.
-  typedef std::map<std::string, ExtensionVersion, ExtensionComparator>
+  typedef std::map<std::string, RISCVISAUtils::ExtensionVersion,
+                   RISCVISAUtils::ExtensionComparator>
       OrderedExtensionMap;
 
   RISCVISAInfo(unsigned XLen, OrderedExtensionMap &Exts)
@@ -105,7 +92,7 @@ private:
 
   OrderedExtensionMap Exts;
 
-  void addExtension(StringRef ExtName, ExtensionVersion Version);
+  void addExtension(StringRef ExtName, RISCVISAUtils::ExtensionVersion Version);
 
   Error checkDependency();
 
