@@ -640,11 +640,10 @@ define i32 @test_assume_false(i32 %cond) {
 ; CHECK:       case2:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       default:
-; CHECK-NEXT:    br label [[EXIT]]
+; CHECK-NEXT:    unreachable
 ; CHECK:       exit:
-; CHECK-NEXT:    [[BOOL:%.*]] = phi i1 [ false, [[DEFAULT]] ], [ true, [[CASE1]] ], [ true, [[CASE2]] ], [ true, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 0, [[DEFAULT]] ], [ 2, [[CASE1]] ], [ 3, [[CASE2]] ], [ 1, [[ENTRY]] ]
-; CHECK-NEXT:    call void @llvm.assume(i1 [[BOOL]])
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 2, [[CASE1]] ], [ 3, [[CASE2]] ], [ 1, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true)
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:

@@ -7516,6 +7516,13 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
                                       SI->getPointerAddressSpace())) &&
                SI->getPointerOperand() == I;
 
+    // llvm.assume(false/undef) always triggers immediate UB.
+    if (auto *Assume = dyn_cast<AssumeInst>(Use)) {
+      // Ignore assume operand bundles.
+      if (I == Assume->getArgOperand(0))
+        return true;
+    }
+
     if (auto *CB = dyn_cast<CallBase>(Use)) {
       if (C->isNullValue() && NullPointerIsDefined(CB->getFunction()))
         return false;
