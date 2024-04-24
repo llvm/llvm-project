@@ -2786,9 +2786,9 @@ void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
                                       "serializing");
 
   // Determine the ID for this declaration.
-  serialization::DeclID ID;
+  DeclID ID;
   assert(!D->isFromASTFile() && "should not be emitting imported decl");
-  serialization::DeclID &IDR = DeclIDs[D];
+  DeclID &IDR = DeclIDs[D];
   if (IDR == 0)
     IDR = NextDeclID++;
 
