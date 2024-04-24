@@ -18,14 +18,12 @@ define i32 @f(i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = memw(r29+#36)
-; CHECK-NEXT:     memw(r29+#32) = ##666
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     r1 = memw(r29+#28)
-; CHECK-NEXT:     r2 = memw(r29+#32)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = sub(r1,r0)
+; CHECK-NEXT:     r2 = memw(r29+#32)
+; CHECK-NEXT:     memw(r29+#32) = ##666
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r0 = xor(r0,r2)
