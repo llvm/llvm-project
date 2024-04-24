@@ -1385,12 +1385,12 @@ define i8 @dont_negate_ordinary_select(i8 %x, i8 %y, i8 %z, i1 %c) {
   ret i8 %t1
 }
 
-; FIXME: This is a miscompile.
 define <2 x i32> @negate_select_of_negation_poison(<2 x i1> %c, <2 x i32> %x) {
 ; CHECK-LABEL: @negate_select_of_negation_poison(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i32> <i32 0, i32 poison>, [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[C:%.*]], <2 x i32> [[X]], <2 x i32> [[NEG]]
-; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i32> [[NEG]], <2 x i32> [[X]]
+; CHECK-NEXT:    [[NEG2:%.*]] = sub <2 x i32> zeroinitializer, [[SEL]]
+; CHECK-NEXT:    ret <2 x i32> [[NEG2]]
 ;
   %neg = sub <2 x i32> <i32 0, i32 poison>, %x
   %sel = select <2 x i1> %c, <2 x i32> %neg, <2 x i32> %x
