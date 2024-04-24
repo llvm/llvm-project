@@ -29,7 +29,7 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 static bool isDummyArgument(mlir::Value v) {
-  auto blockArg{v.dyn_cast<mlir::BlockArgument>()};
+  auto blockArg{mlir::dyn_cast<mlir::BlockArgument>(v)};
   if (!blockArg)
     return false;
 

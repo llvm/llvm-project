@@ -1555,12 +1555,12 @@ private:
 
   // Shamelessly stolen from Analysis/CFRefCount.cpp
   Selector GetNullarySelector(const char* name) const {
-    IdentifierInfo* II = &CGM.getContext().Idents.get(name);
+    const IdentifierInfo *II = &CGM.getContext().Idents.get(name);
     return CGM.getContext().Selectors.getSelector(0, &II);
   }
 
   Selector GetUnarySelector(const char* name) const {
-    IdentifierInfo* II = &CGM.getContext().Idents.get(name);
+    const IdentifierInfo *II = &CGM.getContext().Idents.get(name);
     return CGM.getContext().Selectors.getSelector(1, &II);
   }
 
@@ -2219,14 +2219,6 @@ CGObjCCommonMac::EmitMessageSend(CodeGen::CodeGenFunction &CGF,
   CGCallee Callee = CGCallee::forDirect(BitcastFn);
   RValue rvalue = CGF.EmitCall(MSI.CallInfo, Callee, Return, ActualArgs,
                                &CallSite);
-
-  // Set type identifier metadata of indirect calls for call graph section.
-  if (CGM.getCodeGenOpts().CallGraphSection && Method && CallSite &&
-      CallSite->isIndirectCall()) {
-    if (const auto *FnType = Method->getFunctionType()) {
-      CGM.CreateFunctionTypeMetadataForIcall(QualType(FnType, 0), CallSite);
-    }
-  }
 
   // Mark the call as noreturn if the method is marked noreturn and the
   // receiver cannot be null.
@@ -6276,11 +6268,10 @@ bool CGObjCNonFragileABIMac::isVTableDispatchedSelector(Selector Sel) {
       VTableDispatchMethods.insert(GetUnarySelector("addObject"));
 
       // "countByEnumeratingWithState:objects:count"
-      IdentifierInfo *KeyIdents[] = {
-        &CGM.getContext().Idents.get("countByEnumeratingWithState"),
-        &CGM.getContext().Idents.get("objects"),
-        &CGM.getContext().Idents.get("count")
-      };
+      const IdentifierInfo *KeyIdents[] = {
+          &CGM.getContext().Idents.get("countByEnumeratingWithState"),
+          &CGM.getContext().Idents.get("objects"),
+          &CGM.getContext().Idents.get("count")};
       VTableDispatchMethods.insert(
         CGM.getContext().Selectors.getSelector(3, KeyIdents));
     }

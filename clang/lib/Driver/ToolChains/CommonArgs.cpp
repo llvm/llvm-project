@@ -114,6 +114,7 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
   case llvm::Triple::csky:
   case llvm::Triple::loongarch32:
   case llvm::Triple::loongarch64:
+  case llvm::Triple::m68k:
     return !clang::driver::tools::areOptimizationsEnabled(Args);
   default:
     break;
@@ -2115,8 +2116,12 @@ unsigned tools::getDwarfVersion(const ToolChain &TC,
                                 const llvm::opt::ArgList &Args) {
   unsigned DwarfVersion = ParseDebugDefaultVersion(TC, Args);
   if (const Arg *GDwarfN = getDwarfNArg(Args))
-    if (int N = DwarfVersionNum(GDwarfN->getSpelling()))
+    if (int N = DwarfVersionNum(GDwarfN->getSpelling())) {
       DwarfVersion = N;
+      if (DwarfVersion == 5 && TC.getTriple().isOSAIX())
+        TC.getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
+            << GDwarfN->getSpelling() << TC.getTriple().str();
+    }
   if (DwarfVersion == 0) {
     DwarfVersion = TC.GetDefaultDwarfVersion();
     assert(DwarfVersion && "toolchain default DWARF version must be nonzero");

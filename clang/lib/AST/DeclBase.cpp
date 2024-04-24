@@ -71,7 +71,7 @@ void Decl::updateOutOfDate(IdentifierInfo &II) const {
 #include "clang/AST/DeclNodes.inc"
 
 void *Decl::operator new(std::size_t Size, const ASTContext &Context,
-                         unsigned ID, std::size_t Extra) {
+                         Decl::DeclID ID, std::size_t Extra) {
   // Allocate an extra 8 bytes worth of storage, which ensures that the
   // resulting pointer will still be 8-byte aligned.
   static_assert(sizeof(unsigned) * 2 >= alignof(Decl),
@@ -1104,11 +1104,6 @@ bool Decl::isInAnotherModuleUnit() const {
 
 bool Decl::isFromExplicitGlobalModule() const {
   return getOwningModule() && getOwningModule()->isExplicitGlobalModule();
-}
-
-bool Decl::shouldSkipCheckingODR() const {
-  return getASTContext().getLangOpts().SkipODRCheckInGMF &&
-         isFromExplicitGlobalModule();
 }
 
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }

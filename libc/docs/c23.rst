@@ -20,8 +20,8 @@ Additions:
 
 * fenv.h
 
-  * fesetexcept
-  * fetestexceptflag
+  * fesetexcept |check|
+  * fetestexceptflag |check|
   * fegetmode
   * fesetmode
 * math.h
@@ -54,7 +54,7 @@ Additions:
   * pown*
   * powr*
   * rootn*
-  * roundeven*
+  * roundeven* |check|
   * fromfp*
   * ufromfp*
   * fromfpx*

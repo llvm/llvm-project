@@ -80,6 +80,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
@@ -1326,7 +1327,8 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
   bool NodeInserted = false;
   std::unique_ptr<SelectionDAG::DAGNodeInsertedListener> InsertedListener;
   MDNode *PCSectionsMD = I.getMetadata(LLVMContext::MD_pcsections);
-  if (PCSectionsMD) {
+  MDNode *MMRA = I.getMetadata(LLVMContext::MD_mmra);
+  if (PCSectionsMD || MMRA) {
     InsertedListener = std::make_unique<SelectionDAG::DAGNodeInsertedListener>(
         DAG, [&](SDNode *) { NodeInserted = true; });
   }
@@ -1338,14 +1340,17 @@ void SelectionDAGBuilder::visit(const Instruction &I) {
     CopyToExportRegsIfNeeded(&I);
 
   // Handle metadata.
-  if (PCSectionsMD) {
+  if (PCSectionsMD || MMRA) {
     auto It = NodeMap.find(&I);
     if (It != NodeMap.end()) {
-      DAG.addPCSections(It->second.getNode(), PCSectionsMD);
+      if (PCSectionsMD)
+        DAG.addPCSections(It->second.getNode(), PCSectionsMD);
+      if (MMRA)
+        DAG.addMMRAMetadata(It->second.getNode(), MMRA);
     } else if (NodeInserted) {
       // This should not happen; if it does, don't let it go unnoticed so we can
       // fix it. Relevant visit*() function is probably missing a setValue().
-      errs() << "warning: loosing !pcsections metadata ["
+      errs() << "warning: loosing !pcsections and/or !mmra metadata ["
              << I.getModule()->getName() << "]\n";
       LLVM_DEBUG(I.dump());
       assert(false);
@@ -3883,7 +3888,11 @@ void SelectionDAGBuilder::visitUIToFP(const User &I) {
   SDValue N = getValue(I.getOperand(0));
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
-  setValue(&I, DAG.getNode(ISD::UINT_TO_FP, getCurSDLoc(), DestVT, N));
+  SDNodeFlags Flags;
+  if (auto *PNI = dyn_cast<PossiblyNonNegInst>(&I))
+    Flags.setNonNeg(PNI->hasNonNeg());
+
+  setValue(&I, DAG.getNode(ISD::UINT_TO_FP, getCurSDLoc(), DestVT, N, Flags));
 }
 
 void SelectionDAGBuilder::visitSIToFP(const User &I) {
@@ -4755,8 +4764,12 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
 
   EVT VT = Src0.getValueType();
 
+  auto MMOFlags = MachineMemOperand::MOStore;
+  if (I.hasMetadata(LLVMContext::MD_nontemporal))
+    MMOFlags |= MachineMemOperand::MONonTemporal;
+
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(PtrOperand), MachineMemOperand::MOStore,
+      MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::beforeOrAfterPointer(), Alignment, I.getAAMetadata());
   SDValue StoreNode =
       DAG.getMaskedStore(getMemoryRoot(), sdl, Src0, Ptr, Offset, Mask, VT, MMO,
@@ -4925,8 +4938,12 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
 
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
 
+  auto MMOFlags = MachineMemOperand::MOLoad;
+  if (I.hasMetadata(LLVMContext::MD_nontemporal))
+    MMOFlags |= MachineMemOperand::MONonTemporal;
+
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-      MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
+      MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::beforeOrAfterPointer(), Alignment, AAInfo, Ranges);
 
   SDValue Load =
@@ -5283,9 +5300,9 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
       Result =
           DAG.getAssertAlign(getCurSDLoc(), Result, Alignment.valueOrOne());
     }
-
-    setValue(&I, Result);
   }
+
+  setValue(&I, Result);
 }
 
 /// GetSignificand - Get the significand and build it into a floating-point
@@ -9177,8 +9194,7 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
              {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
               LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
               LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi,
-              LLVMContext::OB_convergencectrl,
-              LLVMContext::OB_type}) &&
+              LLVMContext::OB_convergencectrl, LLVMContext::OB_type}) &&
          "Cannot lower calls with arbitrary operand bundles!");
 
   SDValue Callee = getValue(I.getCalledOperand());
@@ -11118,7 +11134,7 @@ static void tryToElideArgumentCopy(
   }
 
   // Perform the elision. Delete the old stack object and replace its only use
-  // in the variable info map. Mark the stack object as mutable.
+  // in the variable info map. Mark the stack object as mutable and aliased.
   LLVM_DEBUG({
     dbgs() << "Eliding argument copy from " << Arg << " to " << *AI << '\n'
            << "  Replacing frame index " << OldIndex << " with " << FixedIndex
@@ -11126,6 +11142,7 @@ static void tryToElideArgumentCopy(
   });
   MFI.RemoveStackObject(OldIndex);
   MFI.setIsImmutableObjectIndex(FixedIndex, false);
+  MFI.setIsAliasedObjectIndex(FixedIndex, true);
   AllocaIndex = FixedIndex;
   ArgCopyElisionFrameIndexMap.insert({OldIndex, FixedIndex});
   for (SDValue ArgVal : ArgVals)
