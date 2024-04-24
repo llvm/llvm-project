@@ -49,9 +49,8 @@ class ClauseProcessor {
 public:
   ClauseProcessor(Fortran::lower::AbstractConverter &converter,
                   Fortran::semantics::SemanticsContext &semaCtx,
-                  const Fortran::parser::OmpClauseList &clauses)
-      : converter(converter), semaCtx(semaCtx),
-        clauses(makeClauses(clauses, semaCtx)) {}
+                  const List<Clause> &clauses)
+      : converter(converter), semaCtx(semaCtx), clauses(clauses) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
   bool processCollapse(

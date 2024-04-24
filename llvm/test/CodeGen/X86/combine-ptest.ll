@@ -400,17 +400,15 @@ define i1 @PR38788(<4 x i32> %0, <4 x i32> %1) {
 define i32 @PR88958_1(ptr %0, <2 x i64> %1) {
 ; SSE-LABEL: PR88958_1:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa (%rdi), %xmm1
 ; SSE-NEXT:    xorl %eax, %eax
-; SSE-NEXT:    ptest %xmm0, %xmm1
+; SSE-NEXT:    ptest (%rdi), %xmm0
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR88958_1:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX-NEXT:    xorl %eax, %eax
-; AVX-NEXT:    vptest %xmm0, %xmm1
+; AVX-NEXT:    vptest (%rdi), %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %3 = load <2 x i64>, ptr %0

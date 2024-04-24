@@ -3200,7 +3200,7 @@ def fir_CUDAAllocateOp : fir_Op<"cuda_allocate", [AttrSizedOperandSegments,
     is initialized before with the standard flang runtime calls.
   }];
 
-  let arguments = (ins Arg<AnyRefOrBoxType, "", [MemWrite]>:$box,
+  let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
                        Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
                        Optional<AnyIntegerType>:$stream,
                        Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
