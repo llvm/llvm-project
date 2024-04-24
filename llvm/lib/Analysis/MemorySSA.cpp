@@ -1241,7 +1241,7 @@ MemorySSA::MemorySSA(Function &Func, AliasAnalysis *AA, DominatorTree *DT)
   assert(AA && "No alias analysis?");
   BatchAAResults BatchAA(*AA);
   buildMemorySSA(BatchAA, iterator_range(F->begin(), F->end()));
-  // Intentionally leave AA to nullptr while building so we don't accidently
+  // Intentionally leave AA to nullptr while building so we don't accidentally
   // use non-batch AliasAnalysis.
   this->AA = AA;
   // Also create the walker here.
@@ -1262,7 +1262,7 @@ MemorySSA::MemorySSA(Loop &L, AliasAnalysis *AA, DominatorTree *DT)
       BatchAA, map_range(L.blocks(), [](const BasicBlock *BB) -> BasicBlock & {
         return *const_cast<BasicBlock *>(BB);
       }));
-  // Intentionally leave AA to nullptr while building so we don't accidently
+  // Intentionally leave AA to nullptr while building so we don't accidentally
   // use non-batch AliasAnalysis.
   this->AA = AA;
   // Also create the walker here.
@@ -1561,18 +1561,21 @@ void MemorySSA::buildMemorySSA(BatchAAResults &BAA, IterT Blocks) {
   // filled in with all blocks.
   SmallPtrSet<BasicBlock *, 16> Visited;
   if (L) {
+    // Only building MemorySSA for a single loop. placePHINodes may have
+    // inserted a MemoryPhi in the loop's preheader. As this is outside the
+    // scope of the loop, set them to LiveOnEntry.
     if (auto *P = getMemoryAccess(L->getLoopPreheader())) {
-      for (Use &U : make_early_inc_range(P->uses())) {
+      for (Use &U : make_early_inc_range(P->uses()))
         U.set(LiveOnEntryDef.get());
-      }
       removeFromLists(P);
     }
+    // Now rename accesses in the loop. Populate Visited with the exit blocks of
+    // the loop, to limit the scope of the renaming.
     SmallVector<BasicBlock *> ExitBlocks;
     L->getExitBlocks(ExitBlocks);
     Visited.insert(ExitBlocks.begin(), ExitBlocks.end());
     renamePass(DT->getNode(L->getLoopPreheader()), LiveOnEntryDef.get(),
                Visited);
-
   } else {
     renamePass(DT->getRootNode(), LiveOnEntryDef.get(), Visited);
   }

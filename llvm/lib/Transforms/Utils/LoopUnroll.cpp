@@ -254,15 +254,15 @@ public:
 };
 
 Value *getMatchingValue(LoadValue LV, LoadInst *LI, unsigned CurrentGeneration,
-                        MemorySSA *MSSA) {
+                        function_ref<MemorySSA *()> GetMSSA) {
   if (!LV.DefI)
     return nullptr;
   if (LV.Generation != CurrentGeneration) {
+    MemorySSA *MSSA = GetMSSA();
     if (!MSSA)
       return nullptr;
     auto *EarlierMA = MSSA->getMemoryAccess(LV.DefI);
-    MemoryAccess *LaterDef;
-    LaterDef = MSSA->getWalker()->getClobberingMemoryAccess(LI);
+    MemoryAccess *LaterDef = MSSA->getWalker()->getClobberingMemoryAccess(LI);
     if (!MSSA->dominates(LaterDef, EarlierMA))
       return nullptr;
   }
@@ -312,8 +312,7 @@ void loadCSE(Loop *L, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI,
 
         const SCEV *PtrSCEV = SE.getSCEV(Load->getPointerOperand());
         LoadValue LV = AvailableLoads.lookup(PtrSCEV);
-        if (Value *M =
-                getMatchingValue(LV, Load, CurrentGeneration, GetMSSA())) {
+        if (Value *M = getMatchingValue(LV, Load, CurrentGeneration, GetMSSA)) {
 
           if (LI.replacementPreservesLCSSAForm(Load, M)) {
             Load->replaceAllUsesWith(M);
