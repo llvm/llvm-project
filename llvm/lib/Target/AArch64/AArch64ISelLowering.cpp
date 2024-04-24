@@ -17610,8 +17610,8 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
       APInt CVNMinus1 = CVN - 1;
       unsigned ShiftM1 = CVMMinus1.logBase2();
       unsigned ShiftN1 = CVNMinus1.logBase2();
-      // LSLFast implicate that Shifts <= 3 places are fast
-      if (ShiftM1 <= 3 && ShiftN1 <= 3) {
+      // ALULSLFast implicate that Shifts <= 4 places are fast
+      if (ShiftM1 <= 4 && ShiftN1 <= 4) {
         SDValue MVal = Add(Shl(N0, ShiftM1), N0);
         return Add(Shl(MVal, ShiftN1), MVal);
       }
