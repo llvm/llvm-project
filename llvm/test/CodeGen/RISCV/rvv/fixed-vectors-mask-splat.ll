@@ -25,10 +25,10 @@ define void @splat_v1i1(ptr %x, i1 %y) {
 ; CHECK-LABEL: splat_v1i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    andi a1, a1, 1
-; CHECK-NEXT:    vmv.s.x v8, a1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    andi a1, a1, 1
+; CHECK-NEXT:    vmv.s.x v9, a1
+; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
