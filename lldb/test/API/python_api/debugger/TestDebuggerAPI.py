@@ -161,3 +161,45 @@ class DebuggerAPITestCase(TestBase):
         original_dbg_id = self.dbg.GetID()
         self.dbg.Destroy(self.dbg)
         self.assertEqual(destroy_dbg_id, original_dbg_id)
+
+    def test_AddDestroyCallback(self):
+        destroy_dbg_id = None
+        called = []
+
+        def foo(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal destroy_dbg_id
+            destroy_dbg_id = dbg_id
+
+            nonlocal called
+            called += ['foo']
+
+        def bar(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal destroy_dbg_id
+            destroy_dbg_id = dbg_id
+
+            nonlocal called
+            called += ['bar']
+
+        self.dbg.AddDestroyCallback(foo)
+        self.dbg.AddDestroyCallback(bar)
+
+        original_dbg_id = self.dbg.GetID()
+        self.dbg.Destroy(self.dbg)
+        self.assertEqual(destroy_dbg_id, original_dbg_id)
+        self.assertEqual(called, ['bar', 'foo'])
+
+    def test_ClearDestroyCallback(self):
+        destroy_dbg_id = None
+
+        def foo(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal destroy_dbg_id
+            destroy_dbg_id = dbg_id
+
+        self.dbg.AddDestroyCallback(foo)
+        self.dbg.ClearDestroyCallback()
+
+        self.dbg.Destroy(self.dbg)
+        self.assertEqual(destroy_dbg_id, None)
