@@ -1041,22 +1041,24 @@ static ParseResult parseMembersIndex(OpAsmParser &parser,
 
 static void printMembersIndex(OpAsmPrinter &p, MapInfoOp op,
                               DenseIntElementsAttr membersIdx) {
-  assert(membersIdx.getShapedType().getShape().size() <= 2);
-
+  llvm::ArrayRef<int64_t> shape = membersIdx.getShapedType().getShape();
+  assert(shape.size() <= 2);
+  
   if (!membersIdx)
     return;
 
-  for (int i = 0; i < membersIdx.getShapedType().getShape()[0]; ++i) {
+  for (int i = 0; i < shape[0]; ++i) {
     p << "[";
-    for (int j = 0; j < membersIdx.getShapedType().getShape()[1]; ++j) {
+    int rowOffset = i * shape[1];
+    for (int j = 0; j < shape[1]; ++j) {
       p << membersIdx.getValues<
-          int32_t>()[i * membersIdx.getShapedType().getShape()[1] + j];
-      if ((j + 1) < membersIdx.getShapedType().getShape()[1])
+          int32_t>()[rowOffset + j];
+      if ((j + 1) < shape[1])
         p << ",";
     }
     p << "]";
 
-    if ((i + 1) < membersIdx.getShapedType().getShape()[0])
+    if ((i + 1) < shape[0])
       p << ", ";
   }
 }
@@ -1415,6 +1417,22 @@ static LogicalResult verifyPrivateVarList(OpType &op) {
 }
 
 LogicalResult ParallelOp::verify() {
+  // Check that it is a valid loop wrapper if it's taking that role.
+  if (isa<DistributeOp>((*this)->getParentOp())) {
+    if (!isWrapper())
+      return emitOpError() << "must take a loop wrapper role if nested inside "
+                              "of 'omp.distribute'";
+
+    if (LoopWrapperInterface nested = getNestedWrapper()) {
+      // Check for the allowed leaf constructs that may appear in a composite
+      // construct directly after PARALLEL.
+      if (!isa<WsloopOp>(nested))
+        return emitError() << "only supported nested wrapper is 'omp.wsloop'";
+    } else {
+      return emitOpError() << "must not wrap an 'omp.loop_nest' directly";
+    }
+  }
+
   if (getAllocateVars().size() != getAllocatorsVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");
