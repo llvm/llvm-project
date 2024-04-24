@@ -24,7 +24,6 @@ namespace targets {
 class LLVM_LIBRARY_VISIBILITY SystemZTargetInfo : public TargetInfo {
 
   static const char *const GCCRegNames[];
-  std::string CPU;
   int ISARevision;
   bool HasTransactionalExecution;
   bool HasVector;
@@ -33,7 +32,8 @@ class LLVM_LIBRARY_VISIBILITY SystemZTargetInfo : public TargetInfo {
 
 public:
   SystemZTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
-      : TargetInfo(Triple), CPU("z10"), ISARevision(8),
+      : TargetInfo(Triple),
+        ISARevision(getISARevision(Triple.isOSzOS() ? "zEC12" : "z10")),
         HasTransactionalExecution(false), HasVector(false), SoftFloat(false),
         UnalignedSymbols(false) {
     IntMaxType = SignedLong;
@@ -140,8 +140,7 @@ public:
   }
 
   bool setCPU(const std::string &Name) override {
-    CPU = Name;
-    ISARevision = getISARevision(CPU);
+    ISARevision = getISARevision(Name);
     return ISARevision != -1;
   }
 
