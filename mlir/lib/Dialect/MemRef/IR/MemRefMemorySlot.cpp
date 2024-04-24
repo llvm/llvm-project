@@ -161,6 +161,7 @@ bool memref::LoadOp::loadsFrom(const MemorySlot &slot) {
 bool memref::LoadOp::storesTo(const MemorySlot &slot) { return false; }
 
 Value memref::LoadOp::getStored(const MemorySlot &slot, RewriterBase &rewriter,
+                                Value reachingDef,
                                 const DataLayout &dataLayout) {
   llvm_unreachable("getStored should not be called on LoadOp");
 }
@@ -242,6 +243,7 @@ bool memref::StoreOp::storesTo(const MemorySlot &slot) {
 }
 
 Value memref::StoreOp::getStored(const MemorySlot &slot, RewriterBase &rewriter,
+                                 Value reachingDef,
                                  const DataLayout &dataLayout) {
   return getValue();
 }

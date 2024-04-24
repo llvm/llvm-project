@@ -191,13 +191,13 @@ private:
 
   /// Lazily-constructed default value representing the content of the slot when
   /// no store has been executed. This function may mutate IR.
-  Value getLazyDefaultValue();
+  Value getOrCreateDefaultValue();
 
   MemorySlot slot;
   PromotableAllocationOpInterface allocator;
   RewriterBase &rewriter;
-  /// Potentially non-initialized default value. Use `getLazyDefaultValue` to
-  /// initialize it on demand.
+  /// Potentially non-initialized default value. Use `getOrCreateDefaultValue`
+  /// to initialize it on demand.
   Value defaultValue;
   /// Contains the reaching definition at this operation. Reaching definitions
   /// are only computed for promotable memory operations with blocking uses.
@@ -232,7 +232,7 @@ MemorySlotPromoter::MemorySlotPromoter(
 #endif // NDEBUG
 }
 
-Value MemorySlotPromoter::getLazyDefaultValue() {
+Value MemorySlotPromoter::getOrCreateDefaultValue() {
   if (defaultValue)
     return defaultValue;
 
@@ -438,7 +438,7 @@ Value MemorySlotPromoter::computeReachingDefInBlock(Block *block,
 
       if (memOp.storesTo(slot)) {
         rewriter.setInsertionPointAfter(memOp);
-        Value stored = memOp.getStored(slot, rewriter, dataLayout);
+        Value stored = memOp.getStored(slot, rewriter, reachingDef, dataLayout);
         assert(stored && "a memory operation storing to a slot must provide a "
                          "new definition of the slot");
         reachingDef = stored;
@@ -452,6 +452,7 @@ Value MemorySlotPromoter::computeReachingDefInBlock(Block *block,
 
 void MemorySlotPromoter::computeReachingDefInRegion(Region *region,
                                                     Value reachingDef) {
+  assert(reachingDef && "expected an initial reaching def to be provided");
   if (region->hasOneBlock()) {
     computeReachingDefInBlock(&region->front(), reachingDef);
     return;
@@ -508,12 +509,11 @@ void MemorySlotPromoter::computeReachingDefInRegion(Region *region,
     }
 
     job.reachingDef = computeReachingDefInBlock(block, job.reachingDef);
+    assert(job.reachingDef);
 
     if (auto terminator = dyn_cast<BranchOpInterface>(block->getTerminator())) {
       for (BlockOperand &blockOperand : terminator->getBlockOperands()) {
         if (info.mergePoints.contains(blockOperand.get())) {
-          if (!job.reachingDef)
-            job.reachingDef = getLazyDefaultValue();
           rewriter.modifyOpInPlace(terminator, [&]() {
             terminator.getSuccessorOperands(blockOperand.getOperandNumber())
                 .append(job.reachingDef);
@@ -567,7 +567,7 @@ void MemorySlotPromoter::removeBlockingUses() {
       // If no reaching definition is known, this use is outside the reach of
       // the slot. The default value should thus be used.
       if (!reachingDef)
-        reachingDef = getLazyDefaultValue();
+        reachingDef = getOrCreateDefaultValue();
 
       rewriter.setInsertionPointAfter(toPromote);
       if (toPromoteMemOp.removeBlockingUses(
@@ -601,7 +601,8 @@ void MemorySlotPromoter::removeBlockingUses() {
 }
 
 void MemorySlotPromoter::promoteSlot() {
-  computeReachingDefInRegion(slot.ptr.getParentRegion(), {});
+  computeReachingDefInRegion(slot.ptr.getParentRegion(),
+                             getOrCreateDefaultValue());
 
   // Now that reaching definitions are known, remove all users.
   removeBlockingUses();
@@ -617,7 +618,7 @@ void MemorySlotPromoter::promoteSlot() {
              succOperands.size() + 1 == mergePoint->getNumArguments());
       if (succOperands.size() + 1 == mergePoint->getNumArguments())
         rewriter.modifyOpInPlace(
-            user, [&]() { succOperands.append(getLazyDefaultValue()); });
+            user, [&]() { succOperands.append(getOrCreateDefaultValue()); });
     }
   }
 
