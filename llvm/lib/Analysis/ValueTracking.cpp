@@ -8061,8 +8061,7 @@ bool llvm::isKnownNegation(const Value *X, const Value *Y, bool NeedNSW,
     return true;
   };
 
-  // X = sub (0, Y) || X = sub nsw (0, Y)
-  // Y = sub (0, X) || Y = sub nsw (0, X)
+  // X = -Y or Y = -X
   if (IsNegationOf(X, Y) || IsNegationOf(Y, X))
     return true;
 
