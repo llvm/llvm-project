@@ -4514,6 +4514,11 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                     RTLIB::COS_F80, RTLIB::COS_F128,
                     RTLIB::COS_PPCF128, Results);
     break;
+  case ISD::FTAN:
+  case ISD::STRICT_FTAN:
+    ExpandFPLibCall(Node, RTLIB::TAN_F32, RTLIB::TAN_F64, RTLIB::TAN_F80,
+                    RTLIB::TAN_F128, RTLIB::TAN_PPCF128, Results);
+    break;
   case ISD::FSINCOS:
     // Expand into sincos libcall.
     ExpandSinCosLibCall(Node, Results);
@@ -5468,6 +5473,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::FSQRT:
   case ISD::FSIN:
   case ISD::FCOS:
+  case ISD::FTAN:
   case ISD::FLOG:
   case ISD::FLOG2:
   case ISD::FLOG10:
@@ -5492,6 +5498,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::STRICT_FSQRT:
   case ISD::STRICT_FSIN:
   case ISD::STRICT_FCOS:
+  case ISD::STRICT_FTAN:
   case ISD::STRICT_FLOG:
   case ISD::STRICT_FLOG2:
   case ISD::STRICT_FLOG10:
