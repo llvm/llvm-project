@@ -8889,7 +8889,7 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       }
     }
   } else {
-    Say(x.source, "Compiler directive was ignored"_warn_en_US);
+    Say(x.source, "Unrecognized compiler directive was ignored"_warn_en_US);
   }
 }
 
@@ -8904,7 +8904,7 @@ bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
     ResolveAccParts(context(), x, &topScope_);
     return false;
   }
-  auto root{ProgramTree::Build(x)};
+  auto root{ProgramTree::Build(x, context())};
   SetScope(topScope_);
   ResolveSpecificationParts(root);
   FinishSpecificationParts(root);
