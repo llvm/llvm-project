@@ -1486,3 +1486,235 @@ define i1 @fcmp_fadd_fast_zero(float %x, float %y) {
   %cmp = fcmp ugt float %add, %y
   ret i1 %cmp
 }
+
+define i1 @fcmp_ueq_sel_x_negx(float %x) {
+; CHECK-LABEL: @fcmp_ueq_sel_x_negx(
+; CHECK-NEXT:    [[RES:%.*]] = fcmp ueq float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %f = fcmp ueq float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select i1 %f, float %x, float %neg
+  %res = fcmp ueq float %sel, 0.000000e+00
+  ret i1 %res
+}
+
+define i1 @fcmp_une_sel_x_negx(float %x) {
+; CHECK-LABEL: @fcmp_une_sel_x_negx(
+; CHECK-NEXT:    [[RES:%.*]] = fcmp une float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %f = fcmp une float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select i1 %f, float %x, float %neg
+  %res = fcmp une float %sel, 0.000000e+00
+  ret i1 %res
+}
+
+define i1 @fcmp_oeq_sel_x_negx(float %x) {
+; CHECK-LABEL: @fcmp_oeq_sel_x_negx(
+; CHECK-NEXT:    [[RES:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %f = fcmp oeq float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select i1 %f, float %x, float %neg
+  %res = fcmp oeq float %sel, 0.000000e+00
+  ret i1 %res
+}
+
+define i1 @fcmp_one_sel_x_negx(float %x) {
+; CHECK-LABEL: @fcmp_one_sel_x_negx(
+; CHECK-NEXT:    [[RES:%.*]] = fcmp one float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %f = fcmp one float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select i1 %f, float %x, float %neg
+  %res = fcmp one float %sel, 0.000000e+00
+  ret i1 %res
+}
+
+define i1 @fcmp_ueq_sel_x_negx_nzero(float %x) {
+; CHECK-LABEL: @fcmp_ueq_sel_x_negx_nzero(
+; CHECK-NEXT:    [[RES:%.*]] = fcmp ueq float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %f = fcmp ueq float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select i1 %f, float %x, float %neg
+  %res = fcmp ueq float %sel, -0.000000e+00
+  ret i1 %res
+}
+
+define i1 @fcmp_une_sel_x_negx_nzero(float %x) {
+; CHECK-LABEL: @fcmp_une_sel_x_negx_nzero(
+; CHECK-NEXT:    [[RES:%.*]] = fcmp une float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %f = fcmp une float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select i1 %f, float %x, float %neg
+  %res = fcmp une float %sel, -0.000000e+00
+  ret i1 %res
+}
+
+define i1 @fcmp_oeq_sel_x_negx_nzero(float %x) {
+; CHECK-LABEL: @fcmp_oeq_sel_x_negx_nzero(
+; CHECK-NEXT:    [[RES:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %f = fcmp oeq float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select i1 %f, float %x, float %neg
+  %res = fcmp oeq float %sel, -0.000000e+00
+  ret i1 %res
+}
+
+define i1 @fcmp_one_sel_x_negx_nzero(float %x) {
+; CHECK-LABEL: @fcmp_one_sel_x_negx_nzero(
+; CHECK-NEXT:    [[RES:%.*]] = fcmp one float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %f = fcmp one float %x, 0.000000e+00
+  %neg = fneg float %x
+  %sel = select i1 %f, float %x, float %neg
+  %res = fcmp one float %sel, -0.000000e+00
+  ret i1 %res
+}
+
+define <8 x i1> @fcmp_ueq_sel_x_negx_vec(<8 x float> %x) {
+; CHECK-LABEL: @fcmp_ueq_sel_x_negx_vec(
+; CHECK-NEXT:    [[RES:%.*]] = fcmp ueq <8 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <8 x i1> [[RES]]
+;
+  %f = fcmp ueq <8 x float> %x, zeroinitializer
+  %neg = fneg <8 x float> %x
+  %sel = select <8 x i1> %f, <8 x float> %x, <8 x float> %neg
+  %res = fcmp ueq <8 x float> %sel, zeroinitializer
+  ret <8 x i1> %res
+}
+
+define <8 x i1> @fcmp_une_sel_x_negx_vec(<8 x float> %x) {
+; CHECK-LABEL: @fcmp_une_sel_x_negx_vec(
+; CHECK-NEXT:    [[RES:%.*]] = fcmp une <8 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <8 x i1> [[RES]]
+;
+  %f = fcmp une <8 x float> %x, zeroinitializer
+  %neg = fneg <8 x float> %x
+  %sel = select <8 x i1> %f, <8 x float> %x, <8 x float> %neg
+  %res = fcmp une <8 x float> %sel, zeroinitializer
+  ret <8 x i1> %res
+}
+
+define <8 x i1> @fcmp_oeq_sel_x_negx_vec(<8 x float> %x) {
+; CHECK-LABEL: @fcmp_oeq_sel_x_negx_vec(
+; CHECK-NEXT:    [[RES:%.*]] = fcmp oeq <8 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <8 x i1> [[RES]]
+;
+  %f = fcmp oeq <8 x float> %x, zeroinitializer
+  %neg = fneg <8 x float> %x
+  %sel = select <8 x i1> %f, <8 x float> %x, <8 x float> %neg
+  %res = fcmp oeq <8 x float> %sel, zeroinitializer
+  ret <8 x i1> %res
+}
+
+define <8 x i1> @fcmp_one_sel_x_negx_vec(<8 x float> %x) {
+; CHECK-LABEL: @fcmp_one_sel_x_negx_vec(
+; CHECK-NEXT:    [[RES:%.*]] = fcmp one <8 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <8 x i1> [[RES]]
+;
+  %f = fcmp one <8 x float> %x, zeroinitializer
+  %neg = fneg <8 x float> %x
+  %sel = select <8 x i1> %f, <8 x float> %x, <8 x float> %neg
+  %res = fcmp one <8 x float> %sel, zeroinitializer
+  ret <8 x i1> %res
+}
+
+define <2 x i1> @fcmp_oeq_sel_x_negx_with_any_fpzero_ninf_vec(<2 x i1> %cond, <2 x float> %x) {
+; CHECK-LABEL: @fcmp_oeq_sel_x_negx_with_any_fpzero_ninf_vec(
+; CHECK-NEXT:    [[ICMP:%.*]] = fcmp ninf oeq <2 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[ICMP]]
+;
+  %fneg = fneg <2 x float> %x
+  %sel = select <2 x i1> %cond, <2 x float> %x, <2 x float> %fneg
+  %icmp = fcmp ninf oeq <2 x float> %sel, <float 0.0, float -0.0>
+  ret <2 x i1> %icmp
+}
+
+define <2 x i1> @fcmp_one_sel_x_negx_with_any_fpzero_ninf_vec(<2 x i1> %cond, <2 x float> %x) {
+; CHECK-LABEL: @fcmp_one_sel_x_negx_with_any_fpzero_ninf_vec(
+; CHECK-NEXT:    [[ICMP:%.*]] = fcmp ninf one <2 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[ICMP]]
+;
+  %fneg = fneg <2 x float> %x
+  %sel = select <2 x i1> %cond, <2 x float> %x, <2 x float> %fneg
+  %icmp = fcmp ninf one <2 x float> %sel, <float 0.0, float -0.0>
+  ret <2 x i1> %icmp
+}
+
+define <2 x i1> @fcmp_ueq_sel_x_negx_with_any_fpzero_ninf_vec(<2 x i1> %cond, <2 x float> %x) {
+; CHECK-LABEL: @fcmp_ueq_sel_x_negx_with_any_fpzero_ninf_vec(
+; CHECK-NEXT:    [[ICMP:%.*]] = fcmp ninf ueq <2 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[ICMP]]
+;
+  %fneg = fneg <2 x float> %x
+  %sel = select <2 x i1> %cond, <2 x float> %x, <2 x float> %fneg
+  %icmp = fcmp ninf ueq <2 x float> %sel, <float 0.0, float -0.0>
+  ret <2 x i1> %icmp
+}
+
+define <2 x i1> @fcmp_une_sel_x_negx_with_any_fpzero_ninf_vec(<2 x i1> %cond, <2 x float> %x) {
+; CHECK-LABEL: @fcmp_une_sel_x_negx_with_any_fpzero_ninf_vec(
+; CHECK-NEXT:    [[ICMP:%.*]] = fcmp ninf une <2 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[ICMP]]
+;
+  %fneg = fneg <2 x float> %x
+  %sel = select <2 x i1> %cond, <2 x float> %x, <2 x float> %fneg
+  %icmp = fcmp ninf une <2 x float> %sel, <float 0.0, float -0.0>
+  ret <2 x i1> %icmp
+}
+
+define <2 x i1> @fcmp_oeq_sel_x_negx_with_any_fpzero_nnan_vec(<2 x i1> %cond, <2 x float> %x) {
+; CHECK-LABEL: @fcmp_oeq_sel_x_negx_with_any_fpzero_nnan_vec(
+; CHECK-NEXT:    [[ICMP:%.*]] = fcmp nnan oeq <2 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[ICMP]]
+;
+  %fneg = fneg <2 x float> %x
+  %sel = select <2 x i1> %cond, <2 x float> %x, <2 x float> %fneg
+  %icmp = fcmp nnan oeq <2 x float> %sel, <float 0.0, float -0.0>
+  ret <2 x i1> %icmp
+}
+
+define <2 x i1> @fcmp_one_sel_x_negx_with_any_fpzero_nnan_vec(<2 x i1> %cond, <2 x float> %x) {
+; CHECK-LABEL: @fcmp_one_sel_x_negx_with_any_fpzero_nnan_vec(
+; CHECK-NEXT:    [[ICMP:%.*]] = fcmp nnan one <2 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[ICMP]]
+;
+  %fneg = fneg <2 x float> %x
+  %sel = select <2 x i1> %cond, <2 x float> %x, <2 x float> %fneg
+  %icmp = fcmp nnan one <2 x float> %sel, <float 0.0, float -0.0>
+  ret <2 x i1> %icmp
+}
+
+define <2 x i1> @fcmp_ueq_sel_x_negx_with_any_fpzero_nnan_vec(<2 x i1> %cond, <2 x float> %x) {
+; CHECK-LABEL: @fcmp_ueq_sel_x_negx_with_any_fpzero_nnan_vec(
+; CHECK-NEXT:    [[ICMP:%.*]] = fcmp nnan ueq <2 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[ICMP]]
+;
+  %fneg = fneg <2 x float> %x
+  %sel = select <2 x i1> %cond, <2 x float> %x, <2 x float> %fneg
+  %icmp = fcmp nnan ueq <2 x float> %sel, <float 0.0, float -0.0>
+  ret <2 x i1> %icmp
+}
+
+define <2 x i1> @fcmp_une_sel_x_negx_with_any_fpzero_nnan_vec(<2 x i1> %cond, <2 x float> %x) {
+; CHECK-LABEL: @fcmp_une_sel_x_negx_with_any_fpzero_nnan_vec(
+; CHECK-NEXT:    [[ICMP:%.*]] = fcmp nnan une <2 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[ICMP]]
+;
+  %fneg = fneg <2 x float> %x
+  %sel = select <2 x i1> %cond, <2 x float> %x, <2 x float> %fneg
+  %icmp = fcmp nnan une <2 x float> %sel, <float 0.0, float -0.0>
+  ret <2 x i1> %icmp
+}

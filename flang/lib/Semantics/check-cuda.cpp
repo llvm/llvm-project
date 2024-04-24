@@ -344,6 +344,9 @@ private:
             [&](const common::Indirection<parser::BackspaceStmt> &x) {
               WarnOnIoStmt(source);
             },
+            [&](const common::Indirection<parser::IfStmt> &x) {
+              Check(x.value());
+            },
             [&](const auto &x) {
               if (auto msg{ActionStmtChecker<IsCUFKernelDo>::WhyNotOk(x)}) {
                 context_.Say(source, std::move(*msg));
@@ -368,6 +371,13 @@ private:
             std::get<std::optional<parser::IfConstruct::ElseBlock>>(ic.t)}) {
       Check(std::get<parser::Block>(eb->t));
     }
+  }
+  void Check(const parser::IfStmt &is) {
+    const auto &uS{
+        std::get<parser::UnlabeledStatement<parser::ActionStmt>>(is.t)};
+    CheckUnwrappedExpr(
+        context_, uS.source, std::get<parser::ScalarLogicalExpr>(is.t));
+    Check(uS.statement, uS.source);
   }
   void Check(const parser::LoopControl::Bounds &bounds) {
     Check(bounds.lower);
@@ -488,6 +498,10 @@ void CUDAChecker::Enter(const parser::AssignmentStmt &x) {
   }
 
   const evaluate::Assignment *assign{semantics::GetAssignment(x)};
+  if (!assign) {
+    return;
+  }
+
   int nbLhs{evaluate::GetNbOfCUDASymbols(assign->lhs)};
   int nbRhs{evaluate::GetNbOfCUDASymbols(assign->rhs)};
 
