@@ -87,8 +87,6 @@ DisableOption(BoxedProcedureRewrite, "boxed-procedure-rewrite",
 DisableOption(ExternalNameConversion, "external-name-interop",
     "convert names with external convention");
 
-// TODO: remove once these are used for non-codegen passes
-#if !defined(FLANG_EXCLUDE_CODEGEN)
 using PassConstructor = std::unique_ptr<mlir::Pass>();
 
 template <typename OP>
@@ -108,7 +106,12 @@ void addNestedPassToAllTopLevelOperations(
   addNestedPassToOps<mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
       fir::GlobalOp>(pm, ctor);
 }
-#endif
+
+void addNestedPassToAllTopLevelOperationsConditionally(mlir::PassManager &pm,
+    llvm::cl::opt<bool> &disabled, PassConstructor ctor) {
+  if (!disabled)
+    addNestedPassToAllTopLevelOperations(pm, ctor);
+}
 
 /// Generic for adding a pass to the pass manager if it is not disabled.
 template <typename F>
@@ -146,10 +149,8 @@ static void addCanonicalizerPassWithoutRegionSimplification(
 }
 
 inline void addCfgConversionPass(mlir::PassManager &pm) {
-  addNestedPassConditionally<mlir::func::FuncOp>(
-      pm, disableCfgConversion, fir::createFirToCfgOnFuncPass);
-  addNestedPassConditionally<mlir::omp::DeclareReductionOp>(
-      pm, disableCfgConversion, fir::createFirToCfgOnReductionPass);
+  addNestedPassToAllTopLevelOperationsConditionally(
+      pm, disableCfgConversion, fir::createCFGConversion);
 }
 
 inline void addAVC(
