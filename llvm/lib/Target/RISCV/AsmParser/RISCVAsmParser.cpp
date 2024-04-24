@@ -2827,7 +2827,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
         break;
       }
 
-      std::string &&Feature = RISCVISAInfo::getTargetFeatureForExtension(Arch);
+      std::string Feature = RISCVISAInfo::getTargetFeatureForExtension(Arch);
       if (DisableExperimentalExtension &&
           StringRef(Feature).starts_with("experimental-"))
         return Error(Loc, "Unexpected experimental extensions.");
