@@ -26,6 +26,7 @@ incompatible with the flags that gdb specifies.
 //   receive: +       <-- Our OK packet getting ACKed
 //
 //   ACK mode is now disabled.
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
 // qHostInfo
@@ -39,6 +40,7 @@ incompatible with the flags that gdb specifies.
 //  send:    cputype:16777228;cpusubtype:1;ostype:ios;watchpoint_exceptions_received:before;os_version:12.1;vendor:apple;default_packet_timeout:5;
 //
 //  All numbers are base 10, os_version is a string that will be parsed as major.minor.patch.
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
 // qModuleInfo
@@ -50,6 +52,7 @@ incompatible with the flags that gdb specifies.
 //  receive: qModuleInfo:2f62696e2f6c73;
 //
 // FIXME finish this packet description, v. GDBRemoteCommunicationServerCommon::Handle_qModuleInfo
+//----------------------------------------------------------------------
 
 
 //----------------------------------------------------------------------
@@ -63,11 +66,12 @@ incompatible with the flags that gdb specifies.
 // 
 //  receive: qGetWorkingDir
 //  send:    2f4170706c65496e7465726e616c2f6c6c64622f73657474696e67732f342f5465737453657474696e67732e746573745f646973617373656d626c65725f73657474696e6773 
+//----------------------------------------------------------------------
 
 
 
 //----------------------------------------------------------------------
-// QSetWorkingDir:
+// QSetWorkingDir
 //
 // BRIEF
 //   Set the current working directory of the platform stub in
@@ -77,9 +81,10 @@ incompatible with the flags that gdb specifies.
 // 
 //  receive: QSetWorkingDir:2f4170706c65496e7465726e616c2f6c6c64622f73657474696e67732f342f5465737453657474696e67732e746573745f646973617373656d626c65725f73657474696e6773 
 //  send:    OK
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
-// qPlatform_mkdir:
+// qPlatform_mkdir
 //
 // BRIEF
 //   Create a directory on the target system.
@@ -95,9 +100,10 @@ incompatible with the flags that gdb specifies.
 //
 //  response is F followed by the return value of the mkdir() call,
 //  base 16 encoded.
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
-// qPlatform_shell:
+// qPlatform_shell
 //
 // BRIEF
 //   Run a shell command on the target system, return the output.
@@ -114,7 +120,8 @@ incompatible with the flags that gdb specifies.
 //
 //  Response is F followed by the return value of the command (base 16),
 //  followed by another number, followed by the output of the command
-/   in binary-escaped-data encoding.
+//   in binary-escaped-data encoding.
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
 // qLaunchGDBServer
@@ -136,9 +143,10 @@ incompatible with the flags that gdb specifies.
 //
 //  When the testsuite is running, lldb may use the pid to kill off a 
 //  debugserver that doesn't seem to be responding, etc.
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
-// qKillSpawnedProcess:
+// qKillSpawnedProcess
 //
 // BRIEF
 //   Kill a process running on the target system.
@@ -149,6 +157,7 @@ incompatible with the flags that gdb specifies.
 //  send:    OK
 //
 //  The request packet has the process ID in base 10.
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
 // qProcessInfoPID:
@@ -167,9 +176,10 @@ incompatible with the flags that gdb specifies.
 //  shown here.  pid is base 10 encoded.  name is ascii hex encoded.
 //  lldb-server can reply with many additional fields, but I think
 //  this is enough for the testsuite.
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
-// qfProcessInfo:
+// qfProcessInfo
 //
 // BRIEF
 //   Search the process table for processes matching criteria, 
@@ -224,6 +234,7 @@ incompatible with the flags that gdb specifies.
 //  read packet: $pid:59992;ppid:192;uid:7746;gid:11;euid:7746;egid:11;name:6d64776f726b6572;triple:7838365f36342d6170706c652d6d61636f7378;#00
 //  send packet: $qsProcessInfo#00
 //  read packet: $E04#00
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
 // qsProcessInfo
@@ -236,6 +247,7 @@ incompatible with the flags that gdb specifies.
 // 
 //  Continues to return the results of the qfProcessInfo.  Once all matches
 //  have been sent, Exx is returned to indicate end of matches.
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
 // qPathComplete
@@ -257,9 +269,10 @@ incompatible with the flags that gdb specifies.
 //
 //   The result should be a comma-separated list of hex-encoded paths.
 //   Paths denoting a directory should end with a directory separator ('/' or '\').
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
-// vFile:size:
+// vFile:size
 //
 // BRIEF
 //   Get the size of a file on the target system, filename in ASCII hex.
@@ -271,10 +284,11 @@ incompatible with the flags that gdb specifies.
 //
 //  response is "F" followed by the file size in base 16.
 //  "F-1,errno" with the errno if an error occurs, base 16.
+//----------------------------------------------------------------------
 
 
 //----------------------------------------------------------------------
-// vFile:mode:
+// vFile:mode
 //
 // BRIEF
 //   Get the mode bits of a file on the target system, filename in ASCII hex.
@@ -287,9 +301,10 @@ incompatible with the flags that gdb specifies.
 //  response is "F" followed by the mode bits in base 16, this 0x1ed would 
 //  correspond to 0755 in octal.  
 //  "F-1,errno" with the errno if an error occurs, base 16.
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
-// vFile:unlink:
+// vFile:unlink
 //
 // BRIEF
 //   Remove a file on the target system.
@@ -303,9 +318,10 @@ incompatible with the flags that gdb specifies.
 //  Response is "F" plus the return value of unlink(), base 16 encoding.
 //  Return value may optionally be followed by a comma and the base16
 //  value of errno if unlink failed.
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
-// vFile:symlink:
+// vFile:symlink
 //
 // BRIEF
 //   Create a symbolic link (symlink, soft-link) on the target system.
@@ -318,10 +334,11 @@ incompatible with the flags that gdb specifies.
 //  Argument file paths are in ascii-hex encoding.
 //  Response is "F" plus the return value of symlink(), base 16 encoding, 
 //  optionally followed by the value of errno if it failed, also base 16.
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
-// vFile:chmod:
-// qPlatform_chmod:
+// vFile:chmod
+// qPlatform_chmod
 //
 // BRIEF
 //   Change the permission mode bits on a file on the target
@@ -337,9 +354,10 @@ incompatible with the flags that gdb specifies.
 //
 //  I don't know why there are two packets for the same thing, v.
 //  vFile:chmod:.
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
-// vFile:chmod:
+// vFile:chmod
 //
 // BRIEF
 //   Change the permission mode bits on a file on the target
@@ -352,10 +370,10 @@ incompatible with the flags that gdb specifies.
 //  Arguments are the mode bits to set, base 16, and a file path in 
 //  ascii-hex encoding.
 //  Response is "F" plus the return value of chmod(), base 10 encoding.
-
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
-// vFile:open:
+// vFile:open
 //
 // BRIEF
 //   Open a file on the remote system and return the file descriptor of it.
@@ -376,7 +394,10 @@ incompatible with the flags that gdb specifies.
 //  "F-1,errno" with the errno if an error occurs, base 16.
 //
 //----------------------------------------------------------------------
-// vFile:close:
+
+
+//----------------------------------------------------------------------
+// vFile:close
 //
 // BRIEF
 //   Close a previously opened file descriptor.
@@ -389,10 +410,10 @@ incompatible with the flags that gdb specifies.
 //  File descriptor is in base 16.
 //  "F-1,errno" with the errno if an error occurs,
 //  errno is base 16.
-
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
-// vFile:pread:
+// vFile:pread
 //
 // BRIEF
 //   Read data from an opened file descriptor.
@@ -409,10 +430,10 @@ incompatible with the flags that gdb specifies.
 //
 //  Response is F, followed by the number of bytes read (base 16), a
 //  semicolon, followed by the data in the binary-escaped-data encoding.
-
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
-// vFile:pwrite:
+// vFile:pwrite
 //
 // BRIEF
 //   Write data to a previously opened file descriptor.
@@ -428,10 +449,7 @@ incompatible with the flags that gdb specifies.
 //     3. binary-escaped-data to be written
 //
 //  Response is F, followed by the number of bytes written (base 16)
-
-
-
-
+//----------------------------------------------------------------------
 
 Finally, the platform must be able to launch processes so that debugserver
 can attach to them.  To do this, the following packets should be handled:
