@@ -395,7 +395,7 @@ function(runtime_register_target name)
                            EXTRA_TARGETS ${${name}_extra_targets}
                                          ${${name}_test_targets}
                            USE_TOOLCHAIN
-                           FOLDER "${name}"
+                           FOLDER "Runtimes"
                            ${EXTRA_ARGS} ${ARG_EXTRA_ARGS})
 
   add_dependencies(runtimes runtimes-${name})
