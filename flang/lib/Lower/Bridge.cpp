@@ -360,8 +360,8 @@ public:
         // not need to be generated even if no defaults are specified.
         // However, generating main or changing when the runtime reads
         // environment variables is required to do so.
-        auto env = fir::runtime::genEnvironmentDefaults(*builder, toLocation(),
-                                             bridge.getEnvironmentDefaults());
+        auto env = fir::runtime::genEnvironmentDefaults(
+            *builder, toLocation(), bridge.getEnvironmentDefaults());
 
         fir::runtime::genMain(*builder, toLocation(), env);
       });

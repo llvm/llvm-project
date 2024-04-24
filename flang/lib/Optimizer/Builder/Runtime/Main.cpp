@@ -25,7 +25,8 @@ void fir::runtime::genMain(fir::FirOpBuilder &builder, mlir::Location loc,
   auto argcTy = builder.getDefaultIntegerType();
   auto ptrTy = mlir::LLVM::LLVMPointerType::get(context);
 
-  // void ProgramStart(int argc, char** argv, char** envp, _QQEnvironmentDefaults* env)
+  // void ProgramStart(int argc, char** argv, char** envp,
+  // _QQEnvironmentDefaults* env)
   auto startFn = builder.createFunction(
       loc, RTNAME_STRING(ProgramStart),
       mlir::FunctionType::get(context, {argcTy, ptrTy, ptrTy, ptrTy}, {}));
@@ -39,8 +40,8 @@ void fir::runtime::genMain(fir::FirOpBuilder &builder, mlir::Location loc,
       loc, "main",
       mlir::FunctionType::get(context, {argcTy, ptrTy, ptrTy}, argcTy));
   // void _QQmain()
-  auto qqMainFn = builder.createFunction(loc, "_QQmain",
-                                      mlir::FunctionType::get(context, {}, {}));
+  auto qqMainFn = builder.createFunction(
+      loc, "_QQmain", mlir::FunctionType::get(context, {}, {}));
 
   mainFn.setPublic();
 
@@ -48,7 +49,7 @@ void fir::runtime::genMain(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::OpBuilder::InsertionGuard insertGuard(builder);
   builder.setInsertionPointToStart(block);
 
-  llvm::SmallVector<mlir::Value, 4> args (block->getArguments());
+  llvm::SmallVector<mlir::Value, 4> args(block->getArguments());
   auto envAddr =
       builder.create<fir::AddrOfOp>(loc, env.getType(), env.getSymbol());
   args.push_back(envAddr);
