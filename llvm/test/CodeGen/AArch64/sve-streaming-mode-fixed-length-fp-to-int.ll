@@ -464,7 +464,6 @@ define void @fcvtzu_v8f32_v8i64(ptr %a, ptr %b) {
 define <1 x i16> @fcvtzu_v1f64_v1i16(<1 x double> %op1) {
 ; CHECK-LABEL: fcvtzu_v1f64_v1i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    fcvtzs w8, d0
 ; CHECK-NEXT:    mov z0.h, w8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -1215,7 +1214,6 @@ define void @fcvtzs_v8f32_v8i64(ptr %a, ptr %b) {
 define <1 x i16> @fcvtzs_v1f64_v1i16(<1 x double> %op1) {
 ; CHECK-LABEL: fcvtzs_v1f64_v1i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    fcvtzs w8, d0
 ; CHECK-NEXT:    mov z0.h, w8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
