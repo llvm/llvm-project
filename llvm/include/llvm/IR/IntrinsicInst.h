@@ -1520,7 +1520,7 @@ public:
   }
 };
 
-/// This represents the llvm.instrprof.increment intrinsic.
+/// This represents the llvm.instrprof.callsite intrinsic.
 /// It is structurally like the increment or step counters, hence the
 /// inheritance relationship, albeit somewhat tenuous (it's not 'counting' per
 /// se)
