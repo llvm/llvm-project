@@ -241,6 +241,12 @@ public:
   /// Tell the strategy that MBB is about to be processed.
   virtual void enterMBB(MachineBasicBlock *MBB) {};
 
+  virtual bool disableForRegionPreRA(MachineBasicBlock::iterator begin,
+                                     MachineBasicBlock::iterator end,
+                                     unsigned regioninstrs) const {
+    return false;
+  }
+
   /// Tell the strategy that current MBB is done.
   virtual void leaveMBB() {};
 
@@ -486,6 +492,13 @@ public:
                    MachineBasicBlock::iterator begin,
                    MachineBasicBlock::iterator end,
                    unsigned regioninstrs) override;
+
+  bool disableForRegion(MachineBasicBlock *bb,
+                        MachineBasicBlock::iterator begin,
+                        MachineBasicBlock::iterator end,
+                        unsigned regioninstrs) const override {
+    return SchedImpl->disableForRegionPreRA(begin, end, regioninstrs);
+  }
 
   /// Implement ScheduleDAGInstrs interface for scheduling a sequence of
   /// reorderable instructions.
@@ -1218,6 +1231,10 @@ public:
                   unsigned NumRegionInstrs) override;
 
   void dumpPolicy() const override;
+
+  bool disableForRegionPreRA(MachineBasicBlock::iterator Begin,
+                             MachineBasicBlock::iterator End,
+                             unsigned NumRegionInstrs) const override;
 
   bool shouldTrackPressure() const override {
     return RegionPolicy.ShouldTrackPressure;

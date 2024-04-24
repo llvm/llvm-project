@@ -641,7 +641,8 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
       Scheduler.enterRegion(&*MBB, I, RegionEnd, NumRegionInstrs);
 
       // Skip empty scheduling regions (0 or 1 schedulable instructions).
-      if (I == RegionEnd || I == std::prev(RegionEnd)) {
+      if (I == RegionEnd || I == std::prev(RegionEnd) ||
+          Scheduler.disableForRegion(&*MBB, I, RegionEnd, NumRegionInstrs)) {
         // Close the current region. Bundle the terminator if needed.
         // This invalidates 'RegionEnd' and 'I'.
         Scheduler.exitRegion();
@@ -3334,6 +3335,13 @@ void GenericScheduler::dumpPolicy() const {
          << " OnlyBottomUp=" << RegionPolicy.OnlyBottomUp
          << "\n";
 #endif
+}
+
+bool GenericScheduler::disableForRegionPreRA(MachineBasicBlock::iterator Begin,
+                                             MachineBasicBlock::iterator End,
+                                             unsigned NumRegionInstrs) const {
+  const MachineFunction &MF = *Begin->getMF();
+  return MF.getSubtarget().disableForRegionPreRA(Begin, End, NumRegionInstrs);
 }
 
 /// Set IsAcyclicLatencyLimited if the acyclic path is longer than the cyclic

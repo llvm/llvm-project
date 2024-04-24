@@ -319,6 +319,11 @@ namespace llvm {
                              MachineBasicBlock::iterator end,
                              unsigned regioninstrs);
 
+    virtual bool disableForRegion(MachineBasicBlock *bb,
+                                  MachineBasicBlock::iterator begin,
+                                  MachineBasicBlock::iterator end,
+                                  unsigned regioninstrs) const { return false; }
+
     /// Called when the scheduler has finished scheduling the current region.
     virtual void exitRegion();
 
