@@ -6,6 +6,7 @@
 #   The MLIR "Multi-Level Intermediate Representation" Compiler Infrastructure
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load(
     ":build_defs.bzl",
     "cc_headers_only",
@@ -27,6 +28,18 @@ exports_files([
     "run_lit.sh",
     "utils/textmate/mlir.json",
 ])
+
+bool_flag(
+    name = "enable_cuda",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "enable_cuda_config",
+    flag_values = {
+        ":enable_cuda": "True",
+    },
+)
 
 expand_template(
     name = "mlir_config_h_gen",
@@ -577,6 +590,7 @@ mlir_c_api_cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":IR",
         ":NVGPUDialect",
     ],
 )
@@ -634,6 +648,7 @@ mlir_c_api_cc_library(
         ":GPUDialect",
         ":GPUTransforms",
         ":Pass",
+        "//llvm:Support",
     ],
 )
 
@@ -3685,6 +3700,45 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "XeGPUPassIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+                "-name=XeGPU",
+            ],
+            "include/mlir/Dialect/XeGPU/Transforms/Passes.h.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/XeGPU/Transforms/Passes.td",
+    deps = [":PassBaseTdFiles"],
+)
+
+cc_library(
+    name = "XeGPUTransforms",
+    srcs = glob([
+        "lib/Dialect/XeGPU/Transforms/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Dialect/XeGPU/Transforms/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":AffineUtils",
+        ":IR",
+        ":MemRefDialect",
+        ":Pass",
+        ":SideEffectInterfaces",
+        ":Support",
+        ":TransformUtils",
+        ":XeGPUDialect",
+        ":XeGPUPassIncGen",
+        "//llvm:Support",
+    ],
+)
+
 td_library(
     name = "FuncTdFiles",
     srcs = [
@@ -6602,6 +6656,109 @@ gentbl_cc_library(
     deps = [":PDLInterpOpsTdFiles"],
 )
 
+cc_library(
+    name = "PolynomialDialect",
+    srcs = glob([
+        "lib/Dialect/Polynomial/IR/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Dialect/Polynomial/IR/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":InferTypeOpInterface",
+        ":PolynomialAttributesIncGen",
+        ":PolynomialIncGen",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "PolynomialTdFiles",
+    srcs = ["include/mlir/Dialect/Polynomial/IR/Polynomial.td"],
+    includes = ["include"],
+    deps = [
+        ":BuiltinDialectTdFiles",
+        ":InferTypeOpInterfaceTdFiles",
+        ":OpBaseTdFiles",
+        ":SideEffectInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "PolynomialIncGen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/Polynomial/IR/Polynomial.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/Polynomial/IR/Polynomial.cpp.inc",
+        ),
+        (
+            [
+                "-gen-dialect-decls",
+                "-dialect=polynomial",
+            ],
+            "include/mlir/Dialect/Polynomial/IR/PolynomialDialect.h.inc",
+        ),
+        (
+            [
+                "-gen-dialect-defs",
+                "-dialect=polynomial",
+            ],
+            "include/mlir/Dialect/Polynomial/IR/PolynomialDialect.cpp.inc",
+        ),
+        (
+            [
+                "--gen-typedef-decls",
+                "-typedefs-dialect=polynomial",
+            ],
+            "include/mlir/Dialect/Polynomial/IR/PolynomialTypes.h.inc",
+        ),
+        (
+            [
+                "--gen-typedef-defs",
+                "-typedefs-dialect=polynomial",
+            ],
+            "include/mlir/Dialect/Polynomial/IR/PolynomialTypes.cpp.inc",
+        ),
+        (
+            ["-gen-op-doc"],
+            "g3doc/Dialects/Polynomial/Polynomial.md",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Polynomial/IR/Polynomial.td",
+    deps = [":PolynomialTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "PolynomialAttributesIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-attrdef-decls",
+                "-attrdefs-dialect=polynomial",
+            ],
+            "include/mlir/Dialect/Polynomial/IR/PolynomialAttributes.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-attrdefs-dialect=polynomial",
+            ],
+            "include/mlir/Dialect/Polynomial/IR/PolynomialAttributes.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Polynomial/IR/Polynomial.td",
+    deps = [":PolynomialTdFiles"],
+)
+
 td_library(
     name = "SPIRVOpsTdFiles",
     srcs = glob(["include/mlir/Dialect/SPIRV/IR/*.td"]),
@@ -9076,6 +9233,7 @@ cc_library(
         ":PDLDialect",
         ":PDLInterpDialect",
         ":PDLToPDLInterp",
+        ":PolynomialDialect",
         ":QuantOps",
         ":ROCDLDialect",
         ":ROCDLTarget",
@@ -9123,6 +9281,7 @@ cc_library(
         ":X86VectorDialect",
         ":X86VectorTransforms",
         ":XeGPUDialect",
+        ":XeGPUTransforms",
         ":config",
     ],
 )
@@ -11527,6 +11686,8 @@ cc_library(
         ":DialectUtils",
         ":FuncDialect",
         ":IR",
+        ":IndexDialect",
+        ":InferTypeOpInterface",
         ":LinalgDialect",
         ":MathDialect",
         ":Pass",

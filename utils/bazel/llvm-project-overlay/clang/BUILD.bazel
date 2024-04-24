@@ -1136,6 +1136,7 @@ cc_library(
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:Core",
+        "//llvm:Demangle",
         "//llvm:FrontendHLSL",
         "//llvm:FrontendOpenMP",
         "//llvm:MC",

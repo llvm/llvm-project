@@ -152,7 +152,7 @@ let Predicates = [HasStdExtZvknhaOrZvknhb], RVVConstraint = Sha2Constraint in {
   def VSHA2MS_VV : PALUVVNoVmTernary<0b101101, OPMVV, "vsha2ms.vv">;
 } // Predicates = [HasStdExtZvknhaOrZvknhb]
 
-let Predicates = [HasStdExtZvkned]in {
+let Predicates = [HasStdExtZvkned] in {
   defm VAESDF     : VAES_MV_V_S<0b101000, 0b101001, 0b00001, OPMVV, "vaesdf">;
   defm VAESDM     : VAES_MV_V_S<0b101000, 0b101001, 0b00000, OPMVV, "vaesdm">;
   defm VAESEF     : VAES_MV_V_S<0b101000, 0b101001, 0b00011, OPMVV, "vaesef">;

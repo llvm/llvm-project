@@ -5,6 +5,11 @@
 // RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx23,since-cxx20,since-cxx17,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 
+#if __cplusplus == 199711L
+#define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
+// cxx98-error@-1 {{variadic macros are a C99 feature}}
+#endif
+
 // FIXME: This is included to avoid a diagnostic with no source location
 // pointing at the implicit operator new. We can't match such a diagnostic
 // with -verify.
@@ -819,7 +824,7 @@ namespace cwg565 { // cwg565: yes
 
 namespace cwg566 { // cwg566: yes
 #if __cplusplus >= 201103L
-  int check[int(-3.99) == -3 ? 1 : -1];
+  static_assert(int(-3.99) == -3, "");
 #endif
 }
 
@@ -834,7 +839,7 @@ namespace cwg568 { // cwg568: 3.0 c++11
   public:
     int n;
   };
-  int check_trivial[__is_trivial(trivial) ? 1 : -1];
+  static_assert(__is_trivial(trivial), "");
 
   struct std_layout {
     std_layout();
@@ -843,7 +848,7 @@ namespace cwg568 { // cwg568: 3.0 c++11
   private:
     int n;
   };
-  int check_std_layout[__is_standard_layout(std_layout) ? 1 : -1];
+  static_assert(__is_standard_layout(std_layout), "");
 
   struct aggregate {
     int x;
@@ -885,7 +890,7 @@ namespace cwg570 { // cwg570: dup 633
 
 namespace cwg572 { // cwg572: yes
   enum E { a = 1, b = 2 };
-  int check[a + b == 3 ? 1 : -1];
+  static_assert(a + b == 3, "");
 }
 
 namespace cwg573 { // cwg573: no

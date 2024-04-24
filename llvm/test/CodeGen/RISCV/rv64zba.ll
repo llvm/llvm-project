@@ -479,6 +479,18 @@ define i64 @addmul20(i64 %a, i64 %b) {
   ret i64 %d
 }
 
+define i64 @addmul22(i64 %a, i64 %b) {
+; CHECK-LABEL: addmul22:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 22
+; CHECK-NEXT:    mul a0, a0, a2
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, 22
+  %d = add i64 %c, %b
+  ret i64 %d
+}
+
 define i64 @addmul24(i64 %a, i64 %b) {
 ; RV64I-LABEL: addmul24:
 ; RV64I:       # %bb.0:
@@ -551,6 +563,67 @@ define i64 @addmul72(i64 %a, i64 %b) {
   ret i64 %d
 }
 
+define i64 @addmul162(i64 %a, i64 %b) {
+; CHECK-LABEL: addmul162:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 162
+; CHECK-NEXT:    mul a0, a0, a2
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, 162
+  %d = add i64 %c, %b
+  ret i64 %d
+}
+
+define i64 @addmul180(i64 %a, i64 %b) {
+; CHECK-LABEL: addmul180:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 180
+; CHECK-NEXT:    mul a0, a0, a2
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, 180
+  %d = add i64 %c, %b
+  ret i64 %d
+}
+
+define i64 @add255mul180(i64 %a) {
+; CHECK-LABEL: add255mul180:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 180
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    addi a0, a0, 255
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, 180
+  %d = add i64 %c, 255
+  ret i64 %d
+}
+
+
+define i64 @addmul4096(i64 %a, i64 %b) {
+; CHECK-LABEL: addmul4096:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 12
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, 4096
+  %d = add i64 %c, %b
+  ret i64 %d
+}
+
+define i64 @addmul4230(i64 %a, i64 %b) {
+; CHECK-LABEL: addmul4230:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a2, 1
+; CHECK-NEXT:    addiw a2, a2, 134
+; CHECK-NEXT:    mul a0, a0, a2
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, 4230
+  %d = add i64 %c, %b
+  ret i64 %d
+}
+
 define i64 @mul96(i64 %a) {
 ; RV64I-LABEL: mul96:
 ; RV64I:       # %bb.0:
@@ -564,6 +637,87 @@ define i64 @mul96(i64 %a) {
 ; RV64ZBA-NEXT:    slli a0, a0, 5
 ; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 96
+  ret i64 %c
+}
+
+define i64 @mul119(i64 %a) {
+; CHECK-LABEL: mul119:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 119
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, 119
+  ret i64 %c
+}
+
+define i64 @mul123(i64 %a) {
+; CHECK-LABEL: mul123:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 123
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, 123
+  ret i64 %c
+}
+
+define i64 @mul125(i64 %a) {
+; CHECK-LABEL: mul125:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 125
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, 125
+  ret i64 %c
+}
+
+define i64 @mul131(i64 %a) {
+; RV64I-LABEL: mul131:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 131
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul131:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh1add a1, a0, a0
+; RV64ZBA-NEXT:    slli a0, a0, 7
+; RV64ZBA-NEXT:    add a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %c = mul i64 %a, 131
+  ret i64 %c
+}
+
+define i64 @mul133(i64 %a) {
+; RV64I-LABEL: mul133:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 133
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul133:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh2add a1, a0, a0
+; RV64ZBA-NEXT:    slli a0, a0, 7
+; RV64ZBA-NEXT:    add a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %c = mul i64 %a, 133
+  ret i64 %c
+}
+
+define i64 @mul137(i64 %a) {
+; RV64I-LABEL: mul137:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 137
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul137:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh3add a1, a0, a0
+; RV64ZBA-NEXT:    slli a0, a0, 7
+; RV64ZBA-NEXT:    add a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %c = mul i64 %a, 137
   ret i64 %c
 }
 
@@ -596,6 +750,25 @@ define i64 @mul288(i64 %a) {
 ; RV64ZBA-NEXT:    slli a0, a0, 5
 ; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 288
+  ret i64 %c
+}
+
+define i64 @zext_mul68(i32 signext %a) {
+; RV64I-LABEL: zext_mul68:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 17
+; RV64I-NEXT:    slli a1, a1, 34
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    mulhu a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: zext_mul68:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli.uw a1, a0, 6
+; RV64ZBA-NEXT:    sh2add.uw a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %b = zext i32 %a to i64
+  %c = mul i64 %b, 68
   ret i64 %c
 }
 
@@ -834,31 +1007,49 @@ define i64 @adduw_imm(i32 signext %0) nounwind {
 }
 
 define i64 @mul258(i64 %a) {
-; CHECK-LABEL: mul258:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 258
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: mul258:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 258
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul258:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a1, a0, 8
+; RV64ZBA-NEXT:    sh1add a0, a0, a1
+; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 258
   ret i64 %c
 }
 
 define i64 @mul260(i64 %a) {
-; CHECK-LABEL: mul260:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 260
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: mul260:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 260
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul260:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a1, a0, 8
+; RV64ZBA-NEXT:    sh2add a0, a0, a1
+; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 260
   ret i64 %c
 }
 
 define i64 @mul264(i64 %a) {
-; CHECK-LABEL: mul264:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 264
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: mul264:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 264
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul264:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a1, a0, 8
+; RV64ZBA-NEXT:    sh3add a0, a0, a1
+; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 264
   ret i64 %c
 }
@@ -968,8 +1159,8 @@ define i64 @mul25(i64 %a) {
 ;
 ; RV64ZBA-LABEL: mul25:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    sh1add a1, a0, a0
-; RV64ZBA-NEXT:    sh3add a0, a1, a0
+; RV64ZBA-NEXT:    sh2add a0, a0, a0
+; RV64ZBA-NEXT:    sh2add a0, a0, a0
 ; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 25
   ret i64 %c
@@ -1016,8 +1207,8 @@ define i64 @mul27(i64 %a) {
 ;
 ; RV64ZBA-LABEL: mul27:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    sh3add a0, a0, a0
 ; RV64ZBA-NEXT:    sh1add a0, a0, a0
+; RV64ZBA-NEXT:    sh3add a0, a0, a0
 ; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 27
   ret i64 %c
@@ -1032,8 +1223,8 @@ define i64 @mul45(i64 %a) {
 ;
 ; RV64ZBA-LABEL: mul45:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    sh3add a0, a0, a0
 ; RV64ZBA-NEXT:    sh2add a0, a0, a0
+; RV64ZBA-NEXT:    sh3add a0, a0, a0
 ; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 45
   ret i64 %c
@@ -2388,4 +2579,142 @@ define i64 @array_index_sh4_sh3(ptr %p, i64 %idx1, i64 %idx2) {
   %a = getelementptr inbounds [16 x i64], ptr %p, i64 %idx1, i64 %idx2
   %b = load i64, ptr %a, align 8
   ret i64 %b
+}
+
+define ptr @test_gep_gep_dont_crash(ptr %p, i64 %a1, i64 %a2) {
+; RV64I-LABEL: test_gep_gep_dont_crash:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srliw a2, a2, 6
+; RV64I-NEXT:    slli a2, a2, 3
+; RV64I-NEXT:    slli a1, a1, 3
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    add a0, a0, a2
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: test_gep_gep_dont_crash:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    srliw a2, a2, 6
+; RV64ZBA-NEXT:    add a1, a2, a1
+; RV64ZBA-NEXT:    sh3add a0, a1, a0
+; RV64ZBA-NEXT:    ret
+  %lshr = lshr i64 %a2, 6
+  %and = and i64 %lshr, 67108863
+  %gep1 = getelementptr i64, ptr %p, i64 %and
+  %gep2 = getelementptr i64, ptr %gep1, i64 %a1
+  ret ptr %gep2
+}
+
+define i64 @regression(i32 signext %x, i32 signext %y) {
+; RV64I-LABEL: regression:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    li a1, 3
+; RV64I-NEXT:    slli a1, a1, 35
+; RV64I-NEXT:    mulhu a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: regression:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    subw a0, a0, a1
+; RV64ZBA-NEXT:    slli.uw a0, a0, 3
+; RV64ZBA-NEXT:    sh1add a0, a0, a0
+; RV64ZBA-NEXT:    ret
+  %sub = sub i32 %x, %y
+  %ext = zext i32 %sub to i64
+  %res = mul nuw nsw i64 %ext, 24
+  ret i64 %res
+}
+
+define i64 @mul_neg1(i64 %a) {
+; CHECK-LABEL: mul_neg1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, -1
+  ret i64 %c
+}
+
+define i64 @mul_neg2(i64 %a) {
+; CHECK-LABEL: mul_neg2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, -2
+  ret i64 %c
+}
+
+define i64 @mul_neg3(i64 %a) {
+; RV64I-LABEL: mul_neg3:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a1, a0, 1
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    sub a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul_neg3:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh1add a0, a0, a0
+; RV64ZBA-NEXT:    neg a0, a0
+; RV64ZBA-NEXT:    ret
+  %c = mul i64 %a, -3
+  ret i64 %c
+}
+
+define i64 @mul_neg4(i64 %a) {
+; CHECK-LABEL: mul_neg4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, -4
+  ret i64 %c
+}
+
+define i64 @mul_neg5(i64 %a) {
+; RV64I-LABEL: mul_neg5:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a1, a0, 2
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    sub a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul_neg5:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh2add a0, a0, a0
+; RV64ZBA-NEXT:    neg a0, a0
+; RV64ZBA-NEXT:    ret
+  %c = mul i64 %a, -5
+  ret i64 %c
+}
+
+define i64 @mul_neg6(i64 %a) {
+; CHECK-LABEL: mul_neg6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, -6
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, -6
+  ret i64 %c
+}
+
+define i64 @mul_neg7(i64 %a) {
+; CHECK-LABEL: mul_neg7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a0, 3
+; CHECK-NEXT:    sub a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, -7
+  ret i64 %c
+}
+
+define i64 @mul_neg8(i64 %a) {
+; CHECK-LABEL: mul_neg8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    ret
+  %c = mul i64 %a, -8
+  ret i64 %c
 }

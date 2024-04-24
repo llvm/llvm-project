@@ -797,7 +797,7 @@ protected:
     ///
     /// The first value in the array is the number of specializations/partial
     /// specializations that follow.
-    uint32_t *LazySpecializations = nullptr;
+    Decl::DeclID *LazySpecializations = nullptr;
 
     /// The set of "injected" template arguments used within this
     /// template.
@@ -1087,7 +1087,7 @@ public:
                                       NamedDecl *Decl);
 
   /// Create an empty function template node.
-  static FunctionTemplateDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+  static FunctionTemplateDecl *CreateDeserialized(ASTContext &C, DeclID ID);
 
   // Implement isa/cast/dyncast support
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -1204,9 +1204,9 @@ public:
          bool Typename, bool ParameterPack, bool HasTypeConstraint = false,
          std::optional<unsigned> NumExpanded = std::nullopt);
   static TemplateTypeParmDecl *CreateDeserialized(const ASTContext &C,
-                                                  unsigned ID);
+                                                  DeclID ID);
   static TemplateTypeParmDecl *CreateDeserialized(const ASTContext &C,
-                                                  unsigned ID,
+                                                  DeclID ID,
                                                   bool HasTypeConstraint);
 
   /// Whether this template type parameter was declared with
@@ -1414,10 +1414,10 @@ public:
          ArrayRef<TypeSourceInfo *> ExpandedTInfos);
 
   static NonTypeTemplateParmDecl *CreateDeserialized(ASTContext &C,
-                                                     unsigned ID,
+                                                     DeclID ID,
                                                      bool HasTypeConstraint);
   static NonTypeTemplateParmDecl *CreateDeserialized(ASTContext &C,
-                                                     unsigned ID,
+                                                     DeclID ID,
                                                      unsigned NumExpandedTypes,
                                                      bool HasTypeConstraint);
 
@@ -1632,9 +1632,9 @@ public:
          ArrayRef<TemplateParameterList *> Expansions);
 
   static TemplateTemplateParmDecl *CreateDeserialized(ASTContext &C,
-                                                      unsigned ID);
+                                                      DeclID ID);
   static TemplateTemplateParmDecl *CreateDeserialized(ASTContext &C,
-                                                      unsigned ID,
+                                                      DeclID ID,
                                                       unsigned NumExpansions);
 
   using TemplateParmPosition::getDepth;
@@ -1858,7 +1858,7 @@ public:
          ArrayRef<TemplateArgument> Args,
          ClassTemplateSpecializationDecl *PrevDecl);
   static ClassTemplateSpecializationDecl *
-  CreateDeserialized(ASTContext &C, unsigned ID);
+  CreateDeserialized(ASTContext &C, DeclID ID);
 
   void getNameForDiagnostic(raw_ostream &OS, const PrintingPolicy &Policy,
                             bool Qualified) const override;
@@ -2110,7 +2110,7 @@ public:
          ClassTemplatePartialSpecializationDecl *PrevDecl);
 
   static ClassTemplatePartialSpecializationDecl *
-  CreateDeserialized(ASTContext &C, unsigned ID);
+  CreateDeserialized(ASTContext &C, DeclID ID);
 
   ClassTemplatePartialSpecializationDecl *getMostRecentDecl() {
     return cast<ClassTemplatePartialSpecializationDecl>(
@@ -2306,7 +2306,7 @@ public:
                                    NamedDecl *Decl);
 
   /// Create an empty class template node.
-  static ClassTemplateDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+  static ClassTemplateDecl *CreateDeserialized(ASTContext &C, DeclID ID);
 
   /// Return the specialization with the provided arguments if it exists,
   /// otherwise return the insertion point.
@@ -2472,7 +2472,7 @@ public:
          MutableArrayRef<TemplateParameterList *> Params, FriendUnion Friend,
          SourceLocation FriendLoc);
 
-  static FriendTemplateDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+  static FriendTemplateDecl *CreateDeserialized(ASTContext &C, DeclID ID);
 
   /// If this friend declaration names a templated type (or
   /// a dependent member type of a templated type), return that
@@ -2573,7 +2573,7 @@ public:
                                        NamedDecl *Decl);
 
   /// Create an empty alias template node.
-  static TypeAliasTemplateDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+  static TypeAliasTemplateDecl *CreateDeserialized(ASTContext &C, DeclID ID);
 
   // Implement isa/cast/dyncast support
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -2670,7 +2670,7 @@ public:
          TypeSourceInfo *TInfo, StorageClass S,
          ArrayRef<TemplateArgument> Args);
   static VarTemplateSpecializationDecl *CreateDeserialized(ASTContext &C,
-                                                           unsigned ID);
+                                                           DeclID ID);
 
   void getNameForDiagnostic(raw_ostream &OS, const PrintingPolicy &Policy,
                             bool Qualified) const override;
@@ -2901,7 +2901,7 @@ public:
          const TemplateArgumentListInfo &ArgInfos);
 
   static VarTemplatePartialSpecializationDecl *CreateDeserialized(ASTContext &C,
-                                                                  unsigned ID);
+                                                                  DeclID ID);
 
   VarTemplatePartialSpecializationDecl *getMostRecentDecl() {
     return cast<VarTemplatePartialSpecializationDecl>(
@@ -3078,7 +3078,7 @@ public:
                                  VarDecl *Decl);
 
   /// Create an empty variable template node.
-  static VarTemplateDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+  static VarTemplateDecl *CreateDeserialized(ASTContext &C, DeclID ID);
 
   /// Return the specialization with the provided arguments if it exists,
   /// otherwise return the insertion point.
@@ -3183,7 +3183,7 @@ public:
                              SourceLocation L, DeclarationName Name,
                              TemplateParameterList *Params,
                              Expr *ConstraintExpr);
-  static ConceptDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+  static ConceptDecl *CreateDeserialized(ASTContext &C, DeclID ID);
 
   Expr *getConstraintExpr() const {
     return ConstraintExpr;
@@ -3232,7 +3232,7 @@ public:
   Create(const ASTContext &C, DeclContext *DC, SourceLocation SL,
          ArrayRef<TemplateArgument> ConvertedArgs);
   static ImplicitConceptSpecializationDecl *
-  CreateDeserialized(const ASTContext &C, unsigned ID,
+  CreateDeserialized(const ASTContext &C, DeclID ID,
                      unsigned NumTemplateArgs);
 
   ArrayRef<TemplateArgument> getTemplateArguments() const {
@@ -3275,7 +3275,7 @@ private:
   static TemplateParamObjectDecl *Create(const ASTContext &C, QualType T,
                                          const APValue &V);
   static TemplateParamObjectDecl *CreateDeserialized(ASTContext &C,
-                                                     unsigned ID);
+                                                     DeclID ID);
 
   /// Only ASTContext::getTemplateParamObjectDecl and deserialization
   /// create these.

@@ -16,6 +16,8 @@
 namespace llvm {
 namespace memprof {
 
+struct MemProfRecord;
+
 // The versions of the indexed MemProf format
 enum IndexedVersion : uint64_t {
   // Version 0: This version didn't have a version field.
@@ -27,7 +29,7 @@ enum IndexedVersion : uint64_t {
 };
 
 constexpr uint64_t MinimumSupportedVersion = Version0;
-constexpr uint64_t MaximumSupportedVersion = Version1;
+constexpr uint64_t MaximumSupportedVersion = Version2;
 
 // Verify that the minimum and maximum satisfy the obvious constraint.
 static_assert(MinimumSupportedVersion <= MaximumSupportedVersion);
@@ -66,7 +68,7 @@ struct PortableMemInfoBlock {
       switch (Id) {
 #define MIBEntryDef(NameTag, Name, Type)                                       \
   case Meta::Name: {                                                           \
-    Name = endian::readNext<Type, llvm::endianness::little, unaligned>(Ptr);   \
+    Name = endian::readNext<Type, llvm::endianness::little>(Ptr);              \
   } break;
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
@@ -136,11 +138,22 @@ struct PortableMemInfoBlock {
     return !operator==(Other);
   }
 
-  static constexpr size_t serializedSize() {
+  static size_t serializedSize(const MemProfSchema &Schema) {
     size_t Result = 0;
-#define MIBEntryDef(NameTag, Name, Type) Result += sizeof(Type);
+
+    for (const Meta Id : Schema) {
+      switch (Id) {
+#define MIBEntryDef(NameTag, Name, Type)                                       \
+  case Meta::Name: {                                                           \
+    Result += sizeof(Type);                                                    \
+  } break;
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
+      default:
+        llvm_unreachable("Unknown meta type id, invalid input?");
+      }
+    }
+
     return Result;
   }
 
@@ -221,13 +234,12 @@ struct Frame {
     using namespace support;
 
     const uint64_t F =
-        endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+        endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
     const uint32_t L =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
+        endian::readNext<uint32_t, llvm::endianness::little>(Ptr);
     const uint32_t C =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Ptr);
-    const bool I =
-        endian::readNext<bool, llvm::endianness::little, unaligned>(Ptr);
+        endian::readNext<uint32_t, llvm::endianness::little>(Ptr);
+    const bool I = endian::readNext<bool, llvm::endianness::little>(Ptr);
     return Frame(/*Function=*/F, /*LineOffset=*/L, /*Column=*/C,
                  /*IsInlineFrame=*/I);
   }
@@ -291,7 +303,8 @@ struct IndexedAllocationInfo {
       : CallStack(CS.begin(), CS.end()), CSId(CSId), Info(MB) {}
 
   // Returns the size in bytes when this allocation info struct is serialized.
-  size_t serializedSize(IndexedVersion Version) const;
+  size_t serializedSize(const MemProfSchema &Schema,
+                        IndexedVersion Version) const;
 
   bool operator==(const IndexedAllocationInfo &Other) const {
     if (Other.Info != Info)
@@ -366,16 +379,12 @@ struct IndexedMemProfRecord {
     CallSites.append(Other.CallSites);
   }
 
-  size_t serializedSize(IndexedVersion Version) const;
+  size_t serializedSize(const MemProfSchema &Schema,
+                        IndexedVersion Version) const;
 
   bool operator==(const IndexedMemProfRecord &Other) const {
-    if (Other.AllocSites.size() != AllocSites.size())
+    if (Other.AllocSites != AllocSites)
       return false;
-
-    for (size_t I = 0; I < AllocSites.size(); I++) {
-      if (AllocSites[I] != Other.AllocSites[I])
-        return false;
-    }
 
     if (Other.CallSiteIds != CallSiteIds)
       return false;
@@ -391,6 +400,12 @@ struct IndexedMemProfRecord {
   static IndexedMemProfRecord deserialize(const MemProfSchema &Schema,
                                           const unsigned char *Buffer,
                                           IndexedVersion Version);
+
+  // Convert IndexedMemProfRecord to MemProfRecord.  Callback is used to
+  // translate CallStackId to call stacks with frames inline.
+  MemProfRecord toMemProfRecord(
+      std::function<const llvm::SmallVector<Frame>(const CallStackId)> Callback)
+      const;
 
   // Returns the GUID for the function name after canonicalization. For
   // memprof, we remove any .llvm suffix added by LTO. MemProfRecords are
@@ -474,16 +489,15 @@ public:
     using namespace support;
 
     offset_type KeyLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     offset_type DataLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     return std::make_pair(KeyLen, DataLen);
   }
 
   uint64_t ReadKey(const unsigned char *D, offset_type /*Unused*/) {
     using namespace support;
-    return endian::readNext<external_key_type, llvm::endianness::little,
-                            unaligned>(D);
+    return endian::readNext<external_key_type, llvm::endianness::little>(D);
   }
 
   data_type ReadData(uint64_t K, const unsigned char *D,
@@ -513,16 +527,17 @@ public:
   using hash_value_type = uint64_t;
   using offset_type = uint64_t;
 
-  // Pointer to the memprof schema to use for the generator. Unlike the reader
-  // we must use a default constructor with no params for the writer trait so we
-  // have a public member which must be initialized by the user.
-  MemProfSchema *Schema = nullptr;
+private:
+  // Pointer to the memprof schema to use for the generator.
+  const MemProfSchema *Schema;
   // The MemProf version to use for the serialization.
   IndexedVersion Version;
 
+public:
   // We do not support the default constructor, which does not set Version.
   RecordWriterTrait() = delete;
-  RecordWriterTrait(IndexedVersion V) : Version(V) {}
+  RecordWriterTrait(const MemProfSchema *Schema, IndexedVersion V)
+      : Schema(Schema), Version(V) {}
 
   static hash_value_type ComputeHash(key_type_ref K) { return K; }
 
@@ -533,7 +548,7 @@ public:
     endian::Writer LE(Out, llvm::endianness::little);
     offset_type N = sizeof(K);
     LE.write<offset_type>(N);
-    offset_type M = V.serializedSize(Version);
+    offset_type M = V.serializedSize(*Schema, Version);
     LE.write<offset_type>(M);
     return std::make_pair(N, M);
   }
@@ -615,21 +630,110 @@ public:
     using namespace support;
 
     offset_type KeyLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     offset_type DataLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     return std::make_pair(KeyLen, DataLen);
   }
 
   uint64_t ReadKey(const unsigned char *D, offset_type /*Unused*/) {
     using namespace support;
-    return endian::readNext<external_key_type, llvm::endianness::little,
-                            unaligned>(D);
+    return endian::readNext<external_key_type, llvm::endianness::little>(D);
   }
 
   data_type ReadData(uint64_t K, const unsigned char *D,
                      offset_type /*Unused*/) {
     return Frame::deserialize(D);
+  }
+};
+
+// Trait for writing call stacks to the on-disk hash table.
+class CallStackWriterTrait {
+public:
+  using key_type = CallStackId;
+  using key_type_ref = CallStackId;
+
+  using data_type = llvm::SmallVector<FrameId>;
+  using data_type_ref = llvm::SmallVector<FrameId> &;
+
+  using hash_value_type = CallStackId;
+  using offset_type = uint64_t;
+
+  static hash_value_type ComputeHash(key_type_ref K) { return K; }
+
+  static std::pair<offset_type, offset_type>
+  EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
+    using namespace support;
+    endian::Writer LE(Out, llvm::endianness::little);
+    // We do not explicitly emit the key length because it is a constant.
+    offset_type N = sizeof(K);
+    offset_type M = sizeof(FrameId) * V.size();
+    LE.write<offset_type>(M);
+    return std::make_pair(N, M);
+  }
+
+  void EmitKey(raw_ostream &Out, key_type_ref K, offset_type /*Unused*/) {
+    using namespace support;
+    endian::Writer LE(Out, llvm::endianness::little);
+    LE.write<key_type>(K);
+  }
+
+  void EmitData(raw_ostream &Out, key_type_ref /*Unused*/, data_type_ref V,
+                offset_type /*Unused*/) {
+    using namespace support;
+    endian::Writer LE(Out, llvm::endianness::little);
+    // Emit the frames.  We do not explicitly emit the length of the vector
+    // because it can be inferred from the data length.
+    for (FrameId F : V)
+      LE.write<FrameId>(F);
+  }
+};
+
+// Trait for reading call stack mappings from the on-disk hash table.
+class CallStackLookupTrait {
+public:
+  using data_type = const llvm::SmallVector<FrameId>;
+  using internal_key_type = CallStackId;
+  using external_key_type = CallStackId;
+  using hash_value_type = CallStackId;
+  using offset_type = uint64_t;
+
+  static bool EqualKey(internal_key_type A, internal_key_type B) {
+    return A == B;
+  }
+  static uint64_t GetInternalKey(internal_key_type K) { return K; }
+  static uint64_t GetExternalKey(external_key_type K) { return K; }
+
+  hash_value_type ComputeHash(internal_key_type K) { return K; }
+
+  static std::pair<offset_type, offset_type>
+  ReadKeyDataLength(const unsigned char *&D) {
+    using namespace support;
+
+    // We do not explicitly read the key length because it is a constant.
+    offset_type KeyLen = sizeof(external_key_type);
+    offset_type DataLen =
+        endian::readNext<offset_type, llvm::endianness::little>(D);
+    return std::make_pair(KeyLen, DataLen);
+  }
+
+  uint64_t ReadKey(const unsigned char *D, offset_type /*Unused*/) {
+    using namespace support;
+    return endian::readNext<external_key_type, llvm::endianness::little>(D);
+  }
+
+  data_type ReadData(uint64_t K, const unsigned char *D, offset_type Length) {
+    using namespace support;
+    llvm::SmallVector<FrameId> CS;
+    // Derive the number of frames from the data length.
+    uint64_t NumFrames = Length / sizeof(FrameId);
+    assert(Length % sizeof(FrameId) == 0);
+    CS.reserve(NumFrames);
+    for (size_t I = 0; I != NumFrames; ++I) {
+      FrameId F = endian::readNext<FrameId, llvm::endianness::little>(D);
+      CS.push_back(F);
+    }
+    return CS;
   }
 };
 

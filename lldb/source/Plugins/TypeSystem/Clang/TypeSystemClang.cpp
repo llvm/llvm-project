@@ -459,85 +459,19 @@ TypeSystemClang::ConvertAccessTypeToAccessSpecifier(AccessType access) {
   return AS_none;
 }
 
-static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
+static void ParseLangArgs(LangOptions &Opts, ArchSpec arch) {
   // FIXME: Cleanup per-file based stuff.
 
-  // Set some properties which depend solely on the input kind; it would be
-  // nice to move these to the language standard, and have the driver resolve
-  // the input kind + language standard.
-  if (IK.getLanguage() == clang::Language::Asm) {
-    Opts.AsmPreprocessor = 1;
-  } else if (IK.isObjectiveC()) {
-    Opts.ObjC = 1;
-  }
-
-  LangStandard::Kind LangStd = LangStandard::lang_unspecified;
-
-  if (LangStd == LangStandard::lang_unspecified) {
-    // Based on the base language, pick one.
-    switch (IK.getLanguage()) {
-    case clang::Language::Unknown:
-    case clang::Language::CIR:
-    case clang::Language::LLVM_IR:
-    case clang::Language::RenderScript:
-      llvm_unreachable("Invalid input kind!");
-    case clang::Language::OpenCL:
-      LangStd = LangStandard::lang_opencl10;
-      break;
-    case clang::Language::OpenCLCXX:
-      LangStd = LangStandard::lang_openclcpp10;
-      break;
-    case clang::Language::Asm:
-    case clang::Language::C:
-    case clang::Language::ObjC:
-      LangStd = LangStandard::lang_gnu99;
-      break;
-    case clang::Language::CXX:
-    case clang::Language::ObjCXX:
-      LangStd = LangStandard::lang_gnucxx98;
-      break;
-    case clang::Language::CUDA:
-    case clang::Language::HIP:
-      LangStd = LangStandard::lang_gnucxx17;
-      break;
-    case clang::Language::HLSL:
-      LangStd = LangStandard::lang_hlsl;
-      break;
-    }
-  }
-
-  const LangStandard &Std = LangStandard::getLangStandardForKind(LangStd);
-  Opts.LineComment = Std.hasLineComments();
-  Opts.C99 = Std.isC99();
-  Opts.CPlusPlus = Std.isCPlusPlus();
-  Opts.CPlusPlus11 = Std.isCPlusPlus11();
-  Opts.CPlusPlus14 = Std.isCPlusPlus14();
-  Opts.CPlusPlus17 = Std.isCPlusPlus17();
-  Opts.CPlusPlus20 = Std.isCPlusPlus20();
-  Opts.Digraphs = Std.hasDigraphs();
-  Opts.GNUMode = Std.isGNUMode();
-  Opts.GNUInline = !Std.isC99();
-  Opts.HexFloats = Std.hasHexFloats();
-
-  Opts.WChar = true;
-
-  // OpenCL has some additional defaults.
-  if (LangStd == LangStandard::lang_opencl10) {
-    Opts.OpenCL = 1;
-    Opts.AltiVec = 1;
-    Opts.CXXOperatorNames = 1;
-    Opts.setLaxVectorConversions(LangOptions::LaxVectorConversionKind::All);
-  }
-
-  // OpenCL and C++ both have bool, true, false keywords.
-  Opts.Bool = Opts.OpenCL || Opts.CPlusPlus;
+  std::vector<std::string> Includes;
+  LangOptions::setLangDefaults(Opts, clang::Language::ObjCXX, arch.GetTriple(),
+                               Includes, clang::LangStandard::lang_gnucxx98);
 
   Opts.setValueVisibilityMode(DefaultVisibility);
 
   // Mimicing gcc's behavior, trigraphs are only enabled if -trigraphs is
   // specified, or -std is set to a conforming mode.
   Opts.Trigraphs = !Opts.GNUMode;
-  Opts.CharIsSigned = ArchSpec(triple).CharIsSignedByDefault();
+  Opts.CharIsSigned = arch.CharIsSignedByDefault();
   Opts.OptimizeSize = 0;
 
   // FIXME: Eliminate this dependency.
@@ -727,8 +661,7 @@ void TypeSystemClang::CreateASTContext() {
   m_ast_owned = true;
 
   m_language_options_up = std::make_unique<LangOptions>();
-  ParseLangArgs(*m_language_options_up, clang::Language::ObjCXX,
-                GetTargetTriple());
+  ParseLangArgs(*m_language_options_up, ArchSpec(GetTargetTriple()));
 
   m_identifier_table_up =
       std::make_unique<IdentifierTable>(*m_language_options_up, nullptr);
@@ -905,8 +838,11 @@ lldb::BasicType TypeSystemClang::GetBasicTypeEnumeration(llvm::StringRef name) {
       {"__int128_t", eBasicTypeInt128},
       {"__uint128_t", eBasicTypeUnsignedInt128},
 
-      // Miscellaneous
+      // "bool"
       {"bool", eBasicTypeBool},
+      {"_Bool", eBasicTypeBool},
+
+      // Miscellaneous
       {"float", eBasicTypeFloat},
       {"double", eBasicTypeDouble},
       {"long double", eBasicTypeLongDouble},
@@ -7062,6 +6998,36 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
     }
   }
   return UINT32_MAX;
+}
+
+CompilerType
+TypeSystemClang::GetDirectNestedTypeWithName(lldb::opaque_compiler_type_t type,
+                                             llvm::StringRef name) {
+  if (!type || name.empty())
+    return CompilerType();
+
+  clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
+  const clang::Type::TypeClass type_class = qual_type->getTypeClass();
+
+  switch (type_class) {
+  case clang::Type::Record: {
+    if (!GetCompleteType(type))
+      return CompilerType();
+    const clang::RecordType *record_type =
+        llvm::cast<clang::RecordType>(qual_type.getTypePtr());
+    const clang::RecordDecl *record_decl = record_type->getDecl();
+
+    clang::DeclarationName decl_name(&getASTContext().Idents.get(name));
+    for (NamedDecl *decl : record_decl->lookup(decl_name)) {
+      if (auto *tag_decl = dyn_cast<clang::TagDecl>(decl))
+        return GetType(getASTContext().getTagDeclType(tag_decl));
+    }
+    break;
+  }
+  default:
+    break;
+  }
+  return CompilerType();
 }
 
 bool TypeSystemClang::IsTemplateType(lldb::opaque_compiler_type_t type) {
