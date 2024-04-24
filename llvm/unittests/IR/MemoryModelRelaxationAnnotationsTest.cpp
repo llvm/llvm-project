@@ -58,12 +58,12 @@ TEST(MMRATest, GetMD) {
   EXPECT_EQ(MMRAMetadata::getMD(Ctx, {}), nullptr);
 
   MDTuple *SingleMD = MMRAMetadata::getMD(Ctx, {{"foo", "bar"}});
-  EXPECT_EQ(SingleMD->getNumOperands(), 2);
+  EXPECT_EQ(SingleMD->getNumOperands(), 2u);
   EXPECT_EQ(cast<MDString>(SingleMD->getOperand(0))->getString(), "foo");
   EXPECT_EQ(cast<MDString>(SingleMD->getOperand(1))->getString(), "bar");
 
   MDTuple *MultiMD = MMRAMetadata::getMD(Ctx, {{"foo", "bar"}, {"bux", "qux"}});
-  EXPECT_EQ(MultiMD->getNumOperands(), 2);
+  EXPECT_EQ(MultiMD->getNumOperands(), 2u);
 
   MDTuple *FooBar = cast<MDTuple>(MultiMD->getOperand(0));
   EXPECT_EQ(cast<MDString>(FooBar->getOperand(0))->getString(), "foo");
