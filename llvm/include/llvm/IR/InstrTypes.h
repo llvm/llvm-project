@@ -1941,6 +1941,11 @@ public:
     Attrs = Attrs.addDereferenceableRetAttr(getContext(), Bytes);
   }
 
+  /// adds the range attribute to the list of attributes.
+  void addRangeRetAttr(const ConstantRange &CR) {
+    Attrs = Attrs.addRangeRetAttr(getContext(), CR);
+  }
+
   /// Determine whether the return value has the given attribute.
   bool hasRetAttr(Attribute::AttrKind Kind) const {
     return hasRetAttrImpl(Kind);
