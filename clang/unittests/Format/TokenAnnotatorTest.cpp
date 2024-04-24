@@ -599,6 +599,12 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   ASSERT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[2], tok::r_paren, TT_CastRParen);
 
+  Tokens = annotate("(uint32_t)&&label;");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::r_paren, TT_CastRParen);
+  EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_UnaryOperator);
+  EXPECT_TOKEN(Tokens[4], tok::identifier, TT_Unknown);
+
   Tokens = annotate("auto x = (Foo)p;");
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_CastRParen);
@@ -2849,6 +2855,66 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   ASSERT_EQ(Tokens.size(), 18u) << Tokens;
   EXPECT_BRACE_KIND(Tokens[8], BK_BracedInit);
   EXPECT_BRACE_KIND(Tokens[16], BK_BracedInit);
+
+  Tokens = annotate("struct {};");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[1], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[2], BK_Block);
+
+  Tokens = annotate("struct : Base {};");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[3], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[4], BK_Block);
+
+  Tokens = annotate("struct Foo {};");
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[2], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[3], BK_Block);
+
+  Tokens = annotate("struct ::Foo {};");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[3], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[4], BK_Block);
+
+  Tokens = annotate("struct NS::Foo {};");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[4], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[5], BK_Block);
+
+  Tokens = annotate("struct Foo<int> {};");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[5], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[6], BK_Block);
+
+  Tokens = annotate("struct Foo final {};");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[3], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[4], BK_Block);
+
+  Tokens = annotate("struct [[foo]] [[bar]] Foo final : Base1, Base2 {};");
+  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[17], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[18], BK_Block);
+
+  Tokens = annotate("struct Foo x{};");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[3], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[4], BK_BracedInit);
+
+  Tokens = annotate("struct ::Foo x{};");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[4], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[5], BK_BracedInit);
+
+  Tokens = annotate("struct NS::Foo x{};");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[5], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[6], BK_BracedInit);
+
+  Tokens = annotate("struct Foo<int> x{};");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[6], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[7], BK_BracedInit);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {

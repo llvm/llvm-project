@@ -828,9 +828,10 @@ static Instruction *foldNoWrapAdd(BinaryOperator &Add,
 
   // More general combining of constants in the wide type.
   // (sext (X +nsw NarrowC)) + C --> (sext X) + (sext(NarrowC) + C)
+  // or (zext nneg (X +nsw NarrowC)) + C --> (sext X) + (sext(NarrowC) + C)
   Constant *NarrowC;
-  if (match(Op0,
-            m_OneUse(m_SExt(m_NSWAddLike(m_Value(X), m_Constant(NarrowC)))))) {
+  if (match(Op0, m_OneUse(m_SExtLike(
+                     m_NSWAddLike(m_Value(X), m_Constant(NarrowC)))))) {
     Value *WideC = Builder.CreateSExt(NarrowC, Ty);
     Value *NewC = Builder.CreateAdd(WideC, Op1C);
     Value *WideX = Builder.CreateSExt(X, Ty);
@@ -844,7 +845,6 @@ static Instruction *foldNoWrapAdd(BinaryOperator &Add,
     Value *WideX = Builder.CreateZExt(X, Ty);
     return BinaryOperator::CreateAdd(WideX, NewC);
   }
-
   return nullptr;
 }
 
@@ -1134,6 +1134,8 @@ static bool MulWillOverflow(APInt &C0, APInt &C1, bool IsSigned) {
 
 // Simplifies X % C0 + (( X / C0 ) % C1) * C0 to X % (C0 * C1), where (C0 * C1)
 // does not overflow.
+// Simplifies (X / C0) * C1 + (X % C0) * C2 to
+// (X / C0) * (C1 - C2 * C0) + X * C2
 Value *InstCombinerImpl::SimplifyAddWithRemainder(BinaryOperator &I) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   Value *X, *MulOpV;
@@ -1159,6 +1161,33 @@ Value *InstCombinerImpl::SimplifyAddWithRemainder(BinaryOperator &I) {
                         : Builder.CreateURem(X, NewDivisor, "urem");
       }
     }
+  }
+
+  // Match I = (X / C0) * C1 + (X % C0) * C2
+  Value *Div, *Rem;
+  APInt C1, C2;
+  if (!LHS->hasOneUse() || !MatchMul(LHS, Div, C1))
+    Div = LHS, C1 = APInt(I.getType()->getScalarSizeInBits(), 1);
+  if (!RHS->hasOneUse() || !MatchMul(RHS, Rem, C2))
+    Rem = RHS, C2 = APInt(I.getType()->getScalarSizeInBits(), 1);
+  if (match(Div, m_IRem(m_Value(), m_Value()))) {
+    std::swap(Div, Rem);
+    std::swap(C1, C2);
+  }
+  Value *DivOpV;
+  APInt DivOpC;
+  if (MatchRem(Rem, X, C0, IsSigned) &&
+      MatchDiv(Div, DivOpV, DivOpC, IsSigned) && X == DivOpV && C0 == DivOpC) {
+    APInt NewC = C1 - C2 * C0;
+    if (!NewC.isZero() && !Rem->hasOneUse())
+      return nullptr;
+    if (!isGuaranteedNotToBeUndef(X, &AC, &I, &DT))
+      return nullptr;
+    Value *MulXC2 = Builder.CreateMul(X, ConstantInt::get(X->getType(), C2));
+    if (NewC.isZero())
+      return MulXC2;
+    return Builder.CreateAdd(
+        Builder.CreateMul(Div, ConstantInt::get(X->getType(), NewC)), MulXC2);
   }
 
   return nullptr;

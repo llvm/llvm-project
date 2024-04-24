@@ -50,58 +50,40 @@ def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
 
 def IntegerOverflowFlagsInterface : OpInterface<"IntegerOverflowFlagsInterface"> {
   let description = [{
-    Access to op integer overflow flags.
+    This interface defines an LLVM operation with integer overflow flags and
+    provides a uniform API for accessing them.
   }];
 
   let cppNamespace = "::mlir::LLVM";
 
   let methods = [
-    InterfaceMethod<
-      /*desc=*/        "Returns an IntegerOverflowFlagsAttr attribute for the operation",
-      /*returnType=*/  "IntegerOverflowFlagsAttr",
-      /*methodName=*/  "getOverflowAttr",
-      /*args=*/        (ins),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{
-        auto op = cast<ConcreteOp>(this->getOperation());
-        return op.getOverflowFlagsAttr();
-      }]
-      >,
-    InterfaceMethod<
-      /*desc=*/        "Returns whether the operation has the No Unsigned Wrap keyword",
-      /*returnType=*/  "bool",
-      /*methodName=*/  "hasNoUnsignedWrap",
-      /*args=*/        (ins),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{
-        auto op = cast<ConcreteOp>(this->getOperation());
-        IntegerOverflowFlags flags = op.getOverflowFlagsAttr().getValue();
-        return bitEnumContainsAll(flags, IntegerOverflowFlags::nuw);
-      }]
-      >,
-    InterfaceMethod<
-      /*desc=*/        "Returns whether the operation has the No Signed Wrap keyword",
-      /*returnType=*/  "bool",
-      /*methodName=*/  "hasNoSignedWrap",
-      /*args=*/        (ins),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{
-        auto op = cast<ConcreteOp>(this->getOperation());
-        IntegerOverflowFlags flags = op.getOverflowFlagsAttr().getValue();
-        return bitEnumContainsAll(flags, IntegerOverflowFlags::nsw);
-      }]
-      >,
-    StaticInterfaceMethod<
-      /*desc=*/        [{Returns the name of the IntegerOverflowFlagsAttr attribute
-                         for the operation}],
-      /*returnType=*/  "StringRef",
-      /*methodName=*/  "getIntegerOverflowAttrName",
-      /*args=*/        (ins),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{
-        return "overflowFlags";
-      }]
-      >
+    InterfaceMethod<[{
+      Get the integer overflow flags for the operation.
+    }], "IntegerOverflowFlags", "getOverflowFlags", (ins), [{}], [{
+      return $_op.getProperties().overflowFlags;
+    }]>,
+    InterfaceMethod<[{
+      Set the integer overflow flags for the operation.
+    }], "void", "setOverflowFlags", (ins "IntegerOverflowFlags":$flags), [{}], [{
+      $_op.getProperties().overflowFlags = flags;
+    }]>,
+    InterfaceMethod<[{
+      Returns whether the operation has the No Unsigned Wrap keyword.
+    }], "bool", "hasNoUnsignedWrap", (ins), [{}], [{
+      return bitEnumContainsAll($_op.getOverflowFlags(),
+                                IntegerOverflowFlags::nuw);
+    }]>,
+    InterfaceMethod<[{
+      Returns whether the operation has the No Signed Wrap keyword.
+    }], "bool", "hasNoSignedWrap", (ins), [{}], [{
+      return bitEnumContainsAll($_op.getOverflowFlags(),
+                                IntegerOverflowFlags::nsw);
+    }]>,
+    StaticInterfaceMethod<[{
+      Get the attribute name of the overflow flags property.
+    }], "StringRef", "getOverflowFlagsAttrName", (ins), [{}], [{
+      return "overflowFlags";
+    }]>,
   ];
 }
 
