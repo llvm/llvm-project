@@ -1314,6 +1314,10 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   auto [Destructive, Constructive] = TI.hardwareInterferenceSizes();
   Builder.defineMacro("__GCC_DESTRUCTIVE_SIZE", Twine(Destructive));
   Builder.defineMacro("__GCC_CONSTRUCTIVE_SIZE", Twine(Constructive));
+  // We need to use push_macro to allow users to redefine these macros from the
+  // command line with -D and not issue a -Wmacro-redefined warning.
+  Builder.append("#pragma push_macro(\"__GCC_DESTRUCTIVE_SIZE\")");
+  Builder.append("#pragma push_macro(\"__GCC_CONSTRUCTIVE_SIZE\")");
 
   auto addLockFreeMacros = [&](const llvm::Twine &Prefix) {
     // Used by libc++ and libstdc++ to implement ATOMIC_<foo>_LOCK_FREE.

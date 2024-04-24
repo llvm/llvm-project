@@ -5579,7 +5579,9 @@ Predefined Macros
 ------------------------------------------------------
 Specify the mimum offset between two objects to avoid false sharing and the
 maximum size of contiguous memory to promote true sharing, respectively. These
-macros are predefined in all C and C++ language modes.
+macros are predefined in all C and C++ language modes, but can be redefined on
+the command line with ``-D`` to specify different values as needed or can be
+undefined on the command line with ``-U`` to disable support for the feature.
 
 **Note: the values the macros expand to are not stable between releases of Clang
 and do not need to match the values produced by GCC, so these macros should not
