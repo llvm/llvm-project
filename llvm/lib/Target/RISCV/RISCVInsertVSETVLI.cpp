@@ -364,9 +364,11 @@ DemandedFields getDemanded(const MachineInstr &MI,
   // Most instructions don't use any of these subfeilds.
   DemandedFields Res;
   // Start conservative if registers are used
-  if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::VL))
+  if (MI.isCall() || MI.isInlineAsm() ||
+      MI.readsRegister(RISCV::VL, /*TRI=*/nullptr))
     Res.demandVL();
-  if (MI.isCall() || MI.isInlineAsm() || MI.readsRegister(RISCV::VTYPE))
+  if (MI.isCall() || MI.isInlineAsm() ||
+      MI.readsRegister(RISCV::VTYPE, /*TRI=*/nullptr))
     Res.demandVTYPE();
   // Start conservative on the unlowered form too
   uint64_t TSFlags = MI.getDesc().TSFlags;
@@ -1199,8 +1201,9 @@ void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info,
 
   // If this is something that updates VL/VTYPE that we don't know about, set
   // the state to unknown.
-  if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VL) ||
-      MI.modifiesRegister(RISCV::VTYPE))
+  if (MI.isCall() || MI.isInlineAsm() ||
+      MI.modifiesRegister(RISCV::VL, /*TRI=*/nullptr) ||
+      MI.modifiesRegister(RISCV::VTYPE, /*TRI=*/nullptr))
     Info = VSETVLIInfo::getUnknown();
 }
 
@@ -1383,8 +1386,9 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
                                               /*isImp*/ true));
     }
 
-    if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VL) ||
-        MI.modifiesRegister(RISCV::VTYPE))
+    if (MI.isCall() || MI.isInlineAsm() ||
+        MI.modifiesRegister(RISCV::VL, /*TRI=*/nullptr) ||
+        MI.modifiesRegister(RISCV::VTYPE, /*TRI=*/nullptr))
       PrefixTransparent = false;
 
     transferAfter(CurInfo, MI);
@@ -1580,8 +1584,9 @@ bool RISCVCoalesceVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) {
 
     if (!isVectorConfigInstr(MI)) {
       doUnion(Used, getDemanded(MI, MRI, ST));
-      if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VL) ||
-          MI.modifiesRegister(RISCV::VTYPE))
+      if (MI.isCall() || MI.isInlineAsm() ||
+          MI.modifiesRegister(RISCV::VL, /*TRI=*/nullptr) ||
+          MI.modifiesRegister(RISCV::VTYPE, /*TRI=*/nullptr))
         NextMI = nullptr;
       continue;
     }
@@ -1634,15 +1639,16 @@ bool RISCVCoalesceVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) {
           if (NextMI->getOperand(1).isReg())
             NextMI->getOperand(1).setReg(RISCV::NoRegister);
 
-          if (OldVLReg) {
+          if (OldVLReg && OldVLReg.isVirtual()) {
+            // NextMI no longer uses OldVLReg so shrink its LiveInterval.
+            LIS->shrinkToUses(&LIS->getInterval(OldVLReg));
+
             MachineInstr *VLOpDef = MRI->getUniqueVRegDef(OldVLReg);
             if (VLOpDef && TII->isAddImmediate(*VLOpDef, OldVLReg) &&
-                MRI->use_nodbg_empty(OldVLReg))
+                MRI->use_nodbg_empty(OldVLReg)) {
               VLOpDef->eraseFromParent();
-
-            // NextMI no longer uses OldVLReg so shrink its LiveInterval.
-            if (OldVLReg.isVirtual())
-              LIS->shrinkToUses(&LIS->getInterval(OldVLReg));
+              LIS->removeInterval(OldVLReg);
+            }
           }
           MI.setDesc(NextMI->getDesc());
         }
