@@ -186,9 +186,13 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     - The explicit value for the sparse tensor. If explicitVal is set,
       then all the non-zero values in the tensor have the same explicit value.
       The default value Attribute() indicates that it is not set. This
-      is useful for binary-valued tensors whose values could only
-      be 0 or 1, as we can set the explicit value to be 1 instead of
-      storing the values array.
+      is useful for binary-valued sparse tensors whose values can either
+      be an implicit value (0 by default) or an explicit value (such as 1).
+      In this approach, we don't store explicit/implicit values, and metadata
+      (such as position and coordinate arrays) alone fully defines the original tensor.
+      This yields additional savings for the storage requirements,
+      as well as for the computational time, since we skip operating on
+      implicit values and can constant fold the explicit values where they are used.
 
     - The implicit value for the sparse tensor. If implicitVal is set,
       then the "zero" value in the tensor is equal to the implicit value.
