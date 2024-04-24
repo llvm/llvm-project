@@ -514,3 +514,21 @@ of operands.
     (match (does_not_bind $tmp, $x)
            (G_MUL $dst, $x, $tmp)),
     (apply (COPY $dst, $x))>;
+
+
+ Gallery
+----------------
+
+We should use precise patterns that state our intentions. Please avoid
+using wip_match_opcode in patterns.
+
+.. code-block:: text
+  :caption: Example fold ext(trunc)
+
+(match (wip_match_opcode G_ZEXT):$root,
+
+(match (G_TRUNC $src, $x),
+       (G_ZEXT $root, $src),
+
+(match (G_TRUNC $src, $x, (MIFlags NoUWrap)),
+       (G_ZEXT $root, $src),
