@@ -196,7 +196,6 @@ entry:
 define i64 @and_allones(i32 signext %x) {
 ; CHECK-LABEL: and_allones:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a0, a0, -1
 ; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    sll a0, a1, a0
