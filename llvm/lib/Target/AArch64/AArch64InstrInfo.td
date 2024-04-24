@@ -315,6 +315,8 @@ def UseNegativeImmediates
 
 def UseScalarIncVL : Predicate<"Subtarget->useScalarIncVL()">;
 
+def NoUseScalarIncVL : Predicate<"!Subtarget->useScalarIncVL()">;
+
 def UseSVEFPLD1R : Predicate<"!Subtarget->noSVEFPLD1R()">;
 
 def IsNeonAvailable : Predicate<"Subtarget->isNeonAvailable()">;
