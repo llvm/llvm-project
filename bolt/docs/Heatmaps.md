@@ -41,6 +41,7 @@ Other useful options are:
 ```bash
 -line-size=<uint>   - number of entries per line (default 256)
 -max-address=<uint> - maximum address considered valid for heatmap (default 4GB)
+-print-mappings=<bool> - print mappings in legend, between characters/blocks and text sections (default false)
 ```
 
 If you prefer to look at the data in a browser (or would like to share
