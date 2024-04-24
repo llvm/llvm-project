@@ -732,7 +732,7 @@ protected:
   Diagnostics::CallbackID m_diagnostics_callback_id;
 
   std::vector<std::pair<lldb_private::DebuggerDestroyCallback, void *>>
- 	    m_destroy_callback_and_baton;
+      m_destroy_callback_and_baton;
 
   uint32_t m_interrupt_requested = 0; ///< Tracks interrupt requests
   std::mutex m_interrupt_mutex;
