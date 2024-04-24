@@ -200,16 +200,20 @@ inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr,
   return Value;
 }
 
-inline uint64_t decodeULEB128AndInc(const uint8_t *&p) {
+inline uint64_t decodeULEB128AndInc(const uint8_t *&p,
+                                    const uint8_t *end = nullptr,
+                                    const char **error = nullptr) {
   unsigned n;
-  auto ret = decodeULEB128(p, &n);
+  auto ret = decodeULEB128(p, &n, end, error);
   p += n;
   return ret;
 }
 
-inline int64_t decodeSLEB128AndInc(const uint8_t *&p) {
+inline int64_t decodeSLEB128AndInc(const uint8_t *&p,
+                                   const uint8_t *end = nullptr,
+                                   const char **error = nullptr) {
   unsigned n;
-  auto ret = decodeSLEB128(p, &n);
+  auto ret = decodeSLEB128(p, &n, end, error);
   p += n;
   return ret;
 }

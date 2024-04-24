@@ -155,6 +155,12 @@ TEST(LEB128Test, DecodeInvalidULEB128) {
     EXPECT_NE(Error, nullptr);                                                 \
     EXPECT_EQ(0ul, Actual);                                                    \
     EXPECT_EQ(ERROR_OFFSET, ErrorOffset);                                      \
+    Value = reinterpret_cast<const uint8_t *>(VALUE);                          \
+    Error = nullptr;                                                           \
+    Actual = decodeULEB128AndInc(Value, Value + strlen(VALUE), &Error);        \
+    EXPECT_NE(Error, nullptr);                                                 \
+    EXPECT_EQ(0ul, Actual);                                                    \
+    EXPECT_EQ(ERROR_OFFSET, Value - reinterpret_cast<const uint8_t *>(VALUE)); \
   } while (0)
 
   // Buffer overflow.
@@ -224,6 +230,12 @@ TEST(LEB128Test, DecodeInvalidSLEB128) {
     EXPECT_NE(Error, nullptr);                                                 \
     EXPECT_EQ(0ul, Actual);                                                    \
     EXPECT_EQ(ERROR_OFFSET, ErrorOffset);                                      \
+    Value = reinterpret_cast<const uint8_t *>(VALUE);                          \
+    Error = nullptr;                                                           \
+    Actual = decodeSLEB128AndInc(Value, Value + strlen(VALUE), &Error);        \
+    EXPECT_NE(Error, nullptr);                                                 \
+    EXPECT_EQ(0ul, Actual);                                                    \
+    EXPECT_EQ(ERROR_OFFSET, Value - reinterpret_cast<const uint8_t *>(VALUE)); \
   } while (0)
 
   // Buffer overflow.
