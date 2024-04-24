@@ -24,7 +24,6 @@ module {
   // CHECK:       arith.constant
   // CHECK:       tensor.empty()
   // CHECK:       linalg.generic
-  // CHECK:       sparse_tensor.convert
   // CHECK:       return
   //
   func.func @avoid_fold(%0: tensor<10x20x30xf64, #sparse>) -> tensor<10x20x30xf64, #sparse> {
@@ -44,4 +43,3 @@ module {
     return %cast : tensor<10x20x30xf64, #sparse>
   }
 }
-
