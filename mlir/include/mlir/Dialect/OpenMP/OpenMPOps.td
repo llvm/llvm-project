@@ -1454,14 +1454,14 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
     - `var_type`: The type of the variable to copy.
     - `var_ptr_ptr`: Used when the variable copied is a member of a class, structure
       or derived type and refers to the originating struct.
-    - `members`: Used to indicate mapped child members for the current MapInfoOp, 
-       represented as other MapInfoOp's, utilised in cases where a parent structure 
-       type and members of the structure type are being mapped at the same time. 
+    - `members`: Used to indicate mapped child members for the current MapInfoOp,
+       represented as other MapInfoOp's, utilised in cases where a parent structure
+       type and members of the structure type are being mapped at the same time.
        For example: map(to: parent, parent->member, parent->member2[:10])
-    - `members_index`: Used to indicate the ordering of members within the containing 
+    - `members_index`: Used to indicate the ordering of members within the containing
        parent (generally a record type such as a structure, class or derived type),
-       e.g. struct {int x, float y, double z}, x would be 0, y would be 1, and z 
-       would be 2. This aids the mapping 
+       e.g. struct {int x, float y, double z}, x would be 0, y would be 1, and z
+       would be 2. This aids the mapping.
     - `bounds`: Used when copying slices of array's, pointers or pointer members of
        objects (e.g. derived types or classes), indicates the bounds to be copied
        of the variable. When it's an array slice it is in rank order where rank 0
@@ -1472,7 +1472,7 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
     - 'map_capture_type': Capture type for the variable e.g. this, byref, byvalue, byvla
        this can affect how the variable is lowered.
     - `name`: Holds the name of variable as specified in user clause (including bounds).
-    - `partial_map`: The record type being mapped will not be mapped in its entirety, 
+    - `partial_map`: The record type being mapped will not be mapped in its entirety,
        it may be used however, in a mapping to bind it's mapped components together.
   }];
 

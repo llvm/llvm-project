@@ -31,8 +31,7 @@ namespace fir {
 // Passes defined in Passes.td
 //===----------------------------------------------------------------------===//
 
-#define GEN_PASS_DECL_ABSTRACTRESULTONFUNCOPT
-#define GEN_PASS_DECL_ABSTRACTRESULTONGLOBALOPT
+#define GEN_PASS_DECL_ABSTRACTRESULTOPT
 #define GEN_PASS_DECL_AFFINEDIALECTPROMOTION
 #define GEN_PASS_DECL_AFFINEDIALECTDEMOTION
 #define GEN_PASS_DECL_ANNOTATECONSTANTOPERANDS
@@ -48,10 +47,9 @@ namespace fir {
 #define GEN_PASS_DECL_ALGEBRAICSIMPLIFICATION
 #define GEN_PASS_DECL_POLYMORPHICOPCONVERSION
 #define GEN_PASS_DECL_OPENACCDATAOPERANDCONVERSION
+#define GEN_PASS_DECL_ADDDEBUGINFO
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
-std::unique_ptr<mlir::Pass> createAbstractResultOnFuncOptPass();
-std::unique_ptr<mlir::Pass> createAbstractResultOnGlobalOptPass();
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
 std::unique_ptr<mlir::Pass>
 createArrayValueCopyPass(fir::ArrayValueCopyOptions options = {});
@@ -67,7 +65,8 @@ std::unique_ptr<mlir::Pass> createMemoryAllocationPass();
 std::unique_ptr<mlir::Pass> createStackArraysPass();
 std::unique_ptr<mlir::Pass> createAliasTagsPass();
 std::unique_ptr<mlir::Pass> createSimplifyIntrinsicsPass();
-std::unique_ptr<mlir::Pass> createAddDebugInfoPass();
+std::unique_ptr<mlir::Pass>
+createAddDebugInfoPass(fir::AddDebugInfoOptions options = {});
 std::unique_ptr<mlir::Pass> createLoopVersioningPass();
 
 std::unique_ptr<mlir::Pass>

@@ -93,17 +93,6 @@ endif()
 
 add_custom_target(module_files ALL DEPENDS ${MODULE_FILES})
 
-# This flang shell script will only work in a POSIX shell.
-if (NOT WIN32)
-  configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/flang-to-external-fc.in
-    ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc
-    @ONLY
-  )
-  add_custom_target(flang-to-external-fc ALL DEPENDS ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc)
-  install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/flang-to-external-fc DESTINATION "${CMAKE_INSTALL_BINDIR}")
-endif()
-
 # TODO Move this to a more suitable location
 # Copy the generated omp_lib.h header file, if OpenMP support has been configured.
 if (LLVM_TOOL_OPENMP_BUILD)
