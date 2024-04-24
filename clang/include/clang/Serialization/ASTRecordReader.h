@@ -103,13 +103,6 @@ public:
                                                  DC);
   }
 
-  /// Read the record that describes the visible contents of a DC.
-  bool readVisibleDeclContextStorage(uint64_t Offset,
-                                     serialization::DeclID ID) {
-    return Reader->ReadVisibleDeclContextStorage(*F, F->DeclsCursor, Offset,
-                                                 ID);
-  }
-
   ExplicitSpecifier readExplicitSpec() {
     uint64_t Kind = readInt();
     bool HasExpr = Kind & 0x1;
@@ -143,8 +136,7 @@ public:
   /// Reads a declaration with the given local ID in the given module.
   ///
   /// \returns The requested declaration, casted to the given return type.
-  template<typename T>
-  T *GetLocalDeclAs(uint32_t LocalID) {
+  template <typename T> T *GetLocalDeclAs(serialization::LocalDeclID LocalID) {
     return cast_or_null<T>(Reader->GetLocalDecl(*F, LocalID));
   }
 
@@ -190,7 +182,7 @@ public:
   /// Reads a declaration ID from the given position in this record.
   ///
   /// \returns The declaration ID read from the record, adjusted to a global ID.
-  serialization::DeclID readDeclID() {
+  serialization::GlobalDeclID readDeclID() {
     return Reader->ReadDeclID(*F, Record, Idx);
   }
 
