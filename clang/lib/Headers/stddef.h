@@ -40,8 +40,13 @@
 #define __STDDEF_H
 #undef __need_ptrdiff_t
 #undef __need_size_t
+#undef __need_rsize_t
 #undef __need_wchar_t
 #undef __need_NULL
+#undef __need_nullptr_t
+#undef __need_unreachable
+#undef __need_max_align_t
+#undef __need_offsetof
 #undef __need_wint_t
 #include_next <stddef.h>
 
