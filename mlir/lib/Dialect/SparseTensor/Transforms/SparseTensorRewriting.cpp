@@ -289,7 +289,7 @@ struct FuseExtractSliceWithConcat
   }
 };
 
-/// Rewriting rule that converts direct yield of zero with initial allocation.
+/// Rewriting rule that fuses sparse_tensor.convert into producer.
 struct FoldConvertIntoProducer : public OpRewritePattern<ConvertOp> {
 public:
   using OpRewritePattern::OpRewritePattern;

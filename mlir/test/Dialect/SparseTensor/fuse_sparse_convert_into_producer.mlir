@@ -1,3 +1,4 @@
+// RUN: mlir-opt %s --pre-sparsification-rewrite --sparse-reinterpret-map  | FileCheck %s --check-prefix=CHECK-FOLD
 // RUN: mlir-opt %s --pre-sparsification-rewrite --sparse-reinterpret-map --sparsification | FileCheck %s
 
 #trait = {
@@ -10,9 +11,12 @@
   iterator_types = ["parallel", "parallel", "parallel", "parallel"]
 }
 
-#sparse = #sparse_tensor.encoding<{ map = (d0, d1, d2, d3) -> (d0 : compressed, d1 : compressed, d2 : compressed, d3 : dense) }>
+#map = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 
-// CHECK-LABEL:   func.func @test(
+#COO = #sparse_tensor.encoding<{map = (d0, d1, d2) -> (d0 : compressed(nonunique), d1 : singleton(nonunique, soa), d2 : singleton(soa))}>
+#CCCD = #sparse_tensor.encoding<{ map = (d0, d1, d2, d3) -> (d0 : compressed, d1 : compressed, d2 : compressed, d3 : dense) }>
+
+// CHECK-LABEL:   func.func @fold_convert(
 // CHECK:           scf.for
 // CHECK:             scf.for
 // CHECK:               scf.for
@@ -25,7 +29,10 @@
 // CHECK:               scf.yield
 // CHECK:             scf.yield
 // CHECK:           sparse_tensor.load
-func.func @test(%arg0: tensor<128x32x32x1xf32>, %arg1: tensor<128x32x32x1xf32>, %arg2: tensor<128x32x32x1xf32>) -> tensor<128x32x32x1xf32, #sparse> {
+
+// CHECK-FOLD-LABEL:   func.func @fold_convert(
+// CHECK-FOLD-NOT:     sparse_tensor.convert
+func.func @fold_convert(%arg0: tensor<128x32x32x1xf32>, %arg1: tensor<128x32x32x1xf32>, %arg2: tensor<128x32x32x1xf32>) -> tensor<128x32x32x1xf32, #CCCD> {
   %cst = arith.constant 0.000000e+00 : f32
   %cst_0 = arith.constant 1.000000e+00 : f32
   %cst_1 = arith.constant 1.000000e+00 : f32
@@ -43,6 +50,29 @@ func.func @test(%arg0: tensor<128x32x32x1xf32>, %arg1: tensor<128x32x32x1xf32>, 
       %9 = arith.uitofp %8 : i1 to f32
       linalg.yield %9 : f32
     } -> tensor<128x32x32x1xf32>
-  %2 = sparse_tensor.convert %1 : tensor<128x32x32x1xf32> to tensor<128x32x32x1xf32, #sparse>
-  return %2 : tensor<128x32x32x1xf32, #sparse>
+  %2 = sparse_tensor.convert %1 : tensor<128x32x32x1xf32> to tensor<128x32x32x1xf32, #CCCD>
+  return %2 : tensor<128x32x32x1xf32, #CCCD>
+}
+
+
+// FIXME: The following kernel is not sparsifiable because `arith.select`
+// operations is not handled by the sparse compiler at the moment.
+//
+// CHECK-FOLD-LABEL:   func.func @fold_cast(
+// CHECK-FOLD-NOT:     sparse_tensor.convert
+func.func @fold_cast(%0: tensor<10x20x30xf64, #COO>) -> tensor<10x20x30xf64, #COO> {
+  %cst = arith.constant 0.000000e+00 : f64
+  %1 = tensor.empty() : tensor<10x20x30xf64>
+  %2 = linalg.generic { indexing_maps = [#map, #map],
+                        iterator_types = ["parallel", "parallel", "parallel"]
+                      }
+  ins (%0 : tensor<10x20x30xf64, #COO>)
+  outs(%1 : tensor<10x20x30xf64>) {
+      ^bb0(%in: f64, %out: f64):
+        %4 = arith.cmpf ugt, %in, %cst : f64
+        %5 = arith.select %4, %in, %cst : f64
+        linalg.yield %5 : f64
+  } -> tensor<10x20x30xf64>
+  %cast = tensor.cast %2 : tensor<10x20x30xf64> to tensor<10x20x30xf64, #COO>
+  return %cast : tensor<10x20x30xf64, #COO>
 }
