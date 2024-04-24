@@ -6756,10 +6756,10 @@ private:
 
 public:
   // Constructor for OMP array sections, which include a 'stride'.
-  ArraySectionExpr(Expr *Base, Expr *LowerBound,
-                   Expr *Length, Expr *Stride, QualType Type, ExprValueKind VK,
-                   ExprObjectKind OK, SourceLocation ColonLocFirst,
-                   SourceLocation ColonLocSecond, SourceLocation RBracketLoc)
+  ArraySectionExpr(Expr *Base, Expr *LowerBound, Expr *Length, Expr *Stride,
+                   QualType Type, ExprValueKind VK, ExprObjectKind OK,
+                   SourceLocation ColonLocFirst, SourceLocation ColonLocSecond,
+                   SourceLocation RBracketLoc)
       : Expr(ArraySectionExprClass, Type, VK, OK), ASType(OMPArraySection),
         ColonLocFirst(ColonLocFirst), ColonLocSecond(ColonLocSecond),
         RBracketLoc(RBracketLoc) {
@@ -6771,9 +6771,8 @@ public:
   }
 
   // Constructor for OpenACC sub-arrays, which do not permit a 'stride'.
-  ArraySectionExpr(Expr *Base, Expr *LowerBound,
-                   Expr *Length, QualType Type, ExprValueKind VK,
-                   ExprObjectKind OK, SourceLocation ColonLoc,
+  ArraySectionExpr(Expr *Base, Expr *LowerBound, Expr *Length, QualType Type,
+                   ExprValueKind VK, ExprObjectKind OK, SourceLocation ColonLoc,
                    SourceLocation RBracketLoc)
       : Expr(ArraySectionExprClass, Type, VK, OK), ASType(OpenACCArraySection),
         ColonLocFirst(ColonLoc), RBracketLoc(RBracketLoc) {
