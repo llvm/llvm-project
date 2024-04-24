@@ -1,0 +1,26 @@
+resources:
+  repositories:
+  - repository: pipelines_repo
+    type: github
+    endpoint: External-CI-Token
+    name: ROCm/ROCm
+
+variables:
+- group: common
+- template: /.azuredevops/variables-global.yml@pipelines_repo
+
+trigger:
+  batch: true
+  branches:
+    include:
+    - amd-staging
+  paths:
+    exclude:
+    - .ci
+    - .github
+    - '*.md'
+    - '**/*.md'
+    - LICENSE.TXT
+
+jobs:
+  - template: ${{ variables.CI_COMPONENT_PATH }}/llvm-project.yml@pipelines_repo
