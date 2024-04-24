@@ -42,20 +42,22 @@
 ! CHECK:             %[[VAL_12:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_13:.*]] = arith.constant 100 : i32
 ! CHECK:             %[[VAL_14:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop byref reduction(@and_reduction %[[VAL_4]]#0 -> %[[VAL_15:.*]] : !fir.ref<!fir.logical<4>>)  for  (%[[VAL_16:.*]]) : i32 = (%[[VAL_12]]) to (%[[VAL_13]]) inclusive step (%[[VAL_14]]) {
-! CHECK:               fir.store %[[VAL_16]] to %[[VAL_11]]#1 : !fir.ref<i32>
-! CHECK:               %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]] {uniq_name = "_QFsimple_reductionEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-! CHECK:               %[[VAL_18:.*]] = fir.load %[[VAL_17]]#0 : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_19:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<i32>
-! CHECK:               %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (i32) -> i64
-! CHECK:               %[[VAL_21:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_20]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_22:.*]] = fir.load %[[VAL_21]] : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_23:.*]] = fir.convert %[[VAL_18]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_24:.*]] = fir.convert %[[VAL_22]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_25:.*]] = arith.andi %[[VAL_23]], %[[VAL_24]] : i1
-! CHECK:               %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (i1) -> !fir.logical<4>
-! CHECK:               hlfir.assign %[[VAL_26]] to %[[VAL_17]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
-! CHECK:               omp.yield
+! CHECK:             omp.wsloop byref reduction(@and_reduction %[[VAL_4]]#0 -> %[[VAL_15:.*]] : !fir.ref<!fir.logical<4>>) {
+! CHECK-NEXT:          omp.loop_nest (%[[VAL_16:.*]]) : i32 = (%[[VAL_12]]) to (%[[VAL_13]]) inclusive step (%[[VAL_14]]) {
+! CHECK:                 %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]] {uniq_name = "_QFsimple_reductionEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:                 fir.store %[[VAL_16]] to %[[VAL_11]]#1 : !fir.ref<i32>
+! CHECK:                 %[[VAL_18:.*]] = fir.load %[[VAL_17]]#0 : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_19:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<i32>
+! CHECK:                 %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (i32) -> i64
+! CHECK:                 %[[VAL_21:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_20]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_22:.*]] = fir.load %[[VAL_21]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_23:.*]] = fir.convert %[[VAL_18]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_24:.*]] = fir.convert %[[VAL_22]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_25:.*]] = arith.andi %[[VAL_23]], %[[VAL_24]] : i1
+! CHECK:                 %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (i1) -> !fir.logical<4>
+! CHECK:                 hlfir.assign %[[VAL_26]] to %[[VAL_17]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
+! CHECK:                 omp.yield
+! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 
@@ -90,20 +92,22 @@ end subroutine simple_reduction
 ! CHECK:             %[[VAL_12:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_13:.*]] = arith.constant 100 : i32
 ! CHECK:             %[[VAL_14:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop byref reduction(@and_reduction %[[VAL_4]]#0 -> %[[VAL_15:.*]] : !fir.ref<!fir.logical<4>>)  for  (%[[VAL_16:.*]]) : i32 = (%[[VAL_12]]) to (%[[VAL_13]]) inclusive step (%[[VAL_14]]) {
-! CHECK:               fir.store %[[VAL_16]] to %[[VAL_11]]#1 : !fir.ref<i32>
-! CHECK:               %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]] {uniq_name = "_QFsimple_reduction_switch_orderEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-! CHECK:               %[[VAL_18:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<i32>
-! CHECK:               %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (i32) -> i64
-! CHECK:               %[[VAL_20:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_19]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_21:.*]] = fir.load %[[VAL_20]] : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_22:.*]] = fir.load %[[VAL_17]]#0 : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_23:.*]] = fir.convert %[[VAL_21]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_24:.*]] = fir.convert %[[VAL_22]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_25:.*]] = arith.andi %[[VAL_23]], %[[VAL_24]] : i1
-! CHECK:               %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (i1) -> !fir.logical<4>
-! CHECK:               hlfir.assign %[[VAL_26]] to %[[VAL_17]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
-! CHECK:               omp.yield
+! CHECK:             omp.wsloop byref reduction(@and_reduction %[[VAL_4]]#0 -> %[[VAL_15:.*]] : !fir.ref<!fir.logical<4>>) {
+! CHECK-NEXT:          omp.loop_nest (%[[VAL_16:.*]]) : i32 = (%[[VAL_12]]) to (%[[VAL_13]]) inclusive step (%[[VAL_14]]) {
+! CHECK:                 %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_15]] {uniq_name = "_QFsimple_reduction_switch_orderEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:                 fir.store %[[VAL_16]] to %[[VAL_11]]#1 : !fir.ref<i32>
+! CHECK:                 %[[VAL_18:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<i32>
+! CHECK:                 %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (i32) -> i64
+! CHECK:                 %[[VAL_20:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_19]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_21:.*]] = fir.load %[[VAL_20]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_22:.*]] = fir.load %[[VAL_17]]#0 : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_23:.*]] = fir.convert %[[VAL_21]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_24:.*]] = fir.convert %[[VAL_22]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_25:.*]] = arith.andi %[[VAL_23]], %[[VAL_24]] : i1
+! CHECK:                 %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (i1) -> !fir.logical<4>
+! CHECK:                 hlfir.assign %[[VAL_26]] to %[[VAL_17]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
+! CHECK:                 omp.yield
+! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 
@@ -147,42 +151,44 @@ end subroutine
 ! CHECK:             %[[VAL_20:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_21:.*]] = arith.constant 100 : i32
 ! CHECK:             %[[VAL_22:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop byref reduction(@and_reduction %[[VAL_7]]#0 -> %[[VAL_23:.*]] : !fir.ref<!fir.logical<4>>, @and_reduction %[[VAL_9]]#0 -> %[[VAL_24:.*]] : !fir.ref<!fir.logical<4>>, @and_reduction %[[VAL_11]]#0 -> %[[VAL_25:.*]] : !fir.ref<!fir.logical<4>>)  for  (%[[VAL_26:.*]]) : i32 = (%[[VAL_20]]) to (%[[VAL_21]]) inclusive step (%[[VAL_22]]) {
-! CHECK:               fir.store %[[VAL_26]] to %[[VAL_19]]#1 : !fir.ref<i32>
-! CHECK:               %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_23]] {uniq_name = "_QFmultiple_reductionsEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-! CHECK:               %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_24]] {uniq_name = "_QFmultiple_reductionsEy"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-! CHECK:               %[[VAL_29:.*]]:2 = hlfir.declare %[[VAL_25]] {uniq_name = "_QFmultiple_reductionsEz"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
-! CHECK:               %[[VAL_30:.*]] = fir.load %[[VAL_27]]#0 : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_31:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<i32>
-! CHECK:               %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (i32) -> i64
-! CHECK:               %[[VAL_33:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_32]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_34:.*]] = fir.load %[[VAL_33]] : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_35:.*]] = fir.convert %[[VAL_30]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_36:.*]] = fir.convert %[[VAL_34]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_37:.*]] = arith.andi %[[VAL_35]], %[[VAL_36]] : i1
-! CHECK:               %[[VAL_38:.*]] = fir.convert %[[VAL_37]] : (i1) -> !fir.logical<4>
-! CHECK:               hlfir.assign %[[VAL_38]] to %[[VAL_27]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_39:.*]] = fir.load %[[VAL_28]]#0 : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_40:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<i32>
-! CHECK:               %[[VAL_41:.*]] = fir.convert %[[VAL_40]] : (i32) -> i64
-! CHECK:               %[[VAL_42:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_41]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_43:.*]] = fir.load %[[VAL_42]] : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_44:.*]] = fir.convert %[[VAL_39]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_45:.*]] = fir.convert %[[VAL_43]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_46:.*]] = arith.andi %[[VAL_44]], %[[VAL_45]] : i1
-! CHECK:               %[[VAL_47:.*]] = fir.convert %[[VAL_46]] : (i1) -> !fir.logical<4>
-! CHECK:               hlfir.assign %[[VAL_47]] to %[[VAL_28]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_48:.*]] = fir.load %[[VAL_29]]#0 : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_49:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<i32>
-! CHECK:               %[[VAL_50:.*]] = fir.convert %[[VAL_49]] : (i32) -> i64
-! CHECK:               %[[VAL_51:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_50]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_52:.*]] = fir.load %[[VAL_51]] : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_53:.*]] = fir.convert %[[VAL_48]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_54:.*]] = fir.convert %[[VAL_52]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_55:.*]] = arith.andi %[[VAL_53]], %[[VAL_54]] : i1
-! CHECK:               %[[VAL_56:.*]] = fir.convert %[[VAL_55]] : (i1) -> !fir.logical<4>
-! CHECK:               hlfir.assign %[[VAL_56]] to %[[VAL_29]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
-! CHECK:               omp.yield
+! CHECK:             omp.wsloop byref reduction(@and_reduction %[[VAL_7]]#0 -> %[[VAL_23:.*]] : !fir.ref<!fir.logical<4>>, @and_reduction %[[VAL_9]]#0 -> %[[VAL_24:.*]] : !fir.ref<!fir.logical<4>>, @and_reduction %[[VAL_11]]#0 -> %[[VAL_25:.*]] : !fir.ref<!fir.logical<4>>) {
+! CHECK-NEXT:          omp.loop_nest (%[[VAL_26:.*]]) : i32 = (%[[VAL_20]]) to (%[[VAL_21]]) inclusive step (%[[VAL_22]]) {
+! CHECK:                 %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_23]] {uniq_name = "_QFmultiple_reductionsEx"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:                 %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_24]] {uniq_name = "_QFmultiple_reductionsEy"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:                 %[[VAL_29:.*]]:2 = hlfir.declare %[[VAL_25]] {uniq_name = "_QFmultiple_reductionsEz"} : (!fir.ref<!fir.logical<4>>) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+! CHECK:                 fir.store %[[VAL_26]] to %[[VAL_19]]#1 : !fir.ref<i32>
+! CHECK:                 %[[VAL_30:.*]] = fir.load %[[VAL_27]]#0 : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_31:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<i32>
+! CHECK:                 %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (i32) -> i64
+! CHECK:                 %[[VAL_33:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_32]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_34:.*]] = fir.load %[[VAL_33]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_35:.*]] = fir.convert %[[VAL_30]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_36:.*]] = fir.convert %[[VAL_34]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_37:.*]] = arith.andi %[[VAL_35]], %[[VAL_36]] : i1
+! CHECK:                 %[[VAL_38:.*]] = fir.convert %[[VAL_37]] : (i1) -> !fir.logical<4>
+! CHECK:                 hlfir.assign %[[VAL_38]] to %[[VAL_27]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_39:.*]] = fir.load %[[VAL_28]]#0 : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_40:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<i32>
+! CHECK:                 %[[VAL_41:.*]] = fir.convert %[[VAL_40]] : (i32) -> i64
+! CHECK:                 %[[VAL_42:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_41]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_43:.*]] = fir.load %[[VAL_42]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_44:.*]] = fir.convert %[[VAL_39]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_45:.*]] = fir.convert %[[VAL_43]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_46:.*]] = arith.andi %[[VAL_44]], %[[VAL_45]] : i1
+! CHECK:                 %[[VAL_47:.*]] = fir.convert %[[VAL_46]] : (i1) -> !fir.logical<4>
+! CHECK:                 hlfir.assign %[[VAL_47]] to %[[VAL_28]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_48:.*]] = fir.load %[[VAL_29]]#0 : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_49:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<i32>
+! CHECK:                 %[[VAL_50:.*]] = fir.convert %[[VAL_49]] : (i32) -> i64
+! CHECK:                 %[[VAL_51:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_50]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_52:.*]] = fir.load %[[VAL_51]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_53:.*]] = fir.convert %[[VAL_48]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_54:.*]] = fir.convert %[[VAL_52]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_55:.*]] = arith.andi %[[VAL_53]], %[[VAL_54]] : i1
+! CHECK:                 %[[VAL_56:.*]] = fir.convert %[[VAL_55]] : (i1) -> !fir.logical<4>
+! CHECK:                 hlfir.assign %[[VAL_56]] to %[[VAL_29]]#0 : !fir.logical<4>, !fir.ref<!fir.logical<4>>
+! CHECK:                 omp.yield
+! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 

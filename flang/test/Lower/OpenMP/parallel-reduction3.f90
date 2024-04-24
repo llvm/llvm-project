@@ -74,30 +74,33 @@
 ! CHECK:             %[[VAL_18:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_19:.*]] = fir.alloca !fir.box<!fir.array<?xi32>>
 ! CHECK:             fir.store %[[VAL_12]]#0 to %[[VAL_19]] : !fir.ref<!fir.box<!fir.array<?xi32>>>
-! CHECK:             omp.wsloop byref reduction(@add_reduction_byref_box_Uxi32 %[[VAL_19]] -> %[[VAL_20:.*]] : !fir.ref<!fir.box<!fir.array<?xi32>>>)  for  (%[[VAL_21:.*]]) : i32 = (%[[VAL_16]]) to (%[[VAL_17]]) inclusive step (%[[VAL_18]]) {
-! CHECK:               fir.store %[[VAL_21]] to %[[VAL_15]]#1 : !fir.ref<i32>
-! CHECK:               %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_20]] {uniq_name = "_QFsEc"} : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> (!fir.ref<!fir.box<!fir.array<?xi32>>>, !fir.ref<!fir.box<!fir.array<?xi32>>>)
-! CHECK:               %[[VAL_23:.*]] = fir.load %[[VAL_22]]#0 : !fir.ref<!fir.box<!fir.array<?xi32>>>
-! CHECK:               %[[VAL_24:.*]] = fir.load %[[VAL_15]]#0 : !fir.ref<i32>
-! CHECK:               %[[VAL_25:.*]] = arith.constant 0 : index
-! CHECK:               %[[VAL_26:.*]]:3 = fir.box_dims %[[VAL_23]], %[[VAL_25]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-! CHECK:               %[[VAL_27:.*]] = fir.shape %[[VAL_26]]#1 : (index) -> !fir.shape<1>
-! CHECK:               %[[VAL_28:.*]] = hlfir.elemental %[[VAL_27]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
-! CHECK:               ^bb0(%[[VAL_29:.*]]: index):
-! CHECK:                 %[[VAL_30:.*]] = arith.constant 0 : index
-! CHECK:                 %[[VAL_31:.*]]:3 = fir.box_dims %[[VAL_23]], %[[VAL_30]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
-! CHECK:                 %[[VAL_32:.*]] = arith.constant 1 : index
-! CHECK:                 %[[VAL_33:.*]] = arith.subi %[[VAL_31]]#0, %[[VAL_32]] : index
-! CHECK:                 %[[VAL_34:.*]] = arith.addi %[[VAL_29]], %[[VAL_33]] : index
-! CHECK:                 %[[VAL_35:.*]] = hlfir.designate %[[VAL_23]] (%[[VAL_34]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-! CHECK:                 %[[VAL_36:.*]] = fir.load %[[VAL_35]] : !fir.ref<i32>
-! CHECK:                 %[[VAL_37:.*]] = arith.addi %[[VAL_36]], %[[VAL_24]] : i32
-! CHECK:                 hlfir.yield_element %[[VAL_37]] : i32
+! CHECK:             omp.wsloop byref reduction(@add_reduction_byref_box_Uxi32 %[[VAL_19]] -> %[[VAL_20:.*]] : !fir.ref<!fir.box<!fir.array<?xi32>>>) {
+! CHECK-NEXT:          omp.loop_nest (%[[VAL_21:.*]]) : i32 = (%[[VAL_16]]) to (%[[VAL_17]]) inclusive step (%[[VAL_18]]) {
+! CHECK:                 %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_20]] {uniq_name = "_QFsEc"} : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> (!fir.ref<!fir.box<!fir.array<?xi32>>>, !fir.ref<!fir.box<!fir.array<?xi32>>>)
+! CHECK:                 fir.store %[[VAL_21]] to %[[VAL_15]]#1 : !fir.ref<i32>
+! CHECK:                 %[[VAL_23:.*]] = fir.load %[[VAL_22]]#0 : !fir.ref<!fir.box<!fir.array<?xi32>>>
+! CHECK:                 %[[VAL_24:.*]] = fir.load %[[VAL_15]]#0 : !fir.ref<i32>
+! CHECK:                 %[[VAL_25:.*]] = arith.constant 0 : index
+! CHECK:                 %[[VAL_26:.*]]:3 = fir.box_dims %[[VAL_23]], %[[VAL_25]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+! CHECK:                 %[[VAL_27:.*]] = fir.shape %[[VAL_26]]#1 : (index) -> !fir.shape<1>
+! CHECK:                 %[[VAL_28:.*]] = hlfir.elemental %[[VAL_27]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
+! CHECK:                 ^bb0(%[[VAL_29:.*]]: index):
+! CHECK:                   %[[VAL_30:.*]] = arith.constant 0 : index
+! CHECK:                   %[[VAL_31:.*]]:3 = fir.box_dims %[[VAL_23]], %[[VAL_30]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+! CHECK:                   %[[VAL_32:.*]] = arith.constant 1 : index
+! CHECK:                   %[[VAL_33:.*]] = arith.subi %[[VAL_31]]#0, %[[VAL_32]] : index
+! CHECK:                   %[[VAL_34:.*]] = arith.addi %[[VAL_29]], %[[VAL_33]] : index
+! CHECK:                   %[[VAL_35:.*]] = hlfir.designate %[[VAL_23]] (%[[VAL_34]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+! CHECK:                   %[[VAL_36:.*]] = fir.load %[[VAL_35]] : !fir.ref<i32>
+! CHECK:                   %[[VAL_37:.*]] = arith.addi %[[VAL_36]], %[[VAL_24]] : i32
+! CHECK:                   hlfir.yield_element %[[VAL_37]] : i32
+! CHECK:                 }
+! CHECK:                 %[[VAL_38:.*]] = fir.load %[[VAL_22]]#0 : !fir.ref<!fir.box<!fir.array<?xi32>>>
+! CHECK:                 hlfir.assign %[[VAL_28]] to %[[VAL_38]] : !hlfir.expr<?xi32>, !fir.box<!fir.array<?xi32>>
+! CHECK:                 hlfir.destroy %[[VAL_28]] : !hlfir.expr<?xi32>
+! CHECK:                 omp.yield
 ! CHECK:               }
-! CHECK:               %[[VAL_38:.*]] = fir.load %[[VAL_22]]#0 : !fir.ref<!fir.box<!fir.array<?xi32>>>
-! CHECK:               hlfir.assign %[[VAL_28]] to %[[VAL_38]] : !hlfir.expr<?xi32>, !fir.box<!fir.array<?xi32>>
-! CHECK:               hlfir.destroy %[[VAL_28]] : !hlfir.expr<?xi32>
-! CHECK:               omp.yield
+! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }

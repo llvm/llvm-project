@@ -13,13 +13,15 @@
 !CHECK-SAME: %[[Y_BOX:.*]]: !fir.box<!fir.array<?xi32>>
 !CHECK: %[[X_REF:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFreduction_ieorEx"}
 !CHECK: omp.parallel
-!CHECK: omp.wsloop reduction(@[[IEOR_DECLARE_I]] %[[X_REF]] -> %[[PRV:.+]] : !fir.ref<i32>) for
+!CHECK: omp.wsloop reduction(@[[IEOR_DECLARE_I]] %[[X_REF]] -> %[[PRV:.+]] : !fir.ref<i32>)
+!CHECK-NEXT: omp.loop_nest
 !CHECK: %[[LPRV:.+]] = fir.load %[[PRV]] : !fir.ref<i32>
 !CHECK: %[[Y_I_REF:.*]] = fir.coordinate_of %[[Y_BOX]]
 !CHECK: %[[Y_I:.*]] = fir.load %[[Y_I_REF]] : !fir.ref<i32>
 !CHECK: %[[RES:.+]] = arith.xori %[[LPRV]], %[[Y_I]] : i32
 !CHECK: fir.store %[[RES]] to %[[PRV]] : !fir.ref<i32>
 !CHECK: omp.yield
+!CHECK: omp.terminator
 !CHECK: omp.terminator
 
 subroutine reduction_ieor(y)

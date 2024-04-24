@@ -17,7 +17,8 @@
 !CHECK: %[[val_c1_i32:.*]] = arith.constant 1 : i32
 !CHECK: %[[val_c100_i32:.*]] = arith.constant 100 : i32
 !CHECK: %[[val_c1_i32_0:.*]] = arith.constant 1 : i32
-!CHECK: omp.wsloop   for (%[[arg:.*]]) : i32 = (%[[val_c1_i32]]) to (%[[val_c100_i32]]) inclusive step (%[[val_c1_i32_0]]) {
+!CHECK: omp.wsloop {
+!CHECK-NEXT: omp.loop_nest (%[[arg:.*]]) : i32 = (%[[val_c1_i32]]) to (%[[val_c100_i32]]) inclusive step (%[[val_c1_i32_0]]) {
 !CHECK: fir.store %[[arg]] to %[[val_0]] : !fir.ref<i32>
 !CHECK: %[[val_11:.*]] = arith.addi %[[arg]], %[[val_c1_i32_0]] : i32
 !CHECK: %[[val_c0_i32:.*]] = arith.constant 0 : i32
@@ -33,6 +34,8 @@
 !CHECK: fir.store %[[val_17]] to %[[val_8]] : !fir.ref<f32>
 !CHECK: }
 !CHECK: omp.yield
+!CHECK: }
+!CHECK: omp.terminator
 !CHECK: }
 !CHECK: return
 !CHECK: }
