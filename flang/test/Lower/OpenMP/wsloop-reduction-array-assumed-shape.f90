@@ -33,10 +33,13 @@ end program
 ! CHECK:           %[[VAL_6:.*]] = fir.allocmem !fir.array<?xf64>, %[[VAL_4]]#1 {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK:           %[[TRUE:.*]]  = arith.constant true
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_5]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xf64>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xf64>>, !fir.heap<!fir.array<?xf64>>)
-! CHECK:           hlfir.assign %[[VAL_1]] to %[[VAL_7]]#0 : f64, !fir.box<!fir.array<?xf64>>
-! CHECK:           fir.store %[[VAL_7]]#0 to %[[VAL_8]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
+! CHECK:           %[[C0:.*]] = arith.constant 0 : index
+! CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[VAL_2]], %[[C0]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
+! CHECK:           %[[SHIFT:.*]] = fir.shape_shift %[[DIMS]]#0, %[[DIMS]]#1 : (index, index) -> !fir.shapeshift<1>
+! CHECK:           %[[REBOX:.*]] = fir.rebox %[[VAL_7]]#0(%[[SHIFT]]) : (!fir.box<!fir.array<?xf64>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<?xf64>
+! CHECK:           hlfir.assign %[[VAL_1]] to %[[REBOX]] : f64, !fir.box<!fir.array<?xf64>>
+! CHECK:           fir.store %[[REBOX]] to %[[VAL_8]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
 ! CHECK:           omp.yield(%[[VAL_8]] : !fir.ref<!fir.box<!fir.array<?xf64>>>)
-
 ! CHECK-LABEL:   } combiner {
 ! CHECK:         ^bb0(%[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.array<?xf64>>>, %[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.array<?xf64>>>):
 ! CHECK:           %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
