@@ -934,7 +934,7 @@ void LinkerDriver::createImportLibrary(bool asLib) {
     e2.SymbolName = std::string(e1.symbolName);
     e2.ExtName = std::string(e1.extName);
     e2.ExportAs = std::string(e1.exportAs);
-    e2.AliasTarget = std::string(e1.aliasTarget);
+    e2.ImportName = std::string(e1.importName);
     e2.Ordinal = e1.ordinal;
     e2.Noname = e1.noname;
     e2.Data = e1.data;
@@ -1034,7 +1034,7 @@ void LinkerDriver::parseModuleDefs(StringRef path) {
       e2.extName = saver().save(e1.ExtName);
     }
     e2.exportAs = saver().save(e1.ExportAs);
-    e2.aliasTarget = saver().save(e1.AliasTarget);
+    e2.importName = saver().save(e1.ImportName);
     e2.ordinal = e1.Ordinal;
     e2.noname = e1.Noname;
     e2.data = e1.Data;
