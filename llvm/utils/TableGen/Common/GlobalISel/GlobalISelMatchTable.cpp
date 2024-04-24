@@ -723,6 +723,29 @@ void RuleMatcher::optimize() {
     return std::tuple(L->getKind(), L->getInsnVarID(), L->getOpIdx()) <
            std::tuple(R->getKind(), R->getInsnVarID(), R->getOpIdx());
   });
+
+  // Deduplicate EraseInst actions, and if an EraseInst erases the root, place
+  // it at the end to favor generation of GIR_EraseRootFromParent_Done
+  DenseSet<unsigned> AlreadySeenEraseInsts;
+  auto EraseRootIt = Actions.end();
+  auto It = Actions.begin();
+  while (It != Actions.end()) {
+    if (const auto *EI = dyn_cast<EraseInstAction>(It->get())) {
+      unsigned InstID = EI->getInsnID();
+      if (!AlreadySeenEraseInsts.insert(InstID).second) {
+        It = Actions.erase(It);
+        continue;
+      }
+
+      if (InstID == 0)
+        EraseRootIt = It;
+    }
+
+    ++It;
+  }
+
+  if (EraseRootIt != Actions.end())
+    Actions.splice(Actions.end(), Actions, EraseRootIt);
 }
 
 bool RuleMatcher::hasFirstCondition() const {
@@ -966,66 +989,60 @@ void RuleMatcher::emit(MatchTable &Table) {
 
   // We must also check if it's safe to fold the matched instructions.
   if (InsnVariableIDs.size() >= 2) {
-    // Invert the map to create stable ordering (by var names)
-    SmallVector<unsigned, 2> InsnIDs;
-    for (const auto &Pair : InsnVariableIDs) {
-      // Skip the root node since it isn't moving anywhere. Everything else is
-      // sinking to meet it.
-      if (Pair.first == Matchers.front().get())
-        continue;
 
-      InsnIDs.push_back(Pair.second);
-    }
-    llvm::sort(InsnIDs);
+    // FIXME: Emit checks to determine it's _actually_ safe to fold and/or
+    //        account for unsafe cases.
+    //
+    //        Example:
+    //          MI1--> %0 = ...
+    //                 %1 = ... %0
+    //          MI0--> %2 = ... %0
+    //          It's not safe to erase MI1. We currently handle this by not
+    //          erasing %0 (even when it's dead).
+    //
+    //        Example:
+    //          MI1--> %0 = load volatile @a
+    //                 %1 = load volatile @a
+    //          MI0--> %2 = ... %0
+    //          It's not safe to sink %0's def past %1. We currently handle
+    //          this by rejecting all loads.
+    //
+    //        Example:
+    //          MI1--> %0 = load @a
+    //                 %1 = store @a
+    //          MI0--> %2 = ... %0
+    //          It's not safe to sink %0's def past %1. We currently handle
+    //          this by rejecting all loads.
+    //
+    //        Example:
+    //                   G_CONDBR %cond, @BB1
+    //                 BB0:
+    //          MI1-->   %0 = load @a
+    //                   G_BR @BB1
+    //                 BB1:
+    //          MI0-->   %2 = ... %0
+    //          It's not always safe to sink %0 across control flow. In this
+    //          case it may introduce a memory fault. We currentl handle
+    //          this by rejecting all loads.
 
-    for (const auto &InsnID : InsnIDs) {
-      // Reject the difficult cases until we have a more accurate check.
-      Table << MatchTable::Opcode("GIM_CheckIsSafeToFold")
-            << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
-            << MatchTable::LineBreak;
-
-      // FIXME: Emit checks to determine it's _actually_ safe to fold and/or
-      //        account for unsafe cases.
-      //
-      //        Example:
-      //          MI1--> %0 = ...
-      //                 %1 = ... %0
-      //          MI0--> %2 = ... %0
-      //          It's not safe to erase MI1. We currently handle this by not
-      //          erasing %0 (even when it's dead).
-      //
-      //        Example:
-      //          MI1--> %0 = load volatile @a
-      //                 %1 = load volatile @a
-      //          MI0--> %2 = ... %0
-      //          It's not safe to sink %0's def past %1. We currently handle
-      //          this by rejecting all loads.
-      //
-      //        Example:
-      //          MI1--> %0 = load @a
-      //                 %1 = store @a
-      //          MI0--> %2 = ... %0
-      //          It's not safe to sink %0's def past %1. We currently handle
-      //          this by rejecting all loads.
-      //
-      //        Example:
-      //                   G_CONDBR %cond, @BB1
-      //                 BB0:
-      //          MI1-->   %0 = load @a
-      //                   G_BR @BB1
-      //                 BB1:
-      //          MI0-->   %2 = ... %0
-      //          It's not always safe to sink %0 across control flow. In this
-      //          case it may introduce a memory fault. We currentl handle
-      //          this by rejecting all loads.
-    }
+    Table << MatchTable::Opcode("GIM_CheckIsSafeToFold")
+          << MatchTable::Comment("NumInsns")
+          << MatchTable::IntValue(1, InsnVariableIDs.size() - 1)
+          << MatchTable::LineBreak;
   }
 
   for (const auto &PM : EpilogueMatchers)
     PM->emitPredicateOpcodes(Table, *this);
 
-  for (const auto &MA : Actions)
-    MA->emitActionOpcodes(Table, *this);
+  // Emit all actions except the last one, then emit coverage and emit the
+  // final action.
+  //
+  // This is because some actions, such as GIR_EraseRootFromParent_Done, also
+  // double as a GIR_Done and terminate execution of the rule.
+  if (!Actions.empty()) {
+    for (const auto &MA : drop_end(Actions))
+      MA->emitActionOpcodes(Table, *this);
+  }
 
   assert((Table.isWithCoverage() ? !Table.isCombiner() : true) &&
          "Combiner tables don't support coverage!");
@@ -1036,8 +1053,13 @@ void RuleMatcher::emit(MatchTable &Table) {
     Table << MatchTable::Comment(("GIR_Coverage, " + Twine(RuleID) + ",").str())
           << MatchTable::LineBreak;
 
-  Table << MatchTable::Opcode("GIR_Done", -1) << MatchTable::LineBreak
-        << MatchTable::Label(LabelID);
+  if (Actions.empty() ||
+      !Actions.back()->emitActionOpcodesAndDone(Table, *this)) {
+    Table << MatchTable::Opcode("GIR_Done", -1) << MatchTable::LineBreak;
+  }
+
+  Table << MatchTable::Label(LabelID);
+
   ++NumPatternEmitted;
 }
 
@@ -1140,10 +1162,14 @@ bool LLTOperandMatcher::hasValue() const {
 
 void LLTOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
                                              RuleMatcher &Rule) const {
-  Table << MatchTable::Opcode("GIM_CheckType") << MatchTable::Comment("MI")
-        << MatchTable::ULEB128Value(InsnVarID) << MatchTable::Comment("Op")
-        << MatchTable::ULEB128Value(OpIdx) << MatchTable::Comment("Type")
-        << getValue() << MatchTable::LineBreak;
+  if (InsnVarID == 0) {
+    Table << MatchTable::Opcode("GIM_RootCheckType");
+  } else {
+    Table << MatchTable::Opcode("GIM_CheckType") << MatchTable::Comment("MI")
+          << MatchTable::ULEB128Value(InsnVarID);
+  }
+  Table << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx)
+        << MatchTable::Comment("Type") << getValue() << MatchTable::LineBreak;
 }
 
 //===- PointerToAnyOperandMatcher -----------------------------------------===//
@@ -1205,9 +1231,14 @@ bool RegisterBankOperandMatcher::isIdentical(const PredicateMatcher &B) const {
 
 void RegisterBankOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
                                                       RuleMatcher &Rule) const {
-  Table << MatchTable::Opcode("GIM_CheckRegBankForClass")
-        << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
-        << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx)
+  if (InsnVarID == 0) {
+    Table << MatchTable::Opcode("GIM_RootCheckRegBankForClass");
+  } else {
+    Table << MatchTable::Opcode("GIM_CheckRegBankForClass")
+          << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID);
+  }
+
+  Table << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx)
         << MatchTable::Comment("RC")
         << MatchTable::NamedValue(2, RC.getQualifiedIdName())
         << MatchTable::LineBreak;
@@ -1810,17 +1841,28 @@ OperandRenderer::~OperandRenderer() {}
 
 //===- CopyRenderer -------------------------------------------------------===//
 
+void CopyRenderer::emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule,
+                                     unsigned NewInsnID, unsigned OldInsnID,
+                                     unsigned OpIdx, StringRef Name) {
+  if (NewInsnID == 0 && OldInsnID == 0) {
+    Table << MatchTable::Opcode("GIR_RootToRootCopy");
+  } else {
+    Table << MatchTable::Opcode("GIR_Copy") << MatchTable::Comment("NewInsnID")
+          << MatchTable::ULEB128Value(NewInsnID)
+          << MatchTable::Comment("OldInsnID")
+          << MatchTable::ULEB128Value(OldInsnID);
+  }
+
+  Table << MatchTable::Comment("OpIdx") << MatchTable::ULEB128Value(OpIdx)
+        << MatchTable::Comment(Name) << MatchTable::LineBreak;
+}
+
 void CopyRenderer::emitRenderOpcodes(MatchTable &Table,
                                      RuleMatcher &Rule) const {
   const OperandMatcher &Operand = Rule.getOperandMatcher(SymbolicName);
   unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
-  Table << MatchTable::Opcode("GIR_Copy") << MatchTable::Comment("NewInsnID")
-        << MatchTable::ULEB128Value(NewInsnID)
-        << MatchTable::Comment("OldInsnID")
-        << MatchTable::ULEB128Value(OldInsnVarID)
-        << MatchTable::Comment("OpIdx")
-        << MatchTable::ULEB128Value(Operand.getOpIdx())
-        << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
+  emitRenderOpcodes(Table, Rule, NewInsnID, OldInsnVarID, Operand.getOpIdx(),
+                    SymbolicName);
 }
 
 //===- CopyPhysRegRenderer ------------------------------------------------===//
@@ -1829,13 +1871,8 @@ void CopyPhysRegRenderer::emitRenderOpcodes(MatchTable &Table,
                                             RuleMatcher &Rule) const {
   const OperandMatcher &Operand = Rule.getPhysRegOperandMatcher(PhysReg);
   unsigned OldInsnVarID = Rule.getInsnVarID(Operand.getInstructionMatcher());
-  Table << MatchTable::Opcode("GIR_Copy") << MatchTable::Comment("NewInsnID")
-        << MatchTable::ULEB128Value(NewInsnID)
-        << MatchTable::Comment("OldInsnID")
-        << MatchTable::ULEB128Value(OldInsnVarID)
-        << MatchTable::Comment("OpIdx")
-        << MatchTable::ULEB128Value(Operand.getOpIdx())
-        << MatchTable::Comment(PhysReg->getName()) << MatchTable::LineBreak;
+  CopyRenderer::emitRenderOpcodes(Table, Rule, NewInsnID, OldInsnVarID,
+                                  Operand.getOpIdx(), PhysReg->getName());
 }
 
 //===- CopyOrAddZeroRegRenderer -------------------------------------------===//
@@ -2185,10 +2222,17 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
   // TODO: Simple permutation looks like it could be almost as common as
   //       mutation due to commutative operations.
 
-  Table << MatchTable::Opcode("GIR_BuildMI") << MatchTable::Comment("InsnID")
-        << MatchTable::ULEB128Value(InsnID) << MatchTable::Comment("Opcode")
+  if (InsnID == 0) {
+    Table << MatchTable::Opcode("GIR_BuildRootMI");
+  } else {
+    Table << MatchTable::Opcode("GIR_BuildMI") << MatchTable::Comment("InsnID")
+          << MatchTable::ULEB128Value(InsnID);
+  }
+
+  Table << MatchTable::Comment("Opcode")
         << MatchTable::NamedValue(2, I->Namespace, I->TheDef->getName())
         << MatchTable::LineBreak;
+
   for (const auto &Renderer : OperandRenderers)
     Renderer->emitRenderOpcodes(Table, Rule);
 
@@ -2244,8 +2288,8 @@ void BuildConstantAction::emitActionOpcodes(MatchTable &Table,
 
 //===- EraseInstAction ----------------------------------------------------===//
 
-void EraseInstAction::emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule,
-                                        unsigned InsnID) {
+void EraseInstAction::emitActionOpcodes(MatchTable &Table,
+                                        RuleMatcher &Rule) const {
   // Avoid erasing the same inst twice.
   if (!Rule.tryEraseInsnID(InsnID))
     return;
@@ -2255,9 +2299,19 @@ void EraseInstAction::emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule,
         << MatchTable::LineBreak;
 }
 
-void EraseInstAction::emitActionOpcodes(MatchTable &Table,
-                                        RuleMatcher &Rule) const {
-  emitActionOpcodes(Table, Rule, InsnID);
+bool EraseInstAction::emitActionOpcodesAndDone(MatchTable &Table,
+                                               RuleMatcher &Rule) const {
+  if (InsnID != 0) {
+    emitActionOpcodes(Table, Rule);
+    return false;
+  }
+
+  if (!Rule.tryEraseInsnID(0))
+    return false;
+
+  Table << MatchTable::Opcode("GIR_EraseRootFromParent_Done", -1)
+        << MatchTable::LineBreak;
+  return true;
 }
 
 //===- ReplaceRegAction ---------------------------------------------------===//
