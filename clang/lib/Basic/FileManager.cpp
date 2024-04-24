@@ -651,6 +651,7 @@ StringRef FileManager::getCanonicalName(const void *Entry, StringRef Name) {
 }
 
 void FileManager::AddStats(const FileManager &Other) {
+  assert(&Other != this && "Collecting stats into the same FileManager");
   NumDirLookups += Other.NumDirLookups;
   NumFileLookups += Other.NumFileLookups;
   NumDirCacheMisses += Other.NumDirCacheMisses;

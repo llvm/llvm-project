@@ -1294,7 +1294,7 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
     << ModuleName;
 
   // Propagate the statistics to the parent FileManager.
-  if (FrontendOpts.ModulesShareFileManager)
+  if (!FrontendOpts.ModulesShareFileManager)
     ImportingInstance.getFileManager().AddStats(Instance.getFileManager());
 
   if (Crashed) {
