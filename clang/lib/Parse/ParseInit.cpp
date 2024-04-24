@@ -429,23 +429,30 @@ ExprResult Parser::createEmbedExpr() {
   assert(Tok.getKind() == tok::annot_embed);
   EmbedAnnotationData *Data =
       reinterpret_cast<EmbedAnnotationData *>(Tok.getAnnotationValue());
-  SourceLocation StartLoc = ConsumeAnnotationToken();
+  ExprResult Res;
   ASTContext &Context = Actions.getASTContext();
-  auto CreateStringLiteralFromStringRef = [&](StringRef Str, QualType Ty) {
-    llvm::APSInt ArraySize =
-        Context.MakeIntValue(Str.size(), Context.getSizeType());
-    QualType ArrayTy = Context.getConstantArrayType(
-        Ty, ArraySize, nullptr, ArraySizeModifier::Normal, 0);
-    return StringLiteral::Create(Context, Str, StringLiteralKind::Ordinary,
-                                 false, ArrayTy, StartLoc);
-  };
+  SourceLocation StartLoc = ConsumeAnnotationToken();
+  if (Data->BinaryData.size() == 1) {
+    Res = IntegerLiteral::Create(Context,
+                                 llvm::APInt(CHAR_BIT, Data->BinaryData.back()),
+                                 Context.UnsignedCharTy, StartLoc);
+  } else {
+    auto CreateStringLiteralFromStringRef = [&](StringRef Str, QualType Ty) {
+      llvm::APSInt ArraySize =
+          Context.MakeIntValue(Str.size(), Context.getSizeType());
+      QualType ArrayTy = Context.getConstantArrayType(
+          Ty, ArraySize, nullptr, ArraySizeModifier::Normal, 0);
+      return StringLiteral::Create(Context, Str, StringLiteralKind::Ordinary,
+                                   false, ArrayTy, StartLoc);
+    };
 
-  StringLiteral *FileNameArg =
-      CreateStringLiteralFromStringRef(Data->FileName, Context.CharTy);
-  StringLiteral *BinaryDataArg = CreateStringLiteralFromStringRef(
-      Data->BinaryData, Context.UnsignedCharTy);
-  ExprResult Res = Actions.ActOnEmbedExpr(StartLoc, StartLoc, StartLoc,
-                                          FileNameArg, BinaryDataArg);
+    StringLiteral *FileNameArg =
+        CreateStringLiteralFromStringRef(Data->FileName, Context.CharTy);
+    StringLiteral *BinaryDataArg = CreateStringLiteralFromStringRef(
+        Data->BinaryData, Context.UnsignedCharTy);
+    Res = Actions.ActOnEmbedExpr(StartLoc, StartLoc, StartLoc, FileNameArg,
+                                 BinaryDataArg);
+  }
   return Res;
 }
 

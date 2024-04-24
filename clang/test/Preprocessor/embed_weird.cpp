@@ -83,7 +83,6 @@ const unsigned char *null_ptr_2 =
 #embed <null_byte.bin>
 ;
 
-// FIXME: errors out.
-// const unsigned char *null_ptr_3 = {
-// #embed <null_byte.bin>
-// };
+const unsigned char *null_ptr_3 = {
+#embed <null_byte.bin>
+};
