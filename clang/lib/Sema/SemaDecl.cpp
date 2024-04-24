@@ -11174,7 +11174,12 @@ void Sema::maybeAddDeclWithEffects(const Decl *D,
     return;
   }
 
-  addDeclWithEffects(D, FX);
+  if (std::any_of(FX.begin(), FX.end(),
+                  [](const FunctionEffectWithCondition &EC) {
+                    return (EC.Effect.flags() &
+                            FunctionEffect::FE_InferrableOnCallees) != 0;
+                  }))
+    addDeclWithEffects(D, FX);
 }
 
 void Sema::addDeclWithEffects(const Decl *D, const FunctionEffectsRef &FX) {

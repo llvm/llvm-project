@@ -8105,6 +8105,8 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
     TPState.setParsedNonAllocating(NewState);
   }
 
+#if 0
+  // Old type-sugar implementation of denied effects
   if (NewState == FunctionEffectMode::False) {
     // blocking and allocating are represented as AttributedType sugar,
     // using those attributes.
@@ -8117,13 +8119,16 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
     QT = TPState.getAttributedType(A, QT, QT);
     return true;
   }
+#endif
 
   // nonblocking/nonallocating(true/expr) are represented in a
   // FunctionEffectsRef attached to a FunctionProtoType.
-  const FunctionEffect NewEffect(isNonBlocking
-                                     ? FunctionEffect::Kind::NonBlocking
-                                     : FunctionEffect::Kind::NonAllocating,
-                                 /*IsDenied=*/false);
+  const bool Denied = NewState == FunctionEffectMode::False;
+  const FunctionEffect NewEffect(
+      isNonBlocking ? (Denied ? FunctionEffect::Kind::Blocking
+                              : FunctionEffect::Kind::NonBlocking)
+                    : (Denied ? FunctionEffect::Kind::Allocating
+                              : FunctionEffect::Kind::NonAllocating));
 
   FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
   FunctionEffectSet FX(EPI.FunctionEffects);

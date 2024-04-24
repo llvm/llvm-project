@@ -3855,7 +3855,8 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
 
     case DECLS_WITH_EFFECTS_TO_VERIFY:
       for (unsigned I = 0, N = Record.size(); I != N; ++I)
-        DeclsWithEffectsToVerify.push_back(getGlobalDeclID(F, Record[I]));
+        DeclsWithEffectsToVerify.push_back(
+            getGlobalDeclID(F, LocalDeclID(Record[I])));
       break;
 
     case OPENCL_EXTENSIONS:
@@ -8238,19 +8239,15 @@ void ASTReader::InitializeSema(Sema &S) {
   }
 
   if (!DeclsWithEffectsToVerify.empty()) {
-    for (uint64_t ID : DeclsWithEffectsToVerify) {
+    for (GlobalDeclID ID : DeclsWithEffectsToVerify) {
       Decl *D = GetDecl(ID);
-      SemaObj->DeclsWithEffectsToVerify.push_back(D);
-
       FunctionEffectsRef FX;
-      if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+      if (auto *FD = dyn_cast<FunctionDecl>(D))
         FX = FD->getFunctionEffects();
-      } else if (auto *BD = dyn_cast<BlockDecl>(D)) {
+      else if (auto *BD = dyn_cast<BlockDecl>(D))
         FX = BD->getFunctionEffects();
-      }
-      if (!FX.empty()) {
+      if (!FX.empty())
         SemaObj->addDeclWithEffects(D, FX);
-      }
     }
     DeclsWithEffectsToVerify.clear();
   }

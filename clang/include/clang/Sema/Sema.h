@@ -776,9 +776,7 @@ public:
   /// Warn when implicitly casting 0 to nullptr.
   void diagnoseZeroToNullptrConversion(CastKind Kind, const Expr *E);
 
-  // ----- function effects --- where ?????
-  // Ultimately some more of the effects implementation could/should be moved
-  // out of Type.h, but where to?
+  // ----- function effects ---
 
   /// All functions/lambdas/blocks which have bodies and which have a non-empty
   /// FunctionEffectsRef to be verified.
@@ -802,8 +800,6 @@ public:
   /// then this will fail if the expression is dependent.
   ExprResult ActOnEffectExpression(Expr *CondExpr, FunctionEffectMode &Mode,
                                    bool RequireConstexpr = false);
-
-  // ----- function effects --- where ?????
 
   bool makeUnavailableInSystemHeader(SourceLocation loc,
                                      UnavailableAttr::ImplicitReason reason);

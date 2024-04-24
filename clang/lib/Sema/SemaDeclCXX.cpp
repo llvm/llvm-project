@@ -18392,8 +18392,8 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
         Diag(Old->getLocation(), diag::note_overridden_virtual_function)
             << Old->getReturnTypeSourceRange();
         break;
-      case FunctionEffectDiff::OverrideResult::MergeAdded: {
-        NewFX.insert(Diff.New.Effect, Diff.New.Cond.expr());
+      case FunctionEffectDiff::OverrideResult::Merge: {
+        NewFX.insert(Diff.Old.Effect, Diff.Old.Cond.expr());
         const auto *NewFT = New->getType()->castAs<FunctionProtoType>();
         FunctionProtoType::ExtProtoInfo EPI = NewFT->getExtProtoInfo();
         EPI.FunctionEffects = FunctionEffectsRef(NewFX);

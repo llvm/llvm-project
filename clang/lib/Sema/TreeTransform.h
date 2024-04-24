@@ -6255,15 +6255,10 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
     EPI.ExtParameterInfos = nullptr;
   }
 
-#define XFORM_FALSE_FX_TO_SUGAR 0
-
   // Transform any function effects with unevaluated conditions.
   // Hold this set in a local for the rest of this function, since EPI
   // is going to hold a FunctionEffectsRef pointing into it.
   std::optional<FunctionEffectSet> NewFX;
-#if XFORM_FALSE_FX_TO_SUGAR
-  SmallVector<Attr *> TypeAttrsToAdd;
-#endif
   if (ArrayRef FXConds = EPI.FunctionEffects.conditions(); !FXConds.empty()) {
     NewFX.emplace(EPI.FunctionEffects);
     EnterExpressionEvaluationContext Unevaluated(
@@ -6279,29 +6274,26 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
         if (NewExpr.isInvalid())
           return QualType();
 
-#if XFORM_FALSE_FX_TO_SUGAR
-        if (Mode == FunctionEffectMode::False) {
-          NewFX->erase(Idx);
-          --Count;
-          const FunctionEffect Effect(EPI.FunctionEffects.effects()[Idx]);
-          if (Effect.kind() == FunctionEffect::Kind::NonAllocating) {
-            TypeAttrsToAdd.push_back(AllocatingAttr::Create(SemaRef.Context));
-          } else if (Effect.kind() == FunctionEffect::Kind::NonBlocking) {
-            TypeAttrsToAdd.push_back(BlockingAttr::Create(SemaRef.Context));
-          }
-          continue;
-        }
-        assert(Mode == FunctionEffectMode::True);
-        NewFX->replaceCondition(Idx, NewExpr.get());
-#else
         // The condition expression has been transformed, and re-evaluated.
-        // If it is now a constant of 'true', we can discard it because a null
-        // condition in FunctionEffectSet means true. If the expression is still
-        //  dependent or constant 'false', just propagate it into the new EPI.
-        FunctionEffectCondition Cond(
-            Mode == FunctionEffectMode::True ? nullptr : NewExpr.get());
-        NewFX->replaceCondition(Idx, Cond.expr());
-#endif
+        // It may or may not have become constant.
+        const FunctionEffect Effect(EPI.FunctionEffects.effects()[Idx]);
+        FunctionEffectWithCondition EC;
+        switch (Mode) {
+        case FunctionEffectMode::True:
+          EC.Effect = Effect;
+          break;
+        case FunctionEffectMode::False:
+          EC.Effect = FunctionEffect(Effect.oppositeKind());
+          break;
+        case FunctionEffectMode::Dependent:
+          EC.Effect = Effect;
+          EC.Cond = FunctionEffectCondition(NewExpr.get());
+          break;
+        case FunctionEffectMode::None:
+          llvm_unreachable(
+              "FunctionEffectMode::None shouldn't be possible here");
+        }
+        NewFX->replaceItem(Idx, EC);
       }
       ++Idx;
     }
@@ -6325,21 +6317,6 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
   NewTL.setLocalRangeEnd(TL.getLocalRangeEnd());
   for (unsigned i = 0, e = NewTL.getNumParams(); i != e; ++i)
     NewTL.setParam(i, ParamDecls[i]);
-
-#if XFORM_FALSE_FX_TO_SUGAR
-  // This creates problems because the caller assumes FunctionProtoType will
-  // be transformed to FunctionProtoType.
-  if (!TypeAttrsToAdd.empty()) {
-    for (Attr *A : TypeAttrsToAdd) {
-      QualType QT =
-          SemaRef.Context.getAttributedType(A->getKind(), Result, Result);
-      llvm::outs() << "transformed " << Result << " -> " << QT;
-      Result = QT;
-      AttributedTypeLoc ATL = TLB.push<AttributedTypeLoc>(Result);
-      ATL.setAttr(A);
-    }
-  }
-#endif
 
   return Result;
 }

@@ -978,7 +978,7 @@ private:
       DeclsToCheckForDeferredDiags;
 
   /// The IDs of all decls with function effects to be checked.
-  SmallVector<serialization::DeclID> DeclsWithEffectsToVerify;
+  SmallVector<serialization::GlobalDeclID, 0> DeclsWithEffectsToVerify;
 
 private:
   struct ImportedSubmodule {

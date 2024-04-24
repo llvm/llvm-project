@@ -4443,8 +4443,7 @@ class FunctionEffectsRef;
 class FunctionEffectSet;
 
 /// Represents an abstract function effect, using just an enumeration describing
-/// its kind and a bool "denied", which indicates that the effect is asserted
-/// NOT to apply (preventing inference of the effect).
+/// its kind.
 class FunctionEffect {
 public:
   /// Identifies the particular effect.
@@ -4452,13 +4451,16 @@ public:
     None = 0,
     NonBlocking = 1,
     NonAllocating = 2,
+    Blocking = 3,
+    Allocating = 4
   };
 
   /// Flags describing some behaviors of the effect.
   using Flags = unsigned;
   enum FlagBit : Flags {
     // Can verification inspect callees' implementations? (e.g. nonblocking:
-    // yes, tcb+types: no)
+    // yes, tcb+types: no). This also implies the need for 2nd-pass
+    // verification.
     FE_InferrableOnCallees = 0x1,
 
     // Language constructs which effects can diagnose as disallowed.
@@ -4471,31 +4473,27 @@ public:
 
 private:
   LLVM_PREFERRED_TYPE(Kind)
-  unsigned FKind : 2;
-
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsDenied : 1;
+  unsigned FKind : 3;
 
   // Expansion: for hypothetical TCB+types, there could be one Kind for TCB,
   // then ~16(?) bits "SubKind" to map to a specific named TCB. SubKind would
   // be considered for uniqueness.
 
 public:
-  FunctionEffect() : FKind(unsigned(Kind::None)), IsDenied(false) {}
+  FunctionEffect() : FKind(unsigned(Kind::None)) {}
 
-  FunctionEffect(Kind K, bool IsDenied)
-      : FKind(unsigned(K)), IsDenied(IsDenied) {}
+  FunctionEffect(Kind K) : FKind(unsigned(K)) {}
 
   /// The kind of the effect.
   Kind kind() const { return Kind(FKind); }
 
-  /// Whether the effect is being denied (as opposed to asserted).
-  bool isDenied() const { return IsDenied; }
+  /// Return the opposite kind, for effects which have opposites.
+  Kind oppositeKind() const;
 
   /// For serialization.
-  uint32_t toOpaqueInt32() const { return (FKind << 1) | IsDenied; }
+  uint32_t toOpaqueInt32() const { return FKind; }
   static FunctionEffect fromOpaqueInt32(uint32_t Value) {
-    return FunctionEffect(Kind(Value >> 1), Value & 1);
+    return FunctionEffect(Kind(Value));
   }
 
   /// Flags describing some behaviors of the effect.
@@ -4509,6 +4507,9 @@ public:
       // Same as NonBlocking, except without FE_ExcludeStaticLocalVars
       return FE_InferrableOnCallees | FE_ExcludeThrow | FE_ExcludeCatch |
              FE_ExcludeObjCMessageSend | FE_ExcludeThreadLocalVars;
+    case Kind::Blocking:
+    case Kind::Allocating:
+      return 0;
     case Kind::None:
       break;
     }
@@ -4533,7 +4534,7 @@ public:
                                   ArrayRef<FunctionEffect> CalleeFX) const;
 
   friend bool operator==(const FunctionEffect &LHS, const FunctionEffect &RHS) {
-    return LHS.FKind == RHS.FKind && LHS.IsDenied == RHS.IsDenied;
+    return LHS.FKind == RHS.FKind;
   }
   friend bool operator!=(const FunctionEffect &LHS, const FunctionEffect &RHS) {
     return !(LHS == RHS);
@@ -4568,13 +4569,7 @@ struct FunctionEffectWithCondition {
 };
 
 struct FunctionEffectDiff {
-  enum class Kind {
-    Added,
-    Removed,
-    AssertToDeny,
-    DenyToAssert,
-    ConditionMismatch
-  };
+  enum class Kind { Added, Removed, ConditionMismatch };
 
   FunctionEffect::Kind EffectKind;
   Kind DiffKind;
@@ -4592,7 +4587,7 @@ struct FunctionEffectDiff {
   enum class OverrideResult {
     NoAction,
     Warn,
-    MergeAdded // Merge an added effect
+    Merge // Merge missing effect from base to derived
   };
 
   /// Return true if adding or removing the effect as part of a type conversion
@@ -4697,9 +4692,7 @@ public:
 /// A mutable set of FunctionEffects and possibly conditions attached to them.
 /// Used transitorily within Sema to compare and merge effects on declarations.
 ///
-/// Invariant: there is never more than one instance of any given effect. This
-/// is asserted in insert and getUnion; it is the caller's responsibility to
-/// diagnose this.
+/// Invariant: there is never more than one instance of any given effect.
 class FunctionEffectSet {
   SmallVector<FunctionEffect> Effects;
   // The vector of conditions is either empty or has the same size
@@ -4730,7 +4723,7 @@ public:
   void insert(const FunctionEffectsRef &Set);
   void insertIgnoringConditions(const FunctionEffectsRef &Set);
 
-  void replaceCondition(unsigned Idx, Expr *Cond);
+  void replaceItem(unsigned Idx, const FunctionEffectWithCondition &Item);
   void erase(unsigned Idx);
 
   // Set operations

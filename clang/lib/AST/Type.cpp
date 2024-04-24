@@ -5042,12 +5042,32 @@ void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
           getTypeConstraintConcept(), getTypeConstraintArguments());
 }
 
+FunctionEffect::Kind FunctionEffect::oppositeKind() const {
+  switch (kind()) {
+  case Kind::NonBlocking:
+    return Kind::Blocking;
+  case Kind::Blocking:
+    return Kind::NonBlocking;
+  case Kind::NonAllocating:
+    return Kind::Allocating;
+  case Kind::Allocating:
+    return Kind::NonAllocating;
+  case Kind::None:
+    break;
+  }
+  llvm_unreachable("unknown effect kind");
+}
+
 StringRef FunctionEffect::name() const {
   switch (kind()) {
   case Kind::NonBlocking:
     return "nonblocking";
   case Kind::NonAllocating:
     return "nonallocating";
+  case Kind::Blocking:
+    return "blocking";
+  case Kind::Allocating:
+    return "allocating";
   case Kind::None:
     break;
   }
@@ -5076,15 +5096,12 @@ bool FunctionEffectDiff::shouldDiagnoseConversion(
       return true;
     case Kind::Removed:
       return false;
-    case Kind::AssertToDeny:
-      // effect asserted -> denied: no diagnostic.
-      return false;
-    case Kind::DenyToAssert:
-      // effect denied -> asserted: diagnose.
-      return true;
     case Kind::ConditionMismatch:
       return true; // TODO: ???
     }
+  case FunctionEffect::Kind::Blocking:
+  case FunctionEffect::Kind::Allocating:
+    return false;
   case FunctionEffect::Kind::None:
     break;
   }
@@ -5103,12 +5120,13 @@ bool FunctionEffectDiff::shouldDiagnoseRedeclaration(
       return false; // No diagnostic.
     case Kind::Removed:
       return true; // Issue diagnostic
-    case Kind::DenyToAssert:
-    case Kind::AssertToDeny:
     case Kind::ConditionMismatch:
       // All these forms of mismatches are diagnosed.
       return true;
     }
+  case FunctionEffect::Kind::Blocking:
+  case FunctionEffect::Kind::Allocating:
+    return false;
   case FunctionEffect::Kind::None:
     break;
   }
@@ -5130,15 +5148,17 @@ FunctionEffectDiff::shouldDiagnoseMethodOverride(
 
     // If missing from an override (removed), propagate from base to derived.
     case Kind::Removed:
-      return OverrideResult::MergeAdded;
+      return OverrideResult::Merge;
 
     // If there's a mismatch involving the effect's polarity or condition,
     // issue a warning.
-    case Kind::DenyToAssert:
-    case Kind::AssertToDeny:
     case Kind::ConditionMismatch:
       return OverrideResult::Warn;
     }
+
+  case FunctionEffect::Kind::Blocking:
+  case FunctionEffect::Kind::Allocating:
+    return OverrideResult::NoAction;
 
   case FunctionEffect::Kind::None:
     break;
@@ -5149,7 +5169,28 @@ FunctionEffectDiff::shouldDiagnoseMethodOverride(
 bool FunctionEffect::canInferOnFunction(const Decl &Callee) const {
   switch (kind()) {
   case Kind::NonAllocating:
-  case Kind::NonBlocking:
+  case Kind::NonBlocking: {
+    FunctionEffectsRef CalleeFX;
+    if (auto *FD = Callee.getAsFunction())
+      CalleeFX = FD->getFunctionEffects();
+    else if (auto *BD = dyn_cast<BlockDecl>(&Callee))
+      CalleeFX = BD->getFunctionEffects();
+    else
+      return false;
+    for (const FunctionEffectWithCondition &CalleeEC : CalleeFX) {
+      // nonblocking/nonallocating cannot call allocating
+      if (CalleeEC.Effect.kind() == Kind::Allocating)
+        return false;
+      // nonblocking cannot call blocking
+      if (kind() == Kind::NonBlocking &&
+          CalleeEC.Effect.kind() == Kind::Blocking)
+        return false;
+    }
+  }
+    return true;
+
+#if 0
+    // This is the type-sugar implementation of "denied" effects.
     // Do any of the callee's Decls have type sugar for blocking or allocating?
     for (const Decl *D : Callee.redecls()) {
       QualType QT;
@@ -5174,6 +5215,11 @@ bool FunctionEffect::canInferOnFunction(const Decl &Callee) const {
       }
     }
     return true;
+#endif
+  case Kind::Allocating:
+  case Kind::Blocking:
+    return false;
+
   case Kind::None:
     break;
   }
@@ -5196,6 +5242,9 @@ bool FunctionEffect::shouldDiagnoseFunctionCall(
     }
     return true; // warning
   }
+  case Kind::Allocating:
+  case Kind::Blocking:
+    return false;
   case Kind::None:
     break;
   }
@@ -5249,9 +5298,19 @@ void FunctionEffectSet::insertIgnoringConditions(
     insert(Item.Effect, nullptr);
 }
 
-void FunctionEffectSet::replaceCondition(unsigned Idx, Expr *Cond) {
+void FunctionEffectSet::replaceItem(unsigned Idx,
+                                    const FunctionEffectWithCondition &Item) {
   assert(Idx < Conditions.size());
-  Conditions[Idx] = FunctionEffectCondition(Cond);
+  Effects[Idx] = Item.Effect;
+  Conditions[Idx] = Item.Cond;
+
+  // Maintain invariant: If all conditions are null, the vector should be empty.
+  if (std::all_of(Conditions.begin(), Conditions.end(),
+                  [](const FunctionEffectCondition &C) {
+                    return C.expr() == nullptr;
+                  })) {
+    Conditions.clear();
+  }
 }
 
 void FunctionEffectSet::erase(unsigned Idx) {
@@ -5308,14 +5367,6 @@ FunctionEffectSet::differences(const FunctionEffectsRef &Old,
           Result.push_back(FunctionEffectDiff{
               Old.Effect.kind(), FunctionEffectDiff::Kind::ConditionMismatch,
               Old, New});
-        } else if (!Old.Effect.isDenied() && New.Effect.isDenied()) {
-          Result.push_back(FunctionEffectDiff{
-              Old.Effect.kind(), FunctionEffectDiff::Kind::AssertToDeny, Old,
-              New});
-        } else if (Old.Effect.isDenied() && !New.Effect.isDenied()) {
-          Result.push_back(FunctionEffectDiff{
-              Old.Effect.kind(), FunctionEffectDiff::Kind::DenyToAssert, Old,
-              New});
         }
       }
     }
