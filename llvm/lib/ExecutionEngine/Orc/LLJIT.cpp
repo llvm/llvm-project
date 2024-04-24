@@ -681,8 +681,10 @@ Error LLJITBuilderState::prepareForConstruction() {
         inconvertibleErrorCode());
 #endif // !LLVM_ENABLE_THREADS
 
+  // Only used in debug builds.
   [[maybe_unused]] bool ConcurrentCompilationSettingDefaulted =
       !SupportConcurrentCompilation;
+
   if (!SupportConcurrentCompilation) {
 #if LLVM_ENABLE_THREADS
     SupportConcurrentCompilation = NumCompileThreads || ES || EPC;
@@ -719,7 +721,7 @@ Error LLJITBuilderState::prepareForConstruction() {
            << "  Support concurrent compilation: "
            << (*SupportConcurrentCompilation ? "Yes" : "No");
     if (ConcurrentCompilationSettingDefaulted)
-      dbgs() << " (defaulted based on ES / EPC)\n";
+      dbgs() << " (defaulted based on ES / EPC / NumCompileThreads)\n";
     else
       dbgs() << "\n";
     dbgs() << "  Number of compile threads: " << NumCompileThreads << "\n";
