@@ -7387,38 +7387,28 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
   }
   switch (DeclResourceClass) {
   case llvm::hlsl::ResourceClass::SRV: {
-    if (Slot[0] != 't')
-      S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_resource_type_and_name)
-          << Slot.substr(0, 1) << VarTy
-          << (unsigned)llvm::hlsl::ResourceClass::SRV;
+    if (Slot[0] == 't')
+      return;
     break;
   }
   case llvm::hlsl::ResourceClass::UAV: {
-    if (Slot[0] != 'u')
-      S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_resource_type_and_name)
-          << Slot.substr(0, 1) << VarTy
-          << (unsigned)llvm::hlsl::ResourceClass::UAV;
+    if (Slot[0] == 'u')
+      return;
     break;
   }
   case llvm::hlsl::ResourceClass::CBuffer: {
-    if (Slot[0] != 'b')
-      S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_resource_type_and_name)
-          << Slot.substr(0, 1) << VarTy
-          << (unsigned)llvm::hlsl::ResourceClass::CBuffer;
+    if (Slot[0] == 'b')
+      return;
     break;
   }
   case llvm::hlsl::ResourceClass::TBuffer: {
-    if (Slot[0] != 't')
-      S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_resource_type_and_name)
-          << Slot.substr(0, 1) << VarTy
-          << (unsigned)llvm::hlsl::ResourceClass::TBuffer;
+    if (Slot[0] == 't')
+      return;
     break;
   }
   case llvm::hlsl::ResourceClass::Sampler: {
-    if (Slot[0] != 's')
-      S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_resource_type_and_name)
-          << Slot.substr(0, 1) << VarTy
-          << (unsigned)llvm::hlsl::ResourceClass::Sampler;
+    if (Slot[0] == 's')
+      return;
     break;
   }
   case llvm::hlsl::ResourceClass::Invalid: {
@@ -7426,6 +7416,8 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
     break;
   }
   }
+  S.Diag(ArgLoc, diag::err_hlsl_mismatching_register_resource_type_and_name)
+      << Slot.substr(0, 1) << VarTy << (unsigned)DeclResourceClass;
 }
 
 static void handleHLSLResourceBindingAttr(Sema &S, Decl *D,

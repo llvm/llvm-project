@@ -1,10 +1,9 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - -fsyntax-only %s -verify
 
-// the below will cause an llvm unreachable, because RWBuffers don't have resource attributes yet
+
 // expected-error@+1  {{invalid register name prefix 'b' for register resource type 'RWBuffer' (expected 'u')}}
 RWBuffer<int> a : register(b2, space1);
 
-// the below will cause an llvm unreachable, because RWBuffers don't have resource attributes yet
 // expected-error@+1  {{invalid register name prefix 't' for register resource type 'RWBuffer' (expected 'u')}}
 RWBuffer<int> b : register(t2, space1);
 
