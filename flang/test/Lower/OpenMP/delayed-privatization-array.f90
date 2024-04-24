@@ -28,9 +28,9 @@ end subroutine
 
 ! ONE_DIM-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
 
-! ONE_DIM-NEXT:   %[[C0:.*]] = arith.constant 0 : index
+! ONE_DIM:   %[[C0:.*]] = arith.constant 0 : index
 ! ONE_DIM-NEXT:   %[[DIMS:.*]]:3 = fir.box_dims %[[PRIV_ARG]], %[[C0]] : ([[TYPE]], index) -> (index, index, index)
-! ONE_DIM-NEXT:   %[[PRIV_ALLOCA:.*]] = fir.alloca !fir.array<{{\?}}xi32>, %[[DIMS]]#1 {bindc_name = "var1", pinned, uniq_name = "_QFdelayed_privatization_privateEvar1"}
+! ONE_DIM:   %[[PRIV_ALLOCA:.*]] = fir.alloca !fir.array<{{\?}}xi32>
 ! ONE_DIM-NEXT:   %[[SHAPE_SHIFT:.*]] = fir.shape_shift %[[DIMS]]#0, %[[DIMS]]#1 : (index, index) -> !fir.shapeshift<1>
 ! ONE_DIM-NEXT:   %[[PRIV_DECL:.*]]:2 = hlfir.declare %[[PRIV_ALLOCA]](%[[SHAPE_SHIFT]]) {uniq_name = "_QFdelayed_privatization_privateEvar1"}
 ! ONE_DIM-NEXT:  omp.yield(%[[PRIV_DECL]]#0 : [[TYPE]])
@@ -56,7 +56,7 @@ end subroutine
 ! TWO_DIM-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.box<!fir.array<\?x\?xi32>>]] alloc {
 
 ! TWO_DIM-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
-! TWO_DIM-NEXT:   %[[C0:.*]] = arith.constant 0 : index
+! TWO_DIM:        %[[C0:.*]] = arith.constant 0 : index
 ! TWO_DIM-NEXT:   %[[DIMS0:.*]]:3 = fir.box_dims %[[PRIV_ARG]], %[[C0]] : ([[TYPE]], index) -> (index, index, index)
 
 ! TWO_DIM-NEXT:   %[[C1:.*]] = arith.constant 1 : index

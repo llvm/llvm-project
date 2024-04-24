@@ -94,10 +94,11 @@ getExplicitLbounds(fir::FortranVariableOpInterface var) {
   return {};
 }
 
-void hlfir::genLboundsAndExtentsFromBox(
-    mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value boxEntity,
-    int rank, llvm::SmallVectorImpl<mlir::Value> &lbounds,
-    llvm::SmallVectorImpl<mlir::Value> *extents) {
+static void
+genLboundsAndExtentsFromBox(mlir::Location loc, fir::FirOpBuilder &builder,
+                            hlfir::Entity boxEntity, int rank,
+                            llvm::SmallVectorImpl<mlir::Value> &lbounds,
+                            llvm::SmallVectorImpl<mlir::Value> *extents) {
   assert(boxEntity.getType().isa<fir::BaseBoxType>() && "must be a box");
   mlir::Type idxTy = builder.getIndexType();
   for (int i = 0; i < rank; ++i) {
@@ -845,10 +846,9 @@ hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
   return loopNest;
 }
 
-static fir::ExtendedValue
-translateVariableToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                                 hlfir::Entity variable,
-                                 bool forceHlfirBase = false) {
+static fir::ExtendedValue translateVariableToExtendedValue(
+    mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity variable,
+    bool forceHlfirBase = false, bool contiguousHint = false) {
   assert(variable.isVariable() && "must be a variable");
   /// When going towards FIR, use the original base value to avoid
   /// introducing descriptors at runtime when they are not required.
@@ -859,7 +859,9 @@ translateVariableToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
                                 fir::MutableProperties{});
 
   if (base.getType().isa<fir::BaseBoxType>()) {
-    if (!variable.isSimplyContiguous() || variable.isPolymorphic() ||
+
+    bool contiguous = variable.isSimplyContiguous() || contiguousHint;
+    if (!contiguous || variable.isPolymorphic() ||
         variable.isDerivedWithLengthParameters() || variable.isOptional()) {
       llvm::SmallVector<mlir::Value> nonDefaultLbounds =
           getNonDefaultLowerBounds(loc, builder, variable);
@@ -908,9 +910,10 @@ hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 hlfir::translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                                hlfir::Entity entity) {
+                                hlfir::Entity entity, bool contiguousHint) {
   if (entity.isVariable())
-    return {translateVariableToExtendedValue(loc, builder, entity),
+    return {translateVariableToExtendedValue(loc, builder, entity, false,
+                                             contiguousHint),
             std::nullopt};
 
   if (entity.isProcedure()) {

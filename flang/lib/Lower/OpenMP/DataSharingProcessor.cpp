@@ -392,14 +392,10 @@ void DataSharingProcessor::doPrivatize(
 
       fir::ExtendedValue localExV = symExV.match(
           [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
-            llvm::SmallVector<mlir::Value> extents;
-            llvm::SmallVector<mlir::Value> lBounds;
-            hlfir::genLboundsAndExtentsFromBox(symLoc, firOpBuilder,
-                                               allocRegion.getArgument(0),
-                                               box.rank(), lBounds, &extents);
-
-            return fir::ArrayBoxValue(allocRegion.getArgument(0), extents,
-                                      lBounds);
+            return hlfir::translateToExtendedValue(
+                       symLoc, firOpBuilder,
+                       hlfir::Entity{allocRegion.getArgument(0)}, true)
+                .first;
           },
           [&](const fir::CharBoxValue &box) -> fir::ExtendedValue {
             TODO(symLoc,

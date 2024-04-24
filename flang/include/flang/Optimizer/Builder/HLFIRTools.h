@@ -223,7 +223,7 @@ public:
 using CleanupFunction = std::function<void()>;
 std::pair<fir::ExtendedValue, std::optional<CleanupFunction>>
 translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
-                         Entity entity);
+                         Entity entity, bool contiguousHint = false);
 
 /// Function to translate FortranVariableOpInterface to fir::ExtendedValue.
 /// It may generates IR to unbox fir.boxchar, but has otherwise no side effects
@@ -462,10 +462,6 @@ genTypeAndKindConvert(mlir::Location loc, fir::FirOpBuilder &builder,
                       hlfir::Entity source, mlir::Type toType,
                       bool preserveLowerBounds);
 
-void genLboundsAndExtentsFromBox(mlir::Location loc, fir::FirOpBuilder &builder,
-                                 mlir::Value boxEntity, int rank,
-                                 llvm::SmallVectorImpl<mlir::Value> &lbounds,
-                                 llvm::SmallVectorImpl<mlir::Value> *extents);
 } // namespace hlfir
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_HLFIRTOOLS_H
