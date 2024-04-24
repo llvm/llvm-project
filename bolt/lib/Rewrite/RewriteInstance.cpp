@@ -5432,6 +5432,17 @@ uint64_t RewriteInstance::getNewFunctionOrDataAddress(uint64_t OldAddress) {
   if (BD && BD->isMoved())
     return BD->getOutputAddress();
 
+  if (const BinaryFunction *BF =
+          BC->getBinaryFunctionContainingAddress(OldAddress)) {
+    if (BF->isEmitted()) {
+      BC->errs() << "BOLT-ERROR: unable to get new address corresponding to "
+                    "input address 0x"
+                 << Twine::utohexstr(OldAddress) << " in function " << *BF
+                 << ". Consider adding this function to --skip-funcs=...\n";
+      exit(1);
+    }
+  }
+
   return 0;
 }
 
