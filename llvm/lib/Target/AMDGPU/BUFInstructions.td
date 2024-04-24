@@ -1438,28 +1438,28 @@ multiclass MUBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
                                    string opcode, ValueType memoryVt = vt> {
   defvar st = !if(!eq(memoryVt, vt), name, mubuf_intrinsic_store<name, memoryVt>);
 
-  def : GCNPat<
+let GISelShouldIgnore = 1 in   def : GCNPat<
     (st vt:$vdata, v4i32:$rsrc, 0, 0, (BUFSOffset i32:$soffset), timm:$offset,
               timm:$auxiliary, 0),
     (!cast<MUBUF_Pseudo>(opcode # _OFFSET_exact) getVregSrcForVT<vt>.ret:$vdata, SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset,
       (extract_cpol $auxiliary), (extract_swz $auxiliary))
   >;
 
-  def : GCNPat<
+let GISelShouldIgnore = 1 in   def : GCNPat<
     (st vt:$vdata, v4i32:$rsrc, 0, i32:$voffset, (BUFSOffset i32:$soffset), timm:$offset,
               timm:$auxiliary, 0),
     (!cast<MUBUF_Pseudo>(opcode # _OFFEN_exact) getVregSrcForVT<vt>.ret:$vdata, VGPR_32:$voffset, SReg_128:$rsrc, SCSrc_b32:$soffset,
       timm:$offset, (extract_cpol $auxiliary), (extract_swz $auxiliary))
   >;
 
-  def : GCNPat<
+let GISelShouldIgnore = 1 in   def : GCNPat<
     (st vt:$vdata, v4i32:$rsrc, i32:$vindex, 0, (BUFSOffset i32:$soffset), timm:$offset,
               timm:$auxiliary, timm),
     (!cast<MUBUF_Pseudo>(opcode # _IDXEN_exact) getVregSrcForVT<vt>.ret:$vdata, VGPR_32:$vindex, SReg_128:$rsrc, SCSrc_b32:$soffset,
       timm:$offset, (extract_cpol $auxiliary), (extract_swz $auxiliary))
   >;
 
-  def : GCNPat<
+let GISelShouldIgnore = 1 in   def : GCNPat<
     (st vt:$vdata, v4i32:$rsrc, i32:$vindex, i32:$voffset, (BUFSOffset i32:$soffset), timm:$offset,
               timm:$auxiliary, timm),
     (!cast<MUBUF_Pseudo>(opcode # _BOTHEN_exact)
@@ -1643,7 +1643,7 @@ multiclass SIBufferAtomicPat_Common<string OpPrefix, ValueType vt, string Inst,
     (extract_cpol_set_glc $auxiliary), (extract_cpol $auxiliary));
 
   let AddedComplexity = !if(!eq(RtnMode, "ret"), 0, 1) in {
-  def : GCNPat<
+let GISelShouldIgnore = 1 in   def : GCNPat<
     (vt (Op vt:$vdata_in, v4i32:$rsrc, 0, 0, (BUFSOffset i32:$soffset),
               timm:$offset, timm:$auxiliary, 0)),
     (!cast<MUBUF_Pseudo>(Inst # "_OFFSET" # InstSuffix)
@@ -1651,7 +1651,7 @@ multiclass SIBufferAtomicPat_Common<string OpPrefix, ValueType vt, string Inst,
       timm:$offset, CachePolicy)
   >;
 
-  def : GCNPat<
+let GISelShouldIgnore = 1 in   def : GCNPat<
     (vt (Op vt:$vdata_in, v4i32:$rsrc, i32:$vindex, 0, (BUFSOffset i32:$soffset),
               timm:$offset, timm:$auxiliary, timm)),
     (!cast<MUBUF_Pseudo>(Inst # "_IDXEN" # InstSuffix)
@@ -1659,7 +1659,7 @@ multiclass SIBufferAtomicPat_Common<string OpPrefix, ValueType vt, string Inst,
       SCSrc_b32:$soffset, timm:$offset, CachePolicy)
   >;
 
-  def : GCNPat<
+let GISelShouldIgnore = 1 in   def : GCNPat<
     (vt (Op vt:$vdata_in, v4i32:$rsrc, 0, i32:$voffset,
               (BUFSOffset i32:$soffset), timm:$offset, timm:$auxiliary, 0)),
     (!cast<MUBUF_Pseudo>(Inst # "_OFFEN" # InstSuffix)
@@ -1667,7 +1667,7 @@ multiclass SIBufferAtomicPat_Common<string OpPrefix, ValueType vt, string Inst,
       SCSrc_b32:$soffset, timm:$offset, CachePolicy)
   >;
 
-  def : GCNPat<
+let GISelShouldIgnore = 1 in   def : GCNPat<
     (vt (Op vt:$vdata_in, v4i32:$rsrc, i32:$vindex, i32:$voffset,
               (BUFSOffset i32:$soffset), timm:$offset, timm:$auxiliary, timm)),
     (!cast<MUBUF_Pseudo>(Inst # "_BOTHEN" # InstSuffix)
@@ -1907,7 +1907,7 @@ multiclass MUBUFLoad_Atomic_Pattern <MUBUF_Pseudo Instr_ADDR64, MUBUF_Pseudo Ins
      (Instr_ADDR64 $vaddr, $srsrc, $soffset, $offset)
   >;
 
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
     (vt (atomic_ld (MUBUFOffset v4i32:$rsrc, i32:$soffset, i32:$offset))),
     (Instr_OFFSET $rsrc, $soffset, (as_i16imm $offset))
   >;
@@ -1979,12 +1979,12 @@ multiclass MUBUFScratchLoadPat <string Instr,
 // XXX - Is it possible to have a complex pattern in a PatFrag?
 multiclass MUBUFScratchLoadPat_D16_Common <string Instr,
                                 ValueType vt, PatFrag ld_frag> {
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
     (ld_frag (MUBUFScratchOffen v4i32:$srsrc, i32:$vaddr, i32:$soffset, i32:$offset), vt:$in),
     (!cast<MUBUF_Pseudo>(Instr # _OFFEN) $vaddr, $srsrc, $soffset, $offset, $in)
   >;
 
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
     (ld_frag (MUBUFScratchOffset v4i32:$srsrc, i32:$soffset, i32:$offset), vt:$in),
     (!cast<MUBUF_Pseudo>(Instr # _OFFSET) $srsrc, $soffset, $offset, $in)
   >;
@@ -2042,7 +2042,7 @@ multiclass MUBUFStore_Atomic_Pattern <MUBUF_Pseudo Instr_ADDR64, MUBUF_Pseudo In
      (Instr_ADDR64 $val, $vaddr, $srsrc, $soffset, $offset)
   >;
 
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
     (atomic_st vt:$val, (MUBUFOffset v4i32:$rsrc, i32:$soffset, i32:$offset)),
     (Instr_OFFSET $val, $rsrc, $soffset, (as_i16imm $offset))
   >;
@@ -2211,7 +2211,7 @@ multiclass MTBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
                                         string opcode, ValueType memoryVt = vt> {
   defvar st = !if(!eq(memoryVt, vt), name, mtbuf_intrinsic_store<name, memoryVt>);
 
-  def : GCNPat<
+let GISelShouldIgnore = 1 in   def : GCNPat<
     (st vt:$vdata, v4i32:$rsrc, 0, 0, (BUFSOffset i32:$soffset), timm:$offset,
           timm:$format, timm:$auxiliary, 0),
     (!cast<MTBUF_Pseudo>(opcode # _OFFSET_exact) getVregSrcForVT<vt>.ret:$vdata, SReg_128:$rsrc, SCSrc_b32:$soffset,
@@ -2219,7 +2219,7 @@ multiclass MTBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
       (extract_cpol $auxiliary), (extract_swz $auxiliary))
   >;
 
-  def : GCNPat<
+let GISelShouldIgnore = 1 in   def : GCNPat<
     (st vt:$vdata, v4i32:$rsrc, i32:$vindex, 0, (BUFSOffset i32:$soffset), timm:$offset,
           timm:$format, timm:$auxiliary, timm),
     (!cast<MTBUF_Pseudo>(opcode # _IDXEN_exact) getVregSrcForVT<vt>.ret:$vdata, VGPR_32:$vindex, SReg_128:$rsrc, SCSrc_b32:$soffset,
@@ -2227,7 +2227,7 @@ multiclass MTBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
       (extract_cpol $auxiliary), (extract_swz $auxiliary))
   >;
 
-  def : GCNPat<
+let GISelShouldIgnore = 1 in   def : GCNPat<
     (st vt:$vdata, v4i32:$rsrc, 0, i32:$voffset, (BUFSOffset i32:$soffset), timm:$offset,
           timm:$format, timm:$auxiliary, 0),
     (!cast<MTBUF_Pseudo>(opcode # _OFFEN_exact) getVregSrcForVT<vt>.ret:$vdata, VGPR_32:$voffset, SReg_128:$rsrc, SCSrc_b32:$soffset,
@@ -2235,7 +2235,7 @@ multiclass MTBUF_StoreIntrinsicPat_Common<SDPatternOperator name, ValueType vt,
       (extract_cpol $auxiliary), (extract_swz $auxiliary))
   >;
 
-  def : GCNPat<
+let GISelShouldIgnore = 1 in   def : GCNPat<
     (st vt:$vdata, v4i32:$rsrc, i32:$vindex, i32:$voffset, (BUFSOffset i32:$soffset),
           timm:$offset, timm:$format, timm:$auxiliary, timm),
     (!cast<MTBUF_Pseudo>(opcode # _BOTHEN_exact)

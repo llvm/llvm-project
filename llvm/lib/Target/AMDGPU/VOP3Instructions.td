@@ -442,7 +442,7 @@ class Ternary_i16_Pats_gfx9<SDPatternOperator op1, SDPatternOperator op2,
 >;
 
 let Predicates = [Has16BitInsts, isGFX10Plus] in {
-def: Ternary_i16_Pats_gfx9<mul, add, V_MAD_U16_gfx9_e64>;
+let GISelShouldIgnore = 1 in def: Ternary_i16_Pats_gfx9<mul, add, V_MAD_U16_gfx9_e64>;
 } // End Predicates = [Has16BitInsts, isGFX10Plus]
 
 class ThreeOpFragSDAG<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
@@ -694,7 +694,7 @@ def : ThreeOp_i32_Pats<and, or, V_AND_OR_B32_e64>;
 def : ThreeOp_i32_Pats<or, or, V_OR3_B32_e64>;
 def : ThreeOp_i32_Pats<xor, add, V_XAD_U32_e64>;
 
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
  (DivergentBinFrag<mul> i32:$src0, IsPow2Plus1:$src1),
  (V_LSHL_ADD_U32_e64 i32:$src0, (i32 (Log2_32 imm:$src1)), i32:$src0)>;
 
@@ -707,7 +707,7 @@ def : GCNPat<
 def : VOPBinOpClampPat<saddsat, V_ADD_I32_e64, i32>;
 def : VOPBinOpClampPat<ssubsat, V_SUB_I32_e64, i32>;
 
-def : GCNPat<(DivergentBinFrag<or> (or_oneuse i64:$src0, i64:$src1), i64:$src2),
+let GISelShouldIgnore = 1 in def : GCNPat<(DivergentBinFrag<or> (or_oneuse i64:$src0, i64:$src1), i64:$src2),
              (REG_SEQUENCE VReg_64,
                (V_OR3_B32_e64 (i32 (EXTRACT_SUBREG $src0, sub0)),
                               (i32 (EXTRACT_SUBREG $src1, sub0)),
@@ -753,7 +753,7 @@ multiclass IMAD32_Pats <VOP3_Pseudo inst> {
 
   // Immediate src2 in the pattern above will not fold because it would be partially
   // undef. Hence define specialized pattern for this case.
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
         (ThreeOpFrag<mul, add> i32:$src0, i32:$src1, (i32 imm:$src2)),
         (EXTRACT_SUBREG (inst i32:$src0, i32:$src1, (i64 (as_i64imm $src2)), 0 /* clamp */), sub0)
         >;
@@ -769,11 +769,11 @@ class IMAD32_Mul24_Pat<VOP3_Pseudo inst>: GCNPat <
 // exclude pre-GFX9 where it was slow
 let OtherPredicates = [HasNotMADIntraFwdBug], SubtargetPredicate = isGFX9Plus in {
   defm : IMAD32_Pats<V_MAD_U64_U32_e64>;
-  def : IMAD32_Mul24_Pat<V_MAD_U64_U32_e64>;
+let GISelShouldIgnore = 1 in   def : IMAD32_Mul24_Pat<V_MAD_U64_U32_e64>;
 }
 let OtherPredicates = [HasMADIntraFwdBug], SubtargetPredicate = isGFX11Only in {
   defm : IMAD32_Pats<V_MAD_U64_U32_gfx11_e64>;
-  def : IMAD32_Mul24_Pat<V_MAD_U64_U32_gfx11_e64>;
+let GISelShouldIgnore = 1 in   def : IMAD32_Mul24_Pat<V_MAD_U64_U32_gfx11_e64>;
 }
 
 def VOP3_PERMLANE_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>, VOP3_OPSEL> {
@@ -868,13 +868,13 @@ class DivFmasPat<ValueType vt, Instruction inst, Register CondReg> : GCNPat<
 >;
 
 let WaveSizePredicate = isWave64 in {
-def : DivFmasPat<f32, V_DIV_FMAS_F32_e64, VCC>;
-def : DivFmasPat<f64, V_DIV_FMAS_F64_e64, VCC>;
+let GISelShouldIgnore = 1 in def : DivFmasPat<f32, V_DIV_FMAS_F32_e64, VCC>;
+let GISelShouldIgnore = 1 in def : DivFmasPat<f64, V_DIV_FMAS_F64_e64, VCC>;
 }
 
 let WaveSizePredicate = isWave32 in {
-def : DivFmasPat<f32, V_DIV_FMAS_F32_e64, VCC_LO>;
-def : DivFmasPat<f64, V_DIV_FMAS_F64_e64, VCC_LO>;
+let GISelShouldIgnore = 1 in def : DivFmasPat<f32, V_DIV_FMAS_F32_e64, VCC_LO>;
+let GISelShouldIgnore = 1 in def : DivFmasPat<f64, V_DIV_FMAS_F64_e64, VCC_LO>;
 }
 
 class VOP3_DOT_Profile<VOPProfile P> : VOP3_Profile<P, VOP3_OPSEL> {
@@ -945,8 +945,8 @@ class PseudoScalarPatF16<SDPatternOperator node, VOP3_Pseudo inst> : GCNPat <
 let SubtargetPredicate = HasPseudoScalarTrans in {
   def : PseudoScalarPatF16<AMDGPUexpf16, V_S_EXP_F16_e64>;
   def : PseudoScalarPatF16<AMDGPUlogf16, V_S_LOG_F16_e64>;
-  def : PseudoScalarPatF16<AMDGPUrcp, V_S_RCP_F16_e64>;
-  def : PseudoScalarPatF16<AMDGPUrsq, V_S_RSQ_F16_e64>;
+let GISelShouldIgnore = 1 in   def : PseudoScalarPatF16<AMDGPUrcp, V_S_RCP_F16_e64>;
+let GISelShouldIgnore = 1 in   def : PseudoScalarPatF16<AMDGPUrsq, V_S_RSQ_F16_e64>;
   def : PseudoScalarPatF16<any_amdgcn_sqrt, V_S_SQRT_F16_e64>;
 }
 
@@ -977,8 +977,8 @@ class IntClampPat<VOP3InstBase inst, SDPatternOperator node> : GCNPat<
   getClampRes<inst.Pfl, inst>.ret
 >;
 
-def : IntClampPat<V_MAD_I32_I24_e64, AMDGPUmad_i24>;
-def : IntClampPat<V_MAD_U32_U24_e64, AMDGPUmad_u24>;
+let GISelShouldIgnore = 1 in def : IntClampPat<V_MAD_I32_I24_e64, AMDGPUmad_i24>;
+let GISelShouldIgnore = 1 in def : IntClampPat<V_MAD_U32_U24_e64, AMDGPUmad_u24>;
 
 def : IntClampPat<V_SAD_U8_e64, int_amdgcn_sad_u8>;
 def : IntClampPat<V_SAD_HI_U8_e64, int_amdgcn_sad_hi_u8>;

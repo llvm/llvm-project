@@ -628,7 +628,7 @@ def SI_CALL_ISEL : SPseudoInstSI <
   let isConvergent = 1;
 }
 
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
   (AMDGPUcall i64:$src0, (i64 0)),
   (SI_CALL_ISEL $src0, (i64 0))
 >;
@@ -666,13 +666,13 @@ def SI_TCRETURN :     SI_TCRETURN_Pseudo<CCR_SGPR_64, AMDGPUtc_return>;
 def SI_TCRETURN_GFX : SI_TCRETURN_Pseudo<Gfx_CCR_SGPR_64, AMDGPUtc_return_gfx>;
 
 // Handle selecting indirect tail calls
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
   (AMDGPUtc_return i64:$src0, (i64 0), (i32 timm:$fpdiff)),
   (SI_TCRETURN CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff)
 >;
 
 // Handle selecting indirect tail calls for AMDGPU_gfx
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
   (AMDGPUtc_return_gfx i64:$src0, (i64 0), (i32 timm:$fpdiff)),
   (SI_TCRETURN_GFX Gfx_CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff)
 >;
@@ -703,7 +703,7 @@ def SI_CS_CHAIN_TC_W64 : SI_CS_CHAIN_TC<i64, isWave64>;
 // Handle selecting direct & indirect calls via SI_CS_CHAIN_TC_W32/64
 multiclass si_cs_chain_tc_pattern<
   dag callee, ValueType execvt, RegisterOperand execrc, Instruction tc> {
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
   (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec),
   (tc CCR_SGPR_64:$src0, callee, i32imm:$fpdiff, execrc:$exec)
 >;
@@ -1045,17 +1045,17 @@ def SI_PC_ADD_REL_OFFSET : SPseudoInstSI <
   let Defs = [SCC];
 }
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (SIpc_add_rel_offset tglobaladdr:$ptr_lo, 0),
   (SI_PC_ADD_REL_OFFSET $ptr_lo, (i32 0))
 >;
 
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
   (AMDGPUtrap timm:$trapid),
   (S_TRAP $trapid)
 >;
 
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
   (AMDGPUelse i1:$src, bb:$target),
   (SI_ELSE $src, $target)
 >;
@@ -1070,7 +1070,7 @@ def : Pat <
   (SI_KILL_I1_PSEUDO SCSrc_i1:$src, -1)
 >;
 
-def : Pat <
+let GISelShouldIgnore = 1 in def : Pat <
   (int_amdgcn_kill (i1 (setcc f32:$src, InlineImmFP32:$imm, cond:$cond))),
   (SI_KILL_F32_COND_IMM_PSEUDO VSrc_b32:$src, (bitcast_fpimm_to_i32 $imm), (cond_as_i32imm $cond))
 >;
@@ -1087,12 +1087,12 @@ def : Pat <
 
   // TODO: we could add more variants for other types of conditionals
 
-def : Pat <
+let GISelShouldIgnore = 1 in def : Pat <
   (i64 (int_amdgcn_icmp i1:$src, (i1 0), (i32 33))),
   (COPY $src) // Return the SGPRs representing i1 src
 >;
 
-def : Pat <
+let GISelShouldIgnore = 1 in def : Pat <
   (i32 (int_amdgcn_icmp i1:$src, (i1 0), (i32 33))),
   (COPY $src) // Return the SGPRs representing i1 src
 >;
@@ -1103,38 +1103,38 @@ def : Pat <
 
 multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16_inst_e64> {
   // f16_to_fp patterns
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
     (f32 (any_f16_to_fp i32:$src0)),
     (cvt_f32_f16_inst_e64 SRCMODS.NONE, $src0)
   >;
 
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
     (f32 (f16_to_fp (and_oneuse i32:$src0, 0x7fff))),
     (cvt_f32_f16_inst_e64 SRCMODS.ABS, $src0)
   >;
 
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
     (f32 (f16_to_fp (i32 (srl_oneuse (and_oneuse i32:$src0, 0x7fff0000), (i32 16))))),
     (cvt_f32_f16_inst_e64 SRCMODS.ABS, (i32 (V_LSHRREV_B32_e64 (i32 16), i32:$src0)))
   >;
 
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
     (f32 (f16_to_fp (or_oneuse i32:$src0, 0x8000))),
     (cvt_f32_f16_inst_e64 SRCMODS.NEG_ABS, $src0)
   >;
 
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
     (f32 (f16_to_fp (xor_oneuse i32:$src0, 0x8000))),
     (cvt_f32_f16_inst_e64 SRCMODS.NEG, $src0)
   >;
 
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
     (f64 (any_fpextend f16:$src)),
     (V_CVT_F64_F32_e32 (cvt_f32_f16_inst_e64 SRCMODS.NONE, $src))
   >;
 
   // fp_to_fp16 patterns
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
     (i32 (AMDGPUfp_to_f16 (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
     (cvt_f16_f32_inst_e64 $src0_modifiers, f32:$src0)
   >;
@@ -1161,7 +1161,7 @@ multiclass f16_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_f16
 
   // This is only used on targets without half support
   // TODO: Introduce strict variant of AMDGPUfp_to_f16 and share custom lowering
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
     (i32 (strict_fp_to_f16 (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
     (cvt_f16_f32_inst_e64 $src0_modifiers, f32:$src0)
   >;
@@ -1190,13 +1190,13 @@ class FMADPat <ValueType vt, Instruction inst>
 // Prefer mac form when there are no modifiers.
 let AddedComplexity = 9 in {
 let OtherPredicates = [HasMadMacF32Insts] in
-def : FMADPat <f32, V_MAC_F32_e64>;
+let GISelShouldIgnore = 1 in def : FMADPat <f32, V_MAC_F32_e64>;
 
 // Don't allow source modifiers. If there are any source modifiers then it's
 // better to select mad instead of mac.
 let SubtargetPredicate = isGFX6GFX7GFX10,
     OtherPredicates = [HasMadMacF32Insts, NoFP32Denormals] in
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
       (f32 (fadd (AMDGPUfmul_legacy (VOP3NoMods f32:$src0),
                                     (VOP3NoMods f32:$src1)),
                  (VOP3NoMods f32:$src2))),
@@ -1216,11 +1216,11 @@ def : GCNPat <
 >;
 
 let SubtargetPredicate = Has16BitInsts in
-def : FMADPat <f16, V_MAC_F16_e64>;
+let GISelShouldIgnore = 1 in def : FMADPat <f16, V_MAC_F16_e64>;
 } // AddedComplexity = 9
 
 let OtherPredicates = [HasMadMacF32Insts, NoFP32Denormals] in
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
       (f32 (fadd (AMDGPUfmul_legacy (VOP3Mods f32:$src0, i32:$src0_mod),
                                     (VOP3Mods f32:$src1, i32:$src1_mod)),
                  (VOP3Mods f32:$src2, i32:$src2_mod))),
@@ -1246,7 +1246,7 @@ def : VOPSelectPat <f16>;
 def : VOPSelectPat <i16>;
 
 let AddedComplexity = 1 in {
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i32 (add (i32 (DivergentUnaryFrag<ctpop> i32:$popcnt)), i32:$val)),
   (V_BCNT_U32_B32_e64 $popcnt, $val)
 >;
@@ -1257,12 +1257,12 @@ def : GCNPat <
   (V_BCNT_U32_B32_e64 VSrc_b32:$popcnt, (i32 0))
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i16 (add (i16 (trunc (i32 (DivergentUnaryFrag<ctpop> i32:$popcnt)))), i16:$val)),
   (V_BCNT_U32_B32_e64 $popcnt, $val)
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i64 (DivergentUnaryFrag<ctpop> i64:$src)),
   (REG_SEQUENCE VReg_64,
     (V_BCNT_U32_B32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub1)),
@@ -1277,12 +1277,12 @@ def : GCNPat <
 // Special case for 2 element vectors. REQ_SEQUENCE produces better code
 // than an INSERT_SUBREG.
 multiclass Insert_Element_V2<RegisterClass RC, ValueType elem_type, ValueType vec_type> {
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
     (insertelt vec_type:$vec, elem_type:$elem, 0),
     (REG_SEQUENCE RC, $elem, sub0, (elem_type (EXTRACT_SUBREG $vec, sub1)), sub1)
   >;
 
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
     (insertelt vec_type:$vec, elem_type:$elem, 1),
     (REG_SEQUENCE RC, (elem_type (EXTRACT_SUBREG $vec, sub0)), sub0, $elem, sub1)
   >;
@@ -1944,7 +1944,7 @@ def : GCNPat <
 
 // COPY_TO_REGCLASS is needed to avoid using SCC from S_XOR_B32 instead
 // of the real value.
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (UniformUnaryFrag<fneg> (v2f32 SReg_64:$src)),
   (v2f32 (REG_SEQUENCE SReg_64,
          (f32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG $src, sub0)),
@@ -1955,7 +1955,7 @@ def : GCNPat <
                                  SReg_32)), sub1))
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (UniformUnaryFrag<fabs> (v2f32 SReg_64:$src)),
   (v2f32 (REG_SEQUENCE SReg_64,
          (f32 (COPY_TO_REGCLASS (S_AND_B32 (i32 (EXTRACT_SUBREG $src, sub0)),
@@ -1966,7 +1966,7 @@ def : GCNPat <
                                  SReg_32)), sub1))
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (UniformUnaryFrag<fneg> (fabs (v2f32 SReg_64:$src))),
   (v2f32 (REG_SEQUENCE SReg_64,
          (f32 (COPY_TO_REGCLASS (S_OR_B32 (i32 (EXTRACT_SUBREG $src, sub0)),
@@ -2106,7 +2106,7 @@ def : GCNPat <
              (V_LSHLREV_B32_e64 (i32 16), $src1))
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (fcopysign f64:$src0, fp16vt:$src1),
   (REG_SEQUENCE SReg_64,
     (i32 (EXTRACT_SUBREG $src0, sub0)), sub0,
@@ -2120,7 +2120,7 @@ def : GCNPat <
              (V_LSHRREV_B32_e64 (i32 16), $src1))
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (fcopysign fp16vt:$src0, f64:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)), $src0,
              (V_LSHRREV_B32_e64 (i32 16), (EXTRACT_SUBREG $src1, sub1)))
@@ -2131,12 +2131,12 @@ def : GCNPat <
 /********** Immediate Patterns **********/
 /********** ================== **********/
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (VGPRImm<(i32 imm)>:$imm),
   (V_MOV_B32_e32 imm:$imm)
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (VGPRImm<(f32 fpimm)>:$imm),
   (V_MOV_B32_e32 (f32 (bitcast_fpimm_to_i32 $imm)))
 >;
@@ -2146,12 +2146,12 @@ def : GCNPat <
   (S_MOV_B32 imm:$imm)
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (VGPRImm<(SIlds tglobaladdr:$ga)>),
   (V_MOV_B32_e32 $ga)
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (SIlds tglobaladdr:$ga),
   (S_MOV_B32 $ga)
 >;
@@ -2159,12 +2159,12 @@ def : GCNPat <
 // FIXME: Workaround for ordering issue with peephole optimizer where
 // a register class copy interferes with immediate folding.  Should
 // use s_mov_b32, which can be shrunk to s_movk_i32
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (VGPRImm<(f16 fpimm)>:$imm),
   (V_MOV_B32_e32 (f16 (bitcast_fpimm_to_i32 $imm)))
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (VGPRImm<(bf16 fpimm)>:$imm),
   (V_MOV_B32_e32 (bf16 (bitcast_fpimm_to_i32 $imm)))
 >;
@@ -2172,12 +2172,12 @@ def : GCNPat <
 // V_MOV_B64_PSEUDO and S_MOV_B64_IMM_PSEUDO can be used with any 64-bit
 // immediate and wil be expanded as needed, but we will only use these patterns
 // for values which can be encoded.
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (VGPRImm<(i64 imm)>:$imm),
   (V_MOV_B64_PSEUDO imm:$imm)
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (VGPRImm<(f64 fpimm)>:$imm),
   (V_MOV_B64_PSEUDO (f64 (bitcast_fpimm_to_i64 $imm)))
 >;
@@ -2187,7 +2187,7 @@ def : GCNPat <
   (S_MOV_B64_IMM_PSEUDO imm:$imm)
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (f64 fpimm:$imm),
   (S_MOV_B64_IMM_PSEUDO (i64 (bitcast_fpimm_to_i64 fpimm:$imm)))
 >;
@@ -2225,21 +2225,21 @@ def : GCNPat <
 // XXX - Should this use a s_cmp to set SCC?
 
 // Set to sign-extended 64-bit value (true = -1, false = 0)
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i1 imm:$imm),
   (S_MOV_B64 (i64 (as_i64imm $imm)))
 > {
   let WaveSizePredicate = isWave64;
 }
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i1 imm:$imm),
   (S_MOV_B32 (i32 (as_i32imm $imm)))
 > {
   let WaveSizePredicate = isWave32;
 }
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (f64 InlineImmFP64:$imm),
   (S_MOV_B64 (f64 (bitcast_fpimm_to_i64 InlineImmFP64:$imm)))
 >;
@@ -2270,7 +2270,7 @@ def : Ext32Pat <anyext>;
 
 // The multiplication scales from [0,1) to the unsigned integer range,
 // rounding down a bit to avoid unwanted overflow.
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (AMDGPUurecip i32:$src0),
   (V_CVT_U32_F32_e32
     (V_MUL_F32_e32 (i32 CONST.FP_4294966784),
@@ -2281,8 +2281,8 @@ def : GCNPat <
 // VOP3 Patterns
 //===----------------------------------------------------------------------===//
 
-def : IMad24Pat<V_MAD_I32_I24_e64, 1>;
-def : UMad24Pat<V_MAD_U32_U24_e64, 1>;
+let GISelShouldIgnore = 1 in def : IMad24Pat<V_MAD_I32_I24_e64, 1>;
+let GISelShouldIgnore = 1 in def : UMad24Pat<V_MAD_U32_U24_e64, 1>;
 
 // BFI patterns
 
@@ -2308,7 +2308,7 @@ def : AMDGPUPatIgnoreCopies <
 >;
 
 // (y & C) | (z & ~C)
-def : AMDGPUPatIgnoreCopies <
+let GISelShouldIgnore = 1 in def : AMDGPUPatIgnoreCopies <
   (BFIImm32 i32:$x, i32:$y, i32:$z),
   (V_BFI_B32_e64 VSrc_b32:$x, VSrc_b32:$y, VSrc_b32:$z)
 >;
@@ -2357,7 +2357,7 @@ def : AMDGPUPat <
              (i32 (EXTRACT_SUBREG SReg_64:$src1, sub1)))
 >;
 
-def : AMDGPUPat <
+let GISelShouldIgnore = 1 in def : AMDGPUPat <
   (fcopysign f64:$src0, f64:$src1),
   (REG_SEQUENCE SReg_64,
     (i32 (EXTRACT_SUBREG $src0, sub0)), sub0,
@@ -2366,7 +2366,7 @@ def : AMDGPUPat <
                (i32 (EXTRACT_SUBREG SReg_64:$src1, sub1))), sub1)
 >;
 
-def : AMDGPUPat <
+let GISelShouldIgnore = 1 in def : AMDGPUPat <
   (fcopysign f64:$src0, f32:$src1),
   (REG_SEQUENCE SReg_64,
     (i32 (EXTRACT_SUBREG $src0, sub0)), sub0,
@@ -2377,11 +2377,11 @@ def : AMDGPUPat <
 
 def : ROTRPattern <V_ALIGNBIT_B32_e64>;
 
-def : GCNPat<(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),
+let GISelShouldIgnore = 1 in def : GCNPat<(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),
           (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
                           (i32 (EXTRACT_SUBREG (i64 $src0), sub0)), $src1)>;
 
-def : GCNPat<(i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
+let GISelShouldIgnore = 1 in def : GCNPat<(i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
           (V_ALIGNBIT_B32_e64 (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
                           (i32 (EXTRACT_SUBREG (i64 $src0), sub0)), $src1)>;
 
@@ -2391,13 +2391,13 @@ def : GCNPat<(i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
 
 multiclass SI_INDIRECT_Pattern <ValueType vt, ValueType eltvt, string VecSize> {
   // Extract with offset
-  def : GCNPat<
+let GISelShouldIgnore = 1 in   def : GCNPat<
     (eltvt (extractelt vt:$src, (MOVRELOffset i32:$idx, (i32 imm:$offset)))),
     (!cast<Instruction>("SI_INDIRECT_SRC_"#VecSize) $src, $idx, imm:$offset)
   >;
 
   // Insert with offset
-  def : GCNPat<
+let GISelShouldIgnore = 1 in   def : GCNPat<
     (insertelt vt:$src, eltvt:$val, (MOVRELOffset i32:$idx, (i32 imm:$offset))),
     (!cast<Instruction>("SI_INDIRECT_DST_"#VecSize) $src, $idx, imm:$offset, $val)
   >;
@@ -2427,14 +2427,14 @@ defm : SI_INDIRECT_Pattern <v32i32, i32, "V32">;
 // SAD Patterns
 //===----------------------------------------------------------------------===//
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (add (sub_oneuse (umax i32:$src0, i32:$src1),
                    (umin i32:$src0, i32:$src1)),
        i32:$src2),
   (V_SAD_U32_e64 $src0, $src1, $src2, (i1 0))
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (add (select_oneuse (i1 (setugt i32:$src0, i32:$src1)),
                       (sub i32:$src0, i32:$src1),
                       (sub i32:$src1, i32:$src0)),
@@ -2445,86 +2445,86 @@ def : GCNPat <
 //===----------------------------------------------------------------------===//
 // Conversion Patterns
 //===----------------------------------------------------------------------===//
-def : GCNPat<(i32 (UniformSextInreg<i1> i32:$src)),
+let GISelShouldIgnore = 1 in def : GCNPat<(i32 (UniformSextInreg<i1> i32:$src)),
   (S_BFE_I32 i32:$src, (i32 65536))>; // 0 | 1 << 16
 
 // Handle sext_inreg in i64
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i64 (UniformSextInreg<i1> i64:$src)),
   (S_BFE_I64 i64:$src, (i32 0x10000)) // 0 | 1 << 16
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i16 (UniformSextInreg<i1> i16:$src)),
   (S_BFE_I32 $src, (i32 0x00010000)) // 0 | 1 << 16
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i16 (UniformSextInreg<i8> i16:$src)),
   (S_BFE_I32 $src, (i32 0x80000)) // 0 | 8 << 16
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i64 (UniformSextInreg<i8> i64:$src)),
   (S_BFE_I64 i64:$src, (i32 0x80000)) // 0 | 8 << 16
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i64 (UniformSextInreg<i16> i64:$src)),
   (S_BFE_I64 i64:$src, (i32 0x100000)) // 0 | 16 << 16
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i64 (UniformSextInreg<i32> i64:$src)),
   (S_BFE_I64 i64:$src, (i32 0x200000)) // 0 | 32 << 16
 >;
 
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
   (i32 (DivergentSextInreg<i1> i32:$src)),
   (V_BFE_I32_e64 i32:$src, (i32 0), (i32 1))>;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i16 (DivergentSextInreg<i1> i16:$src)),
   (V_BFE_I32_e64 $src, (i32 0), (i32 1))
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i16 (DivergentSextInreg<i8> i16:$src)),
   (V_BFE_I32_e64 $src, (i32 0), (i32 8))
 >;
 
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
   (i32 (DivergentSextInreg<i8> i32:$src)),
   (V_BFE_I32_e64 i32:$src, (i32 0), (i32 8))
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i32 (DivergentSextInreg<i16> i32:$src)),
   (V_BFE_I32_e64 $src, (i32 0), (i32 16))
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i64 (DivergentSextInreg<i1> i64:$src)),
   (REG_SEQUENCE VReg_64,
     (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 1)), sub0,
     (V_ASHRREV_I32_e32  (i32 31), (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 1))), sub1)
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i64 (DivergentSextInreg<i8> i64:$src)),
   (REG_SEQUENCE VReg_64,
     (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 8)), sub0,
     (V_ASHRREV_I32_e32 (i32 31), (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 8))), sub1)
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i64 (DivergentSextInreg<i16> i64:$src)),
   (REG_SEQUENCE VReg_64,
     (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 16)), sub0,
     (V_ASHRREV_I32_e32 (i32 31), (V_BFE_I32_e64 (i32 (EXTRACT_SUBREG i64:$src, sub0)), (i32 0), (i32 16))), sub1)
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i64 (DivergentSextInreg<i32> i64:$src)),
   (REG_SEQUENCE VReg_64,
     (i32 (EXTRACT_SUBREG i64:$src, sub0)), sub0,
@@ -2686,7 +2686,7 @@ def : GCNPat <
   (V_NOT_B32_e32 $src0)
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i64 (DivergentBinFrag<xor> i64:$src0, (i64 -1))),
     (REG_SEQUENCE VReg_64,
       (V_NOT_B32_e32 (i32 (EXTRACT_SUBREG i64:$src0, sub0))), sub0,
@@ -2794,26 +2794,26 @@ def : GCNPat<
     (S_MOV_B32 (i32 0)), sub1)
 >;
 
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
   (i32 (zext (i16 (bitconvert fp16_zeros_high_16bits:$src)))),
   (COPY VSrc_b16:$src)>;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i32 (trunc i64:$a)),
   (EXTRACT_SUBREG $a, sub0)
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i1 (UniformUnaryFrag<trunc> i32:$a)),
   (S_CMP_EQ_U32 (S_AND_B32 (i32 1), $a), (i32 1))
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i1 (UniformUnaryFrag<trunc> i16:$a)),
   (S_CMP_EQ_U32 (S_AND_B32 (i32 1), $a), (i32 1))
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i1 (UniformUnaryFrag<trunc> i64:$a)),
   (S_CMP_EQ_U32 (S_AND_B32 (i32 1),
                     (i32 (EXTRACT_SUBREG $a, sub0))), (i32 1))
@@ -2844,20 +2844,20 @@ def IMMBitSelConst : SDNodeXForm<imm, [{
 // v_cmp_ne_u32_e64 $a, 0, $a
 
 // Handle the VALU case.
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i1 (DivergentUnaryFrag<trunc> (i32 (srl i32:$a, (i32 imm:$b))))),
   (V_CMP_NE_U32_e64 (V_AND_B32_e64 (i32 (IMMBitSelConst $b)), $a),
     (i32 0))
 >;
 
 // Handle the scalar case.
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i1 (UniformUnaryFrag<trunc> (i32 (srl i32:$a, (i32 imm:$b))))),
   (S_CMP_LG_U32 (S_AND_B32 (i32 (IMMBitSelConst $b)), $a),
     (i32 0))
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i1 (DivergentUnaryFrag<trunc> i64:$a)),
   (V_CMP_EQ_U32_e64 (V_AND_B32_e64 (i32 1),
                     (i32 (EXTRACT_SUBREG $a, sub0))), (i32 1))
@@ -2947,7 +2947,7 @@ def : GCNPat<
 // If fcanonicalize's operand is implicitly canonicalized, we only need a copy.
 let AddedComplexity = 1000 in {
 foreach vt = [f16, v2f16, f32, v2f32, f64] in {
-  def : GCNPat<
+let GISelShouldIgnore = 1 in   def : GCNPat<
     (fcanonicalize (vt is_canonicalized:$src)),
     (COPY vt:$src)
   >;
@@ -3146,12 +3146,12 @@ def : GCNPat <
   (v2i16 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), VGPR_32:$src1))
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (v2f16 (UniformBinFrag<build_vector> (f16 SReg_32:$src1), (f16 FP_ZERO))),
   (S_AND_B32 (S_MOV_B32 (i32 0xffff)), SReg_32:$src1)
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (v2f16 (DivergentBinFrag<build_vector> (f16 VGPR_32:$src1), (f16 FP_ZERO))),
   (v2f16 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), VGPR_32:$src1))
 >;
@@ -3166,7 +3166,7 @@ def : GCNPat <
   (COPY_TO_REGCLASS VGPR_32:$src0, VGPR_32)
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (v2f16 (build_vector f16:$src0, (f16 undef))),
   (COPY $src0)
 >;
@@ -3238,7 +3238,7 @@ def : GCNPat <
 
 // Take the lower 16 bits from V[0] and the upper 16 bits from V[1]
 // Special case, can use V_BFI (0xffff literal likely more reusable than 0x70601000)
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (vecTy (DivergentBinFrag<build_vector> (Ty (immzeroTy)),
     (Ty !if(!eq(Ty, i16),
       (Ty (trunc (srl VGPR_32:$b, (i32 16)))),
@@ -3303,22 +3303,22 @@ def : GCNPat <
 >;
 
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (v2f16 (scalar_to_vector f16:$src0)),
   (COPY $src0)
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (v2i16 (scalar_to_vector i16:$src0)),
   (COPY $src0)
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (v4i16 (scalar_to_vector i16:$src0)),
   (INSERT_SUBREG (IMPLICIT_DEF), $src0, sub0)
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (v4f16 (scalar_to_vector f16:$src0)),
   (INSERT_SUBREG (IMPLICIT_DEF), $src0, sub0)
 >;
@@ -3410,12 +3410,12 @@ def : GCNPat<
 >;
 
 multiclass BFMPatterns <ValueType vt, PatFrag SHL, PatFrag ADD, InstSI BFM> {
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
     (vt (SHL (vt (add (vt (shl 1, vt:$a)), -1)), vt:$b)),
     (BFM $a, $b)
   >;
 
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
     (vt (ADD (vt (shl 1, vt:$a)), -1)),
     (BFM $a, (i32 0))
   >;
@@ -3436,39 +3436,39 @@ def IMMPopCount : SDNodeXForm<imm, [{
                                    MVT::i32);
 }]>;
 
-def : AMDGPUPat <
+let GISelShouldIgnore = 1 in def : AMDGPUPat <
   (DivergentBinFrag<and> (i32 (srl i32:$src, i32:$rshift)),
                          IMMZeroBasedBitfieldMask:$mask),
   (V_BFE_U32_e64 $src, $rshift, (i32 (IMMPopCount $mask)))
 >;
 
 // x & ((1 << y) - 1)
-def : AMDGPUPat <
+let GISelShouldIgnore = 1 in def : AMDGPUPat <
   (DivergentBinFrag<and> i32:$src, (add_oneuse (shl_oneuse 1, i32:$width), -1)),
   (V_BFE_U32_e64 $src, (i32 0), $width)
 >;
 
 // x & ~(-1 << y)
-def : AMDGPUPat <
+let GISelShouldIgnore = 1 in def : AMDGPUPat <
   (DivergentBinFrag<and> i32:$src,
                          (xor_oneuse (shl_oneuse -1, i32:$width), -1)),
   (V_BFE_U32_e64 $src, (i32 0), $width)
 >;
 
 // x & (-1 >> (bitwidth - y))
-def : AMDGPUPat <
+let GISelShouldIgnore = 1 in def : AMDGPUPat <
   (DivergentBinFrag<and> i32:$src, (srl_oneuse -1, (sub 32, i32:$width))),
   (V_BFE_U32_e64 $src, (i32 0), $width)
 >;
 
 // x << (bitwidth - y) >> (bitwidth - y)
-def : AMDGPUPat <
+let GISelShouldIgnore = 1 in def : AMDGPUPat <
   (DivergentBinFrag<srl> (shl_oneuse i32:$src, (sub 32, i32:$width)),
                          (sub 32, i32:$width)),
   (V_BFE_U32_e64 $src, (i32 0), $width)
 >;
 
-def : AMDGPUPat <
+let GISelShouldIgnore = 1 in def : AMDGPUPat <
   (DivergentBinFrag<sra> (shl_oneuse i32:$src, (sub 32, i32:$width)),
                          (sub 32, i32:$width)),
   (V_BFE_I32_e64 $src, (i32 0), $width)

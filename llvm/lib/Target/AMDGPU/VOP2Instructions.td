@@ -885,8 +885,8 @@ class mul24_64_Pat<SDPatternOperator Op, Instruction InstLo, Instruction InstHi>
     (InstHi $src0, $src1), sub1)
 >;
 
-def : mul24_64_Pat<AMDGPUmul_i24, V_MUL_I32_I24_e64, V_MUL_HI_I32_I24_e64>;
-def : mul24_64_Pat<AMDGPUmul_u24, V_MUL_U32_U24_e64, V_MUL_HI_U32_U24_e64>;
+let GISelShouldIgnore = 1 in def : mul24_64_Pat<AMDGPUmul_i24, V_MUL_I32_I24_e64, V_MUL_HI_I32_I24_e64>;
+let GISelShouldIgnore = 1 in def : mul24_64_Pat<AMDGPUmul_u24, V_MUL_U32_U24_e64, V_MUL_HI_U32_U24_e64>;
 
 //===----------------------------------------------------------------------===//
 // 16-Bit Operand Instructions
@@ -1020,17 +1020,17 @@ let SubtargetPredicate = HasDLInsts in {
 let isReMaterializable = 1 in
 defm V_XNOR_B32 : VOP2Inst <"v_xnor_b32", VOP_I32_I32_I32, xnor>;
 
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
   (i32 (DivergentUnaryFrag<not> (xor_oneuse i32:$src0, i32:$src1))),
   (i32 (V_XNOR_B32_e64 $src0, $src1))
 >;
 
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
   (i32 (DivergentBinFrag<xor_oneuse> (not i32:$src0), i32:$src1)),
   (i32 (V_XNOR_B32_e64 $src0, $src1))
 >;
 
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
   (i64 (DivergentUnaryFrag<not> (xor_oneuse i64:$src0, i64:$src1))),
   (REG_SEQUENCE VReg_64, (i32 (V_XNOR_B32_e64
                             (i32 (EXTRACT_SUBREG $src0, sub0)),
@@ -1040,7 +1040,7 @@ def : GCNPat<
                             (i32 (EXTRACT_SUBREG $src1, sub1)))), sub1)
 >;
 
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
   (i64 (DivergentBinFrag<xor_oneuse> (not i64:$src0), i64:$src1)),
   (REG_SEQUENCE VReg_64, (i32 (V_XNOR_B32_e64
                             (i32 (EXTRACT_SUBREG $src0, sub0)),
@@ -1092,7 +1092,7 @@ let Constraints = "$vdst = $src2",
 }
 
 let AddedComplexity = 30 in {
-  def : GCNPat<
+let GISelShouldIgnore = 1 in   def : GCNPat<
     (f32 (AMDGPUfdot2 v2f16:$src0, v2f16:$src1, f32:$src2, (i1 DSTCLAMP.NONE))),
     (f32 (V_DOT2C_F32_F16_e32 $src0, $src1, $src2))
   > {
@@ -1138,7 +1138,7 @@ def : GCNPat<
   (inst VSrc_b16:$src0, VSrc_b16:$src1)
 >;
 
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
   (i64 (zext (op i16:$src0, i16:$src1))),
    (REG_SEQUENCE VReg_64,
      (inst $src0, $src1), sub0,

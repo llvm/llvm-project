@@ -989,19 +989,19 @@ defm V_CMPX_CLASS_F16 : VOPCX_CLASS_F16 <"v_cmpx_class_f16">;
 // complaints it cannot replace i1 <-> i64/i32 if node was not morphed in place.
 multiclass ICMP_Pattern <PatFrags cond, Instruction inst, ValueType vt> {
   let WaveSizePredicate = isWave64 in
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
     (i64 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
     (i64 (COPY_TO_REGCLASS (inst $src0, $src1), SReg_64))
   >;
 
   let WaveSizePredicate = isWave32 in {
-    def : GCNPat <
+let GISelShouldIgnore = 1 in     def : GCNPat <
       (i32 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
       (i32 (COPY_TO_REGCLASS (inst $src0, $src1), SReg_32))
     >;
 
     // Support codegen of i64 setcc in wave32 mode.
-    def : GCNPat <
+let GISelShouldIgnore = 1 in     def : GCNPat <
       (i64 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
       (i64 (REG_SEQUENCE SReg_64, (inst $src0, $src1), sub0, (S_MOV_B32 (i32 0)), sub1))
     >;
@@ -1058,7 +1058,7 @@ defm : ICMP_Pattern <COND_SLE, V_CMP_LE_I16_e64, i16>;
 
 multiclass FCMP_Pattern <PatFrags cond, Instruction inst, ValueType vt> {
   let WaveSizePredicate = isWave64 in
-  def : GCNPat <
+let GISelShouldIgnore = 1 in   def : GCNPat <
     (i64 (AMDGPUsetcc (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
                  (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)), cond)),
     (i64 (COPY_TO_REGCLASS (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
@@ -1066,14 +1066,14 @@ multiclass FCMP_Pattern <PatFrags cond, Instruction inst, ValueType vt> {
   >;
 
   let WaveSizePredicate = isWave32 in {
-    def : GCNPat <
+let GISelShouldIgnore = 1 in     def : GCNPat <
       (i32 (AMDGPUsetcc (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
                         (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)), cond)),
       (i32 (COPY_TO_REGCLASS (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
                               DSTCLAMP.NONE), SReg_32))
     >;
 
-    def : GCNPat <
+let GISelShouldIgnore = 1 in     def : GCNPat <
       (i64 (AMDGPUsetcc (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
                         (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)), cond)),
       (i64 (REG_SEQUENCE SReg_64, (inst $src0_modifiers, $src0, $src1_modifiers, $src1,

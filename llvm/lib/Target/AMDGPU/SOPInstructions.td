@@ -1767,7 +1767,7 @@ let OtherPredicates = [HasExportInsts] in
 // SOP1 Patterns
 //===----------------------------------------------------------------------===//
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (AMDGPUendpgm),
     (S_ENDPGM (i16 0))
 >;
@@ -1876,7 +1876,7 @@ def UniformSelect : PatFrag<
 >;
 
 let AddedComplexity = 20 in {
-  def : GCNPat<
+let GISelShouldIgnore = 1 in   def : GCNPat<
     (i32 (UniformSelect i32:$src0, i32:$src1)),
     (S_CSELECT_B32 SSrc_b32:$src0, SSrc_b32:$src1)
   >;
@@ -1884,7 +1884,7 @@ let AddedComplexity = 20 in {
   // TODO: The predicate should not be necessary, but enabling this pattern for
   // all subtargets generates worse code in some cases.
   let OtherPredicates = [HasPseudoScalarTrans] in
-  def : GCNPat<
+let GISelShouldIgnore = 1 in   def : GCNPat<
     (f32 (UniformSelect f32:$src0, f32:$src1)),
     (S_CSELECT_B32 SSrc_b32:$src0, SSrc_b32:$src1)
   >;
@@ -1892,7 +1892,7 @@ let AddedComplexity = 20 in {
 
 // V_ADD_I32_e32/S_ADD_U32 produces carry in VCC/SCC. For the vector
 // case, the sgpr-copies pass will fix this to use the vector version.
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i32 (addc i32:$src0, i32:$src1)),
   (S_ADD_U32 $src0, $src1)
 >;

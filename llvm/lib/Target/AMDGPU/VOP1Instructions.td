@@ -498,21 +498,21 @@ defm V_FRACT_F16 : VOP1Inst_t16 <"v_fract_f16", VOP_F16_F16, AMDGPUfract>;
 } // End FPDPRounding = 1
 
 let OtherPredicates = [Has16BitInsts, NotHasTrue16BitInsts] in {
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
     (f32 (f16_to_fp i16:$src)),
     (V_CVT_F32_F16_e32 $src)
 >;
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
     (i16 (AMDGPUfp_to_f16 f32:$src)),
     (V_CVT_F16_F32_e32 $src)
 >;
 }
 let OtherPredicates = [HasTrue16BitInsts] in {
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
     (f32 (f16_to_fp i16:$src)),
     (V_CVT_F32_F16_t16_e32 $src)
 >;
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
     (i16 (AMDGPUfp_to_f16 f32:$src)),
     (V_CVT_F16_F32_t16_e32 $src)
 >;
@@ -1358,7 +1358,7 @@ def : UpdateDPPPat<v2f16>;
 } // End OtherPredicates = [isGFX8Plus]
 
 let OtherPredicates = [isGFX8Plus] in {
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
   (i32 (anyext i16:$src)),
   (COPY $src)
 >;
@@ -1370,12 +1370,12 @@ def : GCNPat<
      (V_MOV_B32_e32 (i32 0)), sub1)
 >;
 
-def : GCNPat<
+let GISelShouldIgnore = 1 in def : GCNPat<
   (i16 (trunc i32:$src)),
   (COPY $src)
 >;
 
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (i16 (trunc i64:$src)),
   (EXTRACT_SUBREG $src, sub0)
 >;

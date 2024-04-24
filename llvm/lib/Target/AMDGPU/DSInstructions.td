@@ -798,19 +798,19 @@ defm : DSReadPat_mc <DS_READ_B32, i32, "atomic_load_32_local">;
 defm : DSReadPat_mc <DS_READ_B64, i64, "atomic_load_64_local">;
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
-def : DSReadPat_D16<DS_READ_U16_D16_HI, load_d16_hi_local, v2i16>;
-def : DSReadPat_D16<DS_READ_U16_D16_HI, load_d16_hi_local, v2f16>;
-def : DSReadPat_D16<DS_READ_U8_D16_HI, az_extloadi8_d16_hi_local, v2i16>;
-def : DSReadPat_D16<DS_READ_U8_D16_HI, az_extloadi8_d16_hi_local, v2f16>;
-def : DSReadPat_D16<DS_READ_I8_D16_HI, sextloadi8_d16_hi_local, v2i16>;
-def : DSReadPat_D16<DS_READ_I8_D16_HI, sextloadi8_d16_hi_local, v2f16>;
+let GISelShouldIgnore = 1 in def : DSReadPat_D16<DS_READ_U16_D16_HI, load_d16_hi_local, v2i16>;
+let GISelShouldIgnore = 1 in def : DSReadPat_D16<DS_READ_U16_D16_HI, load_d16_hi_local, v2f16>;
+let GISelShouldIgnore = 1 in def : DSReadPat_D16<DS_READ_U8_D16_HI, az_extloadi8_d16_hi_local, v2i16>;
+let GISelShouldIgnore = 1 in def : DSReadPat_D16<DS_READ_U8_D16_HI, az_extloadi8_d16_hi_local, v2f16>;
+let GISelShouldIgnore = 1 in def : DSReadPat_D16<DS_READ_I8_D16_HI, sextloadi8_d16_hi_local, v2i16>;
+let GISelShouldIgnore = 1 in def : DSReadPat_D16<DS_READ_I8_D16_HI, sextloadi8_d16_hi_local, v2f16>;
 
-def : DSReadPat_D16<DS_READ_U16_D16, load_d16_lo_local, v2i16>;
-def : DSReadPat_D16<DS_READ_U16_D16, load_d16_lo_local, v2f16>;
-def : DSReadPat_D16<DS_READ_U8_D16, az_extloadi8_d16_lo_local, v2i16>;
-def : DSReadPat_D16<DS_READ_U8_D16, az_extloadi8_d16_lo_local, v2f16>;
-def : DSReadPat_D16<DS_READ_I8_D16, sextloadi8_d16_lo_local, v2i16>;
-def : DSReadPat_D16<DS_READ_I8_D16, sextloadi8_d16_lo_local, v2f16>;
+let GISelShouldIgnore = 1 in def : DSReadPat_D16<DS_READ_U16_D16, load_d16_lo_local, v2i16>;
+let GISelShouldIgnore = 1 in def : DSReadPat_D16<DS_READ_U16_D16, load_d16_lo_local, v2f16>;
+let GISelShouldIgnore = 1 in def : DSReadPat_D16<DS_READ_U8_D16, az_extloadi8_d16_lo_local, v2i16>;
+let GISelShouldIgnore = 1 in def : DSReadPat_D16<DS_READ_U8_D16, az_extloadi8_d16_lo_local, v2f16>;
+let GISelShouldIgnore = 1 in def : DSReadPat_D16<DS_READ_I8_D16, sextloadi8_d16_lo_local, v2i16>;
+let GISelShouldIgnore = 1 in def : DSReadPat_D16<DS_READ_I8_D16, sextloadi8_d16_lo_local, v2f16>;
 }
 
 class DSWritePat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
@@ -1148,7 +1148,7 @@ def : GCNPat <
 } // End SubtargetPredicate = HasAtomicDsPkAdd16Insts
 
 let OtherPredicates = [HasGDS] in
-def : GCNPat <
+let GISelShouldIgnore = 1 in def : GCNPat <
   (SIds_ordered_count i32:$value, i16:$offset),
   (DS_ORDERED_COUNT $value, (as_i16imm $offset))
 >;
