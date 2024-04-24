@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
@@ -82,6 +83,8 @@ static cl::opt<std::string> ModuleSummaryDotFile(
 
 extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
 
+extern cl::opt<unsigned> MaxNumVTableAnnotations;
+
 // Walk through the operands of a given User via worklist iteration and populate
 // the set of GlobalValue references encountered. Invoked either on an
 // Instruction or a GlobalVariable (which walks its initializer).
@@ -122,6 +125,24 @@ static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
       }
       if (Visited.insert(Operand).second)
         Worklist.push_back(Operand);
+    }
+  }
+
+  const Instruction *I = dyn_cast<Instruction>(CurUser);
+  if (I) {
+    uint32_t ActualNumValueData = 0;
+    uint64_t TotalCount = 0;
+    // MaxNumVTableAnnotations is the maximum number of vtables annotated on
+    // the instruction.
+    auto ValueDataArray =
+        getValueProfDataFromInst(*I, IPVK_VTableTarget, MaxNumVTableAnnotations,
+                                 ActualNumValueData, TotalCount);
+
+    if (ValueDataArray.get()) {
+      for (uint32_t j = 0; j < ActualNumValueData; j++) {
+        RefEdges.insert(Index.getOrInsertValueInfo(/* VTableGUID = */
+                                                   ValueDataArray[j].Value));
+      }
     }
   }
   return HasBlockAddress;
@@ -615,7 +636,8 @@ static void computeFunctionSummary(
                               HasIndirBranchToBlockAddress || HasIFuncCall;
   GlobalValueSummary::GVFlags Flags(
       F.getLinkage(), F.getVisibility(), NotEligibleForImport,
-      /* Live = */ false, F.isDSOLocal(), F.canBeOmittedFromSymbolTable());
+      /* Live = */ false, F.isDSOLocal(), F.canBeOmittedFromSymbolTable(),
+      GlobalValueSummary::ImportKind::Definition);
   FunctionSummary::FFlags FunFlags{
       F.doesNotAccessMemory(), F.onlyReadsMemory() && !F.doesNotAccessMemory(),
       F.hasFnAttribute(Attribute::NoRecurse), F.returnDoesNotAlias(),
@@ -647,7 +669,8 @@ static void computeFunctionSummary(
 /// within the initializer.
 static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
                              const Module &M, ModuleSummaryIndex &Index,
-                             VTableFuncList &VTableFuncs) {
+                             VTableFuncList &VTableFuncs,
+                             const GlobalVariable &OrigGV) {
   // First check if this is a function pointer.
   if (I->getType()->isPointerTy()) {
     auto C = I->stripPointerCasts();
@@ -675,7 +698,7 @@ static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
       auto Offset = SL->getElementOffset(EI.index());
       unsigned Op = SL->getElementContainingOffset(Offset);
       findFuncPointers(cast<Constant>(I->getOperand(Op)),
-                       StartingOffset + Offset, M, Index, VTableFuncs);
+                       StartingOffset + Offset, M, Index, VTableFuncs, OrigGV);
     }
   } else if (auto *C = dyn_cast<ConstantArray>(I)) {
     ArrayType *ATy = C->getType();
@@ -683,7 +706,34 @@ static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
     uint64_t EltSize = DL.getTypeAllocSize(EltTy);
     for (unsigned i = 0, e = ATy->getNumElements(); i != e; ++i) {
       findFuncPointers(cast<Constant>(I->getOperand(i)),
-                       StartingOffset + i * EltSize, M, Index, VTableFuncs);
+                       StartingOffset + i * EltSize, M, Index, VTableFuncs,
+                       OrigGV);
+    }
+  } else if (const auto *CE = dyn_cast<ConstantExpr>(I)) {
+    // For relative vtables, the next sub-component should be a trunc.
+    if (CE->getOpcode() != Instruction::Trunc ||
+        !(CE = dyn_cast<ConstantExpr>(CE->getOperand(0))))
+      return;
+
+    // If this constant can be reduced to the offset between a function and a
+    // global, then we know this is a valid virtual function if the RHS is the
+    // original vtable we're scanning through.
+    if (CE->getOpcode() == Instruction::Sub) {
+      GlobalValue *LHS, *RHS;
+      APSInt LHSOffset, RHSOffset;
+      if (IsConstantOffsetFromGlobal(CE->getOperand(0), LHS, LHSOffset, DL) &&
+          IsConstantOffsetFromGlobal(CE->getOperand(1), RHS, RHSOffset, DL) &&
+          RHS == &OrigGV &&
+
+          // For relative vtables, this component should point to the callable
+          // function without any offsets.
+          LHSOffset == 0 &&
+
+          // Also, the RHS should always point to somewhere within the vtable.
+          RHSOffset <=
+              static_cast<uint64_t>(DL.getTypeAllocSize(OrigGV.getInitializer()->getType()))) {
+        findFuncPointers(LHS, StartingOffset, M, Index, VTableFuncs, OrigGV);
+      }
     }
   }
 }
@@ -696,7 +746,7 @@ static void computeVTableFuncs(ModuleSummaryIndex &Index,
     return;
 
   findFuncPointers(V.getInitializer(), /*StartingOffset=*/0, M, Index,
-                   VTableFuncs);
+                   VTableFuncs, V);
 
 #ifndef NDEBUG
   // Validate that the VTableFuncs list is ordered by offset.
@@ -741,7 +791,8 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
   bool NonRenamableLocal = isNonRenamableLocal(V);
   GlobalValueSummary::GVFlags Flags(
       V.getLinkage(), V.getVisibility(), NonRenamableLocal,
-      /* Live = */ false, V.isDSOLocal(), V.canBeOmittedFromSymbolTable());
+      /* Live = */ false, V.isDSOLocal(), V.canBeOmittedFromSymbolTable(),
+      GlobalValueSummary::Definition);
 
   VTableFuncList VTableFuncs;
   // If splitting is not enabled, then we compute the summary information
@@ -787,7 +838,8 @@ static void computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
   bool NonRenamableLocal = isNonRenamableLocal(A);
   GlobalValueSummary::GVFlags Flags(
       A.getLinkage(), A.getVisibility(), NonRenamableLocal,
-      /* Live = */ false, A.isDSOLocal(), A.canBeOmittedFromSymbolTable());
+      /* Live = */ false, A.isDSOLocal(), A.canBeOmittedFromSymbolTable(),
+      GlobalValueSummary::Definition);
   auto AS = std::make_unique<AliasSummary>(Flags);
   auto AliaseeVI = Index.getValueInfo(Aliasee->getGUID());
   assert(AliaseeVI && "Alias expects aliasee summary to be available");
@@ -867,7 +919,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
               GlobalValue::InternalLinkage, GlobalValue::DefaultVisibility,
               /* NotEligibleToImport = */ true,
               /* Live = */ true,
-              /* Local */ GV->isDSOLocal(), GV->canBeOmittedFromSymbolTable());
+              /* Local */ GV->isDSOLocal(), GV->canBeOmittedFromSymbolTable(),
+              GlobalValueSummary::Definition);
           CantBePromoted.insert(GV->getGUID());
           // Create the appropriate summary type.
           if (Function *F = dyn_cast<Function>(GV)) {

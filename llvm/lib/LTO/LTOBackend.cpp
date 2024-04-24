@@ -436,8 +436,7 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
   unsigned ThreadCount = 0;
   const Target *T = &TM->getTarget();
 
-  SplitModule(
-      Mod, ParallelCodeGenParallelismLevel,
+  const auto HandleModulePartition =
       [&](std::unique_ptr<Module> MPart) {
         // We want to clone the module in a new context to multi-thread the
         // codegen. We do it by serializing partition modules to bitcode
@@ -469,8 +468,14 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
             // Pass BC using std::move to ensure that it get moved rather than
             // copied into the thread's context.
             std::move(BC), ThreadCount++);
-      },
-      false);
+      };
+
+  // Try target-specific module splitting first, then fallback to the default.
+  if (!TM->splitModule(Mod, ParallelCodeGenParallelismLevel,
+                       HandleModulePartition)) {
+    SplitModule(Mod, ParallelCodeGenParallelismLevel, HandleModulePartition,
+                false);
+  }
 
   // Because the inner lambda (which runs in a worker thread) captures our local
   // variables, we need to wait for the worker threads to terminate before we

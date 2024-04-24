@@ -115,9 +115,9 @@ define <3 x i32> @t3_vec_nonsplat(<3 x i32> %x, <3 x i32> %nbits) {
   ret <3 x i32> %t4
 }
 
-define <3 x i32> @t4_vec_undef(<3 x i32> %x, <3 x i32> %nbits) {
-; CHECK-LABEL: @t4_vec_undef(
-; CHECK-NEXT:    [[T0:%.*]] = shl <3 x i32> <i32 -1, i32 undef, i32 -1>, [[NBITS:%.*]]
+define <3 x i32> @t4_vec_poison(<3 x i32> %x, <3 x i32> %nbits) {
+; CHECK-LABEL: @t4_vec_poison(
+; CHECK-NEXT:    [[T0:%.*]] = shl nsw <3 x i32> <i32 -1, i32 poison, i32 -1>, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = lshr <3 x i32> <i32 -1, i32 -1, i32 -1>, [[NBITS]]
 ; CHECK-NEXT:    [[T2:%.*]] = and <3 x i32> [[T1]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T0]])
@@ -127,10 +127,10 @@ define <3 x i32> @t4_vec_undef(<3 x i32> %x, <3 x i32> %nbits) {
 ; CHECK-NEXT:    [[T4:%.*]] = shl <3 x i32> [[X]], [[NBITS]]
 ; CHECK-NEXT:    ret <3 x i32> [[T4]]
 ;
-  %t0 = shl <3 x i32> <i32 -1, i32 undef, i32 -1>, %nbits
+  %t0 = shl <3 x i32> <i32 -1, i32 poison, i32 -1>, %nbits
   %t1 = lshr <3 x i32> %t0, %nbits
   %t2 = and <3 x i32> %t1, %x
-  %t3 = add <3 x i32> %nbits, <i32 0, i32 undef, i32 0>
+  %t3 = add <3 x i32> %nbits, <i32 0, i32 poison, i32 0>
   call void @use3xi32(<3 x i32> %t0)
   call void @use3xi32(<3 x i32> %t1)
   call void @use3xi32(<3 x i32> %t2)

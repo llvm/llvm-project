@@ -25,7 +25,7 @@
 #ifndef FORTRAN_COMMON_REFERENCE_WRAPPER_H
 #define FORTRAN_COMMON_REFERENCE_WRAPPER_H
 
-#include "flang/Runtime/api-attrs.h"
+#include "flang/Common/api-attrs.h"
 #include <functional>
 #include <type_traits>
 

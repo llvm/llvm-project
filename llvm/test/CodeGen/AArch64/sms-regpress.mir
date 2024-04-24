@@ -1,0 +1,160 @@
+# RUN: llc --verify-machineinstrs -mtriple=aarch64 -o - %s -run-pass pipeliner -aarch64-enable-pipeliner -pipeliner-max-mii=40 -pipeliner-register-pressure -pipeliner-ii-search-range=30 -debug-only=pipeliner 2>&1 | FileCheck %s
+
+# REQUIRES: asserts
+
+# Check that if the register pressure is too high, the schedule is rejected, II is incremented, and scheduling continues.
+# The specific value of II is not important.
+
+# CHECK: {{^ *}}Try to schedule with {{[0-9]+$}}
+# CHECK: {{^ *}}Rejected the schedule because of too high register pressure{{$}}
+# CHECK: {{^ *}}Try to schedule with {{[0-9]+$}}
+# CHECK: {{^ *}}Schedule Found? 1 (II={{[0-9]+}}){{$}}
+
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  
+  define dso_local double @kernel(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b, i32 noundef %n) local_unnamed_addr {
+  entry:
+    %0 = load double, ptr %a, align 8
+    %arrayidx1 = getelementptr inbounds i8, ptr %a, i64 8
+    %1 = load double, ptr %arrayidx1, align 8
+    %cmp133 = icmp sgt i32 %n, 0
+    br i1 %cmp133, label %for.body.preheader, label %for.cond.cleanup
+  
+  for.body.preheader:                               ; preds = %entry
+    %wide.trip.count = zext nneg i32 %n to i64
+    br label %for.body
+  
+  for.cond.cleanup:                                 ; preds = %for.body, %entry
+    %res.0.lcssa = phi double [ 0.000000e+00, %entry ], [ %add54, %for.body ]
+    ret double %res.0.lcssa
+  
+  for.body:                                         ; preds = %for.body.preheader, %for.body
+    %lsr.iv137 = phi i64 [ %wide.trip.count, %for.body.preheader ], [ %lsr.iv.next, %for.body ]
+    %lsr.iv = phi ptr [ %b, %for.body.preheader ], [ %scevgep, %for.body ]
+    %res.0135 = phi double [ 0.000000e+00, %for.body.preheader ], [ %add54, %for.body ]
+    %2 = load double, ptr %lsr.iv, align 8
+    %3 = tail call double @llvm.fmuladd.f64(double %0, double %2, double %0)
+    %4 = tail call double @llvm.fmuladd.f64(double %3, double %2, double %3)
+    %5 = tail call double @llvm.fmuladd.f64(double %4, double %2, double %4)
+    %6 = tail call double @llvm.fmuladd.f64(double %5, double %2, double %5)
+    %7 = tail call double @llvm.fmuladd.f64(double %6, double %2, double %6)
+    %8 = tail call double @llvm.fmuladd.f64(double %7, double %2, double %7)
+    %9 = tail call double @llvm.fmuladd.f64(double %8, double %2, double %8)
+    %10 = tail call double @llvm.fmuladd.f64(double %9, double %2, double %9)
+    %11 = tail call double @llvm.fmuladd.f64(double %10, double %2, double %10)
+    %12 = tail call double @llvm.fmuladd.f64(double %11, double %2, double %11)
+    %13 = tail call double @llvm.fmuladd.f64(double %12, double %2, double %12)
+    %14 = tail call double @llvm.fmuladd.f64(double %13, double %2, double %13)
+    %15 = tail call double @llvm.fmuladd.f64(double %14, double %2, double %14)
+    %16 = tail call double @llvm.fmuladd.f64(double %15, double %2, double %15)
+    %17 = tail call double @llvm.fmuladd.f64(double %16, double %2, double %16)
+    %18 = tail call double @llvm.fmuladd.f64(double %17, double %2, double %17)
+    %add = fadd double %17, %18
+    %19 = tail call double @llvm.fmuladd.f64(double %18, double %2, double %add)
+    %add35 = fadd double %10, %19
+    %20 = tail call double @llvm.fmuladd.f64(double %3, double %2, double %add35)
+    %add38 = fadd double %11, %20
+    %21 = tail call double @llvm.fmuladd.f64(double %4, double %2, double %add38)
+    %add41 = fadd double %12, %21
+    %22 = tail call double @llvm.fmuladd.f64(double %5, double %2, double %add41)
+    %add44 = fadd double %14, %15
+    %add45 = fadd double %13, %add44
+    %add46 = fadd double %add45, %22
+    %23 = tail call double @llvm.fmuladd.f64(double %6, double %2, double %add46)
+    %mul = fmul double %2, %7
+    %mul51 = fmul double %1, %mul
+    %24 = tail call double @llvm.fmuladd.f64(double %mul51, double %9, double %23)
+    %25 = tail call double @llvm.fmuladd.f64(double %8, double %1, double %24)
+    %add54 = fadd double %res.0135, %25
+    %scevgep = getelementptr i8, ptr %lsr.iv, i64 8
+    %lsr.iv.next = add nsw i64 %lsr.iv137, -1
+    %exitcond.not = icmp eq i64 %lsr.iv.next, 0
+    br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+  }
+  
+  declare double @llvm.fmuladd.f64(double, double, double)
+
+...
+---
+name:            kernel
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0', virtual-reg: '%10' }
+  - { reg: '$x1', virtual-reg: '%11' }
+  - { reg: '$w2', virtual-reg: '%12' }
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.4
+    liveins: $x0, $x1, $w2
+  
+    %12:gpr32common = COPY $w2
+    %11:gpr64 = COPY $x1
+    %10:gpr64common = COPY $x0
+    dead $wzr = SUBSWri %12, 1, 0, implicit-def $nzcv
+    Bcc 10, %bb.1, implicit $nzcv
+  
+  bb.4:
+    %13:fpr64 = FMOVD0
+    B %bb.2
+  
+  bb.1.for.body.preheader:
+    %0:fpr64 = LDRDui %10, 0 :: (load (s64) from %ir.a)
+    %1:fpr64 = LDRDui %10, 1 :: (load (s64) from %ir.arrayidx1)
+    %16:gpr32 = ORRWrs $wzr, %12, 0
+    %2:gpr64all = SUBREG_TO_REG 0, killed %16, %subreg.sub_32
+    %15:fpr64 = FMOVD0
+    B %bb.3
+  
+  bb.2.for.cond.cleanup:
+    %3:fpr64 = PHI %13, %bb.4, %7, %bb.3
+    $d0 = COPY %3
+    RET_ReallyLR implicit $d0
+  
+  bb.3.for.body:
+    successors: %bb.2, %bb.3
+  
+    %4:gpr64sp = PHI %2, %bb.1, %9, %bb.3
+    %5:gpr64sp = PHI %11, %bb.1, %8, %bb.3
+    %6:fpr64 = PHI %15, %bb.1, %7, %bb.3
+    early-clobber %17:gpr64sp, %18:fpr64 = LDRDpost %5, 8 :: (load (s64) from %ir.lsr.iv)
+    %19:fpr64 = nofpexcept FMADDDrrr %0, %18, %0, implicit $fpcr
+    %20:fpr64 = nofpexcept FMADDDrrr %19, %18, %19, implicit $fpcr
+    %21:fpr64 = nofpexcept FMADDDrrr %20, %18, %20, implicit $fpcr
+    %22:fpr64 = nofpexcept FMADDDrrr %21, %18, %21, implicit $fpcr
+    %23:fpr64 = nofpexcept FMADDDrrr %22, %18, %22, implicit $fpcr
+    %24:fpr64 = nofpexcept FMADDDrrr %23, %18, %23, implicit $fpcr
+    %25:fpr64 = nofpexcept FMADDDrrr %24, %18, %24, implicit $fpcr
+    %26:fpr64 = nofpexcept FMADDDrrr %25, %18, %25, implicit $fpcr
+    %27:fpr64 = nofpexcept FMADDDrrr %26, %18, %26, implicit $fpcr
+    %28:fpr64 = nofpexcept FMADDDrrr %27, %18, %27, implicit $fpcr
+    %29:fpr64 = nofpexcept FMADDDrrr %28, %18, %28, implicit $fpcr
+    %30:fpr64 = nofpexcept FMADDDrrr %29, %18, %29, implicit $fpcr
+    %31:fpr64 = nofpexcept FMADDDrrr %30, %18, %30, implicit $fpcr
+    %32:fpr64 = nofpexcept FMADDDrrr %31, %18, %31, implicit $fpcr
+    %33:fpr64 = nofpexcept FMADDDrrr %32, %18, %32, implicit $fpcr
+    %34:fpr64 = nofpexcept FMADDDrrr %33, %18, %33, implicit $fpcr
+    %35:fpr64 = nofpexcept FADDDrr %33, %34, implicit $fpcr
+    %36:fpr64 = nofpexcept FMADDDrrr %34, %18, killed %35, implicit $fpcr
+    %37:fpr64 = nofpexcept FADDDrr %26, killed %36, implicit $fpcr
+    %38:fpr64 = nofpexcept FMADDDrrr %19, %18, killed %37, implicit $fpcr
+    %39:fpr64 = nofpexcept FADDDrr %27, killed %38, implicit $fpcr
+    %40:fpr64 = nofpexcept FMADDDrrr %20, %18, killed %39, implicit $fpcr
+    %41:fpr64 = nofpexcept FADDDrr %28, killed %40, implicit $fpcr
+    %42:fpr64 = nofpexcept FMADDDrrr %21, %18, killed %41, implicit $fpcr
+    %43:fpr64 = nofpexcept FADDDrr %30, %31, implicit $fpcr
+    %44:fpr64 = nofpexcept FADDDrr %29, killed %43, implicit $fpcr
+    %45:fpr64 = nofpexcept FADDDrr killed %44, killed %42, implicit $fpcr
+    %46:fpr64 = nofpexcept FMADDDrrr %22, %18, killed %45, implicit $fpcr
+    %47:fpr64 = nofpexcept FMULDrr %18, %23, implicit $fpcr
+    %48:fpr64 = nofpexcept FMULDrr %1, killed %47, implicit $fpcr
+    %49:fpr64 = nofpexcept FMADDDrrr killed %48, %25, killed %46, implicit $fpcr
+    %50:fpr64 = nofpexcept FMADDDrrr %24, %1, killed %49, implicit $fpcr
+    %7:fpr64 = nofpexcept FADDDrr %6, killed %50, implicit $fpcr
+    %8:gpr64all = COPY %17
+    %51:gpr64 = nsw SUBSXri %4, 1, 0, implicit-def $nzcv
+    %9:gpr64all = COPY %51
+    Bcc 0, %bb.2, implicit $nzcv
+    B %bb.3
+
+...

@@ -1,0 +1,40 @@
+// UNSUPPORTED: system-windows
+
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+; RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
+; RUN: mkdir %t/Frameworks/
+; RUN: cp -r %S/Inputs/Umbrella/Umbrella.framework %t/Frameworks/
+
+// Only validate path based input that rely on regex matching on unix based file systems.
+; RUN: clang-installapi --target=arm64-apple-macosx13 \
+; RUN:  -install_name /System/Library/Frameworks/Umbrella2.framework/Versions/A/Umbrella \
+; RUN: -ObjC -F%t/Frameworks/ %t/inputs.json \
+; RUN: --public-umbrella-header=%t/Frameworks/Umbrella.framework/Headers/SpecialUmbrella.h \
+; RUN: -private-umbrella-header \
+; RUN: %t/Frameworks/Umbrella.framework/PrivateHeaders/SpecialPrivateUmbrella.h \
+; RUN: -o %t/output.tbd 2>&1 | FileCheck -allow-empty %s
+
+; CHECK-NOT: error
+; CHECK-NOT: warning
+
+;--- inputs.json.in
+{
+  "headers": [ {
+    "path" : "DSTROOT/Frameworks/Umbrella.framework/Headers/AAA.h",
+    "type" : "public"
+  }, 
+  {
+    "path" : "DSTROOT/Frameworks/Umbrella.framework/Headers/SpecialUmbrella.h",
+    "type" : "public"
+  },
+  {
+    "path" : "DSTROOT/Frameworks/Umbrella.framework/PrivateHeaders/AAA_Private.h",
+    "type" : "private"
+  },
+  {
+    "path" : "DSTROOT/Frameworks/Umbrella.framework/PrivateHeaders/SpecialPrivateUmbrella.h",
+    "type" : "private"
+  }],
+  "version": "3"
+}

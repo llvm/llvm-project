@@ -223,6 +223,8 @@ namespace std {
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <locale>
+#  include <queue>
+#  include <stack>
 #endif
 
 #endif // _LIBCPP_FORMAT
