@@ -3618,7 +3618,6 @@ class ASTIdentifierTableTrait {
   /// doesn't check whether the name has macros defined; use PublicMacroIterator
   /// to check that.
   bool isInterestingIdentifier(const IdentifierInfo *II, uint64_t MacroOffset) {
-    II->getObjCOrBuiltinID();
     bool IsInteresting =
         II->getNotableIdentifierID() !=
             tok::NotableIdentifierKind::not_notable ||
