@@ -3830,14 +3830,17 @@ entry:
   ret i32 %cond
 }
 
-; FIXME: This is a miscompile.
 define <2 x i32> @src_and_eq_C_xor_OrAndNotC_vec_poison(<2 x i32> %0, <2 x i32> %1, <2 x i32> %2) {
 ; CHECK-LABEL: @src_and_eq_C_xor_OrAndNotC_vec_poison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[TMP1:%.*]], [[TMP0:%.*]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i32> [[TMP2:%.*]], <i32 -1, i32 poison>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[TMP1:%.*]], [[TMP0:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[AND]], [[TMP2:%.*]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i32> [[TMP2]], <i32 -1, i32 poison>
 ; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i32> [[OR]], [[NOT]]
-; CHECK-NEXT:    ret <2 x i32> [[AND1]]
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[XOR]], <2 x i32> [[AND1]]
+; CHECK-NEXT:    ret <2 x i32> [[COND]]
 ;
 entry:
   %and = and <2 x i32> %1, %0
