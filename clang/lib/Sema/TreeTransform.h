@@ -6257,7 +6257,7 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
 
   // Transform any function effects with unevaluated conditions.
   // Hold this set in a local for the rest of this function, since EPI
-  // is going to hold a FunctionEffectsRef pointing into it.
+  // may need to hold a FunctionEffectsRef pointing into it.
   std::optional<FunctionEffectSet> NewFX;
   if (ArrayRef FXConds = EPI.FunctionEffects.conditions(); !FXConds.empty()) {
     NewFX.emplace(EPI.FunctionEffects);

@@ -1944,6 +1944,8 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ArmPreserves:
   case attr::NonBlocking:
   case attr::NonAllocating:
+  case attr::Blocking:
+  case attr::Allocating:
     llvm_unreachable("This attribute should have been handled already");
 
   case attr::NSReturnsRetained:
@@ -2002,12 +2004,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
   case attr::ArmMveStrictPolymorphism:
     OS << "__clang_arm_mve_strict_polymorphism";
-    break;
-  case attr::Blocking:
-    OS << "clang_blocking";
-    break;
-  case attr::Allocating:
-    OS << "clang_allocating";
     break;
 
   // Nothing to print for this attribute.

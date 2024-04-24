@@ -8121,7 +8121,7 @@ handleNonBlockingNonAllocatingTypeAttr(TypeProcessingState &TPState,
   }
 #endif
 
-  // nonblocking/nonallocating(true/expr) are represented in a
+  // All forms of the attributes are represented in a
   // FunctionEffectsRef attached to a FunctionProtoType.
   const bool Denied = NewState == FunctionEffectMode::False;
   const FunctionEffect NewEffect(

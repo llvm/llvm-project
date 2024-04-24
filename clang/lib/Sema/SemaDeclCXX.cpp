@@ -18346,7 +18346,7 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
 
   if (OldFT->hasExtParameterInfos()) {
     for (unsigned I = 0, E = OldFT->getNumParams(); I != E; ++I)
-      // A parameter of the overriding method should  be annotated with noescape
+      // A parameter of the overriding method should be annotated with noescape
       // if the corresponding parameter of the overridden method is annotated.
       if (OldFT->getExtParameterInfo(I).isNoEscape() &&
           !NewFT->getExtParameterInfo(I).isNoEscape()) {
