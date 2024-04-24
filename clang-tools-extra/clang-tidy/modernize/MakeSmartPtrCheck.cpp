@@ -87,9 +87,9 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
               cxxConstructExpr(
                   hasType(getSmartPointerTypeMatcher()), argumentCountIs(1),
                   hasArgument(
-                      0, cxxNewExpr(hasType(pointsTo(qualType(hasCanonicalType(
+                      0, ignoringParenImpCasts(cxxNewExpr(hasType(pointsTo(qualType(hasCanonicalType(
                                         equalsBoundNode(PointerType))))),
-                                    CanCallCtor, unless(IsPlacement))
+                                    CanCallCtor, unless(IsPlacement)))
                              .bind(NewExpression)),
                   unless(isInTemplateInstantiation()))
                   .bind(ConstructorCall))))),

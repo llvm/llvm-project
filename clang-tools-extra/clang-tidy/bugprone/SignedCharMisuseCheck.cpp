@@ -113,7 +113,7 @@ void SignedCharMisuseCheck::registerMatchers(MatchFinder *Finder) {
       cxxOperatorCallExpr(
           hasOverloadedOperatorName("[]"),
           hasArgument(0, hasType(cxxRecordDecl(hasName("::std::array")))),
-          hasArgument(1, SignedCharCastExpr))
+          hasArgument(1, ignoringParenImpCasts(SignedCharCastExpr)))
           .bind("arraySubscript");
 
   Finder->addMatcher(STDArraySubscript, this);

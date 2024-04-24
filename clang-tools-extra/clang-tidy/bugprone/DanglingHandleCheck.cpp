@@ -24,7 +24,7 @@ handleFrom(const ast_matchers::internal::Matcher<RecordDecl> &IsAHandle,
            const ast_matchers::internal::Matcher<Expr> &Arg) {
   return expr(
       anyOf(cxxConstructExpr(hasDeclaration(cxxMethodDecl(ofClass(IsAHandle))),
-                             hasArgument(0, Arg)),
+                             hasArgument(0, ignoringParenImpCasts(Arg))),
             cxxMemberCallExpr(hasType(hasUnqualifiedDesugaredType(recordType(
                                   hasDeclaration(cxxRecordDecl(IsAHandle))))),
                               callee(memberExpr(member(cxxConversionDecl()))),
@@ -123,9 +123,10 @@ void DanglingHandleCheck::registerMatchersForVariables(MatchFinder *Finder) {
   // Find 'foo = ReturnsAValue();  // foo is Handle'
   Finder->addMatcher(
       traverse(TK_AsIs,
-               cxxOperatorCallExpr(callee(cxxMethodDecl(ofClass(IsAHandle))),
-                                   hasOverloadedOperatorName("="),
-                                   hasArgument(1, ConvertedHandle))
+               cxxOperatorCallExpr(
+                   callee(cxxMethodDecl(ofClass(IsAHandle))),
+                   hasOverloadedOperatorName("="),
+                   hasArgument(1, ignoringParenImpCasts(ConvertedHandle)))
                    .bind("bad_stmt")),
       this);
 

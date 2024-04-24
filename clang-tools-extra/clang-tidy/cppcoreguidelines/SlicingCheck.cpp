@@ -46,12 +46,12 @@ void SlicingCheck::registerMatchers(MatchFinder *Finder) {
           isBaseInitializer(), withInitializer(equalsBoundNode("Call"))))));
 
   // Assignment slicing: "a = b;" and "a = std::move(b);" variants.
-  const auto SlicesObjectInAssignment =
-      callExpr(expr().bind("Call"),
-               callee(cxxMethodDecl(anyOf(isCopyAssignmentOperator(),
-                                          isMoveAssignmentOperator()),
-                                    OfBaseClass)),
-               hasArgument(1, HasTypeDerivedFromBaseDecl));
+  const auto SlicesObjectInAssignment = callExpr(
+      expr().bind("Call"),
+      callee(cxxMethodDecl(
+          anyOf(isCopyAssignmentOperator(), isMoveAssignmentOperator()),
+          OfBaseClass)),
+      hasArgument(1, ignoringParenImpCasts(HasTypeDerivedFromBaseDecl)));
 
   // Construction slicing: "A a{b};" and "f(b);" variants. Note that in case of
   // slicing the letter will create a temporary and therefore call a ctor.
@@ -59,7 +59,7 @@ void SlicingCheck::registerMatchers(MatchFinder *Finder) {
       expr().bind("Call"),
       hasDeclaration(cxxConstructorDecl(
           anyOf(isCopyConstructor(), isMoveConstructor()), OfBaseClass)),
-      hasArgument(0, HasTypeDerivedFromBaseDecl),
+      hasArgument(0, ignoringParenImpCasts(HasTypeDerivedFromBaseDecl)),
       // We need to disable matching on the call to the base copy/move
       // constructor in DerivedDecl's constructors.
       unless(IsCallToBaseClass));

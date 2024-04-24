@@ -22,7 +22,7 @@ namespace clang::tidy::abseil {
 //  - Make it work in macros if the outer and inner StrCats are both in the
 //    argument.
 
-void RedundantStrcatCallsCheck::registerMatchers(MatchFinder* Finder) {
+void RedundantStrcatCallsCheck::registerMatchers(MatchFinder *Finder) {
   const auto CallToStrcat =
       callExpr(callee(functionDecl(hasName("::absl::StrCat"))));
   const auto CallToStrappend =
@@ -61,15 +61,17 @@ const clang::CallExpr *processArgument(const Expr *Arg,
                                        const MatchFinder::MatchResult &Result,
                                        StrCatCheckResult *CheckResult) {
   const auto IsAlphanum = hasDeclaration(cxxMethodDecl(hasName("AlphaNum")));
-  static const auto* const Strcat = new auto(hasName("::absl::StrCat"));
+  static const auto *const Strcat = new auto(hasName("::absl::StrCat"));
   const auto IsStrcat = cxxBindTemporaryExpr(
       has(callExpr(callee(functionDecl(*Strcat))).bind("StrCat")));
   if (const auto *SubStrcatCall = selectFirst<const CallExpr>(
           "StrCat",
-          match(stmt(traverse(TK_AsIs,
-                              anyOf(cxxConstructExpr(IsAlphanum,
-                                                     hasArgument(0, IsStrcat)),
-                                    IsStrcat))),
+          match(stmt(traverse(
+                    TK_AsIs,
+                    anyOf(cxxConstructExpr(
+                              IsAlphanum,
+                              hasArgument(0, ignoringParenImpCasts(IsStrcat))),
+                          IsStrcat))),
                 *Arg->IgnoreParenImpCasts(), *Result.Context))) {
     removeCallLeaveArgs(SubStrcatCall, CheckResult);
     return SubStrcatCall;
@@ -80,18 +82,18 @@ const clang::CallExpr *processArgument(const Expr *Arg,
 StrCatCheckResult processCall(const CallExpr *RootCall, bool IsAppend,
                               const MatchFinder::MatchResult &Result) {
   StrCatCheckResult CheckResult;
-  std::deque<const CallExpr*> CallsToProcess = {RootCall};
+  std::deque<const CallExpr *> CallsToProcess = {RootCall};
 
   while (!CallsToProcess.empty()) {
     ++CheckResult.NumCalls;
 
-    const CallExpr* CallExpr = CallsToProcess.front();
+    const CallExpr *CallExpr = CallsToProcess.front();
     CallsToProcess.pop_front();
 
     int StartArg = CallExpr == RootCall && IsAppend;
     for (const auto *Arg : CallExpr->arguments()) {
-      if (StartArg-- > 0) 
-      	continue;
+      if (StartArg-- > 0)
+        continue;
       if (const clang::CallExpr *Sub =
               processArgument(Arg, Result, &CheckResult)) {
         CallsToProcess.push_back(Sub);
@@ -100,18 +102,18 @@ StrCatCheckResult processCall(const CallExpr *RootCall, bool IsAppend,
   }
   return CheckResult;
 }
-}  // namespace
+} // namespace
 
-void RedundantStrcatCallsCheck::check(const MatchFinder::MatchResult& Result) {
+void RedundantStrcatCallsCheck::check(const MatchFinder::MatchResult &Result) {
   bool IsAppend = false;
 
   const CallExpr *RootCall = nullptr;
-  if ((RootCall = Result.Nodes.getNodeAs<CallExpr>("StrCat"))) 
-  	IsAppend = false;
-  else if ((RootCall = Result.Nodes.getNodeAs<CallExpr>("StrAppend"))) 
-  	IsAppend = true;
-  else 
-  	return;
+  if ((RootCall = Result.Nodes.getNodeAs<CallExpr>("StrCat")))
+    IsAppend = false;
+  else if ((RootCall = Result.Nodes.getNodeAs<CallExpr>("StrAppend")))
+    IsAppend = true;
+  else
+    return;
 
   if (RootCall->getBeginLoc().isMacroID()) {
     // Ignore calls within macros.
@@ -127,8 +129,8 @@ void RedundantStrcatCallsCheck::check(const MatchFinder::MatchResult& Result) {
     return;
   }
 
-  diag(RootCall->getBeginLoc(), 
-  	   "multiple calls to 'absl::StrCat' can be flattened into a single call")
+  diag(RootCall->getBeginLoc(),
+       "multiple calls to 'absl::StrCat' can be flattened into a single call")
       << CheckResult.Hints;
 }
 

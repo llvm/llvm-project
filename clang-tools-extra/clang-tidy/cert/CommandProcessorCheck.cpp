@@ -22,9 +22,9 @@ void CommandProcessorCheck::registerMatchers(MatchFinder *Finder) {
           // Do not diagnose when the call expression passes a null pointer
           // constant to system(); that only checks for the presence of a
           // command processor, which is not a security risk by itself.
-          unless(callExpr(callee(functionDecl(hasName("::system"))),
-                          argumentCountIs(1),
-                          hasArgument(0, nullPointerConstant()))))
+          unless(callExpr(
+              callee(functionDecl(hasName("::system"))), argumentCountIs(1),
+              hasArgument(0, ignoringParenImpCasts(nullPointerConstant())))))
           .bind("expr"),
       this);
 }
