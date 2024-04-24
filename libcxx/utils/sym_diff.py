@@ -62,7 +62,7 @@ def main():
     parser.add_argument(
         "--mapfile-old_syms",
         dest="mapfile_old_syms",
-        help="TODO",
+        help="The name of the mapfile that contains supplementary information about old symbols. (optional, macOS-only feature)",
         type=str,
         action="store",
         default=None,
@@ -70,7 +70,7 @@ def main():
     parser.add_argument(
         "--mapfile-new_syms",
         dest="mapfile_new_syms",
-        help="TODO",
+        help="The name of the mapfile that contains supplementary information about new symbols. (optional, macOS-only feature)",
         type=str,
         action="store",
         default=None,
