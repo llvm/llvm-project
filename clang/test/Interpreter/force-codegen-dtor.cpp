@@ -11,7 +11,7 @@ extern "C" int printf(const char *, ...);
 template <class T> GuardX<T>::~GuardX() { delete x; printf("Running dtor\n"); }
 
 // Let's make sure that the RuntimeInterfaceBuilder requests it explicitly:
-(GuardX(x))
+(GuardX<int>(x))
 
 // CHECK-NOT: Symbols not found
 // CHECK: Running dtor
