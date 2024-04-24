@@ -918,7 +918,7 @@ define half @test_atomicrmw_xchg_f16_global_agent(ptr addrspace(1) %ptr, half %v
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP5]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[VALOPERAND_SHIFTED]]
-; CHECK-NEXT:    [[TMP8:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] syncscope("agent") seq_cst seq_cst, align 4
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP8]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -942,7 +942,7 @@ define half @test_atomicrmw_xchg_f16_global_agent_align4(ptr addrspace(1) %ptr, 
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[LOADED]], -65536
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[LOADED]], i32 [[TMP5]] seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[LOADED]], i32 [[TMP5]] syncscope("agent") seq_cst seq_cst, align 4
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -973,7 +973,7 @@ define half @test_atomicrmw_xchg_f16_flat_agent(ptr %ptr, half %value) {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP5]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[VALOPERAND_SHIFTED]]
-; CHECK-NEXT:    [[TMP8:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] syncscope("agent") seq_cst seq_cst, align 4
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP8]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -997,7 +997,7 @@ define half @test_atomicrmw_xchg_f16_flat_agent_align4(ptr %ptr, half %value) {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[LOADED]], -65536
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = cmpxchg ptr [[PTR]], i32 [[LOADED]], i32 [[TMP5]] seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = cmpxchg ptr [[PTR]], i32 [[LOADED]], i32 [[TMP5]] syncscope("agent") seq_cst seq_cst, align 4
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -1028,7 +1028,7 @@ define bfloat @test_atomicrmw_xchg_bf16_global_agent(ptr addrspace(1) %ptr, bflo
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP5]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], [[VALOPERAND_SHIFTED]]
-; CHECK-NEXT:    [[TMP8:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[TMP7]] syncscope("agent") seq_cst seq_cst, align 4
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP8]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -1052,7 +1052,7 @@ define bfloat @test_atomicrmw_xchg_bf16_global_agent_align4(ptr addrspace(1) %pt
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[LOADED]], -65536
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[LOADED]], i32 [[TMP5]] seq_cst seq_cst, align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[LOADED]], i32 [[TMP5]] syncscope("agent") seq_cst seq_cst, align 4
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
