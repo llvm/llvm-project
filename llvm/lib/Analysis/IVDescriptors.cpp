@@ -689,7 +689,7 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
 // reduction operations.
 RecurrenceDescriptor::InstDesc
 RecurrenceDescriptor::isFindLastIVPattern(PHINode *OrigPhi, Instruction *I,
-                                          ScalarEvolution *SE) {
+                                          ScalarEvolution &SE) {
   // Only match select with single use cmp condition.
   // TODO: Only handle single use for now.
   CmpInst::Predicate Pred;
@@ -708,22 +708,19 @@ RecurrenceDescriptor::isFindLastIVPattern(PHINode *OrigPhi, Instruction *I,
     return InstDesc(false, I);
 
   auto IsIncreasingLoopInduction = [&](Value *V) {
-    if (!SE)
-      return false;
-
     Type *Ty = V->getType();
-    if (!SE->isSCEVable(Ty))
+    if (!SE.isSCEVable(Ty))
       return false;
 
-    auto *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(V));
+    auto *AR = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(V));
     if (!AR)
       return false;
 
-    const SCEV *Step = AR->getStepRecurrence(*SE);
-    if (!SE->isKnownPositive(Step))
+    const SCEV *Step = AR->getStepRecurrence(SE);
+    if (!SE.isKnownPositive(Step))
       return false;
 
-    const ConstantRange IVRange = SE->getSignedRange(AR);
+    const ConstantRange IVRange = SE.getSignedRange(AR);
     unsigned NumBits = Ty->getIntegerBitWidth();
     // Keep the minimum value of the recurrence type as the sentinel value.
     // The maximum acceptable range for the increasing induction variable,
@@ -880,8 +877,8 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
     if (Kind == RecurKind::FAdd || Kind == RecurKind::FMul ||
         Kind == RecurKind::Add || Kind == RecurKind::Mul)
       return isConditionalRdxPattern(Kind, I);
-    if (isFindLastIVRecurrenceKind(Kind))
-      return isFindLastIVPattern(OrigPhi, I, SE);
+    if (isFindLastIVRecurrenceKind(Kind) && SE)
+      return isFindLastIVPattern(OrigPhi, I, *SE);
     [[fallthrough]];
   case Instruction::FCmp:
   case Instruction::ICmp:
