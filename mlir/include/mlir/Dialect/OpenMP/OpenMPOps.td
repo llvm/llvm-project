@@ -600,29 +600,30 @@ def LoopNestOp : OpenMP_Op<"loop_nest", [SameVariadicOperandSize,
 //===----------------------------------------------------------------------===//
 
 def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
-                         AllTypesMatch<["lowerBound", "upperBound", "step"]>,
                          DeclareOpInterfaceMethods<LoopWrapperInterface>,
-                         RecursiveMemoryEffects, ReductionClauseInterface]> {
+                         RecursiveMemoryEffects, ReductionClauseInterface,
+                         SingleBlockImplicitTerminator<"TerminatorOp">]> {
   let summary = "worksharing-loop construct";
   let description = [{
     The worksharing-loop construct specifies that the iterations of the loop(s)
     will be executed in parallel by threads in the current context. These
     iterations are spread across threads that already exist in the enclosing
-    parallel region. The lower and upper bounds specify a half-open range: the
-    range includes the lower bound but does not include the upper bound. If the
-    `inclusive` attribute is specified then the upper bound is also included.
+    parallel region.
 
-    The body region can contain any number of blocks. The region is terminated
-    by "omp.yield" instruction without operands.
+    The body region can only contain a single block which must contain a single
+    operation and a terminator. The operation must be another compatible loop
+    wrapper or an `omp.loop_nest`.
 
     ```
-    omp.wsloop <clauses>
-    for (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
-      %a = load %arrA[%i1, %i2] : memref<?x?xf32>
-      %b = load %arrB[%i1, %i2] : memref<?x?xf32>
-      %sum = arith.addf %a, %b : f32
-      store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
-      omp.yield
+    omp.wsloop <clauses> {
+      omp.loop_nest (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+        %a = load %arrA[%i1, %i2] : memref<?x?xf32>
+        %b = load %arrB[%i1, %i2] : memref<?x?xf32>
+        %sum = arith.addf %a, %b : f32
+        store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
+        omp.yield
+      }
+      omp.terminator
     }
     ```
 
@@ -665,10 +666,7 @@ def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     passed by reference.
   }];
 
-  let arguments = (ins Variadic<IntLikeType>:$lowerBound,
-             Variadic<IntLikeType>:$upperBound,
-             Variadic<IntLikeType>:$step,
-             Variadic<AnyType>:$linear_vars,
+  let arguments = (ins Variadic<AnyType>:$linear_vars,
              Variadic<I32>:$linear_step_vars,
              Variadic<OpenMP_PointerLikeType>:$reduction_vars,
              OptionalAttr<SymbolRefArrayAttr>:$reductions,
@@ -679,22 +677,16 @@ def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
              UnitAttr:$nowait,
              UnitAttr:$byref,
              ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
-             OptionalAttr<OrderKindAttr>:$order_val,
-             UnitAttr:$inclusive);
+             OptionalAttr<OrderKindAttr>:$order_val);
 
   let builders = [
-    OpBuilder<(ins "ValueRange":$lowerBound, "ValueRange":$upperBound,
-               "ValueRange":$step,
-               CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
+    OpBuilder<(ins CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
     OpBuilder<(ins CArg<"const WsloopClauseOps &">:$clauses)>
   ];
 
   let regions = (region AnyRegion:$region);
 
   let extraClassDeclaration = [{
-    /// Returns the number of loops in the worksharing-loop nest.
-    unsigned getNumLoops() { return getLowerBound().size(); }
-
     /// Returns the number of reduction variables.
     unsigned getNumReductionVars() { return getReductionVars().size(); }
   }];
@@ -711,9 +703,8 @@ def WsloopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
           |`byref` $byref
           |`ordered` `(` $ordered_val `)`
           |`order` `(` custom<ClauseAttr>($order_val) `)`
-    ) custom<Wsloop>($region, $lowerBound, $upperBound, $step, type($step),
-                     $reduction_vars, type($reduction_vars), $reductions,
-                     $inclusive) attr-dict
+    ) custom<Wsloop>($region, $reduction_vars, type($reduction_vars),
+                     $reductions) attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -732,7 +723,7 @@ def SimdOp : OpenMP_Op<"simd", [AttrSizedOperandSegments,
     transformed into a SIMD loop (that is, multiple iterations of the loop can
     be executed concurrently using SIMD instructions).
 
-    The body region can contain a single block which must contain a single
+    The body region can only contain a single block which must contain a single
     operation and a terminator. The operation must be another compatible loop
     wrapper or an `omp.loop_nest`.
 
@@ -766,6 +757,7 @@ def SimdOp : OpenMP_Op<"simd", [AttrSizedOperandSegments,
         store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
         omp.yield
       }
+      omp.terminator
     }
     ```
   }];
@@ -805,8 +797,8 @@ def SimdOp : OpenMP_Op<"simd", [AttrSizedOperandSegments,
 
 def YieldOp : OpenMP_Op<"yield",
     [Pure, ReturnLike, Terminator,
-     ParentOneOf<["LoopNestOp", "WsloopOp", "DeclareReductionOp",
-     "AtomicUpdateOp", "PrivateClauseOp"]>]> {
+     ParentOneOf<["AtomicUpdateOp", "DeclareReductionOp", "LoopNestOp",
+                  "PrivateClauseOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "omp.yield" yields SSA values from the OpenMP dialect op region and
@@ -846,7 +838,7 @@ def DistributeOp : OpenMP_Op<"distribute", [AttrSizedOperandSegments,
     iterations are spread across threads that already exist in the enclosing
     region.
     
-    The body region can contain a single block which must contain a single
+    The body region can only contain a single block which must contain a single
     operation and a terminator. The operation must be another compatible loop
     wrapper or an `omp.loop_nest`.
 
@@ -864,6 +856,7 @@ def DistributeOp : OpenMP_Op<"distribute", [AttrSizedOperandSegments,
         store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
         omp.yield
       }
+      omp.terminator
     }
     ```
     // TODO: private_var, firstprivate_var, lastprivate_var, collapse
@@ -1029,7 +1022,7 @@ def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
     iterations are distributed across tasks generated by the construct and
     scheduled to be executed.
 
-    The body region can contain a single block which must contain a single
+    The body region can only contain a single block which must contain a single
     operation and a terminator. The operation must be another compatible loop
     wrapper or an `omp.loop_nest`.
 
@@ -1042,6 +1035,7 @@ def TaskloopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
         store %sum, %arrC[%i1, %i2] : memref<?x?xf32>
         omp.yield
       }
+      omp.terminator
     }
     ```
 
