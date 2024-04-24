@@ -916,35 +916,37 @@ static LogicalResult inlineReductionCleanup(
 static LogicalResult
 convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
-  auto loop = cast<omp::WsloopOp>(opInst);
-  const bool isByRef = loop.getByref();
+  auto wsloopOp = cast<omp::WsloopOp>(opInst);
+  auto loopOp = cast<omp::LoopNestOp>(wsloopOp.getWrappedLoop());
+  const bool isByRef = wsloopOp.getByref();
+
   // TODO: this should be in the op verifier instead.
-  if (loop.getLowerBound().empty())
+  if (loopOp.getLowerBound().empty())
     return failure();
 
   // Static is the default.
   auto schedule =
-      loop.getScheduleVal().value_or(omp::ClauseScheduleKind::Static);
+      wsloopOp.getScheduleVal().value_or(omp::ClauseScheduleKind::Static);
 
   // Find the loop configuration.
-  llvm::Value *step = moduleTranslation.lookupValue(loop.getStep()[0]);
+  llvm::Value *step = moduleTranslation.lookupValue(loopOp.getStep()[0]);
   llvm::Type *ivType = step->getType();
   llvm::Value *chunk = nullptr;
-  if (loop.getScheduleChunkVar()) {
+  if (wsloopOp.getScheduleChunkVar()) {
     llvm::Value *chunkVar =
-        moduleTranslation.lookupValue(loop.getScheduleChunkVar());
+        moduleTranslation.lookupValue(wsloopOp.getScheduleChunkVar());
     chunk = builder.CreateSExtOrTrunc(chunkVar, ivType);
   }
 
   SmallVector<omp::DeclareReductionOp> reductionDecls;
-  collectReductionDecls(loop, reductionDecls);
+  collectReductionDecls(wsloopOp, reductionDecls);
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
 
   SmallVector<llvm::Value *> privateReductionVariables;
   DenseMap<Value, llvm::Value *> reductionVariableMap;
   if (!isByRef) {
-    allocByValReductionVars(loop, builder, moduleTranslation, allocaIP,
+    allocByValReductionVars(wsloopOp, builder, moduleTranslation, allocaIP,
                             reductionDecls, privateReductionVariables,
                             reductionVariableMap);
   }
@@ -952,13 +954,12 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   // Before the loop, store the initial values of reductions into reduction
   // variables. Although this could be done after allocas, we don't want to mess
   // up with the alloca insertion point.
-  MutableArrayRef<BlockArgument> reductionArgs =
-      loop.getRegion().getArguments().take_back(loop.getNumReductionVars());
-  for (unsigned i = 0; i < loop.getNumReductionVars(); ++i) {
+  ArrayRef<BlockArgument> reductionArgs = wsloopOp.getRegion().getArguments();
+  for (unsigned i = 0; i < wsloopOp.getNumReductionVars(); ++i) {
     SmallVector<llvm::Value *> phis;
 
     // map block argument to initializer region
-    mapInitializationArg(loop, moduleTranslation, reductionDecls, i);
+    mapInitializationArg(wsloopOp, moduleTranslation, reductionDecls, i);
 
     if (failed(inlineConvertOmpRegions(reductionDecls[i].getInitializerRegion(),
                                        "omp.reduction.neutral", builder,
@@ -977,7 +978,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
 
       privateReductionVariables.push_back(var);
       moduleTranslation.mapValue(reductionArgs[i], phis[0]);
-      reductionVariableMap.try_emplace(loop.getReductionVars()[i], phis[0]);
+      reductionVariableMap.try_emplace(wsloopOp.getReductionVars()[i], phis[0]);
     } else {
       // for by-ref case the store is inside of the reduction region
       builder.CreateStore(phis[0], privateReductionVariables[i]);
@@ -1008,33 +1009,34 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   auto bodyGen = [&](llvm::OpenMPIRBuilder::InsertPointTy ip, llvm::Value *iv) {
     // Make sure further conversions know about the induction variable.
     moduleTranslation.mapValue(
-        loop.getRegion().front().getArgument(loopInfos.size()), iv);
+        loopOp.getRegion().front().getArgument(loopInfos.size()), iv);
 
     // Capture the body insertion point for use in nested loops. BodyIP of the
     // CanonicalLoopInfo always points to the beginning of the entry block of
     // the body.
     bodyInsertPoints.push_back(ip);
 
-    if (loopInfos.size() != loop.getNumLoops() - 1)
+    if (loopInfos.size() != loopOp.getNumLoops() - 1)
       return;
 
     // Convert the body of the loop.
     builder.restoreIP(ip);
-    convertOmpOpRegions(loop.getRegion(), "omp.wsloop.region", builder,
+    convertOmpOpRegions(loopOp.getRegion(), "omp.wsloop.region", builder,
                         moduleTranslation, bodyGenStatus);
   };
 
   // Delegate actual loop construction to the OpenMP IRBuilder.
-  // TODO: this currently assumes Wsloop is semantically similar to SCF loop,
-  // i.e. it has a positive step, uses signed integer semantics. Reconsider
-  // this code when Wsloop clearly supports more cases.
+  // TODO: this currently assumes omp.loop_nest is semantically similar to SCF
+  // loop, i.e. it has a positive step, uses signed integer semantics.
+  // Reconsider this code when the nested loop operation clearly supports more
+  // cases.
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  for (unsigned i = 0, e = loop.getNumLoops(); i < e; ++i) {
+  for (unsigned i = 0, e = loopOp.getNumLoops(); i < e; ++i) {
     llvm::Value *lowerBound =
-        moduleTranslation.lookupValue(loop.getLowerBound()[i]);
+        moduleTranslation.lookupValue(loopOp.getLowerBound()[i]);
     llvm::Value *upperBound =
-        moduleTranslation.lookupValue(loop.getUpperBound()[i]);
-    llvm::Value *step = moduleTranslation.lookupValue(loop.getStep()[i]);
+        moduleTranslation.lookupValue(loopOp.getUpperBound()[i]);
+    llvm::Value *step = moduleTranslation.lookupValue(loopOp.getStep()[i]);
 
     // Make sure loop trip count are emitted in the preheader of the outermost
     // loop at the latest so that they are all available for the new collapsed
@@ -1047,7 +1049,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     }
     loopInfos.push_back(ompBuilder->createCanonicalLoop(
         loc, bodyGen, lowerBound, upperBound, step,
-        /*IsSigned=*/true, loop.getInclusive(), computeIP));
+        /*IsSigned=*/true, loopOp.getInclusive(), computeIP));
 
     if (failed(bodyGenStatus))
       return failure();
@@ -1062,13 +1064,13 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   allocaIP = findAllocaInsertPoint(builder, moduleTranslation);
 
   // TODO: Handle doacross loops when the ordered clause has a parameter.
-  bool isOrdered = loop.getOrderedVal().has_value();
+  bool isOrdered = wsloopOp.getOrderedVal().has_value();
   std::optional<omp::ScheduleModifier> scheduleModifier =
-      loop.getScheduleModifier();
-  bool isSimd = loop.getSimdModifier();
+      wsloopOp.getScheduleModifier();
+  bool isSimd = wsloopOp.getSimdModifier();
 
   ompBuilder->applyWorkshareLoop(
-      ompLoc.DL, loopInfo, allocaIP, !loop.getNowait(),
+      ompLoc.DL, loopInfo, allocaIP, !wsloopOp.getNowait(),
       convertToScheduleKind(schedule), chunk, isSimd,
       scheduleModifier == omp::ScheduleModifier::monotonic,
       scheduleModifier == omp::ScheduleModifier::nonmonotonic, isOrdered);
@@ -1080,7 +1082,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   builder.restoreIP(afterIP);
 
   // Process the reductions if required.
-  if (loop.getNumReductionVars() == 0)
+  if (wsloopOp.getNumReductionVars() == 0)
     return success();
 
   // Create the reduction generators. We need to own them here because
@@ -1088,7 +1090,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   SmallVector<OwningReductionGen> owningReductionGens;
   SmallVector<OwningAtomicReductionGen> owningAtomicReductionGens;
   SmallVector<llvm::OpenMPIRBuilder::ReductionInfo> reductionInfos;
-  collectReductionInfo(loop, builder, moduleTranslation, reductionDecls,
+  collectReductionInfo(wsloopOp, builder, moduleTranslation, reductionDecls,
                        owningReductionGens, owningAtomicReductionGens,
                        privateReductionVariables, reductionInfos);
 
@@ -1099,9 +1101,9 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   builder.SetInsertPoint(tempTerminator);
   llvm::OpenMPIRBuilder::InsertPointTy contInsertPoint =
       ompBuilder->createReductions(builder.saveIP(), allocaIP, reductionInfos,
-                                   loop.getNowait(), isByRef);
+                                   wsloopOp.getNowait(), isByRef);
   if (!contInsertPoint.getBlock())
-    return loop->emitOpError() << "failed to convert reductions";
+    return wsloopOp->emitOpError() << "failed to convert reductions";
   auto nextInsertionPoint =
       ompBuilder->createBarrier(contInsertPoint, llvm::omp::OMPD_for);
   tempTerminator->eraseFromParent();
