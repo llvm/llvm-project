@@ -106,7 +106,7 @@ jobs:
     - name: Build Stage 1 Clang
       run: |
         sudo chown $USER:$USER /mnt/
-        cmake -G Ninja -C clang/cmake/caches/Release.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DCMAKE_POSITION_INDEPENDENT_CODE=ON -S llvm -B /mnt/build
+        cmake -G Ninja -C clang/cmake/caches/Release.cmake -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -S llvm -B /mnt/build
         ninja -v -C /mnt/build
 
     # We need to create an archive of the build directory, because it has too
