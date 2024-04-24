@@ -245,6 +245,11 @@ module acc_declare
 ! CHECK: fir.freemem %{{.*}} : !fir.heap<!fir.array<?xi32>>
 ! CHECK: fir.store %{{.*}} to %{{.*}} {acc.declare_action = #acc.declare_action<postDealloc = @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_post_dealloc>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 
+! CHECK: fir.if
+! CHECK: fir.freemem %{{.*}} : !fir.heap<!fir.array<?xi32>>
+! CHECK: fir.store %{{.*}} to %{{.*}}#1 {acc.declare_action = #acc.declare_action<postDealloc = @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_post_dealloc>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: }
+
   end subroutine
 
 ! CHECK-LABEL: func.func private @_QMacc_declareFacc_declare_allocateEa_acc_declare_update_desc_post_alloc(

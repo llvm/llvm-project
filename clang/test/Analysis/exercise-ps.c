@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 %s -verify -Wno-error=implicit-function-declaration \
-// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=core,unix.Malloc \
 // RUN:   -analyzer-config core.CallAndMessage:ArgPointeeInitializedness=true
 //
 // Just exercise the analyzer on code that has at one point caused issues

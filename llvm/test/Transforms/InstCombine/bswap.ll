@@ -43,7 +43,7 @@ define i16 @test1_trunc(i32 %i) {
 ; CHECK-NEXT:    [[T3:%.*]] = lshr i32 [[I]], 8
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T3]], 65280
 ; CHECK-NEXT:    [[T5:%.*]] = or disjoint i32 [[T1]], [[T4]]
-; CHECK-NEXT:    [[T13:%.*]] = trunc i32 [[T5]] to i16
+; CHECK-NEXT:    [[T13:%.*]] = trunc nuw i32 [[T5]] to i16
 ; CHECK-NEXT:    ret i16 [[T13]]
 ;
   %t1 = lshr i32 %i, 24
@@ -61,7 +61,7 @@ define i16 @test1_trunc_extra_use(i32 %i) {
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[T3]], 65280
 ; CHECK-NEXT:    [[T5:%.*]] = or disjoint i32 [[T1]], [[T4]]
 ; CHECK-NEXT:    call void @extra_use(i32 [[T5]])
-; CHECK-NEXT:    [[T13:%.*]] = trunc i32 [[T5]] to i16
+; CHECK-NEXT:    [[T13:%.*]] = trunc nuw i32 [[T5]] to i16
 ; CHECK-NEXT:    ret i16 [[T13]]
 ;
   %t1 = lshr i32 %i, 24
@@ -107,27 +107,27 @@ define <2 x i32> @test2_vector(<2 x i32> %arg) {
   ret <2 x i32> %t14
 }
 
-define <2 x i32> @test2_vector_undef(<2 x i32> %arg) {
-; CHECK-LABEL: @test2_vector_undef(
-; CHECK-NEXT:    [[T2:%.*]] = shl <2 x i32> [[ARG:%.*]], <i32 24, i32 undef>
+define <2 x i32> @test2_vector_poison(<2 x i32> %arg) {
+; CHECK-LABEL: @test2_vector_poison(
+; CHECK-NEXT:    [[T2:%.*]] = shl <2 x i32> [[ARG:%.*]], <i32 24, i32 poison>
 ; CHECK-NEXT:    [[T4:%.*]] = shl <2 x i32> [[ARG]], <i32 8, i32 8>
-; CHECK-NEXT:    [[T5:%.*]] = and <2 x i32> [[T4]], <i32 16711680, i32 undef>
-; CHECK-NEXT:    [[T6:%.*]] = or <2 x i32> [[T2]], [[T5]]
+; CHECK-NEXT:    [[T5:%.*]] = and <2 x i32> [[T4]], <i32 16711680, i32 poison>
+; CHECK-NEXT:    [[T6:%.*]] = or disjoint <2 x i32> [[T2]], [[T5]]
 ; CHECK-NEXT:    [[T8:%.*]] = lshr <2 x i32> [[ARG]], <i32 8, i32 8>
-; CHECK-NEXT:    [[T9:%.*]] = and <2 x i32> [[T8]], <i32 65280, i32 undef>
-; CHECK-NEXT:    [[T10:%.*]] = or <2 x i32> [[T6]], [[T9]]
-; CHECK-NEXT:    [[T12:%.*]] = lshr <2 x i32> [[ARG]], <i32 24, i32 undef>
-; CHECK-NEXT:    [[T14:%.*]] = or <2 x i32> [[T10]], [[T12]]
+; CHECK-NEXT:    [[T9:%.*]] = and <2 x i32> [[T8]], <i32 65280, i32 poison>
+; CHECK-NEXT:    [[T10:%.*]] = or disjoint <2 x i32> [[T6]], [[T9]]
+; CHECK-NEXT:    [[T12:%.*]] = lshr <2 x i32> [[ARG]], <i32 24, i32 poison>
+; CHECK-NEXT:    [[T14:%.*]] = or disjoint <2 x i32> [[T10]], [[T12]]
 ; CHECK-NEXT:    ret <2 x i32> [[T14]]
 ;
-  %t2 = shl <2 x i32> %arg, <i32 24, i32 undef>
+  %t2 = shl <2 x i32> %arg, <i32 24, i32 poison>
   %t4 = shl <2 x i32> %arg, <i32 8, i32 8>
-  %t5 = and <2 x i32> %t4, <i32 16711680, i32 undef>
+  %t5 = and <2 x i32> %t4, <i32 16711680, i32 poison>
   %t6 = or <2 x i32> %t2, %t5
   %t8 = lshr <2 x i32> %arg, <i32 8, i32 8>
-  %t9 = and <2 x i32> %t8, <i32 65280, i32 undef>
+  %t9 = and <2 x i32> %t8, <i32 65280, i32 poison>
   %t10 = or <2 x i32> %t6, %t9
-  %t12 = lshr <2 x i32> %arg, <i32 24, i32 undef>
+  %t12 = lshr <2 x i32> %arg, <i32 24, i32 poison>
   %t14 = or <2 x i32> %t10, %t12
   ret <2 x i32> %t14
 }
@@ -154,13 +154,13 @@ define <2 x i16> @test3_vector(<2 x i16> %s) {
   ret <2 x i16> %t5
 }
 
-define <2 x i16> @test3_vector_undef(<2 x i16> %s) {
-; CHECK-LABEL: @test3_vector_undef(
+define <2 x i16> @test3_vector_poison(<2 x i16> %s) {
+; CHECK-LABEL: @test3_vector_poison(
 ; CHECK-NEXT:    [[T5:%.*]] = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> [[S:%.*]])
 ; CHECK-NEXT:    ret <2 x i16> [[T5]]
 ;
-  %t2 = lshr <2 x i16> %s, <i16 undef, i16 8>
-  %t4 = shl <2 x i16> %s, <i16 8, i16 undef>
+  %t2 = lshr <2 x i16> %s, <i16 poison, i16 8>
+  %t4 = shl <2 x i16> %s, <i16 8, i16 poison>
   %t5 = or <2 x i16> %t2, %t4
   ret <2 x i16> %t5
 }
@@ -657,7 +657,7 @@ define i32 @shuf_4bytes(<4 x i8> %x) {
 ; CHECK-NEXT:    [[CAST:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[CAST]]
 ;
-  %bswap = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %bswap = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %cast = bitcast <4 x i8> %bswap to i32
   ret i32 %cast
 }
@@ -669,7 +669,7 @@ define i32 @shuf_load_4bytes(ptr %p) {
 ; CHECK-NEXT:    ret i32 [[CAST]]
 ;
   %x = load <4 x i8>, ptr %p
-  %bswap = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 undef, i32 0>
+  %bswap = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 poison, i32 0>
   %cast = bitcast <4 x i8> %bswap to i32
   ret i32 %cast
 }
@@ -680,7 +680,7 @@ define i32 @shuf_bitcast_twice_4bytes(i32 %x) {
 ; CHECK-NEXT:    ret i32 [[CAST2]]
 ;
   %cast1 = bitcast i32 %x to <4 x i8>
-  %bswap = shufflevector <4 x i8> %cast1, <4 x i8> undef, <4 x i32> <i32 undef, i32 2, i32 1, i32 0>
+  %bswap = shufflevector <4 x i8> %cast1, <4 x i8> poison, <4 x i32> <i32 poison, i32 2, i32 1, i32 0>
   %cast2 = bitcast <4 x i8> %bswap to i32
   ret i32 %cast2
 }
@@ -695,7 +695,7 @@ define i32 @shuf_4bytes_extra_use(<4 x i8> %x) {
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i8> [[BSWAP]] to i32
 ; CHECK-NEXT:    ret i32 [[CAST]]
 ;
-  %bswap = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %bswap = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   call void @use(<4 x i8> %bswap)
   %cast = bitcast <4 x i8> %bswap to i32
   ret i32 %cast
@@ -709,7 +709,7 @@ define i128 @shuf_16bytes(<16 x i8> %x) {
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <16 x i8> [[BSWAP]] to i128
 ; CHECK-NEXT:    ret i128 [[CAST]]
 ;
-  %bswap = shufflevector <16 x i8> %x, <16 x i8> undef, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  %bswap = shufflevector <16 x i8> %x, <16 x i8> poison, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   %cast = bitcast <16 x i8> %bswap to i128
   ret i128 %cast
 }
@@ -722,7 +722,7 @@ define i32 @shuf_2bytes_widening(<2 x i8> %x) {
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i8> [[BSWAP]] to i32
 ; CHECK-NEXT:    ret i32 [[CAST]]
 ;
-  %bswap = shufflevector <2 x i8> %x, <2 x i8> undef, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>
+  %bswap = shufflevector <2 x i8> %x, <2 x i8> poison, <4 x i32> <i32 1, i32 0, i32 poison, i32 poison>
   %cast = bitcast <4 x i8> %bswap to i32
   ret i32 %cast
 }

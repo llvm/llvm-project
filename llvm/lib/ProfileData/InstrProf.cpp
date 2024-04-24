@@ -1135,9 +1135,9 @@ static T swapToHostOrder(const unsigned char *&D, llvm::endianness Orig) {
   using namespace support;
 
   if (Orig == llvm::endianness::little)
-    return endian::readNext<T, llvm::endianness::little, unaligned>(D);
+    return endian::readNext<T, llvm::endianness::little>(D);
   else
-    return endian::readNext<T, llvm::endianness::big, unaligned>(D);
+    return endian::readNext<T, llvm::endianness::big>(D);
 }
 
 static std::unique_ptr<ValueProfData> allocValueProfData(uint32_t TotalSize) {
@@ -1246,6 +1246,8 @@ void annotateValueSite(Module &M, Instruction &Inst,
                        ArrayRef<InstrProfValueData> VDs,
                        uint64_t Sum, InstrProfValueKind ValueKind,
                        uint32_t MaxMDCount) {
+  if (VDs.empty())
+    return;
   LLVMContext &Ctx = M.getContext();
   MDBuilder MDHelper(Ctx);
   SmallVector<Metadata *, 3> Vals;

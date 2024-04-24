@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -398,7 +399,10 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
 
 void AArch64RegisterBankInfo::applyMappingImpl(
     MachineIRBuilder &Builder, const OperandsMapper &OpdMapper) const {
-  switch (OpdMapper.getMI().getOpcode()) {
+  MachineInstr &MI = OpdMapper.getMI();
+  MachineRegisterInfo &MRI = OpdMapper.getMRI();
+
+  switch (MI.getOpcode()) {
   case TargetOpcode::G_OR:
   case TargetOpcode::G_BITCAST:
   case TargetOpcode::G_LOAD:
@@ -407,46 +411,17 @@ void AArch64RegisterBankInfo::applyMappingImpl(
             OpdMapper.getInstrMapping().getID() <= 4) &&
            "Don't know how to handle that ID");
     return applyDefaultMapping(OpdMapper);
+  case TargetOpcode::G_INSERT_VECTOR_ELT: {
+    // Extend smaller gpr operands to 32 bit.
+    Builder.setInsertPt(*MI.getParent(), MI.getIterator());
+    auto Ext = Builder.buildAnyExt(LLT::scalar(32), MI.getOperand(2).getReg());
+    MRI.setRegBank(Ext.getReg(0), getRegBank(AArch64::GPRRegBankID));
+    MI.getOperand(2).setReg(Ext.getReg(0));
+    return applyDefaultMapping(OpdMapper);
+  }
   default:
     llvm_unreachable("Don't know how to handle that operation");
   }
-}
-
-/// Returns whether opcode \p Opc is a pre-isel generic floating-point opcode,
-/// having only floating-point operands.
-static bool isPreISelGenericFloatingPointOpcode(unsigned Opc) {
-  switch (Opc) {
-  case TargetOpcode::G_FADD:
-  case TargetOpcode::G_FSUB:
-  case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FMA:
-  case TargetOpcode::G_FDIV:
-  case TargetOpcode::G_FCONSTANT:
-  case TargetOpcode::G_FPEXT:
-  case TargetOpcode::G_FPTRUNC:
-  case TargetOpcode::G_FCEIL:
-  case TargetOpcode::G_FFLOOR:
-  case TargetOpcode::G_FNEARBYINT:
-  case TargetOpcode::G_FNEG:
-  case TargetOpcode::G_FCOS:
-  case TargetOpcode::G_FSIN:
-  case TargetOpcode::G_FLOG10:
-  case TargetOpcode::G_FLOG:
-  case TargetOpcode::G_FLOG2:
-  case TargetOpcode::G_FSQRT:
-  case TargetOpcode::G_FABS:
-  case TargetOpcode::G_FEXP:
-  case TargetOpcode::G_FRINT:
-  case TargetOpcode::G_INTRINSIC_TRUNC:
-  case TargetOpcode::G_INTRINSIC_ROUND:
-  case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
-  case TargetOpcode::G_FMAXNUM:
-  case TargetOpcode::G_FMINNUM:
-  case TargetOpcode::G_FMAXIMUM:
-  case TargetOpcode::G_FMINIMUM:
-    return true;
-  }
-  return false;
 }
 
 const RegisterBankInfo::InstructionMapping &
@@ -752,6 +727,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
 
   unsigned NumOperands = MI.getNumOperands();
+  unsigned MappingID = DefaultMappingID;
 
   // Track the size and bank of each register.  We don't do partial mappings.
   SmallVector<unsigned, 4> OpSize(NumOperands);
@@ -816,6 +792,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
+  case TargetOpcode::G_INTRINSIC_LRINT:
+  case TargetOpcode::G_INTRINSIC_LLRINT:
     if (MRI.getType(MI.getOperand(0).getReg()).isVector())
       break;
     OpRegBankIdx = {PMI_FirstGPR, PMI_FirstFPR};
@@ -1002,8 +980,14 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // The element may be either a GPR or FPR. Preserve that behaviour.
     if (getRegBank(MI.getOperand(2).getReg(), MRI, TRI) == &AArch64::FPRRegBank)
       OpRegBankIdx[2] = PMI_FirstFPR;
-    else
+    else {
+      // If the type is i8/i16, and the regank will be GPR, then we change the
+      // type to i32 in applyMappingImpl.
+      LLT Ty = MRI.getType(MI.getOperand(2).getReg());
+      if (Ty.getSizeInBits() == 8 || Ty.getSizeInBits() == 16)
+        MappingID = 1;
       OpRegBankIdx[2] = PMI_FirstGPR;
+    }
 
     // Index needs to be a GPR.
     OpRegBankIdx[3] = PMI_FirstGPR;
@@ -1124,6 +1108,6 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
   }
 
-  return getInstructionMapping(DefaultMappingID, Cost,
-                               getOperandsMapping(OpdsMapping), NumOperands);
+  return getInstructionMapping(MappingID, Cost, getOperandsMapping(OpdsMapping),
+                               NumOperands);
 }

@@ -22,6 +22,7 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
@@ -2301,7 +2302,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
     // In OpenMP loop region loop control variable must be captured and be
     // private. Perform analysis of first part (if any).
     if (getLangOpts().OpenMP && FirstPart.isUsable()) {
-      Actions.ActOnOpenMPLoopInitialization(ForLoc, FirstPart.get());
+      Actions.OpenMP().ActOnOpenMPLoopInitialization(ForLoc, FirstPart.get());
     }
   }
 

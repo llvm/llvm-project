@@ -165,6 +165,13 @@ if(CLANG_ENABLE_LIBXML2)
   endif()
 endif()
 
+if(CLANG_ENABLE_CIR)
+  if (NOT "${LLVM_ENABLE_PROJECTS}" MATCHES "MLIR|mlir")
+    message(FATAL_ERROR
+      "Cannot build ClangIR without MLIR in LLVM_ENABLE_PROJECTS")
+  endif()
+endif()
+
 include(CheckIncludeFile)
 check_include_file(sys/resource.h CLANG_HAVE_RLIMITS)
 
