@@ -1144,3 +1144,16 @@ llvm.func @stores_with_different_types_branches(%arg0: i64, %arg1: f32, %cond: i
   %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> f64
   llvm.return %2 : f64
 }
+
+// -----
+
+// Verifiy that mem2reg does not touch stores with undefined semantics.
+
+// CHECK-LABEL: @store_out_of_bounds
+llvm.func @store_out_of_bounds(%arg : i64) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: llvm.alloca
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  llvm.store %arg, %1 : i64, !llvm.ptr
+  llvm.return
+}

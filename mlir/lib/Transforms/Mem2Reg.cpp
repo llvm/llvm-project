@@ -191,7 +191,7 @@ private:
 
   /// Lazily-constructed default value representing the content of the slot when
   /// no store has been executed. This function may mutate IR.
-  Value getLazyDefaultValue();
+  Value getOrCreateDefaultValue();
 
   MemorySlot slot;
   PromotableAllocationOpInterface allocator;
@@ -232,7 +232,7 @@ MemorySlotPromoter::MemorySlotPromoter(
 #endif // NDEBUG
 }
 
-Value MemorySlotPromoter::getLazyDefaultValue() {
+Value MemorySlotPromoter::getOrCreateDefaultValue() {
   if (defaultValue)
     return defaultValue;
 
@@ -567,7 +567,7 @@ void MemorySlotPromoter::removeBlockingUses() {
       // If no reaching definition is known, this use is outside the reach of
       // the slot. The default value should thus be used.
       if (!reachingDef)
-        reachingDef = getLazyDefaultValue();
+        reachingDef = getOrCreateDefaultValue();
 
       rewriter.setInsertionPointAfter(toPromote);
       if (toPromoteMemOp.removeBlockingUses(
@@ -601,7 +601,8 @@ void MemorySlotPromoter::removeBlockingUses() {
 }
 
 void MemorySlotPromoter::promoteSlot() {
-  computeReachingDefInRegion(slot.ptr.getParentRegion(), getLazyDefaultValue());
+  computeReachingDefInRegion(slot.ptr.getParentRegion(),
+                             getOrCreateDefaultValue());
 
   // Now that reaching definitions are known, remove all users.
   removeBlockingUses();
@@ -617,7 +618,7 @@ void MemorySlotPromoter::promoteSlot() {
              succOperands.size() + 1 == mergePoint->getNumArguments());
       if (succOperands.size() + 1 == mergePoint->getNumArguments())
         rewriter.modifyOpInPlace(
-            user, [&]() { succOperands.append(getLazyDefaultValue()); });
+            user, [&]() { succOperands.append(getOrCreateDefaultValue()); });
     }
   }
 
