@@ -88,13 +88,14 @@ generateReplacements(const MatchFinder::MatchResult &Match,
                                   .getUnqualifiedType();
 
   // check if the type is trivial
-  const bool isResultTypeTrivial = ResultType.isTrivialType(*Match.Context);
+  const bool IsResultTypeTrivial = ResultType.isTrivialType(*Match.Context);
 
-  if ((!isResultTypeTrivial && IgnoreNonTrivialTypes))
+  if ((!IsResultTypeTrivial && IgnoreNonTrivialTypes))
     return FixItHints;
 
-  if (isResultTypeTrivial &&
-      Match.Context->getTypeSizeInChars(ResultType).getQuantity() >
+  if (IsResultTypeTrivial &&
+      static_cast<std::uint64_t>(
+          Match.Context->getTypeSizeInChars(ResultType).getQuantity()) >
           IgnoreTrivialTypesOfSizeAbove)
     return FixItHints;
 
@@ -152,8 +153,9 @@ generateReplacements(const MatchFinder::MatchResult &Match,
     // remove the parentheses
     const auto LParen = utils::lexer::findNextTokenSkippingComments(
         InnerCall->getCallee()->getEndLoc(), SourceMngr, LanguageOpts);
-    FixItHints.push_back(
-        FixItHint::CreateRemoval(SourceRange(LParen->getLocation())));
+    if (LParen.has_value() && LParen->is(tok::l_paren))
+      FixItHints.push_back(
+          FixItHint::CreateRemoval(SourceRange(LParen->getLocation())));
     FixItHints.push_back(
         FixItHint::CreateRemoval(SourceRange(InnerCall->getRParenLoc())));
 
@@ -178,8 +180,9 @@ generateReplacements(const MatchFinder::MatchResult &Match,
           InnerResult.Last->getEndLoc(), SourceMngr, LanguageOpts);
 
       // remove the comma and the comparison
-      FixItHints.push_back(
-          FixItHint::CreateRemoval(SourceRange(Comma->getLocation())));
+      if (Comma.has_value() && Comma->is(tok::comma))
+        FixItHints.push_back(
+            FixItHint::CreateRemoval(SourceRange(Comma->getLocation())));
 
       FixItHints.push_back(
           FixItHint::CreateRemoval(InnerResult.Compare->getSourceRange()));
