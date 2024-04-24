@@ -710,6 +710,9 @@ clang-format
 libclang
 --------
 
+- ``clang_getSpellingLocation`` now correctly resolves macro expansions; that
+  is, it returns the spelling location instead of the expansion location.
+
 Static Analyzer
 ---------------
 
