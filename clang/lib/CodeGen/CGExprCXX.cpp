@@ -93,17 +93,9 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorCall(
       *this, MD, This, ImplicitParam, ImplicitParamTy, CE, Args, RtlArgs);
   auto &FnInfo = CGM.getTypes().arrangeCXXMethodCall(
       Args, FPT, CallInfo.ReqArgs, CallInfo.PrefixSize);
-  llvm::CallBase *CallOrInvoke = nullptr;        
-  auto Call = EmitCall(FnInfo, Callee, ReturnValue, Args, &CallOrInvoke,
+  return EmitCall(FnInfo, Callee, ReturnValue, Args, nullptr,
                   CE && CE == MustTailCall,
                   CE ? CE->getExprLoc() : SourceLocation());
-  
-  // Set type identifier metadata of indirect calls for call graph section.
-  if (CGM.getCodeGenOpts().CallGraphSection && CallOrInvoke &&
-      CallOrInvoke->isIndirectCall())
-    CGM.CreateFunctionTypeMetadataForIcall(MD->getType(), CallOrInvoke);
-
-  return Call;                    
 }
 
 RValue CodeGenFunction::EmitCXXDestructorCall(
@@ -127,17 +119,9 @@ RValue CodeGenFunction::EmitCXXDestructorCall(
   CallArgList Args;
   commonEmitCXXMemberOrOperatorCall(*this, Dtor, This, ImplicitParam,
                                     ImplicitParamTy, CE, Args, nullptr);
-  llvm::CallBase *CallOrInvoke = nullptr;
-  auto Call = EmitCall(CGM.getTypes().arrangeCXXStructorDeclaration(Dtor), Callee,
-                  ReturnValueSlot(), Args, &CallOrInvoke, CE && CE == MustTailCall,
+  return EmitCall(CGM.getTypes().arrangeCXXStructorDeclaration(Dtor), Callee,
+                  ReturnValueSlot(), Args, nullptr, CE && CE == MustTailCall,
                   CE ? CE->getExprLoc() : SourceLocation{});
-
-  // Set type identifier metadata of indirect calls for call graph section.
-  if (CGM.getCodeGenOpts().CallGraphSection && CallOrInvoke &&
-      CallOrInvoke->isIndirectCall())
-    CGM.CreateFunctionTypeMetadataForIcall(DtorDecl->getType(), CallOrInvoke);
-
-  return Call;
 }
 
 RValue CodeGenFunction::EmitCXXPseudoDestructorExpr(
@@ -498,18 +482,10 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
 
   // And the rest of the call args
   EmitCallArgs(Args, FPT, E->arguments());
-  llvm::CallBase *CallOrInvoke = nullptr;
-  auto Call = EmitCall(CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required,
+  return EmitCall(CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required,
                                                       /*PrefixSize=*/0),
-                  Callee, ReturnValue, Args, &CallOrInvoke, E == MustTailCall,
+                  Callee, ReturnValue, Args, nullptr, E == MustTailCall,
                   E->getExprLoc());
-
-  // Set type identifier metadata of indirect calls for call graph section.
-  if (CGM.getCodeGenOpts().CallGraphSection && CallOrInvoke &&
-      CallOrInvoke->isIndirectCall())
-    CGM.CreateFunctionTypeMetadataForIcall(QualType(FPT, 0), CallOrInvoke);
-
-  return Call;                  
 }
 
 RValue
@@ -1259,7 +1235,7 @@ void CodeGenFunction::EmitNewArrayInitializer(
         if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RType->getDecl()))
           NumElements = CXXRD->getNumBases();
         for (auto *Field : RType->getDecl()->fields())
-          if (!Field->isUnnamedBitfield())
+          if (!Field->isUnnamedBitField())
             ++NumElements;
         // FIXME: Recurse into nested InitListExprs.
         if (ILE->getNumInits() == NumElements)

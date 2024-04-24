@@ -490,8 +490,8 @@ end subroutine omp_target_implicit_bounds
 !CHECK-LABEL: func.func @_QPomp_target_thread_limit() {
 subroutine omp_target_thread_limit
    integer :: a
-   !CHECK: %[[VAL_1:.*]] = arith.constant 64 : i32
    !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "a"}
+   !CHECK: %[[VAL_1:.*]] = arith.constant 64 : i32
    !CHECK: omp.target   thread_limit(%[[VAL_1]] : i32) map_entries(%[[MAP]] -> %{{.*}} : !fir.ref<i32>) {
    !CHECK: ^bb0(%{{.*}}: !fir.ref<i32>):
    !$omp target map(tofrom: a) thread_limit(64)
@@ -594,7 +594,8 @@ subroutine omp_target_parallel_do
       !$omp target parallel do map(tofrom: a)
          !CHECK: %[[I_PVT_ALLOCA:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
          !CHECK: %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_ALLOCA]] {uniq_name = "_QFomp_target_parallel_doEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-         !CHECK: omp.wsloop for  (%[[I_VAL:.*]]) : i32
+         !CHECK: omp.wsloop {
+         !CHECK-NEXT: omp.loop_nest (%[[I_VAL:.*]]) : i32
          do i = 1, 1024
            !CHECK:   fir.store %[[I_VAL]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
            !CHECK:   %[[C10:.*]] = arith.constant 10 : i32
@@ -605,6 +606,8 @@ subroutine omp_target_parallel_do
             a(i) = 10
          end do
          !CHECK: omp.yield
+         !CHECK: }
+         !CHECK: omp.terminator
          !CHECK: }
       !CHECK: omp.terminator
       !CHECK: }

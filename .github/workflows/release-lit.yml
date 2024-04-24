@@ -58,7 +58,7 @@ jobs:
           cd llvm/utils/lit
           # Remove 'dev' suffix from lit version.
           sed -i 's/ + "dev"//g' lit/__init__.py
-          python3 setup.py sdist
+          python3 setup.py sdist bdist_wheel
 
       - name: Upload lit to test.pypi.org
         uses: pypa/gh-action-pypi-publish@release/v1

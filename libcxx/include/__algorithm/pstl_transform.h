@@ -9,9 +9,9 @@
 #ifndef _LIBCPP___ALGORITHM_PSTL_TRANSFORM_H
 #define _LIBCPP___ALGORITHM_PSTL_TRANSFORM_H
 
-#include <__algorithm/pstl_backend.h>
 #include <__config>
 #include <__iterator/cpp17_iterator_concepts.h>
+#include <__pstl/configuration.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>
@@ -58,9 +58,10 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator transform(
     _ForwardIterator __last,
     _ForwardOutIterator __result,
     _UnaryOperation __op) {
-  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator);
-  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator);
-  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(_ForwardOutIterator, decltype(__op(*__first)));
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "transform requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator, "transform requires an OutputIterator");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(__op(*__first)), "transform requires an OutputIterator");
   auto __res = std::__transform(__policy, std::move(__first), std::move(__last), std::move(__result), std::move(__op));
   if (!__res)
     std::__throw_bad_alloc();
@@ -100,10 +101,11 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator transform(
     _ForwardIterator2 __first2,
     _ForwardOutIterator __result,
     _BinaryOperation __op) {
-  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1);
-  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2);
-  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator);
-  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(_ForwardOutIterator, decltype(__op(*__first1, *__first2)));
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "transform requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "transform requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator, "transform requires an OutputIterator");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(__op(*__first1, *__first2)), "transform requires an OutputIterator");
   auto __res = std::__transform(
       __policy, std::move(__first1), std::move(__last1), std::move(__first2), std::move(__result), std::move(__op));
   if (!__res)

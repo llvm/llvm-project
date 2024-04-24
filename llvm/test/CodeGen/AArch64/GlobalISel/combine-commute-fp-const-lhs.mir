@@ -116,3 +116,129 @@ body:             |
     $q0 = COPY %mul
     RET_ReallyLR
 ...
+---
+name:            fminnum
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $s0
+
+    ; CHECK-LABEL: name: fminnum
+    ; CHECK: liveins: $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-NEXT: %cst:_(s32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %min:_(s32) = G_FMINNUM [[COPY]], %cst
+    ; CHECK-NEXT: $s0 = COPY %min(s32)
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:_(s32) = COPY $s0
+    %cst:_(s32) = G_FCONSTANT float 2.000000e+00
+    %min:_(s32) = G_FMINNUM %cst, %0
+    $s0 = COPY %min
+    RET_ReallyLR
+...
+---
+name:            fmaxnum
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $s0
+
+    ; CHECK-LABEL: name: fmaxnum
+    ; CHECK: liveins: $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-NEXT: %cst:_(s32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %max:_(s32) = G_FMAXNUM [[COPY]], %cst
+    ; CHECK-NEXT: $s0 = COPY %max(s32)
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:_(s32) = COPY $s0
+    %cst:_(s32) = G_FCONSTANT float 2.000000e+00
+    %max:_(s32) = G_FMAXNUM %cst, %0
+    $s0 = COPY %max
+    RET_ReallyLR
+...
+---
+name:            fminnum_ieee
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $s0
+
+    ; CHECK-LABEL: name: fminnum_ieee
+    ; CHECK: liveins: $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-NEXT: %cst:_(s32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %min:_(s32) = G_FMINNUM_IEEE [[COPY]], %cst
+    ; CHECK-NEXT: $s0 = COPY %min(s32)
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:_(s32) = COPY $s0
+    %cst:_(s32) = G_FCONSTANT float 2.000000e+00
+    %min:_(s32) = G_FMINNUM_IEEE %cst, %0
+    $s0 = COPY %min
+    RET_ReallyLR
+...
+---
+name:            fmaxnum_ieee
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $s0
+
+    ; CHECK-LABEL: name: fmaxnum_ieee
+    ; CHECK: liveins: $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-NEXT: %cst:_(s32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %max:_(s32) = G_FMAXNUM_IEEE [[COPY]], %cst
+    ; CHECK-NEXT: $s0 = COPY %max(s32)
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:_(s32) = COPY $s0
+    %cst:_(s32) = G_FCONSTANT float 2.000000e+00
+    %max:_(s32) = G_FMAXNUM_IEEE %cst, %0
+    $s0 = COPY %max
+    RET_ReallyLR
+...
+---
+name:            fminimum
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $s0
+
+    ; CHECK-LABEL: name: fminimum
+    ; CHECK: liveins: $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-NEXT: %cst:_(s32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %min:_(s32) = G_FMINIMUM [[COPY]], %cst
+    ; CHECK-NEXT: $s0 = COPY %min(s32)
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:_(s32) = COPY $s0
+    %cst:_(s32) = G_FCONSTANT float 2.000000e+00
+    %min:_(s32) = G_FMINIMUM %cst, %0
+    $s0 = COPY %min
+    RET_ReallyLR
+...
+---
+name:            fmaximum
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    liveins: $s0
+
+    ; CHECK-LABEL: name: fmaximum
+    ; CHECK: liveins: $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-NEXT: %cst:_(s32) = G_FCONSTANT float 2.000000e+00
+    ; CHECK-NEXT: %max:_(s32) = G_FMAXIMUM [[COPY]], %cst
+    ; CHECK-NEXT: $s0 = COPY %max(s32)
+    ; CHECK-NEXT: RET_ReallyLR
+    %0:_(s32) = COPY $s0
+    %cst:_(s32) = G_FCONSTANT float 2.000000e+00
+    %max:_(s32) = G_FMAXIMUM %cst, %0
+    $s0 = COPY %max
+    RET_ReallyLR
+...

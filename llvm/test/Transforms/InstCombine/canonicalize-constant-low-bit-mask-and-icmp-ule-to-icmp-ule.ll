@@ -95,14 +95,14 @@ define <2 x i1> @p2_vec_nonsplat_edgecase1() {
   ret <2 x i1> %ret
 }
 
-define <3 x i1> @p3_vec_splat_undef() {
-; CHECK-LABEL: @p3_vec_splat_undef(
+define <3 x i1> @p3_vec_splat_poison() {
+; CHECK-LABEL: @p3_vec_splat_poison(
 ; CHECK-NEXT:    [[X:%.*]] = call <3 x i8> @gen3x8()
 ; CHECK-NEXT:    [[RET:%.*]] = icmp ult <3 x i8> [[X]], <i8 4, i8 4, i8 4>
 ; CHECK-NEXT:    ret <3 x i1> [[RET]]
 ;
   %x = call <3 x i8> @gen3x8()
-  %tmp0 = and <3 x i8> %x, <i8 3, i8 undef, i8 3>
+  %tmp0 = and <3 x i8> %x, <i8 3, i8 poison, i8 3>
   %ret = icmp ule <3 x i8> %x, %tmp0
   ret <3 x i1> %ret
 }

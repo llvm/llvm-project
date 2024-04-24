@@ -7,3 +7,8 @@
 
 "test.check_first_mod"() {"map" = #map} : () -> ()
 // expected-remark@-1 {{mod expression}}
+
+#map_rhs_mod = affine_map<(i, j) -> (i + i mod 2, j)>
+
+"test.check_first_mod"() {"map" = #map_rhs_mod} : () -> ()
+// expected-remark@-1 {{mod expression}}

@@ -25,6 +25,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
@@ -3665,7 +3666,7 @@ static void setUsedBits(CodeGenModule &CGM, const RecordType *RTy, int Offset,
   for (auto I = RD->field_begin(), E = RD->field_end(); I != E; ++I, ++Idx) {
     const FieldDecl *F = *I;
 
-    if (F->isUnnamedBitfield() || F->isZeroLengthBitField(Context) ||
+    if (F->isUnnamedBitField() || F->isZeroLengthBitField(Context) ||
         F->getType()->isIncompleteArrayType())
       continue;
 
@@ -5591,6 +5592,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                              /*AttrOnCallSite=*/true,
                              /*IsThunk=*/false);
 
+  if (CallingConv == llvm::CallingConv::X86_VectorCall &&
+      getTarget().getTriple().isWindowsArm64EC()) {
+    CGM.Error(Loc, "__vectorcall calling convention is not currently "
+                   "supported");
+  }
+
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl)) {
     if (FD->hasAttr<StrictFPAttr>())
       // All calls within a strictfp function are marked strictfp
@@ -5700,6 +5707,17 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       auto *TypeIdMDVal =
           llvm::MetadataAsValue::get(getLLVMContext(), TypeIdMD);
       BundleList.emplace_back("type", TypeIdMDVal);
+    }
+
+    // Set type identifier metadata of indirect calls for call graph section.
+    if (callOrInvoke && *callOrInvoke && (*callOrInvoke)->isIndirectCall()) {
+      if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
+        // Type id metadata is set only for C/C++ contexts.
+        if (dyn_cast<CXXConstructorDecl>(FD) || dyn_cast<CXXMethodDecl>(FD) ||
+            dyn_cast<CXXDestructorDecl>(FD)) {
+          CGM.CreateFunctionTypeMetadataForIcall(FD->getType(), *callOrInvoke);
+        }
+      }
     }
   }
 

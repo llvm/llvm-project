@@ -127,7 +127,7 @@ private:
 };
 
 template <ptrdiff_t __least_max_value = _LIBCPP_SEMAPHORE_MAX>
-class counting_semaphore {
+class _LIBCPP_DEPRECATED_ATOMIC_SYNC counting_semaphore {
   __atomic_semaphore_base __semaphore_;
 
 public:
@@ -172,7 +172,9 @@ public:
   }
 };
 
-using binary_semaphore = counting_semaphore<1>;
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
+using binary_semaphore _LIBCPP_DEPRECATED_ATOMIC_SYNC = counting_semaphore<1>;
+_LIBCPP_SUPPRESS_DEPRECATED_POP
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -104,9 +104,9 @@ static constexpr llvm::StringRef getHostAssocAttrName() {
   return "fir.host_assoc";
 }
 
-/// Attribute to mark an internal procedure.
-static constexpr llvm::StringRef getInternalProcedureAttrName() {
-  return "fir.internal_proc";
+/// Attribute to link an internal procedure to its host procedure symbol.
+static constexpr llvm::StringRef getHostSymbolAttrName() {
+  return "fir.host_symbol";
 }
 
 /// Attribute containing the original name of a function from before the
@@ -122,8 +122,8 @@ bool hasHostAssociationArgument(mlir::func::FuncOp func);
 /// Is the function, \p func an internal procedure ?
 /// Some internal procedures may have access to saved host procedure
 /// variables even when they do not have a tuple argument.
-inline bool isInternalPorcedure(mlir::func::FuncOp func) {
-  return func->hasAttr(fir::getInternalProcedureAttrName());
+inline bool isInternalProcedure(mlir::func::FuncOp func) {
+  return func->hasAttr(fir::getHostSymbolAttrName());
 }
 
 /// Tell if \p value is:
@@ -155,13 +155,7 @@ bool valueMayHaveFirAttributes(mlir::Value value,
 bool anyFuncArgsHaveAttr(mlir::func::FuncOp func, llvm::StringRef attr);
 
 /// Unwrap integer constant from an mlir::Value.
-inline std::optional<std::int64_t> getIntIfConstant(mlir::Value value) {
-  if (auto *definingOp = value.getDefiningOp())
-    if (auto cst = mlir::dyn_cast<mlir::arith::ConstantOp>(definingOp))
-      if (auto intAttr = cst.getValue().dyn_cast<mlir::IntegerAttr>())
-        return intAttr.getInt();
-  return {};
-}
+std::optional<std::int64_t> getIntIfConstant(mlir::Value value);
 
 static constexpr llvm::StringRef getAdaptToByRefAttrName() {
   return "adapt.valuebyref";
