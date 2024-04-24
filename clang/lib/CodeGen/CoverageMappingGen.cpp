@@ -294,25 +294,21 @@ public:
     return SM.getLocForEndOfFile(SM.getFileID(Loc));
   }
 
-  /// Find out where the current file is included or macro is expanded.
-  SourceLocation getIncludeOrExpansionLoc(SourceLocation Loc) {
-    return Loc.isMacroID() ? SM.getImmediateExpansionRange(Loc).getBegin()
-                           : SM.getIncludeLoc(SM.getFileID(Loc));
-  }
-
-  /// Find out where the current file is included or macro is expanded. If the
-  /// found expansion is a <scratch space>, keep looking.
-  SourceLocation getIncludeOrNonScratchExpansionLoc(SourceLocation Loc) {
+  /// Find out where the current file is included or macro is expanded. If
+  /// \c AcceptScratch is set to false, keep looking for expansions until the
+  /// found sloc is not a <scratch space>.
+  SourceLocation getIncludeOrExpansionLoc(SourceLocation Loc,
+                                          bool AcceptScratch = true) {
     if (Loc.isMacroID()) {
       Loc = SM.getImmediateExpansionRange(Loc).getBegin();
-      while (Loc.isMacroID() &&
-             SM.isWrittenInScratchSpace(SM.getSpellingLoc(Loc))) {
-        auto ExpansionRange = SM.getImmediateExpansionRange(Loc);
-        Loc = ExpansionRange.getBegin();
-      }
-    } else {
+      if (!AcceptScratch)
+        while (Loc.isMacroID() &&
+               SM.isWrittenInScratchSpace(SM.getSpellingLoc(Loc))) {
+          auto ExpansionRange = SM.getImmediateExpansionRange(Loc);
+          Loc = ExpansionRange.getBegin();
+        }
+    } else
       Loc = SM.getIncludeLoc(SM.getFileID(Loc));
-    }
     return Loc;
   }
 
@@ -563,8 +559,7 @@ public:
     SourceRegionFilter Filter;
     for (const auto &FM : FileIDMapping) {
       SourceLocation ExpandedLoc = FM.second.second;
-      SourceLocation ParentLoc =
-          getIncludeOrNonScratchExpansionLoc(ExpandedLoc);
+      SourceLocation ParentLoc = getIncludeOrExpansionLoc(ExpandedLoc, false);
       if (ParentLoc.isInvalid())
         continue;
 
