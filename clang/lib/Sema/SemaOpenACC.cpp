@@ -91,6 +91,7 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     default:
       return false;
     }
+  case OpenACCClauseKind::NumGangs:
   case OpenACCClauseKind::NumWorkers:
   case OpenACCClauseKind::VectorLength:
     switch (DirectiveKind) {
@@ -229,6 +230,40 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     return OpenACCSelfClause::Create(
         getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
         Clause.getConditionExpr(), Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::NumGangs: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // There is no prose in the standard that says duplicates aren't allowed,
+    // but this diagnostic is present in other compilers, as well as makes
+    // sense.
+    if (checkAlreadyHasClauseOfKind(*this, ExistingClauses, Clause))
+      return nullptr;
+
+    if (Clause.getIntExprs().empty())
+      Diag(Clause.getBeginLoc(), diag::err_acc_num_gangs_num_args)
+          << /*NoArgs=*/0;
+
+    unsigned MaxArgs =
+        (Clause.getDirectiveKind() == OpenACCDirectiveKind::Parallel ||
+         Clause.getDirectiveKind() == OpenACCDirectiveKind::ParallelLoop)
+            ? 3
+            : 1;
+    if (Clause.getIntExprs().size() > MaxArgs)
+      Diag(Clause.getBeginLoc(), diag::err_acc_num_gangs_num_args)
+          << /*NoArgs=*/1 << Clause.getDirectiveKind() << MaxArgs
+          << Clause.getIntExprs().size();
+
+    // Create the AST node for the clause even if the number of expressions is
+    // incorrect.
+    return OpenACCNumGangsClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getIntExprs(), Clause.getEndLoc());
+    break;
   }
   case OpenACCClauseKind::NumWorkers: {
     // Restrictions only properly implemented on 'compute' constructs, and

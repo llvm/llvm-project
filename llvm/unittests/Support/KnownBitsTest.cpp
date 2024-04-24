@@ -117,9 +117,9 @@ TEST(KnownBitsTest, AddCarryExhaustive) {
       ForeachKnownBits(1, [&](const KnownBits &KnownCarry) {
         // Explicitly compute known bits of the addition by trying all
         // possibilities.
-        KnownBits Known(Bits);
-        Known.Zero.setAllBits();
-        Known.One.setAllBits();
+        KnownBits Exact(Bits);
+        Exact.Zero.setAllBits();
+        Exact.One.setAllBits();
         ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
           ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
             ForeachNumInKnownBits(KnownCarry, [&](const APInt &Carry) {
@@ -127,15 +127,15 @@ TEST(KnownBitsTest, AddCarryExhaustive) {
               if (Carry.getBoolValue())
                 ++Add;
 
-              Known.One &= Add;
-              Known.Zero &= ~Add;
+              Exact.One &= Add;
+              Exact.Zero &= ~Add;
             });
           });
         });
 
-        KnownBits KnownComputed =
+        KnownBits Computed =
             KnownBits::computeForAddCarry(Known1, Known2, KnownCarry);
-        EXPECT_EQ(Known, KnownComputed);
+        EXPECT_EQ(Exact, Computed);
       });
     });
   });
@@ -146,16 +146,16 @@ static void TestAddSubExhaustive(bool IsAdd) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
     ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
-      KnownBits Known(Bits), KnownNSW(Bits), KnownNUW(Bits),
-          KnownNSWAndNUW(Bits);
-      Known.Zero.setAllBits();
-      Known.One.setAllBits();
-      KnownNSW.Zero.setAllBits();
-      KnownNSW.One.setAllBits();
-      KnownNUW.Zero.setAllBits();
-      KnownNUW.One.setAllBits();
-      KnownNSWAndNUW.Zero.setAllBits();
-      KnownNSWAndNUW.One.setAllBits();
+      KnownBits Exact(Bits), ExactNSW(Bits), ExactNUW(Bits),
+          ExactNSWAndNUW(Bits);
+      Exact.Zero.setAllBits();
+      Exact.One.setAllBits();
+      ExactNSW.Zero.setAllBits();
+      ExactNSW.One.setAllBits();
+      ExactNUW.Zero.setAllBits();
+      ExactNUW.One.setAllBits();
+      ExactNSWAndNUW.Zero.setAllBits();
+      ExactNSWAndNUW.One.setAllBits();
 
       ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
         ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
@@ -170,47 +170,47 @@ static void TestAddSubExhaustive(bool IsAdd) {
             Res = N1.ssub_ov(N2, SignedOverflow);
           }
 
-          Known.One &= Res;
-          Known.Zero &= ~Res;
+          Exact.One &= Res;
+          Exact.Zero &= ~Res;
 
           if (!SignedOverflow) {
-            KnownNSW.One &= Res;
-            KnownNSW.Zero &= ~Res;
+            ExactNSW.One &= Res;
+            ExactNSW.Zero &= ~Res;
           }
 
           if (!UnsignedOverflow) {
-            KnownNUW.One &= Res;
-            KnownNUW.Zero &= ~Res;
+            ExactNUW.One &= Res;
+            ExactNUW.Zero &= ~Res;
           }
 
           if (!UnsignedOverflow && !SignedOverflow) {
-            KnownNSWAndNUW.One &= Res;
-            KnownNSWAndNUW.Zero &= ~Res;
+            ExactNSWAndNUW.One &= Res;
+            ExactNSWAndNUW.Zero &= ~Res;
           }
         });
       });
 
-      KnownBits KnownComputed = KnownBits::computeForAddSub(
+      KnownBits Computed = KnownBits::computeForAddSub(
           IsAdd, /*NSW=*/false, /*NUW=*/false, Known1, Known2);
-      EXPECT_TRUE(checkResult(Name, Known, KnownComputed, {Known1, Known2},
+      EXPECT_TRUE(checkResult(Name, Exact, Computed, {Known1, Known2},
                               /*CheckOptimality=*/true));
 
-      KnownBits KnownNSWComputed = KnownBits::computeForAddSub(
+      KnownBits ComputedNSW = KnownBits::computeForAddSub(
           IsAdd, /*NSW=*/true, /*NUW=*/false, Known1, Known2);
-      EXPECT_TRUE(checkResult(Name + " nsw", KnownNSW, KnownNSWComputed,
+      EXPECT_TRUE(checkResult(Name + " nsw", ExactNSW, ComputedNSW,
                               {Known1, Known2},
                               /*CheckOptimality=*/true));
 
-      KnownBits KnownNUWComputed = KnownBits::computeForAddSub(
+      KnownBits ComputedNUW = KnownBits::computeForAddSub(
           IsAdd, /*NSW=*/false, /*NUW=*/true, Known1, Known2);
-      EXPECT_TRUE(checkResult(Name + " nuw", KnownNUW, KnownNUWComputed,
+      EXPECT_TRUE(checkResult(Name + " nuw", ExactNUW, ComputedNUW,
                               {Known1, Known2},
                               /*CheckOptimality=*/true));
 
-      KnownBits KnownNSWAndNUWComputed = KnownBits::computeForAddSub(
+      KnownBits ComputedNSWAndNUW = KnownBits::computeForAddSub(
           IsAdd, /*NSW=*/true, /*NUW=*/true, Known1, Known2);
-      EXPECT_TRUE(checkResult(Name + " nsw nuw", KnownNSWAndNUW,
-                              KnownNSWAndNUWComputed, {Known1, Known2},
+      EXPECT_TRUE(checkResult(Name + " nsw nuw", ExactNSWAndNUW,
+                              ComputedNSWAndNUW, {Known1, Known2},
                               /*CheckOptimality=*/true));
     });
   });
@@ -228,9 +228,9 @@ TEST(KnownBitsTest, SubBorrowExhaustive) {
       ForeachKnownBits(1, [&](const KnownBits &KnownBorrow) {
         // Explicitly compute known bits of the subtraction by trying all
         // possibilities.
-        KnownBits Known(Bits);
-        Known.Zero.setAllBits();
-        Known.One.setAllBits();
+        KnownBits Exact(Bits);
+        Exact.Zero.setAllBits();
+        Exact.One.setAllBits();
         ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
           ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
             ForeachNumInKnownBits(KnownBorrow, [&](const APInt &Borrow) {
@@ -238,15 +238,15 @@ TEST(KnownBitsTest, SubBorrowExhaustive) {
               if (Borrow.getBoolValue())
                 --Sub;
 
-              Known.One &= Sub;
-              Known.Zero &= ~Sub;
+              Exact.One &= Sub;
+              Exact.Zero &= ~Sub;
             });
           });
         });
 
-        KnownBits KnownComputed =
+        KnownBits Computed =
             KnownBits::computeForSubBorrow(Known1, Known2, KnownBorrow);
-        EXPECT_EQ(Known, KnownComputed);
+        EXPECT_EQ(Exact, Computed);
       });
     });
   });
