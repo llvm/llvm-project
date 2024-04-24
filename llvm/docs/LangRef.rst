@@ -11112,11 +11112,12 @@ For most of these operations, the type of '<value>' must be an integer
 type whose bit width is a power of two greater than or equal to eight
 and less than or equal to a target-specific size limit. For xchg, this
 may also be a floating point or a pointer type with the same size constraints
-as integers.  For fadd/fsub/fmax/fmin, this must be a floating point type.  The
-type of the '``<pointer>``' operand must be a pointer to that type. If
-the ``atomicrmw`` is marked as ``volatile``, then the optimizer is not
-allowed to modify the number or order of execution of this
-``atomicrmw`` with other :ref:`volatile operations <volatile>`.
+as integers.  For fadd/fsub/fmax/fmin, this must be a floating-point
+or fixed vector of floating-point type.  The type of the '``<pointer>``'
+operand must be a pointer to that type. If the ``atomicrmw`` is marked
+as ``volatile``, then the optimizer is not allowed to modify the
+number or order of execution of this ``atomicrmw`` with other
+:ref:`volatile operations <volatile>`.
 
 Note: if the alignment is not greater or equal to the size of the `<value>`
 type, the atomic operation is likely to require a lock and have poor
@@ -11447,7 +11448,7 @@ and converts the remaining bits to ``ty2``. Since the source size must
 be larger than the destination size, ``trunc`` cannot be a *no-op cast*.
 It will always truncate bits.
 
-If the ``nuw`` keyword is present, and any of the truncated bits are zero,
+If the ``nuw`` keyword is present, and any of the truncated bits are non-zero,
 the result is a :ref:`poison value <poisonvalues>`. If the ``nsw`` keyword
 is present, and any of the truncated bits are not the same as the top bit
 of the truncation result, the result is a :ref:`poison value <poisonvalues>`.
@@ -11750,6 +11751,10 @@ Overview:
 The '``uitofp``' instruction regards ``value`` as an unsigned integer
 and converts that value to the ``ty2`` type.
 
+The ``nneg`` (non-negative) flag, if present, specifies that the
+operand is non-negative. This property may be used by optimization
+passes to later convert the ``uitofp`` into a ``sitofp``.
+
 Arguments:
 """"""""""
 
@@ -11767,6 +11772,9 @@ integer quantity and converts it to the corresponding floating-point
 value. If the value cannot be exactly represented, it is rounded using
 the default rounding mode.
 
+If the ``nneg`` flag is set, and the ``uitofp`` argument is negative,
+the result is a poison value.
+
 
 Example:
 """"""""
@@ -11775,6 +11783,9 @@ Example:
 
       %X = uitofp i32 257 to float         ; yields float:257.0
       %Y = uitofp i8 -1 to double          ; yields double:255.0
+
+      %a = uitofp nneg i32 256 to i32      ; yields float:256.0
+      %b = uitofp nneg i32 -256 to i32     ; yields i32 poison
 
 '``sitofp .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -28119,7 +28130,8 @@ Syntax:
 Arguments:
 """"""""""
 
-The first argument is a pointer, which refers to a thread local global.
+The `llvm.threadlocal.address` intrinsic requires a global value argument (a
+:ref:`global variable <globalvars>` or alias) that is thread local.
 
 Semantics:
 """"""""""

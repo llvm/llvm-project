@@ -3858,8 +3858,10 @@ void CodeGenDAGPatterns::parseInstructionPattern(CodeGenInstruction &CGI,
   for (unsigned i = NumResults, e = CGI.Operands.size(); i != e; ++i) {
     CGIOperandList::OperandInfo &Op = CGI.Operands[i];
     const std::string &OpName = Op.Name;
-    if (OpName.empty())
+    if (OpName.empty()) {
       I.error("Operand #" + Twine(i) + " in operands list has no name!");
+      continue;
+    }
 
     if (!InstInputs.count(OpName)) {
       // If this is an operand with a DefaultOps set filled in, we can ignore
@@ -3872,16 +3874,19 @@ void CodeGenDAGPatterns::parseInstructionPattern(CodeGenInstruction &CGI,
       }
       I.error("Operand $" + OpName +
               " does not appear in the instruction pattern");
+      continue;
     }
     TreePatternNodePtr InVal = InstInputs[OpName];
     InstInputs.erase(OpName); // It occurred, remove from map.
 
     if (InVal->isLeaf() && isa<DefInit>(InVal->getLeafValue())) {
       Record *InRec = cast<DefInit>(InVal->getLeafValue())->getDef();
-      if (!checkOperandClass(Op, InRec))
+      if (!checkOperandClass(Op, InRec)) {
         I.error("Operand $" + OpName +
                 "'s register class disagrees"
                 " between the operand and pattern");
+        continue;
+      }
     }
     Operands.push_back(Op.Rec);
 

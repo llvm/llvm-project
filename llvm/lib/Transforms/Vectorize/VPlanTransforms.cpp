@@ -60,14 +60,14 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         assert(isa<VPInstruction>(&Ingredient) &&
                "only VPInstructions expected here");
         assert(!isa<PHINode>(Inst) && "phis should be handled above");
-        // Create VPWidenMemoryInstructionRecipe for loads and stores.
+        // Create VPWidenMemoryRecipe for loads and stores.
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
-          NewRecipe = new VPWidenMemoryInstructionRecipe(
+          NewRecipe = new VPWidenLoadRecipe(
               *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
               false /*Consecutive*/, false /*Reverse*/,
               Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
-          NewRecipe = new VPWidenMemoryInstructionRecipe(
+          NewRecipe = new VPWidenStoreRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
               nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/,
               Ingredient.getDebugLoc());
@@ -852,6 +852,18 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
   return true;
 }
 
+static SmallVector<VPUser *> collectUsersRecursively(VPValue *V) {
+  SetVector<VPUser *> Users(V->user_begin(), V->user_end());
+  for (unsigned I = 0; I != Users.size(); ++I) {
+    VPRecipeBase *Cur = dyn_cast<VPRecipeBase>(Users[I]);
+    if (!Cur || isa<VPHeaderPHIRecipe>(Cur))
+      continue;
+    for (VPValue *V : Cur->definedValues())
+      Users.insert(V->user_begin(), V->user_end());
+  }
+  return Users.takeVector();
+}
+
 void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
   for (VPRecipeBase &R :
        Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
@@ -863,24 +875,10 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
     if (RK != RecurKind::Add && RK != RecurKind::Mul)
       continue;
 
-    SmallSetVector<VPValue *, 8> Worklist;
-    Worklist.insert(PhiR);
-
-    for (unsigned I = 0; I != Worklist.size(); ++I) {
-      VPValue *Cur = Worklist[I];
-      if (auto *RecWithFlags =
-              dyn_cast<VPRecipeWithIRFlags>(Cur->getDefiningRecipe())) {
+    for (VPUser *U : collectUsersRecursively(PhiR))
+      if (auto *RecWithFlags = dyn_cast<VPRecipeWithIRFlags>(U)) {
         RecWithFlags->dropPoisonGeneratingFlags();
       }
-
-      for (VPUser *U : Cur->users()) {
-        auto *UserRecipe = dyn_cast<VPRecipeBase>(U);
-        if (!UserRecipe)
-          continue;
-        for (VPValue *V : UserRecipe->definedValues())
-          Worklist.insert(V);
-      }
-    }
   }
 }
 
@@ -977,10 +975,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       if (!isa<VPWidenRecipe, VPWidenCastRecipe, VPReplicateRecipe,
-               VPWidenSelectRecipe, VPWidenMemoryInstructionRecipe>(&R))
-        continue;
-      if (isa<VPWidenMemoryInstructionRecipe>(&R) &&
-          cast<VPWidenMemoryInstructionRecipe>(&R)->isStore())
+               VPWidenSelectRecipe, VPWidenLoadRecipe>(&R))
         continue;
 
       VPValue *ResultVPV = R.getVPSingleValue();
@@ -1048,10 +1043,9 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         assert(cast<VPWidenRecipe>(&R)->getOpcode() == Instruction::ICmp &&
                "Only ICmps should not need extending the result.");
 
-      if (isa<VPWidenMemoryInstructionRecipe>(&R)) {
-        assert(!cast<VPWidenMemoryInstructionRecipe>(&R)->isStore() && "stores cannot be narrowed");
+      assert(!isa<VPWidenStoreRecipe>(&R) && "stores cannot be narrowed");
+      if (isa<VPWidenLoadRecipe>(&R))
         continue;
-      }
 
       // Shrink operands by introducing truncates as needed.
       unsigned StartIdx = isa<VPWidenSelectRecipe>(&R) ? 1 : 0;
@@ -1209,6 +1203,54 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   return LaneMaskPhi;
 }
 
+/// Collect all VPValues representing a header mask through the (ICMP_ULE,
+/// WideCanonicalIV, backedge-taken-count) pattern.
+/// TODO: Introduce explicit recipe for header-mask instead of searching
+/// for the header-mask pattern manually.
+static SmallVector<VPValue *> collectAllHeaderMasks(VPlan &Plan) {
+  SmallVector<VPValue *> WideCanonicalIVs;
+  auto *FoundWidenCanonicalIVUser =
+      find_if(Plan.getCanonicalIV()->users(),
+              [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); });
+  assert(count_if(Plan.getCanonicalIV()->users(),
+                  [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); }) <=
+             1 &&
+         "Must have at most one VPWideCanonicalIVRecipe");
+  if (FoundWidenCanonicalIVUser != Plan.getCanonicalIV()->users().end()) {
+    auto *WideCanonicalIV =
+        cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
+    WideCanonicalIVs.push_back(WideCanonicalIV);
+  }
+
+  // Also include VPWidenIntOrFpInductionRecipes that represent a widened
+  // version of the canonical induction.
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
+    auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    if (WidenOriginalIV && WidenOriginalIV->isCanonical())
+      WideCanonicalIVs.push_back(WidenOriginalIV);
+  }
+
+  // Walk users of wide canonical IVs and collect to all compares of the form
+  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count).
+  SmallVector<VPValue *> HeaderMasks;
+  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
+  for (auto *Wide : WideCanonicalIVs) {
+    for (VPUser *U : SmallVector<VPUser *>(Wide->users())) {
+      auto *HeaderMask = dyn_cast<VPInstruction>(U);
+      if (!HeaderMask || HeaderMask->getOpcode() != Instruction::ICmp ||
+          HeaderMask->getPredicate() != CmpInst::ICMP_ULE ||
+          HeaderMask->getOperand(1) != BTC)
+        continue;
+
+      assert(HeaderMask->getOperand(0) == Wide &&
+             "WidenCanonicalIV must be the first operand of the compare");
+      HeaderMasks.push_back(HeaderMask);
+    }
+  }
+  return HeaderMasks;
+}
+
 void VPlanTransforms::addActiveLaneMask(
     VPlan &Plan, bool UseActiveLaneMaskForControlFlow,
     bool DataAndControlFlowWithoutRuntimeCheck) {
@@ -1238,20 +1280,93 @@ void VPlanTransforms::addActiveLaneMask(
   // Walk users of WideCanonicalIV and replace all compares of the form
   // (ICMP_ULE, WideCanonicalIV, backedge-taken-count) with an
   // active-lane-mask.
-  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
-  for (VPUser *U : SmallVector<VPUser *>(WideCanonicalIV->users())) {
-    auto *CompareToReplace = dyn_cast<VPInstruction>(U);
-    if (!CompareToReplace ||
-        CompareToReplace->getOpcode() != Instruction::ICmp ||
-        CompareToReplace->getPredicate() != CmpInst::ICMP_ULE ||
-        CompareToReplace->getOperand(1) != BTC)
-      continue;
+  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan))
+    HeaderMask->replaceAllUsesWith(LaneMask);
+}
 
-    assert(CompareToReplace->getOperand(0) == WideCanonicalIV &&
-           "WidenCanonicalIV must be the first operand of the compare");
-    CompareToReplace->replaceAllUsesWith(LaneMask);
-    CompareToReplace->eraseFromParent();
+/// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
+/// replaces all uses except the canonical IV increment of
+/// VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe. VPCanonicalIVPHIRecipe
+/// is used only for loop iterations counting after this transformation.
+///
+/// The function uses the following definitions:
+///  %StartV is the canonical induction start value.
+///
+/// The function adds the following recipes:
+///
+/// vector.ph:
+/// ...
+///
+/// vector.body:
+/// ...
+/// %EVLPhi = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ],
+///                                               [ %NextEVLIV, %vector.body ]
+/// %VPEVL = EXPLICIT-VECTOR-LENGTH %EVLPhi, original TC
+/// ...
+/// %NextEVLIV = add IVSize (cast i32 %VPEVVL to IVSize), %EVLPhi
+/// ...
+///
+void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
+  VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  auto *CanonicalIVPHI = Plan.getCanonicalIV();
+  VPValue *StartV = CanonicalIVPHI->getStartValue();
+
+  // Create the ExplicitVectorLengthPhi recipe in the main loop.
+  auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
+  EVLPhi->insertAfter(CanonicalIVPHI);
+  auto *VPEVL = new VPInstruction(VPInstruction::ExplicitVectorLength,
+                                  {EVLPhi, Plan.getTripCount()});
+  VPEVL->insertBefore(*Header, Header->getFirstNonPhi());
+
+  auto *CanonicalIVIncrement =
+      cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
+  VPSingleDefRecipe *OpVPEVL = VPEVL;
+  if (unsigned IVSize = CanonicalIVPHI->getScalarType()->getScalarSizeInBits();
+      IVSize != 32) {
+    OpVPEVL = new VPScalarCastRecipe(IVSize < 32 ? Instruction::Trunc
+                                                 : Instruction::ZExt,
+                                     OpVPEVL, CanonicalIVPHI->getScalarType());
+    OpVPEVL->insertBefore(CanonicalIVIncrement);
   }
+  auto *NextEVLIV =
+      new VPInstruction(Instruction::Add, {OpVPEVL, EVLPhi},
+                        {CanonicalIVIncrement->hasNoUnsignedWrap(),
+                         CanonicalIVIncrement->hasNoSignedWrap()},
+                        CanonicalIVIncrement->getDebugLoc(), "index.evl.next");
+  NextEVLIV->insertBefore(CanonicalIVIncrement);
+  EVLPhi->addOperand(NextEVLIV);
+
+  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
+    for (VPUser *U : collectUsersRecursively(HeaderMask)) {
+      auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U);
+      if (!MemR)
+        continue;
+      assert(!MemR->isReverse() &&
+             "Reversed memory operations not supported yet.");
+      VPValue *OrigMask = MemR->getMask();
+      assert(OrigMask && "Unmasked widen memory recipe when folding tail");
+      VPValue *NewMask = HeaderMask == OrigMask ? nullptr : OrigMask;
+      if (auto *L = dyn_cast<VPWidenLoadRecipe>(MemR)) {
+        auto *N = new VPWidenLoadEVLRecipe(L, VPEVL, NewMask);
+        N->insertBefore(L);
+        L->replaceAllUsesWith(N);
+        L->eraseFromParent();
+      } else if (auto *S = dyn_cast<VPWidenStoreRecipe>(MemR)) {
+        auto *N = new VPWidenStoreEVLRecipe(S, VPEVL, NewMask);
+        N->insertBefore(S);
+        S->eraseFromParent();
+      } else {
+        llvm_unreachable("unsupported recipe");
+      }
+    }
+    recursivelyDeleteDeadRecipes(HeaderMask);
+  }
+  // Replace all uses of VPCanonicalIVPHIRecipe by
+  // VPEVLBasedIVPHIRecipe except for the canonical IV increment.
+  CanonicalIVPHI->replaceAllUsesWith(EVLPhi);
+  CanonicalIVIncrement->setOperand(0, CanonicalIVPHI);
+  // TODO: support unroll factor > 1.
+  Plan.setUF(1);
 }
 
 void VPlanTransforms::dropPoisonGeneratingRecipes(
@@ -1275,11 +1390,8 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
       // instruction. Widen memory instructions involved in address computation
       // will lead to gather/scatter instructions, which don't need to be
       // handled.
-      if (isa<VPWidenMemoryInstructionRecipe>(CurRec) ||
-          isa<VPInterleaveRecipe>(CurRec) ||
-          isa<VPScalarIVStepsRecipe>(CurRec) ||
-          isa<VPCanonicalIVPHIRecipe>(CurRec) ||
-          isa<VPActiveLaneMaskPHIRecipe>(CurRec))
+      if (isa<VPWidenMemoryRecipe>(CurRec) || isa<VPInterleaveRecipe>(CurRec) ||
+          isa<VPScalarIVStepsRecipe>(CurRec) || isa<VPHeaderPHIRecipe>(CurRec))
         continue;
 
       // This recipe contributes to the address computation of a widen
@@ -1326,7 +1438,7 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
   auto Iter = vp_depth_first_deep(Plan.getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
     for (VPRecipeBase &Recipe : *VPBB) {
-      if (auto *WidenRec = dyn_cast<VPWidenMemoryInstructionRecipe>(&Recipe)) {
+      if (auto *WidenRec = dyn_cast<VPWidenMemoryRecipe>(&Recipe)) {
         Instruction &UnderlyingInstr = WidenRec->getIngredient();
         VPRecipeBase *AddrDef = WidenRec->getAddr()->getDefiningRecipe();
         if (AddrDef && WidenRec->isConsecutive() &&

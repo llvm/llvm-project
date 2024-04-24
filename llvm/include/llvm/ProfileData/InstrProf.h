@@ -277,6 +277,8 @@ void annotateValueSite(Module &M, Instruction &Inst,
                        uint32_t MaxMDCount = 3);
 
 /// Same as the above interface but using an ArrayRef, as well as \p Sum.
+/// This function will not annotate !prof metadata on the instruction if the
+/// referenced array is empty.
 void annotateValueSite(Module &M, Instruction &Inst,
                        ArrayRef<InstrProfValueData> VDs, uint64_t Sum,
                        InstrProfValueKind ValueKind, uint32_t MaxMDCount);
@@ -465,7 +467,6 @@ private:
   StringSet<> VTableNames;
   // A map from MD5 keys to function name strings.
   std::vector<std::pair<uint64_t, StringRef>> MD5NameMap;
-
   // A map from MD5 keys to function define. We only populate this map
   // when build the Symtab from a Module.
   std::vector<std::pair<uint64_t, Function *>> MD5FuncMap;

@@ -149,6 +149,9 @@ Changes to the C API
 
 * Deprecated ``LLVMConstNUWNeg`` and ``LLVMBuildNUWNeg``.
 
+* Added ``LLVMAtomicRMWBinOpUIncWrap`` and ``LLVMAtomicRMWBinOpUDecWrap`` to
+  ``LLVMAtomicRMWBinOp`` enum for AtomicRMW instructions.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
@@ -174,6 +177,10 @@ Changes to the LLVM tools
 * llvm-ar now allows specifying COFF archive format with ``--format`` argument
   and uses it by default for COFF targets.
 
+* llvm-ranlib now supports ``-V`` as an alias for ``--version``.
+  ``-v`` (``--verbose`` in llvm-ar) has been removed.
+  (`#87661 <https://github.com/llvm/llvm-project/pull/87661>`_)
+
 * llvm-objcopy now supports ``--set-symbol-visibility`` and
   ``--set-symbols-visibility`` options for ELF input to change the
   visibility of symbols.
@@ -190,6 +197,10 @@ Changes to the LLVM tools
   on Windows using Intel VTune's SEP. For details on usage, see the `end-user
   documentation for SPGO
   <https://clang.llvm.org/docs/UsersManual.html#using-sampling-profilers>`_.
+
+* llvm-readelf's ``-r`` output for RELR has been improved.
+  (`#89162 <https://github.com/llvm/llvm-project/pull/89162>`_)
+  ``--raw-relr`` has been removed.
 
 Changes to LLDB
 ---------------------------------

@@ -1493,6 +1493,7 @@ Conditional ``explicit``                     __cpp_conditional_explicit       C+
 ``if consteval``                             __cpp_if_consteval               C++23         C++20
 ``static operator()``                        __cpp_static_call_operator       C++23         C++03
 Attributes on Lambda-Expressions                                              C++23         C++11
+``= delete ("should have a reason");``       __cpp_deleted_function           C++26         C++03
 -------------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                                C99           C89
 Array & element qualification (N2607)                                         C23           C89
@@ -1610,6 +1611,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_pod`` (C++, GNU, Microsoft, Embarcadero):
   Note, the corresponding standard trait was deprecated in C++20.
 * ``__is_pointer`` (C++, Embarcadero)
+* ``__is_pointer_interconvertible_base_of`` (C++, GNU, Microsoft)
 * ``__is_polymorphic`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_reference`` (C++, Embarcadero)
 * ``__is_referenceable`` (C++, GNU, Microsoft, Embarcadero):
@@ -1640,7 +1642,8 @@ The following type trait primitives are supported by Clang. Those traits marked
   were made trivially relocatable via the ``clang::trivial_abi`` attribute.
 * ``__is_trivially_equality_comparable`` (Clang): Returns true if comparing two
   objects of the provided type is known to be equivalent to comparing their
-  value representations.
+  object representations. Note that types containing padding bytes are never
+  trivially equality comparable.
 * ``__is_unbounded_array`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_union`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_unsigned`` (C++, Embarcadero):
@@ -3463,6 +3466,54 @@ Query for this feature with ``__has_builtin(__builtin_trap)``.
 **Description**
 
 ``__builtin_arm_trap`` is lowered to the ``llvm.aarch64.break`` builtin, and then to ``brk #payload``.
+
+``__builtin_allow_runtime_check``
+---------------------------------
+
+``__builtin_allow_runtime_check`` return true if the check at the current
+program location should be executed. It is expected to be used to implement
+``assert`` like checks which can be safely removed by optimizer.
+
+**Syntax**:
+
+.. code-block:: c++
+
+    bool __builtin_allow_runtime_check(const char* kind)
+
+**Example of use**:
+
+.. code-block:: c++
+
+  if (__builtin_allow_runtime_check("mycheck") && !ExpensiveCheck()) {
+     abort();
+  }
+
+**Description**
+
+``__builtin_allow_runtime_check`` is lowered to ` ``llvm.allow.runtime.check``
+<https://llvm.org/docs/LangRef.html#llvm-allow-runtime-check-intrinsic>`_
+builtin.
+
+The ``__builtin_allow_runtime_check()`` is expected to be used with control
+flow conditions such as in ``if`` to guard expensive runtime checks. The
+specific rules for selecting permitted checks can differ and are controlled by
+the compiler options.
+
+Flags to control checks:
+* ``-mllvm -lower-allow-check-percentile-cutoff-hot=N`` where N is PGO hotness
+cutoff in range ``[0, 999999]`` to disallow checks in hot code.
+* ``-mllvm -lower-allow-check-random-rate=P`` where P is number in range
+``[0.0, 1.0]`` representation probability of keeping a check.
+* If both flags are specified, ``-lower-allow-check-random-rate`` takes
+precedence.
+* If none is specified, ``__builtin_allow_runtime_check`` is lowered as
+``true``, allowing all checks.
+
+Parameter ``kind`` is a string literal representing a user selected kind for
+guarded check. It's unused now. It will enable kind-specific lowering in future.
+E.g. a higher hotness cutoff can be used for more expensive kind of check.
+
+Query for this feature with ``__has_builtin(__builtin_allow_runtime_check)``.
 
 ``__builtin_nondeterministic_value``
 ------------------------------------
