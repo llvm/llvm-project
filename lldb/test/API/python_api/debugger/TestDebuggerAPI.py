@@ -163,32 +163,25 @@ class DebuggerAPITestCase(TestBase):
         self.assertEqual(destroy_dbg_id, original_dbg_id)
 
     def test_AddDestroyCallback(self):
-        destroy_dbg_id = None
+        original_dbg_id = self.dbg.GetID()
         called = []
 
         def foo(dbg_id):
             # Need nonlocal to modify closure variable.
-            nonlocal destroy_dbg_id
-            destroy_dbg_id = dbg_id
-
             nonlocal called
-            called += ['foo']
+            called += [('foo', dbg_id)]
 
         def bar(dbg_id):
             # Need nonlocal to modify closure variable.
-            nonlocal destroy_dbg_id
-            destroy_dbg_id = dbg_id
-
             nonlocal called
-            called += ['bar']
+            called += [('bar', dbg_id)]
 
         self.dbg.AddDestroyCallback(foo)
         self.dbg.AddDestroyCallback(bar)
-
-        original_dbg_id = self.dbg.GetID()
         self.dbg.Destroy(self.dbg)
-        self.assertEqual(destroy_dbg_id, original_dbg_id)
-        self.assertEqual(called, ['bar', 'foo'])
+
+        # Should first call `foo()`, then `bar()`
+        self.assertEqual(called, [('foo', original_dbg_id), ('bar', original_dbg_id)])
 
     def test_ClearDestroyCallback(self):
         destroy_dbg_id = None
@@ -200,6 +193,7 @@ class DebuggerAPITestCase(TestBase):
 
         self.dbg.AddDestroyCallback(foo)
         self.dbg.ClearDestroyCallback()
-
         self.dbg.Destroy(self.dbg)
+
+        # `foo()` should never be called
         self.assertEqual(destroy_dbg_id, None)
