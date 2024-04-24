@@ -117,12 +117,19 @@ struct PortableMemInfoBlock {
   void clear() { *this = PortableMemInfoBlock(); }
 
   // Returns the full schema currently in use.
-  static MemProfSchema getSchema() {
+  static MemProfSchema getFullSchema() {
     MemProfSchema List;
 #define MIBEntryDef(NameTag, Name, Type) List.push_back(Meta::Name);
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
     return List;
+  }
+
+  // Returns the schema consisting of the fields currently consumed by the
+  // compiler.
+  static MemProfSchema getHotColdSchema() {
+    return {Meta::AllocCount, Meta::TotalSize, Meta::TotalLifetime,
+            Meta::TotalLifetimeAccessDensity};
   }
 
   bool operator==(const PortableMemInfoBlock &Other) const {
