@@ -36,9 +36,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool> WriteFutureVersion("write-future-version",
-                                        cl::init(false));
-
 // A struct to define how the data stream should be patched. For Indexed
 // profiling, only uint64_t data type is needed.
 struct PatchItem {
@@ -196,7 +193,7 @@ InstrProfWriter::InstrProfWriter(
 
 InstrProfWriter::~InstrProfWriter() { delete InfoObj; }
 
-// Internal interface for testing purpose only.
+// Begin: Internal interface for testing purpose only.
 void InstrProfWriter::setValueProfDataEndianness(llvm::endianness Endianness) {
   InfoObj->ValueProfDataEndianness = Endianness;
 }
@@ -204,6 +201,25 @@ void InstrProfWriter::setValueProfDataEndianness(llvm::endianness Endianness) {
 void InstrProfWriter::setOutputSparse(bool Sparse) {
   this->Sparse = Sparse;
 }
+
+void InstrProfWriter::setProfileVersion(uint32_t Version) {
+  ProfileVersion = std::make_optional(Version);
+}
+
+void InstrProfWriter::setMinCompatibleReaderProfileVersion(uint32_t Version) {
+  MinCompatibleReaderProfileVersion = std::make_optional(Version);
+}
+
+void InstrProfWriter::setAppendAdditionalHeaderFields() {
+  AppendAdditionalHeaderFields = true;
+}
+
+void InstrProfWriter::resetTestOnlyStatesForHeaderSection() {
+  ProfileVersion = std::nullopt;
+  MinCompatibleReaderProfileVersion = std::nullopt;
+  AppendAdditionalHeaderFields = false;
+}
+// End: Internal interface for testing purpose only.
 
 void InstrProfWriter::addRecord(NamedInstrProfRecord &&I, uint64_t Weight,
                                 function_ref<void(Error)> Warn) {
@@ -555,6 +571,24 @@ static Error writeMemProf(
               memprof::MaximumSupportedVersion));
 }
 
+uint32_t InstrProfWriter::profileVersion() const {
+  // ProfileVersion is set in tests only.
+  if (this->ProfileVersion)
+    return *(this->ProfileVersion);
+
+  uint64_t CurVersion = IndexedInstrProf::ProfVersion::CurrentVersion;
+
+  return WritePrevVersion ? CurVersion - 1 : CurVersion;
+}
+
+uint64_t InstrProfWriter::minProfileReaderVersion() const {
+  // MinCompatibleReaderProfileVersion is set in tests only.
+  if (this->MinCompatibleReaderProfileVersion)
+    return *(this->MinCompatibleReaderProfileVersion);
+
+  return IndexedInstrProf::ProfVersion::Version13;
+}
+
 Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   using namespace IndexedInstrProf;
   using namespace support;
@@ -578,19 +612,8 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   // Write the header.
   IndexedInstrProf::Header Header;
   Header.Magic = IndexedInstrProf::Magic;
-  Header.Version = WritePrevVersion
-                       ? IndexedInstrProf::ProfVersion::Version12
-                       : IndexedInstrProf::ProfVersion::CurrentVersion;
-  if (WriteFutureVersion)
-    Header.Version = 14;
-  // The WritePrevVersion handling will either need to be removed or updated
-  // if the version is advanced beyond 13.
-  // Starting from version 13, an indexed profile records the on-disk
-  // byte size of header at a fixed byte offset. Compilers or tools built
-  // starting from this version can read the on-disk byte size (as opposed to
-  // relying on struct definition of Header) to locate the start of payload
-  // sections.
-  // FIXME: Clean up WritePrevVersion later.
+  Header.Version = profileVersion();
+
   assert(IndexedInstrProf::ProfVersion::CurrentVersion ==
          IndexedInstrProf::ProfVersion::Version13);
   if (static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation))
@@ -647,23 +670,25 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   uint64_t VTableNamesOffset = OS.tell();
   OS.write(0);
 
-  // Record the offset of 'Header::Size' field and reserve the space to allow
-  // back patching later.
+  // Record the offset of 'Header::Size' field.
   const uint64_t OnDiskHeaderSizeOffset = OS.tell();
-  if (!WritePrevVersion)
+
+  if (!WritePrevVersion) {
+    // Reserve the space for `OnDiskByteSize` to allow back patching later.
     OS.write(0);
 
-  // Write a dummy value
-  if (WriteFutureVersion)
+    // Write the minimum compatible version required.
+    OS.write(minProfileReaderVersion());
+  }
+
+  // This is a test-only path to append dummy header fields.
+  // NOTE: please write all other header fields before this one.
+  if (AppendAdditionalHeaderFields)
     OS.write(0);
 
   // Record the OnDiskHeader Size after each header field either gets written or
   // gets its space reserved.
   uint64_t OnDiskHeaderSize = OS.tell() - StartOffset;
-
-  llvm::errs() << "OnDiskHeaderSize is " << OnDiskHeaderSize << "\n";
-  fflush(stdout);
-  fflush(stderr);
 
   // Reserve space to write profile summary data.
   uint32_t NumEntries = ProfileSummaryBuilder::DefaultCutoffs.size();

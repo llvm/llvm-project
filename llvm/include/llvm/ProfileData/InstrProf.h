@@ -368,6 +368,7 @@ enum class instrprof_error {
   zlib_unavailable,
   raw_profile_version_mismatch,
   counter_value_too_large,
+  unsupported_incompatible_future_version,
 };
 
 /// An ordered list of functions identified by their NameRef found in
@@ -1146,7 +1147,13 @@ enum ProfVersion {
   Version11 = 11,
   // VTable profiling,
   Version12 = 12,
-  // Record the on-disk byte size of header.
+  // Two additional header fields to add partial forward compatibility.
+  // Indexed profile reader compares the latest version it can parse with the
+  // minimum version required by (and recorded in) the profile; if the reader
+  // can reasonably interprets the payload, it proceeds to parse known sections
+  // and skip unknown sections; otherwise it stops reading and throws error
+  // (users should update compilers and/or command line tools to parse profiles
+  // with newer versions).
   Version13 = 13,
   // The current version is 13.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
@@ -1177,9 +1184,24 @@ struct Header {
   uint64_t TemporalProfTracesOffset;
   uint64_t VTableNamesOffset;
 
-  // The on-disk byte size of the header. As with other fields, do not read its
-  // value before calling readFromBuffer.
-  uint64_t Size = 0;
+  // Records the on-disk byte size of the header.
+  uint64_t OnDiskByteSize = 0;
+
+  // Indexed profile writer will records the minimum profile reader version
+  // required to parse this profile. If a profile reader's supported version is
+  // smaller than what's recorded in this field, the profile reader (in
+  // compilers or command line tools) should be updated.
+  //
+  // Example scenario:
+  // The semantics of an existing section change starting from version V + 1
+  // (with readers supporting both versions to preserve backward compatibility),
+  // indexed profile writer should record `MinimumProfileReaderVersion` as V
+  // + 1. Previously-built profile readers won't know how to interpret the
+  // existing section correctly; these readers will find the
+  // `MinimumProfileReaderVersion` recorded in the profile is higher than the
+  // readers' supported version (a constant baked in the library), and stop the
+  // read process.
+  uint64_t MinimumProfileReaderVersion = 0;
 
   // New fields should only be added at the end to ensure that the size
   // computation is correct. The methods below need to be updated to ensure that
@@ -1192,6 +1214,7 @@ struct Header {
   // the version.
   size_t size() const;
 
+  // Returns the end byte offset of all known fields by the reader.
   Expected<size_t> knownFieldsEndByteOffset() const;
 
   // Returns the format version in little endian. The header retains the
