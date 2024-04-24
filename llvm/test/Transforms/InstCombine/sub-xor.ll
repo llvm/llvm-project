@@ -97,7 +97,7 @@ declare i32 @llvm.ctlz.i32(i32, i1)
 
 define i32 @range_masked_sub(i32 %x) {
 ; CHECK-LABEL: @range_masked_sub(
-; CHECK-NEXT:    [[COUNT:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true) #[[ATTR1:[0-9]+]], !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[COUNT:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 true) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    [[SUB:%.*]] = xor i32 [[COUNT]], 31
 ; CHECK-NEXT:    ret i32 [[SUB]]
 ;
