@@ -1,5 +1,6 @@
 source_set("llvm-min-tblgen-sources") {
   sources = [
+    "ARMTargetDefEmitter.cpp",
     "Attributes.cpp",
     "DirectiveEmitter.cpp",
     "IntrinsicEmitter.cpp",
@@ -32,7 +33,6 @@ executable("llvm-tblgen") {
   ]
   include_dirs = [ "." ]
   sources = [
-    "ARMTargetDefEmitter.cpp",
     "AsmMatcherEmitter.cpp",
     "AsmWriterEmitter.cpp",
     "CTagsEmitter.cpp",
