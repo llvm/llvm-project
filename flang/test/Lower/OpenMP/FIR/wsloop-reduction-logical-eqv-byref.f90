@@ -36,21 +36,23 @@
 ! CHECK:             %[[VAL_6:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 100 : i32
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop byref reduction(@eqv_reduction %[[VAL_2]] -> %[[VAL_9:.*]] : !fir.ref<!fir.logical<4>>)  for  (%[[VAL_10:.*]]) : i32 = (%[[VAL_6]]) to (%[[VAL_7]]) inclusive step (%[[VAL_8]]) {
-! CHECK:               fir.store %[[VAL_10]] to %[[VAL_5]] : !fir.ref<i32>
-! CHECK:               %[[VAL_11:.*]] = fir.load %[[VAL_9]] : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_12:.*]] = fir.load %[[VAL_5]] : !fir.ref<i32>
-! CHECK:               %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (i32) -> i64
-! CHECK:               %[[VAL_14:.*]] = arith.constant 1 : i64
-! CHECK:               %[[VAL_15:.*]] = arith.subi %[[VAL_13]], %[[VAL_14]] : i64
-! CHECK:               %[[VAL_16:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_15]] : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_17:.*]] = fir.load %[[VAL_16]] : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_18:.*]] = fir.convert %[[VAL_11]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_19:.*]] = fir.convert %[[VAL_17]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_20:.*]] = arith.cmpi eq, %[[VAL_18]], %[[VAL_19]] : i1
-! CHECK:               %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i1) -> !fir.logical<4>
-! CHECK:               fir.store %[[VAL_21]] to %[[VAL_9]] : !fir.ref<!fir.logical<4>>
-! CHECK:               omp.yield
+! CHECK:             omp.wsloop byref reduction(@eqv_reduction %[[VAL_2]] -> %[[VAL_9:.*]] : !fir.ref<!fir.logical<4>>) {
+! CHECK-NEXT:          omp.loop_nest (%[[VAL_10:.*]]) : i32 = (%[[VAL_6]]) to (%[[VAL_7]]) inclusive step (%[[VAL_8]]) {
+! CHECK:                 fir.store %[[VAL_10]] to %[[VAL_5]] : !fir.ref<i32>
+! CHECK:                 %[[VAL_11:.*]] = fir.load %[[VAL_9]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_12:.*]] = fir.load %[[VAL_5]] : !fir.ref<i32>
+! CHECK:                 %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (i32) -> i64
+! CHECK:                 %[[VAL_14:.*]] = arith.constant 1 : i64
+! CHECK:                 %[[VAL_15:.*]] = arith.subi %[[VAL_13]], %[[VAL_14]] : i64
+! CHECK:                 %[[VAL_16:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_15]] : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_17:.*]] = fir.load %[[VAL_16]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_18:.*]] = fir.convert %[[VAL_11]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_19:.*]] = fir.convert %[[VAL_17]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_20:.*]] = arith.cmpi eq, %[[VAL_18]], %[[VAL_19]] : i1
+! CHECK:                 %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i1) -> !fir.logical<4>
+! CHECK:                 fir.store %[[VAL_21]] to %[[VAL_9]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 omp.yield
+! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 
@@ -78,21 +80,23 @@ end subroutine
 ! CHECK:             %[[VAL_6:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 100 : i32
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop byref reduction(@eqv_reduction %[[VAL_2]] -> %[[VAL_9:.*]] : !fir.ref<!fir.logical<4>>)  for  (%[[VAL_10:.*]]) : i32 = (%[[VAL_6]]) to (%[[VAL_7]]) inclusive step (%[[VAL_8]]) {
-! CHECK:               fir.store %[[VAL_10]] to %[[VAL_5]] : !fir.ref<i32>
-! CHECK:               %[[VAL_11:.*]] = fir.load %[[VAL_5]] : !fir.ref<i32>
-! CHECK:               %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (i32) -> i64
-! CHECK:               %[[VAL_13:.*]] = arith.constant 1 : i64
-! CHECK:               %[[VAL_14:.*]] = arith.subi %[[VAL_12]], %[[VAL_13]] : i64
-! CHECK:               %[[VAL_15:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_14]] : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_16:.*]] = fir.load %[[VAL_15]] : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_17:.*]] = fir.load %[[VAL_9]] : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_18:.*]] = fir.convert %[[VAL_16]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_19:.*]] = fir.convert %[[VAL_17]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_20:.*]] = arith.cmpi eq, %[[VAL_18]], %[[VAL_19]] : i1
-! CHECK:               %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i1) -> !fir.logical<4>
-! CHECK:               fir.store %[[VAL_21]] to %[[VAL_9]] : !fir.ref<!fir.logical<4>>
-! CHECK:               omp.yield
+! CHECK:             omp.wsloop byref reduction(@eqv_reduction %[[VAL_2]] -> %[[VAL_9:.*]] : !fir.ref<!fir.logical<4>>) {
+! CHECK-NEXT:          omp.loop_nest (%[[VAL_10:.*]]) : i32 = (%[[VAL_6]]) to (%[[VAL_7]]) inclusive step (%[[VAL_8]]) {
+! CHECK:                 fir.store %[[VAL_10]] to %[[VAL_5]] : !fir.ref<i32>
+! CHECK:                 %[[VAL_11:.*]] = fir.load %[[VAL_5]] : !fir.ref<i32>
+! CHECK:                 %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (i32) -> i64
+! CHECK:                 %[[VAL_13:.*]] = arith.constant 1 : i64
+! CHECK:                 %[[VAL_14:.*]] = arith.subi %[[VAL_12]], %[[VAL_13]] : i64
+! CHECK:                 %[[VAL_15:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_14]] : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_16:.*]] = fir.load %[[VAL_15]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_17:.*]] = fir.load %[[VAL_9]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_18:.*]] = fir.convert %[[VAL_16]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_19:.*]] = fir.convert %[[VAL_17]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_20:.*]] = arith.cmpi eq, %[[VAL_18]], %[[VAL_19]] : i1
+! CHECK:                 %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i1) -> !fir.logical<4>
+! CHECK:                 fir.store %[[VAL_21]] to %[[VAL_9]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 omp.yield
+! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 
@@ -128,45 +132,47 @@ end subroutine
 ! CHECK:             %[[VAL_12:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_13:.*]] = arith.constant 100 : i32
 ! CHECK:             %[[VAL_14:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop byref reduction(@eqv_reduction %[[VAL_2]] -> %[[VAL_15:.*]] : !fir.ref<!fir.logical<4>>, @eqv_reduction %[[VAL_3]] -> %[[VAL_16:.*]] : !fir.ref<!fir.logical<4>>, @eqv_reduction %[[VAL_4]] -> %[[VAL_17:.*]] : !fir.ref<!fir.logical<4>>)  for  (%[[VAL_18:.*]]) : i32 = (%[[VAL_12]]) to (%[[VAL_13]]) inclusive step (%[[VAL_14]]) {
-! CHECK:               fir.store %[[VAL_18]] to %[[VAL_11]] : !fir.ref<i32>
-! CHECK:               %[[VAL_19:.*]] = fir.load %[[VAL_15]] : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_20:.*]] = fir.load %[[VAL_11]] : !fir.ref<i32>
-! CHECK:               %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i32) -> i64
-! CHECK:               %[[VAL_22:.*]] = arith.constant 1 : i64
-! CHECK:               %[[VAL_23:.*]] = arith.subi %[[VAL_21]], %[[VAL_22]] : i64
-! CHECK:               %[[VAL_24:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_23]] : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_25:.*]] = fir.load %[[VAL_24]] : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_26:.*]] = fir.convert %[[VAL_19]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_27:.*]] = fir.convert %[[VAL_25]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_28:.*]] = arith.cmpi eq, %[[VAL_26]], %[[VAL_27]] : i1
-! CHECK:               %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (i1) -> !fir.logical<4>
-! CHECK:               fir.store %[[VAL_29]] to %[[VAL_15]] : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_30:.*]] = fir.load %[[VAL_16]] : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_31:.*]] = fir.load %[[VAL_11]] : !fir.ref<i32>
-! CHECK:               %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (i32) -> i64
-! CHECK:               %[[VAL_33:.*]] = arith.constant 1 : i64
-! CHECK:               %[[VAL_34:.*]] = arith.subi %[[VAL_32]], %[[VAL_33]] : i64
-! CHECK:               %[[VAL_35:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_34]] : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_36:.*]] = fir.load %[[VAL_35]] : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_37:.*]] = fir.convert %[[VAL_30]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_38:.*]] = fir.convert %[[VAL_36]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_39:.*]] = arith.cmpi eq, %[[VAL_37]], %[[VAL_38]] : i1
-! CHECK:               %[[VAL_40:.*]] = fir.convert %[[VAL_39]] : (i1) -> !fir.logical<4>
-! CHECK:               fir.store %[[VAL_40]] to %[[VAL_16]] : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_41:.*]] = fir.load %[[VAL_17]] : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_42:.*]] = fir.load %[[VAL_11]] : !fir.ref<i32>
-! CHECK:               %[[VAL_43:.*]] = fir.convert %[[VAL_42]] : (i32) -> i64
-! CHECK:               %[[VAL_44:.*]] = arith.constant 1 : i64
-! CHECK:               %[[VAL_45:.*]] = arith.subi %[[VAL_43]], %[[VAL_44]] : i64
-! CHECK:               %[[VAL_46:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_45]] : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_47:.*]] = fir.load %[[VAL_46]] : !fir.ref<!fir.logical<4>>
-! CHECK:               %[[VAL_48:.*]] = fir.convert %[[VAL_41]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_49:.*]] = fir.convert %[[VAL_47]] : (!fir.logical<4>) -> i1
-! CHECK:               %[[VAL_50:.*]] = arith.cmpi eq, %[[VAL_48]], %[[VAL_49]] : i1
-! CHECK:               %[[VAL_51:.*]] = fir.convert %[[VAL_50]] : (i1) -> !fir.logical<4>
-! CHECK:               fir.store %[[VAL_51]] to %[[VAL_17]] : !fir.ref<!fir.logical<4>>
-! CHECK:               omp.yield
+! CHECK:             omp.wsloop byref reduction(@eqv_reduction %[[VAL_2]] -> %[[VAL_15:.*]] : !fir.ref<!fir.logical<4>>, @eqv_reduction %[[VAL_3]] -> %[[VAL_16:.*]] : !fir.ref<!fir.logical<4>>, @eqv_reduction %[[VAL_4]] -> %[[VAL_17:.*]] : !fir.ref<!fir.logical<4>>) {
+! CHECK-NEXT:          omp.loop_nest (%[[VAL_18:.*]]) : i32 = (%[[VAL_12]]) to (%[[VAL_13]]) inclusive step (%[[VAL_14]]) {
+! CHECK:                 fir.store %[[VAL_18]] to %[[VAL_11]] : !fir.ref<i32>
+! CHECK:                 %[[VAL_19:.*]] = fir.load %[[VAL_15]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_20:.*]] = fir.load %[[VAL_11]] : !fir.ref<i32>
+! CHECK:                 %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i32) -> i64
+! CHECK:                 %[[VAL_22:.*]] = arith.constant 1 : i64
+! CHECK:                 %[[VAL_23:.*]] = arith.subi %[[VAL_21]], %[[VAL_22]] : i64
+! CHECK:                 %[[VAL_24:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_23]] : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_25:.*]] = fir.load %[[VAL_24]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_26:.*]] = fir.convert %[[VAL_19]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_27:.*]] = fir.convert %[[VAL_25]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_28:.*]] = arith.cmpi eq, %[[VAL_26]], %[[VAL_27]] : i1
+! CHECK:                 %[[VAL_29:.*]] = fir.convert %[[VAL_28]] : (i1) -> !fir.logical<4>
+! CHECK:                 fir.store %[[VAL_29]] to %[[VAL_15]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_30:.*]] = fir.load %[[VAL_16]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_31:.*]] = fir.load %[[VAL_11]] : !fir.ref<i32>
+! CHECK:                 %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (i32) -> i64
+! CHECK:                 %[[VAL_33:.*]] = arith.constant 1 : i64
+! CHECK:                 %[[VAL_34:.*]] = arith.subi %[[VAL_32]], %[[VAL_33]] : i64
+! CHECK:                 %[[VAL_35:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_34]] : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_36:.*]] = fir.load %[[VAL_35]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_37:.*]] = fir.convert %[[VAL_30]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_38:.*]] = fir.convert %[[VAL_36]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_39:.*]] = arith.cmpi eq, %[[VAL_37]], %[[VAL_38]] : i1
+! CHECK:                 %[[VAL_40:.*]] = fir.convert %[[VAL_39]] : (i1) -> !fir.logical<4>
+! CHECK:                 fir.store %[[VAL_40]] to %[[VAL_16]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_41:.*]] = fir.load %[[VAL_17]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_42:.*]] = fir.load %[[VAL_11]] : !fir.ref<i32>
+! CHECK:                 %[[VAL_43:.*]] = fir.convert %[[VAL_42]] : (i32) -> i64
+! CHECK:                 %[[VAL_44:.*]] = arith.constant 1 : i64
+! CHECK:                 %[[VAL_45:.*]] = arith.subi %[[VAL_43]], %[[VAL_44]] : i64
+! CHECK:                 %[[VAL_46:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_45]] : (!fir.ref<!fir.array<100x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_47:.*]] = fir.load %[[VAL_46]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 %[[VAL_48:.*]] = fir.convert %[[VAL_41]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_49:.*]] = fir.convert %[[VAL_47]] : (!fir.logical<4>) -> i1
+! CHECK:                 %[[VAL_50:.*]] = arith.cmpi eq, %[[VAL_48]], %[[VAL_49]] : i1
+! CHECK:                 %[[VAL_51:.*]] = fir.convert %[[VAL_50]] : (i1) -> !fir.logical<4>
+! CHECK:                 fir.store %[[VAL_51]] to %[[VAL_17]] : !fir.ref<!fir.logical<4>>
+! CHECK:                 omp.yield
+! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           return
 

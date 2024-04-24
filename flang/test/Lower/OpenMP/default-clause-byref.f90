@@ -352,8 +352,11 @@ subroutine skipped_default_clause_checks()
        type(it)::iii
 
 !CHECK: omp.parallel {
-!CHECK: omp.wsloop byref reduction(@min_byref_i32 %[[VAL_Z_DECLARE]]#0 -> %[[PRV:.+]] : !fir.ref<i32>) for (%[[ARG:.*]]) {{.*}} {
+!CHECK: omp.wsloop byref reduction(@min_byref_i32 %[[VAL_Z_DECLARE]]#0 -> %[[PRV:.+]] : !fir.ref<i32>) {
+!CHECK-NEXT: omp.loop_nest (%[[ARG:.*]]) {{.*}} {
 !CHECK: omp.yield
+!CHECK: }
+!CHECK: omp.terminator
 !CHECK: }
 !CHECK: omp.terminator
 !CHECK: }
