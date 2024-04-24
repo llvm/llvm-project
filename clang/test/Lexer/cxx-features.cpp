@@ -34,6 +34,10 @@
 
 // --- C++26 features ---
 
+#if check(deleted_function, 202403, 202403, 202403, 202403, 202403, 202403, 202403)
+#error "wrong value for __cpp_deleted_function"
+#endif
+
 #if check(placeholder_variables, 202306, 202306, 202306, 202306, 202306, 202306, 202306)
 #error "wrong value for __cpp_placeholder_variables"
 #endif
@@ -85,7 +89,7 @@
 #error "wrong value for __cpp_char8_t"
 #endif
 
-#if check(concepts, 0, 0, 0, 0, 201907, 201907, 201907)
+#if check(concepts, 0, 0, 0, 0, 202002, 202002, 202002)
 #error "wrong value for __cpp_concepts"
 #endif
 

@@ -147,7 +147,7 @@ enum {
         },
         {
           "kind": "text",
-          "spelling": ": "
+          "spelling": " : "
         },
         {
           "kind": "typeIdentifier",
@@ -459,7 +459,7 @@ enum {
         },
         {
           "kind": "text",
-          "spelling": ": "
+          "spelling": " : "
         },
         {
           "kind": "typeIdentifier",
@@ -686,7 +686,7 @@ enum {
         },
         {
           "kind": "text",
-          "spelling": ": "
+          "spelling": " : "
         },
         {
           "kind": "typeIdentifier",
@@ -695,7 +695,7 @@ enum {
         },
         {
           "kind": "text",
-          "spelling": ";"
+          "spelling": " { ... };"
         }
       ],
       "identifier": {
@@ -778,7 +778,7 @@ enum {
         },
         {
           "kind": "text",
-          "spelling": ": "
+          "spelling": " : "
         },
         {
           "kind": "typeIdentifier",
@@ -787,7 +787,7 @@ enum {
         },
         {
           "kind": "text",
-          "spelling": ";"
+          "spelling": " { ... };"
         }
       ],
       "identifier": {

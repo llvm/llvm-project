@@ -198,3 +198,16 @@ struct S {
 };
 
 } // namespace deleted_functions
+
+namespace unused_arguments {
+
+template<typename F>
+void unused_argument1(F&&) {}
+
+template<typename F>
+void unused_argument2([[maybe_unused]] F&& f) {}
+
+template<typename F>
+void unused_argument3(F&& _) {}
+
+} // namespace unused_arguments

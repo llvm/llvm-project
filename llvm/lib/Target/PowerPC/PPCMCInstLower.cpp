@@ -96,15 +96,18 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
     RefKind = MCSymbolRefExpr::VK_PPC_GOT_TLSLD_PCREL;
   else if (MO.getTargetFlags() == PPCII::MO_GOT_TPREL_PCREL_FLAG)
     RefKind = MCSymbolRefExpr::VK_PPC_GOT_TPREL_PCREL;
-  else if (MO.getTargetFlags() == PPCII::MO_TPREL_FLAG) {
+  else if (MO.getTargetFlags() == PPCII::MO_TPREL_FLAG ||
+           MO.getTargetFlags() == PPCII::MO_TLSLD_FLAG) {
     assert(MO.isGlobal() && "Only expecting a global MachineOperand here!");
     TLSModel::Model Model = TM.getTLSModel(MO.getGlobal());
-    // For the local-exec TLS model, we may generate the offset from the TLS
-    // base as an immediate operand (instead of using a TOC entry).
-    // Set the relocation type in case the result is used for purposes other
-    // than a TOC reference. In TOC reference cases, this result is discarded.
+    // For the local-[exec|dynamic] TLS model, we may generate the offset from
+    // the TLS base as an immediate operand (instead of using a TOC entry). Set
+    // the relocation type in case the result is used for purposes other than a
+    // TOC reference. In TOC reference cases, this result is discarded.
     if (Model == TLSModel::LocalExec)
       RefKind = MCSymbolRefExpr::VK_PPC_AIX_TLSLE;
+    else if (Model == TLSModel::LocalDynamic)
+      RefKind = MCSymbolRefExpr::VK_PPC_AIX_TLSLD;
   }
 
   const MachineInstr *MI = MO.getParent();

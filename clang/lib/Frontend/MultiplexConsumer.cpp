@@ -20,6 +20,9 @@ using namespace clang;
 
 namespace clang {
 
+class NamespaceDecl;
+class TranslationUnitDecl;
+
 MultiplexASTDeserializationListener::MultiplexASTDeserializationListener(
       const std::vector<ASTDeserializationListener*>& L)
     : Listeners(L) {
@@ -115,6 +118,11 @@ public:
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
   void AddedAttributeToRecord(const Attr *Attr,
                               const RecordDecl *Record) override;
+  void EnteringModulePurview() override;
+  void AddedManglingNumber(const Decl *D, unsigned) override;
+  void AddedStaticLocalNumbers(const Decl *D, unsigned) override;
+  void AddedAnonymousNamespace(const TranslationUnitDecl *,
+                               NamespaceDecl *AnonNamespace) override;
 
 private:
   std::vector<ASTMutationListener*> Listeners;
@@ -236,6 +244,27 @@ void MultiplexASTMutationListener::AddedAttributeToRecord(
                                                     const RecordDecl *Record) {
   for (auto *L : Listeners)
     L->AddedAttributeToRecord(Attr, Record);
+}
+
+void MultiplexASTMutationListener::EnteringModulePurview() {
+  for (auto *L : Listeners)
+    L->EnteringModulePurview();
+}
+
+void MultiplexASTMutationListener::AddedManglingNumber(const Decl *D,
+                                                       unsigned Number) {
+  for (auto *L : Listeners)
+    L->AddedManglingNumber(D, Number);
+}
+void MultiplexASTMutationListener::AddedStaticLocalNumbers(const Decl *D,
+                                                           unsigned Number) {
+  for (auto *L : Listeners)
+    L->AddedStaticLocalNumbers(D, Number);
+}
+void MultiplexASTMutationListener::AddedAnonymousNamespace(
+    const TranslationUnitDecl *TU, NamespaceDecl *AnonNamespace) {
+  for (auto *L : Listeners)
+    L->AddedAnonymousNamespace(TU, AnonNamespace);
 }
 
 }  // end namespace clang
