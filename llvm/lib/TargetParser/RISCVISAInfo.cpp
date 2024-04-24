@@ -847,14 +847,20 @@ Error RISCVISAInfo::checkDependency() {
 
 struct ImpliedExtsEntry {
   StringLiteral Name;
-  ArrayRef<const char *> Exts;
+  const char *ImpliedExt;
 
   bool operator<(const ImpliedExtsEntry &Other) const {
     return Name < Other.Name;
   }
-
-  bool operator<(StringRef Other) const { return Name < Other; }
 };
+
+static bool operator<(const ImpliedExtsEntry &LHS, StringRef RHS) {
+  return LHS.Name < RHS;
+}
+
+static bool operator<(StringRef LHS, const ImpliedExtsEntry &RHS) {
+  return LHS < RHS.Name;
+}
 
 #define GET_IMPLIED_EXTENSIONS
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
@@ -880,17 +886,17 @@ void RISCVISAInfo::updateImplication() {
 
   while (!WorkList.empty()) {
     StringRef ExtName = WorkList.pop_back_val();
-    auto I = llvm::lower_bound(ImpliedExts, ExtName);
-    if (I != std::end(ImpliedExts) && I->Name == ExtName) {
-      for (const char *ImpliedExt : I->Exts) {
-        if (WorkList.count(ImpliedExt))
-          continue;
-        if (Exts.count(ImpliedExt))
-          continue;
-        auto Version = findDefaultVersion(ImpliedExt);
-        addExtension(ImpliedExt, Version.value());
-        WorkList.insert(ImpliedExt);
-      }
+    auto Range = std::equal_range(std::begin(ImpliedExts),
+                                  std::end(ImpliedExts), ExtName);
+    for (auto I = Range.first, E = Range.second; I != E; ++I) {
+      const char *ImpliedExt = I->ImpliedExt;
+      if (WorkList.count(ImpliedExt))
+        continue;
+      if (Exts.count(ImpliedExt))
+        continue;
+      auto Version = findDefaultVersion(ImpliedExt);
+      addExtension(ImpliedExt, Version.value());
+      WorkList.insert(ImpliedExt);
     }
   }
 
@@ -902,42 +908,34 @@ void RISCVISAInfo::updateImplication() {
   }
 }
 
-struct CombinedExtsEntry {
-  StringLiteral CombineExt;
-  ArrayRef<const char *> RequiredExts;
-};
-
-static constexpr CombinedExtsEntry CombineIntoExts[] = {
-    {{"zk"}, {ImpliedExtsZk}},
-    {{"zkn"}, {ImpliedExtsZkn}},
-    {{"zks"}, {ImpliedExtsZks}},
-    {{"zvkn"}, {ImpliedExtsZvkn}},
-    {{"zvknc"}, {ImpliedExtsZvknc}},
-    {{"zvkng"}, {ImpliedExtsZvkng}},
-    {{"zvks"}, {ImpliedExtsZvks}},
-    {{"zvksc"}, {ImpliedExtsZvksc}},
-    {{"zvksg"}, {ImpliedExtsZvksg}},
+static constexpr StringLiteral CombineIntoExts[] = {
+    {"zk"},    {"zkn"},  {"zks"},   {"zvkn"},  {"zvknc"},
+    {"zvkng"}, {"zvks"}, {"zvksc"}, {"zvksg"},
 };
 
 void RISCVISAInfo::updateCombination() {
-  bool IsNewCombine = false;
+  bool MadeChange = false;
   do {
-    IsNewCombine = false;
-    for (CombinedExtsEntry CombineIntoExt : CombineIntoExts) {
-      auto CombineExt = CombineIntoExt.CombineExt;
-      auto RequiredExts = CombineIntoExt.RequiredExts;
+    MadeChange = false;
+    for (StringRef CombineExt : CombineIntoExts) {
       if (hasExtension(CombineExt))
         continue;
-      bool IsAllRequiredFeatureExist = true;
-      for (const char *Ext : RequiredExts)
-        IsAllRequiredFeatureExist &= hasExtension(Ext);
-      if (IsAllRequiredFeatureExist) {
+
+      // Look up the extension in the ImpliesExt table to find everything it
+      // depends on.
+      auto Range = std::equal_range(std::begin(ImpliedExts),
+                                    std::end(ImpliedExts), CombineExt);
+      bool HasAllRequiredFeatures = std::all_of(
+          Range.first, Range.second, [&](const ImpliedExtsEntry &Implied) {
+            return hasExtension(Implied.ImpliedExt);
+          });
+      if (HasAllRequiredFeatures) {
         auto Version = findDefaultVersion(CombineExt);
         addExtension(CombineExt, Version.value());
-        IsNewCombine = true;
+        MadeChange = true;
       }
     }
-  } while (IsNewCombine);
+  } while (MadeChange);
 }
 
 void RISCVISAInfo::updateFLen() {
