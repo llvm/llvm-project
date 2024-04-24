@@ -634,7 +634,6 @@ define i64 @zext_mul288(i32 signext %a) {
 }
 
 ; We can't use slli.uw becaues the shift amount is more than 31.
-; FIXME: The zext.w is unneeded.
 define i64 @zext_mul12884901888(i32 signext %a) {
 ; RV64I-LABEL: zext_mul12884901888:
 ; RV64I:       # %bb.0:
@@ -656,7 +655,6 @@ define i64 @zext_mul12884901888(i32 signext %a) {
 }
 
 ; We can't use slli.uw becaues the shift amount is more than 31.
-; FIXME: The zext.w is unneeded.
 define i64 @zext_mul21474836480(i32 signext %a) {
 ; RV64I-LABEL: zext_mul21474836480:
 ; RV64I:       # %bb.0:
@@ -678,7 +676,6 @@ define i64 @zext_mul21474836480(i32 signext %a) {
 }
 
 ; We can't use slli.uw becaues the shift amount is more than 31.
-; FIXME: The zext.w is unneeded.
 define i64 @zext_mul38654705664(i32 signext %a) {
 ; RV64I-LABEL: zext_mul38654705664:
 ; RV64I:       # %bb.0:
