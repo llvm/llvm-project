@@ -763,8 +763,8 @@ exit:
   ret i32 %res
 }
 
-define i32 @test_assume_bundle(i32 %cond, ptr nonnull %p) {
-; CHECK-LABEL: @test_assume_bundle(
+define i32 @test_assume_bundle_nonnull(i32 %cond, ptr nonnull %p) {
+; CHECK-LABEL: @test_assume_bundle_nonnull(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[COND:%.*]], label [[DEFAULT:%.*]] [
 ; CHECK-NEXT:      i32 0, label [[EXIT:%.*]]
@@ -806,6 +806,52 @@ exit:
   %ptr = phi ptr [ null, %default ], [ %p, %case0 ], [ %p, %case1 ], [ %p, %case2 ]
   %res = phi i32 [ 0, %default ], [ 1, %case0 ], [ 2, %case1 ], [ 3, %case2 ]
   call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr) ]
+  ret i32 %res
+}
+
+define i32 @test_assume_bundle_align(i32 %cond, ptr nonnull %p) {
+; CHECK-LABEL: @test_assume_bundle_align(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[COND:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i32 0, label [[EXIT:%.*]]
+; CHECK-NEXT:      i32 1, label [[CASE1:%.*]]
+; CHECK-NEXT:      i32 2, label [[CASE2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       case1:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       case2:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       default:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ null, [[DEFAULT]] ], [ [[P:%.*]], [[CASE1]] ], [ [[P]], [[CASE2]] ], [ [[P]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ 0, [[DEFAULT]] ], [ 2, [[CASE1]] ], [ 3, [[CASE2]] ], [ 1, [[ENTRY]] ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i32 8) ]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  switch i32 %cond, label %default [
+  i32 0, label %case0
+  i32 1, label %case1
+  i32 2, label %case2
+  ]
+
+case0:
+  br label %exit
+
+case1:
+  br label %exit
+
+case2:
+  br label %exit
+
+default:
+  br label %exit
+
+exit:
+  %ptr = phi ptr [ null, %default ], [ %p, %case0 ], [ %p, %case1 ], [ %p, %case2 ]
+  %res = phi i32 [ 0, %default ], [ 1, %case0 ], [ 2, %case1 ], [ 3, %case2 ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i32 8) ]
   ret i32 %res
 }
 
