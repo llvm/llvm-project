@@ -1284,7 +1284,9 @@ private:
 
 public:
   AddrSpaceCastSDNode(unsigned Order, const DebugLoc &dl, SDVTList VTs,
-                      unsigned SrcAS, unsigned DestAS);
+                      unsigned SrcAS, unsigned DestAS)
+      : SDNode(ISD::ADDRSPACECAST, Order, dl, VTs), SrcAddrSpace(SrcAS),
+        DestAddrSpace(DestAS) {}
 
   unsigned getSrcAddressSpace() const { return SrcAddrSpace; }
   unsigned getDestAddressSpace() const { return DestAddrSpace; }
@@ -1819,7 +1821,9 @@ class GlobalAddressSDNode : public SDNode {
 
   GlobalAddressSDNode(unsigned Opc, unsigned Order, const DebugLoc &DL,
                       const GlobalValue *GA, SDVTList VTs, int64_t o,
-                      unsigned TF);
+                      unsigned TF)
+      : SDNode(Opc, Order, DL, VTs), TheGlobal(GA), Offset(o), TargetFlags(TF) {
+  }
 
 public:
   const GlobalValue *getGlobal() const { return TheGlobal; }
