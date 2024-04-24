@@ -6,8 +6,9 @@ declare void @llvm.riscv.masked.strided.store.nxv16i8.p0.i64(<vscale x 16 x i8>,
 define void @test(<vscale x 16 x i16> %value, <vscale x 16 x i1> %mask) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vse16.v v8, (zero), v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vnsrl.wi v12, v8, 0
+; CHECK-NEXT:    vse8.v v12, (zero), v0.t
 ; CHECK-NEXT:    ret
   %trunc = trunc <vscale x 16 x i16> %value to <vscale x 16 x i8>
   call void @llvm.riscv.masked.strided.store.nxv16i8.p0.i64(<vscale x 16 x i8> %trunc, ptr null, i64 1, <vscale x 16 x i1> %mask)
