@@ -1833,9 +1833,8 @@ SDValue SelectionDAG::getGlobalAddress(const GlobalValue *GV, const SDLoc &DL,
   if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP))
     return SDValue(E, 0);
 
-  auto *N =
-      newSDNode<GlobalAddressSDNode>(Opc, DL.getIROrder(), DL.getDebugLoc(), GV,
-                                     VTs, Offset, TargetFlags);
+  auto *N = newSDNode<GlobalAddressSDNode>(
+      Opc, DL.getIROrder(), DL.getDebugLoc(), GV, VTs, Offset, TargetFlags);
   CSEMap.InsertNode(N, IP);
     InsertNode(N);
   return SDValue(N, 0);
@@ -1871,8 +1870,7 @@ SDValue SelectionDAG::getJumpTable(int JTI, EVT VT, bool isTarget,
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  auto *N =
-      newSDNode<JumpTableSDNode>(JTI, VTs, isTarget, TargetFlags);
+  auto *N = newSDNode<JumpTableSDNode>(JTI, VTs, isTarget, TargetFlags);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -1906,8 +1904,8 @@ SDValue SelectionDAG::getConstantPool(const Constant *C, EVT VT,
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  auto *N = newSDNode<ConstantPoolSDNode>(isTarget, C, VTs, Offset,
-                                          *Alignment, TargetFlags);
+  auto *N = newSDNode<ConstantPoolSDNode>(isTarget, C, VTs, Offset, *Alignment,
+                                          TargetFlags);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   SDValue V = SDValue(N, 0);
@@ -1934,8 +1932,8 @@ SDValue SelectionDAG::getConstantPool(MachineConstantPoolValue *C, EVT VT,
   if (SDNode *E = FindNodeOrInsertPos(ID, IP))
     return SDValue(E, 0);
 
-  auto *N = newSDNode<ConstantPoolSDNode>(isTarget, C, VTs, Offset,
-                                          *Alignment, TargetFlags);
+  auto *N = newSDNode<ConstantPoolSDNode>(isTarget, C, VTs, Offset, *Alignment,
+                                          TargetFlags);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
   return SDValue(N, 0);
@@ -6667,8 +6665,8 @@ SDValue SelectionDAG::getAssertAlign(const SDLoc &DL, SDValue Val, Align A) {
   if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP))
     return SDValue(E, 0);
 
-  auto *N = newSDNode<AssertAlignSDNode>(DL.getIROrder(), DL.getDebugLoc(),
-                                         VTs, A);
+  auto *N =
+      newSDNode<AssertAlignSDNode>(DL.getIROrder(), DL.getDebugLoc(), VTs, A);
   createOperands(N, {Val});
 
   CSEMap.InsertNode(N, IP);
