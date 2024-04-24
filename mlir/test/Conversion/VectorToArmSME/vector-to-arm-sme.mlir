@@ -620,3 +620,219 @@ func.func @vector_print_tile(%tile: vector<[4]x[4]xf32>)
 // CHECK-NEXT:      scf.for %[[TILE_SLICE_INDEX:.*]] = %[[C0]] to %[[NUM_TILE_SLICES]] step %[[C1]] {
 // CHECK-NEXT:        %[[TILE_SLICE:.*]] = arm_sme.move_tile_slice_to_vector %[[TILE]][%[[TILE_SLICE_INDEX]]] : vector<[4]xf32> from vector<[4]x[4]xf32>
 // CHECK-NEXT:        vector.print %[[TILE_SLICE]] : vector<[4]xf32>
+
+//===----------------------------------------------------------------------===//
+// vector.load
+//===----------------------------------------------------------------------===//
+
+// -----
+
+// CHECK-LABEL: @vector_load_i8_with_offset(
+// CHECK-SAME:                              %[[MEMREF:.*]]: memref<?x?xi8>)
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[C123:.*]] = arith.constant 123 : index
+// CHECK: arm_sme.tile_load %[[MEMREF]][%[[C123]], %[[C0]]] : memref<?x?xi8>, vector<[16]x[16]xi8>
+func.func @vector_load_i8_with_offset(%arg0 : memref<?x?xi8>) -> vector<[16]x[16]xi8> {
+  %c0 = arith.constant 0 : index
+  %c123 = arith.constant 123 : index
+  %tile = vector.load %arg0[%c123, %c0] : memref<?x?xi8>, vector<[16]x[16]xi8>
+  return %tile : vector<[16]x[16]xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_load_i8_from_rank_1_memref(
+// CHECK-SAME:                                     %[[MEMREF:.*]]: memref<?xi8>)
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: arm_sme.tile_load %[[MEMREF]][%[[C0]]] : memref<?xi8>, vector<[16]x[16]xi8>
+func.func @vector_load_i8_from_rank_1_memref(%arg0 : memref<?xi8>) -> vector<[16]x[16]xi8> {
+  %c0 = arith.constant 0 : index
+  %tile = vector.load %arg0[%c0] : memref<?xi8>, vector<[16]x[16]xi8>
+  return %tile : vector<[16]x[16]xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_load_i16(
+// CHECK: arm_sme.tile_load {{.*}} : memref<?x?xi16>, vector<[8]x[8]xi16>
+func.func @vector_load_i16(%arg0 : memref<?x?xi16>) -> vector<[8]x[8]xi16> {
+  %c0 = arith.constant 0 : index
+  %tile = vector.load %arg0[%c0, %c0] : memref<?x?xi16>, vector<[8]x[8]xi16>
+  return %tile : vector<[8]x[8]xi16>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_load_i32(
+// CHECK: arm_sme.tile_load {{.*}} : memref<?x?xi32>, vector<[4]x[4]xi32>
+func.func @vector_load_i32(%arg0 : memref<?x?xi32>) -> vector<[4]x[4]xi32> {
+  %c0 = arith.constant 0 : index
+  %tile = vector.load %arg0[%c0, %c0] : memref<?x?xi32>, vector<[4]x[4]xi32>
+  return %tile : vector<[4]x[4]xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_load_i64(
+// CHECK: arm_sme.tile_load {{.*}} : memref<?x?xi64>, vector<[2]x[2]xi64>
+func.func @vector_load_i64(%arg0 : memref<?x?xi64>) -> vector<[2]x[2]xi64> {
+  %c0 = arith.constant 0 : index
+  %tile = vector.load %arg0[%c0, %c0] : memref<?x?xi64>, vector<[2]x[2]xi64>
+  return %tile : vector<[2]x[2]xi64>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_load_f16(
+// CHECK: arm_sme.tile_load {{.*}} : memref<?x?xf16>, vector<[8]x[8]xf16>
+func.func @vector_load_f16(%arg0 : memref<?x?xf16>) -> vector<[8]x[8]xf16> {
+  %c0 = arith.constant 0 : index
+  %tile = vector.load %arg0[%c0, %c0] : memref<?x?xf16>, vector<[8]x[8]xf16>
+  return %tile : vector<[8]x[8]xf16>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_load_bf16(
+// CHECK: arm_sme.tile_load {{.*}} : memref<?x?xbf16>, vector<[8]x[8]xbf16>
+func.func @vector_load_bf16(%arg0 : memref<?x?xbf16>) -> vector<[8]x[8]xbf16> {
+  %c0 = arith.constant 0 : index
+  %tile = vector.load %arg0[%c0, %c0] : memref<?x?xbf16>, vector<[8]x[8]xbf16>
+  return %tile : vector<[8]x[8]xbf16>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_load_f32(
+// CHECK: arm_sme.tile_load {{.*}} : memref<?x?xf32>, vector<[4]x[4]xf32>
+func.func @vector_load_f32(%arg0 : memref<?x?xf32>) -> vector<[4]x[4]xf32> {
+  %c0 = arith.constant 0 : index
+  %tile = vector.load %arg0[%c0, %c0] : memref<?x?xf32>, vector<[4]x[4]xf32>
+  return %tile : vector<[4]x[4]xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_load_f64(
+// CHECK: arm_sme.tile_load {{.*}} : memref<?x?xf64>, vector<[2]x[2]xf64>
+func.func @vector_load_f64(%arg0 : memref<?x?xf64>) -> vector<[2]x[2]xf64> {
+  %c0 = arith.constant 0 : index
+  %tile = vector.load %arg0[%c0, %c0] : memref<?x?xf64>, vector<[2]x[2]xf64>
+  return %tile : vector<[2]x[2]xf64>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_load_i128(
+// CHECK: arm_sme.tile_load {{.*}} : memref<?x?xi128>, vector<[1]x[1]xi128>
+func.func @vector_load_i128(%arg0 : memref<?x?xi128>) -> vector<[1]x[1]xi128> {
+  %c0 = arith.constant 0 : index
+  %tile = vector.load %arg0[%c0, %c0] : memref<?x?xi128>, vector<[1]x[1]xi128>
+  return %tile : vector<[1]x[1]xi128>
+}
+
+
+//===----------------------------------------------------------------------===//
+// vector.store
+//===----------------------------------------------------------------------===//
+
+// -----
+
+// CHECK-LABEL: @vector_store_i8(
+// CHECK-SAME:                   %[[MEMREF:.*]]: memref<?x?xi8>) {
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[TILE:.*]] = arm_sme.get_tile : vector<[16]x[16]xi8>
+// CHECK: arm_sme.tile_store %[[TILE]], %[[MEMREF]][%[[C0]], %[[C0]]] : memref<?x?xi8>, vector<[16]x[16]xi8>
+func.func @vector_store_i8(%arg0 : memref<?x?xi8>) {
+  %c0 = arith.constant 0 : index
+  %tile = arm_sme.get_tile : vector<[16]x[16]xi8>
+  vector.store %tile, %arg0[%c0, %c0] : memref<?x?xi8>, vector<[16]x[16]xi8>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @vector_store_i16
+// CHECK: arm_sme.tile_store {{.*}} : memref<?x?xi16>, vector<[8]x[8]xi16>
+func.func @vector_store_i16(%arg0 : memref<?x?xi16>) {
+  %c0 = arith.constant 0 : index
+  %tile = arm_sme.get_tile : vector<[8]x[8]xi16>
+  vector.store %tile, %arg0[%c0, %c0] : memref<?x?xi16>, vector<[8]x[8]xi16>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @vector_store_i32
+// CHECK: arm_sme.tile_store {{.*}} : memref<?x?xi32>, vector<[4]x[4]xi32>
+func.func @vector_store_i32(%arg0 : memref<?x?xi32>) {
+  %c0 = arith.constant 0 : index
+  %tile = arm_sme.get_tile : vector<[4]x[4]xi32>
+  vector.store %tile, %arg0[%c0, %c0] : memref<?x?xi32>, vector<[4]x[4]xi32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @vector_store_i64
+// CHECK: arm_sme.tile_store {{.*}} : memref<?x?xi64>, vector<[2]x[2]xi64>
+func.func @vector_store_i64(%arg0 : memref<?x?xi64>) {
+  %c0 = arith.constant 0 : index
+  %tile = arm_sme.get_tile : vector<[2]x[2]xi64>
+  vector.store %tile, %arg0[%c0, %c0] : memref<?x?xi64>, vector<[2]x[2]xi64>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @vector_store_f16
+// CHECK: arm_sme.tile_store {{.*}} : memref<?x?xf16>, vector<[8]x[8]xf16>
+func.func @vector_store_f16(%arg0 : memref<?x?xf16>) {
+  %c0 = arith.constant 0 : index
+  %tile = arm_sme.get_tile : vector<[8]x[8]xf16>
+  vector.store %tile, %arg0[%c0, %c0] : memref<?x?xf16>, vector<[8]x[8]xf16>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @vector_store_bf16
+// CHECK: arm_sme.tile_store {{.*}} : memref<?x?xbf16>, vector<[8]x[8]xbf16>
+func.func @vector_store_bf16(%arg0 : memref<?x?xbf16>) {
+  %c0 = arith.constant 0 : index
+  %tile = arm_sme.get_tile : vector<[8]x[8]xbf16>
+  vector.store %tile, %arg0[%c0, %c0] : memref<?x?xbf16>, vector<[8]x[8]xbf16>
+  return
+}
+// -----
+
+// CHECK-LABEL: @vector_store_f32
+// CHECK: arm_sme.tile_store {{.*}} : memref<?x?xf32>, vector<[4]x[4]xf32>
+func.func @vector_store_f32(%arg0 : memref<?x?xf32>) {
+  %c0 = arith.constant 0 : index
+  %tile = arm_sme.get_tile : vector<[4]x[4]xf32>
+  vector.store %tile, %arg0[%c0, %c0] : memref<?x?xf32>, vector<[4]x[4]xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @vector_store_f64
+// CHECK: arm_sme.tile_store {{.*}} : memref<?x?xf64>, vector<[2]x[2]xf64>
+func.func @vector_store_f64(%arg0 : memref<?x?xf64>) {
+  %c0 = arith.constant 0 : index
+  %tile = arm_sme.get_tile : vector<[2]x[2]xf64>
+  vector.store %tile, %arg0[%c0, %c0] : memref<?x?xf64>, vector<[2]x[2]xf64>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @vector_store_i128
+// CHECK: arm_sme.tile_store {{.*}} : memref<?x?xi128>, vector<[1]x[1]xi128>
+func.func @vector_store_i128(%arg0 : memref<?x?xi128>) {
+  %c0 = arith.constant 0 : index
+  %tile = arm_sme.get_tile : vector<[1]x[1]xi128>
+  vector.store %tile, %arg0[%c0, %c0] : memref<?x?xi128>, vector<[1]x[1]xi128>
+  return
+}
