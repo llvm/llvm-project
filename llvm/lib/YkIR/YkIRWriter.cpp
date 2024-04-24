@@ -450,6 +450,8 @@ private:
       //
       // opcode:
       serialiseOpcode(OpCodeBr);
+      // successor:
+      serialiseBlockLabel(I->getSuccessor(0));
     } else {
       // opcode:
       serialiseOpcode(OpCodeCondBr);
