@@ -48,7 +48,7 @@ static const char *RISCVGImplications[] = {
 };
 
 #define GET_SUPPORTED_EXTENSIONS
-#include "llvm/TargetParser//RISCVTargetParserDef.inc"
+#include "llvm/TargetParser/RISCVTargetParserDef.inc"
 
 static constexpr RISCVProfile SupportedProfiles[] = {
     {"rvi20u32", "rv32i"},
