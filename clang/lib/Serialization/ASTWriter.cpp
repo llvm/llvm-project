@@ -240,9 +240,12 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
       continue;
 
     const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
-    if (!HFI || (!HFI->isCompilingModuleHeader &&
-                 (HFI->isModuleHeader || !HFI->IsLocallyIncluded)))
-      continue;
+    if (!HFI)
+      continue; // We have no information on this being a header file.
+    if (!HFI->isCompilingModuleHeader && HFI->isModuleHeader)
+      continue; // Modular header, handled in the above module-based loop.
+    if (!HFI->isCompilingModuleHeader && !HFI->IsLocallyIncluded)
+      continue; // Non-modular header not included locally is not affecting.
 
     for (const auto &KH : HS.findResolvedModulesForHeader(*File))
       if (const Module *M = KH.getModule())
@@ -2061,17 +2064,13 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     if (!File)
       continue;
 
-    // Get the file info. Skip emitting this file if we have no information on
-    // it as a header file (in which case HFI will be null) or if it hasn't
-    // changed since it was loaded. Also skip it if it's for a modular header
-    // from a different module; in that case, we rely on the module(s)
-    // containing the header to provide this information. Also skip it if it's
-    // for any header not from this module that has not been included; in that
-    // case, we don't need the information at all.
     const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
-    if (!HFI || (!HFI->isCompilingModuleHeader &&
-                 (HFI->isModuleHeader || !PP->alreadyIncluded(*File))))
-      continue;
+    if (!HFI)
+      continue; // We have no information on this being a header file.
+    if (!HFI->isCompilingModuleHeader && HFI->isModuleHeader)
+      continue; // Header file info is tracked by the owning module file.
+    if (!HFI->isCompilingModuleHeader && !PP->alreadyIncluded(*File))
+      continue; // Non-modular header not included is not needed.
 
     // Massage the file path into an appropriate form.
     StringRef Filename = File->getName();
