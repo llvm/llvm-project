@@ -3146,20 +3146,20 @@ Value *InstCombinerImpl::getSelectCondition(Value *A, Value *B,
 /// When InvertFalseVal is set to true, we try to match the pattern
 /// where we have peeked through a 'not' op and A and C are the same:
 /// (A & B) | ~(A | D) --> (A & B) | (~A & ~D) --> A' ? B : ~D
-Value *InstCombinerImpl::matchSelectFromAndOr(Value *valA, Value *valB,
-                                              Value *valC, Value *valD,
+Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *B,
+                                              Value *C, Value *D,
                                               bool InvertFalseVal) {
   // The potential condition of the select may be bitcasted. In that case, look
   // through its bitcast and the corresponding bitcast of the 'not' condition.
-  Type *OrigType = valA->getType();
-  valA = peekThroughBitcast(valA, true);
-  valC = peekThroughBitcast(valC, true);
-  if (Value *Cond = getSelectCondition(valA, valC, InvertFalseVal)) {
+  Type *OrigType = A->getType();
+  A = peekThroughBitcast(A, true);
+  C = peekThroughBitcast(C, true);
+  if (Value *Cond = getSelectCondition(A, C, InvertFalseVal)) {
     // ((bc Cond) & B) | ((bc ~Cond) & D) --> bc (select Cond, (bc B), (bc D))
     // If this is a vector, we may need to cast to match the condition's length.
     // The bitcasts will either all exist or all not exist. The builder will
     // not create unnecessary casts if the types already match.
-    Type *SelTy = valA->getType();
+    Type *SelTy = A->getType();
     if (auto *VecTy = dyn_cast<VectorType>(Cond->getType())) {
       // For a fixed or scalable vector get N from <{vscale x} N x iM>
       unsigned Elts = VecTy->getElementCount().getKnownMinValue();
@@ -3169,10 +3169,10 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *valA, Value *valB,
       Type *EltTy = Builder.getIntNTy(SelEltSize / Elts);
       SelTy = VectorType::get(EltTy, VecTy->getElementCount());
     }
-    Value *BitcastB = Builder.CreateBitCast(valB, SelTy);
+    Value *BitcastB = Builder.CreateBitCast(B, SelTy);
     if (InvertFalseVal)
-      valD = Builder.CreateNot(valD);
-    Value *BitcastD = Builder.CreateBitCast(valD, SelTy);
+      D = Builder.CreateNot(D);
+    Value *BitcastD = Builder.CreateBitCast(D, SelTy);
     Value *Select = Builder.CreateSelect(Cond, BitcastB, BitcastD);
     return Builder.CreateBitCast(Select, OrigType);
   }
