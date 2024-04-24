@@ -822,6 +822,11 @@ RT_API_ATTRS bool EditLogicalOutput(
   case 'Z':
     return EditBOZOutput<4>(io, edit,
         reinterpret_cast<const unsigned char *>(&truth), sizeof truth);
+  case 'A': { // legacy extension
+    int truthBits{truth};
+    return EditCharacterOutput(
+        io, edit, reinterpret_cast<char *>(&truthBits), sizeof truthBits);
+  }
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with a LOGICAL data item",
