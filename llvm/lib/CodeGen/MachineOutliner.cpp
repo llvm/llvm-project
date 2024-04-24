@@ -59,6 +59,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -66,6 +67,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGenData/CodeGenDataReader.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Mangler.h"
@@ -74,6 +76,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SuffixTree.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <functional>
 #include <tuple>
 #include <vector>
@@ -120,6 +123,12 @@ static cl::opt<unsigned> OutlinerBenefitThreshold(
     "outliner-benefit-threshold", cl::init(1), cl::Hidden,
     cl::desc(
         "The minimum size in bytes before an outlining candidate is accepted"));
+
+static cl::opt<bool>
+    DisableGlobalOutlining("disable-global-outlining", cl::Hidden,
+                           cl::desc("Disable global outlining only by ignoring "
+                                    "the codegen data generation or use"),
+                           cl::init(false));
 
 namespace {
 
@@ -411,11 +420,32 @@ struct MachineOutliner : public ModulePass {
   /// Set when the pass is constructed in TargetPassConfig.
   bool RunOnAllFunctions = true;
 
+  /// This is a compact representation of hash sequences of outlined functions.
+  /// It is used when OutlinerMode = CGDataMode::Write.
+  /// The resulting hash tree will be emitted into __llvm_outlined section
+  /// which will be dead-stripped not going to the final binary.
+  /// A post-process using llvm-cgdata, lld, or ThinLTO can merge them into
+  /// a global oulined hash tree for the subsequent codegen.
+  std::unique_ptr<OutlinedHashTree> LocalHashTree;
+
+  /// The combined index to check a LTO mode.
+  const ModuleSummaryIndex *TheIndex = nullptr;
+
+  /// The mode of the outliner.
+  /// When is's CGDataMode::None, candidates are populated with the suffix tree
+  /// within a module and outlined.
+  /// When it's CGDataMode::Write, in addition to CGDataMode::None, the hash
+  /// sequences of outlined functions are published into LocalHashTree.
+  /// When it's CGDataMode::Read, candidates are populated with the global
+  /// outlined hash tree that has been built by the previous codegen.
+  CGDataMode OutlinerMode = CGDataMode::None;
+
   StringRef getPassName() const override { return "Machine Outliner"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineModuleInfoWrapperPass>();
     AU.addPreserved<MachineModuleInfoWrapperPass>();
+    AU.addRequired<ImmutableModuleSummaryIndexWrapperPass>();
     AU.setPreservesAll();
     ModulePass::getAnalysisUsage(AU);
   }
@@ -450,6 +480,16 @@ struct MachineOutliner : public ModulePass {
   findCandidates(InstructionMapper &Mapper,
                  std::vector<std::unique_ptr<OutlinedFunction>> &FunctionList);
 
+  /// Find all repeated substrings that match in the global outlined hash
+  /// tree built from the previous codegen.
+  ///
+  /// \param Mapper Contains outlining mapping information.
+  /// \param[out] FunctionList Filled with a list of \p OutlinedFunctions
+  /// each type of candidate.
+  void findGlobalCandidates(
+      InstructionMapper &Mapper,
+      std::vector<std::unique_ptr<OutlinedFunction>> &FunctionList);
+
   /// Replace the sequences of instructions represented by \p OutlinedFunctions
   /// with calls to functions.
   ///
@@ -465,6 +505,12 @@ struct MachineOutliner : public ModulePass {
   MachineFunction *createOutlinedFunction(Module &M, OutlinedFunction &OF,
                                           InstructionMapper &Mapper,
                                           unsigned Name);
+
+  /// Initialize the outliner mode.
+  void initializeOutlinerMode(const Module &M);
+
+  /// Emit the outlined hash tree into __llvm_outline section.
+  void emitOutlinedHashTree(Module &M);
 
   /// Calls 'doOutline()' 1 + OutlinerReruns times.
   bool runOnModule(Module &M) override;
@@ -576,6 +622,134 @@ void MachineOutliner::emitOutlinedFunctionRemark(OutlinedFunction &OF) {
   MORE.emit(R);
 }
 
+struct MatchedEntry {
+  size_t StartIdx;
+  size_t Length;
+  size_t Count;
+};
+
+static const HashNode *followHashNode(stable_hash StableHash,
+                                      const HashNode *Current) {
+  auto I = Current->Successors.find(StableHash);
+  return (I == Current->Successors.end()) ? nullptr : I->second.get();
+}
+
+static std::vector<MatchedEntry> getMatchedEntries(InstructionMapper &Mapper) {
+
+  auto &InstrList = Mapper.InstrList;
+  auto &UnsignedVec = Mapper.UnsignedVec;
+
+  std::vector<MatchedEntry> MatchedEntries;
+  std::vector<stable_hash> Sequence;
+  auto Size = UnsignedVec.size();
+
+  // Get the global outlined hash tree built from the previous run.
+  assert(cgdata::hasOutlinedHashTree());
+  const auto *RootNode = cgdata::getOutlinedHashTree()->getRoot();
+
+  // Find all matches in the global outlined hash tree.
+  // It's quadratic complexity in theory, but it's nearly linear in practice
+  // since the length of outlined candidates are small within a block.
+  for (size_t I = 0; I < Size; I++) {
+    if (UnsignedVec[I] >= Size)
+      continue;
+
+    const MachineInstr &MI = *InstrList[I];
+    stable_hash StableHashI = stableHashValue(MI);
+    if (!StableHashI)
+      continue;
+
+    Sequence.clear();
+    Sequence.push_back(StableHashI);
+
+    const HashNode *LastNode = followHashNode(StableHashI, RootNode);
+    if (!LastNode)
+      continue;
+
+    size_t J = I + 1;
+    for (; J < Size; J++) {
+      // Break on invalid code
+      if (UnsignedVec[J] >= Size)
+        break;
+
+      const MachineInstr &MJ = *InstrList[J];
+      stable_hash StableHashJ = stableHashValue(MJ);
+      // Break on invalid stable hash
+      if (!StableHashJ)
+        break;
+
+      LastNode = followHashNode(StableHashJ, LastNode);
+      if (!LastNode)
+        break;
+
+      // Even with a match ending with a terminal, we continue finding
+      // matches to populate all candidates.
+      Sequence.push_back(StableHashJ);
+      size_t Count = LastNode->Terminals;
+      if (Count)
+        MatchedEntries.push_back({I, J - I + 1, Count});
+    }
+  }
+
+  return MatchedEntries;
+}
+
+static std::vector<stable_hash>
+stableHashMachineInstrs(const MachineBasicBlock::iterator &Begin,
+                        const MachineBasicBlock::iterator &End) {
+  std::vector<stable_hash> Sequence;
+  for (auto I = Begin; I != End; I++) {
+    const MachineInstr &MI = *I;
+    if (MI.isDebugInstr())
+      continue;
+    stable_hash Hash = stableHashValue(MI);
+    // if (!Hash)
+    //  continue;
+    Sequence.push_back(Hash);
+  }
+  return Sequence;
+}
+
+// Save hash sequence of candidates for global function outlining.
+static void
+saveHashSequence(std::vector<std::unique_ptr<OutlinedFunction>> &FunctionList) {
+  for (auto &OF : FunctionList) {
+    auto &C = OF->Candidates.front();
+    OF->OutlinedHashSequence = stableHashMachineInstrs(C.begin(), C.end());
+  }
+}
+
+void MachineOutliner::findGlobalCandidates(
+    InstructionMapper &Mapper,
+    std::vector<std::unique_ptr<OutlinedFunction>> &FunctionList) {
+  FunctionList.clear();
+  auto &InstrList = Mapper.InstrList;
+  auto &MBBFlagsMap = Mapper.MBBFlagsMap;
+
+  std::vector<Candidate> CandidatesForRepeatedSeq;
+  for (auto &ME : getMatchedEntries(Mapper)) {
+    CandidatesForRepeatedSeq.clear();
+    MachineBasicBlock::iterator StartIt = InstrList[ME.StartIdx];
+    MachineBasicBlock::iterator EndIt = InstrList[ME.StartIdx + ME.Length - 1];
+    MachineBasicBlock *MBB = StartIt->getParent();
+    Candidate C(ME.StartIdx, ME.Length, StartIt, EndIt, MBB,
+                FunctionList.size(), MBBFlagsMap[MBB]);
+    CandidatesForRepeatedSeq.push_back(C);
+    const TargetInstrInfo *TII = C.getMF()->getSubtarget().getInstrInfo();
+    std::optional<OutlinedFunction> OF =
+        TII->getOutliningCandidateInfo(CandidatesForRepeatedSeq, /*MinRep*/ 1);
+    if (!OF || OF->Candidates.empty())
+      continue;
+    // We create a global candidate each match.
+    assert(OF->Candidates.size() == 1);
+
+    FunctionList.push_back(
+        std::make_unique<GlobalOutlinedFunction>(*OF, ME.Count));
+  }
+  assert(OutlinerMode == CGDataMode::Read);
+  saveHashSequence(FunctionList);
+}
+
 void MachineOutliner::findCandidates(
     InstructionMapper &Mapper,
     std::vector<std::unique_ptr<OutlinedFunction>> &FunctionList) {
@@ -680,6 +854,9 @@ void MachineOutliner::findCandidates(
 
     FunctionList.push_back(std::make_unique<OutlinedFunction>(*OF));
   }
+  assert(OutlinerMode != CGDataMode::Read);
+  if (OutlinerMode == CGDataMode::Write)
+    saveHashSequence(FunctionList);
 }
 
 MachineFunction *MachineOutliner::createOutlinedFunction(
@@ -977,6 +1154,10 @@ bool MachineOutliner::outline(
       // Statistics.
       NumOutlined++;
     }
+    if (OutlinerMode == CGDataMode::Write) {
+      unsigned Count = OF->Candidates.size();
+      LocalHashTree->insert({OF->OutlinedHashSequence, Count});
+    }
   }
 
   LLVM_DEBUG(dbgs() << "OutlinedSomething = " << OutlinedSomething << "\n";);
@@ -1124,11 +1305,64 @@ void MachineOutliner::emitInstrCountChangedRemark(
   }
 }
 
+void MachineOutliner::initializeOutlinerMode(const Module &M) {
+  if (DisableGlobalOutlining)
+    return;
+
+  if (auto *IndexWrapperPass =
+          getAnalysisIfAvailable<ImmutableModuleSummaryIndexWrapperPass>())
+    TheIndex = IndexWrapperPass->getIndex();
+
+  // (Full)LTO module does not have functions added to the index.
+  // In this case, we run the outliner without using codegen data as usual.
+  if (TheIndex && !TheIndex->hasExportedFunctions(M))
+    return;
+
+  // When codegen data write is enabled, we want to write the local outlined
+  // hash tree to the custom section, `__llvm_outline`.
+  // When the outlined hash tree is available from the previous codegen data,
+  // we want to read it to optimistically create global outlining candidates.
+  if (cgdata::emitCGData()) {
+    OutlinerMode = CGDataMode::Write;
+    // Create a local outlined hash tree to be published.
+    LocalHashTree.reset(new OutlinedHashTree());
+    // We don't need to read the outlined hash tree from the previous codegen
+  } else if (cgdata::hasOutlinedHashTree())
+    OutlinerMode = CGDataMode::Read;
+}
+
+void MachineOutliner::emitOutlinedHashTree(Module &M) {
+  assert(LocalHashTree);
+  if (!LocalHashTree->empty()) {
+    LLVM_DEBUG({
+      dbgs() << "Emit outlined hash tree. Size: " << LocalHashTree->size()
+             << "\n";
+    });
+    SmallVector<char> Buf;
+    raw_svector_ostream OS(Buf);
+
+    OutlinedHashTreeRecord HTR(std::move(LocalHashTree));
+    HTR.serialize(OS);
+
+    llvm::StringRef Data(Buf.data(), Buf.size());
+    std::unique_ptr<MemoryBuffer> Buffer =
+        MemoryBuffer::getMemBuffer(Data, "in-memory outlined hash tree", false);
+
+    Triple TT(M.getTargetTriple());
+    embedBufferInModule(
+        M, *Buffer.get(),
+        getCodeGenDataSectionName(CG_outline, TT.getObjectFormat()));
+  }
+}
+
 bool MachineOutliner::runOnModule(Module &M) {
   // Check if there's anything in the module. If it's empty, then there's
   // nothing to outline.
   if (M.empty())
     return false;
+
+  // Initialize the outliner mode.
+  initializeOutlinerMode(M);
 
   // Number to append to the current outlined function.
   unsigned OutlinedFunctionNum = 0;
@@ -1148,6 +1382,9 @@ bool MachineOutliner::runOnModule(Module &M) {
       break;
     }
   }
+
+  if (OutlinerMode == CGDataMode::Write)
+    emitOutlinedHashTree(M);
 
   return true;
 }
@@ -1179,7 +1416,10 @@ bool MachineOutliner::doOutline(Module &M, unsigned &OutlinedFunctionNum) {
   std::vector<std::unique_ptr<OutlinedFunction>> FunctionList;
 
   // Find all of the outlining candidates.
-  findCandidates(Mapper, FunctionList);
+  if (OutlinerMode == CGDataMode::Read)
+    findGlobalCandidates(Mapper, FunctionList);
+  else
+    findCandidates(Mapper, FunctionList);
 
   // If we've requested size remarks, then collect the MI counts of every
   // function before outlining, and the MI counts after outlining.
