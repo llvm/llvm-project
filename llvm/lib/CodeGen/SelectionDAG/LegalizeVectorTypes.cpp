@@ -4242,7 +4242,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     break;
 
   case ISD::IS_FPCLASS:
-    Res = WidenVecRes_IS_FPCLASS(N);
+  case ISD::FPTRUNC_ROUND:
+    Res = WidenVecRes_UnarySameEltsWithScalarArg(N);
     break;
 
   case ISD::FLDEXP:
@@ -5004,7 +5005,10 @@ SDValue DAGTypeLegalizer::WidenVecRes_FCOPYSIGN(SDNode *N) {
   return DAG.UnrollVectorOp(N, WidenVT.getVectorNumElements());
 }
 
-SDValue DAGTypeLegalizer::WidenVecRes_IS_FPCLASS(SDNode *N) {
+/// Result and first source operand are different scalar types, but must have
+/// the same number of elements. There is an additional control argument which
+/// should be passed through unchanged.
+SDValue DAGTypeLegalizer::WidenVecRes_UnarySameEltsWithScalarArg(SDNode *N) {
   SDValue FpValue = N->getOperand(0);
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   if (getTypeAction(FpValue.getValueType()) != TargetLowering::TypeWidenVector)
