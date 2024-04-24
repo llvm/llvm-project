@@ -293,7 +293,7 @@ private:
         auto UseMO = TII->getNamedOperand(*Use, AMDGPU::OpName::dst);
         Register UseReg = UseMO->getReg();
 
-        if (Cand->findRegisterUseOperand(UseReg))
+        if (Cand->findRegisterUseOperand(UseReg, /*TRI=*/nullptr))
           Final = Cand;
       }
     }

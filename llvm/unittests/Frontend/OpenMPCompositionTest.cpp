@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "gtest/gtest.h"
 
@@ -38,6 +39,37 @@ TEST(Composition, GetCompoundConstruct) {
   ASSERT_EQ(C6, OMPD_parallel_for_simd);
   Directive C7 = getCompoundConstruct({OMPD_do, OMPD_simd});
   ASSERT_EQ(C7, OMPD_do_simd); // Make sure it's not OMPD_end_do_simd
+}
+
+TEST(Composition, GetLeafOrCompositeConstructs) {
+  SmallVector<Directive> Out1;
+  auto Ret1 = getLeafOrCompositeConstructs(
+      OMPD_target_teams_distribute_parallel_for, Out1);
+  ASSERT_EQ(Ret1, ArrayRef<Directive>(Out1));
+  ASSERT_EQ((ArrayRef<Directive>(Out1)),
+            (ArrayRef<Directive>{OMPD_target, OMPD_teams,
+                                 OMPD_distribute_parallel_for}));
+
+  SmallVector<Directive> Out2;
+  auto Ret2 =
+      getLeafOrCompositeConstructs(OMPD_parallel_masked_taskloop_simd, Out2);
+  ASSERT_EQ(Ret2, ArrayRef<Directive>(Out2));
+  ASSERT_EQ(
+      (ArrayRef<Directive>(Out2)),
+      (ArrayRef<Directive>{OMPD_parallel, OMPD_masked, OMPD_taskloop_simd}));
+
+  SmallVector<Directive> Out3;
+  auto Ret3 =
+      getLeafOrCompositeConstructs(OMPD_distribute_parallel_do_simd, Out3);
+  ASSERT_EQ(Ret3, ArrayRef<Directive>(Out3));
+  ASSERT_EQ((ArrayRef<Directive>(Out3)),
+            (ArrayRef<Directive>{OMPD_distribute_parallel_do_simd}));
+
+  SmallVector<Directive> Out4;
+  auto Ret4 = getLeafOrCompositeConstructs(OMPD_target_parallel_loop, Out4);
+  ASSERT_EQ(Ret4, ArrayRef<Directive>(Out4));
+  ASSERT_EQ((ArrayRef<Directive>(Out4)),
+            (ArrayRef<Directive>{OMPD_target, OMPD_parallel, OMPD_loop}));
 }
 
 TEST(Composition, IsLeafConstruct) {
