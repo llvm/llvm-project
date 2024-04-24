@@ -6563,11 +6563,14 @@ diagnoseNoViableConversion(Sema &SemaRef, SourceLocation Loc, Expr *&From,
                                                        HadMultipleCandidates);
     if (Result.isInvalid())
       return true;
-    // Record usage of conversion in an implicit cast.
-    From = ImplicitCastExpr::Create(SemaRef.Context, Result.get()->getType(),
-                                    CK_UserDefinedConversion, Result.get(),
-                                    nullptr, Result.get()->getValueKind(),
-                                    SemaRef.CurFPFeatureOverrides());
+
+    // Replace the conversion with a RecoveryExpr, so we don't try to
+    // instantiate it later, but can further diagnose here.
+    Result = SemaRef.CreateRecoveryExpr(From->getBeginLoc(), From->getEndLoc(),
+                                        From, Result.get()->getType());
+    if (Result.isInvalid())
+      return true;
+    From = Result.get();
   }
   return false;
 }
@@ -14258,20 +14261,14 @@ ExprResult Sema::BuildOverloadedCallExpr(Scope *S, Expr *Fn,
                                   OverloadResult, AllowTypoCorrection);
 }
 
-static bool IsOverloaded(const UnresolvedSetImpl &Functions) {
-  return Functions.size() > 1 ||
-         (Functions.size() == 1 &&
-          isa<FunctionTemplateDecl>((*Functions.begin())->getUnderlyingDecl()));
-}
-
 ExprResult Sema::CreateUnresolvedLookupExpr(CXXRecordDecl *NamingClass,
                                             NestedNameSpecifierLoc NNSLoc,
                                             DeclarationNameInfo DNI,
                                             const UnresolvedSetImpl &Fns,
                                             bool PerformADL) {
   return UnresolvedLookupExpr::Create(Context, NamingClass, NNSLoc, DNI,
-                                      PerformADL, IsOverloaded(Fns),
-                                      Fns.begin(), Fns.end());
+                                      PerformADL, Fns.begin(), Fns.end(),
+                                      /*KnownDependent=*/false);
 }
 
 ExprResult Sema::BuildCXXMemberCallExpr(Expr *E, NamedDecl *FoundDecl,

@@ -164,27 +164,29 @@ std::optional<Array> serializeAvailability(const AvailabilityInfo &Avail) {
   if (Avail.isDefault())
     return std::nullopt;
 
-  Object Availability;
   Array AvailabilityArray;
-  Availability["domain"] = Avail.Domain;
-  serializeObject(Availability, "introduced",
-                  serializeSemanticVersion(Avail.Introduced));
-  serializeObject(Availability, "deprecated",
-                  serializeSemanticVersion(Avail.Deprecated));
-  serializeObject(Availability, "obsoleted",
-                  serializeSemanticVersion(Avail.Obsoleted));
+
   if (Avail.isUnconditionallyDeprecated()) {
     Object UnconditionallyDeprecated;
     UnconditionallyDeprecated["domain"] = "*";
     UnconditionallyDeprecated["isUnconditionallyDeprecated"] = true;
     AvailabilityArray.emplace_back(std::move(UnconditionallyDeprecated));
   }
-  if (Avail.isUnconditionallyUnavailable()) {
-    Object UnconditionallyUnavailable;
-    UnconditionallyUnavailable["domain"] = "*";
-    UnconditionallyUnavailable["isUnconditionallyUnavailable"] = true;
-    AvailabilityArray.emplace_back(std::move(UnconditionallyUnavailable));
+  Object Availability;
+
+  Availability["domain"] = Avail.Domain;
+
+  if (Avail.isUnavailable()) {
+    Availability["isUnconditionallyUnavailable"] = true;
+  } else {
+    serializeObject(Availability, "introduced",
+                    serializeSemanticVersion(Avail.Introduced));
+    serializeObject(Availability, "deprecated",
+                    serializeSemanticVersion(Avail.Deprecated));
+    serializeObject(Availability, "obsoleted",
+                    serializeSemanticVersion(Avail.Obsoleted));
   }
+
   AvailabilityArray.emplace_back(std::move(Availability));
   return AvailabilityArray;
 }

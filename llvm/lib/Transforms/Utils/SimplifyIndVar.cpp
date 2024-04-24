@@ -768,7 +768,7 @@ bool SimplifyIndvar::eliminateIdentitySCEV(Instruction *UseInst,
       return false;
 
     for (Instruction *I : DropPoisonGeneratingInsts)
-      I->dropPoisonGeneratingFlagsAndMetadata();
+      I->dropPoisonGeneratingAnnotations();
   }
 
   LLVM_DEBUG(dbgs() << "INDVARS: Eliminated identity: " << *UseInst << '\n');
