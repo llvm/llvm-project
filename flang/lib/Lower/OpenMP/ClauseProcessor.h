@@ -115,7 +115,8 @@ public:
   bool processMap(
       mlir::Location currentLocation, Fortran::lower::StatementContext &stmtCtx,
       mlir::omp::MapClauseOps &result,
-      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSyms,
+      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSyms =
+          nullptr,
       llvm::SmallVectorImpl<mlir::Location> *mapSymLocs = nullptr,
       llvm::SmallVectorImpl<mlir::Type> *mapSymTypes = nullptr) const;
   bool processReduction(
@@ -224,23 +225,28 @@ bool ClauseProcessor::processMotionClauses(
           // optimisation passes may alter this to ByCopy or other capture
           // types to optimise
           mlir::omp::MapInfoOp mapOp = createMapInfoOp(
-              firOpBuilder, clauseLocation, symAddr, mlir::Value{},
-              asFortran.str(), bounds, {}, mlir::DenseIntElementsAttr{},
+              firOpBuilder, clauseLocation, symAddr,
+              /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
+              /*members=*/{}, /*membersIndex=*/mlir::DenseIntElementsAttr{},
               static_cast<
                   std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                   mapTypeBits),
               mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
 
           if (object.id()->owner().IsDerivedType()) {
-            if (auto dataRef{ExtractDataRef(object.designator)}) {
-              const Fortran::semantics::Symbol *parentSym =
-                  &dataRef->GetFirstSymbol();
-              assert(parentSym &&
-                     "Could not find parent symbol during lower of "
-                     "a component member in OpenMP map clause");
-              parentMemberIndices[parentSym].push_back(
-                  {generateMemberPlacementIndices(object, semaCtx), mapOp});
-            }
+            std::optional<Fortran::evaluate::DataRef> dataRef =
+                ExtractDataRef(object.designator);
+            assert(
+                dataRef.has_value() &&
+                "DataRef could not be extracted during mapping of derived type "
+                "cannot proceed");
+            const Fortran::semantics::Symbol *parentSym =
+                &dataRef->GetFirstSymbol();
+            assert(parentSym && "Could not find parent symbol during lower of "
+                                "a component member in OpenMP map clause");
+            llvm::SmallVector<int> indices;
+            generateMemberPlacementIndices(object, indices, semaCtx);
+            parentMemberIndices[parentSym].push_back({indices, mapOp});
           } else {
             result.mapVars.push_back(mapOp);
             mapSymbols.push_back(object.id());
@@ -249,7 +255,8 @@ bool ClauseProcessor::processMotionClauses(
       });
 
   insertChildMapInfoIntoParent(converter, parentMemberIndices, result.mapVars,
-                               nullptr, nullptr, &mapSymbols);
+                               mapSymbols,
+                               /*mapSymTypes=*/nullptr, /*mapSymLocs=*/nullptr);
   return clauseFound;
 }
 

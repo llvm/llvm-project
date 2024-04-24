@@ -20,7 +20,7 @@
 /// OpenMP dialect.
 ///
 /// The pass also adds MapInfoOp's that are members of a parent object but are
-/// not directly used in the body of a target region to it's BlockArgument list
+/// not directly used in the body of a target region to its BlockArgument list
 /// to maintain consistency across all MapInfoOp's tied to a region directly or
 /// indirectly via an parent object.
 //===----------------------------------------------------------------------===//
@@ -54,7 +54,7 @@ class OMPMapInfoFinalizationPass
   void genDescriptorMemberMaps(mlir::omp::MapInfoOp op,
                                fir::FirOpBuilder &builder,
                                mlir::Operation *target) {
-    mlir::Location loc = builder.getUnknownLoc();
+    mlir::Location loc = op.getLoc();
     mlir::Value descriptor = op.getVarPtr();
 
     // If we enter this function, but the mapped type itself is not the
@@ -92,14 +92,14 @@ class OMPMapInfoFinalizationPass
         mlir::TypeAttr::get(llvm::cast<mlir::omp::PointerLikeType>(
                                 fir::unwrapRefType(baseAddrAddr.getType()))
                                 .getElementType()),
-        baseAddrAddr, mlir::SmallVector<mlir::Value>{},
-        mlir::DenseIntElementsAttr{}, op.getBounds(),
+        baseAddrAddr, /*members=*/mlir::SmallVector<mlir::Value>{},
+        /*member_index=*/mlir::DenseIntElementsAttr{}, op.getBounds(),
         builder.getIntegerAttr(builder.getIntegerType(64, false),
                                op.getMapType().value()),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
             mlir::omp::VariableCaptureKind::ByRef),
-        builder.getStringAttr("") /*name*/,
-        builder.getBoolAttr(false) /*partial_map*/);
+        /*name=*/builder.getStringAttr(""),
+        /*partial_map=*/builder.getBoolAttr(false));
 
     // TODO: map the addendum segment of the descriptor, similarly to the
     // above base address/data pointer member.
@@ -130,13 +130,15 @@ class OMPMapInfoFinalizationPass
     mlir::Value newDescParentMapOp = builder.create<mlir::omp::MapInfoOp>(
         op->getLoc(), op.getResult().getType(), descriptor,
         mlir::TypeAttr::get(fir::unwrapRefType(descriptor.getType())),
-        mlir::Value{}, mlir::SmallVector<mlir::Value>{baseAddr},
+        /*varPtrPtr=*/mlir::Value{},
+        /*members=*/mlir::SmallVector<mlir::Value>{baseAddr},
+        /*members_index=*/
         mlir::DenseIntElementsAttr::get(
             mlir::VectorType::get(
                 llvm::ArrayRef<int64_t>({1, 1}),
                 mlir::IntegerType::get(builder.getContext(), 32)),
-            llvm::ArrayRef<int32_t>({0})) /*members_index*/,
-        mlir::SmallVector<mlir::Value>{},
+            llvm::ArrayRef<int32_t>({0})),
+        /*bounds=*/mlir::SmallVector<mlir::Value>{},
         builder.getIntegerAttr(builder.getIntegerType(64, false),
                                op.getMapType().value()),
         op.getMapCaptureTypeAttr(), op.getNameAttr(), op.getPartialMapAttr());
@@ -144,9 +146,9 @@ class OMPMapInfoFinalizationPass
     op->erase();
   }
 
-  // For all mapped record members not directly used in the target region
-  // we add them to the block arguments in front of their parent and place
-  // them into the map operands list for consistency.
+  // We add all mapped record members not directly used in the target region
+  // to the block arguments in front of their parent and we place them into
+  // the map operands list for consistency.
   //
   // These indirect uses (via accesses to their parent) will still be
   // mapped individually in most cases, and a parent mapping doesn't
@@ -156,33 +158,32 @@ class OMPMapInfoFinalizationPass
   // For example:
   //    map(tofrom: x%y)
   //
-  // Will generate a mapping for "x" (the parent) and "y" (the member),
-  // the parent "x" will not be mapped, only the member "y" will,
-  // however, we must have the parent as a BlockArg and MapOperand in
-  // these cases to maintain the correct uses within the region and
-  // it helps to track that the member is part of a larger object.
+  // Will generate a mapping for "x" (the parent) and "y" (the member).
+  // The parent "x" will not be mapped (entirely), but the member "y"
+  // will. However, we must have the parent as a BlockArg and MapOperand
+  // in these cases, to maintain the correct uses within the region and
+  // to help tracking that the member is part of a larger object.
   //
   // In the case of:
   //    map(tofrom: x%y, x%z)
   //
   // The parent member becomes more critical, as we perform a partial
-  // structure mapping, where we link the mapping of x and y together
-  // via the parent (at a kernel argument level in LLVM IR not just
-  // MLIR, important to maintain similarity to Clang and for the runtime
-  // to do the correct thing), however, we still do not map the structure
-  // in its totality, we do however, generate an un-sized "binding"
-  // map entry for it.
+  // structure mapping where we link the mapping of x and y together
+  // via the parent. We do this at a kernel argument level in LLVM IR
+  // and not just MLIR, which is important to maintain similarity to
+  // Clang and for the runtime to do the correct thing. However, we
+  // still do not map the structure in its totality but rather we
+  // generate an un-sized "binding" map entry for it.
   //
   // In the case of:
   //    map(tofrom: x, x%y, x%z)
   //
-  // We do actually map the entirety of "x", so the explicit
-  // mapping of x%y, x%z becomes unneccesary. It also doesn't
-  // quite make sense to write this from a Fortran OpenMP
-  // perspective (although it is legal), as even if the members were
-  // allocatables or pointers, we are mandated by the specification
-  // to map these (and any recursive components) in their entirety,
-  // which is different to the C++ equivelant, which requires
+  // We do actually map the entirety of "x", so the explicit mapping of
+  // x%y, x%z becomes unnecessary. It is redundant to write this from a
+  // Fortran OpenMP perspective (although it is legal), as even if the
+  // members were allocatables or pointers, we are mandated by the
+  // specification to map these (and any recursive components) in their
+  // entirety, which is different to the C++ equivalent, which requires
   // explicit mapping of these segments.
   void addImplicitMembersToTarget(mlir::omp::MapInfoOp op,
                                   fir::FirOpBuilder &builder,
@@ -197,17 +198,16 @@ class OMPMapInfoFinalizationPass
 
     for (size_t i = 0; i < mapOperandsArr.size(); ++i) {
       if (mapOperandsArr[i] == op) {
-        // Push member maps
-        for (size_t j = 0; j < op.getMembers().size(); ++j) {
-          newMapOps.push_back(op.getMembers()[j]);
+        for (auto [j, mapMember] : llvm::enumerate(op.getMembers())) {
+          newMapOps.push_back(mapMember);
           // for TargetOp's which have IsolatedFromAbove we must align the
           // new additional map operand with an appropriate BlockArgument,
           // as the printing and later processing currently requires a 1:1
           // mapping of BlockArgs to MapInfoOp's at the same placement in
           // each array (BlockArgs and MapOperands).
           if (auto targetOp = llvm::dyn_cast<mlir::omp::TargetOp>(target)) {
-            targetOp.getRegion().insertArgument(
-                i + j, op.getMembers()[j].getType(), builder.getUnknownLoc());
+            targetOp.getRegion().insertArgument(i + j, mapMember.getType(),
+                                                targetOp->getLoc());
           }
         }
       }

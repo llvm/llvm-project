@@ -807,31 +807,6 @@ bool ClauseProcessor::processLink(
       });
 }
 
-mlir::omp::MapInfoOp
-createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
-                mlir::Value baseAddr, mlir::Value varPtrPtr, std::string name,
-                llvm::ArrayRef<mlir::Value> bounds,
-                llvm::ArrayRef<mlir::Value> members,
-                mlir::DenseIntElementsAttr membersIndex, uint64_t mapType,
-                mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-                bool partialMap) {
-  if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>()) {
-    baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
-    retTy = baseAddr.getType();
-  }
-
-  mlir::TypeAttr varType = mlir::TypeAttr::get(
-      llvm::cast<mlir::omp::PointerLikeType>(retTy).getElementType());
-
-  mlir::omp::MapInfoOp op = builder.create<mlir::omp::MapInfoOp>(
-      loc, retTy, baseAddr, varType, varPtrPtr, members, membersIndex, bounds,
-      builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
-      builder.getAttr<mlir::omp::VariableCaptureKindAttr>(mapCaptureType),
-      builder.getStringAttr(name), builder.getBoolAttr(partialMap));
-
-  return op;
-}
-
 bool ClauseProcessor::processMap(
     mlir::Location currentLocation, Fortran::lower::StatementContext &stmtCtx,
     mlir::omp::MapClauseOps &result,
@@ -839,6 +814,12 @@ bool ClauseProcessor::processMap(
     llvm::SmallVectorImpl<mlir::Location> *mapSymLocs,
     llvm::SmallVectorImpl<mlir::Type> *mapSymTypes) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  // We always require tracking of symbols, even if the caller does not,
+  // so we create an optionally used local set of symbols when the mapSyms
+  // argument is not present.
+  llvm::SmallVector<const Fortran::semantics::Symbol *> localMapSyms;
+  llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *ptrMapSyms =
+      mapSyms ? mapSyms : &localMapSyms;
   std::map<const Fortran::semantics::Symbol *,
            llvm::SmallVector<OmpMapMemberIndicesData>>
       parentMemberIndices;
@@ -909,26 +890,31 @@ bool ClauseProcessor::processMap(
           // optimisation passes may alter this to ByCopy or other capture
           // types to optimise
           mlir::omp::MapInfoOp mapOp = createMapInfoOp(
-              firOpBuilder, clauseLocation, symAddr, mlir::Value{},
-              asFortran.str(), bounds, {}, mlir::DenseIntElementsAttr{},
+              firOpBuilder, clauseLocation, symAddr,
+              /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
+              /*members=*/{}, /*membersIndex=*/mlir::DenseIntElementsAttr{},
               static_cast<
                   std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                   mapTypeBits),
               mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
 
           if (object.id()->owner().IsDerivedType()) {
-            if (auto dataRef{ExtractDataRef(object.designator)}) {
-              const Fortran::semantics::Symbol *parentSym = parentSym =
-                  &dataRef->GetFirstSymbol();
-              assert(parentSym &&
-                     "Could not find parent symbol during lower of "
-                     "a component member in OpenMP map clause");
-              parentMemberIndices[parentSym].push_back(
-                  {generateMemberPlacementIndices(object, semaCtx), mapOp});
-            }
+            std::optional<Fortran::evaluate::DataRef> dataRef =
+                ExtractDataRef(object.designator);
+            assert(
+                dataRef.has_value() &&
+                "DataRef could not be extracted during mapping of derived type "
+                "cannot proceed");
+            const Fortran::semantics::Symbol *parentSym =
+                &dataRef->GetFirstSymbol();
+            assert(parentSym && "Could not find parent symbol during lower of "
+                                "a component member in OpenMP map clause");
+            llvm::SmallVector<int> indices;
+            generateMemberPlacementIndices(object, indices, semaCtx);
+            parentMemberIndices[parentSym].push_back({indices, mapOp});
           } else {
             result.mapVars.push_back(mapOp);
-            mapSyms->push_back(object.id());
+            ptrMapSyms->push_back(object.id());
             if (mapSymTypes)
               mapSymTypes->push_back(symAddr.getType());
             if (mapSymLocs)
@@ -938,7 +924,7 @@ bool ClauseProcessor::processMap(
       });
 
   insertChildMapInfoIntoParent(converter, parentMemberIndices, result.mapVars,
-                               mapSymTypes, mapSymLocs, mapSyms);
+                               *ptrMapSyms, mapSymTypes, mapSymLocs);
 
   return clauseFound;
 }

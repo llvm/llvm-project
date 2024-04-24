@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -fsyntax-only -verify=expected-cpp -x c++ %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -target-feature +sve -Waarch64-sme-attributes -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme2 -target-feature +sve -Waarch64-sme-attributes -fsyntax-only -verify=expected-cpp -x c++ %s
 
 // Valid attributes
 
@@ -495,4 +495,136 @@ void fmv_caller() {
     cannot_work_clones();
     just_fine();
     incompatible_locally_streaming();
+}
+
+void sme_streaming_with_vl_arg(__SVInt8_t a) __arm_streaming { }
+
+__SVInt8_t sme_streaming_returns_vl(void) __arm_streaming { __SVInt8_t r; return r; }
+
+void sme_streaming_compatible_with_vl_arg(__SVInt8_t a) __arm_streaming_compatible { }
+
+__SVInt8_t sme_streaming_compatible_returns_vl(void) __arm_streaming_compatible { __SVInt8_t r; return r; }
+
+void sme_no_streaming_with_vl_arg(__SVInt8_t a) { }
+
+__SVInt8_t sme_no_streaming_returns_vl(void) { __SVInt8_t r; return r; }
+
+// expected-warning@+2 {{passing/returning a VL-dependent argument to/from a __arm_locally_streaming function. The streaming and non-streaming vector lengths may be different}}
+// expected-cpp-warning@+1 {{passing/returning a VL-dependent argument to/from a __arm_locally_streaming function. The streaming and non-streaming vector lengths may be different}}
+__arm_locally_streaming void sme_locally_streaming_with_vl_arg(__SVInt8_t a) { }
+
+// expected-warning@+2 {{passing/returning a VL-dependent argument to/from a __arm_locally_streaming function. The streaming and non-streaming vector lengths may be different}}
+// expected-cpp-warning@+1 {{passing/returning a VL-dependent argument to/from a __arm_locally_streaming function. The streaming and non-streaming vector lengths may be different}}
+__arm_locally_streaming __SVInt8_t sme_locally_streaming_returns_vl(void) { __SVInt8_t r; return r; }
+
+void sme_no_streaming_calling_streaming_with_vl_args() {
+  __SVInt8_t a;
+  // expected-warning@+2 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  // expected-cpp-warning@+1 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  sme_streaming_with_vl_arg(a);
+}
+
+void sme_no_streaming_calling_streaming_with_return_vl() {
+  // expected-warning@+2 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  // expected-cpp-warning@+1 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  __SVInt8_t r = sme_streaming_returns_vl();
+}
+
+void sme_streaming_calling_non_streaming_with_vl_args(void) __arm_streaming {
+  __SVInt8_t a;
+  // expected-warning@+2 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  // expected-cpp-warning@+1 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  sme_no_streaming_with_vl_arg(a);
+}
+
+void sme_streaming_calling_non_streaming_with_return_vl(void) __arm_streaming {
+  // expected-warning@+2 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  // expected-cpp-warning@+1 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  __SVInt8_t r = sme_no_streaming_returns_vl();
+}
+
+void sme_no_streaming_calling_streaming_with_vl_args_param(__SVInt8_t arg, void (*sc)( __SVInt8_t arg) __arm_streaming) {
+  // expected-warning@+2 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  // expected-cpp-warning@+1 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  sc(arg);
+}
+
+__SVInt8_t sme_no_streaming_calling_streaming_return_vl_param(__SVInt8_t (*s)(void) __arm_streaming) {
+  // expected-warning@+2 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  // expected-cpp-warning@+1 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  return s();
+}
+
+void sme_streaming_compatible_calling_streaming_with_vl_args(__SVInt8_t arg) __arm_streaming_compatible {
+  // expected-warning@+2 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  // expected-cpp-warning@+1 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  sme_streaming_with_vl_arg(arg);
+}
+
+void sme_streaming_compatible_calling_sme_streaming_return_vl(void) __arm_streaming_compatible {
+  // expected-warning@+2 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  // expected-cpp-warning@+1 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  __SVInt8_t r = sme_streaming_returns_vl();
+}
+
+void sme_streaming_compatible_calling_no_streaming_with_vl_args(__SVInt8_t arg) __arm_streaming_compatible {
+  // expected-warning@+2 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  // expected-cpp-warning@+1 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  sme_no_streaming_with_vl_arg(arg);
+}
+
+void sme_streaming_compatible_calling_no_sme_streaming_return_vl(void) __arm_streaming_compatible {
+  // expected-warning@+2 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  // expected-cpp-warning@+1 {{passing a VL-dependent argument to/from a function that has a different streaming-mode. The streaming and non-streaming vector lengths may be different}}
+  __SVInt8_t r = sme_no_streaming_returns_vl();
+}
+
+void sme_streaming_calling_streaming(__SVInt8_t arg, void (*s)( __SVInt8_t arg) __arm_streaming) __arm_streaming {
+  s(arg);
+}
+
+__SVInt8_t sme_streaming_calling_streaming_return_vl(__SVInt8_t (*s)(void) __arm_streaming) __arm_streaming {
+  return s();
+}
+
+void sme_streaming_calling_streaming_with_vl_args(__SVInt8_t a) __arm_streaming {
+  sme_streaming_with_vl_arg(a);
+}
+
+void sme_streaming_calling_streaming_with_return_vl(void) __arm_streaming {
+  __SVInt8_t r = sme_streaming_returns_vl();
+}
+
+void sme_streaming_calling_streaming_compatible_with_vl_args(__SVInt8_t a) __arm_streaming {
+  sme_streaming_compatible_with_vl_arg(a);
+}
+
+void sme_streaming_calling_streaming_compatible_with_return_vl(void) __arm_streaming {
+  __SVInt8_t r = sme_streaming_compatible_returns_vl();
+}
+
+void sme_no_streaming_calling_streaming_compatible_with_vl_args() {
+  __SVInt8_t a;
+  sme_streaming_compatible_with_vl_arg(a);
+}
+
+void sme_no_streaming_calling_streaming_compatible_with_return_vl() {
+  __SVInt8_t r = sme_streaming_compatible_returns_vl();
+}
+
+void sme_no_streaming_calling_non_streaming_compatible_with_vl_args() {
+  __SVInt8_t a;
+  sme_no_streaming_with_vl_arg(a);
+}
+
+void sme_no_streaming_calling_non_streaming_compatible_with_return_vl() {
+  __SVInt8_t r = sme_no_streaming_returns_vl();
+}
+
+void sme_streaming_compatible_calling_streaming_compatible_with_vl_args(__SVInt8_t arg) __arm_streaming_compatible {
+  sme_streaming_compatible_with_vl_arg(arg);
+}
+
+void sme_streaming_compatible_calling_streaming_compatible_with_return_vl(void) __arm_streaming_compatible {
+  __SVInt8_t r = sme_streaming_compatible_returns_vl();
 }

@@ -19,7 +19,7 @@
 
 subroutine foo()
   implicit none
-  
+
   type t0
     integer :: a0, a1
   end type

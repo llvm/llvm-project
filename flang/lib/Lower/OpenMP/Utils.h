@@ -21,11 +21,6 @@ extern llvm::cl::opt<bool> enableDelayedPrivatization;
 namespace fir {
 class FirOpBuilder;
 } // namespace fir
-
-namespace llvm::omp {
-enum class OpenMPOffloadMappingFlags : uint64_t;
-} // namespace llvm::omp
-
 namespace Fortran {
 
 namespace semantics {
@@ -47,25 +42,22 @@ using DeclareTargetCapturePair =
     std::pair<mlir::omp::DeclareTargetCaptureClause,
               const Fortran::semantics::Symbol &>;
 
-// A small helper structure for keeping track of a
-// component members MapInfoOp and index data when
-// lowering OpenMP map clauses. Keeps track of the
-// placement of the component in the derived type
-// hierarchy it rests within, alongside the
-// generated mlir::omp::MapInfoOp for the mapped
-// component.
+// A small helper structure for keeping track of a component members MapInfoOp
+// and index data when lowering OpenMP map clauses. Keeps track of the
+// placement of the component in the derived type hierarchy it rests within,
+// alongside the generated mlir::omp::MapInfoOp for the mapped component.
 struct OmpMapMemberIndicesData {
-  // The indices representing the component members
-  // placement in it's derived type parents hierarchy
+  // The indices representing the component members placement in its derived
+  // type parents hierarchy.
   llvm::SmallVector<int> memberPlacementIndices;
 
-  // placement of the member in the member vector.
+  // Placement of the member in the member vector.
   mlir::omp::MapInfoOp memberMap;
 };
 
-llvm::SmallVector<int>
-generateMemberPlacementIndices(const Object &object,
-                               Fortran::semantics::SemanticsContext &semaCtx);
+void generateMemberPlacementIndices(
+    const Object &object, llvm::SmallVectorImpl<int> &indices,
+    Fortran::semantics::SemanticsContext &semaCtx);
 
 mlir::omp::MapInfoOp
 createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -81,9 +73,9 @@ void insertChildMapInfoIntoParent(
     std::map<const Fortran::semantics::Symbol *,
              llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
+    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &mapSyms,
     llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
-    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs,
-    llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSymbols);
+    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs);
 
 mlir::Type getLoopVarType(Fortran::lower::AbstractConverter &converter,
                           std::size_t loopVarTypeSize);

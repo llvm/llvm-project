@@ -6,7 +6,7 @@
 !CHECK:   omp.yield(%[[MAXIMUM_VAL_F]] : f32)
 !CHECK: combiner
 !CHECK: ^bb0(%[[ARG0_F:.*]]: f32, %[[ARG1_F:.*]]: f32):
-!CHECK:   %[[COMB_VAL_F:.*]] = arith.minimumf %[[ARG0_F]], %[[ARG1_F]] {{.*}}: f32
+!CHECK:   %[[COMB_VAL_F:.*]] = arith.minnumf %[[ARG0_F]], %[[ARG1_F]] {{.*}}: f32
 !CHECK:   omp.yield(%[[COMB_VAL_F]] : f32)
 
 !CHECK: omp.declare_reduction @[[MIN_DECLARE_I:.*]] : i32 init {

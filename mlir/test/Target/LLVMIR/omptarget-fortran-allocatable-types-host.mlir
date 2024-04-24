@@ -3,7 +3,7 @@
 // This test checks the offload sizes, map types and base pointers and pointers
 // provided to the OpenMP kernel argument structure are correct when lowering 
 // to LLVM-IR from MLIR when a fortran allocatable descriptor type is provided 
-// alongside the omp.map_info, the test utilises mapping of array sections, 
+// alongside the omp.map.info, the test utilises mapping of array sections, 
 // full arrays and individual allocated scalars.
 
 module attributes {omp.is_target_device = false} {
