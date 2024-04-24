@@ -49,8 +49,8 @@ define <8 x i8> @v4i8_2(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-NEXT:    vid.v v11
 ; CHECK-NEXT:    vrsub.vi v12, v11, 7
 ; CHECK-NEXT:    vrgather.vv v10, v8, v12
-; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vrsub.vi v8, v11, 3
+; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vrgather.vv v10, v9, v8, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -174,8 +174,8 @@ define <8 x i16> @v4i16_2(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-NEXT:    vid.v v11
 ; CHECK-NEXT:    vrsub.vi v12, v11, 7
 ; CHECK-NEXT:    vrgather.vv v10, v8, v12
-; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vrsub.vi v8, v11, 3
+; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vrgather.vv v10, v9, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
@@ -492,8 +492,8 @@ define <8 x half> @v4f16_2(<4 x half> %a, <4 x half> %b) {
 ; CHECK-NEXT:    vid.v v11
 ; CHECK-NEXT:    vrsub.vi v12, v11, 7
 ; CHECK-NEXT:    vrgather.vv v10, v8, v12
-; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vrsub.vi v8, v11, 3
+; CHECK-NEXT:    vmv.v.i v0, 15
 ; CHECK-NEXT:    vrgather.vv v10, v9, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
