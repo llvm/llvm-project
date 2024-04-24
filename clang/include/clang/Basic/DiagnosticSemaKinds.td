@@ -143,12 +143,12 @@ def ext_vla_cxx : ExtWarn<
   "variable length arrays in C++ are a Clang extension">,
   InGroup<VLACxxExtension>;
 def ext_vla_cxx_in_gnu_mode : Extension<ext_vla_cxx.Summary>,
-  InGroup<VLACxxExtension>;
+  InGroup<GNUVLACxxExtension>;
 def ext_vla_cxx_static_assert : ExtWarn<
   "variable length arrays in C++ are a Clang extension; did you mean to use "
   "'static_assert'?">, InGroup<VLAUseStaticAssert>;
 def ext_vla_cxx_in_gnu_mode_static_assert : Extension<
-  ext_vla_cxx_static_assert.Summary>, InGroup<VLAUseStaticAssert>;
+  ext_vla_cxx_static_assert.Summary>, InGroup<GNUVLACxxExtension>;
 def warn_vla_used : Warning<"variable length array used">,
   InGroup<VLA>, DefaultIgnore;
 def err_vla_in_sfinae : Error<

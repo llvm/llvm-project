@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wvla-extension %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wgnu-vla-cxx-extension %s
 struct NonPOD {
   NonPOD();
 };

@@ -870,7 +870,8 @@ def VectorConversion : DiagGroup<"vector-conversion">;      // clang specific
 def VexingParse : DiagGroup<"vexing-parse">;
 def VLAUseStaticAssert : DiagGroup<"vla-extension-static-assert">;
 def VLACxxExtension : DiagGroup<"vla-cxx-extension", [VLAUseStaticAssert]>;
-def VLAExtension : DiagGroup<"vla-extension", [VLACxxExtension]>;
+def GNUVLACxxExtension : DiagGroup<"gnu-vla-cxx-extension", [VLACxxExtension]>;
+def VLAExtension : DiagGroup<"vla-extension", [GNUVLACxxExtension]>;
 def VLA : DiagGroup<"vla", [VLAExtension]>;
 def VolatileRegisterVar : DiagGroup<"volatile-register-var">;
 def Visibility : DiagGroup<"visibility">;
