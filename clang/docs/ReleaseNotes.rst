@@ -214,6 +214,9 @@ Non-comprehensive list of changes in this release
   ``-mdaz-ftz``. This behavior now matches GCC's behavior.
   (`#57589 <https://github.com/llvm/llvm-project/issues/57589>`_)
 
+* ``-fdenormal-fp-math=preserve-sign`` is no longer implied by ``-ffast-math``
+  on x86 systems.
+
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
