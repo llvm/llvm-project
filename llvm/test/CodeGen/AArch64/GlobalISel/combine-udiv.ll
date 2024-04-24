@@ -243,3 +243,29 @@ define <8 x i16> @pr38477(<8 x i16> %a0) {
   %1 = udiv <8 x i16> %a0, <i16 1, i16 119, i16 73, i16 -111, i16 -3, i16 118, i16 32, i16 31>
   ret <8 x i16> %1
 }
+
+define i32 @udiv_div_by_180(i32 %x)
+; SDAG-LABEL: udiv_div_by_180:
+; SDAG:       // %bb.0:
+; SDAG-NEXT:    mov w8, #5826 // =0x16c2
+; SDAG-NEXT:    and w9, w0, #0xff
+; SDAG-NEXT:    movk w8, #364, lsl #16
+; SDAG-NEXT:    umull x8, w9, w8
+; SDAG-NEXT:    lsr x0, x8, #32
+; SDAG-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; SDAG-NEXT:    ret
+;
+; GISEL-LABEL: udiv_div_by_180:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    uxtb w8, w0
+; GISEL-NEXT:    mov w9, #5826 // =0x16c2
+; GISEL-NEXT:    movk w9, #364, lsl #16
+; GISEL-NEXT:    umull x8, w8, w9
+; GISEL-NEXT:    lsr x0, x8, #32
+; GISEL-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; GISEL-NEXT:    ret
+{
+  %truncate = and i32 %x, 255
+  %udiv = udiv i32 %truncate, 180
+  ret i32 %udiv
+}
