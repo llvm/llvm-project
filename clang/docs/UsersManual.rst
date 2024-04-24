@@ -1690,7 +1690,6 @@ floating point semantic models: precise (the default), strict, and fast.
    * ``-fno-associative-math``
    * ``-fno-reciprocal-math``
    * ``-fsigned-zeros``
-   * ``-ftrapping-math``
    * ``-ffp-contract=on``
    * ``-fdenormal-fp-math=ieee``
 
