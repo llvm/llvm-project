@@ -423,11 +423,8 @@ public:
     return TargetInfo::PowerABIBuiltinVaList;
   }
 
-  virtual unsigned hardwareDestructiveInterferenceSize() const override {
-    return 32;
-  }
-  virtual unsigned hardwareConstructiveInterferenceSize() const override {
-    return 32;
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
   }
 };
 
@@ -510,11 +507,8 @@ public:
     }
   }
 
-  virtual unsigned hardwareDestructiveInterferenceSize() const override {
-    return 128;
-  }
-  virtual unsigned hardwareConstructiveInterferenceSize() const override {
-    return 128;
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(128, 128);
   }
 };
 

@@ -221,11 +221,8 @@ public:
     return RegNo < 4 ? 6 + RegNo : -1;
   }
 
-  virtual unsigned hardwareDestructiveInterferenceSize() const override {
-    return 256;
-  }
-  virtual unsigned hardwareConstructiveInterferenceSize() const override {
-    return 256;
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(256, 256);
   }
 };
 } // namespace targets

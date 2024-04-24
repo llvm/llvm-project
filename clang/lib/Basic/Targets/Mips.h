@@ -432,11 +432,8 @@ public:
   bool validateTarget(DiagnosticsEngine &Diags) const override;
   bool hasBitIntType() const override { return true; }
 
-  virtual unsigned hardwareDestructiveInterferenceSize() const override {
-    return 32;
-  }
-  virtual unsigned hardwareConstructiveInterferenceSize() const override {
-    return 32;
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
   }
 };
 } // namespace targets

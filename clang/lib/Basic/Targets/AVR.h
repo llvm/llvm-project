@@ -175,11 +175,8 @@ public:
   std::optional<std::string> handleAsmEscapedChar(char EscChar) const override;
   StringRef getABI() const override { return ABI; }
 
-  virtual unsigned hardwareDestructiveInterferenceSize() const override {
-    return 32;
-  }
-  virtual unsigned hardwareConstructiveInterferenceSize() const override {
-    return 32;
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
   }
 
 protected:
