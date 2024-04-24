@@ -67,10 +67,14 @@ public:
         SymbolTable::UseRange funcUses = *funcOp.getSymbolUses(op);
         for (SymbolTable::SymbolUse use : funcUses) {
           Operation *callOp = use.getUser();
-          if (mlir::isa<func::FuncOp>(callOp)) {
+          if (auto internalFunc = mlir::dyn_cast<func::FuncOp>(callOp)) {
             // Do not delete internal procedures holding the symbol of their
             // Fortran host procedure as attribute.
-            callOp->removeAttr(fir::getHostSymbolAttrName());
+            internalFunc->removeAttr(fir::getHostSymbolAttrName());
+            // Set public visibility so that the function is not deleted by MLIR
+            // because unused. Changing it is OK here because the function will
+            // be deleted anyway in the second filtering phase.
+            internalFunc.setVisibility(mlir::SymbolTable::Visibility::Public);
             continue;
           }
           // If the callOp has users then replace them with Undef values.
