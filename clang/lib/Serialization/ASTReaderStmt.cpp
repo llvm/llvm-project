@@ -1315,17 +1315,13 @@ void ASTStmtReader::VisitSourceLocExpr(SourceLocExpr *E) {
   E->SourceLocExprBits.Kind = Record.readInt();
 }
 
-void ASTStmtReader::VisitPPEmbedExpr(PPEmbedExpr *E) {
+void ASTStmtReader::VisitEmbedExpr(EmbedExpr *E) {
   VisitExpr(E);
-  E->ParentContext = readDeclAs<DeclContext>();
-  E->BuiltinLoc = readSourceLocation();
-  E->RParenLoc = readSourceLocation();
-  E->Filename = cast<StringLiteral>(Record.readSubStmt());
-  E->BinaryData = cast<StringLiteral>(Record.readSubStmt());
-}
-
-void ASTStmtReader::VisitEmbedSubscriptExpr(EmbedSubscriptExpr *E) {
-  VisitExpr(E);
+  // E->ParentContext = readDeclAs<DeclContext>();
+  // E->BuiltinLoc = readSourceLocation();
+  // E->RParenLoc = readSourceLocation();
+  // E->Filename = cast<StringLiteral>(Record.readSubStmt());
+  // E->BinaryData = cast<StringLiteral>(Record.readSubStmt());
 }
 
 void ASTStmtReader::VisitAddrLabelExpr(AddrLabelExpr *E) {
@@ -3231,7 +3227,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_BUILTIN_PP_EMBED:
-      S = new (Context) PPEmbedExpr(Empty);
+      S = new (Context) EmbedExpr(Empty);
       break;
 
     case EXPR_ADDR_LABEL:

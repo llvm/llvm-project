@@ -7723,20 +7723,9 @@ public:
     return Error(E);
   }
 
-  bool VisitPPEmbedExpr(const PPEmbedExpr *E) {
-    for (const IntegerLiteral *IL : E->underlying_data_elements()) {
-      if (!StmtVisitorTy::Visit(IL))
-        return false;
-    }
-    return true;
-  }
-
-  bool VisitEmbedSubscriptExpr(const EmbedSubscriptExpr *E) {
-    PPEmbedExpr *PPEmbed = E->getEmbed();
-    auto It = PPEmbed->begin() + E->getBegin();
-    if (!StmtVisitorTy::Visit(*It))
-      return false;
-    return true;
+  bool VisitEmbedExpr(const EmbedExpr *E) {
+    const auto It = E->begin();
+    return StmtVisitorTy::Visit(*It);
   }
 
   bool VisitPredefinedExpr(const PredefinedExpr *E) {
@@ -9157,7 +9146,7 @@ public:
     return true;
   }
 
-  bool VisitPPEmbedExpr(const PPEmbedExpr *E) {
+  bool VisitEmbedExpr(const EmbedExpr *E) {
     llvm_unreachable("Not yet implemented for ExprConstant.cpp");
     return true;
   }
@@ -11152,7 +11141,7 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
   } else {
     for (auto *Init : Args) {
       if (auto *EmbedS =
-              dyn_cast<EmbedSubscriptExpr>(Init->IgnoreParenImpCasts())) {
+              dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
         NumEltsToInit += EmbedS->getDataElementCount() - 1;
       }
     }
@@ -11201,7 +11190,7 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
     if (ArrayIndex >= NumEltsToInit)
       break;
     if (auto *EmbedS =
-            dyn_cast<EmbedSubscriptExpr>(Init->IgnoreParenImpCasts())) {
+            dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
       if (!EmbedS->doForEachDataElement(Eval, ArrayIndex))
         return false;
     } else {
@@ -16279,8 +16268,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::SizeOfPackExprClass:
   case Expr::GNUNullExprClass:
   case Expr::SourceLocExprClass:
-  case Expr::PPEmbedExprClass:
-  case Expr::EmbedSubscriptExprClass:
+  case Expr::EmbedExprClass:
     return NoDiag();
 
   case Expr::PackIndexingExprClass:

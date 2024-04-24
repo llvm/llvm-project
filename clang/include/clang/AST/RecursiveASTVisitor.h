@@ -2841,12 +2841,11 @@ DEF_TRAVERSE_STMT(ShuffleVectorExpr, {})
 DEF_TRAVERSE_STMT(ConvertVectorExpr, {})
 DEF_TRAVERSE_STMT(StmtExpr, {})
 DEF_TRAVERSE_STMT(SourceLocExpr, {})
-DEF_TRAVERSE_STMT(PPEmbedExpr, {
+DEF_TRAVERSE_STMT(EmbedExpr, {
   for (IntegerLiteral *IL : S->underlying_data_elements()) {
     TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(IL);
   }
 })
-DEF_TRAVERSE_STMT(EmbedSubscriptExpr, {})
 
 DEF_TRAVERSE_STMT(UnresolvedLookupExpr, {
   TRY_TO(TraverseNestedNameSpecifierLoc(S->getQualifierLoc()));

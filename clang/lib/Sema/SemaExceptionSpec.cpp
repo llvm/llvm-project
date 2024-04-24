@@ -1413,8 +1413,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::PackIndexingExprClass:
   case Expr::StringLiteralClass:
   case Expr::SourceLocExprClass:
-  case Expr::PPEmbedExprClass:
-  case Expr::EmbedSubscriptExprClass:
+  case Expr::EmbedExprClass:
   case Expr::ConceptSpecializationExprClass:
   case Expr::RequiresExprClass:
     // These expressions can never throw.

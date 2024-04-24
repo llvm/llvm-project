@@ -5668,7 +5668,7 @@ public:
                               SourceLocation RPLoc, StringLiteral *Filename,
                               StringLiteral *BinaryData);
 
-  PPEmbedExpr::Action
+  EmbedExpr::Action
   CheckExprListForPPEmbedExpr(ArrayRef<Expr *> ExprList,
                               std::optional<QualType> MaybeInitType);
 

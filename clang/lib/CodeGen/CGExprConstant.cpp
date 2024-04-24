@@ -1256,7 +1256,7 @@ public:
     unsigned NumElements = CAT->getZExtSize();
     for (const auto *Init : ILE->inits()) {
       if (const auto *Embed =
-              dyn_cast<EmbedSubscriptExpr>(Init->IgnoreParenImpCasts())) {
+              dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
         NumInitElements += Embed->getDataElementCount() - 1;
         if (NumInitElements > NumElements) {
           NumInitElements = NumElements;
@@ -1307,7 +1307,7 @@ public:
     for (unsigned i = 0; i < ILE->getNumInits(); ++i) {
       Expr *Init = ILE->getInit(i);
       if (auto *EmbedS =
-              dyn_cast<EmbedSubscriptExpr>(Init->IgnoreParenImpCasts())) {
+              dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
         if (!EmbedS->doForEachDataElement(Emit, ArrayIndex,
                                           /*EmbedInit=*/true))
           return nullptr;

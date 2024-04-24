@@ -312,7 +312,7 @@ class InitListChecker {
   InitListExpr *FullyStructuredList = nullptr;
   NoInitExpr *DummyExpr = nullptr;
   SmallVectorImpl<QualType> *AggrDeductionCandidateParamTypes = nullptr;
-  PPEmbedExpr *CurEmbed = nullptr; // Save current embed we're processing.
+  EmbedExpr *CurEmbed = nullptr; // Save current embed we're processing.
   unsigned CurEmbedIndex = 0;
 
   NoInitExpr *getDummyInit() {
@@ -502,7 +502,7 @@ class InitListChecker {
   void CheckEmptyInitializable(const InitializedEntity &Entity,
                                SourceLocation Loc);
 
-  Expr *HandleEmbed(PPEmbedExpr *Embed, const InitializedEntity &Entity) {
+  Expr *HandleEmbed(EmbedExpr *Embed, const InitializedEntity &Entity) {
     Expr *Result = nullptr;
     // Undrestand which part of embed we'd like to reference.
     if (!CurEmbed) {
@@ -516,16 +516,22 @@ class InitListChecker {
       ValueDecl *ArrDecl = Entity.getParent()->getDecl();
       auto *AType = SemaRef.Context.getAsArrayType(ArrDecl->getType());
       assert(AType && "expected array type when initializing array");
-      ElsCount = Embed->getDataElementCount(SemaRef.Context);
+      ElsCount = Embed->getDataElementCount();
       if (const auto *CAType = dyn_cast<ConstantArrayType>(AType))
         ElsCount = std::min(CAType->getSize().getZExtValue(),
                             ElsCount - CurEmbedIndex);
+      if (ElsCount == Embed->getDataElementCount()) {
+        CurEmbed = nullptr;
+        CurEmbedIndex = 0;
+        return Embed;
+      }
     }
 
-    Result = new (SemaRef.Context)
-        EmbedSubscriptExpr(Embed->getType(), Embed, CurEmbedIndex, ElsCount);
+    Result = new (SemaRef.Context) EmbedExpr(
+        SemaRef.Context, Embed->getBeginLoc(), Embed->getEndLoc(),
+        Embed->getParentContext(), Embed->getData(), CurEmbedIndex, ElsCount);
     CurEmbedIndex += ElsCount;
-    if (CurEmbedIndex >= Embed->getDataElementCount(SemaRef.Context)) {
+    if (CurEmbedIndex >= Embed->getDataElementCount()) {
       CurEmbed = nullptr;
       CurEmbedIndex = 0;
     }
@@ -1496,7 +1502,7 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
       // Brace elision is never performed if the element is not an
       // assignment-expression.
       if (Seq || isa<InitListExpr>(expr)) {
-        if (auto *Embed = dyn_cast<PPEmbedExpr>(expr)) {
+        if (auto *Embed = dyn_cast<EmbedExpr>(expr)) {
           expr = HandleEmbed(Embed, Entity);
         }
         if (!VerifyOnly) {
@@ -1706,7 +1712,7 @@ void InitListChecker::CheckScalarType(const InitializedEntity &Entity,
     ++Index;
     ++StructuredIndex;
     return;
-  } else if (auto *Embed = dyn_cast<PPEmbedExpr>(expr)) {
+  } else if (auto *Embed = dyn_cast<EmbedExpr>(expr)) {
     expr = HandleEmbed(Embed, Entity);
   }
 
@@ -1988,8 +1994,8 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
   }
 
   if (SemaRef.CheckExprListForPPEmbedExpr(IList->inits(), DeclType) ==
-      PPEmbedExpr::FoundOne) {
-    PPEmbedExpr *PPEmbed = cast<PPEmbedExpr>(IList->inits()[0]);
+      EmbedExpr::FoundOne) {
+    EmbedExpr *PPEmbed = cast<EmbedExpr>(IList->inits()[0]);
     IList->setInit(0, PPEmbed->getDataStringLiteral());
   }
 
@@ -2104,14 +2110,14 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
     CheckSubElementType(ElementEntity, IList, elementType, Index,
                         StructuredList, StructuredIndex);
     ++elementIndex;
-    if ((CurEmbed || isa<PPEmbedExpr>(Init)) && elementType->isScalarType()) {
+    if ((CurEmbed || isa<EmbedExpr>(Init)) && elementType->isScalarType()) {
       if (CurEmbed) {
         elementIndex =
             elementIndex + CurEmbedIndex - EmbedElementIndexBeforeInit - 1;
       } else {
-        auto Embed = cast<PPEmbedExpr>(Init);
+        auto Embed = cast<EmbedExpr>(Init);
         elementIndex = elementIndex +
-                       Embed->getDataElementCount(SemaRef.Context) -
+                       Embed->getDataElementCount() -
                        EmbedElementIndexBeforeInit - 1;
       }
     }

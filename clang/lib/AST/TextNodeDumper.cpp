@@ -2718,8 +2718,8 @@ void TextNodeDumper::VisitOpenACCConstructStmt(const OpenACCConstructStmt *S) {
   OS << " " << S->getDirectiveKind();
 }
 
-void TextNodeDumper::VisitEmbedSubscriptExpr(const EmbedSubscriptExpr *S) {
-  AddChild("begin", [=] { OS << S->getBegin(); });
+void TextNodeDumper::VisitEmbedExpr(const EmbedExpr *S) {
+  AddChild("begin", [=] { OS << S->getStartingElementPos(); });
   AddChild("number of elements", [=] { OS << S->getDataElementCount(); });
-  AddChild("embed", [=] { Visit(S->getEmbed()); });
+  //AddChild("embed", [=] { Visit(S->getEmbed()); });
 }

@@ -1100,8 +1100,7 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
     };
     unsigned ElementIndex = 0;
     for (const Expr *Init : E->inits()) {
-      if (const auto *EmbedS =
-              dyn_cast<EmbedSubscriptExpr>(Init->IgnoreParenImpCasts())) {
+      if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
         if (!EmbedS->doForEachDataElement(Eval, ElementIndex))
           return false;
       } else {
@@ -1226,19 +1225,8 @@ bool ByteCodeExprGen<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::VisitPPEmbedExpr(const PPEmbedExpr *E) {
-  for (const IntegerLiteral *IL : E->underlying_data_elements()) {
-    if (!this->visit(IL))
-      return false;
-  }
-  return true;
-}
-
-template <class Emitter>
-bool ByteCodeExprGen<Emitter>::VisitEmbedSubscriptExpr(
-    const EmbedSubscriptExpr *E) {
-  PPEmbedExpr *PPEmbed = E->getEmbed();
-  auto It = PPEmbed->begin() + E->getBegin();
+bool ByteCodeExprGen<Emitter>::VisitEmbedExpr(const EmbedExpr *E) {
+  auto It = E->begin();
   return this->Visit(*It);
 }
 

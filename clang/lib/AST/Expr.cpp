@@ -2373,20 +2373,16 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
   llvm_unreachable("unhandled case");
 }
 
-PPEmbedExpr::PPEmbedExpr(const ASTContext &Ctx, StringLiteral *Filename,
-                         StringLiteral *BinaryData, SourceLocation BLoc,
-                         SourceLocation RParenLoc, DeclContext *ParentContext)
-    : Expr(PPEmbedExprClass, Ctx.UnsignedCharTy, VK_PRValue, OK_Ordinary),
+EmbedExpr::EmbedExpr(const ASTContext &Ctx, SourceLocation BLoc,
+                     SourceLocation RParenLoc, DeclContext *ParentContext,
+                     EmbedDataStorage *Data, unsigned Begin,
+                     unsigned NumOfElements)
+    : Expr(EmbedExprClass, Ctx.UnsignedCharTy, VK_PRValue, OK_Ordinary),
       BuiltinLoc(BLoc), RParenLoc(RParenLoc), ParentContext(ParentContext),
-      Filename(Filename), BinaryData(BinaryData), Ctx(&Ctx) {
+      Ctx(&Ctx), Data(Data), Begin(Begin), NumOfElements(NumOfElements) {
   setDependence(ExprDependence::None);
   FakeChildNode = IntegerLiteral::Create(
       Ctx, llvm::APInt::getZero(Ctx.getTypeSize(getType())), getType(), BLoc);
-}
-
-size_t PPEmbedExpr::getDataElementCount(ASTContext &Context) const {
-  return getDataStringLiteral()->getByteLength() /
-         (Context.getTypeSize(getType()) / Context.getTypeSize(Context.CharTy));
 }
 
 InitListExpr::InitListExpr(const ASTContext &C, SourceLocation lbraceloc,
@@ -3631,8 +3627,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case CXXUuidofExprClass:
   case OpaqueValueExprClass:
   case SourceLocExprClass:
-  case PPEmbedExprClass:
-  case EmbedSubscriptExprClass:
+  case EmbedExprClass:
   case ConceptSpecializationExprClass:
   case RequiresExprClass:
   case SYCLUniqueStableNameExprClass:

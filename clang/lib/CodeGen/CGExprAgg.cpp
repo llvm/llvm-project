@@ -512,7 +512,7 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
   uint64_t NumArrayElements = AType->getNumElements();
   for (const auto *Init : Args) {
     if (const auto *Embed =
-            dyn_cast<EmbedSubscriptExpr>(Init->IgnoreParenImpCasts())) {
+            dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
       NumInitElements += Embed->getDataElementCount() - 1;
       if (NumInitElements > NumArrayElements) {
         NumInitElements = NumArrayElements;
@@ -623,7 +623,7 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
     if (ArrayIndex >= NumInitElements)
       break;
     if (auto *EmbedS =
-            dyn_cast<EmbedSubscriptExpr>(Args[i]->IgnoreParenImpCasts())) {
+            dyn_cast<EmbedExpr>(Args[i]->IgnoreParenImpCasts())) {
       EmbedS->doForEachDataElement(Emit, ArrayIndex);
     } else {
       Emit(Args[i], ArrayIndex);

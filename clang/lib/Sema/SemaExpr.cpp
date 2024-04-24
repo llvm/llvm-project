@@ -17043,19 +17043,23 @@ ExprResult Sema::ActOnPPEmbedExpr(SourceLocation BuiltinLoc,
                                   SourceLocation BinaryDataLoc,
                                   SourceLocation RPLoc, StringLiteral *Filename,
                                   StringLiteral *BinaryData) {
-  return new (Context)
-      PPEmbedExpr(Context, Filename, BinaryData, BuiltinLoc, RPLoc, CurContext);
+  EmbedDataStorage *Data = new (Context) EmbedDataStorage;
+  Data->Filename = Filename;
+  Data->BinaryData = BinaryData;
+  return new (Context) EmbedExpr(Context, BuiltinLoc, RPLoc, CurContext, Data,
+                                 0, Data->getDataElementCount());
 }
 
-PPEmbedExpr::Action
+// TODO simplify
+EmbedExpr::Action
 Sema::CheckExprListForPPEmbedExpr(ArrayRef<Expr *> ExprList,
                                   std::optional<QualType> MaybeInitType) {
   if (ExprList.empty()) {
-    return PPEmbedExpr::NotFound;
+    return EmbedExpr::NotFound;
   }
-  PPEmbedExpr *First =
+  EmbedExpr *First =
       ExprList.size() == 1
-          ? dyn_cast_if_present<PPEmbedExpr>(ExprList[0]->IgnoreParens())
+          ? dyn_cast_if_present<EmbedExpr>(ExprList[0]->IgnoreParens())
           : nullptr;
   if (First) {
     // only one and it's an embed
@@ -17066,30 +17070,30 @@ Sema::CheckExprListForPPEmbedExpr(ArrayRef<Expr *> ExprList,
       if (InitType->isArrayType()) {
         const ArrayType *InitArrayType = InitType->getAsArrayTypeUnsafe();
         QualType InitElementTy = InitArrayType->getElementType();
-        QualType PPEmbedExprElementTy = First->getType();
+        QualType EmbedExprElementTy = First->getType();
         const bool TypesMatch =
-            Context.typesAreCompatible(InitElementTy, PPEmbedExprElementTy) ||
-            (InitElementTy->isCharType() && PPEmbedExprElementTy->isCharType());
+            Context.typesAreCompatible(InitElementTy, EmbedExprElementTy) ||
+            (InitElementTy->isCharType() && EmbedExprElementTy->isCharType());
         if (TypesMatch) {
-          // Keep the PPEmbedExpr, report that everything has been found.
-          return PPEmbedExpr::FoundOne;
+          // Keep the EmbedExpr, report that everything has been found.
+          return EmbedExpr::FoundOne;
         }
       }
     } else {
       // leave it, possibly adjusted later!
-      return PPEmbedExpr::FoundOne;
+      return EmbedExpr::FoundOne;
     }
   }
   if (std::find_if(ExprList.begin(), ExprList.end(),
                    [](const Expr *const SomeExpr) {
-                     return isa<PPEmbedExpr>(SomeExpr->IgnoreParens());
+                     return isa<EmbedExpr>(SomeExpr->IgnoreParens());
                    }) == ExprList.end()) {
     // We didn't find one.
-    return PPEmbedExpr::NotFound;
+    return EmbedExpr::NotFound;
   }
   // Otherwise, we found one but it is not the sole entry in the initialization
   // list.
-  return PPEmbedExpr::Expanded;
+  return EmbedExpr::Expanded;
 }
 
 bool Sema::CheckConversionToObjCLiteral(QualType DstType, Expr *&Exp,

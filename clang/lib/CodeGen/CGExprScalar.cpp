@@ -506,7 +506,7 @@ public:
   }
 
   Value *VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E);
-  Value *VisitEmbedSubscriptExpr(EmbedSubscriptExpr *E);
+  Value *VisitEmbedExpr(EmbedExpr *E);
 
   Value *VisitOpaqueValueExpr(OpaqueValueExpr *E) {
     if (E->isGLValue())
@@ -1797,10 +1797,9 @@ ScalarExprEmitter::VisitSYCLUniqueStableNameExpr(SYCLUniqueStableNameExpr *E) {
                                                      "usn_addr_cast");
 }
 
-Value *ScalarExprEmitter::VisitEmbedSubscriptExpr(EmbedSubscriptExpr *E) {
+Value *ScalarExprEmitter::VisitEmbedExpr(EmbedExpr *E) {
   assert(E->getDataElementCount() == 1);
-  PPEmbedExpr *PPEmbed = E->getEmbed();
-  auto It = PPEmbed->begin() + E->getBegin();
+  auto It = E->begin();
   return Builder.getInt((*It)->getValue());
 }
 
