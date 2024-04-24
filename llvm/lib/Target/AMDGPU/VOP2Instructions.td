@@ -163,7 +163,7 @@ multiclass VOP2Inst_e32<string opName,
   } // End renamedInGFX9 = GFX9Renamed
 }
 multiclass
-    VOP2Inst_e32_VOPD<string opName, VOPProfile P, bits<5> VOPDOp,
+    VOP2Inst_e32_VOPD<string opName, VOPProfile P, bits<6> VOPDOp,
                       string VOPDName, SDPatternOperator node = null_frag,
                       string revOp = opName, bit GFX9Renamed = 0> {
   defm NAME : VOP2Inst_e32<opName, P, node, revOp, GFX9Renamed>,
@@ -190,7 +190,7 @@ multiclass VOP2Inst_e64<string opName,
 }
 
 multiclass VOP2Inst_e64_VOPD<string opName,
-                             VOPProfile P, bits<5> VOPDOp,
+                             VOPProfile P, bits<6> VOPDOp,
                              string VOPDName,
                              SDPatternOperator node = null_frag,
                              string revOp = opName,
@@ -257,7 +257,7 @@ multiclass VOP2Inst_e64_t16<string opName,
 
 multiclass VOP2Inst_VOPD<string opName,
                          VOPProfile P,
-                         bits<5> VOPDOp,
+                         bits<6> VOPDOp,
                          string VOPDName,
                          SDPatternOperator node = null_frag,
                          string revOp = opName,
@@ -327,7 +327,7 @@ multiclass VOP2bInstAliases<VOP2_Pseudo ps, VOP2_Real inst, string OpName> {
 }
 
 multiclass
-    VOP2eInst_Base<string opName, VOPProfile P, bits<5> VOPDOp, string VOPDName,
+    VOP2eInst_Base<string opName, VOPProfile P, bits<6> VOPDOp, string VOPDName,
                    SDPatternOperator node, string revOp, bit useSGPRInput> {
 
   let SchedRW = [Write32Bit] in {
@@ -376,7 +376,7 @@ multiclass
     : VOP2eInst_Base<opName, P, -1, "", node, revOp, useSGPRInput>;
 
 multiclass
-    VOP2eInst_VOPD<string opName, VOPProfile P, bits<5> VOPDOp, string VOPDName,
+    VOP2eInst_VOPD<string opName, VOPProfile P, bits<6> VOPDOp, string VOPDName,
                    SDPatternOperator node = null_frag, string revOp = opName,
                    bit useSGPRInput = !eq(P.NumSrcArgs, 3)>
     : VOP2eInst_Base<opName, P, VOPDOp, VOPDName, node, revOp, useSGPRInput>;
@@ -795,8 +795,8 @@ defm V_MUL_U32_U24 : VOP2Inst <"v_mul_u32_u24", VOP_I32_I32_I32_ARITH, AMDGPUmul
 defm V_MUL_HI_U32_U24 : VOP2Inst <"v_mul_hi_u32_u24", VOP_I32_I32_I32, AMDGPUmulhi_u24>;
 defm V_MIN_F32 : VOP2Inst_VOPD <"v_min_f32", VOP_F32_F32_F32, 0xb, "v_min_f32", fminnum_like>;
 defm V_MAX_F32 : VOP2Inst_VOPD <"v_max_f32", VOP_F32_F32_F32, 0xa, "v_max_f32", fmaxnum_like>;
-defm V_MIN_I32 : VOP2Inst_VOPD <"v_min_i32", VOP_PAT_GEN<VOP_I32_I32_I32>, 0x0f, "v_min_i32", smin>;
-defm V_MAX_I32 : VOP2Inst_VOPD <"v_max_i32", VOP_PAT_GEN<VOP_I32_I32_I32>, 0x0e, "v_max_i32", smax>;
+defm V_MIN_I32 : VOP2Inst_VOPD <"v_min_i32", VOP_PAT_GEN<VOP_I32_I32_I32>, 0x18, "v_min_i32", smin>;
+defm V_MAX_I32 : VOP2Inst_VOPD <"v_max_i32", VOP_PAT_GEN<VOP_I32_I32_I32>, 0x17, "v_max_i32", smax>;
 defm V_MIN_U32 : VOP2Inst <"v_min_u32", VOP_PAT_GEN<VOP_I32_I32_I32>, umin>;
 defm V_MAX_U32 : VOP2Inst <"v_max_u32", VOP_PAT_GEN<VOP_I32_I32_I32>, umax>;
 defm V_LSHRREV_B32 : VOP2Inst_VOPD <"v_lshrrev_b32", VOP_I32_I32_I32, 0x15, "v_lshrrev_b32", clshr_rev_32, "v_lshr_b32">;
@@ -1312,11 +1312,11 @@ def : VOPBinOpClampPat<usubsat, V_SUB_U16_e64, i16>;
 let SubtargetPredicate = isGFX12Plus, isReMaterializable = 1 in {
   let SchedRW = [WriteDoubleAdd], isCommutable = 1 in {
     let FPDPRounding = 1 in {
-      defm V_ADD_F64_pseudo : VOP2Inst_VOPD <"v_add_f64_pseudo", VOP_F64_F64_F64, 0x18, "v_add_f64", any_fadd>;
-      defm V_MUL_F64_pseudo : VOP2Inst_VOPD <"v_mul_f64_pseudo", VOP_F64_F64_F64, 0x19, "v_mul_f64", fmul>;
+      defm V_ADD_F64_pseudo : VOP2Inst_VOPD <"v_add_f64_pseudo", VOP_F64_F64_F64, 0x21, "v_add_f64", any_fadd>;
+      defm V_MUL_F64_pseudo : VOP2Inst_VOPD <"v_mul_f64_pseudo", VOP_F64_F64_F64, 0x22, "v_mul_f64", fmul>;
     } // End FPDPRounding = 1
-    defm V_MIN_NUM_F64 : VOP2Inst_VOPD <"v_min_num_f64", VOP_F64_F64_F64, 0x1c, "v_min_num_f64", fminnum_like>;
-    defm V_MAX_NUM_F64 : VOP2Inst_VOPD <"v_max_num_f64", VOP_F64_F64_F64, 0x1b, "v_max_num_f64", fmaxnum_like>;
+    defm V_MIN_NUM_F64 : VOP2Inst_VOPD <"v_min_num_f64", VOP_F64_F64_F64, 0x24, "v_min_num_f64", fminnum_like>;
+    defm V_MAX_NUM_F64 : VOP2Inst_VOPD <"v_max_num_f64", VOP_F64_F64_F64, 0x23, "v_max_num_f64", fmaxnum_like>;
   } // End SchedRW = [WriteDoubleAdd], isCommutable = 1
   let SchedRW = [Write64Bit] in {
     defm V_LSHLREV_B64_pseudo : VOP2Inst <"v_lshlrev_b64_pseudo", VOP_I64_I32_I64, clshl_rev_64>;
