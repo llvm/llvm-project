@@ -681,10 +681,8 @@ Error LLJITBuilderState::prepareForConstruction() {
         inconvertibleErrorCode());
 #endif // !LLVM_ENABLE_THREADS
 
-  LLVM_DEBUG({
-    bool ConcurrentCompilationSettingDefaulted = !SupportConcurrentCompilation;
-  });
-
+  [[maybe_unused]] bool ConcurrentCompilationSettingDefaulted =
+      !SupportConcurrentCompilation;
   if (!SupportConcurrentCompilation) {
 #if LLVM_ENABLE_THREADS
     SupportConcurrentCompilation = NumCompileThreads || ES || EPC;
