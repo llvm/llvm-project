@@ -544,6 +544,10 @@ public:
                               bool isImport, bool ModulesEnabled, Module *M,
                               bool &IsFirstIncludeOfFile);
 
+  /// Record that we're parsing this file as part of the current module, if any.
+  /// The header's owning modulemap is considered to affect the current module.
+  void EnteredTextualFile(FileEntryRef File);
+
   /// Return whether the specified file is a normal header,
   /// a system header, or a C++ friendly system header.
   SrcMgr::CharacteristicKind getFileDirFlavor(FileEntryRef File) {
