@@ -1418,10 +1418,8 @@ void SelectionDAG::clear() {
   TargetExternalSymbols.clear();
   MCSymbols.clear();
   SDEI.clear();
-  std::fill(CondCodeNodes.begin(), CondCodeNodes.end(),
-            static_cast<CondCodeSDNode*>(nullptr));
-  std::fill(ValueTypeNodes.begin(), ValueTypeNodes.end(),
-            static_cast<SDNode*>(nullptr));
+  std::fill(CondCodeNodes.begin(), CondCodeNodes.end(), nullptr);
+  std::fill(ValueTypeNodes.begin(), ValueTypeNodes.end(), nullptr);
 
   EntryNode.UseList = nullptr;
   InsertNode(&EntryNode);
@@ -2995,6 +2993,14 @@ SelectionDAG::getValidShiftAmountConstant(SDValue V,
   return nullptr;
 }
 
+const APInt *SelectionDAG::getValidShiftAmountConstant(SDValue V) const {
+  EVT VT = V.getValueType();
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
+  return getValidShiftAmountConstant(V, DemandedElts);
+}
+
 const APInt *SelectionDAG::getValidMinimumShiftAmountConstant(
     SDValue V, const APInt &DemandedElts) const {
   assert((V.getOpcode() == ISD::SHL || V.getOpcode() == ISD::SRL ||
@@ -3024,6 +3030,14 @@ const APInt *SelectionDAG::getValidMinimumShiftAmountConstant(
   return MinShAmt;
 }
 
+const APInt *SelectionDAG::getValidMinimumShiftAmountConstant(SDValue V) const {
+  EVT VT = V.getValueType();
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
+  return getValidMinimumShiftAmountConstant(V, DemandedElts);
+}
+
 const APInt *SelectionDAG::getValidMaximumShiftAmountConstant(
     SDValue V, const APInt &DemandedElts) const {
   assert((V.getOpcode() == ISD::SHL || V.getOpcode() == ISD::SRL ||
@@ -3051,6 +3065,14 @@ const APInt *SelectionDAG::getValidMaximumShiftAmountConstant(
     MaxShAmt = &ShAmt;
   }
   return MaxShAmt;
+}
+
+const APInt *SelectionDAG::getValidMaximumShiftAmountConstant(SDValue V) const {
+  EVT VT = V.getValueType();
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
+  return getValidMaximumShiftAmountConstant(V, DemandedElts);
 }
 
 /// Determine which bits of Op are known to be either zero or one and return
@@ -12946,7 +12968,7 @@ void SelectionDAG::copyExtraInfo(SDNode *From, SDNode *To) {
   // Use of operator[] on the DenseMap may cause an insertion, which invalidates
   // the iterator, hence the need to make a copy to prevent a use-after-free.
   NodeExtraInfo NEI = I->second;
-  if (LLVM_LIKELY(!NEI.PCSections)) {
+  if (LLVM_LIKELY(!NEI.PCSections) && LLVM_LIKELY(!NEI.MMRA)) {
     // No deep copy required for the types of extra info set.
     //
     // FIXME: Investigate if other types of extra info also need deep copy. This

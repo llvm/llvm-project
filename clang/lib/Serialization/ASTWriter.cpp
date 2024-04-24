@@ -3618,7 +3618,6 @@ class ASTIdentifierTableTrait {
   /// doesn't check whether the name has macros defined; use PublicMacroIterator
   /// to check that.
   bool isInterestingIdentifier(const IdentifierInfo *II, uint64_t MacroOffset) {
-    II->getObjCOrBuiltinID();
     bool IsInteresting =
         II->getNotableIdentifierID() !=
             tok::NotableIdentifierKind::not_notable ||
@@ -5097,7 +5096,7 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
       DeclsToCheckForDeferredDiags.push_back(getDeclID(D));
   if (!DeclsToCheckForDeferredDiags.empty())
     Stream.EmitRecord(DECLS_TO_CHECK_FOR_DEFERRED_DIAGS,
-                      DeclsToCheckForDeferredDiags);
+        DeclsToCheckForDeferredDiags);
 
   // Write the record containing CUDA-specific declaration references.
   RecordData CUDASpecialDeclRefs;
