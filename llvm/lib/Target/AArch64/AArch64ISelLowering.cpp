@@ -1948,8 +1948,7 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::MULHS, VT, Default);
   setOperationAction(ISD::MULHU, VT, Default);
   setOperationAction(ISD::OR, VT, Default);
-  setOperationAction(ISD::SCALAR_TO_VECTOR, VT,
-                     isTypeLegal(VT) ? Legal : Expand);
+  setOperationAction(ISD::SCALAR_TO_VECTOR, VT, PreferNEON ? Legal : Expand);
   setOperationAction(ISD::SDIV, VT, Default);
   setOperationAction(ISD::SELECT, VT, Default);
   setOperationAction(ISD::SETCC, VT, Default);
