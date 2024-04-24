@@ -546,7 +546,7 @@ public:
   bool getTailAgnostic() const { return TailAgnostic; }
   bool getMaskAgnostic() const { return MaskAgnostic; }
 
-  bool hasNonZeroAVL(const MachineRegisterInfo &MRI) const {
+  bool hasNonZeroAVL() const {
     if (hasAVLImm())
       return getAVLImm() > 0;
     if (hasAVLReg()) {
@@ -561,11 +561,10 @@ public:
     return false;
   }
 
-  bool hasEquallyZeroAVL(const VSETVLIInfo &Other,
-                         const MachineRegisterInfo &MRI) const {
+  bool hasEquallyZeroAVL(const VSETVLIInfo &Other) const {
     if (hasSameAVL(Other))
       return true;
-    return (hasNonZeroAVL(MRI) && Other.hasNonZeroAVL(MRI));
+    return (hasNonZeroAVL() && Other.hasNonZeroAVL());
   }
 
   bool hasSameAVL(const VSETVLIInfo &Other) const {
@@ -666,7 +665,7 @@ public:
     if (Used.VLAny && !(hasSameAVL(Require) && hasSameVLMAX(Require)))
       return false;
 
-    if (Used.VLZeroness && !hasEquallyZeroAVL(Require, MRI))
+    if (Used.VLZeroness && !hasEquallyZeroAVL(Require))
       return false;
 
     return hasCompatibleVTYPE(Used, Require);
@@ -1203,7 +1202,7 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
   // variant, so we avoid the transform to prevent extending live range of an
   // avl register operand.
   // TODO: We can probably relax this for immediates.
-  bool EquallyZero = IncomingInfo.hasEquallyZeroAVL(PrevInfo, *MRI) &&
+  bool EquallyZero = IncomingInfo.hasEquallyZeroAVL(PrevInfo) &&
                      IncomingInfo.hasSameVLMAX(PrevInfo);
   if (Demanded.VLAny || (Demanded.VLZeroness && !EquallyZero))
     Info.setAVL(IncomingInfo);
@@ -1592,7 +1591,7 @@ static bool canMutatePriorConfig(const MachineInstr &PrevMI,
       if (isVLPreservingConfig(PrevMI))
         return false;
       if (!getInfoForVSETVLI(PrevMI, MRI)
-               .hasEquallyZeroAVL(getInfoForVSETVLI(MI, MRI), MRI))
+               .hasEquallyZeroAVL(getInfoForVSETVLI(MI, MRI)))
         return false;
     }
 
