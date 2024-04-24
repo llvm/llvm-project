@@ -93,13 +93,13 @@ public:
           const auto Reg = Operand.getReg();
 
           const auto RegUnits = TRI->regunits(Reg);
-          if (any_of(RegUnits, [&RegisterUseCount](const MCRegUnit &Unit) {
+          if (any_of(RegUnits, [&RegisterUseCount](const MCRegUnit Unit) {
                 return RegisterUseCount[Unit] > 1;
               }))
             AllProducerOperandsAreSingleUse = false;
 
           // Reset uses count when a register is no longer live.
-          for (const MCRegUnit &Unit : RegUnits)
+          for (const MCRegUnit Unit : RegUnits)
             RegisterUseCount.erase(Unit);
         }
 
@@ -107,10 +107,10 @@ public:
           const auto Reg = Operand.getReg();
 
           // Count the number of times each register is read.
-          for (const MCRegUnit &Unit : TRI->regunits(Reg))
+          for (const MCRegUnit Unit : TRI->regunits(Reg))
             RegistersUsed.insert(Unit);
         }
-        for (const MCRegUnit &Unit : RegistersUsed)
+        for (const MCRegUnit Unit : RegistersUsed)
           RegisterUseCount[Unit]++;
 
         // Do not attempt to optimise across exec mask changes.
