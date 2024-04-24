@@ -2955,7 +2955,7 @@ public:
         _RHS = new ValueBit(*VB._RHS);
       }
     }
-    ValueBit& operator=(const ValueBit &VB) {
+    ValueBit &operator=(const ValueBit &VB) {
       _Type = VB._Type;
       if (_Type == BitType::REF)
         _BitRef = VB._BitRef;
@@ -3272,8 +3272,8 @@ symbolicallyExecute(BasicBlock *BB,
         }
       }
       assert(IncomingBlock);
-      ValueMap.insert({&I,
-          getOrCreateValueBits(PHI->getIncomingValueForBlock(IncomingBlock))});
+      ValueMap.insert({&I, getOrCreateValueBits(
+                               PHI->getIncomingValueForBlock(IncomingBlock))});
     } break;
     case Instruction::Shl: {
       ConstantInt *CI = getConstantOperand(&I, 1);
@@ -3320,8 +3320,8 @@ symbolicallyExecute(BasicBlock *BB,
       }
       auto IfTrue = getOrCreateValueBits(Select->getTrueValue());
       auto IfFalse = getOrCreateValueBits(Select->getFalseValue());
-      ValueMap.insert({&I,
-          std::make_shared<PredicatedValueBits>(Cond, IfTrue, IfFalse)});
+      ValueMap.insert(
+          {&I, std::make_shared<PredicatedValueBits>(Cond, IfTrue, IfFalse)});
     } break;
     default:
       // If this instruction is not recognized, then just continue. This is
@@ -3456,7 +3456,7 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
   // any unexpected loop variant operations happening, e.g. additional select
   // logic or shifts, then this will be captured in the ValueBits.
   std::map<Value *, std::shared_ptr<ValueBits>> ValueMap;
-    
+
   if (!symbolicallyExecute(CurLoop->getHeader(), ValueMap))
     return false;
 
@@ -3487,8 +3487,8 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
   // whether this is bit reversed CRC
   ICmpInst *ICmp = CRCOutBitsPred->getPredicate();
   CmpInst::Predicate Pred = ICmp->getPredicate();
-  LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRecognize checking to see if " << *ICmp
-                    << " is checking the "
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE << " CRCRecognize checking to see if "
+                    << *ICmp << " is checking the "
                     << (CRC.BitReversed ? "LSB\n" : "MSB\n"));
 
   // Firstly check the LHS is in our map, and RHS is a constant
@@ -3620,7 +3620,8 @@ bool LoopIdiomRecognize::recognizeCRC(const SCEV *BECount) {
   }
   uint64_t GeneratorPolynomial =
       CRC.BitReversed ? reverseBits(CRC.Polynomial, CRCSize) : CRC.Polynomial;
-  PValueBits Polynomial = std::make_shared<ValueBits>(GeneratorPolynomial, CRCSize);
+  PValueBits Polynomial =
+      std::make_shared<ValueBits>(GeneratorPolynomial, CRCSize);
 
   // Case where the MSB/LSB of the data is 0
   PValueBits IfZero = CRC.BitReversed ? ValueBits::LShr(*CRCValueBits, 1)
