@@ -252,6 +252,7 @@ createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
   if (!SpvType)
     SpvType = GR.getSPIRVTypeForVReg(SrcReg);
   assert(SpvType && "VReg is expected to have SPIRV type");
+  LLT SrcLLT = MRI.getType(SrcReg);
   LLT NewT = LLT::scalar(32);
   bool IsFloat = SpvType->getOpcode() == SPIRV::OpTypeFloat;
   bool IsVectorFloat =
@@ -261,10 +262,10 @@ createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
   IsFloat |= IsVectorFloat;
   auto GetIdOp = IsFloat ? SPIRV::GET_fID : SPIRV::GET_ID;
   auto DstClass = IsFloat ? &SPIRV::fIDRegClass : &SPIRV::IDRegClass;
-  if (MRI.getType(SrcReg).isPointer()) {
+  if (SrcLLT.isPointer()) {
     unsigned PtrSz = GR.getPointerSize();
     NewT = LLT::pointer(0, PtrSz);
-    bool IsVec = MRI.getType(SrcReg).isVector();
+    bool IsVec = SrcLLT.isVector();
     if (IsVec)
       NewT = LLT::fixed_vector(2, NewT);
     if (PtrSz == 64) {
@@ -284,7 +285,7 @@ createNewIdReg(SPIRVType *SpvType, Register SrcReg, MachineRegisterInfo &MRI,
         DstClass = &SPIRV::pID32RegClass;
       }
     }
-  } else if (MRI.getType(SrcReg).isVector()) {
+  } else if (SrcLLT.isVector()) {
     NewT = LLT::fixed_vector(2, NewT);
     if (IsFloat) {
       GetIdOp = SPIRV::GET_vfID;
@@ -483,7 +484,8 @@ static void processInstrsWithTypeFolding(MachineFunction &MF,
         continue;
       Register DstReg = MI.getOperand(0).getReg();
       bool IsDstPtr = MRI.getType(DstReg).isPointer();
-      if (IsDstPtr || MRI.getType(DstReg).isVector())
+      bool isDstVec = MRI.getType(DstReg).isVector();
+      if (IsDstPtr || isDstVec)
         MRI.setRegClass(DstReg, &SPIRV::IDRegClass);
       // Don't need to reset type of register holding constant and used in
       // G_ADDRSPACE_CAST, since it breaks legalizer.
