@@ -132,16 +132,7 @@ define <1 x double> @select_v1f64(<1 x double> %op1, <1 x double> %op2, i1 %mask
 ; CHECK-LABEL: select_v1f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    tst w0, #0x1
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    csetm x8, ne
-; CHECK-NEXT:    mvn x9, x8
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    mov z3.d, x9
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    and z1.d, z1.d, z3.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    fcsel d0, d0, d1, ne
 ; CHECK-NEXT:    ret
   %sel = select i1 %mask, <1 x double> %op1, <1 x double> %op2
   ret <1 x double> %sel

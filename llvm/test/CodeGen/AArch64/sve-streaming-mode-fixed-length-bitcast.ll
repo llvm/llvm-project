@@ -60,11 +60,8 @@ define void @bitcast_v2i16(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldrh w8, [x0, #2]
-; CHECK-NEXT:    str w8, [sp, #4]
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    str w8, [sp]
-; CHECK-NEXT:    ldr d0, [sp]
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    mov z1.s, z0.s[1]
 ; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    strh w8, [sp, #8]

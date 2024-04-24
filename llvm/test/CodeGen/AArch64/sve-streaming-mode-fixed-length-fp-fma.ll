@@ -112,9 +112,6 @@ define void @fma_v8f32(ptr %a, ptr %b, ptr %c) {
 define <1 x double> @fma_v1f64(<1 x double> %op1, <1 x double> %op2, <1 x double> %op3) {
 ; CHECK-LABEL: fma_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    // kill: def $d2 killed $d2 def $z2
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fmadd d0, d0, d1, d2
 ; CHECK-NEXT:    ret
   %mul = fmul contract <1 x double> %op1, %op2
