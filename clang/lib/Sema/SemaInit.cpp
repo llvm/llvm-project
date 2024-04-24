@@ -1976,6 +1976,29 @@ static bool checkDestructorReference(QualType ElementType, SourceLocation Loc,
   return SemaRef.DiagnoseUseOfDecl(Destructor, Loc);
 }
 
+static bool canInitializeArrayWithEmbedDataString(ArrayRef<Expr *> ExprList,
+                                                  QualType InitType,
+                                                  ASTContext &Context) {
+  // Only one initializer, it's an embed and the types match;
+  EmbedExpr *First =
+      ExprList.size() == 1
+          ? dyn_cast_if_present<EmbedExpr>(ExprList[0]->IgnoreParens())
+          : nullptr;
+  if (First) {
+    if (InitType->isArrayType()) {
+      const ArrayType *InitArrayType = InitType->getAsArrayTypeUnsafe();
+      QualType InitElementTy = InitArrayType->getElementType();
+      QualType EmbedExprElementTy = First->getType();
+      const bool TypesMatch =
+          Context.typesAreCompatible(InitElementTy, EmbedExprElementTy) ||
+          (InitElementTy->isCharType() && EmbedExprElementTy->isCharType());
+      if (TypesMatch)
+        return true;
+    }
+  }
+  return false;
+}
+
 void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
                                      InitListExpr *IList, QualType &DeclType,
                                      llvm::APSInt elementIndex,
@@ -1993,10 +2016,10 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
     }
   }
 
-  if (SemaRef.CheckExprListForPPEmbedExpr(IList->inits(), DeclType) ==
-      EmbedExpr::FoundOne) {
-    EmbedExpr *PPEmbed = cast<EmbedExpr>(IList->inits()[0]);
-    IList->setInit(0, PPEmbed->getDataStringLiteral());
+  if (canInitializeArrayWithEmbedDataString(IList->inits(), DeclType,
+                                            SemaRef.Context)) {
+    EmbedExpr *Embed = cast<EmbedExpr>(IList->inits()[0]);
+    IList->setInit(0, Embed->getDataStringLiteral());
   }
 
   // Check for the special-case of initializing an array with a string.

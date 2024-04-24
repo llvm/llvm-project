@@ -4840,16 +4840,9 @@ class EmbedExpr final : public Expr {
   unsigned NumOfElements;
 
 public:
-  enum Action {
-    NotFound,
-    FoundOne,
-    Expanded,
-  };
-
   EmbedExpr(const ASTContext &Ctx, SourceLocation BLoc,
             SourceLocation RParenLoc, DeclContext *ParentContext,
             EmbedDataStorage *Data, unsigned Begin, unsigned NumOfElements);
-  /// Build an empty call expression.
   explicit EmbedExpr(EmptyShell Empty) : Expr(SourceLocExprClass, Empty) {}
 
   const DeclContext *getParentContext() const { return ParentContext; }

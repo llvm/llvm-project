@@ -5664,14 +5664,9 @@ public:
                                 SourceLocation RPLoc);
 
   // #embed
-  ExprResult ActOnPPEmbedExpr(SourceLocation BuiltinLoc,
-                              SourceLocation BinaryDataLoc,
-                              SourceLocation RPLoc, StringLiteral *Filename,
-                              StringLiteral *BinaryData);
-
-  EmbedExpr::Action
-  CheckExprListForPPEmbedExpr(ArrayRef<Expr *> ExprList,
-                              std::optional<QualType> MaybeInitType);
+  ExprResult ActOnEmbedExpr(SourceLocation BuiltinLoc,
+                            SourceLocation BinaryDataLoc, SourceLocation RPLoc,
+                            StringLiteral *Filename, StringLiteral *BinaryData);
 
   // Build a potentially resolved SourceLocExpr.
   ExprResult BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,

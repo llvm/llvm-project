@@ -17041,61 +17041,15 @@ ExprResult Sema::BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
       SourceLocExpr(Context, Kind, ResultTy, BuiltinLoc, RPLoc, ParentContext);
 }
 
-ExprResult Sema::ActOnPPEmbedExpr(SourceLocation BuiltinLoc,
-                                  SourceLocation BinaryDataLoc,
-                                  SourceLocation RPLoc, StringLiteral *Filename,
-                                  StringLiteral *BinaryData) {
+ExprResult Sema::ActOnEmbedExpr(SourceLocation BuiltinLoc,
+                                SourceLocation BinaryDataLoc,
+                                SourceLocation RPLoc, StringLiteral *Filename,
+                                StringLiteral *BinaryData) {
   EmbedDataStorage *Data = new (Context) EmbedDataStorage;
   Data->Filename = Filename;
   Data->BinaryData = BinaryData;
   return new (Context) EmbedExpr(Context, BuiltinLoc, RPLoc, CurContext, Data,
                                  0, Data->getDataElementCount());
-}
-
-// TODO simplify
-EmbedExpr::Action
-Sema::CheckExprListForPPEmbedExpr(ArrayRef<Expr *> ExprList,
-                                  std::optional<QualType> MaybeInitType) {
-  if (ExprList.empty()) {
-    return EmbedExpr::NotFound;
-  }
-  EmbedExpr *First =
-      ExprList.size() == 1
-          ? dyn_cast_if_present<EmbedExpr>(ExprList[0]->IgnoreParens())
-          : nullptr;
-  if (First) {
-    // only one and it's an embed
-    if (MaybeInitType) {
-      // With the type information, we have a duty to check if it matches;
-      // if not, explode it out into a list of integer literals.
-      QualType &InitType = *MaybeInitType;
-      if (InitType->isArrayType()) {
-        const ArrayType *InitArrayType = InitType->getAsArrayTypeUnsafe();
-        QualType InitElementTy = InitArrayType->getElementType();
-        QualType EmbedExprElementTy = First->getType();
-        const bool TypesMatch =
-            Context.typesAreCompatible(InitElementTy, EmbedExprElementTy) ||
-            (InitElementTy->isCharType() && EmbedExprElementTy->isCharType());
-        if (TypesMatch) {
-          // Keep the EmbedExpr, report that everything has been found.
-          return EmbedExpr::FoundOne;
-        }
-      }
-    } else {
-      // leave it, possibly adjusted later!
-      return EmbedExpr::FoundOne;
-    }
-  }
-  if (std::find_if(ExprList.begin(), ExprList.end(),
-                   [](const Expr *const SomeExpr) {
-                     return isa<EmbedExpr>(SomeExpr->IgnoreParens());
-                   }) == ExprList.end()) {
-    // We didn't find one.
-    return EmbedExpr::NotFound;
-  }
-  // Otherwise, we found one but it is not the sole entry in the initialization
-  // list.
-  return EmbedExpr::Expanded;
 }
 
 bool Sema::CheckConversionToObjCLiteral(QualType DstType, Expr *&Exp,
