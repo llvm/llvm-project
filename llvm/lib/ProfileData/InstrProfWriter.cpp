@@ -565,11 +565,9 @@ static Error writeMemProfV2(
   OS.write(0ULL); // Reserve space for the memprof call stack payload offset.
   OS.write(0ULL); // Reserve space for the memprof call stack table offset.
 
-  memprof::MemProfSchema Schema;
+  auto Schema = memprof::PortableMemInfoBlock::getHotColdSchema();
   if (MemProfFullSchema)
     Schema = memprof::PortableMemInfoBlock::getFullSchema();
-  else
-    Schema = memprof::PortableMemInfoBlock::getHotColdSchema();
   writeMemProfSchema(OS, Schema);
 
   uint64_t RecordTableOffset =
