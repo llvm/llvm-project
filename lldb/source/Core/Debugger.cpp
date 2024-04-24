@@ -1426,9 +1426,19 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
       std::make_shared<CallbackLogHandler>(log_callback, baton);
 }
 
-void Debugger::SetDestroyCallback(
+void Debugger::AddDestroyCallback(
     lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
   m_destroy_callback_and_baton.emplace_back(destroy_callback, baton);
+}
+
+void Debugger::SetDestroyCallback(
+    lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
+  ClearDestroyCallback();
+  AddDestroyCallback(destroy_callback, baton);
+}
+
+void Debugger::ClearDestroyCallback() {
+  m_destroy_callback_and_baton.clear();
 }
 
 static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,

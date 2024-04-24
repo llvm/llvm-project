@@ -568,9 +568,20 @@ public:
 
   static void ReportSymbolChange(const ModuleSpec &module_spec);
 
+  /// Add a callback for when the debugger is destroyed. A list is maintained
+  /// internally.
+  void
+  AddDestroyCallback(lldb_private::DebuggerDestroyCallback destroy_callback,
+                     void *baton);
+
+  /// Clear the list of callbacks, then add the callback.
   void
   SetDestroyCallback(lldb_private::DebuggerDestroyCallback destroy_callback,
                      void *baton);
+
+  /// Clear the list of callbacks.
+  void
+  ClearDestroyCallback();
 
   /// Manually start the global event handler thread. It is useful to plugins
   /// that directly use the \a lldb_private namespace and want to use the
