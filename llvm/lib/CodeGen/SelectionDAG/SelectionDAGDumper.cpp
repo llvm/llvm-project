@@ -299,6 +299,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::SETCCCARRY:                 return "setcccarry";
   case ISD::STRICT_FSETCC:              return "strict_fsetcc";
   case ISD::STRICT_FSETCCS:             return "strict_fsetccs";
+  case ISD::FPTRUNC_ROUND:              return "fptrunc_round";
   case ISD::SELECT:                     return "select";
   case ISD::VSELECT:                    return "vselect";
   case ISD::SELECT_CC:                  return "select_cc";
