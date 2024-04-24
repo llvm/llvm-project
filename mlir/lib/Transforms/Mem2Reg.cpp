@@ -126,6 +126,9 @@ public:
   /// returns nothing otherwise.
   std::optional<MemorySlotPromotionInfo> computeInfo();
 
+  /// The slot has single definition or not.
+  auto getSingleDefining() { return singleDefining; };
+
 private:
   /// Computes the transitive uses of the slot that block promotion. This finds
   /// uses that would block the promotion, checks that the operation has a
@@ -156,6 +159,11 @@ private:
   MemorySlot slot;
   DominanceInfo &dominance;
   const DataLayout &dataLayout;
+
+  /// If there is only one defining operation for the current slot, will save
+  /// this pointer part, otherwise empty. And when meeting the define and uses
+  /// in the same region the `bool` part will been set true, otherwise false.
+  llvm::PointerIntPair<Operation *, 1, bool> singleDefining{};
 };
 
 /// The MemorySlotPromoter handles the state of promoting a memory slot. It
@@ -166,7 +174,7 @@ public:
   MemorySlotPromoter(MemorySlot slot, PromotableAllocationOpInterface allocator,
                      RewriterBase &rewriter, DominanceInfo &dominance,
                      const DataLayout &dataLayout, MemorySlotPromotionInfo info,
-                     const Mem2RegStatistics &statistics);
+                     const Mem2RegStatistics &statistics, Operation *def);
 
   /// Actually promotes the slot by mutating IR. Promoting a slot DOES
   /// invalidate the MemorySlotPromotionInfo of other slots. Preparation of
@@ -185,6 +193,9 @@ private:
   /// slot will contain before any write, typically a poison value.
   /// This method must only be called at most once per region.
   void computeReachingDefInRegion(Region *region, Value reachingDef);
+
+  ///
+  void computeReachingDefOfSingleDefiningUses();
 
   /// Removes the blocking uses of the slot, in topological order.
   void removeBlockingUses();
@@ -207,6 +218,7 @@ private:
   const DataLayout &dataLayout;
   MemorySlotPromotionInfo info;
   const Mem2RegStatistics &statistics;
+  Operation *singleDefining;
 };
 
 } // namespace
@@ -215,10 +227,10 @@ MemorySlotPromoter::MemorySlotPromoter(
     MemorySlot slot, PromotableAllocationOpInterface allocator,
     RewriterBase &rewriter, DominanceInfo &dominance,
     const DataLayout &dataLayout, MemorySlotPromotionInfo info,
-    const Mem2RegStatistics &statistics)
+    const Mem2RegStatistics &statistics, Operation *singleDefining)
     : slot(slot), allocator(allocator), rewriter(rewriter),
       dominance(dominance), dataLayout(dataLayout), info(std::move(info)),
-      statistics(statistics) {
+      statistics(statistics), singleDefining(singleDefining) {
 #ifndef NDEBUG
   auto isResultOrNewBlockArgument = [&]() {
     if (BlockArgument arg = dyn_cast<BlockArgument>(slot.ptr))
@@ -256,6 +268,7 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
     blockingUses.insert(&use);
   }
 
+  size_t totalStores{};
   // Then, propagate the requirements for the removal of uses. The
   // topologically-sorted forward slice allows for all blocking uses of an
   // operation to have been computed before it is reached. Operations are
@@ -278,8 +291,11 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
                                        dataLayout))
         return failure();
     } else if (auto promotable = dyn_cast<PromotableMemOpInterface>(user)) {
-      if (!promotable.canUsesBeRemoved(slot, blockingUses, newBlockingUses,
-                                       dataLayout))
+      if (promotable.canUsesBeRemoved(slot, blockingUses, newBlockingUses,
+                                      dataLayout))
+        promotable.storesTo(slot) ? singleDefining.setPointer(user),
+            totalStores++         : 0;
+      else
         return failure();
     } else {
       // An operation that has blocking uses must be promoted. If it is not
@@ -297,14 +313,52 @@ LogicalResult MemorySlotPromotionAnalyzer::computeBlockingUses(
     }
   }
 
-  // Because this pass currently only supports analysing the parent region of
-  // the slot pointer, if a promotable memory op that needs promotion is outside
-  // of this region, promotion must fail because it will be impossible to
-  // provide a valid `reachingDef` for it.
-  for (auto &[toPromote, _] : userToBlockingUses)
-    if (isa<PromotableMemOpInterface>(toPromote) &&
-        toPromote->getParentRegion() != slot.ptr.getParentRegion())
+  // The define uses web only have one definition, It is the potential case.
+  totalStores != 1 ? singleDefining.setPointer(nullptr) : (void)0;
+
+  // The single definition can not dominate all of the uses, there are some
+  // uses need default value and block arguments. But current dominate
+  // frontier algorithms only support single region, so failed.
+  auto leagelSingleDefiningMultiRegions = [this](BlockingUsesMap &userMap) {
+    if (singleDefining.getPointer() == nullptr)
       return failure();
+
+    // The single definition dominate all the uses, we can ignore whether
+    // all of the uses and definotion in a same region.
+    for (auto &[user, _] : userMap)
+      if (!dominance.dominates(singleDefining.getPointer(), user))
+        return failure();
+    // The same region case is fail in here we can konwn, clear the bool value
+    // of `singleDefing`, otherwise we may confuse weather same region or single
+    // define multiple region. Place this above return success() because when
+    // return failure() there is not any afterwards, will clear everything
+    // prepare the next slot.
+    singleDefining.setInt(false);
+    return success();
+  };
+
+  // Because we will first check weather def-uses at same region, if this
+  // success, we will missing the opportunity clear the pointer value
+  // of`singleDefinig`, so we need to known weather this is the same region case
+  // in the code afterward. If same region check fails, this value will been
+  // clear at the single defining multiple regions case.
+  singleDefining.setInt(true);
+  // Because this pass currently only supports has only one defining operation
+  // for the , slot or analysing the parent region of the slot pointer, if a
+  // promotable memory op that needs promotion is outside of this region,
+  // promotion must fail because it will be impossible to provide a valid
+  // `reachingDef` for it.
+  for (auto &[toPromote, _] : userToBlockingUses) {
+    if (isa<PromotableMemOpInterface>(toPromote) &&
+        toPromote->getParentRegion() != slot.ptr.getParentRegion()) {
+      // Same region fails, maybe we can save this. Checkes the single defining
+      // operation and its uses in multiple regions can been proceed the stored
+      // value forwards.
+      if (succeeded(leagelSingleDefiningMultiRegions(userToBlockingUses)))
+        return success();
+      return failure();
+    }
+  }
 
   return success();
 }
@@ -369,7 +423,7 @@ SmallPtrSet<Block *, 16> MemorySlotPromotionAnalyzer::computeSlotLiveIn(
 using IDFCalculator = llvm::IDFCalculatorBase<Block, false>;
 void MemorySlotPromotionAnalyzer::computeMergePoints(
     SmallPtrSetImpl<Block *> &mergePoints) {
-  if (slot.ptr.getParentRegion()->hasOneBlock())
+  if (!singleDefining.getInt() || slot.ptr.getParentRegion()->hasOneBlock())
     return;
 
   IDFCalculator idfCalculator(dominance.getDomTree(slot.ptr.getParentRegion()));
@@ -426,12 +480,23 @@ MemorySlotPromotionAnalyzer::computeInfo() {
   return info;
 }
 
+void MemorySlotPromoter::computeReachingDefOfSingleDefiningUses() {
+  auto definingOp = cast<PromotableMemOpInterface>(singleDefining);
+  assert(definingOp.storesTo(slot));
+  rewriter.setInsertionPointAfter(definingOp);
+  Value stored = definingOp.getStored(slot, rewriter, dataLayout);
+  assert(stored && "a memory operation storing to a slot must provide a "
+                   "new definition of the slot");
+  replacedValuesMap[definingOp] = stored;
+
+  for (auto &[op, _] : info.userToBlockingUses)
+    if (auto memOp = dyn_cast<PromotableMemOpInterface>(op))
+      reachingDefs.insert({memOp, stored});
+}
+
 Value MemorySlotPromoter::computeReachingDefInBlock(Block *block,
                                                     Value reachingDef) {
-  SmallVector<Operation *> blockOps;
-  for (Operation &op : block->getOperations())
-    blockOps.push_back(&op);
-  for (Operation *op : blockOps) {
+  for (Operation &op : block->getOperations()) {
     if (auto memOp = dyn_cast<PromotableMemOpInterface>(op)) {
       if (info.userToBlockingUses.contains(memOp))
         reachingDefs.insert({memOp, reachingDef});
@@ -553,8 +618,10 @@ void MemorySlotPromoter::removeBlockingUses() {
   llvm::SmallVector<Operation *> usersToRemoveUses(
       llvm::make_first_range(info.userToBlockingUses));
 
-  // Sort according to dominance.
-  dominanceSort(usersToRemoveUses, *slot.ptr.getParentBlock()->getParent());
+  // Sort according to dominance, but not at the single definition multiple
+  // regions case.
+  if (!singleDefining)
+    dominanceSort(usersToRemoveUses, *slot.ptr.getParentBlock()->getParent());
 
   llvm::SmallVector<Operation *> toErase;
   // List of all replaced values in the slot.
@@ -564,6 +631,13 @@ void MemorySlotPromoter::removeBlockingUses() {
   for (Operation *toPromote : llvm::reverse(usersToRemoveUses)) {
     if (auto toPromoteMemOp = dyn_cast<PromotableMemOpInterface>(toPromote)) {
       Value reachingDef = reachingDefs.lookup(toPromoteMemOp);
+
+#ifndef NDEBUG
+      if (singleDefining)
+        assert(reachingDef && "must have a reaching definition in single "
+                              "definition multiple regions case");
+#endif // NDEBUG
+
       // If no reaching definition is known, this use is outside the reach of
       // the slot. The default value should thus be used.
       if (!reachingDef)
@@ -601,7 +675,8 @@ void MemorySlotPromoter::removeBlockingUses() {
 }
 
 void MemorySlotPromoter::promoteSlot() {
-  computeReachingDefInRegion(slot.ptr.getParentRegion(), {});
+  singleDefining ? computeReachingDefOfSingleDefiningUses()
+                 : computeReachingDefInRegion(slot.ptr.getParentRegion(), {});
 
   // Now that reaching definitions are known, remove all users.
   removeBlockingUses();
@@ -646,7 +721,10 @@ LogicalResult mlir::tryToPromoteMemorySlots(
       std::optional<MemorySlotPromotionInfo> info = analyzer.computeInfo();
       if (info) {
         MemorySlotPromoter(slot, allocator, rewriter, dominance, dataLayout,
-                           std::move(*info), statistics)
+                           std::move(*info), statistics,
+                           analyzer.getSingleDefining().getInt()
+                               ? nullptr
+                               : analyzer.getSingleDefining().getPointer())
             .promoteSlot();
         promotedAny = true;
       }
