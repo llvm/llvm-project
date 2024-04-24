@@ -4,25 +4,40 @@
 ; The si-mode-register pass is changing the default mode for FP constrained  operations.
 ; It must ignore for strictfp functions.
 
-define hidden fastcc double @ignoreStrictfp(double noundef %0, double noundef %1) unnamed_addr #0 {
+define double @ignoreStrictfp(double noundef %a, double noundef %b) #0 {
 ; GCN-LABEL: ignoreStrictfp:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 1
 ; GCN-NEXT:    s_nop 1
-; GCN-NEXT:     s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 0
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 0
 ; GCN-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
-; GCN-NEXT:    s_nop 0
-; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   tail call void @llvm.amdgcn.s.setreg(i32 2177, i32 1)
-  %3 = tail call double @llvm.experimental.constrained.fadd.f64(double %0, double %1, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
-  tail call void @llvm.amdgcn.s.setreg(i32 2177, i32 0)
-  ret double %3
+  %val = tail call double @llvm.experimental.constrained.fadd.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret double %val
+}
+
+define double @set_fpenv(double noundef %a, double noundef %b) #0 {
+; GCN-LABEL: set_fpenv:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 0, 23), 4
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_TRAPSTS, 0, 5), 0
+; GCN-NEXT:    s_nop 0
+; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 0
+; GCN-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  call void @llvm.set.fpenv.i64(i64 4)
+  %val = tail call double @llvm.experimental.constrained.fadd.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret double %val
 }
 
 declare void @llvm.amdgcn.s.setreg(i32 immarg, i32)
 
 declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata)
+
+declare void @llvm.set.fpenv.i64(i64)
 
 attributes #0 = { strictfp }
