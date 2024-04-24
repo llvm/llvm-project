@@ -137,8 +137,7 @@ def CharacterConversion : Pass<"character-conversion"> {
   ];
 }
 
-class CFGConversionBase<string optExt, string operation>
-  : Pass<"cfg-conversion-on-" # optExt # "-opt", operation> {
+def CFGConversion : Pass<"cfg-conversion"> {
   let summary = "Convert FIR structured control flow ops to CFG ops.";
   let description = [{
     Transform the `fir.do_loop`, `fir.if`, `fir.iterate_while` and
@@ -155,14 +154,6 @@ class CFGConversionBase<string optExt, string operation>
            /*default=*/"false",
            "force the body of a loop to execute at least once">
   ];
-}
-
-def CFGConversionOnFunc : CFGConversionBase<"func", "mlir::func::FuncOp"> {
-  let constructor = "::fir::createFirToCfgOnFuncPass()";
-}
-
-def CFGConversionOnReduction : CFGConversionBase<"reduce", "mlir::omp::DeclareReductionOp"> {
-  let constructor = "::fir::createFirToCfgOnReductionPass()";
 }
 
 def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
@@ -201,6 +192,25 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
   let constructor = "::fir::createAddDebugInfoPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::LLVM::LLVMDialect"
+  ];
+  let options = [
+    Option<"debugLevel", "debug-level",
+           "mlir::LLVM::DIEmissionKind",
+           /*default=*/"mlir::LLVM::DIEmissionKind::Full",
+           "debug level",
+           [{::llvm::cl::values(
+            clEnumValN(mlir::LLVM::DIEmissionKind::Full, "Full", "Emit full debug info"),
+            clEnumValN(mlir::LLVM::DIEmissionKind::LineTablesOnly, "LineTablesOnly", "Emit line tables only"),
+            clEnumValN(mlir::LLVM::DIEmissionKind::None, "None", "Emit no debug information")
+          )}]
+           >,
+    Option<"isOptimized", "is-optimized",
+           "bool", /*default=*/"false",
+           "is optimized.">,
+    Option<"inputFilename", "file-name",
+           "std::string",
+           /*default=*/"std::string{}",
+           "name of the input source file">,
   ];
 }
 

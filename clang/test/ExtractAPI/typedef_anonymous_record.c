@@ -21,7 +21,7 @@ typedef struct { } MyStruct;
 // MYSTRUCT-NEXT:   },
 // MYSTRUCT-NEXT:   {
 // MYSTRUCT-NEXT:     "kind": "text",
-// MYSTRUCT-NEXT:     "spelling": " "
+// MYSTRUCT-NEXT:     "spelling": " { ... } "
 // MYSTRUCT-NEXT:   },
 // MYSTRUCT-NEXT:   {
 // MYSTRUCT-NEXT:     "kind": "identifier",
@@ -97,7 +97,7 @@ typedef enum { Case } MyEnum;
 // MYENUM-NEXT:  },
 // MYENUM-NEXT:  {
 // MYENUM-NEXT:    "kind": "text",
-// MYENUM-NEXT:    "spelling": " "
+// MYENUM-NEXT:    "spelling": " { ... } "
 // MYENUM-NEXT:  },
 // MYENUM-NEXT:  {
 // MYENUM-NEXT:    "kind": "identifier",
