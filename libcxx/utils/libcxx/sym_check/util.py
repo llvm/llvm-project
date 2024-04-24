@@ -162,6 +162,17 @@ def extract_object_sizes_from_map(mapfilename: str):
     return True, result
 
 
+def update_symbols_with_supplemental_information(symbols, supplemental_info):
+    for sym in symbols:
+        # Only update from the supplementatl information where the symbol has a
+        # size, that size is not 0 and its type is OBJECT.
+        if "size" not in sym or sym["size"] != 0 or sym["type"] != "OBJECT":
+            continue
+        if sym["name"] in supplemental_info:
+            updated_size = supplemental_info[sym["name"]]
+            sym["size"] = updated_size
+
+
 new_delete_std_symbols = ["_Znam", "_Znwm", "_ZdaPv", "_ZdaPvm", "_ZdlPv", "_ZdlPvm"]
 
 cxxabi_symbols = [

@@ -59,11 +59,14 @@ if (TARGET cxx_shared)
   set(abi_map_file "${CMAKE_CURRENT_BINARY_DIR}/linker.map")
 
   if (EXISTS "${abi_list_file}")
-    add_custom_target(check-cxx-abilist
-      "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/sym_diff.py"
+    set(check_cxx_abilist_parameters "${LIBCXX_SOURCE_DIR}/utils/sym_diff.py"
           --only-stdlib-symbols
           --strict "${abi_list_file}"
-          $<TARGET_FILE:cxx_shared>
+          "$<TARGET_FILE:cxx_shared>")
+    if (APPLE)
+      list(APPEND check_cxx_abilist_parameters --mapfile-new_syms "${abi_map_file}")
+    endif()
+    add_custom_target(check-cxx-abilist COMMAND "${Python3_EXECUTABLE}" ${check_cxx_abilist_parameters}
       DEPENDS cxx_shared
       COMMENT "Testing libc++'s exported symbols against the ABI list")
   else()

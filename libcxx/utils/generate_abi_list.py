@@ -64,14 +64,9 @@ def main(argv):
 
     # Specific to the case where there is supplemental symbol information from a mapfile ...
     if len(supplemental_info) != 0:
-        for sym in symbols:
-            # Only update from the supplementatl information where the symbol has a
-            # size, that size is not 0 and its type is OBJECT.
-            if "size" not in sym or sym["size"] != 0 or sym["type"] != "OBJECT":
-                continue
-            if sym["name"] in supplemental_info:
-                updated_size = supplemental_info[sym["name"]]
-                sym["size"] = updated_size
+        libcxx.sym_check.util.update_symbols_with_supplemental_information(
+            symbols, supplemental_info
+        )
 
     lines = [pprint.pformat(sym, width=99999) for sym in symbols]
     args.output.writelines("\n".join(sorted(lines)))
