@@ -1087,8 +1087,11 @@ void CoroCloner::create() {
   for (CallInst *ResumeCall : Shape.SymmetricTransfers) {
     ResumeCall = cast<CallInst>(VMap[ResumeCall]);
     ResumeCall->setCallingConv(NewF->getCallingConv());
-    if (TTI.supportsTailCallFor(ResumeCall))
+    if (TTI.supportsTailCallFor(ResumeCall)) {
+      // FIXME: Could we support symmetric transfer effectively without
+      // musttail?
       ResumeCall->setTailCallKind(CallInst::TCK_MustTail);
+    }
 
     // Put a 'ret void' after the call, and split any remaining instructions to
     // an unreachable block.
