@@ -301,13 +301,8 @@ define i1 @recursiveGEP_withPtrSubTrunc_knownObject() {
 ; CHECK-NEXT:    [[CMP5_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP5_NOT_I]], label [[LEN_EXIT:%.*]], label [[WHILE_COND_I]]
 ; CHECK:       len.exit:
-; CHECK-NEXT:    [[SUB_PTR_LHS_CAST_I:%.*]] = ptrtoint ptr [[TEST_0_I]] to i64
-; CHECK-NEXT:    [[SUB_PTR_RHS_CAST_I:%.*]] = ptrtoint ptr [[FOO]] to i64
-; CHECK-NEXT:    [[SUB_PTR_SUB_I:%.*]] = sub i64 [[SUB_PTR_LHS_CAST_I]], [[SUB_PTR_RHS_CAST_I]]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[SUB_PTR_SUB_I]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 256, ptr nonnull [[FOO]])
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %foo = alloca %struct.Foo, align 1
