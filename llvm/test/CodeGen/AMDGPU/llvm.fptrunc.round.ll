@@ -266,16 +266,51 @@ define amdgpu_gs void @s_fptrunc_round_v2f32_to_v2f16_upward_multiple_calls(<2 x
   ret void
 }
 
-; FIXME
-; define amdgpu_gs <3 x half> @v_fptrunc_round_v3f32_to_v3f16_upward(<3 x float> %a) {
-;   %res = call <3 x half> @llvm.fptrunc.round.v3f16.v3f32(<3 x float> %a, metadata !"round.upward")
-;   ret <3 x half> %res
-; }
+define amdgpu_gs <3 x half> @v_fptrunc_round_v3f32_to_v3f16_upward(<3 x float> %a) {
+; SDAG-LABEL: v_fptrunc_round_v3f32_to_v3f16_upward:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
+; SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SDAG-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v2
+; SDAG-NEXT:    ; return to shader part epilog
+;
+; GISEL-LABEL: v_fptrunc_round_v3f32_to_v3f16_upward:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 1), 1
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v2
+; GISEL-NEXT:    ; return to shader part epilog
+  %res = call <3 x half> @llvm.fptrunc.round.v3f16.v3f32(<3 x float> %a, metadata !"round.upward")
+  ret <3 x half> %res
+}
 
-; define amdgpu_gs <3 x half> @v_fptrunc_round_v3f32_to_v3f16_downward(<3 x float> %a) {
-;   %res = call <3 x half> @llvm.fptrunc.round.v3f16.v3f32(<3 x float> %a, metadata !"round.downward")
-;   ret <3 x half> %res
-; }
+define amdgpu_gs <3 x half> @v_fptrunc_round_v3f32_to_v3f16_downward(<3 x float> %a) {
+; SDAG-LABEL: v_fptrunc_round_v3f32_to_v3f16_downward:
+; SDAG:       ; %bb.0:
+; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 1
+; SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SDAG-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v2
+; SDAG-NEXT:    ; return to shader part epilog
+;
+; GISEL-LABEL: v_fptrunc_round_v3f32_to_v3f16_downward:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 3, 1), 1
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GISEL-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GISEL-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v2
+; GISEL-NEXT:    ; return to shader part epilog
+  %res = call <3 x half> @llvm.fptrunc.round.v3f16.v3f32(<3 x float> %a, metadata !"round.downward")
+  ret <3 x half> %res
+}
 
 define amdgpu_gs <4 x half> @v_fptrunc_round_v4f32_to_v4f16_upward(<4 x float> %a) {
 ; SDAG-LABEL: v_fptrunc_round_v4f32_to_v4f16_upward:
