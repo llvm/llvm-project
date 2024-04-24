@@ -28,7 +28,7 @@ createLinkGraphFromCOFFObject_arm64(MemoryBufferRef ObjectBuffer);
 
 /// jit-link the given object buffer, which must be a COFF arm64 object file.
 void link_COFF_arm64(std::unique_ptr<LinkGraph> G,
-                      std::unique_ptr<JITLinkContext> Ctx);
+                     std::unique_ptr<JITLinkContext> Ctx);
 
 /// Return the string name of the given COFF arm64 edge kind.
 const char *getCOFFARM64RelocationKindName(Edge::Kind R);
