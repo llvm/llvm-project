@@ -37,9 +37,12 @@ end program
 ! CHECK:             %[[VAL_6:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_4]]#1 {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK:             %[[VAL_7:.*]] = arith.constant true
 ! CHECK:             %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_5]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
-! CHECK:             %[[VAL_9:.*]] = fir.convert %[[VAL_8]]#0 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK:             hlfir.assign %[[VAL_1]] to %[[VAL_9]] : i32, !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK:             fir.store %[[VAL_9]] to %[[VAL_10]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:             %[[C0:.*]] = arith.constant 0 : index
+! CHECK:             %[[DIMS:.*]]:3 = fir.box_dims %[[VAL_2]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+! CHECK:             %[[SHIFT:.*]] = fir.shape_shift %[[DIMS]]#0, %[[DIMS]]#1 : (index, index) -> !fir.shapeshift<1>
+! CHECK:             %[[REBOX:.*]] = fir.rebox %[[VAL_8]]#0(%[[SHIFT]]) : (!fir.box<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:             hlfir.assign %[[VAL_1]] to %[[REBOX]] : i32, !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:             fir.store %[[REBOX]] to %[[VAL_10]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:           }
 ! CHECK:           omp.yield(%[[VAL_10]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK:         } combiner {
