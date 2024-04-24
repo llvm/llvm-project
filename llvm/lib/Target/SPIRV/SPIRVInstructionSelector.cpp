@@ -646,6 +646,37 @@ bool SPIRVInstructionSelector::selectUnOp(Register ResVReg,
                                           const SPIRVType *ResType,
                                           MachineInstr &I,
                                           unsigned Opcode) const {
+  if (STI.isOpenCLEnv() && I.getOperand(1).isReg()) {
+    Register SrcReg = I.getOperand(1).getReg();
+    bool IsGV = false;
+    for (MachineRegisterInfo::def_instr_iterator DefIt =
+             MRI->def_instr_begin(SrcReg);
+         DefIt != MRI->def_instr_end(); DefIt = std::next(DefIt)) {
+      if ((*DefIt).getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
+        IsGV = true;
+        break;
+      }
+    }
+    if (IsGV) {
+      uint32_t SpecOpcode = 0;
+      switch (Opcode) {
+      case SPIRV::OpConvertPtrToU:
+        SpecOpcode = static_cast<uint32_t>(SPIRV::Opcode::ConvertPtrToU);
+        break;
+      case SPIRV::OpConvertUToPtr:
+        SpecOpcode = static_cast<uint32_t>(SPIRV::Opcode::ConvertUToPtr);
+        break;
+      }
+      if (SpecOpcode)
+        return BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                       TII.get(SPIRV::OpSpecConstantOp))
+            .addDef(ResVReg)
+            .addUse(GR.getSPIRVTypeID(ResType))
+            .addImm(SpecOpcode)
+            .addUse(SrcReg)
+            .constrainAllUses(TII, TRI, RBI);
+    }
+  }
   return selectUnOpWithSrc(ResVReg, ResType, I, I.getOperand(1).getReg(),
                            Opcode);
 }

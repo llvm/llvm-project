@@ -224,6 +224,10 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
         }
         break;
       }
+      case TargetOpcode::G_PTRTOINT:
+        SpirvTy = GR->getOrCreateSPIRVIntegerType(
+            MRI.getType(Reg).getScalarSizeInBits(), MIB);
+        break;
       case TargetOpcode::G_TRUNC:
       case TargetOpcode::G_ADDRSPACE_CAST:
       case TargetOpcode::G_PTR_ADD:
@@ -441,6 +445,7 @@ static void generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         insertAssignInstr(Reg, Ty, nullptr, GR, MIB, MRI);
       } else if (MI.getOpcode() == TargetOpcode::G_TRUNC ||
                  MI.getOpcode() == TargetOpcode::G_ZEXT ||
+                 MI.getOpcode() == TargetOpcode::G_PTRTOINT ||
                  MI.getOpcode() == TargetOpcode::G_GLOBAL_VALUE ||
                  MI.getOpcode() == TargetOpcode::COPY ||
                  MI.getOpcode() == TargetOpcode::G_ADDRSPACE_CAST) {
