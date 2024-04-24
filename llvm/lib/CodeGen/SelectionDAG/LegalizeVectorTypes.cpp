@@ -5007,7 +5007,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_FCOPYSIGN(SDNode *N) {
 
 /// Result and first source operand are different scalar types, but must have
 /// the same number of elements. There is an additional control argument which
-/// should be passed thruogh unchanged.
+/// should be passed through unchanged.
 SDValue DAGTypeLegalizer::WidenVecRes_UnarySameEltsWithScalarArg(SDNode *N) {
   SDValue FpValue = N->getOperand(0);
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
