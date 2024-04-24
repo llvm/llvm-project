@@ -339,7 +339,7 @@ public:
     // - We don't model fields that are used only in these nested declaration,
     //   so trying to propagate a result object to initializers of such fields
     //   would cause an error.
-    if (isa<RecordDecl>(D) || isa<FunctionDecl>(D))
+    if (isa_and_nonnull<RecordDecl>(D) || isa_and_nonnull<FunctionDecl>(D))
       return true;
 
     return RecursiveASTVisitor<ResultObjectVisitor>::TraverseDecl(D);
