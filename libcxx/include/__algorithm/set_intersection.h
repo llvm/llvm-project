@@ -134,7 +134,8 @@ private:
   }
 };
 
-// with forward iterators we can use binary search to skip over entries
+// with forward iterators we can make multiple passes over the data, allowing the use of one-sided binary search to reduce best-case
+// complexity to log(N)
 template <class _AlgPolicy,
           class _Compare,
           class _InForwardIter1,
@@ -190,24 +191,11 @@ __set_intersection(
     }
   }
 
-  return std::__set_intersection_result<_InInputIter1, _InInputIter2, _OutIter>(
+  return __set_intersection_result<_InInputIter1, _InInputIter2, _OutIter>(
       _IterOps<_AlgPolicy>::next(std::move(__first1), std::move(__last1)),
       _IterOps<_AlgPolicy>::next(std::move(__first2), std::move(__last2)),
       std::move(__result));
 }
-
-template <class _AlgPolicy, class _Iter>
-class __set_intersection_iter_category {
-  template <class _It>
-  using __cat = typename std::_IterOps<_AlgPolicy>::template __iterator_category<_It>;
-  template <class _It>
-  static __cat<_It> test(__cat<_It>*);
-  template <class>
-  static std::input_iterator_tag test(...);
-
-public:
-  using __type = decltype(test<_Iter>(nullptr));
-};
 
 template <class _AlgPolicy, class _Compare, class _InIter1, class _Sent1, class _InIter2, class _Sent2, class _OutIter>
 _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI
@@ -221,8 +209,8 @@ __set_intersection(
       std::move(__last2),
       std::move(__result),
       __comp,
-      typename std::__set_intersection_iter_category<_AlgPolicy, _InIter1>::__type(),
-      typename std::__set_intersection_iter_category<_AlgPolicy, _InIter2>::__type());
+      typename std::_IterOps<_AlgPolicy>::template __iterator_category<_InIter1>(),
+      typename std::_IterOps<_AlgPolicy>::template __iterator_category<_InIter2>());
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator, class _Compare>
