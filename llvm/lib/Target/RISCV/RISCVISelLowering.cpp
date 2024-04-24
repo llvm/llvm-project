@@ -16832,7 +16832,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
           StrideC && StrideC->getZExtValue() == ElementSize)
         return DAG.getMaskedStore(Store->getChain(), DL, Value, Base,
                                   DAG.getUNDEF(XLenVT), Mask,
-                                  Store->getMemoryVT(), Store->getMemOperand(),
+                                  Value.getValueType(), Store->getMemOperand(),
                                   ISD::UNINDEXED, false);
       return SDValue();
     }
