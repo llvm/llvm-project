@@ -234,6 +234,9 @@ def err_cxx23_size_t_suffix: Error<
 def err_size_t_literal_too_large: Error<
   "%select{signed |}0'size_t' literal is out of range of possible "
   "%select{signed |}0'size_t' values">;
+def ext_cxx_bitint_suffix : Extension<
+  "'_BitInt' suffix for literals is a Clang extension">,
+  InGroup<BitIntExtension>;
 def ext_c23_bitint_suffix : ExtWarn<
   "'_BitInt' suffix for literals is a C23 extension">,
   InGroup<C23>;

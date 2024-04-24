@@ -53,15 +53,15 @@ public:
 
   using const_iterator = forward_list<tzdb>::const_iterator;
 
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI const tzdb& front() const noexcept { return __front(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const tzdb& front() const noexcept { return __front(); }
 
   _LIBCPP_HIDE_FROM_ABI const_iterator erase_after(const_iterator __p) { return __erase_after(__p); }
 
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI const_iterator begin() const noexcept { return __begin(); }
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI const_iterator end() const noexcept { return __end(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_iterator begin() const noexcept { return __begin(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_iterator end() const noexcept { return __end(); }
 
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const noexcept { return __cbegin(); }
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI const_iterator cend() const noexcept { return __cend(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const noexcept { return __cbegin(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const_iterator cend() const noexcept { return __cend(); }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI __impl& __implementation() { return *__impl_; }
 
@@ -79,24 +79,23 @@ private:
   __impl* __impl_;
 };
 
-_LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI tzdb_list& get_tzdb_list();
+[[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI tzdb_list& get_tzdb_list();
 
-_LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline const tzdb& get_tzdb() {
+[[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline const tzdb& get_tzdb() {
   return get_tzdb_list().front();
 }
 
-_LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline const time_zone*
-locate_zone(string_view __name) {
+[[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline const time_zone* locate_zone(string_view __name) {
   return get_tzdb().locate_zone(__name);
 }
 
-_LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline const time_zone* current_zone() {
+[[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_HIDE_FROM_ABI inline const time_zone* current_zone() {
   return get_tzdb().current_zone();
 }
 
 _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI const tzdb& reload_tzdb();
 
-_LIBCPP_NODISCARD_EXT _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI string remote_version();
+[[nodiscard]] _LIBCPP_AVAILABILITY_TZDB _LIBCPP_EXPORTED_FROM_ABI string remote_version();
 
 } // namespace chrono
 
