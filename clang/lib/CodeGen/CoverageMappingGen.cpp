@@ -300,6 +300,22 @@ public:
                            : SM.getIncludeLoc(SM.getFileID(Loc));
   }
 
+  /// Find out where the current file is included or macro is expanded. If the
+  /// found expansion is a <scratch space>, keep looking.
+  SourceLocation getIncludeOrNonScratchExpansionLoc(SourceLocation Loc) {
+    if (Loc.isMacroID()) {
+      Loc = SM.getImmediateExpansionRange(Loc).getBegin();
+      while (Loc.isMacroID() &&
+             SM.isWrittenInScratchSpace(SM.getSpellingLoc(Loc))) {
+        auto ExpansionRange = SM.getImmediateExpansionRange(Loc);
+        Loc = ExpansionRange.getBegin();
+      }
+    } else {
+      Loc = SM.getIncludeLoc(SM.getFileID(Loc));
+    }
+    return Loc;
+  }
+
   /// Return true if \c Loc is a location in a built-in macro.
   bool isInBuiltin(SourceLocation Loc) {
     return SM.getBufferName(SM.getSpellingLoc(Loc)) == "<built-in>";
@@ -547,7 +563,8 @@ public:
     SourceRegionFilter Filter;
     for (const auto &FM : FileIDMapping) {
       SourceLocation ExpandedLoc = FM.second.second;
-      SourceLocation ParentLoc = getIncludeOrExpansionLoc(ExpandedLoc);
+      SourceLocation ParentLoc =
+          getIncludeOrNonScratchExpansionLoc(ExpandedLoc);
       if (ParentLoc.isInvalid())
         continue;
 
