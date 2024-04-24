@@ -554,6 +554,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"radix", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"set_exponent", &I::genSetExponent},
+    {"shape",
+     &I::genShape,
+     {{{"source", asBox}, {"kind", asValue}}},
+     /*isElemental=*/false},
     {"shifta", &I::genShiftA},
     {"shiftl", &I::genShift<mlir::arith::ShLIOp>},
     {"shiftr", &I::genShift<mlir::arith::ShRUIOp>},
@@ -5819,6 +5823,35 @@ mlir::Value IntrinsicLibrary::genSetExponent(mlir::Type resultType,
       loc, resultType,
       fir::runtime::genSetExponent(builder, loc, fir::getBase(args[0]),
                                    fir::getBase(args[1])));
+}
+
+// SHAPE
+fir::ExtendedValue
+IntrinsicLibrary::genShape(mlir::Type resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() >= 1);
+  const fir::ExtendedValue &array = args[0];
+  int rank = array.rank();
+  if (rank == 0)
+    TODO(loc, "shape intrinsic lowering with assumed-rank source");
+  mlir::Type indexType = builder.getIndexType();
+  mlir::Type extentType = fir::unwrapSequenceType(resultType);
+  mlir::Type seqType = fir::SequenceType::get(
+      {static_cast<fir::SequenceType::Extent>(rank)}, extentType);
+  mlir::Value shapeArray = builder.createTemporary(loc, seqType);
+  mlir::Type shapeAddrType = builder.getRefType(extentType);
+  for (int dim = 0; dim < rank; ++dim) {
+    mlir::Value extent = fir::factory::readExtent(builder, loc, array, dim);
+    extent = builder.createConvert(loc, extentType, extent);
+    auto index = builder.createIntegerConstant(loc, indexType, dim);
+    auto shapeAddr = builder.create<fir::CoordinateOp>(loc, shapeAddrType,
+                                                       shapeArray, index);
+    builder.create<fir::StoreOp>(loc, extent, shapeAddr);
+  }
+  mlir::Value shapeArrayExtent =
+      builder.createIntegerConstant(loc, indexType, rank);
+  llvm::SmallVector<mlir::Value> extents{shapeArrayExtent};
+  return fir::ArrayBoxValue{shapeArray, extents};
 }
 
 // SHIFTL, SHIFTR
