@@ -2517,6 +2517,23 @@ let Predicates = [HasSVEorSME] in {
     def : Pat<(vscale (sve_cntd_imm_neg i32:$imm)), (SUBXrs XZR, (CNTD_XPiI 31, $imm), 0)>;
   }
 
+  // Add NoUseScalarIncVL to avoid affecting for patterns with UseScalarIncVL
+  let Predicates = [HasSVEorSME, NoUseScalarIncVL] in {
+    def : Pat<(add GPR64:$op, (vscale (sve_cnth_imm_neg i32:$imm))),
+              (SUBXrs GPR64:$op, (CNTH_XPiI 31, $imm), 0)>;
+    def : Pat<(add GPR64:$op, (vscale (sve_cntw_imm_neg i32:$imm))),
+              (SUBXrs GPR64:$op, (CNTW_XPiI 31, $imm), 0)>;
+    def : Pat<(add GPR64:$op, (vscale (sve_cntd_imm_neg i32:$imm))),
+              (SUBXrs GPR64:$op, (CNTD_XPiI 31, $imm), 0)>;
+
+    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cnth_imm_neg i32:$imm))))),
+              (SUBSWrr GPR32:$op, (EXTRACT_SUBREG (CNTH_XPiI 31, $imm), sub_32))>;
+    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cntw_imm_neg i32:$imm))))),
+              (SUBSWrr GPR32:$op, (EXTRACT_SUBREG (CNTW_XPiI 31, $imm), sub_32))>;
+    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cntd_imm_neg i32:$imm))))),
+              (SUBSWrr GPR32:$op, (EXTRACT_SUBREG (CNTD_XPiI 31, $imm), sub_32))>;
+  }
+
   let AddedComplexity = 5 in {
     def : Pat<(nxv8i16 (add ZPR:$op, (nxv8i16 (splat_vector (i32 (trunc (vscale (sve_cnth_imm i32:$imm)))))))),
               (INCH_ZPiI ZPR:$op, 31, $imm)>;
@@ -2581,27 +2598,6 @@ let Predicates = [HasSVEorSME] in {
               (EXTRACT_SUBREG (DECD_XPiI (INSERT_SUBREG (IMPLICIT_DEF),
                                           GPR32:$op, sub_32), 31, $imm),
                                sub_32)>;
-  }
-
-  // Add NoUseScalarIncVL to avoid affecting for patterns with UseScalarIncVL
-  let Predicates = [NoUseScalarIncVL] in {
-    def : Pat<(add GPR64:$op, (vscale (sve_rdvl_imm i32:$imm))),
-              (ADDXrs GPR64:$op, (RDVLI_XI $imm), 0)>;
-    def : Pat<(add GPR64:$op, (vscale (sve_cnth_imm_neg i32:$imm))),
-              (SUBXrs GPR64:$op, (CNTH_XPiI 31, $imm), 0)>;
-    def : Pat<(add GPR64:$op, (vscale (sve_cntw_imm_neg i32:$imm))),
-              (SUBXrs GPR64:$op, (CNTW_XPiI 31, $imm), 0)>;
-    def : Pat<(add GPR64:$op, (vscale (sve_cntd_imm_neg i32:$imm))),
-              (SUBXrs GPR64:$op, (CNTD_XPiI 31, $imm), 0)>;
-
-    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_rdvl_imm i32:$imm))))),
-              (ADDSWrr GPR32:$op, (EXTRACT_SUBREG (RDVLI_XI $imm), sub_32))>;
-    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cnth_imm_neg i32:$imm))))),
-              (SUBSWrr GPR32:$op, (EXTRACT_SUBREG (CNTH_XPiI 31, $imm), sub_32))>;
-    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cntw_imm_neg i32:$imm))))),
-              (SUBSWrr GPR32:$op, (EXTRACT_SUBREG (CNTW_XPiI 31, $imm), sub_32))>;
-    def : Pat<(add GPR32:$op, (i32 (trunc (vscale (sve_cntd_imm_neg i32:$imm))))),
-              (SUBSWrr GPR32:$op, (EXTRACT_SUBREG (CNTD_XPiI 31, $imm), sub_32))>;
   }
 
   // FIXME: BigEndian requires an additional REV instruction to satisfy the
