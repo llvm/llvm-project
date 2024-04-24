@@ -387,7 +387,7 @@ SBType SBTypeStaticField::GetType() {
 }
 
 SBValue SBTypeStaticField::GetConstantValue(lldb::SBTarget target) {
-  LLDB_INSTRUMENT_VA(this);
+  LLDB_INSTRUMENT_VA(this, target);
 
   if (!IsValid())
     return SBValue();
