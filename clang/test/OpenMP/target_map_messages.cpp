@@ -234,7 +234,7 @@ struct SA {
     {}
     #pragma omp target map(always close: a)   // expected-error {{missing map type}} omp52-error{{missing ',' after map type modifier}}
     {}
-    #pragma omp target map(always close bf: a)   // omp52-error 2 {{missing ',' after map type modifier}} expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
+    #pragma omp target map(always close bf: a)   // omp52-error 2 {{missing ',' after map type modifier}} expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}} 
     {}
     // omp52-error@+4 {{missing ',' after map type modifier}}
     // ge51-error@+3 {{incorrect map type modifier, expected one of: 'always', 'close', 'mapper', 'present'}}
@@ -421,9 +421,9 @@ void SAclient(int arg) {
 
 #pragma omp target map(r.ArrS[0].B)
   {}
-#pragma omp target map(r.ArrS[:1].B)   // expected-error {{array section is not allowed here}}
+#pragma omp target map(r.ArrS[:1].B)   // expected-error {{OpenMP array section is not allowed here}}
   {}
-#pragma omp target map(r.ArrS[:arg].B) // expected-error {{array section is not allowed here}}
+#pragma omp target map(r.ArrS[:arg].B) // expected-error {{OpenMP array section is not allowed here}}
   {}
 #pragma omp target map(r.ArrS[0].Arr [1:23])
   {}
@@ -473,9 +473,9 @@ void SAclient(int arg) {
   {}
 #pragma omp target map(r.Ptr [3:5])
   {}
-#pragma omp target map(r.ArrS [3:5].A)         // expected-error {{array section is not allowed here}}
+#pragma omp target map(r.ArrS [3:5].A)         // expected-error {{OpenMP array section is not allowed here}}
   {}
-#pragma omp target map(r.ArrS [3:5].Arr [6:7]) // expected-error {{array section is not allowed here}}
+#pragma omp target map(r.ArrS [3:5].Arr [6:7]) // expected-error {{OpenMP array section is not allowed here}}
   {}
 #pragma omp target map(r.ArrS[3].Arr [6:7])
   {}

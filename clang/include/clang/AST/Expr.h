@@ -6748,30 +6748,41 @@ private:
     OPENACC_END_EXPR = STRIDE
   };
 
-  ArraySectionType ASType;
-  Stmt *SubExprs[END_EXPR] = {0};
+  ArraySectionType ASType = OMPArraySection;
+  Stmt *SubExprs[END_EXPR] = {nullptr};
   SourceLocation ColonLocFirst;
   SourceLocation ColonLocSecond;
   SourceLocation RBracketLoc;
 
 public:
-  ArraySectionExpr(ArraySectionType ASType, Expr *Base, Expr *LowerBound,
+  // Constructor for OMP array sections, which include a 'stride'.
+  ArraySectionExpr(Expr *Base, Expr *LowerBound,
                    Expr *Length, Expr *Stride, QualType Type, ExprValueKind VK,
                    ExprObjectKind OK, SourceLocation ColonLocFirst,
                    SourceLocation ColonLocSecond, SourceLocation RBracketLoc)
-      : Expr(ArraySectionExprClass, Type, VK, OK), ASType(ASType),
+      : Expr(ArraySectionExprClass, Type, VK, OK), ASType(OMPArraySection),
         ColonLocFirst(ColonLocFirst), ColonLocSecond(ColonLocSecond),
         RBracketLoc(RBracketLoc) {
     setBase(Base);
     setLowerBound(LowerBound);
     setLength(Length);
-
-    assert((!isOpenACCArraySection() || Stride == nullptr) &&
-           "Stride not valid on an OpenACC array section");
-    if (ASType == OMPArraySection)
-      setStride(Stride);
+    setStride(Stride);
     setDependence(computeDependence(this));
   }
+
+  // Constructor for OpenACC sub-arrays, which do not permit a 'stride'.
+  ArraySectionExpr(Expr *Base, Expr *LowerBound,
+                   Expr *Length, QualType Type, ExprValueKind VK,
+                   ExprObjectKind OK, SourceLocation ColonLoc,
+                   SourceLocation RBracketLoc)
+      : Expr(ArraySectionExprClass, Type, VK, OK), ASType(OpenACCArraySection),
+        ColonLocFirst(ColonLoc), RBracketLoc(RBracketLoc) {
+    setBase(Base);
+    setLowerBound(LowerBound);
+    setLength(Length);
+    setDependence(computeDependence(this));
+  }
+
   /// Create an empty array section expression.
   explicit ArraySectionExpr(EmptyShell Shell)
       : Expr(ArraySectionExprClass, Shell) {}

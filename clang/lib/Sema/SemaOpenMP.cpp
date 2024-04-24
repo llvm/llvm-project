@@ -24671,10 +24671,9 @@ ExprResult SemaOpenMP::ActOnOMPArraySectionExpr(
        (LowerBound->isTypeDependent() || LowerBound->isValueDependent())) ||
       (Length && (Length->isTypeDependent() || Length->isValueDependent())) ||
       (Stride && (Stride->isTypeDependent() || Stride->isValueDependent()))) {
-    return new (Context)
-        ArraySectionExpr(ArraySectionExpr::OMPArraySection, Base, LowerBound,
-                         Length, Stride, Context.DependentTy, VK_LValue,
-                         OK_Ordinary, ColonLocFirst, ColonLocSecond, RBLoc);
+    return new (Context) ArraySectionExpr(
+        Base, LowerBound, Length, Stride, Context.DependentTy, VK_LValue,
+        OK_Ordinary, ColonLocFirst, ColonLocSecond, RBLoc);
   }
 
   // Perform default conversions.
@@ -24807,10 +24806,9 @@ ExprResult SemaOpenMP::ActOnOMPArraySectionExpr(
       return ExprError();
     Base = Result.get();
   }
-  return new (Context)
-      ArraySectionExpr(ArraySectionExpr::OMPArraySection, Base, LowerBound,
-                       Length, Stride, Context.ArraySectionTy, VK_LValue,
-                       OK_Ordinary, ColonLocFirst, ColonLocSecond, RBLoc);
+  return new (Context) ArraySectionExpr(
+      Base, LowerBound, Length, Stride, Context.ArraySectionTy, VK_LValue,
+      OK_Ordinary, ColonLocFirst, ColonLocSecond, RBLoc);
 }
 
 ExprResult SemaOpenMP::ActOnOMPArrayShapingExpr(

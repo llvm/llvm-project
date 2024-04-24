@@ -433,10 +433,9 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
   // TODO OpenACC: We likely have to reproduce a lot of the same logic from the
   // OMP version of this, but at the moment we don't have a good way to test it,
   // so for now we'll just create the node.
-  return new (Context) ArraySectionExpr(
-      ArraySectionExpr::OpenACCArraySection, Base, LowerBound, Length,
-      /*Stride=*/nullptr, Context.ArraySectionTy, VK_LValue, OK_Ordinary,
-      ColonLoc, SourceLocation{}, RBLoc);
+  return new (Context)
+      ArraySectionExpr(Base, LowerBound, Length, Context.ArraySectionTy,
+                       VK_LValue, OK_Ordinary, ColonLoc, RBLoc);
 }
 
 bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,

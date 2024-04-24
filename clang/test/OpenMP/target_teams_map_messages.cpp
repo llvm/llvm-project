@@ -228,9 +228,9 @@ void SAclient(int arg) {
 
   #pragma omp target teams map(r.ArrS[0].B)
   {}
-  #pragma omp target teams map(r.ArrS[:1].B) // expected-error {{array section is not allowed here}}
+  #pragma omp target teams map(r.ArrS[:1].B) // expected-error {{OpenMP array section is not allowed here}}
   {}
-  #pragma omp target teams map(r.ArrS[:arg].B) // expected-error {{array section is not allowed here}}
+  #pragma omp target teams map(r.ArrS[:arg].B) // expected-error {{OpenMP array section is not allowed here}}
   {}
   #pragma omp target teams map(r.ArrS[0].Arr[1:23])
   {}
@@ -282,9 +282,9 @@ void SAclient(int arg) {
   {}
   #pragma omp target teams map(r.Ptr[3:5])
   {}
-  #pragma omp target teams map(r.ArrS[3:5].A)   // expected-error {{array section is not allowed here}}
+  #pragma omp target teams map(r.ArrS[3:5].A)   // expected-error {{OpenMP array section is not allowed here}}
   {}
-  #pragma omp target teams map(r.ArrS[3:5].Arr[6:7])   // expected-error {{array section is not allowed here}}
+  #pragma omp target teams map(r.ArrS[3:5].Arr[6:7])   // expected-error {{OpenMP array section is not allowed here}}
   {}
   #pragma omp target teams map(r.ArrS[3].Arr[6:7])
   {}
