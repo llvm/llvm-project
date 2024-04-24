@@ -27,7 +27,7 @@ namespace rdar10544564 {
   X (Y::*func_mem_ptr2)() = &Y::memfunc2;
 }
 
-namespace test2 {
+namespace GH40906 {
   struct A {
     int val;
     void func() {}
