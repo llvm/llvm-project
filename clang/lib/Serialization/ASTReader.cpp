@@ -2444,9 +2444,10 @@ InputFileInfo ASTReader::getInputFileInfo(ModuleFile &F, unsigned ID) {
   R.Overridden = static_cast<bool>(Record[3]);
   R.Transient = static_cast<bool>(Record[4]);
   R.TopLevel = static_cast<bool>(Record[5]);
-  R.ModuleMap = static_cast<bool>(Record[6]);
+  R.TopLevelAmongAffecting = static_cast<bool>(Record[6]);
+  R.ModuleMap = static_cast<bool>(Record[7]);
   std::tie(R.FilenameAsRequested, R.Filename) = [&]() {
-    uint16_t AsRequestedLength = Record[7];
+    uint16_t AsRequestedLength = Record[8];
 
     std::string NameAsRequested = Blob.substr(0, AsRequestedLength).str();
     std::string Name = Blob.substr(AsRequestedLength).str();

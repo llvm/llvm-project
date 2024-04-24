@@ -616,7 +616,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MDC.ScanInstance.getASTReader()->visitInputFileInfos(
       *MF, /*IncludeSystem=*/true,
       [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
-        if (!(IFI.TopLevel && IFI.ModuleMap))
+        if (!(IFI.TopLevelAmongAffecting && IFI.ModuleMap))
           return;
         if (StringRef(IFI.FilenameAsRequested)
                 .ends_with("__inferred_module.map"))
