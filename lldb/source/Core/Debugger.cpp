@@ -743,10 +743,11 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
 }
 
 void Debugger::HandleDestroyCallback() {
-  if (m_destroy_callback) {
-    m_destroy_callback(GetID(), m_destroy_callback_baton);
-    m_destroy_callback = nullptr;
+  const lldb::user_id_t user_id = GetID();
+  for (const auto &callback_and_baton : m_destroy_callback_and_baton) {
+    callback_and_baton.first(user_id, callback_and_baton.second);
   }
+  m_destroy_callback_and_baton.clear();
 }
 
 void Debugger::Destroy(DebuggerSP &debugger_sp) {
@@ -1427,8 +1428,7 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
 
 void Debugger::SetDestroyCallback(
     lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
-  m_destroy_callback = destroy_callback;
-  m_destroy_callback_baton = baton;
+  m_destroy_callback_and_baton.emplace_back(destroy_callback, baton);
 }
 
 static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,
