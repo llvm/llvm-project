@@ -2,14 +2,14 @@
 # RUN:   %PYTHON %s | FileCheck %s
 
 # ===----------------------------------------------------------------------===//
-#  Chapter 3 : GEMM 64x64x64 with Tensor Core
+#  Chapter 3 : GEMM 128x128x64 with Tensor Core
 # ===----------------------------------------------------------------------===//
 #
-# This program demonstrates a GEMM operation with 64x64x64 matrix multiplication
+# This program demonstrates a GEMM operation with 128x128x64 matrix multiplication
 #
 # This chapter introduces demonstrates:
 # 1. Execute TMA Load for two input matrices
-# 2. Performs Tensor Core GEMM 64x64x64 by warpgroup
+# 2. Performs Tensor Core GEMM 128x128x64 by warpgroup
 # 3. Stores fragmented registers to global memory by warpgroup
 #
 # ===----------------------------------------------------------------------===//
