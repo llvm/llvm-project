@@ -32,6 +32,7 @@ executable("llvm-tblgen") {
   ]
   include_dirs = [ "." ]
   sources = [
+    "ARMTargetDefEmitter.cpp",
     "AsmMatcherEmitter.cpp",
     "AsmWriterEmitter.cpp",
     "CTagsEmitter.cpp",
