@@ -57,18 +57,14 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter __lo
 // would yield \Omega(n*log(n)) comparisons and, for non-random iterators, \Omega(n^2) iterator increments, whereas the
 // one-sided version will yield O(n) operations on both counts, with a \Omega(log(n)) bound on the number of
 // comparisons.
-template <class _AlgPolicy, class _Iter, class _Sent, class _Type, class _Proj, class _Comp>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter
-__lower_bound_onesided(_Iter __first, _Sent __last, const _Type& __value, _Comp& __comp, _Proj& __proj) {
-  // static_assert(std::is_base_of<std::forward_iterator_tag, typename _IterOps<_AlgPolicy>::template
-  // __iterator_category<_Iter>>::value,
-  //       "lower_bound() is a multipass algorithm and requires forward iterator or better");
-
+template <class _AlgPolicy, class _ForwardIterator, class _Sent, class _Type, class _Proj, class _Comp>
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+__lower_bound_onesided(_ForwardIterator __first, _Sent __last, const _Type& __value, _Comp& __comp, _Proj& __proj) {
   // step = 0, ensuring we can always short-circuit when distance is 1 later on
   if (__first == __last || !std::__invoke(__comp, std::__invoke(__proj, *__first), __value))
     return __first;
 
-  using _Distance = typename iterator_traits<_Iter>::difference_type;
+  using _Distance = typename iterator_traits<_ForwardIterator>::difference_type;
   for (_Distance __step = 1; __first != __last; __step <<= 1) {
     auto __it   = __first;
     auto __dist = __step - _IterOps<_AlgPolicy>::__advance_to(__it, __step, __last);
@@ -87,9 +83,9 @@ __lower_bound_onesided(_Iter __first, _Sent __last, const _Type& __value, _Comp&
   return __first;
 }
 
-template <class _AlgPolicy, class _RandIter, class _Sent, class _Type, class _Proj, class _Comp>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandIter
-__lower_bound(_RandIter __first, _Sent __last, const _Type& __value, _Comp& __comp, _Proj& __proj) {
+template <class _AlgPolicy, class _RandomAccessIterator, class _Sent, class _Type, class _Proj, class _Comp>
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator
+__lower_bound(_RandomAccessIterator __first, _Sent __last, const _Type& __value, _Comp& __comp, _Proj& __proj) {
   const auto __dist = _IterOps<_AlgPolicy>::distance(__first, __last);
   return std::__lower_bound_bisecting<_AlgPolicy>(__first, __value, __dist, __comp, __proj);
 }
