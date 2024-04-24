@@ -1530,6 +1530,13 @@ AttributeList::addDereferenceableOrNullParamAttr(LLVMContext &C, unsigned Index,
   return addParamAttributes(C, Index, B);
 }
 
+AttributeList AttributeList::addRangeRetAttr(LLVMContext &C,
+                                             const ConstantRange &CR) const {
+  AttrBuilder B(C);
+  B.addRangeAttr(CR);
+  return addRetAttributes(C, B);
+}
+
 AttributeList AttributeList::addAllocSizeParamAttr(
     LLVMContext &C, unsigned Index, unsigned ElemSizeArg,
     const std::optional<unsigned> &NumElemsArg) {

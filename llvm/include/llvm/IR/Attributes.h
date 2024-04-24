@@ -747,6 +747,11 @@ public:
   addDereferenceableOrNullParamAttr(LLVMContext &C, unsigned ArgNo,
                                     uint64_t Bytes) const;
 
+  /// Add the range attribute to the attribute set at the return value index.
+  /// Returns a new list because attribute lists are immutable.
+  [[nodiscard]] AttributeList addRangeRetAttr(LLVMContext &C,
+                                              const ConstantRange &CR) const;
+
   /// Add the allocsize attribute to the attribute set at the given arg index.
   /// Returns a new list because attribute lists are immutable.
   [[nodiscard]] AttributeList
