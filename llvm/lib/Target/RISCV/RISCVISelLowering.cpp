@@ -13490,6 +13490,20 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // 2^N - 3/5/9 --> (sub (shl X, C1), (shXadd X, x))
+  for (uint64_t Offset : {3, 5, 9}) {
+    if (isPowerOf2_64(MulAmt + Offset)) {
+      SDLoc DL(N);
+      SDValue Shift1 =
+          DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+                      DAG.getConstant(Log2_64(MulAmt + Offset), DL, VT));
+      SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, N->getOperand(0),
+                                   DAG.getConstant(Log2_64(Offset - 1), DL, VT),
+                                   N->getOperand(0));
+      return DAG.getNode(ISD::SUB, DL, VT, Shift1, Mul359);
+    }
+  }
+
   return SDValue();
 }
 
