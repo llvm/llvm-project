@@ -5095,8 +5095,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   if (VT.isScalableVector())
     return true;
 
-  // Matches hasPoisonGeneratingFlags().
-  if (ConsiderFlags && Op->getFlags().hasAny())
+  if (ConsiderFlags && Op->hasPoisonGeneratingFlags())
     return true;
 
   unsigned Opcode = Op.getOpcode();

@@ -452,11 +452,9 @@ public:
   bool hasNoFPExcept() const { return NoFPExcept; }
   bool hasUnpredictable() const { return Unpredictable; }
 
-  bool hasAny() const {
+  bool hasPoisonGeneratingFlags() const {
     return NoUnsignedWrap || NoSignedWrap || Exact || Disjoint || NonNeg ||
-           NoNaNs || NoInfs || NoSignedZeros || AllowReciprocal ||
-           AllowContract || ApproximateFuncs || AllowReassociation ||
-           NoFPExcept || Unpredictable;
+           NoNaNs || NoInfs || NoFPExcept || Unpredictable;
   }
 
   /// Clear any flags in this flag set that aren't also set in Flags. All
@@ -1005,6 +1003,10 @@ public:
   /// Clear any flags in this node that aren't also set in Flags.
   /// If Flags is not in a defined state then this has no effect.
   void intersectFlagsWith(const SDNodeFlags Flags);
+
+  bool hasPoisonGeneratingFlags() const {
+    return getFlags().hasPoisonGeneratingFlags();
+  }
 
   void setCFIType(uint32_t Type) { CFIType = Type; }
   uint32_t getCFIType() const { return CFIType; }
