@@ -5,9 +5,9 @@
 // RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx17,since-cxx14,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx17,since-cxx14,since-cxx11,since-cxx23 -fexceptions -fcxx-exceptions -pedantic-errors
 
-// dr1200: na
+// cwg1200: na
 
-namespace dr1213 { // dr1213: 7
+namespace cwg1213 { // cwg1213: 7
 #if __cplusplus >= 201103L
   using T = int[3];
   int &&r = T{}[1];
@@ -32,7 +32,7 @@ namespace dr1213 { // dr1213: 7
 }
 
 #if __cplusplus >= 201103L
-namespace dr1223 { // dr1223: 17 drafting 2023-05-12
+namespace cwg1223 { // cwg1223: 17 drafting 2023-05-12
 struct M;
 template <typename T>
 struct V;
@@ -80,31 +80,31 @@ void g() {
     A b(auto ()->C);
     static_assert(sizeof(B ()->C[1] == sizeof(int)), "");
     sizeof(auto () -> C[1]);
-    // since-cxx11-error@-1 {{function cannot return array type 'C[1]' (aka 'dr1223::BB[1]')}}
+    // since-cxx11-error@-1 {{function cannot return array type 'C[1]' (aka 'cwg1223::BB[1]')}}
 }
 
 }
 #endif
 
 #if __cplusplus >= 201103L
-namespace dr1227 { // dr1227: 3.0
+namespace cwg1227 { // cwg1227: 3.0
 template <class T> struct A { using X = typename T::X; };
 // since-cxx11-error@-1 {{type 'int' cannot be used prior to '::' because it has no members}}
-//   since-cxx11-note@#dr1227-g {{in instantiation of template class 'dr1227::A<int>' requested here}}
-//   since-cxx11-note@#dr1227-g-int {{while substituting explicitly-specified template arguments into function template 'g'}}
+//   since-cxx11-note@#cwg1227-g {{in instantiation of template class 'cwg1227::A<int>' requested here}}
+//   since-cxx11-note@#cwg1227-g-int {{while substituting explicitly-specified template arguments into function template 'g'}}
 template <class T> typename T::X f(typename A<T>::X);
 template <class T> void f(...) { }
-template <class T> auto g(typename A<T>::X) -> typename T::X; // #dr1227-g
+template <class T> auto g(typename A<T>::X) -> typename T::X; // #cwg1227-g
 template <class T> void g(...) { }
 
 void h() {
   f<int>(0); // OK, substituting return type causes deduction to fail
-  g<int>(0); // #dr1227-g-int
+  g<int>(0); // #cwg1227-g-int
 }
 }
 #endif
 
-namespace dr1250 { // dr1250: 3.9
+namespace cwg1250 { // cwg1250: 3.9
 struct Incomplete;
 
 struct Base {
@@ -116,7 +116,7 @@ struct Derived : Base {
 };
 }
 
-namespace dr1265 { // dr1265: 5
+namespace cwg1265 { // cwg1265: 5
 #if __cplusplus >= 201103L
   auto a = 0, b() -> int;
   // since-cxx11-error@-1 {{declaration with trailing return type must be the only declaration in its group}}
@@ -136,9 +136,9 @@ namespace dr1265 { // dr1265: 5
 #endif
 }
 
-// dr1291: na
+// cwg1291: na
 
-namespace dr1295 { // dr1295: 4
+namespace cwg1295 { // cwg1295: 4
   struct X {
     unsigned bitfield : 4;
   };
@@ -150,11 +150,11 @@ namespace dr1295 { // dr1295: 4
   unsigned const &r2 = static_cast<unsigned &&>(x.bitfield);
   // cxx98-error@-1 {{rvalue references are a C++11 extension}}
 
-  template<unsigned &r> struct Y {}; // #dr1295-Y
-  Y<x.bitfield> y; // #dr1295-y
+  template<unsigned &r> struct Y {}; // #cwg1295-Y
+  Y<x.bitfield> y; // #cwg1295-y
   // cxx98-14-error@-1 {{non-type template argument does not refer to any declaration}}
-  //   cxx98-14-note@#dr1295-Y {{template parameter is declared here}}
-  // since-cxx17-error@#dr1295-y {{reference cannot bind to bit-field in converted constant expression}}
+  //   cxx98-14-note@#cwg1295-Y {{template parameter is declared here}}
+  // since-cxx17-error@#cwg1295-y {{reference cannot bind to bit-field in converted constant expression}}
 
 #if __cplusplus >= 201103L
   const unsigned other = 0;

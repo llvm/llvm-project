@@ -1,0 +1,25 @@
+//===-- OpenACCClauses.def - List of implemented OpenACC Clauses -- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines a list of currently implemented OpenACC Clauses (and
+// eventually, the entire list) in a way that makes generating 'visitor' and
+// other lists easier.
+//
+// The primary macro is a single-argument version taking the name of the Clause
+// as used in Clang source (so `Default` instead of `default`).
+//
+// VISIT_CLAUSE(CLAUSE_NAME)
+
+VISIT_CLAUSE(Default)
+VISIT_CLAUSE(If)
+VISIT_CLAUSE(Self)
+VISIT_CLAUSE(NumGangs)
+VISIT_CLAUSE(NumWorkers)
+VISIT_CLAUSE(VectorLength)
+
+#undef VISIT_CLAUSE

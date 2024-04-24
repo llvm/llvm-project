@@ -987,6 +987,8 @@ private:
   bool shouldExpandGetVectorLength(EVT TripCountVT, unsigned VF,
                                    bool IsScalable) const override;
 
+  bool shouldExpandCttzElements(EVT VT) const override;
+
   /// RVV code generation for fixed length vectors does not lower all
   /// BUILD_VECTORs. This makes BUILD_VECTOR legalisation a source of stores to
   /// merge. However, merging them creates a BUILD_VECTOR that is just as
@@ -1041,12 +1043,15 @@ public:
     bool FirstVMask = false;
   };
 
+  template <typename Arg>
   RVVArgDispatcher(const MachineFunction *MF, const RISCVTargetLowering *TLI,
-                   ArrayRef<Type *> TypeList)
+                   ArrayRef<Arg> ArgList)
       : MF(MF), TLI(TLI) {
-    constructArgInfos(TypeList);
+    constructArgInfos(ArgList);
     compute();
   }
+
+  RVVArgDispatcher() = default;
 
   MCPhysReg getNextPhysReg();
 
@@ -1059,7 +1064,7 @@ private:
 
   unsigned CurIdx = 0;
 
-  void constructArgInfos(ArrayRef<Type *> TypeList);
+  template <typename Arg> void constructArgInfos(ArrayRef<Arg> Ret);
   void compute();
   void allocatePhysReg(unsigned NF = 1, unsigned LMul = 1,
                        unsigned StartReg = 0);

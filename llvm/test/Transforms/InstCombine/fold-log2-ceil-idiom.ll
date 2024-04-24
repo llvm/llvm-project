@@ -282,7 +282,7 @@ define i5 @log2_ceil_idiom_trunc_multiuse4(i32 %x) {
 ; CHECK-LABEL: define i5 @log2_ceil_idiom_trunc_multiuse4(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[CTLZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X]], i1 true), !range [[RNG0]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 [[CTLZ]] to i5
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i32 [[CTLZ]] to i5
 ; CHECK-NEXT:    call void @use5(i5 [[TRUNC]])
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i5 [[TRUNC]], -1
 ; CHECK-NEXT:    [[CTPOP:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG0]]

@@ -2294,13 +2294,13 @@ define i32 @PR44139(ptr %p) {
 ;
 ; AVX1-LABEL: PR44139:
 ; AVX1:       # %bb.0:
+; AVX1-NEXT:    movq (%rdi), %rax
 ; AVX1-NEXT:    vbroadcastsd (%rdi), %ymm0
-; AVX1-NEXT:    vpinsrq $1, (%rdi), %xmm0, %xmm1
+; AVX1-NEXT:    vpinsrq $1, %rax, %xmm0, %xmm1
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; AVX1-NEXT:    vmovaps %ymm0, 64(%rdi)
 ; AVX1-NEXT:    vmovaps %ymm0, 96(%rdi)
 ; AVX1-NEXT:    vmovaps %ymm0, 32(%rdi)
-; AVX1-NEXT:    movl (%rdi), %eax
 ; AVX1-NEXT:    vmovaps %ymm1, (%rdi)
 ; AVX1-NEXT:    leal 2147483647(%rax), %ecx
 ; AVX1-NEXT:    testl %eax, %eax
@@ -2315,13 +2315,13 @@ define i32 @PR44139(ptr %p) {
 ;
 ; AVX2-LABEL: PR44139:
 ; AVX2:       # %bb.0:
+; AVX2-NEXT:    movq (%rdi), %rax
 ; AVX2-NEXT:    vpbroadcastq (%rdi), %ymm0
-; AVX2-NEXT:    vpinsrq $1, (%rdi), %xmm0, %xmm1
+; AVX2-NEXT:    vpinsrq $1, %rax, %xmm0, %xmm1
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; AVX2-NEXT:    vmovdqa %ymm0, 64(%rdi)
 ; AVX2-NEXT:    vmovdqa %ymm0, 96(%rdi)
 ; AVX2-NEXT:    vmovdqa %ymm0, 32(%rdi)
-; AVX2-NEXT:    movl (%rdi), %eax
 ; AVX2-NEXT:    vmovdqa %ymm1, (%rdi)
 ; AVX2-NEXT:    leal 2147483647(%rax), %ecx
 ; AVX2-NEXT:    testl %eax, %eax
@@ -2336,14 +2336,12 @@ define i32 @PR44139(ptr %p) {
 ;
 ; AVX512-LABEL: PR44139:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovdqa64 (%rdi), %zmm0
-; AVX512-NEXT:    vpbroadcastq (%rdi), %zmm1
-; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
-; AVX512-NEXT:    vpinsrq $1, (%rdi), %xmm1, %xmm2
-; AVX512-NEXT:    vinserti32x4 $0, %xmm2, %zmm1, %zmm2
-; AVX512-NEXT:    vmovdqa64 %zmm1, 64(%rdi)
-; AVX512-NEXT:    vmovdqa64 %zmm2, (%rdi)
-; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    movq (%rdi), %rax
+; AVX512-NEXT:    vpbroadcastq (%rdi), %zmm0
+; AVX512-NEXT:    vpinsrq $1, %rax, %xmm0, %xmm1
+; AVX512-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm1
+; AVX512-NEXT:    vmovdqa64 %zmm0, 64(%rdi)
+; AVX512-NEXT:    vmovdqa64 %zmm1, (%rdi)
 ; AVX512-NEXT:    leal 2147483647(%rax), %ecx
 ; AVX512-NEXT:    testl %eax, %eax
 ; AVX512-NEXT:    cmovnsl %eax, %ecx

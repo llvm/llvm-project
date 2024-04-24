@@ -146,6 +146,9 @@ public:
 
   void CalculateTrapHandlerSymbolNames() override;
 
+  bool CalculateMD5(const FileSpec &file_spec, uint64_t &low,
+                    uint64_t &high) override;
+
   const lldb::UnixSignalsSP &GetRemoteUnixSignals() override;
 
   size_t ConnectToWaitingProcesses(lldb_private::Debugger &debugger,
