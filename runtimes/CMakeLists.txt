@@ -43,6 +43,27 @@ foreach(proj ${LLVM_ENABLE_RUNTIMES})
   set(LLVM_EXTERNAL_${canon_name}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
 endforeach()
 
+# Set LLVM_RUNTIME_<project>_BUILD variables if a sub-project is enabled to be built as
+# a runtime.  As with LLVM_TOOL_<project>_BUILD, the LLVM_RUNTIME_<project>_BUILD variables
+# should be not directly used from the CMake configuration command line.
+foreach(proj ${LLVM_SUPPORTED_RUNTIMES})
+  set(SHOULD_ENABLE_RUNTIME FALSE)
+  string(TOUPPER "${proj}" upper_proj)
+  string(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
+  if ("${proj}" IN_LIST LLVM_ENABLE_RUNTIMES)
+    message(STATUS "${proj} runtime is enabled")
+    set(SHOULD_ENABLE_RUNTIME TRUE)
+  else()
+    message(STATUS "${proj} runtime is disabled")
+    set(SHOULD_ENABLE_RUNTIME FALSE)
+  endif()
+  set(LLVM_RUNTIME_${upper_proj}_BUILD
+      ${SHOULD_ENABLE_RUNTIME}
+      CACHE
+      BOOL "Whether to build runtime ${upper_proj} as part of LLVM" FORCE)
+endforeach()
+unset(SHOULD_ENABLE_RUNTIME)
+
 function(runtime_register_component name)
   set_property(GLOBAL APPEND PROPERTY SUB_COMPONENTS ${name})
 endfunction()

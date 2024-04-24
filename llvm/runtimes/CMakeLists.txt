@@ -216,7 +216,7 @@ foreach(proj ${LLVM_SUPPORTED_RUNTIMES})
   string(TOUPPER "${proj}" upper_proj)
   string(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
   if ("${proj}" IN_LIST LLVM_ENABLE_RUNTIMES)
-    message(STATUS "${proj} runtime is enabled")
+    message(STATUS "${proj} runtime is enabled for bootstrap build")
     set(SHOULD_ENABLE_RUNTIME TRUE)
     set(PROJ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}")
     if(NOT EXISTS "${PROJ_DIR}" OR NOT IS_DIRECTORY "${PROJ_DIR}")
@@ -231,7 +231,7 @@ foreach(proj ${LLVM_SUPPORTED_RUNTIMES})
     message(STATUS "${proj} runtime is disabled")
     set(SHOULD_ENABLE_RUNTIME FALSE)
   endif()
-  set(LLVM_RUNTIME_${upper_proj}_BUILD
+  set(LLVM_BOOTSTRAP_RUNTIME_${upper_proj}_BUILD
       ${SHOULD_ENABLE_RUNTIME}
       CACHE
       BOOL "Whether to build runtime ${upper_proj} as part of LLVM" FORCE)
