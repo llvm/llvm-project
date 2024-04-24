@@ -5181,7 +5181,7 @@ TEST_P(ASTImporterOptionSpecificTestBase,
   }
 }
 
-TEST_P(ImportFriendClasses, RecordVarTemplateDecl) {
+TEST_P(ASTImporterOptionSpecificTestBase, RecordVarTemplateDecl) {
   Decl *ToTU = getToTuDecl(
       R"(
       template <class T>
@@ -5263,6 +5263,86 @@ TEST_P(ASTImporterOptionSpecificTestBase, VarTemplateStaticDefinition) {
   EXPECT_TRUE(ToXDef);
   EXPECT_TRUE(ToXDef->isThisDeclarationADefinition());
   EXPECT_EQ(ToXDef->getPreviousDecl(), ToX);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, VarTemplateSpecializationDeclValue) {
+  Decl *ToTU = getToTuDecl(
+      R"(
+      template <class U>
+      constexpr int X = U::Value;
+      struct A { static constexpr int Value = 1; };
+      constexpr int Y = X<A>;
+      )",
+      Lang_CXX14);
+
+  auto *ToTUX = FirstDeclMatcher<VarTemplateSpecializationDecl>().match(
+      ToTU, varTemplateSpecializationDecl(hasName("X")));
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <class U>
+      constexpr int X = U::Value;
+      struct A { static constexpr int Value = 1; };
+      constexpr int Y = X<A>;
+      )",
+      Lang_CXX14, "input1.cc");
+  auto *FromX = FirstDeclMatcher<VarTemplateSpecializationDecl>().match(
+      FromTU, varTemplateSpecializationDecl(hasName("X")));
+  auto *ToX = Import(FromX, Lang_CXX14);
+  EXPECT_TRUE(ToX);
+  EXPECT_EQ(ToTUX, ToX);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       VarTemplateSpecializationDeclValueConflict) {
+  getToTuDecl(
+      R"(
+      template <class U>
+      constexpr int X = U::Value;
+      struct A { static constexpr int Value = 1; };
+      constexpr int Y = X<A>;
+      )",
+      Lang_CXX14);
+
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <class U>
+      constexpr int X = U::Value;
+      struct A { static constexpr int Value = 2; };
+      constexpr int Y = X<A>;
+      )",
+      Lang_CXX14, "input1.cc");
+  auto *FromX = FirstDeclMatcher<VarTemplateSpecializationDecl>().match(
+      FromTU, varTemplateSpecializationDecl(hasName("X")));
+  auto *ToX = Import(FromX, Lang_CXX14);
+  EXPECT_FALSE(ToX);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, VarTemplateDeclInlineWithCXX17) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      struct S {
+        template <unsigned> static constexpr bool X = true;
+      };
+      )",
+      Lang_CXX17, "input1.cc");
+  Decl *FromTU2 = getTuDecl(
+      R"(
+      struct S {
+        template <unsigned> static constexpr bool X = true;
+        template <typename T> void get() { X<sizeof(T)>; }
+      };
+      template <typename U> U qvariant_cast(const S &v) { return v.get; }
+      )",
+      Lang_CXX17, "input2.cc");
+  auto *FromX = FirstDeclMatcher<VarTemplateDecl>().match(
+      FromTU, varTemplateDecl(hasName("X")));
+  auto *ToX = Import(FromX, Lang_CXX17);
+  ASSERT_TRUE(ToX);
+  auto *FromX2 = FirstDeclMatcher<VarTemplateDecl>().match(
+      FromTU2, varTemplateDecl(hasName("X")));
+  auto *ToX2 = Import(FromX2, Lang_CXX17);
+  EXPECT_TRUE(ToX2);
+  EXPECT_EQ(ToX, ToX2);
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, VarTemplateParameterDeclContext) {
@@ -6639,6 +6719,23 @@ TEST_P(ASTImporterOptionSpecificTestBase, LambdaInFunctionBody) {
   EXPECT_NE(ToLSize, 0u);
   EXPECT_EQ(ToLSize, FromLSize);
   EXPECT_FALSE(FromL->isDependentLambda());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ReturnTypeDeclaredInsideOfCXX11LambdaWithoutTrailingReturn) {
+  Decl *From, *To;
+  std::tie(From, To) = getImportedDecl(
+      R"(
+      void foo() {
+        (void) []() {
+          struct X {};
+          return X();
+        };
+      }
+      )",
+      Lang_CXX11, "", Lang_CXX11, "foo"); // c++11 only
+  auto *ToLambda = FirstDeclMatcher<LambdaExpr>().match(To, lambdaExpr());
+  EXPECT_TRUE(ToLambda);
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, LambdaInFunctionParam) {

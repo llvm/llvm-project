@@ -157,7 +157,9 @@ std::string getMainExecutable(const char *argv0, void *MainExecAddr) {
 
   SmallString<256> RealPath;
   sys::fs::real_path(PathNameUTF8, RealPath);
-  return std::string(RealPath);
+  if (RealPath.size())
+    return std::string(RealPath);
+  return std::string(PathNameUTF8.data());
 }
 
 UniqueID file_status::getUniqueID() const {
@@ -623,6 +625,10 @@ std::error_code access(const Twine &Path, AccessMode Mode) {
   DWORD Attributes = ::GetFileAttributesW(PathUtf16.begin());
 
   if (Attributes == INVALID_FILE_ATTRIBUTES) {
+    // Avoid returning unexpected error codes when querying for existence.
+    if (Mode == AccessMode::Exist)
+      return errc::no_such_file_or_directory;
+
     // See if the file didn't actually exist.
     DWORD LastError = ::GetLastError();
     if (LastError != ERROR_FILE_NOT_FOUND && LastError != ERROR_PATH_NOT_FOUND)
@@ -961,7 +967,8 @@ void mapped_file_region::unmapImpl() {
 
     ::UnmapViewOfFile(Mapping);
 
-    if (Mode == mapmode::readwrite && Exe && hasFlushBufferKernelBug()) {
+    if (Mode == mapmode::readwrite) {
+      bool DoFlush = Exe && hasFlushBufferKernelBug();
       // There is a Windows kernel bug, the exact trigger conditions of which
       // are not well understood.  When triggered, dirty pages are not properly
       // flushed and subsequent process's attempts to read a file can return
@@ -969,7 +976,27 @@ void mapped_file_region::unmapImpl() {
       // sufficient to ensure that this bug is not triggered.
       // The bug only occurs when writing an executable and executing it right
       // after, under high I/O pressure.
-      ::FlushFileBuffers(FileHandle);
+      if (!DoFlush) {
+        // Separately, on VirtualBox Shared Folder mounts, writes via memory
+        // maps always end up unflushed (regardless of version of Windows),
+        // unless flushed with this explicit call, if they are renamed with
+        // SetFileInformationByHandle(FileRenameInfo) before closing the output
+        // handle.
+        //
+        // As the flushing is quite expensive, use a heuristic to limit the
+        // cases where we do the flushing. Only do the flushing if we aren't
+        // sure we are on a local file system.
+        bool IsLocal = false;
+        SmallVector<wchar_t, 128> FinalPath;
+        if (!realPathFromHandle(FileHandle, FinalPath)) {
+          // Not checking the return value here - if the check fails, assume the
+          // file isn't local.
+          is_local_internal(FinalPath, IsLocal);
+        }
+        DoFlush = !IsLocal;
+      }
+      if (DoFlush)
+        ::FlushFileBuffers(FileHandle);
     }
 
     ::CloseHandle(FileHandle);

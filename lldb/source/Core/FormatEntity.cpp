@@ -926,7 +926,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     s.PutChar('[');
 
     if (index_higher < 0)
-      index_higher = valobj->GetNumChildren() - 1;
+      index_higher = valobj->GetNumChildrenIgnoringErrors() - 1;
 
     uint32_t max_num_children =
         target->GetTargetSP()->GetMaximumNumberOfChildrenToDisplay();
@@ -1792,7 +1792,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     if (sc && sc->line_entry.IsValid()) {
       Module *module = sc->module_sp.get();
       if (module) {
-        if (DumpFile(s, sc->line_entry.file, (FileKind)entry.number))
+        if (DumpFile(s, sc->line_entry.GetFile(), (FileKind)entry.number))
           return true;
       }
     }
@@ -2151,11 +2151,7 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
             if (entry.printf_format.find('%') == std::string::npos) {
               bool clear_printf = false;
 
-              if (FormatManager::GetFormatFromCString(
-                      entry.printf_format.c_str(), false, entry.fmt)) {
-                // We have an LLDB format, so clear the printf format
-                clear_printf = true;
-              } else if (entry.printf_format.size() == 1) {
+              if (entry.printf_format.size() == 1) {
                 switch (entry.printf_format[0]) {
                 case '@': // if this is an @ sign, print ObjC description
                   entry.number = ValueObject::
@@ -2198,20 +2194,20 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
                       eValueObjectRepresentationStyleExpressionPath;
                   clear_printf = true;
                   break;
-                default:
+                }
+              }
+
+              if (entry.number == 0) {
+                if (FormatManager::GetFormatFromCString(
+                        entry.printf_format.c_str(), entry.fmt)) {
+                  clear_printf = true;
+                } else if (entry.printf_format == "tid") {
+                  verify_is_thread_id = true;
+                } else {
                   error.SetErrorStringWithFormat("invalid format: '%s'",
                                                  entry.printf_format.c_str());
                   return error;
                 }
-              } else if (FormatManager::GetFormatFromCString(
-                             entry.printf_format.c_str(), true, entry.fmt)) {
-                clear_printf = true;
-              } else if (entry.printf_format == "tid") {
-                verify_is_thread_id = true;
-              } else {
-                error.SetErrorStringWithFormat("invalid format: '%s'",
-                                               entry.printf_format.c_str());
-                return error;
               }
 
               // Our format string turned out to not be a printf style format

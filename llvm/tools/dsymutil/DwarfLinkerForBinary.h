@@ -192,18 +192,20 @@ private:
 
     /// Checks that there is a relocation in the \p Relocs array against a
     /// debug map entry between \p StartOffset and \p NextOffset.
+    /// Print debug output if \p Verbose is set.
     ///
     /// \returns relocation value if relocation exist, otherwise std::nullopt.
     std::optional<int64_t>
     hasValidRelocationAt(const std::vector<ValidReloc> &Relocs,
-                         uint64_t StartOffset, uint64_t EndOffset);
+                         uint64_t StartOffset, uint64_t EndOffset,
+                         bool Verbose);
 
     std::optional<int64_t> getExprOpAddressRelocAdjustment(
         DWARFUnit &U, const DWARFExpression::Operation &Op,
-        uint64_t StartOffset, uint64_t EndOffset) override;
+        uint64_t StartOffset, uint64_t EndOffset, bool Verbose) override;
 
-    std::optional<int64_t>
-    getSubprogramRelocAdjustment(const DWARFDie &DIE) override;
+    std::optional<int64_t> getSubprogramRelocAdjustment(const DWARFDie &DIE,
+                                                        bool Verbose) override;
 
     std::optional<StringRef> getLibraryInstallName() override;
 

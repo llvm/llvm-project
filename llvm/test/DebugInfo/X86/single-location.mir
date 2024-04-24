@@ -29,7 +29,7 @@
   define dso_local void @fun(i32 %p) local_unnamed_addr !dbg !15 {
   entry:
     call void @llvm.dbg.value(metadata i32 %p, metadata !20, metadata !DIExpression()), !dbg !23
-    store i32 %p, i32* @global, align 4, !dbg !24
+    store i32 %p, ptr @global, align 4, !dbg !24
     tail call void (...) @ext(), !dbg !29
     ret void, !dbg !30
   }

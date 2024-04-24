@@ -83,11 +83,10 @@ def PromotableAllocationOpInterface
 def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
   let description = [{
     Describes an operation that can load from memory slots and/or store
-    to memory slots. Loads and stores must be of whole values of the same
-    type as the slot itself.
+    to memory slots.
 
-    For a memory operation on a slot to be valid, it must operate on the slot
-    pointer *only as a pointer to an element of the type of the slot*.
+    For a memory operation on a slot to be valid, it must strictly operate
+    within the bounds of the slot.
 
     If the same operation does both loads and stores on the same slot, the
     load must semantically happen first.
@@ -128,7 +127,8 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
       }],
       "::mlir::Value", "getStored",
       (ins "const ::mlir::MemorySlot &":$slot,
-           "::mlir::RewriterBase &":$rewriter)
+           "::mlir::RewriterBase &":$rewriter,
+           "const ::mlir::DataLayout &":$dataLayout)
     >,
     InterfaceMethod<[{
         Checks that this operation can be promoted to no longer use the provided
@@ -142,7 +142,8 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
       }], "bool", "canUsesBeRemoved",
       (ins "const ::mlir::MemorySlot &":$slot,
            "const ::llvm::SmallPtrSetImpl<::mlir::OpOperand *> &":$blockingUses,
-           "::llvm::SmallVectorImpl<::mlir::OpOperand *> &":$newBlockingUses)
+           "::llvm::SmallVectorImpl<::mlir::OpOperand *> &":$newBlockingUses,
+           "const ::mlir::DataLayout &":$datalayout)
     >,
     InterfaceMethod<[{
         Transforms IR to ensure that the current operation does not use the
@@ -172,7 +173,8 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
       (ins "const ::mlir::MemorySlot &":$slot,
            "const ::llvm::SmallPtrSetImpl<mlir::OpOperand *> &":$blockingUses,
            "::mlir::RewriterBase &":$rewriter,
-           "::mlir::Value":$reachingDefinition)
+           "::mlir::Value":$reachingDefinition,
+           "const ::mlir::DataLayout &":$dataLayout)
     >,
   ];
 }
@@ -197,7 +199,8 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
         No IR mutation is allowed in this method.
       }], "bool", "canUsesBeRemoved",
       (ins "const ::llvm::SmallPtrSetImpl<::mlir::OpOperand *> &":$blockingUses,
-           "::llvm::SmallVectorImpl<::mlir::OpOperand *> &":$newBlockingUses)
+           "::llvm::SmallVectorImpl<::mlir::OpOperand *> &":$newBlockingUses,
+           "const ::mlir::DataLayout &":$datalayout)
     >,
     InterfaceMethod<[{
         Transforms IR to ensure that the current operation does not use the
@@ -227,6 +230,36 @@ def PromotableOpInterface : OpInterface<"PromotableOpInterface"> {
       "removeBlockingUses",
       (ins "const ::llvm::SmallPtrSetImpl<mlir::OpOperand *> &":$blockingUses,
            "::mlir::RewriterBase &":$rewriter)
+    >,
+    InterfaceMethod<[{
+        This method allows the promoted operation to visit the SSA values used
+        in place of the memory slot once the promotion process of the memory
+        slot is complete.
+
+        If this method returns true, the `visitReplacedValues` method on this
+        operation will be called after the main mutation stage finishes
+        (i.e., after all ops have been processed with `removeBlockingUses`).
+
+        Operations should only the replaced values if the intended
+        transformation applies to all the replaced values. Furthermore, replaced
+        values must not be deleted.
+      }], "bool", "requiresReplacedValues", (ins), [{}],
+      [{ return false; }]
+    >,
+    InterfaceMethod<[{
+        Transforms the IR using the SSA values that replaced the memory slot.
+
+        This method will only be called after all blocking uses have been
+        scheduled for removal and if `requiresReplacedValues` returned
+        true.
+
+        The rewriter is located after the promotable operation on call. All IR
+        mutations must happen through the rewriter. During the transformation,
+        *no operation should be deleted*.
+      }],
+      "void", "visitReplacedValues",
+      (ins "::llvm::ArrayRef<std::pair<::mlir::Operation*, ::mlir::Value>>":$mutatedDefs,
+           "::mlir::RewriterBase &":$rewriter), [{}], [{ return; }]
     >,
   ];
 }
@@ -285,29 +318,28 @@ def DestructurableAllocationOpInterface
 def SafeMemorySlotAccessOpInterface
   : OpInterface<"SafeMemorySlotAccessOpInterface"> {
   let description = [{
-    Describes operations using memory slots in a type-safe manner.
+    Describes operations using memory slots in a safe manner.
   }];
   let cppNamespace = "::mlir";
 
   let methods = [
     InterfaceMethod<[{
         Returns whether all accesses in this operation to the provided slot are
-        done in a type-safe manner. To be type-safe, the access must only load
-        the value in this type as the type of the slot, and without assuming any
-        context around the slot. For example, a type-safe load must not load
-        outside the bounds of the slot.
+        done in a safe manner. To be safe, the access most only access the slot
+        inside the bounds that its type implies.
 
-        If the type-safety of the accesses depends on the type-safety of the
-        accesses to further memory slots, the result of this method will be
-        conditioned to the type-safety of the accesses to the slots added by
-        this method to `mustBeSafelyUsed`.
+        If the safety of the accesses depends on the safety of the accesses to
+        further memory slots, the result of this method will be conditioned to
+        the safety of the accesses to the slots added by this method to
+        `mustBeSafelyUsed`.
 
         No IR mutation is allowed in this method.
       }],
       "::mlir::LogicalResult",
       "ensureOnlySafeAccesses",
       (ins "const ::mlir::MemorySlot &":$slot,
-           "::mlir::SmallVectorImpl<::mlir::MemorySlot> &":$mustBeSafelyUsed)
+           "::mlir::SmallVectorImpl<::mlir::MemorySlot> &":$mustBeSafelyUsed,
+           "const ::mlir::DataLayout &":$dataLayout)
     >
   ];
 }
@@ -323,13 +355,12 @@ def DestructurableAccessorOpInterface
     InterfaceMethod<[{
         For a given destructurable memory slot, returns whether this operation can
         rewire its uses of the slot to use the slots generated after
-        destructuring. This may involve creating new operations, and usually
-        amounts to checking if the pointer types match.
+        destructuring. This may involve creating new operations.
 
         This method must also register the indices it will access within the
         `usedIndices` set. If the accessor generates new slots mapping to
         subelements, they must be registered in `mustBeSafelyUsed` to ensure
-        they are used in a locally type-safe manner.
+        they are used in a safe manner.
 
         No IR mutation is allowed in this method.
       }],
@@ -337,7 +368,8 @@ def DestructurableAccessorOpInterface
       "canRewire",
       (ins "const ::mlir::DestructurableMemorySlot &":$slot,
            "::llvm::SmallPtrSetImpl<::mlir::Attribute> &":$usedIndices,
-           "::mlir::SmallVectorImpl<::mlir::MemorySlot> &":$mustBeSafelyUsed)
+           "::mlir::SmallVectorImpl<::mlir::MemorySlot> &":$mustBeSafelyUsed,
+           "const ::mlir::DataLayout &":$dataLayout)
     >,
     InterfaceMethod<[{
         Rewires the use of a slot to the generated subslots, without deleting
@@ -351,7 +383,8 @@ def DestructurableAccessorOpInterface
       "rewire",
       (ins "const ::mlir::DestructurableMemorySlot &":$slot,
            "::llvm::DenseMap<::mlir::Attribute, ::mlir::MemorySlot> &":$subslots,
-           "::mlir::RewriterBase &":$rewriter)
+           "::mlir::RewriterBase &":$rewriter,
+           "const ::mlir::DataLayout &":$dataLayout)
     >
   ];
 }

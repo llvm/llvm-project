@@ -79,13 +79,13 @@ class SBCommandInterpreterRunOptionsCase(TestBase):
         opts = lldb.SBCommandInterpreterRunOptions()
 
         # Check getters with default values
-        self.assertEqual(opts.GetStopOnContinue(), False)
-        self.assertEqual(opts.GetStopOnError(), False)
-        self.assertEqual(opts.GetStopOnCrash(), False)
-        self.assertEqual(opts.GetEchoCommands(), True)
-        self.assertEqual(opts.GetPrintResults(), True)
-        self.assertEqual(opts.GetPrintErrors(), True)
-        self.assertEqual(opts.GetAddToHistory(), True)
+        self.assertFalse(opts.GetStopOnContinue())
+        self.assertFalse(opts.GetStopOnError())
+        self.assertFalse(opts.GetStopOnCrash())
+        self.assertTrue(opts.GetEchoCommands())
+        self.assertTrue(opts.GetPrintResults())
+        self.assertTrue(opts.GetPrintErrors())
+        self.assertTrue(opts.GetAddToHistory())
 
         # Invert values
         opts.SetStopOnContinue(not opts.GetStopOnContinue())
@@ -97,10 +97,10 @@ class SBCommandInterpreterRunOptionsCase(TestBase):
         opts.SetAddToHistory(not opts.GetAddToHistory())
 
         # Check the value changed
-        self.assertEqual(opts.GetStopOnContinue(), True)
-        self.assertEqual(opts.GetStopOnError(), True)
-        self.assertEqual(opts.GetStopOnCrash(), True)
-        self.assertEqual(opts.GetEchoCommands(), False)
-        self.assertEqual(opts.GetPrintResults(), False)
-        self.assertEqual(opts.GetPrintErrors(), False)
-        self.assertEqual(opts.GetAddToHistory(), False)
+        self.assertTrue(opts.GetStopOnContinue())
+        self.assertTrue(opts.GetStopOnError())
+        self.assertTrue(opts.GetStopOnCrash())
+        self.assertFalse(opts.GetEchoCommands())
+        self.assertFalse(opts.GetPrintResults())
+        self.assertFalse(opts.GetPrintErrors())
+        self.assertFalse(opts.GetAddToHistory())

@@ -22,6 +22,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -32,7 +35,7 @@ struct __fn {
   template <class _Type,
             class _Proj                                                      = identity,
             indirect_strict_weak_order<projected<const _Type*, _Proj>> _Comp = ranges::less>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr const _Type& operator()(
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Type& operator()(
       const _Type& __value, const _Type& __low, const _Type& __high, _Comp __comp = {}, _Proj __proj = {}) const {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         !bool(std::invoke(__comp, std::invoke(__proj, __high), std::invoke(__proj, __low))),
@@ -57,5 +60,7 @@ inline constexpr auto clamp = __clamp::__fn{};
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_CLAMP_H

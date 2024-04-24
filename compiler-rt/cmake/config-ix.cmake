@@ -103,7 +103,7 @@ check_cxx_compiler_flag("-Werror -msse4.2"   COMPILER_RT_HAS_MSSE4_2_FLAG)
 check_cxx_compiler_flag(--sysroot=.          COMPILER_RT_HAS_SYSROOT_FLAG)
 check_cxx_compiler_flag("-Werror -mcrc"      COMPILER_RT_HAS_MCRC_FLAG)
 check_cxx_compiler_flag(-fno-partial-inlining COMPILER_RT_HAS_FNO_PARTIAL_INLINING_FLAG)
-check_cxx_compiler_flag(-Werror -ftrivial-auto-var-init=pattern COMPILER_RT_HAS_TRIVIAL_AUTO_INIT)
+check_cxx_compiler_flag("-Werror -ftrivial-auto-var-init=pattern" COMPILER_RT_HAS_TRIVIAL_AUTO_INIT)
 
 if(NOT WIN32 AND NOT CYGWIN)
   # MinGW warns if -fvisibility-inlines-hidden is used.
@@ -150,21 +150,21 @@ check_cxx_compiler_flag(/wd4391 COMPILER_RT_HAS_WD4391_FLAG)
 check_cxx_compiler_flag(/wd4722 COMPILER_RT_HAS_WD4722_FLAG)
 check_cxx_compiler_flag(/wd4800 COMPILER_RT_HAS_WD4800_FLAG)
 
-check_cxx_compiler_flag(-Werror -Warray-bounds COMPILER_RT_HAS_ARRAY_BOUNDS_FLAG)
-check_cxx_compiler_flag(-Werror -Wuninitialized COMPILER_RT_HAS_UNINITIALIZED_FLAG)
-check_cxx_compiler_flag(-Werror -Wshadow COMPILER_RT_HAS_SHADOW_FLAG)
-check_cxx_compiler_flag(-Werror -Wempty-body COMPILER_RT_HAS_EMPTY_BODY_FLAG)
-check_cxx_compiler_flag(-Werror -Wsizeof-pointer-memaccess COMPILER_RT_HAS_SIZEOF_POINTER_MEMACCESS_FLAG)
-check_cxx_compiler_flag(-Werror -Wsizeof-array-argument COMPILER_RT_HAS_SIZEOF_ARRAY_ARGUMENT_FLAG)
-check_cxx_compiler_flag(-Werror -Wsuspicious-memaccess COMPILER_RT_HAS_SUSPICIOUS_MEMACCESS_FLAG)
-check_cxx_compiler_flag(-Werror -Wbuiltin-memcpy-chk-size COMPILER_RT_HAS_BUILTIN_MEMCPY_CHK_SIZE_FLAG)
-check_cxx_compiler_flag(-Werror -Warray-bounds-pointer-arithmetic COMPILER_RT_HAS_ARRAY_BOUNDS_POINTER_ARITHMETIC_FLAG)
-check_cxx_compiler_flag(-Werror -Wreturn-stack-address COMPILER_RT_HAS_RETURN_STACK_ADDRESS_FLAG)
-check_cxx_compiler_flag(-Werror -Wsizeof-array-decay COMPILER_RT_HAS_SIZEOF_ARRAY_DECAY_FLAG)
-check_cxx_compiler_flag(-Werror -Wformat-insufficient-args COMPILER_RT_HAS_FORMAT_INSUFFICIENT_ARGS_FLAG)
-check_cxx_compiler_flag(-Werror -Wformat-security COMPILER_RT_HAS_BUILTIN_FORMAL_SECURITY_FLAG)
-check_cxx_compiler_flag(-Werror -Wsizeof-array-div COMPILER_RT_HAS_SIZEOF_ARRAY_DIV_FLAG)
-check_cxx_compiler_flag(-Werror -Wsizeof-pointer-div COMPILER_RT_HAS_SIZEOF_POINTER_DIV_FLAG)
+check_cxx_compiler_flag("-Werror -Warray-bounds" COMPILER_RT_HAS_ARRAY_BOUNDS_FLAG)
+check_cxx_compiler_flag("-Werror -Wuninitialized" COMPILER_RT_HAS_UNINITIALIZED_FLAG)
+check_cxx_compiler_flag("-Werror -Wshadow" COMPILER_RT_HAS_SHADOW_FLAG)
+check_cxx_compiler_flag("-Werror -Wempty-body" COMPILER_RT_HAS_EMPTY_BODY_FLAG)
+check_cxx_compiler_flag("-Werror -Wsizeof-pointer-memaccess" COMPILER_RT_HAS_SIZEOF_POINTER_MEMACCESS_FLAG)
+check_cxx_compiler_flag("-Werror -Wsizeof-array-argument" COMPILER_RT_HAS_SIZEOF_ARRAY_ARGUMENT_FLAG)
+check_cxx_compiler_flag("-Werror -Wsuspicious-memaccess" COMPILER_RT_HAS_SUSPICIOUS_MEMACCESS_FLAG)
+check_cxx_compiler_flag("-Werror -Wbuiltin-memcpy-chk-size" COMPILER_RT_HAS_BUILTIN_MEMCPY_CHK_SIZE_FLAG)
+check_cxx_compiler_flag("-Werror -Warray-bounds-pointer-arithmetic" COMPILER_RT_HAS_ARRAY_BOUNDS_POINTER_ARITHMETIC_FLAG)
+check_cxx_compiler_flag("-Werror -Wreturn-stack-address" COMPILER_RT_HAS_RETURN_STACK_ADDRESS_FLAG)
+check_cxx_compiler_flag("-Werror -Wsizeof-array-decay" COMPILER_RT_HAS_SIZEOF_ARRAY_DECAY_FLAG)
+check_cxx_compiler_flag("-Werror -Wformat-insufficient-args" COMPILER_RT_HAS_FORMAT_INSUFFICIENT_ARGS_FLAG)
+check_cxx_compiler_flag("-Werror -Wformat-security" COMPILER_RT_HAS_BUILTIN_FORMAL_SECURITY_FLAG)
+check_cxx_compiler_flag("-Werror -Wsizeof-array-div" COMPILER_RT_HAS_SIZEOF_ARRAY_DIV_FLAG)
+check_cxx_compiler_flag("-Werror -Wsizeof-pointer-div" COMPILER_RT_HAS_SIZEOF_POINTER_DIV_FLAG)
 
 # Symbols.
 check_symbol_exists(__func__ "" COMPILER_RT_HAS_FUNC_SYMBOL)
@@ -461,11 +461,13 @@ if(APPLE)
     set(ORC_SUPPORTED_OS osx)
   endif()
 
-  set(DEFAULT_SANITIZER_MIN_OSX_VERSION 10.10)
+  set(DEFAULT_SANITIZER_MIN_OSX_VERSION 10.13)
   set(DARWIN_osx_MIN_VER_FLAG "-mmacosx-version-min")
+
+  string(REGEX MATCH "${DARWIN_osx_MIN_VER_FLAG}=([.0-9]+)"
+         MACOSX_VERSION_MIN_FLAG "${CMAKE_CXX_FLAGS}")
+
   if(NOT SANITIZER_MIN_OSX_VERSION)
-    string(REGEX MATCH "${DARWIN_osx_MIN_VER_FLAG}=([.0-9]+)"
-           MACOSX_VERSION_MIN_FLAG "${CMAKE_CXX_FLAGS}")
     if(MACOSX_VERSION_MIN_FLAG)
       set(MIN_OSX_VERSION "${CMAKE_MATCH_1}")
     elseif(CMAKE_OSX_DEPLOYMENT_TARGET)
@@ -630,6 +632,9 @@ if(APPLE)
   list_intersect(PROFILE_SUPPORTED_ARCH
     ALL_PROFILE_SUPPORTED_ARCH
     SANITIZER_COMMON_SUPPORTED_ARCH)
+  list_intersect(CTX_PROFILE_SUPPORTED_ARCH
+    ALL_CTX_PROFILE_SUPPORTED_ARCH
+    SANITIZER_COMMON_SUPPORTED_ARCH)
   list_intersect(TSAN_SUPPORTED_ARCH
     ALL_TSAN_SUPPORTED_ARCH
     SANITIZER_COMMON_SUPPORTED_ARCH)
@@ -676,6 +681,7 @@ else()
   filter_available_targets(HWASAN_SUPPORTED_ARCH ${ALL_HWASAN_SUPPORTED_ARCH})
   filter_available_targets(MEMPROF_SUPPORTED_ARCH ${ALL_MEMPROF_SUPPORTED_ARCH})
   filter_available_targets(PROFILE_SUPPORTED_ARCH ${ALL_PROFILE_SUPPORTED_ARCH})
+  filter_available_targets(CTX_PROFILE_SUPPORTED_ARCH ${ALL_CTX_PROFILE_SUPPORTED_ARCH})
   filter_available_targets(TSAN_SUPPORTED_ARCH ${ALL_TSAN_SUPPORTED_ARCH})
   filter_available_targets(UBSAN_SUPPORTED_ARCH ${ALL_UBSAN_SUPPORTED_ARCH})
   filter_available_targets(SAFESTACK_SUPPORTED_ARCH
@@ -799,6 +805,13 @@ if (PROFILE_SUPPORTED_ARCH AND NOT LLVM_USE_SANITIZER AND
   set(COMPILER_RT_HAS_PROFILE TRUE)
 else()
   set(COMPILER_RT_HAS_PROFILE FALSE)
+endif()
+
+if (COMPILER_RT_HAS_SANITIZER_COMMON AND CTX_PROFILE_SUPPORTED_ARCH AND
+    OS_NAME MATCHES "Linux")
+  set(COMPILER_RT_HAS_CTX_PROFILE TRUE)
+else()
+  set(COMPILER_RT_HAS_CTX_PROFILE FALSE)
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND TSAN_SUPPORTED_ARCH)

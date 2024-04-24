@@ -5,7 +5,8 @@
 
 source_filename = "1.c"
 
-; OBJ: Name: 1.c
+; OBJ: Name: .file
 ; OBJ: Source Language ID: TB_C (0x0)
 ; OBJ32: CPU Version ID: TCPU_COM (0x3)
 ; OBJ64: CPU Version ID: TCPU_PPC64 (0x2)
+; OBJ: Name: 1.c

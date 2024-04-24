@@ -8,6 +8,8 @@ void shared_za_def() __arm_inout("za") { } // expected-error {{function using ZA
 __arm_new("za") void new_za_def() { } // expected-error {{function using ZA state requires 'sme'}}
 __arm_locally_streaming void locally_streaming_def() { } // expected-error {{function executed in streaming-SVE mode requires 'sme'}}
 void streaming_shared_za_def() __arm_streaming __arm_inout("za") { } // expected-error {{function executed in streaming-SVE mode requires 'sme'}}
+void inout_za_def() __arm_inout("za") { } // expected-error {{function using ZA state requires 'sme'}}
+void inout_zt0_def() __arm_inout("zt0") { } // expected-error {{function using ZT0 state requires 'sme2'}}
 
 // It should work fine when we explicitly add the target("sme") attribute.
 __attribute__((target("sme"))) void streaming_compatible_def_sme_attr() __arm_streaming_compatible {} // OK

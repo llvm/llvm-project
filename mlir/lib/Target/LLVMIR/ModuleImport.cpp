@@ -123,12 +123,18 @@ static SmallVector<int64_t> getPositionFromIndices(ArrayRef<unsigned> indices) {
 /// access to the private module import methods.
 static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
                                             llvm::Instruction *inst,
-                                            ModuleImport &moduleImport) {
+                                            ModuleImport &moduleImport,
+                                            LLVMImportInterface &iface) {
   // Copy the operands to an LLVM operands array reference for conversion.
   SmallVector<llvm::Value *> operands(inst->operands());
   ArrayRef<llvm::Value *> llvmOperands(operands);
 
   // Convert all instructions that provide an MLIR builder.
+  if (iface.isConvertibleInstruction(inst->getOpcode()))
+    return iface.convertInstruction(odsBuilder, inst, llvmOperands,
+                                    moduleImport);
+    // TODO: Implement the `convertInstruction` hooks in the
+    // `LLVMDialectLLVMIRImportInterface` and move the following include there.
 #include "mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc"
   return failure();
 }
@@ -149,12 +155,14 @@ getTopologicallySortedBlocks(ArrayRef<llvm::BasicBlock *> basicBlocks) {
 
 ModuleImport::ModuleImport(ModuleOp mlirModule,
                            std::unique_ptr<llvm::Module> llvmModule,
-                           bool emitExpensiveWarnings)
+                           bool emitExpensiveWarnings,
+                           bool importEmptyDICompositeTypes)
     : builder(mlirModule->getContext()), context(mlirModule->getContext()),
       mlirModule(mlirModule), llvmModule(std::move(llvmModule)),
       iface(mlirModule->getContext()),
       typeTranslator(*mlirModule->getContext()),
-      debugImporter(std::make_unique<DebugImporter>(mlirModule)),
+      debugImporter(std::make_unique<DebugImporter>(
+          mlirModule, importEmptyDICompositeTypes)),
       loopAnnotationImporter(
           std::make_unique<LoopAnnotationImporter>(*this, builder)),
       emitExpensiveWarnings(emitExpensiveWarnings) {
@@ -619,8 +627,8 @@ void ModuleImport::setNonDebugMetadataAttrs(llvm::Instruction *inst,
   }
 }
 
-void ModuleImport::setIntegerOverflowFlagsAttr(llvm::Instruction *inst,
-                                               Operation *op) const {
+void ModuleImport::setIntegerOverflowFlags(llvm::Instruction *inst,
+                                           Operation *op) const {
   auto iface = cast<IntegerOverflowFlagsInterface>(op);
 
   IntegerOverflowFlags value = {};
@@ -628,8 +636,7 @@ void ModuleImport::setIntegerOverflowFlagsAttr(llvm::Instruction *inst,
   value =
       bitEnumSet(value, IntegerOverflowFlags::nuw, inst->hasNoUnsignedWrap());
 
-  auto attr = IntegerOverflowFlagsAttr::get(op->getContext(), value);
-  iface->setAttr(iface.getIntegerOverflowAttrName(), attr);
+  iface.setOverflowFlags(value);
 }
 
 void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
@@ -1290,6 +1297,27 @@ DILabelAttr ModuleImport::matchLabelAttr(llvm::Value *value) {
   return debugImporter->translate(node);
 }
 
+FPExceptionBehaviorAttr
+ModuleImport::matchFPExceptionBehaviorAttr(llvm::Value *value) {
+  auto *metadata = cast<llvm::MetadataAsValue>(value);
+  auto *mdstr = cast<llvm::MDString>(metadata->getMetadata());
+  std::optional<llvm::fp::ExceptionBehavior> optLLVM =
+      llvm::convertStrToExceptionBehavior(mdstr->getString());
+  assert(optLLVM && "Expecting FP exception behavior");
+  return builder.getAttr<FPExceptionBehaviorAttr>(
+      convertFPExceptionBehaviorFromLLVM(*optLLVM));
+}
+
+RoundingModeAttr ModuleImport::matchRoundingModeAttr(llvm::Value *value) {
+  auto *metadata = cast<llvm::MetadataAsValue>(value);
+  auto *mdstr = cast<llvm::MDString>(metadata->getMetadata());
+  std::optional<llvm::RoundingMode> optLLVM =
+      llvm::convertStrToRoundingMode(mdstr->getString());
+  assert(optLLVM && "Expecting rounding mode");
+  return builder.getAttr<RoundingModeAttr>(
+      convertRoundingModeFromLLVM(*optLLVM));
+}
+
 FailureOr<SmallVector<AliasScopeAttr>>
 ModuleImport::matchAliasScopeAttrs(llvm::Value *value) {
   auto *nodeAsVal = cast<llvm::MetadataAsValue>(value);
@@ -1575,7 +1603,7 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
   }
 
   // Convert all instructions that have an mlirBuilder.
-  if (succeeded(convertInstructionImpl(builder, inst, *this)))
+  if (succeeded(convertInstructionImpl(builder, inst, *this, iface)))
     return success();
 
   return emitError(loc) << "unhandled instruction: " << diag(*inst);
@@ -1640,12 +1668,19 @@ static constexpr std::array ExplicitAttributes{
     StringLiteral("aarch64_pstate_sm_enabled"),
     StringLiteral("aarch64_pstate_sm_body"),
     StringLiteral("aarch64_pstate_sm_compatible"),
-    StringLiteral("aarch64_pstate_za_new"),
-    StringLiteral("aarch64_pstate_za_preserved"),
-    StringLiteral("aarch64_pstate_za_shared"),
+    StringLiteral("aarch64_new_za"),
+    StringLiteral("aarch64_preserves_za"),
+    StringLiteral("aarch64_in_za"),
+    StringLiteral("aarch64_out_za"),
+    StringLiteral("aarch64_inout_za"),
     StringLiteral("vscale_range"),
     StringLiteral("frame-pointer"),
     StringLiteral("target-features"),
+    StringLiteral("unsafe-fp-math"),
+    StringLiteral("no-infs-fp-math"),
+    StringLiteral("no-nans-fp-math"),
+    StringLiteral("approx-func-fp-math"),
+    StringLiteral("no-signed-zeros-fp-math"),
 };
 
 static void processPassthroughAttrs(llvm::Function *func, LLVMFuncOp funcOp) {
@@ -1717,12 +1752,15 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   else if (func->hasFnAttribute("aarch64_pstate_sm_compatible"))
     funcOp.setArmStreamingCompatible(true);
 
-  if (func->hasFnAttribute("aarch64_pstate_za_new"))
+  if (func->hasFnAttribute("aarch64_new_za"))
     funcOp.setArmNewZa(true);
-  else if (func->hasFnAttribute("aarch64_pstate_za_shared"))
-    funcOp.setArmSharedZa(true);
-  // PreservedZA can be used with either NewZA or SharedZA.
-  if (func->hasFnAttribute("aarch64_pstate_za_preserved"))
+  else if (func->hasFnAttribute("aarch64_in_za"))
+    funcOp.setArmInZa(true);
+  else if (func->hasFnAttribute("aarch64_out_za"))
+    funcOp.setArmOutZa(true);
+  else if (func->hasFnAttribute("aarch64_inout_za"))
+    funcOp.setArmInoutZa(true);
+  else if (func->hasFnAttribute("aarch64_preserves_za"))
     funcOp.setArmPreservesZa(true);
 
   llvm::Attribute attr = func->getFnAttribute(llvm::Attribute::VScaleRange);
@@ -1752,6 +1790,26 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
       attr.isStringAttribute())
     funcOp.setTargetFeaturesAttr(
         LLVM::TargetFeaturesAttr::get(context, attr.getValueAsString()));
+
+  if (llvm::Attribute attr = func->getFnAttribute("unsafe-fp-math");
+      attr.isStringAttribute())
+    funcOp.setUnsafeFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("no-infs-fp-math");
+      attr.isStringAttribute())
+    funcOp.setNoInfsFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("no-nans-fp-math");
+      attr.isStringAttribute())
+    funcOp.setNoNansFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("approx-func-fp-math");
+      attr.isStringAttribute())
+    funcOp.setApproxFuncFpMath(attr.getValueAsBool());
+
+  if (llvm::Attribute attr = func->getFnAttribute("no-signed-zeros-fp-math");
+      attr.isStringAttribute())
+    funcOp.setNoSignedZerosFpMath(attr.getValueAsBool());
 }
 
 DictionaryAttr
@@ -1936,6 +1994,13 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
   // TODO: find a way to support this case.
   if (isMetadataKillLocation(dbgIntr))
     return emitUnsupportedWarning();
+  // Drop debug intrinsics if the associated variable information cannot be
+  // translated due to cyclic debug metadata.
+  // TODO: Support cyclic debug metadata.
+  DILocalVariableAttr localVariableAttr =
+      matchLocalVariableAttr(dbgIntr->getArgOperand(1));
+  if (!localVariableAttr)
+    return emitUnsupportedWarning();
   FailureOr<Value> argOperand = convertMetadataValue(dbgIntr->getArgOperand(0));
   if (failed(argOperand))
     return emitError(loc) << "failed to convert a debug intrinsic operand: "
@@ -1961,8 +2026,6 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
   } else {
     builder.setInsertionPointAfterValue(*argOperand);
   }
-  DILocalVariableAttr localVariableAttr =
-      matchLocalVariableAttr(dbgIntr->getArgOperand(1));
   auto locationExprAttr =
       debugImporter->translateExpression(dbgIntr->getExpression());
   Operation *op =
@@ -2030,8 +2093,8 @@ ModuleImport::translateLoopAnnotationAttr(const llvm::MDNode *node,
 
 OwningOpRef<ModuleOp>
 mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
-                              MLIRContext *context,
-                              bool emitExpensiveWarnings) {
+                              MLIRContext *context, bool emitExpensiveWarnings,
+                              bool dropDICompositeTypeElements) {
   // Preload all registered dialects to allow the import to iterate the
   // registered LLVMImportDialectInterface implementations and query the
   // supported LLVM IR constructs before starting the translation. Assumes the
@@ -2047,7 +2110,7 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
       /*column=*/0)));
 
   ModuleImport moduleImport(module.get(), std::move(llvmModule),
-                            emitExpensiveWarnings);
+                            emitExpensiveWarnings, dropDICompositeTypeElements);
   if (failed(moduleImport.initializeImportInterface()))
     return {};
   if (failed(moduleImport.convertDataLayout()))

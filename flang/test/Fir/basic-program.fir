@@ -60,8 +60,11 @@ func.func @_QQmain() {
 
 // PASSES-NEXT: AddAliasTags
 
+// PASSES-NEXT: Pipeline Collection : ['func.func', 'omp.declare_reduction']
 // PASSES-NEXT: 'func.func' Pipeline
-// PASSES-NEXT:   CFGConversion
+// PASSES-NEXT:   CFGConversionOnFunc
+// PASSES-NEXT: 'omp.declare_reduction' Pipeline
+// PASSES-NEXT:   CFGConversionOnReduction
 
 // PASSES-NEXT: SCFToControlFlow
 // PASSES-NEXT: Canonicalizer
@@ -71,11 +74,13 @@ func.func @_QQmain() {
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 // PASSES-NEXT: BoxedProcedurePass
 
-// PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func']
+// PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction']
 // PASSES-NEXT:   'fir.global' Pipeline
-// PASSES-NEXT:    AbstractResultOnGlobalOpt
+// PASSES-NEXT:    AbstractResultOpt
 // PASSES-NEXT:  'func.func' Pipeline
-// PASSES-NEXT:    AbstractResultOnFuncOpt
+// PASSES-NEXT:    AbstractResultOpt
+// PASSES-NEXT:  'omp.declare_reduction' Pipeline
+// PASSES-NEXT:    AbstractResultOpt
 
 // PASSES-NEXT: CodeGenRewrite
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations eliminated

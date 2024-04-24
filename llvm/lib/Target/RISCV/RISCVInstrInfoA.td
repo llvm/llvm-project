@@ -30,6 +30,19 @@ multiclass LR_r_aq_rl<bits<3> funct3, string opcodestr> {
   def _AQ_RL : LR_r<1, 1, funct3, opcodestr # ".aqrl">;
 }
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
+class SC_r<bit aq, bit rl, bits<3> funct3, string opcodestr>
+    : RVInstRAtomic<0b00011, aq, rl, funct3, OPC_AMO,
+                    (outs GPR:$rd), (ins GPRMemZeroOffset:$rs1, GPR:$rs2),
+                    opcodestr, "$rd, $rs2, $rs1">;
+
+multiclass SC_r_aq_rl<bits<3> funct3, string opcodestr> {
+  def ""     : SC_r<0, 0, funct3, opcodestr>;
+  def _AQ    : SC_r<1, 0, funct3, opcodestr # ".aq">;
+  def _RL    : SC_r<0, 1, funct3, opcodestr # ".rl">;
+  def _AQ_RL : SC_r<1, 1, funct3, opcodestr # ".aqrl">;
+}
+
 let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in
 class AMO_rr<bits<5> funct5, bit aq, bit rl, bits<3> funct3, string opcodestr>
     : RVInstRAtomic<funct5, aq, rl, funct3, OPC_AMO,
@@ -47,10 +60,13 @@ multiclass AMO_rr_aq_rl<bits<5> funct5, bits<3> funct3, string opcodestr> {
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtA], IsSignExtendingOpW = 1 in {
+let Predicates = [HasStdExtAOrZalrsc], IsSignExtendingOpW = 1 in {
 defm LR_W       : LR_r_aq_rl<0b010, "lr.w">, Sched<[WriteAtomicLDW, ReadAtomicLDW]>;
-defm SC_W       : AMO_rr_aq_rl<0b00011, 0b010, "sc.w">,
+defm SC_W       : SC_r_aq_rl<0b010, "sc.w">,
                   Sched<[WriteAtomicSTW, ReadAtomicSTW, ReadAtomicSTW]>;
+} // Predicates = [HasStdExtAOrZalrsc], IsSignExtendingOpW = 1
+
+let Predicates = [HasStdExtAOrZaamo], IsSignExtendingOpW = 1 in {
 defm AMOSWAP_W  : AMO_rr_aq_rl<0b00001, 0b010, "amoswap.w">,
                   Sched<[WriteAtomicW, ReadAtomicWA, ReadAtomicWD]>;
 defm AMOADD_W   : AMO_rr_aq_rl<0b00000, 0b010, "amoadd.w">,
@@ -69,12 +85,15 @@ defm AMOMINU_W  : AMO_rr_aq_rl<0b11000, 0b010, "amominu.w">,
                   Sched<[WriteAtomicW, ReadAtomicWA, ReadAtomicWD]>;
 defm AMOMAXU_W  : AMO_rr_aq_rl<0b11100, 0b010, "amomaxu.w">,
                   Sched<[WriteAtomicW, ReadAtomicWA, ReadAtomicWD]>;
-} // Predicates = [HasStdExtA]
+} // Predicates = [HasStdExtAOrZaamo], IsSignExtendingOpW = 1
 
-let Predicates = [HasStdExtA, IsRV64] in {
+let Predicates = [HasStdExtAOrZalrsc, IsRV64] in {
 defm LR_D       : LR_r_aq_rl<0b011, "lr.d">, Sched<[WriteAtomicLDD, ReadAtomicLDD]>;
-defm SC_D       : AMO_rr_aq_rl<0b00011, 0b011, "sc.d">,
+defm SC_D       : SC_r_aq_rl<0b011, "sc.d">,
                   Sched<[WriteAtomicSTD, ReadAtomicSTD, ReadAtomicSTD]>;
+} // Predicates = [HasStdExtAOrZalrsc, IsRV64]
+
+let Predicates = [HasStdExtAOrZaamo, IsRV64] in {
 defm AMOSWAP_D  : AMO_rr_aq_rl<0b00001, 0b011, "amoswap.d">,
                   Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
 defm AMOADD_D   : AMO_rr_aq_rl<0b00000, 0b011, "amoadd.d">,
@@ -93,7 +112,7 @@ defm AMOMINU_D  : AMO_rr_aq_rl<0b11000, 0b011, "amominu.d">,
                   Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
 defm AMOMAXU_D  : AMO_rr_aq_rl<0b11100, 0b011, "amomaxu.d">,
                   Sched<[WriteAtomicD, ReadAtomicDA, ReadAtomicDD]>;
-} // Predicates = [HasStdExtA, IsRV64]
+} // Predicates = [HasStdExtAOrZaamo, IsRV64]
 
 //===----------------------------------------------------------------------===//
 // Pseudo-instructions and codegen patterns

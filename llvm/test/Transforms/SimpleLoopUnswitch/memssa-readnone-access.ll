@@ -115,3 +115,107 @@ split:
 exit:
   ret void
 }
+
+; Variants of the above test with swapped branch destinations.
+
+define void @test1_swapped(i1 %c) {
+; CHECK-LABEL: define void @test1_swapped(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[C_FR:%.*]] = freeze i1 [[C]]
+; CHECK-NEXT:    br i1 [[C_FR]], label [[START_SPLIT_US:%.*]], label [[START_SPLIT:%.*]]
+; CHECK:       start.split.us:
+; CHECK-NEXT:    br label [[LOOP_US:%.*]]
+; CHECK:       loop.us:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[LOOP_US]]
+; CHECK:       start.split:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+start:
+  br label %loop
+
+loop:
+  %fn = load ptr, ptr @vtable, align 8
+  call void %fn()
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @test2_swapped(i1 %c, ptr %p) {
+; CHECK-LABEL: define void @test2_swapped(
+; CHECK-SAME: i1 [[C:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[C_FR:%.*]] = freeze i1 [[C]]
+; CHECK-NEXT:    br i1 [[C_FR]], label [[DOTSPLIT_US:%.*]], label [[DOTSPLIT:%.*]]
+; CHECK:       .split.us:
+; CHECK-NEXT:    br label [[LOOP_US:%.*]]
+; CHECK:       loop.us:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[LOOP_US]]
+; CHECK:       .split:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  br label %loop
+
+loop:
+  %fn = load ptr, ptr @vtable, align 8
+  call void %fn()
+  call void @bar()
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @test3_swapped(i1 %c, ptr %p) {
+; CHECK-LABEL: define void @test3_swapped(
+; CHECK-SAME: i1 [[C:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[C_FR:%.*]] = freeze i1 [[C]]
+; CHECK-NEXT:    br i1 [[C_FR]], label [[DOTSPLIT_US:%.*]], label [[DOTSPLIT:%.*]]
+; CHECK:       .split.us:
+; CHECK-NEXT:    br label [[LOOP_US:%.*]]
+; CHECK:       loop.us:
+; CHECK-NEXT:    br label [[SPLIT_US:%.*]]
+; CHECK:       split.us:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[LOOP_US]]
+; CHECK:       .split:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    br label [[SPLIT:%.*]]
+; CHECK:       split:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  br label %loop
+
+loop:
+  %fn = load ptr, ptr @vtable, align 8
+  br label %split
+
+split:
+  call void %fn()
+  call void @bar()
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}

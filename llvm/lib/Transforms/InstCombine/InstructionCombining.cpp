@@ -1347,9 +1347,13 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
       SI->swapProfMetadata();
       break;
     }
-    case Instruction::Br:
-      cast<BranchInst>(U)->swapSuccessors(); // swaps prof metadata too
+    case Instruction::Br: {
+      BranchInst *BI = cast<BranchInst>(U);
+      BI->swapSuccessors(); // swaps prof metadata too
+      if (BPI)
+        BPI->swapSuccEdgesProbabilities(BI->getParent());
       break;
+    }
     case Instruction::Xor:
       replaceInstUsesWith(cast<Instruction>(*U), I);
       // Add to worklist for DCE.
@@ -1399,6 +1403,201 @@ Value *InstCombinerImpl::dyn_castNegVal(Value *V) const {
       return ConstantExpr::getNeg(CV);
 
   return nullptr;
+}
+
+// Try to fold:
+//    1) (fp_binop ({s|u}itofp x), ({s|u}itofp y))
+//        -> ({s|u}itofp (int_binop x, y))
+//    2) (fp_binop ({s|u}itofp x), FpC)
+//        -> ({s|u}itofp (int_binop x, (fpto{s|u}i FpC)))
+//
+// Assuming the sign of the cast for x/y is `OpsFromSigned`.
+Instruction *InstCombinerImpl::foldFBinOpOfIntCastsFromSign(
+    BinaryOperator &BO, bool OpsFromSigned, std::array<Value *, 2> IntOps,
+    Constant *Op1FpC, SmallVectorImpl<WithCache<const Value *>> &OpsKnown) {
+
+  Type *FPTy = BO.getType();
+  Type *IntTy = IntOps[0]->getType();
+
+  unsigned IntSz = IntTy->getScalarSizeInBits();
+  // This is the maximum number of inuse bits by the integer where the int -> fp
+  // casts are exact.
+  unsigned MaxRepresentableBits =
+      APFloat::semanticsPrecision(FPTy->getScalarType()->getFltSemantics());
+
+  // Preserve known number of leading bits. This can allow us to trivial nsw/nuw
+  // checks later on.
+  unsigned NumUsedLeadingBits[2] = {IntSz, IntSz};
+
+  // NB: This only comes up if OpsFromSigned is true, so there is no need to
+  // cache if between calls to `foldFBinOpOfIntCastsFromSign`.
+  auto IsNonZero = [&](unsigned OpNo) -> bool {
+    if (OpsKnown[OpNo].hasKnownBits() &&
+        OpsKnown[OpNo].getKnownBits(SQ).isNonZero())
+      return true;
+    return isKnownNonZero(IntOps[OpNo], SQ);
+  };
+
+  auto IsNonNeg = [&](unsigned OpNo) -> bool {
+    // NB: This matches the impl in ValueTracking, we just try to use cached
+    // knownbits here. If we ever start supporting WithCache for
+    // `isKnownNonNegative`, change this to an explicit call.
+    return OpsKnown[OpNo].getKnownBits(SQ).isNonNegative();
+  };
+
+  // Check if we know for certain that ({s|u}itofp op) is exact.
+  auto IsValidPromotion = [&](unsigned OpNo) -> bool {
+    // Can we treat this operand as the desired sign?
+    if (OpsFromSigned != isa<SIToFPInst>(BO.getOperand(OpNo)) &&
+        !IsNonNeg(OpNo))
+      return false;
+
+    // If fp precision >= bitwidth(op) then its exact.
+    // NB: This is slightly conservative for `sitofp`. For signed conversion, we
+    // can handle `MaxRepresentableBits == IntSz - 1` as the sign bit will be
+    // handled specially. We can't, however, increase the bound arbitrarily for
+    // `sitofp` as for larger sizes, it won't sign extend.
+    if (MaxRepresentableBits < IntSz) {
+      // Otherwise if its signed cast check that fp precisions >= bitwidth(op) -
+      // numSignBits(op).
+      // TODO: If we add support for `WithCache` in `ComputeNumSignBits`, change
+      // `IntOps[OpNo]` arguments to `KnownOps[OpNo]`.
+      if (OpsFromSigned)
+        NumUsedLeadingBits[OpNo] = IntSz - ComputeNumSignBits(IntOps[OpNo]);
+      // Finally for unsigned check that fp precision >= bitwidth(op) -
+      // numLeadingZeros(op).
+      else {
+        NumUsedLeadingBits[OpNo] =
+            IntSz - OpsKnown[OpNo].getKnownBits(SQ).countMinLeadingZeros();
+      }
+    }
+    // NB: We could also check if op is known to be a power of 2 or zero (which
+    // will always be representable). Its unlikely, however, that is we are
+    // unable to bound op in any way we will be able to pass the overflow checks
+    // later on.
+
+    if (MaxRepresentableBits < NumUsedLeadingBits[OpNo])
+      return false;
+    // Signed + Mul also requires that op is non-zero to avoid -0 cases.
+    return !OpsFromSigned || BO.getOpcode() != Instruction::FMul ||
+           IsNonZero(OpNo);
+  };
+
+  // If we have a constant rhs, see if we can losslessly convert it to an int.
+  if (Op1FpC != nullptr) {
+    // Signed + Mul req non-zero
+    if (OpsFromSigned && BO.getOpcode() == Instruction::FMul &&
+        !match(Op1FpC, m_NonZeroFP()))
+      return nullptr;
+
+    Constant *Op1IntC = ConstantFoldCastOperand(
+        OpsFromSigned ? Instruction::FPToSI : Instruction::FPToUI, Op1FpC,
+        IntTy, DL);
+    if (Op1IntC == nullptr)
+      return nullptr;
+    if (ConstantFoldCastOperand(OpsFromSigned ? Instruction::SIToFP
+                                              : Instruction::UIToFP,
+                                Op1IntC, FPTy, DL) != Op1FpC)
+      return nullptr;
+
+    // First try to keep sign of cast the same.
+    IntOps[1] = Op1IntC;
+  }
+
+  // Ensure lhs/rhs integer types match.
+  if (IntTy != IntOps[1]->getType())
+    return nullptr;
+
+  if (Op1FpC == nullptr) {
+    if (!IsValidPromotion(1))
+      return nullptr;
+  }
+  if (!IsValidPromotion(0))
+    return nullptr;
+
+  // Final we check if the integer version of the binop will not overflow.
+  BinaryOperator::BinaryOps IntOpc;
+  // Because of the precision check, we can often rule out overflows.
+  bool NeedsOverflowCheck = true;
+  // Try to conservatively rule out overflow based on the already done precision
+  // checks.
+  unsigned OverflowMaxOutputBits = OpsFromSigned ? 2 : 1;
+  unsigned OverflowMaxCurBits =
+      std::max(NumUsedLeadingBits[0], NumUsedLeadingBits[1]);
+  bool OutputSigned = OpsFromSigned;
+  switch (BO.getOpcode()) {
+  case Instruction::FAdd:
+    IntOpc = Instruction::Add;
+    OverflowMaxOutputBits += OverflowMaxCurBits;
+    break;
+  case Instruction::FSub:
+    IntOpc = Instruction::Sub;
+    OverflowMaxOutputBits += OverflowMaxCurBits;
+    break;
+  case Instruction::FMul:
+    IntOpc = Instruction::Mul;
+    OverflowMaxOutputBits += OverflowMaxCurBits * 2;
+    break;
+  default:
+    llvm_unreachable("Unsupported binop");
+  }
+  // The precision check may have already ruled out overflow.
+  if (OverflowMaxOutputBits < IntSz) {
+    NeedsOverflowCheck = false;
+    // We can bound unsigned overflow from sub to in range signed value (this is
+    // what allows us to avoid the overflow check for sub).
+    if (IntOpc == Instruction::Sub)
+      OutputSigned = true;
+  }
+
+  // Precision check did not rule out overflow, so need to check.
+  // TODO: If we add support for `WithCache` in `willNotOverflow`, change
+  // `IntOps[...]` arguments to `KnownOps[...]`.
+  if (NeedsOverflowCheck &&
+      !willNotOverflow(IntOpc, IntOps[0], IntOps[1], BO, OutputSigned))
+    return nullptr;
+
+  Value *IntBinOp = Builder.CreateBinOp(IntOpc, IntOps[0], IntOps[1]);
+  if (auto *IntBO = dyn_cast<BinaryOperator>(IntBinOp)) {
+    IntBO->setHasNoSignedWrap(OutputSigned);
+    IntBO->setHasNoUnsignedWrap(!OutputSigned);
+  }
+  if (OutputSigned)
+    return new SIToFPInst(IntBinOp, FPTy);
+  return new UIToFPInst(IntBinOp, FPTy);
+}
+
+// Try to fold:
+//    1) (fp_binop ({s|u}itofp x), ({s|u}itofp y))
+//        -> ({s|u}itofp (int_binop x, y))
+//    2) (fp_binop ({s|u}itofp x), FpC)
+//        -> ({s|u}itofp (int_binop x, (fpto{s|u}i FpC)))
+Instruction *InstCombinerImpl::foldFBinOpOfIntCasts(BinaryOperator &BO) {
+  std::array<Value *, 2> IntOps = {nullptr, nullptr};
+  Constant *Op1FpC = nullptr;
+  // Check for:
+  //    1) (binop ({s|u}itofp x), ({s|u}itofp y))
+  //    2) (binop ({s|u}itofp x), FpC)
+  if (!match(BO.getOperand(0), m_SIToFP(m_Value(IntOps[0]))) &&
+      !match(BO.getOperand(0), m_UIToFP(m_Value(IntOps[0]))))
+    return nullptr;
+
+  if (!match(BO.getOperand(1), m_Constant(Op1FpC)) &&
+      !match(BO.getOperand(1), m_SIToFP(m_Value(IntOps[1]))) &&
+      !match(BO.getOperand(1), m_UIToFP(m_Value(IntOps[1]))))
+    return nullptr;
+
+  // Cache KnownBits a bit to potentially save some analysis.
+  SmallVector<WithCache<const Value *>, 2> OpsKnown = {IntOps[0], IntOps[1]};
+
+  // Try treating x/y as coming from both `uitofp` and `sitofp`. There are
+  // different constraints depending on the sign of the cast.
+  // NB: `(uitofp nneg X)` == `(sitofp nneg X)`.
+  if (Instruction *R = foldFBinOpOfIntCastsFromSign(BO, /*OpsFromSigned=*/false,
+                                                    IntOps, Op1FpC, OpsKnown))
+    return R;
+  return foldFBinOpOfIntCastsFromSign(BO, /*OpsFromSigned=*/true, IntOps,
+                                      Op1FpC, OpsKnown);
 }
 
 /// A binop with a constant operand and a sign-extended boolean operand may be
@@ -1455,6 +1654,7 @@ static Value *foldOperationIntoSelectOperand(Instruction &I, SelectInst *SI,
                                              Value *NewOp, InstCombiner &IC) {
   Instruction *Clone = I.clone();
   Clone->replaceUsesOfWith(SI, NewOp);
+  Clone->dropUBImplyingAttrsAndMetadata();
   IC.InsertNewInstBefore(Clone, SI->getIterator());
   return Clone;
 }
@@ -1473,21 +1673,6 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   // Bool selects with constant operands can be folded to logical ops.
   if (SI->getType()->isIntOrIntVectorTy(1))
     return nullptr;
-
-  // If it's a bitcast involving vectors, make sure it has the same number of
-  // elements on both sides.
-  if (auto *BC = dyn_cast<BitCastInst>(&Op)) {
-    VectorType *DestTy = dyn_cast<VectorType>(BC->getDestTy());
-    VectorType *SrcTy = dyn_cast<VectorType>(BC->getSrcTy());
-
-    // Verify that either both or neither are vectors.
-    if ((SrcTy == nullptr) != (DestTy == nullptr))
-      return nullptr;
-
-    // If vectors, verify that they have the same number of elements.
-    if (SrcTy && SrcTy->getElementCount() != DestTy->getElementCount())
-      return nullptr;
-  }
 
   // Test if a FCmpInst instruction is used exclusively by a select as
   // part of a minimum or maximum operation. If so, refrain from doing
@@ -2009,7 +2194,7 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
     Value *Y, *OtherOp;
     if (!match(LHS,
                m_OneUse(m_Shuffle(m_Value(X), m_Undef(), m_Mask(MaskC)))) ||
-        !match(MaskC, m_SplatOrUndefMask(SplatIndex)) ||
+        !match(MaskC, m_SplatOrPoisonMask(SplatIndex)) ||
         X->getType() != Inst.getType() ||
         !match(RHS, m_OneUse(m_BinOp(Opcode, m_Value(Y), m_Value(OtherOp)))))
       return nullptr;
@@ -2356,11 +2541,13 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
                   !shouldAvoidAbsorbingNotIntoSelect(*cast<SelectInst>(V));
   // Selects/min/max with invertible operands are freely invertible
   if (IsSelect || match(V, m_MaxOrMin(m_Value(A), m_Value(B)))) {
+    bool LocalDoesConsume = DoesConsume;
     if (!getFreelyInvertedImpl(B, B->hasOneUse(), /*Builder*/ nullptr,
-                               DoesConsume, Depth))
+                               LocalDoesConsume, Depth))
       return nullptr;
     if (Value *NotA = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
-                                            DoesConsume, Depth)) {
+                                            LocalDoesConsume, Depth)) {
+      DoesConsume = LocalDoesConsume;
       if (Builder != nullptr) {
         Value *NotB = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
                                             DoesConsume, Depth);
@@ -2374,6 +2561,89 @@ Value *InstCombiner::getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
       return NonNull;
     }
   }
+
+  if (PHINode *PN = dyn_cast<PHINode>(V)) {
+    bool LocalDoesConsume = DoesConsume;
+    SmallVector<std::pair<Value *, BasicBlock *>, 8> IncomingValues;
+    for (Use &U : PN->operands()) {
+      BasicBlock *IncomingBlock = PN->getIncomingBlock(U);
+      Value *NewIncomingVal = getFreelyInvertedImpl(
+          U.get(), /*WillInvertAllUses=*/false,
+          /*Builder=*/nullptr, LocalDoesConsume, MaxAnalysisRecursionDepth - 1);
+      if (NewIncomingVal == nullptr)
+        return nullptr;
+      // Make sure that we can safely erase the original PHI node.
+      if (NewIncomingVal == V)
+        return nullptr;
+      if (Builder != nullptr)
+        IncomingValues.emplace_back(NewIncomingVal, IncomingBlock);
+    }
+
+    DoesConsume = LocalDoesConsume;
+    if (Builder != nullptr) {
+      IRBuilderBase::InsertPointGuard Guard(*Builder);
+      Builder->SetInsertPoint(PN);
+      PHINode *NewPN =
+          Builder->CreatePHI(PN->getType(), PN->getNumIncomingValues());
+      for (auto [Val, Pred] : IncomingValues)
+        NewPN->addIncoming(Val, Pred);
+      return NewPN;
+    }
+    return NonNull;
+  }
+
+  if (match(V, m_SExtLike(m_Value(A)))) {
+    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateSExt(AV, V->getType()) : NonNull;
+    return nullptr;
+  }
+
+  if (match(V, m_Trunc(m_Value(A)))) {
+    if (auto *AV = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                         DoesConsume, Depth))
+      return Builder ? Builder->CreateTrunc(AV, V->getType()) : NonNull;
+    return nullptr;
+  }
+
+  // De Morgan's Laws:
+  // (~(A | B)) -> (~A & ~B)
+  // (~(A & B)) -> (~A | ~B)
+  auto TryInvertAndOrUsingDeMorgan = [&](Instruction::BinaryOps Opcode,
+                                         bool IsLogical, Value *A,
+                                         Value *B) -> Value * {
+    bool LocalDoesConsume = DoesConsume;
+    if (!getFreelyInvertedImpl(B, B->hasOneUse(), /*Builder=*/nullptr,
+                               LocalDoesConsume, Depth))
+      return nullptr;
+    if (auto *NotA = getFreelyInvertedImpl(A, A->hasOneUse(), Builder,
+                                           LocalDoesConsume, Depth)) {
+      auto *NotB = getFreelyInvertedImpl(B, B->hasOneUse(), Builder,
+                                         LocalDoesConsume, Depth);
+      DoesConsume = LocalDoesConsume;
+      if (IsLogical)
+        return Builder ? Builder->CreateLogicalOp(Opcode, NotA, NotB) : NonNull;
+      return Builder ? Builder->CreateBinOp(Opcode, NotA, NotB) : NonNull;
+    }
+
+    return nullptr;
+  };
+
+  if (match(V, m_Or(m_Value(A), m_Value(B))))
+    return TryInvertAndOrUsingDeMorgan(Instruction::And, /*IsLogical=*/false, A,
+                                       B);
+
+  if (match(V, m_And(m_Value(A), m_Value(B))))
+    return TryInvertAndOrUsingDeMorgan(Instruction::Or, /*IsLogical=*/false, A,
+                                       B);
+
+  if (match(V, m_LogicalOr(m_Value(A), m_Value(B))))
+    return TryInvertAndOrUsingDeMorgan(Instruction::And, /*IsLogical=*/true, A,
+                                       B);
+
+  if (match(V, m_LogicalAnd(m_Value(A), m_Value(B))))
+    return TryInvertAndOrUsingDeMorgan(Instruction::Or, /*IsLogical=*/true, A,
+                                       B);
 
   return nullptr;
 }
@@ -2449,6 +2719,15 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   }
   if (MadeChange)
     return &GEP;
+
+  // Canonicalize constant GEPs to i8 type.
+  if (!GEPEltType->isIntegerTy(8) && GEP.hasAllConstantIndices()) {
+    APInt Offset(DL.getIndexTypeSizeInBits(GEPType), 0);
+    if (GEP.accumulateConstantOffset(DL, Offset))
+      return replaceInstUsesWith(
+          GEP, Builder.CreatePtrAdd(PtrOp, Builder.getInt(Offset), "",
+                                    GEP.isInBounds()));
+  }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
   if (auto *PN = dyn_cast<PHINode>(PtrOp)) {
@@ -2594,10 +2873,10 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         Value *V;
         if ((has_single_bit(TyAllocSize) &&
              match(GEP.getOperand(1),
-                   m_Exact(m_AShr(m_Value(V),
-                                  m_SpecificInt(countr_zero(TyAllocSize)))))) ||
+                   m_Exact(m_Shr(m_Value(V),
+                                 m_SpecificInt(countr_zero(TyAllocSize)))))) ||
             match(GEP.getOperand(1),
-                  m_Exact(m_SDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
+                  m_Exact(m_IDiv(m_Value(V), m_SpecificInt(TyAllocSize))))) {
           GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
               Builder.getInt8Ty(), GEP.getPointerOperand(), V);
           NewGEP->setIsInBounds(GEP.isInBounds());
@@ -2845,10 +3124,10 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
   // If we are removing an alloca with a dbg.declare, insert dbg.value calls
   // before each store.
   SmallVector<DbgVariableIntrinsic *, 8> DVIs;
-  SmallVector<DPValue *, 8> DPVs;
+  SmallVector<DbgVariableRecord *, 8> DVRs;
   std::unique_ptr<DIBuilder> DIB;
   if (isa<AllocaInst>(MI)) {
-    findDbgUsers(DVIs, &MI, &DPVs);
+    findDbgUsers(DVIs, &MI, &DVRs);
     DIB.reset(new DIBuilder(*MI.getModule(), /*AllowUnresolved=*/false));
   }
 
@@ -2888,9 +3167,9 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
         for (auto *DVI : DVIs)
           if (DVI->isAddressOfVariable())
             ConvertDebugDeclareToDebugValue(DVI, SI, *DIB);
-        for (auto *DPV : DPVs)
-          if (DPV->isAddressOfVariable())
-            ConvertDebugDeclareToDebugValue(DPV, SI, *DIB);
+        for (auto *DVR : DVRs)
+          if (DVR->isAddressOfVariable())
+            ConvertDebugDeclareToDebugValue(DVR, SI, *DIB);
       } else {
         // Casts, GEP, or anything else: we're about to delete this instruction,
         // so it can not have any valid uses.
@@ -2935,9 +3214,9 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
     for (auto *DVI : DVIs)
       if (DVI->isAddressOfVariable() || DVI->getExpression()->startsWithDeref())
         DVI->eraseFromParent();
-    for (auto *DPV : DPVs)
-      if (DPV->isAddressOfVariable() || DPV->getExpression()->startsWithDeref())
-        DPV->eraseFromParent();
+    for (auto *DVR : DVRs)
+      if (DVR->isAddressOfVariable() || DVR->getExpression()->startsWithDeref())
+        DVR->eraseFromParent();
 
     return eraseInstFromFunction(MI);
   }
@@ -3084,8 +3363,22 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
 }
 
 Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
-  // Nothing for now.
-  return nullptr;
+  Value *RetVal = RI.getReturnValue();
+  if (!RetVal || !AttributeFuncs::isNoFPClassCompatibleType(RetVal->getType()))
+    return nullptr;
+
+  Function *F = RI.getFunction();
+  FPClassTest ReturnClass = F->getAttributes().getRetNoFPClass();
+  if (ReturnClass == fcNone)
+    return nullptr;
+
+  KnownFPClass KnownClass;
+  Value *Simplified =
+      SimplifyDemandedUseFPClass(RetVal, ~ReturnClass, KnownClass, 0, &RI);
+  if (!Simplified)
+    return nullptr;
+
+  return ReturnInst::Create(RI.getContext(), Simplified);
 }
 
 // WARNING: keep in sync with SimplifyCFGOpt::simplifyUnreachable()!
@@ -3182,14 +3475,17 @@ void InstCombinerImpl::handleUnreachableFrom(
     if (Inst.isEHPad() || Inst.getType()->isTokenTy())
       continue;
     // RemoveDIs: erase debug-info on this instruction manually.
-    Inst.dropDbgValues();
+    Inst.dropDbgRecords();
     eraseInstFromFunction(Inst);
     MadeIRChange = true;
   }
 
-  // RemoveDIs: to match behaviour in dbg.value mode, drop debug-info on
-  // terminator too.
-  BB->getTerminator()->dropDbgValues();
+  SmallVector<Value *> Changed;
+  if (handleUnreachableTerminator(BB->getTerminator(), Changed)) {
+    MadeIRChange = true;
+    for (Value *V : Changed)
+      addToWorklist(cast<Instruction>(V));
+  }
 
   // Handle potentially dead successors.
   for (BasicBlock *Succ : successors(BB))
@@ -3233,6 +3529,8 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
   if (match(Cond, m_Not(m_Value(X))) && !isa<Constant>(X)) {
     // Swap Destinations and condition...
     BI.swapSuccessors();
+    if (BPI)
+      BPI->swapSuccEdgesProbabilities(BI.getParent());
     return replaceOperand(BI, 0, X);
   }
 
@@ -3246,6 +3544,8 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
     Value *NotX = Builder.CreateNot(X, "not." + X->getName());
     Value *Or = Builder.CreateLogicalOr(NotX, Y);
     BI.swapSuccessors();
+    if (BPI)
+      BPI->swapSuccEdgesProbabilities(BI.getParent());
     return replaceOperand(BI, 0, Or);
   }
 
@@ -3262,6 +3562,8 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
     auto *Cmp = cast<CmpInst>(Cond);
     Cmp->setPredicate(CmpInst::getInversePredicate(Pred));
     BI.swapSuccessors();
+    if (BPI)
+      BPI->swapSuccEdgesProbabilities(BI.getParent());
     Worklist.push(Cmp);
     return &BI;
   }
@@ -3278,6 +3580,38 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
 
   DC.registerBranch(&BI);
   return nullptr;
+}
+
+// Replaces (switch (select cond, X, C)/(select cond, C, X)) with (switch X) if
+// we can prove that both (switch C) and (switch X) go to the default when cond
+// is false/true.
+static Value *simplifySwitchOnSelectUsingRanges(SwitchInst &SI,
+                                                SelectInst *Select,
+                                                bool IsTrueArm) {
+  unsigned CstOpIdx = IsTrueArm ? 1 : 2;
+  auto *C = dyn_cast<ConstantInt>(Select->getOperand(CstOpIdx));
+  if (!C)
+    return nullptr;
+
+  BasicBlock *CstBB = SI.findCaseValue(C)->getCaseSuccessor();
+  if (CstBB != SI.getDefaultDest())
+    return nullptr;
+  Value *X = Select->getOperand(3 - CstOpIdx);
+  ICmpInst::Predicate Pred;
+  const APInt *RHSC;
+  if (!match(Select->getCondition(),
+             m_ICmp(Pred, m_Specific(X), m_APInt(RHSC))))
+    return nullptr;
+  if (IsTrueArm)
+    Pred = ICmpInst::getInversePredicate(Pred);
+
+  // See whether we can replace the select with X
+  ConstantRange CR = ConstantRange::makeExactICmpRegion(Pred, *RHSC);
+  for (auto Case : SI.cases())
+    if (!CR.contains(Case.getCaseValue()->getValue()))
+      return nullptr;
+
+  return X;
 }
 
 Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
@@ -3353,6 +3687,16 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
     }
   }
 
+  // Fold switch(select cond, X, Y) into switch(X/Y) if possible
+  if (auto *Select = dyn_cast<SelectInst>(Cond)) {
+    if (Value *V =
+            simplifySwitchOnSelectUsingRanges(SI, Select, /*IsTrueArm=*/true))
+      return replaceOperand(SI, 0, V);
+    if (Value *V =
+            simplifySwitchOnSelectUsingRanges(SI, Select, /*IsTrueArm=*/false))
+      return replaceOperand(SI, 0, V);
+  }
+
   KnownBits Known = computeKnownBits(Cond, 0, &SI);
   unsigned LeadingKnownZeros = Known.countMinLeadingZeros();
   unsigned LeadingKnownOnes = Known.countMinLeadingOnes();
@@ -3406,7 +3750,7 @@ InstCombinerImpl::foldExtractOfOverflowIntrinsic(ExtractValueInst &EV) {
 
   Intrinsic::ID OvID = WO->getIntrinsicID();
   const APInt *C = nullptr;
-  if (match(WO->getRHS(), m_APIntAllowUndef(C))) {
+  if (match(WO->getRHS(), m_APIntAllowPoison(C))) {
     if (*EV.idx_begin() == 0 && (OvID == Intrinsic::smul_with_overflow ||
                                  OvID == Intrinsic::umul_with_overflow)) {
       // extractvalue (any_mul_with_overflow X, -1), 0 --> -X
@@ -3449,6 +3793,17 @@ InstCombinerImpl::foldExtractOfOverflowIntrinsic(ExtractValueInst &EV) {
   if (OvID == Intrinsic::smul_with_overflow &&
       WO->getLHS()->getType()->isIntOrIntVectorTy(1))
     return BinaryOperator::CreateAnd(WO->getLHS(), WO->getRHS());
+
+  // extractvalue (umul_with_overflow X, X), 1 -> X u> 2^(N/2)-1
+  if (OvID == Intrinsic::umul_with_overflow && WO->getLHS() == WO->getRHS()) {
+    unsigned BitWidth = WO->getLHS()->getType()->getScalarSizeInBits();
+    // Only handle even bitwidths for performance reasons.
+    if (BitWidth % 2 == 0)
+      return new ICmpInst(
+          ICmpInst::ICMP_UGT, WO->getLHS(),
+          ConstantInt::get(WO->getLHS()->getType(),
+                           APInt::getLowBitsSet(BitWidth, BitWidth / 2)));
+  }
 
   // If only the overflow result is used, and the right hand side is a
   // constant (or constant splat), we can remove the intrinsic by directly
@@ -3576,6 +3931,12 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
     if (Instruction *Res = foldOpIntoPhi(EV, PN))
       return Res;
 
+  // Canonicalize extract (select Cond, TV, FV)
+  // -> select cond, (extract TV), (extract FV)
+  if (auto *SI = dyn_cast<SelectInst>(Agg))
+    if (Instruction *R = FoldOpIntoSelect(EV, SI, /*FoldWithMultiUse=*/true))
+      return R;
+
   // We could simplify extracts from other values. Note that nested extracts may
   // already be simplified implicitly by the above: extract (extract (insert) )
   // will be translated into extract ( insert ( extract ) ) first and then just
@@ -3611,6 +3972,7 @@ static bool isCatchAll(EHPersonality Personality, Constant *TypeInfo) {
   case EHPersonality::CoreCLR:
   case EHPersonality::Wasm_CXX:
   case EHPersonality::XL_CXX:
+  case EHPersonality::ZOS_CXX:
     return TypeInfo->isNullValue();
   }
   llvm_unreachable("invalid enum");
@@ -3979,7 +4341,7 @@ InstCombinerImpl::pushFreezeToPreventPoisonFromPropagating(FreezeInst &OrigFI) {
       return nullptr;
   }
 
-  OrigOpInst->dropPoisonGeneratingFlagsAndMetadata();
+  OrigOpInst->dropPoisonGeneratingAnnotations();
 
   // If all operands are guaranteed to be non-poison, we can drop freeze.
   if (!MaybePoisonOperand)
@@ -4050,7 +4412,7 @@ Instruction *InstCombinerImpl::foldFreezeIntoRecurrence(FreezeInst &FI,
   }
 
   for (Instruction *I : DropFlags)
-    I->dropPoisonGeneratingFlagsAndMetadata();
+    I->dropPoisonGeneratingAnnotations();
 
   if (StartNeedsFreeze) {
     Builder.SetInsertPoint(StartBB->getTerminator());
@@ -4304,12 +4666,32 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
   // mark the location undef: we know it was supposed to receive a new location
   // here, but that computation has been sunk.
   SmallVector<DbgVariableIntrinsic *, 2> DbgUsers;
-  findDbgUsers(DbgUsers, I);
+  SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
+  findDbgUsers(DbgUsers, I, &DbgVariableRecords);
+  if (!DbgUsers.empty())
+    tryToSinkInstructionDbgValues(I, InsertPos, SrcBlock, DestBlock, DbgUsers);
+  if (!DbgVariableRecords.empty())
+    tryToSinkInstructionDbgVariableRecords(I, InsertPos, SrcBlock, DestBlock,
+                                           DbgVariableRecords);
 
+  // PS: there are numerous flaws with this behaviour, not least that right now
+  // assignments can be re-ordered past other assignments to the same variable
+  // if they use different Values. Creating more undef assignements can never be
+  // undone. And salvaging all users outside of this block can un-necessarily
+  // alter the lifetime of the live-value that the variable refers to.
+  // Some of these things can be resolved by tolerating debug use-before-defs in
+  // LLVM-IR, however it depends on the instruction-referencing CodeGen backend
+  // being used for more architectures.
+
+  return true;
+}
+
+void InstCombinerImpl::tryToSinkInstructionDbgValues(
+    Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
+    BasicBlock *DestBlock, SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers) {
   // For all debug values in the destination block, the sunk instruction
   // will still be available, so they do not need to be dropped.
   SmallVector<DbgVariableIntrinsic *, 2> DbgUsersToSalvage;
-  SmallVector<DPValue *, 2> DPValuesToSalvage;
   for (auto &DbgUser : DbgUsers)
     if (DbgUser->getParent() != DestBlock)
       DbgUsersToSalvage.push_back(DbgUser);
@@ -4353,10 +4735,7 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
 
   // Perform salvaging without the clones, then sink the clones.
   if (!DIIClones.empty()) {
-    // RemoveDIs: pass in empty vector of DPValues until we get to instrumenting
-    // this pass.
-    SmallVector<DPValue *, 1> DummyDPValues;
-    salvageDebugInfoForDbgValues(*I, DbgUsersToSalvage, DummyDPValues);
+    salvageDebugInfoForDbgValues(*I, DbgUsersToSalvage, {});
     // The clones are in reverse order of original appearance, reverse again to
     // maintain the original order.
     for (auto &DIIClone : llvm::reverse(DIIClones)) {
@@ -4364,8 +4743,134 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
       LLVM_DEBUG(dbgs() << "SINK: " << *DIIClone << '\n');
     }
   }
+}
 
-  return true;
+void InstCombinerImpl::tryToSinkInstructionDbgVariableRecords(
+    Instruction *I, BasicBlock::iterator InsertPos, BasicBlock *SrcBlock,
+    BasicBlock *DestBlock,
+    SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords) {
+  // Implementation of tryToSinkInstructionDbgValues, but for the
+  // DbgVariableRecord of variable assignments rather than dbg.values.
+
+  // Fetch all DbgVariableRecords not already in the destination.
+  SmallVector<DbgVariableRecord *, 2> DbgVariableRecordsToSalvage;
+  for (auto &DVR : DbgVariableRecords)
+    if (DVR->getParent() != DestBlock)
+      DbgVariableRecordsToSalvage.push_back(DVR);
+
+  // Fetch a second collection, of DbgVariableRecords in the source block that
+  // we're going to sink.
+  SmallVector<DbgVariableRecord *> DbgVariableRecordsToSink;
+  for (DbgVariableRecord *DVR : DbgVariableRecordsToSalvage)
+    if (DVR->getParent() == SrcBlock)
+      DbgVariableRecordsToSink.push_back(DVR);
+
+  // Sort DbgVariableRecords according to their position in the block. This is a
+  // partial order: DbgVariableRecords attached to different instructions will
+  // be ordered by the instruction order, but DbgVariableRecords attached to the
+  // same instruction won't have an order.
+  auto Order = [](DbgVariableRecord *A, DbgVariableRecord *B) -> bool {
+    return B->getInstruction()->comesBefore(A->getInstruction());
+  };
+  llvm::stable_sort(DbgVariableRecordsToSink, Order);
+
+  // If there are two assignments to the same variable attached to the same
+  // instruction, the ordering between the two assignments is important. Scan
+  // for this (rare) case and establish which is the last assignment.
+  using InstVarPair = std::pair<const Instruction *, DebugVariable>;
+  SmallDenseMap<InstVarPair, DbgVariableRecord *> FilterOutMap;
+  if (DbgVariableRecordsToSink.size() > 1) {
+    SmallDenseMap<InstVarPair, unsigned> CountMap;
+    // Count how many assignments to each variable there is per instruction.
+    for (DbgVariableRecord *DVR : DbgVariableRecordsToSink) {
+      DebugVariable DbgUserVariable =
+          DebugVariable(DVR->getVariable(), DVR->getExpression(),
+                        DVR->getDebugLoc()->getInlinedAt());
+      CountMap[std::make_pair(DVR->getInstruction(), DbgUserVariable)] += 1;
+    }
+
+    // If there are any instructions with two assignments, add them to the
+    // FilterOutMap to record that they need extra filtering.
+    SmallPtrSet<const Instruction *, 4> DupSet;
+    for (auto It : CountMap) {
+      if (It.second > 1) {
+        FilterOutMap[It.first] = nullptr;
+        DupSet.insert(It.first.first);
+      }
+    }
+
+    // For all instruction/variable pairs needing extra filtering, find the
+    // latest assignment.
+    for (const Instruction *Inst : DupSet) {
+      for (DbgVariableRecord &DVR :
+           llvm::reverse(filterDbgVars(Inst->getDbgRecordRange()))) {
+        DebugVariable DbgUserVariable =
+            DebugVariable(DVR.getVariable(), DVR.getExpression(),
+                          DVR.getDebugLoc()->getInlinedAt());
+        auto FilterIt =
+            FilterOutMap.find(std::make_pair(Inst, DbgUserVariable));
+        if (FilterIt == FilterOutMap.end())
+          continue;
+        if (FilterIt->second != nullptr)
+          continue;
+        FilterIt->second = &DVR;
+      }
+    }
+  }
+
+  // Perform cloning of the DbgVariableRecords that we plan on sinking, filter
+  // out any duplicate assignments identified above.
+  SmallVector<DbgVariableRecord *, 2> DVRClones;
+  SmallSet<DebugVariable, 4> SunkVariables;
+  for (DbgVariableRecord *DVR : DbgVariableRecordsToSink) {
+    if (DVR->Type == DbgVariableRecord::LocationType::Declare)
+      continue;
+
+    DebugVariable DbgUserVariable =
+        DebugVariable(DVR->getVariable(), DVR->getExpression(),
+                      DVR->getDebugLoc()->getInlinedAt());
+
+    // For any variable where there were multiple assignments in the same place,
+    // ignore all but the last assignment.
+    if (!FilterOutMap.empty()) {
+      InstVarPair IVP = std::make_pair(DVR->getInstruction(), DbgUserVariable);
+      auto It = FilterOutMap.find(IVP);
+
+      // Filter out.
+      if (It != FilterOutMap.end() && It->second != DVR)
+        continue;
+    }
+
+    if (!SunkVariables.insert(DbgUserVariable).second)
+      continue;
+
+    if (DVR->isDbgAssign())
+      continue;
+
+    DVRClones.emplace_back(DVR->clone());
+    LLVM_DEBUG(dbgs() << "CLONE: " << *DVRClones.back() << '\n');
+  }
+
+  // Perform salvaging without the clones, then sink the clones.
+  if (DVRClones.empty())
+    return;
+
+  salvageDebugInfoForDbgValues(*I, {}, DbgVariableRecordsToSalvage);
+
+  // The clones are in reverse order of original appearance. Assert that the
+  // head bit is set on the iterator as we _should_ have received it via
+  // getFirstInsertionPt. Inserting like this will reverse the clone order as
+  // we'll repeatedly insert at the head, such as:
+  //   DVR-3 (third insertion goes here)
+  //   DVR-2 (second insertion goes here)
+  //   DVR-1 (first insertion goes here)
+  //   Any-Prior-DVRs
+  //   InsertPtInst
+  assert(InsertPos.getHeadBit());
+  for (DbgVariableRecord *DVRClone : DVRClones) {
+    InsertPos->getParent()->insertDbgRecordBefore(DVRClone, InsertPos);
+    LLVM_DEBUG(dbgs() << "SINK: " << *DVRClone << '\n');
+  }
 }
 
 bool InstCombinerImpl::run() {
@@ -4754,7 +5259,8 @@ static bool combineInstructionsOverFunction(
     Function &F, InstructionWorklist &Worklist, AliasAnalysis *AA,
     AssumptionCache &AC, TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
     DominatorTree &DT, OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
-    ProfileSummaryInfo *PSI, LoopInfo *LI, const InstCombineOptions &Opts) {
+    BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI, LoopInfo *LI,
+    const InstCombineOptions &Opts) {
   auto &DL = F.getParent()->getDataLayout();
 
   /// Builder - This is an IRBuilder that automatically inserts new
@@ -4792,7 +5298,7 @@ static bool combineInstructionsOverFunction(
                       << F.getName() << "\n");
 
     InstCombinerImpl IC(Worklist, Builder, F.hasMinSize(), AA, AC, TLI, TTI, DT,
-                        ORE, BFI, PSI, DL, LI);
+                        ORE, BFI, BPI, PSI, DL, LI);
     IC.MaxArraySizeForCombine = MaxArraySize;
     bool MadeChangeInThisIteration = IC.prepareWorklist(F, RPOT);
     MadeChangeInThisIteration |= IC.run();
@@ -4803,7 +5309,8 @@ static bool combineInstructionsOverFunction(
     if (Iteration > Opts.MaxIterations) {
       report_fatal_error(
           "Instruction Combining did not reach a fixpoint after " +
-          Twine(Opts.MaxIterations) + " iterations");
+              Twine(Opts.MaxIterations) + " iterations",
+          /*GenCrashDiag=*/false);
     }
   }
 
@@ -4852,9 +5359,10 @@ PreservedAnalyses InstCombinePass::run(Function &F,
       MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   auto *BFI = (PSI && PSI->hasProfileSummary()) ?
       &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
+  auto *BPI = AM.getCachedResult<BranchProbabilityAnalysis>(F);
 
   if (!combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                       BFI, PSI, LI, Options))
+                                       BFI, BPI, PSI, LI, Options))
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
 
@@ -4901,9 +5409,14 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
       (PSI && PSI->hasProfileSummary()) ?
       &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI() :
       nullptr;
+  BranchProbabilityInfo *BPI = nullptr;
+  if (auto *WrapperPass =
+          getAnalysisIfAvailable<BranchProbabilityInfoWrapperPass>())
+    BPI = &WrapperPass->getBPI();
 
   return combineInstructionsOverFunction(F, Worklist, AA, AC, TLI, TTI, DT, ORE,
-                                         BFI, PSI, LI, InstCombineOptions());
+                                         BFI, BPI, PSI, LI,
+                                         InstCombineOptions());
 }
 
 char InstructionCombiningPass::ID = 0;

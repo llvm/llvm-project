@@ -104,7 +104,7 @@ define <8 x i64> @combine_zext_pmuludq_256(<8 x i32> %a) {
 ; SSE-NEXT:    pmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,1,3,3]
 ; SSE-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; SSE-NEXT:    movdqa {{.*#+}} xmm4 = [715827883,715827883]
+; SSE-NEXT:    pmovsxdq {{.*#+}} xmm4 = [715827883,715827883]
 ; SSE-NEXT:    pmuludq %xmm4, %xmm0
 ; SSE-NEXT:    pmuludq %xmm4, %xmm1
 ; SSE-NEXT:    pmuludq %xmm4, %xmm2

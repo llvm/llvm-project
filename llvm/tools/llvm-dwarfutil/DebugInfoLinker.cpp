@@ -80,8 +80,8 @@ public:
   // should be renamed into has valid address ranges
   bool hasValidRelocs() override { return HasValidAddressRanges; }
 
-  std::optional<int64_t>
-  getSubprogramRelocAdjustment(const DWARFDie &DIE) override {
+  std::optional<int64_t> getSubprogramRelocAdjustment(const DWARFDie &DIE,
+                                                      bool Verbose) override {
     assert((DIE.getTag() == dwarf::DW_TAG_subprogram ||
             DIE.getTag() == dwarf::DW_TAG_label) &&
            "Wrong type of input die");
@@ -101,7 +101,7 @@ public:
   std::optional<int64_t>
   getExprOpAddressRelocAdjustment(DWARFUnit &U,
                                   const DWARFExpression::Operation &Op,
-                                  uint64_t, uint64_t) override {
+                                  uint64_t, uint64_t, bool Verbose) override {
     switch (Op.getCode()) {
     default: {
       assert(false && "Specified operation does not have address operand");
@@ -338,9 +338,9 @@ Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
   Triple TargetTriple = File.makeTriple();
   std::unique_ptr<classic::DwarfStreamer> Streamer;
   if (Expected<std::unique_ptr<classic::DwarfStreamer>> StreamerOrErr =
-          classic::DwarfStreamer::createStreamer(
-              TargetTriple, Linker::OutputFileType::Object, OutStream, nullptr,
-              ReportWarn))
+          classic::DwarfStreamer::createStreamer(TargetTriple,
+                                                 Linker::OutputFileType::Object,
+                                                 OutStream, ReportWarn))
     Streamer = std::move(*StreamerOrErr);
   else
     return StreamerOrErr.takeError();

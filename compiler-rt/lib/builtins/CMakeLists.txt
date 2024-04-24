@@ -190,6 +190,7 @@ set(GENERIC_SOURCES
 
 # We only build BF16 files when "__bf16" is available.
 set(BF16_SOURCES
+    extendbfsf2.c
     truncdfbf2.c
     truncsfbf2.c
 )
@@ -560,9 +561,10 @@ set(aarch64_SOURCES
   aarch64/fp_mode.c
 )
 
-if(COMPILER_RT_HAS_ASM_SME AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
-  list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c)
+if(COMPILER_RT_HAS_AARCH64_SME AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
+  list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c aarch64/sme-libc-routines.c)
   message(STATUS "AArch64 SME ABI routines enabled")
+  set_source_files_properties(aarch64/sme-libc-routines.c PROPERTIES COMPILE_FLAGS "-fno-builtin")
 else()
   message(STATUS "AArch64 SME ABI routines disabled")
 endif()

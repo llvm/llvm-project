@@ -1338,7 +1338,7 @@ static Thunk *addThunkV6M(const InputSection &isec, RelType reloc, Symbol &s,
         return make<ThumbV6MPILongThunk>(s, a);
 
       fatal("relocation " + toString(reloc) + " to " + toString(s) +
-            " not supported for Armv6-M targets for position independant"
+            " not supported for Armv6-M targets for position independent"
             " and execute only code");
     }
     if (isPureCode)

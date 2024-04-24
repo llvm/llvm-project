@@ -22,16 +22,17 @@ define void @testOrDoesntSplit(ptr %p) {
   ret void
 }
 
-define void @testNoBitsInCommonOrSplits(ptr %p) {
-; CHECK-LABEL: define void @testNoBitsInCommonOrSplits(
+; COM: The check for `or disjoint` removed the old hasNoBitsInCommon()
+; COM: check, ensure that failing to annotate an or with disjoint makes
+; COM: the optimization fail.
+define void @testNoBitsInCommonOrDoesntSplit(ptr %p) {
+; CHECK-LABEL: define void @testNoBitsInCommonOrDoesntSplit(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[VAR:%.*]] = tail call i64 @foo()
 ; CHECK-NEXT:    [[VAR_HIGH:%.*]] = and i64 [[VAR]], -16
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[VAR_HIGH]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 10
-; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
-; CHECK-NEXT:    store i8 0, ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[OFF:%.*]] = or i64 [[VAR_HIGH]], 10
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 [[OFF]]
+; CHECK-NEXT:    store i8 0, ptr [[Q]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %var = tail call i64 @foo()
@@ -46,9 +47,11 @@ define void @testDisjointOrSplits(ptr %p) {
 ; CHECK-LABEL: define void @testDisjointOrSplits(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[VAR:%.*]] = tail call i64 @foo()
-; CHECK-NEXT:    [[OFF:%.*]] = or disjoint i64 [[VAR]], 10
-; CHECK-NEXT:    [[Q:%.*]] = getelementptr i8, ptr [[P]], i64 [[OFF]]
-; CHECK-NEXT:    store i8 0, ptr [[Q]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[VAR]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 10
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    store i8 0, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %var = tail call i64 @foo()

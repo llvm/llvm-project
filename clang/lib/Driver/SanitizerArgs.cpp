@@ -487,6 +487,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         Add &= ~NotAllowedWithExecuteOnly;
       if (CfiCrossDso)
         Add &= ~SanitizerKind::CFIMFCall;
+      // -fsanitize=undefined does not expand to signed-integer-overflow in
+      // -fwrapv (implied by -fno-strict-overflow) mode.
+      if (Add & SanitizerKind::UndefinedGroup) {
+        bool S = Args.hasFlagNoClaim(options::OPT_fno_strict_overflow,
+                                     options::OPT_fstrict_overflow, false);
+        if (Args.hasFlagNoClaim(options::OPT_fwrapv, options::OPT_fno_wrapv, S))
+          Add &= ~SanitizerKind::SignedIntegerOverflow;
+      }
       Add &= Supported;
 
       if (Add & SanitizerKind::Fuzzer)
@@ -1184,7 +1192,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                           BinaryMetadataIgnorelistFiles);
   }
 
-  if (TC.getTriple().isOSWindows() && needsUbsanRt()) {
+  if (TC.getTriple().isOSWindows() && needsUbsanRt() &&
+      Args.hasFlag(options::OPT_frtlib_defaultlib,
+                   options::OPT_fno_rtlib_defaultlib, true)) {
     // Instruct the code generator to embed linker directives in the object file
     // that cause the required runtime libraries to be linked.
     CmdArgs.push_back(
@@ -1195,7 +1205,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
           "--dependent-lib=" +
           TC.getCompilerRTBasename(Args, "ubsan_standalone_cxx")));
   }
-  if (TC.getTriple().isOSWindows() && needsStatsRt()) {
+  if (TC.getTriple().isOSWindows() && needsStatsRt() &&
+      Args.hasFlag(options::OPT_frtlib_defaultlib,
+                   options::OPT_fno_rtlib_defaultlib, true)) {
     CmdArgs.push_back(Args.MakeArgString(
         "--dependent-lib=" + TC.getCompilerRTBasename(Args, "stats_client")));
 

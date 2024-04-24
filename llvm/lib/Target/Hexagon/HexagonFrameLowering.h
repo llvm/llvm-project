@@ -35,6 +35,10 @@ public:
   explicit HexagonFrameLowering()
       : TargetFrameLowering(StackGrowsDown, Align(8), 0, Align(1), true) {}
 
+  void
+  orderFrameObjects(const MachineFunction &MF,
+                    SmallVectorImpl<int> &ObjectsToAllocate) const override;
+
   // All of the prolog/epilog functionality, including saving and restoring
   // callee-saved registers is handled in emitPrologue. This is to have the
   // logic for shrink-wrapping in one place.

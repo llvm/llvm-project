@@ -559,6 +559,8 @@ unsigned WebAssemblyFastISel::getRegForUnsignedValue(const Value *V) {
   Register VReg = getRegForValue(V);
   if (VReg == 0)
     return 0;
+  if (From == To)
+    return VReg;
   return zeroExtend(VReg, V, From, To);
 }
 
@@ -568,6 +570,8 @@ unsigned WebAssemblyFastISel::getRegForSignedValue(const Value *V) {
   Register VReg = getRegForValue(V);
   if (VReg == 0)
     return 0;
+  if (From == To)
+    return VReg;
   return signExtend(VReg, V, From, To);
 }
 

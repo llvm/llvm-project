@@ -1819,8 +1819,17 @@ public:
             [&](const CompilerDirective::LoopCount &lcount) {
               Walk("!DIR$ LOOP COUNT (", lcount.v, ", ", ")");
             },
+            [&](const std::list<CompilerDirective::AssumeAligned>
+                    &assumeAligned) {
+              Word("!DIR$ ASSUME_ALIGNED ");
+              Walk(" ", assumeAligned, ", ");
+            },
             [&](const std::list<CompilerDirective::NameValue> &names) {
               Walk("!DIR$ ", names, " ");
+            },
+            [&](const CompilerDirective::Unrecognized &) {
+              Word("!DIR$ ");
+              Word(x.source.ToString());
             },
         },
         x.u);
@@ -1840,6 +1849,11 @@ public:
   void Unparse(const CompilerDirective::NameValue &x) {
     Walk(std::get<Name>(x.t));
     Walk("=", std::get<std::optional<std::uint64_t>>(x.t));
+  }
+  void Unparse(const CompilerDirective::AssumeAligned &x) {
+    Walk(std::get<common::Indirection<Designator>>(x.t));
+    Put(":");
+    Walk(std::get<uint64_t>(x.t));
   }
 
   // OpenACC Directives & Clauses
@@ -2076,6 +2090,8 @@ public:
     Walk(":", x.step);
   }
   void Unparse(const OmpReductionClause &x) {
+    Walk(std::get<std::optional<OmpReductionClause::ReductionModifier>>(x.t),
+        ",");
     Walk(std::get<OmpReductionOperator>(x.t));
     Put(":");
     Walk(std::get<OmpObjectList>(x.t));
@@ -2713,12 +2729,21 @@ public:
   WALK_NESTED_ENUM(OmpScheduleClause, ScheduleType) // OMP schedule-type
   WALK_NESTED_ENUM(OmpDeviceClause, DeviceModifier) // OMP device modifier
   WALK_NESTED_ENUM(OmpDeviceTypeClause, Type) // OMP DEVICE_TYPE
+  WALK_NESTED_ENUM(
+      OmpReductionClause, ReductionModifier) // OMP reduction-modifier
   WALK_NESTED_ENUM(OmpIfClause, DirectiveNameModifier) // OMP directive-modifier
   WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
   WALK_NESTED_ENUM(OmpOrderClause, Type) // OMP order-type
   WALK_NESTED_ENUM(OmpOrderModifier, Kind) // OMP order-modifier
 #undef WALK_NESTED_ENUM
 
+  void Unparse(const CUFKernelDoConstruct::StarOrExpr &x) {
+    if (x.v) {
+      Walk(*x.v);
+    } else {
+      Word("*");
+    }
+  }
   void Unparse(const CUFKernelDoConstruct::Directive &x) {
     Word("!$CUF KERNEL DO");
     Walk(" (", std::get<std::optional<ScalarIntConstantExpr>>(x.t), ")");

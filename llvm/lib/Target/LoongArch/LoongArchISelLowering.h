@@ -206,6 +206,8 @@ public:
     return ISD::SIGN_EXTEND;
   }
 
+  ISD::NodeType getExtendForAtomicCmpSwapArg() const override;
+
   Register getRegisterByName(const char *RegName, LLT VT,
                              const MachineFunction &MF) const override;
   bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
@@ -236,6 +238,7 @@ public:
   bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override {
     return false;
   }
+  bool shouldConsiderGEPOffsetSplit() const override { return true; }
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.

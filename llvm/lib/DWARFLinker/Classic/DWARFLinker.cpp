@@ -116,6 +116,7 @@ static bool isTypeTag(uint16_t Tag) {
   case dwarf::DW_TAG_string_type:
   case dwarf::DW_TAG_structure_type:
   case dwarf::DW_TAG_subroutine_type:
+  case dwarf::DW_TAG_template_alias:
   case dwarf::DW_TAG_typedef:
   case dwarf::DW_TAG_union_type:
   case dwarf::DW_TAG_ptr_to_member_type:
@@ -465,7 +466,7 @@ DWARFLinker::getVariableRelocAdjustment(AddressesMap &RelocMgr,
       if (std::optional<int64_t> RelocAdjustment =
               RelocMgr.getExprOpAddressRelocAdjustment(
                   *U, Op, AttrOffset + CurExprOffset,
-                  AttrOffset + Op.getEndOffset()))
+                  AttrOffset + Op.getEndOffset(), Options.Verbose))
         return std::make_pair(HasLocationAddress, *RelocAdjustment);
     } break;
     case dwarf::DW_OP_constx:
@@ -478,7 +479,8 @@ DWARFLinker::getVariableRelocAdjustment(AddressesMap &RelocMgr,
         if (std::optional<int64_t> RelocAdjustment =
                 RelocMgr.getExprOpAddressRelocAdjustment(
                     *U, Op, *AddressOffset,
-                    *AddressOffset + DIE.getDwarfUnit()->getAddressByteSize()))
+                    *AddressOffset + DIE.getDwarfUnit()->getAddressByteSize(),
+                    Options.Verbose))
           return std::make_pair(HasLocationAddress, *RelocAdjustment);
       }
     } break;
@@ -552,7 +554,7 @@ unsigned DWARFLinker::shouldKeepSubprogramDIE(
 
   assert(LowPc && "low_pc attribute is not an address.");
   std::optional<int64_t> RelocAdjustment =
-      RelocMgr.getSubprogramRelocAdjustment(DIE);
+      RelocMgr.getSubprogramRelocAdjustment(DIE, Options.Verbose);
   if (!RelocAdjustment)
     return Flags;
 
@@ -2700,8 +2702,8 @@ Error DWARFLinker::link() {
   // This Dwarf string pool which is used for emission. It must be used
   // serially as the order of calling getStringOffset matters for
   // reproducibility.
-  OffsetsStringPool DebugStrPool(StringsTranslator, true);
-  OffsetsStringPool DebugLineStrPool(StringsTranslator, false);
+  OffsetsStringPool DebugStrPool(true);
+  OffsetsStringPool DebugLineStrPool(false);
   DebugDieValuePool StringOffsetPool;
 
   // ODR Contexts for the optimize.
@@ -2934,7 +2936,7 @@ Error DWARFLinker::link() {
     }
     EmitLambda();
   } else {
-    ThreadPool Pool(hardware_concurrency(2));
+    DefaultThreadPool Pool(hardware_concurrency(2));
     Pool.async(AnalyzeAll);
     Pool.async(CloneAll);
     Pool.wait();

@@ -100,5 +100,42 @@ define void @varargs_many_argscalleer() nounwind {
   ret void
 }
 
+define void @varargs_caller_tail() nounwind {
+; CHECK-LABEL: varargs_caller_tail:
+; CHECK:        // %bb.0:
+; CHECK-NEXT:        sub     sp, sp, #48
+; CHECK-NEXT:        mov     x4, sp
+; CHECK-NEXT:        add     x8, sp, #16
+; CHECK-NEXT:        mov     x9, #4617315517961601024        // =0x4014000000000000
+; CHECK-NEXT:        mov     x0, #4607182418800017408        // =0x3ff0000000000000
+; CHECK-NEXT:        mov     w1, #2                          // =0x2
+; CHECK-NEXT:        mov     x2, #4613937818241073152        // =0x4008000000000000
+; CHECK-NEXT:        mov     w3, #4                          // =0x4
+; CHECK-NEXT:        mov     w5, #16                         // =0x10
+; CHECK-NEXT:        stp     xzr, x30, [sp, #24]             // 8-byte Folded Spill
+; CHECK-NEXT:        stp     x9, x8, [sp]
+; CHECK-NEXT:        str     xzr, [sp, #16]
+; CHECK-NEXT:        .weak_anti_dep  varargs_callee
+; CHECK-NEXT:.set varargs_callee, "#varargs_callee"@WEAKREF
+; CHECK-NEXT:        .weak_anti_dep  "#varargs_callee"
+; CHECK-NEXT:.set "#varargs_callee", varargs_callee@WEAKREF
+; CHECK-NEXT:        bl      "#varargs_callee"
+; CHECK-NEXT:        ldr     x30, [sp, #32]                  // 8-byte Folded Reload
+; CHECK-NEXT:        add     x4, sp, #48
+; CHECK-NEXT:        mov     x0, #4607182418800017408        // =0x3ff0000000000000
+; CHECK-NEXT:        mov     w1, #4                          // =0x4
+; CHECK-NEXT:        mov     w2, #3                          // =0x3
+; CHECK-NEXT:        mov     w3, #2                          // =0x2
+; CHECK-NEXT:        mov     x5, xzr
+; CHECK-NEXT:        add     sp, sp, #48
+; CHECK-NEXT:        .weak_anti_dep  varargs_callee
+; CHECK-NEXT:.set varargs_callee, "#varargs_callee"@WEAKREF
+; CHECK-NEXT:        .weak_anti_dep  "#varargs_callee"
+; CHECK-NEXT:.set "#varargs_callee", varargs_callee@WEAKREF
+; CHECK-NEXT:        b       "#varargs_callee"
+  call void (double, ...) @varargs_callee(double 1.0, i32 2, double 3.0, i32 4, double 5.0, <2 x double> <double 0.0, double 0.0>)
+  tail call void (double, ...) @varargs_callee(double 1.0, i32 4, i32 3, i32 2)
+  ret void
+}
 
 declare void @llvm.va_start(ptr)

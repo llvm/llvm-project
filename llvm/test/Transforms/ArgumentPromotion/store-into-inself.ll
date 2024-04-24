@@ -88,10 +88,10 @@ define i32 @main() nounwind  {
 ;
 entry:
   %S = alloca %struct.ss, align 32
-  %temp1 = getelementptr %struct.ss, %struct.ss* %S, i32 0, i32 0
-  store i32 1, i32* %temp1, align 4
-  %temp4 = getelementptr %struct.ss, %struct.ss* %S, i32 0, i32 1
-  store i64 2, i64* %temp4, align 8
+  %temp1 = getelementptr %struct.ss, ptr %S, i32 0, i32 0
+  store i32 1, ptr %temp1, align 4
+  %temp4 = getelementptr %struct.ss, ptr %S, i32 0, i32 1
+  store i64 2, ptr %temp4, align 8
   call void @f(ptr byval(ptr) align 4 %S) nounwind
   call void @g(ptr byval(ptr) align 4 %S) nounwind
   call void @h(ptr byval(ptr) align 4 %S) nounwind

@@ -20,7 +20,7 @@
 #include <__memory/destruct_n.h>
 #include <__memory/temporary_buffer.h>
 #include <__memory/unique_ptr.h>
-#include <__type_traits/is_trivially_copy_assignable.h>
+#include <__type_traits/is_trivially_assignable.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <new>
@@ -28,6 +28,9 @@
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -264,5 +267,7 @@ inline _LIBCPP_HIDE_FROM_ABI void stable_sort(_RandomAccessIterator __first, _Ra
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_STABLE_SORT_H

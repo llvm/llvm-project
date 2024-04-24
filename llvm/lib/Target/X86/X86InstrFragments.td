@@ -223,6 +223,9 @@ def X86tlsaddr : SDNode<"X86ISD::TLSADDR", SDT_X86TLSADDR,
 def X86tlsbaseaddr : SDNode<"X86ISD::TLSBASEADDR", SDT_X86TLSBASEADDR,
                         [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
+def X86tlsdesc : SDNode<"X86ISD::TLSDESC", SDT_X86TLSADDR,
+                        [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+
 def X86ehret : SDNode<"X86ISD::EH_RETURN", SDT_X86EHRET,
                         [SDNPHasChain]>;
 

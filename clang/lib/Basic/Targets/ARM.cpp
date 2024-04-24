@@ -227,6 +227,8 @@ StringRef ARMTargetInfo::getCPUAttr() const {
     return "9_3A";
   case llvm::ARM::ArchKind::ARMV9_4A:
     return "9_4A";
+  case llvm::ARM::ArchKind::ARMV9_5A:
+    return "9_5A";
   case llvm::ARM::ArchKind::ARMV8MBaseline:
     return "8M_BASE";
   case llvm::ARM::ArchKind::ARMV8MMainline:
@@ -507,7 +509,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   SHA2 = 0;
   AES = 0;
   DSP = 0;
-  Unaligned = 1;
+  HasUnalignedAccess = true;
   SoftFloat = false;
   // Note that SoftFloatABI is initialized in our constructor.
   HWDiv = 0;
@@ -574,7 +576,7 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
         return false;
       }
     } else if (Feature == "+strict-align") {
-      Unaligned = 0;
+      HasUnalignedAccess = false;
     } else if (Feature == "+fp16") {
       HW_FP |= HW_FP_HP;
     } else if (Feature == "+fullfp16") {
@@ -783,7 +785,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_ARCH_PROFILE", "'" + CPUProfile + "'");
 
   // ACLE 6.4.3 Unaligned access supported in hardware
-  if (Unaligned)
+  if (HasUnalignedAccess)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
 
   // ACLE 6.4.4 LDREX/STREX
@@ -889,6 +891,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_2A:
   case llvm::ARM::ArchKind::ARMV9_3A:
   case llvm::ARM::ArchKind::ARMV9_4A:
+  case llvm::ARM::ArchKind::ARMV9_5A:
     // Filter __arm_cdp, __arm_ldcl, __arm_stcl in arm_acle.h
     FeatureCoprocBF = FEATURE_COPROC_B1 | FEATURE_COPROC_B3;
     break;
@@ -1057,6 +1060,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::ARM::ArchKind::ARMV9_2A:
   case llvm::ARM::ArchKind::ARMV9_3A:
   case llvm::ARM::ArchKind::ARMV9_4A:
+  case llvm::ARM::ArchKind::ARMV9_5A:
     getTargetDefinesARMV83A(Opts, Builder);
     break;
   }

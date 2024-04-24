@@ -35,7 +35,16 @@ class ValidationEvent <int event_number> {
   int EventNumber = event_number;
 }
 
+// TableGen names for events defined in `llvm::exegesis::ValidationEvent`.
 def InstructionRetired  : ValidationEvent<0>;
+def L1DCacheLoadMiss : ValidationEvent<1>;
+def L1DCacheStoreMiss : ValidationEvent<2>;
+def L1ICacheLoadMiss : ValidationEvent<3>;
+def DataTLBLoadMiss : ValidationEvent<4>;
+def DataTLBStoreMiss : ValidationEvent<5>;
+def InstructionTLBLoadMiss : ValidationEvent<6>;
+def BranchPredictionMiss : ValidationEvent<7>;
+
 
 // PfmValidationCounter provides a mapping between the events that are
 // are interesting in regards to the snippet execution environment and

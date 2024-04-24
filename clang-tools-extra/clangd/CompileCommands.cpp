@@ -82,7 +82,7 @@ std::string resolve(std::string Path) {
     log("Failed to resolve possible symlink {0}", Path);
     return Path;
   }
-  return std::string(Resolved.str());
+  return std::string(Resolved);
 }
 
 // Get a plausible full `clang` path.
@@ -114,7 +114,7 @@ std::string detectClangPath() {
   SmallString<128> ClangPath;
   ClangPath = llvm::sys::path::parent_path(ClangdExecutable);
   llvm::sys::path::append(ClangPath, "clang");
-  return std::string(ClangPath.str());
+  return std::string(ClangPath);
 }
 
 // On mac, /usr/bin/clang sets SDKROOT and then invokes the real clang.
@@ -466,7 +466,8 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
   static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
       NAME##_init, std::size(NAME##_init) - 1);
 #define OPTION(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
-               FLAGS, VISIBILITY, PARAM, HELP, METAVAR, VALUES)                \
+               FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
+               METAVAR, VALUES)                                                \
   Prefixes[DriverID::OPT_##ID] = PREFIX;
 #include "clang/Driver/Options.inc"
 #undef OPTION
@@ -478,7 +479,8 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
       const void *AliasArgs;
     } AliasTable[] = {
 #define OPTION(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
-               FLAGS, VISIBILITY, PARAM, HELP, METAVAR, VALUES)                \
+               FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
+               METAVAR, VALUES)                                                \
   {DriverID::OPT_##ID, DriverID::OPT_##ALIAS, ALIASARGS},
 #include "clang/Driver/Options.inc"
 #undef OPTION

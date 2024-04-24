@@ -535,8 +535,14 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
     if (*OriginalModuleMap != CI.getSourceManager().getFileEntryRefForID(
                                   CI.getSourceManager().getMainFileID())) {
       M->IsInferred = true;
-      CI.getPreprocessor().getHeaderSearchInfo().getModuleMap()
-        .setInferredModuleAllowedBy(M, *OriginalModuleMap);
+      auto FileCharacter =
+          M->IsSystem ? SrcMgr::C_System_ModuleMap : SrcMgr::C_User_ModuleMap;
+      FileID OriginalModuleMapFID = CI.getSourceManager().getOrCreateFileID(
+          *OriginalModuleMap, FileCharacter);
+      CI.getPreprocessor()
+          .getHeaderSearchInfo()
+          .getModuleMap()
+          .setInferredModuleAllowedBy(M, OriginalModuleMapFID);
     }
   }
 
@@ -689,7 +695,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromASTFile(
         std::string(InputFile), CI.getPCHContainerReader(),
         ASTUnit::LoadEverything, Diags, CI.getFileSystemOpts(),
-        CI.getHeaderSearchOptsPtr());
+        CI.getHeaderSearchOptsPtr(), CI.getLangOptsPtr());
 
     if (!AST)
       return false;

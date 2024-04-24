@@ -68,15 +68,29 @@ add_macro_header(
 )
 
 add_macro_header(
+  stdint_macros
+  HDR
+    stdint-macros.h
+)
+
+add_macro_header(
   float_macros
   HDR
     float-macros.h
 )
 
 add_macro_header(
+  limits_macros
+  HDR
+    limits-macros.h
+)
+
+add_macro_header(
   math_macros
   HDR
     math-macros.h
+  DEPENDS
+    .limits_macros
 )
 
 add_macro_header(
@@ -106,6 +120,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  stdbit_macros
+  HDR
+    stdbit-macros.h
+)
+
+add_macro_header(
   stdio_macros
   HDR
     stdio-macros.h
@@ -121,6 +141,12 @@ add_macro_header(
   sys_auxv_macros
   HDR
     sys-auxv-macros.h
+)
+
+add_macro_header(
+  sys_epoll_macros
+  HDR
+    sys-epoll-macros.h
 )
 
 add_macro_header(
@@ -208,4 +234,22 @@ add_macro_header(
   wchar_macros
   HDR
     wchar-macros.h
+)
+
+add_macro_header(
+  inttypes_macros
+  HDR
+    inttypes-macros.h
+)
+
+add_macro_header(
+  stdfix_macros
+  HDR
+    stdfix-macros.h
+)
+
+add_macro_header(
+  stdckdint_macros
+  HDR
+    stdckdint-macros.h
 )

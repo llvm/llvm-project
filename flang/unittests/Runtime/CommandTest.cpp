@@ -422,6 +422,60 @@ TEST_F(ZeroArguments, ECLInvalidCommandAsyncDontAffectAsync) {
       *command.get(), false, nullptr, nullptr, nullptr));
 }
 
+TEST_F(ZeroArguments, SystemValidCommandExitStat) {
+  // envrionment setup for SYSTEM from EXECUTE_COMMAND_LINE runtime
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
+  bool wait{true};
+  // setup finished
+
+  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
+  OwningPtr<Descriptor> exitStat{EmptyIntDescriptor()};
+
+  RTNAME(ExecuteCommandLine)
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), nullptr);
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 0);
+}
+
+TEST_F(ZeroArguments, SystemInvalidCommandExitStat) {
+  // envrionment setup for SYSTEM from EXECUTE_COMMAND_LINE runtime
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
+  bool wait{true};
+  // setup finished
+
+  OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
+  OwningPtr<Descriptor> exitStat{EmptyIntDescriptor()};
+
+  RTNAME(ExecuteCommandLine)
+  (*command.get(), wait, exitStat.get(), cmdStat.get(), nullptr);
+#ifdef _WIN32
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 1);
+#else
+  CheckDescriptorEqInt<std::int64_t>(exitStat.get(), 127);
+#endif
+}
+
+TEST_F(ZeroArguments, SystemValidCommandOptionalExitStat) {
+  // envrionment setup for SYSTEM from EXECUTE_COMMAND_LINE runtime
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
+  bool wait{true};
+  // setup finished
+
+  OwningPtr<Descriptor> command{CharDescriptor("echo hi")};
+  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
+      *command.get(), wait, nullptr, cmdStat.get(), nullptr));
+}
+
+TEST_F(ZeroArguments, SystemInvalidCommandOptionalExitStat) {
+  // envrionment setup for SYSTEM from EXECUTE_COMMAND_LINE runtime
+  OwningPtr<Descriptor> cmdStat{IntDescriptor(202)};
+  bool wait{true};
+  // setup finished
+
+  OwningPtr<Descriptor> command{CharDescriptor("InvalidCommand")};
+  EXPECT_NO_FATAL_FAILURE(RTNAME(ExecuteCommandLine)(
+      *command.get(), wait, nullptr, cmdStat.get(), nullptr););
+}
+
 static const char *oneArgArgv[]{"aProgram", "anArgumentOfLength20"};
 class OneArgument : public CommandFixture {
 protected:

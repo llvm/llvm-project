@@ -1,4 +1,3 @@
-## NOTE: This file needs to be updated after promoted instruction is supported
 # RUN: llvm-mc -triple x86_64 -disassemble %s | FileCheck %s --check-prefix=ATT
 # RUN: llvm-mc -triple x86_64 -disassemble -output-asm-variant=1 %s | FileCheck %s --check-prefix=INTEL
 
@@ -12,6 +11,12 @@
 # INTEL: add	r18, qword ptr [r17 + 123], r16
 0x62,0xec,0xec,0x10,0x01,0x41,0x7b
 
+## MRMDestMemCC
+
+# ATT:   cfcmovbq %r16, 123(%r17,%r18,4)
+# INTEL: cfcmovb	qword ptr [r17 + 4*r18 + 123], r16
+0x62,0xec,0xf8,0x0c,0x42,0x44,0x91,0x7b
+
 ## MRMSrcMem
 
 # ATT:   vbroadcasti32x4	(%r16,%r17), %zmm0
@@ -21,6 +26,16 @@
 # ATT:   subq	123(%r16), %r17, %r18
 # INTEL: sub	r18, r17, qword ptr [r16 + 123]
 0x62,0xec,0xec,0x10,0x2b,0x48,0x7b
+
+## MRMSrcMemCC
+
+# ATT:   cfcmovbq	123(%r16,%r17,4), %r18
+# INTEL: cfcmovb	r18, qword ptr [r16 + 4*r17 + 123]
+0x62,0xec,0xf8,0x08,0x42,0x54,0x88,0x7b
+
+# ATT:   cfcmovbq	123(%r16,%r17,4), %r18, %r19
+# INTEL: cfcmovb	r19, r18, qword ptr [r16 + 4*r17 + 123]
+0x62,0xec,0xe0,0x14,0x42,0x54,0x88,0x7b
 
 ## MRM0m
 
@@ -98,6 +113,10 @@
 # INTEL: vpslldq	zmm0, zmmword ptr [r16 + r17], 0
 0x62,0xf9,0x79,0x48,0x73,0x3c,0x08,0x00
 
+# ATT:   sarq	$123, 291(%r16,%r17), %r18
+# INTEL: sar	r18, qword ptr [r16 + r17 + 291], 123
+0x62,0xfc,0xe8,0x10,0xc1,0xbc,0x08,0x23,0x01,0x00,0x00,0x7b
+
 ## MRMDestMem4VOp3CC
 
 # ATT:   cmpbexadd	%r18d, %r22d, 291(%r28,%r29,4)
@@ -120,11 +139,27 @@
 # INTEL: {nf}	add	r17, r16
 0x62,0xec,0xfc,0x0c,0x01,0xc1
 
+## MRMDestRegCC
+
+# ATT:   cfcmovbq	%r16, %r17
+# INTEL: cfcmovb	r17, r16
+0x62,0xec,0xfc,0x0c,0x42,0xc1
+
 ## MRMSrcReg
 
 # ATT:   mulxq	%r16, %r17, %r18
 # INTEL: mulx	r18, r17, r16
 0x62,0xea,0xf7,0x00,0xf6,0xd0
+
+## MRMSrcRegCC
+
+# ATT:   cfcmovbq	%r16, %r17, %r18
+# INTEL: cfcmovb	r18, r17, r16
+0x62,0xec,0xec,0x14,0x42,0xc8
+
+# ATT:   cfcmovlq	%r16, %r17, %r18
+# INTEL: cfcmovl	r18, r17, r16
+0x62,0xec,0xec,0x14,0x4c,0xc8
 
 ## MRMSrcReg4VOp3
 
@@ -173,6 +208,22 @@
 # ATT:   xorq	$127, %r16, %r17
 # INTEL: xor	r17, r16, 127
 0x62,0xfc,0xf4,0x10,0x83,0xf0,0x7f
+
+## MRM7r
+
+# ATT:   sarq	$123, %r16, %r17
+# INTEL: sar	r17, r16, 123
+0x62,0xfc,0xf4,0x10,0xc1,0xf8,0x7b
+
+## MRMXrCC
+# ATT:   setzuo	%r16b
+# INTEL: setzuo	r16b
+0x62,0xfc,0x7f,0x18,0x40,0xc0
+
+## MRMXmCC
+# ATT:   setzuo	(%r16,%r17)
+# INTEL: setzuo	byte ptr [r16 + r17]
+0x62,0xfc,0x7b,0x18,0x40,0x04,0x08
 
 ## NoCD8
 

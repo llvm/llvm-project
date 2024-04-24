@@ -88,7 +88,6 @@ exit:
   ret void
 }
 
-; FIXME: The fakeresume1 here should be marked as musttail.
 ; Verify that in the resume part resume call is marked with musttail.
 ; CHECK-LABEL: @f.resume(
 ; CHECK:         musttail call fastcc void @fakeresume1(ptr align 8 null)

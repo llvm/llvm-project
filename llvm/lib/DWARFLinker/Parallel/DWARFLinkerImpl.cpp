@@ -20,11 +20,9 @@ using namespace dwarf_linker;
 using namespace dwarf_linker::parallel;
 
 DWARFLinkerImpl::DWARFLinkerImpl(MessageHandlerTy ErrorHandler,
-                                 MessageHandlerTy WarningHandler,
-                                 TranslatorFuncTy StringsTranslator)
+                                 MessageHandlerTy WarningHandler)
     : UniqueUnitID(0), DebugStrStrings(GlobalData),
       DebugLineStrStrings(GlobalData), CommonSections(GlobalData) {
-  GlobalData.setTranslator(StringsTranslator);
   GlobalData.setErrorHandler(ErrorHandler);
   GlobalData.setWarningHandler(WarningHandler);
 }
@@ -115,7 +113,8 @@ Error DWARFLinkerImpl::link() {
     }
 
     if (GlobalData.getOptions().Verbose) {
-      outs() << "OBJECT: " << Context->InputDWARFFile.FileName << "\n";
+      outs() << "DEBUG MAP OBJECT: " << Context->InputDWARFFile.FileName
+             << "\n";
 
       for (const std::unique_ptr<DWARFUnit> &OrigCU :
            Context->InputDWARFFile.Dwarf->compile_units()) {
@@ -191,7 +190,7 @@ Error DWARFLinkerImpl::link() {
       Context->InputDWARFFile.unload();
     }
   } else {
-    ThreadPool Pool(llvm::parallel::strategy);
+    DefaultThreadPool Pool(llvm::parallel::strategy);
     for (std::unique_ptr<LinkContext> &Context : ObjectContexts)
       Pool.async([&]() {
         // Link object file.

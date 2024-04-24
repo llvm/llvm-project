@@ -1,8 +1,40 @@
 # RUN: llvm-mc -triple x86_64 --show-encoding %s | FileCheck %s
 # RUN: not llvm-mc -triple i386 -show-encoding %s 2>&1 | FileCheck %s --check-prefix=ERROR
 
-# ERROR-COUNT-4: error:
+# ERROR-COUNT-12: error:
 # ERROR-NOT: error:
+# CHECK: {nf}	blsrl	%ecx, %edx
+# CHECK: encoding: [0x62,0xf2,0x6c,0x0c,0xf3,0xc9]
+         {nf}	blsrl	%ecx, %edx
+
+# CHECK: {evex}	blsrl	%ecx, %edx
+# CHECK: encoding: [0x62,0xf2,0x6c,0x08,0xf3,0xc9]
+         {evex}	blsrl	%ecx, %edx
+
+# CHECK: {nf}	blsrq	%r9, %r15
+# CHECK: encoding: [0x62,0xd2,0x84,0x0c,0xf3,0xc9]
+         {nf}	blsrq	%r9, %r15
+
+# CHECK: {evex}	blsrq	%r9, %r15
+# CHECK: encoding: [0x62,0xd2,0x84,0x08,0xf3,0xc9]
+         {evex}	blsrq	%r9, %r15
+
+# CHECK: {nf}	blsrl	123(%rax,%rbx,4), %ecx
+# CHECK: encoding: [0x62,0xf2,0x74,0x0c,0xf3,0x4c,0x98,0x7b]
+         {nf}	blsrl	123(%rax,%rbx,4), %ecx
+
+# CHECK: {evex}	blsrl	123(%rax,%rbx,4), %ecx
+# CHECK: encoding: [0x62,0xf2,0x74,0x08,0xf3,0x4c,0x98,0x7b]
+         {evex}	blsrl	123(%rax,%rbx,4), %ecx
+
+# CHECK: {nf}	blsrq	123(%rax,%rbx,4), %r9
+# CHECK: encoding: [0x62,0xf2,0xb4,0x0c,0xf3,0x4c,0x98,0x7b]
+         {nf}	blsrq	123(%rax,%rbx,4), %r9
+
+# CHECK: {evex}	blsrq	123(%rax,%rbx,4), %r9
+# CHECK: encoding: [0x62,0xf2,0xb4,0x08,0xf3,0x4c,0x98,0x7b]
+         {evex}	blsrq	123(%rax,%rbx,4), %r9
+
 # CHECK: blsrl	%r18d, %r22d
 # CHECK: encoding: [0x62,0xfa,0x4c,0x00,0xf3,0xca]
          blsrl	%r18d, %r22d

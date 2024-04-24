@@ -47,8 +47,6 @@ void EmitClangAttrSubjectMatchRulesParserStringSwitches(
 void EmitClangAttrClass(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangAttrImpl(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangAttrList(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
-void EmitClangAttrPrintList(const std::string &FieldName,
-                            llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitClangAttrSubjectMatchRuleList(llvm::RecordKeeper &Records,
                                        llvm::raw_ostream &OS);
 void EmitClangAttrPCHRead(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
@@ -74,6 +72,8 @@ void EmitClangAttrTextNodeDump(llvm::RecordKeeper &Records,
 void EmitClangAttrNodeTraverse(llvm::RecordKeeper &Records,
                                llvm::raw_ostream &OS);
 void EmitClangAttrDocTable(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+
+void EmitClangBuiltins(llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
 void EmitClangDiagsDefs(llvm::RecordKeeper &Records, llvm::raw_ostream &OS,
                         const std::string &Component);

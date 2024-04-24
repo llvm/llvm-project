@@ -197,6 +197,24 @@ csrrs t1, satp, zero
 csrrs t2, 0x180, zero
 
 #########################################
+# Quality-of-Service(QoS) Identifiers
+#########################################
+
+# srmcfg
+# name
+# CHECK-INST: csrrs t1, srmcfg, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x10,0x18]
+# CHECK-INST-ALIAS: csrr t1, srmcfg
+# uimm12
+# CHECK-INST: csrrs t2, srmcfg, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x10,0x18]
+# CHECK-INST-ALIAS: csrr t2, srmcfg
+# name
+csrrs t1, srmcfg, zero
+# uimm12
+csrrs t2, 0x181, zero
+
+#########################################
 # Debug/Trace Registers
 #########################################
 

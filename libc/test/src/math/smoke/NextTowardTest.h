@@ -9,14 +9,15 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_NEXTTOWARDTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_NEXTTOWARDTEST_H
 
+#include "hdr/fenv_macros.h"
+#include "hdr/math_macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <fenv.h>
-#include <math.h>
 
 #define ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, expected_exception)      \
   ASSERT_FP_EQ(result, expected);                                              \
@@ -30,26 +31,27 @@
   ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, FE_INEXACT | FE_OVERFLOW)
 
 template <typename T>
-class NextTowardTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class NextTowardTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using ToFPBits = LIBC_NAMESPACE::fputil::FPBits<long double>;
   using StorageType = typename FPBits::StorageType;
-  using Sign = LIBC_NAMESPACE::fputil::Sign;
 
-  const T inf = T(FPBits::inf(Sign::POS));
-  const T neg_inf = T(FPBits::inf(Sign::NEG));
-  const T zero = T(FPBits::zero(Sign::POS));
-  const T neg_zero = T(FPBits::zero(Sign::NEG));
-  const T nan = T(FPBits::build_quiet_nan(1));
+  const T inf = FPBits::inf(Sign::POS).get_val();
+  const T neg_inf = FPBits::inf(Sign::NEG).get_val();
+  const T zero = FPBits::zero(Sign::POS).get_val();
+  const T neg_zero = FPBits::zero(Sign::NEG).get_val();
+  const T nan = FPBits::quiet_nan().get_val();
 
-  const long double to_zero = ToFPBits::zero();
-  const long double to_neg_zero = ToFPBits::zero(Sign::NEG);
-  const long double to_nan = ToFPBits::build_quiet_nan(1);
+  const long double to_zero = ToFPBits::zero().get_val();
+  const long double to_neg_zero = ToFPBits::zero(Sign::NEG).get_val();
+  const long double to_nan = ToFPBits::quiet_nan().get_val();
 
-  const StorageType min_subnormal = FPBits::MIN_SUBNORMAL;
-  const StorageType max_subnormal = FPBits::MAX_SUBNORMAL;
-  const StorageType min_normal = FPBits::MIN_NORMAL;
-  const StorageType max_normal = FPBits::MAX_NORMAL;
+  static constexpr StorageType min_subnormal =
+      FPBits::min_subnormal().uintval();
+  static constexpr StorageType max_subnormal =
+      FPBits::max_subnormal().uintval();
+  static constexpr StorageType min_normal = FPBits::min_normal().uintval();
+  static constexpr StorageType max_normal = FPBits::max_normal().uintval();
 
 public:
   typedef T (*NextTowardFunc)(T, long double);

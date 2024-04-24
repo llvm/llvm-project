@@ -41,8 +41,12 @@ static Value extendVectorRank(OpBuilder &builder, Location loc, Value vec,
   SmallVector<int64_t> newShape(addedRank, 1);
   newShape.append(originalVecType.getShape().begin(),
                   originalVecType.getShape().end());
-  VectorType newVecType =
-      VectorType::get(newShape, originalVecType.getElementType());
+
+  SmallVector<bool> newScalableDims(addedRank, false);
+  newScalableDims.append(originalVecType.getScalableDims().begin(),
+                         originalVecType.getScalableDims().end());
+  VectorType newVecType = VectorType::get(
+      newShape, originalVecType.getElementType(), newScalableDims);
   return builder.create<vector::BroadcastOp>(loc, newVecType, vec);
 }
 
@@ -53,7 +57,7 @@ static Value extendMaskRank(OpBuilder &builder, Location loc, Value vec,
   Value broadcasted = extendVectorRank(builder, loc, vec, addedRank);
   SmallVector<int64_t> permutation;
   for (int64_t i = addedRank,
-               e = broadcasted.getType().cast<VectorType>().getRank();
+               e = cast<VectorType>(broadcasted.getType()).getRank();
        i < e; ++i)
     permutation.push_back(i);
   for (int64_t i = 0; i < addedRank; ++i)

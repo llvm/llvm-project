@@ -19,8 +19,8 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProfReader.h"
 #include "llvm/ProfileData/ProfileCommon.h"
-#include "llvm/ProfileData/RawMemProfReader.h"
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include "llvm/Support/BalancedPartitioning.h"
@@ -34,6 +34,7 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -131,9 +132,11 @@ cl::opt<std::string>
                    cl::sub(MergeSubcommand));
 cl::opt<std::string> FuncNameFilter(
     "function",
-    cl::desc("Details for matching functions. For overlapping CSSPGO, this "
-             "takes a function name with calling context."),
-    cl::sub(ShowSubcommand), cl::sub(OverlapSubcommand));
+    cl::desc("Only functions matching the filter are shown in the output. For "
+             "overlapping CSSPGO, this takes a function name with calling "
+             "context."),
+    cl::sub(ShowSubcommand), cl::sub(OverlapSubcommand),
+    cl::sub(MergeSubcommand));
 
 // TODO: Consider creating a template class (e.g., MergeOption, ShowOption) to
 // factor out the common cl::sub in cl::opt constructor for subcommand-specific
@@ -243,6 +246,10 @@ cl::opt<uint64_t> TemporalProfMaxTraceLength(
     cl::sub(MergeSubcommand),
     cl::desc("The maximum length of a single temporal profile trace "
              "(default: 10000)"));
+cl::opt<std::string> FuncNameNegativeFilter(
+    "no-function", cl::init(""),
+    cl::sub(MergeSubcommand),
+    cl::desc("Exclude functions matching the filter from the output."));
 
 cl::opt<FailureMode>
     FailMode("failure-mode", cl::init(failIfAnyAreInvalid),
@@ -283,6 +290,23 @@ cl::opt<bool> DropProfileSymbolList(
     cl::sub(MergeSubcommand),
     cl::desc("Drop the profile symbol list when merging AutoFDO profiles "
              "(only meaningful for -sample)"));
+
+// Temporary support for writing the previous version of the format, to enable
+// some forward compatibility.
+// TODO: Consider enabling this with future version changes as well, to ease
+// deployment of newer versions of llvm-profdata.
+cl::opt<bool> DoWritePrevVersion(
+    "write-prev-version", cl::init(false), cl::Hidden,
+    cl::desc("Write the previous version of indexed format, to enable "
+             "some forward compatibility."));
+
+cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
+    "memprof-version", cl::Hidden, cl::sub(MergeSubcommand),
+    cl::desc("Specify the version of the memprof format to use"),
+    cl::init(memprof::Version0),
+    cl::values(clEnumValN(memprof::Version0, "0", "version 0"),
+               clEnumValN(memprof::Version1, "1", "version 1"),
+               clEnumValN(memprof::Version2, "2", "version 2")));
 
 // Options specific to overlap subcommand.
 cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,
@@ -338,6 +362,9 @@ cl::opt<bool> ShowIndirectCallTargets(
     "ic-targets", cl::init(false),
     cl::desc("Show indirect call site target values for shown functions"),
     cl::sub(ShowSubcommand));
+cl::opt<bool> ShowVTables("show-vtables", cl::init(false),
+                          cl::desc("Show vtable names for shown functions"),
+                          cl::sub(ShowSubcommand));
 cl::opt<bool> ShowMemOPSizes(
     "memop-sizes", cl::init(false),
     cl::desc("Show the profiled sizes of the memory intrinsic calls "
@@ -572,8 +599,9 @@ struct WriterContext {
   WriterContext(bool IsSparse, std::mutex &ErrLock,
                 SmallSet<instrprof_error, 4> &WriterErrorCodes,
                 uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
-      : Writer(IsSparse, ReservoirSize, MaxTraceLength), ErrLock(ErrLock),
-        WriterErrorCodes(WriterErrorCodes) {}
+      : Writer(IsSparse, ReservoirSize, MaxTraceLength, DoWritePrevVersion,
+               MemProfVersionRequested),
+        ErrLock(ErrLock), WriterErrorCodes(WriterErrorCodes) {}
 };
 
 /// Computer the overlap b/w profile BaseFilename and TestFileName,
@@ -650,10 +678,22 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       if (!Succeeded)
         return;
     }
+
+    // Add the call stacks into the writer context.
+    const auto &CSIdToCallStacks = Reader->getCallStacks();
+    for (const auto &I : CSIdToCallStacks) {
+      bool Succeeded = WC->Writer.addMemProfCallStack(
+          /*Id=*/I.first, /*Frame=*/I.getSecond(), MemProfError);
+      // If we weren't able to add the call stacks then it doesn't make sense
+      // to try to add the records from this profile.
+      if (!Succeeded)
+        return;
+    }
+
     const auto &FunctionProfileData = Reader->getProfileData();
     // Add the memprof records into the writer context.
-    for (const auto &I : FunctionProfileData) {
-      WC->Writer.addMemProfRecord(/*Id=*/I.first, /*Record=*/I.second);
+    for (const auto &[GUID, Record] : FunctionProfileData) {
+      WC->Writer.addMemProfRecord(GUID, Record);
     }
     return;
   }
@@ -715,6 +755,13 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     });
   }
 
+  const InstrProfSymtab &symtab = Reader->getSymtab();
+  const auto &VTableNames = symtab.getVTableNames();
+
+  for (const auto &kv : VTableNames) {
+    WC->Writer.addVTableName(kv.getKey());
+  }
+
   if (Reader->hasTemporalProfile()) {
     auto &Traces = Reader->getTemporalProfTraces(Input.Weight);
     if (!Traces.empty())
@@ -757,6 +804,62 @@ static void mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
     if (firstTime)
       warn(toString(make_error<InstrProfError>(ErrorCode, Msg)));
   });
+}
+
+static StringRef
+getFuncName(const StringMap<InstrProfWriter::ProfilingData>::value_type &Val) {
+  return Val.first();
+}
+
+static std::string
+getFuncName(const SampleProfileMap::value_type &Val) {
+  return Val.second.getContext().toString();
+}
+
+template <typename T>
+static void filterFunctions(T &ProfileMap) {
+  bool hasFilter = !FuncNameFilter.empty();
+  bool hasNegativeFilter = !FuncNameNegativeFilter.empty();
+  if (!hasFilter && !hasNegativeFilter)
+    return;
+
+  // If filter starts with '?' it is MSVC mangled name, not a regex.
+  llvm::Regex ProbablyMSVCMangledName("[?@$_0-9A-Za-z]+");
+  if (hasFilter && FuncNameFilter[0] == '?' &&
+      ProbablyMSVCMangledName.match(FuncNameFilter))
+    FuncNameFilter = llvm::Regex::escape(FuncNameFilter);
+  if (hasNegativeFilter && FuncNameNegativeFilter[0] == '?' &&
+      ProbablyMSVCMangledName.match(FuncNameNegativeFilter))
+    FuncNameNegativeFilter = llvm::Regex::escape(FuncNameNegativeFilter);
+
+  size_t Count = ProfileMap.size();
+  llvm::Regex Pattern(FuncNameFilter);
+  llvm::Regex NegativePattern(FuncNameNegativeFilter);
+  std::string Error;
+  if (hasFilter && !Pattern.isValid(Error))
+    exitWithError(Error);
+  if (hasNegativeFilter && !NegativePattern.isValid(Error))
+    exitWithError(Error);
+
+  // Handle MD5 profile, so it is still able to match using the original name.
+  std::string MD5Name = std::to_string(llvm::MD5Hash(FuncNameFilter));
+  std::string NegativeMD5Name =
+      std::to_string(llvm::MD5Hash(FuncNameNegativeFilter));
+
+  for (auto I = ProfileMap.begin(); I != ProfileMap.end();) {
+    auto Tmp = I++;
+    const auto &FuncName = getFuncName(*Tmp);
+    // Negative filter has higher precedence than positive filter.
+    if ((hasNegativeFilter &&
+         (NegativePattern.match(FuncName) ||
+          (FunctionSamples::UseMD5 && NegativeMD5Name == FuncName))) ||
+        (hasFilter && !(Pattern.match(FuncName) ||
+                        (FunctionSamples::UseMD5 && MD5Name == FuncName))))
+      ProfileMap.erase(Tmp);
+  }
+
+  llvm::dbgs() << Count - ProfileMap.size() << " of " << Count << " functions "
+               << "in the original profile are filtered.\n";
 }
 
 static void writeInstrProfile(StringRef OutputFilename,
@@ -835,7 +938,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
       loadInput(Input, Remapper, Correlator.get(), ProfiledBinary,
                 Contexts[0].get());
   } else {
-    ThreadPool Pool(hardware_concurrency(NumThreads));
+    DefaultThreadPool Pool(hardware_concurrency(NumThreads));
 
     // Load the inputs in parallel (N/NumThreads serial steps).
     unsigned Ctx = 0;
@@ -877,6 +980,8 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   if ((NumErrors == Inputs.size() && FailMode == failIfAllAreInvalid) ||
       (NumErrors > 0 && FailMode == failIfAnyAreInvalid))
     exitWithError("no profile can be merged");
+
+  filterFunctions(Contexts[0]->Writer.getProfileData());
 
   writeInstrProfile(OutputFilename, OutputFormat, Contexts[0]->Writer);
 }
@@ -1238,7 +1343,7 @@ static void supplementInstrProfile(const WeightedFileVector &Inputs,
                                    unsigned SupplMinSizeThreshold,
                                    float ZeroCounterThreshold,
                                    unsigned InstrProfColdThreshold) {
-  if (OutputFilename.compare("-") == 0)
+  if (OutputFilename == "-")
     exitWithError("cannot write indexed profdata format to stdout");
   if (Inputs.size() != 1)
     exitWithError("expect one input to be an instr profile");
@@ -1458,6 +1563,8 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
     CSConverter.convertCSProfiles();
     ProfileIsCS = FunctionSamples::ProfileIsCS = false;
   }
+
+  filterFunctions(ProfileMap);
 
   auto WriterOrErr =
       SampleProfileWriter::create(OutputFilename, FormatMap[OutputFormat]);
@@ -2750,6 +2857,10 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
         OS << "    Indirect Call Site Count: "
            << Func.getNumValueSites(IPVK_IndirectCallTarget) << "\n";
 
+      if (ShowVTables)
+        OS << "    Number of instrumented vtables: "
+           << Func.getNumValueSites(IPVK_VTableTarget) << "\n";
+
       uint32_t NumMemOPCalls = Func.getNumValueSites(IPVK_MemOPSize);
       if (ShowMemOPSizes && NumMemOPCalls > 0)
         OS << "    Number of Memory Intrinsics Calls: " << NumMemOPCalls
@@ -2768,6 +2879,13 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
         OS << "    Indirect Target Results:\n";
         traverseAllValueSites(Func, IPVK_IndirectCallTarget,
                               VPStats[IPVK_IndirectCallTarget], OS,
+                              &(Reader->getSymtab()));
+      }
+
+      if (ShowVTables) {
+        OS << "    VTable Results:\n";
+        traverseAllValueSites(Func, IPVK_VTableTarget,
+                              VPStats[IPVK_VTableTarget], OS,
                               &(Reader->getSymtab()));
       }
 
@@ -2817,6 +2935,11 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     OS << "Statistics for indirect call sites profile:\n";
     showValueSitesStats(OS, IPVK_IndirectCallTarget,
                         VPStats[IPVK_IndirectCallTarget]);
+  }
+
+  if (ShownFunctions && ShowVTables) {
+    OS << "Statistics for vtable profile:\n";
+    showValueSitesStats(OS, IPVK_VTableTarget, VPStats[IPVK_VTableTarget]);
   }
 
   if (ShownFunctions && ShowMemOPSizes) {
@@ -3164,7 +3287,7 @@ static int order_main(int argc, const char *argv[]) {
         "-order_file.\n";
   for (auto &N : Nodes) {
     auto [Filename, ParsedFuncName] =
-        getParsedIRPGOFuncName(Reader->getSymtab().getFuncOrVarName(N.Id));
+        getParsedIRPGOName(Reader->getSymtab().getFuncOrVarName(N.Id));
     if (!Filename.empty())
       OS << "# " << Filename << "\n";
     OS << ParsedFuncName << "\n";

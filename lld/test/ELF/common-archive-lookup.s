@@ -61,10 +61,12 @@
 # RUN: ld.lld --no-fortran-common -o 11 main.o --start-lib 1.o strong_data_only.o --end-lib
 # RUN: llvm-readobj --syms 11 | FileCheck --check-prefix=NFC %s
 
-# RUN: ld.lld -o - main.o 4.a --fortran-common --lto-emit-asm | FileCheck --check-prefix=ASM %s
+# RUN: ld.lld -o out main.o 4.a --fortran-common --lto-emit-asm
+# RUN: FileCheck --check-prefix=ASM %s < out.lto.s
 
-# RUN: ld.lld -o - main.o  --start-lib 1.bc 2.bc --end-lib --fortran-common --lto-emit-asm | \
-# RUN:   FileCheck --check-prefix=ASM %s
+# RUN: rm out.lto.s
+# RUN: ld.lld -o out main.o --start-lib 1.bc 2.bc --end-lib --fortran-common --lto-emit-asm
+# RUN: FileCheck --check-prefix=ASM %s < out.lto.s
 
 ## COMMON overrides weak. Don't extract 3.bc which provides a weak definition.
 # RUN: ld.lld -o /dev/null main.o --start-lib 1.bc 3.bc --end-lib -y block | FileCheck --check-prefix=LTO_WEAK %s

@@ -13,7 +13,7 @@
 #define QUAD_PRECISION
 #include "fp_lib.h"
 
-#if defined(CRT_HAS_TF_MODE)
+#if defined(CRT_HAS_F128)
 
 // Returns: the quotient of (a + ib) / (c + id)
 

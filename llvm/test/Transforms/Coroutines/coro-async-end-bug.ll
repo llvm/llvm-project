@@ -24,7 +24,7 @@ entry:
   store ptr %0, ptr %5, align 8
   %8 = call swiftcc i1 %3(ptr noalias nocapture %1, ptr noalias nocapture %2, ptr swiftself %4) #2
   %9 = load ptr, ptr %5, align 8
-  %10 = getelementptr inbounds <{ ptr, ptr }>, <{ ptr, ptr }>* %9, i32 0, i32 1
+  %10 = getelementptr inbounds <{ ptr, ptr }>, ptr %9, i32 0, i32 1
   %11 = load ptr, ptr %10, align 8
   %12 = load ptr, ptr %5, align 8
   %13 = call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %7, i1 false, ptr @repo.0, ptr %11, ptr %12, i1 %8, ptr null)

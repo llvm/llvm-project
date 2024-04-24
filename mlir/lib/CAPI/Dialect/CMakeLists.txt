@@ -198,6 +198,15 @@ add_mlir_upstream_c_api_library(MLIRCAPITransformDialect
   MLIRTransformDialect
 )
 
+add_mlir_upstream_c_api_library(MLIRCAPITransformDialectTransforms
+  TransformInterpreter.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRTransformDialectTransforms
+)
+
 add_mlir_upstream_c_api_library(MLIRCAPIQuant
   Quant.cpp
 

@@ -424,7 +424,7 @@ LIBC_INLINE bool larger_exponent(double a, double b) {
 double powf_double_double(int idx_x, double dx, double y6, double lo6_hi,
                           const DoubleDouble &exp2_hi_mid) {
   using DoubleBits = typename fputil::FPBits<double>;
-  using Sign = fputil::Sign;
+
   // Perform a second range reduction step:
   //   idx2 = round(2^14 * (dx  + 2^-8)) = round ( dx * 2^14 + 2^6)
   //   dx2 = (1 + dx) * r2 - 1
@@ -513,7 +513,7 @@ double powf_double_double(int idx_x, double dx, double y6, double lo6_hi,
 LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   using FloatBits = typename fputil::FPBits<float>;
   using DoubleBits = typename fputil::FPBits<double>;
-  using Sign = fputil::Sign;
+
   FloatBits xbits(x), ybits(y);
 
   uint32_t x_u = xbits.uintval();
@@ -547,14 +547,15 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
         // pow(+-0, -Inf) = +inf and raise FE_DIVBYZERO
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_DIVBYZERO);
-        return FloatBits::inf();
+        return FloatBits::inf().get_val();
       }
       // pow (|x| < 1, -inf) = +inf
       // pow (|x| < 1, +inf) = 0.0f
       // pow (|x| > 1, -inf) = 0.0f
       // pow (|x| > 1, +inf) = +inf
-      return ((x_abs < 0x3f80'0000) == (y_u == 0xff80'0000)) ? FloatBits::inf()
-                                                             : 0.0f;
+      return ((x_abs < 0x3f80'0000) == (y_u == 0xff80'0000))
+                 ? FloatBits::inf().get_val()
+                 : 0.0f;
     }
     default:
       // Speed up for common exponents
@@ -617,7 +618,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
         // pow(0, negative number) = inf
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_DIVBYZERO);
-        return FloatBits::inf(out_is_neg ? Sign::NEG : Sign::POS);
+        return FloatBits::inf(out_is_neg ? Sign::NEG : Sign::POS).get_val();
       }
       // pow(0, positive number) = 0
       return out_is_neg ? -0.0f : 0.0f;
@@ -628,7 +629,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
       if (y_u >= FloatBits::SIGN_MASK) {
         return out_is_neg ? -0.0f : 0.0f;
       }
-      return FloatBits::inf(out_is_neg ? Sign::NEG : Sign::POS);
+      return FloatBits::inf(out_is_neg ? Sign::NEG : Sign::POS).get_val();
     }
     }
 
@@ -656,7 +657,7 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
         // pow( negative, non-integer ) = NaN
         fputil::set_errno_if_required(EDOM);
         fputil::raise_except_if_required(FE_INVALID);
-        return FloatBits::build_quiet_nan(0);
+        return FloatBits::quiet_nan().get_val();
       }
     }
   }

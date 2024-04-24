@@ -265,6 +265,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
     }
+    for (MVT VT : {MVT::v4i32, MVT::v2i64}) {
+      setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, VT, Legal);
+      setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, VT, Legal);
+    }
     for (MVT VT : {MVT::v4f32, MVT::v2f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
       setOperationAction({ISD::FMUL, ISD::FDIV}, VT, Legal);
@@ -306,6 +310,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setCondCodeAction(
           {ISD::SETNE, ISD::SETGE, ISD::SETGT, ISD::SETUGE, ISD::SETUGT}, VT,
           Expand);
+    }
+    for (MVT VT : {MVT::v8i32, MVT::v4i32, MVT::v4i64}) {
+      setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, VT, Legal);
+      setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, VT, Legal);
     }
     for (MVT VT : {MVT::v8f32, MVT::v4f64}) {
       setOperationAction({ISD::FADD, ISD::FSUB}, VT, Legal);
@@ -2335,7 +2343,9 @@ Retry:
     return DAG.getNode(
         LoongArchISD::BSTRINS, DL, ValTy, N0.getOperand(0),
         DAG.getConstant(CN1->getSExtValue() >> MaskIdx0, DL, ValTy),
-        DAG.getConstant((MaskIdx0 + MaskLen0 - 1), DL, GRLenVT),
+        DAG.getConstant(ValBits == 32 ? (MaskIdx0 + (MaskLen0 & 31) - 1)
+                                      : (MaskIdx0 + MaskLen0 - 1),
+                        DL, GRLenVT),
         DAG.getConstant(MaskIdx0, DL, GRLenVT));
   }
 
@@ -4218,14 +4228,12 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // split it and then direct call can be matched by PseudoCALL.
   if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = S->getGlobal();
-    unsigned OpFlags =
-        getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV)
-            ? LoongArchII::MO_CALL
-            : LoongArchII::MO_CALL_PLT;
+    unsigned OpFlags = getTargetMachine().shouldAssumeDSOLocal(GV)
+                           ? LoongArchII::MO_CALL
+                           : LoongArchII::MO_CALL_PLT;
     Callee = DAG.getTargetGlobalAddress(S->getGlobal(), DL, PtrVT, 0, OpFlags);
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    unsigned OpFlags = getTargetMachine().shouldAssumeDSOLocal(
-                           *MF.getFunction().getParent(), nullptr)
+    unsigned OpFlags = getTargetMachine().shouldAssumeDSOLocal(nullptr)
                            ? LoongArchII::MO_CALL
                            : LoongArchII::MO_CALL_PLT;
     Callee = DAG.getTargetExternalSymbol(S->getSymbol(), PtrVT, OpFlags);
@@ -4868,20 +4876,19 @@ bool LoongArchTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (AM.BaseGV)
     return false;
 
-  // Require a 12 or 14 bit signed offset.
-  if (!isInt<12>(AM.BaseOffs) || !isShiftedInt<14, 2>(AM.BaseOffs))
+  // Require a 12-bit signed offset or 14-bit signed offset left-shifted by 2
+  // with `UAL` feature.
+  if (!isInt<12>(AM.BaseOffs) &&
+      !(isShiftedInt<14, 2>(AM.BaseOffs) && Subtarget.hasUAL()))
     return false;
 
   switch (AM.Scale) {
   case 0:
-    // "i" is not allowed.
-    if (!AM.HasBaseReg)
-      return false;
-    // Otherwise we have "r+i".
+    // "r+i" or just "i", depending on HasBaseReg.
     break;
   case 1:
     // "r+r+i" is not allowed.
-    if (AM.HasBaseReg && AM.BaseOffs != 0)
+    if (AM.HasBaseReg && AM.BaseOffs)
       return false;
     // Otherwise we have "r+r" or "r+i".
     break;
@@ -4889,7 +4896,7 @@ bool LoongArchTargetLowering::isLegalAddressingMode(const DataLayout &DL,
     // "2*r+r" or "2*r+i" is not allowed.
     if (AM.HasBaseReg || AM.BaseOffs)
       return false;
-    // Otherwise we have "r+r".
+    // Allow "2*r" as "r+r".
     break;
   default:
     return false;
@@ -4931,4 +4938,9 @@ bool LoongArchTargetLowering::hasAndNotCompare(SDValue Y) const {
     return false;
 
   return !isa<ConstantSDNode>(Y);
+}
+
+ISD::NodeType LoongArchTargetLowering::getExtendForAtomicCmpSwapArg() const {
+  // TODO: LAMCAS will use amcas{_DB,}.[bhwd] which does not require extension.
+  return ISD::SIGN_EXTEND;
 }

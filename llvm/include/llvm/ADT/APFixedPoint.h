@@ -260,6 +260,7 @@ public:
 
   static APFixedPoint getMax(const FixedPointSemantics &Sema);
   static APFixedPoint getMin(const FixedPointSemantics &Sema);
+  static APFixedPoint getEpsilon(const FixedPointSemantics &Sema);
 
   /// Given a floating point semantic, return the next floating point semantic
   /// with a larger exponent and larger or equal mantissa.

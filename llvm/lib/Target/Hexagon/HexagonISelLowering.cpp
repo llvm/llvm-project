@@ -653,6 +653,13 @@ bool HexagonTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
   return Subtarget.getInstrInfo()->isValidAutoIncImm(VT, V);
 }
 
+SDValue HexagonTargetLowering::LowerFDIV(SDValue Op, SelectionDAG &DAG) const {
+  if (DAG.getMachineFunction().getFunction().hasOptSize())
+    return SDValue();
+  else
+    return Op;
+}
+
 SDValue
 HexagonTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
@@ -1231,7 +1238,7 @@ HexagonTargetLowering::LowerGLOBALADDRESS(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(HexagonISD::CONST32, dl, PtrVT, GA);
   }
 
-  bool UsePCRel = getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV);
+  bool UsePCRel = getTargetMachine().shouldAssumeDSOLocal(GV);
   if (UsePCRel) {
     SDValue GA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, Offset,
                                             HexagonII::MO_PCREL);
@@ -1765,6 +1772,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FADD, MVT::f64, Expand);
   setOperationAction(ISD::FSUB, MVT::f64, Expand);
   setOperationAction(ISD::FMUL, MVT::f64, Expand);
+  setOperationAction(ISD::FDIV, MVT::f32, Custom);
 
   setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
   setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
@@ -3341,6 +3349,9 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
         errs() << "Error: check for a non-legal type in this operation\n";
 #endif
       llvm_unreachable("Should not custom lower this!");
+
+    case ISD::FDIV:
+      return LowerFDIV(Op, DAG);
     case ISD::CONCAT_VECTORS:       return LowerCONCAT_VECTORS(Op, DAG);
     case ISD::INSERT_SUBVECTOR:     return LowerINSERT_SUBVECTOR(Op, DAG);
     case ISD::INSERT_VECTOR_ELT:    return LowerINSERT_VECTOR_ELT(Op, DAG);
@@ -3532,7 +3543,7 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
         unsigned A = Amt->getZExtValue();
         SDValue S = Shl.getOperand(0);
         SDValue T0 = DCI.DAG.getNode(ISD::SHL, dl, ty(S), S,
-                                     DCI.DAG.getConstant(32 - A, dl, MVT::i32));
+                                     DCI.DAG.getConstant(A - 32, dl, MVT::i32));
         SDValue T1 = DCI.DAG.getZExtOrTrunc(T0, dl, MVT::i32);
         SDValue T2 = DCI.DAG.getZExtOrTrunc(Z, dl, MVT::i32);
         return DCI.DAG.getNode(HexagonISD::COMBINE, dl, MVT::i64, {T1, T2});

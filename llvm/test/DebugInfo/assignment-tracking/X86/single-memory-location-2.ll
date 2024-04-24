@@ -1,6 +1,10 @@
 ; RUN: llc -stop-after=finalize-isel %s -o - \
 ; RUN: | FileCheck %s
 
+
+; RUN: llc --try-experimental-debuginfo-iterators -stop-after=finalize-isel %s -o - \
+; RUN: | FileCheck %s
+
 ;; Check that a dbg.assign for a fully stack-homed variable causes the variable
 ;; location to appear in the Machine Function side table. Similar to
 ;; single-memory-location.ll except this has slightly more complicated input
@@ -37,7 +41,7 @@ entry:
   %local = alloca i32, align 4, !DIAssignID !13
   call void @llvm.dbg.assign(metadata i1 undef, metadata !11, metadata !DIExpression(), metadata !13, metadata ptr %local, metadata !DIExpression()), !dbg !14
   %0 = bitcast ptr %local to ptr, !dbg !15
-  call void @llvm.lifetime.start.p0i8(i64 4, ptr nonnull %0) #4, !dbg !15
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %0) #4, !dbg !15
   call void @_Z3escPi(ptr nonnull %local), !dbg !16
   %1 = load i32, ptr %local, align 4, !dbg !17
   %tobool.not1 = icmp eq i32 %1, 0, !dbg !17
@@ -54,15 +58,15 @@ while.body:                                       ; preds = %entry, %while.body
   br i1 %tobool.not, label %while.end, label %while.body, !dbg !22, !llvm.loop !29
 
 while.end:                                        ; preds = %while.body, %entry
-  call void @llvm.lifetime.end.p0i8(i64 4, ptr nonnull %0) #4, !dbg !32
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %0) #4, !dbg !32
   ret void, !dbg !32
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare !dbg !33 dso_local void @_Z3escPi(ptr) local_unnamed_addr
 declare !dbg !37 dso_local i32 @_Z3getv() local_unnamed_addr
 declare !dbg !40 dso_local void @_Z11doSomethingi(i32) local_unnamed_addr
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}

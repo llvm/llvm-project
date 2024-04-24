@@ -157,7 +157,7 @@ entry:
 define i16 @shrd16mri8(ptr %ptr, i16 noundef %b) {
 ; CHECK-LABEL: shrd16mri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    shrdw $12, %si, (%rdi), %ax
+; CHECK-NEXT:    shldw $4, %si, (%rdi), %ax
 ; CHECK-NEXT:    retq
 entry:
     %a = load i16, ptr %ptr
@@ -168,7 +168,7 @@ entry:
 define i32 @shrd32mri8(ptr %ptr, i32 noundef %b) {
 ; CHECK-LABEL: shrd32mri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    shrdl $12, %esi, (%rdi), %eax
+; CHECK-NEXT:    shldl $20, %esi, (%rdi), %eax
 ; CHECK-NEXT:    retq
 entry:
     %a = load i32, ptr %ptr
@@ -179,7 +179,7 @@ entry:
 define i64 @shrd64mri8(ptr %ptr, i64 noundef %b) {
 ; CHECK-LABEL: shrd64mri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    shrdq $12, %rsi, (%rdi), %rax
+; CHECK-NEXT:    shldq $52, %rsi, (%rdi), %rax
 ; CHECK-NEXT:    retq
 entry:
     %a = load i64, ptr %ptr
@@ -190,15 +190,13 @@ entry:
 define void @shrd16mrcl_legacy(ptr %ptr, i16 noundef %b, i8 %cl) {
 ; CHECK-LABEL: shrd16mrcl_legacy:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movzwl (%rdi), %eax
 ; CHECK-NEXT:    andb $15, %dl, %cl
-; CHECK-NEXT:    shrdw %cl, %ax, %si, %ax
-; CHECK-NEXT:    movw %ax, (%rdi)
+; CHECK-NEXT:    shrdw %cl, %si, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
     %a = load i16, ptr %ptr
     %clin = sext i8 %cl to i16
-    %shrd = call i16 @llvm.fshr.i16(i16 %a, i16 %b, i16 %clin)
+    %shrd = call i16 @llvm.fshr.i16(i16 %b, i16 %a, i16 %clin)
     store i16 %shrd, ptr %ptr
     ret void
 }
@@ -207,15 +205,13 @@ define void @shrd32mrcl_legacy(ptr %ptr, i32 noundef %b, i8 %cl) {
 ; CHECK-LABEL: shrd32mrcl_legacy:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    movl (%rdi), %eax
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shrdl %cl, %eax, %esi, %eax
-; CHECK-NEXT:    movl %eax, (%rdi)
+; CHECK-NEXT:    shrdl %cl, %esi, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
     %a = load i32, ptr %ptr
     %clin = sext i8 %cl to i32
-    %shrd = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 %clin)
+    %shrd = call i32 @llvm.fshr.i32(i32 %b, i32 %a, i32 %clin)
     store i32 %shrd, ptr %ptr
     ret void
 }
@@ -224,15 +220,13 @@ define void @shrd64mrcl_legacy(ptr %ptr, i64 noundef %b, i8 %cl) {
 ; CHECK-LABEL: shrd64mrcl_legacy:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    movq (%rdi), %rax
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shrdq %cl, %rax, %rsi, %rax
-; CHECK-NEXT:    movq %rax, (%rdi)
+; CHECK-NEXT:    shrdq %cl, %rsi, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
     %a = load i64, ptr %ptr
     %clin = sext i8 %cl to i64
-    %shrd = call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 %clin)
+    %shrd = call i64 @llvm.fshr.i64(i64 %b, i64 %a, i64 %clin)
     store i64 %shrd, ptr %ptr
     ret void
 }
@@ -240,12 +234,11 @@ entry:
 define void @shrd16mri8_legacy(ptr %ptr, i16 noundef %b) {
 ; CHECK-LABEL: shrd16mri8_legacy:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    shrdw $12, %si, (%rdi), %ax
-; CHECK-NEXT:    movw %ax, (%rdi)
+; CHECK-NEXT:    shrdw $12, %si, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
     %a = load i16, ptr %ptr
-    %shrd = call i16 @llvm.fshr.i16(i16 %a, i16 %b, i16 12)
+    %shrd = call i16 @llvm.fshr.i16(i16 %b, i16 %a, i16 12)
     store i16 %shrd, ptr %ptr
     ret void
 }
@@ -253,12 +246,11 @@ entry:
 define void @shrd32mri8_legacy(ptr %ptr, i32 noundef %b) {
 ; CHECK-LABEL: shrd32mri8_legacy:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    shrdl $12, %esi, (%rdi), %eax
-; CHECK-NEXT:    movl %eax, (%rdi)
+; CHECK-NEXT:    shrdl $12, %esi, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
     %a = load i32, ptr %ptr
-    %shrd = call i32 @llvm.fshr.i32(i32 %a, i32 %b, i32 12)
+    %shrd = call i32 @llvm.fshr.i32(i32 %b, i32 %a, i32 12)
     store i32 %shrd, ptr %ptr
     ret void
 }
@@ -266,12 +258,11 @@ entry:
 define void @shrd64mri8_legacy(ptr %ptr, i64 noundef %b) {
 ; CHECK-LABEL: shrd64mri8_legacy:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    shrdq $12, %rsi, (%rdi), %rax
-; CHECK-NEXT:    movq %rax, (%rdi)
+; CHECK-NEXT:    shrdq $12, %rsi, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
     %a = load i64, ptr %ptr
-    %shrd = call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 12)
+    %shrd = call i64 @llvm.fshr.i64(i64 %b, i64 %a, i64 12)
     store i64 %shrd, ptr %ptr
     ret void
 }

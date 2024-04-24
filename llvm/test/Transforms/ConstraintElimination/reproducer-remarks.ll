@@ -19,7 +19,7 @@ define i1 @test_no_known_facts(ptr %dst) {
 entry:
   %dst.0 = getelementptr inbounds ptr, ptr %dst, i64 0
   %upper = getelementptr inbounds ptr, ptr %dst, i64 2
-  %c = icmp ult i32* %dst.0, %upper
+  %c = icmp ult ptr %dst.0, %upper
   ret i1 %c
 }
 

@@ -8,6 +8,15 @@
 // RUN:     -fprebuilt-module-path=%t
 // RUN: %clang_cc1 -std=c++20 %t/Use.cpp -fprebuilt-module-path=%t -fsyntax-only -verify
 
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+// RUN: split-file %s %t
+//
+// RUN: %clang_cc1 -std=c++20 %t/A.cppm -emit-reduced-module-interface -o %t/A.pcm
+// RUN: %clang_cc1 -std=c++20 %t/B.cppm -emit-reduced-module-interface -o %t/B.pcm \
+// RUN:     -fprebuilt-module-path=%t
+// RUN: %clang_cc1 -std=c++20 %t/Use.cpp -fprebuilt-module-path=%t -fsyntax-only -verify
+
 //--- foo.h
 #ifndef _FOO
 #define _FOO

@@ -111,19 +111,21 @@ bb:
   ret void
 }
 
+; FIXME: produce v_alignbit_b32 v2, v2, s0, 24 instead of v_perm
 define amdgpu_kernel void @lsh8_or_lsr24(ptr addrspace(1) nocapture %arg, i32 %arg1) {
 ; GCN-LABEL: lsh8_or_lsr24:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    s_load_dword s0, s[0:1], 0x2c
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GCN-NEXT:    v_mov_b32_e32 v3, 0x2010007
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
 ; GCN-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GCN-NEXT:    flat_load_dword v2, v[0:1]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_alignbit_b32 v2, v2, s0, 24
+; GCN-NEXT:    v_perm_b32 v2, s0, v2, v3
 ; GCN-NEXT:    flat_store_dword v[0:1], v2
 ; GCN-NEXT:    s_endpgm
 bb:

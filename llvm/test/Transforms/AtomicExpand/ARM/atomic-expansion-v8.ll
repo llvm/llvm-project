@@ -1,4 +1,4 @@
-; RUN: opt -S -o - -mtriple=armv8-linux-gnueabihf -atomic-expand %s -codegen-opt-level=1 | FileCheck %s
+; RUN: opt -S -o - -mtriple=armv8-linux-gnueabihf -passes=atomic-expand %s -codegen-opt-level=1 | FileCheck %s
 
 define i8 @test_atomic_xchg_i8(ptr %ptr, i8 %xchgend) {
 ; CHECK-LABEL: @test_atomic_xchg_i8

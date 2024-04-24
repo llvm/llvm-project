@@ -29,15 +29,15 @@ define i32 @load_clustering_1(ptr nocapture %p) {
 ; LDCLUSTER: SU(5): %6:gpr = LW %0:gpr, 16
 entry:
   %arrayidx0 = getelementptr inbounds i32, ptr %p, i32 3
-  %val0 = load i32, i32* %arrayidx0
+  %val0 = load i32, ptr %arrayidx0
   %arrayidx1 = getelementptr inbounds i32, ptr %p, i32 2
-  %val1 = load i32, i32* %arrayidx1
+  %val1 = load i32, ptr %arrayidx1
   %tmp0 = add i32 %val0, %val1
   %arrayidx2 = getelementptr inbounds i32, ptr %p, i32 1
-  %val2 = load i32, i32* %arrayidx2
+  %val2 = load i32, ptr %arrayidx2
   %tmp1 = add i32 %tmp0, %val2
   %arrayidx3 = getelementptr inbounds i32, ptr %p, i32 4
-  %val3 = load i32, i32* %arrayidx3
+  %val3 = load i32, ptr %arrayidx3
   %tmp2 = add i32 %tmp1, %val3
   ret i32 %tmp2
 }

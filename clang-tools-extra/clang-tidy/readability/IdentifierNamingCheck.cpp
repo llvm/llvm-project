@@ -658,7 +658,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getEnumPrefix(
   const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
 
   std::string Name = ED->getName().str();
-  if (std::string::npos != Name.find("enum")) {
+  if (StringRef(Name).contains("enum")) {
     Name = Name.substr(strlen("enum"), Name.length() - strlen("enum"));
     Name = Name.erase(0, Name.find_first_not_of(' '));
   }
@@ -888,8 +888,14 @@ bool IdentifierNamingCheck::matchesStyle(
     return false;
   if (IdentifierNamingCheck::HungarianPrefixType::HPT_Off != Style.HPType) {
     std::string HNPrefix = HungarianNotation.getPrefix(Decl, HNOption);
-    if (!Name.consume_front(HNPrefix))
-      return false;
+    if (!HNPrefix.empty()) {
+      if (!Name.consume_front(HNPrefix))
+        return false;
+      if (Style.HPType ==
+              IdentifierNamingCheck::HungarianPrefixType::HPT_LowerCase &&
+          !Name.consume_front("_"))
+        return false;
+    }
   }
 
   // Ensure the name doesn't have any extra underscores beyond those specified
@@ -1408,13 +1414,16 @@ const IdentifierNamingCheck::FileStyle &
 IdentifierNamingCheck::getStyleForFile(StringRef FileName) const {
   if (!GetConfigPerFile)
     return *MainFileStyle;
-  StringRef Parent = llvm::sys::path::parent_path(FileName);
+
+  SmallString<128> RealFileName;
+  llvm::sys::fs::real_path(FileName, RealFileName);
+  StringRef Parent = llvm::sys::path::parent_path(RealFileName);
   auto Iter = NamingStylesCache.find(Parent);
   if (Iter != NamingStylesCache.end())
     return Iter->getValue();
 
   llvm::StringRef CheckName = getID();
-  ClangTidyOptions Options = Context->getOptionsForFile(FileName);
+  ClangTidyOptions Options = Context->getOptionsForFile(RealFileName);
   if (Options.Checks && GlobList(*Options.Checks).contains(CheckName)) {
     auto It = NamingStylesCache.try_emplace(
         Parent,
