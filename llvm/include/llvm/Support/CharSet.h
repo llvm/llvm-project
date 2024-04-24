@@ -51,17 +51,12 @@ public:
   /// In case of an error, the result string contains the successfully converted
   /// part of the input string.
   ///
+  /// If the destination charset is a stateful character set, the shift state
+  /// will be set to the initial state.
 
   virtual std::error_code convert(StringRef Source,
                                   SmallVectorImpl<char> &Result,
                                   bool ShouldAutoFlush) const = 0;
-
-  /// Restore the conversion to the original state.
-  /// \return error code in case something went wrong
-  ///
-  /// If the destination character set is a stateful character set,
-  /// set the shift state to the initial state.
-  /// Otherwise this is a no-op.
 };
 } // namespace details
 
