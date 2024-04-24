@@ -2092,6 +2092,10 @@ cc_library(
     srcs = glob(["Process/Linux/*.cpp"]),
     hdrs = glob(["Process/Linux/*.h"]),
     include_prefix = "Plugins",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":PluginProcessPOSIX",
         ":PluginProcessUtility",
