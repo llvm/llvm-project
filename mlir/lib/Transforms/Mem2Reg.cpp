@@ -196,8 +196,8 @@ private:
   MemorySlot slot;
   PromotableAllocationOpInterface allocator;
   RewriterBase &rewriter;
-  /// Potentially non-initialized default value. Use `getLazyDefaultValue` to
-  /// initialize it on demand.
+  /// Potentially non-initialized default value. Use `getOrCreateDefaultValue`
+  /// to initialize it on demand.
   Value defaultValue;
   /// Contains the reaching definition at this operation. Reaching definitions
   /// are only computed for promotable memory operations with blocking uses.

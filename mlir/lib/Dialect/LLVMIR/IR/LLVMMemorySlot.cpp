@@ -235,9 +235,8 @@ static Value castSameSizedTypes(RewriterBase &rewriter, Location loc,
 }
 
 /// Constructs operations that convert `srcValue` into a new value of type
-/// `targetType`. Performs bitlevel extraction if the source type is larger than
-/// the target type.
-/// Assumes that this conversion is possible.
+/// `targetType`. Performs bit-level extraction if the source type is larger
+/// than the target type. Assumes that this conversion is possible.
 static Value createExtractAndCast(RewriterBase &rewriter, Location loc,
                                   Value srcValue, Type targetType,
                                   const DataLayout &dataLayout) {
