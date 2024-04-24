@@ -212,6 +212,9 @@ using namespace llvm;
 DEBUG_COUNTER(DebugInsertCheck, "msan-insert-check",
               "Controls which checks to insert");
 
+DEBUG_COUNTER(DebugInstrumentInstruction, "msan-instrument-instruction",
+              "Controls which instruction to instrument");
+
 static const unsigned kOriginSize = 4;
 static const Align kMinOriginAlignment = Align(4);
 static const Align kShadowTLSAlignment = Align(8);
@@ -2176,6 +2179,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Don't want to visit if we're in the prologue
     if (isInPrologue(I))
       return;
+    if (!DebugCounter::shouldExecute(DebugInstrumentInstruction)) {
+      LLVM_DEBUG(dbgs() << "Skipping instruction: " << I << "\n");
+      // We still need to set the shadow and origin to clean values.
+      setShadow(&I, getCleanShadow(&I));
+      setOrigin(&I, getCleanOrigin());
+      return;
+    }
     InstVisitor<MemorySanitizerVisitor>::visit(I);
   }
 
