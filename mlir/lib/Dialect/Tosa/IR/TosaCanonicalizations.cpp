@@ -285,7 +285,7 @@ struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
       return failure();
     }
 
-    if (inputElementType.isa<FloatType>()) {
+    if (isa<FloatType>(inputElementType)) {
       // Unlike integer types, floating point types can represent infinity.
       auto minClamp = op.getMinFp();
       auto maxClamp = op.getMaxFp();

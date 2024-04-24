@@ -61,7 +61,6 @@ config.reverse_iteration = @LLVM_ENABLE_REVERSE_ITERATION@
 config.dxil_tests = @LLVM_INCLUDE_DXIL_TESTS@
 config.have_llvm_driver = @LLVM_TOOL_LLVM_DRIVER_BUILD@
 config.spirv_tools_tests = @LLVM_INCLUDE_SPIRV_TOOLS_TESTS@
-config.has_logf128 = @LLVM_HAS_LOGF128@
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
