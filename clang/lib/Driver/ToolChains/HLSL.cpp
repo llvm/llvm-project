@@ -135,9 +135,11 @@ std::optional<std::string> tryParseProfile(StringRef Profile) {
     SubArch = llvm::Triple::DXILSubArch_v1_7;
     break;
   case 8:
+  case OfflineLibMinor:
+    // Always consider minor version x as the latest supported minor version
     SubArch = llvm::Triple::DXILSubArch_v1_8;
     break;
-  default :
+  default:
     // No DXIL Version corresponding to specified Shader Model version found
     return std::nullopt;
   }
