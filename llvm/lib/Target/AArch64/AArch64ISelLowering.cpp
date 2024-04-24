@@ -1603,39 +1603,19 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
     }
 
-    if (!Subtarget->isNeonAvailable()) {
-      setTruncStoreAction(MVT::v2f32, MVT::v2bf16, Custom);
-      setTruncStoreAction(MVT::v4f32, MVT::v4bf16, Custom);
-      setTruncStoreAction(MVT::v8f32, MVT::v8bf16, Custom);
-      setTruncStoreAction(MVT::v2f64, MVT::v2bf16, Custom);
-      setTruncStoreAction(MVT::v4f64, MVT::v4bf16, Custom);
-      setTruncStoreAction(MVT::v2f32, MVT::v2f16, Custom);
-      setTruncStoreAction(MVT::v4f32, MVT::v4f16, Custom);
-      setTruncStoreAction(MVT::v8f32, MVT::v8f16, Custom);
-      setTruncStoreAction(MVT::v1f64, MVT::v1f16, Custom);
-      setTruncStoreAction(MVT::v2f64, MVT::v2f16, Custom);
-      setTruncStoreAction(MVT::v4f64, MVT::v4f16, Custom);
-      setTruncStoreAction(MVT::v1f64, MVT::v1f32, Custom);
-      setTruncStoreAction(MVT::v2f64, MVT::v2f32, Custom);
-      setTruncStoreAction(MVT::v4f64, MVT::v4f32, Custom);
-      for (MVT VT : {MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v2i32,
-                     MVT::v4i32, MVT::v1i64, MVT::v2i64})
-        addTypeForFixedLengthSVE(VT, /*StreamingSVE=*/ true);
-
-      for (MVT VT :
-           {MVT::v4f16, MVT::v8f16, MVT::v2f32, MVT::v4f32, MVT::v2f64})
-        addTypeForFixedLengthSVE(VT, /*StreamingSVE=*/ true);
-    }
-
     // NOTE: Currently this has to happen after computeRegisterProperties rather
     // than the preferred option of combining it with the addRegisterClass call.
     if (Subtarget->useSVEForFixedLengthVectors()) {
-      for (MVT VT : MVT::integer_fixedlen_vector_valuetypes())
-        if (useSVEForFixedLengthVectorVT(VT))
-          addTypeForFixedLengthSVE(VT, /*StreamingSVE=*/ false);
-      for (MVT VT : MVT::fp_fixedlen_vector_valuetypes())
-        if (useSVEForFixedLengthVectorVT(VT))
-          addTypeForFixedLengthSVE(VT, /*StreamingSVE=*/ false);
+      for (MVT VT : MVT::integer_fixedlen_vector_valuetypes()) {
+        if (useSVEForFixedLengthVectorVT(
+                VT, /*OverrideNEON=*/!Subtarget->isNeonAvailable()))
+          addTypeForFixedLengthSVE(VT);
+      }
+      for (MVT VT : MVT::fp_fixedlen_vector_valuetypes()) {
+        if (useSVEForFixedLengthVectorVT(
+                VT, /*OverrideNEON=*/!Subtarget->isNeonAvailable()))
+          addTypeForFixedLengthSVE(VT);
+      }
 
       // 64bit results can mean a bigger than NEON input.
       for (auto VT : {MVT::v8i8, MVT::v4i16})
@@ -1869,8 +1849,7 @@ bool AArch64TargetLowering::shouldExpandCttzElements(EVT VT) const {
   return !Subtarget->hasSVEorSME() || VT != MVT::nxv16i1;
 }
 
-void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT,
-                                                     bool StreamingSVE) {
+void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
 
   // By default everything must be expanded.
@@ -1889,13 +1868,17 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT,
     setCondCodeAction(ISD::SETONE, VT, Expand);
   }
 
+  TargetLoweringBase::LegalizeAction Default =
+      VT == MVT::v1f64 ? Expand : Custom;
+
   // Mark integer truncating stores/extending loads as having custom lowering
   if (VT.isInteger()) {
     MVT InnerVT = VT.changeVectorElementType(MVT::i8);
     while (InnerVT != VT) {
-      setTruncStoreAction(VT, InnerVT, Custom);
-      setLoadExtAction(ISD::ZEXTLOAD, VT, InnerVT, Custom);
-      setLoadExtAction(ISD::SEXTLOAD, VT, InnerVT, Custom);
+      setTruncStoreAction(VT, InnerVT, Default);
+      setLoadExtAction(ISD::ZEXTLOAD, VT, InnerVT, Default);
+      setLoadExtAction(ISD::SEXTLOAD, VT, InnerVT, Default);
+      setLoadExtAction(ISD::EXTLOAD, VT, InnerVT, Default);
       InnerVT = InnerVT.changeVectorElementType(
           MVT::getIntegerVT(2 * InnerVT.getScalarSizeInBits()));
     }
@@ -1907,101 +1890,103 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT,
     MVT InnerVT = VT.changeVectorElementType(MVT::f16);
     while (InnerVT != VT) {
       setTruncStoreAction(VT, InnerVT, Custom);
-      setLoadExtAction(ISD::EXTLOAD, VT, InnerVT, Custom);
+      setLoadExtAction(ISD::EXTLOAD, VT, InnerVT, Default);
       InnerVT = InnerVT.changeVectorElementType(
           MVT::getFloatingPointVT(2 * InnerVT.getScalarSizeInBits()));
     }
   }
 
+  bool PreferNEON = VT.is64BitVector() || VT.is128BitVector();
+  bool PreferSVE = !PreferNEON && Subtarget->isSVEAvailable();
+
   // Lower fixed length vector operations to scalable equivalents.
-  setOperationAction(ISD::ABS, VT, Custom);
-  setOperationAction(ISD::ADD, VT, Custom);
-  setOperationAction(ISD::AND, VT, Custom);
-  setOperationAction(ISD::ANY_EXTEND, VT, Custom);
-  setOperationAction(ISD::BITCAST, VT, StreamingSVE ? Legal : Custom);
-  setOperationAction(ISD::BITREVERSE, VT, Custom);
-  setOperationAction(ISD::BSWAP, VT, Custom);
-  setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
-  setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
-  setOperationAction(ISD::CTLZ, VT, Custom);
-  setOperationAction(ISD::CTPOP, VT, Custom);
-  setOperationAction(ISD::CTTZ, VT, Custom);
-  setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
-  setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
-  setOperationAction(ISD::FABS, VT, Custom);
-  setOperationAction(ISD::FADD, VT, Custom);
-  setOperationAction(ISD::FCEIL, VT, Custom);
-  setOperationAction(ISD::FCOPYSIGN, VT, Custom);
-  setOperationAction(ISD::FDIV, VT, Custom);
-  setOperationAction(ISD::FFLOOR, VT, Custom);
-  setOperationAction(ISD::FMA, VT, Custom);
-  setOperationAction(ISD::FMAXIMUM, VT, Custom);
-  setOperationAction(ISD::FMAXNUM, VT, Custom);
-  setOperationAction(ISD::FMINIMUM, VT, Custom);
-  setOperationAction(ISD::FMINNUM, VT, Custom);
-  setOperationAction(ISD::FMUL, VT, Custom);
-  setOperationAction(ISD::FNEARBYINT, VT, Custom);
-  setOperationAction(ISD::FNEG, VT, Custom);
-  setOperationAction(ISD::FP_EXTEND, VT, Custom);
-  setOperationAction(ISD::FP_ROUND, VT, Custom);
-  setOperationAction(ISD::FP_TO_SINT, VT, Custom);
-  setOperationAction(ISD::FP_TO_UINT, VT, Custom);
-  setOperationAction(ISD::FRINT, VT, Custom);
-  setOperationAction(ISD::FROUND, VT, Custom);
-  setOperationAction(ISD::FROUNDEVEN, VT, Custom);
-  setOperationAction(ISD::FSQRT, VT, Custom);
-  setOperationAction(ISD::FSUB, VT, Custom);
-  setOperationAction(ISD::FTRUNC, VT, Custom);
-  setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
-  setOperationAction(ISD::LOAD, VT, StreamingSVE ? Legal : Custom);
-  setOperationAction(ISD::MGATHER, VT, StreamingSVE ? Expand : Custom);
-  setOperationAction(ISD::MLOAD, VT, Custom);
-  setOperationAction(ISD::MSCATTER, VT, StreamingSVE ? Expand : Custom);
-  setOperationAction(ISD::MSTORE, VT, Custom);
-  setOperationAction(ISD::MUL, VT, Custom);
-  setOperationAction(ISD::MULHS, VT, Custom);
-  setOperationAction(ISD::MULHU, VT, Custom);
-  setOperationAction(ISD::OR, VT, Custom);
-  setOperationAction(ISD::SCALAR_TO_VECTOR, VT, StreamingSVE ? Legal : Expand);
-  setOperationAction(ISD::SDIV, VT, Custom);
-  setOperationAction(ISD::SELECT, VT, Custom);
-  setOperationAction(ISD::SETCC, VT, Custom);
-  setOperationAction(ISD::SHL, VT, Custom);
-  setOperationAction(ISD::SIGN_EXTEND, VT, Custom);
-  setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Custom);
-  setOperationAction(ISD::SINT_TO_FP, VT, Custom);
-  setOperationAction(ISD::SMAX, VT, Custom);
-  setOperationAction(ISD::SMIN, VT, Custom);
-  setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
-  setOperationAction(ISD::SRA, VT, Custom);
-  setOperationAction(ISD::SRL, VT, Custom);
-  setOperationAction(ISD::STORE, VT, StreamingSVE ? Legal : Custom);
-  setOperationAction(ISD::SUB, VT, Custom);
-  setOperationAction(ISD::TRUNCATE, VT, Custom);
-  setOperationAction(ISD::UDIV, VT, Custom);
-  setOperationAction(ISD::UINT_TO_FP, VT, Custom);
-  setOperationAction(ISD::UMAX, VT, Custom);
-  setOperationAction(ISD::UMIN, VT, Custom);
-  setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
-  setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
-  setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
-  setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
-  setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
-  setOperationAction(ISD::VECREDUCE_FMAXIMUM, VT, Custom);
-  setOperationAction(ISD::VECREDUCE_FMINIMUM, VT, Custom);
-  setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
-  setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT,
-                     StreamingSVE ? Expand : Custom);
-  setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
-  setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
-  setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
-  setOperationAction(ISD::VECREDUCE_UMIN, VT, Custom);
-  setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
-  setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
-  setOperationAction(ISD::VECTOR_SPLICE, VT, Custom);
-  setOperationAction(ISD::VSELECT, VT, Custom);
-  setOperationAction(ISD::XOR, VT, Custom);
-  setOperationAction(ISD::ZERO_EXTEND, VT, Custom);
+  setOperationAction(ISD::ABS, VT, Default);
+  setOperationAction(ISD::ADD, VT, Default);
+  setOperationAction(ISD::AND, VT, Default);
+  setOperationAction(ISD::ANY_EXTEND, VT, Default);
+  setOperationAction(ISD::BITCAST, VT, PreferNEON ? Legal : Default);
+  setOperationAction(ISD::BITREVERSE, VT, Default);
+  setOperationAction(ISD::BSWAP, VT, Default);
+  setOperationAction(ISD::BUILD_VECTOR, VT, Default);
+  setOperationAction(ISD::CONCAT_VECTORS, VT, Default);
+  setOperationAction(ISD::CTLZ, VT, Default);
+  setOperationAction(ISD::CTPOP, VT, Default);
+  setOperationAction(ISD::CTTZ, VT, Default);
+  setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Default);
+  setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Default);
+  setOperationAction(ISD::FABS, VT, Default);
+  setOperationAction(ISD::FADD, VT, Default);
+  setOperationAction(ISD::FCEIL, VT, Default);
+  setOperationAction(ISD::FCOPYSIGN, VT, Default);
+  setOperationAction(ISD::FDIV, VT, Default);
+  setOperationAction(ISD::FFLOOR, VT, Default);
+  setOperationAction(ISD::FMA, VT, Default);
+  setOperationAction(ISD::FMAXIMUM, VT, Default);
+  setOperationAction(ISD::FMAXNUM, VT, Default);
+  setOperationAction(ISD::FMINIMUM, VT, Default);
+  setOperationAction(ISD::FMINNUM, VT, Default);
+  setOperationAction(ISD::FMUL, VT, Default);
+  setOperationAction(ISD::FNEARBYINT, VT, Default);
+  setOperationAction(ISD::FNEG, VT, Default);
+  setOperationAction(ISD::FP_EXTEND, VT, Default);
+  setOperationAction(ISD::FP_ROUND, VT, Default);
+  setOperationAction(ISD::FP_TO_SINT, VT, Default);
+  setOperationAction(ISD::FP_TO_UINT, VT, Default);
+  setOperationAction(ISD::FRINT, VT, Default);
+  setOperationAction(ISD::FROUND, VT, Default);
+  setOperationAction(ISD::FROUNDEVEN, VT, Default);
+  setOperationAction(ISD::FSQRT, VT, Default);
+  setOperationAction(ISD::FSUB, VT, Default);
+  setOperationAction(ISD::FTRUNC, VT, Default);
+  setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Default);
+  setOperationAction(ISD::LOAD, VT, PreferNEON ? Legal : Default);
+  setOperationAction(ISD::MGATHER, VT, PreferSVE ? Default : Expand);
+  setOperationAction(ISD::MLOAD, VT, Default);
+  setOperationAction(ISD::MSCATTER, VT, PreferSVE ? Default : Expand);
+  setOperationAction(ISD::MSTORE, VT, Default);
+  setOperationAction(ISD::MUL, VT, Default);
+  setOperationAction(ISD::MULHS, VT, Default);
+  setOperationAction(ISD::MULHU, VT, Default);
+  setOperationAction(ISD::OR, VT, Default);
+  setOperationAction(ISD::SCALAR_TO_VECTOR, VT, PreferNEON ? Legal : Expand);
+  setOperationAction(ISD::SDIV, VT, Default);
+  setOperationAction(ISD::SELECT, VT, Default);
+  setOperationAction(ISD::SETCC, VT, Default);
+  setOperationAction(ISD::SHL, VT, Default);
+  setOperationAction(ISD::SIGN_EXTEND, VT, Default);
+  setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Default);
+  setOperationAction(ISD::SINT_TO_FP, VT, Default);
+  setOperationAction(ISD::SMAX, VT, Default);
+  setOperationAction(ISD::SMIN, VT, Default);
+  setOperationAction(ISD::SPLAT_VECTOR, VT, Default);
+  setOperationAction(ISD::SRA, VT, Default);
+  setOperationAction(ISD::SRL, VT, Default);
+  setOperationAction(ISD::STORE, VT, PreferNEON ? Legal : Default);
+  setOperationAction(ISD::SUB, VT, Default);
+  setOperationAction(ISD::TRUNCATE, VT, Default);
+  setOperationAction(ISD::UDIV, VT, Default);
+  setOperationAction(ISD::UINT_TO_FP, VT, Default);
+  setOperationAction(ISD::UMAX, VT, Default);
+  setOperationAction(ISD::UMIN, VT, Default);
+  setOperationAction(ISD::VECREDUCE_ADD, VT, Default);
+  setOperationAction(ISD::VECREDUCE_AND, VT, Default);
+  setOperationAction(ISD::VECREDUCE_FADD, VT, Default);
+  setOperationAction(ISD::VECREDUCE_FMAX, VT, Default);
+  setOperationAction(ISD::VECREDUCE_FMIN, VT, Default);
+  setOperationAction(ISD::VECREDUCE_FMAXIMUM, VT, Default);
+  setOperationAction(ISD::VECREDUCE_FMINIMUM, VT, Default);
+  setOperationAction(ISD::VECREDUCE_OR, VT, Default);
+  setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, PreferSVE ? Default : Expand);
+  setOperationAction(ISD::VECREDUCE_SMAX, VT, Default);
+  setOperationAction(ISD::VECREDUCE_SMIN, VT, Default);
+  setOperationAction(ISD::VECREDUCE_UMAX, VT, Default);
+  setOperationAction(ISD::VECREDUCE_UMIN, VT, Default);
+  setOperationAction(ISD::VECREDUCE_XOR, VT, Default);
+  setOperationAction(ISD::VECTOR_SHUFFLE, VT, Default);
+  setOperationAction(ISD::VECTOR_SPLICE, VT, Default);
+  setOperationAction(ISD::VSELECT, VT, Default);
+  setOperationAction(ISD::XOR, VT, Default);
+  setOperationAction(ISD::ZERO_EXTEND, VT, Default);
 }
 
 void AArch64TargetLowering::addDRTypeForNEON(MVT VT) {
