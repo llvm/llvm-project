@@ -11807,20 +11807,6 @@ HandleSDNode::~HandleSDNode() {
   DropOperands();
 }
 
-GlobalAddressSDNode::GlobalAddressSDNode(unsigned Opc, unsigned Order,
-                                         const DebugLoc &DL,
-                                         const GlobalValue *GA, SDVTList VTs,
-                                         int64_t o, unsigned TF)
-    : SDNode(Opc, Order, DL, VTs), Offset(o), TargetFlags(TF) {
-  TheGlobal = GA;
-}
-
-AddrSpaceCastSDNode::AddrSpaceCastSDNode(unsigned Order, const DebugLoc &dl,
-                                         SDVTList VTs, unsigned SrcAS,
-                                         unsigned DestAS)
-    : SDNode(ISD::ADDRSPACECAST, Order, dl, VTs), SrcAddrSpace(SrcAS),
-      DestAddrSpace(DestAS) {}
-
 MemSDNode::MemSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl,
                      SDVTList VTs, EVT memvt, MachineMemOperand *mmo)
     : SDNode(Opc, Order, dl, VTs), MemoryVT(memvt), MMO(mmo) {
