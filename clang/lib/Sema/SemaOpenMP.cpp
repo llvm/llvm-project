@@ -22004,8 +22004,7 @@ static bool checkMapConflicts(
           } else if (const auto *OASE = dyn_cast<ArraySectionExpr>(
                          SI->getAssociatedExpression())) {
             const Expr *E = OASE->getBase()->IgnoreParenImpCasts();
-            Type =
-                ArraySectionExpr::getBaseOriginalType(E).getCanonicalType();
+            Type = ArraySectionExpr::getBaseOriginalType(E).getCanonicalType();
           } else if (const auto *OASE = dyn_cast<OMPArrayShapingExpr>(
                          SI->getAssociatedExpression())) {
             Type = OASE->getBase()->getType()->getPointeeType();
@@ -24672,9 +24671,10 @@ ExprResult SemaOpenMP::ActOnOMPArraySectionExpr(
        (LowerBound->isTypeDependent() || LowerBound->isValueDependent())) ||
       (Length && (Length->isTypeDependent() || Length->isValueDependent())) ||
       (Stride && (Stride->isTypeDependent() || Stride->isValueDependent()))) {
-    return new (Context) ArraySectionExpr(
-        ArraySectionExpr::OMPArraySection, Base, LowerBound, Length, Stride, Context.DependentTy, VK_LValue,
-        OK_Ordinary, ColonLocFirst, ColonLocSecond, RBLoc);
+    return new (Context)
+        ArraySectionExpr(ArraySectionExpr::OMPArraySection, Base, LowerBound,
+                         Length, Stride, Context.DependentTy, VK_LValue,
+                         OK_Ordinary, ColonLocFirst, ColonLocSecond, RBLoc);
   }
 
   // Perform default conversions.

@@ -4397,7 +4397,7 @@ static Address emitOMPArraySectionBase(CodeGenFunction &CGF, const Expr *Base,
 }
 
 LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
-                                                bool IsLowerBound) {
+                                             bool IsLowerBound) {
 
   assert(!E->isOpenACCArraySection() &&
          "OpenACC Array section codegen not implemented");

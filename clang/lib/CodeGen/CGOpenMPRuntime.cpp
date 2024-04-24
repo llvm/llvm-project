@@ -3571,8 +3571,7 @@ getPointerAndSize(CodeGenFunction &CGF, const Expr *E) {
     }
   } else if (const auto *ASE =
                  dyn_cast<ArraySectionExpr>(E->IgnoreParenImpCasts())) {
-    LValue UpAddrLVal =
-        CGF.EmitArraySectionExpr(ASE, /*IsLowerBound=*/false);
+    LValue UpAddrLVal = CGF.EmitArraySectionExpr(ASE, /*IsLowerBound=*/false);
     Address UpAddrAddress = UpAddrLVal.getAddress(CGF);
     llvm::Value *UpAddr = CGF.Builder.CreateConstGEP1_32(
         UpAddrAddress.getElementType(), UpAddrAddress.emitRawPointer(CGF),

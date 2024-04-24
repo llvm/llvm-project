@@ -6734,42 +6734,43 @@ public:
 class ArraySectionExpr : public Expr {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
-  public:
-  enum ArraySectionType { OMPArraySection, OpenACCArraySection};
-  private:
-    enum {
-      BASE,
-      LOWER_BOUND,
-      LENGTH,
-      STRIDE,
-      END_EXPR,
-      OPENACC_END_EXPR = STRIDE
-    };
 
-    ArraySectionType ASType;
-    Stmt *SubExprs[END_EXPR] = {0};
-    SourceLocation ColonLocFirst;
-    SourceLocation ColonLocSecond;
-    SourceLocation RBracketLoc;
+public:
+  enum ArraySectionType { OMPArraySection, OpenACCArraySection };
 
-  public:
-    ArraySectionExpr(ArraySectionType ASType, Expr *Base, Expr *LowerBound,
-                     Expr *Length, Expr *Stride, QualType Type,
-                     ExprValueKind VK, ExprObjectKind OK,
-                     SourceLocation ColonLocFirst,
-                     SourceLocation ColonLocSecond, SourceLocation RBracketLoc)
-        : Expr(ArraySectionExprClass, Type, VK, OK), ASType(ASType),
-          ColonLocFirst(ColonLocFirst), ColonLocSecond(ColonLocSecond),
-          RBracketLoc(RBracketLoc) {
-      setBase(Base);
-      setLowerBound(LowerBound);
-      setLength(Length);
+private:
+  enum {
+    BASE,
+    LOWER_BOUND,
+    LENGTH,
+    STRIDE,
+    END_EXPR,
+    OPENACC_END_EXPR = STRIDE
+  };
 
-      assert((!isOpenACCArraySection() || Stride == nullptr) &&
-             "Stride not valid on an OpenACC array section");
-      if (ASType == OMPArraySection)
-        setStride(Stride);
-      setDependence(computeDependence(this));
+  ArraySectionType ASType;
+  Stmt *SubExprs[END_EXPR] = {0};
+  SourceLocation ColonLocFirst;
+  SourceLocation ColonLocSecond;
+  SourceLocation RBracketLoc;
+
+public:
+  ArraySectionExpr(ArraySectionType ASType, Expr *Base, Expr *LowerBound,
+                   Expr *Length, Expr *Stride, QualType Type, ExprValueKind VK,
+                   ExprObjectKind OK, SourceLocation ColonLocFirst,
+                   SourceLocation ColonLocSecond, SourceLocation RBracketLoc)
+      : Expr(ArraySectionExprClass, Type, VK, OK), ASType(ASType),
+        ColonLocFirst(ColonLocFirst), ColonLocSecond(ColonLocSecond),
+        RBracketLoc(RBracketLoc) {
+    setBase(Base);
+    setLowerBound(LowerBound);
+    setLength(Length);
+
+    assert((!isOpenACCArraySection() || Stride == nullptr) &&
+           "Stride not valid on an OpenACC array section");
+    if (ASType == OMPArraySection)
+      setStride(Stride);
+    setDependence(computeDependence(this));
   }
   /// Create an empty array section expression.
   explicit ArraySectionExpr(EmptyShell Shell)
@@ -6803,7 +6804,8 @@ class ArraySectionExpr : public Expr {
   Expr *getStride() {
     assert(ASType != OpenACCArraySection &&
            "Stride not valid in OpenACC subarrays");
-    return cast_or_null<Expr>(SubExprs[STRIDE]); }
+    return cast_or_null<Expr>(SubExprs[STRIDE]);
+  }
 
   const Expr *getStride() const {
     assert(ASType != OpenACCArraySection &&
@@ -6820,7 +6822,8 @@ class ArraySectionExpr : public Expr {
   SourceLocation getColonLocSecond() const {
     assert(ASType != OpenACCArraySection &&
            "second colon for stride not valid in OpenACC subarrays");
-    return ColonLocSecond; }
+    return ColonLocSecond;
+  }
   SourceLocation getRBracketLoc() const { return RBracketLoc; }
 
   SourceLocation getExprLoc() const LLVM_READONLY {
