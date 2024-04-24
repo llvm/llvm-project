@@ -158,7 +158,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
              ++AfterBBI) {
           // Track the operand that kill Reg. We would unset the kill flag of
           // the operand if there is a following redundant load immediate.
-          int KillIdx = AfterBBI->findRegisterUseOperandIdx(Reg, true, TRI);
+          int KillIdx = AfterBBI->findRegisterUseOperandIdx(Reg, TRI, true);
 
           // We can't just clear implicit kills, so if we encounter one, stop
           // looking further.
@@ -204,7 +204,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
               DeadOrKillToUnset->setIsKill(false);
           }
           DeadOrKillToUnset =
-              AfterBBI->findRegisterDefOperand(Reg, true, true, TRI);
+              AfterBBI->findRegisterDefOperand(Reg, TRI, true, true);
           if (DeadOrKillToUnset)
             LLVM_DEBUG(dbgs()
                        << " Dead flag of " << *DeadOrKillToUnset << " from "
