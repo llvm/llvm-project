@@ -2069,15 +2069,6 @@ std::error_code DataAggregator::parseMMapEvents() {
     if (FileMMapInfo.first == "(deleted)")
       continue;
 
-    // Consider only the first mapping of the file for any given PID
-    auto Range = GlobalMMapInfo.equal_range(FileMMapInfo.first);
-    bool PIDExists = llvm::any_of(make_range(Range), [&](const auto &MI) {
-      return MI.second.PID == FileMMapInfo.second.PID;
-    });
-
-    if (PIDExists)
-      continue;
-
     GlobalMMapInfo.insert(FileMMapInfo);
   }
 
@@ -2129,12 +2120,18 @@ std::error_code DataAggregator::parseMMapEvents() {
                << " using file offset 0x" << Twine::utohexstr(MMapInfo.Offset)
                << ". Ignoring profile data for this mapping\n";
         continue;
-      } else {
-        MMapInfo.BaseAddress = *BaseAddress;
       }
+      MMapInfo.BaseAddress = *BaseAddress;
     }
 
+    // Try to add MMapInfo to the map and update its size. Large binaries
+    // may span multiple text segments, so the mapping is inserted only on the
+    // first occurrence. If a larger section size is found, it will be updated.
     BinaryMMapInfo.insert(std::make_pair(MMapInfo.PID, MMapInfo));
+    uint64_t EndAddress = MMapInfo.MMapAddress + MMapInfo.Size;
+    uint64_t Size = EndAddress - BinaryMMapInfo[MMapInfo.PID].BaseAddress;
+    if (Size > BinaryMMapInfo[MMapInfo.PID].Size)
+      BinaryMMapInfo[MMapInfo.PID].Size = Size;
   }
 
   if (BinaryMMapInfo.empty()) {
