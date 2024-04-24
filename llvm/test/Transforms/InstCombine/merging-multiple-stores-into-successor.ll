@@ -105,11 +105,11 @@ define i32 @diff_types_diff_width_no_merge(i1 %cond, i32 %a, i64 %b) {
 ; CHECK-LABEL: @diff_types_diff_width_no_merge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
-; CHECK:       A:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
 ; CHECK-NEXT:    store i32 [[A:%.*]], ptr [[ALLOCA]], align 4
 ; CHECK-NEXT:    br label [[SINK:%.*]]
-; CHECK:       B:
+; CHECK:       else:
 ; CHECK-NEXT:    store i64 [[B:%.*]], ptr [[ALLOCA]], align 4
 ; CHECK-NEXT:    br label [[SINK]]
 ; CHECK:       sink:
@@ -118,11 +118,11 @@ define i32 @diff_types_diff_width_no_merge(i1 %cond, i32 %a, i64 %b) {
 ;
 entry:
   %alloca = alloca i64
-  br i1 %cond, label %A, label %B
-A:
+  br i1 %cond, label %if, label %else
+if:
   store i32 %a, ptr %alloca
   br label %sink
-B:
+  else:
   store i64 %b, ptr %alloca
   br label %sink
 sink:
@@ -134,11 +134,11 @@ define <4 x i32> @vec_no_merge(i1 %cond, <2 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @vec_no_merge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
-; CHECK:       A:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
 ; CHECK-NEXT:    store <2 x i32> [[A:%.*]], ptr [[ALLOCA]], align 8
 ; CHECK-NEXT:    br label [[SINK:%.*]]
-; CHECK:       B:
+; CHECK:       else:
 ; CHECK-NEXT:    store <4 x i32> [[B:%.*]], ptr [[ALLOCA]], align 16
 ; CHECK-NEXT:    br label [[SINK]]
 ; CHECK:       sink:
@@ -147,11 +147,11 @@ define <4 x i32> @vec_no_merge(i1 %cond, <2 x i32> %a, <4 x i32> %b) {
 ;
 entry:
   %alloca = alloca i64
-  br i1 %cond, label %A, label %B
-A:
+  br i1 %cond, label %if, label %else
+if:
   store <2 x i32> %a, ptr %alloca
   br label %sink
-B:
+else:
   store <4 x i32> %b, ptr %alloca
   br label %sink
 sink:
@@ -195,11 +195,11 @@ define %struct.tup @multi_elem_struct_no_merge(i1 %cond, %struct.tup %a, half %b
 ; CHECK-LABEL: @multi_elem_struct_no_merge(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[A:%.*]], label [[B:%.*]]
-; CHECK:       A:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
 ; CHECK-NEXT:    store [[STRUCT_TUP:%.*]] [[A:%.*]], ptr [[ALLOCA]], align 4
 ; CHECK-NEXT:    br label [[SINK:%.*]]
-; CHECK:       B:
+; CHECK:       else:
 ; CHECK-NEXT:    store half [[B:%.*]], ptr [[ALLOCA]], align 2
 ; CHECK-NEXT:    br label [[SINK]]
 ; CHECK:       sink:
@@ -208,11 +208,11 @@ define %struct.tup @multi_elem_struct_no_merge(i1 %cond, %struct.tup %a, half %b
 ;
 entry:
   %alloca = alloca i64
-  br i1 %cond, label %A, label %B
-A:
+  br i1 %cond, label %if, label %else
+if:
   store %struct.tup %a, ptr %alloca
   br label %sink
-B:
+else:
   store half %b, ptr %alloca
   br label %sink
 sink:

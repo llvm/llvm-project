@@ -151,6 +151,11 @@ struct undef_match {
 /// neither undef nor poison, the aggregate is not matched.
 inline auto m_Undef() { return undef_match(); }
 
+/// Match an arbitrary UndefValue constant.
+inline class_match<UndefValue> m_UndefValue() {
+  return class_match<UndefValue>();
+}
+
 /// Match an arbitrary poison constant.
 inline class_match<PoisonValue> m_Poison() {
   return class_match<PoisonValue>();
@@ -345,8 +350,9 @@ template <int64_t Val> inline constantint_match<Val> m_ConstantInt() {
 
 /// This helper class is used to match constant scalars, vector splats,
 /// and fixed width vectors that satisfy a specified predicate.
-/// For fixed width vector constants, poison elements are ignored.
-template <typename Predicate, typename ConstantVal>
+/// For fixed width vector constants, poison elements are ignored if AllowPoison
+/// is true.
+template <typename Predicate, typename ConstantVal, bool AllowPoison>
 struct cstval_pred_ty : public Predicate {
   template <typename ITy> bool match(ITy *V) {
     if (const auto *CV = dyn_cast<ConstantVal>(V))
@@ -369,7 +375,7 @@ struct cstval_pred_ty : public Predicate {
           Constant *Elt = C->getAggregateElement(i);
           if (!Elt)
             return false;
-          if (isa<PoisonValue>(Elt))
+          if (AllowPoison && isa<PoisonValue>(Elt))
             continue;
           auto *CV = dyn_cast<ConstantVal>(Elt);
           if (!CV || !this->isValue(CV->getValue()))
@@ -384,12 +390,13 @@ struct cstval_pred_ty : public Predicate {
 };
 
 /// specialization of cstval_pred_ty for ConstantInt
-template <typename Predicate>
-using cst_pred_ty = cstval_pred_ty<Predicate, ConstantInt>;
+template <typename Predicate, bool AllowPoison = true>
+using cst_pred_ty = cstval_pred_ty<Predicate, ConstantInt, AllowPoison>;
 
 /// specialization of cstval_pred_ty for ConstantFP
 template <typename Predicate>
-using cstfp_pred_ty = cstval_pred_ty<Predicate, ConstantFP>;
+using cstfp_pred_ty = cstval_pred_ty<Predicate, ConstantFP,
+                                     /*AllowPoison=*/true>;
 
 /// This helper class is used to match scalar and vector constants that
 /// satisfy a specified predicate, and bind them to an APInt.
@@ -477,6 +484,10 @@ struct is_all_ones {
 /// For vectors, this includes constants with undefined elements.
 inline cst_pred_ty<is_all_ones> m_AllOnes() {
   return cst_pred_ty<is_all_ones>();
+}
+
+inline cst_pred_ty<is_all_ones, false> m_AllOnesForbidPoison() {
+  return cst_pred_ty<is_all_ones, false>();
 }
 
 struct is_maxsignedvalue {
@@ -776,6 +787,9 @@ inline bind_ty<const WithOverflowInst>
 m_WithOverflowInst(const WithOverflowInst *&I) {
   return I;
 }
+
+/// Match an UndefValue, capturing the value if we match.
+inline bind_ty<UndefValue> m_UndefValue(UndefValue *&U) { return U; }
 
 /// Match a Constant, capturing the value if we match.
 inline bind_ty<Constant> m_Constant(Constant *&C) { return C; }
@@ -2586,6 +2600,13 @@ template <typename ValTy>
 inline BinaryOp_match<cst_pred_ty<is_all_ones>, ValTy, Instruction::Xor, true>
 m_Not(const ValTy &V) {
   return m_c_Xor(m_AllOnes(), V);
+}
+
+template <typename ValTy>
+inline BinaryOp_match<cst_pred_ty<is_all_ones, false>, ValTy, Instruction::Xor,
+                      true>
+m_NotForbidPoison(const ValTy &V) {
+  return m_c_Xor(m_AllOnesForbidPoison(), V);
 }
 
 /// Matches an SMin with LHS and RHS in either order.

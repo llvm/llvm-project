@@ -68,9 +68,9 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/TargetParser/X86TargetParser.h"
 #include <optional>
@@ -2495,7 +2495,8 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   // In the cross-dso CFI mode with canonical jump tables, we want !type
   // attributes on definitions only.
   if ((CodeGenOpts.SanitizeCfiCrossDso &&
-      CodeGenOpts.SanitizeCfiCanonicalJumpTables) || CodeGenOpts.CallGraphSection) {
+       CodeGenOpts.SanitizeCfiCanonicalJumpTables) ||
+      CodeGenOpts.CallGraphSection) {
     if (auto *FD = dyn_cast<FunctionDecl>(D)) {
       // Skip available_externally functions. They won't be codegen'ed in the
       // current module anyway.
@@ -2688,9 +2689,9 @@ void CodeGenModule::CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
   bool EmittedMDIdGeneralized = false;
   if (CodeGenOpts.CallGraphSection &&
       (!F->hasLocalLinkage() ||
-       F->getFunction().hasAddressTaken(nullptr, /* IgnoreCallbackUses */ true,
-                                        /* IgnoreAssumeLikeCalls */ true,
-                                        /* IgnoreLLVMUsed */ false))) {
+       F->getFunction().hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true,
+                                        /*IgnoreAssumeLikeCalls=*/true,
+                                        /*IgnoreLLVMUsed=*/false))) {
     F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(FD->getType()));
     EmittedMDIdGeneralized = true;
   }
@@ -2719,7 +2720,7 @@ void CodeGenModule::CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
 void CodeGenModule::CreateFunctionTypeMetadataForIcall(const QualType &QT,
                                                        llvm::CallBase *CB) {
   // Only if needed for call graph section and only for indirect calls.
-  if (!(CodeGenOpts.CallGraphSection && CB && CB->isIndirectCall()))
+  if (!CodeGenOpts.CallGraphSection || !CB || !CB->isIndirectCall())
     return;
 
   auto *MD = CreateMetadataIdentifierGeneralized(QT);
