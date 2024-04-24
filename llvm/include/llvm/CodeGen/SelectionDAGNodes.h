@@ -452,11 +452,6 @@ public:
   bool hasNoFPExcept() const { return NoFPExcept; }
   bool hasUnpredictable() const { return Unpredictable; }
 
-  bool hasPoisonGeneratingFlags() const {
-    return NoUnsignedWrap || NoSignedWrap || Exact || Disjoint || NonNeg ||
-           NoNaNs || NoInfs || NoFPExcept || Unpredictable;
-  }
-
   /// Clear any flags in this flag set that aren't also set in Flags. All
   /// flags will be cleared if Flags are undefined.
   void intersectWith(const SDNodeFlags Flags) {
@@ -1005,7 +1000,10 @@ public:
   void intersectFlagsWith(const SDNodeFlags Flags);
 
   bool hasPoisonGeneratingFlags() const {
-    return getFlags().hasPoisonGeneratingFlags();
+    SDNodeFlags Flags = getFlags();
+    return Flags.hasNoUnsignedWrap() || Flags.hasNoSignedWrap() ||
+           Flags.hasExact() || Flags.hasDisjoint() || Flags.hasNonNeg() ||
+           Flags.hasNoNaNs() || Flags.hasNoInfs();
   }
 
   void setCFIType(uint32_t Type) { CFIType = Type; }
