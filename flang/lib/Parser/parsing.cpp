@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Parser/parsing.h"
-#include "preprocessor.h"
 #include "prescan.h"
 #include "type-parsers.h"
 #include "flang/Parser/message.h"
+#include "flang/Parser/preprocessor.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/source.h"
 #include "llvm/Support/raw_ostream.h"
@@ -60,20 +60,19 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
     }
   }
 
-  Preprocessor preprocessor{allSources};
   if (!options.predefinitions.empty()) {
-    preprocessor.DefineStandardMacros();
+    preprocessor_.DefineStandardMacros();
     for (const auto &predef : options.predefinitions) {
       if (predef.second) {
-        preprocessor.Define(predef.first, *predef.second);
+        preprocessor_.Define(predef.first, *predef.second);
       } else {
-        preprocessor.Undefine(predef.first);
+        preprocessor_.Undefine(predef.first);
       }
     }
   }
   currentCooked_ = &allCooked_.NewCookedSource();
   Prescanner prescanner{
-      messages_, *currentCooked_, preprocessor, options.features};
+      messages_, *currentCooked_, preprocessor_, options.features};
   prescanner.set_fixedForm(options.isFixedForm)
       .set_fixedFormColumnLimit(options.fixedFormColumns)
       .AddCompilerDirectiveSentinel("dir$");
@@ -87,7 +86,7 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   if (options.features.IsEnabled(LanguageFeature::CUDA)) {
     prescanner.AddCompilerDirectiveSentinel("$cuf");
     prescanner.AddCompilerDirectiveSentinel("@cuf");
-    preprocessor.Define("_CUDA", "1");
+    preprocessor_.Define("_CUDA", "1");
   }
   ProvenanceRange range{allSources.AddIncludedFile(
       *sourceFile, ProvenanceRange{}, options.isModuleFile)};
@@ -105,6 +104,10 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
     allSources.setShowColors(/*showColors=*/true);
   }
   return sourceFile;
+}
+
+void Parsing::EmitPreprocessorMacros(llvm::raw_ostream &out) const {
+  preprocessor_.PrintMacros(out);
 }
 
 void Parsing::EmitPreprocessedSource(

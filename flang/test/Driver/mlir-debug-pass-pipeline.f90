@@ -58,12 +58,14 @@ end program
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
-! ALL-NEXT: Pipeline Collection : ['func.func', 'omp.declare_reduction']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction']
+! ALL-NEXT:   'fir.global' Pipeline
+! ALL-NEXT:     CFGConversion
 ! ALL-NEXT:   'func.func' Pipeline
 ! ALL-NEXT:     PolymorphicOpConversion
-! ALL-NEXT:     CFGConversionOnFunc
+! ALL-NEXT:     CFGConversion
 ! ALL-NEXT:   'omp.declare_reduction' Pipeline
-! ALL-NEXT:     CFGConversionOnReduction
+! ALL-NEXT:     CFGConversion
 ! ALL-NEXT: SCFToControlFlow
 ! ALL-NEXT: Canonicalizer
 ! ALL-NEXT: SimplifyRegionLite
@@ -72,17 +74,19 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 ! ALL-NEXT: BoxedProcedurePass
 
-! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func']
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction']
 ! ALL-NEXT:   'fir.global' Pipeline
-! ALL-NEXT:   AbstractResultOnGlobalOpt
+! ALL-NEXT:     AbstractResultOpt
 ! ALL-NEXT:   'func.func' Pipeline
-! ALL-NEXT:   AbstractResultOnFuncOpt
+! ALL-NEXT:     AbstractResultOpt
+! ALL-NEXT:   'omp.declare_reduction' Pipeline
+! ALL-NEXT:     AbstractResultOpt
 
 ! ALL-NEXT: CodeGenRewrite
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations eliminated
 ! ALL-NEXT: TargetRewrite
 ! ALL-NEXT: ExternalNameConversion
-! DEBUG-NEXT: AddDebugFoundation
-! NO-DEBUG-NOT: AddDebugFoundation
+! DEBUG-NEXT: AddDebugInfo
+! NO-DEBUG-NOT: AddDebugInfo
 ! ALL: FIRToLLVMLowering
 ! ALL-NOT: LLVMIRLoweringPass

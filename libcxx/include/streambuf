@@ -109,6 +109,7 @@ protected:
 
 #include <__config>
 #include <__fwd/streambuf.h>
+#include <__locale>
 #include <__type_traits/is_same.h>
 #include <climits>
 #include <ios>

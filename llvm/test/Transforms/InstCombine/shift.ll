@@ -423,7 +423,7 @@ define i32 @test29(i64 %d18) {
 ; CHECK-LABEL: @test29(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr i64 [[D18:%.*]], 63
-; CHECK-NEXT:    [[I101:%.*]] = trunc i64 [[SUM_SHIFT]] to i32
+; CHECK-NEXT:    [[I101:%.*]] = trunc nuw nsw i64 [[SUM_SHIFT]] to i32
 ; CHECK-NEXT:    ret i32 [[I101]]
 ;
 entry:
@@ -437,7 +437,7 @@ define <2 x i32> @test29_uniform(<2 x i64> %d18) {
 ; CHECK-LABEL: @test29_uniform(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SUM_SHIFT:%.*]] = lshr <2 x i64> [[D18:%.*]], <i64 63, i64 63>
-; CHECK-NEXT:    [[I101:%.*]] = trunc <2 x i64> [[SUM_SHIFT]] to <2 x i32>
+; CHECK-NEXT:    [[I101:%.*]] = trunc nuw nsw <2 x i64> [[SUM_SHIFT]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[I101]]
 ;
 entry:
@@ -466,7 +466,7 @@ define <2 x i32> @test29_poison(<2 x i64> %d18) {
 ; CHECK-LABEL: @test29_poison(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I916:%.*]] = lshr <2 x i64> [[D18:%.*]], <i64 32, i64 poison>
-; CHECK-NEXT:    [[I917:%.*]] = trunc <2 x i64> [[I916]] to <2 x i32>
+; CHECK-NEXT:    [[I917:%.*]] = trunc nuw <2 x i64> [[I916]] to <2 x i32>
 ; CHECK-NEXT:    [[I10:%.*]] = lshr <2 x i32> [[I917]], <i32 31, i32 poison>
 ; CHECK-NEXT:    ret <2 x i32> [[I10]]
 ;

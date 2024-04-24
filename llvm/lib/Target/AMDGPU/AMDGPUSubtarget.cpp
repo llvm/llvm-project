@@ -642,6 +642,17 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
     Policy.ShouldTrackLaneMasks = true;
 }
 
+void GCNSubtarget::mirFileLoaded(MachineFunction &MF) const {
+  if (isWave32()) {
+    // Fix implicit $vcc operands after MIParser has verified that they match
+    // the instruction definitions.
+    for (auto &MBB : MF) {
+      for (auto &MI : MBB)
+        InstrInfo.fixImplicitOperands(MI);
+    }
+  }
+}
+
 bool GCNSubtarget::hasMadF16() const {
   return InstrInfo.pseudoToMCOpcode(AMDGPU::V_MAD_F16_e64) != -1;
 }
@@ -849,8 +860,9 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
   return getBaseMaxNumVGPRs(F, MFI.getWavesPerEU());
 }
 
-void GCNSubtarget::adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use,
-                                         int UseOpIdx, SDep &Dep) const {
+void GCNSubtarget::adjustSchedDependency(
+    SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx, SDep &Dep,
+    const TargetSchedModel *SchedModel) const {
   if (Dep.getKind() != SDep::Kind::Data || !Dep.getReg() ||
       !Def->isInstr() || !Use->isInstr())
     return;

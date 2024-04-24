@@ -43,6 +43,7 @@ function(_get_common_compile_options output_var flags)
     list(APPEND compile_options "-fpie")
 
     if(LLVM_LIBC_FULL_BUILD)
+      list(APPEND compile_options "-DLIBC_FULL_BUILD")
       # Only add -ffreestanding flag in full build mode.
       list(APPEND compile_options "-ffreestanding")
     endif()
@@ -126,6 +127,7 @@ function(_get_common_test_compile_options output_var c_test flags)
     list(APPEND compile_options "-fpie")
 
     if(LLVM_LIBC_FULL_BUILD)
+      list(APPEND compile_options "-DLIBC_FULL_BUILD")
       # Only add -ffreestanding flag in full build mode.
       list(APPEND compile_options "-ffreestanding")
       list(APPEND compile_options "-fno-exceptions")
@@ -178,5 +180,10 @@ function(_get_hermetic_test_compile_options output_var flags)
          -Wno-multi-gpu --cuda-path=${LIBC_CUDA_ROOT}
          -nogpulib -march=${LIBC_GPU_TARGET_ARCHITECTURE} -fno-use-cxa-atexit)
   endif()
+
+  if(LLVM_LIBC_FULL_BUILD)
+    list(APPEND compile_options "-DLIBC_FULL_BUILD")
+  endif()
+  
   set(${output_var} ${compile_options} PARENT_SCOPE)
 endfunction()

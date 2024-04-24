@@ -18,6 +18,7 @@ module __fortran_builtins
   private
 
   intrinsic :: __builtin_c_loc
+  public :: __builtin_c_loc
 
   intrinsic :: __builtin_c_f_pointer
   public :: __builtin_c_f_pointer
@@ -55,8 +56,6 @@ module __fortran_builtins
   integer, parameter, public :: __builtin_atomic_int_kind = selected_int_kind(18)
   integer, parameter, public :: &
     __builtin_atomic_logical_kind = __builtin_atomic_int_kind
-
-  procedure(type(__builtin_c_ptr)), public :: __builtin_c_loc
 
   type, public :: __builtin_dim3
     integer :: x=1, y=1, z=1
