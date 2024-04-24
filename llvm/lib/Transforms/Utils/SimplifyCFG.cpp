@@ -2888,7 +2888,8 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
       // simple, to avoid introducing a spurious non-atomic write after an
       // atomic write.
       if (SI->getPointerOperand() == StorePtr &&
-          SI->getValueOperand()->getType() == StoreTy && SI->isSimple())
+          SI->getValueOperand()->getType() == StoreTy && SI->isSimple() &&
+          SI->getAlign() >= StoreToHoist->getAlign())
         // Found the previous store, return its value operand.
         return SI->getValueOperand();
       return nullptr; // Unknown store.
@@ -2896,7 +2897,7 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
 
     if (auto *LI = dyn_cast<LoadInst>(&CurI)) {
       if (LI->getPointerOperand() == StorePtr && LI->getType() == StoreTy &&
-          LI->isSimple()) {
+          LI->isSimple() && LI->getAlign() >= StoreToHoist->getAlign()) {
         // Local objects (created by an `alloca` instruction) are always
         // writable, so once we are past a read from a location it is valid to
         // also write to that same location.

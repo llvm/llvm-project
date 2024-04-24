@@ -39,6 +39,10 @@ function(compile_to_bc)
     set( TARGET_ARG "-target" ${ARG_TRIPLE} )
   endif()
 
+  # Ensure the directory we are told to output to exists
+  get_filename_component( ARG_OUTPUT_DIR ${ARG_OUTPUT} DIRECTORY )
+  file( MAKE_DIRECTORY ${ARG_OUTPUT_DIR} )
+
   add_custom_command(
     OUTPUT ${ARG_OUTPUT}${TMP_SUFFIX}
     COMMAND libclc::clang
