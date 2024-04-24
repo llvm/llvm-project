@@ -318,13 +318,12 @@ public:
   /// found sloc is not a <scratch space>.
   SourceLocation getIncludeOrExpansionLoc(SourceLocation Loc,
                                           bool AcceptScratch = true) {
-    if (Loc.isMacroID()) {
-      Loc = SM.getImmediateExpansionRange(Loc).getBegin();
-      if (!AcceptScratch)
-        Loc = getNonScratchExpansionLoc(Loc).first;
-    } else
-      Loc = SM.getIncludeLoc(SM.getFileID(Loc));
-    return Loc;
+    if (!Loc.isMacroID())
+      return SM.getIncludeLoc(SM.getFileID(Loc));
+    Loc = SM.getImmediateExpansionRange(Loc).getBegin();
+    if (AcceptScratch)
+      return Loc;
+    return getNonScratchExpansionLoc(Loc).first;
   }
 
   /// Return true if \c Loc is a location in a built-in macro.
