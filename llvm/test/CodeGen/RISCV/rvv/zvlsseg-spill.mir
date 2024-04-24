@@ -27,7 +27,7 @@ body: |
     ; CHECK-NEXT: $x12 = frame-setup SLLI killed $x12, 3
     ; CHECK-NEXT: $x2 = frame-setup SUB $x2, killed $x12
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22
-    ; CHECK-NEXT: dead $x0 = PseudoVSETVLI killed renamable $x11, 152 /* e64, m1, tu, ma */, implicit-def $vl, implicit-def $vtype
+    ; CHECK-NEXT: dead $x0 = PseudoVSETVLI killed renamable $x11, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: $v0_v1_v2_v3_v4_v5_v6 = PseudoVLSEG7E64_V_M1 undef $v0_v1_v2_v3_v4_v5_v6, renamable $x10, $noreg, 6 /* e64 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: $x11 = ADDI $x2, 16
     ; CHECK-NEXT: $x12 = PseudoReadVLENB
