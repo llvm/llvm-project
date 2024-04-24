@@ -407,13 +407,13 @@ IndexedMemProfRecord makeRecord(
 IndexedMemProfRecord
 makeRecordV2(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
              std::initializer_list<::llvm::memprof::CallStackId> CallSiteFrames,
-             const MemInfoBlock &Block) {
+             const MemInfoBlock &Block, const memprof::MemProfSchema &Schema) {
   llvm::memprof::IndexedMemProfRecord MR;
   for (const auto &CSId : AllocFrames)
     // We don't populate IndexedAllocationInfo::CallStack because we use it only
     // in Version0 and Version1.
     MR.AllocSites.emplace_back(::llvm::SmallVector<memprof::FrameId>(), CSId,
-                               Block);
+                               Block, Schema);
   for (const auto &CSId : CallSiteFrames)
     MR.CallSiteIds.push_back(CSId);
   return MR;
@@ -506,7 +506,7 @@ TEST_F(InstrProfTest, test_memprof_v2_full_schema) {
 
   const IndexedMemProfRecord IndexedMR = makeRecordV2(
       /*AllocFrames=*/{0x111, 0x222},
-      /*CallSiteFrames=*/{0x333}, MIB);
+      /*CallSiteFrames=*/{0x333}, MIB, memprof::getFullSchema());
   const FrameIdMapTy IdToFrameMap = getFrameMapping();
   const auto CSIdToCallStackMap = getCallStackMapping();
   for (const auto &I : IdToFrameMap) {
@@ -548,7 +548,7 @@ TEST_F(InstrProfTest, test_memprof_v2_partial_schema) {
 
   const IndexedMemProfRecord IndexedMR = makeRecordV2(
       /*AllocFrames=*/{0x111, 0x222},
-      /*CallSiteFrames=*/{0x333}, MIB);
+      /*CallSiteFrames=*/{0x333}, MIB, memprof::getHotColdSchema());
   const FrameIdMapTy IdToFrameMap = getFrameMapping();
   const auto CSIdToCallStackMap = getCallStackMapping();
   for (const auto &I : IdToFrameMap) {

@@ -241,7 +241,7 @@ TEST(MemProf, PortableWrapper) {
                     /*dealloc_cpu=*/4);
 
   const auto Schema = llvm::memprof::getFullSchema();
-  PortableMemInfoBlock WriteBlock(Info);
+  PortableMemInfoBlock WriteBlock(Info, Schema);
 
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
