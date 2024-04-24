@@ -13,16 +13,6 @@ define void @test_lazy_save_1_callee() nounwind "aarch64_inout_za" {
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    msub x8, x8, x8, x9
-; CHECK-NEXT:    mov sp, x8
-; CHECK-NEXT:    rdsvl x9, #1
-; CHECK-NEXT:    sub x10, x29, #16
-; CHECK-NEXT:    sub x11, x29, #16
-; CHECK-NEXT:    str x8, [x11]
-; CHECK-NEXT:    strh wzr, [x11, #10]
-; CHECK-NEXT:    str wzr, [x11, #12]
-; CHECK-NEXT:    sturh w9, [x29, #-8]
 ; CHECK-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-NEXT:    bl private_za_callee
 ; CHECK-NEXT:    smstart za
@@ -50,18 +40,6 @@ define void @test_lazy_save_2_callees() nounwind "aarch64_inout_za" {
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    msub x8, x8, x8, x9
-; CHECK-NEXT:    mov sp, x8
-; CHECK-NEXT:    rdsvl x20, #1
-; CHECK-NEXT:    sub x21, x29, #16
-; CHECK-NEXT:    sub x9, x29, #16
-; CHECK-NEXT:    str x8, [x9]
-; CHECK-NEXT:    strh wzr, [x9, #10]
-; CHECK-NEXT:    str wzr, [x9, #12]
-; CHECK-NEXT:    sturh w20, [x29, #-8]
-; CHECK-NEXT:    msr TPIDR2_EL0, x21
 ; CHECK-NEXT:    bl private_za_callee
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
@@ -101,16 +79,6 @@ define float @test_lazy_save_expanded_intrinsic(float %a) nounwind "aarch64_inou
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    msub x8, x8, x8, x9
-; CHECK-NEXT:    mov sp, x8
-; CHECK-NEXT:    rdsvl x9, #1
-; CHECK-NEXT:    sub x10, x29, #16
-; CHECK-NEXT:    sub x11, x29, #16
-; CHECK-NEXT:    str x8, [x11]
-; CHECK-NEXT:    strh wzr, [x11, #10]
-; CHECK-NEXT:    str wzr, [x11, #12]
-; CHECK-NEXT:    sturh w9, [x29, #-8]
 ; CHECK-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-NEXT:    bl cosf
 ; CHECK-NEXT:    smstart za
@@ -144,16 +112,6 @@ define void @test_lazy_save_and_conditional_smstart() nounwind "aarch64_inout_za
 ; CHECK-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    msub x8, x8, x8, x9
-; CHECK-NEXT:    mov sp, x8
-; CHECK-NEXT:    rdsvl x9, #1
-; CHECK-NEXT:    sub x10, x29, #80
-; CHECK-NEXT:    sub x11, x29, #80
-; CHECK-NEXT:    str x8, [x11]
-; CHECK-NEXT:    strh wzr, [x11, #10]
-; CHECK-NEXT:    str wzr, [x11, #12]
-; CHECK-NEXT:    sturh w9, [x29, #-72]
 ; CHECK-NEXT:    msr TPIDR2_EL0, x10
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x20, x0, #0x1

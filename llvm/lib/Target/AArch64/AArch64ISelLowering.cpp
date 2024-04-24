@@ -2492,6 +2492,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((AArch64ISD::NodeType)Opcode) {
   case AArch64ISD::FIRST_NUMBER:
     break;
+    MAKE_CASE(AArch64ISD::EXPAND_ZA_BUFFER)
     MAKE_CASE(AArch64ISD::COALESCER_BARRIER)
     MAKE_CASE(AArch64ISD::VG_SAVE)
     MAKE_CASE(AArch64ISD::VG_RESTORE)
@@ -3017,44 +3018,36 @@ AArch64TargetLowering::EmitExpandZABuffer(MachineInstr &MI,
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
   MachineRegisterInfo &MRI = MF->getRegInfo();
 
-  Register RDSVL = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::RDSVLI_XI), RDSVL)
-      .addImm(1);
-
+  // The SUBXrs below won't always be emitted in a form that accepts SP directly
   Register SP = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), SP)
       .addReg(AArch64::SP);
 
-  // Allocate a lazy-save buffer object of size SVL.B * SVL.B (worst-case)
-  Register MSub = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::MSUBXrrr), MSub)
-      .addReg(RDSVL)
-      .addReg(RDSVL)
-      .addReg(SP);
+  // Allocate a lazy-save buffer object of the size given, normally SVL * SVL
+  Register BufferAddr = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::SUBXrs), BufferAddr)
+      .addReg(SP)
+      .add(MI.getOperand(0))
+      .addImm(0);
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), AArch64::SP)
-      .addReg(MSub);
+      .addReg(BufferAddr);
 
   // Allocate an additional TPIDR2 object on the stack (16 bytes)
   unsigned TPIDR2Object = TPIDR2->FrameIndex;
   MFI.CreateVariableSizedObject(Align(16), nullptr);
 
-  Register Zero32 = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
-  MachineInstrBuilder Wzr =
-      BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), Zero32)
-          .addReg(AArch64::WZR);
-
   // Store the buffer pointer to the TPIDR2 stack object.
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRXui))
-      .addReg(MSub)
+      .addReg(BufferAddr)
       .addFrameIndex(TPIDR2Object)
       .addImm(0);
   // Set the reserved bytes (10-15) to zero
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRHHui))
-      .addReg(Wzr.getReg(0))
+      .addReg(AArch64::WZR)
       .addFrameIndex(TPIDR2Object)
       .addImm(5);
   BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STRWui))
-      .addReg(Wzr.getReg(0))
+      .addReg(AArch64::WZR)
       .addFrameIndex(TPIDR2Object)
       .addImm(3);
 
@@ -7520,11 +7513,17 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   // Create a 16 Byte TPIDR2 object. The dynamic buffer
   // will be expanded and stored in the static object later using a pseudonode.
   if (SMEAttrs(MF.getFunction()).hasZAState()) {
-    Chain = SDValue(
-        DAG.getMachineNode(AArch64::ExpandZABuffer, DL, MVT::Other, Chain), 0);
     TPIDR2Object TPIDR2;
     TPIDR2.FrameIndex = MFI.CreateStackObject(16, Align(16), false);
     FuncInfo->setTPIDR2Obj(TPIDR2);
+    SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
+                              DAG.getConstant(1, DL, MVT::i32));
+    SDValue Size = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
+    SDValue FI = DAG.getFrameIndex(
+        TPIDR2.FrameIndex,
+        DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
+    Chain = DAG.getNode(AArch64ISD::EXPAND_ZA_BUFFER, DL,
+                        DAG.getVTList(MVT::Other), {Chain, Size, FI});
   }
 
   if (CallConv == CallingConv::PreserveNone) {

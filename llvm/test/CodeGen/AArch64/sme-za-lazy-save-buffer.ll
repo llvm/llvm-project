@@ -21,7 +21,8 @@ define float @multi_bb_stpidr2_save_required(i32 %a, float %b, float %c) "aarch6
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    msub x8, x8, x8, x9
+; CHECK-NEXT:    mul x8, x8, x8
+; CHECK-NEXT:    sub x8, x9, x8
 ; CHECK-NEXT:    mov sp, x8
 ; CHECK-NEXT:    sub x9, x29, #16
 ; CHECK-NEXT:    str x8, [x9]
