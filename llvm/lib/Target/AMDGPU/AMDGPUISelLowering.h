@@ -407,6 +407,9 @@ enum NodeType : unsigned {
   // s_endpgm, but we may want to insert it in the middle of the block.
   ENDPGM_TRAP,
 
+  // "s_trap 2" equivalent on hardware that does not support it.
+  SIMULATED_TRAP,
+
   // Return to a shader part's epilog code.
   RETURN_TO_EPILOG,
 
