@@ -240,14 +240,16 @@ if.end:
   ret i32 %add
 }
 
-; FIXME: This is a miscompile.
 define void @wrong_align_store(ptr %A, i32 %B, i32 %C, i32 %D) {
 ; CHECK-LABEL: @wrong_align_store(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[D:%.*]], 42
-; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[C:%.*]], i32 [[B]]
-; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[A]], align 8
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[RET_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    store i32 [[C:%.*]], ptr [[A]], align 8
+; CHECK-NEXT:    br label [[RET_END]]
+; CHECK:       ret.end:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -263,15 +265,17 @@ ret.end:
   ret void
 }
 
-; FIXME: This is a miscompile.
 define void @wrong_align_load(i32 %C, i32 %D) {
 ; CHECK-LABEL: @wrong_align_load(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[D:%.*]], 42
-; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[C:%.*]], i32 [[TMP0]]
-; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[A]], align 8
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[RET_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    store i32 [[C:%.*]], ptr [[A]], align 8
+; CHECK-NEXT:    br label [[RET_END]]
+; CHECK:       ret.end:
 ; CHECK-NEXT:    ret void
 ;
 entry:
