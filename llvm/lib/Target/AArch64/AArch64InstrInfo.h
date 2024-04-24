@@ -724,6 +724,7 @@ static inline unsigned getAUTOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   case IB: return Zero ? AArch64::AUTIZB : AArch64::AUTIB;
   case DA: return Zero ? AArch64::AUTDZA : AArch64::AUTDA;
   case DB: return Zero ? AArch64::AUTDZB : AArch64::AUTDB;
+  default: return 0;
   }
 }
 
@@ -736,6 +737,7 @@ static inline unsigned getPACOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   case IB: return Zero ? AArch64::PACIZB : AArch64::PACIB;
   case DA: return Zero ? AArch64::PACDZA : AArch64::PACDA;
   case DB: return Zero ? AArch64::PACDZB : AArch64::PACDB;
+  default: return 0;
   }
 }
 
