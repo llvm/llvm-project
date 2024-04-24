@@ -4,7 +4,7 @@
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("//llvm:lit_test.bzl", "package_path")
-load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library", "gentbl_sharded_ops", "td_library")
+load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_sharded_ops", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -423,9 +423,9 @@ cc_library(
         "//mlir:SideEffectInterfaces",
         "//mlir:Support",
         "//mlir:TensorDialect",
-        "//mlir:TranslateLib",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
+        "//mlir:TranslateLib",
         "//mlir:ValueBoundsOpInterface",
         "//mlir:ViewLikeInterface",
     ],
