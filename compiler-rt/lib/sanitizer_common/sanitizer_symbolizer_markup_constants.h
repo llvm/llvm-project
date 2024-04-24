@@ -36,7 +36,7 @@ constexpr const char *kFormatData = "{{{data:%p}}}";
 constexpr const char *kFormatFrame = "{{{bt:%d:%p}}}";
 
 // Module contextual element.
-constexpr const char *kFormatModule = "{{{module:%d:%s:elf:%s}}}";
+constexpr const char *kFormatModule = "{{{module:%zu:%s:elf:%s}}}";
 
 // mmap for a module segment.
 constexpr const char *kFormatMmap = "{{{mmap:%p:0x%zx:load:%d:%s:0x%zx}}}";

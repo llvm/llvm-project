@@ -97,7 +97,7 @@ static void RenderModule(InternalScopedString *buffer,
   for (uptr i = 0; i < module.uuid_size(); i++)
     buildIdBuffer.AppendF("%02x", module.uuid()[i]);
 
-  buffer->AppendF(kFormatModule, static_cast<int>(moduleId), module.full_name(),
+  buffer->AppendF(kFormatModule, moduleId, module.full_name(),
                   buildIdBuffer.data());
   buffer->Append("\n");
 }
