@@ -3208,7 +3208,7 @@ M68kTargetLowering::EmitLoweredSelect(MachineInstr &MI,
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
 
   MachineInstr *LastCCRSUser = CascadedCMOV ? CascadedCMOV : LastCMOV;
-  if (!LastCCRSUser->killsRegister(M68k::CCR) &&
+  if (!LastCCRSUser->killsRegister(M68k::CCR, /*TRI=*/nullptr) &&
       !checkAndUpdateCCRKill(LastCCRSUser, MBB, TRI)) {
     Copy0MBB->addLiveIn(M68k::CCR);
     SinkMBB->addLiveIn(M68k::CCR);
