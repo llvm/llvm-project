@@ -17,7 +17,7 @@ define void @fold_ffs(i16 %x) {
 ; AVR-LABEL: @fold_ffs(
 ; AVR-NEXT:    call addrspace(1) void @sink(i16 0)
 ; AVR-NEXT:    call addrspace(1) void @sink(i16 1)
-; AVR-NEXT:    [[CTTZ:%.*]] = call addrspace(1) i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true), !range [[RNG0:![0-9]+]]
+; AVR-NEXT:    [[CTTZ:%.*]] = call range(i16 0, 17) addrspace(1) i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true)
 ; AVR-NEXT:    [[TMP1:%.*]] = add nuw nsw i16 [[CTTZ]], 1
 ; AVR-NEXT:    [[DOTNOT:%.*]] = icmp eq i16 [[X]], 0
 ; AVR-NEXT:    [[NX:%.*]] = select i1 [[DOTNOT]], i16 0, i16 [[TMP1]]
@@ -27,7 +27,7 @@ define void @fold_ffs(i16 %x) {
 ; MSP430-LABEL: @fold_ffs(
 ; MSP430-NEXT:    call void @sink(i16 0)
 ; MSP430-NEXT:    call void @sink(i16 1)
-; MSP430-NEXT:    [[CTTZ:%.*]] = call i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true), !range [[RNG0:![0-9]+]]
+; MSP430-NEXT:    [[CTTZ:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true)
 ; MSP430-NEXT:    [[TMP1:%.*]] = add nuw nsw i16 [[CTTZ]], 1
 ; MSP430-NEXT:    [[DOTNOT:%.*]] = icmp eq i16 [[X]], 0
 ; MSP430-NEXT:    [[NX:%.*]] = select i1 [[DOTNOT]], i16 0, i16 [[TMP1]]
