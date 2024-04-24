@@ -664,7 +664,7 @@ private:
   DebugLoc debugLoc;
 
   /// Return a pointer to the specified value type.
-  static const EVT *getValueTypeList(EVT VT);
+  static const EVT *getValueTypeList(MVT VT);
 
   /// Index in worklist of DAGCombiner, or negative if the node is not in the
   /// worklist. -1 = not in worklist; -2 = not in worklist, but has already been
@@ -1124,7 +1124,7 @@ public:
   void addUse(SDUse &U) { U.addToList(&UseList); }
 
 protected:
-  static SDVTList getSDVTList(EVT VT) {
+  static SDVTList getSDVTList(MVT VT) {
     SDVTList Ret = { getValueTypeList(VT), 1 };
     return Ret;
   }
