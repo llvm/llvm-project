@@ -308,10 +308,9 @@ cl::opt<memprof::IndexedVersion> MemProfVersionRequested(
                clEnumValN(memprof::Version1, "1", "version 1"),
                clEnumValN(memprof::Version2, "2", "version 2")));
 
-cl::opt<bool> MemProfFullSchema("memprof-full-schema", cl::Hidden,
-                                cl::sub(MergeSubcommand),
-                                cl::desc("Serialize the full schema"),
-                                cl::init(false));
+cl::opt<bool> MemProfFullSchema(
+    "memprof-full-schema", cl::Hidden, cl::sub(MergeSubcommand),
+    cl::desc("Use the full schema for serialization"), cl::init(false));
 
 // Options specific to overlap subcommand.
 cl::opt<std::string> BaseFilename(cl::Positional, cl::Required,

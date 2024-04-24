@@ -569,7 +569,7 @@ static Error writeMemProfV2(
   if (MemProfFullSchema)
     Schema = memprof::PortableMemInfoBlock::getFullSchema();
   else
-    Schema = memprof::PortableMemInfoBlock::getSchema();
+    Schema = memprof::PortableMemInfoBlock::getHotColdSchema();
   writeMemProfSchema(OS, Schema);
 
   uint64_t RecordTableOffset =

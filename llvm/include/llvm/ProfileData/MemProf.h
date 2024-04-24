@@ -127,7 +127,7 @@ struct PortableMemInfoBlock {
 
   // Returns the schema consisting of the fields currently consumed by the
   // compiler.
-  static MemProfSchema getSchema() {
+  static MemProfSchema getHotColdSchema() {
     return {Meta::AllocCount, Meta::TotalSize, Meta::TotalLifetime,
             Meta::TotalLifetimeAccessDensity};
   }
