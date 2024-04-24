@@ -373,31 +373,9 @@ static CallStackIdMapTy getCallStackMapping() {
 // Populate all of the fields of MIB.
 MemInfoBlock makeFullMIB() {
   MemInfoBlock MIB;
-  MIB.AllocCount = 1;
-  MIB.TotalAccessCount = 2;
-  MIB.MinAccessCount = 3;
-  MIB.MaxAccessCount = 4;
-  MIB.TotalSize = 5;
-  MIB.MinSize = 6;
-  MIB.MaxSize = 7;
-  MIB.AllocTimestamp = 8;
-  MIB.DeallocTimestamp = 9;
-  MIB.TotalLifetime = 10;
-  MIB.MinLifetime = 11;
-  MIB.MaxLifetime = 12;
-  MIB.AllocCpuId = 13;
-  MIB.DeallocCpuId = 14;
-  MIB.NumMigratedCpu = 15;
-  MIB.NumLifetimeOverlaps = 16;
-  MIB.NumSameAllocCpu = 17;
-  MIB.NumSameDeallocCpu = 18;
-  MIB.DataTypeId = 19;
-  MIB.TotalAccessDensity = 20;
-  MIB.MinAccessDensity = 21;
-  MIB.MaxAccessDensity = 22;
-  MIB.TotalLifetimeAccessDensity = 23;
-  MIB.MinLifetimeAccessDensity = 24;
-  MIB.MaxLifetimeAccessDensity = 25;
+#define MIBEntryDef(NameTag, Name, Type) MIB.NameTag;
+#include "llvm/ProfileData/MIBEntryDef.inc"
+#undef MIBEntryDef
   return MIB;
 }
 
