@@ -182,10 +182,10 @@ class CapturedProcedure : public CapturedSymbols<CapturedProcedure> {
 public:
   static mlir::Type getType(Fortran::lower::AbstractConverter &converter,
                             const Fortran::semantics::Symbol &sym) {
+    mlir::Type funTy = Fortran::lower::getDummyProcedureType(sym, converter);
     if (Fortran::semantics::IsPointer(sym))
-      TODO(converter.getCurrentLocation(),
-           "capture procedure pointer in internal procedure");
-    return Fortran::lower::getDummyProcedureType(sym, converter);
+      return fir::ReferenceType::get(funTy);
+    return funTy;
   }
 
   static void instantiateHostTuple(const InstantiateHostTuple &args,
