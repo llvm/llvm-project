@@ -194,10 +194,8 @@ void ConcatInputSection::foldIdentical(ConcatInputSection *copy) {
   copy->live = false;
   copy->wasCoalesced = true;
   copy->replacement = this;
-  for (auto &copySym : copy->symbols) {
+  for (auto &copySym : copy->symbols)
     copySym->wasIdenticalCodeFolded = true;
-    copySym->size = 0;
-  }
 
   symbols.insert(symbols.end(), copy->symbols.begin(), copy->symbols.end());
   copy->symbols.clear();
@@ -207,7 +205,7 @@ void ConcatInputSection::foldIdentical(ConcatInputSection *copy) {
     return;
   for (auto it = symbols.begin() + 1; it != symbols.end(); ++it) {
     assert((*it)->value == 0);
-    (*it)->unwindEntry = nullptr;
+    (*it)->originalUnwindEntry = nullptr;
   }
 }
 

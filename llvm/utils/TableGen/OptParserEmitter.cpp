@@ -191,6 +191,62 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
   return Ret;
 }
 
+static void EmitHelpTextsForVariants(
+    raw_ostream &OS, std::vector<std::pair<std::vector<std::string>, StringRef>>
+                         HelpTextsForVariants) {
+  // OptTable must be constexpr so it uses std::arrays with these capacities.
+  const unsigned MaxVisibilityPerHelp = 2;
+  const unsigned MaxVisibilityHelp = 1;
+
+  assert(HelpTextsForVariants.size() <= MaxVisibilityHelp &&
+         "Too many help text variants to store in "
+         "OptTable::HelpTextsForVariants");
+
+  // This function must initialise any unused elements of those arrays.
+  for (auto [Visibilities, _] : HelpTextsForVariants)
+    while (Visibilities.size() < MaxVisibilityPerHelp)
+      Visibilities.push_back("0");
+
+  while (HelpTextsForVariants.size() < MaxVisibilityHelp)
+    HelpTextsForVariants.push_back(
+        {std::vector<std::string>(MaxVisibilityPerHelp, "0"), ""});
+
+  OS << ", (std::array<std::pair<std::array<unsigned, " << MaxVisibilityPerHelp
+     << ">, const char*>, " << MaxVisibilityHelp << ">{{ ";
+
+  auto VisibilityHelpEnd = HelpTextsForVariants.cend();
+  for (auto VisibilityHelp = HelpTextsForVariants.cbegin();
+       VisibilityHelp != VisibilityHelpEnd; ++VisibilityHelp) {
+    auto [Visibilities, Help] = *VisibilityHelp;
+
+    assert(Visibilities.size() <= MaxVisibilityPerHelp &&
+           "Too many visibilities to store in an "
+           "OptTable::HelpTextsForVariants entry");
+    OS << "std::make_pair(std::array<unsigned, " << MaxVisibilityPerHelp
+       << ">{{";
+
+    auto VisibilityEnd = Visibilities.cend();
+    for (auto Visibility = Visibilities.cbegin(); Visibility != VisibilityEnd;
+         ++Visibility) {
+      OS << *Visibility;
+      if (std::next(Visibility) != VisibilityEnd)
+        OS << ", ";
+    }
+
+    OS << "}}, ";
+
+    if (Help.size())
+      write_cstring(OS, Help);
+    else
+      OS << "nullptr";
+    OS << ")";
+
+    if (std::next(VisibilityHelp) != VisibilityHelpEnd)
+      OS << ", ";
+  }
+  OS << " }})";
+}
+
 /// OptParserEmitter - This tablegen backend takes an input .td file
 /// describing a list of options and emits a data structure for parsing and
 /// working with those options when given an input command line.
@@ -312,6 +368,9 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
     } else
       OS << ", nullptr";
 
+    // Not using Visibility specific text for group help.
+    EmitHelpTextsForVariants(OS, {});
+
     // The option meta-variable name (unused).
     OS << ", nullptr";
 
@@ -409,6 +468,22 @@ static void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       write_cstring(OS, R.getValueAsString("HelpText"));
     } else
       OS << ", nullptr";
+
+    std::vector<std::pair<std::vector<std::string>, StringRef>>
+        HelpTextsForVariants;
+    for (Record *VisibilityHelp :
+         R.getValueAsListOfDefs("HelpTextsForVariants")) {
+      ArrayRef<Init *> Visibilities =
+          VisibilityHelp->getValueAsListInit("Visibilities")->getValues();
+
+      std::vector<std::string> VisibilityNames;
+      for (Init *Visibility : Visibilities)
+        VisibilityNames.push_back(Visibility->getAsUnquotedString());
+
+      HelpTextsForVariants.push_back(std::make_pair(
+          VisibilityNames, VisibilityHelp->getValueAsString("Text")));
+    }
+    EmitHelpTextsForVariants(OS, HelpTextsForVariants);
 
     // The option meta-variable name.
     OS << ", ";

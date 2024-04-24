@@ -85,7 +85,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 
 // CHECK-LABEL: PredicateBitset MyTargetInstructionSelector::
 // CHECK-NEXT:  computeAvailableModuleFeatures(const MyTargetSubtarget *Subtarget) const {
-// CHECK-NEXT:    PredicateBitset Features;
+// CHECK-NEXT:    PredicateBitset Features{};
 // CHECK-NEXT:    if (!((Subtarget->has64())))
 // CHECK-NEXT:      Features.set(Feature_HwMode1Bit);
 // CHECK-NEXT:    if ((Subtarget->has64()))
@@ -95,7 +95,7 @@ class I<dag OOps, dag IOps, list<dag> Pat>
 
 // CHECK-LABEL: PredicateBitset MyTargetInstructionSelector::
 // CHECK-NEXT:  computeAvailableFunctionFeatures(const MyTargetSubtarget *Subtarget, const MachineFunction *MF) const {
-// CHECK-NEXT:    PredicateBitset Features;
+// CHECK-NEXT:    PredicateBitset Features{};
 // CHECK-NEXT:    return Features;
 // CHECK-NEXT:  }
 

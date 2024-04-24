@@ -11,7 +11,7 @@
 
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/UInt.h"
+#include "src/__support/big_int.h"
 
 namespace LIBC_NAMESPACE {
 

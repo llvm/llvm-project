@@ -757,7 +757,7 @@ private:
 /// rewrite type and operation among the given rewrites.
 template <typename RewriteTy, typename R>
 static bool hasRewrite(R &&rewrites, Operation *op) {
-  return any_of(std::move(rewrites), [&](auto &rewrite) {
+  return any_of(std::forward<R>(rewrites), [&](auto &rewrite) {
     auto *rewriteTy = dyn_cast<RewriteTy>(rewrite.get());
     return rewriteTy && rewriteTy->getOperation() == op;
   });
@@ -2072,6 +2072,10 @@ OperationLegalizer::legalizeWithFold(Operation *op,
     LLVM_DEBUG(logFailure(rewriterImpl.logger, "unable to fold"));
     return failure();
   }
+  // An empty list of replacement values indicates that the fold was in-place.
+  // As the operation changed, a new legalization needs to be attempted.
+  if (replacementValues.empty())
+    return legalize(op, rewriter);
 
   // Insert a replacement for 'op' with the folded replacement values.
   rewriter.replaceOp(op, replacementValues);

@@ -442,6 +442,8 @@ static void checkOptions() {
       error("-r and -pie may not be used together");
     if (config->exportDynamic)
       error("-r and --export-dynamic may not be used together");
+    if (config->debugNames)
+      error("-r and --debug-names may not be used together");
   }
 
   if (config->executeOnly) {
@@ -1234,6 +1236,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->cref = args.hasArg(OPT_cref);
   config->optimizeBBJumps =
       args.hasFlag(OPT_optimize_bb_jumps, OPT_no_optimize_bb_jumps, false);
+  config->debugNames = args.hasFlag(OPT_debug_names, OPT_no_debug_names, false);
   config->demangle = args.hasFlag(OPT_demangle, OPT_no_demangle, true);
   config->dependencyFile = args.getLastArgValue(OPT_dependency_file);
   config->dependentLibraries = args.hasFlag(OPT_dependent_libraries, OPT_no_dependent_libraries, true);
@@ -1853,8 +1856,9 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
   std::vector<std::tuple<bool, bool, bool>> stack;
 
   // Iterate over argv to process input files and positional arguments.
+  std::optional<MemoryBufferRef> defaultScript;
   InputFile::isInGroup = false;
-  bool hasInput = false;
+  bool hasInput = false, hasScript = false;
   for (auto *arg : args) {
     switch (arg->getOption().getID()) {
     case OPT_library:
@@ -1876,9 +1880,16 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
       break;
     }
     case OPT_script:
+    case OPT_default_script:
       if (std::optional<std::string> path = searchScript(arg->getValue())) {
-        if (std::optional<MemoryBufferRef> mb = readFile(*path))
-          readLinkerScript(*mb);
+        if (std::optional<MemoryBufferRef> mb = readFile(*path)) {
+          if (arg->getOption().matches(OPT_default_script)) {
+            defaultScript = mb;
+          } else {
+            readLinkerScript(*mb);
+            hasScript = true;
+          }
+        }
         break;
       }
       error(Twine("cannot find linker script ") + arg->getValue());
@@ -1958,6 +1969,8 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
     }
   }
 
+  if (defaultScript && !hasScript)
+    readLinkerScript(*defaultScript);
   if (files.empty() && !hasInput && errorCount() == 0)
     error("no input files");
 }
@@ -2767,13 +2780,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Create dynamic sections for dynamic linking and static PIE.
   config->hasDynSymTab = !ctx.sharedFiles.empty() || config->isPic;
 
-  script->addScriptReferencedSymbolsToSymTable();
-
-  // Prevent LTO from removing any definition referenced by -u.
-  for (StringRef name : config->undefined)
-    if (Defined *sym = dyn_cast_or_null<Defined>(symtab.find(name)))
-      sym->isUsedInRegularObj = true;
-
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = symtab.find(config->entry))
     handleUndefined(sym, "--entry");
@@ -2781,6 +2787,16 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // Handle the `--undefined-glob <pattern>` options.
   for (StringRef pat : args::getStrings(args, OPT_undefined_glob))
     handleUndefinedGlob(pat);
+
+  // After potential archive member extraction involving ENTRY and
+  // -u/--undefined-glob, check whether PROVIDE symbols should be defined (the
+  // RHS may refer to definitions in just extracted object files).
+  script->addScriptReferencedSymbolsToSymTable();
+
+  // Prevent LTO from removing any definition referenced by -u.
+  for (StringRef name : config->undefined)
+    if (Defined *sym = dyn_cast_or_null<Defined>(symtab.find(name)))
+      sym->isUsedInRegularObj = true;
 
   // Mark -init and -fini symbols so that the LTO doesn't eliminate them.
   if (Symbol *sym = dyn_cast_or_null<Defined>(symtab.find(config->init)))

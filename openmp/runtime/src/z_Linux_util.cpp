@@ -2141,10 +2141,10 @@ int __kmp_is_address_mapped(void *addr) {
   // We pass from number of vm entry's semantic
   // to size of whole entry map list.
   lstsz = lstsz * 4 / 3;
-  buf = reinterpret_cast<char *>(kmpc_malloc(lstsz));
+  buf = reinterpret_cast<char *>(KMP_INTERNAL_MALLOC(lstsz));
   rc = sysctl(mib, 4, buf, &lstsz, NULL, 0);
   if (rc < 0) {
-    kmpc_free(buf);
+    KMP_INTERNAL_FREE(buf);
     return 0;
   }
 
@@ -2168,7 +2168,7 @@ int __kmp_is_address_mapped(void *addr) {
     }
     lw += cursz;
   }
-  kmpc_free(buf);
+  KMP_INTERNAL_FREE(buf);
 #elif KMP_OS_DRAGONFLY
   char err[_POSIX2_LINE_MAX];
   kinfo_proc *proc;
@@ -2234,12 +2234,12 @@ int __kmp_is_address_mapped(void *addr) {
     return 0;
   }
 
-  buf = kmpc_malloc(sz);
+  buf = KMP_INTERNAL_MALLOC(sz);
 
   while (sz > 0 && (rd = pread(file, buf, sz, 0)) == sz) {
     void *newbuf;
     sz <<= 1;
-    newbuf = kmpc_realloc(buf, sz);
+    newbuf = KMP_INTERNAL_REALLOC(buf, sz);
     buf = newbuf;
   }
 
@@ -2255,7 +2255,7 @@ int __kmp_is_address_mapped(void *addr) {
     }
   }
 
-  kmpc_free(map);
+  KMP_INTERNAL_FREE(map);
   close(file);
   KMP_INTERNAL_FREE(name);
 #elif KMP_OS_DARWIN

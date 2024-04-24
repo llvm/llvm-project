@@ -1634,7 +1634,10 @@ static bool generateSampleImageInst(const StringRef DemangledCall,
       ReturnType = ReturnType.substr(ReturnType.find("_R") + 2);
       ReturnType = ReturnType.substr(0, ReturnType.find('('));
     }
-    SPIRVType *Type = GR->getOrCreateSPIRVTypeByName(ReturnType, MIRBuilder);
+    SPIRVType *Type =
+        Call->ReturnType
+            ? Call->ReturnType
+            : GR->getOrCreateSPIRVTypeByName(ReturnType, MIRBuilder);
     if (!Type) {
       std::string DiagMsg =
           "Unable to recognize SPIRV type name: " + ReturnType;
