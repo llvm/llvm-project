@@ -8,7 +8,7 @@
 /// Verify that the binary indeed contains an unnamed symbol at _start
 // RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=CHECK-ELF
 // CHECK-ELF-DAG: [[#%x,START:]] {{.*}} FUNC GLOBAL DEFAULT [[#%d,SECTION:]] _start{{$}}
-// CHECK-ELF-DAG: [[#%x,START]] {{.*}} NOTYPE LOCAL DEFAULT [[#SECTION]] {{$}}
+// CHECK-ELF-DAG: [[#%x,START]] {{.*}} NOTYPE LOCAL DEFAULT [[#SECTION]] .L0 {{$}}
 
 /// Verify that BOLT did not create an extra entry point for the unnamed symbol
 // RUN: llvm-bolt -o %t.bolt %t --print-cfg | FileCheck %s
