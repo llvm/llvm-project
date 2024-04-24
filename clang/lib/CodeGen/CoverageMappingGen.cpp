@@ -294,6 +294,25 @@ public:
     return SM.getLocForEndOfFile(SM.getFileID(Loc));
   }
 
+  /// Find out where a macro is expanded. If the immediate result is a
+  /// <scratch space>, keep looking until the result isn't. Return a pair of
+  /// \c SourceLocation. The first object is always the begin sloc of found
+  /// result. The second should be checked by the caller: if it has value, it's
+  /// the end sloc of the found result. Otherwise the while loop didn't get
+  /// executed, which means the location wasn't changed and the caller has to
+  /// learn the end sloc from somewhere else.
+  std::pair<SourceLocation, std::optional<SourceLocation>>
+  getNonScratchExpansionLoc(SourceLocation Loc) {
+    std::optional<SourceLocation> EndLoc = std::nullopt;
+    while (Loc.isMacroID() &&
+           SM.isWrittenInScratchSpace(SM.getSpellingLoc(Loc))) {
+      auto ExpansionRange = SM.getImmediateExpansionRange(Loc);
+      Loc = ExpansionRange.getBegin();
+      EndLoc = ExpansionRange.getEnd();
+    }
+    return std::make_pair(Loc, EndLoc);
+  }
+
   /// Find out where the current file is included or macro is expanded. If
   /// \c AcceptScratch is set to false, keep looking for expansions until the
   /// found sloc is not a <scratch space>.
@@ -302,11 +321,7 @@ public:
     if (Loc.isMacroID()) {
       Loc = SM.getImmediateExpansionRange(Loc).getBegin();
       if (!AcceptScratch)
-        while (Loc.isMacroID() &&
-               SM.isWrittenInScratchSpace(SM.getSpellingLoc(Loc))) {
-          auto ExpansionRange = SM.getImmediateExpansionRange(Loc);
-          Loc = ExpansionRange.getBegin();
-        }
+        Loc = getNonScratchExpansionLoc(Loc).first;
     } else
       Loc = SM.getIncludeLoc(SM.getFileID(Loc));
     return Loc;
@@ -357,13 +372,12 @@ public:
       SourceLocation Loc = Region.getBeginLoc();
 
       // Replace Region with its definition if it is in <scratch space>.
-      while (Loc.isMacroID() &&
-             SM.isWrittenInScratchSpace(SM.getSpellingLoc(Loc))) {
-        auto ExpansionRange = SM.getImmediateExpansionRange(Loc);
-        Loc = ExpansionRange.getBegin();
-        Region.setStartLoc(Loc);
-        Region.setEndLoc(ExpansionRange.getEnd());
-      }
+      auto NonScratchExpansionLoc = getNonScratchExpansionLoc(Loc);
+      Loc = NonScratchExpansionLoc.first;
+      auto EndLoc = NonScratchExpansionLoc.second;
+      Region.setStartLoc(Loc);
+      Region.setEndLoc(EndLoc.has_value() ? EndLoc.value()
+                                          : Region.getEndLoc());
 
       // Replace Loc with FileLoc if it is expanded with system headers.
       if (!SystemHeadersCoverage && SM.isInSystemMacro(Loc)) {
