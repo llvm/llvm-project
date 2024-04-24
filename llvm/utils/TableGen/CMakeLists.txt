@@ -13,6 +13,7 @@ set(LLVM_LINK_COMPONENTS Support)
 # ValueType definitions.
 add_tablegen(llvm-min-tblgen LLVM_HEADERS
   TableGen.cpp
+  ARMTargetDefEmitter.cpp
   Attributes.cpp
   DirectiveEmitter.cpp
   IntrinsicEmitter.cpp
