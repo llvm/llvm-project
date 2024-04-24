@@ -50,7 +50,7 @@ class VOPD_MADKe<bits<4> opX, bits<5> opY> : Enc96 {
   let Inst{95-64} = imm;
 }
 
-class VOPD3e<bits<5> opX, bits<5> opY, VOP_Pseudo VDX, VOP_Pseudo VDY> : Enc96 {
+class VOPD3e<bits<6> opX, bits<6> opY, VOP_Pseudo VDX, VOP_Pseudo VDY> : Enc96 {
   bits<9> src0X;
   bits<8> vsrc1X;
   bits<8> vsrc2X;
@@ -69,10 +69,8 @@ class VOPD3e<bits<5> opX, bits<5> opY, VOP_Pseudo VDX, VOP_Pseudo VDY> : Enc96 {
   bits<8> bitop3;
 
   let Inst{8-0} = src0X;
-  let Inst{17} = 0;       // opY high bit
-  let Inst{16-12} = opY;
-  let Inst{23} = 0;       // opX high bit
-  let Inst{22-18} = opX;
+  let Inst{17-12} = opY;
+  let Inst{23-18} = opX;
   let Inst{31-24} = 0xcf; // encoding
   let Inst{40-32} = src0Y;
   let Inst{41} = !if(VDX.Pfl.HasModifiers, src0X_modifiers, 0);
@@ -114,8 +112,8 @@ class VOPD_Base<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
       SIMCInstr<NAME, Gen.Subtarget> {
   // Fields for table indexing
   Instruction Opcode = !cast<Instruction>(NAME);
-  bits<5> OpX = XasVC.VOPDOp;
-  bits<5> OpY = YasVC.VOPDOp;
+  bits<6> OpX = XasVC.VOPDOp;
+  bits<6> OpY = YasVC.VOPDOp;
   bits<4> SubTgt = Gen.Subtarget;
 
   let VALU = 1;
@@ -153,7 +151,7 @@ class VOPD_Base<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
 class VOPD<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
            VOPD_Component XasVC, VOPD_Component YasVC, GFXGenD Gen>
     : VOPD_Base<outs, ins, asm, VDX, VDY, XasVC, YasVC, Gen>,
-      VOPDe<XasVC.VOPDOp{3-0}, YasVC.VOPDOp> {
+      VOPDe<XasVC.VOPDOp{3-0}, YasVC.VOPDOp{4-0}> {
   let Inst{16-9} = !if (!eq(VDX.Mnemonic, "v_mov_b32"), 0x0, vsrc1X);
   let Inst{48-41} = !if (!eq(VDY.Mnemonic, "v_mov_b32"), 0x0, vsrc1Y);
 }
@@ -161,7 +159,7 @@ class VOPD<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
 class VOPD_MADK<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
                 VOPD_Component XasVC, VOPD_Component YasVC, GFXGenD Gen>
     : VOPD_Base<outs, ins, asm, VDX, VDY, XasVC, YasVC, Gen>,
-      VOPD_MADKe<XasVC.VOPDOp{3-0}, YasVC.VOPDOp> {
+      VOPD_MADKe<XasVC.VOPDOp{3-0}, YasVC.VOPDOp{4-0}> {
   let Inst{16-9} = !if (!eq(VDX.Mnemonic, "v_mov_b32"), 0x0, vsrc1X);
   let Inst{48-41} = !if (!eq(VDY.Mnemonic, "v_mov_b32"), 0x0, vsrc1Y);
   let Size = 12;
