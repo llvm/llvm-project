@@ -2207,7 +2207,7 @@ SDValue ARMTargetLowering::LowerCallResult(
     SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
-    SDValue ThisVal) const {
+    SDValue ThisVal, bool isCmseNSCall) const {
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
@@ -2284,6 +2284,15 @@ SDValue ARMTargetLowering::LowerCallResult(
     if (VA.needsCustom() &&
         (VA.getValVT() == MVT::f16 || VA.getValVT() == MVT::bf16))
       Val = MoveToHPR(dl, DAG, VA.getLocVT(), VA.getValVT(), Val);
+
+    // On CMSE Non-secure Calls, call results (returned values) whose bitwidth
+    // is less than 32 bits must be sign- or zero-extended after the call for
+    // security reasons. Although the ABI mandates an extension done by the
+    // callee, the latter cannot be trusted to follow the rules of the ABI.
+    const ISD::InputArg &Arg = Ins[VA.getValNo()];
+    if (isCmseNSCall && Arg.ArgVT.isScalarInteger() &&
+        VA.getLocVT().isScalarInteger() && Arg.ArgVT.bitsLT(VA.getLocVT()))
+      Val = handleCMSEValue(Val, Arg, DAG, dl, VA.getLocVT());
 
     InVals.push_back(Val);
   }
@@ -2897,7 +2906,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // return.
   return LowerCallResult(Chain, InGlue, CallConv, isVarArg, Ins, dl, DAG,
                          InVals, isThisReturn,
-                         isThisReturn ? OutVals[0] : SDValue());
+                         isThisReturn ? OutVals[0] : SDValue(), isCmseNSCall);
 }
 
 /// HandleByVal - Every parameter *after* a byval parameter is passed
