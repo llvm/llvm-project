@@ -531,12 +531,12 @@ using wip_match_opcode in patterns.
 
 
 (match (G_TRUNC $src, $x),
-          (G_ZEXT $root, $src),
+       (G_ZEXT $root, $src),
    [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
 
 
 (match (G_TRUNC $src, $x, (MIFlags NoUWrap)),
-          (G_ZEXT $root, $src),
+       (G_ZEXT $root, $src),
    [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
