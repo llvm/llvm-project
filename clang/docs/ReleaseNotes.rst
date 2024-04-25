@@ -414,6 +414,18 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses requires expressions with explicit object parameters.
 
+- Clang now looks up members of the current instantiation in the template definition context
+  if the current instantiation has no dependent base classes.
+
+  .. code-block:: c++
+
+     template<typename T>
+     struct A {
+       int f() {
+         return this->x; // error: no member named 'x' in 'A<T>'
+       }
+     };
+
 Improvements to Clang's time-trace
 ----------------------------------
 
