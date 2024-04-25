@@ -1441,13 +1441,13 @@ lldb_private::DebuggerDestroyCallbackToken Debugger::AddDestroyCallback(
   std::lock_guard<std::recursive_mutex> guard(m_destroy_callback_mutex);
   const auto token = m_destroy_callback_next_token++;
   m_destroy_callback_and_baton.emplace(
-    std::piecewise_construct,
-              std::forward_as_tuple(token),
-              std::forward_as_tuple(destroy_callback, baton));
+      std::piecewise_construct, std::forward_as_tuple(token),
+      std::forward_as_tuple(destroy_callback, baton));
   return token;
 }
 
-bool Debugger::RemoveDestroyCallback(lldb_private::DebuggerDestroyCallbackToken token) {
+bool Debugger::RemoveDestroyCallback(
+    lldb_private::DebuggerDestroyCallbackToken token) {
   std::lock_guard<std::recursive_mutex> guard(m_destroy_callback_mutex);
   return m_destroy_callback_and_baton.erase(token);
 }

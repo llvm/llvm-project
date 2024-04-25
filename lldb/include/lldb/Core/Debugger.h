@@ -13,8 +13,8 @@
 
 #include <memory>
 #include <optional>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "lldb/Core/DebuggerEvents.h"
 #include "lldb/Core/FormatEntity.h"
@@ -746,7 +746,8 @@ protected:
 
   std::recursive_mutex m_destroy_callback_mutex;
   lldb_private::DebuggerDestroyCallbackToken m_destroy_callback_next_token = 0;
-  std::unordered_map<lldb_private::DebuggerDestroyCallbackToken, std::pair<lldb_private::DebuggerDestroyCallback, void *>>
+  std::unordered_map<lldb_private::DebuggerDestroyCallbackToken,
+                     std::pair<lldb_private::DebuggerDestroyCallback, void *>>
       m_destroy_callback_and_baton;
 
   uint32_t m_interrupt_requested = 0; ///< Tracks interrupt requests

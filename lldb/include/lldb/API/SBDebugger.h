@@ -321,11 +321,13 @@ public:
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
 
-  lldb::SBDebuggerDestroyCallbackToken AddDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
-                          void *baton);
+  lldb::SBDebuggerDestroyCallbackToken
+  AddDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
+                     void *baton);
 
-  lldb::SBDebuggerDestroyCallbackToken SetDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
-                          void *baton);
+  lldb::SBDebuggerDestroyCallbackToken
+  SetDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
+                     void *baton);
 
   bool RemoveDestroyCallback(lldb::SBDebuggerDestroyCallbackToken);
 
