@@ -5101,8 +5101,9 @@ void ASTReader::InitializeContext() {
 
   // If there's a listener, notify them that we "read" the translation unit.
   if (DeserializationListener)
-    DeserializationListener->DeclRead(PREDEF_DECL_TRANSLATION_UNIT_ID,
-                                      Context.getTranslationUnitDecl());
+    DeserializationListener->DeclRead(
+        GlobalDeclID(PREDEF_DECL_TRANSLATION_UNIT_ID),
+        Context.getTranslationUnitDecl());
 
   // FIXME: Find a better way to deal with collisions between these
   // built-in types. Right now, we just ignore the problem.
@@ -6010,9 +6011,9 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
     case SUBMODULE_INITIALIZERS: {
       if (!ContextObj)
         break;
-      SmallVector<DeclID, 16> Inits;
+      SmallVector<GlobalDeclID, 16> Inits;
       for (auto &ID : Record)
-        Inits.push_back(getGlobalDeclID(F, LocalDeclID(ID)).get());
+        Inits.push_back(getGlobalDeclID(F, LocalDeclID(ID)));
       ContextObj->addLazyModuleInitializers(CurrentModule, Inits);
       break;
     }
@@ -7517,9 +7518,7 @@ ASTRecordReader::readASTTemplateArgumentListInfo() {
   return ASTTemplateArgumentListInfo::Create(getContext(), Result);
 }
 
-Decl *ASTReader::GetExternalDecl(DeclID ID) {
-  return GetDecl(GlobalDeclID(ID));
-}
+Decl *ASTReader::GetExternalDecl(GlobalDeclID ID) { return GetDecl(ID); }
 
 void ASTReader::CompleteRedeclChain(const Decl *D) {
   if (NumCurrentElementsDeserializing) {
@@ -7668,8 +7667,7 @@ GlobalDeclID ASTReader::getGlobalDeclID(ModuleFile &F,
   return GlobalDeclID(ID + I->second);
 }
 
-bool ASTReader::isDeclIDFromModule(serialization::GlobalDeclID ID,
-                                   ModuleFile &M) const {
+bool ASTReader::isDeclIDFromModule(GlobalDeclID ID, ModuleFile &M) const {
   // Predefined decls aren't from any module.
   if (ID.get() < NUM_PREDEF_DECL_IDS)
     return false;
@@ -7768,7 +7766,7 @@ static Decl *getPredefinedDecl(ASTContext &Context, PredefinedDeclIDs ID) {
 Decl *ASTReader::GetExistingDecl(GlobalDeclID ID) {
   assert(ContextObj && "reading decl with no AST context");
   if (ID.get() < NUM_PREDEF_DECL_IDS) {
-    Decl *D = getPredefinedDecl(*ContextObj, (PredefinedDeclIDs)ID.get());
+    Decl *D = getPredefinedDecl(*ContextObj, (PredefinedDeclIDs)ID);
     if (D) {
       // Track that we have merged the declaration with ID \p ID into the
       // pre-existing predefined declaration \p D.
@@ -7805,28 +7803,28 @@ Decl *ASTReader::GetDecl(GlobalDeclID ID) {
   if (!DeclsLoaded[Index]) {
     ReadDeclRecord(ID);
     if (DeserializationListener)
-      DeserializationListener->DeclRead(ID.get(), DeclsLoaded[Index]);
+      DeserializationListener->DeclRead(ID, DeclsLoaded[Index]);
   }
 
   return DeclsLoaded[Index];
 }
 
-DeclID ASTReader::mapGlobalIDToModuleFileGlobalID(ModuleFile &M,
-                                                  GlobalDeclID GlobalID) {
+LocalDeclID ASTReader::mapGlobalIDToModuleFileGlobalID(ModuleFile &M,
+                                                       GlobalDeclID GlobalID) {
   DeclID ID = GlobalID.get();
   if (ID < NUM_PREDEF_DECL_IDS)
-    return ID;
+    return LocalDeclID(ID);
 
   GlobalDeclMapType::const_iterator I = GlobalDeclMap.find(GlobalID);
   assert(I != GlobalDeclMap.end() && "Corrupted global declaration map");
   ModuleFile *Owner = I->second;
 
-  llvm::DenseMap<ModuleFile *, serialization::DeclID>::iterator Pos
-    = M.GlobalToLocalDeclIDs.find(Owner);
+  llvm::DenseMap<ModuleFile *, DeclID>::iterator Pos =
+      M.GlobalToLocalDeclIDs.find(Owner);
   if (Pos == M.GlobalToLocalDeclIDs.end())
-    return 0;
+    return LocalDeclID();
 
-  return ID - Owner->BaseDeclID + Pos->second;
+  return LocalDeclID(ID - Owner->BaseDeclID + Pos->second);
 }
 
 GlobalDeclID ASTReader::ReadDeclID(ModuleFile &F, const RecordData &Record,
@@ -7872,7 +7870,7 @@ void ASTReader::FindExternalLexicalDecls(
       if (!IsKindWeWant(K))
         continue;
 
-      auto ID = (serialization::DeclID)+LexicalDecls[I + 1];
+      auto ID = (DeclID) + LexicalDecls[I + 1];
 
       // Don't add predefined declarations to the lexical context more
       // than once.
@@ -7954,7 +7952,7 @@ void ASTReader::FindFileRegionDecls(FileID File,
   SourceLocation EndLoc = BeginLoc.getLocWithOffset(Length);
 
   DeclIDComp DIDComp(*this, *DInfo.Mod);
-  ArrayRef<serialization::LocalDeclID>::iterator BeginIt =
+  ArrayRef<LocalDeclID>::iterator BeginIt =
       llvm::lower_bound(DInfo.Decls, BeginLoc, DIDComp);
   if (BeginIt != DInfo.Decls.begin())
     --BeginIt;
@@ -7967,13 +7965,12 @@ void ASTReader::FindFileRegionDecls(FileID File,
              ->isTopLevelDeclInObjCContainer())
     --BeginIt;
 
-  ArrayRef<serialization::LocalDeclID>::iterator EndIt =
+  ArrayRef<LocalDeclID>::iterator EndIt =
       llvm::upper_bound(DInfo.Decls, EndLoc, DIDComp);
   if (EndIt != DInfo.Decls.end())
     ++EndIt;
 
-  for (ArrayRef<serialization::LocalDeclID>::iterator
-         DIt = BeginIt; DIt != EndIt; ++DIt)
+  for (ArrayRef<LocalDeclID>::iterator DIt = BeginIt; DIt != EndIt; ++DIt)
     Decls.push_back(GetDecl(getGlobalDeclID(*DInfo.Mod, *DIt)));
 }
 
@@ -7994,6 +7991,7 @@ ASTReader::FindExternalVisibleDeclsByName(const DeclContext *DC,
   // Load the list of declarations.
   SmallVector<NamedDecl *, 64> Decls;
   llvm::SmallPtrSet<NamedDecl *, 8> Found;
+
   for (GlobalDeclID ID : It->second.Table.find(Name)) {
     NamedDecl *ND = cast<NamedDecl>(GetDecl(ID));
     if (ND->getDeclName() == Name && Found.insert(ND).second)
