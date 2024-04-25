@@ -3,14 +3,14 @@
 namespace N0 {
   struct A {
     int x0;
-    static int x1;
-    int x2;
-    static int x3;
+    static int y0;
+    int x1;
+    static int y1;
 
     void f0();
-    static void f1();
-    void f2();
-    static void f3();
+    static void g0();
+    void f1();
+    static void g1();
 
     using M0 = int;
     using M1 = int;
@@ -21,25 +21,29 @@ namespace N0 {
 
   template<typename T>
   struct B : A {
-    int x4;
-    static int x5;
+    int x2;
+    static int y2;
 
-    using A::x2;
-    using A::x3;
-
-    void f4();
-    static void f5();
-
-    using A::f2;
-    using A::f3;
+    void f2();
+    static void g2();
 
     using M2 = int;
 
-    using A::M1;
-
     struct C2 { };
 
+    using A::x1;
+    using A::y1;
+    using A::f1;
+    using A::g1;
+    using A::M1;
     using A::C1;
+
+    using T::x3;
+    using T::y3;
+    using T::f3;
+    using T::g3;
+    using typename T::M3;
+    using typename T::C3;
 
     void not_instantiated(B *a, B &b) {
       // All of the following should be found in the current instantiation.
@@ -64,271 +68,315 @@ namespace N0 {
       new B::M2;
       new C2;
       new B::C2;
+      new M3;
+      new B::M3;
+      new C3;
+      new B::C3;
 
       x0;
       B::x0;
       A::x0;
       B::A::x0;
+      y0;
+      B::y0;
+      A::y0;
+      B::A::y0;
       x1;
       B::x1;
       A::x1;
       B::A::x1;
+      y1;
+      B::y1;
+      A::y1;
+      B::A::y1;
       x2;
       B::x2;
-      A::x2;
-      B::A::x2;
+      y2;
+      B::y2;
       x3;
       B::x3;
-      A::x3;
-      B::A::x3;
-      x4;
-      B::x4;
-      x5;
-      B::x5;
+      y3;
+      B::y3;
 
       f0();
       B::f0();
       A::f0();
       B::A::f0();
+      g0();
+      B::g0();
+      A::g0();
+      B::A::g0();
       f1();
       B::f1();
       A::f1();
       B::A::f1();
+      g1();
+      B::g1();
+      A::g1();
+      B::A::g1();
       f2();
       B::f2();
-      A::f2();
-      B::A::f2();
+      g2();
+      B::g2();
       f3();
       B::f3();
-      A::f3();
-      B::A::f3();
-      f4();
-      B::f4();
-      f5();
-      B::f5();
+      g3();
+      B::g3();
 
       this->x0;
       this->B::x0;
       this->A::x0;
       this->B::A::x0;
+      this->y0;
+      this->B::y0;
+      this->A::y0;
+      this->B::A::y0;
       this->x1;
       this->B::x1;
       this->A::x1;
       this->B::A::x1;
+      this->y1;
+      this->B::y1;
+      this->A::y1;
+      this->B::A::y1;
       this->x2;
       this->B::x2;
-      this->A::x2;
-      this->B::A::x2;
+      this->y2;
+      this->B::y2;
       this->x3;
       this->B::x3;
-      this->A::x3;
-      this->B::A::x3;
-      this->x4;
-      this->B::x4;
-      this->x5;
-      this->B::x5;
+      this->y3;
+      this->B::y3;
 
       this->f0();
       this->B::f0();
       this->A::f0();
       this->B::A::f0();
+      this->g0();
+      this->B::g0();
+      this->A::g0();
+      this->B::A::g0();
       this->f1();
       this->B::f1();
       this->A::f1();
       this->B::A::f1();
+      this->g1();
+      this->B::g1();
+      this->A::g1();
+      this->B::A::g1();
       this->f2();
       this->B::f2();
-      this->A::f2();
-      this->B::A::f2();
+      this->g2();
+      this->B::g2();
       this->f3();
       this->B::f3();
-      this->A::f3();
-      this->B::A::f3();
-      this->f4();
-      this->B::f4();
-      this->f5();
-      this->B::f5();
+      this->g3();
+      this->B::g3();
 
       a->x0;
       a->B::x0;
       a->A::x0;
       a->B::A::x0;
+      a->y0;
+      a->B::y0;
+      a->A::y0;
+      a->B::A::y0;
       a->x1;
       a->B::x1;
       a->A::x1;
       a->B::A::x1;
+      a->y1;
+      a->B::y1;
+      a->A::y1;
+      a->B::A::y1;
       a->x2;
       a->B::x2;
-      a->A::x2;
-      a->B::A::x2;
+      a->y2;
+      a->B::y2;
       a->x3;
       a->B::x3;
-      a->A::x3;
-      a->B::A::x3;
-      a->x4;
-      a->B::x4;
-      a->x5;
-      a->B::x5;
+      a->y3;
+      a->B::y3;
 
       a->f0();
       a->B::f0();
       a->A::f0();
       a->B::A::f0();
+      a->g0();
+      a->B::g0();
+      a->A::g0();
+      a->B::A::g0();
       a->f1();
       a->B::f1();
       a->A::f1();
       a->B::A::f1();
+      a->g1();
+      a->B::g1();
+      a->A::g1();
+      a->B::A::g1();
       a->f2();
       a->B::f2();
-      a->A::f2();
-      a->B::A::f2();
+      a->g2();
+      a->B::g2();
       a->f3();
       a->B::f3();
-      a->A::f3();
-      a->B::A::f3();
-      a->f4();
-      a->B::f4();
-      a->f5();
-      a->B::f5();
+      a->g3();
+      a->B::g3();
 
       (*this).x0;
       (*this).B::x0;
       (*this).A::x0;
       (*this).B::A::x0;
+      (*this).y0;
+      (*this).B::y0;
+      (*this).A::y0;
+      (*this).B::A::y0;
       (*this).x1;
       (*this).B::x1;
       (*this).A::x1;
       (*this).B::A::x1;
+      (*this).y1;
+      (*this).B::y1;
+      (*this).A::y1;
+      (*this).B::A::y1;
       (*this).x2;
       (*this).B::x2;
-      (*this).A::x2;
-      (*this).B::A::x2;
+      (*this).y2;
+      (*this).B::y2;
       (*this).x3;
       (*this).B::x3;
-      (*this).A::x3;
-      (*this).B::A::x3;
-      (*this).x4;
-      (*this).B::x4;
-      (*this).x5;
-      (*this).B::x5;
+      (*this).y3;
+      (*this).B::y3;
 
       (*this).f0();
       (*this).B::f0();
       (*this).A::f0();
       (*this).B::A::f0();
+      (*this).g0();
+      (*this).B::g0();
+      (*this).A::g0();
+      (*this).B::A::g0();
       (*this).f1();
       (*this).B::f1();
       (*this).A::f1();
       (*this).B::A::f1();
+      (*this).g1();
+      (*this).B::g1();
+      (*this).A::g1();
+      (*this).B::A::g1();
       (*this).f2();
       (*this).B::f2();
-      (*this).A::f2();
-      (*this).B::A::f2();
+      (*this).g2();
+      (*this).B::g2();
       (*this).f3();
       (*this).B::f3();
-      (*this).A::f3();
-      (*this).B::A::f3();
-      (*this).f4();
-      (*this).B::f4();
-      (*this).f5();
-      (*this).B::f5();
+      (*this).g3();
+      (*this).B::g3();
 
       b.x0;
       b.B::x0;
       b.A::x0;
       b.B::A::x0;
+      b.y0;
+      b.B::y0;
+      b.A::y0;
+      b.B::A::y0;
       b.x1;
       b.B::x1;
       b.A::x1;
       b.B::A::x1;
+      b.y1;
+      b.B::y1;
+      b.A::y1;
+      b.B::A::y1;
       b.x2;
       b.B::x2;
-      b.A::x2;
-      b.B::A::x2;
+      b.y2;
+      b.B::y2;
       b.x3;
       b.B::x3;
-      b.A::x3;
-      b.B::A::x3;
-      b.x4;
-      b.B::x4;
-      b.x5;
-      b.B::x5;
+      b.y3;
+      b.B::y3;
 
       b.f0();
       b.B::f0();
       b.A::f0();
       b.B::A::f0();
+      b.g0();
+      b.B::g0();
+      b.A::g0();
+      b.B::A::g0();
       b.f1();
       b.B::f1();
       b.A::f1();
       b.B::A::f1();
+      b.g1();
+      b.B::g1();
+      b.A::g1();
+      b.B::A::g1();
       b.f2();
       b.B::f2();
-      b.A::f2();
-      b.B::A::f2();
+      b.g2();
+      b.B::g2();
       b.f3();
       b.B::f3();
-      b.A::f3();
-      b.B::A::f3();
-      b.f4();
-      b.B::f4();
-      b.f5();
-      b.B::f5();
+      b.g3();
+      b.B::g3();
 
       // None of the following should be found in the current instantiation.
 
-      new M3; // expected-error{{unknown type name 'M3'}}
-      new B::M3; // expected-error{{no type named 'M3' in 'B<T>'}}
-      new A::M3; // expected-error{{no type named 'M3' in 'N0::A'}}
-      new B::A::M3; // expected-error{{no type named 'M3' in 'N0::A'}}
+      new M4; // expected-error{{unknown type name 'M4'}}
+      new B::M4; // expected-error{{no type named 'M4' in 'B<T>'}}
+      new A::M4; // expected-error{{no type named 'M4' in 'N0::A'}}
+      new B::A::M4; // expected-error{{no type named 'M4' in 'N0::A'}}
 
-      x6; // expected-error{{use of undeclared identifier 'x6'}}
-      B::x6; // expected-error{{no member named 'x6' in 'B<T>'}}
-      A::x6; // expected-error{{no member named 'x6' in 'N0::A'}}
-      B::A::x6; // expected-error{{no member named 'x6' in 'N0::A'}}
-      f6(); // expected-error{{use of undeclared identifier 'f6'}}
-      B::f6(); // expected-error{{no member named 'f6' in 'B<T>'}}
-      A::f6(); // expected-error{{no member named 'f6' in 'N0::A'}}
-      B::A::f6(); // expected-error{{no member named 'f6' in 'N0::A'}}
+      x4; // expected-error{{use of undeclared identifier 'x4'}}
+      B::x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
+      B::A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
+      f4(); // expected-error{{use of undeclared identifier 'f4'}}
+      B::f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
+      B::A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
 
-      this->x6; // expected-error{{no member named 'x6' in 'B<T>'}}
-      this->B::x6; // expected-error{{no member named 'x6' in 'B<T>'}}
-      this->A::x6; // expected-error{{no member named 'x6' in 'N0::A'}}
-      this->B::A::x6; // expected-error{{no member named 'x6' in 'N0::A'}}
-      this->f6(); // expected-error{{no member named 'f6' in 'B<T>'}}
-      this->B::f6(); // expected-error{{no member named 'f6' in 'B<T>'}}
-      this->A::f6(); // expected-error{{no member named 'f6' in 'N0::A'}}
-      this->B::A::f6(); // expected-error{{no member named 'f6' in 'N0::A'}}
+      this->x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      this->B::x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      this->A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
+      this->B::A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
+      this->f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      this->B::f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      this->A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
+      this->B::A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
 
-      a->x6; // expected-error{{no member named 'x6' in 'B<T>'}}
-      a->B::x6; // expected-error{{no member named 'x6' in 'B<T>'}}
-      a->A::x6; // expected-error{{no member named 'x6' in 'N0::A'}}
-      a->B::A::x6; // expected-error{{no member named 'x6' in 'N0::A'}}
-      a->f6(); // expected-error{{no member named 'f6' in 'B<T>'}}
-      a->B::f6(); // expected-error{{no member named 'f6' in 'B<T>'}}
-      a->A::f6(); // expected-error{{no member named 'f6' in 'N0::A'}}
-      a->B::A::f6(); // expected-error{{no member named 'f6' in 'N0::A'}}
+      a->x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      a->B::x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      a->A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
+      a->B::A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
+      a->f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      a->B::f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      a->A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
+      a->B::A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
 
       // FIXME: An overloaded unary 'operator*' is built for these
       // even though the operand is a pointer (to a dependent type).
       // Type::isOverloadableType should return false for such cases.
-      (*this).x6;
-      (*this).B::x6;
-      (*this).A::x6;
-      (*this).B::A::x6;
-      (*this).f6();
-      (*this).B::f6();
-      (*this).A::f6();
-      (*this).B::A::f6();
+      (*this).x4;
+      (*this).B::x4;
+      (*this).A::x4;
+      (*this).B::A::x4;
+      (*this).f4();
+      (*this).B::f4();
+      (*this).A::f4();
+      (*this).B::A::f4();
 
-      b.x6; // expected-error{{no member named 'x6' in 'B<T>'}}
-      b.B::x6; // expected-error{{no member named 'x6' in 'B<T>'}}
-      b.A::x6; // expected-error{{no member named 'x6' in 'N0::A'}}
-      b.B::A::x6; // expected-error{{no member named 'x6' in 'N0::A'}}
-      b.f6(); // expected-error{{no member named 'f6' in 'B<T>'}}
-      b.B::f6(); // expected-error{{no member named 'f6' in 'B<T>'}}
-      b.A::f6(); // expected-error{{no member named 'f6' in 'N0::A'}}
-      b.B::A::f6(); // expected-error{{no member named 'f6' in 'N0::A'}}
+      b.x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      b.B::x4; // expected-error{{no member named 'x4' in 'B<T>'}}
+      b.A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
+      b.B::A::x4; // expected-error{{no member named 'x4' in 'N0::A'}}
+      b.f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      b.B::f4(); // expected-error{{no member named 'f4' in 'B<T>'}}
+      b.A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
+      b.B::A::f4(); // expected-error{{no member named 'f4' in 'N0::A'}}
     }
   };
 } // namespace N0
