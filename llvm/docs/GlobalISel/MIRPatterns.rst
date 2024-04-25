@@ -529,7 +529,7 @@ using wip_match_opcode in patterns.
 
   // Imprecise: matches any G_ZEXT
   def zext : GICombineRule<
-    (defs root:$dst),
+    (defs root:$root),
     (match (wip_match_opcode G_ZEXT):$root,
     [{ return Helper.matchZextOfTrunc(*${root}, ${matchinfo}); }]),
     (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
@@ -537,7 +537,7 @@ using wip_match_opcode in patterns.
 
   // Imprecise: matches G_ZEXT of G_TRUNC
   def zext_of_trunc : GICombineRule<
-    (defs root:$dst),
+    (defs root:$root),
     (match (G_TRUNC $src, $x),
            (G_ZEXT $root, $src),
     [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
@@ -546,7 +546,7 @@ using wip_match_opcode in patterns.
 
   // Precise: matches G_ZEXT of G_TRUNC with nuw flag
   def zext_of_trunc_nuw : GICombineRule<
-    (defs root:$dst),
+    (defs root:$root),
     (match (G_TRUNC $src, $x, (MIFlags NoUWrap)),
            (G_ZEXT $root, $src),
     [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
