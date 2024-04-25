@@ -11,8 +11,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x i8> @ctlz_v4i8(<4 x i8> %op) {
 ; CHECK-LABEL: ctlz_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    and z0.h, z0.h, #0xff
 ; CHECK-NEXT:    clz z0.h, p0/m, z0.h
 ; CHECK-NEXT:    sub z0.h, z0.h, #8 // =0x8
@@ -49,8 +49,8 @@ define <16 x i8> @ctlz_v16i8(<16 x i8> %op) {
 define void @ctlz_v32i8(ptr %a) {
 ; CHECK-LABEL: ctlz_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    clz z0.b, p0/m, z0.b
 ; CHECK-NEXT:    clz z1.b, p0/m, z1.b
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -64,8 +64,8 @@ define void @ctlz_v32i8(ptr %a) {
 define <2 x i16> @ctlz_v2i16(<2 x i16> %op) {
 ; CHECK-LABEL: ctlz_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    and z0.s, z0.s, #0xffff
 ; CHECK-NEXT:    clz z0.s, p0/m, z0.s
 ; CHECK-NEXT:    sub z0.s, z0.s, #16 // =0x10
@@ -102,8 +102,8 @@ define <8 x i16> @ctlz_v8i16(<8 x i16> %op) {
 define void @ctlz_v16i16(ptr %a) {
 ; CHECK-LABEL: ctlz_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    clz z0.h, p0/m, z0.h
 ; CHECK-NEXT:    clz z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -141,8 +141,8 @@ define <4 x i32> @ctlz_v4i32(<4 x i32> %op) {
 define void @ctlz_v8i32(ptr %a) {
 ; CHECK-LABEL: ctlz_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    clz z0.s, p0/m, z0.s
 ; CHECK-NEXT:    clz z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -180,8 +180,8 @@ define <2 x i64> @ctlz_v2i64(<2 x i64> %op) {
 define void @ctlz_v4i64(ptr %a) {
 ; CHECK-LABEL: ctlz_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    clz z0.d, p0/m, z0.d
 ; CHECK-NEXT:    clz z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -199,8 +199,8 @@ define void @ctlz_v4i64(ptr %a) {
 define <4 x i8> @ctpop_v4i8(<4 x i8> %op) {
 ; CHECK-LABEL: ctpop_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    and z0.h, z0.h, #0xff
 ; CHECK-NEXT:    cnt z0.h, p0/m, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -236,8 +236,8 @@ define <16 x i8> @ctpop_v16i8(<16 x i8> %op) {
 define void @ctpop_v32i8(ptr %a) {
 ; CHECK-LABEL: ctpop_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    cnt z0.b, p0/m, z0.b
 ; CHECK-NEXT:    cnt z1.b, p0/m, z1.b
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -251,8 +251,8 @@ define void @ctpop_v32i8(ptr %a) {
 define <2 x i16> @ctpop_v2i16(<2 x i16> %op) {
 ; CHECK-LABEL: ctpop_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    and z0.s, z0.s, #0xffff
 ; CHECK-NEXT:    cnt z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -288,8 +288,8 @@ define <8 x i16> @ctpop_v8i16(<8 x i16> %op) {
 define void @ctpop_v16i16(ptr %a) {
 ; CHECK-LABEL: ctpop_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    cnt z0.h, p0/m, z0.h
 ; CHECK-NEXT:    cnt z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -327,8 +327,8 @@ define <4 x i32> @ctpop_v4i32(<4 x i32> %op) {
 define void @ctpop_v8i32(ptr %a) {
 ; CHECK-LABEL: ctpop_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    cnt z0.s, p0/m, z0.s
 ; CHECK-NEXT:    cnt z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -366,8 +366,8 @@ define <2 x i64> @ctpop_v2i64(<2 x i64> %op) {
 define void @ctpop_v4i64(ptr %a) {
 ; CHECK-LABEL: ctpop_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    cnt z0.d, p0/m, z0.d
 ; CHECK-NEXT:    cnt z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -385,8 +385,8 @@ define void @ctpop_v4i64(ptr %a) {
 define <4 x i8> @cttz_v4i8(<4 x i8> %op) {
 ; CHECK-LABEL: cttz_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    orr z0.h, z0.h, #0x100
 ; CHECK-NEXT:    rbit z0.h, p0/m, z0.h
 ; CHECK-NEXT:    clz z0.h, p0/m, z0.h
@@ -425,8 +425,8 @@ define <16 x i8> @cttz_v16i8(<16 x i8> %op) {
 define void @cttz_v32i8(ptr %a) {
 ; CHECK-LABEL: cttz_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    rbit z0.b, p0/m, z0.b
 ; CHECK-NEXT:    rbit z1.b, p0/m, z1.b
 ; CHECK-NEXT:    clz z0.b, p0/m, z0.b
@@ -442,8 +442,8 @@ define void @cttz_v32i8(ptr %a) {
 define <2 x i16> @cttz_v2i16(<2 x i16> %op) {
 ; CHECK-LABEL: cttz_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    orr z0.s, z0.s, #0x10000
 ; CHECK-NEXT:    rbit z0.s, p0/m, z0.s
 ; CHECK-NEXT:    clz z0.s, p0/m, z0.s
@@ -482,8 +482,8 @@ define <8 x i16> @cttz_v8i16(<8 x i16> %op) {
 define void @cttz_v16i16(ptr %a) {
 ; CHECK-LABEL: cttz_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    rbit z0.h, p0/m, z0.h
 ; CHECK-NEXT:    rbit z1.h, p0/m, z1.h
 ; CHECK-NEXT:    clz z0.h, p0/m, z0.h
@@ -525,8 +525,8 @@ define <4 x i32> @cttz_v4i32(<4 x i32> %op) {
 define void @cttz_v8i32(ptr %a) {
 ; CHECK-LABEL: cttz_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    rbit z0.s, p0/m, z0.s
 ; CHECK-NEXT:    rbit z1.s, p0/m, z1.s
 ; CHECK-NEXT:    clz z0.s, p0/m, z0.s
@@ -568,8 +568,8 @@ define <2 x i64> @cttz_v2i64(<2 x i64> %op) {
 define void @cttz_v4i64(ptr %a) {
 ; CHECK-LABEL: cttz_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    rbit z0.d, p0/m, z0.d
 ; CHECK-NEXT:    rbit z1.d, p0/m, z1.d
 ; CHECK-NEXT:    clz z0.d, p0/m, z0.d

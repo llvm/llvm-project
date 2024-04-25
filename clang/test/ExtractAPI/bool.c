@@ -2,7 +2,7 @@
 // RUN: split-file %s %t
 // RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
 // RUN: %t/reference.output.json.in >> %t/reference.output.json
-// RUN: %clang -extract-api -target arm64-apple-macosx \
+// RUN: %clang -extract-api --pretty-sgf -target arm64-apple-macosx \
 // RUN: %t/input.h -o %t/output.json
 
 // Generator version is not consistent across test runs, normalize it.

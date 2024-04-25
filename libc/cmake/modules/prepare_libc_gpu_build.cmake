@@ -93,6 +93,11 @@ else()
 endif()
 set(LIBC_GPU_TARGET_ARCHITECTURE "${gpu_test_architecture}")
 
+# The NVPTX backend cannot currently handle objects created in debug mode.
+if(LIBC_TARGET_ARCHITECTURE_IS_NVPTX AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(LIBC_GPU_TESTS_DISABLED TRUE)
+endif()
+
 # Identify the GPU loader utility used to run tests.
 set(LIBC_GPU_LOADER_EXECUTABLE "" CACHE STRING "Executable for the GPU loader.")
 if(LIBC_GPU_LOADER_EXECUTABLE)

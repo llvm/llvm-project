@@ -510,7 +510,7 @@ SDNode *PPCDAGToDAGISel::getGlobalBaseReg() {
 }
 
 // Check if a SDValue has the toc-data attribute.
-static bool hasTocDataAttr(SDValue Val, unsigned PointerSize) {
+static bool hasTocDataAttr(SDValue Val) {
   GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Val);
   if (!GA)
     return false;
@@ -6115,8 +6115,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
       assert(isAIXABI && "ELF ABI already handled");
 
-      if (hasTocDataAttr(N->getOperand(0),
-                         CurDAG->getDataLayout().getPointerSize())) {
+      if (hasTocDataAttr(N->getOperand(0))) {
         replaceWith(PPC::ADDItoc, N, MVT::i32);
         return;
       }
@@ -6128,8 +6127,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     if (isPPC64 && CModel == CodeModel::Small) {
       assert(isAIXABI && "ELF ABI handled in common SelectCode");
 
-      if (hasTocDataAttr(N->getOperand(0),
-                         CurDAG->getDataLayout().getPointerSize())) {
+      if (hasTocDataAttr(N->getOperand(0))) {
         replaceWith(PPC::ADDItoc8, N, MVT::i64);
         return;
       }
@@ -6144,9 +6142,10 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
            " ELF/AIX or 32-bit AIX in the following.");
 
     // Transforms the ISD::TOC_ENTRY node for 32-bit AIX large code model mode
-    // or 64-bit medium (ELF-only) or large (ELF and AIX) code model code. We
-    // generate two instructions as described below. The first source operand
-    // is a symbol reference. If it must be toc-referenced according to
+    // or 64-bit medium (ELF-only) or large (ELF and AIX) code model code non
+    // toc-data symbols.
+    // We generate two instructions as described below. The first source
+    // operand is a symbol reference. If it must be toc-referenced according to
     // Subtarget, we generate:
     // [32-bit AIX]
     //   LWZtocL(@sym, ADDIStocHA(%r2, @sym))
@@ -6154,12 +6153,32 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     //   LDtocL(@sym, ADDIStocHA8(%x2, @sym))
     // Otherwise we generate:
     //   ADDItocL8(ADDIStocHA8(%x2, @sym), @sym)
+
+    // For large code model toc-data symbols we generate:
+    // [32-bit AIX]
+    //   ADDItocL(ADDIStocHA(%x2, @sym), @sym)
+    // [64-bit AIX]
+    //   Currently not supported.
+
     SDValue GA = N->getOperand(0);
     SDValue TOCbase = N->getOperand(1);
 
     EVT VT = isPPC64 ? MVT::i64 : MVT::i32;
     SDNode *Tmp = CurDAG->getMachineNode(
         isPPC64 ? PPC::ADDIStocHA8 : PPC::ADDIStocHA, dl, VT, TOCbase, GA);
+
+    // On AIX if the symbol has the toc-data attribute it will be defined
+    // in the TOC entry, so we use an ADDItocL similar to the medium code
+    // model ELF abi.
+    if (isAIXABI && hasTocDataAttr(GA)) {
+      if (isPPC64)
+        report_fatal_error(
+            "64-bit large code model toc-data not yet supported");
+
+      ReplaceNode(N, CurDAG->getMachineNode(PPC::ADDItocL, dl, VT,
+                                            SDValue(Tmp, 0), GA));
+      return;
+    }
 
     if (PPCLowering->isAccessedAsGotIndirect(GA)) {
       // If it is accessed as got-indirect, we need an extra LWZ/LD to load
@@ -7558,6 +7577,16 @@ static void reduceVSXSwap(SDNode *N, SelectionDAG *DAG) {
   DAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), N->getOperand(0));
 }
 
+// Check if an SDValue has the 'aix-small-tls' global variable attribute.
+static bool hasAIXSmallTLSAttr(SDValue Val) {
+  if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Val))
+    if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(GA->getGlobal()))
+      if (GV->hasAttribute("aix-small-tls"))
+        return true;
+
+  return false;
+}
+
 // Is an ADDI eligible for folding for non-TOC-based local-exec accesses?
 static bool isEligibleToFoldADDIForLocalExecAccesses(SelectionDAG *DAG,
                                                      SDValue ADDIToFold) {
@@ -7567,20 +7596,25 @@ static bool isEligibleToFoldADDIForLocalExecAccesses(SelectionDAG *DAG,
       (ADDIToFold.getMachineOpcode() != PPC::ADDI8))
     return false;
 
+  // Folding is only allowed for the AIX small-local-exec TLS target attribute
+  // or when the 'aix-small-tls' global variable attribute is present.
+  const PPCSubtarget &Subtarget =
+      DAG->getMachineFunction().getSubtarget<PPCSubtarget>();
+  SDValue TLSVarNode = ADDIToFold.getOperand(1);
+  if (!(Subtarget.hasAIXSmallLocalExecTLS() || hasAIXSmallTLSAttr(TLSVarNode)))
+    return false;
+
   // The first operand of the ADDIToFold should be the thread pointer.
   // This transformation is only performed if the first operand of the
   // addi is the thread pointer.
   SDValue TPRegNode = ADDIToFold.getOperand(0);
   RegisterSDNode *TPReg = dyn_cast<RegisterSDNode>(TPRegNode.getNode());
-  const PPCSubtarget &Subtarget =
-      DAG->getMachineFunction().getSubtarget<PPCSubtarget>();
   if (!TPReg || (TPReg->getReg() != Subtarget.getThreadPointerRegister()))
     return false;
 
   // The second operand of the ADDIToFold should be the global TLS address
   // (the local-exec TLS variable). We only perform the folding if the TLS
   // variable is the second operand.
-  SDValue TLSVarNode = ADDIToFold.getOperand(1);
   GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(TLSVarNode);
   if (!GA)
     return false;
@@ -7649,7 +7683,6 @@ static void foldADDIForLocalExecAccesses(SDNode *N, SelectionDAG *DAG) {
 
 void PPCDAGToDAGISel::PeepholePPC64() {
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
-  bool HasAIXSmallLocalExecTLS = Subtarget->hasAIXSmallLocalExecTLS();
 
   while (Position != CurDAG->allnodes_begin()) {
     SDNode *N = &*--Position;
@@ -7661,8 +7694,7 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       reduceVSXSwap(N, CurDAG);
 
     // This optimization is performed for non-TOC-based local-exec accesses.
-    if (HasAIXSmallLocalExecTLS)
-      foldADDIForLocalExecAccesses(N, CurDAG);
+    foldADDIForLocalExecAccesses(N, CurDAG);
 
     unsigned FirstOp;
     unsigned StorageOpcode = N->getMachineOpcode();
@@ -7821,8 +7853,7 @@ void PPCDAGToDAGISel::PeepholePPC64() {
                                             ImmOpnd.getValueType());
       } else if (Offset != 0) {
         // This optimization is performed for non-TOC-based local-exec accesses.
-        if (HasAIXSmallLocalExecTLS &&
-            isEligibleToFoldADDIForLocalExecAccesses(CurDAG, Base)) {
+        if (isEligibleToFoldADDIForLocalExecAccesses(CurDAG, Base)) {
           // Add the non-zero offset information into the load or store
           // instruction to be used for non-TOC-based local-exec accesses.
           GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(ImmOpnd);

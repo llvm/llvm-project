@@ -678,7 +678,7 @@ def Clz : Builtin, BitShort_Int_Long_LongLongTemplate {
 
 def Clzg : Builtin {
   let Spellings = ["__builtin_clzg"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
   let Prototype = "int(...)";
 }
 
@@ -690,7 +690,7 @@ def Ctz : Builtin, BitShort_Int_Long_LongLongTemplate {
 
 def Ctzg : Builtin {
   let Spellings = ["__builtin_ctzg"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
   let Prototype = "int(...)";
 }
 
@@ -1162,6 +1162,12 @@ def Unreachable : Builtin {
   let Spellings = ["__builtin_unreachable"];
   let Attributes = [NoThrow, NoReturn];
   let Prototype = "void()";
+}
+
+def AllowRuntimeCheck : Builtin {
+  let Spellings = ["__builtin_allow_runtime_check"];
+  let Attributes = [NoThrow, Pure, Const];
+  let Prototype = "bool(char const*)";
 }
 
 def ShuffleVector : Builtin {
@@ -4587,6 +4593,12 @@ def GetDeviceSideMangledName : LangBuiltin<"CUDA_LANG"> {
 }
 
 // HLSL
+def HLSLAll : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_all"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "bool(...)";
+}
+
 def HLSLAny : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_any"];
   let Attributes = [NoThrow, Const];
@@ -4597,6 +4609,12 @@ def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_count_bits"];
   let Attributes = [NoThrow, Const];
   let Prototype = "unsigned int(bool)";
+}
+
+def HLSLWaveGetLaneIndex : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_get_lane_index"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "unsigned int()";
 }
 
 def HLSLClamp : LangBuiltin<"HLSL_LANG"> {

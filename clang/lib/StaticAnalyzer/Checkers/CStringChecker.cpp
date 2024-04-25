@@ -124,34 +124,45 @@ public:
                                      const CallEvent &)>;
 
   CallDescriptionMap<FnCheck> Callbacks = {
-      {{CDM::CLibrary, {"memcpy"}, 3},
+      {{CDM::CLibraryMaybeHardened, {"memcpy"}, 3},
        std::bind(&CStringChecker::evalMemcpy, _1, _2, _3, CK_Regular)},
-      {{CDM::CLibrary, {"wmemcpy"}, 3},
+      {{CDM::CLibraryMaybeHardened, {"wmemcpy"}, 3},
        std::bind(&CStringChecker::evalMemcpy, _1, _2, _3, CK_Wide)},
-      {{CDM::CLibrary, {"mempcpy"}, 3},
+      {{CDM::CLibraryMaybeHardened, {"mempcpy"}, 3},
        std::bind(&CStringChecker::evalMempcpy, _1, _2, _3, CK_Regular)},
-      {{CDM::Unspecified, {"wmempcpy"}, 3},
+      {{CDM::CLibraryMaybeHardened, {"wmempcpy"}, 3},
        std::bind(&CStringChecker::evalMempcpy, _1, _2, _3, CK_Wide)},
       {{CDM::CLibrary, {"memcmp"}, 3},
        std::bind(&CStringChecker::evalMemcmp, _1, _2, _3, CK_Regular)},
       {{CDM::CLibrary, {"wmemcmp"}, 3},
        std::bind(&CStringChecker::evalMemcmp, _1, _2, _3, CK_Wide)},
-      {{CDM::CLibrary, {"memmove"}, 3},
+      {{CDM::CLibraryMaybeHardened, {"memmove"}, 3},
        std::bind(&CStringChecker::evalMemmove, _1, _2, _3, CK_Regular)},
-      {{CDM::CLibrary, {"wmemmove"}, 3},
+      {{CDM::CLibraryMaybeHardened, {"wmemmove"}, 3},
        std::bind(&CStringChecker::evalMemmove, _1, _2, _3, CK_Wide)},
-      {{CDM::CLibrary, {"memset"}, 3}, &CStringChecker::evalMemset},
+      {{CDM::CLibraryMaybeHardened, {"memset"}, 3},
+       &CStringChecker::evalMemset},
       {{CDM::CLibrary, {"explicit_memset"}, 3}, &CStringChecker::evalMemset},
-      {{CDM::CLibrary, {"strcpy"}, 2}, &CStringChecker::evalStrcpy},
-      {{CDM::CLibrary, {"strncpy"}, 3}, &CStringChecker::evalStrncpy},
-      {{CDM::CLibrary, {"stpcpy"}, 2}, &CStringChecker::evalStpcpy},
-      {{CDM::CLibrary, {"strlcpy"}, 3}, &CStringChecker::evalStrlcpy},
-      {{CDM::CLibrary, {"strcat"}, 2}, &CStringChecker::evalStrcat},
-      {{CDM::CLibrary, {"strncat"}, 3}, &CStringChecker::evalStrncat},
-      {{CDM::CLibrary, {"strlcat"}, 3}, &CStringChecker::evalStrlcat},
-      {{CDM::CLibrary, {"strlen"}, 1}, &CStringChecker::evalstrLength},
+      // FIXME: C23 introduces 'memset_explicit', maybe also model that
+      {{CDM::CLibraryMaybeHardened, {"strcpy"}, 2},
+       &CStringChecker::evalStrcpy},
+      {{CDM::CLibraryMaybeHardened, {"strncpy"}, 3},
+       &CStringChecker::evalStrncpy},
+      {{CDM::CLibraryMaybeHardened, {"stpcpy"}, 2},
+       &CStringChecker::evalStpcpy},
+      {{CDM::CLibraryMaybeHardened, {"strlcpy"}, 3},
+       &CStringChecker::evalStrlcpy},
+      {{CDM::CLibraryMaybeHardened, {"strcat"}, 2},
+       &CStringChecker::evalStrcat},
+      {{CDM::CLibraryMaybeHardened, {"strncat"}, 3},
+       &CStringChecker::evalStrncat},
+      {{CDM::CLibraryMaybeHardened, {"strlcat"}, 3},
+       &CStringChecker::evalStrlcat},
+      {{CDM::CLibraryMaybeHardened, {"strlen"}, 1},
+       &CStringChecker::evalstrLength},
       {{CDM::CLibrary, {"wcslen"}, 1}, &CStringChecker::evalstrLength},
-      {{CDM::CLibrary, {"strnlen"}, 2}, &CStringChecker::evalstrnLength},
+      {{CDM::CLibraryMaybeHardened, {"strnlen"}, 2},
+       &CStringChecker::evalstrnLength},
       {{CDM::CLibrary, {"wcsnlen"}, 2}, &CStringChecker::evalstrnLength},
       {{CDM::CLibrary, {"strcmp"}, 2}, &CStringChecker::evalStrcmp},
       {{CDM::CLibrary, {"strncmp"}, 3}, &CStringChecker::evalStrncmp},
@@ -162,9 +173,19 @@ public:
       {{CDM::CLibrary, {"bcmp"}, 3},
        std::bind(&CStringChecker::evalMemcmp, _1, _2, _3, CK_Regular)},
       {{CDM::CLibrary, {"bzero"}, 2}, &CStringChecker::evalBzero},
-      {{CDM::CLibrary, {"explicit_bzero"}, 2}, &CStringChecker::evalBzero},
-      {{CDM::CLibrary, {"sprintf"}, 2}, &CStringChecker::evalSprintf},
-      {{CDM::CLibrary, {"snprintf"}, 2}, &CStringChecker::evalSnprintf},
+      {{CDM::CLibraryMaybeHardened, {"explicit_bzero"}, 2},
+       &CStringChecker::evalBzero},
+
+      // When recognizing calls to the following variadic functions, we accept
+      // any number of arguments in the call (std::nullopt = accept any
+      // number), but check that in the declaration there are 2 and 3
+      // parameters respectively. (Note that the parameter count does not
+      // include the "...". Calls where the number of arguments is too small
+      // will be discarded by the callback.)
+      {{CDM::CLibraryMaybeHardened, {"sprintf"}, std::nullopt, 2},
+       &CStringChecker::evalSprintf},
+      {{CDM::CLibraryMaybeHardened, {"snprintf"}, std::nullopt, 3},
+       &CStringChecker::evalSnprintf},
   };
 
   // These require a bit of special handling.
@@ -218,7 +239,7 @@ public:
   void evalSprintf(CheckerContext &C, const CallEvent &Call) const;
   void evalSnprintf(CheckerContext &C, const CallEvent &Call) const;
   void evalSprintfCommon(CheckerContext &C, const CallEvent &Call,
-                         bool IsBounded, bool IsBuiltin) const;
+                         bool IsBounded) const;
 
   // Utility methods
   std::pair<ProgramStateRef , ProgramStateRef >
@@ -2467,27 +2488,26 @@ void CStringChecker::evalBzero(CheckerContext &C, const CallEvent &Call) const {
 void CStringChecker::evalSprintf(CheckerContext &C,
                                  const CallEvent &Call) const {
   CurrentFunctionDescription = "'sprintf'";
-  const auto *CE = cast<CallExpr>(Call.getOriginExpr());
-  bool IsBI = CE->getBuiltinCallee() == Builtin::BI__builtin___sprintf_chk;
-  evalSprintfCommon(C, Call, /* IsBounded */ false, IsBI);
+  evalSprintfCommon(C, Call, /* IsBounded = */ false);
 }
 
 void CStringChecker::evalSnprintf(CheckerContext &C,
                                   const CallEvent &Call) const {
   CurrentFunctionDescription = "'snprintf'";
-  const auto *CE = cast<CallExpr>(Call.getOriginExpr());
-  bool IsBI = CE->getBuiltinCallee() == Builtin::BI__builtin___snprintf_chk;
-  evalSprintfCommon(C, Call, /* IsBounded */ true, IsBI);
+  evalSprintfCommon(C, Call, /* IsBounded = */ true);
 }
 
 void CStringChecker::evalSprintfCommon(CheckerContext &C, const CallEvent &Call,
-                                       bool IsBounded, bool IsBuiltin) const {
+                                       bool IsBounded) const {
   ProgramStateRef State = C.getState();
   const auto *CE = cast<CallExpr>(Call.getOriginExpr());
   DestinationArgExpr Dest = {{Call.getArgExpr(0), 0}};
 
   const auto NumParams = Call.parameters().size();
-  assert(CE->getNumArgs() >= NumParams);
+  if (CE->getNumArgs() < NumParams) {
+    // This is an invalid call, let's just ignore it.
+    return;
+  }
 
   const auto AllArguments =
       llvm::make_range(CE->getArgs(), CE->getArgs() + CE->getNumArgs());

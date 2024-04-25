@@ -69,7 +69,7 @@ static void extractFromBranchWeightMD(const MDNode *ProfileData,
   assert(isBranchWeightMD(ProfileData) && "wrong metadata");
 
   unsigned NOps = ProfileData->getNumOperands();
-  unsigned int WeightsIdx = getBranchWeightOffset(ProfileData);
+  unsigned WeightsIdx = getBranchWeightOffset(ProfileData);
   assert(WeightsIdx < NOps && "Weights Index must be less than NOps.");
   Weights.resize(NOps - WeightsIdx);
 
@@ -104,28 +104,23 @@ bool hasValidBranchWeightMD(const Instruction &I) {
   return getValidBranchWeightMDNode(I);
 }
 
-bool hasExpectedProvenance(const Instruction &I) {
+bool hasBranchWeightProvenance(const Instruction &I) {
   auto *ProfileData = I.getMetadata(LLVMContext::MD_prof);
-  return hasExpectedProvenance(ProfileData);
+  return hasBranchWeightProvenance(ProfileData);
 }
 
-bool hasExpectedProvenance(const MDNode *ProfileData) {
+bool hasBranchWeightProvenance(const MDNode *ProfileData) {
   if (!isBranchWeightMD(ProfileData))
     return false;
-
   auto *ProfDataName = dyn_cast<MDString>(ProfileData->getOperand(1));
-  if (!ProfDataName)
-    return false;
-  return ProfDataName->getString().equals("expected");
-}
-
-unsigned getBranchWeightOffset(const Instruction &I) {
-  auto *ProfileData = I.getMetadata(LLVMContext::MD_prof);
-  return getBranchWeightOffset(ProfileData);
+  // NOTE: if we ever have more types of branch weight provenance,
+  // we need to check the string value is "expected". For now, we
+  // supply a more generic API, and avoid the spurious comparisons.
+  return ProfDataName;
 }
 
 unsigned getBranchWeightOffset(const MDNode *ProfileData) {
-  return hasExpectedProvenance(ProfileData) ? 2 : 1;
+  return hasBranchWeightProvenance(ProfileData) ? 2 : 1;
 }
 
 MDNode *getBranchWeightMDNode(const Instruction &I) {
@@ -198,7 +193,7 @@ bool extractProfTotalWeight(const MDNode *ProfileData, uint64_t &TotalVal) {
     return false;
 
   if (ProfDataName->getString().equals("branch_weights")) {
-    unsigned int Offset = getBranchWeightOffset(ProfileData);
+    unsigned Offset = getBranchWeightOffset(ProfileData);
     for (unsigned Idx = Offset; Idx < ProfileData->getNumOperands(); ++Idx) {
       auto *V = mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(Idx));
       assert(V && "Malformed branch_weight in MD_prof node");
@@ -226,6 +221,54 @@ void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
   MDBuilder MDB(I.getContext());
   MDNode *BranchWeights = MDB.createBranchWeights(Weights, IsExpected);
   I.setMetadata(LLVMContext::MD_prof, BranchWeights);
+}
+
+void scaleProfData(Instruction &I, uint64_t S, uint64_t T) {
+  assert(T != 0 && "Caller should guarantee");
+  auto *ProfileData = I.getMetadata(LLVMContext::MD_prof);
+  if (ProfileData == nullptr)
+    return;
+
+  auto *ProfDataName = dyn_cast<MDString>(ProfileData->getOperand(0));
+  if (!ProfDataName || (!ProfDataName->getString().equals("branch_weights") &&
+                        !ProfDataName->getString().equals("VP")))
+    return;
+
+  LLVMContext &C = I.getContext();
+
+  MDBuilder MDB(C);
+  SmallVector<Metadata *, 3> Vals;
+  Vals.push_back(ProfileData->getOperand(0));
+  APInt APS(128, S), APT(128, T);
+  if (ProfDataName->getString().equals("branch_weights") &&
+      ProfileData->getNumOperands() > 0) {
+    // Using APInt::div may be expensive, but most cases should fit 64 bits.
+    APInt Val(128, mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(1))
+                       ->getValue()
+                       .getZExtValue());
+    Val *= APS;
+    Vals.push_back(MDB.createConstant(ConstantInt::get(
+        Type::getInt32Ty(C), Val.udiv(APT).getLimitedValue(UINT32_MAX))));
+  } else if (ProfDataName->getString().equals("VP"))
+    for (unsigned i = 1; i < ProfileData->getNumOperands(); i += 2) {
+      // The first value is the key of the value profile, which will not change.
+      Vals.push_back(ProfileData->getOperand(i));
+      uint64_t Count =
+          mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(i + 1))
+              ->getValue()
+              .getZExtValue();
+      // Don't scale the magic number.
+      if (Count == NOMORE_ICP_MAGICNUM) {
+        Vals.push_back(ProfileData->getOperand(i + 1));
+        continue;
+      }
+      // Using APInt::div may be expensive, but most cases should fit 64 bits.
+      APInt Val(128, Count);
+      Val *= APS;
+      Vals.push_back(MDB.createConstant(ConstantInt::get(
+          Type::getInt64Ty(C), Val.udiv(APT).getLimitedValue())));
+    }
+  I.setMetadata(LLVMContext::MD_prof, MDNode::get(C, Vals));
 }
 
 } // namespace llvm

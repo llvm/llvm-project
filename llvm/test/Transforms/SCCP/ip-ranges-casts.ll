@@ -4,7 +4,7 @@
 ; x = [100, 301)
 define internal i1 @f.trunc(i32 %x) {
 ; CHECK-LABEL: @f.trunc(
-; CHECK-NEXT:    [[T_1:%.*]] = trunc i32 [[X:%.*]] to i16
+; CHECK-NEXT:    [[T_1:%.*]] = trunc nuw nsw i32 [[X:%.*]] to i16
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i16 [[T_1]], 299
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i16 [[T_1]], 101
 ; CHECK-NEXT:    [[RES_1:%.*]] = add nuw nsw i1 false, [[C_2]]
@@ -329,7 +329,7 @@ define i64 @caller.sext_to_zext(i32 %i) {
 ; CHECK-LABEL: @caller.sext_to_zext(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[I:%.*]], 9
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[T:%.*]] = call i64 @f.sext_to_zext(i32 [[CONV]])
+; CHECK-NEXT:    [[T:%.*]] = call i64 @f.sext_to_zext(i32 [[CONV]]), !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    ret i64 [[T]]
 ;
   %cmp = icmp sle i32 %i, 9

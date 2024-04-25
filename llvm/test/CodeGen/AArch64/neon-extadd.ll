@@ -515,15 +515,15 @@ define <20 x i32> @v20(<20 x i8> %s0, <20 x i8> %s1) {
 ; CHECK-NEXT:    mov v0.b[6], w6
 ; CHECK-NEXT:    ld1 { v1.b }[7], [x9]
 ; CHECK-NEXT:    uaddl v2.8h, v3.8b, v2.8b
+; CHECK-NEXT:    ushll v3.4s, v4.4h, #0
 ; CHECK-NEXT:    mov v0.b[7], w7
-; CHECK-NEXT:    ushll2 v3.4s, v2.8h, #0
-; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-NEXT:    uaddl v0.8h, v0.8b, v1.8b
-; CHECK-NEXT:    ushll v1.4s, v4.4h, #0
-; CHECK-NEXT:    stp q3, q1, [x8, #48]
-; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
+; CHECK-NEXT:    ushll2 v1.4s, v2.8h, #0
+; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
+; CHECK-NEXT:    stp q1, q3, [x8, #48]
+; CHECK-NEXT:    ushll2 v3.4s, v0.8h, #0
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    stp q1, q2, [x8, #16]
+; CHECK-NEXT:    stp q3, q2, [x8, #16]
 ; CHECK-NEXT:    str q0, [x8]
 ; CHECK-NEXT:    ret
 entry:
