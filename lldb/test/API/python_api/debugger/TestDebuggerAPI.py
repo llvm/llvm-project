@@ -176,24 +176,54 @@ class DebuggerAPITestCase(TestBase):
             nonlocal called
             called += [('bar', dbg_id)]
 
-        self.dbg.AddDestroyCallback(foo)
-        self.dbg.AddDestroyCallback(bar)
+        token_foo = self.dbg.AddDestroyCallback(foo)
+        token_bar = self.dbg.AddDestroyCallback(bar)
         self.dbg.Destroy(self.dbg)
 
-        # Should first call `foo()`, then `bar()`
-        self.assertEqual(called, [('foo', original_dbg_id), ('bar', original_dbg_id)])
+        # Should call both `foo()` and `bar()`. Order is undermined because
+        # of the `unordered_map` in the implementation.
+        self.assertTrue(('foo', original_dbg_id) in called)
+        self.assertTrue(('bar', original_dbg_id) in called)
 
-    def test_ClearDestroyCallback(self):
-        destroy_dbg_id = None
+    def test_RemoveDestroyCallback(self):
+        original_dbg_id = self.dbg.GetID()
+        called = []
 
         def foo(dbg_id):
             # Need nonlocal to modify closure variable.
-            nonlocal destroy_dbg_id
-            destroy_dbg_id = dbg_id
+            nonlocal called
+            called += [('foo', dbg_id)]
 
-        self.dbg.AddDestroyCallback(foo)
-        self.dbg.ClearDestroyCallback()
+        def bar(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal called
+            called += [('bar', dbg_id)]
+
+        token_foo = self.dbg.AddDestroyCallback(foo)
+        token_bar = self.dbg.AddDestroyCallback(bar)
+        ret = self.dbg.RemoveDestroyCallback(token_foo)
         self.dbg.Destroy(self.dbg)
 
-        # `foo()` should never be called
-        self.assertEqual(destroy_dbg_id, None)
+        # `Remove` should be successful
+        self.assertTrue(ret)
+        # Should only call `bar()`
+        self.assertEqual(called, [('bar', original_dbg_id)])
+
+    def test_RemoveDestroyCallback_invalid_token(self):
+        original_dbg_id = self.dbg.GetID()
+        magic_token_that_should_not_exist = 32413
+        called = []
+
+        def foo(dbg_id):
+            # Need nonlocal to modify closure variable.
+            nonlocal called
+            called += [('foo', dbg_id)]
+
+        token_foo = self.dbg.AddDestroyCallback(foo)
+        ret = self.dbg.RemoveDestroyCallback(magic_token_that_should_not_exist)
+        self.dbg.Destroy(self.dbg)
+
+        # `Remove` should be unsuccessful
+        self.assertFalse(ret)
+        # Should call `foo()`
+        self.assertEqual(called, [('foo', original_dbg_id)])

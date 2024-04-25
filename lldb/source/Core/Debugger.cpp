@@ -743,9 +743,12 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
 }
 
 void Debugger::HandleDestroyCallback() {
+  std::lock_guard<std::recursive_mutex> guard(m_destroy_callback_mutex);
   const lldb::user_id_t user_id = GetID();
-  for (const auto &callback_and_baton : m_destroy_callback_and_baton) {
-    callback_and_baton.first(user_id, callback_and_baton.second);
+  for (const auto &element : m_destroy_callback_and_baton) {
+    const auto &callback = element.second.first;
+    const auto &baton = element.second.second;
+    callback(user_id, baton);
   }
   m_destroy_callback_and_baton.clear();
 }
@@ -1426,19 +1429,27 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
       std::make_shared<CallbackLogHandler>(log_callback, baton);
 }
 
-void Debugger::AddDestroyCallback(
+lldb_private::DebuggerDestroyCallbackToken Debugger::SetDestroyCallback(
     lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
-  m_destroy_callback_and_baton.emplace_back(destroy_callback, baton);
-}
-
-void Debugger::SetDestroyCallback(
-    lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
-  ClearDestroyCallback();
-  AddDestroyCallback(destroy_callback, baton);
-}
-
-void Debugger::ClearDestroyCallback() {
+  std::lock_guard<std::recursive_mutex> guard(m_destroy_callback_mutex);
   m_destroy_callback_and_baton.clear();
+  return AddDestroyCallback(destroy_callback, baton);
+}
+
+lldb_private::DebuggerDestroyCallbackToken Debugger::AddDestroyCallback(
+    lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
+  std::lock_guard<std::recursive_mutex> guard(m_destroy_callback_mutex);
+  const auto token = m_destroy_callback_next_token++;
+  m_destroy_callback_and_baton.emplace(
+    std::piecewise_construct,
+              std::forward_as_tuple(token),
+              std::forward_as_tuple(destroy_callback, baton));
+  return token;
+}
+
+bool Debugger::RemoveDestroyCallback(lldb_private::DebuggerDestroyCallbackToken token) {
+  std::lock_guard<std::recursive_mutex> guard(m_destroy_callback_mutex);
+  return m_destroy_callback_and_baton.erase(token);
 }
 
 static void PrivateReportProgress(Debugger &debugger, uint64_t progress_id,

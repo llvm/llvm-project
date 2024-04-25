@@ -14,6 +14,7 @@
 #include <memory>
 #include <optional>
 #include <vector>
+#include <unordered_map>
 
 #include "lldb/Core/DebuggerEvents.h"
 #include "lldb/Core/FormatEntity.h"
@@ -568,19 +569,21 @@ public:
 
   static void ReportSymbolChange(const ModuleSpec &module_spec);
 
-  /// Add a callback for when the debugger is destroyed. Multiple callbacks
-  /// can be added by calling this function multiple times.
-  void
-  AddDestroyCallback(lldb_private::DebuggerDestroyCallback destroy_callback,
-                     void *baton);
-
+  /// DEPRECATED. Use AddDestroyCallback and RemoveDestroyCallback instead.
   /// Clear all previously added callbacks and only add the given one.
-  void
+  lldb_private::DebuggerDestroyCallbackToken
   SetDestroyCallback(lldb_private::DebuggerDestroyCallback destroy_callback,
                      void *baton);
 
-  /// Clear all previously added callbacks.
-  void ClearDestroyCallback();
+  /// Add a callback for when the debugger is destroyed. Return a token, which
+  /// can be used to remove said callback. Multiple callbacks can be added by
+  /// calling this function multiple times.
+  lldb_private::DebuggerDestroyCallbackToken
+  AddDestroyCallback(lldb_private::DebuggerDestroyCallback destroy_callback,
+                     void *baton);
+
+  /// Remove the specified callback. Return true if successful.
+  bool RemoveDestroyCallback(lldb_private::DebuggerDestroyCallbackToken token);
 
   /// Manually start the global event handler thread. It is useful to plugins
   /// that directly use the \a lldb_private namespace and want to use the
@@ -741,7 +744,9 @@ protected:
   lldb::TargetSP m_dummy_target_sp;
   Diagnostics::CallbackID m_diagnostics_callback_id;
 
-  std::vector<std::pair<lldb_private::DebuggerDestroyCallback, void *>>
+  std::recursive_mutex m_destroy_callback_mutex;
+  lldb_private::DebuggerDestroyCallbackToken m_destroy_callback_next_token = 0;
+  std::unordered_map<lldb_private::DebuggerDestroyCallbackToken, std::pair<lldb_private::DebuggerDestroyCallback, void *>>
       m_destroy_callback_and_baton;
 
   uint32_t m_interrupt_requested = 0; ///< Tracks interrupt requests
