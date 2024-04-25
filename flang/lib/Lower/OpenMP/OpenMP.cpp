@@ -1427,9 +1427,10 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
         reductionSyms;
     allSymbols.append(privateSyms);
     for (auto [arg, prv] : llvm::zip_equal(allSymbols, region.getArguments())) {
+      hlfir::Entity regionArgEntity{prv};
       converter.bindSymbol(*arg, hlfir::translateToExtendedValue(
-                                     loc, firOpBuilder, hlfir::Entity{prv},
-                                     /*contiguousHint=*/true)
+                                     loc, firOpBuilder, regionArgEntity,
+                                     regionArgEntity.isArray())
                                      .first);
     }
 
