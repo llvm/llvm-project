@@ -1788,7 +1788,7 @@ IntrinsicLibrary::genIntrinsicCall(llvm::StringRef specificName,
   llvm::StringRef name = genericName(specificName);
   if (const IntrinsicHandler *handler = findIntrinsicHandler(name)) {
     bool outline = handler->outline || outlineAllIntrinsics;
-    return {std::visit(
+    return {Fortran::common::visit(
                 [&](auto &generator) -> fir::ExtendedValue {
                   return invokeHandler(generator, *handler, resultType, args,
                                        outline, *this);
@@ -1802,7 +1802,7 @@ IntrinsicLibrary::genIntrinsicCall(llvm::StringRef specificName,
   if (fir::getTargetTriple(mod).isPPC()) {
     if (const IntrinsicHandler *ppcHandler = findPPCIntrinsicHandler(name)) {
       bool outline = ppcHandler->outline || outlineAllIntrinsics;
-      return {std::visit(
+      return {Fortran::common::visit(
                   [&](auto &generator) -> fir::ExtendedValue {
                     return invokeHandler(generator, *ppcHandler, resultType,
                                          args, outline, *this);
@@ -2136,7 +2136,7 @@ mlir::SymbolRefAttr IntrinsicLibrary::getUnrestrictedIntrinsicSymbolRefAttr(
   bool loadRefArguments = true;
   mlir::func::FuncOp funcOp;
   if (const IntrinsicHandler *handler = findIntrinsicHandler(name))
-    funcOp = std::visit(
+    funcOp = Fortran::common::visit(
         [&](auto generator) {
           return getWrapper(generator, name, signature, loadRefArguments);
         },
