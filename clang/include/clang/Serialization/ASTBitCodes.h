@@ -60,6 +60,10 @@ const unsigned VERSION_MINOR = 1;
 /// and start at 1. 0 is reserved for NULL.
 using IdentifierID = uint32_t;
 
+/// An ID number that refers to a declaration in an AST file. See the comments
+/// in DeclIDBase for details.
+using DeclID = DeclIDBase::DeclID;
+
 /// An ID number that refers to a type in an AST file.
 ///
 /// The ID of a type is partitioned into two parts: the lower
@@ -1979,7 +1983,7 @@ enum CleanupObjectKind { COK_Block, COK_CompoundLiteral };
 /// Describes the categories of an Objective-C class.
 struct ObjCCategoriesInfo {
   // The ID of the definition
-  DeclID DefinitionID;
+  LocalDeclID DefinitionID;
 
   // Offset into the array of category lists.
   unsigned Offset;
@@ -2074,27 +2078,6 @@ template <> struct DenseMapInfo<clang::serialization::DeclarationNameKey> {
 
   static bool isEqual(const clang::serialization::DeclarationNameKey &L,
                       const clang::serialization::DeclarationNameKey &R) {
-    return L == R;
-  }
-};
-
-template <> struct DenseMapInfo<clang::GlobalDeclID> {
-  using DeclID = clang::DeclID;
-  using GlobalDeclID = clang::GlobalDeclID;
-
-  static GlobalDeclID getEmptyKey() {
-    return GlobalDeclID(DenseMapInfo<DeclID>::getEmptyKey());
-  }
-
-  static GlobalDeclID getTombstoneKey() {
-    return GlobalDeclID(DenseMapInfo<DeclID>::getTombstoneKey());
-  }
-
-  static unsigned getHashValue(const GlobalDeclID &Key) {
-    return DenseMapInfo<DeclID>::getHashValue(Key.get());
-  }
-
-  static bool isEqual(const GlobalDeclID &L, const GlobalDeclID &R) {
     return L == R;
   }
 };
