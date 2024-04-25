@@ -423,6 +423,21 @@ ExprResult SemaOpenACC::ActOnIntExpr(OpenACCDirectiveKind DK,
   return IntExpr;
 }
 
+ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
+                                              Expr *LowerBound,
+                                              SourceLocation ColonLoc,
+                                              Expr *Length,
+                                              SourceLocation RBLoc) {
+  ASTContext &Context = getASTContext();
+
+  // TODO OpenACC: We likely have to reproduce a lot of the same logic from the
+  // OMP version of this, but at the moment we don't have a good way to test it,
+  // so for now we'll just create the node.
+  return new (Context)
+      ArraySectionExpr(Base, LowerBound, Length, Context.ArraySectionTy,
+                       VK_LValue, OK_Ordinary, ColonLoc, RBLoc);
+}
+
 bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,
                                           SourceLocation StartLoc) {
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);

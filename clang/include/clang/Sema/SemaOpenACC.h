@@ -193,6 +193,12 @@ public:
   /// conversions and diagnostics to 'int'.
   ExprResult ActOnIntExpr(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                           SourceLocation Loc, Expr *IntExpr);
+
+  /// Checks and creates an Array Section used in an OpenACC construct/clause.
+  ExprResult ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
+                                   Expr *LowerBound,
+                                   SourceLocation ColonLocFirst, Expr *Length,
+                                   SourceLocation RBLoc);
 };
 
 } // namespace clang
