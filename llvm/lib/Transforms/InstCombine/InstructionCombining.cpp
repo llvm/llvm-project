@@ -190,8 +190,26 @@ bool InstCombiner::isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const {
   return TTI.isValidAddrSpaceCast(FromAS, ToAS);
 }
 
-Value *InstCombinerImpl::EmitGEPOffset(User *GEP) {
-  return llvm::emitGEPOffset(&Builder, DL, GEP);
+Value *InstCombinerImpl::EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP) {
+  if (!RewriteGEP)
+    return llvm::emitGEPOffset(&Builder, DL, GEP);
+
+  IRBuilderBase::InsertPointGuard Guard(Builder);
+  auto *Inst = dyn_cast<Instruction>(GEP);
+  if (Inst)
+    Builder.SetInsertPoint(Inst);
+
+  Value *Offset = EmitGEPOffset(GEP);
+  // If a non-trivial GEP has other uses, rewrite it to avoid duplicating
+  // the offset arithmetic.
+  if (Inst && !GEP->hasOneUse() && !GEP->hasAllConstantIndices() &&
+      !GEP->getSourceElementType()->isIntegerTy(8)) {
+    replaceInstUsesWith(
+        *Inst, Builder.CreateGEP(Builder.getInt8Ty(), GEP->getPointerOperand(),
+                                 Offset, "", GEP->isInBounds()));
+    eraseInstFromFunction(*Inst);
+  }
+  return Offset;
 }
 
 /// Legal integers and common types are considered desirable. This is used to
