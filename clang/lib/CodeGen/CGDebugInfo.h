@@ -616,13 +616,13 @@ public:
   /// Create a debug location from `TrapLocation` that adds an artificial inline
   /// frame where the frame name is
   ///
-  /// * `<Prefix>: <FailureMsg>` if `<FailureMsg>` is not empty.
-  /// * `<Prefix>` if `<FailureMsg>` is empty.
+  /// * `<Prefix>:<Category>:<FailureMsg>`
   ///
-  /// Currently `<Prefix>` is always "__llvm_verbose_trap".
+  /// `<Prefix>` is "__llvm_verbose_trap".
   ///
   /// This is used to store failure reasons for traps.
   llvm::DILocation *CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
+                                                StringRef Category,
                                                 StringRef FailureMsg);
 
 private:

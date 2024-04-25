@@ -173,19 +173,24 @@ static bool checkArgCount(Sema &S, CallExpr *Call, unsigned DesiredArgCount) {
 }
 
 static bool checkBuiltinVerboseTrap(CallExpr *Call, Sema &S) {
-  Expr *Arg = Call->getArg(0);
+  bool HasError = false;
 
-  if (Arg->isValueDependent())
-    return true;
+  for (int I = 0; I < Call->getNumArgs(); ++I) {
+    Expr *Arg = Call->getArg(I);
 
-  // FIXME: Add more checks and reject strings that can't be handled by
-  // debuggers.
-  if (!Arg->tryEvaluateString(S.Context).has_value()) {
-    S.Diag(Arg->getBeginLoc(), diag::err_builtin_verbose_trap_arg)
-        << Arg->getSourceRange();
-    return false;
+    if (Arg->isValueDependent())
+      continue;
+
+    // FIXME: Add more checks and reject strings that can't be handled by
+    // debuggers.
+    if (!Arg->tryEvaluateString(S.Context).has_value()) {
+      S.Diag(Arg->getBeginLoc(), diag::err_builtin_verbose_trap_arg)
+          << Arg->getSourceRange();
+      HasError = true;
+    }
   }
-  return true;
+
+  return !HasError;
 }
 
 static bool convertArgumentToType(Sema &S, Expr *&Value, QualType Ty) {

@@ -3478,14 +3478,14 @@ debugger is attached or in a symbolicated crash log.
 
 .. code-block:: c++
 
-    __builtin_verbose_trap(const char *reason)
+    __builtin_verbose_trap(const char *category, const char *reason)
 
 **Description**
 
 ``__builtin_verbose_trap`` is lowered to the ` ``llvm.trap`` <https://llvm.org/docs/LangRef.html#llvm-trap-intrinsic>`_ builtin.
 Additionally, clang emits debugging information that represents an artificial
-inline frame whose name encodes the string passed to the builtin, prefixed by a
-"magic" prefix.
+inline frame whose name encodes the category and reason strings passed to the builtin,
+prefixed by a "magic" prefix.
 
 For example, consider the following code:
 
@@ -3493,7 +3493,7 @@ For example, consider the following code:
 
     void foo(int* p) {
       if (p == nullptr)
-        __builtin_verbose_trap("Argument must not be null!");
+        __builtin_verbose_trap("check null", "Argument must not be null!");
     }
 
 The debugging information would look as if it were produced for the following code:
@@ -3501,13 +3501,13 @@ The debugging information would look as if it were produced for the following co
 .. code-block:: c++
 
     __attribute__((always_inline))
-    inline void "__llvm_verbose_trap: Argument must not be null!"() {
+    inline void "__llvm_verbose_trap:check null:Argument must not be null!"() {
       __builtin_trap();
     }
 
     void foo(int* p) {
       if (p == nullptr)
-        "__llvm_verbose_trap: Argument must not be null!"();
+        "__llvm_verbose_trap:check null:Argument must not be null!"();
     }
 
 However, the generated code would not actually contain a call to the artificial

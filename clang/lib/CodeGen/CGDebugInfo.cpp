@@ -3511,17 +3511,17 @@ llvm::DIMacroFile *CGDebugInfo::CreateTempMacroFile(llvm::DIMacroFile *Parent,
   return DBuilder.createTempMacroFile(Parent, Line, FName);
 }
 
-llvm::DILocation *
-CGDebugInfo::CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,
-                                         StringRef FailureMsg) {
+llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
+    llvm::DebugLoc TrapLocation, StringRef Category, StringRef FailureMsg) {
   // Create a debug location from `TrapLocation` that adds an artificial inline
   // frame.
   const char *Prefix = CLANG_VERBOSE_TRAP_PREFIX;
   SmallString<64> FuncName(Prefix);
-  if (!FailureMsg.empty()) {
-    FuncName += ": ";
-    FuncName += FailureMsg;
-  }
+
+  FuncName += ":";
+  FuncName += Category;
+  FuncName += ":";
+  FuncName += FailureMsg;
 
   llvm::DISubprogram *TrapSP =
       createInlinedTrapSubprogram(FuncName, TrapLocation->getFile());
