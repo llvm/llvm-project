@@ -1084,7 +1084,7 @@ void ASTContext::addModuleInitializer(Module *M, Decl *D) {
 }
 
 void ASTContext::addLazyModuleInitializers(Module *M,
-                                           ArrayRef<Decl::DeclID> IDs) {
+                                           ArrayRef<GlobalDeclID> IDs) {
   auto *&Inits = ModuleInitializers[M];
   if (!Inits)
     Inits = new (*this) PerModuleInitializers;

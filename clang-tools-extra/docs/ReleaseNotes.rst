@@ -117,12 +117,25 @@ New checks
   Detects error-prone Curiously Recurring Template Pattern usage, when the CRTP
   can be constructed outside itself and the derived class.
 
+- New :doc:`bugprone-return-const-ref-from-parameter
+  <clang-tidy/checks/bugprone/return-const-ref-from-parameter>` check.
+
+  Detects return statements that return a constant reference parameter as constant
+  reference. This may cause use-after-free errors if the caller uses xvalues as
+  arguments.
+
 - New :doc:`bugprone-suspicious-stringview-data-usage
   <clang-tidy/checks/bugprone/suspicious-stringview-data-usage>` check.
 
   Identifies suspicious usages of ``std::string_view::data()`` that could lead
   to reading out-of-bounds data due to inadequate or incorrect string null
   termination.
+
+- New :doc:`modernize-min-max-use-initializer-list
+  <clang-tidy/checks/modernize/min-max-use-initializer-list>` check.
+
+  Replaces nested ``std::min`` and ``std::max`` calls with an initializer list
+  where applicable.
 
 - New :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check.
@@ -265,6 +278,10 @@ Changes in existing checks
 - Improved :doc:`modernize-use-override
   <clang-tidy/checks/modernize/use-override>` check to also remove any trailing
   whitespace when deleting the ``virtual`` keyword.
+
+- Improved :doc:`modernize-use-starts-ends-with
+  <clang-tidy/checks/modernize/use-starts-ends-with>` check to also handle
+  calls to ``compare`` method.
 
 - Improved :doc:`modernize-use-using <clang-tidy/checks/modernize/use-using>`
   check by adding support for detection of typedefs declared on function level.

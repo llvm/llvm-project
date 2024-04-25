@@ -46,6 +46,21 @@ def print_other():
 
 
 @test_in_context
+def transform_options():
+    options = interp.TransformOptions()
+    options.expensive_checks = False
+    options.enforce_single_top_level_transform_op = True
+    m = ir.Module.parse(
+        print_root_module.replace("from interpreter", "transform_options")
+    )
+    payload = ir.Module.parse("module attributes { this.is.payload } {}")
+    interp.apply_named_sequence(payload, m.body.operations[0], m, options)
+
+
+# CHECK-LABEL: transform_options
+
+
+@test_in_context
 def failed():
     payload = ir.Module.parse("module attributes { this.is.payload } {}")
     try:
