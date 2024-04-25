@@ -434,14 +434,10 @@ ld_plugin_status onload(ld_plugin_tv *tv) {
       // FIXME: When binutils 2.31 (containing gold 1.16) is the minimum
       // required version, this should be changed to:
       // get_wrap_symbols = tv->tv_u.tv_get_wrap_symbols;
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-function-type"
-#endif
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
       get_wrap_symbols = (ld_plugin_get_wrap_symbols)tv->tv_u.tv_message;
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+#pragma GCC diagnostic pop
       break;
     default:
       break;

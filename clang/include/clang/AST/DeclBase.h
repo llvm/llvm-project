@@ -15,6 +15,7 @@
 
 #include "clang/AST/ASTDumperUtils.h"
 #include "clang/AST/AttrIterator.h"
+#include "clang/AST/DeclID.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/SelectorLocationsKind.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -239,9 +240,6 @@ public:
     ModulePrivate
   };
 
-  /// An ID number that refers to a declaration in an AST file.
-  using DeclID = uint32_t;
-
 protected:
   /// The next declaration within the same lexical
   /// DeclContext. These pointers form the linked list that is
@@ -361,7 +359,7 @@ protected:
   /// \param Ctx The context in which we will allocate memory.
   /// \param ID The global ID of the deserialized declaration.
   /// \param Extra The amount of extra space to allocate after the object.
-  void *operator new(std::size_t Size, const ASTContext &Ctx, DeclID ID,
+  void *operator new(std::size_t Size, const ASTContext &Ctx, GlobalDeclID ID,
                      std::size_t Extra = 0);
 
   /// Allocate memory for a non-deserialized declaration.
@@ -779,10 +777,10 @@ public:
 
   /// Retrieve the global declaration ID associated with this
   /// declaration, which specifies where this Decl was loaded from.
-  DeclID getGlobalID() const {
+  GlobalDeclID getGlobalID() const {
     if (isFromASTFile())
-      return *((const DeclID *)this - 1);
-    return 0;
+      return (*((const GlobalDeclID *)this - 1));
+    return GlobalDeclID();
   }
 
   /// Retrieve the global ID of the module that owns this particular
