@@ -1,4 +1,4 @@
-//===- RISCVScheduleB.td - RISC-V Scheduling Definitions B -*- tablegen -*-===//
+//===- RISCVScheduleB.td - RISC-V Scheduling Definitions Zvk -*- tablegen -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
