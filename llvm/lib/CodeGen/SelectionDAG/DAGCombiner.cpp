@@ -7620,6 +7620,7 @@ SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, const SDLoc &DL) {
 static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
                                   SDNode *N) {
   EVT VT = N0.getValueType();
+  SDLoc DL(N);
 
   auto peekThroughResize = [](SDValue V) {
     if (V->getOpcode() == ISD::ZERO_EXTEND || V->getOpcode() == ISD::TRUNCATE)
@@ -7642,16 +7643,16 @@ static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
     if (SDValue NotOperand = getBitwiseNotOperand(N01, N00,
                                                   /* AllowUndefs */ false)) {
       if (peekThroughResize(NotOperand) == N1Resized)
-        return DAG.getNode(ISD::OR, SDLoc(N), VT,
-                           DAG.getZExtOrTrunc(N00, SDLoc(N), VT), N1);
+        return DAG.getNode(ISD::OR, DL, VT, DAG.getZExtOrTrunc(N00, DL, VT),
+                           N1);
     }
 
     // fold (or (and (xor Y, -1), X), Y) -> (or X, Y)
     if (SDValue NotOperand = getBitwiseNotOperand(N00, N01,
                                                   /* AllowUndefs */ false)) {
       if (peekThroughResize(NotOperand) == N1Resized)
-        return DAG.getNode(ISD::OR, SDLoc(N), VT,
-                           DAG.getZExtOrTrunc(N01, SDLoc(N), VT), N1);
+        return DAG.getNode(ISD::OR, DL, VT, DAG.getZExtOrTrunc(N01, DL, VT),
+                           N1);
     }
   }
 
@@ -7659,13 +7660,13 @@ static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
 
   // fold or (xor X, N1), N1 --> or X, N1
   if (sd_match(N0, m_Xor(m_Value(X), m_Specific(N1))))
-    return DAG.getNode(ISD::OR, SDLoc(N), VT, X, N1);
+    return DAG.getNode(ISD::OR, DL, VT, X, N1);
 
   // fold or (xor x, y), (x and/or y) --> or x, y
   if (sd_match(N0, m_Xor(m_Value(X), m_Value(Y))) &&
       (sd_match(N1, m_And(m_Specific(X), m_Specific(Y))) ||
        sd_match(N1, m_Or(m_Specific(X), m_Specific(Y)))))
-    return DAG.getNode(ISD::OR, SDLoc(N), VT, X, Y);
+    return DAG.getNode(ISD::OR, DL, VT, X, Y);
 
   if (SDValue R = foldLogicOfShifts(N, N0, N1, DAG))
     return R;
