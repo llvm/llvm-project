@@ -2802,8 +2802,7 @@ define i64 @bext_mul45(i32 %1, i32 %2) {
 ;
 ; RV64ZBAZBBZBS-LABEL: bext_mul45:
 ; RV64ZBAZBBZBS:       # %bb.0: # %entry
-; RV64ZBAZBBZBS-NEXT:    srl a0, a0, a1
-; RV64ZBAZBBZBS-NEXT:    andi a0, a0, 1
+; RV64ZBAZBBZBS-NEXT:    bext a0, a0, a1
 ; RV64ZBAZBBZBS-NEXT:    sh2add a0, a0, a0
 ; RV64ZBAZBBZBS-NEXT:    sh3add a0, a0, a0
 ; RV64ZBAZBBZBS-NEXT:    ret
@@ -2842,8 +2841,7 @@ define i64 @bext_mul132(i32 %1, i32 %2) {
 ;
 ; RV64ZBAZBBZBS-LABEL: bext_mul132:
 ; RV64ZBAZBBZBS:       # %bb.0: # %entry
-; RV64ZBAZBBZBS-NEXT:    srl a0, a0, a1
-; RV64ZBAZBBZBS-NEXT:    andi a0, a0, 1
+; RV64ZBAZBBZBS-NEXT:    bext a0, a0, a1
 ; RV64ZBAZBBZBS-NEXT:    slli a1, a0, 7
 ; RV64ZBAZBBZBS-NEXT:    sh2add a0, a0, a1
 ; RV64ZBAZBBZBS-NEXT:    ret
