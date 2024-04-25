@@ -14,6 +14,7 @@
 #include "Targets.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -152,43 +153,7 @@ ArrayRef<const char *> SPIRV64AMDGCNTargetInfo::getGCCRegNames() const {
 bool SPIRV64AMDGCNTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef,
     const std::vector<std::string> &FeatureVec) const {
-  // This represents the union of all AMDGCN features.
-  Features["atomic-ds-pk-add-16-insts"] = true;
-  Features["atomic-flat-pk-add-16-insts"] = true;
-  Features["atomic-buffer-global-pk-add-f16-insts"] = true;
-  Features["atomic-global-pk-add-bf16-inst"] = true;
-  Features["atomic-fadd-rtn-insts"] = true;
-  Features["ci-insts"] = true;
-  Features["dot1-insts"] = true;
-  Features["dot2-insts"] = true;
-  Features["dot3-insts"] = true;
-  Features["dot4-insts"] = true;
-  Features["dot5-insts"] = true;
-  Features["dot7-insts"] = true;
-  Features["dot8-insts"] = true;
-  Features["dot9-insts"] = true;
-  Features["dot10-insts"] = true;
-  Features["dot11-insts"] = true;
-  Features["dl-insts"] = true;
-  Features["16-bit-insts"] = true;
-  Features["dpp"] = true;
-  Features["gfx8-insts"] = true;
-  Features["gfx9-insts"] = true;
-  Features["gfx90a-insts"] = true;
-  Features["gfx940-insts"] = true;
-  Features["gfx10-insts"] = true;
-  Features["gfx10-3-insts"] = true;
-  Features["gfx11-insts"] = true;
-  Features["gfx12-insts"] = true;
-  Features["image-insts"] = true;
-  Features["fp8-conversion-insts"] = true;
-  Features["s-memrealtime"] = true;
-  Features["s-memtime-inst"] = true;
-  Features["gws"] = true;
-  Features["fp8-insts"] = true;
-  Features["fp8-conversion-insts"] = true;
-  Features["atomic-ds-pk-add-16-insts"] = true;
-  Features["mai-insts"] = true;
+  llvm::AMDGPU::fillAMDGPUFeatureMap({}, getTriple(), Features);
 
   return TargetInfo::initFeatureMap(Features, Diags, {}, FeatureVec);
 }
