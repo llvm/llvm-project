@@ -49,7 +49,7 @@
 "`4012 <https://wg21.link/LWG4012>`__","``common_view::begin/end`` are missing the ``simple-view`` check","Tokyo March 2024","","","|ranges|"
 "`4013 <https://wg21.link/LWG4013>`__","``lazy_split_view::outer-iterator::value_type`` should not provide default constructor","Tokyo March 2024","","","|ranges|"
 "`4016 <https://wg21.link/LWG4016>`__","container-insertable checks do not match what container-inserter does","Tokyo March 2024","","",""
-"`4023 <https://wg21.link/LWG4023>`__","Preconditions of ``std::basic_streambuf::setg/setp``","Tokyo March 2024","","",""
+"`4023 <https://wg21.link/LWG4023>`__","Preconditions of ``std::basic_streambuf::setg/setp``","Tokyo March 2024","|Complete|","19.0",""
 "`4025 <https://wg21.link/LWG4025>`__","Move assignment operator of ``std::expected<cv void, E>`` should not be conditionally deleted","Tokyo March 2024","","",""
 "`4030 <https://wg21.link/LWG4030>`__","Clarify whether arithmetic expressions in ``[numeric.sat.func]`` are mathematical or C++","Tokyo March 2024","|Nothing To Do|","",""
 "`4031 <https://wg21.link/LWG4031>`__","``bad_expected_access<void>`` member functions should be ``noexcept``","Tokyo March 2024","|Complete|","16.0",""
