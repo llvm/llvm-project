@@ -1506,7 +1506,8 @@ floating point semantic models: precise (the default), strict, and fast.
 
    * ``-ffp-contract=fast``
 
-   Note: ``-ffast-math`` causes ``crtfastmath.o`` to be linked with code. See
+   Note: ``-ffast-math`` causes ``crtfastmath.o`` to be linked with code unless
+   ``-shared`` or ``-mno-daz-ftz`` is present. See
    :ref:`crtfastmath.o` for more details.
 
 .. option:: -fno-fast-math
@@ -1560,7 +1561,8 @@ floating point semantic models: precise (the default), strict, and fast.
      ``-ffp-contract``.
 
    Note: ``-fno-fast-math`` implies ``-fdenormal-fp-math=ieee``.
-   ``-fno-fast-math`` causes ``crtfastmath.o`` to not be linked with code.
+   ``-fno-fast-math`` causes ``crtfastmath.o`` to not be linked with code
+   unless ``-mdaz-ftz`` is present.
 
 .. option:: -fdenormal-fp-math=<value>
 
@@ -1938,10 +1940,13 @@ by using ``#pragma STDC FENV_ROUND`` with a value other than ``FE_DYNAMIC``.
 
 A note about ``crtfastmath.o``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-``-ffast-math`` and ``-funsafe-math-optimizations`` cause ``crtfastmath.o`` to be
-automatically linked,  which adds a static constructor that sets the FTZ/DAZ
+``-ffast-math`` and ``-funsafe-math-optimizations`` without the ``-shared``
+option cause ``crtfastmath.o`` to be
+automatically linked, which adds a static constructor that sets the FTZ/DAZ
 bits in MXCSR, affecting not only the current compilation unit but all static
-and shared libraries included in the program.
+and shared libraries included in the program. This decision can be overridden
+by using either the flag ``-mdaz-ftz`` or ``-mno-daz-ftz`` to respectively
+link or not link ``crtfastmath.o``.
 
 .. _FLT_EVAL_METHOD:
 
