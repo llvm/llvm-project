@@ -37,6 +37,7 @@
 #include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
@@ -199,9 +200,13 @@ protected:
     AddMachinePass(ModulePassManager &MPM, const DerivedT &PB)
         : MPM(MPM), PB(PB) {}
     ~AddMachinePass() {
-      if (!MFPM.isEmpty())
-        MPM.addPass(createModuleToFunctionPassAdaptor(
-            createFunctionToMachineFunctionPassAdaptor(std::move(MFPM))));
+      if (!MFPM.isEmpty()) {
+        FunctionPassManager FPM;
+        FPM.addPass(
+            createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+        FPM.addPass(InvalidateAnalysisPass<MachineFunctionAnalysis>());
+        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+      }
     }
 
     template <typename PassT>
@@ -540,7 +545,6 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
   if (PrintMIR)
     addPass(PrintMIRPass(Out), /*Force=*/true);
 
-  // TODO: invalidate MachineFunctionAnalysis
   return verifyStartStop(*StartStopInfo);
 }
 
