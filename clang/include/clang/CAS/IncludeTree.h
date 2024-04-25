@@ -378,14 +378,14 @@ public:
   Expected<ModuleImport> getModuleImport() {
     std::optional<ObjectProxy> Proxy;
     if (llvm::Error Err = getCAS().getProxy(getReference(0)).moveInto(Proxy))
-      return Err;
+      return std::move(Err);
     return ModuleImport(*Proxy);
   }
 
   Expected<IncludeTree> getIncludeTree() {
     std::optional<ObjectProxy> Proxy;
     if (llvm::Error Err = getCAS().getProxy(getReference(1)).moveInto(Proxy))
-      return Err;
+      return std::move(Err);
     return IncludeTree(*Proxy);
   }
 
