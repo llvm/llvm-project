@@ -1460,13 +1460,13 @@ floating point semantic models: precise (the default), strict, and fast.
   "allow_approximate_fns", "off", "off", "on"
   "allow_reassociation", "off", "off", "on"
 
-   The ``-fp-model`` option does not modify the "fdenormal-fp-math" or
-   "fdenormal-fp-math-f32" settings, but it does have an impact on whether
-   "crtfastmath.o" is linked. Because linking "crtfastmath.o" has a global
-   effect on the program, and because the global denormal handling can be
-   changed in other ways, the state of "fdenormal-fp-math" handling cannot
-   be assumed in any function based on fp-model. See :ref:`crtfastmath.o`
-   for more details.
+The ``-fp-model`` option does not modify the "fdenormal-fp-math" or
+"fdenormal-fp-math-f32" settings, but it does have an impact on whether
+"crtfastmath.o" is linked. Because linking "crtfastmath.o" has a global
+effect on the program, and because the global denormal handling can be
+changed in other ways, the state of "fdenormal-fp-math" handling cannot
+be assumed in any function based on fp-model. See :ref:`crtfastmath.o`
+for more details.
 
 .. option:: -ffast-math
 
