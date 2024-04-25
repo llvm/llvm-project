@@ -934,8 +934,8 @@ TEST_F(
   EXPECT_EQ(15u, newCursor(Code, 15));
   EXPECT_EQ(44u, newCursor(Code, 46));
   EXPECT_EQ(46u, newCursor(Code, 48));
-#endif
 }
+#endif
 
 TEST_F(SortIncludesTest, DeduplicateIncludes) {
   EXPECT_EQ("#include <a>\n"
