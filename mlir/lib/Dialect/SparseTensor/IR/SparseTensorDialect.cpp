@@ -912,6 +912,41 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
     return emitError()
            << "dimension-rank mismatch between encoding and tensor shape: "
            << getDimRank() << " != " << dimRank;
+  Type expType, impType;
+  if (getExplicitVal()) {
+    auto fVal = llvm::dyn_cast<FloatAttr>(getExplicitVal());
+    auto intVal = llvm::dyn_cast<IntegerAttr>(getExplicitVal());
+    if (fVal && fVal.getType() != elementType) {
+      expType = fVal.getType();
+    } else if (intVal && intVal.getType() != elementType) {
+      expType = intVal.getType();
+    }
+    if (expType) {
+      return emitError() << "explicit value type mismatch between encoding and "
+                         << "tensor element type: " << expType
+                         << " != " << elementType;
+    }
+  }
+
+  if (getImplicitVal()) {
+    auto impFVal = llvm::dyn_cast<FloatAttr>(getImplicitVal());
+    auto impIntVal = llvm::dyn_cast<IntegerAttr>(getImplicitVal());
+    if (impFVal && impFVal.getType() != elementType) {
+      impType = impFVal.getType();
+    } else if (impIntVal && impIntVal.getType() != elementType) {
+      impType = impIntVal.getType();
+    }
+    if (impType) {
+      return emitError() << "implicit value type mismatch between encoding and "
+                         << "tensor element type: " << impType
+                         << " != " << elementType;
+    }
+    // Currently, we only support zero as the implicit value.
+    if ((impFVal && impFVal.getValueAsDouble() != 0.0) ||
+        (impIntVal && impIntVal.getInt() != 0)) {
+      return emitError() << "implicit value must be zero";
+    }
+  }
   return success();
 }
 
