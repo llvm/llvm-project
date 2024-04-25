@@ -389,8 +389,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
                         Twine((unsigned)LangOpts.getHLSLVersion()));
 
     if (LangOpts.NativeHalfType)
-      Builder.defineMacro("__HLSL_ENABLE_16_BIT",
-                          Twine((unsigned)LangOpts.getHLSLVersion()));
+      Builder.defineMacro("__HLSL_ENABLE_16_BIT", "1");
 
     // Shader target information
     // "enums" for shader stages
