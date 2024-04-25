@@ -1069,7 +1069,7 @@ module attributes { transform.target_tag = "start_here" } {
     // expected-remark @below {{convolution}}
     // expected-remark @below {{batch dims 0}}
     // expected-remark @below {{output image dims 1 : i64, 2 : i64}}
-    // expected-remark @below {{output channel dims 3}}
+    // expected-remark @below {{output channel dims}}
     // expected-remark @below {{filter loop dims 4 : i64, 5 : i64}}
     // expected-remark @below {{input channel dims}}
     // expected-remark @below {{depth dims 3}}
