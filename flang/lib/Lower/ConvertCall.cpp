@@ -1190,8 +1190,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
         arg.isSequenceAssociatedDescriptor()) {
       mlir::Type actualTy =
           hlfir::getFortranElementOrSequenceType(actual.getType());
-      dummyTypeWithActualRank =
-          baseBoxDummy.getBoxTypeWithNewShape(actualTy);
+      dummyTypeWithActualRank = baseBoxDummy.getBoxTypeWithNewShape(actualTy);
     }
   }
   // Preserve the actual type in the argument preparation in case IgnoreTKR(t)
