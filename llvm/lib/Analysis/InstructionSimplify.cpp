@@ -1513,7 +1513,7 @@ static Value *simplifyAShrInst(Value *Op0, Value *Op1, bool IsExact,
 
   // -1 >>a X --> -1
   // (-1 << X) a>> X --> -1
-  // Do not return Op0 because it may contain undef elements if it's a vector.
+  // We could return the original -1 constant to preserve poison elements.
   if (match(Op0, m_AllOnes()) ||
       match(Op0, m_Shl(m_AllOnes(), m_Specific(Op1))))
     return Constant::getAllOnesValue(Op0->getType());
@@ -1586,10 +1586,10 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
     if (match(UnsignedICmp,
               m_c_ICmp(UnsignedPred, m_Specific(Y), m_Specific(A)))) {
       if (UnsignedPred == ICmpInst::ICMP_UGE && IsAnd &&
-          EqPred == ICmpInst::ICMP_NE && isKnownNonZero(B, /*Depth=*/0, Q))
+          EqPred == ICmpInst::ICMP_NE && isKnownNonZero(B, Q))
         return UnsignedICmp;
       if (UnsignedPred == ICmpInst::ICMP_ULT && !IsAnd &&
-          EqPred == ICmpInst::ICMP_EQ && isKnownNonZero(B, /*Depth=*/0, Q))
+          EqPred == ICmpInst::ICMP_EQ && isKnownNonZero(B, Q))
         return UnsignedICmp;
     }
   }
@@ -1607,13 +1607,13 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
   // X > Y && Y == 0  -->  Y == 0  iff X != 0
   // X > Y || Y == 0  -->  X > Y   iff X != 0
   if (UnsignedPred == ICmpInst::ICMP_UGT && EqPred == ICmpInst::ICMP_EQ &&
-      isKnownNonZero(X, /*Depth=*/0, Q))
+      isKnownNonZero(X, Q))
     return IsAnd ? ZeroICmp : UnsignedICmp;
 
   // X <= Y && Y != 0  -->  X <= Y  iff X != 0
   // X <= Y || Y != 0  -->  Y != 0  iff X != 0
   if (UnsignedPred == ICmpInst::ICMP_ULE && EqPred == ICmpInst::ICMP_NE &&
-      isKnownNonZero(X, /*Depth=*/0, Q))
+      isKnownNonZero(X, Q))
     return IsAnd ? UnsignedICmp : ZeroICmp;
 
   // The transforms below here are expected to be handled more generally with
@@ -2281,7 +2281,7 @@ static Value *simplifyOrLogic(Value *X, Value *Y) {
   // (B ^ ~A) | (A & B) --> B ^ ~A
   // (~A ^ B) | (B & A) --> ~A ^ B
   // (B ^ ~A) | (B & A) --> B ^ ~A
-  if (match(X, m_c_Xor(m_NotForbidUndef(m_Value(A)), m_Value(B))) &&
+  if (match(X, m_c_Xor(m_Not(m_Value(A)), m_Value(B))) &&
       match(Y, m_c_And(m_Specific(A), m_Specific(B))))
     return X;
 
@@ -2298,31 +2298,29 @@ static Value *simplifyOrLogic(Value *X, Value *Y) {
   // (B & ~A) | ~(A | B) --> ~A
   // (B & ~A) | ~(B | A) --> ~A
   Value *NotA;
-  if (match(X,
-            m_c_And(m_CombineAnd(m_Value(NotA), m_NotForbidUndef(m_Value(A))),
-                    m_Value(B))) &&
+  if (match(X, m_c_And(m_CombineAnd(m_Value(NotA), m_Not(m_Value(A))),
+                       m_Value(B))) &&
       match(Y, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
     return NotA;
   // The same is true of Logical And
   // TODO: This could share the logic of the version above if there was a
   // version of LogicalAnd that allowed more than just i1 types.
-  if (match(X, m_c_LogicalAnd(
-                   m_CombineAnd(m_Value(NotA), m_NotForbidUndef(m_Value(A))),
-                   m_Value(B))) &&
+  if (match(X, m_c_LogicalAnd(m_CombineAnd(m_Value(NotA), m_Not(m_Value(A))),
+                              m_Value(B))) &&
       match(Y, m_Not(m_c_LogicalOr(m_Specific(A), m_Specific(B)))))
     return NotA;
 
   // ~(A ^ B) | (A & B) --> ~(A ^ B)
   // ~(A ^ B) | (B & A) --> ~(A ^ B)
   Value *NotAB;
-  if (match(X, m_CombineAnd(m_NotForbidUndef(m_Xor(m_Value(A), m_Value(B))),
+  if (match(X, m_CombineAnd(m_Not(m_Xor(m_Value(A), m_Value(B))),
                             m_Value(NotAB))) &&
       match(Y, m_c_And(m_Specific(A), m_Specific(B))))
     return NotAB;
 
   // ~(A & B) | (A ^ B) --> ~(A & B)
   // ~(A & B) | (B ^ A) --> ~(A & B)
-  if (match(X, m_CombineAnd(m_NotForbidUndef(m_And(m_Value(A), m_Value(B))),
+  if (match(X, m_CombineAnd(m_Not(m_And(m_Value(A), m_Value(B))),
                             m_Value(NotAB))) &&
       match(Y, m_c_Xor(m_Specific(A), m_Specific(B))))
     return NotAB;
@@ -2552,9 +2550,8 @@ static Value *simplifyXorInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     // The 'not' op must contain a complete -1 operand (no undef elements for
     // vector) for the transform to be safe.
     Value *NotA;
-    if (match(X,
-              m_c_Or(m_CombineAnd(m_NotForbidUndef(m_Value(A)), m_Value(NotA)),
-                     m_Value(B))) &&
+    if (match(X, m_c_Or(m_CombineAnd(m_Not(m_Value(A)), m_Value(NotA)),
+                        m_Value(B))) &&
         match(Y, m_c_And(m_Specific(A), m_Specific(B))))
       return NotA;
 
@@ -2817,10 +2814,9 @@ static Constant *computePointerICmp(CmpInst::Predicate Pred, Value *LHS,
     // the other operand can not be based on the alloc - if it were, then
     // the cmp itself would be a capture.
     Value *MI = nullptr;
-    if (isAllocLikeFn(LHS, TLI) && llvm::isKnownNonZero(RHS, /*Depth=*/0, Q))
+    if (isAllocLikeFn(LHS, TLI) && llvm::isKnownNonZero(RHS, Q))
       MI = LHS;
-    else if (isAllocLikeFn(RHS, TLI) &&
-             llvm::isKnownNonZero(LHS, /*Depth=*/0, Q))
+    else if (isAllocLikeFn(RHS, TLI) && llvm::isKnownNonZero(LHS, Q))
       MI = RHS;
     if (MI) {
       // FIXME: This is incorrect, see PR54002. While we can assume that the
@@ -2976,12 +2972,12 @@ static Value *simplifyICmpWithZero(CmpInst::Predicate Pred, Value *LHS,
     return getTrue(ITy);
   case ICmpInst::ICMP_EQ:
   case ICmpInst::ICMP_ULE:
-    if (isKnownNonZero(LHS, /*Depth=*/0, Q))
+    if (isKnownNonZero(LHS, Q))
       return getFalse(ITy);
     break;
   case ICmpInst::ICMP_NE:
   case ICmpInst::ICMP_UGT:
-    if (isKnownNonZero(LHS, /*Depth=*/0, Q))
+    if (isKnownNonZero(LHS, Q))
       return getTrue(ITy);
     break;
   case ICmpInst::ICMP_SLT: {
@@ -2996,7 +2992,7 @@ static Value *simplifyICmpWithZero(CmpInst::Predicate Pred, Value *LHS,
     KnownBits LHSKnown = computeKnownBits(LHS, /* Depth */ 0, Q);
     if (LHSKnown.isNegative())
       return getTrue(ITy);
-    if (LHSKnown.isNonNegative() && isKnownNonZero(LHS, /*Depth=*/0, Q))
+    if (LHSKnown.isNonNegative() && isKnownNonZero(LHS, Q))
       return getFalse(ITy);
     break;
   }
@@ -3012,7 +3008,7 @@ static Value *simplifyICmpWithZero(CmpInst::Predicate Pred, Value *LHS,
     KnownBits LHSKnown = computeKnownBits(LHS, /* Depth */ 0, Q);
     if (LHSKnown.isNegative())
       return getFalse(ITy);
-    if (LHSKnown.isNonNegative() && isKnownNonZero(LHS, /*Depth=*/0, Q))
+    if (LHSKnown.isNonNegative() && isKnownNonZero(LHS, Q))
       return getTrue(ITy);
     break;
   }
@@ -3027,7 +3023,7 @@ static Value *simplifyICmpWithConstant(CmpInst::Predicate Pred, Value *LHS,
 
   Value *X;
   const APInt *C;
-  if (!match(RHS, m_APIntAllowUndef(C)))
+  if (!match(RHS, m_APIntAllowPoison(C)))
     return nullptr;
 
   // Sign-bit checks can be optimized to true/false after unsigned
@@ -3060,9 +3056,9 @@ static Value *simplifyICmpWithConstant(CmpInst::Predicate Pred, Value *LHS,
   // (mul nuw/nsw X, MulC) == C --> false (if C is not a multiple of MulC)
   const APInt *MulC;
   if (IIQ.UseInstrInfo && ICmpInst::isEquality(Pred) &&
-      ((match(LHS, m_NUWMul(m_Value(), m_APIntAllowUndef(MulC))) &&
+      ((match(LHS, m_NUWMul(m_Value(), m_APIntAllowPoison(MulC))) &&
         *MulC != 0 && C->urem(*MulC) != 0) ||
-       (match(LHS, m_NSWMul(m_Value(), m_APIntAllowUndef(MulC))) &&
+       (match(LHS, m_NSWMul(m_Value(), m_APIntAllowPoison(MulC))) &&
         *MulC != 0 && C->srem(*MulC) != 0)))
     return ConstantInt::get(ITy, Pred == ICmpInst::ICMP_NE);
 
@@ -3165,7 +3161,7 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
   const APInt *C;
   if ((match(LBO, m_LShr(m_Specific(RHS), m_APInt(C))) && *C != 0) ||
       (match(LBO, m_UDiv(m_Specific(RHS), m_APInt(C))) && *C != 1)) {
-    if (isKnownNonZero(RHS, /*Depth=*/0, Q)) {
+    if (isKnownNonZero(RHS, Q)) {
       switch (Pred) {
       default:
         break;
@@ -3207,7 +3203,7 @@ static Value *simplifyICmpWithBinOpOnLHS(CmpInst::Predicate Pred,
 
   // (sub C, X) == X, C is odd  --> false
   // (sub C, X) != X, C is odd  --> true
-  if (match(LBO, m_Sub(m_APIntAllowUndef(C), m_Specific(RHS))) &&
+  if (match(LBO, m_Sub(m_APIntAllowPoison(C), m_Specific(RHS))) &&
       (*C & 1) == 1 && ICmpInst::isEquality(Pred))
     return (Pred == ICmpInst::ICMP_EQ) ? getFalse(ITy) : getTrue(ITy);
 
@@ -3358,7 +3354,7 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
   //   (C2 << X) != C --> true
   const APInt *C;
   if (match(LHS, m_Shl(m_Power2(), m_Value())) &&
-      match(RHS, m_APIntAllowUndef(C)) && !C->isPowerOf2()) {
+      match(RHS, m_APIntAllowPoison(C)) && !C->isPowerOf2()) {
     // C2 << X can equal zero in some circumstances.
     // This simplification might be unsafe if C is zero.
     //
@@ -3398,7 +3394,7 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
       bool NUW = Q.IIQ.hasNoUnsignedWrap(LBO) && Q.IIQ.hasNoUnsignedWrap(RBO);
       bool NSW = Q.IIQ.hasNoSignedWrap(LBO) && Q.IIQ.hasNoSignedWrap(RBO);
       if (!NUW || (ICmpInst::isSigned(Pred) && !NSW) ||
-          !isKnownNonZero(LBO->getOperand(0), /*Depth=*/0, Q))
+          !isKnownNonZero(LBO->getOperand(0), Q))
         break;
       if (Value *V = simplifyICmpInst(Pred, LBO->getOperand(1),
                                       RBO->getOperand(1), Q, MaxRecurse - 1))
@@ -4109,7 +4105,7 @@ static Value *simplifyFCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
   }
 
   const APFloat *C = nullptr;
-  match(RHS, m_APFloatAllowUndef(C));
+  match(RHS, m_APFloatAllowPoison(C));
   std::optional<KnownFPClass> FullKnownClassLHS;
 
   // Lazily compute the possible classes for LHS. Avoid computing it twice if
@@ -4435,7 +4431,7 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
         return nullptr;
     }
     Constant *Res = ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI);
-    if (DropFlags && Res && I->hasPoisonGeneratingFlagsOrMetadata())
+    if (DropFlags && Res && I->hasPoisonGeneratingAnnotations())
       DropFlags->push_back(I);
     return Res;
   }
@@ -6463,7 +6459,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
           ReturnType, MinMaxIntrinsic::getSaturationPoint(IID, BitWidth));
 
     const APInt *C;
-    if (match(Op1, m_APIntAllowUndef(C))) {
+    if (match(Op1, m_APIntAllowPoison(C))) {
       // Clamp to limit value. For example:
       // umax(i8 %x, i8 255) --> 255
       if (*C == MinMaxIntrinsic::getSaturationPoint(IID, BitWidth))
@@ -7242,6 +7238,14 @@ const SimplifyQuery getBestSimplifyQuery(AnalysisManager<T, TArgs...> &AM,
 }
 template const SimplifyQuery getBestSimplifyQuery(AnalysisManager<Function> &,
                                                   Function &);
+
+bool SimplifyQuery::isUndefValue(Value *V) const {
+  if (!CanUseUndef)
+    return false;
+
+  return match(V, m_Undef());
+}
+
 } // namespace llvm
 
 void InstSimplifyFolder::anchor() {}

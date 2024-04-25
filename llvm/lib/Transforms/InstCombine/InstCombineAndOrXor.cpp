@@ -947,9 +947,9 @@ static Value *foldNegativePower2AndShiftedMask(
   // bits (0).
   auto isReducible = [](const Value *B, const Value *D, const Value *E) {
     const APInt *BCst, *DCst, *ECst;
-    return match(B, m_APIntAllowUndef(BCst)) && match(D, m_APInt(DCst)) &&
+    return match(B, m_APIntAllowPoison(BCst)) && match(D, m_APInt(DCst)) &&
            match(E, m_APInt(ECst)) && *DCst == *ECst &&
-           (isa<UndefValue>(B) ||
+           (isa<PoisonValue>(B) ||
             (BCst->countLeadingOnes() == DCst->countLeadingZeros()));
   };
 
@@ -1039,9 +1039,9 @@ static Value *foldUnsignedUnderflowCheck(ICmpInst *ZeroICmp,
       match(ZeroCmpOp, m_c_Add(m_Specific(A), m_Value(B))) &&
       (ZeroICmp->hasOneUse() || UnsignedICmp->hasOneUse())) {
     auto GetKnownNonZeroAndOther = [&](Value *&NonZero, Value *&Other) {
-      if (!isKnownNonZero(NonZero, /*Depth=*/0, Q))
+      if (!isKnownNonZero(NonZero, Q))
         std::swap(NonZero, Other);
-      return isKnownNonZero(NonZero, /*Depth=*/0, Q);
+      return isKnownNonZero(NonZero, Q);
     };
 
     // Given  ZeroCmpOp = (A + B)
@@ -1424,8 +1424,8 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
   const APFloat *LHSC, *RHSC;
   if (LHS0 == RHS0 && LHS->hasOneUse() && RHS->hasOneUse() &&
       FCmpInst::getSwappedPredicate(PredL) == PredR &&
-      match(LHS1, m_APFloatAllowUndef(LHSC)) &&
-      match(RHS1, m_APFloatAllowUndef(RHSC)) &&
+      match(LHS1, m_APFloatAllowPoison(LHSC)) &&
+      match(RHS1, m_APFloatAllowPoison(RHSC)) &&
       LHSC->bitwiseIsEqual(neg(*RHSC))) {
     auto IsLessThanOrLessEqual = [](FCmpInst::Predicate Pred) {
       switch (Pred) {
@@ -2538,6 +2538,8 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     }
   }
 
+  // and(shl(zext(X), Y), SignMask) -> and(sext(X), SignMask)
+  // where Y is a valid shift amount.
   if (match(&I, m_And(m_OneUse(m_Shl(m_ZExt(m_Value(X)), m_Value(Y))),
                       m_SignMask())) &&
       match(Y, m_SpecificInt_ICMP(
@@ -2546,15 +2548,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
                          Ty->getScalarSizeInBits() -
                              X->getType()->getScalarSizeInBits())))) {
     auto *SExt = Builder.CreateSExt(X, Ty, X->getName() + ".signext");
-    auto *SanitizedSignMask = cast<Constant>(Op1);
-    // We must be careful with the undef elements of the sign bit mask, however:
-    // the mask elt can be undef iff the shift amount for that lane was undef,
-    // otherwise we need to sanitize undef masks to zero.
-    SanitizedSignMask = Constant::replaceUndefsWith(
-        SanitizedSignMask, ConstantInt::getNullValue(Ty->getScalarType()));
-    SanitizedSignMask =
-        Constant::mergeUndefsWith(SanitizedSignMask, cast<Constant>(Y));
-    return BinaryOperator::CreateAnd(SExt, SanitizedSignMask);
+    return BinaryOperator::CreateAnd(SExt, Op1);
   }
 
   if (Instruction *Z = narrowMaskedBinOp(I))
@@ -2736,7 +2730,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
   // (iN X s>> (N-1)) & Y --> (X s< 0) ? Y : 0 -- with optional sext
   if (match(&I, m_c_And(m_OneUse(m_SExtOrSelf(
-                            m_AShr(m_Value(X), m_APIntAllowUndef(C)))),
+                            m_AShr(m_Value(X), m_APIntAllowPoison(C)))),
                         m_Value(Y))) &&
       *C == X->getType()->getScalarSizeInBits() - 1) {
     Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
@@ -2745,7 +2739,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   // If there's a 'not' of the shifted value, swap the select operands:
   // ~(iN X s>> (N-1)) & Y --> (X s< 0) ? 0 : Y -- with optional sext
   if (match(&I, m_c_And(m_OneUse(m_SExtOrSelf(
-                            m_Not(m_AShr(m_Value(X), m_APIntAllowUndef(C))))),
+                            m_Not(m_AShr(m_Value(X), m_APIntAllowPoison(C))))),
                         m_Value(Y))) &&
       *C == X->getType()->getScalarSizeInBits() - 1) {
     Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
@@ -2846,7 +2840,7 @@ InstCombinerImpl::convertOrOfShiftsToFunnelShift(Instruction &Or) {
     auto matchShiftAmount = [&](Value *L, Value *R, unsigned Width) -> Value * {
       // Check for constant shift amounts that sum to the bitwidth.
       const APInt *LI, *RI;
-      if (match(L, m_APIntAllowUndef(LI)) && match(R, m_APIntAllowUndef(RI)))
+      if (match(L, m_APIntAllowPoison(LI)) && match(R, m_APIntAllowPoison(RI)))
         if (LI->ult(Width) && RI->ult(Width) && (*LI + *RI) == Width)
           return ConstantInt::get(L->getType(), *LI);
 
@@ -2856,7 +2850,7 @@ InstCombinerImpl::convertOrOfShiftsToFunnelShift(Instruction &Or) {
                 m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, APInt(Width, Width))) &&
           match(R,
                 m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, APInt(Width, Width))) &&
-          match(ConstantExpr::getAdd(LC, RC), m_SpecificIntAllowUndef(Width)))
+          match(ConstantExpr::getAdd(LC, RC), m_SpecificIntAllowPoison(Width)))
         return ConstantExpr::mergeUndefsWith(LC, RC);
 
       // (shl ShVal, X) | (lshr ShVal, (Width - x)) iff X < Width.
@@ -3201,14 +3195,14 @@ static Value *foldAndOrOfICmpEqConstantAndICmp(ICmpInst *LHS, ICmpInst *RHS,
 
   const APInt *CInt;
   if (LPred != ICmpInst::ICMP_EQ ||
-      !match(LHS->getOperand(1), m_APIntAllowUndef(CInt)) ||
+      !match(LHS->getOperand(1), m_APIntAllowPoison(CInt)) ||
       !LHS0->getType()->isIntOrIntVectorTy() ||
       !(LHS->hasOneUse() || RHS->hasOneUse()))
     return nullptr;
 
   auto MatchRHSOp = [LHS0, CInt](const Value *RHSOp) {
     return match(RHSOp,
-                 m_Add(m_Specific(LHS0), m_SpecificIntAllowUndef(-*CInt))) ||
+                 m_Add(m_Specific(LHS0), m_SpecificIntAllowPoison(-*CInt))) ||
            (CInt->isZero() && RHSOp == LHS0);
   };
 
@@ -3964,6 +3958,10 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                       /*SimplifyOnly*/ false, *this))
     return BinaryOperator::CreateOr(Op0, V);
 
+  if (cast<PossiblyDisjointInst>(I).isDisjoint())
+    if (Value *V = SimplifyAddWithRemainder(I))
+      return replaceInstUsesWith(I, V);
+
   return nullptr;
 }
 
@@ -4439,23 +4437,13 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
     // ~(C >>s Y) --> ~C >>u Y (when inverting the replicated sign bits)
     Constant *C;
     if (match(NotVal, m_AShr(m_Constant(C), m_Value(Y))) &&
-        match(C, m_Negative())) {
-      // We matched a negative constant, so propagating undef is unsafe.
-      // Clamp undef elements to -1.
-      Type *EltTy = Ty->getScalarType();
-      C = Constant::replaceUndefsWith(C, ConstantInt::getAllOnesValue(EltTy));
+        match(C, m_Negative()))
       return BinaryOperator::CreateLShr(ConstantExpr::getNot(C), Y);
-    }
 
     // ~(C >>u Y) --> ~C >>s Y (when inverting the replicated sign bits)
     if (match(NotVal, m_LShr(m_Constant(C), m_Value(Y))) &&
-        match(C, m_NonNegative())) {
-      // We matched a non-negative constant, so propagating undef is unsafe.
-      // Clamp undef elements to 0.
-      Type *EltTy = Ty->getScalarType();
-      C = Constant::replaceUndefsWith(C, ConstantInt::getNullValue(EltTy));
+        match(C, m_NonNegative()))
       return BinaryOperator::CreateAShr(ConstantExpr::getNot(C), Y);
-    }
 
     // ~(X + C) --> ~C - X
     if (match(NotVal, m_Add(m_Value(X), m_ImmConstant(C))))
@@ -4641,7 +4629,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     // constant depending on whether this input is less than 0.
     const APInt *CA;
     if (match(Op0, m_OneUse(m_TruncOrSelf(
-                       m_AShr(m_Value(X), m_APIntAllowUndef(CA))))) &&
+                       m_AShr(m_Value(X), m_APIntAllowPoison(CA))))) &&
         *CA == X->getType()->getScalarSizeInBits() - 1 &&
         !match(C1, m_AllOnes())) {
       assert(!C1->isZeroValue() && "Unexpected xor with 0");

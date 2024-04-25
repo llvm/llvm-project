@@ -1670,7 +1670,9 @@ void RewriteInstance::disassemblePLT() {
       return disassemblePLTSectionAArch64(Section);
     if (BC->isRISCV())
       return disassemblePLTSectionRISCV(Section);
-    return disassemblePLTSectionX86(Section, EntrySize);
+    if (BC->isX86())
+      return disassemblePLTSectionX86(Section, EntrySize);
+    llvm_unreachable("Unmplemented PLT");
   };
 
   for (BinarySection &Section : BC->allocatableSections()) {
@@ -2605,7 +2607,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   const bool IsToCode = ReferencedSection && ReferencedSection->isText();
 
   // Special handling of PC-relative relocations.
-  if (!IsAArch64 && !BC->isRISCV() && Relocation::isPCRelative(RType)) {
+  if (BC->isX86() && Relocation::isPCRelative(RType)) {
     if (!IsFromCode && IsToCode) {
       // PC-relative relocations from data to code are tricky since the
       // original information is typically lost after linking, even with
@@ -2859,15 +2861,14 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
       BC->isRISCV())
     ForceRelocation = true;
 
-  if (IsFromCode) {
+  if (IsFromCode)
     ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol, RType,
                                 Addend, ExtractedValue);
-  } else if (IsToCode || ForceRelocation) {
+  else if (IsToCode || ForceRelocation)
     BC->addRelocation(Rel.getOffset(), ReferencedSymbol, RType, Addend,
                       ExtractedValue);
-  } else {
+  else
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: ignoring relocation from data to data\n");
-  }
 }
 
 void RewriteInstance::selectFunctionsToProcess() {
@@ -4492,6 +4493,8 @@ void RewriteInstance::updateELFSymbolTable(
   // Symbols for the new symbol table.
   std::vector<ELFSymTy> Symbols;
 
+  bool EmittedColdFileSymbol = false;
+
   auto getNewSectionIndex = [&](uint32_t OldIndex) {
     // For dynamic symbol table, the section index could be wrong on the input,
     // and its value is ignored by the runtime if it's different from
@@ -4550,6 +4553,20 @@ void RewriteInstance::updateELFSymbolTable(
       Symbols.emplace_back(ICFSymbol);
     }
     if (Function.isSplit()) {
+      // Prepend synthetic FILE symbol to prevent local cold fragments from
+      // colliding with existing symbols with the same name.
+      if (!EmittedColdFileSymbol &&
+          FunctionSymbol.getBinding() == ELF::STB_GLOBAL) {
+        ELFSymTy FileSymbol;
+        FileSymbol.st_shndx = ELF::SHN_ABS;
+        FileSymbol.st_name = AddToStrTab(getBOLTFileSymbolName());
+        FileSymbol.st_value = 0;
+        FileSymbol.st_size = 0;
+        FileSymbol.st_other = 0;
+        FileSymbol.setBindingAndType(ELF::STB_LOCAL, ELF::STT_FILE);
+        Symbols.emplace_back(FileSymbol);
+        EmittedColdFileSymbol = true;
+      }
       for (const FunctionFragment &FF :
            Function.getLayout().getSplitFragments()) {
         if (FF.getAddress()) {
@@ -5431,6 +5448,17 @@ uint64_t RewriteInstance::getNewFunctionOrDataAddress(uint64_t OldAddress) {
   if (BD && BD->isMoved())
     return BD->getOutputAddress();
 
+  if (const BinaryFunction *BF =
+          BC->getBinaryFunctionContainingAddress(OldAddress)) {
+    if (BF->isEmitted()) {
+      BC->errs() << "BOLT-ERROR: unable to get new address corresponding to "
+                    "input address 0x"
+                 << Twine::utohexstr(OldAddress) << " in function " << *BF
+                 << ". Consider adding this function to --skip-funcs=...\n";
+      exit(1);
+    }
+  }
+
   return 0;
 }
 
@@ -5762,13 +5790,6 @@ bool RewriteInstance::isDebugSection(StringRef SectionName) {
   if (SectionName.starts_with(".debug_") ||
       SectionName.starts_with(".zdebug_") || SectionName == ".gdb_index" ||
       SectionName == ".stab" || SectionName == ".stabstr")
-    return true;
-
-  return false;
-}
-
-bool RewriteInstance::isKSymtabSection(StringRef SectionName) {
-  if (SectionName.starts_with("__ksymtab"))
     return true;
 
   return false;

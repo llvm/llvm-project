@@ -213,6 +213,79 @@ exit:
   ret void
 }
 
+define void @multiple_pointer_ivs_with_scalar_uses_only(ptr %A, ptr %B) #0 {
+entry:
+  br label %loop
+
+loop:
+  %iv.1 = phi i32 [ 100, %entry ], [ %dec, %loop ]
+  %iv.2 = phi i32 [ 2048, %entry ], [ %add38, %loop ]
+  %ptr.iv.1 = phi ptr [ %A, %entry ], [ %outptr.0, %loop ]
+  %ptr.iv.2 = phi ptr [ %B, %entry ], [ %incdec.ptr36, %loop ]
+  %ptr.iv.3 = phi ptr [ %B, %entry ], [ %incdec.ptr33, %loop ]
+  %incdec.ptr33 = getelementptr i8, ptr %ptr.iv.3, i64 1
+  %0 = load i8, ptr %ptr.iv.3, align 1
+  %conv34 = zext i8 %0 to i32
+  %incdec.ptr36 = getelementptr i8, ptr %ptr.iv.2, i64 1
+  %1 = load i8, ptr %ptr.iv.2, align 1
+  %conv37 = zext i8 %1 to i32
+  %add38 = add i32 %conv34, %conv37
+  %shr42 = lshr i32 %iv.2, 1
+  %conv43 = trunc i32 %shr42 to i8
+  store i8 %conv43, ptr %ptr.iv.1, align 1
+  %dec = add i32 %iv.1, 1
+  %outptr.0 = getelementptr i8, ptr %ptr.iv.1, i64 2
+  %cmp30.not = icmp eq i32 %dec, 0
+  br i1 %cmp30.not, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define i16 @iv_and_step_trunc() {
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rec = phi i16 [ 0, %entry ], [ %rec.next, %loop ]
+  %iv.next = add i64 %iv, 1
+  %0 = trunc i64 %iv to i16
+  %1 = trunc i64 %iv.next to i16
+  %rec.next = mul i16 %0, %1
+  %ec = icmp eq i64 %iv, 1
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i16 %rec
+}
+
+define i32 @test_scalar_predicated_cost(i64 %x, i64 %y, ptr %A) #0 {
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %cmp9.not = icmp ule i64 %iv, %y
+  br i1 %cmp9.not, label %loop.latch, label %if.then
+
+if.then:
+  %or = or i64 %x, %iv
+  %gep = getelementptr i32, ptr %A, i64 %iv
+  %t = trunc i64 %or to i32
+  store i32 %t, ptr %gep, align 4
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 100
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret i32 0
+}
+
+
 attributes #0 = { "min-legal-vector-width"="0" "target-cpu"="skylake-avx512" }
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}

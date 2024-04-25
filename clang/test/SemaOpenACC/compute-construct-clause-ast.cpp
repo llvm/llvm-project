@@ -110,6 +110,50 @@ void TemplFunc() {
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt
 
+#pragma acc serial self
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
+  // CHECK-NEXT: self clause
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+#pragma acc kernels self(T::SomeFloat)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}kernels
+  // CHECK-NEXT: self clause
+  // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+#pragma acc parallel self(T::SomeFloat) if (T::SomeFloat)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: self clause
+  // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
+  // CHECK-NEXT: if clause
+  // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+#pragma acc serial if(T::SomeFloat) self(T::SomeFloat)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
+  // CHECK-NEXT: if clause
+  // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
+  // CHECK-NEXT: self clause
+  // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}} '<dependent type>' lvalue
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'T'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
   // Match the instantiation:
   // CHECK: FunctionDecl{{.*}}TemplFunc{{.*}}implicit_instantiation
   // CHECK-NEXT: TemplateArgument type 'InstTy'
@@ -171,6 +215,53 @@ void TemplFunc() {
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
+  // CHECK-NEXT: self clause
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}kernels
+  // CHECK-NEXT: self clause
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'bool' <FloatingToBoolean>
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'float' <LValueToRValue>
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'const float' lvalue Var{{.*}} 'SomeFloat' 'const float'
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'InstTy'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}parallel
+  // CHECK-NEXT: self clause
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'bool' <FloatingToBoolean>
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'float' <LValueToRValue>
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'const float' lvalue Var{{.*}} 'SomeFloat' 'const float'
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'InstTy'
+  // CHECK-NEXT: if clause
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'bool' <FloatingToBoolean>
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'float' <LValueToRValue>
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'const float' lvalue Var{{.*}} 'SomeFloat' 'const float'
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'InstTy'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}}serial
+  // CHECK-NEXT: if clause
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'bool' <FloatingToBoolean>
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'float' <LValueToRValue>
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'const float' lvalue Var{{.*}} 'SomeFloat' 'const float'
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'InstTy'
+  // CHECK-NEXT: self clause
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'bool' <FloatingToBoolean>
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'float' <LValueToRValue>
+  // CHECK-NEXT: DeclRefExpr{{.*}} 'const float' lvalue Var{{.*}} 'SomeFloat' 'const float'
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'InstTy'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
 }
 
 struct BoolConversion{ operator bool() const;};

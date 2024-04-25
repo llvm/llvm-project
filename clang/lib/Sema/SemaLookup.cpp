@@ -4449,7 +4449,8 @@ LabelDecl *Sema::LookupOrCreateLabel(IdentifierInfo *II, SourceLocation Loc,
   }
 
   // Not a GNU local label.
-  Res = LookupSingleName(CurScope, II, Loc, LookupLabel, NotForRedeclaration);
+  Res = LookupSingleName(CurScope, II, Loc, LookupLabel,
+                         RedeclarationKind::NotForRedeclaration);
   // If we found a label, check to see if it is in the same context as us.
   // When in a Block, we don't want to reuse a label in an enclosing function.
   if (Res && Res->getDeclContext() != CurContext)
@@ -5889,7 +5890,8 @@ void Sema::clearDelayedTypo(TypoExpr *TE) {
 
 void Sema::ActOnPragmaDump(Scope *S, SourceLocation IILoc, IdentifierInfo *II) {
   DeclarationNameInfo Name(II, IILoc);
-  LookupResult R(*this, Name, LookupAnyName, Sema::NotForRedeclaration);
+  LookupResult R(*this, Name, LookupAnyName,
+                 RedeclarationKind::NotForRedeclaration);
   R.suppressDiagnostics();
   R.setHideTags(false);
   LookupName(R, S);
@@ -5898,4 +5900,14 @@ void Sema::ActOnPragmaDump(Scope *S, SourceLocation IILoc, IdentifierInfo *II) {
 
 void Sema::ActOnPragmaDump(Expr *E) {
   E->dump();
+}
+
+RedeclarationKind Sema::forRedeclarationInCurContext() const {
+  // A declaration with an owning module for linkage can never link against
+  // anything that is not visible. We don't need to check linkage here; if
+  // the context has internal linkage, redeclaration lookup won't find things
+  // from other TUs, and we can't safely compute linkage yet in general.
+  if (cast<Decl>(CurContext)->getOwningModuleForLinkage(/*IgnoreLinkage*/ true))
+    return RedeclarationKind::ForVisibleRedeclaration;
+  return RedeclarationKind::ForExternalRedeclaration;
 }

@@ -49,9 +49,8 @@ class ClauseProcessor {
 public:
   ClauseProcessor(Fortran::lower::AbstractConverter &converter,
                   Fortran::semantics::SemanticsContext &semaCtx,
-                  const Fortran::parser::OmpClauseList &clauses)
-      : converter(converter), semaCtx(semaCtx),
-        clauses(makeClauses(clauses, semaCtx)) {}
+                  const List<Clause> &clauses)
+      : converter(converter), semaCtx(semaCtx), clauses(clauses) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
   bool processCollapse(
@@ -114,8 +113,7 @@ public:
   // They may be used later on to create the block_arguments for some of the
   // target directives that require it.
   bool processMap(
-      mlir::Location currentLocation, const llvm::omp::Directive &directive,
-      Fortran::lower::StatementContext &stmtCtx,
+      mlir::Location currentLocation, Fortran::lower::StatementContext &stmtCtx,
       mlir::omp::MapClauseOps &result,
       llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSyms =
           nullptr,

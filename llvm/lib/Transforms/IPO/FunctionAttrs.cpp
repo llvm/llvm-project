@@ -1175,7 +1175,7 @@ static bool isReturnNonNull(Function *F, const SCCNodeSet &SCCNodes,
     Value *RetVal = FlowsToReturn[i];
 
     // If this value is locally known to be non-null, we're good
-    if (isKnownNonZero(RetVal, /*Depth=*/0, DL))
+    if (isKnownNonZero(RetVal, DL))
       continue;
 
     // Otherwise, we need to look upwards since we can't make any local
@@ -1287,7 +1287,8 @@ static void addNoUndefAttrs(const SCCNodeSet &SCCNodes,
   // values.
   for (Function *F : SCCNodes) {
     // Already noundef.
-    if (F->getAttributes().hasRetAttr(Attribute::NoUndef))
+    AttributeList Attrs = F->getAttributes();
+    if (Attrs.hasRetAttr(Attribute::NoUndef))
       continue;
 
     // We can infer and propagate function attributes only when we know that the
@@ -1305,10 +1306,30 @@ static void addNoUndefAttrs(const SCCNodeSet &SCCNodes,
     if (F->getReturnType()->isVoidTy())
       continue;
 
-    if (all_of(*F, [](BasicBlock &BB) {
+    const DataLayout &DL = F->getParent()->getDataLayout();
+    if (all_of(*F, [&](BasicBlock &BB) {
           if (auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator())) {
             // TODO: perform context-sensitive analysis?
-            return isGuaranteedNotToBeUndefOrPoison(Ret->getReturnValue());
+            Value *RetVal = Ret->getReturnValue();
+            if (!isGuaranteedNotToBeUndefOrPoison(RetVal))
+              return false;
+
+            // We know the original return value is not poison now, but it
+            // could still be converted to poison by another return attribute.
+            // Try to explicitly re-prove the relevant attributes.
+            if (Attrs.hasRetAttr(Attribute::NonNull) &&
+                !isKnownNonZero(RetVal, DL))
+              return false;
+
+            if (MaybeAlign Align = Attrs.getRetAlignment())
+              if (RetVal->getPointerAlignment(DL) < *Align)
+                return false;
+
+            Attribute Attr = Attrs.getRetAttr(Attribute::Range);
+            if (Attr.isValid() &&
+                !Attr.getRange().contains(
+                    computeConstantRange(RetVal, /*ForSigned=*/false)))
+              return false;
           }
           return true;
         })) {

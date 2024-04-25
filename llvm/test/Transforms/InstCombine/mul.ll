@@ -1496,7 +1496,7 @@ define <2 x i8> @negate_if_false_commute(<2 x i8> %px, <2 x i1> %cond) {
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %x = sdiv <2 x i8> <i8 42, i8 5>, %px  ; thwart complexity-based canonicalization
-  %sel = select <2 x i1> %cond, <2 x i8> <i8 1, i8 undef>, <2 x i8> <i8 -1, i8 -1>
+  %sel = select <2 x i1> %cond, <2 x i8> <i8 1, i8 poison>, <2 x i8> <i8 -1, i8 -1>
   %r = mul <2 x i8> %x, %sel
   ret <2 x i8> %r
 }
@@ -1643,7 +1643,7 @@ define <vscale x 2 x i64> @mul_scalable_splat_zero(<vscale x 2 x i64> %z) {
 ; CHECK-LABEL: @mul_scalable_splat_zero(
 ; CHECK-NEXT:    ret <vscale x 2 x i64> zeroinitializer
 ;
-  %shuf = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 0, i32 0), <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %shuf = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> poison, i64 0, i32 0), <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   %t3 = mul <vscale x 2 x i64> %shuf, %z
   ret <vscale x 2 x i64> %t3
 }
@@ -1752,14 +1752,14 @@ define <2 x i32> @mulsub1_vec_nonuniform(<2 x i32> %a0, <2 x i32> %a1) {
   ret <2 x i32> %mul
 }
 
-define <2 x i32> @mulsub1_vec_nonuniform_undef(<2 x i32> %a0, <2 x i32> %a1) {
-; CHECK-LABEL: @mulsub1_vec_nonuniform_undef(
+define <2 x i32> @mulsub1_vec_nonuniform_poison(<2 x i32> %a0, <2 x i32> %a1) {
+; CHECK-LABEL: @mulsub1_vec_nonuniform_poison(
 ; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub <2 x i32> [[A0:%.*]], [[A1:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[SUB_NEG]], <i32 2, i32 0>
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %sub = sub <2 x i32> %a1, %a0
-  %mul = mul <2 x i32> %sub, <i32 -4, i32 undef>
+  %mul = mul <2 x i32> %sub, <i32 -4, i32 poison>
   ret <2 x i32> %mul
 }
 
@@ -1796,14 +1796,14 @@ define <2 x i32> @mulsub2_vec_nonuniform(<2 x i32> %a0) {
   ret <2 x i32> %mul
 }
 
-define <2 x i32> @mulsub2_vec_nonuniform_undef(<2 x i32> %a0) {
-; CHECK-LABEL: @mulsub2_vec_nonuniform_undef(
+define <2 x i32> @mulsub2_vec_nonuniform_poison(<2 x i32> %a0) {
+; CHECK-LABEL: @mulsub2_vec_nonuniform_poison(
 ; CHECK-NEXT:    [[SUB_NEG:%.*]] = add <2 x i32> [[A0:%.*]], <i32 -16, i32 -32>
 ; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[SUB_NEG]], <i32 2, i32 0>
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %sub = sub <2 x i32> <i32 16, i32 32>, %a0
-  %mul = mul <2 x i32> %sub, <i32 -4, i32 undef>
+  %mul = mul <2 x i32> %sub, <i32 -4, i32 poison>
   ret <2 x i32> %mul
 }
 
@@ -1819,15 +1819,15 @@ define i8 @mulsub_nsw(i8 %a1, i8 %a2) {
 }
 
 ; It would be safe to keep the nsw on the shl here, but only because the mul
-; to shl transform happens to replace undef with 0.
-define <2 x i8> @mulsub_nsw_undef(<2 x i8> %a1, <2 x i8> %a2) {
-; CHECK-LABEL: @mulsub_nsw_undef(
+; to shl transform happens to replace poison with 0.
+define <2 x i8> @mulsub_nsw_poison(<2 x i8> %a1, <2 x i8> %a2) {
+; CHECK-LABEL: @mulsub_nsw_poison(
 ; CHECK-NEXT:    [[A_NEG:%.*]] = sub nsw <2 x i8> [[A2:%.*]], [[A1:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i8> [[A_NEG]], <i8 1, i8 0>
 ; CHECK-NEXT:    ret <2 x i8> [[MUL]]
 ;
   %a = sub nsw <2 x i8> %a1, %a2
-  %mul = mul nsw <2 x i8> %a, <i8 -2, i8 undef>
+  %mul = mul nsw <2 x i8> %a, <i8 -2, i8 poison>
   ret <2 x i8> %mul
 }
 
@@ -1864,14 +1864,14 @@ define <2 x i32> @muladd2_vec_nonuniform(<2 x i32> %a0) {
   ret <2 x i32> %mul
 }
 
-define <2 x i32> @muladd2_vec_nonuniform_undef(<2 x i32> %a0) {
-; CHECK-LABEL: @muladd2_vec_nonuniform_undef(
+define <2 x i32> @muladd2_vec_nonuniform_poison(<2 x i32> %a0) {
+; CHECK-LABEL: @muladd2_vec_nonuniform_poison(
 ; CHECK-NEXT:    [[ADD_NEG:%.*]] = sub <2 x i32> <i32 -16, i32 -32>, [[A0:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[ADD_NEG]], <i32 2, i32 0>
 ; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %add = add <2 x i32> %a0, <i32 16, i32 32>
-  %mul = mul <2 x i32> %add, <i32 -4, i32 undef>
+  %mul = mul <2 x i32> %add, <i32 -4, i32 poison>
   ret <2 x i32> %mul
 }
 
