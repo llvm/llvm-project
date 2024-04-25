@@ -2784,28 +2784,6 @@ struct RegPairInfo {
 
 } // end anonymous namespace
 
-static unsigned getPredicateAsCounterReg(unsigned Reg) {
-  switch (Reg) {
-  case AArch64::P8:
-    return AArch64::PN8;
-  case AArch64::P9:
-    return AArch64::PN9;
-  case AArch64::P10:
-    return AArch64::PN10;
-  case AArch64::P11:
-    return AArch64::PN11;
-  case AArch64::P12:
-    return AArch64::PN12;
-  case AArch64::P13:
-    return AArch64::PN13;
-  case AArch64::P14:
-    return AArch64::PN14;
-  case AArch64::P15:
-    return AArch64::PN15;
-  }
-  return 0;
-}
-
 static void computeCalleeSaveRegisterPairs(
     MachineFunction &MF, ArrayRef<CalleeSavedInfo> CSI,
     const TargetRegisterInfo *TRI, SmallVectorImpl<RegPairInfo> &RegPairs,
@@ -2816,7 +2794,6 @@ static void computeCalleeSaveRegisterPairs(
 
   bool IsWindows = isTargetWindows(MF);
   bool NeedsWinCFI = needsWinCFI(MF);
-  const auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   CallingConv::ID CC = MF.getFunction().getCallingConv();
@@ -2887,7 +2864,7 @@ static void computeCalleeSaveRegisterPairs(
       case RegPairInfo::PPR:
         break;
       case RegPairInfo::ZPR:
-        if (Subtarget.hasSVE2p1() || Subtarget.hasSME2())
+        if (AFI->getPredicateRegForFillSpill() != 0)
           if (((RPI.Reg1 - AArch64::Z0) & 1) == 0 && (NextReg == RPI.Reg1 + 1))
             RPI.Reg2 = NextReg;
         break;
@@ -3107,8 +3084,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
         MBB.addLiveIn(Reg1);
       if (!MRI.isReserved(Reg2))
         MBB.addLiveIn(Reg2);
-      unsigned PairRegs = AArch64::Z0_Z1 + (RPI.Reg1 - AArch64::Z0);
-      MIB.addReg(PairRegs);
+      MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RPI.Reg1 - AArch64::Z0));
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg2),
           MachineMemOperand::MOStore, Size, Alignment));
@@ -3258,8 +3234,8 @@ bool AArch64FrameLowering::restoreCalleeSavedRegisters(
             .setMIFlags(MachineInstr::FrameDestroy);
       }
       MachineInstrBuilder MIB = BuildMI(MBB, MBBI, DL, TII.get(LdrOpc));
-      unsigned PairRegs = AArch64::Z0_Z1 + (RPI.Reg1 - AArch64::Z0);
-      MIB.addReg(PairRegs, getDefRegState(true));
+      MIB.addReg(/*PairRegs*/ AArch64::Z0_Z1 + (RPI.Reg1 - AArch64::Z0),
+                 getDefRegState(true));
       MIB.addMemOperand(MF.getMachineMemOperand(
           MachinePointerInfo::getFixedStack(MF, FrameIdxReg2),
           MachineMemOperand::MOLoad, Size, Alignment));
@@ -3381,9 +3357,9 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
     AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
     if (Subtarget.hasSVE2p1() || Subtarget.hasSME2()) {
       if (AArch64::PPRRegClass.contains(Reg) &&
-          (Reg > AArch64::P8 || Reg < AArch64::P15) && SavedRegs.test(Reg) &&
+          (Reg >= AArch64::P8 && Reg <= AArch64::P15) && SavedRegs.test(Reg) &&
           AFI->getPredicateRegForFillSpill() == 0)
-        AFI->setPredicateRegForFillSpill(getPredicateAsCounterReg(Reg));
+        AFI->setPredicateRegForFillSpill((Reg - AArch64::P0) + AArch64::PN0);
 
       // Check if there is a pair of ZRegs, so it can select P8 to create PTRUE,
       // in case there is no PRege being saved(above)
@@ -3395,10 +3371,18 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   // Make sure there is a PReg saved to be used in save and restore when there
   // is ZReg pair.
-  if (AFI->getPredicateRegForFillSpill() == 0 && HasPairZReg) {
-    SavedRegs.set(AArch64::P8);
-    AFI->setPredicateRegForFillSpill(AArch64::PN8);
-  }
+  if ((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
+      (MF.getFunction().getCallingConv() ==
+           CallingConv::AArch64_SVE_VectorCall ||
+       MF.getFunction().getCallingConv() ==
+           CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0 ||
+       MF.getFunction().getCallingConv() ==
+           CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2))
+    if (AFI->getPredicateRegForFillSpill() == 0 && HasPairZReg) {
+      assert(!RegInfo->isReservedReg(MF, AArch64::P8) && "P8 is reserved");
+      SavedRegs.set(AArch64::P8);
+      AFI->setPredicateRegForFillSpill(AArch64::PN8);
+    }
 
   if (MF.getFunction().getCallingConv() == CallingConv::Win64 &&
       !Subtarget.isTargetWindows()) {

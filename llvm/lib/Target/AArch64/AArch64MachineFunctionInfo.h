@@ -227,7 +227,9 @@ public:
   void setPredicateRegForFillSpill(unsigned Reg) {
     PredicateRegForFillSpill = Reg;
   }
-  unsigned getPredicateRegForFillSpill() { return PredicateRegForFillSpill; }
+  unsigned getPredicateRegForFillSpill() const {
+    return PredicateRegForFillSpill;
+  }
 
   Register getPStateSMReg() const { return PStateSMReg; };
   void setPStateSMReg(Register Reg) { PStateSMReg = Reg; };
