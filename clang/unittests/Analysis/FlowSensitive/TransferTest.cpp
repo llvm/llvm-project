@@ -3309,6 +3309,28 @@ TEST(TransferTest, ResultObjectLocationPropagatesThroughConditionalOperator) {
       });
 }
 
+TEST(TransferTest, ResultObjectLocationDontVisitNestedRecordDecl) {
+  // This is a crash repro.
+  // We used to crash because when propagating result objects, we would visit
+  // nested record and function declarations, but we don't model fields used
+  // only in these.
+  std::string Code = R"(
+    struct S1 {};
+    struct S2 { S1 s1; };
+    void target() {
+      struct Nested {
+        void f() {
+          S2 s2 = { S1() };
+        }
+      };
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {});
+}
+
 TEST(TransferTest, StaticCast) {
   std::string Code = R"(
     void target(int Foo) {
