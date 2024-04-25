@@ -4861,7 +4861,6 @@ public:
     return NumOfElements;
   }
 
-  // TODO simplify
   template <bool Const>
   class ChildElementIter
       : public llvm::iterator_facade_base<

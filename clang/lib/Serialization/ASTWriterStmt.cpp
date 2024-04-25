@@ -1259,11 +1259,13 @@ void ASTStmtWriter::VisitSourceLocExpr(SourceLocExpr *E) {
 
 void ASTStmtWriter::VisitEmbedExpr(EmbedExpr *E) {
   VisitExpr(E);
-  // Record.AddDeclRef(cast_or_null<Decl>(E->getParentContext()));
-  // Record.AddSourceLocation(E->getBeginLoc());
-  // Record.AddSourceLocation(E->getEndLoc());
-  // Record.AddStmt(E->getFilenameStringLiteral());
-  // Record.AddStmt(E->getDataStringLiteral());
+  Record.AddDeclRef(cast_or_null<Decl>(E->getParentContext()));
+  Record.AddSourceLocation(E->getBeginLoc());
+  Record.AddSourceLocation(E->getEndLoc());
+  Record.AddStmt(E->getFilenameStringLiteral());
+  Record.AddStmt(E->getDataStringLiteral());
+  Record.writeUInt32(E->getStartingElementPos());
+  Record.writeUInt32(E->getDataElementCount());
   Code = serialization::EXPR_BUILTIN_PP_EMBED;
 }
 

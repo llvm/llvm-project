@@ -940,9 +940,6 @@ class CastExpressionIdValidator final : public CorrectionCandidateCallback {
 ///                   '__is_rvalue_expr'
 /// \endverbatim
 ///
-
-// clang-format on
-
 ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
                                        bool isAddressOfOperand,
                                        bool &NotCastExpr,
@@ -2643,8 +2640,6 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
   return Operand;
 }
 
-// clang-format off
-
 /// ParseBuiltinPrimaryExpression
 ///
 /// \verbatim
@@ -2668,8 +2663,6 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
 /// [GNU]   offsetof-member-designator '.' identifier
 /// [GNU]   offsetof-member-designator '[' expression ']'
 /// \endverbatim
-
-// clang-format on
 ExprResult Parser::ParseBuiltinPrimaryExpression() {
   ExprResult Res;
   const IdentifierInfo *BuiltinII = Tok.getIdentifierInfo();
