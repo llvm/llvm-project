@@ -1995,6 +1995,16 @@ createCallLLVMIntrinsicOp(mlir::ConversionPatternRewriter &rewriter,
       loc, resultTy, intrinsicNameAttr, operands);
 }
 
+static mlir::LLVM::CallIntrinsicOp replaceOpWithCallLLVMIntrinsicOp(
+    mlir::ConversionPatternRewriter &rewriter, mlir::Operation *op,
+    const llvm::Twine &intrinsicName, mlir::Type resultTy,
+    mlir::ValueRange operands) {
+  auto callIntrinOp = createCallLLVMIntrinsicOp(
+      rewriter, op->getLoc(), intrinsicName, resultTy, operands);
+  rewriter.replaceOp(op, callIntrinOp.getOperation());
+  return callIntrinOp;
+}
+
 static mlir::Value createLLVMBitOp(mlir::Location loc,
                                    const llvm::Twine &llvmIntrinBaseName,
                                    mlir::Type resultTy, mlir::Value operand,
@@ -2079,16 +2089,14 @@ public:
     auto llvmResTy = getTypeConverter()->convertType(op.getType());
     auto loc = op->getLoc();
 
-    auto llvmIntrinNameAttr =
-        mlir::StringAttr::get(rewriter.getContext(), "llvm.objectsize");
     mlir::cir::SizeInfoType kindInfo = op.getKind();
     auto falseValue = rewriter.create<mlir::LLVM::ConstantOp>(
         loc, rewriter.getI1Type(), false);
     auto trueValue = rewriter.create<mlir::LLVM::ConstantOp>(
         loc, rewriter.getI1Type(), true);
 
-    rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
-        op, llvmResTy, llvmIntrinNameAttr,
+    replaceOpWithCallLLVMIntrinsicOp(
+        rewriter, op, "llvm.objectsize", llvmResTy,
         mlir::ValueRange{adaptor.getPtr(),
                          kindInfo == mlir::cir::SizeInfoType::max ? falseValue
                                                                   : trueValue,
@@ -2467,11 +2475,8 @@ public:
 
     std::string llvmIntrinName = "llvm.bswap.i";
     llvmIntrinName.append(std::to_string(resTy.getWidth()));
-    auto llvmIntrinNameAttr =
-        mlir::StringAttr::get(rewriter.getContext(), llvmIntrinName);
 
-    rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
-        op, resTy, llvmIntrinNameAttr, adaptor.getInput());
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ByteSwapOp>(op, adaptor.getInput());
 
     return mlir::LogicalResult::success();
   }
@@ -2682,10 +2687,7 @@ public:
     auto loc = op->getLoc();
     rewriter.eraseOp(op);
 
-    auto llvmTrapIntrinsicType =
-        mlir::LLVM::LLVMVoidType::get(op->getContext());
-    rewriter.create<mlir::LLVM::CallIntrinsicOp>(
-        loc, llvmTrapIntrinsicType, "llvm.trap", mlir::ValueRange{});
+    rewriter.create<mlir::LLVM::Trap>(loc);
 
     // Note that the call to llvm.trap is not a terminator in LLVM dialect.
     // So we must emit an additional llvm.unreachable to terminate the current

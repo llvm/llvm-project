@@ -14,7 +14,7 @@ module {
   }
 
   //      MLIR: llvm.func @test_trap()
-  // MLIR-NEXT:   llvm.call_intrinsic "llvm.trap"() : () -> !llvm.void
+  // MLIR-NEXT:   "llvm.intr.trap"() : () -> ()
   // MLIR-NEXT:   llvm.unreachable
 
   //      LLVM: define void @test_trap()
