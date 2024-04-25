@@ -1,17 +1,28 @@
-; Test long double atomic loads. These are emitted by the Clang FE as i128
-; loads with a bitcast, and this test case gets converted into that form as
-; well by the AtomicExpand pass.
+; Test long double atomic loads.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck -check-prefixes=CHECK,BASE %s
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck -check-prefixes=CHECK,Z13 %s
 
+; FIXME: Without vector support, v2i64 should be legal and we should
+; introduce a simple bitcast instead of the stack temporary store and
+; reload
 define void @f1(ptr %ret, ptr %src) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lpq %r0, 0(%r3)
-; CHECK-NEXT:    stg %r1, 8(%r2)
-; CHECK-NEXT:    stg %r0, 0(%r2)
-; CHECK-NEXT:    br %r14
+; Z13-NEXT:    lpq %r0, 0(%r3)
+; Z13-NEXT:    stg %r1, 8(%r2)
+; Z13-NEXT:    stg %r0, 0(%r2)
+; Z13-NEXT:    br %r14
+
+; BASE:	aghi	%r15, -176
+; BASE: lpq	%r0, 0(%r3)
+; BASE-NEXT: stg	%r1, 168(%r15)
+; BASE-NEXT: stg	%r0, 160(%r15)
+; BASE-NEXT: ld	%f0, 160(%r15)
+; BASE-NEXT: ld	%f2, 168(%r15)
+; BASE-NEXT: std	%f0, 0(%r2)
+; BASE-NEXT: std	%f2, 8(%r2)
+; BASE-NEXT: aghi	%r15, 176
   %val = load atomic fp128, ptr %src seq_cst, align 16
   store fp128 %val, ptr %ret, align 8
   ret void
