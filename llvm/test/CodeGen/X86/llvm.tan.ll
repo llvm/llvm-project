@@ -35,7 +35,7 @@ define double @use_tanf64(double %a) {
 define fp128 @use_tanfp128(fp128 %a) {
 ; CHECK-LABEL: use_tanfp128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp tanl@PLT # TAILCALL
+; CHECK-NEXT:    jmp  tanf128@PLT # TAILCALL
   %x = call fp128 @llvm.tan.f128(fp128 %a)
   ret fp128 %x
 }
