@@ -382,8 +382,8 @@ void VectorDialect::initialize() {
                             YieldOp>();
   declarePromisedInterfaces<SubsetOpInterface, TransferReadOp,
                             TransferWriteOp>();
-  declarePromisedInterface<TransferReadOp, SubsetExtractionOpInterface>();
-  declarePromisedInterface<TransferWriteOp, SubsetInsertionOpInterface>();
+  declarePromisedInterface<SubsetExtractionOpInterface, TransferReadOp>();
+  declarePromisedInterface<SubsetInsertionOpInterface, TransferWriteOp>();
 }
 
 /// Materialize a single constant operation from a given attribute value with
@@ -898,13 +898,12 @@ static LogicalResult verifyOutputShape(
 
     AffineMap resMap = op.getIndexingMapsArray()[2];
     auto extentsMap = AffineMap::get(/*dimCount=*/extents.size(),
-                                     /*symCount=*/0, extents, ctx);
+                                     /*symbolCount=*/0, extents, ctx);
     // Compose the resMap with the extentsMap, which is a constant map.
     AffineMap expectedMap = simplifyAffineMap(resMap.compose(extentsMap));
-    assert(
-        llvm::all_of(expectedMap.getResults(),
-                     [](AffineExpr e) { return isa<AffineConstantExpr>(e); }) &&
-        "expected constant extent along all dimensions.");
+    assert(llvm::all_of(expectedMap.getResults(),
+                        llvm::IsaPred<AffineConstantExpr>) &&
+           "expected constant extent along all dimensions.");
     // Extract the expected shape and build the type.
     auto expectedShape = llvm::to_vector<4>(
         llvm::map_range(expectedMap.getResults(), [](AffineExpr e) {
@@ -6170,7 +6169,7 @@ void mlir::vector::populateVectorToVectorCanonicalizationPatterns(
 
 OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
   auto constOperand = adaptor.getInput();
-  if (!constOperand.isa_and_nonnull<IntegerAttr, FloatAttr>())
+  if (!isa_and_nonnull<IntegerAttr, FloatAttr>(constOperand))
     return {};
 
   // SplatElementsAttr::get treats single value for second arg as being a splat.

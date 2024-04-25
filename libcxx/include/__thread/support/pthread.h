@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___THREAD_SUPPORT_PTHREAD_H
 #define _LIBCPP___THREAD_SUPPORT_PTHREAD_H
 
-#include <__availability>
 #include <__chrono/convert_to_timespec.h>
 #include <__chrono/duration.h>
 #include <__config>

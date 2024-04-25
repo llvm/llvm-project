@@ -146,7 +146,7 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
   }
 
   if (const ConstantArrayType *ATy = getContext().getAsConstantArrayType(Ty)) {
-    uint64_t ArraySize = ATy->getSize().getZExtValue();
+    uint64_t ArraySize = ATy->getZExtSize();
     QualType EltTy = ATy->getElementType();
     // Non-zero-length arrays of empty records make the struct ineligible to be
     // passed via FARs in C++.

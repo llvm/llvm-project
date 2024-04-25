@@ -849,6 +849,12 @@ CompilerType::GetVirtualBaseClassAtIndex(size_t idx,
   return CompilerType();
 }
 
+CompilerDecl CompilerType::GetStaticFieldWithName(llvm::StringRef name) const {
+  if (IsValid())
+    return GetTypeSystem()->GetStaticFieldWithName(m_type, name);
+  return CompilerDecl();
+}
+
 uint32_t CompilerType::GetIndexOfFieldWithName(
     const char *name, CompilerType *field_compiler_type_ptr,
     uint64_t *bit_offset_ptr, uint32_t *bitfield_bit_size_ptr,
@@ -929,6 +935,15 @@ size_t CompilerType::GetIndexOfChildMemberWithName(
         m_type, name, omit_empty_base_classes, child_indexes);
   }
   return 0;
+}
+
+CompilerType
+CompilerType::GetDirectNestedTypeWithName(llvm::StringRef name) const {
+  if (IsValid() && !name.empty()) {
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetDirectNestedTypeWithName(m_type, name);
+  }
+  return CompilerType();
 }
 
 size_t CompilerType::GetNumTemplateArguments(bool expand_pack) const {

@@ -57,14 +57,11 @@ MDNode *getValidBranchWeightMDNode(const Instruction &I);
 
 /// Check if Branch Weight Metadata has an "expected" field from an llvm.expect*
 /// intrinsic
-bool hasExpectedProvenance(const Instruction &I);
+bool hasBranchWeightProvenance(const Instruction &I);
 
 /// Check if Branch Weight Metadata has an "expected" field from an llvm.expect*
 /// intrinsic
-bool hasExpectedProvenance(const MDNode *ProfileData);
-
-/// Return the offset to the first branch weight data
-unsigned getBranchWeightOffset(const Instruction &I);
+bool hasBranchWeightProvenance(const MDNode *ProfileData);
 
 /// Return the offset to the first branch weight data
 unsigned getBranchWeightOffset(const MDNode *ProfileData);
@@ -130,6 +127,9 @@ bool extractProfTotalWeight(const Instruction &I, uint64_t &TotalWeights);
 /// \param IsExpected were these weights added from an llvm.expect* intrinsic.
 void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
                       bool IsExpected);
+
+/// Scaling the profile data attached to 'I' using the ratio of S/T.
+void scaleProfData(Instruction &I, uint64_t S, uint64_t T);
 
 } // namespace llvm
 #endif

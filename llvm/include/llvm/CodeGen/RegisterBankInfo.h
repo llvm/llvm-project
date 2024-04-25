@@ -399,22 +399,22 @@ protected:
 
   /// Keep dynamically allocated PartialMapping in a separate map.
   /// This shouldn't be needed when everything gets TableGen'ed.
-  mutable DenseMap<unsigned, std::unique_ptr<const PartialMapping>>
+  mutable DenseMap<hash_code, std::unique_ptr<const PartialMapping>>
       MapOfPartialMappings;
 
   /// Keep dynamically allocated ValueMapping in a separate map.
   /// This shouldn't be needed when everything gets TableGen'ed.
-  mutable DenseMap<unsigned, std::unique_ptr<const ValueMapping>>
+  mutable DenseMap<hash_code, std::unique_ptr<const ValueMapping>>
       MapOfValueMappings;
 
   /// Keep dynamically allocated array of ValueMapping in a separate map.
   /// This shouldn't be needed when everything gets TableGen'ed.
-  mutable DenseMap<unsigned, std::unique_ptr<ValueMapping[]>>
+  mutable DenseMap<hash_code, std::unique_ptr<ValueMapping[]>>
       MapOfOperandsMappings;
 
   /// Keep dynamically allocated InstructionMapping in a separate map.
   /// This shouldn't be needed when everything gets TableGen'ed.
-  mutable DenseMap<unsigned, std::unique_ptr<const InstructionMapping>>
+  mutable DenseMap<hash_code, std::unique_ptr<const InstructionMapping>>
       MapOfInstructionMappings;
 
   /// Getting the minimal register class of a physreg is expensive.

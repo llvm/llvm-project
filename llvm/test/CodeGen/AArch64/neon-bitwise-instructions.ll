@@ -1117,8 +1117,15 @@ define <4 x i16> @vselect_constant_cond_zero_v4i16(<4 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: vselect_constant_cond_zero_v4i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI84_0
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI84_0]
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    mov w9, #0 // =0x0
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    mov v3.16b, v1.16b
+; CHECK-GI-NEXT:    mov v3.b[1], v2.b[0]
+; CHECK-GI-NEXT:    mov v3.b[2], v2.b[0]
+; CHECK-GI-NEXT:    mov v3.b[3], v1.b[0]
+; CHECK-GI-NEXT:    ushll v1.8h, v3.8b, #0
 ; CHECK-GI-NEXT:    shl v1.4h, v1.4h, #15
 ; CHECK-GI-NEXT:    sshr v1.4h, v1.4h, #15
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
@@ -1137,8 +1144,16 @@ define <4 x i32> @vselect_constant_cond_zero_v4i32(<4 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: vselect_constant_cond_zero_v4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI85_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI85_0]
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    mov w9, #0 // =0x0
+; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    fmov s2, w9
+; CHECK-GI-NEXT:    mov v3.16b, v1.16b
+; CHECK-GI-NEXT:    mov v3.h[1], v2.h[0]
+; CHECK-GI-NEXT:    mov v2.h[1], v1.h[0]
+; CHECK-GI-NEXT:    ushll v1.4s, v3.4h, #0
+; CHECK-GI-NEXT:    ushll v2.4s, v2.4h, #0
+; CHECK-GI-NEXT:    mov v1.d[1], v2.d[0]
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #31
 ; CHECK-GI-NEXT:    sshr v1.4s, v1.4s, #31
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
@@ -1181,8 +1196,15 @@ define <4 x i16> @vselect_constant_cond_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ;
 ; CHECK-GI-LABEL: vselect_constant_cond_v4i16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI87_0
-; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI87_0]
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    mov w9, #0 // =0x0
+; CHECK-GI-NEXT:    fmov s2, w8
+; CHECK-GI-NEXT:    fmov s3, w9
+; CHECK-GI-NEXT:    mov v4.16b, v2.16b
+; CHECK-GI-NEXT:    mov v4.b[1], v3.b[0]
+; CHECK-GI-NEXT:    mov v4.b[2], v3.b[0]
+; CHECK-GI-NEXT:    mov v4.b[3], v2.b[0]
+; CHECK-GI-NEXT:    ushll v2.8h, v4.8b, #0
 ; CHECK-GI-NEXT:    shl v2.4h, v2.4h, #15
 ; CHECK-GI-NEXT:    sshr v2.4h, v2.4h, #15
 ; CHECK-GI-NEXT:    bif v0.8b, v1.8b, v2.8b
@@ -1201,8 +1223,16 @@ define <4 x i32> @vselect_constant_cond_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ;
 ; CHECK-GI-LABEL: vselect_constant_cond_v4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI88_0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI88_0]
+; CHECK-GI-NEXT:    mov w8, #1 // =0x1
+; CHECK-GI-NEXT:    mov w9, #0 // =0x0
+; CHECK-GI-NEXT:    fmov s2, w8
+; CHECK-GI-NEXT:    fmov s3, w9
+; CHECK-GI-NEXT:    mov v4.16b, v2.16b
+; CHECK-GI-NEXT:    mov v4.h[1], v3.h[0]
+; CHECK-GI-NEXT:    mov v3.h[1], v2.h[0]
+; CHECK-GI-NEXT:    ushll v2.4s, v4.4h, #0
+; CHECK-GI-NEXT:    ushll v3.4s, v3.4h, #0
+; CHECK-GI-NEXT:    mov v2.d[1], v3.d[0]
 ; CHECK-GI-NEXT:    shl v2.4s, v2.4s, #31
 ; CHECK-GI-NEXT:    sshr v2.4s, v2.4s, #31
 ; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v2.16b

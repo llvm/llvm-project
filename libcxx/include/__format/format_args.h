@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___FORMAT_FORMAT_ARGS_H
 #define _LIBCPP___FORMAT_FORMAT_ARGS_H
 
-#include <__availability>
 #include <__config>
 #include <__format/format_arg.h>
 #include <__format/format_arg_store.h>

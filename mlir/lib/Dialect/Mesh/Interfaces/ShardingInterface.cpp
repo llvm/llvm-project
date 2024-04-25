@@ -97,7 +97,7 @@ checkOperandAffineExpr(AffineExpr expr, unsigned numDims) {
 
 FailureOr<std::pair<bool, MeshShardingAttr>>
 mesh::getMeshShardingAttr(OpResult result) {
-  Value val = result.cast<Value>();
+  Value val = cast<Value>(result);
   bool anyShardedForDef = llvm::any_of(val.getUsers(), [](Operation *user) {
     auto shardOp = llvm::dyn_cast<mesh::ShardOp>(user);
     if (!shardOp)
@@ -178,7 +178,7 @@ LogicalResult mesh::ShardingInterface::verifyShardingInterfaceImpl() {
     return failure();
 
   for (OpResult result : op->getResults()) {
-    auto resultType = result.getType().dyn_cast<RankedTensorType>();
+    auto resultType = dyn_cast<RankedTensorType>(result.getType());
     if (!resultType)
       return failure();
     AffineMap map = maps[numOperands + result.getResultNumber()];
@@ -404,7 +404,7 @@ static LogicalResult addShardOp(OpBuilder &b, OpResult result,
   if (succeeded(maybeSharding) && !maybeSharding->first)
     return success();
 
-  auto resultType = result.getType().cast<RankedTensorType>();
+  auto resultType = cast<RankedTensorType>(result.getType());
   SmallVector<SmallVector<MeshAxis>> splitAxes(resultType.getRank());
   SmallVector<MeshAxis> partialAxes;
 
@@ -457,7 +457,7 @@ static LogicalResult addShardOp(OpBuilder &b, OpOperand &opOperand,
   if (succeeded(maybeShardingAttr) && maybeShardingAttr->first)
     return success();
   Value operand = opOperand.get();
-  auto operandType = operand.getType().cast<RankedTensorType>();
+  auto operandType = cast<RankedTensorType>(operand.getType());
   SmallVector<SmallVector<MeshAxis>> splitAxes(operandType.getRank());
   unsigned numDims = map.getNumDims();
   for (auto it : llvm::enumerate(map.getResults())) {
@@ -526,7 +526,7 @@ LogicalResult mesh::detail::defaultAddShardingAnnotations(
 static bool
 isValueCompatibleWithFullReplicationSharding(Value value,
                                              MeshShardingAttr sharding) {
-  if (value.getType().isa<RankedTensorType>()) {
+  if (isa<RankedTensorType>(value.getType())) {
     return sharding && isFullReplication(sharding);
   }
 

@@ -797,10 +797,6 @@ static MCSection *selectExplicitSectionGlobal(
       SectionName = Attrs.getAttribute("data-section").getValueAsString();
     }
   }
-  const Function *F = dyn_cast<Function>(GO);
-  if (F && F->hasFnAttribute("implicit-section-name")) {
-    SectionName = F->getFnAttribute("implicit-section-name").getValueAsString();
-  }
 
   // Infer section flags from the section name if we can.
   Kind = getELFKindForNamedSection(SectionName, Kind);
@@ -934,7 +930,7 @@ MCSection *TargetLoweringObjectFileELF::getUniqueSectionForFunction(
   unsigned Flags = getELFSectionFlags(Kind);
   // If the function's section names is pre-determined via pragma or a
   // section attribute, call selectExplicitSectionGlobal.
-  if (F.hasSection() || F.hasFnAttribute("implicit-section-name"))
+  if (F.hasSection())
     return selectExplicitSectionGlobal(
         &F, Kind, TM, getContext(), getMangler(), NextUniqueID,
         Used.count(&F), /* ForceUnique = */true);
@@ -1296,11 +1292,6 @@ MCSection *TargetLoweringObjectFileMachO::getExplicitSectionGlobal(
     } else if (Attrs.hasAttribute("data-section") && Kind.isData()) {
       SectionName = Attrs.getAttribute("data-section").getValueAsString();
     }
-  }
-
-  const Function *F = dyn_cast<Function>(GO);
-  if (F && F->hasFnAttribute("implicit-section-name")) {
-    SectionName = F->getFnAttribute("implicit-section-name").getValueAsString();
   }
 
   // Parse the section specifier and create it if valid.
