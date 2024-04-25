@@ -671,12 +671,12 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
 
   // We don't want to throw lvalue-to-rvalue casts on top of
   // expressions of certain types in C++.
-  if (getLangOpts().CPlusPlus &&
-      (E->getType() == Context.OverloadTy ||
-       // FIXME: This is a hack! We want the lvalue-to-rvalue conversion applied
-       // to pointer types even if the pointee type is dependent.
-       (T->isDependentType() && !T->isPointerType()) || T->isRecordType()))
-    return E;
+  if (getLangOpts().CPlusPlus) {
+    if (T == Context.OverloadTy || T->isRecordType() ||
+        (T->isDependentType() && !T->isAnyPointerType() &&
+         !T->isMemberPointerType()))
+      return E;
+  }
 
   // The C standard is actually really unclear on this point, and
   // DR106 tells us what the result should be but not why.  It's
@@ -11117,7 +11117,7 @@ static bool checkArithmeticIncompletePointerType(Sema &S, SourceLocation Loc,
   if (const AtomicType *ResAtomicType = ResType->getAs<AtomicType>())
     ResType = ResAtomicType->getValueType();
 
-  assert(ResType->isAnyPointerType() && !ResType->isDependentType());
+  assert(ResType->isAnyPointerType());
   QualType PointeeTy = ResType->getPointeeType();
   return S.RequireCompleteSizedType(
       Loc, PointeeTy,
@@ -14288,7 +14288,9 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
                                                ExprObjectKind &OK,
                                                SourceLocation OpLoc,
                                                bool IsInc, bool IsPrefix) {
-  if (Op->isTypeDependent())
+  if (Op->isTypeDependent() &&
+      (Op->hasPlaceholderType() ||
+       Op->getType()->isSpecificBuiltinType(BuiltinType::Dependent)))
     return S.Context.DependentTy;
 
   QualType ResType = Op->getType();
@@ -14742,7 +14744,9 @@ static void RecordModifiableNonNullParam(Sema &S, const Expr *Exp) {
 static QualType CheckIndirectionOperand(Sema &S, Expr *Op, ExprValueKind &VK,
                                         SourceLocation OpLoc,
                                         bool IsAfterAmp = false) {
-  if (Op->isTypeDependent())
+  if (Op->isTypeDependent() &&
+      (Op->hasPlaceholderType() ||
+       Op->getType()->isSpecificBuiltinType(BuiltinType::Dependent)))
     return S.Context.DependentTy;
 
   ExprResult ConvResult = S.UsualUnaryConversions(Op);
