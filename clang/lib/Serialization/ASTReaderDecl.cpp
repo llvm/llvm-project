@@ -273,15 +273,17 @@ namespace clang {
       auto *&LazySpecializations = D->getCommonPtr()->LazySpecializations;
 
       if (auto &Old = LazySpecializations) {
-        IDs.insert(IDs.end(), Old + 1, Old + 1 + Old[0].get());
+        IDs.insert(IDs.end(), GlobalDeclIDIterator(Old + 1),
+                   GlobalDeclIDIterator(Old + 1 + Old[0]));
         llvm::sort(IDs);
         IDs.erase(std::unique(IDs.begin(), IDs.end()), IDs.end());
       }
 
-      auto *Result = new (C) GlobalDeclID[1 + IDs.size()];
-      *Result = GlobalDeclID(IDs.size());
+      auto *Result = new (C) DeclID[1 + IDs.size()];
+      *Result = IDs.size();
 
-      std::copy(IDs.begin(), IDs.end(), Result + 1);
+      std::copy(DeclIDIterator(IDs.begin()), DeclIDIterator(IDs.end()),
+                Result + 1);
 
       LazySpecializations = Result;
     }
@@ -556,7 +558,7 @@ void ASTDeclReader::Visit(Decl *D) {
 
     // If this is a tag declaration with a typedef name for linkage, it's safe
     // to load that typedef now.
-    if (NamedDeclForTagDecl.isValid())
+    if (NamedDeclForTagDecl != GlobalDeclID())
       cast<TagDecl>(D)->TypedefNameDeclOrQualifier =
           cast<TypedefNameDecl>(Reader.GetDecl(NamedDeclForTagDecl));
   } else if (auto *ID = dyn_cast<ObjCInterfaceDecl>(D)) {
@@ -601,7 +603,7 @@ void ASTDeclReader::VisitDecl(Decl *D) {
     GlobalDeclID SemaDCIDForTemplateParmDecl = readDeclID();
     GlobalDeclID LexicalDCIDForTemplateParmDecl =
         HasStandaloneLexicalDC ? readDeclID() : GlobalDeclID();
-    if (LexicalDCIDForTemplateParmDecl.isInvalid())
+    if (LexicalDCIDForTemplateParmDecl == GlobalDeclID())
       LexicalDCIDForTemplateParmDecl = SemaDCIDForTemplateParmDecl;
     Reader.addPendingDeclContextInfo(D,
                                      SemaDCIDForTemplateParmDecl,
@@ -1858,7 +1860,7 @@ void ASTDeclReader::VisitNamespaceDecl(NamespaceDecl *D) {
 
   mergeRedeclarable(D, Redecl);
 
-  if (AnonNamespace.isValid()) {
+  if (AnonNamespace != GlobalDeclID()) {
     // Each module has its own anonymous namespace, which is disjoint from
     // any other module's anonymous namespaces, so don't attach the anonymous
     // namespace at all.
@@ -2790,9 +2792,9 @@ ASTDeclReader::VisitRedeclarable(Redeclarable<T> *D) {
 
   uint64_t RedeclOffset = 0;
 
-  // invalid FirstDeclID  indicates that this declaration was the only
-  // declaration of its entity, and is used for space optimization.
-  if (FirstDeclID.isInvalid()) {
+  // 0 indicates that this declaration was the only declaration of its entity,
+  // and is used for space optimization.
+  if (FirstDeclID == GlobalDeclID()) {
     FirstDeclID = ThisDeclID;
     IsKeyDecl = true;
     IsFirstLocalDecl = true;
@@ -3827,232 +3829,240 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
         Twine("ASTReader::readDeclRecord failed reading decl code: ") +
         toString(MaybeDeclCode.takeError()));
 
+  DeclID RawGlobalID = ID.get();
   switch ((DeclCode)MaybeDeclCode.get()) {
   case DECL_CONTEXT_LEXICAL:
   case DECL_CONTEXT_VISIBLE:
     llvm_unreachable("Record cannot be de-serialized with readDeclRecord");
   case DECL_TYPEDEF:
-    D = TypedefDecl::CreateDeserialized(Context, ID);
+    D = TypedefDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_TYPEALIAS:
-    D = TypeAliasDecl::CreateDeserialized(Context, ID);
+    D = TypeAliasDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_ENUM:
-    D = EnumDecl::CreateDeserialized(Context, ID);
+    D = EnumDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_RECORD:
-    D = RecordDecl::CreateDeserialized(Context, ID);
+    D = RecordDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_ENUM_CONSTANT:
-    D = EnumConstantDecl::CreateDeserialized(Context, ID);
+    D = EnumConstantDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_FUNCTION:
-    D = FunctionDecl::CreateDeserialized(Context, ID);
+    D = FunctionDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_LINKAGE_SPEC:
-    D = LinkageSpecDecl::CreateDeserialized(Context, ID);
+    D = LinkageSpecDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_EXPORT:
-    D = ExportDecl::CreateDeserialized(Context, ID);
+    D = ExportDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_LABEL:
-    D = LabelDecl::CreateDeserialized(Context, ID);
+    D = LabelDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_NAMESPACE:
-    D = NamespaceDecl::CreateDeserialized(Context, ID);
+    D = NamespaceDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_NAMESPACE_ALIAS:
-    D = NamespaceAliasDecl::CreateDeserialized(Context, ID);
+    D = NamespaceAliasDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_USING:
-    D = UsingDecl::CreateDeserialized(Context, ID);
+    D = UsingDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_USING_PACK:
-    D = UsingPackDecl::CreateDeserialized(Context, ID, Record.readInt());
+    D = UsingPackDecl::CreateDeserialized(Context, RawGlobalID,
+                                          Record.readInt());
     break;
   case DECL_USING_SHADOW:
-    D = UsingShadowDecl::CreateDeserialized(Context, ID);
+    D = UsingShadowDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_USING_ENUM:
-    D = UsingEnumDecl::CreateDeserialized(Context, ID);
+    D = UsingEnumDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_CONSTRUCTOR_USING_SHADOW:
-    D = ConstructorUsingShadowDecl::CreateDeserialized(Context, ID);
+    D = ConstructorUsingShadowDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_USING_DIRECTIVE:
-    D = UsingDirectiveDecl::CreateDeserialized(Context, ID);
+    D = UsingDirectiveDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_UNRESOLVED_USING_VALUE:
-    D = UnresolvedUsingValueDecl::CreateDeserialized(Context, ID);
+    D = UnresolvedUsingValueDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_UNRESOLVED_USING_TYPENAME:
-    D = UnresolvedUsingTypenameDecl::CreateDeserialized(Context, ID);
+    D = UnresolvedUsingTypenameDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_UNRESOLVED_USING_IF_EXISTS:
-    D = UnresolvedUsingIfExistsDecl::CreateDeserialized(Context, ID);
+    D = UnresolvedUsingIfExistsDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_CXX_RECORD:
-    D = CXXRecordDecl::CreateDeserialized(Context, ID);
+    D = CXXRecordDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_CXX_DEDUCTION_GUIDE:
-    D = CXXDeductionGuideDecl::CreateDeserialized(Context, ID);
+    D = CXXDeductionGuideDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_CXX_METHOD:
-    D = CXXMethodDecl::CreateDeserialized(Context, ID);
+    D = CXXMethodDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_CXX_CONSTRUCTOR:
-    D = CXXConstructorDecl::CreateDeserialized(Context, ID, Record.readInt());
+    D = CXXConstructorDecl::CreateDeserialized(Context, RawGlobalID,
+                                               Record.readInt());
     break;
   case DECL_CXX_DESTRUCTOR:
-    D = CXXDestructorDecl::CreateDeserialized(Context, ID);
+    D = CXXDestructorDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_CXX_CONVERSION:
-    D = CXXConversionDecl::CreateDeserialized(Context, ID);
+    D = CXXConversionDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_ACCESS_SPEC:
-    D = AccessSpecDecl::CreateDeserialized(Context, ID);
+    D = AccessSpecDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_FRIEND:
-    D = FriendDecl::CreateDeserialized(Context, ID, Record.readInt());
+    D = FriendDecl::CreateDeserialized(Context, RawGlobalID, Record.readInt());
     break;
   case DECL_FRIEND_TEMPLATE:
-    D = FriendTemplateDecl::CreateDeserialized(Context, ID);
+    D = FriendTemplateDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_CLASS_TEMPLATE:
-    D = ClassTemplateDecl::CreateDeserialized(Context, ID);
+    D = ClassTemplateDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_CLASS_TEMPLATE_SPECIALIZATION:
-    D = ClassTemplateSpecializationDecl::CreateDeserialized(Context, ID);
+    D = ClassTemplateSpecializationDecl::CreateDeserialized(Context,
+                                                            RawGlobalID);
     break;
   case DECL_CLASS_TEMPLATE_PARTIAL_SPECIALIZATION:
-    D = ClassTemplatePartialSpecializationDecl::CreateDeserialized(Context, ID);
+    D = ClassTemplatePartialSpecializationDecl::CreateDeserialized(Context,
+                                                                   RawGlobalID);
     break;
   case DECL_VAR_TEMPLATE:
-    D = VarTemplateDecl::CreateDeserialized(Context, ID);
+    D = VarTemplateDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_VAR_TEMPLATE_SPECIALIZATION:
-    D = VarTemplateSpecializationDecl::CreateDeserialized(Context, ID);
+    D = VarTemplateSpecializationDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_VAR_TEMPLATE_PARTIAL_SPECIALIZATION:
-    D = VarTemplatePartialSpecializationDecl::CreateDeserialized(Context, ID);
+    D = VarTemplatePartialSpecializationDecl::CreateDeserialized(Context,
+                                                                 RawGlobalID);
     break;
   case DECL_FUNCTION_TEMPLATE:
-    D = FunctionTemplateDecl::CreateDeserialized(Context, ID);
+    D = FunctionTemplateDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_TEMPLATE_TYPE_PARM: {
     bool HasTypeConstraint = Record.readInt();
-    D = TemplateTypeParmDecl::CreateDeserialized(Context, ID,
+    D = TemplateTypeParmDecl::CreateDeserialized(Context, RawGlobalID,
                                                  HasTypeConstraint);
     break;
   }
   case DECL_NON_TYPE_TEMPLATE_PARM: {
     bool HasTypeConstraint = Record.readInt();
-    D = NonTypeTemplateParmDecl::CreateDeserialized(Context, ID,
+    D = NonTypeTemplateParmDecl::CreateDeserialized(Context, RawGlobalID,
                                                     HasTypeConstraint);
     break;
   }
   case DECL_EXPANDED_NON_TYPE_TEMPLATE_PARM_PACK: {
     bool HasTypeConstraint = Record.readInt();
     D = NonTypeTemplateParmDecl::CreateDeserialized(
-        Context, ID, Record.readInt(), HasTypeConstraint);
+        Context, RawGlobalID, Record.readInt(), HasTypeConstraint);
     break;
   }
   case DECL_TEMPLATE_TEMPLATE_PARM:
-    D = TemplateTemplateParmDecl::CreateDeserialized(Context, ID);
+    D = TemplateTemplateParmDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_EXPANDED_TEMPLATE_TEMPLATE_PARM_PACK:
-    D = TemplateTemplateParmDecl::CreateDeserialized(Context, ID,
+    D = TemplateTemplateParmDecl::CreateDeserialized(Context, RawGlobalID,
                                                      Record.readInt());
     break;
   case DECL_TYPE_ALIAS_TEMPLATE:
-    D = TypeAliasTemplateDecl::CreateDeserialized(Context, ID);
+    D = TypeAliasTemplateDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_CONCEPT:
-    D = ConceptDecl::CreateDeserialized(Context, ID);
+    D = ConceptDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_REQUIRES_EXPR_BODY:
-    D = RequiresExprBodyDecl::CreateDeserialized(Context, ID);
+    D = RequiresExprBodyDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_STATIC_ASSERT:
-    D = StaticAssertDecl::CreateDeserialized(Context, ID);
+    D = StaticAssertDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_OBJC_METHOD:
-    D = ObjCMethodDecl::CreateDeserialized(Context, ID);
+    D = ObjCMethodDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_OBJC_INTERFACE:
-    D = ObjCInterfaceDecl::CreateDeserialized(Context, ID);
+    D = ObjCInterfaceDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_OBJC_IVAR:
-    D = ObjCIvarDecl::CreateDeserialized(Context, ID);
+    D = ObjCIvarDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_OBJC_PROTOCOL:
-    D = ObjCProtocolDecl::CreateDeserialized(Context, ID);
+    D = ObjCProtocolDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_OBJC_AT_DEFS_FIELD:
-    D = ObjCAtDefsFieldDecl::CreateDeserialized(Context, ID);
+    D = ObjCAtDefsFieldDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_OBJC_CATEGORY:
-    D = ObjCCategoryDecl::CreateDeserialized(Context, ID);
+    D = ObjCCategoryDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_OBJC_CATEGORY_IMPL:
-    D = ObjCCategoryImplDecl::CreateDeserialized(Context, ID);
+    D = ObjCCategoryImplDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_OBJC_IMPLEMENTATION:
-    D = ObjCImplementationDecl::CreateDeserialized(Context, ID);
+    D = ObjCImplementationDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_OBJC_COMPATIBLE_ALIAS:
-    D = ObjCCompatibleAliasDecl::CreateDeserialized(Context, ID);
+    D = ObjCCompatibleAliasDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_OBJC_PROPERTY:
-    D = ObjCPropertyDecl::CreateDeserialized(Context, ID);
+    D = ObjCPropertyDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_OBJC_PROPERTY_IMPL:
-    D = ObjCPropertyImplDecl::CreateDeserialized(Context, ID);
+    D = ObjCPropertyImplDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_FIELD:
-    D = FieldDecl::CreateDeserialized(Context, ID);
+    D = FieldDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_INDIRECTFIELD:
-    D = IndirectFieldDecl::CreateDeserialized(Context, ID);
+    D = IndirectFieldDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_VAR:
-    D = VarDecl::CreateDeserialized(Context, ID);
+    D = VarDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_IMPLICIT_PARAM:
-    D = ImplicitParamDecl::CreateDeserialized(Context, ID);
+    D = ImplicitParamDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_PARM_VAR:
-    D = ParmVarDecl::CreateDeserialized(Context, ID);
+    D = ParmVarDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_DECOMPOSITION:
-    D = DecompositionDecl::CreateDeserialized(Context, ID, Record.readInt());
+    D = DecompositionDecl::CreateDeserialized(Context, RawGlobalID,
+                                              Record.readInt());
     break;
   case DECL_BINDING:
-    D = BindingDecl::CreateDeserialized(Context, ID);
+    D = BindingDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_FILE_SCOPE_ASM:
-    D = FileScopeAsmDecl::CreateDeserialized(Context, ID);
+    D = FileScopeAsmDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_TOP_LEVEL_STMT_DECL:
-    D = TopLevelStmtDecl::CreateDeserialized(Context, ID);
+    D = TopLevelStmtDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_BLOCK:
-    D = BlockDecl::CreateDeserialized(Context, ID);
+    D = BlockDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_MS_PROPERTY:
-    D = MSPropertyDecl::CreateDeserialized(Context, ID);
+    D = MSPropertyDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_MS_GUID:
-    D = MSGuidDecl::CreateDeserialized(Context, ID);
+    D = MSGuidDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_UNNAMED_GLOBAL_CONSTANT:
-    D = UnnamedGlobalConstantDecl::CreateDeserialized(Context, ID);
+    D = UnnamedGlobalConstantDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_TEMPLATE_PARAM_OBJECT:
-    D = TemplateParamObjectDecl::CreateDeserialized(Context, ID);
+    D = TemplateParamObjectDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_CAPTURED:
-    D = CapturedDecl::CreateDeserialized(Context, ID, Record.readInt());
+    D = CapturedDecl::CreateDeserialized(Context, RawGlobalID,
+                                         Record.readInt());
     break;
   case DECL_CXX_BASE_SPECIFIERS:
     Error("attempt to read a C++ base-specifier record as a declaration");
@@ -4063,62 +4073,66 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   case DECL_IMPORT:
     // Note: last entry of the ImportDecl record is the number of stored source
     // locations.
-    D = ImportDecl::CreateDeserialized(Context, ID, Record.back());
+    D = ImportDecl::CreateDeserialized(Context, RawGlobalID, Record.back());
     break;
   case DECL_OMP_THREADPRIVATE: {
     Record.skipInts(1);
     unsigned NumChildren = Record.readInt();
     Record.skipInts(1);
-    D = OMPThreadPrivateDecl::CreateDeserialized(Context, ID, NumChildren);
+    D = OMPThreadPrivateDecl::CreateDeserialized(Context, RawGlobalID,
+                                                 NumChildren);
     break;
   }
   case DECL_OMP_ALLOCATE: {
     unsigned NumClauses = Record.readInt();
     unsigned NumVars = Record.readInt();
     Record.skipInts(1);
-    D = OMPAllocateDecl::CreateDeserialized(Context, ID, NumVars, NumClauses);
+    D = OMPAllocateDecl::CreateDeserialized(Context, RawGlobalID, NumVars,
+                                            NumClauses);
     break;
   }
   case DECL_OMP_REQUIRES: {
     unsigned NumClauses = Record.readInt();
     Record.skipInts(2);
-    D = OMPRequiresDecl::CreateDeserialized(Context, ID, NumClauses);
+    D = OMPRequiresDecl::CreateDeserialized(Context, RawGlobalID, NumClauses);
     break;
   }
   case DECL_OMP_DECLARE_REDUCTION:
-    D = OMPDeclareReductionDecl::CreateDeserialized(Context, ID);
+    D = OMPDeclareReductionDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_OMP_DECLARE_MAPPER: {
     unsigned NumClauses = Record.readInt();
     Record.skipInts(2);
-    D = OMPDeclareMapperDecl::CreateDeserialized(Context, ID, NumClauses);
+    D = OMPDeclareMapperDecl::CreateDeserialized(Context, RawGlobalID,
+                                                 NumClauses);
     break;
   }
   case DECL_OMP_CAPTUREDEXPR:
-    D = OMPCapturedExprDecl::CreateDeserialized(Context, ID);
+    D = OMPCapturedExprDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_PRAGMA_COMMENT:
-    D = PragmaCommentDecl::CreateDeserialized(Context, ID, Record.readInt());
+    D = PragmaCommentDecl::CreateDeserialized(Context, RawGlobalID,
+                                              Record.readInt());
     break;
   case DECL_PRAGMA_DETECT_MISMATCH:
-    D = PragmaDetectMismatchDecl::CreateDeserialized(Context, ID,
+    D = PragmaDetectMismatchDecl::CreateDeserialized(Context, RawGlobalID,
                                                      Record.readInt());
     break;
   case DECL_EMPTY:
-    D = EmptyDecl::CreateDeserialized(Context, ID);
+    D = EmptyDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_LIFETIME_EXTENDED_TEMPORARY:
-    D = LifetimeExtendedTemporaryDecl::CreateDeserialized(Context, ID);
+    D = LifetimeExtendedTemporaryDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_OBJC_TYPE_PARAM:
-    D = ObjCTypeParamDecl::CreateDeserialized(Context, ID);
+    D = ObjCTypeParamDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_HLSL_BUFFER:
-    D = HLSLBufferDecl::CreateDeserialized(Context, ID);
+    D = HLSLBufferDecl::CreateDeserialized(Context, RawGlobalID);
     break;
   case DECL_IMPLICIT_CONCEPT_SPECIALIZATION:
-    D = ImplicitConceptSpecializationDecl::CreateDeserialized(Context, ID,
-                                                              Record.readInt());
+    D = ImplicitConceptSpecializationDecl::CreateDeserialized(
+        Context, RawGlobalID, Record.readInt());
     break;
   }
 
@@ -4410,9 +4424,8 @@ namespace {
       // Map global ID of the definition down to the local ID used in this
       // module file. If there is no such mapping, we'll find nothing here
       // (or in any module it imports).
-      LocalDeclID LocalID =
-          Reader.mapGlobalIDToModuleFileGlobalID(M, InterfaceID);
-      if (LocalID.isInvalid())
+      DeclID LocalID = Reader.mapGlobalIDToModuleFileGlobalID(M, InterfaceID);
+      if (!LocalID)
         return true;
 
       // Perform a binary search to find the local redeclarations for this
