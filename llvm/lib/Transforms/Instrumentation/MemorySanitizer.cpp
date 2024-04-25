@@ -2506,16 +2506,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   Value *CreateShadowCast(IRBuilder<> &IRB, Value *V, Type *dstTy,
                           bool Signed = false) {
     Type *srcTy = V->getType();
+    if (srcTy == dstTy)
+      return V;
     size_t srcSizeInBits = VectorOrPrimitiveTypeSizeInBits(srcTy);
     size_t dstSizeInBits = VectorOrPrimitiveTypeSizeInBits(dstTy);
     if (srcSizeInBits > 1 && dstSizeInBits == 1)
       return IRB.CreateICmpNE(V, getCleanShadow(V));
-
-    if (dstTy->isIntegerTy() && srcTy->isIntegerTy())
-      return IRB.CreateIntCast(V, dstTy, Signed);
     if (dstTy->isVectorTy() && srcTy->isVectorTy() &&
         cast<VectorType>(dstTy)->getElementCount() ==
             cast<VectorType>(srcTy)->getElementCount())
+      return IRB.CreateIntCast(V, dstTy, Signed);
+    if (dstTy->isIntegerTy() && srcTy->isIntegerTy())
       return IRB.CreateIntCast(V, dstTy, Signed);
     Value *V1 = IRB.CreateBitCast(V, Type::getIntNTy(*MS.C, srcSizeInBits));
     Value *V2 =
