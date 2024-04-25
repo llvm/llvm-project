@@ -4306,7 +4306,8 @@ bool AMDGPULegalizerInfo::loadInputValue(
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00F00000u);
   const ArgDescriptor ClusterWorkGroupMaxFlatID =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0F000000u);
-  if (ST.hasArchitectedSGPRs() && AMDGPU::isCompute(CC)) {
+  if (ST.hasArchitectedSGPRs() &&
+      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
     switch (ArgType) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       Arg = &WorkGroupIDX;

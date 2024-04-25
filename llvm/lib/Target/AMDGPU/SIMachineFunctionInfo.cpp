@@ -107,9 +107,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
       MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
   }
 
-  bool HasArchitectedSGPRs =
-      CC == CallingConv::AMDGPU_CS && ST.hasArchitectedSGPRs();
-  if (!AMDGPU::isGraphics(CC) || HasArchitectedSGPRs) {
+  if (!AMDGPU::isGraphics(CC) ||
+      ((CC == CallingConv::AMDGPU_CS || CC == CallingConv::AMDGPU_CS) &&
+       ST.hasArchitectedSGPRs())) {
     if (IsKernel || !F.hasFnAttribute("amdgpu-no-workgroup-id-x"))
       WorkGroupIDX = true;
 

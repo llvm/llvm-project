@@ -2993,6 +2993,14 @@ SelectionDAG::getValidShiftAmountConstant(SDValue V,
   return nullptr;
 }
 
+const APInt *SelectionDAG::getValidShiftAmountConstant(SDValue V) const {
+  EVT VT = V.getValueType();
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
+  return getValidShiftAmountConstant(V, DemandedElts);
+}
+
 const APInt *SelectionDAG::getValidMinimumShiftAmountConstant(
     SDValue V, const APInt &DemandedElts) const {
   assert((V.getOpcode() == ISD::SHL || V.getOpcode() == ISD::SRL ||
@@ -3022,6 +3030,14 @@ const APInt *SelectionDAG::getValidMinimumShiftAmountConstant(
   return MinShAmt;
 }
 
+const APInt *SelectionDAG::getValidMinimumShiftAmountConstant(SDValue V) const {
+  EVT VT = V.getValueType();
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
+  return getValidMinimumShiftAmountConstant(V, DemandedElts);
+}
+
 const APInt *SelectionDAG::getValidMaximumShiftAmountConstant(
     SDValue V, const APInt &DemandedElts) const {
   assert((V.getOpcode() == ISD::SHL || V.getOpcode() == ISD::SRL ||
@@ -3049,6 +3065,14 @@ const APInt *SelectionDAG::getValidMaximumShiftAmountConstant(
     MaxShAmt = &ShAmt;
   }
   return MaxShAmt;
+}
+
+const APInt *SelectionDAG::getValidMaximumShiftAmountConstant(SDValue V) const {
+  EVT VT = V.getValueType();
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
+  return getValidMaximumShiftAmountConstant(V, DemandedElts);
 }
 
 /// Determine which bits of Op are known to be either zero or one and return
