@@ -6,10 +6,9 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define void @forward_dep_known_safe_due_to_backedge_taken_count(ptr %A) {
 ; CHECK-LABEL: 'forward_dep_known_safe_due_to_backedge_taken_count'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            %l = load i32, ptr %gep.mul.2, align 4 ->
 ; CHECK-NEXT:            store i32 %add, ptr %gep, align 4
 ; CHECK-EMPTY:
@@ -44,10 +43,9 @@ exit:
 define void @forward_dep_not_known_safe_due_to_backedge_taken_count(ptr %A) {
 ; CHECK-LABEL: 'forward_dep_not_known_safe_due_to_backedge_taken_count'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            %l = load i32, ptr %gep.mul.2, align 4 ->
 ; CHECK-NEXT:            store i32 %add, ptr %gep, align 4
 ; CHECK-EMPTY:
