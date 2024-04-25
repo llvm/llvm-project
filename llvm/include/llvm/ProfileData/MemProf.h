@@ -44,6 +44,12 @@ enum class Meta : uint64_t {
 
 using MemProfSchema = llvm::SmallVector<Meta, static_cast<int>(Meta::Size)>;
 
+// Returns the full schema currently in use.
+MemProfSchema getFullSchema();
+
+// Returns the schema consisting of the fields used for hot cold memory hinting.
+MemProfSchema getHotColdSchema();
+
 // Holds the actual MemInfoBlock data with all fields. Contents may be read or
 // written partially by providing an appropriate schema to the serialize and
 // deserialize methods.
@@ -115,22 +121,6 @@ struct PortableMemInfoBlock {
 #undef MIBEntryDef
 
   void clear() { *this = PortableMemInfoBlock(); }
-
-  // Returns the full schema currently in use.
-  static MemProfSchema getFullSchema() {
-    MemProfSchema List;
-#define MIBEntryDef(NameTag, Name, Type) List.push_back(Meta::Name);
-#include "llvm/ProfileData/MIBEntryDef.inc"
-#undef MIBEntryDef
-    return List;
-  }
-
-  // Returns the schema consisting of the fields currently consumed by the
-  // compiler.
-  static MemProfSchema getHotColdSchema() {
-    return {Meta::AllocCount, Meta::TotalSize, Meta::TotalLifetime,
-            Meta::TotalLifetimeAccessDensity};
-  }
 
   bool operator==(const PortableMemInfoBlock &Other) const {
 #define MIBEntryDef(NameTag, Name, Type)                                       \
