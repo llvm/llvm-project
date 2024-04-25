@@ -181,7 +181,8 @@ public:
     ImmTyMatrixAScale,
     ImmTyMatrixBScale,
     ImmTyScaleSel,
-    ImmTyAuxData
+    ImmTyAuxData,
+    ImmTyByteSel,
   };
 
   // Immediate operand kind.
@@ -445,6 +446,7 @@ public:
   bool isBitOp3() const { return isImmTy(ImmTyBitOp3) && isUInt<8>(getImm()); }
   bool isScaleSel() const { return isImmTy(ImmTyScaleSel) && isUInt<3>(getImm()); }
   bool isAuxData() const { return isImmTy(ImmTyAuxData); }
+  bool isByteSel() const { return isImmTy(ImmTyByteSel) && isUInt<2>(getImm()); }
 
   bool isRegOrImm() const {
     return isReg() || isImm();
@@ -1202,6 +1204,7 @@ public:
     case ImmTyMatrixBScale: OS << "ImmTyMatrixBScale"; break;
     case ImmTyScaleSel: OS << "ScaleSel" ; break;
     case ImmTyAuxData: OS << "ImmTyAuxData"; break;
+    case ImmTyByteSel: OS << "ByteSel" ; break;
     }
     // clang-format on
   }
@@ -1997,6 +2000,9 @@ public:
 
   ParseStatus parseScaleSel(OperandVector &Operands);
   AMDGPUOperand::Ptr defaultScaleSel() const;
+
+  ParseStatus parseByteSel(OperandVector &Operands);
+  AMDGPUOperand::Ptr defaultByteSel() const;
 };
 
 } // end anonymous namespace
@@ -9132,10 +9138,15 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
     }
   }
 
-  int ScaleSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::scale_sel);
-  if (ScaleSelIdx != -1) {
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::scale_sel))
     addOptionalImmOperand(Inst, Operands, OptionalIdx,
                           AMDGPUOperand::ImmTyScaleSel);
+
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::byte_sel)) {
+    assert(AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_in));
+    Inst.addOperand(Inst.getOperand(0));
+    addOptionalImmOperand(Inst, Operands, OptionalIdx,
+                          AMDGPUOperand::ImmTyByteSel);
   }
 
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp))
@@ -9829,6 +9840,11 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
       llvm_unreachable("unhandled operand type");
     }
   }
+
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::byte_sel))
+    addOptionalImmOperand(Inst, Operands, OptionalIdx,
+                          AMDGPUOperand::ImmTyByteSel);
+
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp))
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyClampSI);
 
@@ -10299,6 +10315,21 @@ ParseStatus AMDGPUAsmParser::parseScaleSel(OperandVector &Operands) {
 
 AMDGPUOperand::Ptr AMDGPUAsmParser::defaultScaleSel() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyScaleSel);
+}
+
+//===----------------------------------------------------------------------===//
+// ByteSel
+//===----------------------------------------------------------------------===//
+
+ParseStatus AMDGPUAsmParser::parseByteSel(OperandVector &Operands) {
+  ParseStatus Res =
+      parseIntWithPrefix("byte_sel", Operands, AMDGPUOperand::ImmTyByteSel);
+  return Res;
+}
+
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultByteSel() const {
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(),
+                                  AMDGPUOperand::ImmTyByteSel);
 }
 
 //===----------------------------------------------------------------------===//

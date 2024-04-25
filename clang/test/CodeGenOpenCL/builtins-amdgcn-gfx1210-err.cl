@@ -41,7 +41,7 @@ void test__builtin_amdgcn_cvt_f16_bf8(int a, int b) {
   __builtin_amdgcn_cvt_f16_bf8(a, b); // expected-error {{'__builtin_amdgcn_cvt_f16_bf8' must be a constant integer}}
 }
 
-void test_cvt_sr_f8_f16(global int* out, short sr, int old, int sel)
+void test_cvt_sr_f8_f16(global int* out, uint sr, int old, int sel)
 {
   *out = __builtin_amdgcn_cvt_sr_bf8_f16(1.0, sr, old, sel); // expected-error {{'__builtin_amdgcn_cvt_sr_bf8_f16' must be a constant integer}}
   *out = __builtin_amdgcn_cvt_sr_fp8_f16(1.0, sr, old, sel); // expected-error {{'__builtin_amdgcn_cvt_sr_fp8_f16' must be a constant integer}}

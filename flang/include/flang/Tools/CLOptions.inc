@@ -243,12 +243,12 @@ inline void createDefaultFIROptimizerPassPipeline(
   config.enableRegionSimplification = false;
   pm.addPass(mlir::createCSEPass());
   fir::addAVC(pm, pc.OptLevel);
-  pm.addNestedPass<mlir::func::FuncOp>(fir::createCharacterConversionPass());
+  addNestedPassToAllTopLevelOperations(pm, fir::createCharacterConversion);
   pm.addPass(mlir::createCanonicalizerPass(config));
-  pm.addPass(fir::createSimplifyRegionLitePass());
+  pm.addPass(fir::createSimplifyRegionLite());
   if (pc.OptLevel.isOptimizingForSpeed()) {
     // These passes may increase code size.
-    pm.addPass(fir::createSimplifyIntrinsicsPass());
+    pm.addPass(fir::createSimplifyIntrinsics());
     pm.addPass(fir::createAlgebraicSimplificationPass(config));
   }
 
@@ -267,7 +267,7 @@ inline void createDefaultFIROptimizerPassPipeline(
   llvm::StringMap<mlir::OpPassManager> pipelines;
   pm.addPass(mlir::createInlinerPass(
       pipelines, addCanonicalizerPassWithoutRegionSimplification));
-  pm.addPass(fir::createSimplifyRegionLitePass());
+  pm.addPass(fir::createSimplifyRegionLite());
   pm.addPass(mlir::createCSEPass());
 
   // Polymorphic types
@@ -281,7 +281,7 @@ inline void createDefaultFIROptimizerPassPipeline(
   pm.addPass(mlir::createConvertSCFToCFPass());
 
   pm.addPass(mlir::createCanonicalizerPass(config));
-  pm.addPass(fir::createSimplifyRegionLitePass());
+  pm.addPass(fir::createSimplifyRegionLite());
   pm.addPass(mlir::createCSEPass());
 }
 

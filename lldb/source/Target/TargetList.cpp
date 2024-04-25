@@ -29,15 +29,15 @@
 using namespace lldb;
 using namespace lldb_private;
 
-ConstString &TargetList::GetStaticBroadcasterClass() {
-  static ConstString class_name("lldb.targetList");
+llvm::StringRef TargetList::GetStaticBroadcasterClass() {
+  static constexpr llvm::StringLiteral class_name("lldb.targetList");
   return class_name;
 }
 
 // TargetList constructor
 TargetList::TargetList(Debugger &debugger)
     : Broadcaster(debugger.GetBroadcasterManager(),
-                  TargetList::GetStaticBroadcasterClass().AsCString()),
+                  TargetList::GetStaticBroadcasterClass().str()),
       m_target_list(), m_target_list_mutex(), m_selected_target_idx(0) {
   CheckInWithManager();
 }

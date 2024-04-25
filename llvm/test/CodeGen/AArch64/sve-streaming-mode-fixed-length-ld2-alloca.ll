@@ -47,6 +47,7 @@ define void @alloc_v6i8(ptr %st_ptr) nounwind {
 ; CHECK-NEXT:    add x20, sp, #24
 ; CHECK-NEXT:    bl def
 ; CHECK-NEXT:    ptrue p0.b, vl3
+; CHECK-NEXT:    ptrue p1.s, vl2
 ; CHECK-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x20]
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    mov z2.b, z1.b[3]
@@ -63,9 +64,10 @@ define void @alloc_v6i8(ptr %st_ptr) nounwind {
 ; CHECK-NEXT:    add x8, sp, #12
 ; CHECK-NEXT:    ldr d0, [sp]
 ; CHECK-NEXT:    st1b { z0.h }, p0, [x8]
-; CHECK-NEXT:    ldrh w8, [sp, #12]
+; CHECK-NEXT:    ld1h { z0.s }, p1/z, [x8]
 ; CHECK-NEXT:    strb w9, [x19, #2]
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    strh w8, [x19]
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #48
