@@ -813,6 +813,7 @@ public:
     case TargetOpcode::G_TRUNC:
     case TargetOpcode::G_UITOFP:
     case TargetOpcode::G_ZEXT:
+    case TargetOpcode::G_ANYEXT:
       return true;
     default:
       return false;
