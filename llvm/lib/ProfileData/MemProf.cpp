@@ -10,6 +10,19 @@
 
 namespace llvm {
 namespace memprof {
+MemProfSchema getFullSchema() {
+  MemProfSchema List;
+#define MIBEntryDef(NameTag, Name, Type) List.push_back(Meta::Name);
+#include "llvm/ProfileData/MIBEntryDef.inc"
+#undef MIBEntryDef
+  return List;
+}
+
+MemProfSchema getHotColdSchema() {
+  return {Meta::AllocCount, Meta::TotalSize, Meta::TotalLifetime,
+          Meta::TotalLifetimeAccessDensity};
+}
+
 static size_t serializedSizeV0(const IndexedAllocationInfo &IAI,
                                const MemProfSchema &Schema) {
   size_t Size = 0;

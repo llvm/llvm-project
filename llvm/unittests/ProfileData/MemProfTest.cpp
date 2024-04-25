@@ -240,7 +240,7 @@ TEST(MemProf, PortableWrapper) {
                     /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
                     /*dealloc_cpu=*/4);
 
-  const auto Schema = llvm::memprof::PortableMemInfoBlock::getFullSchema();
+  const auto Schema = llvm::memprof::getFullSchema();
   PortableMemInfoBlock WriteBlock(Info);
 
   std::string Buffer;
@@ -263,7 +263,7 @@ TEST(MemProf, PortableWrapper) {
 // Version0 and Version1 serialize IndexedMemProfRecord in the same format, so
 // we share one test.
 TEST(MemProf, RecordSerializationRoundTripVersion0And1) {
-  const auto Schema = llvm::memprof::PortableMemInfoBlock::getFullSchema();
+  const auto Schema = llvm::memprof::getFullSchema();
 
   MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
                     /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
@@ -297,7 +297,7 @@ TEST(MemProf, RecordSerializationRoundTripVersion0And1) {
 }
 
 TEST(MemProf, RecordSerializationRoundTripVerion2) {
-  const auto Schema = llvm::memprof::PortableMemInfoBlock::getFullSchema();
+  const auto Schema = llvm::memprof::getFullSchema();
 
   MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
                     /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
