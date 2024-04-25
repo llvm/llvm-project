@@ -1930,16 +1930,12 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
   if (!TI || !TI->isConditional())
     return {};
 
-  Instruction *CondI = dyn_cast<CmpInst>(TI->getCondition());
-  if (!CondI) {
-    CondI = dyn_cast<TruncInst>(TI->getCondition());
-    if (CondI && CondI->getType() != Type::getInt1Ty(TI->getContext()))
-      return {};
-  }
-
+  auto *CondI = dyn_cast<Instruction>(TI->getCondition());
   // The case with the condition outside the loop should already be handled
   // earlier.
-  if (!CondI || !L.contains(CondI))
+  // Allow CmpInst and TruncInsts as they may be users of load instructions
+  // and have potential for partial unswitching
+  if (!CondI || !isa<CmpInst, TruncInst>(CondI) || !L.contains(CondI))
     return {};
 
   SmallVector<Instruction *> InstToDuplicate;
