@@ -1655,9 +1655,9 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
     case DW_TAG_structure_type:
     case DW_TAG_union_type: {
       if (const char *class_union_struct_name = parent_decl_ctx_die.GetName()) {
+        qualified_name.insert(0, "::");
         qualified_name.insert(
             0, GetDIEClassTemplateParams(parent_decl_ctx_die).AsCString(""));
-        qualified_name.insert(0, "::");
         qualified_name.insert(0, class_union_struct_name);
       }
       parent_decl_ctx_die = parent_decl_ctx_die.GetParentDeclContextDIE();
