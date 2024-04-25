@@ -39,9 +39,9 @@ LogicalResult FromTensorOp::verify() {
                               << "input type " << getInput().getType()
                               << " does not match output type "
                               << getOutput().getType();
-    diag.attachNote() << "The input type must be a tensor of shape [d] where d "
+    diag.attachNote() << "the input type must be a tensor of shape [d] where d "
                          "is at most the degree of the polynomialModulus of "
-                         "the output type's ring attribute.";
+                         "the output type's ring attribute";
     return diag;
   }
 
@@ -55,8 +55,8 @@ LogicalResult FromTensorOp::verify() {
                               << getInput().getType().getElementType()
                               << " is too large to fit in the coefficients of "
                               << getOutput().getType();
-    diag.attachNote() << "The input tensor's elements must be rescaled"
-                         " to fit before using from_tensor.";
+    diag.attachNote() << "the input tensor's elements must be rescaled"
+                         " to fit before using from_tensor";
     return diag;
   }
 
@@ -79,9 +79,9 @@ LogicalResult ToTensorOp::verify() {
   InFlightDiagnostic diag =
       emitOpError() << "input type " << getInput().getType()
                     << " does not match output type " << getOutput().getType();
-  diag.attachNote() << "The input type must be a tensor of shape [d] where d "
+  diag.attachNote() << "he input type must be a tensor of shape [d] where d "
                        "is at most the degree of the polynomialModulus of "
-                       "the output type's ring attribute.";
+                       "the output type's ring attribute";
   return diag;
 }
 
