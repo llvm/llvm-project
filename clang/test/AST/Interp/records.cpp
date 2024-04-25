@@ -1330,3 +1330,82 @@ namespace UnnamedBitFields {
   static_assert(a.f == 1.0, "");
   static_assert(a.c == 'a', "");
 }
+
+/// FIXME: This still doesn't work in the new interpreter because
+/// we lack type information for dummy pointers.
+namespace VirtualBases {
+  /// This used to crash.
+  namespace One {
+    class A {
+    protected:
+      int x;
+    };
+    class B : public virtual A {
+    public:
+      int getX() { return x; } // ref-note {{declared here}}
+    };
+
+    class DV : virtual public B{};
+
+    void foo() {
+      DV b;
+      int a[b.getX()]; // both-warning {{variable length arrays}} \
+                       // ref-note {{non-constexpr function 'getX' cannot be used}}
+    }
+  }
+
+  namespace Two {
+    struct U { int n; };
+    struct A : virtual U { int n; };
+    struct B : A {};
+    B a;
+    static_assert((U*)(A*)(&a) == (U*)(&a), "");
+
+    struct C : virtual A {};
+    struct D : B, C {};
+    D d;
+    constexpr B *p = &d;
+    constexpr C *q = &d;
+    static_assert((A*)p == (A*)q, ""); // both-error {{failed}}
+  }
+
+  namespace Three {
+    struct U { int n; };
+    struct V : U { int n; };
+    struct A : virtual V { int n; };
+    struct Aa { int n; };
+    struct B : virtual A, Aa {};
+
+    struct C : virtual A, Aa {};
+
+    struct D : B, C {};
+
+    D d;
+
+    constexpr B *p = &d;
+    constexpr C *q = &d;
+
+    static_assert((void*)p != (void*)q, "");
+    static_assert((A*)p == (A*)q, "");
+    static_assert((Aa*)p != (Aa*)q, "");
+
+    constexpr V *v = p;
+    constexpr V *w = q;
+    constexpr V *x = (A*)p;
+    static_assert(v == w, "");
+    static_assert(v == x, "");
+
+    static_assert((U*)&d == p, "");
+    static_assert((U*)&d == q, "");
+    static_assert((U*)&d == v, "");
+    static_assert((U*)&d == w, "");
+    static_assert((U*)&d == x, "");
+
+    struct X {};
+    struct Y1 : virtual X {};
+    struct Y2 : X {};
+    struct Z : Y1, Y2 {};
+    Z z;
+    static_assert((X*)(Y1*)&z != (X*)(Y2*)&z, "");
+  }
+}

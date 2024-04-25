@@ -110,10 +110,29 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->visit(SubExpr))
       return false;
 
-    unsigned DerivedOffset =
-        collectBaseOffset(CE->getType(), SubExpr->getType());
+    const auto extractRecordDecl = [](QualType Ty) -> const CXXRecordDecl * {
+      if (const auto *PT = dyn_cast<PointerType>(Ty))
+        return PT->getPointeeType()->getAsCXXRecordDecl();
+      return Ty->getAsCXXRecordDecl();
+    };
 
-    return this->emitGetPtrBasePop(DerivedOffset, CE);
+    // FIXME: We can express a series of non-virtual casts as a single
+    // GetPtrBasePop op.
+    QualType CurType = SubExpr->getType();
+    for (const CXXBaseSpecifier *B : CE->path()) {
+      if (B->isVirtual()) {
+        if (!this->emitGetPtrVirtBasePop(extractRecordDecl(B->getType()), CE))
+          return false;
+        CurType = B->getType();
+      } else {
+        unsigned DerivedOffset = collectBaseOffset(B->getType(), CurType);
+        if (!this->emitGetPtrBasePop(DerivedOffset, CE))
+          return false;
+        CurType = B->getType();
+      }
+    }
+
+    return true;
   }
 
   case CK_BaseToDerived: {
