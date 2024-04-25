@@ -2915,6 +2915,23 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_BRACE_KIND(Tokens[6], BK_BracedInit);
   EXPECT_BRACE_KIND(Tokens[7], BK_BracedInit);
+
+  Tokens = annotate("#ifdef DEBUG_ENABLED\n"
+                    "#else\n"
+                    "#endif\n"
+                    "class RenderingServer : Object {\n"
+                    "#ifndef DISABLE_DEPRECATED\n"
+                    "  enum Features {\n"
+                    "    FEATURE_SHADERS,\n"
+                    "    FEATURE_MULTITHREADED,\n"
+                    "  };\n"
+                    "#endif\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 29u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[11], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[17], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[22], BK_Block);
+  EXPECT_BRACE_KIND(Tokens[26], BK_Block);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {
