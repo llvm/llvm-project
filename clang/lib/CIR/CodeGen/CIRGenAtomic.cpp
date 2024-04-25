@@ -449,6 +449,14 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
     load->setAttr("mem_order", orderAttr);
     if (E->isVolatile())
       load->setAttr("is_volatile", mlir::UnitAttr::get(builder.getContext()));
+
+    // TODO(cir): this logic should be part of createStore, but doing so
+    // currently breaks CodeGen/union.cpp and CodeGen/union.cpp.
+    auto ptrTy = Dest.getPointer().getType().cast<mlir::cir::PointerType>();
+    if (Dest.getElementType() != ptrTy.getPointee()) {
+      Dest = Dest.withPointer(
+          builder.createPtrBitcast(Dest.getPointer(), Dest.getElementType()));
+    }
     builder.createStore(loc, load->getResult(0), Dest);
     return;
   }
