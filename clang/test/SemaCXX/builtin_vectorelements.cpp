@@ -42,11 +42,11 @@ void test_builtin_vectorelements() {
 #include <arm_sve.h>
 
 consteval int consteval_elements() { // expected-error {{consteval function never produces a constant expression}}
-  return __builtin_vectorelements(svuint64_t); // expected-note {{cannot determine number of elements for sizeless vectors in a constant expression}} // expected-note {{cannot determine number of elements for sizeless vectors in a constant expression}}
+  return __builtin_vectorelements(svuint64_t); // expected-note {{cannot determine number of elements for sizeless vectors in a constant expression}}  // expected-note {{cannot determine number of elements for sizeless vectors in a constant expression}} // expected-note {{cannot determine number of elements for sizeless vectors in a constant expression}}
 }
 
 void test_bad_constexpr() {
-  constexpr int eval = consteval_elements(); // expected-error {{initialized by a constant expression}} // expected-note {{in call}}
+  constexpr int eval = consteval_elements(); // expected-error {{initialized by a constant expression}} // expected-error {{not a constant expression}} // expected-note {{in call}} // expected-note {{in call}}
   constexpr int i32 = __builtin_vectorelements(svuint32_t); // expected-error {{initialized by a constant expression}} // expected-note {{cannot determine number of elements for sizeless vectors in a constant expression}}
   constexpr int i16p8 = __builtin_vectorelements(svuint16_t) + 16; // expected-error {{initialized by a constant expression}} // expected-note {{cannot determine number of elements for sizeless vectors in a constant expression}}
   constexpr int lambda = [] { return __builtin_vectorelements(svuint16_t); }(); // expected-error {{initialized by a constant expression}} // expected-note {{cannot determine number of elements for sizeless vectors in a constant expression}} // expected-note {{in call}}

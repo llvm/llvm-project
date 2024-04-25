@@ -193,6 +193,7 @@ Frontend
 | ParseDeclarationOrFunctionDefinition (test.cc:16:1)
 | | ParseFunctionDefinition (slow_test)
 | | | EvaluateAsInitializer (slow_value)
+| | | EvaluateAsConstantExpr (<test.cc:17:33, col:59>)
 | | | EvaluateAsConstantExpr (<test.cc:18:11, col:37>)
 | ParseDeclarationOrFunctionDefinition (test.cc:22:1)
 | | EvaluateAsConstantExpr (<test.cc:23:31, col:57>)

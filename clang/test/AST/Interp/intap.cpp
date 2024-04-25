@@ -9,7 +9,8 @@ using MaxBitInt = _BitInt(128);
 
 constexpr _BitInt(2) A = 0;
 constexpr _BitInt(2) B = A + 1;
-constexpr _BitInt(2) C = B + 1;
+constexpr _BitInt(2) C = B + 1; // expected-warning {{from 2 to -2}} \
+                                // ref-warning {{from 2 to -2}}
 static_assert(C == -2, "");
 static_assert(C - B == A, ""); // expected-error {{not an integral constant expression}} \
                                // expected-note {{value -3 is outside the range of representable values}} \

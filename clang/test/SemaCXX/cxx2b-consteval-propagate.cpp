@@ -394,3 +394,29 @@ static_assert(none_of(
 ));
 
 }
+
+#if __cplusplus >= 202302L
+namespace lvalue_to_rvalue_init_from_heap {
+
+struct S {
+    int *value;
+    constexpr S(int v) : value(new int {v}) {}  // expected-note 2 {{heap allocation performed here}}
+    constexpr ~S() { delete value; }
+};
+consteval S fn() { return S(5); }
+int fn2() { return 2; }  // expected-note {{declared here}}
+
+constexpr int a = *fn().value;
+constinit int b = *fn().value;
+const int c = *fn().value;
+int d = *fn().value;
+
+constexpr int e = *fn().value + fn2(); // expected-error {{must be initialized by a constant expression}} \
+                                       // expected-error {{call to consteval function 'lvalue_to_rvalue_init_from_heap::fn' is not a constant expression}} \
+                                       // expected-note {{non-constexpr function 'fn2'}} \
+                                       // expected-note {{pointer to heap-allocated object}}
+
+int f = *fn().value + fn2();  // expected-error {{call to consteval function 'lvalue_to_rvalue_init_from_heap::fn' is not a constant expression}} \
+                              // expected-note {{pointer to heap-allocated object}}
+}
+#endif

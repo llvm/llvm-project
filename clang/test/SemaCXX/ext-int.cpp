@@ -25,7 +25,7 @@ _BitInt(33) Declarations(_BitInt(48) &Param) { // Useable in params and returns.
   unsigned _BitInt(1) l;
   signed _BitInt(1) m; // expected-error{{signed _BitInt must have a bit size of at least 2}}
 
-  constexpr _BitInt(6) n = 33;
+  constexpr _BitInt(6) n = 33; // expected-warning{{implicit conversion from 'int' to 'const _BitInt(6)' changes value from 33 to -31}}
   constexpr _BitInt(7) o = 33;
 
   // Check imposed max size.
