@@ -21,6 +21,12 @@ char f_int_4(char x) { return x; }
 // CHECK-LABEL: define{{.*}} fp128 @f_ld(fp128 noundef %x)
 long double f_ld(long double x) { return x; }
 
+// Empty struct is lowered as a placeholder word parameter.
+struct empty {};
+
+// CHECK-LABEL: define{{.*}} i64 @f_empty(i64 %x.coerce)
+struct empty f_empty(struct empty x) { return x; }
+
 // Small structs are passed in registers.
 struct small {
   int *a, *b;
