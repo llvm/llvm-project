@@ -3518,9 +3518,9 @@ llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
   const char *Prefix = CLANG_VERBOSE_TRAP_PREFIX;
   SmallString<64> FuncName(Prefix);
 
-  FuncName += ":";
+  FuncName += "$";
   FuncName += Category;
-  FuncName += ":";
+  FuncName += "$";
   FuncName += FailureMsg;
 
   llvm::DISubprogram *TrapSP =
