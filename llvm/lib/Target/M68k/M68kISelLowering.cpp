@@ -3075,9 +3075,9 @@ static bool checkAndUpdateCCRKill(MachineBasicBlock::iterator SelectItr,
   MachineBasicBlock::iterator miI(std::next(SelectItr));
   for (MachineBasicBlock::iterator miE = BB->end(); miI != miE; ++miI) {
     const MachineInstr &mi = *miI;
-    if (mi.readsRegister(M68k::CCR))
+    if (mi.readsRegister(M68k::CCR, /*TRI=*/nullptr))
       return false;
-    if (mi.definesRegister(M68k::CCR))
+    if (mi.definesRegister(M68k::CCR, /*TRI=*/nullptr))
       break; // Should have kill-flag - update below.
   }
 
@@ -3208,7 +3208,7 @@ M68kTargetLowering::EmitLoweredSelect(MachineInstr &MI,
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
 
   MachineInstr *LastCCRSUser = CascadedCMOV ? CascadedCMOV : LastCMOV;
-  if (!LastCCRSUser->killsRegister(M68k::CCR) &&
+  if (!LastCCRSUser->killsRegister(M68k::CCR, /*TRI=*/nullptr) &&
       !checkAndUpdateCCRKill(LastCCRSUser, MBB, TRI)) {
     Copy0MBB->addLiveIn(M68k::CCR);
     SinkMBB->addLiveIn(M68k::CCR);
