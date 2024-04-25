@@ -204,6 +204,13 @@ protected:
   MLIRContext *context;
 };
 
+/// Attempts to fold the given operation and places new results within
+/// 'results'. Returns success if the operation was folded, failure otherwise.
+/// Note: This function does not erase the operation on a successful fold.
+LogicalResult tryFold(MLIRContext *context, Operation *op,
+                      SmallVectorImpl<Value> &results,
+                      SmallVector<Operation *, 1> &generatedConstants);
+
 /// This class helps build Operations. Operations that are created are
 /// automatically inserted at an insertion point. The builder is copyable.
 class OpBuilder : public Builder {
@@ -570,6 +577,8 @@ public:
   /// `results`. Returns success if the operation was folded, failure otherwise.
   /// If the fold was in-place, `results` will not be filled.
   /// Note: This function does not erase the operation on a successful fold.
+  /// Note: This function inserts generated constants at the current insertion
+  /// point.
   LogicalResult tryFold(Operation *op, SmallVectorImpl<Value> &results);
 
   /// Creates a deep copy of the specified operation, remapping any operands

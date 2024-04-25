@@ -89,6 +89,12 @@ def testArithValue():
             # CHECK: ArithValue(%1 = arith.subf %cst_0, %cst_0 : f32)
             print(b)
 
+            results, generated_constants = b.owner.try_fold()
+            for r in results:
+                print(r)
+            for g in generated_constants:
+                print(g)
+
             a = arith.constant(f64_t, 42.42)
             b = a * a
             # CHECK: ArithValue(%2 = arith.mulf %cst_1, %cst_1 : f64)
