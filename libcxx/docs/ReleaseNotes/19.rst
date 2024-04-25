@@ -50,6 +50,7 @@ Implemented Papers
 - P1659R3 - ``std::ranges::starts_with`` and ``std::ranges::ends_with``
 - P3029R1 - Better ``mdspan``'s CTAD
 - P2387R3 - Pipe support for user-defined range adaptors
+- P2713R1 - Escaping improvements in ``std::format``
 
 Improvements and New Features
 -----------------------------
