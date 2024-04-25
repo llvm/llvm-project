@@ -3810,12 +3810,14 @@ private:
     mlir::Location loc = getCurrentLocation();
     fir::FirOpBuilder &builder = getFirOpBuilder();
 
+    bool isInDeviceContext =
+        builder.getRegion().getParentOfType<fir::CUDAKernelOp>();
     bool isCUDATransfer = Fortran::evaluate::HasCUDAAttrs(assign.lhs) ||
                           Fortran::evaluate::HasCUDAAttrs(assign.rhs);
     bool hasCUDAImplicitTransfer =
         Fortran::evaluate::HasCUDAImplicitTransfer(assign.rhs);
     llvm::SmallVector<mlir::Value> implicitTemps;
-    if (hasCUDAImplicitTransfer)
+    if (hasCUDAImplicitTransfer && !isInDeviceContext)
       implicitTemps = genCUDAImplicitDataTransfer(builder, loc, assign);
 
     // Gather some information about the assignment that will impact how it is
@@ -3874,13 +3876,13 @@ private:
       Fortran::lower::StatementContext localStmtCtx;
       hlfir::Entity rhs = evaluateRhs(localStmtCtx);
       hlfir::Entity lhs = evaluateLhs(localStmtCtx);
-      if (isCUDATransfer && !hasCUDAImplicitTransfer)
+      if (isCUDATransfer && !hasCUDAImplicitTransfer && !isInDeviceContext)
         genCUDADataTransfer(builder, loc, assign, lhs, rhs);
       else
         builder.create<hlfir::AssignOp>(loc, rhs, lhs,
                                         isWholeAllocatableAssignment,
                                         keepLhsLengthInAllocatableAssignment);
-      if (hasCUDAImplicitTransfer) {
+      if (hasCUDAImplicitTransfer && !isInDeviceContext) {
         localSymbols.popScope();
         for (mlir::Value temp : implicitTemps)
           builder.create<fir::FreeMemOp>(loc, temp);
