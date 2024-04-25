@@ -49,7 +49,7 @@ namespace GH40906 {
   };
 
   void test() {
-    decltype(&(A::val)) ptr1; // expected-error {{invalid use of non-static data member 'val'}}
+    decltype(&(A::val)) ptr1; // expected-error {{cannot form pointer to member from a parenthesized expression; did you mean to remove the parentheses?}}
     int A::* ptr2 = &(A::val); // expected-error {{invalid use of non-static data member 'val'}}
 
     // FIXME: Error messages in these cases are less than clear, we can do
