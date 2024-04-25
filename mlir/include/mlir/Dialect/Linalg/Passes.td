@@ -144,15 +144,36 @@ def LinalgDetensorizePass : InterfacePass<"linalg-detensorize", "FunctionOpInter
 def LinalgPackMatmul : Pass<"linalg-pack-matmul"> {
   let summary = "Convert linalg matmul ops to block layout and back";
   let description = [{
-    Pack a matmul MxNxK operation into blocked layout
-    as: [MB][NB][mb][nb] += [MB][KB][mb][kb] * [NB][KB][kb][nb].
-    The result is unpacked back to the original layout.
+    Pack a matmul operation into blocked layout with two levels of subdivision:
+    - major 2D blocks - outer dimensions, consist of minor blocks
+    - minor 2D blocks - inner dimensions, consist of scalar elements
 
-    Matmul packing splits the operands into smaller blocks (inner dimensions)
-    and then block-transposes the block sub-groups (outer dimensions).
+    A 2D matmul MxNxK gets reshaped into blocked 4D representation
+    as: [MB][NB][mb][nb] += [MB][KB][mb][kb] * [NB][KB][kb][nb]
+    where the (MB, NB, KB) dimensions represent the major blocks,
+    and the (mb, nb, kb) are the minor blocks of their respective
+    original 2D dimensions (M, N, K).
 
-    This data arrangement minimizes distance between consecutive blocks
-    which improves spacial locality and cache behavior.
+    As a part of packing strategy, the RHS operand gets 'block transposed'
+    i.e., the major blocks [KB][NB] get transposed to [NB][KB] layout.
+    The minor blocks remain unchanged.
+    The final result is unpacked back to the original layout.
+
+    Given a matmul operation:
+    ```mlir
+      %res = linalg.matmul ins(%A, %B) outs(%C)
+    ```
+    the traformation can be represented as:
+    ```mlir
+      %A_packed = pack %A : 2D -> 4D
+      %B_packed = pack %B : 2D -> 4D #block_transposed
+      %C_packed = pack %C : 2D -> 4D
+      %res_packed = linalg.mmt4d ins(%A_packed, %B_packed) outs(%C_packed)
+      %res = unpack %res_packed : 4D -> 2D
+    ```
+
+    This packed data arrangement minimizes distance between consecutive
+    blocks which improves spacial locality and cache behavior.
   }];
   let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect"];
   let options = [
