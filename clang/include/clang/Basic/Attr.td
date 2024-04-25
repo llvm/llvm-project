@@ -976,7 +976,7 @@ def Availability : InheritableAttr {
              .Case("xros", "visionOS")
              .Case("xros_app_extension", "visionOS (App Extension)")
              .Case("swift", "Swift")
-             .Case("shadermodel", "HLSL Shader Model")
+             .Case("shadermodel", "Shader Model")
              .Case("ohos", "OpenHarmony OS")
              .Default(llvm::StringRef());
 }

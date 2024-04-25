@@ -5860,7 +5860,7 @@ def note_availability_specified_here : Note<
   "%0 has been explicitly marked "
   "%select{unavailable|deleted|deprecated}1 here">;
 def note_partial_availability_specified_here : Note<
-  "%0 has been marked as being introduced in %1 %2 here, "
+  "%0 has been marked as being introduced in %1 %2 %select{|in %5 environment }4here, "
   "but the deployment target is %1 %3">;
 def note_implicitly_deleted : Note<
   "explicitly defaulted function was implicitly deleted here">;
