@@ -49,6 +49,7 @@ enum OpCode {
   OpCodeInsertValue,
   OpCodePtrAdd,
   OpCodeBinOp,
+  OpCodeCast,
   OpCodeUnimplemented = 255, // YKFIXME: Will eventually be deleted.
 };
 
@@ -67,6 +68,10 @@ enum TypeKind {
   TypeKindFunction,
   TypeKindStruct,
   TypeKindUnimplemented = 255, // YKFIXME: Will eventually be deleted.
+};
+
+enum CastKind {
+  CastKindSignExt = 0,
 };
 
 // A predicate used in a numeric comparison.
@@ -603,6 +608,23 @@ private:
     InstIdx++;
   }
 
+  void serialiseCastKind(enum CastKind Cast) { OutStreamer.emitInt8(Cast); }
+
+  /// Serialise a cast-like insruction.
+  void serialiseSExtInst(SExtInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
+                         unsigned &InstIdx) {
+    // opcode:
+    serialiseOpcode(OpCodeCast);
+    // cast_kind:
+    serialiseCastKind(CastKindSignExt);
+    // val:
+    serialiseOperand(I, VLMap, I->getOperand(0));
+    // dest_type_idx:
+    OutStreamer.emitSizeT(typeIndex(I->getDestTy()));
+
+    VLMap[I] = {BBIdx, InstIdx};
+    InstIdx++;
+  }
   void serialiseInst(Instruction *I, ValueLoweringMap &VLMap, unsigned BBIdx,
                      unsigned &InstIdx) {
     // Macro to make the dispatch below easier to read/sort.
@@ -621,6 +643,7 @@ private:
     INST_SERIALISE(I, InsertValueInst, serialiseInsertValueInst);
     INST_SERIALISE(I, LoadInst, serialiseLoadInst);
     INST_SERIALISE(I, ReturnInst, serialiseReturnInst);
+    INST_SERIALISE(I, SExtInst, serialiseSExtInst);
     INST_SERIALISE(I, StoreInst, serialiseStoreInst);
 
     // INST_SERIALISE does an early return upon a match, so if we get here then
