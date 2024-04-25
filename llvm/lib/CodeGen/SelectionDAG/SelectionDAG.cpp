@@ -5128,6 +5128,9 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   if (VT.isScalableVector())
     return true;
 
+  if (ConsiderFlags && Op->hasPoisonGeneratingFlags())
+    return true;
+
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
   case ISD::FREEZE:
@@ -5167,34 +5170,20 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
       return true;
 
     const TargetOptions &Options = getTarget().Options;
-    return Options.NoNaNsFPMath || Options.NoInfsFPMath ||
-           (ConsiderFlags &&
-            (Op->getFlags().hasNoNaNs() || Op->getFlags().hasNoInfs()));
+    return Options.NoNaNsFPMath || Options.NoInfsFPMath;
   }
 
-  // Matches hasPoisonGeneratingFlags().
+  case ISD::OR:
   case ISD::ZERO_EXTEND:
-    return ConsiderFlags && Op->getFlags().hasNonNeg();
-
   case ISD::ADD:
   case ISD::SUB:
   case ISD::MUL:
-    // Matches hasPoisonGeneratingFlags().
-    return ConsiderFlags && (Op->getFlags().hasNoSignedWrap() ||
-                             Op->getFlags().hasNoUnsignedWrap());
+    // No poison except from flags (which is handled above)
+    return false;
 
   case ISD::SHL:
     // If the max shift amount isn't in range, then the shift can create poison.
-    if (!getValidMaximumShiftAmountConstant(Op, DemandedElts))
-      return true;
-
-    // Matches hasPoisonGeneratingFlags().
-    return ConsiderFlags && (Op->getFlags().hasNoSignedWrap() ||
-                             Op->getFlags().hasNoUnsignedWrap());
-
-  // Matches hasPoisonGeneratingFlags().
-  case ISD::OR:
-    return ConsiderFlags && Op->getFlags().hasDisjoint();
+    return !getValidMaximumShiftAmountConstant(Op, DemandedElts);
 
   case ISD::SCALAR_TO_VECTOR:
     // Check if we demand any upper (undef) elements.

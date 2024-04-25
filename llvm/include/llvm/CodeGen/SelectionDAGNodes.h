@@ -999,6 +999,13 @@ public:
   /// If Flags is not in a defined state then this has no effect.
   void intersectFlagsWith(const SDNodeFlags Flags);
 
+  bool hasPoisonGeneratingFlags() const {
+    SDNodeFlags Flags = getFlags();
+    return Flags.hasNoUnsignedWrap() || Flags.hasNoSignedWrap() ||
+           Flags.hasExact() || Flags.hasDisjoint() || Flags.hasNonNeg() ||
+           Flags.hasNoNaNs() || Flags.hasNoInfs();
+  }
+
   void setCFIType(uint32_t Type) { CFIType = Type; }
   uint32_t getCFIType() const { return CFIType; }
 
