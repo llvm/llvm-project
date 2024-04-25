@@ -4493,7 +4493,7 @@ void RewriteInstance::updateELFSymbolTable(
   // Symbols for the new symbol table.
   std::vector<ELFSymTy> Symbols;
 
-  bool EmittedColdFileSymbol{false};
+  bool EmittedColdFileSymbol = false;
 
   auto getNewSectionIndex = [&](uint32_t OldIndex) {
     // For dynamic symbol table, the section index could be wrong on the input,
@@ -4559,7 +4559,7 @@ void RewriteInstance::updateELFSymbolTable(
           FunctionSymbol.getBinding() == ELF::STB_GLOBAL) {
         ELFSymTy FileSymbol;
         FileSymbol.st_shndx = ELF::SHN_ABS;
-        FileSymbol.st_name = AddToStrTab("bolt_cold.o");
+        FileSymbol.st_name = AddToStrTab("llvm-bolt-pseudo.o");
         FileSymbol.st_value = 0;
         FileSymbol.st_size = 0;
         FileSymbol.st_other = 0;
