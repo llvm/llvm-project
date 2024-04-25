@@ -24,6 +24,7 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
@@ -68,7 +69,7 @@ struct ConvertCIRToMLIRPass
     registry.insert<mlir::BuiltinDialect, mlir::func::FuncDialect,
                     mlir::affine::AffineDialect, mlir::memref::MemRefDialect,
                     mlir::arith::ArithDialect, mlir::cf::ControlFlowDialect,
-                    mlir::scf::SCFDialect>();
+                    mlir::scf::SCFDialect, mlir::math::MathDialect>();
   }
   void runOnOperation() final;
 
@@ -140,6 +141,18 @@ public:
   }
 };
 
+class CIRCosOpLowering : public mlir::OpConversionPattern<mlir::cir::CosOp> {
+public:
+  using OpConversionPattern<mlir::cir::CosOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::CosOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::math::CosOp>(op, adaptor.getSrc());
+    return mlir::LogicalResult::success();
+  }
+};
+
 class CIRConstantOpLowering
     : public mlir::OpConversionPattern<mlir::cir::ConstantOp> {
 public:
@@ -153,6 +166,11 @@ public:
     if (mlir::isa<mlir::cir::BoolType>(op.getType())) {
       auto boolValue = mlir::cast<mlir::cir::BoolAttr>(op.getValue());
       value = rewriter.getIntegerAttr(ty, boolValue.getValue());
+    } else if (op.getType().isa<mlir::cir::CIRFPTypeInterface>()) {
+      assert(ty.isF32() || ty.isF64() && "NYI");
+      value = rewriter.getFloatAttr(
+          typeConverter->convertType(op.getType()),
+          op.getValue().cast<mlir::cir::FPAttr>().getValue());
     } else {
       auto cirIntAttr = mlir::dyn_cast<mlir::cir::IntAttr>(op.getValue());
       assert(cirIntAttr && "NYI non cir.int attr");
@@ -612,7 +630,8 @@ void populateCIRToMLIRConversionPatterns(mlir::RewritePatternSet &patterns,
                CIRBinOpLowering, CIRLoadOpLowering, CIRConstantOpLowering,
                CIRStoreOpLowering, CIRAllocaOpLowering, CIRFuncOpLowering,
                CIRScopeOpLowering, CIRBrCondOpLowering, CIRTernaryOpLowering,
-               CIRYieldOpLowering>(converter, patterns.getContext());
+               CIRYieldOpLowering, CIRCosOpLowering>(converter,
+                                                     patterns.getContext());
 }
 
 static mlir::TypeConverter prepareTypeConverter() {
@@ -666,7 +685,8 @@ void ConvertCIRToMLIRPass::runOnOperation() {
   target.addLegalOp<mlir::ModuleOp>();
   target.addLegalDialect<mlir::affine::AffineDialect, mlir::arith::ArithDialect,
                          mlir::memref::MemRefDialect, mlir::func::FuncDialect,
-                         mlir::scf::SCFDialect, mlir::cf::ControlFlowDialect>();
+                         mlir::scf::SCFDialect, mlir::cf::ControlFlowDialect,
+                         mlir::math::MathDialect>();
   target.addIllegalDialect<mlir::cir::CIRDialect>();
 
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
