@@ -27,8 +27,6 @@ standard GDB remote protocol packets.
 
 ## QStartNoAckMode
 
-### Brief
-
 Try to enable no ACK mode to skip sending ACKs and NACKs.
 
 ### Priority To Implement
@@ -53,8 +51,6 @@ send packet: +
 ```
 
 ## QSupported
-
-### Brief
 
 Query the GDB remote server for features it supports
 
@@ -99,8 +95,6 @@ In the example above, three lldb extensions are shown:
 
 ## "A" - launch args packet
 
-### Brief
-
 Launch a program using the supplied arguments
 
 ### Priority To Implement
@@ -132,8 +126,6 @@ debugging.
 
 ## qLaunchSuccess
 
-### Brief
-
 Check whether launching a process with the `A` packet succeeded.
 
 ### Description
@@ -147,8 +139,6 @@ describing the error.
 High, launching processes is a key part of LLDB's platform mode.
 
 ## QEnvironment:NAME=VALUE
-
-### Brief
 
 Setup the environment up for a new child process that will soon be
 launched using the "A" packet.
@@ -179,8 +169,6 @@ This packet can be sent one or more times _prior_ to sending a "A" packet.
 
 ## QEnvironmentHexEncoded:HEX-ENCODING(NAME=VALUE)
 
-### Brief
-
 Setup the environment up for a new child process that will soon be
 launched using the "A" packet.
 
@@ -205,8 +193,6 @@ read packet: $OK#00
 This packet can be sent one or more times _prior_ to sending a "A" packet.
 
 ## QEnableErrorStrings
-
-### Brief
 
 This packet enables reporting of Error strings in remote packet
 replies from the server to client. If the server supports this
@@ -236,8 +222,6 @@ read packet: $OK#00
 
 ## QSetSTDIN:\<ascii-hex-path\> / QSetSTDOUT:\<ascii-hex-path\> / QSetSTDERR:\<ascii-hex-path\>
 
-### Brief
-
 Setup where STDIN, STDOUT, and STDERR go prior to sending an "A"
 packet.
 
@@ -260,8 +244,6 @@ These packets must be sent  _prior_ to sending a "A" packet.
 
 ## QSetWorkingDir:\<ascii-hex-path\>
 
-### Brief
-
 Set the working directory prior to sending an "A" packet.
 
 ### Priority To Implement
@@ -280,8 +262,6 @@ This packet must be sent  _prior_ to sending a "A" packet.
 
 ## qGetWorkingDir
 
-### Brief
-
 Get the current working directory of the platform stub in
 ASCII hex encoding.
 
@@ -293,8 +273,6 @@ send:    2f4170706c65496e7465726e616c2f6c6c64622f73657474696e67732f342f546573745
 ```
 
 ## QSetDisableASLR:\<bool\>
-
-### Brief
 
 Enable or disable ASLR on the next "A" packet.
 
@@ -319,8 +297,6 @@ This packet must be sent  _prior_ to sending a "A" packet.
 
 ## QListThreadsInStopReply
 
-### Brief
-
 Enable the `threads:` and `thread-pcs:` data in the question-mark packet
 ("T packet") responses when the stub reports that a program has
 stopped executing.
@@ -340,8 +316,6 @@ read packet: OK
 ```
 
 ## jLLDBTraceSupported
-
-### Brief
 
 Get the processor tracing type supported by the gdb-server for the current
 inferior. Responses might be different depending on the architecture and
@@ -375,8 +349,6 @@ read packet: {"name":<name>, "description":<description>}/E<error code>;AAAAAAAA
 ```
 
 ## jLLDBTraceStart
-
-### Brief
 
 Start tracing a process or its threads using a provided tracing technology.
 The input and output are specified as JSON objects. In case of success, an OK
@@ -530,8 +502,6 @@ read packet: OK/E<error code>;AAAAAAAAA
 
 ## jLLDBTraceStop
 
-### Brief
-
 Stop tracing a process or its threads using a provided tracing technology.
 The input and output are specified as JSON objects. In case of success, an OK
 response is returned, or an error otherwise.
@@ -582,8 +552,6 @@ read packet: OK/E<error code>;AAAAAAAAA
 ```
 
 ## jLLDBTraceGetState
-
-### Brief
 
 Get the current state of the process and its threads being traced by
 a given trace technology. The response is a JSON object with custom
@@ -690,8 +658,6 @@ read packet: {...object}/E<error code>;AAAAAAAAA
 
 ## jLLDBTraceGetBinaryData
 
-### Brief
-
 Get binary data given a trace technology and a data identifier.
 The input is specified as a JSON object and the response has the same format
 as the "binary memory read" (aka "x") packet. In case of failures, an error
@@ -721,8 +687,6 @@ read packet: <binary data>/E<error code>;AAAAAAAAA
 ```
 
 ## qRegisterInfo\<hex-reg-id\>
-
-### Brief
 
 Discover register information from the remote GDB server.
 
@@ -1013,8 +977,6 @@ The keys and values are detailed below:
 
 ## qPlatform_shell
 
-### Brief
-
 Run a command in a shell on the connected remote machine.
 
 ### Priority To Implement
@@ -1045,8 +1007,6 @@ drwxrwxr-x  5 username groupname    4096 Aug 15 21:36 source.cpp
 
 ## qPlatform_mkdir
 
-### Brief
-
 Creates a new directory on the connected remote machine.
 
 ### Priority To Implement
@@ -1070,8 +1030,6 @@ Reply:
 
 ## vFile:chmod / qPlatform_chmod
 
-### Brief
-
 Change the permissions of a file on the connected remote machine.
 
 ### Priority To Implement
@@ -1089,8 +1047,6 @@ Reply:
 * `Exx` (An error occurred)
 
 ## qHostInfo
-
-### Brief
 
 Get information about the host we are remotely connected to.
 
@@ -1149,8 +1105,6 @@ Key value pairs are one of:
 
 ## qGDBServerVersion
 
-### Brief
-
 Get version information about this implementation of the gdb-remote
 protocol.
 
@@ -1193,8 +1147,6 @@ Suggested key names:
 * `minor_version`: minor version number
 
 ## qProcessInfo
-
-### Brief
 
 Get information about the process we are currently debugging.
 
@@ -1249,8 +1201,6 @@ Key value pairs include:
 
 ## qShlibInfoAddr
 
-### Brief
-
 Get an address where the dynamic linker stores information about
 where shared libraries are loaded.
 
@@ -1280,8 +1230,6 @@ read packet: $7fff5fc40040#00
 
 ## qThreadStopInfo\<tid\>
 
-### Brief
-
 Get information about why a thread, whose ID is `<tid>`, is stopped.
 
 ### Priority To Implement
@@ -1305,8 +1253,6 @@ stops at a time. This allows us to see why all threads stopped and allows us
 to implement better multi-threaded debugging support.
 
 ## QThreadSuffixSupported
-
-### Brief
 
 Try to enable thread suffix support for the `g`, `G`, `p`, and `P` packets.
 
@@ -1361,8 +1307,6 @@ allocate memory so we can run JITed code.
 
 ## _M\<size\>,\<permissions\>
 
-### Brief
-
 Allocate memory on the remote target with the specified size and
 permissions.
 
@@ -1397,8 +1341,6 @@ is just the address of the newly allocated memory as raw big endian hex bytes.
 
 ## _m\<addr\>
 
-### Brief
-
 Deallocate memory that was previously allocated using an allocate
 memory pack.
 
@@ -1417,8 +1359,6 @@ if the memory was successfully deallocated, or `EXX`" for an error, or an
 empty response if not supported.
 
 ## qMemoryRegionInfo:\<addr\>
-
-### Brief
 
 Get information about the address range that contains `<addr>`.
 
@@ -1490,8 +1430,6 @@ for this region.
 
 ## "x" - Binary memory read
 
-### Brief
-
 Like the `m` (read) and `M` (write) packets, this is a partner to the
 `X` (write binary data) packet, `x`.
 
@@ -1546,8 +1484,6 @@ D
 
 ## QSaveRegisterState / QSaveRegisterState;thread:XXXX;
 
-### Brief
-
 The `QSaveRegisterState` packet tells the remote debugserver to save
 all registers and return a non-zero unique integer ID that
 represents these save registers. If thread suffixes are enabled the
@@ -1576,8 +1512,6 @@ for the `QRestoreRegisterState` is added.
 
 ## QRestoreRegisterState:\<save_id\> / QRestoreRegisterState:\<save_id\>;thread:XXXX;
 
-### Brief
-
 The `QRestoreRegisterState` packet tells the remote debugserver to
 restore all registers using the `save_id` which is an unsigned
 integer that was returned from a previous call to
@@ -1601,8 +1535,6 @@ for the `QSaveRegisterState` is added.
 
 ## qFileLoadAddress:\<file_path\>
 
-### Brief
-
 Get the load address of a memory mapped file.
 The load address is defined as the address of the first memory
 region what contains data mapped from the specified file.
@@ -1620,8 +1552,6 @@ some object file in the rendezvous data structure.
 
 ## qModuleInfo:\<module_path\>;\<arch triple\>
 
-### Brief
-
 Get information for a module by given module path and architecture.
 
 ### Response
@@ -1635,8 +1565,6 @@ Optional, required if dynamic loader cannot fetch module's information like
 UUID directly from inferior's memory.
 
 ## jModulesInfo:[{"file":"...",triple:"..."}, ...]
-
-### Brief
 
 Get information for a list of modules by given module path and
 architecture.
@@ -1663,8 +1591,6 @@ may be slower if the target contains a large number of modules and
 the communication link has a non-negligible latency.
 
 ## Stop reply packet extensions
-
-### Brief
 
 This section describes some of the additional information you can
 specify in stop reply packets that help LLDB to know more detailed
@@ -1880,8 +1806,6 @@ your debug session more reliable and informative.
 
 ## qfProcessInfo / qsProcessInfo (Platform Extension)
 
-### Brief
-
 Get the first process info (`qfProcessInfo`) or subsequent process
 info (`qsProcessInfo`) for one or more processes on the remote
 platform. The first call gets the first match and subsequent calls
@@ -1935,8 +1859,6 @@ read packet: $E04#00
 
 ## qPathComplete (Platform Extension)
 
-### Brief
-
 Get a list of matched disk files/directories by passing a boolean flag
 and a partial path.
 
@@ -1958,8 +1880,6 @@ Paths denoting a directory should end with a directory separator (`/` or `\`.
 
 ## qKillSpawnedProcess (Platform Extension)
 
-### Brief
-
 Kill a process running on the target system.
 
 ### Example
@@ -1971,8 +1891,6 @@ send:    OK
 The request packet has the process ID in base 10.
 
 ## qLaunchGDBServer (Platform Extension)
-
-### Brief
 
 Have the remote platform launch a GDB server.
 
@@ -2007,8 +1925,6 @@ to attach to in case zero was specified as the "port" in the sent command.
 
 ## qProcessInfoPID:PID (Platform Extension)
 
-### Brief
-
 Have the remote platform get detailed information on a process by
 ID. PID is specified as a decimal integer.
 
@@ -2039,8 +1955,6 @@ read packet: $pid:60050;ppid:59948;uid:7746;gid:11;euid:7746;egid:11;name:6c6c64
 
 ## vAttachName
 
-### Brief
-
 Same as `vAttach`, except instead of a `pid` you send a process name.
 
 ### Priority To Implement
@@ -2050,8 +1964,6 @@ then `process attach -n` will fail gracefully.  So you need only to support
 it if attaching to a process by name makes sense for your environment.
 
 ## vAttachWait
-
-### Brief
 
 Same as `vAttachName`, except that the stub should wait for the next instance
 of a process by that name to be launched and attach to that.
@@ -2063,8 +1975,6 @@ gracefully if the packet is not supported.
 
 ## qAttachOrWaitSupported
 
-### Brief
-
 This is a binary "is it supported" query. Return OK if you support
 `vAttachOrWait`.
 
@@ -2075,8 +1985,6 @@ is needed since the standard "I don't recognize this packet" response
 will do the right thing.
 
 ## vAttachOrWait
-
-### Brief
 
 Same as `vAttachWait`, except that the stub will attach to a process
 by name if it exists, and if it does not, it will wait for a process
@@ -2093,8 +2001,6 @@ however, so if you want to support this behavior it is better to
 support this packet.
 
 ## jThreadExtendedInfo
-
-### Brief
 
 This packet, which takes its arguments as JSON and sends its reply as
 JSON, allows the gdb remote stub to provide additional information
@@ -2157,8 +2063,6 @@ jThreadExtendedInfo:{"thread":612910}]
 
 ## QEnableCompression
 
-### Brief
-
 This packet enables compression of the packets that the debug stub sends to lldb.
 If the debug stub can support compression, it indictes this in the reply of the
 "qSupported" packet. For example:
@@ -2217,8 +2121,6 @@ Example compression algorithms that may be used include:
   open source LZMA implementation.
 
 ## jGetLoadedDynamicLibrariesInfos
-
-### Brief
 
 This packet asks the remote debug stub to send the details about libraries
 being added/removed from the process as a performance optimization.
@@ -2313,8 +2215,6 @@ executable loaded.
 
 ## jThreadsInfo
 
-### Brief
-
 Ask for the server for thread stop information of all threads.
 
 ### Priority To Implement
@@ -2381,8 +2281,6 @@ iOS now don't require us to read any memory!
 
 ## jGetSharedCacheInfo
 
-### Brief
-
 This packet asks the remote debug stub to send the details about the inferior's
 shared cache. The shared cache is a collection of common libraries/frameworks that
 are mapped into every process at the same address on Darwin systems, and can be
@@ -2401,8 +2299,6 @@ the shared cache out of its own memory instead of using gdb-remote read packets 
 them from the inferior process.
 
 ## qQueryGDBServer
-
-### Brief
 
 Ask the platform for the list of gdbservers we have to connect
 
@@ -2432,8 +2328,6 @@ Example packet:
 
 ## QSetDetachOnError
 
-### Brief
-
 Sets what the server should do when the communication channel with LLDB
 goes down. Either kill the inferior process (`0`) or remove breakpoints and
 detach (`1`).
@@ -2450,8 +2344,6 @@ inferior process should be killed, or `1` if the server should remove all
 breakpoints and detach from the inferior.
 
 ## jGetDyldProcessState
-
-### Brief
 
 This packet fetches the process launch state, as reported by libdyld on
 Darwin systems, most importantly to indicate when the system libraries
@@ -2476,8 +2368,6 @@ mismatches or extensions.
 
 ### vFile:size
 
-#### Brief
-
 Get the size of a file on the target system, filename in ASCII hex.
 
 #### Example
@@ -2491,8 +2381,6 @@ response is `F` followed by the file size in base 16.
 `F-1,errno` with the errno if an error occurs, base 16.
 
 ### vFile:mode
-
-#### Brief
 
 Get the mode bits of a file on the target system, filename in ASCII hex.
 
@@ -2508,8 +2396,6 @@ correspond to `0755` in octal.
 `F-1,errno` with the errno if an error occurs, base 16.
 
 ### vFile:unlink
-
-#### Brief
 
 Remove a file on the target system.
 
@@ -2527,8 +2413,6 @@ value of errno if unlink failed.
 
 ### vFile:symlink
 
-#### Brief
-
 Create a symbolic link (symlink, soft-link) on the target system.
 
 #### Example
@@ -2543,8 +2427,6 @@ Response is `F` plus the return value of `symlink()`, base 16 encoding,
 optionally followed by the value of errno if it failed, also base 16.
 
 ### vFile:open
-
-#### Brief
 
 Open a file on the remote system and return the file descriptor of it.
 
@@ -2568,8 +2450,6 @@ response is `F` followed by the opened file descriptor in base 16.
 
 ### vFile:close
 
-#### Brief
-
 Close a previously opened file descriptor.
 
 #### Example
@@ -2583,8 +2463,6 @@ File descriptor is in base 16. `F-1,errno` with the errno if an error occurs,
 errno is base 16.
 
 ### vFile:pread
-
-#### Brief
 
 Read data from an opened file descriptor.
 
@@ -2605,8 +2483,6 @@ semicolon, followed by the data in the binary-escaped-data encoding.
 
 ### vFile:pwrite
 
-#### Brief
-
 Write data to a previously opened file descriptor.
 
 #### Example
@@ -2624,8 +2500,6 @@ Request packet has the fields:
 Response is `F`, followed by the number of bytes written (base 16).
 
 ### vFile:MD5
-
-#### Brief
 
 Generate an MD5 hash of the file at the given path.
 
@@ -2647,8 +2521,6 @@ The response is `F,`, followed by `x` if the file did not exist
 or failed to hash.
 
 ### vFile:exists
-
-#### Brief
 
 Check whether the file at the given path exists.
 
