@@ -2165,7 +2165,7 @@ mlir::ParseResult fir::DoLoopOp::parse(mlir::OpAsmParser &parser,
 }
 
 fir::DoLoopOp fir::getForInductionVarOwner(mlir::Value val) {
-  auto ivArg = val.dyn_cast<mlir::BlockArgument>();
+  auto ivArg = mlir::dyn_cast<mlir::BlockArgument>(val);
   if (!ivArg)
     return {};
   assert(ivArg.getOwner() && "unlinked block argument");
@@ -3777,7 +3777,7 @@ valueCheckFirAttributes(mlir::Value value,
       if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(definingOp))
         value = loadOp.getMemref();
   // If this is a function argument, look in the argument attributes.
-  if (auto blockArg = value.dyn_cast<mlir::BlockArgument>()) {
+  if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(value)) {
     if (blockArg.getOwner() && blockArg.getOwner()->isEntryBlock())
       if (auto funcOp = mlir::dyn_cast<mlir::func::FuncOp>(
               blockArg.getOwner()->getParentOp()))
@@ -3907,7 +3907,7 @@ mlir::ParseResult parseCUFKernelValues(
   if (mlir::succeeded(parser.parseOptionalStar()))
     return mlir::success();
 
-  if (parser.parseOptionalLParen()) {
+  if (mlir::succeeded(parser.parseOptionalLParen())) {
     if (mlir::failed(parser.parseCommaSeparatedList(
             mlir::AsmParser::Delimiter::None, [&]() {
               if (parser.parseOperand(values.emplace_back()))
@@ -3915,11 +3915,17 @@ mlir::ParseResult parseCUFKernelValues(
               return mlir::success();
             })))
       return mlir::failure();
+    auto builder = parser.getBuilder();
+    for (size_t i = 0; i < values.size(); i++) {
+      types.emplace_back(builder.getI32Type());
+    }
     if (parser.parseRParen())
       return mlir::failure();
   } else {
     if (parser.parseOperand(values.emplace_back()))
       return mlir::failure();
+    auto builder = parser.getBuilder();
+    types.emplace_back(builder.getI32Type());
     return mlir::success();
   }
   return mlir::success();
@@ -3990,6 +3996,38 @@ mlir::LogicalResult fir::CUDAKernelOp::verify() {
     return emitOpError(
         "expect same number of values in lowerbound, upperbound and step");
 
+  return mlir::success();
+}
+
+mlir::LogicalResult fir::CUDAAllocateOp::verify() {
+  if (getPinned() && getStream())
+    return emitOpError("pinned and stream cannot appears at the same time");
+  if (!fir::unwrapRefType(getBox().getType()).isa<fir::BaseBoxType>())
+    return emitOpError(
+        "expect box to be a reference to a class or box type value");
+  if (getSource() &&
+      !fir::unwrapRefType(getSource().getType()).isa<fir::BaseBoxType>())
+    return emitOpError(
+        "expect source to be a reference to/or a class or box type value");
+  if (getErrmsg() &&
+      !fir::unwrapRefType(getErrmsg().getType()).isa<fir::BoxType>())
+    return emitOpError(
+        "expect errmsg to be a reference to/or a box type value");
+  if (getErrmsg() && !getHasStat())
+    return emitOpError("expect stat attribute when errmsg is provided");
+  return mlir::success();
+}
+
+mlir::LogicalResult fir::CUDADeallocateOp::verify() {
+  if (!fir::unwrapRefType(getBox().getType()).isa<fir::BaseBoxType>())
+    return emitOpError(
+        "expect box to be a reference to class or box type value");
+  if (getErrmsg() &&
+      !fir::unwrapRefType(getErrmsg().getType()).isa<fir::BoxType>())
+    return emitOpError(
+        "expect errmsg to be a reference to/or a box type value");
+  if (getErrmsg() && !getHasStat())
+    return emitOpError("expect stat attribute when errmsg is provided");
   return mlir::success();
 }
 

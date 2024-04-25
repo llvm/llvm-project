@@ -37,8 +37,8 @@ define <16 x i8> @smax_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 define void @smax_v32i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: smax_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    smax z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    movprfx z1, z2
@@ -81,8 +81,8 @@ define <8 x i16> @smax_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 define void @smax_v16i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: smax_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    smax z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    movprfx z1, z2
@@ -125,8 +125,8 @@ define <4 x i32> @smax_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 define void @smax_v8i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: smax_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    smax z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    movprfx z1, z2
@@ -171,8 +171,8 @@ define <2 x i64> @smax_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 define void @smax_v4i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: smax_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    smax z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    movprfx z1, z2
@@ -219,8 +219,8 @@ define <16 x i8> @smin_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 define void @smin_v32i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: smin_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    smin z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    movprfx z1, z2
@@ -263,8 +263,8 @@ define <8 x i16> @smin_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 define void @smin_v16i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: smin_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    smin z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    movprfx z1, z2
@@ -307,8 +307,8 @@ define <4 x i32> @smin_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 define void @smin_v8i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: smin_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    smin z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    movprfx z1, z2
@@ -353,8 +353,8 @@ define <2 x i64> @smin_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 define void @smin_v4i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: smin_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    smin z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    movprfx z1, z2
@@ -401,8 +401,8 @@ define <16 x i8> @umax_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 define void @umax_v32i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: umax_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    umax z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    movprfx z1, z2
@@ -445,8 +445,8 @@ define <8 x i16> @umax_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 define void @umax_v16i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: umax_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    umax z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    movprfx z1, z2
@@ -489,8 +489,8 @@ define <4 x i32> @umax_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 define void @umax_v8i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: umax_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    umax z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    movprfx z1, z2
@@ -535,8 +535,8 @@ define <2 x i64> @umax_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 define void @umax_v4i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: umax_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    umax z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    movprfx z1, z2
@@ -583,8 +583,8 @@ define <16 x i8> @umin_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 define void @umin_v32i8(ptr %a, ptr %b) {
 ; CHECK-LABEL: umin_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    umin z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    movprfx z1, z2
@@ -627,8 +627,8 @@ define <8 x i16> @umin_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 define void @umin_v16i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: umin_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    umin z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    movprfx z1, z2
@@ -671,8 +671,8 @@ define <4 x i32> @umin_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 define void @umin_v8i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: umin_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    umin z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    movprfx z1, z2
@@ -717,8 +717,8 @@ define <2 x i64> @umin_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 define void @umin_v4i64(ptr %a, ptr %b) {
 ; CHECK-LABEL: umin_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    umin z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    movprfx z1, z2

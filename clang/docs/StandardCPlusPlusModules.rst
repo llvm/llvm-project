@@ -483,6 +483,13 @@ violations with the flag enabled.
 ABI Impacts
 -----------
 
+This section describes the new ABI changes brought by modules.
+
+Only Itanium C++ ABI related change are mentioned
+
+Mangling Names
+~~~~~~~~~~~~~~
+
 The declarations in a module unit which are not in the global module fragment have new linkage names.
 
 For example,
@@ -519,6 +526,129 @@ is attached to the global module fragments. For example:
   }
 
 Now the linkage name of ``NS::foo()`` will be ``_ZN2NS3fooEv``.
+
+Module Initializers
+~~~~~~~~~~~~~~~~~~~
+
+All the importable module units are required to emit an initializer function.
+The initializer function should contain calls to importing modules first and
+all the dynamic-initializers in the current module unit then.
+
+Translation units explicitly or implicitly importing named modules must call
+the initializer functions of the imported named modules within the sequence of
+the dynamic-initializers in the TU. Initializations of entities at namespace
+scope are appearance-ordered. This (recursively) extends into imported modules
+at the point of appearance of the import declaration.
+
+It is allowed to omit calls to importing modules if it is known empty.
+
+It is allowed to omit calls to importing modules for which is known to be called.
+
+Reduced BMI
+-----------
+
+To support the 2 phase compilation model, Clang chose to put everything needed to
+produce an object into the BMI. But every consumer of the BMI, except itself, doesn't
+need such informations. It makes the BMI to larger and so may introduce unnecessary
+dependencies into the BMI. To mitigate the problem, we decided to reduce the information
+contained in the BMI.
+
+To be clear, we call the default BMI as Full BMI and the new introduced BMI as Reduced
+BMI.
+
+Users can use ``-fexperimental-modules-reduced-bmi`` flag to enable the Reduced BMI.
+
+For one phase compilation model (CMake implements this model), with
+``-fexperimental-modules-reduced-bmi``, the generated BMI will be Reduced BMI automatically.
+(The output path of the BMI is specified by ``-fmodule-output=`` as usual one phase
+compilation model).
+
+It is still possible to support Reduced BMI in two phase compilation model. With
+``-fexperimental-modules-reduced-bmi``, ``--precompile`` and ``-fmodule-output=`` specified,
+the generated BMI specified by ``-o`` will be full BMI and the BMI specified by
+``-fmodule-output=`` will be Reduced BMI. The dependency graph may be:
+
+.. code-block:: none
+
+  module-unit.cppm --> module-unit.full.pcm -> module-unit.o
+                    |
+                    -> module-unit.reduced.pcm -> consumer1.cpp
+                                               -> consumer2.cpp
+                                               -> ...
+                                               -> consumer_n.cpp
+
+We don't emit diagnostics if ``-fexperimental-modules-reduced-bmi`` is used with a non-module
+unit. This design helps the end users of one phase compilation model to perform experiments
+early without asking for the help of build systems. The users of build systems which supports
+two phase compilation model still need helps from build systems.
+
+Within Reduced BMI, we won't write unreachable entities from GMF, definitions of non-inline
+functions and non-inline variables. This may not be a transparent change.
+`[module.global.frag]ex2 <https://eel.is/c++draft/module.global.frag#example-2>`_ may be a good
+example:
+
+.. code-block:: c++
+
+  // foo.h
+  namespace N {
+    struct X {};
+    int d();
+    int e();
+    inline int f(X, int = d()) { return e(); }
+    int g(X);
+    int h(X);
+  }
+
+  // M.cppm
+  module;
+  #include "foo.h"
+  export module M;
+  template<typename T> int use_f() {
+    N::X x;                       // N::X, N, and :: are decl-reachable from use_f
+    return f(x, 123);             // N::f is decl-reachable from use_f,
+                                  // N::e is indirectly decl-reachable from use_f
+                                  //   because it is decl-reachable from N::f, and
+                                  // N::d is decl-reachable from use_f
+                                  //   because it is decl-reachable from N::f
+                                  //   even though it is not used in this call
+  }
+  template<typename T> int use_g() {
+    N::X x;                       // N::X, N, and :: are decl-reachable from use_g
+    return g((T(), x));           // N::g is not decl-reachable from use_g
+  }
+  template<typename T> int use_h() {
+    N::X x;                       // N::X, N, and :: are decl-reachable from use_h
+    return h((T(), x));           // N::h is not decl-reachable from use_h, but
+                                  // N::h is decl-reachable from use_h<int>
+  }
+  int k = use_h<int>();
+    // use_h<int> is decl-reachable from k, so
+    // N::h is decl-reachable from k
+
+  // M-impl.cpp
+  module M;
+  int a = use_f<int>();           // OK
+  int b = use_g<int>();           // error: no viable function for call to g;
+                                  // g is not decl-reachable from purview of
+                                  // module M's interface, so is discarded
+  int c = use_h<int>();           // OK
+
+In the above example, the function definition of ``N::g`` is elided from the Reduced
+BMI of ``M.cppm``. Then the use of ``use_g<int>`` in ``M-impl.cpp`` fails
+to instantiate. For such issues, users can add references to ``N::g`` in the module purview
+of ``M.cppm`` to make sure it is reachable, e.g., ``using N::g;``.
+
+We think the Reduced BMI is the correct direction. But given it is a drastic change,
+we'd like to make it experimental first to avoid breaking existing users. The roadmap
+of Reduced BMI may be:
+
+1. ``-fexperimental-modules-reduced-bmi`` is opt in for 1~2 releases. The period depends
+on testing feedbacks.
+2. We would announce Reduced BMI is not experimental and introduce ``-fmodules-reduced-bmi``.
+and suggest users to enable this mode. This may takes 1~2 releases too.
+3. Finally we will enable this by default. When that time comes, the term BMI will refer to
+the reduced BMI today and the Full BMI will only be meaningful to build systems which
+loves to support two phase compilations.
 
 Performance Tips
 ----------------

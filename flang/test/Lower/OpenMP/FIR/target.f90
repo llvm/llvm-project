@@ -1,4 +1,5 @@
-!RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
+! The "thread_limit" clause was added to the "target" construct in OpenMP 5.1.
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp -fopenmp-version=51 %s -o - | FileCheck %s
 
 !===============================================================================
 ! Target_Enter Simple
@@ -411,8 +412,8 @@ end subroutine omp_target_implicit_bounds
 !CHECK-LABEL: func.func @_QPomp_target_thread_limit() {
 subroutine omp_target_thread_limit
    integer :: a
-   !CHECK: %[[VAL_1:.*]] = arith.constant 64 : i32
    !CHECK: %[[MAP:.*]] = omp.map.info var_ptr({{.*}})   map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "a"}
+   !CHECK: %[[VAL_1:.*]] = arith.constant 64 : i32
    !CHECK: omp.target   thread_limit(%[[VAL_1]] : i32) map_entries(%[[MAP]] -> %[[ARG_0:.*]] : !fir.ref<i32>) {
    !CHECK: ^bb0(%[[ARG_0]]: !fir.ref<i32>):
    !$omp target map(tofrom: a) thread_limit(64)
@@ -487,7 +488,8 @@ subroutine omp_target_parallel_do
          !CHECK: %[[VAL_5:.*]] = arith.constant 1 : i32
          !CHECK: %[[VAL_6:.*]] = arith.constant 1024 : i32
          !CHECK: %[[VAL_7:.*]] = arith.constant 1 : i32
-         !CHECK: omp.wsloop   for  (%[[VAL_8:.*]]) : i32 = (%[[VAL_5]]) to (%[[VAL_6]]) inclusive step (%[[VAL_7]]) {
+         !CHECK: omp.wsloop {
+         !CHECK: omp.loop_nest (%[[VAL_8:.*]]) : i32 = (%[[VAL_5]]) to (%[[VAL_6]]) inclusive step (%[[VAL_7]]) {
          !CHECK: fir.store %[[VAL_8]] to %[[VAL_4]] : !fir.ref<i32>
          !CHECK: %[[VAL_9:.*]] = arith.constant 10 : i32
          !CHECK: %[[VAL_10:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>
@@ -500,6 +502,8 @@ subroutine omp_target_parallel_do
             a(i) = 10
          end do
          !CHECK: omp.yield
+         !CHECK: }
+         !CHECK: omp.terminator
          !CHECK: }
       !CHECK: omp.terminator
       !CHECK: }

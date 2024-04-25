@@ -807,7 +807,6 @@ template <> struct MappingTraits<FormatStyle> {
         FormatStyle PredefinedStyle;
         if (getPredefinedStyle(StyleName, Style.Language, &PredefinedStyle) &&
             Style == PredefinedStyle) {
-          IO.mapOptional("# BasedOnStyle", StyleName);
           BasedOnStyle = StyleName;
           break;
         }
@@ -3891,7 +3890,11 @@ static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
       FileName.ends_with_insensitive(".protodevel")) {
     return FormatStyle::LK_Proto;
   }
-  if (FileName.ends_with_insensitive(".textpb") ||
+  // txtpb is the canonical extension, and textproto is the legacy canonical
+  // extension
+  // https://protobuf.dev/reference/protobuf/textformat-spec/#text-format-files
+  if (FileName.ends_with_insensitive(".txtpb") ||
+      FileName.ends_with_insensitive(".textpb") ||
       FileName.ends_with_insensitive(".pb.txt") ||
       FileName.ends_with_insensitive(".textproto") ||
       FileName.ends_with_insensitive(".asciipb")) {

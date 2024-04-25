@@ -1367,6 +1367,7 @@ void PGOUseFunc::populateCoverage(IndexedInstrProfReader *PGOReader) {
     handleInstrProfError(std::move(Err), MismatchedFuncSum);
     return;
   }
+  IsCS ? NumOfCSPGOFunc++ : NumOfPGOFunc++;
 
   std::vector<uint64_t> &CountsFromProfile = Result.get().Counts;
   DenseMap<const BasicBlock *, bool> Coverage;

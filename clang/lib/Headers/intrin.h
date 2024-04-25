@@ -26,7 +26,7 @@
 #include <armintr.h>
 #endif
 
-#if defined(__aarch64__)
+#if defined(__aarch64__) || defined(__arm64ec__)
 #include <arm64intr.h>
 #endif
 

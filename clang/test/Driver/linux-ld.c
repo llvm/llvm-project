@@ -92,6 +92,7 @@
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=arm-linux-androideabi \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --rtlib=compiler-rt \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-RT-ANDROID %s
 // CHECK-LD-RT-ANDROID-NOT: warning:
@@ -262,6 +263,7 @@
 // RUN: %clang -static -### %s -no-pie 2>&1 \
 // RUN:     --target=aarch64-linux-android -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANG-ANDROID-STATIC %s
 // CHECK-CLANG-ANDROID-STATIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-CLANG-ANDROID-STATIC: "--start-group" "{{[^"]*}}{{/|\\\\}}libclang_rt.builtins.a" "-l:libunwind.a" "-lc" "--end-group"
@@ -1442,6 +1444,32 @@
 // We don't have crtfastmath.o in the i386 tree, use it to check that file
 // detection works.
 // RUN: %clang --target=i386-unknown-linux -no-pie -### %s -ffast-math \
+// RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH %s
+// Don't link crtfastmath.o with -shared
+// RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s -ffast-math -shared \
+// RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH %s
+// RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s -Ofast -shared \
+// RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH %s
+// Check for effects of -mdaz-ftz
+// RUN: %clang --target=x86_64-unknown-linux -### %s -ffast-math -shared -mdaz-ftz \
+// RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH %s
+// RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s -ffast-math -mdaz-ftz \
+// RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH %s
+// RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s -mdaz-ftz \
+// RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-CRTFASTMATH %s
+// RUN: %clang --target=x86_64-unknown-linux -### %s -ffast-math -shared -mno-daz-ftz \
+// RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH %s
+// RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s -ffast-math -mno-daz-ftz \
+// RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH %s
+// RUN: %clang --target=x86_64-unknown-linux -no-pie -### %s -mno-daz-ftz \
 // RUN:        --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NOCRTFASTMATH %s
 // CHECK-CRTFASTMATH: usr/lib/gcc/x86_64-unknown-linux/10.2.0{{/|\\\\}}crtfastmath.o

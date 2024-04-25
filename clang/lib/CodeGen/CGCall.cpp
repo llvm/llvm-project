@@ -1585,6 +1585,11 @@ bool CodeGenModule::ReturnTypeUsesSRet(const CGFunctionInfo &FI) {
   return RI.isIndirect() || (RI.isInAlloca() && RI.getInAllocaSRet());
 }
 
+bool CodeGenModule::ReturnTypeHasInReg(const CGFunctionInfo &FI) {
+  const auto &RI = FI.getReturnInfo();
+  return RI.getInReg();
+}
+
 bool CodeGenModule::ReturnSlotInterferesWithArgs(const CGFunctionInfo &FI) {
   return ReturnTypeUsesSRet(FI) &&
          getTargetCodeGenInfo().doesReturnSlotInterfereWithArgs();
@@ -3665,7 +3670,7 @@ static void setUsedBits(CodeGenModule &CGM, const RecordType *RTy, int Offset,
   for (auto I = RD->field_begin(), E = RD->field_end(); I != E; ++I, ++Idx) {
     const FieldDecl *F = *I;
 
-    if (F->isUnnamedBitfield() || F->isZeroLengthBitField(Context) ||
+    if (F->isUnnamedBitField() || F->isZeroLengthBitField(Context) ||
         F->getType()->isIncompleteArrayType())
       continue;
 
@@ -5590,6 +5595,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                              Callee.getAbstractInfo(), Attrs, CallingConv,
                              /*AttrOnCallSite=*/true,
                              /*IsThunk=*/false);
+
+  if (CallingConv == llvm::CallingConv::X86_VectorCall &&
+      getTarget().getTriple().isWindowsArm64EC()) {
+    CGM.Error(Loc, "__vectorcall calling convention is not currently "
+                   "supported");
+  }
 
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl)) {
     if (FD->hasAttr<StrictFPAttr>())

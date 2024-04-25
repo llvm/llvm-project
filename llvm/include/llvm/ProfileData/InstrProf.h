@@ -277,6 +277,8 @@ void annotateValueSite(Module &M, Instruction &Inst,
                        uint32_t MaxMDCount = 3);
 
 /// Same as the above interface but using an ArrayRef, as well as \p Sum.
+/// This function will not annotate !prof metadata on the instruction if the
+/// referenced array is empty.
 void annotateValueSite(Module &M, Instruction &Inst,
                        ArrayRef<InstrProfValueData> VDs, uint64_t Sum,
                        InstrProfValueKind ValueKind, uint32_t MaxMDCount);
@@ -466,7 +468,6 @@ private:
   StringSet<> VTableNames;
   // A map from MD5 keys to function name strings.
   std::vector<std::pair<uint64_t, StringRef>> MD5NameMap;
-
   // A map from MD5 keys to function define. We only populate this map
   // when build the Symtab from a Module.
   std::vector<std::pair<uint64_t, Function *>> MD5FuncMap;
@@ -1150,9 +1151,9 @@ enum ProfVersion {
   // Two additional header fields to add partial forward compatibility.
   // Indexed profile reader compares the latest version it can parse with the
   // minimum version required by (and recorded in) the profile; if the reader
-  // can reasonably interprets the payload, it proceeds to parse known sections
-  // and skip unknown sections; otherwise it stops reading and throws error
-  // (users should update compilers and/or command line tools to parse profiles
+  // can reasonably interpret the payload, it proceeds to parse known sections
+  // and skip new unknown sections; otherwise it stops reading and throws error
+  // (in this case users should update compilers and/or command line tools to parse profiles
   // with newer versions).
   Version13 = 13,
   // The current version is 13.

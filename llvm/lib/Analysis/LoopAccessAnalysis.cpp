@@ -1917,14 +1917,30 @@ isLoopVariantIndirectAddress(ArrayRef<const Value *> UnderlyingObjects,
   });
 }
 
-// Get the dependence distance, stride, type size in whether i is a write for
+namespace {
+struct DepDistanceStrideAndSizeInfo {
+  const SCEV *Dist;
+  uint64_t Stride;
+  uint64_t TypeByteSize;
+  bool AIsWrite;
+  bool BIsWrite;
+
+  DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t Stride,
+                               uint64_t TypeByteSize, bool AIsWrite,
+                               bool BIsWrite)
+      : Dist(Dist), Stride(Stride), TypeByteSize(TypeByteSize),
+        AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
+};
+} // namespace
+
+// Get the dependence distance, stride, type size and whether it is a write for
 // the dependence between A and B. Returns a DepType, if we can prove there's
 // no dependence or the analysis fails. Outlined to lambda to limit he scope
 // of various temporary variables, like A/BPtr, StrideA/BPtr and others.
 // Returns either the dependence result, if it could already be determined, or a
-// tuple with (Distance, Stride, TypeSize, AIsWrite, BIsWrite).
+// struct containing (Distance, Stride, TypeSize, AIsWrite, BIsWrite).
 static std::variant<MemoryDepChecker::Dependence::DepType,
-                    std::tuple<const SCEV *, uint64_t, uint64_t, bool, bool>>
+                    DepDistanceStrideAndSizeInfo>
 getDependenceDistanceStrideAndSize(
     const AccessAnalysis::MemAccessInfo &A, Instruction *AInst,
     const AccessAnalysis::MemAccessInfo &B, Instruction *BInst,
@@ -1993,7 +2009,8 @@ getDependenceDistanceStrideAndSize(
   if (!HasSameSize)
     TypeByteSize = 0;
   uint64_t Stride = std::abs(StrideAPtr);
-  return std::make_tuple(Dist, Stride, TypeByteSize, AIsWrite, BIsWrite);
+  return DepDistanceStrideAndSizeInfo(Dist, Stride, TypeByteSize, AIsWrite,
+                                      BIsWrite);
 }
 
 MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
@@ -2012,11 +2029,15 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
     return std::get<Dependence::DepType>(Res);
 
   const auto &[Dist, Stride, TypeByteSize, AIsWrite, BIsWrite] =
-      std::get<std::tuple<const SCEV *, uint64_t, uint64_t, bool, bool>>(Res);
+      std::get<DepDistanceStrideAndSizeInfo>(Res);
   bool HasSameSize = TypeByteSize > 0;
 
   ScalarEvolution &SE = *PSE.getSE();
   auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
+  // If the distance between the acecsses is larger than their absolute stride
+  // multiplied by the backedge taken count, the accesses are independet, i.e.
+  // they are far enough appart that accesses won't access the same location
+  // across all loop ierations.
   if (!isa<SCEVCouldNotCompute>(Dist) && HasSameSize &&
       isSafeDependenceDistance(DL, SE, *(PSE.getBackedgeTakenCount()), *Dist,
                                Stride, TypeByteSize))
@@ -2032,7 +2053,8 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   const APInt &Val = C->getAPInt();
   int64_t Distance = Val.getSExtValue();
 
-  // Attempt to prove strided accesses independent.
+  // If the distance between accesses and their strides are known constants,
+  // check whether the accesses interlace each other.
   if (std::abs(Distance) > 0 && Stride > 1 && HasSameSize &&
       areStridedAccessesIndependent(std::abs(Distance), Stride, TypeByteSize)) {
     LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
@@ -2042,9 +2064,13 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   // Negative distances are not plausible dependencies.
   if (Val.isNegative()) {
     bool IsTrueDataDependence = (AIsWrite && !BIsWrite);
-    // There is no need to update MaxSafeVectorWidthInBits after call to
-    // couldPreventStoreLoadForward, even if it changed MinDepDistBytes,
-    // since a forward dependency will allow vectorization using any width.
+    // Check if the first access writes to a location that is read in a later
+    // iteration, where the distance between them is not a multiple of a vector
+    // factor and relatively small.
+    //
+    // NOTE: There is no need to update MaxSafeVectorWidthInBits after call to
+    // couldPreventStoreLoadForward, even if it changed MinDepDistBytes, since a
+    // forward dependency will allow vectorization using any width.
     if (IsTrueDataDependence && EnableForwardingConflictDetection &&
         (!HasSameSize || couldPreventStoreLoadForward(Val.abs().getZExtValue(),
                                                       TypeByteSize))) {

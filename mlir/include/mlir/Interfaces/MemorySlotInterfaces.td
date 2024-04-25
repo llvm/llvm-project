@@ -127,7 +127,9 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
       }],
       "::mlir::Value", "getStored",
       (ins "const ::mlir::MemorySlot &":$slot,
-           "::mlir::RewriterBase &":$rewriter)
+           "::mlir::RewriterBase &":$rewriter,
+           "::mlir::Value":$reachingDef,
+           "const ::mlir::DataLayout &":$dataLayout)
     >,
     InterfaceMethod<[{
         Checks that this operation can be promoted to no longer use the provided
@@ -172,7 +174,8 @@ def PromotableMemOpInterface : OpInterface<"PromotableMemOpInterface"> {
       (ins "const ::mlir::MemorySlot &":$slot,
            "const ::llvm::SmallPtrSetImpl<mlir::OpOperand *> &":$blockingUses,
            "::mlir::RewriterBase &":$rewriter,
-           "::mlir::Value":$reachingDefinition)
+           "::mlir::Value":$reachingDefinition,
+           "const ::mlir::DataLayout &":$dataLayout)
     >,
   ];
 }

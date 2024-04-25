@@ -201,11 +201,21 @@ private:
   /// The declarations and types to emit.
   std::queue<DeclOrType> DeclTypesToEmit;
 
+  /// The delayed namespace to emit. Only meaningful for reduced BMI.
+  ///
+  /// In reduced BMI, we want to elide the unreachable declarations in
+  /// the global module fragment. However, in ASTWriterDecl, when we see
+  /// a namespace, all the declarations in the namespace would be emitted.
+  /// So the optimization become meaningless. To solve the issue, we
+  /// delay recording all the declarations until we emit all the declarations.
+  /// Then we can safely record the reached declarations only.
+  llvm::SmallVector<NamespaceDecl *, 16> DelayedNamespace;
+
   /// The first ID number we can use for our own declarations.
-  serialization::DeclID FirstDeclID = serialization::NUM_PREDEF_DECL_IDS;
+  LocalDeclID FirstDeclID = LocalDeclID(clang::NUM_PREDEF_DECL_IDS);
 
   /// The decl ID that will be assigned to the next new decl.
-  serialization::DeclID NextDeclID = FirstDeclID;
+  LocalDeclID NextDeclID = FirstDeclID;
 
   /// Map that provides the ID numbers of each declaration within
   /// the output stream, as well as those deserialized from a chained PCH.
@@ -213,7 +223,7 @@ private:
   /// The ID numbers of declarations are consecutive (in order of
   /// discovery) and start at 2. 1 is reserved for the translation
   /// unit, while 0 is reserved for NULL.
-  llvm::DenseMap<const Decl *, serialization::DeclID> DeclIDs;
+  llvm::DenseMap<const Decl *, LocalDeclID> DeclIDs;
 
   /// Offset of each declaration in the bitstream, indexed by
   /// the declaration's ID.
@@ -223,9 +233,8 @@ private:
   /// are relative to this value.
   uint64_t DeclTypesBlockStartOffset = 0;
 
-  /// Sorted (by file offset) vector of pairs of file offset/DeclID.
-  using LocDeclIDsTy =
-      SmallVector<std::pair<unsigned, serialization::DeclID>, 64>;
+  /// Sorted (by file offset) vector of pairs of file offset/LocalDeclID.
+  using LocDeclIDsTy = SmallVector<std::pair<unsigned, LocalDeclID>, 64>;
   struct DeclIDInFileInfo {
     LocDeclIDsTy DeclIDs;
 
@@ -240,7 +249,7 @@ private:
   /// that it contains.
   FileDeclIDsTy FileDeclIDs;
 
-  void associateDeclWithFile(const Decl *D, serialization::DeclID);
+  void associateDeclWithFile(const Decl *D, LocalDeclID);
 
   /// The first ID number we can use for our own types.
   serialization::TypeID FirstTypeID = serialization::NUM_PREDEF_TYPE_IDS;
@@ -389,6 +398,11 @@ private:
   /// record containing modifications to them.
   DeclUpdateMap DeclUpdates;
 
+  /// DeclUpdates added during parsing the GMF. We split these from
+  /// DeclUpdates since we want to add these updates in GMF on need.
+  /// Only meaningful for reduced BMI.
+  DeclUpdateMap DeclUpdatesFromGMF;
+
   using FirstLatestDeclMap = llvm::DenseMap<Decl *, Decl *>;
 
   /// Map of first declarations from a chained PCH that point to the
@@ -406,8 +420,8 @@ private:
   /// headers. The declarations themselves are stored as declaration
   /// IDs, since they will be written out to an EAGERLY_DESERIALIZED_DECLS
   /// record.
-  SmallVector<serialization::DeclID, 16> EagerlyDeserializedDecls;
-  SmallVector<serialization::DeclID, 16> ModularCodegenDecls;
+  RecordData EagerlyDeserializedDecls;
+  RecordData ModularCodegenDecls;
 
   /// DeclContexts that have received extensions since their serialized
   /// form.
@@ -529,7 +543,8 @@ private:
   void WriteType(QualType T);
 
   bool isLookupResultExternal(StoredDeclsList &Result, DeclContext *DC);
-  bool isLookupResultEntirelyExternal(StoredDeclsList &Result, DeclContext *DC);
+  bool isLookupResultEntirelyExternalOrUnreachable(StoredDeclsList &Result,
+                                                   DeclContext *DC);
 
   void GenerateNameLookupTable(const DeclContext *DC,
                                llvm::SmallVectorImpl<char> &LookupTable);
@@ -543,6 +558,8 @@ private:
   void WriteIdentifierTable(Preprocessor &PP, IdentifierResolver &IdResolver,
                             bool IsModule);
   void WriteDeclAndTypes(ASTContext &Context);
+  void PrepareWritingSpecialDecls(Sema &SemaRef);
+  void WriteSpecialDeclRecords(Sema &SemaRef);
   void WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord);
   void WriteDeclContextVisibleUpdate(const DeclContext *DC);
   void WriteFPPragmaOptions(const FPOptionsOverride &Opts);
@@ -691,18 +708,30 @@ public:
       return false;
     auto I = DeclIDs.find(D);
     return (I == DeclIDs.end() ||
-            I->second >= serialization::NUM_PREDEF_DECL_IDS);
+            I->second.get() >= clang::NUM_PREDEF_DECL_IDS);
   };
 
   /// Emit a reference to a declaration.
   void AddDeclRef(const Decl *D, RecordDataImpl &Record);
+  // Emit a reference to a declaration if the declaration was emitted.
+  void AddEmittedDeclRef(const Decl *D, RecordDataImpl &Record);
 
-  /// Force a declaration to be emitted and get its ID.
-  serialization::DeclID GetDeclRef(const Decl *D);
+  /// Force a declaration to be emitted and get its local ID to the module file
+  /// been writing.
+  LocalDeclID GetDeclRef(const Decl *D);
 
-  /// Determine the declaration ID of an already-emitted
+  /// Determine the local declaration ID of an already-emitted
   /// declaration.
-  serialization::DeclID getDeclID(const Decl *D);
+  LocalDeclID getDeclID(const Decl *D);
+
+  /// Whether or not the declaration got emitted. If not, it wouldn't be
+  /// emitted.
+  ///
+  /// This may only be called after we've done the job to write the
+  /// declarations (marked by DoneWritingDeclsAndTypes).
+  ///
+  /// A declaration may only be omitted in reduced BMI.
+  bool wasDeclEmitted(const Decl *D) const;
 
   unsigned getAnonymousDeclarationNumber(const NamedDecl *D);
 
@@ -798,6 +827,10 @@ public:
     return WritingModule && WritingModule->isNamedModule();
   }
 
+  bool isGeneratingReducedBMI() const { return GeneratingReducedBMI; }
+
+  bool getDoneWritingDeclsAndTypes() const { return DoneWritingDeclsAndTypes; }
+
 private:
   // ASTDeserializationListener implementation
   void ReaderInitialized(ASTReader *Reader) override;
@@ -842,6 +875,11 @@ private:
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
   void AddedAttributeToRecord(const Attr *Attr,
                               const RecordDecl *Record) override;
+  void EnteringModulePurview() override;
+  void AddedManglingNumber(const Decl *D, unsigned) override;
+  void AddedStaticLocalNumbers(const Decl *D, unsigned) override;
+  void AddedAnonymousNamespace(const TranslationUnitDecl *,
+                               NamespaceDecl *AnonNamespace) override;
 };
 
 /// AST and semantic-analysis consumer that generates a
