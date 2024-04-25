@@ -966,6 +966,7 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
   // kill the original source reg entirely.
   if (InstrInfo.hasAVLReg()) {
     MachineInstr *DefMI = MRI->getUniqueVRegDef(InstrInfo.getAVLReg());
+    assert(DefMI);
     if (isVectorConfigInstr(*DefMI)) {
       VSETVLIInfo DefInstrInfo = getInfoForVSETVLI(*DefMI);
       if (DefInstrInfo.hasSameVLMAX(InstrInfo) &&
@@ -1314,12 +1315,11 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
     return true;
 
   Register AVLReg = Require.getAVLReg();
-  if (!AVLReg.isVirtual())
-    return true;
 
   // We need the AVL to be produce by a PHI node in this basic block.
-  MachineInstr *PHI = MRI->getVRegDef(AVLReg);
-  if (!PHI || PHI->getOpcode() != RISCV::PHI || PHI->getParent() != &MBB)
+  MachineInstr *PHI = MRI->getUniqueVRegDef(AVLReg);
+  assert(PHI);
+  if (PHI->getOpcode() != RISCV::PHI || PHI->getParent() != &MBB)
     return true;
 
   for (unsigned PHIOp = 1, NumOps = PHI->getNumOperands(); PHIOp != NumOps;
