@@ -893,19 +893,6 @@ LogicalResult SparseTensorEncodingAttr::verify(
   return success();
 }
 
-Type SparseTensorEncodingAttr::getMismatchedValueType(Type elementType,
-                                                      Attribute val) const {
-  Type type;
-  auto fVal = llvm::dyn_cast<FloatAttr>(val);
-  auto intVal = llvm::dyn_cast<IntegerAttr>(val);
-  if (fVal && fVal.getType() != elementType) {
-    type = fVal.getType();
-  } else if (intVal && intVal.getType() != elementType) {
-    type = intVal.getType();
-  }
-  return type;
-}
-
 LogicalResult SparseTensorEncodingAttr::verifyEncoding(
     ArrayRef<Size> dimShape, Type elementType,
     function_ref<InFlightDiagnostic()> emitError) const {
@@ -925,20 +912,29 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
     return emitError()
            << "dimension-rank mismatch between encoding and tensor shape: "
            << getDimRank() << " != " << dimRank;
-  Type type;
   if (getExplicitVal()) {
-    if ((type = getMismatchedValueType(elementType, getExplicitVal()))) {
-      return emitError() << "explicit value type mismatch between encoding and "
-                         << "tensor element type: " << type
-                         << " != " << elementType;
+    if (auto typedAttr = llvm::dyn_cast<TypedAttr>(getExplicitVal())) {
+      Type attrType = typedAttr.getType();
+      if (attrType != elementType) {
+        return emitError()
+               << "explicit value type mismatch between encoding and "
+               << "tensor element type: " << attrType << " != " << elementType;
+      }
+    } else {
+      return emitError() << "expected typed explicit value";
     }
   }
   if (getImplicitVal()) {
     auto impVal = getImplicitVal();
-    if ((type = getMismatchedValueType(elementType, impVal))) {
-      return emitError() << "implicit value type mismatch between encoding and "
-                         << "tensor element type: " << type
-                         << " != " << elementType;
+    if (auto typedAttr = llvm::dyn_cast<TypedAttr>(getImplicitVal())) {
+      Type attrType = typedAttr.getType();
+      if (attrType != elementType) {
+        return emitError()
+               << "implicit value type mismatch between encoding and "
+               << "tensor element type: " << attrType << " != " << elementType;
+      }
+    } else {
+      return emitError() << "expected typed implicit value";
     }
     // Currently, we only support zero as the implicit value.
     auto impFVal = llvm::dyn_cast<FloatAttr>(impVal);
