@@ -3,6 +3,7 @@
 
 %struct.Large = type { [16 x double] }
 
+; CHECK-LABEL: func_align
 ; CHECK: .param .u64 .ptr .global .align 16 func_align_param_0,
 ; CHECK: .param .u64 .ptr .global func_align_param_1,
 ; CHECK: .param .u32 func_align_param_2
@@ -16,6 +17,7 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: func
 ; CHECK: .param .ptr .global .u64 func_param_0,
 ; CHECK: .param .ptr .global .u64 func_param_1,
 ; CHECK: .param .u32 func_param_2
