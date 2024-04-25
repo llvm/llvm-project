@@ -23,16 +23,6 @@ static StringRef getExtensionName(const Record *R) {
   return Name;
 }
 
-namespace {
-
-struct LessRecordExtensionName {
-  bool operator()(const Record *Rec1, const Record *Rec2) const {
-    return getExtensionName(Rec1) < getExtensionName(Rec2);
-  }
-};
-
-} // end anonymous namespace
-
 static void printExtensionTable(raw_ostream &OS,
                                 const std::vector<Record *> &Extensions,
                                 bool Experimental) {
@@ -69,7 +59,9 @@ static void emitRISCVExtensions(RecordKeeper &Records, raw_ostream &OS) {
 
   std::vector<Record *> Extensions =
       Records.getAllDerivedDefinitions("RISCVExtension");
-  llvm::sort(Extensions, LessRecordExtensionName());
+  llvm::sort(Extensions, [](const Record *Rec1, const Record *Rec2) {
+    return getExtensionName(Rec1) < getExtensionName(Rec2);
+  });
 
   printExtensionTable(OS, Extensions, /*Experimental=*/false);
   printExtensionTable(OS, Extensions, /*Experimental=*/true);

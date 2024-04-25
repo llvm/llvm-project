@@ -12,6 +12,15 @@ class RISCVExtension<string name, int major, int minor, string desc,
   bit Experimental = false;
 }
 
+class RISCVExperimentalExtension<string name, int major, int minor, string desc,
+                                 list<RISCVExtension> implies = [],
+                                 string fieldname = !subst("Feature", "Has", NAME),
+                                 string value = "true">
+    : RISCVExtension<"experimental-"#name, major, minor, desc, implies,
+                     fieldname, value> {
+  let Experimental = true;
+}
+
 def FeatureStdExtI
     : RISCVExtension<"i", 2, 1,
                      "'I' (Base Integer Instruction Set)">;
@@ -28,6 +37,10 @@ def FeatureStdExtF
     : RISCVExtension<"f", 2, 2,
                      "'F' (Single-Precision Floating-Point)",
                      [FeatureStdExtZicsr]>;
+
+def FeatureStdExtZidummy
+    : RISCVExperimentalExtension<"zidummy", 0, 1,
+                                 "Dummy">;
 
 def Feature32Bit
     : SubtargetFeature<"32bit", "IsRV32", "true", "Implements RV32">;
@@ -92,6 +105,7 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
 // CHECK-NEXT: };
 
 // CHECK:      static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
+// CHECK-NEXT:     {"zidummy", {0, 1}},
 // CHECK-NEXT: };
 
 // CHECK:      #endif // GET_SUPPORTED_EXTENSIONS
