@@ -151,12 +151,12 @@ vwsll.vi v8, v4, 8
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      133
-# CHECK-NEXT: Total Cycles:      170
+# CHECK-NEXT: Total Cycles:      166
 # CHECK-NEXT: Total uOps:        133
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.78
-# CHECK-NEXT: IPC:               0.78
+# CHECK-NEXT: uOps Per Cycle:    0.80
+# CHECK-NEXT: IPC:               0.80
 # CHECK-NEXT: Block RThroughput: 164.0
 
 # CHECK:      Instruction Info:
@@ -182,8 +182,8 @@ vwsll.vi v8, v4, 8
 # CHECK-NEXT:  1      2     0.50                        vror.vv	v4, v8, v12
 # CHECK-NEXT:  1      2     0.50                        vror.vx	v4, v8, a0
 # CHECK-NEXT:  1      2     0.50                        vror.vi	v4, v8, 8
-# CHECK-NEXT:  1      6     0.50                        vwsll.vv	v4, v8, v12
-# CHECK-NEXT:  1      6     0.50                        vwsll.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     0.50                        vwsll.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     0.50                        vwsll.vx	v4, v8, a0
 # CHECK-NEXT:  1      2     0.50                        vwsll.vi	v4, v8, 8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
 # CHECK-NEXT:  1      1     0.50                        vandn.vv	v4, v8, v12
@@ -199,8 +199,8 @@ vwsll.vi v8, v4, 8
 # CHECK-NEXT:  1      2     0.50                        vror.vv	v4, v8, v12
 # CHECK-NEXT:  1      2     0.50                        vror.vx	v4, v8, a0
 # CHECK-NEXT:  1      2     0.50                        vror.vi	v4, v8, 8
-# CHECK-NEXT:  1      6     0.50                        vwsll.vv	v4, v8, v12
-# CHECK-NEXT:  1      6     0.50                        vwsll.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     0.50                        vwsll.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     0.50                        vwsll.vx	v4, v8, a0
 # CHECK-NEXT:  1      2     0.50                        vwsll.vi	v4, v8, 8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  1      1     0.50                        vandn.vv	v4, v8, v12
@@ -216,8 +216,8 @@ vwsll.vi v8, v4, 8
 # CHECK-NEXT:  1      2     0.50                        vror.vv	v4, v8, v12
 # CHECK-NEXT:  1      2     0.50                        vror.vx	v4, v8, a0
 # CHECK-NEXT:  1      2     0.50                        vror.vi	v4, v8, 8
-# CHECK-NEXT:  1      6     0.50                        vwsll.vv	v4, v8, v12
-# CHECK-NEXT:  1      6     0.50                        vwsll.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     0.50                        vwsll.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     0.50                        vwsll.vx	v4, v8, a0
 # CHECK-NEXT:  1      2     0.50                        vwsll.vi	v4, v8, 8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
 # CHECK-NEXT:  1      1     0.50                        vandn.vv	v4, v8, v12
@@ -233,8 +233,8 @@ vwsll.vi v8, v4, 8
 # CHECK-NEXT:  1      2     0.50                        vror.vv	v4, v8, v12
 # CHECK-NEXT:  1      2     0.50                        vror.vx	v4, v8, a0
 # CHECK-NEXT:  1      2     0.50                        vror.vi	v4, v8, 8
-# CHECK-NEXT:  1      6     0.50                        vwsll.vv	v4, v8, v12
-# CHECK-NEXT:  1      6     0.50                        vwsll.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     0.50                        vwsll.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     0.50                        vwsll.vx	v4, v8, a0
 # CHECK-NEXT:  1      2     0.50                        vwsll.vi	v4, v8, 8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
 # CHECK-NEXT:  1      1     1.00                        vandn.vv	v4, v8, v12
@@ -250,8 +250,8 @@ vwsll.vi v8, v4, 8
 # CHECK-NEXT:  1      2     1.00                        vror.vv	v4, v8, v12
 # CHECK-NEXT:  1      2     1.00                        vror.vx	v4, v8, a0
 # CHECK-NEXT:  1      2     1.00                        vror.vi	v4, v8, 8
-# CHECK-NEXT:  1      6     1.00                        vwsll.vv	v4, v8, v12
-# CHECK-NEXT:  1      6     1.00                        vwsll.vx	v4, v8, a0
+# CHECK-NEXT:  1      2     1.00                        vwsll.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     1.00                        vwsll.vx	v4, v8, a0
 # CHECK-NEXT:  1      2     1.00                        vwsll.vi	v4, v8, 8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
 # CHECK-NEXT:  1      1     2.00                        vandn.vv	v4, v8, v12
@@ -267,8 +267,8 @@ vwsll.vi v8, v4, 8
 # CHECK-NEXT:  1      2     2.00                        vror.vv	v4, v8, v12
 # CHECK-NEXT:  1      2     2.00                        vror.vx	v4, v8, a0
 # CHECK-NEXT:  1      2     2.00                        vror.vi	v4, v8, 8
-# CHECK-NEXT:  1      6     2.00                        vwsll.vv	v8, v4, v12
-# CHECK-NEXT:  1      6     2.00                        vwsll.vx	v8, v4, a0
+# CHECK-NEXT:  1      2     2.00                        vwsll.vv	v8, v4, v12
+# CHECK-NEXT:  1      2     2.00                        vwsll.vx	v8, v4, a0
 # CHECK-NEXT:  1      2     2.00                        vwsll.vi	v8, v4, 8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
 # CHECK-NEXT:  1      1     4.00                        vandn.vv	v8, v16, v24
@@ -298,8 +298,8 @@ vwsll.vi v8, v4, 8
 # CHECK-NEXT:  1      2     2.00                        vror.vv	v4, v8, v12
 # CHECK-NEXT:  1      2     2.00                        vror.vx	v4, v8, a0
 # CHECK-NEXT:  1      2     2.00                        vror.vi	v4, v8, 8
-# CHECK-NEXT:  1      6     2.00                        vwsll.vv	v8, v4, v12
-# CHECK-NEXT:  1      6     2.00                        vwsll.vx	v8, v4, a0
+# CHECK-NEXT:  1      2     2.00                        vwsll.vv	v8, v4, v12
+# CHECK-NEXT:  1      2     2.00                        vwsll.vx	v8, v4, a0
 # CHECK-NEXT:  1      2     2.00                        vwsll.vi	v8, v4, 8
 
 # CHECK:      Resources:

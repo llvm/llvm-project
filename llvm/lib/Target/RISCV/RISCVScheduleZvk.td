@@ -14,14 +14,15 @@ defm "" : LMULSchedWrites<"WriteVCLZV">;
 defm "" : LMULSchedWrites<"WriteVCPOPV">;
 defm "" : LMULSchedWrites<"WriteVCTZV">;
 defm "" : LMULSchedWrites<"WriteVWSLLV">;
+defm "" : LMULSchedWrites<"WriteVWSLLX">;
+defm "" : LMULSchedWrites<"WriteVWSLLI">;
 
 /// Zvbc extension
 defm "" : LMULSchedWrites<"WriteVCLMULV">;
 defm "" : LMULSchedWrites<"WriteVCLMULX">;
 
 /// Zvkb extension
-defm "" : LMULSchedWrites<"WriteVANDNV">;
-defm "" : LMULSchedWrites<"WriteVANDNX">;
+// VANDN uses WriteVIALU[V|X|I]
 defm "" : LMULSchedWrites<"WriteVBREV8V">;
 defm "" : LMULSchedWrites<"WriteVREV8V">;
 defm "" : LMULSchedWrites<"WriteVRotV">;
@@ -58,14 +59,14 @@ defm "" : LMULSchedReads<"ReadVCLZV">;
 defm "" : LMULSchedReads<"ReadVCPOPV">;
 defm "" : LMULSchedReads<"ReadVCTZV">;
 defm "" : LMULSchedReads<"ReadVWSLLV">;
+defm "" : LMULSchedReads<"ReadVWSLLX">;
 
 /// Zvbc extension
 defm "" : LMULSchedReads<"ReadVCLMULV">;
 defm "" : LMULSchedReads<"ReadVCLMULX">;
 
 /// Zvkb extension
-defm "" : LMULSchedReads<"ReadVANDNV">;
-defm "" : LMULSchedReads<"ReadVANDNX">;
+// VANDN uses ReadVIALU[V|X|I]
 defm "" : LMULSchedReads<"ReadVBREV8V">;
 defm "" : LMULSchedReads<"ReadVREV8V">;
 defm "" : LMULSchedReads<"ReadVRotV">;
@@ -101,12 +102,15 @@ defm "" : LMULWriteRes<"WriteVCLZV", []>;
 defm "" : LMULWriteRes<"WriteVCPOPV", []>;
 defm "" : LMULWriteRes<"WriteVCTZV", []>;
 defm "" : LMULWriteRes<"WriteVWSLLV", []>;
+defm "" : LMULWriteRes<"WriteVWSLLX", []>;
+defm "" : LMULWriteRes<"WriteVWSLLI", []>;
 
 defm "" : LMULReadAdvance<"ReadVBREVV", 0>;
 defm "" : LMULReadAdvance<"ReadVCLZV", 0>;
 defm "" : LMULReadAdvance<"ReadVCPOPV", 0>;
 defm "" : LMULReadAdvance<"ReadVCTZV", 0>;
 defm "" : LMULReadAdvance<"ReadVWSLLV", 0>;
+defm "" : LMULReadAdvance<"ReadVWSLLX", 0>;
 }
 }
 
@@ -122,15 +126,12 @@ defm "" : LMULReadAdvance<"ReadVCLMULX", 0>;
 
 multiclass UnsupportedSchedZvkb {
 let Unsupported = true in {
-defm "" : LMULWriteRes<"WriteVANDNV", []>;
-defm "" : LMULWriteRes<"WriteVANDNX", []>;
 defm "" : LMULWriteRes<"WriteVBREV8V", []>;
 defm "" : LMULWriteRes<"WriteVREV8V", []>;
 defm "" : LMULWriteRes<"WriteVRotV", []>;
 defm "" : LMULWriteRes<"WriteVRotX", []>;
 defm "" : LMULWriteRes<"WriteVRotI", []>;
 
-defm "" : LMULReadAdvance<"ReadVANDNV", 0>;
 defm "" : LMULReadAdvance<"ReadVBREV8V", 0>;
 defm "" : LMULReadAdvance<"ReadVREV8V", 0>;
 defm "" : LMULReadAdvance<"ReadVRotV", 0>;

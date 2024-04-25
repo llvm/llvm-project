@@ -452,10 +452,17 @@ multiclass VPseudoVCPOP {
   }
 }
 
-multiclass VPseudoVWALU_VV_VX_VI<Operand ImmType> : VPseudoVWALU_VV_VX {
+multiclass VPseudoVWALU_VV_VX_VI<Operand ImmType> {
   foreach m = MxListW in {
+    defvar mx = m.MX;
+    defm "" : VPseudoBinaryW_VV<m>,
+              SchedBinary<"WriteVWSLLV", "ReadVWSLLV", "ReadVWSLLV", mx,
+                          forceMergeOpRead=true>;
+    defm "" : VPseudoBinaryW_VX<m>, 
+              SchedBinary<"WriteVWSLLX", "ReadVWSLLV", "ReadVWSLLX", mx,
+                          forceMergeOpRead=true>;
     defm "" : VPseudoBinaryW_VI<ImmType, m>,
-              SchedUnary<"WriteVWSLLV", "ReadVWSLLV", m.MX,
+              SchedUnary<"WriteVWSLLI", "ReadVWSLLV", mx,
                          forceMergeOpRead=true>;
   }
 }
@@ -463,10 +470,10 @@ multiclass VPseudoVWALU_VV_VX_VI<Operand ImmType> : VPseudoVWALU_VV_VX {
 multiclass VPseudoVANDN {
  foreach m = MxList in {
     defm "" : VPseudoBinaryV_VV<m>,
-            SchedBinary<"WriteVANDNV", "ReadVANDNV", "ReadVANDNV", m.MX,
+            SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", m.MX,
                         forceMergeOpRead=true>;
     defm "" : VPseudoBinaryV_VX<m>,
-            SchedBinary<"WriteVANDNX", "ReadVANDNV", "ReadVANDNX", m.MX,
+            SchedBinary<"WriteVIALUX", "ReadVIALUV", "ReadVIALUX", m.MX,
                         forceMergeOpRead=true>;
   }
 }

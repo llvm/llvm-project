@@ -759,6 +759,8 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVCPOPV",   [SiFiveP600VectorArith], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVCTZV",    [SiFiveP600VectorArith], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVWSLLV",   [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVWSLLX",   [SiFiveP600VectorArith], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVWSLLI",   [SiFiveP600VectorArith], mx, IsWorstCase>;
   }
   // Zvbc
   let Latency = 2, ReleaseAtCycles = [LMulLat] in {
@@ -766,10 +768,7 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVCLMULX", [SiFiveP600VectorArith], mx, IsWorstCase>;
   }
   // Zvkb
-  let Latency = 1, ReleaseAtCycles = [LMulLat] in {
-    defm "" : LMULWriteResMX<"WriteVANDNV",   [SiFiveP600VectorArith], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVANDNX",   [SiFiveP600VectorArith], mx, IsWorstCase>;
-  }
+  // VANDN uses WriteVIALU[V|X|I]
   let Latency = 2, ReleaseAtCycles = [LMulLat] in {
     defm "" : LMULWriteResMX<"WriteVBREV8V",  [SiFiveP600VectorArith], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVREV8V",   [SiFiveP600VectorArith], mx, IsWorstCase>;
@@ -1096,12 +1095,12 @@ defm "" : LMULReadAdvance<"ReadVCLZV", 0>;
 defm "" : LMULReadAdvance<"ReadVCPOPV", 0>;
 defm "" : LMULReadAdvance<"ReadVCTZV", 0>;
 defm "" : LMULReadAdvance<"ReadVWSLLV", 0>;
+defm "" : LMULReadAdvance<"ReadVWSLLX", 0>;
 // Zvbc
 defm "" : LMULReadAdvance<"ReadVCLMULV", 0>;
 defm "" : LMULReadAdvance<"ReadVCLMULX", 0>;
 // Zvkb
-defm "" : LMULReadAdvance<"ReadVANDNV", 0>;
-defm "" : LMULReadAdvance<"ReadVANDNX", 0>;
+// VANDN uses ReadVIALU[V|X|I]
 defm "" : LMULReadAdvance<"ReadVBREV8V", 0>;
 defm "" : LMULReadAdvance<"ReadVREV8V", 0>;
 defm "" : LMULReadAdvance<"ReadVRotV", 0>;
