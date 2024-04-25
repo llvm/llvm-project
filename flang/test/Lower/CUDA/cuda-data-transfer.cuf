@@ -98,7 +98,7 @@ end
 
 ! CHECK: %[[TEMP:.*]] = fir.allocmem !fir.array<10xi32> {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK: %[[DECL_TEMP:.*]]:2 = hlfir.declare %[[TEMP]](%{{.*}}) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>)
-! CHECK: %[[ADEV_TEMP:.*]]:2 = hlfir.declare %21#0 {cuda_attr = #fir.cuda<device>, uniq_name = "_QFsub2Eadev"} : (!fir.heap<!fir.array<10xi32>>) -> (!fir.heap<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>)
+! CHECK: %[[ADEV_TEMP:.*]]:2 = hlfir.declare %[[DECL_TEMP]]#1(%{{.*}}) {cuda_attr = #fir.cuda<device>, uniq_name = "_QFsub2Eadev"} : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>)
 ! CHECK: fir.cuda_data_transfer %[[ADEV]]#1 to %[[DECL_TEMP]]#0 {transfer_kind = #fir.cuda_transfer<device_host>} : !fir.ref<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>
 ! CHECK: %[[ELEMENTAL:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<10xi32>
 ! CHECK: hlfir.assign %[[ELEMENTAL]] to %[[BHOST]]#0 : !hlfir.expr<10xi32>, !fir.ref<!fir.array<10xi32>>
