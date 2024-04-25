@@ -19,13 +19,12 @@ struct DestroyLast {
 
 static std::__no_destroy<int> nd_int(5);
 
-void test() { last.ptr = &nd_int.__get(); }
-
 int main(int, char**) {
-  test();
+  last.ptr = &nd_int.__get();
 
   return 0;
 }
+
 #if TEST_STD_VER > 17
 // Test constexpr-constructibility.
 constinit std::__no_destroy<int> nd_int_const(std::__uninitialized_tag{});
