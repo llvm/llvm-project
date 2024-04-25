@@ -3139,7 +3139,7 @@ static void sortCppIncludes(const FormatStyle &Style,
   if (replaceCRLF(result) == replaceCRLF(std::string(Code.substr(
                                  IncludesBeginOffset, IncludesBlockSize)))) {
     if (Cursor)
-        *Cursor = OldCursor;
+      *Cursor = OldCursor;
     return;
   }
 
