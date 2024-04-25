@@ -574,8 +574,6 @@ MCStreamer *llvm::createMachOStreamer(MCContext &Context,
       Target, Context.getObjectFileInfo()->getSDKVersion(),
       Context.getObjectFileInfo()->getDarwinTargetVariantTriple(),
       Context.getObjectFileInfo()->getDarwinTargetVariantSDKVersion());
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
   return S;
 }
 
