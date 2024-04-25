@@ -14154,8 +14154,10 @@ Syntax:
 Overview:
 """""""""
 
+.. FIXME: detail when it's emitted once the support is added
+
 The '``llvm.instrprof.callsite``' intrinsic should be emitted before a callsite
-that's not to a "fake" callee (like another intrinsic or asm). 
+that's not to a "fake" callee (like another intrinsic or asm).
 
 Arguments:
 """"""""""
@@ -14168,6 +14170,8 @@ The last argument is the called value of the callsite this intrinsic precedes.
 
 Semantics:
 """"""""""
+.. FIXME: detail how when the lowering pass is added.
+
 This is lowered by contextual profiling.
 
 '``llvm.instrprof.timestamp``' Intrinsic
