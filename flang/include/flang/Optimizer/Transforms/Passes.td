@@ -127,7 +127,6 @@ def CharacterConversion : Pass<"character-conversion"> {
     By default the translation is to naively zero-extend or truncate a code
     point to fit the destination size.
   }];
-  let constructor = "::fir::createCharacterConversionPass()";
   let dependentDialects = [ "fir::FIROpsDialect" ];
   let options = [
     Option<"useRuntimeCalls", "use-runtime-calls",
