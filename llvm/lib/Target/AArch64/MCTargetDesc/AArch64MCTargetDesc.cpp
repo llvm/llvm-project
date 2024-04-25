@@ -378,30 +378,28 @@ static MCInstPrinter *createAArch64MCInstPrinter(const Triple &T,
 static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
                                      std::unique_ptr<MCAsmBackend> &&TAB,
                                      std::unique_ptr<MCObjectWriter> &&OW,
-                                     std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                     bool RelaxAll) {
+                                     std::unique_ptr<MCCodeEmitter> &&Emitter) {
   return createAArch64ELFStreamer(Ctx, std::move(TAB), std::move(OW),
-                                  std::move(Emitter), RelaxAll);
+                                  std::move(Emitter));
 }
 
 static MCStreamer *createMachOStreamer(MCContext &Ctx,
                                        std::unique_ptr<MCAsmBackend> &&TAB,
                                        std::unique_ptr<MCObjectWriter> &&OW,
                                        std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                       bool RelaxAll,
                                        bool DWARFMustBeAtTheEnd) {
   return createMachOStreamer(Ctx, std::move(TAB), std::move(OW),
-                             std::move(Emitter), RelaxAll, DWARFMustBeAtTheEnd,
+                             std::move(Emitter), DWARFMustBeAtTheEnd,
                              /*LabelSections*/ true);
 }
 
 static MCStreamer *
 createWinCOFFStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
                       std::unique_ptr<MCObjectWriter> &&OW,
-                      std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll,
+                      std::unique_ptr<MCCodeEmitter> &&Emitter,
                       bool IncrementalLinkerCompatible) {
   return createAArch64WinCOFFStreamer(Ctx, std::move(TAB), std::move(OW),
-                                      std::move(Emitter), RelaxAll,
+                                      std::move(Emitter),
                                       IncrementalLinkerCompatible);
 }
 
