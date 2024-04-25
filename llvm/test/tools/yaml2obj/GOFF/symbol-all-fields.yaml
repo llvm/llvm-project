@@ -1,6 +1,5 @@
-# RUN: yaml2obj %s | od -v -An -tx1 | FileCheck --ignore-case %s
-
 ## This tests a symbol where all required and optional fields are set.
+# RUN: yaml2obj %s | od -v -An -tx1 | FileCheck --ignore-case %s
 
 ## Verify that GOFF Header is correct.
 # CHECK: 03 f0 00 00 00 00 00 00 00 00 00 00 00 00 00 00

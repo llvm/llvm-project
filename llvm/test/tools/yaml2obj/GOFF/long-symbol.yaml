@@ -1,6 +1,5 @@
-# RUN: yaml2obj %s | od -v -An -tx1 | FileCheck --ignore-case %s
-
 ## This tests the long symbol name case requiring continuation records.
+# RUN: yaml2obj %s | od -v -An -tx1 | FileCheck --ignore-case %s
 
 --- !GOFF
 FileHeader:
