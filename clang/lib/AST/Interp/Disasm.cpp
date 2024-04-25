@@ -208,6 +208,25 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
     OS << " dummy";
 }
 
+LLVM_DUMP_METHOD void InlineDescriptor::dump(llvm::raw_ostream &OS) const {
+  {
+    ColorScope SC(OS, true, {llvm::raw_ostream::BLUE, true});
+    OS << "InlineDescriptor " << (const void *)this << "\n";
+  }
+  OS << "Offset: " << Offset << "\n";
+  OS << "IsConst: " << IsConst << "\n";
+  OS << "IsInitialized: " << IsInitialized << "\n";
+  OS << "IsBase: " << IsBase << "\n";
+  OS << "IsActive: " << IsActive << "\n";
+  OS << "IsFieldMutable: " << IsFieldMutable << "\n";
+  OS << "Desc: ";
+  if (Desc)
+    Desc->dump(OS);
+  else
+    OS << "nullptr";
+  OS << "\n";
+}
+
 LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
                                         unsigned Indent) const {
   unsigned Spaces = Indent * 2;
