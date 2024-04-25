@@ -1813,6 +1813,8 @@ def : Pat<(binop_allwusers<srl> (sext_inreg GPR:$rs1, i32), uimm5:$shamt),
 
 // Use binop_allwusers to recover immediates that may have been broken by
 // SimplifyDemandedBits.
+def : Pat<(binop_allwusers<and> GPR:$rs1, 0xffffffff),
+          (COPY GPR:$rs1)>;
 def : Pat<(binop_allwusers<and> GPR:$rs1, u32simm12:$imm),
           (ANDI GPR:$rs1, u32simm12:$imm)>;
 
