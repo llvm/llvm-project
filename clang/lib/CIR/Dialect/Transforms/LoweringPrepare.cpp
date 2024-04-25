@@ -497,20 +497,16 @@ static void lowerArrayDtorCtorIntoLoop(CIRBaseBuilderTy &builder,
   mlir::Value end = builder.create<mlir::cir::PtrStrideOp>(
       loc, eltTy, begin, numArrayElementsConst);
 
-  auto tmpAddr = builder.create<mlir::cir::AllocaOp>(
+  auto tmpAddr = builder.createAlloca(
       loc, /*addr type*/ builder.getPointerTo(eltTy),
-      /*var type*/ eltTy, "__array_idx",
-      builder.getSizeFromCharUnits(builder.getContext(),
-                                   clang::CharUnits::One()),
-      nullptr);
+      /*var type*/ eltTy, "__array_idx", clang::CharUnits::One());
   builder.createStore(loc, begin, tmpAddr);
 
   auto loop = builder.createDoWhile(
       loc,
       /*condBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        auto currentElement =
-            b.create<mlir::cir::LoadOp>(loc, eltTy, tmpAddr.getResult());
+        auto currentElement = b.create<mlir::cir::LoadOp>(loc, eltTy, tmpAddr);
         mlir::Type boolTy = mlir::cir::BoolType::get(b.getContext());
         auto cmp = builder.create<mlir::cir::CmpOp>(
             loc, boolTy, mlir::cir::CmpOpKind::eq, currentElement, end);
@@ -518,8 +514,7 @@ static void lowerArrayDtorCtorIntoLoop(CIRBaseBuilderTy &builder,
       },
       /*bodyBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        auto currentElement =
-            b.create<mlir::cir::LoadOp>(loc, eltTy, tmpAddr.getResult());
+        auto currentElement = b.create<mlir::cir::LoadOp>(loc, eltTy, tmpAddr);
 
         CallOp ctorCall;
         op->walk([&](CallOp c) { ctorCall = c; });

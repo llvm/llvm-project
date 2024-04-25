@@ -160,6 +160,36 @@ public:
     return create<mlir::cir::StoreOp>(loc, val, dst, _volatile, order);
   }
 
+  mlir::Value createAlloca(mlir::Location loc, mlir::cir::PointerType addrType,
+                           mlir::Type type, llvm::StringRef name,
+                           mlir::IntegerAttr alignment,
+                           mlir::Value dynAllocSize) {
+    return create<mlir::cir::AllocaOp>(loc, addrType, type, name, alignment,
+                                       dynAllocSize);
+  }
+
+  mlir::Value createAlloca(mlir::Location loc, mlir::cir::PointerType addrType,
+                           mlir::Type type, llvm::StringRef name,
+                           clang::CharUnits alignment,
+                           mlir::Value dynAllocSize) {
+    auto alignmentIntAttr = getSizeFromCharUnits(getContext(), alignment);
+    return createAlloca(loc, addrType, type, name, alignmentIntAttr,
+                        dynAllocSize);
+  }
+
+  mlir::Value createAlloca(mlir::Location loc, mlir::cir::PointerType addrType,
+                           mlir::Type type, llvm::StringRef name,
+                           mlir::IntegerAttr alignment) {
+    return create<mlir::cir::AllocaOp>(loc, addrType, type, name, alignment);
+  }
+
+  mlir::Value createAlloca(mlir::Location loc, mlir::cir::PointerType addrType,
+                           mlir::Type type, llvm::StringRef name,
+                           clang::CharUnits alignment) {
+    auto alignmentIntAttr = getSizeFromCharUnits(getContext(), alignment);
+    return createAlloca(loc, addrType, type, name, alignmentIntAttr);
+  }
+
   mlir::Value createSub(mlir::Value lhs, mlir::Value rhs, bool hasNUW = false,
                         bool hasNSW = false) {
     auto op = create<mlir::cir::BinOp>(lhs.getLoc(), lhs.getType(),
