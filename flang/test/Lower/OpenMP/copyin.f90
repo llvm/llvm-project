@@ -156,10 +156,13 @@ end
 ! CHECK:             %[[VAL_11:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_12:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_13:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop for  (%[[VAL_14:.*]]) : i32 = (%[[VAL_11]]) to (%[[VAL_12]]) inclusive step (%[[VAL_13]]) {
-! CHECK:               fir.store %[[VAL_14]] to %[[VAL_7]]#1 : !fir.ref<i32>
-! CHECK:               fir.call @_QPsub4(%[[VAL_9]]#1) fastmath<contract> : (!fir.ref<i32>) -> ()
-! CHECK:               omp.yield
+! CHECK:             omp.wsloop {
+! CHECK-NEXT:          omp.loop_nest (%[[VAL_14:.*]]) : i32 = (%[[VAL_11]]) to (%[[VAL_12]]) inclusive step (%[[VAL_13]]) {
+! CHECK:                 fir.store %[[VAL_14]] to %[[VAL_7]]#1 : !fir.ref<i32>
+! CHECK:                 fir.call @_QPsub4(%[[VAL_9]]#1) fastmath<contract> : (!fir.ref<i32>) -> ()
+! CHECK:                 omp.yield
+! CHECK:               }
+! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
@@ -320,13 +323,16 @@ end subroutine
 ! CHECK:             %[[VAL_34:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_35:.*]] = fir.load %[[VAL_26]]#0 : !fir.ref<i32>
 ! CHECK:             %[[VAL_36:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop for  (%[[VAL_37:.*]]) : i32 = (%[[VAL_34]]) to (%[[VAL_35]]) inclusive step (%[[VAL_36]]) {
-! CHECK:               fir.store %[[VAL_37]] to %[[VAL_20]]#1 : !fir.ref<i32>
-! CHECK:               %[[VAL_38:.*]] = fir.load %[[VAL_31]]#0 : !fir.ref<i32>
-! CHECK:               %[[VAL_39:.*]] = fir.load %[[VAL_20]]#0 : !fir.ref<i32>
-! CHECK:               %[[VAL_40:.*]] = arith.addi %[[VAL_38]], %[[VAL_39]] : i32
-! CHECK:               hlfir.assign %[[VAL_40]] to %[[VAL_31]]#0 : i32, !fir.ref<i32>
-! CHECK:               omp.yield
+! CHECK:             omp.wsloop {
+! CHECK-NEXT:          omp.loop_nest (%[[VAL_37:.*]]) : i32 = (%[[VAL_34]]) to (%[[VAL_35]]) inclusive step (%[[VAL_36]]) {
+! CHECK:                 fir.store %[[VAL_37]] to %[[VAL_20]]#1 : !fir.ref<i32>
+! CHECK:                 %[[VAL_38:.*]] = fir.load %[[VAL_31]]#0 : !fir.ref<i32>
+! CHECK:                 %[[VAL_39:.*]] = fir.load %[[VAL_20]]#0 : !fir.ref<i32>
+! CHECK:                 %[[VAL_40:.*]] = arith.addi %[[VAL_38]], %[[VAL_39]] : i32
+! CHECK:                 hlfir.assign %[[VAL_40]] to %[[VAL_31]]#0 : i32, !fir.ref<i32>
+! CHECK:                 omp.yield
+! CHECK:               }
+! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }

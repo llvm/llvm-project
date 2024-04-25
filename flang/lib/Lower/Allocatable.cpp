@@ -799,6 +799,28 @@ static void postDeallocationAction(Fortran::lower::AbstractConverter &converter,
     Fortran::lower::attachDeclarePostDeallocAction(converter, builder, sym);
 }
 
+static mlir::Value genCudaDeallocate(fir::FirOpBuilder &builder,
+                                     mlir::Location loc,
+                                     const fir::MutableBoxValue &box,
+                                     ErrorManager &errorManager,
+                                     const Fortran::semantics::Symbol &sym) {
+  fir::CUDADataAttributeAttr cudaAttr =
+      Fortran::lower::translateSymbolCUDADataAttribute(builder.getContext(),
+                                                       sym);
+  mlir::Value errmsg =
+      mlir::isa<fir::AbsentOp>(errorManager.errMsgAddr.getDefiningOp())
+          ? nullptr
+          : errorManager.errMsgAddr;
+
+  // Keep return type the same as a standard AllocatableAllocate call.
+  mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
+  return builder
+      .create<fir::CUDADeallocateOp>(
+          loc, retTy, box.getAddr(), errmsg, cudaAttr,
+          errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
+      .getResult();
+}
+
 // Generate deallocation of a pointer/allocatable.
 static mlir::Value
 genDeallocate(fir::FirOpBuilder &builder,
@@ -806,10 +828,11 @@ genDeallocate(fir::FirOpBuilder &builder,
               const fir::MutableBoxValue &box, ErrorManager &errorManager,
               mlir::Value declaredTypeDesc = {},
               const Fortran::semantics::Symbol *symbol = nullptr) {
+  bool isCudaSymbol = symbol && Fortran::semantics::HasCUDAAttr(*symbol);
   // Deallocate intrinsic types inline.
   if (!box.isDerived() && !box.isPolymorphic() &&
       !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&
-      !useAllocateRuntime && !box.isPointer()) {
+      !useAllocateRuntime && !box.isPointer() && !isCudaSymbol) {
     // Pointers must use PointerDeallocate so that their deallocations
     // can be validated.
     mlir::Value ret = fir::factory::genFreemem(builder, loc, box);
@@ -820,8 +843,12 @@ genDeallocate(fir::FirOpBuilder &builder,
   // Use runtime calls to deallocate descriptor cases. Sync MutableBoxValue
   // with its descriptor before and after calls if needed.
   errorManager.genStatCheck(builder, loc);
-  mlir::Value stat =
-      genRuntimeDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
+  mlir::Value stat;
+  if (!isCudaSymbol)
+    stat =
+        genRuntimeDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
+  else
+    stat = genCudaDeallocate(builder, loc, box, errorManager, *symbol);
   fir::factory::syncMutableBoxFromIRBox(builder, loc, box);
   if (symbol)
     postDeallocationAction(converter, builder, *symbol);
@@ -832,18 +859,20 @@ genDeallocate(fir::FirOpBuilder &builder,
 void Fortran::lower::genDeallocateBox(
     Fortran::lower::AbstractConverter &converter,
     const fir::MutableBoxValue &box, mlir::Location loc,
-    mlir::Value declaredTypeDesc) {
+    const Fortran::semantics::Symbol *sym, mlir::Value declaredTypeDesc) {
   const Fortran::lower::SomeExpr *statExpr = nullptr;
   const Fortran::lower::SomeExpr *errMsgExpr = nullptr;
   ErrorManager errorManager;
   errorManager.init(converter, loc, statExpr, errMsgExpr);
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  genDeallocate(builder, converter, loc, box, errorManager, declaredTypeDesc);
+  genDeallocate(builder, converter, loc, box, errorManager, declaredTypeDesc,
+                sym);
 }
 
 void Fortran::lower::genDeallocateIfAllocated(
     Fortran::lower::AbstractConverter &converter,
-    const fir::MutableBoxValue &box, mlir::Location loc) {
+    const fir::MutableBoxValue &box, mlir::Location loc,
+    const Fortran::semantics::Symbol *sym) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Value isAllocated =
       fir::factory::genIsAllocatedOrAssociatedTest(builder, loc, box);
@@ -853,9 +882,9 @@ void Fortran::lower::genDeallocateIfAllocated(
             eleType.isa<fir::RecordType>() && box.isPolymorphic()) {
           mlir::Value declaredTypeDesc = builder.create<fir::TypeDescOp>(
               loc, mlir::TypeAttr::get(eleType));
-          genDeallocateBox(converter, box, loc, declaredTypeDesc);
+          genDeallocateBox(converter, box, loc, sym, declaredTypeDesc);
         } else {
-          genDeallocateBox(converter, box, loc);
+          genDeallocateBox(converter, box, loc, sym);
         }
       })
       .end();

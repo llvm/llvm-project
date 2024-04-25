@@ -2051,41 +2051,46 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       for (size_t SHI = 0; SHI < SymbolsHere.size(); ++SHI) {
         SymbolInfoTy Symbol = SymbolsHere[SHI];
 
-        auto Status = DT->DisAsm->onSymbolStart(
-            Symbol, Size, Bytes.slice(Start, End - Start), SectionAddr + Start,
-            CommentStream);
+        Expected<bool> RespondedOrErr = DT->DisAsm->onSymbolStart(
+            Symbol, Size, Bytes.slice(Start, End - Start), SectionAddr + Start);
 
-        if (!Status) {
-          // If onSymbolStart returns std::nullopt, that means it didn't trigger
-          // any interesting handling for this symbol. Try the other symbols
-          // defined at this address.
+        if (RespondedOrErr && !*RespondedOrErr) {
+          // This symbol didn't trigger any interesting handling. Try the other
+          // symbols defined at this address.
           continue;
         }
 
-        if (*Status == MCDisassembler::Fail) {
-          // If onSymbolStart returns Fail, that means it identified some kind
-          // of special data at this address, but wasn't able to disassemble it
-          // meaningfully. So we fall back to disassembling the failed region
-          // as bytes, assuming that the target detected the failure before
-          // printing anything.
-          //
-          // Return values Success or SoftFail (i.e no 'real' failure) are
-          // expected to mean that the target has emitted its own output.
-          //
-          // Either way, 'Size' will have been set to the amount of data
-          // covered by whatever prologue the target identified. So we advance
-          // our own position to beyond that. Sometimes that will be the entire
-          // distance to the next symbol, and sometimes it will be just a
-          // prologue and we should start disassembling instructions from where
-          // it left off.
-          outs() << DT->Context->getAsmInfo()->getCommentString()
-                 << " error in decoding " << SymNamesHere[SHI]
-                 << " : decoding failed region as bytes.\n";
-          for (uint64_t I = 0; I < Size; ++I) {
-            outs() << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
-                   << "\n";
+        // If onSymbolStart returned an Error, that means it identified some
+        // kind of special data at this address, but wasn't able to disassemble
+        // it meaningfully. So we fall back to printing the error out and
+        // disassembling the failed region as bytes, assuming that the target
+        // detected the failure before printing anything.
+        if (!RespondedOrErr) {
+          std::string ErrMsgStr = toString(RespondedOrErr.takeError());
+          StringRef ErrMsg = ErrMsgStr;
+          do {
+            StringRef Line;
+            std::tie(Line, ErrMsg) = ErrMsg.split('\n');
+            outs() << DT->Context->getAsmInfo()->getCommentString()
+                   << " error decoding " << SymNamesHere[SHI] << ": " << Line
+                   << '\n';
+          } while (!ErrMsg.empty());
+
+          if (Size) {
+            outs() << DT->Context->getAsmInfo()->getCommentString()
+                   << " decoding failed region as bytes\n";
+            for (uint64_t I = 0; I < Size; ++I)
+              outs() << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
+                     << '\n';
           }
         }
+
+        // Regardless of whether onSymbolStart returned an Error or true, 'Size'
+        // will have been set to the amount of data covered by whatever prologue
+        // the target identified. So we advance our own position to beyond that.
+        // Sometimes that will be the entire distance to the next symbol, and
+        // sometimes it will be just a prologue and we should start
+        // disassembling instructions from where it left off.
         Start += Size;
         break;
       }
