@@ -645,7 +645,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   HeaderFieldOffsets Offsets;
 
-  this->writeHeader(OS, Offsets);
+  (void)this->writeHeader(OS, Offsets);
 
   // Reserve space to write profile summary data.
   uint32_t NumEntries = ProfileSummaryBuilder::DefaultCutoffs.size();
