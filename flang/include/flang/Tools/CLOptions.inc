@@ -248,7 +248,7 @@ inline void createDefaultFIROptimizerPassPipeline(
   pm.addPass(fir::createSimplifyRegionLite());
   if (pc.OptLevel.isOptimizingForSpeed()) {
     // These passes may increase code size.
-    pm.addPass(fir::createSimplifyIntrinsicsPass());
+    pm.addPass(fir::createSimplifyIntrinsics());
     pm.addPass(fir::createAlgebraicSimplificationPass(config));
   }
 

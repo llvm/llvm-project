@@ -224,7 +224,6 @@ def SimplifyIntrinsics : Pass<"simplify-intrinsics", "mlir::ModuleOp"> {
     simplified function. The simplified function is added to the current module.
     This function can be inlined by a general purpose inlining pass.
   }];
-  let constructor = "::fir::createSimplifyIntrinsicsPass()";
 
   let options = [
     Option<"enableExperimental", "enable-experimental", "bool",
