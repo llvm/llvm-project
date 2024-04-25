@@ -15,9 +15,9 @@
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 
 using namespace clang::driver;
@@ -68,8 +68,10 @@ static void getRISCFeaturesFromMcpu(const Driver &D, const Arg *A,
           << A->getSpelling() << Mcpu;
   }
 
-  if (llvm::RISCV::hasFastUnalignedAccess(Mcpu))
-    Features.push_back("+fast-unaligned-access");
+  if (llvm::RISCV::hasFastUnalignedAccess(Mcpu)) {
+    Features.push_back("+unaligned-scalar-mem");
+    Features.push_back("+unaligned-vector-mem");
+  }
 }
 
 void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
@@ -168,12 +170,16 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   }
 
   // Android requires fast unaligned access on RISCV64.
-  if (Triple.isAndroid())
-    Features.push_back("+fast-unaligned-access");
+  if (Triple.isAndroid()) {
+    Features.push_back("+unaligned-scalar-mem");
+    Features.push_back("+unaligned-vector-mem");
+  }
 
   // -mstrict-align is default, unless -mno-strict-align is specified.
   AddTargetFeature(Args, Features, options::OPT_mno_strict_align,
-                   options::OPT_mstrict_align, "fast-unaligned-access");
+                   options::OPT_mstrict_align, "unaligned-scalar-mem");
+  AddTargetFeature(Args, Features, options::OPT_mno_strict_align,
+                   options::OPT_mstrict_align, "unaligned-vector-mem");
 
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.

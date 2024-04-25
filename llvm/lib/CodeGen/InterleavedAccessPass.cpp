@@ -200,28 +200,6 @@ FunctionPass *llvm::createInterleavedAccessPass() {
   return new InterleavedAccess();
 }
 
-/// Check if the mask is a DE-interleave mask of the given factor
-/// \p Factor like:
-///     <Index, Index+Factor, ..., Index+(NumElts-1)*Factor>
-static bool isDeInterleaveMaskOfFactor(ArrayRef<int> Mask, unsigned Factor,
-                                       unsigned &Index) {
-  // Check all potential start indices from 0 to (Factor - 1).
-  for (Index = 0; Index < Factor; Index++) {
-    unsigned i = 0;
-
-    // Check that elements are in ascending order by Factor. Ignore undef
-    // elements.
-    for (; i < Mask.size(); i++)
-      if (Mask[i] >= 0 && static_cast<unsigned>(Mask[i]) != Index + i * Factor)
-        break;
-
-    if (i == Mask.size())
-      return true;
-  }
-
-  return false;
-}
-
 /// Check if the mask is a DE-interleave mask for an interleaved load.
 ///
 /// E.g. DE-interleave masks (Factor = 2) could be:
@@ -238,7 +216,7 @@ static bool isDeInterleaveMask(ArrayRef<int> Mask, unsigned &Factor,
     // Make sure we don't produce a load wider than the input load.
     if (Mask.size() * Factor > NumLoadElements)
       return false;
-    if (isDeInterleaveMaskOfFactor(Mask, Factor, Index))
+    if (ShuffleVectorInst::isDeInterleaveMaskOfFactor(Mask, Factor, Index))
       return true;
   }
 
@@ -333,8 +311,8 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   for (auto *Shuffle : Shuffles) {
     if (Shuffle->getType() != VecTy)
       return false;
-    if (!isDeInterleaveMaskOfFactor(Shuffle->getShuffleMask(), Factor,
-                                    Index))
+    if (!ShuffleVectorInst::isDeInterleaveMaskOfFactor(
+            Shuffle->getShuffleMask(), Factor, Index))
       return false;
 
     assert(Shuffle->getShuffleMask().size() <= NumLoadElements);
@@ -343,8 +321,8 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
   for (auto *Shuffle : BinOpShuffles) {
     if (Shuffle->getType() != VecTy)
       return false;
-    if (!isDeInterleaveMaskOfFactor(Shuffle->getShuffleMask(), Factor,
-                                    Index))
+    if (!ShuffleVectorInst::isDeInterleaveMaskOfFactor(
+            Shuffle->getShuffleMask(), Factor, Index))
       return false;
 
     assert(Shuffle->getShuffleMask().size() <= NumLoadElements);

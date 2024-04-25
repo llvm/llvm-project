@@ -190,6 +190,12 @@ func.func @func_powff64(%a : f64, %b : f64) {
   return
 }
 
+func.func @func_powff32(%a : f32, %b : f32) {
+  %r = math.powf %a, %b : f32
+  vector.print %r : f32
+  return
+}
+
 func.func @powf() {
   // CHECK-NEXT: 16
   %a   = arith.constant 4.0 : f64
@@ -230,7 +236,17 @@ func.func @powf() {
   %j   = arith.constant 29385.0 : f64
   %j_p = arith.constant 23598.0 : f64
   call @func_powff64(%j, %j_p) : (f64, f64) -> ()
-  return
+
+  // CHECK-NEXT: -nan
+  %k = arith.constant 1.0 : f64
+  %k_p = arith.constant 0xfff0000001000000 : f64
+  call @func_powff64(%k, %k_p) : (f64, f64) -> ()  
+
+  // CHECK-NEXT: -nan
+  %l = arith.constant 1.0 : f32
+  %l_p = arith.constant 0xffffffff : f32
+  call @func_powff32(%l, %l_p) : (f32, f32) -> ()  
+  return  
 }
 
 // -------------------------------------------------------------------------- //

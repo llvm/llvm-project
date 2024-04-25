@@ -59,6 +59,10 @@ PoisonFlags::PoisonFlags(const Instruction *I) {
     Disjoint = PDI->isDisjoint();
   if (auto *PNI = dyn_cast<PossiblyNonNegInst>(I))
     NNeg = PNI->hasNonNeg();
+  if (auto *TI = dyn_cast<TruncInst>(I)) {
+    NUW = TI->hasNoUnsignedWrap();
+    NSW = TI->hasNoSignedWrap();
+  }
 }
 
 void PoisonFlags::apply(Instruction *I) {
@@ -72,6 +76,10 @@ void PoisonFlags::apply(Instruction *I) {
     PDI->setIsDisjoint(Disjoint);
   if (auto *PNI = dyn_cast<PossiblyNonNegInst>(I))
     PNI->setNonNeg(NNeg);
+  if (isa<TruncInst>(I)) {
+    I->setHasNoUnsignedWrap(NUW);
+    I->setHasNoSignedWrap(NSW);
+  }
 }
 
 /// ReuseOrCreateCast - Arrange for there to be a cast of V to Ty at IP,
@@ -1514,7 +1522,7 @@ Value *SCEVExpander::expand(const SCEV *S) {
   } else {
     for (Instruction *I : DropPoisonGeneratingInsts) {
       rememberFlags(I);
-      I->dropPoisonGeneratingFlagsAndMetadata();
+      I->dropPoisonGeneratingAnnotations();
       // See if we can re-infer from first principles any of the flags we just
       // dropped.
       if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(I))

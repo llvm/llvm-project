@@ -10,12 +10,9 @@ define <vscale x 16 x i8> @sabd_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) 
 ; CHECK-LABEL: sabd_b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vwsub.vv v12, v8, v10
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v12, 0
-; CHECK-NEXT:    vmax.vv v12, v12, v8
-; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v12, 0
+; CHECK-NEXT:    vmin.vv v12, v8, v10
+; CHECK-NEXT:    vmax.vv v8, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %a.sext = sext <vscale x 16 x i8> %a to <vscale x 16 x i16>
   %b.sext = sext <vscale x 16 x i8> %b to <vscale x 16 x i16>
@@ -33,9 +30,9 @@ define <vscale x 16 x i8> @sabd_b_promoted_ops(<vscale x 16 x i1> %a, <vscale x 
 ; CHECK-NEXT:    vmerge.vim v12, v10, -1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v8, v10, -1, v0
-; CHECK-NEXT:    vsub.vv v8, v12, v8
-; CHECK-NEXT:    vrsub.vi v10, v8, 0
-; CHECK-NEXT:    vmax.vv v8, v8, v10
+; CHECK-NEXT:    vmin.vv v10, v12, v8
+; CHECK-NEXT:    vmax.vv v8, v12, v8
+; CHECK-NEXT:    vsub.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %a.sext = sext <vscale x 16 x i1> %a to <vscale x 16 x i8>
   %b.sext = sext <vscale x 16 x i1> %b to <vscale x 16 x i8>
@@ -48,12 +45,9 @@ define <vscale x 8 x i16> @sabd_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) 
 ; CHECK-LABEL: sabd_h:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vwsub.vv v12, v8, v10
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v12, 0
-; CHECK-NEXT:    vmax.vv v12, v12, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v12, 0
+; CHECK-NEXT:    vmin.vv v12, v8, v10
+; CHECK-NEXT:    vmax.vv v8, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %a.sext = sext <vscale x 8 x i16> %a to <vscale x 8 x i32>
   %b.sext = sext <vscale x 8 x i16> %b to <vscale x 8 x i32>
@@ -67,10 +61,11 @@ define <vscale x 8 x i16> @sabd_h_promoted_ops(<vscale x 8 x i8> %a, <vscale x 8
 ; CHECK-LABEL: sabd_h_promoted_ops:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vwsub.vv v10, v8, v9
+; CHECK-NEXT:    vmin.vv v10, v8, v9
+; CHECK-NEXT:    vmax.vv v8, v8, v9
+; CHECK-NEXT:    vsub.vv v10, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v10, 0
-; CHECK-NEXT:    vmax.vv v8, v10, v8
+; CHECK-NEXT:    vzext.vf2 v8, v10
 ; CHECK-NEXT:    ret
   %a.sext = sext <vscale x 8 x i8> %a to <vscale x 8 x i16>
   %b.sext = sext <vscale x 8 x i8> %b to <vscale x 8 x i16>
@@ -83,12 +78,9 @@ define <vscale x 4 x i32> @sabd_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) 
 ; CHECK-LABEL: sabd_s:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vwsub.vv v12, v8, v10
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v12, 0
-; CHECK-NEXT:    vmax.vv v12, v12, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v12, 0
+; CHECK-NEXT:    vmin.vv v12, v8, v10
+; CHECK-NEXT:    vmax.vv v8, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %a.sext = sext <vscale x 4 x i32> %a to <vscale x 4 x i64>
   %b.sext = sext <vscale x 4 x i32> %b to <vscale x 4 x i64>
@@ -102,10 +94,11 @@ define <vscale x 4 x i32> @sabd_s_promoted_ops(<vscale x 4 x i16> %a, <vscale x 
 ; CHECK-LABEL: sabd_s_promoted_ops:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vwsub.vv v10, v8, v9
+; CHECK-NEXT:    vmin.vv v10, v8, v9
+; CHECK-NEXT:    vmax.vv v8, v8, v9
+; CHECK-NEXT:    vsub.vv v10, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v10, 0
-; CHECK-NEXT:    vmax.vv v8, v10, v8
+; CHECK-NEXT:    vzext.vf2 v8, v10
 ; CHECK-NEXT:    ret
   %a.sext = sext <vscale x 4 x i16> %a to <vscale x 4 x i32>
   %b.sext = sext <vscale x 4 x i16> %b to <vscale x 4 x i32>
@@ -128,10 +121,11 @@ define <vscale x 2 x i64> @sabd_d_promoted_ops(<vscale x 2 x i32> %a, <vscale x 
 ; CHECK-LABEL: sabd_d_promoted_ops:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vwsub.vv v10, v8, v9
+; CHECK-NEXT:    vmin.vv v10, v8, v9
+; CHECK-NEXT:    vmax.vv v8, v8, v9
+; CHECK-NEXT:    vsub.vv v10, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v10, 0
-; CHECK-NEXT:    vmax.vv v8, v10, v8
+; CHECK-NEXT:    vzext.vf2 v8, v10
 ; CHECK-NEXT:    ret
   %a.sext = sext <vscale x 2 x i32> %a to <vscale x 2 x i64>
   %b.sext = sext <vscale x 2 x i32> %b to <vscale x 2 x i64>
@@ -148,12 +142,9 @@ define <vscale x 16 x i8> @uabd_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) 
 ; CHECK-LABEL: uabd_b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vwsubu.vv v12, v8, v10
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v12, 0
-; CHECK-NEXT:    vmax.vv v12, v12, v8
-; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v12, 0
+; CHECK-NEXT:    vminu.vv v12, v8, v10
+; CHECK-NEXT:    vmaxu.vv v8, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 16 x i8> %a to <vscale x 16 x i16>
   %b.zext = zext <vscale x 16 x i8> %b to <vscale x 16 x i16>
@@ -171,9 +162,9 @@ define <vscale x 16 x i8> @uabd_b_promoted_ops(<vscale x 16 x i1> %a, <vscale x 
 ; CHECK-NEXT:    vmerge.vim v12, v10, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
-; CHECK-NEXT:    vsub.vv v8, v12, v8
-; CHECK-NEXT:    vrsub.vi v10, v8, 0
-; CHECK-NEXT:    vmax.vv v8, v8, v10
+; CHECK-NEXT:    vminu.vv v10, v12, v8
+; CHECK-NEXT:    vmaxu.vv v8, v12, v8
+; CHECK-NEXT:    vsub.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 16 x i1> %a to <vscale x 16 x i8>
   %b.zext = zext <vscale x 16 x i1> %b to <vscale x 16 x i8>
@@ -186,12 +177,9 @@ define <vscale x 8 x i16> @uabd_h(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) 
 ; CHECK-LABEL: uabd_h:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vwsubu.vv v12, v8, v10
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v12, 0
-; CHECK-NEXT:    vmax.vv v12, v12, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v12, 0
+; CHECK-NEXT:    vminu.vv v12, v8, v10
+; CHECK-NEXT:    vmaxu.vv v8, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 8 x i16> %a to <vscale x 8 x i32>
   %b.zext = zext <vscale x 8 x i16> %b to <vscale x 8 x i32>
@@ -205,10 +193,11 @@ define <vscale x 8 x i16> @uabd_h_promoted_ops(<vscale x 8 x i8> %a, <vscale x 8
 ; CHECK-LABEL: uabd_h_promoted_ops:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vwsubu.vv v10, v8, v9
+; CHECK-NEXT:    vminu.vv v10, v8, v9
+; CHECK-NEXT:    vmaxu.vv v8, v8, v9
+; CHECK-NEXT:    vsub.vv v10, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v10, 0
-; CHECK-NEXT:    vmax.vv v8, v10, v8
+; CHECK-NEXT:    vzext.vf2 v8, v10
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 8 x i8> %a to <vscale x 8 x i16>
   %b.zext = zext <vscale x 8 x i8> %b to <vscale x 8 x i16>
@@ -221,12 +210,9 @@ define <vscale x 4 x i32> @uabd_s(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) 
 ; CHECK-LABEL: uabd_s:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vwsubu.vv v12, v8, v10
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v12, 0
-; CHECK-NEXT:    vmax.vv v12, v12, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v12, 0
+; CHECK-NEXT:    vminu.vv v12, v8, v10
+; CHECK-NEXT:    vmaxu.vv v8, v8, v10
+; CHECK-NEXT:    vsub.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 4 x i32> %a to <vscale x 4 x i64>
   %b.zext = zext <vscale x 4 x i32> %b to <vscale x 4 x i64>
@@ -240,10 +226,11 @@ define <vscale x 4 x i32> @uabd_s_promoted_ops(<vscale x 4 x i16> %a, <vscale x 
 ; CHECK-LABEL: uabd_s_promoted_ops:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vwsubu.vv v10, v8, v9
+; CHECK-NEXT:    vminu.vv v10, v8, v9
+; CHECK-NEXT:    vmaxu.vv v8, v8, v9
+; CHECK-NEXT:    vsub.vv v10, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v10, 0
-; CHECK-NEXT:    vmax.vv v8, v10, v8
+; CHECK-NEXT:    vzext.vf2 v8, v10
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 4 x i16> %a to <vscale x 4 x i32>
   %b.zext = zext <vscale x 4 x i16> %b to <vscale x 4 x i32>
@@ -266,10 +253,11 @@ define <vscale x 2 x i64> @uabd_d_promoted_ops(<vscale x 2 x i32> %a, <vscale x 
 ; CHECK-LABEL: uabd_d_promoted_ops:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vwsubu.vv v10, v8, v9
+; CHECK-NEXT:    vminu.vv v10, v8, v9
+; CHECK-NEXT:    vmaxu.vv v8, v8, v9
+; CHECK-NEXT:    vsub.vv v10, v8, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v10, 0
-; CHECK-NEXT:    vmax.vv v8, v10, v8
+; CHECK-NEXT:    vzext.vf2 v8, v10
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 2 x i32> %a to <vscale x 2 x i64>
   %b.zext = zext <vscale x 2 x i32> %b to <vscale x 2 x i64>
@@ -285,12 +273,9 @@ define <vscale x 4 x i32> @uabd_non_matching_extension(<vscale x 4 x i32> %a, <v
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf4 v12, v10
-; CHECK-NEXT:    vwsubu.vv v16, v8, v12
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v16, 0
-; CHECK-NEXT:    vmax.vv v12, v16, v8
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v8, v12, 0
+; CHECK-NEXT:    vminu.vv v10, v8, v12
+; CHECK-NEXT:    vmaxu.vv v8, v8, v12
+; CHECK-NEXT:    vsub.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 4 x i32> %a to <vscale x 4 x i64>
   %b.zext = zext <vscale x 4 x i8> %b to <vscale x 4 x i64>
@@ -307,10 +292,11 @@ define <vscale x 4 x i32> @uabd_non_matching_promoted_ops(<vscale x 4 x i8> %a, 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vwsubu.vv v12, v10, v9
+; CHECK-NEXT:    vminu.vv v8, v10, v9
+; CHECK-NEXT:    vmaxu.vv v9, v10, v9
+; CHECK-NEXT:    vsub.vv v10, v9, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v12, 0
-; CHECK-NEXT:    vmax.vv v8, v12, v8
+; CHECK-NEXT:    vzext.vf2 v8, v10
 ; CHECK-NEXT:    ret
   %a.zext = zext <vscale x 4 x i8> %a to <vscale x 4 x i32>
   %b.zext = zext <vscale x 4 x i16> %b to <vscale x 4 x i32>

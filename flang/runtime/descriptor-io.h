@@ -250,6 +250,7 @@ static RT_API_ATTRS bool DefaultComponentIO(IoStatementState &io,
     const typeInfo::Component &component, const Descriptor &origDescriptor,
     const SubscriptValue origSubscripts[], Terminator &terminator,
     const NonTbpDefinedIoTable *table) {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
   if (component.genre() == typeInfo::Component::Genre::Data) {
     // Create a descriptor for the component
     StaticDescriptor<maxRank, true, 16 /*?*/> statDesc;
@@ -266,6 +267,9 @@ static RT_API_ATTRS bool DefaultComponentIO(IoStatementState &io,
     const Descriptor &compDesc{*reinterpret_cast<const Descriptor *>(pointer)};
     return DescriptorIO<DIR>(io, compDesc, table);
   }
+#else
+  terminator.Crash("not yet implemented: component IO");
+#endif
 }
 
 template <Direction DIR>

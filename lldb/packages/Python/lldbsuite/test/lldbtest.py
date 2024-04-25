@@ -751,6 +751,8 @@ class Base(unittest.TestCase):
             "settings set symbols.enable-external-lookup false",
             # Inherit the TCC permissions from the inferior's parent.
             "settings set target.inherit-tcc true",
+            # Based on https://discourse.llvm.org/t/running-lldb-in-a-container/76801/4
+            "settings set target.disable-aslr false",
             # Kill rather than detach from the inferior if something goes wrong.
             "settings set target.detach-on-error false",
             # Disable fix-its by default so that incorrect expressions in tests don't

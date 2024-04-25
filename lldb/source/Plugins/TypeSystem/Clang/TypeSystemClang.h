@@ -22,6 +22,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTFwd.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
@@ -250,6 +251,8 @@ public:
   CompilerType GetTypeForDecl(clang::TagDecl *decl);
 
   CompilerType GetTypeForDecl(clang::ObjCInterfaceDecl *objc_decl);
+
+  CompilerType GetTypeForDecl(clang::ValueDecl *value_decl);
 
   template <typename RecordDeclType>
   CompilerType
@@ -558,6 +561,8 @@ public:
 
   std::vector<lldb_private::CompilerContext>
   DeclGetCompilerContext(void *opaque_decl) override;
+
+  Scalar DeclGetConstantValue(void *opaque_decl) override;
 
   CompilerType GetTypeForDecl(void *opaque_decl) override;
 
@@ -868,6 +873,9 @@ public:
                                           size_t idx,
                                           uint32_t *bit_offset_ptr) override;
 
+  CompilerDecl GetStaticFieldWithName(lldb::opaque_compiler_type_t type,
+                                      llvm::StringRef name) override;
+
   static uint32_t GetNumPointeeChildren(clang::QualType type);
 
   CompilerType GetChildCompilerTypeAtIndex(
@@ -896,6 +904,9 @@ public:
                                 llvm::StringRef name,
                                 bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) override;
+
+  CompilerType GetDirectNestedTypeWithName(lldb::opaque_compiler_type_t type,
+                                           llvm::StringRef name) override;
 
   bool IsTemplateType(lldb::opaque_compiler_type_t type) override;
 

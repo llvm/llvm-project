@@ -59,6 +59,7 @@
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
@@ -230,7 +231,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
           // Remove weight for this case.
           std::swap(Weights[Idx + 1], Weights.back());
           Weights.pop_back();
-          setBranchWeights(*SI, Weights, hasExpectedProvenance(MD));
+          setBranchWeights(*SI, Weights, hasBranchWeightProvenance(MD));
         }
         // Remove this entry.
         BasicBlock *ParentBB = SI->getParent();
@@ -473,6 +474,12 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
     // Safe to delete llvm.stacksave and launder.invariant.group if dead.
     if (II->getIntrinsicID() == Intrinsic::stacksave ||
         II->getIntrinsicID() == Intrinsic::launder_invariant_group)
+      return true;
+
+    // Intrinsics declare sideeffects to prevent them from moving, but they are
+    // nops without users.
+    if (II->getIntrinsicID() == Intrinsic::allow_runtime_check ||
+        II->getIntrinsicID() == Intrinsic::allow_ubsan_check)
       return true;
 
     if (II->isLifetimeStartOrEnd()) {
@@ -3278,6 +3285,9 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
       case LLVMContext::MD_invariant_group:
         // Preserve !invariant.group in K.
         break;
+      case LLVMContext::MD_mmra:
+        // Combine MMRAs
+        break;
       case LLVMContext::MD_align:
         if (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef))
           K->setMetadata(
@@ -3316,6 +3326,16 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
   if (auto *JMD = J->getMetadata(LLVMContext::MD_invariant_group))
     if (isa<LoadInst>(K) || isa<StoreInst>(K))
       K->setMetadata(LLVMContext::MD_invariant_group, JMD);
+
+  // Merge MMRAs.
+  // This is handled separately because we also want to handle cases where K
+  // doesn't have tags but J does.
+  auto JMMRA = J->getMetadata(LLVMContext::MD_mmra);
+  auto KMMRA = K->getMetadata(LLVMContext::MD_mmra);
+  if (JMMRA || KMMRA) {
+    K->setMetadata(LLVMContext::MD_mmra,
+                   MMRAMetadata::combine(K->getContext(), JMMRA, KMMRA));
+  }
 }
 
 void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
@@ -3335,7 +3355,8 @@ void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
                          LLVMContext::MD_preserve_access_index,
                          LLVMContext::MD_prof,
                          LLVMContext::MD_nontemporal,
-                         LLVMContext::MD_noundef};
+                         LLVMContext::MD_noundef,
+                         LLVMContext::MD_mmra};
   combineMetadata(K, J, KnownIDs, KDominatesJ);
 }
 
@@ -3423,15 +3444,15 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   combineMetadataForCSE(ReplInst, I, false);
 }
 
-template <typename RootType, typename DominatesFn>
+template <typename RootType, typename ShouldReplaceFn>
 static unsigned replaceDominatedUsesWith(Value *From, Value *To,
                                          const RootType &Root,
-                                         const DominatesFn &Dominates) {
+                                         const ShouldReplaceFn &ShouldReplace) {
   assert(From->getType() == To->getType());
 
   unsigned Count = 0;
   for (Use &U : llvm::make_early_inc_range(From->uses())) {
-    if (!Dominates(Root, U))
+    if (!ShouldReplace(Root, U))
       continue;
     LLVM_DEBUG(dbgs() << "Replace dominated use of '";
                From->printAsOperand(dbgs());
@@ -3473,6 +3494,26 @@ unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
     return DT.dominates(BB, U);
   };
   return ::replaceDominatedUsesWith(From, To, BB, Dominates);
+}
+
+unsigned llvm::replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const BasicBlockEdge &Root,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
+  auto DominatesAndShouldReplace =
+      [&DT, &ShouldReplace, To](const BasicBlockEdge &Root, const Use &U) {
+        return DT.dominates(Root, U) && ShouldReplace(U, To);
+      };
+  return ::replaceDominatedUsesWith(From, To, Root, DominatesAndShouldReplace);
+}
+
+unsigned llvm::replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const BasicBlock *BB,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
+  auto DominatesAndShouldReplace = [&DT, &ShouldReplace,
+                                    To](const BasicBlock *BB, const Use &U) {
+    return DT.dominates(BB, U) && ShouldReplace(U, To);
+  };
+  return ::replaceDominatedUsesWith(From, To, BB, DominatesAndShouldReplace);
 }
 
 bool llvm::callsGCLeafFunction(const CallBase *Call,
@@ -3621,10 +3662,12 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
     return createIntegerExpression(C);
 
   auto *FP = dyn_cast<ConstantFP>(&C);
-  if (FP && (Ty.isFloatTy() || Ty.isDoubleTy())) {
+  if (FP && Ty.isFloatingPointTy() && Ty.getScalarSizeInBits() <= 64) {
     const APFloat &APF = FP->getValueAPF();
-    return DIB.createConstantValueExpression(
-        APF.bitcastToAPInt().getZExtValue());
+    APInt const &API = APF.bitcastToAPInt();
+    if (auto Temp = API.getZExtValue())
+      return DIB.createConstantValueExpression(static_cast<uint64_t>(Temp));
+    return DIB.createConstantValueExpression(*API.getRawData());
   }
 
   if (!Ty.isPointerTy())
