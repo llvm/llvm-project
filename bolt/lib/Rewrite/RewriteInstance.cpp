@@ -1341,6 +1341,7 @@ void RewriteInstance::discoverFileObjects() {
   }
 
   registerFragments();
+  FileSymbols.clear();
 }
 
 Error RewriteInstance::discoverRtFiniAddress() {
