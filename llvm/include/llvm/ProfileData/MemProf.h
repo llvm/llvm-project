@@ -123,6 +123,11 @@ struct PortableMemInfoBlock {
 #undef MIBEntryDef
   }
 
+  // Return the schema, only for unit tests.
+  std::bitset<llvm::to_underlying(Meta::Size)> getSchema() const {
+    return Schema;
+  }
+
   // Define getters for each type which can be called by analyses.
 #define MIBEntryDef(NameTag, Name, Type)                                       \
   Type get##Name() const {                                                     \
