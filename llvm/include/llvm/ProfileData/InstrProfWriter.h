@@ -197,6 +197,13 @@ public:
                      const OverlapFuncFilters &FuncFilter);
 
 private:
+  struct HeaderFieldOffsets {
+    uint64_t HashTableStartFieldOffset;
+    uint64_t MemProfSectionOffset;
+    uint64_t BinaryIdSectionOffset;
+    uint64_t TemporalProfTracesOffset;
+    uint64_t VTableNamesOffset;
+  };
   void addRecord(StringRef Name, uint64_t Hash, InstrProfRecord &&I,
                  uint64_t Weight, function_ref<void(Error)> Warn);
   bool shouldEncodeData(const ProfilingData &PD);
@@ -204,6 +211,12 @@ private:
   void addTemporalProfileTrace(TemporalProfTraceTy Trace);
 
   Error writeImpl(ProfOStream &OS);
+
+  // Writes known header fields and preserves space for fields whose value are
+  // known only after payloads are written.
+  // Returns the number of bytes written and outputs the byte offset for back
+  // patching.
+  uint64_t writeHeader(ProfOStream &OS, HeaderFieldOffsets &Offsets);
 };
 
 } // end namespace llvm
