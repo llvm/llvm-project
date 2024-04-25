@@ -14653,7 +14653,7 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
 
             Diag(LeftParenLoc,
                  diag::err_form_ptr_to_member_from_parenthesized_expr)
-                << OrigOp.get()->getSourceRange()
+                << SourceRange(OpLoc, RightParenLoc)
                 << FixItHint::CreateRemoval(LeftParenLoc)
                 << FixItHint::CreateRemoval(RightParenLoc);
 
