@@ -796,8 +796,12 @@ private:
       }
     }
 
-    if (const auto *LastNonComment = Line.getLastNonComment();
-        LastNonComment && LastNonComment->is(tok::l_brace)) {
+    if (Line.endsWith(tok::l_brace)) {
+      if (Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Never &&
+          Line.First->is(TT_BlockLBrace)) {
+        return 0;
+      }
+
       if (IsSplitBlock && Line.First == Line.Last &&
           I > AnnotatedLines.begin() &&
           (I[-1]->endsWith(tok::kw_else) || IsCtrlStmt(*I[-1]))) {

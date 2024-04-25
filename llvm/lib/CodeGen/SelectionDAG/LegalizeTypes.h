@@ -389,7 +389,6 @@ private:
   SDValue PromoteIntOp_MLOAD(MaskedLoadSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_MSCATTER(MaskedScatterSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_MGATHER(MaskedGatherSDNode *N, unsigned OpNo);
-  SDValue PromoteIntOp_ADDSUBO_CARRY(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_FRAMERETURNADDR(SDNode *N);
   SDValue PromoteIntOp_FIX(SDNode *N);
   SDValue PromoteIntOp_ExpOp(SDNode *N);
@@ -530,6 +529,7 @@ private:
   SDValue SoftenFloatRes_BITCAST(SDNode *N);
   SDValue SoftenFloatRes_BUILD_PAIR(SDNode *N);
   SDValue SoftenFloatRes_ConstantFP(SDNode *N);
+  SDValue SoftenFloatRes_EXTRACT_ELEMENT(SDNode *N);
   SDValue SoftenFloatRes_EXTRACT_VECTOR_ELT(SDNode *N, unsigned ResNo);
   SDValue SoftenFloatRes_FABS(SDNode *N);
   SDValue SoftenFloatRes_FMINNUM(SDNode *N);
@@ -984,7 +984,7 @@ private:
   SDValue WidenVecRes_FP_TO_XINT_SAT(SDNode *N);
   SDValue WidenVecRes_XRINT(SDNode *N);
   SDValue WidenVecRes_FCOPYSIGN(SDNode *N);
-  SDValue WidenVecRes_IS_FPCLASS(SDNode *N);
+  SDValue WidenVecRes_UnarySameEltsWithScalarArg(SDNode *N);
   SDValue WidenVecRes_ExpOp(SDNode *N);
   SDValue WidenVecRes_Unary(SDNode *N);
   SDValue WidenVecRes_InregOp(SDNode *N);

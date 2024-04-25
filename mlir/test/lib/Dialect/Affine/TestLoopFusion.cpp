@@ -22,23 +22,6 @@
 using namespace mlir;
 using namespace mlir::affine;
 
-static llvm::cl::OptionCategory clOptionsCategory(DEBUG_TYPE " options");
-
-static llvm::cl::opt<bool> clTestDependenceCheck(
-    "test-loop-fusion-dependence-check",
-    llvm::cl::desc("Enable testing of loop fusion dependence check"),
-    llvm::cl::cat(clOptionsCategory));
-
-static llvm::cl::opt<bool> clTestSliceComputation(
-    "test-loop-fusion-slice-computation",
-    llvm::cl::desc("Enable testing of loop fusion slice computation"),
-    llvm::cl::cat(clOptionsCategory));
-
-static llvm::cl::opt<bool> clTestLoopFusionTransformation(
-    "test-loop-fusion-transformation",
-    llvm::cl::desc("Enable testing of loop fusion transformation"),
-    llvm::cl::cat(clOptionsCategory));
-
 namespace {
 
 struct TestLoopFusion
@@ -50,6 +33,24 @@ struct TestLoopFusion
     return "Tests loop fusion utility functions.";
   }
   void runOnOperation() override;
+
+  TestLoopFusion() = default;
+  TestLoopFusion(const TestLoopFusion &pass) : PassWrapper(pass){};
+
+  Option<bool> clTestDependenceCheck{
+      *this, "test-loop-fusion-dependence-check",
+      llvm::cl::desc("Enable testing of loop fusion dependence check"),
+      llvm::cl::init(false)};
+
+  Option<bool> clTestSliceComputation{
+      *this, "test-loop-fusion-slice-computation",
+      llvm::cl::desc("Enable testing of loop fusion slice computation"),
+      llvm::cl::init(false)};
+
+  Option<bool> clTestLoopFusionTransformation{
+      *this, "test-loop-fusion-transformation",
+      llvm::cl::desc("Enable testing of loop fusion transformation"),
+      llvm::cl::init(false)};
 };
 
 } // namespace

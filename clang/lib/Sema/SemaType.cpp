@@ -33,10 +33,13 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
+#include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -138,7 +141,8 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_PreserveMost:                                            \
   case ParsedAttr::AT_PreserveAll:                                             \
   case ParsedAttr::AT_M68kRTD:                                                 \
-  case ParsedAttr::AT_PreserveNone
+  case ParsedAttr::AT_PreserveNone:                                            \
+  case ParsedAttr::AT_RISCVVectorCC
 
 // Function type attributes.
 #define FUNCTION_TYPE_ATTRS_CASELIST                                           \
@@ -375,11 +379,10 @@ enum TypeAttrLocation {
 static void
 processTypeAttrs(TypeProcessingState &state, QualType &type,
                  TypeAttrLocation TAL, const ParsedAttributesView &attrs,
-                 Sema::CUDAFunctionTarget CFT = Sema::CFT_HostDevice);
+                 CUDAFunctionTarget CFT = CUDAFunctionTarget::HostDevice);
 
 static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
-                                   QualType &type,
-                                   Sema::CUDAFunctionTarget CFT);
+                                   QualType &type, CUDAFunctionTarget CFT);
 
 static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &state,
                                              ParsedAttr &attr, QualType &type);
@@ -626,7 +629,7 @@ static void distributeFunctionTypeAttr(TypeProcessingState &state,
 static bool distributeFunctionTypeAttrToInnermost(
     TypeProcessingState &state, ParsedAttr &attr,
     ParsedAttributesView &attrList, QualType &declSpecType,
-    Sema::CUDAFunctionTarget CFT) {
+    CUDAFunctionTarget CFT) {
   Declarator &declarator = state.getDeclarator();
 
   // Put it on the innermost function chunk, if there is one.
@@ -643,10 +646,10 @@ static bool distributeFunctionTypeAttrToInnermost(
 
 /// A function type attribute was written in the decl spec.  Try to
 /// apply it somewhere.
-static void
-distributeFunctionTypeAttrFromDeclSpec(TypeProcessingState &state,
-                                       ParsedAttr &attr, QualType &declSpecType,
-                                       Sema::CUDAFunctionTarget CFT) {
+static void distributeFunctionTypeAttrFromDeclSpec(TypeProcessingState &state,
+                                                   ParsedAttr &attr,
+                                                   QualType &declSpecType,
+                                                   CUDAFunctionTarget CFT) {
   state.saveDeclSpecAttrs();
 
   // Try to distribute to the innermost.
@@ -663,9 +666,10 @@ distributeFunctionTypeAttrFromDeclSpec(TypeProcessingState &state,
 /// Try to apply it somewhere.
 /// `Attrs` is the attribute list containing the declaration (either of the
 /// declarator or the declaration).
-static void distributeFunctionTypeAttrFromDeclarator(
-    TypeProcessingState &state, ParsedAttr &attr, QualType &declSpecType,
-    Sema::CUDAFunctionTarget CFT) {
+static void distributeFunctionTypeAttrFromDeclarator(TypeProcessingState &state,
+                                                     ParsedAttr &attr,
+                                                     QualType &declSpecType,
+                                                     CUDAFunctionTarget CFT) {
   Declarator &declarator = state.getDeclarator();
 
   // Try to distribute to the innermost.
@@ -693,7 +697,7 @@ static void distributeFunctionTypeAttrFromDeclarator(
 /// declarator or the declaration).
 static void distributeTypeAttrsFromDeclarator(TypeProcessingState &state,
                                               QualType &declSpecType,
-                                              Sema::CUDAFunctionTarget CFT) {
+                                              CUDAFunctionTarget CFT) {
   // The called functions in this loop actually remove things from the current
   // list, so iterating over the existing list isn't possible.  Instead, make a
   // non-owning copy and iterate over that.
@@ -2637,7 +2641,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
   } else if (isSFINAEContext()) {
     VLADiag = diag::err_vla_in_sfinae;
     VLAIsError = true;
-  } else if (getLangOpts().OpenMP && isInOpenMPTaskUntiedContext()) {
+  } else if (getLangOpts().OpenMP && OpenMP().isInOpenMPTaskUntiedContext()) {
     VLADiag = diag::err_openmp_vla_in_task_untied;
     VLAIsError = true;
   } else if (getLangOpts().CPlusPlus) {
@@ -2733,7 +2737,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       bool IsCUDADevice = (getLangOpts().CUDA && getLangOpts().CUDAIsDevice);
       targetDiag(Loc,
                  IsCUDADevice ? diag::err_cuda_vla : diag::err_vla_unsupported)
-          << (IsCUDADevice ? CurrentCUDATarget() : 0);
+          << (IsCUDADevice ? llvm::to_underlying(CUDA().CurrentTarget()) : 0);
     } else if (sema::FunctionScopeInfo *FSI = getCurFunction()) {
       // VLAs are supported on this target, but we may need to do delayed
       // checking that the VLA is not being used within a coroutine.
@@ -3616,7 +3620,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
   // D.getDeclarationAttributes()) because those are always C++11 attributes,
   // and those don't get distributed.
   distributeTypeAttrsFromDeclarator(
-      state, T, SemaRef.IdentifyCUDATarget(D.getAttributes()));
+      state, T, SemaRef.CUDA().IdentifyTarget(D.getAttributes()));
 
   // Find the deduced type in this type. Look in the trailing return type if we
   // have one, otherwise in the DeclSpec type.
@@ -4137,7 +4141,7 @@ static CallingConv getCCForDeclaratorChunk(
       // handleFunctionTypeAttr.
       CallingConv CC;
       if (!S.CheckCallingConvAttr(AL, CC, /*FunctionDecl=*/nullptr,
-                                  S.IdentifyCUDATarget(D.getAttributes())) &&
+                                  S.CUDA().IdentifyTarget(D.getAttributes())) &&
           (!FTI.isVariadic || supportsVariadicCall(CC))) {
         return CC;
       }
@@ -4716,6 +4720,19 @@ static bool DiagnoseMultipleAddrSpaceAttributes(Sema &S, LangAS ASOld,
   return false;
 }
 
+// Whether this is a type broadly expected to have nullability attached.
+// These types are affected by `#pragma assume_nonnull`, and missing nullability
+// will be diagnosed with -Wnullability-completeness.
+static bool shouldHaveNullability(QualType T) {
+  return T->canHaveNullability(/*ResultIfUnknown=*/false) &&
+         // For now, do not infer/require nullability on C++ smart pointers.
+         // It's unclear whether the pragma's behavior is useful for C++.
+         // e.g. treating type-aliases and template-type-parameters differently
+         // from types of declarations can be surprising.
+         !isa<RecordType, TemplateSpecializationType>(
+             T->getCanonicalTypeInternal());
+}
+
 static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                                                 QualType declSpecType,
                                                 TypeSourceInfo *TInfo) {
@@ -4834,8 +4851,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     // inner pointers.
     complainAboutMissingNullability = CAMN_InnerPointers;
 
-    if (T->canHaveNullability(/*ResultIfUnknown*/ false) &&
-        !T->getNullability()) {
+    if (shouldHaveNullability(T) && !T->getNullability()) {
       // Note that we allow but don't require nullability on dependent types.
       ++NumPointersRemaining;
     }
@@ -5058,8 +5074,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   // If the type itself could have nullability but does not, infer pointer
   // nullability and perform consistency checking.
   if (S.CodeSynthesisContexts.empty()) {
-    if (T->canHaveNullability(/*ResultIfUnknown*/ false) &&
-        !T->getNullability()) {
+    if (shouldHaveNullability(T) && !T->getNullability()) {
       if (isVaList(T)) {
         // Record that we've seen a pointer, but do nothing else.
         if (NumPointersRemaining > 0)
@@ -5813,7 +5828,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
     // See if there are any attributes on this declarator chunk.
     processTypeAttrs(state, T, TAL_DeclChunk, DeclType.getAttrs(),
-                     S.IdentifyCUDATarget(D.getAttributes()));
+                     S.CUDA().IdentifyTarget(D.getAttributes()));
 
     if (DeclType.Kind != DeclaratorChunk::Paren) {
       if (ExpectNoDerefChunk && !IsNoDerefableChunk(DeclType))
@@ -6503,6 +6518,9 @@ namespace {
     }
     void VisitDecayedTypeLoc(DecayedTypeLoc TL) {
       llvm_unreachable("decayed type locs not expected here!");
+    }
+    void VisitArrayParameterTypeLoc(ArrayParameterTypeLoc TL) {
+      llvm_unreachable("array parameter type locs not expected here!");
     }
 
     void VisitAttributedTypeLoc(AttributedTypeLoc TL) {
@@ -7939,6 +7957,8 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<M68kRTDAttr>(Ctx, Attr);
   case ParsedAttr::AT_PreserveNone:
     return createSimpleAttr<PreserveNoneAttr>(Ctx, Attr);
+  case ParsedAttr::AT_RISCVVectorCC:
+    return createSimpleAttr<RISCVVectorCCAttr>(Ctx, Attr);
   }
   llvm_unreachable("unexpected attribute kind!");
 }
@@ -8012,8 +8032,7 @@ static bool handleArmStateAttribute(Sema &S,
 /// Process an individual function attribute.  Returns true to
 /// indicate that the attribute was handled, false if it wasn't.
 static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
-                                   QualType &type,
-                                   Sema::CUDAFunctionTarget CFT) {
+                                   QualType &type, CUDAFunctionTarget CFT) {
   Sema &S = state.getSema();
 
   FunctionTypeUnwrapper unwrapped(S, type);
@@ -8847,7 +8866,7 @@ static void HandleHLSLParamModifierAttr(QualType &CurType,
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
                              TypeAttrLocation TAL,
                              const ParsedAttributesView &attrs,
-                             Sema::CUDAFunctionTarget CFT) {
+                             CUDAFunctionTarget CFT) {
 
   state.setParsedNoDeref(false);
   if (attrs.empty())
@@ -9722,7 +9741,8 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
                                     : diag::note_non_literal_nontrivial_dtor)
           << RD;
       if (!Dtor->isUserProvided())
-        SpecialMemberIsTrivial(Dtor, CXXDestructor, TAH_IgnoreTrivialABI,
+        SpecialMemberIsTrivial(Dtor, CXXSpecialMemberKind::Destructor,
+                               TAH_IgnoreTrivialABI,
                                /*Diagnose*/ true);
     }
   }

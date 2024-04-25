@@ -1202,6 +1202,10 @@ Lforward:
 @ CHECK: ldrex	r1, [r7]                @ encoding: [0x9f,0x1f,0x97,0xe1]
 @ CHECK: ldrexd	r6, r7, [r8]            @ encoding: [0x9f,0x6f,0xb8,0xe1]
 
+@ GNU alias
+        ldrexd  r6, [r8]
+@ CHECK: ldrexd	r6, r7, [r8]            @ encoding: [0x9f,0x6f,0xb8,0xe1]
+
 @------------------------------------------------------------------------------
 @ LDRHT
 @------------------------------------------------------------------------------
@@ -2902,6 +2906,10 @@ Lforward:
 @ CHECK: strexb	r1, r3, [r4]            @ encoding: [0x93,0x1f,0xc4,0xe1]
 @ CHECK: strexh	r4, r2, [r5]            @ encoding: [0x92,0x4f,0xe5,0xe1]
 @ CHECK: strex	r2, r1, [r7]            @ encoding: [0x91,0x2f,0x87,0xe1]
+@ CHECK: strexd	r6, r2, r3, [r8]        @ encoding: [0x92,0x6f,0xa8,0xe1]
+
+@ GNU alias
+        strexd  r6, r2, [r8]
 @ CHECK: strexd	r6, r2, r3, [r8]        @ encoding: [0x92,0x6f,0xa8,0xe1]
 
 @------------------------------------------------------------------------------

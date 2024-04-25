@@ -61,6 +61,7 @@ class LLVM_LIBRARY_VISIBILITY PPCTargetInfo : public TargetInfo {
   bool HasROPProtect = false;
   bool HasPrivileged = false;
   bool HasAIXSmallLocalExecTLS = false;
+  bool HasAIXSmallLocalDynamicTLS = false;
   bool HasVSX = false;
   bool UseCRBits = false;
   bool HasP8Vector = false;
@@ -92,6 +93,7 @@ public:
     LongDoubleFormat = &llvm::APFloat::PPCDoubleDouble();
     HasStrictFP = true;
     HasIbm128 = true;
+    HasUnalignedAccess = true;
   }
 
   // Set the language option for altivec based on our value.
