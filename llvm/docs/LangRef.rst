@@ -14159,7 +14159,7 @@ that's not to a "fake" callee (like another intrinsic or asm).
 
 Arguments:
 """"""""""
-The first 3 arguments are similar to ``llvm.instrprof.increment``. The indexing
+The first 4 arguments are similar to ``llvm.instrprof.increment``. The indexing
 is specific to callsites, meaning callsites are indexed from 0, independent from
 the indexes used by the other intrinsics (such as 
 ``llvm.instrprof.increment[.step]``).
