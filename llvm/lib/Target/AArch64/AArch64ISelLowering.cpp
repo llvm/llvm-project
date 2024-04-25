@@ -18663,14 +18663,12 @@ static SDValue performConcatVectorsCombine(SDNode *N,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
-  // Optimise concat_vectors of two [us]avgceils or [us]avgfloors with a 128-bit
-  // destination size, combine into an avg of two contacts of the source
-  // vectors. eg: concat(uhadd(a,b), uhadd(c, d)) -> uhadd(concat(a, c),
-  // concat(b, d))
+  // Optimise concat_vectors of two identical binops with a 128-bit destination
+  // size, combine into an binop of two contacts of the source vectors. eg:
+  // concat(uhadd(a,b), uhadd(c, d)) -> uhadd(concat(a, c), concat(b, d))
   if (N->getNumOperands() == 2 && N0Opc == N1Opc && VT.is128BitVector() &&
-      (N0Opc == ISD::AVGCEILU || N0Opc == ISD::AVGCEILS ||
-       N0Opc == ISD::AVGFLOORU || N0Opc == ISD::AVGFLOORS) &&
-      N0->hasOneUse() && N1->hasOneUse()) {
+      DAG.getTargetLoweringInfo().isBinOp(N0Opc) && N0->hasOneUse() &&
+      N1->hasOneUse()) {
     SDValue N00 = N0->getOperand(0);
     SDValue N01 = N0->getOperand(1);
     SDValue N10 = N1->getOperand(0);
