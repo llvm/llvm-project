@@ -71,6 +71,24 @@ buildBuiltinBitOp(CIRGenFunction &CGF, const CallExpr *E,
   return RValue::get(op);
 }
 
+// Initialize the alloca with the given size and alignment according to the lang
+// opts. Supporting only the trivial non-initialization for now.
+static void initializeAlloca(CIRGenFunction &CGF,
+                             [[maybe_unused]] mlir::Value AllocaAddr,
+                             [[maybe_unused]] mlir::Value Size,
+                             [[maybe_unused]] CharUnits AlignmentInBytes) {
+
+  switch (CGF.getLangOpts().getTrivialAutoVarInit()) {
+  case LangOptions::TrivialAutoVarInitKind::Uninitialized:
+    // Nothing to initialize.
+    return;
+  case LangOptions::TrivialAutoVarInitKind::Zero:
+  case LangOptions::TrivialAutoVarInitKind::Pattern:
+    assert(false && "unexpected trivial auto var init kind NYI");
+    return;
+  }
+}
+
 RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
@@ -641,6 +659,49 @@ RValue CIRGenFunction::buildBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (Result.getType() != ResultType)
       Result = builder.createBoolToInt(Result, ResultType);
     return RValue::get(Result);
+  }
+
+  case Builtin::BIalloca:
+  case Builtin::BI_alloca:
+  case Builtin::BI__builtin_alloca_uninitialized:
+  case Builtin::BI__builtin_alloca: {
+    // Get alloca size input
+    mlir::Value Size = buildScalarExpr(E->getArg(0));
+
+    // The alignment of the alloca should correspond to __BIGGEST_ALIGNMENT__.
+    const TargetInfo &TI = getContext().getTargetInfo();
+    const CharUnits SuitableAlignmentInBytes =
+        getContext().toCharUnitsFromBits(TI.getSuitableAlign());
+
+    // Emit the alloca op with type `u8 *` to match the semantics of
+    // `llvm.alloca`. We later bitcast the type to `void *` to match the
+    // semantics of C/C++
+    // FIXME(cir): It may make sense to allow AllocaOp of type `u8` to return a
+    // pointer of type `void *`. This will require a change to the allocaOp
+    // verifier.
+    auto AllocaAddr = builder.createAlloca(
+        getLoc(E->getSourceRange()), builder.getUInt8PtrTy(),
+        builder.getUInt8Ty(), "bi_alloca", SuitableAlignmentInBytes, Size);
+
+    // Initialize the allocated buffer if required.
+    if (BuiltinID != Builtin::BI__builtin_alloca_uninitialized)
+      initializeAlloca(*this, AllocaAddr, Size, SuitableAlignmentInBytes);
+
+    // An alloca will always return a pointer to the alloca (stack) address
+    // space. This address space need not be the same as the AST / Language
+    // default (e.g. in C / C++ auto vars are in the generic address space). At
+    // the AST level this is handled within CreateTempAlloca et al., but for the
+    // builtin / dynamic alloca we have to handle it here.
+    assert(!UnimplementedFeature::addressSpace());
+    LangAS AAS = getASTAllocaAddressSpace();
+    LangAS EAS = E->getType()->getPointeeType().getAddressSpace();
+    if (EAS != AAS) {
+      assert(false && "Non-default address space for alloca NYI");
+    }
+
+    // Bitcast the alloca to the expected type.
+    return RValue::get(
+        builder.createBitcast(AllocaAddr, builder.getVoidPtrTy()));
   }
   }
 
