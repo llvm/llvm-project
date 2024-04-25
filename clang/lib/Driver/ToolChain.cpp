@@ -1310,7 +1310,7 @@ bool ToolChain::isFastMathRuntimeAvailable(const ArgList &Args,
   // Don't implicitly link in mode-changing libraries in a shared library, since
   // this can have very deleterious effects. See the various links from
   // https://github.com/llvm/llvm-project/issues/57589 for more information.
-  bool Default = !Args.hasArg(options::OPT_shared);
+  bool Default = !Args.hasArgNoClaim(options::OPT_shared);
 
   // Do not check for -fno-fast-math or -fno-unsafe-math when -Ofast passed
   // (to keep the linker options consistent with gcc and clang itself).
