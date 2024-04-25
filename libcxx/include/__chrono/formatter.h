@@ -88,6 +88,9 @@ __format_sub_seconds(basic_stringstream<_CharT>& __sstr, const chrono::duration<
   using __duration = chrono::duration<_Rep, _Period>;
 
   auto __fraction = __value - chrono::duration_cast<chrono::seconds>(__value);
+  // Converts a negative fraction to its positive value.
+  if (__value < chrono::seconds{0} && __fraction != __duration{0})
+    __fraction += chrono::seconds{1};
   if constexpr (chrono::treat_as_floating_point_v<_Rep>)
     // When the floating-point value has digits itself they are ignored based
     // on the wording in [tab:time.format.spec]

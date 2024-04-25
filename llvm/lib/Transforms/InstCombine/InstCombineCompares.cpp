@@ -816,29 +816,9 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
     }
 
     if (GEPsInBounds || CmpInst::isEquality(Cond)) {
-      auto EmitGEPOffsetAndRewrite = [&](GEPOperator *GEP) {
-        IRBuilderBase::InsertPointGuard Guard(Builder);
-        auto *Inst = dyn_cast<Instruction>(GEP);
-        if (Inst)
-          Builder.SetInsertPoint(Inst);
-
-        Value *Offset = EmitGEPOffset(GEP);
-        // If a non-trivial GEP has other uses, rewrite it to avoid duplicating
-        // the offset arithmetic.
-        if (Inst && !GEP->hasOneUse() && !GEP->hasAllConstantIndices() &&
-            !GEP->getSourceElementType()->isIntegerTy(8)) {
-          replaceInstUsesWith(*Inst,
-                              Builder.CreateGEP(Builder.getInt8Ty(),
-                                                GEP->getPointerOperand(),
-                                                Offset, "", GEPsInBounds));
-          eraseInstFromFunction(*Inst);
-        }
-        return Offset;
-      };
-
       // ((gep Ptr, OFFSET1) cmp (gep Ptr, OFFSET2)  --->  (OFFSET1 cmp OFFSET2)
-      Value *L = EmitGEPOffsetAndRewrite(GEPLHS);
-      Value *R = EmitGEPOffsetAndRewrite(GEPRHS);
+      Value *L = EmitGEPOffset(GEPLHS, /*RewriteGEP=*/true);
+      Value *R = EmitGEPOffset(GEPRHS, /*RewriteGEP=*/true);
       return new ICmpInst(ICmpInst::getSignedPredicate(Cond), L, R);
     }
   }
@@ -8052,6 +8032,8 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
                  m_Select(m_Value(), m_Value(X), m_FNeg(m_Deferred(X)))) ||
            match(LHSI, m_Select(m_Value(), m_FNeg(m_Value(X)), m_Deferred(X)))))
         return replaceOperand(I, 0, X);
+      if (Instruction *NV = FoldOpIntoSelect(I, cast<SelectInst>(LHSI)))
+        return NV;
       break;
     case Instruction::PHI:
       if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))

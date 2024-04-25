@@ -5041,6 +5041,12 @@ def maix_small_local_exec_tls : Flag<["-"], "maix-small-local-exec-tls">,
            "where the offset from the TLS base is encoded as an "
            "immediate operand (AIX 64-bit only). "
            "This access sequence is not used for variables larger than 32KB.">;
+def maix_small_local_dynamic_tls : Flag<["-"], "maix-small-local-dynamic-tls">,
+  Group<m_ppc_Features_Group>,
+  HelpText<"Produce a faster access sequence for local-dynamic TLS variables "
+           "where the offset from the TLS base is encoded as an "
+           "immediate operand (AIX 64-bit only). "
+           "This access sequence is not used for variables larger than 32KB.">;
 def maix_struct_return : Flag<["-"], "maix-struct-return">,
   Group<m_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Return all structs in memory (PPC32 only)">,
@@ -5502,6 +5508,14 @@ def fno_rtlib_add_rpath: Flag<["-"], "fno-rtlib-add-rpath">,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Do not add -rpath with architecture-specific resource directory to the linker flags. "
   "When --hip-link is specified, do not add -rpath with HIP runtime library directory to the linker flags">;
+def frtlib_defaultlib : Flag<["-"], "frtlib-defaultlib">,
+                      Visibility<[ClangOption, CLOption]>,
+                      Group<f_Group>,
+                      HelpText<"On Windows, emit /defaultlib: directives to link compiler-rt libraries (default)">;
+def fno_rtlib_defaultlib : Flag<["-"], "fno-rtlib-defaultlib">,
+                      Visibility<[ClangOption, CLOption]>,
+                      Group<f_Group>,
+                      HelpText<"On Windows, do not emit /defaultlib: directives to link compiler-rt libraries">;
 def offload_add_rpath: Flag<["--"], "offload-add-rpath">,
   Flags<[NoArgumentUnused]>,
   Alias<frtlib_add_rpath>;
