@@ -108,9 +108,9 @@ bool MemMapFuchsia::mapImpl(UNUSED uptr Addr, uptr Size, const char *Name,
   // Create the VMO.
   zx_status_t Status = _zx_vmo_create(Size, 0, &Vmo);
   if (UNLIKELY(Status != ZX_OK)) {
-    if (!IsNoMemError(Status) || !AllowNoMem)
-      dieOnError(Status, "zx_vmo_create", Size);
-    return false;
+    if (AllowNoMem && IsNoMemError(Status))
+      return false;
+    dieOnError(Status, "zx_vmo_create", Size);
   }
 
   if (Name != nullptr)
@@ -123,15 +123,15 @@ bool MemMapFuchsia::mapImpl(UNUSED uptr Addr, uptr Size, const char *Name,
   Status =
       _zx_vmar_map(_zx_vmar_root_self(), MapFlags, 0, Vmo, 0, Size, &MapAddr);
   if (UNLIKELY(Status != ZX_OK)) {
-    if (!IsNoMemError(Status) || !AllowNoMem)
-      dieOnError(Status, "zx_vmar_map", Size);
+    if (AllowNoMem && IsNoMemError(Status)) {
+      Status = _zx_handle_close(Vmo);
+      CHECK_EQ(Status, ZX_OK);
 
-    Status = _zx_handle_close(Vmo);
-    CHECK_EQ(Status, ZX_OK);
-
-    MapAddr = 0;
-    Vmo = ZX_HANDLE_INVALID;
-    return false;
+      MapAddr = 0;
+      Vmo = ZX_HANDLE_INVALID;
+      return false;
+    }
+    dieOnError(Status, "zx_vmar_map", Size);
   }
 
   if (PreCommit) {
@@ -194,9 +194,9 @@ bool MemMapFuchsia::remapImpl(uptr Addr, uptr Size, const char *Name,
       _zx_vmar_map(_zx_vmar_root_self(), MapFlags, Addr - getRootVmarBase(),
                    Vmo, Addr - MapAddr, Size, &MappedAddr);
   if (UNLIKELY(Status != ZX_OK)) {
-    if (!IsNoMemError(Status) || !AllowNoMem)
-      dieOnError(Status, "zx_vmar_map", Size);
-    return false;
+    if (AllowNoMem && IsNoMemError(Status))
+      return false;
+    dieOnError(Status, "zx_vmar_map", Size);
   }
   DCHECK_EQ(Addr, MappedAddr);
 
@@ -234,9 +234,9 @@ bool ReservedMemoryFuchsia::createImpl(UNUSED uptr Addr, uptr Size,
   zx_status_t Status = _zx_vmar_map(_zx_vmar_root_self(), ZX_VM_ALLOW_FAULTS, 0,
                                     getPlaceholderVmo(), 0, Size, &Base);
   if (UNLIKELY(Status != ZX_OK)) {
-    if (!IsNoMemError(Status) || !AllowNoMem)
-      dieOnError(Status, "zx_vmar_map", Size);
-    return false;
+    if (AllowNoMem && IsNoMemError(Status))
+      return false;
+    dieOnError(Status, "zx_vmar_map", Size);
   }
 
   Capacity = Size;
