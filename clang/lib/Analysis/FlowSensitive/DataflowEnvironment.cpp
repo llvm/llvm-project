@@ -333,6 +333,18 @@ public:
     }
   }
 
+  bool TraverseDecl(Decl *D) {
+    // Don't traverse nested record or function declarations.
+    // - We won't be analyzing code contained in these anyway
+    // - We don't model fields that are used only in these nested declaration,
+    //   so trying to propagate a result object to initializers of such fields
+    //   would cause an error.
+    if (isa_and_nonnull<RecordDecl>(D) || isa_and_nonnull<FunctionDecl>(D))
+      return true;
+
+    return RecursiveASTVisitor<ResultObjectVisitor>::TraverseDecl(D);
+  }
+
   bool TraverseBindingDecl(BindingDecl *BD) {
     // `RecursiveASTVisitor` doesn't traverse holding variables for
     // `BindingDecl`s by itself, so we need to tell it to.
