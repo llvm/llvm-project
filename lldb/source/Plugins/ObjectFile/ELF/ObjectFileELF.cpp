@@ -1854,6 +1854,49 @@ public:
 };
 }
 
+namespace {
+  // We have to do this because ELF doesn't have section IDs, and also
+  // doesn't require section names to be unique.  (We use the section index
+  // for section IDs, but that isn't guaranteed to be the same in separate
+  // debug images.)
+  SectionSP FindMatchingSection(const SectionList &section_list,
+                                SectionSP section) {
+    SectionSP sect_sp;
+
+    addr_t vm_addr = section->GetFileAddress();
+    ConstString name = section->GetName();
+    offset_t file_size = section->GetFileSize();
+    offset_t byte_size = section->GetByteSize();
+    SectionType type = section->GetType();
+    bool thread_specific = section->IsThreadSpecific();
+    uint32_t permissions = section->GetPermissions();
+    uint32_t alignment = section->GetLog2Align();
+
+    for (auto sect_iter = section_list.begin();
+         sect_iter != section_list.end();
+         ++sect_iter) {
+      if ((*sect_iter)->GetName() == name
+          && (*sect_iter)->GetType() == type
+          && (*sect_iter)->IsThreadSpecific() == thread_specific
+          && (*sect_iter)->GetPermissions() == permissions
+          && (*sect_iter)->GetFileSize() == file_size
+          && (*sect_iter)->GetByteSize() == byte_size
+          && (*sect_iter)->GetFileAddress() == vm_addr
+          && (*sect_iter)->GetLog2Align() == alignment) {
+        sect_sp = *sect_iter;
+        break;
+      } else {
+        sect_sp = FindMatchingSection((*sect_iter)->GetChildren(),
+                                      section);
+        if (sect_sp)
+          break;
+      }
+    }
+
+    return sect_sp;
+  }
+}
+
 void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
   if (m_sections_up)
     return;
@@ -2067,10 +2110,8 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
   SectionList *module_section_list =
       module_sp ? module_sp->GetSectionList() : nullptr;
 
-  // Local cache to avoid doing a FindSectionByName for each symbol. The "const
-  // char*" key must came from a ConstString object so they can be compared by
-  // pointer
-  std::unordered_map<const char *, lldb::SectionSP> section_name_to_section;
+  // Cache the section mapping
+  std::unordered_map<lldb::SectionSP, lldb::SectionSP> section_map;
 
   unsigned i;
   for (i = 0; i < num_symbols; ++i) {
@@ -2275,14 +2316,15 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     if (symbol_section_sp && module_section_list &&
         module_section_list != section_list) {
-      ConstString sect_name = symbol_section_sp->GetName();
-      auto section_it = section_name_to_section.find(sect_name.GetCString());
-      if (section_it == section_name_to_section.end())
+      auto section_it = section_map.find(symbol_section_sp);
+      if (section_it == section_map.end()) {
         section_it =
-            section_name_to_section
-                .emplace(sect_name.GetCString(),
-                         module_section_list->FindSectionByName(sect_name))
-                .first;
+          section_map
+              .emplace(symbol_section_sp,
+                       FindMatchingSection(*module_section_list,
+                                           symbol_section_sp))
+              .first;
+      }
       if (section_it->second)
         symbol_section_sp = section_it->second;
     }
