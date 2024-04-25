@@ -8786,15 +8786,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     FuncInfo->setTPIDR2Obj(TPIDR2);
   }
 
-  if (std::optional<TPIDR2Object> TPIDR2 = FuncInfo->getTPIDR2Obj()) {
-    if (auto Global = dyn_cast<GlobalAddressSDNode>(Callee)) {
-      if (Global->getGlobal()->getName() == "__arm_tpidr2_save") {
-        TPIDR2->Uses++;
-        FuncInfo->setTPIDR2Obj(*TPIDR2);
-      }
-    }
-  }
-
   if (RequiresSMChange || RequiresLazySave || ShouldPreserveZT0) {
     for (unsigned I = 0; I < InVals.size(); ++I) {
       // The smstart/smstop is chained as part of the call, but when the
