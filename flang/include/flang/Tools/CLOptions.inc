@@ -163,8 +163,8 @@ inline void addAVC(
 
 inline void addMemoryAllocationOpt(mlir::PassManager &pm) {
   addNestedPassConditionally<mlir::func::FuncOp>(pm, disableFirMao, [&]() {
-    return fir::createMemoryAllocationPass(
-        dynamicArrayStackToHeapAllocation, arrayStackAllocationThreshold);
+    return fir::createMemoryAllocationOpt(
+        {dynamicArrayStackToHeapAllocation, arrayStackAllocationThreshold});
   });
 }
 
