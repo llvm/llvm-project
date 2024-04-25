@@ -15,6 +15,7 @@
 #include "ClauseProcessor.h"
 #include "Clauses.h"
 #include "DataSharingProcessor.h"
+#include "Decomposer.h"
 #include "DirectivesCommon.h"
 #include "ReductionProcessor.h"
 #include "Utils.h"
@@ -36,7 +37,6 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Frontend/OpenMP/ConstructDecompositionT.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
 using namespace Fortran::lower::omp;
@@ -44,6 +44,13 @@ using namespace Fortran::lower::omp;
 //===----------------------------------------------------------------------===//
 // Code generation helper functions
 //===----------------------------------------------------------------------===//
+
+static void genOMPDispatch(Fortran::lower::AbstractConverter &converter,
+                           Fortran::lower::SymMap &symTable,
+                           Fortran::semantics::SemanticsContext &semaCtx,
+                           Fortran::lower::pft::Evaluation &eval,
+                           mlir::Location loc, const ConstructQueue &queue,
+                           ConstructQueue::iterator item);
 
 static Fortran::lower::pft::Evaluation *
 getCollapsedLoopEval(Fortran::lower::pft::Evaluation &eval, int collapseValue) {
@@ -71,89 +78,6 @@ static void genNestedEvaluations(Fortran::lower::AbstractConverter &converter,
 
   for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
     converter.genEval(e);
-}
-
-//===----------------------------------------------------------------------===//
-// Directive decomposition
-//===----------------------------------------------------------------------===//
-
-namespace {
-using DirectiveWithClauses = tomp::DirectiveWithClauses<lower::omp::Clause>;
-using ConstructQueue = List<DirectiveWithClauses>;
-} // namespace
-
-static void genOMPDispatch(Fortran::lower::AbstractConverter &converter,
-                           Fortran::lower::SymMap &symTable,
-                           Fortran::semantics::SemanticsContext &semaCtx,
-                           Fortran::lower::pft::Evaluation &eval,
-                           mlir::Location loc, const ConstructQueue &queue,
-                           ConstructQueue::iterator item);
-
-namespace {
-struct ConstructDecomposition {
-  ConstructDecomposition(mlir::ModuleOp modOp,
-                         semantics::SemanticsContext &semaCtx,
-                         lower::pft::Evaluation &ev,
-                         llvm::omp::Directive construct,
-                         const List<Clause> &clauses)
-      : semaCtx(semaCtx), mod(modOp), eval(ev) {
-    tomp::ConstructDecompositionT decompose(getOpenMPVersion(modOp), *this,
-                                            construct, llvm::ArrayRef(clauses));
-    output = std::move(decompose.output);
-  }
-
-  // Given an object, return its base object if one exists.
-  std::optional<Object> getBaseObject(const Object &object) {
-    return lower::omp::getBaseObject(object, semaCtx);
-  }
-
-  // Return the iteration variable of the associated loop if any.
-  std::optional<Object> getLoopIterVar() {
-    if (semantics::Symbol *symbol = getIterationVariableSymbol(eval))
-      return Object{symbol, /*designator=*/{}};
-    return std::nullopt;
-  }
-
-  semantics::SemanticsContext &semaCtx;
-  mlir::ModuleOp mod;
-  lower::pft::Evaluation &eval;
-  List<DirectiveWithClauses> output;
-};
-} // namespace
-
-LLVM_DUMP_METHOD static llvm::raw_ostream &
-operator<<(llvm::raw_ostream &os, const DirectiveWithClauses &dwc) {
-  os << llvm::omp::getOpenMPDirectiveName(dwc.id);
-  for (auto [index, clause] : llvm::enumerate(dwc.clauses)) {
-    os << (index == 0 ? '\t' : ' ');
-    os << llvm::omp::getOpenMPClauseName(clause.id);
-  }
-  return os;
-}
-
-static void splitCompoundConstruct(
-    mlir::ModuleOp modOp, Fortran::semantics::SemanticsContext &semaCtx,
-    Fortran::lower::pft::Evaluation &eval, llvm::omp::Directive construct,
-    const List<Clause> &clauses, List<DirectiveWithClauses> &directives) {
-
-  ConstructDecomposition decompose(modOp, semaCtx, eval, construct, clauses);
-  assert(!decompose.output.empty());
-
-  llvm::SmallVector<llvm::omp::Directive> loweringUnits;
-  std::ignore =
-      llvm::omp::getLeafOrCompositeConstructs(construct, loweringUnits);
-
-  int leafIndex = 0;
-  for (llvm::omp::Directive dir_id : loweringUnits) {
-    directives.push_back(DirectiveWithClauses{dir_id});
-    DirectiveWithClauses &dwc = directives.back();
-    llvm::ArrayRef<llvm::omp::Directive> leafsOrSelf =
-        llvm::omp::getLeafConstructsOrSelf(dir_id);
-    for (int i = 0, e = leafsOrSelf.size(); i != e; ++i) {
-      dwc.clauses.append(decompose.output[leafIndex].clauses);
-      ++leafIndex;
-    }
-  }
 }
 
 static fir::GlobalOp globalInitialization(
@@ -2170,7 +2094,9 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       semaCtx);
   mlir::Location currentLocation = converter.genLocation(directive.source);
 
-  ConstructQueue queue{{DirectiveWithClauses{directive.v, clauses}}};
+  ConstructQueue queue{
+      buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
+                          eval, directive.v, clauses)};
 
   switch (directive.v) {
   default:
@@ -2234,7 +2160,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   mlir::Location currentLocation = converter.genLocation(verbatim.source);
 
   ConstructQueue queue{
-      DirectiveWithClauses{llvm::omp::Directive::OMPD_flush, clauses}};
+      buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
+                          eval, llvm::omp::Directive::OMPD_flush, clauses)};
   genFlushOp(converter, symTable, semaCtx, eval, currentLocation, objects,
              clauses, queue, queue.begin());
 }
@@ -2381,9 +2308,9 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 
   llvm::omp::Directive directive =
       std::get<parser::OmpBlockDirective>(beginBlockDirective.t).v;
-  ConstructQueue queue;
-  splitCompoundConstruct(converter.getFirOpBuilder().getModule(), semaCtx, eval,
-                         directive, clauses, queue);
+  ConstructQueue queue{
+      buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
+                          eval, directive, clauses)};
   genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
 }
@@ -2399,9 +2326,9 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   List<Clause> clauses =
       makeClauses(std::get<Fortran::parser::OmpClauseList>(cd.t), semaCtx);
 
-  ConstructQueue queue;
-  splitCompoundConstruct(converter.getFirOpBuilder().getModule(), semaCtx, eval,
-                         llvm::omp::Directive::OMPD_critical, clauses, queue);
+  ConstructQueue queue{
+      buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
+                          eval, llvm::omp::Directive::OMPD_critical, clauses)};
 
   const auto &name = std::get<std::optional<Fortran::parser::Name>>(cd.t);
   mlir::Location currentLocation = converter.getCurrentLocation();
@@ -2440,9 +2367,9 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
 
   llvm::omp::Directive directive =
       std::get<parser::OmpLoopDirective>(beginLoopDirective.t).v;
-  ConstructQueue queue;
-  splitCompoundConstruct(converter.getFirOpBuilder().getModule(), semaCtx, eval,
-                         directive, clauses, queue);
+  ConstructQueue queue{
+      buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
+                          eval, directive, clauses)};
   genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
 }
@@ -2455,7 +2382,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
        const Fortran::parser::OpenMPSectionConstruct &sectionConstruct) {
   mlir::Location loc = converter.getCurrentLocation();
   ConstructQueue queue{
-      DirectiveWithClauses{llvm::omp::Directive::OMPD_section}};
+      buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
+                          eval, llvm::omp::Directive::OMPD_section, {})};
   genSectionOp(converter, symTable, semaCtx, eval, loc,
                /*clauses=*/{}, queue, queue.begin());
 }
@@ -2480,9 +2408,9 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 
   llvm::omp::Directive directive =
       std::get<parser::OmpSectionsDirective>(beginSectionsDirective.t).v;
-  ConstructQueue queue;
-  splitCompoundConstruct(converter.getFirOpBuilder().getModule(), semaCtx, eval,
-                         directive, clauses, queue);
+  ConstructQueue queue{
+      buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
+                          eval, directive, clauses)};
   genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
 }
