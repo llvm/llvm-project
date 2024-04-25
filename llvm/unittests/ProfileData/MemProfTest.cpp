@@ -179,7 +179,7 @@ TEST(MemProf, FillsValue) {
 
   // Check the memprof record for foo.
   const llvm::GlobalValue::GUID FooId = IndexedMemProfRecord::getGUID("foo");
-  ASSERT_EQ(Records.count(FooId), 1U);
+  ASSERT_TRUE(Records.contains(FooId));
   const MemProfRecord &Foo = Records[FooId];
   ASSERT_THAT(Foo.AllocSites, SizeIs(1));
   EXPECT_EQ(Foo.AllocSites[0].Info.getAllocCount(), 1U);
@@ -195,7 +195,7 @@ TEST(MemProf, FillsValue) {
 
   // Check the memprof record for bar.
   const llvm::GlobalValue::GUID BarId = IndexedMemProfRecord::getGUID("bar");
-  ASSERT_EQ(Records.count(BarId), 1U);
+  ASSERT_TRUE(Records.contains(BarId));
   const MemProfRecord &Bar = Records[BarId];
   ASSERT_THAT(Bar.AllocSites, SizeIs(1));
   EXPECT_EQ(Bar.AllocSites[0].Info.getAllocCount(), 1U);
@@ -215,7 +215,7 @@ TEST(MemProf, FillsValue) {
 
   // Check the memprof record for xyz.
   const llvm::GlobalValue::GUID XyzId = IndexedMemProfRecord::getGUID("xyz");
-  ASSERT_EQ(Records.count(XyzId), 1U);
+  ASSERT_TRUE(Records.contains(XyzId));
   const MemProfRecord &Xyz = Records[XyzId];
   ASSERT_THAT(Xyz.CallSites, SizeIs(1));
   ASSERT_THAT(Xyz.CallSites[0], SizeIs(2));
@@ -226,7 +226,7 @@ TEST(MemProf, FillsValue) {
 
   // Check the memprof record for abc.
   const llvm::GlobalValue::GUID AbcId = IndexedMemProfRecord::getGUID("abc");
-  ASSERT_EQ(Records.count(AbcId), 1U);
+  ASSERT_TRUE(Records.contains(AbcId));
   const MemProfRecord &Abc = Records[AbcId];
   EXPECT_TRUE(Abc.AllocSites.empty());
   ASSERT_THAT(Abc.CallSites, SizeIs(1));
