@@ -90,7 +90,7 @@ LogicalResult MulScalarOp::verify() {
   PolynomialType polyType;
 
   if (auto shapedPolyType = dyn_cast<ShapedType>(argType)) {
-    polyType = dyn_cast<PolynomialType>(shapedPolyType.getElementType());
+    polyType = cast<PolynomialType>(shapedPolyType.getElementType());
   } else {
     polyType = cast<PolynomialType>(argType);
   }
