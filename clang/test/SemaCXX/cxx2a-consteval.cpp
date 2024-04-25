@@ -260,6 +260,26 @@ int(*test)(int)  = l1;
 
 }
 
+namespace consteval_lambda_in_template {
+struct S {
+    int *value;
+    constexpr S(int v) : value(new int {v}) {}
+    constexpr ~S() { delete value; }
+};
+consteval S fn() { return S(5); }
+
+template <typename T>
+void fn2() {
+    (void)[]() consteval -> int {
+      return *(fn().value);  // OK, immediate context
+    };
+}
+
+void caller() {
+    fn2<int>();
+}
+}
+
 namespace std {
 
 template <typename T> struct remove_reference { using type = T; };
