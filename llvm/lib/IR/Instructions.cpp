@@ -5165,7 +5165,7 @@ void SwitchInstProfUpdateWrapper::init() {
   if (!ProfileData)
     return;
 
-  if (ProfileData->getNumOperands() != SI.getNumSuccessors() + 1) {
+  if (getNumBranchWeights(*ProfileData) != SI.getNumSuccessors()) {
     llvm_unreachable("number of prof branch_weights metadata operands does "
                      "not correspond to number of succesors");
   }
