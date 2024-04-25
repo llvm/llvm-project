@@ -2055,7 +2055,7 @@ define <2 x i8> @shl1_cttz_vec_poison(<2 x i8> %x) {
 
 define i32 @shl1_cttz_extra_use(i32 %x) {
 ; CHECK-LABEL: @shl1_cttz_extra_use(
-; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false)
 ; CHECK-NEXT:    call void @use_i32(i32 [[TZ]])
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i32 1, [[TZ]]
 ; CHECK-NEXT:    ret i32 [[SHL]]
@@ -2070,7 +2070,7 @@ define i32 @shl1_cttz_extra_use(i32 %x) {
 
 define i32 @shl2_cttz(i32 %x) {
 ; CHECK-LABEL: @shl2_cttz(
-; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[TZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 2, [[TZ]]
 ; CHECK-NEXT:    ret i32 [[SHL]]
 ;

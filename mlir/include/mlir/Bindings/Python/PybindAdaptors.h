@@ -18,6 +18,7 @@
 #ifndef MLIR_BINDINGS_PYTHON_PYBINDADAPTORS_H
 #define MLIR_BINDINGS_PYTHON_PYBINDADAPTORS_H
 
+#include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
 #include <pybind11/stl.h>
