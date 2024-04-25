@@ -1366,6 +1366,9 @@ inline bool GetPtrVirtBasePop(InterpState &S, CodePtr OpPC,
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckNull(S, OpPC, Ptr, CSK_Base))
     return false;
+  if (Ptr.isDummy()) // FIXME: Once we have type info for dummy pointers, this
+                     // needs to go.
+    return false;
   return VirtBaseHelper(S, OpPC, D, Ptr);
 }
 
