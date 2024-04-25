@@ -849,6 +849,12 @@ CompilerType::GetVirtualBaseClassAtIndex(size_t idx,
   return CompilerType();
 }
 
+CompilerDecl CompilerType::GetStaticFieldWithName(llvm::StringRef name) const {
+  if (IsValid())
+    return GetTypeSystem()->GetStaticFieldWithName(m_type, name);
+  return CompilerDecl();
+}
+
 uint32_t CompilerType::GetIndexOfFieldWithName(
     const char *name, CompilerType *field_compiler_type_ptr,
     uint64_t *bit_offset_ptr, uint32_t *bitfield_bit_size_ptr,
