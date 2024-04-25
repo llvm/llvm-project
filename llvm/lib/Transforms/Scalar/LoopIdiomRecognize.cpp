@@ -2999,6 +2999,7 @@ public:
     }
 
     void print(raw_ostream &OS) {
+#ifndef NDEBUG
       switch (_Type) {
       case BitType::ONE:
         OS << "1";
@@ -3016,6 +3017,7 @@ public:
         _RHS->print(OS);
         break;
       }
+#endif
     }
   };
   using PValueBits = std::shared_ptr<ValueBits>;
@@ -3153,6 +3155,7 @@ public:
   }
 
   virtual void print(raw_ostream &OS) {
+#ifndef NDEBUG
     assert(Size != 0);
     OS << "[";
     Bits[Size - 1].print(OS);
@@ -3161,6 +3164,7 @@ public:
       Bits[i].print(OS);
     }
     OS << "]\n";
+#endif
   }
 };
 
@@ -3218,9 +3222,11 @@ public:
   ICmpInst *getPredicate() { return _Predicate; }
 
   virtual void print(raw_ostream &OS) override {
+#ifndef NDEBUG
     OS << "Predicate: " << *_Predicate << "\nIf True:\n"
        << *_IfTrue << "If False:\n"
        << *_IfFalse;
+#endif
   }
 };
 
