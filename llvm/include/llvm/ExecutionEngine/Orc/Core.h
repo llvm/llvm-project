@@ -1443,9 +1443,6 @@ public:
   /// Send a result to the remote.
   using SendResultFunction = unique_function<void(shared::WrapperFunctionResult)>;
 
-  /// For dispatching ORC tasks (typically materialization tasks).
-  using DispatchTaskFunction = unique_function<void(std::unique_ptr<Task> T)>;
-
   /// An asynchronous wrapper-function callable from the executor via
   /// jit-dispatch.
   using JITDispatchHandlerFunction = unique_function<void(
@@ -1568,12 +1565,6 @@ public:
   /// Unhandled errors can be sent here to log them.
   void reportError(Error Err) { ReportError(std::move(Err)); }
 
-  /// Set the task dispatch function.
-  ExecutionSession &setDispatchTask(DispatchTaskFunction DispatchTask) {
-    this->DispatchTask = std::move(DispatchTask);
-    return *this;
-  }
-
   /// Search the given JITDylibs to find the flags associated with each of the
   /// given symbols.
   void lookupFlags(LookupKind K, JITDylibSearchOrder SearchOrder,
@@ -1648,7 +1639,7 @@ public:
   void dispatchTask(std::unique_ptr<Task> T) {
     assert(T && "T must be non-null");
     DEBUG_WITH_TYPE("orc", dumpDispatchInfo(*T));
-    DispatchTask(std::move(T));
+    EPC->getDispatcher().dispatch(std::move(T));
   }
 
   /// Run a wrapper function in the executor.
@@ -1762,8 +1753,6 @@ private:
     logAllUnhandledErrors(std::move(Err), errs(), "JIT session error: ");
   }
 
-  static void runOnCurrentThread(std::unique_ptr<Task> T) { T->run(); }
-
   void dispatchOutstandingMUs();
 
   static std::unique_ptr<MaterializationResponsibility>
@@ -1869,7 +1858,6 @@ private:
   std::unique_ptr<ExecutorProcessControl> EPC;
   std::unique_ptr<Platform> P;
   ErrorReporter ReportError = logErrorsToStdErr;
-  DispatchTaskFunction DispatchTask = runOnCurrentThread;
 
   std::vector<ResourceManager *> ResourceManagers;
 
