@@ -65,7 +65,7 @@ static StringRef getExtensionNameFromRecordName(const Record *R) {
 
 static void emitRISCVExtensions(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef GET_SUPPORTED_EXTENSIONS\n";
-  OS << "#undef GET_SUPPORTED_EXTENSIONS\n";
+  OS << "#undef GET_SUPPORTED_EXTENSIONS\n\n";
 
   std::vector<Record *> Extensions =
       Records.getAllDerivedDefinitions("RISCVExtension");
@@ -77,7 +77,7 @@ static void emitRISCVExtensions(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#endif // GET_SUPPORTED_EXTENSIONS\n\n";
 
   OS << "#ifdef GET_IMPLIED_EXTENSIONS\n";
-  OS << "#undef GET_IMPLIED_EXTENSIONS\n";
+  OS << "#undef GET_IMPLIED_EXTENSIONS\n\n";
 
   for (Record *Ext : Extensions) {
     auto ImpliesList = Ext->getValueAsListOfDefs("Implies");
@@ -104,8 +104,8 @@ static void emitRISCVExtensions(RecordKeeper &Records, raw_ostream &OS) {
     if (ImpliesList.empty())
       continue;
 
-    OS << "    {{\"" << getExtensionName(Ext) << "\"}, {ImpliedExts"
-       << getExtensionNameFromRecordName(Ext) << "}},\n";
+    OS << "    { {\"" << getExtensionName(Ext) << "\"}, {ImpliedExts"
+       << getExtensionNameFromRecordName(Ext) << "} },\n";
   }
 
   OS << "};\n\n";
