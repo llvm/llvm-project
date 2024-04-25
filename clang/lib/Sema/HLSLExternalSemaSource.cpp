@@ -126,12 +126,15 @@ struct BuiltinTypeDeclBuilder {
 
   static DeclRefExpr *lookupBuiltinFunction(ASTContext &AST, Sema &S,
                                             StringRef Name) {
-    CXXScopeSpec SS;
     IdentifierInfo &II = AST.Idents.get(Name, tok::TokenKind::identifier);
     DeclarationNameInfo NameInfo =
         DeclarationNameInfo(DeclarationName(&II), SourceLocation());
     LookupResult R(S, NameInfo, Sema::LookupOrdinaryName);
-    S.LookupParsedName(R, S.getCurScope(), &SS, false);
+    // AllowBuiltinCreation is false but LookupDirect will create
+    // the builtin when searching the global scope anyways...
+    S.LookupName(R, S.getCurScope());
+    // FIXME: If the builtin function was user-declared in global scope,
+    // this assert *will* fail. Should this call LookupBuiltin instead?
     assert(R.isSingleResult() &&
            "Since this is a builtin it should always resolve!");
     auto *VD = cast<ValueDecl>(R.getFoundDecl());
