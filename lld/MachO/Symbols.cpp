@@ -63,8 +63,8 @@ Defined::Defined(StringRefZ name, InputFile *file, InputSection *isec,
       wasIdenticalCodeFolded(false),
       referencedDynamically(isReferencedDynamically), noDeadStrip(noDeadStrip),
       interposable(interposable), weakDefCanBeHidden(isWeakDefCanBeHidden),
-      weakDef(isWeakDef), external(isExternal), isec(isec), value(value),
-      size(size) {
+      weakDef(isWeakDef), external(isExternal), originalIsec(isec),
+      value(value), size(size) {
   if (isec) {
     isec->symbols.push_back(this);
     // Maintain sorted order.
@@ -82,7 +82,7 @@ Defined::Defined(StringRefZ name, InputFile *file, InputSection *isec,
 }
 
 bool Defined::isTlv() const {
-  return !isAbsolute() && isThreadLocalVariables(isec->getFlags());
+  return !isAbsolute() && isThreadLocalVariables(originalIsec->getFlags());
 }
 
 uint64_t Defined::getVA() const {
@@ -91,7 +91,7 @@ uint64_t Defined::getVA() const {
   if (isAbsolute())
     return value;
 
-  if (!isec->isFinal) {
+  if (!isec()->isFinal) {
     // A target arch that does not use thunks ought never ask for
     // the address of a function that has not yet been finalized.
     assert(target->usesThunks());
@@ -102,24 +102,28 @@ uint64_t Defined::getVA() const {
     // expedient to return a contrived out-of-range address.
     return TargetInfo::outOfRangeVA;
   }
-  return isec->getVA(value);
+  return isec()->getVA(value);
 }
 
 ObjFile *Defined::getObjectFile() const {
-  return isec ? dyn_cast_or_null<ObjFile>(isec->getFile()) : nullptr;
-}
-
-void Defined::canonicalize() {
-  if (unwindEntry)
-    unwindEntry = unwindEntry->canonical();
-  if (isec)
-    isec = isec->canonical();
+  return originalIsec ? dyn_cast_or_null<ObjFile>(originalIsec->getFile())
+                      : nullptr;
 }
 
 std::string Defined::getSourceLocation() {
-  if (!isec)
+  if (!originalIsec)
     return {};
-  return isec->getSourceLocation(value);
+  return originalIsec->getSourceLocation(value);
+}
+
+// Get the canonical InputSection of the symbol.
+InputSection *Defined::isec() const {
+  return originalIsec ? originalIsec->canonical() : nullptr;
+}
+
+// Get the canonical unwind entry of the symbol.
+ConcatInputSection *Defined::unwindEntry() const {
+  return originalUnwindEntry ? originalUnwindEntry->canonical() : nullptr;
 }
 
 uint64_t DylibSymbol::getVA() const {

@@ -264,7 +264,7 @@ define i8 @test_atomicrmw_and_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) 
 ; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; GCN-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; GCN-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; GCN-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[INV_MASK]], [[VALOPERAND_SHIFTED]]
+; GCN-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
 ; GCN-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
 ; GCN-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
 ; GCN-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i8
@@ -279,7 +279,7 @@ define i8 @test_atomicrmw_and_i8_global_agent(ptr addrspace(1) %ptr, i8 %value) 
 ; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
 ; R600-NEXT:    [[TMP3:%.*]] = zext i8 [[VALUE:%.*]] to i32
 ; R600-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[TMP2]]
-; R600-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[INV_MASK]], [[VALOPERAND_SHIFTED]]
+; R600-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
 ; R600-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
 ; R600-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[TMP2]]
 ; R600-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i8

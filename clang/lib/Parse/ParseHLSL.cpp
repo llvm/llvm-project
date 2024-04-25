@@ -63,7 +63,7 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
   SourceLocation IdentifierLoc = ConsumeToken();
 
   ParsedAttributes Attrs(AttrFactory);
-  MaybeParseHLSLSemantics(Attrs, nullptr);
+  MaybeParseHLSLAnnotations(Attrs, nullptr);
 
   ParseScope BufferScope(this, Scope::DeclScope);
   BalancedDelimiterTracker T(*this, tok::l_brace);
@@ -118,12 +118,10 @@ static void fixSeparateAttrArgAndNumber(StringRef ArgStr, SourceLocation ArgLoc,
   Slot = IdentifierLoc::create(Ctx, ArgLoc, PP.getIdentifierInfo(FixedArg));
 }
 
-void Parser::ParseHLSLSemantics(ParsedAttributes &Attrs,
-                                SourceLocation *EndLoc) {
-  // FIXME: HLSLSemantic is shared for Semantic and resource binding which is
-  // confusing. Need a better name to avoid misunderstanding. Issue
-  // https://github.com/llvm/llvm-project/issues/57882
-  assert(Tok.is(tok::colon) && "Not a HLSL Semantic");
+void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
+                                  SourceLocation *EndLoc) {
+
+  assert(Tok.is(tok::colon) && "Not a HLSL Annotation");
   ConsumeToken();
 
   IdentifierInfo *II = nullptr;
@@ -141,7 +139,7 @@ void Parser::ParseHLSLSemantics(ParsedAttributes &Attrs,
   if (EndLoc)
     *EndLoc = Tok.getLocation();
   ParsedAttr::Kind AttrKind =
-      ParsedAttr::getParsedKind(II, nullptr, ParsedAttr::AS_HLSLSemantic);
+      ParsedAttr::getParsedKind(II, nullptr, ParsedAttr::AS_HLSLAnnotation);
 
   ArgsVector ArgExprs;
   switch (AttrKind) {
@@ -192,10 +190,10 @@ void Parser::ParseHLSLSemantics(ParsedAttributes &Attrs,
   case ParsedAttr::AT_HLSLSV_DispatchThreadID:
     break;
   default:
-    llvm_unreachable("invalid HLSL Semantic");
+    llvm_unreachable("invalid HLSL Annotation");
     break;
   }
 
   Attrs.addNew(II, Loc, nullptr, SourceLocation(), ArgExprs.data(),
-               ArgExprs.size(), ParsedAttr::Form::HLSLSemantic());
+               ArgExprs.size(), ParsedAttr::Form::HLSLAnnotation());
 }
