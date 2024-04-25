@@ -1,6 +1,7 @@
 ! Tests for 2.9.3.1 Simd
 
-! RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s
+! The "if" clause was added to the "simd" directive in OpenMP 5.0.
+! RUN: bbc -fopenmp -fopenmp-version=50 -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 !CHECK-LABEL: func @_QPsimd()
 subroutine simd
