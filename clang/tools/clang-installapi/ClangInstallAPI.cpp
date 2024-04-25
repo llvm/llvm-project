@@ -147,7 +147,7 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
     return EXIT_FAILURE;
 
   // Assign attributes for serialization.
-  InterfaceFile IF(Ctx.Verifier->getExports());
+  InterfaceFile IF(Ctx.Verifier->takeExports());
   // Assign attributes that are the same per slice first.
   for (const auto &TargetInfo : Opts.DriverOpts.Targets) {
     IF.addTarget(TargetInfo.first);

@@ -399,6 +399,11 @@ private:
   /// record containing modifications to them.
   DeclUpdateMap DeclUpdates;
 
+  /// DeclUpdates added during parsing the GMF. We split these from
+  /// DeclUpdates since we want to add these updates in GMF on need.
+  /// Only meaningful for reduced BMI.
+  DeclUpdateMap DeclUpdatesFromGMF;
+
   using FirstLatestDeclMap = llvm::DenseMap<Decl *, Decl *>;
 
   /// Map of first declarations from a chained PCH that point to the
@@ -554,6 +559,8 @@ private:
   void WriteIdentifierTable(Preprocessor &PP, IdentifierResolver &IdResolver,
                             bool IsModule);
   void WriteDeclAndTypes(ASTContext &Context);
+  void PrepareWritingSpecialDecls(Sema &SemaRef);
+  void WriteSpecialDeclRecords(Sema &SemaRef);
   void WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord);
   void WriteDeclContextVisibleUpdate(const DeclContext *DC);
   void WriteFPPragmaOptions(const FPOptionsOverride &Opts);
@@ -707,6 +714,8 @@ public:
 
   /// Emit a reference to a declaration.
   void AddDeclRef(const Decl *D, RecordDataImpl &Record);
+  // Emit a reference to a declaration if the declaration was emitted.
+  void AddEmittedDeclRef(const Decl *D, RecordDataImpl &Record);
 
   /// Force a declaration to be emitted and get its ID.
   serialization::DeclID GetDeclRef(const Decl *D);
@@ -866,6 +875,11 @@ private:
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
   void AddedAttributeToRecord(const Attr *Attr,
                               const RecordDecl *Record) override;
+  void EnteringModulePurview() override;
+  void AddedManglingNumber(const Decl *D, unsigned) override;
+  void AddedStaticLocalNumbers(const Decl *D, unsigned) override;
+  void AddedAnonymousNamespace(const TranslationUnitDecl *,
+                               NamespaceDecl *AnonNamespace) override;
 };
 
 /// AST and semantic-analysis consumer that generates a

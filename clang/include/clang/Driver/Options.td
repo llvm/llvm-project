@@ -807,8 +807,12 @@ def gcc_install_dir_EQ : Joined<["--"], "gcc-install-dir=">,
   "Note: executables (e.g. ld) used by the compiler are not overridden by the selected GCC installation">;
 def gcc_toolchain : Joined<["--"], "gcc-toolchain=">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, FlangOption]>,
-  HelpText<"Specify a directory where Clang can find 'include' and 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
-  "Clang will use the GCC installation with the largest version">;
+  HelpText<
+    "Specify a directory where Clang can find 'include' and 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
+    "Clang will use the GCC installation with the largest version">,
+  HelpTextForVariants<[FlangOption],
+    "Specify a directory where Flang can find 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
+    "Flang will use the GCC installation with the largest version">;
 def gcc_triple_EQ : Joined<["--"], "gcc-triple=">,
   HelpText<"Search for the GCC installation with the specified triple.">;
 def CC : Flag<["-"], "CC">, Visibility<[ClangOption, CC1Option]>,
@@ -1505,6 +1509,7 @@ def end_no_unused_arguments : Flag<["--"], "end-no-unused-arguments">,
 def interface_stub_version_EQ : JoinedOrSeparate<["-"], "interface-stub-version=">,
   Visibility<[ClangOption, CC1Option]>;
 def exported__symbols__list : Separate<["-"], "exported_symbols_list">;
+def alias_list : Separate<["-"], "alias_list">, Flags<[LinkerInput]>;
 def extract_api : Flag<["-"], "extract-api">,
   Visibility<[ClangOption, CC1Option]>, Group<Action_Group>,
   HelpText<"Extract API information">;
@@ -2878,11 +2883,13 @@ def fapple_link_rtlib : Flag<["-"], "fapple-link-rtlib">, Group<f_Group>,
   HelpText<"Force linking the clang builtins runtime library">;
 
 /// ClangIR-specific options - BEGIN
-def fclangir_enable : Flag<["-"], "fclangir-enable">, Visibility<[ClangOption, CC1Option]>,
-  Group<f_Group>, HelpText<"Use ClangIR pipeline to compile">,
-  MarshallingInfoFlag<FrontendOpts<"UseClangIRPipeline">>;
+defm clangir : BoolFOption<"clangir",
+  FrontendOpts<"UseClangIRPipeline">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use the ClangIR pipeline to compile">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Use the AST -> LLVM pipeline to compile">,
+  BothFlags<[], [ClangOption, CC1Option], "">>;
 def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
-  Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR, emit the .cir file">;
+  Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR">;
 /// ClangIR-specific options - END
 
 def flto_EQ : Joined<["-"], "flto=">,
@@ -3108,6 +3115,11 @@ defm modules_skip_header_search_paths : BoolFOption<"modules-skip-header-search-
     HeaderSearchOpts<"ModulesSkipHeaderSearchPaths">, DefaultFalse,
     PosFlag<SetTrue, [], [], "Disable writing header search paths">,
     NegFlag<SetFalse>, BothFlags<[], [CC1Option]>>;
+def fno_modules_prune_non_affecting_module_map_files :
+    Flag<["-"], "fno-modules-prune-non-affecting-module-map-files">,
+    Group<f_Group>, Flags<[]>, Visibility<[CC1Option]>,
+    MarshallingInfoNegativeFlag<HeaderSearchOpts<"ModulesPruneNonAffectingModuleMaps">>,
+    HelpText<"Do not prune non-affecting module map files when writing module files">;
 
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,
@@ -4317,6 +4329,8 @@ def gsplit_dwarf_EQ : Joined<["-"], "gsplit-dwarf=">, Group<g_flags_Group>,
   Values<"split,single">;
 def gno_split_dwarf : Flag<["-"], "gno-split-dwarf">, Group<g_flags_Group>,
   Visibility<[ClangOption, CLOption, DXCOption]>;
+def gtemplate_alias : Flag<["-"], "gtemplate-alias">, Group<g_flags_Group>, Visibility<[ClangOption, CC1Option]>;
+def gno_template_alias : Flag<["-"], "gno-template-alias">, Group<g_flags_Group>, Visibility<[ClangOption]>;
 def gsimple_template_names : Flag<["-"], "gsimple-template-names">, Group<g_flags_Group>;
 def gsimple_template_names_EQ
     : Joined<["-"], "gsimple-template-names=">,
@@ -4753,9 +4767,9 @@ def munaligned_symbols : Flag<["-"], "munaligned-symbols">, Group<m_Group>,
   HelpText<"Expect external char-aligned symbols to be without ABI alignment (SystemZ only)">;
 def mno_unaligned_symbols : Flag<["-"], "mno-unaligned-symbols">, Group<m_Group>,
   HelpText<"Expect external char-aligned symbols to be without ABI alignment (SystemZ only)">;
-def mstrict_align : Flag<["-"], "mstrict-align">,
+def mstrict_align : Flag<["-"], "mstrict-align">, Group<m_Group>,
   HelpText<"Force all memory accesses to be aligned (AArch64/LoongArch/RISC-V only)">;
-def mno_strict_align : Flag<["-"], "mno-strict-align">,
+def mno_strict_align : Flag<["-"], "mno-strict-align">, Group<m_Group>,
   HelpText<"Allow memory accesses to be unaligned (AArch64/LoongArch/RISC-V only)">;
 def mno_thumb : Flag<["-"], "mno-thumb">, Group<m_arm_Features_Group>;
 def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
@@ -5035,6 +5049,12 @@ defm regnames : BoolMOption<"regnames",
 def maix_small_local_exec_tls : Flag<["-"], "maix-small-local-exec-tls">,
   Group<m_ppc_Features_Group>,
   HelpText<"Produce a faster access sequence for local-exec TLS variables "
+           "where the offset from the TLS base is encoded as an "
+           "immediate operand (AIX 64-bit only). "
+           "This access sequence is not used for variables larger than 32KB.">;
+def maix_small_local_dynamic_tls : Flag<["-"], "maix-small-local-dynamic-tls">,
+  Group<m_ppc_Features_Group>,
+  HelpText<"Produce a faster access sequence for local-dynamic TLS variables "
            "where the offset from the TLS base is encoded as an "
            "immediate operand (AIX 64-bit only). "
            "This access sequence is not used for variables larger than 32KB.">;
@@ -5499,6 +5519,14 @@ def fno_rtlib_add_rpath: Flag<["-"], "fno-rtlib-add-rpath">,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Do not add -rpath with architecture-specific resource directory to the linker flags. "
   "When --hip-link is specified, do not add -rpath with HIP runtime library directory to the linker flags">;
+def frtlib_defaultlib : Flag<["-"], "frtlib-defaultlib">,
+                      Visibility<[ClangOption, CLOption]>,
+                      Group<f_Group>,
+                      HelpText<"On Windows, emit /defaultlib: directives to link compiler-rt libraries (default)">;
+def fno_rtlib_defaultlib : Flag<["-"], "fno-rtlib-defaultlib">,
+                      Visibility<[ClangOption, CLOption]>,
+                      Group<f_Group>,
+                      HelpText<"On Windows, do not emit /defaultlib: directives to link compiler-rt libraries">;
 def offload_add_rpath: Flag<["--"], "offload-add-rpath">,
   Flags<[NoArgumentUnused]>,
   Alias<frtlib_add_rpath>;
@@ -8352,14 +8380,15 @@ def _SLASH_FI : CLJoinedOrSeparate<"FI">,
 def _SLASH_Fe : CLJoined<"Fe">,
   HelpText<"Set output executable file name">,
   MetaVarName<"<file or dir/>">;
-def _SLASH_Fe_COLON : CLJoined<"Fe:">, Alias<_SLASH_Fe>;
+def _SLASH_Fe_COLON : CLJoinedOrSeparate<"Fe:">, Alias<_SLASH_Fe>;
 def _SLASH_Fi : CLCompileJoined<"Fi">,
   HelpText<"Set preprocess output file name (with /P)">,
   MetaVarName<"<file>">;
+def _SLASH_Fi_COLON : CLJoinedOrSeparate<"Fi:">, Alias<_SLASH_Fi>;
 def _SLASH_Fo : CLCompileJoined<"Fo">,
   HelpText<"Set output object file (with /c)">,
   MetaVarName<"<file or dir/>">;
-def _SLASH_Fo_COLON : CLCompileJoined<"Fo:">, Alias<_SLASH_Fo>;
+def _SLASH_Fo_COLON : CLCompileJoinedOrSeparate<"Fo:">, Alias<_SLASH_Fo>;
 def _SLASH_guard : CLJoined<"guard:">,
   HelpText<"Enable Control Flow Guard with /guard:cf, or only the table with /guard:cf,nochecks. "
            "Enable EH Continuation Guard with /guard:ehcont">;
@@ -8454,6 +8483,7 @@ def _SLASH_Zc_dllexportInlines_ : CLFlag<"Zc:dllexportInlines-">,
   HelpText<"Do not dllexport/dllimport inline member functions of dllexport/import classes">;
 def _SLASH_Fp : CLJoined<"Fp">,
   HelpText<"Set pch file name (with /Yc and /Yu)">, MetaVarName<"<file>">;
+def _SLASH_Fp_COLON : CLJoinedOrSeparate<"Fp:">, Alias<_SLASH_Fp>;
 
 def _SLASH_Gd : CLFlag<"Gd">,
   HelpText<"Set __cdecl as a default calling convention">;

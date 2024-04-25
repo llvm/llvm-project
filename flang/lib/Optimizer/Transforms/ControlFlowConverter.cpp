@@ -24,8 +24,7 @@
 #include "llvm/Support/CommandLine.h"
 
 namespace fir {
-#define GEN_PASS_DEF_CFGCONVERSIONONFUNC
-#define GEN_PASS_DEF_CFGCONVERSIONONREDUCTION
+#define GEN_PASS_DEF_CFGCONVERSION
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
@@ -309,9 +308,10 @@ public:
 };
 
 /// Convert FIR structured control flow ops to CFG ops.
-template <typename Pass, template <typename> class PassBase>
-class CfgConversionTemplate : public PassBase<Pass> {
+class CfgConversion : public fir::impl::CFGConversionBase<CfgConversion> {
 public:
+  using CFGConversionBase<CfgConversion>::CFGConversionBase;
+
   void runOnOperation() override {
     auto *context = &this->getContext();
     mlir::RewritePatternSet patterns(context);
@@ -333,14 +333,6 @@ public:
   }
 };
 
-class CfgConversionOnFunc
-    : public CfgConversionTemplate<CfgConversionOnFunc,
-                                   ::fir::impl::CFGConversionOnFuncBase> {};
-
-class CfgConversionOnReduction
-    : public CfgConversionTemplate<CfgConversionOnReduction,
-                                   ::fir::impl::CFGConversionOnReductionBase> {
-};
 } // namespace
 
 /// Expose conversion rewriters to other passes
@@ -348,14 +340,4 @@ void fir::populateCfgConversionRewrites(mlir::RewritePatternSet &patterns,
                                         bool forceLoopToExecuteOnce) {
   patterns.insert<CfgLoopConv, CfgIfConv, CfgIterWhileConv>(
       patterns.getContext(), forceLoopToExecuteOnce);
-}
-
-/// Convert FIR's structured control flow ops to CFG ops.  This
-/// conversion enables the `createLowerToCFGPass` to transform these to CFG
-/// form.
-std::unique_ptr<mlir::Pass> fir::createFirToCfgOnFuncPass() {
-  return std::make_unique<CfgConversionOnFunc>();
-}
-std::unique_ptr<mlir::Pass> fir::createFirToCfgOnReductionPass() {
-  return std::make_unique<CfgConversionOnReduction>();
 }

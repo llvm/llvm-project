@@ -412,6 +412,7 @@ public:
   unsigned GenReducedBMI : 1;
 
   /// Use Clang IR pipeline to emit code
+  LLVM_PREFERRED_TYPE(bool)
   unsigned UseClangIRPipeline : 1;
 
   CodeCompleteOptions CodeCompleteOpts;
@@ -596,7 +597,7 @@ public:
         EmitSymbolGraph(false), EmitExtensionSymbolGraphs(false),
         EmitSymbolGraphSymbolLabelsForTesting(false),
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
-        UseClangIRPipeline(), TimeTraceGranularity(500) {}
+        UseClangIRPipeline(false), TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

@@ -9,3 +9,8 @@
 // This file declares the CIR dialect.
 //
 //===----------------------------------------------------------------------===//
+
+#ifndef LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT_H
+#define LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT_H
+
+#endif // LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT_H

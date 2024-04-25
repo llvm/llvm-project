@@ -42,13 +42,13 @@ define <2 x i16> @t1_vec_splat(<2 x i32> %x, <2 x i16> %y) {
   ret <2 x i16> %t5
 }
 
-define <3 x i16> @t3_vec_nonsplat_undef0(<3 x i32> %x, <3 x i16> %y) {
-; CHECK-LABEL: @t3_vec_nonsplat_undef0(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <3 x i32> [[X:%.*]], <i32 31, i32 0, i32 31>
-; CHECK-NEXT:    [[T5:%.*]] = trunc <3 x i32> [[TMP1]] to <3 x i16>
+define <3 x i16> @t3_vec_nonsplat_poison0(<3 x i32> %x, <3 x i16> %y) {
+; CHECK-LABEL: @t3_vec_nonsplat_poison0(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <3 x i32> [[X:%.*]], <i32 31, i32 poison, i32 31>
+; CHECK-NEXT:    [[T5:%.*]] = trunc nuw nsw <3 x i32> [[TMP1]] to <3 x i16>
 ; CHECK-NEXT:    ret <3 x i16> [[T5]]
 ;
-  %t0 = sub <3 x i16> <i16 32, i16 undef, i16 32>, %y
+  %t0 = sub <3 x i16> <i16 32, i16 poison, i16 32>, %y
   %t1 = zext <3 x i16> %t0 to <3 x i32>
   %t2 = lshr <3 x i32> %x, %t1
   %t3 = trunc <3 x i32> %t2 to <3 x i16>
@@ -57,32 +57,32 @@ define <3 x i16> @t3_vec_nonsplat_undef0(<3 x i32> %x, <3 x i16> %y) {
   ret <3 x i16> %t5
 }
 
-define <3 x i16> @t4_vec_nonsplat_undef1(<3 x i32> %x, <3 x i16> %y) {
-; CHECK-LABEL: @t4_vec_nonsplat_undef1(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <3 x i32> [[X:%.*]], <i32 31, i32 0, i32 31>
-; CHECK-NEXT:    [[T5:%.*]] = trunc <3 x i32> [[TMP1]] to <3 x i16>
+define <3 x i16> @t4_vec_nonsplat_poison1(<3 x i32> %x, <3 x i16> %y) {
+; CHECK-LABEL: @t4_vec_nonsplat_poison1(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <3 x i32> [[X:%.*]], <i32 31, i32 poison, i32 31>
+; CHECK-NEXT:    [[T5:%.*]] = trunc nuw nsw <3 x i32> [[TMP1]] to <3 x i16>
 ; CHECK-NEXT:    ret <3 x i16> [[T5]]
 ;
   %t0 = sub <3 x i16> <i16 32, i16 32, i16 32>, %y
   %t1 = zext <3 x i16> %t0 to <3 x i32>
   %t2 = lshr <3 x i32> %x, %t1
   %t3 = trunc <3 x i32> %t2 to <3 x i16>
-  %t4 = add <3 x i16> %y, <i16 -1, i16 undef, i16 -1>
+  %t4 = add <3 x i16> %y, <i16 -1, i16 poison, i16 -1>
   %t5 = lshr <3 x i16> %t3, %t4
   ret <3 x i16> %t5
 }
 
-define <3 x i16> @t5_vec_nonsplat_undef1(<3 x i32> %x, <3 x i16> %y) {
-; CHECK-LABEL: @t5_vec_nonsplat_undef1(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <3 x i32> [[X:%.*]], <i32 31, i32 0, i32 31>
-; CHECK-NEXT:    [[T5:%.*]] = trunc <3 x i32> [[TMP1]] to <3 x i16>
+define <3 x i16> @t5_vec_nonsplat_poison1(<3 x i32> %x, <3 x i16> %y) {
+; CHECK-LABEL: @t5_vec_nonsplat_poison1(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <3 x i32> [[X:%.*]], <i32 31, i32 poison, i32 31>
+; CHECK-NEXT:    [[T5:%.*]] = trunc nuw nsw <3 x i32> [[TMP1]] to <3 x i16>
 ; CHECK-NEXT:    ret <3 x i16> [[T5]]
 ;
-  %t0 = sub <3 x i16> <i16 32, i16 undef, i16 32>, %y
+  %t0 = sub <3 x i16> <i16 32, i16 poison, i16 32>, %y
   %t1 = zext <3 x i16> %t0 to <3 x i32>
   %t2 = lshr <3 x i32> %x, %t1
   %t3 = trunc <3 x i32> %t2 to <3 x i16>
-  %t4 = add <3 x i16> %y, <i16 -1, i16 undef, i16 -1>
+  %t4 = add <3 x i16> %y, <i16 -1, i16 poison, i16 -1>
   %t5 = lshr <3 x i16> %t3, %t4
   ret <3 x i16> %t5
 }
