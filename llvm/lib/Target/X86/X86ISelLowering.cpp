@@ -655,7 +655,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSIN   , VT, Expand);
       setOperationAction(ISD::FCOS   , VT, Expand);
       setOperationAction(ISD::FSINCOS, VT, Expand);
-      setOperationAction(ISD::FTAN   , VT, Expand);
+      setOperationAction(ISD::FTAN, VT, Expand);
     }
 
     // Half type will be promoted by default.
@@ -731,7 +731,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSIN   , MVT::f32, Expand);
     setOperationAction(ISD::FCOS   , MVT::f32, Expand);
     setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
-    setOperationAction(ISD::FTAN   , MVT::f32, Expand);
+    setOperationAction(ISD::FTAN, MVT::f32, Expand);
 
     if (UseX87) {
       // Always expand sin/cos functions even though x87 has an instruction.
@@ -754,7 +754,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSIN   , VT, Expand);
       setOperationAction(ISD::FCOS   , VT, Expand);
       setOperationAction(ISD::FSINCOS, VT, Expand);
-      setOperationAction(ISD::FTAN   , VT, Expand);
+      setOperationAction(ISD::FTAN, VT, Expand);
     }
   }
 
@@ -824,7 +824,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSIN   , MVT::f80, Expand);
     setOperationAction(ISD::FCOS   , MVT::f80, Expand);
     setOperationAction(ISD::FSINCOS, MVT::f80, Expand);
-    setOperationAction(ISD::FTAN   , MVT::f80, Expand);
+    setOperationAction(ISD::FTAN, MVT::f80, Expand);
 
     setOperationAction(ISD::FFLOOR, MVT::f80, Expand);
     setOperationAction(ISD::FCEIL,  MVT::f80, Expand);
@@ -882,8 +882,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FCOS,         MVT::f128, LibCall);
     setOperationAction(ISD::STRICT_FCOS,  MVT::f128, LibCall);
     setOperationAction(ISD::FSINCOS,      MVT::f128, LibCall);
-    setOperationAction(ISD::FTAN,         MVT::f128, LibCall);
-    setOperationAction(ISD::STRICT_FTAN,  MVT::f128, LibCall);
+    setOperationAction(ISD::FTAN, MVT::f128, LibCall);
+    setOperationAction(ISD::STRICT_FTAN, MVT::f128, LibCall);
     // No STRICT_FSINCOS
     setOperationAction(ISD::FSQRT,        MVT::f128, LibCall);
     setOperationAction(ISD::STRICT_FSQRT, MVT::f128, LibCall);
@@ -938,7 +938,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSIN,      VT, Expand);
     setOperationAction(ISD::FSINCOS,   VT, Expand);
     setOperationAction(ISD::FCOS,      VT, Expand);
-    setOperationAction(ISD::FTAN,      VT, Expand);
+    setOperationAction(ISD::FTAN, VT, Expand);
     setOperationAction(ISD::FREM,      VT, Expand);
     setOperationAction(ISD::FCOPYSIGN, VT, Expand);
     setOperationAction(ISD::FPOW,      VT, Expand);
@@ -2475,16 +2475,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (Subtarget.is32Bit() &&
       (Subtarget.isTargetWindowsMSVC() || Subtarget.isTargetWindowsItanium()))
     for (ISD::NodeType Op :
-         {ISD::FCEIL,  ISD::STRICT_FCEIL,
-          ISD::FCOS,   ISD::STRICT_FCOS,
-          ISD::FEXP,   ISD::STRICT_FEXP,
-          ISD::FFLOOR, ISD::STRICT_FFLOOR,
-          ISD::FREM,   ISD::STRICT_FREM,
-          ISD::FLOG,   ISD::STRICT_FLOG,
-          ISD::FLOG10, ISD::STRICT_FLOG10,
-          ISD::FPOW,   ISD::STRICT_FPOW,
-          ISD::FSIN,   ISD::STRICT_FSIN,
-          ISD::FTAN,   ISD::STRICT_FTAN})
+         {ISD::FCEIL,  ISD::STRICT_FCEIL,  ISD::FCOS,   ISD::STRICT_FCOS,
+          ISD::FEXP,   ISD::STRICT_FEXP,   ISD::FFLOOR, ISD::STRICT_FFLOOR,
+          ISD::FREM,   ISD::STRICT_FREM,   ISD::FLOG,   ISD::STRICT_FLOG,
+          ISD::FLOG10, ISD::STRICT_FLOG10, ISD::FPOW,   ISD::STRICT_FPOW,
+          ISD::FSIN,   ISD::STRICT_FSIN,   ISD::FTAN,   ISD::STRICT_FTAN})
       if (isOperationExpand(Op, MVT::f32))
         setOperationAction(Op, MVT::f32, Promote);
 
