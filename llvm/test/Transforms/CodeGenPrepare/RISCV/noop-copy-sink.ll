@@ -16,11 +16,10 @@ fnend:
 }
 
 ; The flags on the original trunc should be preserved.
-; FIXME: Flags are currently dropped.
 define i16 @sink_trunc2(i64 %a) {
 ; CHECK-LABEL: @sink_trunc2(
 ; CHECK-NEXT:  fnend:
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[A:%.*]] to i16
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc nuw nsw i64 [[A:%.*]] to i16
 ; CHECK-NEXT:    ret i16 [[TMP0]]
 ;
   %trunc = trunc nuw nsw i64 %a to i16
