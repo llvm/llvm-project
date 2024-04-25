@@ -31,7 +31,7 @@ define <vscale x 1 x i8> @simple_vadd_vv(<vscale x 1 x i8> %0, <vscale x 1 x i8>
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vadd.vv v9, v8, v9
-; CHECK-NEXT:    vadd.vv v9, v8, v9
+; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 entry:
@@ -61,7 +61,7 @@ define <vscale x 1 x i8> @simple_vadd_vsub_vv(<vscale x 1 x i8> %0, <vscale x 1 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsub.vv v9, v8, v9
-; CHECK-NEXT:    vadd.vv v9, v8, v9
+; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 entry:
@@ -91,7 +91,7 @@ define <vscale x 1 x i8> @simple_vmul_vv(<vscale x 1 x i8> %0, <vscale x 1 x i8>
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmul.vv v9, v8, v9
-; CHECK-NEXT:    vmul.vv v9, v8, v9
+; CHECK-NEXT:    vmul.vv v8, v8, v8
 ; CHECK-NEXT:    vmul.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 entry:
@@ -124,8 +124,8 @@ define <vscale x 1 x i8> @vadd_vv_passthru(<vscale x 1 x i8> %0, <vscale x 1 x i
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vadd.vv v10, v8, v9
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vadd.vv v9, v8, v10
-; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    vadd.vv v9, v8, v8
+; CHECK-NEXT:    vadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vadd.nxv1i8.nxv1i8(
@@ -187,8 +187,8 @@ define <vscale x 1 x i8> @vadd_vv_mask(<vscale x 1 x i8> %0, <vscale x 1 x i8> %
 ; CHECK-NEXT:    vmv1r.v v10, v8
 ; CHECK-NEXT:    vadd.vv v10, v8, v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vadd.vv v9, v8, v10, v0.t
-; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vadd.vv v9, v8, v8, v0.t
+; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vadd.mask.nxv1i8.nxv1i8(
@@ -215,15 +215,16 @@ entry:
   ret <vscale x 1 x i8> %c
 }
 
-define <vscale x 1 x i8> @vadd_vv_mask_negative(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, i32 %2, <vscale x 1 x i1> %m) nounwind {
+define <vscale x 1 x i8> @vadd_vv_mask_negative(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, i32 %2, <vscale x 1 x i1> %m, <vscale x 1 x i1> %m2) nounwind {
 ; CHECK-LABEL: vadd_vv_mask_negative:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vadd.vv v10, v8, v9, v0.t
+; CHECK-NEXT:    vmv1r.v v11, v8
+; CHECK-NEXT:    vadd.vv v11, v8, v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vadd.vv v9, v8, v10, v0.t
-; CHECK-NEXT:    vadd.vv v8, v8, v9
+; CHECK-NEXT:    vadd.vv v9, v8, v11, v0.t
+; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 1 x i8> @llvm.riscv.vadd.mask.nxv1i8.nxv1i8(
@@ -240,8 +241,6 @@ entry:
     <vscale x 1 x i1> %m,
     i32 %2, i32 1)
 
-  %splat = insertelement <vscale x 1 x i1> poison, i1 1, i32 0
-  %m2 = shufflevector <vscale x 1 x i1> %splat, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
   %c = call <vscale x 1 x i8> @llvm.riscv.vadd.mask.nxv1i8.nxv1i8(
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %0,
