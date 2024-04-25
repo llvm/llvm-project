@@ -279,7 +279,7 @@ namespace clang {
         IDs.erase(std::unique(IDs.begin(), IDs.end()), IDs.end());
       }
 
-      auto *Result = new (C) serialization::DeclID[1 + IDs.size()];
+      auto *Result = new (C) DeclID[1 + IDs.size()];
       *Result = IDs.size();
 
       std::copy(DeclIDIterator(IDs.begin()), DeclIDIterator(IDs.end()),
@@ -4217,7 +4217,7 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
   // The declaration may have been modified by files later in the chain.
   // If this is the case, read the record containing the updates from each file
   // and pass it to ASTDeclReader to make the modifications.
-  serialization::GlobalDeclID ID = Record.ID;
+  GlobalDeclID ID = Record.ID;
   Decl *D = Record.D;
   ProcessingUpdatesRAIIObj ProcessingUpdates(*this);
   DeclUpdateOffsetsMap::iterator UpdI = DeclUpdateOffsets.find(ID);
@@ -4359,7 +4359,7 @@ namespace {
     llvm::SmallPtrSetImpl<ObjCCategoryDecl *> &Deserialized;
     ObjCCategoryDecl *Tail = nullptr;
     llvm::DenseMap<DeclarationName, ObjCCategoryDecl *> NameCategoryMap;
-    serialization::GlobalDeclID InterfaceID;
+    GlobalDeclID InterfaceID;
     unsigned PreviousGeneration;
 
     void add(ObjCCategoryDecl *Cat) {
@@ -4401,11 +4401,10 @@ namespace {
     }
 
   public:
-    ObjCCategoriesVisitor(ASTReader &Reader,
-                          ObjCInterfaceDecl *Interface,
-                          llvm::SmallPtrSetImpl<ObjCCategoryDecl *> &Deserialized,
-                          serialization::GlobalDeclID InterfaceID,
-                          unsigned PreviousGeneration)
+    ObjCCategoriesVisitor(
+        ASTReader &Reader, ObjCInterfaceDecl *Interface,
+        llvm::SmallPtrSetImpl<ObjCCategoryDecl *> &Deserialized,
+        GlobalDeclID InterfaceID, unsigned PreviousGeneration)
         : Reader(Reader), Interface(Interface), Deserialized(Deserialized),
           InterfaceID(InterfaceID), PreviousGeneration(PreviousGeneration) {
       // Populate the name -> category map with the set of known categories.
@@ -4459,8 +4458,7 @@ namespace {
 
 } // namespace
 
-void ASTReader::loadObjCCategories(serialization::GlobalDeclID ID,
-                                   ObjCInterfaceDecl *D,
+void ASTReader::loadObjCCategories(GlobalDeclID ID, ObjCInterfaceDecl *D,
                                    unsigned PreviousGeneration) {
   ObjCCategoriesVisitor Visitor(*this, D, CategoriesDeserialized, ID,
                                 PreviousGeneration);
