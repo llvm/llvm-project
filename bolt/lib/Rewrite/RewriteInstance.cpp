@@ -4559,7 +4559,7 @@ void RewriteInstance::updateELFSymbolTable(
           FunctionSymbol.getBinding() == ELF::STB_GLOBAL) {
         ELFSymTy FileSymbol;
         FileSymbol.st_shndx = ELF::SHN_ABS;
-        FileSymbol.st_name = AddToStrTab("llvm-bolt-pseudo.o");
+        FileSymbol.st_name = AddToStrTab(getBOLTFileSymbolName());
         FileSymbol.st_value = 0;
         FileSymbol.st_size = 0;
         FileSymbol.st_other = 0;
