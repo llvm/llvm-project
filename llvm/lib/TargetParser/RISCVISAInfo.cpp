@@ -1028,20 +1028,28 @@ Error RISCVISAInfo::checkDependency() {
     return createStringError(errc::invalid_argument,
                              "'zcf' is only supported for 'rv32'");
 
+  if (Exts.count("zacas") && !(Exts.count("a") || Exts.count("zamo")))
+    return createStringError(
+        errc::invalid_argument,
+        "'zacas' requires 'a' or 'zaamo' extension to also be specified");
+
+  if (Exts.count("zabha") && !(Exts.count("a") || Exts.count("zamo")))
+    return createStringError(
+        errc::invalid_argument,
+        "'zabha' requires 'a' or 'zaamo' extension to also be specified");
+
   return Error::success();
 }
 
 static const char *ImpliedExtsD[] = {"f"};
 static const char *ImpliedExtsF[] = {"zicsr"};
 static const char *ImpliedExtsV[] = {"zvl128b", "zve64d"};
-static const char *ImpliedExtsXTHeadVdot[] = {"v"};
 static const char *ImpliedExtsXSfvcp[] = {"zve32x"};
 static const char *ImpliedExtsXSfvfnrclipxfqf[] = {"zve32f"};
 static const char *ImpliedExtsXSfvfwmaccqqq[] = {"zvfbfmin"};
 static const char *ImpliedExtsXSfvqmaccdod[] = {"zve32x"};
 static const char *ImpliedExtsXSfvqmaccqoq[] = {"zve32x"};
-static const char *ImpliedExtsZabha[] = {"a"};
-static const char *ImpliedExtsZacas[] = {"a"};
+static const char *ImpliedExtsXTHeadVdot[] = {"v"};
 static const char *ImpliedExtsZcb[] = {"zca"};
 static const char *ImpliedExtsZcd[] = {"d", "zca"};
 static const char *ImpliedExtsZce[] = {"zcb", "zcmp", "zcmt"};
@@ -1057,8 +1065,8 @@ static const char *ImpliedExtsZfhmin[] = {"f"};
 static const char *ImpliedExtsZfinx[] = {"zicsr"};
 static const char *ImpliedExtsZhinx[] = {"zhinxmin"};
 static const char *ImpliedExtsZhinxmin[] = {"zfinx"};
-static const char *ImpliedExtsZicntr[] = {"zicsr"};
 static const char *ImpliedExtsZicfiss[] = {"zicsr", "zimop"};
+static const char *ImpliedExtsZicntr[] = {"zicsr"};
 static const char *ImpliedExtsZihpm[] = {"zicsr"};
 static const char *ImpliedExtsZk[] = {"zkn", "zkt", "zkr"};
 static const char *ImpliedExtsZkn[] = {"zbkb", "zbkc", "zbkx",
@@ -1115,8 +1123,6 @@ static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"xsfvqmaccdod"}, {ImpliedExtsXSfvqmaccdod}},
     {{"xsfvqmaccqoq"}, {ImpliedExtsXSfvqmaccqoq}},
     {{"xtheadvdot"}, {ImpliedExtsXTHeadVdot}},
-    {{"zabha"}, {ImpliedExtsZabha}},
-    {{"zacas"}, {ImpliedExtsZacas}},
     {{"zcb"}, {ImpliedExtsZcb}},
     {{"zcd"}, {ImpliedExtsZcd}},
     {{"zce"}, {ImpliedExtsZce}},

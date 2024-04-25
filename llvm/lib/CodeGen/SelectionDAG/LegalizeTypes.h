@@ -984,7 +984,7 @@ private:
   SDValue WidenVecRes_FP_TO_XINT_SAT(SDNode *N);
   SDValue WidenVecRes_XRINT(SDNode *N);
   SDValue WidenVecRes_FCOPYSIGN(SDNode *N);
-  SDValue WidenVecRes_IS_FPCLASS(SDNode *N);
+  SDValue WidenVecRes_UnarySameEltsWithScalarArg(SDNode *N);
   SDValue WidenVecRes_ExpOp(SDNode *N);
   SDValue WidenVecRes_Unary(SDNode *N);
   SDValue WidenVecRes_InregOp(SDNode *N);

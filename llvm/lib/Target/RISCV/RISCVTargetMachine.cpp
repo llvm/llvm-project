@@ -91,11 +91,6 @@ static cl::opt<bool>
                            cl::desc("Enable the loop data prefetch pass"),
                            cl::init(true));
 
-static cl::opt<bool>
-    EnableSplitRegAlloc("riscv-split-regalloc", cl::Hidden,
-                        cl::desc("Enable Split RegisterAlloc for RVV"),
-                        cl::init(true));
-
 static cl::opt<bool> EnableMISchedLoadClustering(
     "riscv-misched-load-clustering", cl::Hidden,
     cl::desc("Enable load clustering in the machine scheduler"),
@@ -121,6 +116,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVExpandPseudoPass(*PR);
   initializeRISCVFoldMasksPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
+  initializeRISCVCoalesceVSETVLIPass(*PR);
   initializeRISCVInsertReadWriteCSRPass(*PR);
   initializeRISCVInsertWriteVXRMPass(*PR);
   initializeRISCVDAGToDAGISelPass(*PR);
@@ -392,16 +388,15 @@ FunctionPass *RISCVPassConfig::createRVVRegAllocPass(bool Optimized) {
 }
 
 bool RISCVPassConfig::addRegAssignAndRewriteFast() {
-  if (EnableSplitRegAlloc)
-    addPass(createRVVRegAllocPass(false));
+  addPass(createRVVRegAllocPass(false));
+  addPass(createRISCVCoalesceVSETVLIPass());
   return TargetPassConfig::addRegAssignAndRewriteFast();
 }
 
 bool RISCVPassConfig::addRegAssignAndRewriteOptimized() {
-  if (EnableSplitRegAlloc) {
-    addPass(createRVVRegAllocPass(true));
-    addPass(createVirtRegRewriter(false));
-  }
+  addPass(createRVVRegAllocPass(true));
+  addPass(createVirtRegRewriter(false));
+  addPass(createRISCVCoalesceVSETVLIPass());
   return TargetPassConfig::addRegAssignAndRewriteOptimized();
 }
 
