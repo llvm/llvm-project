@@ -4485,9 +4485,8 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     break;
   case ISD::FTAN:
   case ISD::STRICT_FTAN:
-    ExpandFPLibCall(Node, RTLIB::TAN_F32, RTLIB::TAN_F64,
-                    RTLIB::TAN_F80, RTLIB::TAN_F128,
-                    RTLIB::TAN_PPCF128, Results);
+    ExpandFPLibCall(Node, RTLIB::TAN_F32, RTLIB::TAN_F64, RTLIB::TAN_F80,
+                    RTLIB::TAN_F128, RTLIB::TAN_PPCF128, Results);
     break;
   case ISD::FSINCOS:
     // Expand into sincos libcall.

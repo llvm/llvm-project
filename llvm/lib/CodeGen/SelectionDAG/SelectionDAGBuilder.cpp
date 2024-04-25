@@ -6707,7 +6707,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     case Intrinsic::fabs:      Opcode = ISD::FABS;       break;
     case Intrinsic::sin:       Opcode = ISD::FSIN;       break;
     case Intrinsic::cos:       Opcode = ISD::FCOS;       break;
-    case Intrinsic::tan:       Opcode = ISD::FTAN;       break;
+    case Intrinsic::tan:
+      Opcode = ISD::FTAN;
+      break;
     case Intrinsic::exp10:     Opcode = ISD::FEXP10;     break;
     case Intrinsic::floor:     Opcode = ISD::FFLOOR;     break;
     case Intrinsic::ceil:      Opcode = ISD::FCEIL;      break;
