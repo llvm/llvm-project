@@ -82,8 +82,7 @@ namespace llvm {
 MCELFStreamer *createLoongArchELFStreamer(MCContext &C,
                                           std::unique_ptr<MCAsmBackend> MAB,
                                           std::unique_ptr<MCObjectWriter> MOW,
-                                          std::unique_ptr<MCCodeEmitter> MCE,
-                                          bool RelaxAll) {
+                                          std::unique_ptr<MCCodeEmitter> MCE) {
   LoongArchELFStreamer *S = new LoongArchELFStreamer(
       C, std::move(MAB), std::move(MOW), std::move(MCE));
   return S;

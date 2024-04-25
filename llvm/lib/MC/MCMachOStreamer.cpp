@@ -564,7 +564,7 @@ MCStreamer *llvm::createMachOStreamer(MCContext &Context,
                                       std::unique_ptr<MCAsmBackend> &&MAB,
                                       std::unique_ptr<MCObjectWriter> &&OW,
                                       std::unique_ptr<MCCodeEmitter> &&CE,
-                                      bool RelaxAll, bool DWARFMustBeAtTheEnd,
+                                      bool DWARFMustBeAtTheEnd,
                                       bool LabelSections) {
   MCMachOStreamer *S =
       new MCMachOStreamer(Context, std::move(MAB), std::move(OW), std::move(CE),
