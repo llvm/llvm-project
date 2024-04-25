@@ -88,6 +88,7 @@ MERGE_CATS-NEXT:                 name {{.*}} MyProtocol02Prop
 MERGE_CATS-NEXT:            attributes {{.*}} Ti,R,D
 MERGE_CATS-NEXT:                 name {{.*}} MyProtocol03Prop
 MERGE_CATS-NEXT:            attributes {{.*}} Ti,R,D
+MERGE_CATS:        __OBJC_$_CATEGORY_MyBaseClass_$_Category04
 
 
 NO_MERGE_CATS-NOT: __OBJC_$_CATEGORY_MyBaseClass(Category02|Category03)
@@ -431,6 +432,15 @@ L_OBJC_IMAGE_INFO:
 ## @dynamic MyProtocol03Prop;
 ## @end
 ##
+## // This category shouldn't be merged
+## @interface MyBaseClass(Category04)
+## + (void)load;
+## @end
+##
+## @implementation MyBaseClass(Category04)
+## + (void)load {}
+## @end
+##
 ## int main() {
 ##     return 0;
 ## }
@@ -493,6 +503,12 @@ L_OBJC_IMAGE_INFO:
 	b	_OUTLINED_FUNCTION_0
 	.cfi_endproc
                                         ; -- End function
+	.p2align	2
+"+[MyBaseClass(Category04) load]":
+	.cfi_startproc
+; %bb.0:
+	ret
+	.cfi_endproc
 	.globl	_main                           ; -- Begin function main
 	.p2align	2
 _main:                                  ; @main
@@ -746,11 +762,42 @@ __OBJC_$_CATEGORY_MyBaseClass_$_Category03:
 	.quad	0
 	.long	64                              ; 0x40
 	.space	4
+	.section	__TEXT,__objc_classname,cstring_literals
+l_OBJC_CLASS_NAME_.15:
+	.asciz	"Category04"
+	.section	__TEXT,__objc_methname,cstring_literals
+l_OBJC_METH_VAR_NAME_.16:
+	.asciz	"load"
+	.section	__DATA,__objc_const
+	.p2align	3, 0x0
+__OBJC_$_CATEGORY_CLASS_METHODS_MyBaseClass_$_Category04:
+	.long	24
+	.long	1
+	.quad	l_OBJC_METH_VAR_NAME_.16
+	.quad	l_OBJC_METH_VAR_TYPE_
+	.quad	"+[MyBaseClass(Category04) load]"
+	.p2align	3, 0x0
+__OBJC_$_CATEGORY_MyBaseClass_$_Category04:
+	.quad	l_OBJC_CLASS_NAME_.15
+	.quad	_OBJC_CLASS_$_MyBaseClass
+	.quad	0
+	.quad	__OBJC_$_CATEGORY_CLASS_METHODS_MyBaseClass_$_Category04
+	.quad	0
+	.quad	0
+	.quad	0
+	.long	64
+	.space	4
 	.section	__DATA,__objc_catlist,regular,no_dead_strip
 	.p2align	3, 0x0                          ; @"OBJC_LABEL_CATEGORY_$"
 l_OBJC_LABEL_CATEGORY_$:
 	.quad	__OBJC_$_CATEGORY_MyBaseClass_$_Category02
 	.quad	__OBJC_$_CATEGORY_MyBaseClass_$_Category03
+	.quad	__OBJC_$_CATEGORY_MyBaseClass_$_Category04
+	.section	__DATA,__objc_nlcatlist,regular,no_dead_strip
+	.p2align	3, 0x0
+l_OBJC_LABEL_NONLAZY_CATEGORY_$:
+	.quad	__OBJC_$_CATEGORY_MyBaseClass_$_Category04
+
 	.no_dead_strip	__OBJC_LABEL_PROTOCOL_$_MyProtocol02
 	.no_dead_strip	__OBJC_LABEL_PROTOCOL_$_MyProtocol03
 	.no_dead_strip	__OBJC_PROTOCOL_$_MyProtocol02

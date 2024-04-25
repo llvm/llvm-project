@@ -428,6 +428,7 @@ public:
   static void doCleanup();
 
 private:
+  DenseSet<const Symbol *> collectNlCategories();
   void collectAndValidateCategoriesData();
   void
   mergeCategoriesIntoSingleCategory(std::vector<InfoInputCategory> &categories);
@@ -1060,7 +1061,27 @@ void ObjcCategoryMerger::createSymbolReference(Defined *refFrom,
   refFrom->isec()->relocs.push_back(r);
 }
 
+// Get the list of categories in the '__objc_nlcatlist' section. We can't
+// optimize these as they have a '+load' method that has to be called at
+// runtime.
+DenseSet<const Symbol *> ObjcCategoryMerger::collectNlCategories() {
+  DenseSet<const Symbol *> nlCategories;
+
+  for (InputSection *sec : allInputSections) {
+    if (sec->getName() != section_names::objcNonLazyCatList)
+      continue;
+
+    for (auto &r : sec->relocs) {
+      const Symbol *sym = r.referent.dyn_cast<Symbol *>();
+      nlCategories.insert(sym);
+    }
+  }
+  return nlCategories;
+}
+
 void ObjcCategoryMerger::collectAndValidateCategoriesData() {
+  auto nlCategories = collectNlCategories();
+
   for (InputSection *sec : allInputSections) {
     if (sec->getName() != section_names::objcCatList)
       continue;
@@ -1073,6 +1094,9 @@ void ObjcCategoryMerger::collectAndValidateCategoriesData() {
       Defined *categorySym = tryGetDefinedAtIsecOffset(catListCisec, off);
       assert(categorySym &&
              "Failed to get a valid category at __objc_catlit offset");
+
+      if (nlCategories.count(categorySym))
+        continue;
 
       // We only support ObjC categories (no swift + @objc)
       // TODO: Support swift + @objc categories also
