@@ -7668,8 +7668,7 @@ GlobalDeclID ASTReader::getGlobalDeclID(ModuleFile &F,
   return GlobalDeclID(ID + I->second);
 }
 
-bool ASTReader::isDeclIDFromModule(serialization::GlobalDeclID ID,
-                                   ModuleFile &M) const {
+bool ASTReader::isDeclIDFromModule(GlobalDeclID ID, ModuleFile &M) const {
   // Predefined decls aren't from any module.
   if (ID.get() < NUM_PREDEF_DECL_IDS)
     return false;
@@ -7821,8 +7820,8 @@ DeclID ASTReader::mapGlobalIDToModuleFileGlobalID(ModuleFile &M,
   assert(I != GlobalDeclMap.end() && "Corrupted global declaration map");
   ModuleFile *Owner = I->second;
 
-  llvm::DenseMap<ModuleFile *, serialization::DeclID>::iterator Pos
-    = M.GlobalToLocalDeclIDs.find(Owner);
+  llvm::DenseMap<ModuleFile *, DeclID>::iterator Pos =
+      M.GlobalToLocalDeclIDs.find(Owner);
   if (Pos == M.GlobalToLocalDeclIDs.end())
     return 0;
 
@@ -7872,7 +7871,7 @@ void ASTReader::FindExternalLexicalDecls(
       if (!IsKindWeWant(K))
         continue;
 
-      auto ID = (serialization::DeclID)+LexicalDecls[I + 1];
+      auto ID = (DeclID) + LexicalDecls[I + 1];
 
       // Don't add predefined declarations to the lexical context more
       // than once.
@@ -7954,7 +7953,7 @@ void ASTReader::FindFileRegionDecls(FileID File,
   SourceLocation EndLoc = BeginLoc.getLocWithOffset(Length);
 
   DeclIDComp DIDComp(*this, *DInfo.Mod);
-  ArrayRef<serialization::LocalDeclID>::iterator BeginIt =
+  ArrayRef<LocalDeclID>::iterator BeginIt =
       llvm::lower_bound(DInfo.Decls, BeginLoc, DIDComp);
   if (BeginIt != DInfo.Decls.begin())
     --BeginIt;
@@ -7967,13 +7966,12 @@ void ASTReader::FindFileRegionDecls(FileID File,
              ->isTopLevelDeclInObjCContainer())
     --BeginIt;
 
-  ArrayRef<serialization::LocalDeclID>::iterator EndIt =
+  ArrayRef<LocalDeclID>::iterator EndIt =
       llvm::upper_bound(DInfo.Decls, EndLoc, DIDComp);
   if (EndIt != DInfo.Decls.end())
     ++EndIt;
 
-  for (ArrayRef<serialization::LocalDeclID>::iterator
-         DIt = BeginIt; DIt != EndIt; ++DIt)
+  for (ArrayRef<LocalDeclID>::iterator DIt = BeginIt; DIt != EndIt; ++DIt)
     Decls.push_back(GetDecl(getGlobalDeclID(*DInfo.Mod, *DIt)));
 }
 

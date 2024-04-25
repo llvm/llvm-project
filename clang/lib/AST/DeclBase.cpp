@@ -70,8 +70,8 @@ void Decl::updateOutOfDate(IdentifierInfo &II) const {
 #define ABSTRACT_DECL(DECL)
 #include "clang/AST/DeclNodes.inc"
 
-void *Decl::operator new(std::size_t Size, const ASTContext &Context,
-                         Decl::DeclID ID, std::size_t Extra) {
+void *Decl::operator new(std::size_t Size, const ASTContext &Context, DeclID ID,
+                         std::size_t Extra) {
   // Allocate an extra 8 bytes worth of storage, which ensures that the
   // resulting pointer will still be 8-byte aligned.
   static_assert(sizeof(unsigned) * 2 >= alignof(Decl),
