@@ -1,55 +1,58 @@
-// RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
-// RUN:   -emit-llvm -disable-llvm-passes -O3 -o - | FileCheck %s
-// RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
-// RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
-// RUN:   -D__HLSL_ENABLE_16_BIT -o - | FileCheck %s --check-prefix=NO_HALF
+// RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s \ 
+// RUN:   --check-prefixes=CHECK,NATIVE_HALF
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
+// RUN:   spirv-unknown-vulkan-compute %s -emit-llvm -disable-llvm-passes \
+// RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
 
-// CHECK: define noundef half @
-// CHECK: call half @llvm.tan.f16(
-// NO_HALF: define noundef float @"?test_tan_half@@YA$halff@$halff@@Z"(
-// NO_HALF: call float @llvm.tan.f32(
+// CHECK-LABEL: test_tan_half
+// NATIVE_HALF: call half @llvm.tan.f16
+// NO_HALF: call float @llvm.tan.f32
 half test_tan_half ( half p0 ) {
   return tan ( p0 );
 }
-// CHECK: define noundef <2 x half> @
-// CHECK: call <2 x half> @llvm.tan.v2f16
-// NO_HALF: define noundef <2 x float> @"?test_tan_float2@@YAT?$__vector@M$01@__clang@@T12@@Z"(
-// NO_HALF: call <2 x float> @llvm.tan.v2f32(
+
+// CHECK-LABEL: test_tan_half2
+// NATIVE_HALF: call <2 x half> @llvm.tan.v2f16
+// NO_HALF: call <2 x float> @llvm.tan.v2f32
 half2 test_tan_half2 ( half2 p0 ) {
   return tan ( p0 );
 }
-// CHECK: define noundef <3 x half> @
-// CHECK: call <3 x half> @llvm.tan.v3f16
-// NO_HALF: define noundef <3 x float> @"?test_tan_float3@@YAT?$__vector@M$02@__clang@@T12@@Z"(
-// NO_HALF: call <3 x float> @llvm.tan.v3f32(
+
+// CHECK-LABEL: test_tan_half3
+// NATIVE_HALF: call <3 x half> @llvm.tan.v3f16
+// NO_HALF: call <3 x float> @llvm.tan.v3f32
 half3 test_tan_half3 ( half3 p0 ) {
   return tan ( p0 );
 }
-// CHECK: define noundef <4 x half> @
-// CHECK: call <4 x half> @llvm.tan.v4f16
-// NO_HALF: define noundef <4 x float> @"?test_tan_float4@@YAT?$__vector@M$03@__clang@@T12@@Z"(
-// NO_HALF: call <4 x float> @llvm.tan.v4f32(
+
+// CHECK-LABEL: test_tan_half4
+// NATIVE_HALF: call <4 x half> @llvm.tan.v4f16
+// NO_HALF: call <4 x float> @llvm.tan.v4f32
 half4 test_tan_half4 ( half4 p0 ) {
   return tan ( p0 );
 }
 
-// CHECK: define noundef float @
-// CHECK: call float @llvm.tan.f32(
+// CHECK-LABEL: test_tan_float
+// CHECK: call float @llvm.tan.f32
 float test_tan_float ( float p0 ) {
   return tan ( p0 );
 }
-// CHECK: define noundef <2 x float> @
+
+// CHECK-LABEL: test_tan_float2
 // CHECK: call <2 x float> @llvm.tan.v2f32
 float2 test_tan_float2 ( float2 p0 ) {
   return tan ( p0 );
 }
-// CHECK: define noundef <3 x float> @
+
+// CHECK-LABEL: test_tan_float3
 // CHECK: call <3 x float> @llvm.tan.v3f32
 float3 test_tan_float3 ( float3 p0 ) {
   return tan ( p0 );
 }
-// CHECK: define noundef <4 x float> @
+
+// CHECK-LABEL: test_tan_float4
 // CHECK: call <4 x float> @llvm.tan.v4f32
 float4 test_tan_float4 ( float4 p0 ) {
   return tan ( p0 );
