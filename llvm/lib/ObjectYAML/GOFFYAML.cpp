@@ -236,7 +236,7 @@ void CustomMappingTraits<GOFFYAML::RecordPtr>::output(
   if (auto *Sym = dyn_cast<GOFFYAML::Symbol>(Elem.get())) {
     IO.mapRequired("Symbol", *Sym);
   } else {
-    IO.setError("Unknown record type");
+    IO.setError("unknown record type");
   }
 }
 
