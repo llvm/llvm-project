@@ -463,7 +463,7 @@ class VSETVLIInfo {
 
   enum : uint8_t {
     Uninitialized,
-    AVLIsReg,
+    AVLIsDefMI,
     AVLIsImm,
     AVLIsVLMAX,
     AVLIsIgnored,
@@ -492,10 +492,11 @@ public:
   void setUnknown() { State = Unknown; }
   bool isUnknown() const { return State == Unknown; }
 
-  void setAVLReg(Register Reg) {
+  void setAVLReg(Register Reg, const MachineInstr *DefMI) {
     assert(Reg.isVirtual());
     AVLReg = Reg;
-    State = AVLIsReg;
+    AVLDefMI = DefMI;
+    State = AVLIsDefMI;
   }
 
   void setAVLImm(unsigned Imm) {
@@ -509,7 +510,7 @@ public:
   void setAVLDefMI(const MachineInstr *DefMI) { AVLDefMI = DefMI; }
 
   bool hasAVLImm() const { return State == AVLIsImm; }
-  bool hasAVLReg() const { return State == AVLIsReg; }
+  bool hasAVLReg() const { return State == AVLIsDefMI; }
   bool hasAVLVLMAX() const { return State == AVLIsVLMAX; }
   bool hasAVLIgnored() const { return State == AVLIsIgnored; }
   Register getAVLReg() const {
@@ -527,10 +528,8 @@ public:
     assert(Info.isValid());
     if (Info.isUnknown())
       setUnknown();
-    else if (Info.hasAVLReg()) {
-      setAVLReg(Info.getAVLReg());
-      setAVLDefMI(Info.getAVLDefMI());
-    }
+    else if (Info.hasAVLReg())
+      setAVLReg(Info.getAVLReg(), Info.getAVLDefMI());
     else if (Info.hasAVLVLMAX())
       setAVLVLMAX();
     else if (Info.hasAVLIgnored())
@@ -890,7 +889,7 @@ static VSETVLIInfo getInfoForVSETVLI(const MachineInstr &MI,
     if (AVLReg == RISCV::X0)
       NewInfo.setAVLVLMAX();
     else
-      NewInfo.setAVLDefMI(MRI.getVRegDef(AVLReg));
+      NewInfo.setAVLReg(AVLReg, MRI.getVRegDef(AVLReg));
   }
   NewInfo.setVTYPE(MI.getOperand(2).getImm());
 
@@ -962,9 +961,9 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
       else
         InstrInfo.setAVLImm(Imm);
     } else {
-      InstrInfo.setAVLReg(VLOp.getReg());
-      if (VLOp.getReg().isVirtual())
-        InstrInfo.setAVLDefMI(MRI->getVRegDef(VLOp.getReg()));
+      InstrInfo.setAVLReg(VLOp.getReg(), VLOp.getReg().isVirtual()
+                                             ? MRI->getVRegDef(VLOp.getReg())
+                                             : nullptr);
     }
   } else {
     assert(isScalarExtractInstr(MI));
@@ -1239,9 +1238,10 @@ void RISCVInsertVSETVLI::transferAfter(VSETVLIInfo &Info,
 
   if (RISCV::isFaultFirstLoad(MI)) {
     // Update AVL to vl-output of the fault first load.
-    Info.setAVLReg(MI.getOperand(1).getReg());
-    if (MI.getOperand(1).getReg().isVirtual())
-      Info.setAVLDefMI(MRI->getVRegDef(MI.getOperand(1).getReg()));
+    Info.setAVLReg(MI.getOperand(1).getReg(),
+                   MI.getOperand(1).getReg().isVirtual()
+                       ? MRI->getVRegDef(MI.getOperand(1).getReg())
+                       : nullptr);
     return;
   }
 
