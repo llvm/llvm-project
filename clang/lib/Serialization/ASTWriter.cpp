@@ -3043,7 +3043,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
     RecordData Inits;
     for (Decl *D : Context->getModuleInitializers(Mod))
       if (wasDeclEmitted(D))
-        AddDeclRef(D, Inits);
+        Inits.push_back(GetDeclRef(D));
     if (!Inits.empty())
       Stream.EmitRecord(SUBMODULE_INITIALIZERS, Inits);
 
@@ -3226,7 +3226,7 @@ uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
       continue;
 
     KindDeclPairs.push_back(D->getKind());
-    KindDeclPairs.push_back(GetDeclRef(D).get());
+    KindDeclPairs.push_back(GetDeclRef(D));
   }
 
   ++NumLexicalDeclContexts;
@@ -3261,7 +3261,7 @@ void ASTWriter::WriteTypeDeclOffsets() {
   unsigned DeclOffsetAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
   {
     RecordData::value_type Record[] = {DECL_OFFSET, DeclOffsets.size(),
-                                       FirstDeclID.get() - NUM_PREDEF_DECL_IDS};
+                                       FirstDeclID - NUM_PREDEF_DECL_IDS};
     Stream.EmitRecordWithBlob(DeclOffsetAbbrev, Record, bytes(DeclOffsets));
   }
 }
@@ -3282,7 +3282,7 @@ void ASTWriter::WriteFileDeclIDsMap() {
     Info.FirstDeclIndex = FileGroupedDeclIDs.size();
     llvm::stable_sort(Info.DeclIDs);
     for (auto &LocDeclEntry : Info.DeclIDs)
-      FileGroupedDeclIDs.push_back(LocDeclEntry.second.get());
+      FileGroupedDeclIDs.push_back(LocDeclEntry.second);
   }
 
   auto Abbrev = std::make_shared<BitCodeAbbrev>();
@@ -3420,11 +3420,11 @@ public:
     for (const ObjCMethodList *Method = &Methods.Instance; Method;
          Method = Method->getNext())
       if (ShouldWriteMethodListNode(Method))
-        LE.write<DeclID>((DeclID)Writer.getDeclID(Method->getMethod()));
+        LE.write<DeclID>(Writer.getDeclID(Method->getMethod()));
     for (const ObjCMethodList *Method = &Methods.Factory; Method;
          Method = Method->getNext())
       if (ShouldWriteMethodListNode(Method))
-        LE.write<DeclID>((DeclID)Writer.getDeclID(Method->getMethod()));
+        LE.write<DeclID>(Writer.getDeclID(Method->getMethod()));
 
     assert(Out.tell() - Start == DataLen && "Data length is wrong");
   }
@@ -3743,8 +3743,8 @@ public:
       // Only emit declarations that aren't from a chained PCH, though.
       SmallVector<NamedDecl *, 16> Decls(IdResolver.decls(II));
       for (NamedDecl *D : llvm::reverse(Decls))
-        LE.write<DeclID>((DeclID)Writer.getDeclID(
-            getDeclForLocalLookup(PP.getLangOpts(), D)));
+        LE.write<DeclID>(
+            Writer.getDeclID(getDeclForLocalLookup(PP.getLangOpts(), D)));
     }
   }
 };
@@ -3860,7 +3860,7 @@ namespace {
 // Trait used for the on-disk hash table used in the method pool.
 class ASTDeclContextNameLookupTrait {
   ASTWriter &Writer;
-  llvm::SmallVector<LocalDeclID, 64> DeclIDs;
+  llvm::SmallVector<DeclID, 64> DeclIDs;
 
 public:
   using key_type = DeclarationNameKey;
@@ -3893,10 +3893,8 @@ public:
 
   data_type ImportData(const reader::ASTDeclContextNameLookupTrait::data_type &FromReader) {
     unsigned Start = DeclIDs.size();
-    DeclIDs.insert(
-        DeclIDs.end(),
-        DeclIDIterator<GlobalDeclID, LocalDeclID>(FromReader.begin()),
-        DeclIDIterator<GlobalDeclID, LocalDeclID>(FromReader.end()));
+    DeclIDs.insert(DeclIDs.end(), DeclIDIterator(FromReader.begin()),
+                   DeclIDIterator(FromReader.end()));
     return std::make_pair(Start, DeclIDs.size());
   }
 
@@ -3985,7 +3983,7 @@ public:
     endian::Writer LE(Out, llvm::endianness::little);
     uint64_t Start = Out.tell(); (void)Start;
     for (unsigned I = Lookup.first, N = Lookup.second; I != N; ++I)
-      LE.write<DeclID>((DeclID)DeclIDs[I]);
+      LE.write<DeclID>(DeclIDs[I]);
     assert(Out.tell() - Start == DataLen && "Data length is wrong");
   }
 };
@@ -4319,8 +4317,7 @@ void ASTWriter::WriteDeclContextVisibleUpdate(const DeclContext *DC) {
     DC = cast<DeclContext>(Chain->getKeyDeclaration(cast<Decl>(DC)));
 
   // Write the lookup table
-  RecordData::value_type Record[] = {UPDATE_VISIBLE,
-                                     getDeclID(cast<Decl>(DC)).get()};
+  RecordData::value_type Record[] = {UPDATE_VISIBLE, getDeclID(cast<Decl>(DC))};
   Stream.EmitRecordWithBlob(UpdateVisibleAbbrev, Record, LookupTable);
 }
 
@@ -4374,7 +4371,7 @@ void ASTWriter::WriteObjCCategories() {
            Cat = Class->known_categories_begin(),
            CatEnd = Class->known_categories_end();
          Cat != CatEnd; ++Cat, ++Size) {
-      assert(getDeclID(*Cat).isValid() && "Bogus category");
+      assert(getDeclID(*Cat) != 0 && "Bogus category");
       AddDeclRef(*Cat, Categories);
     }
 
@@ -5092,7 +5089,7 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
       if (!D || !wasDeclEmitted(D))
         SemaDeclRefs.push_back(0);
       else
-        AddDeclRef(D, SemaDeclRefs);
+        SemaDeclRefs.push_back(getDeclID(D));
     };
 
     AddEmittedDeclRefOrZero(SemaRef.getStdNamespace());
@@ -5103,10 +5100,10 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
     Stream.EmitRecord(SEMA_DECL_REFS, SemaDeclRefs);
 
   // Write the record containing decls to be checked for deferred diags.
-  RecordData DeclsToCheckForDeferredDiags;
+  SmallVector<DeclID, 64> DeclsToCheckForDeferredDiags;
   for (auto *D : SemaRef.DeclsToCheckForDeferredDiags)
     if (wasDeclEmitted(D))
-      AddDeclRef(D, DeclsToCheckForDeferredDiags);
+      DeclsToCheckForDeferredDiags.push_back(getDeclID(D));
   if (!DeclsToCheckForDeferredDiags.empty())
     Stream.EmitRecord(DECLS_TO_CHECK_FOR_DEFERRED_DIAGS,
         DeclsToCheckForDeferredDiags);
@@ -5476,7 +5473,7 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
     if (VisibleOffset)
       VisibleOffset -= DeclTypesBlockStartOffset;
 
-    AddDeclRef(NS, DelayedNamespaceRecord);
+    DelayedNamespaceRecord.push_back(getDeclID(NS));
     DelayedNamespaceRecord.push_back(LexicalOffset);
     DelayedNamespaceRecord.push_back(VisibleOffset);
   }
@@ -5510,7 +5507,7 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
       continue;
 
     NewGlobalKindDeclPairs.push_back(D->getKind());
-    NewGlobalKindDeclPairs.push_back(GetDeclRef(D).get());
+    NewGlobalKindDeclPairs.push_back(GetDeclRef(D));
   }
 
   auto Abv = std::make_shared<llvm::BitCodeAbbrev>();
@@ -5571,7 +5568,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
       case UPD_CXX_ADDED_TEMPLATE_SPECIALIZATION:
       case UPD_CXX_ADDED_ANONYMOUS_NAMESPACE:
         assert(Update.getDecl() && "no decl to add?");
-        Record.AddDeclRef(Update.getDecl());
+        Record.push_back(GetDeclRef(Update.getDecl()));
         break;
 
       case UPD_CXX_ADDED_FUNCTION_DEFINITION:
@@ -5712,7 +5709,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
       }
     }
 
-    AddDeclRef(D, OffsetsRecord);
+    OffsetsRecord.push_back(GetDeclRef(D));
     OffsetsRecord.push_back(Record.Emit(DECL_UPDATES));
   }
 }
@@ -5977,18 +5974,18 @@ void ASTWriter::AddEmittedDeclRef(const Decl *D, RecordDataImpl &Record) {
   if (!wasDeclEmitted(D))
     return;
 
-  Record.push_back(GetDeclRef(D).get());
+  Record.push_back(GetDeclRef(D));
 }
 
 void ASTWriter::AddDeclRef(const Decl *D, RecordDataImpl &Record) {
-  Record.push_back(GetDeclRef(D).get());
+  Record.push_back(GetDeclRef(D));
 }
 
-LocalDeclID ASTWriter::GetDeclRef(const Decl *D) {
+DeclID ASTWriter::GetDeclRef(const Decl *D) {
   assert(WritingAST && "Cannot request a declaration ID before AST writing");
 
   if (!D) {
-    return LocalDeclID();
+    return 0;
   }
 
   // If the DeclUpdate from the GMF gets touched, emit it.
@@ -6002,14 +5999,14 @@ LocalDeclID ASTWriter::GetDeclRef(const Decl *D) {
   // If D comes from an AST file, its declaration ID is already known and
   // fixed.
   if (D->isFromASTFile())
-    return LocalDeclID(D->getGlobalID());
+    return D->getGlobalID();
 
   assert(!(reinterpret_cast<uintptr_t>(D) & 0x01) && "Invalid decl pointer");
-  LocalDeclID &ID = DeclIDs[D];
-  if (ID.isInvalid()) {
+  DeclID &ID = DeclIDs[D];
+  if (ID == 0) {
     if (DoneWritingDeclsAndTypes) {
       assert(0 && "New decl seen after serializing all the decls to emit!");
-      return LocalDeclID();
+      return 0;
     }
 
     // We haven't seen this declaration before. Give it a new ID and
@@ -6021,14 +6018,14 @@ LocalDeclID ASTWriter::GetDeclRef(const Decl *D) {
   return ID;
 }
 
-LocalDeclID ASTWriter::getDeclID(const Decl *D) {
+DeclID ASTWriter::getDeclID(const Decl *D) {
   if (!D)
-    return LocalDeclID();
+    return 0;
 
   // If D comes from an AST file, its declaration ID is already known and
   // fixed.
   if (D->isFromASTFile())
-    return LocalDeclID(D->getGlobalID());
+    return D->getGlobalID();
 
   assert(DeclIDs.contains(D) && "Declaration not emitted!");
   return DeclIDs[D];
@@ -6049,8 +6046,8 @@ bool ASTWriter::wasDeclEmitted(const Decl *D) const {
   return Emitted;
 }
 
-void ASTWriter::associateDeclWithFile(const Decl *D, LocalDeclID ID) {
-  assert(ID.isValid());
+void ASTWriter::associateDeclWithFile(const Decl *D, DeclID ID) {
+  assert(ID);
   assert(D);
 
   SourceLocation Loc = D->getLocation();
@@ -6082,7 +6079,7 @@ void ASTWriter::associateDeclWithFile(const Decl *D, LocalDeclID ID) {
   if (!Info)
     Info = std::make_unique<DeclIDInFileInfo>();
 
-  std::pair<unsigned, LocalDeclID> LocDecl(Offset, ID);
+  std::pair<unsigned, DeclID> LocDecl(Offset, ID);
   LocDeclIDsTy &Decls = Info->DeclIDs;
   Decls.push_back(LocDecl);
 }
@@ -6352,7 +6349,7 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
       Writer->Context->getLangOpts().ModulesDebugInfo && !D->isDependentType();
   Record->push_back(ModulesDebugInfo);
   if (ModulesDebugInfo)
-    Writer->AddDeclRef(D, Writer->ModularCodegenDecls);
+    Writer->ModularCodegenDecls.push_back(Writer->GetDeclRef(D));
 
   // IsLambda bit is already saved.
 
@@ -6456,7 +6453,7 @@ void ASTWriter::ReaderInitialized(ASTReader *Reader) {
 
   // Note, this will get called multiple times, once one the reader starts up
   // and again each time it's done reading a PCH or module.
-  FirstDeclID = LocalDeclID(NUM_PREDEF_DECL_IDS + Chain->getTotalNumDecls());
+  FirstDeclID = NUM_PREDEF_DECL_IDS + Chain->getTotalNumDecls();
   FirstTypeID = NUM_PREDEF_TYPE_IDS + Chain->getTotalNumTypes();
   FirstIdentID = NUM_PREDEF_IDENT_IDS + Chain->getTotalNumIdentifiers();
   FirstMacroID = NUM_PREDEF_MACRO_IDS + Chain->getTotalNumMacros();

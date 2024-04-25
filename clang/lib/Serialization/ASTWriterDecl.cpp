@@ -223,9 +223,9 @@ namespace clang {
         assert(!Common->LazySpecializations);
       }
 
-      ArrayRef<GlobalDeclID> LazySpecializations;
+      ArrayRef<DeclID> LazySpecializations;
       if (auto *LS = Common->LazySpecializations)
-        LazySpecializations = llvm::ArrayRef(LS + 1, LS[0].get());
+        LazySpecializations = llvm::ArrayRef(LS + 1, LS[0]);
 
       // Add a slot to the record for the number of specializations.
       unsigned I = Record.size();
@@ -243,9 +243,7 @@ namespace clang {
         assert(D->isCanonicalDecl() && "non-canonical decl in set");
         AddFirstDeclFromEachModule(D, /*IncludeLocal*/true);
       }
-      Record.append(
-          DeclIDIterator<GlobalDeclID, DeclID>(LazySpecializations.begin()),
-          DeclIDIterator<GlobalDeclID, DeclID>(LazySpecializations.end()));
+      Record.append(LazySpecializations.begin(), LazySpecializations.end());
 
       // Update the size entry we added earlier.
       Record[I] = Record.size() - I - 1;
@@ -1168,7 +1166,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
   Record.push_back(VarDeclBits);
 
   if (ModulesCodegen)
-    Writer.AddDeclRef(D, Writer.ModularCodegenDecls);
+    Writer.ModularCodegenDecls.push_back(Writer.GetDeclRef(D));
 
   if (D->hasAttr<BlocksAttr>()) {
     BlockVarCopyInit Init = Writer.Context->getBlockVarCopyInit(D);
@@ -2788,10 +2786,10 @@ void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
                                       "serializing");
 
   // Determine the ID for this declaration.
-  LocalDeclID ID;
+  DeclID ID;
   assert(!D->isFromASTFile() && "should not be emitting imported decl");
-  LocalDeclID &IDR = DeclIDs[D];
-  if (IDR.isInvalid())
+  DeclID &IDR = DeclIDs[D];
+  if (IDR == 0)
     IDR = NextDeclID++;
 
   ID = IDR;
@@ -2809,7 +2807,7 @@ void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
 
   // Record the offset for this declaration
   SourceLocation Loc = D->getLocation();
-  unsigned Index = ID.get() - FirstDeclID.get();
+  unsigned Index = ID - FirstDeclID;
   if (DeclOffsets.size() == Index)
     DeclOffsets.emplace_back(getAdjustedLocation(Loc), Offset,
                              DeclTypesBlockStartOffset);
@@ -2829,7 +2827,7 @@ void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
   // Note declarations that should be deserialized eagerly so that we can add
   // them to a record in the AST file later.
   if (isRequiredDecl(D, Context, WritingModule))
-    AddDeclRef(D, EagerlyDeserializedDecls);
+    EagerlyDeserializedDecls.push_back(ID);
 }
 
 void ASTRecordWriter::AddFunctionDefinition(const FunctionDecl *FD) {
@@ -2865,7 +2863,7 @@ void ASTRecordWriter::AddFunctionDefinition(const FunctionDecl *FD) {
   }
   Record->push_back(ModulesCodegen);
   if (ModulesCodegen)
-    Writer->AddDeclRef(FD, Writer->ModularCodegenDecls);
+    Writer->ModularCodegenDecls.push_back(Writer->GetDeclRef(FD));
   if (auto *CD = dyn_cast<CXXConstructorDecl>(FD)) {
     Record->push_back(CD->getNumCtorInitializers());
     if (CD->getNumCtorInitializers())
