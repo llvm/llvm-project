@@ -24,8 +24,7 @@ MCGOFFStreamer::~MCGOFFStreamer() {}
 MCStreamer *llvm::createGOFFStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> &&MAB,
                                      std::unique_ptr<MCObjectWriter> &&OW,
-                                     std::unique_ptr<MCCodeEmitter> &&CE,
-                                     bool RelaxAll) {
+                                     std::unique_ptr<MCCodeEmitter> &&CE) {
   MCGOFFStreamer *S =
       new MCGOFFStreamer(Context, std::move(MAB), std::move(OW), std::move(CE));
   return S;
