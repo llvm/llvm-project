@@ -2521,8 +2521,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           return false;
         }
 
-        bool NeedSaveSCC =
-            RS->isRegUsed(AMDGPU::SCC) && !MI->definesRegister(AMDGPU::SCC);
+        bool NeedSaveSCC = RS->isRegUsed(AMDGPU::SCC) &&
+                           !MI->definesRegister(AMDGPU::SCC, /*TRI=*/nullptr);
 
         Register TmpSReg =
             UseSGPR ? TmpReg
@@ -2564,7 +2564,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
         if (TmpSReg == FrameReg) {
           // Undo frame register modification.
-          if (NeedSaveSCC && !MI->registerDefIsDead(AMDGPU::SCC)) {
+          if (NeedSaveSCC &&
+              !MI->registerDefIsDead(AMDGPU::SCC, /*TRI=*/nullptr)) {
             MachineBasicBlock::iterator I =
                 BuildMI(*MBB, std::next(MI), DL, TII->get(AMDGPU::S_ADDC_U32),
                         TmpSReg)
@@ -2594,8 +2595,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         // Convert to a swizzled stack address by scaling by the wave size.
         // In an entry function/kernel the offset is already swizzled.
         bool IsSALU = isSGPRClass(TII->getOpRegClass(*MI, FIOperandNum));
-        bool LiveSCC =
-            RS->isRegUsed(AMDGPU::SCC) && !MI->definesRegister(AMDGPU::SCC);
+        bool LiveSCC = RS->isRegUsed(AMDGPU::SCC) &&
+                       !MI->definesRegister(AMDGPU::SCC, /*TRI=*/nullptr);
         const TargetRegisterClass *RC = IsSALU && !LiveSCC
                                             ? &AMDGPU::SReg_32RegClass
                                             : &AMDGPU::VGPR_32RegClass;

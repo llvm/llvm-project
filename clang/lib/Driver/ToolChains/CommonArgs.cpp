@@ -1102,13 +1102,13 @@ std::string tools::FindDebugPerfInLibraryPath(const std::string &RLib) {
   StringRef::size_type Delim;
   while ((Delim = Dirs.find(llvm::sys::EnvPathSeparator)) != StringRef::npos) {
     if (Delim != 0) { // Leading colon.
-      if (Dirs.substr(0, Delim).endswith(RLib))
+      if (Dirs.substr(0, Delim).ends_with(RLib))
         return Dirs.substr(0, Delim).str();
     }
     Dirs = Dirs.substr(Delim + 1);
   }
   if (!Dirs.empty()) {
-    if (Dirs.endswith(RLib))
+    if (Dirs.ends_with(RLib))
       return Dirs.str();
   }
   return "";

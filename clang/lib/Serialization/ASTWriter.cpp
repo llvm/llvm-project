@@ -171,34 +171,9 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
            .ModulesPruneNonAffectingModuleMaps)
     return std::nullopt;
 
-  SmallVector<const Module *> ModulesToProcess{RootModule};
-
   const HeaderSearch &HS = PP.getHeaderSearchInfo();
-
-  SmallVector<OptionalFileEntryRef, 16> FilesByUID;
-  HS.getFileMgr().GetUniqueIDMapping(FilesByUID);
-
-  if (FilesByUID.size() > HS.header_file_size())
-    FilesByUID.resize(HS.header_file_size());
-
-  for (unsigned UID = 0, LastUID = FilesByUID.size(); UID != LastUID; ++UID) {
-    OptionalFileEntryRef File = FilesByUID[UID];
-    if (!File)
-      continue;
-
-    const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
-    if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader))
-      continue;
-
-    for (const auto &KH : HS.findResolvedModulesForHeader(*File)) {
-      if (!KH.getModule())
-        continue;
-      ModulesToProcess.push_back(KH.getModule());
-    }
-  }
-
   const ModuleMap &MM = HS.getModuleMap();
-  SourceManager &SourceMgr = PP.getSourceManager();
+  const SourceManager &SourceMgr = PP.getSourceManager();
 
   std::set<const FileEntry *> ModuleMaps;
   auto CollectIncludingModuleMaps = [&](FileID FID, FileEntryRef F) {
@@ -233,12 +208,48 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
     }
   };
 
-  for (const Module *CurrentModule : ModulesToProcess) {
+  // Handle all the affecting modules referenced from the root module.
+
+  std::queue<const Module *> Q;
+  Q.push(RootModule);
+  while (!Q.empty()) {
+    const Module *CurrentModule = Q.front();
+    Q.pop();
+
     CollectIncludingMapsFromAncestors(CurrentModule);
     for (const Module *ImportedModule : CurrentModule->Imports)
       CollectIncludingMapsFromAncestors(ImportedModule);
     for (const Module *UndeclaredModule : CurrentModule->UndeclaredUses)
       CollectIncludingMapsFromAncestors(UndeclaredModule);
+
+    for (auto *M : CurrentModule->submodules())
+      Q.push(M);
+  }
+
+  // Handle textually-included headers that belong to other modules.
+
+  SmallVector<OptionalFileEntryRef, 16> FilesByUID;
+  HS.getFileMgr().GetUniqueIDMapping(FilesByUID);
+
+  if (FilesByUID.size() > HS.header_file_size())
+    FilesByUID.resize(HS.header_file_size());
+
+  for (unsigned UID = 0, LastUID = FilesByUID.size(); UID != LastUID; ++UID) {
+    OptionalFileEntryRef File = FilesByUID[UID];
+    if (!File)
+      continue;
+
+    const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
+    if (!HFI)
+      continue; // We have no information on this being a header file.
+    if (!HFI->isCompilingModuleHeader && HFI->isModuleHeader)
+      continue; // Modular header, handled in the above module-based loop.
+    if (!HFI->isCompilingModuleHeader && !HFI->IsLocallyIncluded)
+      continue; // Non-modular header not included locally is not affecting.
+
+    for (const auto &KH : HS.findResolvedModulesForHeader(*File))
+      if (const Module *M = KH.getModule())
+        CollectIncludingMapsFromAncestors(M);
   }
 
   return ModuleMaps;
@@ -2053,14 +2064,13 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     if (!File)
       continue;
 
-    // Get the file info. Skip emitting this file if we have no information on
-    // it as a header file (in which case HFI will be null) or if it hasn't
-    // changed since it was loaded. Also skip it if it's for a modular header
-    // from a different module; in that case, we rely on the module(s)
-    // containing the header to provide this information.
     const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
-    if (!HFI || (HFI->isModuleHeader && !HFI->isCompilingModuleHeader))
-      continue;
+    if (!HFI)
+      continue; // We have no information on this being a header file.
+    if (!HFI->isCompilingModuleHeader && HFI->isModuleHeader)
+      continue; // Header file info is tracked by the owning module file.
+    if (!HFI->isCompilingModuleHeader && !PP->alreadyIncluded(*File))
+      continue; // Non-modular header not included is not needed.
 
     // Massage the file path into an appropriate form.
     StringRef Filename = File->getName();
@@ -3210,7 +3220,7 @@ uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
     return 0;
 
   uint64_t Offset = Stream.GetCurrentBitNo();
-  SmallVector<uint32_t, 128> KindDeclPairs;
+  SmallVector<DeclID, 128> KindDeclPairs;
   for (const auto *D : DC->decls()) {
     if (DoneWritingDeclsAndTypes && !wasDeclEmitted(D))
       continue;
@@ -3348,11 +3358,11 @@ public:
     for (const ObjCMethodList *Method = &Methods.Instance; Method;
          Method = Method->getNext())
       if (ShouldWriteMethodListNode(Method))
-        DataLen += 4;
+        DataLen += sizeof(DeclID);
     for (const ObjCMethodList *Method = &Methods.Factory; Method;
          Method = Method->getNext())
       if (ShouldWriteMethodListNode(Method))
-        DataLen += 4;
+        DataLen += sizeof(DeclID);
     return emitULEBKeyDataLength(KeyLen, DataLen, Out);
   }
 
@@ -3410,11 +3420,11 @@ public:
     for (const ObjCMethodList *Method = &Methods.Instance; Method;
          Method = Method->getNext())
       if (ShouldWriteMethodListNode(Method))
-        LE.write<uint32_t>(Writer.getDeclID(Method->getMethod()));
+        LE.write<DeclID>(Writer.getDeclID(Method->getMethod()));
     for (const ObjCMethodList *Method = &Methods.Factory; Method;
          Method = Method->getNext())
       if (ShouldWriteMethodListNode(Method))
-        LE.write<uint32_t>(Writer.getDeclID(Method->getMethod()));
+        LE.write<DeclID>(Writer.getDeclID(Method->getMethod()));
 
     assert(Out.tell() - Start == DataLen && "Data length is wrong");
   }
@@ -3618,7 +3628,6 @@ class ASTIdentifierTableTrait {
   /// doesn't check whether the name has macros defined; use PublicMacroIterator
   /// to check that.
   bool isInterestingIdentifier(const IdentifierInfo *II, uint64_t MacroOffset) {
-    II->getObjCOrBuiltinID();
     bool IsInteresting =
         II->getNotableIdentifierID() !=
             tok::NotableIdentifierKind::not_notable ||
@@ -3687,7 +3696,8 @@ public:
         DataLen += 4; // MacroDirectives offset.
 
       if (NeedDecls)
-        DataLen += std::distance(IdResolver.begin(II), IdResolver.end()) * 4;
+        DataLen += std::distance(IdResolver.begin(II), IdResolver.end()) *
+                   sizeof(DeclID);
     }
     return emitULEBKeyDataLength(KeyLen, DataLen, Out);
   }
@@ -3733,7 +3743,7 @@ public:
       // Only emit declarations that aren't from a chained PCH, though.
       SmallVector<NamedDecl *, 16> Decls(IdResolver.decls(II));
       for (NamedDecl *D : llvm::reverse(Decls))
-        LE.write<uint32_t>(
+        LE.write<DeclID>(
             Writer.getDeclID(getDeclForLocalLookup(PP.getLangOpts(), D)));
     }
   }
@@ -3883,7 +3893,8 @@ public:
 
   data_type ImportData(const reader::ASTDeclContextNameLookupTrait::data_type &FromReader) {
     unsigned Start = DeclIDs.size();
-    llvm::append_range(DeclIDs, FromReader);
+    DeclIDs.insert(DeclIDs.end(), DeclIDIterator(FromReader.begin()),
+                   DeclIDIterator(FromReader.end()));
     return std::make_pair(Start, DeclIDs.size());
   }
 
@@ -3928,8 +3939,8 @@ public:
       break;
     }
 
-    // 4 bytes for each DeclID.
-    unsigned DataLen = 4 * (Lookup.second - Lookup.first);
+    // length of DeclIDs.
+    unsigned DataLen = sizeof(DeclID) * (Lookup.second - Lookup.first);
 
     return emitULEBKeyDataLength(KeyLen, DataLen, Out);
   }
@@ -3972,7 +3983,7 @@ public:
     endian::Writer LE(Out, llvm::endianness::little);
     uint64_t Start = Out.tell(); (void)Start;
     for (unsigned I = Lookup.first, N = Lookup.second; I != N; ++I)
-      LE.write<uint32_t>(DeclIDs[I]);
+      LE.write<DeclID>(DeclIDs[I]);
     assert(Out.tell() - Start == DataLen && "Data length is wrong");
   }
 };
@@ -5486,7 +5497,7 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
   const TranslationUnitDecl *TU = Context.getTranslationUnitDecl();
   // Create a lexical update block containing all of the declarations in the
   // translation unit that do not come from other AST files.
-  SmallVector<uint32_t, 128> NewGlobalKindDeclPairs;
+  SmallVector<DeclID, 128> NewGlobalKindDeclPairs;
   for (const auto *D : TU->noload_decls()) {
     if (D->isFromASTFile())
       continue;

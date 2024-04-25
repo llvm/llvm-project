@@ -974,7 +974,7 @@ lltok::Kind LLLexer::LexIdentifier() {
     return lltok::NameTableKind;
   }
 
-  if (Keyword.startswith("DIOp")) {
+  if (Keyword.starts_with("DIOp")) {
     StrVal.assign(Keyword.begin(), Keyword.end());
     return lltok::DIOp;
   }

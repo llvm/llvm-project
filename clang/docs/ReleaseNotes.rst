@@ -420,6 +420,9 @@ Bug Fixes in This Version
   operator.
   Fixes (#GH83267).
 
+- Fix crash on ill-formed partial specialization with CRTP.
+  Fixes (#GH89374).
+
 - Clang now correctly generates overloads for bit-precise integer types for
   builtin operators in C++. Fixes #GH82998.
 
@@ -561,6 +564,7 @@ Bug Fixes to C++ Support
 - Fix the Itanium mangling of lambdas defined in a member of a local class (#GH88906)
 - Fixed a crash when trying to evaluate a user-defined ``static_assert`` message whose ``size()``
   function returns a large or negative value. Fixes (#GH89407).
+- Fixed a use-after-free bug in parsing of type constraints with default arguments that involve lambdas. (#GH67235)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -711,6 +715,9 @@ clang-format
 
 libclang
 --------
+
+- ``clang_getSpellingLocation`` now correctly resolves macro expansions; that
+  is, it returns the spelling location instead of the expansion location.
 
 Static Analyzer
 ---------------

@@ -1057,7 +1057,7 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
         return nullptr;
       }
 
-      if (StringRef(F.Filename).endswith(".a")) {
+      if (StringRef(F.Filename).ends_with(".a")) {
         // Handle Archive file
         Error Err = Error::success();
         llvm::object::Archive Archive(BCBuf.get()->getMemBufferRef(), Err);

@@ -71,9 +71,9 @@ public:
                           StringRef>::type &
   operator=(T &&Str) = delete;
   operator std::string() const;
-  bool startswith(StringRef Prefix) const;
+  bool starts_with(StringRef Prefix) const;
   bool startswith_lower(StringRef Prefix) const;
-  bool endswith(StringRef Suffix) const;
+  bool ends_with(StringRef Suffix) const;
   bool endswith_lower(StringRef Suffix) const;
   size_t find(char C, size_t From = 0) const;
   size_t find_lower(char C, size_t From = 0) const;

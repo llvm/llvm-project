@@ -55,11 +55,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/LoongArchTargetParser.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cctype>
 
@@ -665,7 +665,9 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
                                            ProfileGenerateArg->getValue()));
     // The default is to use Clang Instrumentation.
     CmdArgs.push_back("-fprofile-instrument=clang");
-    if (TC.getTriple().isWindowsMSVCEnvironment()) {
+    if (TC.getTriple().isWindowsMSVCEnvironment() &&
+        Args.hasFlag(options::OPT_frtlib_defaultlib,
+                     options::OPT_fno_rtlib_defaultlib, true)) {
       // Add dependent lib for clang_rt.profile
       CmdArgs.push_back(Args.MakeArgString(
           "--dependent-lib=" + TC.getCompilerRTBasename(Args, "profile")));
@@ -684,7 +686,9 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     CmdArgs.push_back("-fprofile-instrument=csllvm");
   }
   if (PGOGenArg) {
-    if (TC.getTriple().isWindowsMSVCEnvironment()) {
+    if (TC.getTriple().isWindowsMSVCEnvironment() &&
+        Args.hasFlag(options::OPT_frtlib_defaultlib,
+                     options::OPT_fno_rtlib_defaultlib, true)) {
       // Add dependent lib for clang_rt.profile
       CmdArgs.push_back(Args.MakeArgString(
           "--dependent-lib=" + TC.getCompilerRTBasename(Args, "profile")));
@@ -8973,11 +8977,11 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
 
 static bool isArchiveOfBundlesFileName(StringRef FilePath) {
   StringRef FileName = llvm::sys::path::filename(FilePath);
-  if (!FileName.endswith(".a"))
+  if (!FileName.ends_with(".a"))
     return false;
 
 
-  if (FileName.startswith("lib")) {
+  if (FileName.starts_with("lib")) {
     if (FileName.contains("amdgcn") && FileName.contains("gfx"))
       return false;
     if (FileName.contains("nvptx") && FileName.contains("sm_"))
@@ -9197,7 +9201,7 @@ static void addSubArchsWithTargetID(Compilation &C, const ArgList &Args,
   for (auto itr : Args.getAllArgValues(options::OPT_Xopenmp_target_EQ)) {
     SmallVector<StringRef> marchs;
     StringRef vstr = StringRef(itr);
-    if (vstr.startswith("-march=") || vstr.startswith("--march=")) {
+    if (vstr.starts_with("-march=") || vstr.starts_with("--march=")) {
       vstr.split('=').second.split(marchs, ',');
       for (auto &march : marchs)
         subarchs.push_back(march.str());
@@ -9271,7 +9275,7 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
                           false, TargetID);
 
         llvm::copy_if(Features, std::back_inserter(FeatureArgs),
-                      [](StringRef Arg) { return !Arg.startswith("-target"); });
+                      [](StringRef Arg) { return !Arg.starts_with("-target"); });
 
         SmallVector<std::string> Parts{
             "file=" + std::string(UnpackagedFileName),

@@ -89,12 +89,12 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include <cstdlib> // ::getenv
 #include <map>
 #include <memory>
@@ -810,7 +810,7 @@ bool Driver::GetTargetInfoFromMarch(Compilation &C,
     if (A->getOption().matches(options::OPT_Xopenmp_target_EQ)) {
       for (auto *V : A->getValues()) {
         StringRef VStr = StringRef(V);
-        if (VStr.startswith("-march=") || VStr.startswith("--march="))
+        if (VStr.starts_with("-march=") || VStr.starts_with("--march="))
           for (StringRef OpenMPTargetArch :
                llvm::split(VStr.split('=').second, ",")) {
             StringRef OpenMPTargetTriple = StringRef(A->getValue(0));

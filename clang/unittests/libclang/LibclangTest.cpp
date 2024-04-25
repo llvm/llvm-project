@@ -1246,6 +1246,83 @@ static_assert(true, message);
   EXPECT_EQ(fromCXString(clang_getCursorSpelling(*staticAssertCsr)), "");
 }
 
+TEST_F(LibclangParseTest, ExposesAnnotateArgs) {
+  const char testSource[] = R"cpp(
+[[clang::annotate("category", 42)]]
+void func() {}
+)cpp";
+  std::string fileName = "main.cpp";
+  WriteFile(fileName, testSource);
+
+  const char *Args[] = {"-xc++"};
+  ClangTU = clang_parseTranslationUnit(Index, fileName.c_str(), Args, 1,
+                                       nullptr, 0, TUFlags);
+
+  int attrCount = 0;
+
+  Traverse(
+      [&attrCount](CXCursor cursor, CXCursor parent) -> CXChildVisitResult {
+        if (cursor.kind == CXCursor_AnnotateAttr) {
+          int childCount = 0;
+          clang_visitChildren(
+              cursor,
+              [](CXCursor child, CXCursor,
+                 CXClientData data) -> CXChildVisitResult {
+                int *pcount = static_cast<int *>(data);
+
+                // we only expect one argument here, so bail otherwise
+                EXPECT_EQ(*pcount, 0);
+
+                auto *result = clang_Cursor_Evaluate(child);
+                EXPECT_NE(result, nullptr);
+                EXPECT_EQ(clang_EvalResult_getAsInt(result), 42);
+                clang_EvalResult_dispose(result);
+
+                ++*pcount;
+
+                return CXChildVisit_Recurse;
+              },
+              &childCount);
+          attrCount++;
+          return CXChildVisit_Continue;
+        }
+        return CXChildVisit_Recurse;
+      });
+
+  EXPECT_EQ(attrCount, 1);
+}
+
+TEST_F(LibclangParseTest, clang_getSpellingLocation) {
+  std::string fileName = "main.c";
+  WriteFile(fileName, "#define X(value) int x = value;\nX(42)\n");
+
+  ClangTU = clang_parseTranslationUnit(Index, fileName.c_str(), nullptr, 0,
+                                       nullptr, 0, TUFlags);
+
+  int declarationCount = 0;
+  Traverse([&declarationCount](CXCursor cursor,
+                               CXCursor parent) -> CXChildVisitResult {
+    if (cursor.kind == CXCursor_VarDecl) {
+      declarationCount++;
+
+      CXSourceLocation cxl = clang_getCursorLocation(cursor);
+      unsigned line;
+
+      // We expect clang_getFileLocation to return the expansion location,
+      // whereas clang_getSpellingLocation should resolve the macro expansion
+      // and return the location of the macro definition.
+      clang_getFileLocation(cxl, nullptr, &line, nullptr, nullptr);
+      EXPECT_EQ(line, 2U);
+      clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
+      EXPECT_EQ(line, 1U);
+    }
+
+    return CXChildVisit_Recurse;
+  });
+
+  EXPECT_EQ(declarationCount, 1);
+}
+
 class LibclangRewriteTest : public LibclangParseTest {
 public:
   CXRewriter Rew = nullptr;

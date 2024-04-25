@@ -8092,9 +8092,9 @@ static bool checkCCKill(MachineInstr &MI, MachineBasicBlock *MBB) {
   MachineBasicBlock::iterator miI(std::next(MachineBasicBlock::iterator(MI)));
   for (MachineBasicBlock::iterator miE = MBB->end(); miI != miE; ++miI) {
     const MachineInstr& mi = *miI;
-    if (mi.readsRegister(SystemZ::CC))
+    if (mi.readsRegister(SystemZ::CC, /*TRI=*/nullptr))
       return false;
-    if (mi.definesRegister(SystemZ::CC))
+    if (mi.definesRegister(SystemZ::CC, /*TRI=*/nullptr))
       break; // Should have kill-flag - update below.
   }
 
@@ -8233,7 +8233,8 @@ SystemZTargetLowering::emitSelect(MachineInstr &MI,
       }
       break;
     }
-    if (NextMI.definesRegister(SystemZ::CC) || NextMI.usesCustomInsertionHook())
+    if (NextMI.definesRegister(SystemZ::CC, /*TRI=*/nullptr) ||
+        NextMI.usesCustomInsertionHook())
       break;
     bool User = false;
     for (auto *SelMI : Selects)
@@ -8251,8 +8252,8 @@ SystemZTargetLowering::emitSelect(MachineInstr &MI,
   }
 
   MachineInstr *LastMI = Selects.back();
-  bool CCKilled =
-      (LastMI->killsRegister(SystemZ::CC) || checkCCKill(*LastMI, MBB));
+  bool CCKilled = (LastMI->killsRegister(SystemZ::CC, /*TRI=*/nullptr) ||
+                   checkCCKill(*LastMI, MBB));
   MachineBasicBlock *StartMBB = MBB;
   MachineBasicBlock *JoinMBB  = SystemZ::splitBlockAfter(LastMI, MBB);
   MachineBasicBlock *FalseMBB = SystemZ::emitBlockAfter(StartMBB);
@@ -8352,7 +8353,8 @@ MachineBasicBlock *SystemZTargetLowering::emitCondStore(MachineInstr &MI,
 
   // Unless CC was killed in the CondStore instruction, mark it as
   // live-in to both FalseMBB and JoinMBB.
-  if (!MI.killsRegister(SystemZ::CC) && !checkCCKill(MI, JoinMBB)) {
+  if (!MI.killsRegister(SystemZ::CC, /*TRI=*/nullptr) &&
+      !checkCCKill(MI, JoinMBB)) {
     FalseMBB->addLiveIn(SystemZ::CC);
     JoinMBB->addLiveIn(SystemZ::CC);
   }
@@ -8755,7 +8757,7 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
   // If the CC def wasn't dead in the ATOMIC_CMP_SWAPW, mark CC as live-in
   // to the block after the loop.  At this point, CC may have been defined
   // either by the CR in LoopMBB or by the CS in SetMBB.
-  if (!MI.registerDefIsDead(SystemZ::CC))
+  if (!MI.registerDefIsDead(SystemZ::CC, /*TRI=*/nullptr))
     DoneMBB->addLiveIn(SystemZ::CC);
 
   MI.eraseFromParent();
