@@ -556,7 +556,6 @@ inferConvolutionDimsImpl(LinalgOp linalgOp,
   // filterDims & outputDims - unConvolvedDims are the output channel iterators.
   llvm::SmallDenseSet<int64_t> oc = filterDims;
   llvm::set_intersect(oc, outputDims);
-  llvm::set_subtract(oc, inputExprWalker.unConvolvedDims);
 
   // filterDims & outputDims & unConvolvedDims are the depth iterators.
   llvm::SmallDenseSet<int64_t> depth = filterDims;
