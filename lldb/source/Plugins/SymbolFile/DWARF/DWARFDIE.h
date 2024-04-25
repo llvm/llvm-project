@@ -47,6 +47,8 @@ public:
   DWARFDIE
   GetParent() const;
 
+  DWARFDIE getParent() const { return GetParent(); }
+
   DWARFDIE
   GetFirstChild() const;
 
@@ -55,6 +57,12 @@ public:
 
   DWARFDIE
   GetReferencedDIE(const dw_attr_t attr) const;
+
+  DWARFDIE getAttributeValueAsReferencedDie(const dw_attr_t attr) const {
+    return GetReferencedDIE(attr);
+  }
+
+  DWARFDIE getAttributeValueAsReferencedDie(DWARFFormValue) const;
 
   // Get a another DIE from the same DWARF file as this DIE. This will
   // check the current DIE's compile unit first to see if "die_offset" is
@@ -97,6 +105,8 @@ public:
   DWARFDIE
   GetAttributeValueAsReferenceDIE(const dw_attr_t attr) const;
 
+  std::optional<DWARFFormValue> find(const dw_attr_t attr) const;
+
   bool GetDIENamesAndRanges(
       const char *&name, const char *&mangled, DWARFRangeList &ranges,
       std::optional<int> &decl_file, std::optional<int> &decl_line,
@@ -106,6 +116,9 @@ public:
 
   /// The range of all the children of this DIE.
   llvm::iterator_range<child_iterator> children() const;
+
+  child_iterator begin() const;
+  child_iterator end() const;
 };
 
 class DWARFDIE::child_iterator
