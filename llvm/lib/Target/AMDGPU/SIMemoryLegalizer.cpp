@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/TargetParser/TargetParser.h"
 
@@ -71,16 +72,17 @@ enum class SIAtomicAddrSpace {
   LDS = 1u << 1,
   SCRATCH = 1u << 2,
   GDS = 1u << 3,
-  OTHER = 1u << 4,
+  BUFFER_RESOURCE = 1u << 4,
+  OTHER = 1u << 5,
 
   /// The address spaces that can be accessed by a FLAT instruction.
   FLAT = GLOBAL | LDS | SCRATCH,
 
   /// The address spaces that support atomic instructions.
-  ATOMIC = GLOBAL | LDS | SCRATCH | GDS,
+  ATOMIC = GLOBAL | LDS | SCRATCH | GDS | BUFFER_RESOURCE,
 
   /// All address spaces.
-  ALL = GLOBAL | LDS | SCRATCH | GDS | OTHER,
+  ALL = GLOBAL | LDS | SCRATCH | GDS | BUFFER_RESOURCE | OTHER,
 
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
 };
@@ -732,6 +734,8 @@ SIAtomicAddrSpace SIMemOpAccess::toSIAtomicAddrSpace(unsigned AS) const {
     return SIAtomicAddrSpace::SCRATCH;
   if (AS == AMDGPUAS::REGION_ADDRESS)
     return SIAtomicAddrSpace::GDS;
+  if (AS == AMDGPUAS::BUFFER_RESOURCE)
+    return SIAtomicAddrSpace::BUFFER_RESOURCE;
 
   return SIAtomicAddrSpace::OTHER;
 }

@@ -85,15 +85,10 @@ entry:
 }
 
 define amdgpu_ps void @store_buffer(<4 x i32> inreg %rsrc, float %data, i32 %index) {
-; FORCESC0SC1-LABEL: store_buffer:
-; FORCESC0SC1:       ; %bb.0: ; %main_body
-; FORCESC0SC1-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 idxen sc0 sc1
-; FORCESC0SC1-NEXT:    s_endpgm
-;
-; NOSC0SC1-LABEL: store_buffer:
-; NOSC0SC1:       ; %bb.0: ; %main_body
-; NOSC0SC1-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 idxen
-; NOSC0SC1-NEXT:    s_endpgm
+; GCN-LABEL: store_buffer:
+; GCN:       ; %bb.0: ; %main_body
+; GCN-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 idxen
+; GCN-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.buffer.store.f32(float %data, <4 x i32> %rsrc, i32 %index, i32 0, i1 0, i1 0)
   ret void
