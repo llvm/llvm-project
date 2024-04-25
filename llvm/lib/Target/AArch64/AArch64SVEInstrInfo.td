@@ -3760,30 +3760,13 @@ let Predicates = [HasSVE2orSME] in {
   defm BSL_ZZZZ   : sve2_int_bitwise_ternary_op<0b001, "bsl",   int_aarch64_sve_bsl, AArch64bsp>;
   defm BSL1N_ZZZZ : sve2_int_bitwise_ternary_op<0b011, "bsl1n", int_aarch64_sve_bsl1n>;
   defm BSL2N_ZZZZ : sve2_int_bitwise_ternary_op<0b101, "bsl2n", int_aarch64_sve_bsl2n>;
-  defm NBSL_ZZZZ  : sve2_int_bitwise_ternary_op<0b111, "nbsl",  int_aarch64_sve_nbsl>;
+  defm NBSL_ZZZZ  : sve2_int_bitwise_ternary_op<0b111, "nbsl",  int_aarch64_sve_nbsl, AArch64nbsl>;
 
   // SVE2 bitwise xor and rotate right by immediate
   defm XAR_ZZZI : sve2_int_rotate_right_imm<"xar", int_aarch64_sve_xar>;
 
   // SVE2 extract vector (immediate offset, constructive)
   def EXT_ZZI_B : sve2_int_perm_extract_i_cons<"ext">;
-
-  // zext(cmpeq(bsl(x, y, z), splat(0))) -> nbsl(x, y, z)
-  def : Pat<(nxv16i8 (zext (nxv16i1 (AArch64setcc_z (nxv16i1 (SVEAllActive)),
-            (nxv16i8 (AArch64bsp nxv16i8:$Op1, nxv16i8:$Op2, nxv16i8:$Op3)), (SVEDup0), SETEQ)))),
-            (NBSL_ZZZZ nxv16i8:$Op1, nxv16i8:$Op2, nxv16i8:$Op3)>;
-
-  def : Pat<(nxv8i16 (zext (nxv8i1 (AArch64setcc_z (nxv8i1 (SVEAllActive)),
-            (nxv8i16 (AArch64bsp nxv8i16:$Op1, nxv8i16:$Op2, nxv8i16:$Op3)), (SVEDup0), SETEQ)))),
-            (NBSL_ZZZZ nxv8i16:$Op1, nxv8i16:$Op2, nxv8i16:$Op3)>;
-
-  def : Pat<(nxv4i32 (zext (nxv4i1 (AArch64setcc_z (nxv4i1 (SVEAllActive)),
-            (nxv4i32 (AArch64bsp nxv4i32:$Op1, nxv4i32:$Op2, nxv4i32:$Op3)), (SVEDup0), SETEQ)))),
-            (NBSL_ZZZZ nxv4i32:$Op1, nxv4i32:$Op2, nxv4i32:$Op3)>;
-
-  def : Pat<(nxv2i64 (zext (nxv2i1 (AArch64setcc_z (nxv2i1 (SVEAllActive)),
-            (nxv2i64 (AArch64bsp nxv2i64:$Op1, nxv2i64:$Op2, nxv2i64:$Op3)), (SVEDup0), SETEQ)))),
-            (NBSL_ZZZZ nxv2i64:$Op1, nxv2i64:$Op2, nxv2i64:$Op3)>;
 } // End HasSVE2orSME
 
 let Predicates = [HasSVE2] in {
