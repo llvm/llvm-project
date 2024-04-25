@@ -430,6 +430,9 @@ void SIModeRegister::processBlockPhase3(MachineBasicBlock &MBB,
 }
 
 bool SIModeRegister::runOnMachineFunction(MachineFunction &MF) {
+  const Function &F = MF.getFunction();
+  if (F.hasFnAttribute(llvm::Attribute::StrictFP))
+    return Changed;
   BlockInfo.resize(MF.getNumBlockIDs());
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
