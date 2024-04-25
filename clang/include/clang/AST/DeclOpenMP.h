@@ -61,7 +61,7 @@ protected:
   template <typename T, typename... Params>
   static T *createEmptyDirective(const ASTContext &C, GlobalDeclID ID,
                                  unsigned NumClauses, unsigned NumChildren,
-                                 Params &&...P) {
+                                 Params &&... P) {
     auto *Inst = new (C, ID, size(NumClauses, NumChildren))
         T(nullptr, std::forward<Params>(P)...);
     Inst->Data = OMPChildren::CreateEmpty(
