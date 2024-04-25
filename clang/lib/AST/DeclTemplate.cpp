@@ -337,9 +337,10 @@ void RedeclarableTemplateDecl::loadLazySpecializationsImpl() const {
   CommonBase *CommonBasePtr = getMostRecentDecl()->getCommonPtr();
   if (CommonBasePtr->LazySpecializations) {
     ASTContext &Context = getASTContext();
-    DeclID *Specs = CommonBasePtr->LazySpecializations;
+    GlobalDeclID *Specs = CommonBasePtr->LazySpecializations;
     CommonBasePtr->LazySpecializations = nullptr;
-    for (uint32_t I = 0, N = *Specs++; I != N; ++I)
+    unsigned SpecSize = (*Specs++).get();
+    for (unsigned I = 0; I != SpecSize; ++I)
       (void)Context.getExternalSource()->GetExternalDecl(Specs[I]);
   }
 }
@@ -417,8 +418,8 @@ FunctionTemplateDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
   return TD;
 }
 
-FunctionTemplateDecl *FunctionTemplateDecl::CreateDeserialized(ASTContext &C,
-                                                               DeclID ID) {
+FunctionTemplateDecl *
+FunctionTemplateDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) FunctionTemplateDecl(C, nullptr, SourceLocation(),
                                           DeclarationName(), nullptr, nullptr);
 }
@@ -503,7 +504,7 @@ ClassTemplateDecl *ClassTemplateDecl::Create(ASTContext &C, DeclContext *DC,
 }
 
 ClassTemplateDecl *ClassTemplateDecl::CreateDeserialized(ASTContext &C,
-                                                         DeclID ID) {
+                                                         GlobalDeclID ID) {
   return new (C, ID) ClassTemplateDecl(C, nullptr, SourceLocation(),
                                        DeclarationName(), nullptr, nullptr);
 }
@@ -652,14 +653,14 @@ TemplateTypeParmDecl *TemplateTypeParmDecl::Create(
 }
 
 TemplateTypeParmDecl *
-TemplateTypeParmDecl::CreateDeserialized(const ASTContext &C, DeclID ID) {
+TemplateTypeParmDecl::CreateDeserialized(const ASTContext &C, GlobalDeclID ID) {
   return new (C, ID)
       TemplateTypeParmDecl(nullptr, SourceLocation(), SourceLocation(), nullptr,
                            false, false, std::nullopt);
 }
 
 TemplateTypeParmDecl *
-TemplateTypeParmDecl::CreateDeserialized(const ASTContext &C, DeclID ID,
+TemplateTypeParmDecl::CreateDeserialized(const ASTContext &C, GlobalDeclID ID,
                                          bool HasTypeConstraint) {
   return new (C, ID,
               additionalSizeToAlloc<TypeConstraint>(HasTypeConstraint ? 1 : 0))
@@ -759,7 +760,7 @@ NonTypeTemplateParmDecl *NonTypeTemplateParmDecl::Create(
 }
 
 NonTypeTemplateParmDecl *
-NonTypeTemplateParmDecl::CreateDeserialized(ASTContext &C, DeclID ID,
+NonTypeTemplateParmDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                             bool HasTypeConstraint) {
   return new (C, ID, additionalSizeToAlloc<std::pair<QualType,
                                                      TypeSourceInfo *>,
@@ -770,7 +771,7 @@ NonTypeTemplateParmDecl::CreateDeserialized(ASTContext &C, DeclID ID,
 }
 
 NonTypeTemplateParmDecl *
-NonTypeTemplateParmDecl::CreateDeserialized(ASTContext &C, DeclID ID,
+NonTypeTemplateParmDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                             unsigned NumExpandedTypes,
                                             bool HasTypeConstraint) {
   auto *NTTP =
@@ -836,13 +837,13 @@ TemplateTemplateParmDecl::Create(const ASTContext &C, DeclContext *DC,
 }
 
 TemplateTemplateParmDecl *
-TemplateTemplateParmDecl::CreateDeserialized(ASTContext &C, DeclID ID) {
+TemplateTemplateParmDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) TemplateTemplateParmDecl(nullptr, SourceLocation(), 0, 0,
                                               false, nullptr, false, nullptr);
 }
 
 TemplateTemplateParmDecl *
-TemplateTemplateParmDecl::CreateDeserialized(ASTContext &C, DeclID ID,
+TemplateTemplateParmDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                              unsigned NumExpansions) {
   auto *TTP =
       new (C, ID, additionalSizeToAlloc<TemplateParameterList *>(NumExpansions))
@@ -948,7 +949,8 @@ ClassTemplateSpecializationDecl::Create(ASTContext &Context, TagKind TK,
 }
 
 ClassTemplateSpecializationDecl *
-ClassTemplateSpecializationDecl::CreateDeserialized(ASTContext &C, DeclID ID) {
+ClassTemplateSpecializationDecl::CreateDeserialized(ASTContext &C,
+                                                    GlobalDeclID ID) {
   auto *Result =
     new (C, ID) ClassTemplateSpecializationDecl(C, ClassTemplateSpecialization);
   Result->setMayHaveOutOfDateDef(false);
@@ -1034,7 +1036,7 @@ ConceptDecl *ConceptDecl::Create(ASTContext &C, DeclContext *DC,
   return TD;
 }
 
-ConceptDecl *ConceptDecl::CreateDeserialized(ASTContext &C, DeclID ID) {
+ConceptDecl *ConceptDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   ConceptDecl *Result = new (C, ID) ConceptDecl(nullptr, SourceLocation(),
                                                 DeclarationName(),
                                                 nullptr, nullptr);
@@ -1068,7 +1070,7 @@ ImplicitConceptSpecializationDecl *ImplicitConceptSpecializationDecl::Create(
 
 ImplicitConceptSpecializationDecl *
 ImplicitConceptSpecializationDecl::CreateDeserialized(
-    const ASTContext &C, DeclID ID, unsigned NumTemplateArgs) {
+    const ASTContext &C, GlobalDeclID ID, unsigned NumTemplateArgs) {
   return new (C, ID, additionalSizeToAlloc<TemplateArgument>(NumTemplateArgs))
       ImplicitConceptSpecializationDecl(EmptyShell{}, NumTemplateArgs);
 }
@@ -1131,7 +1133,7 @@ Create(ASTContext &Context, TagKind TK,DeclContext *DC,
 
 ClassTemplatePartialSpecializationDecl *
 ClassTemplatePartialSpecializationDecl::CreateDeserialized(ASTContext &C,
-                                                           DeclID ID) {
+                                                           GlobalDeclID ID) {
   auto *Result = new (C, ID) ClassTemplatePartialSpecializationDecl(C);
   Result->setMayHaveOutOfDateDef(false);
   return Result;
@@ -1158,7 +1160,7 @@ FriendTemplateDecl::Create(ASTContext &Context, DeclContext *DC,
 }
 
 FriendTemplateDecl *FriendTemplateDecl::CreateDeserialized(ASTContext &C,
-                                                           DeclID ID) {
+                                                           GlobalDeclID ID) {
   return new (C, ID) FriendTemplateDecl(EmptyShell());
 }
 
@@ -1177,8 +1179,8 @@ TypeAliasTemplateDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
   return TD;
 }
 
-TypeAliasTemplateDecl *TypeAliasTemplateDecl::CreateDeserialized(ASTContext &C,
-                                                                 DeclID ID) {
+TypeAliasTemplateDecl *
+TypeAliasTemplateDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) TypeAliasTemplateDecl(C, nullptr, SourceLocation(),
                                            DeclarationName(), nullptr, nullptr);
 }
@@ -1215,7 +1217,8 @@ VarTemplateDecl *VarTemplateDecl::Create(ASTContext &C, DeclContext *DC,
   return TD;
 }
 
-VarTemplateDecl *VarTemplateDecl::CreateDeserialized(ASTContext &C, DeclID ID) {
+VarTemplateDecl *VarTemplateDecl::CreateDeserialized(ASTContext &C,
+                                                     GlobalDeclID ID) {
   return new (C, ID) VarTemplateDecl(C, nullptr, SourceLocation(),
                                      DeclarationName(), nullptr, nullptr);
 }
@@ -1337,7 +1340,8 @@ VarTemplateSpecializationDecl *VarTemplateSpecializationDecl::Create(
 }
 
 VarTemplateSpecializationDecl *
-VarTemplateSpecializationDecl::CreateDeserialized(ASTContext &C, DeclID ID) {
+VarTemplateSpecializationDecl::CreateDeserialized(ASTContext &C,
+                                                  GlobalDeclID ID) {
   return new (C, ID)
       VarTemplateSpecializationDecl(VarTemplateSpecialization, C);
 }
@@ -1429,7 +1433,7 @@ VarTemplatePartialSpecializationDecl::Create(
 
 VarTemplatePartialSpecializationDecl *
 VarTemplatePartialSpecializationDecl::CreateDeserialized(ASTContext &C,
-                                                         DeclID ID) {
+                                                         GlobalDeclID ID) {
   return new (C, ID) VarTemplatePartialSpecializationDecl(C);
 }
 
@@ -1543,7 +1547,7 @@ TemplateParamObjectDecl *TemplateParamObjectDecl::Create(const ASTContext &C,
 }
 
 TemplateParamObjectDecl *
-TemplateParamObjectDecl::CreateDeserialized(ASTContext &C, DeclID ID) {
+TemplateParamObjectDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   auto *TPOD = new (C, ID) TemplateParamObjectDecl(nullptr, QualType(), APValue());
   C.addDestruction(&TPOD->Value);
   return TPOD;

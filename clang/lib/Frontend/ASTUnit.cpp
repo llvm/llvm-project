@@ -1067,7 +1067,7 @@ public:
 
   std::vector<Decl *> takeTopLevelDecls() { return std::move(TopLevelDecls); }
 
-  std::vector<DeclID> takeTopLevelDeclIDs() {
+  std::vector<LocalDeclID> takeTopLevelDeclIDs() {
     return std::move(TopLevelDeclIDs);
   }
 
@@ -1101,7 +1101,7 @@ public:
 private:
   unsigned Hash = 0;
   std::vector<Decl *> TopLevelDecls;
-  std::vector<DeclID> TopLevelDeclIDs;
+  std::vector<LocalDeclID> TopLevelDeclIDs;
   llvm::SmallVector<ASTUnit::StandaloneDiagnostic, 4> PreambleDiags;
 };
 
@@ -1471,7 +1471,9 @@ void ASTUnit::RealizeTopLevelDeclsFromPreamble() {
   for (const auto TopLevelDecl : TopLevelDeclsInPreamble) {
     // Resolve the declaration ID to an actual declaration, possibly
     // deserializing the declaration in the process.
-    if (Decl *D = Source.GetExternalDecl(TopLevelDecl))
+    //
+    // FIMXE: We shouldn't convert a LocalDeclID to GlobalDeclID directly.
+    if (Decl *D = Source.GetExternalDecl(GlobalDeclID(TopLevelDecl.get())))
       Resolved.push_back(D);
   }
   TopLevelDeclsInPreamble.clear();

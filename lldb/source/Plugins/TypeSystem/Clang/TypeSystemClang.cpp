@@ -1230,7 +1230,7 @@ CompilerType TypeSystemClang::CreateRecordType(
   // complete definition just in case.
 
   bool has_name = !name.empty();
-  CXXRecordDecl *decl = CXXRecordDecl::CreateDeserialized(ast, 0);
+  CXXRecordDecl *decl = CXXRecordDecl::CreateDeserialized(ast, GlobalDeclID());
   decl->setTagKind(static_cast<TagDecl::TagKind>(kind));
   decl->setDeclContext(decl_ctx);
   if (has_name)
@@ -1402,7 +1402,7 @@ clang::FunctionTemplateDecl *TypeSystemClang::CreateFunctionTemplateDecl(
   TemplateParameterList *template_param_list = CreateTemplateParameterList(
       ast, template_param_infos, template_param_decls);
   FunctionTemplateDecl *func_tmpl_decl =
-      FunctionTemplateDecl::CreateDeserialized(ast, 0);
+      FunctionTemplateDecl::CreateDeserialized(ast, GlobalDeclID());
   func_tmpl_decl->setDeclContext(decl_ctx);
   func_tmpl_decl->setLocation(func_decl->getLocation());
   func_tmpl_decl->setDeclName(func_decl->getDeclName());
@@ -1564,7 +1564,8 @@ ClassTemplateDecl *TypeSystemClang::CreateClassTemplateDecl(
   TemplateParameterList *template_param_list = CreateTemplateParameterList(
       ast, template_param_infos, template_param_decls);
 
-  CXXRecordDecl *template_cxx_decl = CXXRecordDecl::CreateDeserialized(ast, 0);
+  CXXRecordDecl *template_cxx_decl =
+      CXXRecordDecl::CreateDeserialized(ast, GlobalDeclID());
   template_cxx_decl->setTagKind(static_cast<TagDecl::TagKind>(kind));
   // What decl context do we use here? TU? The actual decl context?
   template_cxx_decl->setDeclContext(decl_ctx);
@@ -1581,7 +1582,8 @@ ClassTemplateDecl *TypeSystemClang::CreateClassTemplateDecl(
   // template_cxx_decl->startDefinition();
   // template_cxx_decl->completeDefinition();
 
-  class_template_decl = ClassTemplateDecl::CreateDeserialized(ast, 0);
+  class_template_decl =
+      ClassTemplateDecl::CreateDeserialized(ast, GlobalDeclID());
   // What decl context do we use here? TU? The actual decl context?
   class_template_decl->setDeclContext(decl_ctx);
   class_template_decl->setDeclName(decl_name);
@@ -1642,7 +1644,7 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
         ast, template_param_infos.GetParameterPackArgs());
   }
   ClassTemplateSpecializationDecl *class_template_specialization_decl =
-      ClassTemplateSpecializationDecl::CreateDeserialized(ast, 0);
+      ClassTemplateSpecializationDecl::CreateDeserialized(ast, GlobalDeclID());
   class_template_specialization_decl->setTagKind(
       static_cast<TagDecl::TagKind>(kind));
   class_template_specialization_decl->setDeclContext(decl_ctx);
@@ -1792,7 +1794,8 @@ CompilerType TypeSystemClang::CreateObjCClass(
   if (!decl_ctx)
     decl_ctx = ast.getTranslationUnitDecl();
 
-  ObjCInterfaceDecl *decl = ObjCInterfaceDecl::CreateDeserialized(ast, 0);
+  ObjCInterfaceDecl *decl =
+      ObjCInterfaceDecl::CreateDeserialized(ast, GlobalDeclID());
   decl->setDeclContext(decl_ctx);
   decl->setDeclName(&ast.Idents.get(name));
   /*isForwardDecl,*/
@@ -1900,7 +1903,7 @@ TypeSystemClang::CreateBlockDeclaration(clang::DeclContext *ctx,
                                         OptionalClangModuleID owning_module) {
   if (ctx) {
     clang::BlockDecl *decl =
-        clang::BlockDecl::CreateDeserialized(getASTContext(), 0);
+        clang::BlockDecl::CreateDeserialized(getASTContext(), GlobalDeclID());
     decl->setDeclContext(ctx);
     ctx->addDecl(decl);
     SetOwningModule(decl, owning_module);
@@ -1969,7 +1972,7 @@ clang::VarDecl *TypeSystemClang::CreateVariableDeclaration(
     const char *name, clang::QualType type) {
   if (decl_context) {
     clang::VarDecl *var_decl =
-        clang::VarDecl::CreateDeserialized(getASTContext(), 0);
+        clang::VarDecl::CreateDeserialized(getASTContext(), GlobalDeclID());
     var_decl->setDeclContext(decl_context);
     if (name && name[0])
       var_decl->setDeclName(&getASTContext().Idents.getOwn(name));
@@ -2129,7 +2132,7 @@ FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
 
   clang::DeclarationName declarationName =
       GetDeclarationName(name, function_clang_type);
-  func_decl = FunctionDecl::CreateDeserialized(ast, 0);
+  func_decl = FunctionDecl::CreateDeserialized(ast, GlobalDeclID());
   func_decl->setDeclContext(decl_ctx);
   func_decl->setDeclName(declarationName);
   func_decl->setType(ClangUtil::GetQualType(function_clang_type));
@@ -2190,7 +2193,7 @@ ParmVarDecl *TypeSystemClang::CreateParameterDeclaration(
     const char *name, const CompilerType &param_type, int storage,
     bool add_decl) {
   ASTContext &ast = getASTContext();
-  auto *decl = ParmVarDecl::CreateDeserialized(ast, 0);
+  auto *decl = ParmVarDecl::CreateDeserialized(ast, GlobalDeclID());
   decl->setDeclContext(decl_ctx);
   if (name && name[0])
     decl->setDeclName(&ast.Idents.get(name));
@@ -2295,7 +2298,7 @@ CompilerType TypeSystemClang::CreateEnumerationType(
 
   // TODO: ask about these...
   //    const bool IsFixed = false;
-  EnumDecl *enum_decl = EnumDecl::CreateDeserialized(ast, 0);
+  EnumDecl *enum_decl = EnumDecl::CreateDeserialized(ast, GlobalDeclID());
   enum_decl->setDeclContext(decl_ctx);
   if (!name.empty())
     enum_decl->setDeclName(&ast.Idents.get(name));
@@ -4534,7 +4537,7 @@ CompilerType TypeSystemClang::CreateTypedef(
       decl_ctx = getASTContext().getTranslationUnitDecl();
 
     clang::TypedefDecl *decl =
-        clang::TypedefDecl::CreateDeserialized(clang_ast, 0);
+        clang::TypedefDecl::CreateDeserialized(clang_ast, GlobalDeclID());
     decl->setDeclContext(decl_ctx);
     decl->setDeclName(&clang_ast.Idents.get(typedef_name));
     decl->setTypeSourceInfo(clang_ast.getTrivialTypeSourceInfo(qual_type));
@@ -7291,7 +7294,7 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
 
   clang::RecordDecl *record_decl = ast->GetAsRecordDecl(type);
   if (record_decl) {
-    field = clang::FieldDecl::CreateDeserialized(clang_ast, 0);
+    field = clang::FieldDecl::CreateDeserialized(clang_ast, GlobalDeclID());
     field->setDeclContext(record_decl);
     field->setDeclName(ident);
     field->setType(ClangUtil::GetQualType(field_clang_type));
@@ -7338,7 +7341,8 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
 
       field_clang_type.GetCompleteType();
 
-      auto *ivar = clang::ObjCIvarDecl::CreateDeserialized(clang_ast, 0);
+      auto *ivar =
+          clang::ObjCIvarDecl::CreateDeserialized(clang_ast, GlobalDeclID());
       ivar->setDeclContext(class_interface_decl);
       ivar->setDeclName(ident);
       ivar->setType(ClangUtil::GetQualType(field_clang_type));
@@ -7504,7 +7508,8 @@ clang::VarDecl *TypeSystemClang::AddVariableToRecordType(
   if (!name.empty())
     ident = &ast->getASTContext().Idents.get(name);
 
-  var_decl = clang::VarDecl::CreateDeserialized(ast->getASTContext(), 0);
+  var_decl =
+      clang::VarDecl::CreateDeserialized(ast->getASTContext(), GlobalDeclID());
   var_decl->setDeclContext(record_decl);
   var_decl->setDeclName(ident);
   var_decl->setType(ClangUtil::GetQualType(var_type));
@@ -7605,8 +7610,8 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
                                     : clang::ExplicitSpecKind::ResolvedFalse);
 
   if (name.starts_with("~")) {
-    cxx_dtor_decl =
-        clang::CXXDestructorDecl::CreateDeserialized(getASTContext(), 0);
+    cxx_dtor_decl = clang::CXXDestructorDecl::CreateDeserialized(
+        getASTContext(), GlobalDeclID());
     cxx_dtor_decl->setDeclContext(cxx_record_decl);
     cxx_dtor_decl->setDeclName(
         getASTContext().DeclarationNames.getCXXDestructorName(
@@ -7618,7 +7623,7 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     cxx_method_decl = cxx_dtor_decl;
   } else if (decl_name == cxx_record_decl->getDeclName()) {
     cxx_ctor_decl = clang::CXXConstructorDecl::CreateDeserialized(
-        getASTContext(), 0, 0);
+        getASTContext(), GlobalDeclID(), 0);
     cxx_ctor_decl->setDeclContext(cxx_record_decl);
     cxx_ctor_decl->setDeclName(
         getASTContext().DeclarationNames.getCXXConstructorName(
@@ -7644,8 +7649,8 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
         if (!TypeSystemClang::CheckOverloadedOperatorKindParameterCount(
                 is_method, op_kind, num_params))
           return nullptr;
-        cxx_method_decl =
-            clang::CXXMethodDecl::CreateDeserialized(getASTContext(), 0);
+        cxx_method_decl = clang::CXXMethodDecl::CreateDeserialized(
+            getASTContext(), GlobalDeclID());
         cxx_method_decl->setDeclContext(cxx_record_decl);
         cxx_method_decl->setDeclName(
             getASTContext().DeclarationNames.getCXXOperatorName(op_kind));
@@ -7656,7 +7661,8 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
       } else if (num_params == 0) {
         // Conversion operators don't take params...
         auto *cxx_conversion_decl =
-            clang::CXXConversionDecl::CreateDeserialized(getASTContext(), 0);
+            clang::CXXConversionDecl::CreateDeserialized(getASTContext(),
+                                                         GlobalDeclID());
         cxx_conversion_decl->setDeclContext(cxx_record_decl);
         cxx_conversion_decl->setDeclName(
             getASTContext().DeclarationNames.getCXXConversionFunctionName(
@@ -7671,8 +7677,8 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     }
 
     if (cxx_method_decl == nullptr) {
-      cxx_method_decl =
-          clang::CXXMethodDecl::CreateDeserialized(getASTContext(), 0);
+      cxx_method_decl = clang::CXXMethodDecl::CreateDeserialized(
+          getASTContext(), GlobalDeclID());
       cxx_method_decl->setDeclContext(cxx_record_decl);
       cxx_method_decl->setDeclName(decl_name);
       cxx_method_decl->setType(method_qual_type);
@@ -7855,7 +7861,7 @@ bool TypeSystemClang::AddObjCClassProperty(
         ClangUtil::GetQualType(property_clang_type));
 
   clang::ObjCPropertyDecl *property_decl =
-      clang::ObjCPropertyDecl::CreateDeserialized(clang_ast, 0);
+      clang::ObjCPropertyDecl::CreateDeserialized(clang_ast, GlobalDeclID());
   property_decl->setDeclContext(class_interface_decl);
   property_decl->setDeclName(&clang_ast.Idents.get(property_name));
   property_decl->setType(ivar_decl
@@ -7944,7 +7950,8 @@ bool TypeSystemClang::AddObjCClassProperty(
         clang::ObjCImplementationControl::None;
     const bool HasRelatedResultType = false;
 
-    getter = clang::ObjCMethodDecl::CreateDeserialized(clang_ast, 0);
+    getter =
+        clang::ObjCMethodDecl::CreateDeserialized(clang_ast, GlobalDeclID());
     getter->setDeclName(getter_sel);
     getter->setReturnType(ClangUtil::GetQualType(property_clang_type_to_access));
     getter->setDeclContext(class_interface_decl);
@@ -7986,7 +7993,8 @@ bool TypeSystemClang::AddObjCClassProperty(
         clang::ObjCImplementationControl::None;
     const bool HasRelatedResultType = false;
 
-    setter = clang::ObjCMethodDecl::CreateDeserialized(clang_ast, 0);
+    setter =
+        clang::ObjCMethodDecl::CreateDeserialized(clang_ast, GlobalDeclID());
     setter->setDeclName(setter_sel);
     setter->setReturnType(result_type);
     setter->setDeclContext(class_interface_decl);
@@ -8114,7 +8122,8 @@ clang::ObjCMethodDecl *TypeSystemClang::AddMethodToObjCObjectType(
     return nullptr; // some debug information is corrupt.  We are not going to
                     // deal with it.
 
-  auto *objc_method_decl = clang::ObjCMethodDecl::CreateDeserialized(ast, 0);
+  auto *objc_method_decl =
+      clang::ObjCMethodDecl::CreateDeserialized(ast, GlobalDeclID());
   objc_method_decl->setDeclName(method_selector);
   objc_method_decl->setReturnType(method_function_prototype->getReturnType());
   objc_method_decl->setDeclContext(
@@ -8360,7 +8369,8 @@ clang::EnumConstantDecl *TypeSystemClang::AddEnumerationValueToEnumerationType(
     return nullptr;
 
   clang::EnumConstantDecl *enumerator_decl =
-      clang::EnumConstantDecl::CreateDeserialized(getASTContext(), 0);
+      clang::EnumConstantDecl::CreateDeserialized(getASTContext(),
+                                                  GlobalDeclID());
   enumerator_decl->setDeclContext(enutype->getDecl());
   if (name && name[0])
     enumerator_decl->setDeclName(&getASTContext().Idents.get(name));
