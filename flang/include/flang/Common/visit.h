@@ -40,11 +40,17 @@ inline RT_API_ATTRS RESULT Log2VisitHelper(
       return visitor(std::get<(LOW + N)>(std::forward<VARIANT>(u))...); \
     }
       VISIT_CASE_N(1)
+      [[fallthrough]];
       VISIT_CASE_N(2)
+      [[fallthrough]];
       VISIT_CASE_N(3)
+      [[fallthrough]];
       VISIT_CASE_N(4)
+      [[fallthrough]];
       VISIT_CASE_N(5)
+      [[fallthrough]];
       VISIT_CASE_N(6)
+      [[fallthrough]];
       VISIT_CASE_N(7)
 #undef VISIT_CASE_N
     }
