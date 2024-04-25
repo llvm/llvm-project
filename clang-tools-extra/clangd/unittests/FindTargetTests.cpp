@@ -854,7 +854,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           }
         };
       )cpp";
-  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void foo()");
+  EXPECT_DECLS("MemberExpr", "void foo()");
 
   // Similar to above but base expression involves a function call.
   Code = R"cpp(
@@ -872,7 +872,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           }
         };
       )cpp";
-  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void foo()");
+  EXPECT_DECLS("MemberExpr", "void foo()");
 
   // Similar to above but uses a function pointer.
   Code = R"cpp(
@@ -891,7 +891,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           }
         };
       )cpp";
-  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void foo()");
+  EXPECT_DECLS("MemberExpr", "void foo()");
 
   // Base expression involves a member access into this.
   Code = R"cpp(
@@ -962,7 +962,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           void Foo() { this->[[find]](); }
         };
   )cpp";
-  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void find()");
+  EXPECT_DECLS("MemberExpr", "void find()");
 }
 
 TEST_F(TargetDeclTest, DependentTypes) {
