@@ -13502,16 +13502,18 @@ void Sema::checkNonTrivialCUnion(QualType QT, SourceLocation Loc,
 void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   // If there is no declaration, there was an error parsing it.  Just ignore
   // the initializer.
-  if (!RealDecl || RealDecl->isInvalidDecl()) {
+  if (!RealDecl) {
     CorrectDelayedTyposInExpr(Init, dyn_cast_or_null<VarDecl>(RealDecl));
     return;
   }
 
-  if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(RealDecl)) {
-    // Pure-specifiers are handled in ActOnPureSpecifier.
-    Diag(Method->getLocation(), diag::err_member_function_initialization)
-      << Method->getDeclName() << Init->getSourceRange();
-    Method->setInvalidDecl();
+  if (auto *Method = dyn_cast<CXXMethodDecl>(RealDecl)) {
+    if (!Method->isInvalidDecl()) {
+      // Pure-specifiers are handled in ActOnPureSpecifier.
+      Diag(Method->getLocation(), diag::err_member_function_initialization)
+          << Method->getDeclName() << Init->getSourceRange();
+      Method->setInvalidDecl();
+    }
     return;
   }
 
@@ -13520,6 +13522,15 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     assert(!isa<FieldDecl>(RealDecl) && "field init shouldn't get here");
     Diag(RealDecl->getLocation(), diag::err_illegal_initializer);
     RealDecl->setInvalidDecl();
+    return;
+  }
+
+  if (VDecl->isInvalidDecl()) {
+    CorrectDelayedTyposInExpr(Init, VDecl);
+    ExprResult Recovery =
+        CreateRecoveryExpr(Init->getBeginLoc(), Init->getEndLoc(), {Init});
+    if (Expr *E = Recovery.get())
+      VDecl->setInit(E);
     return;
   }
 
