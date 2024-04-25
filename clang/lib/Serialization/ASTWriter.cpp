@@ -5100,7 +5100,7 @@ void ASTWriter::WriteSpecialDeclRecords(Sema &SemaRef) {
     Stream.EmitRecord(SEMA_DECL_REFS, SemaDeclRefs);
 
   // Write the record containing decls to be checked for deferred diags.
-  SmallVector<serialization::DeclID, 64> DeclsToCheckForDeferredDiags;
+  SmallVector<DeclID, 64> DeclsToCheckForDeferredDiags;
   for (auto *D : SemaRef.DeclsToCheckForDeferredDiags)
     if (wasDeclEmitted(D))
       DeclsToCheckForDeferredDiags.push_back(getDeclID(D));
@@ -6079,7 +6079,7 @@ void ASTWriter::associateDeclWithFile(const Decl *D, DeclID ID) {
   if (!Info)
     Info = std::make_unique<DeclIDInFileInfo>();
 
-  std::pair<unsigned, serialization::DeclID> LocDecl(Offset, ID);
+  std::pair<unsigned, DeclID> LocDecl(Offset, ID);
   LocDeclIDsTy &Decls = Info->DeclIDs;
   Decls.push_back(LocDecl);
 }

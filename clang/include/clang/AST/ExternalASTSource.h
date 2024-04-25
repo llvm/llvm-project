@@ -99,7 +99,7 @@ public:
   /// passes back decl sets as VisibleDeclaration objects.
   ///
   /// The default implementation of this method is a no-op.
-  virtual Decl *GetExternalDecl(Decl::DeclID ID);
+  virtual Decl *GetExternalDecl(DeclID ID);
 
   /// Resolve a selector ID into a selector.
   ///
@@ -579,7 +579,7 @@ using LazyDeclStmtPtr =
 
 /// A lazy pointer to a declaration.
 using LazyDeclPtr =
-    LazyOffsetPtr<Decl, Decl::DeclID, &ExternalASTSource::GetExternalDecl>;
+    LazyOffsetPtr<Decl, DeclID, &ExternalASTSource::GetExternalDecl>;
 
 /// A lazy pointer to a set of CXXCtorInitializers.
 using LazyCXXCtorInitializersPtr =

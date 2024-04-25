@@ -15,6 +15,7 @@
 
 #include "clang/AST/ASTDumperUtils.h"
 #include "clang/AST/AttrIterator.h"
+#include "clang/AST/DeclID.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/SelectorLocationsKind.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -238,9 +239,6 @@ public:
     /// to this group too.
     ModulePrivate
   };
-
-  /// An ID number that refers to a declaration in an AST file.
-  using DeclID = uint32_t;
 
 protected:
   /// The next declaration within the same lexical
