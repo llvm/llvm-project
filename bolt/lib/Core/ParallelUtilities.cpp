@@ -164,8 +164,8 @@ void runOnEachFunction(BinaryContext &BC, SchedulingPolicy SchedPolicy,
   Pool.wait();
 }
 
-static void EnsureAllocatorExists(BinaryContext& BC, unsigned AllocId) {
-    if (!BC.MIB->checkAllocatorExists(AllocId)) {
+static void EnsureAllocatorExists(BinaryContext &BC, unsigned AllocId) {
+  if (!BC.MIB->checkAllocatorExists(AllocId)) {
     MCPlusBuilder::AllocatorIdTy Id =
         BC.MIB->initializeNewAnnotationAllocator();
     (void)Id;
