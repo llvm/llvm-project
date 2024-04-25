@@ -423,8 +423,8 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_UnexposedExpr;
     break;
 
-  case Stmt::OMPArraySectionExprClass:
-    K = CXCursor_OMPArraySectionExpr;
+  case Stmt::ArraySectionExprClass:
+    K = CXCursor_ArraySectionExpr;
     break;
 
   case Stmt::OMPArrayShapingExprClass:

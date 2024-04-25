@@ -973,8 +973,8 @@ enum PredefinedTypeIDs {
   /// OpenCL reserve_id type.
   PREDEF_TYPE_RESERVE_ID_ID = 41,
 
-  /// The placeholder type for OpenMP array section.
-  PREDEF_TYPE_OMP_ARRAY_SECTION = 42,
+  /// The placeholder type for an array section.
+  PREDEF_TYPE_ARRAY_SECTION = 42,
 
   /// The '__float128' type
   PREDEF_TYPE_FLOAT128_ID = 43,
@@ -1926,7 +1926,7 @@ enum StmtCode {
   STMT_OMP_TARGET_TEAMS_GENERIC_LOOP_DIRECTIVE,
   STMT_OMP_PARALLEL_GENERIC_LOOP_DIRECTIVE,
   STMT_OMP_TARGET_PARALLEL_GENERIC_LOOP_DIRECTIVE,
-  EXPR_OMP_ARRAY_SECTION,
+  EXPR_ARRAY_SECTION,
   EXPR_OMP_ARRAY_SHAPING,
   EXPR_OMP_ITERATOR,
 

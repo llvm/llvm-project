@@ -74,12 +74,12 @@ void use() {
   for (int i = 0; i < 10; ++i) {
     // FIXME: Once we have a new array-section type to represent OpenACC as
     // well, change this error message.
-    // expected-error@+2{{OpenMP array section is not allowed here}}
+    // expected-error@+2{{OpenACC sub-array is not allowed here}}
     // expected-warning@+1{{OpenACC construct 'cache' not yet implemented, pragma ignored}}
     #pragma acc cache(Arrs.MemArr[3:4].array[1:4])
   }
   for (int i = 0; i < 10; ++i) {
-    // expected-error@+2{{OpenMP array section is not allowed here}}
+    // expected-error@+2{{OpenACC sub-array is not allowed here}}
     // expected-warning@+1{{OpenACC construct 'cache' not yet implemented, pragma ignored}}
     #pragma acc cache(Arrs.MemArr[3:4].array[4])
   }
