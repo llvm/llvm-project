@@ -1,5 +1,22 @@
-#ifndef LLVM_FRONTEND_OPENMP_COMPOUNDSPLITTERT_H
-#define LLVM_FRONTEND_OPENMP_COMPOUNDSPLITTERT_H
+//===- ConstructDecompositionT.h -- Decomposing compound constructs -------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+// Given a compound construct with a set of clauses, generate the list of
+// constituent leaf constructs, each with a list of clauses that apply to it.
+//
+// Note: Clauses that are not originally present, but that are implied by the
+// OpenMP spec are materialized, and are present in the output.
+//
+// Note: Composite constructs will also be broken up into leaf constructs.
+// If composite constructs require processing as a whole, the lists of clauses
+// for each leaf constituent should be concatenated.
+//===----------------------------------------------------------------------===//
+#ifndef LLVM_FRONTEND_OPENMP_CONSTRUCTDECOMPOSITIONT_H
+#define LLVM_FRONTEND_OPENMP_CONSTRUCTDECOMPOSITIONT_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -982,4 +999,4 @@ template <typename C, typename H> bool ConstructDecompositionT<C, H>::split() {
 
 } // namespace tomp
 
-#endif // LLVM_FRONTEND_OPENMP_COMPOUNDSPLITTERT_H
+#endif // LLVM_FRONTEND_OPENMP_CONSTRUCTDECOMPOSITIONT_H
