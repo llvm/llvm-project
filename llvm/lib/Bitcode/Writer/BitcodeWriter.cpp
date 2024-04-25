@@ -941,9 +941,9 @@ void ModuleBitcodeWriter::writeAttributeGroupTable() {
         assert(Attr.isConstantRangeListAttribute());
         Record.push_back(8);
         Record.push_back(getAttrKindEncoding(Attr.getKindAsEnum()));
-        ConstantRangeList CRL = Attr.getValueAsConstantRangeList();
-        Record.push_back(CRL.size());
-        for (auto &CR : CRL) {
+        ArrayRef<ConstantRange> Val = Attr.getValueAsConstantRangeList();
+        Record.push_back(Val.size());
+        for (auto &CR : Val) {
           emitSignedInt64(Record, CR.getLower().getSExtValue());
           emitSignedInt64(Record, CR.getUpper().getSExtValue());
         }

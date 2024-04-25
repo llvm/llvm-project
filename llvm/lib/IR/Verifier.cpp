@@ -2034,8 +2034,7 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
   }
 
   if (Attrs.hasAttribute(Attribute::Initializes)) {
-    auto Inits = Attrs.getAttribute(Attribute::Initializes)
-                     .getValueAsConstantRangeList();
+    auto Inits = Attrs.getAttribute(Attribute::Initializes).getInitializes();
     Check(!Inits.empty(), "Attribute 'initializes' does not support empty list",
           V);
 

@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/Support/Debug.h"
 #include <cstddef>
 #include <cstdint>
 
@@ -30,6 +31,14 @@ class [[nodiscard]] ConstantRangeList {
   SmallVector<ConstantRange, 2> Ranges;
 
 public:
+  ConstantRangeList() = default;
+  ConstantRangeList(ArrayRef<ConstantRange> RangesRef) {
+    for (const ConstantRange &R : RangesRef) {
+      assert(R.getBitWidth() == getBitWidth());
+      Ranges.push_back(R);
+    }
+  }
+  ArrayRef<ConstantRange> rangesRef() const { return Ranges; }
   SmallVectorImpl<ConstantRange>::iterator begin() { return Ranges.begin(); }
   SmallVectorImpl<ConstantRange>::iterator end() { return Ranges.end(); }
   SmallVectorImpl<ConstantRange>::const_iterator begin() const {
@@ -56,14 +65,6 @@ public:
   void insert(const ConstantRange &NewRange);
   void insert(int64_t Lower, int64_t Upper) {
     insert(ConstantRange(APInt(64, Lower, /*isSigned=*/true),
-                         APInt(64, Upper, /*isSigned=*/true)));
-  }
-
-  // Append a new Range to Ranges. Caller should make sure
-  // the list is still ordered after appending.
-  void append(const ConstantRange &Range) { Ranges.push_back(Range); }
-  void append(int64_t Lower, int64_t Upper) {
-    append(ConstantRange(APInt(64, Lower, /*isSigned=*/true),
                          APInt(64, Upper, /*isSigned=*/true)));
   }
 

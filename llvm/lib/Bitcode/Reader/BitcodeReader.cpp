@@ -2323,15 +2323,16 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           if (!Attribute::isConstantRangeListAttrKind(Kind))
             return error("Not a constant range list attribute");
 
-          ConstantRangeList CRL;
+          SmallVector<ConstantRange, 2> Val;
           int RangeSize = Record[++i];
           assert(i + 2 * RangeSize < e);
           for (int Idx = 0; Idx < RangeSize; ++Idx) {
             int64_t Start = BitcodeReader::decodeSignRotatedValue(Record[++i]);
             int64_t End = BitcodeReader::decodeSignRotatedValue(Record[++i]);
-            CRL.append(Start, End);
+            Val.push_back(
+                ConstantRange(APInt(64, Start, true), APInt(64, End, true)));
           }
-          B.addConstantRangeListAttr(Kind, CRL);
+          B.addConstantRangeListAttr(Kind, Val);
         } else {
           return error("Invalid attribute group entry");
         }

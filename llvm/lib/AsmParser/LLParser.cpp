@@ -3070,7 +3070,7 @@ bool LLParser::parseInitializesAttr(AttrBuilder &B) {
   if (parseToken(lltok::lparen, "expected '('"))
     return true;
 
-  ConstantRangeList CRL;
+  SmallVector<ConstantRange, 2> RangeList;
   // Parse each constant range.
   do {
     APInt Lower, Upper;
@@ -3087,13 +3087,13 @@ bool LLParser::parseInitializesAttr(AttrBuilder &B) {
     if (parseToken(lltok::rparen, "expected ')'"))
       return true;
 
-    CRL.append(ConstantRange(Lower, Upper));
+    RangeList.push_back(ConstantRange(Lower, Upper));
   } while (EatIfPresent(lltok::comma));
 
   if (parseToken(lltok::rparen, "expected ')'"))
     return true;
 
-  B.addInitializesAttr(CRL);
+  B.addInitializesAttr(ConstantRangeList(RangeList));
   return false;
 }
 
