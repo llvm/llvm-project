@@ -1180,6 +1180,27 @@ define i64 @test61(ptr %foo, i64 %i, i64 %j) {
   ret i64 %sub
 }
 
+declare void @use.ptr(ptr)
+
+define i64 @test_sub_ptradd_multiuse(ptr %p, i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @test_sub_ptradd_multiuse(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[IDX1:%.*]]
+; CHECK-NEXT:    call void @use.ptr(ptr [[P1]])
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[P1_INT:%.*]] = ptrtoint ptr [[P1]] to i64
+; CHECK-NEXT:    [[P2_INT:%.*]] = ptrtoint ptr [[P2]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[P1_INT]], [[P2_INT]]
+; CHECK-NEXT:    ret i64 [[SUB]]
+;
+  %p1 = getelementptr inbounds i8, ptr %p, i64 %idx1
+  call void @use.ptr(ptr %p1)
+  %p2 = getelementptr inbounds i8, ptr %p, i64 %idx2
+  %p1.int = ptrtoint ptr %p1 to i64
+  %p2.int = ptrtoint ptr %p2 to i64
+  %sub = sub i64 %p1.int, %p2.int
+  ret i64 %sub
+}
+
 define i32 @test62(i32 %A) {
 ; CHECK-LABEL: @test62(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[A:%.*]], 1
