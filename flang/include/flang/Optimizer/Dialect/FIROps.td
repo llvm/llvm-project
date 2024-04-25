@@ -3190,4 +3190,61 @@ def fir_CUDADataTransferOp : fir_Op<"cuda_data_transfer", []> {
   }];
 }
 
+def fir_CUDAAllocateOp : fir_Op<"cuda_allocate", [AttrSizedOperandSegments,
+    MemoryEffects<[MemAlloc<DefaultResource>]>]> {
+  let summary = "Perform the device allocation of data of an allocatable";
+
+  let description = [{
+    The fir.cuda_allocate operation performs the allocation on the device
+    of the data of an allocatable. The descriptor passed to the operation
+    is initialized before with the standard flang runtime calls.
+  }];
+
+  let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
+                       Optional<AnyIntegerType>:$stream,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
+                       fir_CUDADataAttributeAttr:$cuda_attr,
+                       UnitAttr:$hasStat);
+
+  let results = (outs AnyIntegerType:$stat);
+
+  let assemblyFormat = [{
+    $box `:` qualified(type($box))
+    ( `source` `(` $source^ `:` qualified(type($source) )`)` )?
+    ( `errmsg` `(` $errmsg^ `:` type($errmsg) `)` )?
+    ( `stream` `(` $stream^ `:` type($stream) `)` )?
+    ( `pinned` `(` $pinned^ `:` type($pinned) `)` )?
+    attr-dict `->` type($stat)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def fir_CUDADeallocateOp : fir_Op<"cuda_deallocate",
+    [MemoryEffects<[MemFree<DefaultResource>]>]> {
+  let summary = "Perform the device deallocation of data of an allocatable";
+
+  let description = [{
+    The fir.cuda_deallocate operation performs the deallocation on the device
+    of the data of an allocatable.
+  }];
+
+  let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
+                       fir_CUDADataAttributeAttr:$cuda_attr,
+                       UnitAttr:$hasStat);
+
+  let results = (outs AnyIntegerType:$stat);
+
+  let assemblyFormat = [{
+    $box `:` qualified(type($box))
+    ( `errmsg` `(` $errmsg^ `:` type($errmsg) `)` )?
+    attr-dict `->` type($stat)
+  }];
+
+  let hasVerifier = 1;
+}
+
 #endif

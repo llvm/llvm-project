@@ -19,7 +19,6 @@
 #include "clang/AST/ExprOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Lex/Token.h"
-#include "clang/Sema/DeclSpec.h"
 #include "clang/Serialization/ASTRecordWriter.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 using namespace clang;
@@ -2083,7 +2082,6 @@ void ASTStmtWriter::VisitUnresolvedMemberExpr(UnresolvedMemberExpr *E) {
 void ASTStmtWriter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
   VisitOverloadExpr(E);
   CurrentPackingBits.addBit(E->requiresADL());
-  CurrentPackingBits.addBit(E->isOverloaded());
   Record.AddDeclRef(E->getNamingClass());
   Code = serialization::EXPR_CXX_UNRESOLVED_LOOKUP;
 }

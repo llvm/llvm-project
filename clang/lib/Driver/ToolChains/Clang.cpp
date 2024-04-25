@@ -54,11 +54,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/LoongArchTargetParser.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cctype>
 
@@ -346,11 +346,14 @@ static bool addExceptionArgs(const ArgList &Args, types::ID InputType,
   bool EH = Args.hasFlag(options::OPT_fexceptions, options::OPT_fno_exceptions,
                          false);
 
-  bool EHa = Args.hasFlag(options::OPT_fasync_exceptions,
-                          options::OPT_fno_async_exceptions, false);
-  if (EHa) {
-    CmdArgs.push_back("-fasync-exceptions");
-    EH = true;
+  // Async exceptions are Windows MSVC only.
+  if (Triple.isWindowsMSVCEnvironment()) {
+    bool EHa = Args.hasFlag(options::OPT_fasync_exceptions,
+                            options::OPT_fno_async_exceptions, false);
+    if (EHa) {
+      CmdArgs.push_back("-fasync-exceptions");
+      EH = true;
+    }
   }
 
   // Obj-C exceptions are enabled by default, regardless of -fexceptions. This
@@ -634,7 +637,9 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
                                            ProfileGenerateArg->getValue()));
     // The default is to use Clang Instrumentation.
     CmdArgs.push_back("-fprofile-instrument=clang");
-    if (TC.getTriple().isWindowsMSVCEnvironment()) {
+    if (TC.getTriple().isWindowsMSVCEnvironment() &&
+        Args.hasFlag(options::OPT_frtlib_defaultlib,
+                     options::OPT_fno_rtlib_defaultlib, true)) {
       // Add dependent lib for clang_rt.profile
       CmdArgs.push_back(Args.MakeArgString(
           "--dependent-lib=" + TC.getCompilerRTBasename(Args, "profile")));
@@ -653,7 +658,9 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     CmdArgs.push_back("-fprofile-instrument=csllvm");
   }
   if (PGOGenArg) {
-    if (TC.getTriple().isWindowsMSVCEnvironment()) {
+    if (TC.getTriple().isWindowsMSVCEnvironment() &&
+        Args.hasFlag(options::OPT_frtlib_defaultlib,
+                     options::OPT_fno_rtlib_defaultlib, true)) {
       // Add dependent lib for clang_rt.profile
       CmdArgs.push_back(Args.MakeArgString(
           "--dependent-lib=" + TC.getCompilerRTBasename(Args, "profile")));
@@ -843,6 +850,16 @@ static bool UseRelaxAll(Compilation &C, const ArgList &Args) {
 
   if (Arg *A = Args.getLastArg(options::OPT_O_Group))
     RelaxDefault = A->getOption().matches(options::OPT_O0);
+
+  // RISC-V requires an indirect jump for offsets larger than 1MiB. This cannot
+  // be done by assembler branch relaxation as it needs a free temporary
+  // register. Because of this, branch relaxation is handled by a MachineIR
+  // pass before the assembler. Forcing assembler branch relaxation for -O0
+  // makes the MachineIR branch relaxation inaccurate and it will miss cases
+  // where an indirect branch is necessary. To avoid this issue we are
+  // sacrificing the compile time improvement of using -mrelax-all for -O0.
+  if (C.getDefaultToolChain().getTriple().isRISCV())
+    RelaxDefault = false;
 
   if (RelaxDefault) {
     RelaxDefault = false;
@@ -4045,6 +4062,24 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   // module fragment.
   CmdArgs.push_back("-fskip-odr-check-in-gmf");
 
+  if (Args.hasArg(options::OPT_modules_reduced_bmi) &&
+      (Input.getType() == driver::types::TY_CXXModule ||
+       Input.getType() == driver::types::TY_PP_CXXModule)) {
+    CmdArgs.push_back("-fexperimental-modules-reduced-bmi");
+
+    if (Args.hasArg(options::OPT_fmodule_output_EQ))
+      Args.AddLastArg(CmdArgs, options::OPT_fmodule_output_EQ);
+    else
+      CmdArgs.push_back(Args.MakeArgString(
+          "-fmodule-output=" +
+          getCXX20NamedModuleOutputPath(Args, Input.getBaseInput())));
+  }
+
+  // Noop if we see '-fexperimental-modules-reduced-bmi' with other translation
+  // units than module units. This is more user friendly to allow end uers to
+  // enable this feature without asking for help from build systems.
+  Args.ClaimAllArgs(options::OPT_modules_reduced_bmi);
+
   // We need to include the case the input file is a module file here.
   // Since the default compilation model for C++ module interface unit will
   // create temporary module file and compile the temporary module file
@@ -4611,6 +4646,21 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
     }
   }
 
+  // Emit DW_TAG_template_alias for template aliases? True by default for SCE.
+  bool UseDebugTemplateAlias =
+      DebuggerTuning == llvm::DebuggerKind::SCE && RequestedDWARFVersion >= 4;
+  if (const auto *DebugTemplateAlias = Args.getLastArg(
+          options::OPT_gtemplate_alias, options::OPT_gno_template_alias)) {
+    // DW_TAG_template_alias is only supported from DWARFv5 but if a user
+    // asks for it we should let them have it (if the target supports it).
+    if (checkDebugInfoOption(DebugTemplateAlias, Args, D, TC)) {
+      const auto &Opt = DebugTemplateAlias->getOption();
+      UseDebugTemplateAlias = Opt.matches(options::OPT_gtemplate_alias);
+    }
+  }
+  if (UseDebugTemplateAlias)
+    CmdArgs.push_back("-gtemplate-alias");
+
   if (const Arg *A = Args.getLastArg(options::OPT_gsrc_hash_EQ)) {
     StringRef v = A->getValue();
     CmdArgs.push_back(Args.MakeArgString("-gsrc-hash=" + v));
@@ -4697,7 +4747,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
                        Output.getFilename());
 }
 
-static void ProcessVSRuntimeLibrary(const ArgList &Args,
+static void ProcessVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
                                     ArgStringList &CmdArgs) {
   unsigned RTOptionID = options::OPT__SLASH_MT;
 
@@ -4760,6 +4810,12 @@ static void ProcessVSRuntimeLibrary(const ArgList &Args,
     // implemented in clang.
     CmdArgs.push_back("--dependent-lib=oldnames");
   }
+
+  // All Arm64EC object files implicitly add softintrin.lib. This is necessary
+  // even if the file doesn't actually refer to any of the routines because
+  // the CRT itself has incomplete dependency markings.
+  if (TC.getTriple().isWindowsArm64EC())
+    CmdArgs.push_back("--dependent-lib=softintrin");
 }
 
 void Clang::ConstructJob(Compilation &C, const JobAction &JA,
@@ -7015,7 +7071,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Triple.isWindowsMSVCEnvironment() && !D.IsCLMode() &&
       Args.hasArg(options::OPT_fms_runtime_lib_EQ))
-    ProcessVSRuntimeLibrary(Args, CmdArgs);
+    ProcessVSRuntimeLibrary(getToolChain(), Args, CmdArgs);
 
   // Handle -fgcc-version, if present.
   VersionTuple GNUCVer;
@@ -8084,7 +8140,8 @@ struct EHFlags {
 ///      The 'a' modifier is unimplemented and fundamentally hard in LLVM IR.
 /// - c: Assume that extern "C" functions are implicitly nounwind.
 /// The default is /EHs-c-, meaning cleanups are disabled.
-static EHFlags parseClangCLEHFlags(const Driver &D, const ArgList &Args) {
+static EHFlags parseClangCLEHFlags(const Driver &D, const ArgList &Args,
+                                   bool isWindowsMSVC) {
   EHFlags EH;
 
   std::vector<std::string> EHArgs =
@@ -8094,8 +8151,15 @@ static EHFlags parseClangCLEHFlags(const Driver &D, const ArgList &Args) {
       switch (EHVal[I]) {
       case 'a':
         EH.Asynch = maybeConsumeDash(EHVal, I);
-        if (EH.Asynch)
+        if (EH.Asynch) {
+          // Async exceptions are Windows MSVC only.
+          if (!isWindowsMSVC) {
+            EH.Asynch = false;
+            D.Diag(clang::diag::warn_drv_unused_argument) << "/EHa" << EHVal;
+            continue;
+          }
           EH.Synch = false;
+        }
         continue;
       case 'c':
         EH.NoUnwindC = maybeConsumeDash(EHVal, I);
@@ -8134,7 +8198,7 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
                            ArgStringList &CmdArgs) const {
   bool isNVPTX = getToolChain().getTriple().isNVPTX();
 
-  ProcessVSRuntimeLibrary(Args, CmdArgs);
+  ProcessVSRuntimeLibrary(getToolChain(), Args, CmdArgs);
 
   if (Arg *ShowIncludes =
           Args.getLastArg(options::OPT__SLASH_showIncludes,
@@ -8159,7 +8223,8 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
 
   const Driver &D = getToolChain().getDriver();
 
-  EHFlags EH = parseClangCLEHFlags(D, Args);
+  bool IsWindowsMSVC = getToolChain().getTriple().isWindowsMSVCEnvironment();
+  EHFlags EH = parseClangCLEHFlags(D, Args, IsWindowsMSVC);
   if (!isNVPTX && (EH.Synch || EH.Asynch)) {
     if (types::isCXX(InputType))
       CmdArgs.push_back("-fcxx-exceptions");

@@ -2090,6 +2090,8 @@ public:
     Walk(":", x.step);
   }
   void Unparse(const OmpReductionClause &x) {
+    Walk(std::get<std::optional<OmpReductionClause::ReductionModifier>>(x.t),
+        ",");
     Walk(std::get<OmpReductionOperator>(x.t));
     Put(":");
     Walk(std::get<OmpObjectList>(x.t));
@@ -2727,6 +2729,8 @@ public:
   WALK_NESTED_ENUM(OmpScheduleClause, ScheduleType) // OMP schedule-type
   WALK_NESTED_ENUM(OmpDeviceClause, DeviceModifier) // OMP device modifier
   WALK_NESTED_ENUM(OmpDeviceTypeClause, Type) // OMP DEVICE_TYPE
+  WALK_NESTED_ENUM(
+      OmpReductionClause, ReductionModifier) // OMP reduction-modifier
   WALK_NESTED_ENUM(OmpIfClause, DirectiveNameModifier) // OMP directive-modifier
   WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
   WALK_NESTED_ENUM(OmpOrderClause, Type) // OMP order-type

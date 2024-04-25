@@ -60,6 +60,7 @@ namespace {
     SmallVectorImpl<WeakTrackingVH> &DeadInsts;
 
     bool Changed = false;
+    bool RunUnswitching = false;
 
   public:
     SimplifyIndvar(Loop *Loop, ScalarEvolution *SE, DominatorTree *DT,
@@ -72,6 +73,7 @@ namespace {
     }
 
     bool hasChanged() const { return Changed; }
+    bool runUnswitching() const { return RunUnswitching; }
 
     /// Iteratively perform simplification on a worklist of users of the
     /// specified induction variable. This is the top-level driver that applies
@@ -233,6 +235,7 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   ICmp->setPredicate(InvariantPredicate);
   ICmp->setOperand(0, NewLHS);
   ICmp->setOperand(1, NewRHS);
+  RunUnswitching = true;
   return true;
 }
 
@@ -765,7 +768,7 @@ bool SimplifyIndvar::eliminateIdentitySCEV(Instruction *UseInst,
       return false;
 
     for (Instruction *I : DropPoisonGeneratingInsts)
-      I->dropPoisonGeneratingFlagsAndMetadata();
+      I->dropPoisonGeneratingAnnotations();
   }
 
   LLVM_DEBUG(dbgs() << "INDVARS: Eliminated identity: " << *UseInst << '\n');
@@ -993,14 +996,18 @@ void IVVisitor::anchor() { }
 
 /// Simplify instructions that use this induction variable
 /// by using ScalarEvolution to analyze the IV's recurrence.
-bool simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE, DominatorTree *DT,
-                       LoopInfo *LI, const TargetTransformInfo *TTI,
-                       SmallVectorImpl<WeakTrackingVH> &Dead,
-                       SCEVExpander &Rewriter, IVVisitor *V) {
+///  Returns a pair where the first entry indicates that the function makes
+///  changes and the second entry indicates that it introduced new opportunities
+///  for loop unswitching.
+std::pair<bool, bool> simplifyUsersOfIV(PHINode *CurrIV, ScalarEvolution *SE,
+                                        DominatorTree *DT, LoopInfo *LI,
+                                        const TargetTransformInfo *TTI,
+                                        SmallVectorImpl<WeakTrackingVH> &Dead,
+                                        SCEVExpander &Rewriter, IVVisitor *V) {
   SimplifyIndvar SIV(LI->getLoopFor(CurrIV->getParent()), SE, DT, LI, TTI,
                      Rewriter, Dead);
   SIV.simplifyUsers(CurrIV, V);
-  return SIV.hasChanged();
+  return {SIV.hasChanged(), SIV.runUnswitching()};
 }
 
 /// Simplify users of induction variables within this
@@ -1014,8 +1021,9 @@ bool simplifyLoopIVs(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
 #endif
   bool Changed = false;
   for (BasicBlock::iterator I = L->getHeader()->begin(); isa<PHINode>(I); ++I) {
-    Changed |=
+    const auto &[C, _] =
         simplifyUsersOfIV(cast<PHINode>(I), SE, DT, LI, TTI, Dead, Rewriter);
+    Changed |= C;
   }
   return Changed;
 }
@@ -1145,6 +1153,7 @@ protected:
 
   Instruction *widenIVUse(NarrowIVDefUse DU, SCEVExpander &Rewriter,
                           PHINode *OrigPhi, PHINode *WidePhi);
+  void truncateIVUse(NarrowIVDefUse DU);
 
   bool widenLoopCompare(NarrowIVDefUse DU);
   bool widenWithVariantUse(NarrowIVDefUse DU);
@@ -1561,15 +1570,18 @@ WidenIV::WidenedRecTy WidenIV::getWideRecurrence(WidenIV::NarrowIVDefUse DU) {
 
 /// This IV user cannot be widened. Replace this use of the original narrow IV
 /// with a truncation of the new wide IV to isolate and eliminate the narrow IV.
-static void truncateIVUse(WidenIV::NarrowIVDefUse DU, DominatorTree *DT,
-                          LoopInfo *LI) {
+void WidenIV::truncateIVUse(NarrowIVDefUse DU) {
   auto *InsertPt = getInsertPointForUses(DU.NarrowUse, DU.NarrowDef, DT, LI);
   if (!InsertPt)
     return;
   LLVM_DEBUG(dbgs() << "INDVARS: Truncate IV " << *DU.WideDef << " for user "
                     << *DU.NarrowUse << "\n");
+  ExtendKind ExtKind = getExtendKind(DU.NarrowDef);
   IRBuilder<> Builder(InsertPt);
-  Value *Trunc = Builder.CreateTrunc(DU.WideDef, DU.NarrowDef->getType());
+  Value *Trunc =
+      Builder.CreateTrunc(DU.WideDef, DU.NarrowDef->getType(), "",
+                          DU.NeverNegative || ExtKind == ExtendKind::Zero,
+                          DU.NeverNegative || ExtKind == ExtendKind::Sign);
   DU.NarrowUse->replaceUsesOfWith(DU.NarrowDef, Trunc);
 }
 
@@ -1818,6 +1830,13 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU,
   assert(ExtendKindMap.count(DU.NarrowDef) &&
          "Should already know the kind of extension used to widen NarrowDef");
 
+  // This narrow use can be widened by a sext if it's non-negative or its narrow
+  // def was widened by a sext. Same for zext.
+  bool CanWidenBySExt =
+      DU.NeverNegative || getExtendKind(DU.NarrowDef) == ExtendKind::Sign;
+  bool CanWidenByZExt =
+      DU.NeverNegative || getExtendKind(DU.NarrowDef) == ExtendKind::Zero;
+
   // Stop traversing the def-use chain at inner-loop phis or post-loop phis.
   if (PHINode *UsePhi = dyn_cast<PHINode>(DU.NarrowUse)) {
     if (LI->getLoopFor(UsePhi->getParent()) != L) {
@@ -1825,7 +1844,7 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU,
       // After SimplifyCFG most loop exit targets have a single predecessor.
       // Otherwise fall back to a truncate within the loop.
       if (UsePhi->getNumOperands() != 1)
-        truncateIVUse(DU, DT, LI);
+        truncateIVUse(DU);
       else {
         // Widening the PHI requires us to insert a trunc.  The logical place
         // for this trunc is in the same BB as the PHI.  This is not possible if
@@ -1839,7 +1858,8 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU,
         WidePhi->addIncoming(DU.WideDef, UsePhi->getIncomingBlock(0));
         BasicBlock *WidePhiBB = WidePhi->getParent();
         IRBuilder<> Builder(WidePhiBB, WidePhiBB->getFirstInsertionPt());
-        Value *Trunc = Builder.CreateTrunc(WidePhi, DU.NarrowDef->getType());
+        Value *Trunc = Builder.CreateTrunc(WidePhi, DU.NarrowDef->getType(), "",
+                                           CanWidenByZExt, CanWidenBySExt);
         UsePhi->replaceAllUsesWith(Trunc);
         DeadInsts.emplace_back(UsePhi);
         LLVM_DEBUG(dbgs() << "INDVARS: Widen lcssa phi " << *UsePhi << " to "
@@ -1849,18 +1869,9 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU,
     }
   }
 
-  // This narrow use can be widened by a sext if it's non-negative or its narrow
-  // def was widened by a sext. Same for zext.
-  auto canWidenBySExt = [&]() {
-    return DU.NeverNegative || getExtendKind(DU.NarrowDef) == ExtendKind::Sign;
-  };
-  auto canWidenByZExt = [&]() {
-    return DU.NeverNegative || getExtendKind(DU.NarrowDef) == ExtendKind::Zero;
-  };
-
   // Our raison d'etre! Eliminate sign and zero extension.
-  if ((match(DU.NarrowUse, m_SExtLike(m_Value())) && canWidenBySExt()) ||
-      (isa<ZExtInst>(DU.NarrowUse) && canWidenByZExt())) {
+  if ((match(DU.NarrowUse, m_SExtLike(m_Value())) && CanWidenBySExt) ||
+      (isa<ZExtInst>(DU.NarrowUse) && CanWidenByZExt)) {
     Value *NewDef = DU.WideDef;
     if (DU.NarrowUse->getType() != WideType) {
       unsigned CastWidth = SE->getTypeSizeInBits(DU.NarrowUse->getType());
@@ -1868,7 +1879,8 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU,
       if (CastWidth < IVWidth) {
         // The cast isn't as wide as the IV, so insert a Trunc.
         IRBuilder<> Builder(DU.NarrowUse);
-        NewDef = Builder.CreateTrunc(DU.WideDef, DU.NarrowUse->getType());
+        NewDef = Builder.CreateTrunc(DU.WideDef, DU.NarrowUse->getType(), "",
+                                     CanWidenByZExt, CanWidenBySExt);
       }
       else {
         // A wider extend was hidden behind a narrower one. This may induce
@@ -1967,7 +1979,7 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU,
   // This user does not evaluate to a recurrence after widening, so don't
   // follow it. Instead insert a Trunc to kill off the original use,
   // eventually isolating the original narrow IV so it can be removed.
-  truncateIVUse(DU, DT, LI);
+  truncateIVUse(DU);
   return nullptr;
 }
 

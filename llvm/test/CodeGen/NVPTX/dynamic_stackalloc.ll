@@ -17,7 +17,6 @@
 ; CHECK-32-NEXT:  alloca.u32  %r[[ALLOCA:[0-9]]], %r[[SIZE3]], 16;
 ; CHECK-32-NEXT:  cvta.local.u32  %r[[ALLOCA]], %r[[ALLOCA]];
 ; CHECK-32-NEXT:  { // callseq 0, 0
-; CHECK-32-NEXT:  .reg .b32 temp_param_reg;
 ; CHECK-32-NEXT:  .param .b32 param0;
 ; CHECK-32-NEXT:  st.param.b32  [param0+0], %r[[ALLOCA]];
 
@@ -27,7 +26,6 @@
 ; CHECK-64-NEXT:  alloca.u64  %rd[[ALLOCA:[0-9]]], %rd[[SIZE3]], 16;
 ; CHECK-64-NEXT:  cvta.local.u64  %rd[[ALLOCA]], %rd[[ALLOCA]];
 ; CHECK-64-NEXT:  { // callseq 0, 0
-; CHECK-64-NEXT:  .reg .b32 temp_param_reg;
 ; CHECK-64-NEXT:  .param .b64 param0;
 ; CHECK-64-NEXT:  st.param.b64  [param0+0], %rd[[ALLOCA]];
 

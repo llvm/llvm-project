@@ -1955,6 +1955,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_PTRMASK;
     case Intrinsic::lrint:
       return TargetOpcode::G_INTRINSIC_LRINT;
+    case Intrinsic::llrint:
+      return TargetOpcode::G_INTRINSIC_LLRINT;
     // FADD/FMUL require checking the FMF, so are handled elsewhere.
     case Intrinsic::vector_reduce_fmin:
       return TargetOpcode::G_VECREDUCE_FMIN;
@@ -2548,6 +2550,10 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   }
   case Intrinsic::reset_fpmode: {
     MIRBuilder.buildInstr(TargetOpcode::G_RESET_FPMODE, {}, {});
+    return true;
+  }
+  case Intrinsic::vscale: {
+    MIRBuilder.buildVScale(getOrCreateVReg(CI), 1);
     return true;
   }
   case Intrinsic::prefetch: {
@@ -3440,6 +3446,7 @@ void IRTranslator::translateDbgInfo(const Instruction &Inst,
 bool IRTranslator::translate(const Instruction &Inst) {
   CurBuilder->setDebugLoc(Inst.getDebugLoc());
   CurBuilder->setPCSections(Inst.getMetadata(LLVMContext::MD_pcsections));
+  CurBuilder->setMMRAMetadata(Inst.getMetadata(LLVMContext::MD_mmra));
 
   if (TLI->fallBackToDAGISel(Inst))
     return false;

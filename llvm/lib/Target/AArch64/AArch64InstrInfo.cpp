@@ -643,7 +643,8 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
   case AArch64::ADDSXri:
   case AArch64::ADDSWri:
     // if NZCV is used, do not fold.
-    if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, true) == -1)
+    if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr,
+                                         true) == -1)
       return 0;
     // fall-through to ADDXri and ADDWri.
     [[fallthrough]];
@@ -671,7 +672,8 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
   case AArch64::SUBSXrr:
   case AArch64::SUBSWrr:
     // if NZCV is used, do not fold.
-    if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, true) == -1)
+    if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr,
+                                         true) == -1)
       return 0;
     // fall-through to SUBXrr and SUBWrr.
     [[fallthrough]];
@@ -1275,7 +1277,8 @@ static unsigned convertToNonFlagSettingOpc(const MachineInstr &MI) {
   // Don't convert all compare instructions, because for some the zero register
   // encoding becomes the sp register.
   bool MIDefinesZeroReg = false;
-  if (MI.definesRegister(AArch64::WZR) || MI.definesRegister(AArch64::XZR))
+  if (MI.definesRegister(AArch64::WZR, /*TRI=*/nullptr) ||
+      MI.definesRegister(AArch64::XZR, /*TRI=*/nullptr))
     MIDefinesZeroReg = true;
 
   switch (MI.getOpcode()) {
@@ -1519,10 +1522,11 @@ bool AArch64InstrInfo::optimizeCompareInstr(
   assert(MRI);
 
   // Replace SUBSWrr with SUBWrr if NZCV is not used.
-  int DeadNZCVIdx = CmpInstr.findRegisterDefOperandIdx(AArch64::NZCV, true);
+  int DeadNZCVIdx =
+      CmpInstr.findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr, true);
   if (DeadNZCVIdx != -1) {
-    if (CmpInstr.definesRegister(AArch64::WZR) ||
-        CmpInstr.definesRegister(AArch64::XZR)) {
+    if (CmpInstr.definesRegister(AArch64::WZR, /*TRI=*/nullptr) ||
+        CmpInstr.definesRegister(AArch64::XZR, /*TRI=*/nullptr)) {
       CmpInstr.eraseFromParent();
       return true;
     }
@@ -1623,7 +1627,7 @@ findCondCodeUseOperandIdxForBranchOrSelect(const MachineInstr &Instr) {
     return -1;
 
   case AArch64::Bcc: {
-    int Idx = Instr.findRegisterUseOperandIdx(AArch64::NZCV);
+    int Idx = Instr.findRegisterUseOperandIdx(AArch64::NZCV, /*TRI=*/nullptr);
     assert(Idx >= 2);
     return Idx - 2;
   }
@@ -1638,7 +1642,7 @@ findCondCodeUseOperandIdxForBranchOrSelect(const MachineInstr &Instr) {
   case AArch64::CSNEGXr:
   case AArch64::FCSELSrrr:
   case AArch64::FCSELDrrr: {
-    int Idx = Instr.findRegisterUseOperandIdx(AArch64::NZCV);
+    int Idx = Instr.findRegisterUseOperandIdx(AArch64::NZCV, /*TRI=*/nullptr);
     assert(Idx >= 1);
     return Idx - 1;
   }
@@ -1846,7 +1850,7 @@ static bool canCmpInstrBeRemoved(MachineInstr &MI, MachineInstr &CmpInstr,
     return false;
 
   // NZCV needs to be defined
-  if (MI.findRegisterDefOperandIdx(AArch64::NZCV, true) != -1)
+  if (MI.findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr, true) != -1)
     return false;
 
   // CmpInstr is 'ADDS %vreg, 0' or 'SUBS %vreg, 0' or 'SUBS %vreg, 1'
@@ -5913,7 +5917,7 @@ static bool canCombine(MachineBasicBlock &MBB, MachineOperand &MO,
   }
 
   if (isCombineInstrSettingFlag(CombineOpc) &&
-      MI->findRegisterDefOperandIdx(AArch64::NZCV, true) == -1)
+      MI->findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr, true) == -1)
     return false;
 
   return true;
@@ -6051,7 +6055,8 @@ static bool getMaddPatterns(MachineInstr &Root,
   if (!isCombineInstrCandidate(Opc))
     return false;
   if (isCombineInstrSettingFlag(Opc)) {
-    int Cmp_NZCV = Root.findRegisterDefOperandIdx(AArch64::NZCV, true);
+    int Cmp_NZCV =
+        Root.findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr, true);
     // When NZCV is live bail out.
     if (Cmp_NZCV == -1)
       return false;
@@ -6546,7 +6551,8 @@ static bool getMiscPatterns(MachineInstr &Root,
   }
 
   if (isCombineInstrSettingFlag(Opc) &&
-      Root.findRegisterDefOperandIdx(AArch64::NZCV, true) == -1)
+      Root.findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr, true) ==
+          -1)
     return false;
 
   if (canCombine(MBB, Root.getOperand(2), AArch64::ADDWrr) ||
@@ -8031,7 +8037,8 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
           DefMI->getOperand(2).getReg() == AArch64::XZR))
       return false;
 
-    if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, true) != -1)
+    if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, /*TRI=*/nullptr,
+                                         true) != -1)
       return false;
 
     AArch64CC::CondCode CC = (AArch64CC::CondCode)DefMI->getOperand(3).getImm();
@@ -9238,7 +9245,8 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
        MI.getOperand(0).getSubReg() == 0) &&
       (!MI.getOperand(0).getReg().isPhysical() ||
        MI.findRegisterDefOperandIdx(MI.getOperand(0).getReg() - AArch64::W0 +
-                                    AArch64::X0) == -1))
+                                        AArch64::X0,
+                                    /*TRI=*/nullptr) == -1))
     return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
 
   if (MI.getOpcode() == AArch64::ORRXrs &&
@@ -9556,15 +9564,8 @@ AArch64InstrInfo::probedStackAlloc(MachineBasicBlock::iterator MBBI,
   MBB.addSuccessor(LoopTestMBB);
 
   // Update liveins.
-  if (MF.getRegInfo().reservedRegsFrozen()) {
-    bool anyChange = false;
-    do {
-      anyChange = recomputeLiveIns(*ExitMBB) ||
-                  recomputeLiveIns(*LoopBodyMBB) ||
-                  recomputeLiveIns(*LoopTestMBB);
-    } while (anyChange);
-    ;
-  }
+  if (MF.getRegInfo().reservedRegsFrozen())
+    fullyRecomputeLiveIns({ExitMBB, LoopBodyMBB, LoopTestMBB});
 
   return ExitMBB->begin();
 }

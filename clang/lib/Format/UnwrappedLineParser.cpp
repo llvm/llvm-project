@@ -534,11 +534,11 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
     case tok::r_brace:
       if (LBraceStack.empty())
         break;
-      if (LBraceStack.back().Tok->is(BK_Unknown)) {
+      if (auto *LBrace = LBraceStack.back().Tok; LBrace->is(BK_Unknown)) {
         bool ProbablyBracedList = false;
         if (Style.Language == FormatStyle::LK_Proto) {
           ProbablyBracedList = NextTok->isOneOf(tok::comma, tok::r_square);
-        } else {
+        } else if (LBrace->isNot(TT_EnumLBrace)) {
           // Using OriginalColumn to distinguish between ObjC methods and
           // binary operators is a bit hacky.
           bool NextIsObjCMethod = NextTok->isOneOf(tok::plus, tok::minus) &&
@@ -552,7 +552,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
 
           // If we already marked the opening brace as braced list, the closing
           // must also be part of it.
-          ProbablyBracedList = LBraceStack.back().Tok->is(TT_BracedListLBrace);
+          ProbablyBracedList = LBrace->is(TT_BracedListLBrace);
 
           ProbablyBracedList = ProbablyBracedList ||
                                (Style.isJavaScript() &&
@@ -608,13 +608,9 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
             ProbablyBracedList = true;
           }
         }
-        if (ProbablyBracedList) {
-          Tok->setBlockKind(BK_BracedInit);
-          LBraceStack.back().Tok->setBlockKind(BK_BracedInit);
-        } else {
-          Tok->setBlockKind(BK_Block);
-          LBraceStack.back().Tok->setBlockKind(BK_Block);
-        }
+        const auto BlockKind = ProbablyBracedList ? BK_BracedInit : BK_Block;
+        Tok->setBlockKind(BlockKind);
+        LBrace->setBlockKind(BlockKind);
       }
       LBraceStack.pop_back();
       break;
@@ -819,8 +815,11 @@ FormatToken *UnwrappedLineParser::parseBlock(bool MustBeDeclaration,
     return IfLBrace;
   }
 
-  if (FormatTok->is(tok::r_brace) && Tok->is(TT_NamespaceLBrace))
-    FormatTok->setFinalizedType(TT_NamespaceRBrace);
+  if (FormatTok->is(tok::r_brace)) {
+    FormatTok->setBlockKind(BK_Block);
+    if (Tok->is(TT_NamespaceLBrace))
+      FormatTok->setFinalizedType(TT_NamespaceRBrace);
+  }
 
   const bool IsFunctionRBrace =
       FormatTok->is(tok::r_brace) && Tok->is(TT_FunctionLBrace);
@@ -2415,6 +2414,7 @@ bool UnwrappedLineParser::tryToParseChildBlock() {
 }
 
 bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
+  assert(!IsAngleBracket || !IsEnum);
   bool HasError = false;
 
   // FIXME: Once we have an expression parser in the UnwrappedLineParser,
@@ -2437,8 +2437,11 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
       }
     }
     if (FormatTok->is(IsAngleBracket ? tok::greater : tok::r_brace)) {
-      if (IsEnum && !Style.AllowShortEnumsOnASingleLine)
-        addUnwrappedLine();
+      if (IsEnum) {
+        FormatTok->setBlockKind(BK_Block);
+        if (!Style.AllowShortEnumsOnASingleLine)
+          addUnwrappedLine();
+      }
       nextToken();
       return !HasError;
     }
@@ -3910,6 +3913,8 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
   const FormatToken &InitialToken = *FormatTok;
   nextToken();
 
+  const FormatToken *ClassName = nullptr;
+  bool IsDerived = false;
   auto IsNonMacroIdentifier = [](const FormatToken *Tok) {
     return Tok->is(tok::identifier) && Tok->TokenText != Tok->TokenText.upper();
   };
@@ -3934,15 +3939,35 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     }
     if (FormatTok->is(tok::l_square) && handleCppAttributes())
       continue;
+    const auto *Previous = FormatTok;
     nextToken();
-    // We can have macros in between 'class' and the class name.
-    if (!IsNonMacroIdentifier(FormatTok->Previous) &&
-        FormatTok->is(tok::l_paren)) {
-      parseParens();
+    switch (FormatTok->Tok.getKind()) {
+    case tok::l_paren:
+      // We can have macros in between 'class' and the class name.
+      if (!IsNonMacroIdentifier(Previous))
+        parseParens();
+      break;
+    case tok::coloncolon:
+      break;
+    default:
+      if (!ClassName && Previous->is(tok::identifier))
+        ClassName = Previous;
     }
   }
 
+  auto IsListInitialization = [&] {
+    if (!ClassName || IsDerived)
+      return false;
+    assert(FormatTok->is(tok::l_brace));
+    const auto *Prev = FormatTok->getPreviousNonComment();
+    assert(Prev);
+    return Prev != ClassName && Prev->is(tok::identifier) &&
+           Prev->isNot(Keywords.kw_final) && tryToParseBracedList();
+  };
+
   if (FormatTok->isOneOf(tok::colon, tok::less)) {
+    if (FormatTok->is(tok::colon))
+      IsDerived = true;
     int AngleNestingLevel = 0;
     do {
       if (FormatTok->is(tok::less))
@@ -3955,6 +3980,8 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
         break;
       }
       if (FormatTok->is(tok::l_brace)) {
+        if (AngleNestingLevel == 0 && IsListInitialization())
+          return;
         calculateBraceTypes(/*ExpectClassBody=*/true);
         if (!tryToParseBracedList())
           break;
@@ -3999,6 +4026,8 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     }
   };
   if (FormatTok->is(tok::l_brace)) {
+    if (IsListInitialization())
+      return;
     auto [OpenBraceType, ClosingBraceType] = GetBraceTypes(InitialToken);
     FormatTok->setFinalizedType(OpenBraceType);
     if (ParseAsExpr) {

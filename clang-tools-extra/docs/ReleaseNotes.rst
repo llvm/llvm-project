@@ -100,6 +100,13 @@ Improvements to clang-tidy
 - Improved :program:`run-clang-tidy.py` script. Added argument `-source-filter`
   to filter source files from the compilation database, via a RegEx. In a
   similar fashion to what `-header-filter` does for header files.
+- Improved :program:`check_clang_tidy.py` script. Added argument `-export-fixes`
+  to aid in clang-tidy and test development.
+- Fixed bug where big values for unsigned check options overflowed into negative values
+  when being printed with ``--dump-config``.
+
+- Fixed ``--verify-config`` option not properly parsing checks when using the 
+  literal operator in the ``.clang-tidy`` config.
 
 New checks
 ^^^^^^^^^^
@@ -109,6 +116,13 @@ New checks
 
   Detects error-prone Curiously Recurring Template Pattern usage, when the CRTP
   can be constructed outside itself and the derived class.
+
+- New :doc:`bugprone-return-const-ref-from-parameter
+  <clang-tidy/checks/bugprone/return-const-ref-from-parameter>` check.
+
+  Detects return statements that return a constant reference parameter as constant
+  reference. This may cause use-after-free errors if the caller uses xvalues as
+  arguments.
 
 - New :doc:`bugprone-suspicious-stringview-data-usage
   <clang-tidy/checks/bugprone/suspicious-stringview-data-usage>` check.
@@ -145,9 +159,17 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/assert-side-effect>` check by detecting side
   effect from calling a method with non-const reference parameters.
 
+- Improved :doc:`bugprone-forwarding-reference-overload
+  <clang-tidy/checks/bugprone/forwarding-reference-overload>`
+  check to ignore deleted constructors which won't hide other overloads.
+
 - Improved :doc:`bugprone-inc-dec-in-conditions
   <clang-tidy/checks/bugprone/inc-dec-in-conditions>` check to ignore code
   within unevaluated contexts, such as ``decltype``.
+
+- Improved :doc:`bugprone-lambda-function-name<clang-tidy/checks/bugprone/lambda-function-name>`
+  check by ignoring ``__func__`` macro in lambda captures, initializers of
+  default parameters and nested function declarations.
 
 - Improved :doc:`bugprone-non-zero-enum-to-bool-conversion
   <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by
@@ -219,6 +241,10 @@ Changes in existing checks
   <clang-tidy/checks/llvm/header-guard>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
 
+- Improved :doc:`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check by avoiding infinite recursion
+  for recursive forwarding reference.
+
 - Improved :doc:`misc-definitions-in-headers
   <clang-tidy/checks/misc/definitions-in-headers>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
@@ -246,6 +272,10 @@ Changes in existing checks
 - Improved :doc:`modernize-use-override
   <clang-tidy/checks/modernize/use-override>` check to also remove any trailing
   whitespace when deleting the ``virtual`` keyword.
+
+- Improved :doc:`modernize-use-starts-ends-with
+  <clang-tidy/checks/modernize/use-starts-ends-with>` check to also handle
+  calls to ``compare`` method.
 
 - Improved :doc:`modernize-use-using <clang-tidy/checks/modernize/use-using>`
   check by adding support for detection of typedefs declared on function level.
@@ -296,6 +326,10 @@ Miscellaneous
 - Fixed incorrect formatting in :program:`clang-apply-replacements` when no
   ``--format`` option is specified. Now :program:`clang-apply-replacements`
   applies formatting only with the option.
+
+- Fixed the :doc:`linuxkernel-must-check-errs
+  <clang-tidy/checks/linuxkernel/must-check-errs>` documentation to consistently
+  use the check's proper name.
 
 Improvements to include-fixer
 -----------------------------

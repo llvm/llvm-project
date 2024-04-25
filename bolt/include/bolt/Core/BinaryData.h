@@ -107,7 +107,6 @@ public:
   std::vector<MCSymbol *> &getSymbols() { return Symbols; }
 
   bool hasName(StringRef Name) const;
-  bool hasNameRegex(StringRef Name) const;
   bool nameStartsWith(StringRef Prefix) const;
 
   bool hasSymbol(const MCSymbol *Symbol) const {

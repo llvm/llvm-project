@@ -43,10 +43,13 @@ Implemented Papers
 - P2819R2 - Add ``tuple`` protocol to ``complex``
 - P2495R3 - Interfacing ``stringstream``\s with ``string_view``
 - P2867R2 - Remove Deprecated ``strstream``\s From C++26
+- P2869R4 - Remove Deprecated ``shared_ptr`` Atomic Access APIs from C++26
 - P2872R3 - Remove ``wstring_convert`` From C++26
 - P3142R0 - Printing Blank Lines with ``println`` (as DR against C++23)
 - P2302R4 - ``std::ranges::contains``
 - P1659R3 - ``std::ranges::starts_with`` and ``std::ranges::ends_with``
+- P3029R1 - Better ``mdspan``'s CTAD
+- P2387R3 - Pipe support for user-defined range adaptors
 
 Improvements and New Features
 -----------------------------
@@ -62,6 +65,9 @@ Improvements and New Features
 
 - The ``_LIBCPP_ENABLE_CXX26_REMOVED_STRSTREAM`` macro has been added to make the declarations in ``<strstream>`` available.
 
+- The ``_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS`` macro has been added to make the declarations in ``<memory>``
+  available.
+
 - The ``_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT`` macro has been added to make the declarations in ``<locale>``
   available.
 
@@ -69,6 +75,14 @@ Improvements and New Features
 
 Deprecations and Removals
 -------------------------
+
+- The C++20 synchronization library (``<barrier>``, ``<latch>``, ``atomic::wait``, etc.) has been deprecated
+  in language modes prior to C++20. If you are using these features prior to C++20, please update to ``-std=c++20``.
+  In LLVM 20, the C++20 synchronization library will be removed entirely in language modes prior to C++20.
+
+- ``_LIBCPP_DISABLE_NODISCARD_EXT`` has been removed. ``[[nodiscard]]`` applications are now unconditional.
+  This decision is based on LEWGs discussion on `P3122 <https://wg21.link/P3122>` and `P3162 <https://wg21.link/P3162>`
+  to not use ``[[nodiscard]]`` in the standard.
 
 - TODO: The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable that was used to enable the safe mode has been deprecated and setting
   it triggers an error; use the ``LIBCXX_HARDENING_MODE`` CMake variable with the value ``extensive`` instead. Similarly,
@@ -88,7 +102,7 @@ Deprecations and Removals
 - The ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS`` and ``_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_VOID_SPECIALIZATION``
   macros have been removed in LLVM 19.
 
-- TODO: The ``_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES`` and ``_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES`` macros have
+- The ``_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES`` and ``_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES`` macros have
   been removed in LLVM 19. C++17 and C++20 removed features can still be re-enabled individually.
 
 - The ``_LIBCPP_INLINE_VISIBILITY`` and ``_VSTD`` macros have been removed in LLVM 19.
@@ -131,3 +145,6 @@ Build System Changes
 
 - The ``LIBCXX_EXECUTOR`` and ``LIBCXXABI_EXECUTOR`` CMake variables have been removed. Please
   set ``LIBCXX_TEST_PARAMS`` to ``executor=<...>`` instead.
+
+- The Cmake variable ``LIBCXX_ENABLE_CLANG_TIDY`` has been removed. The build system has been changed
+  to automatically detect the presence of ``clang-tidy`` and the required ``Clang`` libraries.
