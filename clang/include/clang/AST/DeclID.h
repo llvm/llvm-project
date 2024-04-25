@@ -16,6 +16,7 @@
 #ifndef LLVM_CLANG_AST_DECLID_H
 #define LLVM_CLANG_AST_DECLID_H
 
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/iterator.h"
 
 namespace clang {
@@ -88,90 +89,139 @@ enum PredefinedDeclIDs {
 /// \c PredefinedDeclIDs type and the PREDEF_DECL_*_ID constants.
 const unsigned int NUM_PREDEF_DECL_IDS = 18;
 
-/// An ID number that refers to a declaration in an AST file.
-///
-/// The ID numbers of declarations are consecutive (in order of
-/// discovery), with values below NUM_PREDEF_DECL_IDS being reserved.
-/// At the start of a chain of precompiled headers, declaration ID 1 is
-/// used for the translation unit declaration.
-using DeclID = uint32_t;
+/// GlobalDeclID means DeclID in the current ASTContext and LocalDeclID means
+/// DeclID specific to a certain ModuleFile. Specially, in ASTWriter, the
+/// LocalDeclID to the ModuleFile been writting is equal to the GlobalDeclID.
+/// Outside the serializer, all the DeclID been used should be GlobalDeclID.
+/// We can translate a LocalDeclID to the GlobalDeclID by
+/// `ASTReader::getGlobalDeclID()`.
 
-class LocalDeclID {
+class DeclIDBase {
 public:
-  explicit LocalDeclID(DeclID ID) : ID(ID) {}
+  /// An ID number that refers to a declaration in an AST file.
+  ///
+  /// The ID numbers of declarations are consecutive (in order of
+  /// discovery), with values below NUM_PREDEF_DECL_IDS being reserved.
+  /// At the start of a chain of precompiled headers, declaration ID 1 is
+  /// used for the translation unit declaration.
+  ///
+  /// DeclID should only be used directly in serialization. All other users
+  /// should use LocalDeclID or GlobalDeclID.
+  using DeclID = uint32_t;
 
-  DeclID get() const { return ID; }
+protected:
+  DeclIDBase() : ID(PREDEF_DECL_NULL_ID) {}
+  explicit DeclIDBase(DeclID ID) : ID(ID) {}
 
-private:
-  DeclID ID;
-};
-
-/// Wrapper class for DeclID. This is helpful to not mix the use of LocalDeclID
-/// and GlobalDeclID to improve the type safety.
-class GlobalDeclID {
 public:
-  GlobalDeclID() : ID(PREDEF_DECL_NULL_ID) {}
-  explicit GlobalDeclID(DeclID ID) : ID(ID) {}
-
   DeclID get() const { return ID; }
 
   explicit operator DeclID() const { return ID; }
 
-  friend bool operator==(const GlobalDeclID &LHS, const GlobalDeclID &RHS) {
+  explicit operator PredefinedDeclIDs() const { return (PredefinedDeclIDs)ID; }
+
+  bool isValid() const { return ID != PREDEF_DECL_NULL_ID; }
+
+  bool isInvalid() const { return ID == PREDEF_DECL_NULL_ID; }
+
+  friend bool operator==(const DeclIDBase &LHS, const DeclIDBase &RHS) {
     return LHS.ID == RHS.ID;
   }
-  friend bool operator!=(const GlobalDeclID &LHS, const GlobalDeclID &RHS) {
+  friend bool operator!=(const DeclIDBase &LHS, const DeclIDBase &RHS) {
     return LHS.ID != RHS.ID;
   }
-  // We may sort the global decl ID.
-  friend bool operator<(const GlobalDeclID &LHS, const GlobalDeclID &RHS) {
+  // We may sort the decl ID.
+  friend bool operator<(const DeclIDBase &LHS, const DeclIDBase &RHS) {
     return LHS.ID < RHS.ID;
   }
-  friend bool operator>(const GlobalDeclID &LHS, const GlobalDeclID &RHS) {
+  friend bool operator>(const DeclIDBase &LHS, const DeclIDBase &RHS) {
     return LHS.ID > RHS.ID;
   }
-  friend bool operator<=(const GlobalDeclID &LHS, const GlobalDeclID &RHS) {
+  friend bool operator<=(const DeclIDBase &LHS, const DeclIDBase &RHS) {
     return LHS.ID <= RHS.ID;
   }
-  friend bool operator>=(const GlobalDeclID &LHS, const GlobalDeclID &RHS) {
+  friend bool operator>=(const DeclIDBase &LHS, const DeclIDBase &RHS) {
     return LHS.ID >= RHS.ID;
   }
 
-private:
+protected:
   DeclID ID;
 };
 
-/// A helper iterator adaptor to convert the iterators to `SmallVector<DeclID>`
-/// to the iterators to `SmallVector<GlobalDeclID>`.
-class GlobalDeclIDIterator
-    : public llvm::iterator_adaptor_base<GlobalDeclIDIterator, const DeclID *,
-                                         std::forward_iterator_tag,
-                                         GlobalDeclID> {
+class LocalDeclID : public DeclIDBase {
+  using Base = DeclIDBase;
+
 public:
-  GlobalDeclIDIterator() : iterator_adaptor_base(nullptr) {}
+  LocalDeclID() : Base() {}
+  LocalDeclID(PredefinedDeclIDs ID) : Base(ID) {}
+  explicit LocalDeclID(DeclID ID) : Base(ID) {}
 
-  GlobalDeclIDIterator(const DeclID *ID) : iterator_adaptor_base(ID) {}
+  LocalDeclID &operator++() {
+    ++ID;
+    return *this;
+  }
 
-  value_type operator*() const { return GlobalDeclID(*I); }
+  LocalDeclID operator++(int) {
+    LocalDeclID Ret = *this;
+    ++(*this);
+    return Ret;
+  }
+};
 
-  bool operator==(const GlobalDeclIDIterator &RHS) const { return I == RHS.I; }
+class GlobalDeclID : public DeclIDBase {
+  using Base = DeclIDBase;
+
+public:
+  GlobalDeclID() : Base() {}
+  explicit GlobalDeclID(DeclID ID) : Base(ID) {}
+
+  // For DeclIDIterator<GlobalDeclID> to be able to convert a GlobalDeclID
+  // to a LocalDeclID.
+  explicit operator LocalDeclID() const { return LocalDeclID(this->ID); }
 };
 
 /// A helper iterator adaptor to convert the iterators to
-/// `SmallVector<GlobalDeclID>` to the iterators to `SmallVector<DeclID>`.
+/// `SmallVector<SomeDeclID>` to the iterators to `SmallVector<OtherDeclID>`.
+template <class FromTy, class ToTy>
 class DeclIDIterator
-    : public llvm::iterator_adaptor_base<DeclIDIterator, const GlobalDeclID *,
-                                         std::forward_iterator_tag, DeclID> {
+    : public llvm::iterator_adaptor_base<DeclIDIterator<FromTy, ToTy>,
+                                         const FromTy *,
+                                         std::forward_iterator_tag, ToTy> {
 public:
-  DeclIDIterator() : iterator_adaptor_base(nullptr) {}
+  DeclIDIterator() : DeclIDIterator::iterator_adaptor_base(nullptr) {}
 
-  DeclIDIterator(const GlobalDeclID *ID) : iterator_adaptor_base(ID) {}
+  DeclIDIterator(const FromTy *ID)
+      : DeclIDIterator::iterator_adaptor_base(ID) {}
 
-  value_type operator*() const { return DeclID(*I); }
+  ToTy operator*() const { return ToTy(*this->I); }
 
-  bool operator==(const DeclIDIterator &RHS) const { return I == RHS.I; }
+  bool operator==(const DeclIDIterator &RHS) const { return this->I == RHS.I; }
 };
 
 } // namespace clang
+
+namespace llvm {
+template <> struct DenseMapInfo<clang::GlobalDeclID> {
+  using GlobalDeclID = clang::GlobalDeclID;
+  using DeclID = GlobalDeclID::DeclID;
+
+  static GlobalDeclID getEmptyKey() {
+    return GlobalDeclID(DenseMapInfo<DeclID>::getEmptyKey());
+  }
+
+  static GlobalDeclID getTombstoneKey() {
+    return GlobalDeclID(DenseMapInfo<DeclID>::getTombstoneKey());
+  }
+
+  static unsigned getHashValue(const GlobalDeclID &Key) {
+    return DenseMapInfo<DeclID>::getHashValue(Key.get());
+  }
+
+  static bool isEqual(const GlobalDeclID &L, const GlobalDeclID &R) {
+    return L == R;
+  }
+};
+
+} // namespace llvm
 
 #endif
