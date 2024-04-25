@@ -2331,11 +2331,10 @@ FindAtExitLibFunc(Module &M,
     return nullptr;
   auto *TLI = &GetTLI(*FuncIter);
 
-  LibFunc F = Func;
-  if (!TLI->has(F))
+  if (!TLI->has(Func))
     return nullptr;
 
-  Function *Fn = M.getFunction(TLI->getName(F));
+  Function *Fn = M.getFunction(TLI->getName(Func));
   if (!Fn)
     return nullptr;
 
@@ -2343,20 +2342,11 @@ FindAtExitLibFunc(Module &M,
   TLI = &GetTLI(*Fn);
 
   // Make sure that the function has the correct prototype.
+  LibFunc F;
   if (!TLI->getLibFunc(*Fn, F) || F != Func)
     return nullptr;
 
   return Fn;
-}
-
-static Function *
-FindCXAAtExit(Module &M, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
-  return FindAtExitLibFunc(M, GetTLI, LibFunc_cxa_atexit);
-}
-
-static Function *
-FindAtExit(Module &M, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
-  return FindAtExitLibFunc(M, GetTLI, LibFunc_atexit);
 }
 
 /// Returns whether the given function is an empty C++ destructor or atexit
@@ -2534,10 +2524,10 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
 
     // Try to remove trivial global destructors if they are not removed
     // already.
-    if (Function *CXAAtExitFn = FindCXAAtExit(M, GetTLI))
+    if (Function *CXAAtExitFn = FindAtExitLibFunc(M, GetTLI, LibFunc_cxa_atexit))
       LocalChange |= OptimizeEmptyGlobalAtExitDtors(CXAAtExitFn, true);
 
-    if (Function *AtExitFn = FindAtExit(M, GetTLI))
+    if (Function *AtExitFn = FindAtExitLibFunc(M, GetTLI, LibFunc_atexit))
       LocalChange |= OptimizeEmptyGlobalAtExitDtors(AtExitFn, false);
 
     // Optimize IFuncs whose callee's are statically known.
