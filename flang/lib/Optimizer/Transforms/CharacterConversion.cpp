@@ -102,6 +102,9 @@ public:
 class CharacterConversion
     : public fir::impl::CharacterConversionBase<CharacterConversion> {
 public:
+  using fir::impl::CharacterConversionBase<
+      CharacterConversion>::CharacterConversionBase;
+
   void runOnOperation() override {
     CharacterConversionOptions clOpts{useRuntimeCalls.getValue()};
     if (clOpts.runtimeName.empty()) {
@@ -130,7 +133,3 @@ public:
   }
 };
 } // end anonymous namespace
-
-std::unique_ptr<mlir::Pass> fir::createCharacterConversionPass() {
-  return std::make_unique<CharacterConversion>();
-}
