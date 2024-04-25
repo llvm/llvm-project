@@ -2,7 +2,7 @@ resources:
   repositories:
   - repository: pipelines_repo
     type: github
-    endpoint: External-CI-Token
+    endpoint: ROCm
     name: ROCm/ROCm
 
 variables:
