@@ -1865,7 +1865,7 @@ static void createStandardUtilityFunctions(unsigned numTypeInfos,
 
   // llvm.eh.typeid.for intrinsic
 
-  getDeclaration(&module, llvm::Intrinsic::eh_typeid_for);
+  getDeclaration(&module, llvm::Intrinsic::eh_typeid_for, builder.getPtrTy());
 }
 
 
