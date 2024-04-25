@@ -143,6 +143,7 @@
     __cpp_lib_math_special_functions                        201603L [C++17]
     __cpp_lib_mdspan                                        202207L [C++23]
     __cpp_lib_memory_resource                               201603L [C++17]
+    __cpp_lib_modules                                       202207L [C++23]
     __cpp_lib_move_iterator_concept                         202207L [C++20]
     __cpp_lib_move_only_function                            202110L [C++23]
     __cpp_lib_node_extract                                  201606L [C++17]
@@ -729,6 +730,10 @@
 
 # ifdef __cpp_lib_memory_resource
 #   error "__cpp_lib_memory_resource should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_modules
+#   error "__cpp_lib_modules should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_move_iterator_concept
@@ -1581,6 +1586,10 @@
 
 # ifdef __cpp_lib_memory_resource
 #   error "__cpp_lib_memory_resource should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_modules
+#   error "__cpp_lib_modules should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_move_iterator_concept
@@ -2595,6 +2604,10 @@
 #   ifdef __cpp_lib_memory_resource
 #     error "__cpp_lib_memory_resource should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR' is not met!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_modules
+#   error "__cpp_lib_modules should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_move_iterator_concept
@@ -3894,6 +3907,10 @@
 #   ifdef __cpp_lib_memory_resource
 #     error "__cpp_lib_memory_resource should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR' is not met!"
 #   endif
+# endif
+
+# ifdef __cpp_lib_modules
+#   error "__cpp_lib_modules should not be defined before c++23"
 # endif
 
 # ifndef __cpp_lib_move_iterator_concept
@@ -5352,6 +5369,13 @@
 #   ifdef __cpp_lib_memory_resource
 #     error "__cpp_lib_memory_resource should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR' is not met!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_modules
+#   error "__cpp_lib_modules should be defined in c++23"
+# endif
+# if __cpp_lib_modules != 202207L
+#   error "__cpp_lib_modules should have the value 202207L in c++23"
 # endif
 
 # ifndef __cpp_lib_move_iterator_concept
@@ -7137,6 +7161,13 @@
 #   ifdef __cpp_lib_memory_resource
 #     error "__cpp_lib_memory_resource should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_PMR' is not met!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_modules
+#   error "__cpp_lib_modules should be defined in c++26"
+# endif
+# if __cpp_lib_modules != 202207L
+#   error "__cpp_lib_modules should have the value 202207L in c++26"
 # endif
 
 # ifndef __cpp_lib_move_iterator_concept
