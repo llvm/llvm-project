@@ -2587,7 +2587,8 @@ bool Sema::IsIntegralPromotion(Expr *From, QualType FromType, QualType ToType) {
 
   // In HLSL an rvalue of integral type can be promoted to an rvalue of a larger
   // integral type.
-  if (Context.getLangOpts().HLSL)
+  if (Context.getLangOpts().HLSL && FromType->isIntegerType() &&
+      ToType->isIntegerType())
     return Context.getTypeSize(FromType) < Context.getTypeSize(ToType);
 
   return false;
@@ -2614,6 +2615,13 @@ bool Sema::IsFloatingPointPromotion(QualType FromType, QualType ToType) {
           (ToBuiltin->getKind() == BuiltinType::LongDouble ||
            ToBuiltin->getKind() == BuiltinType::Float128 ||
            ToBuiltin->getKind() == BuiltinType::Ibm128))
+        return true;
+
+      // In HLSL, `half` promotes to `float` or `double`, regardless of whether
+      // or not native half types are enabled.
+      if (getLangOpts().HLSL && FromBuiltin->getKind() == BuiltinType::Half &&
+          (ToBuiltin->getKind() == BuiltinType::Float ||
+           ToBuiltin->getKind() == BuiltinType::Double))
         return true;
 
       // Half can be promoted to float.
@@ -4393,6 +4401,24 @@ getFixedEnumPromtion(Sema &S, const StandardConversionSequence &SCS) {
   return FixedEnumPromotion::ToPromotedUnderlyingType;
 }
 
+static ImplicitConversionSequence::CompareKind
+HLSLCompareFloatingRank(QualType LHS, QualType RHS) {
+  assert(LHS->isVectorType() == RHS->isVectorType() &&
+         "Either both elements should be vectors or neither should.");
+  if (const auto *VT = LHS->getAs<VectorType>())
+    LHS = VT->getElementType();
+
+  if (const auto *VT = RHS->getAs<VectorType>())
+    RHS = VT->getElementType();
+
+  const auto L = LHS->getAs<BuiltinType>()->getKind();
+  const auto R = RHS->getAs<BuiltinType>()->getKind();
+  if (L == R)
+    return ImplicitConversionSequence::Indistinguishable;
+  return L < R ? ImplicitConversionSequence::Better
+               : ImplicitConversionSequence::Worse;
+}
+
 /// CompareStandardConversionSequences - Compare two standard
 /// conversion sequences to determine whether one is better than the
 /// other or if they are indistinguishable (C++ 13.3.3.2p3).
@@ -4632,6 +4658,21 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
       return SCS1IsCompatibleRVVVectorConversion
                  ? ImplicitConversionSequence::Better
                  : ImplicitConversionSequence::Worse;
+  }
+
+  if (S.getLangOpts().HLSL) {
+    // On a promotion we prefer the lower rank to disambiguate.
+    if ((SCS1.Second == ICK_Floating_Promotion &&
+         SCS2.Second == ICK_Floating_Promotion) ||
+        (SCS1.Element == ICK_Floating_Promotion &&
+         SCS2.Element == ICK_Floating_Promotion))
+      return HLSLCompareFloatingRank(SCS1.getToType(2), SCS2.getToType(2));
+    // On a conversion we prefer the higher rank to disambiguate.
+    if ((SCS1.Second == ICK_Floating_Conversion &&
+         SCS2.Second == ICK_Floating_Conversion) ||
+        (SCS1.Element == ICK_Floating_Conversion &&
+         SCS2.Element == ICK_Floating_Conversion))
+      return HLSLCompareFloatingRank(SCS2.getToType(2), SCS1.getToType(2));
   }
 
   return ImplicitConversionSequence::Indistinguishable;
