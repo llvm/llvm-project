@@ -757,8 +757,11 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
   // IR files bypass the rest of initialization.
   if (Input.getKind().getLanguage() == Language::LLVM_IR) {
-    assert(hasIRSupport() &&
-           "This action does not have IR file support!");
+    if (!hasIRSupport()) {
+      CI.getDiagnostics().Report(diag::err_ast_action_on_llvm_ir)
+          << Input.getFile();
+      return false;
+    }
 
     // Inform the diagnostic client we are processing a source file.
     CI.getDiagnosticClient().BeginSourceFile(CI.getLangOpts(), nullptr);
