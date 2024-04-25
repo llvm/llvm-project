@@ -980,11 +980,132 @@ define float @fneg_ldexp_contract(float %x, i32 %n) {
 define float @fneg_ldexp_metadata(float %x, i32 %n) {
 ; CHECK-LABEL: @fneg_ldexp_metadata(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[NEG:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[N:%.*]]), !arst !0
+; CHECK-NEXT:    [[NEG:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[N:%.*]]), !arst [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret float [[NEG]]
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %n), !arst !0
   %neg = fneg float %ldexp
+  ret float %neg
+}
+
+define float @test_fneg_select_constants(i1 %cond) {
+; CHECK-LABEL: @test_fneg_select_constants(
+; CHECK-NEXT:    [[NEG:%.*]] = select i1 [[COND:%.*]], float -0.000000e+00, float 0.000000e+00
+; CHECK-NEXT:    ret float [[NEG]]
+;
+  %sel1 = select i1 %cond, float 0.0, float -0.0
+  %neg = fneg float %sel1
+  ret float %neg
+}
+
+define <2 x float> @test_fneg_vec(<2 x i1> %cond) {
+; CHECK-LABEL: @test_fneg_vec(
+; CHECK-NEXT:    [[NEG:%.*]] = select <2 x i1> [[COND:%.*]], <2 x float> <float -0.000000e+00, float 0.000000e+00>, <2 x float> <float 0.000000e+00, float -0.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[NEG]]
+;
+  %sel1 = select <2 x i1> %cond, <2 x float> <float 0.0, float -0.0>, <2 x float> <float -0.0, float 0.0>
+  %neg = fneg <2 x float> %sel1
+  ret <2 x float> %neg
+}
+
+define float @test_fneg_select_var_constant(i1 %cond, float %x) {
+; CHECK-LABEL: @test_fneg_select_var_constant(
+; CHECK-NEXT:    [[X_NEG:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = select i1 [[COND:%.*]], float [[X_NEG]], float 0.000000e+00
+; CHECK-NEXT:    ret float [[NEG]]
+;
+  %sel1 = select i1 %cond, float %x, float -0.0
+  %neg = fneg float %sel1
+  ret float %neg
+}
+
+; nsz can be preserved.
+
+define float @test_fneg_select_var_constant_fmf1(i1 %cond, float %x) {
+; CHECK-LABEL: @test_fneg_select_var_constant_fmf1(
+; CHECK-NEXT:    [[X_NEG:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = select nnan ninf nsz i1 [[COND:%.*]], float [[X_NEG]], float -1.000000e+00
+; CHECK-NEXT:    ret float [[NEG]]
+;
+  %sel1 = select nnan ninf nsz i1 %cond, float %x, float 1.0
+  %neg = fneg float %sel1
+  ret float %neg
+}
+
+define float @test_fneg_select_var_constant_fmf2(i1 %cond, float %x) {
+; CHECK-LABEL: @test_fneg_select_var_constant_fmf2(
+; CHECK-NEXT:    [[X_NEG:%.*]] = fneg nnan ninf nsz float [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = select nnan ninf nsz i1 [[COND:%.*]], float [[X_NEG]], float -1.000000e+00
+; CHECK-NEXT:    ret float [[NEG]]
+;
+  %sel1 = select i1 %cond, float %x, float 1.0
+  %neg = fneg nnan ninf nsz float %sel1
+  ret float %neg
+}
+
+define float @test_fneg_select_constant_var(i1 %cond, float %x) {
+; CHECK-LABEL: @test_fneg_select_constant_var(
+; CHECK-NEXT:    [[X_NEG:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = select i1 [[COND:%.*]], float -0.000000e+00, float [[X_NEG]]
+; CHECK-NEXT:    ret float [[NEG]]
+;
+  %sel1 = select i1 %cond, float 0.0, float %x
+  %neg = fneg float %sel1
+  ret float %neg
+}
+
+; Make sure nabs is generated.
+
+define float @test_fneg_select_abs(i1 %cond, float %x) {
+; CHECK-LABEL: @test_fneg_select_abs(
+; CHECK-NEXT:    [[ABSX:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[ABSX_NEG:%.*]] = fneg float [[ABSX]]
+; CHECK-NEXT:    [[NEG:%.*]] = select i1 [[COND:%.*]], float -0.000000e+00, float [[ABSX_NEG]]
+; CHECK-NEXT:    ret float [[NEG]]
+;
+  %absx = call float @llvm.fabs.f32(float %x)
+  %sel1 = select i1 %cond, float 0.0, float %absx
+  %neg = fneg float %sel1
+  ret float %neg
+}
+
+define float @test_fneg_fabs_select(i1 %cond, float %x) {
+; CHECK-LABEL: @test_fneg_fabs_select(
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[DOTNEG:%.*]] = fneg float [[TMP1]]
+; CHECK-NEXT:    [[NEG:%.*]] = select i1 [[COND:%.*]], float -0.000000e+00, float [[DOTNEG]]
+; CHECK-NEXT:    ret float [[NEG]]
+;
+  %sel1 = select i1 %cond, float 0.0, float %x
+  %abs = call float @llvm.fabs.f32(float %sel1)
+  %neg = fneg float %abs
+  ret float %neg
+}
+
+define float @test_fneg_select_constant_var_multiuse(i1 %cond, float %x) {
+; CHECK-LABEL: @test_fneg_select_constant_var_multiuse(
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND:%.*]], float 0.000000e+00, float [[X:%.*]]
+; CHECK-NEXT:    call void @use(float [[SEL1]])
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[SEL1]]
+; CHECK-NEXT:    ret float [[NEG]]
+;
+  %sel1 = select i1 %cond, float 0.0, float %x
+  call void @use(float %sel1)
+  %neg = fneg float %sel1
+  ret float %neg
+}
+
+; Don't break fmax idioms.
+
+define float @test_fneg_select_maxnum(float %x) {
+; CHECK-LABEL: @test_fneg_select_maxnum(
+; CHECK-NEXT:    [[SEL1:%.*]] = call nnan nsz float @llvm.maxnum.f32(float [[X:%.*]], float 1.000000e+00)
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[SEL1]]
+; CHECK-NEXT:    ret float [[NEG]]
+;
+  %cmp1 = fcmp ogt float %x, 1.0
+  %sel1 = select nnan nsz i1 %cmp1, float %x, float 1.0
+  %neg = fneg float %sel1
   ret float %neg
 }
 
