@@ -391,9 +391,6 @@ public:
     llvm_unreachable("getting host associated type in CallerInterface");
   }
 
-  /// Set attributes on MLIR function.
-  void setFuncAttrs(mlir::func::FuncOp) const {}
-
 private:
   /// Check that the input vector is complete.
   bool verifyActualInputs() const;
@@ -444,7 +441,6 @@ public:
   bool hasHostAssociated() const;
   mlir::Type getHostAssociatedTy() const;
   mlir::Value getHostAssociatedTuple() const;
-  void setFuncAttrs(mlir::func::FuncOp) const;
 
 private:
   Fortran::lower::pft::FunctionLikeUnit &funit;

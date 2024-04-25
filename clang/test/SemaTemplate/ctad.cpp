@@ -53,4 +53,4 @@ X x;
 template<class T, class B> struct Y { Y(T); };
 template<class T, class B=void> struct Y ;
 Y y(1);
-};
+}

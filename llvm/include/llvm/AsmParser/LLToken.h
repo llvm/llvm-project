@@ -181,6 +181,7 @@ enum Kind {
   kw_tailcc,
   kw_m68k_rtdcc,
   kw_graalcc,
+  kw_riscv_vector_cc,
 
   // Attributes:
   kw_attributes,
@@ -369,6 +370,9 @@ enum Kind {
   kw_live,
   kw_dsoLocal,
   kw_canAutoHide,
+  kw_importType,
+  kw_definition,
+  kw_declaration,
   kw_function,
   kw_insts,
   kw_funcFlags,

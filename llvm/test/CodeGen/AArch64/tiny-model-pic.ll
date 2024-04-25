@@ -10,22 +10,6 @@
 @ptr = external local_unnamed_addr global ptr, align 8
 
 define dso_preemptable void @foo1() {
-; CHECK-LABEL: foo1:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr x8, :got:src
-; CHECK-NEXT:    ldrb w8, [x8]
-; CHECK-NEXT:    ldr x9, :got:dst
-; CHECK-NEXT:    strb w8, [x9]
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: foo1:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    ldr x8, :got:src
-; CHECK-GLOBISEL-NEXT:    ldrb w8, [x8]
-; CHECK-GLOBISEL-NEXT:    ldr x9, :got:dst
-; CHECK-GLOBISEL-NEXT:    strb w8, [x9]
-; CHECK-GLOBISEL-NEXT:    ret
-;
 ; CHECK-PIC-LABEL: foo1:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    ldr x8, :got:src
@@ -48,20 +32,6 @@ entry:
 }
 
 define dso_preemptable void @foo2() {
-; CHECK-LABEL: foo2:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr x8, :got:ptr
-; CHECK-NEXT:    ldr x9, :got:dst
-; CHECK-NEXT:    str x9, [x8]
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: foo2:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    ldr x8, :got:ptr
-; CHECK-GLOBISEL-NEXT:    ldr x9, :got:dst
-; CHECK-GLOBISEL-NEXT:    str x9, [x8]
-; CHECK-GLOBISEL-NEXT:    ret
-;
 ; CHECK-PIC-LABEL: foo2:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    ldr x8, :got:ptr
@@ -82,24 +52,6 @@ entry:
 
 define dso_preemptable void @foo3() {
 ; FIXME: Needn't adr ptr
-;
-; CHECK-LABEL: foo3:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr x8, :got:src
-; CHECK-NEXT:    ldr x9, :got:ptr
-; CHECK-NEXT:    ldrb w8, [x8]
-; CHECK-NEXT:    ldr x9, [x9]
-; CHECK-NEXT:    strb w8, [x9]
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: foo3:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    ldr x8, :got:src
-; CHECK-GLOBISEL-NEXT:    ldr x9, :got:ptr
-; CHECK-GLOBISEL-NEXT:    ldrb w8, [x8]
-; CHECK-GLOBISEL-NEXT:    ldr x9, [x9]
-; CHECK-GLOBISEL-NEXT:    strb w8, [x9]
-; CHECK-GLOBISEL-NEXT:    ret
 ;
 ; CHECK-PIC-LABEL: foo3:
 ; CHECK-PIC:       // %bb.0: // %entry
@@ -130,22 +82,6 @@ entry:
 @lptr = internal global ptr null, align 8
 
 define dso_preemptable void @bar1() {
-; CHECK-LABEL: bar1:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adr x8, lsrc
-; CHECK-NEXT:    ldrb w8, [x8]
-; CHECK-NEXT:    adr x9, ldst
-; CHECK-NEXT:    strb w8, [x9]
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: bar1:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    adr x8, lsrc
-; CHECK-GLOBISEL-NEXT:    ldrb w8, [x8]
-; CHECK-GLOBISEL-NEXT:    adr x9, ldst
-; CHECK-GLOBISEL-NEXT:    strb w8, [x9]
-; CHECK-GLOBISEL-NEXT:    ret
-;
 ; CHECK-PIC-LABEL: bar1:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    adr x8, lsrc
@@ -168,20 +104,6 @@ entry:
 }
 
 define dso_preemptable void @bar2() {
-; CHECK-LABEL: bar2:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adr x8, lptr
-; CHECK-NEXT:    adr x9, ldst
-; CHECK-NEXT:    str x9, [x8]
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: bar2:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    adr x8, lptr
-; CHECK-GLOBISEL-NEXT:    adr x9, ldst
-; CHECK-GLOBISEL-NEXT:    str x9, [x8]
-; CHECK-GLOBISEL-NEXT:    ret
-;
 ; CHECK-PIC-LABEL: bar2:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    adr x8, lptr
@@ -202,23 +124,6 @@ entry:
 
 define dso_preemptable void @bar3() {
 ; FIXME: Needn't adr lptr
-;
-; CHECK-LABEL: bar3:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adr x8, lsrc
-; CHECK-NEXT:    ldrb w8, [x8]
-; CHECK-NEXT:    ldr x9, lptr
-; CHECK-NEXT:    strb w8, [x9]
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: bar3:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    adr x8, lsrc
-; CHECK-GLOBISEL-NEXT:    adr x9, lptr
-; CHECK-GLOBISEL-NEXT:    ldrb w8, [x8]
-; CHECK-GLOBISEL-NEXT:    ldr x9, [x9]
-; CHECK-GLOBISEL-NEXT:    strb w8, [x9]
-; CHECK-GLOBISEL-NEXT:    ret
 ;
 ; CHECK-PIC-LABEL: bar3:
 ; CHECK-PIC:       // %bb.0: // %entry
@@ -248,22 +153,6 @@ entry:
 @lbdst = internal global [65536 x i8] zeroinitializer, align 4
 
 define dso_preemptable void @baz1() {
-; CHECK-LABEL: baz1:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adr x8, lbsrc
-; CHECK-NEXT:    ldrb w8, [x8]
-; CHECK-NEXT:    adr x9, lbdst
-; CHECK-NEXT:    strb w8, [x9]
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: baz1:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    adr x8, lbsrc
-; CHECK-GLOBISEL-NEXT:    ldrb w8, [x8]
-; CHECK-GLOBISEL-NEXT:    adr x9, lbdst
-; CHECK-GLOBISEL-NEXT:    strb w8, [x9]
-; CHECK-GLOBISEL-NEXT:    ret
-;
 ; CHECK-PIC-LABEL: baz1:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    adr x8, lbsrc
@@ -286,20 +175,6 @@ entry:
 }
 
 define dso_preemptable void @baz2() {
-; CHECK-LABEL: baz2:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adr x8, lptr
-; CHECK-NEXT:    adr x9, lbdst
-; CHECK-NEXT:    str x9, [x8]
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: baz2:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    adr x8, lptr
-; CHECK-GLOBISEL-NEXT:    adr x9, lbdst
-; CHECK-GLOBISEL-NEXT:    str x9, [x8]
-; CHECK-GLOBISEL-NEXT:    ret
-;
 ; CHECK-PIC-LABEL: baz2:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    adr x8, lptr
@@ -320,23 +195,6 @@ entry:
 
 define dso_preemptable void @baz3() {
 ; FIXME: Needn't adr lptr
-;
-; CHECK-LABEL: baz3:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adr x8, lbsrc
-; CHECK-NEXT:    ldrb w8, [x8]
-; CHECK-NEXT:    ldr x9, lptr
-; CHECK-NEXT:    strb w8, [x9]
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: baz3:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    adr x8, lbsrc
-; CHECK-GLOBISEL-NEXT:    adr x9, lptr
-; CHECK-GLOBISEL-NEXT:    ldrb w8, [x8]
-; CHECK-GLOBISEL-NEXT:    ldr x9, [x9]
-; CHECK-GLOBISEL-NEXT:    strb w8, [x9]
-; CHECK-GLOBISEL-NEXT:    ret
 ;
 ; CHECK-PIC-LABEL: baz3:
 ; CHECK-PIC:       // %bb.0: // %entry
@@ -365,16 +223,6 @@ entry:
 declare void @func(...)
 
 define dso_preemptable ptr @externfuncaddr() {
-; CHECK-LABEL: externfuncaddr:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr x0, :got:func
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: externfuncaddr:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    ldr x0, :got:func
-; CHECK-GLOBISEL-NEXT:    ret
-;
 ; CHECK-PIC-LABEL: externfuncaddr:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    ldr x0, :got:func
@@ -389,16 +237,6 @@ entry:
 }
 
 define dso_preemptable ptr @localfuncaddr() {
-; CHECK-LABEL: localfuncaddr:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adr x0, externfuncaddr
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: localfuncaddr:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    adr x0, externfuncaddr
-; CHECK-GLOBISEL-NEXT:    ret
-;
 ; CHECK-PIC-LABEL: localfuncaddr:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    ldr x0, :got:externfuncaddr

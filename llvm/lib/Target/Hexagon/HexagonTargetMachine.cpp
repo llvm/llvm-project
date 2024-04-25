@@ -299,6 +299,9 @@ HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
 
 void HexagonTargetMachine::registerPassBuilderCallbacks(
     PassBuilder &PB, bool PopulateClassToPassNames) {
+#define GET_PASS_REGISTRY "HexagonPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
+
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
         LPM.addPass(HexagonLoopIdiomRecognitionPass());

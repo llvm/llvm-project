@@ -120,6 +120,7 @@ public:
   void convertFromNewDbgValues();
 
   void setIsNewDbgInfoFormat(bool NewVal);
+  void setNewDbgInfoFormatFlag(bool NewVal);
 
 private:
   friend class TargetLibraryInfoImpl;

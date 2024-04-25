@@ -16,6 +16,8 @@
 
 #include "llvm/ADT/ArrayRef.h"
 
+namespace llvm {
+
 // 31 entries have cost 0
 // 756 entries have cost 1
 // 3690 entries have cost 2
@@ -6617,5 +6619,67 @@ static unsigned getPerfectShuffleCost(llvm::ArrayRef<int> M) {
   // And extract the cost from the upper bits. The cost is encoded as Cost-1.
   return (PFEntry >> 30) + 1;
 }
+
+/// Return true for zip1 or zip2 masks of the form:
+///  <0,  8, 1,  9, 2, 10, 3, 11> or
+///  <4, 12, 5, 13, 6, 14, 7, 15>
+inline bool isZIPMask(ArrayRef<int> M, EVT VT, unsigned &WhichResultOut) {
+  unsigned NumElts = VT.getVectorNumElements();
+  if (NumElts % 2 != 0)
+    return false;
+  // Check the first non-undef element for which half to use.
+  unsigned WhichResult = 2;
+  for (unsigned i = 0; i != NumElts / 2; i++) {
+    if (M[i * 2] >= 0) {
+      WhichResult = ((unsigned)M[i * 2] == i ? 0 : 1);
+      break;
+    } else if (M[i * 2 + 1] >= 0) {
+      WhichResult = ((unsigned)M[i * 2 + 1] == NumElts + i ? 0 : 1);
+      break;
+    }
+  }
+  if (WhichResult == 2)
+    return false;
+
+  // Check all elements match.
+  unsigned Idx = WhichResult * NumElts / 2;
+  for (unsigned i = 0; i != NumElts; i += 2) {
+    if ((M[i] >= 0 && (unsigned)M[i] != Idx) ||
+        (M[i + 1] >= 0 && (unsigned)M[i + 1] != Idx + NumElts))
+      return false;
+    Idx += 1;
+  }
+  WhichResultOut = WhichResult;
+  return true;
+}
+
+/// Return true for uzp1 or uzp2 masks of the form:
+///  <0, 2, 4, 6, 8, 10, 12, 14> or
+///  <1, 3, 5, 7, 9, 11, 13, 15>
+inline bool isUZPMask(ArrayRef<int> M, EVT VT, unsigned &WhichResultOut) {
+  unsigned NumElts = VT.getVectorNumElements();
+  // Check the first non-undef element for which half to use.
+  unsigned WhichResult = 2;
+  for (unsigned i = 0; i != NumElts; i++) {
+    if (M[i] >= 0) {
+      WhichResult = ((unsigned)M[i] == i * 2 ? 0 : 1);
+      break;
+    }
+  }
+  if (WhichResult == 2)
+    return false;
+
+  // Check all elements match.
+  for (unsigned i = 0; i != NumElts; ++i) {
+    if (M[i] < 0)
+      continue; // ignore UNDEF indices
+    if ((unsigned)M[i] != 2 * i + WhichResult)
+      return false;
+  }
+  WhichResultOut = WhichResult;
+  return true;
+}
+
+} // namespace llvm
 
 #endif

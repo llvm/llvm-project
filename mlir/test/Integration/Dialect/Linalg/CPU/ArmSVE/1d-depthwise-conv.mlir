@@ -1,12 +1,12 @@
 // DEFINE: %{compile} =  mlir-opt %s \
 // DEFINE:    -transform-interpreter -test-transform-dialect-erase-schedule \
-// DEFINE:    -one-shot-bufferize="bufferize-function-boundaries" -lower-vector-mask -cse -canonicalize -convert-vector-to-scf -arm-sve-legalize-vector-storage \
+// DEFINE:    -one-shot-bufferize="bufferize-function-boundaries" -lower-vector-mask -buffer-deallocation-pipeline -cse -canonicalize -convert-vector-to-scf -arm-sve-legalize-vector-storage \
 // DEFINE:    -convert-vector-to-llvm="enable-arm-sve" -test-lower-to-llvm -o %t
 // DEFINE: %{entry_point} = conv
 // DEFINE: %{run} = %mcr_aarch64_cmd %t -e %{entry_point} -entry-point-result=void --march=aarch64 --mattr="+sve"\
 // DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
 
-// RUN: %{compile} | %{run} | FileCheck %s
+// RUN: rm -f %t && %{compile} && %{run} | FileCheck %s
 
 func.func @conv() {
   // Define input/output tensors
@@ -57,4 +57,4 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-func.func private @printMemrefI32(%ptr : tensor<*xi32>) attributes { llvm.emit_c_interface }
+func.func private @printMemrefI32(%ptr : tensor<*xi32>)

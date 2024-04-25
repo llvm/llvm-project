@@ -6,8 +6,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define <vscale x 4 x i32> @srem_combine_loop(<vscale x 4 x i32> %a) #0 {
 ; CHECK-LABEL: srem_combine_loop:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    mov z2.s, #2 // =0x2
 ; CHECK-NEXT:    asrd z1.s, p0/m, z1.s, #1
 ; CHECK-NEXT:    mls z0.s, p0/m, z1.s, z2.s

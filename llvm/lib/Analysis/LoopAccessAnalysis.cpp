@@ -1917,14 +1917,31 @@ isLoopVariantIndirectAddress(ArrayRef<const Value *> UnderlyingObjects,
   });
 }
 
-// Get the dependence distance, stride, type size in whether i is a write for
+namespace {
+struct DepDistanceStrideAndSizeInfo {
+  const SCEV *Dist;
+  uint64_t StrideA;
+  uint64_t StrideB;
+  uint64_t TypeByteSize;
+  bool AIsWrite;
+  bool BIsWrite;
+
+  DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t StrideA,
+                               uint64_t StrideB, uint64_t TypeByteSize,
+                               bool AIsWrite, bool BIsWrite)
+      : Dist(Dist), StrideA(StrideA), StrideB(StrideB),
+        TypeByteSize(TypeByteSize), AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
+};
+} // namespace
+
+// Get the dependence distance, strides, type size and whether it is a write for
 // the dependence between A and B. Returns a DepType, if we can prove there's
 // no dependence or the analysis fails. Outlined to lambda to limit he scope
 // of various temporary variables, like A/BPtr, StrideA/BPtr and others.
 // Returns either the dependence result, if it could already be determined, or a
-// tuple with (Distance, Stride, TypeSize, AIsWrite, BIsWrite).
+// struct containing (Distance, Stride, TypeSize, AIsWrite, BIsWrite).
 static std::variant<MemoryDepChecker::Dependence::DepType,
-                    std::tuple<const SCEV *, uint64_t, uint64_t, bool, bool>>
+                    DepDistanceStrideAndSizeInfo>
 getDependenceDistanceStrideAndSize(
     const AccessAnalysis::MemAccessInfo &A, Instruction *AInst,
     const AccessAnalysis::MemAccessInfo &B, Instruction *BInst,
@@ -1979,10 +1996,11 @@ getDependenceDistanceStrideAndSize(
                                    InnermostLoop))
     return MemoryDepChecker::Dependence::IndirectUnsafe;
 
-  // Need accesses with constant stride. We don't want to vectorize
-  // "A[B[i]] += ..." and similar code or pointer arithmetic that could wrap
-  // in the address space.
-  if (!StrideAPtr || !StrideBPtr || StrideAPtr != StrideBPtr) {
+  // Need accesses with constant strides and the same direction. We don't want
+  // to vectorize "A[B[i]] += ..." and similar code or pointer arithmetic that
+  // could wrap in the address space.
+  if (!StrideAPtr || !StrideBPtr || (StrideAPtr > 0 && StrideBPtr < 0) ||
+      (StrideAPtr < 0 && StrideBPtr > 0)) {
     LLVM_DEBUG(dbgs() << "Pointer access with non-constant stride\n");
     return MemoryDepChecker::Dependence::Unknown;
   }
@@ -1992,8 +2010,9 @@ getDependenceDistanceStrideAndSize(
       DL.getTypeStoreSizeInBits(ATy) == DL.getTypeStoreSizeInBits(BTy);
   if (!HasSameSize)
     TypeByteSize = 0;
-  uint64_t Stride = std::abs(StrideAPtr);
-  return std::make_tuple(Dist, Stride, TypeByteSize, AIsWrite, BIsWrite);
+  return DepDistanceStrideAndSizeInfo(Dist, std::abs(StrideAPtr),
+                                      std::abs(StrideBPtr), TypeByteSize,
+                                      AIsWrite, BIsWrite);
 }
 
 MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
@@ -2011,67 +2030,119 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   if (std::holds_alternative<Dependence::DepType>(Res))
     return std::get<Dependence::DepType>(Res);
 
-  const auto &[Dist, Stride, TypeByteSize, AIsWrite, BIsWrite] =
-      std::get<std::tuple<const SCEV *, uint64_t, uint64_t, bool, bool>>(Res);
+  const auto &[Dist, StrideA, StrideB, TypeByteSize, AIsWrite, BIsWrite] =
+      std::get<DepDistanceStrideAndSizeInfo>(Res);
   bool HasSameSize = TypeByteSize > 0;
 
-  ScalarEvolution &SE = *PSE.getSE();
-  auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
-  if (!isa<SCEVCouldNotCompute>(Dist) && HasSameSize &&
-      isSafeDependenceDistance(DL, SE, *(PSE.getBackedgeTakenCount()), *Dist,
-                               Stride, TypeByteSize))
-    return Dependence::NoDep;
-
-  const SCEVConstant *C = dyn_cast<SCEVConstant>(Dist);
-  if (!C) {
-    LLVM_DEBUG(dbgs() << "LAA: Dependence because of non-constant distance\n");
-    FoundNonConstantDistanceDependence = true;
+  std::optional<uint64_t> CommonStride =
+      StrideA == StrideB ? std::make_optional(StrideA) : std::nullopt;
+  if (isa<SCEVCouldNotCompute>(Dist)) {
+    // TODO: Relax requirement that there is a common stride to retry with
+    // non-constant distance dependencies.
+    FoundNonConstantDistanceDependence |= !!CommonStride;
+    LLVM_DEBUG(dbgs() << "LAA: Dependence because of uncomputable distance.\n");
     return Dependence::Unknown;
   }
 
-  const APInt &Val = C->getAPInt();
-  int64_t Distance = Val.getSExtValue();
+  ScalarEvolution &SE = *PSE.getSE();
+  auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
+
+  // If the distance between the acecsses is larger than their absolute stride
+  // multiplied by the backedge taken count, the accesses are independet, i.e.
+  // they are far enough appart that accesses won't access the same location
+  // across all loop ierations.
+  if (HasSameSize && CommonStride &&
+      isSafeDependenceDistance(DL, SE, *(PSE.getBackedgeTakenCount()), *Dist,
+                               *CommonStride, TypeByteSize))
+    return Dependence::NoDep;
+
+  const SCEVConstant *C = dyn_cast<SCEVConstant>(Dist);
 
   // Attempt to prove strided accesses independent.
-  if (std::abs(Distance) > 0 && Stride > 1 && HasSameSize &&
-      areStridedAccessesIndependent(std::abs(Distance), Stride, TypeByteSize)) {
-    LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
-    return Dependence::NoDep;
+  if (C) {
+    const APInt &Val = C->getAPInt();
+    int64_t Distance = Val.getSExtValue();
+
+    // If the distance between accesses and their strides are known constants,
+    // check whether the accesses interlace each other.
+    if (std::abs(Distance) > 0 && CommonStride && *CommonStride > 1 &&
+        HasSameSize &&
+        areStridedAccessesIndependent(std::abs(Distance), *CommonStride,
+                                      TypeByteSize)) {
+      LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
+      return Dependence::NoDep;
+    }
   }
 
   // Negative distances are not plausible dependencies.
-  if (Val.isNegative()) {
+  if (SE.isKnownNonPositive(Dist)) {
+    if (SE.isKnownNonNegative(Dist)) {
+      if (HasSameSize) {
+        // Write to the same location with the same size.
+        return Dependence::Forward;
+      } else {
+        LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence difference but "
+                             "different type sizes\n");
+        return Dependence::Unknown;
+      }
+    }
+
     bool IsTrueDataDependence = (AIsWrite && !BIsWrite);
-    // There is no need to update MaxSafeVectorWidthInBits after call to
-    // couldPreventStoreLoadForward, even if it changed MinDepDistBytes,
-    // since a forward dependency will allow vectorization using any width.
-    if (IsTrueDataDependence && EnableForwardingConflictDetection &&
-        (!HasSameSize || couldPreventStoreLoadForward(Val.abs().getZExtValue(),
-                                                      TypeByteSize))) {
-      LLVM_DEBUG(dbgs() << "LAA: Forward but may prevent st->ld forwarding\n");
-      return Dependence::ForwardButPreventsForwarding;
+    // Check if the first access writes to a location that is read in a later
+    // iteration, where the distance between them is not a multiple of a vector
+    // factor and relatively small.
+    //
+    // NOTE: There is no need to update MaxSafeVectorWidthInBits after call to
+    // couldPreventStoreLoadForward, even if it changed MinDepDistBytes, since a
+    // forward dependency will allow vectorization using any width.
+
+    if (IsTrueDataDependence && EnableForwardingConflictDetection) {
+      if (!C) {
+        // TODO: FoundNonConstantDistanceDependence is used as a necessary
+        // condition to consider retrying with runtime checks. Historically, we
+        // did not set it when strides were different but there is no inherent
+        // reason to.
+        FoundNonConstantDistanceDependence |= CommonStride.has_value();
+        return Dependence::Unknown;
+      }
+      if (!HasSameSize ||
+          couldPreventStoreLoadForward(C->getAPInt().abs().getZExtValue(),
+                                       TypeByteSize)) {
+        LLVM_DEBUG(
+            dbgs() << "LAA: Forward but may prevent st->ld forwarding\n");
+        return Dependence::ForwardButPreventsForwarding;
+      }
     }
 
     LLVM_DEBUG(dbgs() << "LAA: Dependence is negative\n");
     return Dependence::Forward;
   }
 
-  // Write to the same location with the same size.
-  if (Val == 0) {
-    if (HasSameSize)
-      return Dependence::Forward;
-    LLVM_DEBUG(
-        dbgs() << "LAA: Zero dependence difference but different type sizes\n");
+  if (!C) {
+    // TODO: FoundNonConstantDistanceDependence is used as a necessary condition
+    // to consider retrying with runtime checks. Historically, we did not set it
+    // when strides were different but there is no inherent reason to.
+    FoundNonConstantDistanceDependence |= CommonStride.has_value();
+    LLVM_DEBUG(dbgs() << "LAA: Dependence because of non-constant distance\n");
     return Dependence::Unknown;
   }
 
-  assert(Val.isStrictlyPositive() && "Expect a positive value");
+  if (!SE.isKnownPositive(Dist))
+    return Dependence::Unknown;
 
   if (!HasSameSize) {
     LLVM_DEBUG(dbgs() << "LAA: ReadWrite-Write positive dependency with "
                          "different type sizes\n");
     return Dependence::Unknown;
   }
+
+  // The logic below currently only supports StrideA ==  StrideB, i.e. there's a
+  // common stride.
+  if (!CommonStride)
+    return Dependence::Unknown;
+
+  const APInt &Val = C->getAPInt();
+  int64_t Distance = Val.getSExtValue();
 
   // Bail out early if passed-in parameters make vectorization not feasible.
   unsigned ForcedFactor = (VectorizerParams::VectorizationFactor ?
@@ -2108,7 +2179,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   // the minimum distance needed is 28, which is greater than distance. It is
   // not safe to do vectorization.
   uint64_t MinDistanceNeeded =
-      TypeByteSize * Stride * (MinNumIter - 1) + TypeByteSize;
+      TypeByteSize * (*CommonStride) * (MinNumIter - 1) + TypeByteSize;
   if (MinDistanceNeeded > static_cast<uint64_t>(Distance)) {
     LLVM_DEBUG(dbgs() << "LAA: Failure because of positive distance "
                       << Distance << '\n');
@@ -2157,7 +2228,7 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
 
   // An update to MinDepDistBytes requires an update to MaxSafeVectorWidthInBits
   // since there is a backwards dependency.
-  uint64_t MaxVF = MinDepDistBytes / (TypeByteSize * Stride);
+  uint64_t MaxVF = MinDepDistBytes / (TypeByteSize * (*CommonStride));
   LLVM_DEBUG(dbgs() << "LAA: Positive distance " << Val.getSExtValue()
                     << " with max VF = " << MaxVF << '\n');
   uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;

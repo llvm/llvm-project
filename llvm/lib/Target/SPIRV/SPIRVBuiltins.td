@@ -41,6 +41,7 @@ def Variable : BuiltinGroup;
 def Atomic : BuiltinGroup;
 def Barrier : BuiltinGroup;
 def Dot : BuiltinGroup;
+def Wave : BuiltinGroup;
 def GetQuery : BuiltinGroup;
 def ImageSizeQuery : BuiltinGroup;
 def ImageMiscQuery : BuiltinGroup;
@@ -1143,6 +1144,7 @@ defm : DemangledGetBuiltin<"get_global_size", OpenCL_std, GetQuery, GlobalSize>;
 defm : DemangledGetBuiltin<"get_group_id", OpenCL_std, GetQuery, WorkgroupId>;
 defm : DemangledGetBuiltin<"get_enqueued_local_size", OpenCL_std, GetQuery, EnqueuedWorkgroupSize>;
 defm : DemangledGetBuiltin<"get_num_groups", OpenCL_std, GetQuery, NumWorkgroups>;
+defm : DemangledGetBuiltin<"__hlsl_wave_get_lane_index", GLSL_std_450, Wave, SubgroupLocalInvocationId>;
 
 //===----------------------------------------------------------------------===//
 // Class defining an image query builtin record used for lowering the OpenCL

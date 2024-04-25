@@ -44,12 +44,6 @@ void test_default_ctor_sfinae() {
     using V = std::variant<NonDefaultConstructible, int>;
     static_assert(!std::is_default_constructible<V>::value, "");
   }
-#if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
-  {
-    using V = std::variant<int &, int>;
-    static_assert(!std::is_default_constructible<V>::value, "");
-  }
-#endif
 }
 
 void test_default_ctor_noexcept() {

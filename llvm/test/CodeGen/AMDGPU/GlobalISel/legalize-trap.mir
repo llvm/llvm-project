@@ -24,7 +24,7 @@ body: |
   bb.0:
     %0:_(s8) = G_CONSTANT i8 0
     %1:_(p1) = G_CONSTANT i64 0
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
 
   bb.1:
     G_STORE %0, %1 :: (store 1, addrspace 1)
@@ -55,7 +55,7 @@ body: |
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     %0:_(s8) = G_CONSTANT i8 0
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.trap)
+    G_TRAP
     %1:_(p1) = G_CONSTANT i64 0
 
   bb.1:

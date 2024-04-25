@@ -203,7 +203,7 @@ public:
     for (const auto &GUIDSummaryLists : *Index)
       // Examine all summaries for this GUID.
       for (auto &Summary : GUIDSummaryLists.second.SummaryList)
-        if (auto FS = dyn_cast<FunctionSummary>(Summary.get()))
+        if (auto FS = dyn_cast<FunctionSummary>(Summary.get())) {
           // For each call in the function summary, see if the call
           // is to a GUID (which means it is for an indirect call,
           // otherwise we would have a Value for it). If so, synthesize
@@ -211,6 +211,15 @@ public:
           for (auto &CallEdge : FS->calls())
             if (!CallEdge.first.haveGVs() || !CallEdge.first.getValue())
               assignValueId(CallEdge.first.getGUID());
+
+          // For each referenced variables in the function summary, see if the
+          // variable is represented by a GUID (as opposed to a symbol to
+          // declarations or definitions in the module). If so, synthesize a
+          // value id.
+          for (auto &RefEdge : FS->refs())
+            if (!RefEdge.haveGVs() || !RefEdge.getValue())
+              assignValueId(RefEdge.getGUID());
+        }
   }
 
 protected:
@@ -1208,6 +1217,8 @@ static uint64_t getEncodedGVSummaryFlags(GlobalValueSummary::GVFlags Flags) {
 
   RawFlags |= (Flags.Visibility << 8); // 2 bits
 
+  RawFlags |= (Flags.ImportType << 10); // 1 bit
+
   return RawFlags;
 }
 
@@ -1640,6 +1651,11 @@ static uint64_t getOptimizationFlags(const Value *V) {
   } else if (const auto *NNI = dyn_cast<PossiblyNonNegInst>(V)) {
     if (NNI->hasNonNeg())
       Flags |= 1 << bitc::PNNI_NON_NEG;
+  } else if (const auto *TI = dyn_cast<TruncInst>(V)) {
+    if (TI->hasNoSignedWrap())
+      Flags |= 1 << bitc::TIO_NO_SIGNED_WRAP;
+    if (TI->hasNoUnsignedWrap())
+      Flags |= 1 << bitc::TIO_NO_UNSIGNED_WRAP;
   }
 
   return Flags;
@@ -4183,7 +4199,7 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
   NameVals.push_back(SpecialRefCnts.second); // worefcnt
 
   for (auto &RI : FS->refs())
-    NameVals.push_back(VE.getValueID(RI.getValue()));
+    NameVals.push_back(getValueId(RI));
 
   const bool UseRelBFRecord =
       WriteRelBFToSummary && !F.hasProfileData() &&

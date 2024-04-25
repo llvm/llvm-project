@@ -16,7 +16,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -109,6 +109,8 @@ public:
   bool hasBitIntType() const override { return true; }
 
   bool hasBFloat16Type() const override { return true; }
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
 
   bool useFP16ConversionIntrinsics() const override {
     return false;
