@@ -23,7 +23,6 @@
 
 #include "variant.h"
 #include "flang/Common/api-attrs.h"
-#include "llvm/Support/Compiler.h"
 #include <type_traits>
 
 namespace Fortran::common {
@@ -41,17 +40,11 @@ inline RT_API_ATTRS RESULT Log2VisitHelper(
       return visitor(std::get<(LOW + N)>(std::forward<VARIANT>(u))...); \
     }
       VISIT_CASE_N(1)
-      LLVM_FALLTHROUGH;
       VISIT_CASE_N(2)
-      LLVM_FALLTHROUGH;
       VISIT_CASE_N(3)
-      LLVM_FALLTHROUGH;
       VISIT_CASE_N(4)
-      LLVM_FALLTHROUGH;
       VISIT_CASE_N(5)
-      LLVM_FALLTHROUGH;
       VISIT_CASE_N(6)
-      LLVM_FALLTHROUGH;
       VISIT_CASE_N(7)
 #undef VISIT_CASE_N
     }
