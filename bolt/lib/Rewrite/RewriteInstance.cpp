@@ -4493,6 +4493,8 @@ void RewriteInstance::updateELFSymbolTable(
   // Symbols for the new symbol table.
   std::vector<ELFSymTy> Symbols;
 
+  bool EmittedColdFileSymbol = false;
+
   auto getNewSectionIndex = [&](uint32_t OldIndex) {
     // For dynamic symbol table, the section index could be wrong on the input,
     // and its value is ignored by the runtime if it's different from
@@ -4551,6 +4553,20 @@ void RewriteInstance::updateELFSymbolTable(
       Symbols.emplace_back(ICFSymbol);
     }
     if (Function.isSplit()) {
+      // Prepend synthetic FILE symbol to prevent local cold fragments from
+      // colliding with existing symbols with the same name.
+      if (!EmittedColdFileSymbol &&
+          FunctionSymbol.getBinding() == ELF::STB_GLOBAL) {
+        ELFSymTy FileSymbol;
+        FileSymbol.st_shndx = ELF::SHN_ABS;
+        FileSymbol.st_name = AddToStrTab(getBOLTFileSymbolName());
+        FileSymbol.st_value = 0;
+        FileSymbol.st_size = 0;
+        FileSymbol.st_other = 0;
+        FileSymbol.setBindingAndType(ELF::STB_LOCAL, ELF::STT_FILE);
+        Symbols.emplace_back(FileSymbol);
+        EmittedColdFileSymbol = true;
+      }
       for (const FunctionFragment &FF :
            Function.getLayout().getSplitFragments()) {
         if (FF.getAddress()) {
