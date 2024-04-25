@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MIRPrinter.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -154,7 +153,6 @@ int llvm::compileModuleWithNewPM(
     MachineFunctionPassManager MFPM;
     MFPM.addPass(PrintMIRPass(*OS));
     FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
-    FPM.addPass(InvalidateAnalysisPass<MachineFunctionAnalysis>());
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
     if (MIR->parseMachineFunctions(*M, MAM))
