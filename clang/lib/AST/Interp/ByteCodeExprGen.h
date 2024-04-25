@@ -283,8 +283,8 @@ private:
 
   bool emitRecordDestruction(const Record *R);
   bool emitDestruction(const Descriptor *Desc);
-  unsigned collectBaseOffset(const RecordType *BaseType,
-                             const RecordType *DerivedType);
+  unsigned collectBaseOffset(const QualType BaseType,
+                             const QualType DerivedType);
 
 protected:
   /// Variable to storage mapping.

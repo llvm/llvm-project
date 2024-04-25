@@ -110,8 +110,8 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->visit(SubExpr))
       return false;
 
-    unsigned DerivedOffset = collectBaseOffset(getRecordTy(CE->getType()),
-                                               getRecordTy(SubExpr->getType()));
+    unsigned DerivedOffset =
+        collectBaseOffset(CE->getType(), SubExpr->getType());
 
     return this->emitGetPtrBasePop(DerivedOffset, CE);
   }
@@ -120,8 +120,8 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->visit(SubExpr))
       return false;
 
-    unsigned DerivedOffset = collectBaseOffset(getRecordTy(SubExpr->getType()),
-                                               getRecordTy(CE->getType()));
+    unsigned DerivedOffset =
+        collectBaseOffset(SubExpr->getType(), CE->getType());
 
     return this->emitGetPtrDerivedPop(DerivedOffset, CE);
   }
@@ -3529,35 +3529,17 @@ void ByteCodeExprGen<Emitter>::emitCleanup() {
 
 template <class Emitter>
 unsigned
-ByteCodeExprGen<Emitter>::collectBaseOffset(const RecordType *BaseType,
-                                            const RecordType *DerivedType) {
-  assert(BaseType);
-  assert(DerivedType);
-  const auto *FinalDecl = cast<CXXRecordDecl>(BaseType->getDecl());
-  const RecordDecl *CurDecl = DerivedType->getDecl();
-  const Record *CurRecord = getRecord(CurDecl);
-  assert(CurDecl && FinalDecl);
+ByteCodeExprGen<Emitter>::collectBaseOffset(const QualType BaseType,
+                                            const QualType DerivedType) {
+  const auto extractRecordDecl = [](QualType Ty) -> const CXXRecordDecl * {
+    if (const auto *PT = dyn_cast<PointerType>(Ty))
+      return PT->getPointeeType()->getAsCXXRecordDecl();
+    return Ty->getAsCXXRecordDecl();
+  };
+  const CXXRecordDecl *BaseDecl = extractRecordDecl(BaseType);
+  const CXXRecordDecl *DerivedDecl = extractRecordDecl(DerivedType);
 
-  unsigned OffsetSum = 0;
-  for (;;) {
-    assert(CurRecord->getNumBases() > 0);
-    // One level up
-    for (const Record::Base &B : CurRecord->bases()) {
-      const auto *BaseDecl = cast<CXXRecordDecl>(B.Decl);
-
-      if (BaseDecl == FinalDecl || BaseDecl->isDerivedFrom(FinalDecl)) {
-        OffsetSum += B.Offset;
-        CurRecord = B.R;
-        CurDecl = BaseDecl;
-        break;
-      }
-    }
-    if (CurDecl == FinalDecl)
-      break;
-  }
-
-  assert(OffsetSum > 0);
-  return OffsetSum;
+  return Ctx.collectBaseOffset(BaseDecl, DerivedDecl);
 }
 
 /// Emit casts from a PrimType to another PrimType.
