@@ -3794,7 +3794,9 @@ private:
           auto needCleanup = fir::getIntIfConstant(cleanup);
           if (needCleanup && *needCleanup)
             temps.push_back(temp);
-          addSymbol(sym, temp, /*forced=*/true);
+          addSymbol(sym,
+                    hlfir::translateToExtendedValue(loc, builder, temp).first,
+                    /*forced=*/true);
           builder.create<fir::CUDADataTransferOp>(loc, addr, temp,
                                                   transferKindAttr);
           ++nbDeviceResidentObject;
