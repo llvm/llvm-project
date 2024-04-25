@@ -561,9 +561,9 @@ namespace cwg244 { // cwg244: 11
     B_ptr->B_alias::~B();
     B_ptr->B_alias::~B_alias();
     B_ptr->cwg244::~B();
-    // expected-error@-1 {{qualified member access refers to a member in namespace 'cwg244'}}
+    // expected-error@-1 {{no member named '~B' in namespace 'cwg244'}}
     B_ptr->cwg244::~B_alias();
-    // expected-error@-1 {{qualified member access refers to a member in namespace 'cwg244'}}
+    // expected-error@-1 {{no member named '~B' in namespace 'cwg244'}}
   }
 
   template<typename T, typename U>
@@ -836,7 +836,7 @@ namespace cwg258 { // cwg258: 2.8
 
 namespace cwg259 { // cwg259: 4
   template<typename T> struct A {};
-  template struct A<int>; // #cwg259-A-int 
+  template struct A<int>; // #cwg259-A-int
   template struct A<int>;
   // expected-error@-1 {{duplicate explicit instantiation of 'A<int>'}}
   //   expected-note@#cwg259-A-int {{previous explicit instantiation is here}}
@@ -997,7 +997,7 @@ namespace cwg275 { // cwg275: no
     // expected-error@-1 {{no function template matches function template specialization 'f'}}
   }
 
-  template <class T> void g(T) {} // #cwg275-g 
+  template <class T> void g(T) {} // #cwg275-g
 
   template <> void N::f(char) {}
   template <> void f(int) {}
@@ -1164,7 +1164,7 @@ namespace cwg285 { // cwg285: yes
 namespace cwg286 { // cwg286: 2.8
   template<class T> struct A {
     class C {
-      template<class T2> struct B {}; // #cwg286-B 
+      template<class T2> struct B {}; // #cwg286-B
     };
   };
 
