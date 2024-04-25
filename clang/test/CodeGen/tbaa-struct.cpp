@@ -197,7 +197,7 @@ void copy12(UnionMember2 *a1, UnionMember2 *a2) {
 // CHECK-OLD: [[TS6]] = !{i64 0, i64 2, [[TAG_CHAR]], i64 2, i64 1, [[TAG_CHAR]], i64 8, i64 8, [[TAG_DOUBLE:!.+]]}
 // CHECK-OLD: [[TAG_DOUBLE]] = !{[[DOUBLE:!.+]], [[DOUBLE]], i64 0}
 // CHECK-OLD  [[DOUBLE]] = !{!"double", [[CHAR]], i64 0}
-// CHECK-OLD: [[TS7]] = !{i64 0, i64 1, [[TAG_CHAR]], i64 1, i64 1, [[TAG_CHAR]], i64 2, i64 1, [[TAG_CHAR]], i64 3, i64 1, [[TAG_CHAR]], i64 4, i64 1, [[TAG_CHAR]], i64 8, i64 8, [[TAG_DOUBLE]], i64 16, i64 1, [[TAG_CHAR]]}
+// CHECK-OLD: [[TS7]] = !{i64 0, i64 1, [[TAG_CHAR]], i64 1, i64 1, [[TAG_CHAR]], i64 2, i64 1, [[TAG_CHAR]], i64 3, i64 2, [[TAG_CHAR]], i64 8, i64 8, [[TAG_DOUBLE]], i64 16, i64 1, [[TAG_CHAR]]}
 // CHECK-OLD: [[TS8]] = !{i64 0, i64 4, [[TAG_CHAR]], i64 8, i64 8, [[TAG_DOUBLE]]}
 // CHECK-OLD: [[TS9]] = !{i64 0, i64 8, [[TAG_CHAR]], i64 8, i64 4, [[TAG_INT]]}
 // CHECK-OLD: [[TS10]] = !{i64 0, i64 4, [[TAG_INT]], i64 8, i64 8, [[TAG_CHAR]]}

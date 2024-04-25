@@ -95,10 +95,10 @@ private:
 template <typename T>
 using Callback = llvm::unique_function<void(llvm::Expected<T>)>;
 
-/// An OutgoingNotification<T> is a function used for outgoing notifications
-/// send to the client.
+/// An OutgoingMessage<T> is a function used for outgoing requests or
+/// notifications to send to the client.
 template <typename T>
-using OutgoingNotification = llvm::unique_function<void(const T &)>;
+using OutgoingMessage = llvm::unique_function<void(const T &)>;
 
 /// A handler used to process the incoming transport messages.
 class MessageHandler {
@@ -147,16 +147,23 @@ public:
                     void (ThisT::*handler)(const Param &)) {
     notificationHandlers[method] = [method, handler,
                                     thisPtr](llvm::json::Value rawParams) {
-      llvm::Expected<Param> param = parse<Param>(rawParams, method, "request");
-      if (!param)
-        return llvm::consumeError(param.takeError());
+      llvm::Expected<Param> param =
+          parse<Param>(rawParams, method, "notification");
+      if (!param) {
+        return llvm::consumeError(
+            llvm::handleErrors(param.takeError(), [](const LSPError &lspError) {
+              Logger::error("JSON parsing error: {0}",
+                            lspError.message.c_str());
+            }));
+      }
       (thisPtr->*handler)(*param);
     };
   }
 
-  /// Create an OutgoingNotification object used for the given method.
+  /// Create an OutgoingMessage function that, when called, sends a notification
+  /// with the given method via the transport.
   template <typename T>
-  OutgoingNotification<T> outgoingNotification(llvm::StringLiteral method) {
+  OutgoingMessage<T> outgoingNotification(llvm::StringLiteral method) {
     return [&, method](const T &params) {
       std::lock_guard<std::mutex> transportLock(transportOutputMutex);
       Logger::info("--> {0}", method);

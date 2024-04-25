@@ -110,7 +110,7 @@ bool ByteCodeStmtGen<Emitter>::emitLambdaStaticInvokerBody(
   // one here, and we don't need one either because the lambda cannot have
   // any captures, as verified above. Emit a null pointer. This is then
   // special-cased when interpreting to not emit any misleading diagnostics.
-  if (!this->emitNullPtr(MD))
+  if (!this->emitNullPtr(nullptr, MD))
     return false;
 
   // Forward all arguments from the static invoker to the lambda call operator.
@@ -675,7 +675,30 @@ bool ByteCodeStmtGen<Emitter>::visitDefaultStmt(const DefaultStmt *S) {
 
 template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitAttributedStmt(const AttributedStmt *S) {
-  // Ignore all attributes.
+
+  for (const Attr *A : S->getAttrs()) {
+    auto *AA = dyn_cast<CXXAssumeAttr>(A);
+    if (!AA)
+      continue;
+
+    assert(isa<NullStmt>(S->getSubStmt()));
+
+    const Expr *Assumption = AA->getAssumption();
+    if (Assumption->isValueDependent())
+      return false;
+
+    if (Assumption->HasSideEffects(this->Ctx.getASTContext()))
+      continue;
+
+    // Evaluate assumption.
+    if (!this->visitBool(Assumption))
+      return false;
+
+    if (!this->emitAssume(Assumption))
+      return false;
+  }
+
+  // Ignore other attributes.
   return this->visitStmt(S->getSubStmt());
 }
 

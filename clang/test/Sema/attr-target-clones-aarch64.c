@@ -27,7 +27,7 @@ int __attribute__((target_clones("rng", "fp16fml+fp", "default"))) redecl4(void)
 int __attribute__((target_clones("dgh+memtag+rpres+ls64_v", "ebf16+dpb+sha1", "default"))) redecl4(void) { return 1; }
 
 int __attribute__((target_version("flagm2"))) redef2(void) { return 1; }
-// expected-error@+2 {{multiversioning attributes cannot be combined}}
+// expected-error@+2 {{multiversioned function redeclarations require identical target attributes}}
 // expected-note@-2 {{previous declaration is here}}
 int __attribute__((target_clones("flagm2", "default"))) redef2(void) { return 1; }
 

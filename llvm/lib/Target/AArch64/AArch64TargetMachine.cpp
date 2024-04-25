@@ -235,6 +235,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64O0PreLegalizerCombinerPass(*PR);
   initializeAArch64PreLegalizerCombinerPass(*PR);
   initializeAArch64PointerAuthPass(*PR);
+  initializeAArch64PostCoalescerPass(*PR);
   initializeAArch64PostLegalizerCombinerPass(*PR);
   initializeAArch64PostLegalizerLoweringPass(*PR);
   initializeAArch64PostSelectOptimizePass(*PR);
@@ -539,6 +540,7 @@ public:
   void addPreEmitPass() override;
   void addPostBBSections() override;
   void addPreEmitPass2() override;
+  bool addRegAssignAndRewriteOptimized() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
@@ -874,6 +876,11 @@ void AArch64PassConfig::addPreEmitPass2() {
   // SVE bundles move prefixes with destructive operations. BLR_RVMARKER pseudo
   // instructions are lowered to bundles as well.
   addPass(createUnpackMachineBundles(nullptr));
+}
+
+bool AArch64PassConfig::addRegAssignAndRewriteOptimized() {
+  addPass(createAArch64PostCoalescerPass());
+  return TargetPassConfig::addRegAssignAndRewriteOptimized();
 }
 
 MachineFunctionInfo *AArch64TargetMachine::createMachineFunctionInfo(

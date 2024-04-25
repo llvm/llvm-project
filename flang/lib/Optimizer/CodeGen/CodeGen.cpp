@@ -92,27 +92,10 @@ static mlir::Block *createBlock(mlir::ConversionPatternRewriter &rewriter,
                               mlir::Region::iterator(insertBefore));
 }
 
-/// Extract constant from a value if it is a result of one of the
-/// ConstantOp operations, otherwise, return std::nullopt.
-static std::optional<int64_t> getIfConstantIntValue(mlir::Value val) {
-  if (!val || !val.dyn_cast<mlir::OpResult>())
-    return {};
-
-  mlir::Operation *defop = val.getDefiningOp();
-
-  if (auto constOp = mlir::dyn_cast<mlir::arith::ConstantIntOp>(defop))
-    return constOp.value();
-  if (auto llConstOp = mlir::dyn_cast<mlir::LLVM::ConstantOp>(defop))
-    if (auto attr = llConstOp.getValue().dyn_cast<mlir::IntegerAttr>())
-      return attr.getValue().getSExtValue();
-
-  return {};
-}
-
 /// Extract constant from a value that must be the result of one of the
 /// ConstantOp operations.
 static int64_t getConstantIntValue(mlir::Value val) {
-  if (auto constVal = getIfConstantIntValue(val))
+  if (auto constVal = fir::getIntIfConstant(val))
     return *constVal;
   fir::emitFatalError(val.getLoc(), "must be a constant");
 }
@@ -664,7 +647,7 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
                << " -> " << toTy;
 
       // Do folding for constant inputs.
-      if (auto constVal = getIfConstantIntValue(op0)) {
+      if (auto constVal = fir::getIntIfConstant(op0)) {
         mlir::Value normVal =
             genConstantIndex(loc, toTy, rewriter, *constVal ? 1 : 0);
         rewriter.replaceOp(convert, normVal);
@@ -2127,9 +2110,8 @@ struct XArrayCoorOpConversion
     const bool baseIsBoxed = coor.getMemref().getType().isa<fir::BaseBoxType>();
     TypePair baseBoxTyPair =
         baseIsBoxed ? getBoxTypePair(coor.getMemref().getType()) : TypePair{};
-    mlir::LLVM::IntegerOverflowFlagsAttr nsw =
-        mlir::LLVM::IntegerOverflowFlagsAttr::get(
-            rewriter.getContext(), mlir::LLVM::IntegerOverflowFlags::nsw);
+    mlir::LLVM::IntegerOverflowFlags nsw =
+        mlir::LLVM::IntegerOverflowFlags::nsw;
 
     // For each dimension of the array, generate the offset calculation.
     for (unsigned i = 0; i < rank; ++i, ++indexOffset, ++shapeOffset,
@@ -2413,9 +2395,8 @@ private:
     auto cpnTy = fir::dyn_cast_ptrOrBoxEleTy(boxObjTy);
     mlir::Type llvmPtrTy = ::getLlvmPtrType(coor.getContext());
     mlir::Type byteTy = ::getI8Type(coor.getContext());
-    mlir::LLVM::IntegerOverflowFlagsAttr nsw =
-        mlir::LLVM::IntegerOverflowFlagsAttr::get(
-            rewriter.getContext(), mlir::LLVM::IntegerOverflowFlags::nsw);
+    mlir::LLVM::IntegerOverflowFlags nsw =
+        mlir::LLVM::IntegerOverflowFlags::nsw;
 
     for (unsigned i = 1, last = operands.size(); i < last; ++i) {
       if (auto arrTy = cpnTy.dyn_cast<fir::SequenceType>()) {

@@ -366,4 +366,11 @@ def warn_profile_data_misexpect : Warning<
 def err_extract_api_ignores_file_not_found :
   Error<"file '%0' specified by '--extract-api-ignores=' not found">, DefaultFatal;
 
+def warn_missing_symbol_graph_dir : Warning<
+  "Missing symbol graph output directory, defaulting to working directory">,
+  InGroup<ExtractAPIMisuse>;
+
+def err_ast_action_on_llvm_ir : Error<
+  "cannot apply AST actions to LLVM IR file '%0'">,
+  DefaultFatal;
 }

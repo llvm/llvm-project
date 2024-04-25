@@ -6,6 +6,7 @@
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_skylib//lib:selects.bzl", "selects")
+load(":libc_configure_options.bzl", "LIBC_CONFIGURE_OPTIONS")
 load(":libc_namespace.bzl", "LIBC_NAMESPACE")
 load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_X86_64")
 
@@ -21,13 +22,14 @@ def libc_common_copts():
         "-DLIBC_NAMESPACE=" + LIBC_NAMESPACE,
     ]
 
-def _libc_library(name, hidden, copts = [], deps = [], **kwargs):
+def _libc_library(name, hidden, copts = [], deps = [], local_defines = [], **kwargs):
     """Internal macro to serve as a base for all other libc library rules.
 
     Args:
       name: Target name.
       copts: The special compiler options for the target.
       deps: The list of target dependencies if any.
+      local_defines: The list of target local_defines if any.
       hidden: Whether the symbols should be explicitly hidden or not.
       **kwargs: All other attributes relevant for the cc_library rule.
     """
@@ -40,6 +42,7 @@ def _libc_library(name, hidden, copts = [], deps = [], **kwargs):
     native.cc_library(
         name = name,
         copts = copts + libc_common_copts(),
+        local_defines = local_defines + LIBC_CONFIGURE_OPTIONS,
         deps = deps,
         linkstatic = 1,
         **kwargs
@@ -87,7 +90,16 @@ def libc_function(
         "-fno-builtin",
         "-fno-lax-vector-conversions",
         "-ftrivial-auto-var-init=pattern",
+        "-fno-omit-frame-pointer",
+        "-fstack-protector-strong",
     ]
+
+    # x86 targets have -mno-omit-leaf-frame-pointer.
+    platform_copts = selects.with_or({
+        PLATFORM_CPU_X86_64: ["-mno-omit-leaf-frame-pointer"],
+        "//conditions:default": [],
+    })
+    copts = copts + platform_copts
 
     # We compile the code twice, the first target is suffixed with ".__internal__" and contains the
     # C++ functions in the "LIBC_NAMESPACE" namespace. This allows us to test the function in the

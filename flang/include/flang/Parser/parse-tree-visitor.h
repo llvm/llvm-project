@@ -861,6 +861,18 @@ template <typename M> void Walk(CompilerDirective &x, M &mutator) {
   }
 }
 template <typename V>
+void Walk(const CompilerDirective::Unrecognized &x, V &visitor) {
+  if (visitor.Pre(x)) {
+    visitor.Post(x);
+  }
+}
+template <typename M>
+void Walk(CompilerDirective::Unrecognized &x, M &mutator) {
+  if (mutator.Pre(x)) {
+    mutator.Post(x);
+  }
+}
+template <typename V>
 void Walk(const OmpLinearClause::WithModifier &x, V &visitor) {
   if (visitor.Pre(x)) {
     Walk(x.modifier, visitor);

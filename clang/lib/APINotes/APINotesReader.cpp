@@ -30,23 +30,20 @@ namespace {
 llvm::VersionTuple ReadVersionTuple(const uint8_t *&Data) {
   uint8_t NumVersions = (*Data++) & 0x03;
 
-  unsigned Major =
-      endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+  unsigned Major = endian::readNext<uint32_t, llvm::endianness::little>(Data);
   if (NumVersions == 0)
     return llvm::VersionTuple(Major);
 
-  unsigned Minor =
-      endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+  unsigned Minor = endian::readNext<uint32_t, llvm::endianness::little>(Data);
   if (NumVersions == 1)
     return llvm::VersionTuple(Major, Minor);
 
   unsigned Subminor =
-      endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+      endian::readNext<uint32_t, llvm::endianness::little>(Data);
   if (NumVersions == 2)
     return llvm::VersionTuple(Major, Minor, Subminor);
 
-  unsigned Build =
-      endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+  unsigned Build = endian::readNext<uint32_t, llvm::endianness::little>(Data);
   return llvm::VersionTuple(Major, Minor, Subminor, Build);
 }
 
@@ -71,16 +68,16 @@ public:
 
   static std::pair<unsigned, unsigned> ReadKeyDataLength(const uint8_t *&Data) {
     unsigned KeyLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     unsigned DataLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     return {KeyLength, DataLength};
   }
 
   static data_type ReadData(internal_key_type Key, const uint8_t *Data,
                             unsigned Length) {
     unsigned NumElements =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     data_type Result;
     Result.reserve(NumElements);
     for (unsigned i = 0; i != NumElements; ++i) {
@@ -105,14 +102,14 @@ void ReadCommonEntityInfo(const uint8_t *&Data, CommonEntityInfo &Info) {
     Info.setSwiftPrivate(static_cast<bool>((UnavailableBits >> 3) & 0x01));
 
   unsigned MsgLength =
-      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
   Info.UnavailableMsg =
       std::string(reinterpret_cast<const char *>(Data),
                   reinterpret_cast<const char *>(Data) + MsgLength);
   Data += MsgLength;
 
   unsigned SwiftNameLength =
-      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
   Info.SwiftName =
       std::string(reinterpret_cast<const char *>(Data),
                   reinterpret_cast<const char *>(Data) + SwiftNameLength);
@@ -124,7 +121,7 @@ void ReadCommonTypeInfo(const uint8_t *&Data, CommonTypeInfo &Info) {
   ReadCommonEntityInfo(Data, Info);
 
   unsigned SwiftBridgeLength =
-      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
   if (SwiftBridgeLength > 0) {
     Info.setSwiftBridge(std::string(reinterpret_cast<const char *>(Data),
                                     SwiftBridgeLength - 1));
@@ -132,7 +129,7 @@ void ReadCommonTypeInfo(const uint8_t *&Data, CommonTypeInfo &Info) {
   }
 
   unsigned ErrorDomainLength =
-      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
   if (ErrorDomainLength > 0) {
     Info.setNSErrorDomain(std::optional<std::string>(std::string(
         reinterpret_cast<const char *>(Data), ErrorDomainLength - 1)));
@@ -163,9 +160,9 @@ public:
 
   static std::pair<unsigned, unsigned> ReadKeyDataLength(const uint8_t *&Data) {
     unsigned KeyLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     unsigned DataLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     return {KeyLength, DataLength};
   }
 
@@ -175,8 +172,7 @@ public:
 
   static data_type ReadData(internal_key_type key, const uint8_t *Data,
                             unsigned Length) {
-    return endian::readNext<uint32_t, llvm::endianness::little, unaligned>(
-        Data);
+    return endian::readNext<uint32_t, llvm::endianness::little>(Data);
   }
 };
 
@@ -203,26 +199,24 @@ public:
 
   static std::pair<unsigned, unsigned> ReadKeyDataLength(const uint8_t *&Data) {
     unsigned KeyLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     unsigned DataLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     return {KeyLength, DataLength};
   }
 
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
     auto ParentCtxID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint32_t, llvm::endianness::little>(Data);
     auto ContextKind =
-        endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
-    auto NameID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint8_t, llvm::endianness::little>(Data);
+    auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
     return {ParentCtxID, ContextKind, NameID};
   }
 
   static data_type ReadData(internal_key_type Key, const uint8_t *Data,
                             unsigned Length) {
-    return endian::readNext<uint32_t, llvm::endianness::little, unaligned>(
-        Data);
+    return endian::readNext<uint32_t, llvm::endianness::little>(Data);
   }
 };
 
@@ -232,8 +226,7 @@ class ObjCContextInfoTableInfo
                                 ObjCContextInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
-    return endian::readNext<uint32_t, llvm::endianness::little, unaligned>(
-        Data);
+    return endian::readNext<uint32_t, llvm::endianness::little>(Data);
   }
 
   hash_value_type ComputeHash(internal_key_type Key) {
@@ -273,8 +266,7 @@ void ReadVariableInfo(const uint8_t *&Data, VariableInfo &Info) {
   }
   ++Data;
 
-  auto TypeLen =
-      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+  auto TypeLen = endian::readNext<uint16_t, llvm::endianness::little>(Data);
   Info.setType(std::string(Data, Data + TypeLen));
   Data += TypeLen;
 }
@@ -286,12 +278,9 @@ class ObjCPropertyTableInfo
                                 ObjCPropertyInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
-    auto ClassID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
-    auto NameID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
-    char IsInstance =
-        endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
+    auto ClassID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    char IsInstance = endian::readNext<uint8_t, llvm::endianness::little>(Data);
     return {ClassID, NameID, IsInstance};
   }
 
@@ -314,8 +303,7 @@ public:
 void ReadParamInfo(const uint8_t *&Data, ParamInfo &Info) {
   ReadVariableInfo(Data, Info);
 
-  uint8_t Payload =
-      endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
+  uint8_t Payload = endian::readNext<uint8_t, llvm::endianness::little>(Data);
   if (auto RawConvention = Payload & 0x7) {
     auto Convention = static_cast<RetainCountConventionKind>(RawConvention - 1);
     Info.setRetainCountConvention(Convention);
@@ -331,8 +319,7 @@ void ReadParamInfo(const uint8_t *&Data, ParamInfo &Info) {
 void ReadFunctionInfo(const uint8_t *&Data, FunctionInfo &Info) {
   ReadCommonEntityInfo(Data, Info);
 
-  uint8_t Payload =
-      endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
+  uint8_t Payload = endian::readNext<uint8_t, llvm::endianness::little>(Data);
   if (auto RawConvention = Payload & 0x7) {
     auto Convention = static_cast<RetainCountConventionKind>(RawConvention - 1);
     Info.setRetainCountConvention(Convention);
@@ -343,12 +330,12 @@ void ReadFunctionInfo(const uint8_t *&Data, FunctionInfo &Info) {
   assert(Payload == 0 && "Bad API notes");
 
   Info.NumAdjustedNullable =
-      endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
+      endian::readNext<uint8_t, llvm::endianness::little>(Data);
   Info.NullabilityPayload =
-      endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Data);
+      endian::readNext<uint64_t, llvm::endianness::little>(Data);
 
   unsigned NumParams =
-      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
   while (NumParams > 0) {
     ParamInfo pi;
     ReadParamInfo(Data, pi);
@@ -357,7 +344,7 @@ void ReadFunctionInfo(const uint8_t *&Data, FunctionInfo &Info) {
   }
 
   unsigned ResultTypeLen =
-      endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+      endian::readNext<uint16_t, llvm::endianness::little>(Data);
   Info.ResultType = std::string(Data, Data + ResultTypeLen);
   Data += ResultTypeLen;
 }
@@ -369,12 +356,10 @@ class ObjCMethodTableInfo
                                 ObjCMethodInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
-    auto ClassID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+    auto ClassID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
     auto SelectorID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
-    auto IsInstance =
-        endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint32_t, llvm::endianness::little>(Data);
+    auto IsInstance = endian::readNext<uint8_t, llvm::endianness::little>(Data);
     return {ClassID, SelectorID, IsInstance};
   }
 
@@ -419,29 +404,26 @@ public:
 
   static std::pair<unsigned, unsigned> ReadKeyDataLength(const uint8_t *&Data) {
     unsigned KeyLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     unsigned DataLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     return {KeyLength, DataLength};
   }
 
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
     internal_key_type Key;
-    Key.NumArgs =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+    Key.NumArgs = endian::readNext<uint16_t, llvm::endianness::little>(Data);
     unsigned NumIdents = (Length - sizeof(uint16_t)) / sizeof(uint32_t);
     for (unsigned i = 0; i != NumIdents; ++i) {
       Key.Identifiers.push_back(
-          endian::readNext<uint32_t, llvm::endianness::little, unaligned>(
-              Data));
+          endian::readNext<uint32_t, llvm::endianness::little>(Data));
     }
     return Key;
   }
 
   static data_type ReadData(internal_key_type Key, const uint8_t *Data,
                             unsigned Length) {
-    return endian::readNext<uint32_t, llvm::endianness::little, unaligned>(
-        Data);
+    return endian::readNext<uint32_t, llvm::endianness::little>(Data);
   }
 };
 
@@ -451,12 +433,10 @@ class GlobalVariableTableInfo
                                 GlobalVariableInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
-    auto CtxID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+    auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
     auto ContextKind =
-        endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
-    auto NameID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint8_t, llvm::endianness::little>(Data);
+    auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
     return {CtxID, ContextKind, NameID};
   }
 
@@ -478,12 +458,10 @@ class GlobalFunctionTableInfo
                                 GlobalFunctionInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
-    auto CtxID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+    auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
     auto ContextKind =
-        endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
-    auto NameID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint8_t, llvm::endianness::little>(Data);
+    auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
     return {CtxID, ContextKind, NameID};
   }
 
@@ -505,8 +483,7 @@ class EnumConstantTableInfo
                                 EnumConstantInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
-    auto NameID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+    auto NameID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
     return NameID;
   }
 
@@ -527,13 +504,11 @@ class TagTableInfo
     : public VersionedTableInfo<TagTableInfo, ContextTableKey, TagInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
-    auto CtxID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+    auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
     auto ContextKind =
-        endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint8_t, llvm::endianness::little>(Data);
     auto NameID =
-        endian::readNext<IdentifierID, llvm::endianness::little, unaligned>(
-            Data);
+        endian::readNext<IdentifierID, llvm::endianness::little>(Data);
     return {CtxID, ContextKind, NameID};
   }
 
@@ -553,21 +528,21 @@ public:
           static_cast<EnumExtensibilityKind>((Payload & 0x3) - 1);
 
     unsigned ImportAsLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     if (ImportAsLength > 0) {
       Info.SwiftImportAs =
           std::string(reinterpret_cast<const char *>(Data), ImportAsLength - 1);
       Data += ImportAsLength - 1;
     }
     unsigned RetainOpLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     if (RetainOpLength > 0) {
       Info.SwiftRetainOp =
           std::string(reinterpret_cast<const char *>(Data), RetainOpLength - 1);
       Data += RetainOpLength - 1;
     }
     unsigned ReleaseOpLength =
-        endian::readNext<uint16_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint16_t, llvm::endianness::little>(Data);
     if (ReleaseOpLength > 0) {
       Info.SwiftReleaseOp = std::string(reinterpret_cast<const char *>(Data),
                                         ReleaseOpLength - 1);
@@ -585,13 +560,11 @@ class TypedefTableInfo
                                 TypedefInfo> {
 public:
   static internal_key_type ReadKey(const uint8_t *Data, unsigned Length) {
-    auto CtxID =
-        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(Data);
+    auto CtxID = endian::readNext<uint32_t, llvm::endianness::little>(Data);
     auto ContextKind =
-        endian::readNext<uint8_t, llvm::endianness::little, unaligned>(Data);
+        endian::readNext<uint8_t, llvm::endianness::little>(Data);
     auto nameID =
-        endian::readNext<IdentifierID, llvm::endianness::little, unaligned>(
-            Data);
+        endian::readNext<IdentifierID, llvm::endianness::little>(Data);
     return {CtxID, ContextKind, nameID};
   }
 
