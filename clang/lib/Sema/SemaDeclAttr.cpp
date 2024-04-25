@@ -7377,13 +7377,7 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
     DeclResourceClass = Attr->getResourceClass();
     VarTy = TheRecordDecl->getName();
   } else {
-    if (CBufferOrTBuffer->isCBuffer()) {
-      DeclResourceClass = llvm::hlsl::ResourceClass::CBuffer;
-      VarTy = "cbuffer";
-    } else {
-      DeclResourceClass = llvm::hlsl::ResourceClass::TBuffer;
-      VarTy = "tbuffer";
-    }
+    DeclResourceClass = llvm::hlsl::ResourceClass::CBuffer;
   }
   switch (DeclResourceClass) {
   case llvm::hlsl::ResourceClass::SRV: {
@@ -7397,13 +7391,19 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
     break;
   }
   case llvm::hlsl::ResourceClass::CBuffer: {
-    if (Slot[0] == 'b')
-      return;
-    break;
-  }
-  case llvm::hlsl::ResourceClass::TBuffer: {
-    if (Slot[0] == 't')
-      return;
+    // could be CBuffer or TBuffer
+    if (CBufferOrTBuffer->isCBuffer()) {
+      VarTy = "cbuffer";
+      if (Slot[0] == 'b')
+        return;
+    } else {
+      VarTy = "tbuffer";
+      // This isn't an SRV, but we need the diagnostic to emit
+      // the same binding prefix that would be expected on an SRV.
+      DeclResourceClass = llvm::hlsl::ResourceClass::SRV;
+      if (Slot[0] == 't')
+        return;
+    }
     break;
   }
   case llvm::hlsl::ResourceClass::Sampler: {

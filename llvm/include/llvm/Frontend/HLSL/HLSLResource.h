@@ -25,7 +25,6 @@ enum class ResourceClass : uint8_t {
   SRV = 0,
   UAV,
   CBuffer,
-  TBuffer,
   Sampler,
   Invalid,
   NumClasses = Invalid,
