@@ -11167,7 +11167,7 @@ void Sema::maybeAddDeclWithEffects(const Decl *D,
   if (hasUncompilableErrorOccurred())
     return;
 
-  // For code in dependent contexts, we'll do this at instantiation time
+  // For code in dependent contexts, we'll do this at instantiation time.
   // Without this check, we would analyze the function based on placeholder
   // template parameters, and potentially generate spurious diagnostics.
   if (cast<DeclContext>(D)->isDependentContext()) {

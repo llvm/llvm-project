@@ -5053,7 +5053,7 @@ FunctionEffect::Kind FunctionEffect::oppositeKind() const {
   case Kind::Allocating:
     return Kind::NonAllocating;
   case Kind::None:
-    break;
+    return Kind::None;
   }
   llvm_unreachable("unknown effect kind");
 }

@@ -2471,6 +2471,8 @@ class EffectSet {
     using const_iterator = const T *;
     iterator begin() { return &Items[0]; }
     iterator end() { return &Items[Count]; }
+    const_iterator begin() const { return &Items[0]; }
+    const_iterator end() const { return &Items[Count]; }
     const_iterator cbegin() const { return &Items[0]; }
     const_iterator cend() const { return &Items[Count]; }
 
@@ -2493,6 +2495,9 @@ class EffectSet {
 
 public:
   EffectSet() = default;
+  explicit EffectSet(FunctionEffectsRef FX) {
+    insert(FX);
+  }
 
   operator ArrayRef<FunctionEffect>() const {
     return ArrayRef(Impl.cbegin(), Impl.cend());
@@ -2503,10 +2508,25 @@ public:
   iterator end() const { return Impl.cend(); }
 
   void insert(const FunctionEffect &Effect);
-  void insert(const EffectSet &Set);
-  void insertIgnoringConditions(const FunctionEffectsRef &FX);
-  bool contains(const FunctionEffect &E) const {
-    return std::find(begin(), end(), E) != end();
+  void insert(const EffectSet &Set) {
+    for (auto &Item : Set) {
+      // push_back because set is already sorted
+      Impl.push_back(Item);
+    }
+  }
+  void insert(FunctionEffectsRef FX) {
+    for (const auto &EC : FX) {
+      assert(EC.Cond.expr() == nullptr); // should be resolved by now, right?
+      // push_back because set is already sorted
+      Impl.push_back(EC.Effect);
+    }
+  }
+  bool contains(const FunctionEffect::Kind EK) const {
+    for (const FunctionEffect &E : Impl) {
+      if (E.kind() == EK)
+        return true;
+    }
+    return false;
   }
 
   void dump(llvm::raw_ostream &OS) const;
@@ -2526,16 +2546,6 @@ void EffectSet::insert(const FunctionEffect &Effect) {
       break;
   }
   Impl.insert(Iter, Effect);
-}
-
-void EffectSet::insert(const EffectSet &Set) {
-  for (auto &Item : Set)
-    insert(Item);
-}
-
-void EffectSet::insertIgnoringConditions(const FunctionEffectsRef &FX) {
-  for (const auto &Item : FX)
-    insert(Item.Effect);
 }
 
 LLVM_DUMP_METHOD void EffectSet::dump(llvm::raw_ostream &OS) const {
@@ -2559,32 +2569,6 @@ EffectSet EffectSet::difference(ArrayRef<FunctionEffect> LHS,
   return Result;
 }
 
-// Represent the declared effects, and absent effects (e.g. nonblocking(false)).
-// Centralize the resolution of computed effects.
-struct CondEffectSet {
-  EffectSet EffectsPresent;
-  EffectSet EffectsExplicitlyAbsent;
-
-  CondEffectSet() = default;
-
-  CondEffectSet(Sema &SemaRef, FunctionEffectsRef FX) {
-    for (const auto Item : FX) {
-      if (Expr *Cond = Item.Cond.expr()) {
-        FunctionEffectMode Mode = FunctionEffectMode::None;
-        ExprResult ER = SemaRef.ActOnEffectExpression(
-            Cond, Mode, /*RequireConstexpr=*/true);
-        if (ER.isInvalid() || Mode == FunctionEffectMode::Dependent)
-          continue;
-        if (Mode == FunctionEffectMode::False) {
-          EffectsExplicitlyAbsent.insert(Item.Effect);
-          continue;
-        }
-      }
-      EffectsPresent.insert(Item.Effect);
-    }
-  }
-};
-
 // Transitory, more extended information about a callable, which can be a
 // function, block, function pointer...
 struct CallableInfo {
@@ -2593,7 +2577,7 @@ struct CallableInfo {
   mutable std::optional<std::string>
       MaybeName; // mutable because built on demand in const method
   SpecialFuncType FuncType = SpecialFuncType::None;
-  CondEffectSet Effects;
+  EffectSet Effects;
   CallType CType = CallType::Unknown;
 
   CallableInfo(Sema &SemaRef, const Decl &CD,
@@ -2621,7 +2605,7 @@ struct CallableInfo {
       // ValueDecl is function, enum, or variable, so just look at its type.
       FXRef = FunctionEffectsRef::get(VD->getType());
     }
-    Effects = CondEffectSet(SemaRef, FXRef);
+    Effects = EffectSet(FXRef);
   }
 
   bool isDirectCall() const {
@@ -2756,14 +2740,13 @@ public:
   PendingFunctionAnalysis(
       Sema &Sem, const CallableInfo &CInfo,
       ArrayRef<FunctionEffect> AllInferrableEffectsToVerify) {
-    DeclaredVerifiableEffects = CInfo.Effects.EffectsPresent;
+    DeclaredVerifiableEffects = CInfo.Effects;
 
     // Check for effects we are not allowed to infer
     EffectSet FX;
 
     for (const auto &effect : AllInferrableEffectsToVerify) {
-      if (effect.canInferOnFunction(*CInfo.CDecl) &&
-          !CInfo.Effects.EffectsExplicitlyAbsent.contains(effect)) {
+      if (effect.canInferOnFunction(*CInfo.CDecl)) {
         FX.insert(effect);
       } else {
         // Add a diagnostic for this effect if a caller were to
@@ -3046,7 +3029,7 @@ private:
 
     // If any of the Decl's declared effects forbid throwing (e.g. nonblocking)
     // then the function should also be declared noexcept.
-    for (const auto &Effect : CInfo.Effects.EffectsPresent) {
+    for (const auto &Effect : CInfo.Effects) {
       if (!(Effect.flags() & FunctionEffect::FE_ExcludeThrow))
         continue;
 
@@ -3104,7 +3087,7 @@ private:
       emitDiagnostics(*Diags, CInfo, Sem);
     }
     auto *CompletePtr = new CompleteFunctionAnalysis(
-        Sem.getASTContext(), Pending, CInfo.Effects.EffectsPresent,
+        Sem.getASTContext(), Pending, CInfo.Effects,
         AllInferrableEffectsToVerify);
     DeclAnalysis[CInfo.CDecl] = CompletePtr;
     if constexpr (DebugLogLevel > 0) {
@@ -3143,7 +3126,7 @@ private:
     const bool DirectCall = Callee.isDirectCall();
 
     // These will be its declared effects.
-    EffectSet CalleeEffects = Callee.Effects.EffectsPresent;
+    EffectSet CalleeEffects = Callee.Effects;
 
     bool IsInferencePossible = DirectCall;
 
@@ -3210,6 +3193,8 @@ private:
   // Should only be called when determined to be complete.
   void emitDiagnostics(SmallVector<Diagnostic> &Diags,
                        const CallableInfo &CInfo, Sema &S) {
+    if (Diags.empty())
+      return;
     const SourceManager &SM = S.getSourceManager();
     std::sort(Diags.begin(), Diags.end(),
               [&SM](const Diagnostic &LHS, const Diagnostic &RHS) {
@@ -3290,8 +3275,8 @@ private:
               S.Diag(Callee->getLocation(),
                      diag::note_func_effect_call_func_ptr)
                   << effectName;
-            } else if (CalleeInfo.Effects.EffectsExplicitlyAbsent.contains(
-                           Diag.Effect)) {
+            } else if (CalleeInfo.Effects.contains(
+                           Diag.Effect.oppositeKind())) {
               S.Diag(Callee->getLocation(),
                      diag::note_func_effect_call_disallows_inference)
                   << effectName;
@@ -3456,8 +3441,7 @@ private:
           CalleeType->getAs<FunctionProtoType>(); // null if FunctionType
       EffectSet CalleeFX;
       if (FPT) {
-        CondEffectSet CFE(Outer.Sem, FPT->getFunctionEffects());
-        CalleeFX.insert(CFE.EffectsPresent);
+        CalleeFX.insert(FPT->getFunctionEffects());
       }
 
       auto check1Effect = [&](const FunctionEffect &Effect, bool Inferring) {

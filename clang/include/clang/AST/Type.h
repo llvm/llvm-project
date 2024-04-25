@@ -4482,7 +4482,7 @@ private:
 public:
   FunctionEffect() : FKind(unsigned(Kind::None)) {}
 
-  FunctionEffect(Kind K) : FKind(unsigned(K)) {}
+  explicit FunctionEffect(Kind K) : FKind(unsigned(K)) {}
 
   /// The kind of the effect.
   Kind kind() const { return Kind(FKind); }

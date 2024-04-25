@@ -134,13 +134,26 @@ void nl10(
 }
 
 // Interactions with nonblocking(false)
-void nl11_no_inference() [[clang::nonblocking(false)]] // expected-note {{function does not permit inference of 'nonblocking'}}
+void nl11_no_inference_1() [[clang::nonblocking(false)]] // expected-note {{function does not permit inference of 'nonblocking'}}
 {
 }
+void nl11_no_inference_2() [[clang::nonblocking(false)]]; // expected-note {{function does not permit inference of 'nonblocking'}}
+
+template <bool V>
+struct ComputedNB {
+	void method() [[clang::nonblocking(V)]]; // expected-note {{function does not permit inference of 'nonblocking'}}
+};
 
 void nl11() [[clang::nonblocking]]
 {
-	nl11_no_inference(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
+	nl11_no_inference_1(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
+	nl11_no_inference_2(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
+
+	ComputedNB<true> CNB_true;
+	CNB_true.method();
+	
+	ComputedNB<false> CNB_false;
+	CNB_false.method(); // expected-warning {{'nonblocking' function must not call non-'nonblocking' function}}
 }
 
 // Verify that when attached to a redeclaration, the attribute successfully attaches.
