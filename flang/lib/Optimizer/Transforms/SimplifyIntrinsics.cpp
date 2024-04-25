@@ -72,6 +72,9 @@ class SimplifyIntrinsicsPass
       mlir::Type elementType)>;
 
 public:
+  using fir::impl::SimplifyIntrinsicsBase<
+      SimplifyIntrinsicsPass>::SimplifyIntrinsicsBase;
+
   /// Generate a new function implementing a simplified version
   /// of a Fortran runtime function defined by \p basename name.
   /// \p typeGenerator is a callback that generates the new function's type.
@@ -1386,7 +1389,4 @@ void SimplifyIntrinsicsPass::getDependentDialects(
     mlir::DialectRegistry &registry) const {
   // LLVM::LinkageAttr creation requires that LLVM dialect is loaded.
   registry.insert<mlir::LLVM::LLVMDialect>();
-}
-std::unique_ptr<mlir::Pass> fir::createSimplifyIntrinsicsPass() {
-  return std::make_unique<SimplifyIntrinsicsPass>();
 }
