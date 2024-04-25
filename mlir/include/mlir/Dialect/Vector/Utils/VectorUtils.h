@@ -185,8 +185,8 @@ bool isLinearizableVector(VectorType type);
 /// mask is created on the read, if use of mask is specified or the bounds on a
 /// dimension are different.
 ///
-/// `useInBoundsInsteadOfMasking` if false, the inBoundsVal values are set
-/// properly, based on
+/// `useInBoundsInsteadOfMasking` if true, the inBoundsVal values are set
+///   properly, based on
 ///   the rank dimensions of the source and destination tensors. And that is
 ///   what determines if masking is done.
 ///
@@ -194,7 +194,7 @@ bool isLinearizableVector(VectorType type);
 /// for each dimension of the passed in tensor.
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
                              ArrayRef<int64_t> readShape, Value padValue,
-                             bool useInBoundsInsteadOfMasking = true);
+                             bool useInBoundsInsteadOfMasking = false);
 
 /// Returns success if `inputVectorSizes` is a valid masking configuraion for
 /// given `shape`, i.e., it meets:

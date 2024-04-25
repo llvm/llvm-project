@@ -345,7 +345,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
   int64_t readRank = readShape.size();
   auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
   SmallVector<bool> inBoundsVal(readRank, true);
-  if (!useInBoundsInsteadOfMasking) {
+  if (useInBoundsInsteadOfMasking) {
     // Update the inBounds attribute.
     for (unsigned i = 0; i < readRank; i++)
       inBoundsVal[i] = (sourceShape[i] == readShape[i]) &&

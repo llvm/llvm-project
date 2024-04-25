@@ -1499,11 +1499,11 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
   // If the input vector sizes are not provided, then the vector sizes are
   // determined by the result tensor shape. In case the vector sizes aren't
   // provided, we update the inBounds attribute instead of masking.
-  bool useInBoundsInsteadOfMasking = true;
+  bool useInBoundsInsteadOfMasking = false;
   if (inputVectorSizes.empty()) {
     ArrayRef<int64_t> resultTensorShape = packOp.getDestType().getShape();
     inputVectorSizes = resultTensorShape.take_front(packOp.getSourceRank());
-    useInBoundsInsteadOfMasking = false;
+    useInBoundsInsteadOfMasking = true;
   }
 
   // Create masked TransferReadOp.
