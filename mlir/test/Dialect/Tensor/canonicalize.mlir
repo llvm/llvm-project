@@ -830,6 +830,39 @@ func.func @fold_pack_constant_splat(%dest : tensor<8x16x8x32xf32>) -> tensor<8x1
 
 // -----
 
+// CHECK-LABEL: func @fold_padding_value_pack_constant_splat
+//   CHECK-NOT: tensor.pack
+//       CHECK: arith.constant dense<1.000000e-01> : tensor<8x16x8x32xf32>
+func.func @fold_padding_value_pack_constant_splat(%dest : tensor<8x16x8x32xf32>) -> tensor<8x16x8x32xf32> {
+  %pad = arith.constant 1.000000e-01 : f32
+  %cst = arith.constant dense<1.000000e-01> : tensor<63x127xf32>
+  %0 = tensor.pack %cst
+    padding_value(%pad : f32)
+    outer_dims_perm = [1, 0] inner_dims_pos = [0, 1]
+    inner_tiles = [8, 32] into %dest : tensor<63x127xf32> -> tensor<8x16x8x32xf32>
+  return %0 : tensor<8x16x8x32xf32>
+}
+
+
+// -----
+
+// CHECK-LABEL: func @nofold_padding_value_pack_constant_splat
+//       CHECK: arith.constant dense<1.000000e-01> : tensor<63x127xf32>
+//       CHECK: tensor.pack
+func.func @nofold_padding_value_pack_constant_splat(%dest : tensor<8x16x8x32xf32>) -> tensor<8x16x8x32xf32> {
+  %pad = arith.constant 0.0 : f32
+  %cst = arith.constant dense<1.000000e-01> : tensor<63x127xf32>
+  %0 = tensor.pack %cst
+    padding_value(%pad : f32)
+    outer_dims_perm = [1, 0]
+    inner_dims_pos = [0, 1]
+    inner_tiles = [8, 32]
+    into %dest : tensor<63x127xf32> -> tensor<8x16x8x32xf32>
+  return %0 : tensor<8x16x8x32xf32>
+}
+
+// -----
+
 func.func @fold_padding_value_pack(%arg0: tensor<1200x500000xf32>) -> tensor<31250x1200x16x1xf32> {
   %cst = arith.constant 0.000000e+00 : f32
   %0 = tensor.empty() : tensor<31250x1200x16x1xf32>
@@ -2367,3 +2400,73 @@ func.func @dim_of_reshape_undominated(%arg0: tensor<*xf32>, %arg1: tensor<?xinde
     %dim = tensor.dim %reshape, %0 : tensor<*xf32>
     return %dim : index
   }
+
+// -----
+
+// CHECK-LABEL: @reshape_fold_2d
+// CHECK-SAME: %[[ARG0:.+]]: tensor<?x?xi32>
+func.func @reshape_fold_2d(%arg0 : tensor<?x?xi32>) -> tensor<?x?xi32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %d0 = tensor.dim %arg0, %c0 : tensor<?x?xi32>
+  %d1 = tensor.dim %arg0, %c1 : tensor<?x?xi32>
+  %ds = tensor.from_elements %d0, %d1 : tensor<2xindex>
+  %reshape = tensor.reshape %arg0(%ds) : (tensor<?x?xi32>, tensor<2xindex>) -> tensor<?x?xi32>
+  // CHECK: return %[[ARG0]]
+  return %reshape : tensor<?x?xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @reshape_nofold_2d
+// CHECK-SAME: %[[ARG0:.+]]: tensor<?x?xi32>
+func.func @reshape_nofold_2d(%arg0 : tensor<?x?xi32>) -> tensor<?x?xi32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %d0 = tensor.dim %arg0, %c0 : tensor<?x?xi32>
+  %d1 = tensor.dim %arg0, %c1 : tensor<?x?xi32>
+  %ds = tensor.from_elements %d1, %d0 : tensor<2xindex>
+  // CHECK: tensor.reshape
+  %reshape = tensor.reshape %arg0(%ds) : (tensor<?x?xi32>, tensor<2xindex>) -> tensor<?x?xi32>
+  return %reshape : tensor<?x?xi32>
+}
+
+
+// -----
+
+// CHECK-LABEL: @reshape_fold_3d_cst
+// CHECK-SAME: %[[ARG0:.+]]: tensor<5x?x?xi32>
+func.func @reshape_fold_3d_cst(%arg0 : tensor<5x?x?xi32>) -> tensor<5x?x?xi32> {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %d0 = arith.constant 5 : index
+  %d1 = tensor.dim %arg0, %c1 : tensor<5x?x?xi32>
+  %d2 = tensor.dim %arg0, %c2 : tensor<5x?x?xi32>
+  %ds = tensor.from_elements %d0, %d1, %d2 : tensor<3xindex>
+  %reshape = tensor.reshape %arg0(%ds) : (tensor<5x?x?xi32>, tensor<3xindex>) -> tensor<5x?x?xi32>
+  // CHECK: return %[[ARG0]]
+  return %reshape : tensor<5x?x?xi32>
+}
+
+// -----
+
+// Test case: This test fails to fold because the index of tensor.dim is out_of_bounds
+// CHECK-LABEL: func @dim_out_of_bounds(
+//       CHECK: %[[IDX:.*]] = index.constant 28
+//  CHECK-NEXT: bufferization.alloc_tensor
+//  CHECK-NEXT: %[[DIM:.*]] = tensor.dim %{{.*}}, %[[IDX]]
+//  CHECK-NEXT: memref.alloc
+//  CHECK-NEXT: memref.cast
+//  CHECK-NEXT: affine.vector_load %{{.*}}[{{.*}}, {{.*}}, symbol(%[[DIM]])]
+//  CHECK-NEXT: return
+func.func @dim_out_of_bounds() -> vector<7xi32> {
+    %c1 = arith.constant 1 : index
+    %idx28 = index.constant 28
+    %c29 = arith.constant 29 : index
+    %3 = bufferization.alloc_tensor(%c29) : tensor<?xi16>
+    %dim = tensor.dim %3, %idx28 : tensor<?xi16>
+    %alloc_21 = memref.alloc(%c29) : memref<?x26x2xi32>
+    %16 = affine.vector_load %alloc_21[%c1, %c1, %dim] : memref<?x26x2xi32>, vector<7xi32>
+    return %16 : vector<7xi32>
+}
+

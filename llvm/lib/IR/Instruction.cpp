@@ -13,10 +13,13 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
@@ -370,11 +373,17 @@ bool Instruction::isOnlyUserOfAnyOperand() {
 }
 
 void Instruction::setHasNoUnsignedWrap(bool b) {
-  cast<OverflowingBinaryOperator>(this)->setHasNoUnsignedWrap(b);
+  if (auto *Inst = dyn_cast<OverflowingBinaryOperator>(this))
+    Inst->setHasNoUnsignedWrap(b);
+  else
+    cast<TruncInst>(this)->setHasNoUnsignedWrap(b);
 }
 
 void Instruction::setHasNoSignedWrap(bool b) {
-  cast<OverflowingBinaryOperator>(this)->setHasNoSignedWrap(b);
+  if (auto *Inst = dyn_cast<OverflowingBinaryOperator>(this))
+    Inst->setHasNoSignedWrap(b);
+  else
+    cast<TruncInst>(this)->setHasNoSignedWrap(b);
 }
 
 void Instruction::setIsExact(bool b) {
@@ -382,21 +391,27 @@ void Instruction::setIsExact(bool b) {
 }
 
 void Instruction::setNonNeg(bool b) {
-  assert(isa<PossiblyNonNegInst>(this) && "Must be zext");
+  assert(isa<PossiblyNonNegInst>(this) && "Must be zext/uitofp");
   SubclassOptionalData = (SubclassOptionalData & ~PossiblyNonNegInst::NonNeg) |
                          (b * PossiblyNonNegInst::NonNeg);
 }
 
 bool Instruction::hasNoUnsignedWrap() const {
-  return cast<OverflowingBinaryOperator>(this)->hasNoUnsignedWrap();
+  if (auto *Inst = dyn_cast<OverflowingBinaryOperator>(this))
+    return Inst->hasNoUnsignedWrap();
+
+  return cast<TruncInst>(this)->hasNoUnsignedWrap();
 }
 
 bool Instruction::hasNoSignedWrap() const {
-  return cast<OverflowingBinaryOperator>(this)->hasNoSignedWrap();
+  if (auto *Inst = dyn_cast<OverflowingBinaryOperator>(this))
+    return Inst->hasNoSignedWrap();
+
+  return cast<TruncInst>(this)->hasNoSignedWrap();
 }
 
 bool Instruction::hasNonNeg() const {
-  assert(isa<PossiblyNonNegInst>(this) && "Must be zext");
+  assert(isa<PossiblyNonNegInst>(this) && "Must be zext/uitofp");
   return (SubclassOptionalData & PossiblyNonNegInst::NonNeg) != 0;
 }
 
@@ -429,8 +444,14 @@ void Instruction::dropPoisonGeneratingFlags() {
     cast<GetElementPtrInst>(this)->setIsInBounds(false);
     break;
 
+  case Instruction::UIToFP:
   case Instruction::ZExt:
     setNonNeg(false);
+    break;
+
+  case Instruction::Trunc:
+    cast<TruncInst>(this)->setHasNoUnsignedWrap(false);
+    cast<TruncInst>(this)->setHasNoSignedWrap(false);
     break;
   }
 
@@ -452,6 +473,27 @@ void Instruction::dropPoisonGeneratingMetadata() {
   eraseMetadata(LLVMContext::MD_range);
   eraseMetadata(LLVMContext::MD_nonnull);
   eraseMetadata(LLVMContext::MD_align);
+}
+
+bool Instruction::hasPoisonGeneratingReturnAttributes() const {
+  if (const auto *CB = dyn_cast<CallBase>(this)) {
+    AttributeSet RetAttrs = CB->getAttributes().getRetAttrs();
+    return RetAttrs.hasAttribute(Attribute::Range) ||
+           RetAttrs.hasAttribute(Attribute::Alignment) ||
+           RetAttrs.hasAttribute(Attribute::NonNull);
+  }
+  return false;
+}
+
+void Instruction::dropPoisonGeneratingReturnAttributes() {
+  if (auto *CB = dyn_cast<CallBase>(this)) {
+    AttributeMask AM;
+    AM.addAttribute(Attribute::Range);
+    AM.addAttribute(Attribute::Alignment);
+    AM.addAttribute(Attribute::NonNull);
+    CB->removeRetAttrs(AM);
+  }
+  assert(!hasPoisonGeneratingReturnAttributes() && "must be kept in sync");
 }
 
 void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
@@ -595,6 +637,13 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
     }
   }
 
+  if (auto *TI = dyn_cast<TruncInst>(V)) {
+    if (isa<TruncInst>(this)) {
+      setHasNoSignedWrap(TI->hasNoSignedWrap());
+      setHasNoUnsignedWrap(TI->hasNoUnsignedWrap());
+    }
+  }
+
   // Copy the exact flag.
   if (auto *PE = dyn_cast<PossiblyExactOperator>(V))
     if (isa<PossiblyExactOperator>(this))
@@ -623,6 +672,13 @@ void Instruction::andIRFlags(const Value *V) {
     if (isa<OverflowingBinaryOperator>(this)) {
       setHasNoSignedWrap(hasNoSignedWrap() && OB->hasNoSignedWrap());
       setHasNoUnsignedWrap(hasNoUnsignedWrap() && OB->hasNoUnsignedWrap());
+    }
+  }
+
+  if (auto *TI = dyn_cast<TruncInst>(V)) {
+    if (isa<TruncInst>(this)) {
+      setHasNoSignedWrap(hasNoSignedWrap() && TI->hasNoSignedWrap());
+      setHasNoUnsignedWrap(hasNoUnsignedWrap() && TI->hasNoUnsignedWrap());
     }
   }
 

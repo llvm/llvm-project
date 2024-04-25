@@ -25,6 +25,7 @@ namespace targets {
 
 class LLVM_LIBRARY_VISIBILITY M68kTargetInfo : public TargetInfo {
   static const char *const GCCRegNames[];
+  static const TargetInfo::GCCRegAlias GCCRegAliases[];
 
   enum CPUKind {
     CK_Unknown,

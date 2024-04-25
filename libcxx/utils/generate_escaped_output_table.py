@@ -39,12 +39,6 @@ LINE_REGEX = re.compile(
 )
 
 
-def filterCoreProperty(element: PropertyRange) -> Optional[PropertyRange]:
-    if element.prop == "Grapheme_Extend":
-        return element
-    return None
-
-
 # https://www.unicode.org/reports/tr44/#GC_Values_Table
 def filterGeneralProperty(element: PropertyRange) -> Optional[PropertyRange]:
     if element.prop in ["Zs", "Zl", "Zp", "Cc", "Cf", "Cs", "Co", "Cn"]:
@@ -94,10 +88,9 @@ DATA_ARRAY_TEMPLATE = """
 /// The entries of the characters to escape in format's debug string.
 ///
 /// Contains the entries for [format.string.escaped]/2.2.1.2.1
-///   CE is a Unicode encoding and C corresponds to either a UCS scalar value
-///   whose Unicode property General_Category has a value in the groups
-///   Separator (Z) or Other (C) or to a UCS scalar value which has the Unicode
-///   property Grapheme_Extend=Yes, as described by table 12 of UAX #44
+///   CE is a Unicode encoding and C corresponds to a UCS scalar value whose
+///   Unicode property General_Category has a value in the groups Separator (Z)
+///   or Other (C), as described by table 12 of UAX #44
 ///
 /// Separator (Z) consists of General_Category
 /// - Space_Separator,
@@ -112,7 +105,6 @@ DATA_ARRAY_TEMPLATE = """
 /// - Unassigned.
 ///
 /// The data is generated from
-/// - https://www.unicode.org/Public/UCD/latest/ucd/DerivedCoreProperties.txt
 /// - https://www.unicode.org/Public/UCD/latest/ucd/extracted/DerivedGeneralCategory.txt
 ///
 /// The table is similar to the table
@@ -124,7 +116,7 @@ DATA_ARRAY_TEMPLATE = """
 /// - bits [0, 10] The size of the range, allowing 2048 elements.
 /// - bits [11, 31] The lower bound code point of the range. The upper bound of
 ///   the range is lower bound + size.
-inline constexpr uint32_t __entries[{size}] = {{
+_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[{size}] = {{
 {entries}}};
 
 /// At the end of the valid Unicode code points space a lot of code points are
@@ -132,7 +124,7 @@ inline constexpr uint32_t __entries[{size}] = {{
 /// lookup table would add 446 entries to the table (in Unicode 14).
 /// Instead the only the start of the region is stored, every code point in
 /// this region needs to be escaped.
-inline constexpr uint32_t __unallocated_region_lower_bound = 0x{unallocated:08x};
+_LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __unallocated_region_lower_bound = 0x{unallocated:08x};
 
 /// Returns whether the code unit needs to be escaped.
 ///
@@ -262,7 +254,7 @@ def property_ranges_to_table(ranges: list[PropertyRange]) -> list[Entry]:
     return result
 
 
-cpp_entrytemplate = "    0x{:08x}"
+cpp_entrytemplate = "    0x{:08x} /* {:08x} - {:08x} [{:>5}] */"
 
 
 def generate_cpp_data(ranges: list[PropertyRange], unallocated: int) -> str:
@@ -272,7 +264,15 @@ def generate_cpp_data(ranges: list[PropertyRange], unallocated: int) -> str:
         DATA_ARRAY_TEMPLATE.format(
             size=len(table),
             entries=",\n".join(
-                [cpp_entrytemplate.format(x.lower << 11 | x.offset) for x in table]
+                [
+                    cpp_entrytemplate.format(
+                        x.lower << 11 | x.offset,
+                        x.lower,
+                        x.lower + x.offset,
+                        x.offset + 1,
+                    )
+                    for x in table
+                ]
             ),
             unallocated=unallocated,
         )
@@ -291,12 +291,6 @@ def generate_data_tables() -> str:
         / "unicode"
         / "DerivedGeneralCategory.txt"
     )
-    derived_core_catagory_path = (
-        Path(__file__).absolute().parent
-        / "data"
-        / "unicode"
-        / "DerivedCoreProperties.txt"
-    )
 
     properties = list()
     with derived_general_catagory_path.open(encoding="utf-8") as f:
@@ -304,15 +298,6 @@ def generate_data_tables() -> str:
             list(
                 filter(
                     filterGeneralProperty,
-                    [x for line in f if (x := parsePropertyLine(line))],
-                )
-            )
-        )
-    with derived_core_catagory_path.open(encoding="utf-8") as f:
-        properties.extend(
-            list(
-                filter(
-                    filterCoreProperty,
                     [x for line in f if (x := parsePropertyLine(line))],
                 )
             )
@@ -328,8 +313,12 @@ def generate_data_tables() -> str:
     #
     # When this region becomes substantially smaller we need to investigate
     # this design.
+    #
+    # Due to P2713R1 Escaping improvements in std::format the range
+    #   E0100..E01EF  ; Grapheme_Extend # Mn [240] VARIATION SELECTOR-17..VARIATION SELECTOR-256
+    # is no longer part of these entries. This causes an increase in the size
+    # of the table.
     assert data[-1].upper == 0x10FFFF
-    assert data[-1].upper - data[-1].lower > 900000
 
     return "\n".join([generate_cpp_data(data[:-1], data[-1].lower)])
 

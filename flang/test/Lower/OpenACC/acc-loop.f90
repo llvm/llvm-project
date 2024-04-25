@@ -324,5 +324,5 @@ end subroutine
 ! CHECK: %[[P_I:.*]] = acc.private varPtr(%[[DC_I]] : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = ""}
 ! CHECK: %[[P_J:.*]] = acc.private varPtr(%[[DC_J]] : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = ""}
 ! CHECK: %[[P_K:.*]] = acc.private varPtr(%[[DC_K]] : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = ""}
-! CHECK: acc.loop private(@privatization_ref_i32 -> %[[P_I]] : !fir.ref<i32>, @privatization_ref_i32 -> %[[P_J]] : !fir.ref<i32>, @privatization_ref_i32 -> %[[P_K]] : !fir.ref<i32>) control(%{{.*}} : i32, %{{.*}} : i32, %{{.*}} : i32) = (%c1{{.*}}, %c1{{.*}}, %c1{{.*}} : i32, i32, i32) to (%c10{{.*}}, %c100{{.*}}, %c200{{.*}} : i32, i32, i32)  step (%c1{{.*}}, %c1{{.*}}, %c1{{.*}} : i32, i32, i32)
+! CHECK: acc.loop combined(parallel) private(@privatization_ref_i32 -> %[[P_I]] : !fir.ref<i32>, @privatization_ref_i32 -> %[[P_J]] : !fir.ref<i32>, @privatization_ref_i32 -> %[[P_K]] : !fir.ref<i32>) control(%{{.*}} : i32, %{{.*}} : i32, %{{.*}} : i32) = (%c1{{.*}}, %c1{{.*}}, %c1{{.*}} : i32, i32, i32) to (%c10{{.*}}, %c100{{.*}}, %c200{{.*}} : i32, i32, i32)  step (%c1{{.*}}, %c1{{.*}}, %c1{{.*}} : i32, i32, i32)
 ! CHECK: } attributes {inclusiveUpperbound = array<i1: true, true, true>}
