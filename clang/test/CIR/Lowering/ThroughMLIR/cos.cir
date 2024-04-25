@@ -1,0 +1,22 @@
+// RUN: cir-opt %s -cir-to-mlir -o %t.mlir
+// RUN: FileCheck %s --input-file %t.mlir
+
+module {
+  cir.func @foo() {
+    %1 = cir.const(#cir.fp<1.0> : !cir.float) : !cir.float
+    %2 = cir.const(#cir.fp<1.0> : !cir.double) : !cir.double
+    %3 = cir.cos %1 : !cir.float
+    %4 = cir.cos %2 : !cir.double
+    cir.return
+  }
+}
+
+//CHECK: module {
+//CHECK:   func.func @foo() {
+//CHECK:     %cst = arith.constant 1.000000e+00 : f32
+//CHECK:     %cst_0 = arith.constant 1.000000e+00 : f64
+//CHECK:     %0 = math.cos %cst : f32
+//CHECK:     %1 = math.cos %cst_0 : f64
+//CHECK:     return
+//CHECK:   }
+//CHECK: }
