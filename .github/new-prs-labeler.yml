@@ -467,6 +467,7 @@ backend:m68k:
 
 libc++:
   - libcxx/**
+  - .github/workflows/libcxx-*
 
 libc++abi:
   - libcxxabi/**
