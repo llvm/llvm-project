@@ -210,6 +210,7 @@ template <class... Types>
 #include <__config>
 #include <__functional/invoke.h>
 #include <__fwd/array.h>
+#include <__fwd/pair.h>
 #include <__fwd/tuple.h>
 #include <__memory/allocator_arg_t.h>
 #include <__memory/uses_allocator.h>
@@ -250,7 +251,6 @@ template <class... Types>
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
-#include <__utility/pair.h>
 #include <__utility/piecewise_construct.h>
 #include <__utility/swap.h>
 #include <cstddef>
@@ -1347,17 +1347,6 @@ tuple_cat(_Tuple0&& __t0, _Tuples&&... __tpls) {
 
 template <class... _Tp, class _Alloc>
 struct _LIBCPP_TEMPLATE_VIS uses_allocator<tuple<_Tp...>, _Alloc> : true_type {};
-
-template <class _T1, class _T2>
-template <class... _Args1, class... _Args2, size_t... _I1, size_t... _I2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_T1, _T2>::pair(
-    piecewise_construct_t,
-    tuple<_Args1...>& __first_args,
-    tuple<_Args2...>& __second_args,
-    __tuple_indices<_I1...>,
-    __tuple_indices<_I2...>)
-    : first(std::forward<_Args1>(std::get<_I1>(__first_args))...),
-      second(std::forward<_Args2>(std::get<_I2>(__second_args))...) {}
 
 #  if _LIBCPP_STD_VER >= 17
 #    define _LIBCPP_NOEXCEPT_RETURN(...)                                                                               \

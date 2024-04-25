@@ -39,7 +39,7 @@
 #include <type_traits>
 #include <variant>
 
-// Some environments, viz. glibc 2.17, allow the macro HUGE
+// Some environments, viz. glibc 2.17 and *BSD, allow the macro HUGE
 // to leak out of <math.h>.
 #undef HUGE
 
@@ -201,11 +201,12 @@ std::optional<Constant<T>> Folder<T>::ApplySubscripts(const Constant<T> &array,
   ConstantSubscripts resultShape;
   ConstantSubscripts ssLB;
   for (const auto &ss : subscripts) {
-    CHECK(ss.Rank() <= 1);
     if (ss.Rank() == 1) {
       resultShape.push_back(static_cast<ConstantSubscript>(ss.size()));
       elements *= ss.size();
       ssLB.push_back(ss.lbounds().front());
+    } else if (ss.Rank() > 1) {
+      return std::nullopt; // error recovery
     }
   }
   ConstantSubscripts ssAt(rank, 0), at(rank, 0), tmp(1, 0);
@@ -1969,7 +1970,7 @@ Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
       // NaN, and Inf respectively.
       bool isCanonicalNaNOrInf{false};
       if constexpr (T::category == TypeCategory::Real) {
-        if (folded->second.IsZero() && context.inModuleFile()) {
+        if (folded->second.IsZero() && context.moduleFileName().has_value()) {
           using IntType = typename T::Scalar::Word;
           auto intNumerator{folded->first.template ToInteger<IntType>()};
           isCanonicalNaNOrInf = intNumerator.flags == RealFlags{} &&

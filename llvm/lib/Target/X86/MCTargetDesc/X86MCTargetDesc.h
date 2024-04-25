@@ -121,7 +121,6 @@ MCStreamer *createX86WinCOFFStreamer(MCContext &C,
                                      std::unique_ptr<MCAsmBackend> &&AB,
                                      std::unique_ptr<MCObjectWriter> &&OW,
                                      std::unique_ptr<MCCodeEmitter> &&CE,
-                                     bool RelaxAll,
                                      bool IncrementalLinkerCompatible);
 
 /// Construct an X86 Mach-O object writer.

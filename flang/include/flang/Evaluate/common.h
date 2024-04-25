@@ -256,9 +256,11 @@ public:
   const common::LanguageFeatureControl &languageFeatures() const {
     return languageFeatures_;
   }
-  bool inModuleFile() const { return inModuleFile_; }
-  FoldingContext &set_inModuleFile(bool yes = true) {
-    inModuleFile_ = yes;
+  std::optional<parser::CharBlock> moduleFileName() const {
+    return moduleFileName_;
+  }
+  FoldingContext &set_moduleFileName(std::optional<parser::CharBlock> n) {
+    moduleFileName_ = n;
     return *this;
   }
 
@@ -288,7 +290,7 @@ private:
   const IntrinsicProcTable &intrinsics_;
   const TargetCharacteristics &targetCharacteristics_;
   const semantics::DerivedTypeSpec *pdtInstance_{nullptr};
-  bool inModuleFile_{false};
+  std::optional<parser::CharBlock> moduleFileName_;
   std::map<parser::CharBlock, ConstantSubscript> impliedDos_;
   const common::LanguageFeatureControl &languageFeatures_;
   std::set<std::string> &tempNames_;

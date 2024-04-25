@@ -144,9 +144,8 @@ static bool runIPSCCP(
     // Assume the function is called.
     Solver.markBlockExecutable(&F.front());
 
-    // Assume nothing about the incoming arguments.
     for (Argument &AI : F.args())
-      Solver.markOverdefined(&AI);
+      Solver.trackValueOfArgument(&AI);
   }
 
   // Determine if we can track any of the module's global variables. If so, add

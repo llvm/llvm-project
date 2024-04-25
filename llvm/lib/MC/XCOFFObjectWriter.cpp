@@ -736,11 +736,26 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
     } else {
       // The FixedValue should be the TOC entry offset from the TOC-base plus
       // any constant offset value.
-      const int64_t TOCEntryOffset = SectionMap[SymASec]->Address -
-                                     TOCCsects.front().Address +
-                                     Target.getConstant();
+      int64_t TOCEntryOffset = SectionMap[SymASec]->Address -
+                               TOCCsects.front().Address + Target.getConstant();
+      // For small code model, if the TOCEntryOffset overflows the 16-bit value,
+      // we truncate it back down to 16 bits. The linker will be able to insert
+      // fix-up code when needed.
+      // For non toc-data symbols, we already did the truncation in
+      // PPCAsmPrinter.cpp through setting Target.getConstant() in the
+      // expression above by calling getTOCEntryLoadingExprForXCOFF for the
+      // various TOC PseudoOps.
+      // For toc-data symbols, we were not able to calculate the offset from
+      // the TOC in PPCAsmPrinter.cpp since the TOC has not been finalized at
+      // that point, so we are adjusting it here though
+      // llvm::SignExtend64<16>(TOCEntryOffset);
+      // TODO: Since the time that the handling for offsets over 16-bits was
+      // added in PPCAsmPrinter.cpp using getTOCEntryLoadingExprForXCOFF, the
+      // system assembler and linker have been updated to be able to handle the
+      // overflowing offsets, so we no longer need to keep
+      // getTOCEntryLoadingExprForXCOFF.
       if (Type == XCOFF::RelocationType::R_TOC && !isInt<16>(TOCEntryOffset))
-        report_fatal_error("TOCEntryOffset overflows in small code model mode");
+        TOCEntryOffset = llvm::SignExtend64<16>(TOCEntryOffset);
 
       FixedValue = TOCEntryOffset;
     }

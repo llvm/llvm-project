@@ -213,7 +213,6 @@ static unsigned getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
 bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
   MMI.initialize();
   MMI.TheModule = &M;
-  // FIXME: Do this for new pass manager.
   LLVMContext &Ctx = M.getContext();
   MMI.getContext().setDiagnosticHandler(
       [&Ctx, &M](const SMDiagnostic &SMD, bool IsInlineAsm,
@@ -240,6 +239,17 @@ AnalysisKey MachineModuleAnalysis::Key;
 MachineModuleAnalysis::Result
 MachineModuleAnalysis::run(Module &M, ModuleAnalysisManager &) {
   MMI.TheModule = &M;
+  LLVMContext &Ctx = M.getContext();
+  MMI.getContext().setDiagnosticHandler(
+      [&Ctx, &M](const SMDiagnostic &SMD, bool IsInlineAsm,
+                 const SourceMgr &SrcMgr,
+                 std::vector<const MDNode *> &LocInfos) {
+        unsigned LocCookie = 0;
+        if (IsInlineAsm)
+          LocCookie = getLocCookie(SMD, SrcMgr, LocInfos);
+        Ctx.diagnose(
+            DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
+      });
   MMI.DbgInfoAvailable =
       !DisableDebugInfoPrinting && !M.debug_compile_units().empty();
   return Result(MMI);

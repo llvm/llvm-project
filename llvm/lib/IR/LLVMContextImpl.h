@@ -441,7 +441,7 @@ template <> struct MDNodeKeyImpl<DIEnumerator> {
   bool IsUnsigned;
 
   MDNodeKeyImpl(APInt Value, bool IsUnsigned, MDString *Name)
-      : Value(Value), Name(Name), IsUnsigned(IsUnsigned) {}
+      : Value(std::move(Value)), Name(Name), IsUnsigned(IsUnsigned) {}
   MDNodeKeyImpl(int64_t Value, bool IsUnsigned, MDString *Name)
       : Value(APInt(64, Value, !IsUnsigned)), Name(Name),
         IsUnsigned(IsUnsigned) {}

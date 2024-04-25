@@ -10,8 +10,21 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// Checks that `std::ranges::fold_left_with_iter`'s requirements reject parameters that don't meet
-// the overloads' constraints.
+// template<input_iterator I, sentinel_for<I> S, class T,
+//          indirectly-binary-left-foldable<T, I> F>
+//   constexpr see below ranges::fold_left_with_iter(I first, S last, T init, F f);
+//
+// template<input_range R, class T, indirectly-binary-left-foldable<T, iterator_t<R>> F>
+//   constexpr see below ranges::fold_left_with_iter(R&& r, T init, F f);
+
+// template<input_iterator I, sentinel_for<I> S, class T,
+//          indirectly-binary-left-foldable<T, I> F>
+//   constexpr see below ranges::fold_left(I first, S last, T init, F f);
+//
+// template<input_range R, class T, indirectly-binary-left-foldable<T, iterator_t<R>> F>
+//   constexpr see below ranges::fold_left(R&& r, T init, F f);
+
+// Checks that the algorithm requirements reject parameters that don't meet the overloads' constraints.
 
 #include <algorithm>
 #include <concepts>

@@ -147,7 +147,7 @@ endif()
 # As we migrate runtimes to using the bootstrapping build, the set of default runtimes
 # should grow as we remove those runtimes from LLVM_ENABLE_PROJECTS above.
 set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind")
-set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc")
+set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;offload")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all")
@@ -673,6 +673,9 @@ option(LLVM_USE_OPROFILE
 option(LLVM_EXTERNALIZE_DEBUGINFO
   "Generate dSYM files and strip executables and libraries (Darwin Only)" OFF)
 
+option(LLVM_ENABLE_EXPORTED_SYMBOLS_IN_EXECUTABLES
+  "Preserve exported symbols in executables" ON)
+
 set(LLVM_CODESIGNING_IDENTITY "" CACHE STRING
   "Sign executables and dylibs with the given identity or skip if empty (Darwin Only)")
 
@@ -798,6 +801,9 @@ option (LLVM_BUILD_EXTERNAL_COMPILER_RT
 
 option (LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO
   "Show target and host info when tools are invoked with --version." ON)
+
+option(LLVM_VERSION_PRINTER_SHOW_BUILD_CONFIG
+  "Show the optional build config flags when tools are invoked with --version." ON)
 
 # You can configure which libraries from LLVM you want to include in the
 # shared library by setting LLVM_DYLIB_COMPONENTS to a semi-colon delimited
