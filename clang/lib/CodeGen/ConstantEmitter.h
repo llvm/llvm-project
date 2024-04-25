@@ -40,10 +40,6 @@ private:
   /// Whether we're in a constant context.
   bool InConstantContext = false;
 
-  /// The AST address space where this (non-abstract) initializer is going.
-  /// Used for generating appropriate placeholders.
-  LangAS DestAddressSpace = LangAS::Default;
-
   llvm::SmallVector<std::pair<llvm::Constant *, llvm::GlobalVariable*>, 4>
     PlaceholderAddresses;
 
@@ -73,10 +69,8 @@ public:
   /// Try to emit the initiaizer of the given declaration as an abstract
   /// constant.  If this succeeds, the emission must be finalized.
   llvm::Constant *tryEmitForInitializer(const VarDecl &D);
-  llvm::Constant *tryEmitForInitializer(const Expr *E, LangAS destAddrSpace,
-                                        QualType destType);
-  llvm::Constant *emitForInitializer(const APValue &value, LangAS destAddrSpace,
-                                     QualType destType);
+  llvm::Constant *tryEmitForInitializer(const Expr *E, QualType destType);
+  llvm::Constant *emitForInitializer(const APValue &value, QualType destType);
 
   void finalize(llvm::GlobalVariable *global);
 
@@ -138,28 +132,10 @@ public:
   llvm::Constant *tryEmitPrivate(const APValue &value, QualType T);
   llvm::Constant *tryEmitPrivateForMemory(const APValue &value, QualType T);
 
-  /// Get the address of the current location.  This is a constant
-  /// that will resolve, after finalization, to the address of the
-  /// 'signal' value that is registered with the emitter later.
-  llvm::GlobalValue *getCurrentAddrPrivate();
-
-  /// Register a 'signal' value with the emitter to inform it where to
-  /// resolve a placeholder.  The signal value must be unique in the
-  /// initializer; it might, for example, be the address of a global that
-  /// refers to the current-address value in its own initializer.
-  ///
-  /// Uses of the placeholder must be properly anchored before finalizing
-  /// the emitter, e.g. by being installed as the initializer of a global
-  /// variable.  That is, it must be possible to replaceAllUsesWith
-  /// the placeholder with the proper address of the signal.
-  void registerCurrentAddrPrivate(llvm::Constant *signal,
-                                  llvm::GlobalValue *placeholder);
-
 private:
-  void initializeNonAbstract(LangAS destAS) {
+  void initializeNonAbstract() {
     assert(!InitializedNonAbstract);
     InitializedNonAbstract = true;
-    DestAddressSpace = destAS;
   }
   llvm::Constant *markIfFailed(llvm::Constant *init) {
     if (!init)

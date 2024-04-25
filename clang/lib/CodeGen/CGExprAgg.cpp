@@ -537,7 +537,7 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
     ConstantEmitter Emitter(CGF);
     LangAS AS = ArrayQTy.getAddressSpace();
     if (llvm::Constant *C =
-            Emitter.tryEmitForInitializer(ExprToVisit, AS, ArrayQTy)) {
+            Emitter.tryEmitForInitializer(ExprToVisit, ArrayQTy)) {
       auto GV = new llvm::GlobalVariable(
           CGM.getModule(), C->getType(),
           /* isConstant= */ true, llvm::GlobalValue::PrivateLinkage, C,

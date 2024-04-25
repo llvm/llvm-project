@@ -926,7 +926,7 @@ tryEmitGlobalCompoundLiteral(ConstantEmitter &emitter,
 
   LangAS addressSpace = E->getType().getAddressSpace();
   llvm::Constant *C = emitter.tryEmitForInitializer(E->getInitializer(),
-                                                    addressSpace, E->getType());
+                                                    E->getType());
   if (!C) {
     assert(!E->isFileScope() &&
            "file-scope compound literal did not have constant initializer!");
@@ -1474,52 +1474,22 @@ ConstantEmitter::emitAbstract(SourceLocation loc, const APValue &value,
 }
 
 llvm::Constant *ConstantEmitter::tryEmitForInitializer(const VarDecl &D) {
-  initializeNonAbstract(D.getType().getAddressSpace());
+  initializeNonAbstract();
   return markIfFailed(tryEmitPrivateForVarInit(D));
 }
 
 llvm::Constant *ConstantEmitter::tryEmitForInitializer(const Expr *E,
-                                                       LangAS destAddrSpace,
                                                        QualType destType) {
-  initializeNonAbstract(destAddrSpace);
+  initializeNonAbstract();
   return markIfFailed(tryEmitPrivateForMemory(E, destType));
 }
 
 llvm::Constant *ConstantEmitter::emitForInitializer(const APValue &value,
-                                                    LangAS destAddrSpace,
                                                     QualType destType) {
-  initializeNonAbstract(destAddrSpace);
+  initializeNonAbstract();
   auto C = tryEmitPrivateForMemory(value, destType);
   assert(C && "couldn't emit constant value non-abstractly?");
   return C;
-}
-
-llvm::GlobalValue *ConstantEmitter::getCurrentAddrPrivate() {
-  assert(!Abstract && "cannot get current address for abstract constant");
-
-
-
-  // Make an obviously ill-formed global that should blow up compilation
-  // if it survives.
-  auto global = new llvm::GlobalVariable(CGM.getModule(), CGM.Int8Ty, true,
-                                         llvm::GlobalValue::PrivateLinkage,
-                                         /*init*/ nullptr,
-                                         /*name*/ "",
-                                         /*before*/ nullptr,
-                                         llvm::GlobalVariable::NotThreadLocal,
-                                         CGM.getContext().getTargetAddressSpace(DestAddressSpace));
-
-  PlaceholderAddresses.push_back(std::make_pair(nullptr, global));
-
-  return global;
-}
-
-void ConstantEmitter::registerCurrentAddrPrivate(llvm::Constant *signal,
-                                           llvm::GlobalValue *placeholder) {
-  assert(!PlaceholderAddresses.empty());
-  assert(PlaceholderAddresses.back().first == nullptr);
-  assert(PlaceholderAddresses.back().second == placeholder);
-  PlaceholderAddresses.back().first = signal;
 }
 
 namespace {

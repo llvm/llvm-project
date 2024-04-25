@@ -3503,8 +3503,7 @@ ConstantAddress CodeGenModule::GetAddrOfMSGuidDecl(const MSGuidDecl *GD) {
   if (!V.isAbsent()) {
     // If possible, emit the APValue version of the initializer. In particular,
     // this gets the type of the constant right.
-    Init = Emitter.emitForInitializer(
-        GD->getAsAPValue(), GD->getType().getAddressSpace(), GD->getType());
+    Init = Emitter.emitForInitializer(GD->getAsAPValue(), GD->getType());
   } else {
     // As a fallback, directly construct the constant.
     // FIXME: This may get padding wrong under esoteric struct layout rules.
@@ -3552,8 +3551,7 @@ ConstantAddress CodeGenModule::GetAddrOfUnnamedGlobalConstantDecl(
   const APValue &V = GCD->getValue();
 
   assert(!V.isAbsent());
-  Init = Emitter.emitForInitializer(V, GCD->getType().getAddressSpace(),
-                                    GCD->getType());
+  Init = Emitter.emitForInitializer(V, GCD->getType());
 
   auto *GV = new llvm::GlobalVariable(getModule(), Init->getType(),
                                       /*isConstant=*/true,
@@ -3578,7 +3576,7 @@ ConstantAddress CodeGenModule::GetAddrOfTemplateParamObject(
 
   ConstantEmitter Emitter(*this);
   llvm::Constant *Init = Emitter.emitForInitializer(
-        TPO->getValue(), TPO->getType().getAddressSpace(), TPO->getType());
+        TPO->getValue(), TPO->getType());
 
   if (!Init) {
     ErrorUnsupported(TPO, "template parameter object");
@@ -6520,7 +6518,7 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
   if (Value) {
     // The temporary has a constant initializer, use it.
     emitter.emplace(*this);
-    InitialValue = emitter->emitForInitializer(*Value, AddrSpace,
+    InitialValue = emitter->emitForInitializer(*Value,
                                                MaterializedType);
     Constant =
         MaterializedType.isConstantStorage(getContext(), /*ExcludeCtor*/ Value,
