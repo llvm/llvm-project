@@ -7315,13 +7315,7 @@ static void handleHLSLSV_DispatchThreadIDAttr(Sema &S, Decl *D,
 }
 
 static void handleHLSLPackOffsetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  if (!isa<VarDecl>(D)) {
-    S.Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_ast_node)
-        << AL << "cbuffer constant";
-    return;
-  }
-  auto *BufDecl = dyn_cast<HLSLBufferDecl>(D->getDeclContext());
-  if (!BufDecl) {
+  if (!isa<VarDecl>(D) || !isa<HLSLBufferDecl>(D->getDeclContext())) {
     S.Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_ast_node)
         << AL << "cbuffer constant";
     return;

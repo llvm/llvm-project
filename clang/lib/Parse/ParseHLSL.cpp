@@ -211,6 +211,7 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
       if (OffsetStr.getAsInteger(10, SubComponent)) {
         Diag(OffsetLoc.getLocWithOffset(1),
              diag::err_hlsl_unsupported_register_number);
+        SkipUntil(tok::r_paren, StopAtSemi); // skip through )
         return;
       }
     }
@@ -231,25 +232,24 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
         Diag(SpaceLoc, diag::err_hlsl_unsupported_component) << ComponentStr;
         SkipUntil(tok::r_paren, StopAtSemi); // skip through )
         return;
-      } else {
-        switch (ComponentStr[0]) {
-        case 'x':
-          Component = 0;
-          break;
-        case 'y':
-          Component = 1;
-          break;
-        case 'z':
-          Component = 2;
-          break;
-        case 'w':
-          Component = 3;
-          break;
-        default:
-          Diag(SpaceLoc, diag::err_hlsl_unsupported_component) << ComponentStr;
-          SkipUntil(tok::r_paren, StopAtSemi); // skip through )
-          return;
-        }
+      }
+      switch (ComponentStr[0]) {
+      case 'x':
+        Component = 0;
+        break;
+      case 'y':
+        Component = 1;
+        break;
+      case 'z':
+        Component = 2;
+        break;
+      case 'w':
+        Component = 3;
+        break;
+      default:
+        Diag(SpaceLoc, diag::err_hlsl_unsupported_component) << ComponentStr;
+        SkipUntil(tok::r_paren, StopAtSemi); // skip through )
+        return;
       }
     }
     unsigned Offset = SubComponent * 4 + Component;
