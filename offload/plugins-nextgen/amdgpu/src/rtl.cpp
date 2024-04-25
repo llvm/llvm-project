@@ -2758,6 +2758,14 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = checkIfAPU())
       return Err;
 
+    // detect if device is GFX90a.
+    if (auto Err = checkIfGFX90a())
+      return Err;
+
+    // detect if device is an MI300X.
+    if (auto Err = checkIfMI300x())
+      return Err;
+
     // detect special cases for MI200 and MI300A
     specialBehaviorHandling();
 
@@ -3811,26 +3819,12 @@ private:
   /// Detect if current architecture is an APU.
   Error checkIfAPU() {
     // TODO: replace with ROCr API once it becomes available.
-    // MI200
-    llvm::StringRef StrGfxName(ComputeUnitKind);
-    IsEquippedWithGFX90A = llvm::StringSwitch<bool>(StrGfxName)
-                               .Case("gfx90a", true)
-                               .Default(false);
-    if (IsEquippedWithGFX90A)
-      return Plugin::success();
-
     // MI300A
+    llvm::StringRef StrGfxName(ComputeUnitKind);
     IsAPU = llvm::StringSwitch<bool>(StrGfxName)
                 .Case("gfx940", true)
                 .Default(false);
     if (IsAPU)
-      return Plugin::success();
-
-    // MI300X
-    IsEquippedWithMI300X = llvm::StringSwitch<bool>(StrGfxName)
-                               .Case("gfx941", true)
-                               .Default(false);
-    if (IsEquippedWithMI300X)
       return Plugin::success();
 
     bool MayBeAPU = llvm::StringSwitch<bool>(StrGfxName)
@@ -3844,11 +3838,43 @@ private:
     if (auto Err = getDeviceAttr(HSA_AMD_AGENT_INFO_CHIP_ID, ChipID))
       return Err;
 
-    if (!(ChipID & 0x1)) {
+    if (!(ChipID & 0x1))
       IsAPU = true;
+
+    return Plugin::success();
+  }
+
+  Error checkIfGFX90a() {
+    llvm::StringRef StrGfxName(ComputeUnitKind);
+    IsEquippedWithGFX90A = llvm::StringSwitch<bool>(StrGfxName)
+                               .Case("gfx90a", true)
+                               .Default(false);
+    return Plugin::success();
+  }
+
+  Error checkIfMI300x() {
+    llvm::StringRef StrGfxName(ComputeUnitKind);
+    IsEquippedWithMI300X = llvm::StringSwitch<bool>(StrGfxName)
+                               .Case("gfx941", true)
+                               .Default(false);
+
+    if (IsEquippedWithMI300X)
       return Plugin::success();
-    }
-    IsEquippedWithMI300X = true;
+
+    bool isMI300 = llvm::StringSwitch<bool>(StrGfxName)
+                       .Case("gfx942", true)
+                       .Default(false);
+    if (!isMI300)
+      return Plugin::success();
+
+    // Can be MI300A or MI300X
+    uint32_t ChipID = 0;
+    if (auto Err = getDeviceAttr(HSA_AMD_AGENT_INFO_CHIP_ID, ChipID))
+      return Err;
+
+    if (ChipID & 0x1)
+      IsEquippedWithMI300X = true;
+
     return Plugin::success();
   }
 
