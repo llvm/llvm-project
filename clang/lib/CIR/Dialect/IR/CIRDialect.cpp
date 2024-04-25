@@ -9,3 +9,5 @@
 // This file implements the CIR dialect and its operations.
 //
 //===----------------------------------------------------------------------===//
+
+#include <clang/CIR/Dialect/IR/CIRDialect.h>

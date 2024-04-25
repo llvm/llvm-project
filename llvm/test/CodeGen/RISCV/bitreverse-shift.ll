@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zbkb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=RV64ZBKB
 
-; TODO: These tests can be optmised
+; TODO: These tests can be optimised
 ;       fold (bitreverse(srl (bitreverse c), x)) -> (shl c, x)
 ;       fold (bitreverse(shl (bitreverse c), x)) -> (srl c, x)
 

@@ -100,7 +100,7 @@ bool isSpecialOpaqueType(const Type *Ty);
 bool isEntryPoint(const Function &F);
 
 // Parse basic scalar type name, substring TypeName, and return LLVM type.
-Type *parseBasicTypeName(StringRef TypeName, LLVMContext &Ctx);
+Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx);
 
 // True if this is an instance of TypedPointerType.
 inline bool isTypedPointerTy(const Type *T) {

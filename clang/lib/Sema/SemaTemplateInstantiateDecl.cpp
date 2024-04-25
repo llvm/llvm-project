@@ -2296,7 +2296,7 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
       SemaRef, Function->getDeclName(), SourceLocation(),
       D->isLocalExternDecl() ? Sema::LookupRedeclarationWithLinkage
                              : Sema::LookupOrdinaryName,
-      D->isLocalExternDecl() ? Sema::ForExternalRedeclaration
+      D->isLocalExternDecl() ? RedeclarationKind::ForExternalRedeclaration
                              : SemaRef.forRedeclarationInCurContext());
 
   if (DependentFunctionTemplateSpecializationInfo *DFTSI =
@@ -2697,7 +2697,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
     Method->setInvalidDecl();
 
   LookupResult Previous(SemaRef, NameInfo, Sema::LookupOrdinaryName,
-                        Sema::ForExternalRedeclaration);
+                        RedeclarationKind::ForExternalRedeclaration);
 
   bool IsExplicitSpecialization = false;
 
@@ -3365,7 +3365,7 @@ Decl *TemplateDeclInstantiator::VisitUsingDecl(UsingDecl *D) {
   // fact, it's not really even possible in non-class scopes).
   bool CheckRedeclaration = Owner->isRecord();
   LookupResult Prev(SemaRef, NameInfo, Sema::LookupUsingDeclName,
-                    Sema::ForVisibleRedeclaration);
+                    RedeclarationKind::ForVisibleRedeclaration);
 
   UsingDecl *NewUD = UsingDecl::Create(SemaRef.Context, Owner,
                                        D->getUsingLoc(),
@@ -5101,6 +5101,14 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   EnterExpressionEvaluationContext EvalContext(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
 
+  Qualifiers ThisTypeQuals;
+  CXXRecordDecl *ThisContext = nullptr;
+  if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(Function)) {
+    ThisContext = Method->getParent();
+    ThisTypeQuals = Method->getMethodQualifiers();
+  }
+  CXXThisScopeRAII ThisScope(*this, ThisContext, ThisTypeQuals);
+
   // Introduce a new scope where local variable instantiations will be
   // recorded, unless we're actually a member function within a local
   // class, in which case we need to merge our results with the parent
@@ -5176,6 +5184,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
 
     ParmVarDecl *Parm = Function->getParamDecl(0);
     TypeSourceInfo *NewParmSI = IR.TransformType(Parm->getTypeSourceInfo());
+    assert(NewParmSI && "Type transformation failed.");
     Parm->setType(NewParmSI->getType());
     Parm->setTypeSourceInfo(NewParmSI);
   };
@@ -5388,7 +5397,7 @@ void Sema::BuildVariableInstantiation(
       *this, NewVar->getDeclName(), NewVar->getLocation(),
       NewVar->isLocalExternDecl() ? Sema::LookupRedeclarationWithLinkage
                                   : Sema::LookupOrdinaryName,
-      NewVar->isLocalExternDecl() ? Sema::ForExternalRedeclaration
+      NewVar->isLocalExternDecl() ? RedeclarationKind::ForExternalRedeclaration
                                   : forRedeclarationInCurContext());
 
   if (NewVar->isLocalExternDecl() && OldVar->getPreviousDecl() &&
