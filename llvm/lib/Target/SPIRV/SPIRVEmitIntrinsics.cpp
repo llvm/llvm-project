@@ -1140,9 +1140,13 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
                  (II->paramHasAttr(OpNo, Attribute::ImmArg))))
         continue;
       B.SetInsertPoint(I);
-      auto *NewOp =
-          buildIntrWithMD(Intrinsic::spv_track_constant,
-                          {Op->getType(), Op->getType()}, Op, Op, {}, B);
+      Value *OpTyVal = Op;
+      if (Op->getType()->isTargetExtTy())
+        OpTyVal = Constant::getNullValue(
+            IntegerType::get(I->getContext(), GR->getPointerSize()));
+      auto *NewOp = buildIntrWithMD(Intrinsic::spv_track_constant,
+                                    {Op->getType(), OpTyVal->getType()}, Op,
+                                    OpTyVal, {}, B);
       I->setOperand(OpNo, NewOp);
     }
   }

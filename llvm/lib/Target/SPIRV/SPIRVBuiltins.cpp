@@ -2012,6 +2012,13 @@ static bool generateAsyncCopy(const SPIRV::IncomingCall *Call,
   const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
   unsigned Opcode =
       SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  bool IsSet = Opcode == SPIRV::OpGroupAsyncCopy;
+  Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
+  if (Call->isSpirvOp())
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                              IsSet ? TypeReg : Register(0));
+
   auto Scope = buildConstantIntReg(SPIRV::Scope::Workgroup, MIRBuilder, GR);
 
   switch (Opcode) {
