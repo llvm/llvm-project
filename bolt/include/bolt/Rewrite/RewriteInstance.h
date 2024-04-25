@@ -426,6 +426,9 @@ private:
   static StringRef getEHFrameSectionName() { return ".eh_frame"; }
   static StringRef getRelaDynSectionName() { return ".rela.dyn"; }
 
+  /// FILE symbol name used for local fragments of global functions.
+  static StringRef getBOLTFileSymbolName() { return "bolt-pseudo.o"; }
+
   /// An instance of the input binary we are processing, externally owned.
   llvm::object::ELFObjectFileBase *InputFile;
 
