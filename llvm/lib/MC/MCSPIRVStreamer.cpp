@@ -38,7 +38,5 @@ MCStreamer *llvm::createSPIRVStreamer(MCContext &Context,
                                       bool RelaxAll) {
   MCSPIRVStreamer *S = new MCSPIRVStreamer(Context, std::move(MAB),
                                            std::move(OW), std::move(CE));
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
   return S;
 }

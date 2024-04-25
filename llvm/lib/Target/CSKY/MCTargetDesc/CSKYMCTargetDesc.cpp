@@ -93,8 +93,6 @@ static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
   CSKYELFStreamer *S = new CSKYELFStreamer(Ctx, std::move(MAB), std::move(OW),
                                            std::move(Emitter));
 
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
   return S;
 }
 

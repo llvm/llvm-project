@@ -896,7 +896,5 @@ MCStreamer *llvm::createELFStreamer(MCContext &Context,
                                     bool RelaxAll) {
   MCELFStreamer *S =
       new MCELFStreamer(Context, std::move(MAB), std::move(OW), std::move(CE));
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
   return S;
 }

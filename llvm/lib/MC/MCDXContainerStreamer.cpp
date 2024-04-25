@@ -25,7 +25,5 @@ MCStreamer *llvm::createDXContainerStreamer(
     bool RelaxAll) {
   auto *S = new MCDXContainerStreamer(Context, std::move(MAB), std::move(OW),
                                       std::move(CE));
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
   return S;
 }

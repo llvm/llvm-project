@@ -312,7 +312,5 @@ MCELFStreamer *llvm::createAArch64ELFStreamer(
     bool RelaxAll) {
   AArch64ELFStreamer *S = new AArch64ELFStreamer(
       Context, std::move(TAB), std::move(OW), std::move(Emitter));
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
   return S;
 }

@@ -1497,8 +1497,6 @@ MCELFStreamer *createARMELFStreamer(MCContext &Context,
   // the status quo for ARM and setting EF_ARM_EABI_VER5 as the default.
   S->getAssembler().setELFHeaderEFlags(ELF::EF_ARM_EABI_VER5);
 
-  if (RelaxAll)
-    S->getAssembler().setRelaxAll(true);
   return S;
 }
 
