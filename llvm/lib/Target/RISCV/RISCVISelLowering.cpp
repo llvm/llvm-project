@@ -13436,13 +13436,11 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
           X.getConstantOperandVal(1) == UINT64_C(0xffffffff)) {
         SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X,
                                   DAG.getConstant(Log2_64(MulAmt2), DL, VT));
-        Shl = DAG.getFreeze(Shl);
         return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, Shl,
                            DAG.getConstant(Log2_64(Divisor - 1), DL, VT), Shl);
       }
       // Otherwise, put rhe shl second so that it can fold with following
       // instructions (e.g. sext or add).
-      X = DAG.getFreeze(X);
       SDValue Mul359 =
           DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
                       DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);

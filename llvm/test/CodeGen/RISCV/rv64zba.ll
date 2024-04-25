@@ -2633,7 +2633,7 @@ define i64 @regression(i32 signext %x, i32 signext %y) {
 ;
 ; RV64ZBA-LABEL: regression:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    sub a0, a0, a1
+; RV64ZBA-NEXT:    subw a0, a0, a1
 ; RV64ZBA-NEXT:    slli.uw a0, a0, 3
 ; RV64ZBA-NEXT:    sh1add a0, a0, a0
 ; RV64ZBA-NEXT:    ret
@@ -2763,8 +2763,7 @@ define i64 @bext_mul12(i32 %1, i32 %2) {
 ;
 ; RV64ZBAZBBZBS-LABEL: bext_mul12:
 ; RV64ZBAZBBZBS:       # %bb.0: # %entry
-; RV64ZBAZBBZBS-NEXT:    srl a0, a0, a1
-; RV64ZBAZBBZBS-NEXT:    andi a0, a0, 1
+; RV64ZBAZBBZBS-NEXT:    bext a0, a0, a1
 ; RV64ZBAZBBZBS-NEXT:    sh1add a0, a0, a0
 ; RV64ZBAZBBZBS-NEXT:    slli a0, a0, 2
 ; RV64ZBAZBBZBS-NEXT:    ret
