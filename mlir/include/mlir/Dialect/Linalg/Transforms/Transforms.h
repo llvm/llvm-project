@@ -1162,6 +1162,26 @@ packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
                    ArrayRef<int64_t> mnkPaddedSizesNextMultipleOf,
                    ArrayRef<int64_t> mnkOrder);
 
+struct PackMatmulOptions {
+  /// Minor block factors for packing relayout in the 'mnkOrder'.
+  SmallVector<int64_t, 3> blockFactors;
+  /// Order of packed dimensions (mb, nb, kb) - permutation of the default
+  /// order.
+  SmallVector<int64_t, 3> mnkOrder = {0, 1, 2};
+  SmallVector<int64_t, 3> mnkPaddedSizesNextMultipleOf;
+  bool allowPadding = true;
+};
+/// Function type which is used to control matmul block packing.
+/// It is expected to return valid packing configuration for each operation.
+/// Lack of options indicates no valid configuration could be assigned and
+/// will prevent any packing from occuring.
+using ControlPackMatmulFn =
+    std::function<std::optional<PackMatmulOptions>(linalg::LinalgOp)>;
+
+FailureOr<PackResult>
+packMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
+             const ControlPackMatmulFn &controlPackMatmul);
+
 /// Rewrite tensor.from_elements to linalg.generic.
 FailureOr<Operation *>
 rewriteInDestinationPassingStyle(RewriterBase &rewriter,
@@ -1630,7 +1650,7 @@ void populateTransposeMatmulPatterns(RewritePatternSet &patterns,
 
 /// Patterns to pack Linalg matmul ops.
 void populatePackMatmulPatterns(RewritePatternSet &patterns,
-                                ArrayRef<int64_t> blockingFactors);
+                                const ControlPackMatmulFn &controlFn);
 
 } // namespace linalg
 } // namespace mlir

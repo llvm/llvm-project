@@ -41,7 +41,7 @@ static std::optional<int64_t> getConstantRange(const Range &range) {
 
 static bool validateFullTilesOnDims(TilingInterface tileOp,
                                     ArrayRef<OpFoldResult> tiles,
-                                    ArrayRef<size_t> dims) {
+                                    ArrayRef<int64_t> dims) {
   if (dims.size() != tiles.size() || tiles.empty())
     return false;
 
@@ -51,7 +51,7 @@ static bool validateFullTilesOnDims(TilingInterface tileOp,
       cast<TilingInterface>(tileOp.getOperation()).getIterationDomain(builder);
 
   for (auto dim : llvm::enumerate(dims)) {
-    if (dim.value() >= iterationDomain.size())
+    if (dim.value() >= static_cast<int64_t>(iterationDomain.size()))
       return false;
 
     auto tileSize = getConstantIntValue(tiles[dim.index()]);
@@ -70,16 +70,17 @@ static bool validateFullTilesOnDims(TilingInterface tileOp,
   return true;
 }
 
-static FailureOr<linalg::LinalgOp>
-packMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
-             ArrayRef<OpFoldResult> mnkTiles) {
+FailureOr<PackResult>
+linalg::packMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
+                     const ControlPackMatmulFn &controlPackMatmul) {
   if (!(isa<linalg::MatmulOp>(matmulOp) ||
-        isa<linalg::BatchMatmulOp>(matmulOp))) {
+        isa<linalg::BatchMatmulOp>(matmulOp) ||
+        isa<linalg::MatmulTransposeAOp>(matmulOp) ||
+        isa<linalg::MatmulTransposeBOp>(matmulOp) ||
+        isa<linalg::BatchMatmulTransposeAOp>(matmulOp) ||
+        isa<linalg::BatchMatmulTransposeBOp>(matmulOp))) {
     return rewriter.notifyMatchFailure(matmulOp, "not a matmul-like operation");
   }
-
-  if (mnkTiles.size() != 3)
-    return rewriter.notifyMatchFailure(matmulOp, "require 3 tile factors");
 
   if (matmulOp.hasDynamicShape())
     return rewriter.notifyMatchFailure(matmulOp, "require static shape");
@@ -87,25 +88,44 @@ packMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
   if (matmulOp.hasPureBufferSemantics())
     return rewriter.notifyMatchFailure(matmulOp, "require tensor semantics");
 
-  SmallVector<size_t, 3> dims{0, 1, 2};
-  // Skip the batch dimension if present.
-  bool isBatchMatmulOp = isa<linalg::BatchMatmulOp>(matmulOp);
-  if (isBatchMatmulOp)
-    dims = {1, 2, 3};
+  std::optional<PackMatmulOptions> options = controlPackMatmul(matmulOp);
+  if (!options)
+    return rewriter.notifyMatchFailure(matmulOp, "invalid packing options");
 
-  if (!validateFullTilesOnDims(cast<TilingInterface>(matmulOp.getOperation()),
+  if (options->blockFactors.size() != 3)
+    return rewriter.notifyMatchFailure(matmulOp, "require 3 tile factors");
+
+  auto mnkTiles =
+      getAsOpFoldResult(rewriter.getI64ArrayAttr(options->blockFactors));
+
+  SmallVector<int64_t, 3> dims{options->mnkOrder};
+  // Skip the batch dimension if present.
+  bool isBatchMatmulOp = isa<linalg::BatchMatmulOp>(matmulOp) ||
+                         isa<linalg::BatchMatmulTransposeAOp>(matmulOp) ||
+                         isa<linalg::BatchMatmulTransposeBOp>(matmulOp);
+  if (isBatchMatmulOp) {
+    // Offset all dimensions.
+    for (size_t i = 0; i < dims.size(); i++)
+      ++dims[i];
+  }
+
+  if (!options->allowPadding &&
+      !validateFullTilesOnDims(cast<TilingInterface>(matmulOp.getOperation()),
                                mnkTiles, dims)) {
     return rewriter.notifyMatchFailure(matmulOp,
                                        "expect packing full tiles only");
   }
+
+  bool isTransposedRhs = isa<linalg::MatmulTransposeBOp>(matmulOp) ||
+                         isa<linalg::BatchMatmulTransposeBOp>(matmulOp);
 
   OpBuilder::InsertionGuard guard(rewriter);
   // The op is replaced, we need to set the insertion point after it.
   rewriter.setInsertionPointAfter(matmulOp);
 
   auto packedCanonicalMatmul = packMatmulGreedily(
-      rewriter, matmulOp, mnkTiles, /*mnkPaddedSizesNextMultipleOf=*/{},
-      /*mnkOrder=*/{0, 1, 2});
+      rewriter, matmulOp, mnkTiles, options->mnkPaddedSizesNextMultipleOf,
+      options->mnkOrder);
   if (failed(packedCanonicalMatmul))
     return failure();
 
@@ -113,11 +133,21 @@ packMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
   assert(packedCanonicalMatmul->unPackOps.size() == 1 &&
          "failed matmul unpacking");
 
-  SmallVector<int64_t> innerPerm = {1, 0};
-  SmallVector<int64_t> outerPerm = {1, 0};
+  SmallVector<int64_t> innerPerm{1, 0};
+  SmallVector<int64_t> outerPerm{1, 0};
+  // No need to block transpose if the RHS matrix is already transposed.
+  if (isTransposedRhs)
+    outerPerm = {0, 1};
+
   // Leave the batch dimension as is.
-  if (isBatchMatmulOp)
-    outerPerm = {0, 2, 1};
+  if (isBatchMatmulOp) {
+    // Account for the batch dimension.
+    SmallVector<int64_t> newOuterPerms{0};
+    // Offset all permutations.
+    for (auto perm : outerPerm)
+      newOuterPerms.push_back(++perm);
+    outerPerm = newOuterPerms;
+  }
 
   auto packedMatmul =
       packTranspose(rewriter, packedCanonicalMatmul->packOps[1],
@@ -126,30 +156,28 @@ packMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
   if (failed(packedMatmul))
     return failure();
 
-  return packedMatmul->transposedLinalgOp;
+  packedCanonicalMatmul->packedLinalgOp = packedMatmul->transposedLinalgOp;
+
+  return packedCanonicalMatmul;
 }
 
 namespace {
 template <typename OpTy>
 struct PackMatmul : public OpRewritePattern<OpTy> {
-  PackMatmul(MLIRContext *context, ArrayRef<int64_t> blockFactors,
+  PackMatmul(MLIRContext *context, ControlPackMatmulFn fun,
              PatternBenefit benefit = 1)
-      : OpRewritePattern<OpTy>(context, benefit), blockFactors(blockFactors) {}
+      : OpRewritePattern<OpTy>(context, benefit), controlFn(std::move(fun)) {}
 
   LogicalResult matchAndRewrite(OpTy matmulOp,
                                 PatternRewriter &rewriter) const override {
-    if (blockFactors.empty())
-      return failure();
-    auto packedMatmul =
-        packMatmulOp(rewriter, matmulOp,
-                     getAsOpFoldResult(rewriter.getI64ArrayAttr(blockFactors)));
+    auto packedMatmul = packMatmulOp(rewriter, matmulOp, controlFn);
     if (failed(packedMatmul))
       return failure();
     return success();
   }
 
 private:
-  SmallVector<int64_t> blockFactors;
+  ControlPackMatmulFn controlFn;
 };
 
 // Entry point for packing matmul operations.
@@ -163,7 +191,20 @@ struct LinalgPackMatmul : public impl::LinalgPackMatmulBase<LinalgPackMatmul> {
   void runOnOperation() override {
     Operation *op = getOperation();
     RewritePatternSet patterns(&getContext());
-    linalg::populatePackMatmulPatterns(patterns, blockFactors);
+
+    ControlPackMatmulFn controlFn =
+        [&](linalg::LinalgOp op) -> PackMatmulOptions {
+      PackMatmulOptions options;
+      options.blockFactors = SmallVector<int64_t>{*blockFactors};
+      if (!mnkOrder.empty())
+        options.mnkOrder = SmallVector<int64_t>{*mnkOrder};
+      options.mnkPaddedSizesNextMultipleOf =
+          SmallVector<int64_t>{*mnkPaddedSizesNextMultipleOf};
+      options.allowPadding = allowPadding;
+      return options;
+    };
+
+    linalg::populatePackMatmulPatterns(patterns, controlFn);
     if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
       return signalPassFailure();
   }
@@ -171,7 +212,11 @@ struct LinalgPackMatmul : public impl::LinalgPackMatmulBase<LinalgPackMatmul> {
 } // namespace
 
 void linalg::populatePackMatmulPatterns(RewritePatternSet &patterns,
-                                        ArrayRef<int64_t> blockFactors) {
-  patterns.add<PackMatmul<linalg::MatmulOp>, PackMatmul<linalg::BatchMatmulOp>>(
-      patterns.getContext(), blockFactors);
+                                        const ControlPackMatmulFn &controlFn) {
+  patterns.add<PackMatmul<linalg::MatmulOp>, PackMatmul<linalg::BatchMatmulOp>,
+               PackMatmul<linalg::MatmulTransposeAOp>,
+               PackMatmul<linalg::BatchMatmulTransposeAOp>,
+               PackMatmul<linalg::MatmulTransposeBOp>,
+               PackMatmul<linalg::BatchMatmulTransposeBOp>>(
+      patterns.getContext(), controlFn);
 }

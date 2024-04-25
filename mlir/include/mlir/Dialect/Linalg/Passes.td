@@ -178,7 +178,14 @@ def LinalgPackMatmul : Pass<"linalg-pack-matmul"> {
   let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect"];
   let options = [
     ListOption<"blockFactors", "block-factors", "int64_t",
-               "Block factors (mb, nb, kb) for relayout">
+               "Block factors (mb, nb, kb) for relayout">,
+    ListOption<"mnkOrder", "mnk-order", "int64_t",
+               "Permutation of (mb, nb, kb) dimensions order">,
+    ListOption<"mnkPaddedSizesNextMultipleOf", "mnk-padded-multiples", "int64_t",
+               "Packing sizes next multiple">,
+    Option<"allowPadding", "allow-padding", "bool",
+           /*default=*/"true",
+           "Allow packing padding">
   ];
 }
 
