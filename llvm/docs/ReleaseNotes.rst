@@ -112,6 +112,11 @@ Changes to the RISC-V Backend
 * The experimental Ssqosid extension is supported.
 * Zacas is no longer experimental.
 * Added the CSR names from the Resumable Non-Maskable Interrupts (Smrnmi) extension.
+* The default atomics mapping was changed to emit an additional trailing fence
+  for sequentially consistent stores, offering compatibility with a future
+  mapping using load-acquire and store-release instructions while remaining
+  fully compatible with objects produced prior to this change. The mapping
+  (ABI) used is recorded as an ELF attribute.
 
 Changes to the WebAssembly Backend
 ----------------------------------
