@@ -1467,13 +1467,12 @@ void ASTUnit::RealizeTopLevelDeclsFromPreamble() {
 
   std::vector<Decl *> Resolved;
   Resolved.reserve(TopLevelDeclsInPreamble.size());
-  ExternalASTSource &Source = *getASTContext().getExternalSource();
+  // The module file of the preamble.
+  serialization::ModuleFile &MF = Reader->getModuleManager().getPrimaryModule();
   for (const auto TopLevelDecl : TopLevelDeclsInPreamble) {
     // Resolve the declaration ID to an actual declaration, possibly
     // deserializing the declaration in the process.
-    //
-    // FIMXE: We shouldn't convert a LocalDeclID to GlobalDeclID directly.
-    if (Decl *D = Source.GetExternalDecl(GlobalDeclID(TopLevelDecl.get())))
+    if (Decl *D = Reader->GetDecl(Reader->getGlobalDeclID(MF, TopLevelDecl)))
       Resolved.push_back(D);
   }
   TopLevelDeclsInPreamble.clear();
