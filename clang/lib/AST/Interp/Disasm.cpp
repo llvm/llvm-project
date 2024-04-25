@@ -270,8 +270,6 @@ LLVM_DUMP_METHOD void Record::dump(llvm::raw_ostream &OS, unsigned Indentation,
     ++I;
   }
 
-  // FIXME: Virtual bases.
-
   I = 0;
   for (const Record::Field &F : fields()) {
     OS.indent(Indent) << "- Field " << I << ": ";
@@ -280,6 +278,14 @@ LLVM_DUMP_METHOD void Record::dump(llvm::raw_ostream &OS, unsigned Indentation,
       OS << F.Decl->getName();
     }
     OS << ". Offset " << (Offset + F.Offset) << "\n";
+    ++I;
+  }
+
+  I = 0;
+  for (const Record::Base &B : virtual_bases()) {
+    OS.indent(Indent) << "- Virtual Base " << I << ". Offset "
+                      << (Offset + B.Offset) << "\n";
+    B.R->dump(OS, Indentation + 1, Offset + B.Offset);
     ++I;
   }
 }
