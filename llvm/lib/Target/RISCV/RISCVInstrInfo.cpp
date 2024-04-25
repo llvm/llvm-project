@@ -3152,6 +3152,16 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
 }
 
+#undef CASE_RVV_OPCODE_UNMASK_LMUL
+#undef CASE_RVV_OPCODE_MASK_LMUL
+#undef CASE_RVV_OPCODE_LMUL
+#undef CASE_RVV_OPCODE_UNMASK_WIDEN
+#undef CASE_RVV_OPCODE_UNMASK
+#undef CASE_RVV_OPCODE_MASK_WIDEN
+#undef CASE_RVV_OPCODE_MASK
+#undef CASE_RVV_OPCODE_WIDEN
+#undef CASE_RVV_OPCODE
+
 #undef CASE_VMA_OPCODE_COMMON
 #undef CASE_VMA_OPCODE_LMULS_M1
 #undef CASE_VMA_OPCODE_LMULS_MF2
