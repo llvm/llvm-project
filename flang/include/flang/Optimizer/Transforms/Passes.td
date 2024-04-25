@@ -127,7 +127,6 @@ def CharacterConversion : Pass<"character-conversion"> {
     By default the translation is to naively zero-extend or truncate a code
     point to fit the destination size.
   }];
-  let constructor = "::fir::createCharacterConversionPass()";
   let dependentDialects = [ "fir::FIROpsDialect" ];
   let options = [
     Option<"useRuntimeCalls", "use-runtime-calls",
@@ -137,8 +136,7 @@ def CharacterConversion : Pass<"character-conversion"> {
   ];
 }
 
-class CFGConversionBase<string optExt, string operation>
-  : Pass<"cfg-conversion-on-" # optExt # "-opt", operation> {
+def CFGConversion : Pass<"cfg-conversion"> {
   let summary = "Convert FIR structured control flow ops to CFG ops.";
   let description = [{
     Transform the `fir.do_loop`, `fir.if`, `fir.iterate_while` and
@@ -155,14 +153,6 @@ class CFGConversionBase<string optExt, string operation>
            /*default=*/"false",
            "force the body of a loop to execute at least once">
   ];
-}
-
-def CFGConversionOnFunc : CFGConversionBase<"func", "mlir::func::FuncOp"> {
-  let constructor = "::fir::createFirToCfgOnFuncPass()";
-}
-
-def CFGConversionOnReduction : CFGConversionBase<"reduce", "mlir::omp::DeclareReductionOp"> {
-  let constructor = "::fir::createFirToCfgOnReductionPass()";
 }
 
 def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
@@ -234,7 +224,6 @@ def SimplifyIntrinsics : Pass<"simplify-intrinsics", "mlir::ModuleOp"> {
     simplified function. The simplified function is added to the current module.
     This function can be inlined by a general purpose inlining pass.
   }];
-  let constructor = "::fir::createSimplifyIntrinsicsPass()";
 
   let options = [
     Option<"enableExperimental", "enable-experimental", "bool",
@@ -296,7 +285,6 @@ def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
   let description = [{
     Run region DCE and erase unreachable blocks in regions.
   }];
-  let constructor = "::fir::createSimplifyRegionLitePass()";
 }
 
 def AlgebraicSimplification : Pass<"flang-algebraic-simplification"> {

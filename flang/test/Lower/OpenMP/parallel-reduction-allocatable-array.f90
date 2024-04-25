@@ -37,9 +37,12 @@ end program
 ! CHECK:             %[[VAL_6:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_4]]#1 {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK:             %[[VAL_7:.*]] = arith.constant true
 ! CHECK:             %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_5]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
-! CHECK:             %[[VAL_9:.*]] = fir.convert %[[VAL_8]]#0 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK:             hlfir.assign %[[VAL_1]] to %[[VAL_9]] : i32, !fir.box<!fir.heap<!fir.array<?xi32>>>
-! CHECK:             fir.store %[[VAL_9]] to %[[VAL_10]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:             %[[C0:.*]] = arith.constant 0 : index
+! CHECK:             %[[DIMS:.*]]:3 = fir.box_dims %[[VAL_2]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+! CHECK:             %[[SHIFT:.*]] = fir.shape_shift %[[DIMS]]#0, %[[DIMS]]#1 : (index, index) -> !fir.shapeshift<1>
+! CHECK:             %[[REBOX:.*]] = fir.rebox %[[VAL_8]]#0(%[[SHIFT]]) : (!fir.box<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:             hlfir.assign %[[VAL_1]] to %[[REBOX]] : i32, !fir.box<!fir.heap<!fir.array<?xi32>>>
+! CHECK:             fir.store %[[REBOX]] to %[[VAL_10]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:           }
 ! CHECK:           omp.yield(%[[VAL_10]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK:         } combiner {
@@ -92,22 +95,25 @@ end program
 ! CHECK:             %[[VAL_14:.*]] = arith.constant 0 : i32
 ! CHECK:             %[[VAL_15:.*]] = arith.constant 10 : i32
 ! CHECK:             %[[VAL_16:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop byref reduction(@add_reduction_byref_box_heap_Uxi32 %[[VAL_3]]#0 -> %[[VAL_17:.*]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)  for  (%[[VAL_18:.*]]) : i32 = (%[[VAL_14]]) to (%[[VAL_15]]) inclusive step (%[[VAL_16]]) {
-! CHECK:               fir.store %[[VAL_18]] to %[[VAL_13]]#1 : !fir.ref<i32>
-! CHECK:               %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_17]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFEr"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
-! CHECK:               %[[VAL_20:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<i32>
-! CHECK:               %[[VAL_21:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:               %[[VAL_22:.*]] = arith.constant 1 : index
-! CHECK:               %[[VAL_23:.*]] = hlfir.designate %[[VAL_21]] (%[[VAL_22]])  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
-! CHECK:               hlfir.assign %[[VAL_20]] to %[[VAL_23]] : i32, !fir.ref<i32>
-! CHECK:               %[[VAL_24:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<i32>
-! CHECK:               %[[VAL_25:.*]] = arith.constant 0 : i32
-! CHECK:               %[[VAL_26:.*]] = arith.subi %[[VAL_25]], %[[VAL_24]] : i32
-! CHECK:               %[[VAL_27:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK:               %[[VAL_28:.*]] = arith.constant 2 : index
-! CHECK:               %[[VAL_29:.*]] = hlfir.designate %[[VAL_27]] (%[[VAL_28]])  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
-! CHECK:               hlfir.assign %[[VAL_26]] to %[[VAL_29]] : i32, !fir.ref<i32>
-! CHECK:               omp.yield
+! CHECK:             omp.wsloop byref reduction(@add_reduction_byref_box_heap_Uxi32 %[[VAL_3]]#0 -> %[[VAL_17:.*]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
+! CHECK-NEXT:          omp.loop_nest (%[[VAL_18:.*]]) : i32 = (%[[VAL_14]]) to (%[[VAL_15]]) inclusive step (%[[VAL_16]]) {
+! CHECK:                 %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_17]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFEr"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+! CHECK:                 fir.store %[[VAL_18]] to %[[VAL_13]]#1 : !fir.ref<i32>
+! CHECK:                 %[[VAL_20:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<i32>
+! CHECK:                 %[[VAL_21:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:                 %[[VAL_22:.*]] = arith.constant 1 : index
+! CHECK:                 %[[VAL_23:.*]] = hlfir.designate %[[VAL_21]] (%[[VAL_22]])  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_20]] to %[[VAL_23]] : i32, !fir.ref<i32>
+! CHECK:                 %[[VAL_24:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<i32>
+! CHECK:                 %[[VAL_25:.*]] = arith.constant 0 : i32
+! CHECK:                 %[[VAL_26:.*]] = arith.subi %[[VAL_25]], %[[VAL_24]] : i32
+! CHECK:                 %[[VAL_27:.*]] = fir.load %[[VAL_19]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK:                 %[[VAL_28:.*]] = arith.constant 2 : index
+! CHECK:                 %[[VAL_29:.*]] = hlfir.designate %[[VAL_27]] (%[[VAL_28]])  : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_26]] to %[[VAL_29]] : i32, !fir.ref<i32>
+! CHECK:                 omp.yield
+! CHECK:               }
+! CHECK:               omp.terminator
 ! CHECK:             }
 ! CHECK:             omp.terminator
 ! CHECK:           }
