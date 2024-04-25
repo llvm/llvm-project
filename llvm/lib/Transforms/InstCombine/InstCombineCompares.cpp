@@ -8086,9 +8086,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       case FCmpInst::FCMP_OGE:
       case FCmpInst::FCMP_OLE: {
         if (!LHSI->hasNoNaNs() && !LHSI->hasNoInfs() &&
-            !isKnownNeverInfinity(LHSI->getOperand(0), /*Depth=*/0,
-                                  getSimplifyQuery().getWithInstruction(&I)) &&
             !isKnownNeverInfinity(LHSI->getOperand(1), /*Depth=*/0,
+                                  getSimplifyQuery().getWithInstruction(&I)) &&
+            !isKnownNeverInfinity(LHSI->getOperand(0), /*Depth=*/0,
                                   getSimplifyQuery().getWithInstruction(&I)))
           break;
       }
@@ -8100,7 +8100,10 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       case FCmpInst::FCMP_UGE:
       case FCmpInst::FCMP_ULE:
         if (match(RHSC, m_AnyZeroFP()) &&
-            match(LHSI, m_FSub(m_Value(X), m_Value(Y)))) {
+            match(LHSI, m_FSub(m_Value(X), m_Value(Y))) &&
+            I.getFunction()->getDenormalMode(
+                LHSI->getType()->getScalarType()->getFltSemantics()) ==
+                DenormalMode::getIEEE()) {
           replaceOperand(I, 0, X);
           replaceOperand(I, 1, Y);
           return &I;

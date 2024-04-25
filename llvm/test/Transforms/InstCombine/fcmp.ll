@@ -1289,7 +1289,7 @@ define <1 x i1> @bitcast_1vec_eq0(i32 %x) {
 
 define i1 @fcmp_fadd_zero_ugt(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_ugt(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[ADD:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1299,7 +1299,7 @@ define i1 @fcmp_fadd_zero_ugt(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_uge(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_uge(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[ADD:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1309,7 +1309,7 @@ define i1 @fcmp_fadd_zero_uge(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_ogt(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_ogt(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[ADD:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1319,7 +1319,7 @@ define i1 @fcmp_fadd_zero_ogt(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_oge(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_oge(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[ADD:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1329,7 +1329,7 @@ define i1 @fcmp_fadd_zero_oge(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_ult(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_ult(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[ADD:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1339,7 +1339,7 @@ define i1 @fcmp_fadd_zero_ult(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_ule(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_ule(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[ADD:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1349,7 +1349,7 @@ define i1 @fcmp_fadd_zero_ule(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_olt(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_olt(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[ADD:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1359,7 +1359,7 @@ define i1 @fcmp_fadd_zero_olt(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_ole(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_ole(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[ADD:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1369,7 +1369,7 @@ define i1 @fcmp_fadd_zero_ole(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_oeq(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_oeq(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ADD:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1379,7 +1379,7 @@ define i1 @fcmp_fadd_zero_oeq(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_one(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_one(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[ADD:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1389,7 +1389,7 @@ define i1 @fcmp_fadd_zero_one(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_ueq(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_ueq(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[ADD:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1399,7 +1399,7 @@ define i1 @fcmp_fadd_zero_ueq(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_une(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_une(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[ADD:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1409,7 +1409,7 @@ define i1 @fcmp_fadd_zero_une(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_ord(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_ord(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[ADD:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -1419,7 +1419,7 @@ define i1 @fcmp_fadd_zero_ord(float %x, float %y) {
 
 define i1 @fcmp_fadd_zero_uno(float %x, float %y) {
 ; CHECK-LABEL: @fcmp_fadd_zero_uno(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[ADD:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add = fadd float %x, 0.000000e+00
@@ -2052,5 +2052,38 @@ define <8 x i1> @fcmp_une_fsub_const_nnan_vec(<8 x float> %x, <8 x float> %y) {
 ;
   %fs = fsub nnan <8 x float> %x, %y
   %cmp = fcmp nnan une <8 x float> %fs, zeroinitializer
+  ret <8 x i1> %cmp
+}
+
+define <8 x i1> @fcmp_ugt_fsub_const_vec_denormal_positive-zero(<8 x float> %x, <8 x float> %y) "denormal-fp-math"="positive-zero" {
+; CHECK-LABEL: @fcmp_ugt_fsub_const_vec_denormal_positive-zero(
+; CHECK-NEXT:    [[FS:%.*]] = fsub <8 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt <8 x float> [[FS]], zeroinitializer
+; CHECK-NEXT:    ret <8 x i1> [[CMP]]
+;
+  %fs = fsub <8 x float> %x, %y
+  %cmp = fcmp ogt <8 x float> %fs, zeroinitializer
+  ret <8 x i1> %cmp
+}
+
+define <8 x i1> @fcmp_ogt_fsub_const_vec_denormal_dynamic(<8 x float> %x, <8 x float> %y) "denormal-fp-math"="dynamic,dynamic" {
+; CHECK-LABEL: @fcmp_ogt_fsub_const_vec_denormal_dynamic(
+; CHECK-NEXT:    [[FS:%.*]] = fsub <8 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt <8 x float> [[FS]], zeroinitializer
+; CHECK-NEXT:    ret <8 x i1> [[CMP]]
+;
+  %fs = fsub <8 x float> %x, %y
+  %cmp = fcmp ogt <8 x float> %fs, zeroinitializer
+  ret <8 x i1> %cmp
+}
+
+define <8 x i1> @fcmp_ogt_fsub_const_vec_denormal_preserve-sign(<8 x float> %x, <8 x float> %y) "denormal-fp-math"="preserve-sign" {
+; CHECK-LABEL: @fcmp_ogt_fsub_const_vec_denormal_preserve-sign(
+; CHECK-NEXT:    [[FS:%.*]] = fsub <8 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt <8 x float> [[FS]], zeroinitializer
+; CHECK-NEXT:    ret <8 x i1> [[CMP]]
+;
+  %fs = fsub <8 x float> %x, %y
+  %cmp = fcmp ogt <8 x float> %fs, zeroinitializer
   ret <8 x i1> %cmp
 }
