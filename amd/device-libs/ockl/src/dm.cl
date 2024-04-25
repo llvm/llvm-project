@@ -294,9 +294,14 @@ first(__global void * v)
     return __builtin_astype(w2, __global void *);
 }
 
-REQUIRES_WAVE64
+// Read val from one active lane whose predicate is one.
+// If no lanes have the predicate set, return none
+// This is like first, except that first may not have its predicate set
 static uint
-elect_uint_wave64(int pred, uint val, uint none) {
+elect_uint(int pred, uint val, uint none)
+{
+  // Pretend wave32 doesn't exist. The wave64 ballot works, and the high half
+  // will fold out as 0.
     uint ret = none;
 
     ulong mask = __builtin_amdgcn_ballot_w64(pred != 0);
@@ -308,49 +313,12 @@ elect_uint_wave64(int pred, uint val, uint none) {
     return ret;
 }
 
-REQUIRES_WAVE32
-static uint
-elect_uint_wave32(int pred, uint val, uint none) {
-    uint ret = none;
-    uint mask = __builtin_amdgcn_ballot_w32(pred != 0);
-    if (mask != 0U) {
-        uint l = __ockl_ctz_u32(mask);
-        ret = __builtin_amdgcn_ds_bpermute(l << 2, val);
-    }
-
-    return ret;
-}
-
-// Read val from one active lane whose predicate is one.
-// If no lanes have the predicate set, return none
-// This is like first, except that first may not have its predicate set
-static uint
-elect_uint(int pred, uint val, uint none)
-{
-    return __oclc_wavefrontsize64 ?  elect_uint_wave64(pred, val, none) : elect_uint_wave32(pred, val, none);
-}
-
-REQUIRES_WAVE64
-static uint
-votes_wave64(bool b)
-{
-    ulong mask = __builtin_amdgcn_ballot_w64(b);
-    return __builtin_popcountl(mask);
-}
-
-REQUIRES_WAVE32
-static uint
-votes_wave32(bool b)
-{
-    uint mask = __builtin_amdgcn_ballot_w32(b);
-    return __builtin_popcount(mask);
-}
-
 // Count the number of nonzero arguments across the wave
 static uint
 votes(bool b)
 {
-    return __oclc_wavefrontsize64 ?  votes_wave64(b) : votes_wave32(b);
+    ulong mask = __builtin_amdgcn_ballot_w64(b);
+    return __builtin_popcountl(mask);
 }
 
 // The kind of the smallest block that can hold sz bytes
