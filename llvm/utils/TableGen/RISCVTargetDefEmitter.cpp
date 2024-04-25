@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This tablegen backend emits the include file needed by the target
-// parser to parse the RISC-V CPUs.
+// This tablegen backend emits the include file needed by RISCVTargetParser.cpp
+// and RISCVISAInfo.cpp to parse the RISC-V CPUs and extensions.
 //
 //===----------------------------------------------------------------------===//
 
@@ -203,4 +203,5 @@ static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
 }
 
 static TableGen::Emitter::Opt X("gen-riscv-target-def", EmitRISCVTargetDef,
-                                "Generate the list of CPU for RISCV");
+                                "Generate the list of CPUs and extensions for "
+                                "RISC-V");
