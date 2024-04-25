@@ -797,7 +797,7 @@ protected:
     ///
     /// The first value in the array is the number of specializations/partial
     /// specializations that follow.
-    Decl::DeclID *LazySpecializations = nullptr;
+    DeclID *LazySpecializations = nullptr;
 
     /// The set of "injected" template arguments used within this
     /// template.
