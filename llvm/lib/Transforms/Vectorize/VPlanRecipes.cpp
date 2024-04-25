@@ -1744,6 +1744,36 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   }
 }
 
+void VPReductionEVLRecipe::execute(VPTransformState &State) {
+  assert(!State.Instance && "Reduction being replicated.");
+  assert(State.UF == 1 &&
+         "Expected only UF == 1 when vectorizing with explicit vector length.");
+
+  auto &Builder = State.Builder;
+  // Propagate the fast-math flags carried by the underlying instruction.
+  IRBuilderBase::FastMathFlagGuard FMFGuard(Builder);
+  Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
+
+  RecurKind Kind = RdxDesc.getRecurrenceKind();
+  Value *Prev = State.get(getChainOp(), 0, /*IsScalar*/ true);
+  Value *VecOp = State.get(getVecOp(), 0);
+  Value *EVL = State.get(getEVL(), VPIteration(0, 0));
+  Value *Cond = getCondOp() ? State.get(getCondOp(), 0) : nullptr;
+
+  Value *NewRed;
+  if (IsOrdered) {
+    NewRed = createOrderedReduction(Builder, RdxDesc, VecOp, Prev, EVL, Cond);
+  } else {
+    NewRed = createSimpleTargetReduction(Builder, VecOp, Kind, EVL, Cond);
+    if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind))
+      NewRed = createMinMaxOp(Builder, Kind, NewRed, Prev);
+    else
+      NewRed = Builder.CreateBinOp(
+          (Instruction::BinaryOps)RdxDesc.getOpcode(Kind), NewRed, Prev);
+  }
+  State.set(this, NewRed, 0, /*IsScalar*/ true);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
@@ -1756,6 +1786,29 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
     O << getUnderlyingInstr()->getFastMathFlags();
   O << " reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
+  if (getCondOp()) {
+    O << ", ";
+    getCondOp()->printAsOperand(O, SlotTracker);
+  }
+  O << ")";
+  if (RdxDesc.IntermediateStore)
+    O << " (with final reduction value stored in invariant address sank "
+         "outside of loop)";
+}
+
+void VPReductionEVLRecipe::print(raw_ostream &O, const Twine &Indent,
+                                 VPSlotTracker &SlotTracker) const {
+  O << Indent << "REDUCE ";
+  printAsOperand(O, SlotTracker);
+  O << " = ";
+  getChainOp()->printAsOperand(O, SlotTracker);
+  O << " +";
+  if (isa<FPMathOperator>(getUnderlyingInstr()))
+    O << getUnderlyingInstr()->getFastMathFlags();
+  O << " reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
+  getVecOp()->printAsOperand(O, SlotTracker);
+  O << ", ";
+  getEVL()->printAsOperand(O, SlotTracker);
   if (getCondOp()) {
     O << ", ";
     getCondOp()->printAsOperand(O, SlotTracker);

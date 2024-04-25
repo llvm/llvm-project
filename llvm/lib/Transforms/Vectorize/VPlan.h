@@ -909,6 +909,7 @@ public:
     case VPRecipeBase::VPEVLBasedIVPHISC:
     case VPRecipeBase::VPExpandSCEVSC:
     case VPRecipeBase::VPInstructionSC:
+    case VPRecipeBase::VPReductionEVLSC:
     case VPRecipeBase::VPReductionSC:
     case VPRecipeBase::VPReplicateSC:
     case VPRecipeBase::VPScalarIVStepsSC:
@@ -2201,6 +2202,12 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
+  /// Return the recurrence decriptor for the in-loop reduction.
+  const RecurrenceDescriptor &getRecurrenceDescriptor() const {
+    return RdxDesc;
+  }
+  /// Return true if the in-loop reduction is ordered.
+  bool isOrdered() const { return IsOrdered; };
   /// The VPValue of the scalar Chain being accumulated.
   VPValue *getChainOp() const { return getOperand(0); }
   /// The VPValue of the vector value to be reduced.
@@ -2208,6 +2215,75 @@ public:
   /// The VPValue of the condition for the block.
   VPValue *getCondOp() const {
     return getNumOperands() > 2 ? getOperand(2) : nullptr;
+  }
+};
+
+/// A recipe to represent inloop reduction operations with vector-predication
+/// intrinsics, performing a reduction on a vector operand with the explicit
+/// vector length (EVL) into a scalar value, and adding the result to a chain.
+/// The Operands are {ChainOp, VecOp, EVL, [Condition]}.
+class VPReductionEVLRecipe : public VPSingleDefRecipe {
+  /// The recurrence decriptor for the reduction in question.
+  const RecurrenceDescriptor &RdxDesc;
+  bool IsOrdered;
+
+  VPReductionEVLRecipe(const RecurrenceDescriptor &R, Instruction *I,
+                       VPValue *ChainOp, VPValue *VecOp, VPValue *EVL,
+                       VPValue *CondOp, bool IsOrdered)
+      : VPSingleDefRecipe(VPDef::VPReductionEVLSC,
+                          ArrayRef<VPValue *>({ChainOp, VecOp, EVL}), I),
+        RdxDesc(R), IsOrdered(IsOrdered) {
+    if (CondOp)
+      addOperand(CondOp);
+  }
+
+public:
+  VPReductionEVLRecipe(VPReductionRecipe *R, VPValue *EVL)
+      : VPSingleDefRecipe(
+            VPDef::VPReductionEVLSC,
+            ArrayRef<VPValue *>({R->getChainOp(), R->getVecOp(), EVL}),
+            R->getUnderlyingInstr()),
+        RdxDesc(R->getRecurrenceDescriptor()), IsOrdered(R->isOrdered()) {
+    VPValue *CondOp = R->getCondOp();
+    if (CondOp)
+      addOperand(CondOp);
+  };
+
+  ~VPReductionEVLRecipe() override = default;
+
+  VPReductionEVLRecipe *clone() override {
+    return new VPReductionEVLRecipe(RdxDesc, getUnderlyingInstr(), getChainOp(),
+                                    getVecOp(), getEVL(), getCondOp(),
+                                    IsOrdered);
+  }
+
+  VP_CLASSOF_IMPL(VPDef::VPReductionEVLSC)
+
+  /// Generate the reduction in the loop
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  /// The VPValue of the scalar Chain being accumulated.
+  VPValue *getChainOp() const { return getOperand(0); }
+  /// The VPValue of the vector value to be reduced.
+  VPValue *getVecOp() const { return getOperand(1); }
+  /// The VPValue of the explicit vector length.
+  VPValue *getEVL() const { return getOperand(2); }
+  /// The VPValue of the condition for the block.
+  VPValue *getCondOp() const {
+    return getNumOperands() > 3 ? getOperand(3) : nullptr;
+  }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getEVL();
   }
 };
 

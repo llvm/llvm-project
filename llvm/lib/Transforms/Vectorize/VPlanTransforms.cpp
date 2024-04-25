@@ -1462,23 +1462,29 @@ bool VPlanTransforms::tryAddExplicitVectorLength(VPlan &Plan) {
 
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
-      auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U);
-      if (!MemR)
-        continue;
-      VPValue *OrigMask = MemR->getMask();
-      assert(OrigMask && "Unmasked widen memory recipe when folding tail");
-      VPValue *NewMask = HeaderMask == OrigMask ? nullptr : OrigMask;
-      if (auto *L = dyn_cast<VPWidenLoadRecipe>(MemR)) {
-        auto *N = new VPWidenLoadEVLRecipe(L, VPEVL, NewMask);
-        N->insertBefore(L);
-        L->replaceAllUsesWith(N);
-        L->eraseFromParent();
-      } else if (auto *S = dyn_cast<VPWidenStoreRecipe>(MemR)) {
-        auto *N = new VPWidenStoreEVLRecipe(S, VPEVL, NewMask);
-        N->insertBefore(S);
-        S->eraseFromParent();
-      } else {
-        llvm_unreachable("unsupported recipe");
+      if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U)) {
+        if (!MemR)
+          continue;
+        VPValue *OrigMask = MemR->getMask();
+        assert(OrigMask && "Unmasked widen memory recipe when folding tail");
+        VPValue *NewMask = HeaderMask == OrigMask ? nullptr : OrigMask;
+        if (auto *L = dyn_cast<VPWidenLoadRecipe>(MemR)) {
+          auto *N = new VPWidenLoadEVLRecipe(L, VPEVL, NewMask);
+          N->insertBefore(L);
+          L->replaceAllUsesWith(N);
+          L->eraseFromParent();
+        } else if (auto *S = dyn_cast<VPWidenStoreRecipe>(MemR)) {
+          auto *N = new VPWidenStoreEVLRecipe(S, VPEVL, NewMask);
+          N->insertBefore(S);
+          S->eraseFromParent();
+        } else {
+          llvm_unreachable("unsupported recipe");
+        }
+      } else if (auto *RedR = dyn_cast<VPReductionRecipe>(U)) {
+        auto *N = new VPReductionEVLRecipe(RedR, VPEVL);
+        N->insertBefore(RedR);
+        RedR->replaceAllUsesWith(N);
+        RedR->eraseFromParent();
       }
     }
     recursivelyDeleteDeadRecipes(HeaderMask);
