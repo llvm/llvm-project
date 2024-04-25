@@ -430,6 +430,10 @@ void SIModeRegister::processBlockPhase3(MachineBasicBlock &MBB,
 }
 
 bool SIModeRegister::runOnMachineFunction(MachineFunction &MF) {
+  // This pass should not modify the rounding mode in case 
+  // of constrained FP operations with dynamic rounding modes.
+  // As per llvm lang ref, functions with such constrained
+  // operations must have strictfp attribute.
   const Function &F = MF.getFunction();
   if (F.hasFnAttribute(llvm::Attribute::StrictFP))
     return Changed;
