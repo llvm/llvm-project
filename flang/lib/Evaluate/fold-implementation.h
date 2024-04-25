@@ -45,6 +45,12 @@
 
 namespace Fortran::evaluate {
 
+// Don't use Kahan extended precision summation any more when folding
+// transformational intrinsic functions other than SUM, since it is
+// not used in the runtime implementations of those functions and we
+// want results to match.
+static constexpr bool useKahanSummation{false};
+
 // Utilities
 template <typename T> class Folder {
 public:
