@@ -2441,7 +2441,6 @@ func.func @reshape_nofold_2d_ins(%arg0 : tensor<?x?xi32>, %arg1: index, %arg2: i
   return %reshape : tensor<?x?xi32>
 }
 
-
 // -----
 
 // CHECK-LABEL: @reshape_fold_3d_cst
