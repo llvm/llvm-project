@@ -118,4 +118,11 @@ TEST_F(TransportInputTest, MethodNotFound) {
   EXPECT_THAT(getOutput(), HasSubstr("\"error\""));
   EXPECT_THAT(getOutput(), HasSubstr("\"message\":\"method not found: ack\""));
 }
+
+TEST_F(TransportInputTest, OutgoingNotification) {
+  auto notifyFn = getMessageHandler().outgoingNotification<CompletionList>(
+      "outgoing-notification");
+  notifyFn(CompletionList{});
+  EXPECT_THAT(getOutput(), HasSubstr("\"method\":\"outgoing-notification\""));
+}
 } // namespace
