@@ -861,7 +861,6 @@ getOutputStream(CompilerInstance &ci, llvm::StringRef inFile,
     return ci.createDefaultOutputFile(
         /*Binary=*/false, inFile, /*extension=*/"ll");
   case BackendActionTy::Backend_EmitFIR:
-    LLVM_FALLTHROUGH;
   case BackendActionTy::Backend_EmitHLFIR:
     return ci.createDefaultOutputFile(
         /*Binary=*/false, inFile, /*extension=*/"mlir");
