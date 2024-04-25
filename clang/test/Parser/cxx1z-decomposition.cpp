@@ -177,4 +177,27 @@ void ok() {
                                                                 // pre2c-warning  2{{an attribute specifier sequence attached to a structured binding declaration is a C++2c extension}}
 }
 
+
+auto [G1 [[deprecated]], G2 [[deprecated]]] = S{42}; // #deprecated-here
+// pre2c-warning@-1 2{{an attribute specifier sequence attached to a structured binding declaration is a C++2c extension}}
+
+int test() {
+  return G1 + G2; // expected-warning {{'G1' is deprecated}} expected-note@#deprecated-here {{here}} \
+                  // expected-warning {{'G2' is deprecated}} expected-note@#deprecated-here {{here}}
+}
+
+void invalid_attributes() {
+  // pre2c-warning@+1 {{an attribute specifier sequence attached to a structured binding declaration is a C++2c extension}}
+  auto [a alignas(42) // expected-error {{'alignas' attribute only applies to variables, data members and tag types}}
+      [[assume(true), // expected-error {{'assume' attribute cannot be applied to a declaration}}
+        carries_dependency, // expected-error {{'carries_dependency' attribute only applies to parameters, Objective-C methods, and functions}}
+        fallthrough,  // expected-error {{'fallthrough' attribute cannot be applied to a declaration}}
+        likely, // expected-error {{'likely' attribute cannot be applied to a declaration}}
+        unlikely, // expected-error {{'unlikely' attribute cannot be applied to a declaration}}
+        nodiscard,  // expected-warning {{'nodiscard' attribute only applies to Objective-C methods, enums, structs, unions, classes, functions, function pointers, and typedefs}}
+        noreturn,  // expected-error {{'noreturn' attribute only applies to functions}}
+        no_unique_address]], // expected-error {{'no_unique_address' attribute only applies to non-bit-field non-static data members}}
+    b] = S{0};
+}
+
 }
