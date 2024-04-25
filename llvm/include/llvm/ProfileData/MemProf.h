@@ -47,8 +47,7 @@ using MemProfSchema = llvm::SmallVector<Meta, static_cast<int>(Meta::Size)>;
 // Returns the full schema currently in use.
 MemProfSchema getFullSchema();
 
-// Returns the schema consisting of the fields currently consumed by the
-// compiler.
+// Returns the schema consisting of the fields used for hot cold memory hinting.
 MemProfSchema getHotColdSchema();
 
 // Holds the actual MemInfoBlock data with all fields. Contents may be read or
