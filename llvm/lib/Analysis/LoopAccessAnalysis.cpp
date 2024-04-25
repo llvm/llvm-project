@@ -2098,9 +2098,11 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
 
     if (IsTrueDataDependence && EnableForwardingConflictDetection) {
       if (!C) {
-        // TODO: Relax requirement that there is a common stride to retry with
-        // non-constant distance dependencies.
-        FoundNonConstantDistanceDependence |= !!CommonStride;
+        // TODO: FoundNonConstantDistanceDependence is used as a necessary
+        // condition to consider retrying with runtime checks. Historically, we
+        // did not set it when strides were different but there is no inherent
+        // reason to.
+        FoundNonConstantDistanceDependence |= CommonStride.has_value();
         return Dependence::Unknown;
       }
       if (!HasSameSize ||
@@ -2117,9 +2119,10 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
   }
 
   if (!C) {
-    // TODO: Relax requirement that there is a common stride to retry with
-    // non-constant distance dependencies.
-    FoundNonConstantDistanceDependence |= !!CommonStride;
+    // TODO: FoundNonConstantDistanceDependence is used as a necessary condition
+    // to consider retrying with runtime checks. Historically, we did not set it
+    // when strides were different but there is no inherent reason to.
+    FoundNonConstantDistanceDependence |= CommonStride.has_value();
     LLVM_DEBUG(dbgs() << "LAA: Dependence because of non-constant distance\n");
     return Dependence::Unknown;
   }
