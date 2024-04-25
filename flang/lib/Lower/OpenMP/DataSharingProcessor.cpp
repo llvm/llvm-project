@@ -430,7 +430,10 @@ void DataSharingProcessor::doPrivatize(
             return {};
           },
           [&](const auto &box) -> fir::ExtendedValue {
-            return fir::substBase(box, allocRegion.getArgument(0));
+            return hlfir::translateToExtendedValue(
+                       symLoc, firOpBuilder,
+                       hlfir::Entity{allocRegion.getArgument(0)}, true)
+                .first;
           });
 
       symTable->addSymbol(*sym, localExV);
