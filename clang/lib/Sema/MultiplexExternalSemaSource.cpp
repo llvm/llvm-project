@@ -46,7 +46,7 @@ void MultiplexExternalSemaSource::AddSource(ExternalSemaSource *Source) {
 // ExternalASTSource.
 //===----------------------------------------------------------------------===//
 
-Decl *MultiplexExternalSemaSource::GetExternalDecl(GlobalDeclID ID) {
+Decl *MultiplexExternalSemaSource::GetExternalDecl(DeclID ID) {
   for(size_t i = 0; i < Sources.size(); ++i)
     if (Decl *Result = Sources[i]->GetExternalDecl(ID))
       return Result;

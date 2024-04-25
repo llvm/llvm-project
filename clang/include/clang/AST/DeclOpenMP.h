@@ -59,9 +59,9 @@ protected:
   }
 
   template <typename T, typename... Params>
-  static T *createEmptyDirective(const ASTContext &C, GlobalDeclID ID,
+  static T *createEmptyDirective(const ASTContext &C, unsigned ID,
                                  unsigned NumClauses, unsigned NumChildren,
-                                 Params &&...P) {
+                                 Params &&... P) {
     auto *Inst = new (C, ID, size(NumClauses, NumChildren))
         T(nullptr, std::forward<Params>(P)...);
     Inst->Data = OMPChildren::CreateEmpty(
@@ -133,7 +133,7 @@ public:
                                       SourceLocation L,
                                       ArrayRef<Expr *> VL);
   static OMPThreadPrivateDecl *CreateDeserialized(ASTContext &C,
-                                                  GlobalDeclID ID, unsigned N);
+                                                  DeclID ID, unsigned N);
 
   typedef MutableArrayRef<Expr *>::iterator varlist_iterator;
   typedef ArrayRef<const Expr *>::iterator varlist_const_iterator;
@@ -214,7 +214,7 @@ public:
          QualType T, OMPDeclareReductionDecl *PrevDeclInScope);
   /// Create deserialized declare reduction node.
   static OMPDeclareReductionDecl *CreateDeserialized(ASTContext &C,
-                                                     GlobalDeclID ID);
+                                                     DeclID ID);
 
   /// Get combiner expression of the declare reduction construct.
   Expr *getCombiner() { return Combiner; }
@@ -318,8 +318,8 @@ public:
                                       ArrayRef<OMPClause *> Clauses,
                                       OMPDeclareMapperDecl *PrevDeclInScope);
   /// Creates deserialized declare mapper node.
-  static OMPDeclareMapperDecl *CreateDeserialized(ASTContext &C,
-                                                  GlobalDeclID ID, unsigned N);
+  static OMPDeclareMapperDecl *CreateDeserialized(ASTContext &C, DeclID ID,
+                                                  unsigned N);
 
   using clauselist_iterator = MutableArrayRef<OMPClause *>::iterator;
   using clauselist_const_iterator = ArrayRef<const OMPClause *>::iterator;
@@ -397,8 +397,7 @@ public:
                                      IdentifierInfo *Id, QualType T,
                                      SourceLocation StartLoc);
 
-  static OMPCapturedExprDecl *CreateDeserialized(ASTContext &C,
-                                                 GlobalDeclID ID);
+  static OMPCapturedExprDecl *CreateDeserialized(ASTContext &C, DeclID ID);
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
@@ -428,7 +427,7 @@ public:
   static OMPRequiresDecl *Create(ASTContext &C, DeclContext *DC,
                                  SourceLocation L, ArrayRef<OMPClause *> CL);
   /// Create deserialized requires node.
-  static OMPRequiresDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
+  static OMPRequiresDecl *CreateDeserialized(ASTContext &C, DeclID ID,
                                              unsigned N);
 
   using clauselist_iterator = MutableArrayRef<OMPClause *>::iterator;
@@ -496,7 +495,7 @@ public:
   static OMPAllocateDecl *Create(ASTContext &C, DeclContext *DC,
                                  SourceLocation L, ArrayRef<Expr *> VL,
                                  ArrayRef<OMPClause *> CL);
-  static OMPAllocateDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
+  static OMPAllocateDecl *CreateDeserialized(ASTContext &C, DeclID ID,
                                              unsigned NVars, unsigned NClauses);
 
   typedef MutableArrayRef<Expr *>::iterator varlist_iterator;

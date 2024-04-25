@@ -459,10 +459,10 @@ public:
   const DeclOffset *DeclOffsets = nullptr;
 
   /// Base declaration ID for declarations local to this module.
-  serialization::DeclID BaseDeclID = 0;
+  DeclID BaseDeclID = 0;
 
   /// Remapping table for declaration IDs in this module.
-  ContinuousRangeMap<serialization::DeclID, int, 2> DeclRemap;
+  ContinuousRangeMap<DeclID, int, 2> DeclRemap;
 
   /// Mapping from the module files that this module file depends on
   /// to the base declaration ID for that module as it is understood within this
@@ -471,7 +471,7 @@ public:
   /// This is effectively a reverse global-to-local mapping for declaration
   /// IDs, so that we can interpret a true global ID (for this translation unit)
   /// as a local ID (for this module file).
-  llvm::DenseMap<ModuleFile *, serialization::DeclID> GlobalToLocalDeclIDs;
+  llvm::DenseMap<ModuleFile *, DeclID> GlobalToLocalDeclIDs;
 
   /// Array of file-level DeclIDs sorted by file.
   const LocalDeclID *FileSortedDecls = nullptr;

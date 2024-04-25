@@ -603,8 +603,7 @@ private:
   /// Decl::Kind, DeclID pairs.
   using unalighed_decl_id_t =
       llvm::support::detail::packed_endian_specific_integral<
-          serialization::DeclID, llvm::endianness::native,
-          llvm::support::unaligned>;
+          DeclID, llvm::endianness::native, llvm::support::unaligned>;
   using LexicalContents = ArrayRef<unalighed_decl_id_t>;
 
   /// Map from a DeclContext to its lexical contents.
@@ -1919,7 +1918,7 @@ public:
   /// Resolve a declaration ID into a declaration, potentially
   /// building a new declaration.
   Decl *GetDecl(GlobalDeclID ID);
-  Decl *GetExternalDecl(GlobalDeclID ID) override;
+  Decl *GetExternalDecl(DeclID ID) override;
 
   /// Resolve a declaration ID into a declaration. Return 0 if it's not
   /// been loaded yet.
@@ -1942,8 +1941,7 @@ public:
   ///
   /// \returns the global ID of the given declaration as known in the given
   /// module file.
-  LocalDeclID mapGlobalIDToModuleFileGlobalID(ModuleFile &M,
-                                              GlobalDeclID GlobalID);
+  DeclID mapGlobalIDToModuleFileGlobalID(ModuleFile &M, GlobalDeclID GlobalID);
 
   /// Reads a declaration ID from the given position in a record in the
   /// given module.
