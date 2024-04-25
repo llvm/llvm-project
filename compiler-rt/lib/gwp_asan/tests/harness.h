@@ -11,7 +11,7 @@
 
 #include <stdarg.h>
 
-#if defined(__Fuchsia__)
+#ifdef LIBC_COPT_TEST_USE_ZXTEST
 #define ZXTEST_USE_STREAMABLE_MACROS
 #include <zxtest/zxtest.h>
 namespace testing = zxtest;
