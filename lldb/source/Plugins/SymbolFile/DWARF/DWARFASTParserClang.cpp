@@ -8,6 +8,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <algorithm>
 
 #include "DWARFASTParser.h"
 #include "DWARFASTParserClang.h"
@@ -44,6 +45,8 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
 #include "llvm/Demangle/Demangle.h"
+
+#include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 
 #include <map>
 #include <memory>
@@ -866,11 +869,19 @@ DWARFASTParserClang::GetDIEClassTemplateParams(const DWARFDIE &die) {
   if (llvm::StringRef(die.GetName()).contains("<"))
     return ConstString();
 
+#if 1
+  std::string R;
+  llvm::raw_string_ostream OS(R);
+  llvm::DWARFTypePrinter<DWARFDIE> p(OS);
+  p.appendAndTerminateTemplateParameters(die);
+  return ConstString(R);
+#else
   TypeSystemClang::TemplateParameterInfos template_param_infos;
   if (ParseTemplateParameterInfos(die, template_param_infos)) {
     return ConstString(m_ast.PrintTemplateParams(template_param_infos));
   }
   return ConstString();
+#endif
 }
 
 TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,

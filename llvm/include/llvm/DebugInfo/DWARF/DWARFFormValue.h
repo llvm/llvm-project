@@ -168,8 +168,6 @@ private:
   void dumpString(raw_ostream &OS) const;
 };
 
-namespace dwarf {
-
 /// Take an optional DWARFFormValue and try to extract a string value from it.
 ///
 /// \param V and optional DWARFFormValue to attempt to extract the value from.
@@ -218,6 +216,11 @@ inline const char *toString(const std::optional<DWARFFormValue> &V,
     return *E;
   return Default;
 }
+
+namespace dwarf {
+
+using llvm::toString;
+using llvm::toStringRef;
 
 /// Take an optional DWARFFormValue and try to extract an unsigned constant.
 ///

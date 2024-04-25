@@ -69,6 +69,30 @@ public:
   uint64_t Reference(dw_offset_t offset) const;
   bool Boolean() const { return m_value.value.uval != 0; }
   uint64_t Unsigned() const { return m_value.value.uval; }
+  std::optional<uint64_t> getAsUnsignedConstant() const {
+    if ((!IsDataForm(m_form)) || m_form == lldb_private::dwarf::DW_FORM_sdata)
+      return std::nullopt;
+    return m_value.value.uval;
+  }
+  std::optional<int64_t> getAsSignedConstant() const {
+    if ((!IsDataForm(m_form)) ||
+        (m_form == lldb_private::dwarf::DW_FORM_udata &&
+         uint64_t(std::numeric_limits<int64_t>::max()) < m_value.value.uval))
+      return std::nullopt;
+    switch (m_form) {
+    case lldb_private::dwarf::DW_FORM_data4:
+      return int32_t(m_value.value.uval);
+    case lldb_private::dwarf::DW_FORM_data2:
+      return int16_t(m_value.value.uval);
+    case lldb_private::dwarf::DW_FORM_data1:
+      return int8_t(m_value.value.uval);
+    case lldb_private::dwarf::DW_FORM_sdata:
+    case lldb_private::dwarf::DW_FORM_data8:
+    default:
+      return m_value.value.sval;
+    }
+  }
+
   void SetUnsigned(uint64_t uval) { m_value.value.uval = uval; }
   int64_t Signed() const { return m_value.value.sval; }
   void SetSigned(int64_t sval) { m_value.value.sval = sval; }
@@ -93,6 +117,19 @@ protected:
   dw_form_t m_form = dw_form_t(0);   // Form for this value
   ValueType m_value;                 // Contains all data for the form
 };
+
+inline const char* toString(DWARFFormValue Value, const char* Default) {
+  if (const char* R = Value.AsCString())
+    return R;
+  return Default;
+}
+inline const char* toString(std::optional<DWARFFormValue> Value, const char* Default) {
+  if (!Value)
+    return Default;
+  if (const char* R = Value->AsCString())
+    return R;
+  return Default;
+}
 } // namespace dwarf
 } // namespace lldb_private::plugin
 

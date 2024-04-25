@@ -3219,30 +3219,20 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
             type_dwarf_decl_ctx.GetQualifiedName());
       }
 
-      Type *resolved_type = ResolveType(type_die, false);
-      if (!resolved_type || resolved_type == DIE_IS_BEING_PARSED)
-        return true;
-
       // With -gsimple-template-names, the DIE name may not contain the template
       // parameters. If the declaration has template parameters but doesn't
       // contain '<', check that the child template parameters match.
       if (template_params) {
-        llvm::StringRef test_base_name =
-            GetTypeForDIE(type_die)->GetBaseName().GetStringRef();
-        auto i = test_base_name.find('<');
-
-        // Full name from clang AST doesn't contain '<' so this type_die isn't
-        // a template parameter, but we're expecting template parameters, so
-        // bail.
-        if (i == llvm::StringRef::npos)
-          return true;
-
-        llvm::StringRef test_template_params =
-            test_base_name.slice(i, test_base_name.size());
+        ConstString test_template_params =
+            type_system->GetDWARFParser()->GetDIEClassTemplateParams(type_die);
         // Bail if template parameters don't match.
-        if (test_template_params != template_params.GetStringRef())
+        if (test_template_params != template_params)
           return true;
       }
+
+      Type *resolved_type = ResolveType(type_die, false);
+      if (!resolved_type || resolved_type == DIE_IS_BEING_PARSED)
+        return true;
 
       type_sp = resolved_type->shared_from_this();
       return false;

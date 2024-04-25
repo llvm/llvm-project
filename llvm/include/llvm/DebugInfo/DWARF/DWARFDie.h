@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFAttribute.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
+#include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
 #include <cassert>
 #include <cstdint>
@@ -44,6 +45,7 @@ class DWARFDie {
   const DWARFDebugInfoEntry *Die = nullptr;
 
 public:
+  using DWARFFormValue = llvm::DWARFFormValue;
   DWARFDie() = default;
   DWARFDie(DWARFUnit *Unit, const DWARFDebugInfoEntry *D) : U(Unit), Die(D) {}
 

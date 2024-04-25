@@ -118,7 +118,13 @@ DWARFDIE::GetReferencedDIE(const dw_attr_t attr) const {
 }
 
 DWARFDIE
-DWARFDIE::GetDIE(dw_offset_t die_offset) const {
+DWARFDIE::getAttributeValueAsReferencedDie(DWARFFormValue value) const {
+  if (IsValid())
+    return value.Reference();
+  return {};
+}
+
+DWARFDIE DWARFDIE::GetDIE(dw_offset_t die_offset) const {
   if (IsValid())
     return m_cu->GetDIE(die_offset);
   else
@@ -544,4 +550,17 @@ bool DWARFDIE::GetDIENamesAndRanges(
 
 llvm::iterator_range<DWARFDIE::child_iterator> DWARFDIE::children() const {
   return llvm::make_range(child_iterator(*this), child_iterator());
+}
+
+DWARFDIE::child_iterator DWARFDIE::begin() const {
+  return child_iterator(*this);
+}
+DWARFDIE::child_iterator DWARFDIE::end() const {
+  return child_iterator();
+}
+std::optional<DWARFFormValue> DWARFDIE::find(const dw_attr_t attr) const {
+  DWARFFormValue form_value;
+  if (m_die->GetAttributeValue(m_cu, attr, form_value, nullptr, false))
+    return form_value;
+  return std::nullopt;
 }
