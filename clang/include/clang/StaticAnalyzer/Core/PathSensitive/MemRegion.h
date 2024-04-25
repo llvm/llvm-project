@@ -34,6 +34,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -99,6 +100,8 @@ public:
 #define REGION(Id, Parent) Id ## Kind,
 #define REGION_RANGE(Id, First, Last) BEGIN_##Id = First, END_##Id = Last,
 #include "clang/StaticAnalyzer/Core/PathSensitive/Regions.def"
+#undef REGION
+#undef REGION_RANGE
   };
 
 private:
@@ -170,6 +173,17 @@ public:
   virtual void printPrettyAsExpr(raw_ostream &os) const;
 
   Kind getKind() const { return kind; }
+
+  StringRef getKindStr() const {
+    switch (getKind()) {
+#define REGION(Id, Parent)                                                     \
+  case Id##Kind:                                                               \
+    return #Id;
+#include "clang/StaticAnalyzer/Core/PathSensitive/Regions.def"
+#undef REGION
+    }
+    llvm_unreachable("Unkown kind!");
+  }
 
   template<typename RegionTy> const RegionTy* getAs() const;
   template <typename RegionTy>

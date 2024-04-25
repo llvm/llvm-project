@@ -16,7 +16,31 @@ void *memcpy(void *restrict s1, const void *restrict s2, size_t n);
 
 void top(char *dst) {
   char buf[10];
-  memcpy(dst, buf, 10); // expected-warning{{Bytes string function accesses uninitialized/garbage values}}
+  memcpy(dst, buf, 10); // expected-warning{{The first element of the 2nd argument is undefined}}
+                        // expected-note@-1{{Other elements might also be undefined}}
+  (void)buf;
+}
+
+void top2(char *dst) {
+  char buf[10];
+  buf[0] = 'i';
+  memcpy(dst, buf, 10); // expected-warning{{The last element of the 2nd argument to access (the 10th) is undefined}}
+                        // expected-note@-1{{Other elements might also be undefined}}
+  (void)buf;
+}
+
+void top3(char *dst) {
+  char buf[10];
+  buf[0] = 'i';
+  memcpy(dst, buf, 1);
+  (void)buf;
+}
+
+void top4(char *dst) {
+  char buf[10];
+  buf[0] = 'i';
+  memcpy(dst, buf, 2); // expected-warning{{The last element of the 2nd argument to access (the 2nd) is undefined}}
+                        // expected-note@-1{{Other elements might also be undefined}}
   (void)buf;
 }
 
@@ -26,16 +50,12 @@ void top(char *dst) {
 
 void *mempcpy(void *restrict s1, const void *restrict s2, size_t n);
 
-void mempcpy14() {
+void mempcpy13() {
   int src[] = {1, 2, 3, 4};
   int dst[5] = {0};
   int *p;
 
-  p = mempcpy(dst, src, 4 * sizeof(int)); // expected-warning{{Bytes string function accesses uninitialized/garbage values}}
-   // FIXME: This behaviour is actually surprising and needs to be fixed, 
-   // mempcpy seems to consider the very last byte of the src buffer uninitialized
-   // and returning undef unfortunately. It should have returned unknown or a conjured value instead.
-
+  p = mempcpy(dst, src, 4 * sizeof(int));
   clang_analyzer_eval(p == &dst[4]); // no-warning (above is fatal)
 }
 
@@ -52,8 +72,34 @@ void mempcpy15() {
   struct st *p2;
 
   p1 = (&s2) + 1;
-  p2 = mempcpy(&s2, &s1, sizeof(struct st)); // expected-warning{{Bytes string function accesses uninitialized/garbage values}}
-  // FIXME: It seems same as mempcpy14() case.
-  
+
+  p2 = mempcpy(&s2, &s1, sizeof(struct st));
+
   clang_analyzer_eval(p1 == p2); // no-warning (above is fatal)
 }
+
+void mempcpy16() {
+  struct st s1;
+  struct st s2;
+
+  // FIXME: Maybe ask UninitializedObjectChecker whether s1 is fully
+  // initialized?
+  mempcpy(&s2, &s1, sizeof(struct st));
+}
+
+void initialized(int *dest) {
+  int t[] = {1, 2, 3};
+  memcpy(dest, t, sizeof(t));
+}
+
+// Creduced crash.
+
+void *ga_copy_strings_from_0;
+void *memmove();
+void alloc();
+void ga_copy_strings() {
+  int i = 0;
+  for (;; ++i)
+    memmove(alloc, ((char **)ga_copy_strings_from_0)[i], 1);
+}
+
