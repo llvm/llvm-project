@@ -655,10 +655,12 @@ static std::vector<MatchedEntry> getMatchedEntries(InstructionMapper &Mapper) {
       continue;
 
     const MachineInstr &MI = *InstrList[I];
-    stable_hash StableHashI = stableHashValue(MI);
-    if (!StableHashI)
+    // We optimistically skip Debug instructions and CFI instructions.
+    // Debug instructions will be deleted in the outlined function.
+    // CFI instructions are adapted to the outlined function.
+    if (MI.isDebugInstr() || MI.isCFIInstruction())
       continue;
-
+    stable_hash StableHashI = stableHashValue(MI);
     Sequence.clear();
     Sequence.push_back(StableHashI);
 
@@ -673,11 +675,10 @@ static std::vector<MatchedEntry> getMatchedEntries(InstructionMapper &Mapper) {
         break;
 
       const MachineInstr &MJ = *InstrList[J];
-      stable_hash StableHashJ = stableHashValue(MJ);
-      // Break on invalid stable hash
-      if (!StableHashJ)
-        break;
+      if (MJ.isDebugInstr() || MJ.isCFIInstruction())
+        continue;
 
+      stable_hash StableHashJ = stableHashValue(MJ);
       LastNode = followHashNode(StableHashJ, LastNode);
       if (!LastNode)
         break;
@@ -692,31 +693,6 @@ static std::vector<MatchedEntry> getMatchedEntries(InstructionMapper &Mapper) {
   }
 
   return MatchedEntries;
-}
-
-static std::vector<stable_hash>
-stableHashMachineInstrs(const MachineBasicBlock::iterator &Begin,
-                        const MachineBasicBlock::iterator &End) {
-  std::vector<stable_hash> Sequence;
-  for (auto I = Begin; I != End; I++) {
-    const MachineInstr &MI = *I;
-    if (MI.isDebugInstr())
-      continue;
-    stable_hash Hash = stableHashValue(MI);
-    // if (!Hash)
-    //  continue;
-    Sequence.push_back(Hash);
-  }
-  return Sequence;
-}
-
-// Save hash sequence of candidates for global function outlining.
-static void
-saveHashSequence(std::vector<std::unique_ptr<OutlinedFunction>> &FunctionList) {
-  for (auto &OF : FunctionList) {
-    auto &C = OF->Candidates.front();
-    OF->OutlinedHashSequence = stableHashMachineInstrs(C.begin(), C.end());
-  }
 }
 
 void MachineOutliner::findGlobalCandidates(
@@ -746,8 +722,6 @@ void MachineOutliner::findGlobalCandidates(
     FunctionList.push_back(
         std::make_unique<GlobalOutlinedFunction>(*OF, ME.Count));
   }
-  assert(OutlinerMode == CGDataMode::Read);
-  saveHashSequence(FunctionList);
 }
 
 void MachineOutliner::findCandidates(
@@ -854,9 +828,6 @@ void MachineOutliner::findCandidates(
 
     FunctionList.push_back(std::make_unique<OutlinedFunction>(*OF));
   }
-  assert(OutlinerMode != CGDataMode::Read);
-  if (OutlinerMode == CGDataMode::Write)
-    saveHashSequence(FunctionList);
 }
 
 MachineFunction *MachineOutliner::createOutlinedFunction(
@@ -916,6 +887,7 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   MachineFunction *OriginalMF = FirstCand.front().getMF();
   const std::vector<MCCFIInstruction> &Instrs =
       OriginalMF->getFrameInstructions();
+  std::vector<stable_hash> OutlinedHashSequence;
   for (auto &MI : FirstCand) {
     if (MI.isDebugInstr())
       continue;
@@ -932,7 +904,21 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
       NewMI->dropMemRefs(MF);
       NewMI->setDebugLoc(DL);
       MBB.insert(MBB.end(), NewMI);
+      // For non-debug and non-cfi instructions, compute stable hash sequence.
+      if (OutlinerMode != CGDataMode::None) {
+        stable_hash Hash = stableHashValue(MI);
+        OutlinedHashSequence.push_back(Hash);
+      }
     }
+  }
+
+  // TODO: Update function name based on the hash sequence.
+
+  // Publish the hash sequence to the local hash tree.
+  if (OutlinerMode == CGDataMode::Write) {
+    assert(!OutlinedHashSequence.empty());
+    unsigned Count = OF.Candidates.size();
+    LocalHashTree->insert({OutlinedHashSequence, Count});
   }
 
   // Set normal properties for a late MachineFunction.
@@ -1153,10 +1139,6 @@ bool MachineOutliner::outline(
 
       // Statistics.
       NumOutlined++;
-    }
-    if (OutlinerMode == CGDataMode::Write) {
-      unsigned Count = OF->Candidates.size();
-      LocalHashTree->insert({OF->OutlinedHashSequence, Count});
     }
   }
 

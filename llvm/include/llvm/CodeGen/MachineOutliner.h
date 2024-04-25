@@ -234,9 +234,6 @@ public:
   /// Target-defined identifier for constructing a frame for this function.
   unsigned FrameConstructionID = 0;
 
-  /// The sequence of stable_hash'es of instructions.
-  std::vector<stable_hash> OutlinedHashSequence;
-
   /// Return the number of candidates for this \p OutlinedFunction.
   virtual unsigned getOccurrenceCount() const { return Candidates.size(); }
 
