@@ -13416,6 +13416,12 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   uint64_t MulAmt = CNode->getZExtValue();
 
+  // WARNING: The code below is knowingly incorrect with regards to undef semantics.
+  // We're adding additional uses of X here, and in principle, we should be freezing
+  // X before doing so.  However, adding freeze here causes real regressions, and no
+  // other target properly freezes X in these cases either.
+  SDValue X = N->getOperand(0);
+
   for (uint64_t Divisor : {3, 5, 9}) {
     if (MulAmt % Divisor != 0)
       continue;
@@ -13428,7 +13434,6 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     // 3/5/9 * 3/5/9 -> shXadd (shYadd X, X), (shYadd X, X)
     if (MulAmt2 == 3 || MulAmt2 == 5 || MulAmt2 == 9) {
       SDLoc DL(N);
-      SDValue X = DAG.getFreeze(N->getOperand(0));
       SDValue Mul359 =
           DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
                       DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
@@ -13446,7 +13451,6 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     if (ScaleShift >= 1 && ScaleShift < 4) {
       unsigned ShiftAmt = Log2_64((MulAmt & (MulAmt - 1)));
       SDLoc DL(N);
-      SDValue X = DAG.getFreeze(N->getOperand(0));
       SDValue Shift1 =
           DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
       return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
@@ -13466,7 +13470,6 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     unsigned TZ = llvm::countr_zero(C);
     if ((C >> TZ) == Divisor && (TZ == 1 || TZ == 2 || TZ == 3)) {
       SDLoc DL(N);
-      SDValue X = DAG.getFreeze(N->getOperand(0));
       SDValue Mul359 =
           DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
                       DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
@@ -13481,7 +13484,6 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     if (ScaleShift >= 1 && ScaleShift < 4) {
       unsigned ShiftAmt = Log2_64(((MulAmt - 1) & (MulAmt - 2)));
       SDLoc DL(N);
-      SDValue X = DAG.getFreeze(N->getOperand(0));
       SDValue Shift1 =
           DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
       return DAG.getNode(ISD::ADD, DL, VT, Shift1,
@@ -13495,11 +13497,11 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     if (isPowerOf2_64(MulAmt + Offset)) {
       SDLoc DL(N);
       SDValue Shift1 =
-          DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+          DAG.getNode(ISD::SHL, DL, VT, X,
                       DAG.getConstant(Log2_64(MulAmt + Offset), DL, VT));
-      SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, N->getOperand(0),
+      SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
                                    DAG.getConstant(Log2_64(Offset - 1), DL, VT),
-                                   N->getOperand(0));
+                                   X);
       return DAG.getNode(ISD::SUB, DL, VT, Shift1, Mul359);
     }
   }
