@@ -1316,11 +1316,10 @@ bool ToolChain::isFastMathRuntimeAvailable(const ArgList &Args,
   // (to keep the linker options consistent with gcc and clang itself).
   if (Default && !isOptimizationLevelFast(Args)) {
     // Check if -ffast-math or -funsafe-math.
-    Arg *A =
-      Args.getLastArg(options::OPT_ffast_math, options::OPT_fno_fast_math,
-                      options::OPT_funsafe_math_optimizations,
-                      options::OPT_fno_unsafe_math_optimizations,
-                      options::OPT_ffp_model_EQ);
+    Arg *A = Args.getLastArg(
+        options::OPT_ffast_math, options::OPT_fno_fast_math,
+        options::OPT_funsafe_math_optimizations,
+        options::OPT_fno_unsafe_math_optimizations, options::OPT_ffp_model_EQ);
 
     if (!A || A->getOption().getID() == options::OPT_fno_fast_math ||
         A->getOption().getID() == options::OPT_fno_unsafe_math_optimizations)
