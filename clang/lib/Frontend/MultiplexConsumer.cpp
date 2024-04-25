@@ -52,7 +52,8 @@ void MultiplexASTDeserializationListener::TypeRead(
     Listeners[i]->TypeRead(Idx, T);
 }
 
-void MultiplexASTDeserializationListener::DeclRead(DeclID ID, const Decl *D) {
+void MultiplexASTDeserializationListener::DeclRead(GlobalDeclID ID,
+                                                   const Decl *D) {
   for (size_t i = 0, e = Listeners.size(); i != e; ++i)
     Listeners[i]->DeclRead(ID, D);
 }

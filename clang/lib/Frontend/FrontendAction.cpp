@@ -80,7 +80,7 @@ public:
     if (Previous)
       Previous->TypeRead(Idx, T);
   }
-  void DeclRead(DeclID ID, const Decl *D) override {
+  void DeclRead(GlobalDeclID ID, const Decl *D) override {
     if (Previous)
       Previous->DeclRead(ID, D);
   }
@@ -102,7 +102,7 @@ public:
                                    bool DeletePrevious)
       : DelegatingDeserializationListener(Previous, DeletePrevious) {}
 
-  void DeclRead(DeclID ID, const Decl *D) override {
+  void DeclRead(GlobalDeclID ID, const Decl *D) override {
     llvm::outs() << "PCH DECL: " << D->getDeclKindName();
     if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
       llvm::outs() << " - ";
@@ -128,7 +128,7 @@ public:
       : DelegatingDeserializationListener(Previous, DeletePrevious), Ctx(Ctx),
         NamesToCheck(NamesToCheck) {}
 
-  void DeclRead(DeclID ID, const Decl *D) override {
+  void DeclRead(GlobalDeclID ID, const Decl *D) override {
     if (const NamedDecl *ND = dyn_cast<NamedDecl>(D))
       if (NamesToCheck.find(ND->getNameAsString()) != NamesToCheck.end()) {
         unsigned DiagID
