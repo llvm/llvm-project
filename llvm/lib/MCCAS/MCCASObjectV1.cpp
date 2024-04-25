@@ -1375,9 +1375,46 @@ static Expected<uint64_t> materializeGenericDebugSection(MCCASReader &Reader,
 Expected<uint64_t>
 DebugStringOffsetsSectionRef::materialize(MCCASReader &Reader,
                                           raw_ostream *Stream) const {
+  // Start a new section for relocations.
+  Reader.Relocations.emplace_back();
+  SmallVector<char, 0> SectionContents;
+  raw_svector_ostream SectionStream(SectionContents);
+
+  unsigned Size = 0;
   StringRef Remaining = getData();
-  return materializeGenericDebugSection<DebugStringOffsetsSectionRef>(
-      Reader, Remaining, *this);
+  auto Refs = DebugStringOffsetsSectionRef::decodeReferences(*this, Remaining);
+  if (!Refs)
+    return Refs.takeError();
+
+  for (auto ID : *Refs) {
+    auto FragmentSize = Reader.materializeSection(ID, &SectionStream);
+    if (!FragmentSize)
+      return FragmentSize.takeError();
+    Size += *FragmentSize;
+  }
+
+  if (auto E = decodeRelocations(Reader, Remaining))
+    return std::move(E);
+
+#if LLVM_ENABLE_ZLIB
+  StringRef SectionStringRef = toStringRef(SectionContents);
+  ArrayRef<uint8_t> BufRef = arrayRefFromStringRef(SectionStringRef);
+  assert(BufRef.size() >= 8 &&
+         "Debug String Offset buffer less than 8 bytes in size!");
+  // The zlib decompress function needs to know the uncompressed size of the
+  // buffer. That size is stored as a ULEB at the end of the buffer
+  auto UncompressedSize = decodeULEB128(BufRef.data() + BufRef.size() - 8);
+  BufRef = BufRef.drop_back(8);
+  SmallVector<uint8_t> OutBuff;
+  if (auto E = compression::zlib::decompress(BufRef, OutBuff, UncompressedSize))
+    return E;
+  SectionStringRef = toStringRef(OutBuff);
+  Reader.OS << SectionStringRef;
+  return UncompressedSize;
+#endif
+
+  Reader.OS << SectionContents;
+  return Size;
 }
 
 Expected<uint64_t> DebugLocSectionRef::materialize(MCCASReader &Reader,
@@ -2625,10 +2662,44 @@ MCCASBuilder::createGenericDebugRef(MCSection *Section) {
   return *DebugCASRef;
 }
 
+std::optional<Expected<DebugStrOffsetsRef>>
+MCCASBuilder::createDebugStrOffsetsRef() {
+
+  if (!DwarfSections.StrOffsets ||
+      !DwarfSections.StrOffsets->getFragmentList().size())
+    return std::nullopt;
+
+  auto DebugStrOffsetsData = mergeMCFragmentContents(
+      DwarfSections.StrOffsets->getFragmentList(), false);
+
+  if (!DebugStrOffsetsData)
+    return DebugStrOffsetsData.takeError();
+
+#if LLVM_ENABLE_ZLIB
+  SmallVector<uint8_t> CompressedBuff;
+  compression::zlib::compress(
+      arrayRefFromStringRef(toStringRef(*DebugStrOffsetsData)), CompressedBuff);
+  // Reserve 8 bytes for ULEB to store the size of the uncompressed data.
+  CompressedBuff.append(8, 0);
+  encodeULEB128(DebugStrOffsetsData->size(), CompressedBuff.end() - 8,
+                8 /*Pad to*/);
+  auto DbgStrOffsetsRef =
+      DebugStrOffsetsRef::create(*this, toStringRef(CompressedBuff));
+  if (!DbgStrOffsetsRef)
+    return DbgStrOffsetsRef.takeError();
+  return *DbgStrOffsetsRef;
+#else
+  auto DbgStrOffsetsRef =
+      DebugStrOffsetsRef::create(*this, toStringRef(CompressedBuff));
+  if (!DbgStrOffsetsRef)
+    return DbgStrOffsetsRef.takeError();
+  return *DbgStrOffsetsRef;
+#endif
+}
+
 Error MCCASBuilder::createDebugStrOffsetsSection() {
 
-  auto MaybeDebugStringOffsetsRef =
-      createGenericDebugRef<DebugStrOffsetsRef>(DwarfSections.StrOffsets);
+  auto MaybeDebugStringOffsetsRef = createDebugStrOffsetsRef();
   if (!MaybeDebugStringOffsetsRef)
     return Error::success();
 
