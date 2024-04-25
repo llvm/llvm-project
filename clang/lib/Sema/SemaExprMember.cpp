@@ -718,14 +718,6 @@ static bool LookupMemberExprInRecord(Sema &SemaRef, LookupResult &R,
                                      CXXScopeSpec &SS, bool HasTemplateArgs,
                                      SourceLocation TemplateKWLoc,
                                      TypoExpr *&TE) {
-  // FIXME: Should this use Name.isDependentName()?
-  if (DeclarationName Name = R.getLookupName();
-      Name.getNameKind() == DeclarationName::CXXConversionFunctionName &&
-      Name.getCXXNameType()->isDependentType()) {
-    R.setNotFoundInCurrentInstantiation();
-    return false;
-  }
-
   SourceRange BaseRange = BaseExpr ? BaseExpr->getSourceRange() : SourceRange();
   if (!RTy->isDependentType() &&
       !SemaRef.isThisOutsideMemberFunctionBody(RTy) &&

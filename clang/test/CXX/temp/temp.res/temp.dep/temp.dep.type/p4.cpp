@@ -440,3 +440,17 @@ namespace N2 {
     }
   };
 }
+
+namespace N3 {
+  struct A { };
+
+  template<typename T>
+  struct B : A {
+    void not_instantiated() {
+      // Dependent, lookup context is the current instantiation.
+      this->operator=(*this);
+      // Not dependent, the lookup context is A (not the current instantiation).
+      this->A::operator=(*this);
+    }
+  };
+}
