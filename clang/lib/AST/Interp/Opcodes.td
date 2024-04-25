@@ -336,7 +336,7 @@ def GetPtrDerivedPop : Opcode {
 }
 
 // [Pointer] -> [Pointer]
-def GetPtrVirtBase : Opcode {
+def GetPtrVirtBasePop : Opcode {
   // RecordDecl of base class.
   let Args = [ArgRecordDecl];
 }
