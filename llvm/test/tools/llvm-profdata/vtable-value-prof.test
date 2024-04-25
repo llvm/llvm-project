@@ -1,7 +1,7 @@
 ; RUN: rm -rf %t && mkdir %t && cd %t
 
 ; Generate indexed profiles from text profiles
-RUN: llvm-profdata merge %S/Inputs/vtable-value-prof.proftext -o indexed.profdata
+RUN: llvm-profdata merge %S/Inputs/vtable-value-prof.proftext  -o indexed.profdata
 
 ; Show indexed profiles
 RUN: llvm-profdata show --function=main --ic-targets --show-vtables indexed.profdata | FileCheck %s --check-prefix=INDEXED
@@ -13,6 +13,10 @@ RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text %S/In
 RUN: llvm-profdata merge --text -o text-from-indexed.proftext indexed.profdata
 RUN: llvm-profdata show --function=main --ic-targets --show-vtables text-from-indexed.proftext | FileCheck %s --check-prefix=INDEXED
 RUN: llvm-profdata show --function=main --ic-targets --show-vtables --text text-from-indexed.proftext | FileCheck %s --check-prefix=ICTEXT
+
+; Test vtable profile counters accumulate when multiple profiles are merged.
+RUN: llvm-profdata merge %S/Inputs/vtable-value-prof.proftext %S/Inputs/vtable-value-prof.proftext -o merge.profdata
+RUN: llvm-profdata show --function=main --ic-targets --show-vtables merge.profdata | FileCheck %s --check-prefix=MERGED
 
 INDEXED:      Counters:
 INDEXED-NEXT:   main:
@@ -81,3 +85,39 @@ ICTEXT: _ZTV8Derived1:250
 ICTEXT: 2
 ICTEXT: {{.*}}vtable_prof.cc;_ZTVN12_GLOBAL__N_18Derived2E:750
 ICTEXT: _ZTV8Derived1:250
+
+MERGED:      Counters:
+MERGED-NEXT:   main:
+MERGED-NEXT:     Hash: 0x0f9a16fe6d398548
+MERGED-NEXT:     Counters: 2
+MERGED-NEXT:     Indirect Call Site Count: 2
+MERGED-NEXT:     Number of instrumented vtables: 2
+MERGED-NEXT:     Indirect Target Results:
+MERGED-NEXT:         [  0, {{.*}}vtable_prof.cc;_ZN12_GLOBAL__N_18Derived25func1Eii,        1500 ] (75.00%)
+MERGED-NEXT:         [  0, _ZN8Derived15func1Eii,        500 ] (25.00%)
+MERGED-NEXT:         [  1, {{.*}}vtable_prof.cc;_ZN12_GLOBAL__N_18Derived25func2Eii,        1500 ] (75.00%)
+MERGED-NEXT:         [  1, _ZN8Derived15func2Eii,        500 ] (25.00%)
+MERGED-NEXT:     VTable Results:
+MERGED-NEXT:         [  0, {{.*}}vtable_prof.cc;_ZTVN12_GLOBAL__N_18Derived2E,        1500 ] (75.00%)
+MERGED-NEXT:         [  0, _ZTV8Derived1,        500 ] (25.00%)
+MERGED-NEXT:         [  1, {{.*}}vtable_prof.cc;_ZTVN12_GLOBAL__N_18Derived2E,        1500 ] (75.00%)
+MERGED-NEXT:         [  1, _ZTV8Derived1,        500 ] (25.00%)
+MERGED-NEXT: Instrumentation level: IR  entry_first = 0
+MERGED-NEXT: Functions shown: 1
+MERGED-NEXT: Total functions: 6
+MERGED-NEXT: Maximum function count: 2000
+MERGED-NEXT: Maximum internal block count: 500
+MERGED-NEXT: Statistics for indirect call sites profile:
+MERGED-NEXT:   Total number of sites: 2
+MERGED-NEXT:   Total number of sites with values: 2
+MERGED-NEXT:   Total number of profiled values: 4
+MERGED-NEXT:   Value sites histogram:
+MERGED-NEXT:       NumTargets, SiteCount
+MERGED-NEXT:       2, 2
+MERGED-NEXT: Statistics for vtable profile:
+MERGED-NEXT:   Total number of sites: 2
+MERGED-NEXT:   Total number of sites with values: 2
+MERGED-NEXT:   Total number of profiled values: 4
+MERGED-NEXT:   Value sites histogram:
+MERGED-NEXT:       NumTargets, SiteCount
+MERGED-NEXT:       2, 2
