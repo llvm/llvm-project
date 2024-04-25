@@ -1431,10 +1431,8 @@ static bool SinkCast(CastInst *CI) {
     if (!InsertedCast) {
       BasicBlock::iterator InsertPt = UserBB->getFirstInsertionPt();
       assert(InsertPt != UserBB->end());
-      InsertedCast = CastInst::Create(CI->getOpcode(), CI->getOperand(0),
-                                      CI->getType(), "");
+      InsertedCast = cast<CastInst>(CI->clone());
       InsertedCast->insertBefore(*UserBB, InsertPt);
-      InsertedCast->setDebugLoc(CI->getDebugLoc());
     }
 
     // Replace a use of the cast with a use of the new cast.
