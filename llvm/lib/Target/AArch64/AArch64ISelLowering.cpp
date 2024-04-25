@@ -7519,11 +7519,8 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
                               DAG.getConstant(1, DL, MVT::i32));
     SDValue Size = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
-    SDValue FI = DAG.getFrameIndex(
-        TPIDR2.FrameIndex,
-        DAG.getTargetLoweringInfo().getFrameIndexTy(DAG.getDataLayout()));
     Chain = DAG.getNode(AArch64ISD::EXPAND_ZA_BUFFER, DL,
-                        DAG.getVTList(MVT::Other), {Chain, Size, FI});
+                        DAG.getVTList(MVT::Other), {Chain, Size});
   }
 
   if (CallConv == CallingConv::PreserveNone) {
