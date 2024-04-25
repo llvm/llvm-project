@@ -279,8 +279,7 @@ bool InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
   Value *LHS = ICI->getOperand(0);
   Value *RHS = ICI->getOperand(1);
 
-  // ICmp with pointers are unsupported.
-  if (LHS->getType()->isPtrOrPtrVectorTy())
+  if (!LHS->getType()->isIntegerTy())
     return false;
 
   // Canonicalize to the `Index Pred Invariant` comparison
