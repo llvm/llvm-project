@@ -136,28 +136,66 @@ static void moveArrayDesc(Block *B, const std::byte *Src, std::byte *Dst,
   }
 }
 
+static void initField(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
+                      bool IsActive, const Descriptor *D,
+                      unsigned FieldOffset) {
+  bool IsUnion = false; // FIXME
+  auto *Desc = reinterpret_cast<InlineDescriptor *>(Ptr + FieldOffset) - 1;
+  Desc->Offset = FieldOffset;
+  Desc->Desc = D;
+  Desc->IsInitialized = D->IsArray;
+  Desc->IsBase = false;
+  Desc->IsActive = IsActive && !IsUnion;
+  Desc->IsConst = IsConst || D->IsConst;
+  Desc->IsFieldMutable = IsMutable || D->IsMutable;
+
+  if (auto Fn = D->CtorFn)
+    Fn(B, Ptr + FieldOffset, Desc->IsConst, Desc->IsFieldMutable,
+       Desc->IsActive, D);
+}
+
+static void initBase(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
+                     bool IsActive, const Descriptor *D, unsigned FieldOffset,
+                     bool IsVirtualBase) {
+  assert(D);
+  assert(D->ElemRecord);
+
+  bool IsUnion = D->ElemRecord->isUnion();
+  auto *Desc = reinterpret_cast<InlineDescriptor *>(Ptr + FieldOffset) - 1;
+  Desc->Offset = FieldOffset;
+  Desc->Desc = D;
+  Desc->IsInitialized = D->IsArray;
+  Desc->IsBase = true;
+  Desc->IsActive = IsActive && !IsUnion;
+  Desc->IsConst = IsConst || D->IsConst;
+  Desc->IsFieldMutable = IsMutable || D->IsMutable;
+
+  for (const auto &V : D->ElemRecord->bases())
+    initBase(B, Ptr + FieldOffset, IsConst, IsMutable, IsActive, V.Desc,
+             V.Offset, false);
+  for (const auto &F : D->ElemRecord->fields())
+    initField(B, Ptr + FieldOffset, IsConst, IsMutable, IsActive, F.Desc,
+              F.Offset);
+
+  // If this is initializing a virtual base, we do NOT want to consider its
+  // virtual bases, those are already flattened into the parent record when
+  // creating it.
+  if (IsVirtualBase)
+    return;
+
+  for (const auto &V : D->ElemRecord->virtual_bases())
+    initBase(B, Ptr + FieldOffset, IsConst, IsMutable, IsActive, V.Desc,
+             V.Offset, true);
+}
+
 static void ctorRecord(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
                        bool IsActive, const Descriptor *D) {
-  const bool IsUnion = D->ElemRecord->isUnion();
-  auto CtorSub = [=](unsigned SubOff, const Descriptor *F, bool IsBase) {
-    auto *Desc = reinterpret_cast<InlineDescriptor *>(Ptr + SubOff) - 1;
-    Desc->Offset = SubOff;
-    Desc->Desc = F;
-    Desc->IsInitialized = F->IsArray && !IsBase;
-    Desc->IsBase = IsBase;
-    Desc->IsActive = IsActive && !IsUnion;
-    Desc->IsConst = IsConst || F->IsConst;
-    Desc->IsFieldMutable = IsMutable || F->IsMutable;
-    if (auto Fn = F->CtorFn)
-      Fn(B, Ptr + SubOff, Desc->IsConst, Desc->IsFieldMutable, Desc->IsActive,
-         F);
-  };
-  for (const auto &B : D->ElemRecord->bases())
-    CtorSub(B.Offset, B.Desc, /*isBase=*/true);
+  for (const auto &V : D->ElemRecord->bases())
+    initBase(B, Ptr, IsConst, IsMutable, IsActive, V.Desc, V.Offset, false);
   for (const auto &F : D->ElemRecord->fields())
-    CtorSub(F.Offset, F.Desc, /*isBase=*/false);
+    initField(B, Ptr, IsConst, IsMutable, IsActive, F.Desc, F.Offset);
   for (const auto &V : D->ElemRecord->virtual_bases())
-    CtorSub(V.Offset, V.Desc, /*isBase=*/true);
+    initBase(B, Ptr, IsConst, IsMutable, IsActive, V.Desc, V.Offset, true);
 }
 
 static void dtorRecord(Block *B, std::byte *Ptr, const Descriptor *D) {
