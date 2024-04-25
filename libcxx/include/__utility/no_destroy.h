@@ -30,7 +30,7 @@ struct __uninitialized_tag {};
 // initialization using __emplace.
 template <class _Tp>
 struct __no_destroy {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __no_destroy(__uninitialized_tag) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __no_destroy(__uninitialized_tag) : __obj_() {}
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI explicit __no_destroy(_Args&&... __args) {
@@ -46,7 +46,7 @@ struct __no_destroy {
   _LIBCPP_HIDE_FROM_ABI _Tp const& __get() const { return *reinterpret_cast<const _Tp*>(__obj_); }
 
 private:
-  _ALIGNAS_TYPE(_Tp) char __obj_[sizeof(_Tp)] = {};
+  _ALIGNAS_TYPE(_Tp) char __obj_[sizeof(_Tp)];
 };
 
 _LIBCPP_END_NAMESPACE_STD
