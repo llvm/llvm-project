@@ -1673,7 +1673,8 @@ namespace llvm {
     SDValue LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerLRINT_LLRINT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerLRINT_LLRINT(SDValue Op, const X86Subtarget &STI,
+                              SelectionDAG &DAG) const;
     SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
