@@ -266,6 +266,7 @@ void sw12(int a) {
     break;
   }
 }
+
 //      CHECK: cir.func @_Z4sw12i
 //      CHECK:   cir.scope {
 //      CHECK:     cir.switch
@@ -274,6 +275,32 @@ void sw12(int a) {
 // CHECK-NEXT:     ^bb1:  // no predecessors
 // CHECK-NEXT:       cir.break
 // CHECK-NEXT:     }
+
+void sw13(int a, int b) {
+  switch (a) {
+  case 1:
+    switch (b) {
+    case 2:
+      break;
+    }
+  }
+}
+
+//      CHECK:  cir.func @_Z4sw13ii
+//      CHECK:    cir.scope {
+//      CHECK:      cir.switch
+// CHECK-NEXT:      case (equal, 1) {
+// CHECK-NEXT:        cir.scope {
+//      CHECK:          cir.switch
+// CHECK-NEXT:          case (equal, 2) {
+// CHECK-NEXT:            cir.break
+// CHECK-NEXT:          }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:        }
+// CHECK-NEXT:        cir.yield
+// CHECK-NEXT:      }
+//      CHECK:    }
+//      CHECK:    cir.return
 
 void fallthrough(int x) {
   switch (x) {

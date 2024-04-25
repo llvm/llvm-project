@@ -1085,18 +1085,23 @@ public:
   template <typename T>
   mlir::LogicalResult
   buildCaseDefaultCascade(const T *stmt, mlir::Type condType,
-                          SmallVector<mlir::Attribute, 4> &caseAttrs,
-                          mlir::OperationState &os);
+                          SmallVector<mlir::Attribute, 4> &caseAttrs);
 
   mlir::LogicalResult buildCaseStmt(const clang::CaseStmt &S,
                                     mlir::Type condType,
-                                    SmallVector<mlir::Attribute, 4> &caseAttrs,
-                                    mlir::OperationState &op);
+                                    SmallVector<mlir::Attribute, 4> &caseAttrs);
 
   mlir::LogicalResult
   buildDefaultStmt(const clang::DefaultStmt &S, mlir::Type condType,
-                   SmallVector<mlir::Attribute, 4> &caseAttrs,
-                   mlir::OperationState &op);
+                   SmallVector<mlir::Attribute, 4> &caseAttrs);
+
+  mlir::LogicalResult
+  buildSwitchCase(const clang::SwitchCase &S, mlir::Type condType,
+                  SmallVector<mlir::Attribute, 4> &caseAttrs);
+
+  mlir::LogicalResult
+  buildSwitchBody(const clang::Stmt *S, mlir::Type condType,
+                  SmallVector<mlir::Attribute, 4> &caseAttrs);
 
   mlir::cir::FuncOp generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
                                  const CIRGenFunctionInfo &FnInfo);
@@ -1964,7 +1969,7 @@ public:
     // have their own scopes but are distinct regions nonetheless.
     llvm::SmallVector<mlir::Block *> RetBlocks;
     llvm::SmallVector<std::optional<mlir::Location>> RetLocs;
-    unsigned int CurrentSwitchRegionIdx = -1;
+    llvm::SmallVector<std::unique_ptr<mlir::Region>> SwitchRegions;
 
     // There's usually only one ret block per scope, but this needs to be
     // get or create because of potential unreachable return statements, note
@@ -1985,16 +1990,25 @@ public:
     void buildImplicitReturn();
 
   public:
-    void updateCurrentSwitchCaseRegion() { CurrentSwitchRegionIdx++; }
     llvm::ArrayRef<mlir::Block *> getRetBlocks() { return RetBlocks; }
     llvm::ArrayRef<std::optional<mlir::Location>> getRetLocs() {
       return RetLocs;
+    }
+    llvm::MutableArrayRef<std::unique_ptr<mlir::Region>> getSwitchRegions() {
+      assert(isSwitch() && "expected switch scope");
+      return SwitchRegions;
+    }
+
+    mlir::Region *createSwitchRegion() {
+      assert(isSwitch() && "expected switch scope");
+      SwitchRegions.push_back(std::make_unique<mlir::Region>());
+      return SwitchRegions.back().get();
     }
 
     mlir::Block *getOrCreateRetBlock(CIRGenFunction &CGF, mlir::Location loc) {
       unsigned int regionIdx = 0;
       if (isSwitch())
-        regionIdx = CurrentSwitchRegionIdx;
+        regionIdx = SwitchRegions.size() - 1;
       if (regionIdx >= RetBlocks.size())
         return createRetBlock(CGF, loc);
       return &*RetBlocks.back();
