@@ -523,19 +523,22 @@ We should use precise patterns that state our intentions. Please avoid
 using wip_match_opcode in patterns.
 
 .. code-block:: text
-  :caption: Example fold ext(trunc:nuw)
+  :caption: Example fold zext(trunc:nuw)
 
+// Imprecise: matches any G_ZEXT
 (match (wip_match_opcode G_ZEXT):$root,
    [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
 
 
+// Imprecise: matches G_ZEXT of G_TRUNC
 (match (G_TRUNC $src, $x),
        (G_ZEXT $root, $src),
    [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
    (apply [{ Helper.applyBuildFnMO(${root}, ${matchinfo}); }])>;
 
 
+// Precise: matches G_ZEXT of G_TRUNC with nuw flag
 (match (G_TRUNC $src, $x, (MIFlags NoUWrap)),
        (G_ZEXT $root, $src),
    [{ return Helper.matchZextOfTrunc(${root}, ${matchinfo}); }]),
