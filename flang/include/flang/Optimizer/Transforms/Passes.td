@@ -286,7 +286,6 @@ def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
   let description = [{
     Run region DCE and erase unreachable blocks in regions.
   }];
-  let constructor = "::fir::createSimplifyRegionLitePass()";
 }
 
 def AlgebraicSimplification : Pass<"flang-algebraic-simplification"> {
