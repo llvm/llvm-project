@@ -258,6 +258,11 @@ public:
     return SelectSVEAddSubImm(N, VT, Imm, Shift);
   }
 
+  template <MVT::SimpleValueType VT, bool Negate>
+  bool SelectSVEAddSubSSatImm(SDValue N, SDValue &Imm, SDValue &Shift) {
+    return SelectSVEAddSubSSatImm(N, VT, Imm, Shift, Negate);
+  }
+
   template <MVT::SimpleValueType VT>
   bool SelectSVECpyDupImm(SDValue N, SDValue &Imm, SDValue &Shift) {
     return SelectSVECpyDupImm(N, VT, Imm, Shift);
@@ -484,6 +489,8 @@ private:
   bool SelectCMP_SWAP(SDNode *N);
 
   bool SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift);
+  bool SelectSVEAddSubSSatImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift,
+                              bool Negate);
   bool SelectSVECpyDupImm(SDValue N, MVT VT, SDValue &Imm, SDValue &Shift);
   bool SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm, bool Invert);
 
@@ -4001,6 +4008,56 @@ bool AArch64DAGToDAGISel::SelectSVEAddSubImm(SDValue N, MVT VT, SDValue &Imm,
       return true;
     }
     // Support 16bit unsigned immediates that are a multiple of 256.
+    if (Val <= 65280 && Val % 256 == 0) {
+      Shift = CurDAG->getTargetConstant(8, DL, MVT::i32);
+      Imm = CurDAG->getTargetConstant(Val >> 8, DL, MVT::i32);
+      return true;
+    }
+    break;
+  default:
+    break;
+  }
+
+  return false;
+}
+
+bool AArch64DAGToDAGISel::SelectSVEAddSubSSatImm(SDValue N, MVT VT,
+                                                 SDValue &Imm, SDValue &Shift,
+                                                 bool Negate) {
+  if (!isa<ConstantSDNode>(N))
+    return false;
+
+  SDLoc DL(N);
+  int64_t Val = cast<ConstantSDNode>(N)
+                    ->getAPIntValue()
+                    .trunc(VT.getFixedSizeInBits())
+                    .getSExtValue();
+
+  if (Negate)
+    Val = -Val;
+
+  // Signed saturating instructions treat their immediate operand as unsigned,
+  // whereas the related intrinsics define their operands to be signed. This
+  // means we can only use the immediate form when the operand is non-negative.
+  if (Val < 0)
+    return false;
+
+  switch (VT.SimpleTy) {
+  case MVT::i8:
+    // All positive immediates are supported.
+    Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
+    Imm = CurDAG->getTargetConstant(Val, DL, MVT::i32);
+    return true;
+  case MVT::i16:
+  case MVT::i32:
+  case MVT::i64:
+    // Support 8bit positive immediates.
+    if (Val <= 255) {
+      Shift = CurDAG->getTargetConstant(0, DL, MVT::i32);
+      Imm = CurDAG->getTargetConstant(Val, DL, MVT::i32);
+      return true;
+    }
+    // Support 16bit positive immediates that are a multiple of 256.
     if (Val <= 65280 && Val % 256 == 0) {
       Shift = CurDAG->getTargetConstant(8, DL, MVT::i32);
       Imm = CurDAG->getTargetConstant(Val >> 8, DL, MVT::i32);

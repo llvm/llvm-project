@@ -12517,7 +12517,7 @@ This instruction requires several arguments:
       ``llvm::GuaranteedTailCallOpt`` is ``true``, or the calling convention
       is ``tailcc``
    -  `Platform-specific constraints are
-      met. <CodeGenerator.html#tailcallopt>`_
+      met. <CodeGenerator.html#tail-call-optimization>`_
 
 #. The optional ``notail`` marker indicates that the optimizers should not add
    ``tail`` or ``musttail`` markers to the call. It is used to prevent tail
@@ -28130,7 +28130,8 @@ Syntax:
 Arguments:
 """"""""""
 
-The first argument is a thread local :ref:`global variable <globalvars>`.
+The `llvm.threadlocal.address` intrinsic requires a global value argument (a
+:ref:`global variable <globalvars>` or alias) that is thread local.
 
 Semantics:
 """"""""""
