@@ -3147,9 +3147,17 @@ void AsmPrinter::emitAlignment(Align Alignment, const GlobalObject *GV,
 
   if (getCurrentSection()->getKind().isText()) {
     const MCSubtargetInfo *STI = nullptr;
-    if (this->MF)
-      STI = &getSubtargetInfo();
-    else
+    if (this->MF) {
+      // Don't allow the possibly smaller alignment of the GV
+      // (e.g. 2 for a C++ method) to reduce a function's alignment
+      // below the target's minimum function alignment. (#90358)
+      const TargetSubtargetInfo *TSI = &MF->getSubtarget();
+      const Align MinAlign =
+          TSI->getTargetLowering()->getMinFunctionAlignment();
+      if (Alignment < MinAlign)
+        Alignment = MinAlign;
+      STI = TSI;
+    } else
       STI = TM.getMCSubtargetInfo();
     OutStreamer->emitCodeAlignment(Alignment, STI, MaxBytesToEmit);
   } else
