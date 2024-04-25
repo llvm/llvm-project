@@ -74,7 +74,6 @@ MCStreamer *llvm::createX86WinCOFFStreamer(MCContext &C,
                                            bool IncrementalLinkerCompatible) {
   X86WinCOFFStreamer *S =
       new X86WinCOFFStreamer(C, std::move(AB), std::move(CE), std::move(OW));
-  S->getAssembler().setRelaxAll(RelaxAll);
   S->getAssembler().setIncrementalLinkerCompatible(IncrementalLinkerCompatible);
   return S;
 }
