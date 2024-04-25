@@ -1581,6 +1581,11 @@ bool CodeGenModule::ReturnTypeUsesSRet(const CGFunctionInfo &FI) {
   return RI.isIndirect() || (RI.isInAlloca() && RI.getInAllocaSRet());
 }
 
+bool CodeGenModule::ReturnTypeHasInReg(const CGFunctionInfo &FI) {
+  const auto &RI = FI.getReturnInfo();
+  return RI.getInReg();
+}
+
 bool CodeGenModule::ReturnSlotInterferesWithArgs(const CGFunctionInfo &FI) {
   return ReturnTypeUsesSRet(FI) &&
          getTargetCodeGenInfo().doesReturnSlotInterfereWithArgs();
