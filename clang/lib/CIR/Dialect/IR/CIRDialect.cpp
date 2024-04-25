@@ -367,12 +367,7 @@ LogicalResult ConstantOp::verify() {
 static ParseResult parseConstantValue(OpAsmParser &parser,
                                       mlir::Attribute &valueAttr) {
   NamedAttrList attr;
-  if (parser.parseAttribute(valueAttr, "value", attr).failed()) {
-    return parser.emitError(parser.getCurrentLocation(),
-                            "expected constant attribute to match type");
-  }
-
-  return success();
+  return parser.parseAttribute(valueAttr, "value", attr);
 }
 
 // FIXME: create a CIRConstAttr and hide this away for both global

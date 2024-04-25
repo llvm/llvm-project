@@ -305,34 +305,39 @@ cir.func @cast24(%p : !u32i) {
 !u32i = !cir.int<u, 32>
 !u8i = !cir.int<u, 8>
 module {
-  cir.global external @a = #cir.const_array<[#cir.int<0> : !u8i, #cir.int<23> : !u8i, #cir.int<33> : !u8i] : !cir.array<!u32i x 3>> // expected-error {{constant array element should match array element type}}
-} // expected-error {{expected constant attribute to match type}}
+  // expected-error@+1 {{constant array element should match array element type}}
+  cir.global external @a = #cir.const_array<[#cir.int<0> : !u8i, #cir.int<23> : !u8i, #cir.int<33> : !u8i] : !cir.array<!u32i x 3>>
+}
 
 // -----
 
 !u8i = !cir.int<u, 8>
 module {
-  cir.global external @a = #cir.const_array<[#cir.int<0> : !u8i, #cir.int<23> : !u8i, #cir.int<33> : !u8i] : !cir.array<!u8i x 4>> // expected-error {{constant array size should match type size}}
-} // expected-error {{expected constant attribute to match type}}
+  // expected-error@+1 {{constant array size should match type size}}
+  cir.global external @a = #cir.const_array<[#cir.int<0> : !u8i, #cir.int<23> : !u8i, #cir.int<33> : !u8i] : !cir.array<!u8i x 4>>
+}
 
 // -----
 
 !u32i = !cir.int<u, 32>
 module {
-  cir.global external @b = #cir.const_array<"example\00" : !cir.array<!u32i x 8>> // expected-error {{constant array element for string literals expects !cir.int<u, 8> element type}}
-} // expected-error {{expected constant attribute to match type}}
+  // expected-error@+1 {{constant array element for string literals expects !cir.int<u, 8> element type}}
+  cir.global external @b = #cir.const_array<"example\00" : !cir.array<!u32i x 8>>
+}
 
 // -----
 
 module {
-  cir.global "private" constant external @".str2" = #cir.const_array<"example\00"> {alignment = 1 : i64} // expected-error {{expected type declaration for string literal}}
-} // expected-error@-1 {{expected constant attribute to match type}}
+  // expected-error@+1 {{expected type declaration for string literal}}
+  cir.global "private" constant external @".str2" = #cir.const_array<"example\00"> {alignment = 1 : i64}
+}
 
 // -----
 
 !u32i = !cir.int<u, 32>
 module {
-  cir.global @a = #cir.const_array<[0 : !u8i, -23 : !u8i, 33 : !u8i] : !cir.array<!u32i x 3>> // expected-error {{expected string or keyword containing one of the following enum values for attribute 'linkage' [external, available_externally, linkonce, linkonce_odr, weak, weak_odr, internal, cir_private, extern_weak, common]}}
+  // expected-error@+1 {{expected string or keyword containing one of the following enum values for attribute 'linkage' [external, available_externally, linkonce, linkonce_odr, weak, weak_odr, internal, cir_private, extern_weak, common]}}
+  cir.global @a = #cir.const_array<[0 : !u8i, -23 : !u8i, 33 : !u8i] : !cir.array<!u32i x 3>>
 }
 
 // -----
@@ -535,10 +540,11 @@ module {
   // rid of this somehow in favor of clarity?
   cir.global "private" external @_ZTVN10__cxxabiv120__si_class_type_infoE : !cir.ptr<!u32i>
 
-  cir.global external @type_info_B = #cir.typeinfo<{ // expected-error {{element at index 0 has type '!cir.ptr<!cir.int<u, 8>>' but return type for this element is '!cir.ptr<!cir.int<u, 32>>'}}
+  // expected-error@+1 {{element at index 0 has type '!cir.ptr<!cir.int<u, 8>>' but return type for this element is '!cir.ptr<!cir.int<u, 32>>'}}
+  cir.global external @type_info_B = #cir.typeinfo<{
     #cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2]> : !cir.ptr<!u8i>}>
     : !cir.struct<struct {!cir.ptr<!u32i>}>
-} // expected-error {{'cir.global' expected constant attribute to match type}}
+}
 
 // -----
 
