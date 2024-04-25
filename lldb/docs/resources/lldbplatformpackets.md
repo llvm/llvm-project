@@ -1,4 +1,5 @@
 # LLDB Platform Packets
+
 Here is a brief overview of the packets that an lldb platform server
 needs to implement for the lldb testsuite to be run on a remote
 target device/system.
@@ -104,7 +105,7 @@ send:    F0
 
 request packet has the fields:
    1. mode bits in base 16
-   2. file path in ascii-hex encoding
+   2. file path in ASCII hex encoding
 
 response is F followed by the return value of the `mkdir()` call,
 base 16 encoded.
@@ -123,9 +124,9 @@ send:    F,0,0,<OUTPUT>
 ```
 
 request packet has the fields:
-   1. shell command ascii-hex encoded
+   1. shell command in ASCII hex encoding
    2. timeout
-   3. working directory ascii-hex encoded (optional)
+   3. working directory in ASCII hex encoding (optional)
 
 Response is `F` followed by the return value of the command (base 16),
 followed by another number, followed by the output of the command
@@ -145,8 +146,8 @@ receive: qLaunchGDBServer;host:<HOSTNAME_LLDB_IS_ON>;
 send:    pid:1337;port:43001;
 ```
 
-Request packet hostname field is not ascii-hex encoded. Hostnames
-don't have `$` or `#` characters in them.
+Request packet hostname field is not ASCII hex encoded. Hostnames
+do not have `$` or `#` characters in them.
 
 Response to the packet is the pid of the newly launched gdbserver,
 and the port it is listening for a connection on.
@@ -172,7 +173,7 @@ The request packet has the process ID in base 10.
 
 ### Brief
 
-Gather information about a process running on the target
+Gather information about a process running on the target.
 
 ### Example
 
@@ -225,7 +226,7 @@ no-criteria mode to list every process.
 
 The response should include any information about the process that
 can be retrieved in semicolon-separated `name:value` fields.
-In this example, `pid` is base 10, `name` is ascii-hex encoded.
+In this example, `pid` is base 10, `name` is ASCII hex encoded.
 The testsuite seems to only require these two.
 
 This packet only responds with one process. To get further matches to
@@ -276,13 +277,13 @@ files (including directories) starting with the given path. If the
 argument is one, the result should contain only directories.
 
 The result should be a comma-separated list of hex-encoded paths.
-Paths denoting a directory should end with a directory separator (`/` or `\`.
+Paths denoting a directory should end with a directory separator (`/` or `\`).
 
 ## vFile:size
 
 ### Brief
 
-Get the size of a file on the target system, filename in ASCII hex.
+Get the size of a file on the target system, filename in ASCII hex encoding.
 
 ### Example
 
@@ -325,9 +326,10 @@ send:    F0
 ```
 
 Argument is a file path in ascii-hex encoding.
-Response is `F` plus the return value of `unlink()`, base 16 encoding.
-Return value may optionally be followed by a comma and the base16
-value of errno if unlink failed.
+
+Response is `F` plus the return value of `unlink()` in base 16 encoding.
+If unlink failed, the return value may be followed by a comma and the value of
+errno in base 16 encoding.
 
 ## vFile:symlink
 
@@ -440,7 +442,7 @@ Request packet has the fields:
    2. Number of bytes to be read, base 16
    3. Offset into file to start from, base 16
 
-Response is `F`, followed by the number of bytes read (base 16), a
+Response is `F`, followed by the number of bytes read (base 16 encoded), a
 semicolon, followed by the data in the binary-escaped-data encoding.
 
 ## vFile:pwrite
@@ -461,7 +463,7 @@ Request packet has the fields:
    2. Offset into file to start from, base 16
    3. binary-escaped-data to be written
 
-Response is `F`, followed by the number of bytes written (base 16).
+Response is `F`, followed by the number of bytes written (base 16 encoded).
 
 ## Launching Processes
 
