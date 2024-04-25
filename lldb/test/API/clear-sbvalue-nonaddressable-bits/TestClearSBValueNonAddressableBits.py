@@ -7,7 +7,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestClearSBValueNonAddressableBits(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
 
     # On AArch64 systems, the top bits that are not used for

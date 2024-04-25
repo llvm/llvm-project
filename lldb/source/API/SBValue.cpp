@@ -917,9 +917,8 @@ lldb::addr_t SBValue::GetValueAsAddress() {
     bool success = true;
     uint64_t ret_val = fail_value;
     ret_val = value_sp->GetValueAsUnsigned(fail_value, &success);
-    if (!success) {
+    if (!success)
       return fail_value;
-    }
     ProcessSP process_sp = m_opaque_sp->GetProcessSP();
     if (!process_sp)
       return ret_val;
