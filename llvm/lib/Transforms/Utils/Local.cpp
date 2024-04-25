@@ -3651,7 +3651,7 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
 void llvm::remapDebugVariable(ValueToValueMapTy &Mapping, Instruction *Inst) {
   auto RemapDebugOperands = [&Mapping](auto *DV, auto Set) {
     for (auto *Op : Set)
-      if (Instruction *InstOp = dyn_cast<Instruction>(Op)) {
+      if (auto *InstOp = Op) {
         auto I = Mapping.find(InstOp);
         if (I != Mapping.end())
           DV->replaceVariableLocationOp(Op, I->second, /*AllowEmpty=*/true);

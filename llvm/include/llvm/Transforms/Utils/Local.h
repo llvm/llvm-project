@@ -479,8 +479,8 @@ void hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
 DIExpression *getExpressionForConstant(DIBuilder &DIB, const Constant &C,
                                        Type &Ty);
 
-/// Remap the debug intrinsic instructions in the \p Mapping using the
-/// \p Inst as a criteria.
+/// Remap the operands of the debug records attached to \p Inst, and the
+/// operands of \p Inst itself if it's a debug intrinsic.
 void remapDebugVariable(ValueToValueMapTy &Mapping, Instruction *Inst);
 
 //===----------------------------------------------------------------------===//
