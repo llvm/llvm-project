@@ -1677,30 +1677,30 @@ bool RISCVInstrInfo::isVectorAssociativeAndCommutative(const MachineInstr &Inst,
 #undef OPCODE_LMUL_CASE
 }
 
-bool RISCVInstrInfo::areRVVInstsReassociable(const MachineInstr &MI1,
-                                             const MachineInstr &MI2) const {
-  if (!areOpcodesEqualOrInverse(MI1.getOpcode(), MI2.getOpcode()))
+bool RISCVInstrInfo::areRVVInstsReassociable(const MachineInstr &Root,
+                                             const MachineInstr &Prev) const {
+  if (!areOpcodesEqualOrInverse(Root.getOpcode(), Prev.getOpcode()))
     return false;
 
-  assert(MI1.getMF() == MI2.getMF());
-  const MachineRegisterInfo *MRI = &MI1.getMF()->getRegInfo();
+  assert(Root.getMF() == Prev.getMF());
+  const MachineRegisterInfo *MRI = &Root.getMF()->getRegInfo();
   const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
 
   // Make sure vtype operands are also the same.
-  const MCInstrDesc &Desc = get(MI1.getOpcode());
+  const MCInstrDesc &Desc = get(Root.getOpcode());
   const uint64_t TSFlags = Desc.TSFlags;
 
   auto checkImmOperand = [&](unsigned OpIdx) {
-    return MI1.getOperand(OpIdx).getImm() == MI2.getOperand(OpIdx).getImm();
+    return Root.getOperand(OpIdx).getImm() == Prev.getOperand(OpIdx).getImm();
   };
 
   auto checkRegOperand = [&](unsigned OpIdx) {
-    return MI1.getOperand(OpIdx).getReg() == MI2.getOperand(OpIdx).getReg();
+    return Root.getOperand(OpIdx).getReg() == Prev.getOperand(OpIdx).getReg();
   };
 
   // PassThru
-  // TODO: Potentially we can loosen the condition to consider Root (MI1) to be
-  // associable with Prev (MI2) if Root has NoReg as passthru. In which case we
+  // TODO: Potentially we can loosen the condition to consider Root to be
+  // associable with Prev if Root has NoReg as passthru. In which case we
   // also need to loosen the condition on vector policies between these.
   if (!checkRegOperand(1))
     return false;
@@ -1712,9 +1712,9 @@ bool RISCVInstrInfo::areRVVInstsReassociable(const MachineInstr &MI1,
 
   // Mask
   if (RISCVII::usesMaskPolicy(TSFlags)) {
-    const MachineBasicBlock *MBB = MI1.getParent();
-    const MachineBasicBlock::const_reverse_iterator It1(&MI1);
-    const MachineBasicBlock::const_reverse_iterator It2(&MI2);
+    const MachineBasicBlock *MBB = Root.getParent();
+    const MachineBasicBlock::const_reverse_iterator It1(&Root);
+    const MachineBasicBlock::const_reverse_iterator It2(&Prev);
     Register MI1VReg;
 
     bool SeenMI2 = false;
@@ -1722,7 +1722,7 @@ bool RISCVInstrInfo::areRVVInstsReassociable(const MachineInstr &MI1,
       if (It == It2) {
         SeenMI2 = true;
         if (!MI1VReg.isValid())
-          // There is no V0 def between MI1 and MI2; they're sharing the
+          // There is no V0 def between Root and Prev; they're sharing the
           // same V0.
           break;
       }
@@ -1735,7 +1735,7 @@ bool RISCVInstrInfo::areRVVInstsReassociable(const MachineInstr &MI1,
           return false;
 
         if (!MI1VReg.isValid()) {
-          // This is the V0 def for MI1.
+          // This is the V0 def for Root.
           MI1VReg = SrcReg;
           continue;
         }
@@ -1744,8 +1744,8 @@ bool RISCVInstrInfo::areRVVInstsReassociable(const MachineInstr &MI1,
         if (!SeenMI2)
           continue;
 
-        // This is the V0 def for MI2; check if it's the same as that of
-        // MI1.
+        // This is the V0 def for Prev; check if it's the same as that of
+        // Root.
         if (MI1VReg != SrcReg)
           return false;
         else
@@ -1753,9 +1753,9 @@ bool RISCVInstrInfo::areRVVInstsReassociable(const MachineInstr &MI1,
       }
     }
 
-    // If we haven't encountered MI2, it's likely that this function was
-    // called in a wrong way (e.g. MI1 is before MI2).
-    assert(SeenMI2 && "MI2 is expected to appear before MI1");
+    // If we haven't encountered Prev, it's likely that this function was
+    // called in a wrong way (e.g. Root is before Prev).
+    assert(SeenMI2 && "Prev is expected to appear before Root");
   }
 
   // Tail / Mask policies
@@ -1766,8 +1766,8 @@ bool RISCVInstrInfo::areRVVInstsReassociable(const MachineInstr &MI1,
   // VL
   if (RISCVII::hasVLOp(TSFlags)) {
     unsigned OpIdx = RISCVII::getVLOpNum(Desc);
-    const MachineOperand &Op1 = MI1.getOperand(OpIdx);
-    const MachineOperand &Op2 = MI2.getOperand(OpIdx);
+    const MachineOperand &Op1 = Root.getOperand(OpIdx);
+    const MachineOperand &Op2 = Prev.getOperand(OpIdx);
     if (Op1.getType() != Op2.getType())
       return false;
     switch (Op1.getType()) {
