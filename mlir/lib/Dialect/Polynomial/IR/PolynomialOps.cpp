@@ -79,9 +79,9 @@ LogicalResult ToTensorOp::verify() {
   InFlightDiagnostic diag =
       emitOpError() << "input type " << getInput().getType()
                     << " does not match output type " << getOutput().getType();
-  diag.attachNote() << "he input type must be a tensor of shape [d] where d "
+  diag.attachNote() << "the output type must be a tensor of shape [d] where d "
                        "is at most the degree of the polynomialModulus of "
-                       "the output type's ring attribute";
+                       "the input type's ring attribute";
   return diag;
 }
 
