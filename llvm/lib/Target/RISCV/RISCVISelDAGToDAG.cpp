@@ -2102,7 +2102,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       SubVecContainerVT = TLI.getContainerForFixedLengthVector(SubVecVT);
 #ifndef NDEBUG
       TypeSize VecRegSize = TypeSize::getScalable(RISCV::RVVBitsPerBlock);
-      bool ExactlyVecRegSized =
+      [[maybe_unused]] bool ExactlyVecRegSized =
           Subtarget->expandVScale(SubVecVT.getSizeInBits())
               .isKnownMultipleOf(Subtarget->expandVScale(VecRegSize));
       assert(isPowerOf2_64(Subtarget->expandVScale(SubVecVT.getSizeInBits())
