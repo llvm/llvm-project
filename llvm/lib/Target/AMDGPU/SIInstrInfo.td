@@ -1176,6 +1176,9 @@ def ScaleSel : CustomOperand<i8, 1, "ScaleSel">;
 def scalesel_0 : DefaultOperand<ScaleSel, 0>;
 def AuxData : NamedIntOperand<i32, "aux_data">;
 
+def ByteSel : CustomOperand<i8, 1, "ByteSel">;
+def bytesel_0 : DefaultOperand<ByteSel, 0>;
+
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
   let OperandType = "OPERAND_KIMM"#vt.Size;
@@ -2201,7 +2204,8 @@ class getAsmDPP8 <bit HasDst, int NumSrcArgs, bit HasModifiers, ValueType DstVT 
 class getAsmVOP3Base <int NumSrcArgs, bit HasDst, bit HasClamp,
                        bit HasOpSel, bit HasOMod, bit IsVOP3P,
                        bit HasNeg, bit Src0HasMods,
-                       bit Src1HasMods, bit Src2HasMods, ValueType DstVT = i32> {
+                       bit Src1HasMods, bit Src2HasMods, ValueType DstVT = i32,
+                       bit HasByteSel = 0> {
   string dst = !if(HasDst,
                    !if(!eq(DstVT.Size, 1),
                        "$sdst",
@@ -2223,6 +2227,7 @@ class getAsmVOP3Base <int NumSrcArgs, bit HasDst, bit HasClamp,
   string src1 = !if(Src1HasMods, src1mods, src1nomods);
   string src2 = !if(Src2HasMods, src2mods, src2nomods);
   string opsel = !if(HasOpSel, "$op_sel", "");
+  string bytesel = !if(HasByteSel, "$byte_sel", "");
   string 3PMods = !if(IsVOP3P,
                       !if(HasOpSel, "$op_sel_hi", "")
                         #!if(HasNeg, "$neg_lo$neg_hi", ""),
@@ -2230,7 +2235,7 @@ class getAsmVOP3Base <int NumSrcArgs, bit HasDst, bit HasClamp,
   string clamp = !if(HasClamp, "$clamp", "");
   string omod = !if(HasOMod, "$omod", "");
 
-  string ret = dst#!if(!gt(NumSrcArgs,0),", "#src0#src1#src2#opsel#3PMods#clamp#omod, "");
+  string ret = dst#!if(!gt(NumSrcArgs,0),", "#src0#src1#src2#opsel#bytesel#3PMods#clamp#omod, "");
 
 }
 
@@ -2583,7 +2588,7 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
   field string AsmVOP3Base = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
    HasOpSel, HasOMod, IsVOP3P, HasNeg, HasSrc0Mods, HasSrc1Mods,
-   HasSrc2Mods, DstVT>.ret;
+   HasSrc2Mods, DstVT, IsFP8DstByteSel>.ret;
   field string Asm64 = AsmVOP3Base;
   field string AsmVOP3P = getAsmVOP3P<HasDst, NumSrcArgs, HasNeg, HasClamp, HasOpSel>.ret;
   field string AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs,
@@ -2736,7 +2741,7 @@ def VOP_F32_F16_F16_F16 : VOPProfile <[f32, f16, f16, f16]>;
 def VOP_V2BF16_F32_F32 : VOPProfile <[v2bf16, f32, f32, untyped]>;
 def VOP_V2BF16_F32_F32_I32 : VOPProfile <[v2bf16, f32, f32, i32]>;
 def VOP_V2F16_F32_F32_I32 : VOPProfile <[v2f16, f32, f32, i32]>;
-def VOP_I32_F16_I16 : VOPProfile <[i32, f16, i16, untyped]>;
+def VOP_I32_F16_I32 : VOPProfile <[i32, f16, i32, untyped]>;
 def VOP_V32F16_V6I32_I32  : VOPProfile<[v32f16, v6i32, i32, untyped]>;
 def VOP_V32BF16_V6I32_I32 : VOPProfile<[v32bf16, v6i32, i32, untyped]>;
 def VOP_V8F16_V2I32_I32  : VOPProfile<[v8f16, v2i32, i32, untyped]>;
