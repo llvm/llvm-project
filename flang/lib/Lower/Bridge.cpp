@@ -3807,6 +3807,9 @@ private:
     return temps;
   }
 
+  // Check if the insertion point is currently in a device context. HostDevice
+  // subprogram are not considered fully device context so it will return false
+  // for it.
   static bool isDeviceContext(fir::FirOpBuilder &builder) {
     if (builder.getRegion().getParentOfType<fir::CUDAKernelOp>())
       return true;
@@ -3815,7 +3818,8 @@ private:
       if (auto cudaProcAttr =
               funcOp.getOperation()->getAttrOfType<fir::CUDAProcAttributeAttr>(
                   fir::getCUDAAttrName())) {
-        return cudaProcAttr.getValue() != fir::CUDAProcAttribute::Host;
+        return cudaProcAttr.getValue() != fir::CUDAProcAttribute::Host
+          && cudaProcAttr.getValue() != fir::CUDAProcAttribute::HostDevice;
       }
     }
     return false;
