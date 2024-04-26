@@ -3678,12 +3678,12 @@ def AtomicFetchKind : I32EnumAttr<
 }
 
 def AtomicFetch : CIR_Op<"atomic.fetch",
-                         [Pure, SameSecondOperandAndResultType]> {
+                         [AllTypesMatch<["result", "val"]>]> {
   let summary = "Atomic fetch with unary and binary operations";
   let description = [{
-    Represents `__atomic_binop_fetch` and `__atomic_fetch_binop` builtins,
+    Represents `__atomic_<binop>_fetch` and `__atomic_fetch_<binop>` builtins,
     where `binop` is on of the binary opcodes : `add`, `sub`, `and`, `xor`,
-    `or` and `nand`.
+    `or`, `nand`, `max` and `min`.
 
     `ptr` is an integer or fp pointer, followed by `val`, which must be
     an integer or fp (only supported for `add` and `sub`). The operation
@@ -3693,9 +3693,14 @@ def AtomicFetch : CIR_Op<"atomic.fetch",
     `__atomic_fetch_binop` and returns the value that had
     previously been in *ptr, otherwise it returns the final result
     of the computation (`__atomic_binop_fetch`).
+
+    Example:
+    %res = cir.atomic.fetch(add, %ptr : !cir.ptr<!s32i>,
+                            %val : !s32i, seq_cst) : !s32i
   }];
   let results = (outs CIR_AnyIntOrFloat:$result);
-  let arguments = (ins PrimitiveIntOrFPPtr:$ptr, CIR_AnyIntOrFloat:$val,
+  let arguments = (ins Arg<PrimitiveIntOrFPPtr, "", [MemRead, MemWrite]>:$ptr,
+                       CIR_AnyIntOrFloat:$val,
                        AtomicFetchKind:$binop,
                        Arg<MemOrder, "memory order">:$mem_order,
                        UnitAttr:$is_volatile,
@@ -3715,14 +3720,19 @@ def AtomicFetch : CIR_Op<"atomic.fetch",
   let hasVerifier = 1;
 }
 
-def AtomicXchg : CIR_Op<"atomic.xchg", [Pure, SameSecondOperandAndResultType]> {
+def AtomicXchg : CIR_Op<"atomic.xchg", [AllTypesMatch<["result", "val"]>]> {
   let summary = "Atomic exchange";
   let description = [{
-    Atomic exchange functionality mapped from different use of builtins in
-    C/C++.
+    Atomic exchange operations. Implements C/C++ builtins such as
+    `__atomic_exchange`and `__atomic_exchange_n`.
+
+    Example:
+    %res = cir.atomic.xchg(%ptr : !cir.ptr<!some_struct>,
+                           %val : !u64i, seq_cst) : !u64i
   }];
   let results = (outs CIR_AnyType:$result);
-  let arguments = (ins CIR_PointerType:$ptr, CIR_AnyType:$val,
+  let arguments = (ins Arg<CIR_PointerType, "", [MemRead, MemWrite]>:$ptr,
+                       CIR_AnyType:$val,
                        Arg<MemOrder, "memory order">:$mem_order,
                        UnitAttr:$is_volatile);
 
@@ -3738,14 +3748,24 @@ def AtomicXchg : CIR_Op<"atomic.xchg", [Pure, SameSecondOperandAndResultType]> {
   let hasVerifier = 0;
 }
 
-def AtomicCmpXchg : CIR_Op<"atomic.cmp_xchg", [Pure]> {
+def AtomicCmpXchg : CIR_Op<"atomic.cmp_xchg",
+                           [AllTypesMatch<["old", "expected", "desired"]>]> {
   let summary = "Atomic compare exchange";
   let description = [{
-    C/C++ Atomic compare and exchange. Example:
+    C/C++ Atomic compare and exchange operation. Implements builtins like
+    `__atomic_compare_exchange_n` and `__atomic_compare_exchange`.
+
+    Example:
+    %old, %cmp = cir.atomic.cmp_xchg(%ptr : !cir.ptr<!some_struct>,
+                                     %expected : !u64i,
+                                     %desired : !u64i,
+                                     success = seq_cst,
+                                     failure = seq_cst) weak
+                                     : (!u64i, !cir.bool)
 
   }];
   let results = (outs CIR_AnyType:$old, CIR_BoolType:$cmp);
-  let arguments = (ins CIR_AnyType:$ptr,
+  let arguments = (ins Arg<CIR_PointerType, "", [MemRead, MemWrite]>:$ptr,
                        CIR_AnyType:$expected,
                        CIR_AnyType:$desired,
                        Arg<MemOrder, "success memory order">:$succ_order,
