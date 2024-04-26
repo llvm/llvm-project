@@ -75,8 +75,8 @@ def HasJS            : Predicate<"Subtarget->hasJS()">,
 def HasCCIDX         : Predicate<"Subtarget->hasCCIDX()">,
                        AssemblerPredicateWithAll<(all_of FeatureCCIDX), "ccidx">;
 
-def HasComplxNum      : Predicate<"Subtarget->hasComplxNum()">,
-                       AssemblerPredicateWithAll<(all_of FeatureComplxNum), "complxnum">;
+def HasFCMA      : Predicate<"Subtarget->hasFCMA()">,
+                       AssemblerPredicateWithAll<(all_of FeatureFCMA), "fcma">;
 
 def HasNV            : Predicate<"Subtarget->hasNV()">,
                        AssemblerPredicateWithAll<(all_of FeatureNV), "nv">;
@@ -1499,7 +1499,7 @@ defm FCADD : SIMDThreeSameVectorComplexHSD<1, 0b111, complexrotateopodd,
                                            "fcadd", null_frag>;
 defm FCMLA : SIMDIndexedTiedComplexHSD<0, 1, complexrotateop, "fcmla">;
 
-let Predicates = [HasComplxNum, HasNEON, HasFullFP16] in {
+let Predicates = [HasFCMA, HasNEON, HasFullFP16] in {
   def : Pat<(v4f16 (int_aarch64_neon_vcadd_rot90 (v4f16 V64:$Rn), (v4f16 V64:$Rm))),
             (FCADDv4f16 (v4f16 V64:$Rn), (v4f16 V64:$Rm), (i32 0))>;
   def : Pat<(v4f16 (int_aarch64_neon_vcadd_rot270 (v4f16 V64:$Rn), (v4f16 V64:$Rm))),
@@ -1510,7 +1510,7 @@ let Predicates = [HasComplxNum, HasNEON, HasFullFP16] in {
             (FCADDv8f16 (v8f16 V128:$Rn), (v8f16 V128:$Rm), (i32 1))>;
 }
 
-let Predicates = [HasComplxNum, HasNEON] in {
+let Predicates = [HasFCMA, HasNEON] in {
   def : Pat<(v2f32 (int_aarch64_neon_vcadd_rot90 (v2f32 V64:$Rn), (v2f32 V64:$Rm))),
             (FCADDv2f32 (v2f32 V64:$Rn), (v2f32 V64:$Rm), (i32 0))>;
   def : Pat<(v2f32 (int_aarch64_neon_vcadd_rot270 (v2f32 V64:$Rn), (v2f32 V64:$Rm))),
@@ -1546,7 +1546,7 @@ multiclass FCMLA_LANE_PATS<ValueType ty, DAGOperand Reg, dag RHSDup> {
 }
 
 
-let Predicates = [HasComplxNum, HasNEON, HasFullFP16] in {
+let Predicates = [HasFCMA, HasNEON, HasFullFP16] in {
   defm : FCMLA_PATS<v4f16, V64>;
   defm : FCMLA_PATS<v8f16, V128>;
 
@@ -1555,7 +1555,7 @@ let Predicates = [HasComplxNum, HasNEON, HasFullFP16] in {
   defm : FCMLA_LANE_PATS<v8f16, V128,
                          (v8f16 (bitconvert (v4i32 (AArch64duplane32 (v4i32 V128:$Rm), VectorIndexS:$idx))))>;
 }
-let Predicates = [HasComplxNum, HasNEON] in {
+let Predicates = [HasFCMA, HasNEON] in {
   defm : FCMLA_PATS<v2f32, V64>;
   defm : FCMLA_PATS<v4f32, V128>;
   defm : FCMLA_PATS<v2f64, V128>;

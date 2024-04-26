@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+complxnum,+fullfp16 -o - %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+fcma,+fullfp16 -o - %s 2>&1 | FileCheck %s
 fcmla v0.2s, v1.2s, v2.2s, #1
 fcmla v0.2s, v1.2s, v2.2s, #360
 fcmla v0.2s, v1.2s, v2.2s, #-90

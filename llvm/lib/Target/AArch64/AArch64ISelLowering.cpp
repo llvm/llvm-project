@@ -27705,8 +27705,7 @@ bool AArch64TargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
 }
 
 bool AArch64TargetLowering::isComplexDeinterleavingSupported() const {
-  return Subtarget->hasSVE() || Subtarget->hasSVE2() ||
-         Subtarget->hasComplxNum();
+  return Subtarget->hasSVE() || Subtarget->hasSVE2() || Subtarget->hasFCMA();
 }
 
 bool AArch64TargetLowering::isComplexDeinterleavingOperationSupported(
@@ -27717,7 +27716,7 @@ bool AArch64TargetLowering::isComplexDeinterleavingOperationSupported(
 
   // If the vector is scalable, SVE is enabled, implying support for complex
   // numbers. Otherwise, we need to ensure complex number support is available
-  if (!VTy->isScalableTy() && !Subtarget->hasComplxNum())
+  if (!VTy->isScalableTy() && !Subtarget->hasFCMA())
     return false;
 
   auto *ScalarTy = VTy->getScalarType();

@@ -3701,7 +3701,7 @@ static const struct Extension {
     {"rcpc3", {AArch64::FeatureRCPC3}},
     {"gcs", {AArch64::FeatureGCS}},
     {"bf16", {AArch64::FeatureBF16}},
-    {"compnum", {AArch64::FeatureComplxNum}},
+    {"compnum", {AArch64::FeatureFCMA}},
     {"dotprod", {AArch64::FeatureDotProd}},
     {"f32mm", {AArch64::FeatureF32MM}},
     {"f64mm", {AArch64::FeatureF64MM}},

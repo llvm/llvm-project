@@ -338,8 +338,8 @@ def FeatureCCIDX : SubtargetFeature<
     "ccidx", "HasCCIDX", "true",
     "Enable v8.3-A Extend of the CCSIDR number of sets (FEAT_CCIDX)">;
 
-def FeatureComplxNum : Extension<
-    "complxnum", "ComplxNum",
+def FeatureFCMA : Extension<
+    "fcma", "FCMA",
     "Enable v8.3-A Floating-point complex number support (FEAT_FCMA)",
     [FeatureNEON]>;
 
@@ -661,7 +661,7 @@ def HasV8_2aOps : SubtargetFeature<"v8.2a", "HasV8_2aOps", "true",
 
 def HasV8_3aOps : SubtargetFeature<"v8.3a", "HasV8_3aOps", "true",
   "Support ARM v8.3a instructions", [HasV8_2aOps, FeatureRCPC, FeaturePAuth,
-  FeatureJS, FeatureCCIDX, FeatureComplxNum]>;
+  FeatureJS, FeatureCCIDX, FeatureFCMA]>;
 
 def HasV8_4aOps : SubtargetFeature<"v8.4a", "HasV8_4aOps", "true",
   "Support ARM v8.4a instructions", [HasV8_3aOps, FeatureDotProd,

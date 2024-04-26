@@ -111,7 +111,6 @@ enum ArchExtKind : unsigned {
   AEK_NUM_EXTENSIONS,
 
   // FIXME temporary fixes for inconsistent naming.
-  AEK_FCMA = AEK_COMPLXNUM,
   AEK_FP = AEK_FPARMV8,
   AEK_FP16 = AEK_FULLFP16,
   AEK_I8MM = AEK_MATMULINT8,
@@ -167,7 +166,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"ebf16", AArch64::AEK_NONE, {}, {}, FEAT_EBF16, "+bf16", 290},
     {"f32mm", AArch64::AEK_F32MM, "+f32mm", "-f32mm", FEAT_SVE_F32MM, "+sve,+f32mm,+fullfp16,+fp-armv8,+neon", 350},
     {"f64mm", AArch64::AEK_F64MM, "+f64mm", "-f64mm", FEAT_SVE_F64MM, "+sve,+f64mm,+fullfp16,+fp-armv8,+neon", 360},
-    {"fcma", AArch64::AEK_FCMA, "+complxnum", "-complxnum", FEAT_FCMA, "+fp-armv8,+neon,+complxnum", 220},
+    {"fcma", AArch64::AEK_FCMA, "+fcma", "-fcma", FEAT_FCMA, "+fp-armv8,+neon,+fcma", 220},
     {"flagm", AArch64::AEK_FLAGM, "+flagm", "-flagm", FEAT_FLAGM, "+flagm", 20},
     {"flagm2", AArch64::AEK_NONE, {}, {}, FEAT_FLAGM2, "+flagm,+altnzcv", 30},
     {"fp", AArch64::AEK_FP, "+fp-armv8", "-fp-armv8", FEAT_FP, "+fp-armv8,+neon", 90},

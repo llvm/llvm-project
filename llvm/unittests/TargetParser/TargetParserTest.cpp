@@ -2096,7 +2096,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+pauth-lr"));
   EXPECT_TRUE(llvm::is_contained(Features, "+tlbiw"));
   EXPECT_TRUE(llvm::is_contained(Features, "+jsconv"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+complxnum"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+fcma"));
 
   // Assuming we listed every extension above, this should produce the same
   // result. (note that AEK_NONE doesn't have a name so it won't be in the
@@ -2448,8 +2448,8 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"rdm", "nosimd"}, {}, {"neon", "rdm"}},
         {AArch64::ARMV8A, {"nosimd", "dotprod"}, {"neon", "dotprod"}, {}},
         {AArch64::ARMV8A, {"dotprod", "nosimd"}, {}, {"neon", "dotprod"}},
-        {AArch64::ARMV8A, {"nosimd", "fcma"}, {"neon", "complxnum"}, {}},
-        {AArch64::ARMV8A, {"fcma", "nosimd"}, {}, {"neon", "complxnum"}},
+        {AArch64::ARMV8A, {"nosimd", "fcma"}, {"neon", "fcma"}, {}},
+        {AArch64::ARMV8A, {"fcma", "nosimd"}, {}, {"neon", "fcma"}},
 
         // fp16 -> {fp16fml, sve}
         {AArch64::ARMV8A, {"nofp16", "fp16fml"}, {"fullfp16", "fp16fml"}, {}},
