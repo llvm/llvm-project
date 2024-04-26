@@ -1337,11 +1337,7 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
        PHIOp += 2) {
     Register InReg = PHI->getOperand(PHIOp).getReg();
     MachineBasicBlock *PBB = PHI->getOperand(PHIOp + 1).getMBB();
-    const BlockData &PBBInfo = BlockInfo[PBB->getNumber()];
-    // If the exit from the predecessor has the VTYPE we are looking for
-    // we might be able to avoid a VSETVLI.
-    if (PBBInfo.Exit.isUnknown() || !PBBInfo.Exit.hasSameVTYPE(Require))
-      return true;
+    const VSETVLIInfo &PBBExit = BlockInfo[PBB->getNumber()].Exit;
 
     // We need the PHI input to the be the output of a VSET(I)VLI.
     MachineInstr *DefMI = MRI->getVRegDef(InReg);
@@ -1351,7 +1347,13 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
     // We found a VSET(I)VLI make sure it matches the output of the
     // predecessor block.
     VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
-    if (DefInfo != PBBInfo.Exit)
+    if (DefInfo != PBBExit)
+      return true;
+
+    // Require has the same VL as PBBExit, so if the exit from the
+    // predecessor has the VTYPE we are looking for we might be able
+    // to avoid a VSETVLI.
+    if (PBBExit.isUnknown() || !PBBExit.hasSameVTYPE(Require))
       return true;
   }
 
