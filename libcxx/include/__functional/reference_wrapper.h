@@ -72,7 +72,7 @@ public:
 
   // [refwrap.comparisons], comparisons
 
-  friend constexpr bool operator==(reference_wrapper __x, reference_wrapper __y)
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(reference_wrapper __x, reference_wrapper __y)
     requires requires {
       { __x.get() == __y.get() } -> __boolean_testable;
     }
@@ -80,7 +80,7 @@ public:
     return __x.get() == __y.get();
   }
 
-  friend constexpr bool operator==(reference_wrapper __x, const _Tp& __y)
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(reference_wrapper __x, const _Tp& __y)
     requires requires {
       { __x.get() == __y } -> __boolean_testable;
     }
@@ -88,7 +88,7 @@ public:
     return __x.get() == __y;
   }
 
-  friend constexpr bool operator==(reference_wrapper __x, reference_wrapper<const _Tp> __y)
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(reference_wrapper __x, reference_wrapper<const _Tp> __y)
     requires(!is_const_v<_Tp>) && requires {
       { __x.get() == __y.get() } -> __boolean_testable;
     }
@@ -98,25 +98,25 @@ public:
 
   // `operator<=>`: Checks the constraints of `synth-three-way` as per https://wg21.link/LWG4071 directly
 
-  friend constexpr auto operator<=>(reference_wrapper __x, reference_wrapper __y)
-    requires requires(const _Tp t) {
-      { t < t } -> __boolean_testable;
+  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, reference_wrapper __y)
+    requires requires(const _Tp __t) {
+      { __t < __t } -> __boolean_testable;
     }
   {
     return std::__synth_three_way(__x.get(), __y.get());
   }
 
-  friend constexpr auto operator<=>(reference_wrapper __x, const _Tp& __y)
-    requires requires(const _Tp t) {
-      { t < t } -> __boolean_testable;
+  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, const _Tp& __y)
+    requires requires(const _Tp __t) {
+      { __t < __t } -> __boolean_testable;
     }
   {
     return std::__synth_three_way(__x.get(), __y);
   }
 
-  friend constexpr auto operator<=>(reference_wrapper __x, reference_wrapper<const _Tp> __y)
-    requires(!is_const_v<_Tp>) && requires(const _Tp t) {
-      { t < t } -> __boolean_testable;
+  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(reference_wrapper __x, reference_wrapper<const _Tp> __y)
+    requires(!is_const_v<_Tp>) && requires(const _Tp __t) {
+      { __t < __t } -> __boolean_testable;
     }
   {
     return std::__synth_three_way(__x.get(), __y.get());

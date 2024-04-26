@@ -14,9 +14,9 @@
 
 // // [refwrap.comparisons], comparisons
 
-// friend constexpr synth-three-way-result<T> operator<=>(reference_wrapper, reference_wrapper);          // Since C++26
-// friend constexpr synth-three-way-result<T> operator<=>(reference_wrapper, const T&);                   // Since C++26
-// friend constexpr synth-three-way-result<T> operator<=>(reference_wrapper, reference_wrapper<const T>); // Since C++26
+// friend constexpr auto operator<=>(reference_wrapper, reference_wrapper);          // Since C++26
+// friend constexpr auto operator<=>(reference_wrapper, const T&);                   // Since C++26
+// friend constexpr auto operator<=>(reference_wrapper, reference_wrapper<const T>); // Since C++26
 
 #include <cassert>
 #include <concepts>
@@ -31,16 +31,16 @@ static_assert(!std::three_way_comparable<NonComparable>);
 
 // Test SFINAE.
 
-template <class _Tp>
-concept BooleanTestableImpl = std::convertible_to<_Tp, bool>;
+template <class T>
+concept BooleanTestableImpl = std::convertible_to<T, bool>;
 
-template <class _Tp>
-concept BooleanTestable = BooleanTestableImpl<_Tp> && requires(_Tp&& __t) {
-  { !std::forward<_Tp>(__t) } -> BooleanTestableImpl;
+template <class T>
+concept BooleanTestable = BooleanTestableImpl<T> && requires(T&& t) {
+  { !std::forward<T>(t) } -> BooleanTestableImpl;
 };
 
 template <typename T>
-concept HasEqualityOperatorWithInt = requires(T t, int i) {
+concept HasSpaceshipOperatorWithInt = requires(T t, int i) {
   { t < i } -> BooleanTestable;
   { i < t } -> BooleanTestable;
 };
@@ -50,9 +50,9 @@ static_assert(std::three_way_comparable<std::reference_wrapper<StrongOrder>>);
 static_assert(std::three_way_comparable<std::reference_wrapper<WeakOrder>>);
 static_assert(std::three_way_comparable<std::reference_wrapper<PartialOrder>>);
 // refwrap, const&
-static_assert(HasEqualityOperatorWithInt<std::reference_wrapper<StrongOrder>>);
-static_assert(HasEqualityOperatorWithInt<std::reference_wrapper<WeakOrder>>);
-static_assert(HasEqualityOperatorWithInt<std::reference_wrapper<PartialOrder>>);
+static_assert(HasSpaceshipOperatorWithInt<std::reference_wrapper<StrongOrder>>);
+static_assert(HasSpaceshipOperatorWithInt<std::reference_wrapper<WeakOrder>>);
+static_assert(HasSpaceshipOperatorWithInt<std::reference_wrapper<PartialOrder>>);
 // refwrap, refwrap<const>
 static_assert(std::three_way_comparable_with<std::reference_wrapper<StrongOrder>, const StrongOrder>);
 static_assert(std::three_way_comparable_with<std::reference_wrapper<WeakOrder>, const WeakOrder>);
@@ -61,7 +61,7 @@ static_assert(std::three_way_comparable_with<std::reference_wrapper<PartialOrder
 // refwrap, refwrap
 static_assert(!std::three_way_comparable<std::reference_wrapper<NonComparable>>);
 // refwrap, const&
-static_assert(!HasEqualityOperatorWithInt<std::reference_wrapper<NonComparable>>);
+static_assert(!HasSpaceshipOperatorWithInt<std::reference_wrapper<NonComparable>>);
 // refwrap, refwrap<const>
 static_assert(!std::three_way_comparable_with<std::reference_wrapper<StrongOrder>, const NonComparable>);
 static_assert(!std::three_way_comparable_with<std::reference_wrapper<WeakOrder>, const NonComparable>);
