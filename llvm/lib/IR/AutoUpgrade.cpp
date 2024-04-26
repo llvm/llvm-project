@@ -846,6 +846,18 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return false; // No other 'aarch64.sve.bf*'.
       }
 
+      if (Name.consume_front("addqv")) {
+        // 'aarch64.sve.addqv'.
+        if (!F->getReturnType()->isFPOrFPVectorTy())
+          return false;
+
+        auto Args = F->getFunctionType()->params();
+        Type *Tys[] = {F->getReturnType(), Args[1]};
+        NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                          Intrinsic::aarch64_sve_faddqv, Tys);
+        return true;
+      }
+
       if (Name.consume_front("ld")) {
         // 'aarch64.sve.ld*'.
         static const Regex LdRegex("^[234](.nxv[a-z0-9]+|$)");
