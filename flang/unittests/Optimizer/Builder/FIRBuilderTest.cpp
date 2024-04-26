@@ -217,8 +217,7 @@ TEST_F(FIRBuilderTest, createGlobal2) {
   EXPECT_EQ(i32Type, global.getType());
   EXPECT_TRUE(global.getInitVal().has_value());
   EXPECT_TRUE(mlir::isa<mlir::IntegerAttr>(global.getInitVal().value()));
-  EXPECT_EQ(
-      16,
+  EXPECT_EQ(16,
       mlir::cast<mlir::IntegerAttr>(global.getInitVal().value()).getValue());
   EXPECT_TRUE(global.getLinkName().has_value());
   EXPECT_EQ(
@@ -272,14 +271,15 @@ TEST_F(FIRBuilderTest, locationToFilename) {
   auto stringLitOps = global.getRegion().front().getOps<fir::StringLitOp>();
   EXPECT_TRUE(llvm::hasSingleElement(stringLitOps));
   for (auto stringLit : stringLitOps) {
-    EXPECT_EQ(10,
-              mlir::cast<mlir::IntegerAttr>(stringLit.getSize()).getValue());
+    EXPECT_EQ(
+        10, mlir::cast<mlir::IntegerAttr>(stringLit.getSize()).getValue());
     EXPECT_TRUE(mlir::isa<StringAttr>(stringLit.getValue()));
-    EXPECT_EQ(0, strcmp("file1.f90\0",
-                        mlir::dyn_cast<StringAttr>(stringLit.getValue())
-                            .getValue()
-                            .str()
-                            .c_str()));
+    EXPECT_EQ(0,
+        strcmp("file1.f90\0",
+            mlir::dyn_cast<StringAttr>(stringLit.getValue())
+                .getValue()
+                .str()
+                .c_str()));
   }
 }
 
@@ -318,11 +318,11 @@ TEST_F(FIRBuilderTest, createStringLiteral) {
   auto stringLitOps = global.getRegion().front().getOps<fir::StringLitOp>();
   EXPECT_TRUE(llvm::hasSingleElement(stringLitOps));
   for (auto stringLit : stringLitOps) {
-    EXPECT_EQ(16,
-              mlir::cast<mlir::IntegerAttr>(stringLit.getSize()).getValue());
+    EXPECT_EQ(
+        16, mlir::cast<mlir::IntegerAttr>(stringLit.getSize()).getValue());
     EXPECT_TRUE(mlir::isa<StringAttr>(stringLit.getValue()));
-    EXPECT_EQ(strValue,
-              mlir::dyn_cast<StringAttr>(stringLit.getValue()).getValue());
+    EXPECT_EQ(
+        strValue, mlir::dyn_cast<StringAttr>(stringLit.getValue()).getValue());
   }
 }
 
