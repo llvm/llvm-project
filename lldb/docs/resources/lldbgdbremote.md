@@ -2622,3 +2622,45 @@ Request packet has the fields:
    3. binary-escaped-data to be written
 
 Response is `F`, followed by the number of bytes written (base 16).
+
+### vFile:MD5
+
+#### Brief
+
+Generate an MD5 hash of the file at the given path.
+
+#### Example
+
+```
+receive: vFile:MD5:2f746d702f61
+send (success): F,00000000000000001111111111111111
+send (failure): F,x
+```
+
+Request packet contains the ASCII hex encoded filename.
+
+If the hash succeeded, the response is `F,` followed by the low 64
+bits of the result, and finally the high 64 bits of the result. Both are in
+hex format without a prefix.
+
+The response is `F,`, followed by `x` if the file did not exist
+or failed to hash.
+
+### vFile:exists
+
+#### Brief
+
+Check whether the file at the given path exists.
+
+#### Example
+
+```
+receive: vFile:exists:2f746d702f61
+send         (exists): F,1
+send (does not exist): F,0
+```
+
+Request packet contains the ASCII hex encoded filename.
+
+The response is a return code where 1 means the file exists
+and 0 means it does not.
