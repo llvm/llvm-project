@@ -396,7 +396,7 @@ public:
     case UnaryFn::negf:
       return builder.create<arith::NegFOp>(arg.getLoc(), arg);
     case UnaryFn::reciprocal: {
-      Attribute oneAttr = builder.getNumberAttr(1.0, arg.getType());
+      Attribute oneAttr = builder.getOneAttr(arg.getType());
       auto one = builder.create<arith::ConstantOp>(arg.getLoc(),
                                                    ::cast<TypedAttr>(oneAttr));
       return builder.create<arith::DivFOp>(arg.getLoc(), one, arg);
