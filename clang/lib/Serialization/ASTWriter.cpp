@@ -1645,7 +1645,6 @@ struct InputFileEntry {
   bool IsTransient;
   bool BufferOverridden;
   bool IsTopLevel;
-  bool IsTopLevelAmongAffecting;
   bool IsModuleMap;
   uint32_t ContentHash[2];
 
@@ -1681,7 +1680,6 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Overridden
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Transient
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Top-level
-  IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Top-level affect
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Module map
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 16)); // Name as req. len
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name as req. + name
@@ -1720,9 +1718,7 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
     Entry.IsSystemFile = isSystem(File.getFileCharacteristic());
     Entry.IsTransient = Cache->IsTransient;
     Entry.BufferOverridden = Cache->BufferOverridden;
-    Entry.IsTopLevel = File.getIncludeLoc().isInvalid();
-    Entry.IsTopLevelAmongAffecting =
-        getAffectingIncludeLoc(SourceMgr, File).isInvalid();
+    Entry.IsTopLevel = getAffectingIncludeLoc(SourceMgr, File).isInvalid();
     Entry.IsModuleMap = isModuleMap(File.getFileCharacteristic());
 
     auto ContentHash = hash_code(-1);
@@ -1788,7 +1784,6 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
           Entry.BufferOverridden,
           Entry.IsTransient,
           Entry.IsTopLevel,
-          Entry.IsTopLevelAmongAffecting,
           Entry.IsModuleMap,
           NameAsRequested.size()};
 

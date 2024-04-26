@@ -69,7 +69,6 @@ struct InputFileInfo {
   bool Overridden;
   bool Transient;
   bool TopLevel;
-  bool TopLevelAmongAffecting;
   bool ModuleMap;
 };
 
