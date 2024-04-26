@@ -138,10 +138,10 @@ def Linalg_SoftmaxOp : Linalg_Op<"softmax",
 
   let extraClassDeclaration = [{
     ShapedType getInputOperandType() {
-      return cast<ShapedType>(getInput().getType());
+      return getInput().getType().cast<ShapedType>();
     }
     ShapedType getOutputOperandType() {
-      return cast<ShapedType>(getOutput().getType());
+      return getOutput().getType().cast<ShapedType>();
     }
     int64_t getInputOperandRank() {
       return getInputOperandType().getRank();

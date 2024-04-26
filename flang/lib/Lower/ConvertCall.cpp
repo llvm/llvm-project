@@ -49,15 +49,15 @@ static fir::ExtendedValue toExtendedValue(mlir::Location loc, mlir::Value base,
                                           llvm::ArrayRef<mlir::Value> extents,
                                           llvm::ArrayRef<mlir::Value> lengths) {
   mlir::Type type = base.getType();
-  if (mlir::isa<fir::BaseBoxType>(type))
+  if (type.isa<fir::BaseBoxType>())
     return fir::BoxValue(base, /*lbounds=*/{}, lengths, extents);
   type = fir::unwrapRefType(type);
-  if (mlir::isa<fir::BaseBoxType>(type))
+  if (type.isa<fir::BaseBoxType>())
     return fir::MutableBoxValue(base, lengths, /*mutableProperties*/ {});
-  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(type)) {
+  if (auto seqTy = type.dyn_cast<fir::SequenceType>()) {
     if (seqTy.getDimension() != extents.size())
       fir::emitFatalError(loc, "incorrect number of extents for array");
-    if (mlir::isa<fir::CharacterType>(seqTy.getEleTy())) {
+    if (seqTy.getEleTy().isa<fir::CharacterType>()) {
       if (lengths.empty())
         fir::emitFatalError(loc, "missing length for character");
       assert(lengths.size() == 1);
@@ -65,7 +65,7 @@ static fir::ExtendedValue toExtendedValue(mlir::Location loc, mlir::Value base,
     }
     return fir::ArrayBoxValue(base, extents);
   }
-  if (mlir::isa<fir::CharacterType>(type)) {
+  if (type.isa<fir::CharacterType>()) {
     if (lengths.empty())
       fir::emitFatalError(loc, "missing length for character");
     assert(lengths.size() == 1);
@@ -193,7 +193,7 @@ static mlir::Value remapActualToDummyDescriptor(
   llvm::SmallVector<mlir::Value> lengths;
   mlir::Type dummyBoxType = caller.getDummyArgumentType(arg);
   mlir::Type dummyBaseType = fir::unwrapPassByRefType(dummyBoxType);
-  if (mlir::isa<fir::SequenceType>(dummyBaseType))
+  if (dummyBaseType.isa<fir::SequenceType>())
     caller.walkDummyArgumentExtents(
         arg, [&](const Fortran::lower::SomeExpr &e, bool isAssumedSizeExtent) {
           extents.emplace_back(lowerSpecExpr(e, isAssumedSizeExtent));
@@ -338,7 +338,7 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
     if (!caller.callerAllocateResult())
       return {};
     mlir::Type type = caller.getResultStorageType();
-    if (mlir::isa<fir::SequenceType>(type))
+    if (type.isa<fir::SequenceType>())
       caller.walkResultExtents(
           [&](const Fortran::lower::SomeExpr &e, bool isAssumedSizeExtent) {
             assert(!isAssumedSizeExtent && "result cannot be assumed-size");
@@ -353,7 +353,7 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
     // Result length parameters should not be provided to box storage
     // allocation and save_results, but they are still useful information to
     // keep in the ExtendedValue if non-deferred.
-    if (!mlir::isa<fir::BoxType>(type)) {
+    if (!type.isa<fir::BoxType>()) {
       if (fir::isa_char(fir::unwrapSequenceType(type)) && lengths.empty()) {
         // Calling an assumed length function. This is only possible if this
         // is a call to a character dummy procedure.
@@ -478,7 +478,7 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
   // FIR.
   if (funcPointer) {
     operands.push_back(
-        mlir::isa<fir::BoxProcType>(funcPointer.getType())
+        funcPointer.getType().isa<fir::BoxProcType>()
             ? builder.create<fir::BoxAddrOp>(loc, funcType, funcPointer)
             : builder.createConvert(loc, funcType, funcPointer));
   }
@@ -492,8 +492,8 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
     // arguments of any type and vice versa.
     mlir::Value cast;
     auto *context = builder.getContext();
-    if (mlir::isa<fir::BoxProcType>(snd) &&
-        mlir::isa<mlir::FunctionType>(fst.getType())) {
+    if (snd.isa<fir::BoxProcType>() &&
+        fst.getType().isa<mlir::FunctionType>()) {
       auto funcTy =
           mlir::FunctionType::get(context, std::nullopt, std::nullopt);
       auto boxProcTy = builder.getBoxProcType(funcTy);
@@ -734,9 +734,9 @@ std::pair<fir::ExtendedValue, bool> Fortran::lower::genCallOpAndResult(
 
   // Call a BIND(C) function that return a char.
   if (caller.characterize().IsBindC() &&
-      mlir::isa<fir::CharacterType>(funcType.getResults()[0])) {
+      funcType.getResults()[0].isa<fir::CharacterType>()) {
     fir::CharacterType charTy =
-        mlir::dyn_cast<fir::CharacterType>(funcType.getResults()[0]);
+        funcType.getResults()[0].dyn_cast<fir::CharacterType>();
     mlir::Value len = builder.createIntegerConstant(
         loc, builder.getCharacterLengthType(), charTy.getLen());
     return {fir::CharBoxValue{callResult, len}, /*resultIsFinalized=*/false};
@@ -890,7 +890,7 @@ extendedValueToHlfirEntity(mlir::Location loc, fir::FirOpBuilder &builder,
   mlir::Type firBaseTy = firBase.getType();
   if (fir::isa_trivial(firBaseTy))
     return hlfir::EntityWithAttributes{firBase};
-  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(firBase.getType())) {
+  if (auto charTy = firBase.getType().dyn_cast<fir::CharacterType>()) {
     // CHAR() intrinsic and BIND(C) procedures returning CHARACTER(1)
     // are lowered to a fir.char<kind,1> that is not in memory.
     // This tends to cause a lot of bugs because the rest of the
@@ -1061,7 +1061,7 @@ static hlfir::Entity fixProcedureDummyMismatch(mlir::Location loc,
                                                fir::FirOpBuilder &builder,
                                                hlfir::Entity actual,
                                                mlir::Type dummyType) {
-  if (mlir::isa<fir::BoxProcType>(actual.getType()) &&
+  if (actual.getType().isa<fir::BoxProcType>() &&
       fir::isCharacterProcedureTuple(dummyType)) {
     mlir::Value length =
         builder.create<fir::UndefOp>(loc, builder.getCharacterLengthType());
@@ -1070,7 +1070,7 @@ static hlfir::Entity fixProcedureDummyMismatch(mlir::Location loc,
     return hlfir::Entity{tuple};
   }
   assert(fir::isCharacterProcedureTuple(actual.getType()) &&
-         mlir::isa<fir::BoxProcType>(dummyType) &&
+         dummyType.isa<fir::BoxProcType>() &&
          "unsupported dummy procedure mismatch with the actual argument");
   mlir::Value boxProc = fir::factory::extractCharacterProcedureTuple(
                             builder, loc, actual, /*openBoxProc=*/false)
@@ -1143,7 +1143,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
     assert(actual.isProcedure());
     // Do nothing if this is a procedure argument. It is already a
     // fir.boxproc/fir.tuple<fir.boxproc, len> as it should.
-    if (!mlir::isa<fir::BoxProcType>(actual.getType()) &&
+    if (!actual.getType().isa<fir::BoxProcType>() &&
         actual.getType() != dummyType)
       // The actual argument may be a procedure that returns character (a
       // fir.tuple<fir.boxproc, len>) while the dummy is not. Extract the tuple
@@ -1164,7 +1164,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // dynamic type matters to determine the contiguity.
   const bool mustSetDynamicTypeToDummyType =
       passingPolymorphicToNonPolymorphic &&
-      (actual.isArray() || mlir::isa<fir::BaseBoxType>(dummyType));
+      (actual.isArray() || dummyType.isa<fir::BaseBoxType>());
 
   // The simple contiguity of the actual is "lost" when passing a polymorphic
   // to a non polymorphic entity because the dummy dynamic type matters for
@@ -1236,7 +1236,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       preparedDummy.pushExprAssociateCleanUp(associate);
     } else if (mustDoCopyInOut) {
       // Copy-in non contiguous variables.
-      assert(mlir::isa<fir::BaseBoxType>(entity.getType()) &&
+      assert(entity.getType().isa<fir::BaseBoxType>() &&
              "expect non simply contiguous variables to be boxes");
       if (actualIsAssumedRank)
         TODO(loc, "copy-in and copy-out of assumed-rank arguments");
@@ -1294,14 +1294,13 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // Step 3: now that the dummy argument storage has been prepared, package
   // it according to the interface.
   mlir::Value addr;
-  if (mlir::isa<fir::BoxCharType>(dummyTypeWithActualRank)) {
+  if (dummyTypeWithActualRank.isa<fir::BoxCharType>()) {
     addr = hlfir::genVariableBoxChar(loc, builder, entity);
-  } else if (mlir::isa<fir::BaseBoxType>(dummyTypeWithActualRank)) {
+  } else if (dummyTypeWithActualRank.isa<fir::BaseBoxType>()) {
     entity = hlfir::genVariableBox(loc, builder, entity);
     // Ensures the box has the right attributes and that it holds an
     // addendum if needed.
-    fir::BaseBoxType actualBoxType =
-        mlir::cast<fir::BaseBoxType>(entity.getType());
+    fir::BaseBoxType actualBoxType = entity.getType().cast<fir::BaseBoxType>();
     mlir::Type boxEleType = actualBoxType.getEleTy();
     // For now, assume it is not OK to pass the allocatable/pointer
     // descriptor to a non pointer/allocatable dummy. That is a strict
@@ -1568,7 +1567,7 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
         // callee side, and it is illegal to use NULL without a MOLD if any
         // dummy length parameters are assumed.
         mlir::Type boxTy = fir::dyn_cast_ptrEleTy(argTy);
-        assert(boxTy && mlir::isa<fir::BaseBoxType>(boxTy) &&
+        assert(boxTy && boxTy.isa<fir::BaseBoxType>() &&
                "must be a fir.box type");
         mlir::Value boxStorage =
             fir::factory::genNullBoxStorage(builder, loc, boxTy);
@@ -1636,8 +1635,7 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
       caller, callSiteType, callContext.resultType,
       callContext.isElementalProcWithArrayArgs());
   // For procedure pointer function result, just return the call.
-  if (callContext.resultType &&
-      mlir::isa<fir::BoxProcType>(*callContext.resultType))
+  if (callContext.resultType && callContext.resultType->isa<fir::BoxProcType>())
     return hlfir::EntityWithAttributes(fir::getBase(result));
 
   /// Clean-up associations and copy-in.
@@ -2117,9 +2115,9 @@ public:
         hlfir::getFortranElementType(*callContext.resultType);
     // Get result length parameters.
     llvm::SmallVector<mlir::Value> typeParams;
-    if (mlir::isa<fir::CharacterType>(elementType) ||
+    if (elementType.isa<fir::CharacterType>() ||
         fir::isRecordWithTypeParameters(elementType)) {
-      auto charType = mlir::dyn_cast<fir::CharacterType>(elementType);
+      auto charType = elementType.dyn_cast<fir::CharacterType>();
       if (charType && charType.hasConstantLen())
         typeParams.push_back(builder.createIntegerConstant(
             loc, builder.getIndexType(), charType.getLen()));
@@ -2525,7 +2523,7 @@ genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
   }
   std::optional<hlfir::EntityWithAttributes> result = genHLFIRIntrinsicRefCore(
       loweredActuals, intrinsic, argLowering, callContext);
-  if (result && mlir::isa<hlfir::ExprType>(result->getType())) {
+  if (result && result->getType().isa<hlfir::ExprType>()) {
     fir::FirOpBuilder *bldr = &callContext.getBuilder();
     callContext.stmtCtx.attachCleanup(
         [=]() { bldr->create<hlfir::DestroyOp>(loc, *result); });
