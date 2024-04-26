@@ -3650,19 +3650,16 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
 
 void llvm::remapDebugVariable(ValueToValueMapTy &Mapping, Instruction *Inst) {
   auto RemapDebugOperands = [&Mapping](auto *DV, auto Set) {
-    for (auto *Op : Set)
-      if (auto *InstOp = Op) {
-        auto I = Mapping.find(InstOp);
-        if (I != Mapping.end())
-          DV->replaceVariableLocationOp(Op, I->second, /*AllowEmpty=*/true);
-      }
+    for (auto *Op : Set) {
+      auto I = Mapping.find(Op);
+      if (I != Mapping.end())
+        DV->replaceVariableLocationOp(Op, I->second, /*AllowEmpty=*/true);
+    }
   };
   auto RemapAssignAddress = [&Mapping](auto *DA) {
-    if (Instruction *Addr = dyn_cast<Instruction>(DA->getAddress())) {
-      auto I = Mapping.find(Addr);
-      if (I != Mapping.end())
-        DA->setAddress(I->second);
-    }
+    auto I = Mapping.find(DA->getAddress());
+    if (I != Mapping.end())
+      DA->setAddress(I->second);
   };
   if (auto DVI = dyn_cast<DbgVariableIntrinsic>(Inst))
     RemapDebugOperands(DVI, DVI->location_ops());
