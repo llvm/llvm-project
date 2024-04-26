@@ -186,11 +186,10 @@ define i64 @or_build_pair_not(i32 %a0, i32 %a1) {
 ; CHECK-LABEL: or_build_pair_not:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    notl %edi
-; CHECK-NEXT:    notl %esi
 ; CHECK-NEXT:    shlq $32, %rsi
-; CHECK-NEXT:    leaq (%rsi,%rdi), %rax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    orq %rsi, %rax
+; CHECK-NEXT:    notq %rax
 ; CHECK-NEXT:    retq
   %n0 = xor i32 %a0, -1
   %n1 = xor i32 %a1, -1
@@ -269,12 +268,11 @@ define i64 @PR89533(<64 x i8> %a0) {
 ; AVX2-NEXT:    vpbroadcastb {{.*#+}} ymm2 = [95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95,95]
 ; AVX2-NEXT:    vpcmpeqb %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
-; AVX2-NEXT:    notl %eax
 ; AVX2-NEXT:    vpcmpeqb %ymm2, %ymm1, %ymm0
 ; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
-; AVX2-NEXT:    notl %ecx
 ; AVX2-NEXT:    shlq $32, %rcx
 ; AVX2-NEXT:    orq %rax, %rcx
+; AVX2-NEXT:    notq %rcx
 ; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    tzcntq %rcx, %rax
 ; AVX2-NEXT:    vzeroupper
