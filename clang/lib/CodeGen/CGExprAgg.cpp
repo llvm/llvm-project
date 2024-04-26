@@ -1811,7 +1811,6 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
     // Push a destructor if necessary.
     // FIXME: if we have an array of structures, all explicitly
     // initialized, we can end up pushing a linear number of cleanups.
-    bool pushedCleanup = false;
     if (QualType::DestructionKind dtorKind
           = field->getType().isDestructedType()) {
       assert(LV.isSimple());
@@ -1819,17 +1818,8 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
         CGF.pushDestroy(EHCleanup, LV.getAddress(CGF), field->getType(),
                         CGF.getDestroyer(dtorKind), false);
         addCleanup(CGF.EHStack.stable_begin());
-        pushedCleanup = true;
       }
     }
-
-    // If the GEP didn't get used because of a dead zero init or something
-    // else, clean it up for -O0 builds and general tidiness.
-    if (!pushedCleanup && LV.isSimple())
-      if (llvm::GetElementPtrInst *GEP =
-              dyn_cast<llvm::GetElementPtrInst>(LV.emitRawPointer(CGF)))
-        if (GEP->use_empty())
-          GEP->eraseFromParent();
   }
 
   // Deactivate all the partial cleanups in reverse order, which
