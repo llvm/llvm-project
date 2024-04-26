@@ -896,17 +896,17 @@ static Value rewriteI4ToI8UnsignedExt(PatternRewriter &rewriter, Location loc,
   auto i8VecType = VectorType::get(i8VecShape, rewriter.getI8Type());
   Value i8Vector = rewriter.create<vector::BitCastOp>(loc, i8VecType, srcValue);
 
-  // 2 Extend the i4 elements using shifts & masking. Low i4 elemens of each
-  //  byte are place in one vector and the high i4 elements in another vector.
-  constexpr unsigned char lowBitsMask = 15; // Equivalent to [0000IIII] bit mask
+  // 2 Extend the i4 elements using shifts & masking. Low i4 elements of each
+  //  byte are placed in one vector and the high i4 elements in another vector.
+  constexpr uint8_t lowBitsMask = 15; // Equivalent to [00001111] bit mask
   auto lowBitsMaskValues = rewriter.create<arith::ConstantOp>(
       loc, DenseElementsAttr::get(i8VecType, lowBitsMask));
-  Value low = rewriter.create<arith::AndIOp>(loc, i8Vector.getType(), i8Vector,
+  Value low = rewriter.create<arith::AndIOp>(loc, i8VecType, i8Vector,
                                              lowBitsMaskValues);
   constexpr int8_t highBitsToShift = 4;
   auto highShiftValues = rewriter.create<arith::ConstantOp>(
       loc, DenseElementsAttr::get(i8VecType, highBitsToShift));
-  Value high = rewriter.create<arith::ShRSIOp>(loc, i8Vector, highShiftValues);
+  Value high = rewriter.create<arith::ShRUIOp>(loc, i8Vector, highShiftValues);
 
   // 3. Interleave low and high i8 elements.
   return rewriter.create<vector::InterleaveOp>(loc, low, high);
@@ -1080,9 +1080,10 @@ struct RewriteExtOfBitCast : OpRewritePattern<ExtOpType> {
 
 /// Rewrite the i4 -> i8 part of any conversion into a sequence of shuffles and
 /// bitwise ops that take advantage of high-level information to avoid leaving
-/// LLVM to scramble with peephole optimizations.
+/// LLVM to scramble with peephole optimizations. Templated to choose between
+/// signed and unsigned conversions.
 ///
-/// For example:
+/// For example (signed):
 ///    arith.extsi %in : vector<8xi4> to vector<8xi32>
 ///      is rewriten as
 ///        %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
@@ -1101,60 +1102,25 @@ struct RewriteExtOfBitCast : OpRewritePattern<ExtOpType> {
 ///        %4 = vector.interleave %2, %3 : vector<4xi8>
 ///        %5 = arith.sitofp %4 : vector<8xi8> to vector<8xf32>
 ///
-template <typename ConversionOpType>
-struct RewriteAlignedSubByteIntSignedExt : OpRewritePattern<ConversionOpType> {
-  using OpRewritePattern<ConversionOpType>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ConversionOpType conversionOp,
-                                PatternRewriter &rewriter) const override {
-    // Verify the preconditions.
-    Value srcValue = conversionOp.getIn();
-    auto srcVecType = dyn_cast<VectorType>(srcValue.getType());
-    auto dstVecType = dyn_cast<VectorType>(conversionOp.getType());
-    if (failed(
-            commonConversionPrecondition(rewriter, dstVecType, conversionOp)))
-      return failure();
-
-    // Check general alignment preconditions.
-    if (failed(alignedConversionPrecondition(rewriter, srcVecType, dstVecType,
-                                             conversionOp)))
-      return failure();
-
-    // Perform the rewrite.
-    Value subByteExt =
-        rewriteI4ToI8SignedExt(rewriter, conversionOp.getLoc(), srcValue);
-
-    // Finalize the rewrite.
-    rewriter.replaceOpWithNewOp<ConversionOpType>(
-        conversionOp, conversionOp.getType(), subByteExt);
-    return success();
-  }
-};
-
-/// Rewrite the i4 -> i8 part of any unsigned conversion into a sequence of
-/// shuffles and bitwise ops that take advantage of high-level information to
-/// avoid leaving LLVM to scramble with peephole optimizations.
-///
-/// For example:
+/// Example (unsigned):
 ///    arith.extui %in : vector<8xi4> to vector<8xi32>
 ///      is rewritten as
 ///        %0 = vector.bitcast %in : vector<8xi4> to vector<4xi8>
 ///        %1 = arith.andi %0, 15 : vector<4xi8>
-///        %2 = arith.shrsi %0, 4 : vector<4xi8>
+///        %2 = arith.shrui %0, 4 : vector<4xi8>
 ///        %3 = vector.interleave %1, %2 : vector<4xi8>
-///        %4 = arith.extsi %3 : vector<8xi8> to vector<8xi32>
+///        %4 = arith.extui %3 : vector<8xi8> to vector<8xi32>
 ///
-template <typename ConversionOpType>
-struct RewriteAlignedSubByteIntUnsignedExt
-    : OpRewritePattern<ConversionOpType> {
+template <typename ConversionOpType, bool isSigned>
+struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
   using OpRewritePattern<ConversionOpType>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(ConversionOpType conversionOp,
                                 PatternRewriter &rewriter) const override {
     // Verify the preconditions.
     Value srcValue = conversionOp.getIn();
-    auto srcVecType = dyn_cast<VectorType>(srcValue.getType());
-    auto dstVecType = dyn_cast<VectorType>(conversionOp.getType());
+    auto srcVecType = cast<VectorType>(srcValue.getType());
+    auto dstVecType = cast<VectorType>(conversionOp.getType());
     if (failed(
             commonConversionPrecondition(rewriter, dstVecType, conversionOp)))
       return failure();
@@ -1165,8 +1131,14 @@ struct RewriteAlignedSubByteIntUnsignedExt
       return failure();
 
     // Perform the rewrite.
-    Value subByteExt =
-        rewriteI4ToI8UnsignedExt(rewriter, conversionOp.getLoc(), srcValue);
+    Value subByteExt;
+    if (isSigned) {
+      subByteExt =
+          rewriteI4ToI8SignedExt(rewriter, conversionOp.getLoc(), srcValue);
+    } else {
+      subByteExt =
+          rewriteI4ToI8UnsignedExt(rewriter, conversionOp.getLoc(), srcValue);
+    }
 
     // Finalize the rewrite.
     rewriter.replaceOpWithNewOp<ConversionOpType>(
@@ -1305,11 +1277,11 @@ void vector::populateVectorNarrowTypeRewritePatterns(
 
   // Patterns for aligned cases. We set higher priority as they are expected to
   // generate better performance for aligned cases.
-  patterns.add<RewriteAlignedSubByteIntSignedExt<arith::ExtSIOp>,
-               RewriteAlignedSubByteIntSignedExt<arith::SIToFPOp>,
+  patterns.add<RewriteAlignedSubByteIntExt<arith::ExtSIOp, /*isSigned=*/true>,
+               RewriteAlignedSubByteIntExt<arith::SIToFPOp, /*isSigned=*/true>,
                RewriteAlignedSubByteIntTrunc>(patterns.getContext(),
                                               benefit.getBenefit() + 1);
-  patterns.add<RewriteAlignedSubByteIntUnsignedExt<arith::ExtUIOp>>(
+  patterns.add<RewriteAlignedSubByteIntExt<arith::ExtUIOp, /*isSigned=*/false>>(
       patterns.getContext(), benefit.getBenefit() + 1);
 }
 
