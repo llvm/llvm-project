@@ -762,14 +762,14 @@ validateDynamicDimExpansion(LinalgOp linalgOp,
       continue;
     bool foundDynamic = false;
     for (int64_t shape : expandedShape) {
-      if (ShapedType::isDynamic(shape)) {
-        if (foundDynamic) {
-          return rewriter.notifyMatchFailure(
-              linalgOp, "cannot infer expanded shape with multiple dynamic "
-                        "dims in the same reassociation group");
-        }
-        foundDynamic = true;
+      if (!ShapedType::isDynamic(shape))
+        continue;
+      if (foundDynamic) {
+        return rewriter.notifyMatchFailure(
+            linalgOp, "cannot infer expanded shape with multiple dynamic "
+                      "dims in the same reassociation group");
       }
+      foundDynamic = true;
     }
   }
   return success();

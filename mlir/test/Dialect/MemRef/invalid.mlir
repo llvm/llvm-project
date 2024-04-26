@@ -408,6 +408,14 @@ func.func @expand_shape(%arg0: memref<f32>) {
 
 // -----
 
+func.func @expand_shape_illegal_output_shape(%arg0: memref<2xf32>) {
+  // expected-error @+1 {{expected number of static shape bounds to be equal to the output rank (3) but found 2 inputs instead}}
+  %0 = memref.expand_shape %arg0 [[0, 1, 2]] output_shape [1, 2] : memref<2xf32> into memref<1x1x2xf32>
+  return
+}
+
+// -----
+
 func.func @collapse_shape_out_of_bounds(%arg0: memref<?x?xf32>) {
   // expected-error @+1 {{op reassociation index 2 is out of bounds}}
   %0 = memref.collapse_shape %arg0 [[0, 1, 2]] : memref<?x?xf32> into memref<?xf32>

@@ -313,6 +313,15 @@ func.func @illegal_expanding_reshape_mixed_tensor_2(%arg0 : tensor<?x?xf32>, %sz
 
 // -----
 
+func.func @expand_shape_illegal_output_shape(%arg0: tensor<2xf32>) {
+  // expected-error @+1 {{expected number of static shape dims to be equal to the output rank (3) but found 2 inputs instead}}
+  %0 = tensor.expand_shape %arg0 [[0, 1, 2]] output_shape [1, 2] : tensor<2xf32> into tensor<1x1x2xf32>
+  return
+}
+
+
+// -----
+
 func.func @illegal_collapsing_reshape_mixed_tensor(%arg0 : tensor<?x4x5xf32>) -> tensor<?x?xf32> {
   // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 5}}
   %0 = tensor.collapse_shape %arg0 [[0, 1], [2]]
