@@ -835,46 +835,6 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
   }
 }
 
-/// Check whether the given input tree contains any compilation actions.
-static bool ContainsCompileAction(const Action *A) {
-  if (isa<CompileJobAction>(A) || isa<BackendJobAction>(A))
-    return true;
-
-  return llvm::any_of(A->inputs(), ContainsCompileAction);
-}
-
-/// Check if -relax-all should be passed to the internal assembler.
-/// This is done by default when compiling non-assembler source with -O0.
-static bool UseRelaxAll(Compilation &C, const ArgList &Args) {
-  bool RelaxDefault = true;
-
-  if (Arg *A = Args.getLastArg(options::OPT_O_Group))
-    RelaxDefault = A->getOption().matches(options::OPT_O0);
-
-  // RISC-V requires an indirect jump for offsets larger than 1MiB. This cannot
-  // be done by assembler branch relaxation as it needs a free temporary
-  // register. Because of this, branch relaxation is handled by a MachineIR
-  // pass before the assembler. Forcing assembler branch relaxation for -O0
-  // makes the MachineIR branch relaxation inaccurate and it will miss cases
-  // where an indirect branch is necessary. To avoid this issue we are
-  // sacrificing the compile time improvement of using -mrelax-all for -O0.
-  if (C.getDefaultToolChain().getTriple().isRISCV())
-    RelaxDefault = false;
-
-  if (RelaxDefault) {
-    RelaxDefault = false;
-    for (const auto &Act : C.getActions()) {
-      if (ContainsCompileAction(Act)) {
-        RelaxDefault = true;
-        break;
-      }
-    }
-  }
-
-  return Args.hasFlag(options::OPT_mrelax_all, options::OPT_mno_relax_all,
-                      RelaxDefault);
-}
-
 static void
 RenderDebugEnablingArgs(const ArgList &Args, ArgStringList &CmdArgs,
                         llvm::codegenoptions::DebugInfoKind DebugInfoKind,
@@ -2472,8 +2432,16 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
                                               const ArgList &Args,
                                               ArgStringList &CmdArgs,
                                               const Driver &D) {
-  if (UseRelaxAll(C, Args))
-    CmdArgs.push_back("-mrelax-all");
+  // Default to -mno-relax-all.
+  //
+  // Note: RISC-V requires an indirect jump for offsets larger than 1MiB. This
+  // cannot be done by assembler branch relaxation as it needs a free temporary
+  // register. Because of this, branch relaxation is handled by a MachineIR pass
+  // before the assembler. Forcing assembler branch relaxation for -O0 makes the
+  // MachineIR branch relaxation inaccurate and it will miss cases where an
+  // indirect branch is necessary.
+  Args.addOptInFlag(CmdArgs, options::OPT_mrelax_all,
+                    options::OPT_mno_relax_all);
 
   // Only default to -mincremental-linker-compatible if we think we are
   // targeting the MSVC linker.
@@ -7294,10 +7262,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptInFlag(CmdArgs, options::OPT_frelaxed_template_template_args,
                     options::OPT_fno_relaxed_template_template_args);
 
-  // -fsized-deallocation is off by default, as it is an ABI-breaking change for
-  // most platforms.
-  Args.addOptInFlag(CmdArgs, options::OPT_fsized_deallocation,
-                    options::OPT_fno_sized_deallocation);
+  // -fsized-deallocation is on by default in C++14 onwards and otherwise off
+  // by default.
+  if (Arg *A = Args.getLastArg(options::OPT_fsized_deallocation,
+                               options::OPT_fno_sized_deallocation)) {
+    if (A->getOption().matches(options::OPT_fno_sized_deallocation))
+      CmdArgs.push_back("-fno-sized-deallocation");
+    else
+      CmdArgs.push_back("-fsized-deallocation");
+  }
 
   // -faligned-allocation is on by default in C++17 onwards and otherwise off
   // by default.

@@ -1127,7 +1127,8 @@ public:
   CanQualType OCLSamplerTy, OCLEventTy, OCLClkEventTy;
   CanQualType OCLQueueTy, OCLReserveIDTy;
   CanQualType IncompleteMatrixIdxTy;
-  CanQualType OMPArraySectionTy, OMPArrayShapingTy, OMPIteratorTy;
+  CanQualType ArraySectionTy;
+  CanQualType OMPArrayShapingTy, OMPIteratorTy;
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
   CanQualType Id##Ty;
 #include "clang/Basic/OpenCLExtensionTypes.def"
@@ -2194,6 +2195,16 @@ public:
     Qualifiers Qs = type.getQualifiers();
     Qs.removeObjCLifetime();
     return getQualifiedType(type.getUnqualifiedType(), Qs);
+  }
+
+  /// \brief Return a type with the given __ptrauth qualifier.
+  QualType getPointerAuthType(QualType Ty, PointerAuthQualifier PointerAuth) {
+    assert(!Ty.getPointerAuth());
+    assert(PointerAuth);
+
+    Qualifiers Qs;
+    Qs.setPointerAuth(PointerAuth);
+    return getQualifiedType(Ty, Qs);
   }
 
   unsigned char getFixedPointScale(QualType Ty) const;

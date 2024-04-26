@@ -130,6 +130,10 @@
     ret void
   }
 
+  define void @pre_undemanded_vl() {
+    ret void
+  }
+
   declare i32 @llvm.vector.reduce.add.v4i32(<4 x i32>)
 
   declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
@@ -1040,4 +1044,13 @@ body:             |
   bb.4:
     PseudoRET
 
+...
+---
+name: pre_undemanded_vl
+body: |
+  bb.0:
+    PseudoBR %bb.1
+  bb.1:
+    %x:gpr = PseudoVMV_X_S undef $noreg, 6
+    PseudoBR %bb.1
 ...

@@ -90,6 +90,11 @@ C++ Language Changes
 --------------------
 - Implemented ``_BitInt`` literal suffixes ``__wb`` or ``__WB`` as a Clang extension with ``unsigned`` modifiers also allowed. (#GH85223).
 
+C++14 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
+- Sized deallocation is enabled by default in C++14 onwards. The user may specify
+  ``-fno-sized-deallocation`` to disable it if there are some regressions.
+
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -206,6 +211,16 @@ Non-comprehensive list of changes in this release
 
 - ``__typeof_unqual__`` is available in all C modes as an extension, which behaves
   like ``typeof_unqual`` from C23, similar to ``__typeof__`` and ``typeof``.
+
+
+* Shared libraries linked with either the ``-ffast-math``, ``-Ofast``, or
+  ``-funsafe-math-optimizations`` flags will no longer enable flush-to-zero
+  floating-point mode by default. This decision can be overridden with use of
+  ``-mdaz-ftz``. This behavior now matches GCC's behavior.
+  (`#57589 <https://github.com/llvm/llvm-project/issues/57589>`_)
+
+* ``-fdenormal-fp-math=preserve-sign`` is no longer implied by ``-ffast-math``
+  on x86 systems.
 
 New Compiler Flags
 ------------------
