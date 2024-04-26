@@ -8,15 +8,15 @@ Standard C++ Modules
 Introduction
 ============
 
-The term ``modules`` has a lot of meanings. For Clang users, modules may refer
-to ``Objective-C Modules``, `Clang Modules <Modules.html>`_ (also called
-``Clang Header Modules``, etc.) or ``C++20 Modules`` (or
-``Standard C++ Modules``). The implementation of all these kinds of modules in
-Clang shares a lot of code, but from the perspective of users, their semantics
-and command line interfaces are very different. This document focuses on an
-introduction of focusing on the use of C++20 modules in Clang. In the remainder
-of this document, the term ``modules`` will refer to Standard C++20 modules and
-the term ``Clang modules`` will refer to the Clang modules extension.
+The term ``module`` has a lot of meanings. For Clang users, a module may refer
+to an ``Objective-C Module``, `Clang Module <Modules.html>`_ (also called a
+``Clang Header Module``) or a ``C++20 Module`` (or a ``Standard C++ Module``).
+The implementation of all these kinds of modules in Clang shares a lot of code,
+but from the perspective of users, their semantics and command line interfaces
+are very different. This document focuses on an introduction to the use of
+C++20 modules in Clang. In the remainder of this document, the term ``module``
+will refer to Standard C++20 modules and the term ``Clang module`` will refer
+to the Clang modules extension.
 
 Modules exist in two forms in the C++ Standard. They can refer to either
 "Named Modules" or "Header Units". This document covers both forms.
@@ -25,9 +25,9 @@ Standard C++ Named modules
 ==========================
 
 In order to understand compiler behavior, it is helpful to introduce some
-language background here for readers who are not familiar with the C++ feature.
+terms and definitions for readers who are not familiar with the C++ feature.
 This document is not a tutorial on C++; it only introduces necessary concepts
-to better understand use of modules for a project.
+to better understand use of modules in a project.
 
 Background and terminology
 --------------------------
@@ -46,14 +46,14 @@ syntax of the module declaration is:
 Terms enclosed in ``[]`` are optional. ``module_name`` and ``partition_name``
 are typical C++ identifiers, except that they may contain a period (``.``).
 Note that a ``.`` in the name has no semantic meaning (e.g. implying a
-hierarchy).
+hierarchy or referring to the file system).
 
 In this document, module units are classified as:
 
 * Primary module interface unit
 * Module implementation unit
-* Module interface partition unit
-* Internal module partition unit
+* Module partition interface unit
+* Module partition implementation unit
 
 A primary module interface unit is a module unit whose module declaration is
 ``export module module_name;`` where ``module_name`` denotes the name of the
@@ -63,24 +63,24 @@ A module implementation unit is a module unit whose module declaration is
 ``module module_name;``. Multiple module implementation units can be declared
 in the same translation unit.
 
-A module interface partition unit is a module unit whose module declaration is
+A module partition interface unit is a module unit whose module declaration is
 ``export module module_name:partition_name;``. The ``partition_name`` should be
 unique within any given module.
 
-An internal module partition unit is a module unit whose module declaration
-is ``module module_name:partition_name;``. The ``partition_name`` should be
-unique within any given module.
+An module partition implementation unit is a module unit whose module
+declaration is ``module module_name:partition_name;``. The ``partition_name``
+should be unique within any given module.
 
 In this document, we use the following umbrella terms:
 
 * A ``module interface unit`` refers to either a ``primary module interface unit``
-  or a ``module interface partition unit``.
+  or a ``module partition interface unit``.
 
 * An ``importable module unit`` refers to either a ``module interface unit`` or
-  an ``internal module partition unit``.
+  an ``module partition implementation unit``.
 
-* A ``module partition unit`` refers to either a ``module interface partition unit``
-  or an ``internal module partition unit``.
+* A ``module partition unit`` refers to either a ``module partition interface unit``
+  or an ``module partition implementation unit``.
 
 Binary Module Interface
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -267,7 +267,7 @@ you can specify ``-x c++-module`` before the file. For example,
   }
 
 In this example, the extension used by the ``module interface`` is ``.cpp``
-instead of ``.cppm``, so is cannot be compiled with the command lines from the
+instead of ``.cppm``, so it cannot be compiled with the command lines from the
 previous example, but it can be compiled with:
 
 .. code-block:: console
@@ -316,7 +316,7 @@ The ``-fprebuilt-module-path`` option specifies the path to search for
 dependent BMIs. Multiple paths may be specified, similar to using ``-I`` to
 specify a search path for header files. When importing a module ``M``, the
 compiler looks for ``M.pcm`` in the directories specified by
-``-fprebuilt-module-path``. Similarly,  When importing a partition module unit
+``-fprebuilt-module-path``. Similarly, when importing a partition module unit
 ``M:P``, the compiler looks for ``M-P.pcm`` in the directories specified by
 ``-fprebuilt-module-path``.
 
@@ -402,8 +402,8 @@ Consistency Requirements
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 If modules are thought of as a kind of cache to speed up compilation, then, as
-with other caching techniques, it is important to keep cache consistency.
-**Currently**, Clang does very strict checking for consistency.
+with other caching techniques, it is important to keep cache consistency. Clang
+does very strict checking for that.
 
 Options consistency
 ^^^^^^^^^^^^^^^^^^^
@@ -425,7 +425,7 @@ uses need to be consistent. Consider the following example:
   $ clang++ -std=c++23 Use.cpp -fprebuilt-module-path=.
 
 Clang rejects the example due to the inconsistent language standard modes. Not
-all compiler options are language dialect options. For example:
+all compiler options are language dialect options, though. For example:
 
 .. code-block:: console
 
@@ -448,25 +448,24 @@ definitions (this may change in the future). For example:
   # Inconsistent optimization level.
   $ clang++ -std=c++20 -O3 -DNDEBUG Use.cpp -fprebuilt-module-path=.
 
-Currently, Clang accepts the above example though it may produce surprising
+Currently, Clang accepts the above example, though it may produce surprising
 results if the debugging code depends on consistent use of ``NDEBUG`` in other
 translation units.
 
 Object definition consistency
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The C++ language requires that the same declarations in different translation
-units have the same definition, which is known as the One Definition Rule (ODR).
-Prior to modules, the compiler cannot perform strong ODR violation checking
-because it only sees one translation unit at a time. With use of modules, the
-compiler can perform checks for ODR violations across translation units.
+The C++ language requires that declarations of the same entity in different
+translation units have the same definition, which is known as the One
+Definition Rule (ODR). Prior to modules, the compiler was not able to perform
+strong ODR violation checking because it only sees one translation unit at a
+time. Now, with use of modules, the compiler can perform checks for ODR
+violations across translation units.
 
 However, the current ODR checking mechanisms are not perfect. There are a
 significant number of false positive ODR violation diagnostics, where the
 compiler incorrectly diagnoses two identical declarations as having different
 definitions. Further, true positive ODR violations are not always reported.
-Additionally, MSVC does not currently perform ODR checking for declarations in
-the global module fragment.
 
 To give a better user experience, improve compilation performance, and for
 consistentency with MSVC, ODR checking of declarations in the global module
@@ -478,8 +477,8 @@ and you encounter incorrect or missing diagnostics, please report them via the
 ABI Impacts
 -----------
 
-This section describes the new ABI changes brought by modules. Only Itanium C++
-ABI related change are mentioned.
+This section describes the new ABI changes brought by modules. Only changes to
+the Itanium C++ ABI are covered.
 
 Name Mangling
 ~~~~~~~~~~~~~
@@ -634,13 +633,13 @@ variables. This may not be a transparent change.
 In the above example, the function definition of ``N::g`` is elided from the
 Reduced BMI of ``M.cppm``. Then the use of ``use_g<int>`` in ``M-impl.cpp``
 fails to instantiate. For such issues, users can add references to ``N::g`` in
-the module purview of ``M.cppm`` to ensure it is reachable, e.g.,
+the module purview of ``M.cppm`` to ensure it is reachable, e.g.
 ``using N::g;``.
 
 Long-term, Clang is likely to make Reduced BMIs the default rather than Full
-BMIs. But because it is a drastic change, it is initially an experimental
-option to avoid breaking existing users. The expected roadmap for Reduced BMIs
-as of Clang 19.x is:
+BMIs. Because it would be a drastic change of user interface, it is initially
+an experimental option to avoid breaking existing users. The expected roadmap
+for Reduced BMIs as of Clang 19.x is:
 
 1. ``-fexperimental-modules-reduced-bmi`` is opt-in for 1~2 releases. The period depends
    on user feedback and may be extended.
@@ -648,7 +647,7 @@ as of Clang 19.x is:
    ``-fmodules-reduced-bmi`` as a new option, and recommend use of the new
    option. This transition is expected to take 1~2 additional releases as well.
 3. Finally, ``-fmodules-reduced-bmi`` will be the default. When that time
-   comes, the term BMI will refer to the reduced BMI and the Full BMI will only
+   comes, the term BMI will refer to the Reduced BMI and the Full BMI will only
    be meaningful to build systems which elect to support two-phase compilation.
 
 Performance Tips
@@ -659,8 +658,9 @@ Reduce duplications
 
 While it is valid to have duplicated declarations in the global module fragments
 of different module units, it is not free for Clang to deal with the duplicated
-declarations. A translation unit will compile more slowly if it and its
-imported module units contain a lot of duplicated declarations. For example:
+declarations. A translation unit will compile more slowly if there is a lot of
+duplicated declarations between the translation unit and modules it imports.
+For example:
 
 .. code-block:: c++
 
@@ -742,12 +742,12 @@ performance.
 Transitioning to modules
 ------------------------
 
-New code and libraries should use modules from day one if possible. However,
-it may be a breaking change for existing code or libraries to refactor to use
-modules. As a result, many existing libraries need to provide headers and module
-interfaces for a while to not break existing users.
+New code and libraries should use modules from the start if possible. However,
+it may be a breaking change for existing code or libraries to switch to
+modules. As a result, many existing libraries need to provide both headers and
+module interfaces for a while to not break existing users.
 
-This section provides some ideas on how to ease the transition process for
+This section suggests some ideas on how to ease the transition process for
 existing libraries. **Note that this information is only intended as helpful
 tips instead of requirements from Clang.** It presumes the project is starting
 with no module-based dependencies.
@@ -774,8 +774,8 @@ export-using style
   }
 
 This example shows how to include all the headers containing declarations which
-need to be exported and uses `using` declarations in an `export` block to
-produce the module interface. Then, basically, we're done.
+need to be exported, and uses `using` declarations in an `export` block to
+produce the module interface.
 
 export extern-C++ style
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -899,7 +899,7 @@ into the new ABI. This is done by an additional part of the interface unit:
 
 If the number of source files is small, everything can be put in the private
 module fragment directly. (It is recommended to add conditional includes to the
-source files too). However, compile time performance will be slow if there are
+source files too). However, compile time performance will be bad if there are
 a lot of source files to compile.
 
 **Note that the private module fragment can only be in the primary module
@@ -937,16 +937,16 @@ What if there are headers only inclued by the source files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The above practice may be problematic if there are headers only included by the
-source files. If using a private module fragment, this issue may be solved by
+source files. When using a private module fragment, this issue may be solved by
 including those headers in the private module fragment. While it is OK to solve
 it by including the implementation headers in the module purview when using
 implementation module units, it may be suboptimal because the primary module
 interface units now contain entities that do not belong to the interface.
 
-This can potentially be improved by introducing internal module partition unit.
-The internal module partition unit is an importable module unit which is
-internal to the module itself. However, this approach may not always be the
-best way forward.
+This can potentially be improved by introducing module partition implementation
+unit. The module partition implementation unit is an importable module unit
+which is internal to the module itself. However, this approach may not always
+be the best way forward.
 
 Providing a header to skip parsing redundant headers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1061,9 +1061,9 @@ or, for the ABI-breaking style,
   #include "source_n.cpp"
   #endif
 
-Non-exported using declarations are not needed if using implementation module
-units. Instead, third-party modules can be imported directly in implementation
-module units.
+Non-exported ``using`` declarations are not needed if using implementation
+module units. Instead, third-party modules can be imported directly in
+implementation module units.
 
 Partial dependent libraries providing modules
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1122,7 +1122,7 @@ then the code is currently rejected:
 
 Both of the above examples should be accepted.
 
-This is a limitation in the implementation. In the first example, the compiler
+This is a limitation of the implementation. In the first example, the compiler
 will see and parse ``<iostream>`` first then it will see the ``import``. In
 this case, ODR checking and declaration merging will happen in the
 deserializer. In the second example, the compiler will see the ``import`` first
@@ -1131,8 +1131,8 @@ merging happening in the semantic analyzer. This is due to a divergence in the
 implementation path. This is tracked by
 `#61465 <https://github.com/llvm/llvm-project/issues/61465>`_.
 
-Ignored ``prefered_name`` Attribute
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Ignored ``preferred_name`` Attribute
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 When Clang writes BMIs, it will ignore the ``preferred_name`` attribute on
 declarations which use it. Thus, the preferred name will not be displayed in
@@ -1216,7 +1216,7 @@ it is a false positive result. One often reported example is:
 
 Currently the compiler incorrectly diagnoses the inconsistent definition of
 ``fun()`` in two module units. Because both definitions of ``fun()`` have the
-same spelling and ``T`` refers to the same type entity, so there is no ODR
+same spelling and ``T`` refers to the same type entity, there is no ODR
 violation. This is tracked by
 `#78850 <https://github.com/llvm/llvm-project/issues/78850>`_.
 
@@ -1423,7 +1423,8 @@ additional semantics get interpreted as Standard C++ behavior.
 
 Another reason is that there are proposals to introduce module mappers to the
 C++ standard (for example, https://wg21.link/p1184r2). Reusing Clang's
-modulemap may be more difficult if we need to introduce another module mapper.
+``modulemap`` may be more difficult if we need to introduce another module
+mapper.
 
 Discover Dependencies
 =====================
@@ -1759,13 +1760,13 @@ First is ``-O0``. The compilation process is described in the following graph.
   │                               │                                       │               │
   └---parsing----sema----codegen--┴----- transformations ---- codegen ----┴---- codegen --┘
 
-  ┌---------------------------------------------------------------------------------------┐
+  ├---------------------------------------------------------------------------------------┐
   |                                                                                       │
   |                                     source file                                       │
   |                                                                                       │
   └---------------------------------------------------------------------------------------┘
 
-              ┌--------┐
+              ├--------┐
               │        │
               │imported│
               │        │
@@ -1775,11 +1776,11 @@ First is ``-O0``. The compilation process is described in the following graph.
 
 In this case, the source file (which could be a non-module unit or a module
 unit) would get processed by the whole pipeline. But the imported code would
-only get involved in semantic analysis, which is mainly about name lookup,
-overload resolution, and template instantiation. All of these processes are
-fast relative to the whole compilation process. More importantly, the imported
-code only needs to be processed once during frontend code generation, as well
-as the whole middle end and backend. So we could get a big win for the
+only get involved in semantic analysis, which, for the most part, is name
+lookup, overload resolution, and template instantiation. All of these processes
+are fast relative to the whole compilation process. More importantly, the
+imported code only needs to be processed once during frontend code generation,
+as well as the whole middle end and backend. So we could get a big win for the
 compilation time in ``-O0``.
 
 But with optimizations, things are different (the ``code generation`` part for
@@ -1791,12 +1792,12 @@ each end is omitted due to limited space):
   │                           │                                               │                   │
   └--- parsing ---- sema -----┴--- optimizations --- IPO ---- optimizations---┴--- optimizations -┘
 
-  ┌-----------------------------------------------------------------------------------------------┐
+  ├-----------------------------------------------------------------------------------------------┐
   │                                                                                               │
   │                                         source file                                           │
   │                                                                                               │
   └-----------------------------------------------------------------------------------------------┘
-                ┌---------------------------------------┐
+                ├---------------------------------------┐
                 │                                       │
                 │                                       │
                 │            imported code              │
@@ -1820,9 +1821,9 @@ Overall, at ``-O0`` the implementations of functions defined in a module will
 not impact module users, but at higher optimization levels the definitions of
 such functions are provided to user compilations for the purposes of
 optimization (but definitions of these functions are still not included in the
-use's object file) -- this means the build speedup at higher optimization
-levels may be lower than expected given ``-O0`` experience, but does provide
-more optimization opportunities.
+use's object file). This means the build speedup at higher optimization levels
+may be lower than expected given ``-O0`` experience, but does provide more
+optimization opportunities.
 
 Interoperability with Clang Modules
 -----------------------------------
