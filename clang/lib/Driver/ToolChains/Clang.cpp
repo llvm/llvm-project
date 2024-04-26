@@ -8449,11 +8449,6 @@ void ClangAs::AddRISCVTargetArgs(const ArgList &Args,
       CmdArgs.push_back("-mllvm");
       CmdArgs.push_back("-riscv-add-build-attributes");
   }
-
-  if (!Args.hasArg(options::OPT_menable_experimental_extensions)) {
-    CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back("-riscv-disable-experimental-ext");
-  }
 }
 
 void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,

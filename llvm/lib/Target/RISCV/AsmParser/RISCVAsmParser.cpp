@@ -51,10 +51,6 @@ STATISTIC(RISCVNumInstrsCompressed,
 
 static cl::opt<bool> AddBuildAttributes("riscv-add-build-attributes",
                                         cl::init(false));
-static cl::opt<bool>
-    DisableExperimentalExtension("riscv-disable-experimental-ext",
-                                 cl::init(false));
-
 namespace llvm {
 extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
 } // namespace llvm
@@ -87,6 +83,9 @@ class RISCVAsmParser : public MCTargetAsmParser {
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
   bool isRV64() const { return getSTI().hasFeature(RISCV::Feature64Bit); }
   bool isRVE() const { return getSTI().hasFeature(RISCV::FeatureStdExtE); }
+  bool enableExperimentalExtension() const {
+    return getSTI().hasFeature(RISCV::Experimental);
+  }
 
   RISCVTargetStreamer &getTargetStreamer() {
     assert(getParser().getStreamer().getTargetStreamer() &&
@@ -2828,7 +2827,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
       }
 
       std::string Feature = RISCVISAInfo::getTargetFeatureForExtension(Arch);
-      if (DisableExperimentalExtension &&
+      if (!enableExperimentalExtension() &&
           StringRef(Feature).starts_with("experimental-"))
         return Error(Loc, "Unexpected experimental extensions.");
       auto Ext = llvm::lower_bound(RISCVFeatureKV, Feature);
