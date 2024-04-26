@@ -888,16 +888,17 @@ void RISCVISAInfo::updateImplication() {
     StringRef ExtName = WorkList.pop_back_val();
     auto Range = std::equal_range(std::begin(ImpliedExts),
                                   std::end(ImpliedExts), ExtName);
-    for (auto I = Range.first, E = Range.second; I != E; ++I) {
-      const char *ImpliedExt = I->ImpliedExt;
-      if (WorkList.count(ImpliedExt))
-        continue;
-      if (Exts.count(ImpliedExt))
-        continue;
-      auto Version = findDefaultVersion(ImpliedExt);
-      addExtension(ImpliedExt, Version.value());
-      WorkList.insert(ImpliedExt);
-    }
+    std::for_each(Range.first, Range.second,
+                  [&](const ImpliedExtsEntry &Implied) {
+                    const char *ImpliedExt = Implied.ImpliedExt;
+                    if (WorkList.count(ImpliedExt))
+                      return;
+                    if (Exts.count(ImpliedExt))
+                      return;
+                    auto Version = findDefaultVersion(ImpliedExt);
+                    addExtension(ImpliedExt, Version.value());
+                    WorkList.insert(ImpliedExt);
+                  });
   }
 
   // Add Zcf if Zce and F are enabled on RV32.
