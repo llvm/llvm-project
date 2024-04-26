@@ -1497,6 +1497,7 @@ protected:
     case Intrinsic::instrprof_cover:
     case Intrinsic::instrprof_increment:
     case Intrinsic::instrprof_increment_step:
+    case Intrinsic::instrprof_callsite:
     case Intrinsic::instrprof_timestamp:
     case Intrinsic::instrprof_value_profile:
       return true;
@@ -1579,6 +1580,21 @@ public:
   static bool classof(const Value *V) {
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
+};
+
+/// This represents the llvm.instrprof.callsite intrinsic.
+/// It is structurally like the increment or step counters, hence the
+/// inheritance relationship, albeit somewhat tenuous (it's not 'counting' per
+/// se)
+class InstrProfCallsite : public InstrProfCntrInstBase {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::instrprof_callsite;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+  Value *getCallee() const;
 };
 
 /// This represents the llvm.instrprof.timestamp intrinsic.
