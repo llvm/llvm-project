@@ -1514,3 +1514,25 @@ func.func @zero_sized_memred(%arg0: f32) -> (memref<f16, 3>, index,index,index) 
       memref<f16,3>, index,
       index, index
 }
+
+// -----
+
+func.func @extract_strided_metadata_of_collapse_shape(%base: memref<5x4xf32>)
+    -> (memref<f32>, index, index, index) {
+
+  %collapse = memref.collapse_shape %base[[0, 1]] :
+    memref<5x4xf32> into memref<20xf32>
+
+  %base_buffer, %offset, %size, %stride = memref.extract_strided_metadata %collapse :
+    memref<20xf32> -> memref<f32>, index, index, index
+
+  return %base_buffer, %offset, %size, %stride :
+    memref<f32>, index, index, index
+}
+
+// CHECK-LABEL:  func @extract_strided_metadata_of_collapse_shape
+//   CHECK-DAG:    %[[OFFSET:.*]] = arith.constant 0 : index
+//   CHECK-DAG:    %[[SIZE:.*]] = arith.constant 20 : index
+//   CHECK-DAG:    %[[STEP:.*]] = arith.constant 1 : index
+//       CHECK:    %[[BASE:.*]], %{{.*}}, %{{.*}}, %{{.*}} = memref.extract_strided_metadata
+//       CHECK:    return %[[BASE]], %[[OFFSET]], %[[SIZE]], %[[STEP]] : memref<f32>, index, index, index
