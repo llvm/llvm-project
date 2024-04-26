@@ -505,14 +505,14 @@ def FeatureSMEF64F64 : SubtargetFeature<"sme-f64f64", "HasSMEF64F64", "true",
 def FeatureSMEI16I64 : SubtargetFeature<"sme-i16i64", "HasSMEI16I64", "true",
   "Enable Scalable Matrix Extension (SME) I16I64 instructions (FEAT_SME_I16I64)", [FeatureSME]>;
 
-def FeatureSMEF16F16 : SubtargetFeature<"sme-f16f16", "HasSMEF16F16", "true",
-  "Enable SME2.1 non-widening Float16 instructions (FEAT_SME_F16F16)", []>;
-
 def FeatureSMEFA64 : SubtargetFeature<"sme-fa64", "HasSMEFA64", "true",
   "Enable the full A64 instruction set in streaming SVE mode (FEAT_SME_FA64)", [FeatureSME, FeatureSVE2]>;
 
 def FeatureSME2 : SubtargetFeature<"sme2", "HasSME2", "true",
   "Enable Scalable Matrix Extension 2 (SME2) instructions", [FeatureSME]>;
+
+def FeatureSMEF16F16 : SubtargetFeature<"sme-f16f16", "HasSMEF16F16", "true",
+  "Enable SME non-widening Float16 instructions (FEAT_SME_F16F16)", [FeatureSME2]>;
 
 def FeatureSME2p1 : SubtargetFeature<"sme2p1", "HasSME2p1", "true",
   "Enable Scalable Matrix Extension 2.1 (FEAT_SME2p1) instructions", [FeatureSME2]>;
