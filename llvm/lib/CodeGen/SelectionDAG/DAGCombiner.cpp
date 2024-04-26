@@ -530,6 +530,7 @@ namespace {
     bool refineExtractVectorEltIntoMultipleNarrowExtractVectorElts(SDNode *N);
 
     SDValue visitSTORE(SDNode *N);
+    SDValue visitATOMIC_STORE(SDNode *N);
     SDValue visitLIFETIME_END(SDNode *N);
     SDValue visitINSERT_VECTOR_ELT(SDNode *N);
     SDValue visitEXTRACT_VECTOR_ELT(SDNode *N);
@@ -1909,6 +1910,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::BR_CC:              return visitBR_CC(N);
   case ISD::LOAD:               return visitLOAD(N);
   case ISD::STORE:              return visitSTORE(N);
+  case ISD::ATOMIC_STORE:       return visitATOMIC_STORE(N);
   case ISD::INSERT_VECTOR_ELT:  return visitINSERT_VECTOR_ELT(N);
   case ISD::EXTRACT_VECTOR_ELT: return visitEXTRACT_VECTOR_ELT(N);
   case ISD::BUILD_VECTOR:       return visitBUILD_VECTOR(N);
@@ -21135,6 +21137,24 @@ SDValue DAGCombiner::replaceStoreOfInsertLoad(StoreSDNode *ST) {
 
   return DAG.getStore(Chain, DL, Elt, NewPtr, PointerInfo, ST->getAlign(),
                       ST->getMemOperand()->getFlags());
+}
+
+SDValue DAGCombiner::visitATOMIC_STORE(SDNode *N) {
+  AtomicSDNode *ST = cast<AtomicSDNode>(N);
+  SDValue Val = ST->getVal();
+  EVT VT = Val.getValueType();
+  EVT MemVT = ST->getMemoryVT();
+
+  if (MemVT.bitsLT(VT)) { // Is truncating store
+    APInt TruncDemandedBits = APInt::getLowBitsSet(VT.getScalarSizeInBits(),
+                                                   MemVT.getScalarSizeInBits());
+    // See if we can simplify the operation with SimplifyDemandedBits, which
+    // only works if the value has a single use.
+    if (SimplifyDemandedBits(Val, TruncDemandedBits))
+      return SDValue(N, 0);
+  }
+
+  return SDValue();
 }
 
 SDValue DAGCombiner::visitSTORE(SDNode *N) {
