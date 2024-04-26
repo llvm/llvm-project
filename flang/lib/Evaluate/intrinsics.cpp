@@ -1340,6 +1340,13 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"values", AnyInt, Rank::vector, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"etime",
+          {
+            {"values", DefaultReal, Rank::vector, Optionality::required, common::Intent::Out},
+            {"time", DefaultReal, Rank::scalar, Optionality::required, common::Intent::Out}
+          },
+          {}, Rank::elemental, IntrinsicClass::impureSubroutine
+        },
     {"execute_command_line",
         {{"command", DefaultChar, Rank::scalar},
             {"wait", AnyLogical, Rank::scalar, Optionality::optional},

@@ -222,6 +222,11 @@ static constexpr IntrinsicHandler handlers[]{
        {"boundary", asBox, handleDynamicOptional},
        {"dim", asValue}}},
      /*isElemental=*/false},
+    {"etime",
+     &I::genEtime,
+     {{{"values", asBox},
+       {"time", asBox}}},
+     /*isElemental=*/false},
     {"execute_command_line",
      &I::genExecuteCommandLine,
      {{{"command", asBox},
@@ -3228,6 +3233,22 @@ void IntrinsicLibrary::genExecuteCommandLine(
           : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
   fir::runtime::genExecuteCommandLine(builder, loc, command, waitBool,
                                       exitstatBox, cmdstatBox, cmdmsgBox);
+}
+
+// ETIME
+void IntrinsicLibrary::genEtime(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+
+  mlir::Value values = fir::getBase(args[0]);
+  mlir::Value time = fir::getBase(args[1]);
+
+  if (!values)
+    fir::emitFatalError(loc, "expected VALUES parameter");
+  if (!time)
+    fir::emitFatalError(loc, "expected TIME parameter");
+
+  fir::runtime::genEtime(builder, loc, values, time);
 }
 
 // EXIT

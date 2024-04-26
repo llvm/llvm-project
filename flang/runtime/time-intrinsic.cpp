@@ -19,6 +19,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <sys/times.h>
+#include <unistd.h>
 #ifndef _WIN32
 #include <sys/time.h> // gettimeofday
 #endif
@@ -368,6 +370,47 @@ void RTNAME(DateAndTime)(char *date, std::size_t dateChars, char *time,
   Fortran::runtime::Terminator terminator{source, line};
   return GetDateAndTime(
       terminator, date, dateChars, time, timeChars, zone, zoneChars, values);
+}
+
+void RTNAME(Etime)(const Descriptor *values, const Descriptor *time,
+    const char *sourceFile, int line) {
+  Fortran::runtime::Terminator terminator{sourceFile, line};
+
+  struct tms tms;
+  times(&tms);
+  auto usrTime = (double)(tms.tms_utime) / sysconf(_SC_CLK_TCK);
+  auto sysTime = (double)(tms.tms_stime) / sysconf(_SC_CLK_TCK);
+  auto realTime = usrTime + sysTime;
+
+  if (values) {
+    auto typeCode{values->type().GetCategoryAndKind()};
+    // ETIME values argument must have decimal range == 2.
+    RUNTIME_CHECK(terminator,
+        values->rank() == 1 && values->GetDimension(0).Extent() == 2 &&
+            typeCode && typeCode->first == Fortran::common::TypeCategory::Real);
+    // Only accept KIND=4 here.
+    int kind{typeCode->second};
+    RUNTIME_CHECK(terminator, kind == 4);
+
+    ApplyFloatingPointKind<StoreFloatingPointAt, void>(
+        kind, terminator, *values, /* atIndex = */ 0, usrTime);
+    ApplyFloatingPointKind<StoreFloatingPointAt, void>(
+        kind, terminator, *values, /* atIndex = */ 1, sysTime);
+  }
+
+  if (time) {
+    auto typeCode{time->type().GetCategoryAndKind()};
+    // ETIME time argument must have decimal range == 0.
+    RUNTIME_CHECK(terminator,
+        time->rank() == 0 && typeCode &&
+            typeCode->first == Fortran::common::TypeCategory::Real);
+    // Only accept KIND=4 here.
+    int kind{typeCode->second};
+    RUNTIME_CHECK(terminator, kind == 4);
+
+    ApplyFloatingPointKind<StoreFloatingPointAt, void>(
+        kind, terminator, *time, /* atIndex = */ 0, realTime);
+  }
 }
 
 } // extern "C"
