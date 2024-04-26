@@ -551,17 +551,28 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
                                       groupStrides)};
 }
 
-template <typename ReassociativeReshapeLikeOp,
-          SmallVector<OpFoldResult> (*getReshapedSizes)(
-              ReassociativeReshapeLikeOp, OpBuilder &,
-              ArrayRef<OpFoldResult> /*origSizes*/, unsigned /*groupId*/),
-          SmallVector<OpFoldResult> (*getReshapedStrides)(
-              ReassociativeReshapeLikeOp, OpBuilder &,
-              ArrayRef<OpFoldResult> /*origSizes*/,
-              ArrayRef<OpFoldResult> /*origStrides*/, unsigned /*groupId*/)>
-static FailureOr<StridedMetadata>
-resolveReshapeStridedMetadata(RewriterBase &rewriter,
-                              ReassociativeReshapeLikeOp reshape) {
+/// From `reshape_like(memref, subSizes, subStrides))` compute
+///
+/// \verbatim
+/// baseBuffer, baseOffset, baseSizes, baseStrides =
+///     extract_strided_metadata(memref)
+/// strides#i = baseStrides#i * subStrides#i
+/// offset = baseOffset + sum(subOffset#i * baseStrides#i)
+/// sizes = subSizes
+/// \endverbatim
+///
+/// and return {baseBuffer, offset, sizes, strides}
+template <typename ReassociativeReshapeLikeOp>
+static FailureOr<StridedMetadata> resolveReshapeStridedMetadata(
+    RewriterBase &rewriter, ReassociativeReshapeLikeOp reshape,
+    function_ref<SmallVector<OpFoldResult>(
+        ReassociativeReshapeLikeOp, OpBuilder &,
+        ArrayRef<OpFoldResult> /*origSizes*/, unsigned /*groupId*/)>
+        getReshapedSizes,
+    function_ref<SmallVector<OpFoldResult>(
+        ReassociativeReshapeLikeOp, OpBuilder &,
+        ArrayRef<OpFoldResult> /*origSizes*/, unsigned /*groupId*/)>
+        getReshapedStrides) {
   // Build a plain extract_strided_metadata(memref) from
   // extract_strided_metadata(reassociative_reshape_like(memref)).
   Location origLoc = reshape.getLoc();
@@ -699,7 +710,8 @@ struct ExtractStridedMetadataOpCollapseShapeFolder
                                                           collapseShapeOp);
     if (failed(stridedMetadata)) {
       return rewriter.notifyMatchFailure(
-          op, "failed to resolve metadata in terms of source collapse_shape op");
+          op,
+          "failed to resolve metadata in terms of source collapse_shape op");
     }
 
     Location loc = collapseShapeOp.getLoc();
@@ -1088,9 +1100,11 @@ void memref::populateExpandStridedMetadataPatterns(
                              getCollapsedStride>,
                ExtractStridedMetadataOpAllocFolder<memref::AllocOp>,
                ExtractStridedMetadataOpAllocFolder<memref::AllocaOp>,
+               ExtractStridedMetadataOpCollapseShapeFolder,
                ExtractStridedMetadataOpGetGlobalFolder,
                RewriteExtractAlignedPointerAsIndexOfViewLikeOp,
                ExtractStridedMetadataOpReinterpretCastFolder,
+               ExtractStridedMetadataOpSubviewFolder,
                ExtractStridedMetadataOpCastFolder,
                ExtractStridedMetadataOpExtractStridedMetadataFolder>(
       patterns.getContext());
