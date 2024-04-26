@@ -3760,7 +3760,7 @@ let Predicates = [HasSVE2orSME] in {
   defm BSL_ZZZZ   : sve2_int_bitwise_ternary_op<0b001, "bsl",   int_aarch64_sve_bsl, AArch64bsp>;
   defm BSL1N_ZZZZ : sve2_int_bitwise_ternary_op<0b011, "bsl1n", int_aarch64_sve_bsl1n>;
   defm BSL2N_ZZZZ : sve2_int_bitwise_ternary_op<0b101, "bsl2n", int_aarch64_sve_bsl2n>;
-  defm NBSL_ZZZZ  : sve2_int_bitwise_ternary_op<0b111, "nbsl",  int_aarch64_sve_nbsl>;
+  defm NBSL_ZZZZ  : sve2_int_bitwise_ternary_op<0b111, "nbsl",  int_aarch64_sve_nbsl, AArch64nbsl>;
 
   // SVE2 bitwise xor and rotate right by immediate
   defm XAR_ZZZI : sve2_int_rotate_right_imm<"xar", int_aarch64_sve_xar>;
@@ -4119,7 +4119,7 @@ defm BFCLAMP_ZZZ : sve2p1_bfclamp<"bfclamp", AArch64fclamp>;
 // SME2.1 or SVE2.1 instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasSVE2p1_or_HasSME2p1] in {
-defm FADDQV   : sve2p1_fp_reduction_q<0b000, "faddqv", int_aarch64_sve_addqv>;
+defm FADDQV   : sve2p1_fp_reduction_q<0b000, "faddqv", int_aarch64_sve_faddqv>;
 defm FMAXNMQV : sve2p1_fp_reduction_q<0b100, "fmaxnmqv", int_aarch64_sve_fmaxnmqv>;
 defm FMINNMQV : sve2p1_fp_reduction_q<0b101, "fminnmqv", int_aarch64_sve_fminnmqv>;
 defm FMAXQV   : sve2p1_fp_reduction_q<0b110, "fmaxqv", int_aarch64_sve_fmaxqv>;
