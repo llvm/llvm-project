@@ -141,6 +141,17 @@ export namespace std {
 #if _LIBCPP_STD_VER >= 23
     // [range.adaptor.object], range adaptor objects
     using std::ranges::range_adaptor_closure;
+    // Note: This declaration not in the synopsis or explicitly in the wording.
+    // However it is needed for the range adaptors.
+    // [range.adaptor.object]/3
+    //   The template parameter D for range_adaptor_closure may be an
+    //   incomplete type. If an expression of type cv D is used as an operand
+    //   to the | operator, D shall be complete and model
+    //   derived_from<range_adaptor_closure<D>>. The behavior of an expression
+    //   involving an object of type cv D as an operand to the | operator is
+    //   undefined if overload resolution selects a program-defined operator|
+    //   function.
+    using std::ranges::operator|;
 #endif
 
     // [range.all], all view
