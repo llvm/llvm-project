@@ -311,7 +311,8 @@ public:
 
   Value *getVariableLocationOp(unsigned OpIdx) const;
 
-  void replaceVariableLocationOp(Value *OldValue, Value *NewValue);
+  void replaceVariableLocationOp(Value *OldValue, Value *NewValue,
+                                 bool AllowEmpty = false);
   void replaceVariableLocationOp(unsigned OpIdx, Value *NewValue);
   /// Adding a new location operand will always result in this intrinsic using
   /// an ArgList, and must always be accompanied by a new expression that uses
