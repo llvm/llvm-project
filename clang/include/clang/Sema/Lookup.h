@@ -499,9 +499,7 @@ public:
   /// Note that while no result was found in the current instantiation,
   /// there were dependent base classes that could not be searched.
   void setNotFoundInCurrentInstantiation() {
-    assert((ResultKind == NotFound ||
-            ResultKind == NotFoundInCurrentInstantiation) &&
-           Decls.empty());
+    assert(ResultKind == NotFound && Decls.empty());
     ResultKind = NotFoundInCurrentInstantiation;
   }
 

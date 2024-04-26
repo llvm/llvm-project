@@ -260,8 +260,6 @@ template <class T>
 struct Template {
   Template() = default;
   Template(const Template &Other) : Field(Other.Field) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: Template(const Template &Other)  = default;
   Template &operator=(const Template &Other);
   void foo(const T &t);
   int Field;
@@ -271,11 +269,7 @@ Template<T> &Template<T>::operator=(const Template<T> &Other) {
   Field = Other.Field;
   return *this;
 }
-// CHECK-MESSAGES: :[[@LINE-4]]:27: warning: use '= default'
-// CHECK-FIXES: Template<T> &Template<T>::operator=(const Template<T> &Other) = default;
-
 Template<int> T1;
-
 
 // Dependent types.
 template <class T>
@@ -290,9 +284,6 @@ DT1<T> &DT1<T>::operator=(const DT1<T> &Other) {
   Field = Other.Field;
   return *this;
 }
-// CHECK-MESSAGES: :[[@LINE-4]]:17: warning: use '= default'
-// CHECK-FIXES: DT1<T> &DT1<T>::operator=(const DT1<T> &Other) = default;
-
 DT1<int> Dt1;
 
 template <class T>
@@ -312,9 +303,6 @@ DT2<T> &DT2<T>::operator=(const DT2<T> &Other) {
 struct T {
   typedef int TT;
 };
-// CHECK-MESSAGES: :[[@LINE-8]]:17: warning: use '= default'
-// CHECK-FIXES: DT2<T> &DT2<T>::operator=(const DT2<T> &Other) = default;
-
 DT2<T> Dt2;
 
 // Default arguments.
