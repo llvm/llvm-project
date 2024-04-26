@@ -15,7 +15,20 @@ set -e
 
 YK_DIRS="./clang/test/Yk ./llvm/lib/Transforms/Yk ./llvm/include/llvm/Transforms/Yk llvm/lib/YkIR"
 
+if ./build/bin/clang-format -version > /dev/null 2>&1; then
+    clang_format=./build/bin/clang-format
+elif ../target/release/ykllvm/bin/clang-format -version > /dev/null 2>&1; then
+    clang_format=../target/release/ykllvm/bin/clang-format
+elif ../target/debug/ykllvm/bin/clang-format -version > /dev/null 2>&1; then
+    clang_format=../target/debug/ykllvm/bin/clang-format
+else
+    echo "Can't find clang-format" > /dev/null
+    exit 1
+fi
+clang_format=$(readlink -f "$clang_format")
+echo "Using $clang_format"
+
 for dir in ${YK_DIRS}; do
     find ${dir} -type f -iname '*.cpp' -or -iname '*.h' -or -iname '*.c' | \
-        xargs ./build/bin/clang-format -i
+        xargs ${clang_format} -i
 done
