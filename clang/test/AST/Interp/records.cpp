@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++14 -verify=expected,both %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=expected,both %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -triple i686 -verify=expected,both %s
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify=expected,both %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple i686 -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both %s
 // RUN: %clang_cc1 -verify=ref,both -std=c++14 %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++17 %s
+// RUN: %clang_cc1 -verify=ref,both -std=c++17 -triple i686 %s
 // RUN: %clang_cc1 -verify=ref,both -std=c++20 %s
-// RUN: %clang_cc1 -verify=ref,both -triple i686 %s
 
 /// Used to crash.
 struct Empty {};
@@ -1285,3 +1285,127 @@ namespace {
   }
 }
 #endif
+
+namespace pr18633 {
+  struct A1 {
+    static const int sz;
+    static const int sz2;
+  };
+  const int A1::sz2 = 11;
+  template<typename T>
+  void func () {
+    int arr[A1::sz];
+    // both-warning@-1 {{variable length arrays in C++ are a Clang extension}}
+    // both-note@-2 {{initializer of 'sz' is unknown}}
+    // both-note@-9 {{declared here}}
+  }
+  template<typename T>
+  void func2 () {
+    int arr[A1::sz2];
+  }
+  const int A1::sz = 12;
+  void func2() {
+    func<int>();
+    func2<int>();
+  }
+}
+
+namespace {
+  struct F {
+    static constexpr int Z = 12;
+  };
+  F f;
+  static_assert(f.Z == 12, "");
+}
+
+namespace UnnamedBitFields {
+  struct A {
+    int : 1;
+    double f;
+    int : 1;
+    char c;
+  };
+
+  constexpr A a = (A){1.0, 'a'};
+  static_assert(a.f == 1.0, "");
+  static_assert(a.c == 'a', "");
+}
+
+/// FIXME: This still doesn't work in the new interpreter because
+/// we lack type information for dummy pointers.
+namespace VirtualBases {
+  /// This used to crash.
+  namespace One {
+    class A {
+    protected:
+      int x;
+    };
+    class B : public virtual A {
+    public:
+      int getX() { return x; } // ref-note {{declared here}}
+    };
+
+    class DV : virtual public B{};
+
+    void foo() {
+      DV b;
+      int a[b.getX()]; // both-warning {{variable length arrays}} \
+                       // ref-note {{non-constexpr function 'getX' cannot be used}}
+    }
+  }
+
+  namespace Two {
+    struct U { int n; };
+    struct A : virtual U { int n; };
+    struct B : A {};
+    B a;
+    static_assert((U*)(A*)(&a) == (U*)(&a), "");
+
+    struct C : virtual A {};
+    struct D : B, C {};
+    D d;
+    constexpr B *p = &d;
+    constexpr C *q = &d;
+    static_assert((A*)p == (A*)q, ""); // both-error {{failed}}
+  }
+
+  namespace Three {
+    struct U { int n; };
+    struct V : U { int n; };
+    struct A : virtual V { int n; };
+    struct Aa { int n; };
+    struct B : virtual A, Aa {};
+
+    struct C : virtual A, Aa {};
+
+    struct D : B, C {};
+
+    D d;
+
+    constexpr B *p = &d;
+    constexpr C *q = &d;
+
+    static_assert((void*)p != (void*)q, "");
+    static_assert((A*)p == (A*)q, "");
+    static_assert((Aa*)p != (Aa*)q, "");
+
+    constexpr V *v = p;
+    constexpr V *w = q;
+    constexpr V *x = (A*)p;
+    static_assert(v == w, "");
+    static_assert(v == x, "");
+
+    static_assert((U*)&d == p, "");
+    static_assert((U*)&d == q, "");
+    static_assert((U*)&d == v, "");
+    static_assert((U*)&d == w, "");
+    static_assert((U*)&d == x, "");
+
+    struct X {};
+    struct Y1 : virtual X {};
+    struct Y2 : X {};
+    struct Z : Y1, Y2 {};
+    Z z;
+    static_assert((X*)(Y1*)&z != (X*)(Y2*)&z, "");
+  }
+}

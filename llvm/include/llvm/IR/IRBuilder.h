@@ -221,6 +221,12 @@ public:
     AddOrRemoveMetadataToCopy(LLVMContext::MD_dbg, L.getAsMDNode());
   }
 
+  /// Set nosanitize metadata.
+  void SetNoSanitizeMetadata() {
+    AddOrRemoveMetadataToCopy(llvm::LLVMContext::MD_nosanitize,
+                              llvm::MDNode::get(getContext(), std::nullopt));
+  }
+
   /// Collect metadata with IDs \p MetadataKinds from \p Src which should be
   /// added to all created instructions. Entries present in MedataDataToCopy but
   /// not on \p Src will be dropped from MetadataToCopy.
@@ -1712,18 +1718,13 @@ public:
       const Twine &Name = "", MDNode *FPMathTag = nullptr,
       std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 
-  Value *CreateNeg(Value *V, const Twine &Name = "", bool HasNUW = false,
-                   bool HasNSW = false) {
-    return CreateSub(Constant::getNullValue(V->getType()), V, Name, HasNUW,
-                     HasNSW);
+  Value *CreateNeg(Value *V, const Twine &Name = "", bool HasNSW = false) {
+    return CreateSub(Constant::getNullValue(V->getType()), V, Name,
+                     /*HasNUW=*/0, HasNSW);
   }
 
   Value *CreateNSWNeg(Value *V, const Twine &Name = "") {
-    return CreateNeg(V, Name, false, true);
-  }
-
-  Value *CreateNUWNeg(Value *V, const Twine &Name = "") {
-    return CreateNeg(V, Name, true, false);
+    return CreateNeg(V, Name, /*HasNSW=*/true);
   }
 
   Value *CreateFNeg(Value *V, const Twine &Name = "",
@@ -2003,8 +2004,18 @@ public:
   // Instruction creation methods: Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
 
-  Value *CreateTrunc(Value *V, Type *DestTy, const Twine &Name = "") {
-    return CreateCast(Instruction::Trunc, V, DestTy, Name);
+  Value *CreateTrunc(Value *V, Type *DestTy, const Twine &Name = "",
+                     bool IsNUW = false, bool IsNSW = false) {
+    if (V->getType() == DestTy)
+      return V;
+    if (Value *Folded = Folder.FoldCast(Instruction::Trunc, V, DestTy))
+      return Folded;
+    Instruction *I = CastInst::Create(Instruction::Trunc, V, DestTy);
+    if (IsNUW)
+      I->setHasNoUnsignedWrap();
+    if (IsNSW)
+      I->setHasNoSignedWrap();
+    return Insert(I, Name);
   }
 
   Value *CreateZExt(Value *V, Type *DestTy, const Twine &Name = "",
@@ -2067,11 +2078,17 @@ public:
     return CreateCast(Instruction::FPToSI, V, DestTy, Name);
   }
 
-  Value *CreateUIToFP(Value *V, Type *DestTy, const Twine &Name = ""){
+  Value *CreateUIToFP(Value *V, Type *DestTy, const Twine &Name = "",
+                      bool IsNonNeg = false) {
     if (IsFPConstrained)
       return CreateConstrainedFPCast(Intrinsic::experimental_constrained_uitofp,
                                      V, DestTy, nullptr, Name);
-    return CreateCast(Instruction::UIToFP, V, DestTy, Name);
+    if (Value *Folded = Folder.FoldCast(Instruction::UIToFP, V, DestTy))
+      return Folded;
+    Instruction *I = Insert(new UIToFPInst(V, DestTy), Name);
+    if (IsNonNeg)
+      I->setNonNeg();
+    return I;
   }
 
   Value *CreateSIToFP(Value *V, Type *DestTy, const Twine &Name = ""){

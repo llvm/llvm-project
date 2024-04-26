@@ -1555,12 +1555,12 @@ private:
 
   // Shamelessly stolen from Analysis/CFRefCount.cpp
   Selector GetNullarySelector(const char* name) const {
-    IdentifierInfo* II = &CGM.getContext().Idents.get(name);
+    const IdentifierInfo *II = &CGM.getContext().Idents.get(name);
     return CGM.getContext().Selectors.getSelector(0, &II);
   }
 
   Selector GetUnarySelector(const char* name) const {
-    IdentifierInfo* II = &CGM.getContext().Idents.get(name);
+    const IdentifierInfo *II = &CGM.getContext().Idents.get(name);
     return CGM.getContext().Selectors.getSelector(1, &II);
   }
 
@@ -2500,12 +2500,12 @@ void CGObjCCommonMac::BuildRCRecordLayout(const llvm::StructLayout *RecLayout,
 
     if (const ArrayType *Array = CGM.getContext().getAsArrayType(FQT)) {
       auto *CArray = cast<ConstantArrayType>(Array);
-      uint64_t ElCount = CArray->getSize().getZExtValue();
+      uint64_t ElCount = CArray->getZExtSize();
       assert(CArray && "only array with known element size is supported");
       FQT = CArray->getElementType();
       while (const ArrayType *Array = CGM.getContext().getAsArrayType(FQT)) {
         auto *CArray = cast<ConstantArrayType>(Array);
-        ElCount *= CArray->getSize().getZExtValue();
+        ElCount *= CArray->getZExtSize();
         FQT = CArray->getElementType();
       }
       if (FQT->isRecordType() && ElCount) {
@@ -5327,7 +5327,7 @@ void IvarLayoutBuilder::visitField(const FieldDecl *field,
   }
   // Unlike incomplete arrays, constant arrays can be nested.
   while (auto arrayType = CGM.getContext().getAsConstantArrayType(fieldType)) {
-    numElts *= arrayType->getSize().getZExtValue();
+    numElts *= arrayType->getZExtSize();
     fieldType = arrayType->getElementType();
   }
 
@@ -6268,11 +6268,10 @@ bool CGObjCNonFragileABIMac::isVTableDispatchedSelector(Selector Sel) {
       VTableDispatchMethods.insert(GetUnarySelector("addObject"));
 
       // "countByEnumeratingWithState:objects:count"
-      IdentifierInfo *KeyIdents[] = {
-        &CGM.getContext().Idents.get("countByEnumeratingWithState"),
-        &CGM.getContext().Idents.get("objects"),
-        &CGM.getContext().Idents.get("count")
-      };
+      const IdentifierInfo *KeyIdents[] = {
+          &CGM.getContext().Idents.get("countByEnumeratingWithState"),
+          &CGM.getContext().Idents.get("objects"),
+          &CGM.getContext().Idents.get("count")};
       VTableDispatchMethods.insert(
         CGM.getContext().Selectors.getSelector(3, KeyIdents));
     }

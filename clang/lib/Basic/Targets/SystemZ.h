@@ -47,6 +47,7 @@ public:
     LongDoubleFormat = &llvm::APFloat::IEEEquad();
     DefaultAlignForAttributeAligned = 64;
     MinGlobalAlign = 16;
+    HasUnalignedAccess = true;
     if (Triple.isOSzOS()) {
       TLSSupported = false;
       // All vector types are default aligned on an 8-byte boundary, even if the
@@ -218,6 +219,10 @@ public:
 
   int getEHDataRegisterNumber(unsigned RegNo) const override {
     return RegNo < 4 ? 6 + RegNo : -1;
+  }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(256, 256);
   }
 };
 } // namespace targets

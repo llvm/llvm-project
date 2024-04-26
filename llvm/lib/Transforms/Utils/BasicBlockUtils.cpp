@@ -333,6 +333,10 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   // Finally, erase the old block and update dominator info.
   DeleteDeadBlock(BB, DTU);
 
+  // Remove redundant "llvm.dbg" instrunctions after blocks have been merged.
+  if (PredBB->getParent()->getSubprogram())
+    RemoveRedundantDbgInstrs(PredBB);
+
   return true;
 }
 
@@ -784,7 +788,7 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
     // If the successor only has a single pred, split the top of the successor
     // block.
     assert(SP == BB && "CFG broken");
-    SP = nullptr;
+    (void)SP;
     return SplitBlock(Succ, &Succ->front(), DT, LI, MSSAU, BBName,
                       /*Before=*/true);
   }

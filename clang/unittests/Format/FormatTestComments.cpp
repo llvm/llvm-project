@@ -376,6 +376,10 @@ TEST_F(FormatTestComments, RemovesTrailingWhitespaceOfComments) {
 TEST_F(FormatTestComments, UnderstandsBlockComments) {
   verifyFormat("f(/*noSpaceAfterParameterNamingComment=*/true);");
   verifyFormat("void f() { g(/*aaa=*/x, /*bbb=*/!y, /*c=*/::c); }");
+  verifyFormat("fooooooooooooooooooooooooooooo(\n"
+               "    /*qq_=*/move(q), [this, b](bar<void(uint32_t)> b) {},\n"
+               "    c);",
+               getLLVMStyleWithColumns(60));
   EXPECT_EQ("f(aaaaaaaaaaaaaaaaaaaaaaaaa, /* Trailing comment for aa... */\n"
             "  bbbbbbbbbbbbbbbbbbbbbbbbb);",
             format("f(aaaaaaaaaaaaaaaaaaaaaaaaa ,   \\\n"

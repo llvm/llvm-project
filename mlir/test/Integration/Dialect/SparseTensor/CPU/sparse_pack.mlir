@@ -231,7 +231,7 @@ module {
     %od = tensor.empty() : tensor<3xf64>
     %op = tensor.empty() : tensor<2xi32>
     %oi = tensor.empty() : tensor<3x2xi32>
-    %p, %i, %d, %dl, %pl, %il = sparse_tensor.disassemble %s5 : tensor<10x10xf64, #SortedCOOI32>
+    %p, %i, %d, %pl, %il, %dl = sparse_tensor.disassemble %s5 : tensor<10x10xf64, #SortedCOOI32>
                  out_lvls(%op, %oi : tensor<2xi32>, tensor<3x2xi32>)
                  out_vals(%od : tensor<3xf64>)
                  -> (tensor<2xi32>, tensor<3x2xi32>), tensor<3xf64>, (i32, i64), index
@@ -244,10 +244,13 @@ module {
     %vi = vector.transfer_read %i[%c0, %c0], %i0 : tensor<3x2xi32>, vector<3x2xi32>
     vector.print %vi : vector<3x2xi32>
 
+    // CHECK-NEXT: 3
+    vector.print %dl : index
+
     %d_csr = tensor.empty() : tensor<4xf64>
     %p_csr = tensor.empty() : tensor<3xi32>
     %i_csr = tensor.empty() : tensor<3xi32>
-    %rp_csr, %ri_csr, %rd_csr, %ld_csr, %lp_csr, %li_csr = sparse_tensor.disassemble %csr : tensor<2x2xf64, #CSR>
+    %rp_csr, %ri_csr, %rd_csr, %lp_csr, %li_csr, %ld_csr = sparse_tensor.disassemble %csr : tensor<2x2xf64, #CSR>
                  out_lvls(%p_csr, %i_csr : tensor<3xi32>, tensor<3xi32>)
                  out_vals(%d_csr : tensor<4xf64>)
                  -> (tensor<3xi32>, tensor<3xi32>), tensor<4xf64>, (i32, i64), index
@@ -255,6 +258,9 @@ module {
     // CHECK-NEXT: ( 1, 2, 3 )
     %vd_csr = vector.transfer_read %rd_csr[%c0], %f0 : tensor<4xf64>, vector<3xf64>
     vector.print %vd_csr : vector<3xf64>
+
+    // CHECK-NEXT: 3
+    vector.print %ld_csr : index
 
     %bod = tensor.empty() : tensor<6xf64>
     %bop = tensor.empty() : tensor<4xindex>

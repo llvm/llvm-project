@@ -59,6 +59,12 @@ unsigned AMDGPUTargetLowering::numBitsSigned(SDValue Op, SelectionDAG &DAG) {
 AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                                            const AMDGPUSubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
+  // Always lower memset, memcpy, and memmove intrinsics to load/store
+  // instructions, rather then generating calls to memset, mempcy or memmove.
+  MaxStoresPerMemset = MaxStoresPerMemsetOptSize = ~0U;
+  MaxStoresPerMemcpy = MaxStoresPerMemcpyOptSize = ~0U;
+  MaxStoresPerMemmove = MaxStoresPerMemmoveOptSize = ~0U;
+
   // Lower floating point store/load to integer store/load to reduce the number
   // of patterns in tablegen.
   setOperationAction(ISD::LOAD, MVT::f32, Promote);
@@ -141,6 +147,19 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::LOAD, MVT::i128, Promote);
   AddPromotedToType(ISD::LOAD, MVT::i128, MVT::v4i32);
+
+  // TODO: Would be better to consume as directly legal
+  setOperationAction(ISD::ATOMIC_LOAD, MVT::f32, Promote);
+  AddPromotedToType(ISD::ATOMIC_LOAD, MVT::f32, MVT::i32);
+
+  setOperationAction(ISD::ATOMIC_LOAD, MVT::f64, Promote);
+  AddPromotedToType(ISD::ATOMIC_LOAD, MVT::f64, MVT::i64);
+
+  setOperationAction(ISD::ATOMIC_LOAD, MVT::f16, Promote);
+  AddPromotedToType(ISD::ATOMIC_LOAD, MVT::f16, MVT::i16);
+
+  setOperationAction(ISD::ATOMIC_LOAD, MVT::bf16, Promote);
+  AddPromotedToType(ISD::ATOMIC_LOAD, MVT::bf16, MVT::i16);
 
   // There are no 64-bit extloads. These should be done as a 32-bit extload and
   // an extension to 64-bit.
@@ -851,12 +870,7 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode *N) const {
     return true;
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IntrID = N->getConstantOperandVal(0);
-    switch (IntrID) {
-    case Intrinsic::amdgcn_readfirstlane:
-    case Intrinsic::amdgcn_readlane:
-      return true;
-    }
-    return false;
+    return AMDGPU::isIntrinsicAlwaysUniform(IntrID);
   }
   case ISD::LOAD:
     if (cast<LoadSDNode>(N)->getMemOperand()->getAddrSpace() ==
@@ -5376,6 +5390,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(RETURN_TO_EPILOG)
   NODE_NAME_CASE(ENDPGM)
   NODE_NAME_CASE(ENDPGM_TRAP)
+  NODE_NAME_CASE(SIMULATED_TRAP)
   NODE_NAME_CASE(DWORDADDR)
   NODE_NAME_CASE(FRACT)
   NODE_NAME_CASE(SETCC)
