@@ -115,16 +115,12 @@ public:
   ArrayAttr getArrayAttr(ArrayRef<Attribute> value);
 
   // Returns a 0-valued attribute of the given `type`. This function only
-  // supports integer, and 16-/32-/64-bit float types, and vector or
+  // supports boolean, integer, and 16-/32-/64-bit float types, and vector or
   // ranked tensor of them. Returns null attribute otherwise.
   TypedAttr getZeroAttr(Type type);
   // Returns a 1-valued attribute of the given `type`.
   // Type constraints are the same as `getZeroAttr`.
   TypedAttr getOneAttr(Type type);
-  // Returns a numeric attribute of the given `type`.
-  // Type constraints are the same as `getZeroAttr`.
-  // Non float types are converted before returning the attribute.
-  TypedAttr getNumberAttr(double value, Type type);
 
   // Convenience methods for fixed types.
   FloatAttr getF16FloatAttr(float value);
