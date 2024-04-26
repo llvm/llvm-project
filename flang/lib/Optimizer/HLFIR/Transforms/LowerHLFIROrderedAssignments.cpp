@@ -732,7 +732,7 @@ OrderedAssignmentRewriter::generateYieldedLHS(
         // If the shape cannot be retrieved from the RHS, it must have been
         // saved. Get it from the temporary.
         auto &vectorTmp =
-            temp->second.cast<fir::factory::AnyVectorSubscriptStack>();
+            temp->mlir::cast<fir::factory::AnyVectorSubscriptStack>(second);
         loweredLhs.vectorSubscriptShape = vectorTmp.fetchShape(loc, builder);
       }
       loweredLhs.vectorSubscriptLoopNest = hlfir::genLoopNest(
@@ -1090,7 +1090,7 @@ void OrderedAssignmentRewriter::generateSaveEntity(
         mlir::Value loopExtent =
             computeLoopNestIterationNumber(loc, builder, loopNest);
         auto sequenceType =
-            builder.getVarLenSeqTy(entityType).cast<fir::SequenceType>();
+            mlir::cast<fir::SequenceType>(builder.getVarLenSeqTy(entityType));
         temp = insertSavedEntity(region,
                                  fir::factory::HomogeneousScalarStack{
                                      loc, builder, sequenceType, loopExtent,

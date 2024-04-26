@@ -624,7 +624,7 @@ struct FunctionLikeUnit : public ProgramUnit {
   FunctionLikeUnit(const FunctionLikeUnit &) = delete;
 
   bool isMainProgram() const {
-    return endStmt.isA<parser::Statement<parser::EndProgramStmt>>();
+    return mlir::isA<parser::Statement<parser::EndProgramStmt>>(endStmt);
   }
 
   /// Get the starting source location for this function like unit
