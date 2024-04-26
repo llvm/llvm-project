@@ -123,7 +123,7 @@ static constexpr CustomOperand SysMsgOperands[] = {
   {{""}},
   {{"SYSMSG_OP_ECC_ERR_INTERRUPT"},  OP_SYS_ECC_ERR_INTERRUPT},
   {{"SYSMSG_OP_REG_RD"},             OP_SYS_REG_RD},
-  {{"SYSMSG_OP_HOST_TRAP_ACK"},      OP_SYS_HOST_TRAP_ACK},
+  {{"SYSMSG_OP_HOST_TRAP_ACK"},      OP_SYS_HOST_TRAP_ACK,      isNotGFX9Plus},
   {{"SYSMSG_OP_TTRACE_PC"},          OP_SYS_TTRACE_PC},
 };
 
