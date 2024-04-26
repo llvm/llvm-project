@@ -1,5 +1,5 @@
-// This test checks that parent module maps that do not define any related
-// modules are not affecting.
+// This test checks that only module map files defining affecting modules are
+// affecting.
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
