@@ -130,6 +130,21 @@ The above packet helps when you have remote debugging abilities where you
 could launch a process on a remote host, this isn't needed for bare board
 debugging.
 
+## qLaunchSuccess
+
+### Brief
+
+Check whether launching a process with the `A` packet succeeded.
+
+### Description
+
+Returns the status of the last attempt to launch a process.
+Either `OK` if no error ocurred, or `E` followed by a string
+describing the error.
+
+### Priority To Implement
+
+High, launching processes is a key part of LLDB's platform mode.
 
 ## QEnvironment:NAME=VALUE
 
@@ -262,6 +277,20 @@ Or specify the working directory:
 QSetWorkingDir:<ascii-hex-path>
 ```
 This packet must be sent  _prior_ to sending a "A" packet.
+
+## qGetWorkingDir
+
+### Brief
+
+Get the current working directory of the platform stub in
+ASCII hex encoding.
+
+### Example
+
+```
+receive: qGetWorkingDir
+send:    2f4170706c65496e7465726e616c2f6c6c64622f73657474696e67732f342f5465737453657474696e67732e746573745f646973617373656d626c65725f73657474696e6773
+```
 
 ## QSetDisableASLR:\<bool\>
 
@@ -1029,13 +1058,17 @@ a remote host.
 
 Request: `qPlatform_mkdir:<hex-file-mode>,<ascii-hex-path>`
 
+The request packet has the fields:
+   1. mode bits in base 16
+   2. file path in ascii-hex encoding
+
 Reply: 
   * `F<mkdir-return-code>`
     (mkdir called successfully and returned with the given return code)
   * `Exx` (An error occurred)
 
 
-## qPlatform_chmod
+## vFile:chmod / qPlatform_chmod
 
 ### Brief
 
@@ -1900,6 +1933,43 @@ send packet: $qsProcessInfo#00
 read packet: $E04#00
 ```
 
+## qPathComplete (Platform Extension)
+
+### Brief
+
+Get a list of matched disk files/directories by passing a boolean flag
+and a partial path.
+
+### Example
+
+```
+receive: qPathComplete:0,6d61696e
+send:    M6d61696e2e637070
+receive: qPathComplete:1,746573
+send:    M746573742f,74657374732f
+```
+
+If the first argument is zero, the result should contain all
+files (including directories) starting with the given path. If the
+argument is one, the result should contain only directories.
+
+The result should be a comma-separated list of hex-encoded paths.
+Paths denoting a directory should end with a directory separator (`/` or `\`.
+
+## qKillSpawnedProcess (Platform Extension)
+
+### Brief
+
+Kill a process running on the target system.
+
+### Example
+
+```
+receive: qKillSpawnedProcess:1337
+send:    OK
+```
+The request packet has the process ID in base 10.
+
 ## qLaunchGDBServer (Platform Extension)
 
 ### Brief
@@ -2397,3 +2467,158 @@ STUB REPLIES: {"process_state_value":48,"process_state string":"dyld_process_sta
 Low. This packet is needed to prevent lldb's utility functions for
 scanning the Objective-C class list from running very early in
 process startup.
+
+## vFile Packets
+
+Though some of these may match the ones described in GDB's protocol
+documentation, we include our own expectations here in case of
+mismatches or extensions.
+
+### vFile:size
+
+#### Brief
+
+Get the size of a file on the target system, filename in ASCII hex.
+
+#### Example
+
+```
+receive: vFile:size:2f746d702f61
+send:    Fc008
+```
+
+response is `F` followed by the file size in base 16.
+`F-1,errno` with the errno if an error occurs, base 16.
+
+### vFile:mode
+
+#### Brief
+
+Get the mode bits of a file on the target system, filename in ASCII hex.
+
+#### Example
+
+```
+receive: vFile:mode:2f746d702f61
+send:    F1ed
+```
+
+response is `F` followed by the mode bits in base 16, this `0x1ed` would
+correspond to `0755` in octal.
+`F-1,errno` with the errno if an error occurs, base 16.
+
+### vFile:unlink
+
+#### Brief
+
+Remove a file on the target system.
+
+#### Example
+
+```
+receive: vFile:unlink:2f746d702f61
+send:    F0
+```
+
+Argument is a file path in ascii-hex encoding.
+Response is `F` plus the return value of `unlink()`, base 16 encoding.
+Return value may optionally be followed by a comma and the base16
+value of errno if unlink failed.
+
+### vFile:symlink
+
+#### Brief
+
+Create a symbolic link (symlink, soft-link) on the target system.
+
+#### Example
+
+```
+receive: vFile:symlink:<SRC-FILE>,<DST-NAME>
+send:    F0,0
+```
+
+Argument file paths are in ascii-hex encoding.
+Response is `F` plus the return value of `symlink()`, base 16 encoding,
+optionally followed by the value of errno if it failed, also base 16.
+
+### vFile:open
+
+#### Brief
+
+Open a file on the remote system and return the file descriptor of it.
+
+#### Example
+
+```
+receive: vFile:open:2f746d702f61,00000001,00000180
+send:    F8
+```
+
+request packet has the fields:
+   1. ASCII hex encoded filename
+   2. Flags passed to the open call, base 16.
+      Note that these are not the `oflags` that `open(2)` takes, but
+      are the constant values in `enum OpenOptions` from LLDB's
+      [`File.h`](https://github.com/llvm/llvm-project/blob/main/lldb/include/lldb/Host/File.h).
+   3. Mode bits, base 16
+
+response is `F` followed by the opened file descriptor in base 16.
+`F-1,errno` with the errno if an error occurs, base 16.
+
+### vFile:close
+
+#### Brief
+
+Close a previously opened file descriptor.
+
+#### Example
+
+```
+receive: vFile:close:7
+send:    F0
+```
+
+File descriptor is in base 16. `F-1,errno` with the errno if an error occurs,
+errno is base 16.
+
+### vFile:pread
+
+#### Brief
+
+Read data from an opened file descriptor.
+
+#### Example
+
+```
+receive: vFile:pread:7,1024,0
+send:    F4;a'b\00
+```
+
+Request packet has the fields:
+   1. File descriptor, base 16
+   2. Number of bytes to be read, base 16
+   3. Offset into file to start from, base 16
+
+Response is `F`, followed by the number of bytes read (base 16), a
+semicolon, followed by the data in the binary-escaped-data encoding.
+
+### vFile:pwrite
+
+#### Brief
+
+Write data to a previously opened file descriptor.
+
+#### Example
+
+```
+receive: vFile:pwrite:8,0,\cf\fa\ed\fe\0c\00\00
+send:    F1024
+```
+
+Request packet has the fields:
+   1. File descriptor, base 16
+   2. Offset into file to start from, base 16
+   3. binary-escaped-data to be written
+
+Response is `F`, followed by the number of bytes written (base 16).
