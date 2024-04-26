@@ -18011,8 +18011,7 @@ HandleImmediateInvocations(Sema &SemaRef,
                            Sema::ExpressionEvaluationContextRecord &Rec) {
   if ((Rec.ImmediateInvocationCandidates.size() == 0 &&
        Rec.ReferenceToConsteval.size() == 0) ||
-      Rec.isImmediateFunctionContext() ||
-      SemaRef.RebuildingImmediateInvocation)
+      Rec.isImmediateFunctionContext() || SemaRef.RebuildingImmediateInvocation)
     return;
 
   /// When we have more than 1 ImmediateInvocationCandidates or previously

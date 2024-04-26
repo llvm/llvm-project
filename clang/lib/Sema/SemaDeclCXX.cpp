@@ -18584,8 +18584,8 @@ void Sema::ActOnCXXExitDeclInitializer(Scope *S, Decl *D) {
       // An expression or conversion is in an 'immediate function context' if it
       // is potentially evaluated and either:
       // [...]
-      // - it is a subexpression of a manifestly constant-evaluated expression or
-      //   conversion.
+      // - it is a subexpression of a manifestly constant-evaluated expression
+      //   or conversion.
       ExprEvalContexts.back().InImmediateFunctionContext = true;
     }
   }
