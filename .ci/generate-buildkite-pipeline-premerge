@@ -91,7 +91,7 @@ function add-dependencies() {
     echo "${project}"
     case ${project} in
     bolt)
-      for p in lld llvm; do
+      for p in clang lld llvm; do
         echo $p
       done
     ;;
