@@ -1511,6 +1511,11 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
         return;
   }
 
+  // If the AVL isn't used in its predecessors then bail, since we have no AVL
+  // to insert a vsetvli with.
+  if (AvailableInfo.hasAVLIgnored())
+    return;
+
   // Model the effect of changing the input state of the block MBB to
   // AvailableInfo.  We're looking for two issues here; one legality,
   // one profitability.
