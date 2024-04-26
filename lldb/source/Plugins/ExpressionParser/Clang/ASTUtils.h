@@ -31,7 +31,7 @@ public:
 
   ~ExternalASTSourceWrapper() override;
 
-  clang::Decl *GetExternalDecl(uint32_t ID) override {
+  clang::Decl *GetExternalDecl(clang::GlobalDeclID ID) override {
     return m_Source->GetExternalDecl(ID);
   }
 
@@ -267,7 +267,7 @@ public:
   // ExternalASTSource.
   //===--------------------------------------------------------------------===//
 
-  clang::Decl *GetExternalDecl(uint32_t ID) override {
+  clang::Decl *GetExternalDecl(clang::GlobalDeclID ID) override {
     for (size_t i = 0; i < Sources.size(); ++i)
       if (clang::Decl *Result = Sources[i]->GetExternalDecl(ID))
         return Result;
