@@ -557,11 +557,10 @@ getCollapsedStride(memref::CollapseShapeOp collapseShape, OpBuilder &builder,
 /// baseBuffer, baseOffset, baseSizes, baseStrides =
 ///     extract_strided_metadata(memref)
 /// strides#i = baseStrides#i * subStrides#i
-/// offset = baseOffset + sum(subOffset#i * baseStrides#i)
 /// sizes = subSizes
 /// \endverbatim
 ///
-/// and return {baseBuffer, offset, sizes, strides}
+/// and return {baseBuffer, baseOffset, sizes, strides}
 template <typename ReassociativeReshapeLikeOp>
 static FailureOr<StridedMetadata> resolveReshapeStridedMetadata(
     RewriterBase &rewriter, ReassociativeReshapeLikeOp reshape,
