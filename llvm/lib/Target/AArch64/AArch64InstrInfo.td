@@ -232,7 +232,7 @@ def HasSVE2p1_or_HasSME2p1
                  AssemblerPredicateWithAll<(any_of FeatureSME2p1, FeatureSVE2p1), "sme2p1 or sve2p1">;
 
 def HasSMEF16F16orSMEF8F16
-    : Predicate<"Subtarget->hasSMEF6F16() || Subtarget->hasSMEF8F16()">,
+    : Predicate<"Subtarget->hasSMEF16F16() || Subtarget->hasSMEF8F16()">,
                 AssemblerPredicateWithAll<(any_of FeatureSMEF16F16, FeatureSMEF8F16),
                 "sme-f16f16 or sme-f8f16">;
 
