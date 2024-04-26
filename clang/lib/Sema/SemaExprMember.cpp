@@ -1800,7 +1800,6 @@ ExprResult Sema::ActOnMemberAccessExpr(Scope *S, Expr *Base,
   DecomposeUnqualifiedId(Id, TemplateArgsBuffer,
                          NameInfo, TemplateArgs);
 
-  DeclarationName Name = NameInfo.getName();
   bool IsArrow = (OpKind == tok::arrow);
 
   if (getLangOpts().HLSL && IsArrow)
