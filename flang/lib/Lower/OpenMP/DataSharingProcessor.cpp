@@ -19,6 +19,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include <variant>
 
 namespace Fortran {
 namespace lower {
@@ -397,44 +398,14 @@ void DataSharingProcessor::doPrivatize(
 
       firOpBuilder.setInsertionPointToEnd(allocEntryBlock);
 
-      fir::ExtendedValue localExV = symExV.match(
-          [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
-            return hlfir::translateToExtendedValue(
-                       symLoc, firOpBuilder,
-                       hlfir::Entity{allocRegion.getArgument(0)}, true)
-                .first;
-          },
-          [&](const fir::CharBoxValue &box) -> fir::ExtendedValue {
-            TODO(symLoc,
-                 "Delayed privatization is not supported for CharBoxValue");
-            return {};
-          },
-          [&](const fir::CharArrayBoxValue &box) -> fir::ExtendedValue {
-            TODO(
-                symLoc,
-                "Delayed privatization is not supported for CharArrayBoxValue");
-            return {};
-          },
-          [&](const fir::ProcBoxValue &box) -> fir::ExtendedValue {
-            TODO(symLoc,
-                 "Delayed privatization is not supported for ProcBoxValue");
-            return {};
-          },
-          [&](const fir::BoxValue &box) -> fir::ExtendedValue {
-            TODO(symLoc, "Delayed privatization is not supported for BoxValue");
-            return {};
-          },
-          [&](const fir::PolymorphicValue &box) -> fir::ExtendedValue {
-            TODO(symLoc,
-                 "Delayed privatization is not supported for PolymorphicValue");
-            return {};
-          },
-          [&](const auto &box) -> fir::ExtendedValue {
-            return hlfir::translateToExtendedValue(
-                       symLoc, firOpBuilder,
-                       hlfir::Entity{allocRegion.getArgument(0)}, true)
-                .first;
-          });
+      // TODO Delayed privatization has not been tested yet for: CharBoxValue,
+      // CharArrayBoxValue, BoxValue, or PolymorphicValue.
+      fir::ExtendedValue localExV =
+          hlfir::translateToExtendedValue(
+              symLoc, firOpBuilder, hlfir::Entity{allocRegion.getArgument(0)},
+              /*contiguousHint=*/
+              std::holds_alternative<fir::ArrayBoxValue>(symExV.matchee()))
+              .first;
 
       symTable->addSymbol(*sym, localExV);
       symTable->pushScope();

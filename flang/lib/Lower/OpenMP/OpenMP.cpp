@@ -1427,10 +1427,12 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
         reductionSyms;
     allSymbols.append(privateSyms);
     for (auto [arg, prv] : llvm::zip_equal(allSymbols, region.getArguments())) {
-      hlfir::Entity regionArgEntity{prv};
+      fir::ExtendedValue hostExV = converter.getSymbolExtendedValue(*arg);
       converter.bindSymbol(*arg, hlfir::translateToExtendedValue(
-                                     loc, firOpBuilder, regionArgEntity,
-                                     regionArgEntity.isArray())
+                                     loc, firOpBuilder, hlfir::Entity{prv},
+                                     /*contiguousHint=*/
+                                     std::holds_alternative<fir::ArrayBoxValue>(
+                                         hostExV.matchee()))
                                      .first);
     }
 
