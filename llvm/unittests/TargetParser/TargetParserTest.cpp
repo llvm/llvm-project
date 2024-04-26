@@ -2009,7 +2009,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SMEF16F16,    AArch64::AEK_CSSC,
       AArch64::AEK_RCPC3,        AArch64::AEK_THE,
       AArch64::AEK_D128,         AArch64::AEK_LSE128,
-      AArch64::AEK_SPECRES2,     AArch64::AEK_RASv2,
+      AArch64::AEK_SPECRES2,     AArch64::AEK_RASV2,
       AArch64::AEK_ITE,          AArch64::AEK_GCS,
       AArch64::AEK_FPMR,         AArch64::AEK_FP8,
       AArch64::AEK_FAMINMAX,     AArch64::AEK_FP8FMA,
