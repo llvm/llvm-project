@@ -2016,7 +2016,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SSVE_FP8FMA,  AArch64::AEK_FP8DOT2,
       AArch64::AEK_SSVE_FP8DOT2, AArch64::AEK_FP8DOT4,
       AArch64::AEK_SSVE_FP8DOT4, AArch64::AEK_LUT,
-      AArch64::AEK_SME_LUTv2,    AArch64::AEK_SMEF8F16,
+      AArch64::AEK_SME_LUTV2,    AArch64::AEK_SMEF8F16,
       AArch64::AEK_SMEF8F32,     AArch64::AEK_SMEFA64,
       AArch64::AEK_CPA,          AArch64::AEK_PAUTHLR,
       AArch64::AEK_TLBIW,        AArch64::AEK_JSCVT,

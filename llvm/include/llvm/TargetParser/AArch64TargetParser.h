@@ -108,11 +108,7 @@ enum ArchExtKind : unsigned {
   AEK_NONE = 1,
 #define ARM_EXTENSION(NAME, ENUM) ENUM,
 #include "llvm/TargetParser/AArch64TargetParserDef.inc"
-  AEK_NUM_EXTENSIONS,
-
-  // FIXME temporary fixes for inconsistent naming.
-  AEK_SME_LUTv2 = AEK_SME_LUTV2,
-
+  AEK_NUM_EXTENSIONS
 };
 using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
 
@@ -229,7 +225,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"fp8dot4", AArch64::AEK_FP8DOT4, "+fp8dot4", "-fp8dot4", FEAT_INIT, "", 0},
     {"ssve-fp8dot4", AArch64::AEK_SSVE_FP8DOT4, "+ssve-fp8dot4", "-ssve-fp8dot4", FEAT_INIT, "+sme2", 0},
     {"lut", AArch64::AEK_LUT, "+lut", "-lut", FEAT_INIT, "", 0},
-    {"sme-lutv2", AArch64::AEK_SME_LUTv2, "+sme-lutv2", "-sme-lutv2", FEAT_INIT, "", 0},
+    {"sme-lutv2", AArch64::AEK_SME_LUTV2, "+sme-lutv2", "-sme-lutv2", FEAT_INIT, "", 0},
     {"sme-f8f16", AArch64::AEK_SMEF8F16, "+sme-f8f16", "-sme-f8f16", FEAT_INIT, "+fp8,+sme2", 0},
     {"sme-f8f32", AArch64::AEK_SMEF8F32, "+sme-f8f32", "-sme-f8f32", FEAT_INIT, "+sme2,+fp8", 0},
     {"sme-fa64",  AArch64::AEK_SMEFA64,  "+sme-fa64", "-sme-fa64",  FEAT_INIT, "", 0},
