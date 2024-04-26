@@ -2463,7 +2463,7 @@ usual build cycle when using sample profilers for optimization:
 
    .. code-block:: winbatch
 
-     $ clang-cl -O2 -gdwarf -gline-tables-only ^
+     > clang-cl -O2 -gdwarf -gline-tables-only ^
        /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
        code.cc -o code -fuse-ld=lld -link -debug:dwarf
 
@@ -2547,22 +2547,40 @@ usual build cycle when using sample profilers for optimization:
    used in the first step. The only requirement is that you build the code
    with the same debug info options and ``-fprofile-sample-use``.
 
+   On Linux:
+
    .. code-block:: console
 
      $ clang++ -O2 -gline-tables-only \
        -fdebug-info-for-profiling -funique-internal-linkage-names \
        -fprofile-sample-use=code.prof code.cc -o code
 
-  [OPTIONAL] Sampling-based profiles can have inaccuracies or missing block/
-  edge counters. The profile inference algorithm (profi) can be used to infer
-  missing blocks and edge counts, and improve the quality of profile data.
-  Enable it with ``-fsample-profile-use-profi``.
+   On Windows:
 
-  .. code-block:: console
+   .. code-block:: winbatch
 
-    $ clang++ -O2 -gline-tables-only -fprofile-sample-use=code.prof \
-      -fdebug-info-for-profiling -funique-internal-linkage-names \
-      -fsample-profile-use-profi code.cc -o code
+     > clang-cl -O2 -gdwarf -gline-tables-only ^
+       /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
+       -fprofile-sample-use=code.prof code.cc -o code -fuse-ld=lld -link -debug:dwarf
+
+   [OPTIONAL] Sampling-based profiles can have inaccuracies or missing block/
+   edge counters. The profile inference algorithm (profi) can be used to infer
+   missing blocks and edge counts, and improve the quality of profile data.
+   Enable it with ``-fsample-profile-use-profi``. For example, on Linux:
+
+   .. code-block:: console
+
+     $ clang++ -fsample-profile-use-profi -O2 -gline-tables-only \
+       -fdebug-info-for-profiling -funique-internal-linkage-names \
+       -fprofile-sample-use=code.prof code.cc -o code
+
+   On Windows:
+
+   .. code-block:: winbatch
+
+     > clang-cl /clang:-fsample-profile-use-profi -O2 -gdwarf -gline-tables-only ^
+       /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
+       -fprofile-sample-use=code.prof code.cc -o code -fuse-ld=lld -link -debug:dwarf
 
 Sample Profile Formats
 """"""""""""""""""""""
