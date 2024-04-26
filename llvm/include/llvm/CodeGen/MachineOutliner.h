@@ -255,8 +255,8 @@ public:
   unsigned getBenefit() const {
     unsigned NotOutlinedCost = getNotOutlinedCost();
     unsigned OutlinedCost = getOutliningCost();
-    return (NotOutlinedCost < OutlinedCost) ? 0
-                                            : NotOutlinedCost - OutlinedCost;
+    return (NotOutlinedCost <= OutlinedCost) ? 0
+                                             : NotOutlinedCost - OutlinedCost;
   }
 
   /// Return the number of instructions in this sequence.
