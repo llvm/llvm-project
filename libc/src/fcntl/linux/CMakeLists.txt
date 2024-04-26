@@ -18,6 +18,9 @@ add_entrypoint_object(
     ../fcntl.h
   DEPENDS
     libc.include.fcntl
+    libc.include.llvm-libc-types.struct_flock
+    libc.include.llvm-libc-types.struct_flock64
+    libc.hdr.fcntl_macros
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )

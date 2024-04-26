@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_SRC_FCNTL_FCNTL_H
 #define LLVM_LIBC_SRC_FCNTL_FCNTL_H
 
-#include <fcntl.h>
-
 namespace LIBC_NAMESPACE {
 
 int fcntl(int fd, int cmd, ...);

@@ -8,6 +8,9 @@
 
 #include "src/fcntl/fcntl.h"
 
+#include "hdr/fcntl_macros.h"
+#include "hdr/types/struct_flock.h"
+#include "hdr/types/struct_flock64.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/errno/libc_errno.h"
@@ -15,12 +18,19 @@
 #include <stdarg.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace {
+// To avoid conflict with system headers when building
+// in overlay mode.
+namespace helper {
+enum pid_type {
+  F_OWNER_TID = 0,
+  F_OWNER_PID,
+  F_OWNER_PGRP,
+};
 struct fowner_ex {
-  int type;
+  enum pid_type type;
   pid_t pid;
 };
-} // namespace
+} // namespace helper
 
 // The OFD file locks require special handling for LARGEFILES
 namespace LIBC_NAMESPACE {
@@ -35,7 +45,7 @@ LLVM_LIBC_FUNCTION(int, fcntl, (int fd, int cmd, ...)) {
   case F_SETLKW:
     return syscall_impl<int>(SYS_fcntl, fd, cmd, arg);
   case F_OFD_SETLKW: {
-    struct flock *flk = (struct flock *)arg;
+    struct flock *flk = reinterpret_cast<struct flock *>(arg);
     // convert the struct to a flock64
     struct flock64 flk64;
     flk64.l_type = flk->l_type;
@@ -48,7 +58,7 @@ LLVM_LIBC_FUNCTION(int, fcntl, (int fd, int cmd, ...)) {
   }
   case F_OFD_GETLK:
   case F_OFD_SETLK: {
-    struct flock *flk = (struct flock *)arg;
+    struct flock *flk = reinterpret_cast<struct flock *>(arg);
     // convert the struct to a flock64
     struct flock64 flk64;
     flk64.l_type = flk->l_type;
@@ -63,8 +73,8 @@ LLVM_LIBC_FUNCTION(int, fcntl, (int fd, int cmd, ...)) {
       return -1;
     // Check for overflow, i.e. the offsets are not the same when cast
     // to off_t from off64_t.
-    if ((off_t)flk64.l_len != flk64.l_len ||
-        (off_t)flk64.l_start != flk64.l_start) {
+    if (static_cast<off_t>(flk64.l_len) != flk64.l_len ||
+        static_cast<off_t>(flk64.l_start) != flk64.l_start) {
       libc_errno = EOVERFLOW;
       return -1;
     }
@@ -79,17 +89,18 @@ LLVM_LIBC_FUNCTION(int, fcntl, (int fd, int cmd, ...)) {
     // The general case
   default: {
     if (cmd == F_GETOWN) {
-      struct fowner_ex fex;
+      struct helper::fowner_ex fex;
       int retVal = syscall_impl<int>(SYS_fcntl, fd, F_GETOWN_EX, &fex);
       if (retVal == -EINVAL)
-        return syscall_impl<int>(SYS_fcntl, fd, cmd, (void *)arg);
-      if ((uint64_t)retVal <= -4096UL)
-        return fex.type == F_OWNER_PGRP ? -fex.pid : fex.pid;
+        return syscall_impl<int>(SYS_fcntl, fd, cmd,
+                                 reinterpret_cast<void *>(arg));
+      if (static_cast<uint64_t>(retVal) <= -4096UL)
+        return fex.type == helper::F_OWNER_PGRP ? -fex.pid : fex.pid;
 
       libc_errno = -retVal;
       return -1;
     }
-    return syscall_impl<int>(SYS_fcntl, fd, cmd, (void *)arg);
+    return syscall_impl<int>(SYS_fcntl, fd, cmd, reinterpret_cast<void *>(arg));
   }
   }
 }
