@@ -3893,7 +3893,8 @@ namespace {
     }
 
     void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *E) {
-      if (const CXXDestructorDecl *DtorDecl = E->getTemporary()->getDestructor()) {
+      if (const CXXDestructorDecl *DtorDecl =
+              E->getTemporary()->getDestructor()) {
         if (DtorDecl->isTrivial()) {
           Inherited::VisitStmt(E);
           return;
