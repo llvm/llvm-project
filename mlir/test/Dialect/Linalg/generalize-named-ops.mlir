@@ -661,15 +661,13 @@ func.func @generalize_square(%arg: memref<7x14x21xf32>, %out: memref<7x14x21xf32
 // CHECK: func @generalize_square
 // CHECK-SAME: (%[[ARG:.+]]: memref<7x14x21xf32>, %[[OUT:.+]]: memref<7x14x21xf32>)
 
-// CHECK: %[[two:.+]] = arith.constant 2.000000e+00 : f32
-
 // CHECK: linalg.generic
 // CHECK-SAME: indexing_maps = [#[[MAP]], #[[MAP]]]
 // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel"]}
 // CHECK-SAME:  ins(%[[LHS]] : memref<7x14x21xf32>) outs(%[[OUT]] : memref<7x14x21xf32>)
 
 // CHECK:         ^{{.+}}(%[[BBARG0:.+]]: f32, %[[BBARG1:.+]]: f32)
-// CHECK-NEXT:      %[[square:.+]] = math.powf %[[BBARG0]], %[[two]] : f32
+// CHECK-NEXT:      %[[square:.+]] = arith.mulf %[[BBARG0]], %[[BBARG0]] : f32
 // CHECK-NEXT:      linalg.yield %[[square]] : f32
 
 // -----

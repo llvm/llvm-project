@@ -407,12 +407,8 @@ public:
       return builder.create<math::SqrtOp>(arg.getLoc(), arg);
     case UnaryFn::rsqrt:
       return builder.create<math::RsqrtOp>(arg.getLoc(), arg);
-    case UnaryFn::square: {
-      Attribute twoAttr = builder.getNumberAttr(2.0, arg.getType());
-      auto two = builder.create<arith::ConstantOp>(arg.getLoc(),
-                                                   ::cast<TypedAttr>(twoAttr));
-      return builder.create<math::PowFOp>(arg.getLoc(), arg, two);
-    }
+    case UnaryFn::square:
+      return builder.create<arith::MulFOp>(arg.getLoc(), arg, arg);
     case UnaryFn::tanh:
       return builder.create<math::TanhOp>(arg.getLoc(), arg);
     }
