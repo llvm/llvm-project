@@ -44,7 +44,7 @@ fn:
   sb                                    // AEK_SB
   sha256h q0, q0, v0.4s                 // AEK_SHA2
   bcax v0.16b, v0.16b, v0.16b, v0.16b   // AEK_SHA3
-  addp v0.4s, v0.4s, v0.4s              // AEK_SIMD (neon)
+  addp v0.4s, v0.4s, v0.4s              // AEK_NEON
   sm4e v0.4s, v0.4s                     // AEK_SM4
   addha za0.s, p0/m, p0/m, z0.s         // AEK_SME
   fadd za.h[w11, 7], {z12.h - z13.h}    // AEK_SMEF16F16

@@ -99,7 +99,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
     CPU = llvm::sys::getHostCPUName();
 
   if (CPU == "generic") {
-    Extensions.enable(llvm::AArch64::AEK_SIMD);
+    Extensions.enable(llvm::AArch64::AEK_NEON);
   } else {
     const std::optional<llvm::AArch64::CpuInfo> CpuInfo =
         llvm::AArch64::parseCpu(CPU);
