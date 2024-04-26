@@ -10,6 +10,7 @@
 
 typedef struct {
   int pshared;
+  int pref;
 } pthread_rwlockattr_t;
 
 #endif // LLVM_LIBC_TYPES_PTHREAD_RWLOCKATTR_T_H
