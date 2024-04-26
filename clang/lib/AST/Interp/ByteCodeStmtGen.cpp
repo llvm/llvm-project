@@ -189,14 +189,23 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
         if (!emitFieldInitializer(F, F->Offset, InitExpr))
           return false;
       } else if (const Type *Base = Init->getBaseClass()) {
-        // Base class initializer.
-        // Get This Base and call initializer on it.
         const auto *BaseDecl = Base->getAsCXXRecordDecl();
         assert(BaseDecl);
-        const Record::Base *B = R->getBase(BaseDecl);
-        assert(B);
-        if (!this->emitGetPtrThisBase(B->Offset, InitExpr))
-          return false;
+
+        if (Init->isBaseVirtual()) {
+          assert(R->getVirtualBase(BaseDecl));
+          if (!this->emitGetPtrThisVirtBase(BaseDecl, InitExpr))
+            return false;
+
+        } else {
+          // Base class initializer.
+          // Get This Base and call initializer on it.
+          const Record::Base *B = R->getBase(BaseDecl);
+          assert(B);
+          if (!this->emitGetPtrThisBase(B->Offset, InitExpr))
+            return false;
+        }
+
         if (!this->visitInitializer(InitExpr))
           return false;
         if (!this->emitFinishInitPop(InitExpr))
