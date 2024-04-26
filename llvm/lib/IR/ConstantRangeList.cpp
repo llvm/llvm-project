@@ -33,26 +33,16 @@ void ConstantRangeList::insert(const ConstantRange &NewRange) {
     Ranges.insert(Ranges.begin(), NewRange);
     return;
   }
-  if (std::find(Ranges.begin(), Ranges.end(), NewRange) != Ranges.end()) {
-    return;
-  }
-  if (size() == 1) {
-    // With all above checks (front/back/size), this branch means "NewRanges"
-    // overlaps with the singleton range in the list.
-    const ConstantRange &CurRange = Ranges.front();
-    APInt NewLower = APIntOps::smin(CurRange.getLower(), NewRange.getLower());
-    APInt NewUpper = APIntOps::smax(CurRange.getUpper(), NewRange.getUpper());
-    Ranges.clear();
-    Ranges.push_back(ConstantRange(NewLower, NewUpper));
-    return;
-  }
 
-  // Slow insert.
   auto LowerBound =
       std::lower_bound(Ranges.begin(), Ranges.end(), NewRange,
                        [](const ConstantRange &a, const ConstantRange &b) {
                          return a.getLower().slt(b.getLower());
                        });
+  if (LowerBound != Ranges.end() && *LowerBound == NewRange)
+    return;
+
+  // Slow insert.
   SmallVector<ConstantRange, 2> ExistingTail(LowerBound, Ranges.end());
   Ranges.erase(LowerBound, Ranges.end());
   // "sle" instead of "slt" to merge consecutive ranges.

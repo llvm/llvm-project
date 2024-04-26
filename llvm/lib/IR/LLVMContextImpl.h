@@ -57,7 +57,6 @@ class AttributeListImpl;
 class AttributeSetNode;
 class BasicBlock;
 class ConstantRangeAttributeImpl;
-class ConstantRangeListAttributeImpl;
 struct DiagnosticHandler;
 class DPMarker;
 class ElementCount;
@@ -1566,8 +1565,6 @@ public:
   UniqueStringSaver Saver{Alloc};
   SpecificBumpPtrAllocator<ConstantRangeAttributeImpl>
       ConstantRangeAttributeAlloc;
-  SpecificBumpPtrAllocator<ConstantRangeListAttributeImpl>
-      ConstantRangeListAttributeAlloc;
 
   DenseMap<unsigned, IntegerType *> IntegerTypes;
 

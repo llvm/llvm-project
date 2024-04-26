@@ -246,20 +246,17 @@ class ConstantRangeListAttributeImpl final
       private TrailingObjects<ConstantRangeListAttributeImpl, ConstantRange> {
   friend TrailingObjects;
 
-  unsigned ValSize;
-  size_t numTrailingObjects(OverloadToken<ConstantRange>) const {
-    return ValSize;
-  }
+  unsigned Size;
+  size_t numTrailingObjects(OverloadToken<ConstantRange>) const { return Size; }
 
 public:
   ConstantRangeListAttributeImpl(Attribute::AttrKind Kind,
                                  ArrayRef<ConstantRange> Val)
-      : EnumAttributeImpl(ConstantRangeListAttrEntry, Kind),
-        ValSize(Val.size()) {
+      : EnumAttributeImpl(ConstantRangeListAttrEntry, Kind), Size(Val.size()) {
     ConstantRange *TrailingCR = getTrailingObjects<ConstantRange>();
-    assert(ValSize > 0);
+    assert(Size > 0);
     unsigned BitWidth = Val.front().getLower().getBitWidth();
-    for (unsigned I = 0; I != ValSize; ++I) {
+    for (unsigned I = 0; I != Size; ++I) {
       assert(BitWidth == Val[I].getLower().getBitWidth());
       new (&TrailingCR[I]) ConstantRange(BitWidth, false);
     }
@@ -267,7 +264,7 @@ public:
   }
 
   ArrayRef<ConstantRange> getConstantRangeListValue() const {
-    return ArrayRef(getTrailingObjects<ConstantRange>(), ValSize);
+    return ArrayRef(getTrailingObjects<ConstantRange>(), Size);
   }
 
   static size_t totalSizeToAlloc(ArrayRef<ConstantRange> Val) {
