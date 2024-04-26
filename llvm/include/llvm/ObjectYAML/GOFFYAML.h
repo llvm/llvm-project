@@ -29,8 +29,8 @@ struct FileHeader {
   uint32_t TargetEnvironment = 0;
   uint32_t TargetOperatingSystem = 0;
   uint16_t CCSID = 0;
-  StringRef CharacterSetName;
-  StringRef LanguageProductIdentifier;
+  std::string CharacterSetName;
+  std::string LanguageProductIdentifier;
   uint32_t ArchitectureLevel = 0;
   std::optional<uint16_t> InternalCCSID;
   std::optional<uint8_t> TargetSoftwareEnvironment;

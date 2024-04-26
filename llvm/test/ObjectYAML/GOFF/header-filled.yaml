@@ -1,0 +1,21 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+# CHECK:      --- !GOFF
+# CHECK-NEXT: FileHeader:
+# CHECK-NEXT:   TargetEnvironment: 1
+# CHECK-NEXT:   TargetOperatingSystem: 2
+# CHECK-NEXT:   CCSID:           1047
+# CHECK-NEXT:   CharacterSetName: EBCDIC-1047
+# CHECK-NEXT:   LanguageProductIdentifier: Foo
+# CHECK-NEXT:   ArchitectureLevel: 2
+# CHECK: ...
+
+--- !GOFF
+FileHeader:
+  TargetEnvironment: 1
+  TargetOperatingSystem: 2
+  CCSID:           1047
+  CharacterSetName: EBCDIC-1047
+  LanguageProductIdentifier: Foo
+  ArchitectureLevel: 2
+...
