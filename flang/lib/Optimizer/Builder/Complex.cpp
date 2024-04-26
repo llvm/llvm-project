@@ -14,8 +14,7 @@
 
 mlir::Type
 fir::factory::Complex::getComplexPartType(mlir::Type complexType) const {
-  return builder.getRealType(
-      mlir::cast<fir::ComplexType>(complexType).getFKind());
+  return builder.getRealType(complexType.cast<fir::ComplexType>().getFKind());
 }
 
 mlir::Type fir::factory::Complex::getComplexPartType(mlir::Value cplx) const {
