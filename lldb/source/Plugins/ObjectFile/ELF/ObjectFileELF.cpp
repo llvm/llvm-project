@@ -1864,7 +1864,6 @@ static SectionSP FindMatchingSection(const SectionList &section_list,
 
   addr_t vm_addr = section->GetFileAddress();
   ConstString name = section->GetName();
-  offset_t file_size = section->GetFileSize();
   offset_t byte_size = section->GetByteSize();
   SectionType type = section->GetType();
   bool thread_specific = section->IsThreadSpecific();
@@ -1875,8 +1874,7 @@ static SectionSP FindMatchingSection(const SectionList &section_list,
     if (sect->GetName() == name && sect->GetType() == type &&
         sect->IsThreadSpecific() == thread_specific &&
         sect->GetPermissions() == permissions &&
-        sect->GetFileSize() == file_size && sect->GetByteSize() == byte_size &&
-        sect->GetFileAddress() == vm_addr &&
+        sect->GetByteSize() == byte_size && sect->GetFileAddress() == vm_addr &&
         sect->GetLog2Align() == alignment) {
       sect_sp = sect;
       break;
