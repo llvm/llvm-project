@@ -11,19 +11,20 @@
 //===----------------------------------------------------------------------===//
 
 // TODO: Add other DW-based macros.
-#if !(                                                                         \
-    defined HANDLE_DW_TAG || defined HANDLE_DW_AT || defined HANDLE_DW_FORM || \
-    defined HANDLE_DW_OP || defined HANDLE_DW_OP_LLVM_USEROP ||                    \
-    defined HANDLE_DW_LANG || defined HANDLE_DW_ATE ||                         \
-    defined HANDLE_DW_VIRTUALITY || defined HANDLE_DW_DEFAULTED ||             \
-    defined HANDLE_DW_CC || defined HANDLE_DW_LNS || defined HANDLE_DW_LNE ||  \
-    defined HANDLE_DW_LNCT || defined HANDLE_DW_MACRO ||                       \
-    defined HANDLE_DW_MACRO_GNU || defined HANDLE_MACRO_FLAG ||                \
-    defined HANDLE_DW_RLE || defined HANDLE_DW_LLE ||                          \
-    (defined HANDLE_DW_CFA && defined HANDLE_DW_CFA_PRED) ||                   \
-    defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||                \
-    defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                   \
-    defined HANDLE_DW_END || defined HANDLE_DW_SECT)
+#if !(defined HANDLE_DW_TAG || defined HANDLE_DW_AT ||                         \
+      defined HANDLE_DW_FORM || defined HANDLE_DW_OP ||                        \
+      defined HANDLE_DW_OP_LLVM_USEROP || defined HANDLE_DW_LANG ||            \
+      defined HANDLE_DW_LNAME || defined HANDLE_DW_ATE ||                      \
+      defined HANDLE_DW_VIRTUALITY || defined HANDLE_DW_DEFAULTED ||           \
+      defined HANDLE_DW_CC || defined HANDLE_DW_LNS ||                         \
+      defined HANDLE_DW_LNE || defined HANDLE_DW_LNCT ||                       \
+      defined HANDLE_DW_MACRO || defined HANDLE_DW_MACRO_GNU ||                \
+      defined HANDLE_MACRO_FLAG || defined HANDLE_DW_RLE ||                    \
+      defined HANDLE_DW_LLE ||                                                 \
+      (defined HANDLE_DW_CFA && defined HANDLE_DW_CFA_PRED) ||                 \
+      defined HANDLE_DW_APPLE_PROPERTY || defined HANDLE_DW_UT ||              \
+      defined HANDLE_DWARF_SECTION || defined HANDLE_DW_IDX ||                 \
+      defined HANDLE_DW_END || defined HANDLE_DW_SECT)
 #error "Missing macro definition of HANDLE_DW*"
 #endif
 
@@ -59,6 +60,10 @@
 
 #ifndef HANDLE_DW_LANG
 #define HANDLE_DW_LANG(ID, NAME, LOWER_BOUND, VERSION, VENDOR)
+#endif
+
+#ifndef HANDLE_DW_LNAME
+#define HANDLE_DW_LNAME(ID, NAME, DESC, LOWER_BOUND)
 #endif
 
 #ifndef HANDLE_DW_ATE
@@ -950,12 +955,81 @@ HANDLE_DW_LANG(0x002c, C17, 0, 0, DWARF)
 HANDLE_DW_LANG(0x002d, Fortran18, 0, 0, DWARF)
 HANDLE_DW_LANG(0x002e, Ada2005, 0, 0, DWARF)
 HANDLE_DW_LANG(0x002f, Ada2012, 0, 0, DWARF)
+HANDLE_DW_LANG(0x0030, HIP, 0, 0, DWARF)
+HANDLE_DW_LANG(0x0031, Assembly, 0, 0, DWARF)
+HANDLE_DW_LANG(0x0032, C_sharp, 0, 0, DWARF)
 HANDLE_DW_LANG(0x0033, Mojo, 0, 0, DWARF)
+HANDLE_DW_LANG(0x0034, GLSL, 0, 0, DWARF)
+HANDLE_DW_LANG(0x0035, GLSL_ES, 0, 0, DWARF)
+HANDLE_DW_LANG(0x0036, HLSL, 0, 0, DWARF)
+HANDLE_DW_LANG(0x0037, OpenCL_CPP, 0, 0, DWARF)
+HANDLE_DW_LANG(0x0038, CPP_for_OpenCL, 0, 0, DWARF)
+HANDLE_DW_LANG(0x0039, SYCL, 0, 0, DWARF)
+HANDLE_DW_LANG(0x0040, Ruby, 0, 0, DWARF)
+HANDLE_DW_LANG(0x0041, Move, 0, 0, DWARF)
+HANDLE_DW_LANG(0x0042, Hylo, 0, 0, DWARF)
+
 // Vendor extensions:
 HANDLE_DW_LANG(0x8001, Mips_Assembler, std::nullopt, 0, MIPS)
 HANDLE_DW_LANG(0x8e57, GOOGLE_RenderScript, 0, 0, GOOGLE)
 HANDLE_DW_LANG(0xb000, BORLAND_Delphi, 0, 0, BORLAND)
 
+// Tentative DWARF 6 language codes. This list is subject to change.
+HANDLE_DW_LNAME(0x0001, Ada, "ISO Ada", 1) // YYYY
+HANDLE_DW_LNAME(0x0002, BLISS, "BLISS", 0)
+//     YYYYMM
+// K&R 000000
+// C89 198912
+// C99 199901
+// C11 201112
+// C17 201710
+// C23 202311
+HANDLE_DW_LNAME(0x0003, C, "C (K&R and ISO)", 0)
+//       YYYYMM
+// C++98 199711
+// C++03 200310
+// C++11 201103
+// C++14 201402
+// C++17 201703
+// C++20 202002
+HANDLE_DW_LNAME(0x0004, C_plus_plus, "ISO C++", 0)
+HANDLE_DW_LNAME(0x0005, Cobol, "ISO Cobol", 1) // YYYY
+HANDLE_DW_LNAME(0x0006, Crystal, "Crystal", 0)
+HANDLE_DW_LNAME(0x0007, D, "D", 0)
+HANDLE_DW_LNAME(0x0008, Dylan, "Dylan", 0)
+HANDLE_DW_LNAME(0x0009, Fortran, "ISO Fortran", 1) // YYYY
+HANDLE_DW_LNAME(0x000a, Go, "Go", 0)
+HANDLE_DW_LNAME(0x000b, Haskell, "Haskell", 0)
+HANDLE_DW_LNAME(0x000c, Java, "Java", 0)
+HANDLE_DW_LNAME(0x000d, Julia, "Julia", 1)
+HANDLE_DW_LNAME(0x000e, Kotlin, "Kotlin", 0)
+HANDLE_DW_LNAME(0x000f, Modula2, "Modula 2", 1)
+HANDLE_DW_LNAME(0x0010, Modula3, "Modula 3", 1)
+HANDLE_DW_LNAME(0x0011, ObjC, "Objective C", 0) // YYYYMM
+HANDLE_DW_LNAME(0x0012, ObjC_plus_plus, "Objective C++", 0) // YYYYMM
+HANDLE_DW_LNAME(0x0013, OCaml, "OCaml", 0)
+HANDLE_DW_LNAME(0x0014, OpenCL_C, "OpenCL C", 0)
+HANDLE_DW_LNAME(0x0015, Pascal, "ISO Pascal", 1) // YYYY
+HANDLE_DW_LNAME(0x0016, PLI, "ANSI PL/I", 1)
+HANDLE_DW_LNAME(0x0017, Python, "Python", 0)
+HANDLE_DW_LNAME(0x0018, RenderScript, "RenderScript Kernel Language", 0)
+HANDLE_DW_LNAME(0x0019, Rust, "Rust", 0)
+HANDLE_DW_LNAME(0x001a, Swift, "Swift", 0) // VVMM
+HANDLE_DW_LNAME(0x001b, UPC, "Unified Parallel C (UPC)", 0)
+HANDLE_DW_LNAME(0x001c, Zig, "Zig", 0)
+HANDLE_DW_LNAME(0x001d, Assembly, "Assembly", 0)
+// Conflict: HANDLE_DW_LNAME(0x001d, HIP, "HIP", 0)
+HANDLE_DW_LNAME(0x001e, C_sharp, "C#", 0)
+HANDLE_DW_LNAME(0x001f, Mojo, "Mojo", 0)
+HANDLE_DW_LNAME(0x0020, GLSL, "OpenGL Shading Language", 0) // VVMMPP
+HANDLE_DW_LNAME(0x0021, GLSL_ES, "OpenGL ES Shading Language", 0) // VVMMPP
+HANDLE_DW_LNAME(0x0022, HLSL, "High Level Shading Language", 0) // YYYY
+HANDLE_DW_LNAME(0x0023, OpenCL_CPP, "OpenCL C++", 0) // VVMM
+HANDLE_DW_LNAME(0x0024, CPP_for_OpenCL, "C++ for OpenCL", 0) // VVMM
+HANDLE_DW_LNAME(0x0025, SYCL, "SYCL", 0) // YYYYRR
+HANDLE_DW_LNAME(0x0026, Ruby, "Ruby", 0) // VVMMPP
+HANDLE_DW_LNAME(0x0027, Move, "Move", 0) // YYYYMM
+HANDLE_DW_LNAME(0x0028, Hylo, "Hylo", 0)
 
 // DWARF attribute type encodings.
 HANDLE_DW_ATE(0x01, address, 2, DWARF)
@@ -1267,6 +1341,7 @@ HANDLE_DW_SECT(8, RNGLISTS)
 #undef HANDLE_DW_OP
 #undef HANDLE_DW_OP_LLVM_USEROP
 #undef HANDLE_DW_LANG
+#undef HANDLE_DW_LNAME
 #undef HANDLE_DW_ATE
 #undef HANDLE_DW_VIRTUALITY
 #undef HANDLE_DW_DEFAULTED
