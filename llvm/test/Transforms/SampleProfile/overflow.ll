@@ -65,6 +65,6 @@ attributes #0 = { "use-sample-profile" }
 !25 = !DILocation(line: 10, column: 1, scope: !10)
 !26 = !DISubprogram(name: "sqrt", linkageName: "_Z4sqrti", scope: !11, file: !11, line: 1, type: !12, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
 
-; CHECK: edge %entry -> %return probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK: edge %entry -> %if.else probability is 0x00000000 / 0x80000000 = 0.00%
+; CHECK: edge %entry -> %return probability is 0x00000000 / 0x80000000 = 0.00%
+; CHECK: edge %entry -> %if.else probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ; CHECK: edge %if.else -> %return probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
