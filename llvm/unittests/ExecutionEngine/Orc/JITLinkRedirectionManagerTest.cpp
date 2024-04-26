@@ -38,7 +38,7 @@ protected:
             nullptr, nullptr, JTMB->getTargetTriple().getTriple()));
     JD = &ES->createBareJITDylib("main");
     ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(
-        *ES, std::make_unique<InProcessMemoryManager>(4096));
+        *ES, std::make_unique<InProcessMemoryManager>(16384));
     DL = std::make_unique<DataLayout>(
         cantFail(JTMB->getDefaultDataLayoutForTarget()));
   }
@@ -49,8 +49,7 @@ protected:
 };
 
 TEST_F(JITLinkRedirectionManagerTest, BasicRedirectionOperation) {
-  auto RM =
-      JITLinkRedirectableSymbolManager::Create(*ES, *ObjLinkingLayer, *JD);
+  auto RM = JITLinkRedirectableSymbolManager::Create(*ObjLinkingLayer, *JD);
   // Bail out if we can not create
   if (!RM) {
     consumeError(RM.takeError());
@@ -65,7 +64,7 @@ TEST_F(JITLinkRedirectionManagerTest, BasicRedirectionOperation) {
           // No dependencies registered, can't fail.
           cantFail(
               R->notifyResolved({{Target, {Addr, JITSymbolFlags::Exported}}}));
-          cantFail(R->notifyEmitted());
+          cantFail(R->notifyEmitted({}));
         })));
     return cantFail(ES->lookup({JD}, TargetName));
   };

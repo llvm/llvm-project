@@ -17,6 +17,7 @@ using namespace llvm::orc;
 void JITLinkRedirectableSymbolManager::emitRedirectableSymbols(
     std::unique_ptr<MaterializationResponsibility> R,
     const SymbolAddrMap &InitialDests) {
+  auto &ES = ObjLinkingLayer.getExecutionSession();
   std::unique_lock<std::mutex> Lock(Mutex);
   if (GetNumAvailableStubs() < InitialDests.size())
     if (auto Err = grow(InitialDests.size() - GetNumAvailableStubs())) {
@@ -37,7 +38,6 @@ void JITLinkRedirectableSymbolManager::emitRedirectableSymbols(
       R->failMaterialization();
       return;
     }
-    dbgs() << *K << "\n";
     SymbolToStubs[&TargetJD][K] = StubID;
     NewSymbolDefs[K] = JumpStubs[StubID];
     NewSymbolDefs[K].setFlags(V.getFlags());
@@ -45,13 +45,14 @@ void JITLinkRedirectableSymbolManager::emitRedirectableSymbols(
     AvailableStubs.pop_back();
   }
 
-  if (auto Err = R->replace(absoluteSymbols(NewSymbolDefs))) {
+  // FIXME: when this fails we can return stubs to the pool
+  if (auto Err = redirectInner(TargetJD, InitialDests)) {
     ES.reportError(std::move(Err));
     R->failMaterialization();
     return;
   }
 
-  if (auto Err = redirectInner(TargetJD, InitialDests)) {
+  if (auto Err = R->replace(absoluteSymbols(NewSymbolDefs))) {
     ES.reportError(std::move(Err));
     R->failMaterialization();
     return;
@@ -85,10 +86,10 @@ Error JITLinkRedirectableSymbolManager::redirectInner(
     StubHandle StubID = SymbolToStubs[&TargetJD].at(K);
     PtrWrites.push_back({StubPointers[StubID].getAddress(), V.getAddress()});
   }
-  if (auto Err = ES.getExecutorProcessControl().getMemoryAccess().writePointers(
-          PtrWrites))
-    return Err;
-  return Error::success();
+  return ObjLinkingLayer.getExecutionSession()
+      .getExecutorProcessControl()
+      .getMemoryAccess()
+      .writePointers(PtrWrites);
 }
 
 Error JITLinkRedirectableSymbolManager::grow(unsigned Need) {
@@ -103,16 +104,18 @@ Error JITLinkRedirectableSymbolManager::grow(unsigned Need) {
   SymbolLookupSet LookupSymbols;
   DenseMap<SymbolStringPtr, ExecutorSymbolDef *> NewDefsMap;
 
+  auto &ES = ObjLinkingLayer.getExecutionSession();
   Triple TT = ES.getTargetTriple();
   auto G = std::make_unique<jitlink::LinkGraph>(
       "<INDIRECT STUBS>", TT, TT.isArch64Bit() ? 8 : 4,
-      TT.isLittleEndian() ? support::little : support::big,
+      TT.isLittleEndian() ? endianness::little : endianness::big,
       jitlink::getGenericEdgeKindName);
   auto &PointerSection =
       G->createSection(StubPtrTableName, MemProt::Write | MemProt::Read);
   auto &StubsSection =
       G->createSection(JumpStubTableName, MemProt::Exec | MemProt::Read);
 
+  // FIXME: We can batch the stubs into one block and use address to access them
   for (size_t I = OldSize; I < NewSize; I++) {
     auto Pointer = AnonymousPtrCreator(*G, PointerSection, nullptr, 0);
     if (auto Err = Pointer.takeError())
