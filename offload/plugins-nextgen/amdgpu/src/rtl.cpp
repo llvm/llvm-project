@@ -933,8 +933,11 @@ private:
       } else {
         // num_teams clause is not specified. Choose lower of tripcount-based
         // num-groups and a value that maximizes occupancy. At this point, aim
-        // to have 16 wavefronts in a CU.
-        uint64_t MaxOccupancyFactor = 16 / NumWavesInGroup;
+        // to have 16 wavefronts in a CU. Allow for override with envar.
+        uint64_t MaxOccupancyFactor =
+            GenericDevice.getOMPXBigJumpLoopTeamsPerCU() > 0
+                ? GenericDevice.getOMPXBigJumpLoopTeamsPerCU()
+                : 16 / NumWavesInGroup;
         NumGroups = std::min(NumGroups, MaxOccupancyFactor * DeviceNumCUs);
 
         // If the user specifies a number of teams for low trip count loops,
@@ -1065,10 +1068,22 @@ private:
         TripCountNumBlocks = LoopTripCount;
       }
     }
+
+    auto getAdjustedDefaultNumBlocks =
+        [this](GenericDeviceTy &GenericDevice,
+               uint64_t DeviceNumCUs) -> uint64_t {
+      if (!isGenericSPMDMode() ||
+          GenericDevice.getOMPXGenericSpmdTeamsPerCU() == 0)
+        return static_cast<uint64_t>(GenericDevice.getDefaultNumBlocks());
+      return DeviceNumCUs * static_cast<uint64_t>(
+                                GenericDevice.getOMPXGenericSpmdTeamsPerCU());
+    };
+
     // If the loops are long running we rather reuse blocks than spawn too many.
     // Additionally, under an env-var, adjust the number of teams based on the
     // number of wave-slots in a CU that we aim to occupy.
-    uint64_t AdjustedNumBlocks = GenericDevice.getDefaultNumBlocks();
+    uint64_t AdjustedNumBlocks =
+        getAdjustedDefaultNumBlocks(GenericDevice, DeviceNumCUs);
     if (GenericDevice.getOMPXAdjustNumTeamsForSmallBlockSize()) {
       uint64_t DefaultNumWavesInGroup =
           (GenericDevice.getDefaultNumThreads() - 1) /
@@ -2462,6 +2477,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_NumQueues("LIBOMPTARGET_AMDGPU_NUM_HSA_QUEUES", 4),
         OMPX_QueueSize("LIBOMPTARGET_AMDGPU_HSA_QUEUE_SIZE", 512),
         OMPX_DefaultTeamsPerCU("LIBOMPTARGET_AMDGPU_TEAMS_PER_CU", 6),
+        OMPX_GenericSpmdTeamsPerCU(
+            "LIBOMPTARGET_AMDGPU_GENERIC_SPMD_TEAMS_PER_CU", 0),
+        OMPX_BigJumpLoopTeamsPerCU(
+            "LIBOMPTARGET_AMDGPU_BIG_JUMP_LOOP_TEAMS_PER_CU", 0),
         OMPX_LowTripCount("LIBOMPTARGET_AMDGPU_LOW_TRIPCOUNT", 2000),
         OMPX_SmallBlockSize("LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT", 8),
         OMPX_NumBlocksForLowTripcount("LIBOMPTARGET_BLOCKS_FOR_LOW_TRIP_COUNT",
@@ -2514,6 +2533,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return OMPX_NumQueues;
   }
 
+  virtual uint32_t getOMPXGenericSpmdTeamsPerCU() const override {
+    return OMPX_GenericSpmdTeamsPerCU;
+  }
+  virtual uint32_t getOMPXBigJumpLoopTeamsPerCU() const override {
+    return OMPX_BigJumpLoopTeamsPerCU;
+  }
   virtual uint32_t getOMPXLowTripCount() const override {
     return OMPX_LowTripCount;
   }
@@ -3874,6 +3899,18 @@ private:
   /// of compute units (CUs) the device has:
   ///   #default_teams = OMPX_DefaultTeamsPerCU * #CUs.
   UInt32Envar OMPX_DefaultTeamsPerCU;
+
+  /// Envar for controlling the number of teams relative to the number of
+  /// compute units (CUs) for generic-SPMD kernels. 0 indicates that this value
+  /// is not specified, so instead OMPX_DefaultTeamsPerCU should be used. If
+  /// non-zero, the number of teams = OMPX_GenericSpmdTeamsPerCU * #CUs.
+  UInt32Envar OMPX_GenericSpmdTeamsPerCU;
+
+  /// Envar for controlling the number of teams relative to the number of
+  /// compute units (CUs) for Big-Jump-Loop kernels. 0 indicates that this value
+  /// is not specified. If non-zero, the number of teams =
+  /// OMPX_BigJumpLoopTeamsPerCU * #CUs.
+  UInt32Envar OMPX_BigJumpLoopTeamsPerCU;
 
   /// Envar specifying tripcount below which the blocksize should be adjusted.
   UInt32Envar OMPX_LowTripCount;

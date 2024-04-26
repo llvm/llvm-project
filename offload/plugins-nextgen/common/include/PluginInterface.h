@@ -887,6 +887,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   uint32_t getDynamicMemorySize() const { return OMPX_SharedMemorySize; }
   virtual uint64_t getClockFrequency() const { return CLOCKS_PER_SEC; }
 
+  virtual uint32_t getOMPXGenericSpmdTeamsPerCU() const {
+    llvm_unreachable("Unimplemented");
+  }
+  virtual uint32_t getOMPXBigJumpLoopTeamsPerCU() const {
+    llvm_unreachable("Unimplemented");
+  }
   virtual uint32_t getOMPXLowTripCount() const {
     llvm_unreachable("Unimplemented");
   }
