@@ -63,6 +63,8 @@ public:
                           const SymbolMap &InitialDests) = 0;
 };
 
+/// RedirectableMaterializationUnit materializes redirectable symbol
+/// by invoking RedirectableSymbolManager::emitRedirectableSymbols
 class RedirectableMaterializationUnit : public MaterializationUnit {
 public:
   RedirectableMaterializationUnit(RedirectableSymbolManager &RM,

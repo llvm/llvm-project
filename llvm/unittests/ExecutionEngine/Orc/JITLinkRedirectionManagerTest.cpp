@@ -49,8 +49,7 @@ protected:
 };
 
 TEST_F(JITLinkRedirectionManagerTest, BasicRedirectionOperation) {
-  auto RM =
-      JITLinkRedirectableSymbolManager::Create(*ES, *ObjLinkingLayer, *JD);
+  auto RM = JITLinkRedirectableSymbolManager::Create(*ObjLinkingLayer, *JD);
   // Bail out if we can not create
   if (!RM) {
     consumeError(RM.takeError());
