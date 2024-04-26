@@ -111,7 +111,6 @@ enum ArchExtKind : unsigned {
   AEK_NUM_EXTENSIONS,
 
   // FIXME temporary fixes for inconsistent naming.
-  AEK_SVE2p1 = AEK_SVE2P1,
   AEK_SME_LUTv2 = AEK_SME_LUTV2,
 
 };
@@ -215,7 +214,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"sve2-sha3", AArch64::AEK_SVE2SHA3, "+sve2-sha3", "-sve2-sha3", FEAT_SVE_SHA3, "+sve2,+sve,+sve2-sha3,+fullfp16,+fp-armv8,+neon", 410},
     {"sve2-sm4", AArch64::AEK_SVE2SM4, "+sve2-sm4", "-sve2-sm4", FEAT_SVE_SM4, "+sve2,+sve,+sve2-sm4,+fullfp16,+fp-armv8,+neon", 420},
     {"sve2", AArch64::AEK_SVE2, "+sve2", "-sve2", FEAT_SVE2, "+sve2,+sve,+fullfp16,+fp-armv8,+neon", 370},
-    {"sve2p1", AArch64::AEK_SVE2p1, "+sve2p1", "-sve2p1", FEAT_INIT, "+sve2p1,+sve2,+sve,+fullfp16,+fp-armv8,+neon", 0},
+    {"sve2p1", AArch64::AEK_SVE2P1, "+sve2p1", "-sve2p1", FEAT_INIT, "+sve2p1,+sve2,+sve,+fullfp16,+fp-armv8,+neon", 0},
     {"the", AArch64::AEK_THE, "+the", "-the", FEAT_INIT, "", 0},
     {"tme", AArch64::AEK_TME, "+tme", "-tme", FEAT_INIT, "", 0},
     {"wfxt", AArch64::AEK_NONE, {}, {}, FEAT_WFXT, "+wfxt", 550},
@@ -316,7 +315,7 @@ inline constexpr ExtensionDependency ExtensionDependencies[] = {
   {AEK_SVE, AEK_SVE2},
   {AEK_SVE, AEK_F32MM},
   {AEK_SVE, AEK_F64MM},
-  {AEK_SVE2, AEK_SVE2p1},
+  {AEK_SVE2, AEK_SVE2P1},
   {AEK_SVE2, AEK_SVE2BITPERM},
   {AEK_SVE2, AEK_SVE2AES},
   {AEK_SVE2, AEK_SVE2SHA3},
