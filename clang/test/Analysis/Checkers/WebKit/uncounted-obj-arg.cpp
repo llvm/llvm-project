@@ -201,6 +201,8 @@ public:
   unsigned trivial25() const { return __c11_atomic_load((volatile _Atomic(unsigned) *)&v, __ATOMIC_RELAXED); }
   bool trivial26() { bool hasValue = v; return !hasValue; }
   bool trivial27(int v) { bool value; value = v ? 1 : 0; return value; }
+  bool trivial28() { return false; }
+  bool trivial29() { return true; }
 
   static RefCounted& singleton() {
     static RefCounted s_RefCounted;
@@ -322,6 +324,8 @@ public:
     getFieldTrivial().trivial25(); // no-warning
     getFieldTrivial().trivial26(); // no-warning
     getFieldTrivial().trivial27(5); // no-warning
+    getFieldTrivial().trivial28(); // no-warning
+    getFieldTrivial().trivial29(); // no-warning
     RefCounted::singleton().trivial18(); // no-warning
     RefCounted::singleton().someFunction(); // no-warning
 

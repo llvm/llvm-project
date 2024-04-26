@@ -463,6 +463,7 @@ public:
   bool VisitFixedPointLiteral(const FixedPointLiteral *E) { return true; }
   bool VisitCharacterLiteral(const CharacterLiteral *E) { return true; }
   bool VisitStringLiteral(const StringLiteral *E) { return true; }
+  bool VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E) { return true; }
 
   bool VisitConstantExpr(const ConstantExpr *CE) {
     // Constant expressions are trivial.
