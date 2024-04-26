@@ -10,6 +10,9 @@ class RISCVProfile<string name, list<SubtargetFeature> features>
     : SubtargetFeature<name, "RISCVProfile", NAME,
                        "RISC-V " # name # " profile", features>;
 
+defvar RVI20U32Features = [Feature32Bit, FeatureStdExtI];
+defvar RVI20U64Features = [Feature64Bit, FeatureStdExtI];
+
 defvar RVA20U64Features = [Feature64Bit,
                            FeatureStdExtI,
                            FeatureStdExtM,
@@ -188,8 +191,8 @@ defvar RVM23U32Features = [Feature32Bit,
                            FeatureStdExtZimop,
                            FeatureStdExtZcmop];
 
-def RVI20U32 : RISCVProfile<"rvi20u32", [Feature32Bit]>;
-def RVI20U64 : RISCVProfile<"rvi20u64", [Feature64Bit]>;
+def RVI20U32 : RISCVProfile<"rvi20u32", RVI20U32Features>;
+def RVI20U64 : RISCVProfile<"rvi20u64", RVI20U64Features>;
 def RVA20U64 : RISCVProfile<"rva20u64", RVA20U64Features>;
 def RVA20S64 : RISCVProfile<"rva20s64", RVA20S64Features>;
 def RVA22U64 : RISCVProfile<"rva22u64", RVA22U64Features>;
