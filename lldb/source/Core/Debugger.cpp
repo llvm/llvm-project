@@ -745,12 +745,18 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
 void Debugger::HandleDestroyCallback() {
   std::lock_guard<std::recursive_mutex> guard(m_destroy_callback_mutex);
   const lldb::user_id_t user_id = GetID();
-  for (const auto &element : m_destroy_callback_and_baton) {
-    const auto &callback = element.second.first;
-    const auto &baton = element.second.second;
-    callback(user_id, baton);
+  // In case one destroy callback adds or removes other destroy callbacks
+  // which aren't taken care of in the same inner loop.
+  while (m_destroy_callback_and_baton.size()) {
+    auto iter = m_destroy_callback_and_baton.begin();
+    while (iter != m_destroy_callback_and_baton.end()) {
+      // Invoke the callback and remove the entry from the map
+      const auto &callback = iter->second.first;
+      const auto &baton = iter->second.second;
+      callback(user_id, baton);
+      iter = m_destroy_callback_and_baton.erase(iter);
+    }
   }
-  m_destroy_callback_and_baton.clear();
 }
 
 void Debugger::Destroy(DebuggerSP &debugger_sp) {
