@@ -1435,7 +1435,7 @@ void StmtProfiler::VisitMatrixSubscriptExpr(const MatrixSubscriptExpr *S) {
   VisitExpr(S);
 }
 
-void StmtProfiler::VisitOMPArraySectionExpr(const OMPArraySectionExpr *S) {
+void StmtProfiler::VisitArraySectionExpr(const ArraySectionExpr *S) {
   VisitExpr(S);
 }
 
@@ -2495,6 +2495,12 @@ void OpenACCClauseProfiler::VisitIfClause(const OpenACCIfClause &Clause) {
 void OpenACCClauseProfiler::VisitSelfClause(const OpenACCSelfClause &Clause) {
   if (Clause.hasConditionExpr())
     Profiler.VisitStmt(Clause.getConditionExpr());
+}
+
+void OpenACCClauseProfiler::VisitNumGangsClause(
+    const OpenACCNumGangsClause &Clause) {
+  for (auto *E : Clause.getIntExprs())
+    Profiler.VisitStmt(E);
 }
 
 void OpenACCClauseProfiler::VisitNumWorkersClause(

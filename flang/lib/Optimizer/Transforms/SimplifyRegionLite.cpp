@@ -45,7 +45,3 @@ void SimplifyRegionLitePass::runOnOperation() {
   (void)mlir::eraseUnreachableBlocks(rewriter, regions);
   (void)mlir::runRegionDCE(rewriter, regions);
 }
-
-std::unique_ptr<mlir::Pass> fir::createSimplifyRegionLitePass() {
-  return std::make_unique<SimplifyRegionLitePass>();
-}

@@ -884,18 +884,19 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
 
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
+  using namespace llvm::VPlanPatternMatch;
   // Try to remove redundant blend recipes.
   if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
     VPValue *Inc0 = Blend->getIncomingValue(0);
     for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
-      if (Inc0 != Blend->getIncomingValue(I))
+      if (Inc0 != Blend->getIncomingValue(I) &&
+          !match(Blend->getMask(I), m_False()))
         return;
     Blend->replaceAllUsesWith(Inc0);
     Blend->eraseFromParent();
     return;
   }
 
-  using namespace llvm::VPlanPatternMatch;
   VPValue *A;
   if (match(&R, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
     VPValue *Trunc = R.getVPSingleValue();
@@ -1031,7 +1032,9 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       if (auto *VPW = dyn_cast<VPRecipeWithIRFlags>(&R))
         VPW->dropPoisonGeneratingFlags();
 
-      if (OldResSizeInBits != NewResSizeInBits) {
+      using namespace llvm::VPlanPatternMatch;
+      if (OldResSizeInBits != NewResSizeInBits &&
+          !match(&R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue()))) {
         // Extend result to original width.
         auto *Ext =
             new VPWidenCastRecipe(Instruction::ZExt, ResultVPV, OldResTy);
@@ -1040,8 +1043,9 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         Ext->setOperand(0, ResultVPV);
         assert(OldResSizeInBits > NewResSizeInBits && "Nothing to shrink?");
       } else
-        assert(cast<VPWidenRecipe>(&R)->getOpcode() == Instruction::ICmp &&
-               "Only ICmps should not need extending the result.");
+        assert(
+            match(&R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue())) &&
+            "Only ICmps should not need extending the result.");
 
       assert(!isa<VPWidenStoreRecipe>(&R) && "stores cannot be narrowed");
       if (isa<VPWidenLoadRecipe>(&R))

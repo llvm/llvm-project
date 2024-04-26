@@ -137,7 +137,8 @@ static bool runOnFunction(Function &F, bool PostInlining) {
 
 PreservedAnalyses
 llvm::EntryExitInstrumenterPass::run(Function &F, FunctionAnalysisManager &AM) {
-  runOnFunction(F, PostInlining);
+  if (!runOnFunction(F, PostInlining))
+    return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   return PA;
