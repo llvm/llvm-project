@@ -213,9 +213,9 @@ public:
   }
 
   Qualifiers readQualifiers() {
-    static_assert(sizeof(Qualifiers().getAsOpaqueValue()) <= sizeof(uint32_t),
+    static_assert(sizeof(Qualifiers().getAsOpaqueValue()) <= sizeof(uint64_t),
                   "update this if the value size changes");
-    uint32_t value = asImpl().readUInt32();
+    uint64_t value = asImpl().readUInt64();
     return Qualifiers::fromOpaqueValue(value);
   }
 
