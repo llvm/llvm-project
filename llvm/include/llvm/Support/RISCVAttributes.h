@@ -32,20 +32,7 @@ enum AttrType : unsigned {
   PRIV_SPEC = 8,
   PRIV_SPEC_MINOR = 10,
   PRIV_SPEC_REVISION = 12,
-  ATOMIC_ABI = 14,
 };
-
-namespace RISCVAtomicAbiTag {
-enum AtomicABI : unsigned {
-  // Values for Tag_RISCV_atomic_abi
-  // Defined at
-  // https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-elf.adoc#tag_riscv_atomic_abi-14-uleb128version
-  UNKNOWN = 0,
-  A6C = 1,
-  A6S = 2,
-  A7 = 3,
-};
-} // namespace RISCVAtomicAbiTag
 
 enum { NOT_ALLOWED = 0, ALLOWED = 1 };
 
