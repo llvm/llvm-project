@@ -129,7 +129,7 @@ C++2c Feature Support
 
 - Implemented `P2662R3 Pack Indexing <https://wg21.link/P2662R3>`_.
 
-- Implemented `P2573R2: = delete("should have a reason"); <https://wg21.link/P2573R2>`_.
+- Implemented `P2573R2: = delete("should have a reason"); <https://wg21.link/P2573R2>`_
 
 - Implemented `P2748R5 Disallow Binding a Returned Glvalue to a Temporary <https://wg21.link/P2748R5>`_.
 
