@@ -22,19 +22,21 @@ class VOP2Me <bits<8> op, VOPMProfile pfl> : Enc64 {
   bits<10> vdst;
   bits<11> src0;
   bits<11> src1;
-  bits<11> src2;
   bits<6> aux_data;
 
+  // TODO-GFX13: Inst{9-0} = vdst;
   let Inst{7-0} = vdst{7-0};
   let Inst{11-10} = ?;    // vdst_idx
-  let Inst{12} = ?;       // clmp
   let Inst{13} = ?;       // supr
 
-  let Inst{24-17} = op;
-  let Inst{31-25} = 0x37; // encoding
+  let Inst{22-15} = op;
+  let Inst{31-24} = 0xdc; // encoding
 
+  // TODO-GFX13: Inst{42-32} = src0;
   let Inst{40-32} = src0{8-0};
   let Inst{44-43} = ?;    // src0_idx
+
+  // TODO-GFX13: Inst{55-45} = !if(pfl.HasSrc1, src1, ?);
   let Inst{53-45} = !if(pfl.HasSrc1, src1{8-0}, ?);
   let Inst{57-56} = ?;    // src1_idx
 
@@ -229,13 +231,14 @@ multiclass VOP3M_Real_Base<GFXGen Gen, bits<8> op,
 
 multiclass VOP3M_Real_gfx13 <bits<8> op> : VOP3M_Real_Base <GFX13Gen, op>;
 
+defm V_PERMUTE_PAIR_2SRC_ROTATE_GROUP_B32 : VOP2M_Real_gfx13 <0x0>;
+defm V_PERMUTE_PAIR_GENSGPR_B32           : VOP2M_Real_gfx13 <0x1>;
+defm V_PERMUTE_PAIR_BCAST_B32             : VOP2M_Real_gfx13 <0x2>;
+defm V_BPERMUTE_B32                       : VOP2M_Real_gfx13 <0x3>;
+
 // TODO-GFX13: Replace invented opcodes
 
-defm V_MOV_2SRC_B64              : VOP2M_Real_gfx13 <0x42>;
-defm V_BPERMUTE_B32              : VOP2M_Real_gfx13 <0x43>;
-defm V_PERMUTE_PAIR_BCAST_B32    : VOP2M_Real_gfx13 <0x44>;
-defm V_PERMUTE_PAIR_GENSGPR_B32  : VOP2M_Real_gfx13 <0x45>;
-defm V_PERMUTE_PAIR_2SRC_ROTATE_GROUP_B32 : VOP2M_Real_gfx13 <0x46>;
+defm V_MOV_2SRC_B64                       : VOP2M_Real_gfx13 <0x4>;
 
 defm V_PERMUTE_PAIR_2SRC_INTERLEAVE_B64   : VOP3M_Real_gfx13 <0x3E>;
 defm V_PERMUTE_PACK_TENSOR_2SRC_B64       : VOP3M_Real_gfx13 <0x3F>;
