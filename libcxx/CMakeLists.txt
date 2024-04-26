@@ -329,6 +329,23 @@ endif()
 option(LIBCXX_HERMETIC_STATIC_LIBRARY
   "Do not export any symbols from the static library." ${LIBCXX_HERMETIC_STATIC_LIBRARY_DEFAULT})
 
+# If a toolchain uses the multilib layout for different instrumented binaries,
+# it's possible to run into nondeterministic behavior when generating __config_site
+# because there's only one __config_site per target triple and doesn't consider
+# multilibs. For example, both an unininstrumented libcxx and ASAN-instrumented
+# libcxx for riscv64-unknown-fuchsia will write to the exact same __config_site.
+# Depending on which is the last step to execute, the __config_site could come
+# from the uninstrumented multilib build which means _LIBCPP_INSTRUMENTED_WITH_ASAN
+# won't be defined which can result in false positives when doing container overflow
+# checks. Ideally, each multilib would have its own unique __config_site and
+# clang would know which __config_site to use. This option allows multilib users
+# to just always have this #cmakedefine set. This is fine for multilib users because
+# clang will know which runtime to used based on sanitizer flags. Likewise, headers
+# that check if container annotations are available are gated on __has_feature(address_sanitizer).
+option(LIBCXX_FORCE_LIBCPP_INSTRUMENTED_WITH_ASAN_FOR_MULTILIBS
+       "For multilib toolchains, always ensure _LIBCPP_INSTRUMENTED_WITH_ASAN is set."
+       OFF)
+
 #===============================================================================
 # Check option configurations
 #===============================================================================
@@ -663,7 +680,8 @@ target_compile_options(cxx-sanitizer-flags INTERFACE ${SANITIZER_FLAGS})
 # will not be compiled into it, resulting in false positives.
 # For context, read: https://github.com/llvm/llvm-project/pull/72677#pullrequestreview-1765402800
 string(FIND "${LLVM_USE_SANITIZER}" "Address" building_with_asan)
-if (NOT "${building_with_asan}" STREQUAL "-1")
+if ((NOT "${building_with_asan}" STREQUAL "-1") OR
+    ${LIBCXX_FORCE_LIBCPP_INSTRUMENTED_WITH_ASAN_FOR_MULTILIBS})
   config_define(ON _LIBCPP_INSTRUMENTED_WITH_ASAN)
 endif()
 
