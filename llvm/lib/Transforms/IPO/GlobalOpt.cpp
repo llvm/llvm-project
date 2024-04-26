@@ -2524,7 +2524,8 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
 
     // Try to remove trivial global destructors if they are not removed
     // already.
-    if (Function *CXAAtExitFn = FindAtExitLibFunc(M, GetTLI, LibFunc_cxa_atexit))
+    if (Function *CXAAtExitFn =
+            FindAtExitLibFunc(M, GetTLI, LibFunc_cxa_atexit))
       LocalChange |= OptimizeEmptyGlobalAtExitDtors(CXAAtExitFn, true);
 
     if (Function *AtExitFn = FindAtExitLibFunc(M, GetTLI, LibFunc_atexit))
