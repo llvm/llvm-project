@@ -1461,7 +1461,7 @@ floating point semantic models: precise (the default), strict, and fast.
   "allow_reassociation", "off", "off", "on"
 
 The ``-ffp-model`` option does not modify the ``fdenormal-fp-math``
-setting, but it does have an impact on whether ``crtfastmath.o``is
+setting, but it does have an impact on whether ``crtfastmath.o`` is
 linked. Because linking ``crtfastmath.o`` has a global effect on the
 program, and because the global denormal handling can be changed in
 other ways, the state of ``fdenormal-fp-math`` handling cannot
