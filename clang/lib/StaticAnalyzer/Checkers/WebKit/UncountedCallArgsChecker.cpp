@@ -220,10 +220,17 @@ public:
     return NamespaceName == "WTF" &&
            (MethodName == "find" || MethodName == "findIf" ||
             MethodName == "reverseFind" || MethodName == "reverseFindIf" ||
+            MethodName == "findIgnoringASCIICase" ||
             MethodName == "get" || MethodName == "inlineGet" ||
-            MethodName == "contains" || MethodName == "containsIf") &&
+            MethodName == "contains" || MethodName == "containsIf" ||
+            MethodName == "containsIgnoringASCIICase" ||
+            MethodName == "startsWith" || MethodName == "endsWith" ||
+            MethodName == "startsWithIgnoringASCIICase" ||
+            MethodName == "endsWithIgnoringASCIICase" ||
+            MethodName == "substring") &&
            (ClsName.ends_with("Vector") || ClsName.ends_with("Set") ||
-            ClsName.ends_with("Map"));
+            ClsName.ends_with("Map") || ClsName == "StringImpl" ||
+            ClsName.ends_with("String"));
   }
 
   void reportBug(const Expr *CallArg, const ParmVarDecl *Param) const {
