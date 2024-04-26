@@ -8373,9 +8373,9 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
         // copy-initialization of a temporary of the appropriate type, which for
         // this expression is identical to the return statement (since NRVO
         // doesn't apply), and not really build a `return create<From>()` in
-        // type traits expression evaluation. Therefor, P2748R5 has no impact for
-        // {__is_convertible, __is_nothrow_convertible, __is_convertible_to}
-        // evaluation.
+        // type traits expression evaluation. Therefor, P2748R5 has no impact
+        // for evaluation of
+        // {__is_convertible, __is_nothrow_convertible, __is_convertible_to}.
         //
         // Clang can correctly handle cases like the following:
         //
