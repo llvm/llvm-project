@@ -502,7 +502,7 @@ def : ProcNoItin<"cortex-a710",                         [ARMv9a, ProcA710,
                                                          FeatureHWDivARM,
                                                          FeatureFP16FML,
                                                          FeatureBF16,
-                                                         FeatureMatMulInt8,
+                                                         FeatureI8MM,
                                                          FeatureSB]>;
 
 def : ProcNoItin<"cortex-x1",                           [ARMv82a, ProcX1,
@@ -528,7 +528,7 @@ def : ProcNoItin<"neoverse-v1",                         [ARMv84a,
                                                          FeatureCRC,
                                                          FeatureFullFP16,
                                                          FeatureBF16,
-                                                         FeatureMatMulInt8]>;
+                                                         FeatureI8MM]>;
 
 def : ProcNoItin<"neoverse-n1",                         [ARMv82a,
                                                          FeatureHWDivThumb,
@@ -540,7 +540,7 @@ def : ProcNoItin<"neoverse-n1",                         [ARMv82a,
 def : ProcNoItin<"neoverse-n2",                         [ARMv9a,
                                                          FeatureBF16,
                                                          FeatureFP16FML,
-                                                         FeatureMatMulInt8]>;
+                                                         FeatureI8MM]>;
 
 def : ProcessorModel<"cyclone",     SwiftModel,         [ARMv8a, ProcSwift,
                                                          FeatureHasRetAddrStack,

@@ -461,7 +461,7 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
 
-def FeatureMatMulInt8 : Extension<"i8mm", "MatMulInt8",
+def FeatureI8MM : Extension<"i8mm", "I8MM",
     "Enable Matrix Multiply Int8 Extension (FEAT_I8MM)">;
 
 def FeatureF32MM : Extension<"f32mm", "F32MM",
@@ -678,7 +678,7 @@ def HasV8_5aOps : SubtargetFeature<
 def HasV8_6aOps : SubtargetFeature<
   "v8.6a", "HasV8_6aOps", "true", "Support ARM v8.6a instructions",
   [HasV8_5aOps, FeatureAMVS, FeatureBF16, FeatureFineGrainedTraps,
-   FeatureEnhancedCounterVirtualization, FeatureMatMulInt8]>;
+   FeatureEnhancedCounterVirtualization, FeatureI8MM]>;
 
 def HasV8_7aOps : SubtargetFeature<
   "v8.7a", "HasV8_7aOps", "true", "Support ARM v8.7a instructions",

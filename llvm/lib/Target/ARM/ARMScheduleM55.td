@@ -90,7 +90,7 @@ def CortexM55Model : SchedMachineModel {
   let FullInstRWOverlapCheck = 1;
 
   let CompleteModel = 0;
-  let UnsupportedFeatures = [IsARM, HasNEON, HasDotProd, HasMatMulInt8, HasZCZ,
+  let UnsupportedFeatures = [IsARM, HasNEON, HasDotProd, HasI8MM, HasZCZ,
                              IsNotMClass, HasV8, HasV8_3a, HasTrustZone, HasDFB,
                              IsWindows];
 }

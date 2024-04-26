@@ -4868,7 +4868,7 @@ defm VSDOTQI : DOTI<"vsdot", "s8", 0b1, 0b0, QPR, v4i32, v16i8,
                     int_arm_neon_sdot, (EXTRACT_SUBREG QPR:$Vm, dsub_0)>;
 
 // v8.6A matrix multiplication extension
-let Predicates = [HasMatMulInt8] in {
+let Predicates = [HasI8MM] in {
   class N3VMatMul<bit B, bit U, string Asm, string AsmTy,
                   SDPatternOperator OpNode>
         : N3Vnp<{0b1100, B}, 0b10, 0b1100, 1, U, (outs QPR:$dst),

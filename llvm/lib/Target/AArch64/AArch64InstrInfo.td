@@ -267,8 +267,8 @@ def HasTRBE          : Predicate<"Subtarget->hasTRBE()">,
 def HasBF16          : Predicate<"Subtarget->hasBF16()">,
                        AssemblerPredicateWithAll<(all_of FeatureBF16), "bf16">;
 def HasNoBF16        : Predicate<"!Subtarget->hasBF16()">;
-def HasMatMulInt8    : Predicate<"Subtarget->hasMatMulInt8()">,
-                       AssemblerPredicateWithAll<(all_of FeatureMatMulInt8), "i8mm">;
+def HasI8MM          : Predicate<"Subtarget->hasI8MM()">,
+                       AssemblerPredicateWithAll<(all_of FeatureI8MM), "i8mm">;
 def HasF32MM         : Predicate<"Subtarget->hasF32MM()">,
                        AssemblerPredicateWithAll<(all_of FeatureF32MM), "f32mm">;
 def HasF64MM         : Predicate<"Subtarget->hasF64MM()">,
@@ -1329,7 +1329,7 @@ def : Pat<(bf16 (any_fpround (f32 FPR32:$Rn))), (BFCVT $Rn)>;
 }
 
 // ARMv8.6A AArch64 matrix multiplication
-let Predicates = [HasMatMulInt8] in {
+let Predicates = [HasI8MM] in {
 def  SMMLA : SIMDThreeSameVectorMatMul<0, 0, "smmla", int_aarch64_neon_smmla>;
 def  UMMLA : SIMDThreeSameVectorMatMul<0, 1, "ummla", int_aarch64_neon_ummla>;
 def USMMLA : SIMDThreeSameVectorMatMul<1, 0, "usmmla", int_aarch64_neon_usmmla>;

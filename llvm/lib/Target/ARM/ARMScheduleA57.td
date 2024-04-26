@@ -84,7 +84,7 @@ def CortexA57Model : SchedMachineModel {
   let FullInstRWOverlapCheck = 0;
 
   let UnsupportedFeatures = [HasV8_1MMainline, HasMVEInt, HasMVEFloat, IsMClass,
-                             HasFPRegsV8_1M, HasFP16FML, HasMatMulInt8, HasBF16];
+                             HasFPRegsV8_1M, HasFP16FML, HasI8MM, HasBF16];
 }
 
 //===----------------------------------------------------------------------===//

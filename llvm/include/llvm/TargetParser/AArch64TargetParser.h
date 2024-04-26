@@ -113,7 +113,6 @@ enum ArchExtKind : unsigned {
   // FIXME temporary fixes for inconsistent naming.
   AEK_FP = AEK_FPARMV8,
   AEK_FP16 = AEK_FULLFP16,
-  AEK_I8MM = AEK_MATMULINT8,
   AEK_JSCVT = AEK_JS,
   AEK_PROFILE = AEK_SPE,
   AEK_RASv2 = AEK_RASV2,

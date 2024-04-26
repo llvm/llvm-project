@@ -3707,7 +3707,7 @@ static const struct Extension {
     {"f64mm", {AArch64::FeatureF64MM}},
     {"fp16", {AArch64::FeatureFullFP16}},
     {"fp16fml", {AArch64::FeatureFP16FML}},
-    {"i8mm", {AArch64::FeatureMatMulInt8}},
+    {"i8mm", {AArch64::FeatureI8MM}},
     {"lor", {AArch64::FeatureLOR}},
     {"profile", {AArch64::FeatureSPE}},
     // "rdma" is the name documented by binutils for the feature, but

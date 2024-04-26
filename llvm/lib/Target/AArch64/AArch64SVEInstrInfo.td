@@ -3388,17 +3388,17 @@ let Predicates = [HasSVEorSME] in {
             (SUB_ZPmZ_D PPR:$pred, ZPR:$op, (DUP_ZI_D 255, 0))>;
 } // End HasSVEorSME
 
-let Predicates = [HasSVE, HasMatMulInt8] in {
+let Predicates = [HasSVE, HasI8MM] in {
   defm  SMMLA_ZZZ : sve_int_matmul<0b00, "smmla", int_aarch64_sve_smmla>;
   defm  UMMLA_ZZZ : sve_int_matmul<0b11, "ummla", int_aarch64_sve_ummla>;
   defm USMMLA_ZZZ : sve_int_matmul<0b10, "usmmla", int_aarch64_sve_usmmla>;
-} // End HasSVE, HasMatMulInt8
+} // End HasSVE, HasI8MM
 
-let Predicates = [HasSVEorSME, HasMatMulInt8] in {
+let Predicates = [HasSVEorSME, HasI8MM] in {
   defm USDOT_ZZZ  : sve_int_dot_mixed<"usdot", int_aarch64_sve_usdot>;
   defm USDOT_ZZZI : sve_int_dot_mixed_indexed<0, "usdot", int_aarch64_sve_usdot_lane>;
   defm SUDOT_ZZZI : sve_int_dot_mixed_indexed<1, "sudot", int_aarch64_sve_sudot_lane>;
-} // End HasSVEorSME, HasMatMulInt8
+} // End HasSVEorSME, HasI8MM
 
 let Predicates = [HasSVE, HasF32MM] in {
   defm FMMLA_ZZZ_S : sve_fp_matrix_mla<0, "fmmla", ZPR32, int_aarch64_sve_fmmla, nxv4f32>;
