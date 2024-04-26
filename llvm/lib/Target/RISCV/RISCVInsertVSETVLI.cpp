@@ -262,6 +262,17 @@ struct DemandedFields {
     VLZeroness = true;
   }
 
+  // Make this the result of demanding both the fields in this and B.
+  void doUnion(const DemandedFields &B) {
+    VLAny |= B.VLAny;
+    VLZeroness |= B.VLZeroness;
+    SEW = std::max(SEW, B.SEW);
+    LMUL |= B.LMUL;
+    SEWLMULRatio |= B.SEWLMULRatio;
+    TailPolicy |= B.TailPolicy;
+    MaskPolicy |= B.MaskPolicy;
+  }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Support for debugging, callable in GDB: V->dump()
   LLVM_DUMP_METHOD void dump() const {
@@ -1547,16 +1558,6 @@ void RISCVInsertVSETVLI::doPRE(MachineBasicBlock &MBB) {
                 AvailableInfo, OldExit);
 }
 
-static void doUnion(DemandedFields &A, DemandedFields B) {
-  A.VLAny |= B.VLAny;
-  A.VLZeroness |= B.VLZeroness;
-  A.SEW = std::max(A.SEW, B.SEW);
-  A.LMUL |= B.LMUL;
-  A.SEWLMULRatio |= B.SEWLMULRatio;
-  A.TailPolicy |= B.TailPolicy;
-  A.MaskPolicy |= B.MaskPolicy;
-}
-
 // Return true if we can mutate PrevMI to match MI without changing any the
 // fields which would be observed.
 static bool canMutatePriorConfig(const MachineInstr &PrevMI,
@@ -1606,7 +1607,7 @@ bool RISCVCoalesceVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) {
   for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend())) {
 
     if (!isVectorConfigInstr(MI)) {
-      doUnion(Used, getDemanded(MI, MRI, ST));
+      Used.doUnion(getDemanded(MI, MRI, ST));
       if (MI.isCall() || MI.isInlineAsm() ||
           MI.modifiesRegister(RISCV::VL, /*TRI=*/nullptr) ||
           MI.modifiesRegister(RISCV::VTYPE, /*TRI=*/nullptr))
