@@ -5583,7 +5583,13 @@ macros are predefined in all C and C++ language modes, but can be redefined on
 the command line with ``-D`` to specify different values as needed or can be
 undefined on the command line with ``-U`` to disable support for the feature.
 
-**Note: the values the macros expand to are not stable between releases of Clang
-and do not need to match the values produced by GCC, so these macros should not
-be used from header files because they may not be stable across multiple TUs
-(the values may vary based on compiler version as well as CPU tuning).**
+**Note: the values the macros expand to are not guaranteed to be stable. They
+are are affected by architectures and CPU tuning flags, can change between
+releases of Clang and will not match the values defined by other compilers such
+as GCC.**
+
+Compiling different TUs depending on these flags (including use of
+``std::hardware_constructive_interference`` or
+``std::hardware_destructive_interference``)  with different compilers, macro
+definitions, or architecture flags will lead to ODR violations and should be
+avoided.
