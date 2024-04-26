@@ -1433,8 +1433,7 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
     LLVM_DEBUG(dbgs() << "  expected end state: " << Info.Exit << "\n");
     LLVM_DEBUG(dbgs() << "  actual   end state: " << CurInfo << "\n");
   }
-  assert(CurInfo == Info.Exit &&
-         "InsertVSETVLI dataflow invariant violated");
+  assert(CurInfo == Info.Exit && "InsertVSETVLI dataflow invariant violated");
 }
 
 /// Perform simple partial redundancy elimination of the VSETVLI instructions
