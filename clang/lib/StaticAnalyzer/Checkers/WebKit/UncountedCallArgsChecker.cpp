@@ -220,9 +220,9 @@ public:
     return NamespaceName == "WTF" &&
            (MethodName == "find" || MethodName == "findIf" ||
             MethodName == "reverseFind" || MethodName == "reverseFindIf" ||
-            MethodName == "findIgnoringASCIICase" ||
-            MethodName == "get" || MethodName == "inlineGet" ||
-            MethodName == "contains" || MethodName == "containsIf" ||
+            MethodName == "findIgnoringASCIICase" || MethodName == "get" ||
+            MethodName == "inlineGet" || MethodName == "contains" ||
+            MethodName == "containsIf" ||
             MethodName == "containsIgnoringASCIICase" ||
             MethodName == "startsWith" || MethodName == "endsWith" ||
             MethodName == "startsWithIgnoringASCIICase" ||
