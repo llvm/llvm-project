@@ -1617,12 +1617,13 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
       for (auto &I : *BB) {
         if (!isa<CallInst>(I) && !isa<InvokeInst>(I))
           continue;
-        if (!cast<CallBase>(I).getCalledFunction()) {
-          const DebugLoc &DLoc = I.getDebugLoc();
+        const DebugLoc &DLoc = I.getDebugLoc();
+        const DILocation *DIL = DLoc;
+        const FunctionSamples *FS = findFunctionSamples(I);
+        Function *Callee = cast<CallBase>(I).getCalledFunction();
+        if (!Callee) {
           if (!DLoc)
             continue;
-          const DILocation *DIL = DLoc;
-          const FunctionSamples *FS = findFunctionSamples(I);
           if (!FS)
             continue;
           auto CallSite = FunctionSamples::getCallSiteIdentifier(DIL);
@@ -1659,7 +1660,26 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           else if (OverwriteExistingWeights)
             I.setMetadata(LLVMContext::MD_prof, nullptr);
         } else if (!isa<IntrinsicInst>(&I)) {
-          setBranchWeights(I, {static_cast<uint32_t>(BlockWeights[BB])});
+          uint32_t BranchWeight = static_cast<uint32_t>(BlockWeights[BB]);
+          // If I is a direct call and we found it has a sample with a matching
+          // call target, we should use its count instead because it is more
+          // precise.
+          if (DLoc && FS) {
+            auto Callsite = FunctionSamples::getCallSiteIdentifier(DIL);
+            // Account for stale profile matching.
+            Callsite = FS->mapIRLocToProfileLoc(Callsite);
+            auto CallTargetMap = FS->findCallTargetMapAt(Callsite);
+            if (CallTargetMap) {
+              auto FindRes = CallTargetMap->find(
+                  FunctionSamples::UseMD5 ?
+                      FunctionId(MD5Hash(Callee->getName())) :
+                      FunctionId(Callee->getName()));
+              if (FindRes != CallTargetMap->end()) {
+                BranchWeight = FindRes->second;
+              }
+            }
+          }
+          setBranchWeights(I, {BranchWeight});
         }
       }
     } else if (OverwriteExistingWeights || ProfileSampleBlockAccurate) {
@@ -2201,6 +2221,7 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
 
 bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) {
   LLVM_DEBUG(dbgs() << "\n\nProcessing Function " << F.getName() << "\n");
+
   DILocation2SampleMap.clear();
   // By default the entry count is initialized to -1, which will be treated
   // conservatively by getEntryCount as the same as unknown (None). This is
