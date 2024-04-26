@@ -1,23 +1,15 @@
 // RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+sme-f16f16 < %s \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 // RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+sme-f8f16 < %s \
-// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+sme-f16f16 < %s \
-// RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
-// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+sme-f8f16 < %s \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 // RUN: not llvm-mc -triple=aarch64 -show-encoding < %s 2>&1 \
 // RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sme-f16f16 < %s \
 // RUN:        | llvm-objdump -d --mattr=+sme-f16f16 - | FileCheck %s --check-prefix=CHECK-INST
 // RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sme-f16f16 < %s \
-// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sme-f16f16 < %s \
-// RUN:        | llvm-objdump -d --mattr=+sme-f16f16 - | FileCheck %s --check-prefix=CHECK-INST
-// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+sme-f16f16 < %s \
 // RUN:        | llvm-objdump -d --mattr=-sme2p1 - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 // RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+sme-f16f16 < %s \
-// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+sme-f16f16 < %s \
 // RUN:        | sed '/.text/d' | sed 's/.*encoding: //g' \
-// RUN:        | llvm-mc -triple=aarch64 -mattr=+sme-f16f16 -disassemble -show-encoding \
 // RUN:        | llvm-mc -triple=aarch64 -mattr=+sme-f16f16 -disassemble -show-encoding \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 
