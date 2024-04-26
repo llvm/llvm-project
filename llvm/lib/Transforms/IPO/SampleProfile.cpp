@@ -2130,7 +2130,7 @@ bool SampleProfileLoader::rejectHighStalenessProfile(
 }
 
 void SampleProfileLoader::removePseudoProbeInsts(Module &M) {
-  for (Function &F : M) {
+  for (auto &F : M) {
     std::vector<Instruction *> InstsToDel;
     for (auto &BB : F) {
       for (auto &I : BB) {
