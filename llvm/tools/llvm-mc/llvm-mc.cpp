@@ -107,18 +107,19 @@ static cl::opt<bool>
 enum OutputFileType {
   OFT_Null,
   OFT_AssemblyFile,
-  OFT_ObjectFile
+  OFT_ObjectFile,
+  OFT_HexFile,
 };
-static cl::opt<OutputFileType>
-    FileType("filetype", cl::init(OFT_AssemblyFile),
-             cl::desc("Choose an output file type:"),
-             cl::values(clEnumValN(OFT_AssemblyFile, "asm",
-                                   "Emit an assembly ('.s') file"),
-                        clEnumValN(OFT_Null, "null",
-                                   "Don't emit anything (for timing purposes)"),
-                        clEnumValN(OFT_ObjectFile, "obj",
-                                   "Emit a native object ('.o') file")),
-             cl::cat(MCCategory));
+static cl::opt<OutputFileType> FileType(
+    "filetype", cl::init(OFT_AssemblyFile),
+    cl::desc("Choose an output file type:"),
+    cl::values(
+        clEnumValN(OFT_AssemblyFile, "asm", "Emit an assembly ('.s') file"),
+        clEnumValN(OFT_Null, "null",
+                   "Don't emit anything (for timing purposes)"),
+        clEnumValN(OFT_ObjectFile, "obj", "Emit a native object ('.o') file"),
+        clEnumValN(OFT_HexFile, "hex", "Emit a plain hex ('.hex') file")),
+    cl::cat(MCCategory));
 
 static cl::list<std::string> IncludeDirs("I",
                                          cl::desc("Directory of include files"),
@@ -486,9 +487,10 @@ int main(int argc, char **argv) {
   if (GenDwarfForAssembly)
     Ctx.setGenDwarfRootFile(InputFilename, Buffer->getBuffer());
 
-  sys::fs::OpenFlags Flags = (FileType == OFT_AssemblyFile)
-                                 ? sys::fs::OF_TextWithCRLF
-                                 : sys::fs::OF_None;
+  sys::fs::OpenFlags Flags =
+      (FileType == OFT_AssemblyFile || FileType == OFT_HexFile)
+          ? sys::fs::OF_TextWithCRLF
+          : sys::fs::OF_None;
   std::unique_ptr<ToolOutputFile> Out = GetOutputStream(OutputFilename, Flags);
   if (!Out)
     return 1;
@@ -512,7 +514,7 @@ int main(int argc, char **argv) {
   assert(MCII && "Unable to create instruction info!");
 
   MCInstPrinter *IP = nullptr;
-  if (FileType == OFT_AssemblyFile) {
+  if (FileType == OFT_AssemblyFile || FileType == OFT_HexFile) {
     IP = TheTarget->createMCInstPrinter(Triple(TripleName), OutputAsmVariant,
                                         *MAI, *MCII, *MRI);
 
@@ -541,11 +543,13 @@ int main(int argc, char **argv) {
     std::unique_ptr<MCAsmBackend> MAB(
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
     auto FOut = std::make_unique<formatted_raw_ostream>(*OS);
-    Str.reset(
-        TheTarget->createAsmStreamer(Ctx, std::move(FOut), /*asmverbose*/ true,
-                                     /*useDwarfDirectory*/ true, IP,
-                                     std::move(CE), std::move(MAB), ShowInst));
-
+    Str.reset(FileType == OFT_HexFile
+                  ? TheTarget->createHexStreamer(Ctx, std::move(FOut), IP,
+                                                 std::move(CE), std::move(MAB))
+                  : TheTarget->createAsmStreamer(
+                        Ctx, std::move(FOut), /*asmverbose=*/true,
+                        /*useDwarfDirectory=*/true, IP, std::move(CE),
+                        std::move(MAB), ShowInst));
   } else if (FileType == OFT_Null) {
     Str.reset(TheTarget->createNullStreamer(Ctx));
   } else {

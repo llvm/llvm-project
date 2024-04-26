@@ -88,7 +88,11 @@ createAsmStreamer(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
                   bool isVerboseAsm, bool useDwarfDirectory,
                   MCInstPrinter *InstPrint, std::unique_ptr<MCCodeEmitter> &&CE,
                   std::unique_ptr<MCAsmBackend> &&TAB, bool ShowInst);
-
+MCStreamer *createHexStreamer(MCContext &Ctx,
+                              std::unique_ptr<formatted_raw_ostream> OS,
+                              MCInstPrinter *InstPrint,
+                              std::unique_ptr<MCCodeEmitter> &&CE,
+                              std::unique_ptr<MCAsmBackend> &&TAB);
 MCStreamer *createELFStreamer(MCContext &Ctx,
                               std::unique_ptr<MCAsmBackend> &&TAB,
                               std::unique_ptr<MCObjectWriter> &&OW,
@@ -234,6 +238,9 @@ public:
   using AsmTargetStreamerCtorTy = MCTargetStreamer *(*)(
       MCStreamer &S, formatted_raw_ostream &OS, MCInstPrinter *InstPrint,
       bool IsVerboseAsm);
+  using HexTargetStreamerCtorTy =
+      MCTargetStreamer *(*)(MCStreamer &S, formatted_raw_ostream &OS,
+                            MCInstPrinter *InstPrint);
   using ObjectTargetStreamerCtorTy = MCTargetStreamer *(*)(
       MCStreamer &S, const MCSubtargetInfo &STI);
   using MCRelocationInfoCtorTy = MCRelocationInfo *(*)(const Triple &TT,
@@ -345,6 +352,10 @@ private:
   /// Construction function for this target's asm TargetStreamer, if
   /// registered (default = nullptr).
   AsmTargetStreamerCtorTy AsmTargetStreamerCtorFn = nullptr;
+
+  /// Construction function for this target's hex TargetStreamer, if
+  /// registered (default = nullptr).
+  HexTargetStreamerCtorTy HexTargetStreamerCtorFn = nullptr;
 
   /// Construction function for this target's obj TargetStreamer, if
   /// registered (default = nullptr).
@@ -668,6 +679,26 @@ public:
   MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) const {
     if (NullTargetStreamerCtorFn)
       return NullTargetStreamerCtorFn(S);
+    return nullptr;
+  }
+
+  MCStreamer *createHexStreamer(MCContext &Ctx,
+                                std::unique_ptr<formatted_raw_ostream> OS,
+                                MCInstPrinter *InstPrint,
+                                std::unique_ptr<MCCodeEmitter> &&CE,
+                                std::unique_ptr<MCAsmBackend> &&TAB) const {
+    formatted_raw_ostream &OSRef = *OS;
+    MCStreamer *S = llvm::createHexStreamer(Ctx, std::move(OS), InstPrint,
+                                            std::move(CE), std::move(TAB));
+    createHexTargetStreamer(*S, OSRef, InstPrint);
+    return S;
+  }
+
+  MCTargetStreamer *createHexTargetStreamer(MCStreamer &S,
+                                            formatted_raw_ostream &OS,
+                                            MCInstPrinter *InstPrint) const {
+    if (HexTargetStreamerCtorFn)
+      return HexTargetStreamerCtorFn(S, OS, InstPrint);
     return nullptr;
   }
 
@@ -1047,6 +1078,11 @@ struct TargetRegistry {
   static void RegisterAsmTargetStreamer(Target &T,
                                         Target::AsmTargetStreamerCtorTy Fn) {
     T.AsmTargetStreamerCtorFn = Fn;
+  }
+
+  static void RegisterHexTargetStreamer(Target &T,
+                                        Target::HexTargetStreamerCtorTy Fn) {
+    T.HexTargetStreamerCtorFn = Fn;
   }
 
   static void
