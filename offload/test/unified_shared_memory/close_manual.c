@@ -8,8 +8,6 @@
 // ---------------------------------------------------------------------------
 // Various definitions copied from OpenMP RTL
 
-extern void __tgt_register_requires(int64_t);
-
 extern void __tgt_target_data_begin(int64_t device_id, int32_t arg_num,
                                     void **args_base, void **args,
                                     int64_t *arg_sizes, int64_t *arg_types);
@@ -29,10 +27,6 @@ int main(int argc, char *argv[]) {
   int fails;
   void *host_alloc = 0, *device_alloc = 0;
   int *a = (int *)malloc(N * sizeof(int));
-
-  // Manual registration of requires flags for Clang versions
-  // that do not support requires.
-  __tgt_register_requires(8);
 
   // Init
   for (int i = 0; i < N; ++i) {
