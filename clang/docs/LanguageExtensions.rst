@@ -4403,6 +4403,7 @@ immediately after the name being declared.
 For example, this applies the GNU ``unused`` attribute to ``a`` and ``f``, and
 also applies the GNU ``noreturn`` attribute to ``f``.
 
+Examples:
 .. code-block:: c++
 
   [[gnu::unused]] int a, f [[gnu::noreturn]] ();
@@ -4411,6 +4412,60 @@ Target-Specific Extensions
 ==========================
 
 Clang supports some language features conditionally on some targets.
+
+AMDGPU Language Extensions
+--------------------------
+
+__builtin_amdgcn_fence
+^^^^^^^^^^^^^^^^^^^^^^
+
+``__builtin_amdgcn_fence`` emits a fence for all address spaces
+and takes the following arguments:
+
+* ``unsigned`` atomic ordering, e.g. ``__ATOMIC_ACQUIRE``
+* ``const char *`` synchronization scope, e.g. ``workgroup``
+
+.. code-block:: c++
+
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup");
+  __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "agent");
+
+__builtin_amdgcn_masked_fence
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``__builtin_amdgcn_masked_fence`` emits a fence for one or more address
+spaces.
+
+* ``unsigned`` address space mask
+* ``unsigned`` atomic ordering, e.g. ``__ATOMIC_ACQUIRE``
+* ``const char *`` synchronization scope, e.g. ``workgroup``
+
+The address space mask is a bitmask and each bit corresponds
+to an OpenCL memory type:
+
+* ``0x1`` (first bit) is for local memory.
+* ``0x2`` (second bit) is for global memory.
+* ``0x4`` (third bit) is for image memory.
+
+A bitmask of zero causes this fence to behave like
+``__builtin_amdgcn_fence``.
+Different values can of course be OR'd together. Examples:
+
+.. code-block:: c++
+
+  // Fence local only
+  __builtin_amdgcn_masked_fence(0x1, __ATOMIC_SEQ_CST, "workgroup")
+
+  // Fence local & global
+  __builtin_amdgcn_masked_fence(0x3, __ATOMIC_SEQ_CST, "workgroup")
+
+Note that this fence may affect more than just the address spaces
+specified. In some cases, the address space mask may
+be lost during optimization and a normal fence for all address
+spaces (``__builtin_amdgcn_fence``) will be emitted instead.
+This generally happens if the address space mask restricts an
+optimization, and the performance cost of skipping that optimization
+is greater than the cost of performing a more expensive fence operation.
 
 ARM/AArch64 Language Extensions
 -------------------------------
