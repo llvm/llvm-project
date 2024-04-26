@@ -186,3 +186,16 @@ subroutine alternate_return_call(n1, n2, k)
   ! CHECK: ^[[block2]]: // pred: ^bb0
 7 k =  1; return
 end
+
+! -----------------------------------------------------------------------------
+!     Test calls to user procedures with intrinsic interfaces
+! -----------------------------------------------------------------------------
+
+! CHECK-NAME: func.func @_QPintrinsic_iface()
+subroutine intrinsic_iface()
+  intrinsic acos
+  real :: x
+  procedure(acos) :: proc
+  x = proc(1.0)
+end subroutine
+! CHECK" fir.call @_QPproc(%{{.*}}) {{.*}}: (!fir.ref<f32>) -> f32
