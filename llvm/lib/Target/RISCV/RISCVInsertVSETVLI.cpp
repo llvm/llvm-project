@@ -1351,8 +1351,7 @@ bool RISCVInsertVSETVLI::needVSETVLIPHI(const VSETVLIInfo &Require,
     // We found a VSET(I)VLI make sure it matches the output of the
     // predecessor block.
     VSETVLIInfo DefInfo = getInfoForVSETVLI(*DefMI);
-    if (!DefInfo.hasSameAVL(PBBInfo.Exit) ||
-        !DefInfo.hasSameVTYPE(PBBInfo.Exit))
+    if (DefInfo != PBBInfo.Exit)
       return true;
   }
 
