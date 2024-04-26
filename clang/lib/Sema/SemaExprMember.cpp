@@ -991,7 +991,12 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
                                bool SuppressQualifierCheck,
                                ActOnMemberAccessExtraArgs *ExtraArgs) {
   assert(!SS.isInvalid() && "nested-name-specifier cannot be invalid");
-  if (R.wasNotFoundInCurrentInstantiation())
+  // If the member wasn't found in the current instantiation, or if the
+  // arrow operator was used with a dependent non-pointer object expression,
+  // build a CXXDependentScopeMemberExpr.
+  if (R.wasNotFoundInCurrentInstantiation() ||
+      (IsArrow && !BaseExprType->isPointerType() &&
+       BaseExprType->isDependentType()))
     return ActOnDependentMemberExpr(BaseExpr, BaseExprType, IsArrow, OpLoc, SS,
                                     TemplateKWLoc, FirstQualifierInScope,
                                     R.getLookupNameInfo(), TemplateArgs);
@@ -1036,41 +1041,39 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
         << isa<CXXDestructorDecl>(FD);
 
   if (R.empty()) {
+    ExprResult RetryExpr = ExprError();
+    if (ExtraArgs && !IsArrow && BaseExpr && !BaseExpr->isTypeDependent()) {
+      SFINAETrap Trap(*this, true);
+      ParsedType ObjectType;
+      bool MayBePseudoDestructor = false;
+      RetryExpr = ActOnStartCXXMemberReference(getCurScope(), BaseExpr, OpLoc,
+                                               tok::arrow, ObjectType,
+                                               MayBePseudoDestructor);
+      if (RetryExpr.isUsable() && !Trap.hasErrorOccurred()) {
+        CXXScopeSpec TempSS(SS);
+        RetryExpr = ActOnMemberAccessExpr(
+            ExtraArgs->S, RetryExpr.get(), OpLoc, tok::arrow, TempSS,
+            TemplateKWLoc, ExtraArgs->Id, ExtraArgs->ObjCImpDecl);
+      }
+      if (Trap.hasErrorOccurred())
+        RetryExpr = ExprError();
+    }
+
     // Rederive where we looked up.
     DeclContext *DC =
         (SS.isSet() ? computeDeclContext(SS) : computeDeclContext(BaseType));
-    if (ExtraArgs) {
-      ExprResult RetryExpr;
-      if (!IsArrow && BaseExpr && !BaseExpr->isTypeDependent()) {
-        SFINAETrap Trap(*this, true);
-        ParsedType ObjectType;
-        bool MayBePseudoDestructor = false;
-        RetryExpr = ActOnStartCXXMemberReference(getCurScope(), BaseExpr,
-                                                 OpLoc, tok::arrow, ObjectType,
-                                                 MayBePseudoDestructor);
-        if (RetryExpr.isUsable() && !Trap.hasErrorOccurred()) {
-          CXXScopeSpec TempSS(SS);
-          RetryExpr = ActOnMemberAccessExpr(
-              ExtraArgs->S, RetryExpr.get(), OpLoc, tok::arrow, TempSS,
-              TemplateKWLoc, ExtraArgs->Id, ExtraArgs->ObjCImpDecl);
-        }
-        if (Trap.hasErrorOccurred())
-          RetryExpr = ExprError();
-      }
-      if (RetryExpr.isUsable()) {
-        Diag(OpLoc, diag::err_no_member_overloaded_arrow)
-          << MemberName << DC << FixItHint::CreateReplacement(OpLoc, "->");
-        return RetryExpr;
-      }
-    }
-
     assert(DC);
-    Diag(R.getNameLoc(), diag::err_no_member)
-        << MemberName << DC
-        << (SS.isSet()
-                ? SS.getRange()
-                : (BaseExpr ? BaseExpr->getSourceRange() : SourceRange()));
-    return ExprError();
+
+    if (RetryExpr.isUsable())
+      Diag(OpLoc, diag::err_no_member_overloaded_arrow)
+          << MemberName << DC << FixItHint::CreateReplacement(OpLoc, "->");
+    else
+      Diag(R.getNameLoc(), diag::err_no_member)
+          << MemberName << DC
+          << (SS.isSet()
+                  ? SS.getRange()
+                  : (BaseExpr ? BaseExpr->getSourceRange() : SourceRange()));
+    return RetryExpr;
   }
 
   // Diagnose lookups that find only declarations from a non-base

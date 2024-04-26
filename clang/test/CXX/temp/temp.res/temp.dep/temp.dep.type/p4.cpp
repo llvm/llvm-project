@@ -439,7 +439,7 @@ namespace N2 {
       a->B::C::x;
     }
   };
-}
+} // namespace N2
 
 namespace N3 {
   struct A { };
@@ -453,4 +453,71 @@ namespace N3 {
       this->A::operator=(*this);
     }
   };
-}
+} // namespace N3
+
+namespace N4 {
+  template<typename T>
+  struct A {
+    void not_instantiated(A a, A<T> b, T c) {
+      a->x;
+      b->x;
+      c->x;
+    }
+
+    void instantiated(A a, A<T> b, T c) {
+      a->x; // expected-error {{member reference type 'A<int>' is not a pointer; did you mean to use '.'?}}
+            // expected-error@-1 {{no member named 'x' in 'N4::A<int>'}}
+      b->x; // expected-error {{member reference type 'A<int>' is not a pointer; did you mean to use '.'?}}
+            // expected-error@-1 {{no member named 'x' in 'N4::A<int>'}}
+      c->x; // expected-error {{member reference type 'int' is not a pointer}}
+    }
+  };
+
+  template void A<int>::instantiated(A<int>, A<int>, int); // expected-note {{in instantiation of}}
+
+  struct B {
+    int x;
+
+    void f();
+  };
+
+  template<typename T>
+  struct C {
+    B *operator->();
+
+    void not_instantiated(C a, C<T> b, T c) {
+      a->x;
+      b->x;
+      c->x;
+    }
+
+    void instantiated(C a, C<T> b, T c) {
+      a->x;
+      b->x;
+      c->x; // expected-error {{member reference type 'int' is not a pointer}}
+    }
+  };
+
+  template void C<int>::instantiated(C, C, int); // expected-note {{in instantiation of}}
+
+  template<typename T>
+  struct D {
+    T *operator->();
+
+    void not_instantiated(D a) {
+      a->x;
+      a->y;
+      a->f();
+      a->g();
+    }
+
+    void instantiated(D a) {
+      a->x;
+      a->y; // expected-error {{no member named 'y' in 'N4::B'}}
+      a->f();
+      a->g(); // expected-error {{no member named 'g' in 'N4::B'}}
+    }
+  };
+
+  template void D<B>::instantiated(D); // expected-note {{in instantiation of}}
+} // namespace N4
