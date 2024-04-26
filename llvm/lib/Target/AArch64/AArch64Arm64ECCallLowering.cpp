@@ -178,13 +178,14 @@ void AArch64Arm64ECCallLowering::getThunkArgTypes(
   }
 
   for (unsigned E = FT->getNumParams(); I != E; ++I) {
-    Align ParamAlign = AttrList.getParamAlignment(I).valueOrOne();
 #if 0
     // FIXME: Need more information about argument size; see
     // https://reviews.llvm.org/D132926
     uint64_t ArgSizeBytes = AttrList.getParamArm64ECArgSizeBytes(I);
+    Align ParamAlign = AttrList.getParamAlignment(I).valueOrOne();
 #else
     uint64_t ArgSizeBytes = 0;
+    Align ParamAlign = Align();
 #endif
     Type *Arm64Ty, *X64Ty;
     canonicalizeThunkType(FT->getParamType(I), ParamAlign,
@@ -294,7 +295,7 @@ void AArch64Arm64ECCallLowering::canonicalizeThunkType(
     uint64_t TotalSizeBytes = ElementCnt * ElementSizePerBytes;
     if (ElementTy->isFloatTy() || ElementTy->isDoubleTy()) {
       Out << (ElementTy->isFloatTy() ? "F" : "D") << TotalSizeBytes;
-      if (Alignment.value() >= 8 && !T->isPointerTy())
+      if (Alignment.value() >= 16 && !Ret)
         Out << "a" << Alignment.value();
       Arm64Ty = T;
       if (TotalSizeBytes <= 8) {
@@ -325,7 +326,7 @@ void AArch64Arm64ECCallLowering::canonicalizeThunkType(
   Out << "m";
   if (TypeSize != 4)
     Out << TypeSize;
-  if (Alignment.value() >= 8 && !T->isPointerTy())
+  if (Alignment.value() >= 16 && !Ret)
     Out << "a" << Alignment.value();
   // FIXME: Try to canonicalize Arm64Ty more thoroughly?
   Arm64Ty = T;

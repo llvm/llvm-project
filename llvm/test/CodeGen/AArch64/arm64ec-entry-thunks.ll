@@ -223,8 +223,8 @@ define i8 @matches_has_sret() nounwind {
 
 %TSRet = type { i64, i64 }
 define void @has_aligned_sret(ptr align 32 sret(%TSRet)) nounwind {
-; CHECK-LABEL:    .def    $ientry_thunk$cdecl$m16a32$v;
-; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$m16a32$v
+; CHECK-LABEL:    .def    $ientry_thunk$cdecl$m16$v;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$m16$v
 ; CHECK:          // %bb.0:
 ; CHECK-NEXT:     stp     q6, q7, [sp, #-176]!            // 32-byte Folded Spill
 ; CHECK-NEXT:     .seh_save_any_reg_px    q6, 176
@@ -457,7 +457,7 @@ define %T2 @simple_struct(%T1 %0, %T2 %1, %T3, %T4) nounwind {
 ; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$i8$v
 ; CHECK-NEXT:     .word   1
 ; CHECK-NEXT:     .symidx "#has_aligned_sret"
-; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$m16a32$v
+; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$m16$v
 ; CHECK-NEXT:     .word   1
 ; CHECK-NEXT:     .symidx "#small_array"
 ; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$m2$m2F8
