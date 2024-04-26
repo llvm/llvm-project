@@ -8,6 +8,5 @@ add_mlir_library(MLIRDialectUtils
   MLIRDialectUtilsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRArithDialect
   MLIRIR
 )
