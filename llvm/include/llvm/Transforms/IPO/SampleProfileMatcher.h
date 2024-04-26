@@ -44,26 +44,30 @@ class MyersDiff {
 public:
   struct DiffResult {
     LocToLocMap EqualLocations;
+#ifndef NDEBUG
     // New IR locations that are inserted in the new version.
     std::vector<LineLocation> Insertions;
     // Old Profile locations that are deleted in the new version.
     std::vector<LineLocation> Deletions;
+#endif
     void addEqualLocations(const LineLocation &IRLoc,
                            const LineLocation &ProfLoc) {
       EqualLocations.insert({IRLoc, ProfLoc});
     }
+#ifndef NDEBUG
     void addInsertion(const LineLocation &IRLoc) {
       Insertions.push_back(IRLoc);
     }
     void addDeletion(const LineLocation &ProfLoc) {
       Deletions.push_back(ProfLoc);
     }
+#endif
   };
 
   // The basic greedy version of Myers's algorithm. Refer to page 6 of the
   // original paper.
-  DiffResult shortestEdit(const std::vector<Anchor> &A,
-                          const std::vector<Anchor> &B) const;
+  DiffResult longestCommonSequence(const std::vector<Anchor> &A,
+                                   const std::vector<Anchor> &B) const;
 };
 
 // Sample profile matching - fuzzy match.

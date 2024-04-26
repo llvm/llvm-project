@@ -123,8 +123,8 @@ void SampleProfileMatcher::findProfileAnchors(
 }
 
 MyersDiff::DiffResult
-MyersDiff::shortestEdit(const std::vector<Anchor> &A,
-                        const std::vector<Anchor> &B) const {
+MyersDiff::longestCommonSequence(const std::vector<Anchor> &A,
+                                 const std::vector<Anchor> &B) const {
   int32_t N = A.size(), M = B.size(), Max = N + M;
   auto Index = [&](int32_t I) { return I + Max; };
 
@@ -159,10 +159,14 @@ MyersDiff::shortestEdit(const std::vector<Anchor> &A,
 
       if (Y == PrevY) {
         X--;
+#ifndef NDEBUG
         Diff.addInsertion(A[X].Loc);
+#endif
       } else if (X == PrevX) {
         Y--;
+#ifndef NDEBUG
         Diff.addDeletion(B[Y].Loc);
+#endif
       }
       X = PrevX;
       Y = PrevY;
@@ -213,7 +217,7 @@ void SampleProfileMatcher::matchNonAnchorAndWriteResults(
   SmallVector<LineLocation> LastMatchedNonAnchors;
   for (const auto &IR : IRAnchors) {
     const auto &Loc = IR.first;
-    StringRef CalleeName = IR.second;
+    [[maybe_unused]] StringRef CalleeName = IR.second;
     bool IsMatchedAnchor = false;
 
     // Match the anchor location in lexical order.
@@ -309,11 +313,13 @@ void SampleProfileMatcher::runStaleProfileMatching(
   if (IRCallsiteAnchors.empty() || ProfileCallsiteAnchors.empty())
     return;
 
-  // Use the diff algorithm to find the SES, the resulting equal locations from
-  // IR to Profile are used as anchor to match other locations. Note that here
-  // use IR anchor as base(A) to align with the order of IRToProfileLocationMap.
+  // Use the diff algorithm to find the LCS/SES, the resulting equal locations
+  // from IR to Profile are used as anchor to match other locations. Note that
+  // here use IR anchor as base(A) to align with the order of
+  // IRToProfileLocationMap.
   MyersDiff Diff;
-  auto DiffRes = Diff.shortestEdit(IRCallsiteAnchors, ProfileCallsiteAnchors);
+  auto DiffRes =
+      Diff.longestCommonSequence(IRCallsiteAnchors, ProfileCallsiteAnchors);
 
   matchNonAnchorAndWriteResults(DiffRes.EqualLocations, IRAnchors,
                                 IRToProfileLocationMap);

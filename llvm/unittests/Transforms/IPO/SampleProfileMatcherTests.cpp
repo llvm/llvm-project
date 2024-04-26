@@ -43,20 +43,24 @@ TEST(SampleProfileMatcherTests, MyersDiffTest1) {
 
   std::vector<Anchor> AnchorsA;
   std::vector<Anchor> AnchorsB;
-  auto R = Diff.shortestEdit(AnchorsA, AnchorsB);
+  auto R = Diff.longestCommonSequence(AnchorsA, AnchorsB);
   EXPECT_TRUE(R.EqualLocations.empty());
+#ifndef NDEBUG
   EXPECT_TRUE(R.Deletions.empty());
   EXPECT_TRUE(R.Insertions.empty());
+#endif
 }
 
 TEST(SampleProfileMatcherTests, MyersDiffTest2) {
   std::vector<std::string> A({"a", "b", "c"});
   std::vector<Anchor> AnchorsA = createAnchorsFromStrings(A);
   std::vector<Anchor> AnchorsB;
-  auto R = Diff.shortestEdit(AnchorsA, AnchorsB);
+  auto R = Diff.longestCommonSequence(AnchorsA, AnchorsB);
   EXPECT_TRUE(R.EqualLocations.empty());
+#ifndef NDEBUG
   EXPECT_EQ(R.Insertions, createLocations(std::vector<uint32_t>({2, 1, 0})));
   EXPECT_TRUE(R.Deletions.empty());
+#endif
 }
 
 TEST(SampleProfileMatcherTests, MyersDiffTest3) {
@@ -64,10 +68,12 @@ TEST(SampleProfileMatcherTests, MyersDiffTest3) {
   std::vector<Anchor> AnchorsA;
   std::vector<std::string> B({"a", "b", "c"});
   std::vector<Anchor> AnchorsB = createAnchorsFromStrings(B);
-  auto R = Diff.shortestEdit(AnchorsA, AnchorsB);
+  auto R = Diff.longestCommonSequence(AnchorsA, AnchorsB);
   EXPECT_TRUE(R.EqualLocations.empty());
+#ifndef NDEBUG
   EXPECT_TRUE(R.Insertions.empty());
   EXPECT_EQ(R.Deletions, createLocations(std::vector<uint32_t>({2, 1, 0})));
+#endif
 }
 
 TEST(SampleProfileMatcherTests, MyersDiffTest4) {
@@ -77,10 +83,12 @@ TEST(SampleProfileMatcherTests, MyersDiffTest4) {
   std::vector<Anchor> AnchorsB = createAnchorsFromStrings(B);
   LocToLocMap ExpectEqualLocations =
       createEqualLocations({{0, 0}, {1, 1}, {2, 2}});
-  auto R = Diff.shortestEdit(AnchorsA, AnchorsB);
+  auto R = Diff.longestCommonSequence(AnchorsA, AnchorsB);
   EXPECT_EQ(R.EqualLocations, ExpectEqualLocations);
+#ifndef NDEBUG
   EXPECT_TRUE(R.Insertions.empty());
   EXPECT_TRUE(R.Deletions.empty());
+#endif
 }
 
 TEST(SampleProfileMatcherTests, MyersDiffTest5) {
@@ -89,10 +97,12 @@ TEST(SampleProfileMatcherTests, MyersDiffTest5) {
   std::vector<Anchor> AnchorsA = createAnchorsFromStrings(A);
   std::vector<Anchor> AnchorsB = createAnchorsFromStrings(B);
   LocToLocMap ExpectEqualLocations = createEqualLocations({{1, 0}, {2, 1}});
-  auto R = Diff.shortestEdit(AnchorsA, AnchorsB);
+  auto R = Diff.longestCommonSequence(AnchorsA, AnchorsB);
   EXPECT_EQ(R.EqualLocations, ExpectEqualLocations);
+#ifndef NDEBUG
   EXPECT_EQ(R.Insertions, createLocations(std::vector<uint32_t>({0})));
   EXPECT_EQ(R.Deletions, createLocations(std::vector<uint32_t>({2})));
+#endif
 }
 
 TEST(SampleProfileMatcherTests, MyersDiffTest6) {
@@ -101,10 +111,12 @@ TEST(SampleProfileMatcherTests, MyersDiffTest6) {
   std::vector<Anchor> AnchorsA = createAnchorsFromStrings(A);
   std::vector<Anchor> AnchorsB = createAnchorsFromStrings(B);
   LocToLocMap ExpectEqualLocations = createEqualLocations({{0, 0}, {2, 2}});
-  auto R = Diff.shortestEdit(AnchorsA, AnchorsB);
+  auto R = Diff.longestCommonSequence(AnchorsA, AnchorsB);
   EXPECT_EQ(R.EqualLocations, ExpectEqualLocations);
+#ifndef NDEBUG
   EXPECT_EQ(R.Insertions, createLocations(std::vector<uint32_t>({1})));
   EXPECT_EQ(R.Deletions, createLocations(std::vector<uint32_t>({1})));
+#endif
 }
 
 TEST(SampleProfileMatcherTests, MyersDiffTest7) {
@@ -114,10 +126,12 @@ TEST(SampleProfileMatcherTests, MyersDiffTest7) {
   std::vector<Anchor> AnchorsB = createAnchorsFromStrings(B);
   LocToLocMap ExpectEqualLocations =
       createEqualLocations({{2, 0}, {3, 2}, {4, 3}, {6, 4}});
-  auto R = Diff.shortestEdit(AnchorsA, AnchorsB);
+  auto R = Diff.longestCommonSequence(AnchorsA, AnchorsB);
   EXPECT_EQ(R.EqualLocations, ExpectEqualLocations);
+#ifndef NDEBUG
   EXPECT_EQ(R.Insertions, createLocations(std::vector<uint32_t>({5, 1, 0})));
   EXPECT_EQ(R.Deletions, createLocations(std::vector<uint32_t>({5, 1})));
+#endif
 }
 
 TEST(SampleProfileMatcherTests, MyersDiffTest8) {
@@ -127,8 +141,10 @@ TEST(SampleProfileMatcherTests, MyersDiffTest8) {
   std::vector<Anchor> AnchorsB = createAnchorsFromStrings(B);
   LocToLocMap ExpectEqualLocations =
       createEqualLocations({{0, 0}, {2, 1}, {3, 2}, {4, 5}, {5, 8}});
-  auto R = Diff.shortestEdit(AnchorsA, AnchorsB);
+  auto R = Diff.longestCommonSequence(AnchorsA, AnchorsB);
   EXPECT_EQ(R.EqualLocations, ExpectEqualLocations);
+#ifndef NDEBUG
   EXPECT_EQ(R.Insertions, createLocations(std::vector<uint32_t>({6, 1})));
   EXPECT_EQ(R.Deletions, createLocations(std::vector<uint32_t>({7, 6, 4, 3})));
+#endif
 }
