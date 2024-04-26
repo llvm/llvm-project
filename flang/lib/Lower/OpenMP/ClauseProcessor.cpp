@@ -23,10 +23,10 @@ namespace omp {
 
 /// Check for unsupported map operand types.
 static void checkMapType(mlir::Location location, mlir::Type type) {
-  if (auto refType = mlir::dyn_cast<fir::ReferenceType>(type))
+  if (auto refType = type.dyn_cast<fir::ReferenceType>())
     type = refType.getElementType();
-  if (auto boxType = mlir::dyn_cast_or_null<fir::BoxType>(type))
-    if (!mlir::isa<fir::PointerType>(boxType.getElementType()))
+  if (auto boxType = type.dyn_cast_or_null<fir::BoxType>())
+    if (!boxType.getElementType().isa<fir::PointerType>())
       TODO(location, "OMPD_target_data MapOperand BoxType");
 }
 
@@ -814,7 +814,7 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 llvm::ArrayRef<mlir::Value> members, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
                 bool isVal) {
-  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(baseAddr.getType())) {
+  if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>()) {
     baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
     retTy = baseAddr.getType();
   }

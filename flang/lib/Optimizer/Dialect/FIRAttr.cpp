@@ -264,23 +264,23 @@ void fir::FortranVariableFlagsAttr::print(mlir::AsmPrinter &printer) const {
 void fir::printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
                             mlir::DialectAsmPrinter &p) {
   auto &os = p.getStream();
-  if (auto exact = mlir::dyn_cast<fir::ExactTypeAttr>(attr)) {
+  if (auto exact = attr.dyn_cast<fir::ExactTypeAttr>()) {
     os << fir::ExactTypeAttr::getAttrName() << '<';
     p.printType(exact.getType());
     os << '>';
-  } else if (auto sub = mlir::dyn_cast<fir::SubclassAttr>(attr)) {
+  } else if (auto sub = attr.dyn_cast<fir::SubclassAttr>()) {
     os << fir::SubclassAttr::getAttrName() << '<';
     p.printType(sub.getType());
     os << '>';
-  } else if (mlir::dyn_cast_or_null<fir::PointIntervalAttr>(attr)) {
+  } else if (attr.dyn_cast_or_null<fir::PointIntervalAttr>()) {
     os << fir::PointIntervalAttr::getAttrName();
-  } else if (mlir::dyn_cast_or_null<fir::ClosedIntervalAttr>(attr)) {
+  } else if (attr.dyn_cast_or_null<fir::ClosedIntervalAttr>()) {
     os << fir::ClosedIntervalAttr::getAttrName();
-  } else if (mlir::dyn_cast_or_null<fir::LowerBoundAttr>(attr)) {
+  } else if (attr.dyn_cast_or_null<fir::LowerBoundAttr>()) {
     os << fir::LowerBoundAttr::getAttrName();
-  } else if (mlir::dyn_cast_or_null<fir::UpperBoundAttr>(attr)) {
+  } else if (attr.dyn_cast_or_null<fir::UpperBoundAttr>()) {
     os << fir::UpperBoundAttr::getAttrName();
-  } else if (auto a = mlir::dyn_cast_or_null<fir::RealAttr>(attr)) {
+  } else if (auto a = attr.dyn_cast_or_null<fir::RealAttr>()) {
     os << fir::RealAttr::getAttrName() << '<' << a.getFKind() << ", i x";
     llvm::SmallString<40> ss;
     a.getValue().bitcastToAPInt().toStringUnsigned(ss, 16);

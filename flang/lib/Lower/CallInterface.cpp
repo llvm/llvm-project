@@ -1182,7 +1182,7 @@ private:
       Property prop = Property::BaseAddress;
       if (isValueAttr) {
         bool isBuiltinCptrType = fir::isa_builtin_cptr_type(type);
-        if (isBindC || (!mlir::isa<fir::SequenceType>(type) &&
+        if (isBindC || (!type.isa<fir::SequenceType>() &&
                         !obj.attrs.test(Attrs::Optional) &&
                         (dynamicType.category() !=
                              Fortran::common::TypeCategory::Derived ||
@@ -1190,7 +1190,7 @@ private:
           passBy = PassEntityBy::Value;
           prop = Property::Value;
           if (isBuiltinCptrType) {
-            auto recTy = mlir::dyn_cast<fir::RecordType>(type);
+            auto recTy = type.dyn_cast<fir::RecordType>();
             mlir::Type fieldTy = recTy.getTypeList()[0].second;
             passType = fir::ReferenceType::get(fieldTy);
           } else {
@@ -1714,7 +1714,7 @@ mlir::Type Fortran::lower::getDummyProcedureType(
 }
 
 bool Fortran::lower::isCPtrArgByValueType(mlir::Type ty) {
-  return mlir::isa<fir::ReferenceType>(ty) &&
+  return ty.isa<fir::ReferenceType>() &&
          fir::isa_integer(fir::unwrapRefType(ty));
 }
 

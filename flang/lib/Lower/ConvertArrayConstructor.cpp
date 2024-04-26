@@ -336,7 +336,7 @@ public:
       if (!extent)
         extent = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
       if (missingLengthParameters) {
-        if (mlir::isa<fir::CharacterType>(declaredType.getEleTy()))
+        if (declaredType.getEleTy().isa<fir::CharacterType>())
           emboxLengths.push_back(builder.createIntegerConstant(
               loc, builder.getCharacterLengthType(), 0));
         else
@@ -357,7 +357,7 @@ public:
 
   bool useSimplePushRuntime(hlfir::Entity value) {
     return value.isScalar() &&
-           !mlir::isa<fir::CharacterType>(arrayConstructorElementType) &&
+           !arrayConstructorElementType.isa<fir::CharacterType>() &&
            !fir::isRecordWithAllocatableMember(arrayConstructorElementType) &&
            !fir::isRecordWithTypeParameters(arrayConstructorElementType);
   }
@@ -370,7 +370,7 @@ public:
       auto [addrExv, cleanUp] = hlfir::convertToAddress(
           loc, builder, value, arrayConstructorElementType);
       mlir::Value addr = fir::getBase(addrExv);
-      if (mlir::isa<fir::BaseBoxType>(addr.getType()))
+      if (addr.getType().isa<fir::BaseBoxType>())
         addr = builder.create<fir::BoxAddrOp>(loc, addr);
       fir::runtime::genPushArrayConstructorSimpleScalar(
           loc, builder, arrayConstructorVector, addr);
@@ -564,7 +564,7 @@ struct LengthAndTypeCollector<Character<Kind>> {
 /// lowering an ac-value and must be delayed?
 static bool missingLengthParameters(mlir::Type elementType,
                                     llvm::ArrayRef<mlir::Value> lengths) {
-  return (mlir::isa<fir::CharacterType>(elementType) ||
+  return (elementType.isa<fir::CharacterType>() ||
           fir::isRecordWithTypeParameters(elementType)) &&
          lengths.empty();
 }
@@ -702,8 +702,7 @@ static ArrayCtorLoweringStrategy selectArrayCtorLoweringStrategy(
   // Based on what was gathered and the result of the analysis, select and
   // instantiate the right lowering strategy for the array constructor.
   if (!extent || needToEvaluateOneExprToGetLengthParameters ||
-      analysis.anyArrayExpr ||
-      mlir::isa<fir::RecordType>(declaredType.getEleTy()))
+      analysis.anyArrayExpr || declaredType.getEleTy().isa<fir::RecordType>())
     return RuntimeTempStrategy(
         loc, builder, stmtCtx, symMap, declaredType,
         extent ? std::optional<mlir::Value>(extent) : std::nullopt, lengths,

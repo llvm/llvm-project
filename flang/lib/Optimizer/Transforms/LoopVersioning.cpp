@@ -147,7 +147,7 @@ struct ArgsUsageInLoop {
 
 static fir::SequenceType getAsSequenceType(mlir::Value *v) {
   mlir::Type argTy = fir::unwrapPassByRefType(fir::unwrapRefType(v->getType()));
-  return mlir::dyn_cast<fir::SequenceType>(argTy);
+  return argTy.dyn_cast<fir::SequenceType>();
 }
 
 /// if a value comes from a fir.declare, follow it to the original source,

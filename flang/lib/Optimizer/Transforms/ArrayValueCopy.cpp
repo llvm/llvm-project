@@ -461,9 +461,9 @@ void ArrayCopyAnalysisBase::arrayMentions(
 }
 
 static bool hasPointerType(mlir::Type type) {
-  if (auto boxTy = mlir::dyn_cast<BoxType>(type))
+  if (auto boxTy = type.dyn_cast<BoxType>())
     type = boxTy.getEleTy();
-  return mlir::isa<fir::PointerType>(type);
+  return type.isa<fir::PointerType>();
 }
 
 // This is a NF performance hack. It makes a simple test that the slices of the
@@ -512,7 +512,7 @@ static bool mutuallyExclusiveSliceRange(ArrayLoadOp ld, ArrayMergeStoreOp st) {
     auto isPositiveConstant = [](mlir::Value v) -> bool {
       if (auto conOp =
               mlir::dyn_cast<mlir::arith::ConstantOp>(v.getDefiningOp()))
-        if (auto iattr = mlir::dyn_cast<mlir::IntegerAttr>(conOp.getValue()))
+        if (auto iattr = conOp.getValue().dyn_cast<mlir::IntegerAttr>())
           return iattr.getInt() > 0;
       return false;
     };
@@ -725,8 +725,8 @@ static bool
 conservativeCallConflict(llvm::ArrayRef<mlir::Operation *> reaches) {
   return llvm::any_of(reaches, [](mlir::Operation *op) {
     if (auto call = mlir::dyn_cast<fir::CallOp>(op))
-      if (auto callee = mlir::dyn_cast<mlir::SymbolRefAttr>(
-              call.getCallableForCallee())) {
+      if (auto callee =
+              call.getCallableForCallee().dyn_cast<mlir::SymbolRefAttr>()) {
         auto module = op->getParentOfType<mlir::ModuleOp>();
         return isInternalProcedure(
             module.lookupSymbol<mlir::func::FuncOp>(callee));
@@ -891,9 +891,9 @@ static mlir::Value getOrReadExtentsAndShapeOp(
   if (arrLoad->hasAttr(fir::getOptionalAttrName()))
     fir::emitFatalError(
         loc, "shapes from array load of OPTIONAL arrays must not be used");
-  if (auto boxTy = mlir::dyn_cast<BoxType>(arrLoad.getMemref().getType())) {
+  if (auto boxTy = arrLoad.getMemref().getType().dyn_cast<BoxType>()) {
     auto rank =
-        mlir::cast<SequenceType>(dyn_cast_ptrOrBoxEleTy(boxTy)).getDimension();
+        dyn_cast_ptrOrBoxEleTy(boxTy).cast<SequenceType>().getDimension();
     auto idxTy = rewriter.getIndexType();
     for (decltype(rank) dim = 0; dim < rank; ++dim) {
       auto dimVal = rewriter.create<mlir::arith::ConstantIndexOp>(loc, dim);
@@ -929,7 +929,7 @@ static mlir::Type toRefType(mlir::Type ty) {
 static llvm::SmallVector<mlir::Value>
 getTypeParamsIfRawData(mlir::Location loc, FirOpBuilder &builder,
                        ArrayLoadOp arrLoad, mlir::Type ty) {
-  if (mlir::isa<BoxType>(ty))
+  if (ty.isa<BoxType>())
     return {};
   return fir::factory::getTypeParams(loc, builder, arrLoad);
 }
@@ -947,8 +947,8 @@ static mlir::Value genCoorOp(mlir::PatternRewriter &rewriter,
     originated = factory::originateIndices(loc, rewriter, alloc.getType(),
                                            shape, indices);
   auto seqTy = dyn_cast_ptrOrBoxEleTy(alloc.getType());
-  assert(seqTy && mlir::isa<SequenceType>(seqTy));
-  const auto dimension = mlir::cast<SequenceType>(seqTy).getDimension();
+  assert(seqTy && seqTy.isa<SequenceType>());
+  const auto dimension = seqTy.cast<SequenceType>().getDimension();
   auto module = load->getParentOfType<mlir::ModuleOp>();
   FirOpBuilder builder(rewriter, module);
   auto typeparams = getTypeParamsIfRawData(loc, builder, load, alloc.getType());
@@ -967,7 +967,7 @@ static mlir::Value getCharacterLen(mlir::Location loc, FirOpBuilder &builder,
                                    ArrayLoadOp load, CharacterType charTy) {
   auto charLenTy = builder.getCharacterLengthType();
   if (charTy.hasDynamicLen()) {
-    if (mlir::isa<BoxType>(load.getMemref().getType())) {
+    if (load.getMemref().getType().isa<BoxType>()) {
       // The loaded array is an emboxed value. Get the CHARACTER length from
       // the box value.
       auto eleSzInBytes =
@@ -1027,7 +1027,7 @@ void genArrayCopy(mlir::Location loc, mlir::PatternRewriter &rewriter,
       getTypeParamsIfRawData(loc, builder, arrLoad, dst.getType()));
   auto eleTy = unwrapSequenceType(unwrapPassByRefType(dst.getType()));
   // Copy from (to) object to (from) temp copy of same object.
-  if (auto charTy = mlir::dyn_cast<CharacterType>(eleTy)) {
+  if (auto charTy = eleTy.dyn_cast<CharacterType>()) {
     auto len = getCharacterLen(loc, builder, arrLoad, charTy);
     CharBoxValue toChar(toAddr, len);
     CharBoxValue fromChar(fromAddr, len);
@@ -1049,8 +1049,8 @@ genArrayLoadTypeParameters(mlir::Location loc, mlir::PatternRewriter &rewriter,
     auto eleTy =
         unwrapSequenceType(unwrapPassByRefType(load.getMemref().getType()));
     if (hasDynamicSize(eleTy)) {
-      if (auto charTy = mlir::dyn_cast<CharacterType>(eleTy)) {
-        assert(mlir::isa<BoxType>(load.getMemref().getType()));
+      if (auto charTy = eleTy.dyn_cast<CharacterType>()) {
+        assert(load.getMemref().getType().isa<BoxType>());
         auto module = load->getParentOfType<mlir::ModuleOp>();
         FirOpBuilder builder(rewriter, module);
         return {getCharacterLen(loc, builder, load, charTy)};
@@ -1067,7 +1067,7 @@ findNonconstantExtents(mlir::Type memrefTy,
                        llvm::ArrayRef<mlir::Value> extents) {
   llvm::SmallVector<mlir::Value> nce;
   auto arrTy = unwrapPassByRefType(memrefTy);
-  auto seqTy = mlir::cast<SequenceType>(arrTy);
+  auto seqTy = arrTy.cast<SequenceType>();
   for (auto [s, x] : llvm::zip(seqTy.getShape(), extents))
     if (s == SequenceType::getUnknownExtent())
       nce.emplace_back(x);

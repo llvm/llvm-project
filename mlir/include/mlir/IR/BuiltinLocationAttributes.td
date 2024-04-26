@@ -228,8 +228,7 @@ def OpaqueLoc : Builtin_LocationAttr<"OpaqueLoc"> {
     template <typename T> static T getUnderlyingLocation(Location location) {
       assert(isa<T>(location));
       return reinterpret_cast<T>(
-          mlir::cast<mlir::OpaqueLoc>(static_cast<LocationAttr>(location))
-              .getUnderlyingLocation());
+          location.cast<mlir::OpaqueLoc>().getUnderlyingLocation());
     }
 
     /// Returns a pointer to some data structure that opaque location stores.
@@ -238,17 +237,15 @@ def OpaqueLoc : Builtin_LocationAttr<"OpaqueLoc"> {
     template <typename T>
     static T getUnderlyingLocationOrNull(Location location) {
       return isa<T>(location)
-                ? reinterpret_cast<T>(mlir::cast<mlir::OpaqueLoc>(
-                                          static_cast<LocationAttr>(location))
-                                          .getUnderlyingLocation())
-                : T(nullptr);
+                 ? reinterpret_cast<T>(
+                       location.cast<mlir::OpaqueLoc>().getUnderlyingLocation())
+                 : T(nullptr);
     }
 
     /// Checks whether provided location is opaque location and contains a
     /// pointer to an object of particular type.
     template <typename T> static bool isa(Location location) {
-      auto opaque_loc =
-          mlir::dyn_cast<OpaqueLoc>(static_cast<LocationAttr>(location));
+      auto opaque_loc = location.dyn_cast<OpaqueLoc>();
       return opaque_loc && opaque_loc.getUnderlyingTypeID() == TypeID::get<T>();
     }
   }];

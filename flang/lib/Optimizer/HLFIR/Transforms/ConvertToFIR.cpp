@@ -34,7 +34,7 @@ using namespace mlir;
 static mlir::Value genAllocatableTempFromSourceBox(mlir::Location loc,
                                                    fir::FirOpBuilder &builder,
                                                    mlir::Value sourceBox) {
-  assert(mlir::isa<fir::BaseBoxType>(sourceBox.getType()) &&
+  assert(sourceBox.getType().isa<fir::BaseBoxType>() &&
          "must be a base box type");
   // Use the runtime to make a quick and dirty temp with the rhs value.
   // Overkill for scalar rhs that could be done in much more clever ways.
@@ -44,7 +44,7 @@ static mlir::Value genAllocatableTempFromSourceBox(mlir::Location loc,
   // This has the huge benefit of dealing with all cases, including
   // polymorphic entities.
   mlir::Type fromHeapType = fir::HeapType::get(fir::unwrapRefType(
-      mlir::cast<fir::BaseBoxType>(sourceBox.getType()).getEleTy()));
+      sourceBox.getType().cast<fir::BaseBoxType>().getEleTy()));
   mlir::Type fromBoxHeapType = fir::BoxType::get(fromHeapType);
   mlir::Value fromMutableBox =
       fir::factory::genNullBoxStorage(builder, loc, fromBoxHeapType);
@@ -69,7 +69,7 @@ public:
     auto module = assignOp->getParentOfType<mlir::ModuleOp>();
     fir::FirOpBuilder builder(rewriter, module);
 
-    if (mlir::isa<hlfir::ExprType>(rhs.getType())) {
+    if (rhs.getType().isa<hlfir::ExprType>()) {
       mlir::emitError(loc, "hlfir must be bufferized with --bufferize-hlfir "
                            "pass before being converted to FIR");
       return mlir::failure();
@@ -343,15 +343,16 @@ public:
     auto firBase = firDeclareOp.getResult();
     mlir::Value hlfirBase;
     mlir::Type hlfirBaseType = declareOp.getBase().getType();
-    if (mlir::isa<fir::BaseBoxType>(hlfirBaseType)) {
+    if (hlfirBaseType.isa<fir::BaseBoxType>()) {
       fir::FirOpBuilder builder(rewriter, declareOp.getOperation());
       // Helper to generate the hlfir fir.box with the local lower bounds and
       // type parameters.
       auto genHlfirBox = [&]() -> mlir::Value {
-        if (!mlir::isa<fir::BaseBoxType>(firBase.getType())) {
+        if (!firBase.getType().isa<fir::BaseBoxType>()) {
           llvm::SmallVector<mlir::Value> typeParams;
-          auto maybeCharType = mlir::dyn_cast<fir::CharacterType>(
-              fir::unwrapSequenceType(fir::unwrapPassByRefType(hlfirBaseType)));
+          auto maybeCharType =
+              fir::unwrapSequenceType(fir::unwrapPassByRefType(hlfirBaseType))
+                  .dyn_cast<fir::CharacterType>();
           if (!maybeCharType || maybeCharType.hasDynamicLen())
             typeParams.append(declareOp.getTypeparams().begin(),
                               declareOp.getTypeparams().end());
@@ -398,7 +399,7 @@ public:
                         })
                         .getResults()[0];
       }
-    } else if (mlir::isa<fir::BoxCharType>(hlfirBaseType)) {
+    } else if (hlfirBaseType.isa<fir::BoxCharType>()) {
       assert(declareOp.getTypeparams().size() == 1 &&
              "must contain character length");
       hlfirBase = rewriter.create<fir::EmboxCharOp>(
@@ -479,12 +480,11 @@ public:
         // - scalar%scalar_component [substring|complex_part] or
         // - scalar%static_size_array_comp
         // - scalar%array(indices) [substring| complex part]
-        mlir::Type componentType =
-            mlir::cast<fir::RecordType>(baseEleTy).getType(
-                designate.getComponent().value());
+        mlir::Type componentType = baseEleTy.cast<fir::RecordType>().getType(
+            designate.getComponent().value());
         mlir::Type coorTy = fir::ReferenceType::get(componentType);
         base = builder.create<fir::CoordinateOp>(loc, coorTy, base, fieldIndex);
-        if (mlir::isa<fir::BaseBoxType>(componentType)) {
+        if (componentType.isa<fir::BaseBoxType>()) {
           auto variableInterface = mlir::cast<fir::FortranVariableOpInterface>(
               designate.getOperation());
           if (variableInterface.isAllocatable() ||
@@ -500,14 +500,14 @@ public:
       } else {
         // array%component[(indices) substring|complex part] cases.
         // Component ref of array bases are dealt with below in embox/rebox.
-        assert(mlir::isa<fir::BaseBoxType>(designateResultType));
+        assert(designateResultType.isa<fir::BaseBoxType>());
       }
     }
 
-    if (mlir::isa<fir::BaseBoxType>(designateResultType)) {
+    if (designateResultType.isa<fir::BaseBoxType>()) {
       // Generate embox or rebox.
       mlir::Type eleTy = fir::unwrapPassByRefType(designateResultType);
-      bool isScalarDesignator = !mlir::isa<fir::SequenceType>(eleTy);
+      bool isScalarDesignator = !eleTy.isa<fir::SequenceType>();
       mlir::Value sourceBox;
       if (isScalarDesignator) {
         // The base box will be used for emboxing the scalar element.
@@ -583,7 +583,7 @@ public:
         assert(sliceFields.empty() && substring.empty());
       llvm::SmallVector<mlir::Type> resultType{designateResultType};
       mlir::Value resultBox;
-      if (mlir::isa<fir::BaseBoxType>(base.getType()))
+      if (base.getType().isa<fir::BaseBoxType>())
         resultBox =
             builder.create<fir::ReboxOp>(loc, resultType, base, shape, slice);
       else
@@ -598,8 +598,7 @@ public:
     // first element of a contiguous array section with compile time constant
     // shape. The base may be an array, or a scalar.
     mlir::Type resultAddressType = designateResultType;
-    if (auto boxCharType =
-            mlir::dyn_cast<fir::BoxCharType>(designateResultType))
+    if (auto boxCharType = designateResultType.dyn_cast<fir::BoxCharType>())
       resultAddressType = fir::ReferenceType::get(boxCharType.getEleTy());
 
     // Array element indexing.
@@ -621,7 +620,7 @@ public:
     // Scalar complex part ref
     if (designate.getComplexPart()) {
       // Sequence types should have already been handled by this point
-      assert(!mlir::isa<fir::SequenceType>(designateResultType));
+      assert(!designateResultType.isa<fir::SequenceType>());
       auto index = builder.createIntegerConstant(loc, builder.getIndexType(),
                                                  *designate.getComplexPart());
       auto coorTy = fir::ReferenceType::get(resultEleTy);
@@ -629,7 +628,7 @@ public:
     }
 
     // Cast/embox the computed scalar address if needed.
-    if (mlir::isa<fir::BoxCharType>(designateResultType)) {
+    if (designateResultType.isa<fir::BoxCharType>()) {
       assert(designate.getTypeparams().size() == 1 &&
              "must have character length");
       auto emboxChar = builder.create<fir::EmboxCharOp>(
@@ -672,13 +671,13 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = parentComponent.getLoc();
     mlir::Type resultType = parentComponent.getType();
-    if (!mlir::isa<fir::BoxType>(parentComponent.getType())) {
+    if (!parentComponent.getType().isa<fir::BoxType>()) {
       mlir::Value baseAddr = parentComponent.getMemref();
       // Scalar parent component ref without any length type parameters. The
       // input may be a fir.class if it is polymorphic, since this is a scalar
       // and the output will be monomorphic, the base address can be extracted
       // from the fir.class.
-      if (mlir::isa<fir::BaseBoxType>(baseAddr.getType()))
+      if (baseAddr.getType().isa<fir::BaseBoxType>())
         baseAddr = rewriter.create<fir::BoxAddrOp>(loc, baseAddr);
       rewriter.replaceOpWithNewOp<fir::ConvertOp>(parentComponent, resultType,
                                                   baseAddr);
@@ -687,7 +686,7 @@ public:
     // Array parent component ref or PDTs.
     hlfir::Entity base{parentComponent.getMemref()};
     mlir::Value baseAddr = base.getBase();
-    if (!mlir::isa<fir::BaseBoxType>(baseAddr.getType())) {
+    if (!baseAddr.getType().isa<fir::BaseBoxType>()) {
       // Embox cannot directly be used to address parent components: it expects
       // the output type to match the input type when there are no slices. When
       // the types have at least one component, a slice to the first element can
@@ -749,7 +748,7 @@ public:
     // the hlfir.shape_of operation which led to the creation of this get_extent
     // operation should now have been lowered to a fir.shape operation
     if (auto s = mlir::dyn_cast_or_null<fir::ShapeOp>(shapeOp)) {
-      fir::ShapeType shapeTy = mlir::cast<fir::ShapeType>(shape.getType());
+      fir::ShapeType shapeTy = shape.getType().cast<fir::ShapeType>();
       llvm::APInt dim = getExtentOp.getDim();
       uint64_t dimVal = dim.getLimitedValue(shapeTy.getRank());
       mlir::Value extent = s.getExtents()[dimVal];

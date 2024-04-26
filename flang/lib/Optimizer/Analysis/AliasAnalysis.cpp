@@ -68,7 +68,7 @@ bool AliasAnalysis::Source::isPointerReference(mlir::Type ty) {
   if (!eleTy)
     return false;
 
-  return fir::isPointerType(eleTy) || mlir::isa<fir::PointerType>(eleTy);
+  return fir::isPointerType(eleTy) || eleTy.isa<fir::PointerType>();
 }
 
 bool AliasAnalysis::Source::isTargetOrPointer() const {
@@ -81,7 +81,7 @@ bool AliasAnalysis::Source::isRecordWithPointerComponent() const {
   if (!eleTy)
     return false;
   // TO DO: Look for pointer components
-  return mlir::isa<fir::RecordType>(eleTy);
+  return eleTy.isa<fir::RecordType>();
 }
 
 AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {

@@ -26,11 +26,11 @@
 
 /// Unwrap all the ref and box types and return the inner element type.
 static mlir::Type unwrapBoxAndRef(mlir::Type type) {
-  if (auto boxType = mlir::dyn_cast<fir::BoxCharType>(type))
+  if (auto boxType = type.dyn_cast<fir::BoxCharType>())
     return boxType.getEleTy();
   while (true) {
     type = fir::unwrapRefType(type);
-    if (auto boxTy = mlir::dyn_cast<fir::BoxType>(type))
+    if (auto boxTy = type.dyn_cast<fir::BoxType>())
       type = boxTy.getEleTy();
     else
       break;
@@ -41,19 +41,19 @@ static mlir::Type unwrapBoxAndRef(mlir::Type type) {
 /// Unwrap base fir.char<kind,len> type.
 static fir::CharacterType recoverCharacterType(mlir::Type type) {
   type = fir::unwrapSequenceType(unwrapBoxAndRef(type));
-  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(type))
+  if (auto charTy = type.dyn_cast<fir::CharacterType>())
     return charTy;
   llvm::report_fatal_error("expected a character type");
 }
 
 bool fir::factory::CharacterExprHelper::isCharacterScalar(mlir::Type type) {
   type = unwrapBoxAndRef(type);
-  return !mlir::isa<fir::SequenceType>(type) && fir::isa_char(type);
+  return !type.isa<fir::SequenceType>() && fir::isa_char(type);
 }
 
 bool fir::factory::CharacterExprHelper::isArray(mlir::Type type) {
   type = unwrapBoxAndRef(type);
-  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(type))
+  if (auto seqTy = type.dyn_cast<fir::SequenceType>())
     return fir::isa_char(seqTy.getEleTy());
   return false;
 }
@@ -92,8 +92,7 @@ getCompileTimeLength(const fir::CharBoxValue &box) {
 /// Detect the precondition that the value `str` does not reside in memory. Such
 /// values will have a type `!fir.array<...x!fir.char<N>>` or `!fir.char<N>`.
 LLVM_ATTRIBUTE_UNUSED static bool needToMaterialize(mlir::Value str) {
-  return mlir::isa<fir::SequenceType>(str.getType()) ||
-         fir::isa_char(str.getType());
+  return str.getType().isa<fir::SequenceType>() || fir::isa_char(str.getType());
 }
 
 /// This is called only if `str` does not reside in memory. Such a bare string
@@ -104,7 +103,7 @@ fir::factory::CharacterExprHelper::materializeValue(mlir::Value str) {
   assert(needToMaterialize(str));
   auto ty = str.getType();
   assert(isCharacterScalar(ty) && "expected scalar character");
-  auto charTy = mlir::dyn_cast<fir::CharacterType>(ty);
+  auto charTy = ty.dyn_cast<fir::CharacterType>();
   if (!charTy || charTy.getLen() == fir::CharacterType::unknownLen()) {
     LLVM_DEBUG(llvm::dbgs() << "cannot materialize: " << str << '\n');
     llvm_unreachable("must be a !fir.char<N> type");
@@ -130,7 +129,7 @@ fir::factory::CharacterExprHelper::toExtendedValue(mlir::Value character,
   if (auto eleType = fir::dyn_cast_ptrEleTy(type))
     type = eleType;
 
-  if (auto arrayType = mlir::dyn_cast<fir::SequenceType>(type)) {
+  if (auto arrayType = type.dyn_cast<fir::SequenceType>()) {
     type = arrayType.getEleTy();
     auto indexType = builder.getIndexType();
     for (auto extent : arrayType.getShape()) {
@@ -146,10 +145,10 @@ fir::factory::CharacterExprHelper::toExtendedValue(mlir::Value character,
       mlir::emitError(loc, "cannot retrieve array extents from type");
   }
 
-  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(type)) {
+  if (auto charTy = type.dyn_cast<fir::CharacterType>()) {
     if (!resultLen && charTy.getLen() != fir::CharacterType::unknownLen())
       resultLen = builder.createIntegerConstant(loc, lenType, charTy.getLen());
-  } else if (auto boxCharType = mlir::dyn_cast<fir::BoxCharType>(type)) {
+  } else if (auto boxCharType = type.dyn_cast<fir::BoxCharType>()) {
     auto refType = builder.getRefType(boxCharType.getEleTy());
     // If the embox is accessible, use its operand to avoid filling
     // the generated fir with embox/unbox.
@@ -169,7 +168,7 @@ fir::factory::CharacterExprHelper::toExtendedValue(mlir::Value character,
     if (!resultLen) {
       resultLen = boxCharLen;
     }
-  } else if (mlir::isa<fir::BoxType>(type)) {
+  } else if (type.isa<fir::BoxType>()) {
     mlir::emitError(loc, "descriptor or derived type not yet handled");
   } else {
     llvm_unreachable("Cannot translate mlir::Value to character ExtendedValue");
@@ -222,7 +221,7 @@ fir::factory::CharacterExprHelper::createEmbox(const fir::CharBoxValue &box) {
 
 fir::CharBoxValue fir::factory::CharacterExprHelper::toScalarCharacter(
     const fir::CharArrayBoxValue &box) {
-  if (mlir::isa<fir::PointerType>(box.getBuffer().getType()))
+  if (box.getBuffer().getType().isa<fir::PointerType>())
     TODO(loc, "concatenating non contiguous character array into a scalar");
 
   // TODO: add a fast path multiplying new length at compile time if the info is
@@ -656,7 +655,7 @@ fir::factory::CharacterExprHelper::createUnboxChar(mlir::Value boxChar) {
 }
 
 bool fir::factory::CharacterExprHelper::isCharacterLiteral(mlir::Type type) {
-  if (auto seqType = mlir::dyn_cast<fir::SequenceType>(type))
+  if (auto seqType = type.dyn_cast<fir::SequenceType>())
     return (seqType.getShape().size() == 1) &&
            fir::isa_char(seqType.getEleTy());
   return false;
@@ -729,9 +728,9 @@ mlir::Value fir::factory::CharacterExprHelper::getLength(mlir::Value memref) {
   if (charType.hasConstantLen())
     return builder.createIntegerConstant(loc, builder.getCharacterLengthType(),
                                          charType.getLen());
-  if (mlir::isa<fir::BoxType>(memrefType))
+  if (memrefType.isa<fir::BoxType>())
     return readLengthFromBox(memref);
-  if (mlir::isa<fir::BoxCharType>(memrefType))
+  if (memrefType.isa<fir::BoxCharType>())
     return createUnboxChar(memref).second;
 
   // Length cannot be deduced from memref.
@@ -743,14 +742,14 @@ fir::factory::extractCharacterProcedureTuple(fir::FirOpBuilder &builder,
                                              mlir::Location loc,
                                              mlir::Value tuple,
                                              bool openBoxProc) {
-  mlir::TupleType tupleType = mlir::cast<mlir::TupleType>(tuple.getType());
+  mlir::TupleType tupleType = tuple.getType().cast<mlir::TupleType>();
   mlir::Value addr = builder.create<fir::ExtractValueOp>(
       loc, tupleType.getType(0), tuple,
       builder.getArrayAttr(
           {builder.getIntegerAttr(builder.getIndexType(), 0)}));
   mlir::Value proc = [&]() -> mlir::Value {
     if (openBoxProc)
-      if (auto addrTy = mlir::dyn_cast<fir::BoxProcType>(addr.getType()))
+      if (auto addrTy = addr.getType().dyn_cast<fir::BoxProcType>())
         return builder.create<fir::BoxAddrOp>(loc, addrTy.getEleTy(), addr);
     return addr;
   }();
@@ -764,7 +763,7 @@ fir::factory::extractCharacterProcedureTuple(fir::FirOpBuilder &builder,
 mlir::Value fir::factory::createCharacterProcedureTuple(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type argTy,
     mlir::Value addr, mlir::Value len) {
-  mlir::TupleType tupleType = mlir::cast<mlir::TupleType>(argTy);
+  mlir::TupleType tupleType = argTy.cast<mlir::TupleType>();
   addr = builder.createConvert(loc, tupleType.getType(0), addr);
   if (len)
     len = builder.createConvert(loc, tupleType.getType(1), len);
@@ -867,7 +866,7 @@ fir::factory::convertCharacterKind(fir::FirOpBuilder &builder,
   auto kindMap = builder.getKindMap();
   mlir::Value boxCharAddr = srcBoxChar.getAddr();
   auto fromTy = boxCharAddr.getType();
-  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(fromTy)) {
+  if (auto charTy = fromTy.dyn_cast<fir::CharacterType>()) {
     // boxchar is a value, not a variable. Turn it into a temporary.
     // As a value, it ought to have a constant LEN value.
     assert(charTy.hasConstantLen() && "must have constant length");
@@ -876,7 +875,7 @@ fir::factory::convertCharacterKind(fir::FirOpBuilder &builder,
     boxCharAddr = tmp;
   }
   auto fromBits = kindMap.getCharacterBitsize(
-      mlir::cast<fir::CharacterType>(fir::unwrapRefType(fromTy)).getFKind());
+      fir::unwrapRefType(fromTy).cast<fir::CharacterType>().getFKind());
   auto toBits = kindMap.getCharacterBitsize(toKind);
   if (toBits < fromBits) {
     // Scale by relative ratio to give a buffer of the same length.

@@ -21,18 +21,17 @@ include "flang/Optimizer/Dialect/FIROps.td"
 
 def IdenticalTypePred : Constraint<CPred<"$0.getType() == $1.getType()">>;
 def IntegerTypePred : Constraint<CPred<"fir::isa_integer($0.getType())">>;
-def IndexTypePred : Constraint<CPred<
-                       "mlir::isa<mlir::IndexType>($0.getType())">>;
+def IndexTypePred : Constraint<CPred<"$0.getType().isa<mlir::IndexType>()">>;
 
 // Widths are monotonic.
 //   $0.bits >= $1.bits >= $2.bits or $0.bits <= $1.bits <= $2.bits
 def MonotonicTypePred
-    : Constraint<CPred<"((mlir::isa<mlir::IntegerType>($0.getType()) && "
-                       "  mlir::isa<mlir::IntegerType>($1.getType()) && "
-                       "  mlir::isa<mlir::IntegerType>($2.getType())) || "
-                       " (mlir::isa<mlir::FloatType>($0.getType()) && "
-                       "  mlir::isa<mlir::FloatType>($1.getType()) && "
-                       "  mlir::isa<mlir::FloatType>($2.getType()))) && "
+    : Constraint<CPred<"(($0.getType().isa<mlir::IntegerType>() && "
+                       "  $1.getType().isa<mlir::IntegerType>() && "
+                       "  $2.getType().isa<mlir::IntegerType>()) || "
+                       " ($0.getType().isa<mlir::FloatType>() && "
+                       "  $1.getType().isa<mlir::FloatType>() && "
+                       "  $2.getType().isa<mlir::FloatType>())) && "
                        "(($0.getType().getIntOrFloatBitWidth() <= "
                        "  $1.getType().getIntOrFloatBitWidth() && "
                        "  $1.getType().getIntOrFloatBitWidth() <= "
@@ -43,8 +42,8 @@ def MonotonicTypePred
                        "  $2.getType().getIntOrFloatBitWidth()))">>;
 
 def IntPred : Constraint<CPred<
-                       "mlir::isa<mlir::IntegerType>($0.getType()) && "
-                       "mlir::isa<mlir::IntegerType>($1.getType())">>;
+                       "$0.getType().isa<mlir::IntegerType>() && "
+                       "$1.getType().isa<mlir::IntegerType>()">>;
                        
 // If both are int type and the first is smaller than the second.
 //   $0.bits <= $1.bits
@@ -102,8 +101,8 @@ def CombineConvertTruncOptPattern
 def createConstantOp
     : NativeCodeCall<"$_builder.create<mlir::arith::ConstantOp>"
                      "($_loc, $_builder.getIndexType(), "
-                     "rewriter.getIndexAttr("
-                     "mlir::dyn_cast<mlir::IntegerAttr>($1).getInt()))">;
+                     "rewriter.getIndexAttr($1.dyn_cast<mlir::IntegerAttr>()"
+                     ".getInt()))">;
 
 def ForwardConstantConvertPattern
     : Pat<(fir_ConvertOp:$res (Arith_ConstantOp:$cnt $attr)),
