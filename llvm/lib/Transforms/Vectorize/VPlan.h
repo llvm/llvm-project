@@ -2227,16 +2227,6 @@ class VPReductionEVLRecipe : public VPSingleDefRecipe {
   const RecurrenceDescriptor &RdxDesc;
   bool IsOrdered;
 
-  VPReductionEVLRecipe(const RecurrenceDescriptor &R, Instruction *I,
-                       VPValue *ChainOp, VPValue *VecOp, VPValue *EVL,
-                       VPValue *CondOp, bool IsOrdered)
-      : VPSingleDefRecipe(VPDef::VPReductionEVLSC,
-                          ArrayRef<VPValue *>({ChainOp, VecOp, EVL}), I),
-        RdxDesc(R), IsOrdered(IsOrdered) {
-    if (CondOp)
-      addOperand(CondOp);
-  }
-
 public:
   VPReductionEVLRecipe(VPReductionRecipe *R, VPValue *EVL)
       : VPSingleDefRecipe(
@@ -2252,9 +2242,7 @@ public:
   ~VPReductionEVLRecipe() override = default;
 
   VPReductionEVLRecipe *clone() override {
-    return new VPReductionEVLRecipe(RdxDesc, getUnderlyingInstr(), getChainOp(),
-                                    getVecOp(), getEVL(), getCondOp(),
-                                    IsOrdered);
+    llvm_unreachable("cloning not implemented yet");
   }
 
   VP_CLASSOF_IMPL(VPDef::VPReductionEVLSC)
