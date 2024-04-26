@@ -27,7 +27,7 @@ set(OMPTEST_HEADERS
   ./include/OmptTesterStandalone.h
 )
 
-add_llvm_library(omptest
+add_library(omptest
   SHARED
 
   ${OMPTEST_HEADERS}
@@ -37,25 +37,12 @@ add_llvm_library(omptest
   ./src/OmptAssertEvent.cpp
   ./src/OmptCallbackHandler.cpp
   ./src/OmptTester.cpp
-
-  ADDITIONAL_HEADER_DIRS
-  ${LIBOMPTARGET_INCLUDE_DIR}
-  ${LIBOMPTARGET_DEP_LIBFFI_INCLUDE_DIR}
-
-  LINK_LIBS
-  PRIVATE
-  ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
-  ${OPENMP_PTHREAD_LIB}
-
-  NO_INSTALL_RPATH
 )
 
-# Don't override an externally defined RPATH
-if(NOT DEFINED CMAKE_INSTALL_RPATH)
-  set_target_properties(omptest PROPERTIES INSTALL_RPATH "$ORIGIN:$ORIGIN/../lib:$ORIGIN/../../lib" BUILD_RPATH "$ORIGIN")
-else()
-  set_target_properties(omptest PROPERTIES INSTALL_RPATH ${CMAKE_INSTALL_RPATH} BUILD_RPATH ${CMAKE_INSTALL_RPATH})
-endif()
+target_include_directories(omptest
+  PRIVATE
+  ${LIBOMPTARGET_INCLUDE_DIR}
+)
 
 # Include local include directory, so we do not need relative paths
 include_directories(./include)
@@ -73,9 +60,11 @@ configure_file(
   ${omptest_BINARY_DIR}/cmake/omptest-config.cmake @ONLY)
 
 install(FILES ${omptest_BINARY_DIR}/cmake/omptest-config.cmake
-        DESTINATION lib/cmake/omptest)
+        DESTINATION "${OFFLOAD_INSTALL_LIBDIR}/cmake/omptest")
 
 # Install libomptest header files: Copy the whole include dir
 install(DIRECTORY ./include
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/omptest
+        DESTINATION "${OFFLOAD_INSTALL_LIBDIR}/omptest"
         FILES_MATCHING PATTERN "*.h")
+
+install(TARGETS omptest LIBRARY COMPONENT omptest DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
