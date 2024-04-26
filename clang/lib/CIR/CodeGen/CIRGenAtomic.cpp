@@ -416,7 +416,8 @@ static void buildAtomicOp(CIRGenFunction &CGF, AtomicExpr *E, Address Dest,
   case AtomicExpr::AO__c11_atomic_compare_exchange_strong:
   case AtomicExpr::AO__hip_atomic_compare_exchange_strong:
   case AtomicExpr::AO__opencl_atomic_compare_exchange_strong:
-    llvm_unreachable("NYI");
+    buildAtomicCmpXchgFailureSet(CGF, E, false, Dest, Ptr, Val1, Val2,
+                                 FailureOrder, Size, Order, Scope);
     return;
   case AtomicExpr::AO__c11_atomic_compare_exchange_weak:
   case AtomicExpr::AO__opencl_atomic_compare_exchange_weak:

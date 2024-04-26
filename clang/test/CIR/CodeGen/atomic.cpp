@@ -273,3 +273,14 @@ bool fi4b(int *i) {
 // LLVM: %[[R:.*]] = cmpxchg weak ptr {{.*}}, i32 {{.*}}, i32 {{.*}} acquire acquire, align 4
 // LLVM: extractvalue { i32, i1 } %[[R]], 0
 // LLVM: extractvalue { i32, i1 } %[[R]], 1
+
+bool fi4c(atomic_int *i) {
+  int cmp = 0;
+  return atomic_compare_exchange_strong(i, &cmp, 1);
+}
+
+// CHECK-LABEL: @_Z4fi4cPU7_Atomici
+// CHECK: cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!s32i>, {{.*}} : <!s32i>, {{.*}} : !cir.ptr<!s32i>, success = seq_cst, failure = seq_cst) : !cir.bool
+
+// LLVM-LABEL: @_Z4fi4cPU7_Atomici
+// LLVM: cmpxchg ptr {{.*}}, i32 {{.*}}, i32 {{.*}} seq_cst seq_cst, align 4
