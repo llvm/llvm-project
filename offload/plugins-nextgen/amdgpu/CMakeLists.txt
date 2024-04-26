@@ -40,7 +40,9 @@ if(hsa-runtime64_FOUND AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBHSA)
   target_link_libraries(omptarget.rtl.amdgpu PRIVATE hsa-runtime64::hsa-runtime64)
 else()
   libomptarget_say("Building AMDGPU plugin for dlopened libhsa")
-  target_include_directories(omptarget.rtl.amdgpu PRIVATE dynamic_hsa)
+  target_include_directories(omptarget.rtl.amdgpu 
+                            PRIVATE dynamic_hsa 
+                            PRIVATE dynamic_hip)
   target_sources(omptarget.rtl.amdgpu PRIVATE dynamic_hsa/hsa.cpp)
 endif()
 

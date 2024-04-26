@@ -57,6 +57,12 @@
 #endif
 
 #if defined(__has_include)
+#if __has_include("hip/hip_version.h")
+#include "hip/hip_version.h"
+#else
+#include "hip_version.h"
+#endif
+
 #if __has_include("hsa/hsa.h")
 #include "hsa/hsa.h"
 #include "hsa/hsa_ext_amd.h"
@@ -2809,7 +2815,21 @@ private:
 
   /// Detect if current architecture is an APU.
   Error checkIfAPU() {
-    // TODO: replace with ROCr API once it becomes available.
+#if (HIP_VERSION_MAJOR >= 6 && HIP_VERSION_MINOR >= 1)
+
+    uint8_t MemoryProperties[8];
+
+    hsa_status_t Stat = hsa_agent_get_info(
+        getAgent(), (hsa_agent_info_t)HSA_AMD_AGENT_INFO_MEMORY_PROPERTIES,
+        MemoryProperties);
+
+    if (auto Err = Plugin::check(Stat, "Error: Unable to fetch the memory "
+                                       "properties of the GPU. (%s)\n"))
+      return Err;
+
+    IsAPU = hsa_flag_isset64(MemoryProperties,
+                             HSA_AMD_MEMORY_PROPERTY_AGENT_IS_APU);
+#else
     llvm::StringRef StrGfxName(ComputeUnitKind);
     IsAPU = llvm::StringSwitch<bool>(StrGfxName)
                 .Case("gfx940", true)
@@ -2832,6 +2852,7 @@ private:
       IsAPU = true;
       return Plugin::success();
     }
+#endif
     return Plugin::success();
   }
 
