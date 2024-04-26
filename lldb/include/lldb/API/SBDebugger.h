@@ -321,13 +321,22 @@ public:
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
 
+  /// DEPRECATED: We used to only support one Destroy callback. Now that we
+  /// support Add and Remove, you should only remove Destroy callbacks that
+  /// you Add-ed. Use Add and Remove instead.
+  ///
+  /// Clear all previously added callbacks and only add the given one.
   void SetDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
                           void *baton);
 
+  /// Add a callback for when the debugger is destroyed. Return a token, which
+  /// can be used to remove said callback. Multiple callbacks can be added by
+  /// calling this function multiple times.
   lldb::destroy_callback_token_t
   AddDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
                      void *baton);
 
+  /// Remove the specified callback. Return true if successful.
   bool RemoveDestroyCallback(lldb::destroy_callback_token_t token);
 
 #ifndef SWIG
