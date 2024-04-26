@@ -1609,6 +1609,9 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
             cst.has_value() && cst.value() == static_cast<int64_t>(id);
         continue;
       }
+
+      dynamicNoop = false;
+      break;
     }
 
     if (dynamicNoop)
