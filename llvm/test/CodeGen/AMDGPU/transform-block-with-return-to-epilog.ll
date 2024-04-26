@@ -106,10 +106,9 @@ define amdgpu_ps { <4 x float> } @test_return_to_epilog_with_optimized_kill(floa
   ; GCN-NEXT:   renamable $vgpr1 = nofpexcept V_RCP_F32_e32 $vgpr0, implicit $mode, implicit $exec
   ; GCN-NEXT:   $sgpr0_sgpr1 = S_MOV_B64 $exec
   ; GCN-NEXT:   nofpexcept V_CMP_NGT_F32_e32 0, killed $vgpr1, implicit-def $vcc, implicit $mode, implicit $exec
-  ; GCN-NEXT:   renamable $sgpr4_sgpr5 = S_AND_B64 killed renamable $vcc, $exec, implicit-def $scc
-  ; GCN-NEXT:   renamable $sgpr2_sgpr3 = S_XOR_B64 renamable $sgpr4_sgpr5, $exec, implicit-def $scc
-  ; GCN-NEXT:   dead renamable $sgpr6_sgpr7 = S_AND_B64 renamable $sgpr4_sgpr5, -1, implicit-def $scc
-  ; GCN-NEXT:   $exec = S_CMOV_B64 killed renamable $sgpr4_sgpr5, implicit $scc
+  ; GCN-NEXT:   renamable $sgpr2_sgpr3 = S_XOR_B64 renamable $vcc, $exec, implicit-def $scc
+  ; GCN-NEXT:   dead renamable $sgpr4_sgpr5 = S_AND_B64 renamable $vcc, -1, implicit-def $scc
+  ; GCN-NEXT:   $exec = S_CMOV_B64 killed renamable $vcc, implicit $scc
   ; GCN-NEXT:   S_CBRANCH_SCC0 %bb.4, implicit killed $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1.flow.preheader:
@@ -126,9 +125,8 @@ define amdgpu_ps { <4 x float> } @test_return_to_epilog_with_optimized_kill(floa
   ; GCN-NEXT:   renamable $sgpr6_sgpr7 = S_AND_B64 $exec, renamable $vcc, implicit-def $scc
   ; GCN-NEXT:   renamable $sgpr4_sgpr5 = S_OR_B64 killed renamable $sgpr6_sgpr7, killed renamable $sgpr4_sgpr5, implicit-def $scc
   ; GCN-NEXT:   renamable $sgpr6_sgpr7 = S_ANDN2_B64 $exec, renamable $sgpr4_sgpr5, implicit-def $scc
-  ; GCN-NEXT:   renamable $sgpr8_sgpr9 = S_OR_B64 renamable $sgpr4_sgpr5, $exec, implicit-def $scc
-  ; GCN-NEXT:   dead renamable $sgpr10_sgpr11 = S_AND_B64 renamable $sgpr6_sgpr7, -1, implicit-def $scc
-  ; GCN-NEXT:   $exec = S_CSELECT_B64 killed renamable $sgpr6_sgpr7, killed renamable $sgpr8_sgpr9, implicit $scc
+  ; GCN-NEXT:   dead renamable $sgpr8_sgpr9 = S_AND_B64 renamable $sgpr6_sgpr7, -1, implicit-def $scc
+  ; GCN-NEXT:   $exec = S_CSELECT_B64 killed renamable $sgpr6_sgpr7, renamable $sgpr4_sgpr5, implicit $scc
   ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3.Flow:

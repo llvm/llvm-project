@@ -167,13 +167,12 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-NEXT:    buffer_load_dword v2, v[0:1], s[0:3], 0 addr64 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    v_add_i32_e64 v0, s[0:1], s0, v0
+; GCN-NEXT:    s_mov_b64 s[4:5], exec
+; GCN-NEXT:    v_addc_u32_e64 v1, s[0:1], 0, v1, s[0:1]
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
-; GCN-NEXT:    s_and_b64 s[6:7], vcc, exec
-; GCN-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
-; GCN-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
-; GCN-NEXT:    s_and_b64 s[8:9], s[6:7], -1
-; GCN-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GCN-NEXT:    s_cmov_b64 exec, s[6:7]
+; GCN-NEXT:    s_and_b64 s[6:7], vcc, -1
+; GCN-NEXT:    s_cmov_b64 exec, vcc
 ; GCN-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GCN-NEXT:  ; %bb.3: ; %bb
 ; GCN-NEXT:    s_getpc_b64 s[0:1]
@@ -447,10 +446,9 @@ define amdgpu_kernel void @uniform_inside_divergent(ptr addrspace(1) %out, i32 %
 ; GCN-LABEL: uniform_inside_divergent:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_cmp_gt_u32_e32 vcc, 16, v0
-; GCN-NEXT:    s_and_b64 s[2:3], vcc, exec
-; GCN-NEXT:    s_xor_b64 s[4:5], s[2:3], exec
-; GCN-NEXT:    s_and_b64 s[6:7], s[2:3], -1
-; GCN-NEXT:    s_cmov_b64 exec, s[2:3]
+; GCN-NEXT:    s_mov_b64 s[4:5], exec
+; GCN-NEXT:    s_and_b64 s[2:3], vcc, -1
+; GCN-NEXT:    s_cmov_b64 exec, vcc
 ; GCN-NEXT:    s_cbranch_scc1 .LBB8_1
 ; GCN-NEXT:  ; %bb.5: ; %entry
 ; GCN-NEXT:    s_getpc_b64 s[0:1]
@@ -507,10 +505,9 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GCN-NEXT:    v_mov_b32_e64 v0, 0
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
-; GCN-NEXT:    s_and_b64 s[2:3], vcc, exec
-; GCN-NEXT:    s_xor_b64 s[0:1], s[2:3], exec
-; GCN-NEXT:    s_and_b64 s[4:5], s[2:3], -1
-; GCN-NEXT:    s_cmov_b64 exec, s[2:3]
+; GCN-NEXT:    s_xor_b64 s[0:1], vcc, exec
+; GCN-NEXT:    s_and_b64 s[2:3], vcc, -1
+; GCN-NEXT:    s_cmov_b64 exec, vcc
 ; GCN-NEXT:    s_cbranch_scc1 .LBB9_1
 ; GCN-NEXT:  ; %bb.6: ; %entry
 ; GCN-NEXT:    s_getpc_b64 s[2:3]

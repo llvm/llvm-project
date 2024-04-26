@@ -499,10 +499,9 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-SDAG-NEXT:    v_and_b32_e32 v3, 1, v3
 ; GFX8-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v3
-; GFX8-SDAG-NEXT:    s_and_b64 s[6:7], vcc, exec
-; GFX8-SDAG-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
-; GFX8-SDAG-NEXT:    s_and_b64 s[8:9], s[6:7], -1
-; GFX8-SDAG-NEXT:    s_cmov_b64 exec, s[6:7]
+; GFX8-SDAG-NEXT:    s_mov_b64 s[4:5], exec
+; GFX8-SDAG-NEXT:    s_and_b64 s[6:7], vcc, -1
+; GFX8-SDAG-NEXT:    s_cmov_b64 exec, vcc
 ; GFX8-SDAG-NEXT:    s_cbranch_scc0 .LBB4_2
 ; GFX8-SDAG-NEXT:  ; %bb.1: ; %use.bb
 ; GFX8-SDAG-NEXT:    v_mov_b32_e32 v0, 0
@@ -526,10 +525,9 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-GISEL-NEXT:    v_and_b32_e32 v3, 1, v3
 ; GFX8-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v3
-; GFX8-GISEL-NEXT:    s_and_b64 s[6:7], vcc, exec
-; GFX8-GISEL-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
-; GFX8-GISEL-NEXT:    s_and_b64 s[8:9], s[6:7], -1
-; GFX8-GISEL-NEXT:    s_cmov_b64 exec, s[6:7]
+; GFX8-GISEL-NEXT:    s_mov_b64 s[4:5], exec
+; GFX8-GISEL-NEXT:    s_and_b64 s[6:7], vcc, -1
+; GFX8-GISEL-NEXT:    s_cmov_b64 exec, vcc
 ; GFX8-GISEL-NEXT:    s_cbranch_scc0 .LBB4_2
 ; GFX8-GISEL-NEXT:  ; %bb.1: ; %use.bb
 ; GFX8-GISEL-NEXT:    s_mov_b64 s[6:7], 0xc8
@@ -554,10 +552,9 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-SDAG-NEXT:    v_and_b32_e32 v3, 1, v3
 ; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v3
-; GFX9-SDAG-NEXT:    s_and_b64 s[6:7], vcc, exec
-; GFX9-SDAG-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
-; GFX9-SDAG-NEXT:    s_and_b64 s[8:9], s[6:7], -1
-; GFX9-SDAG-NEXT:    s_cmov_b64 exec, s[6:7]
+; GFX9-SDAG-NEXT:    s_mov_b64 s[4:5], exec
+; GFX9-SDAG-NEXT:    s_and_b64 s[6:7], vcc, -1
+; GFX9-SDAG-NEXT:    s_cmov_b64 exec, vcc
 ; GFX9-SDAG-NEXT:    s_cbranch_scc0 .LBB4_2
 ; GFX9-SDAG-NEXT:  ; %bb.1: ; %use.bb
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v0, 0
@@ -578,10 +575,9 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v3, 1, v3
 ; GFX9-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v3
-; GFX9-GISEL-NEXT:    s_and_b64 s[6:7], vcc, exec
-; GFX9-GISEL-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
-; GFX9-GISEL-NEXT:    s_and_b64 s[8:9], s[6:7], -1
-; GFX9-GISEL-NEXT:    s_cmov_b64 exec, s[6:7]
+; GFX9-GISEL-NEXT:    s_mov_b64 s[4:5], exec
+; GFX9-GISEL-NEXT:    s_and_b64 s[6:7], vcc, -1
+; GFX9-GISEL-NEXT:    s_cmov_b64 exec, vcc
 ; GFX9-GISEL-NEXT:    s_cbranch_scc0 .LBB4_2
 ; GFX9-GISEL-NEXT:  ; %bb.1: ; %use.bb
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
@@ -602,10 +598,9 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    v_and_b32_e32 v3, 1, v3
 ; SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v3
-; SDAG-NEXT:    s_and_b64 s[6:7], vcc, exec
-; SDAG-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
-; SDAG-NEXT:    s_and_b64 s[8:9], s[6:7], -1
-; SDAG-NEXT:    s_cmov_b64 exec, s[6:7]
+; SDAG-NEXT:    s_mov_b64 s[4:5], exec
+; SDAG-NEXT:    s_and_b64 s[6:7], vcc, -1
+; SDAG-NEXT:    s_cmov_b64 exec, vcc
 ; SDAG-NEXT:    s_cbranch_scc0 .LBB4_3
 ; SDAG-NEXT:  ; %bb.1: ; %use.bb
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
@@ -629,10 +624,9 @@ define i32 @func_uses_lds_phi_after(i1 %cond, ptr addrspace(1) %ptr) {
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    v_and_b32_e32 v3, 1, v3
 ; GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v3
-; GISEL-NEXT:    s_and_b64 s[6:7], vcc, exec
-; GISEL-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
-; GISEL-NEXT:    s_and_b64 s[8:9], s[6:7], -1
-; GISEL-NEXT:    s_cmov_b64 exec, s[6:7]
+; GISEL-NEXT:    s_mov_b64 s[4:5], exec
+; GISEL-NEXT:    s_and_b64 s[6:7], vcc, -1
+; GISEL-NEXT:    s_cmov_b64 exec, vcc
 ; GISEL-NEXT:    s_cbranch_scc0 .LBB4_3
 ; GISEL-NEXT:  ; %bb.1: ; %use.bb
 ; GISEL-NEXT:    s_cbranch_execnz .LBB4_4

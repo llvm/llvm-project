@@ -18,13 +18,12 @@ define i32 @prolog_spill(i32 %arg0, i32 %arg1, i32 %arg2) {
   ; REGALLOC-NEXT:   renamable $sgpr6 = IMPLICIT_DEF
   ; REGALLOC-NEXT:   renamable $vgpr1 = COPY killed renamable $sgpr6
   ; REGALLOC-NEXT:   SI_SPILL_V32_SAVE killed $vgpr1, %stack.3, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.3, addrspace 5)
-  ; REGALLOC-NEXT:   renamable $sgpr4_sgpr5 = S_AND_B64 killed renamable $sgpr4_sgpr5, $exec, implicit-def dead $scc
   ; REGALLOC-NEXT:   renamable $sgpr6_sgpr7 = S_XOR_B64 renamable $sgpr4_sgpr5, $exec, implicit-def dead $scc
   ; REGALLOC-NEXT:   renamable $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr6, 0, $vgpr0, implicit-def $sgpr6_sgpr7, implicit $sgpr6_sgpr7
   ; REGALLOC-NEXT:   renamable $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr7, 1, $vgpr0, implicit killed $sgpr6_sgpr7
   ; REGALLOC-NEXT:   SI_SPILL_WWM_V32_SAVE killed $vgpr0, %stack.2, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; REGALLOC-NEXT:   dead renamable $sgpr6_sgpr7 = S_AND_B64 renamable $sgpr4_sgpr5, -1, implicit-def $scc
-  ; REGALLOC-NEXT:   $exec = S_CMOV_B64 killed renamable $sgpr4_sgpr5, implicit $scc
+  ; REGALLOC-NEXT:   $exec = S_CMOV_B64_term killed renamable $sgpr4_sgpr5, implicit $scc
   ; REGALLOC-NEXT:   S_CBRANCH_SCC1 %bb.3, implicit killed $scc
   ; REGALLOC-NEXT:   S_BRANCH %bb.1
   ; REGALLOC-NEXT: {{  $}}
@@ -41,7 +40,7 @@ define i32 @prolog_spill(i32 %arg0, i32 %arg1, i32 %arg2) {
   ; REGALLOC-NEXT:   renamable $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr7, 3, $vgpr0, implicit killed $sgpr6_sgpr7
   ; REGALLOC-NEXT:   SI_SPILL_WWM_V32_SAVE killed $vgpr0, %stack.2, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; REGALLOC-NEXT:   dead renamable $sgpr6_sgpr7 = S_AND_B64 renamable $sgpr4_sgpr5, -1, implicit-def $scc
-  ; REGALLOC-NEXT:   $exec = S_CMOV_B64 killed renamable $sgpr4_sgpr5, implicit $scc
+  ; REGALLOC-NEXT:   $exec = S_CMOV_B64_term killed renamable $sgpr4_sgpr5, implicit $scc
   ; REGALLOC-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
   ; REGALLOC-NEXT:   S_BRANCH %bb.4
   ; REGALLOC-NEXT: {{  $}}

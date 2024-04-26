@@ -1553,7 +1553,8 @@ bool AMDGPUInstructionSelector::selectReturnAddress(MachineInstr &I) const {
   return true;
 }
 
-bool AMDGPUInstructionSelector::selectEndCfIntrinsic(MachineInstr &MI) const {
+bool AMDGPUInstructionSelector::selectWaveReconvergeIntrinsic(
+    MachineInstr &MI) const {
   // FIXME: Manually selecting to avoid dealing with the SReg_1 trick
   // SelectionDAG uses for wave32 vs wave64.
   MachineBasicBlock *BB = MI.getParent();
@@ -2084,7 +2085,7 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   unsigned IntrinsicID = cast<GIntrinsic>(I).getIntrinsicID();
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_wave_reconverge:
-    return selectEndCfIntrinsic(I);
+    return selectWaveReconvergeIntrinsic(I);
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap:
     return selectDSOrderedIntrinsic(I, IntrinsicID);

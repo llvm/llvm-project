@@ -204,11 +204,10 @@ define void @func_stacksave_nonentry_block(i1 %cond) {
 ; WAVE32-OPT:       ; %bb.0: ; %bb0
 ; WAVE32-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-OPT-NEXT:    v_and_b32_e32 v0, 1, v0
+; WAVE32-OPT-NEXT:    s_mov_b32 s4, exec_lo
 ; WAVE32-OPT-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; WAVE32-OPT-NEXT:    s_and_b32 s5, vcc_lo, exec_lo
-; WAVE32-OPT-NEXT:    s_xor_b32 s4, s5, exec_lo
-; WAVE32-OPT-NEXT:    s_and_b32 s6, s5, -1
-; WAVE32-OPT-NEXT:    s_cmov_b32 exec_lo, s5
+; WAVE32-OPT-NEXT:    s_and_b32 s5, vcc_lo, -1
+; WAVE32-OPT-NEXT:    s_cmov_b32 exec_lo, vcc_lo
 ; WAVE32-OPT-NEXT:    s_cbranch_scc0 .LBB4_2
 ; WAVE32-OPT-NEXT:  ; %bb.1: ; %bb1
 ; WAVE32-OPT-NEXT:    s_lshr_b32 s5, s32, 5
@@ -223,11 +222,10 @@ define void @func_stacksave_nonentry_block(i1 %cond) {
 ; WAVE64-OPT:       ; %bb.0: ; %bb0
 ; WAVE64-OPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE64-OPT-NEXT:    v_and_b32_e32 v0, 1, v0
+; WAVE64-OPT-NEXT:    s_mov_b64 s[4:5], exec
 ; WAVE64-OPT-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; WAVE64-OPT-NEXT:    s_and_b64 s[6:7], vcc, exec
-; WAVE64-OPT-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
-; WAVE64-OPT-NEXT:    s_and_b64 s[8:9], s[6:7], -1
-; WAVE64-OPT-NEXT:    s_cmov_b64 exec, s[6:7]
+; WAVE64-OPT-NEXT:    s_and_b64 s[6:7], vcc, -1
+; WAVE64-OPT-NEXT:    s_cmov_b64 exec, vcc
 ; WAVE64-OPT-NEXT:    s_cbranch_scc0 .LBB4_2
 ; WAVE64-OPT-NEXT:  ; %bb.1: ; %bb1
 ; WAVE64-OPT-NEXT:    s_lshr_b32 s6, s32, 6
@@ -251,8 +249,7 @@ define void @func_stacksave_nonentry_block(i1 %cond) {
 ; WAVE32-O0-NEXT:    s_mov_b32 exec_lo, s7
 ; WAVE32-O0-NEXT:    v_and_b32_e64 v1, 1, v1
 ; WAVE32-O0-NEXT:    v_cmp_eq_u32_e64 s4, v1, 1
-; WAVE32-O0-NEXT:    s_and_b32 s4, s4, exec_lo
-; WAVE32-O0-NEXT:    s_xor_b32 s5, s4, exec_lo
+; WAVE32-O0-NEXT:    s_mov_b32 s5, exec_lo
 ; WAVE32-O0-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE32-O0-NEXT:    v_writelane_b32 v0, s5, 0
 ; WAVE32-O0-NEXT:    s_or_saveexec_b32 s7, -1
@@ -298,8 +295,7 @@ define void @func_stacksave_nonentry_block(i1 %cond) {
 ; WAVE64-O0-NEXT:    s_mov_b64 exec, s[10:11]
 ; WAVE64-O0-NEXT:    v_and_b32_e64 v1, 1, v1
 ; WAVE64-O0-NEXT:    v_cmp_eq_u32_e64 s[4:5], v1, 1
-; WAVE64-O0-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; WAVE64-O0-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; WAVE64-O0-NEXT:    s_mov_b64 s[6:7], exec
 ; WAVE64-O0-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE64-O0-NEXT:    v_writelane_b32 v0, s6, 0
 ; WAVE64-O0-NEXT:    v_writelane_b32 v0, s7, 1
@@ -343,8 +339,7 @@ define void @func_stacksave_nonentry_block(i1 %cond) {
 ; WAVE32-WWM-PREALLOC-NEXT:    ; implicit-def: $vgpr1 : SGPR spill to VGPR lane
 ; WAVE32-WWM-PREALLOC-NEXT:    v_and_b32_e64 v0, 1, v0
 ; WAVE32-WWM-PREALLOC-NEXT:    v_cmp_eq_u32_e64 s4, v0, 1
-; WAVE32-WWM-PREALLOC-NEXT:    s_and_b32 s4, s4, exec_lo
-; WAVE32-WWM-PREALLOC-NEXT:    s_xor_b32 s5, s4, exec_lo
+; WAVE32-WWM-PREALLOC-NEXT:    s_mov_b32 s5, exec_lo
 ; WAVE32-WWM-PREALLOC-NEXT:    v_writelane_b32 v1, s5, 0
 ; WAVE32-WWM-PREALLOC-NEXT:    s_and_b32 s5, s4, -1
 ; WAVE32-WWM-PREALLOC-NEXT:    s_cmov_b32 exec_lo, s4

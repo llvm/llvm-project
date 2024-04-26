@@ -16,10 +16,9 @@ define amdgpu_ps void @return_void(float %0) #0 {
 ; CHECK-NEXT:    s_mov_b64 s[2:3], exec
 ; CHECK-NEXT:    s_mov_b32 s0, 0x41200000
 ; CHECK-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
-; CHECK-NEXT:    s_and_b64 s[4:5], vcc, exec
-; CHECK-NEXT:    s_xor_b64 s[0:1], s[4:5], exec
-; CHECK-NEXT:    s_and_b64 s[6:7], s[4:5], -1
-; CHECK-NEXT:    s_cmov_b64 exec, s[4:5]
+; CHECK-NEXT:    s_xor_b64 s[0:1], vcc, exec
+; CHECK-NEXT:    s_and_b64 s[4:5], vcc, -1
+; CHECK-NEXT:    s_cmov_b64 exec, vcc
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_4
 ; CHECK-NEXT:  .LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -66,10 +65,9 @@ define amdgpu_ps void @return_void_compr(float %0) #0 {
 ; CHECK-NEXT:    s_mov_b64 s[2:3], exec
 ; CHECK-NEXT:    s_mov_b32 s0, 0x41200000
 ; CHECK-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
-; CHECK-NEXT:    s_and_b64 s[4:5], vcc, exec
-; CHECK-NEXT:    s_xor_b64 s[0:1], s[4:5], exec
-; CHECK-NEXT:    s_and_b64 s[6:7], s[4:5], -1
-; CHECK-NEXT:    s_cmov_b64 exec, s[4:5]
+; CHECK-NEXT:    s_xor_b64 s[0:1], vcc, exec
+; CHECK-NEXT:    s_and_b64 s[4:5], vcc, -1
+; CHECK-NEXT:    s_cmov_b64 exec, vcc
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB1_4
 ; CHECK-NEXT:  .LBB1_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -144,10 +142,9 @@ define amdgpu_ps float @return_nonvoid(float %0) #0 {
 ; CHECK-NEXT:    s_mov_b64 s[0:1], exec
 ; CHECK-NEXT:    s_mov_b32 s2, 0x41200000
 ; CHECK-NEXT:    v_cmp_ngt_f32_e32 vcc, s2, v0
-; CHECK-NEXT:    s_and_b64 s[4:5], vcc, exec
-; CHECK-NEXT:    s_xor_b64 s[2:3], s[4:5], exec
-; CHECK-NEXT:    s_and_b64 s[6:7], s[4:5], -1
-; CHECK-NEXT:    s_cmov_b64 exec, s[4:5]
+; CHECK-NEXT:    s_xor_b64 s[2:3], vcc, exec
+; CHECK-NEXT:    s_and_b64 s[4:5], vcc, -1
+; CHECK-NEXT:    s_cmov_b64 exec, vcc
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB3_4
 ; CHECK-NEXT:  .LBB3_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1

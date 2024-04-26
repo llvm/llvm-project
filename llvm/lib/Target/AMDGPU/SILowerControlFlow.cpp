@@ -82,7 +82,7 @@ private:
   SmallSet<Register, 8> RecomputeRegs;
 
   const TargetRegisterClass *BoolRC = nullptr;
-  long unsigned TestMask;
+  uint64_t TestMask;
   unsigned Select;
   unsigned CmovOpc;
   unsigned AndOpc;
@@ -96,12 +96,14 @@ private:
   unsigned OrSaveExecOpc;
   unsigned Exec;
 
+  bool hasKill(const MachineBasicBlock *Begin, const MachineBasicBlock *End);
+
   void emitIf(MachineInstr &MI);
   void emitElse(MachineInstr &MI);
   void emitIfBreak(MachineInstr &MI);
   void emitLoop(MachineInstr &MI);
   void emitWaveDiverge(MachineInstr &MI, Register EnabledLanesMask,
-                       Register DisableLanesMask);
+                       Register DisableLanesMask, bool IsIf);
 
   void emitWaveReconverge(MachineInstr &MI);
 
@@ -165,6 +167,37 @@ INITIALIZE_PASS(SILowerControlFlow, DEBUG_TYPE,
 
 char &llvm::SILowerControlFlowID = SILowerControlFlow::ID;
 
+bool SILowerControlFlow::hasKill(const MachineBasicBlock *Begin,
+                                 const MachineBasicBlock *End) {
+  DenseSet<const MachineBasicBlock*> Visited;
+  SmallVector<MachineBasicBlock *, 4> Worklist(Begin->successors());
+
+  while (!Worklist.empty()) {
+    MachineBasicBlock *MBB = Worklist.pop_back_val();
+
+    if (MBB == End || !Visited.insert(MBB).second)
+      continue;
+    if (KillBlocks.contains(MBB))
+      return true;
+
+    Worklist.append(MBB->succ_begin(), MBB->succ_end());
+  }
+
+  return false;
+}
+
+static bool isSimpleIf(const MachineInstr &MI, const MachineRegisterInfo *MRI) {
+  Register SaveExecReg = MI.getOperand(0).getReg();
+  auto U = MRI->use_instr_nodbg_begin(SaveExecReg);
+
+  if (U == MRI->use_instr_nodbg_end() ||
+      std::next(U) != MRI->use_instr_nodbg_end() ||
+      U->getOpcode() != AMDGPU::SI_WAVE_RECONVERGE)
+    return false;
+
+  return true;
+}
+
 void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
@@ -173,6 +206,9 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineOperand &Cond = MI.getOperand(1);
   assert(Cond.getSubReg() == AMDGPU::NoSubRegister);
   Register CondReg = Cond.getReg();
+  MachineInstr *CondRegDef = MRI->getVRegDef(CondReg);
+  if (CondRegDef && CondRegDef->getParent() == &MBB && TII->isVALU(*CondRegDef))
+    return emitWaveDiverge(MI, CondReg, MaskElse, true);
 
   Register MaskThen = MRI->createVirtualRegister(BoolRC);
   // Get rid of the garbage bits in the Cond register which might be coming from
@@ -184,7 +220,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   if (LV)
     LV->replaceKillInstruction(CondReg, MI, *CondFiltered);
 
-  emitWaveDiverge(MI, MaskThen, MaskElse);
+  emitWaveDiverge(MI, MaskThen, MaskElse, true);
 
   if (LIS) {
     LIS->InsertMachineInstrInMaps(*CondFiltered);
@@ -195,7 +231,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
 void SILowerControlFlow::emitElse(MachineInstr &MI) {
   Register InvCondReg = MI.getOperand(0).getReg();
   Register CondReg = MI.getOperand(1).getReg();
-  emitWaveDiverge(MI, CondReg, InvCondReg);
+  emitWaveDiverge(MI, CondReg, InvCondReg, false);
 }
 
 void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
@@ -258,16 +294,11 @@ void SILowerControlFlow::emitLoop(MachineInstr &MI) {
 
   Register Cond = MI.getOperand(0).getReg();
   Register MaskLoop = MRI->createVirtualRegister(BoolRC);
-  Register MaskExit = MRI->createVirtualRegister(BoolRC);
   Register AndZero = MRI->createVirtualRegister(BoolRC);
 
   MachineInstr *CondLoop = BuildMI(MBB, &MI, DL, TII->get(Andn2Opc), MaskLoop)
                                .addReg(Exec)
                                .addReg(Cond);
-
-  MachineInstr *ExitExec = BuildMI(MBB, &MI, DL, TII->get(OrOpc), MaskExit)
-                               .addReg(Cond)
-                               .addReg(Exec);
 
   MachineInstr *IfZeroMask = BuildMI(MBB, &MI, DL, TII->get(AndOpc), AndZero)
                                  .addReg(MaskLoop)
@@ -275,7 +306,7 @@ void SILowerControlFlow::emitLoop(MachineInstr &MI) {
 
   MachineInstr *SetExec= BuildMI(MBB, &MI, DL, TII->get(Select), Exec)
                                      .addReg(MaskLoop)
-                                     .addReg(MaskExit);
+                                     .addReg(Cond);
 
   if (LV)
     LV->replaceKillInstruction(MI.getOperand(0).getReg(), MI, *SetExec);
@@ -290,10 +321,8 @@ void SILowerControlFlow::emitLoop(MachineInstr &MI) {
     LIS->ReplaceMachineInstrInMaps(MI, *SetExec);
     LIS->InsertMachineInstrInMaps(*CondLoop);
     LIS->InsertMachineInstrInMaps(*IfZeroMask);
-    LIS->InsertMachineInstrInMaps(*ExitExec);
     LIS->InsertMachineInstrInMaps(*Branch);
     LIS->createAndComputeVirtRegInterval(MaskLoop);
-    LIS->createAndComputeVirtRegInterval(MaskExit);
     LIS->createAndComputeVirtRegInterval(AndZero);
   }
 
@@ -302,20 +331,49 @@ void SILowerControlFlow::emitLoop(MachineInstr &MI) {
 
 void SILowerControlFlow::emitWaveDiverge(MachineInstr &MI,
                                          Register EnabledLanesMask,
-                                         Register DisableLanesMask) {
+                                         Register DisableLanesMask, bool IsIf) {
+
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
   MachineBasicBlock::iterator I(MI);
 
-  MachineInstr *CondInverted =
-      BuildMI(MBB, I, DL, TII->get(XorOpc), DisableLanesMask)
-          .addReg(EnabledLanesMask)
-          .addReg(Exec);
+  bool NeedXor = true;
+  if (IsIf) {
+    // If there is only one use of save exec register and that use is SI_END_CF,
+    // we can optimize SI_IF by returning the full saved exec mask instead of
+    // just cleared bits.
+    bool SimpleIf = isSimpleIf(MI, MRI);
 
-  if (LV) {
-    LV->replaceKillInstruction(DisableLanesMask, MI, *CondInverted);
+    if (SimpleIf) {
+      // Check for SI_KILL_*_TERMINATOR on path from if to endif.
+      // if there is any such terminator simplifications are not safe.
+      auto UseMI = MRI->use_instr_nodbg_begin(DisableLanesMask);
+      SimpleIf = !hasKill(MI.getParent(), UseMI->getParent());
+    }
+    NeedXor = !SimpleIf;
   }
 
+  if (NeedXor) {
+
+    MachineInstr *CondInverted =
+        BuildMI(MBB, I, DL, TII->get(XorOpc), DisableLanesMask)
+            .addReg(EnabledLanesMask)
+            .addReg(Exec);
+
+    if (LV) {
+      LV->replaceKillInstruction(DisableLanesMask, MI, *CondInverted);
+    }
+
+    if (LIS) {
+      LIS->InsertMachineInstrInMaps(*CondInverted);
+    }
+  } else {
+    MachineInstr *CopyExec =
+        BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DisableLanesMask)
+            .addReg(Exec);
+    if(LIS)
+      LIS->InsertMachineInstrInMaps(*CopyExec);
+  }
   Register TestResultReg = MRI->createVirtualRegister(BoolRC);
   MachineInstr *IfZeroMask =
       BuildMI(MBB, I, DL, TII->get(AndOpc), TestResultReg)
@@ -327,7 +385,7 @@ void SILowerControlFlow::emitWaveDiverge(MachineInstr &MI,
 
   MachineBasicBlock *FlowBB = MI.getOperand(2).getMBB();
   MachineBasicBlock *TargetBB = nullptr;
-  // determine target BBs
+    // determine target BBs
   I = skipToUncondBrOrEnd(MBB, I);
   if (I != MBB.end()) {
     // skipToUncondBrOrEnd returns either unconditional branch or end()
@@ -358,8 +416,7 @@ void SILowerControlFlow::emitWaveDiverge(MachineInstr &MI,
     return;
   }
 
-  LIS->InsertMachineInstrInMaps(*CondInverted);
-  LIS->InsertMachineInstrInMaps(*IfZeroMask);
+    LIS->InsertMachineInstrInMaps(*IfZeroMask);
   LIS->ReplaceMachineInstrInMaps(MI, *SetExecForSucc);
 
   RecomputeRegs.insert(MI.getOperand(0).getReg());
@@ -607,8 +664,8 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
 
   if (ST.isWave32()) {
     TestMask = 0xffffffff;
-    Select = AMDGPU::S_CSELECT_B32;
-    CmovOpc = AMDGPU::S_CMOV_B32;
+    Select = AMDGPU::S_CSELECT_B32_term;
+    CmovOpc = AMDGPU::S_CMOV_B32_term;
     AndOpc = AMDGPU::S_AND_B32;
     Andn2Opc = AMDGPU::S_ANDN2_B32;
     OrOpc = AMDGPU::S_OR_B32;
@@ -621,8 +678,8 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
     Exec = AMDGPU::EXEC_LO;
   } else {
     TestMask = 0xffffffffffffffff;
-    Select = AMDGPU::S_CSELECT_B64;
-    CmovOpc = AMDGPU::S_CMOV_B64;
+    Select = AMDGPU::S_CSELECT_B64_term;
+    CmovOpc = AMDGPU::S_CMOV_B64_term;
     AndOpc = AMDGPU::S_AND_B64;
     Andn2Opc = AMDGPU::S_ANDN2_B64;
     OrOpc = AMDGPU::S_OR_B64;

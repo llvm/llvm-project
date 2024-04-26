@@ -15754,7 +15754,7 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
           Next++;
         }
 
-        assert((Next == MBB.end() || !Next->readsRegister(AMDGPU::SCC)) &&
+        assert((Next == MBB.end() || !Next->readsRegister(AMDGPU::SCC, TRI)) &&
                "Malformed CFG detected!\n");
 
         if (NeedToMove) {

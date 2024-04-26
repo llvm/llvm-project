@@ -18,9 +18,8 @@ define <3 x float> @liveout_undef_subrange(<3 x float> %arg) {
 ; CHECK-NEXT:    v_cmp_neq_f32_e32 vcc, 0, v2
 ; CHECK-NEXT:    s_or_b64 s[4:5], vcc, s[4:5]
 ; CHECK-NEXT:    s_andn2_b64 s[6:7], exec, s[4:5]
-; CHECK-NEXT:    s_or_b64 s[8:9], s[4:5], exec
-; CHECK-NEXT:    s_and_b64 s[10:11], s[6:7], -1
-; CHECK-NEXT:    s_cselect_b64 exec, s[6:7], s[8:9]
+; CHECK-NEXT:    s_and_b64 s[8:9], s[6:7], -1
+; CHECK-NEXT:    s_cselect_b64 exec, s[6:7], s[4:5]
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb2
 ; CHECK-NEXT:    ; in Loop: Header=BB0_1 Depth=1

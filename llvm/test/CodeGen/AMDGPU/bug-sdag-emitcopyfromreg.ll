@@ -31,12 +31,11 @@ define void @f(i32 %arg, ptr %ptr) {
 ; ISA-NEXT:    s_or_b32 s4, s5, s4
 ; ISA-NEXT:    s_andn2_b32 s5, exec_lo, s4
 ; ISA-NEXT:    v_add_f32_e32 v6, v7, v0
-; ISA-NEXT:    s_or_b32 s6, s4, exec_lo
-; ISA-NEXT:    s_and_b32 s7, s5, -1
+; ISA-NEXT:    s_and_b32 s6, s5, -1
 ; ISA-NEXT:    v_add_f32_e64 v6, v6, |v3|
 ; ISA-NEXT:    v_add_f32_e32 v6, v6, v4
 ; ISA-NEXT:    v_add_f32_e32 v6, v6, v5
-; ISA-NEXT:    s_cselect_b32 exec_lo, s5, s6
+; ISA-NEXT:    s_cselect_b32 exec_lo, s5, s4
 ; ISA-NEXT:    s_cbranch_scc1 .LBB0_1
 ; ISA-NEXT:  ; %bb.2: ; %bb21
 ; ISA-NEXT:    flat_store_dword v[1:2], v7

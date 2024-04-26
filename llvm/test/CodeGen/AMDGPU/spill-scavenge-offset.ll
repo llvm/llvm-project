@@ -10273,9 +10273,8 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    s_mov_b64 exec, s[0:1]
 ; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GFX6-NEXT:    s_and_b64 s[36:37], vcc, exec
-; GFX6-NEXT:    s_xor_b64 s[0:1], s[36:37], exec
-; GFX6-NEXT:    s_and_b64 vcc, s[36:37], -1
+; GFX6-NEXT:    s_mov_b64 s[0:1], exec
+; GFX6-NEXT:    s_and_b64 s[36:37], vcc, -1
 ; GFX6-NEXT:    ;;#ASMSTART
 ; GFX6-NEXT:    ; def s[8:15]
 ; GFX6-NEXT:    ;;#ASMEND
@@ -10294,7 +10293,7 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX6-NEXT:    ;;#ASMSTART
 ; GFX6-NEXT:    ; def s33
 ; GFX6-NEXT:    ;;#ASMEND
-; GFX6-NEXT:    s_cmov_b64 exec, s[36:37]
+; GFX6-NEXT:    s_cmov_b64 exec, vcc
 ; GFX6-NEXT:    s_cbranch_scc0 .LBB1_2
 ; GFX6-NEXT:  ; %bb.1: ; %bb0
 ; GFX6-NEXT:    s_mov_b64 s[2:3], exec
@@ -10635,6 +10634,7 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX9-FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s3, 0
 ; GFX9-FLATSCR-NEXT:    s_movk_i32 s0, 0x2050
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v4, 16
+; GFX9-FLATSCR-NEXT:    s_mov_b64 s[34:35], exec
 ; GFX9-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[0:3], s0 ; 16-byte Folded Spill
 ; GFX9-FLATSCR-NEXT:    global_load_dwordx4 v[0:3], v5, s[38:39] offset:224
@@ -10667,10 +10667,8 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX9-FLATSCR-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-FLATSCR-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v7
 ; GFX9-FLATSCR-NEXT:    v_lshl_add_u32 v4, v7, 13, v4
-; GFX9-FLATSCR-NEXT:    s_and_b64 s[44:45], vcc, exec
+; GFX9-FLATSCR-NEXT:    s_and_b64 s[44:45], vcc, -1
 ; GFX9-FLATSCR-NEXT:    scratch_store_dword v4, v6, off
-; GFX9-FLATSCR-NEXT:    s_xor_b64 s[34:35], s[44:45], exec
-; GFX9-FLATSCR-NEXT:    s_and_b64 s[46:47], s[44:45], -1
 ; GFX9-FLATSCR-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[0:3], s0 ; 16-byte Folded Spill
 ; GFX9-FLATSCR-NEXT:    global_load_dwordx4 v[0:3], v5, s[38:39] offset:80
@@ -10714,7 +10712,7 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX9-FLATSCR-NEXT:    ;;#ASMSTART
 ; GFX9-FLATSCR-NEXT:    ; def s33
 ; GFX9-FLATSCR-NEXT:    ;;#ASMEND
-; GFX9-FLATSCR-NEXT:    s_cmov_b64 exec, s[44:45]
+; GFX9-FLATSCR-NEXT:    s_cmov_b64 exec, vcc
 ; GFX9-FLATSCR-NEXT:    s_cbranch_scc0 .LBB1_2
 ; GFX9-FLATSCR-NEXT:  ; %bb.1: ; %bb0
 ; GFX9-FLATSCR-NEXT:    ;;#ASMSTART
@@ -10819,6 +10817,7 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX10-FLATSCR-NEXT:    s_load_dwordx4 s[36:39], s[0:1], 0x24
 ; GFX10-FLATSCR-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX10-FLATSCR-NEXT:    v_mov_b32_e32 v6, 1
+; GFX10-FLATSCR-NEXT:    s_mov_b32 s33, exec_lo
 ; GFX10-FLATSCR-NEXT:    v_mbcnt_hi_u32_b32 v0, -1, v0
 ; GFX10-FLATSCR-NEXT:    v_lshlrev_b32_e32 v5, 8, v0
 ; GFX10-FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
@@ -10842,10 +10841,8 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX10-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-FLATSCR-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-FLATSCR-NEXT:    v_lshl_add_u32 v4, v0, 13, 16
-; GFX10-FLATSCR-NEXT:    s_and_b32 s39, vcc_lo, exec_lo
+; GFX10-FLATSCR-NEXT:    s_and_b32 s39, vcc_lo, -1
 ; GFX10-FLATSCR-NEXT:    scratch_store_dword v4, v6, off
-; GFX10-FLATSCR-NEXT:    s_xor_b32 s33, s39, exec_lo
-; GFX10-FLATSCR-NEXT:    s_and_b32 s44, s39, -1
 ; GFX10-FLATSCR-NEXT:    ;;#ASMSTART
 ; GFX10-FLATSCR-NEXT:    ; def s[0:7]
 ; GFX10-FLATSCR-NEXT:    ;;#ASMEND
@@ -10867,7 +10864,7 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX10-FLATSCR-NEXT:    ;;#ASMSTART
 ; GFX10-FLATSCR-NEXT:    ; def s38
 ; GFX10-FLATSCR-NEXT:    ;;#ASMEND
-; GFX10-FLATSCR-NEXT:    s_cmov_b32 exec_lo, s39
+; GFX10-FLATSCR-NEXT:    s_cmov_b32 exec_lo, vcc_lo
 ; GFX10-FLATSCR-NEXT:    s_cbranch_scc0 .LBB1_2
 ; GFX10-FLATSCR-NEXT:  ; %bb.1: ; %bb0
 ; GFX10-FLATSCR-NEXT:    ;;#ASMSTART

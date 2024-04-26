@@ -116,7 +116,7 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    ; Child Loop BB0_15 Depth 2
 ; CHECK-NEXT:    ; Child Loop BB0_19 Depth 2
 ; CHECK-NEXT:    s_and_b64 s[10:11], s[4:5], exec
-; CHECK-NEXT:    s_xor_b64 s[8:9], s[10:11], exec
+; CHECK-NEXT:    s_mov_b64 s[8:9], exec
 ; CHECK-NEXT:    s_and_b64 s[12:13], s[10:11], -1
 ; CHECK-NEXT:    s_cmov_b64 exec, s[10:11]
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_14
@@ -160,8 +160,7 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    s_addc_u32 s11, s11, 0
 ; CHECK-NEXT:    s_or_b64 s[12:13], vcc, s[12:13]
 ; CHECK-NEXT:    s_andn2_b64 s[16:17], exec, s[12:13]
-; CHECK-NEXT:    s_or_b64 s[18:19], s[12:13], exec
-; CHECK-NEXT:    s_and_b64 s[20:21], s[16:17], -1
+; CHECK-NEXT:    s_and_b64 s[18:19], s[16:17], -1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[10:11], v15 offset:3
 ; CHECK-NEXT:    flat_store_byte v[10:11], v16 offset:2
@@ -179,7 +178,7 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    flat_store_byte v[10:11], v21 offset:14
 ; CHECK-NEXT:    flat_store_byte v[10:11], v20 offset:13
 ; CHECK-NEXT:    flat_store_byte v[10:11], v27 offset:12
-; CHECK-NEXT:    s_cselect_b64 exec, s[16:17], s[18:19]
+; CHECK-NEXT:    s_cselect_b64 exec, s[16:17], s[12:13]
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_15
 ; CHECK-NEXT:  ; %bb.16: ; %loop.exit.guard
 ; CHECK-NEXT:    ; in Loop: Header=BB0_12 Depth=1
@@ -211,11 +210,10 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    v_addc_co_u32_e32 v11, vcc, v9, v12, vcc
 ; CHECK-NEXT:    s_or_b64 s[12:13], s[8:9], s[12:13]
 ; CHECK-NEXT:    s_andn2_b64 s[8:9], exec, s[12:13]
-; CHECK-NEXT:    s_or_b64 s[16:17], s[12:13], exec
-; CHECK-NEXT:    s_and_b64 s[18:19], s[8:9], -1
+; CHECK-NEXT:    s_and_b64 s[16:17], s[8:9], -1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_store_byte v[10:11], v13
-; CHECK-NEXT:    s_cselect_b64 exec, s[8:9], s[16:17]
+; CHECK-NEXT:    s_cselect_b64 exec, s[8:9], s[12:13]
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_19
 ; CHECK-NEXT:  ; %bb.20: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB0_12 Depth=1

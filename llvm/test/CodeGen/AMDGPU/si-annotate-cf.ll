@@ -17,9 +17,8 @@ define amdgpu_kernel void @break_inserted_outside_of_loop(ptr addrspace(1) %out,
 ; SI-NEXT:    s_and_b64 s[4:5], exec, vcc
 ; SI-NEXT:    s_or_b64 s[2:3], s[4:5], s[2:3]
 ; SI-NEXT:    s_andn2_b64 s[4:5], exec, s[2:3]
-; SI-NEXT:    s_or_b64 s[6:7], s[2:3], exec
-; SI-NEXT:    s_and_b64 s[8:9], s[4:5], -1
-; SI-NEXT:    s_cselect_b64 exec, s[4:5], s[6:7]
+; SI-NEXT:    s_and_b64 s[6:7], s[4:5], -1
+; SI-NEXT:    s_cselect_b64 exec, s[4:5], s[2:3]
 ; SI-NEXT:    s_cbranch_scc1 .LBB0_1
 ; SI-NEXT:  ; %bb.2: ; %ENDLOOP
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
@@ -44,9 +43,8 @@ define amdgpu_kernel void @break_inserted_outside_of_loop(ptr addrspace(1) %out,
 ; FLAT-NEXT:    s_and_b64 s[4:5], exec, vcc
 ; FLAT-NEXT:    s_or_b64 s[2:3], s[4:5], s[2:3]
 ; FLAT-NEXT:    s_andn2_b64 s[4:5], exec, s[2:3]
-; FLAT-NEXT:    s_or_b64 s[6:7], s[2:3], exec
-; FLAT-NEXT:    s_and_b64 s[8:9], s[4:5], -1
-; FLAT-NEXT:    s_cselect_b64 exec, s[4:5], s[6:7]
+; FLAT-NEXT:    s_and_b64 s[6:7], s[4:5], -1
+; FLAT-NEXT:    s_cselect_b64 exec, s[4:5], s[2:3]
 ; FLAT-NEXT:    s_cbranch_scc1 .LBB0_1
 ; FLAT-NEXT:  ; %bb.2: ; %ENDLOOP
 ; FLAT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
@@ -75,12 +73,11 @@ define amdgpu_kernel void @phi_cond_outside_loop(i32 %b) {
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, -1, 0
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_and_b64 s[8:9], vcc, exec
-; SI-NEXT:    s_xor_b64 s[6:7], s[8:9], exec
-; SI-NEXT:    s_and_b64 s[4:5], s[8:9], -1
+; SI-NEXT:    s_and_b64 s[4:5], vcc, -1
+; SI-NEXT:    s_mov_b64 s[6:7], exec
 ; SI-NEXT:    s_mov_b64 s[2:3], 0
 ; SI-NEXT:    s_mov_b64 s[4:5], 0
-; SI-NEXT:    s_cmov_b64 exec, s[8:9]
+; SI-NEXT:    s_cmov_b64 exec, vcc
 ; SI-NEXT:    s_cbranch_scc0 .LBB1_2
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    s_load_dword s0, s[0:1], 0x9
@@ -94,9 +91,8 @@ define amdgpu_kernel void @phi_cond_outside_loop(i32 %b) {
 ; SI-NEXT:    s_and_b64 s[0:1], exec, s[4:5]
 ; SI-NEXT:    s_or_b64 s[2:3], s[0:1], s[2:3]
 ; SI-NEXT:    s_andn2_b64 s[0:1], exec, s[2:3]
-; SI-NEXT:    s_or_b64 s[6:7], s[2:3], exec
-; SI-NEXT:    s_and_b64 s[8:9], s[0:1], -1
-; SI-NEXT:    s_cselect_b64 exec, s[0:1], s[6:7]
+; SI-NEXT:    s_and_b64 s[6:7], s[0:1], -1
+; SI-NEXT:    s_cselect_b64 exec, s[0:1], s[2:3]
 ; SI-NEXT:    s_cbranch_scc1 .LBB1_2
 ; SI-NEXT:  ; %bb.3: ; %exit
 ; SI-NEXT:    s_endpgm
@@ -105,12 +101,11 @@ define amdgpu_kernel void @phi_cond_outside_loop(i32 %b) {
 ; FLAT:       ; %bb.0: ; %entry
 ; FLAT-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; FLAT-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; FLAT-NEXT:    s_and_b64 s[8:9], vcc, exec
-; FLAT-NEXT:    s_xor_b64 s[6:7], s[8:9], exec
-; FLAT-NEXT:    s_and_b64 s[4:5], s[8:9], -1
+; FLAT-NEXT:    s_and_b64 s[4:5], vcc, -1
+; FLAT-NEXT:    s_mov_b64 s[6:7], exec
 ; FLAT-NEXT:    s_mov_b64 s[2:3], 0
 ; FLAT-NEXT:    s_mov_b64 s[4:5], 0
-; FLAT-NEXT:    s_cmov_b64 exec, s[8:9]
+; FLAT-NEXT:    s_cmov_b64 exec, vcc
 ; FLAT-NEXT:    s_cbranch_scc0 .LBB1_2
 ; FLAT-NEXT:  ; %bb.1: ; %else
 ; FLAT-NEXT:    s_load_dword s0, s[0:1], 0x24
@@ -124,9 +119,8 @@ define amdgpu_kernel void @phi_cond_outside_loop(i32 %b) {
 ; FLAT-NEXT:    s_and_b64 s[0:1], exec, s[4:5]
 ; FLAT-NEXT:    s_or_b64 s[2:3], s[0:1], s[2:3]
 ; FLAT-NEXT:    s_andn2_b64 s[0:1], exec, s[2:3]
-; FLAT-NEXT:    s_or_b64 s[6:7], s[2:3], exec
-; FLAT-NEXT:    s_and_b64 s[8:9], s[0:1], -1
-; FLAT-NEXT:    s_cselect_b64 exec, s[0:1], s[6:7]
+; FLAT-NEXT:    s_and_b64 s[6:7], s[0:1], -1
+; FLAT-NEXT:    s_cselect_b64 exec, s[0:1], s[2:3]
 ; FLAT-NEXT:    s_cbranch_scc1 .LBB1_2
 ; FLAT-NEXT:  ; %bb.3: ; %exit
 ; FLAT-NEXT:    s_endpgm

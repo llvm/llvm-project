@@ -148,21 +148,19 @@ define void @func_non_entry_block_static_alloca_align4(ptr addrspace(1) %out, i3
 ; GCN-LABEL: func_non_entry_block_static_alloca_align4:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s12, s33
+; GCN-NEXT:    s_mov_b32 s10, s33
 ; GCN-NEXT:    s_mov_b32 s33, s32
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
-; GCN-NEXT:    s_and_b64 s[6:7], vcc, exec
-; GCN-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
-; GCN-NEXT:    s_and_b64 s[8:9], s[6:7], -1
-; GCN-NEXT:    s_cmov_b64 exec, s[6:7]
+; GCN-NEXT:    s_mov_b64 s[4:5], exec
+; GCN-NEXT:    s_and_b64 s[6:7], vcc, -1
+; GCN-NEXT:    s_cmov_b64 exec, vcc
 ; GCN-NEXT:    s_cbranch_scc0 .LBB2_4
 ; GCN-NEXT:  ; %bb.1: ; %bb.0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v3
-; GCN-NEXT:    s_and_b64 s[8:9], vcc, exec
-; GCN-NEXT:    s_xor_b64 s[6:7], s[8:9], exec
-; GCN-NEXT:    s_and_b64 s[10:11], s[8:9], -1
-; GCN-NEXT:    s_cmov_b64 exec, s[8:9]
+; GCN-NEXT:    s_mov_b64 s[6:7], exec
+; GCN-NEXT:    s_and_b64 s[8:9], vcc, -1
+; GCN-NEXT:    s_cmov_b64 exec, vcc
 ; GCN-NEXT:    s_cbranch_scc0 .LBB2_3
 ; GCN-NEXT:  ; %bb.2: ; %bb.1
 ; GCN-NEXT:    s_add_u32 s8, s32, 0x1000
@@ -186,7 +184,7 @@ define void @func_non_entry_block_static_alloca_align4(ptr addrspace(1) %out, i3
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_addk_i32 s32, 0xfc00
-; GCN-NEXT:    s_mov_b32 s33, s12
+; GCN-NEXT:    s_mov_b32 s33, s10
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 
 entry:
@@ -219,15 +217,14 @@ define void @func_non_entry_block_static_alloca_align64(ptr addrspace(1) %out, i
 ; GCN-LABEL: func_non_entry_block_static_alloca_align64:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s10, s33
+; GCN-NEXT:    s_mov_b32 s8, s33
 ; GCN-NEXT:    s_add_i32 s33, s32, 0xfc0
 ; GCN-NEXT:    s_and_b32 s33, s33, 0xfffff000
 ; GCN-NEXT:    s_addk_i32 s32, 0x2000
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v2
-; GCN-NEXT:    s_and_b64 s[6:7], vcc, exec
-; GCN-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
-; GCN-NEXT:    s_and_b64 s[8:9], s[6:7], -1
-; GCN-NEXT:    s_cmov_b64 exec, s[6:7]
+; GCN-NEXT:    s_mov_b64 s[4:5], exec
+; GCN-NEXT:    s_and_b64 s[6:7], vcc, -1
+; GCN-NEXT:    s_cmov_b64 exec, vcc
 ; GCN-NEXT:    s_cbranch_scc0 .LBB3_2
 ; GCN-NEXT:  ; %bb.1: ; %bb.0
 ; GCN-NEXT:    s_add_u32 s6, s32, 0x1000
@@ -250,7 +247,7 @@ define void @func_non_entry_block_static_alloca_align64(ptr addrspace(1) %out, i
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_addk_i32 s32, 0xe000
-; GCN-NEXT:    s_mov_b32 s33, s10
+; GCN-NEXT:    s_mov_b32 s33, s8
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %cond = icmp eq i32 %arg.cond, 0

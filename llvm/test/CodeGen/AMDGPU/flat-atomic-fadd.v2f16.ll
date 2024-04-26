@@ -67,8 +67,6 @@ define <2 x half> @flat_agent_atomic_fadd_ret_v2f16(ptr %ptr, <2 x half> %val) {
   ; GFX940-NEXT: {{  $}}
   ; GFX940-NEXT: bb.2.atomicrmw.end:
   ; GFX940-NEXT:   [[PHI2:%[0-9]+]]:vgpr_32 = PHI [[FLAT_ATOMIC_CMPSWAP_RTN]], %bb.1
-  ; GFX940-NEXT:   [[PHI3:%[0-9]+]]:sreg_64 = PHI [[SI_IF_BREAK]], %bb.1
-  ; GFX940-NEXT:   SI_END_CF [[PHI3]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX940-NEXT:   $vgpr0 = COPY [[PHI2]]
   ; GFX940-NEXT:   SI_RETURN implicit $vgpr0
   %result = atomicrmw fadd ptr %ptr, <2 x half> %val syncscope("agent") seq_cst
@@ -105,8 +103,6 @@ define void @flat_agent_atomic_fadd_noret_v2f16(ptr %ptr, <2 x half> %val) {
   ; GFX940-NEXT:   S_BRANCH %bb.2
   ; GFX940-NEXT: {{  $}}
   ; GFX940-NEXT: bb.2.atomicrmw.end:
-  ; GFX940-NEXT:   [[PHI2:%[0-9]+]]:sreg_64 = PHI [[SI_IF_BREAK]], %bb.1
-  ; GFX940-NEXT:   SI_END_CF [[PHI2]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GFX940-NEXT:   SI_RETURN
   %result = atomicrmw fadd ptr %ptr, <2 x half> %val syncscope("agent") seq_cst
   ret void

@@ -169,8 +169,7 @@ define amdgpu_cs void @cfg(ptr addrspace(8) inreg %tmp14, i32 %arg) {
 ; GFX9-O0-NEXT:    v_cmp_eq_u32_e64 s[0:1], v3, s2
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX9-O0-NEXT:    buffer_store_dword v3, off, s[16:19], 0 offset:4 ; 4-byte Folded Spill
-; GFX9-O0-NEXT:    s_and_b64 s[0:1], s[0:1], exec
-; GFX9-O0-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-O0-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX9-O0-NEXT:    v_writelane_b32 v0, s2, 5
 ; GFX9-O0-NEXT:    v_writelane_b32 v0, s3, 6
 ; GFX9-O0-NEXT:    s_or_saveexec_b64 s[12:13], -1
@@ -239,27 +238,24 @@ define amdgpu_cs void @cfg(ptr addrspace(8) inreg %tmp14, i32 %arg) {
 ; GFX9-O3-LABEL: cfg:
 ; GFX9-O3:       ; %bb.0: ; %entry
 ; GFX9-O3-NEXT:    buffer_load_dwordx2 v[3:4], off, s[0:3], 0
+; GFX9-O3-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v5, 0
-; GFX9-O3-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; GFX9-O3-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v1, 0
-; GFX9-O3-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX9-O3-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX9-O3-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-O3-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v2, v3
 ; GFX9-O3-NEXT:    s_not_b64 exec, exec
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-O3-NEXT:    s_not_b64 exec, exec
-; GFX9-O3-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; GFX9-O3-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX9-O3-NEXT:    v_mov_b32_dpp v1, v2 row_bcast:31 row_mask:0xc bank_mask:0xf
-; GFX9-O3-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX9-O3-NEXT:    s_and_b64 s[6:7], vcc, exec
-; GFX9-O3-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GFX9-O3-NEXT:    v_add_u32_e32 v1, v2, v1
-; GFX9-O3-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX9-O3-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
-; GFX9-O3-NEXT:    s_and_b64 s[8:9], s[6:7], -1
+; GFX9-O3-NEXT:    s_mov_b64 exec, s[6:7]
+; GFX9-O3-NEXT:    s_and_b64 s[6:7], vcc, -1
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v0, v1
-; GFX9-O3-NEXT:    s_cmov_b64 exec, s[6:7]
+; GFX9-O3-NEXT:    s_cmov_b64 exec, vcc
 ; GFX9-O3-NEXT:    s_cbranch_scc0 .LBB1_2
 ; GFX9-O3-NEXT:  ; %bb.1: ; %if
 ; GFX9-O3-NEXT:    s_or_saveexec_b64 s[6:7], -1
@@ -1050,8 +1046,7 @@ define amdgpu_cs void @strict_wwm_cfg(ptr addrspace(8) inreg %tmp14, i32 %arg) {
 ; GFX9-O0-NEXT:    v_cmp_eq_u32_e64 s[0:1], v3, s2
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v3, s2
 ; GFX9-O0-NEXT:    buffer_store_dword v3, off, s[16:19], 0 offset:4 ; 4-byte Folded Spill
-; GFX9-O0-NEXT:    s_and_b64 s[0:1], s[0:1], exec
-; GFX9-O0-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
+; GFX9-O0-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX9-O0-NEXT:    v_writelane_b32 v0, s2, 5
 ; GFX9-O0-NEXT:    v_writelane_b32 v0, s3, 6
 ; GFX9-O0-NEXT:    s_or_saveexec_b64 s[12:13], -1
@@ -1120,27 +1115,24 @@ define amdgpu_cs void @strict_wwm_cfg(ptr addrspace(8) inreg %tmp14, i32 %arg) {
 ; GFX9-O3-LABEL: strict_wwm_cfg:
 ; GFX9-O3:       ; %bb.0: ; %entry
 ; GFX9-O3-NEXT:    buffer_load_dwordx2 v[3:4], off, s[0:3], 0
+; GFX9-O3-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v5, 0
-; GFX9-O3-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; GFX9-O3-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v1, 0
-; GFX9-O3-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX9-O3-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX9-O3-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-O3-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v2, v3
 ; GFX9-O3-NEXT:    s_not_b64 exec, exec
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-O3-NEXT:    s_not_b64 exec, exec
-; GFX9-O3-NEXT:    s_or_saveexec_b64 s[4:5], -1
+; GFX9-O3-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GFX9-O3-NEXT:    v_mov_b32_dpp v1, v2 row_bcast:31 row_mask:0xc bank_mask:0xf
-; GFX9-O3-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX9-O3-NEXT:    s_and_b64 s[6:7], vcc, exec
-; GFX9-O3-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GFX9-O3-NEXT:    v_add_u32_e32 v1, v2, v1
-; GFX9-O3-NEXT:    s_mov_b64 exec, s[4:5]
-; GFX9-O3-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
-; GFX9-O3-NEXT:    s_and_b64 s[8:9], s[6:7], -1
+; GFX9-O3-NEXT:    s_mov_b64 exec, s[6:7]
+; GFX9-O3-NEXT:    s_and_b64 s[6:7], vcc, -1
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v0, v1
-; GFX9-O3-NEXT:    s_cmov_b64 exec, s[6:7]
+; GFX9-O3-NEXT:    s_cmov_b64 exec, vcc
 ; GFX9-O3-NEXT:    s_cbranch_scc0 .LBB8_2
 ; GFX9-O3-NEXT:  ; %bb.1: ; %if
 ; GFX9-O3-NEXT:    s_or_saveexec_b64 s[6:7], -1

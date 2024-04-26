@@ -754,10 +754,9 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX9_W64-NEXT:    s_mov_b64 exec, s[12:13]
 ; GFX9_W64-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GFX9_W64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GFX9_W64-NEXT:    s_and_b64 s[8:9], vcc, exec
-; GFX9_W64-NEXT:    s_xor_b64 s[6:7], s[8:9], exec
-; GFX9_W64-NEXT:    s_and_b64 s[10:11], s[8:9], -1
-; GFX9_W64-NEXT:    s_cmov_b64 exec, s[8:9]
+; GFX9_W64-NEXT:    s_mov_b64 s[6:7], exec
+; GFX9_W64-NEXT:    s_and_b64 s[8:9], vcc, -1
+; GFX9_W64-NEXT:    s_cmov_b64 exec, vcc
 ; GFX9_W64-NEXT:    s_cbranch_scc0 .LBB2_6
 ; GFX9_W64-NEXT:  ; %bb.3: ; %bb1
 ; GFX9_W64-NEXT:    v_mov_b32_e32 v0, s4
@@ -812,11 +811,10 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1010_W32-NEXT:  ; %bb.2:
 ; GFX1010_W32-NEXT:    s_mov_b32 exec_lo, s6
 ; GFX1010_W32-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
+; GFX1010_W32-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX1010_W32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1010_W32-NEXT:    s_and_b32 s6, vcc_lo, exec_lo
-; GFX1010_W32-NEXT:    s_xor_b32 s5, s6, exec_lo
-; GFX1010_W32-NEXT:    s_and_b32 s7, s6, -1
-; GFX1010_W32-NEXT:    s_cmov_b32 exec_lo, s6
+; GFX1010_W32-NEXT:    s_and_b32 s6, vcc_lo, -1
+; GFX1010_W32-NEXT:    s_cmov_b32 exec_lo, vcc_lo
 ; GFX1010_W32-NEXT:    s_cbranch_scc0 .LBB2_6
 ; GFX1010_W32-NEXT:  ; %bb.3: ; %bb1
 ; GFX1010_W32-NEXT:    v_mov_b32_e32 v0, s4
@@ -871,11 +869,10 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1010_W64-NEXT:  ; %bb.2:
 ; GFX1010_W64-NEXT:    s_mov_b64 exec, s[12:13]
 ; GFX1010_W64-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
+; GFX1010_W64-NEXT:    s_mov_b64 s[6:7], exec
 ; GFX1010_W64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GFX1010_W64-NEXT:    s_and_b64 s[8:9], vcc, exec
-; GFX1010_W64-NEXT:    s_xor_b64 s[6:7], s[8:9], exec
-; GFX1010_W64-NEXT:    s_and_b64 s[10:11], s[8:9], -1
-; GFX1010_W64-NEXT:    s_cmov_b64 exec, s[8:9]
+; GFX1010_W64-NEXT:    s_and_b64 s[8:9], vcc, -1
+; GFX1010_W64-NEXT:    s_cmov_b64 exec, vcc
 ; GFX1010_W64-NEXT:    s_cbranch_scc0 .LBB2_6
 ; GFX1010_W64-NEXT:  ; %bb.3: ; %bb1
 ; GFX1010_W64-NEXT:    v_mov_b32_e32 v0, s4
@@ -931,12 +928,11 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1100_W32-NEXT:  ; %bb.2:
 ; GFX1100_W32-NEXT:    s_mov_b32 exec_lo, s1
 ; GFX1100_W32-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
-; GFX1100_W32-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1100_W32-NEXT:    s_mov_b32 s1, exec_lo
+; GFX1100_W32-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100_W32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
-; GFX1100_W32-NEXT:    s_and_b32 s0, vcc_lo, exec_lo
-; GFX1100_W32-NEXT:    s_xor_b32 s1, s0, exec_lo
-; GFX1100_W32-NEXT:    s_and_b32 s2, s0, -1
-; GFX1100_W32-NEXT:    s_cmov_b32 exec_lo, s0
+; GFX1100_W32-NEXT:    s_and_b32 s0, vcc_lo, -1
+; GFX1100_W32-NEXT:    s_cmov_b32 exec_lo, vcc_lo
 ; GFX1100_W32-NEXT:    s_cbranch_scc0 .LBB2_6
 ; GFX1100_W32-NEXT:  ; %bb.3: ; %bb1
 ; GFX1100_W32-NEXT:    v_mov_b32_e32 v0, s4
@@ -994,12 +990,11 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; GFX1100_W64-NEXT:  ; %bb.2:
 ; GFX1100_W64-NEXT:    s_mov_b64 exec, s[2:3]
 ; GFX1100_W64-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
-; GFX1100_W64-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1100_W64-NEXT:    s_mov_b64 s[2:3], exec
+; GFX1100_W64-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100_W64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GFX1100_W64-NEXT:    s_and_b64 s[0:1], vcc, exec
-; GFX1100_W64-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
-; GFX1100_W64-NEXT:    s_and_b64 s[6:7], s[0:1], -1
-; GFX1100_W64-NEXT:    s_cmov_b64 exec, s[0:1]
+; GFX1100_W64-NEXT:    s_and_b64 s[0:1], vcc, -1
+; GFX1100_W64-NEXT:    s_cmov_b64 exec, vcc
 ; GFX1100_W64-NEXT:    s_cbranch_scc0 .LBB2_6
 ; GFX1100_W64-NEXT:  ; %bb.3: ; %bb1
 ; GFX1100_W64-NEXT:    v_mov_b32_e32 v0, s4
@@ -1172,8 +1167,7 @@ define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, ptr ad
 ; W64-O0-NEXT:    v_and_b32_e64 v2, v2, s5
 ; W64-O0-NEXT:    v_cmp_eq_u32_e64 s[4:5], v2, s4
 ; W64-O0-NEXT:    buffer_store_dword v1, off, s[0:3], s32 offset:64 ; 4-byte Folded Spill
-; W64-O0-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; W64-O0-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
+; W64-O0-NEXT:    s_mov_b64 s[6:7], exec
 ; W64-O0-NEXT:    v_writelane_b32 v0, s6, 10
 ; W64-O0-NEXT:    v_writelane_b32 v0, s7, 11
 ; W64-O0-NEXT:    s_or_saveexec_b64 s[16:17], -1

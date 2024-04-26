@@ -17,13 +17,12 @@ define amdgpu_kernel void @kernel(i32 %a, ptr addrspace(1) %x, i32 noundef %n) {
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_5
 ; CHECK-NEXT:  ; %bb.1: ; %if.else
 ; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, 10, v0
-; CHECK-NEXT:    s_and_b64 s[12:13], vcc, exec
-; CHECK-NEXT:    s_xor_b64 s[8:9], s[12:13], exec
-; CHECK-NEXT:    s_and_b64 s[0:1], s[12:13], -1
+; CHECK-NEXT:    s_xor_b64 s[8:9], vcc, exec
+; CHECK-NEXT:    s_and_b64 s[0:1], vcc, -1
 ; CHECK-NEXT:    s_mov_b64 s[6:7], 0
 ; CHECK-NEXT:    s_mov_b64 s[2:3], 0
 ; CHECK-NEXT:    s_mov_b64 s[0:1], 0
-; CHECK-NEXT:    s_cmov_b64 exec, s[12:13]
+; CHECK-NEXT:    s_cmov_b64 exec, vcc
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_6
 ; CHECK-NEXT:  ; %bb.2: ; %if.then3
 ; CHECK-NEXT:    s_cmp_lg_u32 s10, 0
@@ -47,17 +46,16 @@ define amdgpu_kernel void @kernel(i32 %a, ptr addrspace(1) %x, i32 noundef %n) {
 ; CHECK-NEXT:    s_mov_b64 s[0:1], -1
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_13
 ; CHECK-NEXT:  .LBB0_8: ; %Flow4
-; CHECK-NEXT:    s_and_b64 s[6:7], s[2:3], exec
-; CHECK-NEXT:    s_xor_b64 s[2:3], s[6:7], exec
-; CHECK-NEXT:    s_and_b64 s[8:9], s[6:7], -1
-; CHECK-NEXT:    s_cmov_b64 exec, s[6:7]
+; CHECK-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; CHECK-NEXT:    s_mov_b64 s[6:7], exec
+; CHECK-NEXT:    s_and_b64 s[8:9], s[2:3], -1
+; CHECK-NEXT:    s_cmov_b64 exec, s[2:3]
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_10
 ; CHECK-NEXT:  ; %bb.9: ; %UnifiedUnreachableBlock
 ; CHECK-NEXT:    ; divergent unreachable
-; CHECK-NEXT:    s_or_b64 exec, exec, s[2:3]
+; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; CHECK-NEXT:  .LBB0_10: ; %Flow6
 ; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
-; CHECK-NEXT:    s_xor_b64 s[2:3], s[0:1], exec
 ; CHECK-NEXT:    s_and_b64 s[2:3], s[0:1], -1
 ; CHECK-NEXT:    s_cmov_b64 exec, s[0:1]
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_12

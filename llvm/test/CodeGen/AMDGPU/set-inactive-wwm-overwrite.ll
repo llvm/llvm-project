@@ -6,20 +6,18 @@ define amdgpu_cs void @if_then(ptr addrspace(8) inreg %input, ptr addrspace(8) i
 ; GCN:       ; %bb.0: ; %.entry
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
-; GCN-NEXT:    s_and_b32 s1, vcc_lo, exec_lo
-; GCN-NEXT:    s_xor_b32 s0, s1, exec_lo
-; GCN-NEXT:    s_and_b32 s2, s1, -1
-; GCN-NEXT:    s_cmov_b32 exec_lo, s1
+; GCN-NEXT:    s_mov_b32 s0, exec_lo
+; GCN-NEXT:    s_and_b32 s1, vcc_lo, -1
+; GCN-NEXT:    s_cmov_b32 exec_lo, vcc_lo
 ; GCN-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %.bb0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 1
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GCN-NEXT:  .LBB0_2: ; %.merge
 ; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 3, v0
-; GCN-NEXT:    s_and_b32 s1, vcc_lo, exec_lo
-; GCN-NEXT:    s_xor_b32 s0, s1, exec_lo
-; GCN-NEXT:    s_and_b32 s2, s1, -1
-; GCN-NEXT:    s_cmov_b32 exec_lo, s1
+; GCN-NEXT:    s_mov_b32 s0, exec_lo
+; GCN-NEXT:    s_and_b32 s1, vcc_lo, -1
+; GCN-NEXT:    s_cmov_b32 exec_lo, vcc_lo
 ; GCN-NEXT:    s_cbranch_scc0 .LBB0_4
 ; GCN-NEXT:  ; %bb.3: ; %.then
 ; GCN-NEXT:    v_mov_b32_e32 v1, v3
@@ -72,20 +70,18 @@ define amdgpu_cs void @if_else_vgpr_opt(ptr addrspace(8) inreg %input, ptr addrs
 ; GCN:       ; %bb.0: ; %.entry
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
-; GCN-NEXT:    s_and_b32 s1, vcc_lo, exec_lo
-; GCN-NEXT:    s_xor_b32 s0, s1, exec_lo
-; GCN-NEXT:    s_and_b32 s2, s1, -1
-; GCN-NEXT:    s_cmov_b32 exec_lo, s1
+; GCN-NEXT:    s_mov_b32 s0, exec_lo
+; GCN-NEXT:    s_and_b32 s1, vcc_lo, -1
+; GCN-NEXT:    s_cmov_b32 exec_lo, vcc_lo
 ; GCN-NEXT:    s_cbranch_scc0 .LBB1_2
 ; GCN-NEXT:  ; %bb.1: ; %.bb0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 1
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GCN-NEXT:  .LBB1_2: ; %.merge
 ; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 3, v0
-; GCN-NEXT:    s_and_b32 s1, vcc_lo, exec_lo
-; GCN-NEXT:    s_xor_b32 s0, s1, exec_lo
-; GCN-NEXT:    s_and_b32 s2, s1, -1
-; GCN-NEXT:    s_cmov_b32 exec_lo, s1
+; GCN-NEXT:    s_xor_b32 s0, vcc_lo, exec_lo
+; GCN-NEXT:    s_and_b32 s1, vcc_lo, -1
+; GCN-NEXT:    s_cmov_b32 exec_lo, vcc_lo
 ; GCN-NEXT:    s_cbranch_scc0 .LBB1_4
 ; GCN-NEXT:  ; %bb.3: ; %.else
 ; GCN-NEXT:    s_or_saveexec_b32 s1, -1

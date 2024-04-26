@@ -8,10 +8,9 @@ define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src
 ; LOOP-LABEL: memmove_p1i8:
 ; LOOP:       ; %bb.0:
 ; LOOP-NEXT:    v_cmp_ge_u64_e32 vcc, v[2:3], v[0:1]
-; LOOP-NEXT:    s_and_b64 s[0:1], vcc, exec
-; LOOP-NEXT:    s_xor_b64 s[4:5], s[0:1], exec
-; LOOP-NEXT:    s_and_b64 s[2:3], s[0:1], -1
-; LOOP-NEXT:    s_cmov_b64 exec, s[0:1]
+; LOOP-NEXT:    s_xor_b64 s[4:5], vcc, exec
+; LOOP-NEXT:    s_and_b64 s[0:1], vcc, -1
+; LOOP-NEXT:    s_cmov_b64 exec, vcc
 ; LOOP-NEXT:    s_cbranch_scc0 .LBB0_4
 ; LOOP-NEXT:  ; %bb.1: ; %copy_forward
 ; LOOP-NEXT:    s_mov_b64 s[6:7], 0

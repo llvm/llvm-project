@@ -13,13 +13,12 @@ define amdgpu_ps void @_amdgpu_ps_main(float %arg) {
 ; GFX900-NEXT:    s_wqm_b64 exec, exec
 ; GFX900-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX900-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v1
-; GFX900-NEXT:    s_and_b64 s[8:9], vcc, exec
-; GFX900-NEXT:    s_xor_b64 s[6:7], s[8:9], exec
-; GFX900-NEXT:    s_and_b64 s[0:1], s[8:9], -1
+; GFX900-NEXT:    s_xor_b64 s[6:7], vcc, exec
+; GFX900-NEXT:    s_and_b64 s[0:1], vcc, -1
 ; GFX900-NEXT:    s_mov_b32 s0, 0
 ; GFX900-NEXT:    ; implicit-def: $vgpr0
 ; GFX900-NEXT:    ; implicit-def: $sgpr2
-; GFX900-NEXT:    s_cmov_b64 exec, s[8:9]
+; GFX900-NEXT:    s_cmov_b64 exec, vcc
 ; GFX900-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GFX900-NEXT:  ; %bb.1: ; %bb1
 ; GFX900-NEXT:    v_mov_b32_e32 v0, 0

@@ -12,19 +12,17 @@ define amdgpu_ps float @while_break(i32 %z, float %v, i32 %x, i32 %y) #0 {
 ; GCN-NEXT:    s_and_b32 s2, exec_lo, s2
 ; GCN-NEXT:    s_or_b32 s1, s2, s1
 ; GCN-NEXT:    s_andn2_b32 s2, exec_lo, s1
-; GCN-NEXT:    s_or_b32 s3, s1, exec_lo
-; GCN-NEXT:    s_and_b32 s4, s2, -1
-; GCN-NEXT:    s_cselect_b32 exec_lo, s2, s3
+; GCN-NEXT:    s_and_b32 s3, s2, -1
+; GCN-NEXT:    s_cselect_b32 exec_lo, s2, s1
 ; GCN-NEXT:    s_cbranch_scc0 .LBB0_8
 ; GCN-NEXT:  .LBB0_2: ; %header
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_add_i32 s0, s0, 1
 ; GCN-NEXT:    s_mov_b32 s2, 0
 ; GCN-NEXT:    v_cmp_ge_i32_e32 vcc_lo, s0, v2
-; GCN-NEXT:    s_and_b32 s4, vcc_lo, exec_lo
-; GCN-NEXT:    s_xor_b32 s3, s4, exec_lo
-; GCN-NEXT:    s_and_b32 s5, s4, -1
-; GCN-NEXT:    s_cmov_b32 exec_lo, s4
+; GCN-NEXT:    s_xor_b32 s3, vcc_lo, exec_lo
+; GCN-NEXT:    s_and_b32 s4, vcc_lo, -1
+; GCN-NEXT:    s_cmov_b32 exec_lo, vcc_lo
 ; GCN-NEXT:    s_cbranch_scc0 .LBB0_4
 ; GCN-NEXT:  ; %bb.3: ; %else
 ; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
@@ -45,8 +43,8 @@ define amdgpu_ps float @while_break(i32 %z, float %v, i32 %x, i32 %y) #0 {
 ; GCN-NEXT:  .LBB0_6: ; %Flow1
 ; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; GCN-NEXT:    s_and_b32 s4, s2, exec_lo
+; GCN-NEXT:    s_mov_b32 s3, exec_lo
 ; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    s_xor_b32 s3, s4, exec_lo
 ; GCN-NEXT:    s_and_b32 s5, s4, -1
 ; GCN-NEXT:    s_cmov_b32 exec_lo, s4
 ; GCN-NEXT:    s_cbranch_scc0 .LBB0_1
@@ -99,19 +97,17 @@ define amdgpu_ps float @while_break2(i32 %z, float %v, i32 %x, i32 %y) #0 {
 ; GCN-NEXT:    s_and_b32 s2, exec_lo, s2
 ; GCN-NEXT:    s_or_b32 s1, s2, s1
 ; GCN-NEXT:    s_andn2_b32 s2, exec_lo, s1
-; GCN-NEXT:    s_or_b32 s3, s1, exec_lo
-; GCN-NEXT:    s_and_b32 s4, s2, -1
-; GCN-NEXT:    s_cselect_b32 exec_lo, s2, s3
+; GCN-NEXT:    s_and_b32 s3, s2, -1
+; GCN-NEXT:    s_cselect_b32 exec_lo, s2, s1
 ; GCN-NEXT:    s_cbranch_scc0 .LBB1_8
 ; GCN-NEXT:  .LBB1_2: ; %header
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    s_add_i32 s0, s0, 1
 ; GCN-NEXT:    s_mov_b32 s2, 0
 ; GCN-NEXT:    v_cmp_ge_i32_e32 vcc_lo, s0, v2
-; GCN-NEXT:    s_and_b32 s4, vcc_lo, exec_lo
-; GCN-NEXT:    s_xor_b32 s3, s4, exec_lo
-; GCN-NEXT:    s_and_b32 s5, s4, -1
-; GCN-NEXT:    s_cmov_b32 exec_lo, s4
+; GCN-NEXT:    s_xor_b32 s3, vcc_lo, exec_lo
+; GCN-NEXT:    s_and_b32 s4, vcc_lo, -1
+; GCN-NEXT:    s_cmov_b32 exec_lo, vcc_lo
 ; GCN-NEXT:    s_cbranch_scc0 .LBB1_4
 ; GCN-NEXT:  ; %bb.3: ; %if
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
@@ -134,8 +130,8 @@ define amdgpu_ps float @while_break2(i32 %z, float %v, i32 %x, i32 %y) #0 {
 ; GCN-NEXT:  .LBB1_6: ; %Flow1
 ; GCN-NEXT:    ; in Loop: Header=BB1_2 Depth=1
 ; GCN-NEXT:    s_and_b32 s4, s2, exec_lo
+; GCN-NEXT:    s_mov_b32 s3, exec_lo
 ; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    s_xor_b32 s3, s4, exec_lo
 ; GCN-NEXT:    s_and_b32 s5, s4, -1
 ; GCN-NEXT:    s_cmov_b32 exec_lo, s4
 ; GCN-NEXT:    s_cbranch_scc0 .LBB1_1

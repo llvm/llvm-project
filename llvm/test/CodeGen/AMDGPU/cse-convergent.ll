@@ -10,23 +10,20 @@ define i32 @test(i32 %val, i32 %cond) {
 ; GCN-NEXT:    buffer_store_dword v3, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_waitcnt_depctr 0xffe3
 ; GCN-NEXT:    s_mov_b32 exec_lo, s4
-; GCN-NEXT:    s_or_saveexec_b32 s4, -1
+; GCN-NEXT:    s_mov_b32 s4, exec_lo
+; GCN-NEXT:    v_mov_b32_e32 v2, v0
+; GCN-NEXT:    s_not_b32 exec_lo, exec_lo
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-NEXT:    s_mov_b32 exec_lo, s4
-; GCN-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN-NEXT:    s_not_b32 exec_lo, exec_lo
+; GCN-NEXT:    s_or_saveexec_b32 s5, -1
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
-; GCN-NEXT:    s_not_b32 exec_lo, exec_lo
-; GCN-NEXT:    s_or_saveexec_b32 s4, -1
-; GCN-NEXT:    v_mov_b32_dpp v2, v3 row_xmask:1 row_mask:0xf bank_mask:0xf
-; GCN-NEXT:    s_mov_b32 exec_lo, s4
+; GCN-NEXT:    v_mov_b32_dpp v3, v2 row_xmask:1 row_mask:0xf bank_mask:0xf
+; GCN-NEXT:    s_mov_b32 exec_lo, s5
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GCN-NEXT:    v_mov_b32_e32 v4, 0
-; GCN-NEXT:    v_mov_b32_e32 v1, v2
-; GCN-NEXT:    s_and_b32 s5, vcc_lo, exec_lo
-; GCN-NEXT:    s_xor_b32 s4, s5, exec_lo
-; GCN-NEXT:    s_and_b32 s6, s5, -1
-; GCN-NEXT:    s_cmov_b32 exec_lo, s5
+; GCN-NEXT:    v_mov_b32_e32 v1, v3
+; GCN-NEXT:    s_and_b32 s5, vcc_lo, -1
+; GCN-NEXT:    s_cmov_b32 exec_lo, vcc_lo
 ; GCN-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %if
 ; GCN-NEXT:    s_or_saveexec_b32 s5, -1

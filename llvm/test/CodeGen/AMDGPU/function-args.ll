@@ -103,9 +103,9 @@ define void @i1_arg_i1_use(i1 %arg) #0 {
 ; CIGFX89-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CIGFX89-NEXT:    v_and_b32_e32 v0, 1, v0
 ; CIGFX89-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
-; CIGFX89-NEXT:    s_xor_b64 s[4:5], vcc, -1
-; CIGFX89-NEXT:    s_and_b64 s[6:7], s[4:5], exec
-; CIGFX89-NEXT:    s_xor_b64 s[4:5], s[6:7], exec
+; CIGFX89-NEXT:    s_xor_b64 s[6:7], vcc, -1
+; CIGFX89-NEXT:    s_and_b64 s[6:7], s[6:7], exec
+; CIGFX89-NEXT:    s_mov_b64 s[4:5], exec
 ; CIGFX89-NEXT:    s_and_b64 s[8:9], s[6:7], -1
 ; CIGFX89-NEXT:    s_cmov_b64 exec, s[6:7]
 ; CIGFX89-NEXT:    s_cbranch_scc0 .LBB3_2
@@ -123,13 +123,13 @@ define void @i1_arg_i1_use(i1 %arg) #0 {
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    s_xor_b32 s0, vcc_lo, -1
-; GFX11-NEXT:    s_and_b32 s1, s0, exec_lo
+; GFX11-NEXT:    s_xor_b32 s1, vcc_lo, -1
+; GFX11-NEXT:    s_and_b32 s1, s1, exec_lo
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-NEXT:    s_xor_b32 s0, s1, exec_lo
 ; GFX11-NEXT:    s_and_b32 s3, s1, -1
 ; GFX11-NEXT:    s_cmov_b32 exec_lo, s1
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB3_2

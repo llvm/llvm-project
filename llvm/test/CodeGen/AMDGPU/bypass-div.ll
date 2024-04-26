@@ -12,10 +12,9 @@ define i64 @sdiv64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
 ; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX9-NEXT:    s_and_b64 s[4:5], vcc, exec
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
-; GFX9-NEXT:    s_and_b64 s[8:9], s[4:5], -1
-; GFX9-NEXT:    s_cmov_b64 exec, s[4:5]
+; GFX9-NEXT:    s_xor_b64 s[6:7], vcc, exec
+; GFX9-NEXT:    s_and_b64 s[4:5], vcc, -1
+; GFX9-NEXT:    s_cmov_b64 exec, vcc
 ; GFX9-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v9, 31, v3
@@ -168,10 +167,9 @@ define i64 @udiv64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
 ; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX9-NEXT:    s_and_b64 s[4:5], vcc, exec
-; GFX9-NEXT:    s_xor_b64 s[6:7], s[4:5], exec
-; GFX9-NEXT:    s_and_b64 s[8:9], s[4:5], -1
-; GFX9-NEXT:    s_cmov_b64 exec, s[4:5]
+; GFX9-NEXT:    s_xor_b64 s[6:7], vcc, exec
+; GFX9-NEXT:    s_and_b64 s[4:5], vcc, -1
+; GFX9-NEXT:    s_cmov_b64 exec, vcc
 ; GFX9-NEXT:    s_cbranch_scc0 .LBB1_2
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v4, v2
@@ -309,10 +307,9 @@ define i64 @srem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
 ; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX9-NEXT:    s_and_b64 s[4:5], vcc, exec
-; GFX9-NEXT:    s_xor_b64 s[8:9], s[4:5], exec
-; GFX9-NEXT:    s_and_b64 s[6:7], s[4:5], -1
-; GFX9-NEXT:    s_cmov_b64 exec, s[4:5]
+; GFX9-NEXT:    s_xor_b64 s[8:9], vcc, exec
+; GFX9-NEXT:    s_and_b64 s[4:5], vcc, -1
+; GFX9-NEXT:    s_cmov_b64 exec, vcc
 ; GFX9-NEXT:    s_cbranch_scc0 .LBB2_2
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
@@ -461,10 +458,9 @@ define i64 @urem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
 ; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX9-NEXT:    s_and_b64 s[4:5], vcc, exec
-; GFX9-NEXT:    s_xor_b64 s[8:9], s[4:5], exec
-; GFX9-NEXT:    s_and_b64 s[6:7], s[4:5], -1
-; GFX9-NEXT:    s_cmov_b64 exec, s[4:5]
+; GFX9-NEXT:    s_xor_b64 s[8:9], vcc, exec
+; GFX9-NEXT:    s_and_b64 s[4:5], vcc, -1
+; GFX9-NEXT:    s_cmov_b64 exec, vcc
 ; GFX9-NEXT:    s_cbranch_scc0 .LBB3_2
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v4, v2
@@ -725,10 +721,9 @@ define <2 x i64> @sdivrem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
 ; GFX9-NEXT:    ; implicit-def: $vgpr6_vgpr7
 ; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX9-NEXT:    s_and_b64 s[4:5], vcc, exec
-; GFX9-NEXT:    s_xor_b64 s[10:11], s[4:5], exec
-; GFX9-NEXT:    s_and_b64 s[6:7], s[4:5], -1
-; GFX9-NEXT:    s_cmov_b64 exec, s[4:5]
+; GFX9-NEXT:    s_xor_b64 s[10:11], vcc, exec
+; GFX9-NEXT:    s_and_b64 s[4:5], vcc, -1
+; GFX9-NEXT:    s_cmov_b64 exec, vcc
 ; GFX9-NEXT:    s_cbranch_scc0 .LBB8_2
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v9, 31, v3
@@ -901,10 +896,9 @@ define <2 x i64> @udivrem64(i64 %a, i64 %b) {
 ; GFX9-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[4:5]
 ; GFX9-NEXT:    ; implicit-def: $vgpr6_vgpr7
 ; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX9-NEXT:    s_and_b64 s[4:5], vcc, exec
-; GFX9-NEXT:    s_xor_b64 s[8:9], s[4:5], exec
-; GFX9-NEXT:    s_and_b64 s[6:7], s[4:5], -1
-; GFX9-NEXT:    s_cmov_b64 exec, s[4:5]
+; GFX9-NEXT:    s_xor_b64 s[8:9], vcc, exec
+; GFX9-NEXT:    s_and_b64 s[4:5], vcc, -1
+; GFX9-NEXT:    s_cmov_b64 exec, vcc
 ; GFX9-NEXT:    s_cbranch_scc0 .LBB9_2
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v4, v2
