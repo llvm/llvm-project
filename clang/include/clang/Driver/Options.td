@@ -1894,6 +1894,18 @@ def fprofile_selected_function_group :
   Visibility<[ClangOption, CC1Option]>, MetaVarName<"<i>">,
   HelpText<"Partition functions into N groups using -fprofile-function-groups and select only functions in group i to be instrumented. The valid range is 0 to N-1 inclusive">,
   MarshallingInfoInt<CodeGenOpts<"ProfileSelectedFunctionGroup">>;
+def fcodegen_data_generate : Joined<["-"], "fcodegen-data-generate">,
+    Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Emit codegen data into object file. LLD for MachO (for now) merges them into default.cgdata">;
+def fcodegen_data_generate_EQ : Joined<["-"], "fcodegen-data-generate=">,
+    Group<f_Group>, Visibility<[ClangOption, CC1Option]>, MetaVarName<"<directory>">,
+    HelpText<"Emit codegen data into object file. LLD for MachO (for now) merges them into <directory>/default.cgdata">;
+def fcodegen_data_use : Joined<["-"], "fcodegen-data-use">,
+    Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Use codegen data read from default.cgdata to optimize the binary">;
+def fcodegen_data_use_EQ : Joined<["-"], "fcodegen-data-use=">,
+    Group<f_Group>, Visibility<[ClangOption, CC1Option]>, MetaVarName<"<directory>">,
+    HelpText<"Use codegen data read from <directory>/default.cgdata to optimize the binary">;
 def fswift_async_fp_EQ : Joined<["-"], "fswift-async-fp=">,
     Group<f_Group>,
     Visibility<[ClangOption, CC1Option, CC1AsOption, CLOption]>,

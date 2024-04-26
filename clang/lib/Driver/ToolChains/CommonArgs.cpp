@@ -2753,6 +2753,33 @@ void tools::addMachineOutlinerArgs(const Driver &D,
       addArg(Twine("-enable-machine-outliner=never"));
     }
   }
+
+  auto *CodeGenDataGenArg =
+      Args.getLastArg(options::OPT_fcodegen_data_generate,
+                      options::OPT_fcodegen_data_generate_EQ);
+  auto *CodeGenDataUseArg = Args.getLastArg(options::OPT_fcodegen_data_use,
+                                            options::OPT_fcodegen_data_use_EQ);
+
+  // We only allow one of them to be specified.
+  if (CodeGenDataGenArg && CodeGenDataUseArg)
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << CodeGenDataGenArg->getAsString(Args)
+        << CodeGenDataUseArg->getAsString(Args);
+
+  // For codegen data gen, the output file is passed to the linker
+  // while a boolean flag is passed to the LLVM backend.
+  if (CodeGenDataGenArg)
+    addArg(Twine("-codegen-data-generate"));
+
+  // For codegen data use, the input file is passed to the LLVM backend.
+  if (CodeGenDataUseArg) {
+    SmallString<128> Path(CodeGenDataUseArg->getNumValues() == 0
+                              ? ""
+                              : CodeGenDataUseArg->getValue());
+    if (Path.empty() || llvm::sys::fs::is_directory(Path))
+      llvm::sys::path::append(Path, "default.cgdata");
+    addArg(Twine("-codegen-data-use-path=" + Path.str()));
+  }
 }
 
 void tools::addOpenMPDeviceRTL(const Driver &D,
