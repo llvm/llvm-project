@@ -741,7 +741,7 @@ def AArch64vsri : SDNode<"AArch64ISD::VSRI", SDT_AArch64vshiftinsert>;
 
 def AArch64bsp: SDNode<"AArch64ISD::BSP", SDT_AArch64trivec>;
 def AArch64nbsl: PatFrag<(ops node:$Op1, node:$Op2, node:$Op3),
-                        (vnot (AArch64bsp node:$Op1, node:$Op2, node:$Op3))>;
+                         (vnot (AArch64bsp node:$Op1, node:$Op2, node:$Op3))>;
 
 def AArch64cmeq: SDNode<"AArch64ISD::CMEQ", SDT_AArch64binvec>;
 def AArch64cmge: SDNode<"AArch64ISD::CMGE", SDT_AArch64binvec>;
