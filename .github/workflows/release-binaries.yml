@@ -113,22 +113,21 @@ jobs:
     # many files to upload.
     - name: Package Build and Source Directories
       run: |
-        tar -czf /mnt/build/llvm-project.tar.gz .
-        mv /mnt/build/llvm-project.tar.gz .
-        tar -C /mnt/ -czf build.tar.gz build/
+        tar -c . | zstd -T0 -c > llvm-project.tar.zst
+        tar -C /mnt/ -c build/ | zstd -T0 -c > build.tar.zst
 
     - name: Upload Stage 1 Source
       uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
       with:
         name: stage1-source
-        path: llvm-project.tar.gz
+        path: llvm-project.tar.zst
         retention-days: 2
 
     - name: Upload Stage 1 Build Dir
       uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
       with:
         name: stage1-build
-        path: build.tar.gz
+        path: build.tar.zst
         retention-days: 2
 
   build-stage2-linux:
@@ -150,11 +149,11 @@ jobs:
 
     - name: Unpack Artifacts
       run: |
-        tar -xzf llvm-project.tar.gz
-        rm llvm-project.tar.gz
+        tar --zstd -xf llvm-project.tar.zst
+        rm llvm-project.tar.zst
         sudo chown $USER:$USER /mnt/
-        tar -C /mnt -xzf build.tar.gz
-        rm build.tar.gz
+        tar --zstd -C /mnt -xf build.tar.zst
+        rm build.tar.zst
 
     - name: Build Stage 2
       run: |
@@ -164,22 +163,21 @@ jobs:
     # many files to upload.
     - name: Save Build and Source Directories
       run: |
-        tar -czf /mnt/build/llvm-project.tar.gz .
-        mv /mnt/build/llvm-project.tar.gz .
-        tar -C /mnt/ -czf build.tar.gz build/
+        tar -c . | zstd -T0 -c > llvm-project.tar.zst
+        tar -C /mnt/ -c build/ | zstd -T0 -c > build.tar.zst
 
     - name: Upload Stage 2 Source
       uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
       with:
         name: stage2-source
-        path: ${{ github.workspace }}/llvm-project.tar.gz
+        path: ${{ github.workspace }}/llvm-project.tar.zst
         retention-days: 2
 
     - name: Upload Stage 2 Build Dir
       uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
       with:
         name: stage2-build
-        path: ${{ github.workspace }}/build.tar.gz
+        path: ${{ github.workspace }}/build.tar.zst
         retention-days: 2
 
 
@@ -204,11 +202,11 @@ jobs:
 
     - name: Unpack Artifact
       run: |
-        tar -xzf llvm-project.tar.gz
-        rm llvm-project.tar.gz
+        tar --zstd -xf llvm-project.tar.zst
+        rm llvm-project.tar.zst
         sudo chown $USER:$USER /mnt/
-        tar -C /mnt -xzf build.tar.gz
-        rm build.tar.gz
+        tar --zstd -C /mnt -xf build.tar.zst
+        rm build.tar.zst
 
     - name: Build Release Package
       run: |
@@ -235,15 +233,14 @@ jobs:
     # many files to upload.
     - name: Save Build and Source Directories
       run: |
-        tar -czf /mnt/build/llvm-project.tar.gz .
-        mv /mnt/build/llvm-project.tar.gz .
+        tar -c . | zstd -T0 -c > llvm-project.tar.zst
         tar -C /mnt/ -c build/ | zstd -T0 -c > build.tar.zst
 
     - name: Upload Stage 3 Source
       uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
       with:
         name: stage3-source
-        path: llvm-project.tar.gz
+        path: llvm-project.tar.zst
         retention-days: 2
 
     - name: Upload Stage 3 Build Dir
@@ -298,8 +295,8 @@ jobs:
 
     - name: Unpack Artifact
       run: |
-        tar -xzf llvm-project.tar.gz
-        rm llvm-project.tar.gz
+        tar --zstd -xf llvm-project.tar.zst
+        rm llvm-project.tar.zst
         sudo chown $USER:$USER /mnt/
         tar --zstd -C /mnt -xf build.tar.zst
         rm build.tar.zst
