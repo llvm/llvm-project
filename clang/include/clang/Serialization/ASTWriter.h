@@ -212,10 +212,10 @@ private:
   llvm::SmallVector<NamespaceDecl *, 16> DelayedNamespace;
 
   /// The first ID number we can use for our own declarations.
-  serialization::DeclID FirstDeclID = serialization::NUM_PREDEF_DECL_IDS;
+  LocalDeclID FirstDeclID = LocalDeclID(clang::NUM_PREDEF_DECL_IDS);
 
   /// The decl ID that will be assigned to the next new decl.
-  serialization::DeclID NextDeclID = FirstDeclID;
+  LocalDeclID NextDeclID = FirstDeclID;
 
   /// Map that provides the ID numbers of each declaration within
   /// the output stream, as well as those deserialized from a chained PCH.
@@ -223,7 +223,7 @@ private:
   /// The ID numbers of declarations are consecutive (in order of
   /// discovery) and start at 2. 1 is reserved for the translation
   /// unit, while 0 is reserved for NULL.
-  llvm::DenseMap<const Decl *, serialization::DeclID> DeclIDs;
+  llvm::DenseMap<const Decl *, LocalDeclID> DeclIDs;
 
   /// Offset of each declaration in the bitstream, indexed by
   /// the declaration's ID.
@@ -233,9 +233,8 @@ private:
   /// are relative to this value.
   uint64_t DeclTypesBlockStartOffset = 0;
 
-  /// Sorted (by file offset) vector of pairs of file offset/DeclID.
-  using LocDeclIDsTy =
-      SmallVector<std::pair<unsigned, serialization::DeclID>, 64>;
+  /// Sorted (by file offset) vector of pairs of file offset/LocalDeclID.
+  using LocDeclIDsTy = SmallVector<std::pair<unsigned, LocalDeclID>, 64>;
   struct DeclIDInFileInfo {
     LocDeclIDsTy DeclIDs;
 
@@ -250,7 +249,7 @@ private:
   /// that it contains.
   FileDeclIDsTy FileDeclIDs;
 
-  void associateDeclWithFile(const Decl *D, serialization::DeclID);
+  void associateDeclWithFile(const Decl *D, LocalDeclID);
 
   /// The first ID number we can use for our own types.
   serialization::TypeID FirstTypeID = serialization::NUM_PREDEF_TYPE_IDS;
@@ -421,8 +420,8 @@ private:
   /// headers. The declarations themselves are stored as declaration
   /// IDs, since they will be written out to an EAGERLY_DESERIALIZED_DECLS
   /// record.
-  SmallVector<serialization::DeclID, 16> EagerlyDeserializedDecls;
-  SmallVector<serialization::DeclID, 16> ModularCodegenDecls;
+  RecordData EagerlyDeserializedDecls;
+  RecordData ModularCodegenDecls;
 
   /// DeclContexts that have received extensions since their serialized
   /// form.
@@ -709,7 +708,7 @@ public:
       return false;
     auto I = DeclIDs.find(D);
     return (I == DeclIDs.end() ||
-            I->second >= serialization::NUM_PREDEF_DECL_IDS);
+            I->second.get() >= clang::NUM_PREDEF_DECL_IDS);
   };
 
   /// Emit a reference to a declaration.
@@ -717,12 +716,13 @@ public:
   // Emit a reference to a declaration if the declaration was emitted.
   void AddEmittedDeclRef(const Decl *D, RecordDataImpl &Record);
 
-  /// Force a declaration to be emitted and get its ID.
-  serialization::DeclID GetDeclRef(const Decl *D);
+  /// Force a declaration to be emitted and get its local ID to the module file
+  /// been writing.
+  LocalDeclID GetDeclRef(const Decl *D);
 
-  /// Determine the declaration ID of an already-emitted
+  /// Determine the local declaration ID of an already-emitted
   /// declaration.
-  serialization::DeclID getDeclID(const Decl *D);
+  LocalDeclID getDeclID(const Decl *D);
 
   /// Whether or not the declaration got emitted. If not, it wouldn't be
   /// emitted.

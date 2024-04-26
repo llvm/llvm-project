@@ -22,6 +22,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -494,7 +495,6 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
         memtag::getFP(IRB),
         IRB.CreateAnd(IRB.CreatePtrToInt(Base, IntptrTy), TagMask));
     Value *PC = memtag::getPC(TargetTriple, IRB);
-
     Value *RecordPtr = IRB.CreateIntToPtr(ThreadLong, IRB.getPtrTy(0));
     IRB.CreateStore(PC, RecordPtr);
     IRB.CreateStore(TaggedFP, IRB.CreateConstGEP1_64(IntptrTy, RecordPtr, 1));
@@ -630,6 +630,8 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
       for (auto *II : Info.LifetimeEnd)
         II->eraseFromParent();
     }
+
+    memtag::annotateDebugRecords(Info, static_cast<unsigned long>(Tag));
   }
 
   // If we have instrumented at least one alloca, all unrecognized lifetime

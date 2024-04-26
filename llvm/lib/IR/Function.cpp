@@ -735,6 +735,10 @@ void Function::addDereferenceableOrNullParamAttr(unsigned ArgNo,
                                                                   ArgNo, Bytes);
 }
 
+void Function::addRangeRetAttr(const ConstantRange &CR) {
+  AttributeSets = AttributeSets.addRangeRetAttr(getContext(), CR);
+}
+
 DenormalMode Function::getDenormalMode(const fltSemantics &FPType) const {
   if (&FPType == &APFloat::IEEEsingle()) {
     DenormalMode Mode = getDenormalModeF32Raw();
@@ -1170,6 +1174,10 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     return;
   case IIT_V8:
     OutputTable.push_back(IITDescriptor::getVector(8, IsScalableVector));
+    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    return;
+  case IIT_V10:
+    OutputTable.push_back(IITDescriptor::getVector(10, IsScalableVector));
     DecodeIITType(NextElt, Infos, Info, OutputTable);
     return;
   case IIT_V16:

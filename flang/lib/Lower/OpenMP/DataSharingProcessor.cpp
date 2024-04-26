@@ -135,8 +135,14 @@ void DataSharingProcessor::insertBarrier() {
 }
 
 void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
+  mlir::omp::LoopNestOp loopOp;
+  if (auto wrapper = mlir::dyn_cast<mlir::omp::LoopWrapperInterface>(op))
+    loopOp = wrapper.isWrapper()
+                 ? mlir::cast<mlir::omp::LoopNestOp>(wrapper.getWrappedLoop())
+                 : nullptr;
+
   bool cmpCreated = false;
-  mlir::OpBuilder::InsertPoint localInsPt = firOpBuilder.saveInsertionPoint();
+  mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
   for (const omp::Clause &clause : clauses) {
     if (clause.id != llvm::omp::OMPC_lastprivate)
       continue;
@@ -203,30 +209,31 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
           // Lastprivate operation is inserted at the end
           // of the lexically last section in the sections
           // construct
-          mlir::OpBuilder::InsertPoint unstructuredSectionsIP =
-              firOpBuilder.saveInsertionPoint();
+          mlir::OpBuilder::InsertionGuard unstructuredSectionsGuard(
+              firOpBuilder);
           mlir::Operation *lastOper = op->getRegion(0).back().getTerminator();
           firOpBuilder.setInsertionPoint(lastOper);
           lastPrivIP = firOpBuilder.saveInsertionPoint();
-          firOpBuilder.restoreInsertionPoint(unstructuredSectionsIP);
         }
       }
     } else if (mlir::isa<mlir::omp::WsloopOp>(op)) {
       // Update the original variable just before exiting the worksharing
       // loop. Conversion as follows:
       //
-      //                       omp.wsloop {
-      // omp.wsloop {            ...
-      //    ...                  store
-      //    store       ===>     %v = arith.addi %iv, %step
-      //    omp.yield            %cmp = %step < 0 ? %v < %ub : %v > %ub
-      // }                       fir.if %cmp {
-      //                           fir.store %v to %loopIV
-      //                           ^%lpv_update_blk:
-      //                         }
-      //                         omp.yield
-      //                       }
-      //
+      // omp.wsloop {             omp.wsloop {
+      //   omp.loop_nest {          omp.loop_nest {
+      //     ...                      ...
+      //     store          ===>      store
+      //     omp.yield                %v = arith.addi %iv, %step
+      //   }                          %cmp = %step < 0 ? %v < %ub : %v > %ub
+      //   omp.terminator             fir.if %cmp {
+      // }                              fir.store %v to %loopIV
+      //                                ^%lpv_update_blk:
+      //                              }
+      //                              omp.yield
+      //                            }
+      //                            omp.terminator
+      //                          }
 
       // Only generate the compare once in presence of multiple LastPrivate
       // clauses.
@@ -234,14 +241,13 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
         continue;
       cmpCreated = true;
 
-      mlir::Location loc = op->getLoc();
-      mlir::Operation *lastOper = op->getRegion(0).back().getTerminator();
+      mlir::Location loc = loopOp.getLoc();
+      mlir::Operation *lastOper = loopOp.getRegion().back().getTerminator();
       firOpBuilder.setInsertionPoint(lastOper);
 
-      mlir::Value iv = op->getRegion(0).front().getArguments()[0];
-      mlir::Value ub =
-          mlir::dyn_cast<mlir::omp::WsloopOp>(op).getUpperBound()[0];
-      mlir::Value step = mlir::dyn_cast<mlir::omp::WsloopOp>(op).getStep()[0];
+      mlir::Value iv = loopOp.getIVs()[0];
+      mlir::Value ub = loopOp.getUpperBound()[0];
+      mlir::Value step = loopOp.getStep()[0];
 
       // v = iv + step
       // cmp = step < 0 ? v < ub : v > ub
@@ -260,7 +266,7 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
       auto ifOp = firOpBuilder.create<fir::IfOp>(loc, cmpOp, /*else*/ false);
       firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
       assert(loopIV && "loopIV was not set");
-      firOpBuilder.create<fir::StoreOp>(op->getLoc(), v, loopIV);
+      firOpBuilder.create<fir::StoreOp>(loopOp.getLoc(), v, loopIV);
       lastPrivIP = firOpBuilder.saveInsertionPoint();
     } else {
       TODO(converter.getCurrentLocation(),
@@ -268,7 +274,6 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
            "simd/worksharing-loop");
     }
   }
-  firOpBuilder.restoreInsertionPoint(localInsPt);
 }
 
 void DataSharingProcessor::collectSymbols(
@@ -334,6 +339,7 @@ void DataSharingProcessor::defaultPrivatize(
     if (!Fortran::semantics::IsProcedure(*sym) &&
         !sym->GetUltimate().has<Fortran::semantics::DerivedTypeDetails>() &&
         !sym->GetUltimate().has<Fortran::semantics::NamelistDetails>() &&
+        !Fortran::semantics::IsImpliedDoIndex(sym->GetUltimate()) &&
         !symbolsInNestedRegions.contains(sym) &&
         !symbolsInParentRegions.contains(sym) &&
         !privatizedSymbols.contains(sym))
@@ -372,7 +378,7 @@ void DataSharingProcessor::doPrivatize(
                 uniquePrivatizerName))
       return existingPrivatizer;
 
-    auto ip = firOpBuilder.saveInsertionPoint();
+    mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
     firOpBuilder.setInsertionPoint(&moduleOp.getBodyRegion().front(),
                                    moduleOp.getBodyRegion().front().begin());
     auto result = firOpBuilder.create<mlir::omp::PrivateClauseOp>(
@@ -424,7 +430,6 @@ void DataSharingProcessor::doPrivatize(
     }
 
     symTable->popScope();
-    firOpBuilder.restoreInsertionPoint(ip);
     return result;
   }();
 

@@ -77,24 +77,27 @@ end
 ! CHECK:         %[[VAL_3:.*]] = arith.constant 1 : i32
 ! CHECK:         %[[VAL_4:.*]] = arith.constant 10 : i32
 ! CHECK:         %[[VAL_5:.*]] = arith.constant 1 : i32
-! CHECK:         omp.wsloop   for  (%[[VAL_6:.*]]) : i32 = (%[[VAL_3]]) to (%[[VAL_4]]) inclusive step (%[[VAL_5]]) {
-! CHECK:           fir.store %[[VAL_6]] to %[[VAL_0]] : !fir.ref<i32>
-! CHECK:           cf.br ^bb1
-! CHECK:         ^bb1:
-! CHECK:           %[[VAL_7:.*]] = arith.constant 3 : i32
-! CHECK:           fir.store %[[VAL_7]] to %[[VAL_2]] : !fir.ref<i32>
-! CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
-! CHECK:           %[[VAL_9:.*]] = arith.constant 1 : i32
-! CHECK:           %[[VAL_10:.*]] = arith.cmpi sgt, %[[VAL_8]], %[[VAL_9]] : i32
-! CHECK:           cf.cond_br %[[VAL_10]], ^bb2, ^bb3
-! CHECK:         ^bb2:
-! CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
-! CHECK:           %[[VAL_12:.*]] = arith.constant false
-! CHECK:           %[[VAL_13:.*]] = arith.constant false
-! CHECK:           %[[VAL_14:.*]] = fir.call @_FortranAStopStatement(%[[VAL_11]], %[[VAL_12]], %[[VAL_13]]) {{.*}} : (i32, i1, i1) -> none
-! CHECK:           omp.yield
-! CHECK:         ^bb3:
-! CHECK:           omp.yield
+! CHECK:         omp.wsloop {
+! CHECK-NEXT:      omp.loop_nest (%[[VAL_6:.*]]) : i32 = (%[[VAL_3]]) to (%[[VAL_4]]) inclusive step (%[[VAL_5]]) {
+! CHECK:             fir.store %[[VAL_6]] to %[[VAL_0]] : !fir.ref<i32>
+! CHECK:             cf.br ^bb1
+! CHECK:           ^bb1:
+! CHECK:             %[[VAL_7:.*]] = arith.constant 3 : i32
+! CHECK:             fir.store %[[VAL_7]] to %[[VAL_2]] : !fir.ref<i32>
+! CHECK:             %[[VAL_8:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
+! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
+! CHECK:             %[[VAL_10:.*]] = arith.cmpi sgt, %[[VAL_8]], %[[VAL_9]] : i32
+! CHECK:             cf.cond_br %[[VAL_10]], ^bb2, ^bb3
+! CHECK:           ^bb2:
+! CHECK:             %[[VAL_11:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
+! CHECK:             %[[VAL_12:.*]] = arith.constant false
+! CHECK:             %[[VAL_13:.*]] = arith.constant false
+! CHECK:             %[[VAL_14:.*]] = fir.call @_FortranAStopStatement(%[[VAL_11]], %[[VAL_12]], %[[VAL_13]]) {{.*}} : (i32, i1, i1) -> none
+! CHECK:             omp.yield
+! CHECK:           ^bb3:
+! CHECK:             omp.yield
+! CHECK:           }
+! CHECK:           omp.terminator
 ! CHECK:         }
 ! CHECK:         cf.br ^bb1
 ! CHECK:       ^bb1:
