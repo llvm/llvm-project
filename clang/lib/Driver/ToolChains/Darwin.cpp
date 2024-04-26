@@ -476,6 +476,19 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
         llvm::sys::path::append(Path, "default.profdata");
       CmdArgs.push_back(Args.MakeArgString(Twine("--cs-profile-path=") + Path));
     }
+
+    auto *CodeGenDataGenArg =
+        Args.getLastArg(options::OPT_fcodegen_data_generate,
+                        options::OPT_fcodegen_data_generate_EQ);
+    if (CodeGenDataGenArg) {
+      SmallString<128> Path(CodeGenDataGenArg->getNumValues() == 0
+                                ? ""
+                                : CodeGenDataGenArg->getValue());
+      if (Path.empty() || llvm::sys::fs::is_directory(Path))
+        llvm::sys::path::append(Path, "default.cgdata");
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine("--codegen-data-generate-path=") + Path));
+    }
   }
 }
 
@@ -632,6 +645,39 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // independently of -moutline.
   CmdArgs.push_back("-mllvm");
   CmdArgs.push_back("-enable-linkonceodr-outlining");
+
+  // Propagate codegen data flags to the linker for the LLVM backend.
+  auto *CodeGenDataGenArg =
+      Args.getLastArg(options::OPT_fcodegen_data_generate,
+                      options::OPT_fcodegen_data_generate_EQ);
+  auto *CodeGenDataUseArg = Args.getLastArg(options::OPT_fcodegen_data_use,
+                                            options::OPT_fcodegen_data_use_EQ);
+
+  // We only allow one of them to be specified.
+  const Driver &D = getToolChain().getDriver();
+  if (CodeGenDataGenArg && CodeGenDataUseArg)
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << CodeGenDataGenArg->getAsString(Args)
+        << CodeGenDataUseArg->getAsString(Args);
+
+  // For codegen data gen, the output file is passed to the linker
+  // while a boolean flag is passed to the LLVM backend.
+  if (CodeGenDataGenArg) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-codegen-data-generate");
+  }
+
+  // For codegen data use, the input file is passed to the LLVM backend.
+  if (CodeGenDataUseArg) {
+    SmallString<128> Path(CodeGenDataUseArg->getNumValues() == 0
+                              ? ""
+                              : CodeGenDataUseArg->getValue());
+    if (Path.empty() || llvm::sys::fs::is_directory(Path))
+      llvm::sys::path::append(Path, "default.cgdata");
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(
+        Args.MakeArgString("-codegen-data-use-path=" + Path.str()));
+  }
 
   // Setup statistics file output.
   SmallString<128> StatsFile =
