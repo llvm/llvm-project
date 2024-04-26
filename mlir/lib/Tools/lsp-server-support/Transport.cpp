@@ -51,12 +51,12 @@ private:
 
 Reply::Reply(const llvm::json::Value &id, llvm::StringRef method,
              JSONTransport &transport, std::mutex &transportOutputMutex)
-    : method(method), id(id), transport(&transport),
+    : id(id), transport(&transport),
       transportOutputMutex(transportOutputMutex) {}
 
 Reply::Reply(Reply &&other)
-    : method(other.method), replied(other.replied.load()),
-      id(std::move(other.id)), transport(other.transport),
+    : replied(other.replied.load()), id(std::move(other.id)),
+      transport(other.transport),
       transportOutputMutex(other.transportOutputMutex) {
   other.transport = nullptr;
 }
