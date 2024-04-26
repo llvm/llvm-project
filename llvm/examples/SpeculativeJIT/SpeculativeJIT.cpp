@@ -3,7 +3,6 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
-#include "llvm/ExecutionEngine/Orc/IRPartitionLayer.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
@@ -110,14 +109,13 @@ private:
       IndirectStubsManagerBuilderFunction ISMBuilder,
       std::unique_ptr<DynamicLibrarySearchGenerator> ProcessSymbolsGenerator)
       : ES(std::move(ES)), DL(std::move(DL)),
-        MainJD(this->ES->createBareJITDylib("<main>")),
-        LCTMgr(std::move(LCTMgr)),
+        MainJD(this->ES->createBareJITDylib("<main>")), LCTMgr(std::move(LCTMgr)),
         CompileLayer(*this->ES, ObjLayer,
                      std::make_unique<ConcurrentIRCompiler>(std::move(JTMB))),
         S(Imps, *this->ES),
         SpeculateLayer(*this->ES, CompileLayer, S, Mangle, BlockFreqQuery()),
-        IPLayer(*this->ES, SpeculateLayer),
-        CODLayer(*this->ES, IPLayer, *this->LCTMgr, std::move(ISMBuilder)) {
+        CODLayer(*this->ES, SpeculateLayer, *this->LCTMgr,
+                 std::move(ISMBuilder)) {
     MainJD.addGenerator(std::move(ProcessSymbolsGenerator));
     this->CODLayer.setImplMap(&Imps);
     ExitOnErr(S.addSpeculationRuntime(MainJD, Mangle));
@@ -143,7 +141,6 @@ private:
   Speculator S;
   RTDyldObjectLinkingLayer ObjLayer{*ES, createMemMgr};
   IRSpeculationLayer SpeculateLayer;
-  IRPartitionLayer IPLayer;
   CompileOnDemandLayer CODLayer;
 };
 
