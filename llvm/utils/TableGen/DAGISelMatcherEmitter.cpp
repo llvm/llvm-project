@@ -1352,7 +1352,7 @@ void llvm::EmitMatcherTable(Matcher *TheMatcher, const CodeGenDAGPatterns &CGP,
   MatcherEmitter.EmitHistogram(TheMatcher, OS);
 
   OS << "  #undef TARGET_VAL\n";
-  OS << "  SelectCodeCommon(N, MatcherTable,sizeof(MatcherTable));\n";
+  OS << "  SelectCodeCommon(N, MatcherTable, sizeof(MatcherTable));\n";
   OS << "}\n";
   EndEmitFunction(OS);
 
