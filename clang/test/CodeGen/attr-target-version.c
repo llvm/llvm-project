@@ -1129,7 +1129,7 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 // CHECK-NOFMV-NEXT:    ret i32 0
 //
 //.
-// CHECK: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+flagm,+fp16fml,+fullfp16,+neon,+rand,-fp-armv8,-v9.5a" }
+// CHECK: attributes #[[ATTR0]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+flagm,+fp16fml,+fullfp16,+neon,+rng,-fp-armv8,-v9.5a" }
 // CHECK: attributes #[[ATTR1]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+altnzcv,+bf16,+flagm,+sme,+sme-i16i64,-fp-armv8,-v9.5a" }
 // CHECK: attributes #[[ATTR2]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+lse,+neon,+sha2,-fp-armv8,-v9.5a" }
 // CHECK: attributes #[[ATTR3]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+dotprod,+ls64,+neon,-fp-armv8,-v9.5a" }

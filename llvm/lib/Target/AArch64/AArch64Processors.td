@@ -755,29 +755,29 @@ def ProcessorFeatures {
                                        FeaturePerfMon];
   list<SubtargetFeature> NeoverseN3 = [HasV9_2aOps, FeatureETE, FeatureFP16FML,
                                       FeatureFullFP16, FeatureMTE, FeaturePerfMon,
-                                      FeatureRandGen, FeatureSPE, FeatureSPE_EEF,
+                                      FeatureRNG, FeatureSPE, FeatureSPE_EEF,
                                       FeatureSVE2BitPerm];
   list<SubtargetFeature> Neoverse512TVB = [HasV8_4aOps, FeatureBF16, FeatureCacheDeepPersist,
                                            FeatureCrypto, FeatureFPARMv8, FeatureFP16FML,
                                            FeatureFullFP16, FeatureI8MM, FeatureNEON,
-                                           FeaturePerfMon, FeatureRandGen, FeatureSPE,
+                                           FeaturePerfMon, FeatureRNG, FeatureSPE,
                                            FeatureSSBS, FeatureSVE];
   list<SubtargetFeature> NeoverseV1 = [HasV8_4aOps, FeatureBF16, FeatureCacheDeepPersist,
                                        FeatureCrypto, FeatureFPARMv8, FeatureFP16FML,
                                        FeatureFullFP16, FeatureI8MM, FeatureNEON,
-                                       FeaturePerfMon, FeatureRandGen, FeatureSPE,
+                                       FeaturePerfMon, FeatureRNG, FeatureSPE,
                                        FeatureSSBS, FeatureSVE];
   list<SubtargetFeature> NeoverseV2 = [HasV9_0aOps, FeatureBF16, FeatureSPE,
                                        FeaturePerfMon, FeatureETE, FeatureI8MM,
                                        FeatureNEON, FeatureSVE2BitPerm, FeatureFP16FML,
-                                       FeatureMTE, FeatureRandGen];
+                                       FeatureMTE, FeatureRNG];
   list<SubtargetFeature> NeoverseV3 = [HasV9_2aOps, FeatureETE, FeatureFP16FML,
                                       FeatureFullFP16, FeatureLS64, FeatureMTE,
-                                      FeaturePerfMon, FeatureRandGen, FeatureSPE,
+                                      FeaturePerfMon, FeatureRNG, FeatureSPE,
                                       FeatureSPE_EEF, FeatureSVE2BitPerm, FeatureBRBE];
   list<SubtargetFeature> NeoverseV3AE = [HasV9_2aOps, FeatureETE, FeatureFP16FML,
                                       FeatureFullFP16, FeatureLS64, FeatureMTE,
-                                      FeaturePerfMon, FeatureRandGen, FeatureSPE,
+                                      FeaturePerfMon, FeatureRNG, FeatureSPE,
                                       FeatureSPE_EEF, FeatureSVE2BitPerm, FeatureBRBE];
   list<SubtargetFeature> Saphira    = [HasV8_4aOps, FeatureCrypto, FeatureFPARMv8,
                                        FeatureNEON, FeatureSPE, FeaturePerfMon];
@@ -793,14 +793,14 @@ def ProcessorFeatures {
                                    FeatureFullFP16, FeatureFP16FML, FeatureDotProd,
                                    FeatureJS, FeatureFCMA];
   list<SubtargetFeature> Ampere1 = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
-                                    FeatureSSBS, FeatureRandGen, FeatureSB,
+                                    FeatureSSBS, FeatureRNG, FeatureSB,
                                     FeatureSHA2, FeatureSHA3, FeatureAES];
   list<SubtargetFeature> Ampere1A = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
-                                     FeatureMTE, FeatureSSBS, FeatureRandGen,
+                                     FeatureMTE, FeatureSSBS, FeatureRNG,
                                      FeatureSB, FeatureSM4, FeatureSHA2,
                                      FeatureSHA3, FeatureAES];
   list<SubtargetFeature> Ampere1B = [HasV8_7aOps, FeatureNEON, FeaturePerfMon,
-                                     FeatureMTE, FeatureSSBS, FeatureRandGen,
+                                     FeatureMTE, FeatureSSBS, FeatureRNG,
                                      FeatureSB, FeatureSM4, FeatureSHA2,
                                      FeatureSHA3, FeatureAES, FeatureCSSC,
                                      FeatureWFxT, FeatureFullFP16];

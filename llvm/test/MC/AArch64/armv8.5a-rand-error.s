@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple aarch64 -show-encoding -mattr=+rand < %s 2>&1| FileCheck %s
+// RUN: not llvm-mc -triple aarch64 -show-encoding -mattr=+rng < %s 2>&1| FileCheck %s
 
 mrs rndr
 mrs rndrrs

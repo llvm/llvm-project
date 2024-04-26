@@ -40,7 +40,7 @@ fn:
   ldaprb w0, [x0, #0]                   // AEK_RCPC
   stilp w26, w2, [x18]                  // AEK_RCPC3
   sqrdmlah v0.4h, v1.4h, v2.4h          // AEK_RDM
-  mrs x0, rndr                          // AEK_RAND
+  mrs x0, rndr                          // AEK_RNG
   sb                                    // AEK_SB
   sha256h q0, q0, v0.4s                 // AEK_SHA2
   bcax v0.16b, v0.16b, v0.16b, v0.16b   // AEK_SHA3

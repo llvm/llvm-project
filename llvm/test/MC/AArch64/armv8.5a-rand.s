@@ -1,6 +1,6 @@
-// RUN:     llvm-mc -triple aarch64 -show-encoding -mattr=+rand  < %s      | FileCheck %s
+// RUN:     llvm-mc -triple aarch64 -show-encoding -mattr=+rng  < %s      | FileCheck %s
 // RUN: not llvm-mc -triple aarch64 -show-encoding -mattr=+v8.5a < %s 2>&1 | FileCheck %s --check-prefix=NORAND
-// RUN: not llvm-mc -triple aarch64 -show-encoding -mattr=-rand  < %s 2>&1 | FileCheck %s --check-prefix=NORAND
+// RUN: not llvm-mc -triple aarch64 -show-encoding -mattr=-rng  < %s 2>&1 | FileCheck %s --check-prefix=NORAND
 
 mrs x0, rndr
 mrs x1, rndrrs

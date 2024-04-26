@@ -1,6 +1,6 @@
-# RUN: llvm-mc -triple=aarch64 -mattr=+rand  -disassemble < %s | FileCheck %s
+# RUN: llvm-mc -triple=aarch64 -mattr=+rng  -disassemble < %s | FileCheck %s
 # RUN: llvm-mc -triple=aarch64 -mattr=+v8.5a -disassemble < %s | FileCheck %s --check-prefix=NORAND
-# RUN: llvm-mc -triple=aarch64 -mattr=-rand  -disassemble < %s | FileCheck %s --check-prefix=NORAND
+# RUN: llvm-mc -triple=aarch64 -mattr=-rng  -disassemble < %s | FileCheck %s --check-prefix=NORAND
 
 [0x00,0x24,0x3b,0xd5]
 [0x21,0x24,0x3b,0xd5]

@@ -575,7 +575,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasLS64)
     Builder.defineMacro("__ARM_FEATURE_LS64", "1");
 
-  if (HasRandGen)
+  if (HasRNG)
     Builder.defineMacro("__ARM_FEATURE_RNG", "1");
 
   if (HasMOPS)
@@ -698,7 +698,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Cases("neon", "simd", FPU & NeonMode)
       .Case("jscvt", HasJSCVT)
       .Case("fcma", HasFCMA)
-      .Case("rng", HasRandGen)
+      .Case("rng", HasRNG)
       .Case("flagm", HasFlagM)
       .Case("flagm2", HasAlternativeNZCV)
       .Case("fp16fml", HasFP16FML)
@@ -1001,8 +1001,8 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasLSE = true;
     if (Feature == "+ls64")
       HasLS64 = true;
-    if (Feature == "+rand")
-      HasRandGen = true;
+    if (Feature == "+rng")
+      HasRNG = true;
     if (Feature == "+flagm")
       HasFlagM = true;
     if (Feature == "+altnzcv") {

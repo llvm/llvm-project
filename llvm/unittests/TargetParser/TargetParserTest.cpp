@@ -1325,7 +1325,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_RDM,     AArch64::AEK_RCPC,  AArch64::AEK_DOTPROD,
                  AArch64::AEK_AES,     AArch64::AEK_SHA2,  AArch64::AEK_SHA3,
                  AArch64::AEK_SM4,     AArch64::AEK_FP16,  AArch64::AEK_BF16,
-                 AArch64::AEK_PROFILE, AArch64::AEK_RAND,  AArch64::AEK_FP16FML,
+                 AArch64::AEK_PROFILE, AArch64::AEK_RNG,   AArch64::AEK_FP16FML,
                  AArch64::AEK_I8MM,    AArch64::AEK_JSCVT, AArch64::AEK_FCMA,
                  AArch64::AEK_PAUTH}),
             "8.4-A"),
@@ -1341,7 +1341,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_FP16,        AArch64::AEK_BF16,
                  AArch64::AEK_SVE2,        AArch64::AEK_PROFILE,
                  AArch64::AEK_FP16FML,     AArch64::AEK_I8MM,
-                 AArch64::AEK_SVE2BITPERM, AArch64::AEK_RAND,
+                 AArch64::AEK_SVE2BITPERM, AArch64::AEK_RNG,
                  AArch64::AEK_JSCVT,       AArch64::AEK_FCMA,
                  AArch64::AEK_PAUTH}),
             "9-A"),
@@ -1359,7 +1359,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_SB,          AArch64::AEK_PREDRES,
                  AArch64::AEK_LS64,        AArch64::AEK_BRBE,
                  AArch64::AEK_PAUTH,       AArch64::AEK_FLAGM,
-                 AArch64::AEK_PERFMON,     AArch64::AEK_RAND,
+                 AArch64::AEK_PERFMON,     AArch64::AEK_RNG,
                  AArch64::AEK_SVE2BITPERM, AArch64::AEK_FP16FML,
                  AArch64::AEK_PROFILE,     AArch64::AEK_JSCVT,
                  AArch64::AEK_FCMA}),
@@ -1378,7 +1378,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_SB,          AArch64::AEK_PREDRES,
                  AArch64::AEK_LS64,        AArch64::AEK_BRBE,
                  AArch64::AEK_PAUTH,       AArch64::AEK_FLAGM,
-                 AArch64::AEK_PERFMON,     AArch64::AEK_RAND,
+                 AArch64::AEK_PERFMON,     AArch64::AEK_RNG,
                  AArch64::AEK_SVE2BITPERM, AArch64::AEK_FP16FML,
                  AArch64::AEK_PROFILE,     AArch64::AEK_JSCVT,
                  AArch64::AEK_FCMA}),
@@ -1701,7 +1701,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_SB,      AArch64::AEK_PREDRES,
                  AArch64::AEK_FCMA,    AArch64::AEK_PAUTH,
                  AArch64::AEK_FLAGM,   AArch64::AEK_PERFMON,
-                 AArch64::AEK_RAND,    AArch64::AEK_SVE2BITPERM,
+                 AArch64::AEK_RNG,     AArch64::AEK_SVE2BITPERM,
                  AArch64::AEK_FP16FML, AArch64::AEK_PROFILE,
                  AArch64::AEK_JSCVT}),
             "9.2-A"),
@@ -1713,7 +1713,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_RDM,  AArch64::AEK_RCPC, AArch64::AEK_DOTPROD,
                  AArch64::AEK_SHA3, AArch64::AEK_BF16, AArch64::AEK_SHA2,
                  AArch64::AEK_AES,  AArch64::AEK_I8MM, AArch64::AEK_SSBS,
-                 AArch64::AEK_SB,   AArch64::AEK_RAND, AArch64::AEK_JSCVT,
+                 AArch64::AEK_SB,   AArch64::AEK_RNG,  AArch64::AEK_JSCVT,
                  AArch64::AEK_FCMA, AArch64::AEK_PAUTH}),
             "8.6-A"),
         ARMCPUTestParams<AArch64::ExtensionBitset>(
@@ -1724,7 +1724,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_RDM,  AArch64::AEK_RCPC,  AArch64::AEK_DOTPROD,
                  AArch64::AEK_SM4,  AArch64::AEK_SHA3,  AArch64::AEK_BF16,
                  AArch64::AEK_SHA2, AArch64::AEK_AES,   AArch64::AEK_I8MM,
-                 AArch64::AEK_SSBS, AArch64::AEK_SB,    AArch64::AEK_RAND,
+                 AArch64::AEK_SSBS, AArch64::AEK_SB,    AArch64::AEK_RNG,
                  AArch64::AEK_MTE,  AArch64::AEK_JSCVT, AArch64::AEK_FCMA,
                  AArch64::AEK_PAUTH}),
             "8.6-A"),
@@ -1736,7 +1736,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_RDM,   AArch64::AEK_RCPC,  AArch64::AEK_DOTPROD,
                  AArch64::AEK_SM4,   AArch64::AEK_SHA3,  AArch64::AEK_BF16,
                  AArch64::AEK_SHA2,  AArch64::AEK_AES,   AArch64::AEK_I8MM,
-                 AArch64::AEK_SSBS,  AArch64::AEK_SB,    AArch64::AEK_RAND,
+                 AArch64::AEK_SSBS,  AArch64::AEK_SB,    AArch64::AEK_RNG,
                  AArch64::AEK_MTE,   AArch64::AEK_JSCVT, AArch64::AEK_FCMA,
                  AArch64::AEK_PAUTH, AArch64::AEK_CSSC}),
             "8.7-A"),
@@ -1749,7 +1749,7 @@ INSTANTIATE_TEST_SUITE_P(
                  AArch64::AEK_RDM,     AArch64::AEK_RCPC,  AArch64::AEK_DOTPROD,
                  AArch64::AEK_AES,     AArch64::AEK_SHA2,  AArch64::AEK_SHA3,
                  AArch64::AEK_SM4,     AArch64::AEK_FP16,  AArch64::AEK_BF16,
-                 AArch64::AEK_PROFILE, AArch64::AEK_RAND,  AArch64::AEK_FP16FML,
+                 AArch64::AEK_PROFILE, AArch64::AEK_RNG,   AArch64::AEK_FP16FML,
                  AArch64::AEK_I8MM,    AArch64::AEK_JSCVT, AArch64::AEK_FCMA,
                  AArch64::AEK_PAUTH}),
             "8.4-A"),
@@ -1979,7 +1979,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SVE2,         AArch64::AEK_SVE2AES,
       AArch64::AEK_SVE2SM4,      AArch64::AEK_SVE2SHA3,
       AArch64::AEK_SVE2BITPERM,  AArch64::AEK_RCPC,
-      AArch64::AEK_RAND,         AArch64::AEK_MTE,
+      AArch64::AEK_RNG,          AArch64::AEK_MTE,
       AArch64::AEK_SSBS,         AArch64::AEK_SB,
       AArch64::AEK_PREDRES,      AArch64::AEK_BF16,
       AArch64::AEK_I8MM,         AArch64::AEK_F32MM,
@@ -2047,7 +2047,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sve2p1"));
   EXPECT_TRUE(llvm::is_contained(Features, "+b16b16"));
   EXPECT_TRUE(llvm::is_contained(Features, "+rcpc"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+rand"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+rng"));
   EXPECT_TRUE(llvm::is_contained(Features, "+mte"));
   EXPECT_TRUE(llvm::is_contained(Features, "+ssbs"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sb"));
@@ -2201,7 +2201,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"sve2-bitperm", "nosve2-bitperm", "+sve2-bitperm", "-sve2-bitperm"},
       {"dotprod", "nodotprod", "+dotprod", "-dotprod"},
       {"rcpc", "norcpc", "+rcpc", "-rcpc"},
-      {"rng", "norng", "+rand", "-rand"},
+      {"rng", "norng", "+rng", "-rng"},
       {"memtag", "nomemtag", "+mte", "-mte"},
       {"tme", "notme", "+tme", "-tme"},
       {"pauth", "nopauth", "+pauth", "-pauth"},

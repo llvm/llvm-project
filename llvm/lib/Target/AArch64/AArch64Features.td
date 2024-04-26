@@ -440,7 +440,7 @@ def FeatureCacheDeepPersist : Extension<"ccdp", "CCDP",
 def FeatureBranchTargetId : Extension<"bti", "BTI",
     "Enable Branch Target Identification (FEAT_BTI)" >;
 
-def FeatureRandGen : Extension<"rand", "RandGen",
+def FeatureRNG : Extension<"rng", "RNG",
     "Enable Random Number generation instructions (FEAT_RNG)" >;
 
 def FeatureMTE : Extension<"mte", "MTE",
