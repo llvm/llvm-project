@@ -8345,43 +8345,6 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
         // other than an invented function for std::is_convertible ([meta.rel]),
         // a return statement that binds the returned reference to a temporary
         // expression ([class.temporary]) is ill-formed.
-        //
-        // C++0x [meta.rel]p4:
-        //   Given the following function prototype:
-        //
-        //     template <class T>
-        //       typename add_rvalue_reference<T>::type create();
-        //
-        //   the predicate condition for a template specialization
-        //   is_convertible<From, To> shall be satisfied if and only if
-        //   the return expression in the following code would be
-        //   well-formed, including any implicit conversions to the return
-        //   type of the function:
-        //
-        //     To test() {
-        //       return create<From>();
-        //     }
-        //
-        //   Access checking is performed as if in a context unrelated to To and
-        //   From. Only the validity of the immediate context of the expression
-        //   of the return-statement (including conversions to the return type)
-        //   is considered.
-        //
-        // We skip to check whether we are evaluating one of {__is_convertible,
-        // __is_nothrow_convertible, __is_convertible_to} type traits
-        // expression, because we model the initialization as a
-        // copy-initialization of a temporary of the appropriate type, which for
-        // this expression is identical to the return statement (since NRVO
-        // doesn't apply), and not really build a `return create<From>()` in
-        // type traits expression evaluation. Therefor, P2748R5 has no impact
-        // for evaluation of {__is_convertible, __is_nothrow_convertible,
-        // __is_convertible_to}.
-        //
-        // Clang can correctly handle cases like the following:
-        //
-        // static_assert(__is_convertible(int, const int &));
-        // static_assert(__is_nothrow_convertible(int, const int &));
-        // static_assert(__is_convertible_to(int, const int &));
         if (getLangOpts().CPlusPlus26 && Entity.getType()->isReferenceType())
           Diag(DiagLoc, diag::err_ret_local_temp_ref)
               << Entity.getType()->isReferenceType() << DiagRange;
