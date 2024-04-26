@@ -884,9 +884,10 @@ private:
         ScopedLock ML(Region->MMLock);
 
         const bool RegionIsExhausted = Region->Exhausted;
-        if (!RegionIsExhausted)
+        if (!RegionIsExhausted) {
           PopCount = populateFreeListAndPopBlocks(C, ClassId, Region, ToArray,
                                                   MaxBlockCount);
+        }
         ReportRegionExhausted = !RegionIsExhausted && Region->Exhausted;
 
         {
@@ -1019,7 +1020,6 @@ private:
                                           MAP_ALLOWNOMEM))) {
         Printf("Can't reserve pages for size class %zu.\n",
                getSizeByClassId(ClassId));
-        Region->Exhausted = true;
         return 0U;
       }
       initRegion(Region, ClassId,
