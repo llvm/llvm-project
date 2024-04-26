@@ -379,6 +379,13 @@ struct SingleUseExceptionInfo {
   bool IsInvalidSingleUseProducer;
 };
 
+struct DPMACCInstructionInfo {
+  uint16_t Opcode;
+  bool IsDPMACCInstruction;
+};
+
+#define GET_DPMACCInstructionTable_DECL
+#define GET_DPMACCInstructionTable_IMPL
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
@@ -622,6 +629,11 @@ bool isInvalidSingleUseConsumerInst(unsigned Opc) {
 bool isInvalidSingleUseProducerInst(unsigned Opc) {
   const SingleUseExceptionInfo *Info = getSingleUseExceptionHelper(Opc);
   return Info && Info->IsInvalidSingleUseProducer;
+}
+
+bool isDPMACCInstruction(unsigned Opc) {
+  const DPMACCInstructionInfo *Info = getDPMACCInstructionHelper(Opc);
+  return Info && Info->IsDPMACCInstruction;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {

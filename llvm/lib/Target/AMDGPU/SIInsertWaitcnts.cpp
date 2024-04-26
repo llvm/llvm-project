@@ -133,7 +133,13 @@ enum WaitEventType {
   EXP_PARAM_ACCESS,         // write to export parameter
   VMW_GPR_LOCK,             // vector-memory write holding on its data src
   EXP_LDS_ACCESS,           // read by ldsdir counting as export
-  VGPR_DEST_WRITE,          // write VGPR destinations in VALU instructions
+  VGPR_CSMACC_WRITE,        // write VGPR destinations in Core/Side-MACC VALU
+                            // instructions
+  VGPR_DPMACC_WRITE,        // write VGPR destinations in DPMACC VALU
+                            // instructions
+  VGPR_TRANS_WRITE,         // write VGPR destinations in TRANS VALU
+                            // instructions
+  VGPR_XDL_WRITE,           // write VGPR destinations in XDL VALU instructions
   VGPR_SOURCES_VMEM_READ,   // read VGPR sources in VMEM instructions
   NUM_WAIT_EVENTS,
 };
@@ -599,7 +605,8 @@ public:
         eventMask({VMEM_SAMPLER_READ_ACCESS}),
         eventMask({VMEM_BVH_READ_ACCESS}),
         eventMask({SMEM_ACCESS, SQ_MESSAGE}),
-        eventMask({VGPR_DEST_WRITE}),
+        eventMask({VGPR_CSMACC_WRITE, VGPR_DPMACC_WRITE, VGPR_TRANS_WRITE,
+                   VGPR_XDL_WRITE}),
         eventMask({VGPR_SOURCES_VMEM_READ})};
 
     return WaitEventMaskForInstGFX12Plus;
@@ -742,6 +749,8 @@ public:
       return VMEM_READ_ACCESS;
     return VmemReadMapping[getVmemType(Inst)];
   }
+
+  WaitEventType getVALUHazardEventType(const MachineInstr &Inst) const;
 
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
   bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
@@ -2079,6 +2088,26 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
   return Modified;
 }
 
+WaitEventType
+SIInsertWaitcnts::getVALUHazardEventType(const MachineInstr &Inst) const {
+  // Core/Side-, DP-, XDL- and TRANS-MACC instructions complete out-of-order
+  // with respect to each other, so each of these classes has its own event,
+  // allowing the existing counter-out-of-order logic to trigger when
+  // necessary.
+
+  if (SIInstrInfo::isWMMA(Inst) || SIInstrInfo::isSWMMAC(Inst) ||
+      SIInstrInfo::isDOT(Inst))
+    return VGPR_XDL_WRITE;
+
+  if (TII->isTRANS(Inst))
+    return VGPR_TRANS_WRITE;
+
+  if (AMDGPU::isDPMACCInstruction(Inst.getOpcode()))
+    return VGPR_DPMACC_WRITE;
+
+  return VGPR_CSMACC_WRITE;
+}
+
 // This is a flat memory operation. Check to see if it has memory tokens other
 // than LDS. Other address spaces supported by flat memory operations involve
 // global memory.
@@ -2180,7 +2209,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
         TII->isVSAMPLE(Inst) || TII->isFLAT(Inst))
       ScoreBrackets->updateByEvent(TII, TRI, MRI, VGPR_SOURCES_VMEM_READ, Inst);
     else if (TII->isVALU(Inst))
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, VGPR_DEST_WRITE, Inst);
+      ScoreBrackets->updateByEvent(TII, TRI, MRI, getVALUHazardEventType(Inst),
+                                   Inst);
   }
 
   if (TII->isDS(Inst) && TII->usesLGKM_CNT(Inst)) {
