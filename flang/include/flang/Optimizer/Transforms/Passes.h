@@ -47,6 +47,7 @@ namespace fir {
 #define GEN_PASS_DECL_POLYMORPHICOPCONVERSION
 #define GEN_PASS_DECL_OPENACCDATAOPERANDCONVERSION
 #define GEN_PASS_DECL_ADDDEBUGINFO
+#define GEN_PASS_DECL_LOOPVERSIONING
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
@@ -62,7 +63,6 @@ std::unique_ptr<mlir::Pass> createStackArraysPass();
 std::unique_ptr<mlir::Pass> createAliasTagsPass();
 std::unique_ptr<mlir::Pass>
 createAddDebugInfoPass(fir::AddDebugInfoOptions options = {});
-std::unique_ptr<mlir::Pass> createLoopVersioningPass();
 
 std::unique_ptr<mlir::Pass>
 createMemoryAllocationPass(bool dynOnHeap, std::size_t maxStackSize);

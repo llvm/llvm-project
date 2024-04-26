@@ -253,7 +253,7 @@ inline void createDefaultFIROptimizerPassPipeline(
   }
 
   if (pc.LoopVersioning)
-    pm.addPass(fir::createLoopVersioningPass());
+    pm.addPass(fir::createLoopVersioning());
 
   pm.addPass(mlir::createCSEPass());
 

@@ -556,7 +556,3 @@ void LoopVersioningPass::runOnOperation() {
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
 }
-
-std::unique_ptr<mlir::Pass> fir::createLoopVersioningPass() {
-  return std::make_unique<LoopVersioningPass>();
-}

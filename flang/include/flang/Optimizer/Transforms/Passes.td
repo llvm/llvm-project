@@ -321,7 +321,6 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
     an array has element sized stride. The element sizes stride allows some
     loops to be vectorized as well as other loop optimizations.
   }];
-  let constructor = "::fir::createLoopVersioningPass()";
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
