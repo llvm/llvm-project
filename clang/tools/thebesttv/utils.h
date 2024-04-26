@@ -136,15 +136,49 @@ struct GlobalStat {
     std::map<std::string, std::set<std::string>> callGraph;
 
     int functionCnt;
-    std::map<std::string, int> idOfFunction;
+    std::map<std::string, std::map<std::string, int>> fileAndIdOfFunction;
     std::vector<NamedLocation> functionLocations;
 
-    int getIdOfFunction(const std::string &signature) {
-        auto it = idOfFunction.find(signature);
-        if (it == idOfFunction.end()) {
+    /**
+     * 获取函数的 fid
+     *
+     * 目前的mapping是：signature -> {file -> fid}
+     * 其中 file 是函数定义所在的文件名，这是为了防止同名函数的冲突，
+     * 例如不同文件中的 main() 函数。
+     *
+     * 如果不提供函数的定义位置，就会选择第一个找到的函数。
+     */
+    int getIdOfFunction(const std::string &signature,
+                        const std::string &file = "") {
+        auto _it = fileAndIdOfFunction.find(signature);
+        if (_it == fileAndIdOfFunction.end()) {
             return -1;
         }
-        return it->second;
+        // 获取 signature 对应的 file -> fid 的 mapping
+        std::map<std::string, int> &fidOfFile = _it->second;
+        requireTrue(fidOfFile.size() > 0);
+        if (file.empty()) {
+            // 默认用第一个找到的函数
+            auto it = fidOfFile.begin();
+            if (fidOfFile.size() > 1) {
+                const auto &sourceFile = it->first;
+                auto fid = it->second;
+                logger.warn("Function {} is defined in multiple files and no "
+                            "specific one is chosen!",
+                            signature);
+                logger.warn("  Using the one in {} with fid {}", sourceFile,
+                            fid);
+            }
+            return it->second;
+        } else {
+            auto it = fidOfFile.find(file);
+            if (it == fidOfFile.end()) {
+                logger.error("No record of function {} in file {}!", signature,
+                             file);
+                return -1;
+            }
+            return it->second;
+        }
     }
 
     ICFG icfg;

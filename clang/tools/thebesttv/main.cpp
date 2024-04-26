@@ -90,8 +90,8 @@ struct VarLocResult {
     VarLocResult() : fid(-1), bid(-1) {}
     VarLocResult(int fid, int bid) : fid(fid), bid(bid) {}
     VarLocResult(const std::unique_ptr<FunctionInfo> &fi, const CFGBlock *block)
-        : fid(Global.getIdOfFunction(fi->signature)), bid(block->getBlockID()) {
-    }
+        : fid(Global.getIdOfFunction(fi->signature, fi->file)),
+          bid(block->getBlockID()) {}
 
     bool isValid() const { return fid != -1; }
 };

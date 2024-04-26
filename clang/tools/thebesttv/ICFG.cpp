@@ -60,7 +60,7 @@ void ICFG::tryAndAddCallSite(int fid, const CFGBlock &B) {
     int uEntry = getNodeId(fid, B.getBlockID());
     int uExit = getNodeId(fid, Succ.getBlockID());
 
-    // get callee
+    // get callee （这边没法提供 callee 函数定义所在的文件名）
     std::string callee = getFullSignature(calleeDecl);
     int calleeFid = Global.getIdOfFunction(callee);
     if (calleeFid == -1) {

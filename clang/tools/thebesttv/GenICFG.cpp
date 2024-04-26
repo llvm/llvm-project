@@ -54,13 +54,20 @@ bool GenICFGVisitor::VisitFunctionDecl(FunctionDecl *D) {
     std::string fullSignature = getFullSignature(D);
 
     auto &functionCnt = Global.functionCnt;
-    auto &idOfFunction = Global.idOfFunction;
+    auto &fileAndIdOfFunction = Global.fileAndIdOfFunction;
     auto &functionLocations = Global.functionLocations;
 
     // declaration already processed
-    // 由于 include，可能导致重复定义？
-    if (idOfFunction.find(fullSignature) != idOfFunction.end())
-        return true;
+    auto it = fileAndIdOfFunction.find(fullSignature);
+    if (it != fileAndIdOfFunction.end()) { // 首先看函数签名是否已经见过
+        auto &fidOfFile = it->second;
+        // 然后判断函数定义所在的文件是不是也见过了
+        if (fidOfFile.find(pLoc->file) != fidOfFile.end()) {
+            logger.warn("Skipping func {} in {}:{}:{}", fullSignature,
+                        pLoc->file, pLoc->line, pLoc->column);
+            return true;
+        }
+    }
 
     std::unique_ptr<CFG> cfg = CFG::buildCFG(
         D, D->getBody(), &D->getASTContext(), CFG::BuildOptions());
@@ -70,7 +77,7 @@ bool GenICFGVisitor::VisitFunctionDecl(FunctionDecl *D) {
         return true;
     }
 
-    idOfFunction[fullSignature] = functionCnt++;
+    fileAndIdOfFunction[fullSignature][pLoc->file] = functionCnt++;
     functionLocations.emplace_back(*pLoc, fullSignature);
 
     CallGraph CG;
@@ -96,7 +103,8 @@ bool GenICFGVisitor::VisitFunctionDecl(FunctionDecl *D) {
         }
     }
 
-    Global.icfg.addFunction(Global.getIdOfFunction(fullSignature), *cfg);
+    Global.icfg.addFunction(Global.getIdOfFunction(fullSignature, pLoc->file),
+                            *cfg);
 
     /*
     // traverse CFGBlocks

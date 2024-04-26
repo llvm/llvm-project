@@ -1,0 +1,12 @@
+[
+    {
+        "command": "c++ -c main_1.cpp",
+        "directory": "/home/thebesttv/vul/llvm-project/graph-generation/same-name",
+        "file": "/home/thebesttv/vul/llvm-project/graph-generation/same-name/main_1.cpp"
+    },
+    {
+        "command": "c++ -c main_2.cpp",
+        "directory": "/home/thebesttv/vul/llvm-project/graph-generation/same-name",
+        "file": "/home/thebesttv/vul/llvm-project/graph-generation/same-name/main_2.cpp"
+    }
+]
