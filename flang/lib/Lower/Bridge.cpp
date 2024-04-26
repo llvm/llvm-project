@@ -3818,8 +3818,8 @@ private:
       if (auto cudaProcAttr =
               funcOp.getOperation()->getAttrOfType<fir::CUDAProcAttributeAttr>(
                   fir::getCUDAAttrName())) {
-        return cudaProcAttr.getValue() != fir::CUDAProcAttribute::Host
-          && cudaProcAttr.getValue() != fir::CUDAProcAttribute::HostDevice;
+        return cudaProcAttr.getValue() != fir::CUDAProcAttribute::Host &&
+               cudaProcAttr.getValue() != fir::CUDAProcAttribute::HostDevice;
       }
     }
     return false;
