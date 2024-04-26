@@ -1,3 +1,5 @@
+; Checks that we are able to handle overflowing counters correctly.
+
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/overflow.proftext | opt -passes='print<branch-prob>' -disable-output 2>&1 | FileCheck %s
 
 ; Original Source:
