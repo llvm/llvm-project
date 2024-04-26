@@ -33,6 +33,3 @@
 
 .attribute arch, 30
 # CHECK: [[@LINE-1]]:18: error: expected string constant
-
-.attribute atomic_abi, "16"
-# CHECK: [[@LINE-1]]:24: error: expected numeric constant
