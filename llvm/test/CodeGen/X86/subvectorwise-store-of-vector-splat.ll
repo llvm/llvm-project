@@ -3060,12 +3060,7 @@ define void @vec384_v3i32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    movl 8(%rdi), %eax
 ; SCALAR-NEXT:    movq (%rdi), %rcx
-; SCALAR-NEXT:    movq %rcx, %rdi
-; SCALAR-NEXT:    shrq $32, %rdi
-; SCALAR-NEXT:    notl %edi
-; SCALAR-NEXT:    shlq $32, %rdi
-; SCALAR-NEXT:    notl %ecx
-; SCALAR-NEXT:    orq %rdi, %rcx
+; SCALAR-NEXT:    notq %rcx
 ; SCALAR-NEXT:    notl %eax
 ; SCALAR-NEXT:    movl %eax, 8(%rsi)
 ; SCALAR-NEXT:    movq %rcx, (%rsi)
@@ -3196,12 +3191,7 @@ define void @vec384_v3f32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    movl 8(%rdi), %eax
 ; SCALAR-NEXT:    movq (%rdi), %rcx
-; SCALAR-NEXT:    movq %rcx, %rdi
-; SCALAR-NEXT:    shrq $32, %rdi
-; SCALAR-NEXT:    notl %edi
-; SCALAR-NEXT:    shlq $32, %rdi
-; SCALAR-NEXT:    notl %ecx
-; SCALAR-NEXT:    orq %rdi, %rcx
+; SCALAR-NEXT:    notq %rcx
 ; SCALAR-NEXT:    notl %eax
 ; SCALAR-NEXT:    movl %eax, 8(%rsi)
 ; SCALAR-NEXT:    movq %rcx, (%rsi)
@@ -4216,25 +4206,10 @@ define void @vec384_v6i32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    movq (%rdi), %rax
 ; SCALAR-NEXT:    movq 8(%rdi), %rcx
-; SCALAR-NEXT:    movq %rax, %r8
-; SCALAR-NEXT:    shrq $32, %r8
-; SCALAR-NEXT:    movq %rcx, %r9
-; SCALAR-NEXT:    shrq $32, %r9
 ; SCALAR-NEXT:    movq 16(%rdi), %rdi
-; SCALAR-NEXT:    movq %rdi, %r10
-; SCALAR-NEXT:    shrq $32, %r10
-; SCALAR-NEXT:    notl %r10d
-; SCALAR-NEXT:    shlq $32, %r10
-; SCALAR-NEXT:    notl %edi
-; SCALAR-NEXT:    orq %r10, %rdi
-; SCALAR-NEXT:    notl %r9d
-; SCALAR-NEXT:    shlq $32, %r9
-; SCALAR-NEXT:    notl %ecx
-; SCALAR-NEXT:    orq %r9, %rcx
-; SCALAR-NEXT:    notl %r8d
-; SCALAR-NEXT:    shlq $32, %r8
-; SCALAR-NEXT:    notl %eax
-; SCALAR-NEXT:    orq %r8, %rax
+; SCALAR-NEXT:    notq %rdi
+; SCALAR-NEXT:    notq %rcx
+; SCALAR-NEXT:    notq %rax
 ; SCALAR-NEXT:    movq %rax, (%rsi)
 ; SCALAR-NEXT:    movq %rcx, 8(%rsi)
 ; SCALAR-NEXT:    movq %rdi, 16(%rsi)
@@ -4303,25 +4278,10 @@ define void @vec384_v6f32(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec.
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    movq (%rdi), %rax
 ; SCALAR-NEXT:    movq 8(%rdi), %rcx
-; SCALAR-NEXT:    movq %rax, %r8
-; SCALAR-NEXT:    shrq $32, %r8
-; SCALAR-NEXT:    movq %rcx, %r9
-; SCALAR-NEXT:    shrq $32, %r9
 ; SCALAR-NEXT:    movq 16(%rdi), %rdi
-; SCALAR-NEXT:    movq %rdi, %r10
-; SCALAR-NEXT:    shrq $32, %r10
-; SCALAR-NEXT:    notl %r10d
-; SCALAR-NEXT:    shlq $32, %r10
-; SCALAR-NEXT:    notl %edi
-; SCALAR-NEXT:    orq %r10, %rdi
-; SCALAR-NEXT:    notl %r9d
-; SCALAR-NEXT:    shlq $32, %r9
-; SCALAR-NEXT:    notl %ecx
-; SCALAR-NEXT:    orq %r9, %rcx
-; SCALAR-NEXT:    notl %r8d
-; SCALAR-NEXT:    shlq $32, %r8
-; SCALAR-NEXT:    notl %eax
-; SCALAR-NEXT:    orq %r8, %rax
+; SCALAR-NEXT:    notq %rdi
+; SCALAR-NEXT:    notq %rcx
+; SCALAR-NEXT:    notq %rax
 ; SCALAR-NEXT:    movq %rax, (%rsi)
 ; SCALAR-NEXT:    movq %rcx, 8(%rsi)
 ; SCALAR-NEXT:    movq %rdi, 16(%rsi)

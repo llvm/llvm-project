@@ -600,7 +600,7 @@ struct StreamOperationEvaluator {
   SValBuilder &SVB;
   const ASTContext &ACtx;
 
-  SymbolRef StreamSym;
+  SymbolRef StreamSym = nullptr;
   const StreamState *SS = nullptr;
   const CallExpr *CE = nullptr;
   StreamErrorState NewES;

@@ -3755,14 +3755,12 @@ def err_sme_definition_using_za_in_non_sme_target : Error<
 def err_sme_definition_using_zt0_in_non_sme2_target : Error<
   "function using ZT0 state requires 'sme2'">;
 def warn_sme_streaming_pass_return_vl_to_non_streaming : Warning<
-  "passing a VL-dependent argument to/from a function that has a different"
-  " streaming-mode. The streaming and non-streaming vector lengths may be"
-  " different">,
+  "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a function with a different"
+  " streaming-mode is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime">,
   InGroup<AArch64SMEAttributes>, DefaultIgnore;
 def warn_sme_locally_streaming_has_vl_args_returns : Warning<
-  "passing/returning a VL-dependent argument to/from a __arm_locally_streaming"
-  " function. The streaming and non-streaming vector"
-  " lengths may be different">,
+  "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a locally streaming function is undefined"
+  " behaviour when the streaming and non-streaming vector lengths are different at runtime">,
   InGroup<AArch64SMEAttributes>, DefaultIgnore;
 def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
@@ -11163,7 +11161,7 @@ def err_omp_declare_mapper_redefinition : Error<
   "redefinition of user-defined mapper for type %0 with name %1">;
 def err_omp_invalid_mapper: Error<
   "cannot find a valid user-defined mapper for type %0 with name %1">;
-def err_omp_array_section_use : Error<"OpenMP array section is not allowed here">;
+def err_array_section_use : Error<"%select{OpenACC sub-array|OpenMP array section}0 is not allowed here">;
 def err_omp_array_shaping_use : Error<"OpenMP array shaping operation is not allowed here">;
 def err_omp_iterator_use : Error<"OpenMP iterator is not allowed here">;
 def err_omp_typecheck_section_value : Error<

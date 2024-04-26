@@ -389,8 +389,8 @@ define i64 @mul27(i64 %a) {
 ;
 ; RV64XTHEADBA-LABEL: mul27:
 ; RV64XTHEADBA:       # %bb.0:
-; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a0, 3
 ; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a0, 1
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a0, 3
 ; RV64XTHEADBA-NEXT:    ret
   %c = mul i64 %a, 27
   ret i64 %c
@@ -405,8 +405,8 @@ define i64 @mul45(i64 %a) {
 ;
 ; RV64XTHEADBA-LABEL: mul45:
 ; RV64XTHEADBA:       # %bb.0:
-; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a0, 3
 ; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a0, 2
+; RV64XTHEADBA-NEXT:    th.addsl a0, a0, a0, 3
 ; RV64XTHEADBA-NEXT:    ret
   %c = mul i64 %a, 45
   ret i64 %c

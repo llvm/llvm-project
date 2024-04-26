@@ -90,6 +90,11 @@ C++ Language Changes
 --------------------
 - Implemented ``_BitInt`` literal suffixes ``__wb`` or ``__WB`` as a Clang extension with ``unsigned`` modifiers also allowed. (#GH85223).
 
+C++14 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
+- Sized deallocation is enabled by default in C++14 onwards. The user may specify
+  ``-fno-sized-deallocation`` to disable it if there are some regressions.
+
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -206,6 +211,16 @@ Non-comprehensive list of changes in this release
 
 - ``__typeof_unqual__`` is available in all C modes as an extension, which behaves
   like ``typeof_unqual`` from C23, similar to ``__typeof__`` and ``typeof``.
+
+
+* Shared libraries linked with either the ``-ffast-math``, ``-Ofast``, or
+  ``-funsafe-math-optimizations`` flags will no longer enable flush-to-zero
+  floating-point mode by default. This decision can be overridden with use of
+  ``-mdaz-ftz``. This behavior now matches GCC's behavior.
+  (`#57589 <https://github.com/llvm/llvm-project/issues/57589>`_)
+
+* ``-fdenormal-fp-math=preserve-sign`` is no longer implied by ``-ffast-math``
+  on x86 systems.
 
 New Compiler Flags
 ------------------
@@ -415,6 +430,9 @@ Bug Fixes in This Version
   operator.
   Fixes (#GH83267).
 
+- Fix crash on ill-formed partial specialization with CRTP.
+  Fixes (#GH89374).
+
 - Clang now correctly generates overloads for bit-precise integer types for
   builtin operators in C++. Fixes #GH82998.
 
@@ -557,11 +575,12 @@ Bug Fixes to C++ Support
 - Fix a crash in requires expression with templated base class member function. Fixes (#GH84020).
 - Fix a crash caused by defined struct in a type alias template when the structure
   has fields with dependent type. Fixes (#GH75221).
-- Fix placement new initializes typedef array with correct size. Fixes (#GH41441).
 - Fix the Itanium mangling of lambdas defined in a member of a local class (#GH88906)
 - Fixed a crash when trying to evaluate a user-defined ``static_assert`` message whose ``size()``
   function returns a large or negative value. Fixes (#GH89407).
 - Fixed a use-after-free bug in parsing of type constraints with default arguments that involve lambdas. (#GH67235)
+- Fixed bug in which the body of a consteval lambda within a template was not parsed as within an
+  immediate function context.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -614,6 +633,9 @@ Arm and AArch64 Support
     * Arm Cortex-A78AE (cortex-a78ae).
     * Arm Cortex-A520AE (cortex-a520ae).
     * Arm Cortex-A720AE (cortex-a720ae).
+    * Arm Neoverse-N3 (neoverse-n3).
+    * Arm Neoverse-V3 (neoverse-v3).
+    * Arm Neoverse-V3AE (neoverse-v3ae).
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -707,6 +729,9 @@ clang-format
 
 libclang
 --------
+
+- ``clang_getSpellingLocation`` now correctly resolves macro expansions; that
+  is, it returns the spelling location instead of the expansion location.
 
 Static Analyzer
 ---------------

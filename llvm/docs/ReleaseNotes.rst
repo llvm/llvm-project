@@ -50,6 +50,8 @@ Update on required toolchains to build LLVM
 Changes to the LLVM IR
 ----------------------
 
+- Added Memory Model Relaxation Annotations (MMRAs).
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -67,7 +69,8 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
-* Added support for Cortex-A78AE, Cortex-A520AE and Cortex-A720AE CPUs.
+* Added support for Cortex-A78AE, Cortex-A520AE, Cortex-A720AE,
+  Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
 
 Changes to the AMDGPU Backend
 -----------------------------
@@ -133,7 +136,7 @@ Changes to the C API
   functions for accessing the values in a blockaddress constant.
 
 * Added ``LLVMConstStringInContext2`` function, which better matches the C++
-  API by using ``size_t`` for string length. Deprecated ``LLVMConstStringInContext``. 
+  API by using ``size_t`` for string length. Deprecated ``LLVMConstStringInContext``.
 
 * Added the following functions for accessing a function's prefix data:
 

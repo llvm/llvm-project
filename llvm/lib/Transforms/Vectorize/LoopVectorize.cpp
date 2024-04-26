@@ -9358,6 +9358,14 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
   }
 }
 
+static Value *reverseMask(IRBuilderBase &Builder, Value *Mask, Value *EVL,
+                          Value *AllTrueMask) {
+  VectorType *MaskTy = cast<VectorType>(Mask->getType());
+  return Builder.CreateIntrinsic(MaskTy, Intrinsic::experimental_vp_reverse,
+                                 {Mask, AllTrueMask, EVL}, nullptr,
+                                 "vp.reverse.mask");
+}
+
 void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
                           "explicit vector length.");
@@ -9373,19 +9381,11 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   CallInst *NewLI;
   Value *EVL = State.get(getEVL(), VPIteration(0, 0));
   Value *Addr = State.get(getAddr(), 0, !CreateGather);
-  Value *Mask = getMask()
-                    ? State.get(getMask(), 0)
-                    : Builder.CreateVectorSplat(State.VF, Builder.getTrue());
-  if (isReverse() && getMask()) {
-    VectorType *MaskTy = cast<VectorType>(Mask->getType());
-    Mask = Builder.CreateIntrinsic(
-        MaskTy, Intrinsic::experimental_vp_reverse,
-        {Mask,
-         Builder.CreateVectorSplat(MaskTy->getElementCount(),
-                                   Builder.getTrue()),
-         EVL},
-        nullptr, "vp.reverse.mask");
-  }
+  Value *AllTrueMask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  Value *Mask = getMask() ? State.get(getMask(), 0) : AllTrueMask;
+  if (isReverse() && getMask())
+    Mask = reverseMask(Builder, Mask, EVL, AllTrueMask);
+
   if (CreateGather) {
     NewLI =
         Builder.CreateIntrinsic(DataTy, Intrinsic::vp_gather, {Addr, Mask, EVL},
@@ -9401,10 +9401,9 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   State.addMetadata(NewLI, LI);
   Instruction *Res = NewLI;
   if (isReverse()) {
-    Value *MaskVal =
-        Builder.CreateVectorSplat(DataTy->getElementCount(), Builder.getTrue());
-    Res = Builder.CreateIntrinsic(DataTy, Intrinsic::experimental_vp_reverse,
-                                  {Res, MaskVal, EVL}, nullptr, "vp.reverse");
+    Res =
+        Builder.CreateIntrinsic(DataTy, Intrinsic::experimental_vp_reverse,
+                                {Res, AllTrueMask, EVL}, nullptr, "vp.reverse");
   }
   State.set(this, Res, 0);
 }
@@ -9464,27 +9463,16 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   CallInst *NewSI = nullptr;
   Value *StoredVal = State.get(StoredValue, 0);
   Value *EVL = State.get(getEVL(), VPIteration(0, 0));
+  Value *AllTrueMask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
   if (isReverse()) {
     auto *StoredValTy = cast<VectorType>(StoredVal->getType());
-    Value *MaskVal = Builder.CreateVectorSplat(StoredValTy->getElementCount(),
-                                               Builder.getTrue());
     StoredVal = Builder.CreateIntrinsic(
         StoredValTy, Intrinsic::experimental_vp_reverse,
-        {StoredVal, MaskVal, EVL}, nullptr, "vp.reverse");
+        {StoredVal, AllTrueMask, EVL}, nullptr, "vp.reverse");
   }
-  Value *Mask = getMask()
-                    ? State.get(getMask(), 0)
-                    : Builder.CreateVectorSplat(State.VF, Builder.getTrue());
-  if (isReverse() && getMask()) {
-    VectorType *MaskTy = cast<VectorType>(Mask->getType());
-    Mask = Builder.CreateIntrinsic(
-        MaskTy, Intrinsic::experimental_vp_reverse,
-        {Mask,
-         Builder.CreateVectorSplat(MaskTy->getElementCount(),
-                                   Builder.getTrue()),
-         EVL},
-        nullptr, "vp.reverse.mask");
-  }
+  Value *Mask = getMask() ? State.get(getMask(), 0) : AllTrueMask;
+  if (isReverse() && getMask())
+    Mask = reverseMask(Builder, Mask, EVL, AllTrueMask);
   Value *Addr = State.get(getAddr(), 0, !CreateScatter);
   if (CreateScatter) {
     NewSI = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),
