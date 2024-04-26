@@ -326,6 +326,8 @@ public:
   /// you Add-ed. Use Add and Remove instead.
   ///
   /// Clear all previously added callbacks and only add the given one.
+  LLDB_DEPRECATED_FIXME("Use AddDestroyCallback and RemoveDestroyCallback",
+                        "AddDestroyCallback")
   void SetDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
                           void *baton);
 
