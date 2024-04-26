@@ -256,7 +256,6 @@ def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
     allocations.
   }];
   let dependentDialects = [ "fir::FIROpsDialect" ];
-  let constructor = "::fir::createStackArraysPass()";
 }
 
 def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
@@ -320,7 +319,6 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
     an array has element sized stride. The element sizes stride allows some
     loops to be vectorized as well as other loop optimizations.
   }];
-  let constructor = "::fir::createLoopVersioningPass()";
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 

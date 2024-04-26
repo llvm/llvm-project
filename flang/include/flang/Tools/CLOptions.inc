@@ -253,12 +253,12 @@ inline void createDefaultFIROptimizerPassPipeline(
   }
 
   if (pc.LoopVersioning)
-    pm.addPass(fir::createLoopVersioningPass());
+    pm.addPass(fir::createLoopVersioning());
 
   pm.addPass(mlir::createCSEPass());
 
   if (pc.StackArrays)
-    pm.addPass(fir::createStackArraysPass());
+    pm.addPass(fir::createStackArrays());
   else
     fir::addMemoryAllocationOpt(pm);
 
