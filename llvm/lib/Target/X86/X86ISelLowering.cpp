@@ -27896,7 +27896,7 @@ static SDValue LowerVectorCTLZInRegLUT(SDValue Op, const SDLoc &DL,
   SDValue InRegLUT = DAG.getBuildVector(CurrVT, DL, LUTVec);
 
   // Begin by bitcasting the input to byte vector, then split those bytes
-  // into lo/hi nibbles and use the PSHUFB LUT to perform CLTZ on each of them.
+  // into lo/hi nibbles and use the PSHUFB LUT to perform CTLZ on each of them.
   // If the hi input nibble is zero then we add both results together, otherwise
   // we just take the hi result (by masking the lo result to zero before the
   // add).
