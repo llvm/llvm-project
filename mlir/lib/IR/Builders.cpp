@@ -328,13 +328,9 @@ ArrayAttr Builder::getAffineMapArrayAttr(ArrayRef<AffineMap> values) {
   return getArrayAttr(attrs);
 }
 
-TypedAttr Builder::getZeroAttr(Type type) {
-  return getNumberAttr(0.0, type);
-}
+TypedAttr Builder::getZeroAttr(Type type) { return getNumberAttr(0.0, type); }
 
-TypedAttr Builder::getOneAttr(Type type) {
-  return getNumberAttr(1.0, type);
-}
+TypedAttr Builder::getOneAttr(Type type) { return getNumberAttr(1.0, type); }
 
 TypedAttr Builder::getNumberAttr(double value, Type type) {
   if (llvm::isa<FloatType>(type))
@@ -342,8 +338,8 @@ TypedAttr Builder::getNumberAttr(double value, Type type) {
   if (llvm::isa<IndexType>(type))
     return getIndexAttr(static_cast<int64_t>(value));
   if (llvm::dyn_cast<IntegerType>(type))
-    return getIntegerAttr(type,
-                          APInt(llvm::cast<IntegerType>(type).getWidth(), static_cast<int64_t>(value)));
+    return getIntegerAttr(type, APInt(llvm::cast<IntegerType>(type).getWidth(),
+                                      static_cast<int64_t>(value)));
   if (llvm::isa<RankedTensorType, VectorType>(type)) {
     auto vtType = llvm::cast<ShapedType>(type);
     auto element = getNumberAttr(value, vtType.getElementType());
