@@ -63,8 +63,8 @@ bool GenICFGVisitor::VisitFunctionDecl(FunctionDecl *D) {
         auto &fidOfFile = it->second;
         // 然后判断函数定义所在的文件是不是也见过了
         if (fidOfFile.find(pLoc->file) != fidOfFile.end()) {
-            logger.warn("Skipping func {} in {}:{}:{}", fullSignature,
-                        pLoc->file, pLoc->line, pLoc->column);
+            // logger.warn("Skipping func {} in {}:{}:{}", fullSignature,
+            //             pLoc->file, pLoc->line, pLoc->column);
             return true;
         }
     }
