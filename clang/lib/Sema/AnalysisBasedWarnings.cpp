@@ -2495,9 +2495,7 @@ class EffectSet {
 
 public:
   EffectSet() = default;
-  explicit EffectSet(FunctionEffectsRef FX) {
-    insert(FX);
-  }
+  explicit EffectSet(FunctionEffectsRef FX) { insert(FX); }
 
   operator ArrayRef<FunctionEffect>() const {
     return ArrayRef(Impl.cbegin(), Impl.cend());
@@ -3026,30 +3024,36 @@ private:
   // else null. This method must not recurse.
   PendingFunctionAnalysis *verifyDecl(const Decl *D) {
     CallableInfo CInfo(Sem, *D);
-
-    // If any of the Decl's declared effects forbid throwing (e.g. nonblocking)
-    // then the function should also be declared noexcept.
-    for (const auto &Effect : CInfo.Effects) {
-      if (!(Effect.flags() & FunctionEffect::FE_ExcludeThrow))
-        continue;
-
-      const FunctionProtoType *FPT = nullptr;
-      if (auto *FD = D->getAsFunction()) {
-        FPT = FD->getType()->getAs<FunctionProtoType>();
-      } else if (auto *BD = dyn_cast<BlockDecl>(D)) {
-        if (auto *TSI = BD->getSignatureAsWritten()) {
-          FPT = TSI->getType()->getAs<FunctionProtoType>();
-        }
-      }
-      if (FPT && FPT->canThrow() != clang::CT_Cannot) {
-        Sem.Diag(D->getBeginLoc(), diag::warn_perf_constraint_implies_noexcept)
-            << Effect.name();
-      }
-      break;
-    }
+    bool isExternC = false;
 
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
       tmp_assert(FD->getBuiltinID() == 0);
+      isExternC = FD->isExternCContext();
+    }
+
+    // For C++, with non-extern "C" linkage only - if any of the Decl's declared
+    // effects forbid throwing (e.g. nonblocking) then the function should also
+    // be declared noexcept.
+    if (Sem.getLangOpts().CPlusPlus && !isExternC) {
+      for (const auto &Effect : CInfo.Effects) {
+        if (!(Effect.flags() & FunctionEffect::FE_ExcludeThrow))
+          continue;
+
+        const FunctionProtoType *FPT = nullptr;
+        if (auto *FD = D->getAsFunction()) {
+          FPT = FD->getType()->getAs<FunctionProtoType>();
+        } else if (auto *BD = dyn_cast<BlockDecl>(D)) {
+          if (auto *TSI = BD->getSignatureAsWritten()) {
+            FPT = TSI->getType()->getAs<FunctionProtoType>();
+          }
+        }
+        if (FPT && FPT->canThrow() != clang::CT_Cannot) {
+          Sem.Diag(D->getBeginLoc(),
+                   diag::warn_perf_constraint_implies_noexcept)
+              << Effect.name();
+        }
+        break;
+      }
     }
 
     // Build a PendingFunctionAnalysis on the stack. If it turns out to be
