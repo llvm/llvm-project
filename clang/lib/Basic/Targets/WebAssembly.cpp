@@ -47,6 +47,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("simd128", SIMDLevel >= SIMD128)
       .Case("relaxed-simd", SIMDLevel >= RelaxedSIMD)
+      .Case("half-precision", HasHalfPrecision)
       .Case("nontrapping-fptoint", HasNontrappingFPToInt)
       .Case("sign-ext", HasSignExt)
       .Case("exception-handling", HasExceptionHandling)
@@ -156,6 +157,7 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     Features["reference-types"] = true;
     Features["sign-ext"] = true;
     Features["tail-call"] = true;
+    Features["half-precision"] = true;
     setSIMDLevel(Features, SIMD128, true);
   } else if (CPU == "generic") {
     Features["mutable-globals"] = true;
@@ -214,6 +216,15 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-bulk-memory") {
       HasBulkMemory = false;
+      continue;
+    }
+    if (Feature == "+half-precision") {
+      SIMDLevel = std::max(SIMDLevel, SIMD128);
+      HasHalfPrecision = true;
+      continue;
+    }
+    if (Feature == "-half-precision") {
+      HasHalfPrecision = false;
       continue;
     }
     if (Feature == "+atomics") {
