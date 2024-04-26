@@ -111,7 +111,6 @@ enum ArchExtKind : unsigned {
   AEK_NUM_EXTENSIONS,
 
   // FIXME temporary fixes for inconsistent naming.
-  AEK_SME2p1 = AEK_SME2P1,
   AEK_SVE2p1 = AEK_SVE2P1,
   AEK_SME_LUTv2 = AEK_SME_LUTV2,
 
@@ -203,7 +202,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"sme-i16i64", AArch64::AEK_SMEI16I64, "+sme-i16i64", "-sme-i16i64", FEAT_SME_I64, "+sme,+sme-i16i64,+bf16", 570},
     {"sme", AArch64::AEK_SME, "+sme", "-sme", FEAT_SME, "+sme,+bf16", 430},
     {"sme2", AArch64::AEK_SME2, "+sme2", "-sme2", FEAT_SME2, "+sme2,+sme,+bf16", 580},
-    {"sme2p1", AArch64::AEK_SME2p1, "+sme2p1", "-sme2p1", FEAT_INIT, "+sme2p1,+sme2,+sme,+bf16", 0},
+    {"sme2p1", AArch64::AEK_SME2P1, "+sme2p1", "-sme2p1", FEAT_INIT, "+sme2p1,+sme2,+sme,+bf16", 0},
     {"ssbs", AArch64::AEK_SSBS, "+ssbs", "-ssbs", FEAT_SSBS, "", 490},
     {"ssbs2", AArch64::AEK_NONE, {}, {}, FEAT_SSBS2, "+ssbs", 500},
     {"sve-bf16", AArch64::AEK_NONE, {}, {}, FEAT_SVE_BF16, "+sve,+bf16,+fullfp16,+fp-armv8,+neon", 320},
@@ -329,7 +328,7 @@ inline constexpr ExtensionDependency ExtensionDependencies[] = {
   {AEK_SME, AEK_SMEF64F64},
   {AEK_SME, AEK_SMEI16I64},
   {AEK_SME, AEK_SMEFA64},
-  {AEK_SME2, AEK_SME2p1},
+  {AEK_SME2, AEK_SME2P1},
   {AEK_SME2, AEK_SSVE_FP8FMA},
   {AEK_SME2, AEK_SSVE_FP8DOT2},
   {AEK_SME2, AEK_SSVE_FP8DOT4},

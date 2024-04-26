@@ -2005,7 +2005,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SMEI16I64,    AArch64::AEK_SME2,
       AArch64::AEK_HBC,          AArch64::AEK_MOPS,
       AArch64::AEK_PERFMON,      AArch64::AEK_SVE2p1,
-      AArch64::AEK_SME2p1,       AArch64::AEK_B16B16,
+      AArch64::AEK_SME2P1,       AArch64::AEK_B16B16,
       AArch64::AEK_SMEF16F16,    AArch64::AEK_CSSC,
       AArch64::AEK_RCPC3,        AArch64::AEK_THE,
       AArch64::AEK_D128,         AArch64::AEK_LSE128,
