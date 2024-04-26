@@ -293,7 +293,7 @@ def max(
 
     This means reduction/broadcast/element cast semantics is explicit. Further
     passes can take that into account when lowering this code. For example,
-    a `linalg.broadcast` + `linalg.div` sequence can be lowered to a
+    a `linalg.broadcast` + `linalg.max` sequence can be lowered to a
     `linalg.generic` with different affine maps for the two operands.
     """
     O[None] = BinaryFn.max_signed(lhs[None], rhs[None])
@@ -312,7 +312,7 @@ def min(
 
     This means reduction/broadcast/element cast semantics is explicit. Further
     passes can take that into account when lowering this code. For example,
-    a `linalg.broadcast` + `linalg.div` sequence can be lowered to a
+    a `linalg.broadcast` + `linalg.min` sequence can be lowered to a
     `linalg.generic` with different affine maps for the two operands.
     """
     O[None] = BinaryFn.min_signed(lhs[None], rhs[None])
