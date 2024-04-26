@@ -451,7 +451,6 @@ def TuneNeoverseN3 : SubtargetFeature<"neoversen3", "ARMProcFamily", "NeoverseN3
                                       "Neoverse N3 ARM processors", [
                                       FeatureFuseAES,
                                       FeaturePostRAScheduler,
-                                      FeatureCmpBccFusion,
                                       FeatureALULSLFast,
                                       FeatureFuseAdrpAdd,
                                       FeatureEnableSelectOptimize,
