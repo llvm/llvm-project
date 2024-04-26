@@ -423,6 +423,10 @@ public:
     // This is the ELF definition
     return TargetInfo::PowerABIBuiltinVaList;
   }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
+  }
 };
 
 // Note: ABI differences may eventually require us to have a separate
@@ -502,6 +506,10 @@ public:
     default:
       return CCCR_Warning;
     }
+  }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(128, 128);
   }
 };
 
