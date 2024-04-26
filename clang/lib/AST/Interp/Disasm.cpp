@@ -208,6 +208,25 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
     OS << " dummy";
 }
 
+LLVM_DUMP_METHOD void InlineDescriptor::dump(llvm::raw_ostream &OS) const {
+  {
+    ColorScope SC(OS, true, {llvm::raw_ostream::BLUE, true});
+    OS << "InlineDescriptor " << (const void *)this << "\n";
+  }
+  OS << "Offset: " << Offset << "\n";
+  OS << "IsConst: " << IsConst << "\n";
+  OS << "IsInitialized: " << IsInitialized << "\n";
+  OS << "IsBase: " << IsBase << "\n";
+  OS << "IsActive: " << IsActive << "\n";
+  OS << "IsFieldMutable: " << IsFieldMutable << "\n";
+  OS << "Desc: ";
+  if (Desc)
+    Desc->dump(OS);
+  else
+    OS << "nullptr";
+  OS << "\n";
+}
+
 LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
                                         unsigned Indent) const {
   unsigned Spaces = Indent * 2;
@@ -251,8 +270,6 @@ LLVM_DUMP_METHOD void Record::dump(llvm::raw_ostream &OS, unsigned Indentation,
     ++I;
   }
 
-  // FIXME: Virtual bases.
-
   I = 0;
   for (const Record::Field &F : fields()) {
     OS.indent(Indent) << "- Field " << I << ": ";
@@ -261,6 +278,14 @@ LLVM_DUMP_METHOD void Record::dump(llvm::raw_ostream &OS, unsigned Indentation,
       OS << F.Decl->getName();
     }
     OS << ". Offset " << (Offset + F.Offset) << "\n";
+    ++I;
+  }
+
+  I = 0;
+  for (const Record::Base &B : virtual_bases()) {
+    OS.indent(Indent) << "- Virtual Base " << I << ". Offset "
+                      << (Offset + B.Offset) << "\n";
+    B.R->dump(OS, Indentation + 1, Offset + B.Offset);
     ++I;
   }
 }
