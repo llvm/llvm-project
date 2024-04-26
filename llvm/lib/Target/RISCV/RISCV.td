@@ -15,6 +15,12 @@ include "llvm/Target/Target.td"
 include "RISCVFeatures.td"
 
 //===----------------------------------------------------------------------===//
+// RISC-V profiles supported.
+//===----------------------------------------------------------------------===//
+
+include "RISCVProfiles.td"
+
+//===----------------------------------------------------------------------===//
 // Named operands for CSR instructions.
 //===----------------------------------------------------------------------===//
 
@@ -46,12 +52,6 @@ include "RISCVSchedSiFiveP400.td"
 include "RISCVSchedSiFiveP600.td"
 include "RISCVSchedSyntacoreSCR1.td"
 include "RISCVSchedXiangShanNanHu.td"
-
-//===----------------------------------------------------------------------===//
-// RISC-V profiles supported.
-//===----------------------------------------------------------------------===//
-
-include "RISCVProfiles.td"
 
 //===----------------------------------------------------------------------===//
 // RISC-V processors supported.
