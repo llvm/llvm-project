@@ -573,7 +573,7 @@ uint8_t ELF::convertOSToOSAbi(StringRef OS) {
   return StringSwitch<uint16_t>(LowerOS)
       .StartsWith("hpux", ELFOSABI_HPUX)
       .StartsWith("netbsd", ELFOSABI_NETBSD)
-      .StartsWith("linux", ELFOSABI_LINUX)
+      .StartsWith("gnu", ELFOSABI_GNU)
       .StartsWith("hurd", ELFOSABI_HURD)
       .StartsWith("solaris", ELFOSABI_SOLARIS)
       .StartsWith("aix", ELFOSABI_AIX)
@@ -603,8 +603,8 @@ StringRef ELF::convertOSAbiToOS(uint8_t OSAbi) {
     return "hpux";
   case ELFOSABI_NETBSD:
     return "netbsd";
-  case ELFOSABI_LINUX:
-    return "linux";
+  case ELFOSABI_GNU:
+    return "gnu";
   case ELFOSABI_HURD:
     return "hurd";
   case ELFOSABI_SOLARIS:
