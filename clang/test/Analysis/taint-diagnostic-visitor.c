@@ -94,7 +94,7 @@ void testReadStdIn(){
 }
 
 void multipleTaintSources(void) {
-  char cmd[2048],file[1024];
+  char cmd[2048], file[1024];
   scanf ("%1022[^\n] ", cmd); // expected-note {{Taint originated here}}
                    // expected-note@-1 {{Taint propagated to the 2nd argument}}
   scanf ("%1023[^\n]", file); // expected-note {{Taint originated here}}
@@ -105,7 +105,7 @@ void multipleTaintSources(void) {
 }
 
 void multipleTaintedArgs(void) {
-  char cmd[1024],file[1024], buf[2048];
+  char cmd[1024], file[1024], buf[2048];
   scanf("%1022s %1023s", cmd, file); // expected-note {{Taint originated here}}
                           // expected-note@-1 {{Taint propagated to the 2nd argument, 3rd argument}}
   strcpy(buf, cmd);// expected-note {{Taint propagated to the 1st argument}}

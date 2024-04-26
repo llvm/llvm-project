@@ -305,11 +305,13 @@ void testGets_s(void) {
 
 void testTaintedBufferSize(void) {
   size_t ts;
-  // malloc, calloc, bcopy, memcpy functions are removed as unconditional sinks
-  // from the GenericTaintChecker's default configuration,
-  // because it generated too many false positives.
-  // We would need more sophisticated handling of these reports to enable
-  // these test-cases again.
+  // The functions malloc, calloc, bcopy and memcpy are not taint sinks in the
+  // default config of GenericTaintChecker (because that would cause too many
+  // false positives).
+  // FIXME: We should generate warnings when a value passed to these functions
+  // is tainted and _can be very large_ (because that's exploitable). This
+  // functionality probably belongs to the checkers that do more detailed
+  // modeling of these functions (MallocChecker and CStringChecker).
   scanf("%zd", &ts);
   int *buf1 = (int*)malloc(ts*sizeof(int)); // warn here, ts is unbounded and tainted
   char *dst = (char*)calloc(ts, sizeof(char)); // warn here, ts is unbounded tainted
