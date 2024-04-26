@@ -3744,9 +3744,9 @@ def AtomicCmpXchg : CIR_Op<"atomic.cmp_xchg", [Pure]> {
     C/C++ Atomic compare and exchange. Example:
 
   }];
-  let results = (outs CIR_BoolType:$cmp);
-  let arguments = (ins CIR_PointerType:$ptr,
-                       CIR_PointerType:$expected,
+  let results = (outs CIR_AnyType:$old, CIR_BoolType:$cmp);
+  let arguments = (ins CIR_AnyType:$ptr,
+                       CIR_AnyType:$expected,
                        CIR_AnyType:$desired,
                        Arg<MemOrder, "success memory order">:$succ_order,
                        Arg<MemOrder, "failure memory order">:$fail_order,
@@ -3763,7 +3763,7 @@ def AtomicCmpXchg : CIR_Op<"atomic.cmp_xchg", [Pure]> {
     `)`
     (`weak` $weak^)?
     (`volatile` $is_volatile^)?
-    `:` type($cmp) attr-dict
+    `:` `(` type($old) `,` type($cmp) `)` attr-dict
   }];
 
   let hasVerifier = 0;

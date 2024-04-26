@@ -331,18 +331,26 @@ static void buildAtomicCmpXchg(CIRGenFunction &CGF, AtomicExpr *E, bool IsWeak,
                                llvm::SyncScope::ID Scope) {
   auto &builder = CGF.getBuilder();
   auto loc = CGF.getLoc(E->getSourceRange());
-  mlir::Value Expected = Val1.getPointer();
-  mlir::Value Desired = Val2.getPointer();
-
-  // The approach here is a bit different from traditional LLVM codegen: we pass
-  // the pointers instead, and let the operation hide the details of storing the
-  // old value into expected in case of failure (handled during LLVM lowering).
+  auto Expected = builder.createLoad(loc, Val1);
+  auto Desired = builder.createLoad(loc, Val2);
   auto boolTy = builder.getBoolTy();
   auto cmpxchg = builder.create<mlir::cir::AtomicCmpXchg>(
-      loc, boolTy, Ptr.getPointer(), Expected, Desired, SuccessOrder,
-      FailureOrder);
+      loc, Expected.getType(), boolTy, Ptr.getPointer(), Expected, Desired,
+      SuccessOrder, FailureOrder);
   cmpxchg.setIsVolatile(E->isVolatile());
   cmpxchg.setWeak(IsWeak);
+
+  auto cmp = builder.createNot(cmpxchg.getCmp());
+  builder.create<mlir::cir::IfOp>(
+      loc, cmp, false, [&](mlir::OpBuilder &, mlir::Location) {
+        auto ptrTy = Val1.getPointer().getType().cast<mlir::cir::PointerType>();
+        if (Val1.getElementType() != ptrTy.getPointee()) {
+          Val1 = Val1.withPointer(builder.createPtrBitcast(
+              Val1.getPointer(), Val1.getElementType()));
+        }
+        builder.createStore(loc, cmpxchg.getOld(), Val1);
+        builder.createYield(loc);
+      });
 
   // Update the memory at Dest with Cmp's value.
   CGF.buildStoreOfScalar(cmpxchg.getCmp(),
