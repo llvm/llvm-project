@@ -593,7 +593,11 @@ void MachineOutliner::findCandidates(
     unsigned NumDiscarded = 0;
     unsigned NumKept = 0;
 #endif
-    for (const unsigned &StartIdx : RS.StartIndices) {
+    // Sort the start indices so that we can efficiently check if candidates
+    // overlap with each other in MachineOutliner::findCandidates().
+    SmallVector<unsigned> SortedStartIndices(RS.StartIndices);
+    llvm::sort(SortedStartIndices);
+    for (const unsigned &StartIdx : SortedStartIndices) {
       // Trick: Discard some candidates that would be incompatible with the
       // ones we've already found for this sequence. This will save us some
       // work in candidate selection.
@@ -616,17 +620,15 @@ void MachineOutliner::findCandidates(
       // * End before the other starts
       // * Start after the other ends
       unsigned EndIdx = StartIdx + StringLen - 1;
-      auto FirstOverlap = find_if(
-          CandidatesForRepeatedSeq, [StartIdx, EndIdx](const Candidate &C) {
-            return EndIdx >= C.getStartIdx() && StartIdx <= C.getEndIdx();
-          });
-      if (FirstOverlap != CandidatesForRepeatedSeq.end()) {
+      if (CandidatesForRepeatedSeq.size() > 0 &&
+          StartIdx <= CandidatesForRepeatedSeq.back().getEndIdx()) {
 #ifndef NDEBUG
         ++NumDiscarded;
-        LLVM_DEBUG(dbgs() << "    .. DISCARD candidate @ [" << StartIdx
-                          << ", " << EndIdx << "]; overlaps with candidate @ ["
-                          << FirstOverlap->getStartIdx() << ", "
-                          << FirstOverlap->getEndIdx() << "]\n");
+        LLVM_DEBUG(dbgs() << "    .. DISCARD candidate @ [" << StartIdx << ", "
+                          << EndIdx << "]; overlaps with candidate @ ["
+                          << CandidatesForRepeatedSeq.back().getStartIdx()
+                          << ", " << CandidatesForRepeatedSeq.back().getEndIdx()
+                          << "]\n");
 #endif
         continue;
       }
