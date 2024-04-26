@@ -54,7 +54,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasSVE2SM4 = false;
   bool HasSVE2BitPerm = false;
   bool HasMatmulFP64 = false;
-  bool HasMatmulFP32 = false;
+  bool HasF32MM = false;
   bool HasLSE = false;
   bool HasFlagM = false;
   bool HasAlternativeNZCV = false;

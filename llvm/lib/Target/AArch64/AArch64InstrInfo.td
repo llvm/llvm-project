@@ -269,8 +269,8 @@ def HasBF16          : Predicate<"Subtarget->hasBF16()">,
 def HasNoBF16        : Predicate<"!Subtarget->hasBF16()">;
 def HasMatMulInt8    : Predicate<"Subtarget->hasMatMulInt8()">,
                        AssemblerPredicateWithAll<(all_of FeatureMatMulInt8), "i8mm">;
-def HasMatMulFP32    : Predicate<"Subtarget->hasMatMulFP32()">,
-                       AssemblerPredicateWithAll<(all_of FeatureMatMulFP32), "f32mm">;
+def HasF32MM         : Predicate<"Subtarget->hasF32MM()">,
+                       AssemblerPredicateWithAll<(all_of FeatureF32MM), "f32mm">;
 def HasMatMulFP64    : Predicate<"Subtarget->hasMatMulFP64()">,
                        AssemblerPredicateWithAll<(all_of FeatureMatMulFP64), "f64mm">;
 def HasXS            : Predicate<"Subtarget->hasXS()">,

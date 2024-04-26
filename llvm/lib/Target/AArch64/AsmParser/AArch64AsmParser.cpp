@@ -3703,7 +3703,7 @@ static const struct Extension {
     {"bf16", {AArch64::FeatureBF16}},
     {"compnum", {AArch64::FeatureComplxNum}},
     {"dotprod", {AArch64::FeatureDotProd}},
-    {"f32mm", {AArch64::FeatureMatMulFP32}},
+    {"f32mm", {AArch64::FeatureF32MM}},
     {"f64mm", {AArch64::FeatureMatMulFP64}},
     {"fp16", {AArch64::FeatureFullFP16}},
     {"fp16fml", {AArch64::FeatureFP16FML}},

@@ -3400,9 +3400,9 @@ let Predicates = [HasSVEorSME, HasMatMulInt8] in {
   defm SUDOT_ZZZI : sve_int_dot_mixed_indexed<1, "sudot", int_aarch64_sve_sudot_lane>;
 } // End HasSVEorSME, HasMatMulInt8
 
-let Predicates = [HasSVE, HasMatMulFP32] in {
+let Predicates = [HasSVE, HasF32MM] in {
   defm FMMLA_ZZZ_S : sve_fp_matrix_mla<0, "fmmla", ZPR32, int_aarch64_sve_fmmla, nxv4f32>;
-} // End HasSVE, HasMatMulFP32
+} // End HasSVE, HasF32MM
 
 let Predicates = [HasSVE, HasMatMulFP64] in {
   defm FMMLA_ZZZ_D : sve_fp_matrix_mla<1, "fmmla", ZPR64, int_aarch64_sve_fmmla, nxv2f64>;

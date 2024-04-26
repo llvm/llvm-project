@@ -464,7 +464,7 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
 def FeatureMatMulInt8 : Extension<"i8mm", "MatMulInt8",
     "Enable Matrix Multiply Int8 Extension (FEAT_I8MM)">;
 
-def FeatureMatMulFP32 : Extension<"f32mm", "MatMulFP32",
+def FeatureF32MM : Extension<"f32mm", "F32MM",
     "Enable Matrix Multiply FP32 Extension (FEAT_F32MM)", [FeatureSVE]>;
 
 def FeatureMatMulFP64 : Extension<"f64mm", "MatMulFP64",
