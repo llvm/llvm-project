@@ -10,184 +10,6 @@
 // RISC-V processors supported.
 //===----------------------------------------------------------------------===//
 
-defvar RVA20U64Features = [Feature64Bit,
-                           FeatureStdExtI,
-                           FeatureStdExtM,
-                           FeatureStdExtA,
-                           FeatureStdExtF,
-                           FeatureStdExtD,
-                           FeatureStdExtC,
-                           FeatureStdExtZicntr,
-                           FeatureStdExtZiccif,
-                           FeatureStdExtZiccrse,
-                           FeatureStdExtZiccamoa,
-                           FeatureStdExtZa128rs,
-                           FeatureStdExtZicclsm];
-
-defvar RVA20S64Features = !listconcat(RVA20U64Features,
-                                      [FeatureStdExtZifencei,
-                                       FeatureStdExtSvbare,
-                                       FeatureStdExtSvade,
-                                       FeatureStdExtSsccptr,
-                                       FeatureStdExtSstvecd,
-                                       FeatureStdExtSstvala]);
-
-defvar RVA22U64Features = [Feature64Bit,
-                           FeatureStdExtI,
-                           FeatureStdExtM,
-                           FeatureStdExtA,
-                           FeatureStdExtF,
-                           FeatureStdExtD,
-                           FeatureStdExtC,
-                           FeatureStdExtZicntr,
-                           FeatureStdExtZiccif,
-                           FeatureStdExtZiccrse,
-                           FeatureStdExtZiccamoa,
-                           FeatureStdExtZicclsm,
-                           FeatureStdExtZa64rs,
-                           FeatureStdExtZihpm,
-                           FeatureStdExtZihintpause,
-                           FeatureStdExtZba,
-                           FeatureStdExtZbb,
-                           FeatureStdExtZbs,
-                           FeatureStdExtZic64b,
-                           FeatureStdExtZicbom,
-                           FeatureStdExtZicbop,
-                           FeatureStdExtZicboz,
-                           FeatureStdExtZfhmin,
-                           FeatureStdExtZkt];
-
-defvar RVA22S64Features = !listconcat(RVA22U64Features,
-                                      [FeatureStdExtZifencei,
-                                       FeatureStdExtSvbare,
-                                       FeatureStdExtSvade,
-                                       FeatureStdExtSsccptr,
-                                       FeatureStdExtSstvecd,
-                                       FeatureStdExtSstvala,
-                                       FeatureStdExtSscounterenw,
-                                       FeatureStdExtSvpbmt,
-                                       FeatureStdExtSvinval]);
-
-defvar RVA23U64Features = [Feature64Bit,
-                           FeatureStdExtI,
-                           FeatureStdExtM,
-                           FeatureStdExtA,
-                           FeatureStdExtF,
-                           FeatureStdExtD,
-                           FeatureStdExtC,
-                           FeatureStdExtZicntr,
-                           FeatureStdExtZihpm,
-                           FeatureStdExtZiccif,
-                           FeatureStdExtZiccrse,
-                           FeatureStdExtZiccamoa,
-                           FeatureStdExtZicclsm,
-                           FeatureStdExtZa64rs,
-                           FeatureStdExtZihintpause,
-                           FeatureStdExtZba,
-                           FeatureStdExtZbb,
-                           FeatureStdExtZbs,
-                           FeatureStdExtZic64b,
-                           FeatureStdExtZicbom,
-                           FeatureStdExtZicbop,
-                           FeatureStdExtZicboz,
-                           FeatureStdExtZfhmin,
-                           FeatureStdExtZkt,
-                           FeatureStdExtV,
-                           FeatureStdExtZvfhmin,
-                           FeatureStdExtZvbb,
-                           FeatureStdExtZvkt,
-                           FeatureStdExtZihintntl,
-                           FeatureStdExtZicond,
-                           FeatureStdExtZimop,
-                           FeatureStdExtZcmop,
-                           FeatureStdExtZcb,
-                           FeatureStdExtZfa,
-                           FeatureStdExtZawrs];
-
-defvar RVA23S64Features = !listconcat(RVA23U64Features,
-                                      [FeatureStdExtZifencei,
-                                       FeatureStdExtSvbare,
-                                       FeatureStdExtSvade,
-                                       FeatureStdExtSsccptr,
-                                       FeatureStdExtSstvecd,
-                                       FeatureStdExtSstvala,
-                                       FeatureStdExtSscounterenw,
-                                       FeatureStdExtSvpbmt,
-                                       FeatureStdExtSvinval,
-                                       FeatureStdExtSvnapot,
-                                       FeatureStdExtSstc,
-                                       FeatureStdExtSscofpmf,
-                                       FeatureStdExtSsnpm,
-                                       FeatureStdExtSsu64xl,
-                                       FeatureStdExtH,
-                                       FeatureStdExtSsstateen,
-                                       FeatureStdExtShcounterenw,
-                                       FeatureStdExtShvstvala,
-                                       FeatureStdExtShtvala,
-                                       FeatureStdExtShvstvecd,
-                                       FeatureStdExtShvsatpa,
-                                       FeatureStdExtShgatpa]);
-
-defvar RVB23U64Features = [Feature64Bit,
-                           FeatureStdExtI,
-                           FeatureStdExtM,
-                           FeatureStdExtA,
-                           FeatureStdExtF,
-                           FeatureStdExtD,
-                           FeatureStdExtC,
-                           FeatureStdExtZicntr,
-                           FeatureStdExtZihpm,
-                           FeatureStdExtZiccif,
-                           FeatureStdExtZiccrse,
-                           FeatureStdExtZiccamoa,
-                           FeatureStdExtZicclsm,
-                           FeatureStdExtZa64rs,
-                           FeatureStdExtZihintpause,
-                           FeatureStdExtZba,
-                           FeatureStdExtZbb,
-                           FeatureStdExtZbs,
-                           FeatureStdExtZic64b,
-                           FeatureStdExtZicbom,
-                           FeatureStdExtZicbop,
-                           FeatureStdExtZicboz,
-                           FeatureStdExtZkt,
-                           FeatureStdExtZihintntl,
-                           FeatureStdExtZicond,
-                           FeatureStdExtZimop,
-                           FeatureStdExtZcmop,
-                           FeatureStdExtZcb,
-                           FeatureStdExtZfa,
-                           FeatureStdExtZawrs];
-
-defvar RVB23S64Features = !listconcat(RVB23U64Features,
-                                      [FeatureStdExtZifencei,
-                                       FeatureStdExtSvnapot,
-                                       FeatureStdExtSvbare,
-                                       FeatureStdExtSvade,
-                                       FeatureStdExtSsccptr,
-                                       FeatureStdExtSstvecd,
-                                       FeatureStdExtSstvala,
-                                       FeatureStdExtSscounterenw,
-                                       FeatureStdExtSvpbmt,
-                                       FeatureStdExtSvinval,
-                                       FeatureStdExtSstc,
-                                       FeatureStdExtSscofpmf,
-                                       FeatureStdExtSsu64xl]);
-
-defvar RVM23U32Features = [Feature32Bit,
-                           FeatureStdExtI,
-                           FeatureStdExtM,
-                           FeatureStdExtZba,
-                           FeatureStdExtZbb,
-                           FeatureStdExtZbs,
-                           FeatureStdExtZicond,
-                           FeatureStdExtZihintpause,
-                           FeatureStdExtZihintntl,
-                           FeatureStdExtZce,
-                           FeatureStdExtZicbop,
-                           FeatureStdExtZimop,
-                           FeatureStdExtZcmop];
-
 class RISCVTuneInfo {
   bits<8> PrefFunctionAlignment = 1;
   bits<8> PrefLoopAlignment = 1;
@@ -222,7 +44,7 @@ class RISCVProcessorModel<string n,
                           list<SubtargetFeature> f,
                           list<SubtargetFeature> tunef = [],
                           string default_march = "">
-      :  ProcessorModel<n, m, f, tunef> {
+    :  ProcessorModel<n, m, f, tunef> {
   string DefaultMarch = default_march;
 }
 
@@ -230,38 +52,21 @@ class RISCVTuneProcessorModel<string n,
                               SchedMachineModel m,
                               list<SubtargetFeature> tunef = [],
                               list<SubtargetFeature> f = []>
-      : ProcessorModel<n, m, f,tunef>;
+    : ProcessorModel<n, m, f,tunef>;
 
-
-class RISCVGenericProcessorModel<string n, list<SubtargetFeature> f>
-    : RISCVProcessorModel<n, NoSchedModel, f>,
-      GenericTuneInfo;
-
-def GENERIC_RV32 : RISCVGenericProcessorModel<"generic-rv32",
-                                              [Feature32Bit,
-                                               FeatureStdExtI]>;
-
-def GENERIC_RV64 : RISCVGenericProcessorModel<"generic-rv64",
-                                              [Feature64Bit,
-                                               FeatureStdExtI]>;
-
-def RVI20U32 : RISCVGenericProcessorModel<"rvi20u32", [Feature32Bit,
-                                                       FeatureStdExtI]>;
-def RVI20U64 : RISCVGenericProcessorModel<"rvi20u64", [Feature64Bit,
-                                                       FeatureStdExtI]>;
-def RVA20U64 : RISCVGenericProcessorModel<"rva20u64", RVA20U64Features>;
-def RVA20S64 : RISCVGenericProcessorModel<"rva20s64", RVA20S64Features>;
-def RVA22U64 : RISCVGenericProcessorModel<"rva22u64", RVA22U64Features>;
-def RVA22S64 : RISCVGenericProcessorModel<"rva22s64", RVA22S64Features>;
-def RVA23U64 : RISCVGenericProcessorModel<"rva23u64", RVA23U64Features>;
-def RVA23S64 : RISCVGenericProcessorModel<"rva23s64", RVA23S64Features>;
-def RVB23U64 : RISCVGenericProcessorModel<"rvb23u64", RVB23U64Features>;
-def RVB23S64 : RISCVGenericProcessorModel<"rvb23s64", RVB23S64Features>;
-def RVM23U32 : RISCVGenericProcessorModel<"rvm23u32", RVM23U32Features>;
-
+def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
+                                       NoSchedModel,
+                                       [Feature32Bit,
+                                        FeatureStdExtI]>,
+                   GenericTuneInfo;
+def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
+                                       NoSchedModel,
+                                       [Feature64Bit,
+                                        FeatureStdExtI]>,
+                   GenericTuneInfo;
 // Support generic for compatibility with other targets. The triple will be used
 // to change to the appropriate rv32/rv64 version.
-def : ProcessorModel<"generic", NoSchedModel, []>, GenericTuneInfo;
+def GENERIC : RISCVTuneProcessorModel<"generic", NoSchedModel>, GenericTuneInfo;
 
 def ROCKET_RV32 : RISCVProcessorModel<"rocket-rv32",
                                       RocketModel,

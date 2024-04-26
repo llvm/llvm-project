@@ -93,18 +93,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor(PackedVectorAllTypeList)
       .widenScalarToNextPow2(0)
       .clampScalar(0, s8, s64)
-      .fewerElementsIf(
-          [=](const LegalityQuery &Query) {
-            return Query.Types[0].isVector() &&
-                   (Query.Types[0].getElementType() != s64 ||
-                    Query.Types[0].getNumElements() != 2);
-          },
-          [=](const LegalityQuery &Query) {
-            LLT EltTy = Query.Types[0].getElementType();
-            if (EltTy == s64)
-              return std::make_pair(0, LLT::fixed_vector(2, 64));
-            return std::make_pair(0, EltTy);
-          });
+      .moreElementsToNextPow2(0)
+      .widenVectorEltsToVectorMinSize(0, 64)
+      .clampNumElements(0, v8s8, v16s8)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64);
 
   getActionDefinitionsBuilder(G_PHI)
       .legalFor({p0, s16, s32, s64})
@@ -262,7 +256,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .minScalar(0, s32)
       .scalarize(0);
 
-  getActionDefinitionsBuilder(G_INTRINSIC_LRINT)
+  getActionDefinitionsBuilder({G_INTRINSIC_LRINT, G_INTRINSIC_LLRINT})
       .legalFor({{s64, MinFPScalar}, {s64, s32}, {s64, s64}})
       .libcallFor({{s64, s128}})
       .minScalarOrElt(1, MinFPScalar);

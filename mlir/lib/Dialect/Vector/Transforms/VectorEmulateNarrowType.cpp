@@ -63,7 +63,7 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
   // new mask index) only happens on the last dimension of the vectors.
   Operation *newMask = nullptr;
   SmallVector<int64_t> shape(
-      maskOp->getResultTypes()[0].cast<VectorType>().getShape());
+      cast<VectorType>(maskOp->getResultTypes()[0]).getShape());
   shape.back() = numElements;
   auto newMaskType = VectorType::get(shape, rewriter.getI1Type());
   if (createMaskOp) {
