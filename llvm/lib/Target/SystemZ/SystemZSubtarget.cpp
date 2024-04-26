@@ -72,22 +72,6 @@ SystemZSubtarget::SystemZSubtarget(const Triple &TT, const std::string &CPU,
       InstrInfo(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       TLInfo(TM, *this), FrameLowering(SystemZFrameLowering::create(*this)) {}
 
-
-// EXPERIMENTAL
-cl::opt<unsigned> NoSchedAbove("nosched-above", cl::init(~0U));
-bool SystemZSubtarget::disableForRegionPreRA(MachineBasicBlock::iterator Begin,
-                                             MachineBasicBlock::iterator End,
-                                             unsigned NumRegionInstrs) const {
-  // It seems that the generic scheduler currently can increase spilling heavily
-  // with big / huge regions. Disable it until it is fixed.
-  if (NumRegionInstrs > NoSchedAbove) {
-    LLVM_DEBUG(dbgs() << "Disabling pre-ra mischeduling of region with "
-                      << NumRegionInstrs << " instructions\n";);
-    return true;
-  }
-  return false;
-}
-
 bool SystemZSubtarget::enableSubRegLiveness() const {
   return UseSubRegLiveness;
 }

@@ -89,12 +89,6 @@ public:
   // "source" order scheduler.
   bool enableMachineScheduler() const override { return true; }
 
-  // Don't use pre-ra mischeduler for huge regions where it creates a lot of
-  // spilling (temporary solution).
-  bool disableForRegionPreRA(MachineBasicBlock::iterator Begin,
-                             MachineBasicBlock::iterator End,
-                             unsigned NumRegionInstrs) const override;
-
   // This is important for reducing register pressure in vector code.
   bool useAA() const override { return true; }
 

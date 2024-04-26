@@ -94,6 +94,7 @@
 #include <cassert>
 #include <llvm/Support/raw_ostream.h>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -240,12 +241,6 @@ public:
 
   /// Tell the strategy that MBB is about to be processed.
   virtual void enterMBB(MachineBasicBlock *MBB) {};
-
-  virtual bool disableForRegionPreRA(MachineBasicBlock::iterator begin,
-                                     MachineBasicBlock::iterator end,
-                                     unsigned regioninstrs) const {
-    return false;
-  }
 
   /// Tell the strategy that current MBB is done.
   virtual void leaveMBB() {};
@@ -496,9 +491,7 @@ public:
   bool disableForRegion(MachineBasicBlock *bb,
                         MachineBasicBlock::iterator begin,
                         MachineBasicBlock::iterator end,
-                        unsigned regioninstrs) const override {
-    return SchedImpl->disableForRegionPreRA(begin, end, regioninstrs);
-  }
+                        unsigned regioninstrs) const override;
 
   /// Implement ScheduleDAGInstrs interface for scheduling a sequence of
   /// reorderable instructions.
@@ -1084,7 +1077,7 @@ public:
   enum CandReason : uint8_t {
     NoCand, Only1, PhysReg, RegExcess, RegCritical, Stall, Cluster, Weak,
     RegMax, ResourceReduce, ResourceDemand, BotHeightReduce, BotPathReduce,
-    TopDepthReduce, TopPathReduce, NextDefUse, NodeOrder};
+    TopDepthReduce, TopPathReduce, NextDefUse, RegPressure, NodeOrder};
 
 #ifndef NDEBUG
   static const char *getReasonStr(GenericSchedulerBase::CandReason Reason);
@@ -1221,6 +1214,33 @@ int biasPhysReg(const SUnit *SU, bool isTop);
 /// GenericScheduler shrinks the unscheduled zone using heuristics to balance
 /// the schedule.
 class GenericScheduler : public GenericSchedulerBase {
+  //// Experimental members for OOO scheduling. ////
+
+  // TODO: Integrate with SchedDFSResult class.
+  // SU -> Nodes above in subtree.
+  std::vector<std::set<const SUnit *> > TreeSUs;
+  // SU -> Virtual regs defined above in subtree.
+  std::vector<std::set<Register> > TreeDefs;
+  // SU -> Regs used but not defined above in subtree.
+  std::vector<std::set<Register> > TreeUses;
+
+  // If this SU is non-null, it is the start of a subtree to be scheduled as
+  // a unit.
+  mutable SUnit *NextSubtreeSU = nullptr;
+  // A (small) set of instructions to be scheduled next as a unit.
+  std::set<const SUnit *> NextQueue;
+
+  unsigned DAGHeight;
+  unsigned DAGDepth;
+  unsigned NumScheduled;
+  std::set<Register> LiveRegs; // Currently live registers.
+
+  void initLiveRegs(ScheduleDAGMILive *DAG);
+  void getMIPDiff(const MachineInstr *MI, PressureDiff &PDiff) const;
+  void getTreePDiff(unsigned NodeNum, PressureDiff &PDiff) const;
+  int comparePDiffs(PressureDiff &PDiff1, PressureDiff &PDiff2) const;
+  ////                                          ////
+
 public:
   GenericScheduler(const MachineSchedContext *C):
     GenericSchedulerBase(C), Top(SchedBoundary::TopQID, "TopQ"),
@@ -1231,10 +1251,6 @@ public:
                   unsigned NumRegionInstrs) override;
 
   void dumpPolicy() const override;
-
-  bool disableForRegionPreRA(MachineBasicBlock::iterator Begin,
-                             MachineBasicBlock::iterator End,
-                             unsigned NumRegionInstrs) const override;
 
   bool shouldTrackPressure() const override {
     return RegionPolicy.ShouldTrackPressure;

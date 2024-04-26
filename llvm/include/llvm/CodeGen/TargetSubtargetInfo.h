@@ -16,7 +16,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MacroFusion.h"
 #include "llvm/CodeGen/PBQPRAConstraint.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
@@ -229,15 +228,6 @@ public:
   /// changes to the generic scheduling policy.
   virtual void overrideSchedPolicy(MachineSchedPolicy &Policy,
                                    unsigned NumRegionInstrs) const {}
-
-  /// Allow the subtarget to leave a region untouched. This has purposefully
-  /// been left a bit untangled from other methods as this is hopefully
-  /// just a temporary solution.
-  virtual bool disableForRegionPreRA(MachineBasicBlock::iterator Begin,
-                                     MachineBasicBlock::iterator End,
-                                     unsigned NumRegionInstrs) const {
-    return false;
-  }
 
   // Perform target-specific adjustments to the latency of a schedule
   // dependency.
