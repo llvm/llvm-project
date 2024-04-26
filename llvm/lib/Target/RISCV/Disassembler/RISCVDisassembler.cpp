@@ -258,9 +258,9 @@ static DecodeStatus DecodeVRM8RegisterClass(MCInst &Inst, uint32_t RegNo,
 static DecodeStatus decodeVMaskReg(MCInst &Inst, uint32_t RegNo,
                                    uint64_t Address,
                                    const MCDisassembler *Decoder) {
-  if (RegNo > 2) {
+  if (RegNo >= 2)
     return MCDisassembler::Fail;
-  }
+
   MCRegister Reg = (RegNo == 0) ? RISCV::V0 : RISCV::NoRegister;
 
   Inst.addOperand(MCOperand::createReg(Reg));
