@@ -19,7 +19,7 @@ define i32 @foo() uwtable ssp personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    jsr _Z1fv@PLT
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:  ; %bb.1: ; %try.cont
-; CHECK-NEXT:    move.l #0, %d0
+; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB0_2: ; %lpad
