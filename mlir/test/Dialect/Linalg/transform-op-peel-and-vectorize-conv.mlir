@@ -70,12 +70,6 @@ module attributes {transform.with_named_sequence} {
     // 3. Decompose 2D conv into 2 x 1D conv
     %3 = transform.structured.match ops{["linalg.depthwise_conv_2d_nhwc_hwc"]} in %loops_1#3 : (!transform.op<"scf.for">) -> !transform.any_op
     %4 = transform.structured.decompose %3 : (!transform.any_op) -> !transform.any_op
-    %f00 = transform.structured.match ops{["func.func"]} in %root
-        : (!transform.any_op) -> !transform.any_op
-    transform.apply_patterns to %f00 {
-        transform.apply_patterns.canonicalization
-        transform.apply_patterns.linalg.tiling_canonicalization
-    } : !transform.any_op
 
     // 4. Apply loop peeling
     %main_loop, %remainder_loop = transform.loop.peel %loops_1#3 : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
