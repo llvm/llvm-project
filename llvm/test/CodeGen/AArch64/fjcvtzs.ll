@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm64-eabi -mattr=+jsconv -o - %s | FileCheck %s
+; RUN: llc -mtriple=arm64-eabi -mattr=+jscvt -o - %s | FileCheck %s
 
 define i32 @test_jcvt(double %v) {
 ; CHECK-LABEL: test_jcvt:

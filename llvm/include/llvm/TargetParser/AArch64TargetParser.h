@@ -113,7 +113,6 @@ enum ArchExtKind : unsigned {
   // FIXME temporary fixes for inconsistent naming.
   AEK_FP = AEK_FPARMV8,
   AEK_FP16 = AEK_FULLFP16,
-  AEK_JSCVT = AEK_JS,
   AEK_RASv2 = AEK_RASV2,
   AEK_SME2p1 = AEK_SME2P1,
   AEK_SVE2p1 = AEK_SVE2P1,
@@ -172,7 +171,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"hbc", AArch64::AEK_HBC, "+hbc", "-hbc", FEAT_INIT, "", 0},
     {"i8mm", AArch64::AEK_I8MM, "+i8mm", "-i8mm", FEAT_I8MM, "+i8mm", 270},
     {"ite", AArch64::AEK_ITE, "+ite", "-ite", FEAT_INIT, "", 0},
-    {"jscvt", AArch64::AEK_JSCVT, "+jsconv", "-jsconv", FEAT_JSCVT, "+fp-armv8,+neon,+jsconv", 210},
+    {"jscvt", AArch64::AEK_JSCVT, "+jscvt", "-jscvt", FEAT_JSCVT, "+fp-armv8,+neon,+jscvt", 210},
     {"ls64_accdata", AArch64::AEK_NONE, {}, {}, FEAT_LS64_ACCDATA, "+ls64", 540},
     {"ls64_v", AArch64::AEK_NONE, {}, {}, FEAT_LS64_V, "", 530},
     {"ls64", AArch64::AEK_LS64, "+ls64", "-ls64", FEAT_LS64, "", 520},

@@ -69,8 +69,8 @@ def HasPAuth         : Predicate<"Subtarget->hasPAuth()">,
 def HasPAuthLR       : Predicate<"Subtarget->hasPAuthLR()">,
                        AssemblerPredicateWithAll<(all_of FeaturePAuthLR), "pauth-lr">;
 
-def HasJS            : Predicate<"Subtarget->hasJS()">,
-                       AssemblerPredicateWithAll<(all_of FeatureJS), "jsconv">;
+def HasJSCVT            : Predicate<"Subtarget->hasJSCVT()">,
+                       AssemblerPredicateWithAll<(all_of FeatureJSCVT), "jscvt">;
 
 def HasCCIDX         : Predicate<"Subtarget->hasCCIDX()">,
                        AssemblerPredicateWithAll<(all_of FeatureCCIDX), "ccidx">;
@@ -1746,13 +1746,13 @@ let Predicates = [HasPAuthLR] in {
 
 
 // v8.3a floating point conversion for javascript
-let Predicates = [HasJS, HasFPARMv8], Defs = [NZCV] in
+let Predicates = [HasJSCVT, HasFPARMv8], Defs = [NZCV] in
 def FJCVTZS  : BaseFPToIntegerUnscaled<0b01, 0b11, 0b110, FPR64, GPR32,
                                       "fjcvtzs",
                                       [(set GPR32:$Rd,
                                          (int_aarch64_fjcvtzs FPR64:$Rn))]> {
   let Inst{31} = 0;
-} // HasJS, HasFPARMv8
+} // HasJSCVT, HasFPARMv8
 
 // v8.4 Flag manipulation instructions
 let Predicates = [HasFlagM], Defs = [NZCV], Uses = [NZCV] in {

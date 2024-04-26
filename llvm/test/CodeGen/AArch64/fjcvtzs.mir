@@ -1,4 +1,4 @@
-# RUN: not llc -o - %s -mtriple=arm64-eabi -mattr=+jsconv -run-pass=legalizer 2>&1 | FileCheck %s
+# RUN: not llc -o - %s -mtriple=arm64-eabi -mattr=+jscvt -run-pass=legalizer 2>&1 | FileCheck %s
 
 # CHECK: [[@LINE+11]]:49: missing implicit register operand 'implicit-def $nzcv'
 

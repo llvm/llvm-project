@@ -1148,15 +1148,15 @@ int caller(void) { return used_def_without_default_decl() + used_decl_without_de
 // CHECK: attributes #[[ATTR16]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fullfp16,+neon,+sve,-fp-armv8,-v9.5a" }
 // CHECK: attributes #[[ATTR17]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+lse,-fp-armv8,-v9.5a" }
 // CHECK: attributes #[[ATTR18]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+neon,+rdm,-fp-armv8,-v9.5a" }
-// CHECK: attributes #[[ATTR19:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+jsconv,+neon,-fp-armv8,-v9.5a" }
+// CHECK: attributes #[[ATTR19:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+jscvt,+neon,-fp-armv8,-v9.5a" }
 // CHECK: attributes #[[ATTR20:[0-9]+]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+neon,+rdm,-fp-armv8,-v9.5a" }
-// CHECK: attributes #[[ATTR21]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+jsconv,+neon,-fp-armv8,-v9.5a" }
+// CHECK: attributes #[[ATTR21]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+jscvt,+neon,-fp-armv8,-v9.5a" }
 // CHECK: attributes #[[ATTR22]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+aes,+f64mm,+fullfp16,+neon,+sve,-fp-armv8,-v9.5a" }
 // CHECK: attributes #[[ATTR23]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fcma,+fullfp16,+neon,+rdm,+sme,-fp-armv8,-v9.5a" }
 // CHECK: attributes #[[ATTR24]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+f32mm,+fullfp16,+i8mm,+neon,+sha2,+sha3,+sve,-fp-armv8,-v9.5a" }
 // CHECK: attributes #[[ATTR25]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+dit,+fullfp16,+neon,+sve,-fp-armv8,-v9.5a" }
 // CHECK: attributes #[[ATTR26]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ccpp,+rcpc,-fp-armv8,-v9.5a" }
-// CHECK: attributes #[[ATTR27]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ccdp,+ccpp,+jsconv,+neon,-fp-armv8,-v9.5a" }
+// CHECK: attributes #[[ATTR27]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ccdp,+ccpp,+jscvt,+neon,-fp-armv8,-v9.5a" }
 // CHECK: attributes #[[ATTR28]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fptoint,+rcpc,-fp-armv8,-v9.5a" }
 // CHECK: attributes #[[ATTR29]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+fullfp16,+neon,+sve,-fp-armv8,-v9.5a" }
 // CHECK: attributes #[[ATTR30]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fullfp16,+neon,+sve,+sve2,+sve2-aes,+sve2-sha3,-fp-armv8,-v9.5a" }

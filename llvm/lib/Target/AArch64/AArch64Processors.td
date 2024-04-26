@@ -672,12 +672,12 @@ def ProcessorFeatures {
   list<SubtargetFeature> R82  = [HasV8_0rOps, FeaturePerfMon, FeatureFullFP16,
                                  FeatureFP16FML, FeatureSSBS, FeaturePredRes,
                                  FeatureSB, FeatureRDM, FeatureDotProd,
-                                 FeatureFCMA, FeatureJS,
+                                 FeatureFCMA, FeatureJSCVT,
                                  FeatureCacheDeepPersist];
   list<SubtargetFeature> R82AE = [HasV8_0rOps, FeaturePerfMon, FeatureFullFP16,
                                   FeatureFP16FML, FeatureSSBS, FeaturePredRes,
                                   FeatureSB, FeatureRDM, FeatureDotProd,
-                                  FeatureFCMA, FeatureJS,
+                                  FeatureFCMA, FeatureJSCVT,
                                   FeatureCacheDeepPersist];
   list<SubtargetFeature> X1   = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
                                  FeatureNEON, FeatureRCPC, FeaturePerfMon,
@@ -791,7 +791,7 @@ def ProcessorFeatures {
   list<SubtargetFeature> TSV110 = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
                                    FeatureNEON, FeaturePerfMon, FeatureSPE,
                                    FeatureFullFP16, FeatureFP16FML, FeatureDotProd,
-                                   FeatureJS, FeatureFCMA];
+                                   FeatureJSCVT, FeatureFCMA];
   list<SubtargetFeature> Ampere1 = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
                                     FeatureSSBS, FeatureRNG, FeatureSB,
                                     FeatureSHA2, FeatureSHA3, FeatureAES];

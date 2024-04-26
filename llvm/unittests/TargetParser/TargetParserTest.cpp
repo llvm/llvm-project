@@ -2095,7 +2095,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+cpa"));
   EXPECT_TRUE(llvm::is_contained(Features, "+pauth-lr"));
   EXPECT_TRUE(llvm::is_contained(Features, "+tlbiw"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+jsconv"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+jscvt"));
   EXPECT_TRUE(llvm::is_contained(Features, "+fcma"));
 
   // Assuming we listed every extension above, this should produce the same
@@ -2430,8 +2430,8 @@ AArch64ExtensionDependenciesBaseArchTestParams
         {AArch64::ARMV8A, {"simd", "nofp"}, {}, {"fp-armv8", "neon"}},
 
         // fp -> jscvt
-        {AArch64::ARMV8A, {"nofp", "jscvt"}, {"fp-armv8", "jsconv"}, {}},
-        {AArch64::ARMV8A, {"jscvt", "nofp"}, {}, {"fp-armv8", "jsconv"}},
+        {AArch64::ARMV8A, {"nofp", "jscvt"}, {"fp-armv8", "jscvt"}, {}},
+        {AArch64::ARMV8A, {"jscvt", "nofp"}, {}, {"fp-armv8", "jscvt"}},
 
         // simd -> {aes, sha2, sha3, sm4}
         {AArch64::ARMV8A, {"nosimd", "aes"}, {"neon", "aes"}, {}},
