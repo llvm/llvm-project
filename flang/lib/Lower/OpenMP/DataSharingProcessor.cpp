@@ -339,6 +339,7 @@ void DataSharingProcessor::defaultPrivatize(
     if (!Fortran::semantics::IsProcedure(*sym) &&
         !sym->GetUltimate().has<Fortran::semantics::DerivedTypeDetails>() &&
         !sym->GetUltimate().has<Fortran::semantics::NamelistDetails>() &&
+        !Fortran::semantics::IsImpliedDoIndex(sym->GetUltimate()) &&
         !symbolsInNestedRegions.contains(sym) &&
         !symbolsInParentRegions.contains(sym) &&
         !privatizedSymbols.contains(sym))
