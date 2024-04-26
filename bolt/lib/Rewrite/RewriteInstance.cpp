@@ -3978,8 +3978,8 @@ void RewriteInstance::patchELFPHDRTable() {
       NewPhdr.p_filesz = sizeof(NewPhdr) * Phnum;
       NewPhdr.p_memsz = sizeof(NewPhdr) * Phnum;
     } else if (Phdr.p_type == ELF::PT_GNU_EH_FRAME) {
-      ErrorOr<BinarySection &> EHFrameHdrSec =
-          BC->getUniqueSectionByName(getNewSecPrefix() + ".eh_frame_hdr");
+      ErrorOr<BinarySection &> EHFrameHdrSec = BC->getUniqueSectionByName(
+          getNewSecPrefix() + getEHFrameHdrSectionName());
       if (EHFrameHdrSec && EHFrameHdrSec->isAllocatable() &&
           EHFrameHdrSec->isFinalized()) {
         NewPhdr.p_offset = EHFrameHdrSec->getOutputFileOffset();
@@ -5692,7 +5692,8 @@ void RewriteInstance::writeEHFrameHeader() {
       BC->AsmInfo->getCodePointerSize()));
   check_error(std::move(Er), "failed to parse EH frame");
 
-  LLVM_DEBUG(dbgs() << "BOLT: writing a new .eh_frame_hdr\n");
+  LLVM_DEBUG(dbgs() << "BOLT: writing a new " << getEHFrameHdrSectionName()
+                    << '\n');
 
   NextAvailableAddress =
       appendPadding(Out->os(), NextAvailableAddress, EHFrameHdrAlign);
@@ -5710,16 +5711,17 @@ void RewriteInstance::writeEHFrameHeader() {
   const unsigned Flags = BinarySection::getFlags(/*IsReadOnly=*/true,
                                                  /*IsText=*/false,
                                                  /*IsAllocatable=*/true);
-  BinarySection *OldEHFrameHdrSection = getSection(".eh_frame_hdr");
+  BinarySection *OldEHFrameHdrSection = getSection(getEHFrameHdrSectionName());
   if (OldEHFrameHdrSection)
-    OldEHFrameHdrSection->setOutputName(getOrgSecPrefix() + ".eh_frame_hdr");
+    OldEHFrameHdrSection->setOutputName(getOrgSecPrefix() +
+                                        getEHFrameHdrSectionName());
 
   BinarySection &EHFrameHdrSec = BC->registerOrUpdateSection(
-      getNewSecPrefix() + ".eh_frame_hdr", ELF::SHT_PROGBITS, Flags, nullptr,
-      NewEHFrameHdr.size(), /*Alignment=*/1);
+      getNewSecPrefix() + getEHFrameHdrSectionName(), ELF::SHT_PROGBITS, Flags,
+      nullptr, NewEHFrameHdr.size(), /*Alignment=*/1);
   EHFrameHdrSec.setOutputFileOffset(EHFrameHdrFileOffset);
   EHFrameHdrSec.setOutputAddress(EHFrameHdrOutputAddress);
-  EHFrameHdrSec.setOutputName(".eh_frame_hdr");
+  EHFrameHdrSec.setOutputName(getEHFrameHdrSectionName());
 
   NextAvailableAddress += EHFrameHdrSec.getOutputSize();
 
