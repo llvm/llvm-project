@@ -12934,7 +12934,7 @@ bool ARMAsmParser::enableArchExtFeature(StringRef Name, SMLoc &ExtLoc) {
       {ARM::AEK_SEC, {Feature_HasV6KBit}, {ARM::FeatureTrustZone}},
       // FIXME: Only available in A-class, isel not predicated
       {ARM::AEK_VIRT, {Feature_HasV7Bit}, {ARM::FeatureVirtualization}},
-      {ARM::AEK_FP16,
+      {ARM::AEK_FULLFP16,
        {Feature_HasV8_2aBit},
        {ARM::FeatureFPARMv8, ARM::FeatureFullFP16}},
       {ARM::AEK_RAS, {Feature_HasV8Bit}, {ARM::FeatureRAS}},

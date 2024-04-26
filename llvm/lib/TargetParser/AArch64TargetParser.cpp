@@ -187,7 +187,7 @@ void AArch64::ExtensionSet::enable(ArchExtKind E) {
   // architecture version.
   if (BaseArch) {
     // +fp16 implies +fp16fml for v8.4A+, but not v9.0-A+
-    if (E == AEK_FP16 && BaseArch->is_superset(ARMV8_4A) &&
+    if (E == AEK_FULLFP16 && BaseArch->is_superset(ARMV8_4A) &&
         !BaseArch->is_superset(ARMV9A))
       enable(AEK_FP16FML);
 

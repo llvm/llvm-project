@@ -41,7 +41,7 @@ enum ArchExtKind : uint64_t {
   AEK_SEC = 1 << 8,
   AEK_VIRT = 1 << 9,
   AEK_DSP = 1 << 10,
-  AEK_FP16 = 1 << 11,
+  AEK_FULLFP16 = 1 << 11,
   AEK_RAS = 1 << 12,
   AEK_DOTPROD = 1 << 13,
   AEK_SHA2 = 1 << 14,

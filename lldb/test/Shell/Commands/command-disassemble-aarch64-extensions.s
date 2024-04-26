@@ -23,7 +23,7 @@ fn:
   fmmla z0.d, z1.d, z2.d                // AEK_F64MM
   cfinv                                 // AEK_FLAGM
   fcvt d0, s0                           // AEK_FPARMV8
-  fabs h1, h2                           // AEK_FP16
+  fabs h1, h2                           // AEK_FULLFP16
   fmlal v0.2s, v1.2h, v2.2h             // AEK_FP16FML
   bc.eq lbl                             // AEK_HBC
   smmla v1.4s, v16.16b, v31.16b         // AEK_I8MM
