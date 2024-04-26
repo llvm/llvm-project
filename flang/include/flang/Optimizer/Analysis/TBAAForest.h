@@ -73,15 +73,15 @@ private:
 //===----------------------------------------------------------------------===//
 // TBAAForrest
 //===----------------------------------------------------------------------===//
-/// Collection of TBAATrees, usually indexed by function (so that each function
-/// has a different TBAATree)
+/// Collection of TBAATrees, usually indexed by symbol (so that each
+/// function-like container operation has a different TBAATree)
 class TBAAForrest {
 public:
   explicit TBAAForrest(bool separatePerFunction = true)
       : separatePerFunction{separatePerFunction} {}
 
-  inline const TBAATree &operator[](mlir::func::FuncOp func) {
-    return getFuncTree(func.getSymNameAttr());
+  inline const TBAATree &operator[](mlir::SymbolOpInterface sym) {
+    return getFuncTree(sym.getNameAttr());
   }
   inline const TBAATree &operator[](mlir::LLVM::LLVMFuncOp func) {
     // the external name conversion pass may rename some functions. Their old

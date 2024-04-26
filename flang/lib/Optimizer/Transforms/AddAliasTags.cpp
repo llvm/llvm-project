@@ -49,6 +49,13 @@ static llvm::cl::opt<bool> enableLocalAllocs(
     "local-alloc-tbaa", llvm::cl::init(false), llvm::cl::Hidden,
     llvm::cl::desc("Add TBAA tags to local allocations. UNSAFE."));
 
+// Run on function-like top-level operations (e.g. omp.declare_reduction).
+// This needs more testing before enabling by default:
+static llvm::cl::opt<bool> runOnNonFunctions(
+    "nonfunc-tbaa", llvm::cl::init(false), llvm::cl::Hidden,
+    llvm::cl::desc("Add TBAA tags to operations insode of container operations "
+                   "other than func.func"));
+
 namespace {
 
 /// Shared state per-module
@@ -61,9 +68,9 @@ public:
     return analysisCache[value];
   }
 
-  /// get the per-function TBAATree for this function
-  inline const fir::TBAATree &getFuncTree(mlir::func::FuncOp func) {
-    return forrest[func];
+  /// get the per-function TBAATree for this function-like op
+  inline const fir::TBAATree &getFuncTree(mlir::SymbolOpInterface symbol) {
+    return forrest[symbol];
   }
 
 private:
@@ -113,10 +120,22 @@ static std::string getFuncArgName(mlir::Value arg) {
   return attr.str();
 }
 
+static mlir::SymbolOpInterface getTopLevelSymbolParent(mlir::Operation *op) {
+  mlir::SymbolOpInterface parent =
+      op->getParentOfType<mlir::SymbolOpInterface>();
+  mlir::SymbolOpInterface oldParent = parent;
+  while (parent) {
+    parent = getTopLevelSymbolParent(parent);
+    if (parent)
+      oldParent = parent;
+  }
+  return oldParent;
+}
+
 void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
                                            PassState &state) {
-  mlir::func::FuncOp func = op->getParentOfType<mlir::func::FuncOp>();
-  if (!func)
+  mlir::SymbolOpInterface parent = getTopLevelSymbolParent(op);
+  if (!runOnNonFunctions && !mlir::isa<mlir::func::FuncOp>(parent))
     return;
 
   llvm::SmallVector<mlir::Value> accessedOperands = op.getAccessedOperands();
@@ -147,7 +166,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
                << "Found reference to dummy argument at " << *op << "\n");
     std::string name = getFuncArgName(source.u.get<mlir::Value>());
     if (!name.empty())
-      tag = state.getFuncTree(func).dummyArgDataTree.getTag(name);
+      tag = state.getFuncTree(parent).dummyArgDataTree.getTag(name);
     else
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "WARN: couldn't find a name for dummy argument " << *op
@@ -160,7 +179,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     const char *name = glbl.getRootReference().data();
     LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to global " << name
                                       << " at " << *op << "\n");
-    tag = state.getFuncTree(func).globalDataTree.getTag(name);
+    tag = state.getFuncTree(parent).globalDataTree.getTag(name);
 
     // TBAA for SourceKind::Direct
   } else if (enableDirect &&
@@ -170,7 +189,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
       const char *name = glbl.getRootReference().data();
       LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to direct " << name
                                         << " at " << *op << "\n");
-      tag = state.getFuncTree(func).directDataTree.getTag(name);
+      tag = state.getFuncTree(parent).directDataTree.getTag(name);
     } else {
       // SourceKind::Direct is likely to be extended to cases which are not a
       // SymbolRefAttr in the future
@@ -190,7 +209,7 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
     if (name) {
       LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to allocation "
                                         << name << " at " << *op << "\n");
-      tag = state.getFuncTree(func).allocatedDataTree.getTag(*name);
+      tag = state.getFuncTree(parent).allocatedDataTree.getTag(*name);
     } else {
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "WARN: couldn't find a name for allocation " << *op
