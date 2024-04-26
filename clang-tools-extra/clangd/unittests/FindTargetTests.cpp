@@ -839,7 +839,9 @@ TEST_F(TargetDeclTest, OverloadExpr) {
       [[delete]] x;
     }
   )cpp";
-  EXPECT_DECLS("CXXDeleteExpr", "void operator delete(void *) noexcept");
+  // Sized deallocation is enabled by default in C++14 onwards.
+  EXPECT_DECLS("CXXDeleteExpr",
+               "void operator delete(void *, unsigned long) noexcept");
 }
 
 TEST_F(TargetDeclTest, DependentExprs) {
@@ -854,7 +856,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           }
         };
       )cpp";
-  EXPECT_DECLS("MemberExpr", "void foo()");
+  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void foo()");
 
   // Similar to above but base expression involves a function call.
   Code = R"cpp(
@@ -872,7 +874,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           }
         };
       )cpp";
-  EXPECT_DECLS("MemberExpr", "void foo()");
+  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void foo()");
 
   // Similar to above but uses a function pointer.
   Code = R"cpp(
@@ -891,7 +893,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           }
         };
       )cpp";
-  EXPECT_DECLS("MemberExpr", "void foo()");
+  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void foo()");
 
   // Base expression involves a member access into this.
   Code = R"cpp(
@@ -962,7 +964,7 @@ TEST_F(TargetDeclTest, DependentExprs) {
           void Foo() { this->[[find]](); }
         };
   )cpp";
-  EXPECT_DECLS("MemberExpr", "void find()");
+  EXPECT_DECLS("CXXDependentScopeMemberExpr", "void find()");
 }
 
 TEST_F(TargetDeclTest, DependentTypes) {
