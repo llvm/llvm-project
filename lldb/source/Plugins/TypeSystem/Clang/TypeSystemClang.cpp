@@ -9,6 +9,7 @@
 #include "TypeSystemClang.h"
 
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/ExprCXX.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -1199,6 +1200,8 @@ CompilerType TypeSystemClang::GetTypeForDecl(clang::NamedDecl *decl) {
     return GetTypeForDecl(interface_decl);
   if (clang::TagDecl *tag_decl = llvm::dyn_cast<clang::TagDecl>(decl))
     return GetTypeForDecl(tag_decl);
+  if (clang::ValueDecl *value_decl = llvm::dyn_cast<clang::ValueDecl>(decl))
+    return GetTypeForDecl(value_decl);
   return CompilerType();
 }
 
@@ -1215,6 +1218,10 @@ CompilerType TypeSystemClang::GetTypeForDecl(const ObjCInterfaceDecl *decl) {
   // sure that all redeclarations share the same type.
   return GetType(getASTContext().getObjCInterfaceType(
       decl, const_cast<ObjCInterfaceDecl *>(decl->getPreviousDecl())));
+}
+
+CompilerType TypeSystemClang::GetTypeForDecl(clang::ValueDecl *value_decl) {
+  return GetType(value_decl->getType());
 }
 
 #pragma mark Structure, Unions, Classes
@@ -6063,6 +6070,36 @@ CompilerType TypeSystemClang::GetVirtualBaseClassAtIndex(
   return CompilerType();
 }
 
+CompilerDecl
+TypeSystemClang::GetStaticFieldWithName(lldb::opaque_compiler_type_t type,
+                                        llvm::StringRef name) {
+  clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
+  switch (qual_type->getTypeClass()) {
+  case clang::Type::Record: {
+    if (!GetCompleteType(type))
+      return CompilerDecl();
+
+    const clang::RecordType *record_type =
+        llvm::cast<clang::RecordType>(qual_type.getTypePtr());
+    const clang::RecordDecl *record_decl = record_type->getDecl();
+
+    clang::DeclarationName decl_name(&getASTContext().Idents.get(name));
+    for (NamedDecl *decl : record_decl->lookup(decl_name)) {
+      auto *var_decl = dyn_cast<clang::VarDecl>(decl);
+      if (!var_decl || var_decl->getStorageClass() != clang::SC_Static)
+        continue;
+
+      return CompilerDecl(this, var_decl);
+    }
+    break;
+  }
+
+  default:
+    break;
+  }
+  return CompilerDecl();
+}
+
 // If a pointer to a pointee type (the clang_type arg) says that it has no
 // children, then we either need to trust it, or override it and return a
 // different result. For example, an "int *" has one child that is an integer,
@@ -9347,6 +9384,21 @@ CompilerType TypeSystemClang::DeclGetFunctionArgumentType(void *opaque_decl,
       return GetType(objc_method->parameters()[idx]->getOriginalType());
   }
   return CompilerType();
+}
+
+Scalar TypeSystemClang::DeclGetConstantValue(void *opaque_decl) {
+  clang::Decl *decl = static_cast<clang::Decl *>(opaque_decl);
+  clang::VarDecl *var_decl = llvm::dyn_cast<clang::VarDecl>(decl);
+  if (!var_decl)
+    return Scalar();
+  clang::Expr *init_expr = var_decl->getInit();
+  if (!init_expr)
+    return Scalar();
+  std::optional<llvm::APSInt> value =
+      init_expr->getIntegerConstantExpr(getASTContext());
+  if (!value)
+    return Scalar();
+  return Scalar(*value);
 }
 
 // CompilerDeclContext functions
