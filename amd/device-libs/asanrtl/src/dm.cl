@@ -114,21 +114,9 @@ first(__global void * v)
 
 // The number of active lanes at this point
 static uint
-active_lane_count_w64(void)
-{
-    return __builtin_popcountl(__builtin_amdgcn_read_exec());
-}
-
-static uint
-active_lane_count_w32(void)
-{
-    return __builtin_popcount(__builtin_amdgcn_read_exec_lo());
-}
-
-static uint
 active_lane_count(void)
 {
-    return __oclc_wavefrontsize64 ? active_lane_count_w64() : active_lane_count_w32();
+    return __builtin_popcountl(__builtin_amdgcn_ballot_w64(true));
 }
 
 static ulong

@@ -12,11 +12,7 @@
 static uint
 active_lane_count(void)
 {
-    if (__oclc_wavefrontsize64) {
-        return __builtin_popcountl(__builtin_amdgcn_read_exec());
-    } else {
-        return __builtin_popcount(__builtin_amdgcn_read_exec_lo());
-    }
+    return __builtin_popcountl(__builtin_amdgcn_ballot_w64(true));
 }
 
 size_t
