@@ -530,6 +530,7 @@ namespace {
     bool refineExtractVectorEltIntoMultipleNarrowExtractVectorElts(SDNode *N);
 
     SDValue visitSTORE(SDNode *N);
+    SDValue visitATOMIC_STORE(SDNode *N);
     SDValue visitLIFETIME_END(SDNode *N);
     SDValue visitINSERT_VECTOR_ELT(SDNode *N);
     SDValue visitEXTRACT_VECTOR_ELT(SDNode *N);
@@ -1909,6 +1910,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::BR_CC:              return visitBR_CC(N);
   case ISD::LOAD:               return visitLOAD(N);
   case ISD::STORE:              return visitSTORE(N);
+  case ISD::ATOMIC_STORE:       return visitATOMIC_STORE(N);
   case ISD::INSERT_VECTOR_ELT:  return visitINSERT_VECTOR_ELT(N);
   case ISD::EXTRACT_VECTOR_ELT: return visitEXTRACT_VECTOR_ELT(N);
   case ISD::BUILD_VECTOR:       return visitBUILD_VECTOR(N);
@@ -7620,6 +7622,7 @@ SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, const SDLoc &DL) {
 static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
                                   SDNode *N) {
   EVT VT = N0.getValueType();
+  unsigned BW = VT.getScalarSizeInBits();
   SDLoc DL(N);
 
   auto peekThroughResize = [](SDValue V) {
@@ -7688,6 +7691,26 @@ static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
       N0.getOperand(1) == N1.getOperand(0) &&
       peekThroughZext(N0.getOperand(2)) == peekThroughZext(N1.getOperand(1)))
     return N0;
+
+  // Attempt to match a legalized build_pair-esque pattern:
+  // or(shl(aext(Hi),BW/2),zext(Lo))
+  SDValue Lo, Hi;
+  if (sd_match(N0,
+               m_OneUse(m_Shl(m_AnyExt(m_Value(Hi)), m_SpecificInt(BW / 2)))) &&
+      sd_match(N1, m_ZExt(m_Value(Lo))) &&
+      Lo.getScalarValueSizeInBits() == (BW / 2) &&
+      Lo.getValueType() == Hi.getValueType()) {
+    // Fold build_pair(not(Lo),not(Hi)) -> not(build_pair(Lo,Hi)).
+    SDValue NotLo, NotHi;
+    if (sd_match(Lo, m_OneUse(m_Not(m_Value(NotLo)))) &&
+        sd_match(Hi, m_OneUse(m_Not(m_Value(NotHi))))) {
+      Lo = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, NotLo);
+      Hi = DAG.getNode(ISD::ANY_EXTEND, DL, VT, NotHi);
+      Hi = DAG.getNode(ISD::SHL, DL, VT, Hi,
+                       DAG.getShiftAmountConstant(BW / 2, VT, DL));
+      return DAG.getNOT(DL, DAG.getNode(ISD::OR, DL, VT, Lo, Hi), VT);
+    }
+  }
 
   return SDValue();
 }
@@ -21114,6 +21137,24 @@ SDValue DAGCombiner::replaceStoreOfInsertLoad(StoreSDNode *ST) {
 
   return DAG.getStore(Chain, DL, Elt, NewPtr, PointerInfo, ST->getAlign(),
                       ST->getMemOperand()->getFlags());
+}
+
+SDValue DAGCombiner::visitATOMIC_STORE(SDNode *N) {
+  AtomicSDNode *ST = cast<AtomicSDNode>(N);
+  SDValue Val = ST->getVal();
+  EVT VT = Val.getValueType();
+  EVT MemVT = ST->getMemoryVT();
+
+  if (MemVT.bitsLT(VT)) { // Is truncating store
+    APInt TruncDemandedBits = APInt::getLowBitsSet(VT.getScalarSizeInBits(),
+                                                   MemVT.getScalarSizeInBits());
+    // See if we can simplify the operation with SimplifyDemandedBits, which
+    // only works if the value has a single use.
+    if (SimplifyDemandedBits(Val, TruncDemandedBits))
+      return SDValue(N, 0);
+  }
+
+  return SDValue();
 }
 
 SDValue DAGCombiner::visitSTORE(SDNode *N) {
