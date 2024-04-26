@@ -140,7 +140,7 @@ struct LinearizeVectorExtractStridedSlice final
                   ConversionPatternRewriter &rewriter) const override {
     Type dstType = getTypeConverter()->convertType(extractOp.getType());
     assert(!(extractOp.getVector().getType().isScalable() ||
-             dstType.cast<VectorType>().isScalable()) &&
+             cast<VectorType>(dstType).isScalable()) &&
            "scalable vectors are not supported.");
     if (!isLessThanTargetBitWidth(extractOp, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
@@ -172,7 +172,7 @@ struct LinearizeVectorExtractStridedSlice final
     // Get total number of extracted slices.
     int64_t nExtractedSlices = 1;
     for (Attribute size : sizes) {
-      nExtractedSlices *= size.cast<IntegerAttr>().getInt();
+      nExtractedSlices *= cast<IntegerAttr>(size).getInt();
     }
     // Compute the strides of the source vector considering first k dimensions.
     llvm::SmallVector<int64_t, 4> sourceStrides(kD, extractGranularitySize);
@@ -189,7 +189,7 @@ struct LinearizeVectorExtractStridedSlice final
     // Compute extractedStrides.
     for (int i = kD - 2; i >= 0; --i) {
       extractedStrides[i] =
-          extractedStrides[i + 1] * sizes[i + 1].cast<IntegerAttr>().getInt();
+          extractedStrides[i + 1] * cast<IntegerAttr>(sizes[i + 1]).getInt();
     }
     // Iterate over all extracted slices from 0 to nExtractedSlices - 1
     // and compute the multi-dimensional index and the corresponding linearized
@@ -207,7 +207,7 @@ struct LinearizeVectorExtractStridedSlice final
       int64_t linearizedIndex = 0;
       for (int64_t j = 0; j < kD; ++j) {
         linearizedIndex +=
-            (offsets[j].cast<IntegerAttr>().getInt() + multiDimIndex[j]) *
+            (cast<IntegerAttr>(offsets[j]).getInt() + multiDimIndex[j]) *
             sourceStrides[j];
       }
       // Fill the indices array form linearizedIndex to linearizedIndex +
@@ -254,7 +254,7 @@ struct LinearizeVectorShuffle final
     Type dstType = getTypeConverter()->convertType(shuffleOp.getType());
     assert(!(shuffleOp.getV1VectorType().isScalable() ||
              shuffleOp.getV2VectorType().isScalable() ||
-             dstType.cast<VectorType>().isScalable()) &&
+             cast<VectorType>(dstType).isScalable()) &&
            "scalable vectors are not supported.");
     if (!isLessThanTargetBitWidth(shuffleOp, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
@@ -324,7 +324,7 @@ struct LinearizeVectorExtract final
                   ConversionPatternRewriter &rewriter) const override {
     Type dstTy = getTypeConverter()->convertType(extractOp.getType());
     assert(!(extractOp.getVector().getType().isScalable() ||
-             dstTy.cast<VectorType>().isScalable()) &&
+             cast<VectorType>(dstTy).isScalable()) &&
            "scalable vectors are not supported.");
     if (!isLessThanTargetBitWidth(extractOp, targetVectorBitWidth))
       return rewriter.notifyMatchFailure(
@@ -405,9 +405,7 @@ void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(
       [=](vector::ShuffleOp shuffleOp) -> bool {
         return isLessThanTargetBitWidth(shuffleOp, targetBitWidth)
                    ? (typeConverter.isLegal(shuffleOp) &&
-                      shuffleOp.getResult()
-                              .getType()
-                              .cast<mlir::VectorType>()
+                      cast<mlir::VectorType>(shuffleOp.getResult().getType())
                               .getRank() == 1)
                    : true;
       });
