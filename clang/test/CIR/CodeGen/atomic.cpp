@@ -247,6 +247,16 @@ void fd3(struct S *a, struct S *b, struct S *c) {
 // LLVM-NEXT: [[RESULT:%.*]] = atomicrmw xchg ptr [[LOAD_A_PTR]], i64 [[LOAD_B]] seq_cst
 // LLVM-NEXT: store i64 [[RESULT]], ptr [[LOAD_C_PTR]]
 
+bool fd4(struct S *a, struct S *b, struct S *c) {
+  return __atomic_compare_exchange(a, b, c, 1, 5, 5);
+}
+
+// CHECK-LABEL: @_Z3fd4P1SS0_S0_
+// CHECK: %old, %cmp = cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!ty_22S22>, {{.*}} : !u64i, {{.*}} : !u64i, success = seq_cst, failure = seq_cst) weak : (!u64i, !cir.bool)
+
+// LLVM-LABEL: @_Z3fd4P1SS0_S0_
+// LLVM: cmpxchg weak ptr {{.*}}, i64 {{.*}}, i64 {{.*}} seq_cst seq_cst, align 8
+
 bool fi4a(int *i) {
   int cmp = 0;
   int desired = 1;
@@ -254,7 +264,7 @@ bool fi4a(int *i) {
 }
 
 // CHECK-LABEL: @_Z4fi4aPi
-// CHECK: cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!s32i>, {{.*}} : <!s32i>, {{.*}} : !cir.ptr<!s32i>, success = acquire, failure = acquire) : !cir.bool
+// CHECK: %old, %cmp = cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!s32i>, {{.*}} : !s32i, {{.*}} : !s32i, success = acquire, failure = acquire) : (!s32i, !cir.bool)
 
 // LLVM-LABEL: @_Z4fi4aPi
 // LLVM: %[[RES:.*]] = cmpxchg ptr %7, i32 %8, i32 %9 acquire acquire, align 4
@@ -267,7 +277,7 @@ bool fi4b(int *i) {
 }
 
 // CHECK-LABEL: @_Z4fi4bPi
-// CHECK: cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!s32i>, {{.*}} : <!s32i>, {{.*}} : !cir.ptr<!s32i>, success = acquire, failure = acquire) weak : !cir.bool
+// CHECK: %old, %cmp = cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!s32i>, {{.*}} : !s32i, {{.*}} : !s32i, success = acquire, failure = acquire) weak : (!s32i, !cir.bool)
 
 // LLVM-LABEL: @_Z4fi4bPi
 // LLVM: %[[R:.*]] = cmpxchg weak ptr {{.*}}, i32 {{.*}}, i32 {{.*}} acquire acquire, align 4
@@ -280,7 +290,11 @@ bool fi4c(atomic_int *i) {
 }
 
 // CHECK-LABEL: @_Z4fi4cPU7_Atomici
-// CHECK: cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!s32i>, {{.*}} : <!s32i>, {{.*}} : !cir.ptr<!s32i>, success = seq_cst, failure = seq_cst) : !cir.bool
+// CHECK: %old, %cmp = cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!s32i>, {{.*}} : !s32i, {{.*}} : !s32i, success = seq_cst, failure = seq_cst) : (!s32i, !cir.bool)
+// CHECK: %[[CMP:.*]] = cir.unary(not, %cmp) : !cir.bool, !cir.bool
+// CHECK: cir.if %[[CMP:.*]] {
+// CHECK:   cir.store %old, {{.*}} : !s32i, cir.ptr <!s32i>
+// CHECK: }
 
 // LLVM-LABEL: @_Z4fi4cPU7_Atomici
 // LLVM: cmpxchg ptr {{.*}}, i32 {{.*}}, i32 {{.*}} seq_cst seq_cst, align 4
