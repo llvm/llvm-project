@@ -12517,7 +12517,7 @@ This instruction requires several arguments:
       ``llvm::GuaranteedTailCallOpt`` is ``true``, or the calling convention
       is ``tailcc``
    -  `Platform-specific constraints are
-      met. <CodeGenerator.html#tailcallopt>`_
+      met. <CodeGenerator.html#tail-call-optimization>`_
 
 #. The optional ``notail`` marker indicates that the optimizers should not add
    ``tail`` or ``musttail`` markers to the call. It is used to prevent tail
@@ -14138,6 +14138,41 @@ The last argument specifies the value of the increment of the counter variable.
 Semantics:
 """"""""""
 See description of '``llvm.instrprof.increment``' intrinsic.
+
+'``llvm.instrprof.callsite``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.instrprof.callsite(ptr <name>, i64 <hash>,
+                                            i32 <num-counters>,
+                                            i32 <index>, ptr <callsite>)
+
+Overview:
+"""""""""
+
+.. FIXME: detail when it's emitted once the support is added
+
+The '``llvm.instrprof.callsite``' intrinsic should be emitted before a callsite
+that's not to a "fake" callee (like another intrinsic or asm).
+
+Arguments:
+""""""""""
+The first 4 arguments are similar to ``llvm.instrprof.increment``. The indexing
+is specific to callsites, meaning callsites are indexed from 0, independent from
+the indexes used by the other intrinsics (such as 
+``llvm.instrprof.increment[.step]``).
+
+The last argument is the called value of the callsite this intrinsic precedes.
+
+Semantics:
+""""""""""
+.. FIXME: detail how when the lowering pass is added.
+
+This is lowered by contextual profiling.
 
 '``llvm.instrprof.timestamp``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

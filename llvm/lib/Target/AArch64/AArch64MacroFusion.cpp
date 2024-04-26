@@ -245,7 +245,7 @@ static bool isCCSelectPair(const MachineInstr *FirstMI,
     if (FirstMI == nullptr)
       return true;
 
-    if (FirstMI->definesRegister(AArch64::WZR))
+    if (FirstMI->definesRegister(AArch64::WZR, /*TRI=*/nullptr))
       switch (FirstMI->getOpcode()) {
       case AArch64::SUBSWrs:
         return !AArch64InstrInfo::hasShiftedReg(*FirstMI);
@@ -263,7 +263,7 @@ static bool isCCSelectPair(const MachineInstr *FirstMI,
     if (FirstMI == nullptr)
       return true;
 
-    if (FirstMI->definesRegister(AArch64::XZR))
+    if (FirstMI->definesRegister(AArch64::XZR, /*TRI=*/nullptr))
       switch (FirstMI->getOpcode()) {
       case AArch64::SUBSXrs:
         return !AArch64InstrInfo::hasShiftedReg(*FirstMI);

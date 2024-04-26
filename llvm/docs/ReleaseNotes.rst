@@ -50,6 +50,8 @@ Update on required toolchains to build LLVM
 Changes to the LLVM IR
 ----------------------
 
+- Added Memory Model Relaxation Annotations (MMRAs).
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -110,6 +112,11 @@ Changes to the RISC-V Backend
 * The experimental Ssqosid extension is supported.
 * Zacas is no longer experimental.
 * Added the CSR names from the Resumable Non-Maskable Interrupts (Smrnmi) extension.
+* The default atomics mapping was changed to emit an additional trailing fence
+  for sequentially consistent stores, offering compatibility with a future
+  mapping using load-acquire and store-release instructions while remaining
+  fully compatible with objects produced prior to this change. The mapping
+  (ABI) used is recorded as an ELF attribute.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -133,7 +140,7 @@ Changes to the C API
   functions for accessing the values in a blockaddress constant.
 
 * Added ``LLVMConstStringInContext2`` function, which better matches the C++
-  API by using ``size_t`` for string length. Deprecated ``LLVMConstStringInContext``. 
+  API by using ``size_t`` for string length. Deprecated ``LLVMConstStringInContext``.
 
 * Added the following functions for accessing a function's prefix data:
 

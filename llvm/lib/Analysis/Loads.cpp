@@ -710,22 +710,62 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
   return Available;
 }
 
-bool llvm::canReplacePointersIfEqual(Value *A, Value *B, const DataLayout &DL,
-                                     Instruction *CtxI) {
-  Type *Ty = A->getType();
-  assert(Ty == B->getType() && Ty->isPointerTy() &&
-         "values must have matching pointer types");
+// Returns true if a use is either in an ICmp/PtrToInt or a Phi/Select that only
+// feeds into them.
+static bool isPointerUseReplacable(const Use &U) {
+  unsigned Limit = 40;
+  SmallVector<const User *> Worklist({U.getUser()});
+  SmallPtrSet<const User *, 8> Visited;
 
-  // NOTE: The checks in the function are incomplete and currently miss illegal
-  // cases! The current implementation is a starting point and the
-  // implementation should be made stricter over time.
-  if (auto *C = dyn_cast<Constant>(B)) {
-    // Do not allow replacing a pointer with a constant pointer, unless it is
-    // either null or at least one byte is dereferenceable.
-    APInt OneByte(DL.getPointerTypeSizeInBits(Ty), 1);
-    return C->isNullValue() ||
-           isDereferenceableAndAlignedPointer(B, Align(1), OneByte, DL, CtxI);
+  while (!Worklist.empty() && --Limit) {
+    auto *User = Worklist.pop_back_val();
+    if (!Visited.insert(User).second)
+      continue;
+    if (isa<ICmpInst, PtrToIntInst>(User))
+      continue;
+    if (isa<PHINode, SelectInst>(User))
+      Worklist.append(User->user_begin(), User->user_end());
+    else
+      return false;
   }
 
-  return true;
+  return Limit != 0;
+}
+
+// Returns true if `To` is a null pointer, constant dereferenceable pointer or
+// both pointers have the same underlying objects.
+static bool isPointerAlwaysReplaceable(const Value *From, const Value *To,
+                                       const DataLayout &DL) {
+  // This is not strictly correct, but we do it for now to retain important
+  // optimizations.
+  if (isa<ConstantPointerNull>(To))
+    return true;
+  if (isa<Constant>(To) &&
+      isDereferenceablePointer(To, Type::getInt8Ty(To->getContext()), DL))
+    return true;
+  if (getUnderlyingObject(From) == getUnderlyingObject(To))
+    return true;
+  return false;
+}
+
+bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
+                                          const DataLayout &DL) {
+  assert(U->getType() == To->getType() && "values must have matching types");
+  // Not a pointer, just return true.
+  if (!To->getType()->isPointerTy())
+    return true;
+
+  if (isPointerAlwaysReplaceable(&*U, To, DL))
+    return true;
+  return isPointerUseReplacable(U);
+}
+
+bool llvm::canReplacePointersIfEqual(const Value *From, const Value *To,
+                                     const DataLayout &DL) {
+  assert(From->getType() == To->getType() && "values must have matching types");
+  // Not a pointer, just return true.
+  if (!From->getType()->isPointerTy())
+    return true;
+
+  return isPointerAlwaysReplaceable(From, To, DL);
 }
