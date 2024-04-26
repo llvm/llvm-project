@@ -532,7 +532,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ARM_FEATURE_SVE_BF16", "1");
   }
 
-  if ((FPU & SveMode) && HasMatmulFP64)
+  if ((FPU & SveMode) && HasF64MM)
     Builder.defineMacro("__ARM_FEATURE_SVE_MATMUL_FP64", "1");
 
   if ((FPU & SveMode) && HasF32MM)
@@ -722,7 +722,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sve-bf16", FPU & SveMode && HasBFloat16)
       .Case("sve-i8mm", FPU & SveMode && HasMatMul)
       .Case("f32mm", FPU & SveMode && HasF32MM)
-      .Case("f64mm", FPU & SveMode && HasMatmulFP64)
+      .Case("f64mm", FPU & SveMode && HasF64MM)
       .Case("sve2", FPU & SveMode && HasSVE2)
       .Case("sve2-pmull128", FPU & SveMode && HasSVE2AES)
       .Case("sve2-bitperm", FPU & SveMode && HasSVE2BitPerm)
@@ -843,7 +843,7 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       FPU |= NeonMode;
       FPU |= SveMode;
       HasFullFP16 = true;
-      HasMatmulFP64 = true;
+      HasF64MM = true;
     }
     if (Feature == "+sme") {
       HasSME = true;

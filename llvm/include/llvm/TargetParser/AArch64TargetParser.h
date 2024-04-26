@@ -111,7 +111,6 @@ enum ArchExtKind : unsigned {
   AEK_NUM_EXTENSIONS,
 
   // FIXME temporary fixes for inconsistent naming.
-  AEK_F64MM = AEK_MATMULFP64,
   AEK_FCMA = AEK_COMPLXNUM,
   AEK_FP = AEK_FPARMV8,
   AEK_FP16 = AEK_FULLFP16,

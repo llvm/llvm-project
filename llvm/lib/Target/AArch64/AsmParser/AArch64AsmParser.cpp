@@ -3704,7 +3704,7 @@ static const struct Extension {
     {"compnum", {AArch64::FeatureComplxNum}},
     {"dotprod", {AArch64::FeatureDotProd}},
     {"f32mm", {AArch64::FeatureF32MM}},
-    {"f64mm", {AArch64::FeatureMatMulFP64}},
+    {"f64mm", {AArch64::FeatureF64MM}},
     {"fp16", {AArch64::FeatureFullFP16}},
     {"fp16fml", {AArch64::FeatureFP16FML}},
     {"i8mm", {AArch64::FeatureMatMulInt8}},
@@ -3731,7 +3731,7 @@ static const struct Extension {
     {"sme-lutv2", {AArch64::FeatureSME_LUTv2}},
     {"sme-f8f16", {AArch64::FeatureSMEF8F16}},
     {"sme-f8f32", {AArch64::FeatureSMEF8F32}},
-    {"sme-fa64",  {AArch64::FeatureSMEFA64}},
+    {"sme-fa64", {AArch64::FeatureSMEFA64}},
     {"cpa", {AArch64::FeatureCPA}},
     {"tlbiw", {AArch64::FeatureTLBIW}},
 };

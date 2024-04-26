@@ -467,7 +467,7 @@ def FeatureMatMulInt8 : Extension<"i8mm", "MatMulInt8",
 def FeatureF32MM : Extension<"f32mm", "F32MM",
     "Enable Matrix Multiply FP32 Extension (FEAT_F32MM)", [FeatureSVE]>;
 
-def FeatureMatMulFP64 : Extension<"f64mm", "MatMulFP64",
+def FeatureF64MM : Extension<"f64mm", "F64MM",
     "Enable Matrix Multiply FP64 Extension (FEAT_F64MM)", [FeatureSVE]>;
 
 def FeatureXS : SubtargetFeature<"xs", "HasXS",
