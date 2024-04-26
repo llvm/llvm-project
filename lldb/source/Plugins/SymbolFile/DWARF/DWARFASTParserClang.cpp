@@ -495,6 +495,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   case DW_TAG_const_type:
   case DW_TAG_restrict_type:
   case DW_TAG_volatile_type:
+  case DW_TAG_LLVM_ptrauth_type:
   case DW_TAG_atomic_type:
   case DW_TAG_unspecified_type: {
     type_sp = ParseTypeModifier(sc, die, attrs);
