@@ -40,7 +40,7 @@ define zeroext i8 @test3(i8 zeroext %x, i8 zeroext %c) {
 ; CHECK-NEXT:    move.b (11,%sp), %d0
 ; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    muls #171, %d0
-; CHECK-NEXT:    move.w #9, %d1
+; CHECK-NEXT:    moveq #9, %d1
 ; CHECK-NEXT:    lsr.w %d1, %d0
 ; CHECK-NEXT:    and.l #65535, %d0
 ; CHECK-NEXT:    rts
@@ -58,7 +58,7 @@ define signext i16 @test4(i16 signext %x) nounwind {
 ; CHECK-NEXT:    muls #1986, %d0
 ; CHECK-NEXT:    asr.l #8, %d0
 ; CHECK-NEXT:    asr.l #8, %d0
-; CHECK-NEXT:    move.w #15, %d1
+; CHECK-NEXT:    moveq #15, %d1
 ; CHECK-NEXT:    move.w %d0, %d2
 ; CHECK-NEXT:    lsr.w %d1, %d2
 ; CHECK-NEXT:    add.w %d2, %d0
@@ -94,7 +94,7 @@ define signext i16 @test6(i16 signext %x) nounwind {
 ; CHECK-NEXT:    muls #26215, %d0
 ; CHECK-NEXT:    asr.l #8, %d0
 ; CHECK-NEXT:    asr.l #8, %d0
-; CHECK-NEXT:    move.w #15, %d1
+; CHECK-NEXT:    moveq #15, %d1
 ; CHECK-NEXT:    move.w %d0, %d2
 ; CHECK-NEXT:    lsr.w %d1, %d2
 ; CHECK-NEXT:    asr.w #2, %d0
@@ -128,7 +128,7 @@ define i8 @test8(i8 %x) nounwind {
 ; CHECK-NEXT:    lsr.b #1, %d0
 ; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    muls #211, %d0
-; CHECK-NEXT:    move.w #13, %d1
+; CHECK-NEXT:    moveq #13, %d1
 ; CHECK-NEXT:    lsr.w %d1, %d0
 ; CHECK-NEXT:    ; kill: def $bd0 killed $bd0 killed $d0
 ; CHECK-NEXT:    rts
@@ -143,7 +143,7 @@ define i8 @test9(i8 %x) nounwind {
 ; CHECK-NEXT:    lsr.b #2, %d0
 ; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    muls #71, %d0
-; CHECK-NEXT:    move.w #11, %d1
+; CHECK-NEXT:    moveq #11, %d1
 ; CHECK-NEXT:    lsr.w %d1, %d0
 ; CHECK-NEXT:    ; kill: def $bd0 killed $bd0 killed $d0
 ; CHECK-NEXT:    rts
@@ -156,11 +156,11 @@ define i32 @testsize1(i32 %x) minsize nounwind {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    movem.l %d2, (0,%sp) ; 8-byte Folded Spill
-; CHECK-NEXT:    move.l #31, %d1
+; CHECK-NEXT:    moveq #31, %d1
 ; CHECK-NEXT:    move.l (8,%sp), %d0
 ; CHECK-NEXT:    move.l %d0, %d2
 ; CHECK-NEXT:    asr.l %d1, %d2
-; CHECK-NEXT:    move.l #27, %d1
+; CHECK-NEXT:    moveq #27, %d1
 ; CHECK-NEXT:    lsr.l %d1, %d2
 ; CHECK-NEXT:    add.l %d2, %d0
 ; CHECK-NEXT:    asr.l #5, %d0
