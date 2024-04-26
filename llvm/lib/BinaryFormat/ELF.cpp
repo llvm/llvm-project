@@ -568,9 +568,8 @@ StringRef ELF::convertEMachineToArchName(uint16_t EMachine) {
   }
 }
 
-uint8_t ELF::convertOSToOSAbi(StringRef OS) {
-  std::string LowerOS = OS.lower();
-  return StringSwitch<uint16_t>(LowerOS)
+uint8_t ELF::convertNameToOSAbi(StringRef Name) {
+  return StringSwitch<uint16_t>(Name)
       .StartsWith("hpux", ELFOSABI_HPUX)
       .StartsWith("netbsd", ELFOSABI_NETBSD)
       .StartsWith("gnu", ELFOSABI_GNU)
@@ -597,7 +596,7 @@ uint8_t ELF::convertOSToOSAbi(StringRef OS) {
       .Default(ELFOSABI_NONE);
 }
 
-StringRef ELF::convertOSAbiToOS(uint8_t OSAbi) {
+StringRef ELF::convertOSAbiToName(uint8_t OSAbi) {
   switch (OSAbi) {
   case ELFOSABI_HPUX:
     return "hpux";

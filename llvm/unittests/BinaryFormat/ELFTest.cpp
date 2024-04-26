@@ -14,19 +14,19 @@ using namespace llvm::ELF;
 
 namespace {
 TEST(ELFTest, OSAbi) {
-  EXPECT_EQ(ELFOSABI_GNU, convertOSToOSAbi("gnu"));
-  EXPECT_EQ(ELFOSABI_FREEBSD, convertOSToOSAbi("freebsd"));
-  EXPECT_EQ(ELFOSABI_STANDALONE, convertOSToOSAbi("standalone"));
-  EXPECT_EQ(ELFOSABI_NONE, convertOSToOSAbi("none"));
+  EXPECT_EQ(ELFOSABI_GNU, convertNameToOSAbi("gnu"));
+  EXPECT_EQ(ELFOSABI_FREEBSD, convertNameToOSAbi("freebsd"));
+  EXPECT_EQ(ELFOSABI_STANDALONE, convertNameToOSAbi("standalone"));
+  EXPECT_EQ(ELFOSABI_NONE, convertNameToOSAbi("none"));
   // Test unrecognized strings.
-  EXPECT_EQ(ELFOSABI_NONE, convertOSToOSAbi(""));
-  EXPECT_EQ(ELFOSABI_NONE, convertOSToOSAbi("linux"));
+  EXPECT_EQ(ELFOSABI_NONE, convertNameToOSAbi(""));
+  EXPECT_EQ(ELFOSABI_NONE, convertNameToOSAbi("linux"));
 
-  EXPECT_EQ("gnu", convertOSAbiToOS(ELFOSABI_GNU));
-  EXPECT_EQ("freebsd", convertOSAbiToOS(ELFOSABI_FREEBSD));
-  EXPECT_EQ("standalone", convertOSAbiToOS(ELFOSABI_STANDALONE));
-  EXPECT_EQ("none", convertOSAbiToOS(ELFOSABI_NONE));
+  EXPECT_EQ("gnu", convertOSAbiToName(ELFOSABI_GNU));
+  EXPECT_EQ("freebsd", convertOSAbiToName(ELFOSABI_FREEBSD));
+  EXPECT_EQ("standalone", convertOSAbiToName(ELFOSABI_STANDALONE));
+  EXPECT_EQ("none", convertOSAbiToName(ELFOSABI_NONE));
   // Test unrecognized values.
-  EXPECT_EQ("none", convertOSAbiToOS(0xfe));
+  EXPECT_EQ("none", convertOSAbiToName(0xfe));
 }
 } // namespace
