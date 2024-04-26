@@ -1596,8 +1596,7 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
         // Lower bound is normalized to 0 for BIND(C) interoperability.
         mlir::Value lb = zero;
         const bool isaPointerOrAllocatable =
-            mlir::isa<fir::PointerType>() ||
-            mlir::isa<fir::HeapType>(eleTyeleTy);
+            mlir::isa<fir::PointerType, fir::HeapType>(eleTy);
         // Lower bound is defaults to 1 for POINTER, ALLOCATABLE, and
         // denormalized descriptors.
         if (isaPointerOrAllocatable || !normalizedLowerBound(xbox))

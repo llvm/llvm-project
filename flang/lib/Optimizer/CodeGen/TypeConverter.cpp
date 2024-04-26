@@ -181,7 +181,7 @@ std::optional<mlir::LogicalResult> LLVMTypeConverter::convertRecordType(
   for (auto mem : derived.getTypeList()) {
     // Prevent fir.box from degenerating to a pointer to a descriptor in the
     // context of a record type.
-    if (auto box = mem.mlir::dyn_cast<fir::BaseBoxType>(second))
+    if (auto box = mlir::dyn_cast<fir::BaseBoxType>(mem.second))
       members.push_back(convertBoxTypeAsStruct(box));
     else
       members.push_back(mlir::cast<mlir::Type>(convertType(mem.second)));

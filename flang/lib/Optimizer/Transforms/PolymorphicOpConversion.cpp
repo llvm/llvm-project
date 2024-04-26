@@ -168,8 +168,8 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
 
     // Load the correct binding.
     mlir::Value bindings = rewriter.create<fir::BoxAddrOp>(loc, bindingBox);
-    fir::RecordType bindingTy = mlir::cast<fir::BaseBoxType>(
-        fir::unwrapIfDerived(bindingBox.getType()));
+    fir::RecordType bindingTy = fir::unwrapIfDerived(
+        mlir::cast<fir::BaseBoxType>(bindingBox.getType()));
     mlir::Type bindingAddrTy = fir::ReferenceType::get(bindingTy);
     mlir::Value bindingIdxVal = rewriter.create<mlir::arith::ConstantOp>(
         loc, rewriter.getIndexType(), rewriter.getIndexAttr(bindingIdx));

@@ -1119,7 +1119,7 @@ PPCIntrinsicLibrary::genVecAbs(mlir::Type resultType,
     funcOp = builder.createFunction(loc, fname, ftype);
     auto callOp{builder.create<fir::CallOp>(loc, funcOp, argBases[0])};
     return callOp.getResult(0);
-  } else if (auto eleTy = vTypeInfo.mlir::dyn_cast<mlir::IntegerType>(eleTy)) {
+  } else if (auto eleTy = mlir::dyn_cast<mlir::IntegerType>(vTypeInfo.eleTy)) {
     // vec_abs(arg1) = max(0 - arg1, arg1)
 
     auto newVecTy{mlir::VectorType::get(vTypeInfo.len, eleTy)};
@@ -1178,8 +1178,8 @@ fir::ExtendedValue PPCIntrinsicLibrary::genVecAddAndMulSubXor(
 
   auto vecTyInfo{getVecTypeFromFir(argBases[0])};
 
-  const auto isInteger{vecTyInfo.mlir::isa<mlir::IntegerType>(eleTy)};
-  const auto isFloat{vecTyInfo.mlir::isa<mlir::FloatType>(eleTy)};
+  const auto isInteger{mlir::isa<mlir::IntegerType>(vecTyInfo.eleTy)};
+  const auto isFloat{mlir::isa<mlir::FloatType>(vecTyInfo.eleTy)};
   assert((isInteger || isFloat) && "unknown vector type");
 
   auto vargs{convertVecArgs(builder, loc, vecTyInfo, argBases)};
@@ -1213,7 +1213,7 @@ fir::ExtendedValue PPCIntrinsicLibrary::genVecAddAndMulSubXor(
       arg2 = vargs[1];
     } else if (isFloat) {
       // bitcast the arguments to integer
-      auto wd{vecTyInfo.mlir::dyn_cast<mlir::FloatType>(eleTy).getWidth()};
+      auto wd{mlir::dyn_cast<mlir::FloatType>(vecTyInfo.eleTy).getWidth()};
       auto ftype{builder.getIntegerType(wd)};
       auto bcVecTy{mlir::VectorType::get(vecTyInfo.len, ftype)};
       arg1 = builder.create<mlir::vector::BitCastOp>(loc, bcVecTy, vargs[0]);
@@ -1451,7 +1451,7 @@ PPCIntrinsicLibrary::genVecCmp(mlir::Type resultType,
 
   mlir::Value res{nullptr};
 
-  if (auto eTy = vecTyInfo.mlir::dyn_cast<mlir::IntegerType>(eleTy)) {
+  if (auto eTy = mlir::dyn_cast<mlir::IntegerType>(vecTyInfo.eleTy)) {
     constexpr int firstArg{0};
     constexpr int secondArg{1};
     std::map<VecOp, std::array<int, 2>> argOrder{
@@ -1560,7 +1560,7 @@ PPCIntrinsicLibrary::genVecConvert(mlir::Type resultType,
   case VecOp::Ctf: {
     assert(args.size() == 2);
     auto convArg{builder.createConvert(loc, i32Ty, argBases[1])};
-    auto eTy{vecTyInfo.mlir::dyn_cast<mlir::IntegerType>(eleTy)};
+    auto eTy{mlir::dyn_cast<mlir::IntegerType>(vecTyInfo.eleTy)};
     assert(eTy && "Unsupported vector type");
     const auto isUnsigned{eTy.isUnsignedInteger()};
     const auto width{eTy.getWidth()};
@@ -2859,7 +2859,7 @@ void PPCIntrinsicLibrary::genVecStore(llvm::ArrayRef<fir::ExtendedValue> args) {
     if (arg1TyInfo.isFloat32()) {
       stTy = mlir::VectorType::get(len, i32ty);
       fname = "llvm.ppc.altivec.stvewx";
-    } else if (arg1TyInfo.mlir::isa<mlir::IntegerType>(eleTy)) {
+    } else if (mlir::isa<mlir::IntegerType>(arg1TyInfo.eleTy)) {
       stTy = mlir::VectorType::get(len, mlir::IntegerType::get(context, width));
 
       switch (width) {

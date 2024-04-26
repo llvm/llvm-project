@@ -732,7 +732,7 @@ OrderedAssignmentRewriter::generateYieldedLHS(
         // If the shape cannot be retrieved from the RHS, it must have been
         // saved. Get it from the temporary.
         auto &vectorTmp =
-            temp->mlir::cast<fir::factory::AnyVectorSubscriptStack>(second);
+            temp->second.cast<fir::factory::AnyVectorSubscriptStack>();
         loweredLhs.vectorSubscriptShape = vectorTmp.fetchShape(loc, builder);
       }
       loweredLhs.vectorSubscriptLoopNest = hlfir::genLoopNest(

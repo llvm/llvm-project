@@ -566,8 +566,7 @@ private:
     for (auto it = evaluationList.begin(), end = evaluationList.end();
          it != end; ++it) {
       auto &eval = *it;
-      if (mlir::isA<parser::EntryStmt>(eval) ||
-          eval.isIntermediateConstructStmt()) {
+      if (eval.isA<parser::EntryStmt>() || eval.isIntermediateConstructStmt()) {
         ifCandidateStack.clear();
         continue;
       }
@@ -575,7 +574,7 @@ private:
         return e->isConstruct() ? &*e->evaluationList->begin() : e;
       };
       const Fortran::lower::pft::Evaluation &targetEval = *firstStmt(&eval);
-      bool targetEvalIsEndDoStmt = mlir::isA<parser::EndDoStmt>(targetEval);
+      bool targetEvalIsEndDoStmt = targetEval.isA<parser::EndDoStmt>();
       auto branchTargetMatch = [&]() {
         if (const parser::Label targetLabel =
                 ifCandidateStack.back().ifTargetLabel)
@@ -614,8 +613,7 @@ private:
           ifCandidateStack.pop_back();
         }
       }
-      if (mlir::isA<parser::IfConstruct>(eval) &&
-          eval.evaluationList->size() == 3) {
+      if (eval.isA<parser::IfConstruct>() && eval.evaluationList->size() == 3) {
         const auto bodyEval = std::next(eval.evaluationList->begin());
         if (const auto *gotoStmt = bodyEval->getIf<parser::GotoStmt>()) {
           if (!bodyEval->lexicalSuccessor->label)
@@ -1201,7 +1199,7 @@ public:
       outputStream << " -> " << eval.constructExit->printIndex;
     else if (eval.controlSuccessor)
       outputStream << " -> " << eval.controlSuccessor->printIndex;
-    else if (mlir::isA<parser::EntryStmt>(eval) && eval.lexicalSuccessor)
+    else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor)
       outputStream << " -> " << eval.lexicalSuccessor->printIndex;
     if (!eval.position.empty())
       outputStream << ": " << eval.position.ToString();

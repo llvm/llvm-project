@@ -892,8 +892,7 @@ public:
   /// or a full subprogram context.
   Fortran::lower::StatementContext &getFctCtx() override final {
     if (!activeConstructStack.empty() &&
-        activeConstructStack.back().mlir::isA<Fortran::parser::BlockConstruct>(
-            eval))
+        activeConstructStack.back().eval.isA<Fortran::parser::BlockConstruct>())
       return activeConstructStack.back().stmtCtx;
     return bridge.fctCtx();
   }
@@ -2080,10 +2079,10 @@ private:
           builder->setInsertionPointToStart(
               &currentIfOp.getElseRegion().front());
           currentIfOp = genIfOp(genIfCondition(s));
-        } else if (mlir::isA<Fortran::parser::ElseStmt>(e)) {
+        } else if (e.isA<Fortran::parser::ElseStmt>()) {
           builder->setInsertionPointToStart(
               &currentIfOp.getElseRegion().front());
-        } else if (mlir::isA<Fortran::parser::EndIfStmt>(e)) {
+        } else if (e.isA<Fortran::parser::EndIfStmt>()) {
           builder->setInsertionPointAfter(topIfOp);
           genFIR(e, /*unstructuredContext=*/false); // may generate branch
         } else {
@@ -3280,8 +3279,8 @@ private:
     // indicates that these specifiers have a fallthrough target. END and EOR
     // specifiers may appear on READ and WAIT statements.
     bool allSpecifiersRequired = errLabel && hasIostat &&
-                                 (mlir::isA<Fortran::parser::ReadStmt>(eval) ||
-                                  mlir::isA<Fortran::parser::WaitStmt>(eval));
+                                 (eval.isA<Fortran::parser::ReadStmt>() ||
+                                  eval.isA<Fortran::parser::WaitStmt>());
     mlir::Value selector =
         builder->createConvert(toLocation(), builder->getIndexType(), iostat);
     llvm::SmallVector<int64_t> valueList;
@@ -4663,7 +4662,7 @@ private:
     assert(builder && "FirOpBuilder did not instantiate");
     builder->setFastMathFlags(bridge.getLoweringOptions().getMathOptions());
     builder->setInsertionPointToStart(&func.front());
-    if (funit.mlir::isA<Fortran::lower::pft::FunctionLikeUnit>(parent)) {
+    if (funit.parent.isA<Fortran::lower::pft::FunctionLikeUnit>()) {
       // Give internal linkage to internal functions. There are no name clash
       // risks, but giving global linkage to internal procedure will break the
       // static link register in shared libraries because of the system calls.

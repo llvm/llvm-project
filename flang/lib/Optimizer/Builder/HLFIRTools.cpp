@@ -415,7 +415,8 @@ hlfir::genBounds(mlir::Location loc, fir::FirOpBuilder &builder,
 llvm::SmallVector<std::pair<mlir::Value, mlir::Value>>
 hlfir::genBounds(mlir::Location loc, fir::FirOpBuilder &builder,
                  mlir::Value shape) {
-  assert(mlir::isa<fir::ShapeShiftType, fir::ShapeType>(shape.getType()) &&
+  assert((mlir::isa<fir::ShapeShiftType>(shape.getType()) ||
+          mlir::isa<fir::ShapeType>(shape.getType())) &&
          "shape must contain extents");
   auto extents = hlfir::getExplicitExtentsFromShape(shape, builder);
   auto lowers = getExplicitLboundsFromShape(shape);

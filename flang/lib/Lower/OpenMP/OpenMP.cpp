@@ -1593,7 +1593,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
             mlir::omp::VariableCaptureKind::ByRef;
 
         mlir::Type eleType = baseOp.getType();
-        if (mlir::dyn_cast<fir::ReferenceType>(auto refType = baseOp.getType()))
+        if (auto refType = mlir::dyn_cast<fir::ReferenceType>(baseOp.getType()))
           eleType = refType.getElementType();
 
         // If a variable is specified in declare target link and if device

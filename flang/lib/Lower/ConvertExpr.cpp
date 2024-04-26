@@ -2670,7 +2670,7 @@ public:
                 // free-casting the base address to be a !fir.char reference and
                 // setting the LEN argument to undefined. What could go wrong?
                 auto dataPtr = fir::getBase(x);
-                assert(!mir::isa<fir::BoxType>(dataPtr.getType()));
+                assert(!mlir::isa<fir::BoxType>(dataPtr.getType()));
                 return builder.convertWithSemantics(
                     loc, argTy, dataPtr,
                     /*allowCharacterConversion=*/true);
