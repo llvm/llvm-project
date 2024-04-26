@@ -357,7 +357,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::f128, &AArch64::FPR128RegClass);
   }
 
-  if (Subtarget->hasNEON()) {
+  if (Subtarget->isNeonAvailable()) {
     addRegisterClass(MVT::v16i8, &AArch64::FPR8RegClass);
     addRegisterClass(MVT::v8i16, &AArch64::FPR16RegClass);
     // Someone set us up the NEON.
@@ -378,6 +378,27 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addQRTypeForNEON(MVT::v2i64);
     addQRTypeForNEON(MVT::v8f16);
     addQRTypeForNEON(MVT::v8bf16);
+  } else if (Subtarget->hasNEON() || Subtarget->useSVEForFixedLengthVectors()) {
+    addRegisterClass(MVT::v16i8, &AArch64::FPR8RegClass);
+    addRegisterClass(MVT::v8i16, &AArch64::FPR16RegClass);
+
+    addRegisterClass(MVT::v2f32, &AArch64::FPR64RegClass);
+    addRegisterClass(MVT::v8i8, &AArch64::FPR64RegClass);
+    addRegisterClass(MVT::v4i16, &AArch64::FPR64RegClass);
+    addRegisterClass(MVT::v2i32, &AArch64::FPR64RegClass);
+    addRegisterClass(MVT::v1i64, &AArch64::FPR64RegClass);
+    addRegisterClass(MVT::v1f64, &AArch64::FPR64RegClass);
+    addRegisterClass(MVT::v4f16, &AArch64::FPR64RegClass);
+    addRegisterClass(MVT::v4bf16, &AArch64::FPR64RegClass);
+
+    addRegisterClass(MVT::v4f32, &AArch64::FPR128RegClass);
+    addRegisterClass(MVT::v2f64, &AArch64::FPR128RegClass);
+    addRegisterClass(MVT::v16i8, &AArch64::FPR128RegClass);
+    addRegisterClass(MVT::v8i16, &AArch64::FPR128RegClass);
+    addRegisterClass(MVT::v4i32, &AArch64::FPR128RegClass);
+    addRegisterClass(MVT::v2i64, &AArch64::FPR128RegClass);
+    addRegisterClass(MVT::v8f16, &AArch64::FPR128RegClass);
+    addRegisterClass(MVT::v8bf16, &AArch64::FPR128RegClass);
   }
 
   if (Subtarget->hasSVEorSME()) {
@@ -1125,7 +1146,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 
-  if (Subtarget->hasNEON()) {
+  if (Subtarget->isNeonAvailable()) {
     // FIXME: v1f64 shouldn't be legal if we can avoid it, because it leads to
     // silliness like this:
     for (auto Op :
@@ -1337,6 +1358,24 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // FADDP custom lowering
     for (MVT VT : { MVT::v16f16, MVT::v8f32, MVT::v4f64 })
       setOperationAction(ISD::FADD, VT, Custom);
+  } else {
+    for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
+      for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op)
+        setOperationAction(Op, VT, Expand);
+
+      if (VT.is128BitVector() || VT.is64BitVector()) {
+        setOperationAction(ISD::LOAD, VT, Legal);
+        setOperationAction(ISD::STORE, VT, Legal);
+        setOperationAction(ISD::BITCAST, VT,
+                           Subtarget->isLittleEndian() ? Legal : Expand);
+      }
+      for (MVT InnerVT : MVT::fixedlen_vector_valuetypes()) {
+        setTruncStoreAction(VT, InnerVT, Expand);
+        setLoadExtAction(ISD::SEXTLOAD, VT, InnerVT, Expand);
+        setLoadExtAction(ISD::ZEXTLOAD, VT, InnerVT, Expand);
+        setLoadExtAction(ISD::EXTLOAD, VT, InnerVT, Expand);
+      }
+    }
   }
 
   if (Subtarget->hasSME()) {
@@ -9445,7 +9484,8 @@ SDValue AArch64TargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue AArch64TargetLowering::LowerFCOPYSIGN(SDValue Op,
                                               SelectionDAG &DAG) const {
-  if (!Subtarget->hasNEON())
+  if (!Subtarget->isNeonAvailable() &&
+      !Subtarget->useSVEForFixedLengthVectors())
     return SDValue();
 
   EVT VT = Op.getValueType();
@@ -14139,6 +14179,13 @@ SDValue AArch64TargetLowering::LowerDIV(SDValue Op, SelectionDAG &DAG) const {
   SDValue ResultLo = DAG.getNode(Op.getOpcode(), dl, WidenedVT, Op0Lo, Op1Lo);
   SDValue ResultHi = DAG.getNode(Op.getOpcode(), dl, WidenedVT, Op0Hi, Op1Hi);
   return DAG.getNode(AArch64ISD::UZP1, dl, VT, ResultLo, ResultHi);
+}
+
+bool AArch64TargetLowering::shouldExpandBuildVectorWithShuffles(
+    EVT VT, unsigned DefinedValues) const {
+  if (!Subtarget->isNeonAvailable())
+    return false;
+  return TargetLowering::shouldExpandBuildVectorWithShuffles(VT, DefinedValues);
 }
 
 bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {

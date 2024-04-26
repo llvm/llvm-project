@@ -1020,6 +1020,8 @@ private:
   void addDRTypeForNEON(MVT VT);
   void addQRTypeForNEON(MVT VT);
 
+  bool shouldExpandBuildVectorWithShuffles(EVT, unsigned) const override;
+
   unsigned allocateLazySaveBuffer(SDValue &Chain, const SDLoc &DL,
                                   SelectionDAG &DAG) const;
 
