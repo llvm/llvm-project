@@ -163,8 +163,8 @@ inline void addAVC(
 
 inline void addMemoryAllocationOpt(mlir::PassManager &pm) {
   addNestedPassConditionally<mlir::func::FuncOp>(pm, disableFirMao, [&]() {
-    return fir::createMemoryAllocationPass(
-        dynamicArrayStackToHeapAllocation, arrayStackAllocationThreshold);
+    return fir::createMemoryAllocationOpt(
+        {dynamicArrayStackToHeapAllocation, arrayStackAllocationThreshold});
   });
 }
 
@@ -253,12 +253,12 @@ inline void createDefaultFIROptimizerPassPipeline(
   }
 
   if (pc.LoopVersioning)
-    pm.addPass(fir::createLoopVersioningPass());
+    pm.addPass(fir::createLoopVersioning());
 
   pm.addPass(mlir::createCSEPass());
 
   if (pc.StackArrays)
-    pm.addPass(fir::createStackArraysPass());
+    pm.addPass(fir::createStackArrays());
   else
     fir::addMemoryAllocationOpt(pm);
 
