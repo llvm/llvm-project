@@ -193,8 +193,7 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
         assert(BaseDecl);
 
         if (Init->isBaseVirtual()) {
-          const Record::Base *B = R->getVirtualBase(BaseDecl);
-          assert(B);
+          assert(R->getVirtualBase(BaseDecl));
           if (!this->emitGetPtrThisVirtBase(BaseDecl, InitExpr))
             return false;
 
