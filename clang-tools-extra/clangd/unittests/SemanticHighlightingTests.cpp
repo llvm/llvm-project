@@ -621,7 +621,7 @@ sizeof...($TemplateParameter[[Elements]]);
       struct $Class_def[[Foo]] {
         int $Field_decl[[Waldo]];
         void $Method_def[[bar]]() {
-          $Class[[Foo]]().$Field[[Waldo]];
+          $Class[[Foo]]().$Field_dependentName[[Waldo]];
         }
         template $Bracket[[<]]typename $TemplateParameter_def[[U]]$Bracket[[>]]
         void $Method_def[[bar1]]() {
