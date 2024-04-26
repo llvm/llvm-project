@@ -89,18 +89,21 @@ inline MemRefType getMemRefType(T &&t) {
 /// Returns null-attribute for any type without an encoding.
 SparseTensorEncodingAttr getSparseTensorEncoding(Type type);
 
+/// Returns true iff the type range has any sparse tensor type.
+inline bool hasAnySparseType(TypeRange types) {
+  return llvm::any_of(types, [](Type type) {
+    return getSparseTensorEncoding(type) != nullptr;
+  });
+}
+
 /// Returns true iff MLIR operand has any sparse operand.
 inline bool hasAnySparseOperand(Operation *op) {
-  return llvm::any_of(op->getOperands().getTypes(), [](Type t) {
-    return getSparseTensorEncoding(t) != nullptr;
-  });
+  return hasAnySparseType(op->getOperands().getTypes());
 }
 
 /// Returns true iff MLIR operand has any sparse result.
 inline bool hasAnySparseResult(Operation *op) {
-  return llvm::any_of(op->getResults().getTypes(), [](Type t) {
-    return getSparseTensorEncoding(t) != nullptr;
-  });
+  return hasAnySparseType(op->getResults().getTypes());
 }
 
 /// Returns true iff MLIR operand has any sparse operand or result.
