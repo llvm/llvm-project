@@ -5706,7 +5706,7 @@ static void replaceUsesOfNonProtoConstant(llvm::Constant *old,
 
   llvm::Type *newRetTy = newFn->getReturnType();
   SmallVector<llvm::Value*, 4> newArgs;
-  SmallVector<llvm::CallBase* > toBeRemoved;
+  SmallVector<llvm::CallBase *> toBeRemoved;
 
   for (llvm::Value::use_iterator ui = old->use_begin(), ue = old->use_end();
          ui != ue; ) {
@@ -5796,7 +5796,7 @@ static void replaceUsesOfNonProtoConstant(llvm::Constant *old,
     toBeRemoved.push_back(callSite);
   }
   for (llvm::CallBase *callSite : toBeRemoved) {
-	callSite->eraseFromParent();
+    callSite->eraseFromParent();
   }
 }
 
