@@ -247,7 +247,7 @@ void ARMTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
         emitFPU(STI.hasFeature(ARM::FeatureFP64) ? ARM::FK_FPV5_D16
                                                  : ARM::FK_FPV5_SP_D16);
         if (STI.hasFeature(ARM::HasMVEFloatOps))
-          emitArchExtension(ARM::AEK_NEON | ARM::AEK_DSP | ARM::AEK_FP);
+          emitArchExtension(ARM::AEK_NEON | ARM::AEK_DSP | ARM::AEK_FPARMV8);
       }
     } else if (STI.hasFeature(ARM::FeatureVFP4_D16_SP))
       emitFPU(STI.hasFeature(ARM::FeatureD32)

@@ -245,7 +245,7 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
 
   // -mgeneral-regs-only disables all floating-point features.
   if (Args.getLastArg(options::OPT_mgeneral_regs_only)) {
-    Extensions.disable(llvm::AArch64::AEK_FP);
+    Extensions.disable(llvm::AArch64::AEK_FPARMV8);
   }
 
   // En/disable crc

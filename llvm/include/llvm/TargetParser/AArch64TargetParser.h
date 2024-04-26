@@ -111,7 +111,6 @@ enum ArchExtKind : unsigned {
   AEK_NUM_EXTENSIONS,
 
   // FIXME temporary fixes for inconsistent naming.
-  AEK_FP = AEK_FPARMV8,
   AEK_FP16 = AEK_FULLFP16,
   AEK_RASv2 = AEK_RASV2,
   AEK_SME2p1 = AEK_SME2P1,
@@ -164,7 +163,7 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"fcma", AArch64::AEK_FCMA, "+fcma", "-fcma", FEAT_FCMA, "+fp-armv8,+neon,+fcma", 220},
     {"flagm", AArch64::AEK_FLAGM, "+flagm", "-flagm", FEAT_FLAGM, "+flagm", 20},
     {"flagm2", AArch64::AEK_NONE, {}, {}, FEAT_FLAGM2, "+flagm,+altnzcv", 30},
-    {"fp", AArch64::AEK_FP, "+fp-armv8", "-fp-armv8", FEAT_FP, "+fp-armv8,+neon", 90},
+    {"fp", AArch64::AEK_FPARMV8, "+fp-armv8", "-fp-armv8", FEAT_FP, "+fp-armv8,+neon", 90},
     {"fp16", AArch64::AEK_FP16, "+fullfp16", "-fullfp16", FEAT_FP16, "+fullfp16,+fp-armv8,+neon", 170},
     {"fp16fml", AArch64::AEK_FP16FML, "+fp16fml", "-fp16fml", FEAT_FP16FML, "+fp16fml,+fullfp16,+fp-armv8,+neon", 175},
     {"frintts", AArch64::AEK_NONE, {}, {}, FEAT_FRINTTS, "+fptoint", 250},
@@ -301,10 +300,10 @@ struct ExtensionDependency {
 // Each entry here is a link in the dependency chain starting from the
 // extension that was added to the architecture first.
 inline constexpr ExtensionDependency ExtensionDependencies[] = {
-  {AEK_FP, AEK_FP16},
-  {AEK_FP, AEK_NEON},
-  {AEK_FP, AEK_JSCVT},
-  {AEK_FP, AEK_FP8},
+  {AEK_FPARMV8, AEK_FP16},
+  {AEK_FPARMV8, AEK_NEON},
+  {AEK_FPARMV8, AEK_JSCVT},
+  {AEK_FPARMV8, AEK_FP8},
   {AEK_NEON, AEK_CRYPTO},
   {AEK_NEON, AEK_AES},
   {AEK_NEON, AEK_SHA2},
@@ -405,7 +404,7 @@ struct ArchInfo {
 
 // clang-format off
 inline constexpr ArchInfo ARMV8A    = { VersionTuple{8, 0}, AProfile, "armv8-a", "+v8a", (
-                                        AArch64::ExtensionBitset({AArch64::AEK_FP, AArch64::AEK_NEON})), };
+                                        AArch64::ExtensionBitset({AArch64::AEK_FPARMV8, AArch64::AEK_NEON})), };
 inline constexpr ArchInfo ARMV8_1A  = { VersionTuple{8, 1}, AProfile, "armv8.1-a", "+v8.1a", (ARMV8A.DefaultExts |
                                         AArch64::ExtensionBitset({AArch64::AEK_CRC, AArch64::AEK_LSE, AArch64::AEK_RDM}))};
 inline constexpr ArchInfo ARMV8_2A  = { VersionTuple{8, 2}, AProfile, "armv8.2-a", "+v8.2a", (ARMV8_1A.DefaultExts |

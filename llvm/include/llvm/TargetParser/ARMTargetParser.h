@@ -33,7 +33,7 @@ enum ArchExtKind : uint64_t {
   AEK_NONE = 1,
   AEK_CRC = 1 << 1,
   AEK_CRYPTO = 1 << 2,
-  AEK_FP = 1 << 3,
+  AEK_FPARMV8 = 1 << 3,
   AEK_HWDIVTHUMB = 1 << 4,
   AEK_HWDIVARM = 1 << 5,
   AEK_MP = 1 << 6,
