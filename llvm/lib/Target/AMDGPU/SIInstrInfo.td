@@ -1171,11 +1171,8 @@ def MatrixBFMT : CustomOperand<i32, 1, "MatrixBFMT">;
 def MatrixAScale : CustomOperand<i32, 1, "MatrixAScale">;
 def MatrixBScale : CustomOperand<i32, 1, "MatrixBScale">;
 
-def ScaleSel : CustomOperand<i8, 1, "ScaleSel">;
-def scalesel_0 : DefaultOperand<ScaleSel, 0>;
-
-def ByteSel : CustomOperand<i8, 1, "ByteSel">;
-def bytesel_0 : DefaultOperand<ByteSel, 0>;
+def ScaleSel : NamedIntOperand<i8, "scale_sel">;
+def ByteSel : NamedIntOperand<i8, "byte_sel">;
 
 class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";

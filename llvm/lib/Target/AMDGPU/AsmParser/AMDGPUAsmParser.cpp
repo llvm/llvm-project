@@ -1995,12 +1995,6 @@ public:
   ParseStatus parseEndpgm(OperandVector &Operands);
 
   ParseStatus parseVOPD(OperandVector &Operands);
-
-  ParseStatus parseScaleSel(OperandVector &Operands);
-  AMDGPUOperand::Ptr defaultScaleSel() const;
-
-  ParseStatus parseByteSel(OperandVector &Operands);
-  AMDGPUOperand::Ptr defaultByteSel() const;
 };
 
 } // end anonymous namespace
@@ -10263,35 +10257,6 @@ bool AMDGPUOperand::isWaitVMVSrc() const {
 
 bool AMDGPUOperand::isWaitEXP() const {
   return isImmTy(ImmTyWaitEXP) && isUInt<3>(getImm());
-}
-
-//===----------------------------------------------------------------------===//
-// ScaleSel
-//===----------------------------------------------------------------------===//
-
-ParseStatus AMDGPUAsmParser::parseScaleSel(OperandVector &Operands) {
-  ParseStatus Res =
-      parseIntWithPrefix("scale_sel", Operands, AMDGPUOperand::ImmTyScaleSel);
-  return Res;
-}
-
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultScaleSel() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyScaleSel);
-}
-
-//===----------------------------------------------------------------------===//
-// ByteSel
-//===----------------------------------------------------------------------===//
-
-ParseStatus AMDGPUAsmParser::parseByteSel(OperandVector &Operands) {
-  ParseStatus Res =
-      parseIntWithPrefix("byte_sel", Operands, AMDGPUOperand::ImmTyByteSel);
-  return Res;
-}
-
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultByteSel() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(),
-                                  AMDGPUOperand::ImmTyByteSel);
 }
 
 //===----------------------------------------------------------------------===//

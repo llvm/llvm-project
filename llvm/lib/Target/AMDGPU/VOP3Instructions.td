@@ -637,7 +637,7 @@ class VOP3_CVT_SR_F8_ByteSel_Profile<ValueType SrcVT> :
   VOP3_Profile<VOPProfile<[i32, SrcVT, i32, untyped]>> {
   let IsFP8DstByteSel = 1;
   let HasClamp = 0;
-  defvar bytesel = (ins VGPR_32:$vdst_in, bytesel_0:$byte_sel);
+  defvar bytesel = (ins VGPR_32:$vdst_in, ByteSel:$byte_sel);
   let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
                             HasClamp, HasModifiers, HasSrc2Mods,
                             HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
@@ -1206,7 +1206,7 @@ class VOP3_CVT_SCALE_PK_F16_F864_Profile<VOPProfile P> : VOP3_CVT_SCALEF32_PK_F8
   let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
                             HasClamp, HasModifiers, HasSrc2Mods,
                             HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
-                   (ins scalesel_0:$scale_sel));
+                   (ins ScaleSel:$scale_sel));
   let Asm64 = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
                              HasOpSel, HasOMod, IsVOP3P, HasNeg, HasSrc0Mods, HasSrc1Mods,
                              HasSrc2Mods, DstVT>.ret # "$scale_sel";
