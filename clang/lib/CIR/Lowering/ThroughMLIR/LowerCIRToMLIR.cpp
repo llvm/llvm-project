@@ -167,10 +167,8 @@ public:
       auto boolValue = mlir::cast<mlir::cir::BoolAttr>(op.getValue());
       value = rewriter.getIntegerAttr(ty, boolValue.getValue());
     } else if (op.getType().isa<mlir::cir::CIRFPTypeInterface>()) {
-      assert(ty.isF32() || ty.isF64() && "NYI");
       value = rewriter.getFloatAttr(
-          typeConverter->convertType(op.getType()),
-          op.getValue().cast<mlir::cir::FPAttr>().getValue());
+          ty, op.getValue().cast<mlir::cir::FPAttr>().getValue());
     } else {
       auto cirIntAttr = mlir::dyn_cast<mlir::cir::IntAttr>(op.getValue());
       assert(cirIntAttr && "NYI non cir.int attr");
@@ -663,6 +661,12 @@ static mlir::TypeConverter prepareTypeConverter() {
   });
   converter.addConversion([&](mlir::cir::DoubleType type) -> mlir::Type {
     return mlir::FloatType::getF64(type.getContext());
+  });
+  converter.addConversion([&](mlir::cir::FP80Type type) -> mlir::Type {
+    return mlir::FloatType::getF80(type.getContext());
+  });
+  converter.addConversion([&](mlir::cir::LongDoubleType type) -> mlir::Type {
+    return converter.convertType(type.getUnderlying());
   });
   converter.addConversion([&](mlir::cir::ArrayType type) -> mlir::Type {
     auto elementType = converter.convertType(type.getEltType());
