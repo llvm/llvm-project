@@ -2791,7 +2791,7 @@ bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
       return LookupInSuper(R, NNS->getAsRecordDecl());
     // This nested-name-specifier occurs after another nested-name-specifier,
     // so long into the context associated with the prior nested-name-specifier.
-    if ((DC = computeDeclContext(*SS, EnteringContext))) {
+    if (DC = computeDeclContext(*SS, EnteringContext)) {
       // The declaration context must be complete.
       if (!DC->isDependentContext() && RequireCompleteDeclContext(*SS, DC))
         return false;
