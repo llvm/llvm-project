@@ -4517,7 +4517,7 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
                               DS.getBeginLoc(), DS.getEllipsisLoc());
   } else {
     LookupResult R(*this, MemberOrBase, IdLoc, LookupOrdinaryName);
-    LookupParsedName(R, S, &SS, /*ObjectType=*/QualType());
+    LookupParsedName(R, S, &SS);
 
     TypeDecl *TyD = R.getAsSingle<TypeDecl>();
     if (!TyD) {
@@ -12300,7 +12300,7 @@ Decl *Sema::ActOnUsingDirective(Scope *S, SourceLocation UsingLoc,
 
   // Lookup namespace name.
   LookupResult R(*this, NamespcName, IdentLoc, LookupNamespaceName);
-  LookupParsedName(R, S, &SS, /*ObjectType=*/QualType());
+  LookupParsedName(R, S, &SS);
   if (R.isAmbiguous())
     return nullptr;
 
@@ -13759,7 +13759,7 @@ Decl *Sema::ActOnNamespaceAliasDef(Scope *S, SourceLocation NamespaceLoc,
 
   // Lookup the namespace name.
   LookupResult R(*this, Ident, IdentLoc, LookupNamespaceName);
-  LookupParsedName(R, S, &SS, /*ObjectType=*/QualType());
+  LookupParsedName(R, S, &SS);
 
   if (R.isAmbiguous())
     return nullptr;
