@@ -243,7 +243,7 @@ inline void createDefaultFIROptimizerPassPipeline(
   config.enableRegionSimplification = false;
   pm.addPass(mlir::createCSEPass());
   fir::addAVC(pm, pc.OptLevel);
-  pm.addNestedPass<mlir::func::FuncOp>(fir::createCharacterConversionPass());
+  addNestedPassToAllTopLevelOperations(pm, fir::createCharacterConversion);
   pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLitePass());
   if (pc.OptLevel.isOptimizingForSpeed()) {
