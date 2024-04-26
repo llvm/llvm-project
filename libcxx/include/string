@@ -868,7 +868,7 @@ private:
       __r_.first() = __rep();
       __set_short_size(__size);
     } else {
-      auto __capacity   = __recommend(__size) + 1;
+      auto __capacity   = __align_it<__endian_factor>(__recommend(__size) + 1);
       auto __allocation = __alloc_traits::allocate(__alloc(), __capacity);
       __begin_lifetime(__allocation, __capacity);
       __set_long_cap(__capacity);
@@ -2202,7 +2202,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s, size_ty
     __set_short_size(__sz);
     __p = __get_short_pointer();
   } else {
-    auto __allocation = std::__allocate_at_least(__alloc(), __recommend(__reserve) + 1);
+    auto __allocation = std::__allocate_at_least(__alloc(), __align_it<__endian_factor>(__recommend(__reserve) + 1));
     __p               = __allocation.ptr;
     __begin_lifetime(__p, __allocation.count);
     __set_long_pointer(__p);
@@ -2226,7 +2226,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s, size_ty
     __set_short_size(__sz);
     __p = __get_short_pointer();
   } else {
-    auto __allocation = std::__allocate_at_least(__alloc(), __recommend(__sz) + 1);
+    auto __allocation = std::__allocate_at_least(__alloc(), __align_it<__endian_factor>(__recommend(__sz) + 1));
     __p               = __allocation.ptr;
     __begin_lifetime(__p, __allocation.count);
     __set_long_pointer(__p);
@@ -2251,7 +2251,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init_copy_ctor_external(const value
   } else {
     if (__sz > max_size())
       __throw_length_error();
-    auto __allocation = std::__allocate_at_least(__alloc(), __recommend(__sz) + 1);
+    auto __allocation = std::__allocate_at_least(__alloc(), __align_it<__endian_factor>(__recommend(__sz) + 1));
     __p               = __allocation.ptr;
     __begin_lifetime(__p, __allocation.count);
     __set_long_pointer(__p);
@@ -2274,7 +2274,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
     __set_short_size(__n);
     __p = __get_short_pointer();
   } else {
-    auto __allocation = std::__allocate_at_least(__alloc(), __recommend(__n) + 1);
+    auto __allocation = std::__allocate_at_least(__alloc(), __align_it<__endian_factor>(__recommend(__n) + 1));
     __p               = __allocation.ptr;
     __begin_lifetime(__p, __allocation.count);
     __set_long_pointer(__p);
@@ -2339,7 +2339,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init_with_size(_InputIterator __fir
     __p = __get_short_pointer();
 
   } else {
-    auto __allocation = std::__allocate_at_least(__alloc(), __recommend(__sz) + 1);
+    auto __allocation = std::__allocate_at_least(__alloc(), __align_it<__endian_factor>(__recommend(__sz) + 1));
     __p               = __allocation.ptr;
     __begin_lifetime(__p, __allocation.count);
     __set_long_pointer(__p);
@@ -2379,7 +2379,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__
   size_type __cap =
       __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms - 1;
   __annotate_delete();
-  auto __allocation = std::__allocate_at_least(__alloc(), __cap + 1);
+  auto __allocation = std::__allocate_at_least(__alloc(), __align_it<__endian_factor>(__cap + 1));
   pointer __p       = __allocation.ptr;
   __begin_lifetime(__p, __allocation.count);
   if (__n_copy != 0)
@@ -2422,7 +2422,7 @@ void _LIBCPP_CONSTEXPR_SINCE_CXX20
   size_type __cap =
       __old_cap < __ms / 2 - __alignment ? __recommend(std::max(__old_cap + __delta_cap, 2 * __old_cap)) : __ms - 1;
   __annotate_delete();
-  auto __allocation = std::__allocate_at_least(__alloc(), __cap + 1);
+  auto __allocation = std::__allocate_at_least(__alloc(), __align_it<__endian_factor>(__cap + 1));
   pointer __p       = __allocation.ptr;
   __begin_lifetime(__p, __allocation.count);
   if (__n_copy != 0)
@@ -3255,14 +3255,14 @@ basic_string<_CharT, _Traits, _Allocator>::__shrink_or_extend(size_type __target
     __p        = __get_long_pointer();
   } else {
     if (__target_capacity > __cap) {
-      auto __allocation = std::__allocate_at_least(__alloc(), __target_capacity + 1);
+      auto __allocation = std::__allocate_at_least(__alloc(), __align_it<__endian_factor>(__target_capacity + 1));
       __new_data        = __allocation.ptr;
       __target_capacity = __allocation.count - 1;
     } else {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
       try {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
-        auto __allocation = std::__allocate_at_least(__alloc(), __target_capacity + 1);
+        auto __allocation = std::__allocate_at_least(__alloc(), __align_it<__endian_factor>(__target_capacity + 1));
         __new_data        = __allocation.ptr;
         __target_capacity = __allocation.count - 1;
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
