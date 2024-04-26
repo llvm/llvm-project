@@ -527,6 +527,13 @@ public:
       Info.EnumExtensibility =
           static_cast<EnumExtensibilityKind>((Payload & 0x3) - 1);
 
+    uint8_t Copyable =
+        endian::readNext<uint8_t, llvm::endianness::little>(Data);
+    if (Copyable == kSwiftNonCopyable)
+      Info.setSwiftCopyable(std::optional(false));
+    else if (Copyable == kSwiftCopyable)
+      Info.setSwiftCopyable(std::optional(true));
+
     unsigned ImportAsLength =
         endian::readNext<uint16_t, llvm::endianness::little>(Data);
     if (ImportAsLength > 0) {
