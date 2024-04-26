@@ -470,11 +470,11 @@ multiclass VPseudoVWALU_VV_VX_VI<Operand ImmType> {
 multiclass VPseudoVANDN {
  foreach m = MxList in {
     defm "" : VPseudoBinaryV_VV<m>,
-            SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", m.MX,
-                        forceMergeOpRead=true>;
+              SchedBinary<"WriteVIALUV", "ReadVIALUV", "ReadVIALUV", m.MX,
+                          forceMergeOpRead=true>;
     defm "" : VPseudoBinaryV_VX<m>,
-            SchedBinary<"WriteVIALUX", "ReadVIALUV", "ReadVIALUX", m.MX,
-                        forceMergeOpRead=true>;
+              SchedBinary<"WriteVIALUX", "ReadVIALUV", "ReadVIALUX", m.MX,
+                          forceMergeOpRead=true>;
   }
 }
 
@@ -497,11 +497,11 @@ multiclass VPseudoVREV8 {
 multiclass VPseudoVROL {
  foreach m = MxList in {
     defm "" : VPseudoBinaryV_VV<m>,
-            SchedBinary<"WriteVRotV", "ReadVRotV", "ReadVRotV", m.MX,
-                        forceMergeOpRead=true>;
+              SchedBinary<"WriteVRotV", "ReadVRotV", "ReadVRotV", m.MX,
+                          forceMergeOpRead=true>;
     defm "" : VPseudoBinaryV_VX<m>,
-            SchedBinary<"WriteVRotX", "ReadVRotV", "ReadVRotX", m.MX,
-                        forceMergeOpRead=true>;
+              SchedBinary<"WriteVRotX", "ReadVRotV", "ReadVRotX", m.MX,
+                          forceMergeOpRead=true>;
   }
 }
 
@@ -510,13 +510,13 @@ multiclass VPseudoVROR<Operand ImmType> {
   foreach m = MxList in {
     defvar mx = m.MX;
     defm "" : VPseudoBinaryV_VV<m>,
-            SchedBinary<"WriteVRotV", "ReadVRotV", "ReadVRotV", mx,
-                        forceMergeOpRead=true>;
+              SchedBinary<"WriteVRotV", "ReadVRotV", "ReadVRotV", mx,
+                          forceMergeOpRead=true>;
     defm "" : VPseudoBinaryV_VX<m>,
-            SchedBinary<"WriteVRotX", "ReadVRotV", "ReadVRotX", mx,
-                        forceMergeOpRead=true>;
+              SchedBinary<"WriteVRotX", "ReadVRotV", "ReadVRotX", mx,
+                          forceMergeOpRead=true>;
     defm "" : VPseudoBinaryV_VI<ImmType, m>,
-            SchedUnary<"WriteVRotI", "ReadVRotV", mx, forceMergeOpRead=true>;
+              SchedUnary<"WriteVRotI", "ReadVRotV", mx, forceMergeOpRead=true>;
   }
 }
 
