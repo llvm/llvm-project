@@ -19507,7 +19507,27 @@ static SDValue performBuildVectorCombine(SDNode *N,
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
 
-  if (VT == MVT::v4f16 || VT == MVT::v4bf16) {
+  const auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+  bool CanUseFCVTXN = Subtarget.isNeonAvailable() ||
+                      (Subtarget.useSVEForFixedLengthVectors() &&
+                       (Subtarget.hasSVE2() || Subtarget.hasSME()));
+  if (CanUseFCVTXN && (VT == MVT::v4f16 || VT == MVT::v4bf16)) {
+    // Convenience function to build an FCVT instruction, which is needed
+    // once for the bottom bits and once for the top bits.
+    auto MakeFCVTXN = [&](SDValue V) {
+      if (Subtarget.isNeonAvailable())
+        return DAG.getNode(AArch64ISD::FCVTXN, DL, MVT::v2f32, V);
+      else {
+        SDValue In = convertToScalableVector(DAG, MVT::nxv2f64, V);
+        SDValue PTrue = getPredicateForVector(DAG, DL, MVT::v2f64);
+        SDValue ID = DAG.getTargetConstant(Intrinsic::aarch64_sve_fcvtx_f32f64,
+                                           DL, MVT::i64);
+        SDValue Op = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv4f32,
+                                 {ID, In, PTrue, In});
+        return convertFromScalableVector(DAG, MVT::v2f32, Op);
+      }
+    };
+
     SDValue Elt0 = N->getOperand(0), Elt1 = N->getOperand(1),
             Elt2 = N->getOperand(2), Elt3 = N->getOperand(3);
     if (Elt0->getOpcode() == ISD::FP_ROUND &&
@@ -19548,12 +19568,10 @@ static SDValue performBuildVectorCombine(SDNode *N,
                    Elt2->getOperand(0)->getConstantOperandVal(1) == 0 &&
                    Elt3->getOperand(0)->getConstantOperandVal(1) == 1) {
           SDValue HighLanesSrcVec = Elt2->getOperand(0)->getOperand(0);
-          HighLanes =
-              DAG.getNode(AArch64ISD::FCVTXN, DL, MVT::v2f32, HighLanesSrcVec);
+          HighLanes = MakeFCVTXN(HighLanesSrcVec);
         }
         if (HighLanes) {
-          SDValue DoubleToSingleSticky =
-              DAG.getNode(AArch64ISD::FCVTXN, DL, MVT::v2f32, LowLanesSrcVec);
+          SDValue DoubleToSingleSticky = MakeFCVTXN(LowLanesSrcVec);
           SDValue Concat = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4f32,
                                        DoubleToSingleSticky, HighLanes);
           return DAG.getNode(ISD::FP_ROUND, DL, VT, Concat,
