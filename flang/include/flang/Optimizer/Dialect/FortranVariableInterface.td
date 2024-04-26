@@ -75,7 +75,7 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
     /// variable.
     mlir::Type getElementOrSequenceType() {
       mlir::Type type = fir::unwrapPassByRefType(fir::unwrapRefType(getBase().getType()));
-      if (auto boxCharType = mlir::dyn_cast<fir::BoxCharType>(type))
+      if (auto boxCharType = type.dyn_cast<fir::BoxCharType>())
         return boxCharType.getEleTy();
       return type;
     }
@@ -87,13 +87,13 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
 
     /// Is the variable an array?
     bool isArray() {
-      return mlir::isa<fir::SequenceType>(getElementOrSequenceType());
+      return getElementOrSequenceType().isa<fir::SequenceType>();
     }
 
     /// Return the rank of the entity if it is known at compile time.
     std::optional<unsigned> getRank() {
       if (auto sequenceType =
-            mlir::dyn_cast<fir::SequenceType>(getElementOrSequenceType())) {
+            getElementOrSequenceType().dyn_cast<fir::SequenceType>()) {
         if (sequenceType.hasUnknownShape())
           return {};
         return sequenceType.getDimension();
@@ -133,7 +133,7 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
 
     /// Is this a Fortran character variable?
     bool isCharacter() {
-      return mlir::isa<fir::CharacterType>(getElementType());
+      return getElementType().isa<fir::CharacterType>();
     }
 
     /// Is this a Fortran character variable with an explicit length?
@@ -149,7 +149,7 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
 
     /// Is this variable represented as a fir.box or fir.class value?
     bool isBoxValue() {
-      return mlir::isa<fir::BaseBoxType>(getBase().getType());
+      return getBase().getType().isa<fir::BaseBoxType>();
     }
 
     /// Is this variable represented as a fir.box or fir.class address?

@@ -84,7 +84,7 @@ static fir::GlobalOp globalInitialization(
 
   // Create default initialization for non-character scalar.
   if (Fortran::semantics::IsAllocatableOrObjectPointer(&sym)) {
-    mlir::Type baseAddrType = mlir::dyn_cast<fir::BoxType>(ty).getEleTy();
+    mlir::Type baseAddrType = ty.dyn_cast<fir::BoxType>().getEleTy();
     Fortran::lower::createGlobalInitialization(
         firOpBuilder, global, [&](fir::FirOpBuilder &b) {
           mlir::Value nullAddr =
@@ -778,7 +778,7 @@ static void genBodyOfTargetDataOp(
   for (auto [argIndex, argSymbol] : llvm::enumerate(useDeviceSymbols)) {
     const mlir::BlockArgument &arg = region.front().getArgument(argIndex);
     fir::ExtendedValue extVal = converter.getSymbolExtendedValue(*argSymbol);
-    if (auto refType = mlir::dyn_cast<fir::ReferenceType>(arg.getType())) {
+    if (auto refType = arg.getType().dyn_cast<fir::ReferenceType>()) {
       if (fir::isa_builtin_cptr_type(refType.getElementType())) {
         converter.bindSymbol(*argSymbol, arg);
       } else {
@@ -1570,15 +1570,13 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
 
         Fortran::lower::AddrAndBoundsInfo info = getDataOperandBaseAddr(
             converter, firOpBuilder, sym, converter.getCurrentLocation());
-        if (mlir::isa<fir::BaseBoxType>(
-                fir::unwrapRefType(info.addr.getType())))
+        if (fir::unwrapRefType(info.addr.getType()).isa<fir::BaseBoxType>())
           bounds =
               Fortran::lower::genBoundsOpsFromBox<mlir::omp::MapBoundsOp,
                                                   mlir::omp::MapBoundsType>(
                   firOpBuilder, converter.getCurrentLocation(), converter,
                   dataExv, info);
-        if (mlir::isa<fir::SequenceType>(
-                fir::unwrapRefType(info.addr.getType()))) {
+        if (fir::unwrapRefType(info.addr.getType()).isa<fir::SequenceType>()) {
           bool dataExvIsAssumedSize =
               Fortran::semantics::IsAssumedSizeArray(sym.GetUltimate());
           bounds = Fortran::lower::genBaseBoundsOps<mlir::omp::MapBoundsOp,
@@ -1593,7 +1591,7 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
             mlir::omp::VariableCaptureKind::ByRef;
 
         mlir::Type eleType = baseOp.getType();
-        if (auto refType = mlir::dyn_cast<fir::ReferenceType>(baseOp.getType()))
+        if (auto refType = baseOp.getType().dyn_cast<fir::ReferenceType>())
           eleType = refType.getElementType();
 
         // If a variable is specified in declare target link and if device

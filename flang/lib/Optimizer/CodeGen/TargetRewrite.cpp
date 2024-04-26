@@ -137,7 +137,7 @@ public:
         if (!hasPortableSignature(dispatch.getFunctionType(), op))
           convertCallOp(dispatch);
       } else if (auto addr = mlir::dyn_cast<fir::AddrOfOp>(op)) {
-        if (mlir::isa<mlir::FunctionType>(addr.getType()) &&
+        if (addr.getType().isa<mlir::FunctionType>() &&
             !hasPortableSignature(addr.getType(), op))
           convertAddrOp(addr);
       }
@@ -601,7 +601,7 @@ public:
   /// Taking the address of a function. Modify the signature as needed.
   void convertAddrOp(fir::AddrOfOp addrOp) {
     rewriter->setInsertionPoint(addrOp);
-    auto addrTy = mlir::cast<mlir::FunctionType>(addrOp.getType());
+    auto addrTy = addrOp.getType().cast<mlir::FunctionType>();
     fir::CodeGenSpecifics::Marshalling newInTyAndAttrs;
     llvm::SmallVector<mlir::Type> newResTys;
     auto loc = addrOp.getLoc();
@@ -705,23 +705,22 @@ public:
   /// return `true`. Otherwise, the signature is not portable and `false` is
   /// returned.
   bool hasPortableSignature(mlir::Type signature, mlir::Operation *op) {
-    assert(mlir::isa<mlir::FunctionType>(signature));
-    auto func = mlir::dyn_cast<mlir::FunctionType>(signature);
+    assert(signature.isa<mlir::FunctionType>());
+    auto func = signature.dyn_cast<mlir::FunctionType>();
     bool hasCCallingConv = isFuncWithCCallingConvention(op);
     for (auto ty : func.getResults())
-      if ((mlir::isa<fir::BoxCharType>(ty) && !noCharacterConversion) ||
+      if ((ty.isa<fir::BoxCharType>() && !noCharacterConversion) ||
           (fir::isa_complex(ty) && !noComplexConversion) ||
-          (mlir::isa<mlir::IntegerType>(ty) && hasCCallingConv)) {
+          (ty.isa<mlir::IntegerType>() && hasCCallingConv)) {
         LLVM_DEBUG(llvm::dbgs() << "rewrite " << signature << " for target\n");
         return false;
       }
     for (auto ty : func.getInputs())
-      if (((mlir::isa<fir::BoxCharType>(ty) ||
-            fir::isCharacterProcedureTuple(ty)) &&
+      if (((ty.isa<fir::BoxCharType>() || fir::isCharacterProcedureTuple(ty)) &&
            !noCharacterConversion) ||
           (fir::isa_complex(ty) && !noComplexConversion) ||
-          (mlir::isa<mlir::IntegerType>(ty) && hasCCallingConv) ||
-          (mlir::isa<fir::RecordType>(ty) && !noStructConversion)) {
+          (ty.isa<mlir::IntegerType>() && hasCCallingConv) ||
+          (ty.isa<fir::RecordType>() && !noStructConversion)) {
         LLVM_DEBUG(llvm::dbgs() << "rewrite " << signature << " for target\n");
         return false;
       }
@@ -741,7 +740,7 @@ public:
   /// Rewrite the signatures and body of the `FuncOp`s in the module for
   /// the immediately subsequent target code gen.
   void convertSignature(mlir::func::FuncOp func) {
-    auto funcTy = mlir::cast<mlir::FunctionType>(func.getFunctionType());
+    auto funcTy = func.getFunctionType().cast<mlir::FunctionType>();
     if (hasPortableSignature(funcTy, func) && !hasHostAssociations(func))
       return;
     llvm::SmallVector<mlir::Type> newResTys;

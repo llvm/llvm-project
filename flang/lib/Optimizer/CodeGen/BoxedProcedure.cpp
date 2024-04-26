@@ -51,9 +51,9 @@ public:
   /// not at all depending on the implementation target's characteristics and
   /// preference.
   bool needsConversion(mlir::Type ty) {
-    if (mlir::isa<BoxProcType>(ty))
+    if (ty.isa<BoxProcType>())
       return true;
-    if (auto funcTy = mlir::dyn_cast<mlir::FunctionType>(ty)) {
+    if (auto funcTy = ty.dyn_cast<mlir::FunctionType>()) {
       for (auto t : funcTy.getInputs())
         if (needsConversion(t))
           return true;
@@ -62,13 +62,13 @@ public:
           return true;
       return false;
     }
-    if (auto tupleTy = mlir::dyn_cast<mlir::TupleType>(ty)) {
+    if (auto tupleTy = ty.dyn_cast<mlir::TupleType>()) {
       for (auto t : tupleTy.getTypes())
         if (needsConversion(t))
           return true;
       return false;
     }
-    if (auto recTy = mlir::dyn_cast<RecordType>(ty)) {
+    if (auto recTy = ty.dyn_cast<RecordType>()) {
       auto visited = visitedTypes.find(ty);
       if (visited != visitedTypes.end())
         return visited->second;
@@ -97,11 +97,11 @@ public:
         visitedTypes.find(ty)->second = result;
       return result;
     }
-    if (auto boxTy = mlir::dyn_cast<BaseBoxType>(ty))
+    if (auto boxTy = ty.dyn_cast<BaseBoxType>())
       return needsConversion(boxTy.getEleTy());
     if (isa_ref_type(ty))
       return needsConversion(unwrapRefType(ty));
-    if (auto t = mlir::dyn_cast<SequenceType>(ty))
+    if (auto t = ty.dyn_cast<SequenceType>())
       return needsConversion(unwrapSequenceType(ty));
     return false;
   }
@@ -246,7 +246,7 @@ public:
           if (typeConverter.needsConversion(ty)) {
             rewriter.startOpModification(func);
             auto toTy =
-                mlir::cast<mlir::FunctionType>(typeConverter.convertType(ty));
+                typeConverter.convertType(ty).cast<mlir::FunctionType>();
             if (!func.empty())
               for (auto e : llvm::enumerate(toTy.getInputs())) {
                 unsigned i = e.index();
@@ -263,7 +263,7 @@ public:
           // Rewrite all `fir.emboxproc` ops to either `fir.convert` or a thunk
           // as required.
           mlir::Type toTy = typeConverter.convertType(
-              mlir::cast<BoxProcType>(embox.getType()).getEleTy());
+              embox.getType().cast<BoxProcType>().getEleTy());
           rewriter.setInsertionPoint(embox);
           if (embox.getHost()) {
             // Create the thunk.

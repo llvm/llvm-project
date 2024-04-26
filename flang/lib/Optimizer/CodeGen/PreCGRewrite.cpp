@@ -86,10 +86,10 @@ public:
     // If the embox does not include a shape, then do not convert it
     if (auto shapeVal = embox.getShape())
       return rewriteDynamicShape(embox, rewriter, shapeVal);
-    if (mlir::isa<fir::ClassType>(embox.getType()))
+    if (embox.getType().isa<fir::ClassType>())
       TODO(embox.getLoc(), "embox conversion for fir.class type");
-    if (auto boxTy = mlir::dyn_cast<fir::BoxType>(embox.getType()))
-      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(boxTy.getEleTy()))
+    if (auto boxTy = embox.getType().dyn_cast<fir::BoxType>())
+      if (auto seqTy = boxTy.getEleTy().dyn_cast<fir::SequenceType>())
         if (!seqTy.hasDynamicExtents())
           return rewriteStaticShape(embox, rewriter, seqTy);
     return mlir::failure();
@@ -294,9 +294,10 @@ public:
     target.addIllegalOp<fir::ReboxOp>();
     target.addIllegalOp<fir::DeclareOp>();
     target.addDynamicallyLegalOp<fir::EmboxOp>([](fir::EmboxOp embox) {
-      return !(embox.getShape() ||
-               mlir::isa<fir::SequenceType>(
-                   mlir::cast<fir::BaseBoxType>(embox.getType()).getEleTy()));
+      return !(embox.getShape() || embox.getType()
+                                       .cast<fir::BaseBoxType>()
+                                       .getEleTy()
+                                       .isa<fir::SequenceType>());
     });
     mlir::RewritePatternSet patterns(&context);
     fir::populatePreCGRewritePatterns(patterns);

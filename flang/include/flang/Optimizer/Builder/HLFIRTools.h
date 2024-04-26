@@ -77,12 +77,12 @@ public:
   /// Return the rank of this entity or -1 if it is an assumed rank.
   int getRank() const {
     mlir::Type type = fir::unwrapPassByRefType(fir::unwrapRefType(getType()));
-    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(type)) {
+    if (auto seqTy = type.dyn_cast<fir::SequenceType>()) {
       if (seqTy.hasUnknownShape())
         return -1;
       return seqTy.getDimension();
     }
-    if (auto exprType = mlir::dyn_cast<hlfir::ExprType>(type))
+    if (auto exprType = type.dyn_cast<hlfir::ExprType>())
       return exprType.getRank();
     return 0;
   }
@@ -99,17 +99,17 @@ public:
 
   bool hasLengthParameters() const {
     mlir::Type eleTy = getFortranElementType();
-    return mlir::isa<fir::CharacterType>(eleTy) ||
+    return eleTy.isa<fir::CharacterType>() ||
            fir::isRecordWithTypeParameters(eleTy);
   }
 
   bool isCharacter() const {
-    return mlir::isa<fir::CharacterType>(getFortranElementType());
+    return getFortranElementType().isa<fir::CharacterType>();
   }
 
   bool hasIntrinsicType() const {
     mlir::Type eleTy = getFortranElementType();
-    return fir::isa_trivial(eleTy) || mlir::isa<fir::CharacterType>(eleTy);
+    return fir::isa_trivial(eleTy) || eleTy.isa<fir::CharacterType>();
   }
 
   bool isDerivedWithLengthParameters() const {
@@ -124,8 +124,8 @@ public:
     if (auto varIface = getIfVariableInterface()) {
       if (auto shape = varIface.getShape()) {
         auto shapeTy = shape.getType();
-        return mlir::isa<fir::ShiftType>(shapeTy) ||
-               mlir::isa<fir::ShapeShiftType>(shapeTy);
+        return shapeTy.isa<fir::ShiftType>() ||
+               shapeTy.isa<fir::ShapeShiftType>();
       }
       return false;
     }
