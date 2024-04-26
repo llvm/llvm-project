@@ -10,9 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+
 //===----------------------------------------------------------------------===//
 // ARM Instruction Predicate Definitions.
 //
+
+class AssemblerPredicateWithAll<dag cond, string name="">
+    : AssemblerPredicate<(any_of FeatureAll, cond), name>;
+
 def HasV8_0a         : Predicate<"Subtarget->hasV8_0aOps()">,
                                  AssemblerPredicate<(all_of HasV8_0aOps), "armv8.0a">;
 def HasV8_1a         : Predicate<"Subtarget->hasV8_1aOps()">,
@@ -225,6 +230,12 @@ def HasSVE2p1_or_HasSME2
 def HasSVE2p1_or_HasSME2p1
     : Predicate<"Subtarget->hasSVE2p1() || Subtarget->hasSME2p1()">,
                  AssemblerPredicateWithAll<(any_of FeatureSME2p1, FeatureSVE2p1), "sme2p1 or sve2p1">;
+
+def HasSMEF16F16orSMEF8F16
+    : Predicate<"Subtarget->hasSMEF16F16() || Subtarget->hasSMEF8F16()">,
+                AssemblerPredicateWithAll<(any_of FeatureSMEF16F16, FeatureSMEF8F16),
+                "sme-f16f16 or sme-f8f16">;
+
 // A subset of NEON instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasNEONorSME
@@ -309,6 +320,8 @@ def UseNegativeImmediates
                                              "NegativeImmediates">;
 
 def UseScalarIncVL : Predicate<"Subtarget->useScalarIncVL()">;
+
+def NoUseScalarIncVL : Predicate<"!Subtarget->useScalarIncVL()">;
 
 def UseSVEFPLD1R : Predicate<"!Subtarget->noSVEFPLD1R()">;
 
@@ -1815,6 +1828,20 @@ let Uses = [ X20 ], Defs = [ X16, X17, LR, NZCV ] in {
 def HWASAN_CHECK_MEMACCESS_SHORTGRANULES : Pseudo<
   (outs), (ins GPR64noip:$ptr, i32imm:$accessinfo),
   [(int_hwasan_check_memaccess_shortgranules X20, GPR64noip:$ptr, (i32 timm:$accessinfo))]>,
+  Sched<[]>;
+}
+
+let Defs = [ X16, X17, LR, NZCV ] in {
+def HWASAN_CHECK_MEMACCESS_FIXEDSHADOW : Pseudo<
+  (outs), (ins GPR64noip:$ptr, i32imm:$accessinfo, i64imm:$fixed_shadow),
+  [(int_hwasan_check_memaccess_fixedshadow GPR64noip:$ptr, (i32 timm:$accessinfo), (i64 timm:$fixed_shadow))]>,
+  Sched<[]>;
+}
+
+let Defs = [ X16, X17, LR, NZCV ] in {
+def HWASAN_CHECK_MEMACCESS_SHORTGRANULES_FIXEDSHADOW : Pseudo<
+  (outs), (ins GPR64noip:$ptr, i32imm:$accessinfo, i64imm:$fixed_shadow),
+  [(int_hwasan_check_memaccess_shortgranules_fixedshadow GPR64noip:$ptr, (i32 timm:$accessinfo), (i64 timm:$fixed_shadow))]>,
   Sched<[]>;
 }
 

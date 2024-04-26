@@ -2803,6 +2803,10 @@ void OpenACCClauseEnqueue::VisitVectorLengthClause(
     const OpenACCVectorLengthClause &C) {
   Visitor.AddStmt(C.getIntExpr());
 }
+void OpenACCClauseEnqueue::VisitNumGangsClause(const OpenACCNumGangsClause &C) {
+  for (Expr *IE : C.getIntExprs())
+    Visitor.AddStmt(IE);
+}
 } // namespace
 
 void EnqueueVisitor::EnqueueChildren(const OpenACCClause *C) {
@@ -5709,8 +5713,8 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("UnaryOperator");
   case CXCursor_ArraySubscriptExpr:
     return cxstring::createRef("ArraySubscriptExpr");
-  case CXCursor_OMPArraySectionExpr:
-    return cxstring::createRef("OMPArraySectionExpr");
+  case CXCursor_ArraySectionExpr:
+    return cxstring::createRef("ArraySectionExpr");
   case CXCursor_OMPArrayShapingExpr:
     return cxstring::createRef("OMPArrayShapingExpr");
   case CXCursor_OMPIteratorExpr:

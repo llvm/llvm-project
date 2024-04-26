@@ -258,11 +258,6 @@ namespace llvm {
       return Length >= Prefix.Length &&
              compareMemory(Data, Prefix.Data, Prefix.Length) == 0;
     }
-    [[nodiscard]] LLVM_DEPRECATED(
-        "Use starts_with instead",
-        "starts_with") bool startswith(StringRef Prefix) const {
-      return starts_with(Prefix);
-    }
 
     /// Check if this string starts with the given \p Prefix, ignoring case.
     [[nodiscard]] bool starts_with_insensitive(StringRef Prefix) const;
@@ -272,11 +267,6 @@ namespace llvm {
       return Length >= Suffix.Length &&
              compareMemory(end() - Suffix.Length, Suffix.Data, Suffix.Length) ==
                  0;
-    }
-    [[nodiscard]] LLVM_DEPRECATED(
-        "Use ends_with instead",
-        "ends_with") bool endswith(StringRef Suffix) const {
-      return ends_with(Suffix);
     }
 
     /// Check if this string ends with the given \p Suffix, ignoring case.

@@ -296,7 +296,10 @@ class Type<TypeCategory::Real, KIND>
 public:
   static constexpr int precision{common::PrecisionOfRealKind(KIND)};
   static constexpr int bits{common::BitsForBinaryPrecision(precision)};
-  using Scalar = value::Real<value::Integer<bits>, precision>;
+  using Scalar =
+      value::Real<std::conditional_t<precision == 64,
+                      value::X87IntegerContainer, value::Integer<bits>>,
+          precision>;
 };
 
 // The KIND type parameter on COMPLEX is the kind of each of its components.
