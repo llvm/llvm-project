@@ -963,24 +963,26 @@ public:
       OS << format("%8" PRIx64 ":", Address.Address);
     if (ShowRawInsn) {
       size_t Pos = 0, End = Bytes.size();
-      if (Pos + 2 == End) {
-        // Compressed instruction.
-        OS << ' '
-           << format_hex_no_prefix(
-                  llvm::support::endian::read<uint16_t>(
-                      Bytes.data() + Pos, llvm::endianness::little),
-                  4);
-      } else {
+      if (End % 4 == 0) {
+        // 32-bit and 64-bit instructions.
         for (; Pos + 4 <= End; Pos += 4)
           OS << ' '
              << format_hex_no_prefix(
                     llvm::support::endian::read<uint32_t>(
                         Bytes.data() + Pos, llvm::endianness::little),
                     8);
-        if (Pos < End) {
-          OS << ' ';
-          dumpBytes(Bytes.slice(Pos), OS);
-        }
+      } else if (End % 2 == 0) {
+        // 16-bit and 48-bits instructions.
+        for (; Pos + 2 <= End; Pos += 2)
+          OS << ' '
+             << format_hex_no_prefix(
+                    llvm::support::endian::read<uint16_t>(
+                        Bytes.data() + Pos, llvm::endianness::little),
+                    4);
+      }
+      if (Pos < End) {
+        OS << ' ';
+        dumpBytes(Bytes.slice(Pos), OS);
       }
     }
 
