@@ -62,6 +62,10 @@ ArgumentsAdjuster getRmoveUnknownArgumentsAdjuster() {
         "-falign-jumps=",
         "-fno-code-hoisting",
         "-fsched-pressure",
+
+        // from ZRQ, project: grpc
+        "--with-libxml",
+        "--with-gssapi",
     };
 
     auto unknownArgAdj = [unknownArgPrefixes](const CommandLineArguments &Args,
