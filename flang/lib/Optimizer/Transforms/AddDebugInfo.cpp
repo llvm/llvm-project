@@ -116,8 +116,8 @@ void AddDebugInfoPass::runOnOperation() {
     llvm::SmallVector<mlir::LLVM::DITypeAttr> types;
     fir::DebugTypeGenerator typeGen(module);
     for (auto resTy : funcOp.getResultTypes()) {
-      auto tyAttr = typeGen.convertType(fir::unwrapRefType(resTy), fileAttr,
-                                        cuAttr, funcOp.getLoc());
+      auto tyAttr =
+          typeGen.convertType(resTy, fileAttr, cuAttr, funcOp.getLoc());
       types.push_back(tyAttr);
     }
     for (auto inTy : funcOp.getArgumentTypes()) {
