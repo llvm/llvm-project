@@ -43,16 +43,6 @@ static void printExtensionTable(raw_ostream &OS,
   OS << "};\n\n";
 }
 
-// Get the extension name from the Record name. This gives the canonical
-// capitalization.
-static StringRef getExtensionNameFromRecordName(const Record *R) {
-  StringRef Name = R->getName();
-  if (!Name.consume_front("FeatureStdExt"))
-    Name.consume_front("FeatureVendor");
-
-  return Name;
-}
-
 static void emitRISCVExtensions(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef GET_SUPPORTED_EXTENSIONS\n";
   OS << "#undef GET_SUPPORTED_EXTENSIONS\n\n";
@@ -71,33 +61,21 @@ static void emitRISCVExtensions(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef GET_IMPLIED_EXTENSIONS\n";
   OS << "#undef GET_IMPLIED_EXTENSIONS\n\n";
 
-  for (Record *Ext : Extensions) {
-    auto ImpliesList = Ext->getValueAsListOfDefs("Implies");
-    if (ImpliesList.empty())
-      continue;
-
-    OS << "static const char *ImpliedExts"
-       << getExtensionNameFromRecordName(Ext) << "[] = {";
-
-    ListSeparator LS(", ");
-    for (auto *ImpliedExt : ImpliesList) {
-      if (!ImpliedExt->isSubClassOf("RISCVExtension"))
-        continue;
-
-      OS << LS << '"' << getExtensionName(ImpliedExt) << '"';
-    }
-
-    OS << "};\n";
-  }
-
   OS << "\nstatic constexpr ImpliedExtsEntry ImpliedExts[] = {\n";
   for (Record *Ext : Extensions) {
     auto ImpliesList = Ext->getValueAsListOfDefs("Implies");
     if (ImpliesList.empty())
       continue;
 
-    OS << "    { {\"" << getExtensionName(Ext) << "\"}, {ImpliedExts"
-       << getExtensionNameFromRecordName(Ext) << "} },\n";
+    StringRef Name = getExtensionName(Ext);
+
+    for (auto *ImpliedExt : ImpliesList) {
+      if (!ImpliedExt->isSubClassOf("RISCVExtension"))
+        continue;
+
+      OS << "    { {\"" << Name << "\"}, \"" << getExtensionName(ImpliedExt)
+         << "\"},\n";
+    }
   }
 
   OS << "};\n\n";
