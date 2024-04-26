@@ -613,9 +613,9 @@ bool ObjCPropertyOpBuilder::findGetter() {
       // Must build the getter selector the hard way.
       ObjCMethodDecl *setter = RefExpr->getImplicitPropertySetter();
       assert(setter && "both setter and getter are null - cannot happen");
-      IdentifierInfo *setterName =
-        setter->getSelector().getIdentifierInfoForSlot(0);
-      IdentifierInfo *getterName =
+      const IdentifierInfo *setterName =
+          setter->getSelector().getIdentifierInfoForSlot(0);
+      const IdentifierInfo *getterName =
           &S.Context.Idents.get(setterName->getName().substr(3));
       GetterSelector =
         S.PP.getSelectorTable().getNullarySelector(getterName);
@@ -640,9 +640,9 @@ bool ObjCPropertyOpBuilder::findSetter(bool warn) {
       SetterSelector = setter->getSelector();
       return true;
     } else {
-      IdentifierInfo *getterName =
-        RefExpr->getImplicitPropertyGetter()->getSelector()
-          .getIdentifierInfoForSlot(0);
+      const IdentifierInfo *getterName = RefExpr->getImplicitPropertyGetter()
+                                             ->getSelector()
+                                             .getIdentifierInfoForSlot(0);
       SetterSelector =
         SelectorTable::constructSetterSelector(S.PP.getIdentifierTable(),
                                                S.PP.getSelectorTable(),
@@ -667,7 +667,8 @@ bool ObjCPropertyOpBuilder::findSetter(bool warn) {
         front = isLowercase(front) ? toUppercase(front) : toLowercase(front);
         SmallString<100> PropertyName = thisPropertyName;
         PropertyName[0] = front;
-        IdentifierInfo *AltMember = &S.PP.getIdentifierTable().get(PropertyName);
+        const IdentifierInfo *AltMember =
+            &S.PP.getIdentifierTable().get(PropertyName);
         if (ObjCPropertyDecl *prop1 = IFace->FindPropertyDeclaration(
                 AltMember, prop->getQueryKind()))
           if (prop != prop1 && (prop1->getSetterMethodDecl() == setter)) {
@@ -1126,9 +1127,8 @@ static void CheckKeyForObjCARCConversion(Sema &S, QualType ContainerT,
     return;
   // dictionary subscripting.
   // - (id)objectForKeyedSubscript:(id)key;
-  IdentifierInfo *KeyIdents[] = {
-    &S.Context.Idents.get("objectForKeyedSubscript")
-  };
+  const IdentifierInfo *KeyIdents[] = {
+      &S.Context.Idents.get("objectForKeyedSubscript")};
   Selector GetterSelector = S.Context.Selectors.getSelector(1, KeyIdents);
   ObjCMethodDecl *Getter = S.LookupMethodInObjectType(GetterSelector, ContainerT,
                                                       true /*instance*/);
@@ -1136,7 +1136,7 @@ static void CheckKeyForObjCARCConversion(Sema &S, QualType ContainerT,
     return;
   QualType T = Getter->parameters()[0]->getType();
   S.CheckObjCConversion(Key->getSourceRange(), T, Key,
-                        Sema::CCK_ImplicitConversion);
+                        CheckedConversionKind::Implicit);
 }
 
 bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
@@ -1169,16 +1169,14 @@ bool ObjCSubscriptOpBuilder::findAtIndexGetter() {
   if (!arrayRef) {
     // dictionary subscripting.
     // - (id)objectForKeyedSubscript:(id)key;
-    IdentifierInfo *KeyIdents[] = {
-      &S.Context.Idents.get("objectForKeyedSubscript")
-    };
+    const IdentifierInfo *KeyIdents[] = {
+        &S.Context.Idents.get("objectForKeyedSubscript")};
     AtIndexGetterSelector = S.Context.Selectors.getSelector(1, KeyIdents);
   }
   else {
     // - (id)objectAtIndexedSubscript:(size_t)index;
-    IdentifierInfo *KeyIdents[] = {
-      &S.Context.Idents.get("objectAtIndexedSubscript")
-    };
+    const IdentifierInfo *KeyIdents[] = {
+        &S.Context.Idents.get("objectAtIndexedSubscript")};
 
     AtIndexGetterSelector = S.Context.Selectors.getSelector(1, KeyIdents);
   }
@@ -1274,18 +1272,16 @@ bool ObjCSubscriptOpBuilder::findAtIndexSetter() {
   if (!arrayRef) {
     // dictionary subscripting.
     // - (void)setObject:(id)object forKeyedSubscript:(id)key;
-    IdentifierInfo *KeyIdents[] = {
-      &S.Context.Idents.get("setObject"),
-      &S.Context.Idents.get("forKeyedSubscript")
-    };
+    const IdentifierInfo *KeyIdents[] = {
+        &S.Context.Idents.get("setObject"),
+        &S.Context.Idents.get("forKeyedSubscript")};
     AtIndexSetterSelector = S.Context.Selectors.getSelector(2, KeyIdents);
   }
   else {
     // - (void)setObject:(id)object atIndexedSubscript:(NSInteger)index;
-    IdentifierInfo *KeyIdents[] = {
-      &S.Context.Idents.get("setObject"),
-      &S.Context.Idents.get("atIndexedSubscript")
-    };
+    const IdentifierInfo *KeyIdents[] = {
+        &S.Context.Idents.get("setObject"),
+        &S.Context.Idents.get("atIndexedSubscript")};
     AtIndexSetterSelector = S.Context.Selectors.getSelector(2, KeyIdents);
   }
   AtIndexSetter = S.LookupMethodInObjectType(AtIndexSetterSelector, ResultType,
@@ -1474,7 +1470,7 @@ ExprResult MSPropertyOpBuilder::buildGet() {
   }
 
   UnqualifiedId GetterName;
-  IdentifierInfo *II = RefExpr->getPropertyDecl()->getGetterId();
+  const IdentifierInfo *II = RefExpr->getPropertyDecl()->getGetterId();
   GetterName.setIdentifier(II, RefExpr->getMemberLoc());
   CXXScopeSpec SS;
   SS.Adopt(RefExpr->getQualifierLoc());
@@ -1503,7 +1499,7 @@ ExprResult MSPropertyOpBuilder::buildSet(Expr *op, SourceLocation sl,
   }
 
   UnqualifiedId SetterName;
-  IdentifierInfo *II = RefExpr->getPropertyDecl()->getSetterId();
+  const IdentifierInfo *II = RefExpr->getPropertyDecl()->getSetterId();
   SetterName.setIdentifier(II, RefExpr->getMemberLoc());
   CXXScopeSpec SS;
   SS.Adopt(RefExpr->getQualifierLoc());

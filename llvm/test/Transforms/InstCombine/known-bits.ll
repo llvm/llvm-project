@@ -124,7 +124,6 @@ exit:
   ret i8 %or2
 }
 
-
 define i8 @test_cond_and_bothways(i8 %x) {
 ; CHECK-LABEL: @test_cond_and_bothways(
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 91
@@ -180,8 +179,6 @@ exit:
   %or2 = or i8 %x, -4
   ret i8 %or2
 }
-
-
 
 define i8 @test_cond_and_commuted(i8 %x, i1 %c1, i1 %c2) {
 ; CHECK-LABEL: @test_cond_and_commuted(
@@ -343,7 +340,7 @@ exit:
   ret i8 %or2
 }
 
-define i32 @test_icmp_trunc1(i32 %x){
+define i32 @test_icmp_trunc1(i32 %x) {
 ; CHECK-LABEL: @test_icmp_trunc1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Y:%.*]] = trunc i32 [[X:%.*]] to i16
@@ -365,7 +362,7 @@ else:
   ret i32 0
 }
 
-define i32 @test_icmp_trunc_assume(i32 %x){
+define i32 @test_icmp_trunc_assume(i32 %x) {
 ; CHECK-LABEL: @test_icmp_trunc_assume(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Y:%.*]] = trunc i32 [[X:%.*]] to i16
@@ -458,7 +455,7 @@ define i64 @test_icmp_trunc5(i64 %n) {
 ; CHECK-LABEL: @test_icmp_trunc5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr i64 [[N:%.*]], 47
-; CHECK-NEXT:    [[CONV1:%.*]] = trunc i64 [[SHR]] to i32
+; CHECK-NEXT:    [[CONV1:%.*]] = trunc nsw i64 [[SHR]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[CONV1]], -13
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
@@ -481,6 +478,900 @@ if.then:
 
 if.else:
   ret i64 13
+}
+
+define i1 @test_icmp_or_distjoint(i8 %n, i1 %other) {
+; CHECK-LABEL: @test_icmp_or_distjoint(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_OR:%.*]] = or disjoint i8 [[N:%.*]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_OR]], -111
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 [[OTHER:%.*]]
+;
+entry:
+  %n_or = or disjoint i8 %n, 16
+  %cmp = icmp ugt i8 %n_or, 145
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = icmp slt i8 %n, 0
+  ret i1 %r
+
+if.else:
+  ret i1 %other
+}
+
+define i1 @test_icmp_or_fail_missing_disjoint(i8 %n, i1 %other) {
+; CHECK-LABEL: @test_icmp_or_fail_missing_disjoint(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_OR:%.*]] = or i8 [[N:%.*]], 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_OR]], -111
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[N]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 [[OTHER:%.*]]
+;
+entry:
+  %n_or = or i8 %n, 16
+  %cmp = icmp ugt i8 %n_or, 145
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = icmp slt i8 %n, 0
+  ret i1 %r
+
+if.else:
+  ret i1 %other
+}
+
+define i8 @and_eq_bits_must_be_set(i8 %x, i8 %y) {
+; CHECK-LABEL: @and_eq_bits_must_be_set(
+; CHECK-NEXT:    [[XY:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 123
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i8 1
+;
+  %xy = and i8 %x, %y
+  %cmp = icmp eq i8 %xy, 123
+  call void @llvm.assume(i1 %cmp)
+  %r = and i8 %x, 1
+  ret i8 %r
+}
+
+define i8 @test_icmp_or(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_OR:%.*]] = or i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[N_OR]], 32
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 0
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_or = or i8 %n, %n2
+  %cmp = icmp ult i8 %n_or, 32
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @test_icmp_or2(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_or2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_OR:%.*]] = or i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_OR]], 14
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  %n_or = or i8 %n, %n2
+  %cmp = icmp uge i8 %n_or, 15
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  ret i8 %other
+if.else:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+}
+
+define i8 @test_icmp_or_fail_bad_range(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_or_fail_bad_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_OR:%.*]] = or i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[N_OR]], 33
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
+; CHECK-NEXT:    ret i8 [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_or = or i8 %n, %n2
+  %cmp = icmp ule i8 %n_or, 32
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @test_icmp_or_fail_bad_pred(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_or_fail_bad_pred(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_OR:%.*]] = or i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_OR]], 32
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
+; CHECK-NEXT:    ret i8 [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_or = or i8 %n, %n2
+  %cmp = icmp ugt i8 %n_or, 32
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @test_icmp_and(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_and(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_AND:%.*]] = and i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_AND]], -33
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 32
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_and = and i8 %n, %n2
+  %cmp = icmp ugt i8 %n_and, 223
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @test_icmp_and2(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_and2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_AND:%.*]] = and i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[N_AND]], -31
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 32
+;
+entry:
+  %n_and = and i8 %n, %n2
+  %cmp = icmp ule i8 %n_and, 224
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  ret i8 %other
+if.else:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+}
+
+define i8 @test_icmp_and_fail_bad_range(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_and_fail_bad_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_AND:%.*]] = and i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[N_AND]], -34
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
+; CHECK-NEXT:    ret i8 [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_and = and i8 %n, %n2
+  %cmp = icmp uge i8 %n_and, 223
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @test_icmp_and_fail_bad_pred(i8 %n, i8 %n2, i8 %other) {
+; CHECK-LABEL: @test_icmp_and_fail_bad_pred(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N_AND:%.*]] = and i8 [[N:%.*]], [[N2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[N_AND]], 31
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[N]], 32
+; CHECK-NEXT:    ret i8 [[R]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i8 [[OTHER:%.*]]
+;
+entry:
+  %n_and = and i8 %n, %n2
+  %cmp = icmp sge i8 %n_and, 32
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  %r = and i8 %n, 32
+  ret i8 %r
+
+if.else:
+  ret i8 %other
+}
+
+define i8 @and_eq_bits_must_be_set2(i8 %x, i8 %y) {
+; CHECK-LABEL: @and_eq_bits_must_be_set2(
+; CHECK-NEXT:    [[XY:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 123
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i8 11
+;
+  %xy = and i8 %x, %y
+  %cmp = icmp eq i8 %xy, 123
+  call void @llvm.assume(i1 %cmp)
+  %r = and i8 %y, 11
+  ret i8 %r
+}
+
+define i8 @and_eq_bits_must_be_set2_partial_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @and_eq_bits_must_be_set2_partial_fail(
+; CHECK-NEXT:    [[XY:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 123
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[Y]], 111
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xy = and i8 %x, %y
+  %cmp = icmp eq i8 %xy, 123
+  call void @llvm.assume(i1 %cmp)
+  %r = and i8 %y, 111
+  ret i8 %r
+}
+
+define i8 @or_eq_bits_must_be_unset(i8 %x, i8 %y) {
+; CHECK-LABEL: @or_eq_bits_must_be_unset(
+; CHECK-NEXT:    [[XY:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 124
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i8 0
+;
+  %xy = or i8 %x, %y
+  %cmp = icmp eq i8 %xy, 124
+  call void @llvm.assume(i1 %cmp)
+  %r = and i8 %x, 3
+  ret i8 %r
+}
+
+define i8 @or_eq_bits_must_be_unset2(i8 %x, i8 %y) {
+; CHECK-LABEL: @or_eq_bits_must_be_unset2(
+; CHECK-NEXT:    [[XY:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 124
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i8 0
+;
+  %xy = or i8 %x, %y
+  %cmp = icmp eq i8 %xy, 124
+  call void @llvm.assume(i1 %cmp)
+  %r = and i8 %y, 1
+  ret i8 %r
+}
+
+define i8 @or_eq_bits_must_be_unset2_partial_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @or_eq_bits_must_be_unset2_partial_fail(
+; CHECK-NEXT:    [[XY:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 124
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[Y]], 4
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xy = or i8 %x, %y
+  %cmp = icmp eq i8 %xy, 124
+  call void @llvm.assume(i1 %cmp)
+  %r = and i8 %y, 7
+  ret i8 %r
+}
+
+define i8 @or_ne_bits_must_be_unset2_fail(i8 %x, i8 %y) {
+; CHECK-LABEL: @or_ne_bits_must_be_unset2_fail(
+; CHECK-NEXT:    [[XY:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[XY]], 124
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[X]], 3
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %xy = or i8 %x, %y
+  %cmp = icmp ne i8 %xy, 124
+  call void @llvm.assume(i1 %cmp)
+  %r = and i8 %x, 3
+  ret i8 %r
+}
+
+declare void @use.i1(i1)
+declare void @use.i8(i8)
+
+declare void @use.2xi1(<2 x i1>)
+
+define i1 @extract_value_uadd(<2 x i8> %xx, <2 x i8> %yy) {
+; CHECK-LABEL: @extract_value_uadd(
+; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], <i8 63, i8 -1>
+; CHECK-NEXT:    [[Y0:%.*]] = and <2 x i8> [[YY:%.*]], <i8 63, i8 -1>
+; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[X0]], <i8 1, i8 0>
+; CHECK-NEXT:    [[Y:%.*]] = add nuw <2 x i8> [[Y0]], <i8 1, i8 0>
+; CHECK-NEXT:    [[ADD_UOV:%.*]] = call { <2 x i8>, <2 x i1> } @llvm.uadd.with.overflow.v2i8(<2 x i8> [[X]], <2 x i8> [[Y]])
+; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[ADD_UOV]], 1
+; CHECK-NEXT:    call void @use.2xi1(<2 x i1> [[UOV]])
+; CHECK-NEXT:    ret i1 false
+;
+  %x0 = and <2 x i8> %xx, <i8 63, i8 255>
+  %y0 = and <2 x i8> %yy, <i8 63, i8 255>
+  %x = add nuw <2 x i8> %x0, <i8 1, i8 0>
+  %y = add nuw <2 x i8> %y0, <i8 1, i8 0>
+
+  %add_uov = call { <2 x i8>, <2 x i1> } @llvm.uadd.with.overflow(<2 x i8> %x, <2 x i8> %y)
+  %add = extractvalue { <2 x i8>, <2 x i1> } %add_uov, 0
+  %uov = extractvalue { <2 x i8>, <2 x i1> } %add_uov, 1
+  call void @use.2xi1(<2 x i1> %uov)
+  %add_ele = extractelement <2 x i8> %add, i32 0
+  %r = icmp eq i8 %add_ele, 0
+  ret i1 %r
+}
+
+define i1 @extract_value_uadd2(<2 x i8> %xx, <2 x i8> %yy) {
+; CHECK-LABEL: @extract_value_uadd2(
+; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], <i8 -1, i8 63>
+; CHECK-NEXT:    [[Y0:%.*]] = and <2 x i8> [[YY:%.*]], <i8 -1, i8 63>
+; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[X0]], <i8 0, i8 1>
+; CHECK-NEXT:    [[Y:%.*]] = add nuw <2 x i8> [[Y0]], <i8 0, i8 1>
+; CHECK-NEXT:    [[ADD_UOV:%.*]] = call { <2 x i8>, <2 x i1> } @llvm.uadd.with.overflow.v2i8(<2 x i8> [[X]], <2 x i8> [[Y]])
+; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[ADD_UOV]], 1
+; CHECK-NEXT:    call void @use.2xi1(<2 x i1> [[UOV]])
+; CHECK-NEXT:    ret i1 false
+;
+  %x0 = and <2 x i8> %xx, <i8 255, i8 63>
+  %y0 = and <2 x i8> %yy, <i8 255, i8 63>
+  %x = add nuw <2 x i8> %x0, <i8 0, i8 1>
+  %y = add nuw <2 x i8> %y0, <i8 0, i8 1>
+
+  %add_uov = call { <2 x i8>, <2 x i1> } @llvm.uadd.with.overflow(<2 x i8> %x, <2 x i8> %y)
+  %add = extractvalue { <2 x i8>, <2 x i1> } %add_uov, 0
+  %uov = extractvalue { <2 x i8>, <2 x i1> } %add_uov, 1
+  call void @use.2xi1(<2 x i1> %uov)
+  %add_ele = extractelement <2 x i8> %add, i32 1
+  %r = icmp eq i8 %add_ele, 0
+  ret i1 %r
+}
+
+define i1 @extract_value_uadd_fail(<2 x i8> %xx, <2 x i8> %yy) {
+; CHECK-LABEL: @extract_value_uadd_fail(
+; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], <i8 63, i8 -1>
+; CHECK-NEXT:    [[Y0:%.*]] = and <2 x i8> [[YY:%.*]], <i8 63, i8 -1>
+; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[X0]], <i8 1, i8 0>
+; CHECK-NEXT:    [[Y:%.*]] = add nuw <2 x i8> [[Y0]], <i8 1, i8 0>
+; CHECK-NEXT:    [[ADD_UOV:%.*]] = call { <2 x i8>, <2 x i1> } @llvm.uadd.with.overflow.v2i8(<2 x i8> [[X]], <2 x i8> [[Y]])
+; CHECK-NEXT:    [[ADD:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[ADD_UOV]], 0
+; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[ADD_UOV]], 1
+; CHECK-NEXT:    call void @use.2xi1(<2 x i1> [[UOV]])
+; CHECK-NEXT:    [[ADD_ELE:%.*]] = extractelement <2 x i8> [[ADD]], i64 1
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[ADD_ELE]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x0 = and <2 x i8> %xx, <i8 63, i8 255>
+  %y0 = and <2 x i8> %yy, <i8 63, i8 255>
+  %x = add nuw <2 x i8> %x0, <i8 1, i8 0>
+  %y = add nuw <2 x i8> %y0, <i8 1, i8 0>
+
+  %add_uov = call { <2 x i8>, <2 x i1> } @llvm.uadd.with.overflow(<2 x i8> %x, <2 x i8> %y)
+  %add = extractvalue { <2 x i8>, <2 x i1> } %add_uov, 0
+  %uov = extractvalue { <2 x i8>, <2 x i1> } %add_uov, 1
+  call void @use.2xi1(<2 x i1> %uov)
+  %add_ele = extractelement <2 x i8> %add, i32 1
+  %r = icmp eq i8 %add_ele, 0
+  ret i1 %r
+}
+
+define i1 @extract_value_uadd_fail2(<2 x i8> %xx, <2 x i8> %yy, i32 %idx) {
+; CHECK-LABEL: @extract_value_uadd_fail2(
+; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], <i8 63, i8 -1>
+; CHECK-NEXT:    [[Y0:%.*]] = and <2 x i8> [[YY:%.*]], <i8 63, i8 -1>
+; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[X0]], <i8 1, i8 0>
+; CHECK-NEXT:    [[Y:%.*]] = add nuw <2 x i8> [[Y0]], <i8 1, i8 0>
+; CHECK-NEXT:    [[ADD_UOV:%.*]] = call { <2 x i8>, <2 x i1> } @llvm.uadd.with.overflow.v2i8(<2 x i8> [[X]], <2 x i8> [[Y]])
+; CHECK-NEXT:    [[ADD:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[ADD_UOV]], 0
+; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[ADD_UOV]], 1
+; CHECK-NEXT:    call void @use.2xi1(<2 x i1> [[UOV]])
+; CHECK-NEXT:    [[ADD_ELE:%.*]] = extractelement <2 x i8> [[ADD]], i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[ADD_ELE]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x0 = and <2 x i8> %xx, <i8 63, i8 255>
+  %y0 = and <2 x i8> %yy, <i8 63, i8 255>
+  %x = add nuw <2 x i8> %x0, <i8 1, i8 0>
+  %y = add nuw <2 x i8> %y0, <i8 1, i8 0>
+
+  %add_uov = call { <2 x i8>, <2 x i1> } @llvm.uadd.with.overflow(<2 x i8> %x, <2 x i8> %y)
+  %add = extractvalue { <2 x i8>, <2 x i1> } %add_uov, 0
+  %uov = extractvalue { <2 x i8>, <2 x i1> } %add_uov, 1
+  call void @use.2xi1(<2 x i1> %uov)
+  %add_ele = extractelement <2 x i8> %add, i32 %idx
+  %r = icmp eq i8 %add_ele, 0
+  ret i1 %r
+}
+
+define i1 @extract_value_uadd_fail3(<2 x i8> %xx, <2 x i8> %yy) {
+; CHECK-LABEL: @extract_value_uadd_fail3(
+; CHECK-NEXT:    [[X0:%.*]] = and <2 x i8> [[XX:%.*]], <i8 127, i8 127>
+; CHECK-NEXT:    [[Y0:%.*]] = and <2 x i8> [[YY:%.*]], <i8 127, i8 127>
+; CHECK-NEXT:    [[X:%.*]] = add nuw <2 x i8> [[X0]], <i8 1, i8 1>
+; CHECK-NEXT:    [[Y:%.*]] = add nuw <2 x i8> [[Y0]], <i8 1, i8 1>
+; CHECK-NEXT:    [[ADD_UOV:%.*]] = call { <2 x i8>, <2 x i1> } @llvm.uadd.with.overflow.v2i8(<2 x i8> [[X]], <2 x i8> [[Y]])
+; CHECK-NEXT:    [[ADD:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[ADD_UOV]], 0
+; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { <2 x i8>, <2 x i1> } [[ADD_UOV]], 1
+; CHECK-NEXT:    call void @use.2xi1(<2 x i1> [[UOV]])
+; CHECK-NEXT:    [[ADD_ELE:%.*]] = extractelement <2 x i8> [[ADD]], i64 0
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[ADD_ELE]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x0 = and <2 x i8> %xx, <i8 127, i8 127>
+  %y0 = and <2 x i8> %yy, <i8 127, i8 127>
+  %x = add nuw <2 x i8> %x0, <i8 1, i8 1>
+  %y = add nuw <2 x i8> %y0, <i8 1, i8 1>
+
+  %add_uov = call { <2 x i8>, <2 x i1> } @llvm.uadd.with.overflow(<2 x i8> %x, <2 x i8> %y)
+  %add = extractvalue { <2 x i8>, <2 x i1> } %add_uov, 0
+  %uov = extractvalue { <2 x i8>, <2 x i1> } %add_uov, 1
+  call void @use.2xi1(<2 x i1> %uov)
+  %add_ele = extractelement <2 x i8> %add, i32 0
+  %r = icmp eq i8 %add_ele, 0
+  ret i1 %r
+}
+
+define i1 @extract_value_sadd(i8 %xx, i8 %yy) {
+; CHECK-LABEL: @extract_value_sadd(
+; CHECK-NEXT:    [[X:%.*]] = add nuw i8 [[XX:%.*]], 1
+; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
+; CHECK-NEXT:    [[X_LEMMA:%.*]] = icmp sgt i8 [[X]], -1
+; CHECK-NEXT:    [[Y_LEMMA:%.*]] = icmp sgt i8 [[Y]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LEMMA]])
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LEMMA]])
+; CHECK-NEXT:    [[ADD_SOV:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[SOV:%.*]] = extractvalue { i8, i1 } [[ADD_SOV]], 1
+; CHECK-NEXT:    call void @use.i1(i1 [[SOV]])
+; CHECK-NEXT:    ret i1 false
+;
+  %x = add nuw i8 %xx, 1
+  %y = add nuw i8 %yy, 1
+  %x_lemma = icmp ult i8 %x, 128
+  %y_lemma = icmp ult i8 %y, 128
+  call void @llvm.assume(i1 %x_lemma)
+  call void @llvm.assume(i1 %y_lemma)
+
+  %add_sov = call { i8, i1 } @llvm.sadd.with.overflow(i8 %x, i8 %y)
+  %add = extractvalue { i8, i1 } %add_sov, 0
+  %sov = extractvalue { i8, i1 } %add_sov, 1
+  call void @use.i1(i1 %sov)
+  %r = icmp eq i8 %add, 0
+  ret i1 %r
+}
+
+define i1 @extract_value_sadd_fail(i8 %xx, i8 %yy) {
+; CHECK-LABEL: @extract_value_sadd_fail(
+; CHECK-NEXT:    [[X:%.*]] = add i8 [[XX:%.*]], 1
+; CHECK-NEXT:    [[Y:%.*]] = add i8 [[YY:%.*]], 1
+; CHECK-NEXT:    [[ADD_SOV:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[ADD:%.*]] = extractvalue { i8, i1 } [[ADD_SOV]], 0
+; CHECK-NEXT:    [[SOV:%.*]] = extractvalue { i8, i1 } [[ADD_SOV]], 1
+; CHECK-NEXT:    call void @use.i1(i1 [[SOV]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[ADD]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = add i8 %xx, 1
+  %y = add i8 %yy, 1
+
+  %add_sov = call { i8, i1 } @llvm.sadd.with.overflow(i8 %x, i8 %y)
+  %add = extractvalue { i8, i1 } %add_sov, 0
+  %sov = extractvalue { i8, i1 } %add_sov, 1
+  call void @use.i1(i1 %sov)
+  %r = icmp eq i8 %add, 0
+  ret i1 %r
+}
+
+define i1 @extract_value_usub(i8 %x, i8 %zz) {
+; CHECK-LABEL: @extract_value_usub(
+; CHECK-NEXT:    [[Z:%.*]] = add nuw i8 [[ZZ:%.*]], 1
+; CHECK-NEXT:    [[Y:%.*]] = add i8 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    [[SUB_UOV:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[SUB:%.*]] = extractvalue { i8, i1 } [[SUB_UOV]], 0
+; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { i8, i1 } [[SUB_UOV]], 1
+; CHECK-NEXT:    call void @use.i1(i1 [[UOV]])
+; CHECK-NEXT:    call void @use.i8(i8 [[SUB]])
+; CHECK-NEXT:    ret i1 false
+;
+  %z = add nuw i8 %zz, 1
+  %y = add i8 %x, %z
+
+  %sub_uov = call { i8, i1 } @llvm.usub.with.overflow(i8 %x, i8 %y)
+  %sub = extractvalue { i8, i1 } %sub_uov, 0
+  %uov = extractvalue { i8, i1 } %sub_uov, 1
+  call void @use.i1(i1 %uov)
+  call void @use.i8(i8 %sub)
+  %r = icmp eq i8 %sub, 0
+  ret i1 %r
+}
+
+define i1 @extract_value_usub_fail(i8 %x, i8 %z) {
+; CHECK-LABEL: @extract_value_usub_fail(
+; CHECK-NEXT:    [[Y:%.*]] = add i8 [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[SUB_UOV:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[SUB:%.*]] = extractvalue { i8, i1 } [[SUB_UOV]], 0
+; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { i8, i1 } [[SUB_UOV]], 1
+; CHECK-NEXT:    call void @use.i1(i1 [[UOV]])
+; CHECK-NEXT:    call void @use.i8(i8 [[SUB]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[SUB]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %y = add i8 %x, %z
+  %sub_uov = call { i8, i1 } @llvm.usub.with.overflow(i8 %x, i8 %y)
+  %sub = extractvalue { i8, i1 } %sub_uov, 0
+  %uov = extractvalue { i8, i1 } %sub_uov, 1
+  call void @use.i1(i1 %uov)
+  call void @use.i8(i8 %sub)
+  %r = icmp eq i8 %sub, 0
+  ret i1 %r
+}
+
+define i1 @extract_value_ssub(i8 %x, i8 %zz) {
+; CHECK-LABEL: @extract_value_ssub(
+; CHECK-NEXT:    [[Z:%.*]] = add nuw i8 [[ZZ:%.*]], 1
+; CHECK-NEXT:    [[Y:%.*]] = add i8 [[Z]], [[X:%.*]]
+; CHECK-NEXT:    [[SUB_SOV:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[Y]], i8 [[X]])
+; CHECK-NEXT:    [[SUB:%.*]] = extractvalue { i8, i1 } [[SUB_SOV]], 0
+; CHECK-NEXT:    [[SOV:%.*]] = extractvalue { i8, i1 } [[SUB_SOV]], 1
+; CHECK-NEXT:    call void @use.i1(i1 [[SOV]])
+; CHECK-NEXT:    call void @use.i8(i8 [[SUB]])
+; CHECK-NEXT:    ret i1 false
+;
+  %z = add nuw i8 %zz, 1
+  %y = add i8 %x, %z
+
+  %sub_sov = call { i8, i1 } @llvm.ssub.with.overflow(i8 %y, i8 %x)
+  %sub = extractvalue { i8, i1 } %sub_sov, 0
+  %sov = extractvalue { i8, i1 } %sub_sov, 1
+  call void @use.i1(i1 %sov)
+  call void @use.i8(i8 %sub)
+  %r = icmp eq i8 %sub, 0
+  ret i1 %r
+}
+
+define i1 @extract_value_ssub_fail(i8 %x) {
+; CHECK-LABEL: @extract_value_ssub_fail(
+; CHECK-NEXT:    [[SUB_SOV:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 10, i8 [[X:%.*]])
+; CHECK-NEXT:    [[SUB:%.*]] = extractvalue { i8, i1 } [[SUB_SOV]], 0
+; CHECK-NEXT:    [[SOV:%.*]] = extractvalue { i8, i1 } [[SUB_SOV]], 1
+; CHECK-NEXT:    call void @use.i1(i1 [[SOV]])
+; CHECK-NEXT:    call void @use.i8(i8 [[SUB]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[SUB]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %sub_sov = call { i8, i1 } @llvm.ssub.with.overflow(i8 10, i8 %x)
+  %sub = extractvalue { i8, i1 } %sub_sov, 0
+  %sov = extractvalue { i8, i1 } %sub_sov, 1
+  call void @use.i1(i1 %sov)
+  call void @use.i8(i8 %sub)
+  %r = icmp eq i8 %sub, 0
+  ret i1 %r
+}
+
+define i1 @extract_value_umul(i8 %xx, i8 %yy) {
+; CHECK-LABEL: @extract_value_umul(
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], 1
+; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
+; CHECK-NEXT:    [[MUL_UOV:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[MUL:%.*]] = extractvalue { i8, i1 } [[MUL_UOV]], 0
+; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { i8, i1 } [[MUL_UOV]], 1
+; CHECK-NEXT:    call void @use.i1(i1 [[UOV]])
+; CHECK-NEXT:    call void @use.i8(i8 [[MUL]])
+; CHECK-NEXT:    ret i1 false
+;
+  %x = or i8 %xx, 1
+  %y = add nuw i8 %yy, 1
+
+  %mul_uov = call { i8, i1 } @llvm.umul.with.overflow(i8 %x, i8 %y)
+  %mul = extractvalue { i8, i1 } %mul_uov, 0
+  %uov = extractvalue { i8, i1 } %mul_uov, 1
+  call void @use.i1(i1 %uov)
+  call void @use.i8(i8 %mul)
+  %r = icmp eq i8 %mul, 0
+  ret i1 %r
+}
+
+define i1 @extract_value_umul_fail(i8 %xx, i8 %yy) {
+; CHECK-LABEL: @extract_value_umul_fail(
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], 2
+; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
+; CHECK-NEXT:    [[MUL_UOV:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[X]], i8 [[Y]])
+; CHECK-NEXT:    [[MUL:%.*]] = extractvalue { i8, i1 } [[MUL_UOV]], 0
+; CHECK-NEXT:    [[UOV:%.*]] = extractvalue { i8, i1 } [[MUL_UOV]], 1
+; CHECK-NEXT:    call void @use.i1(i1 [[UOV]])
+; CHECK-NEXT:    call void @use.i8(i8 [[MUL]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[MUL]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = or i8 %xx, 2
+  %y = add nuw i8 %yy, 1
+
+  %mul_uov = call { i8, i1 } @llvm.umul.with.overflow(i8 %x, i8 %y)
+  %mul = extractvalue { i8, i1 } %mul_uov, 0
+  %uov = extractvalue { i8, i1 } %mul_uov, 1
+  call void @use.i1(i1 %uov)
+  call void @use.i8(i8 %mul)
+  %r = icmp eq i8 %mul, 0
+  ret i1 %r
+}
+
+define i1 @extract_value_smul(i8 %xx, i8 %yy) {
+; CHECK-LABEL: @extract_value_smul(
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], 1
+; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
+; CHECK-NEXT:    [[MUL_SOV:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[Y]], i8 [[X]])
+; CHECK-NEXT:    [[MUL:%.*]] = extractvalue { i8, i1 } [[MUL_SOV]], 0
+; CHECK-NEXT:    [[SOV:%.*]] = extractvalue { i8, i1 } [[MUL_SOV]], 1
+; CHECK-NEXT:    call void @use.i1(i1 [[SOV]])
+; CHECK-NEXT:    call void @use.i8(i8 [[MUL]])
+; CHECK-NEXT:    ret i1 false
+;
+  %x = or i8 %xx, 1
+  %y = add nuw i8 %yy, 1
+
+  %mul_sov = call { i8, i1 } @llvm.smul.with.overflow(i8 %y, i8 %x)
+  %mul = extractvalue { i8, i1 } %mul_sov, 0
+  %sov = extractvalue { i8, i1 } %mul_sov, 1
+  call void @use.i1(i1 %sov)
+  call void @use.i8(i8 %mul)
+  %r = icmp eq i8 %mul, 0
+  ret i1 %r
+}
+
+define i1 @extract_value_smul_fail(i8 %xx, i8 %yy) {
+; CHECK-LABEL: @extract_value_smul_fail(
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], 1
+; CHECK-NEXT:    [[Y:%.*]] = add i8 [[YY:%.*]], 1
+; CHECK-NEXT:    [[MUL_SOV:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[Y]], i8 [[X]])
+; CHECK-NEXT:    [[MUL:%.*]] = extractvalue { i8, i1 } [[MUL_SOV]], 0
+; CHECK-NEXT:    [[SOV:%.*]] = extractvalue { i8, i1 } [[MUL_SOV]], 1
+; CHECK-NEXT:    call void @use.i1(i1 [[SOV]])
+; CHECK-NEXT:    call void @use.i8(i8 [[MUL]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[MUL]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = or i8 %xx, 1
+  %y = add i8 %yy, 1
+
+  %mul_sov = call { i8, i1 } @llvm.smul.with.overflow(i8 %y, i8 %x)
+  %mul = extractvalue { i8, i1 } %mul_sov, 0
+  %sov = extractvalue { i8, i1 } %mul_sov, 1
+  call void @use.i1(i1 %sov)
+  call void @use.i8(i8 %mul)
+  %r = icmp eq i8 %mul, 0
+  ret i1 %r
+}
+
+define i8 @known_reduce_or(<2 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_or(
+; CHECK-NEXT:    ret i8 1
+;
+  %x = or <2 x i8> %xx, <i8 5, i8 3>
+  %v = call i8 @llvm.vector.reduce.or(<2 x i8> %x)
+  %r = and i8 %v, 1
+  ret i8 %r
+}
+
+define i8 @known_reduce_or_fail(<2 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_or_fail(
+; CHECK-NEXT:    [[X:%.*]] = or <2 x i8> [[XX:%.*]], <i8 5, i8 3>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.or.v2i8(<2 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 4
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x = or <2 x i8> %xx, <i8 5, i8 3>
+  %v = call i8 @llvm.vector.reduce.or(<2 x i8> %x)
+  %r = and i8 %v, 4
+  ret i8 %r
+}
+
+define i8 @known_reduce_and(<2 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_and(
+; CHECK-NEXT:    ret i8 1
+;
+  %x = or <2 x i8> %xx, <i8 5, i8 3>
+  %v = call i8 @llvm.vector.reduce.and(<2 x i8> %x)
+  %r = and i8 %v, 1
+  ret i8 %r
+}
+
+define i8 @known_reduce_and_fail(<2 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_and_fail(
+; CHECK-NEXT:    [[X:%.*]] = or <2 x i8> [[XX:%.*]], <i8 5, i8 3>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.and.v2i8(<2 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x = or <2 x i8> %xx, <i8 5, i8 3>
+  %v = call i8 @llvm.vector.reduce.and(<2 x i8> %x)
+  %r = and i8 %v, 2
+  ret i8 %r
+}
+
+define i8 @known_reduce_xor_even(<2 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_xor_even(
+; CHECK-NEXT:    ret i8 0
+;
+  %x = or <2 x i8> %xx, <i8 5, i8 3>
+  %v = call i8 @llvm.vector.reduce.xor(<2 x i8> %x)
+  %r = and i8 %v, 1
+  ret i8 %r
+}
+
+define i8 @known_reduce_xor_even2(<2 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_xor_even2(
+; CHECK-NEXT:    ret i8 0
+;
+  %x = and <2 x i8> %xx, <i8 15, i8 15>
+  %v = call i8 @llvm.vector.reduce.xor(<2 x i8> %x)
+  %r = and i8 %v, 16
+  ret i8 %r
+}
+
+define i8 @known_reduce_xor_even_fail(<2 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_xor_even_fail(
+; CHECK-NEXT:    [[X:%.*]] = or <2 x i8> [[XX:%.*]], <i8 5, i8 3>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.xor.v2i8(<2 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x = or <2 x i8> %xx, <i8 5, i8 3>
+  %v = call i8 @llvm.vector.reduce.xor(<2 x i8> %x)
+  %r = and i8 %v, 2
+  ret i8 %r
+}
+
+define i8 @known_reduce_xor_odd(<3 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_xor_odd(
+; CHECK-NEXT:    ret i8 1
+;
+  %x = or <3 x i8> %xx, <i8 5, i8 3, i8 9>
+  %v = call i8 @llvm.vector.reduce.xor.v3i8(<3 x i8> %x)
+  %r = and i8 %v, 1
+  ret i8 %r
+}
+
+define i8 @known_reduce_xor_odd2(<3 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_xor_odd2(
+; CHECK-NEXT:    ret i8 0
+;
+  %x = and <3 x i8> %xx, <i8 15, i8 15, i8 31>
+  %v = call i8 @llvm.vector.reduce.xor.v3i8(<3 x i8> %x)
+  %r = and i8 %v, 32
+  ret i8 %r
+}
+
+define i8 @known_reduce_xor_odd2_fail(<3 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_xor_odd2_fail(
+; CHECK-NEXT:    [[X:%.*]] = and <3 x i8> [[XX:%.*]], <i8 15, i8 15, i8 31>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.xor.v3i8(<3 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 16
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x = and <3 x i8> %xx, <i8 15, i8 15, i8 31>
+  %v = call i8 @llvm.vector.reduce.xor.v3i8(<3 x i8> %x)
+  %r = and i8 %v, 16
+  ret i8 %r
+}
+
+define i8 @known_reduce_xor_odd_fail(<3 x i8> %xx) {
+; CHECK-LABEL: @known_reduce_xor_odd_fail(
+; CHECK-NEXT:    [[X:%.*]] = or <3 x i8> [[XX:%.*]], <i8 5, i8 3, i8 9>
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.xor.v3i8(<3 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x = or <3 x i8> %xx, <i8 5, i8 3, i8 9>
+  %v = call i8 @llvm.vector.reduce.xor.v3i8(<3 x i8> %x)
+  %r = and i8 %v, 2
+  ret i8 %r
+}
+
+define i8 @nonzero_reduce_xor_vscale_even(<vscale x 2 x i8> %xx) {
+; CHECK-LABEL: @nonzero_reduce_xor_vscale_even(
+; CHECK-NEXT:    ret i8 0
+;
+  %one = insertelement <vscale x 2 x i8> poison, i8 1, i64 0
+  %ones = shufflevector <vscale x 2 x i8> %one, <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
+  %x = or <vscale x 2 x i8> %xx, %ones
+  %v = call i8 @llvm.vector.reduce.xor.nxv2i8(<vscale x 2 x i8> %x)
+  %r = and i8 %v, 1
+  ret i8 %r
+}
+
+define i8 @nonzero_reduce_xor_vscale_odd_fail(<vscale x 3 x i8> %xx) {
+; CHECK-LABEL: @nonzero_reduce_xor_vscale_odd_fail(
+; CHECK-NEXT:    [[X:%.*]] = or <vscale x 3 x i8> [[XX:%.*]], shufflevector (<vscale x 3 x i8> insertelement (<vscale x 3 x i8> poison, i8 1, i64 0), <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer)
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.xor.nxv3i8(<vscale x 3 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %one = insertelement <vscale x 3 x i8> poison, i8 1, i64 0
+  %ones = shufflevector <vscale x 3 x i8> %one, <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer
+  %x = or <vscale x 3 x i8> %xx, %ones
+  %v = call i8 @llvm.vector.reduce.xor.nxv3i8(<vscale x 3 x i8> %x)
+  %r = and i8 %v, 1
+  ret i8 %r
+}
+
+define i8 @nonzero_reduce_xor_vscale_even_fail(<vscale x 2 x i8> %xx) {
+; CHECK-LABEL: @nonzero_reduce_xor_vscale_even_fail(
+; CHECK-NEXT:    [[X:%.*]] = or <vscale x 2 x i8> [[XX:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 1, i64 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[V:%.*]] = call i8 @llvm.vector.reduce.xor.nxv2i8(<vscale x 2 x i8> [[X]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %one = insertelement <vscale x 2 x i8> poison, i8 1, i64 0
+  %ones = shufflevector <vscale x 2 x i8> %one, <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
+  %x = or <vscale x 2 x i8> %xx, %ones
+  %v = call i8 @llvm.vector.reduce.xor.nxv2i8(<vscale x 2 x i8> %x)
+  %r = and i8 %v, 2
+  ret i8 %r
+}
+
+define i8 @nonzero_reduce_xor_vscale_odd(<vscale x 3 x i8> %xx) {
+; CHECK-LABEL: @nonzero_reduce_xor_vscale_odd(
+; CHECK-NEXT:    ret i8 0
+;
+  %one = insertelement <vscale x 3 x i8> poison, i8 1, i64 0
+  %ones = shufflevector <vscale x 3 x i8> %one, <vscale x 3 x i8> poison, <vscale x 3 x i32> zeroinitializer
+  %x = and <vscale x 3 x i8> %xx, %ones
+  %v = call i8 @llvm.vector.reduce.xor.nxv3i8(<vscale x 3 x i8> %x)
+  %r = and i8 %v, 2
+  ret i8 %r
 }
 
 declare void @use(i1)

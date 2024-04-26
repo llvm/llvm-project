@@ -13,7 +13,6 @@
 #include "bolt/Core/DebugData.h"
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/DIEBuilder.h"
-#include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/DIE.h"
@@ -23,7 +22,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LEB128.h"
@@ -32,7 +30,6 @@
 #include <cassert>
 #include <cstdint>
 #include <functional>
-#include <limits>
 #include <memory>
 #include <unordered_map>
 #include <vector>

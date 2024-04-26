@@ -16,7 +16,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/RISCVAttributes.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 
 using namespace llvm;
 
@@ -74,6 +74,13 @@ void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
   } else {
     auto &ISAInfo = *ParseResult;
     emitTextAttribute(RISCVAttrs::ARCH, ISAInfo->toString());
+  }
+
+  if (STI.hasFeature(RISCV::FeatureStdExtA)) {
+    unsigned AtomicABITag = STI.hasFeature(RISCV::FeatureNoTrailingSeqCstFence)
+                                ? RISCVAttrs::RISCVAtomicAbiTag::AtomicABI::A6C
+                                : RISCVAttrs::RISCVAtomicAbiTag::AtomicABI::A6S;
+    emitAttribute(RISCVAttrs::ATOMIC_ABI, AtomicABITag);
   }
 }
 

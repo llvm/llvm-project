@@ -197,7 +197,7 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td><tt>= delete("should have a reason");</tt></td>
   <td><a href="https://wg21.link/P2573R2">P2573R2</a></td>
-  <td class="none" align="center">No</td>
+  <td class="unreleased" align="center">Clang 19</td>
  </tr>
  <tr>
   <td>Variadic friends</td>
@@ -544,16 +544,8 @@ C++23, informally referred to as C++26.</p>
       </tr>
       <tr> <!-- from Cologne -->
         <td><a href="https://wg21.link/p0848r3">P0848R3</a></td>
-        <td rowspan="1" class="partial" align="center">
-          <details>
-            <summary>Clang 16 (Partial)</summary>
-            Because of other concepts implementation deficits, the __cpp_concepts macro is not yet set to 202002L.
-            Also, the related defect reports <a href="https://wg21.link/cwg1496">DR1496</a> and
-            <a href="https://wg21.link/cwg1734">DR1734</a> are not yet implemented. Accordingly, deleted
-            special member functions are treated as eligible even though they shouldn't be.
-          </details>
-        </td>
-        </tr>
+        <td rowspan="1" class="full" align="center">Clang 19</td>
+      </tr>
       <tr>
         <td><a href="https://wg21.link/p1616r1">P1616R1</a></td>
         <td rowspan="2" class="full" align="center">Clang 10</td>
@@ -1266,12 +1258,11 @@ code. This issue is expected to be rectified soon.
 </table>
 
 <p>
-<span id="n3778">(7): In Clang 3.7 and later, sized deallocation is only enabled
-if the user passes the <code>-fsized-deallocation</code> flag. The user must
-supply definitions of the sized deallocation functions, either by providing them
-explicitly or by using a C++ standard library that does. <code>libstdc++</code>
-added these functions in version 5.0, and <code>libc++</code> added them in
-version 3.7.
+<span id="n3778">(7): The user must supply definitions of the sized deallocation
+  functions, either by providing them explicitly or by using a C++ standard library
+  that does. <code>libstdc++</code> added these functions in version 5.0, and
+  <code>libc++</code> added them in version 3.7. The user can also use the
+  <code>-fno-sized-deallocation</code> option to disable sized deallocation.
 </span>
 </p>
 </details>
