@@ -1519,24 +1519,52 @@ FileHeader:
   ASSERT_THAT_EXPECTED(ElfOrErr, Succeeded());
   const ELFObjectFile<ELF64LE> &Obj = *ElfOrErr;
 
-  llvm::object::DataRefImpl Data1;
-  Data1.d.a = 0x00000000;
-  Data1.d.b = 0x00000001;
-  SymbolRef Symbol1(Data1, &Obj);
-  ELFSymbolRef ELFSymbol1(Symbol1);
+  const uint32_t Val1 = 0x00000001;
+  const uint32_t Val2 = 0x00000100;
 
-  llvm::object::DataRefImpl Data2;
-  Data2.d.a = 0x00000000;
-  Data2.d.b = 0x00000100;
-  SymbolRef Symbol2(Data2, &Obj);
-  ELFSymbolRef ELFSymbol2(Symbol2);
+  DataRefImpl Data1, Data2, Data3, Data4;
 
-  // SymbolRef operator< uses std::memcmp treating the union as char string.
-  if (llvm::sys::IsLittleEndianHost)
-    EXPECT_FALSE(Symbol1 < Symbol2);
-  else
-    EXPECT_TRUE(Symbol1 < Symbol2);
+  // Symtab index
+  Data1.d.a = Data2.d.a = Val1;
+  Data3.d.a = Data4.d.a = Val2;
 
-  // ELFSymbolRef operator< compares struct fields.
+  // Symbol index
+  Data1.d.b = Data3.d.b = Val1;
+  Data2.d.b = Data4.d.b = Val2;
+
+  SymbolRef Symbol1(Data1, &Obj), Symbol2(Data2, &Obj), Symbol3(Data3, &Obj),
+      Symbol4(Data4, &Obj);
+  ELFSymbolRef ELFSymbol1(Symbol1), ELFSymbol2(Symbol2), ELFSymbol3(Symbol3),
+      ELFSymbol4(Symbol4);
+
+  // Symtab index match
+  // left sym index is lower
   EXPECT_TRUE(ELFSymbol1 < ELFSymbol2);
+  EXPECT_TRUE(ELFSymbol3 < ELFSymbol4);
+  // right sym index is lower
+  EXPECT_FALSE(ELFSymbol2 < ELFSymbol1);
+  EXPECT_FALSE(ELFSymbol4 < ELFSymbol3);
+  // sym indexes match
+  EXPECT_FALSE(ELFSymbol1 < ELFSymbol1);
+  EXPECT_FALSE(ELFSymbol2 < ELFSymbol2);
+  EXPECT_FALSE(ELFSymbol3 < ELFSymbol3);
+  EXPECT_FALSE(ELFSymbol4 < ELFSymbol4);
+
+  // Left symtab index is lower
+  // left sym index is lower
+  EXPECT_TRUE(ELFSymbol1 < ELFSymbol4);
+  // right sym index is lower
+  EXPECT_TRUE(ELFSymbol2 < ELFSymbol3);
+  // sym indexes match
+  EXPECT_TRUE(ELFSymbol1 < ELFSymbol3);
+  EXPECT_TRUE(ELFSymbol2 < ELFSymbol4);
+
+  // Right symtab index is lower
+  // left sym index is lower
+  EXPECT_FALSE(ELFSymbol3 < ELFSymbol2);
+  // right sym index is lower
+  EXPECT_FALSE(ELFSymbol4 < ELFSymbol1);
+  // sym indexes match
+  EXPECT_FALSE(ELFSymbol3 < ELFSymbol1);
+  EXPECT_FALSE(ELFSymbol4 < ELFSymbol2);
 }
