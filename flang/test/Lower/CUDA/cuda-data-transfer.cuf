@@ -141,3 +141,13 @@ end subroutine
 ! CHECK: fir.cuda_kernel<<<*, *>>>
 ! CHECK-NOT: fir.cuda_data_transfer
 ! CHECK: hlfir.assign
+
+attributes(global) subroutine sub5(a)
+  integer, device :: a
+  integer :: i
+  i = threadIdx%x + (blockIdx%x - 1) * blockDim%x
+  a = i
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub5
+! CHECK-NOT: fir.cuda_data_transfer
