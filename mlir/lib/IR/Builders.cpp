@@ -329,34 +329,24 @@ ArrayAttr Builder::getAffineMapArrayAttr(ArrayRef<AffineMap> values) {
 }
 
 TypedAttr Builder::getZeroAttr(Type type) {
-  if (llvm::isa<FloatType>(type))
-    return getFloatAttr(type, 0.0);
-  if (llvm::isa<IndexType>(type))
-    return getIndexAttr(0);
-  if (llvm::dyn_cast<IntegerType>(type))
-    return getIntegerAttr(type,
-                          APInt(llvm::cast<IntegerType>(type).getWidth(), 0));
-  if (llvm::isa<RankedTensorType, VectorType>(type)) {
-    auto vtType = llvm::cast<ShapedType>(type);
-    auto element = getZeroAttr(vtType.getElementType());
-    if (!element)
-      return {};
-    return DenseElementsAttr::get(vtType, element);
-  }
-  return {};
+  return getNumberAttr(0.0, type);
 }
 
 TypedAttr Builder::getOneAttr(Type type) {
+  return getNumberAttr(1.0, type);
+}
+
+TypedAttr Builder::getNumberAttr(double value, Type type) {
   if (llvm::isa<FloatType>(type))
-    return getFloatAttr(type, 1.0);
+    return getFloatAttr(type, value);
   if (llvm::isa<IndexType>(type))
-    return getIndexAttr(1);
+    return getIndexAttr(static_cast<int64_t>(value));
   if (llvm::dyn_cast<IntegerType>(type))
     return getIntegerAttr(type,
-                          APInt(llvm::cast<IntegerType>(type).getWidth(), 1));
+                          APInt(llvm::cast<IntegerType>(type).getWidth(), static_cast<int64_t>(value)));
   if (llvm::isa<RankedTensorType, VectorType>(type)) {
     auto vtType = llvm::cast<ShapedType>(type);
-    auto element = getOneAttr(vtType.getElementType());
+    auto element = getNumberAttr(value, vtType.getElementType());
     if (!element)
       return {};
     return DenseElementsAttr::get(vtType, element);

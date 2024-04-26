@@ -395,6 +395,26 @@ public:
       return builder.create<math::FloorOp>(arg.getLoc(), arg);
     case UnaryFn::negf:
       return builder.create<arith::NegFOp>(arg.getLoc(), arg);
+    case UnaryFn::reciprocal:
+    {
+      Attribute oneAttr = builder.getNumberAttr(1.0, arg.getType());
+      auto one = builder.create<arith::ConstantOp>(arg.getLoc(), ::cast<TypedAttr>(oneAttr));
+      return builder.create<arith::DivFOp>(arg.getLoc(), one, arg);
+    }
+    case UnaryFn::round:
+      return builder.create<math::RoundOp>(arg.getLoc(), arg);
+    case UnaryFn::sqrt:
+      return builder.create<math::SqrtOp>(arg.getLoc(), arg);
+    case UnaryFn::rsqrt:
+      return builder.create<math::RsqrtOp>(arg.getLoc(), arg);
+    case UnaryFn::square:
+    {
+      Attribute twoAttr = builder.getNumberAttr(2.0, arg.getType());
+      auto two = builder.create<arith::ConstantOp>(arg.getLoc(), ::cast<TypedAttr>(twoAttr));
+      return builder.create<math::PowFOp>(arg.getLoc(), arg, two);
+    }
+    case UnaryFn::tanh:
+      return builder.create<math::TanhOp>(arg.getLoc(), arg);
     }
     llvm_unreachable("unsupported unary function");
   }
