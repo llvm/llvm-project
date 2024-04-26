@@ -116,4 +116,50 @@ VectorType getSMETileTypeForElement(Type elementType) {
   return VectorType::get({minNumElts, minNumElts}, elementType, {true, true});
 }
 
+void eraseTriviallyDeadTileOps(IRRewriter &rewriter,
+                               FunctionOpInterface function) {
+  SmallVector<Operation *> worklist;
+  function->walk([&](Operation *op) {
+    auto armSMEOp = dyn_cast<arm_sme::ArmSMETileOpInterface>(op);
+    if (armSMEOp && isOpTriviallyDead(armSMEOp))
+      worklist.push_back(armSMEOp);
+  });
+  while (!worklist.empty()) {
+    Operation *op = worklist.pop_back_val();
+    if (!isOpTriviallyDead(op))
+      continue;
+    for (Value value : op->getOperands()) {
+      if (auto armSMEOp = value.getDefiningOp<arm_sme::ArmSMETileOpInterface>())
+        worklist.push_back(armSMEOp);
+    }
+    rewriter.eraseOp(op);
+  }
+}
+
+bool isTriviallyCloneableTileOp(arm_sme::ArmSMETileOpInterface tileOp) {
+  return tileOp && tileOp->getNumResults() == 1 &&
+         tileOp->getNumOperands() == 0 && isPure(tileOp);
+}
+
+bool hasTileResult(arm_sme::ArmSMETileOpInterface tileOp) {
+  for (Value result : tileOp->getResults()) {
+    if (arm_sme::isValidSMETileVectorType(result.getType()))
+      return true;
+  }
+  return false;
+}
+
+OpOperand *getTileOpOperand(arm_sme::ArmSMETileOpInterface tileOp) {
+  auto isTileOperandType = [](OpOperand &operand) {
+    return arm_sme::isValidSMETileVectorType(operand.get().getType());
+  };
+  OpOperand *tileOperand =
+      llvm::find_if(tileOp->getOpOperands(), isTileOperandType);
+  assert(llvm::count_if(tileOp->getOpOperands(), isTileOperandType) <= 1 &&
+         "expected at most one tile operand");
+  if (tileOperand == tileOp->getOpOperands().end())
+    return nullptr;
+  return tileOperand;
+}
+
 } // namespace mlir::arm_sme

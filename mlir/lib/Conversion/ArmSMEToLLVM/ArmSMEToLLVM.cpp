@@ -16,6 +16,7 @@
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
+#include "mlir/Dialect/ArmSME/Transforms/Transforms.h"
 #include "mlir/Dialect/ArmSME/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -245,6 +246,10 @@ struct ConvertArmSMESpillsAndFillsToLLVM : public ConvertToLLVMPattern {
     if (!tileOp.isInMemoryTile())
       return failure();
 
+    tileOp->emitWarning(
+        "failed to allocate SME virtual tile to operation, all tile "
+        "operations will go through memory, expect degraded performance");
+
     // Step 1. Create an alloca for the tile at the top of the function (if one
     // does not already exist).
     auto loc = tileOp.getLoc();
@@ -391,20 +396,6 @@ addArmSMEConversionPatterns(RewritePatternSet &patterns,
   (addArmSMEConversionPattern<Patterns>(patterns, typeConverter), ...);
 }
 
-struct GetTileConversion
-    : public ConvertArmSMEOpToLLVMPattern<arm_sme::GetTileOp,
-                                          RequiresSpillsAndFills::No> {
-  using ConvertArmSMEOpToLLVMPattern::ConvertArmSMEOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(arm_sme::GetTileOp getTile, OpAdaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<arm_sme::MaterializeSSATileOp>(
-        getTile, getTile.getTileType());
-    return success();
-  }
-};
-
 /// Lower 'arm_sme.zero' to SME intrinsics.
 ///
 ///  BEFORE:
@@ -436,7 +427,8 @@ struct ZeroOpConversion : public ConvertArmSMEOpToLLVMPattern<arm_sme::ZeroOp> {
     // The base mask is just the mask to zero the first tile (of a size).
     // These masks are derived from:
     // https://developer.arm.com/documentation/ddi0602/2022-06/SME-Instructions/ZERO--Zero-a-list-of-64-bit-element-ZA-tiles-
-    arm_sme::ArmSMETileType tileType = *zero.getAllocatedTileType();
+    arm_sme::ArmSMETileType tileType =
+        *arm_sme::getSMETileType(zero.getTileType());
     auto baseMaskForSize = [&] {
       switch (tileType) {
       case arm_sme::ArmSMETileType::ZAB:
@@ -488,8 +480,7 @@ struct ZeroOpConversion : public ConvertArmSMEOpToLLVMPattern<arm_sme::ZeroOp> {
         loc, rewriter.getI32IntegerAttr(zeroMask));
 
     // Create a placeholder op to preserve dataflow.
-    rewriter.replaceOpWithNewOp<arm_sme::MaterializeSSATileOp>(
-        zero, zero.getVectorType());
+    rewriter.replaceOpWithNewOp<arm_sme::GetTileOp>(zero, zero.getVectorType());
 
     return success();
   }
@@ -746,10 +737,12 @@ struct OuterProductOpConversion
     auto loc = outerProductOp.getLoc();
 
     Value acc = outerProductOp.getAcc();
-    if (!acc)
+    if (!acc) {
       // Initalize accumulator with zero.
-      acc = outerProductOp.createOpAndForwardTileId<arm_sme::ZeroOp>(
-          rewriter, loc, resultVectorType);
+      auto zero = rewriter.create<arm_sme::ZeroOp>(loc, resultVectorType);
+      zero.setTileId(tileId);
+      acc = zero;
+    }
 
     Value lhsMask = outerProductOp.getLhsMask();
     Value rhsMask = outerProductOp.getRhsMask();
@@ -791,25 +784,27 @@ struct OuterProductWideningOpConversion
     if (!tileId)
       return failure();
 
+    auto loc = op.getLoc();
     Value acc = op.getAcc();
-    if (!acc)
+    if (!acc) {
       // Initalize accumulator with zero.
-      acc = op.template createOpAndForwardTileId<arm_sme::ZeroOp>(
-          rewriter, op.getLoc(), op.getResultType());
+      auto zero = rewriter.create<arm_sme::ZeroOp>(loc, op.getResultType());
+      zero.setTileId(tileId);
+      acc = zero;
+    }
 
     Value lhsMask = op.getLhsMask();
     Value rhsMask = op.getRhsMask();
     if (!lhsMask || !rhsMask) {
       auto predTy = op.getLhsType().cloneWith({}, rewriter.getI1Type());
       Value allActiveMask = rewriter.create<arith::ConstantOp>(
-          op.getLoc(), DenseElementsAttr::get(predTy, true));
+          loc, DenseElementsAttr::get(predTy, true));
       lhsMask = allActiveMask;
       rhsMask = allActiveMask;
     }
 
-    rewriter.create<OuterProductWideningIntrOp>(op.getLoc(), tileId, lhsMask,
-                                                rhsMask, adaptor.getLhs(),
-                                                adaptor.getRhs());
+    rewriter.create<OuterProductWideningIntrOp>(
+        loc, tileId, lhsMask, rhsMask, adaptor.getLhs(), adaptor.getRhs());
 
     // The outerproduct intrinsics have no result, replace
     // 'arm_sme.outerproduct' with the input tile to preserve dataflow.
@@ -865,15 +860,22 @@ namespace {
 
 struct ConvertArmSMEToLLVMPass
     : public impl::ConvertArmSMEToLLVMBase<ConvertArmSMEToLLVMPass> {
+  ConvertArmSMEToLLVMPass(bool dumpTileLiveRanges) {
+    this->dumpTileLiveRanges = dumpTileLiveRanges;
+  }
   void runOnOperation() override {
+    auto function = getOperation();
+
+    if (failed(arm_sme::allocateSMETiles(function, dumpTileLiveRanges)))
+      return signalPassFailure();
+
     LLVMConversionTarget target(getContext());
     RewritePatternSet patterns(&getContext());
     LLVMTypeConverter converter(&getContext());
     configureArmSMEToLLVMConversionLegality(target);
     populateArmSMEToLLVMConversionPatterns(converter, patterns);
 
-    if (failed(applyPartialConversion(getOperation(), target,
-                                      std::move(patterns))))
+    if (failed(applyPartialConversion(function, target, std::move(patterns))))
       signalPassFailure();
   }
 };
@@ -883,7 +885,7 @@ struct ConvertArmSMEToLLVMPass
 void mlir::configureArmSMEToLLVMConversionLegality(ConversionTarget &target) {
   target.addIllegalDialect<arm_sme::ArmSMEDialect>();
   target.addLegalOp<
-      arm_sme::MaterializeSSATileOp, arm_sme::aarch64_sme_zero,
+      arm_sme::GetTileOp, arm_sme::CopyTileOp, arm_sme::aarch64_sme_zero,
       arm_sme::aarch64_sme_str, arm_sme::aarch64_sme_ld1b_horiz,
       arm_sme::aarch64_sme_ld1h_horiz, arm_sme::aarch64_sme_ld1w_horiz,
       arm_sme::aarch64_sme_ld1d_horiz, arm_sme::aarch64_sme_ld1q_horiz,
@@ -955,9 +957,10 @@ void mlir::populateArmSMEToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                        arm_sme::aarch64_sme_usmopa_wide>,
       OuterProductWideningOpConversion<arm_sme::UsMops4WayOp,
                                        arm_sme::aarch64_sme_usmops_wide>,
-      ZeroOpConversion, GetTileConversion>(patterns, converter);
+      ZeroOpConversion>(patterns, converter);
 }
 
-std::unique_ptr<Pass> mlir::createConvertArmSMEToLLVMPass() {
-  return std::make_unique<ConvertArmSMEToLLVMPass>();
+std::unique_ptr<Pass>
+mlir::createConvertArmSMEToLLVMPass(bool dumpTileLiveRanges) {
+  return std::make_unique<ConvertArmSMEToLLVMPass>(dumpTileLiveRanges);
 }
