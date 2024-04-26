@@ -257,7 +257,6 @@ def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
     allocations.
   }];
   let dependentDialects = [ "fir::FIROpsDialect" ];
-  let constructor = "::fir::createStackArraysPass()";
 }
 
 def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {

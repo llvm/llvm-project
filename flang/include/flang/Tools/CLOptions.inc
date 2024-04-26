@@ -258,7 +258,7 @@ inline void createDefaultFIROptimizerPassPipeline(
   pm.addPass(mlir::createCSEPass());
 
   if (pc.StackArrays)
-    pm.addPass(fir::createStackArraysPass());
+    pm.addPass(fir::createStackArrays());
   else
     fir::addMemoryAllocationOpt(pm);
 
