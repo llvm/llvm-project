@@ -57,7 +57,8 @@ class RISCVProfile<string name, list<SubtargetFeature> features>
 
 def RVI20U32 : RISCVProfile<"rvi20u32", [Feature32Bit, FeatureStdExtI]>;
 def RVI20U64 : RISCVProfile<"rvi20u64", [Feature64Bit, FeatureStdExtI]>;
-def ProfileDummy : RISCVProfile<"dummy", [Feature64Bit, FeatureStdExtI, FeatureStdExtZidummy]>;
+def ProfileDummy : RISCVProfile<"dummy", [Feature64Bit, FeatureStdExtI,
+                                          FeatureStdExtF, FeatureStdExtZidummy]>;
 
 class RISCVProcessorModel<string n,
                           SchedMachineModel m,
@@ -135,7 +136,7 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
 // CHECK-NEXT: #undef GET_SUPPORTED_PROFILES
 
 // CHECK:      static constexpr RISCVProfile SupportedProfiles[] = {
-// CHECK-NEXT:     {"dummy","rv64i2p1_zidummy0p1"},
+// CHECK-NEXT:     {"dummy","rv64i2p1_f2p2_zidummy0p1"},
 // CHECK-NEXT:     {"rvi20u32","rv32i2p1"},
 // CHECK-NEXT:     {"rvi20u64","rv64i2p1"},
 // CHECK-NEXT: };

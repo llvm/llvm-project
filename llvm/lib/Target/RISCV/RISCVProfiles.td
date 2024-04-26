@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 class RISCVProfile<string name, list<SubtargetFeature> features>
-    : SubtargetFeature<name, "RISCVProfile", NAME,
+    : SubtargetFeature<name, "Is" # NAME, "true",
                        "RISC-V " # name # " profile", features>;
 
 defvar RVI20U32Features = [Feature32Bit, FeatureStdExtI];
