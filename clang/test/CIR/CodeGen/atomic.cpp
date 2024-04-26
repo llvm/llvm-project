@@ -246,3 +246,30 @@ void fd3(struct S *a, struct S *b, struct S *c) {
 // LLVM-NEXT: [[LOAD_B:%.*]] = load i64, ptr [[LOAD_B_PTR]]
 // LLVM-NEXT: [[RESULT:%.*]] = atomicrmw xchg ptr [[LOAD_A_PTR]], i64 [[LOAD_B]] seq_cst
 // LLVM-NEXT: store i64 [[RESULT]], ptr [[LOAD_C_PTR]]
+
+bool fi4a(int *i) {
+  int cmp = 0;
+  int desired = 1;
+  return __atomic_compare_exchange(i, &cmp, &desired, 0, memory_order_acquire, memory_order_acquire);
+}
+
+// CHECK-LABEL: @_Z4fi4aPi
+// CHECK: cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!s32i>, {{.*}} : <!s32i>, {{.*}} : !cir.ptr<!s32i>, success = acquire, failure = acquire) : !cir.bool
+
+// LLVM-LABEL: @_Z4fi4aPi
+// LLVM: %[[RES:.*]] = cmpxchg ptr %7, i32 %8, i32 %9 acquire acquire, align 4
+// LLVM: extractvalue { i32, i1 } %[[RES]], 0
+// LLVM: extractvalue { i32, i1 } %[[RES]], 1
+
+bool fi4b(int *i) {
+  int cmp = 0;
+  return __atomic_compare_exchange_n(i, &cmp, 1, 1, memory_order_acquire, memory_order_acquire);
+}
+
+// CHECK-LABEL: @_Z4fi4bPi
+// CHECK: cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!s32i>, {{.*}} : <!s32i>, {{.*}} : !cir.ptr<!s32i>, success = acquire, failure = acquire) weak : !cir.bool
+
+// LLVM-LABEL: @_Z4fi4bPi
+// LLVM: %[[R:.*]] = cmpxchg weak ptr {{.*}}, i32 {{.*}}, i32 {{.*}} acquire acquire, align 4
+// LLVM: extractvalue { i32, i1 } %[[R]], 0
+// LLVM: extractvalue { i32, i1 } %[[R]], 1
