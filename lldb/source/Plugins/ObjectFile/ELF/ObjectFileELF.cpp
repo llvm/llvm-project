@@ -1854,47 +1854,40 @@ public:
 };
 }
 
-namespace {
-  // We have to do this because ELF doesn't have section IDs, and also
-  // doesn't require section names to be unique.  (We use the section index
-  // for section IDs, but that isn't guaranteed to be the same in separate
-  // debug images.)
-  SectionSP FindMatchingSection(const SectionList &section_list,
-                                SectionSP section) {
-    SectionSP sect_sp;
+// We have to do this because ELF doesn't have section IDs, and also
+// doesn't require section names to be unique.  (We use the section index
+// for section IDs, but that isn't guaranteed to be the same in separate
+// debug images.)
+static SectionSP FindMatchingSection(const SectionList &section_list,
+                                     SectionSP section) {
+  SectionSP sect_sp;
 
-    addr_t vm_addr = section->GetFileAddress();
-    ConstString name = section->GetName();
-    offset_t file_size = section->GetFileSize();
-    offset_t byte_size = section->GetByteSize();
-    SectionType type = section->GetType();
-    bool thread_specific = section->IsThreadSpecific();
-    uint32_t permissions = section->GetPermissions();
-    uint32_t alignment = section->GetLog2Align();
+  addr_t vm_addr = section->GetFileAddress();
+  ConstString name = section->GetName();
+  offset_t file_size = section->GetFileSize();
+  offset_t byte_size = section->GetByteSize();
+  SectionType type = section->GetType();
+  bool thread_specific = section->IsThreadSpecific();
+  uint32_t permissions = section->GetPermissions();
+  uint32_t alignment = section->GetLog2Align();
 
-    for (auto sect_iter = section_list.begin();
-         sect_iter != section_list.end();
-         ++sect_iter) {
-      if ((*sect_iter)->GetName() == name
-          && (*sect_iter)->GetType() == type
-          && (*sect_iter)->IsThreadSpecific() == thread_specific
-          && (*sect_iter)->GetPermissions() == permissions
-          && (*sect_iter)->GetFileSize() == file_size
-          && (*sect_iter)->GetByteSize() == byte_size
-          && (*sect_iter)->GetFileAddress() == vm_addr
-          && (*sect_iter)->GetLog2Align() == alignment) {
-        sect_sp = *sect_iter;
+  for (auto sect : section_list) {
+    if (sect->GetName() == name && sect->GetType() == type &&
+        sect->IsThreadSpecific() == thread_specific &&
+        sect->GetPermissions() == permissions &&
+        sect->GetFileSize() == file_size && sect->GetByteSize() == byte_size &&
+        sect->GetFileAddress() == vm_addr &&
+        sect->GetLog2Align() == alignment) {
+      sect_sp = sect;
+      break;
+    } else {
+      sect_sp = FindMatchingSection(sect->GetChildren(), section);
+      if (sect_sp)
         break;
-      } else {
-        sect_sp = FindMatchingSection((*sect_iter)->GetChildren(),
-                                      section);
-        if (sect_sp)
-          break;
-      }
     }
-
-    return sect_sp;
   }
+
+  return sect_sp;
 }
 
 void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
@@ -2110,7 +2103,11 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
   SectionList *module_section_list =
       module_sp ? module_sp->GetSectionList() : nullptr;
 
-  // Cache the section mapping
+  // We might have debug information in a separate object, in which case
+  // we need to map the sections from that object to the sections in the
+  // main object during symbol lookup.  If we had to compare the sections
+  // for every single symbol, that would be expensive, so this map is
+  // used to accelerate the process.
   std::unordered_map<lldb::SectionSP, lldb::SectionSP> section_map;
 
   unsigned i;
@@ -2318,12 +2315,11 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
         module_section_list != section_list) {
       auto section_it = section_map.find(symbol_section_sp);
       if (section_it == section_map.end()) {
-        section_it =
-          section_map
-              .emplace(symbol_section_sp,
-                       FindMatchingSection(*module_section_list,
-                                           symbol_section_sp))
-              .first;
+        section_it = section_map
+                         .emplace(symbol_section_sp,
+                                  FindMatchingSection(*module_section_list,
+                                                      symbol_section_sp))
+                         .first;
       }
       if (section_it->second)
         symbol_section_sp = section_it->second;
