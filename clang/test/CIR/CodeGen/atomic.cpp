@@ -298,3 +298,13 @@ bool fi4c(atomic_int *i) {
 
 // LLVM-LABEL: @_Z4fi4cPU7_Atomici
 // LLVM: cmpxchg ptr {{.*}}, i32 {{.*}}, i32 {{.*}} seq_cst seq_cst, align 4
+
+bool fsb(bool *c) {
+  return __atomic_exchange_n(c, 1, memory_order_seq_cst);
+}
+
+// CHECK-LABEL: @_Z3fsbPb
+// CHECK: cir.atomic.xchg({{.*}} : !cir.ptr<!cir.bool>, {{.*}} : !u8i, seq_cst) : !u8i
+
+// LLVM-LABEL: @_Z3fsbPb
+// LLVM: atomicrmw xchg ptr {{.*}}, i8 {{.*}} seq_cst, align 1
