@@ -321,15 +321,14 @@ public:
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
 
-  lldb::SBDebuggerDestroyCallbackToken
+  void SetDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
+                          void *baton);
+
+  lldb::destroy_callback_token_t
   AddDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
                      void *baton);
 
-  lldb::SBDebuggerDestroyCallbackToken
-  SetDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
-                     void *baton);
-
-  bool RemoveDestroyCallback(lldb::SBDebuggerDestroyCallbackToken);
+  bool RemoveDestroyCallback(lldb::destroy_callback_token_t token);
 
 #ifndef SWIG
   LLDB_DEPRECATED_FIXME("Use DispatchInput(const void *, size_t)",

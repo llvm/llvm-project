@@ -1429,14 +1429,14 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
       std::make_shared<CallbackLogHandler>(log_callback, baton);
 }
 
-lldb_private::DebuggerDestroyCallbackToken Debugger::SetDestroyCallback(
+void Debugger::SetDestroyCallback(
     lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
   std::lock_guard<std::recursive_mutex> guard(m_destroy_callback_mutex);
   m_destroy_callback_and_baton.clear();
-  return AddDestroyCallback(destroy_callback, baton);
+  AddDestroyCallback(destroy_callback, baton);
 }
 
-lldb_private::DebuggerDestroyCallbackToken Debugger::AddDestroyCallback(
+lldb::destroy_callback_token_t Debugger::AddDestroyCallback(
     lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
   std::lock_guard<std::recursive_mutex> guard(m_destroy_callback_mutex);
   const auto token = m_destroy_callback_next_token++;
@@ -1446,8 +1446,7 @@ lldb_private::DebuggerDestroyCallbackToken Debugger::AddDestroyCallback(
   return token;
 }
 
-bool Debugger::RemoveDestroyCallback(
-    lldb_private::DebuggerDestroyCallbackToken token) {
+bool Debugger::RemoveDestroyCallback(lldb::destroy_callback_token_t token) {
   std::lock_guard<std::recursive_mutex> guard(m_destroy_callback_mutex);
   return m_destroy_callback_and_baton.erase(token);
 }

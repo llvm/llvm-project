@@ -1686,28 +1686,25 @@ void SBDebugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
   }
 }
 
-lldb::SBDebuggerDestroyCallbackToken
-SBDebugger::AddDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback, void *baton) {
+void SBDebugger::SetDestroyCallback(
+    lldb::SBDebuggerDestroyCallback destroy_callback, void *baton) {
   LLDB_INSTRUMENT_VA(this, destroy_callback, baton);
   if (m_opaque_sp) {
-    return m_opaque_sp->AddDestroyCallback(
-        destroy_callback, baton);
+    m_opaque_sp->SetDestroyCallback(destroy_callback, baton);
   }
-  return -1;
 }
 
-lldb::SBDebuggerDestroyCallbackToken
-SBDebugger::SetDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback, void *baton) {
+lldb::destroy_callback_token_t
+SBDebugger::AddDestroyCallback(lldb::SBDebuggerDestroyCallback destroy_callback,
+                               void *baton) {
   LLDB_INSTRUMENT_VA(this, destroy_callback, baton);
   if (m_opaque_sp) {
-    return m_opaque_sp->SetDestroyCallback(
-        destroy_callback, baton);
+    return m_opaque_sp->AddDestroyCallback(destroy_callback, baton);
   }
-  return -1;
+  return LLDB_INVALID_DESTROY_CALLBACK_TOKEN;
 }
 
-bool SBDebugger::RemoveDestroyCallback(
-    lldb::SBDebuggerDestroyCallbackToken token) {
+bool SBDebugger::RemoveDestroyCallback(lldb::destroy_callback_token_t token) {
   LLDB_INSTRUMENT_VA(this);
   if (m_opaque_sp) {
     return m_opaque_sp->RemoveDestroyCallback(token);
