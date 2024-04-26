@@ -9631,7 +9631,7 @@ SDValue SystemZTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
   case 8:
   case 16:
     Op = DAG.getNode(SystemZISD::VSUM, DL, MVT::v4i32, Op, Zero);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case 32:
   case 64:
     Op = DAG.getNode(SystemZISD::VSUM, DL, MVT::i128, Op,
