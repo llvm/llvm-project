@@ -1876,6 +1876,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __set_long_cap(size_type __s) _NOEXCEPT {
     __r_.first().__l.__cap_     = __s / __endian_factor;
     __r_.first().__l.__is_long_ = true;
+    _LIBCPP_ASSERT_INTERNAL(__s == __get_long_cap(), "Size must be __endian_factor aligned.");
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __get_long_cap() const _NOEXCEPT {
