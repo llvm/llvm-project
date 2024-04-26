@@ -9,13 +9,13 @@
 #include "AvoidBoundsErrorsCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
-
 #include <iostream>
+
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
 
-bool isApplicable(const QualType &Type) {
+static bool isApplicable(const QualType &Type) {
   const auto TypeStr = Type.getAsString();
   bool Result = false;
   // Only check for containers in the std namespace
@@ -51,9 +51,9 @@ void AvoidBoundsErrorsCheck::registerMatchers(MatchFinder *Finder) {
 void AvoidBoundsErrorsCheck::check(const MatchFinder::MatchResult &Result) {
   const ASTContext &Context = *Result.Context;
   const SourceManager &Source = Context.getSourceManager();
-  const auto *MatchedExpr = Result.Nodes.getNodeAs<CallExpr>("x");
-  const auto *MatchedFunction = Result.Nodes.getNodeAs<CXXMethodDecl>("f");
-  const auto Type = MatchedFunction->getThisType();
+  const CallExpr *MatchedExpr = Result.Nodes.getNodeAs<CallExpr>("x");
+  const CXXMethodDecl *MatchedFunction = Result.Nodes.getNodeAs<CXXMethodDecl>("f");
+  const QualType Type = MatchedFunction->getThisType();
   if (!isApplicable(Type)) {
     return;
   }
