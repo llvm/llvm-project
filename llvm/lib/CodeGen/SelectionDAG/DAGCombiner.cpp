@@ -15452,6 +15452,26 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
                                           N0.getOpcode() == ISD::BUILD_PAIR ||
                                           N0.getOpcode() == ISD::CONCAT_VECTORS;
 
+  // Avoid turning a BUILD_VECTOR that can be recognized as "all zeros", "all
+  // ones" or "constant" into something that depends on FrozenUndef. We can
+  // instead pick undef values to keep those properties, while at the same time
+  // folding away the freeze.
+  // If we implement a more general solution for folding away freeze(undef) in
+  // the future, then this special handling can be removed.
+  if (N0.getOpcode() == ISD::BUILD_VECTOR) {
+    SDLoc DL(N0);
+    MVT VT = N0.getSimpleValueType();
+    if (llvm::ISD::isBuildVectorAllOnes(N0.getNode()))
+      return DAG.getAllOnesConstant(DL, VT);
+    if (llvm::ISD::isBuildVectorOfConstantSDNodes(N0.getNode())) {
+      SmallVector<SDValue, 8> NewVecC;
+      for (const SDValue &Op : N0->op_values())
+        NewVecC.push_back(
+            Op.isUndef() ? DAG.getConstant(0, DL, Op.getValueType()) : Op);
+      return DAG.getBuildVector(VT, DL, NewVecC);
+    }
+  }
+
   SmallSetVector<SDValue, 8> MaybePoisonOperands;
   for (SDValue Op : N0->ops()) {
     if (DAG.isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly*/ false,

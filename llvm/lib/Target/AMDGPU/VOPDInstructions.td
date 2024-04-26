@@ -290,6 +290,13 @@ def GFX1210GenD3 : GFXGenD<GFX12_10Gen, VOPD3XPseudosGFX1210, VOPD3YPseudosGFX12
 
 def GFX13GenD3 : GFXGenD<GFX13Gen, VOPD3XPseudosGFX1210, VOPD3YPseudosGFX1210>;
 
+class getOpcMap<string OPName> {
+  defvar BaseName = !substr(OPName,2);
+  string ret = !cond(!eq(BaseName, "LSHL_ADD_U64_e64") : "LSHLREV_ADD_U64_e64",
+                     !eq(BaseName, "BITOP3_B32_e64")   : "BITOP2_B32_e64",
+                     1 : BaseName);
+}
+
 foreach Gen = [GFX1210GenD3, GFX13GenD3] in {
   foreach x = Gen.VOPDXPseudos in {
     foreach y = Gen.VOPDYPseudos in {
@@ -299,7 +306,7 @@ foreach Gen = [GFX1210GenD3, GFX13GenD3] in {
       defvar YasVC = !cast<VOPD_Component>(y);
       defvar xAsmName = getRenamed<XasVC.VOPDName, Gen>.ret;
       defvar yAsmName = getRenamed<YasVC.VOPDName, Gen>.ret;
-      defvar OpName = "V_DUAL_" # !substr(x,2) # "_X_" # !substr(y,2) # "_e96" # Gen.Suffix;
+      defvar OpName = "V_DUAL_" # getOpcMap<x>.ret # "_X_" # getOpcMap<y>.ret # "_e96" # Gen.Suffix;
       defvar asm = xAsmName # xInst.Pfl.AsmVOPD3X #" :: "# yAsmName #" "# yInst.Pfl.AsmVOPD3Y;
       defvar ins = !con(xInst.Pfl.InsVOPD3X, yInst.Pfl.InsVOPD3Y);
       defvar outs = (outs xInst.Pfl.DstRC:$vdstX, yInst.Pfl.DstRC:$vdstY);

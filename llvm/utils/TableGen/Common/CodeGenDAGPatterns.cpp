@@ -3616,7 +3616,15 @@ public:
       hasChain = true;
 
     if (const CodeGenIntrinsic *IntInfo = N.getIntrinsicInfo(CDP)) {
-      ModRefInfo MR = IntInfo->ME.getModRef();
+      // Ignore reads/writes to inaccessible memory. These should not imply
+      // mayLoad/mayStore on the instruction because they are often used to
+      // model dependencies that Machine IR expresses as uses/defs of a
+      // special physical register.
+      ModRefInfo MR = ModRefInfo::NoModRef;
+      for (MemoryEffects::Location Loc : MemoryEffects::locations()) {
+        if (Loc != MemoryEffects::Location::InaccessibleMem)
+          MR |= IntInfo->ME.getModRef();
+      }
       // If this is an intrinsic, analyze it.
       if (isRefSet(MR))
         mayLoad = true; // These may load memory.
@@ -4246,7 +4254,7 @@ static TreePatternNodePtr PromoteXForms(TreePatternNodePtr N) {
 
 void CodeGenDAGPatterns::ParseOnePattern(
     Record *TheDef, TreePattern &Pattern, TreePattern &Result,
-    const std::vector<Record *> &InstImpResults) {
+    const std::vector<Record *> &InstImpResults, bool ShouldIgnore) {
 
   // Inline pattern fragments and expand multiple alternatives.
   Pattern.InlinePatternFragments();
@@ -4332,7 +4340,7 @@ void CodeGenDAGPatterns::ParseOnePattern(
         AddPatternToMatch(&Pattern,
                           PatternToMatch(TheDef, Preds, T, Temp.getOnlyTree(),
                                          InstImpResults, Complexity,
-                                         TheDef->getID()));
+                                         TheDef->getID(), ShouldIgnore));
     }
   } else {
     // Show a message about a dropped pattern with some info to make it
@@ -4378,7 +4386,8 @@ void CodeGenDAGPatterns::ParsePatterns() {
       FindPatternInputsAndOutputs(Pattern, Pattern.getTree(j), InstInputs,
                                   InstResults, InstImpResults);
 
-    ParseOnePattern(CurPattern, Pattern, Result, InstImpResults);
+    ParseOnePattern(CurPattern, Pattern, Result, InstImpResults,
+                    CurPattern->getValueAsBit("GISelShouldIgnore"));
   }
 }
 
@@ -4407,10 +4416,10 @@ void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
       return;
     }
 
-    PatternsToMatch.emplace_back(P.getSrcRecord(), P.getPredicates(),
-                                 std::move(NewSrc), std::move(NewDst),
-                                 P.getDstRegs(), P.getAddedComplexity(),
-                                 Record::getNewUID(Records), Check);
+    PatternsToMatch.emplace_back(
+        P.getSrcRecord(), P.getPredicates(), std::move(NewSrc),
+        std::move(NewDst), P.getDstRegs(), P.getAddedComplexity(),
+        Record::getNewUID(Records), P.getGISelShouldIgnore(), Check);
   };
 
   for (PatternToMatch &P : Copy) {
@@ -4781,6 +4790,7 @@ void CodeGenDAGPatterns::GenerateVariants() {
           Variant, PatternsToMatch[i].getDstPatternShared(),
           PatternsToMatch[i].getDstRegs(),
           PatternsToMatch[i].getAddedComplexity(), Record::getNewUID(Records),
+          PatternsToMatch[i].getGISelShouldIgnore(),
           PatternsToMatch[i].getHwModeFeatures());
     }
 

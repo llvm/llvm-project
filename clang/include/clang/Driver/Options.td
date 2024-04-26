@@ -603,6 +603,7 @@ class MarshallingInfoVisibility<KeyPathAndMacro kpm, code default>
 // Key paths that are constant during parsing of options with the same key path prefix.
 defvar cplusplus = LangOpts<"CPlusPlus">;
 defvar cpp11 = LangOpts<"CPlusPlus11">;
+defvar cpp14 = LangOpts<"CPlusPlus14">;
 defvar cpp17 = LangOpts<"CPlusPlus17">;
 defvar cpp20 = LangOpts<"CPlusPlus20">;
 defvar c99 = LangOpts<"C99">;
@@ -2615,6 +2616,11 @@ defm protect_parens : BoolFOption<"protect-parens",
           "floating-point expressions are evaluated">,
   NegFlag<SetFalse>>;
 
+defm daz_ftz : SimpleMFlag<"daz-ftz",
+  "Globally set", "Do not globally set",
+  " the denormals-are-zero (DAZ) and flush-to-zero (FTZ) bits in the "
+  "floating-point control register on program startup">;
+
 def ffor_scope : Flag<["-"], "ffor-scope">, Group<f_Group>;
 def fno_for_scope : Flag<["-"], "fno-for-scope">, Group<f_Group>;
 
@@ -3365,10 +3371,9 @@ defm relaxed_template_template_args : BoolFOption<"relaxed-template-template-arg
           "Enable C++17 relaxed template template argument matching">,
   NegFlag<SetFalse>>;
 defm sized_deallocation : BoolFOption<"sized-deallocation",
-  LangOpts<"SizedDeallocation">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Enable C++14 sized global deallocation functions">,
-  NegFlag<SetFalse>>;
+  LangOpts<"SizedDeallocation">, Default<cpp14.KeyPath>,
+  PosFlag<SetTrue, [], [], "Enable C++14 sized global deallocation functions">,
+  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
 defm aligned_allocation : BoolFOption<"aligned-allocation",
   LangOpts<"AlignedAllocation">, Default<cpp17.KeyPath>,
   PosFlag<SetTrue, [], [ClangOption], "Enable C++17 aligned allocation functions">,

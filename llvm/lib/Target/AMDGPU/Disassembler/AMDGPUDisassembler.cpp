@@ -972,12 +972,6 @@ void AMDGPUDisassembler::convertDPP8Inst(MCInst &MI) const {
       MI.getOpcode() == AMDGPU::V_CVT_F16_BF8_e64_dpp8_gfx13)
     insertNamedMCOperand(MI, MI.getOperand(0), AMDGPU::OpName::src1);
 
-  if (MI.getOpcode() == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp8_gfx12 ||
-      MI.getOpcode() == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp8_gfx13 ||
-      MI.getOpcode() == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp8_gfx12 ||
-      MI.getOpcode() == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp8_gfx13)
-    insertNamedMCOperand(MI, MI.getOperand(0), AMDGPU::OpName::src2);
-
   unsigned DescNumOps = MCII->get(Opc).getNumOperands();
   if (MI.getNumOperands() < DescNumOps &&
       AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::op_sel)) {
@@ -1012,12 +1006,6 @@ void AMDGPUDisassembler::convertVOP3DPPInst(MCInst &MI) const {
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdst_in);
   if (VDstInIdx != -1)
     insertNamedMCOperand(MI, MI.getOperand(0), AMDGPU::OpName::vdst_in);
-
-  if (MI.getOpcode() == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp_gfx12 ||
-      MI.getOpcode() == AMDGPU::V_CVT_SR_BF8_F32_e64_dpp_gfx13 ||
-      MI.getOpcode() == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp_gfx12 ||
-      MI.getOpcode() == AMDGPU::V_CVT_SR_FP8_F32_e64_dpp_gfx13)
-    insertNamedMCOperand(MI, MI.getOperand(0), AMDGPU::OpName::src2);
 
   unsigned Opc = MI.getOpcode();
   unsigned DescNumOps = MCII->get(Opc).getNumOperands();
