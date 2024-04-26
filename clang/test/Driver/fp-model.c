@@ -73,9 +73,8 @@
 
 // RUN: %clang -### -Ofast -ffp-model=strict -c %s 2>&1 | FileCheck \
 // RUN:   --check-prefix=WARN12 %s
-// RUN: %clang -### -ffast-math -ffp-model=strict -c %s 2>&1 | FileCheck \
-// RUN:   --check-prefix=WARN12 %s
-// WARN12-NOT: warning: overriding '-ffp-model=strict' option with '-ffp-model=strict' [-Woverriding-option]
+// RUN: %clang -### -Werror -ffast-math -ffp-model=strict -c %s
+// WARN12: warning: overriding '-ffp-model=strict' option with '-Ofast'
 
 // RUN: %clang -### -ffp-model=strict -fapprox-func -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN13 %s
