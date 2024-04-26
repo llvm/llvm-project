@@ -644,6 +644,9 @@ public:
         TUCacheKey = Key->toString();
     }
 
+    // Propagate the statistics to the parent FileManager.
+    DriverFileMgr->AddStats(ScanInstance.getFileManager());
+
     return true;
   }
 
