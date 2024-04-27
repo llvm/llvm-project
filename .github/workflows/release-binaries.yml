@@ -216,7 +216,7 @@ jobs:
       run: |
         filename="LLVM-${{ needs.prepare.outputs.release-version }}-Linux.tar.gz"
         echo "filename=$filename" >> $GITHUB_OUTPUT
-        echo "path=/mnt/build/tools/clang/stage2-instrumented-bins/tools/clang/stage2-bins/$filename" >> $GITHUB_OUTPUT
+        echo "path=/mnt/build/tools/clang/stage2-bins/$filename" >> $GITHUB_OUTPUT
 
     - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
       if: always()
