@@ -112,7 +112,7 @@ void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
   outs() << "All available -march extensions for RISC-V\n\n";
   PrintExtension("Name", "Version", (DescMap.empty() ? "" : "Description"));
 
-  RISCVISAInfo::OrderedExtensionMap ExtMap;
+  RISCVISAUtils::OrderedExtensionMap ExtMap;
   for (const auto &E : SupportedExtensions)
     ExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
   for (const auto &E : ExtMap) {
