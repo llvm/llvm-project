@@ -1396,6 +1396,9 @@ def StdC : StandardSpec<"stdc"> {
       [], // Macros
       [ //Types
         MBStateTType,
+        Char8TType,
+        Char16TType,
+        Char32TType,
       ],
       [], // Enumerations
       []
