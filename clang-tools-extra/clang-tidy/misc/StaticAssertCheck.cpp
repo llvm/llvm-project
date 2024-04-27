@@ -64,7 +64,7 @@ void StaticAssertCheck::registerMatchers(MatchFinder *Finder) {
   auto Condition =
       anyOf(ignoringParenImpCasts(callExpr(
                 hasDeclaration(functionDecl(hasName("__builtin_expect"))),
-                hasArgument(0, AssertCondition))),
+                hasArgument(0, ignoringParenImpCasts(AssertCondition)))),
             AssertCondition);
 
   Finder->addMatcher(conditionalOperator(hasCondition(Condition),

@@ -687,21 +687,22 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
   };
 
   auto MatchDestination = [=](CallContext CC) {
-    return hasArgument(*CC.DestinationPos,
-                       allOf(AnyOfDestDecl,
-                             unless(hasAncestor(compoundStmt(
-                                 hasDescendant(NullTerminatorExpr)))),
-                             unless(Container)));
+    return hasArgument(
+        *CC.DestinationPos,
+        ignoringParenImpCasts(allOf(AnyOfDestDecl,
+                                    unless(hasAncestor(compoundStmt(
+                                        hasDescendant(NullTerminatorExpr)))),
+                                    unless(Container))));
   };
 
   auto MatchSource = [=](CallContext CC) {
-    return hasArgument(*CC.SourcePos, AnyOfSrcDecl);
+    return hasArgument(*CC.SourcePos, ignoringParenImpCasts(AnyOfSrcDecl));
   };
 
   auto MatchGivenLength = [=](CallContext CC) {
     return hasArgument(
         CC.LengthPos,
-        allOf(
+        ignoringParenImpCasts(allOf(
             anyOf(
                 ignoringImpCasts(integerLiteral().bind(WrongLengthExprName)),
                 allOf(unless(hasDefinition(SizeOfCharExpr)),
@@ -713,7 +714,7 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
                                                 UnknownLengthName)),
                                             hasDefinition(anything())))),
                             AnyOfWrongLengthInit))),
-            expr().bind(LengthExprName)));
+            expr().bind(LengthExprName))));
   };
 
   auto MatchCall = [=](CallContext CC) {
@@ -734,12 +735,14 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
       return allOf(MatchCall(CC), MatchDestination(CC), MatchSource(CC));
 
     if (CC.DestinationPos && !CC.SourcePos)
-      return allOf(MatchCall(CC), MatchDestination(CC),
-                   hasArgument(*CC.DestinationPos, anything()));
+      return allOf(
+          MatchCall(CC), MatchDestination(CC),
+          hasArgument(*CC.DestinationPos, ignoringParenImpCasts(anything())));
 
     if (!CC.DestinationPos && CC.SourcePos)
-      return allOf(MatchCall(CC), MatchSource(CC),
-                   hasArgument(*CC.SourcePos, anything()));
+      return allOf(
+          MatchCall(CC), MatchSource(CC),
+          hasArgument(*CC.SourcePos, ignoringParenImpCasts(anything())));
 
     llvm_unreachable("Unhandled match");
   };

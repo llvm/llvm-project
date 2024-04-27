@@ -74,7 +74,7 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
   auto BasicStringViewConstructingFromNullExpr =
       cxxConstructExpr(
           HasBasicStringViewType, argumentCountIs(1),
-          hasAnyArgument(/* `hasArgument` would skip over parens */ anyOf(
+          hasArgument(/* `hasArgument` would skip over parens */ anyOf(
               NullLiteral, NullInitList, EmptyInitList)),
           unless(cxxTemporaryObjectExpr(/* filters out type spellings */)),
           has(expr().bind("null_arg_expr")))
@@ -87,13 +87,13 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
                remove(node("null_arg_expr")), construction_warning);
 
   // `std::string_view{null_arg_expr}` and `(std::string_view){null_arg_expr}`
-  auto HandleTemporaryCXXTemporaryObjectExprAndCompoundLiteralExpr = makeRule(
-      cxxTemporaryObjectExpr(cxxConstructExpr(
-          HasBasicStringViewType, argumentCountIs(1),
-          hasAnyArgument(/* `hasArgument` would skip over parens */ anyOf(
-              NullLiteral, NullInitList, EmptyInitList)),
-          has(expr().bind("null_arg_expr")))),
-      remove(node("null_arg_expr")), construction_warning);
+  auto HandleTemporaryCXXTemporaryObjectExprAndCompoundLiteralExpr =
+      makeRule(cxxTemporaryObjectExpr(cxxConstructExpr(
+                   HasBasicStringViewType, argumentCountIs(1),
+                   hasArgument(/* `hasArgument` would skip over parens */ anyOf(
+                       NullLiteral, NullInitList, EmptyInitList)),
+                   has(expr().bind("null_arg_expr")))),
+               remove(node("null_arg_expr")), construction_warning);
 
   // `(std::string_view) null_arg_expr`
   auto HandleTemporaryCStyleCastExpr = makeRule(
@@ -262,9 +262,9 @@ RewriteRuleWith<std::string> StringviewNullptrCheckImpl() {
   // `T(null_arg_expr)`
   auto HandleConstructorInvocation =
       makeRule(cxxConstructExpr(
-                   hasAnyArgument(/* `hasArgument` would skip over parens */
-                                  ignoringImpCasts(
-                                      BasicStringViewConstructingFromNullExpr)),
+                   hasArgument(/* `hasArgument` would skip over parens */
+                               ignoringImpCasts(
+                                   BasicStringViewConstructingFromNullExpr)),
                    unless(HasBasicStringViewType)),
                changeTo(node("construct_expr"), cat("\"\"")),
                argument_construction_warning);

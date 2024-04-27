@@ -30,9 +30,9 @@ void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxOperatorCallExpr(
           argumentCountIs(2),
-          hasArgument(
-              0, expr(hasType(cxxRecordDecl(hasName("::absl::Duration"))))),
-          hasArgument(1, expr().bind("arg")),
+          hasArgument(0, ignoringParenImpCasts(expr(hasType(
+                             cxxRecordDecl(hasName("::absl::Duration")))))),
+          hasArgument(1, ignoringParenImpCasts(expr().bind("arg"))),
           callee(functionDecl(
               hasParent(functionTemplateDecl()),
               unless(hasTemplateArgument(0, refersToType(builtinType()))),
@@ -49,7 +49,8 @@ void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
               hasParent(functionTemplateDecl()),
               unless(hasTemplateArgument(0, refersToType(builtinType()))),
               hasAnyName("operator*=", "operator/="))),
-          argumentCountIs(1), hasArgument(0, expr().bind("arg")))
+          argumentCountIs(1),
+          hasArgument(0, ignoringParenImpCasts(expr().bind("arg"))))
           .bind("OuterExpr"),
       this);
 
@@ -62,9 +63,9 @@ void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
                    unless(hasTemplateArgument(0, refersToType(builtinType()))),
                    hasAnyName("::absl::operator*", "::absl::operator/"))),
                argumentCountIs(2),
-               hasArgument(0, expr(hasType(
-                                  cxxRecordDecl(hasName("::absl::Duration"))))),
-               hasArgument(1, expr().bind("arg")))
+               hasArgument(0, ignoringParenImpCasts(expr(hasType(cxxRecordDecl(
+                                  hasName("::absl::Duration")))))),
+               hasArgument(1, ignoringParenImpCasts(expr().bind("arg"))))
           .bind("OuterExpr"),
       this);
 
@@ -75,9 +76,10 @@ void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
                    hasParent(functionTemplateDecl()),
                    unless(hasTemplateArgument(0, refersToType(builtinType()))),
                    hasName("::absl::operator*"))),
-               argumentCountIs(2), hasArgument(0, expr().bind("arg")),
-               hasArgument(1, expr(hasType(
-                                  cxxRecordDecl(hasName("::absl::Duration"))))))
+               argumentCountIs(2),
+               hasArgument(0, ignoringParenImpCasts(expr().bind("arg"))),
+               hasArgument(1, ignoringParenImpCasts(expr(hasType(cxxRecordDecl(
+                                  hasName("::absl::Duration")))))))
           .bind("OuterExpr"),
       this);
 
@@ -98,16 +100,18 @@ void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
   //   `absl::Hours(x)`
   // where `x` is not of a built-in type.
   Finder->addMatcher(
-      traverse(TK_AsIs, implicitCastExpr(
-                            anyOf(hasCastKind(CK_UserDefinedConversion),
-                                  has(implicitCastExpr(
-                                      hasCastKind(CK_UserDefinedConversion)))),
-                            hasParent(callExpr(
-                                callee(functionDecl(
-                                    DurationFactoryFunction(),
-                                    unless(hasParent(functionTemplateDecl())))),
-                                hasArgument(0, expr().bind("arg")))))
-                            .bind("OuterExpr")),
+      traverse(
+          TK_AsIs,
+          implicitCastExpr(
+              anyOf(
+                  hasCastKind(CK_UserDefinedConversion),
+                  has(implicitCastExpr(hasCastKind(CK_UserDefinedConversion)))),
+              hasParent(callExpr(
+                  callee(
+                      functionDecl(DurationFactoryFunction(),
+                                   unless(hasParent(functionTemplateDecl())))),
+                  hasArgument(0, ignoringParenImpCasts(expr().bind("arg"))))))
+              .bind("OuterExpr")),
       this);
 }
 

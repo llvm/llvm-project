@@ -72,7 +72,7 @@ void FasterStrsplitDelimiterCheck::registerMatchers(MatchFinder *Finder) {
       expr(has(ignoringElidableConstructorCall(
                ignoringParenCasts(cxxBindTemporaryExpr(has(cxxConstructExpr(
                    hasType(recordDecl(hasName("::absl::ByAnyChar"))),
-                   hasArgument(0, StringViewArg))))))))
+                   hasArgument(0, ignoringParenImpCasts(StringViewArg)))))))))
           .bind("ByAnyChar");
 
   // Find uses of absl::StrSplit(..., "x") and absl::StrSplit(...,
@@ -80,7 +80,8 @@ void FasterStrsplitDelimiterCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       traverse(TK_AsIs,
                callExpr(callee(functionDecl(hasName("::absl::StrSplit"))),
-                        hasArgument(1, anyOf(ByAnyCharArg, SingleChar)),
+                        hasArgument(1, ignoringParenImpCasts(
+                                           anyOf(ByAnyCharArg, SingleChar))),
                         unless(isInTemplateInstantiation()))
                    .bind("StrSplit")),
       this);
@@ -91,8 +92,9 @@ void FasterStrsplitDelimiterCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       traverse(TK_AsIs,
                callExpr(callee(functionDecl(hasName("::absl::MaxSplits"))),
-                        hasArgument(0, anyOf(ByAnyCharArg,
-                                             ignoringParenCasts(SingleChar))),
+                        hasArgument(0, ignoringParenImpCasts(anyOf(
+                                           ByAnyCharArg,
+                                           ignoringParenCasts(SingleChar)))),
                         unless(isInTemplateInstantiation()))),
       this);
 }

@@ -99,7 +99,8 @@ void UseStdPrintCheck::registerMatchers(MatchFinder *Finder) {
     Finder->addMatcher(
         unusedReturnValue(
             callExpr(argumentCountAtLeast(1),
-                     hasArgument(0, stringLiteral(isOrdinary())),
+                     hasArgument(
+                         0, ignoringParenImpCasts(stringLiteral(isOrdinary()))),
                      callee(functionDecl(unless(cxxMethodDecl()),
                                          matchers::matchesAnyListedName(
                                              PrintfLikeFunctions))
@@ -111,7 +112,8 @@ void UseStdPrintCheck::registerMatchers(MatchFinder *Finder) {
     Finder->addMatcher(
         unusedReturnValue(
             callExpr(argumentCountAtLeast(2),
-                     hasArgument(1, stringLiteral(isOrdinary())),
+                     hasArgument(
+                         1, ignoringParenImpCasts(stringLiteral(isOrdinary()))),
                      callee(functionDecl(unless(cxxMethodDecl()),
                                          matchers::matchesAnyListedName(
                                              FprintfLikeFunctions))

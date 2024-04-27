@@ -37,19 +37,19 @@ void InefficientAlgorithmCheck::registerMatchers(MatchFinder *Finder) {
       callExpr(
           callee(functionDecl(Algorithms)),
           hasArgument(
-              0, cxxMemberCallExpr(
+              0, ignoringParenImpCasts(cxxMemberCallExpr(
                      callee(cxxMethodDecl(hasName("begin"))),
                      on(declRefExpr(
                             hasDeclaration(decl().bind("IneffContObj")),
                             anyOf(hasType(ContainerMatcher.bind("IneffCont")),
                                   hasType(pointsTo(
                                       ContainerMatcher.bind("IneffContPtr")))))
-                            .bind("IneffContExpr")))),
-          hasArgument(
-              1, cxxMemberCallExpr(callee(cxxMethodDecl(hasName("end"))),
-                                   on(declRefExpr(hasDeclaration(
-                                       equalsBoundNode("IneffContObj")))))),
-          hasArgument(2, expr().bind("AlgParam")))
+                            .bind("IneffContExpr"))))),
+          hasArgument(1, ignoringParenImpCasts(cxxMemberCallExpr(
+                             callee(cxxMethodDecl(hasName("end"))),
+                             on(declRefExpr(hasDeclaration(
+                                 equalsBoundNode("IneffContObj"))))))),
+          hasArgument(2, ignoringParenImpCasts(expr().bind("AlgParam"))))
           .bind("IneffAlg");
 
   Finder->addMatcher(Matcher, this);

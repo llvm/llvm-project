@@ -20,7 +20,8 @@ void BadSignalToKillThreadCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(callee(functionDecl(hasName("::pthread_kill"))),
                argumentCountIs(2),
-               hasArgument(1, integerLiteral().bind("integer-literal")))
+               hasArgument(1, ignoringParenImpCasts(
+                                  integerLiteral().bind("integer-literal"))))
           .bind("thread-kill"),
       this);
 }

@@ -110,8 +110,9 @@ void TimeSubtractionCheck::registerMatchers(MatchFinder *Finder) {
     auto CallMatcher =
         callExpr(
             callee(functionDecl(hasName(getDurationFactoryForScale(*Scale)))),
-            hasArgument(0, binaryOperator(hasOperatorName("-"),
-                                          hasLHS(TimeInverseMatcher))
+            hasArgument(0, ignoringParenImpCasts(
+                               binaryOperator(hasOperatorName("-"),
+                                              hasLHS(TimeInverseMatcher)))
                                .bind("binop")))
             .bind("outer_call");
     Finder->addMatcher(CallMatcher, this);

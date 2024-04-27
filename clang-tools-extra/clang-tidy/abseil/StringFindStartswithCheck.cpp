@@ -46,7 +46,8 @@ void StringFindStartswithCheck::registerMatchers(MatchFinder *Finder) {
       // ... with some search expression ...
       hasArgument(0, expr().ignoringParenImpCasts().bind("needle")),
       // ... and either "0" as second argument or the default argument (also 0).
-      anyOf(hasArgument(1, ZeroLiteral), hasArgument(1, cxxDefaultArgExpr())));
+      anyOf(hasArgument(1, ignoringParenImpCasts(ZeroLiteral)),
+            hasArgument(1, ignoringParenImpCasts(cxxDefaultArgExpr()))));
 
   Finder->addMatcher(
       // Match [=!]= with a zero on one side and a string.find on the other.

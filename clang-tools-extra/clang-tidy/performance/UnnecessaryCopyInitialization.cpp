@@ -97,11 +97,12 @@ AST_MATCHER_FUNCTION_P(StatementMatcher, isConstRefReturningMethodCall,
       hasCanonicalType(recordType(hasDeclaration(namedDecl(
           unless(matchers::matchesAnyListedName(ExcludedContainerTypes))))));
 
-  return expr(
-      anyOf(cxxMemberCallExpr(callee(MethodDecl), on(OnExpr),
-                              thisPointerType(ReceiverType)),
-            cxxOperatorCallExpr(callee(MethodDecl), hasArgument(0, OnExpr),
-                                hasArgument(0, hasType(ReceiverType)))));
+  return expr(anyOf(
+      cxxMemberCallExpr(callee(MethodDecl), on(OnExpr),
+                        thisPointerType(ReceiverType)),
+      cxxOperatorCallExpr(
+          callee(MethodDecl), hasArgument(0, ignoringParenImpCasts(OnExpr)),
+          hasArgument(0, ignoringParenImpCasts(hasType(ReceiverType))))));
 }
 
 AST_MATCHER_FUNCTION(StatementMatcher, isConstRefReturningFunctionCall) {
@@ -252,7 +253,8 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
                                        cxxConstructExpr(
                                            hasDeclaration(cxxConstructorDecl(
                                                isCopyConstructor())),
-                                           hasArgument(0, CopyCtorArg))
+                                           hasArgument(0, ignoringParenImpCasts(
+                                                              CopyCtorArg)))
                                            .bind("ctorCall"))))
                                .bind("newVarDecl")))
                        .bind("declStmt")))

@@ -54,12 +54,12 @@ void UnconventionalAssignOperatorCheck::registerMatchers(
       anyOf(unaryOperator(hasOperatorName("*"), hasUnaryOperand(cxxThisExpr())),
             cxxOperatorCallExpr(argumentCountIs(1),
                                 callee(unresolvedLookupExpr()),
-                                hasArgument(0, cxxThisExpr())),
+                                hasArgument(0, ignoringParenImpCasts(cxxThisExpr()))),
             cxxOperatorCallExpr(
                 hasOverloadedOperatorName("="),
                 hasArgument(
-                    0, unaryOperator(hasOperatorName("*"),
-                                     hasUnaryOperand(cxxThisExpr())))))))));
+                    0, ignoringParenImpCasts(unaryOperator(hasOperatorName("*"),
+                                     hasUnaryOperand(cxxThisExpr()))))))))));
   const auto IsGoodAssign = cxxMethodDecl(IsAssign, HasGoodReturnType);
 
   Finder->addMatcher(returnStmt(IsBadReturnStatement, forFunction(IsGoodAssign))

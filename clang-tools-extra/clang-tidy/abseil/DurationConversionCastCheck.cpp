@@ -20,7 +20,7 @@ namespace clang::tidy::abseil {
 void DurationConversionCastCheck::registerMatchers(MatchFinder *Finder) {
   auto CallMatcher = ignoringImpCasts(callExpr(
       callee(functionDecl(DurationConversionFunction()).bind("func_decl")),
-      hasArgument(0, expr().bind("arg"))));
+      hasArgument(0, ignoringParenImpCasts(expr().bind("arg")))));
 
   Finder->addMatcher(
       expr(anyOf(

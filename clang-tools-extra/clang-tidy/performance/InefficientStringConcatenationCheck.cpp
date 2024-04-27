@@ -43,11 +43,12 @@ void InefficientStringConcatenationCheck::registerMatchers(
 
   const auto AssignOperator = cxxOperatorCallExpr(
       hasOverloadedOperatorName("="),
-      hasArgument(0, declRefExpr(BasicStringType,
-                                 hasDeclaration(decl().bind("lhsStrT")))
+      hasArgument(0, ignoringParenImpCasts(
+                         declRefExpr(BasicStringType,
+                                     hasDeclaration(decl().bind("lhsStrT"))))
                          .bind("lhsStr")),
-      hasArgument(1, stmt(hasDescendant(declRefExpr(
-                         hasDeclaration(decl(equalsBoundNode("lhsStrT"))))))),
+      hasArgument(1, ignoringParenImpCasts(stmt(hasDescendant(declRefExpr(
+                         hasDeclaration(decl(equalsBoundNode("lhsStrT")))))))),
       hasDescendant(BasicStringPlusOperator));
 
   if (StrictMode) {

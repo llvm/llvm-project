@@ -41,14 +41,17 @@ void StringLiteralWithEmbeddedNulCheck::registerMatchers(MatchFinder *Finder) {
                        hasDeclaration(cxxMethodDecl(hasName("basic_string")))),
       // If present, the second argument is the alloc object which must not
       // be present explicitly.
-      cxxConstructExpr(argumentCountIs(2),
-                       hasDeclaration(cxxMethodDecl(hasName("basic_string"))),
-                       hasArgument(1, cxxDefaultArgExpr()))));
+      cxxConstructExpr(
+          argumentCountIs(2),
+          hasDeclaration(cxxMethodDecl(hasName("basic_string"))),
+          hasArgument(1, ignoringParenImpCasts(cxxDefaultArgExpr())))));
 
   // Detect passing a suspicious string literal to a string constructor.
   // example: std::string str = "abc\0def";
-  Finder->addMatcher(traverse(TK_AsIs,
-      cxxConstructExpr(StringConstructorExpr, hasArgument(0, StrLitWithNul))),
+  Finder->addMatcher(
+      traverse(TK_AsIs, cxxConstructExpr(StringConstructorExpr,
+                                         hasArgument(0, ignoringParenImpCasts(
+                                                            StrLitWithNul)))),
       this);
 
   // Detect passing a suspicious string literal through an overloaded operator.

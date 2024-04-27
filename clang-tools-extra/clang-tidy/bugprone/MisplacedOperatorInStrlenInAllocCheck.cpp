@@ -54,12 +54,12 @@ void MisplacedOperatorInStrlenInAllocCheck::registerMatchers(
 
   Finder->addMatcher(
       traverse(TK_AsIs, callExpr(callee(decl(anyOf(Alloc0Func, Alloc0FuncPtr))),
-                                 hasArgument(0, BadArg))
+                                 hasArgument(0, ignoringParenImpCasts(BadArg)))
                             .bind("Alloc")),
       this);
   Finder->addMatcher(
       traverse(TK_AsIs, callExpr(callee(decl(anyOf(Alloc1Func, Alloc1FuncPtr))),
-                                 hasArgument(1, BadArg))
+                                 hasArgument(1, ignoringParenImpCasts(BadArg)))
                             .bind("Alloc")),
       this);
   Finder->addMatcher(
@@ -74,7 +74,7 @@ void MisplacedOperatorInStrlenInAllocCheck::check(
   if (!Alloc)
     Alloc = Result.Nodes.getNodeAs<CXXNewExpr>("Alloc");
   assert(Alloc && "Matched node bound by 'Alloc' should be either 'CallExpr'"
-         " or 'CXXNewExpr'");
+                  " or 'CXXNewExpr'");
 
   const auto *StrLen = Result.Nodes.getNodeAs<CallExpr>("StrLen");
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("BinOp");

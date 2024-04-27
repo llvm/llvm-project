@@ -75,10 +75,11 @@ rewriteInverseDurationCall(const MatchFinder::MatchResult &Result,
       getDurationInverseForScale(Scale);
   if (const auto *MaybeCallArg = selectFirst<const Expr>(
           "e",
-          match(callExpr(callee(functionDecl(hasAnyName(
-                             InverseFunctions.first, InverseFunctions.second))),
-                         hasArgument(0, expr().bind("e"))),
-                Node, *Result.Context))) {
+          match(
+              callExpr(callee(functionDecl(hasAnyName(
+                           InverseFunctions.first, InverseFunctions.second))),
+                       hasArgument(0, ignoringParenImpCasts(expr().bind("e")))),
+              Node, *Result.Context))) {
     return tooling::fixit::getText(*MaybeCallArg, *Result.Context).str();
   }
 
@@ -93,7 +94,8 @@ rewriteInverseTimeCall(const MatchFinder::MatchResult &Result,
   llvm::StringRef InverseFunction = getTimeInverseForScale(Scale);
   if (const auto *MaybeCallArg = selectFirst<const Expr>(
           "e", match(callExpr(callee(functionDecl(hasName(InverseFunction))),
-                              hasArgument(0, expr().bind("e"))),
+                              hasArgument(
+                                  0, ignoringParenImpCasts(expr().bind("e")))),
                      Node, *Result.Context))) {
     return tooling::fixit::getText(*MaybeCallArg, *Result.Context).str();
   }

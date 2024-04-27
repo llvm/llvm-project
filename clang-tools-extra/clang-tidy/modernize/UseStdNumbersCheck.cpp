@@ -94,7 +94,7 @@ struct MatchBuilder {
     return expr(ignoreParenAndFloatingCasting(
         callExpr(callee(functionDecl(hasName(FunctionName),
                                      hasParameter(0, hasType(isArithmetic())))),
-                 hasArgument(0, ArgumentMatcher))));
+                 hasArgument(0, ignoringParenImpCasts(ArgumentMatcher)))));
   }
 
   auto matchSqrt(const Matcher<clang::Expr> ArgumentMatcher) const {
