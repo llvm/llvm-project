@@ -534,11 +534,11 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
     case tok::r_brace:
       if (LBraceStack.empty())
         break;
-      if (LBraceStack.back().Tok->is(BK_Unknown)) {
+      if (auto *LBrace = LBraceStack.back().Tok; LBrace->is(BK_Unknown)) {
         bool ProbablyBracedList = false;
         if (Style.Language == FormatStyle::LK_Proto) {
           ProbablyBracedList = NextTok->isOneOf(tok::comma, tok::r_square);
-        } else {
+        } else if (LBrace->isNot(TT_EnumLBrace)) {
           // Using OriginalColumn to distinguish between ObjC methods and
           // binary operators is a bit hacky.
           bool NextIsObjCMethod = NextTok->isOneOf(tok::plus, tok::minus) &&
@@ -552,7 +552,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
 
           // If we already marked the opening brace as braced list, the closing
           // must also be part of it.
-          ProbablyBracedList = LBraceStack.back().Tok->is(TT_BracedListLBrace);
+          ProbablyBracedList = LBrace->is(TT_BracedListLBrace);
 
           ProbablyBracedList = ProbablyBracedList ||
                                (Style.isJavaScript() &&
@@ -608,13 +608,9 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
             ProbablyBracedList = true;
           }
         }
-        if (ProbablyBracedList) {
-          Tok->setBlockKind(BK_BracedInit);
-          LBraceStack.back().Tok->setBlockKind(BK_BracedInit);
-        } else {
-          Tok->setBlockKind(BK_Block);
-          LBraceStack.back().Tok->setBlockKind(BK_Block);
-        }
+        const auto BlockKind = ProbablyBracedList ? BK_BracedInit : BK_Block;
+        Tok->setBlockKind(BlockKind);
+        LBrace->setBlockKind(BlockKind);
       }
       LBraceStack.pop_back();
       break;
@@ -2418,6 +2414,7 @@ bool UnwrappedLineParser::tryToParseChildBlock() {
 }
 
 bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
+  assert(!IsAngleBracket || !IsEnum);
   bool HasError = false;
 
   // FIXME: Once we have an expression parser in the UnwrappedLineParser,
@@ -2440,8 +2437,11 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
       }
     }
     if (FormatTok->is(IsAngleBracket ? tok::greater : tok::r_brace)) {
-      if (IsEnum && !Style.AllowShortEnumsOnASingleLine)
-        addUnwrappedLine();
+      if (IsEnum) {
+        FormatTok->setBlockKind(BK_Block);
+        if (!Style.AllowShortEnumsOnASingleLine)
+          addUnwrappedLine();
+      }
       nextToken();
       return !HasError;
     }

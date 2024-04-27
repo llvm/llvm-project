@@ -3195,7 +3195,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       break;
     }
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case ISD::BITCAST:
     if ((Tmp1 = EmitStackConvert(Node->getOperand(0), Node->getValueType(0),
@@ -5571,6 +5571,21 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                       DAG.getVTList(NVT, MVT::Other),
                       { AM->getChain(), AM->getBasePtr(), CastVal },
                       AM->getMemOperand());
+    Results.push_back(DAG.getNode(ISD::BITCAST, SL, OVT, NewAtomic));
+    Results.push_back(NewAtomic.getValue(1));
+    break;
+  }
+  case ISD::ATOMIC_LOAD: {
+    AtomicSDNode *AM = cast<AtomicSDNode>(Node);
+    SDLoc SL(Node);
+    assert(NVT.getSizeInBits() == OVT.getSizeInBits() &&
+           "unexpected promotion type");
+    assert(AM->getMemoryVT().getSizeInBits() == NVT.getSizeInBits() &&
+           "unexpected atomic_load with illegal type");
+
+    SDValue NewAtomic =
+        DAG.getAtomic(ISD::ATOMIC_LOAD, SL, NVT, DAG.getVTList(NVT, MVT::Other),
+                      {AM->getChain(), AM->getBasePtr()}, AM->getMemOperand());
     Results.push_back(DAG.getNode(ISD::BITCAST, SL, OVT, NewAtomic));
     Results.push_back(NewAtomic.getValue(1));
     break;
