@@ -2,6 +2,10 @@
 
 using size_t = unsigned long long;
 
+// CHECK: LoopHintAttr {{.*}} Implicit unroll UnrollCount Numeric
+// CHECK: LoopHintAttr {{.*}} Implicit unroll UnrollCount Numeric
+// CHECK: LoopHintAttr {{.*}} Implicit unroll Unroll Disable
+// CHECK: LoopHintAttr {{.*}} Implicit unroll Unroll Disable
 template <bool Flag>
 int value_dependent(int n) {
   constexpr int N = 100;
@@ -10,12 +14,11 @@ int value_dependent(int n) {
   auto iter = [=](size_t ix) {
     return Flag ? ix & ~(1ULL << __builtin_clzll(ix)) : ix + 1;
   };
-  // CHECK: LoopHintAttr {{.*}} Implicit unroll Unroll Disable
+
 #pragma unroll Flag ? 1 : N
   for (size_t ix = init(); cond(ix); ix = iter(ix)) {
     n *= n;
   }
-  // CHECK: LoopHintAttr {{.*}} Implicit unroll Unroll Disable
 #pragma unroll Flag ? 0 : N
   for (size_t ix = init(); cond(ix); ix = iter(ix)) {
     n *= n;

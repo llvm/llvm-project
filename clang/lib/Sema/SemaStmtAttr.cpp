@@ -109,11 +109,14 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
     SetHints(LoopHintAttr::Unroll, LoopHintAttr::Disable);
   } else if (PragmaName == "unroll") {
     // #pragma unroll N
-    if (ValueExpr && !ValueExpr->isValueDependent()) {
-      auto Value = ValueExpr->EvaluateKnownConstInt(S.getASTContext());
-      if (Value.isZero() || Value.isOne())
-        SetHints(LoopHintAttr::Unroll, LoopHintAttr::Disable);
-      else
+    if (ValueExpr) {
+      if (!ValueExpr->isValueDependent()) {
+        auto Value = ValueExpr->EvaluateKnownConstInt(S.getASTContext());
+        if (Value.isZero() || Value.isOne())
+          SetHints(LoopHintAttr::Unroll, LoopHintAttr::Disable);
+        else
+          SetHints(LoopHintAttr::UnrollCount, LoopHintAttr::Numeric);
+      } else
         SetHints(LoopHintAttr::UnrollCount, LoopHintAttr::Numeric);
     } else
       SetHints(LoopHintAttr::Unroll, LoopHintAttr::Enable);
