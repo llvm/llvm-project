@@ -30,6 +30,10 @@ cl::opt<bool>
 cl::opt<std::string>
     CodeGenDataUsePath("codegen-data-use-path", cl::init(""), cl::Hidden,
                        cl::desc("File path to where .cgdata file is read"));
+cl::opt<std::string> CodeGenDataThinLTOTwoRoundsPath(
+    "codegen-data-thinlto-two-rounds-path", cl::init(""), cl::Hidden,
+    cl::desc("Directory path to where the optimized bitcodes are saved and "
+             "restored."));
 
 static std::string getCGDataErrString(cgdata_error Err,
                                       const std::string &ErrMsg = "") {
@@ -140,7 +144,7 @@ CodeGenData &CodeGenData::getInstance() {
     auto *CGD = new CodeGenData();
     Instance.reset(CGD);
 
-    if (CodeGenDataGenerate)
+    if (CodeGenDataGenerate || !CodeGenDataThinLTOTwoRoundsPath.empty())
       CGD->EmitCGData = true;
     else if (!CodeGenDataUsePath.empty()) {
       // Initialize the global CGData if the input file name is given.
@@ -214,6 +218,69 @@ void warn(Error E, StringRef Whence) {
       warn(IPE.message(), std::string(Whence), std::string(""));
     });
   }
+}
+
+static std::string getPath(const std::string &Dir, unsigned Task) {
+  return (Dir + "/" + llvm::Twine(Task) + ".saved_copy.bc").str();
+}
+
+void saveModuleForTwoRounds(const Module &TheModule, unsigned Task) {
+  assert(sys::fs::is_directory(CodeGenDataThinLTOTwoRoundsPath));
+  std::string Path = getPath(CodeGenDataThinLTOTwoRoundsPath, Task);
+  std::error_code EC;
+  raw_fd_ostream OS(Path, EC, sys::fs::OpenFlags::OF_None);
+  if (EC)
+    report_fatal_error(Twine("Failed to open ") + Path +
+                       " to save optimized bitcode\n");
+  WriteBitcodeToFile(TheModule, OS, /* ShouldPreserveUseListOrder */ true);
+}
+
+std::unique_ptr<Module> loadModuleForTwoRounds(BitcodeModule &OrigModule,
+                                               unsigned Task,
+                                               LLVMContext &Context) {
+  assert(sys::fs::is_directory(CodeGenDataThinLTOTwoRoundsPath));
+  std::string Path = getPath(CodeGenDataThinLTOTwoRoundsPath, Task);
+  auto FileOrError = MemoryBuffer::getFile(Path);
+  if (!FileOrError)
+    report_fatal_error(Twine("Failed to open ") + Path +
+                       " to load optimized bitcode\n");
+
+  std::unique_ptr<MemoryBuffer> FileBuffer = std::move(*FileOrError);
+  auto RestoredModule = llvm::parseBitcodeFile(*FileBuffer, Context);
+  if (!RestoredModule)
+    report_fatal_error(Twine("Failed to parse optimized bitcode loaded from ") +
+                       Path + "\n");
+
+  // Restore the original module identifier.
+  (*RestoredModule)->setModuleIdentifier(OrigModule.getModuleIdentifier());
+  return std::move(*RestoredModule);
+}
+
+Error mergeCodeGenData(
+    const std::unique_ptr<std::vector<llvm::SmallString<0>>> InputFiles) {
+
+  OutlinedHashTreeRecord GlobalOutlineRecord;
+  for (auto &InputFile : *(InputFiles)) {
+    if (InputFile.empty())
+      continue;
+    StringRef File = StringRef(InputFile.data(), InputFile.size());
+    std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBuffer(
+        File, "in-memory object file", /*RequiresNullTerminator=*/false);
+    Expected<std::unique_ptr<object::ObjectFile>> BinOrErr =
+        object::ObjectFile::createObjectFile(Buffer->getMemBufferRef());
+    if (!BinOrErr)
+      return BinOrErr.takeError();
+
+    std::unique_ptr<object::ObjectFile> &Obj = BinOrErr.get();
+    if (auto E = CodeGenDataReader::mergeFromObjectFile(Obj.get(),
+                                                        GlobalOutlineRecord))
+      return E;
+  }
+
+  if (!GlobalOutlineRecord.empty())
+    cgdata::publishOutlinedHashTree(std::move(GlobalOutlineRecord.HashTree));
+
+  return Error::success();
 }
 
 } // end namespace cgdata

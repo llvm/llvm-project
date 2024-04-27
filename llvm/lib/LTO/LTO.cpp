@@ -22,6 +22,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGenData/CodeGenData.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -68,6 +69,10 @@ using namespace object;
 static cl::opt<bool>
     DumpThinCGSCCs("dump-thin-cg-sccs", cl::init(false), cl::Hidden,
                    cl::desc("Dump the SCCs in the ThinLTO index's callgraph"));
+
+/// Path to where the optimized bitcodes are saved and restored for ThinLTO
+/// two-codegen rounds.
+extern cl::opt<std::string> CodeGenDataThinLTOTwoRoundsPath;
 
 namespace llvm {
 /// Enable global value internalization in LTO.
@@ -1543,6 +1548,66 @@ public:
     return BackendThreadPool.getMaxConcurrency();
   }
 };
+
+// This Backend will run ThinBackend process but throw away all the output from
+// the codegen. This class facilitates the first codegen round.
+class NoOutputThinBackend : public InProcessThinBackend {
+public:
+  NoOutputThinBackend(
+      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      ThreadPoolStrategy ThinLTOParallelism,
+      const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+      std::unique_ptr<std::vector<llvm::SmallString<0>>> Scratch)
+      : InProcessThinBackend(
+            Conf, CombinedIndex, ThinLTOParallelism, ModuleToDefinedGVSummaries,
+            // This lambda is the reason why Scratch is a unique_ptr that is
+            // constructed outside of this class's constructor. The Scratch
+            // space needs to be fully allocated so that its address does not
+            // change after we create this lambda, which depends on its address
+            // remaining the same.
+            // There may be a cleaner way to do this but this way seems to work.
+            [Allocation = &*Scratch](unsigned Task, const Twine &ModuleName) {
+              return std::make_unique<CachedFileStream>(
+                  std::make_unique<raw_svector_ostream>((*Allocation)[Task]));
+            },
+            FileCache(), nullptr, false, false),
+        Scratch(std::move(Scratch)) {}
+
+  /// This vector is just scratch space where the output of the ThinBackend can
+  /// be written and then thrown away during destruction.
+  std::unique_ptr<std::vector<llvm::SmallString<0>>> Scratch;
+};
+
+// This Backend performs codegen on bitcode that was previously saved after
+// going through optimization. This class facilitates the second codegen round.
+class OptimizedBitcodeThinBackend : public InProcessThinBackend {
+public:
+  OptimizedBitcodeThinBackend(
+      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      ThreadPoolStrategy ThinLTOParallelism,
+      const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+      AddStreamFn AddStream)
+      : InProcessThinBackend(Conf, CombinedIndex, ThinLTOParallelism,
+                             ModuleToDefinedGVSummaries, AddStream, FileCache(),
+                             nullptr, false, false) {}
+
+  virtual Error runThinLTOBackendThread(
+      AddStreamFn AddStream, FileCache Cache, unsigned Task, BitcodeModule BM,
+      ModuleSummaryIndex &CombinedIndex,
+      const FunctionImporter::ImportMapTy &ImportList,
+      const FunctionImporter::ExportSetTy &ExportList,
+      const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
+      const GVSummaryMapTy &DefinedGlobals,
+      MapVector<StringRef, BitcodeModule> &ModuleMap) override {
+    LTOLLVMContext BackendContext(Conf);
+    std::unique_ptr<Module> LoadedModule =
+        cgdata::loadModuleForTwoRounds(BM, Task, BackendContext);
+
+    return thinBackend(Conf, Task, AddStream, *LoadedModule, CombinedIndex,
+                       ImportList, DefinedGlobals, &ModuleMap,
+                       /*CodeGenOnly*/ true);
+  }
+};
 } // end anonymous namespace
 
 ThinBackend lto::createInProcessThinBackend(ThreadPoolStrategy Parallelism,
@@ -1867,10 +1932,49 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
     return BackendProcess->wait();
   };
 
-  std::unique_ptr<ThinBackendProc> BackendProc =
-      ThinLTO.Backend(Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
-                      AddStream, Cache);
-  return RunBackends(BackendProc.get());
+  if (CodeGenDataThinLTOTwoRoundsPath.empty()) {
+    std::unique_ptr<ThinBackendProc> BackendProc =
+        ThinLTO.Backend(Conf, ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
+                        AddStream, Cache);
+    return RunBackends(BackendProc.get());
+  }
+
+  // Two-codegen rounds:
+  // 1. The first round: Run opt + codegen with a scratch output.
+  // 2. Merge codegen data extracted from the scratch output.
+  // 3. The second round: Run codegen again.
+  LLVM_DEBUG(dbgs() << "Running ThinLTO two-codegen rounds\n");
+
+  // Ensure we have a directory to write the bitcode files for two-codegen
+  // rounds.
+  if (auto EC = sys::fs::create_directories(CodeGenDataThinLTOTwoRoundsPath,
+                                            /*IgnoreExisting=*/true))
+    return errorCodeToError(EC);
+
+  // Create a scratch output.
+  auto Outputs = std::make_unique<std::vector<llvm::SmallString<0>>>();
+  Outputs->resize(getMaxTasks());
+  auto FirstRoundLTO = std::make_unique<NoOutputThinBackend>(
+      Conf, ThinLTO.CombinedIndex, llvm::heavyweight_hardware_concurrency(),
+      ModuleToDefinedGVSummaries, std::move(Outputs));
+  // The first round: Run opt + codegen with a scratch output.
+  // Before codegen, we serilized modules to CodeGenDataThinLTOTwoRoundsPath.
+  if (Error E = RunBackends(FirstRoundLTO.get()))
+    return E;
+
+  // Using the scratch output, we merge codegen data.
+  if (Error E = cgdata::mergeCodeGenData(std::move(FirstRoundLTO->Scratch)))
+    return E;
+
+  // The second round: Run codegen by reading IRs from
+  // CodeGenDataThinLTOTwoRoundsPath.
+  std::unique_ptr<ThinBackendProc> SecondRoundLTO =
+      std::make_unique<OptimizedBitcodeThinBackend>(
+          Conf, ThinLTO.CombinedIndex, llvm::heavyweight_hardware_concurrency(),
+          ModuleToDefinedGVSummaries, AddStream);
+  Error E = RunBackends(SecondRoundLTO.get());
+
+  return E;
 }
 
 Expected<std::unique_ptr<ToolOutputFile>> lto::setupLLVMOptimizationRemarks(

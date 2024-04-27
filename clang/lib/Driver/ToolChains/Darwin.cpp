@@ -652,6 +652,9 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                       options::OPT_fcodegen_data_generate_EQ);
   auto *CodeGenDataUseArg = Args.getLastArg(options::OPT_fcodegen_data_use,
                                             options::OPT_fcodegen_data_use_EQ);
+  auto *CodeGenDataTwoRoundsArg =
+      Args.getLastArg(options::OPT_fcodegen_data_thinlto_two_rounds,
+                      options::OPT_fcodegen_data_thinlto_two_rounds_EQ);
 
   // We only allow one of them to be specified.
   const Driver &D = getToolChain().getDriver();
@@ -659,9 +662,17 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     D.Diag(diag::err_drv_argument_not_allowed_with)
         << CodeGenDataGenArg->getAsString(Args)
         << CodeGenDataUseArg->getAsString(Args);
+  if (CodeGenDataGenArg && CodeGenDataTwoRoundsArg)
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << CodeGenDataGenArg->getAsString(Args)
+        << CodeGenDataTwoRoundsArg->getAsString(Args);
+  if (CodeGenDataUseArg && CodeGenDataTwoRoundsArg)
+    D.Diag(diag::err_drv_argument_not_allowed_with)
+        << CodeGenDataUseArg->getAsString(Args)
+        << CodeGenDataTwoRoundsArg->getAsString(Args);
 
   // For codegen data gen, the output file is passed to the linker
-  // while a boolean flag is passed to the LLVM backend.
+  // while a boolean flag is passed to the LTO backend.
   if (CodeGenDataGenArg) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-codegen-data-generate");
@@ -677,6 +688,19 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back(
         Args.MakeArgString("-codegen-data-use-path=" + Path.str()));
+  }
+
+  // For codegen data thinlto two rounds, the output directory needs to
+  // be passed. A temp directory is created if it does not exist.
+  if (CodeGenDataTwoRoundsArg) {
+    SmallString<128> Path(CodeGenDataTwoRoundsArg->getNumValues() == 0
+                              ? ""
+                              : CodeGenDataTwoRoundsArg->getValue());
+    if (Path.empty())
+      llvm::sys::fs::createUniqueDirectory("cgdata", Path);
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(Args.MakeArgString(
+        "-codegen-data-thinlto-two-rounds-path=" + Path.str()));
   }
 
   // Setup statistics file output.
