@@ -1897,8 +1897,8 @@ prepareCompareSwapOperands(MachineBasicBlock::iterator const MBBI) const {
 
 unsigned SystemZ::reverseCCMask(unsigned CCMask) {
   return ((CCMask & SystemZ::CCMASK_CMP_EQ) |
-          (CCMask & SystemZ::CCMASK_CMP_GT ? SystemZ::CCMASK_CMP_LT : 0) |
-          (CCMask & SystemZ::CCMASK_CMP_LT ? SystemZ::CCMASK_CMP_GT : 0) |
+          ((CCMask & SystemZ::CCMASK_CMP_GT) ? SystemZ::CCMASK_CMP_LT : 0) |
+          ((CCMask & SystemZ::CCMASK_CMP_LT) ? SystemZ::CCMASK_CMP_GT : 0) |
           (CCMask & SystemZ::CCMASK_CMP_UO));
 }
 
