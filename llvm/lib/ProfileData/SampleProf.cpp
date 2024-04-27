@@ -275,6 +275,25 @@ void FunctionSamples::findAllNames(DenseSet<FunctionId> &NameSet) const {
   }
 }
 
+const uint64_t *FunctionSamples::findCallTargetAt(const LineLocation &Callsite,
+    StringRef CalleeName, SampleProfileReaderItaniumRemapper *Remapper) const {
+  const auto &FindRes = BodySamples.find(mapIRLocToProfileLoc(Callsite));
+  if (FindRes == BodySamples.end())
+    return nullptr;
+  const auto &CallTargets = FindRes->second.getCallTargets();
+  const auto &Ret = CallTargets.find(getRepInFormat(CalleeName));
+  if (Ret != CallTargets.end())
+    return &Ret->second;
+  if (Remapper && !UseMD5) {
+    if (auto RemappedName = Remapper->lookUpNameInProfile(CalleeName)) {
+      const auto &Ret = CallTargets.find(getRepInFormat(*RemappedName));
+      if (Ret != CallTargets.end())
+        return &Ret->second;
+    }
+  }
+  return nullptr;
+}
+
 const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
     const LineLocation &Loc, StringRef CalleeName,
     SampleProfileReaderItaniumRemapper *Remapper) const {

@@ -902,6 +902,13 @@ public:
     return Ret->second.getCallTargets();
   }
 
+  /// Returns the call target count of a specific function \p CalleeName at a
+  /// given location \p Callsite. Returns nullptr if not found. A \p Remapper
+  /// can be optionally provided to look up a name equivalent to \p CalleeName.
+  const uint64_t *
+  findCallTargetAt(const LineLocation &Callsite, StringRef CalleeName,
+                   SampleProfileReaderItaniumRemapper *Remapper) const;
+
   /// Return the function samples at the given callsite location.
   FunctionSamplesMap &functionSamplesAt(const LineLocation &Loc) {
     return CallsiteSamples[mapIRLocToProfileLoc(Loc)];

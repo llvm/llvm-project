@@ -1666,16 +1666,16 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           // precise.
           if (DLoc && FS) {
             auto Callsite = FunctionSamples::getCallSiteIdentifier(DIL);
-            // Account for stale profile matching.
-            Callsite = FS->mapIRLocToProfileLoc(Callsite);
-            auto CallTargetMap = FS->findCallTargetMapAt(Callsite);
-            if (CallTargetMap) {
-              auto FindRes = CallTargetMap->find(
-                  FunctionSamples::UseMD5 ?
-                      FunctionId(MD5Hash(Callee->getName())) :
-                      FunctionId(Callee->getName()));
-              if (FindRes != CallTargetMap->end()) {
-                BranchWeight = FindRes->second;
+            if (const uint64_t *CallTargetCount = FS->findCallTargetAt(
+                    Callsite, Callee->getName(), Reader->getRemapper())) {
+              BranchWeight = static_cast<uint32_t>(*CallTargetCount);
+              if (!FunctionSamples::ProfileIsCS) {
+                if (const FunctionSamples *InlinedCallee =
+                        FS->findFunctionSamplesAt(Callsite, Callee->getName(),
+                                                  Reader->getRemapper())) {
+                  BranchWeight += static_cast<uint32_t>(
+                      InlinedCallee->getHeadSamplesEstimate());
+                }
               }
             }
           }
@@ -2221,7 +2221,6 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
 
 bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) {
   LLVM_DEBUG(dbgs() << "\n\nProcessing Function " << F.getName() << "\n");
-
   DILocation2SampleMap.clear();
   // By default the entry count is initialized to -1, which will be treated
   // conservatively by getEntryCount as the same as unknown (None). This is
