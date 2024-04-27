@@ -344,7 +344,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char16_t> {
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17 const char_type*
   find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT {
     __identity __proj;
-    const char_type* __match = std::__find_impl(__s, __s + __n, __a, __proj);
+    const char_type* __match = std::__find(__s, __s + __n, __a, __proj);
     if (__match == __s + __n)
       return nullptr;
     return __match;
@@ -430,7 +430,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char32_t> {
   _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX17 const char_type*
   find(const char_type* __s, size_t __n, const char_type& __a) _NOEXCEPT {
     __identity __proj;
-    const char_type* __match = std::__find_impl(__s, __s + __n, __a, __proj);
+    const char_type* __match = std::__find(__s, __s + __n, __a, __proj);
     if (__match == __s + __n)
       return nullptr;
     return __match;
