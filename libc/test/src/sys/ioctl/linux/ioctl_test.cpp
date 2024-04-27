@@ -22,6 +22,6 @@ using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 TEST(LlvmLibcIoctlTest, InvalidFileDescriptor) {
   int fd = 10;
   unsigned long request = 10;
-  int res = LIBC_NAMESPACE::ioctl(fd, 10, NULL);
+  int res = LIBC_NAMESPACE::ioctl(fd, request, NULL);
   EXPECT_THAT(res, Fails(EBADF, -1));
 }
