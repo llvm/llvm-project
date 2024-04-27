@@ -90,8 +90,7 @@ struct Ints2 {
   int a = 10;
   int b;
 };
-constexpr Ints2 ints22; // both-error {{without a user-provided default constructor}} \
-                        // expected-error {{must be initialized by a constant expression}}
+constexpr Ints2 ints22; // both-error {{without a user-provided default constructor}}
 
 constexpr Ints2 I2 = Ints2{12, 25};
 static_assert(I2.a == 12, "");
@@ -1408,4 +1407,16 @@ namespace VirtualBases {
     Z z;
     static_assert((X*)(Y1*)&z != (X*)(Y2*)&z, "");
   }
+}
+
+namespace ZeroInit {
+  struct S3 {
+    S3() = default;
+    S3(const S3&) = default;
+    S3(S3&&) = default;
+    constexpr S3(int n) : n(n) {}
+    int n;
+  };
+  constexpr S3 s3d; // both-error {{default initialization of an object of const type 'const S3' without a user-provided default constructor}}
+  static_assert(s3d.n == 0, "");
 }
