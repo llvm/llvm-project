@@ -837,17 +837,48 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   }
   assert(ScratchWaveOffsetReg || !PreloadedScratchWaveOffsetReg);
 
-  if (requiresStackPointerReference(MF)) {
-    Register SPReg = MFI->getStackPtrOffsetReg();
-    assert(SPReg != AMDGPU::SP_REG);
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg)
-        .addImm(FrameInfo.getStackSize() * getScratchScaleFactor(ST));
-  }
-
-  if (hasFP(MF)) {
+  // SP and FP need adjustment in wave-group mode
+  // TODO-GFX13: replace this condition with the real wave-group attribute
+  if (auto LaneSharedSize = MFI->getLaneSharedSize()) {
+    auto AlignUnit = ST.getStackAlignment();
+    auto WaveScratchStart = alignTo(LaneSharedSize, AlignUnit);
+    auto WaveLen = ST.getWavefrontSize();
+    // the number of wave-groups is always 4
+    auto NumWavesInWaveGroup =
+        ST.getFlatWorkGroupSizes(MF.getFunction()).second / (4 * WaveLen);
+    auto ScratchPerLane = ST.getMaxWaveScratchSize() / WaveLen;
+    auto PerWaveScratch =
+        (ScratchPerLane - WaveScratchStart) / NumWavesInWaveGroup;
+    PerWaveScratch = (PerWaveScratch / AlignUnit.value()) * AlignUnit.value();
+    Register FPReg = MFI->getFrameOffsetReg();
+    assert(FPReg != AMDGPU::FP_REG);
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_GETREG_B32), FPReg)
+        .addImm(AMDGPU::Hwreg::HwregEncoding::encode(
+            AMDGPU::Hwreg::ID_WAVE_GROUP_INFO, 16, 4));
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MUL_I32), FPReg)
+        .addReg(FPReg)
+        .addImm(PerWaveScratch);
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_I32), FPReg)
+        .addReg(FPReg)
+        .addImm(WaveScratchStart);
+  } else if (hasFP(MF)) {
     Register FPReg = MFI->getFrameOffsetReg();
     assert(FPReg != AMDGPU::FP_REG);
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), FPReg).addImm(0);
+  }
+
+  if (requiresStackPointerReference(MF)) {
+    Register SPReg = MFI->getStackPtrOffsetReg();
+    assert(SPReg != AMDGPU::SP_REG);
+    // TODO-GFX13: replace this condition with the real wave-group attribute
+    auto StackSize = FrameInfo.getStackSize() * getScratchScaleFactor(ST);
+    if (MFI->getLaneSharedSize()) {
+      Register FPReg = MFI->getFrameOffsetReg();
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_I32), SPReg)
+          .addReg(FPReg)
+          .addImm(StackSize);
+    } else
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), SPReg).addImm(StackSize);
   }
 
   bool NeedsFlatScratchInit =
@@ -1973,8 +2004,9 @@ bool SIFrameLowering::hasFP(const MachineFunction &MF) const {
     // frame layout is determined or CSR spills are inserted.
     return MFI.getStackSize() != 0;
   }
-
-  return frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
+  // TODO-GFX13: replace the 1st condition with the real wave-group attribute
+  return MF.getInfo<SIMachineFunctionInfo>()->getLaneSharedSize() ||
+         frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
          MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
              MF) ||
          MF.getTarget().Options.DisableFramePointerElim(MF);

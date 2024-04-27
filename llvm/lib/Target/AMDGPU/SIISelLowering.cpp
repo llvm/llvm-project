@@ -7638,7 +7638,8 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
   if ((GSD->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS &&
        shouldUseLDSConstAddress(GV)) ||
       GSD->getAddressSpace() == AMDGPUAS::REGION_ADDRESS ||
-      GSD->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS) {
+      GSD->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS ||
+      GSD->getAddressSpace() == AMDGPUAS::LANE_SHARED) {
     if (GSD->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS &&
         GV->hasExternalLinkage()) {
       Type *Ty = GV->getValueType();

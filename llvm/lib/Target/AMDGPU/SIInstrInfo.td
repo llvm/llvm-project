@@ -650,7 +650,7 @@ class LoadD16Frag <SDPatternOperator op> : PatFrag<
   let IsLoad = 1;
 }
 
-foreach as = [ "global", "flat", "constant", "local", "private", "region" ] in {
+foreach as = [ "global", "flat", "constant", "local", "private", "region", "laneshared" ] in {
 let AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
 
 def load_d16_hi_#as : LoadD16Frag <SIload_d16_hi>;
