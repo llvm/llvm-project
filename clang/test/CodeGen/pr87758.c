@@ -2,9 +2,8 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -O3 -emit-llvm -o - %s \
 // RUN: | FileCheck -check-prefix=CHECK %s
 
-// FIXME: Reproducer for issue #87758
-// The testcase below show the faulty behavior where the calls to
-// llvm.pow.f32 and llvm.fma.f32 are not attributed with the "fast" flag.
+// Reproducer for issue #87758
+// The testcase below verifies that the "fast" flag are set on the calls.
 
 float sqrtf(float x);
 float powf(float x, float y);
@@ -16,8 +15,8 @@ float fmaf(float x, float y, float z);
 // CHECK-SAME: float noundef [[A:%.*]], float noundef [[B:%.*]], float noundef [[C:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call fast float @llvm.sqrt.f32(float [[A]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call float @llvm.pow.f32(float [[TMP0]], float [[B]])
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call float @llvm.fma.f32(float [[TMP1]], float [[B]], float [[C]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.pow.f32(float [[TMP0]], float [[B]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.fma.f32(float [[TMP1]], float [[B]], float [[C]])
 // CHECK-NEXT:    ret float [[TMP2]]
 //
 float fp_precise_libm_calls(float a, float b, float c) {
