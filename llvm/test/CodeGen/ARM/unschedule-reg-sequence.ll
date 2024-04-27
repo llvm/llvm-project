@@ -2,7 +2,7 @@
 ; Regression test for https://github.com/llvm/llvm-project/issues/58911
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-target triple = "armv7-none-unknown-eabi"
+target triple = "armv7-unknown-none-eabi"
 
 @a = dso_local global i64 0, align 8
 @d = dso_local local_unnamed_addr global i32 0, align 4

@@ -41,7 +41,7 @@ define void @_start() {
 
 ;--- thumb.ll
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-target triple = "thumbv8m.base-none-unknown-gnueabi"
+target triple = "thumbv8m.base-unknown-none-gnueabi"
 
 define void @_start() {
   ret void
@@ -57,7 +57,7 @@ define void @_start() {
 
 ;--- thumbeb.ll
 target datalayout = "E-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-target triple = "thumbebv8m.base-none-unknown-gnueabi"
+target triple = "thumbebv8m.base-unknown-none-gnueabi"
 
 define void @_start() {
   ret void

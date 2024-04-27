@@ -8,7 +8,7 @@
 # RUN: mkdir -p %t/baremetal_multilib/lib/clang-runtimes
 # RUN: ln -s %s %t/baremetal_multilib/lib/clang-runtimes/multilib.yaml
 
-# RUN: %t/baremetal_multilib/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out --target=thumbv7em-none-unknown-eabi --sysroot= 2>%t.err
+# RUN: %t/baremetal_multilib/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out --target=thumbv7em-unknown-none-eabi --sysroot= 2>%t.err
 
 # RUN: FileCheck -DSYSROOT=%t/baremetal_multilib %s < %t.err --check-prefix=POS
 # RUN: FileCheck -DSYSROOT=%t/baremetal_multilib %s < %t.err --check-prefix=NEG
@@ -16,7 +16,7 @@
 # Expected results:
 #
 # Due to the Mappings section, all six of these library directories should
-# match the command-line flag --target=thumbv7em-none-unknown-eabi.
+# match the command-line flag --target=thumbv7em-unknown-none-eabi.
 #
 # The two "non_exclusive" directories, which don't have an ExclusiveGroup at
 # all, should both be selected. So should the two "own_group", each of which
@@ -49,31 +49,31 @@ Groups:
 
 Variants:
 - Dir: testdir1_non_exclusive
-  Flags: [--target=thumbv7m-none-unknown-eabi]
+  Flags: [--target=thumbv7m-unknown-none-eabi]
 
 - Dir: testdir2_non_exclusive
-  Flags: [--target=thumbv7em-none-unknown-eabi]
+  Flags: [--target=thumbv7em-unknown-none-eabi]
 
 - Dir: testdir1_exclusive
-  Flags: [--target=thumbv7m-none-unknown-eabi]
+  Flags: [--target=thumbv7m-unknown-none-eabi]
   Group: actually_exclude_something
 
 - Dir: testdir2_exclusive
-  Flags: [--target=thumbv7em-none-unknown-eabi]
+  Flags: [--target=thumbv7em-unknown-none-eabi]
   Group: actually_exclude_something
 
 - Dir: testdir3_exclusive
-  Flags: [--target=thumbv7em-none-unknown-eabi]
+  Flags: [--target=thumbv7em-unknown-none-eabi]
   Group: actually_exclude_something
 
 - Dir: testdir1_own_group
-  Flags: [--target=thumbv7m-none-unknown-eabi]
+  Flags: [--target=thumbv7m-unknown-none-eabi]
   Group: foo
 
 - Dir: testdir2_own_group
-  Flags: [--target=thumbv7em-none-unknown-eabi]
+  Flags: [--target=thumbv7em-unknown-none-eabi]
   Group: bar
 
 Mappings:
-- Match: --target=thumbv7em-none-unknown-eabi
-  Flags: [--target=thumbv7m-none-unknown-eabi]
+- Match: --target=thumbv7em-unknown-none-eabi
+  Flags: [--target=thumbv7m-unknown-none-eabi]

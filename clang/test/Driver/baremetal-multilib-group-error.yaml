@@ -8,7 +8,7 @@
 # RUN: mkdir -p %t/baremetal_multilib/lib/clang-runtimes
 # RUN: ln -s %s %t/baremetal_multilib/lib/clang-runtimes/multilib.yaml
 
-# RUN: %t/baremetal_multilib/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out --target=thumbv7em-none-unknown-eabi --sysroot= 2>%t.err
+# RUN: %t/baremetal_multilib/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out --target=thumbv7em-unknown-none-eabi --sysroot= 2>%t.err
 # RUN: FileCheck %s < %t.err
 
 ---
@@ -20,7 +20,7 @@ Groups:
 
 Variants:
 - Dir: testdir1
-  Flags: [--target=thumbv7m-none-unknown-eabi]
+  Flags: [--target=thumbv7m-unknown-none-eabi]
   Group: nonexistent_group_name
 
 # CHECK: error: unknown enumerated scalar

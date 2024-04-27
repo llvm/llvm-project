@@ -6,7 +6,7 @@
 ; RUN: llc -consthoist-min-num-to-rebase=2 %s -o - | FileCheck %s --check-prefix=LLC
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
-target triple = "thumbv6m-none-unknown-musleabi"
+target triple = "thumbv6m-unknown-none-musleabi"
 
 ; Test that constant 0 and 1 of i1 type is NOT hoisted due low
 ; materializing cost.

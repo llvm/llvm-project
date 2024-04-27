@@ -449,42 +449,42 @@ TEST(MultilibTest, SelectMClass) {
   const char *MultilibSpec = YAML_PREAMBLE R"(
 Variants:
 - Dir: thumb/v6-m/nofp
-  Flags: [--target=thumbv6m-none-unknown-eabi, -mfpu=none]
+  Flags: [--target=thumbv6m-unknown-none-eabi, -mfpu=none]
 
 - Dir: thumb/v7-m/nofp
-  Flags: [--target=thumbv7m-none-unknown-eabi, -mfpu=none]
+  Flags: [--target=thumbv7m-unknown-none-eabi, -mfpu=none]
 
 - Dir: thumb/v7e-m/nofp
-  Flags: [--target=thumbv7em-none-unknown-eabi, -mfpu=none]
+  Flags: [--target=thumbv7em-unknown-none-eabi, -mfpu=none]
 
 - Dir: thumb/v8-m.main/nofp
-  Flags: [--target=thumbv8m.main-none-unknown-eabi, -mfpu=none]
+  Flags: [--target=thumbv8m.main-unknown-none-eabi, -mfpu=none]
 
 - Dir: thumb/v8.1-m.main/nofp/nomve
-  Flags: [--target=thumbv8.1m.main-none-unknown-eabi, -mfpu=none]
+  Flags: [--target=thumbv8.1m.main-unknown-none-eabi, -mfpu=none]
 
 - Dir: thumb/v7e-m/fpv4_sp_d16
-  Flags: [--target=thumbv7em-none-unknown-eabihf, -mfpu=fpv4-sp-d16]
+  Flags: [--target=thumbv7em-unknown-none-eabihf, -mfpu=fpv4-sp-d16]
 
 - Dir: thumb/v7e-m/fpv5_d16
-  Flags: [--target=thumbv7em-none-unknown-eabihf, -mfpu=fpv5-d16]
+  Flags: [--target=thumbv7em-unknown-none-eabihf, -mfpu=fpv5-d16]
 
 - Dir: thumb/v8-m.main/fp
-  Flags: [--target=thumbv8m.main-none-unknown-eabihf]
+  Flags: [--target=thumbv8m.main-unknown-none-eabihf]
 
 - Dir: thumb/v8.1-m.main/fp
-  Flags: [--target=thumbv8.1m.main-none-unknown-eabihf]
+  Flags: [--target=thumbv8.1m.main-unknown-none-eabihf]
 
 - Dir: thumb/v8.1-m.main/nofp/mve
-  Flags: [--target=thumbv8.1m.main-none-unknown-eabihf, -march=thumbv8.1m.main+mve]
+  Flags: [--target=thumbv8.1m.main-unknown-none-eabihf, -march=thumbv8.1m.main+mve]
 
 Mappings:
-- Match: --target=thumbv8(\.[0-9]+)?m\.base-none-unknown-eabi
-  Flags: [--target=thumbv6m-none-unknown-eabi]
-- Match: -target=thumbv8\.[1-9]m\.main-none-unknown-eabi
-  Flags: [--target=thumbv8.1m.main-none-unknown-eabi]
-- Match: -target=thumbv8\.[1-9]m\.main-none-unknown-eabihf
-  Flags: [--target=thumbv8.1m.main-none-unknown-eabihf]
+- Match: --target=thumbv8(\.[0-9]+)?m\.base-unknown-none-eabi
+  Flags: [--target=thumbv6m-unknown-none-eabi]
+- Match: -target=thumbv8\.[1-9]m\.main-unknown-none-eabi
+  Flags: [--target=thumbv8.1m.main-unknown-none-eabi]
+- Match: -target=thumbv8\.[1-9]m\.main-unknown-none-eabihf
+  Flags: [--target=thumbv8.1m.main-unknown-none-eabihf]
 - Match: -march=thumbv8\.[1-9]m\.main.*\+mve($|\+).*
   Flags: [-march=thumbv8.1m.main+mve]
 )";
@@ -493,44 +493,44 @@ Mappings:
   llvm::SmallVector<Multilib> Selected;
   ASSERT_TRUE(parseYaml(MS, MultilibSpec));
 
-  ASSERT_TRUE(MS.select({"--target=thumbv6m-none-unknown-eabi", "-mfpu=none"},
+  ASSERT_TRUE(MS.select({"--target=thumbv6m-unknown-none-eabi", "-mfpu=none"},
                         Selected));
   EXPECT_EQ("/thumb/v6-m/nofp", Selected.back().gccSuffix());
 
-  ASSERT_TRUE(MS.select({"--target=thumbv7m-none-unknown-eabi", "-mfpu=none"},
+  ASSERT_TRUE(MS.select({"--target=thumbv7m-unknown-none-eabi", "-mfpu=none"},
                         Selected));
   EXPECT_EQ("/thumb/v7-m/nofp", Selected.back().gccSuffix());
 
-  ASSERT_TRUE(MS.select({"--target=thumbv7em-none-unknown-eabi", "-mfpu=none"},
+  ASSERT_TRUE(MS.select({"--target=thumbv7em-unknown-none-eabi", "-mfpu=none"},
                         Selected));
   EXPECT_EQ("/thumb/v7e-m/nofp", Selected.back().gccSuffix());
 
   ASSERT_TRUE(MS.select(
-      {"--target=thumbv8m.main-none-unknown-eabi", "-mfpu=none"}, Selected));
+      {"--target=thumbv8m.main-unknown-none-eabi", "-mfpu=none"}, Selected));
   EXPECT_EQ("/thumb/v8-m.main/nofp", Selected.back().gccSuffix());
 
   ASSERT_TRUE(MS.select(
-      {"--target=thumbv8.1m.main-none-unknown-eabi", "-mfpu=none"}, Selected));
+      {"--target=thumbv8.1m.main-unknown-none-eabi", "-mfpu=none"}, Selected));
   EXPECT_EQ("/thumb/v8.1-m.main/nofp/nomve", Selected.back().gccSuffix());
 
   ASSERT_TRUE(
-      MS.select({"--target=thumbv7em-none-unknown-eabihf", "-mfpu=fpv4-sp-d16"},
+      MS.select({"--target=thumbv7em-unknown-none-eabihf", "-mfpu=fpv4-sp-d16"},
                 Selected));
   EXPECT_EQ("/thumb/v7e-m/fpv4_sp_d16", Selected.back().gccSuffix());
 
   ASSERT_TRUE(MS.select(
-      {"--target=thumbv7em-none-unknown-eabihf", "-mfpu=fpv5-d16"}, Selected));
+      {"--target=thumbv7em-unknown-none-eabihf", "-mfpu=fpv5-d16"}, Selected));
   EXPECT_EQ("/thumb/v7e-m/fpv5_d16", Selected.back().gccSuffix());
 
   ASSERT_TRUE(
-      MS.select({"--target=thumbv8m.main-none-unknown-eabihf"}, Selected));
+      MS.select({"--target=thumbv8m.main-unknown-none-eabihf"}, Selected));
   EXPECT_EQ("/thumb/v8-m.main/fp", Selected.back().gccSuffix());
 
   ASSERT_TRUE(
-      MS.select({"--target=thumbv8.1m.main-none-unknown-eabihf"}, Selected));
+      MS.select({"--target=thumbv8.1m.main-unknown-none-eabihf"}, Selected));
   EXPECT_EQ("/thumb/v8.1-m.main/fp", Selected.back().gccSuffix());
 
-  ASSERT_TRUE(MS.select({"--target=thumbv8.1m.main-none-unknown-eabihf",
+  ASSERT_TRUE(MS.select({"--target=thumbv8.1m.main-unknown-none-eabihf",
                          "-mfpu=none", "-march=thumbv8.1m.main+dsp+mve"},
                         Selected));
   EXPECT_EQ("/thumb/v8.1-m.main/nofp/mve", Selected.back().gccSuffix());

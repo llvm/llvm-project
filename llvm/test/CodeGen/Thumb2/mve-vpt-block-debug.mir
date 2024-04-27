@@ -3,7 +3,7 @@
 
 --- |
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
-  target triple = "thumbv8.1m.main-none-unknown-eabihf"
+  target triple = "thumbv8.1m.main-unknown-none-eabihf"
 
   define <4 x i32> @test(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) #0 !dbg !5 {
   entry:

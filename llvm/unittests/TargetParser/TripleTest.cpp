@@ -1237,7 +1237,7 @@ TEST(TripleTest, Normalization) {
             Triple::normalize("i386-redhat-linux")); // i386-redhat-linux-gnu
   EXPECT_EQ("i686-unknown-linux",
             Triple::normalize("i686-linux")); // i686-pc-linux-gnu
-  EXPECT_EQ("arm-none-unknown-eabi",
+  EXPECT_EQ("arm-unknown-none-eabi",
             Triple::normalize("arm-none-eabi")); // arm-none-eabi
   EXPECT_EQ("ve-unknown-linux",
             Triple::normalize("ve-linux")); // ve-linux
