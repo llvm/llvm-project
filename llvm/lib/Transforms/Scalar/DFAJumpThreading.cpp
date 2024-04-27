@@ -553,7 +553,7 @@ struct AllSwitchPaths {
       return;
     }
 
-    for (PathType Path : LoopPaths) {
+    for (const PathType &Path : LoopPaths) {
       ThreadingPath TPath;
 
       const BasicBlock *PrevBB = Path.back();
