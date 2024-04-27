@@ -173,45 +173,37 @@ void DefaultClause() {
 #pragma acc serial default), seq
   for(;;){}
 
-  // expected-error@+2{{expected identifier}}
-  // expected-warning@+1{{OpenACC clause 'default' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected identifier}}
 #pragma acc serial default()
   for(;;){}
 
-  // expected-error@+3{{expected identifier}}
-  // expected-warning@+2{{OpenACC clause 'default' not yet implemented, clause ignored}}
+  // expected-error@+2{{expected identifier}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial default() seq
   for(;;){}
 
-  // expected-error@+3{{expected identifier}}
-  // expected-warning@+2{{OpenACC clause 'default' not yet implemented, clause ignored}}
+  // expected-error@+2{{expected identifier}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial default(), seq
   for(;;){}
 
-  // expected-error@+2{{invalid value for 'default' clause; expected 'present' or 'none'}}
-  // expected-warning@+1{{OpenACC clause 'default' not yet implemented, clause ignored}}
+  // expected-error@+1{{invalid value for 'default' clause; expected 'present' or 'none'}}
 #pragma acc serial default(invalid)
   for(;;){}
 
-  // expected-error@+3{{invalid value for 'default' clause; expected 'present' or 'none'}}
-  // expected-warning@+2{{OpenACC clause 'default' not yet implemented, clause ignored}}
+  // expected-error@+2{{invalid value for 'default' clause; expected 'present' or 'none'}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial default(auto) seq
   for(;;){}
 
-  // expected-error@+3{{invalid value for 'default' clause; expected 'present' or 'none'}}
-  // expected-warning@+2{{OpenACC clause 'default' not yet implemented, clause ignored}}
+  // expected-error@+2{{invalid value for 'default' clause; expected 'present' or 'none'}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial default(invalid), seq
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'default' not yet implemented, clause ignored}}
 #pragma acc serial default(none)
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'default' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial default(present), seq
   for(;;){}
@@ -291,11 +283,9 @@ void IfClause() {
 
   int i, j;
 
-  // expected-warning@+1{{OpenACC clause 'if' not yet implemented, clause ignored}}
 #pragma acc serial if(i > j)
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'if' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial if(1+5>3), seq
   for(;;){}
@@ -386,16 +376,13 @@ void SelfClause() {
 #pragma acc serial self(i > j, seq
   for(;;){}
 
-  // expected-warning@+2{{left operand of comma operator has no effect}}
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented, clause ignored}}
+  // expected-warning@+1{{left operand of comma operator has no effect}}
 #pragma acc serial self(i, j)
   for(;;){}
 
-  // expected-warning@+1{{OpenACC clause 'self' not yet implemented, clause ignored}}
 #pragma acc serial self(i > j)
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'self' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial self(1+5>3), seq
   for(;;){}
@@ -495,13 +482,13 @@ void VarListClauses() {
 #pragma acc serial copy(HasMem.MemArr[3].array[1:4]), seq
   for(;;){}
 
-  // expected-error@+3{{OpenMP array section is not allowed here}}
+  // expected-error@+3{{OpenACC sub-array is not allowed here}}
   // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(HasMem.MemArr[1:3].array[1]), seq
   for(;;){}
 
-  // expected-error@+3{{OpenMP array section is not allowed here}}
+  // expected-error@+3{{OpenACC sub-array is not allowed here}}
   // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(HasMem.MemArr[1:3].array[1:2]), seq
@@ -906,11 +893,9 @@ void IntExprParsing() {
 #pragma acc parallel vector_length(5, 4)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
 #pragma acc parallel vector_length(5)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'vector_length' not yet implemented, clause ignored}}
 #pragma acc parallel vector_length(returns_int())
   {}
 
@@ -926,16 +911,12 @@ void IntExprParsing() {
 #pragma acc parallel num_gangs(invalid)
   {}
 
-  // expected-error@+2{{expected ')'}}
-  // expected-note@+1{{to match this '('}}
 #pragma acc parallel num_gangs(5, 4)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'num_gangs' not yet implemented, clause ignored}}
 #pragma acc parallel num_gangs(5)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'num_gangs' not yet implemented, clause ignored}}
 #pragma acc parallel num_gangs(returns_int())
   {}
 
@@ -956,11 +937,9 @@ void IntExprParsing() {
 #pragma acc parallel num_workers(5, 4)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
 #pragma acc parallel num_workers(5)
   {}
 
-  // expected-warning@+1{{OpenACC clause 'num_workers' not yet implemented, clause ignored}}
 #pragma acc parallel num_workers(returns_int())
   {}
 

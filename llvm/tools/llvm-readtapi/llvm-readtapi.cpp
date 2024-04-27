@@ -133,9 +133,7 @@ getInterfaceFile(const StringRef Filename, bool ResetBanner = true) {
   std::unique_ptr<InterfaceFile> IF;
   switch (identify_magic(Buffer->getBuffer())) {
   case file_magic::macho_dynamically_linked_shared_lib:
-    LLVM_FALLTHROUGH;
   case file_magic::macho_dynamically_linked_shared_lib_stub:
-    LLVM_FALLTHROUGH;
   case file_magic::macho_universal_binary:
     IF = ExitOnErr(DylibReader::get(Buffer->getMemBufferRef()));
     break;

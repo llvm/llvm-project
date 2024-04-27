@@ -1543,6 +1543,7 @@ private:
         return false;
       if (Line.MustBeDeclaration && Contexts.size() == 1 &&
           !Contexts.back().IsExpression && !Line.startsWith(TT_ObjCProperty) &&
+          !Line.startsWith(tok::l_paren) &&
           !Tok->isOneOf(TT_TypeDeclarationParen, TT_RequiresExpressionLParen)) {
         if (const auto *Previous = Tok->Previous;
             !Previous ||
@@ -2726,8 +2727,10 @@ private:
       }
     }
 
-    if (Tok.Next->isOneOf(tok::question, tok::ampamp))
+    if (Tok.Next->is(tok::question) ||
+        (Tok.Next->is(tok::ampamp) && !Tok.Previous->isTypeName(IsCpp))) {
       return false;
+    }
 
     // `foreach((A a, B b) in someList)` should not be seen as a cast.
     if (Tok.Next->is(Keywords.kw_in) && Style.isCSharp())
@@ -2912,6 +2915,8 @@ private:
       return TT_UnaryOperator;
     if (PrevToken->is(TT_TypeName))
       return TT_PointerOrReference;
+    if (PrevToken->isOneOf(tok::kw_new, tok::kw_delete) && Tok.is(tok::ampamp))
+      return TT_BinaryOperator;
 
     const FormatToken *NextToken = Tok.getNextNonComment();
 
@@ -4829,10 +4834,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         Right.is(TT_TemplateOpener)) {
       return true;
     }
-    if (Left.is(tok::identifier) && Right.is(tok::numeric_constant) &&
-        Right.TokenText[0] == '.') {
-      return false;
-    }
+    if (Left.Tok.getIdentifierInfo() && Right.is(tok::numeric_constant))
+      return Right.TokenText[0] != '.';
   } else if (Style.isProto()) {
     if (Right.is(tok::period) &&
         Left.isOneOf(Keywords.kw_optional, Keywords.kw_required,
@@ -5261,21 +5264,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return true;
   }
   if (Left.is(TT_UnaryOperator)) {
-    if (Right.isNot(tok::l_paren)) {
-      // The alternative operators for ~ and ! are "compl" and "not".
-      // If they are used instead, we do not want to combine them with
-      // the token to the right, unless that is a left paren.
-      if (Left.is(tok::exclaim) && Left.TokenText == "not")
-        return true;
-      if (Left.is(tok::tilde) && Left.TokenText == "compl")
-        return true;
-      // Lambda captures allow for a lone &, so "&]" needs to be properly
-      // handled.
-      if (Left.is(tok::amp) && Right.is(tok::r_square))
-        return Style.SpacesInSquareBrackets;
-    }
-    return (Style.SpaceAfterLogicalNot && Left.is(tok::exclaim)) ||
-           Right.is(TT_BinaryOperator);
+    // Lambda captures allow for a lone &, so "&]" needs to be properly
+    // handled.
+    if (Left.is(tok::amp) && Right.is(tok::r_square))
+      return Style.SpacesInSquareBrackets;
+    return Style.SpaceAfterLogicalNot && Left.is(tok::exclaim);
   }
 
   // If the next token is a binary operator or a selector name, we have
@@ -5595,12 +5588,8 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return true;
   if (Left.IsUnterminatedLiteral)
     return true;
-  // FIXME: Breaking after newlines seems useful in general. Turn this into an
-  // option and recognize more cases like endl etc, and break independent of
-  // what comes after operator lessless.
-  if (Right.is(tok::lessless) && Right.Next &&
-      Right.Next->is(tok::string_literal) && Left.is(tok::string_literal) &&
-      Left.TokenText.ends_with("\\n\"")) {
+  if (Right.is(tok::lessless) && Right.Next && Left.is(tok::string_literal) &&
+      Right.Next->is(tok::string_literal)) {
     return true;
   }
   if (Right.is(TT_RequiresClause)) {

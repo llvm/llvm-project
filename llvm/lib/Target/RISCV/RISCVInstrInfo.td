@@ -1813,6 +1813,8 @@ def : Pat<(binop_allwusers<srl> (sext_inreg GPR:$rs1, i32), uimm5:$shamt),
 
 // Use binop_allwusers to recover immediates that may have been broken by
 // SimplifyDemandedBits.
+def : Pat<(binop_allwusers<and> GPR:$rs1, 0xffffffff),
+          (COPY GPR:$rs1)>;
 def : Pat<(binop_allwusers<and> GPR:$rs1, u32simm12:$imm),
           (ANDI GPR:$rs1, u32simm12:$imm)>;
 
@@ -1861,7 +1863,7 @@ def : Pat<(trap), (UNIMP)>;
 def : Pat<(debugtrap), (EBREAK)>;
 
 let Predicates = [IsRV64], Uses = [X5],
-    Defs = [X1, X6, X7, X28, X29, X30, X31] in
+    Defs = [X1, X6, X7, X28, X29, X30, X31], Size = 8 in
 def HWASAN_CHECK_MEMACCESS_SHORTGRANULES
   : Pseudo<(outs), (ins GPRJALR:$ptr, i32imm:$accessinfo),
            [(int_hwasan_check_memaccess_shortgranules (i64 X5), GPRJALR:$ptr,

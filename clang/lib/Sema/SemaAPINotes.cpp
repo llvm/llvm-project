@@ -463,6 +463,8 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
     D = MD;
   }
 
+  assert((FD || MD) && "Expecting Function or ObjCMethod");
+
   // Nullability of return type.
   if (Info.NullabilityAudited)
     applyNullability(S, D, Info.getReturnTypeInfo(), Metadata);
@@ -591,6 +593,11 @@ static void ProcessAPINotes(Sema &S, TagDecl *D, const api_notes::TagInfo &Info,
   if (auto ReleaseOp = Info.SwiftReleaseOp)
     D->addAttr(
         SwiftAttrAttr::Create(S.Context, "release:" + ReleaseOp.value()));
+
+  if (auto Copyable = Info.isSwiftCopyable()) {
+    if (!*Copyable)
+      D->addAttr(SwiftAttrAttr::Create(S.Context, "~Copyable"));
+  }
 
   if (auto Extensibility = Info.EnumExtensibility) {
     using api_notes::EnumExtensibilityKind;
