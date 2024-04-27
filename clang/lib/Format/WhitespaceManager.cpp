@@ -128,11 +128,13 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
 void WhitespaceManager::calculateLineBreakInformation() {
   Changes[0].PreviousEndOfTokenColumn = 0;
   Change *LastOutsideTokenChange = &Changes[0];
-  for (unsigned i = 1, e = Changes.size(); i != e; ++i) {
+  for (unsigned I = 1, e = Changes.size(); I != e; ++I) {
+    auto &C = Changes[I];
+    auto &P = Changes[I - 1];
     SourceLocation OriginalWhitespaceStart =
-        Changes[i].OriginalWhitespaceRange.getBegin();
+        C.OriginalWhitespaceRange.getBegin();
     SourceLocation PreviousOriginalWhitespaceEnd =
-        Changes[i - 1].OriginalWhitespaceRange.getEnd();
+        P.OriginalWhitespaceRange.getEnd();
     unsigned OriginalWhitespaceStartOffset =
         SourceMgr.getFileOffset(OriginalWhitespaceStart);
     unsigned PreviousOriginalWhitespaceEndOffset =
@@ -167,31 +169,26 @@ void WhitespaceManager::calculateLineBreakInformation() {
     // line of the token.
     auto NewlinePos = Text.find_first_of('\n');
     if (NewlinePos == StringRef::npos) {
-      Changes[i - 1].TokenLength = OriginalWhitespaceStartOffset -
-                                   PreviousOriginalWhitespaceEndOffset +
-                                   Changes[i].PreviousLinePostfix.size() +
-                                   Changes[i - 1].CurrentLinePrefix.size();
+      P.TokenLength = OriginalWhitespaceStartOffset -
+                      PreviousOriginalWhitespaceEndOffset +
+                      C.PreviousLinePostfix.size() + P.CurrentLinePrefix.size();
     } else {
-      Changes[i - 1].TokenLength =
-          NewlinePos + Changes[i - 1].CurrentLinePrefix.size();
+      P.TokenLength = NewlinePos + P.CurrentLinePrefix.size();
     }
 
     // If there are multiple changes in this token, sum up all the changes until
     // the end of the line.
-    if (Changes[i - 1].IsInsideToken && Changes[i - 1].NewlinesBefore == 0) {
-      LastOutsideTokenChange->TokenLength +=
-          Changes[i - 1].TokenLength + Changes[i - 1].Spaces;
-    } else {
-      LastOutsideTokenChange = &Changes[i - 1];
-    }
+    if (P.IsInsideToken && P.NewlinesBefore == 0)
+      LastOutsideTokenChange->TokenLength += P.TokenLength + P.Spaces;
+    else
+      LastOutsideTokenChange = &P;
 
-    Changes[i].PreviousEndOfTokenColumn =
-        Changes[i - 1].StartOfTokenColumn + Changes[i - 1].TokenLength;
+    C.PreviousEndOfTokenColumn = P.StartOfTokenColumn + P.TokenLength;
 
-    Changes[i - 1].IsTrailingComment =
-        (Changes[i].NewlinesBefore > 0 || Changes[i].Tok->is(tok::eof) ||
-         (Changes[i].IsInsideToken && Changes[i].Tok->is(tok::comment))) &&
-        Changes[i - 1].Tok->is(tok::comment) &&
+    P.IsTrailingComment =
+        (C.NewlinesBefore > 0 || C.Tok->is(tok::eof) ||
+         (C.IsInsideToken && C.Tok->is(tok::comment))) &&
+        P.Tok->is(tok::comment) &&
         // FIXME: This is a dirty hack. The problem is that
         // BreakableLineCommentSection does comment reflow changes and here is
         // the aligning of trailing comments. Consider the case where we reflow
