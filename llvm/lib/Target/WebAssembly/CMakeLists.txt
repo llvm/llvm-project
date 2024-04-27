@@ -19,7 +19,6 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyArgumentMove.cpp
   WebAssemblyAsmPrinter.cpp
   WebAssemblyCFGStackify.cpp
-  WebAssemblyCleanCodeAfterTrap.cpp
   WebAssemblyCFGSort.cpp
   WebAssemblyDebugFixup.cpp
   WebAssemblyDebugValueManager.cpp
