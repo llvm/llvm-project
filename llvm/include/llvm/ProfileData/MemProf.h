@@ -751,7 +751,7 @@ value_type DerefIterator(IterTy Iter) {
 }
 } // namespace detail
 
-// A function object that returns a call stack for a given FrameId.
+// A function object that returns a frame for a given FrameId.
 template <typename MapTy> struct FrameIdConverter {
   std::optional<FrameId> LastUnmappedId;
   MapTy &Map;
