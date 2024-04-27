@@ -3,8 +3,8 @@
 
 declare dso_local i32 @atexit(ptr)
 
-define dso_local void @atexit_handler() {
-; CHECK-LABEL: define dso_local void @atexit_handler() local_unnamed_addr {
+define dso_local void @empty_atexit_handler() {
+; CHECK-LABEL: define dso_local void @empty_atexit_handler() local_unnamed_addr {
 ; CHECK-NEXT:    ret void
 ;
   ret void
@@ -14,12 +14,41 @@ define dso_local void @atexit_handler() {
 ; Check that a removed `atexit` call returns `0` which is the value that denotes success.
 define dso_local noundef i32 @register_atexit_handler() {
 ; CHECK-LABEL: define dso_local noundef i32 @register_atexit_handler() local_unnamed_addr {
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 0, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret i32 0
 ;
-  %1 = alloca i32, align 4
-  store i32 0, ptr %1, align 4
-  %2 = call i32 @atexit(ptr @"atexit_handler")
-  ret i32 %2
+  %1 = call i32 @atexit(ptr @empty_atexit_handler)
+  ret i32 %1
+}
+
+declare dso_local void @declared_atexit_handler()
+
+; Check that an atexit handler with only a declaration is not removed.
+define dso_local noundef i32 @register_declared_atexit_handler() {
+; CHECK-LABEL: define dso_local noundef i32 @register_declared_atexit_handler() local_unnamed_addr {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @atexit(ptr @declared_atexit_handler)
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %1 = call i32 @atexit(ptr @declared_atexit_handler)
+  ret i32 %1
+}
+
+declare dso_local void @external_exit_func()
+
+define dso_local void @nonempty_atexit_handler() {
+; CHECK-LABEL: define dso_local void @nonempty_atexit_handler() {
+; CHECK-NEXT:    call void @external_exit_func()
+; CHECK-NEXT:    ret void
+;
+  call void @external_exit_func()
+  ret void
+}
+
+; Check that an atexit handler that consists of any instructions other than `ret` is considered nonempty and not removed.
+define dso_local noundef i32 @register_nonempty_atexit_handler() {
+; CHECK-LABEL: define dso_local noundef i32 @register_nonempty_atexit_handler() local_unnamed_addr {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @atexit(ptr @nonempty_atexit_handler)
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %1 = call i32 @atexit(ptr @nonempty_atexit_handler)
+  ret i32 %1
 }
