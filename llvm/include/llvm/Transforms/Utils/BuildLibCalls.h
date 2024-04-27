@@ -63,10 +63,10 @@ namespace llvm {
                      FunctionType *Invalid, ArgsTy... Args) = delete;
 
   // Handle -mregparm for the given function.
-  // FIXME: This should likely be implemented in
-  // CodeGenModule::SetLLVMFunctionAttributes() since callers of
-  // markRegisterParameterAttributes() will not have gotten appropriate
-  // attributes for things like sign/zero-extension, etc.
+  // Note that this function is a rough approximation that only works for simple
+  // function signatures; it does not apply other relevant attributes for
+  // function signatures, including sign/zero-extension for arguments and return
+  // values.
   void markRegisterParameterAttributes(Function *F);
 
   /// Check whether the library function is available on target and also that

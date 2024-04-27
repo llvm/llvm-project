@@ -4782,6 +4782,9 @@ CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *FTy, StringRef Name,
         }
       }
       setDSOLocal(F);
+      // FIXME: We should use CodeGenModule::SetLLVMFunctionAttributes() instead
+      // of trying to approximate the attributes using the LLVM function
+      // signature. This requires revising the API of CreateRuntimeFunction().
       markRegisterParameterAttributes(F);
     }
   }
