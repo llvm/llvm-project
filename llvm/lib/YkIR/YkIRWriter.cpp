@@ -11,6 +11,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -50,6 +51,7 @@ enum OpCode {
   OpCodePtrAdd,
   OpCodeBinOp,
   OpCodeCast,
+  OpCodeDeoptSafepoint,
   OpCodeUnimplemented = 255, // YKFIXME: Will eventually be deleted.
 };
 
@@ -393,6 +395,26 @@ private:
     InstIdx++;
   }
 
+  void serialiseDeoptSafepointInst(CallInst *I, ValueLoweringMap &VLMap,
+                                   unsigned BBIdx, unsigned &InstIdx) {
+    serialiseOpcode(OpCodeDeoptSafepoint);
+    // stackmap ID:
+    serialiseOperand(I, VLMap, I->getOperand(0));
+
+    // num_shadow_bytes:
+    serialiseOperand(I, VLMap, I->getOperand(1));
+
+    // num_lives:
+    OutStreamer.emitInt32(I->arg_size() - 2);
+
+    // lives:
+    for (unsigned OI = 2; OI < I->arg_size(); OI++) {
+      serialiseOperand(I, VLMap, I->getOperand(OI));
+    }
+    InstIdx++;
+    return;
+  }
+
   void serialiseCallInst(CallInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
                          unsigned &InstIdx) {
     if (I->isInlineAsm()) {
@@ -426,7 +448,13 @@ private:
     //   call i32 (i32, ...) @f(1i32, 2i32);
     assert(I->getCalledFunction());
 
-    // opcode:
+    // special case for llvm.experimental.stackmap intrinsic.
+    if (I->getCalledFunction()->isIntrinsic() &&
+        I->getIntrinsicID() == Intrinsic::experimental_stackmap) {
+      serialiseDeoptSafepointInst(I, VLMap, BBIdx, InstIdx);
+      return;
+    }
+
     serialiseOpcode(OpCodeCall);
     // callee:
     OutStreamer.emitSizeT(functionIndex(I->getCalledFunction()));
