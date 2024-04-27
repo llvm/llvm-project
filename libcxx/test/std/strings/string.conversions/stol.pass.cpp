@@ -13,7 +13,7 @@
 
 #include <string>
 #include <cassert>
-#incluce <limits>
+#include <limits>
 #include <stdexcept>
 
 #include "test_macros.h"
