@@ -34,8 +34,13 @@ func.func @_QQmain() {
 // PASSES-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
+// PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction']
+// PASSES-NEXT: 'fir.global' Pipeline
+// PASSES-NEXT:   CharacterConversion
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:   ArrayValueCopy
+// PASSES-NEXT:   CharacterConversion
+// PASSES-NEXT: 'omp.declare_reduction' Pipeline
 // PASSES-NEXT:   CharacterConversion
 
 // PASSES-NEXT: Canonicalizer

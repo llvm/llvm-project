@@ -2615,6 +2615,11 @@ defm protect_parens : BoolFOption<"protect-parens",
           "floating-point expressions are evaluated">,
   NegFlag<SetFalse>>;
 
+defm daz_ftz : SimpleMFlag<"daz-ftz",
+  "Globally set", "Do not globally set",
+  " the denormals-are-zero (DAZ) and flush-to-zero (FTZ) bits in the "
+  "floating-point control register on program startup">;
+
 def ffor_scope : Flag<["-"], "ffor-scope">, Group<f_Group>;
 def fno_for_scope : Flag<["-"], "fno-for-scope">, Group<f_Group>;
 
@@ -4876,6 +4881,8 @@ def msimd128 : Flag<["-"], "msimd128">, Group<m_wasm_Features_Group>;
 def mno_simd128 : Flag<["-"], "mno-simd128">, Group<m_wasm_Features_Group>;
 def mrelaxed_simd : Flag<["-"], "mrelaxed-simd">, Group<m_wasm_Features_Group>;
 def mno_relaxed_simd : Flag<["-"], "mno-relaxed-simd">, Group<m_wasm_Features_Group>;
+def mhalf_precision : Flag<["-"], "mhalf-precision">, Group<m_wasm_Features_Group>;
+def mno_half_precision : Flag<["-"], "mno-half-precision">, Group<m_wasm_Features_Group>;
 def mnontrapping_fptoint : Flag<["-"], "mnontrapping-fptoint">, Group<m_wasm_Features_Group>;
 def mno_nontrapping_fptoint : Flag<["-"], "mno-nontrapping-fptoint">, Group<m_wasm_Features_Group>;
 def msign_ext : Flag<["-"], "msign-ext">, Group<m_wasm_Features_Group>;
