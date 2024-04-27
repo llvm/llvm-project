@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1y -verify %s -fexceptions -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++1y -verify %s -fsized-deallocation -fexceptions -fcxx-exceptions
 
 using size_t = decltype(sizeof(0));
 void operator delete(void *, size_t) noexcept;   // expected-note {{'operator delete' declared here}}

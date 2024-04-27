@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1z -fno-sized-deallocation -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++1z -fsyntax-only -verify %s
 // RUN: %clang_cc1 -std=c++03 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -std=c++03 -faligned-allocation -fsyntax-only -verify %s
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
