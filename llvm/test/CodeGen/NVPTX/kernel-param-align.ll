@@ -6,8 +6,8 @@
 ; CHECK-LABEL: func_align
 ; CHECK: .param .u64 .ptr .global .align 16 func_align_param_0,
 ; CHECK: .param .u64 .ptr .global func_align_param_1,
-; CHECK: .param .u32 func_align_param_2
-define void @func_align(ptr nocapture readonly align 16 %input, ptr addrspace(3) nocapture %out, i32 %n) {
+; CHECK: .param .u64 .ptr .global func_align_param_2
+define void @func_align(ptr nocapture readonly align 16 %input, ptr nocapture %out, ptr addrspace(3) %n) {
 entry:
   %0 = addrspacecast ptr %out to ptr addrspace(1)
   %1 = addrspacecast ptr %input to ptr addrspace(1)
@@ -18,8 +18,8 @@ entry:
 }
 
 ; CHECK-LABEL: func
-; CHECK: .param .ptr .global .u64 func_param_0,
-; CHECK: .param .ptr .global .u64 func_param_1,
+; CHECK: .param .u64 .ptr .global func_param_0,
+; CHECK: .param .u64 .ptr .global func_param_1,
 ; CHECK: .param .u32 func_param_2
 define void @func(ptr nocapture readonly %input, ptr nocapture %out, i32 %n) {
 entry:
