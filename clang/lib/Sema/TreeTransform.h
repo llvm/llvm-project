@@ -6649,8 +6649,9 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
     }
   }
 
-  // We may be doing this in the context of expanding the Pattern. Forget that
-  // because it has been handled above.
+  // A pack indexing type can appear in a larger pack expansion,
+  // e.g. `Pack...[pack_of_indexes]...`
+  // so we need to temporarily disable substitution of pack elements
   Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), -1);
   QualType Result = getDerived().TransformType(TLB, TL.getPatternLoc());
 
