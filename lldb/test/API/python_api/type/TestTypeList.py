@@ -33,6 +33,32 @@ class TypeAndTypeListTestCase(TestBase):
         self.assertTrue(pointer_masks2_type)
         self.DebugSBType(pointer_masks2_type)
 
+    def _find_static_field_in_Task_pointer(self, task_pointer):
+        self.assertTrue(task_pointer)
+        self.DebugSBType(task_pointer)
+
+        task_type = task_pointer.GetPointeeType()
+        self.assertTrue(task_type)
+        self.DebugSBType(task_type)
+
+        static_constexpr_field = task_type.GetStaticFieldWithName(
+            "static_constexpr_field"
+        )
+        self.assertTrue(static_constexpr_field)
+        self.assertEqual(static_constexpr_field.GetName(), "static_constexpr_field")
+        self.assertEqual(static_constexpr_field.GetType().GetName(), "const long")
+
+        value = static_constexpr_field.GetConstantValue(self.target())
+        self.DebugSBValue(value)
+        self.assertEqual(value.GetValueAsSigned(), 47)
+
+        static_mutable_field = task_type.GetStaticFieldWithName("static_mutable_field")
+        self.assertTrue(static_mutable_field)
+        self.assertEqual(static_mutable_field.GetName(), "static_mutable_field")
+        self.assertEqual(static_mutable_field.GetType().GetName(), "int")
+
+        self.assertFalse(static_mutable_field.GetConstantValue(self.target()))
+
     @skipIf(compiler="clang", compiler_version=["<", "17.0"])
     def test(self):
         """Exercise SBType and SBTypeList API."""
@@ -173,6 +199,13 @@ class TypeAndTypeListTestCase(TestBase):
         )
         self._find_nested_type_in_Pointer_template_arg(
             frame0.EvaluateExpression("pointer").GetType()
+        )
+
+        self._find_static_field_in_Task_pointer(
+            frame0.FindVariable("task_head").GetType()
+        )
+        self._find_static_field_in_Task_pointer(
+            frame0.EvaluateExpression("task_head").GetType()
         )
 
         # We'll now get the child member 'id' from 'task_head'.
