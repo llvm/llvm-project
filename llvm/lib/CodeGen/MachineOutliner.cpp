@@ -100,6 +100,10 @@ STATISTIC(NumInvisible,
           "Invisible instructions skipped during mapping");
 STATISTIC(UnsignedVecSize,
           "Total number of instructions mapped and saved to mapping vector");
+STATISTIC(StableHashAttempts,
+          "Count of hashing attempts made for outlined functions");
+STATISTIC(StableHashDropped,
+          "Count of unsuccessful hashing attempts for outlined functions");
 
 // Set to true if the user wants the outliner to run on linkonceodr linkage
 // functions. This is false by default because the linker can dedupe linkonceodr
@@ -506,6 +510,11 @@ struct MachineOutliner : public ModulePass {
                                           InstructionMapper &Mapper,
                                           unsigned Name);
 
+  /// Compute and publish the stable hash sequence of instructions in the
+  /// outlined function, \p MF. The parameter \p CandSize represents the number
+  /// of candidates that have identical instruction sequences to \p MF.
+  void computeAndPublishHashSequence(MachineFunction &MF, unsigned CandSize);
+
   /// Initialize the outliner mode.
   void initializeOutlinerMode(const Module &M);
 
@@ -634,8 +643,10 @@ static const HashNode *followHashNode(stable_hash StableHash,
   return (I == Current->Successors.end()) ? nullptr : I->second.get();
 }
 
+// Find all matches in the global outlined hash tree.
+// It's quadratic complexity in theory, but it's nearly linear in practice
+// since the length of outlined sequences are small within a block.
 static std::vector<MatchedEntry> getMatchedEntries(InstructionMapper &Mapper) {
-
   auto &InstrList = Mapper.InstrList;
   auto &UnsignedVec = Mapper.UnsignedVec;
 
@@ -646,21 +657,18 @@ static std::vector<MatchedEntry> getMatchedEntries(InstructionMapper &Mapper) {
   // Get the global outlined hash tree built from the previous run.
   assert(cgdata::hasOutlinedHashTree());
   const auto *RootNode = cgdata::getOutlinedHashTree()->getRoot();
-
-  // Find all matches in the global outlined hash tree.
-  // It's quadratic complexity in theory, but it's nearly linear in practice
-  // since the length of outlined candidates are small within a block.
-  for (size_t I = 0; I < Size; I++) {
+  for (size_t I = 0; I < Size; ++I) {
+    // skip the invalid mapping that represents a large negative value.
     if (UnsignedVec[I] >= Size)
       continue;
-
     const MachineInstr &MI = *InstrList[I];
-    // We optimistically skip Debug instructions and CFI instructions.
-    // Debug instructions will be deleted in the outlined function.
-    // CFI instructions are adapted to the outlined function.
-    if (MI.isDebugInstr() || MI.isCFIInstruction())
+    // skip debug instructions as we did for the outlined function.
+    if (MI.isDebugInstr())
       continue;
+    // skip the empty hash value.
     stable_hash StableHashI = stableHashValue(MI);
+    if (!StableHashI)
+      continue;
     Sequence.clear();
     Sequence.push_back(StableHashI);
 
@@ -669,16 +677,18 @@ static std::vector<MatchedEntry> getMatchedEntries(InstructionMapper &Mapper) {
       continue;
 
     size_t J = I + 1;
-    for (; J < Size; J++) {
-      // Break on invalid code
+    for (; J < Size; ++J) {
+      // break on the invalid mapping that represents a large negative value.
       if (UnsignedVec[J] >= Size)
         break;
-
+      // ignore debug instructions as we did for the outlined function.
       const MachineInstr &MJ = *InstrList[J];
-      if (MJ.isDebugInstr() || MJ.isCFIInstruction())
+      if (MJ.isDebugInstr())
         continue;
-
+      // break on the empty hash value.
       stable_hash StableHashJ = stableHashValue(MJ);
+      if (!StableHashJ)
+        break;
       LastNode = followHashNode(StableHashJ, LastNode);
       if (!LastNode)
         break;
@@ -830,6 +840,31 @@ void MachineOutliner::findCandidates(
   }
 }
 
+void MachineOutliner::computeAndPublishHashSequence(MachineFunction &MF,
+                                                    unsigned CandSize) {
+  // Compute the hash sequence for the outlined function.
+  std::vector<stable_hash> OutlinedHashSequence;
+  for (auto &MBB : MF) {
+    for (auto &NewMI : MBB) {
+      stable_hash Hash = stableHashValue(NewMI);
+      if (!Hash) {
+        OutlinedHashSequence.clear();
+        break;
+      }
+      OutlinedHashSequence.push_back(Hash);
+    }
+  }
+
+  // Publish the non-empty hash sequence to the local hash tree.
+  if (OutlinerMode == CGDataMode::Write) {
+    StableHashAttempts++;
+    if (!OutlinedHashSequence.empty())
+      LocalHashTree->insert({OutlinedHashSequence, CandSize});
+    else
+      StableHashDropped++;
+  }
+}
+
 MachineFunction *MachineOutliner::createOutlinedFunction(
     Module &M, OutlinedFunction &OF, InstructionMapper &Mapper, unsigned Name) {
 
@@ -887,7 +922,6 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
   MachineFunction *OriginalMF = FirstCand.front().getMF();
   const std::vector<MCCFIInstruction> &Instrs =
       OriginalMF->getFrameInstructions();
-  std::vector<stable_hash> OutlinedHashSequence;
   for (auto &MI : FirstCand) {
     if (MI.isDebugInstr())
       continue;
@@ -904,22 +938,11 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
       NewMI->dropMemRefs(MF);
       NewMI->setDebugLoc(DL);
       MBB.insert(MBB.end(), NewMI);
-      // For non-debug and non-cfi instructions, compute stable hash sequence.
-      if (OutlinerMode != CGDataMode::None) {
-        stable_hash Hash = stableHashValue(MI);
-        OutlinedHashSequence.push_back(Hash);
-      }
     }
   }
 
-  // TODO: Update function name based on the hash sequence.
-
-  // Publish the hash sequence to the local hash tree.
-  if (OutlinerMode == CGDataMode::Write) {
-    assert(!OutlinedHashSequence.empty());
-    unsigned Count = OF.Candidates.size();
-    LocalHashTree->insert({OutlinedHashSequence, Count});
-  }
+  if (OutlinerMode != CGDataMode::None)
+    computeAndPublishHashSequence(MF, OF.Candidates.size());
 
   // Set normal properties for a late MachineFunction.
   MF.getProperties().reset(MachineFunctionProperties::Property::IsSSA);
