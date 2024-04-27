@@ -122,6 +122,10 @@ public:
   void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool supportsTargetAttributeTune() const override { return true; }
   ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(32, 32);
+  }
 };
 class LLVM_LIBRARY_VISIBILITY RISCV32TargetInfo : public RISCVTargetInfo {
 public:
