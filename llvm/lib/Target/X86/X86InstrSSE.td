@@ -1594,7 +1594,7 @@ let Predicates = [HasAVX] in {
   def : Pat<(v4i32 (lrint (loadv4f64 addr:$src))), (VCVTPD2DQYrm addr:$src)>;
 }
 
-let Predicates = [HasSSE2] in {
+let Predicates = [UseSSE2] in {
   def : Pat<(v4i32 (lrint VR128:$src)), (CVTPS2DQrr VR128:$src)>;
   def : Pat<(v4i32 (lrint (loadv4f32 addr:$src))), (CVTPS2DQrm addr:$src)>;
 }

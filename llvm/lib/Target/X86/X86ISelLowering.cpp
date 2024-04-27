@@ -1434,6 +1434,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     setOperationAction(ISD::LRINT, MVT::v8f32, Custom);
+    setOperationAction(ISD::LRINT, MVT::v4f64, Custom);
 
     // (fp_to_int:v8i16 (v8f32 ..)) requires the result type to be promoted
     // even though v8i16 is a legal type.
@@ -1736,14 +1737,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   }
   if (Subtarget.hasDQI() && Subtarget.hasVLX()) {
-    setOperationAction(ISD::LRINT, MVT::v4f32, Legal);
-    setOperationAction(ISD::LRINT, MVT::v8f32, Legal);
-    setOperationAction(ISD::LLRINT, MVT::v4f32, Legal);
-    setOperationAction(ISD::LLRINT, MVT::v8f32, Legal);
-    setOperationAction(ISD::LRINT, MVT::v2f64, Legal);
-    setOperationAction(ISD::LRINT, MVT::v4f64, Legal);
-    setOperationAction(ISD::LLRINT, MVT::v2f64, Legal);
-    setOperationAction(ISD::LLRINT, MVT::v4f64, Legal);
+    for (MVT VT : { MVT::v4f32, MVT::v8f32, MVT::v2f64, MVT::v4f64 }) {
+      setOperationAction(ISD::LRINT, VT, Legal);
+      setOperationAction(ISD::LLRINT, VT, Legal);
+    }
   }
 
   // This block controls legalization for 512-bit operations with 8/16/32/64 bit
@@ -21181,7 +21178,6 @@ SDValue X86TargetLowering::LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue X86TargetLowering::LowerLRINT_LLRINT(SDValue Op,
-                                             const X86Subtarget &Subtarget,
                                              SelectionDAG &DAG) const {
   SDValue Src = Op.getOperand(0);
   EVT DstVT = Op.getSimpleValueType();
@@ -32244,7 +32240,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FCOPYSIGN:          return LowerFCOPYSIGN(Op, DAG);
   case ISD::FGETSIGN:           return LowerFGETSIGN(Op, DAG);
   case ISD::LRINT:
-  case ISD::LLRINT:             return LowerLRINT_LLRINT(Op, Subtarget, DAG);
+  case ISD::LLRINT:             return LowerLRINT_LLRINT(Op, DAG);
   case ISD::SETCC:
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:     return LowerSETCC(Op, DAG);
