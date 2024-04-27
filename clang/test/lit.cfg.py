@@ -285,8 +285,6 @@ known_arches = ["x86_64", "mips64", "ppc64", "aarch64"]
 if any(config.target_triple.startswith(x) for x in known_arches):
     config.available_features.add("clang-target-64-bits")
 
-if re.match(r"^(aarch64-|arm|x86).*-windows-msvc$", config.target_triple):
-    config.available_features.add("coff-supported-target")
 
 def calculate_arch_features(arch_string):
     features = []
