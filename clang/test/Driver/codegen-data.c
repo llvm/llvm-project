@@ -2,6 +2,24 @@
 // RUN: not %clang -### -S --target=aarch64-linux-gnu -fcodegen-data-generate -fcodegen-data-use %s 2>&1 | FileCheck %s --check-prefix=CONFLICT
 // RUN: not %clang -### -S --target=arm64-apple-darwin  -fcodegen-data-generate -fcodegen-data-use %s 2>&1 | FileCheck %s --check-prefix=CONFLICT
 // CONFLICT: error: invalid argument '-fcodegen-data-generate' not allowed with '-fcodegen-data-use'
+// RUN: not %clang -### -S --target=aarch64-linux-gnu -fcodegen-data-generate -fcodegen-data-thinlto-two-rounds %s 2>&1 | FileCheck %s --check-prefix=CONFLICT-2
+// RUN: not %clang -### -S --target=arm64-apple-darwin -fcodegen-data-generate -fcodegen-data-thinlto-two-rounds %s 2>&1 | FileCheck %s --check-prefix=CONFLICT-2
+// CONFLICT-2: error: invalid argument '-fcodegen-data-generate' not allowed with '-fcodegen-data-thinlto-two-rounds'
+// RUN: not %clang -### -S --target=aarch64-linux-gnu -fcodegen-data-use -fcodegen-data-thinlto-two-rounds %s 2>&1 | FileCheck %s --check-prefix=CONFLICT-3
+// RUN: not %clang -### -S --target=arm64-apple-darwin -fcodegen-data-use -fcodegen-data-thinlto-two-rounds %s 2>&1 | FileCheck %s --check-prefix=CONFLICT-3
+// CONFLICT-3: error: invalid argument '-fcodegen-data-use' not allowed with '-fcodegen-data-thinlto-two-rounds'
+
+// Verify the codegen-data-thinlto-two-rounds-path must have a valid directory path passed to LLVM.
+// RUN: not %clang -### -S --target=aarch64-linux-gnu -fcodegen-data-thinlto-two-rounds=file %s 2>&1 | FileCheck %s --check-prefix=ROUND-FILE
+// RUN: not %clang -### -S --target=arm64-apple-darwin -fcodegen-data-thinlto-two-rounds=file %s 2>&1 | FileCheck %s --check-prefix=ROUND-FILE
+// ROUND-FILE: error: unable to set working directory: file
+// RUN: %clang -### -S --target=aarch64-linux-gnu -fcodegen-data-thinlto-two-rounds %s 2>&1 | FileCheck %s --check-prefix=ROUND-DIRTEMP
+// RUN: %clang -### -S --target=arm64-apple-darwin -fcodegen-data-thinlto-two-rounds %s 2>&1 | FileCheck %s --check-prefix=ROUND-DIRTEMP
+// ROUND-DIRTEMP: "-mllvm" "-codegen-data-thinlto-two-rounds-path={{.*}}"
+// RUN: mkdir -p %t.d/some
+// RUN: %clang -### -S --target=aarch64-linux-gnu -fcodegen-data-thinlto-two-rounds=%t.d/some %s 2>&1 | FileCheck %s --check-prefix=ROUND-DIR
+// RUN: %clang -### -S --target=arm64-apple-darwin -fcodegen-data-thinlto-two-rounds=%t.d/some %s 2>&1 | FileCheck %s --check-prefix=ROUND-DIR
+// ROUND-DIR: "-mllvm" "-codegen-data-thinlto-two-rounds-path={{.*}}.d/some"
 
 // Verify the codegen-data-generate (boolean) flag is passed to LLVM
 // RUN: %clang -### -S --target=aarch64-linux-gnu -fcodegen-data-generate %s  2>&1| FileCheck %s --check-prefix=GENERATE

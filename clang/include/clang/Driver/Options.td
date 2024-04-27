@@ -1846,6 +1846,12 @@ def fcodegen_data_use : Joined<["-"], "fcodegen-data-use">,
 def fcodegen_data_use_EQ : Joined<["-"], "fcodegen-data-use=">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option]>, MetaVarName<"<directory>">,
     HelpText<"Use codegen data read from <directory>/default.cgdata to optimize the binary">;
+def fcodegen_data_thinlto_two_rounds : Joined<["-"], "fcodegen-data-thinlto-two-rounds">,
+    Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+    HelpText<"ThinLTO runs codegen twice by serializing and deserializing IRs to and from a temp directory. Applies to ThinLTO bitcodes only">;
+def fcodegen_data_thinlto_two_rounds_EQ : Joined<["-"], "fcodegen-data-thinlto-two-rounds=">,
+    Group<f_Group>, Visibility<[ClangOption, CC1Option]>, MetaVarName<"<directory>">,
+    HelpText<"ThinLTO runs codegen twice by serializing and deserializing IRs to and from <directory>. Applies to ThinLTO bitcodes only">;
 def fswift_async_fp_EQ : Joined<["-"], "fswift-async-fp=">,
     Group<f_Group>,
     Visibility<[ClangOption, CC1Option, CC1AsOption, CLOption]>,
