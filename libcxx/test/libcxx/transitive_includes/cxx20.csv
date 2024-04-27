@@ -129,6 +129,7 @@ chrono cwchar
 chrono forward_list
 chrono limits
 chrono locale
+chrono new
 chrono optional
 chrono ostream
 chrono ratio
