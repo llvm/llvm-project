@@ -1949,7 +1949,7 @@ mlir::Value ScalarExprEmitter::buildCompoundAssign(
     return RHS;
 
   // If the lvalue is non-volatile, return the computed value of the assignment.
-  if (!LHS.isVolatile())
+  if (!LHS.isVolatileQualified())
     return RHS;
 
   // Otherwise, reload the value.
