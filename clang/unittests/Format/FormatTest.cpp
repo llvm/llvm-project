@@ -24507,16 +24507,25 @@ TEST_F(FormatTest, AlternativeOperators) {
   verifyFormat("int a compl(5);");
   verifyFormat("int a not(5);");
 
-  /* FIXME handle alternate tokens
-   * https://en.cppreference.com/w/cpp/language/operator_alternative
-  // alternative tokens
-  verifyFormat("compl foo();");     //  ~foo();
-  verifyFormat("foo() <%%>;");      // foo();
-  verifyFormat("void foo() <%%>;"); // void foo(){}
-  verifyFormat("int a <:1:>;");     // int a[1];[
+  verifyFormat("compl foo();");     // ~foo();
+  verifyFormat("foo() <%%>");       // foo() {}
+  verifyFormat("void foo() <%%>");  // void foo() {}
+  verifyFormat("int a<:1:>;");      // int a[1];
   verifyFormat("%:define ABC abc"); // #define ABC abc
   verifyFormat("%:%:");             // ##
-  */
+
+  verifyFormat("a = v(not;);\n"
+               "b = v(not+);\n"
+               "c = v(not x);\n"
+               "d = v(not 1);\n"
+               "e = v(not 123.f);");
+
+  verifyNoChange("#define ASSEMBLER_INSTRUCTION_LIST(V)  \\\n"
+                 "  V(and)                               \\\n"
+                 "  V(not)                               \\\n"
+                 "  V(not!)                              \\\n"
+                 "  V(other)",
+                 getLLVMStyleWithColumns(40));
 }
 
 TEST_F(FormatTest, STLWhileNotDefineChed) {
