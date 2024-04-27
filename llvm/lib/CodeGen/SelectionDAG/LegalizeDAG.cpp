@@ -5575,6 +5575,21 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(NewAtomic.getValue(1));
     break;
   }
+  case ISD::ATOMIC_LOAD: {
+    AtomicSDNode *AM = cast<AtomicSDNode>(Node);
+    SDLoc SL(Node);
+    assert(NVT.getSizeInBits() == OVT.getSizeInBits() &&
+           "unexpected promotion type");
+    assert(AM->getMemoryVT().getSizeInBits() == NVT.getSizeInBits() &&
+           "unexpected atomic_load with illegal type");
+
+    SDValue NewAtomic =
+        DAG.getAtomic(ISD::ATOMIC_LOAD, SL, NVT, DAG.getVTList(NVT, MVT::Other),
+                      {AM->getChain(), AM->getBasePtr()}, AM->getMemOperand());
+    Results.push_back(DAG.getNode(ISD::BITCAST, SL, OVT, NewAtomic));
+    Results.push_back(NewAtomic.getValue(1));
+    break;
+  }
   case ISD::SPLAT_VECTOR: {
     SDValue Scalar = Node->getOperand(0);
     MVT ScalarType = Scalar.getSimpleValueType();
