@@ -135,10 +135,6 @@ std::pair<Container, Container> genCacheUnfriendlyData(size_t size1, size_t size
   return std::pair<Container, Container>();
 }
 
-// use environment variable to enable additional counters: instrumentation will
-// impact CPU utilisation, let's give the user the option
-static const bool TRACK_COUNTERS = getenv("TRACK_COUNTERS") != nullptr;
-
 template <class ValueType, class Container, class Overlap>
 struct SetIntersection {
   using ContainerType = typename Container::template type<Value<ValueType>>;
@@ -164,26 +160,8 @@ struct SetIntersection {
       while (state.KeepRunningBatch(BATCH_SIZE)) {
         for (unsigned i = 0; i < BATCH_SIZE; ++i) {
           const auto& [c1, c2] = input;
-          if (TRACK_COUNTERS) {
-            size_t cmp{}, strides{}, displacement{};
-            auto tracking_less = [&cmp](const Value<ValueType>& lhs, const Value<ValueType>& rhs) {
-              ++cmp;
-              return std::less<Value<ValueType>>{}(lhs, rhs);
-            };
-            stride_counting_iterator b1(c1.begin(), &strides, &displacement);
-            stride_counting_iterator e1(c1.end(), &strides, &displacement);
-            stride_counting_iterator b2(c2.begin(), &strides, &displacement);
-            stride_counting_iterator e2(c2.end(), &strides, &displacement);
-            auto res = std::set_intersection(b1, e1, b2, e2, out.begin(), tracking_less);
-            benchmark::DoNotOptimize(res);
-            state.counters["comparisons"]       = cmp;
-            state.counters["iter_strides"]      = strides;
-            state.counters["iter_displacement"] = displacement;
-
-          } else {
-            auto res = std::set_intersection(c1.begin(), c1.end(), c2.begin(), c2.end(), out.begin());
-            benchmark::DoNotOptimize(res);
-          }
+          auto res = std::set_intersection(c1.begin(), c1.end(), c2.begin(), c2.end(), out.begin());
+          benchmark::DoNotOptimize(res);
         }
       }
     }
