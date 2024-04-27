@@ -1520,53 +1520,35 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
 
   // Setup a callback to convert from frame ids to frame using the on-disk
   // FrameData hash table.
-  std::optional<memprof::FrameId> LastUnmappedFrameId;
-  auto IdToFrameCallback = [&](const memprof::FrameId Id) {
-    auto FrIter = MemProfFrameTable->find(Id);
-    if (FrIter == MemProfFrameTable->end()) {
-      LastUnmappedFrameId = Id;
-      return memprof::Frame(0, 0, 0, false);
-    }
-    return *FrIter;
-  };
+  memprof::FrameIdConverter<MemProfFrameHashTable> FrameIdConv(
+      *MemProfFrameTable.get());
 
   // Setup a callback to convert call stack ids to call stacks using the on-disk
   // hash table.
-  std::optional<memprof::CallStackId> LastUnmappedCSId;
-  auto CSIdToCallStackCallback = [&](memprof::CallStackId CSId) {
-    llvm::SmallVector<memprof::Frame> Frames;
-    auto CSIter = MemProfCallStackTable->find(CSId);
-    if (CSIter == MemProfCallStackTable->end()) {
-      LastUnmappedCSId = CSId;
-    } else {
-      const llvm::SmallVector<memprof::FrameId> &CS = *CSIter;
-      Frames.reserve(CS.size());
-      for (memprof::FrameId Id : CS)
-        Frames.push_back(IdToFrameCallback(Id));
-    }
-    return Frames;
-  };
+  memprof::CallStackIdConverter<MemProfCallStackHashTable> CSIdConv(
+      *MemProfCallStackTable.get(), FrameIdConv);
 
   const memprof::IndexedMemProfRecord IndexedRecord = *Iter;
   memprof::MemProfRecord Record;
   if (MemProfCallStackTable)
-    Record = IndexedRecord.toMemProfRecord(CSIdToCallStackCallback);
+    Record = IndexedRecord.toMemProfRecord(CSIdConv);
   else
-    Record = memprof::MemProfRecord(IndexedRecord, IdToFrameCallback);
+    Record = memprof::MemProfRecord(IndexedRecord, FrameIdConv);
 
   // Check that all frame ids were successfully converted to frames.
-  if (LastUnmappedFrameId) {
-    return make_error<InstrProfError>(instrprof_error::hash_mismatch,
-                                      "memprof frame not found for frame id " +
-                                          Twine(*LastUnmappedFrameId));
+  if (FrameIdConv.LastUnmappedId) {
+    return make_error<InstrProfError>(
+        instrprof_error::hash_mismatch,
+        "memprof frame not found for frame id " +
+            Twine(*FrameIdConv.LastUnmappedId));
   }
 
   // Check that all call stack ids were successfully converted to call stacks.
-  if (LastUnmappedCSId) {
+  if (CSIdConv.LastUnmappedId) {
     return make_error<InstrProfError>(
         instrprof_error::hash_mismatch,
         "memprof call stack not found for call stack id " +
-            Twine(*LastUnmappedCSId));
+            Twine(*CSIdConv.LastUnmappedId));
   }
   return Record;
 }
