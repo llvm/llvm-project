@@ -90,9 +90,7 @@ static void emitRISCVExtensions(RecordKeeper &Records, raw_ostream &OS) {
 // This is almost the same as RISCVFeatures::parseFeatureBits, except that we
 // get feature name from feature records instead of feature bits.
 static void printMArch(raw_ostream &OS, const Record &Rec) {
-  std::map<std::string, RISCVISAUtils::ExtensionVersion,
-           RISCVISAUtils::ExtensionComparator>
-      Extensions;
+  RISCVISAUtils::OrderedExtensionMap Extensions;
   unsigned XLen = 0;
 
   // Convert features to FeatureVector.
