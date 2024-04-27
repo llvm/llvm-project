@@ -373,6 +373,9 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
   // the new memset. The new MemoryDef for the inserted memsets will be inserted
   // after MemInsertPoint.
   MemoryUseOrDef *MemInsertPoint = nullptr;
+  MemoryLocation StartPtrLocation = MemoryLocation::getBeforeOrAfter(StartPtr);
+  BatchAAResults BAA(*AA);
+
   for (++BI; !BI->isTerminator(); ++BI) {
     auto *CurrentAcc = cast_or_null<MemoryUseOrDef>(
         MSSAU->getMemorySSA()->getMemoryAccess(&*BI));
@@ -386,19 +389,20 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
         continue;
     }
 
-    if (!isa<StoreInst>(BI) && !isa<MemSetInst>(BI)) {
-      // If the instruction is readnone, ignore it, otherwise bail out.  We
-      // don't even allow readonly here because we don't want something like:
-      // A[1] = 2; strlen(A); A[2] = 2; -> memcpy(A, ...); strlen(A).
-      if (BI->mayWriteToMemory() || BI->mayReadFromMemory())
+    if (BI->isVolatile() || BI->isAtomic())
+      break;
+
+    if (BI->mayReadOrWriteMemory()) {
+      // Skip unrelated clobbers.
+      if (isNoModRef(BAA.getModRefInfo(&*BI, StartPtrLocation)))
+        continue;
+      // Bail out if an unmergable instruction clobbers.
+      if (!isa<StoreInst>(BI) && !isa<MemSetInst>(BI))
         break;
-      continue;
     }
 
     if (auto *NextStore = dyn_cast<StoreInst>(BI)) {
       // If this is a store, see if we can merge it in.
-      if (!NextStore->isSimple()) break;
-
       Value *StoredVal = NextStore->getValueOperand();
 
       // Don't convert stores of non-integral pointer types to memsets (which
@@ -420,20 +424,19 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
       // Check to see if this store is to a constant offset from the start ptr.
       std::optional<int64_t> Offset =
           NextStore->getPointerOperand()->getPointerOffsetFrom(StartPtr, DL);
+
       if (!Offset)
         break;
 
       Ranges.addStore(*Offset, NextStore);
-    } else {
-      auto *MSI = cast<MemSetInst>(BI);
-
-      if (MSI->isVolatile() || ByteVal != MSI->getValue() ||
-          !isa<ConstantInt>(MSI->getLength()))
+    } else if (auto *MSI = dyn_cast<MemSetInst>(BI)) {
+      if (ByteVal != MSI->getValue() || !isa<ConstantInt>(MSI->getLength()))
         break;
 
       // Check to see if this store is to a constant offset from the start ptr.
       std::optional<int64_t> Offset =
           MSI->getDest()->getPointerOffsetFrom(StartPtr, DL);
+
       if (!Offset)
         break;
 
