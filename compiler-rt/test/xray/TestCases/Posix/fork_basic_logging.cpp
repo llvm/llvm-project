@@ -13,6 +13,10 @@
 
 // Not ported.
 // UNSUPPORTED: target={{.*netbsd.*}}
+// Not ported.
+// UNSUPPORTED: target={{.*solaris.*}}
+// Not ported.
+// UNSUPPORTED: target={{.*illumos.*}}
 
 #include "xray/xray_log_interface.h"
 #include <stdio.h>

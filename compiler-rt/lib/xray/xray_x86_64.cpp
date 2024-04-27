@@ -9,6 +9,8 @@
 #if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_APPLE
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#elif SANITIZER_SOLARIS
+#include <kstat.h>
 #elif SANITIZER_FUCHSIA
 #include <zircon/syscalls.h>
 #endif
@@ -100,6 +102,37 @@ uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
     }
 
     return 0;
+}
+#elif SANITIZER_SOLARIS
+uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
+  kstat_named_t *nm;
+  kstat_ctl_t *ctl;
+  kstat_t *s;
+  uint64_t TSCFrequency;
+
+  ctl = kstat_open();
+  if (!ctl) {
+    return 0;
+  }
+  s = kstat_lookup(ctl, "cpu_info", 0, NULL);
+  if (!s) {
+    kstat_close(ctl);
+    return 0;
+  }
+
+  if (kstat_read(ctl, s, NULL) == -1) {
+    kstat_close(ctl);
+    return 0;
+  }
+
+  nm = reinterpret_cast<kstat_named_t *>(kstat_data_lookup(s, "clock_MHz"));
+
+  auto clock =
+      nm->data_type == KSTAT_DATA_INT32 ? nm->value.i32 : nm->value.i64;
+  TSCFrequency = static_cast<uint64_t>(clock) * 1000000;
+  kstat_close(ctl);
+
+  return TSCFrequency;
 }
 #elif !SANITIZER_FUCHSIA
 uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
