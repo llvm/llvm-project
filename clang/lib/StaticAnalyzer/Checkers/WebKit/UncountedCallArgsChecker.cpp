@@ -54,7 +54,7 @@ public:
       bool shouldVisitImplicitCode() const { return false; }
 
       bool TraverseDecl(Decl *D) {
-        if (isa<ClassTemplateDecl>(D) && isRefType(safeGetName(D)))
+        if (D && isa<ClassTemplateDecl>(D) && isRefType(safeGetName(D)))
           return true;
         return RecursiveASTVisitor<LocalVisitor>::TraverseDecl(D);
       }
