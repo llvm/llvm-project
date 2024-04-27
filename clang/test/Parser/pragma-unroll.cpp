@@ -135,19 +135,11 @@ int FailToBuild(int n) {
   auto iter = [=](size_t ix) {
     return Flag ? ix & ~(1ULL << __builtin_clzll(ix)) : ix + 1;
   };
-#pragma unroll Flag ? 1 : N
+#pragma unroll Flag ? 0 : N // Ok, allow 0.
   for (size_t ix = init(); cond(ix); ix = iter(ix)) {
     n *= n;
   }
-#pragma unroll Flag ? 0 : N
-  for (size_t ix = init(); cond(ix); ix = iter(ix)) {
-    n *= n;
-  }
-#pragma GCC unroll Flag ? 1 : N
-  for (size_t ix = init(); cond(ix); ix = iter(ix)) {
-    n *= n;
-  }
-#pragma GCC unroll Flag ? 0 : N
+#pragma GCC unroll Flag ? 0 : N // Ok, allow 0.
   for (size_t ix = init(); cond(ix); ix = iter(ix)) {
     n *= n;
   }
