@@ -1737,7 +1737,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Custom);
   }
   if (Subtarget.hasDQI() && Subtarget.hasVLX()) {
-    for (MVT VT : { MVT::v4f32, MVT::v8f32, MVT::v2f64, MVT::v4f64 }) {
+    for (MVT VT : {MVT::v4f32, MVT::v8f32, MVT::v2f64, MVT::v4f64}) {
       setOperationAction(ISD::LRINT, VT, Legal);
       setOperationAction(ISD::LLRINT, VT, Legal);
     }
