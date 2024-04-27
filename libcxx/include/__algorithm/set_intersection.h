@@ -162,7 +162,7 @@ __set_intersection(
       std::move(__first2),
       std::move(__last2),
       std::move(__result),
-       std::forward<_Compare>(__comp),
+      std::forward<_Compare>(__comp),
       typename std::_IterOps<_AlgPolicy>::template __iterator_category<_InIter1>(),
       typename std::_IterOps<_AlgPolicy>::template __iterator_category<_InIter2>());
 }

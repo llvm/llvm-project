@@ -160,7 +160,7 @@ struct SetIntersection {
       while (state.KeepRunningBatch(BATCH_SIZE)) {
         for (unsigned i = 0; i < BATCH_SIZE; ++i) {
           const auto& [c1, c2] = input;
-          auto res = std::set_intersection(c1.begin(), c1.end(), c2.begin(), c2.end(), out.begin());
+          auto res             = std::set_intersection(c1.begin(), c1.end(), c2.begin(), c2.end(), out.begin());
           benchmark::DoNotOptimize(res);
         }
       }
