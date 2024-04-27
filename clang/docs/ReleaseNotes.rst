@@ -90,11 +90,6 @@ C++ Language Changes
 --------------------
 - Implemented ``_BitInt`` literal suffixes ``__wb`` or ``__WB`` as a Clang extension with ``unsigned`` modifiers also allowed. (#GH85223).
 
-C++14 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-- Sized deallocation is enabled by default in C++14 onwards. The user may specify
-  ``-fno-sized-deallocation`` to disable it if there are some regressions.
-
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Clang now exposes ``__GCC_DESTRUCTIVE_SIZE`` and ``__GCC_CONSTRUCTIVE_SIZE``
