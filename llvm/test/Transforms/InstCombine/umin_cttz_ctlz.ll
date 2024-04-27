@@ -4,8 +4,8 @@
 define i8 @umin_cttz_i8_zero_undefined(i8 %X) {
 ; CHECK-LABEL: define i8 @umin_cttz_i8_zero_undefined(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.umin.i8(i8 [[CTTZ]], i8 6)
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X]], 64
+; CHECK-NEXT:    [[RET:%.*]] = call range(i8 0, 7) i8 @llvm.cttz.i8(i8 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %cttz = call i8 @llvm.cttz.i8(i8 %X, i1 true)
@@ -16,8 +16,8 @@ define i8 @umin_cttz_i8_zero_undefined(i8 %X) {
 define i8 @umin_cttz_i8_zero_defined(i8 %X) {
 ; CHECK-LABEL: define i8 @umin_cttz_i8_zero_defined(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[X]], i1 false)
-; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.umin.i8(i8 [[CTTZ]], i8 6)
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X]], 64
+; CHECK-NEXT:    [[RET:%.*]] = call range(i8 0, 7) i8 @llvm.cttz.i8(i8 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %cttz = call i8 @llvm.cttz.i8(i8 %X, i1 false)
@@ -28,8 +28,8 @@ define i8 @umin_cttz_i8_zero_defined(i8 %X) {
 define i8 @umin_cttz_i8_commuted_zero_undefined(i8 %X) {
 ; CHECK-LABEL: define i8 @umin_cttz_i8_commuted_zero_undefined(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i8 0, 9) i8 @llvm.cttz.i8(i8 [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.umin.i8(i8 [[CTTZ]], i8 6)
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X]], 64
+; CHECK-NEXT:    [[RET:%.*]] = call range(i8 0, 7) i8 @llvm.cttz.i8(i8 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %cttz = call i8 @llvm.cttz.i8(i8 %X, i1 true)
@@ -51,8 +51,8 @@ define i8 @umin_cttz_i8_negative_ge_bitwidth_zero_undefined(i8 %X) {
 define i16 @umin_cttz_i16_zero_undefined(i16 %X) {
 ; CHECK-LABEL: define i16 @umin_cttz_i16_zero_undefined(
 ; CHECK-SAME: i16 [[X:%.*]]) {
-; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i16 0, 17) i16 @llvm.cttz.i16(i16 [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call i16 @llvm.umin.i16(i16 [[CTTZ]], i16 6)
+; CHECK-NEXT:    [[TMP1:%.*]] = or i16 [[X]], 64
+; CHECK-NEXT:    [[RET:%.*]] = call range(i16 0, 7) i16 @llvm.cttz.i16(i16 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i16 [[RET]]
 ;
   %cttz = call i16 @llvm.cttz.i16(i16 %X, i1 true)
@@ -63,8 +63,8 @@ define i16 @umin_cttz_i16_zero_undefined(i16 %X) {
 define i32 @umin_cttz_i32_zero_undefined(i32 %X) {
 ; CHECK-LABEL: define i32 @umin_cttz_i32_zero_undefined(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call i32 @llvm.umin.i32(i32 [[CTTZ]], i32 6)
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X]], 64
+; CHECK-NEXT:    [[RET:%.*]] = call range(i32 0, 7) i32 @llvm.cttz.i32(i32 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %cttz = call i32 @llvm.cttz.i32(i32 %X, i1 true)
@@ -75,8 +75,8 @@ define i32 @umin_cttz_i32_zero_undefined(i32 %X) {
 define i64 @umin_cttz_i64_zero_undefined(i64 %X) {
 ; CHECK-LABEL: define i64 @umin_cttz_i64_zero_undefined(
 ; CHECK-SAME: i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i64 0, 65) i64 @llvm.cttz.i64(i64 [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call i64 @llvm.umin.i64(i64 [[CTTZ]], i64 6)
+; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[X]], 64
+; CHECK-NEXT:    [[RET:%.*]] = call range(i64 0, 7) i64 @llvm.cttz.i64(i64 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i64 [[RET]]
 ;
   %cttz = call i64 @llvm.cttz.i64(i64 %X, i1 true)
@@ -108,8 +108,8 @@ define i1 @umin_cttz_i1_zero_defined(i1 %X) {
 define <2 x i32> @umin_cttz_2xi32_splat_zero_undefined(<2 x i32> %X) {
 ; CHECK-LABEL: define <2 x i32> @umin_cttz_2xi32_splat_zero_undefined(
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[CTTZ]], <2 x i32> <i32 6, i32 6>)
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X]], <i32 64, i32 64>
+; CHECK-NEXT:    [[RET:%.*]] = call range(i32 0, 7) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
   %cttz = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %X, i1 true)
@@ -120,8 +120,8 @@ define <2 x i32> @umin_cttz_2xi32_splat_zero_undefined(<2 x i32> %X) {
 define <2 x i32> @umin_cttz_2xi32_splat_poison_zero_undefined(<2 x i32> %X) {
 ; CHECK-LABEL: define <2 x i32> @umin_cttz_2xi32_splat_poison_zero_undefined(
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[CTTZ]], <2 x i32> <i32 6, i32 poison>)
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X]], <i32 64, i32 poison>
+; CHECK-NEXT:    [[RET:%.*]] = call range(i32 0, 7) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
   %cttz = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %X, i1 true)
@@ -132,8 +132,8 @@ define <2 x i32> @umin_cttz_2xi32_splat_poison_zero_undefined(<2 x i32> %X) {
 define <2 x i32> @umin_cttz_2xi32_no_splat_all_lt_bitwidth_zero_undefined(<2 x i32> %X) {
 ; CHECK-LABEL: define <2 x i32> @umin_cttz_2xi32_no_splat_all_lt_bitwidth_zero_undefined(
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[CTTZ]], <2 x i32> <i32 6, i32 0>)
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X]], <i32 64, i32 1>
+; CHECK-NEXT:    [[RET:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
   %cttz = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %X, i1 true)
@@ -144,9 +144,9 @@ define <2 x i32> @umin_cttz_2xi32_no_splat_all_lt_bitwidth_zero_undefined(<2 x i
 define <2 x i32> @umin_cttz_2xi32_negative_no_splat_some_lt_bitwidth_zero_undefined(<2 x i32> %X) {
 ; CHECK-LABEL: define <2 x i32> @umin_cttz_2xi32_negative_no_splat_some_lt_bitwidth_zero_undefined(
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[CTTZ]], <2 x i32> <i32 6, i32 64>)
-; CHECK-NEXT:    ret <2 x i32> [[RET]]
+; CHECK-NEXT:    [[RET:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X]], i1 true)
+; CHECK-NEXT:    [[RET1:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[RET]], <2 x i32> <i32 6, i32 64>)
+; CHECK-NEXT:    ret <2 x i32> [[RET1]]
 ;
   %cttz = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %X, i1 true)
   %ret = call <2 x i32> @llvm.umin.v2i32(<2 x i32> %cttz, <2 x i32> <i32 6, i32 64>)
@@ -156,9 +156,9 @@ define <2 x i32> @umin_cttz_2xi32_negative_no_splat_some_lt_bitwidth_zero_undefi
 define <2 x i32> @umin_cttz_2xi32_negative_no_splat_none_lt_bitwidth_zero_undefined(<2 x i32> %X) {
 ; CHECK-LABEL: define <2 x i32> @umin_cttz_2xi32_negative_no_splat_none_lt_bitwidth_zero_undefined(
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[CTTZ:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[CTTZ]], <2 x i32> <i32 32, i32 64>)
-; CHECK-NEXT:    ret <2 x i32> [[RET]]
+; CHECK-NEXT:    [[RET:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X]], i1 true)
+; CHECK-NEXT:    [[RET1:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[RET]], <2 x i32> <i32 32, i32 64>)
+; CHECK-NEXT:    ret <2 x i32> [[RET1]]
 ;
   %cttz = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %X, i1 true)
   %ret = call <2 x i32> @llvm.umin.v2i32(<2 x i32> %cttz, <2 x i32> <i32 32, i32 64>)
@@ -194,8 +194,8 @@ define i16 @umin_cttz_i16_negative_two_uses(i16 %X) {
 define i8 @umin_ctlz_i8_zero_undefined(i8 %X) {
 ; CHECK-LABEL: define i8 @umin_ctlz_i8_zero_undefined(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i8 0, 9) i8 @llvm.ctlz.i8(i8 [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.umin.i8(i8 [[CTLZ]], i8 6)
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X]], 2
+; CHECK-NEXT:    [[RET:%.*]] = call range(i8 0, 7) i8 @llvm.ctlz.i8(i8 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %ctlz = call i8 @llvm.ctlz.i8(i8 %X, i1 true)
@@ -206,8 +206,8 @@ define i8 @umin_ctlz_i8_zero_undefined(i8 %X) {
 define i8 @umin_ctlz_i8_zero_defined(i8 %X) {
 ; CHECK-LABEL: define i8 @umin_ctlz_i8_zero_defined(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i8 0, 9) i8 @llvm.ctlz.i8(i8 [[X]], i1 false)
-; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.umin.i8(i8 [[CTLZ]], i8 6)
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X]], 2
+; CHECK-NEXT:    [[RET:%.*]] = call range(i8 0, 7) i8 @llvm.ctlz.i8(i8 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %ctlz = call i8 @llvm.ctlz.i8(i8 %X, i1 false)
@@ -218,8 +218,8 @@ define i8 @umin_ctlz_i8_zero_defined(i8 %X) {
 define i8 @umin_ctlz_i8_commuted_zero_undefined(i8 %X) {
 ; CHECK-LABEL: define i8 @umin_ctlz_i8_commuted_zero_undefined(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i8 0, 9) i8 @llvm.ctlz.i8(i8 [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call i8 @llvm.umin.i8(i8 [[CTLZ]], i8 6)
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[X]], 2
+; CHECK-NEXT:    [[RET:%.*]] = call range(i8 0, 7) i8 @llvm.ctlz.i8(i8 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %ctlz = call i8 @llvm.ctlz.i8(i8 %X, i1 true)
@@ -241,8 +241,8 @@ define i8 @umin_ctlz_i8_negative_ge_bitwidth_zero_undefined(i8 %X) {
 define i16 @umin_ctlz_i16_zero_undefined(i16 %X) {
 ; CHECK-LABEL: define i16 @umin_ctlz_i16_zero_undefined(
 ; CHECK-SAME: i16 [[X:%.*]]) {
-; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i16 0, 17) i16 @llvm.ctlz.i16(i16 [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call i16 @llvm.umin.i16(i16 [[CTLZ]], i16 6)
+; CHECK-NEXT:    [[TMP1:%.*]] = or i16 [[X]], 512
+; CHECK-NEXT:    [[RET:%.*]] = call range(i16 0, 7) i16 @llvm.ctlz.i16(i16 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i16 [[RET]]
 ;
   %ctlz = call i16 @llvm.ctlz.i16(i16 %X, i1 true)
@@ -253,8 +253,8 @@ define i16 @umin_ctlz_i16_zero_undefined(i16 %X) {
 define i32 @umin_ctlz_i32_zero_undefined(i32 %X) {
 ; CHECK-LABEL: define i32 @umin_ctlz_i32_zero_undefined(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call i32 @llvm.umin.i32(i32 [[CTLZ]], i32 6)
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X]], 33554432
+; CHECK-NEXT:    [[RET:%.*]] = call range(i32 0, 7) i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
   %ctlz = call i32 @llvm.ctlz.i32(i32 %X, i1 true)
@@ -265,8 +265,8 @@ define i32 @umin_ctlz_i32_zero_undefined(i32 %X) {
 define i64 @umin_ctlz_i64_zero_undefined(i64 %X) {
 ; CHECK-LABEL: define i64 @umin_ctlz_i64_zero_undefined(
 ; CHECK-SAME: i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call i64 @llvm.umin.i64(i64 [[CTLZ]], i64 6)
+; CHECK-NEXT:    [[TMP1:%.*]] = or i64 [[X]], 144115188075855872
+; CHECK-NEXT:    [[RET:%.*]] = call range(i64 0, 7) i64 @llvm.ctlz.i64(i64 [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret i64 [[RET]]
 ;
   %ctlz = call i64 @llvm.ctlz.i64(i64 %X, i1 true)
@@ -298,8 +298,8 @@ define i1 @umin_ctlz_i1_zero_defined(i1 %X) {
 define <2 x i32> @umin_ctlz_2xi32_splat_zero_undefined(<2 x i32> %X) {
 ; CHECK-LABEL: define <2 x i32> @umin_ctlz_2xi32_splat_zero_undefined(
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[CTLZ]], <2 x i32> <i32 6, i32 6>)
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X]], <i32 33554432, i32 33554432>
+; CHECK-NEXT:    [[RET:%.*]] = call range(i32 0, 7) <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
   %ctlz = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %X, i1 true)
@@ -310,8 +310,8 @@ define <2 x i32> @umin_ctlz_2xi32_splat_zero_undefined(<2 x i32> %X) {
 define <2 x i32> @umin_ctlz_2xi32_splat_poison_zero_undefined(<2 x i32> %X) {
 ; CHECK-LABEL: define <2 x i32> @umin_ctlz_2xi32_splat_poison_zero_undefined(
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[CTLZ]], <2 x i32> <i32 6, i32 poison>)
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X]], <i32 33554432, i32 poison>
+; CHECK-NEXT:    [[RET:%.*]] = call range(i32 0, 7) <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
   %ctlz = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %X, i1 true)
@@ -322,8 +322,8 @@ define <2 x i32> @umin_ctlz_2xi32_splat_poison_zero_undefined(<2 x i32> %X) {
 define <2 x i32> @umin_ctlz_2xi32_no_splat_all_lt_bitwidth_zero_undefined(<2 x i32> %X) {
 ; CHECK-LABEL: define <2 x i32> @umin_ctlz_2xi32_no_splat_all_lt_bitwidth_zero_undefined(
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[CTLZ]], <2 x i32> <i32 6, i32 0>)
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X]], <i32 33554432, i32 -2147483648>
+; CHECK-NEXT:    [[RET:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[TMP1]], i1 true)
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
   %ctlz = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %X, i1 true)
@@ -334,9 +334,9 @@ define <2 x i32> @umin_ctlz_2xi32_no_splat_all_lt_bitwidth_zero_undefined(<2 x i
 define <2 x i32> @umin_ctlz_2xi32_negative_no_splat_some_lt_bitwidth_zero_undefined(<2 x i32> %X) {
 ; CHECK-LABEL: define <2 x i32> @umin_ctlz_2xi32_negative_no_splat_some_lt_bitwidth_zero_undefined(
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[CTLZ]], <2 x i32> <i32 6, i32 64>)
-; CHECK-NEXT:    ret <2 x i32> [[RET]]
+; CHECK-NEXT:    [[RET:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[X]], i1 true)
+; CHECK-NEXT:    [[RET1:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[RET]], <2 x i32> <i32 6, i32 64>)
+; CHECK-NEXT:    ret <2 x i32> [[RET1]]
 ;
   %ctlz = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %X, i1 true)
   %ret = call <2 x i32> @llvm.umin.v2i32(<2 x i32> %ctlz, <2 x i32> <i32 6, i32 64>)
@@ -346,9 +346,9 @@ define <2 x i32> @umin_ctlz_2xi32_negative_no_splat_some_lt_bitwidth_zero_undefi
 define <2 x i32> @umin_ctlz_2xi32_negative_no_splat_none_lt_bitwidth_zero_undefined(<2 x i32> %X) {
 ; CHECK-LABEL: define <2 x i32> @umin_ctlz_2xi32_negative_no_splat_none_lt_bitwidth_zero_undefined(
 ; CHECK-SAME: <2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[CTLZ:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[X]], i1 true)
-; CHECK-NEXT:    [[RET:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[CTLZ]], <2 x i32> <i32 32, i32 64>)
-; CHECK-NEXT:    ret <2 x i32> [[RET]]
+; CHECK-NEXT:    [[RET:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[X]], i1 true)
+; CHECK-NEXT:    [[RET1:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[RET]], <2 x i32> <i32 32, i32 64>)
+; CHECK-NEXT:    ret <2 x i32> [[RET1]]
 ;
   %ctlz = call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %X, i1 true)
   %ret = call <2 x i32> @llvm.umin.v2i32(<2 x i32> %ctlz, <2 x i32> <i32 32, i32 64>)
