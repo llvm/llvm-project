@@ -76,16 +76,20 @@ public:
       Callback =
           std::bind(&MemProfReader::idToFrame, this, std::placeholders::_1);
 
-    memprof::CallStackIdConverter<decltype(CSIdToCallStack)> CSIdConv(
-        CSIdToCallStack, Callback);
+    auto CallStackCallback = [&](CallStackId CSId) {
+      llvm::SmallVector<Frame> CallStack;
+      auto Iter = CSIdToCallStack.find(CSId);
+      assert(Iter != CSIdToCallStack.end());
+      for (FrameId Id : Iter->second)
+        CallStack.push_back(Callback(Id));
+      return CallStack;
+    };
 
     const IndexedMemProfRecord &IndexedRecord = Iter->second;
     GuidRecord = {
         Iter->first,
-        IndexedRecord.toMemProfRecord(CSIdConv),
+        IndexedRecord.toMemProfRecord(CallStackCallback),
     };
-    if (CSIdConv.LastUnmappedId)
-      return make_error<InstrProfError>(instrprof_error::hash_mismatch);
     Iter++;
     return Error::success();
   }
