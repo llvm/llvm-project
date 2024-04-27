@@ -853,6 +853,9 @@ public:
   bool matchExtractVectorElementWithDifferentIndices(const MachineOperand &MO,
                                                      BuildFnTy &MatchInfo);
 
+  /// Combine insert vector element OOB.
+  bool matchInsertVectorElementOOB(MachineInstr &MI, BuildFnTy &MatchInfo);
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;

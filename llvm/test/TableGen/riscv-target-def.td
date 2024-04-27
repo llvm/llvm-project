@@ -113,10 +113,8 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
 // CHECK:      #ifdef GET_IMPLIED_EXTENSIONS
 // CHECK-NEXT: #undef GET_IMPLIED_EXTENSIONS
 
-// CHECK:      static const char *ImpliedExtsF[] = {"zicsr"};
-
 // CHECK:      static constexpr ImpliedExtsEntry ImpliedExts[] = {
-// CHECK-NEXT:     { {"f"}, {ImpliedExtsF} },
+// CHECK-NEXT:       { {"f"}, "zicsr"},
 // CHECK-NEXT: };
 
 // CHECK:      #endif // GET_IMPLIED_EXTENSIONS

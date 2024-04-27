@@ -149,6 +149,12 @@ New checks
   Enforces consistent style for enumerators' initialization, covering three
   styles: none, first only, or all initialized explicitly.
 
+- New :doc:`readability-math-missing-parentheses
+  <clang-tidy/checks/readability/math-missing-parentheses>` check.
+
+  Check for missing parentheses in mathematical expressions that involve
+  operators of different priorities.
+
 - New :doc:`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check.
 
