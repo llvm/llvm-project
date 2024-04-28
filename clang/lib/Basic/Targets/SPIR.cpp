@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPU.h"
 #include "SPIR.h"
+#include "AMDGPU.h"
 #include "Targets.h"
 #include "llvm/TargetParser/TargetParser.h"
 
