@@ -83,9 +83,9 @@ __lower_bound_onesided(_ForwardIterator __first, _Sent __last, const _Type& __va
   return __first;
 }
 
-template <class _AlgPolicy, class _RandomAccessIterator, class _Sent, class _Type, class _Proj, class _Comp>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _RandomAccessIterator
-__lower_bound(_RandomAccessIterator __first, _Sent __last, const _Type& __value, _Comp& __comp, _Proj& __proj) {
+template <class _AlgPolicy, class _ForwardIterator, class _Sent, class _Type, class _Proj, class _Comp>
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+__lower_bound(_ForwardIterator __first, _Sent __last, const _Type& __value, _Comp& __comp, _Proj& __proj) {
   const auto __dist = _IterOps<_AlgPolicy>::distance(__first, __last);
   return std::__lower_bound_bisecting<_AlgPolicy>(__first, __value, __dist, __comp, __proj);
 }
