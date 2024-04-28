@@ -2,11 +2,10 @@
 // General tests that ld invocations on Linux targets sane. Note that we use
 // sysroot to make these tests independent of the host system.
 //
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### -Werror %s -no-pie 2>&1 \
 // RUN:     --target=i386-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-32 %s
-// CHECK-LD-32-NOT: warning:
 // CHECK-LD-32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-32: "{{.*}}/usr/lib/gcc/i386-unknown-linux/10.2.0{{/|\\\\}}crtbegin.o"
 // CHECK-LD-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0"
@@ -14,11 +13,10 @@
 // CHECK-LD-32: "-L[[SYSROOT]]/lib"
 // CHECK-LD-32: "-L[[SYSROOT]]/usr/lib"
 //
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-64 %s
-// CHECK-LD-64-NOT: warning:
 // CHECK-LD-64: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-64: "--eh-frame-hdr"
 // CHECK-LD-64: "-m" "elf_x86_64"
@@ -32,11 +30,10 @@
 // CHECK-LD-64: "-lc"
 // CHECK-LD-64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 //
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-X32 %s
-// CHECK-LD-X32-NOT: warning:
 // CHECK-LD-X32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-X32: "--eh-frame-hdr"
 // CHECK-LD-X32: "-m" "elf32_x86_64"
@@ -45,13 +42,12 @@
 // CHECK-LD-X32: "-lc"
 // CHECK-LD-X32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 //
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:     --rtlib=compiler-rt \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-RT %s
-// CHECK-LD-RT-NOT: warning:
 // CHECK-LD-RT: "-resource-dir" "[[RESDIR:[^"]*]]"
 // CHECK-LD-RT: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-RT: "--eh-frame-hdr"
@@ -67,13 +63,12 @@
 // CHECK-LD-RT: libclang_rt.builtins.a"
 // CHECK-LD-RT: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-linux{{/|\\\\}}clang_rt.crtend.o"
 //
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=i686-unknown-linux \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:     --rtlib=compiler-rt \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-RT-I686 %s
-// CHECK-LD-RT-I686-NOT: warning:
 // CHECK-LD-RT-I686: "-resource-dir" "[[RESDIR:[^"]*]]"
 // CHECK-LD-RT-I686: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-RT-I686: "--eh-frame-hdr"
@@ -89,13 +84,12 @@
 // CHECK-LD-RT-I686: libclang_rt.builtins.a"
 // CHECK-LD-RT-I686: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}i686-unknown-linux{{/|\\\\}}clang_rt.crtend.o"
 //
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=arm-linux-androideabi \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --rtlib=compiler-rt \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-RT-ANDROID %s
-// CHECK-LD-RT-ANDROID-NOT: warning:
 // CHECK-LD-RT-ANDROID: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-RT-ANDROID: "--eh-frame-hdr"
 // CHECK-LD-RT-ANDROID: "-m" "armelf_linux_eabi"
@@ -104,11 +98,10 @@
 // CHECK-LD-RT-ANDROID: "-lc"
 // CHECK-LD-RT-ANDROID: libclang_rt.builtins.a"
 //
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-GCC %s
-// CHECK-LD-GCC-NOT: warning:
 // CHECK-LD-GCC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-GCC: "--eh-frame-hdr"
 // CHECK-LD-GCC: "-m" "elf_x86_64"
@@ -122,12 +115,11 @@
 // CHECK-LD-GCC: "-lc"
 // CHECK-LD-GCC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 //
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     -static-libgcc \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-64-STATIC-LIBGCC %s
-// CHECK-LD-64-STATIC-LIBGCC-NOT: warning:
 // CHECK-LD-64-STATIC-LIBGCC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-64-STATIC-LIBGCC: "--eh-frame-hdr"
 // CHECK-LD-64-STATIC-LIBGCC: "-m" "elf_x86_64"
@@ -268,12 +260,10 @@
 // CHECK-CLANG-ANDROID-STATIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-CLANG-ANDROID-STATIC: "--start-group" "{{[^"]*}}{{/|\\\\}}libclang_rt.builtins.a" "-l:libunwind.a" "-lc" "--end-group"
 //
-// RUN: %clang -### %s 2>&1      \
-// RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
+// RUN: %clang -### %s -Werror --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     -static \
-// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-64-STATIC %s
-// CHECK-LD-64-STATIC-NOT: warning:
 // CHECK-LD-64-STATIC: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-64-STATIC: "--eh-frame-hdr"
 // CHECK-LD-64-STATIC: "-m" "elf_x86_64"
@@ -486,13 +476,12 @@
 //
 // Test that we can use -stdlib=libc++ in a build system even when it
 // occasionally links C code instead of C++ code.
-// RUN: %clang -x c -### %s -no-pie 2>&1 \
+// RUN: %clang -x c -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu \
 // RUN:     -stdlib=libc++ \
 // RUN:     -ccc-install-dir %S/Inputs/basic_linux_libcxx_tree/usr/bin \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-LIBCXX-C-LINK %s
-// CHECK-BASIC-LIBCXX-C-LINK-NOT: warning:
 // CHECK-BASIC-LIBCXX-C-LINK: "-cc1"
 // CHECK-BASIC-LIBCXX-C-LINK: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-BASIC-LIBCXX-C-LINK-NOT: "-internal-isystem" "[[SYSROOT]]/usr/bin/../include/c++/v1"
@@ -1661,11 +1650,10 @@
 // CHECK-MUSL-AARCH64_BE: "-dynamic-linker" "/lib/ld-musl-aarch64_be.so.1"
 
 // Check whether multilib gcc install works fine on Gentoo with gcc-config
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnu -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-GENTOO %s
-// CHECK-LD-GENTOO-NOT: warning:
 // CHECK-LD-GENTOO: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-GENTOO: "--eh-frame-hdr"
 // CHECK-LD-GENTOO: "-m" "elf_x86_64"
@@ -1676,11 +1664,10 @@
 // CHECK-LD-GENTOO: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-LD-GENTOO: "-lc"
 // CHECK-LD-GENTOO: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=i686-unknown-linux-gnu -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-GENTOO-32 %s
-// CHECK-LD-GENTOO-32-NOT: warning:
 // CHECK-LD-GENTOO-32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-GENTOO-32: "--eh-frame-hdr"
 // CHECK-LD-GENTOO-32: "-m" "elf_i386"
@@ -1691,11 +1678,10 @@
 // CHECK-LD-GENTOO-32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-LD-GENTOO-32: "-lc"
 // CHECK-LD-GENTOO-32: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/gentoo_linux_gcc_multi_version_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-GENTOO-X32 %s
-// CHECK-LD-GENTOO-X32-NOT: warning:
 // CHECK-LD-GENTOO-X32: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-GENTOO-X32: "--eh-frame-hdr"
 // CHECK-LD-GENTOO-X32: "-m" "elf32_x86_64"
@@ -1717,11 +1703,10 @@
 // CHECK-LD-RHEL7-DTS: [[SYSROOT]]/usr/lib/gcc/x86_64-redhat-linux/7/../../../../bin/ld
 
 // Check whether gcc7 install works fine on Amazon Linux AMI
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=x86_64-amazon-linux -rtlib=libgcc --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/ami_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-AMI %s
-// CHECK-LD-AMI-NOT: warning:
 // CHECK-LD-AMI: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-LD-AMI: "--eh-frame-hdr"
 // CHECK-LD-AMI: "-m" "elf_x86_64"
