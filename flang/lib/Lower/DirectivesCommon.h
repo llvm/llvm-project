@@ -642,14 +642,14 @@ getDataOperandBaseAddr(Fortran::lower::AbstractConverter &converter,
     isPresent =
         builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), rawInput);
 
-  if (auto boxTy =
-          fir::unwrapRefType(symAddr.getType()).dyn_cast<fir::BaseBoxType>()) {
-    if (boxTy.getEleTy().isa<fir::RecordType>())
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(
+          fir::unwrapRefType(symAddr.getType()))) {
+    if (mlir::isa<fir::RecordType>(boxTy.getEleTy()))
       TODO(loc, "derived type");
 
     // Load the box when baseAddr is a `fir.ref<fir.box<T>>` or a
     // `fir.ref<fir.class<T>>` type.
-    if (symAddr.getType().isa<fir::ReferenceType>()) {
+    if (mlir::isa<fir::ReferenceType>(symAddr.getType())) {
       if (Fortran::semantics::IsOptional(sym)) {
         mlir::Value addr =
             builder.genIfOp(loc, {boxTy}, isPresent, /*withElseRegion=*/true)
@@ -722,7 +722,7 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type boundTy = builder.getType<BoundsType>();
 
-  assert(info.addr.getType().isa<fir::BaseBoxType>() &&
+  assert(mlir::isa<fir::BaseBoxType>(info.addr.getType()) &&
          "expect fir.box or fir.class");
 
   if (info.isPresent) {
@@ -909,7 +909,8 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
       mlir::Value stride = one;
       bool strideInBytes = false;
 
-      if (fir::unwrapRefType(info.addr.getType()).isa<fir::BaseBoxType>()) {
+      if (mlir::isa<fir::BaseBoxType>(
+              fir::unwrapRefType(info.addr.getType()))) {
         if (info.isPresent) {
           stride =
               builder
@@ -1020,8 +1021,8 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           }
         }
 
-        if (info.isPresent &&
-            fir::unwrapRefType(info.addr.getType()).isa<fir::BaseBoxType>()) {
+        if (info.isPresent && mlir::isa<fir::BaseBoxType>(
+                                  fir::unwrapRefType(info.addr.getType()))) {
           extent =
               builder
                   .genIfOp(loc, idxTy, info.isPresent, /*withElseRegion=*/true)
@@ -1157,7 +1158,7 @@ AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
         converter.genExprAddr(operandLocation, designator, stmtCtx);
     info.addr = fir::getBase(compExv);
     info.rawInput = info.addr;
-    if (fir::unwrapRefType(info.addr.getType()).isa<fir::SequenceType>())
+    if (mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
       bounds = genBaseBoundsOps<BoundsOp, BoundsType>(builder, operandLocation,
                                                       converter, compExv,
                                                       /*isAssumedSize=*/false);
@@ -1199,13 +1200,14 @@ AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
       fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(*symRef);
       info =
           getDataOperandBaseAddr(converter, builder, *symRef, operandLocation);
-      if (fir::unwrapRefType(info.addr.getType()).isa<fir::BaseBoxType>()) {
+      if (mlir::isa<fir::BaseBoxType>(
+              fir::unwrapRefType(info.addr.getType()))) {
         bounds = genBoundsOpsFromBox<BoundsOp, BoundsType>(
             builder, operandLocation, converter, dataExv, info);
       }
       bool dataExvIsAssumedSize =
           Fortran::semantics::IsAssumedSizeArray(symRef->get().GetUltimate());
-      if (fir::unwrapRefType(info.addr.getType()).isa<fir::SequenceType>())
+      if (mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
         bounds = genBaseBoundsOps<BoundsOp, BoundsType>(
             builder, operandLocation, converter, dataExv, dataExvIsAssumedSize);
       asFortran << symRef->get().name().ToString();
