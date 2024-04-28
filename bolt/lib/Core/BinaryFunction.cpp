@@ -1268,7 +1268,13 @@ Error BinaryFunction::disassemble() {
         bool IsCall = MIB->isCall(Instruction);
         const bool IsCondBranch = MIB->isConditionalBranch(Instruction);
         MCSymbol *TargetSymbol = nullptr;
-
+        if(IsCall) {
+          if (BinaryFunction *TargetFunc = BC.getBinaryFunctionContainingAddress(TargetAddress)) {
+            // direct call here.
+            TargetFunc->IsDirectCalled = true;
+            LLVM_DEBUG(dbgs() << "[Disasm] Find function which is directly called: 0x" << Twine::utohexstr(TargetFunc->getAddress()) << "\n");
+          }
+        }
         if (BC.MIB->isUnsupportedBranch(Instruction)) {
           setIgnored();
           if (BinaryFunction *TargetFunc =
