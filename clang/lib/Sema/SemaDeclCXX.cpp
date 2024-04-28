@@ -910,6 +910,8 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
 
     auto *BD = BindingDecl::Create(Context, DC, B.NameLoc, VarName);
 
+    ProcessDeclAttributeList(S, BD, *B.Attrs);
+
     // Find the shadowed declaration before filtering for scope.
     NamedDecl *ShadowedDecl = D.getCXXScopeSpec().isEmpty()
                                   ? getShadowedDeclaration(BD, Previous)

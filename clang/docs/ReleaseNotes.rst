@@ -143,6 +143,8 @@ C++2c Feature Support
 
 - Implemented `P2573R2: = delete("should have a reason"); <https://wg21.link/P2573R2>`_
 
+- Implemented `P0609R3: Attributes for Structured Bindings <https://wg21.link/P0609R3>`_
+
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

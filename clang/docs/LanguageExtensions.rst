@@ -1493,6 +1493,7 @@ Conditional ``explicit``                     __cpp_conditional_explicit       C+
 ``if consteval``                             __cpp_if_consteval               C++23         C++20
 ``static operator()``                        __cpp_static_call_operator       C++23         C++03
 Attributes on Lambda-Expressions                                              C++23         C++11
+Attributes on Structured Bindings            __cpp_structured_bindings        C++26         C++03
 ``= delete ("should have a reason");``       __cpp_deleted_function           C++26         C++03
 -------------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                                C99           C89
