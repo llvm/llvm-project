@@ -6072,6 +6072,10 @@ static bool CheckConvertedConstantConversions(Sema &S,
   case ICK_Integral_Promotion:
   case ICK_Integral_Conversion: // Narrowing conversions are checked elsewhere.
   case ICK_Zero_Queue_Conversion:
+  // Per CWG2851, floating-point promotions and conversions are allowed.
+  // The value of a conversion is checked afterwards.
+  case ICK_Floating_Promotion:
+  case ICK_Floating_Conversion:
     return true;
 
   case ICK_Boolean_Conversion:
@@ -6091,9 +6095,7 @@ static bool CheckConvertedConstantConversions(Sema &S,
     // only permitted if the source type is std::nullptr_t.
     return SCS.getFromType()->isNullPtrType();
 
-  case ICK_Floating_Promotion:
   case ICK_Complex_Promotion:
-  case ICK_Floating_Conversion:
   case ICK_Complex_Conversion:
   case ICK_Floating_Integral:
   case ICK_Compatible_Conversion:
@@ -6229,7 +6231,37 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
   if (Result.isInvalid())
     return Result;
 
-  // Check for a narrowing implicit conversion.
+  if (SCS->Second == ICK_Floating_Conversion) {
+    // Unlike with narrowing conversions, the value must fit
+    // exactly even if it is in range
+    assert(CCE == Sema::CCEKind::CCEK_TemplateArg &&
+           "Only non-type template args should use floating-point conversions");
+
+    // Initializer is From, except it is a full-expression
+    const Expr *Initializer =
+        IgnoreNarrowingConversion(S.Context, Result.get());
+
+    // If it's value-dependent, we can't tell whether it will fit
+    if (Initializer->isValueDependent())
+      return Result;
+
+    // Not-constant diagnosed afterwards
+    if (!Initializer->isCXX11ConstantExpr(S.Context, &PreNarrowingValue))
+      return Result;
+
+    llvm::APFloat PostNarrowingValue = PreNarrowingValue.getFloat();
+    bool LosesInfo = true;
+    PostNarrowingValue.convert(S.Context.getFloatTypeSemantics(T),
+                               llvm::APFloat::rmNearestTiesToEven, &LosesInfo);
+
+    if (LosesInfo)
+      S.Diag(From->getBeginLoc(), diag::err_float_conv_cant_represent)
+          << PreNarrowingValue.getAsString(S.Context, From->getType()) << T;
+
+    return Result;
+  }
+
+  // Check for a narrowing integer conversion.
   bool ReturnPreNarrowingValue = false;
   QualType PreNarrowingType;
   switch (SCS->getNarrowingKind(S.Context, Result.get(), PreNarrowingValue,

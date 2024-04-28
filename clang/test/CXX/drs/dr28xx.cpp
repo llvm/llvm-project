@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -std=c++14 -verify=expected %s
 // RUN: %clang_cc1 -std=c++17 -verify=expected %s
 // RUN: %clang_cc1 -std=c++20 -verify=expected,since-cxx20 %s
+// RUN: %clang_cc1 -std=c++20 -mlong-double-64 -verify=expected,since-cxx20 %s
 // RUN: %clang_cc1 -std=c++23 -verify=expected,since-cxx20,since-cxx23 %s
 // RUN: %clang_cc1 -std=c++2c -verify=expected,since-cxx20,since-cxx23,since-cxx26 %s
 
@@ -66,6 +67,69 @@ void B<int>::g() requires true;
 #endif
 
 } // namespace cwg2847
+
+namespace cwg2851 { // cwg2851: 19
+
+#if __cplusplus >= 202002L
+template<typename T, T v> struct Val { static constexpr T value = v; };
+
+
+// Floating-point promotions
+
+static_assert(Val<long double, 0.0>::value == 0.0L);
+static_assert(Val<long double, 0.0f>::value == 0.0L);
+static_assert(Val<double, 0.0f>::value == 0.0);
+static_assert(Val<long double, -0.0>::value == -0.0L);
+
+static_assert(!__is_same(Val<long double, -0.0>, Val<long double, 0.0L>));
+static_assert(__is_same(Val<long double, 0.5>, Val<long double, 0.5L>));
+
+static_assert(__is_same(Val<long double, __builtin_inff()>, Val<long double, __builtin_infl()>));
+
+static_assert(__is_same(Val<long double, __builtin_nanf("")>, Val<long double, static_cast<long double>(__builtin_nanf(""))>));
+static_assert(__is_same(Val<long double, __builtin_nansf("")>, Val<long double, static_cast<long double>(__builtin_nansf(""))>));
+static_assert(__is_same(Val<long double, __builtin_nanf("0x1")>, Val<long double, static_cast<long double>(__builtin_nanf("0x1"))>));
+static_assert(__is_same(Val<long double, __builtin_nansf("0x1")>, Val<long double, static_cast<long double>(__builtin_nansf("0x1"))>));
+
+
+// Floating-point conversions where the source value can be represented exactly in the destination type
+
+static_assert(Val<float, 0.0L>::value == 0.0L);
+static_assert(__is_same(Val<float, 0.0>, Val<float, 0.0L>));
+static_assert(__is_same(Val<float, 0.0>, Val<float, 0.0f>));
+static_assert(!__is_same(Val<float, -0.0L>, Val<float, 0.0f>));
+static_assert(__is_same(Val<float, 0.5L>, Val<float, 0.5f>));
+static_assert(__is_same(Val<float, 0.5L>, Val<float, 0.5f>));
+
+static_assert(__is_same(Val<float, double{__FLT_DENORM_MIN__}>, Val<float, __FLT_DENORM_MIN__>));
+Val<float, double{__FLT_DENORM_MIN__} / 2.0> _1;
+// since-cxx20-error-re@-1 {{non-type template argument evaluates to {{.+}} which cannot be exactly represented in type 'float'}}
+Val<float, static_cast<long double>(__FLT_DENORM_MIN__) / 2.0L> _2;
+// since-cxx20-error-re@-1 {{non-type template argument evaluates to {{.+}} which cannot be exactly represented in type 'float'}}
+Val<float, __DBL_MAX__> _3;
+// since-cxx20-error-re@-1 {{non-type template argument evaluates to {{.+}} which cannot be exactly represented in type 'float'}}
+
+static_assert(__is_same(Val<float, __builtin_infl()>, Val<float, __builtin_inff()>));
+
+static_assert(__is_same(Val<float, __builtin_nanl("")>, Val<float, static_cast<float>(__builtin_nanl(""))>));
+static_assert(__is_same(Val<float, __builtin_nansl("")>, Val<float, static_cast<float>(__builtin_nansl(""))>));
+#if __SIZEOF_LONG_DOUBLE__ > 8
+// since-cxx20-error@-2 {{non-type template argument evaluates to nan which cannot be exactly represented in type 'float'}}
+#endif
+// Payload is shifted right so these payloads will be preserved
+static_assert(__is_same(Val<float, __builtin_nan("0xFF00000000")>, Val<float, static_cast<float>(__builtin_nan("0xFF00000000"))>));
+static_assert(__is_same(Val<float, __builtin_nans("0xFF00000000")>, Val<float, static_cast<float>(__builtin_nans("0xFF00000000"))>));
+static_assert(__is_same(Val<float, __builtin_nanl("0x1")>, Val<float, static_cast<float>(__builtin_nanl("0x1"))>));
+// since-cxx20-error@-1 {{non-type template argument evaluates to nan which cannot be exactly represented in type 'float'}}
+static_assert(__is_same(Val<float, __builtin_nansl("0x1")>, Val<float, static_cast<float>(__builtin_nansl("0x1"))>));
+// since-cxx20-error@-1 {{non-type template argument evaluates to nan which cannot be exactly represented in type 'float'}}
+static_assert(__is_same(Val<float, __builtin_nanl("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")>, Val<float, static_cast<float>(__builtin_nanl("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))>));
+// since-cxx20-error@-1 {{non-type template argument evaluates to nan which cannot be exactly represented in type 'float'}}
+static_assert(__is_same(Val<float, __builtin_nansl("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")>, Val<float, static_cast<float>(__builtin_nansl("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))>));
+// since-cxx20-error@-1 {{non-type template argument evaluates to nan which cannot be exactly represented in type 'float'}}
+#endif
+
+}
 
 namespace cwg2858 { // cwg2858: 19 tentatively ready 2024-04-05
 

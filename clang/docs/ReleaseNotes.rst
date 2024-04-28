@@ -166,6 +166,9 @@ Resolutions to C++ Defect Reports
 - Clang now diagnoses declarative nested-name-specifiers with pack-index-specifiers.
   (`CWG2858: Declarative nested-name-specifiers and pack-index-specifiers <https://cplusplus.github.io/CWG/issues/2858.html>`_).
 
+- Allow floating-point promotions and conversions in converted constant expressions.
+  (`CWG2851 Allow floating-point conversions in converted constant expressions <https://cplusplus.github.io/CWG/issues/2851.html>`_).
+
 C Language Changes
 ------------------
 
