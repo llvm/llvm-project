@@ -57,10 +57,7 @@ void SPIRV64TargetInfo::getTargetDefines(const LangOptions &Opts,
   DefineStd(Builder, "SPIRV64", Opts);
 }
 
-namespace {
-const AMDGPUTargetInfo AMDGPUTI(llvm::Triple("amdgcn-amd-amdhsa"), {});
-
-} // anonymous namespace
+static const AMDGPUTargetInfo AMDGPUTI(llvm::Triple("amdgcn-amd-amdhsa"), {});
 
 ArrayRef<const char *> SPIRV64AMDGCNTargetInfo::getGCCRegNames() const {
   return AMDGPUTI.getGCCRegNames();
@@ -99,6 +96,8 @@ void SPIRV64AMDGCNTargetInfo::getTargetDefines(const LangOptions &Opts,
 }
 
 void SPIRV64AMDGCNTargetInfo::setAuxTarget(const TargetInfo *Aux) {
+  assert(Aux && "Cannot invoke setAuxTarget without a valid auxiliary target!");
+
   // This is a 1:1 copy of AMDGPUTargetInfo::setAuxTarget()
   assert(HalfFormat == Aux->HalfFormat);
   assert(FloatFormat == Aux->FloatFormat);

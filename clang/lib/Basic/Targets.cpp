@@ -676,7 +676,6 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
         Triple.getEnvironment() != llvm::Triple::UnknownEnvironment) {
       if (os == llvm::Triple::OSType::AMDHSA)
         return std::make_unique<SPIRV64AMDGCNTargetInfo>(Triple, Opts);
-
       return nullptr;
     }
     return std::make_unique<SPIRV64TargetInfo>(Triple, Opts);
