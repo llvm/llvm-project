@@ -215,7 +215,7 @@ constexpr bool test_all() {
   dangling_1st<next_permutation_result<dangling>>(std::ranges::next_permutation, in);
 
 #if TEST_STD_VER >= 23
-  dangling_1st< out_value_result<dangling, decltype(x)>>(std::ranges::iota, in, x);
+  dangling_1st<out_value_result<dangling, decltype(x)>>(std::ranges::iota, in, x);
 #endif
 
   return true;

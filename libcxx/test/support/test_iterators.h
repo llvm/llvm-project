@@ -1207,13 +1207,6 @@ struct Proxy : ProxyDiffTBase<T> {
     return tmp;
   }
 
-  void operator++(int)
-    requires(std::weakly_incrementable<std::remove_reference_t<T>> && !std::incrementable<std::remove_reference_t<T>>)
-  {
-    Proxy tmp = *this;
-    operator++();
-    return tmp;
-  }
 };
 
 // This is to make ProxyIterator model `std::indirectly_readable`

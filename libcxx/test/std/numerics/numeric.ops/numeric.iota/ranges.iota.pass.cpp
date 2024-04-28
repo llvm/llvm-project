@@ -10,14 +10,15 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-#include <cassert>
-#include <numeric>
 #include <algorithm>
 #include <array>
+#include <cassert>
+#include <numeric>
+#include <utility>
 
-#include "test_macros.h"
-#include "test_iterators.h"
 #include "almost_satisfies_types.h"
+#include "test_iterators.h"
+#include "test_macros.h"
 
 //
 // Testing constraints
@@ -73,9 +74,13 @@ struct DangerousCopyAssign {
   // Needed in postfix
   constexpr DangerousCopyAssign(DangerousCopyAssign const& other) { this->val = other.val; }
 
-  // mischievious copy assignment that we won't use if the
-  // std::as_const inside ranges::iota isn't working, this should perturb the
-  // results
+  /*
+  This class has a "mischievous" non-const overload of copy-assignment
+  operator that modifies the object being assigned from. `ranges::iota`
+  should not be invoking this overload thanks to the `std::as_const` in its
+  implementation. If for some reason it does invoke it, the values written
+  by ranges::iota will increment by 2 rather than 1.
+  */
   constexpr DangerousCopyAssign& operator=(DangerousCopyAssign& a) {
     ++a.val;
     this->val = a.val;
@@ -118,7 +123,7 @@ constexpr void test_result(std::array<int, N> input, int starting_value, std::ar
   }
 
   { // (range) overload
-    // inthe range overload adds the additional constraint that it must be an outputrange
+    // in the range overload adds the additional constraint that it must be an output range
     // so skip this for the input iterators we test
     auto in_begin = Iter(input.data());
     auto in_end   = Sent(Iter(input.data() + input.size()));
@@ -142,25 +147,29 @@ constexpr void test_results() {
   test_result<Iter, Sent, 5>({1, 2, 3, 4, 5}, 0, {0, 1, 2, 3, 4});
 }
 
-constexpr void test_DangerousCopyAssign() {
-  using A                   = DangerousCopyAssign;
-  using Iter                = contiguous_iterator<A*>;
-  std::array<A, 3> aa       = {A{1}, A{2}, A{3}};
+constexpr void test_danderous_copy_assign() {
+  using A    = DangerousCopyAssign;
+  using Iter = contiguous_iterator<A*>;
+
+  // If the dangerous non-const copy assignment is called, the final values in
+  // aa should increment by 2 rather than 1.
+  std::array<A, 3> aa       = {A{0}, A{0}, A{0}};
   std::array<A, 3> expected = {A{0}, A{1}, A{2}};
   std::ranges::iota(aa, A{0});
   auto proj_val = [](DangerousCopyAssign const& el) { return el.val; };
   assert(std::ranges::equal(aa, expected, std::ranges::equal_to{}, proj_val, proj_val));
 }
 
-void test_results() {
+constexpr bool test_results() {
   types::for_each(types::cpp17_input_iterator_list<int*>{}, []<class Iter> { test_results< Iter>(); });
   test_results<cpp17_output_iterator<int*>>();
   test_results<cpp20_output_iterator<int*>>();
   test_results<int*, sized_sentinel<int*>>();
-  test_DangerousCopyAssign();
+  test_danderous_copy_assign();
+  return true;
 }
 
 int main(int, char**) {
-  test_results();
+  static_assert(test_results());
   return 0;
 }
