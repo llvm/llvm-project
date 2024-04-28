@@ -89,14 +89,14 @@ void RemarkArgInfo::print(raw_ostream &OS) const {
   OS << Key << ": " << Val << "\n";
 }
 
-void RemarkInfo::printHeader(raw_ostream &OS) const {
+void RemarkHeader::print(raw_ostream &OS) const {
   OS << "Name: " << RemarkName << "\n";
   OS << "FunctionName: " << FunctionName << "\n";
   OS << "PassName: " << PassName << "\n";
 }
 
 void RemarkInfo::print(raw_ostream &OS) const {
-  printHeader(OS);
+  RemarkHeader.print(OS);
   OS << "Type: " << typeToStr(RemarkType) << "\n";
   if (!Args.empty()) {
     OS << "Args:\n";
@@ -106,7 +106,7 @@ void RemarkInfo::print(raw_ostream &OS) const {
 }
 
 void DiffAtRemark::print(raw_ostream &OS) const {
-  BaseRemark.printHeader(OS);
+  BaseRemark.RemarkHeader.print(OS);
   if (RemarkTypeDiff) {
     OS << "Only at A >>>>\n";
     OS << "Type: " << typeToStr(RemarkTypeDiff->first) << "\n";
@@ -185,12 +185,17 @@ static json::Array remarkArgsToJson(SmallVectorImpl<RemarkArgInfo> &Args) {
   return ArgArray;
 }
 
+void remarkHeaderToJson(json::Object &RemarkObj,
+                        const RemarkHeader &RemarkHeader) {
+  RemarkObj["RemarkName"] = RemarkHeader.RemarkName;
+  RemarkObj["FunctionName"] = RemarkHeader.FunctionName;
+  RemarkObj["PassName"] = RemarkHeader.PassName;
+}
+
 /// \returns remark representation as a json object.
-static json::Object remarkToJSON(RemarkInfo &Remark) {
+static json::Object remarkToJSON(const RemarkInfo &Remark) {
   json::Object RemarkJSON;
-  RemarkJSON["RemarkName"] = Remark.RemarkName;
-  RemarkJSON["FunctionName"] = Remark.FunctionName;
-  RemarkJSON["PassName"] = Remark.PassName;
+  remarkHeaderToJson(RemarkJSON, Remark.RemarkHeader);
   RemarkJSON["RemarkType"] = typeToStr(Remark.RemarkType);
   if (Verbose)
     RemarkJSON["Args"] = remarkArgsToJson(Remark.Args);
@@ -199,9 +204,7 @@ static json::Object remarkToJSON(RemarkInfo &Remark) {
 
 json::Object DiffAtRemark::toJson() {
   json::Object Object;
-  Object["FunctionName"] = BaseRemark.FunctionName;
-  Object["PassName"] = BaseRemark.PassName;
-  Object["RemarkName"] = BaseRemark.RemarkName;
+  remarkHeaderToJson(Object, BaseRemark.RemarkHeader);
   // display remark type if it is the same between the two remarks.
   if (!RemarkTypeDiff)
     Object["RemarkType"] = typeToStr(BaseRemark.RemarkType);

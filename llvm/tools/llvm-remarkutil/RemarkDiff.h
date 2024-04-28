@@ -15,6 +15,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Regex.h"
@@ -37,23 +38,41 @@ hash_code hash_value(const RemarkArgInfo &Arg) {
   return hash_combine(Arg.Key, Arg.Val);
 }
 
+struct RemarkHeader {
+  SmallString<5> RemarkName;
+  SmallString<5> FunctionName;
+  SmallString<5> PassName;
+  RemarkHeader(SmallString<5> RemarkName, SmallString<5> FunctionName,
+               SmallString<5> PassName)
+      : RemarkName(RemarkName), FunctionName(FunctionName), PassName(PassName) {
+  }
+  void print(raw_ostream &OS) const;
+};
+
+inline bool operator==(const RemarkHeader &LHS, const RemarkHeader &RHS) {
+  return LHS.RemarkName == RHS.RemarkName &&
+         LHS.FunctionName == RHS.FunctionName && LHS.PassName == RHS.PassName;
+}
+
+inline bool operator<(const RemarkHeader &LHS, const RemarkHeader &RHS) {
+  return std::make_tuple(LHS.PassName, LHS.RemarkName, LHS.FunctionName) <
+         std::make_tuple(RHS.PassName, RHS.RemarkName, RHS.FunctionName);
+}
+
 /// A wrapper for Remark class that can be used for generating remark diff.
 struct RemarkInfo {
-  std::string RemarkName;
-  std::string FunctionName;
-  std::string PassName;
+  RemarkHeader RemarkHeader;
   Type RemarkType;
   SmallVector<RemarkArgInfo, 4> Args;
   RemarkInfo();
-  RemarkInfo(std::string RemarkName, std::string FunctionName,
-             std::string PassName, Type RemarkType,
+  RemarkInfo(SmallString<5> RemarkName, SmallString<5> FunctionName,
+             SmallString<5> PassName, Type RemarkType,
              SmallVector<RemarkArgInfo, 4> &Args)
-      : RemarkName(RemarkName), FunctionName(FunctionName), PassName(PassName),
+      : RemarkHeader(RemarkName, FunctionName, PassName),
         RemarkType(RemarkType), Args(Args) {}
   RemarkInfo(Remark &Remark)
-      : RemarkName(Remark.RemarkName.str()),
-        FunctionName(Remark.FunctionName.str()),
-        PassName(Remark.PassName.str()), RemarkType(Remark.RemarkType) {
+      : RemarkHeader(Remark.RemarkName, Remark.FunctionName, Remark.PassName),
+        RemarkType(Remark.RemarkType) {
     for (const auto &Arg : Remark.Args)
       Args.push_back({Arg.Key.str(), Arg.Val.str()});
   }
@@ -61,11 +80,9 @@ struct RemarkInfo {
   /// Check if the remark has the same name, function name and pass name as \p
   /// RHS
   bool hasSameHeader(const RemarkInfo &RHS) const {
-    return RemarkName == RHS.RemarkName && FunctionName == RHS.FunctionName &&
-           PassName == RHS.PassName;
+    return RemarkHeader == RHS.RemarkHeader;
   };
   void print(raw_ostream &OS) const;
-  void printHeader(raw_ostream &OS) const;
 };
 
 inline bool operator<(const RemarkArgInfo &LHS, const RemarkArgInfo &RHS) {
@@ -73,10 +90,8 @@ inline bool operator<(const RemarkArgInfo &LHS, const RemarkArgInfo &RHS) {
 }
 
 inline bool operator<(const RemarkInfo &LHS, const RemarkInfo &RHS) {
-  return std::make_tuple(LHS.RemarkType, LHS.PassName, LHS.RemarkName,
-                         LHS.FunctionName, LHS.Args) <
-         std::make_tuple(RHS.RemarkType, RHS.PassName, RHS.RemarkName,
-                         RHS.FunctionName, RHS.Args);
+  return std::make_tuple(LHS.RemarkType, LHS.RemarkHeader, LHS.Args) <
+         std::make_tuple(RHS.RemarkType, RHS.RemarkHeader, RHS.Args);
 }
 
 inline bool operator==(const RemarkArgInfo &LHS, const RemarkArgInfo &RHS) {
@@ -84,8 +99,7 @@ inline bool operator==(const RemarkArgInfo &LHS, const RemarkArgInfo &RHS) {
 }
 
 inline bool operator==(const RemarkInfo &LHS, const RemarkInfo &RHS) {
-  return LHS.RemarkName == RHS.RemarkName &&
-         LHS.FunctionName == RHS.FunctionName && LHS.PassName == RHS.PassName &&
+  return LHS.RemarkHeader == RHS.RemarkHeader &&
          LHS.RemarkType == RHS.RemarkType && LHS.Args == RHS.Args;
 }
 
@@ -275,19 +289,21 @@ template <> struct DenseMapInfo<remarks::RemarkInfo, void> {
 
   static inline remarks::RemarkInfo getTombstoneKey() {
     auto Info = remarks::RemarkInfo();
-    Info.RemarkName =
+    Info.RemarkHeader.RemarkName =
         reinterpret_cast<const char *>(~static_cast<uintptr_t>(1));
-    Info.FunctionName =
+    Info.RemarkHeader.FunctionName =
         reinterpret_cast<const char *>(~static_cast<uintptr_t>(1));
-    Info.PassName = reinterpret_cast<const char *>(~static_cast<uintptr_t>(1));
+    Info.RemarkHeader.PassName =
+        reinterpret_cast<const char *>(~static_cast<uintptr_t>(1));
     Info.RemarkType = remarks::Type::Unknown;
     return Info;
   }
 
   static unsigned getHashValue(const remarks::RemarkInfo &Key) {
     auto ArgCode = hash_combine_range(Key.Args.begin(), Key.Args.end());
-    return hash_combine(Key.RemarkName, Key.FunctionName, Key.PassName,
-                        remarks::typeToStr(Key.RemarkType), ArgCode);
+    return hash_combine(
+        Key.RemarkHeader.RemarkName, Key.RemarkHeader.FunctionName,
+        Key.RemarkHeader.PassName, remarks::typeToStr(Key.RemarkType), ArgCode);
   }
 
   static bool isEqual(const remarks::RemarkInfo &LHS,
