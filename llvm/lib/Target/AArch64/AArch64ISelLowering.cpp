@@ -17629,7 +17629,7 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
     // (mul x, (2^M + 1) * 2^N + 1))
     //     =>  MV = add (shl x, M), x); add (shl MV, N), x)
     // (mul x, 1 - (1 - 2^M) * 2^N))
-    //     =>  MV = sub (x - (shl x, M)); add (x - (shl x, M))
+    //     =>  MV = sub (x - (shl x, M)); sub (x - (shl MV, N))
     APInt SCVMinus1 = ShiftedConstValue - 1;
     APInt SCVPlus1 = ShiftedConstValue + 1;
     APInt CVPlus1 = ConstValue + 1;
