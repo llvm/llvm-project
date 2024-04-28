@@ -1053,7 +1053,7 @@ static void emitWasmCatchPadBlock(CodeGenFunction &CGF,
   llvm::CallInst *Selector = CGF.Builder.CreateCall(GetSelectorFn, CPI);
 
   llvm::Function *TypeIDFn =
-    CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for, {CGF.VoidPtrTy});
+      CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for, {CGF.VoidPtrTy});
 
   // If there's only a single catch-all, branch directly to its handler.
   if (CatchScope.getNumHandlers() == 1 &&
@@ -1138,7 +1138,7 @@ static void emitCatchDispatchBlock(CodeGenFunction &CGF,
 
   // Select the right handler.
   llvm::Function *llvm_eh_typeid_for =
-    CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for, {CGF.VoidPtrTy});
+      CGF.CGM.getIntrinsic(llvm::Intrinsic::eh_typeid_for, {CGF.VoidPtrTy});
   llvm::Type *argTy = llvm_eh_typeid_for->getArg(0)->getType();
   LangAS globAS = CGF.CGM.GetGlobalVarAddressSpace(nullptr);
 
