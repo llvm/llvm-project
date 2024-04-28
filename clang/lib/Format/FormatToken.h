@@ -1623,10 +1623,10 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_then;
 
   /// Returns \c true if \p Tok is a keyword or an identifier.
-  bool isWordLike(const FormatToken &Tok) const {
+  bool isWordLike(const FormatToken &Tok, bool IsVerilog = true) const {
     // getIdentifierinfo returns non-null for keywords as well as identifiers.
     return Tok.Tok.getIdentifierInfo() &&
-           !Tok.isOneOf(kw_verilogHash, kw_verilogHashHash, kw_apostrophe);
+           (!IsVerilog || !isVerilogKeywordSymbol(Tok));
   }
 
   /// Returns \c true if \p Tok is a true JavaScript identifier, returns
@@ -1753,6 +1753,10 @@ struct AdditionalKeywords {
              CSharpExtraKeywords.find(Tok.Tok.getIdentifierInfo()) ==
                  CSharpExtraKeywords.end();
     }
+  }
+
+  bool isVerilogKeywordSymbol(const FormatToken &Tok) const {
+    return Tok.isOneOf(kw_verilogHash, kw_verilogHashHash, kw_apostrophe);
   }
 
   bool isVerilogWordOperator(const FormatToken &Tok) const {

@@ -4780,9 +4780,14 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if (Left.Finalized)
     return Right.hasWhitespaceBefore();
 
+  const bool IsVerilog = Style.isVerilog();
+  assert(!IsVerilog || !IsCpp);
+
   // Never ever merge two words.
-  if (Keywords.isWordLike(Right) && Keywords.isWordLike(Left))
+  if (Keywords.isWordLike(Right, IsVerilog) &&
+      Keywords.isWordLike(Left, IsVerilog)) {
     return true;
+  }
 
   // Leave a space between * and /* to avoid C4138 `comment end` found outside
   // of comment.
@@ -5063,12 +5068,10 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         Right.is(TT_TemplateOpener)) {
       return true;
     }
-  } else if (Style.isVerilog()) {
+  } else if (IsVerilog) {
     // An escaped identifier ends with whitespace.
-    if (Style.isVerilog() && Left.is(tok::identifier) &&
-        Left.TokenText[0] == '\\') {
+    if (Left.is(tok::identifier) && Left.TokenText[0] == '\\')
       return true;
-    }
     // Add space between things in a primitive's state table unless in a
     // transition like `(0?)`.
     if ((Left.is(TT_VerilogTableItem) &&
