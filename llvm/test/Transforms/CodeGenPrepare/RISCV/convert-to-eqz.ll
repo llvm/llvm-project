@@ -5,7 +5,7 @@ define i8 @hoist_add(i8 %x) {
 ; CHECK-LABEL: define i8 @hoist_add(
 ; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i8 [[X]], 1
+; CHECK-NEXT:    [[INC:%.*]] = add i8 [[X]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i8 [[INC]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[EXIT:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
@@ -31,7 +31,7 @@ define i8 @hoist_lshr(i8 %x) {
 ; CHECK-LABEL: define i8 @hoist_lshr(
 ; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INC:%.*]] = lshr exact i8 [[X]], 3
+; CHECK-NEXT:    [[INC:%.*]] = lshr i8 [[X]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i8 [[INC]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[EXIT:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
@@ -57,7 +57,7 @@ define i8 @nomove_add(i8 %x) {
 ; CHECK-LABEL: define i8 @nomove_add(
 ; CHECK-SAME: i8 [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i8 [[X]], 1
+; CHECK-NEXT:    [[INC:%.*]] = add i8 [[X]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i8 [[INC]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[EXIT:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
