@@ -747,8 +747,10 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   uint64_t VTableNamesOffset = OS.tell();
   OS.write(0);
 
-  // Record the offset of 'Header::Size' field.
+  // Record the offset of 'Header::OnDiskHeaderByteSize' field.
   const uint64_t OnDiskHeaderSizeOffset = OS.tell();
+
+  uint64_t OnDiskProfileSizeOffset = 0, TemporalProfSizeOffset = 0;
 
   if (!WritePrevVersion) {
     // Reserve the space for `OnDiskByteSize` to allow back patching later.
@@ -756,6 +758,16 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
 
     // Write the minimum compatible version required.
     OS.write(minProfileReaderVersion());
+
+    // Record the offset of `Header::TemporalProfSizeOffset` field, and reserve
+    // the space for this field to allow back patching.
+    TemporalProfSizeOffset = OS.tell();
+    OS.write(0);
+
+    // Record the offset of `Header::OnDiskProfileByteSize` field, and reserve
+    // the space for this field to allow back patching.
+    OnDiskProfileSizeOffset = OS.tell();
+    OS.write(0);
   }
 
   // This is a test-only path to append dummy header fields.
@@ -863,6 +875,7 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
     OS.writeByte(0);
 
   uint64_t TemporalProfTracesSectionStart = 0;
+  uint64_t TemporalProfSize = 0;
   if (static_cast<bool>(ProfileKind & InstrProfKind::TemporalProfile)) {
     TemporalProfTracesSectionStart = OS.tell();
     OS.write(TemporalProfTraces.size());
@@ -873,7 +886,11 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
       for (auto &NameRef : Trace.FunctionNameRefs)
         OS.write(NameRef);
     }
+
+    TemporalProfSize = OS.tell() - TemporalProfTracesSectionStart;
   }
+
+  uint64_t OnDiskProfileByteSize = OS.tell() - StartOffset;
 
   // Allocate space for data to be serialized out.
   std::unique_ptr<IndexedInstrProf::Summary> TheSummary =
@@ -908,6 +925,8 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
         {TemporalProfTracesOffset, &TemporalProfTracesSectionStart, 1},
         {VTableNamesOffset, &VTableNamesSectionStart, 1},
         {OnDiskHeaderSizeOffset, &OnDiskHeaderSize, 1},
+        {TemporalProfSizeOffset, &TemporalProfSize, 1},
+        {OnDiskProfileSizeOffset, &OnDiskProfileByteSize, 1},
         // Patch the summary data.
         {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
          (int)(SummarySize / sizeof(uint64_t))},

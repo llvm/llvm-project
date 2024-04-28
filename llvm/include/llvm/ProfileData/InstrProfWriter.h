@@ -40,7 +40,6 @@ public:
 
 private:
   bool Sparse;
-
   StringMap<ProfilingData> FunctionData;
   /// The maximum length of a single temporal profile trace.
   uint64_t MaxTemporalProfTraceLength;

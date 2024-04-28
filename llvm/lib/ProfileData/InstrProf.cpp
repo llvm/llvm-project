@@ -1625,9 +1625,13 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
   if (ProfileRecordedProfileVersion >= ProfVersion::Version13) {
     // Starting from version 13, profiles should records header's on-disk byte
     // size and the minimum profile reader version required.
-    H.OnDiskByteSize = read(Buffer, kOnDiskSizeOffset);
+    H.OnDiskHeaderByteSize = read(Buffer, kOnDiskSizeOffset);
     H.MinimumProfileReaderVersion =
         read(Buffer, kOnDiskSizeOffset + sizeof(uint64_t));
+    H.TemporalProfSectionSize =
+        read(Buffer, kOnDiskSizeOffset + 2 * sizeof(uint64_t));
+    H.OnDiskProfileByteSize =
+        read(Buffer, kOnDiskSizeOffset + 3 * sizeof(uint64_t));
   } else {
     // Prior to version 13, the largest version supported by the reader
     // (ProfVersion::CurrentVersion) must be greater than or equal to the
@@ -1671,8 +1675,10 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
         "if not add a case statement to fall through to the latest version.");
   case 13ull:
     // Size field is already read.
-    FieldByteOffset -= sizeof(Header::OnDiskByteSize);
+    FieldByteOffset -= sizeof(Header::OnDiskHeaderByteSize);
+    FieldByteOffset -= sizeof(Header::TemporalProfSectionSize);
     FieldByteOffset -= sizeof(Header::MinimumProfileReaderVersion);
+    FieldByteOffset -= sizeof(Header::OnDiskProfileByteSize);
     [[fallthrough]];
   case 12ull:
     FieldByteOffset -= sizeof(Header::VTableNamesOffset);
@@ -1718,8 +1724,10 @@ Expected<size_t> Header::knownFieldsEndByteOffset() const {
                   "If current version bumps, please update the case below to "
                   "calculate the known field end byte offset.");
   case 13ull:
-    return kOnDiskSizeOffset + sizeof(Header::OnDiskByteSize) +
-           sizeof(Header::MinimumProfileReaderVersion);
+    return kOnDiskSizeOffset + sizeof(Header::OnDiskHeaderByteSize) +
+           sizeof(Header::MinimumProfileReaderVersion) +
+           sizeof(Header::OnDiskProfileByteSize) +
+           sizeof(Header::TemporalProfSectionSize);
   default:
     break;
   }
@@ -1732,10 +1740,10 @@ size_t Header::size() const {
   // Starting from version 13, the indexed profile records the byte size of
   // header.
   if (ProfileRecordedProfileVersion >= ProfVersion::Version13) {
-    assert(OnDiskByteSize != 0 &&
+    assert(OnDiskHeaderByteSize != 0 &&
            "User can call Header::size() only after reading it "
            "from readMemoryBuffer");
-    return OnDiskByteSize;
+    return OnDiskHeaderByteSize;
   }
   switch (ProfileRecordedProfileVersion) {
     assert(ProfileRecordedProfileVersion <= ProfVersion::Version12 &&

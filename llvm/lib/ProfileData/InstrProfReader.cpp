@@ -1330,9 +1330,11 @@ Error IndexedInstrProfReader::readHeader() {
   auto IndexPtr = std::make_unique<InstrProfReaderIndex<OnDiskHashTableImplV3>>(
       Start + HashOffset, Cur, Start, HashType, Header->formatVersion());
 
+  const auto ProfileRecordedVersion = GET_VERSION(Header->formatVersion());
+
   // The MemProfOffset field in the header is only valid when the format
   // version is higher than 8 (when it was introduced).
-  if (GET_VERSION(Header->formatVersion()) >= 8 &&
+  if (ProfileRecordedVersion >= 8 &&
       Header->formatVersion() & VARIANT_MASK_MEMPROF) {
     uint64_t MemProfOffset =
         endian::byte_swap<uint64_t, llvm::endianness::little>(
@@ -1341,9 +1343,19 @@ Error IndexedInstrProfReader::readHeader() {
       return E;
   }
 
-  // BinaryIdOffset field in the header is only valid when the format version
-  // is higher than 9 (when it was introduced).
-  if (GET_VERSION(Header->formatVersion()) >= 9) {
+  auto getProfileBufferEnd = [&]() -> const char * {
+    if (ProfileRecordedVersion <= 12)
+      return DataBuffer->getBufferEnd();
+
+    return DataBuffer->getBufferStart() + Header->OnDiskProfileByteSize;
+  };
+
+  const unsigned char *ProfileBufferEnd =
+      (const unsigned char *)getProfileBufferEnd();
+
+  // BinaryIdOffset field in the header is only valid when the format
+  // version is higher than 9 (when it was introduced).
+  if (ProfileRecordedVersion >= 9) {
     uint64_t BinaryIdOffset =
         endian::byte_swap<uint64_t, llvm::endianness::little>(
             Header->BinaryIdOffset);
@@ -1355,12 +1367,12 @@ Error IndexedInstrProfReader::readHeader() {
       return error(instrprof_error::bad_header);
     // Set the binary ids start.
     BinaryIdsStart = Ptr;
-    if (BinaryIdsStart > (const unsigned char *)DataBuffer->getBufferEnd())
+    if (BinaryIdsStart > ProfileBufferEnd)
       return make_error<InstrProfError>(instrprof_error::malformed,
                                         "corrupted binary ids");
   }
 
-  if (GET_VERSION(Header->formatVersion()) >= 12) {
+  if (ProfileRecordedVersion >= 12) {
     uint64_t VTableNamesOffset =
         endian::byte_swap<uint64_t, llvm::endianness::little>(
             Header->VTableNamesOffset);
@@ -1372,17 +1384,17 @@ Error IndexedInstrProfReader::readHeader() {
     // Writer first writes the length of compressed string, and then the actual
     // content.
     VTableNamePtr = (const char *)Ptr;
-    if (VTableNamePtr > (const char *)DataBuffer->getBufferEnd())
+    if (VTableNamePtr > (const char *)ProfileBufferEnd)
       return make_error<InstrProfError>(instrprof_error::truncated);
   }
 
-  if (GET_VERSION(Header->formatVersion()) >= 10 &&
+  if (ProfileRecordedVersion >= 10 &&
       Header->formatVersion() & VARIANT_MASK_TEMPORAL_PROF) {
     uint64_t TemporalProfTracesOffset =
         endian::byte_swap<uint64_t, llvm::endianness::little>(
             Header->TemporalProfTracesOffset);
     const unsigned char *Ptr = Start + TemporalProfTracesOffset;
-    const auto *PtrEnd = (const unsigned char *)DataBuffer->getBufferEnd();
+    const auto *PtrEnd = ProfileBufferEnd;
     // Expect at least two 64 bit fields: NumTraces, and TraceStreamSize
     if (Ptr + 2 * sizeof(uint64_t) > PtrEnd)
       return error(instrprof_error::truncated);

@@ -1148,13 +1148,26 @@ enum ProfVersion {
   Version11 = 11,
   // VTable profiling,
   Version12 = 12,
-  // Two additional header fields to add partial forward compatibility.
-  // Indexed profile reader compares the latest version it can parse with the
-  // minimum version required by (and recorded in) the profile; if the reader
-  // can reasonably interpret the payload, it proceeds to parse known sections
-  // and skip new unknown sections; otherwise it stops reading and throws error
-  // (in this case users should update compilers and/or command line tools to parse profiles
-  // with newer versions).
+  // Add additional header fields to allow partial forward compatibility.
+  // - Allow reader to locate the end byte of the profile header and each
+  //   payload section.
+  //   - Prior to this version, header records the start byte offset of each
+  //   payload; for some payloads, reader knows the end byte offset as it reads
+  //   (or decodes) the payload (i.e., without explicit header fields).
+  //   - With this change, profile header records the byte size of the profile
+  //   header, and the end byte offset of a payload if explicit recording is
+  //   necessary for reader to locate the end of this payload.
+  //
+  // - Profile reader (in compilers and tools) can detect whether it can parse
+  // known payloads with the correct semantic. It makes use of the compatible
+  // profiles and rejects the incompatbile ones (in this case users should
+  // update compilers and/or command line tools to parse profiles with newer
+  // versions)
+  //  - Indexed profile reader compares the latest version it can parse with
+  //    the  minimum version required by (and recorded in) the profile; if the
+  //    reader  can reasonably interpret the payload, it proceeds to parse known
+  //    sections and skip new unknown sections; otherwise it stops reading and
+  //    throws error.
   Version13 = 13,
   // The current version is 13.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
@@ -1186,7 +1199,7 @@ struct Header {
   uint64_t VTableNamesOffset;
 
   // Records the on-disk byte size of the header.
-  uint64_t OnDiskByteSize = 0;
+  uint64_t OnDiskHeaderByteSize = 0;
 
   // Indexed profile writer will records the minimum profile reader version
   // required to parse this profile. If a profile reader's supported version is
@@ -1203,6 +1216,12 @@ struct Header {
   // readers' supported version (a constant baked in the library), and stop the
   // read process.
   uint64_t MinimumProfileReaderVersion = 0;
+
+  // The byte size of temporal profiles.
+  uint64_t TemporalProfSectionSize = 0;
+
+  // Records the on-disk byte size of the profiles (header and payloads).
+  uint64_t OnDiskProfileByteSize = 0;
 
   // New fields should only be added at the end to ensure that the size
   // computation is correct. The methods below need to be updated to ensure that
