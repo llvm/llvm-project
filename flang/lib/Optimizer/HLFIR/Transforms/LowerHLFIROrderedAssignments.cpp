@@ -1090,7 +1090,7 @@ void OrderedAssignmentRewriter::generateSaveEntity(
         mlir::Value loopExtent =
             computeLoopNestIterationNumber(loc, builder, loopNest);
         auto sequenceType =
-            mlir::cast<fir::SequenceType>(builder.getVarLenSeqTy(entityType));
+            builder.getVarLenSeqTy(entityType).cast<fir::SequenceType>();
         temp = insertSavedEntity(region,
                                  fir::factory::HomogeneousScalarStack{
                                      loc, builder, sequenceType, loopExtent,

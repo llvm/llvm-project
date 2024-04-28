@@ -98,15 +98,14 @@ public:
   mlir::LogicalResult
   matchAndRewrite(fir::ConvertOp op,
                   mlir::PatternRewriter &rewriter) const override {
-    if (mlir::isa<mlir::MemRefType>(op.getRes().getType())) {
+    if (op.getRes().getType().isa<mlir::MemRefType>()) {
       // due to index calculation moving to affine maps we still need to
       // add converts for sequence types this has a side effect of losing
       // some information about arrays with known dimensions by creating:
       // fir.convert %arg0 : (!fir.ref<!fir.array<5xi32>>) ->
       // !fir.ref<!fir.array<?xi32>>
-      if (auto refTy =
-              mlir::dyn_cast<fir::ReferenceType>(op.getValue().getType()))
-        if (auto arrTy = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
+      if (auto refTy = op.getValue().getType().dyn_cast<fir::ReferenceType>())
+        if (auto arrTy = refTy.getEleTy().dyn_cast<fir::SequenceType>()) {
           fir::SequenceType::Shape flatShape = {
               fir::SequenceType::getUnknownExtent()};
           auto flatArrTy = fir::SequenceType::get(flatShape, arrTy.getEleTy());
@@ -159,7 +158,7 @@ public:
     mlir::ConversionTarget target(*context);
     target.addIllegalOp<memref::AllocOp>();
     target.addDynamicallyLegalOp<fir::ConvertOp>([](fir::ConvertOp op) {
-      if (mlir::isa<mlir::MemRefType>(op.getRes().getType()))
+      if (op.getRes().getType().isa<mlir::MemRefType>())
         return false;
       return true;
     });
