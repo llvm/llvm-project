@@ -441,7 +441,7 @@ USAGE: :program:`llvm-remarkutil diff` [*options*] <remarka_file>  <remarkb_file
 Summary
 ^^^^^^^
 
-:program:`llvm-remarkutil diff` hilights the difference between two versions of `remarks <https://llvm.org/docs/Remarks.html>`_ based on specified properties.
+:program:`llvm-remarkutil diff` highlight the difference between two versions of `remarks <https://llvm.org/docs/Remarks.html>`_ based on specified properties.
 The tool will organise remarks based on the debug location and highlight the differences between remarks with the same header i.e remark name, pass name and function name. The tool by default highlights the differences in arguments between two remarks and the difference in remark type.
 The tool contains utilities to filter the remark diff based on remark name, pass name, argument value and remark type.
 
