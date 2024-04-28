@@ -53,7 +53,7 @@ Options
 
   to ensure that the output will continue to be the unsigned representation
   of -42 and the signed representation of 0xffffffff (often 4294967254
-  and -1 respectively.) When `false` (which is the default), these casts
+  and -1 respectively). When `false` (which is the default), these casts
   will not be added which may cause a change in the output. Note that this
   option makes no difference for the default value of
   `StrFormatLikeFunctions` since ``absl::StrFormat`` takes a function
