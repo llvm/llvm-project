@@ -95,7 +95,7 @@ static void printMArch(raw_ostream &OS, const Record &Rec) {
 
   // Convert features to FeatureVector.
   for (auto *Feature : Rec.getValueAsListOfDefs("Features")) {
-    StringRef FeatureName = Feature->getValueAsString("Name");
+    StringRef FeatureName = getExtensionName(Feature);
     if (Feature->isSubClassOf("RISCVExtension")) {
       unsigned Major = Feature->getValueAsInt("MajorVersion");
       unsigned Minor = Feature->getValueAsInt("MinorVersion");
