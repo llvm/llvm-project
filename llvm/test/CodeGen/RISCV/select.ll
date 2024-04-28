@@ -1858,3 +1858,113 @@ define i32 @select_cst6(i1 zeroext %cond) {
   %ret = select i1 %cond, i32 2049, i32 2047
   ret i32 %ret
 }
+
+@select_redundant_czero_eqz_data = global i32 0, align 4
+
+define void @select_redundant_czero_eqz1(ptr %0, ptr %1) {
+; RV32IM-LABEL: select_redundant_czero_eqz1:
+; RV32IM:       # %bb.0: # %entry
+; RV32IM-NEXT:    bnez a0, .LBB49_2
+; RV32IM-NEXT:  # %bb.1:
+; RV32IM-NEXT:    lui a0, %hi(select_redundant_czero_eqz_data)
+; RV32IM-NEXT:    addi a0, a0, %lo(select_redundant_czero_eqz_data)
+; RV32IM-NEXT:  .LBB49_2: # %entry
+; RV32IM-NEXT:    sw a0, 0(a1)
+; RV32IM-NEXT:    ret
+;
+; RV64IM-LABEL: select_redundant_czero_eqz1:
+; RV64IM:       # %bb.0: # %entry
+; RV64IM-NEXT:    bnez a0, .LBB49_2
+; RV64IM-NEXT:  # %bb.1:
+; RV64IM-NEXT:    lui a0, %hi(select_redundant_czero_eqz_data)
+; RV64IM-NEXT:    addi a0, a0, %lo(select_redundant_czero_eqz_data)
+; RV64IM-NEXT:  .LBB49_2: # %entry
+; RV64IM-NEXT:    sd a0, 0(a1)
+; RV64IM-NEXT:    ret
+;
+; RV64IMXVTCONDOPS-LABEL: select_redundant_czero_eqz1:
+; RV64IMXVTCONDOPS:       # %bb.0: # %entry
+; RV64IMXVTCONDOPS-NEXT:    lui a2, %hi(select_redundant_czero_eqz_data)
+; RV64IMXVTCONDOPS-NEXT:    addi a2, a2, %lo(select_redundant_czero_eqz_data)
+; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a2, a2, a0
+; RV64IMXVTCONDOPS-NEXT:    or a0, a2, a0
+; RV64IMXVTCONDOPS-NEXT:    sd a0, 0(a1)
+; RV64IMXVTCONDOPS-NEXT:    ret
+;
+; RV32IMZICOND-LABEL: select_redundant_czero_eqz1:
+; RV32IMZICOND:       # %bb.0: # %entry
+; RV32IMZICOND-NEXT:    lui a2, %hi(select_redundant_czero_eqz_data)
+; RV32IMZICOND-NEXT:    addi a2, a2, %lo(select_redundant_czero_eqz_data)
+; RV32IMZICOND-NEXT:    czero.nez a2, a2, a0
+; RV32IMZICOND-NEXT:    or a0, a2, a0
+; RV32IMZICOND-NEXT:    sw a0, 0(a1)
+; RV32IMZICOND-NEXT:    ret
+;
+; RV64IMZICOND-LABEL: select_redundant_czero_eqz1:
+; RV64IMZICOND:       # %bb.0: # %entry
+; RV64IMZICOND-NEXT:    lui a2, %hi(select_redundant_czero_eqz_data)
+; RV64IMZICOND-NEXT:    addi a2, a2, %lo(select_redundant_czero_eqz_data)
+; RV64IMZICOND-NEXT:    czero.nez a2, a2, a0
+; RV64IMZICOND-NEXT:    or a0, a2, a0
+; RV64IMZICOND-NEXT:    sd a0, 0(a1)
+; RV64IMZICOND-NEXT:    ret
+entry:
+  %3 = icmp eq ptr %0, null
+  %4 = select i1 %3, ptr @select_redundant_czero_eqz_data, ptr %0
+  store ptr %4, ptr %1, align 8
+  ret void
+}
+
+define void @select_redundant_czero_eqz2(ptr %0, ptr %1) {
+; RV32IM-LABEL: select_redundant_czero_eqz2:
+; RV32IM:       # %bb.0: # %entry
+; RV32IM-NEXT:    bnez a0, .LBB50_2
+; RV32IM-NEXT:  # %bb.1: # %entry
+; RV32IM-NEXT:    lui a0, %hi(select_redundant_czero_eqz_data)
+; RV32IM-NEXT:    addi a0, a0, %lo(select_redundant_czero_eqz_data)
+; RV32IM-NEXT:  .LBB50_2: # %entry
+; RV32IM-NEXT:    sw a0, 0(a1)
+; RV32IM-NEXT:    ret
+;
+; RV64IM-LABEL: select_redundant_czero_eqz2:
+; RV64IM:       # %bb.0: # %entry
+; RV64IM-NEXT:    bnez a0, .LBB50_2
+; RV64IM-NEXT:  # %bb.1: # %entry
+; RV64IM-NEXT:    lui a0, %hi(select_redundant_czero_eqz_data)
+; RV64IM-NEXT:    addi a0, a0, %lo(select_redundant_czero_eqz_data)
+; RV64IM-NEXT:  .LBB50_2: # %entry
+; RV64IM-NEXT:    sd a0, 0(a1)
+; RV64IM-NEXT:    ret
+;
+; RV64IMXVTCONDOPS-LABEL: select_redundant_czero_eqz2:
+; RV64IMXVTCONDOPS:       # %bb.0: # %entry
+; RV64IMXVTCONDOPS-NEXT:    lui a2, %hi(select_redundant_czero_eqz_data)
+; RV64IMXVTCONDOPS-NEXT:    addi a2, a2, %lo(select_redundant_czero_eqz_data)
+; RV64IMXVTCONDOPS-NEXT:    vt.maskcn a2, a2, a0
+; RV64IMXVTCONDOPS-NEXT:    or a0, a0, a2
+; RV64IMXVTCONDOPS-NEXT:    sd a0, 0(a1)
+; RV64IMXVTCONDOPS-NEXT:    ret
+;
+; RV32IMZICOND-LABEL: select_redundant_czero_eqz2:
+; RV32IMZICOND:       # %bb.0: # %entry
+; RV32IMZICOND-NEXT:    lui a2, %hi(select_redundant_czero_eqz_data)
+; RV32IMZICOND-NEXT:    addi a2, a2, %lo(select_redundant_czero_eqz_data)
+; RV32IMZICOND-NEXT:    czero.nez a2, a2, a0
+; RV32IMZICOND-NEXT:    or a0, a0, a2
+; RV32IMZICOND-NEXT:    sw a0, 0(a1)
+; RV32IMZICOND-NEXT:    ret
+;
+; RV64IMZICOND-LABEL: select_redundant_czero_eqz2:
+; RV64IMZICOND:       # %bb.0: # %entry
+; RV64IMZICOND-NEXT:    lui a2, %hi(select_redundant_czero_eqz_data)
+; RV64IMZICOND-NEXT:    addi a2, a2, %lo(select_redundant_czero_eqz_data)
+; RV64IMZICOND-NEXT:    czero.nez a2, a2, a0
+; RV64IMZICOND-NEXT:    or a0, a0, a2
+; RV64IMZICOND-NEXT:    sd a0, 0(a1)
+; RV64IMZICOND-NEXT:    ret
+entry:
+  %3 = icmp ne ptr %0, null
+  %4 = select i1 %3, ptr %0, ptr @select_redundant_czero_eqz_data
+  store ptr %4, ptr %1, align 8
+  ret void
+}
