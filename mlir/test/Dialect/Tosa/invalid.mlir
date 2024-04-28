@@ -72,10 +72,10 @@ func.func @test_pad_non_const(%arg0: tensor<13x21x3xi8>, %arg1: tensor<i8>) -> t
 
 // -----
 
-func.func @test_transpose_non_const(%arg0: tensor<13x21x3xf32>, %arg1: tensor<3xi32>) -> tensor<3x13x21xf32> {
+func.func @test_transpose_non_const(%arg0: tensor<13x21x3xf32>, %arg1: tensor<3xi32>) -> tensor<?x?x?xf32> {
   // expected-error@+1 {{'tosa.transpose' op perms of transpose is not constant}}
-  %0 = tosa.transpose %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<3xi32>) -> tensor<3x13x21xf32>
-  return %0 : tensor<3x13x21xf32>
+  %0 = tosa.transpose %arg0, %arg1 : (tensor<13x21x3xf32>, tensor<3xi32>) -> tensor<?x?x?xf32>
+  return %0 : tensor<?x?x?xf32>
 }
 
 // -----
@@ -412,4 +412,14 @@ func.func @test_tile_invalid_multiples() {
   // expected-error@+1 {{'tosa.tile' op expect 'multiples' array to have length 3 but got 0.}}
   %1 = tosa.tile %0 {multiples = array<i64>} : (tensor<4x31x31xf32>) -> tensor<4x31x31xf32>
   return
+}
+
+// -----
+
+func.func @transpose_wrong_sizes(%arg0: tensor<1x1x1x1xi16>) -> (tensor<2x1x1x1xi16>) {
+  %0 = "tosa.const"() <{value = dense<[0, 3, 1, 2]> : tensor<4xi32>}> : () -> tensor<4xi32>
+  // expected-error@+2 {{'tosa.transpose' op inferred type(s) 'tensor<1x1x1x1xi16>' are incompatible with return type(s) of operation 'tensor<2x1x1x1xi16>'}}
+  // expected-error@+1 {{'tosa.transpose' op failed to infer returned types}}
+  %1 = tosa.transpose %arg0, %0 : (tensor<1x1x1x1xi16>, tensor<4xi32>) -> tensor<2x1x1x1xi16>
+  return %1 : tensor<2x1x1x1xi16>
 }
