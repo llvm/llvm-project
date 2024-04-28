@@ -92,3 +92,12 @@ void rethrow_correct() {
     throw;
   }
 }
+
+void rethrow_in_lambda() {
+  try {
+    throw 5;
+  } catch(...) {
+    auto lambda = [] { throw; };
+// CHECK-MESSAGES: :[[@LINE-1]]:24: warning: empty 'throw' outside a catch block with no operand triggers 'std::terminate()' [bugprone-exception-rethrow]
+  }
+}
