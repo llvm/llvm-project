@@ -191,9 +191,8 @@ struct DiffAtRemark {
     }
 
     // Compare remark type between RA and RB.
-    if (DiffConfig.ShowRemarkTypeDiff && RA.RemarkType != RB.RemarkType) {
+    if (DiffConfig.ShowRemarkTypeDiff && RA.RemarkType != RB.RemarkType)
       RemarkTypeDiff = {RA.RemarkType, RB.RemarkType};
-    }
   }
 
   void print(raw_ostream &OS) const;
