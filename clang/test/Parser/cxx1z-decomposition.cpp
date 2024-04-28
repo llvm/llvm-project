@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx17,pre2c -fcxx-exceptions
-// RUN: %clang_cc1 -std=c++2b %s -verify=expected,cxx2b,pre2c,post2b -fcxx-exceptions
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,cxx2c,post2b -fcxx-exceptions
-// RUN: not %clang_cc1 -std=c++17 %s -emit-llvm-only -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++17 %s -triple x86_64-unknown-linux-gnu -verify=expected,cxx17,pre2c -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++2b %s -triple x86_64-unknown-linux-gnu -verify=expected,cxx2b,pre2c,post2b -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++2c %s -triple x86_64-unknown-linux-gnu -verify=expected,cxx2c,post2b -fcxx-exceptions
+// RUN: not %clang_cc1 -std=c++17 %s -triple x86_64-unknown-linux-gnu -emit-llvm-only -fcxx-exceptions
 
 struct S { int a, b, c; };
 
