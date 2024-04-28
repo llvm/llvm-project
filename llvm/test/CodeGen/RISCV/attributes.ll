@@ -256,6 +256,19 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-supm %s -o - | FileCheck --check-prefix=RV64SUPM %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-ssqosid %s -o - | FileCheck --check-prefix=RV64SSQOSID %s
 
+; Tests for profile features.
+; RUN: llc -mtriple=riscv32 -mattr=+rvi20u32 %s -o - | FileCheck --check-prefix=RVI20U32 %s
+; RUN: llc -mtriple=riscv64 -mattr=+rvi20u64 %s -o - | FileCheck --check-prefix=RVI20U64 %s
+; RUN: llc -mtriple=riscv64 -mattr=+rva20u64 %s -o - | FileCheck --check-prefix=RVA20U64 %s
+; RUN: llc -mtriple=riscv64 -mattr=+rva20s64 %s -o - | FileCheck --check-prefix=RVA20S64 %s
+; RUN: llc -mtriple=riscv64 -mattr=+rva22u64 %s -o - | FileCheck --check-prefix=RVA22U64 %s
+; RUN: llc -mtriple=riscv64 -mattr=+rva22s64 %s -o - | FileCheck --check-prefix=RVA22S64 %s
+; RUN: llc -mtriple=riscv64 -mattr=+rva23u64 %s -o - | FileCheck --check-prefix=RVA23U64 %s
+; RUN: llc -mtriple=riscv64 -mattr=+rva23s64 %s -o - | FileCheck --check-prefix=RVA23S64 %s
+; RUN: llc -mtriple=riscv64 -mattr=+rvb23u64 %s -o - | FileCheck --check-prefix=RVB23U64 %s
+; RUN: llc -mtriple=riscv64 -mattr=+rvb23s64 %s -o - | FileCheck --check-prefix=RVB23S64 %s
+; RUN: llc -mtriple=riscv32 -mattr=+rvm23u32 %s -o - | FileCheck --check-prefix=RVM23U32 %s
+
 ; CHECK: .attribute 4, 16
 
 ; RV32M: .attribute 5, "rv32i2p1_m2p0"
@@ -511,6 +524,18 @@
 ; RV64SSPM: .attribute 5, "rv64i2p1_sspm0p8"
 ; RV64SUPM: .attribute 5, "rv64i2p1_supm0p8"
 ; RV64SSQOSID: .attribute 5, "rv64i2p1_ssqosid1p0"
+
+; RVI20U32: .attribute 5, "rv32i2p1"
+; RVI20U64: .attribute 5, "rv64i2p1"
+; RVA20U64: .attribute 5, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_ziccamoa1p0_ziccif1p0_zicclsm1p0_ziccrse1p0_zicntr2p0_zicsr2p0_za128rs1p0"
+; RVA20S64: .attribute 5, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_ziccamoa1p0_ziccif1p0_zicclsm1p0_ziccrse1p0_zicntr2p0_zicsr2p0_zifencei2p0_za128rs1p0_ssccptr1p0_sstvala1p0_sstvecd1p0_svade1p0_svbare1p0"
+; RVA22U64: .attribute 5, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zic64b1p0_zicbom1p0_zicbop1p0_zicboz1p0_ziccamoa1p0_ziccif1p0_zicclsm1p0_ziccrse1p0_zicntr2p0_zicsr2p0_zihintpause2p0_zihpm2p0_za64rs1p0_zfhmin1p0_zba1p0_zbb1p0_zbs1p0_zkt1p0"
+; RVA22S64: .attribute 5, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zic64b1p0_zicbom1p0_zicbop1p0_zicboz1p0_ziccamoa1p0_ziccif1p0_zicclsm1p0_ziccrse1p0_zicntr2p0_zicsr2p0_zifencei2p0_zihintpause2p0_zihpm2p0_za64rs1p0_zfhmin1p0_zba1p0_zbb1p0_zbs1p0_zkt1p0_ssccptr1p0_sscounterenw1p0_sstvala1p0_sstvecd1p0_svade1p0_svbare1p0_svinval1p0_svpbmt1p0"
+; RVA23U64: .attribute 5, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_v1p0_zic64b1p0_zicbom1p0_zicbop1p0_zicboz1p0_ziccamoa1p0_ziccif1p0_zicclsm1p0_ziccrse1p0_zicntr2p0_zicond1p0_zicsr2p0_zihintntl1p0_zihintpause2p0_zihpm2p0_zimop1p0_za64rs1p0_zawrs1p0_zfa1p0_zfhmin1p0_zca1p0_zcb1p0_zcmop1p0_zba1p0_zbb1p0_zbs1p0_zkt1p0_zvbb1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvfhmin1p0_zvkb1p0_zvkt1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0"
+; RVA23S64: .attribute 5, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_v1p0_h1p0_zic64b1p0_zicbom1p0_zicbop1p0_zicboz1p0_ziccamoa1p0_ziccif1p0_zicclsm1p0_ziccrse1p0_zicntr2p0_zicond1p0_zicsr2p0_zifencei2p0_zihintntl1p0_zihintpause2p0_zihpm2p0_zimop1p0_za64rs1p0_zawrs1p0_zfa1p0_zfhmin1p0_zca1p0_zcb1p0_zcmop1p0_zba1p0_zbb1p0_zbs1p0_zkt1p0_zvbb1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvfhmin1p0_zvkb1p0_zvkt1p0_zvl128b1p0_zvl32b1p0_zvl64b1p0_shcounterenw1p0_shgatpa1p0_shtvala1p0_shvsatpa1p0_shvstvala1p0_shvstvecd1p0_ssccptr1p0_sscofpmf1p0_sscounterenw1p0_ssnpm0p8_ssstateen1p0_sstc1p0_sstvala1p0_sstvecd1p0_ssu64xl1p0_svade1p0_svbare1p0_svinval1p0_svnapot1p0_svpbmt1p0"
+; RVB23U64: .attribute 5, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zic64b1p0_zicbom1p0_zicbop1p0_zicboz1p0_ziccamoa1p0_ziccif1p0_zicclsm1p0_ziccrse1p0_zicntr2p0_zicond1p0_zicsr2p0_zihintntl1p0_zihintpause2p0_zihpm2p0_zimop1p0_za64rs1p0_zawrs1p0_zfa1p0_zca1p0_zcb1p0_zcmop1p0_zba1p0_zbb1p0_zbs1p0_zkt1p0"
+; RVB23S64: .attribute 5, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zic64b1p0_zicbom1p0_zicbop1p0_zicboz1p0_ziccamoa1p0_ziccif1p0_zicclsm1p0_ziccrse1p0_zicntr2p0_zicond1p0_zicsr2p0_zifencei2p0_zihintntl1p0_zihintpause2p0_zihpm2p0_zimop1p0_za64rs1p0_zawrs1p0_zfa1p0_zca1p0_zcb1p0_zcmop1p0_zba1p0_zbb1p0_zbs1p0_zkt1p0_ssccptr1p0_sscofpmf1p0_sscounterenw1p0_sstc1p0_sstvala1p0_sstvecd1p0_ssu64xl1p0_svade1p0_svbare1p0_svinval1p0_svnapot1p0_svpbmt1p0"
+; RVM23U32: .attribute 5, "rv32i2p1_m2p0_zicbop1p0_zicond1p0_zicsr2p0_zihintntl1p0_zihintpause2p0_zimop1p0_zca1p0_zcb1p0_zce1p0_zcmop1p0_zcmp1p0_zcmt1p0_zba1p0_zbb1p0_zbs1p0"
 
 define i32 @addi(i32 %a) {
   %1 = add i32 %a, 1
