@@ -182,12 +182,81 @@ static void emitRISCVProcs(RecordKeeper &RK, raw_ostream &OS) {
   OS << "\n#undef TUNE_PROC\n";
 }
 
+static void emitRISCVExtensionInfoJSON(const std::vector<Record *> &Extensions,
+                                       raw_ostream &OS) {
+  // Dump supported RISC-V extensions
+  OS << "{\n";
+  OS << "  \"supported_extensions\": [\n";
+  for (const Record *R : Extensions) {
+    OS << "    {\n";
+    OS << "      \"name\": \"" << getExtensionName(R) << "\",\n";
+    OS << "      \"version\": " << R->getValueAsInt("MajorVersion") << "."
+       << R->getValueAsInt("MinorVersion") << ",\n";
+    OS << "      \"experimental\": " << R->getValueAsBit("Experimental")
+       << "\n";
+    if (R != Extensions.back()) {
+      OS << "    },\n";
+    } else {
+      OS << "    }\n";
+    }
+  }
+  OS << "  ],\n";
+}
+
+static void
+emitRISCVImpliedExtensionInfoJSON(const std::vector<Record *> &Extensions,
+                                  raw_ostream &OS) {
+  // Dump implied RISC-V extensions
+  OS << "  \"implied_extensions\": [\n";
+  for (Record *Ext : Extensions) {
+    auto ImpliesList = Ext->getValueAsListOfDefs("Implies");
+    if (ImpliesList.empty())
+      continue;
+    StringRef Name = getExtensionName(Ext);
+    OS << "    {\n";
+    OS << "      \"name\": \"" << Name << "\",\n";
+    OS << "      \"implied\": [\n";
+    for (auto *ImpliedExt : ImpliesList) {
+      if (!ImpliedExt->isSubClassOf("RISCVExtension"))
+        continue;
+      OS << "        \"" << getExtensionName(ImpliedExt) << "\"";
+      if (ImpliedExt != ImpliesList.back()) {
+        OS << ",\n";
+      } else {
+        OS << "\n";
+      }
+    }
+    OS << "      ]\n";
+    if (Ext != Extensions.back()) {
+      OS << "    },\n";
+    } else {
+      OS << "    }\n";
+    }
+  }
+  OS << "  ]\n";
+  OS << "}\n";
+}
+
 static void EmitRISCVTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   emitRISCVExtensions(RK, OS);
   emitRISCVProfiles(RK, OS);
   emitRISCVProcs(RK, OS);
 }
 
+static void EmitRISCVISAInfoJSON(RecordKeeper &RK, raw_ostream &OS) {
+  std::vector<Record *> Extensions =
+      RK.getAllDerivedDefinitions("RISCVExtension");
+  llvm::sort(Extensions, [](const Record *Rec1, const Record *Rec2) {
+    return getExtensionName(Rec1) < getExtensionName(Rec2);
+  });
+  emitRISCVExtensionInfoJSON(Extensions, OS);
+  emitRISCVImpliedExtensionInfoJSON(Extensions, OS);
+}
+
 static TableGen::Emitter::Opt X("gen-riscv-target-def", EmitRISCVTargetDef,
                                 "Generate the list of CPUs and extensions for "
                                 "RISC-V");
+
+static TableGen::Emitter::Opt Y("gen-riscv-isa-info-json", EmitRISCVISAInfoJSON,
+                                "Generate the JSON file of suported extensions"
+                                " and implied rules for RISC-V.");
