@@ -364,7 +364,7 @@ public:
                         MacroBuilder &Builder) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY SPIRV64AMDGCNTargetInfo
+class LLVM_LIBRARY_VISIBILITY SPIRV64AMDGCNTargetInfo final
     : public BaseSPIRVTargetInfo {
 public:
   SPIRV64AMDGCNTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
