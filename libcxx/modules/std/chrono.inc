@@ -212,10 +212,13 @@ export namespace std {
     // [time.zone.exception], exception classes
     using std::chrono::ambiguous_local_time;
     using std::chrono::nonexistent_local_time;
+#    endif // if 0
 
     // [time.zone.info], information classes
+    using std::chrono::local_info;
     using std::chrono::sys_info;
 
+#    if 0
     // [time.zone.timezone], class time_zone
     using std::chrono::choose;
 #    endif // if 0

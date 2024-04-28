@@ -101,6 +101,15 @@ Improvements to clang-tidy
   to filter source files from the compilation database, via a RegEx. In a
   similar fashion to what `-header-filter` does for header files.
 
+- Improved :program:`check_clang_tidy.py` script. Added argument `-export-fixes`
+  to aid in clang-tidy and test development.
+
+- Fixed bug where big values for unsigned check options overflowed into negative values
+  when being printed with `--dump-config`.
+
+- Fixed `--verify-config` option not properly parsing checks when using the
+  literal operator in the `.clang-tidy` config.
+
 New checks
 ^^^^^^^^^^
 
@@ -110,12 +119,25 @@ New checks
   Detects error-prone Curiously Recurring Template Pattern usage, when the CRTP
   can be constructed outside itself and the derived class.
 
+- New :doc:`bugprone-return-const-ref-from-parameter
+  <clang-tidy/checks/bugprone/return-const-ref-from-parameter>` check.
+
+  Detects return statements that return a constant reference parameter as constant
+  reference. This may cause use-after-free errors if the caller uses xvalues as
+  arguments.
+
 - New :doc:`bugprone-suspicious-stringview-data-usage
   <clang-tidy/checks/bugprone/suspicious-stringview-data-usage>` check.
 
   Identifies suspicious usages of ``std::string_view::data()`` that could lead
   to reading out-of-bounds data due to inadequate or incorrect string null
   termination.
+
+- New :doc:`modernize-min-max-use-initializer-list
+  <clang-tidy/checks/modernize/min-max-use-initializer-list>` check.
+
+  Replaces nested ``std::min`` and ``std::max`` calls with an initializer list
+  where applicable.
 
 - New :doc:`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` check.
@@ -128,6 +150,12 @@ New checks
 
   Enforces consistent style for enumerators' initialization, covering three
   styles: none, first only, or all initialized explicitly.
+
+- New :doc:`readability-math-missing-parentheses
+  <clang-tidy/checks/readability/math-missing-parentheses>` check.
+
+  Check for missing parentheses in mathematical expressions that involve
+  operators of different priorities.
 
 - New :doc:`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check.
@@ -145,9 +173,17 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/assert-side-effect>` check by detecting side
   effect from calling a method with non-const reference parameters.
 
+- Improved :doc:`bugprone-forwarding-reference-overload
+  <clang-tidy/checks/bugprone/forwarding-reference-overload>`
+  check to ignore deleted constructors which won't hide other overloads.
+
 - Improved :doc:`bugprone-inc-dec-in-conditions
   <clang-tidy/checks/bugprone/inc-dec-in-conditions>` check to ignore code
   within unevaluated contexts, such as ``decltype``.
+
+- Improved :doc:`bugprone-lambda-function-name<clang-tidy/checks/bugprone/lambda-function-name>`
+  check by ignoring ``__func__`` macro in lambda captures, initializers of
+  default parameters and nested function declarations.
 
 - Improved :doc:`bugprone-non-zero-enum-to-bool-conversion
   <clang-tidy/checks/bugprone/non-zero-enum-to-bool-conversion>` check by
@@ -202,7 +238,7 @@ Changes in existing checks
 
 - Improved :doc:`google-explicit-constructor
   <clang-tidy/checks/google/explicit-constructor>` check to better handle
-  ``C++-20`` `explicit(bool)`.
+  C++20 `explicit(bool)`.
 
 - Improved :doc:`google-global-names-in-headers
   <clang-tidy/checks/google/global-names-in-headers>` check by replacing the local
@@ -215,9 +251,17 @@ Changes in existing checks
   check by ignoring other functions with same prefixes as the target specific
   functions.
 
+- Improved :doc:`linuxkernel-must-check-errs
+  <clang-tidy/checks/linuxkernel/must-check-errs>` check documentation to
+  consistently use the check's proper name.
+
 - Improved :doc:`llvm-header-guard
   <clang-tidy/checks/llvm/header-guard>` check by replacing the local
   option `HeaderFileExtensions` by the global option of the same name.
+
+- Improved :doc:`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check by avoiding infinite recursion
+  for recursive forwarding reference.
 
 - Improved :doc:`misc-definitions-in-headers
   <clang-tidy/checks/misc/definitions-in-headers>` check by replacing the local
@@ -243,9 +287,17 @@ Changes in existing checks
   don't remove parentheses used in ``sizeof`` calls when they have array index
   accesses as arguments.
 
+- Improved :doc:`modernize-use-nullptr
+  <clang-tidy/checks/modernize/use-nullptr>` check to include support for C23,
+  which also has introduced the ``nullptr`` keyword.
+
 - Improved :doc:`modernize-use-override
   <clang-tidy/checks/modernize/use-override>` check to also remove any trailing
   whitespace when deleting the ``virtual`` keyword.
+
+- Improved :doc:`modernize-use-starts-ends-with
+  <clang-tidy/checks/modernize/use-starts-ends-with>` check to also handle
+  calls to ``compare`` method.
 
 - Improved :doc:`modernize-use-using <clang-tidy/checks/modernize/use-using>`
   check by adding support for detection of typedefs declared on function level.
@@ -268,7 +320,7 @@ Changes in existing checks
   <clang-tidy/checks/readability/identifier-naming>` check in `GetConfigPerFile`
   mode by resolving symbolic links to header files. Fixed handling of Hungarian
   Prefix when configured to `LowerCase`. Added support for renaming designated
-  initializers.
+  initializers. Added support for renaming macro arguments.
 
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to provide
@@ -294,7 +346,7 @@ Miscellaneous
 ^^^^^^^^^^^^^
 
 - Fixed incorrect formatting in :program:`clang-apply-replacements` when no
-  ``--format`` option is specified. Now :program:`clang-apply-replacements`
+  `--format` option is specified. Now :program:`clang-apply-replacements`
   applies formatting only with the option.
 
 Improvements to include-fixer

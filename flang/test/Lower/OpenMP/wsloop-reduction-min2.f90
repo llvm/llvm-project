@@ -39,12 +39,14 @@ end program
 ! CHECK:             %[[VAL_6:.*]] = arith.constant 0 : i32
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 10 : i32
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 1 : i32
-! CHECK:             omp.wsloop reduction(@min_i32 %[[VAL_3]]#0 -> %[[VAL_9:.*]] : !fir.ref<i32>)  for  (%[[VAL_10:.*]]) : i32 = (%[[VAL_6]]) to (%[[VAL_7]]) inclusive step (%[[VAL_8]]) {
-! CHECK:               fir.store %[[VAL_10]] to %[[VAL_5]]#1 : !fir.ref<i32>
-! CHECK:               %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]] {uniq_name = "_QFEr"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:               %[[VAL_12:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
-! CHECK:               hlfir.assign %[[VAL_12]] to %[[VAL_11]]#0 : i32, !fir.ref<i32>
-! CHECK:               omp.yield
-! CHECK:             }
+! CHECK:             omp.wsloop reduction(@min_i32 %[[VAL_3]]#0 -> %[[VAL_9:.*]] : !fir.ref<i32>) {
+! CHECK-NEXT:          omp.loop_nest (%[[VAL_10:.*]]) : i32 = (%[[VAL_6]]) to (%[[VAL_7]]) inclusive step (%[[VAL_8]]) {
+! CHECK:                 %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]] {uniq_name = "_QFEr"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 fir.store %[[VAL_10]] to %[[VAL_5]]#1 : !fir.ref<i32>
+! CHECK:                 %[[VAL_12:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
+! CHECK:                 hlfir.assign %[[VAL_12]] to %[[VAL_11]]#0 : i32, !fir.ref<i32>
+! CHECK:                 omp.yield
+! CHECK:               }
+! CHECK:               omp.terminator
 ! CHECK:             omp.terminator
 ! CHECK:           }

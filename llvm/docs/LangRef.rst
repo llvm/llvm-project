@@ -11751,6 +11751,10 @@ Overview:
 The '``uitofp``' instruction regards ``value`` as an unsigned integer
 and converts that value to the ``ty2`` type.
 
+The ``nneg`` (non-negative) flag, if present, specifies that the
+operand is non-negative. This property may be used by optimization
+passes to later convert the ``uitofp`` into a ``sitofp``.
+
 Arguments:
 """"""""""
 
@@ -11768,6 +11772,9 @@ integer quantity and converts it to the corresponding floating-point
 value. If the value cannot be exactly represented, it is rounded using
 the default rounding mode.
 
+If the ``nneg`` flag is set, and the ``uitofp`` argument is negative,
+the result is a poison value.
+
 
 Example:
 """"""""
@@ -11776,6 +11783,9 @@ Example:
 
       %X = uitofp i32 257 to float         ; yields float:257.0
       %Y = uitofp i8 -1 to double          ; yields double:255.0
+
+      %a = uitofp nneg i32 256 to i32      ; yields float:256.0
+      %b = uitofp nneg i32 -256 to i32     ; yields i32 poison
 
 '``sitofp .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -12507,7 +12517,7 @@ This instruction requires several arguments:
       ``llvm::GuaranteedTailCallOpt`` is ``true``, or the calling convention
       is ``tailcc``
    -  `Platform-specific constraints are
-      met. <CodeGenerator.html#tailcallopt>`_
+      met. <CodeGenerator.html#tail-call-optimization>`_
 
 #. The optional ``notail`` marker indicates that the optimizers should not add
    ``tail`` or ``musttail`` markers to the call. It is used to prevent tail
@@ -14128,6 +14138,41 @@ The last argument specifies the value of the increment of the counter variable.
 Semantics:
 """"""""""
 See description of '``llvm.instrprof.increment``' intrinsic.
+
+'``llvm.instrprof.callsite``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.instrprof.callsite(ptr <name>, i64 <hash>,
+                                            i32 <num-counters>,
+                                            i32 <index>, ptr <callsite>)
+
+Overview:
+"""""""""
+
+.. FIXME: detail when it's emitted once the support is added
+
+The '``llvm.instrprof.callsite``' intrinsic should be emitted before a callsite
+that's not to a "fake" callee (like another intrinsic or asm).
+
+Arguments:
+""""""""""
+The first 4 arguments are similar to ``llvm.instrprof.increment``. The indexing
+is specific to callsites, meaning callsites are indexed from 0, independent from
+the indexes used by the other intrinsics (such as 
+``llvm.instrprof.increment[.step]``).
+
+The last argument is the called value of the callsite this intrinsic precedes.
+
+Semantics:
+""""""""""
+.. FIXME: detail how when the lowering pass is added.
+
+This is lowered by contextual profiling.
 
 '``llvm.instrprof.timestamp``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -28120,7 +28165,8 @@ Syntax:
 Arguments:
 """"""""""
 
-The first argument is a thread local :ref:`global variable <globalvars>`.
+The `llvm.threadlocal.address` intrinsic requires a global value argument (a
+:ref:`global variable <globalvars>` or alias) that is thread local.
 
 Semantics:
 """"""""""

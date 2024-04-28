@@ -221,8 +221,10 @@ set(BENCHMARK_TESTS
     map.bench.cpp
     monotonic_buffer.bench.cpp
     ordered_set.bench.cpp
+    shared_mutex_vs_mutex.bench.cpp
     stop_token.bench.cpp
     std_format_spec_string_unicode.bench.cpp
+    std_format_spec_string_unicode_escape.bench.cpp
     string.bench.cpp
     stringstream.bench.cpp
     system_error.bench.cpp

@@ -3700,7 +3700,8 @@ private:
     using DummyAttr = Fortran::evaluate::characteristics::DummyDataObject::Attr;
     if (auto procedure =
             Fortran::evaluate::characteristics::Procedure::Characterize(
-                userDefinedAssignment.proc(), getFoldingContext()))
+                userDefinedAssignment.proc(), getFoldingContext(),
+                /*emitError=*/false))
       if (!procedure->dummyArguments.empty())
         if (const auto *dataArg = std::get_if<
                 Fortran::evaluate::characteristics::DummyDataObject>(
@@ -3793,7 +3794,9 @@ private:
           auto needCleanup = fir::getIntIfConstant(cleanup);
           if (needCleanup && *needCleanup)
             temps.push_back(temp);
-          addSymbol(sym, temp, /*forced=*/true);
+          addSymbol(sym,
+                    hlfir::translateToExtendedValue(loc, builder, temp).first,
+                    /*forced=*/true);
           builder.create<fir::CUDADataTransferOp>(loc, addr, temp,
                                                   transferKindAttr);
           ++nbDeviceResidentObject;
@@ -3803,18 +3806,38 @@ private:
     return temps;
   }
 
+  // Check if the insertion point is currently in a device context. HostDevice
+  // subprogram are not considered fully device context so it will return false
+  // for it.
+  static bool isDeviceContext(fir::FirOpBuilder &builder) {
+    if (builder.getRegion().getParentOfType<fir::CUDAKernelOp>())
+      return true;
+    if (auto funcOp =
+            builder.getRegion().getParentOfType<mlir::func::FuncOp>()) {
+      if (auto cudaProcAttr =
+              funcOp.getOperation()->getAttrOfType<fir::CUDAProcAttributeAttr>(
+                  fir::getCUDAAttrName())) {
+        return cudaProcAttr.getValue() != fir::CUDAProcAttribute::Host &&
+               cudaProcAttr.getValue() != fir::CUDAProcAttribute::HostDevice;
+      }
+    }
+    return false;
+  }
+
   void genDataAssignment(
       const Fortran::evaluate::Assignment &assign,
       const Fortran::evaluate::ProcedureRef *userDefinedAssignment) {
     mlir::Location loc = getCurrentLocation();
     fir::FirOpBuilder &builder = getFirOpBuilder();
 
-    bool isCUDATransfer = Fortran::evaluate::HasCUDAAttrs(assign.lhs) ||
-                          Fortran::evaluate::HasCUDAAttrs(assign.rhs);
+    bool isInDeviceContext = isDeviceContext(builder);
+    bool isCUDATransfer = (Fortran::evaluate::HasCUDAAttrs(assign.lhs) ||
+                           Fortran::evaluate::HasCUDAAttrs(assign.rhs)) &&
+                          !isInDeviceContext;
     bool hasCUDAImplicitTransfer =
         Fortran::evaluate::HasCUDAImplicitTransfer(assign.rhs);
     llvm::SmallVector<mlir::Value> implicitTemps;
-    if (hasCUDAImplicitTransfer)
+    if (hasCUDAImplicitTransfer && !isInDeviceContext)
       implicitTemps = genCUDAImplicitDataTransfer(builder, loc, assign);
 
     // Gather some information about the assignment that will impact how it is
@@ -3879,7 +3902,7 @@ private:
         builder.create<hlfir::AssignOp>(loc, rhs, lhs,
                                         isWholeAllocatableAssignment,
                                         keepLhsLengthInAllocatableAssignment);
-      if (hasCUDAImplicitTransfer) {
+      if (hasCUDAImplicitTransfer && !isInDeviceContext) {
         localSymbols.popScope();
         for (mlir::Value temp : implicitTemps)
           builder.create<fir::FreeMemOp>(loc, temp);

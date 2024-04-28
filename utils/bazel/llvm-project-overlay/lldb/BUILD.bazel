@@ -16,7 +16,11 @@ package(
 
 licenses(["notice"])
 
-exports_files(["LICENSE.TXT"])
+exports_files([
+    "LICENSE.TXT",
+    "source/API/liblldb-private.exports",
+    "source/API/liblldb.exports",
+])
 
 bool_flag(
     name = "enable_curses",
@@ -203,13 +207,29 @@ cc_library(
         ":TargetHeaders",
         ":Utility",
         ":Version",
+        "//lldb/source/Plugins:PluginExpressionParserClang",
         "//lldb/source/Plugins:PluginExpressionParserClangHeaders",
         "//lldb/source/Plugins:PluginsConfig",
+        "//llvm:AllTargetsDisassemblers",
         "//llvm:ExecutionEngine",
         "//llvm:MCJIT",
         "//llvm:Support",
         "//llvm:config",
-    ],
+    ] + [
+        "//lldb/source/Plugins:Plugin{}".format(x)
+        for x in DEFAULT_PLUGINS + DEFAULT_SCRIPT_PLUGINS
+    ] + select({
+        "@platforms//os:macos": [
+            "//lldb/source/Plugins:PluginProcessMacOSXKernel",
+            "//lldb/source/Plugins:PluginSymbolLocatorDebugSymbols",
+            "//lldb/source/Plugins:PluginSymbolVendorMacOSX",
+        ],
+        "@platforms//os:linux": [
+            "//lldb/source/Plugins:PluginProcessLinux",
+        ],
+        "//conditions:default": [],
+    }),
+    alwayslink = True,
 )
 
 cc_library(
@@ -690,20 +710,8 @@ cc_library(
     name = "liblldb.static",
     deps = [
         ":API",
-        ":Host",
         ":Interpreter",
-        "//llvm:AllTargetsDisassemblers",
-    ] + [
-        "//lldb/source/Plugins:Plugin{}".format(x)
-        for x in DEFAULT_PLUGINS + DEFAULT_SCRIPT_PLUGINS
-    ] + select({
-        "@platforms//os:macos": [
-            "//lldb/source/Plugins:PluginProcessMacOSXKernel",
-            "//lldb/source/Plugins:PluginSymbolLocatorDebugSymbols",
-            "//lldb/source/Plugins:PluginSymbolVendorMacOSX",
-        ],
-        "//conditions:default": [],
-    }),
+    ],
 )
 
 cc_shared_library(
@@ -752,7 +760,13 @@ cc_binary(
     data = [
         ":lldb-argdumper",
     ] + select({
-        "@platforms//os:macos": [":debugserver"],
+        "@platforms//os:macos": [
+            ":debugserver",
+            ":lldb-server",
+        ],
+        "@platforms//os:linux": [
+            ":lldb-server",
+        ],
         "//conditions:default": [],
     }),
     deps = [
@@ -799,8 +813,8 @@ cc_library(
         ["tools/debugserver/source/**/*.cpp"],
         exclude = ["tools/debugserver/source/debugserver.cpp"],
     ),
-    tags = ["nobuildkite"],
     local_defines = ["LLDB_USE_OS_LOG"],
+    tags = ["nobuildkite"],
     deps = [
         ":DebugServerCommonHeaders",
         ":DebugServerCommonMacOSXHeaders",
@@ -851,4 +865,65 @@ cc_binary(
     name = "lldb-argdumper",
     srcs = glob(["tools/argdumper/*.cpp"]),
     deps = ["//llvm:Support"],
+)
+
+gentbl_cc_library(
+    name = "lldb_server_opts_gen",
+    strip_include_prefix = ".",
+    tbl_outs = [(
+        ["-gen-opt-parser-defs"],
+        "LLGSOptions.inc",
+    )],
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "tools/lldb-server/LLGSOptions.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
+cc_binary(
+    name = "lldb-server",
+    srcs = glob([
+        "tools/lldb-server/*.cpp",
+        "tools/lldb-server/*.h",
+    ]),
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "@platforms//os:macos": [],
+        # TODO: This can theoretically support more platforms, but it hasn't been tested yet
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":Host",
+        ":Initialization",
+        ":Interpreter",
+        ":Utility",
+        ":Version",
+        ":lldb_server_opts_gen",
+        "//lldb:Target",
+        "//lldb:TargetHeaders",
+        "//lldb/source/Plugins:PluginCPlusPlusLanguage",
+        "//lldb/source/Plugins:PluginExpressionParserClang",
+        "//lldb/source/Plugins:PluginInstructionARM",
+        "//lldb/source/Plugins:PluginInstructionARM64",
+        "//lldb/source/Plugins:PluginInstructionLoongArch",
+        "//lldb/source/Plugins:PluginInstructionMIPS",
+        "//lldb/source/Plugins:PluginInstructionMIPS64",
+        "//lldb/source/Plugins:PluginInstructionRISCV",
+        "//lldb/source/Plugins:PluginObjCLanguage",
+        "//lldb/source/Plugins:PluginProcessGDBRemote",
+        "//lldb/source/Plugins:PluginSymbolFileDWARF",
+        "//lldb/source/Plugins:PluginSymbolFileNativePDB",
+        "//lldb/source/Plugins:PluginSymbolFilePDB",
+        "//lldb/source/Plugins:PluginTypeSystemClang",
+        "//llvm:Option",
+        "//llvm:Support",
+    ] + select({
+        "@platforms//os:linux": [
+            "//lldb/source/Plugins:PluginObjectFileELF",
+            "//lldb/source/Plugins:PluginProcessLinux",
+        ],
+        "@platforms//os:macos": [
+            "//lldb/source/Plugins:PluginObjectFileMachO",
+        ],
+        "//conditions:default": [],
+    }),
 )
