@@ -176,10 +176,11 @@ void DiffAtLoc::print(raw_ostream &OS) {
 }
 
 /// \returns json array representation of a vecotor of remark arguments.
-static json::Array remarkArgsToJson(SmallVectorImpl<RemarkArgInfo> &Args) {
+static json::Array
+remarkArgsToJson(const SmallVectorImpl<RemarkArgInfo> &Args) {
   json::Array ArgArray;
   for (auto Arg : Args) {
-    json::Object ArgPair({{Arg.Key, Arg.Val}});
+    json::Object ArgPair = Arg.toJson();
     ArgArray.push_back(std::move(ArgPair));
   }
   return ArgArray;
@@ -193,12 +194,12 @@ void remarkHeaderToJson(json::Object &RemarkObj,
 }
 
 /// \returns remark representation as a json object.
-static json::Object remarkToJSON(const RemarkInfo &Remark) {
+json::Object RemarkInfo::toJson() const {
   json::Object RemarkJSON;
-  remarkHeaderToJson(RemarkJSON, Remark.RemarkHeader);
-  RemarkJSON["RemarkType"] = typeToStr(Remark.RemarkType);
+  remarkHeaderToJson(RemarkJSON, RemarkHeader);
+  RemarkJSON["RemarkType"] = typeToStr(RemarkType);
   if (Verbose)
-    RemarkJSON["Args"] = remarkArgsToJson(Remark.Args);
+    RemarkJSON["Args"] = remarkArgsToJson(Args);
   return RemarkJSON;
 }
 
@@ -246,9 +247,9 @@ json::Object DiffAtLoc::toJson() {
   json::Array OnlyBObj;
   json::Array HasSameHeaderObj;
   for (auto R : OnlyA)
-    OnlyAObj.push_back(remarkToJSON(R));
+    OnlyAObj.push_back(R.toJson());
   for (auto R : OnlyB)
-    OnlyBObj.push_back(remarkToJSON(R));
+    OnlyBObj.push_back(R.toJson());
   for (auto R : HasTheSameHeader)
     HasSameHeaderObj.push_back(R.toJson());
   if (!OnlyShowCommonRemarks) {

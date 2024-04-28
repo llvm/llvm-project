@@ -32,6 +32,7 @@ struct RemarkArgInfo {
   RemarkArgInfo(StringRef Key, StringRef Val)
       : Key(Key.str()), Val(Val.str()) {}
   void print(raw_ostream &OS) const;
+  json::Object toJson() { return json::Object({{Key, Val}}); }
 };
 
 hash_code hash_value(const RemarkArgInfo &Arg) {
@@ -83,6 +84,7 @@ struct RemarkInfo {
     return RemarkHeader == RHS.RemarkHeader;
   };
   void print(raw_ostream &OS) const;
+  json::Object toJson() const;
 };
 
 inline bool operator<(const RemarkArgInfo &LHS, const RemarkArgInfo &RHS) {
