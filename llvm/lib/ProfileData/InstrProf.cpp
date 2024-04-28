@@ -1625,13 +1625,18 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
   if (ProfileRecordedProfileVersion >= ProfVersion::Version13) {
     // Starting from version 13, profiles should records header's on-disk byte
     // size and the minimum profile reader version required.
-    H.OnDiskHeaderByteSize = read(Buffer, kOnDiskSizeOffset);
+    H.OnDiskHeaderByteSize =
+        endian::byte_swap<uint64_t, llvm::endianness::little>(
+            read(Buffer, kOnDiskSizeOffset));
     H.MinimumProfileReaderVersion =
-        read(Buffer, kOnDiskSizeOffset + sizeof(uint64_t));
+        endian::byte_swap<uint64_t, llvm::endianness::little>(
+            read(Buffer, kOnDiskSizeOffset + sizeof(uint64_t)));
     H.TemporalProfSectionSize =
-        read(Buffer, kOnDiskSizeOffset + 2 * sizeof(uint64_t));
+        endian::byte_swap<uint64_t, llvm::endianness::little>(
+            read(Buffer, kOnDiskSizeOffset + 2 * sizeof(uint64_t)));
     H.OnDiskProfileByteSize =
-        read(Buffer, kOnDiskSizeOffset + 3 * sizeof(uint64_t));
+        endian::byte_swap<uint64_t, llvm::endianness::little>(
+            read(Buffer, kOnDiskSizeOffset + 3 * sizeof(uint64_t)));
   } else {
     // Prior to version 13, the largest version supported by the reader
     // (ProfVersion::CurrentVersion) must be greater than or equal to the

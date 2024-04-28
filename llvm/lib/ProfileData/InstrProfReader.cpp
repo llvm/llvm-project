@@ -1390,11 +1390,19 @@ Error IndexedInstrProfReader::readHeader() {
 
   if (ProfileRecordedVersion >= 10 &&
       Header->formatVersion() & VARIANT_MASK_TEMPORAL_PROF) {
+    auto getTemporalProfBufferEnd =
+        [&](const unsigned char *TemporalProfBufferStart)
+        -> const unsigned char * {
+      if (ProfileRecordedVersion <= 12)
+        return (const unsigned char *)DataBuffer->getBufferEnd();
+
+      return TemporalProfBufferStart + Header->TemporalProfSectionSize;
+    };
     uint64_t TemporalProfTracesOffset =
         endian::byte_swap<uint64_t, llvm::endianness::little>(
             Header->TemporalProfTracesOffset);
     const unsigned char *Ptr = Start + TemporalProfTracesOffset;
-    const auto *PtrEnd = ProfileBufferEnd;
+    const auto *PtrEnd = getTemporalProfBufferEnd(Ptr);
     // Expect at least two 64 bit fields: NumTraces, and TraceStreamSize
     if (Ptr + 2 * sizeof(uint64_t) > PtrEnd)
       return error(instrprof_error::truncated);
