@@ -10,8 +10,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USESTDFORMATCHECK_H
 
 #include "../ClangTidyCheck.h"
-
-#include "../ClangTidyCheck.h"
 #include "../utils/IncludeInserter.h"
 
 namespace clang::tidy::modernize {
