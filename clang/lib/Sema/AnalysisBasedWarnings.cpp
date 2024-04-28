@@ -3028,7 +3028,7 @@ private:
 
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
       tmp_assert(FD->getBuiltinID() == 0);
-      isExternC = FD->isExternCContext();
+      isExternC = FD->getCanonicalDecl()->isExternCContext();
     }
 
     // For C++, with non-extern "C" linkage only - if any of the Decl's declared
