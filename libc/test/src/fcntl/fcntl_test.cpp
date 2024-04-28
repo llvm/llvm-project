@@ -15,7 +15,8 @@
 
 TEST(LlvmLibcFcntlTest, FcntlDupfd) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_FILE = "testdata/fcntl.test";
+  constexpr const char *TEST_FILE_NAME = "testdata/fcntl_dup.test";
+  auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
   int fd2, fd3;
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_TRUNC, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
@@ -36,7 +37,8 @@ TEST(LlvmLibcFcntlTest, FcntlDupfd) {
 
 TEST(LlvmLibcFcntlTest, FcntlGetFl) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_FILE = "testdata/fcntl.test";
+  constexpr const char *TEST_FILE_NAME = "testdata/fcntl_getfl.test";
+  auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
   int retVal;
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_TRUNC, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
@@ -51,7 +53,8 @@ TEST(LlvmLibcFcntlTest, FcntlGetFl) {
 
 TEST(LlvmLibcFcntlTest, FcntlSetFl) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_FILE = "testdata/fcntl.test";
+  constexpr const char *TEST_FILE_NAME = "testdata/fcntl_setfl.test";
+  auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
 
   int retVal;
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_TRUNC | O_RDWR, S_IRWXU);
@@ -85,11 +88,13 @@ TEST(LlvmLibcFcntlTest, FcntlSetFl) {
 
 TEST(LlvmLibcFcntlTest, FcntlGetLkRead) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_FILE = "testdata/fcntl.test";
+  constexpr const char *TEST_FILE_NAME = "testdata/fcntl_getlkread.test";
+  auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
 
   struct flock flk, svflk;
   int retVal;
-  int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_TRUNC | O_RDONLY);
+  int fd =
+      LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_TRUNC | O_RDONLY, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
 
@@ -115,7 +120,8 @@ TEST(LlvmLibcFcntlTest, FcntlGetLkRead) {
 
 TEST(LlvmLibcFcntlTest, FcntlGetLkWrite) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_FILE = "testdata/fcntl.test";
+  constexpr const char *TEST_FILE_NAME = "testdata/fcntl_getlkwrite.test";
+  auto TEST_FILE = libc_make_test_file_path(TEST_FILE_NAME);
 
   struct flock flk, svflk;
   int retVal;

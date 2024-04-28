@@ -9,6 +9,7 @@
 #include "src/fcntl/fcntl.h"
 
 #include "hdr/fcntl_macros.h"
+#include "hdr/types/struct_f_owner_ex.h"
 #include "hdr/types/struct_flock.h"
 #include "hdr/types/struct_flock64.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
@@ -17,20 +18,6 @@
 
 #include <stdarg.h>
 #include <sys/syscall.h> // For syscall numbers.
-
-// To avoid conflict with system headers when building
-// in overlay mode.
-namespace helper {
-enum pid_type {
-  F_OWNER_TID = 0,
-  F_OWNER_PID,
-  F_OWNER_PGRP,
-};
-struct fowner_ex {
-  enum pid_type type;
-  pid_t pid;
-};
-} // namespace helper
 
 // The OFD file locks require special handling for LARGEFILES
 namespace LIBC_NAMESPACE {
@@ -86,22 +73,21 @@ LLVM_LIBC_FUNCTION(int, fcntl, (int fd, int cmd, ...)) {
     flk->l_pid = flk64.l_pid;
     return retVal;
   }
-    // The general case
-  default: {
-    if (cmd == F_GETOWN) {
-      struct helper::fowner_ex fex;
-      int retVal = syscall_impl<int>(SYS_fcntl, fd, F_GETOWN_EX, &fex);
-      if (retVal == -EINVAL)
-        return syscall_impl<int>(SYS_fcntl, fd, cmd,
-                                 reinterpret_cast<void *>(arg));
-      if (static_cast<uint64_t>(retVal) <= -4096UL)
-        return fex.type == helper::F_OWNER_PGRP ? -fex.pid : fex.pid;
+  case F_GETOWN: {
+    struct f_owner_ex fex;
+    int retVal = syscall_impl<int>(SYS_fcntl, fd, F_GETOWN_EX, &fex);
+    if (retVal == -EINVAL)
+      return syscall_impl<int>(SYS_fcntl, fd, cmd,
+                               reinterpret_cast<void *>(arg));
+    if (static_cast<unsigned long>(retVal) <= -4096UL)
+      return fex.type == F_OWNER_PGRP ? -fex.pid : fex.pid;
 
-      libc_errno = -retVal;
-      return -1;
-    }
-    return syscall_impl<int>(SYS_fcntl, fd, cmd, reinterpret_cast<void *>(arg));
+    libc_errno = -retVal;
+    return -1;
   }
+  // The general case
+  default:
+    return syscall_impl<int>(SYS_fcntl, fd, cmd, reinterpret_cast<void *>(arg));
   }
 }
 } // namespace LIBC_NAMESPACE

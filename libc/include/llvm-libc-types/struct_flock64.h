@@ -13,8 +13,8 @@
 #include "llvm-libc-types/pid_t.h"
 
 struct flock64 {
-  int16_t l_type;
-  int16_t l_whence;
+  short int l_type;
+  short int l_whence;
   off64_t l_start;
   off64_t l_len;
   pid_t l_pid;

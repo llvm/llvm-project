@@ -12,9 +12,9 @@
 #include "llvm-libc-types/off_t.h"
 #include "llvm-libc-types/pid_t.h"
 
-struct flock64 {
-  int16_t l_type;
-  int16_t l_whence;
+struct flock {
+  short int l_type;
+  short int l_whence;
   off_t l_start;
   off_t l_len;
   pid_t l_pid;
