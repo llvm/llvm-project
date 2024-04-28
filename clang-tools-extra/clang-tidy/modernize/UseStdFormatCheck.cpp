@@ -93,8 +93,7 @@ void UseStdFormatCheck::check(const MatchFinder::MatchResult &Result) {
       diag(StrFormatCall->getBeginLoc(), "use '%0' instead of %1")
       << ReplacementFormatFunction << OldFunction->getIdentifier();
   Diag << FixItHint::CreateReplacement(
-      CharSourceRange::getTokenRange(StrFormatCall->getBeginLoc(),
-                                     StrFormatCall->getEndLoc()),
+    CharSourceRange::getTokenRange(StrFormatCall->getSourceRange()),
       ReplacementFormatFunction);
   Converter.applyFixes(Diag, *Result.SourceManager);
 
