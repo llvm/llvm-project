@@ -296,6 +296,7 @@ class UnaryFn:
     rsqrt = UnaryFnType("rsqrt")
     square = UnaryFnType("square")
     tanh = UnaryFnType("tanh")
+    erf = UnaryFnType("erf")
 
 
 class BinaryFnType:

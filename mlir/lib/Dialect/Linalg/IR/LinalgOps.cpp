@@ -411,6 +411,8 @@ public:
       return builder.create<arith::MulFOp>(arg.getLoc(), arg, arg);
     case UnaryFn::tanh:
       return builder.create<math::TanhOp>(arg.getLoc(), arg);
+    case UnaryFn::erf:
+      return builder.create<math::ErfOp>(arg.getLoc(), arg);
     }
     llvm_unreachable("unsupported unary function");
   }

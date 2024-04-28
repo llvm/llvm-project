@@ -169,6 +169,18 @@ def tanh(
 
 
 @linalg_structured_op
+def erf(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies erf(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.erf(I[None])
+
+
+@linalg_structured_op
 def elemwise_binary(
     lhs=TensorDef(T1),
     rhs=TensorDef(T2),

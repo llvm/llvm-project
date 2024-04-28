@@ -272,6 +272,22 @@ func.func @tanh_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
 
 // -----
 
+func.func @erf_type_cast(%arg: memref<4x8x16xf16>, %out: memref<4x8x16xf32>) {
+  // CHECK: operand 1 ('f16') doesn't match the element type of the enclosing linalg.generic op ('f32')
+  linalg.erf ins(%arg : memref<4x8x16xf16>) outs(%out: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
+func.func @erf_broadcast(%arg: memref<8x16xf32>, %out: memref<4x8x16xf32>) {
+  // CHECK: op expected operand rank (2) to match the result rank of indexing_map #0 (3)
+  linalg.erf ins(%arg : memref<8x16xf32>) outs(%out: memref<4x8x16xf32>)
+  return
+}
+
+// -----
+
 func.func @max_type_cast(%arg0: memref<4x8x16xf32>, %arg1: memref<4x8x16xf16>, %arg2: memref<4x8x16xf32>) {
   // CHECK: op requires the same type for all operands and results
   linalg.max ins(%arg0, %arg1 : memref<4x8x16xf32>, memref<4x8x16xf16>) outs(%arg2: memref<4x8x16xf32>)

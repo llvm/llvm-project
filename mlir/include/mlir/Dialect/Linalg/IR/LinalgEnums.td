@@ -28,7 +28,8 @@ def UnaryFn : I32EnumAttr<"UnaryFn", "", [
   I32EnumAttrCase<"sqrt", 8>,
   I32EnumAttrCase<"rsqrt", 9>,
   I32EnumAttrCase<"square", 10>,
-  I32EnumAttrCase<"tanh", 11>
+  I32EnumAttrCase<"tanh", 11>,
+  I32EnumAttrCase<"erf", 12>
 ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::linalg";
