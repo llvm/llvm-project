@@ -628,10 +628,12 @@ void FormatStringConverter::finalizeFormatText() {
 
   // It's clearer to convert printf("Hello\r\n"); to std::print("Hello\r\n")
   // than to std::println("Hello\r");
+  // Use StringRef until C++20 std::string::ends_with() is available.
+  const auto StandardFormatStringRef = StringRef(StandardFormatString);
   if (Config.AllowTrailingNewlineRemoval &&
-      StringRef(StandardFormatString).ends_with("\\n") &&
-      !StringRef(StandardFormatString).ends_with("\\\\n") &&
-      !StringRef(StandardFormatString).ends_with("\\r\\n")) {
+      StandardFormatStringRef.ends_with("\\n") &&
+      !StandardFormatStringRef.ends_with("\\\\n") &&
+      !StandardFormatStringRef.ends_with("\\r\\n")) {
     UsePrintNewlineFunction = true;
     FormatStringNeededRewriting = true;
     StandardFormatString.erase(StandardFormatString.end() - 2,
