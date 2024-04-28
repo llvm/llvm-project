@@ -441,3 +441,28 @@ func.func @switch(%arg0: index) -> i32 {
 
   return %0 : i32
 }
+
+// CHECK-LABEL: @scope
+// CHECK-SAME: %[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: f32, %[[VAL_2:.*]]: f32
+func.func @scope(%arg0 : i32, %arg1 : f32, %arg2 : f32) -> (f32) {
+  // CHECK: %[[VAL_3:.*]] = arith.constant 77 : i32
+  %c77 = arith.constant 77 : i32
+
+  // CHECK: %[[VAL_4:.*]]:2 = scf.scope %[[VAL_0]], %[[VAL_3]], %[[VAL_1]], %[[VAL_2]] : (i32, i32, f32, f32) -> (i32, f32)
+  %p:2 = scf.scope %arg0, %c77, %arg1, %arg2 : (i32, i32, f32, f32) -> (i32, f32) {
+  // CHECK: ^bb0(%[[VAL_5:.*]]: i32, %[[VAL_6:.*]]: i32, %[[VAL_7:.*]]: f32, %[[VAL_8:.*]]: f32):
+  ^bb0(%a : i32, %b : i32, %c : f32, %d : f32):
+    // CHECK: %[[VAL_9:.*]] = arith.addi %[[VAL_5]], %[[VAL_6]] : i32
+    %add = arith.addi %a, %b : i32
+    // CHECK: %[[VAL_10:.*]] = arith.mulf %[[VAL_7]], %[[VAL_8]] : f32
+    %mul = arith.mulf %c, %d : f32
+    // CHECK: scf.yield %[[VAL_9]], %[[VAL_10]] : i32, f32
+    scf.yield %add, %mul : i32, f32
+  }
+
+  // CHECK: %[[VAL_11:.*]] = arith.sitofp %[[VAL_4:.*]]#0 : i32 to f32
+  %m = arith.sitofp %p#0 : i32 to f32
+  // CHECK: %[[VAL_13:.*]] = arith.subf %[[VAL_11]], %[[VAL_4]]#1 : f32
+  %r = arith.subf %m, %p#1 : f32
+  return %r : f32
+}

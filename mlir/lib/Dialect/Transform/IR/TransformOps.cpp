@@ -8,9 +8,12 @@
 
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 
+#include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
@@ -19,6 +22,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
@@ -801,6 +805,293 @@ DiagnosedSilenceableFailure transform::ApplyRegisteredPassOp::applyToOne(
 
   results.push_back(target);
   return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// AsScopeOp
+//===----------------------------------------------------------------------===//
+
+/// Helper function for getting the (first, last) pair of ops in the closed
+/// interval of ops specified as argument. All ops must belong to the same block
+/// and are not assumed to be ordered from earliest to latest. The function
+/// finds the earliest and latest ops and verifies that given ops indeed form an
+/// interval, i.e. that all ops between earliest and latest are in the set.
+static std::optional<std::pair<Operation *, Operation *>>
+getInterval(SetVector<Operation *> &ops) {
+  assert(!ops.empty() && "Expected non-empty operation list");
+  Operation *earliest = ops[0];
+  Operation *latest = ops[ops.size() - 1];
+  Block *block = earliest->getBlock();
+  if (latest->getBlock() != block)
+    return std::nullopt;
+  if (latest->isBeforeInBlock(earliest))
+    std::swap(earliest, latest);
+  for (Operation *op : ops) {
+    if (op->getBlock() != block)
+      return std::nullopt;
+    if (op->isBeforeInBlock(earliest)) {
+      earliest = op;
+      continue;
+    }
+    if (latest->isBeforeInBlock(op))
+      latest = op;
+  }
+
+  // Make sure all operations between earliest and latest are in ops.
+  auto end = latest->getIterator();
+  for (auto it = earliest->getIterator(); it != end; ++it)
+    if (!ops.contains(&*it))
+      return std::nullopt;
+
+  return std::make_pair(earliest, latest);
+}
+
+DiagnosedSilenceableFailure
+transform::AsScopeOp::apply(transform::TransformRewriter &rewriter,
+                            transform::TransformResults &results,
+                            transform::TransformState &state) {
+  Value ops = getWhat();
+  SetVector<Operation *> opsPayload;
+  SmallVector<Operation *> opsClones;
+  SmallVector<Value> liveIns;
+  DenseMap<Value, unsigned> liveInIndex;
+  SmallVector<Value> liveOuts;
+  DenseMap<Value, unsigned> liveOutIndex;
+  SmallVector<Type> resultTypes;
+
+  for (Operation *payload : state.getPayloadOps(ops))
+    opsPayload.insert(payload);
+
+  Operation *wherePayload = nullptr;
+  Value whereOp = getWhereOp();
+  RelativeLocation where;
+  if (whereOp) {
+    auto wherePayloadOps = state.getPayloadOps(whereOp);
+    if (!llvm::hasSingleElement(wherePayloadOps)) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError() << "expects a single location for the scope";
+      diag.attachNote(whereOp.getLoc()) << "single location";
+      return diag;
+    }
+    wherePayload = *wherePayloadOps.begin();
+    where = *getWhere();
+  } else {
+    // No insertion point specified, so payload ops must form an interval.
+    auto interval = getInterval(opsPayload);
+    if (!interval) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError()
+          << "payload ops must form an interval unless insertion point "
+             "is specified";
+      diag.attachNote(ops.getLoc()) << "not an interval";
+      return diag;
+    }
+    Operation *last;
+    std::tie(std::ignore, last) = *interval;
+    wherePayload = last;
+    where = RelativeLocation::After;
+  }
+
+  auto isInScope = [&opsPayload](Operation *operation) {
+    return opsPayload.contains(operation);
+  };
+
+  unsigned nextScopeOperandIndex = 0;
+  unsigned nextScopeResultIndex = 0;
+
+  for (auto payload : opsPayload) {
+    if (payload == getOperation()) {
+      auto diag = emitDefiniteFailure()
+                  << "scope ops must not contain the transform being applied";
+      diag.attachNote(payload->getLoc()) << "scope";
+      return diag;
+    }
+
+    for (Value operand : payload->getOperands()) {
+      if (liveInIndex.contains(operand))
+        continue; // Already set as a live in.
+
+      Operation *def = operand.getDefiningOp();
+      if (def && opsPayload.contains(def))
+        continue; // Will be defined within scope, so not a live in.
+
+      // Set this operand as the next operand of the scope op.
+      liveIns.push_back(operand);
+      liveInIndex[operand] = nextScopeOperandIndex++;
+    }
+    for (Value result : payload->getResults()) {
+      if (liveOutIndex.contains(result))
+        continue; // Already set as a live out.
+      if (llvm::all_of(result.getUsers(), isInScope))
+        continue; // All users are in scope, so not a live out.
+
+      // Set this result as the next result of the scope op.
+      liveOuts.push_back(result);
+      liveOutIndex[result] = nextScopeResultIndex++;
+      resultTypes.push_back(result.getType());
+    }
+  }
+
+  if (where == RelativeLocation::Before)
+    rewriter.setInsertionPoint(wherePayload);
+  else
+    rewriter.setInsertionPointAfter(wherePayload);
+
+  TypeRange noTypes;
+  ValueRange noValues;
+  auto executeRegion = rewriter.create<scf::ExecuteRegionOp>(
+      wherePayload->getLoc(), noTypes, noValues);
+  Block &executeRegionBody = executeRegion.getRegion().emplaceBlock();
+  rewriter.setInsertionPointToStart(&executeRegionBody);
+  auto scope = rewriter.create<scf::ScopeOp>(wherePayload->getLoc(),
+                                             resultTypes, liveIns);
+  Region *scopeBody = &scope.getBody();
+  SmallVector<Location> argLocs(liveIns.size(), scope.getLoc());
+  SmallVector<Type> argTypes;
+  for (Value liveIn : liveIns)
+    argTypes.push_back(liveIn.getType());
+  Block *scopeBlock = rewriter.createBlock(scopeBody, scopeBody->end(),
+                                           argTypes, argLocs);
+
+  IRMapping mapper;
+  for (Value liveIn : liveIns)
+    mapper.map(liveIn, scopeBlock->getArgument(liveInIndex[liveIn]));
+
+  rewriter.setInsertionPointToEnd(scopeBlock);
+  for (auto payload : opsPayload)
+    rewriter.clone(*payload, mapper);
+
+  SmallVector<Value> scopeResults;
+  for (Value liveOut : liveOuts)
+    scopeResults.push_back(mapper.lookup(liveOut));
+  rewriter.create<scf::YieldOp>(scope.getLoc(), scopeResults);
+
+  Region &body = getBody();
+
+  DiagnosedSilenceableFailure result = DiagnosedSilenceableFailure::success();
+
+  // Create a region scope for the transform::as_scope region and run the
+  // transformations it contains. This is done in a syntactic C++ scope since
+  // we'll be deleting the scf::scope, and its mapping will become invalid if
+  // left until compactOpHandles() is called.
+  {
+    auto regionScope = state.make_region_scope(body);
+    if (failed(state.mapBlockArguments(body.front().getArgument(0), {scope})))
+      return DiagnosedSilenceableFailure::definiteFailure();
+
+    for (Operation &transform : body.front().without_terminator()) {
+      result = state.applyTransform(cast<TransformOpInterface>(transform));
+      if (result.isSilenceableFailure()) {
+        LLVM_DEBUG(DBGS() << "transformation on scope failed: "
+                          << result.getMessage() << "\n");
+        break;
+      }
+
+      if (failed(result.silence()))
+        return DiagnosedSilenceableFailure::definiteFailure();
+    }
+
+    // Since the transformations applied may have replaced the scope, get the
+    // current scope from the wrapping scf.execute_region.
+    scope = dyn_cast<scf::ScopeOp>(*executeRegionBody.getOperations().begin());
+    scope->moveAfter(executeRegion);
+    rewriter.eraseOp(executeRegion);
+    if (!scope) {
+      LLVM_DEBUG(DBGS() << "scope missing post transformation\n");
+      return DiagnosedSilenceableFailure::definiteFailure();
+    }
+    if (failed(scope.verify())) {
+      LLVM_DEBUG(DBGS() << "invalid scope post transformation\n");
+      return DiagnosedSilenceableFailure::definiteFailure();
+    }
+    scopeBody = &scope.getBody();
+    scopeBlock = &scopeBody->front();
+  }
+
+  if (!result.succeeded()) {
+    // Erase the scope and return a silenaceable failure.
+    rewriter.eraseOp(scope);
+    return result;
+  }
+
+  // The transformations applied to the scope succeeded. Complete the
+  // transformation by inlining the new contents of the scope and having
+  // the scope's yielded values replace the original live-out values.
+  // Finally, erase the original ops.
+
+  LLVM_DEBUG(DBGS() << "scope after transformations: " << scope << "\n");
+
+  // Update the live-outs to what the scope's terminator now yields.
+  auto scopeYield = cast<scf::YieldOp>(scopeBlock->getTerminator());
+  SmallVector<Value> transformedLiveOuts =
+      llvm::to_vector(scopeYield.getResults());
+
+  IRMapping inlineMapper;
+  for (auto [blockArg, operand] :
+       llvm::zip(scopeBlock->getArguments(), scope.getOperands()))
+    inlineMapper.map(blockArg, operand);
+
+  rewriter.setInsertionPoint(scope);
+  for (Operation &scopeOp : scopeBlock->without_terminator())
+    rewriter.clone(scopeOp, inlineMapper);
+
+  // Replace users with the transformed live outs, except users which belong to
+  // the original payload ops. Once done, any remaining user of any payload op
+  // must itself be a payload op.
+  for (auto [liveOut, transformedLiveOut] :
+       llvm::zip(liveOuts, transformedLiveOuts)) {
+    Value inlinedLiveOut = inlineMapper.lookup<Value>(transformedLiveOut);
+    rewriter.replaceUsesWithIf(liveOut, inlinedLiveOut,
+                               [&isInScope](OpOperand &operand) {
+                                 return !isInScope(operand.getOwner());
+                               });
+  }
+  assert(llvm::all_of(opsPayload,
+                      [&opsPayload](Operation *payload) {
+                        return llvm::all_of(payload->getUsers(),
+                                            [&opsPayload](Operation *user) {
+                                              return opsPayload.contains(user);
+                                            });
+                      }) &&
+         "Expected users of payload ops to be the payload ops themselves");
+
+  rewriter.eraseOp(scope);
+
+  // Erase the original payload ops. Since these ops might still be using each
+  // other, they must be erased in use-before-def order.
+  while (!opsPayload.empty()) {
+    for (auto payload : llvm::make_early_inc_range(opsPayload)) {
+      if (payload->getUsers().empty()) {
+        rewriter.eraseOp(payload);
+        opsPayload.remove(payload);
+      }
+    }
+  }
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::AsScopeOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getWhereOp(), effects);
+  consumesHandle(getWhat(), effects);
+  producesHandle(getResults(), effects);
+  modifiesPayload(effects);
+}
+
+LogicalResult transform::AsScopeOp::verify() {
+  Region &body = getBody();
+  Block &block = body.front();
+  Operation *terminator = block.getTerminator();
+  if (terminator->getOperands().getTypes() != getResults().getTypes()) {
+    InFlightDiagnostic diag = emitOpError()
+                              << "expects terminator operands to have the "
+                                 "same type as results of the operation";
+    diag.attachNote(terminator->getLoc()) << "terminator";
+    return diag;
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
