@@ -20,7 +20,7 @@ static inline mlir::Type getLlvmPtrType(mlir::MLIRContext *context,
 }
 
 static unsigned getTypeDescFieldId(mlir::Type ty) {
-  auto isArray = fir::dyn_cast_ptrOrBoxEleTy(ty).isa<fir::SequenceType>();
+  auto isArray = mlir::isa<fir::SequenceType>(fir::dyn_cast_ptrOrBoxEleTy(ty));
   return isArray ? kOptTypePtrPosInBox : kDimsPosInBox;
 }
 
@@ -37,7 +37,7 @@ ConvertFIRToLLVMPattern::ConvertFIRToLLVMPattern(
 // reference.
 mlir::Type
 ConvertFIRToLLVMPattern::convertObjectType(mlir::Type firType) const {
-  if (auto boxTy = firType.dyn_cast<fir::BaseBoxType>())
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(firType))
     return lowerTy().convertBoxTypeAsStruct(boxTy);
   return lowerTy().convertType(firType);
 }
@@ -69,7 +69,7 @@ ConvertFIRToLLVMPattern::integerCast(mlir::Location loc,
   auto valTy = val.getType();
   // If the value was not yet lowered, lower its type so that it can
   // be used in getPrimitiveTypeSizeInBits.
-  if (!valTy.isa<mlir::IntegerType>())
+  if (!mlir::isa<mlir::IntegerType>(valTy))
     valTy = convertType(valTy);
   auto toSize = mlir::LLVM::getPrimitiveTypeSizeInBits(ty);
   auto fromSize = mlir::LLVM::getPrimitiveTypeSizeInBits(valTy);
@@ -91,7 +91,7 @@ ConvertFIRToLLVMPattern::getBoxTypePair(mlir::Type firBoxTy) const {
 mlir::Value ConvertFIRToLLVMPattern::getValueFromBox(
     mlir::Location loc, TypePair boxTy, mlir::Value box, mlir::Type resultTy,
     mlir::ConversionPatternRewriter &rewriter, int boxValue) const {
-  if (box.getType().isa<mlir::LLVM::LLVMPointerType>()) {
+  if (mlir::isa<mlir::LLVM::LLVMPointerType>(box.getType())) {
     auto pty = getLlvmPtrType(resultTy.getContext());
     auto p = rewriter.create<mlir::LLVM::GEPOp>(
         loc, pty, boxTy.llvm, box,
@@ -133,7 +133,7 @@ llvm::SmallVector<mlir::Value, 3> ConvertFIRToLLVMPattern::getDimsFromBox(
 mlir::Value ConvertFIRToLLVMPattern::loadDimFieldFromBox(
     mlir::Location loc, TypePair boxTy, mlir::Value box, mlir::Value dim,
     int off, mlir::Type ty, mlir::ConversionPatternRewriter &rewriter) const {
-  assert(box.getType().isa<mlir::LLVM::LLVMPointerType>() &&
+  assert(mlir::isa<mlir::LLVM::LLVMPointerType>(box.getType()) &&
          "descriptor inquiry with runtime dim can only be done on descriptor "
          "in memory");
   mlir::LLVM::GEPOp p = genGEP(loc, boxTy.llvm, rewriter, box, 0,
@@ -146,7 +146,7 @@ mlir::Value ConvertFIRToLLVMPattern::loadDimFieldFromBox(
 mlir::Value ConvertFIRToLLVMPattern::getDimFieldFromBox(
     mlir::Location loc, TypePair boxTy, mlir::Value box, int dim, int off,
     mlir::Type ty, mlir::ConversionPatternRewriter &rewriter) const {
-  if (box.getType().isa<mlir::LLVM::LLVMPointerType>()) {
+  if (mlir::isa<mlir::LLVM::LLVMPointerType>(box.getType())) {
     mlir::LLVM::GEPOp p = genGEP(loc, boxTy.llvm, rewriter, box, 0,
                                  static_cast<int>(kDimsPosInBox), dim, off);
     auto loadOp = rewriter.create<mlir::LLVM::LoadOp>(loc, ty, p);
@@ -184,12 +184,12 @@ mlir::Value ConvertFIRToLLVMPattern::getElementSizeFromBox(
 mlir::Type ConvertFIRToLLVMPattern::getBoxEleTy(
     mlir::Type type, llvm::ArrayRef<std::int64_t> indexes) const {
   for (unsigned i : indexes) {
-    if (auto t = type.dyn_cast<mlir::LLVM::LLVMStructType>()) {
+    if (auto t = mlir::dyn_cast<mlir::LLVM::LLVMStructType>(type)) {
       assert(!t.isOpaque() && i < t.getBody().size());
       type = t.getBody()[i];
-    } else if (auto t = type.dyn_cast<mlir::LLVM::LLVMArrayType>()) {
+    } else if (auto t = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(type)) {
       type = t.getElementType();
-    } else if (auto t = type.dyn_cast<mlir::VectorType>()) {
+    } else if (auto t = mlir::dyn_cast<mlir::VectorType>(type)) {
       type = t.getElementType();
     } else {
       fir::emitFatalError(mlir::UnknownLoc::get(type.getContext()),

@@ -351,7 +351,7 @@ void AllocationAnalysis::visitOperation(mlir::Operation *op,
     }
 
     auto retTy = allocmem.getAllocatedType();
-    if (!retTy.isa<fir::SequenceType>()) {
+    if (!mlir::isa<fir::SequenceType>(retTy)) {
       LLVM_DEBUG(llvm::dbgs()
                  << "--Allocation is not for an array: skipping\n");
       return;
