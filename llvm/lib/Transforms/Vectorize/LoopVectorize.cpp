@@ -4167,7 +4167,6 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
 
   // Worklist containing uniform instructions demanding lane 0.
   SetVector<Instruction *> Worklist;
-  BasicBlock *Latch = TheLoop->getLoopLatch();
 
   // Add uniform instructions demanding lane 0 to the worklist. Instructions
   // that are scalar with predication must not be considered uniform after
@@ -4189,12 +4188,16 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     Worklist.insert(I);
   };
 
-  // Start with the conditional branch. If the branch condition is an
-  // instruction contained in the loop that is only used by the branch, it is
-  // uniform.
-  auto *Cmp = dyn_cast<Instruction>(Latch->getTerminator()->getOperand(0));
-  if (Cmp && TheLoop->contains(Cmp) && Cmp->hasOneUse())
-    addToWorklistIfAllowed(Cmp);
+  // Start with the conditional branches exiting the loop. If the branch
+  // condition is an instruction contained in the loop that is only used by the
+  // branch, it is uniform.
+  SmallVector<BasicBlock *> Exiting;
+  TheLoop->getExitingBlocks(Exiting);
+  for (BasicBlock *E : Exiting) {
+    auto *Cmp = dyn_cast<Instruction>(E->getTerminator()->getOperand(0));
+    if (Cmp && TheLoop->contains(Cmp) && Cmp->hasOneUse())
+      addToWorklistIfAllowed(Cmp);
+  }
 
   auto PrevVF = VF.divideCoefficientBy(2);
   // Return true if all lanes perform the same memory operation, and we can
@@ -4335,6 +4338,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   // nodes separately. An induction variable will remain uniform if all users
   // of the induction variable and induction variable update remain uniform.
   // The code below handles both pointer and non-pointer induction variables.
+  BasicBlock *Latch = TheLoop->getLoopLatch();
   for (const auto &Induction : Legal->getInductionVars()) {
     auto *Ind = Induction.first;
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));

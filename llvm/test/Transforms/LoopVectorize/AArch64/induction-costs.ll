@@ -9,37 +9,37 @@ define i32 @multi_exit_iv_uniform(i32 %a, i64 %N, ptr %dst) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[N]], i64 2147483648)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[UMIN]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP0]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP0]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 4, i64 [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 8, i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[A]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP11:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = zext <2 x i32> [[BROADCAST_SPLAT]] to <2 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = zext <4 x i32> [[BROADCAST_SPLAT]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP5]], i32 2
-; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP8]], align 8
-; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP9]], align 8
-; CHECK-NEXT:    [[TMP10]] = add <2 x i32> [[VEC_PHI]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP11]] = add <2 x i32> [[VEC_PHI1]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[TMP5]], i32 4
+; CHECK-NEXT:    store <4 x i64> [[TMP7]], ptr [[TMP8]], align 8
+; CHECK-NEXT:    store <4 x i64> [[TMP7]], ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[TMP10]] = add <4 x i32> [[VEC_PHI]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP11]] = add <4 x i32> [[VEC_PHI1]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <2 x i32> [[TMP11]], [[TMP10]]
-; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[BIN_RDX]])
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP11]], [[TMP10]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
 ; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
