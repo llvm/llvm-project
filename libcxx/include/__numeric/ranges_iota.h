@@ -30,10 +30,10 @@ template <typename _Out, typename _Tp>
 using iota_result = ranges::out_value_result<_Out, _Tp>;
 
 struct __iota_fn {
-private:
-  // Private helper function
-  template <class _Out, class _Sent, class _Tp>
-  _LIBCPP_HIDE_FROM_ABI static constexpr iota_result<_Out, _Tp> __iota_impl(_Out __first, _Sent __last, _Tp __value) {
+public:
+  template <input_or_output_iterator _Out, sentinel_for<_Out> _Sent, weakly_incrementable _Tp>
+    requires indirectly_writable<_Out, const _Tp&>
+  _LIBCPP_HIDE_FROM_ABI static constexpr iota_result<_Out, _Tp> operator()(_Out __first, _Sent __last, _Tp __value) {
     while (__first != __last) {
       *__first = std::as_const(__value);
       ++__first;
@@ -42,18 +42,10 @@ private:
     return {std::move(__first), std::move(__value)};
   }
 
-public:
-  // Public facing interfaces
-  template <input_or_output_iterator _Out, sentinel_for<_Out> _Sent, weakly_incrementable _Tp>
-    requires indirectly_writable<_Out, const _Tp&>
-  _LIBCPP_HIDE_FROM_ABI static constexpr iota_result<_Out, _Tp> operator()(_Out __first, _Sent __last, _Tp __value) {
-    return __iota_impl(std::move(__first), std::move(__last), std::move(__value));
-  }
-
   template <weakly_incrementable _Tp, ranges::output_range<const _Tp&> _Range>
   _LIBCPP_HIDE_FROM_ABI static constexpr iota_result<ranges::borrowed_iterator_t<_Range>, _Tp>
   operator()(_Range&& __r, _Tp __value) {
-    return __iota_impl(ranges::begin(__r), ranges::end(__r), std::move(__value));
+    return __iota_fn::operator()(ranges::begin(__r), ranges::end(__r), std::move(__value));
   }
 };
 
