@@ -134,6 +134,13 @@ static cl::opt<bool>
                                     "the codegen data generation or use"),
                            cl::init(false));
 
+static cl::opt<bool> AppendContentHashToOutlinedName(
+    "append-content-hash-outlined-name", cl::Hidden,
+    cl::desc("This appends the content hash to the globally outlined function "
+             "name. It's beneficial for enhancing the precision of the stable "
+             "hash and for ordering the outlined functions."),
+    cl::init(false));
+
 namespace {
 
 /// Maps \p MachineInstrs to unsigned integers and stores the mappings.
@@ -853,6 +860,15 @@ void MachineOutliner::computeAndPublishHashSequence(MachineFunction &MF,
       }
       OutlinedHashSequence.push_back(Hash);
     }
+  }
+
+  // Append a unique name based on the non-empty hash sequence.
+  if (AppendContentHashToOutlinedName && !OutlinedHashSequence.empty()) {
+    auto CombinedHash = stable_hash_combine_range(OutlinedHashSequence.begin(),
+                                                  OutlinedHashSequence.end());
+    auto NewName =
+        MF.getName().str() + ".content." + std::to_string(CombinedHash);
+    MF.getFunction().setName(NewName);
   }
 
   // Publish the non-empty hash sequence to the local hash tree.

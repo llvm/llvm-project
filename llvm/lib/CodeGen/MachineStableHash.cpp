@@ -101,6 +101,12 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
       return 0;
     }
     auto Name = GV->getName();
+    // Use the content hash of the outlined function.
+    auto Pos = Name.find_last_of(".content.");
+    if (Pos != StringRef::npos) {
+      assert(Name.starts_with("OUTLINED_FUNCTION"));
+      Name = Name.substr(Pos);
+    }
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
                                stable_hash_combine_string(Name),
                                MO.getOffset());
