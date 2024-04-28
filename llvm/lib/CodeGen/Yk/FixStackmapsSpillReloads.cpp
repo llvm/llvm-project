@@ -210,7 +210,11 @@ bool FixStackmapsSpillReloads::runOnMachineFunction(MachineFunction &MF) {
               MIB.add(*MOI); // Offset
               break;
             }
-            case StackMaps::ConstantOp: {break;}
+            case StackMaps::ConstantOp: {
+              MOI++;
+              MIB.add(*MOI);
+              break;
+            }
             case StackMaps::NextLive: {break;}
           }
           MOI++;
