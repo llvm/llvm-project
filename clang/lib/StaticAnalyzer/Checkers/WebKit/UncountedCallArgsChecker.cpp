@@ -53,10 +53,10 @@ public:
       bool shouldVisitTemplateInstantiations() const { return true; }
       bool shouldVisitImplicitCode() const { return false; }
 
-      bool TraverseDecl(Decl *D) {
-        if (D && isa<ClassTemplateDecl>(D) && isRefType(safeGetName(D)))
+      bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) {
+        if (isRefType(safeGetName(Decl)))
           return true;
-        return RecursiveASTVisitor<LocalVisitor>::TraverseDecl(D);
+        return RecursiveASTVisitor<LocalVisitor>::TraverseClassTemplateDecl(Decl);
       }
 
       bool VisitCallExpr(const CallExpr *CE) {
