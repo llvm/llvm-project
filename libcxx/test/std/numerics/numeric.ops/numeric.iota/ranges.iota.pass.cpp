@@ -147,9 +147,48 @@ constexpr void test_results() {
   test_result<Iter, Sent, 5>({1, 2, 3, 4, 5}, 0, {0, 1, 2, 3, 4});
 }
 
+constexpr void test_user_defined_type() {
+  // Simple non-fundamental type
+  struct UserDefinedType {
+    int val;
+    using difference_type = int;
+
+    constexpr explicit UserDefinedType(int v) : val(v) {}
+    constexpr UserDefinedType(UserDefinedType const& other) { this->val = other.val; }
+    constexpr UserDefinedType& operator=(UserDefinedType const& a) {
+      this->val = a.val;
+      return *this;
+    }
+
+    // prefix
+    constexpr UserDefinedType& operator++() {
+      ++(this->val);
+      return *this;
+    }
+
+    // postfix
+    constexpr UserDefinedType operator++(int) {
+      auto tmp = *this;
+      ++this->val;
+      return tmp;
+    }
+  };
+
+  // Setup
+  using A                                 = UserDefinedType;
+  std::array<UserDefinedType, 5> a        = {A{0}, A{0}, A{0}, A{0}, A{0}};
+  std::array<UserDefinedType, 5> expected = {A{0}, A{1}, A{2}, A{3}, A{4}};
+
+  // Fill with values
+  std::ranges::iota(a, A{0});
+  auto proj_val = [](UserDefinedType const& el) { return el.val; };
+
+  // Check
+  assert(std::ranges::equal(a, expected, std::ranges::equal_to{}, proj_val, proj_val));
+}
+
 constexpr void test_danderous_copy_assign() {
-  using A    = DangerousCopyAssign;
-  using Iter = contiguous_iterator<A*>;
+  using A = DangerousCopyAssign;
 
   // If the dangerous non-const copy assignment is called, the final values in
   // aa should increment by 2 rather than 1.
@@ -161,10 +200,14 @@ constexpr void test_danderous_copy_assign() {
 }
 
 constexpr bool test_results() {
+  // Tests on fundamental types
   types::for_each(types::cpp17_input_iterator_list<int*>{}, []<class Iter> { test_results< Iter>(); });
   test_results<cpp17_output_iterator<int*>>();
   test_results<cpp20_output_iterator<int*>>();
   test_results<int*, sized_sentinel<int*>>();
+
+  // Tests on non-fundamental types
+  test_user_defined_type();
   test_danderous_copy_assign();
   return true;
 }
