@@ -6,8 +6,7 @@ target datalayout = "e-p:64:64:64"
 define ptr @add1(ptr %p, i64 %o, i64 %n) {
 ; CHECK-LABEL: define ptr @add1(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[O:%.*]], i64 [[N:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[O]], 1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr [10 x [10 x [10 x [10 x i32]]]], ptr [[P]], i64 0, i64 [[A]], i64 1, i64 -6, i64 [[N]]
+; CHECK-NEXT:    [[G:%.*]] = getelementptr [10 x [10 x [10 x [10 x i32]]]], ptr [[P]], i64 0, i64 [[O]], i64 11, i64 -6, i64 [[N]]
 ; CHECK-NEXT:    ret ptr [[G]]
 ;
   %a = add i64 %o, 1
@@ -18,8 +17,7 @@ define ptr @add1(ptr %p, i64 %o, i64 %n) {
 define ptr @sub1(ptr %p, i64 %o, i64 %n) {
 ; CHECK-LABEL: define ptr @sub1(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[O:%.*]], i64 [[N:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[O]], -1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr [10 x [10 x [10 x [10 x i32]]]], ptr [[P]], i64 0, i64 [[A]], i64 1, i64 -6, i64 [[N]]
+; CHECK-NEXT:    [[G:%.*]] = getelementptr [10 x [10 x [10 x [10 x i32]]]], ptr [[P]], i64 0, i64 [[O]], i64 -9, i64 -6, i64 [[N]]
 ; CHECK-NEXT:    ret ptr [[G]]
 ;
   %a = sub i64 %o, 1
@@ -30,8 +28,7 @@ define ptr @sub1(ptr %p, i64 %o, i64 %n) {
 define ptr @add10(ptr %p, i64 %o, i64 %n) {
 ; CHECK-LABEL: define ptr @add10(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[O:%.*]], i64 [[N:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[O]], 10
-; CHECK-NEXT:    [[G:%.*]] = getelementptr [10 x [10 x [10 x [10 x i32]]]], ptr [[P]], i64 0, i64 [[A]], i64 1, i64 -6, i64 [[N]]
+; CHECK-NEXT:    [[G:%.*]] = getelementptr [10 x [10 x [10 x [10 x i32]]]], ptr [[P]], i64 0, i64 [[O]], i64 101, i64 -6, i64 [[N]]
 ; CHECK-NEXT:    ret ptr [[G]]
 ;
   %a = add i64 %o, 10
@@ -54,8 +51,7 @@ define ptr @nooff(ptr %p, i64 %o, i64 %n) {
 define ptr @inbounds(ptr %p, i64 %o, i64 %n) {
 ; CHECK-LABEL: define ptr @inbounds(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[O:%.*]], i64 [[N:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[O]], 1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds [10 x [10 x [10 x [10 x i32]]]], ptr [[P]], i64 0, i64 [[A]], i64 1, i64 -6, i64 [[N]]
+; CHECK-NEXT:    [[G:%.*]] = getelementptr [10 x [10 x [10 x [10 x i32]]]], ptr [[P]], i64 0, i64 [[O]], i64 11, i64 -6, i64 [[N]]
 ; CHECK-NEXT:    ret ptr [[G]]
 ;
   %a = add i64 %o, 1
@@ -79,8 +75,7 @@ define ptr @struct(ptr %p, i64 %o, i64 %n) {
 define ptr @lessargs(ptr %p, i64 %o, i64 %n) {
 ; CHECK-LABEL: define ptr @lessargs(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[O:%.*]], i64 [[N:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[O]], 1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr [10 x [10 x [10 x i32]]], ptr [[P]], i64 0, i64 [[A]], i64 1
+; CHECK-NEXT:    [[G:%.*]] = getelementptr [10 x [10 x [10 x i32]]], ptr [[P]], i64 0, i64 [[O]], i64 11
 ; CHECK-NEXT:    ret ptr [[G]]
 ;
   %a = add i64 %o, 1
@@ -91,9 +86,7 @@ define ptr @lessargs(ptr %p, i64 %o, i64 %n) {
 define ptr @twice(ptr %p, i64 %o, i64 %n) {
 ; CHECK-LABEL: define ptr @twice(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[O:%.*]], i64 [[N:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[O]], 1
-; CHECK-NEXT:    [[B:%.*]] = add i64 [[O]], -1
-; CHECK-NEXT:    [[G:%.*]] = getelementptr [10 x [10 x [10 x [10 x [10 x i32]]]]], ptr [[P]], i64 0, i64 [[A]], i64 1, i64 [[B]], i64 -3
+; CHECK-NEXT:    [[G:%.*]] = getelementptr [10 x [10 x [10 x [10 x [10 x i32]]]]], ptr [[P]], i64 0, i64 [[O]], i64 11, i64 [[O]], i64 -13
 ; CHECK-NEXT:    ret ptr [[G]]
 ;
   %a = add i64 %o, 1
@@ -105,8 +98,7 @@ define ptr @twice(ptr %p, i64 %o, i64 %n) {
 define ptr @simpler(ptr %p, i64 %o, i64 %n) {
 ; CHECK-LABEL: define ptr @simpler(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[O:%.*]], i64 [[N:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[O]], 8
-; CHECK-NEXT:    [[G:%.*]] = getelementptr [16 x [8 x i32]], ptr [[P]], i64 0, i64 [[A]], i64 1
+; CHECK-NEXT:    [[G:%.*]] = getelementptr [16 x [8 x i32]], ptr [[P]], i64 0, i64 [[O]], i64 65
 ; CHECK-NEXT:    ret ptr [[G]]
 ;
   %a = add i64 %o, 8
