@@ -99,6 +99,7 @@
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
@@ -116,6 +117,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -529,6 +531,7 @@ private:
   void visitMemProfMetadata(Instruction &I, MDNode *MD);
   void visitCallsiteMetadata(Instruction &I, MDNode *MD);
   void visitDIAssignIDMetadata(Instruction &I, MDNode *MD);
+  void visitMMRAMetadata(Instruction &I, MDNode *MD);
   void visitAnnotationMetadata(MDNode *Annotation);
   void visitAliasScopeMetadata(const MDNode *MD);
   void visitAliasScopeListMetadata(const MDNode *MD);
@@ -4844,6 +4847,24 @@ void Verifier::visitDIAssignIDMetadata(Instruction &I, MDNode *MD) {
   }
 }
 
+void Verifier::visitMMRAMetadata(Instruction &I, MDNode *MD) {
+  Check(canInstructionHaveMMRAs(I),
+        "!mmra metadata attached to unexpected instruction kind", I, MD);
+
+  // MMRA Metadata should either be a tag, e.g. !{!"foo", !"bar"}, or a
+  // list of tags such as !2 in the following example:
+  //    !0 = !{!"a", !"b"}
+  //    !1 = !{!"c", !"d"}
+  //    !2 = !{!0, !1}
+  if (MMRAMetadata::isTagMD(MD))
+    return;
+
+  Check(isa<MDTuple>(MD), "!mmra expected to be a metadata tuple", I, MD);
+  for (const MDOperand &MDOp : MD->operands())
+    Check(MMRAMetadata::isTagMD(MDOp.get()),
+          "!mmra metadata tuple operand is not an MMRA tag", I, MDOp.get());
+}
+
 void Verifier::visitCallStackMetadata(MDNode *MD) {
   // Call stack metadata should consist of a list of at least 1 constant int
   // (representing a hash of the location).
@@ -5123,9 +5144,6 @@ void Verifier::visitInstruction(Instruction &I) {
   if (MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa))
     TBAAVerifyHelper.visitTBAAMetadata(I, TBAA);
 
-  if (MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa_struct))
-    TBAAVerifyHelper.visitTBAAStructMetadata(I, TBAA);
-
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_noalias))
     visitAliasScopeListMetadata(MD);
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_alias_scope))
@@ -5163,6 +5181,9 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_DIAssignID))
     visitDIAssignIDMetadata(I, MD);
+
+  if (MDNode *MMRA = I.getMetadata(LLVMContext::MD_mmra))
+    visitMMRAMetadata(I, MMRA);
 
   if (MDNode *Annotation = I.getMetadata(LLVMContext::MD_annotation))
     visitAnnotationMetadata(Annotation);
@@ -6205,7 +6226,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::experimental_convergence_entry:
-    LLVM_FALLTHROUGH;
   case Intrinsic::experimental_convergence_anchor:
     break;
   case Intrinsic::experimental_convergence_loop:
@@ -7459,35 +7479,6 @@ bool TBAAVerifier::visitTBAAMetadata(Instruction &I, const MDNode *MD) {
 
   CheckTBAA(SeenAccessTypeInPath, "Did not see access type in access path!", &I,
             MD);
-  return true;
-}
-
-bool TBAAVerifier::visitTBAAStructMetadata(Instruction &I, const MDNode *MD) {
-  CheckTBAA(MD->getNumOperands() % 3 == 0,
-            "tbaa.struct operands must occur in groups of three", &I, MD);
-
-  // Each group of three operands must consist of two integers and a
-  // tbaa node. Moreover, the regions described by the offset and size
-  // operands must be non-overlapping.
-  std::optional<APInt> NextFree;
-  for (unsigned int Idx = 0; Idx < MD->getNumOperands(); Idx += 3) {
-    auto *OffsetCI =
-        mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(Idx));
-    CheckTBAA(OffsetCI, "Offset must be a constant integer", &I, MD);
-
-    auto *SizeCI =
-        mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(Idx + 1));
-    CheckTBAA(SizeCI, "Size must be a constant integer", &I, MD);
-
-    MDNode *TBAA = dyn_cast_or_null<MDNode>(MD->getOperand(Idx + 2));
-    CheckTBAA(TBAA, "TBAA tag missing", &I, MD);
-    visitTBAAMetadata(I, TBAA);
-
-    bool NonOverlapping = !NextFree || NextFree->ule(OffsetCI->getValue());
-    CheckTBAA(NonOverlapping, "Overlapping tbaa.struct regions", &I, MD);
-
-    NextFree = OffsetCI->getValue() + SizeCI->getValue();
-  }
   return true;
 }
 

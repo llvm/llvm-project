@@ -1355,20 +1355,26 @@ inline bool VirtBaseHelper(InterpState &S, CodePtr OpPC, const RecordDecl *Decl,
   while (Base.isBaseClass())
     Base = Base.getBase();
 
-  auto *Field = Base.getRecord()->getVirtualBase(Decl);
-  S.Stk.push<Pointer>(Base.atField(Field->Offset));
+  const Record::Base *VirtBase = Base.getRecord()->getVirtualBase(Decl);
+  S.Stk.push<Pointer>(Base.atField(VirtBase->Offset));
   return true;
 }
 
-inline bool GetPtrVirtBase(InterpState &S, CodePtr OpPC, const RecordDecl *D) {
+inline bool GetPtrVirtBasePop(InterpState &S, CodePtr OpPC,
+                              const RecordDecl *D) {
+  assert(D);
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckNull(S, OpPC, Ptr, CSK_Base))
+    return false;
+  if (Ptr.isDummy()) // FIXME: Once we have type info for dummy pointers, this
+                     // needs to go.
     return false;
   return VirtBaseHelper(S, OpPC, D, Ptr);
 }
 
 inline bool GetPtrThisVirtBase(InterpState &S, CodePtr OpPC,
                                const RecordDecl *D) {
+  assert(D);
   if (S.checkingPotentialConstantExpression())
     return false;
   const Pointer &This = S.Current->getThis();
@@ -1830,6 +1836,32 @@ bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
       << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
 
   S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
+  return true;
+}
+
+static inline bool CastPointerIntegralAP(InterpState &S, CodePtr OpPC,
+                                         uint32_t BitWidth) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+
+  S.Stk.push<IntegralAP<false>>(
+      IntegralAP<false>::from(Ptr.getIntegerRepresentation(), BitWidth));
+  return true;
+}
+
+static inline bool CastPointerIntegralAPS(InterpState &S, CodePtr OpPC,
+                                          uint32_t BitWidth) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+
+  S.Stk.push<IntegralAP<true>>(
+      IntegralAP<true>::from(Ptr.getIntegerRepresentation(), BitWidth));
   return true;
 }
 
@@ -2299,6 +2331,18 @@ inline bool InvalidDeclRef(InterpState &S, CodePtr OpPC,
                            const DeclRefExpr *DR) {
   assert(DR);
   return CheckDeclRef(S, OpPC, DR);
+}
+
+inline bool Assume(InterpState &S, CodePtr OpPC) {
+  const auto Val = S.Stk.pop<Boolean>();
+
+  if (Val)
+    return true;
+
+  // Else, diagnose.
+  const SourceLocation &Loc = S.Current->getLocation(OpPC);
+  S.CCEDiag(Loc, diag::note_constexpr_assumption_failed);
+  return false;
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>

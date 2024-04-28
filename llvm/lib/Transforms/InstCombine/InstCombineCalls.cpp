@@ -606,14 +606,13 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombinerImpl &IC) {
       return IC.replaceOperand(II, 1, IC.Builder.getTrue());
   }
 
-  // Add range metadata since known bits can't completely reflect what we know.
-  auto *IT = cast<IntegerType>(Op0->getType()->getScalarType());
-  if (IT && IT->getBitWidth() != 1 && !II.getMetadata(LLVMContext::MD_range)) {
-    Metadata *LowAndHigh[] = {
-        ConstantAsMetadata::get(ConstantInt::get(IT, DefiniteZeros)),
-        ConstantAsMetadata::get(ConstantInt::get(IT, PossibleZeros + 1))};
-    II.setMetadata(LLVMContext::MD_range,
-                   MDNode::get(II.getContext(), LowAndHigh));
+  // Add range attribute since known bits can't completely reflect what we know.
+  unsigned BitWidth = Op0->getType()->getScalarSizeInBits();
+  if (BitWidth != 1 && !II.hasRetAttr(Attribute::Range) &&
+      !II.getMetadata(LLVMContext::MD_range)) {
+    ConstantRange Range(APInt(BitWidth, DefiniteZeros),
+                        APInt(BitWidth, PossibleZeros + 1));
+    II.addRangeRetAttr(Range);
     return &II;
   }
 
@@ -685,16 +684,12 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombinerImpl &IC) {
                                                   Constant::getNullValue(Ty)),
                             Ty);
 
-  // Add range metadata since known bits can't completely reflect what we know.
-  auto *IT = cast<IntegerType>(Ty->getScalarType());
-  unsigned MinCount = Known.countMinPopulation();
-  unsigned MaxCount = Known.countMaxPopulation();
-  if (IT->getBitWidth() != 1 && !II.getMetadata(LLVMContext::MD_range)) {
-    Metadata *LowAndHigh[] = {
-        ConstantAsMetadata::get(ConstantInt::get(IT, MinCount)),
-        ConstantAsMetadata::get(ConstantInt::get(IT, MaxCount + 1))};
-    II.setMetadata(LLVMContext::MD_range,
-                   MDNode::get(II.getContext(), LowAndHigh));
+  // Add range attribute since known bits can't completely reflect what we know.
+  if (BitWidth != 1 && !II.hasRetAttr(Attribute::Range) &&
+      !II.getMetadata(LLVMContext::MD_range)) {
+    ConstantRange Range(APInt(BitWidth, Known.countMinPopulation()),
+                        APInt(BitWidth, Known.countMaxPopulation() + 1));
+    II.addRangeRetAttr(Range);
     return &II;
   }
 
@@ -2501,10 +2496,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(II->getArgOperand(0),
               m_Select(m_Value(Cond), m_Value(TVal), m_Value(FVal)))) {
       // fabs (select Cond, TrueC, FalseC) --> select Cond, AbsT, AbsF
-      if (isa<Constant>(TVal) && isa<Constant>(FVal)) {
+      if (isa<Constant>(TVal) || isa<Constant>(FVal)) {
         CallInst *AbsT = Builder.CreateCall(II->getCalledFunction(), {TVal});
         CallInst *AbsF = Builder.CreateCall(II->getCalledFunction(), {FVal});
-        return SelectInst::Create(Cond, AbsT, AbsF);
+        SelectInst *SI = SelectInst::Create(Cond, AbsT, AbsF);
+        FastMathFlags FMF1 = II->getFastMathFlags();
+        FastMathFlags FMF2 =
+            cast<SelectInst>(II->getArgOperand(0))->getFastMathFlags();
+        FMF2.setNoSignedZeros(false);
+        SI->setFastMathFlags(FMF1 | FMF2);
+        return SI;
       }
       // fabs (select Cond, -FVal, FVal) --> fabs FVal
       if (match(TVal, m_FNeg(m_Specific(FVal))))

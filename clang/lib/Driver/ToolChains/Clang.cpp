@@ -54,11 +54,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/LoongArchTargetParser.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cctype>
 
@@ -637,7 +637,9 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
                                            ProfileGenerateArg->getValue()));
     // The default is to use Clang Instrumentation.
     CmdArgs.push_back("-fprofile-instrument=clang");
-    if (TC.getTriple().isWindowsMSVCEnvironment()) {
+    if (TC.getTriple().isWindowsMSVCEnvironment() &&
+        Args.hasFlag(options::OPT_frtlib_defaultlib,
+                     options::OPT_fno_rtlib_defaultlib, true)) {
       // Add dependent lib for clang_rt.profile
       CmdArgs.push_back(Args.MakeArgString(
           "--dependent-lib=" + TC.getCompilerRTBasename(Args, "profile")));
@@ -656,7 +658,9 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     CmdArgs.push_back("-fprofile-instrument=csllvm");
   }
   if (PGOGenArg) {
-    if (TC.getTriple().isWindowsMSVCEnvironment()) {
+    if (TC.getTriple().isWindowsMSVCEnvironment() &&
+        Args.hasFlag(options::OPT_frtlib_defaultlib,
+                     options::OPT_fno_rtlib_defaultlib, true)) {
       // Add dependent lib for clang_rt.profile
       CmdArgs.push_back(Args.MakeArgString(
           "--dependent-lib=" + TC.getCompilerRTBasename(Args, "profile")));
@@ -829,36 +833,6 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
           Args.MakeArgString("-coverage-data-file=" + CoverageFilename));
     }
   }
-}
-
-/// Check whether the given input tree contains any compilation actions.
-static bool ContainsCompileAction(const Action *A) {
-  if (isa<CompileJobAction>(A) || isa<BackendJobAction>(A))
-    return true;
-
-  return llvm::any_of(A->inputs(), ContainsCompileAction);
-}
-
-/// Check if -relax-all should be passed to the internal assembler.
-/// This is done by default when compiling non-assembler source with -O0.
-static bool UseRelaxAll(Compilation &C, const ArgList &Args) {
-  bool RelaxDefault = true;
-
-  if (Arg *A = Args.getLastArg(options::OPT_O_Group))
-    RelaxDefault = A->getOption().matches(options::OPT_O0);
-
-  if (RelaxDefault) {
-    RelaxDefault = false;
-    for (const auto &Act : C.getActions()) {
-      if (ContainsCompileAction(Act)) {
-        RelaxDefault = true;
-        break;
-      }
-    }
-  }
-
-  return Args.hasFlag(options::OPT_mrelax_all, options::OPT_mno_relax_all,
-                      RelaxDefault);
 }
 
 static void
@@ -2458,8 +2432,16 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
                                               const ArgList &Args,
                                               ArgStringList &CmdArgs,
                                               const Driver &D) {
-  if (UseRelaxAll(C, Args))
-    CmdArgs.push_back("-mrelax-all");
+  // Default to -mno-relax-all.
+  //
+  // Note: RISC-V requires an indirect jump for offsets larger than 1MiB. This
+  // cannot be done by assembler branch relaxation as it needs a free temporary
+  // register. Because of this, branch relaxation is handled by a MachineIR pass
+  // before the assembler. Forcing assembler branch relaxation for -O0 makes the
+  // MachineIR branch relaxation inaccurate and it will miss cases where an
+  // indirect branch is necessary.
+  Args.addOptInFlag(CmdArgs, options::OPT_mrelax_all,
+                    options::OPT_mno_relax_all);
 
   // Only default to -mincremental-linker-compatible if we think we are
   // targeting the MSVC linker.
@@ -4634,7 +4616,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
 
   // Emit DW_TAG_template_alias for template aliases? True by default for SCE.
   bool UseDebugTemplateAlias =
-      DebuggerTuning == llvm::DebuggerKind::SCE && RequestedDWARFVersion >= 5;
+      DebuggerTuning == llvm::DebuggerKind::SCE && RequestedDWARFVersion >= 4;
   if (const auto *DebugTemplateAlias = Args.getLastArg(
           options::OPT_gtemplate_alias, options::OPT_gno_template_alias)) {
     // DW_TAG_template_alias is only supported from DWARFv5 but if a user

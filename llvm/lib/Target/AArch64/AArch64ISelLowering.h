@@ -523,6 +523,9 @@ enum Rounding {
 // Bit position of rounding mode bits in FPCR.
 const unsigned RoundingBitsPos = 22;
 
+// Reserved bits should be preserved when modifying FPCR.
+const uint64_t ReservedFPControlBits = 0xfffffffff80040f8;
+
 // Registers used to pass function arguments.
 ArrayRef<MCPhysReg> getGPRArgRegs();
 ArrayRef<MCPhysReg> getFPRArgRegs();
@@ -1013,7 +1016,7 @@ private:
   bool isExtFreeImpl(const Instruction *Ext) const override;
 
   void addTypeForNEON(MVT VT);
-  void addTypeForFixedLengthSVE(MVT VT, bool StreamingSVE);
+  void addTypeForFixedLengthSVE(MVT VT);
   void addDRTypeForNEON(MVT VT);
   void addQRTypeForNEON(MVT VT);
 
@@ -1128,6 +1131,9 @@ private:
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerGET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerSET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerRESET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;

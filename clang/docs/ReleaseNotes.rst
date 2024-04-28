@@ -88,6 +88,19 @@ sections with improvements to Clang's support for those languages.
 
 C++ Language Changes
 --------------------
+- Implemented ``_BitInt`` literal suffixes ``__wb`` or ``__WB`` as a Clang extension with ``unsigned`` modifiers also allowed. (#GH85223).
+
+C++17 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
+- Clang now exposes ``__GCC_DESTRUCTIVE_SIZE`` and ``__GCC_CONSTRUCTIVE_SIZE``
+  predefined macros to support standard library implementations of
+  ``std::hardware_destructive_interference_size`` and
+  ``std::hardware_constructive_interference_size``, respectively. These macros
+  are predefined in all C and C++ language modes. The values the macros
+  expand to are not stable between releases of Clang and do not need to match
+  the values produced by GCC, so these macros should not be used from header
+  files because they may not be stable across multiple TUs (the values may vary
+  based on compiler version as well as CPU tuning). #GH60174
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -179,6 +192,9 @@ C23 Feature Support
 - Clang now supports `N3018 The constexpr specifier for object definitions`
   <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3018.htm>`_.
 
+- Properly promote bit-fields of bit-precise integer types to the field's type
+  rather than to ``int``. #GH87641
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -202,6 +218,16 @@ Non-comprehensive list of changes in this release
 
 - ``__typeof_unqual__`` is available in all C modes as an extension, which behaves
   like ``typeof_unqual`` from C23, similar to ``__typeof__`` and ``typeof``.
+
+
+* Shared libraries linked with either the ``-ffast-math``, ``-Ofast``, or
+  ``-funsafe-math-optimizations`` flags will no longer enable flush-to-zero
+  floating-point mode by default. This decision can be overridden with use of
+  ``-mdaz-ftz``. This behavior now matches GCC's behavior.
+  (`#57589 <https://github.com/llvm/llvm-project/issues/57589>`_)
+
+* ``-fdenormal-fp-math=preserve-sign`` is no longer implied by ``-ffast-math``
+  on x86 systems.
 
 New Compiler Flags
 ------------------
@@ -248,6 +274,8 @@ Modified Compiler Flags
        f3 *c = (f3 *)x;
      }
 
+- Carved out ``-Wformat`` warning about scoped enums into a subwarning and
+  make it controlled by ``-Wformat-pedantic``. Fixes #GH88595.
 
 Removed Compiler Flags
 -------------------------
@@ -409,6 +437,9 @@ Bug Fixes in This Version
   operator.
   Fixes (#GH83267).
 
+- Fix crash on ill-formed partial specialization with CRTP.
+  Fixes (#GH89374).
+
 - Clang now correctly generates overloads for bit-precise integer types for
   builtin operators in C++. Fixes #GH82998.
 
@@ -538,6 +569,8 @@ Bug Fixes to C++ Support
 - Fix an issue caused by not handling invalid cases when substituting into the parameter mapping of a constraint. Fixes (#GH86757).
 - Fixed a bug that prevented member function templates of class templates declared with a deduced return type
   from being explicitly specialized for a given implicit instantiation of the class template.
+- Fixed a crash when ``this`` is used in a dependent class scope function template specialization
+  that instantiates to a static member function.
 
 - Fix crash when inheriting from a cv-qualified type. Fixes #GH35603
 - Fix a crash when the using enum declaration uses an anonymous enumeration. Fixes (#GH86790).
@@ -550,6 +583,11 @@ Bug Fixes to C++ Support
 - Fix a crash caused by defined struct in a type alias template when the structure
   has fields with dependent type. Fixes (#GH75221).
 - Fix the Itanium mangling of lambdas defined in a member of a local class (#GH88906)
+- Fixed a crash when trying to evaluate a user-defined ``static_assert`` message whose ``size()``
+  function returns a large or negative value. Fixes (#GH89407).
+- Fixed a use-after-free bug in parsing of type constraints with default arguments that involve lambdas. (#GH67235)
+- Fixed bug in which the body of a consteval lambda within a template was not parsed as within an
+  immediate function context.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -602,6 +640,9 @@ Arm and AArch64 Support
     * Arm Cortex-A78AE (cortex-a78ae).
     * Arm Cortex-A520AE (cortex-a520ae).
     * Arm Cortex-A720AE (cortex-a720ae).
+    * Arm Neoverse-N3 (neoverse-n3).
+    * Arm Neoverse-V3 (neoverse-v3).
+    * Arm Neoverse-V3AE (neoverse-v3ae).
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -649,6 +690,12 @@ CUDA Support
 AIX Support
 ^^^^^^^^^^^
 
+- Introduced the ``-maix-small-local-dynamic-tls`` option to produce a faster
+  access sequence for local-dynamic TLS variables where the offset from the TLS
+  base is encoded as an immediate operand.
+  This access sequence is not used for TLS variables larger than 32KB, and is
+  currently only supported on 64-bit mode.
+
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
@@ -689,6 +736,9 @@ clang-format
 
 libclang
 --------
+
+- ``clang_getSpellingLocation`` now correctly resolves macro expansions; that
+  is, it returns the spelling location instead of the expansion location.
 
 Static Analyzer
 ---------------
