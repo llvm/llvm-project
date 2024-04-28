@@ -52,7 +52,7 @@ def FeatureDummy
     : SubtargetFeature<"dummy", "Dummy", "true", "Dummy">;
 
 class RISCVProfile<string name, list<SubtargetFeature> features>
-    : SubtargetFeature<name, "RISCVProfile", NAME,
+    : SubtargetFeature<name, "Is" # NAME, "true",
                        "RISC-V " # name # " profile", features>;
 
 def RVI20U32 : RISCVProfile<"rvi20u32", [Feature32Bit, FeatureStdExtI]>;
@@ -124,10 +124,8 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
 // CHECK:      #ifdef GET_IMPLIED_EXTENSIONS
 // CHECK-NEXT: #undef GET_IMPLIED_EXTENSIONS
 
-// CHECK:      static const char *ImpliedExtsF[] = {"zicsr"};
-
 // CHECK:      static constexpr ImpliedExtsEntry ImpliedExts[] = {
-// CHECK-NEXT:     { {"f"}, {ImpliedExtsF} },
+// CHECK-NEXT:       { {"f"}, "zicsr"},
 // CHECK-NEXT: };
 
 // CHECK:      #endif // GET_IMPLIED_EXTENSIONS
