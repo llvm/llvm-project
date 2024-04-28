@@ -45,6 +45,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugCounter.h"
 
 using namespace llvm;
 
@@ -94,6 +95,13 @@ static cl::opt<bool>
     EnableTrapOptimization("ppc-opt-conditional-trap",
                            cl::desc("enable optimization of conditional traps"),
                            cl::init(false), cl::Hidden);
+
+DEBUG_COUNTER(
+    PeepholeXToICounter, "ppc-xtoi-peephole",
+    "Controls whether PPC reg+reg to reg+imm peephole is performed on a MI");
+
+DEBUG_COUNTER(PeepholePerOpCounter, "ppc-per-op-peephole",
+              "Controls whether PPC per opcode peephole is performed on a MI");
 
 namespace {
 
@@ -469,6 +477,9 @@ bool PPCMIPeephole::simplifyCode() {
           if (MI.isDebugInstr())
             continue;
 
+          if (!DebugCounter::shouldExecute(PeepholeXToICounter))
+            continue;
+
           SmallSet<Register, 4> RRToRIRegsToUpdate;
           if (!TII->convertToImmediateForm(MI, RRToRIRegsToUpdate))
             continue;
@@ -536,6 +547,9 @@ bool PPCMIPeephole::simplifyCode() {
 
       // Ignore debug instructions.
       if (MI.isDebugInstr())
+        continue;
+
+      if (!DebugCounter::shouldExecute(PeepholePerOpCounter))
         continue;
 
       // Per-opcode peepholes.
