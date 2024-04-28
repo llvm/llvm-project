@@ -48,6 +48,12 @@ private:
   const TypeErasedDataflowAnalysisState &CurState;
 };
 
+namespace bool_model {
+
+BoolValue &freshBoolValue(Environment &Env);
+
+} // namespace bool_model
+
 /// Evaluates `S` and updates `Env` accordingly.
 ///
 /// Requirements:

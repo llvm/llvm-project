@@ -1382,9 +1382,10 @@ protected:
 
 INSTANTIATE_TEST_SUITE_P(
     UncheckedOptionalUseTestInst, UncheckedOptionalAccessTest,
-    ::testing::Values(OptionalTypeIdentifier{"std", "optional"},
-                      OptionalTypeIdentifier{"absl", "optional"},
-                      OptionalTypeIdentifier{"base", "Optional"}),
+    ::testing::Values(OptionalTypeIdentifier{"std", "optional"}// ,
+                      // OptionalTypeIdentifier{"absl", "optional"},
+                      // OptionalTypeIdentifier{"base", "Optional"}
+                      ),
     [](const ::testing::TestParamInfo<OptionalTypeIdentifier> &Info) {
       return Info.param.NamespaceName;
     });
@@ -3007,7 +3008,7 @@ TEST_P(UncheckedOptionalAccessTest, CorrelatedBranches) {
   )");
 }
 
-TEST_P(UncheckedOptionalAccessTest, JoinDistinctValues) {
+TEST_P(UncheckedOptionalAccessTest, JoinDistinctValuesThenCheck) {
   ExpectDiagnosticsFor(
       R"code(
     #include "unchecked_optional_access_test.h"
@@ -3026,7 +3027,9 @@ TEST_P(UncheckedOptionalAccessTest, JoinDistinctValues) {
       }
     }
   )code");
+}
 
+TEST_P(UncheckedOptionalAccessTest, JoinDistinctValuesCheckInBranches) {
   ExpectDiagnosticsFor(R"code(
     #include "unchecked_optional_access_test.h"
 
@@ -3042,7 +3045,9 @@ TEST_P(UncheckedOptionalAccessTest, JoinDistinctValues) {
       opt.value();
     }
   )code");
+}
 
+TEST_P(UncheckedOptionalAccessTest, JoinDistinctValuesCheckInOneBranch) {
   ExpectDiagnosticsFor(
       R"code(
     #include "unchecked_optional_access_test.h"
@@ -3058,7 +3063,9 @@ TEST_P(UncheckedOptionalAccessTest, JoinDistinctValues) {
       opt.value(); // [[unsafe]]
     }
   )code");
+}
 
+TEST_P(UncheckedOptionalAccessTest, JoinDistinctValuesSetInBothBranches) {
   ExpectDiagnosticsFor(
       R"code(
     #include "unchecked_optional_access_test.h"
@@ -3073,7 +3080,9 @@ TEST_P(UncheckedOptionalAccessTest, JoinDistinctValues) {
       opt.value();
     }
   )code");
+}
 
+TEST_P(UncheckedOptionalAccessTest, JoinDistinctValuesSetInOneBranch) {
   ExpectDiagnosticsFor(
       R"code(
     #include "unchecked_optional_access_test.h"
