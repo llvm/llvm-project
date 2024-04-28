@@ -160,12 +160,16 @@ public:
 
   void replaceExternalDecls(ArrayRef<NamedDecl*> Decls) {
     // Remove all declarations that are either external or are replaced with
-    // external declarations.
+    // external declarations with higher visibilities.
     erase_if([Decls](NamedDecl *ND) {
       if (ND->isFromASTFile())
         return true;
+      // FIXME: Can we get rid of this loop completely?
       for (NamedDecl *D : Decls)
-        if (D->declarationReplaces(ND, /*IsKnownNewer=*/false))
+        // Only replace the local declaration if the external declaration has
+        // higher visibilities.
+        if (D->getModuleOwnershipKind() <= ND->getModuleOwnershipKind() &&
+            D->declarationReplaces(ND, /*IsKnownNewer=*/false))
           return true;
       return false;
     });
