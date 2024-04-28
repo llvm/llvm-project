@@ -335,6 +335,7 @@ class BinaryFn:
     min_signed = BinaryFnType("min_signed")
     max_unsigned = BinaryFnType("max_unsigned")
     min_unsigned = BinaryFnType("min_unsigned")
+    powf = BinaryFnType("powf")
 
 
 class TypeFnType:
