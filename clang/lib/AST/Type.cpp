@@ -2558,6 +2558,17 @@ QualType Type::getRVVEltType(const ASTContext &Ctx) const {
   llvm_unreachable("Unhandled type");
 }
 
+bool Type::isVLSBuiltinType() const {
+  return isSveVLSBuiltinType() || isRVVVLSBuiltinType();
+}
+
+QualType Type::getVLSEltType(const ASTContext &Ctx) const {
+  assert(isVLSBuiltinType() && "unsupported type!");
+
+  const BuiltinType *BTy = castAs<BuiltinType>();
+  return Ctx.getBuiltinVectorTypeInfo(BTy).ElementType;
+}
+
 bool QualType::isPODType(const ASTContext &Context) const {
   // C++11 has a more relaxed definition of POD.
   if (Context.getLangOpts().CPlusPlus11)

@@ -581,26 +581,26 @@ The table below shows the support for each operation by vector extension.  A
 dash indicates that an operation is not accepted according to a corresponding
 specification.
 
-============================== ======= ======= ============= ======= =====
-         Operator              OpenCL  AltiVec     GCC        NEON    SVE
-============================== ======= ======= ============= ======= =====
-[]                               yes     yes       yes         yes    yes
-unary operators +, --            yes     yes       yes         yes    yes
-++, -- --                        yes     yes       yes         no     no
-+,--,*,/,%                       yes     yes       yes         yes    yes
-bitwise operators &,|,^,~        yes     yes       yes         yes    yes
->>,<<                            yes     yes       yes         yes    yes
-!, &&, ||                        yes     --        yes         yes    yes
-==, !=, >, <, >=, <=             yes     yes       yes         yes    yes
-=                                yes     yes       yes         yes    yes
-?: [#]_                          yes     --        yes         yes    yes
-sizeof                           yes     yes       yes         yes    yes [#]_
-C-style cast                     yes     yes       yes         no     no
-reinterpret_cast                 yes     no        yes         no     no
-static_cast                      yes     no        yes         no     no
-const_cast                       no      no        no          no     no
-address &v[i]                    no      no        no [#]_     no     no
-============================== ======= ======= ============= ======= =====
+============================== ======= ======= ============= ======= ========= =====
+         Operator              OpenCL  AltiVec     GCC        NEON    SVE       RVV
+============================== ======= ======= ============= ======= ========= =====
+[]                               yes     yes       yes         yes    yes       yes
+unary operators +, --            yes     yes       yes         yes    yes       yes
+++, -- --                        yes     yes       yes         no     no        no
++,--,*,/,%                       yes     yes       yes         yes    yes       yes
+bitwise operators &,|,^,~        yes     yes       yes         yes    yes       yes
+>>,<<                            yes     yes       yes         yes    yes       yes
+!, &&, ||                        yes     --        yes         yes    yes       yes
+==, !=, >, <, >=, <=             yes     yes       yes         yes    yes       yes
+=                                yes     yes       yes         yes    yes       yes
+?: [#]_                          yes     --        yes         yes    yes       yes
+sizeof                           yes     yes       yes         yes    yes [#]_  yes [#]_
+C-style cast                     yes     yes       yes         no     no        no
+reinterpret_cast                 yes     no        yes         no     no        no
+static_cast                      yes     no        yes         no     no        no
+const_cast                       no      no        no          no     no        no
+address &v[i]                    no      no        no [#]_     no     no        no
+============================== ======= ======= ============= ======= ========= =====
 
 See also :ref:`langext-__builtin_shufflevector`, :ref:`langext-__builtin_convertvector`.
 
@@ -611,6 +611,7 @@ See also :ref:`langext-__builtin_shufflevector`, :ref:`langext-__builtin_convert
   If it's an extension (OpenCL) vector, it's only available in C and OpenCL C.
   And it selects base on signedness of the condition operands (OpenCL v1.1 s6.3.9).
 .. [#] sizeof can only be used on vector length specific SVE types.
+.. [#] sizeof can only be used on vector length specific RVV types.
 .. [#] Clang does not allow the address of an element to be taken while GCC
    allows this. This is intentional for vectors with a boolean element type and
    not implemented otherwise.
