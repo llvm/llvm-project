@@ -95,3 +95,26 @@ std::string StrFormat_field_width_and_precision() {
 
   return s1 + s2 + s3 + s4 + s5 + s6;
 }
+
+std::string StrFormat_macros() {
+  // The function call is replaced even though it comes from a macro.
+#define FORMAT absl::StrFormat
+  auto s1 = FORMAT("Hello %d", 42);
+  // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use 'std::format' instead of 'StrFormat' [modernize-use-std-format]
+  // CHECK-FIXES: std::format("Hello {}", 42);
+
+  // The format string is replaced even though it comes from a macro, this
+  // behaviour is required so that that <inttypes.h> macros are replaced.
+#define FORMAT_STRING "Hello %s"
+  auto s2 = absl::StrFormat(FORMAT_STRING, 42);
+  // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use 'std::format' instead of 'StrFormat' [modernize-use-std-format]
+  // CHECK-FIXES: std::format("Hello {}", 42);
+
+  // Arguments that are macros aren't replaced with their value, even if they are rearranged.
+#define VALUE 3.14159265358979323846
+#define WIDTH 10
+#define PRECISION 4
+  auto s3 = absl::StrFormat("Hello %*.*f", WIDTH, PRECISION, VALUE);
+  // CHECK-MESSAGES: [[@LINE-1]]:13: warning: use 'std::format' instead of 'StrFormat' [modernize-use-std-format]
+  // CHECK-FIXES: std::format("Hello {:{}.{}f}", VALUE, WIDTH, PRECISION);
+}
