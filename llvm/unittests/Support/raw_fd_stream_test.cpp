@@ -64,4 +64,32 @@ TEST(raw_fd_streamTest, DynCast) {
   }
 }
 
+TEST(raw_fd_streamTest, OverrideOutsAndErrs) {
+  SmallString<64> Path;
+  int FD;
+  ASSERT_FALSE(sys::fs::createTemporaryFile("foo", "bar", FD, Path));
+  FileRemover Cleanup(Path);
+  std::error_code EC;
+  raw_fd_stream OS(Path, EC);
+  ASSERT_TRUE(!EC);
+
+  ScopedOutsAndErrsOverride Overrides(&OS, &OS);
+
+  // First test `outs`.
+  llvm::outs() << "outs";
+  llvm::outs().flush();
+  char Buffer[4];
+  OS.seek(0);
+  OS.read(Buffer, sizeof(Buffer));
+  EXPECT_EQ("outs", StringRef(Buffer, sizeof(Buffer)));
+
+  // Now test `errs`.
+  OS.seek(0);
+  llvm::errs() << "errs";
+  llvm::errs().flush();
+  OS.seek(0);
+  OS.read(Buffer, sizeof(Buffer));
+  EXPECT_EQ("errs", StringRef(Buffer, sizeof(Buffer)));
+}
+
 } // namespace
