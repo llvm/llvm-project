@@ -1068,8 +1068,7 @@ define i1 @trunc_xor(i8 %x, i8 %y) {
 
 define i1 @trunc_nuw_xor(i8 %x, i8 %y) {
 ; CHECK-LABEL: @trunc_nuw_xor(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = trunc nuw i8 [[XOR]] to i1
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %xor = xor i8 %x, %y
@@ -1079,8 +1078,7 @@ define i1 @trunc_nuw_xor(i8 %x, i8 %y) {
 
 define <2 x i1> @trunc_nuw_xor_vector(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @trunc_nuw_xor_vector(
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = trunc nuw <2 x i8> [[XOR]] to <2 x i1>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %xor = xor <2 x i8> %x, %y
