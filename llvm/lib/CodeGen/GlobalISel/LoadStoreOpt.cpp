@@ -567,8 +567,8 @@ bool LoadStoreOpt::addStoreToCandidate(GStore &StoreMI,
   // writes to the next lowest adjacent address.
   if (C.BasePtr != StoreBase)
     return false;
-  // If we don't have a valid offset, we must have an index reg and therefore
-  // can't guarantee to be an adjacent offset.
+  // If we don't have a valid offset, we can't guarantee to be an adjacent
+  // offset.
   if (!BIO.hasValidOffset())
     return false;
   if ((C.CurrentLowestOffset -

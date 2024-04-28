@@ -4,8 +4,6 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64"
 
-  @G = external global [10 x i32]
-
   define void @test_simple_2xs8(ptr %ptr) {
     %addr11 = bitcast ptr %ptr to ptr
     store i8 4, ptr %addr11, align 1
@@ -164,6 +162,7 @@
     ret void
   }
 
+  @G = external global [10 x i32]
   define void @invalid_zero_offset_no_merge(i64 %0) {
     %2 = getelementptr [10 x i32], ptr @G, i64 0, i64 %0
     store i32 0, ptr %2, align 4
@@ -590,11 +589,11 @@ liveins:
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
+# The store to ptr2 prevents merging into a single store.
+# We can still merge the stores into addr1 and addr2.
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x0, $x1
-
-
     ; CHECK-LABEL: name: test_alias_4xs16
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
@@ -645,6 +644,7 @@ liveins:
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
+# Here store of 5 and 9 can be merged, others have aliasing barriers.
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x0, $x1, $x2
@@ -703,10 +703,10 @@ liveins:
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
+# No merging can be done here.
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x0, $x1, $x2, $x3
-
 
     ; CHECK-LABEL: name: test_alias3_4xs16
     ; CHECK: liveins: $x0, $x1, $x2, $x3
@@ -771,11 +771,10 @@ stack:
   - { id: 0, name: a1, size: 24, alignment: 4 }
   - { id: 1, name: a2, size: 4, alignment: 4 }
 machineFunctionInfo: {}
+# Can merge because the load is from a different alloca and can't alias.
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x0
-
-
     ; CHECK-LABEL: name: test_alias_allocas_2xs32
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
