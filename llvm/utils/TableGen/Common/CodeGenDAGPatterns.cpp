@@ -3616,15 +3616,7 @@ public:
       hasChain = true;
 
     if (const CodeGenIntrinsic *IntInfo = N.getIntrinsicInfo(CDP)) {
-      // Ignore reads/writes to inaccessible memory. These should not imply
-      // mayLoad/mayStore on the instruction because they are often used to
-      // model dependencies that Machine IR expresses as uses/defs of a
-      // special physical register.
-      ModRefInfo MR = ModRefInfo::NoModRef;
-      for (MemoryEffects::Location Loc : MemoryEffects::locations()) {
-        if (Loc != MemoryEffects::Location::InaccessibleMem)
-          MR |= IntInfo->ME.getModRef();
-      }
+      ModRefInfo MR = IntInfo->ME.getModRef();
       // If this is an intrinsic, analyze it.
       if (isRefSet(MR))
         mayLoad = true; // These may load memory.
