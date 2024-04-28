@@ -14,7 +14,10 @@
 
 namespace clang::tidy::modernize {
 
-/// Convert calls to absl::StrFormat-like functions to std::format.
+/// Converts calls to absl::StrFormat, or other functions via configuration
+/// options, to C++20's std::format, or another function via a configuration
+/// option, modifying the format string appropriately and removing
+/// now-unnecessary calls to std::string::c_str() and std::string::data().
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-std-format.html
