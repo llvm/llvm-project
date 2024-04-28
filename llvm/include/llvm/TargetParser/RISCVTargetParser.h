@@ -51,6 +51,13 @@ enum VLMUL : uint8_t {
   LMUL_F2
 };
 
+enum VSEW : uint8_t {
+  SEW_8 = 0,
+  SEW_16,
+  SEW_32,
+  SEW_64,
+};
+
 enum {
   TAIL_UNDISTURBED_MASK_UNDISTURBED = 0,
   TAIL_AGNOSTIC = 1,

@@ -287,7 +287,7 @@ static bool isConvertibleToVMV_V_V(const RISCVSubtarget &STI,
 
           // If the producing instruction does not depend on vsetvli, do not
           // convert COPY to vmv.v.v. For example, VL1R_V or PseudoVRELOAD.
-          if (!RISCVII::hasSEWOp(TSFlags) || !RISCVII::hasVLOp(TSFlags))
+          if (!RISCVII::hasSEW(TSFlags) || !RISCVII::hasVLOp(TSFlags))
             return false;
 
           // Found the definition.
@@ -410,9 +410,9 @@ void RISCVInstrInfo::copyPhysRegVector(
       MIB = MIB.addReg(ActualSrcReg, getKillRegState(KillSrc));
     if (UseVMV) {
       const MCInstrDesc &Desc = DefMBBI->getDesc();
-      MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc)));  // AVL
-      MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
-      MIB.addImm(0);                                            // tu, mu
+      MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc))); // AVL
+      MIB.add(RISCVII::getSEWOp(*DefMBBI));                    // SEW
+      MIB.addImm(0);                                           // tu, mu
       MIB.addReg(RISCV::VL, RegState::Implicit);
       MIB.addReg(RISCV::VTYPE, RegState::Implicit);
     }
@@ -1706,8 +1706,7 @@ bool RISCVInstrInfo::areRVVInstsReassociable(const MachineInstr &Root,
     return false;
 
   // SEW
-  if (RISCVII::hasSEWOp(TSFlags) &&
-      !checkImmOperand(RISCVII::getSEWOpNum(Desc)))
+  if (RISCVII::hasSEW(TSFlags) && !checkImmOperand(RISCVII::getSEWOpNum(Desc)))
     return false;
 
   // Mask
@@ -2462,10 +2461,6 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         ErrInfo = "Invalid register class for VL operand";
         return false;
       }
-    }
-    if (!RISCVII::hasSEWOp(TSFlags)) {
-      ErrInfo = "VL operand w/o SEW operand?";
-      return false;
     }
   }
   if (RISCVII::hasSEWOp(TSFlags)) {
@@ -3521,8 +3516,8 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
   case CASE_FP_WIDEOP_OPCODE_LMULS_MF4(FWADD_WV):
   case CASE_FP_WIDEOP_OPCODE_LMULS_MF4(FWSUB_WV): {
     assert(RISCVII::hasVecPolicyOp(MI.getDesc().TSFlags) &&
-           MI.getNumExplicitOperands() == 7 &&
-           "Expect 7 explicit operands rd, rs2, rs1, rm, vl, sew, policy");
+           MI.getNumExplicitOperands() == 6 &&
+           "Expect 6 explicit operands rd, rs2, rs1, rm, vl, policy");
     // If the tail policy is undisturbed we can't convert.
     if ((MI.getOperand(RISCVII::getVecPolicyOpNum(MI.getDesc())).getImm() &
          1) == 0)
@@ -3545,8 +3540,7 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
               .add(MI.getOperand(2))
               .add(MI.getOperand(3))
               .add(MI.getOperand(4))
-              .add(MI.getOperand(5))
-              .add(MI.getOperand(6));
+              .add(MI.getOperand(5));
     break;
   }
   case CASE_WIDEOP_OPCODE_LMULS(WADD_WV):

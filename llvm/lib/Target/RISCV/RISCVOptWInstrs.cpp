@@ -100,10 +100,10 @@ static bool vectorPseudoHasAllNBitUsers(const MachineOperand &UserOp,
 
   const MCInstrDesc &MCID = MI.getDesc();
   const uint64_t TSFlags = MCID.TSFlags;
-  if (!RISCVII::hasSEWOp(TSFlags))
+  if (!RISCVII::hasSEW(TSFlags))
     return false;
   assert(RISCVII::hasVLOp(TSFlags));
-  const unsigned Log2SEW = MI.getOperand(RISCVII::getSEWOpNum(MCID)).getImm();
+  const unsigned Log2SEW = RISCVII::getSEWOp(MI).getImm();
 
   if (UserOp.getOperandNo() == RISCVII::getVLOpNum(MCID))
     return false;

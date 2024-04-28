@@ -223,6 +223,13 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   // 3 -> widening case
   bits<2> TargetOverlapConstraintType = 0;
   let TSFlags{22-21} = TargetOverlapConstraintType;
+
+  bit HasImplictSEW = 0;
+  let TSFlags{23} = HasImplictSEW;
+
+  // The actual SEW value is 8 * (2 ^ VSEW).
+  bits<2> VSEW = 0;
+  let TSFlags{25-24} = VSEW;
 }
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,
