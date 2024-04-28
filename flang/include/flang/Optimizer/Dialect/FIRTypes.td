@@ -578,7 +578,7 @@ def fir_VoidType : FIR_Type<"Void", "void"> {
 
 // Whether a type is a BaseBoxType
 def IsBaseBoxTypePred
-        : CPred<"$_self.isa<::fir::BaseBoxType>()">;
+        : CPred<"mlir::isa<::fir::BaseBoxType>($_self)">;
 def fir_BaseBoxType : Type<IsBaseBoxTypePred, "fir.box or fir.class type">;
 
 // Generalized FIR and standard dialect types representing intrinsic types
@@ -625,6 +625,7 @@ def AnyRefOrBoxLike : TypeConstraint<Or<[AnyReferenceLike.predicate,
 def AnyRefOrBox : TypeConstraint<Or<[fir_ReferenceType.predicate,
     fir_HeapType.predicate, fir_PointerType.predicate,
     IsBaseBoxTypePred]>, "any reference or box">;
+def AnyRefOrBoxType : Type<AnyRefOrBox.predicate, "any legal ref or box type">;
 
 def AnyShapeLike : TypeConstraint<Or<[fir_ShapeType.predicate,
     fir_ShapeShiftType.predicate]>, "any legal shape type">;

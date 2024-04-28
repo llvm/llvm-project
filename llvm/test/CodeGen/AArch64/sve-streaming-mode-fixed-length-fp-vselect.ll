@@ -71,8 +71,8 @@ define <8 x half> @select_v8f16(<8 x half> %op1, <8 x half> %op2, <8 x i1> %mask
 define void @select_v16f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: select_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q2, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q3, [x1]
 ; CHECK-NEXT:    fcmeq p1.h, p0/z, z0.h, z1.h
 ; CHECK-NEXT:    fcmeq p0.h, p0/z, z2.h, z3.h
@@ -128,8 +128,8 @@ define <4 x float> @select_v4f32(<4 x float> %op1, <4 x float> %op2, <4 x i1> %m
 define void @select_v8f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: select_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q2, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q3, [x1]
 ; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z2.s, z3.s
@@ -149,16 +149,7 @@ define <1 x double> @select_v1f64(<1 x double> %op1, <1 x double> %op2, <1 x i1>
 ; CHECK-LABEL: select_v1f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    tst w0, #0x1
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    csetm x8, ne
-; CHECK-NEXT:    mvn x9, x8
-; CHECK-NEXT:    mov z2.d, x8
-; CHECK-NEXT:    mov z3.d, x9
-; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    and z1.d, z1.d, z3.d
-; CHECK-NEXT:    orr z0.d, z0.d, z1.d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    fcsel d0, d0, d1, ne
 ; CHECK-NEXT:    ret
   %sel = select <1 x i1> %mask, <1 x double> %op1, <1 x double> %op2
   ret <1 x double> %sel
@@ -186,8 +177,8 @@ define <2 x double> @select_v2f64(<2 x double> %op1, <2 x double> %op2, <2 x i1>
 define void @select_v4f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: select_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q2, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q3, [x1]
 ; CHECK-NEXT:    fcmeq p1.d, p0/z, z0.d, z1.d
 ; CHECK-NEXT:    fcmeq p0.d, p0/z, z2.d, z3.d

@@ -2,8 +2,7 @@
 ; RUN: llc < %s -mtriple=aarch64 | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=aarch64 -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:       warning: Instruction selection used fallback path for lrint_v1f16
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v2f16
+; CHECK-GI:       warning: Instruction selection used fallback path for lrint_v2f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v4f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v8f16
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16i64_v16f16

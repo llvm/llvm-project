@@ -10,7 +10,7 @@ set(FLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD "off" CACHE STRING
 set(FLANG_OMP_DEVICE_ARCHITECTURES "all" CACHE STRING
   "List of OpenMP device architectures to be used to compile the Fortran runtime (e.g. 'gfx1103;sm_90')")
 
-macro(enable_cuda_compilation files)
+macro(enable_cuda_compilation name files)
   if (FLANG_EXPERIMENTAL_CUDA_RUNTIME)
     if (BUILD_SHARED_LIBS)
       message(FATAL_ERROR
@@ -52,6 +52,10 @@ macro(enable_cuda_compilation files)
       include_directories(AFTER ${FLANG_LIBCUDACXX_PATH}/include)
       add_compile_definitions(RT_USE_LIBCUDACXX=1)
     endif()
+
+    # Add an OBJECT library consisting of CUDA PTX.
+    llvm_add_library(${name}PTX OBJECT PARTIAL_SOURCES_INTENDED ${files})
+    set_property(TARGET obj.${name}PTX PROPERTY CUDA_PTX_COMPILATION ON)
   endif()
 endmacro()
 

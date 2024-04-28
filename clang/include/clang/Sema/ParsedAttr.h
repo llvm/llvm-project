@@ -94,7 +94,7 @@ struct PropertyData {
       : GetterId(getterId), SetterId(setterId) {}
 };
 
-} // namespace
+} // namespace detail
 
 /// Wraps an identifier and optional source location for the identifier.
 struct IdentifierLoc {
@@ -743,11 +743,6 @@ public:
                      IdentifierInfo *scopeName, SourceLocation scopeLoc,
                      ArgsUnion *args, unsigned numArgs, ParsedAttr::Form form,
                      SourceLocation ellipsisLoc = SourceLocation()) {
-    size_t temp =
-        ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
-                                     detail::TypeTagForDatatypeData, ParsedType,
-                                     detail::PropertyData>(numArgs, 0, 0, 0, 0);
-    (void)temp;
     void *memory = allocate(
         ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
                                      detail::TypeTagForDatatypeData, ParsedType,
@@ -953,6 +948,7 @@ public:
   ParsedAttributes(AttributeFactory &factory) : pool(factory) {}
   ParsedAttributes(const ParsedAttributes &) = delete;
   ParsedAttributes &operator=(const ParsedAttributes &) = delete;
+  ParsedAttributes(ParsedAttributes &&G) = default;
 
   AttributePool &getPool() const { return pool; }
 

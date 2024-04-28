@@ -88,7 +88,7 @@ public:
     // name must be used so that we add to the tbaa tree added in the FIR pass
     mlir::Attribute attr = func->getAttr(getInternalFuncNameAttrName());
     if (attr) {
-      return getFuncTree(attr.cast<mlir::StringAttr>());
+      return getFuncTree(mlir::cast<mlir::StringAttr>(attr));
     }
     return getFuncTree(func.getSymNameAttr());
   }

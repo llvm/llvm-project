@@ -10,11 +10,12 @@
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_FMAXIMUM_MAGTEST_H
 
 #include "src/__support/FPUtil/BasicOperations.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
 template <typename T>
-class FMaximumMagTest : public LIBC_NAMESPACE::testing::Test {
+class FMaximumMagTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
   DECLARE_SPECIAL_CONSTANTS(T)
 

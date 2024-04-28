@@ -34,6 +34,10 @@
 
 // --- C++26 features ---
 
+#if check(deleted_function, 202403, 202403, 202403, 202403, 202403, 202403, 202403)
+#error "wrong value for __cpp_deleted_function"
+#endif
+
 #if check(placeholder_variables, 202306, 202306, 202306, 202306, 202306, 202306, 202306)
 #error "wrong value for __cpp_placeholder_variables"
 #endif
@@ -218,7 +222,7 @@
 #error "wrong value for __cpp_aggregate_bases"
 #endif
 
-#if check(structured_bindings, 0, 0, 0, 201606, 201606, 201606, 201606)
+#if check(structured_bindings, 0, 0, 0, 202403L, 202403L, 202403L, 202403L)
 #error "wrong value for __cpp_structured_bindings"
 #endif
 
