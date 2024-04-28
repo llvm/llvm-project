@@ -59,9 +59,9 @@ template <> struct CustomMappingTraits<IdHashNodeStableMapTy> {
 void OutlinedHashTreeRecord::serialize(raw_ostream &OS) const {
   IdHashNodeStableMapTy IdNodeStableMap;
   convertToStableData(IdNodeStableMap);
-
   support::endian::Writer Writer(OS, endianness::little);
   Writer.write<uint32_t>(IdNodeStableMap.size());
+
   for (const auto &[Id, NodeStable] : IdNodeStableMap) {
     Writer.write<uint32_t>(Id);
     Writer.write<uint64_t>(NodeStable.Hash);
@@ -74,9 +74,9 @@ void OutlinedHashTreeRecord::serialize(raw_ostream &OS) const {
 
 void OutlinedHashTreeRecord::deserialize(const unsigned char *&Ptr) {
   IdHashNodeStableMapTy IdNodeStableMap;
-
   auto NumIdNodeStableMap =
       endian::readNext<uint32_t, endianness::little, unaligned>(Ptr);
+
   for (unsigned I = 0; I < NumIdNodeStableMap; ++I) {
     auto Id = endian::readNext<uint32_t, endianness::little, unaligned>(Ptr);
     HashNodeStable NodeStable;
@@ -116,12 +116,14 @@ void OutlinedHashTreeRecord::convertToStableData(
     IdHashNodeStableMapTy &IdNodeStableMap) const {
   // Build NodeIdMap
   HashNodeIdMapTy NodeIdMap;
-  HashTree->walkVertices([&NodeIdMap](const HashNode *Current) {
-    size_t Index = NodeIdMap.size();
-    NodeIdMap[Current] = Index;
-    assert(Index = NodeIdMap.size() + 1 &&
-                   "Expected size of NodeMap to increment by 1");
-  });
+  HashTree->walkGraph(
+      [&NodeIdMap](const HashNode *Current) {
+        size_t Index = NodeIdMap.size();
+        NodeIdMap[Current] = Index;
+        assert(Index = NodeIdMap.size() + 1 &&
+                       "Expected size of NodeMap to increment by 1");
+      },
+      /*EdgeCallbackFn=*/nullptr, /*SortedWork=*/true);
 
   // Convert NodeIdMap to NodeStableMap
   for (auto &P : NodeIdMap) {

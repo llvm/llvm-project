@@ -54,19 +54,15 @@ class OutlinedHashTree {
   using HashSequence = std::vector<stable_hash>;
   using HashSequencePair = std::pair<std::vector<stable_hash>, unsigned>;
 
+public:
   /// Walks every edge and node in the OutlinedHashTree and calls CallbackEdge
   /// for the edges and CallbackNode for the nodes with the stable_hash for
   /// the source and the stable_hash of the sink for an edge. These generic
   /// callbacks can be used to traverse a OutlinedHashTree for the purpose of
   /// print debugging or serializing it.
-  void walkGraph(EdgeCallbackFn CallbackEdge,
-                 NodeCallbackFn CallbackNode) const;
-
-public:
-  /// Walks the nodes of a OutlinedHashTree using walkGraph.
-  void walkVertices(NodeCallbackFn Callback) const {
-    walkGraph([](const HashNode *A, const HashNode *B) {}, Callback);
-  }
+  void walkGraph(NodeCallbackFn CallbackNode,
+                 EdgeCallbackFn CallbackEdge = nullptr,
+                 bool SortedWalk = false) const;
 
   /// Release all hash nodes except the root hash node.
   void clear() {
@@ -79,32 +75,12 @@ public:
 
   /// \returns the size of a OutlinedHashTree by traversing it. If
   /// \p GetTerminalCountOnly is true, it only counts the terminal nodes
-  /// (meaning it returns the size of the number of hash sequences in a
+  /// (meaning it returns the the number of hash sequences in the
   /// OutlinedHashTree).
-  size_t size(bool GetTerminalCountOnly = false) const {
-    size_t Size = 0;
-    walkVertices([&Size, GetTerminalCountOnly](const HashNode *N) {
-      Size += (N && (!GetTerminalCountOnly || N->Terminals));
-    });
-    return Size;
-  }
+  size_t size(bool GetTerminalCountOnly = false) const;
 
   /// \returns the depth of a OutlinedHashTree by traversing it.
-  size_t depth() const {
-    size_t Size = 0;
-    std::unordered_map<const HashNode *, size_t> DepthMap;
-
-    walkGraph(
-        [&DepthMap](const HashNode *Src, const HashNode *Dst) {
-          size_t Depth = DepthMap[Src];
-          DepthMap[Dst] = Depth + 1;
-        },
-        [&Size, &DepthMap](const HashNode *N) {
-          Size = std::max(Size, DepthMap[N]);
-        });
-
-    return Size;
-  }
+  size_t depth() const;
 
   /// \returns the root hash node of a OutlinedHashTree.
   const HashNode *getRoot() const { return Root.get(); }
@@ -117,7 +93,7 @@ public:
   /// Merge a \p OtherTree into this Tree.
   void merge(const OutlinedHashTree *OtherTree);
 
-  /// \returns the matching count if \p Sequence exists in a OutlinedHashTree.
+  /// \returns the matching count if \p Sequence exists in the OutlinedHashTree.
   unsigned find(const HashSequence &Sequence) const;
 
   OutlinedHashTree() { Root = std::make_unique<HashNode>(); }
