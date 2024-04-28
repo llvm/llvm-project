@@ -83,6 +83,7 @@ def ROCKET_RV32 : RISCVProcessorModel<"rocket-rv32",
                                        FeatureStdExtI,
                                        FeatureStdExtZifencei,
                                        FeatureStdExtZicsr,
+                                       FeatureStdExtZidummy,
                                        FeatureDummy]>;
 def ROCKET_RV64 : RISCVProcessorModel<"rocket-rv64",
                                       NoSchedModel,
@@ -90,6 +91,7 @@ def ROCKET_RV64 : RISCVProcessorModel<"rocket-rv64",
                                        FeatureStdExtI,
                                        FeatureStdExtZifencei,
                                        FeatureStdExtZicsr,
+                                       FeatureStdExtZidummy,
                                        FeatureDummy]>;
 def ROCKET : RISCVTuneProcessorModel<"rocket",
                                      NoSchedModel>;
@@ -125,8 +127,8 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
 
 // CHECK:      PROC(GENERIC_RV32, {"generic-rv32"}, {"rv32i2p1"}, 0)
 // CHECK-NEXT: PROC(GENERIC_RV64, {"generic-rv64"}, {"rv64i2p1"}, 0)
-// CHECK-NEXT: PROC(ROCKET_RV32, {"rocket-rv32"}, {"rv32i2p1_zicsr2p0_zifencei2p0"}, 0)
-// CHECK-NEXT: PROC(ROCKET_RV64, {"rocket-rv64"}, {"rv64i2p1_zicsr2p0_zifencei2p0"}, 0)
+// CHECK-NEXT: PROC(ROCKET_RV32, {"rocket-rv32"}, {"rv32i2p1_zicsr2p0_zidummy0p1_zifencei2p0"}, 0)
+// CHECK-NEXT: PROC(ROCKET_RV64, {"rocket-rv64"}, {"rv64i2p1_zicsr2p0_zidummy0p1_zifencei2p0"}, 0)
 
 // CHECK: #undef PROC
 
