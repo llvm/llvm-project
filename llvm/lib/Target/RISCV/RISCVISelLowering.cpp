@@ -13416,6 +13416,12 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     return SDValue();
   uint64_t MulAmt = CNode->getZExtValue();
 
+  // WARNING: The code below is knowingly incorrect with regards to undef semantics.
+  // We're adding additional uses of X here, and in principle, we should be freezing
+  // X before doing so.  However, adding freeze here causes real regressions, and no
+  // other target properly freezes X in these cases either.
+  SDValue X = N->getOperand(0);
+
   for (uint64_t Divisor : {3, 5, 9}) {
     if (MulAmt % Divisor != 0)
       continue;
@@ -13428,7 +13434,6 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     // 3/5/9 * 3/5/9 -> shXadd (shYadd X, X), (shYadd X, X)
     if (MulAmt2 == 3 || MulAmt2 == 5 || MulAmt2 == 9) {
       SDLoc DL(N);
-      SDValue X = DAG.getFreeze(N->getOperand(0));
       SDValue Mul359 =
           DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
                       DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
@@ -13446,7 +13451,6 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     if (ScaleShift >= 1 && ScaleShift < 4) {
       unsigned ShiftAmt = Log2_64((MulAmt & (MulAmt - 1)));
       SDLoc DL(N);
-      SDValue X = DAG.getFreeze(N->getOperand(0));
       SDValue Shift1 =
           DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
       return DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
@@ -13466,7 +13470,6 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     unsigned TZ = llvm::countr_zero(C);
     if ((C >> TZ) == Divisor && (TZ == 1 || TZ == 2 || TZ == 3)) {
       SDLoc DL(N);
-      SDValue X = DAG.getFreeze(N->getOperand(0));
       SDValue Mul359 =
           DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
                       DAG.getConstant(Log2_64(Divisor - 1), DL, VT), X);
@@ -13481,7 +13484,6 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     if (ScaleShift >= 1 && ScaleShift < 4) {
       unsigned ShiftAmt = Log2_64(((MulAmt - 1) & (MulAmt - 2)));
       SDLoc DL(N);
-      SDValue X = DAG.getFreeze(N->getOperand(0));
       SDValue Shift1 =
           DAG.getNode(ISD::SHL, DL, VT, X, DAG.getConstant(ShiftAmt, DL, VT));
       return DAG.getNode(ISD::ADD, DL, VT, Shift1,
@@ -13495,11 +13497,11 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     if (isPowerOf2_64(MulAmt + Offset)) {
       SDLoc DL(N);
       SDValue Shift1 =
-          DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
+          DAG.getNode(ISD::SHL, DL, VT, X,
                       DAG.getConstant(Log2_64(MulAmt + Offset), DL, VT));
-      SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, N->getOperand(0),
+      SDValue Mul359 = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, X,
                                    DAG.getConstant(Log2_64(Offset - 1), DL, VT),
-                                   N->getOperand(0));
+                                   X);
       return DAG.getNode(ISD::SUB, DL, VT, Shift1, Mul359);
     }
   }
@@ -16162,23 +16164,31 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SELECT:
     return performSELECTCombine(N, DAG, Subtarget);
   case RISCVISD::CZERO_EQZ:
-  case RISCVISD::CZERO_NEZ:
+  case RISCVISD::CZERO_NEZ: {
+    SDValue LHS = N->getOperand(0);
+    SDValue RHS = N->getOperand(1);
     // czero_eq X, (xor Y, 1) -> czero_ne X, Y if Y is 0 or 1.
     // czero_ne X, (xor Y, 1) -> czero_eq X, Y if Y is 0 or 1.
-    if (N->getOperand(1).getOpcode() == ISD::XOR &&
-        isOneConstant(N->getOperand(1).getOperand(1))) {
-      SDValue Cond = N->getOperand(1).getOperand(0);
+    if (RHS.getOpcode() == ISD::XOR && isOneConstant(RHS.getOperand(1))) {
+      SDValue Cond = RHS.getOperand(0);
       APInt Mask = APInt::getBitsSetFrom(Cond.getValueSizeInBits(), 1);
       if (DAG.MaskedValueIsZero(Cond, Mask)) {
         unsigned NewOpc = N->getOpcode() == RISCVISD::CZERO_EQZ
                               ? RISCVISD::CZERO_NEZ
                               : RISCVISD::CZERO_EQZ;
-        return DAG.getNode(NewOpc, SDLoc(N), N->getValueType(0),
-                           N->getOperand(0), Cond);
+        return DAG.getNode(NewOpc, SDLoc(N), N->getValueType(0), LHS, Cond);
       }
     }
+    // czero_eqz x, (setcc x, 0, ne) -> x
+    // czero_nez x, (setcc x, 0, eq) -> x
+    if (RHS.getOpcode() == ISD::SETCC && isNullConstant(RHS.getOperand(1)) &&
+        cast<CondCodeSDNode>(RHS.getOperand(2))->get() ==
+            (N->getOpcode() == RISCVISD::CZERO_EQZ ? ISD::CondCode::SETNE
+                                                   : ISD::CondCode::SETEQ) &&
+        LHS == RHS.getOperand(0))
+      return LHS;
     return SDValue();
-
+  }
   case RISCVISD::SELECT_CC: {
     // Transform
     SDValue LHS = N->getOperand(0);
