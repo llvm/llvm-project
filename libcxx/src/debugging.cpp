@@ -39,11 +39,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #  if defined(_LIBCPP_WIN32API)
 
-void __breakpoint() noexcept { DebugBreak(); }
+static void __breakpoint() noexcept { DebugBreak(); }
 
 #  elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__linux__)
 
-void __breakpoint() {
+static void __breakpoint() {
 #    if __has_builtin(__builtin_debugtrap)
   __builtin_debugtrap();
 #    else
@@ -61,13 +61,13 @@ void __breakpoint() {
 
 #  if defined(_LIBCPP_WIN32API)
 
-bool __is_debugger_present() noexcept { return IsDebuggerPresent(); }
+static bool __is_debugger_present() noexcept { return IsDebuggerPresent(); }
 
 #  elif defined(__APPLE__) || defined(__FreeBSD__)
 
 // Returns true if the current process is being debugged (either
 // running under the debugger or has a debugger attached post facto).
-bool __is_debugger_present() noexcept {
+static bool __is_debugger_present() noexcept {
   // Technical Q&A QA1361: Detecting the Debugger
   // https://developer.apple.com/library/archive/qa/qa1361/_index.html
 
@@ -103,7 +103,7 @@ bool __is_debugger_present() noexcept {
 
 #  elif defined(__linux__)
 
-bool __is_debugger_present() noexcept {
+static bool __is_debugger_present() noexcept {
 #    if defined(_LIBCPP_HAS_NO_FILESYSTEM)
   _LIBCPP_ASSERT_INTERNAL(false,
                           "Function is not available. Could not open '/proc/self/status' for reading, libc++ was "
