@@ -54,6 +54,7 @@ void deinitRuntime() {
     PM = nullptr;
   }
 
+  RefCount--;
 }
 
 // HACK: These depricated device stubs still needs host versions for fallback

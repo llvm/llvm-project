@@ -478,8 +478,8 @@ EXTERN void __tgt_push_mapper_component(void *RtMapperHandle, void *Base,
 }
 
 EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
-  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   assert(PM && "Runtime not initialized");
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
   for (auto &R : PM->pluginAdaptors())
@@ -487,8 +487,8 @@ EXTERN void __tgt_set_info_flag(uint32_t NewInfoLevel) {
 }
 
 EXTERN int __tgt_print_device_info(int64_t DeviceId) {
-  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   assert(PM && "Runtime not initialized");
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   auto DeviceOrErr = PM->getDevice(DeviceId);
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceId, "%s", toString(DeviceOrErr.takeError()).c_str());
