@@ -399,8 +399,6 @@ void DataSharingProcessor::doPrivatize(
 
       firOpBuilder.setInsertionPointToEnd(allocEntryBlock);
 
-      // TODO Delayed privatization has not been tested yet for:
-      // CharArrayBoxValue, BoxValue, or PolymorphicValue.
       fir::ExtendedValue localExV =
           hlfir::translateToExtendedValue(
               symLoc, firOpBuilder, hlfir::Entity{allocRegion.getArgument(0)},
