@@ -484,7 +484,7 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
   Base->setName("basetag");
   auto TargetTriple = Triple(M.getTargetTriple());
   if (ClRecordStackHistory == instr && TargetTriple.isAndroid() &&
-      TargetTriple.isAArch64() && !TargetTriple.isAndroidVersionLT(35)) {
+      TargetTriple.isAArch64() && !TargetTriple.isAndroidVersionLT(36)) {
     constexpr int StackMteSlot = -3;
     constexpr uint64_t TagMask = 0xFULL << 56;
 
