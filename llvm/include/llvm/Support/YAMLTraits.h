@@ -671,7 +671,11 @@ inline bool isBool(StringRef S) {
 // (except for TAB #x9, LF #xA, and CR #xD which are allowed), DEL #x7F, the C1
 // control block #x80-#x9F (except for NEL #x85 which is allowed), the surrogate
 // block #xD800-#xDFFF, #xFFFE, and #xFFFF.
-inline QuotingType needsQuotes(StringRef S) {
+//
+// Some strings are valid YAML values even unquoted, but without quotes are
+// interpreted as non-string type, for instance null, boolean or numeric values.
+// If ForcePreserveAsString is set, such strings are quoted.
+inline QuotingType needsQuotes(StringRef S, bool ForcePreserveAsString = true) {
   if (S.empty())
     return QuotingType::Single;
 
@@ -679,12 +683,14 @@ inline QuotingType needsQuotes(StringRef S) {
   if (isSpace(static_cast<unsigned char>(S.front())) ||
       isSpace(static_cast<unsigned char>(S.back())))
     MaxQuotingNeeded = QuotingType::Single;
-  if (isNull(S))
-    MaxQuotingNeeded = QuotingType::Single;
-  if (isBool(S))
-    MaxQuotingNeeded = QuotingType::Single;
-  if (isNumeric(S))
-    MaxQuotingNeeded = QuotingType::Single;
+  if (ForcePreserveAsString) {
+    if (isNull(S))
+      MaxQuotingNeeded = QuotingType::Single;
+    if (isBool(S))
+      MaxQuotingNeeded = QuotingType::Single;
+    if (isNumeric(S))
+      MaxQuotingNeeded = QuotingType::Single;
+  }
 
   // 7.3.3 Plain Style
   // Plain scalars must not begin with most indicators, as this would cause
@@ -1636,6 +1642,7 @@ public:
 
 private:
   void output(StringRef s);
+  void output(StringRef, QuotingType);
   void outputUpToEndOfLine(StringRef s);
   void newLineCheck(bool EmptySequence = false);
   void outputNewLine();
