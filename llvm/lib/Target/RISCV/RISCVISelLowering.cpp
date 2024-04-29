@@ -16791,6 +16791,11 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue Scalar = N->getOperand(1);
     SDValue VL = N->getOperand(2);
 
+    if (Scalar.getOpcode() == RISCVISD::VMV_X_S &&
+        Scalar.getOperand(0).getValueType() == N->getValueType(0) &&
+        isa<ConstantSDNode>(N->getOperand(2)) && N->getOperand(0).isUndef())
+      return Scalar.getOperand(0);
+
     // Use M1 or smaller to avoid over constraining register allocation
     const MVT M1VT = getLMUL1VT(VT);
     if (M1VT.bitsLT(VT)) {
