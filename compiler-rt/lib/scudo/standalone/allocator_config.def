@@ -89,6 +89,7 @@ PRIMARY_REQUIRED(const s32, MaxReleaseToOsIntervalMs)
 // Indicates support for offsetting the start of a region by a random number of
 // pages. This is only used if `EnableContiguousRegions` is enabled.
 PRIMARY_OPTIONAL(const bool, EnableRandomOffset, false)
+PRIMARY_OPTIONAL(const s32, DefaultReleaseToOsIntervalMs, INT32_MIN)
 
 // When `EnableContiguousRegions` is true, all regions will be be arranged in
 // adjacency. This will reduce the fragmentation caused by region allocations
@@ -118,6 +119,7 @@ SECONDARY_CACHE_OPTIONAL(const u32, DefaultMaxEntriesCount, 0)
 SECONDARY_CACHE_OPTIONAL(const uptr, DefaultMaxEntrySize, 0)
 SECONDARY_CACHE_OPTIONAL(const s32, MinReleaseToOsIntervalMs, INT32_MIN)
 SECONDARY_CACHE_OPTIONAL(const s32, MaxReleaseToOsIntervalMs, INT32_MAX)
+SECONDARY_CACHE_OPTIONAL(const s32, DefaultReleaseToOsIntervalMs, INT32_MIN)
 
 #undef SECONDARY_CACHE_OPTIONAL
 #undef SECONDARY_REQUIRED_TEMPLATE_TYPE
