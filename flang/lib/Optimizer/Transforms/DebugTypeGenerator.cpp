@@ -42,7 +42,7 @@ DebugTypeGenerator::convertType(mlir::Type Ty, mlir::LLVM::DIFileAttr fileAttr,
                                 mlir::LLVM::DIScopeAttr scope,
                                 mlir::Location loc) {
   mlir::MLIRContext *context = module.getContext();
-  if (Ty.isIntOrIndex()) {
+  if (Ty.isInteger()) {
     return genBasicType(context, mlir::StringAttr::get(context, "integer"),
                         Ty.getIntOrFloatBitWidth(), llvm::dwarf::DW_ATE_signed);
   } else if (Ty.isa<mlir::FloatType>() || Ty.isa<fir::RealType>()) {
