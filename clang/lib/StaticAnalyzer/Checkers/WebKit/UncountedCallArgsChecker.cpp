@@ -56,7 +56,8 @@ public:
       bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) {
         if (isRefType(safeGetName(Decl)))
           return true;
-        return RecursiveASTVisitor<LocalVisitor>::TraverseClassTemplateDecl(Decl);
+        return RecursiveASTVisitor<LocalVisitor>::TraverseClassTemplateDecl(
+            Decl);
       }
 
       bool VisitCallExpr(const CallExpr *CE) {
