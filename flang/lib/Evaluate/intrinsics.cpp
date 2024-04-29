@@ -1342,8 +1342,8 @@ static const IntrinsicInterface intrinsicSubroutine[]{
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"etime",
           {
-            {"values", DefaultReal, Rank::vector, Optionality::required, common::Intent::Out},
-            {"time", DefaultReal, Rank::scalar, Optionality::required, common::Intent::Out}
+            {"values", TypePattern{RealType, KindCode::exactKind, 4}, Rank::vector, Optionality::required, common::Intent::Out},
+            {"time", TypePattern{RealType, KindCode::exactKind, 4}, Rank::scalar, Optionality::required, common::Intent::Out}
           },
           {}, Rank::elemental, IntrinsicClass::impureSubroutine
         },
