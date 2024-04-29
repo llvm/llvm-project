@@ -41,22 +41,6 @@ if( MSVC OR MINGW )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
   set(system_libs ${system_libs} psapi shell32 ole32 uuid advapi32 ws2_32)
-  # find dbgcore.dll and dbghelp.dll together in their system folder,
-  # required for lib/Support/Windows/Signals.inc.
-  set(tempsuffixes ${CMAKE_FIND_LIBRARY_SUFFIXES})
-  set(CMAKE_FIND_LIBRARY_SUFFIXES .DLL ${CMAKE_FIND_LIBRARY_SUFFIXES})
-  find_library(DBGCORE dbgcore REQUIRED NO_CACHE)
-  cmake_path(GET DBGCORE PARENT_PATH DBGSYSPATH)
-  find_library(DBGHELP dbghelp REQUIRED HINTS "${DBGSYSPATH}" NO_DEFAULT_PATH NO_CACHE)
-  cmake_path(CONVERT "${DBGCORE}" TO_NATIVE_PATH_LIST DBGCORE)
-  cmake_path(CONVERT "${DBGHELP}" TO_NATIVE_PATH_LIST DBGHELP)
-  string(REPLACE "\\" "\\\\" DBGCORE "${DBGCORE}")
-  string(REPLACE "\\" "\\\\" DBGHELP "${DBGHELP}")
-  message("-DDBGCORE is ${DBGCORE}")
-  message("-DDBGHELP is ${DBGHELP}")
-  add_compile_definitions(DBGCOREDLL="${DBGCORE}"
-                          DBGHELPDLL="${DBGHELP}")
-  set(CMAKE_FIND_LIBRARY_SUFFIXES ${tempsuffixes})
 elseif( CMAKE_HOST_UNIX )
   if( HAVE_LIBRT )
     set(system_libs ${system_libs} rt)

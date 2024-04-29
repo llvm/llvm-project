@@ -43,6 +43,10 @@ InitLLVM::InitLLVM(int &Argc, const char **&Argv,
   assert(!Initialized && "InitLLVM was already initialized!");
   Initialized = true;
 #endif
+#ifdef _WIN32
+  // Avoid searching the directory from which the application is loaded.
+  SetDllDirectoryA("");
+#endif
 #ifdef __MVS__
   // Bring stdin/stdout/stderr into a known state.
   sys::AddSignalHandler(CleanupStdHandles, nullptr);
