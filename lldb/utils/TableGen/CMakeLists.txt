@@ -10,6 +10,7 @@ if (NOT DEFINED LLDB_TABLEGEN_EXE)
     add_tablegen(lldb-tblgen LLDB
       LLDBOptionDefEmitter.cpp
       LLDBPropertyDefEmitter.cpp
+      LLDBSBAPIDWARFEnum.cpp
       LLDBTableGen.cpp
       LLDBTableGenUtils.cpp
       )

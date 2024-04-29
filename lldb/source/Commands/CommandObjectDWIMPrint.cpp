@@ -96,7 +96,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
   // Either Swift was explicitly specified, or the frame is Swift.
   lldb::LanguageType language = m_expr_options.language;
   if (language == lldb::eLanguageTypeUnknown && frame)
-    language = frame->GuessLanguage();
+    language = frame->GuessLanguage().AsLanguageType();
 
   // Add a hint if object description was requested, but no description
   // function was implemented.

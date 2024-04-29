@@ -39,6 +39,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 
 using namespace lldb_private;
 
@@ -46,8 +47,7 @@ char UserExpression::ID;
 
 UserExpression::UserExpression(ExecutionContextScope &exe_scope,
                                llvm::StringRef expr, llvm::StringRef prefix,
-                               lldb::LanguageType language,
-                               ResultType desired_type,
+                               SourceLanguage language, ResultType desired_type,
                                const EvaluateExpressionOptions &options)
     : Expression(exe_scope), m_expr_text(std::string(expr)),
       m_expr_prefix(std::string(prefix)), m_language(language),
@@ -176,7 +176,7 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
   }
 
   lldb_private::ExecutionPolicy execution_policy = options.GetExecutionPolicy();
-  lldb::LanguageType language = options.GetLanguage();
+  SourceLanguage language = options.GetLanguage();
   const ResultType desired_type = options.DoesCoerceToId()
                                       ? UserExpression::eResultTypeId
                                       : UserExpression::eResultTypeAny;
@@ -242,7 +242,7 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
   // If the language was not specified in the expression command, set it to the
   // language in the target's properties if specified, else default to the
   // langage for the frame.
-  if (language == lldb::eLanguageTypeUnknown) {
+  if (!language.name) {
     if (target->GetLanguage() != lldb::eLanguageTypeUnknown)
       language = target->GetLanguage();
     else if (StackFrame *frame = exe_ctx.GetFramePtr())
@@ -384,7 +384,8 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
       } else {
         if (expr_result) {
           result_valobj_sp = expr_result->GetValueObject();
-          result_valobj_sp->SetPreferredDisplayLanguage(language);
+          result_valobj_sp->SetPreferredDisplayLanguage(
+              language.AsLanguageType());
 
           LLDB_LOG(log,
                    "== [UserExpression::Evaluate] Execution completed "
@@ -426,7 +427,8 @@ UserExpression::Execute(DiagnosticManager &diagnostic_manager,
   Target *target = exe_ctx.GetTargetPtr();
   if (options.GetSuppressPersistentResult() && result_var && target) {
     if (auto *persistent_state =
-            target->GetPersistentExpressionStateForLanguage(m_language))
+            target->GetPersistentExpressionStateForLanguage(
+                m_language.AsLanguageType()))
       persistent_state->RemovePersistentVariable(result_var);
   }
   return expr_result;
