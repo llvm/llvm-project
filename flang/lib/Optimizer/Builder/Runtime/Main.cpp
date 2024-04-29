@@ -1,5 +1,4 @@
-//===-- Main.cpp - generate main runtime API calls ----------------*- C++
-//-*-===//
+//===-- Main.cpp - generate main runtime API calls --------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -26,7 +25,7 @@ void fir::runtime::genMain(fir::FirOpBuilder &builder, mlir::Location loc,
   auto ptrTy = mlir::LLVM::LLVMPointerType::get(context);
 
   // void ProgramStart(int argc, char** argv, char** envp,
-  // _QQEnvironmentDefaults* env)
+  //                   _QQEnvironmentDefaults* env)
   auto startFn = builder.createFunction(
       loc, RTNAME_STRING(ProgramStart),
       mlir::FunctionType::get(context, {argcTy, ptrTy, ptrTy, ptrTy}, {}));
