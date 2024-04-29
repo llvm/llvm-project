@@ -3534,17 +3534,19 @@ void RewriteInstance::mapFileSections(BOLTLinker::SectionMapper MapSection) {
   // Check if the input has a space reserved for BOLT.
   BinaryData *StartBD = BC->getBinaryDataByName(getBOLTReservedStart());
   BinaryData *EndBD = BC->getBinaryDataByName(getBOLTReservedEnd());
-  if (StartBD) {
-    if (!EndBD) {
-      BC->errs() << "BOLT-ERROR: " << getBOLTReservedEnd() << " is missing\n";
-      exit(1);
-    }
+  if (!StartBD != !EndBD) {
+    BC->errs() << "BOLT-ERROR: one of the symbols is missing from the binary: "
+               << getBOLTReservedStart() << ", " << getBOLTReservedEnd()
+               << '\n';
+    exit(1);
+  }
 
+  if (StartBD) {
     PHDRTableOffset = 0;
     PHDRTableAddress = 0;
-    NextAvailableAddress = StartBD->getAddress();
     NewTextSegmentAddress = 0;
     NewTextSegmentOffset = 0;
+    NextAvailableAddress = StartBD->getAddress();
     BC->outs()
         << "BOLT-INFO: using reserved space for allocating new sections\n";
   }
