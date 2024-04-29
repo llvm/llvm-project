@@ -1535,27 +1535,15 @@ FileHeader:
   ELFSymbolRef ELFSymHighLow = MakeSymbol(ValHigh, ValLow);
   ELFSymbolRef ELFSymHighHigh = MakeSymbol(ValHigh, ValHigh);
 
-  // Symtab index match
-  // Left symbol index is lower
   EXPECT_TRUE(ELFSymLowLow < ELFSymLowHigh);
-  // Right symbol index is lower
   EXPECT_FALSE(ELFSymLowHigh < ELFSymLowLow);
-  // Symbol indices match
   EXPECT_FALSE(ELFSymLowLow < ELFSymLowLow);
 
-  // Left symtab index is lower
-  // Left symbol index is lower
   EXPECT_TRUE(ELFSymLowLow < ELFSymHighHigh);
-  // Right symbol index is lower
   EXPECT_TRUE(ELFSymLowHigh < ELFSymHighLow);
-  // Symbol indices match
   EXPECT_TRUE(ELFSymLowLow < ELFSymHighLow);
 
-  // Right symtab index is lower
-  // Left symbol index is lower
   EXPECT_FALSE(ELFSymHighLow < ELFSymLowHigh);
-  // Right symbol index is lower
   EXPECT_FALSE(ELFSymHighHigh < ELFSymLowLow);
-  // Symbol indices match
   EXPECT_FALSE(ELFSymHighLow < ELFSymLowLow);
 }
