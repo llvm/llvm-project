@@ -66,6 +66,7 @@ static void HandleOverflow(size_t &Capacity, char *&Output,
   Capacity = (Capacity < std::numeric_limits<size_t>::max() / 2)
                  ? 2 * Capacity
                  : std::numeric_limits<size_t>::max();
+  Result.resize(0);
   Result.resize_for_overwrite(Capacity);
   Output = static_cast<char *>(Result.data());
   OutputLength = Capacity;
@@ -205,6 +206,8 @@ std::error_code CharSetConverterIconv::convert(StringRef Source,
       // An error occured. Check if we can gracefully handle it.
       if (errno == E2BIG && Capacity < std::numeric_limits<size_t>::max()) {
         HandleOverflow(Capacity, Output, OutputLength, Result);
+        // Reset converter
+        iconv(ConvDesc, nullptr, nullptr, nullptr, nullptr);
         return std::error_code();
       } else {
         // Some other error occured.
