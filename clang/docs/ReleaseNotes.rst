@@ -145,6 +145,7 @@ C++2c Feature Support
 
 - Implemented `P0609R3: Attributes for Structured Bindings <https://wg21.link/P0609R3>`_
 
+- Implemented `P2748R5 Disallow Binding a Returned Glvalue to a Temporary <https://wg21.link/P2748R5>`_.
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
