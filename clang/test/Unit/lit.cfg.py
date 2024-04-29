@@ -32,6 +32,8 @@ if "TEMP" in os.environ:
 
 if "HOME" in os.environ:
     config.environment["HOME"] = os.environ["HOME"]
+if "SystemDrive" in os.environ:
+    config.environment["SystemDrive"] = os.environ["SystemDrive"]
 
 # Propagate sanitizer options.
 for var in [
