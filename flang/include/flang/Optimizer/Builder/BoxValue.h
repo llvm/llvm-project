@@ -78,7 +78,7 @@ class CharBoxValue : public AbstractBox {
 public:
   CharBoxValue(mlir::Value addr, mlir::Value len)
       : AbstractBox{addr}, len{len} {
-    if (addr && mlir::isa<fir::BoxCharType>(addr.getType()))
+    if (addr && addr.getType().template isa<fir::BoxCharType>())
       fir::emitFatalError(addr.getLoc(),
                           "BoxChar should not be in CharBoxValue");
   }
@@ -221,7 +221,7 @@ public:
     auto type = getAddr().getType();
     if (auto pointedTy = fir::dyn_cast_ptrEleTy(type))
       type = pointedTy;
-    return mlir::cast<fir::BaseBoxType>(type);
+    return type.cast<fir::BaseBoxType>();
   }
   /// Return the part of the address type after memory and box types. That is
   /// the element type, maybe wrapped in a fir.array type.
@@ -243,22 +243,22 @@ public:
   /// Get the scalar type related to the described entity
   mlir::Type getEleTy() const {
     auto type = getBaseTy();
-    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(type))
+    if (auto seqTy = type.dyn_cast<fir::SequenceType>())
       return seqTy.getEleTy();
     return type;
   }
 
   /// Is the entity an array or an assumed rank ?
-  bool hasRank() const { return mlir::isa<fir::SequenceType>(getBaseTy()); }
+  bool hasRank() const { return getBaseTy().isa<fir::SequenceType>(); }
   /// Is this an assumed rank ?
   bool hasAssumedRank() const {
-    auto seqTy = mlir::dyn_cast<fir::SequenceType>(getBaseTy());
+    auto seqTy = getBaseTy().dyn_cast<fir::SequenceType>();
     return seqTy && seqTy.hasUnknownShape();
   }
   /// Returns the rank of the entity. Beware that zero will be returned for
   /// both scalars and assumed rank.
   unsigned rank() const {
-    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(getBaseTy()))
+    if (auto seqTy = getBaseTy().dyn_cast<fir::SequenceType>())
       return seqTy.getDimension();
     return 0;
   }
@@ -267,7 +267,7 @@ public:
   bool isCharacter() const { return fir::isa_char(getEleTy()); }
 
   /// Is this a derived type entity ?
-  bool isDerived() const { return mlir::isa<fir::RecordType>(getEleTy()); }
+  bool isDerived() const { return getEleTy().isa<fir::RecordType>(); }
 
   bool isDerivedWithLenParameters() const {
     return fir::isRecordWithTypeParameters(getEleTy());
@@ -377,11 +377,11 @@ public:
   }
   /// Is this a Fortran pointer ?
   bool isPointer() const {
-    return mlir::isa<fir::PointerType>(getBoxTy().getEleTy());
+    return getBoxTy().getEleTy().isa<fir::PointerType>();
   }
   /// Is this an allocatable ?
   bool isAllocatable() const {
-    return mlir::isa<fir::HeapType>(getBoxTy().getEleTy());
+    return getBoxTy().getEleTy().isa<fir::HeapType>();
   }
   // Replace the fir.ref<fir.box>, keeping any non-deferred parameters.
   MutableBoxValue clone(mlir::Value newBox) const {
@@ -488,7 +488,7 @@ public:
     if (const auto *b = getUnboxed()) {
       if (*b) {
         auto type = b->getType();
-        if (mlir::isa<fir::BoxCharType>(type))
+        if (type.template isa<fir::BoxCharType>())
           fir::emitFatalError(b->getLoc(), "BoxChar should be unboxed");
         type = fir::unwrapSequenceType(fir::unwrapRefType(type));
         if (fir::isa_char(type))
