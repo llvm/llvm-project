@@ -1,10 +1,16 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - -O3 | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LP64 %s
-// RUN: %clang_cc1 %s -triple=i386-apple-darwin10 -emit-llvm -o - -O3 | FileCheck %s
-// RUN: %clang_cc1 %s -triple=aarch64_be -emit-llvm -o - -O3 | FileCheck %s
-// RUN: %clang_cc1 %s -triple=thumbv7_be-none-eabi -emit-llvm -o - -O3 | FileCheck %s
-// RUN: %clang_cc1 %s -triple=x86_64-unknown-unknown -emit-llvm -o - -O3 -std=c++11 | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LP64 %s
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -emit-llvm -o - -O3 | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LP64 --check-prefix=NEW --check-prefix=NEW-LP64 %s --allow-unused-prefixes
+// RUN: %clang_cc1 %s -triple=i386-apple-darwin10 -emit-llvm -o - -O3 | FileCheck --check-prefix=CHECK --check-prefix=NEW %s --allow-unused-prefixes
+// RUN: %clang_cc1 %s -triple=aarch64_be -emit-llvm -o - -O3 | FileCheck --check-prefix=CHECK --check-prefix=NEW %s --allow-unused-prefixes
+// RUN: %clang_cc1 %s -triple=thumbv7_be-none-eabi -emit-llvm -o - -O3 | FileCheck --check-prefix=CHECK --check-prefix=NEW %s --allow-unused-prefixes
+// RUN: %clang_cc1 %s -triple=x86_64-unknown-unknown -emit-llvm -o - -O3 -std=c++11 | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LP64 --check-prefix=NEW --check-prefix=NEW-LP64 %s --allow-unused-prefixes
+// RUN: %clang_cc1 %s -fclang-abi-compat=18.0 -triple=x86_64-apple-darwin10 -emit-llvm -o - -O3 | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LP64 --check-prefix=OLD --check-prefix=OLD-LP64 %s --allow-unused-prefixes
+// RUN: %clang_cc1 %s -fclang-abi-compat=18.0 -triple=i386-apple-darwin10 -emit-llvm -o - -O3 | FileCheck --check-prefix=CHECK --check-prefix=OLD %s --allow-unused-prefixes
+// RUN: %clang_cc1 %s -fclang-abi-compat=18.0 -triple=aarch64_be -emit-llvm -o - -O3 | FileCheck --check-prefix=CHECK --check-prefix=OLD %s --allow-unused-prefixes
+// RUN: %clang_cc1 %s -fclang-abi-compat=18.0 -triple=thumbv7_be-none-eabi -emit-llvm -o - -O3 | FileCheck --check-prefix=CHECK --check-prefix=OLD %s --allow-unused-prefixes
+// RUN: %clang_cc1 %s -fclang-abi-compat=18.0 -triple=x86_64-unknown-unknown -emit-llvm -o - -O3 -std=c++11 | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LP64 --check-prefix=OLD --check-prefix=OLD-LP64 %s --allow-unused-prefixes
 
-// CHECK-LP64: %union.Test1 = type { i32, [4 x i8] }
+// OLD-LP64: %union.Test1 = type { i32, [4 x i8] }
+// NEW-LP64: %union.Test1 = type <{ i32, [4 x i8] }>
 union Test1 {
   int a;
   int b: 39;

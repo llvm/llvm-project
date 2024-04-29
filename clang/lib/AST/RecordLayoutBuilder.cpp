@@ -2415,46 +2415,112 @@ DiagnosticBuilder ItaniumRecordLayoutBuilder::Diag(SourceLocation Loc,
   return Context.getDiagnostics().Report(Loc, DiagID);
 }
 
+/// https://itanium-cxx-abi.github.io/cxx-abi/abi.html#POD
+/// POD for the purpose of layout
+///   In general, a type is considered a POD for the purposes of layout if it is
+///   a POD type (in the sense of ISO C++ [basic.types]). However, a type is not
+///   considered to be a POD for the purpose of layout if it is:
+///     - a POD-struct or POD-union (in the sense of ISO C++ [class]) with a
+///     bit-field whose declared width is wider than the declared type of the
+///     bit-field, or
+///     - an array type whose element type is not a POD for the purpose of
+///     layout, or
+///     - a POD-struct with one or more potentially-overlapping non-static data
+///     members.
+///   Where references to the ISO C++ are made in this paragraph, the Technical
+///   Corrigendum 1 version of the standard is intended.
+///
+/// This function does not check if the type is POD first
+static bool isItaniumPOD(const ASTContext &Context, const CXXRecordDecl *RD) {
+  const auto IsDisqualifying = [&](const FieldDecl *FD) -> bool {
+    if (FD->isBitField())
+      if (FD->getBitWidthValue(Context) > Context.getTypeSize(FD->getType()))
+        return true;
+
+    return FD->isPotentiallyOverlapping();
+  };
+
+  if (llvm::any_of(RD->fields(), IsDisqualifying))
+    return false;
+
+  return RD->forallBases([&](const CXXRecordDecl *Base) -> bool {
+    return llvm::any_of(Base->fields(), IsDisqualifying);
+  });
+}
+
 /// Does the target C++ ABI require us to skip over the tail-padding
 /// of the given class (considering it as a base class) when allocating
 /// objects?
-static bool mustSkipTailPadding(TargetCXXABI ABI, const CXXRecordDecl *RD) {
-  switch (ABI.getTailPaddingUseRules()) {
-  case TargetCXXABI::AlwaysUseTailPadding:
-    return false;
-
-  case TargetCXXABI::UseTailPaddingUnlessPOD03:
-    // FIXME: To the extent that this is meant to cover the Itanium ABI
-    // rules, we should implement the restrictions about over-sized
-    // bitfields:
-    //
-    // http://itanium-cxx-abi.github.io/cxx-abi/abi.html#POD :
-    //   In general, a type is considered a POD for the purposes of
-    //   layout if it is a POD type (in the sense of ISO C++
-    //   [basic.types]). However, a POD-struct or POD-union (in the
-    //   sense of ISO C++ [class]) with a bitfield member whose
-    //   declared width is wider than the declared type of the
-    //   bitfield is not a POD for the purpose of layout.  Similarly,
-    //   an array type is not a POD for the purpose of layout if the
-    //   element type of the array is not a POD for the purpose of
-    //   layout.
-    //
-    //   Where references to the ISO C++ are made in this paragraph,
-    //   the Technical Corrigendum 1 version of the standard is
-    //   intended.
-    return RD->isPOD();
-
-  case TargetCXXABI::UseTailPaddingUnlessPOD11:
-    // This is equivalent to RD->getTypeForDecl().isCXX11PODType(),
-    // but with a lot of abstraction penalty stripped off.  This does
-    // assume that these properties are set correctly even in C++98
-    // mode; fortunately, that is true because we want to assign
-    // consistently semantics to the type-traits intrinsics (or at
-    // least as many of them as possible).
+static bool mustSkipTailPadding(const ASTContext &Context, TargetCXXABI ABI,
+                                const CXXRecordDecl *RD) {
+  // This is equivalent to
+  // Context.getTypeDeclType(RD).isCXX11PODType(Context),
+  // but with a lot of abstraction penalty stripped off.  This does
+  // assume that these properties are set correctly even in C++98
+  // mode; fortunately, that is true because we want to assign
+  // consistently semantics to the type-traits intrinsics (or at
+  // least as many of them as possible).
+  auto IsCXX11PODType = [&]() -> bool {
     return RD->isTrivial() && RD->isCXX11StandardLayout();
+  };
+
+  if (Context.getLangOpts().getClangABICompat() <=
+      LangOptions::ClangABI::Ver18) {
+    switch (ABI.getKind()) {
+    // ABIs derived from Itanium: In Clang 18, did not check for over-large
+    // bit-fields or potentially overlapping members
+    case TargetCXXABI::GenericItanium:
+    case TargetCXXABI::GenericAArch64:
+    case TargetCXXABI::GenericARM:
+    case TargetCXXABI::iOS:
+    case TargetCXXABI::GenericMIPS:
+    case TargetCXXABI::XL:
+      return RD->isPOD();
+
+    case TargetCXXABI::AppleARM64:
+    case TargetCXXABI::Fuchsia:
+    case TargetCXXABI::WebAssembly:
+    case TargetCXXABI::WatchOS:
+      return IsCXX11PODType();
+
+    case TargetCXXABI::Microsoft:
+      return true;
+    }
+    llvm_unreachable("bad ABI kind");
   }
 
-  llvm_unreachable("bad tail-padding use kind");
+  switch (ABI.getKind()) {
+  // To preserve binary compatibility, the generic Itanium ABI has permanently
+  // locked the definition of POD to the rules of C++ TR1, and that trickles
+  // down to derived ABIs.
+  case TargetCXXABI::GenericItanium:
+  case TargetCXXABI::GenericAArch64:
+  case TargetCXXABI::GenericARM:
+  case TargetCXXABI::GenericMIPS:
+    return RD->isPOD() && isItaniumPOD(Context, RD);
+
+  case TargetCXXABI::XL:
+  case TargetCXXABI::iOS:
+    return RD->isPOD();
+
+  // https://github.com/WebAssembly/tool-conventions/blob/cd83f847828336f10643d1f48aa60867c428c55c/ItaniumLikeC%2B%2BABI.md
+  // The same as Itanium except with C++11 POD instead of C++ TC1 POD
+  case TargetCXXABI::WebAssembly:
+    return IsCXX11PODType() && isItaniumPOD(Context, RD);
+
+  // Also uses C++11 POD but do not honor the Itanium exception about classes
+  // with over-large bitfields.
+  case TargetCXXABI::AppleARM64:
+  case TargetCXXABI::WatchOS:
+  case TargetCXXABI::Fuchsia:
+    return IsCXX11PODType();
+
+  // MSVC always allocates fields in the tail-padding of a base class
+  // subobject, even if they're POD.
+  case TargetCXXABI::Microsoft:
+    return true;
+  }
+  llvm_unreachable("bad ABI kind");
 }
 
 static bool isMsLayout(const ASTContext &Context) {
@@ -3388,7 +3454,7 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
       // tail-padding of base classes.  This is ABI-dependent.
       // FIXME: this should be stored in the record layout.
       bool skipTailPadding =
-          mustSkipTailPadding(getTargetInfo().getCXXABI(), RD);
+          mustSkipTailPadding(*this, getTargetInfo().getCXXABI(), RD);
 
       // FIXME: This should be done in FinalizeLayout.
       CharUnits DataSize =

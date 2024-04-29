@@ -63,6 +63,9 @@ ABI Changes in This Version
   MSVC uses a different mangling for these objects, compatibility is not affected.
   (#GH85423).
 
+- Fixed tail padding not being reused on types with oversized bit-fields and
+  potentially-overlapping members (#GH50766).
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
