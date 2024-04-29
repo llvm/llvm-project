@@ -457,22 +457,22 @@ std::int64_t SizeInBytes(const char *path) {
   return -1;
 }
 #else // defined(RT_DEVICE_COMPILATION)
-bool IsATerminal(int fd) {
+RT_API_ATTRS bool IsATerminal(int fd) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
-bool IsExtant(const char *path) {
+RT_API_ATTRS bool IsExtant(const char *path) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
-bool MayRead(const char *path) {
+RT_API_ATTRS bool MayRead(const char *path) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
-bool MayWrite(const char *path) {
+RT_API_ATTRS bool MayWrite(const char *path) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
-bool MayReadAndWrite(const char *path) {
+RT_API_ATTRS bool MayReadAndWrite(const char *path) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
-std::int64_t SizeInBytes(const char *path) {
+RT_API_ATTRS std::int64_t SizeInBytes(const char *path) {
   Terminator{__FILE__, __LINE__}.Crash("%s: unsupported", RT_PRETTY_FUNCTION);
 }
 #endif // defined(RT_DEVICE_COMPILATION)
