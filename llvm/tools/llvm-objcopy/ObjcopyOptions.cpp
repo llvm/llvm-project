@@ -27,6 +27,7 @@
 
 using namespace llvm;
 using namespace llvm::objcopy;
+using namespace llvm::object;
 using namespace llvm::opt;
 
 namespace {
@@ -1243,8 +1244,8 @@ objcopy::parseInstallNameToolOptions(ArrayRef<const char *> ArgsArr) {
   Config.InputFilename = Positional[0];
   Config.OutputFilename = Positional[0];
 
-  Expected<llvm::object::OwningBinary<llvm::object::Binary>> BinaryOrErr =
-      llvm::object::createBinary(Config.InputFilename);
+  Expected<OwningBinary<Binary>> BinaryOrErr =
+      createBinary(Config.InputFilename);
   if (!BinaryOrErr)
     return createFileError(Config.InputFilename, BinaryOrErr.takeError());
   auto *Binary = (*BinaryOrErr).getBinary();
