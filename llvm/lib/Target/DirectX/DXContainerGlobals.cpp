@@ -18,12 +18,14 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 using namespace llvm::dxil;
+using namespace llvm::mcdxbc;
 
 namespace {
 class DXContainerGlobals : public llvm::ModulePass {
@@ -32,8 +34,8 @@ class DXContainerGlobals : public llvm::ModulePass {
                                        StringRef Name, StringRef SectionName);
   GlobalVariable *getFeatureFlags(Module &M);
   GlobalVariable *computeShaderHash(Module &M);
-  GlobalVariable *buildInputSingature(Module &M, Constant *Content);
-  GlobalVariable *buildOutputSingature(Module &M, Constant *Content);
+  GlobalVariable *buildSingature(Module &M, Signature &Sig, StringRef Name,
+                                 StringRef SectionName);
   void addSingature(Module &M, SmallVector<GlobalValue *> &Globals, Triple &TT);
 
 public:
@@ -119,39 +121,28 @@ GlobalVariable *DXContainerGlobals::buildContainerGlobal(
   return GV;
 }
 
-GlobalVariable *DXContainerGlobals::buildInputSingature(Module &M,
-                                                        Constant *Content) {
-  return buildContainerGlobal(M, Content, "dx.isg1", "ISG1");
-}
-GlobalVariable *DXContainerGlobals::buildOutputSingature(Module &M,
-                                                         Constant *Content) {
-  return buildContainerGlobal(M, Content, "dx.osg1", "OSG1");
+GlobalVariable *DXContainerGlobals::buildSingature(Module &M, Signature &Sig,
+                                                   StringRef Name,
+                                                   StringRef SectionName) {
+  std::string Data;
+  raw_string_ostream OS(Data);
+  Sig.write(OS);
+  OS.flush();
+  Constant *Constant =
+      ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
+  return buildContainerGlobal(M, Constant, Name, SectionName);
 }
 
 void DXContainerGlobals::addSingature(Module &M,
                                       SmallVector<GlobalValue *> &Globals,
                                       Triple &TT) {
-  dxbc::ProgramSignatureHeader Sig;
-  Sig.ParamCount = 0;
-  Sig.FirstParamOffset = sizeof(dxbc::ProgramSignatureHeader);
-  Type *Int32Ty = Type::getInt32Ty(M.getContext());
-  Constant *InputSig = nullptr;
-  Constant *OutputSig = nullptr;
-  switch (TT.getEnvironment()) {
-  case Triple::EnvironmentType::Compute:
-    InputSig = ConstantStruct::get(
-        StructType::get(Int32Ty, Int32Ty),
-        {ConstantInt::get(M.getContext(), APInt(32, Sig.ParamCount)),
-         ConstantInt::get(M.getContext(), APInt(32, Sig.FirstParamOffset))});
-    OutputSig = InputSig;
-    break;
-    // FIXME: support graphics shader.
-    //  see issue https://github.com/llvm/llvm-project/issues/90504.
-  default:
-    return;
-  }
-  Globals.emplace_back(buildInputSingature(M, InputSig));
-  Globals.emplace_back(buildOutputSingature(M, OutputSig));
+  Signature InputSig;
+  Signature OutputSig;
+  // FIXME: support graphics shader.
+  //  see issue https://github.com/llvm/llvm-project/issues/90504.
+
+  Globals.emplace_back(buildSingature(M, InputSig, "dx.isg1", "ISG1"));
+  Globals.emplace_back(buildSingature(M, OutputSig, "dx.osg1", "OSG1"));
 }
 
 char DXContainerGlobals::ID = 0;
