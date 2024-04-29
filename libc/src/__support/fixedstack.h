@@ -34,7 +34,7 @@ template <typename T, uint32_t CAPACITY> class alignas(16) FixedStack {
 
   // Get the 20-bit index into the underlying array from the head.
   static constexpr uint32_t get_node(uint64_t head) {
-    return static_cast<uint32_t>(head & 0xffff);
+    return static_cast<uint32_t>(head & 0xfffff);
   }
 
   // Increment the old ABA tag and merge it into the new index.
