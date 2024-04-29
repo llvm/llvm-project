@@ -6686,9 +6686,15 @@ llvm::computeConstantRangeIncludingKnownBits(const WithCache<const Value *> &V,
 
 OverflowResult llvm::computeOverflowForUnsignedMul(const Value *LHS,
                                                    const Value *RHS,
-                                                   const SimplifyQuery &SQ) {
+                                                   const SimplifyQuery &SQ,
+                                                   bool IsNSW) {
   KnownBits LHSKnown = computeKnownBits(LHS, /*Depth=*/0, SQ);
   KnownBits RHSKnown = computeKnownBits(RHS, /*Depth=*/0, SQ);
+
+  // mul nsw of two non-negative numbers is also nuw.
+  if (IsNSW && LHSKnown.isNonNegative() && RHSKnown.isNonNegative())
+    return OverflowResult::NeverOverflows;
+
   ConstantRange LHSRange = ConstantRange::fromKnownBits(LHSKnown, false);
   ConstantRange RHSRange = ConstantRange::fromKnownBits(RHSKnown, false);
   return mapOverflowResult(LHSRange.unsignedMulMayOverflow(RHSRange));

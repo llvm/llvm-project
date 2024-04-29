@@ -2146,7 +2146,7 @@ define i8 @mul_nsw_nonneg(i8 %x, i8 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NNEG]])
 ; CHECK-NEXT:    [[Y_NNEG:%.*]] = icmp sgt i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_NNEG]])
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[MUL]]
 ;
   %x.nneg = icmp sge i8 %x, 0

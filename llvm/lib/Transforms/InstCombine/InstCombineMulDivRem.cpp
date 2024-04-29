@@ -530,7 +530,7 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     I.setHasNoSignedWrap(true);
   }
 
-  if (!HasNUW && willNotOverflowUnsignedMul(Op0, Op1, I)) {
+  if (!HasNUW && willNotOverflowUnsignedMul(Op0, Op1, I, I.hasNoSignedWrap())) {
     Changed = true;
     I.setHasNoUnsignedWrap(true);
   }
