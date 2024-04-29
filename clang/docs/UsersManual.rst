@@ -2319,6 +2319,8 @@ are listed below.
    on ELF targets when using the integrated assembler. This flag currently
    only has an effect on ELF targets.
 
+.. _funique_internal_linkage_names:
+
 .. option:: -f[no]-unique-internal-linkage-names
 
    Controls whether Clang emits a unique (best-effort) symbol name for internal
@@ -2448,27 +2450,41 @@ usual build cycle when using sample profilers for optimization:
    usual build flags that you always build your application with. The only
    requirement is that DWARF debug info including source line information is
    generated. This DWARF information is important for the profiler to be able
-   to map instructions back to source line locations.
+   to map instructions back to source line locations. The usefulness of this
+   DWARF information can be improved with the ``-fdebug-info-for-profiling``
+   and ``-funique-internal-linkage-names`` options.
 
-   On Linux, ``-g`` or just ``-gline-tables-only`` is sufficient:
+   On Linux:
 
    .. code-block:: console
 
-     $ clang++ -O2 -gline-tables-only code.cc -o code
+     $ clang++ -O2 -gline-tables-only \
+       -fdebug-info-for-profiling -funique-internal-linkage-names \
+       code.cc -o code
 
    While MSVC-style targets default to CodeView debug information, DWARF debug
    information is required to generate source-level LLVM profiles. Use
    ``-gdwarf`` to include DWARF debug information:
 
-   .. code-block:: console
+   .. code-block:: winbatch
 
-     $ clang-cl -O2 -gdwarf -gline-tables-only coff-profile.cpp -fuse-ld=lld -link -debug:dwarf
+     > clang-cl /O2 -gdwarf -gline-tables-only ^
+       /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
+       code.cc /Fe:code /fuse-ld=lld /link /debug:dwarf
+
+.. note::
+
+   :ref:`-funique-internal-linkage-names <funique_internal_linkage_names>`
+   generates unique names based on given command-line source file paths. If
+   your build system uses absolute source paths and these paths may change
+   between steps 1 and 4, then the uniqued function names may change and result
+   in unused profile data. Consider omitting this option in such cases.
 
 2. Run the executable under a sampling profiler. The specific profiler
    you use does not really matter, as long as its output can be converted
    into the format that the LLVM optimizer understands.
 
-   Two such profilers are the the Linux Perf profiler
+   Two such profilers are the Linux Perf profiler
    (https://perf.wiki.kernel.org/) and Intel's Sampling Enabling Product (SEP),
    available as part of `Intel VTune
    <https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/vtune-profiler.html>`_.
@@ -2482,7 +2498,9 @@ usual build cycle when using sample profilers for optimization:
 
    .. code-block:: console
 
-     $ perf record -b ./code
+     $ perf record -b -e BR_INST_RETIRED.NEAR_TAKEN:uppp ./code
+
+   If the event above is unavailable, ``branches:u`` is probably next-best.
 
    Note the use of the ``-b`` flag. This tells Perf to use the Last Branch
    Record (LBR) to record call chains. While this is not strictly required,
@@ -2532,21 +2550,42 @@ usual build cycle when using sample profilers for optimization:
    that executes faster than the original one. Note that you are not
    required to build the code with the exact same arguments that you
    used in the first step. The only requirement is that you build the code
-   with ``-gline-tables-only`` and ``-fprofile-sample-use``.
+   with the same debug info options and ``-fprofile-sample-use``.
+
+   On Linux:
 
    .. code-block:: console
 
-     $ clang++ -O2 -gline-tables-only -fprofile-sample-use=code.prof code.cc -o code
+     $ clang++ -O2 -gline-tables-only \
+       -fdebug-info-for-profiling -funique-internal-linkage-names \
+       -fprofile-sample-use=code.prof code.cc -o code
 
-  [OPTIONAL] Sampling-based profiles can have inaccuracies or missing block/
-  edge counters. The profile inference algorithm (profi) can be used to infer
-  missing blocks and edge counts, and improve the quality of profile data.
-  Enable it with ``-fsample-profile-use-profi``.
+   On Windows:
 
-  .. code-block:: console
+   .. code-block:: winbatch
 
-    $ clang++ -O2 -gline-tables-only -fprofile-sample-use=code.prof \
-      -fsample-profile-use-profi code.cc -o code
+     > clang-cl /O2 -gdwarf -gline-tables-only ^
+       /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
+       /fprofile-sample-use=code.prof code.cc /Fe:code /fuse-ld=lld /link /debug:dwarf
+
+   [OPTIONAL] Sampling-based profiles can have inaccuracies or missing block/
+   edge counters. The profile inference algorithm (profi) can be used to infer
+   missing blocks and edge counts, and improve the quality of profile data.
+   Enable it with ``-fsample-profile-use-profi``. For example, on Linux:
+
+   .. code-block:: console
+
+     $ clang++ -fsample-profile-use-profi -O2 -gline-tables-only \
+       -fdebug-info-for-profiling -funique-internal-linkage-names \
+       -fprofile-sample-use=code.prof code.cc -o code
+
+   On Windows:
+
+   .. code-block:: winbatch
+
+     > clang-cl /clang:-fsample-profile-use-profi /O2 -gdwarf -gline-tables-only ^
+       /clang:-fdebug-info-for-profiling /clang:-funique-internal-linkage-names ^
+       /fprofile-sample-use=code.prof code.cc /Fe:code /fuse-ld=lld /link /debug:dwarf
 
 Sample Profile Formats
 """"""""""""""""""""""
