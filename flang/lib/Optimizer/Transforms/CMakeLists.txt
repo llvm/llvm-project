@@ -22,7 +22,6 @@ add_flang_library(FIRTransforms
   OMPMarkDeclareTarget.cpp
   VScaleAttr.cpp
   FunctionAttr.cpp
-  DebugTypeGenerator.cpp
 
   DEPENDS
   FIRDialect
