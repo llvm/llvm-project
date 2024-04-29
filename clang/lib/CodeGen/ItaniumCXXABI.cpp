@@ -308,6 +308,10 @@ public:
       CodeGenFunction &CGF, const CXXRecordDecl *VTableClass,
       BaseSubobject Base, const CXXRecordDecl *NearestVBase);
 
+  llvm::Constant *
+  getVTableAddressPointForConstExpr(BaseSubobject Base,
+                                    const CXXRecordDecl *VTableClass) override;
+
   llvm::GlobalVariable *getAddrOfVTable(const CXXRecordDecl *RD,
                                         CharUnits VPtrOffset) override;
 
@@ -2084,6 +2088,18 @@ llvm::Value *ItaniumCXXABI::getVTableAddressPointInStructorWithVTT(
                                                             QualType());
     AP = CGF.EmitPointerAuthAuth(PointerAuth, AP);
   }
+
+  return AP;
+}
+
+llvm::Constant *
+ItaniumCXXABI::getVTableAddressPointForConstExpr(BaseSubobject Base,
+                                    const CXXRecordDecl *VTableClass) {
+  auto AP = getVTableAddressPoint(Base, VTableClass);
+
+  if (auto &Schema = CGM.getCodeGenOpts().PointerAuth.CXXVTablePointers)
+    AP = CGM.getConstantSignedPointer(AP, Schema, nullptr, GlobalDecl(),
+                                      QualType());
 
   return AP;
 }
