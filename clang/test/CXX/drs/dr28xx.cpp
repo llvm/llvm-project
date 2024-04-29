@@ -10,6 +10,14 @@
 // expected-no-diagnostics
 #endif
 
+namespace cwg2819 { // cwg2819: 19 tentatively ready 2023-12-01
+#if __cpp_constexpr >= 202306L
+  constexpr void* p = nullptr;
+  constexpr int* q = static_cast<int*>(p);
+  static_assert(q == nullptr);
+#endif
+}
+
 namespace cwg2847 { // cwg2847: 19 review 2024-03-01
 
 #if __cplusplus >= 202002L
@@ -59,7 +67,7 @@ void B<int>::g() requires true;
 
 } // namespace cwg2847
 
-namespace cwg2858 { // cwg2858: 19
+namespace cwg2858 { // cwg2858: 19 tentatively ready 2024-04-05
 
 #if __cplusplus > 202302L
 
