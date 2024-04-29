@@ -93,7 +93,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
 
   StackFrame *frame = m_exe_ctx.GetFramePtr();
 
-  // Either Swift was explicitly specified, or the frame is Swift.
+  // Either the language was explicitly specified, or we check the frame.
   lldb::LanguageType language = m_expr_options.language;
   if (language == lldb::eLanguageTypeUnknown && frame)
     language = frame->GuessLanguage().AsLanguageType();
