@@ -222,7 +222,7 @@ void W() {
 // CHECK-NEXT:    br label %while.body
 // CHECK:       while.body:
 // CXX98-NOT:     br {{.*}}, !llvm.loop
-// CXX11-NOT:     br label %while.body, !llvm.loop [[LOOP12:!.*]]
+// CXX11-NOT:     br {{.*}}, !llvm.loop
 // FINITE-NEXT:   br label %while.body, !llvm.loop [[LOOP12:!.*]]
 //
 void W2() {
@@ -347,12 +347,75 @@ void D2() {
   while (1);
 }
 
-// CXX11: [[LOOP1:.*]] = distinct !{[[LOOP1]], [[MP:.*]]}
+// CXX98-NOT:  mustprogress
+// CXX11-NOT:  mustprogress
+// FINITE-NOT: mustprogress
+// CHECK-LABEL: @_Z9compound0v(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    br label %for.cond
+// CHECK:       for.cond:
+// CXX98-NOT:    br {{.*}} llvm.loop
+// CXX11-NOT:    br {{.*}} llvm.loop
+// FINITE-NEXT:  br label %for.cond, !llvm.loop [[LOOP19:!.*]]
+void compound0() {
+  for (; ;) {}
+}
+
+// CXX98-NOT:  mustprogress
+// CXX11-NOT:  mustprogress
+// FINITE-NOT: mustprogress
+// CHECK-LABEL: @_Z9compound1v(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    br label %for.cond
+// CHECK:       for.cond:
+// CXX98-NOT:    br {{.*}} llvm.loop
+// CXX11-NOT:    br {{.*}} llvm.loop
+// FINITE-NEXT:  br label %for.cond, !llvm.loop [[LOOP20:!.*]]
+void compound1() {
+  for (; ;) {/*! */}
+}
+
+// CXX98-NOT:  mustprogress
+// CXX11-NOT:  mustprogress
+// FINITE-NOT: mustprogress
+// CHECK-LABEL: @_Z9compound2v(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    br label %do.body
+// CHECK:       do.body:
+// CHECK-NEXT:    br label %do.cond
+// CHECK:       do.cond:
+// CXX98-NOT:     br {{.*}}, !llvm.loop
+// CXX11-NOT:     br {{.*}}, !llvm.loop
+// FINITE-NEXT:   br i1 true, label %do.body, label %do.end, !llvm.loop [[LOOP21:!.*]]
+// CHECK:       do.end:
+// CHECK-NEXT:    ret void
+//
+void compound2() {
+  do {} while (1+1);
+}
+
+// CXX98-NOT:  mustprogress
+// CXX11    :  mustprogress
+// FINITE-NOT: mustprogress
+// CHECK-LABEL: @_Z5Falsev(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    br label %do.body
+// CHECK:       do.body:
+// CHECK-NEXT:    br label %do.end
+// CHECK:       do.end:
+// CHECK-NEXT:    ret void
+//
+void False() {
+  do {} while (1-1);
+}
+
+
+// CXX11: [[LOOP3]] = distinct !{[[LOOP3]], [[MP:.*]]}
 // CXX11: [[MP]] = !{!"llvm.loop.mustprogress"}
-// CXX11: [[LOOP2:.*]] = distinct !{[[LOOP2]], [[MP]]}
-// CXX11: [[LOOP3:.*]] = distinct !{[[LOOP3]], [[MP]]}
-// CXX11: [[LOOP4:.*]] = distinct !{[[LOOP4]], [[MP]]}
-// CXX11: [[LOOP5:.*]] = distinct !{[[LOOP5]], [[MP]]}
-// CXX11: [[LOOP6:.*]] = distinct !{[[LOOP6]], [[MP]]}
-// CXX11: [[LOOP7:.*]] = distinct !{[[LOOP7]], [[MP]]}
-// CXX11: [[LOOP8:.*]] = distinct !{[[LOOP8]], [[MP]]}
+// CXX11: [[LOOP5]] = distinct !{[[LOOP5]], [[MP]]}
+// CXX11: [[LOOP6]] = distinct !{[[LOOP6]], [[MP]]}
+// CXX11: [[LOOP9]] = distinct !{[[LOOP9]], [[MP]]}
+// CXX11: [[LOOP10]] = distinct !{[[LOOP10]], [[MP]]}
+// CXX11: [[LOOP14]] = distinct !{[[LOOP14]], [[MP]]}
+// CXX11: [[LOOP16]] = distinct !{[[LOOP16]], [[MP]]}
+// CXX11: [[LOOP17]] = distinct !{[[LOOP17]], [[MP]]}

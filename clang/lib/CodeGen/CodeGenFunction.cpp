@@ -1465,7 +1465,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
 
   // Ensure that the function adheres to the forward progress guarantee, which
   // is required by certain optimizations.
-  // The attribute will be removed if the body contains a trivial empty loop.
+  // In C++11 and up, the attribute will be removed if the body contains a trivial empty loop.
   if (checkIfFunctionMustProgress())
     CurFn->addFnAttr(llvm::Attribute::MustProgress);
 
