@@ -425,12 +425,23 @@ void DataSharingProcessor::doPrivatize(
       mlir::Block *copyEntryBlock = firOpBuilder.createBlock(
           &copyRegion, /*insertPt=*/{}, {symType, symType}, {symLoc, symLoc});
       firOpBuilder.setInsertionPointToEnd(copyEntryBlock);
-      symTable->addSymbol(*sym,
-                          fir::substBase(symExV, copyRegion.getArgument(0)),
-                          /*force=*/true);
+
+      auto addSymbol = [&](unsigned argIdx, bool force = false) {
+        symExV.match(
+            [&](const fir::MutableBoxValue &box) {
+              symTable->addSymbol(
+                  *sym, fir::substBase(box, copyRegion.getArgument(argIdx)),
+                  force);
+            },
+            [&](const auto &box) {
+              symTable->addSymbol(*sym, copyRegion.getArgument(argIdx), force);
+            });
+      };
+
+      addSymbol(0, true);
       symTable->pushScope();
-      symTable->addSymbol(*sym,
-                          fir::substBase(symExV, copyRegion.getArgument(1)));
+      addSymbol(1);
+
       auto ip = firOpBuilder.saveInsertionPoint();
       copyFirstPrivateSymbol(sym, &ip);
 
