@@ -58,7 +58,9 @@ define void @dead_smaller_than_threshold(ptr nocapture noundef writeonly %X) {
 ; CHECK-LABEL: define void @dead_smaller_than_threshold(
 ; CHECK-SAME: ptr nocapture noundef writeonly [[X:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(50) [[X]], i8 5, i64 50, i1 false)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 35
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(15) [[TMP0]], i8 5, i64 15, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(10) [[X]], i8 5, i64 10, i1 false)
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 10
 ; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(45) [[ARRAYIDX]], i8 3, i64 25, i1 false)
 ; CHECK-NEXT:    ret void
