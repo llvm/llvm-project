@@ -1,4 +1,4 @@
-; Tests that we would convert coro.resume to a musttail call if the target is
+; Tests that coro-split will convert coro.await.suspend.handle to a musttail call if the target is
 ; Wasm64 or Wasm32 with tail-call support.
 ; REQUIRES: webassembly-registered-target
 

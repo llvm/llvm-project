@@ -1,5 +1,4 @@
-; Tests that coro-split will convert coro.resume followed by a suspend to a
-; musttail call.
+; Tests that coro-split will convert coro.await.suspend.handle to a musttail call.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 ; RUN: opt < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 

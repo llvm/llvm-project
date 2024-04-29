@@ -1,5 +1,5 @@
 ; Tests that sinked lifetime markers wouldn't provent optimization
-; to convert a resuming call to a musttail call.
+; to convert a coro.await.suspend.handle call to a musttail call.
 ; The difference between this and coro-split-musttail5.ll is that there is
 ; an extra bitcast instruction in the path, which makes it harder to
 ; optimize.

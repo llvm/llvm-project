@@ -1,4 +1,4 @@
-; Tests that coro-split will convert coro.await.suspend.handle to a tail call.
+; Tests that coro-split will convert coro.await.suspend.handle to a musttail call.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck --check-prefixes=CHECK %s
 ; RUN: opt < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck --check-prefixes=CHECK %s
 
