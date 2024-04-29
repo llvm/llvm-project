@@ -150,16 +150,52 @@ define iXLen @nxv2i64_zero_poison(<vscale x 2 x i64> %src, <vscale x 2 x i1> %m,
   ret iXLen %r
 }
 
+define i1 @nxv2i32_cmp_evl(<vscale x 2 x i32> %src, <vscale x 2 x i1> %m, i32 %evl) {
+; RV32-LABEL: nxv2i32_cmp_evl:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; RV32-NEXT:    vmsne.vi v8, v8, 0, v0.t
+; RV32-NEXT:    vfirst.m a2, v8, v0.t
+; RV32-NEXT:    mv a1, a0
+; RV32-NEXT:    bltz a2, .LBB6_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a1, a2
+; RV32-NEXT:  .LBB6_2:
+; RV32-NEXT:    xor a0, a1, a0
+; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: nxv2i32_cmp_evl:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a1, a0, 32
+; RV64-NEXT:    srli a1, a1, 32
+; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; RV64-NEXT:    vmsne.vi v8, v8, 0, v0.t
+; RV64-NEXT:    vfirst.m a2, v8, v0.t
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    bltz a2, .LBB6_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a1, a2
+; RV64-NEXT:  .LBB6_2:
+; RV64-NEXT:    sext.w a1, a1
+; RV64-NEXT:    xor a0, a1, a0
+; RV64-NEXT:    seqz a0, a0
+; RV64-NEXT:    ret
+  %r = call i32 @llvm.vp.cttz.elts.i32.nxv2i32(<vscale x 2 x i32> %src, i1 0, <vscale x 2 x i1> %m, i32 %evl)
+  %cmp = icmp eq i32 %r, %evl
+  ret i1 %cmp
+}
+
 define iXLen @fixed_v2i64(<2 x i64> %src, <2 x i1> %m, i32 %evl) {
 ; RV32-LABEL: fixed_v2i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vmsne.vi v8, v8, 0, v0.t
 ; RV32-NEXT:    vfirst.m a1, v8, v0.t
-; RV32-NEXT:    bltz a1, .LBB6_2
+; RV32-NEXT:    bltz a1, .LBB7_2
 ; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    mv a0, a1
-; RV32-NEXT:  .LBB6_2:
+; RV32-NEXT:  .LBB7_2:
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: fixed_v2i64:
@@ -169,10 +205,10 @@ define iXLen @fixed_v2i64(<2 x i64> %src, <2 x i1> %m, i32 %evl) {
 ; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV64-NEXT:    vmsne.vi v8, v8, 0, v0.t
 ; RV64-NEXT:    vfirst.m a1, v8, v0.t
-; RV64-NEXT:    bltz a1, .LBB6_2
+; RV64-NEXT:    bltz a1, .LBB7_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    mv a0, a1
-; RV64-NEXT:  .LBB6_2:
+; RV64-NEXT:  .LBB7_2:
 ; RV64-NEXT:    ret
   %r = call iXLen @llvm.vp.cttz.elts.iXLen.v2i64(<2 x i64> %src, i1 0, <2 x i1> %m, i32 %evl)
   ret iXLen %r
