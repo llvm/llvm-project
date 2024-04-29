@@ -20394,14 +20394,16 @@ static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
   EVT SrcVT = In.getValueType();
   EVT DstSVT = DstVT.getVectorElementType();
   EVT SrcSVT = SrcVT.getVectorElementType();
+  unsigned NumDstEltBits = DstSVT.getSizeInBits();
+  unsigned NumSrcEltBits = SrcSVT.getSizeInBits();
 
   // Check we have a truncation suited for PACKSS/PACKUS.
   if (!((SrcSVT == MVT::i16 || SrcSVT == MVT::i32 || SrcSVT == MVT::i64) &&
         (DstSVT == MVT::i8 || DstSVT == MVT::i16 || DstSVT == MVT::i32)))
     return SDValue();
 
-  assert(SrcSVT.getSizeInBits() > DstSVT.getSizeInBits() && "Bad truncation");
-  unsigned NumStages = Log2_32(SrcSVT.getSizeInBits() / DstSVT.getSizeInBits());
+  assert(NumSrcEltBits > NumDstEltBits && "Bad truncation");
+  unsigned NumStages = Log2_32(NumSrcEltBits / NumDstEltBits);
 
   // Truncation from 128-bit to vXi32 can be better handled with PSHUFD.
   // Truncation to sub-64-bit vXi16 can be better handled with PSHUFD/PSHUFLW.
@@ -20422,8 +20424,7 @@ static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
   if (Subtarget.hasAVX512() && NumStages > 1)
     return SDValue();
 
-  unsigned NumSrcEltBits = SrcVT.getScalarSizeInBits();
-  unsigned NumPackedSignBits = std::min<unsigned>(DstSVT.getSizeInBits(), 16);
+  unsigned NumPackedSignBits = std::min<unsigned>(NumDstEltBits, 16);
   unsigned NumPackedZeroBits = Subtarget.hasSSE41() ? NumPackedSignBits : 8;
 
   // Truncate with PACKUS if we are truncating a vector with leading zero
@@ -20445,7 +20446,7 @@ static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
   // a sign splat (or AVX512 VPSRAQ support). ComputeNumSignBits struggles to
   // see through BITCASTs later on and combines/simplifications can't then use
   // it.
-  if (DstSVT == MVT::i32 && NumSignBits != SrcSVT.getSizeInBits() &&
+  if (DstSVT == MVT::i32 && NumSignBits != NumSrcEltBits &&
       !Subtarget.hasAVX512())
     return SDValue();
 
