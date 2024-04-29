@@ -24141,8 +24141,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
               DAG.getConstant(1, DL, VT));
         else
           Neg = CmpOp0;
-        SDValue Mask = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
-                                   Neg); // -(and (x, 0x1))
+        SDValue Mask = DAG.getNegative(Neg, DL, VT); // -(and (x, 0x1))
         SDValue And = DAG.getNode(ISD::AND, DL, VT, Mask, Src1); // Mask & z
         return DAG.getNode(Op2.getOpcode(), DL, VT, And, Src2);  // And Op y
       }
