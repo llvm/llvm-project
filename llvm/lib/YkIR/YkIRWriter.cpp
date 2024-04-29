@@ -52,6 +52,7 @@ enum OpCode {
   OpCodeBinOp,
   OpCodeCast,
   OpCodeDeoptSafepoint,
+  OpCodeSwitch,
   OpCodeUnimplemented = 255, // YKFIXME: Will eventually be deleted.
 };
 
@@ -653,6 +654,32 @@ private:
     VLMap[I] = {BBIdx, InstIdx};
     InstIdx++;
   }
+
+  void serialiseSwitchInst(SwitchInst *I, ValueLoweringMap &VLMap,
+                           unsigned BBIdx, unsigned &InstIdx) {
+    // opcode:
+    serialiseOpcode(OpCodeSwitch);
+    // test_val:
+    serialiseOperand(I, VLMap, I->getCondition());
+    // default_dest:
+    serialiseBlockLabel(I->getDefaultDest());
+    // num_cases:
+    assert(I->getNumCases() == std::distance(I->case_begin(), I->case_end()));
+    OutStreamer.emitSizeT(I->getNumCases());
+    // case_values:
+    for (auto &Case : I->cases()) {
+      // We can't handle case values larger than uint64_t for now.
+      assert(Case.getCaseValue()->getBitWidth() <= 64);
+      OutStreamer.emitInt64(Case.getCaseValue()->getZExtValue());
+    }
+    // case_dests:
+    for (auto &Case : I->cases()) {
+      serialiseBlockLabel(Case.getCaseSuccessor());
+    }
+
+    InstIdx++;
+  }
+
   void serialiseInst(Instruction *I, ValueLoweringMap &VLMap, unsigned BBIdx,
                      unsigned &InstIdx) {
     // Macro to make the dispatch below easier to read/sort.
@@ -673,6 +700,7 @@ private:
     INST_SERIALISE(I, ReturnInst, serialiseReturnInst);
     INST_SERIALISE(I, SExtInst, serialiseSExtInst);
     INST_SERIALISE(I, StoreInst, serialiseStoreInst);
+    INST_SERIALISE(I, SwitchInst, serialiseSwitchInst);
 
     // INST_SERIALISE does an early return upon a match, so if we get here then
     // the instruction wasn't handled.
