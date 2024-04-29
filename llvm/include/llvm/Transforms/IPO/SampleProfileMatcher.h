@@ -39,7 +39,8 @@ struct Anchor {
 // In the scenario of profile fuzzy matching, the two sequences are the IR
 // callsite anchors and profile callsite anchors. The subsequence equivalent
 // parts from the resulting SES are used to remap the IR locations to the
-// profile locations.
+// profile locations. As the number of function callsite is usually not big, we
+// currently just implements the basic greedy version(page 6 of the paper).
 class MyersDiff {
 public:
   struct DiffResult {
@@ -64,10 +65,8 @@ public:
 #endif
   };
 
-  // The basic greedy version of Myers's algorithm. Refer to page 6 of the
-  // original paper.
-  DiffResult longestCommonSequence(const std::vector<Anchor> &A,
-                                   const std::vector<Anchor> &B) const;
+  DiffResult shortestEditScript(const std::vector<Anchor> &A,
+                                const std::vector<Anchor> &B) const;
 };
 
 // Sample profile matching - fuzzy match.
@@ -194,7 +193,10 @@ private:
   }
   void distributeIRToProfileLocationMap();
   void distributeIRToProfileLocationMap(FunctionSamples &FS);
-  void matchNonAnchorAndWriteResults(
+  LocToLocMap longestCommonSequence(
+      const std::vector<Anchor> &IRCallsiteAnchors,
+      const std::vector<Anchor> &ProfileCallsiteAnchors) const;
+  void matchNonCallsiteLocsAndWriteResults(
       const LocToLocMap &AnchorMatchings,
       const std::map<LineLocation, StringRef> &IRAnchors,
       LocToLocMap &IRToProfileLocationMap);

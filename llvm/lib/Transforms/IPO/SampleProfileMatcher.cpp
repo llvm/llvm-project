@@ -123,8 +123,8 @@ void SampleProfileMatcher::findProfileAnchors(
 }
 
 MyersDiff::DiffResult
-MyersDiff::longestCommonSequence(const std::vector<Anchor> &A,
-                                 const std::vector<Anchor> &B) const {
+MyersDiff::shortestEditScript(const std::vector<Anchor> &A,
+                              const std::vector<Anchor> &B) const {
   int32_t N = A.size(), M = B.size(), Max = N + M;
   auto Index = [&](int32_t I) { return I + Max; };
 
@@ -135,7 +135,7 @@ MyersDiff::longestCommonSequence(const std::vector<Anchor> &A,
   // Backtrack the SES result.
   auto Backtrack = [&](const std::vector<std::vector<int32_t>> &Trace,
                        const std::vector<Anchor> &A,
-                       const std::vector<Anchor> &B) {
+                       const std::vector<Anchor> &B, DiffResult &Diff) {
     int32_t X = N, Y = M;
     for (int32_t D = Trace.size() - 1; X > 0 || Y > 0; D--) {
       const auto &P = Trace[D];
@@ -174,8 +174,11 @@ MyersDiff::longestCommonSequence(const std::vector<Anchor> &A,
   };
 
   // The greedy LCS/SES algorithm.
+
+  // An array contains the endpoints of the furthest reaching D-paths.
   std::vector<int32_t> V(2 * Max + 1, -1);
   V[Index(1)] = 0;
+  // Trace is used to backtrack the SES result.
   std::vector<std::vector<int32_t>> Trace;
   for (int32_t D = 0; D <= Max; D++) {
     Trace.push_back(V);
@@ -193,7 +196,7 @@ MyersDiff::longestCommonSequence(const std::vector<Anchor> &A,
 
       if (X >= N && Y >= M) {
         // Length of an SES is D.
-        Backtrack(Trace, A, B);
+        Backtrack(Trace, A, B, Diff);
         return Diff;
       }
     }
@@ -202,8 +205,18 @@ MyersDiff::longestCommonSequence(const std::vector<Anchor> &A,
   return Diff;
 }
 
-void SampleProfileMatcher::matchNonAnchorAndWriteResults(
-    const LocToLocMap &AnchorMatchings,
+LocToLocMap SampleProfileMatcher::longestCommonSequence(
+    const std::vector<Anchor> &IRCallsiteAnchors,
+    const std::vector<Anchor> &ProfileCallsiteAnchors) const {
+  // Use the diff algorithm to find the LCS/SES, the resulting equal locations
+  // from IR to Profile are used as anchor to match other locations.
+  auto SES =
+      MyersDiff().shortestEditScript(IRCallsiteAnchors, ProfileCallsiteAnchors);
+  return SES.EqualLocations;
+}
+
+void SampleProfileMatcher::matchNonCallsiteLocsAndWriteResults(
+    const LocToLocMap &MatchedAnchors,
     const std::map<LineLocation, StringRef> &IRAnchors,
     LocToLocMap &IRToProfileLocationMap) {
   auto InsertMatching = [&](const LineLocation &From, const LineLocation &To) {
@@ -221,8 +234,8 @@ void SampleProfileMatcher::matchNonAnchorAndWriteResults(
     bool IsMatchedAnchor = false;
 
     // Match the anchor location in lexical order.
-    auto R = AnchorMatchings.find(Loc);
-    if (R != AnchorMatchings.end()) {
+    auto R = MatchedAnchors.find(Loc);
+    if (R != MatchedAnchors.end()) {
       const auto &Candidate = R->second;
       InsertMatching(Loc, Candidate);
       LLVM_DEBUG(dbgs() << "Callsite with callee:" << CalleeName
@@ -313,16 +326,16 @@ void SampleProfileMatcher::runStaleProfileMatching(
   if (IRCallsiteAnchors.empty() || ProfileCallsiteAnchors.empty())
     return;
 
-  // Use the diff algorithm to find the LCS/SES, the resulting equal locations
-  // from IR to Profile are used as anchor to match other locations. Note that
-  // here use IR anchor as base(A) to align with the order of
-  // IRToProfileLocationMap.
-  MyersDiff Diff;
-  auto DiffRes =
-      Diff.longestCommonSequence(IRCallsiteAnchors, ProfileCallsiteAnchors);
+  // Match the callsite anchors by finding the longest common subsequence
+  // between IR and profile. Note that we need to use IR anchor as base(A side)
+  // to align with the order of IRToProfileLocationMap.
+  LocToLocMap MatchedAnchors =
+      longestCommonSequence(IRCallsiteAnchors, ProfileCallsiteAnchors);
 
-  matchNonAnchorAndWriteResults(DiffRes.EqualLocations, IRAnchors,
-                                IRToProfileLocationMap);
+  // Match the non-callsite locations and write the result to
+  // IRToProfileLocationMap.
+  matchNonCallsiteLocsAndWriteResults(MatchedAnchors, IRAnchors,
+                                      IRToProfileLocationMap);
 }
 
 void SampleProfileMatcher::runOnFunction(Function &F) {
