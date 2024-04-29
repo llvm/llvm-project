@@ -856,16 +856,67 @@ define void @exit_cond_zext_iv(ptr %dst, i64 %N) {
 ; PRED-LABEL: define void @exit_cond_zext_iv(
 ; PRED-SAME: ptr [[DST:%.*]], i64 [[N:%.*]]) {
 ; PRED-NEXT:  entry:
+; PRED-NEXT:    [[UMAX1:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
+; PRED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
+; PRED:       vector.scevcheck:
+; PRED-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
+; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[UMAX]], -1
+; PRED-NEXT:    [[TMP1:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
+; PRED-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP0]] to i32
+; PRED-NEXT:    [[TMP3:%.*]] = add i32 1, [[TMP2]]
+; PRED-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[TMP3]], 1
+; PRED-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[TMP0]], 4294967295
+; PRED-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[TMP5]]
+; PRED-NEXT:    br i1 [[TMP6]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; PRED:       vector.ph:
+; PRED-NEXT:    [[N_RND_UP:%.*]] = add i64 [[UMAX1]], 1
+; PRED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 2
+; PRED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; PRED-NEXT:    [[IND_END:%.*]] = trunc i64 [[N_VEC]] to i32
+; PRED-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[UMAX1]], 1
+; PRED-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
+; PRED-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT3]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; PRED-NEXT:    br label [[LOOP:%.*]]
-; PRED:       loop:
-; PRED-NEXT:    [[IV_1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_1_NEXT:%.*]], [[LOOP]] ]
-; PRED-NEXT:    [[IV_CONV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_EXT:%.*]], [[LOOP]] ]
+; PRED:       vector.body:
+; PRED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE6:%.*]] ]
+; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[INDEX]], i64 0
+; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
+; PRED-NEXT:    [[VEC_IV:%.*]] = add <2 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1>
+; PRED-NEXT:    [[TMP7:%.*]] = icmp ule <2 x i64> [[VEC_IV]], [[BROADCAST_SPLAT4]]
+; PRED-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP7]], i32 0
+; PRED-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
+; PRED:       pred.store.if:
+; PRED-NEXT:    [[IV_CONV:%.*]] = add i64 [[INDEX]], 0
 ; PRED-NEXT:    [[GEP:%.*]] = getelementptr { [100 x i32], i32, i32 }, ptr [[DST]], i64 [[IV_CONV]], i32 2
 ; PRED-NEXT:    store i32 0, ptr [[GEP]], align 8
+; PRED-NEXT:    br label [[PRED_STORE_CONTINUE]]
+; PRED:       pred.store.continue:
+; PRED-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP7]], i32 1
+; PRED-NEXT:    br i1 [[TMP11]], label [[PRED_STORE_IF5:%.*]], label [[PRED_STORE_CONTINUE6]]
+; PRED:       pred.store.if5:
+; PRED-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 1
+; PRED-NEXT:    [[TMP13:%.*]] = getelementptr { [100 x i32], i32, i32 }, ptr [[DST]], i64 [[TMP12]], i32 2
+; PRED-NEXT:    store i32 0, ptr [[TMP13]], align 8
+; PRED-NEXT:    br label [[PRED_STORE_CONTINUE6]]
+; PRED:       pred.store.continue6:
+; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
+; PRED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; PRED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
+; PRED:       middle.block:
+; PRED-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; PRED:       scalar.ph:
+; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; PRED-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ], [ 0, [[VECTOR_SCEVCHECK]] ]
+; PRED-NEXT:    br label [[LOOP1:%.*]]
+; PRED:       loop:
+; PRED-NEXT:    [[IV_1:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_1_NEXT:%.*]], [[LOOP1]] ]
+; PRED-NEXT:    [[IV_CONV1:%.*]] = phi i64 [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ], [ [[IV_EXT:%.*]], [[LOOP1]] ]
+; PRED-NEXT:    [[GEP1:%.*]] = getelementptr { [100 x i32], i32, i32 }, ptr [[DST]], i64 [[IV_CONV1]], i32 2
+; PRED-NEXT:    store i32 0, ptr [[GEP1]], align 8
 ; PRED-NEXT:    [[IV_1_NEXT]] = add i32 [[IV_1]], 1
 ; PRED-NEXT:    [[IV_EXT]] = zext i32 [[IV_1_NEXT]] to i64
 ; PRED-NEXT:    [[C:%.*]] = icmp ult i64 [[IV_EXT]], [[N]]
-; PRED-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
+; PRED-NEXT:    br i1 [[C]], label [[LOOP1]], label [[EXIT]], !llvm.loop [[LOOP11:![0-9]+]]
 ; PRED:       exit:
 ; PRED-NEXT:    ret void
 ;
@@ -913,4 +964,6 @@ attributes #0 = { "target-features"="+sve" }
 ; PRED: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
 ; PRED: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
 ; PRED: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]]}
+; PRED: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]], [[META2]]}
+; PRED: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]]}
 ;.
