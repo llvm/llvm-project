@@ -13166,7 +13166,8 @@ Value *BoUpSLP::vectorizeTree(
     auto *TE = const_cast<TreeEntry *>(E);
     if (auto *VecTE = getTreeEntry(TE->Scalars.front()))
       if (VecTE->isSame(TE->UserTreeIndices.front().UserTE->getOperand(
-              TE->UserTreeIndices.front().EdgeIdx)))
+              TE->UserTreeIndices.front().EdgeIdx)) &&
+          VecTE->isSame(TE->Scalars))
         // Found gather node which is absolutely the same as one of the
         // vectorized nodes. It may happen after reordering.
         continue;
