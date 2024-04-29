@@ -1023,70 +1023,178 @@ bool ByteCodeExprGen<Emitter>::VisitArraySubscriptExpr(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
+                                             const Expr *ArrayFiller,
                                              const Expr *E) {
-  assert(E->getType()->isRecordType());
-  const Record *R = getRecord(E->getType());
+  if (E->getType()->isVoidType())
+    return this->emitInvalid(E);
 
-  if (Inits.size() == 1 && E->getType() == Inits[0]->getType()) {
-    return this->visitInitializer(Inits[0]);
+  // Handle discarding first.
+  if (DiscardResult) {
+    for (const Expr *Init : Inits) {
+      if (!this->discard(Init))
+        return false;
+    }
+    return true;
   }
 
-  unsigned InitIndex = 0;
-  for (const Expr *Init : Inits) {
-    // Skip unnamed bitfields.
-    while (InitIndex < R->getNumFields() &&
-           R->getField(InitIndex)->Decl->isUnnamedBitField())
-      ++InitIndex;
+  // Primitive values.
+  if (std::optional<PrimType> T = classify(E->getType())) {
+    assert(!DiscardResult);
+    if (Inits.size() == 0)
+      return this->visitZeroInitializer(*T, E->getType(), E);
+    assert(Inits.size() == 1);
+    return this->delegate(Inits[0]);
+  }
 
-    if (!this->emitDupPtr(E))
-      return false;
+  QualType T = E->getType();
+  if (T->isRecordType()) {
+    const Record *R = getRecord(E->getType());
 
-    if (std::optional<PrimType> T = classify(Init)) {
-      const Record::Field *FieldToInit = R->getField(InitIndex);
-      if (!this->visit(Init))
+    if (Inits.size() == 1 && E->getType() == Inits[0]->getType()) {
+      return this->visitInitializer(Inits[0]);
+    }
+
+    unsigned InitIndex = 0;
+    for (const Expr *Init : Inits) {
+      // Skip unnamed bitfields.
+      while (InitIndex < R->getNumFields() &&
+             R->getField(InitIndex)->Decl->isUnnamedBitField())
+        ++InitIndex;
+
+      if (!this->emitDupPtr(E))
         return false;
 
-      if (FieldToInit->isBitField()) {
-        if (!this->emitInitBitField(*T, FieldToInit, E))
-          return false;
-      } else {
-        if (!this->emitInitField(*T, FieldToInit->Offset, E))
-          return false;
-      }
-
-      if (!this->emitPopPtr(E))
-        return false;
-      ++InitIndex;
-    } else {
-      // Initializer for a direct base class.
-      if (const Record::Base *B = R->getBase(Init->getType())) {
-        if (!this->emitGetPtrBasePop(B->Offset, Init))
-          return false;
-
-        if (!this->visitInitializer(Init))
-          return false;
-
-        if (!this->emitFinishInitPop(E))
-          return false;
-        // Base initializers don't increase InitIndex, since they don't count
-        // into the Record's fields.
-      } else {
+      if (std::optional<PrimType> T = classify(Init)) {
         const Record::Field *FieldToInit = R->getField(InitIndex);
-        // Non-primitive case. Get a pointer to the field-to-initialize
-        // on the stack and recurse into visitInitializer().
-        if (!this->emitGetPtrField(FieldToInit->Offset, Init))
+        if (!this->visit(Init))
           return false;
 
-        if (!this->visitInitializer(Init))
-          return false;
+        if (FieldToInit->isBitField()) {
+          if (!this->emitInitBitField(*T, FieldToInit, E))
+            return false;
+        } else {
+          if (!this->emitInitField(*T, FieldToInit->Offset, E))
+            return false;
+        }
 
         if (!this->emitPopPtr(E))
           return false;
         ++InitIndex;
+      } else {
+        // Initializer for a direct base class.
+        if (const Record::Base *B = R->getBase(Init->getType())) {
+          if (!this->emitGetPtrBasePop(B->Offset, Init))
+            return false;
+
+          if (!this->visitInitializer(Init))
+            return false;
+
+          if (!this->emitFinishInitPop(E))
+            return false;
+          // Base initializers don't increase InitIndex, since they don't count
+          // into the Record's fields.
+        } else {
+          const Record::Field *FieldToInit = R->getField(InitIndex);
+          // Non-primitive case. Get a pointer to the field-to-initialize
+          // on the stack and recurse into visitInitializer().
+          if (!this->emitGetPtrField(FieldToInit->Offset, Init))
+            return false;
+
+          if (!this->visitInitializer(Init))
+            return false;
+
+          if (!this->emitPopPtr(E))
+            return false;
+          ++InitIndex;
+        }
       }
     }
+    return true;
   }
-  return true;
+
+  if (T->isArrayType()) {
+    unsigned ElementIndex = 0;
+    for (const Expr *Init : Inits) {
+      if (!this->visitArrayElemInit(ElementIndex, Init))
+        return false;
+      ++ElementIndex;
+    }
+
+    // Expand the filler expression.
+    // FIXME: This should go away.
+    if (ArrayFiller) {
+      const ConstantArrayType *CAT =
+          Ctx.getASTContext().getAsConstantArrayType(E->getType());
+      uint64_t NumElems = CAT->getZExtSize();
+
+      for (; ElementIndex != NumElems; ++ElementIndex) {
+        if (!this->visitArrayElemInit(ElementIndex, ArrayFiller))
+          return false;
+      }
+    }
+
+    return true;
+  }
+
+  if (const auto *ComplexTy = E->getType()->getAs<ComplexType>()) {
+    unsigned NumInits = Inits.size();
+
+    if (NumInits == 1)
+      return this->delegate(Inits[0]);
+
+    QualType ElemQT = ComplexTy->getElementType();
+    PrimType ElemT = classifyPrim(ElemQT);
+    if (NumInits == 0) {
+      // Zero-initialize both elements.
+      for (unsigned I = 0; I < 2; ++I) {
+        if (!this->visitZeroInitializer(ElemT, ElemQT, E))
+          return false;
+        if (!this->emitInitElem(ElemT, I, E))
+          return false;
+      }
+    } else if (NumInits == 2) {
+      unsigned InitIndex = 0;
+      for (const Expr *Init : Inits) {
+        if (!this->visit(Init))
+          return false;
+
+        if (!this->emitInitElem(ElemT, InitIndex, E))
+          return false;
+        ++InitIndex;
+      }
+    }
+    return true;
+  }
+
+  if (const auto *VecT = E->getType()->getAs<VectorType>()) {
+    unsigned NumVecElements = VecT->getNumElements();
+    assert(NumVecElements >= Inits.size());
+
+    QualType ElemQT = VecT->getElementType();
+    PrimType ElemT = classifyPrim(ElemQT);
+
+    // All initializer elements.
+    unsigned InitIndex = 0;
+    for (const Expr *Init : Inits) {
+      if (!this->visit(Init))
+        return false;
+
+      if (!this->emitInitElem(ElemT, InitIndex, E))
+        return false;
+      ++InitIndex;
+    }
+
+    // Fill the rest with zeroes.
+    for (; InitIndex != NumVecElements; ++InitIndex) {
+      if (!this->visitZeroInitializer(ElemT, ElemQT, E))
+        return false;
+      if (!this->emitInitElem(ElemT, InitIndex, E))
+        return false;
+    }
+    return true;
+  }
+
+  return false;
 }
 
 /// Pointer to the array(not the element!) must be on the stack when calling
@@ -1114,129 +1222,13 @@ bool ByteCodeExprGen<Emitter>::visitArrayElemInit(unsigned ElemIndex,
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
-  if (E->getType()->isVoidType())
-    return this->emitInvalid(E);
-
-  // Handle discarding first.
-  if (DiscardResult) {
-    for (const Expr *Init : E->inits()) {
-      if (!this->discard(Init))
-        return false;
-    }
-    return true;
-  }
-
-  // Primitive values.
-  if (std::optional<PrimType> T = classify(E->getType())) {
-    assert(!DiscardResult);
-    if (E->getNumInits() == 0)
-      return this->visitZeroInitializer(*T, E->getType(), E);
-    assert(E->getNumInits() == 1);
-    return this->delegate(E->inits()[0]);
-  }
-
-  QualType T = E->getType();
-  if (T->isRecordType())
-    return this->visitInitList(E->inits(), E);
-
-  if (T->isArrayType()) {
-    unsigned ElementIndex = 0;
-    for (const Expr *Init : E->inits()) {
-      if (!this->visitArrayElemInit(ElementIndex, Init))
-        return false;
-      ++ElementIndex;
-    }
-
-    // Expand the filler expression.
-    // FIXME: This should go away.
-    if (const Expr *Filler = E->getArrayFiller()) {
-      const ConstantArrayType *CAT =
-          Ctx.getASTContext().getAsConstantArrayType(E->getType());
-      uint64_t NumElems = CAT->getZExtSize();
-
-      for (; ElementIndex != NumElems; ++ElementIndex) {
-        if (!this->visitArrayElemInit(ElementIndex, Filler))
-          return false;
-      }
-    }
-
-    return true;
-  }
-
-  if (const auto *ComplexTy = E->getType()->getAs<ComplexType>()) {
-    unsigned NumInits = E->getNumInits();
-
-    if (NumInits == 1)
-      return this->delegate(E->inits()[0]);
-
-    QualType ElemQT = ComplexTy->getElementType();
-    PrimType ElemT = classifyPrim(ElemQT);
-    if (NumInits == 0) {
-      // Zero-initialize both elements.
-      for (unsigned I = 0; I < 2; ++I) {
-        if (!this->visitZeroInitializer(ElemT, ElemQT, E))
-          return false;
-        if (!this->emitInitElem(ElemT, I, E))
-          return false;
-      }
-    } else if (NumInits == 2) {
-      unsigned InitIndex = 0;
-      for (const Expr *Init : E->inits()) {
-        if (!this->visit(Init))
-          return false;
-
-        if (!this->emitInitElem(ElemT, InitIndex, E))
-          return false;
-        ++InitIndex;
-      }
-    }
-    return true;
-  }
-
-  if (const auto *VecT = E->getType()->getAs<VectorType>()) {
-    unsigned NumVecElements = VecT->getNumElements();
-    assert(NumVecElements >= E->getNumInits());
-
-    QualType ElemQT = VecT->getElementType();
-    PrimType ElemT = classifyPrim(ElemQT);
-
-    // All initializer elements.
-    unsigned InitIndex = 0;
-    for (const Expr *Init : E->inits()) {
-      if (!this->visit(Init))
-        return false;
-
-      if (!this->emitInitElem(ElemT, InitIndex, E))
-        return false;
-      ++InitIndex;
-    }
-
-    // Fill the rest with zeroes.
-    for (; InitIndex != NumVecElements; ++InitIndex) {
-      if (!this->visitZeroInitializer(ElemT, ElemQT, E))
-        return false;
-      if (!this->emitInitElem(ElemT, InitIndex, E))
-        return false;
-    }
-    return true;
-  }
-
-  return false;
+  return this->visitInitList(E->inits(), E->getArrayFiller(), E);
 }
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCXXParenListInitExpr(
     const CXXParenListInitExpr *E) {
-  if (DiscardResult) {
-    for (const Expr *Init : E->getInitExprs()) {
-      if (!this->discard(Init))
-        return false;
-    }
-    return true;
-  }
-
-  assert(E->getType()->isRecordType());
-  return this->visitInitList(E->getInitExprs(), E);
+  return this->visitInitList(E->getInitExprs(), E->getArrayFiller(), E);
 }
 
 template <class Emitter>
