@@ -211,12 +211,9 @@ Example 8 - Addresses having approximate line info:
 
 .. code-block:: console
 
-  $ llvm-symbolizer --obj=test.elf --approximate-line-info=before 0xa
+  $ llvm-symbolizer --obj=test.elf --approximate-line 0xa
   main
   /tmp/test/main.c:4:6 (approximate)
-  $ llvm-symbolizer --obj=test.elf --approximate-line-info=after 0xa
-  main
-  /tmp/test/main.c:8:2 (approximate)
 
 OPTIONS
 -------
@@ -227,11 +224,11 @@ OPTIONS
   This can be used to perform lookups as if the object were relocated by the
   offset.
 
-.. option:: --approximate-line-info=<before|after>
+.. option:: --approximate-line
 
-  Print the approximate non-zero line number nearest to an input address.
-  Nearest lookup is performed by querying the line-table structure for an
-  address having non-zero line information in close proximity.
+  Print the approximate non-zero line number that is nearest to before an
+  input address. Nearest lookup is performed by querying the line-table
+  structure for an address having non-zero line information in close proximity.
 
 .. option:: --basenames, -s
 

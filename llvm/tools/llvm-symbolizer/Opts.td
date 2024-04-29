@@ -17,7 +17,7 @@ def grp_mach_o : OptionGroup<"kind">,
                  HelpText<"llvm-symbolizer Mach-O Specific Options">;
 
 def addresses : F<"addresses", "Show address before line information">;
-defm approximate_line_info : Eq<"approximate-line-info","Find approximate non-zero line number information nearest to given address.">,Values<"<before/after>">;
+def approximate_line : F<"approximate-line","Show approximate non-zero line number information nearest to before the given address.">;
 defm adjust_vma
     : Eq<"adjust-vma", "Add specified offset to object file addresses">,
       MetaVarName<"<offset>">;

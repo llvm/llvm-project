@@ -240,9 +240,8 @@ public:
 
     /// Returns the index of the row with file/line info for a given address,
     /// or UnknownRowIndex if there is no such row.
-    std::pair<uint32_t, bool>
-    lookupAddress(object::SectionedAddress Address,
-                  DILineInfoSpecifier::ApproximateLineKind LineKind) const;
+    std::pair<uint32_t, bool> lookupAddress(object::SectionedAddress Address,
+                                            bool ApproximateLine) const;
 
     bool lookupAddressRange(object::SectionedAddress Address, uint64_t Size,
                             std::vector<uint32_t> &Result) const;
@@ -268,10 +267,10 @@ public:
 
     /// Fills the Result argument with the file and line information
     /// corresponding to Address. Returns true on success.
-    bool getFileLineInfoForAddress(
-        object::SectionedAddress Address,
-        DILineInfoSpecifier::ApproximateLineKind LineKind, const char *CompDir,
-        DILineInfoSpecifier::FileLineInfoKind Kind, DILineInfo &Result) const;
+    bool getFileLineInfoForAddress(object::SectionedAddress Address,
+                                   const char *CompDir, bool ApproximateLine,
+                                   DILineInfoSpecifier::FileLineInfoKind Kind,
+                                   DILineInfo &Result) const;
 
     /// Extracts directory name by its Entry in include directories table
     /// in prologue. Returns true on success.
@@ -305,7 +304,7 @@ public:
 
     std::pair<uint32_t, bool>
     lookupAddressImpl(object::SectionedAddress Address,
-                      DILineInfoSpecifier::ApproximateLineKind LineKind) const;
+                      bool ApproximateLine) const;
 
     bool lookupAddressRangeImpl(object::SectionedAddress Address, uint64_t Size,
                                 std::vector<uint32_t> &Result) const;

@@ -44,7 +44,6 @@ using namespace object;
 
 using FunctionNameKind = DILineInfoSpecifier::FunctionNameKind;
 using FileLineInfoKind = DILineInfoSpecifier::FileLineInfoKind;
-using ApproximateLineKind = DILineInfoSpecifier::ApproximateLineKind;
 
 class CachedBinary;
 
@@ -53,7 +52,7 @@ public:
   struct Options {
     FunctionNameKind PrintFunctions = FunctionNameKind::LinkageName;
     FileLineInfoKind PathStyle = FileLineInfoKind::AbsoluteFilePath;
-    ApproximateLineKind ApproximateLineNumbers = ApproximateLineKind::None;
+    bool ApproximateLine = false;
     bool UseSymbolTable = true;
     bool Demangle = true;
     bool RelativeAddresses = false;
