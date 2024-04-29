@@ -1785,7 +1785,7 @@ LogicalResult ReturnOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// Verifier for LLVM::AddressOfOp.
+// LLVM::AddressOfOp.
 //===----------------------------------------------------------------------===//
 
 static Operation *parentLLVMModule(Operation *op) {
@@ -1824,6 +1824,11 @@ AddressOfOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
                        "referenced global");
 
   return success();
+}
+
+// AddressOfOp constant-folds to the global symbol name.
+OpFoldResult LLVM::AddressOfOp::fold(FoldAdaptor) {
+  return getGlobalNameAttr();
 }
 
 //===----------------------------------------------------------------------===//
@@ -3258,6 +3263,12 @@ LogicalResult LLVMDialect::verifyRegionResultAttribute(Operation *op,
 
 Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                             Type type, Location loc) {
+  // If this was folded from an llvm.mlir.addressof operation, it should be
+  // materialized as such.
+  if (auto symbol = dyn_cast<FlatSymbolRefAttr>(value))
+    if (isa<LLVM::LLVMPointerType>(type))
+      return builder.create<LLVM::AddressOfOp>(loc, type, symbol);
+  // Otherwise try materializing it as a regular llvm.mlir.constant op.
   return LLVM::ConstantOp::materialize(builder, value, type, loc);
 }
 
