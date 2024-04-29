@@ -1612,8 +1612,8 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   if (Op2Info.isConstant())
     ConstantMatCost += getConstantMatCost(1, Op2Info);
 
-  // Assuming instructions falling through the switch-cases have the same cost
-  // until a need arises to differentiate them.
+  // Assuming all other instructions have the same cost until a need arises to
+  // differentiate them.
   unsigned Op;
   switch (TLI->InstructionOpcodeToISD(Opcode)) {
   case ISD::ADD:
