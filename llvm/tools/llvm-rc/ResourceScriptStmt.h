@@ -993,6 +993,19 @@ public:
   Error visit(Visitor *V) const override { return V->visitExStyleStmt(this); }
 };
 
+// MENU optional statement.
+//
+// Ref: https://learn.microsoft.com/en-us/windows/win32/menurc/menu-statement
+class MenuStmt : public OptionalStmt {
+public:
+  IntOrString Value;
+
+  MenuStmt(IntOrString NameOrId) : Value(NameOrId) {}
+  raw_ostream &log(raw_ostream &) const override;
+  Twine getResourceTypeName() const override { return "MENU"; }
+  Error visit(Visitor *V) const override { return V->visitMenuStmt(this); }
+};
+
 // CLASS optional statement.
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa380883(v=vs.85).aspx
