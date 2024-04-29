@@ -16171,7 +16171,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     unsigned Opc = N->getOpcode();
 
     // czero_eqz x, x -> x
-    if (Opc && Val == Cond)
+    if (Opc == RISCVISD::CZERO_EQZ && Val == Cond)
       return Val;
 
     unsigned InvOpc =
@@ -16180,10 +16180,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // czero_eqz X, (xor Y, 1) -> czero_nez X, Y if Y is 0 or 1.
     // czero_nez X, (xor Y, 1) -> czero_eqz X, Y if Y is 0 or 1.
     if (Cond.getOpcode() == ISD::XOR && isOneConstant(Cond.getOperand(1))) {
-      Cond = Cond.getOperand(0);
-      APInt Mask = APInt::getBitsSetFrom(Cond.getValueSizeInBits(), 1);
-      if (DAG.MaskedValueIsZero(Cond, Mask))
-        return DAG.getNode(InvOpc, SDLoc(N), N->getValueType(0), Val, Cond);
+      SDValue NewCond = Cond.getOperand(0);
+      APInt Mask = APInt::getBitsSetFrom(NewCond.getValueSizeInBits(), 1);
+      if (DAG.MaskedValueIsZero(NewCond, Mask))
+        return DAG.getNode(InvOpc, SDLoc(N), N->getValueType(0), Val, NewCond);
     }
     // czero_eqz x, (setcc y, 0, ne) -> czero_eqz x, y
     // czero_nez x, (setcc y, 0, ne) -> czero_nez x, y
