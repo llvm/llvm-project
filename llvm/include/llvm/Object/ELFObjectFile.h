@@ -199,6 +199,14 @@ public:
   }
 };
 
+inline bool operator<(const ELFSymbolRef &A, const ELFSymbolRef &B) {
+  const DataRefImpl &DRIA = A.getRawDataRefImpl();
+  const DataRefImpl &DRIB = B.getRawDataRefImpl();
+  if (DRIA.d.a == DRIB.d.a)
+    return DRIA.d.b < DRIB.d.b;
+  return DRIA.d.a < DRIB.d.a;
+}
+
 class elf_symbol_iterator : public symbol_iterator {
 public:
   elf_symbol_iterator(const basic_symbol_iterator &B)
@@ -801,9 +809,8 @@ Expected<uint32_t> ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
   } else if (EF.getHeader().e_machine == ELF::EM_RISCV) {
     if (Expected<StringRef> NameOrErr = getSymbolName(Sym)) {
       StringRef Name = *NameOrErr;
-      // Mark empty name symbols (used for label differences) and mapping
-      // symbols.
-      if (Name.empty() || Name.starts_with("$d") || Name.starts_with("$x"))
+      // Mark fake labels (used for label differences) and mapping symbols.
+      if (Name == ".L0 " || Name.starts_with("$d") || Name.starts_with("$x"))
         Result |= SymbolRef::SF_FormatSpecific;
     } else {
       // TODO: Actually report errors helpfully.

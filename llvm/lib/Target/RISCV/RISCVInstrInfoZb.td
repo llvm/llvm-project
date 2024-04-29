@@ -26,18 +26,24 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def riscv_clzw   : SDNode<"RISCVISD::CLZW",   SDT_RISCVIntUnaryOpW>;
-def riscv_ctzw   : SDNode<"RISCVISD::CTZW",   SDT_RISCVIntUnaryOpW>;
-def riscv_rolw   : SDNode<"RISCVISD::ROLW",   SDT_RISCVIntBinOpW>;
-def riscv_rorw   : SDNode<"RISCVISD::RORW",   SDT_RISCVIntBinOpW>;
-def riscv_brev8  : SDNode<"RISCVISD::BREV8",  SDTIntUnaryOp>;
-def riscv_orc_b  : SDNode<"RISCVISD::ORC_B",  SDTIntUnaryOp>;
-def riscv_zip    : SDNode<"RISCVISD::ZIP",    SDTIntUnaryOp>;
-def riscv_unzip  : SDNode<"RISCVISD::UNZIP",  SDTIntUnaryOp>;
-def riscv_absw   : SDNode<"RISCVISD::ABSW",   SDTIntUnaryOp>;
-def riscv_clmul  : SDNode<"RISCVISD::CLMUL",  SDTIntBinOp>;
-def riscv_clmulh : SDNode<"RISCVISD::CLMULH", SDTIntBinOp>;
-def riscv_clmulr : SDNode<"RISCVISD::CLMULR", SDTIntBinOp>;
+def SDTIntShiftAddOp : SDTypeProfile<1, 3, [   // shl_add
+  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 3>, SDTCisInt<0>, SDTCisInt<2>,
+  SDTCisInt<3>
+]>;
+
+def riscv_shl_add : SDNode<"RISCVISD::SHL_ADD", SDTIntShiftAddOp>;
+def riscv_clzw    : SDNode<"RISCVISD::CLZW",    SDT_RISCVIntUnaryOpW>;
+def riscv_ctzw    : SDNode<"RISCVISD::CTZW",    SDT_RISCVIntUnaryOpW>;
+def riscv_rolw    : SDNode<"RISCVISD::ROLW",    SDT_RISCVIntBinOpW>;
+def riscv_rorw    : SDNode<"RISCVISD::RORW",    SDT_RISCVIntBinOpW>;
+def riscv_brev8   : SDNode<"RISCVISD::BREV8",   SDTIntUnaryOp>;
+def riscv_orc_b   : SDNode<"RISCVISD::ORC_B",   SDTIntUnaryOp>;
+def riscv_zip     : SDNode<"RISCVISD::ZIP",     SDTIntUnaryOp>;
+def riscv_unzip   : SDNode<"RISCVISD::UNZIP",   SDTIntUnaryOp>;
+def riscv_absw    : SDNode<"RISCVISD::ABSW",    SDTIntUnaryOp>;
+def riscv_clmul   : SDNode<"RISCVISD::CLMUL",   SDTIntBinOp>;
+def riscv_clmulh  : SDNode<"RISCVISD::CLMULH",  SDTIntBinOp>;
+def riscv_clmulr  : SDNode<"RISCVISD::CLMULR",  SDTIntBinOp>;
 
 def UImmLog2XLenHalfAsmOperand : AsmOperandClass {
   let Name = "UImmLog2XLenHalf";
@@ -678,6 +684,8 @@ foreach i = {1,2,3} in {
   defvar shxadd = !cast<Instruction>("SH"#i#"ADD");
   def : Pat<(XLenVT (add_like_non_imm12 (shl GPR:$rs1, (XLenVT i)), GPR:$rs2)),
             (shxadd GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVT (riscv_shl_add GPR:$rs1, (XLenVT i), GPR:$rs2)),
+            (shxadd GPR:$rs1, GPR:$rs2)>;
 
   defvar pat = !cast<ComplexPattern>("sh"#i#"add_op");
   // More complex cases use a ComplexPattern.
@@ -721,31 +729,6 @@ def : Pat<(mul (XLenVT GPR:$r), C9LeftShift:$i),
           (SLLI (XLenVT (SH3ADD GPR:$r, GPR:$r)),
                 (TrailingZeros C9LeftShift:$i))>;
 
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 11)),
-          (SH1ADD (XLenVT (SH2ADD GPR:$r, GPR:$r)), GPR:$r)>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 19)),
-          (SH1ADD (XLenVT (SH3ADD GPR:$r, GPR:$r)), GPR:$r)>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 13)),
-          (SH2ADD (XLenVT (SH1ADD GPR:$r, GPR:$r)), GPR:$r)>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 21)),
-          (SH2ADD (XLenVT (SH2ADD GPR:$r, GPR:$r)), GPR:$r)>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 37)),
-          (SH2ADD (XLenVT (SH3ADD GPR:$r, GPR:$r)), GPR:$r)>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 25)),
-          (SH3ADD (XLenVT (SH1ADD GPR:$r, GPR:$r)), GPR:$r)>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 41)),
-          (SH3ADD (XLenVT (SH2ADD GPR:$r, GPR:$r)), GPR:$r)>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 73)),
-          (SH3ADD (XLenVT (SH3ADD GPR:$r, GPR:$r)), GPR:$r)>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 27)),
-          (SH1ADD (XLenVT (SH3ADD GPR:$r, GPR:$r)),
-                  (XLenVT (SH3ADD GPR:$r, GPR:$r)))>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 45)),
-          (SH2ADD (XLenVT (SH3ADD GPR:$r, GPR:$r)),
-                  (XLenVT (SH3ADD GPR:$r, GPR:$r)))>;
-def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 81)),
-          (SH3ADD (XLenVT (SH3ADD GPR:$r, GPR:$r)),
-                  (XLenVT (SH3ADD GPR:$r, GPR:$r)))>;
 } // Predicates = [HasStdExtZba]
 
 let Predicates = [HasStdExtZba, IsRV64] in {
@@ -763,6 +746,8 @@ def : Pat<(i64 (and GPR:$rs, 0xFFFFFFFF)), (ADD_UW GPR:$rs, (XLenVT X0))>;
 foreach i = {1,2,3} in {
   defvar shxadd_uw = !cast<Instruction>("SH"#i#"ADD_UW");
   def : Pat<(i64 (add_like_non_imm12 (shl (and GPR:$rs1, 0xFFFFFFFF), (i64 i)), (XLenVT GPR:$rs2))),
+            (shxadd_uw GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (riscv_shl_add (and GPR:$rs1, 0xFFFFFFFF), (i64 i), GPR:$rs2)),
             (shxadd_uw GPR:$rs1, GPR:$rs2)>;
 }
 
@@ -880,6 +865,8 @@ def : Pat<(zext GPR:$src), (ADD_UW GPR:$src, (XLenVT X0))>;
 foreach i = {1,2,3} in {
   defvar shxadd = !cast<Instruction>("SH"#i#"ADD");
   def : Pat<(i32 (add_like_non_imm12 (shl GPR:$rs1, (i64 i)), GPR:$rs2)),
+            (shxadd GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(i32 (riscv_shl_add GPR:$rs1, (i32 i), GPR:$rs2)),
             (shxadd GPR:$rs1, GPR:$rs2)>;
 }
 }

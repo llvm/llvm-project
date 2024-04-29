@@ -281,32 +281,21 @@ static bool runIPSCCP(
     Function *F = I.first;
     const ValueLatticeElement &ReturnValue = I.second;
 
-    // If there is a known constant range for the return value, add !range
-    // metadata to the function's call sites.
+    // If there is a known constant range for the return value, add range
+    // attribute to the return value.
     if (ReturnValue.isConstantRange() &&
         !ReturnValue.getConstantRange().isSingleElement()) {
       // Do not add range metadata if the return value may include undef.
       if (ReturnValue.isConstantRangeIncludingUndef())
         continue;
 
+      // Do not touch existing attribute for now.
+      // TODO: We should be able to take the intersection of the existing
+      // attribute and the inferred range.
+      if (F->hasRetAttribute(Attribute::Range))
+        continue;
       auto &CR = ReturnValue.getConstantRange();
-      for (User *User : F->users()) {
-        auto *CB = dyn_cast<CallBase>(User);
-        if (!CB || CB->getCalledFunction() != F)
-          continue;
-
-        // Do not touch existing metadata for now.
-        // TODO: We should be able to take the intersection of the existing
-        // metadata and the inferred range.
-        if (CB->getMetadata(LLVMContext::MD_range))
-          continue;
-
-        LLVMContext &Context = CB->getParent()->getContext();
-        Metadata *RangeMD[] = {
-            ConstantAsMetadata::get(ConstantInt::get(Context, CR.getLower())),
-            ConstantAsMetadata::get(ConstantInt::get(Context, CR.getUpper()))};
-        CB->setMetadata(LLVMContext::MD_range, MDNode::get(Context, RangeMD));
-      }
+      F->addRangeRetAttr(CR);
       continue;
     }
     if (F->getReturnType()->isVoidTy())
