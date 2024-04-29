@@ -173,3 +173,432 @@ end:
   call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx3)
   ret void
 }
+
+
+define protected amdgpu_kernel void @reorder_expand(ptr addrspace(3) %in.ptr, i32 %in.idx0, i32 %in.idx1) {
+; CHECK-LABEL: reorder_expand:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_add_i32 s0, s0, s1
+; CHECK-NEXT:    s_lshl_b32 s2, s2, 1
+; CHECK-NEXT:    s_add_i32 s0, s0, s2
+; CHECK-NEXT:    s_cmp_lg_u32 s1, 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB2_2
+; CHECK-NEXT:  ; %bb.1: ; %bb.1
+; CHECK-NEXT:    v_mov_b32_e32 v12, s0
+; CHECK-NEXT:    ds_read_b128 v[0:3], v12
+; CHECK-NEXT:    ds_read_b128 v[4:7], v12 offset:256
+; CHECK-NEXT:    ds_read_b128 v[8:11], v12 offset:512
+; CHECK-NEXT:    ds_read_b128 v[12:15], v12 offset:768
+; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt lgkmcnt(2)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[4:7]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[8:11]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[12:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:  .LBB2_2: ; %end
+; CHECK-NEXT:    s_add_i32 s1, s0, 0x100
+; CHECK-NEXT:    v_mov_b32_e32 v0, s0
+; CHECK-NEXT:    s_add_i32 s2, s0, 0x200
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v0, s1
+; CHECK-NEXT:    s_add_i32 s3, s0, 0x300
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v0, s2
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v0, s3
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_endpgm
+entry:
+  %base = getelementptr i8, ptr addrspace(3) %in.ptr, i32 %in.idx0
+  %idx0 = getelementptr half, ptr addrspace(3) %base, i32 %in.idx1
+  %const1 = getelementptr i8, ptr addrspace(3) %base, i32 256
+  %idx1 = getelementptr half, ptr addrspace(3) %const1, i32 %in.idx1
+  %const2 = getelementptr i8, ptr addrspace(3) %base, i32 512
+  %idx2 = getelementptr half, ptr addrspace(3) %const2, i32 %in.idx1
+  %const3 = getelementptr i8, ptr addrspace(3) %base, i32 768
+  %idx3 = getelementptr half, ptr addrspace(3) %const3, i32 %in.idx1
+  %cmp0 = icmp eq i32 %in.idx0, 0
+  br i1 %cmp0, label %bb.1, label %end
+
+bb.1:
+  %val0 = load <8 x half>, ptr addrspace(3) %idx0, align 16
+  %val1 = load <8 x half>, ptr addrspace(3) %idx1, align 16
+  %val2 = load <8 x half>, ptr addrspace(3) %idx2, align 16
+  %val3 = load <8 x half>, ptr addrspace(3) %idx3, align 16
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val0)
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val1)
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val2)
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val3)
+  br label %end
+
+end:
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx0)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx1)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx2)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx3)
+  ret void
+}
+
+define protected amdgpu_kernel void @reorder_shrink(ptr addrspace(3) %in.ptr, i32 %in.idx0, i32 %in.idx1) {
+; CHECK-LABEL: reorder_shrink:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_lshl_b32 s3, s1, 3
+; CHECK-NEXT:    s_add_i32 s0, s0, s3
+; CHECK-NEXT:    s_lshl_b32 s2, s2, 1
+; CHECK-NEXT:    s_add_i32 s0, s0, s2
+; CHECK-NEXT:    s_cmp_lg_u32 s1, 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB3_2
+; CHECK-NEXT:  ; %bb.1: ; %bb.1
+; CHECK-NEXT:    v_mov_b32_e32 v12, s0
+; CHECK-NEXT:    ds_read_b128 v[0:3], v12
+; CHECK-NEXT:    ds_read_b128 v[4:7], v12 offset:2048
+; CHECK-NEXT:    ds_read_b128 v[8:11], v12 offset:4096
+; CHECK-NEXT:    ds_read_b128 v[12:15], v12 offset:6144
+; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt lgkmcnt(2)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[4:7]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[8:11]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[12:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:  .LBB3_2: ; %end
+; CHECK-NEXT:    s_add_i32 s1, s0, 0x800
+; CHECK-NEXT:    v_mov_b32_e32 v0, s0
+; CHECK-NEXT:    s_add_i32 s2, s0, 0x1000
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v0, s1
+; CHECK-NEXT:    s_add_i32 s3, s0, 0x1800
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v0, s2
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v0, s3
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_endpgm
+entry:
+  %base = getelementptr i64, ptr addrspace(3) %in.ptr, i32 %in.idx0
+  %idx0 = getelementptr half, ptr addrspace(3) %base, i32 %in.idx1
+  %const1 = getelementptr i64, ptr addrspace(3) %base, i32 256
+  %idx1 = getelementptr half, ptr addrspace(3) %const1, i32 %in.idx1
+  %const2 = getelementptr i64, ptr addrspace(3) %base, i32 512
+  %idx2 = getelementptr half, ptr addrspace(3) %const2, i32 %in.idx1
+  %const3 = getelementptr i64, ptr addrspace(3) %base, i32 768
+  %idx3 = getelementptr half, ptr addrspace(3) %const3, i32 %in.idx1
+  %cmp0 = icmp eq i32 %in.idx0, 0
+  br i1 %cmp0, label %bb.1, label %end
+
+bb.1:
+  %val0 = load <8 x half>, ptr addrspace(3) %idx0, align 16
+  %val1 = load <8 x half>, ptr addrspace(3) %idx1, align 16
+  %val2 = load <8 x half>, ptr addrspace(3) %idx2, align 16
+  %val3 = load <8 x half>, ptr addrspace(3) %idx3, align 16
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val0)
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val1)
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val2)
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val3)
+  br label %end
+
+end:
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx0)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx1)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx2)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx3)
+  ret void
+}
+
+define protected amdgpu_kernel void @reorder_shrink2(ptr addrspace(3) %in.ptr, i32 %in.idx0, i32 %in.idx1) {
+; CHECK-LABEL: reorder_shrink2:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_lshl_b32 s3, s1, 1
+; CHECK-NEXT:    s_add_i32 s0, s0, s3
+; CHECK-NEXT:    s_add_i32 s0, s0, s2
+; CHECK-NEXT:    s_cmp_lg_u32 s1, 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB4_2
+; CHECK-NEXT:  ; %bb.1: ; %bb.1
+; CHECK-NEXT:    v_mov_b32_e32 v12, s0
+; CHECK-NEXT:    ds_read_b128 v[0:3], v12
+; CHECK-NEXT:    ds_read_b128 v[4:7], v12 offset:512
+; CHECK-NEXT:    ds_read_b128 v[8:11], v12 offset:1024
+; CHECK-NEXT:    ds_read_b128 v[12:15], v12 offset:1536
+; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt lgkmcnt(2)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[4:7]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[8:11]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[12:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:  .LBB4_2: ; %end
+; CHECK-NEXT:    s_add_i32 s1, s0, 0x200
+; CHECK-NEXT:    v_mov_b32_e32 v0, s0
+; CHECK-NEXT:    s_add_i32 s2, s0, 0x400
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v0, s1
+; CHECK-NEXT:    s_add_i32 s3, s0, 0x600
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v0, s2
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v0, s3
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_endpgm
+entry:
+  %base = getelementptr half, ptr addrspace(3) %in.ptr, i32 %in.idx0
+  %idx0 = getelementptr i8, ptr addrspace(3) %base, i32 %in.idx1
+  %const1 = getelementptr half, ptr addrspace(3) %base, i32 256
+  %idx1 = getelementptr i8, ptr addrspace(3) %const1, i32 %in.idx1
+  %const2 = getelementptr half, ptr addrspace(3) %base, i32 512
+  %idx2 = getelementptr i8, ptr addrspace(3) %const2, i32 %in.idx1
+  %const3 = getelementptr half, ptr addrspace(3) %base, i32 768
+  %idx3 = getelementptr i8, ptr addrspace(3) %const3, i32 %in.idx1
+  %cmp0 = icmp eq i32 %in.idx0, 0
+  br i1 %cmp0, label %bb.1, label %end
+
+bb.1:
+  %val0 = load <8 x half>, ptr addrspace(3) %idx0, align 16
+  %val1 = load <8 x half>, ptr addrspace(3) %idx1, align 16
+  %val2 = load <8 x half>, ptr addrspace(3) %idx2, align 16
+  %val3 = load <8 x half>, ptr addrspace(3) %idx3, align 16
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val0)
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val1)
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val2)
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val3)
+  br label %end
+
+end:
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx0)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx1)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx2)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx3)
+  ret void
+}
+
+
+
+define protected amdgpu_kernel void @bad_index(ptr addrspace(3) %in.ptr, i32 %in.idx0, i32 %in.idx1) {
+; CHECK-LABEL: bad_index:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_lshl_b32 s3, s1, 1
+; CHECK-NEXT:    s_add_i32 s0, s0, s3
+; CHECK-NEXT:    s_add_i32 s0, s0, s2
+; CHECK-NEXT:    s_cmp_lg_u32 s1, 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB5_2
+; CHECK-NEXT:  ; %bb.1: ; %bb.1
+; CHECK-NEXT:    v_mov_b32_e32 v12, s0
+; CHECK-NEXT:    ds_read_b128 v[0:3], v12
+; CHECK-NEXT:    ds_read_b128 v[4:7], v12 offset:2
+; CHECK-NEXT:    ds_read_b128 v[8:11], v12 offset:4
+; CHECK-NEXT:    ds_read_b128 v[12:15], v12 offset:6
+; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt lgkmcnt(2)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[4:7]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[8:11]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[12:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:  .LBB5_2: ; %end
+; CHECK-NEXT:    s_add_i32 s1, s0, 2
+; CHECK-NEXT:    v_mov_b32_e32 v0, s0
+; CHECK-NEXT:    s_add_i32 s2, s0, 4
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v0, s1
+; CHECK-NEXT:    s_add_i32 s3, s0, 6
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v0, s2
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v0, s3
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_endpgm
+entry:
+  %base = getelementptr half, ptr addrspace(3) %in.ptr, i32 %in.idx0
+  %idx0 = getelementptr i8, ptr addrspace(3) %base, i32 %in.idx1
+  %const1 = getelementptr half, ptr addrspace(3) %base, i32 1
+  %idx1 = getelementptr i8, ptr addrspace(3) %const1, i32 %in.idx1
+  %const2 = getelementptr half, ptr addrspace(3) %base, i32 2
+  %idx2 = getelementptr i8, ptr addrspace(3) %const2, i32 %in.idx1
+  %const3 = getelementptr half, ptr addrspace(3) %base, i32 3
+  %idx3 = getelementptr i8, ptr addrspace(3) %const3, i32 %in.idx1
+  %cmp0 = icmp eq i32 %in.idx0, 0
+  br i1 %cmp0, label %bb.1, label %end
+
+bb.1:
+  %val0 = load <8 x half>, ptr addrspace(3) %idx0, align 16
+  %val1 = load <8 x half>, ptr addrspace(3) %idx1, align 16
+  %val2 = load <8 x half>, ptr addrspace(3) %idx2, align 16
+  %val3 = load <8 x half>, ptr addrspace(3) %idx3, align 16
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val0)
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val1)
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val2)
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val3)
+  br label %end
+
+end:
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx0)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx1)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx2)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx3)
+  ret void
+}
+
+
+%struct.Packed = type <{ [8 x i8], [4 x half] }>
+define protected amdgpu_kernel void @struct_type(ptr addrspace(3) %in.ptr, i32 %in.idx0, i32 %in.idx1) {
+; CHECK-LABEL: struct_type:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_load_dwordx4 s[4:7], s[6:7], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_lshl_b32 s0, s5, 14
+; CHECK-NEXT:    s_add_i32 s3, s4, s0
+; CHECK-NEXT:    s_add_i32 s3, s3, s6
+; CHECK-NEXT:    s_add_i32 s2, s3, 0x400000
+; CHECK-NEXT:    s_add_i32 s1, s3, 0x800000
+; CHECK-NEXT:    s_add_i32 s0, s3, 0xc00000
+; CHECK-NEXT:    s_cmp_lg_u32 s5, 0
+; CHECK-NEXT:    s_cbranch_scc1 .LBB6_2
+; CHECK-NEXT:  ; %bb.1: ; %bb.1
+; CHECK-NEXT:    v_mov_b32_e32 v0, s3
+; CHECK-NEXT:    v_mov_b32_e32 v4, s2
+; CHECK-NEXT:    v_mov_b32_e32 v8, s1
+; CHECK-NEXT:    v_mov_b32_e32 v12, s0
+; CHECK-NEXT:    ds_read_b128 v[0:3], v0
+; CHECK-NEXT:    ds_read_b128 v[4:7], v4
+; CHECK-NEXT:    ds_read_b128 v[8:11], v8
+; CHECK-NEXT:    ds_read_b128 v[12:15], v12
+; CHECK-NEXT:    s_waitcnt lgkmcnt(3)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt lgkmcnt(2)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[4:7]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt lgkmcnt(1)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[8:11]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v[12:15]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:  .LBB6_2: ; %end
+; CHECK-NEXT:    v_mov_b32_e32 v0, s3
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v0, s2
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v0, s1
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v0, s0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_endpgm
+entry:
+  %base = getelementptr [1024 x %struct.Packed], ptr addrspace(3) %in.ptr, i32 %in.idx0
+  %idx0 = getelementptr i8, ptr addrspace(3) %base, i32 %in.idx1
+  %const1 = getelementptr [1024 x %struct.Packed], ptr addrspace(3) %base, i32 256
+  %idx1 = getelementptr i8, ptr addrspace(3) %const1, i32 %in.idx1
+  %const2 = getelementptr [1024 x %struct.Packed], ptr addrspace(3) %base, i32 512
+  %idx2 = getelementptr i8, ptr addrspace(3) %const2, i32 %in.idx1
+  %const3 = getelementptr [1024 x %struct.Packed], ptr addrspace(3) %base, i32 768
+  %idx3 = getelementptr i8, ptr addrspace(3) %const3, i32 %in.idx1
+  %cmp0 = icmp eq i32 %in.idx0, 0
+  br i1 %cmp0, label %bb.1, label %end
+
+bb.1:
+  %val0 = load <8 x half>, ptr addrspace(3) %idx0, align 16
+  %val1 = load <8 x half>, ptr addrspace(3) %idx1, align 16
+  %val2 = load <8 x half>, ptr addrspace(3) %idx2, align 16
+  %val3 = load <8 x half>, ptr addrspace(3) %idx3, align 16
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val0)
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val1)
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val2)
+  call void asm sideeffect "; use $0", "v"(<8 x half> %val3)
+  br label %end
+
+end:
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx0)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx1)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx2)
+  call void asm sideeffect "; use $0", "v"(ptr addrspace(3) %idx3)
+  ret void
+}
