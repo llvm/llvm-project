@@ -80,8 +80,7 @@ TinyPtrVector<DbgVariableRecord *> llvm::findDVRDeclares(Value *V) {
   return Declares;
 }
 
-template <typename IntrinsicT, DbgVariableRecord::LocationType Type =
-                                   DbgVariableRecord::LocationType::Any>
+template <typename IntrinsicT, bool DbgAssignAndValuesOnly>
 static void
 findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
                   SmallVectorImpl<DbgVariableRecord *> *DbgVariableRecords) {
@@ -114,8 +113,7 @@ findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
     // Get DbgVariableRecords that use this as a single value.
     if (LocalAsMetadata *L = dyn_cast<LocalAsMetadata>(MD)) {
       for (DbgVariableRecord *DVR : L->getAllDbgVariableRecordUsers()) {
-        if (Type == DbgVariableRecord::LocationType::Any ||
-            DVR->getType() == Type)
+        if (!DbgAssignAndValuesOnly || DVR->isDbgValue() || DVR->isDbgAssign())
           if (EncounteredDbgVariableRecords.insert(DVR).second)
             DbgVariableRecords->push_back(DVR);
       }
@@ -130,8 +128,7 @@ findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
         continue;
       DIArgList *DI = cast<DIArgList>(AL);
       for (DbgVariableRecord *DVR : DI->getAllDbgVariableRecordUsers())
-        if (Type == DbgVariableRecord::LocationType::Any ||
-            DVR->getType() == Type)
+        if (!DbgAssignAndValuesOnly || DVR->isDbgValue() || DVR->isDbgAssign())
           if (EncounteredDbgVariableRecords.insert(DVR).second)
             DbgVariableRecords->push_back(DVR);
     }
@@ -141,14 +138,14 @@ findDbgIntrinsics(SmallVectorImpl<IntrinsicT *> &Result, Value *V,
 void llvm::findDbgValues(
     SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V,
     SmallVectorImpl<DbgVariableRecord *> *DbgVariableRecords) {
-  findDbgIntrinsics<DbgValueInst, DbgVariableRecord::LocationType::Value>(
+  findDbgIntrinsics<DbgValueInst, /*DbgAssignAndValuesOnly=*/true>(
       DbgValues, V, DbgVariableRecords);
 }
 
 void llvm::findDbgUsers(
     SmallVectorImpl<DbgVariableIntrinsic *> &DbgUsers, Value *V,
     SmallVectorImpl<DbgVariableRecord *> *DbgVariableRecords) {
-  findDbgIntrinsics<DbgVariableIntrinsic, DbgVariableRecord::LocationType::Any>(
+  findDbgIntrinsics<DbgVariableIntrinsic, /*DbgAssignAndValuesOnly=*/false>(
       DbgUsers, V, DbgVariableRecords);
 }
 
