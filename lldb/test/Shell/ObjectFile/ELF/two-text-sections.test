@@ -1,8 +1,0 @@
-# Test symbol lookup when we have duplicate section names.
-#
-# (See https://github.com/llvm/llvm-project/issues/88001)
-
-# RUN: lldb-test symbols %S/Inputs/two-text-sections.elf
-
-# CHECK: 0x00000000004000b0 {{.*}} my_function
-# CHECK: 0x00000000004000e0 {{.*}} my_other_function
