@@ -1,5 +1,7 @@
 ; Tests that we would convert coro.resume to a musttail call if the target is
 ; Wasm64 or Wasm32 with tail-call support.
+; REQUIRES: webassembly-registered-target
+
 ; RUN: opt -mtriple=wasm64-unknown-unknown < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 ; RUN: opt -mtriple=wasm64-unknown-unknown < %s -passes='pgo-instr-gen,cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 

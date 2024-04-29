@@ -7753,9 +7753,9 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
     break;
   }
 
-  case Stmt::OMPArraySectionExprClass: {
+  case Stmt::ArraySectionExprClass: {
     visitLocalsRetainedByInitializer(Path,
-                                     cast<OMPArraySectionExpr>(Init)->getBase(),
+                                     cast<ArraySectionExpr>(Init)->getBase(),
                                      Visit, true, EnableLifetimeWarnings);
     break;
   }
@@ -10789,8 +10789,6 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
 
   // FIXME: Perform "exact type" matching first, per CWG discussion?
   //        Or implement this via an implied 'T(T) -> T' deduction guide?
-
-  // FIXME: Do we need/want a std::initializer_list<T> special case?
 
   // Look up deduction guides, including those synthesized from constructors.
   //
