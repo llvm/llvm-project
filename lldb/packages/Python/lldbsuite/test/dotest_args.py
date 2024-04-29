@@ -248,10 +248,16 @@ def create_parser():
         help="The lib directory inside the Swift build directory.",
     )
     group.add_argument(
+        "--lldb-obj-root",
+        dest="lldb_obj_root",
+        metavar="path",
+        help="The path to the LLDB object files.",
+    )
+    group.add_argument(
         "--lldb-libs-dir",
         dest="lldb_libs_dir",
         metavar="path",
-        help="The path to LLDB library directory (containing liblldb)",
+        help="The path to LLDB library directory (containing liblldb).",
     )
     group.add_argument(
         "--enable-plugin",
