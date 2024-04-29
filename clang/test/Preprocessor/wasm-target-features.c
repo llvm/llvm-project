@@ -44,6 +44,15 @@
 // EXTENDED-CONST: #define __wasm_extended_const__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm32-unknown-unknown -mhalf-precision \
+// RUN:   | FileCheck %s -check-prefix=HALF-PRECISION
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm64-unknown-unknown -mhalf-precision \
+// RUN:   | FileCheck %s -check-prefix=HALF-PRECISION
+//
+// HALF-PRECISION: #define __wasm_half_precision__ 1{{$}}
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mmultimemory \
 // RUN:   | FileCheck %s -check-prefix=MULTIMEMORY
 // RUN: %clang -E -dM %s -o - 2>&1 \
@@ -135,6 +144,7 @@
 // MVP-NOT: #define __wasm_bulk_memory__ 1{{$}}
 // MVP-NOT: #define __wasm_exception_handling__ 1{{$}}
 // MVP-NOT: #define __wasm_extended_const__ 1{{$}}
+// MVP-NOT: #define __wasm_half_precision__ 1{{$}}
 // MVP-NOT: #define __wasm_multimemory__ 1{{$}}
 // MVP-NOT: #define __wasm_multivalue__ 1{{$}}
 // MVP-NOT: #define __wasm_mutable_globals__ 1{{$}}
@@ -168,6 +178,7 @@
 // GENERIC-NOT: #define __wasm_bulk_memory__ 1{{$}}
 // GENERIC-NOT: #define __wasm_exception_handling__ 1{{$}}
 // GENERIC-NOT: #define __wasm_extended_const__ 1{{$}}
+// GENERIC-NOT: #define __wasm_half_precision__ 1{{$}}
 // GENERIC-NOT: #define __wasm_multimemory__ 1{{$}}
 // GENERIC-NOT: #define __wasm_nontrapping_fptoint__ 1{{$}}
 // GENERIC-NOT: #define __wasm_relaxed_simd__ 1{{$}}
@@ -183,6 +194,7 @@
 //
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_atomics__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_bulk_memory__ 1{{$}}
+// BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_half_precision__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_multimemory__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_multivalue__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_mutable_globals__ 1{{$}}
