@@ -50,7 +50,11 @@ Update on required toolchains to build LLVM
 Changes to the LLVM IR
 ----------------------
 
-- Added Memory Model Relaxation Annotations (MMRAs).
+* Added Memory Model Relaxation Annotations (MMRAs).
+* Renamed ``llvm.experimental.vector.reverse`` intrinsic to ``llvm.vector.reverse``.
+* Renamed ``llvm.experimental.vector.splice`` intrinsic to ``llvm.vector.splice``.
+* Renamed ``llvm.experimental.vector.interleave2`` intrinsic to ``llvm.vector.interleave2``.
+* Renamed ``llvm.experimental.vector.deinterleave2`` intrinsic to ``llvm.vector.deinterleave2``.
 
 Changes to LLVM infrastructure
 ------------------------------
