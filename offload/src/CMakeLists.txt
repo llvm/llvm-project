@@ -37,6 +37,7 @@ add_llvm_library(omptarget
 
   ADDITIONAL_HEADER_DIRS
   ${LIBOMPTARGET_INCLUDE_DIR}
+  ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
 
   LINK_COMPONENTS
   Support
@@ -49,7 +50,9 @@ add_llvm_library(omptarget
   NO_INSTALL_RPATH
   BUILDTREE_ONLY
 )
-target_include_directories(omptarget PRIVATE ${LIBOMPTARGET_INCLUDE_DIR})
+target_include_directories(omptarget PRIVATE 
+  ${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
+)
 
 if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
   target_link_libraries(omptarget PRIVATE
@@ -64,20 +67,6 @@ target_compile_definitions(omptarget PRIVATE
 
 target_compile_options(omptarget PUBLIC ${offload_compile_flags})
 target_link_options(omptarget PUBLIC ${offload_link_flags})
-
-macro(check_plugin_target target)
-if (TARGET omptarget.rtl.${target})
-	list(APPEND LIBOMPTARGET_PLUGINS_TO_LOAD ${target})
-endif()
-endmacro()
-
-set(LIBOMPTARGET_PLUGINS_TO_LOAD "" CACHE STRING
-  "Comma separated list of plugin names to look for at runtime")
-if (NOT LIBOMPTARGET_PLUGINS_TO_LOAD)
-	check_plugin_target(cuda)
-	check_plugin_target(amdgpu)
-	check_plugin_target(host)
-endif()
 
 list(TRANSFORM LIBOMPTARGET_PLUGINS_TO_LOAD PREPEND "\"libomptarget.rtl.")
 list(TRANSFORM LIBOMPTARGET_PLUGINS_TO_LOAD APPEND "\"")
