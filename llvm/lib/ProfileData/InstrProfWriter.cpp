@@ -508,7 +508,7 @@ static Error writeMemProfV0(
   OS.write(0ULL); // Reserve space for the memprof frame payload offset.
   OS.write(0ULL); // Reserve space for the memprof frame table offset.
 
-  auto Schema = memprof::PortableMemInfoBlock::getFullSchema();
+  auto Schema = memprof::getFullSchema();
   writeMemProfSchema(OS, Schema);
 
   uint64_t RecordTableOffset =
@@ -534,7 +534,7 @@ static Error writeMemProfV1(
   OS.write(0ULL); // Reserve space for the memprof frame payload offset.
   OS.write(0ULL); // Reserve space for the memprof frame table offset.
 
-  auto Schema = memprof::PortableMemInfoBlock::getFullSchema();
+  auto Schema = memprof::getFullSchema();
   writeMemProfSchema(OS, Schema);
 
   uint64_t RecordTableOffset =
@@ -565,9 +565,9 @@ static Error writeMemProfV2(
   OS.write(0ULL); // Reserve space for the memprof call stack payload offset.
   OS.write(0ULL); // Reserve space for the memprof call stack table offset.
 
-  auto Schema = memprof::PortableMemInfoBlock::getHotColdSchema();
+  auto Schema = memprof::getHotColdSchema();
   if (MemProfFullSchema)
-    Schema = memprof::PortableMemInfoBlock::getFullSchema();
+    Schema = memprof::getFullSchema();
   writeMemProfSchema(OS, Schema);
 
   uint64_t RecordTableOffset =
@@ -657,8 +657,8 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
                        : IndexedInstrProf::ProfVersion::CurrentVersion;
   // The WritePrevVersion handling will either need to be removed or updated
   // if the version is advanced beyond 12.
-  assert(IndexedInstrProf::ProfVersion::CurrentVersion ==
-         IndexedInstrProf::ProfVersion::Version12);
+  static_assert(IndexedInstrProf::ProfVersion::CurrentVersion ==
+                IndexedInstrProf::ProfVersion::Version12);
   if (static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation))
     Header.Version |= VARIANT_MASK_IR_PROF;
   if (static_cast<bool>(ProfileKind & InstrProfKind::ContextSensitive))
