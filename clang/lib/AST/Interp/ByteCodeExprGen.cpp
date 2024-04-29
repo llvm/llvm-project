@@ -212,6 +212,13 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->visit(SubExpr))
       return false;
 
+    // If SubExpr doesn't result in a pointer, make it one.
+    if (PrimType FromT = classifyPrim(SubExpr->getType()); FromT != PT_Ptr) {
+      assert(isPtrType(FromT));
+      if (!this->emitDecayPtr(FromT, PT_Ptr, CE))
+        return false;
+    }
+
     PrimType T = classifyPrim(CE->getType());
     if (T == PT_IntAP)
       return this->emitCastPointerIntegralAP(Ctx.getBitWidth(CE->getType()),
