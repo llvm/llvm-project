@@ -1221,17 +1221,17 @@ func.func @extract_scalable_from_fixed_length_vector(%arg0 : vector<16xf32>) {
 
 // -----
 
-func.func @experimental_vector_interleave2_bad_type0(%vec1: vector<[2]xf16>, %vec2 : vector<[4]xf16>) {
+func.func @vector_interleave2_bad_type0(%vec1: vector<[2]xf16>, %vec2 : vector<[4]xf16>) {
   // expected-error@+1 {{op failed to verify that all of {vec1, vec2} have same type}}
-  %0 = "llvm.intr.experimental.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
+  %0 = "llvm.intr.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[4]xf16>) -> vector<[8]xf16>
   return
 }
 
 // -----
 
-func.func @experimental_vector_interleave2_bad_type1(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
+func.func @vector_interleave2_bad_type1(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
   // expected-error@+1 {{op failed to verify that result has twice as many elements as 'vec1'}}
-  %0 = "llvm.intr.experimental.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<[8]xf16>
+  %0 = "llvm.intr.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<[8]xf16>
   return
 }
 
@@ -1239,9 +1239,9 @@ func.func @experimental_vector_interleave2_bad_type1(%vec1: vector<[2]xf16>, %ve
 
 /// result vector type is not scalable.
 
-func.func @experimental_vector_interleave2_bad_type2(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
+func.func @vector_interleave2_bad_type2(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
   // expected-error@+1 {{op failed to verify that result has twice as many elements as 'vec1'}}
-  %0 = "llvm.intr.experimental.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<4xf16>
+  %0 = "llvm.intr.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<4xf16>
   return
 }
 
@@ -1250,9 +1250,9 @@ func.func @experimental_vector_interleave2_bad_type2(%vec1: vector<[2]xf16>, %ve
 
 /// element type doesn't match.
 
-func.func @experimental_vector_interleave2_bad_type3(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
+func.func @vector_interleave2_bad_type3(%vec1: vector<[2]xf16>, %vec2 : vector<[2]xf16>) {
   // expected-error@+1 {{op failed to verify that result has twice as many elements as 'vec1'}}
-  %0 = "llvm.intr.experimental.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<[4]xf32>
+  %0 = "llvm.intr.vector.interleave2"(%vec1, %vec2) : (vector<[2]xf16>, vector<[2]xf16>) -> vector<[4]xf32>
   return
 }
 
