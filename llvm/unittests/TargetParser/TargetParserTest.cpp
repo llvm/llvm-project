@@ -2009,7 +2009,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SMEF16F16,    AArch64::AEK_CSSC,
       AArch64::AEK_RCPC3,        AArch64::AEK_THE,
       AArch64::AEK_D128,         AArch64::AEK_LSE128,
-      AArch64::AEK_SPECRES2,     AArch64::AEK_RASV2,
+      AArch64::AEK_PREDRES2,     AArch64::AEK_RASV2,
       AArch64::AEK_ITE,          AArch64::AEK_GCS,
       AArch64::AEK_FPMR,         AArch64::AEK_FP8,
       AArch64::AEK_FAMINMAX,     AArch64::AEK_FP8FMA,
@@ -2090,7 +2090,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+the"));
   EXPECT_TRUE(llvm::is_contained(Features, "+d128"));
   EXPECT_TRUE(llvm::is_contained(Features, "+lse128"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+specres2"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+predres2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+ite"));
   EXPECT_TRUE(llvm::is_contained(Features, "+gcs"));
   EXPECT_TRUE(llvm::is_contained(Features, "+fpmr"));
@@ -2236,7 +2236,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"hbc", "nohbc", "+hbc", "-hbc"},
       {"mops", "nomops", "+mops", "-mops"},
       {"pmuv3", "nopmuv3", "+perfmon", "-perfmon"},
-      {"predres2", "nopredres2", "+specres2", "-specres2"},
+      {"predres2", "nopredres2", "+predres2", "-predres2"},
       {"rasv2", "norasv2", "+rasv2", "-rasv2"},
       {"gcs", "nogcs", "+gcs", "-gcs"},
       {"fpmr", "nofpmr", "+fpmr", "-fpmr"},
@@ -2562,12 +2562,12 @@ AArch64ExtensionDependenciesBaseArchTestParams
         // predres -> predres2
         {AArch64::ARMV8A,
          {"nopredres", "predres2"},
-         {"predres", "specres2"},
+         {"predres", "predres2"},
          {}},
         {AArch64::ARMV8A,
          {"predres2", "nopredres"},
          {},
-         {"predres", "specres2"}},
+         {"predres", "predres2"}},
 
         // ras -> ras2
         {AArch64::ARMV8A, {"noras", "rasv2"}, {"ras", "rasv2"}, {}},

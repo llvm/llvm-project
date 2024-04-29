@@ -592,7 +592,7 @@ def FeatureCLRBHB : SubtargetFeature<"clrbhb", "HasCLRBHB",
 def FeaturePRFM_SLC : SubtargetFeature<"prfm-slc-target", "HasPRFM_SLC",
     "true", "Enable SLC target for PRFM instruction">;
 
-def FeatureSPECRES2 : Extension<"specres2", "SPECRES2",
+def FeaturePredRes2 : Extension<"predres2", "PredRes2",
     "Enable Speculation Restriction Instruction (FEAT_SPECRES2)",
     [FeaturePredRes]>;
 
@@ -690,7 +690,7 @@ def HasV8_8aOps : SubtargetFeature<
 
 def HasV8_9aOps : SubtargetFeature<
   "v8.9a", "HasV8_9aOps", "true", "Support ARM v8.9a instructions",
-  [HasV8_8aOps, FeatureCLRBHB, FeaturePRFM_SLC, FeatureSPECRES2,
+  [HasV8_8aOps, FeatureCLRBHB, FeaturePRFM_SLC, FeaturePredRes2,
    FeatureCSSC, FeatureRASv2, FeatureCHK]>;
 
 def HasV9_0aOps : SubtargetFeature<

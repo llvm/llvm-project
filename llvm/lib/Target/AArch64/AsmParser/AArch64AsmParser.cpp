@@ -3661,7 +3661,7 @@ static const struct Extension {
     {"rasv2", {AArch64::FeatureRASv2}},
     {"lse", {AArch64::FeatureLSE}},
     {"predres", {AArch64::FeaturePredRes}},
-    {"predres2", {AArch64::FeatureSPECRES2}},
+    {"predres2", {AArch64::FeaturePredRes2}},
     {"ccdp", {AArch64::FeatureCacheDeepPersist}},
     {"mte", {AArch64::FeatureMTE}},
     {"memtag", {AArch64::FeatureMTE}},
@@ -3863,9 +3863,9 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
 
     bool hasAll = getSTI().hasFeature(AArch64::FeatureAll);
     bool hasPredres = hasAll || getSTI().hasFeature(AArch64::FeaturePredRes);
-    bool hasSpecres2 = hasAll || getSTI().hasFeature(AArch64::FeatureSPECRES2);
+    bool hasPredRes2 = hasAll || getSTI().hasFeature(AArch64::FeaturePredRes2);
 
-    if (Mnemonic == "cosp" && !hasSpecres2)
+    if (Mnemonic == "cosp" && !hasPredRes2)
       return TokError("COSP requires: predres2");
     if (!hasPredres)
       return TokError(Mnemonic.upper() + "RCTX requires: predres");

@@ -938,7 +938,7 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
         return false;
 
       const auto Requires =
-          Op2Val == 6 ? AArch64::FeatureSPECRES2 : AArch64::FeaturePredRes;
+          Op2Val == 6 ? AArch64::FeaturePredRes2 : AArch64::FeaturePredRes;
       if (!(STI.hasFeature(AArch64::FeatureAll) || STI.hasFeature(Requires)))
         return false;
 

@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+specres2 < %s 2>&1| FileCheck %s
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+predres2 < %s 2>&1| FileCheck %s
 
 cosp rctx
 

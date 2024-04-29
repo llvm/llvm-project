@@ -289,8 +289,8 @@ def HasMOPS          : Predicate<"Subtarget->hasMOPS()">,
                        AssemblerPredicateWithAll<(all_of FeatureMOPS), "mops">;
 def HasCLRBHB        : Predicate<"Subtarget->hasCLRBHB()">,
                        AssemblerPredicateWithAll<(all_of FeatureCLRBHB), "clrbhb">;
-def HasSPECRES2      : Predicate<"Subtarget->hasSPECRES2()">,
-                       AssemblerPredicateWithAll<(all_of FeatureSPECRES2), "specres2">;
+def HasPredRes2      : Predicate<"Subtarget->hasPredRes2()">,
+                       AssemblerPredicateWithAll<(all_of FeaturePredRes2), "predres2">;
 def HasITE           : Predicate<"Subtarget->hasITE()">,
                        AssemblerPredicateWithAll<(all_of FeatureITE), "ite">;
 def HasTHE           : Predicate<"Subtarget->hasTHE()">,
