@@ -156,7 +156,7 @@ TEST(CharSet, RoundTrip) {
 TEST(CharSet, ShiftState2022) {
   // Earth string.
   StringRef Src(EarthUTF);
-  SmallString<64> Dst;
+  SmallString<8> Dst;
 
   ErrorOr<CharSetConverter> ConvTo2022 =
       CharSetConverter::create("UTF-8", "ISO-2022-JP");
