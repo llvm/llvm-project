@@ -38,6 +38,10 @@ class ParamNativeAttrTrait<string prop, string params>
 class GenInternalAttrTrait<string prop> : GenInternalTrait<prop, "Attribute">;
 class PredAttrTrait<string descr, Pred pred> : PredTrait<descr, pred>;
 
+// Trait used to tell the printer and parser to always print and parse
+// instances of the attribute as if it occurs within a `qualified` directive.
+def PrintAttrQualified : NativeAttrTrait<"PrintQualified">;
+
 //===----------------------------------------------------------------------===//
 // TypeTrait definitions
 //===----------------------------------------------------------------------===//
@@ -55,6 +59,10 @@ class ParamNativeTypeTrait<string prop, string params>
     : ParamNativeTrait<prop, params, "Type">;
 class GenInternalTypeTrait<string prop> : GenInternalTrait<prop, "Type">;
 class PredTypeTrait<string descr, Pred pred> : PredTrait<descr, pred>;
+
+// Trait used to tell the printer and parser to always print and parse
+// instances of the type as if it occurs within a `qualified` directive.
+def PrintTypeQualified : NativeTypeTrait<"PrintQualified">;
 
 //===----------------------------------------------------------------------===//
 // Builders

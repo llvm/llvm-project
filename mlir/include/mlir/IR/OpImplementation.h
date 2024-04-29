@@ -132,12 +132,20 @@ public:
   using detect_has_print_method =
       llvm::is_detected<has_print_method, AttrOrType>;
 
+  /// Constexpr bool that is true if `AttrOrType` should be printed with the
+  /// dialect prefix stripped.
+  template <typename AttrOrType>
+  constexpr static bool shouldPrintStripped =
+      detect_has_print_method<AttrOrType>::value &&
+      (!std::is_base_of_v<AttributeTrait::PrintQualified<AttrOrType>,
+                          AttrOrType> &&
+       !std::is_base_of_v<TypeTrait::PrintQualified<AttrOrType>, AttrOrType>);
+
   /// Print the provided attribute in the context of an operation custom
   /// printer/parser: this will invoke directly the print method on the
   /// attribute class and skip the `#dialect.mnemonic` prefix in most cases.
   template <typename AttrOrType,
-            std::enable_if_t<detect_has_print_method<AttrOrType>::value>
-                *sfinae = nullptr>
+            std::enable_if_t<shouldPrintStripped<AttrOrType>> *sfinae = nullptr>
   void printStrippedAttrOrType(AttrOrType attrOrType) {
     if (succeeded(printAlias(attrOrType)))
       return;
@@ -158,8 +166,7 @@ public:
   /// method on the attribute class and skip the `#dialect.mnemonic` prefix in
   /// most cases.
   template <typename AttrOrType,
-            std::enable_if_t<detect_has_print_method<AttrOrType>::value>
-                *sfinae = nullptr>
+            std::enable_if_t<shouldPrintStripped<AttrOrType>> *sfinae = nullptr>
   void printStrippedAttrOrType(ArrayRef<AttrOrType> attrOrTypes) {
     llvm::interleaveComma(
         attrOrTypes, getStream(),
@@ -169,9 +176,9 @@ public:
   /// SFINAE for printing the provided attribute in the context of an operation
   /// custom printer in the case where the attribute does not define a print
   /// method.
-  template <typename AttrOrType,
-            std::enable_if_t<!detect_has_print_method<AttrOrType>::value>
-                *sfinae = nullptr>
+  template <
+      typename AttrOrType,
+      std::enable_if_t<!shouldPrintStripped<AttrOrType>> *sfinae = nullptr>
   void printStrippedAttrOrType(AttrOrType attrOrType) {
     *this << attrOrType;
   }
@@ -980,12 +987,19 @@ public:
   template <typename AttrType>
   using detect_has_parse_method = llvm::is_detected<has_parse_method, AttrType>;
 
+  /// Constexpr bool that is true if `AttrType` can be parsed with the dialect
+  /// prefix stripped.
+  template <typename AttrType>
+  constexpr static bool shouldParseAttrStripped =
+      detect_has_parse_method<AttrType>::value &&
+      !std::is_base_of_v<AttributeTrait::PrintQualified<AttrType>, AttrType>;
+
   /// Parse a custom attribute of a given type unless the next token is `#`, in
   /// which case the generic parser is invoked. The parsed attribute is
   /// populated in `result` and also added to the specified attribute list with
   /// the specified name.
   template <typename AttrType>
-  std::enable_if_t<detect_has_parse_method<AttrType>::value, ParseResult>
+  std::enable_if_t<shouldParseAttrStripped<AttrType>, ParseResult>
   parseCustomAttributeWithFallback(AttrType &result, Type type,
                                    StringRef attrName, NamedAttrList &attrs) {
     SMLoc loc = getCurrentLocation();
@@ -1012,7 +1026,7 @@ public:
 
   /// SFINAE parsing method for Attribute that don't implement a parse method.
   template <typename AttrType>
-  std::enable_if_t<!detect_has_parse_method<AttrType>::value, ParseResult>
+  std::enable_if_t<!shouldParseAttrStripped<AttrType>, ParseResult>
   parseCustomAttributeWithFallback(AttrType &result, Type type,
                                    StringRef attrName, NamedAttrList &attrs) {
     return parseAttribute(result, type, attrName, attrs);
@@ -1022,7 +1036,7 @@ public:
   /// which case the generic parser is invoked. The parsed attribute is
   /// populated in `result`.
   template <typename AttrType>
-  std::enable_if_t<detect_has_parse_method<AttrType>::value, ParseResult>
+  std::enable_if_t<shouldParseAttrStripped<AttrType>, ParseResult>
   parseCustomAttributeWithFallback(AttrType &result, Type type = {}) {
     SMLoc loc = getCurrentLocation();
 
@@ -1044,7 +1058,7 @@ public:
 
   /// SFINAE parsing method for Attribute that don't implement a parse method.
   template <typename AttrType>
-  std::enable_if_t<!detect_has_parse_method<AttrType>::value, ParseResult>
+  std::enable_if_t<!shouldParseAttrStripped<AttrType>, ParseResult>
   parseCustomAttributeWithFallback(AttrType &result, Type type = {}) {
     return parseAttribute(result, type);
   }
@@ -1213,11 +1227,18 @@ public:
   using detect_type_has_parse_method =
       llvm::is_detected<type_has_parse_method, TypeT>;
 
+  /// Constexpr bool that is true if `TypeT` can be parsed with the dialect
+  /// prefix stripped.
+  template <typename TypeT>
+  constexpr static bool shouldParseTypeStripped =
+      detect_type_has_parse_method<TypeT>::value &&
+      !std::is_base_of_v<TypeTrait::PrintQualified<TypeT>, TypeT>;
+
   /// Parse a custom Type of a given type unless the next token is `#`, in
   /// which case the generic parser is invoked. The parsed Type is
   /// populated in `result`.
   template <typename TypeT>
-  std::enable_if_t<detect_type_has_parse_method<TypeT>::value, ParseResult>
+  std::enable_if_t<shouldParseTypeStripped<TypeT>, ParseResult>
   parseCustomTypeWithFallback(TypeT &result) {
     SMLoc loc = getCurrentLocation();
 
@@ -1238,7 +1259,7 @@ public:
 
   /// SFINAE parsing method for Type that don't implement a parse method.
   template <typename TypeT>
-  std::enable_if_t<!detect_type_has_parse_method<TypeT>::value, ParseResult>
+  std::enable_if_t<!shouldParseTypeStripped<TypeT>, ParseResult>
   parseCustomTypeWithFallback(TypeT &result) {
     return parseType(result);
   }

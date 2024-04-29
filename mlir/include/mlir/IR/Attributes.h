@@ -317,12 +317,18 @@ protected:
 // Core AttributeTrait
 //===----------------------------------------------------------------------===//
 
+namespace AttributeTrait {
+
 /// This trait is used to determine if an attribute is mutable or not. It is
 /// attached on an attribute if the corresponding ImplType defines a `mutate`
 /// function with proper signature.
-namespace AttributeTrait {
 template <typename ConcreteType>
 using IsMutable = detail::StorageUserTrait::IsMutable<ConcreteType>;
+
+/// Trait used to tell the printer and parser to always print and parse
+/// instances of the attribute as if it occurs within a `qualified` directive.
+template <typename ConcreteAttr>
+struct PrintQualified : TraitBase<ConcreteAttr, PrintQualified> {};
 } // namespace AttributeTrait
 
 } // namespace mlir.

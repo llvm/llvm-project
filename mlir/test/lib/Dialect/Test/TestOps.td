@@ -3167,4 +3167,10 @@ def TestOpOptionallyImplementingInterface
   let arguments = (ins BoolAttr:$implementsInterface);
 }
 
+def TestOpWouldPrintUnqualified : TEST_Op<"would_print_unqualified"> {
+  let arguments = (ins TestAlwaysQualifiedAttr:$attr);
+  let results = (outs TestAlwaysQualifiedType:$result);
+  let assemblyFormat = "$attr `->` type($result) attr-dict";
+}
+
 #endif // TEST_OPS

@@ -392,4 +392,13 @@ def TestRecursiveAlias
   }];
 }
 
+def TestAlwaysQualifiedType : Test_Type<"TestAlwaysQualified",
+  [PrintTypeQualified]> {
+  let mnemonic = "always_qualified";
+  let parameters = (ins "int":$value);
+  let assemblyFormat = [{
+    `<` $value `>`
+  }];
+}
+
 #endif // TEST_TYPEDEFS
