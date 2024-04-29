@@ -2220,24 +2220,27 @@ bool SelectionDAGISel::CheckOrMask(SDValue LHS, ConstantSDNode *RHS,
 /// by tblgen.  Others should not call it.
 void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
                                                      const SDLoc &DL) {
-  std::vector<SDValue> InOps;
-  std::swap(InOps, Ops);
+  // Change the vector of SDValue into a list of SDNodeHandle for x86 might call
+  // replaceAllUses when matching address.
 
-  Ops.push_back(InOps[InlineAsm::Op_InputChain]); // 0
-  Ops.push_back(InOps[InlineAsm::Op_AsmString]);  // 1
-  Ops.push_back(InOps[InlineAsm::Op_MDNode]);     // 2, !srcloc
-  Ops.push_back(InOps[InlineAsm::Op_ExtraInfo]);  // 3 (SideEffect, AlignStack)
+  std::list<HandleSDNode> Handles;
 
-  unsigned i = InlineAsm::Op_FirstOperand, e = InOps.size();
-  if (InOps[e-1].getValueType() == MVT::Glue)
+  Handles.emplace_back(Ops[InlineAsm::Op_InputChain]); // 0
+  Handles.emplace_back(Ops[InlineAsm::Op_AsmString]);  // 1
+  Handles.emplace_back(Ops[InlineAsm::Op_MDNode]);     // 2, !srcloc
+  Handles.emplace_back(
+      Ops[InlineAsm::Op_ExtraInfo]); // 3 (SideEffect, AlignStack)
+
+  unsigned i = InlineAsm::Op_FirstOperand, e = Ops.size();
+  if (Ops[e - 1].getValueType() == MVT::Glue)
     --e;  // Don't process a glue operand if it is here.
 
   while (i != e) {
-    InlineAsm::Flag Flags(InOps[i]->getAsZExtVal());
+    InlineAsm::Flag Flags(Ops[i]->getAsZExtVal());
     if (!Flags.isMemKind() && !Flags.isFuncKind()) {
       // Just skip over this operand, copying the operands verbatim.
-      Ops.insert(Ops.end(), InOps.begin() + i,
-                 InOps.begin() + i + Flags.getNumOperandRegisters() + 1);
+      Handles.insert(Handles.end(), Ops.begin() + i,
+                     Ops.begin() + i + Flags.getNumOperandRegisters() + 1);
       i += Flags.getNumOperandRegisters() + 1;
     } else {
       assert(Flags.getNumOperandRegisters() == 1 &&
@@ -2247,10 +2250,10 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
       if (Flags.isUseOperandTiedToDef(TiedToOperand)) {
         // We need the constraint ID from the operand this is tied to.
         unsigned CurOp = InlineAsm::Op_FirstOperand;
-        Flags = InlineAsm::Flag(InOps[CurOp]->getAsZExtVal());
+        Flags = InlineAsm::Flag(Ops[CurOp]->getAsZExtVal());
         for (; TiedToOperand; --TiedToOperand) {
           CurOp += Flags.getNumOperandRegisters() + 1;
-          Flags = InlineAsm::Flag(InOps[CurOp]->getAsZExtVal());
+          Flags = InlineAsm::Flag(Ops[CurOp]->getAsZExtVal());
         }
       }
 
@@ -2258,7 +2261,7 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
       std::vector<SDValue> SelOps;
       const InlineAsm::ConstraintCode ConstraintID =
           Flags.getMemoryConstraintID();
-      if (SelectInlineAsmMemoryOperand(InOps[i+1], ConstraintID, SelOps))
+      if (SelectInlineAsmMemoryOperand(Ops[i + 1], ConstraintID, SelOps))
         report_fatal_error("Could not match memory address.  Inline asm"
                            " failure!");
 
@@ -2267,15 +2270,19 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
                                                 : InlineAsm::Kind::Func,
                               SelOps.size());
       Flags.setMemConstraint(ConstraintID);
-      Ops.push_back(CurDAG->getTargetConstant(Flags, DL, MVT::i32));
-      llvm::append_range(Ops, SelOps);
+      Handles.emplace_back(CurDAG->getTargetConstant(Flags, DL, MVT::i32));
+      Handles.insert(Handles.end(), SelOps.begin(), SelOps.end());
       i += 2;
     }
   }
 
   // Add the glue input back if present.
-  if (e != InOps.size())
-    Ops.push_back(InOps.back());
+  if (e != Ops.size())
+    Handles.emplace_back(Ops.back());
+
+  Ops.clear();
+  for (auto &handle : Handles)
+    Ops.push_back(handle.getValue());
 }
 
 /// findGlueUse - Return use of MVT::Glue value produced by the specified
