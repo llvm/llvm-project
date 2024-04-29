@@ -11170,16 +11170,18 @@ void Sema::maybeAddDeclWithEffects(const Decl *D,
   // For code in dependent contexts, we'll do this at instantiation time.
   // Without this check, we would analyze the function based on placeholder
   // template parameters, and potentially generate spurious diagnostics.
-  if (cast<DeclContext>(D)->isDependentContext()) {
+  if (cast<DeclContext>(D)->isDependentContext())
     return;
-  }
 
-  if (std::any_of(FX.begin(), FX.end(),
-                  [](const FunctionEffectWithCondition &EC) {
-                    return (EC.Effect.flags() &
-                            FunctionEffect::FE_InferrableOnCallees) != 0;
-                  }))
-    addDeclWithEffects(D, FX);
+  // Effects which are not inferrable (e.g. nonblocking(false) don't need
+  // to be verified later in the deferred pass. (If they do need to be
+  // verified, that can happen immediately at the call site, like TCB.)
+  if (llvm::none_of(FX.effects(), [](const FunctionEffect &E) {
+        return (E.flags() & FunctionEffect::FE_InferrableOnCallees) != 0;
+      }))
+    return;
+
+  addDeclWithEffects(D, FX);
 }
 
 void Sema::addDeclWithEffects(const Decl *D, const FunctionEffectsRef &FX) {
