@@ -18590,6 +18590,12 @@ void Sema::ActOnCXXExitDeclInitializer(Scope *S, Decl *D) {
     }
   }
 
+  // Unless the initializer is in an immediate function context (as determined
+  // above), this will evaluate all contained immediate function calls as
+  // constant expressions. If the initializer IS an immediate function context,
+  // the initializer has been determined to be a constant expression, and all
+  // such evaluations will be elided (i.e., as if we "knew the whole time" that
+  // it was a constant expression).
   PopExpressionEvaluationContext();
 }
 
