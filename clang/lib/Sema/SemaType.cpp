@@ -8716,7 +8716,10 @@ static void HandlePtrAuthQualifier(QualType &type, const ParsedAttr &attr,
     return;
   }
 
-  PointerAuthQualifier qual(key, isAddressDiscriminated, extraDiscriminator);
+  PointerAuthQualifier qual = PointerAuthQualifier::Create(
+      key, isAddressDiscriminated, extraDiscriminator,
+      /*AuthenticationMode*/ PointerAuthenticationMode::SignAndAuth,
+      /*IsIsaPointer*/ false, /*AuthenticatesNullValues*/ true);
   type = S.Context.getPointerAuthType(type, qual);
 }
 

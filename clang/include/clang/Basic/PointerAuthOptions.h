@@ -200,6 +200,8 @@ struct PointerAuthOptions {
   PointerAuthSchema CXXMemberFunctionPointers;
 };
 
-}  // end namespace clang
+constexpr unsigned PointerAuthKeyNone = -1;
+
+} // end namespace clang
 
 #endif

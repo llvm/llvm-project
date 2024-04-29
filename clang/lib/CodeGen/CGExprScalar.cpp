@@ -4807,7 +4807,7 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
 
   if (auto ptrauth = E->getLHS()->getType().getPointerAuth()) {
     LValue LV = CGF.EmitCheckedLValue(E->getLHS(), CodeGenFunction::TCK_Store);
-    LV.getQuals().removePtrAuth();
+    LV.getQuals().removePointerAuth();
     llvm::Value *RV = CGF.EmitPointerAuthQualify(ptrauth, E->getRHS(),
                                                  LV.getAddress(CGF));
     CGF.EmitNullabilityCheck(LV, RV, E->getExprLoc());
