@@ -2791,7 +2791,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalbn
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.normal_float
 )
 
 add_fp_unittest(
@@ -2805,7 +2804,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalbnf
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.normal_float
 )
 
 add_fp_unittest(
@@ -2819,7 +2817,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalbnl
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.normal_float
 )
 
 add_fp_unittest(
@@ -2833,7 +2830,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.scalbnf128
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.normal_float
 )
 
 add_fp_unittest(
