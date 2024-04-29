@@ -688,7 +688,7 @@ let TargetGuard = "sme2,b16b16" in {
                              [ImmCheck<0, ImmCheck0_1>]>;
 }
 
-let TargetGuard = "sme2p1,sme-f16f16" in {
+let TargetGuard = "sme-f16f16" in {
   def SVMOPA_F16_NW : SInst<"svmopa_za16[_f16]_m", "viPPdd", "h",
                             MergeNone, "aarch64_sme_mopa",
                             [IsStreaming, IsInOutZA],

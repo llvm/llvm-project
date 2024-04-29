@@ -12,9 +12,9 @@ void test_features(svbool_t pn, svbool_t pm,
   svmopa_za16_bf16_m(0, pn, pm, znb, zmb);
 // expected-error@+1 {{'svmops_za16_bf16_m' needs target feature sme2,b16b16}}
   svmops_za16_bf16_m(0, pn, pm, znb, zmb);
-// expected-error@+1 {{'svmopa_za16_f16_m' needs target feature sme2p1,sme-f16f16}}
+// expected-error@+1 {{'svmopa_za16_f16_m' needs target feature sme-f16f16}}
   svmopa_za16_f16_m(0, pn, pm, zn, zm);
-// expected-error@+1 {{'svmops_za16_f16_m' needs target feature sme2p1,sme-f16f16}}
+// expected-error@+1 {{'svmops_za16_f16_m' needs target feature sme-f16f16}}
   svmops_za16_f16_m(0, pn, pm, zn, zm);
 }
 
