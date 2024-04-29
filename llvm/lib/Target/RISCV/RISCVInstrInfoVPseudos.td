@@ -2146,8 +2146,9 @@ multiclass VPseudoBinaryRoundingMode<VReg RetClass,
                                      string Constraint = "",
                                      int sew = 0,
                                      int UsesVXRM = 1,
-                                     int TargetConstraintType = 1> {
-  let VLMul = MInfo.value, SEW=sew in {
+                                     int TargetConstraintType = 1,
+                                     bit Commutable = 0> {
+  let VLMul = MInfo.value, SEW=sew, isCommutable = Commutable in {
     defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
     def suffix : VPseudoBinaryNoMaskRoundingMode<RetClass, Op1Class, Op2Class,
                                                  Constraint, UsesVXRM,
@@ -2232,8 +2233,9 @@ multiclass VPseudoBinaryV_VV<LMULInfo m, string Constraint = "", int sew = 0, bi
   defm _VV : VPseudoBinary<m.vrclass, m.vrclass, m.vrclass, m, Constraint, sew, Commutable=Commutable>;
 }
 
-multiclass VPseudoBinaryV_VV_RM<LMULInfo m, string Constraint = ""> {
-  defm _VV : VPseudoBinaryRoundingMode<m.vrclass, m.vrclass, m.vrclass, m, Constraint>;
+multiclass VPseudoBinaryV_VV_RM<LMULInfo m, string Constraint = "", bit Commutable = 0> {
+  defm _VV : VPseudoBinaryRoundingMode<m.vrclass, m.vrclass, m.vrclass, m, Constraint,
+                                       Commutable=Commutable>;
 }
 
 // Similar to VPseudoBinaryV_VV, but uses MxListF.
@@ -2715,10 +2717,11 @@ multiclass VPseudoVGTR_VV_VX_VI<Operand ImmType = simm5, string Constraint = "">
   }
 }
 
-multiclass VPseudoVSALU_VV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
+multiclass VPseudoVSALU_VV_VX_VI<Operand ImmType = simm5, string Constraint = "",
+                                 bit Commutable = 0> {
   foreach m = MxList in {
     defvar mx = m.MX;
-    defm "" : VPseudoBinaryV_VV<m, Constraint>,
+    defm "" : VPseudoBinaryV_VV<m, Constraint, Commutable=Commutable>,
               SchedBinary<"WriteVSALUV", "ReadVSALUV", "ReadVSALUX", mx,
                           forceMergeOpRead=true>;
     defm "" : VPseudoBinaryV_VX<m, Constraint>,
@@ -2788,7 +2791,7 @@ multiclass VPseudoVSALU_VV_VX {
 multiclass VPseudoVSMUL_VV_VX_RM {
   foreach m = MxList in {
     defvar mx = m.MX;
-    defm "" : VPseudoBinaryV_VV_RM<m>,
+    defm "" : VPseudoBinaryV_VV_RM<m, Commutable=1>,
               SchedBinary<"WriteVSMulV", "ReadVSMulV", "ReadVSMulV", mx,
                           forceMergeOpRead=true>;
     defm "" : VPseudoBinaryV_VX_RM<m>,
@@ -2797,10 +2800,10 @@ multiclass VPseudoVSMUL_VV_VX_RM {
   }
 }
 
-multiclass VPseudoVAALU_VV_VX_RM {
+multiclass VPseudoVAALU_VV_VX_RM<bit Commutable = 0> {
   foreach m = MxList in {
     defvar mx = m.MX;
-    defm "" : VPseudoBinaryV_VV_RM<m>,
+    defm "" : VPseudoBinaryV_VV_RM<m, Commutable=Commutable>,
               SchedBinary<"WriteVAALUV", "ReadVAALUV", "ReadVAALUV", mx,
                           forceMergeOpRead=true>;
     defm "" : VPseudoBinaryV_VX_RM<m>,
@@ -6448,8 +6451,8 @@ defm PseudoVMV_V : VPseudoUnaryVMV_V_X_I;
 // 12.1. Vector Single-Width Saturating Add and Subtract
 //===----------------------------------------------------------------------===//
 let Defs = [VXSAT], hasSideEffects = 1 in {
-  defm PseudoVSADDU : VPseudoVSALU_VV_VX_VI;
-  defm PseudoVSADD  : VPseudoVSALU_VV_VX_VI;
+  defm PseudoVSADDU : VPseudoVSALU_VV_VX_VI<Commutable=1>;
+  defm PseudoVSADD  : VPseudoVSALU_VV_VX_VI<Commutable=1>;
   defm PseudoVSSUBU : VPseudoVSALU_VV_VX;
   defm PseudoVSSUB  : VPseudoVSALU_VV_VX;
 }
@@ -6457,8 +6460,8 @@ let Defs = [VXSAT], hasSideEffects = 1 in {
 //===----------------------------------------------------------------------===//
 // 12.2. Vector Single-Width Averaging Add and Subtract
 //===----------------------------------------------------------------------===//
-defm PseudoVAADDU : VPseudoVAALU_VV_VX_RM;
-defm PseudoVAADD  : VPseudoVAALU_VV_VX_RM;
+defm PseudoVAADDU : VPseudoVAALU_VV_VX_RM<Commutable=1>;
+defm PseudoVAADD  : VPseudoVAALU_VV_VX_RM<Commutable=1>;
 defm PseudoVASUBU : VPseudoVAALU_VV_VX_RM;
 defm PseudoVASUB  : VPseudoVAALU_VV_VX_RM;
 

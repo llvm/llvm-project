@@ -1493,6 +1493,7 @@ Conditional ``explicit``                     __cpp_conditional_explicit       C+
 ``if consteval``                             __cpp_if_consteval               C++23         C++20
 ``static operator()``                        __cpp_static_call_operator       C++23         C++03
 Attributes on Lambda-Expressions                                              C++23         C++11
+Attributes on Structured Bindings            __cpp_structured_bindings        C++26         C++03
 ``= delete ("should have a reason");``       __cpp_deleted_function           C++26         C++03
 -------------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                                C99           C89
@@ -5572,3 +5573,25 @@ but the expression has no runtime effects.
 Type- and value-dependent expressions are not supported yet.
 
 This facility is designed to aid with testing name lookup machinery.
+
+Predefined Macros
+=================
+
+`__GCC_DESTRUCTIVE_SIZE` and `__GCC_CONSTRUCTIVE_SIZE`
+------------------------------------------------------
+Specify the mimum offset between two objects to avoid false sharing and the
+maximum size of contiguous memory to promote true sharing, respectively. These
+macros are predefined in all C and C++ language modes, but can be redefined on
+the command line with ``-D`` to specify different values as needed or can be
+undefined on the command line with ``-U`` to disable support for the feature.
+
+**Note: the values the macros expand to are not guaranteed to be stable. They
+are are affected by architectures and CPU tuning flags, can change between
+releases of Clang and will not match the values defined by other compilers such
+as GCC.**
+
+Compiling different TUs depending on these flags (including use of
+``std::hardware_constructive_interference`` or
+``std::hardware_destructive_interference``)  with different compilers, macro
+definitions, or architecture flags will lead to ODR violations and should be
+avoided.
