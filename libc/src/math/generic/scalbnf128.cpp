@@ -13,6 +13,8 @@
 namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float128, scalbnf128, (float128 x, int n)) {
+// TODO: should be switched to use `FLT_RADIX` in hdr/float_macros.h" instead
+// see: https://github.com/llvm/llvm-project/issues/90496
 #if !defined(__FLT_RADIX__)
 #error __FLT_RADIX__ undefined.
 #elif __FLT_RADIX__ != 2
