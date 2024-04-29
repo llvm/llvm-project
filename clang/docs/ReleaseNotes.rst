@@ -424,6 +424,10 @@ Bug Fixes in This Version
 
 - Fixed an assertion failure on invalid InitListExpr in C89 mode (#GH88008).
 
+- Fixed missing destructor calls when we branch from middle of an expression.
+  This could happen through a branch in stmt-expr or in an expression containing a coroutine
+  suspension. Fixes (#GH63818) (#GH88478).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
