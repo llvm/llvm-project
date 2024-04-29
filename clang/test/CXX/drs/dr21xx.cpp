@@ -175,6 +175,8 @@ void foo() {
 }
 }
 
+// cwg2149 is in cwg2149.cpp
+
 namespace cwg2157 { // cwg2157: 11
 #if __cplusplus >= 201103L
   enum E : int;
