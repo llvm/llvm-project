@@ -715,41 +715,43 @@ define <2 x i64> @abd_cmp_v2i64_multiuse_cmp(<2 x i64> %a, <2 x i64> %b) nounwin
 ;
 ; SSE42-LABEL: abd_cmp_v2i64_multiuse_cmp:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movdqa %xmm0, %xmm2
-; SSE42-NEXT:    psubq %xmm1, %xmm2
+; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
 ; SSE42-NEXT:    movdqa %xmm1, %xmm3
-; SSE42-NEXT:    psubq %xmm0, %xmm3
-; SSE42-NEXT:    movdqa {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
-; SSE42-NEXT:    pxor %xmm4, %xmm1
-; SSE42-NEXT:    pxor %xmm4, %xmm0
-; SSE42-NEXT:    pcmpgtq %xmm1, %xmm0
-; SSE42-NEXT:    blendvpd %xmm0, %xmm2, %xmm3
-; SSE42-NEXT:    paddq %xmm3, %xmm0
+; SSE42-NEXT:    pxor %xmm2, %xmm3
+; SSE42-NEXT:    pxor %xmm0, %xmm2
+; SSE42-NEXT:    pcmpgtq %xmm3, %xmm2
+; SSE42-NEXT:    movdqa %xmm0, %xmm3
+; SSE42-NEXT:    psubq %xmm1, %xmm3
+; SSE42-NEXT:    psubq %xmm0, %xmm1
+; SSE42-NEXT:    movdqa %xmm2, %xmm0
+; SSE42-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
+; SSE42-NEXT:    paddq %xmm1, %xmm2
+; SSE42-NEXT:    movdqa %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: abd_cmp_v2i64_multiuse_cmp:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpsubq %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vpsubq %xmm0, %xmm1, %xmm3
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
-; AVX1-NEXT:    # xmm4 = mem[0,0]
-; AVX1-NEXT:    vpxor %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpxor %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vblendvpd %xmm0, %xmm2, %xmm3, %xmm1
-; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX1-NEXT:    # xmm2 = mem[0,0]
+; AVX1-NEXT:    vpxor %xmm2, %xmm1, %xmm3
+; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm2
+; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpsubq %xmm1, %xmm0, %xmm3
+; AVX1-NEXT:    vpsubq %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vblendvpd %xmm2, %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: abd_cmp_v2i64_multiuse_cmp:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsubq %xmm1, %xmm0, %xmm2
-; AVX2-NEXT:    vpsubq %xmm0, %xmm1, %xmm3
-; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm4 = [9223372036854775808,9223372036854775808]
-; AVX2-NEXT:    vpxor %xmm4, %xmm1, %xmm1
-; AVX2-NEXT:    vpxor %xmm4, %xmm0, %xmm0
-; AVX2-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vblendvpd %xmm0, %xmm2, %xmm3, %xmm1
-; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm3
+; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm2
+; AVX2-NEXT:    vpcmpgtq %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vpsubq %xmm1, %xmm0, %xmm3
+; AVX2-NEXT:    vpsubq %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vblendvpd %xmm2, %xmm3, %xmm0, %xmm0
+; AVX2-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: abd_cmp_v2i64_multiuse_cmp:

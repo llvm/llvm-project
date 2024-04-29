@@ -80,13 +80,13 @@ define <4 x i32> @combine_vec_mul_pow2b(<4 x i32> %x) {
 define <4 x i64> @combine_vec_mul_pow2c(<4 x i64> %x) {
 ; SSE-LABEL: combine_vec_mul_pow2c:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa %xmm0, %xmm2
-; SSE-NEXT:    paddq %xmm0, %xmm2
-; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
 ; SSE-NEXT:    psllq $4, %xmm2
 ; SSE-NEXT:    psllq $2, %xmm1
 ; SSE-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    paddq %xmm0, %xmm2
+; SSE-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_mul_pow2c:
@@ -399,12 +399,14 @@ define i64 @combine_mul_self_demandedbits(i64 %x) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq %rdi, %rax
 ; SSE-NEXT:    imulq %rdi, %rax
+; SSE-NEXT:    andq $-3, %rax
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_mul_self_demandedbits:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movq %rdi, %rax
 ; AVX-NEXT:    imulq %rdi, %rax
+; AVX-NEXT:    andq $-3, %rax
 ; AVX-NEXT:    retq
   %1 = mul i64 %x, %x
   %2 = and i64 %1, -3

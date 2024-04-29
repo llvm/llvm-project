@@ -3567,8 +3567,8 @@ define i64 @rmw64_umax_seq_cst(ptr %p) nounwind {
 ; RV32-NEXT:    # in Loop: Header=BB51_2 Depth=1
 ; RV32-NEXT:    neg a3, a0
 ; RV32-NEXT:    and a3, a3, a1
-; RV32-NEXT:    sw a4, 0(sp)
 ; RV32-NEXT:    sw a1, 4(sp)
+; RV32-NEXT:    sw a4, 0(sp)
 ; RV32-NEXT:    mv a1, sp
 ; RV32-NEXT:    li a4, 5
 ; RV32-NEXT:    li a5, 5
@@ -3659,8 +3659,8 @@ define i64 @rmw64_umin_seq_cst(ptr %p) nounwind {
 ; RV32-NEXT:    # in Loop: Header=BB52_2 Depth=1
 ; RV32-NEXT:    neg a3, a0
 ; RV32-NEXT:    and a3, a3, a1
-; RV32-NEXT:    sw a4, 0(sp)
 ; RV32-NEXT:    sw a1, 4(sp)
+; RV32-NEXT:    sw a4, 0(sp)
 ; RV32-NEXT:    mv a1, sp
 ; RV32-NEXT:    li a4, 5
 ; RV32-NEXT:    li a5, 5

@@ -114,8 +114,8 @@ define i32 @utest_f64i32(double %x) {
 ; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IF-NEXT:    .cfi_offset ra, -4
 ; RV32IF-NEXT:    call __fixunsdfdi
-; RV32IF-NEXT:    sltiu a2, a0, -1
 ; RV32IF-NEXT:    seqz a1, a1
+; RV32IF-NEXT:    sltiu a2, a0, -1
 ; RV32IF-NEXT:    and a1, a1, a2
 ; RV32IF-NEXT:    addi a1, a1, -1
 ; RV32IF-NEXT:    or a0, a1, a0
@@ -429,8 +429,8 @@ define i32 @utesth_f16i32(half %x) {
 ; RV32-NEXT:    .cfi_offset ra, -4
 ; RV32-NEXT:    call __extendhfsf2
 ; RV32-NEXT:    call __fixunssfdi
-; RV32-NEXT:    sltiu a2, a0, -1
 ; RV32-NEXT:    seqz a1, a1
+; RV32-NEXT:    sltiu a2, a0, -1
 ; RV32-NEXT:    and a1, a1, a2
 ; RV32-NEXT:    addi a1, a1, -1
 ; RV32-NEXT:    or a0, a1, a0

@@ -421,18 +421,18 @@ define <16 x i8> @splatconstant_rotr_v16i8(<16 x i8> %a) nounwind {
 ; GFNISSE-LABEL: splatconstant_rotr_v16i8:
 ; GFNISSE:       # %bb.0:
 ; GFNISSE-NEXT:    movdqa %xmm0, %xmm1
-; GFNISSE-NEXT:    paddb %xmm0, %xmm1
-; GFNISSE-NEXT:    psrlw $7, %xmm0
-; GFNISSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; GFNISSE-NEXT:    psrlw $7, %xmm1
+; GFNISSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; GFNISSE-NEXT:    paddb %xmm0, %xmm0
 ; GFNISSE-NEXT:    por %xmm1, %xmm0
 ; GFNISSE-NEXT:    retq
 ;
 ; GFNIAVX1OR2-LABEL: splatconstant_rotr_v16i8:
 ; GFNIAVX1OR2:       # %bb.0:
-; GFNIAVX1OR2-NEXT:    vpaddb %xmm0, %xmm0, %xmm1
-; GFNIAVX1OR2-NEXT:    vpsrlw $7, %xmm0, %xmm0
-; GFNIAVX1OR2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; GFNIAVX1OR2-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; GFNIAVX1OR2-NEXT:    vpsrlw $7, %xmm0, %xmm1
+; GFNIAVX1OR2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; GFNIAVX1OR2-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
+; GFNIAVX1OR2-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; GFNIAVX1OR2-NEXT:    retq
 ;
 ; GFNIAVX512-LABEL: splatconstant_rotr_v16i8:

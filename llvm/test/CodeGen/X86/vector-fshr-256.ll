@@ -486,22 +486,22 @@ define <16 x i16> @var_funnnel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %
 ; XOPAVX2-LABEL: var_funnnel_v16i16:
 ; XOPAVX2:       # %bb.0:
 ; XOPAVX2-NEXT:    vpbroadcastw {{.*#+}} ymm3 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; XOPAVX2-NEXT:    vpandn %ymm3, %ymm2, %ymm4
+; XOPAVX2-NEXT:    vpand %ymm3, %ymm2, %ymm4
 ; XOPAVX2-NEXT:    vextracti128 $1, %ymm4, %xmm5
-; XOPAVX2-NEXT:    vpaddw %ymm0, %ymm0, %ymm0
-; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm6
-; XOPAVX2-NEXT:    vpshlw %xmm5, %xmm6, %xmm5
-; XOPAVX2-NEXT:    vpshlw %xmm4, %xmm0, %xmm0
-; XOPAVX2-NEXT:    vinserti128 $1, %xmm5, %ymm0, %ymm0
-; XOPAVX2-NEXT:    vpand %ymm3, %ymm2, %ymm2
+; XOPAVX2-NEXT:    vpxor %xmm6, %xmm6, %xmm6
+; XOPAVX2-NEXT:    vpsubw %xmm5, %xmm6, %xmm5
+; XOPAVX2-NEXT:    vextracti128 $1, %ymm1, %xmm7
+; XOPAVX2-NEXT:    vpshlw %xmm5, %xmm7, %xmm5
+; XOPAVX2-NEXT:    vpsubw %xmm4, %xmm6, %xmm4
+; XOPAVX2-NEXT:    vpshlw %xmm4, %xmm1, %xmm1
+; XOPAVX2-NEXT:    vinserti128 $1, %xmm5, %ymm1, %ymm1
+; XOPAVX2-NEXT:    vpandn %ymm3, %ymm2, %ymm2
 ; XOPAVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; XOPAVX2-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; XOPAVX2-NEXT:    vpsubw %xmm3, %xmm4, %xmm3
-; XOPAVX2-NEXT:    vextracti128 $1, %ymm1, %xmm5
-; XOPAVX2-NEXT:    vpshlw %xmm3, %xmm5, %xmm3
-; XOPAVX2-NEXT:    vpsubw %xmm2, %xmm4, %xmm2
-; XOPAVX2-NEXT:    vpshlw %xmm2, %xmm1, %xmm1
-; XOPAVX2-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
+; XOPAVX2-NEXT:    vpaddw %ymm0, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vextracti128 $1, %ymm0, %xmm4
+; XOPAVX2-NEXT:    vpshlw %xmm3, %xmm4, %xmm3
+; XOPAVX2-NEXT:    vpshlw %xmm2, %xmm0, %xmm0
+; XOPAVX2-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
   %res = call <16 x i16> @llvm.fshr.v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %amt)
