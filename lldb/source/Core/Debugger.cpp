@@ -745,17 +745,22 @@ DebuggerSP Debugger::CreateInstance(lldb::LogOutputCallback log_callback,
 void Debugger::HandleDestroyCallback() {
   std::lock_guard<std::recursive_mutex> guard(m_destroy_callback_mutex);
   const lldb::user_id_t user_id = GetID();
-  // In case one destroy callback adds or removes other destroy callbacks
-  // which aren't taken care of in the same inner loop.
+  // This loop handles the case where callbacks are added/removed by existing
+  // callbacks during the loop, as the following:
+  // - Added callbacks will always be invoked.
+  // - Removed callbacks will never be invoked. That is *unless* the loop
+  //   happens to invoke the said callbacks first, before they get removed.
+  //   In this case, the callbacks gets invoked, and the removal return false.
+  //
+  // In the removal case, because the order of the container (`unordered_map`)
+  // is random, it's wise to not depend on the order and instead implement
+  // logic inside the callbacks to decide if their work should be skipped.
   while (m_destroy_callback_and_baton.size()) {
     auto iter = m_destroy_callback_and_baton.begin();
-    while (iter != m_destroy_callback_and_baton.end()) {
-      // Invoke the callback and remove the entry from the map
-      const auto &callback = iter->second.first;
-      const auto &baton = iter->second.second;
-      callback(user_id, baton);
-      iter = m_destroy_callback_and_baton.erase(iter);
-    }
+    const auto &callback = iter->second.first;
+    const auto &baton = iter->second.second;
+    callback(user_id, baton);
+    m_destroy_callback_and_baton.erase(iter);
   }
 }
 

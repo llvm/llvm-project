@@ -243,8 +243,9 @@ class DebuggerAPITestCase(TestBase):
             events['foo called'] = dbg_id
 
         def bar(dbg_id):
-            # Don't log bar()'s invokation because it may or may not be called
-            # based on its position in the container relative to remove_bar
+            # Don't log/validate bar's invocation because it may or may not be
+            # called based on its position in the container relative to
+            # remove_bar.
             pass
 
         def add_foo(dbg_id):
