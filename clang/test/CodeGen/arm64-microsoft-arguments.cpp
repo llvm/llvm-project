@@ -201,3 +201,18 @@ S11 f11() {
   S11 x;
   return func11(x);
 }
+
+// GH86384
+// Pass and return object with template constructor (pass directly,
+// return indirectly).
+// CHECK: define dso_local void @"?f12@@YA?AUS12@@XZ"(ptr dead_on_unwind inreg noalias writable sret(%struct.S12) align 4 {{.*}})
+// CHECK: call void @"?func12@@YA?AUS12@@U1@@Z"(ptr dead_on_unwind inreg writable sret(%struct.S12) align 4 {{.*}}, i64 {{.*}})
+struct S12 {
+  template<typename T> S12(T*) {}
+  int x;
+};
+S12 func12(S12 x);
+S12 f12() {
+  S12 x((int*)0);
+  return func12(x);
+}
