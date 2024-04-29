@@ -2363,8 +2363,7 @@ bool ByteCodeExprGen<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
   if (!this->emitGetPtrGlobal(*GlobalIndex, E))
     return false;
 
-  const Record *R = this->getRecord(E->getType());
-  assert(R);
+  assert(this->getRecord(E->getType()));
 
   const APValue &V = E->getGuidDecl()->getAsAPValue();
   if (V.getKind() == APValue::None)
