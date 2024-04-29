@@ -39,6 +39,7 @@ add_llvm_library(omptarget
 
   ADDITIONAL_HEADER_DIRS
   ${LIBOMPTARGET_INCLUDE_DIR}
+  ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
 
   LINK_COMPONENTS
   Support
@@ -51,7 +52,9 @@ add_llvm_library(omptarget
   NO_INSTALL_RPATH
   BUILDTREE_ONLY
 )
-target_include_directories(omptarget PRIVATE ${LIBOMPTARGET_INCLUDE_DIR})
+target_include_directories(omptarget PRIVATE 
+  ${LIBOMPTARGET_INCLUDE_DIR} ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
+)
 
 if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
   target_link_libraries(omptarget PRIVATE

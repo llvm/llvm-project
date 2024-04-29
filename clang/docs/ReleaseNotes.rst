@@ -150,6 +150,7 @@ C++2c Feature Support
 
 - Implemented `P0609R3: Attributes for Structured Bindings <https://wg21.link/P0609R3>`_
 
+- Implemented `P2748R5 Disallow Binding a Returned Glvalue to a Temporary <https://wg21.link/P2748R5>`_.
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -226,6 +227,7 @@ Non-comprehensive list of changes in this release
 - ``__typeof_unqual__`` is available in all C modes as an extension, which behaves
   like ``typeof_unqual`` from C23, similar to ``__typeof__`` and ``typeof``.
 
+- ``__builtin_reduce_{add|mul|xor|or|and|min|max}`` builtins now support scalable vectors.
 
 * Shared libraries linked with either the ``-ffast-math``, ``-Ofast``, or
   ``-funsafe-math-optimizations`` flags will no longer enable flush-to-zero
@@ -235,6 +237,9 @@ Non-comprehensive list of changes in this release
 
 * ``-fdenormal-fp-math=preserve-sign`` is no longer implied by ``-ffast-math``
   on x86 systems.
+
+- Builtins ``__builtin_shufflevector()`` and ``__builtin_convertvector()`` may
+  now be used within constant expressions.
 
 New Compiler Flags
 ------------------

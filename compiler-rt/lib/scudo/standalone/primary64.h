@@ -147,6 +147,9 @@ public:
     for (uptr I = 0; I < NumClasses; I++)
       getRegionInfo(I)->FLLockCV.bindTestOnly(getRegionInfo(I)->FLLock);
 
+    // The default value in the primary config has the higher priority.
+    if (Config::getDefaultReleaseToOsIntervalMs() != INT32_MIN)
+      ReleaseToOsInterval = Config::getDefaultReleaseToOsIntervalMs();
     setOption(Option::ReleaseInterval, static_cast<sptr>(ReleaseToOsInterval));
   }
 
