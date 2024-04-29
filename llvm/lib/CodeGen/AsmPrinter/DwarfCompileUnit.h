@@ -121,12 +121,6 @@ class DwarfCompileUnit final : public DwarfUnit {
 
   bool isDwoUnit() const override;
 
-  DenseMap<const DILocalScope *, DIE *> &getAbstractScopeDIEs() {
-    if (isDwoUnit() && !DD->shareAcrossDWOCUs())
-      return AbstractLocalScopeDIEs;
-    return DU->getAbstractScopeDIEs();
-  }
-
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> &getAbstractEntities() {
     if (isDwoUnit() && !DD->shareAcrossDWOCUs())
       return AbstractEntities;
@@ -143,7 +137,11 @@ public:
   DwarfCompileUnit(unsigned UID, const DICompileUnit *Node, AsmPrinter *A,
                    DwarfDebug *DW, DwarfFile *DWU,
                    UnitKind Kind = UnitKind::Full);
-
+  DenseMap<const DILocalScope *, DIE *> &getAbstractScopeDIEs() {
+    if (isDwoUnit() && !DD->shareAcrossDWOCUs())
+      return AbstractLocalScopeDIEs;
+    return DU->getAbstractScopeDIEs();
+  }
   bool hasRangeLists() const { return HasRangeLists; }
 
   DwarfCompileUnit *getSkeleton() const {
