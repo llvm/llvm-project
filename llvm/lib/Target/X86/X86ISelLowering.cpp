@@ -4441,10 +4441,8 @@ static SDValue concatSubVectors(SDValue V1, SDValue V2, SelectionDAG &DAG,
 static SDValue getOnesVector(EVT VT, SelectionDAG &DAG, const SDLoc &dl) {
   assert((VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()) &&
          "Expected a 128/256/512-bit vector type");
-
-  APInt Ones = APInt::getAllOnes(32);
   unsigned NumElts = VT.getSizeInBits() / 32;
-  SDValue Vec = DAG.getConstant(Ones, dl, MVT::getVectorVT(MVT::i32, NumElts));
+  SDValue Vec = DAG.getAllOnesConstant(dl, MVT::getVectorVT(MVT::i32, NumElts));
   return DAG.getBitcast(VT, Vec);
 }
 
