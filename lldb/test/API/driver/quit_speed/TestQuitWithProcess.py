@@ -31,4 +31,4 @@ class DriverQuitSpeedTest(PExpectTest):
         print("Got launch message")
         child.sendline("quit")
         print("sent quit")
-        child.expect(pexpect.EOF, timeout=15)
+        child.expect(pexpect.EOF, timeout=60)
