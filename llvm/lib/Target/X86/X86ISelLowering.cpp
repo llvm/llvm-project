@@ -47247,8 +47247,7 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
       NewMul = DAG.getNode(X86ISD::MUL_IMM, DL, VT, N->getOperand(0),
                            DAG.getConstant(AbsMulAmt, DL, VT));
       if (SignMulAmt < 0)
-        NewMul =
-            DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), NewMul);
+        NewMul = DAG.getNegative(NewMul, DL, VT);
 
       return NewMul;
     }
@@ -47295,8 +47294,7 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
 
       // Negate the result.
       if (SignMulAmt < 0)
-        NewMul =
-            DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), NewMul);
+        NewMul = DAG.getNegative(NewMul, DL, VT);
     } else if (!Subtarget.slowLEA())
       NewMul = combineMulSpecial(C->getZExtValue(), N, DAG, VT, DL);
   }
@@ -47312,10 +47310,8 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
           ISD::ADD, DL, VT, N->getOperand(0),
           DAG.getNode(ISD::SHL, DL, VT, N->getOperand(0),
                       DAG.getConstant(Log2_64(AbsMulAmt - 1), DL, ShiftVT)));
-      // To negate, subtract the number from zero
       if (SignMulAmt < 0)
-        NewMul =
-            DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), NewMul);
+        NewMul = DAG.getNegative(NewMul, DL, VT);
     } else if (isPowerOf2_64(AbsMulAmt + 1)) {
       // (mul x, 2^N - 1) => (sub (shl x, N), x)
       NewMul =
