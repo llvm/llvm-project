@@ -27,7 +27,7 @@ TEST(RTBuilderTest, ComplexRuntimeInterface) {
   mlir::Type c99_cacosf_signature{
       fir::runtime::RuntimeTableKey<decltype(c99_cacosf)>::getTypeModel()(
           &ctx)};
-  auto c99_cacosf_funcTy = c99_cacosf_signature.cast<mlir::FunctionType>();
+  auto c99_cacosf_funcTy = mlir::cast<mlir::FunctionType>(c99_cacosf_signature);
   EXPECT_EQ(c99_cacosf_funcTy.getNumInputs(), 1u);
   EXPECT_EQ(c99_cacosf_funcTy.getNumResults(), 1u);
   auto cplx_ty = fir::ComplexType::get(&ctx, 4);
