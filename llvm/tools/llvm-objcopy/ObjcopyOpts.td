@@ -176,6 +176,9 @@ def G : JoinedOrSeparate<["-"], "G">,
         Alias<keep_global_symbol>,
         HelpText<"Alias for --keep-global-symbol">;
 
+def no_verify_note_sections : Flag<["--"], "no-verify-note-sections">,
+                        HelpText<"Disable note section validation">;
+
 defm keep_global_symbols
     : Eq<"keep-global-symbols",
          "Read a list of symbols from <filename> and run as if "
