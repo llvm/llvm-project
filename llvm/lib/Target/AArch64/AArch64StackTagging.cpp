@@ -102,7 +102,7 @@ static cl::opt<RecordStackHistoryMode> ClRecordStackHistory(
     cl::values(clEnumVal(none, "Do not record stack ring history"),
                clEnumVal(instr, "Insert instructions into the prologue for "
                                 "storing into the stack ring buffer")),
-    cl::Hidden, cl::init(instr));
+    cl::Hidden, cl::init(none));
 
 static const Align kTagGranuleSize = Align(16);
 
