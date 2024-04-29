@@ -57,21 +57,16 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
     OS << "ARM_ARCHITECTURE(" << Arch << ")\n";
   OS << "\n#undef ARM_ARCHITECTURE\n\n";
 
-  OS << "#ifndef ARM_SUBTARGET_FEATURE\n"
-     << "#define ARM_SUBTARGET_FEATURE(NAME, ENUM)\n"
+  // Emit information for each defined Extension; used to build ArmExtKind.
+  OS << "#ifndef ARM_EXTENSION\n"
+     << "#define ARM_EXTENSION(NAME, ENUM)\n"
      << "#endif\n\n";
-  // Look for all SubtargetFeatures where the FieldName starts with "Has"
-  // FIXME make a subclass of SubtargetFeature instead.
-  for (const Record *Rec : RK.getAllDerivedDefinitions("SubtargetFeature")) {
+  for (const Record *Rec : RK.getAllDerivedDefinitions("Extension")) {
     StringRef Name = Rec->getValueAsString("Name");
-    StringRef FieldName = Rec->getValueAsString("FieldName");
-    if (!FieldName.starts_with("Has"))
-      continue;
-    // upper() removes dashes "-"
-    std::string Enum = std::string("AEK_") + FieldName.substr(3).upper();
-    OS << "ARM_SUBTARGET_FEATURE(" << Name << ", " << Enum << ")\n";
+    std::string Enum = Rec->getValueAsString("ArchExtKindSpelling").upper();
+    OS << "ARM_EXTENSION(" << Name << ", " << Enum << ")\n";
   }
-  OS << "\n#undef ARM_SUBTARGET_FEATURE\n\n";
+  OS << "\n#undef ARM_EXTENSION\n\n";
 }
 
 static TableGen::Emitter::Opt

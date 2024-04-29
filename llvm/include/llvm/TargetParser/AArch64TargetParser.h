@@ -106,7 +106,7 @@ static_assert(FEAT_MAX < 62,
 // Each ArchExtKind correponds directly to a possible -target-feature.
 enum ArchExtKind : unsigned {
   AEK_NONE = 1,
-#define ARM_SUBTARGET_FEATURE(NAME, ENUM) ENUM,
+#define ARM_EXTENSION(NAME, ENUM) ENUM,
 #include "llvm/TargetParser/AArch64TargetParserDef.inc"
   AEK_NUM_EXTENSIONS,
 
