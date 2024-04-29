@@ -151,6 +151,13 @@ def : ProcessorModel<"la464", NoSchedModel, [Feature64Bit,
                                              FeatureExtLVZ,
                                              FeatureExtLBT]>;
 
+def : ProcessorModel<"la664", NoSchedModel, [Feature64Bit,
+                                             FeatureUAL,
+                                             FeatureExtLASX,
+                                             FeatureExtLVZ,
+                                             FeatureExtLBT,
+                                             FeatureFrecipe]>;
+
 //===----------------------------------------------------------------------===//
 // Define the LoongArch target.
 //===----------------------------------------------------------------------===//

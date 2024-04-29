@@ -1562,6 +1562,8 @@ StringRef sys::getHostCPUName() {
   switch (processor_id & 0xf000) {
   case 0xc000: // Loongson 64bit, 4-issue
     return "la464";
+  case 0xd000: // Loongson 64bit, 6-issue
+    return "la664";
   // TODO: Others.
   default:
     break;
