@@ -684,7 +684,7 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
   }
 
   // 80-bit through 176-bit instructions are encoded as 0bxnnnxxxx_x1111111.
-  // Where number of bits is (80 + (nnn * 16)) for nnn != 0b111.
+  // Where the number of bits is (80 + (nnn * 16)) for nnn != 0b111.
   unsigned nnn = (Bytes[1] >> 4) & 0b111;
   if (nnn != 0b111) {
     Size = 10 + (nnn * 2);
