@@ -4286,11 +4286,13 @@ bool Parser::parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data) {
         continue;
       }
       // Potential map-type token as it is followed by a colon.
-      if (PP.LookAhead(0).is(tok::colon))
-        if (getLangOpts().OpenMP >= 60)
+      if (PP.LookAhead(0).is(tok::colon)) {
+        if (getLangOpts().OpenMP >= 60) {
           break;
-        else
+        } else {
           return false;
+        }
+      }
 
       Diag(Tok, diag::err_omp_unknown_map_type_modifier)
           << (getLangOpts().OpenMP >= 51 ? (getLangOpts().OpenMP >= 52 ? 2 : 1)
