@@ -124,10 +124,9 @@ GlobalVariable *DXContainerGlobals::buildContainerGlobal(
 GlobalVariable *DXContainerGlobals::buildSingature(Module &M, Signature &Sig,
                                                    StringRef Name,
                                                    StringRef SectionName) {
-  std::string Data;
-  raw_string_ostream OS(Data);
+  SmallString<256> Data;
+  raw_svector_ostream OS(Data);
   Sig.write(OS);
-  OS.flush();
   Constant *Constant =
       ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
   return buildContainerGlobal(M, Constant, Name, SectionName);
