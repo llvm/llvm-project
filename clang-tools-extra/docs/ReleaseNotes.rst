@@ -368,7 +368,8 @@ Changes in existing checks
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to provide
   valid fix suggestions for ``static_cast`` without a preceding space and
-  fixed problem with duplicate parentheses in double implicit casts.
+  fixed problem with duplicate parentheses in double implicit casts. Corrected
+  the fix suggestions for C23 by using C-style casts instead of ``static_cast``.
 
 - Improved :doc:`readability-redundant-inline-specifier
   <clang-tidy/checks/readability/redundant-inline-specifier>` check to properly

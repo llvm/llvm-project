@@ -165,6 +165,12 @@ bool needsSpacePrefix(SourceLocation Loc, ASTContext &Context) {
 void fixGenericExprCastFromBool(DiagnosticBuilder &Diag,
                                 const ImplicitCastExpr *Cast,
                                 ASTContext &Context, StringRef OtherType) {
+  if (!Context.getLangOpts().CPlusPlus) {
+    Diag << FixItHint::CreateInsertion(Cast->getBeginLoc(),
+                                       (Twine("(") + OtherType + ")").str());
+    return;
+  }
+
   const Expr *SubExpr = Cast->getSubExpr();
   const bool NeedParens = !isa<ParenExpr>(SubExpr->IgnoreImplicit());
   const bool NeedSpace = needsSpacePrefix(Cast->getBeginLoc(), Context);
