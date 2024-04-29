@@ -17,6 +17,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
@@ -823,13 +824,16 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     }
   }
 
-  // Make a second pass over the PHINodes now that all of them have been
-  // remapped into the new function, simplifying the PHINode and performing any
-  // recursive simplifications exposed. This will transparently update the
-  // WeakTrackingVH in the VMap. Notably, we rely on that so that if we coalesce
-  // two PHINodes, the iteration over the old PHIs remains valid, and the
-  // mapping will just map us to the new node (which may not even be a PHI
-  // node).
+  // Drop all incompatible return attributes that cannot be applied to NewFunc
+  // during cloning, so as to allow instruction simplification to reason on the
+  // old state of the function. The original attributes are restored later.
+  AttributeMask IncompatibleAttrs =
+      AttributeFuncs::typeIncompatible(OldFunc->getReturnType());
+  AttributeList Attrs = NewFunc->getAttributes();
+  NewFunc->removeRetAttrs(IncompatibleAttrs);
+
+  // As phi-nodes have been now remapped, allow incremental simplification of
+  // newly-cloned instructions.
   const DataLayout &DL = NewFunc->getParent()->getDataLayout();
   SmallSetVector<const Value *, 8> Worklist;
   for (unsigned Idx = 0, Size = PHIToResolve.size(); Idx != Size; ++Idx)
@@ -870,6 +874,9 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     else
       VMap[OrigV] = I;
   }
+
+  // Restore attributes.
+  NewFunc->setAttributes(Attrs);
 
   // Remap debug intrinsic operands now that all values have been mapped.
   // Doing this now (late) preserves use-before-defs in debug intrinsics. If
