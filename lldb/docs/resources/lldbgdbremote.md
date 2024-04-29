@@ -1379,8 +1379,7 @@ involves calling `thread_abort_safely(mach_port_t thread)` to
 ensure we get the correct registers for a thread in case it is
 currently having code run on its behalf in the kernel.
 
-### Response
-
+The response is either:
 * `<unsigned int>` - The save_id result is a non-zero unsigned integer value
                  that can be passed back to the GDB server using a
                  `QRestoreRegisterState` packet to restore the registers
@@ -1404,8 +1403,7 @@ completion of the `QRestoreRegisterState` command.
 If thread suffixes are enabled the second form of this packet is
 used, otherwise the first form is used.
 
-### Response
-
+The response is either:
 * `OK` - if all registers were successfully restored
 * `EXX` - for any errors
 
@@ -1419,8 +1417,7 @@ Get the load address of a memory mapped file.
 The load address is defined as the address of the first memory
 region what contains data mapped from the specified file.
 
-### Response
-
+The response is either:
 * `<unsigned-hex64>` - Load address of the file in big endian encoding
 * `E01` - the requested file isn't loaded
 * `EXX` - for any other errors
@@ -1432,8 +1429,7 @@ address of some object file in the rendezvous data structure.
 
 Get information for a module by given module path and architecture.
 
-### Response
-
+The response is either:
 * `(uuid|md5):...;triple:...;file_offset:...;file_size...;`
 * `EXX` - for any errors
 
@@ -1445,9 +1441,7 @@ module's information like UUID directly from inferior's memory.
 Get information for a list of modules by given module path and
 architecture.
 
-### Response
-
-A JSON array of dictionaries containing the following keys:
+The response is a JSON array of dictionaries containing the following keys:
 * `uuid`
 * `triple`
 * `file_path`
