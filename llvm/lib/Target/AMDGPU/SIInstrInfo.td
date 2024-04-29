@@ -1614,7 +1614,6 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
         !eq(VT, v4bf16)   : AVSrc_64,
         !eq(VT, v32f16)   : VRegSrc_512,
         !eq(VT, v32bf16)  : VRegSrc_512,
-        !eq(VT, v16f32)   : VRegSrc_512,
         !eq(VT.Size, 192) : VRegSrc_192,
         !eq(VT.Size, 128) : VRegSrc_128,
         !eq(VT.Size, 96)  : VRegSrc_96,
