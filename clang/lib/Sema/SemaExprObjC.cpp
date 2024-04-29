@@ -2441,10 +2441,11 @@ ExprResult Sema::BuildClassMessageImplicit(QualType ReceiverType,
          "Either the super receiver location needs to be valid or the receiver "
          "needs valid type source information");
   if (receiverTypeInfo) {
-    return BuildClassMessage(receiverTypeInfo, ReceiverType,
-                            /*SuperLoc=*/isSuperReceiver ? Loc : SourceLocation(),
-                             Sel, Method, Loc, Loc, Loc, Args,
-                             /*isImplicit=*/true);
+    return BuildClassMessage(
+        receiverTypeInfo, ReceiverType,
+        /*SuperLoc=*/isSuperReceiver ? Loc : SourceLocation(), Sel, Method, Loc,
+        Loc, Loc, Args,
+        /*isImplicit=*/true);
   }
 }
 
