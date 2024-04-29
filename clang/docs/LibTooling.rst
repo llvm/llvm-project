@@ -71,7 +71,7 @@ and automatic location of the compilation database using source files paths.
 
   int main(int argc, const char **argv) {
     // CommonOptionsParser::create will parse arguments and create a
-    // CompilationDatabase. In case of error it will terminate the program.
+    // CompilationDatabase.
     auto ExpectedParser = CommonOptionsParser::create(argc, argv, MyToolCategory);
     if (!ExpectedParser) {
       // Fail gracefully for unsupported options.
