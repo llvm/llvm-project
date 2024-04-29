@@ -5713,8 +5713,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     if (callOrInvoke && *callOrInvoke && (*callOrInvoke)->isIndirectCall()) {
       if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
         // Type id metadata is set only for C/C++ contexts.
-        if (dyn_cast<CXXConstructorDecl>(FD) || dyn_cast<CXXMethodDecl>(FD) ||
-            dyn_cast<CXXDestructorDecl>(FD)) {
+        if (isa<CXXConstructorDecl>(FD) || isa<CXXMethodDecl>(FD) ||
+            isa<CXXDestructorDecl>(FD)) {
           CGM.CreateFunctionTypeMetadataForIcall(FD->getType(), *callOrInvoke);
         }
       }
