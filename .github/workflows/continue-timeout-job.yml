@@ -1,0 +1,69 @@
+name: Continue Timeout Job
+
+on:
+  workflow_run:
+    workflows:
+      - "Windows Precommit Tests"
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+jobs:
+  restart:
+    name: "Restart Job"
+    permissions:
+      actions: write
+    runs-on: ubuntu-22.04
+    if: github.event.workflow_run.conclusion == 'failure'
+    steps:
+      - name: "Restart Job"
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1
+        with:
+          script: |
+            const data = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id
+            })
+          
+            for (artifact of data.data.artifacts) {
+              if (artifact.name != 'timeout') {
+                continue;
+              }
+
+              // Delete the timeout artifact to prepare for the next run
+              await github.rest.actions.deleteArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id
+              })
+
+              const job_data = await github.rest.actions.listJobsForWorkflowRun({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.payload.workflow_run.id 
+              });
+
+              for (job of job_data.data.jobs) {
+                console.log(job)
+                if (job.name != "Build") {
+                  continue;
+                }
+                if (job.conclusion == "success") {
+                  // IS this possible?
+                  return "success";
+                }
+          
+                // Restart the job
+                // This function does not exist even though it is in the document
+                //github.rest.actions.reRunJobForWorkflow({
+                await github.request('POST /repos/{owner}/{repo}/actions/jobs/{job_id}/rerun', {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  job_id: job.id
+                })
+                return "timeout"
+              }
+            }

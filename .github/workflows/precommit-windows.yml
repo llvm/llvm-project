@@ -2,6 +2,7 @@ name: "Windows Precommit Tests"
 
 permissions:
   contents: read
+  actions: write
 
 on:
   pull_request:
@@ -32,19 +33,43 @@ jobs:
         id: vars
         uses: ./.github/workflows/compute-projects-to-test
 
-  build-windows-part1:
-    name: "Build LLVM/Clang"
+  build-windows:
+    name: "Build"
     runs-on: windows-2022
+    permissions:
+      actions: write #pr-sccache-save may delete artifacts.
+    outputs:
+      build-timeout: ${{ steps.build.outputs.timeout }}
+      build-failed: ${{ steps.build.outputs.failed }}
     needs:
       - compute-projects
     if: ${{ needs.compute-projects.outputs.test-build == 'true' }}
     steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+        with:
+          pattern: timeout-build
+          merge-multiple: true
+
+      - name: Unpack Artifact
+        id: timeout-artifact
+        shell: bash
+        run: |
+          if [ -e llvm-project.tar.zst ]; then
+            tar --zstd -xf llvm-project.tar.zst
+            rm llvm-project.tar.zst
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Setup Windows
         uses: llvm/actions/setup-windows@main
         with:
           arch: amd64
 
       - name: Fetch LLVM sources
+        if: ${{ steps.timeout-artifact.outputs.exists != 'true' }}
         uses: actions/checkout@v4
 
       - name: Setup sccache
@@ -53,15 +78,12 @@ jobs:
           max-size: 2G
           variant: sccache
           key: precommit-windows
-
+      
       - name: Restore sccache from previous PR run
         uses: ./.github/workflows/pr-sccache-restore
 
-      - name: Compute projects to test
-        id: compute-projects
-        uses: ./.github/workflows/compute-projects-to-test
-
-      - name: Configure LLVM
+      - name: Configure
+        if: ${{ steps.timeout-artifact.outputs.exists != 'true' }}
         shell: bash
         run: |
           cmake -B build -GNinja \
@@ -75,12 +97,22 @@ jobs:
 
       - name: Build
         shell: bash
+        id: build
+        timeout-minutes: 330
         run: |
-          targets="llc"
-          if echo "${{ needs.compute-projects.outputs.check-targets }}" | grep clang; then
-            targets="$targets clang"
-          fi
-          ninja -C build $targets
+          touch timeout
+          ninja -C build -k 0 ${{ needs.compute-projects.outputs.check-targets }} && pass=1
+          rm timeout
+          [ $pass ] || false
+
+      - name: Upload Timeout Message
+        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+        id: timeout
+        if: always()
+        with:
+          name: timeout
+          path: timeout
+          retention-days: 2
 
       - name: Save sccache for next PR run
         if: always()
@@ -88,111 +120,19 @@ jobs:
 
       - name: Package Build Directory
         shell: bash
+        if: always() && steps.timeout.outputs.artifact-id != ''
         run: |
-          tar -c . | zstd -T0 -c > ../llvm-project.tar.zst
+          # Remove the timeout file, so the next build isn't categorized
+          # as a timeout.
+          rm -f timeout
+          # Dereference symlinks so that this works on Windows.
+          tar -h -c . | zstd -T0 -c > ../llvm-project.tar.zst
           mv ../llvm-project.tar.zst .
 
       - name: Upload Build
         uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+        if: always() && steps.timeout.outputs.artifact-id != ''
         with:
-          name: part1
+          name: timeout-build
           path: llvm-project.tar.zst
           retention-days: 2
-
-  build-windows-part2:
-    name: "Build All"
-    needs:
-      - build-windows-part1
-    runs-on: windows-2022
-    steps:
-      - name: Setup Windows
-        uses: llvm/actions/setup-windows@main
-        with:
-          arch: amd64
-
-      - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1
-        with:
-          max-size: 2G
-          variant: sccache
-          key: precommit-windows
-          # The llvm-project.zip archive contains the sccache directory from
-          # part 1, so we don't need to restore the cache.
-          restore: false
-
-      - name: Download Artifact
-        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
-        with:
-          pattern: part1
-
-      - name: Unpack Artifact
-        shell: bash
-        run: |
-          tar --zstd -xf llvm-project.tar.zst
-          rm llvm-project.tar.zst
-
-      - name: Build
-        shell: bash
-        run: |
-          ls
-          ninja -C build
-
-      - name: Save sccache for next PR run
-        if: always()
-        uses: ./.github/workflows/pr-sccache-save
- 
-      - name: Package Build Directory
-        shell: bash
-        run: |
-          tar -c . | zstd -T0 -c > ../llvm-project.tar.zst
-          mv ../llvm-project.tar.zst .
-
-      - name: Upload Build
-        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
-        with:
-          name: part2
-          path: llvm-project.tar.zst
-          retention-days: 2
-
-  test-windows:
-    name: "Test"
-    needs:
-      - compute-projects
-      - build-windows-part2
-    runs-on: windows-2022
-    steps:
-      - name: Setup Windows
-        uses: llvm/actions/setup-windows@main
-        with:
-          arch: amd64
-
-      - name: Setup ccache
-        uses: hendrikmuhs/ccache-action@v1
-        with:
-          max-size: 2G
-          variant: sccache
-          key: precommit-windows
-          # The llvm-project.zip archive contains the sccache directory from
-          # part 1, so we don't need to restore the cache.
-          restore: false
-
-      - name: Download Artifact
-        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
-        with:
-          pattern: part2
-          merge-multiple: true
-
-      - name: Unpack Artifact
-        shell: bash
-        run: |
-          tar --zstd -xf llvm-project.tar.zst
-          rm llvm-project.tar.zst
-
-      - name: Check LLVM
-        if: ${{ needs.compute-projects.outputs.check-targets }}
-        run: |
-          ninja -C build ${{ needs.compute-projects.outputs.check-targets }}
-
-      - name: Save sccache for next PR run
-        if: always()
-        uses: ./.github/workflows/pr-sccache-save

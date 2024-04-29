@@ -9,6 +9,7 @@ runs:
           const data = await github.rest.actions.listWorkflowRunArtifacts({
             owner: context.repo.owner,
             repo: context.repo.repo,
+            run_id: context.runId,
             name: 'sccache-pr' + context.issue.number
           })
 
@@ -19,12 +20,13 @@ runs:
           console.log(data.data.artifacts[0])
           const artifact_id = data.data.artifacts[0].id
 
-          // Delete the exisitng artifact so we can upload a new one with the same name.
+          // Delete the exisiting artifact so we can upload a new one with the same name.
           github.rest.actions.deleteArtifact({
             owner: context.repo.owner,
             repo: context.repo.repo,
             artifact_id: artifact_id
           })
+
 
     - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
       with:

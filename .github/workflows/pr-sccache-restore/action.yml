@@ -30,7 +30,6 @@ runs:
             return url.url
           }
           console.log("Could not find previous sccache for this PR.")
-          return ""
 
     - shell: bash
       if: steps.artifact-url.outputs.result != ''
