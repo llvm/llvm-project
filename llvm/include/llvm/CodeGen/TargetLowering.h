@@ -5238,6 +5238,9 @@ public:
   /// Expand fminnum/fmaxnum into fminnum_ieee/fmaxnum_ieee with quieted inputs.
   SDValue expandFMINNUM_FMAXNUM(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand fminimum/fmaximum into multiple comparison with selects.
+  SDValue expandFMINIMUM_FMAXIMUM(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand FP_TO_[US]INT_SAT into FP_TO_[US]INT and selects or min/max.
   /// \param N Node to expand
   /// \returns The expansion result
