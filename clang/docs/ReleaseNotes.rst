@@ -472,7 +472,6 @@ Bug Fixes in This Version
   The values of 0 and 1 block any unrolling of the loop. This keeps the same behavior with GCC.
   Fixes (`#88624 <https://github.com/llvm/llvm-project/issues/88624>`_).
 
-
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
