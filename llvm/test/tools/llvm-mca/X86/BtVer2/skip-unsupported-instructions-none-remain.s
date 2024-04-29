@@ -1,5 +1,5 @@
-# RUN: not llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -skip-unsupported-instructions %s |& FileCheck --check-prefixes=CHECK-ALL,CHECK-SKIP %s
-# RUN: not llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 %s |& FileCheck --check-prefixes=CHECK-ALL,CHECK-ERROR %s
+# RUN: not llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -skip-unsupported-instructions %s 2>&1 | FileCheck --check-prefixes=CHECK-ALL,CHECK-SKIP %s
+# RUN: not llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 %s 2>&1 | FileCheck --check-prefixes=CHECK-ALL,CHECK-ERROR %s
 
 # Test defends that if all instructions are skipped leaving an empty input, an error is printed.
 
