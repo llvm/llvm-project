@@ -1523,17 +1523,26 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
   memprof::FrameIdConverter<MemProfFrameHashTable> FrameIdConv(
       *MemProfFrameTable.get());
 
-  // Setup a callback to convert call stack ids to call stacks using the on-disk
-  // hash table.
-  memprof::CallStackIdConverter<MemProfCallStackHashTable> CSIdConv(
-      *MemProfCallStackTable.get(), FrameIdConv);
-
   const memprof::IndexedMemProfRecord IndexedRecord = *Iter;
   memprof::MemProfRecord Record;
-  if (MemProfCallStackTable)
+  if (MemProfCallStackTable) {
+    // Setup a callback to convert call stack ids to call stacks using the
+    // on-disk hash table.
+    memprof::CallStackIdConverter<MemProfCallStackHashTable> CSIdConv(
+        *MemProfCallStackTable.get(), FrameIdConv);
+
     Record = IndexedRecord.toMemProfRecord(CSIdConv);
-  else
+
+    // Check that all call stack ids were successfully converted to call stacks.
+    if (CSIdConv.LastUnmappedId) {
+      return make_error<InstrProfError>(
+          instrprof_error::hash_mismatch,
+          "memprof call stack not found for call stack id " +
+              Twine(*CSIdConv.LastUnmappedId));
+    }
+  } else {
     Record = memprof::MemProfRecord(IndexedRecord, FrameIdConv);
+  }
 
   // Check that all frame ids were successfully converted to frames.
   if (FrameIdConv.LastUnmappedId) {
@@ -1543,13 +1552,6 @@ IndexedMemProfReader::getMemProfRecord(const uint64_t FuncNameHash) const {
             Twine(*FrameIdConv.LastUnmappedId));
   }
 
-  // Check that all call stack ids were successfully converted to call stacks.
-  if (CSIdConv.LastUnmappedId) {
-    return make_error<InstrProfError>(
-        instrprof_error::hash_mismatch,
-        "memprof call stack not found for call stack id " +
-            Twine(*CSIdConv.LastUnmappedId));
-  }
   return Record;
 }
 

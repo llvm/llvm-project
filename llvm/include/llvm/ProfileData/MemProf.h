@@ -2,6 +2,7 @@
 #define LLVM_PROFILEDATA_MEMPROF_H_
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/GlobalValue.h"
@@ -10,6 +11,7 @@
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <bitset>
 #include <cstdint>
 #include <optional>
 
@@ -55,7 +57,10 @@ MemProfSchema getHotColdSchema();
 // deserialize methods.
 struct PortableMemInfoBlock {
   PortableMemInfoBlock() = default;
-  explicit PortableMemInfoBlock(const MemInfoBlock &Block) {
+  explicit PortableMemInfoBlock(const MemInfoBlock &Block,
+                                const MemProfSchema &IncomingSchema) {
+    for (const Meta Id : IncomingSchema)
+      Schema.set(llvm::to_underlying(Id));
 #define MIBEntryDef(NameTag, Name, Type) Name = Block.Name;
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
@@ -67,10 +72,12 @@ struct PortableMemInfoBlock {
 
   // Read the contents of \p Ptr based on the \p Schema to populate the
   // MemInfoBlock member.
-  void deserialize(const MemProfSchema &Schema, const unsigned char *Ptr) {
+  void deserialize(const MemProfSchema &IncomingSchema,
+                   const unsigned char *Ptr) {
     using namespace support;
 
-    for (const Meta Id : Schema) {
+    Schema.reset();
+    for (const Meta Id : IncomingSchema) {
       switch (Id) {
 #define MIBEntryDef(NameTag, Name, Type)                                       \
   case Meta::Name: {                                                           \
@@ -82,6 +89,8 @@ struct PortableMemInfoBlock {
         llvm_unreachable("Unknown meta type id, is the profile collected from "
                          "a newer version of the runtime?");
       }
+
+      Schema.set(llvm::to_underlying(Id));
     }
   }
 
@@ -114,17 +123,29 @@ struct PortableMemInfoBlock {
 #undef MIBEntryDef
   }
 
+  // Return the schema, only for unit tests.
+  std::bitset<llvm::to_underlying(Meta::Size)> getSchema() const {
+    return Schema;
+  }
+
   // Define getters for each type which can be called by analyses.
 #define MIBEntryDef(NameTag, Name, Type)                                       \
-  Type get##Name() const { return Name; }
+  Type get##Name() const {                                                     \
+    assert(Schema[llvm::to_underlying(Meta::Name)]);                           \
+    return Name;                                                               \
+  }
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
 
   void clear() { *this = PortableMemInfoBlock(); }
 
   bool operator==(const PortableMemInfoBlock &Other) const {
+    if (Other.Schema != Schema)
+      return false;
+
 #define MIBEntryDef(NameTag, Name, Type)                                       \
-  if (Other.get##Name() != get##Name())                                        \
+  if (Schema[llvm::to_underlying(Meta::Name)] &&                               \
+      Other.get##Name() != get##Name())                                        \
     return false;
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
@@ -155,6 +176,9 @@ struct PortableMemInfoBlock {
   }
 
 private:
+  // The set of available fields, indexed by Meta::Name.
+  std::bitset<llvm::to_underlying(Meta::Size)> Schema;
+
 #define MIBEntryDef(NameTag, Name, Type) Type Name = Type();
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
@@ -296,8 +320,9 @@ struct IndexedAllocationInfo {
 
   IndexedAllocationInfo() = default;
   IndexedAllocationInfo(ArrayRef<FrameId> CS, CallStackId CSId,
-                        const MemInfoBlock &MB)
-      : CallStack(CS.begin(), CS.end()), CSId(CSId), Info(MB) {}
+                        const MemInfoBlock &MB,
+                        const MemProfSchema &Schema = getFullSchema())
+      : CallStack(CS.begin(), CS.end()), CSId(CSId), Info(MB, Schema) {}
 
   // Returns the size in bytes when this allocation info struct is serialized.
   size_t serializedSize(const MemProfSchema &Schema,
