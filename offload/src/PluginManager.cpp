@@ -23,9 +23,6 @@ using namespace llvm::sys;
 
 PluginManager *PM = nullptr;
 
-// List of all plugins that can support offloading.
-static const char *RTLNames[] = {ENABLED_OFFLOAD_PLUGINS};
-
 Expected<std::unique_ptr<PluginAdaptorTy>>
 PluginAdaptorTy::create(const std::string &Name) {
   DP("Attempting to load library '%s'...\n", Name.c_str());
@@ -95,17 +92,19 @@ void PluginManager::init() {
 
   // Attempt to open all the plugins and, if they exist, check if the interface
   // is correct and if they are supporting any devices.
-  for (const char *Name : RTLNames) {
-    auto PluginAdaptorOrErr =
-        PluginAdaptorTy::create(std::string(Name) + ".so");
-    if (!PluginAdaptorOrErr) {
-      [[maybe_unused]] std::string InfoMsg =
-          toString(PluginAdaptorOrErr.takeError());
-      DP("%s", InfoMsg.c_str());
-    } else {
-      PluginAdaptors.push_back(std::move(*PluginAdaptorOrErr));
-    }
-  }
+#define PLUGIN_TARGET(Name)                                                    \
+  do {                                                                         \
+    auto PluginAdaptorOrErr =                                                  \
+        PluginAdaptorTy::create("libomptarget.rtl." #Name ".so");              \
+    if (!PluginAdaptorOrErr) {                                                 \
+      [[maybe_unused]] std::string InfoMsg =                                   \
+          toString(PluginAdaptorOrErr.takeError());                            \
+      DP("%s", InfoMsg.c_str());                                               \
+    } else {                                                                   \
+      PluginAdaptors.push_back(std::move(*PluginAdaptorOrErr));                \
+    }                                                                          \
+  } while (false);
+#include "Shared/Targets.def"
 
   DP("RTLs loaded!\n");
 }
