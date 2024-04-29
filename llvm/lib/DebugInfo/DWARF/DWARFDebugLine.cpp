@@ -1386,9 +1386,10 @@ bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
       FirstRowIndex = findRowInSeq(CurSeq, Address);
 
     // Figure out the last row in the range.
+    // end_sequence tags can be at EndAddr
     uint32_t LastRowIndex =
-        findRowInSeq(CurSeq, {EndAddr - 1, Address.SectionIndex});
-    if (LastRowIndex == UnknownRowIndex)
+        findRowInSeq(CurSeq, {EndAddr, Address.SectionIndex});
+    if (LastRowIndex == UnknownRowIndex || !Rows[LastRowIndex].EndSequence)
       LastRowIndex = CurSeq.LastRowIndex - 1;
 
     assert(FirstRowIndex != UnknownRowIndex);

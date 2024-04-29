@@ -354,6 +354,17 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
   for (uint32_t RowIndex : RowVector) {
     // Take file number and line/column from the row.
     const DWARFDebugLine::Row &Row = CUI.LineTable->Rows[RowIndex];
+
+    // TODO(avillega): With this conditional, functions folded by `icf`
+    // optimizations will only include 1 of all the folded functions. There is
+    // not a clear path forward to have the information of all folded functions
+    // in gsym.
+    if (Row.EndSequence) {
+      // End sequence markers are included for the last address
+      // in a function or the last contiguos address in a sequence.
+      break;
+    }
+
     std::optional<uint32_t> OptFileIdx =
         CUI.DWARFToGSYMFileIndex(Gsym, Row.File);
     if (!OptFileIdx) {
@@ -411,7 +422,7 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
       else
         Out.Report("Non-monotonically increasing addresses",
                    [&](raw_ostream &OS) {
-                     OS << "error: line table has addresses that do not "
+                     OS << "warning: line table has addresses that do not "
                         << "monotonically increase:\n";
                      for (uint32_t RowIndex2 : RowVector)
                        CUI.LineTable->Rows[RowIndex2].dump(OS);
@@ -424,19 +435,9 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
     auto LastLE = FI.OptLineTable->last();
     if (LastLE && LastLE->File == FileIdx && LastLE->Line == Row.Line)
         continue;
-    // Only push a row if it isn't an end sequence. End sequence markers are
-    // included for the last address in a function or the last contiguous
-    // address in a sequence.
-    if (Row.EndSequence) {
-      // End sequence means that the next line entry could have a lower address
-      // that the previous entries. So we clear the previous row so we don't
-      // trigger the line table error about address that do not monotonically
-      // increase.
-      PrevRow = DWARFDebugLine::Row();
-    } else {
-      FI.OptLineTable->push(LE);
-      PrevRow = Row;
-    }
+
+    FI.OptLineTable->push(LE);
+    PrevRow = Row;
   }
   // If not line table rows were added, clear the line table so we don't encode
   // on in the GSYM file.
