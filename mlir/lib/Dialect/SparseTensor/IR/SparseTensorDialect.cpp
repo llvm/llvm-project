@@ -926,7 +926,7 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
   }
   if (getImplicitVal()) {
     auto impVal = getImplicitVal();
-    if (auto typedAttr = llvm::dyn_cast<TypedAttr>(getImplicitVal())) {
+    if (auto typedAttr = llvm::dyn_cast<TypedAttr>(impVal)) {
       Type attrType = typedAttr.getType();
       if (attrType != elementType) {
         return emitError()
