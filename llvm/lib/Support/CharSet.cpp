@@ -57,6 +57,7 @@ static std::optional<text_encoding::id> getKnownCharSet(StringRef CSName) {
   return std::nullopt;
 }
 
+#if defined(HAVE_ICONV) || defined(HAVE_ICU)
 static void HandleOverflow(size_t &Capacity, char *&Output,
                            size_t &OutputLength,
                            SmallVectorImpl<char> &Result) {
@@ -71,6 +72,7 @@ static void HandleOverflow(size_t &Capacity, char *&Output,
   Output = static_cast<char *>(Result.data());
   OutputLength = Capacity;
 }
+#endif
 
 namespace {
 enum ConversionType {
@@ -89,13 +91,13 @@ class CharSetConverterTable : public details::CharSetConverterImplBase {
 public:
   CharSetConverterTable(ConversionType ConvType) : ConvType(ConvType) {}
 
-  std::error_code convert(StringRef Source, SmallVectorImpl<char> &Result,
-                          bool ShouldAutoFlush) const override;
+  std::error_code convert(StringRef Source,
+                          SmallVectorImpl<char> &Result) const override;
 };
 
-std::error_code CharSetConverterTable::convert(StringRef Source,
-                                               SmallVectorImpl<char> &Result,
-                                               bool ShouldAutoFlush) const {
+std::error_code
+CharSetConverterTable::convert(StringRef Source,
+                               SmallVectorImpl<char> &Result) const {
   if (ConvType == IBM1047ToUTF) {
     ConverterEBCDIC::convertToUTF8(Source, Result);
     return std::error_code();
@@ -131,13 +133,13 @@ public:
       ToConvDesc = nullptr;
   }
 
-  std::error_code convert(StringRef Source, SmallVectorImpl<char> &Result,
-                          bool ShouldAutoFlush) const override;
+  std::error_code convert(StringRef Source,
+                          SmallVectorImpl<char> &Result) const override;
 };
 
-std::error_code CharSetConverterICU::convert(StringRef Source,
-                                             SmallVectorImpl<char> &Result,
-                                             bool ShouldAutoFlush) const {
+std::error_code
+CharSetConverterICU::convert(StringRef Source,
+                             SmallVectorImpl<char> &Result) const {
   // Setup the output. We directly write into the SmallVector.
   size_t Capacity = Result.capacity();
   size_t OutputLength = Capacity;
@@ -158,7 +160,7 @@ std::error_code CharSetConverterICU::convert(StringRef Source,
                    &Input, In + InputLength, /*pivotStart=*/NULL,
                    /*pivotSource=*/NULL, /*pivotTarget=*/NULL,
                    /*pivotLimit=*/NULL, /*reset=*/true,
-                   /*flush=*/ShouldAutoFlush, &EC);
+                   /*flush=*/true, &EC);
     if (U_FAILURE(EC)) {
       if (EC == U_BUFFER_OVERFLOW_ERROR &&
           Capacity < std::numeric_limits<size_t>::max()) {
@@ -182,13 +184,13 @@ class CharSetConverterIconv : public details::CharSetConverterImplBase {
 public:
   CharSetConverterIconv(iconv_t ConvDesc) : ConvDesc(ConvDesc) {}
 
-  std::error_code convert(StringRef Source, SmallVectorImpl<char> &Result,
-                          bool ShouldAutoFlush) const override;
+  std::error_code convert(StringRef Source,
+                          SmallVectorImpl<char> &Result) const override;
 };
 
-std::error_code CharSetConverterIconv::convert(StringRef Source,
-                                               SmallVectorImpl<char> &Result,
-                                               bool ShouldAutoFlush) const {
+std::error_code
+CharSetConverterIconv::convert(StringRef Source,
+                               SmallVectorImpl<char> &Result) const {
   // Setup the input. Use nullptr to reset iconv state if input length is zero.
   size_t InputLength = Source.size();
   char *Input = InputLength ? const_cast<char *>(Source.data()) : nullptr;
@@ -226,11 +228,10 @@ std::error_code CharSetConverterIconv::convert(StringRef Source,
   while ((Ret = iconv(ConvDesc, &Input, &InputLength, &Output, &OutputLength)))
     if (auto EC = HandleError(Ret))
       return EC;
-  if (ShouldAutoFlush) {
-    while ((Ret = iconv(ConvDesc, nullptr, nullptr, &Output, &OutputLength)))
-      if (auto EC = HandleError(Ret))
-        return EC;
-  }
+  // Flush the converter
+  while ((Ret = iconv(ConvDesc, nullptr, nullptr, &Output, &OutputLength)))
+    if (auto EC = HandleError(Ret))
+      return EC;
 
   // Re-adjust size to actual size.
   Result.resize(Capacity - OutputLength);

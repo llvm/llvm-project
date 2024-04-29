@@ -46,8 +46,6 @@ static const char CyrillicUTF[] = "\xd0\xaf";
 // IBM-939: Byte 0x0E shifts from single byte to double byte, and 0x0F shifts
 // back.
 static const char EarthUTF[] = "\x45\x61\x72\x74\x68\xe5\x9c\xb0\xe7\x90\x83";
-// Identical to above, except the final character (球) has its last byte taken
-// away from it.
 static const char EarthISO2022[] =
     "\x45\x61\x72\x74\x68\x1B\x24\x42\x43\x4F\x35\x65\x1B\x28\x42";
 static const char EarthIBM939[] =
@@ -60,28 +58,28 @@ TEST(CharSet, FromUTF8) {
 
   CharSetConverter Conv = CharSetConverter::create(text_encoding::id::UTF8,
                                                    text_encoding::id::IBM1047);
-  std::error_code EC = Conv.convert(Src, Dst, true);
+  std::error_code EC = Conv.convert(Src, Dst);
   EXPECT_TRUE(!EC);
   EXPECT_STREQ(HelloE, static_cast<std::string>(Dst).c_str());
   Dst.clear();
 
   // ABC string.
   Src = ABCStrA;
-  EC = Conv.convert(Src, Dst, true);
+  EC = Conv.convert(Src, Dst);
   EXPECT_TRUE(!EC);
   EXPECT_STREQ(ABCStrE, static_cast<std::string>(Dst).c_str());
   Dst.clear();
 
   // Accent string.
   Src = AccentUTF;
-  EC = Conv.convert(Src, Dst, true);
+  EC = Conv.convert(Src, Dst);
   EXPECT_TRUE(!EC);
   EXPECT_STREQ(AccentE, static_cast<std::string>(Dst).c_str());
   Dst.clear();
 
   // Cyrillic string. Results in error because not representable in 1047.
   Src = CyrillicUTF;
-  EC = Conv.convert(Src, Dst, true);
+  EC = Conv.convert(Src, Dst);
   EXPECT_EQ(EC, std::errc::illegal_byte_sequence);
 }
 
@@ -92,21 +90,21 @@ TEST(CharSet, ToUTF8) {
 
   CharSetConverter Conv = CharSetConverter::create(text_encoding::id::IBM1047,
                                                    text_encoding::id::UTF8);
-  std::error_code EC = Conv.convert(Src, Dst, true);
+  std::error_code EC = Conv.convert(Src, Dst);
   EXPECT_TRUE(!EC);
   EXPECT_STREQ(HelloA, static_cast<std::string>(Dst).c_str());
   Dst.clear();
 
   // ABC string.
   Src = ABCStrE;
-  EC = Conv.convert(Src, Dst, true);
+  EC = Conv.convert(Src, Dst);
   EXPECT_TRUE(!EC);
   EXPECT_STREQ(ABCStrA, static_cast<std::string>(Dst).c_str());
   Dst.clear();
 
   // Accent string.
   Src = AccentE;
-  EC = Conv.convert(Src, Dst, true);
+  EC = Conv.convert(Src, Dst);
   EXPECT_TRUE(!EC);
   EXPECT_STREQ(AccentUTF, static_cast<std::string>(Dst).c_str());
 }
@@ -144,11 +142,11 @@ TEST(CharSet, RoundTrip) {
 
   SmallString<99> Dst1Str, Dst2Str, Dst3Str;
 
-  std::error_code EC = ConvToUTF16->convert(StringRef(SrcStr), Dst1Str, true);
+  std::error_code EC = ConvToUTF16->convert(StringRef(SrcStr), Dst1Str);
   EXPECT_TRUE(!EC);
-  EC = ConvToUTF32->convert(Dst1Str, Dst2Str, true);
+  EC = ConvToUTF32->convert(Dst1Str, Dst2Str);
   EXPECT_TRUE(!EC);
-  EC = ConvToEBCDIC->convert(Dst2Str, Dst3Str, true);
+  EC = ConvToEBCDIC->convert(Dst2Str, Dst3Str);
   EXPECT_TRUE(!EC);
   EXPECT_STREQ(SrcStr, static_cast<std::string>(Dst3Str).c_str());
 }
@@ -168,7 +166,7 @@ TEST(CharSet, ShiftState2022) {
   }
 
   // Check that the string is properly converted.
-  std::error_code EC = ConvTo2022->convert(Src, Dst, true);
+  std::error_code EC = ConvTo2022->convert(Src, Dst);
   EXPECT_TRUE(!EC);
   EXPECT_STREQ(EarthISO2022, static_cast<std::string>(Dst).c_str());
 }
@@ -188,7 +186,7 @@ TEST(CharSet, ShiftStateIBM939) {
   }
 
   // Check that the string is properly converted.
-  std::error_code EC = ConvToIBM939->convert(Src, Dst, true);
+  std::error_code EC = ConvToIBM939->convert(Src, Dst);
   EXPECT_TRUE(!EC);
   EXPECT_STREQ(EarthIBM939, static_cast<std::string>(Dst).c_str());
 }

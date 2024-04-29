@@ -36,8 +36,6 @@ public:
   /// Converts a string.
   /// \param[in] Source source string
   /// \param[out] Result container for converted string
-  /// \param[in] ShouldAutoFlush Append shift-back sequence after conversion
-  /// for stateful encodings if true.
   /// \return error code in case something went wrong
   ///
   /// The following error codes can occur, among others:
@@ -55,8 +53,7 @@ public:
   /// will be set to the initial state.
 
   virtual std::error_code convert(StringRef Source,
-                                  SmallVectorImpl<char> &Result,
-                                  bool ShouldAutoFlush) const = 0;
+                                  SmallVectorImpl<char> &Result) const = 0;
 };
 } // namespace details
 
@@ -113,18 +110,15 @@ public:
   /// Converts a string.
   /// \param[in] Source source string
   /// \param[out] Result container for converted string
-  /// \param[in] ShouldAutoFlush Append shift-back sequence after conversion
-  /// for stateful encodings.
   /// \return error code in case something went wrong
-  std::error_code convert(StringRef Source, SmallVectorImpl<char> &Result,
-                          bool ShouldAutoFlush = true) const {
-    return Converter->convert(Source, Result, ShouldAutoFlush);
+  std::error_code convert(StringRef Source,
+                          SmallVectorImpl<char> &Result) const {
+    return Converter->convert(Source, Result);
   }
 
-  ErrorOr<std::string> convert(StringRef Source,
-                               bool ShouldAutoFlush = true) const {
+  ErrorOr<std::string> convert(StringRef Source) const {
     SmallString<100> Result;
-    auto EC = Converter->convert(Source, Result, ShouldAutoFlush);
+    auto EC = Converter->convert(Source, Result);
     if (!EC)
       return std::string(Result);
     return EC;
