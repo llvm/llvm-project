@@ -8,7 +8,7 @@ extern int external_int;
 // CHECK: !DIDerivedType(tag: DW_TAG_LLVM_ptrauth_type,
 // CHECK-SAME:           ptrAuthKey: 1,
 // CHECK-SAME:           ptrAuthIsAddressDiscriminated: false,
-// CHECK-SAME:           ptrAuthExtraDiscriminator: 1234)
+// CHECK-SAME:           ptrAuthExtraDiscriminator: 1234,
 int * __ptrauth(1,0,1234) g1 = &external_int;
 
 struct A {
@@ -23,4 +23,4 @@ void f() {
 // CHECK: !DIDerivedType(tag: DW_TAG_LLVM_ptrauth_type,
 // CHECK-SAME:           ptrAuthKey: 1,
 // CHECK-SAME:           ptrAuthIsAddressDiscriminated: true,
-// CHECK-SAME:           ptrAuthExtraDiscriminator: 1)
+// CHECK-SAME:           ptrAuthExtraDiscriminator: 1,
