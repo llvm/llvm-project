@@ -2378,6 +2378,10 @@ public:
   /// 'riscv_rvv_vector_bits' type attribute as VectorType.
   QualType getRVVEltType(const ASTContext &Ctx) const;
 
+  /// Returns the representative type for the element of a sizeless vector
+  /// builtin type.
+  QualType getSizelessVectorEltType(const ASTContext &Ctx) const;
+
   /// Types are partitioned into 3 broad categories (C99 6.2.5p1):
   /// object types, function types, and incomplete types.
 
