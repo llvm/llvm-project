@@ -1,5 +1,7 @@
+// This is to test the scenario where different HwMode attributes coexist.
 // RUN: llvm-tblgen -gen-register-info -register-info-debug -I %p/../../include %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-REG
 // RUN: llvm-tblgen -gen-subtarget -I %p/../../include %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-SUBTARGET
+
 
 include "llvm/Target/Target.td"
 
@@ -109,6 +111,7 @@ def fooTypeEncA : InstructionEncoding {
 
 
 def foo : Instruction {
+  bits<32> Inst;
   let OutOperandList = (outs);
   let InOperandList = (ins i32imm:$factor);
   let EncodingInfos = EncodingByHwMode<
@@ -126,37 +129,34 @@ def foo : Instruction {
 // CHECK-SUBTARGET:       }
 // CHECK-SUBTARGET-LABEL: unsigned TestTargetGenSubtargetInfo::getHwMode(enum HwModeType type) const {
 // CHECK-SUBTARGET:         unsigned Modes = getHwModeSet();
-// CHECK-SUBTARGET:         if(!Modes)
+// CHECK-SUBTARGET:         if (!Modes)
 // CHECK-SUBTARGET:           return Modes;
 // CHECK-SUBTARGET:         switch (type) {
 // CHECK-SUBTARGET:         case HwMode_Default:
 // CHECK-SUBTARGET:           return llvm::countr_zero(Modes) + 1;
-// CHECK-SUBTARGET:           break;
-// CHECK-SUBTARGET:         case HwMode_ValueType: {
+// CHECK-SUBTARGET:         case HwMode_ValueType:
 // CHECK-SUBTARGET:           Modes &= 3;
 // CHECK-SUBTARGET:           if (!Modes)
 // CHECK-SUBTARGET:             return Modes;
 // CHECK-SUBTARGET:           if (!llvm::has_single_bit<unsigned>(Modes))
 // CHECK-SUBTARGET:             llvm_unreachable("Two or more HwModes for ValueType were found!");
 // CHECK-SUBTARGET:           return llvm::countr_zero(Modes) + 1;
-// CHECK-SUBTARGET:         }
-// CHECK-SUBTARGET:         case HwMode_RegInfo: {
+// CHECK-SUBTARGET:         case HwMode_RegInfo:
 // CHECK-SUBTARGET:           Modes &= 1;
 // CHECK-SUBTARGET:           if (!Modes)
 // CHECK-SUBTARGET:             return Modes;
 // CHECK-SUBTARGET:           if (!llvm::has_single_bit<unsigned>(Modes))
 // CHECK-SUBTARGET:             llvm_unreachable("Two or more HwModes for RegInfo were found!");
 // CHECK-SUBTARGET:           return llvm::countr_zero(Modes) + 1;
-// CHECK-SUBTARGET:         }
-// CHECK-SUBTARGET:         case HwMode_EncodingInfo: {
+// CHECK-SUBTARGET:         case HwMode_EncodingInfo:
 // CHECK-SUBTARGET:           Modes &= 4;
 // CHECK-SUBTARGET:           if (!Modes)
 // CHECK-SUBTARGET:             return Modes;
 // CHECK-SUBTARGET:           if (!llvm::has_single_bit<unsigned>(Modes))
-// CHECK-SUBTARGET:             llvm_unreachable("Two or more HwModes for Encoding were found!");
+// CHECK-SUBTARGET:             llvm_unreachable("Two or more HwModes for EncodingInfo were found!");
 // CHECK-SUBTARGET:           return llvm::countr_zero(Modes) + 1;
 // CHECK-SUBTARGET:         }
-// CHECK-SUBTARGET:         }
+// CHECK-SUBTARGET:         llvm_unreachable("unexpected HwModeType");
 // CHECK-SUBTARGET:         return 0; // should not get here
 // CHECK-SUBTARGET:       }
 

@@ -290,54 +290,44 @@ CodeEmitterGen::getInstructionCases(Record *R, CodeGenTarget &Target) {
     if (auto *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
       const CodeGenHwModes &HWM = Target.getHwModes();
       EncodingInfoByHwMode EBM(DI->getDef(), HWM);
-      unsigned EncodingHwModesInBits = DefaultMode;
-      for (auto &[ModeId, Encoding] : EBM) {
-        // DefaultMode is 0, skip it.
-        if (ModeId != DefaultMode)
-          EncodingHwModesInBits |= (1 << (ModeId - 1));
-      }
 
-      // Get HwModes for this Instr by bitwise AND operations,
-      // and find the table to which this instr and hwmode belong.
+      // Invoke the interface to obtain the HwMode ID controlling the
+      // EncodingInfo for the current subtarget. This interface will
+      // mask off irrelevant HwMode IDs.
       append("      unsigned HwMode = "
              "STI.getHwMode(MCSubtargetInfo::HwMode_EncodingInfo);\n");
-      append("      HwMode &= " + itostr(EncodingHwModesInBits) + ";\n");
-      append("      switch (HwMode) {\n");
-      append("      default: llvm_unreachable(\"Unknown hardware mode!\"); "
-             "break;\n");
+      Case += "      switch (HwMode) {\n";
+      Case += "      default: llvm_unreachable(\"Unknown hardware mode!\"); "
+              "break;\n";
       for (auto &[ModeId, Encoding] : EBM) {
         if (ModeId == DefaultMode) {
-          append("      case " + itostr(DefaultMode) +
-                 ": InstBitsByHw = InstBits");
+          Case +=
+              "      case " + itostr(DefaultMode) + ": InstBitsByHw = InstBits";
         } else {
-          append("      case " + itostr(1 << (ModeId - 1)) +
-                 ": InstBitsByHw = InstBits_" +
-                 std::string(HWM.getMode(ModeId).Name));
+          Case += "      case " + itostr(ModeId) +
+                  ": InstBitsByHw = InstBits_" +
+                  std::string(HWM.getMode(ModeId).Name);
         }
-        append("; break;\n");
+        Case += "; break;\n";
       }
-      append("      };\n");
+      Case += "      };\n";
 
       // We need to remodify the 'Inst' value from the table we found above.
       if (UseAPInt) {
         int NumWords = APInt::getNumWords(BitWidth);
-        append("      Inst = APInt(" + itostr(BitWidth));
-        append(", ArrayRef(InstBitsByHw + opcode * " + itostr(NumWords) + ", " +
-               itostr(NumWords));
-        append("));\n");
-        append("      Value = Inst;\n");
+        Case += "      Inst = APInt(" + itostr(BitWidth);
+        Case += ", ArrayRef(InstBitsByHw + opcode * " + itostr(NumWords) +
+                ", " + itostr(NumWords);
+        Case += "));\n";
+        Case += "      Value = Inst;\n";
       } else {
-        append("      Value = InstBitsByHw[opcode];\n");
+        Case += "      Value = InstBitsByHw[opcode];\n";
       }
 
       append("      switch (HwMode) {\n");
       append("      default: llvm_unreachable(\"Unhandled HwMode\");\n");
       for (auto &[ModeId, Encoding] : EBM) {
-        if (ModeId == DefaultMode) {
-          append("      case " + itostr(DefaultMode) + ": {\n");
-        } else {
-          append("      case " + itostr(1 << (ModeId - 1)) + ": {\n");
-        }
+        append("      case " + itostr(ModeId) + ": {\n");
         addInstructionCasesForEncoding(R, Encoding, Target, Case,
                                        BitOffsetCase);
         append("      break;\n");
@@ -430,13 +420,13 @@ void CodeEmitterGen::emitInstructionBaseValues(
         if (EBM.hasMode(HwMode)) {
           EncodingDef = EBM.get(HwMode);
         } else {
-          // If this Instr dosen't have this HwMode, just choose
-          // the encoding from the first HwMode. Otherwise, the encoding
-          // info would be empty.
-          for (auto &[ModeId, Encoding] : EBM) {
-            EncodingDef = Encoding;
-            break;
-          }
+          // If the HwMode does not match, then Encoding '0'
+          // should be generated.
+          APInt Value(BitWidth, 0);
+          o << "    ";
+          emitInstBits(o, Value);
+          o << "," << '\t' << "// " << R->getName() << "\n";
+          continue;
         }
       }
     }

@@ -1782,7 +1782,7 @@ void SubtargetEmitter::EmitHwModeCheck(const std::string &ClassName,
     return;
 
   // Collect all HwModes and related features defined in the TD files,
-  // and store them in bit format.
+  // and store them as a bit set.
   unsigned ValueTypeModes = 0;
   unsigned RegInfoModes = 0;
   unsigned EncodingInfoModes = 0;
@@ -1803,7 +1803,7 @@ void SubtargetEmitter::EmitHwModeCheck(const std::string &ClassName,
 
   // Start emitting for getHwModeSet().
   OS << "unsigned " << ClassName << "::getHwModeSet() const {\n";
-  OS << "  // Collect HwModes and store them in bits\n";
+  OS << "  // Collect HwModes and store them as a bit set.\n";
   OS << "  unsigned Modes = 0;\n";
   for (unsigned M = 1, NumModes = CGH.getNumModeIds(); M != NumModes; ++M) {
     const HwMode &HM = CGH.getMode(M);
@@ -1813,35 +1813,29 @@ void SubtargetEmitter::EmitHwModeCheck(const std::string &ClassName,
   OS << "  return Modes;\n}\n";
   // End emitting for getHwModeSet().
 
+  auto handlePerMode = [&](std::string ModeType, unsigned ModeInBitSet) {
+    OS << "  case HwMode_" << ModeType << ":\n"
+       << "    Modes &= " << ModeInBitSet << ";\n"
+       << "    if (!Modes)\n      return Modes;\n"
+       << "    if (!llvm::has_single_bit<unsigned>(Modes))\n"
+       << "      llvm_unreachable(\"Two or more HwModes for " << ModeType
+       << " were found!\");\n"
+       << "    return llvm::countr_zero(Modes) + 1;\n";
+  };
+
   // Start emitting for getHwMode().
   OS << "unsigned " << ClassName
      << "::getHwMode(enum HwModeType type) const {\n";
-  OS << "  unsigned Modes = getHwModeSet();\n";
-  OS << "\n  if(!Modes)\n    return Modes;\n\n";
+  OS << "  unsigned Modes = getHwModeSet();\n\n";
+  OS << "  if (!Modes)\n    return Modes;\n\n";
   OS << "  switch (type) {\n";
-  OS << "  case HwMode_Default:\n    return llvm::countr_zero(Modes) + 1;\n"
-     << "    break;\n";
-  OS << "  case HwMode_ValueType: {\n    Modes &= " << ValueTypeModes << ";\n"
-     << "    if (!Modes)\n      return Modes;\n"
-     << "    if (!llvm::has_single_bit<unsigned>(Modes))\n"
-     << "      llvm_unreachable(\"Two or more HwModes for ValueType were "
-        "found!\");\n"
-     << "    return llvm::countr_zero(Modes) + 1;\n  }\n";
-  OS << "  case HwMode_RegInfo: {\n    Modes &= " << RegInfoModes << ";\n"
-     << "    if (!Modes)\n      return Modes;\n"
-     << "    if (!llvm::has_single_bit<unsigned>(Modes))\n"
-     << "      llvm_unreachable(\"Two or more HwModes for RegInfo were "
-        "found!\");\n"
-     << "    return llvm::countr_zero(Modes) + 1;\n  }\n";
-  OS << "  case HwMode_EncodingInfo: {\n    Modes &= " << EncodingInfoModes
-     << ";\n"
-     << "    if (!Modes)\n      return Modes;\n"
-     << "    if (!llvm::has_single_bit<unsigned>(Modes))\n"
-     << "      llvm_unreachable(\"Two or more HwModes for Encoding were "
-        "found!\");\n"
-     << "    return llvm::countr_zero(Modes) + 1;\n  }\n";
+  OS << "  case HwMode_Default:\n    return llvm::countr_zero(Modes) + 1;\n";
+  handlePerMode("ValueType", ValueTypeModes);
+  handlePerMode("RegInfo", RegInfoModes);
+  handlePerMode("EncodingInfo", EncodingInfoModes);
   OS << "  }\n";
-  OS << "  return 0; // should not get here\n}\n";
+  OS << "  llvm_unreachable(\"unexpected HwModeType\");\n"
+     << "  return 0; // should not get here\n}\n";
   // End emitting for getHwMode().
 }
 

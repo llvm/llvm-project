@@ -240,10 +240,14 @@ public:
     return ProcFeatures;
   }
 
-  /// HwMode ID will be stored as bits, allowing users to pull the specific
-  /// HwMode ID (like RegInfo HwMode ID) from the bits as needed. This enables
-  /// users to control multiple features with one hwmode (as previously) or use
-  /// different hwmodes to control different features.
+  /// HwMode IDs are stored and accessed in a bit set format, enabling
+  /// users to efficiently retrieve specific IDs, such as the RegInfo
+  /// HwMode ID, from the set as required. Using this approach, various
+  /// types of HwMode IDs can be added to a subtarget to manage different
+  /// attributes within that subtarget, significantly enhancing the
+  /// scalability and usability of HwMode. Moreover, to ensure compatibility,
+  /// this method also supports controlling multiple attributes with a single
+  /// HwMode ID, just as was done previously.
   enum HwModeType {
     HwMode_Default,   // Return the smallest HwMode ID of current subtarget.
     HwMode_ValueType, // Return the HwMode ID that controls the ValueType.
@@ -252,8 +256,13 @@ public:
     HwMode_EncodingInfo // Return the HwMode ID that controls the EncodingInfo.
   };
 
+  /// Return a bit set containing all HwMode IDs of the current subtarget.
   virtual unsigned getHwModeSet() const { return 0; }
 
+  /// HwMode ID corresponding to the 'type' parameter is retrieved from the
+  /// HwMode bit set of the current subtarget. It’s important to note that if
+  /// the current subtarget possesses two HwMode IDs and both control a single
+  /// attribute (such as RegInfo), this interface will result in an error.
   virtual unsigned getHwMode(enum HwModeType type = HwMode_Default) const {
     return 0;
   }
