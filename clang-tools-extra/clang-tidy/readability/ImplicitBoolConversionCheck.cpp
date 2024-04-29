@@ -50,7 +50,9 @@ StringRef getZeroLiteralToCompareWithForType(CastKind CastExprKind,
 
   case CK_PointerToBoolean:
   case CK_MemberPointerToBoolean: // Fall-through on purpose.
-    return Context.getLangOpts().CPlusPlus11 ? "nullptr" : "0";
+    return (Context.getLangOpts().CPlusPlus11 || Context.getLangOpts().C23)
+               ? "nullptr"
+               : "0";
 
   default:
     llvm_unreachable("Unexpected cast kind");

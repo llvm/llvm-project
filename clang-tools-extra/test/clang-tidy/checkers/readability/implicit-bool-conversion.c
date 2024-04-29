@@ -158,7 +158,7 @@ void implicitConversionToBoolSimpleCases() {
   int* pointer = nullptr;
   functionTakingBool(pointer);
   // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: implicit conversion 'int *' -> 'bool'
-  // CHECK-FIXES: functionTakingBool(pointer != 0);
+  // CHECK-FIXES: functionTakingBool(pointer != nullptr);
 }
 
 void implicitConversionToBoolInSingleExpressions() {
@@ -184,7 +184,7 @@ void implicitConversionToBoolInSingleExpressions() {
   bool boolComingFromPointer;
   boolComingFromPointer = pointer;
   // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: implicit conversion 'int *' -> 'bool'
-  // CHECK-FIXES: boolComingFromPointer = (pointer != 0);
+  // CHECK-FIXES: boolComingFromPointer = (pointer != nullptr);
 }
 
 void implicitConversionToBoolInComplexExpressions() {
