@@ -36,7 +36,7 @@ class DXContainerGlobals : public llvm::ModulePass {
   GlobalVariable *computeShaderHash(Module &M);
   GlobalVariable *buildSingature(Module &M, Signature &Sig, StringRef Name,
                                  StringRef SectionName);
-  void addSingature(Module &M, SmallVector<GlobalValue *> &Globals, Triple &TT);
+  void addSingature(Module &M, SmallVector<GlobalValue *> &Globals);
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -62,8 +62,7 @@ bool DXContainerGlobals::runOnModule(Module &M) {
   llvm::SmallVector<GlobalValue *> Globals;
   Globals.push_back(getFeatureFlags(M));
   Globals.push_back(computeShaderHash(M));
-  Triple TT(M.getTargetTriple());
-  addSingature(M, Globals, TT);
+  addSingature(M, Globals);
   appendToCompilerUsed(M, Globals);
   return true;
 }
@@ -133,8 +132,7 @@ GlobalVariable *DXContainerGlobals::buildSingature(Module &M, Signature &Sig,
 }
 
 void DXContainerGlobals::addSingature(Module &M,
-                                      SmallVector<GlobalValue *> &Globals,
-                                      Triple &TT) {
+                                      SmallVector<GlobalValue *> &Globals) {
   Signature InputSig;
   Signature OutputSig;
   // FIXME: support graphics shader.
