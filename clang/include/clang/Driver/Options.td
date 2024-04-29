@@ -603,7 +603,6 @@ class MarshallingInfoVisibility<KeyPathAndMacro kpm, code default>
 // Key paths that are constant during parsing of options with the same key path prefix.
 defvar cplusplus = LangOpts<"CPlusPlus">;
 defvar cpp11 = LangOpts<"CPlusPlus11">;
-defvar cpp14 = LangOpts<"CPlusPlus14">;
 defvar cpp17 = LangOpts<"CPlusPlus17">;
 defvar cpp20 = LangOpts<"CPlusPlus20">;
 defvar c99 = LangOpts<"C99">;
@@ -3371,9 +3370,10 @@ defm relaxed_template_template_args : BoolFOption<"relaxed-template-template-arg
           "Enable C++17 relaxed template template argument matching">,
   NegFlag<SetFalse>>;
 defm sized_deallocation : BoolFOption<"sized-deallocation",
-  LangOpts<"SizedDeallocation">, Default<cpp14.KeyPath>,
-  PosFlag<SetTrue, [], [], "Enable C++14 sized global deallocation functions">,
-  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
+  LangOpts<"SizedDeallocation">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enable C++14 sized global deallocation functions">,
+  NegFlag<SetFalse>>;
 defm aligned_allocation : BoolFOption<"aligned-allocation",
   LangOpts<"AlignedAllocation">, Default<cpp17.KeyPath>,
   PosFlag<SetTrue, [], [ClangOption], "Enable C++17 aligned allocation functions">,
@@ -4881,6 +4881,8 @@ def msimd128 : Flag<["-"], "msimd128">, Group<m_wasm_Features_Group>;
 def mno_simd128 : Flag<["-"], "mno-simd128">, Group<m_wasm_Features_Group>;
 def mrelaxed_simd : Flag<["-"], "mrelaxed-simd">, Group<m_wasm_Features_Group>;
 def mno_relaxed_simd : Flag<["-"], "mno-relaxed-simd">, Group<m_wasm_Features_Group>;
+def mhalf_precision : Flag<["-"], "mhalf-precision">, Group<m_wasm_Features_Group>;
+def mno_half_precision : Flag<["-"], "mno-half-precision">, Group<m_wasm_Features_Group>;
 def mnontrapping_fptoint : Flag<["-"], "mnontrapping-fptoint">, Group<m_wasm_Features_Group>;
 def mno_nontrapping_fptoint : Flag<["-"], "mno-nontrapping-fptoint">, Group<m_wasm_Features_Group>;
 def msign_ext : Flag<["-"], "msign-ext">, Group<m_wasm_Features_Group>;

@@ -924,8 +924,31 @@ bool ByteCodeExprGen<Emitter>::VisitImplicitValueInitExpr(const ImplicitValueIni
   if (std::optional<PrimType> T = classify(QT))
     return this->visitZeroInitializer(*T, QT, E);
 
-  if (QT->isRecordType())
-    return false;
+  if (QT->isRecordType()) {
+    const RecordDecl *RD = QT->getAsRecordDecl();
+    assert(RD);
+    if (RD->isInvalidDecl())
+      return false;
+    if (RD->isUnion()) {
+      // C++11 [dcl.init]p5: If T is a (possibly cv-qualified) union type, the
+      // object's first non-static named data member is zero-initialized
+      // FIXME
+      return false;
+    }
+
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
+        CXXRD && CXXRD->getNumVBases() > 0) {
+      // TODO: Diagnose.
+      return false;
+    }
+
+    const Record *R = getRecord(QT);
+    if (!R)
+      return false;
+
+    assert(Initializing);
+    return this->visitZeroRecordInitializer(R, E);
+  }
 
   if (QT->isIncompleteArrayType())
     return true;
@@ -2349,41 +2372,8 @@ bool ByteCodeExprGen<Emitter>::VisitCXXUuidofExpr(const CXXUuidofExpr *E) {
 
   assert(V.isStruct());
   assert(V.getStructNumBases() == 0);
-  // FIXME: This could be useful in visitAPValue, too.
-  for (unsigned I = 0, N = V.getStructNumFields(); I != N; ++I) {
-    const APValue &F = V.getStructField(I);
-    const Record::Field *RF = R->getField(I);
-
-    if (F.isInt()) {
-      PrimType T = classifyPrim(RF->Decl->getType());
-      if (!this->visitAPValue(F, T, E))
-        return false;
-      if (!this->emitInitField(T, RF->Offset, E))
-        return false;
-    } else if (F.isArray()) {
-      assert(RF->Desc->isPrimitiveArray());
-      const auto *ArrType = RF->Decl->getType()->getAsArrayTypeUnsafe();
-      PrimType ElemT = classifyPrim(ArrType->getElementType());
-      assert(ArrType);
-
-      if (!this->emitDupPtr(E))
-        return false;
-      if (!this->emitGetPtrField(RF->Offset, E))
-        return false;
-
-      for (unsigned A = 0, AN = F.getArraySize(); A != AN; ++A) {
-        if (!this->visitAPValue(F.getArrayInitializedElt(A), ElemT, E))
-          return false;
-        if (!this->emitInitElem(ElemT, A, E))
-          return false;
-      }
-
-      if (!this->emitPopPtr(E))
-        return false;
-    } else {
-      assert(false && "I don't think this should be possible");
-    }
-  }
+  if (!this->visitAPValueInitializer(V, E))
+    return false;
 
   return this->emitFinishInit(E);
 }
@@ -2949,6 +2939,54 @@ bool ByteCodeExprGen<Emitter>::visitAPValue(const APValue &Val,
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::visitAPValueInitializer(const APValue &Val,
+                                                       const Expr *E) {
+  if (Val.isStruct()) {
+    const Record *R = this->getRecord(E->getType());
+    assert(R);
+
+    for (unsigned I = 0, N = Val.getStructNumFields(); I != N; ++I) {
+      const APValue &F = Val.getStructField(I);
+      const Record::Field *RF = R->getField(I);
+
+      if (F.isInt()) {
+        PrimType T = classifyPrim(RF->Decl->getType());
+        if (!this->visitAPValue(F, T, E))
+          return false;
+        if (!this->emitInitField(T, RF->Offset, E))
+          return false;
+      } else if (F.isArray()) {
+        assert(RF->Desc->isPrimitiveArray());
+        const auto *ArrType = RF->Decl->getType()->getAsArrayTypeUnsafe();
+        PrimType ElemT = classifyPrim(ArrType->getElementType());
+        assert(ArrType);
+
+        if (!this->emitDupPtr(E))
+          return false;
+        if (!this->emitGetPtrField(RF->Offset, E))
+          return false;
+
+        for (unsigned A = 0, AN = F.getArraySize(); A != AN; ++A) {
+          if (!this->visitAPValue(F.getArrayInitializedElt(A), ElemT, E))
+            return false;
+          if (!this->emitInitElem(ElemT, A, E))
+            return false;
+        }
+
+        if (!this->emitPopPtr(E))
+          return false;
+      } else {
+        assert(false && "I don't think this should be possible");
+      }
+    }
+    return true;
+  }
+  // TODO: Other types.
+
+  return false;
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
   const Function *Func = getFunction(E->getDirectCallee());
   if (!Func)
@@ -3469,9 +3507,17 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   } else if (const auto *FuncDecl = dyn_cast<FunctionDecl>(D)) {
     const Function *F = getFunction(FuncDecl);
     return F && this->emitGetFnPtr(F, E);
-  } else if (isa<TemplateParamObjectDecl>(D)) {
-    if (std::optional<unsigned> Index = P.getOrCreateGlobal(D))
-      return this->emitGetPtrGlobal(*Index, E);
+  } else if (const auto *TPOD = dyn_cast<TemplateParamObjectDecl>(D)) {
+    if (std::optional<unsigned> Index = P.getOrCreateGlobal(D)) {
+      if (!this->emitGetPtrGlobal(*Index, E))
+        return false;
+      if (std::optional<PrimType> T = classify(E->getType())) {
+        if (!this->visitAPValue(TPOD->getValue(), *T, E))
+          return false;
+        return this->emitInitGlobal(*T, *Index, E);
+      }
+      return this->visitAPValueInitializer(TPOD->getValue(), E);
+    }
     return false;
   }
 
