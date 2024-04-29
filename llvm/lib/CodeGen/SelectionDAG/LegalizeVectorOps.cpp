@@ -963,13 +963,6 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
-  case ISD::VP_CTTZ_ELTS:
-  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
-    if (SDValue Expanded = TLI.expandVPCTTZElements(Node, DAG)) {
-      Results.push_back(Expanded);
-      return;
-    }
-    break;
   case ISD::FSHL:
   case ISD::VP_FSHL:
   case ISD::FSHR:
