@@ -28,8 +28,13 @@ using namespace llvm::dxil;
 namespace {
 class DXContainerGlobals : public llvm::ModulePass {
 
+  GlobalVariable *buildContainerGlobal(Module &M, Constant *Content,
+                                       StringRef Name, StringRef SectionName);
   GlobalVariable *getFeatureFlags(Module &M);
   GlobalVariable *computeShaderHash(Module &M);
+  GlobalVariable *buildInputSingature(Module &M, Constant *Content);
+  GlobalVariable *buildOutputSingature(Module &M, Constant *Content);
+  void addSingature(Module &M, SmallVector<GlobalValue *> &Globals, Triple &TT);
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -55,7 +60,8 @@ bool DXContainerGlobals::runOnModule(Module &M) {
   llvm::SmallVector<GlobalValue *> Globals;
   Globals.push_back(getFeatureFlags(M));
   Globals.push_back(computeShaderHash(M));
-
+  Triple TT(M.getTargetTriple());
+  addSingature(M, Globals, TT);
   appendToCompilerUsed(M, Globals);
   return true;
 }
@@ -102,6 +108,50 @@ GlobalVariable *DXContainerGlobals::computeShaderHash(Module &M) {
   GV->setSection("HASH");
   GV->setAlignment(Align(4));
   return GV;
+}
+
+GlobalVariable *DXContainerGlobals::buildContainerGlobal(
+    Module &M, Constant *Content, StringRef Name, StringRef SectionName) {
+  auto *GV = new llvm::GlobalVariable(
+      M, Content->getType(), true, GlobalValue::PrivateLinkage, Content, Name);
+  GV->setSection(SectionName);
+  GV->setAlignment(Align(4));
+  return GV;
+}
+
+GlobalVariable *DXContainerGlobals::buildInputSingature(Module &M,
+                                                        Constant *Content) {
+  return buildContainerGlobal(M, Content, "dx.isg1", "ISG1");
+}
+GlobalVariable *DXContainerGlobals::buildOutputSingature(Module &M,
+                                                         Constant *Content) {
+  return buildContainerGlobal(M, Content, "dx.osg1", "OSG1");
+}
+
+void DXContainerGlobals::addSingature(Module &M,
+                                      SmallVector<GlobalValue *> &Globals,
+                                      Triple &TT) {
+  dxbc::ProgramSignatureHeader Sig;
+  Sig.ParamCount = 0;
+  Sig.FirstParamOffset = sizeof(dxbc::ProgramSignatureHeader);
+  Type *Int32Ty = Type::getInt32Ty(M.getContext());
+  Constant *InputSig = nullptr;
+  Constant *OutputSig = nullptr;
+  switch (TT.getEnvironment()) {
+  case Triple::EnvironmentType::Compute:
+    InputSig = ConstantStruct::get(
+        StructType::get(Int32Ty, Int32Ty),
+        {ConstantInt::get(M.getContext(), APInt(32, Sig.ParamCount)),
+         ConstantInt::get(M.getContext(), APInt(32, Sig.FirstParamOffset))});
+    OutputSig = InputSig;
+    break;
+    // FIXME: support graphics shader.
+    //  see issue https://github.com/llvm/llvm-project/issues/90504.
+  default:
+    return;
+  }
+  Globals.emplace_back(buildInputSingature(M, InputSig));
+  Globals.emplace_back(buildOutputSingature(M, OutputSig));
 }
 
 char DXContainerGlobals::ID = 0;
