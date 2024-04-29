@@ -1478,11 +1478,9 @@ void RewriteInstance::registerFragments() {
     return Sec.sh_type == ELF::SHT_SYMTAB;
   });
   assert(SymTab);
-  if (!SymTab->sh_info) {
-    BC->errs() << "BOLT-ERROR: malformed SYMTAB sh_info\n";
-    exit(1);
-  }
-  ELFSymbolRef FirstGlobal = ELF64LEFile->toSymbolRef(SymTab, SymTab->sh_info);
+  // Symtab sh_info contains the value one greater than the symbol table index
+  // of the last local symbol.
+  ELFSymbolRef LocalSymEnd = ELF64LEFile->toSymbolRef(SymTab, SymTab->sh_info);
 
   for (auto &[ParentName, BF] : AmbiguousFragments) {
     const uint64_t Address = BF->getAddress();
@@ -1505,7 +1503,7 @@ void RewriteInstance::registerFragments() {
       exit(1);
     }
 
-    ELFSymbolRef StopSymbol = FirstGlobal;
+    ELFSymbolRef StopSymbol = LocalSymEnd;
     if (FSI != FileSymbols.end())
       StopSymbol = *FSI;
 
