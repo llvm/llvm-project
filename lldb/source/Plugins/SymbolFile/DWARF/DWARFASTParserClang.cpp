@@ -869,6 +869,7 @@ DWARFASTParserClang::GetDIEClassTemplateParams(const DWARFDIE &die) {
   if (llvm::StringRef(die.GetName()).contains("<"))
     return ConstString();
 
+  //std::cerr << "rebuilding template params for " << die.GetDIE()->GetOffset() << "\n";
 #if 1
   std::string R;
   llvm::raw_string_ostream OS(R);
@@ -1633,6 +1634,7 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
   const char *name = die.GetName();
   if (!name)
     return "";
+#if 0
   static int indent = 0;
   std::cerr << std::string(indent, ' ') << "starting qualified name for: " << name << '\n';
   auto &FS = die.GetCU()->GetSymbolFileDWARF().GetObjectFile()->GetFileSpec();
@@ -1642,6 +1644,7 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
             << FS.GetFilename().AsCString("") << ':' << std::hex
             << die.GetDIE()->GetOffset() << '\n';
   ++indent;
+#endif
   std::string qualified_name;
   DWARFDIE parent_decl_ctx_die = die.GetParentDeclContextDIE();
   // TODO: change this to get the correct decl context parent....
@@ -1687,8 +1690,10 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
   qualified_name.append(name);
   qualified_name.append(GetDIEClassTemplateParams(die).AsCString(""));
 
+#if 0
   --indent;
   std::cerr << std::string(indent, ' ') << "computed qualified name: " << qualified_name << '\n';
+#endif
 
   return qualified_name;
 }
