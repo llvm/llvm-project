@@ -209,7 +209,7 @@
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32q -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-LETTER %s
 // RV32-LETTER: error: invalid arch name 'rv32q',
-// RV32-LETTER: first letter should be 'e', 'i' or 'g'
+// RV32-LETTER: first letter after 'rv32' should be 'e', 'i' or 'g'
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32imcq -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ORDER %s
@@ -239,12 +239,12 @@
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32xabc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32X %s
 // RV32X: error: invalid arch name 'rv32xabc',
-// RV32X: first letter should be 'e', 'i' or 'g'
+// RV32X: first letter after 'rv32' should be 'e', 'i' or 'g'
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32sabc -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32S %s
 // RV32S: error: invalid arch name 'rv32sabc',
-// RV32S: first letter should be 'e', 'i' or 'g'
+// RV32S: first letter after 'rv32' should be 'e', 'i' or 'g'
 
 // RUN: not %clang --target=riscv32-unknown-elf -march=rv32ix -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32X-NAME %s
