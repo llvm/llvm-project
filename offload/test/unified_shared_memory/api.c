@@ -9,11 +9,6 @@
 #include <omp.h>
 #include <stdio.h>
 
-// ---------------------------------------------------------------------------
-// Various definitions copied from OpenMP RTL
-
-extern void __tgt_register_requires(int64_t);
-
 // End of definitions copied from OpenMP RTL.
 // ---------------------------------------------------------------------------
 
@@ -31,10 +26,6 @@ void init(int A[], int B[], int C[]) {
 
 int main(int argc, char *argv[]) {
   const int device = omp_get_default_device();
-
-  // Manual registration of requires flags for Clang versions
-  // that do not support requires.
-  __tgt_register_requires(8);
 
   // CHECK: Initial device: [[INITIAL_DEVICE:[0-9]+]]
   printf("Initial device: %d\n", omp_get_initial_device());

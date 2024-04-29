@@ -72,7 +72,7 @@ struct LSPServer {
 
   /// An outgoing notification used to send diagnostics to the client when they
   /// are ready to be processed.
-  OutgoingMessage<PublishDiagnosticsParams> publishDiagnostics;
+  OutgoingNotification<PublishDiagnosticsParams> publishDiagnostics;
 
   /// Used to indicate that the 'shutdown' request was received from the
   /// Language Server client.
