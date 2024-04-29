@@ -78,6 +78,9 @@ void initializeRISCVRedundantCopyEliminationPass(PassRegistry &);
 FunctionPass *createRISCVMoveMergePass();
 void initializeRISCVMoveMergePass(PassRegistry &);
 
+FunctionPass *createRISCVMIPeepholeOptPass();
+void initializeRISCVMIPeepholeOptPass(PassRegistry &);
+
 FunctionPass *createRISCVPushPopOptimizationPass();
 void initializeRISCVPushPopOptPass(PassRegistry &);
 
