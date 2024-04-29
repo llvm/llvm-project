@@ -1078,8 +1078,7 @@ define i1 @trunc_nuw_xor(i8 %x, i8 %y) {
 
 define i1 @trunc_nsw_xor(i8 %x, i8 %y) {
 ; CHECK-LABEL: @trunc_nsw_xor(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = trunc nsw i8 [[XOR]] to i1
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %xor = xor i8 %x, %y

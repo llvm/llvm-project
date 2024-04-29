@@ -771,7 +771,7 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       }
     }
 
-    if (Trunc.hasNoUnsignedWrap()) {
+    if (Trunc.hasNoUnsignedWrap() || Trunc.hasNoSignedWrap()) {
       Value *X, *Y;
       if (match(Src, m_Xor(m_Value(X), m_Value(Y))))
         return new ICmpInst(ICmpInst::ICMP_NE, X, Y);
