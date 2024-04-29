@@ -395,14 +395,9 @@ private:
     InstIdx++;
   }
 
-  void serialiseDeoptSafepointInst(CallInst *I, ValueLoweringMap &VLMap,
-                                   unsigned BBIdx, unsigned &InstIdx) {
-    serialiseOpcode(OpCodeDeoptSafepoint);
+  void serialiseStackmapCall(CallInst *I, ValueLoweringMap &VLMap) {
     // stackmap ID:
     serialiseOperand(I, VLMap, I->getOperand(0));
-
-    // num_shadow_bytes:
-    serialiseOperand(I, VLMap, I->getOperand(1));
 
     // num_lives:
     OutStreamer.emitInt32(I->arg_size() - 2);
@@ -411,8 +406,6 @@ private:
     for (unsigned OI = 2; OI < I->arg_size(); OI++) {
       serialiseOperand(I, VLMap, I->getOperand(OI));
     }
-    InstIdx++;
-    return;
   }
 
   void serialiseCallInst(CallInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
@@ -427,6 +420,13 @@ private:
         // Non-empty asm block. We can't ignore it.
         serialiseUnimplementedInstruction(I, VLMap, BBIdx, InstIdx);
       }
+      return;
+    }
+
+    // Stackmap calls are serialised on-demand by folding them into the `call`
+    // or `condbr` instruction which they belong to.
+    if (I->getCalledFunction()->isIntrinsic() &&
+        I->getIntrinsicID() == Intrinsic::experimental_stackmap) {
       return;
     }
 
@@ -448,13 +448,6 @@ private:
     //   call i32 (i32, ...) @f(1i32, 2i32);
     assert(I->getCalledFunction());
 
-    // special case for llvm.experimental.stackmap intrinsic.
-    if (I->getCalledFunction()->isIntrinsic() &&
-        I->getIntrinsicID() == Intrinsic::experimental_stackmap) {
-      serialiseDeoptSafepointInst(I, VLMap, BBIdx, InstIdx);
-      return;
-    }
-
     serialiseOpcode(OpCodeCall);
     // callee:
     OutStreamer.emitSizeT(functionIndex(I->getCalledFunction()));
@@ -464,6 +457,19 @@ private:
     // args:
     for (unsigned OI = 0; OI < I->arg_size(); OI++) {
       serialiseOperand(I, VLMap, I->getOperand(OI));
+    }
+    if (!I->getCalledFunction()->isDeclaration()) {
+      // The next instruction will be the stackmap entry
+      CallInst *SMI = dyn_cast<CallInst>(I->getNextNonDebugInstruction());
+      assert(SMI);
+      assert(SMI->getCalledFunction()->isIntrinsic());
+      assert(SMI->getIntrinsicID() == Intrinsic::experimental_stackmap);
+      // has_safepoint = 1:
+      OutStreamer.emitInt8(1);
+      serialiseStackmapCall(SMI, VLMap);
+    } else {
+      // has_safepoint = 0:
+      OutStreamer.emitInt8(0);
     }
 
     // If the return type is non-void, then this defines a local.
@@ -497,6 +503,12 @@ private:
       serialiseBlockLabel(I->getSuccessor(0));
       // false_bb:
       serialiseBlockLabel(I->getSuccessor(1));
+
+      CallInst *SMI = dyn_cast<CallInst>(I->getPrevNonDebugInstruction());
+      assert(SMI);
+      assert(SMI->getCalledFunction()->isIntrinsic());
+      assert(SMI->getIntrinsicID() == Intrinsic::experimental_stackmap);
+      serialiseStackmapCall(SMI, VLMap);
     }
     InstIdx++;
   }
