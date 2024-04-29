@@ -2992,19 +2992,28 @@ MachineBasicBlock *AArch64TargetLowering::EmitZTInstr(MachineInstr &MI,
 
 MachineBasicBlock *
 AArch64TargetLowering::EmitZAInstr(unsigned Opc, unsigned BaseReg,
-                                   MachineInstr &MI,
-                                   MachineBasicBlock *BB, bool HasTile) const {
+                                   MachineInstr &MI, MachineBasicBlock *BB,
+                                   bool HasTile, bool HasZPROut) const {
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
   MachineInstrBuilder MIB = BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Opc));
   unsigned StartIdx = 0;
 
-  if (HasTile) {
-    MIB.addReg(BaseReg + MI.getOperand(0).getImm(), RegState::Define);
-    MIB.addReg(BaseReg + MI.getOperand(0).getImm());
-    StartIdx = 1;
-  } else
-    MIB.addReg(BaseReg, RegState::Define).addReg(BaseReg);
-
+  if (HasZPROut) {
+    if (HasTile) {
+      MIB.add(MI.getOperand(0)); // Output ZPR
+      MIB.addReg(BaseReg + MI.getOperand(1).getImm(),
+                 RegState::Define);                    // Output ZA Tile
+      MIB.addReg(BaseReg + MI.getOperand(1).getImm()); // Input Za Tile
+      StartIdx = 2;
+    }
+  } else {
+    if (HasTile) {
+      MIB.addReg(BaseReg + MI.getOperand(0).getImm(), RegState::Define);
+      MIB.addReg(BaseReg + MI.getOperand(0).getImm());
+      StartIdx = 1;
+    } else
+      MIB.addReg(BaseReg, RegState::Define).addReg(BaseReg);
+  }
   for (unsigned I = StartIdx; I < MI.getNumOperands(); ++I)
     MIB.add(MI.getOperand(I));
 
@@ -3113,17 +3122,59 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
         TII->get(MI.getOpcode()).TSFlags & AArch64::SMEMatrixTypeMask;
     switch (SMEMatrixType) {
     case (AArch64::SMEMatrixArray):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZA, MI, BB, /*HasTile*/ false);
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZA, MI, BB, /*HasTile*/ false,
+                         /*HasZPROut*/ false);
     case (AArch64::SMEMatrixTileB):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZAB0, MI, BB, /*HasTile*/ true);
+      switch (MI.getOpcode()) {
+      case AArch64::MOVAZ_2ZMI_H_B_PSEUDO:
+      case AArch64::MOVAZ_2ZMI_V_B_PSEUDO:
+      case AArch64::MOVAZ_4ZMI_H_B_PSEUDO:
+      case AArch64::MOVAZ_4ZMI_V_B_PSEUDO:
+        return EmitZAInstr(SMEOrigInstr, AArch64::ZAB0, MI, BB,
+                           /*HasTile*/ true, /*HasZPROut*/ true);
+      default:
+        return EmitZAInstr(SMEOrigInstr, AArch64::ZAB0, MI, BB,
+                           /*HasTile*/ true, /*HasZPROut*/ false);
+      }
     case (AArch64::SMEMatrixTileH):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZAH0, MI, BB, /*HasTile*/ true);
+      switch (MI.getOpcode()) {
+      case AArch64::MOVAZ_2ZMI_H_H_PSEUDO:
+      case AArch64::MOVAZ_2ZMI_V_H_PSEUDO:
+      case AArch64::MOVAZ_4ZMI_H_H_PSEUDO:
+      case AArch64::MOVAZ_4ZMI_V_H_PSEUDO:
+        return EmitZAInstr(SMEOrigInstr, AArch64::ZAH0, MI, BB,
+                           /*HasTile*/ true, /*HasZPROut*/ true);
+      default:
+        return EmitZAInstr(SMEOrigInstr, AArch64::ZAH0, MI, BB,
+                           /*HasTile*/ true, /*HasZPROut*/ false);
+      }
     case (AArch64::SMEMatrixTileS):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZAS0, MI, BB, /*HasTile*/ true);
+      switch (MI.getOpcode()) {
+      case AArch64::MOVAZ_2ZMI_H_S_PSEUDO:
+      case AArch64::MOVAZ_2ZMI_V_S_PSEUDO:
+      case AArch64::MOVAZ_4ZMI_H_S_PSEUDO:
+      case AArch64::MOVAZ_4ZMI_V_S_PSEUDO:
+        return EmitZAInstr(SMEOrigInstr, AArch64::ZAS0, MI, BB,
+                           /*HasTile*/ true, /*HasZPROut*/ true);
+      default:
+        return EmitZAInstr(SMEOrigInstr, AArch64::ZAS0, MI, BB,
+                           /*HasTile*/ true, /*HasZPROut*/ false);
+      }
     case (AArch64::SMEMatrixTileD):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZAD0, MI, BB, /*HasTile*/ true);
+      switch (MI.getOpcode()) {
+      case AArch64::MOVAZ_2ZMI_H_D_PSEUDO:
+      case AArch64::MOVAZ_2ZMI_V_D_PSEUDO:
+      case AArch64::MOVAZ_4ZMI_H_D_PSEUDO:
+      case AArch64::MOVAZ_4ZMI_V_D_PSEUDO:
+        return EmitZAInstr(SMEOrigInstr, AArch64::ZAD0, MI, BB,
+                           /*HasTile*/ true, /*HasZPROut*/ true);
+      default:
+        return EmitZAInstr(SMEOrigInstr, AArch64::ZAD0, MI, BB,
+                           /*HasTile*/ true, /*HasZPROut*/ false);
+      }
     case (AArch64::SMEMatrixTileQ):
-      return EmitZAInstr(SMEOrigInstr, AArch64::ZAQ0, MI, BB, /*HasTile*/ true);
+      return EmitZAInstr(SMEOrigInstr, AArch64::ZAQ0, MI, BB, /*HasTile*/ true,
+                         /*HasZPROut*/ false);
     }
   }
 
@@ -3195,38 +3246,6 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitZero(MI, BB);
   case AArch64::ZERO_T_PSEUDO:
     return EmitZTInstr(MI, BB, AArch64::ZERO_T, /*Op0IsDef=*/true);
-  case AArch64::MOVAZ_2ZMI_H_B_PSEUDO:
-    return EmitTileMovaz(AArch64::MOVAZ_2ZMI_H_B, AArch64::ZAB0, MI, BB);
-  case AArch64::MOVAZ_2ZMI_H_H_PSEUDO:
-    return EmitTileMovaz(AArch64::MOVAZ_2ZMI_H_H, AArch64::ZAH0, MI, BB);
-  case AArch64::MOVAZ_2ZMI_H_S_PSEUDO:
-    return EmitTileMovaz(AArch64::MOVAZ_2ZMI_H_S, AArch64::ZAS0, MI, BB);
-  case AArch64::MOVAZ_2ZMI_H_D_PSEUDO:
-    return EmitTileMovaz(AArch64::MOVAZ_2ZMI_H_D, AArch64::ZAD0, MI, BB);
-  case AArch64::MOVAZ_2ZMI_V_B_PSEUDO:
-    return EmitTileMovaz(AArch64::MOVAZ_2ZMI_V_B, AArch64::ZAB0, MI, BB);
-  case AArch64::MOVAZ_2ZMI_V_H_PSEUDO:
-    return EmitTileMovaz(AArch64::MOVAZ_2ZMI_V_H, AArch64::ZAH0, MI, BB);
-  case AArch64::MOVAZ_2ZMI_V_S_PSEUDO:
-    return EmitTileMovaz(AArch64::MOVAZ_2ZMI_V_S, AArch64::ZAS0, MI, BB);
-  case AArch64::MOVAZ_2ZMI_V_D_PSEUDO:
-    return EmitTileMovaz(AArch64::MOVAZ_2ZMI_V_D, AArch64::ZAD0, MI, BB);
-  case AArch64::MOVAZ_4ZMI_H_B_PSEUDO:
-    return EmitTileMovaz(AArch64::MOVAZ_4ZMI_H_B, AArch64::ZAB0, MI, BB);
-  case AArch64::MOVAZ_4ZMI_H_H_PSEUDO:
-    return EmitTileMovaz(AArch64::MOVAZ_4ZMI_H_H, AArch64::ZAH0, MI, BB);
-  case AArch64::MOVAZ_4ZMI_H_S_PSEUDO:
-    return EmitTileMovaz(AArch64::MOVAZ_4ZMI_H_S, AArch64::ZAS0, MI, BB);
-  case AArch64::MOVAZ_4ZMI_H_D_PSEUDO:
-    return EmitTileMovaz(AArch64::MOVAZ_4ZMI_H_D, AArch64::ZAD0, MI, BB);
-  case AArch64::MOVAZ_4ZMI_V_B_PSEUDO:
-    return EmitTileMovaz(AArch64::MOVAZ_4ZMI_V_B, AArch64::ZAB0, MI, BB);
-  case AArch64::MOVAZ_4ZMI_V_H_PSEUDO:
-    return EmitTileMovaz(AArch64::MOVAZ_4ZMI_V_H, AArch64::ZAH0, MI, BB);
-  case AArch64::MOVAZ_4ZMI_V_S_PSEUDO:
-    return EmitTileMovaz(AArch64::MOVAZ_4ZMI_V_S, AArch64::ZAS0, MI, BB);
-  case AArch64::MOVAZ_4ZMI_V_D_PSEUDO:
-    return EmitTileMovaz(AArch64::MOVAZ_4ZMI_V_D, AArch64::ZAD0, MI, BB);
   }
 }
 

@@ -395,8 +395,8 @@ public:
   template <unsigned MaxIdx, unsigned Scale>
   void SelectMultiVectorMove(SDNode *N, unsigned NumVecs, unsigned BaseReg,
                              unsigned Op);
-  template <unsigned MaxIdx, unsigned Scale>
-  void SelectMultiVectorMoveZ(SDNode *N, unsigned NumVecs, unsigned Op);
+  void SelectMultiVectorMoveZ(SDNode *N, unsigned NumVecs, unsigned Op,
+                              unsigned MaxIdx, unsigned Scale);
   bool SelectAddrModeFrameIndexSVE(SDValue N, SDValue &Base, SDValue &OffImm);
   /// SVE Reg+Imm addressing mode.
   template <int64_t Min, int64_t Max>
@@ -2004,9 +2004,9 @@ void AArch64DAGToDAGISel::SelectMultiVectorMove(SDNode *N, unsigned NumVecs,
   CurDAG->RemoveDeadNode(N);
 }
 
-template <unsigned MaxIdx, unsigned Scale>
 void AArch64DAGToDAGISel::SelectMultiVectorMoveZ(SDNode *N, unsigned NumVecs,
-                                                 unsigned Op) {
+                                                 unsigned Op, unsigned MaxIdx,
+                                                 unsigned Scale) {
 
   SDValue SliceBase = N->getOperand(3);
   SDValue Base, Offset;
@@ -5276,68 +5276,68 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     }
     case Intrinsic::aarch64_sme_readz_horiz_x2: {
       if (VT == MVT::nxv16i8) {
-        SelectMultiVectorMoveZ<14, 2>(Node, 2, AArch64::MOVAZ_2ZMI_H_B_PSEUDO);
+        SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_H_B_PSEUDO, 14, 2);
         return;
       } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
                  VT == MVT::nxv8bf16) {
-        SelectMultiVectorMoveZ<6, 2>(Node, 2, AArch64::MOVAZ_2ZMI_H_H_PSEUDO);
+        SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_H_H_PSEUDO, 6, 2);
         return;
       } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-        SelectMultiVectorMoveZ<2, 2>(Node, 2, AArch64::MOVAZ_2ZMI_H_S_PSEUDO);
+        SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_H_S_PSEUDO, 2, 2);
         return;
       } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-        SelectMultiVectorMoveZ<0, 2>(Node, 2, AArch64::MOVAZ_2ZMI_H_D_PSEUDO);
+        SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_H_D_PSEUDO, 0, 2);
         return;
       }
       break;
     }
     case Intrinsic::aarch64_sme_readz_vert_x2: {
       if (VT == MVT::nxv16i8) {
-        SelectMultiVectorMoveZ<14, 2>(Node, 2, AArch64::MOVAZ_2ZMI_V_B_PSEUDO);
+        SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_V_B_PSEUDO, 14, 2);
         return;
       } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
                  VT == MVT::nxv8bf16) {
-        SelectMultiVectorMoveZ<6, 2>(Node, 2, AArch64::MOVAZ_2ZMI_V_H_PSEUDO);
+        SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_V_H_PSEUDO, 6, 2);
         return;
       } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-        SelectMultiVectorMoveZ<2, 2>(Node, 2, AArch64::MOVAZ_2ZMI_V_S_PSEUDO);
+        SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_V_S_PSEUDO, 2, 2);
         return;
       } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-        SelectMultiVectorMoveZ<0, 2>(Node, 2, AArch64::MOVAZ_2ZMI_V_D_PSEUDO);
+        SelectMultiVectorMoveZ(Node, 2, AArch64::MOVAZ_2ZMI_V_D_PSEUDO, 0, 2);
         return;
       }
       break;
     }
     case Intrinsic::aarch64_sme_readz_horiz_x4: {
       if (VT == MVT::nxv16i8) {
-        SelectMultiVectorMoveZ<12, 4>(Node, 4, AArch64::MOVAZ_4ZMI_H_B_PSEUDO);
+        SelectMultiVectorMoveZ(Node, 4, AArch64::MOVAZ_4ZMI_H_B_PSEUDO, 12, 4);
         return;
       } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
                  VT == MVT::nxv8bf16) {
-        SelectMultiVectorMoveZ<4, 4>(Node, 4, AArch64::MOVAZ_4ZMI_H_H_PSEUDO);
+        SelectMultiVectorMoveZ(Node, 4, AArch64::MOVAZ_4ZMI_H_H_PSEUDO, 4, 4);
         return;
       } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-        SelectMultiVectorMoveZ<0, 4>(Node, 4, AArch64::MOVAZ_4ZMI_H_S_PSEUDO);
+        SelectMultiVectorMoveZ(Node, 4, AArch64::MOVAZ_4ZMI_H_S_PSEUDO, 0, 4);
         return;
       } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-        SelectMultiVectorMoveZ<0, 4>(Node, 4, AArch64::MOVAZ_4ZMI_H_D_PSEUDO);
+        SelectMultiVectorMoveZ(Node, 4, AArch64::MOVAZ_4ZMI_H_D_PSEUDO, 0, 4);
         return;
       }
       break;
     }
     case Intrinsic::aarch64_sme_readz_vert_x4: {
       if (VT == MVT::nxv16i8) {
-        SelectMultiVectorMoveZ<12, 4>(Node, 4, AArch64::MOVAZ_4ZMI_V_B_PSEUDO);
+        SelectMultiVectorMoveZ(Node, 4, AArch64::MOVAZ_4ZMI_V_B_PSEUDO, 12, 4);
         return;
       } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
                  VT == MVT::nxv8bf16) {
-        SelectMultiVectorMoveZ<4, 4>(Node, 4, AArch64::MOVAZ_4ZMI_V_H_PSEUDO);
+        SelectMultiVectorMoveZ(Node, 4, AArch64::MOVAZ_4ZMI_V_H_PSEUDO, 4, 4);
         return;
       } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
-        SelectMultiVectorMoveZ<0, 4>(Node, 4, AArch64::MOVAZ_4ZMI_V_S_PSEUDO);
+        SelectMultiVectorMoveZ(Node, 4, AArch64::MOVAZ_4ZMI_V_S_PSEUDO, 0, 4);
         return;
       } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
-        SelectMultiVectorMoveZ<0, 4>(Node, 4, AArch64::MOVAZ_4ZMI_V_D_PSEUDO);
+        SelectMultiVectorMoveZ(Node, 4, AArch64::MOVAZ_4ZMI_V_D_PSEUDO, 0, 4);
         return;
       }
       break;
