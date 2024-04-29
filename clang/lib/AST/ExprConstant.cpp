@@ -9237,9 +9237,10 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
       bool HasValidResult = !Result.InvalidBase && !Result.Designator.Invalid &&
                             !Result.IsNullPtr;
       bool VoidPtrCastMaybeOK =
-          HasValidResult &&
-          Info.Ctx.hasSameUnqualifiedType(Result.Designator.getType(Info.Ctx),
-                                          E->getType()->getPointeeType());
+          Result.IsNullPtr ||
+          (HasValidResult &&
+           Info.Ctx.hasSimilarType(Result.Designator.getType(Info.Ctx),
+                                   E->getType()->getPointeeType()));
       // 1. We'll allow it in std::allocator::allocate, and anything which that
       //    calls.
       // 2. HACK 2022-03-28: Work around an issue with libstdc++'s
