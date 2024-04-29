@@ -4,7 +4,7 @@
 #CSR_ones_complex = #sparse_tensor.encoding<{
   map = (d0, d1) -> (d0 : dense, d1 : compressed)
 // explicitVal = (1.0, 0.0) : complex<f32>,
-// implicitVal = (1.0, 0.0) : complex<f32>
+// implicitVal = (0.0, 0.0) : complex<f32>
 }>
 
 #CSR_ones_fp = #sparse_tensor.encoding<{

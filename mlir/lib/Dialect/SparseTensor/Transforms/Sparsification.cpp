@@ -504,10 +504,8 @@ static Value genTensorLoad(CodegenEnv &env, OpBuilder &builder, ExprId exp) {
   OpOperand *t = &op->getOpOperand(env.exp(exp).tensor);
   // Fold binary-valued tensor into explicit value.
   const auto stt = getSparseTensorType(t->get());
-  if (stt.hasEncoding()) {
-    if (auto explVal = stt.getExplicitVal())
-      return genValFromAttr(builder, loc, explVal);
-  }
+  if (auto explVal = stt.getExplicitVal())
+    return genValFromAttr(builder, loc, explVal);
   // Load during insertion.
   if (env.isSparseOutput(t)) {
     if (env.isCustomReduc())
