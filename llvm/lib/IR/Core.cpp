@@ -14,6 +14,7 @@
 #include "llvm-c/Core.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -176,6 +177,19 @@ LLVMAttributeRef LLVMCreateTypeAttribute(LLVMContextRef C, unsigned KindID,
 LLVMTypeRef LLVMGetTypeAttributeValue(LLVMAttributeRef A) {
   auto Attr = unwrap(A);
   return wrap(Attr.getValueAsType());
+}
+
+LLVMAttributeRef LLVMCreateConstantRangeAttribute(
+    LLVMContextRef C, unsigned KindID, LLVMTypeRef IntTy,
+    unsigned LowerNumWords, const uint64_t LowerWords[], unsigned UpperNumWords,
+    const uint64_t UpperWords[]) {
+  unsigned BitWidth = unwrap<IntegerType>(IntTy)->getBitWidth();
+  auto &Ctx = *unwrap(C);
+  auto AttrKind = (Attribute::AttrKind)KindID;
+  return wrap(Attribute::get(
+      Ctx, AttrKind,
+      ConstantRange(APInt(BitWidth, ArrayRef(LowerWords, LowerNumWords)),
+                    APInt(BitWidth, ArrayRef(UpperWords, UpperNumWords)))));
 }
 
 LLVMAttributeRef LLVMCreateStringAttribute(LLVMContextRef C,
