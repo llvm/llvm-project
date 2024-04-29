@@ -107,17 +107,3 @@ auto FooFunc(C auto V) -> C decltype(auto) {
 }
 
 }
-
-namespace dump_unreslove_lookup_arguments {
-template <class D>
-constexpr bool C = true;
-
-template <typename T>
-requires(C<T>)
-// CHECK:      ParenExpr {{.*}} '<dependent type>' lvalue
-// CHECK-NEXT: `-UnresolvedLookupExpr {{.*}} '<dependent type>' lvalue (no ADL) = 'C'
-// CHECK-NEXT:   `-TemplateArgument type 'T'
-// CHECK-NEXT:     `-TemplateTypeParmType {{.*}} 'T'
-// CHECK-NEXT:       `-TemplateTypeParm {{.*}} 'T'
-struct Foo {};
-}

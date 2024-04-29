@@ -844,7 +844,7 @@ public:
     }
   }
 
-  void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr* E) {
+  void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr *E) {
     if (E->hasExplicitTemplateArgs())
       for (auto Arg : E->template_arguments())
         Visit(Arg.getArgument());
