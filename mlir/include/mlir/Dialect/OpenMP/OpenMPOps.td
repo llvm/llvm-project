@@ -194,7 +194,7 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove]> {
     ^bb0(%arg0: !some.type):
     %0 = ... allocate proper memory for the private clone ...
     omp.yield(%0 : !fir.ref<i32>)
-    } deaclloc {
+    } dealloc {
     ^bb0(%arg0: !some.type):
     ... deallocate allocated memory ...
     omp.yield
@@ -204,10 +204,10 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove]> {
     There are no restrictions on the body except for:
     - The `alloc` & `dealloc` regions have a single argument.
     - The `copy` region has 2 arguments.
-    - All 3 regions are terminated by `omp.yield` ops.
+    - All three regions are terminated by `omp.yield` ops.
     The above restrictions and other obvious restrictions (e.g. verifying the
     type of yielded values) are verified by the custom op verifier. The actual
-    contents of the blocks inside both regions are not verified.
+    contents of the blocks inside all regions are not verified.
 
     Instances of this op would then be used by ops that model directives that
     accept data-sharing attribute clauses.
