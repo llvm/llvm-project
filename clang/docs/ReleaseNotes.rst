@@ -233,6 +233,9 @@ Non-comprehensive list of changes in this release
 * ``-fdenormal-fp-math=preserve-sign`` is no longer implied by ``-ffast-math``
   on x86 systems.
 
+- Builtins ``__builtin_shufflevector()`` and ``__builtin_convertvector()`` may
+  now be used within constant expressions.
+
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
