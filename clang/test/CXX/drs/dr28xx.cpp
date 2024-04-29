@@ -82,7 +82,7 @@ struct A {
 
 } // namespace cwg2858
 
-namespace cwg2881 { // cwg2881: 19
+namespace cwg2881 { // cwg2881: 19 open 2024-04-19
 
 #if __cplusplus >= 202302L
 
