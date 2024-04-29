@@ -329,8 +329,8 @@ def FeaturePAuth : Extension<
     "pauth", "PAuth",
     "Enable v8.3-A Pointer Authentication extension (FEAT_PAuth)">;
 
-def FeatureJSCVT : Extension<
-    "jsconv", "HasJS",
+def FeatureJS : Extension<
+    "jsconv", "JS",
     "Enable v8.3-A JavaScript FP conversion instructions (FEAT_JSCVT)",
     [FeatureFPARMv8]>;
 
@@ -338,8 +338,8 @@ def FeatureCCIDX : SubtargetFeature<
     "ccidx", "HasCCIDX", "true",
     "Enable v8.3-A Extend of the CCSIDR number of sets (FEAT_CCIDX)">;
 
-def FeatureFCMA : Extension<
-    "complxnum", "HasComplxNum",
+def FeatureComplxNum : Extension<
+    "complxnum", "ComplxNum",
     "Enable v8.3-A Floating-point complex number support (FEAT_FCMA)",
     [FeatureNEON]>;
 
@@ -440,7 +440,7 @@ def FeatureCacheDeepPersist : Extension<"ccdp", "CCDP",
 def FeatureBranchTargetId : Extension<"bti", "BTI",
     "Enable Branch Target Identification (FEAT_BTI)" >;
 
-def FeatureRNG : Extension<"rand", "HasRandGen",
+def FeatureRandGen : Extension<"rand", "RandGen",
     "Enable Random Number generation instructions (FEAT_RNG)" >;
 
 def FeatureMTE : Extension<"mte", "MTE",
@@ -461,13 +461,13 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
 
-def FeatureI8MM : Extension<"i8mm", "MatMulInt8",
+def FeatureMatMulInt8 : Extension<"i8mm", "MatMulInt8",
     "Enable Matrix Multiply Int8 Extension (FEAT_I8MM)">;
 
-def FeatureF32MM : Extension<"f32mm", "MatMulFP32",
+def FeatureMatMulFP32 : Extension<"f32mm", "MatMulFP32",
     "Enable Matrix Multiply FP32 Extension (FEAT_F32MM)", [FeatureSVE]>;
 
-def FeatureF64MM : Extension<"f64mm", "MatMulFP64",
+def FeatureMatMulFP64 : Extension<"f64mm", "MatMulFP64",
     "Enable Matrix Multiply FP64 Extension (FEAT_F64MM)", [FeatureSVE]>;
 
 def FeatureXS : SubtargetFeature<"xs", "HasXS",
