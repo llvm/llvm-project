@@ -31,7 +31,7 @@ TEST(TransportTest, SendReply) {
 }
 
 class TransportInputTest : public Test {
-  std::optional<llvm::sys::fs::TempFile> inputTempFile;
+  llvm::SmallVector<char> inputPath;
   std::FILE *in = nullptr;
   std::string output = "";
   llvm::raw_string_ostream os;
@@ -42,25 +42,31 @@ protected:
   TransportInputTest() : os(output) {}
 
   void SetUp() override {
-    auto tempOr = llvm::sys::fs::TempFile::create("lsp-unittest-%%%%%%.json");
-    ASSERT_TRUE((bool)tempOr);
-    llvm::sys::fs::TempFile t = std::move(*tempOr);
-    inputTempFile = std::move(t);
+    std::error_code ec =
+        llvm::sys::fs::createTemporaryFile("lsp-unittest", "json", inputPath);
+    ASSERT_FALSE(ec) << "Could not create temporary file: " << ec.message();
 
-    in = std::fopen(inputTempFile->TmpName.c_str(), "r");
+    in = std::fopen(inputPath.data(), "r");
+    ASSERT_TRUE(in) << "Could not open temporary file: "
+                    << std::strerror(errno);
     transport.emplace(in, os, JSONStreamStyle::Delimited);
     messageHandler.emplace(*transport);
   }
 
   void TearDown() override {
-    EXPECT_FALSE(inputTempFile->discard());
-    EXPECT_EQ(std::fclose(in), 0);
+    EXPECT_EQ(std::fclose(in), 0)
+        << "Could not close temporary file FD: " << std::strerror(errno);
+    std::error_code ec =
+        llvm::sys::fs::remove(inputPath, /*IgnoreNonExisting=*/false);
+    EXPECT_FALSE(ec) << "Could not remove temporary file '" << inputPath.data()
+                     << "': " << ec.message();
   }
 
   void writeInput(StringRef buffer) {
     std::error_code ec;
-    llvm::raw_fd_ostream os(inputTempFile->TmpName, ec);
-    ASSERT_FALSE(ec);
+    llvm::raw_fd_ostream os(inputPath.data(), ec);
+    ASSERT_FALSE(ec) << "Could not write to '" << inputPath.data()
+                     << "': " << ec.message();
     os << buffer;
     os.close();
   }
