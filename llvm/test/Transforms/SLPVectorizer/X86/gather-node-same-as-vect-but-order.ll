@@ -21,8 +21,7 @@ define void @foo(ptr %i7, i32 %0, i1 %tobool62.not) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> [[TMP9]], <4 x i32> <i32 0, i32 4, i32 5, i32 poison>
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> [[TMP10]], float [[TMP7]], i32 3
 ; CHECK-NEXT:    [[TMP12:%.*]] = fcmp olt <4 x float> [[TMP11]], zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = load <4 x float>, ptr poison, align 16
-; CHECK-NEXT:    [[TMP14:%.*]] = fcmp olt <4 x float> [[TMP13]], zeroinitializer
+; CHECK-NEXT:    [[TMP14:%.*]] = fcmp olt <4 x float> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP15:%.*]] = select <4 x i1> [[TMP14]], <4 x float> [[TMP5]], <4 x float> zeroinitializer
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <4 x i1> [[TMP12]], <4 x float> zeroinitializer, <4 x float> [[TMP15]]
 ; CHECK-NEXT:    store <4 x float> [[TMP16]], ptr [[RC21]], align 4
