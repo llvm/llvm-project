@@ -17,13 +17,13 @@ class C : A, B {
 };
 void C::primary_key() {}
 
-// CHECK-LABEL: define available_externally void @_ZThn8_N1C9secondaryEv(ptr noundef %this) {{.*}} #2
+// CHECK-LABEL: define available_externally void @_ZThn8_N1C9secondaryEv(ptr noundef %this) {{.*}} #0
 // CHECK-NOT: invoke
 // CHECK: tail call void @_ZN1C9secondaryEv(ptr {{[^,]*}} %{{.*}})
 // CHECK-NOT: invoke
 // CHECK: ret void
 
-// CHECK-LABEL: define available_externally void @_ZThn8_N1C16secondary_varargEiz(ptr noundef %this, i32 noundef %0, ...) {{.*}} #2
+// CHECK-LABEL: define available_externally void @_ZThn8_N1C16secondary_varargEiz(ptr noundef %this, i32 noundef %0, ...) {{.*}} #0
 // CHECK-NOT: invoke
-// CHECK:  musttail call void (ptr, i32, ...) @_ZN1C16secondary_varargEiz(ptr {{[^,]*}} %{{.*}}, i32 noundef %{{.*}}, ...) #3
+// CHECK:  musttail call void (ptr, i32, ...) @_ZN1C16secondary_varargEiz(ptr {{[^,]*}} %{{.*}}, i32 noundef %{{.*}}, ...) #2
 // CHECK-NEXT:  ret void

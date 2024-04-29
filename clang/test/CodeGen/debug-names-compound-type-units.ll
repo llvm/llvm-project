@@ -29,7 +29,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %struct.Foo2 = type { i8, %struct.Foo }
 %struct.Foo = type { i8 }
 
-; Function Attrs: mustprogress noinline nounwind optnone uwtable
+; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @_Z7fooFuncv() #0 !dbg !10 {
 entry:
   %global2 = alloca %struct.Foo2, align 1
@@ -40,7 +40,7 @@ entry:
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-attributes #0 = { mustprogress noinline nounwind optnone uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 !llvm.dbg.cu = !{!0}

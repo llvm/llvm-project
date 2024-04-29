@@ -230,11 +230,11 @@ void run_foo_tml() {
 // CHECK-NEXT:    ret i32 2
 //
 //.
-// CHECK: attributes #[[ATTR0:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon" }
-// CHECK: attributes #[[ATTR1:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ls64" }
-// CHECK: attributes #[[ATTR2:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #[[ATTR3:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fptoint" }
-// CHECK: attributes #[[ATTR4:[0-9]+]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme,+sme-f64f64" }
+// CHECK: attributes #[[ATTR0:[0-9]+]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fp-armv8,+fullfp16,+neon" }
+// CHECK: attributes #[[ATTR1:[0-9]+]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ls64" }
+// CHECK: attributes #[[ATTR2:[0-9]+]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #[[ATTR3:[0-9]+]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+fptoint" }
+// CHECK: attributes #[[ATTR4:[0-9]+]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme,+sme-f64f64" }
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}

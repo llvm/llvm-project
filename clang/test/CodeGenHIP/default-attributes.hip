@@ -8,7 +8,7 @@
 #define __device__ __attribute__((device))
 #define __global__ __attribute__((global))
 
-// OPTNONE: Function Attrs: convergent mustprogress noinline nounwind optnone
+// OPTNONE: Function Attrs: convergent noinline nounwind optnone
 // OPTNONE-LABEL: define {{[^@]+}}@_Z4funcv
 // OPTNONE-SAME: () #[[ATTR0:[0-9]+]] {
 // OPTNONE-NEXT:  entry:
@@ -24,7 +24,7 @@ __device__ void func() {
 
 }
 
-// OPTNONE: Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
+// OPTNONE: Function Attrs: convergent noinline norecurse nounwind optnone
 // OPTNONE-LABEL: define {{[^@]+}}@_Z6kernelv
 // OPTNONE-SAME: () #[[ATTR1:[0-9]+]] {
 // OPTNONE-NEXT:  entry:
@@ -40,8 +40,8 @@ __global__ void kernel() {
 
 }
 //.
-// OPTNONE: attributes #0 = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// OPTNONE: attributes #1 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,1024" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// OPTNONE: attributes #0 = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// OPTNONE: attributes #1 = { convergent noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,1024" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
 //.
 // OPT: attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // OPT: attributes #1 = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) "amdgpu-flat-work-group-size"="1,1024" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }

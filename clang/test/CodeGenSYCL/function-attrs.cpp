@@ -49,7 +49,7 @@ int main() {
   return 0;
 }
 //.
-// CHECK: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #0 = { convergent noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CHECK: attributes #1 = { convergent nounwind }
 //.
 // CHECK: !0 = !{i32 1, !"wchar_size", i32 4}
