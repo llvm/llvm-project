@@ -1,5 +1,9 @@
-; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile.prof -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml -sample-profile-use-profi=0 -S | FileCheck %s
-; RUN: FileCheck %s -check-prefix=YAML < %t.opt.yaml
+; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile.prof -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml -sample-profile-use-profi=0 -S -o %t
+; RUN: FileCheck %s --input-file %t
+; RUN: FileCheck %s -check-prefix=YAML --input-file %t.opt.yaml
+; RUN: opt < %t -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile.prof -sample-profile-remove-probe -S | FileCheck %s -check-prefix=REMOVE-PROBE
+
+; REMOVE-PROBE-NOT: call void @llvm.pseudoprobe
 
 define dso_local i32 @foo(i32 %x, ptr %f) #0 !dbg !4 {
 entry:

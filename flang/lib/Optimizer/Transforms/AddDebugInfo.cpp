@@ -69,7 +69,7 @@ void AddDebugInfoPass::runOnOperation() {
   // In that case, 'inputFilename' may be empty. Location embedded in the
   // module will be used to get file name and its directory.
   if (inputFilename.empty()) {
-    if (auto fileLoc = module.getLoc().dyn_cast<mlir::FileLineColLoc>()) {
+    if (auto fileLoc = mlir::dyn_cast<mlir::FileLineColLoc>(module.getLoc())) {
       fileName = llvm::sys::path::filename(fileLoc.getFilename().getValue());
       filePath = llvm::sys::path::parent_path(fileLoc.getFilename().getValue());
     } else
@@ -94,14 +94,14 @@ void AddDebugInfoPass::runOnOperation() {
     mlir::Location l = funcOp->getLoc();
     // If fused location has already been created then nothing to do
     // Otherwise, create a fused location.
-    if (l.dyn_cast<mlir::FusedLoc>())
+    if (mlir::dyn_cast<mlir::FusedLoc>(l))
       return;
 
     unsigned int CC = (funcOp.getName() == fir::NameUniquer::doProgramEntry())
                           ? llvm::dwarf::getCallingConvention("DW_CC_program")
                           : llvm::dwarf::getCallingConvention("DW_CC_normal");
 
-    if (auto funcLoc = l.dyn_cast<mlir::FileLineColLoc>()) {
+    if (auto funcLoc = mlir::dyn_cast<mlir::FileLineColLoc>(l)) {
       fileName = llvm::sys::path::filename(funcLoc.getFilename().getValue());
       filePath = llvm::sys::path::parent_path(funcLoc.getFilename().getValue());
     }
