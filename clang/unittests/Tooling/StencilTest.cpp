@@ -580,10 +580,10 @@ TEST_F(StencilTest, CatOfMacroRangeSucceeds) {
   double foo(double d);
   foo(MACRO);)cpp";
 
-  auto StmtMatch =
-      matchStmt(Snippet, callExpr(callee(functionDecl(hasName("foo"))),
-                                  argumentCountIs(1),
-                                  hasArgument(0, expr().bind("arg"))));
+  auto StmtMatch = matchStmt(
+      Snippet,
+      callExpr(callee(functionDecl(hasName("foo"))), argumentCountIs(1),
+               hasArgument(0, ignoringParenImpCasts(expr().bind("arg")))));
   ASSERT_TRUE(StmtMatch);
   Stencil S = cat(node("arg"));
   EXPECT_THAT_EXPECTED(S->eval(StmtMatch->Result), HasValue("MACRO"));
@@ -608,9 +608,10 @@ TEST_F(StencilTest, CatOfMacroArgSubRangeSucceeds) {
   MACRO(2, foo(3));)cpp";
 
   auto StmtMatch = matchStmt(
-      Snippet, binaryOperator(hasRHS(callExpr(
-                   callee(functionDecl(hasName("foo"))), argumentCountIs(1),
-                   hasArgument(0, expr().bind("arg"))))));
+      Snippet,
+      binaryOperator(hasRHS(callExpr(
+          callee(functionDecl(hasName("foo"))), argumentCountIs(1),
+          hasArgument(0, ignoringParenImpCasts(expr().bind("arg")))))));
   ASSERT_TRUE(StmtMatch);
   Stencil S = cat(node("arg"));
   EXPECT_THAT_EXPECTED(S->eval(StmtMatch->Result), HasValue("3"));
@@ -622,10 +623,10 @@ TEST_F(StencilTest, CatOfInvalidRangeFails) {
   double foo(double d);
   foo(MACRO);)cpp";
 
-  auto StmtMatch =
-      matchStmt(Snippet, callExpr(callee(functionDecl(hasName("foo"))),
-                                  argumentCountIs(1),
-                                  hasArgument(0, expr().bind("arg"))));
+  auto StmtMatch = matchStmt(
+      Snippet,
+      callExpr(callee(functionDecl(hasName("foo"))), argumentCountIs(1),
+               hasArgument(0, ignoringParenImpCasts(expr().bind("arg")))));
   ASSERT_TRUE(StmtMatch);
   Stencil S = cat(node("arg"));
   Expected<std::string> Result = S->eval(StmtMatch->Result);

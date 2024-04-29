@@ -122,8 +122,9 @@ static internal::BindableMatcher<Stmt>
 gtestComparisonInternal(MacroType Macro, GtestCmp Cmp, StatementMatcher Left,
                         StatementMatcher Right) {
   return callExpr(isExpandedFromMacro(getMacroName(Macro, Cmp)),
-                  callee(getComparisonDecl(Cmp)), hasArgument(2, Left),
-                  hasArgument(3, Right));
+                  callee(getComparisonDecl(Cmp)),
+                  hasArgument(2, ignoringParenImpCasts(Left)),
+                  hasArgument(3, ignoringParenImpCasts(Right)));
 }
 
 static internal::BindableMatcher<Stmt>
@@ -131,15 +132,17 @@ gtestThatInternal(MacroType Macro, StatementMatcher Actual,
                   StatementMatcher Matcher) {
   return cxxOperatorCallExpr(
       isExpandedFromMacro(getMacroName(Macro, "THAT")),
-      hasOverloadedOperatorName("()"), hasArgument(2, Actual),
+      hasOverloadedOperatorName("()"),
+      hasArgument(2, ignoringParenImpCasts(Actual)),
       hasArgument(
-          0, expr(hasType(classTemplateSpecializationDecl(hasName(
-                      "::testing::internal::PredicateFormatterFromMatcher"))),
-                  ignoringImplicit(
-                      callExpr(callee(functionDecl(hasName(
-                                   "::testing::internal::"
-                                   "MakePredicateFormatterFromMatcher"))),
-                               hasArgument(0, ignoringImplicit(Matcher)))))));
+          0, ignoringParenImpCasts(expr(
+                 hasType(classTemplateSpecializationDecl(hasName(
+                     "::testing::internal::PredicateFormatterFromMatcher"))),
+                 ignoringImplicit(
+                     callExpr(callee(functionDecl(hasName(
+                                  "::testing::internal::"
+                                  "MakePredicateFormatterFromMatcher"))),
+                              hasArgument(0, ignoringImplicit(Matcher))))))));
 }
 
 static internal::BindableMatcher<Stmt>
