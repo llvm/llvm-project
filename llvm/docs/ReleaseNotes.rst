@@ -50,7 +50,11 @@ Update on required toolchains to build LLVM
 Changes to the LLVM IR
 ----------------------
 
-- Added Memory Model Relaxation Annotations (MMRAs).
+* Added Memory Model Relaxation Annotations (MMRAs).
+* Renamed ``llvm.experimental.vector.reverse`` intrinsic to ``llvm.vector.reverse``.
+* Renamed ``llvm.experimental.vector.splice`` intrinsic to ``llvm.vector.splice``.
+* Renamed ``llvm.experimental.vector.interleave2`` intrinsic to ``llvm.vector.interleave2``.
+* Renamed ``llvm.experimental.vector.deinterleave2`` intrinsic to ``llvm.vector.deinterleave2``.
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -122,6 +126,8 @@ Changes to the RISC-V Backend
 * The experimental Ssqosid extension is supported.
 * Zacas is no longer experimental.
 * Added the CSR names from the Resumable Non-Maskable Interrupts (Smrnmi) extension.
+* llvm-objdump now prints disassembled opcode bytes in groups of 2 or 4 bytes to
+  match GNU objdump. The bytes within the groups are in big endian order.
 
 Changes to the WebAssembly Backend
 ----------------------------------

@@ -10,7 +10,7 @@
 // expected-no-diagnostics
 #endif
 
-namespace cwg2847 { // cwg2847: 19
+namespace cwg2847 { // cwg2847: 19 review 2024-03-01
 
 #if __cplusplus >= 202002L
 

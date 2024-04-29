@@ -90,11 +90,6 @@ C++ Language Changes
 --------------------
 - Implemented ``_BitInt`` literal suffixes ``__wb`` or ``__WB`` as a Clang extension with ``unsigned`` modifiers also allowed. (#GH85223).
 
-C++14 Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-- Sized deallocation is enabled by default in C++14 onwards. The user may specify
-  ``-fno-sized-deallocation`` to disable it if there are some regressions.
-
 C++17 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Clang now exposes ``__GCC_DESTRUCTIVE_SIZE`` and ``__GCC_CONSTRUCTIVE_SIZE``
@@ -147,6 +142,8 @@ C++2c Feature Support
 - Implemented `P2662R3 Pack Indexing <https://wg21.link/P2662R3>`_.
 
 - Implemented `P2573R2: = delete("should have a reason"); <https://wg21.link/P2573R2>`_
+
+- Implemented `P0609R3: Attributes for Structured Bindings <https://wg21.link/P0609R3>`_
 
 
 Resolutions to C++ Defect Reports
@@ -463,6 +460,10 @@ Bug Fixes in This Version
 
 - Fixed an assertion failure on invalid InitListExpr in C89 mode (#GH88008).
 
+- Fixed missing destructor calls when we branch from middle of an expression.
+  This could happen through a branch in stmt-expr or in an expression containing a coroutine
+  suspension. Fixes (#GH63818) (#GH88478).
+
 - Clang will no longer diagnose an erroneous non-dependent ``switch`` condition
   during instantiation, and instead will only diagnose it once, during checking
   of the function template.
@@ -593,6 +594,8 @@ Bug Fixes to C++ Support
 - Fixed a use-after-free bug in parsing of type constraints with default arguments that involve lambdas. (#GH67235)
 - Fixed bug in which the body of a consteval lambda within a template was not parsed as within an
   immediate function context.
+- Fix CTAD for ``std::initializer_list``. This allows ``std::initializer_list{1, 2, 3}`` to be deduced as
+  ``std::initializer_list<int>`` as intended.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
