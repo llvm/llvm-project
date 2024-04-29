@@ -385,8 +385,8 @@ public:
   bool isIdxen() const { return isImmTy(ImmTyIdxen); }
   bool isAddr64() const { return isImmTy(ImmTyAddr64); }
   bool isOffset() const { return isImmTy(ImmTyOffset); }
-  bool isOffset0() const { return isImmTy(ImmTyOffset0) && isUInt<8>(getImm()); }
-  bool isOffset1() const { return isImmTy(ImmTyOffset1) && isUInt<8>(getImm()); }
+  bool isOffset0() const { return isImmTy(ImmTyOffset0); }
+  bool isOffset1() const { return isImmTy(ImmTyOffset1); }
   bool isSMEMOffsetMod() const { return isImmTy(ImmTySMEMOffsetMod); }
   bool isFlatOffset() const { return isImmTy(ImmTyOffset) || isImmTy(ImmTyInstOffset); }
   bool isGDS() const { return isImmTy(ImmTyGDS); }
@@ -411,9 +411,7 @@ public:
   bool isOpSelHi() const { return isImmTy(ImmTyOpSelHi); }
   bool isNegLo() const { return isImmTy(ImmTyNegLo); }
   bool isNegHi() const { return isImmTy(ImmTyNegHi); }
-  bool isByteSel() const {
-    return isImmTy(ImmTyByteSel) && isUInt<2>(getImm());
-  }
+  bool isByteSel() const { return isImmTy(ImmTyByteSel); }
 
   bool isRegOrImm() const {
     return isReg() || isImm();
@@ -8939,11 +8937,11 @@ bool AMDGPUOperand::isBLGP() const {
 }
 
 bool AMDGPUOperand::isCBSZ() const {
-  return isImm() && getImmTy() == ImmTyCBSZ && isUInt<3>(getImm());
+  return isImm() && getImmTy() == ImmTyCBSZ;
 }
 
 bool AMDGPUOperand::isABID() const {
-  return isImm() && getImmTy() == ImmTyABID && isUInt<4>(getImm());
+  return isImm() && getImmTy() == ImmTyABID;
 }
 
 bool AMDGPUOperand::isS16Imm() const {
@@ -9670,25 +9668,17 @@ bool AMDGPUOperand::isEndpgm() const { return isImmTy(ImmTyEndpgm); }
 // LDSDIR
 //===----------------------------------------------------------------------===//
 
-bool AMDGPUOperand::isWaitVDST() const {
-  return isImmTy(ImmTyWaitVDST) && isUInt<4>(getImm());
-}
+bool AMDGPUOperand::isWaitVDST() const { return isImmTy(ImmTyWaitVDST); }
 
-bool AMDGPUOperand::isWaitVAVDst() const {
-  return isImmTy(ImmTyWaitVAVDst) && isUInt<4>(getImm());
-}
+bool AMDGPUOperand::isWaitVAVDst() const { return isImmTy(ImmTyWaitVAVDst); }
 
-bool AMDGPUOperand::isWaitVMVSrc() const {
-  return isImmTy(ImmTyWaitVMVSrc) && isUInt<1>(getImm());
-}
+bool AMDGPUOperand::isWaitVMVSrc() const { return isImmTy(ImmTyWaitVMVSrc); }
 
 //===----------------------------------------------------------------------===//
 // VINTERP
 //===----------------------------------------------------------------------===//
 
-bool AMDGPUOperand::isWaitEXP() const {
-  return isImmTy(ImmTyWaitEXP) && isUInt<3>(getImm());
-}
+bool AMDGPUOperand::isWaitEXP() const { return isImmTy(ImmTyWaitEXP); }
 
 //===----------------------------------------------------------------------===//
 // Split Barrier
