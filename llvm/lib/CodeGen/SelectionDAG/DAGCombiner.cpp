@@ -15459,6 +15459,12 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   if (DAG.isGuaranteedNotToBeUndefOrPoison(N0, /*PoisonOnly*/ false))
     return N0;
 
+  // We currently avoid folding freeze over SRA/SRL, due to the problems seen
+  // with (freeze (assert ext)) blocking simplifications of SRA/SRL. See for
+  // example https://reviews.llvm.org/D136529#4120959.
+  if (N0.getOpcode() == ISD::SRA || N0.getOpcode() == ISD::SRL)
+    return SDValue();
+
   // Fold freeze(op(x, ...)) -> op(freeze(x), ...).
   // Try to push freeze through instructions that propagate but don't produce
   // poison as far as possible. If an operand of freeze follows three
