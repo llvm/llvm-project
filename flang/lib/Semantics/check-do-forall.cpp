@@ -540,7 +540,8 @@ private:
     CheckDoExpression(bounds.upper);
     if (bounds.step) {
       CheckDoExpression(*bounds.step);
-      if (IsZero(*bounds.step)) {
+      if (IsZero(*bounds.step) &&
+          context_.ShouldWarn(common::UsageWarning::ZeroDoStep)) {
         context_.Say(bounds.step->thing.value().source,
             "DO step expression should not be zero"_warn_en_US);
       }
@@ -791,7 +792,8 @@ private:
           },
           assignment.u);
       for (const Symbol &index : indexVars) {
-        if (symbols.count(index) == 0) {
+        if (symbols.count(index) == 0 &&
+            context_.ShouldWarn(common::UsageWarning::UnusedForallIndex)) {
           context_.Say("FORALL index variable '%s' not used on left-hand side"
                        " of assignment"_warn_en_US,
               index.name());
