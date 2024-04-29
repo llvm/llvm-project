@@ -7861,7 +7861,8 @@ void BoUpSLP::transformNodes() {
       break;
     }
     case Instruction::Store: {
-      Type *ScalarTy = cast<StoreInst>(E.getMainOp())->getValueOperand()->getType();
+      Type *ScalarTy =
+          cast<StoreInst>(E.getMainOp())->getValueOperand()->getType();
       auto *VecTy = FixedVectorType::get(ScalarTy, E.Scalars.size());
       Align CommonAlignment = computeCommonAlignment<StoreInst>(E.Scalars);
       // Check if profitable to represent consecutive load + reverse as strided
