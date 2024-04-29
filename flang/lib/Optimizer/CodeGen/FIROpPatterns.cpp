@@ -243,6 +243,9 @@ ConvertFIRToLLVMPattern::getBlockForAllocaInsert(mlir::Operation *op) const {
     return iface.getAllocaBlock();
   if (auto llvmFuncOp = mlir::dyn_cast<mlir::LLVM::LLVMFuncOp>(op))
     return &llvmFuncOp.front();
+  if (auto ompPrivateOp = mlir::dyn_cast<mlir::omp::PrivateClauseOp>(op))
+    return &ompPrivateOp.getAllocRegion().front();
+
   return getBlockForAllocaInsert(op->getParentOp());
 }
 
