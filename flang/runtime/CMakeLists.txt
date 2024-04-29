@@ -192,6 +192,7 @@ set(supported_files
   environment.cpp
   extrema.cpp
   external-unit.cpp
+  file.cpp
   findloc.cpp
   format.cpp
   inquiry.cpp
