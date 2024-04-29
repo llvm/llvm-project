@@ -2510,6 +2510,18 @@ bool Type::isSveVLSBuiltinType() const {
   return false;
 }
 
+QualType Type::getSizelessVectorEltType(const ASTContext &Ctx) const {
+  assert(isSizelessVectorType() && "Must be sizeless vector type");
+  // Currently supports SVE and RVV
+  if (isSVESizelessBuiltinType())
+    return getSveEltType(Ctx);
+
+  if (isRVVSizelessBuiltinType())
+    return getRVVEltType(Ctx);
+
+  llvm_unreachable("Unhandled type");
+}
+
 QualType Type::getSveEltType(const ASTContext &Ctx) const {
   assert(isSveVLSBuiltinType() && "unsupported type!");
 

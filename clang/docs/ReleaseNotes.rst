@@ -222,6 +222,7 @@ Non-comprehensive list of changes in this release
 - ``__typeof_unqual__`` is available in all C modes as an extension, which behaves
   like ``typeof_unqual`` from C23, similar to ``__typeof__`` and ``typeof``.
 
+- ``__builtin_reduce_{add|mul|xor|or|and|min|max}`` builtins now support scalable vectors.
 
 * Shared libraries linked with either the ``-ffast-math``, ``-Ofast``, or
   ``-funsafe-math-optimizations`` flags will no longer enable flush-to-zero

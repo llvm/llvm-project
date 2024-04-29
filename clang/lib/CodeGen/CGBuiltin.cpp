@@ -3885,9 +3885,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
 
   case Builtin::BI__builtin_reduce_max: {
-    auto GetIntrinsicID = [](QualType QT) {
+    auto GetIntrinsicID = [this](QualType QT) {
       if (auto *VecTy = QT->getAs<VectorType>())
         QT = VecTy->getElementType();
+      else if (QT->isSizelessVectorType())
+        QT = QT->getSizelessVectorEltType(CGM.getContext());
+
       if (QT->isSignedIntegerType())
         return llvm::Intrinsic::vector_reduce_smax;
       if (QT->isUnsignedIntegerType())
@@ -3900,9 +3903,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
 
   case Builtin::BI__builtin_reduce_min: {
-    auto GetIntrinsicID = [](QualType QT) {
+    auto GetIntrinsicID = [this](QualType QT) {
       if (auto *VecTy = QT->getAs<VectorType>())
         QT = VecTy->getElementType();
+      else if (QT->isSizelessVectorType())
+        QT = QT->getSizelessVectorEltType(CGM.getContext());
+
       if (QT->isSignedIntegerType())
         return llvm::Intrinsic::vector_reduce_smin;
       if (QT->isUnsignedIntegerType())

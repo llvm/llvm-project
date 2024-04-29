@@ -711,6 +711,8 @@ even-odd element pair with indices ``i * 2`` and ``i * 2 + 1`` with
 power of 2, the vector is widened with neutral elements for the reduction
 at the end to the next power of 2.
 
+These reductions support both fixed-sized and scalable vector types.
+
 Example:
 
 .. code-block:: c++
