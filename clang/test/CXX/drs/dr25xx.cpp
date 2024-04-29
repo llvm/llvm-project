@@ -130,12 +130,14 @@ struct D3 : B {
 #endif
 
 #if __cplusplus >= 202302L
-namespace cwg2561 { // cwg2561: 18 review 2023-11-09
+namespace cwg2561 { // cwg2561: no
 struct C {
     constexpr C(auto) { }
 };
 void foo() {
     constexpr auto b = [](this C) { return 1; };
+    // FIXME: closure type shouldn't have a conversion function to function
+    //        pointer, because explicit object parameter is present. 
     constexpr int (*fp)(C) = b;
     static_assert(fp(1) == 1);
     static_assert((&decltype(b)::operator())(1) == 1);
