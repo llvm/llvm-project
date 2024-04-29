@@ -164,10 +164,10 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     /// source operand. They overide static shape from source memref type.
     ArrayRef<int64_t> getStaticSizes() {
       auto attr = getConstShapeAttr();
-      if (getSourceType().isa<IntegerType>() || attr)
+      if (llvm::isa<IntegerType>(getSourceType()) || attr)
         return attr;
 
-      auto memrefType = getSourceType().dyn_cast<MemRefType>();
+      auto memrefType = llvm::dyn_cast<MemRefType>(getSourceType());
       assert(memrefType && "Incorrect use of getStaticSizes");
       return memrefType.getShape();
     }
@@ -179,10 +179,10 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     /// source operand. They overide static strides from source memref type.
     ArrayRef<int64_t> getStaticStrides() {
       auto attr = getConstStridesAttr();
-      if (getSourceType().isa<IntegerType>() || attr)
+      if (llvm::isa<IntegerType>(getSourceType()) || attr)
         return attr;
 
-      auto memrefType = getSourceType().dyn_cast<MemRefType>();
+      auto memrefType = llvm::dyn_cast<MemRefType>(getSourceType());
       assert(memrefType && "Incorrect use of getStaticStrides");
       auto [strides, offset] = getStridesAndOffset(memrefType);
       // reuse the storage of ConstStridesAttr since strides from
@@ -196,7 +196,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     /// `static_shape` and `static_strides` attributes.
     std::array<unsigned, 3> getArrayAttrMaxRanks() {
       unsigned rank;
-      if (auto ty = getSourceType().dyn_cast<MemRefType>()) {
+      if (auto ty = llvm::dyn_cast<MemRefType>(getSourceType())) {
         rank = ty.getRank();
       } else {
         rank = (unsigned)getMixedOffsets().size();
