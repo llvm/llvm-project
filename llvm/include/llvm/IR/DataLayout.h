@@ -166,6 +166,7 @@ private:
   SmallVector<unsigned, 8> NonIntegralAddressSpaces;
 
   DenseMap<unsigned, int64_t> AddrSpaceToSentinelValueMap;
+  bool sentinelValueDefined = false;
 
   /// Attempts to set the alignment of the given type. Returns an error
   /// description on failure.
@@ -222,6 +223,8 @@ public:
     StructAlignment = DL.StructAlignment;
     Pointers = DL.Pointers;
     NonIntegralAddressSpaces = DL.NonIntegralAddressSpaces;
+    AddrSpaceToSentinelValueMap = DL.AddrSpaceToSentinelValueMap;
+    sentinelValueDefined = DL.isSentinelValueDefined();
     return *this;
   }
 
@@ -302,7 +305,7 @@ public:
     return ManglingMode == MM_WinCOFFX86;
   }
 
-  int64_t getSentinelPointerValue(unsigned AddrSpace) {
+  int64_t getSentinelPointerValue(unsigned AddrSpace) const {
     auto It = AddrSpaceToSentinelValueMap.find(AddrSpace);
     if (It == AddrSpaceToSentinelValueMap.end())
       return 0;
@@ -312,6 +315,8 @@ public:
   void setSentinelPointerValue(unsigned AddrSpace, int64_t Value) {
     AddrSpaceToSentinelValueMap[AddrSpace] = Value;
   }
+
+  bool isSentinelValueDefined() const { return sentinelValueDefined; }
 
   /// Returns true if symbols with leading question marks should not receive IR
   /// mangling. True for Windows mangling modes.

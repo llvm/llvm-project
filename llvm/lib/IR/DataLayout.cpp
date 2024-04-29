@@ -521,6 +521,7 @@ Error DataLayout::parseSpecifier(StringRef Desc) {
       break;
     }
     case 'z': {
+      sentinelValueDefined = true;
       unsigned AddrSpace = 0;
       int64_t Value;
       // for unlisted address spaces e.g., z:0
@@ -748,6 +749,7 @@ public:
 } // end anonymous namespace
 
 void DataLayout::clear() {
+
   LegalIntWidths.clear();
   IntAlignments.clear();
   FloatAlignments.clear();
