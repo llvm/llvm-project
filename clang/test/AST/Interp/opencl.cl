@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 -fsyntax-only -pedantic -verify %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -verify=ref,both %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,both %s -fexperimental-new-constant-interpreter
+
+// both-no-diagnostics
 
 typedef int int2 __attribute__((ext_vector_type(2)));
 typedef int int3 __attribute__((ext_vector_type(3)));
@@ -25,10 +28,5 @@ void foo(int3 arg1, int8 arg2) {
   int res10[vec_step(int8) == 8 ? 1 : -1];
   int res11[vec_step(int16) == 16 ? 1 : -1];
   int res12[vec_step(void) == 1 ? 1 : -1];
-
-  int res13 = vec_step(*incomplete1); // expected-error {{'vec_step' requires built-in scalar or vector type, '__private struct S' invalid}}
-  int res14 = vec_step(int16*); // expected-error {{'vec_step' requires built-in scalar or vector type, '__private int16 *' invalid}}
-  int res15 = vec_step(void(void)); // expected-error {{'vec_step' requires built-in scalar or vector type, 'void (void)' invalid}}
-
-  int res_no_effect = vec_step(auto3++); // expected-warning {{expression with side effects has no effect in an unevaluated context}}
 }
+

@@ -1358,6 +1358,20 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     assert(E->getTypeOfArgument()->isSizelessVectorType());
   }
 
+  if (Kind == UETT_VecStep) {
+    if (const auto *VT = E->getTypeOfArgument()->getAs<VectorType>()) {
+      unsigned N = VT->getNumElements();
+
+      // The vec_step built-in functions that take a 3-component
+      // vector return 4. (OpenCL 1.1 spec 6.11.12)
+      if (N == 3)
+        N = 4;
+
+      return this->emitConst(N, E);
+    }
+    return this->emitConst(1, E);
+  }
+
   return false;
 }
 
