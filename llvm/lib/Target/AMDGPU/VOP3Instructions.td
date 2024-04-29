@@ -923,7 +923,7 @@ def VOP3_CVT_SCALE_PK_FP8BF8_F16BF16_Profile : VOP3_Profile<VOPProfile<[i32, v2f
   let HasOMod = 0;
 }
 
-class VOP3_CVT_SCALE_PK_F16F32_F864_Profile<ValueType DstTy, ValueType SrcTy> : VOP3_Profile<VOPProfile<[DstTy, SrcTy, f32, untyped]>> {
+class VOP3_CVT_SCALE_PK_F16F32_F864_Profile<ValueType DstTy> : VOP3_Profile<VOPProfile<[DstTy, v6i32, f32, untyped]>> {
   let HasModifiers = 0;
   let HasOMod = 0;
   let HasOpSel = 0;
@@ -956,16 +956,12 @@ let SubtargetPredicate = HasFP4ConversionScaleInsts, mayRaiseFPException = 0 in 
 }
 
 let SubtargetPredicate = HasFP6BF6ConversionScaleInsts, mayRaiseFPException = 0 in {
-  defm V_CVT_SCALEF32_PK32_F32_FP6 : VOP3Inst<"v_cvt_scalef32_pk32_f32_fp6", VOP3_CVT_SCALE_PK_F16F32_F864_Profile<v32f32, v6i32>>;
-  defm V_CVT_SCALEF32_PK32_F32_BF6 : VOP3Inst<"v_cvt_scalef32_pk32_f32_bf6", VOP3_CVT_SCALE_PK_F16F32_F864_Profile<v32f32, v6i32>>;
-  defm V_CVT_SCALEF32_PK32_F16_FP6 : VOP3Inst<"v_cvt_scalef32_pk32_f16_fp6",  VOP3_CVT_SCALE_PK_F16F32_F864_Profile<v32f16, v6i32>>;
-  defm V_CVT_SCALEF32_PK32_BF16_FP6: VOP3Inst<"v_cvt_scalef32_pk32_bf16_fp6", VOP3_CVT_SCALE_PK_F16F32_F864_Profile<v32bf16, v6i32>>;
-  defm V_CVT_SCALEF32_PK32_F16_BF6 : VOP3Inst<"v_cvt_scalef32_pk32_f16_bf6",  VOP3_CVT_SCALE_PK_F16F32_F864_Profile<v32f16, v6i32>>;
-  defm V_CVT_SCALEF32_PK32_BF16_BF6: VOP3Inst<"v_cvt_scalef32_pk32_bf16_bf6", VOP3_CVT_SCALE_PK_F16F32_F864_Profile<v32bf16, v6i32>>;
-  defm V_CVT_SCALEF32_PK32_FP6_F16 : VOP3Inst<"v_cvt_scalef32_pk32_fp6_f16",  VOP3_CVT_SCALE_PK_F16F32_F864_Profile<v6i32, v32f16>>;
-  defm V_CVT_SCALEF32_PK32_FP6_BF16: VOP3Inst<"v_cvt_scalef32_pk32_fp6_bf16", VOP3_CVT_SCALE_PK_F16F32_F864_Profile<v6i32, v32bf16>>;
-  defm V_CVT_SCALEF32_PK32_BF6_F16 : VOP3Inst<"v_cvt_scalef32_pk32_bf6_f16",  VOP3_CVT_SCALE_PK_F16F32_F864_Profile<v6i32, v32f16>>;
-  defm V_CVT_SCALEF32_PK32_BF6_BF16: VOP3Inst<"v_cvt_scalef32_pk32_bf6_bf16", VOP3_CVT_SCALE_PK_F16F32_F864_Profile<v6i32, v32bf16>>;
+  defm V_CVT_SCALEF32_PK32_F32_FP6 : VOP3Inst<"v_cvt_scalef32_pk32_f32_fp6", VOP3_CVT_SCALE_PK_F16F32_F864_Profile<v32f32>>;
+  defm V_CVT_SCALEF32_PK32_F32_BF6 : VOP3Inst<"v_cvt_scalef32_pk32_f32_bf6", VOP3_CVT_SCALE_PK_F16F32_F864_Profile<v32f32>>;
+  defm V_CVT_SCALEF32_PK32_F16_FP6 : VOP3Inst<"v_cvt_scalef32_pk32_f16_fp6",  VOP3_CVT_SCALE_PK_F16F32_F864_Profile<v32f16>>;
+  defm V_CVT_SCALEF32_PK32_BF16_FP6: VOP3Inst<"v_cvt_scalef32_pk32_bf16_fp6", VOP3_CVT_SCALE_PK_F16F32_F864_Profile<v32bf16>>;
+  defm V_CVT_SCALEF32_PK32_F16_BF6 : VOP3Inst<"v_cvt_scalef32_pk32_f16_bf6",  VOP3_CVT_SCALE_PK_F16F32_F864_Profile<v32f16>>;
+  defm V_CVT_SCALEF32_PK32_BF16_BF6: VOP3Inst<"v_cvt_scalef32_pk32_bf16_bf6", VOP3_CVT_SCALE_PK_F16F32_F864_Profile<v32bf16>>;
 }
 
 let SubtargetPredicate = isGFX10Plus in {
@@ -1893,8 +1889,4 @@ defm V_CVT_SCALEF32_PK32_F16_FP6  : VOP3_Real_gfx9<0x260, "v_cvt_scalef32_pk32_f
 defm V_CVT_SCALEF32_PK32_BF16_FP6 : VOP3_Real_gfx9<0x261, "v_cvt_scalef32_pk32_bf16_fp6">;
 defm V_CVT_SCALEF32_PK32_F16_BF6  : VOP3_Real_gfx9<0x262, "v_cvt_scalef32_pk32_f16_bf6">;
 defm V_CVT_SCALEF32_PK32_BF16_BF6 : VOP3_Real_gfx9<0x263, "v_cvt_scalef32_pk32_bf16_bf6">;
-defm V_CVT_SCALEF32_PK32_FP6_F16  : VOP3_Real_gfx9<0x258, "v_cvt_scalef32_pk32_fp6_f16">;
-defm V_CVT_SCALEF32_PK32_FP6_BF16 : VOP3_Real_gfx9<0x259, "v_cvt_scalef32_pk32_fp6_bf16">;
-defm V_CVT_SCALEF32_PK32_BF6_F16  : VOP3_Real_gfx9<0x25a, "v_cvt_scalef32_pk32_bf6_f16">;
-defm V_CVT_SCALEF32_PK32_BF6_BF16 : VOP3_Real_gfx9<0x25b, "v_cvt_scalef32_pk32_bf6_bf16">;
 }
