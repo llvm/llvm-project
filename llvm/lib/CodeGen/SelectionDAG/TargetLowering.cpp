@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -33,6 +34,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cctype>
 using namespace llvm;
 
@@ -5668,6 +5670,7 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
   unsigned ResNo = 0; // ResNo - The result number of the next output.
   unsigned LabelNo = 0; // LabelNo - CallBr indirect dest number.
 
+  const Triple &T = getTargetMachine().getTargetTriple();
   for (InlineAsm::ConstraintInfo &CI : IA->ParseConstraints()) {
     ConstraintOperands.emplace_back(std::move(CI));
     AsmOperandInfo &OpInfo = ConstraintOperands.back();
@@ -5677,6 +5680,16 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
       maCount = OpInfo.multipleAlternatives.size();
 
     OpInfo.ConstraintVT = MVT::Other;
+
+    // Special treatment for all platforms (currently only x86) that can fold a
+    // register into a spill. This is used for the "rm" constraint, where we
+    // would vastly prefer to use 'r' over 'm', but can't because of LLVM's
+    // architecture picks the most "conservative" constraint to ensure that (in
+    // the case of "rm") register pressure cause bad things to happen.
+    if (T.isX86() && !OpInfo.hasMatchingInput() && OpInfo.Codes.size() == 2 &&
+        llvm::is_contained(OpInfo.Codes, "r") &&
+        llvm::is_contained(OpInfo.Codes, "m"))
+      OpInfo.MayFoldRegister = true;
 
     // Compute the value type for each operand.
     switch (OpInfo.Type) {
@@ -5954,7 +5967,12 @@ TargetLowering::ConstraintWeight
 ///  1) If there is an 'other' constraint, and if the operand is valid for
 ///     that constraint, use it.  This makes us take advantage of 'i'
 ///     constraints when available.
-///  2) Otherwise, pick the most general constraint present.  This prefers
+///  2) Special processing is done for the "rm" constraint. If specified, we
+///     opt for the 'r' constraint, but mark the operand as being "foldable."
+///     In the face of register exhaustion, the register allocator is free to
+///     choose to use a stack slot. This only applies to the greedy and default
+///     register allocators. FIXME: Support other allocators (fast?).
+///  3) Otherwise, pick the most general constraint present.  This prefers
 ///     'm' over 'r', for example.
 ///
 TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
@@ -5962,6 +5980,16 @@ TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
   ConstraintGroup Ret;
 
   Ret.reserve(OpInfo.Codes.size());
+
+  // If we can fold the register (i.e. it has an "rm" constraint), opt for the
+  // 'r' constraint, and allow the register allocator to spill if need be.
+  // Applies only to the greedy and default register allocators.
+  if (OpInfo.MayFoldRegister && usesGreedyOrDefaultRegisterAllocator()) {
+    Ret.emplace_back(ConstraintPair("r", getConstraintType("r")));
+    Ret.emplace_back(ConstraintPair("m", getConstraintType("m")));
+    return Ret;
+  }
+
   for (StringRef Code : OpInfo.Codes) {
     TargetLowering::ConstraintType CType = getConstraintType(Code);
 

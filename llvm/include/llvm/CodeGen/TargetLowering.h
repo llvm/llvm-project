@@ -4939,6 +4939,11 @@ public:
     /// Memory, Other, Unknown.
     TargetLowering::ConstraintType ConstraintType = TargetLowering::C_Unknown;
 
+    /// The register may be folded. This is used if the constraint is "rm",
+    /// where we prefer using a register, but can fall back to a memory slot
+    /// under register pressure.
+    bool MayFoldRegister = false;
+
     /// If this is the result output operand or a clobber, this is null,
     /// otherwise it is the incoming operand to the CallInst.  This gets
     /// modified as the asm is processed.
