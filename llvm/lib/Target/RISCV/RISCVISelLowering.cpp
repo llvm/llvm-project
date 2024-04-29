@@ -5378,8 +5378,7 @@ SDValue RISCVTargetLowering::lowerVPCttzElements(SDValue Op,
   // Convert -1 to VL.
   SDValue SetCC =
       DAG.getSetCC(DL, XLenVT, Res, DAG.getConstant(0, DL, XLenVT), ISD::SETLT);
-  Res = DAG.getSelect(DL, XLenVT, SetCC, DAG.getZExtOrTrunc(EVL, DL, XLenVT),
-                      Res);
+  Res = DAG.getSelect(DL, XLenVT, SetCC, EVL, Res);
   return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Res);
 }
 

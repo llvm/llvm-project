@@ -9095,7 +9095,8 @@ SDValue TargetLowering::expandVPCTTZElements(SDNode *N,
     SDValue AllZero = DAG.getConstant(0, DL, SrcVT);
     SrcVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
                              SrcVT.getVectorElementCount());
-    Source = DAG.getSetCC(DL, SrcVT, Source, AllZero, ISD::SETNE);
+    Source = DAG.getNode(ISD::VP_SETCC, DL, SrcVT, Source, AllZero,
+                         DAG.getCondCode(ISD::SETNE), Mask, EVL);
   }
 
   SDValue ExtEVL = DAG.getZExtOrTrunc(EVL, DL, ResVT);

@@ -22,7 +22,6 @@
 #include "LegalizeTypes.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -6957,32 +6956,14 @@ SDValue DAGTypeLegalizer::WidenVecOp_VSELECT(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_VP_CttzElements(SDNode *N) {
-  // Widen the result bit width if needed.
   SDLoc DL(N);
-  EVT OrigResVT = N->getValueType(0);
-  const Function &F = DAG.getMachineFunction().getFunction();
-
   SDValue Source = GetWidenedVector(N->getOperand(0));
   EVT SrcVT = Source.getValueType();
   SDValue Mask =
       GetWidenedMask(N->getOperand(1), SrcVT.getVectorElementCount());
 
-  // Compute the number of bits that can fit the result.
-  ConstantRange CR(APInt(64, SrcVT.getVectorMinNumElements()));
-  if (SrcVT.isScalableVT())
-    CR = CR.umul_sat(getVScaleRange(&F, 64));
-  // If the zero-is-poison flag is set in the original intrinsic, we can
-  // assume the upper limit of the result is EVL - 1.
-  if (N->getOpcode() == ISD::VP_CTTZ_ELTS_ZERO_UNDEF)
-    CR = CR.subtract(APInt(64, 1));
-
-  unsigned NewResWidth = OrigResVT.getScalarSizeInBits();
-  NewResWidth = std::min(NewResWidth, unsigned(CR.getActiveBits()));
-  NewResWidth = std::max(llvm::bit_ceil(NewResWidth), 8U);
-
-  EVT NewResVT = EVT::getIntegerVT(*DAG.getContext(), NewResWidth);
-  return DAG.getNode(N->getOpcode(), DL, NewResVT, Source, Mask,
-                     N->getOperand(2));
+  return DAG.getNode(N->getOpcode(), DL, N->getValueType(0),
+                     {Source, Mask, N->getOperand(2)}, N->getFlags());
 }
 
 //===----------------------------------------------------------------------===//
