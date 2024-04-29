@@ -639,7 +639,8 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   switch (Baseline) {
   default:
     return createStringError(errc::invalid_argument,
-                             "first letter should be 'e', 'i' or 'g'");
+                             "first letter after \'" + Arch.slice(0, 4) +
+                                 "\' should be 'e', 'i' or 'g'");
   case 'e':
   case 'i':
     break;
