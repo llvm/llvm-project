@@ -1515,7 +1515,7 @@ void RewriteInstance::registerFragments() {
     // symbol.
     for (ELFSymbolRef NextSymbol = Symbol; NextSymbol < StopSymbol;
          NextSymbol.moveNext()) {
-      Expected<StringRef> NameOrError = Symbol.getName();
+      Expected<StringRef> NameOrError = NextSymbol.getName();
       if (!NameOrError)
         break;
       StringRef Name = *NameOrError;
