@@ -122,8 +122,6 @@ C++23 Feature Support
   materialize temporary object which is a prvalue in discarded-value expression.
 - Implemented `P1774R8: Portable assumptions <https://wg21.link/P1774R8>`_.
 
-- Implemented `P2809R3: Trivial infinite loops are not Undefined Behavior <https://wg21.link/P2809R3>`_.
-
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -131,7 +129,7 @@ C++2c Feature Support
 
 - Implemented `P2573R2: = delete("should have a reason"); <https://wg21.link/P2573R2>`_
 
-- Implemented `P2573R2: = delete("should have a reason"); <https://wg21.link/P2573R2>`_
+- Implemented `P2809R3: Trivial infinite loops are not Undefined Behavior <https://wg21.link/P2809R3>`_.
 
 
 Resolutions to C++ Defect Reports
