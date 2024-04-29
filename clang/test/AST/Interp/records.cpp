@@ -1420,3 +1420,17 @@ namespace ZeroInit {
   constexpr S3 s3d; // both-error {{default initialization of an object of const type 'const S3' without a user-provided default constructor}}
   static_assert(s3d.n == 0, "");
 }
+
+namespace {
+#if __cplusplus >= 202002L
+  struct C {
+    template <unsigned N> constexpr C(const char (&)[N]) : n(N) {}
+    unsigned n;
+  };
+  template <C c>
+  constexpr auto operator""_c() { return c.n; }
+
+  constexpr auto waldo = "abc"_c;
+  static_assert(waldo == 4, "");
+#endif
+}
