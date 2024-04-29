@@ -2440,10 +2440,12 @@ ExprResult Sema::BuildClassMessageImplicit(QualType ReceiverType,
   assert(((isSuperReceiver && Loc.isValid()) || receiverTypeInfo) &&
          "Either the super receiver location needs to be valid or the receiver "
          "needs valid type source information");
-  return BuildClassMessage(receiverTypeInfo, ReceiverType,
-                          /*SuperLoc=*/isSuperReceiver ? Loc : SourceLocation(),
-                           Sel, Method, Loc, Loc, Loc, Args,
-                           /*isImplicit=*/true);
+  if (receiverTypeInfo) {
+    return BuildClassMessage(receiverTypeInfo, ReceiverType,
+                            /*SuperLoc=*/isSuperReceiver ? Loc : SourceLocation(),
+                             Sel, Method, Loc, Loc, Loc, Args,
+                             /*isImplicit=*/true);
+  }
 }
 
 static void applyCocoaAPICheck(Sema &S, const ObjCMessageExpr *Msg,
