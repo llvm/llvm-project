@@ -180,8 +180,8 @@ static inline bool hasRoundModeOp(uint64_t TSFlags) {
 /// \returns true if this instruction uses vxrm
 static inline bool usesVXRM(uint64_t TSFlags) { return TSFlags & UsesVXRMMask; }
 
-/// \returns true if this instruction has implict SEW value.
-static inline bool hasImplictSEW(uint64_t TSFlags) {
+/// \returns true if this instruction has implicit SEW value.
+static inline bool hasImplicitSEW(uint64_t TSFlags) {
   return TSFlags & HasImplictSEWMask;
 }
 
@@ -192,7 +192,7 @@ static inline VSEW getVSEW(uint64_t TSFlags) {
 
 /// \returns true if there is a SEW value for the instruction.
 static inline bool hasSEW(uint64_t TSFlags) {
-  return hasSEWOp(TSFlags) || hasImplictSEW(TSFlags);
+  return hasSEWOp(TSFlags) || hasImplicitSEW(TSFlags);
 }
 
 static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
