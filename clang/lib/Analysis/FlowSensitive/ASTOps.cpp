@@ -33,12 +33,20 @@ namespace clang::dataflow {
 
 const Expr &ignoreCFGOmittedNodes(const Expr &E) {
   const Expr *Current = &E;
-  if (auto *EWC = dyn_cast<ExprWithCleanups>(Current)) {
-    Current = EWC->getSubExpr();
+  const Expr *Last = nullptr;
+  while (Current != Last) {
+    Last = Current;
+    if (auto *EWC = dyn_cast<ExprWithCleanups>(Current)) {
+      Current = EWC->getSubExpr();
+      assert(Current != nullptr);
+    }
+    if (auto *CE = dyn_cast<ConstantExpr>(Current)) {
+      Current = CE->getSubExpr();
+      assert(Current != nullptr);
+    }
+    Current = Current->IgnoreParens();
     assert(Current != nullptr);
   }
-  Current = Current->IgnoreParens();
-  assert(Current != nullptr);
   return *Current;
 }
 
@@ -80,11 +88,12 @@ bool containsSameFields(const FieldSet &Fields,
 }
 
 /// Returns the fields of a `RecordDecl` that are initialized by an
-/// `InitListExpr`, in the order in which they appear in
-/// `InitListExpr::inits()`.
-/// `Init->getType()` must be a record type.
+/// `InitListExpr` or `CXXParenListInitExpr`, in the order in which they appear
+/// in `InitListExpr::inits()` / `CXXParenListInitExpr::getInitExprs()`.
+/// `InitList->getType()` must be a record type.
+template <class InitListT>
 static std::vector<const FieldDecl *>
-getFieldsForInitListExpr(const InitListExpr *InitList) {
+getFieldsForInitListExpr(const InitListT *InitList) {
   const RecordDecl *RD = InitList->getType()->getAsRecordDecl();
   assert(RD != nullptr);
 
@@ -101,23 +110,33 @@ getFieldsForInitListExpr(const InitListExpr *InitList) {
   // fields to avoid mapping inits to the wrongs fields.
   llvm::copy_if(
       RD->fields(), std::back_inserter(Fields),
-      [](const FieldDecl *Field) { return !Field->isUnnamedBitfield(); });
+      [](const FieldDecl *Field) { return !Field->isUnnamedBitField(); });
   return Fields;
 }
 
-RecordInitListHelper::RecordInitListHelper(const InitListExpr *InitList) {
-  auto *RD = InitList->getType()->getAsCXXRecordDecl();
-  assert(RD != nullptr);
+RecordInitListHelper::RecordInitListHelper(const InitListExpr *InitList)
+    : RecordInitListHelper(InitList->getType(),
+                           getFieldsForInitListExpr(InitList),
+                           InitList->inits()) {}
 
-  std::vector<const FieldDecl *> Fields = getFieldsForInitListExpr(InitList);
-  ArrayRef<Expr *> Inits = InitList->inits();
+RecordInitListHelper::RecordInitListHelper(
+    const CXXParenListInitExpr *ParenInitList)
+    : RecordInitListHelper(ParenInitList->getType(),
+                           getFieldsForInitListExpr(ParenInitList),
+                           ParenInitList->getInitExprs()) {}
+
+RecordInitListHelper::RecordInitListHelper(
+    QualType Ty, std::vector<const FieldDecl *> Fields,
+    ArrayRef<Expr *> Inits) {
+  auto *RD = Ty->getAsCXXRecordDecl();
+  assert(RD != nullptr);
 
   // Unions initialized with an empty initializer list need special treatment.
   // For structs/classes initialized with an empty initializer list, Clang
   // puts `ImplicitValueInitExpr`s in `InitListExpr::inits()`, but for unions,
   // it doesn't do this -- so we create an `ImplicitValueInitExpr` ourselves.
   SmallVector<Expr *> InitsForUnion;
-  if (InitList->getType()->isUnionType() && Inits.empty()) {
+  if (Ty->isUnionType() && Inits.empty()) {
     assert(Fields.size() == 1);
     ImplicitValueInitForUnion.emplace(Fields.front()->getType());
     InitsForUnion.push_back(&*ImplicitValueInitForUnion);
@@ -217,6 +236,10 @@ static void getReferencedDecls(const Stmt &S, ReferencedDecls &Referenced) {
     if (InitList->getType()->isRecordType())
       for (const auto *FD : getFieldsForInitListExpr(InitList))
         Referenced.Fields.insert(FD);
+  } else if (auto *ParenInitList = dyn_cast<CXXParenListInitExpr>(&S)) {
+    if (ParenInitList->getType()->isRecordType())
+      for (const auto *FD : getFieldsForInitListExpr(ParenInitList))
+        Referenced.Fields.insert(FD);
   }
 }
 
@@ -243,6 +266,12 @@ ReferencedDecls getReferencedDecls(const FunctionDecl &FD) {
   }
   getReferencedDecls(*FD.getBody(), Result);
 
+  return Result;
+}
+
+ReferencedDecls getReferencedDecls(const Stmt &S) {
+  ReferencedDecls Result;
+  getReferencedDecls(S, Result);
   return Result;
 }
 

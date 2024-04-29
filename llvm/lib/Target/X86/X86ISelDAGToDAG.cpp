@@ -5046,17 +5046,17 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       switch (IntNo) {
       default: llvm_unreachable("Impossible intrinsic");
       case Intrinsic::x86_encodekey128:
-        Opcode = GET_EGPR_IF_ENABLED(X86::ENCODEKEY128);
+        Opcode = X86::ENCODEKEY128;
         break;
       case Intrinsic::x86_encodekey256:
-        Opcode = GET_EGPR_IF_ENABLED(X86::ENCODEKEY256);
+        Opcode = X86::ENCODEKEY256;
         break;
       }
 
       SDValue Chain = Node->getOperand(0);
       Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM0, Node->getOperand(3),
                                    SDValue());
-      if (Opcode == X86::ENCODEKEY256 || Opcode == X86::ENCODEKEY256_EVEX)
+      if (Opcode == X86::ENCODEKEY256)
         Chain = CurDAG->getCopyToReg(Chain, dl, X86::XMM1, Node->getOperand(4),
                                      Chain.getValue(1));
 
@@ -6475,18 +6475,17 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     default:
       llvm_unreachable("Unexpected opcode!");
     case X86ISD::AESENCWIDE128KL:
-      Opcode = GET_EGPR_IF_ENABLED(X86::AESENCWIDE128KL);
+      Opcode = X86::AESENCWIDE128KL;
       break;
     case X86ISD::AESDECWIDE128KL:
-      Opcode = GET_EGPR_IF_ENABLED(X86::AESDECWIDE128KL);
+      Opcode = X86::AESDECWIDE128KL;
       break;
     case X86ISD::AESENCWIDE256KL:
-      Opcode = GET_EGPR_IF_ENABLED(X86::AESENCWIDE256KL);
+      Opcode = X86::AESENCWIDE256KL;
       break;
     case X86ISD::AESDECWIDE256KL:
-      Opcode = GET_EGPR_IF_ENABLED(X86::AESDECWIDE256KL);
+      Opcode = X86::AESDECWIDE256KL;
       break;
-#undef GET_EGPR_IF_ENABLED
     }
 
     SDValue Chain = Node->getOperand(0);

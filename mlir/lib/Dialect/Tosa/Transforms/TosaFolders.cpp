@@ -371,7 +371,7 @@ struct ReduceConstantOptimization : public OpRewritePattern<OperationType> {
     auto reductionAxis = op.getAxis();
     const auto denseElementsAttr = constOp.getValue();
     const auto shapedOldElementsValues =
-        denseElementsAttr.getType().cast<ShapedType>();
+        cast<ShapedType>(denseElementsAttr.getType());
 
     if (!llvm::isa<IntegerType>(shapedOldElementsValues.getElementType()))
       return rewriter.notifyMatchFailure(

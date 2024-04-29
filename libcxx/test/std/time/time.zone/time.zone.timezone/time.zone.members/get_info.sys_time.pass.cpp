@@ -12,7 +12,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23, c++26
 // UNSUPPORTED: no-filesystem, no-localization, no-tzdb
 
-// XFAIL: libcpp-has-no-incomplete-tzdb
+// XFAIL: libcpp-has-no-experimental-tzdb
 // XFAIL: availability-tzdb-missing
 
 // <chrono>
@@ -1299,6 +1299,78 @@ static void test_america_indiana_knox() {
                tz->get_info(to_sys_seconds(2006y, std::chrono::October, 29d, 6h, 59min, 59s)));
 }
 
+static void test_america_punta_arenas() {
+  // Z America/Punta_Arenas -4:43:40 - LMT 1890
+  // ...
+  // -4 - -04 1919 Jul
+  // -4:42:45 - SMT 1927 S
+  // -5 x -05/-04 1932 S
+  // ...
+  //
+  // R x 1927 1931 - S 1 0 1 -
+  // R x 1928 1932 - Ap 1 0 0 -
+  // ...
+
+  using namespace std::literals::chrono_literals;
+  const std::chrono::time_zone* tz = std::chrono::locate_zone("America/Punta_Arenas");
+
+  assert_equal(
+      std::chrono::sys_info(
+          to_sys_seconds(1927y, std::chrono::September, 1d, 4h, 42min, 45s),
+          to_sys_seconds(1928y, std::chrono::April, 1d, 4h),
+          -4h,
+          60min,
+          "-04"),
+      tz->get_info(to_sys_seconds(1927y, std::chrono::September, 1d, 4h, 42min, 45s)));
+
+  assert_equal(
+      std::chrono::sys_info(
+          to_sys_seconds(1927y, std::chrono::September, 1d, 4h, 42min, 45s),
+          to_sys_seconds(1928y, std::chrono::April, 1d, 4h),
+          -4h,
+          60min,
+          "-04"),
+      tz->get_info(to_sys_seconds(1928y, std::chrono::April, 1d, 3h, 59min, 59s)));
+}
+
+static void test_europ_ljubljana() {
+  // Z Europe/Ljubljana 0:58:4 - LMT 1884
+  // 1 - CET 1941 Ap 18 23
+  // 1 c CE%sT 1945 May 8 2s
+  // 1 1 CEST 1945 S 16 2s
+  // 1 - CET 1982 N 27
+  // 1 E CE%sT
+  //
+  // ...
+  // R c 1943 o - O 4 2s 0 -
+  // R c 1944 1945 - Ap M>=1 2s 1 S
+  // R c 1944 o - O 2 2s 0 -
+  // R c 1945 o - S 16 2s 0 -
+  // R c 1977 1980 - Ap Su>=1 2s 1 S
+  // ...
+
+  using namespace std::literals::chrono_literals;
+  const std::chrono::time_zone* tz = std::chrono::locate_zone("Europe/Ljubljana");
+
+  assert_equal(
+      std::chrono::sys_info(
+          to_sys_seconds(1945y, std::chrono::April, 2d, 1h),
+          to_sys_seconds(1945y, std::chrono::September, 16d, 1h),
+          2h,
+          60min,
+          "CEST"),
+      tz->get_info(to_sys_seconds(1945y, std::chrono::April, 2d, 1h)));
+
+  assert_equal(
+      std::chrono::sys_info(
+          to_sys_seconds(1945y, std::chrono::April, 2d, 1h),
+          to_sys_seconds(1945y, std::chrono::September, 16d, 1h),
+          2h,
+          60min,
+          "CEST"),
+      tz->get_info(to_sys_seconds(1945y, std::chrono::September, 16d, 0h, 59min, 59s)));
+}
+
 int main(int, const char**) {
   // Basic tests
   test_gmt();
@@ -1332,6 +1404,10 @@ int main(int, const char**) {
   test_america_auncion();
   test_america_ciudad_juarez();
   test_america_indiana_knox();
+
+  // Reverse search bugs
+  test_america_punta_arenas();
+  test_europ_ljubljana();
 
   return 0;
 }

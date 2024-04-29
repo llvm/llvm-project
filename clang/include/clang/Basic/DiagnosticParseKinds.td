@@ -478,6 +478,15 @@ def ext_decomp_decl_empty : ExtWarn<
   "ISO C++17 does not allow a decomposition group to be empty">,
   InGroup<DiagGroup<"empty-decomposition">>;
 
+// C++26 structured bindings
+def ext_decl_attrs_on_binding : ExtWarn<
+  "an attribute specifier sequence attached to a structured binding declaration "
+  "is a C++2c extension">, InGroup<CXX26>;
+def warn_cxx23_compat_decl_attrs_on_binding : Warning<
+  "an attribute specifier sequence attached to a structured binding declaration "
+  "is incompatible with C++ standards before C++2c">,
+  InGroup<CXXPre26Compat>, DefaultIgnore;
+
 /// Objective-C parser diagnostics
 def err_expected_minus_or_plus : Error<
   "method type specifier must start with '-' or '+'">;
@@ -1654,7 +1663,7 @@ def warn_ext_int_deprecated : Warning<
   "'_ExtInt' is deprecated; use '_BitInt' instead">, InGroup<DeprecatedType>;
 def ext_bit_int : Extension<
   "'_BitInt' in %select{C17 and earlier|C++}0 is a Clang extension">,
-  InGroup<DiagGroup<"bit-int-extension">>;
+  InGroup<BitIntExtension>;
 } // end of Parse Issue category.
 
 let CategoryName = "Modules Issue" in {

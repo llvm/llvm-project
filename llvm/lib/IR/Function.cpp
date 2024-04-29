@@ -735,6 +735,10 @@ void Function::addDereferenceableOrNullParamAttr(unsigned ArgNo,
                                                                   ArgNo, Bytes);
 }
 
+void Function::addRangeRetAttr(const ConstantRange &CR) {
+  AttributeSets = AttributeSets.addRangeRetAttr(getContext(), CR);
+}
+
 DenormalMode Function::getDenormalMode(const fltSemantics &FPType) const {
   if (&FPType == &APFloat::IEEEsingle()) {
     DenormalMode Mode = getDenormalModeF32Raw();
@@ -1170,6 +1174,10 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     return;
   case IIT_V8:
     OutputTable.push_back(IITDescriptor::getVector(8, IsScalableVector));
+    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    return;
+  case IIT_V10:
+    OutputTable.push_back(IITDescriptor::getVector(10, IsScalableVector));
     DecodeIITType(NextElt, Infos, Info, OutputTable);
     return;
   case IIT_V16:
@@ -1742,9 +1750,8 @@ Intrinsic::matchIntrinsicVarArg(bool isVarArg,
   return true;
 }
 
-bool Intrinsic::getIntrinsicSignature(Function *F,
+bool Intrinsic::getIntrinsicSignature(Intrinsic::ID ID, FunctionType *FT,
                                       SmallVectorImpl<Type *> &ArgTys) {
-  Intrinsic::ID ID = F->getIntrinsicID();
   if (!ID)
     return false;
 
@@ -1752,15 +1759,19 @@ bool Intrinsic::getIntrinsicSignature(Function *F,
   getIntrinsicInfoTableEntries(ID, Table);
   ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
 
-  if (Intrinsic::matchIntrinsicSignature(F->getFunctionType(), TableRef,
-                                         ArgTys) !=
+  if (Intrinsic::matchIntrinsicSignature(FT, TableRef, ArgTys) !=
       Intrinsic::MatchIntrinsicTypesResult::MatchIntrinsicTypes_Match) {
     return false;
   }
-  if (Intrinsic::matchIntrinsicVarArg(F->getFunctionType()->isVarArg(),
-                                      TableRef))
+  if (Intrinsic::matchIntrinsicVarArg(FT->isVarArg(), TableRef))
     return false;
   return true;
+}
+
+bool Intrinsic::getIntrinsicSignature(Function *F,
+                                      SmallVectorImpl<Type *> &ArgTys) {
+  return getIntrinsicSignature(F->getIntrinsicID(), F->getFunctionType(),
+                               ArgTys);
 }
 
 std::optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
