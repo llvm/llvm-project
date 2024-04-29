@@ -1,5 +1,5 @@
-# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -skip-unsupported-instructions -timeline %s |& FileCheck --check-prefix=CHECK-SKIP %s
-# RUN: not llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 %s |& FileCheck --check-prefix=CHECK-ERROR %s
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -skip-unsupported-instructions -timeline %s 2>&1 | FileCheck --check-prefix=CHECK-SKIP %s
+# RUN: not llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 
 # Test checks that unsupported instructions exit with an error, unless -skip-unsupported-instructions is passed, in which case the remaining instructions should be analysed.
 
