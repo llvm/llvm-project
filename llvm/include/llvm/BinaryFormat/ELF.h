@@ -1940,11 +1940,11 @@ uint16_t convertArchNameToEMachine(StringRef Arch);
 StringRef convertEMachineToArchName(uint16_t EMachine);
 
 // Convert a lowercase string identifier into an OSABI value.
-uint8_t convertNameToOSAbi(StringRef Name);
+uint8_t convertNameToOSABI(StringRef Name);
 
 // Convert an OSABI value into a string that identifies the OS- or ABI-
 // specific ELF extension.
-StringRef convertOSAbiToName(uint8_t OSAbi);
+StringRef convertOSABIToName(uint8_t OSABI);
 
 } // end namespace ELF
 } // end namespace llvm

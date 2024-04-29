@@ -1060,8 +1060,8 @@ def LLVM_vector_extract
   }];
 }
 
-def LLVM_experimental_vector_interleave2
-    : LLVM_OneResultIntrOp<"experimental.vector.interleave2",
+def LLVM_vector_interleave2
+    : LLVM_OneResultIntrOp<"vector.interleave2",
         /*overloadedResults=*/[0], /*overloadedOperands=*/[],
         /*traits=*/[
           Pure, AllTypesMatch<["vec1", "vec2"]>,

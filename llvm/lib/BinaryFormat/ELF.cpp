@@ -568,7 +568,7 @@ StringRef ELF::convertEMachineToArchName(uint16_t EMachine) {
   }
 }
 
-uint8_t ELF::convertNameToOSAbi(StringRef Name) {
+uint8_t ELF::convertNameToOSABI(StringRef Name) {
   return StringSwitch<uint16_t>(Name)
       .StartsWith("hpux", ELFOSABI_HPUX)
       .StartsWith("netbsd", ELFOSABI_NETBSD)
@@ -596,8 +596,8 @@ uint8_t ELF::convertNameToOSAbi(StringRef Name) {
       .Default(ELFOSABI_NONE);
 }
 
-StringRef ELF::convertOSAbiToName(uint8_t OSAbi) {
-  switch (OSAbi) {
+StringRef ELF::convertOSABIToName(uint8_t OSABI) {
+  switch (OSABI) {
   case ELFOSABI_HPUX:
     return "hpux";
   case ELFOSABI_NETBSD:
