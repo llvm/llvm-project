@@ -927,7 +927,8 @@ bool CodeGenFunction::checkIfLoopMustProgress(const Expr *ControllingExpression,
       !ControllingExpression ||
       (ControllingExpression->EvaluateAsInt(Result, getContext()) &&
        Result.Val.isInt());
-  bool IsTrue = CondIsConstInt &&
+
+  bool CondIsTrue = CondIsConstInt &&
                 (!ControllingExpression || Result.Val.getInt().getBoolValue());
 
   if (getLangOpts().C99 && CondIsConstInt)
@@ -943,7 +944,7 @@ bool CodeGenFunction::checkIfLoopMustProgress(const Expr *ControllingExpression,
   // [...]
   // - continue execution of a trivial infinite loop ([stmt.iter.general]).
   if (getLangOpts().CPlusPlus11)
-    return !(IsTrivialCXXLoop && IsTrue);
+    return !(IsTrivialCXXLoop && CondIsTrue);
 
   return false;
 }
