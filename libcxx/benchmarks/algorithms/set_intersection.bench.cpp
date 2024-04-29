@@ -149,13 +149,10 @@ struct SetIntersection {
   }
 
   void run(benchmark::State& state) const {
-    state.PauseTiming();
     auto input = genCacheUnfriendlyData<ContainerType>(size1_, size2_, Overlap());
     std::vector<Value<ValueType>> out(std::min(size1_, size2_));
 
     const auto BATCH_SIZE = std::max(size_t{512}, (2 * TestSetElements) / (size1_ + size2_));
-    state.ResumeTiming();
-
     for (const auto& _ : state) {
       while (state.KeepRunningBatch(BATCH_SIZE)) {
         for (unsigned i = 0; i < BATCH_SIZE; ++i) {
