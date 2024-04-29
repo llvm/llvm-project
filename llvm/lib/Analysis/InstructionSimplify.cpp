@@ -6281,11 +6281,11 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
                m_Intrinsic<Intrinsic::pow>(m_SpecificFP(10.0), m_Value(X)))))
       return X;
     break;
-  case Intrinsic::experimental_vector_reverse:
-    // experimental.vector.reverse(experimental.vector.reverse(x)) -> x
+  case Intrinsic::vector_reverse:
+    // vector.reverse(vector.reverse(x)) -> x
     if (match(Op0, m_VecReverse(m_Value(X))))
       return X;
-    // experimental.vector.reverse(splat(X)) -> splat(X)
+    // vector.reverse(splat(X)) -> splat(X)
     if (isSplatValue(Op0))
       return Op0;
     break;

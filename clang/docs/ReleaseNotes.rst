@@ -63,6 +63,12 @@ ABI Changes in This Version
   MSVC uses a different mangling for these objects, compatibility is not affected.
   (#GH85423).
 
+- Fixed Microsoft calling convention for returning certain classes with a
+  templated constructor. If a class has a templated constructor, it should
+  be returned indirectly even if it meets all the other requirements for
+  returning a class in a register. This affects some uses of std::pair.
+  (#GH86384).
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
@@ -145,6 +151,7 @@ C++2c Feature Support
 
 - Implemented `P0609R3: Attributes for Structured Bindings <https://wg21.link/P0609R3>`_
 
+- Implemented `P2748R5 Disallow Binding a Returned Glvalue to a Temporary <https://wg21.link/P2748R5>`_.
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -221,6 +228,7 @@ Non-comprehensive list of changes in this release
 - ``__typeof_unqual__`` is available in all C modes as an extension, which behaves
   like ``typeof_unqual`` from C23, similar to ``__typeof__`` and ``typeof``.
 
+- ``__builtin_reduce_{add|mul|xor|or|and|min|max}`` builtins now support scalable vectors.
 
 * Shared libraries linked with either the ``-ffast-math``, ``-Ofast``, or
   ``-funsafe-math-optimizations`` flags will no longer enable flush-to-zero
@@ -230,6 +238,9 @@ Non-comprehensive list of changes in this release
 
 * ``-fdenormal-fp-math=preserve-sign`` is no longer implied by ``-ffast-math``
   on x86 systems.
+
+- Builtins ``__builtin_shufflevector()`` and ``__builtin_convertvector()`` may
+  now be used within constant expressions.
 
 New Compiler Flags
 ------------------
@@ -460,6 +471,10 @@ Bug Fixes in This Version
 
 - Fixed an assertion failure on invalid InitListExpr in C89 mode (#GH88008).
 
+- Fixed missing destructor calls when we branch from middle of an expression.
+  This could happen through a branch in stmt-expr or in an expression containing a coroutine
+  suspension. Fixes (#GH63818) (#GH88478).
+
 - Clang will no longer diagnose an erroneous non-dependent ``switch`` condition
   during instantiation, and instead will only diagnose it once, during checking
   of the function template.
@@ -590,6 +605,8 @@ Bug Fixes to C++ Support
 - Fixed a use-after-free bug in parsing of type constraints with default arguments that involve lambdas. (#GH67235)
 - Fixed bug in which the body of a consteval lambda within a template was not parsed as within an
   immediate function context.
+- Fix CTAD for ``std::initializer_list``. This allows ``std::initializer_list{1, 2, 3}`` to be deduced as
+  ``std::initializer_list<int>`` as intended.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -700,6 +717,11 @@ AIX Support
 
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
+
+The -mcpu=generic configuration now enables multivalue and reference-types.These
+proposals are standardized and available in all major engines. Enabling
+multivalue here only enables the language feature but does not turn on the
+multivalue ABI (this enables non-ABI uses of multivalue, like exnref).
 
 AVR Support
 ^^^^^^^^^^^
