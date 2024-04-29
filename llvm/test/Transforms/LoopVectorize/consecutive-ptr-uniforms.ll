@@ -200,13 +200,13 @@ for.end:
 ; INTER-NOT: LV: Found uniform instruction: %tmp0 = getelementptr inbounds %pair, ptr %p, i64 %i, i32 0
 ; INTER:     vector.body
 ; INTER:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, {{.*}} ]
+; INTER:       %[[I1:.+]] = or disjoint i64 %index, 1
+; INTER:       %[[I2:.+]] = or disjoint i64 %index, 2
+; INTER:       %[[I3:.+]] = or disjoint i64 %index, 3
 ; INTER:       %[[G0:.+]] = getelementptr inbounds %pair, ptr %p, i64 %index, i32 0
 ; INTER:       %wide.vec = load <8 x i32>, ptr %[[G0]], align 8
-; INTER:       %[[I1:.+]] = or disjoint i64 %index, 1
 ; INTER:       getelementptr inbounds %pair, ptr %p, i64 %[[I1]], i32 0
-; INTER:       %[[I2:.+]] = or disjoint i64 %index, 2
 ; INTER:       getelementptr inbounds %pair, ptr %p, i64 %[[I2]], i32 0
-; INTER:       %[[I3:.+]] = or disjoint i64 %index, 3
 ; INTER:       getelementptr inbounds %pair, ptr %p, i64 %[[I3]], i32 0
 ; INTER:       br i1 {{.*}}, label %middle.block, label %vector.body
 ;

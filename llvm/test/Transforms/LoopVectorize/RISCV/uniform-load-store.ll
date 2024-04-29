@@ -1046,6 +1046,9 @@ define void @uniform_store_of_loop_varying(ptr noalias nocapture %a, ptr noalias
 ; TF-FIXEDLEN:       [[VECTOR_BODY]]:
 ; TF-FIXEDLEN-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
 ; TF-FIXEDLEN-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; TF-FIXEDLEN-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 1
+; TF-FIXEDLEN-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 2
+; TF-FIXEDLEN-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 3
 ; TF-FIXEDLEN-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 [[TMP0]], i64 1025)
 ; TF-FIXEDLEN-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i32 0
 ; TF-FIXEDLEN-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
@@ -1056,21 +1059,18 @@ define void @uniform_store_of_loop_varying(ptr noalias nocapture %a, ptr noalias
 ; TF-FIXEDLEN-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i32 1
 ; TF-FIXEDLEN-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
 ; TF-FIXEDLEN:       [[PRED_STORE_IF1]]:
-; TF-FIXEDLEN-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 1
 ; TF-FIXEDLEN-NEXT:    store i64 [[TMP3]], ptr [[B]], align 8
 ; TF-FIXEDLEN-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; TF-FIXEDLEN:       [[PRED_STORE_CONTINUE2]]:
 ; TF-FIXEDLEN-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i32 2
 ; TF-FIXEDLEN-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
 ; TF-FIXEDLEN:       [[PRED_STORE_IF3]]:
-; TF-FIXEDLEN-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 2
 ; TF-FIXEDLEN-NEXT:    store i64 [[TMP5]], ptr [[B]], align 8
 ; TF-FIXEDLEN-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
 ; TF-FIXEDLEN:       [[PRED_STORE_CONTINUE4]]:
 ; TF-FIXEDLEN-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[ACTIVE_LANE_MASK]], i32 3
 ; TF-FIXEDLEN-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6]]
 ; TF-FIXEDLEN:       [[PRED_STORE_IF5]]:
-; TF-FIXEDLEN-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 3
 ; TF-FIXEDLEN-NEXT:    store i64 [[TMP7]], ptr [[B]], align 8
 ; TF-FIXEDLEN-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
 ; TF-FIXEDLEN:       [[PRED_STORE_CONTINUE6]]:

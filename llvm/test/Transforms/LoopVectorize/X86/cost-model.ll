@@ -604,9 +604,21 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE37:%.*]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP35:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP42:%.*]] = add i64 [[INDEX]], 5
+; CHECK-NEXT:    [[TMP46:%.*]] = add i64 [[INDEX]], 6
+; CHECK-NEXT:    [[TMP50:%.*]] = add i64 [[INDEX]], 7
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP57:%.*]] = add i64 [[INDEX]], 9
+; CHECK-NEXT:    [[TMP61:%.*]] = add i64 [[INDEX]], 10
+; CHECK-NEXT:    [[TMP65:%.*]] = add i64 [[INDEX]], 11
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 12
+; CHECK-NEXT:    [[TMP72:%.*]] = add i64 [[INDEX]], 13
+; CHECK-NEXT:    [[TMP76:%.*]] = add i64 [[INDEX]], 14
+; CHECK-NEXT:    [[TMP80:%.*]] = add i64 [[INDEX]], 15
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl nsw i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl nsw i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = shl nsw i64 [[TMP5]], 2
@@ -638,7 +650,6 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i1> [[TMP19]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP26]], label [[PRED_STORE_IF8:%.*]], label [[PRED_STORE_CONTINUE9:%.*]]
 ; CHECK:       pred.store.if8:
-; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP28:%.*]] = shl nsw i64 [[TMP27]], 2
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP28]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP29]], align 8
@@ -647,7 +658,6 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <4 x i1> [[TMP19]], i32 2
 ; CHECK-NEXT:    br i1 [[TMP30]], label [[PRED_STORE_IF10:%.*]], label [[PRED_STORE_CONTINUE11:%.*]]
 ; CHECK:       pred.store.if10:
-; CHECK-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP32:%.*]] = shl nsw i64 [[TMP31]], 2
 ; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP32]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP33]], align 8
@@ -656,7 +666,6 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i1> [[TMP19]], i32 3
 ; CHECK-NEXT:    br i1 [[TMP34]], label [[PRED_STORE_IF12:%.*]], label [[PRED_STORE_CONTINUE13:%.*]]
 ; CHECK:       pred.store.if12:
-; CHECK-NEXT:    [[TMP35:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP36:%.*]] = shl nsw i64 [[TMP35]], 2
 ; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP36]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP37]], align 8
@@ -673,7 +682,6 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <4 x i1> [[TMP20]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP41]], label [[PRED_STORE_IF16:%.*]], label [[PRED_STORE_CONTINUE17:%.*]]
 ; CHECK:       pred.store.if16:
-; CHECK-NEXT:    [[TMP42:%.*]] = add i64 [[INDEX]], 5
 ; CHECK-NEXT:    [[TMP43:%.*]] = shl nsw i64 [[TMP42]], 2
 ; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP43]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP44]], align 8
@@ -682,7 +690,6 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <4 x i1> [[TMP20]], i32 2
 ; CHECK-NEXT:    br i1 [[TMP45]], label [[PRED_STORE_IF18:%.*]], label [[PRED_STORE_CONTINUE19:%.*]]
 ; CHECK:       pred.store.if18:
-; CHECK-NEXT:    [[TMP46:%.*]] = add i64 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP47:%.*]] = shl nsw i64 [[TMP46]], 2
 ; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP47]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP48]], align 8
@@ -691,7 +698,6 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP49:%.*]] = extractelement <4 x i1> [[TMP20]], i32 3
 ; CHECK-NEXT:    br i1 [[TMP49]], label [[PRED_STORE_IF20:%.*]], label [[PRED_STORE_CONTINUE21:%.*]]
 ; CHECK:       pred.store.if20:
-; CHECK-NEXT:    [[TMP50:%.*]] = add i64 [[INDEX]], 7
 ; CHECK-NEXT:    [[TMP51:%.*]] = shl nsw i64 [[TMP50]], 2
 ; CHECK-NEXT:    [[TMP52:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP51]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP52]], align 8
@@ -708,7 +714,6 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP56:%.*]] = extractelement <4 x i1> [[TMP21]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP56]], label [[PRED_STORE_IF24:%.*]], label [[PRED_STORE_CONTINUE25:%.*]]
 ; CHECK:       pred.store.if24:
-; CHECK-NEXT:    [[TMP57:%.*]] = add i64 [[INDEX]], 9
 ; CHECK-NEXT:    [[TMP58:%.*]] = shl nsw i64 [[TMP57]], 2
 ; CHECK-NEXT:    [[TMP59:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP58]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP59]], align 8
@@ -717,7 +722,6 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP60:%.*]] = extractelement <4 x i1> [[TMP21]], i32 2
 ; CHECK-NEXT:    br i1 [[TMP60]], label [[PRED_STORE_IF26:%.*]], label [[PRED_STORE_CONTINUE27:%.*]]
 ; CHECK:       pred.store.if26:
-; CHECK-NEXT:    [[TMP61:%.*]] = add i64 [[INDEX]], 10
 ; CHECK-NEXT:    [[TMP62:%.*]] = shl nsw i64 [[TMP61]], 2
 ; CHECK-NEXT:    [[TMP63:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP62]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP63]], align 8
@@ -726,7 +730,6 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP64:%.*]] = extractelement <4 x i1> [[TMP21]], i32 3
 ; CHECK-NEXT:    br i1 [[TMP64]], label [[PRED_STORE_IF28:%.*]], label [[PRED_STORE_CONTINUE29:%.*]]
 ; CHECK:       pred.store.if28:
-; CHECK-NEXT:    [[TMP65:%.*]] = add i64 [[INDEX]], 11
 ; CHECK-NEXT:    [[TMP66:%.*]] = shl nsw i64 [[TMP65]], 2
 ; CHECK-NEXT:    [[TMP67:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP66]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP67]], align 8
@@ -743,7 +746,6 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP71:%.*]] = extractelement <4 x i1> [[TMP22]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP71]], label [[PRED_STORE_IF32:%.*]], label [[PRED_STORE_CONTINUE33:%.*]]
 ; CHECK:       pred.store.if32:
-; CHECK-NEXT:    [[TMP72:%.*]] = add i64 [[INDEX]], 13
 ; CHECK-NEXT:    [[TMP73:%.*]] = shl nsw i64 [[TMP72]], 2
 ; CHECK-NEXT:    [[TMP74:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP73]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP74]], align 8
@@ -752,7 +754,6 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP75:%.*]] = extractelement <4 x i1> [[TMP22]], i32 2
 ; CHECK-NEXT:    br i1 [[TMP75]], label [[PRED_STORE_IF34:%.*]], label [[PRED_STORE_CONTINUE35:%.*]]
 ; CHECK:       pred.store.if34:
-; CHECK-NEXT:    [[TMP76:%.*]] = add i64 [[INDEX]], 14
 ; CHECK-NEXT:    [[TMP77:%.*]] = shl nsw i64 [[TMP76]], 2
 ; CHECK-NEXT:    [[TMP78:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP77]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP78]], align 8
@@ -761,7 +762,6 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP79:%.*]] = extractelement <4 x i1> [[TMP22]], i32 3
 ; CHECK-NEXT:    br i1 [[TMP79]], label [[PRED_STORE_IF36:%.*]], label [[PRED_STORE_CONTINUE37]]
 ; CHECK:       pred.store.if36:
-; CHECK-NEXT:    [[TMP80:%.*]] = add i64 [[INDEX]], 15
 ; CHECK-NEXT:    [[TMP81:%.*]] = shl nsw i64 [[TMP80]], 2
 ; CHECK-NEXT:    [[TMP82:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP81]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP82]], align 8
@@ -786,6 +786,9 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX40:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL1]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT51:%.*]], [[PRED_STORE_CONTINUE50:%.*]] ]
 ; CHECK-NEXT:    [[TMP86:%.*]] = add i64 [[INDEX40]], 0
+; CHECK-NEXT:    [[TMP95:%.*]] = add i64 [[INDEX40]], 1
+; CHECK-NEXT:    [[TMP99:%.*]] = add i64 [[INDEX40]], 2
+; CHECK-NEXT:    [[TMP103:%.*]] = add i64 [[INDEX40]], 3
 ; CHECK-NEXT:    [[TMP87:%.*]] = shl nsw i64 [[TMP86]], 2
 ; CHECK-NEXT:    [[TMP89:%.*]] = getelementptr nusw double, ptr [[A]], i64 [[TMP87]]
 ; CHECK-NEXT:    [[WIDE_VEC41:%.*]] = load <16 x double>, ptr [[TMP89]], align 8
@@ -802,7 +805,6 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP94:%.*]] = extractelement <4 x i1> [[TMP90]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP94]], label [[PRED_STORE_IF45:%.*]], label [[PRED_STORE_CONTINUE46:%.*]]
 ; CHECK:       pred.store.if45:
-; CHECK-NEXT:    [[TMP95:%.*]] = add i64 [[INDEX40]], 1
 ; CHECK-NEXT:    [[TMP96:%.*]] = shl nsw i64 [[TMP95]], 2
 ; CHECK-NEXT:    [[TMP97:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP96]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP97]], align 8
@@ -811,7 +813,6 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP98:%.*]] = extractelement <4 x i1> [[TMP90]], i32 2
 ; CHECK-NEXT:    br i1 [[TMP98]], label [[PRED_STORE_IF47:%.*]], label [[PRED_STORE_CONTINUE48:%.*]]
 ; CHECK:       pred.store.if47:
-; CHECK-NEXT:    [[TMP99:%.*]] = add i64 [[INDEX40]], 2
 ; CHECK-NEXT:    [[TMP100:%.*]] = shl nsw i64 [[TMP99]], 2
 ; CHECK-NEXT:    [[TMP101:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP100]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP101]], align 8
@@ -820,7 +821,6 @@ define void @cost_duplicate_recipe_for_sinking(ptr %A, i64 %N) #2 {
 ; CHECK-NEXT:    [[TMP102:%.*]] = extractelement <4 x i1> [[TMP90]], i32 3
 ; CHECK-NEXT:    br i1 [[TMP102]], label [[PRED_STORE_IF49:%.*]], label [[PRED_STORE_CONTINUE50]]
 ; CHECK:       pred.store.if49:
-; CHECK-NEXT:    [[TMP103:%.*]] = add i64 [[INDEX40]], 3
 ; CHECK-NEXT:    [[TMP104:%.*]] = shl nsw i64 [[TMP103]], 2
 ; CHECK-NEXT:    [[TMP105:%.*]] = getelementptr double, ptr [[A]], i64 [[TMP104]]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[TMP105]], align 8
