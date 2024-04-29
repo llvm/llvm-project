@@ -1114,6 +1114,9 @@ bool ByteCodeExprGen<Emitter>::visitArrayElemInit(unsigned ElemIndex,
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
+  if (E->getType()->isVoidType())
+    return this->emitInvalid(E);
+
   // Handle discarding first.
   if (DiscardResult) {
     for (const Expr *Init : E->inits()) {
