@@ -4881,6 +4881,8 @@ def msimd128 : Flag<["-"], "msimd128">, Group<m_wasm_Features_Group>;
 def mno_simd128 : Flag<["-"], "mno-simd128">, Group<m_wasm_Features_Group>;
 def mrelaxed_simd : Flag<["-"], "mrelaxed-simd">, Group<m_wasm_Features_Group>;
 def mno_relaxed_simd : Flag<["-"], "mno-relaxed-simd">, Group<m_wasm_Features_Group>;
+def mhalf_precision : Flag<["-"], "mhalf-precision">, Group<m_wasm_Features_Group>;
+def mno_half_precision : Flag<["-"], "mno-half-precision">, Group<m_wasm_Features_Group>;
 def mnontrapping_fptoint : Flag<["-"], "mnontrapping-fptoint">, Group<m_wasm_Features_Group>;
 def mno_nontrapping_fptoint : Flag<["-"], "mno-nontrapping-fptoint">, Group<m_wasm_Features_Group>;
 def msign_ext : Flag<["-"], "msign-ext">, Group<m_wasm_Features_Group>;
@@ -6586,12 +6588,6 @@ def J : JoinedOrSeparate<["-"], "J">,
   Flags<[RenderJoined]>, Visibility<[FlangOption, FC1Option]>,
   Group<gfortran_Group>,
   Alias<module_dir>;
-
-let Visibility = [FlangOption] in {
-def no_fortran_main : Flag<["-"], "fno-fortran-main">,
-  Visibility<[FlangOption]>, Group<f_Group>,
-  HelpText<"Do not include Fortran_main.a (provided by Flang) when linking">;
-} // let Visibility = [ FlangOption ]
 
 //===----------------------------------------------------------------------===//
 // FC1 Options

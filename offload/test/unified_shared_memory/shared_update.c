@@ -11,11 +11,6 @@
 #include <omp.h>
 #include <stdio.h>
 
-// ---------------------------------------------------------------------------
-// Various definitions copied from OpenMP RTL
-
-extern void __tgt_register_requires(int64_t);
-
 // End of definitions copied from OpenMP RTL.
 // ---------------------------------------------------------------------------
 
@@ -29,10 +24,6 @@ int main(int argc, char *argv[]) {
   void *host_data, *device_data;
   int *alloc = (int *)malloc(N * sizeof(int));
   int data[N];
-
-  // Manual registration of requires flags for Clang versions
-  // that do not support requires.
-  __tgt_register_requires(8);
 
   for (int i = 0; i < N; ++i) {
     alloc[i] = 10;
