@@ -1521,8 +1521,8 @@ InstCombinerImpl::foldICmpTruncWithTruncOrExt(ICmpInst &Cmp,
   else if (match(&Cmp, m_c_ICmp(Pred, m_NSWTrunc(m_Value(X)),
                                 m_OneUse(m_ZExtOrSExt(m_Value(Y)))))) {
     // Can fold trunc nsw + zext/sext for all predicates.
-    YIsSExt = isa<SExtInst>(Cmp.getOperand(0)) ||
-              isa<SExtInst>(Cmp.getOperand(1));
+    YIsSExt =
+        isa<SExtInst>(Cmp.getOperand(0)) || isa<SExtInst>(Cmp.getOperand(1));
   } else
     return nullptr;
 
