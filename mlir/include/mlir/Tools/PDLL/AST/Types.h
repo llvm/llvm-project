@@ -323,6 +323,29 @@ struct DenseMapInfo<mlir::pdll::ast::Type> {
     return lhs == rhs;
   }
 };
+
+/// Add support for llvm style casts.
+/// We provide a cast between To and From if From is mlir::pdll::ast::Type or
+/// derives from it
+template <typename To, typename From>
+struct CastInfo<
+    To, From,
+    std::enable_if_t<
+        std::is_same_v<mlir::pdll::ast::Type, std::remove_const_t<From>> ||
+        std::is_base_of_v<mlir::pdll::ast::Type, From>>>
+    : NullableValueCastFailed<To>,
+      DefaultDoCastIfPossible<To, From, CastInfo<To, From>> {
+  static inline bool isPossible(mlir::pdll::ast::Type ty) {
+    /// Return a constant true instead of a dynamic true when casting to self or
+    /// up the hierarchy.
+    if constexpr (std::is_base_of_v<To, From>) {
+      return true;
+    } else {
+      return To::classof(ty);
+    };
+  }
+  static inline To doCast(mlir::pdll::ast::Type ty) { return To(ty.getImpl()); }
+};
 } // namespace llvm
 
 #endif // MLIR_TOOLS_PDLL_AST_TYPES_H_
