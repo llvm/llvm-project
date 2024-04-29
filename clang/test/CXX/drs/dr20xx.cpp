@@ -90,7 +90,7 @@ namespace cwg2026 { // cwg2026: 11
   }
 }
 
-namespace cwg2049 { // cwg2049: 18 drafting P2308R1
+namespace cwg2049 { // cwg2049: 18
 #if __cplusplus >= 202302L
 template <int* x = {}> struct X {};
 X<> a;
