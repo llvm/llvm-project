@@ -35,6 +35,10 @@
 clang/lib/AST/Interp/ @tbaederr
 clang/test/AST/Interp/ @tbaederr
 
+/clang/include/clang/CIR @lanza @bcardosolopes
+/clang/lib/CIR @lanza @bcardosolopes
+/clang/tools/cir-* @lanza @bcardosolopes
+
 /lldb/ @JDevlieghere
 
 # MLIR Interfaces.
@@ -118,6 +122,10 @@ clang/test/AST/Interp/ @tbaederr
 # MLIR Python Bindings
 /mlir/test/python/ @ftynse @makslevental @stellaraccident
 /mlir/python/ @ftynse @makslevental @stellaraccident
+
+# MLIR Mem2Reg/SROA
+/mlir/**/Transforms/Mem2Reg.* @moxinilian
+/mlir/**/Transforms/SROA.* @moxinilian
 
 # BOLT
 /bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci

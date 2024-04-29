@@ -1540,7 +1540,7 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   if (auto DstPT = dyn_cast<llvm::PointerType>(DstTy)) {
     // The source value may be an integer, or a pointer.
     if (isa<llvm::PointerType>(SrcTy))
-      return Builder.CreateBitCast(Src, DstTy, "conv");
+      return Src;
 
     assert(SrcType->isIntegerType() && "Not ptr->ptr or int->ptr conversion?");
     // First, convert to the correct width so that we control the kind of
@@ -2330,7 +2330,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     }
 
     // Perform VLAT <-> VLST bitcast through memory.
-    // TODO: since the llvm.experimental.vector.{insert,extract} intrinsics
+    // TODO: since the llvm.vector.{insert,extract} intrinsics
     //       require the element types of the vectors to be the same, we
     //       need to keep this around for bitcasts between VLAT <-> VLST where
     //       the element types of the vectors are not the same, until we figure

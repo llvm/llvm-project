@@ -420,6 +420,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FFLOOR:
   case ISD::FP_ROUND:
   case ISD::FP_EXTEND:
+  case ISD::FPTRUNC_ROUND:
   case ISD::FMA:
   case ISD::SIGN_EXTEND_INREG:
   case ISD::ANY_EXTEND_VECTOR_INREG:
@@ -1044,6 +1045,13 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
     if (SDValue Expanded = TLI.expandFMINNUM_FMAXNUM(Node, DAG)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
+    if (SDValue Expanded = TLI.expandFMINIMUM_FMAXIMUM(Node, DAG)) {
       Results.push_back(Expanded);
       return;
     }

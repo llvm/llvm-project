@@ -3038,15 +3038,7 @@ static bool __kmp_affinity_create_cpuinfo_map(int *line,
     KMP_INFORM(AffParseFilename, "KMP_AFFINITY", "system info for topology");
 
   // Get the number of SMT threads per core.
-  int retval =
-      lpar_get_info(LPAR_INFO_FORMAT1, &cpuinfo, sizeof(lpar_info_format1_t));
-  if (!retval)
-    smt_threads = cpuinfo.smt_threads;
-  else {
-    CLEANUP_THREAD_INFO;
-    *msg_id = kmp_i18n_str_UnknownTopology;
-    return false;
-  }
+  smt_threads = syssmt(GET_NUMBER_SMT_SETS, 0, 0, NULL);
 
   // Allocate a resource set containing available system resourses.
   rsethandle_t sys_rset = rs_alloc(RS_SYSTEM);

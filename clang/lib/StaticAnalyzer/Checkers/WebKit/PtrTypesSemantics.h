@@ -50,6 +50,9 @@ std::optional<bool> isUncounted(const clang::CXXRecordDecl* Class);
 /// class, false if not, std::nullopt if inconclusive.
 std::optional<bool> isUncountedPtr(const clang::Type* T);
 
+/// \returns true if Name is a RefPtr, Ref, or its variant, false if not.
+bool isRefType(const std::string &Name);
+
 /// \returns true if \p F creates ref-countable object from uncounted parameter,
 /// false if not.
 bool isCtorOfRefCounted(const clang::FunctionDecl *F);
