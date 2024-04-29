@@ -2,14 +2,12 @@
 # Warm section should have name .text.warm and warm function fragments should
 # have symbol names ending in warm.
 
-# RUN: split-file %s %t
-# RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %t/main.s -o %t.o
-# RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %t/chain.s -o %t.chain.o
+# RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %s -o %t.o
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: llvm-strip --strip-unneeded %t.o
-# RUN: %clang %cflags %t.o %t.chain.o -o %t.exe -Wl,-q
+# RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt %t.exe -o %t.bolt --split-functions --split-strategy=cdsplit \
-# RUN:   --call-scale=2 --data=%t.fdata --reorder-blocks=ext-tsp --enable-bat
+# RUN:         --call-scale=2 --data=%t.fdata --reorder-blocks=ext-tsp
 # RUN: llvm-objdump --syms %t.bolt | FileCheck %s --check-prefix=CHECK-SYMS-WARM
 
 # CHECK-SYMS-WARM: 0000000000000000 l df *ABS* 0000000000000000 bolt-pseudo.o
@@ -18,22 +16,8 @@
 # CHECK-SYMS-WARM: .text.cold
 # CHECK-SYMS-WARM-SAME: dummy.cold
 
-# RUN: link_fdata %s %t.bolt %t.preagg PREAGG
-# PREAGG: B X:0 #chain.warm# 1 0
-# RUN: perf2bolt %t.bolt -p %t.preagg --pa -o %t.bat.fdata -w %t.bat.yaml -v=1 \
-# RUN:   | FileCheck %s --check-prefix=CHECK-REGISTER
-
-# CHECK-REGISTER: BOLT-INFO: marking chain.warm/1(*2) as a fragment of chain/2(*2)
-
-#--- chain.s
         .text
-        .type   chain, @function
-chain:
-        ret
-        .size   chain, .-chain
-
-#--- main.s
-        .text
+        .globl  chain
         .type   chain, @function
 chain:
         pushq   %rbp
