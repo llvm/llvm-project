@@ -64,11 +64,11 @@ vector.body:                                      ; preds = %vector.body, %entry
   %scevgep46 = getelementptr i8, ptr %a, i64 %lsr.iv27
   %scevgep47 = getelementptr i8, ptr %b, i64 %lsr.iv27
   %wide.vec = load <vscale x 4 x double>, ptr %scevgep46, align 8
-  %3 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec)
+  %3 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec)
   %4 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %3, 0
   %5 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %3, 1
   %wide.vec30 = load <vscale x 4 x double>, ptr %scevgep47, align 8
-  %6 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec30)
+  %6 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec30)
   %7 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %6, 0
   %8 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %6, 1
   %9 = fmul fast <vscale x 2 x double> %8, %4
@@ -156,11 +156,11 @@ vector.body:                                      ; preds = %vector.body, %entry
   %scevgep46 = getelementptr i8, ptr %a, i64 %lsr.iv27
   %scevgep47 = getelementptr i8, ptr %b, i64 %lsr.iv27
   %wide.vec = load <vscale x 4 x double>, ptr %scevgep46, align 8
-  %3 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec)
+  %3 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec)
   %4 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %3, 0
   %5 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %3, 1
   %wide.vec30 = load <vscale x 4 x double>, ptr %scevgep47, align 8
-  %6 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec30)
+  %6 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec30)
   %7 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %6, 0
   %8 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %6, 1
   %9 = fmul fast <vscale x 2 x double> %8, %4
@@ -266,16 +266,16 @@ vector.body:                                      ; preds = %vector.body, %entry
   %scevgep62 = getelementptr i8, ptr %scevgep61, i64 %lsr.iv34
   %wide.vec = load <vscale x 4 x double>, ptr %scevgep57, align 8
   %wide.vec32 = load <vscale x 4 x double>, ptr %scevgep64, align 8
-  %4 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec)
-  %5 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec32)
+  %4 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec)
+  %5 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec32)
   %6 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %4, 0
   %7 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %5, 0
   %8 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %4, 1
   %9 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %5, 1
   %wide.vec34 = load <vscale x 4 x double>, ptr %scevgep58, align 8
   %wide.vec35 = load <vscale x 4 x double>, ptr %scevgep62, align 8
-  %10 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec34)
-  %11 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec35)
+  %10 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec34)
+  %11 = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec35)
   %12 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %10, 0
   %13 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %11, 0
   %14 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %10, 1
@@ -375,7 +375,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %5 = add <vscale x 2 x i32> %wide.load, %vec.phi
   %6 = getelementptr inbounds %"class.std::complex", ptr %a, i64 %index
   %wide.vec = load <vscale x 4 x double>, ptr %6, align 8
-  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec)
+  %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %wide.vec)
   %7 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 0
   %8 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %strided.vec, 1
   %9 = fadd fast <vscale x 2 x double> %7, %vec.phi13
@@ -396,6 +396,6 @@ middle.block:                                     ; preds = %vector.body
 
 
 declare i64 @llvm.vscale.i64()
-declare { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.experimental.vector.deinterleave2.nxv4f64(<vscale x 4 x double>)
+declare { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double>)
 declare double @llvm.vector.reduce.fadd.nxv2f64(double, <vscale x 2 x double>)
 declare i32 @llvm.vector.reduce.add.nxv2i32(<vscale x 2 x i32>)
