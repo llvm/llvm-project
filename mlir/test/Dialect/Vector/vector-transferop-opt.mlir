@@ -362,20 +362,47 @@ func.func @forward_dead_store_dynamic_non_overlap_trailing_dim(
 }
 
 // CHECK-LABEL: func @forward_dead_constant_splat_store_with_masking
+//       CHECK:   %[[SPLAT:.*]] = arith.constant dense<0.000000e+00> : vector<[8]x[8]xf32>
 //   CHECK-NOT:   vector.transfer_write
 //   CHECK-NOT:   vector.transfer_read
 //       CHECK:   scf.for
+//  CHECK-SAME:     iter_args(%{{.*}} = %[[SPLAT]])
 //       CHECK:   }
 //       CHECK:   vector.transfer_write
 //       CHECK:   return
 func.func @forward_dead_constant_splat_store_with_masking(%buffer : memref<?x?xf32>, %mask: vector<[8]x[8]xi1>) {
-  %cst = arith.constant dense<0.0> : vector<[8]x[8]xf32>
-  %cst_f32 = arith.constant 0.0 : f32
+  %zero_splat = arith.constant dense<0.0> : vector<[8]x[8]xf32>
+  %read_padding = arith.constant 0.0 : f32
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %c512 = arith.constant 512 : index
-  vector.transfer_write %cst, %buffer[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
-  %0 = vector.transfer_read %buffer[%c0, %c0], %cst_f32, %mask {in_bounds = [true, true]} : memref<?x?xf32>, vector<[8]x[8]xf32>
+  vector.transfer_write %zero_splat, %buffer[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  %0 = vector.transfer_read %buffer[%c0, %c0], %read_padding, %mask {in_bounds = [true, true]} : memref<?x?xf32>, vector<[8]x[8]xf32>
+  %x = scf.for %arg2 = %c0 to %c512 step %c1 iter_args(%acc = %0) -> (vector<[8]x[8]xf32>) {
+    %1 = arith.addf %acc, %acc : vector<[8]x[8]xf32>
+    scf.yield %1 : vector<[8]x[8]xf32>
+  }
+  vector.transfer_write %x, %buffer[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  return
+}
+
+// Here the read can be eliminated but not the write (due to mismatched masks).
+// CHECK-LABEL: func @forward_dead_constant_splat_store_with_masking_unmasked_write
+//       CHECK:   %[[SPLAT:.*]] = arith.constant dense<0.000000e+00> : vector<[8]x[8]xf32>
+//       CHECK:   vector.transfer_write %[[SPLAT]]
+//       CHECK:   scf.for
+//  CHECK-SAME:     iter_args(%{{.*}} = %[[SPLAT]])
+//       CHECK:   }
+//       CHECK:   vector.transfer_write
+//       CHECK:   return
+func.func @forward_dead_constant_splat_store_with_masking_unmasked_write(%buffer : memref<?x?xf32>, %mask: vector<[8]x[8]xi1>) {
+  %zero_splat = arith.constant dense<0.0> : vector<[8]x[8]xf32>
+  %read_padding = arith.constant 0.0 : f32
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c512 = arith.constant 512 : index
+  vector.transfer_write %zero_splat, %buffer[%c0, %c0] {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  %0 = vector.transfer_read %buffer[%c0, %c0], %read_padding, %mask {in_bounds = [true, true]} : memref<?x?xf32>, vector<[8]x[8]xf32>
   %x = scf.for %arg2 = %c0 to %c512 step %c1 iter_args(%acc = %0) -> (vector<[8]x[8]xf32>) {
     %1 = arith.addf %acc, %acc : vector<[8]x[8]xf32>
     scf.yield %1 : vector<[8]x[8]xf32>
@@ -386,25 +413,50 @@ func.func @forward_dead_constant_splat_store_with_masking(%buffer : memref<?x?xf
 
 // Negative test, the padding does not match the constant splat, so we can't
 // forward the store.
-// CHECK-LABEL: func @forward_dead_constant_splat_store_with_masking_negative
+// CHECK-LABEL: func @forward_dead_constant_splat_store_with_masking_negative_0
 //       CHECK:   vector.transfer_write
 //       CHECK:   vector.transfer_read
 //       CHECK:   scf.for
 //       CHECK:   }
 //       CHECK:   vector.transfer_write
 //       CHECK:   return
-func.func @forward_dead_constant_splat_store_with_masking_negative(%buffer : memref<?x?xf32>, %mask: vector<[8]x[8]xi1>) {
-  %cst = arith.constant dense<0.0> : vector<[8]x[8]xf32>
-  %cst_f32 = arith.constant 1.0 : f32
+func.func @forward_dead_constant_splat_store_with_masking_negative_0(%buffer : memref<?x?xf32>, %mask: vector<[8]x[8]xi1>) {
+  %zero_splat = arith.constant dense<0.0> : vector<[8]x[8]xf32>
+  %read_padding = arith.constant 1.0 : f32
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %c512 = arith.constant 512 : index
-  vector.transfer_write %cst, %buffer[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
-  %0 = vector.transfer_read %buffer[%c0, %c0], %cst_f32, %mask {in_bounds = [true, true]} : memref<?x?xf32>, vector<[8]x[8]xf32>
+  vector.transfer_write %zero_splat, %buffer[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  %0 = vector.transfer_read %buffer[%c0, %c0], %read_padding, %mask {in_bounds = [true, true]} : memref<?x?xf32>, vector<[8]x[8]xf32>
   %x = scf.for %arg2 = %c0 to %c512 step %c1 iter_args(%acc = %0) -> (vector<[8]x[8]xf32>) {
     %1 = arith.addf %acc, %acc : vector<[8]x[8]xf32>
     scf.yield %1 : vector<[8]x[8]xf32>
   }
   vector.transfer_write %x, %buffer[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  return
+}
+
+// Negative test, the masks don't match between the read and write, so we can't
+// foward the store.
+// CHECK-LABEL: func @forward_dead_constant_splat_store_with_masking_negative_1
+//       CHECK:   vector.transfer_write
+//       CHECK:   vector.transfer_read
+//       CHECK:   scf.for
+//       CHECK:   }
+//       CHECK:   vector.transfer_write
+//       CHECK:   return
+func.func @forward_dead_constant_splat_store_with_masking_negative_1(%buffer : memref<?x?xf32>, %mask_a: vector<[8]x[8]xi1>, %mask_b: vector<[8]x[8]xi1>) {
+  %zero_splat = arith.constant dense<0.0> : vector<[8]x[8]xf32>
+  %read_padding = arith.constant 1.0 : f32
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c512 = arith.constant 512 : index
+  vector.transfer_write %zero_splat, %buffer[%c0, %c0], %mask_a {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  %0 = vector.transfer_read %buffer[%c0, %c0], %read_padding, %mask_b {in_bounds = [true, true]} : memref<?x?xf32>, vector<[8]x[8]xf32>
+  %x = scf.for %arg2 = %c0 to %c512 step %c1 iter_args(%acc = %0) -> (vector<[8]x[8]xf32>) {
+    %1 = arith.addf %acc, %acc : vector<[8]x[8]xf32>
+    scf.yield %1 : vector<[8]x[8]xf32>
+  }
+  vector.transfer_write %x, %buffer[%c0, %c0], %mask_a {in_bounds = [true, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
   return
 }

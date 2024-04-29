@@ -170,10 +170,16 @@ AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
       shapedType.getContext());
 }
 
+/// Returns true if the value written by `defWrite` could be the same as the
+/// value read by `read`. Note: True is 'could be' not 'definitely' (as this
+/// simply looks at the masks and the value written). For a definite answer use
+/// `checkSameValueRAW()` -- which calls this function.
 static bool couldBeSameValueWithMasking(vector::TransferWriteOp defWrite,
                                         vector::TransferReadOp read) {
-  if (!defWrite.getMask() && !read.getMask())
-    return true; // Success: No masks (values will be the same).
+  if (!defWrite.getMask() && !read.getMask()) {
+    // Success: No masks (values could be the same).
+    return true;
+  }
   // Check for constant splats. These will be the same value if the read is
   // masked (and padded with the splat value), and the write is unmasked or has
   // the same mask.
