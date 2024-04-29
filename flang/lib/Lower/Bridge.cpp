@@ -36,6 +36,7 @@
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
+#include "flang/Optimizer/Builder/Runtime/Main.h"
 #include "flang/Optimizer/Builder/Runtime/Ragged.h"
 #include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -359,8 +360,10 @@ public:
         // not need to be generated even if no defaults are specified.
         // However, generating main or changing when the runtime reads
         // environment variables is required to do so.
-        fir::runtime::genEnvironmentDefaults(*builder, toLocation(),
-                                             bridge.getEnvironmentDefaults());
+        auto env = fir::runtime::genEnvironmentDefaults(
+            *builder, toLocation(), bridge.getEnvironmentDefaults());
+
+        fir::runtime::genMain(*builder, toLocation(), env);
       });
 
     finalizeOpenACCLowering();
@@ -3807,16 +3810,34 @@ private:
     return temps;
   }
 
+  // Check if the insertion point is currently in a device context. HostDevice
+  // subprogram are not considered fully device context so it will return false
+  // for it.
+  static bool isDeviceContext(fir::FirOpBuilder &builder) {
+    if (builder.getRegion().getParentOfType<fir::CUDAKernelOp>())
+      return true;
+    if (auto funcOp =
+            builder.getRegion().getParentOfType<mlir::func::FuncOp>()) {
+      if (auto cudaProcAttr =
+              funcOp.getOperation()->getAttrOfType<fir::CUDAProcAttributeAttr>(
+                  fir::getCUDAAttrName())) {
+        return cudaProcAttr.getValue() != fir::CUDAProcAttribute::Host &&
+               cudaProcAttr.getValue() != fir::CUDAProcAttribute::HostDevice;
+      }
+    }
+    return false;
+  }
+
   void genDataAssignment(
       const Fortran::evaluate::Assignment &assign,
       const Fortran::evaluate::ProcedureRef *userDefinedAssignment) {
     mlir::Location loc = getCurrentLocation();
     fir::FirOpBuilder &builder = getFirOpBuilder();
 
-    bool isInDeviceContext =
-        builder.getRegion().getParentOfType<fir::CUDAKernelOp>();
-    bool isCUDATransfer = Fortran::evaluate::HasCUDAAttrs(assign.lhs) ||
-                          Fortran::evaluate::HasCUDAAttrs(assign.rhs);
+    bool isInDeviceContext = isDeviceContext(builder);
+    bool isCUDATransfer = (Fortran::evaluate::HasCUDAAttrs(assign.lhs) ||
+                           Fortran::evaluate::HasCUDAAttrs(assign.rhs)) &&
+                          !isInDeviceContext;
     bool hasCUDAImplicitTransfer =
         Fortran::evaluate::HasCUDAImplicitTransfer(assign.rhs);
     llvm::SmallVector<mlir::Value> implicitTemps;
@@ -3879,7 +3900,7 @@ private:
       Fortran::lower::StatementContext localStmtCtx;
       hlfir::Entity rhs = evaluateRhs(localStmtCtx);
       hlfir::Entity lhs = evaluateLhs(localStmtCtx);
-      if (isCUDATransfer && !hasCUDAImplicitTransfer && !isInDeviceContext)
+      if (isCUDATransfer && !hasCUDAImplicitTransfer)
         genCUDADataTransfer(builder, loc, assign, lhs, rhs);
       else
         builder.create<hlfir::AssignOp>(loc, rhs, lhs,

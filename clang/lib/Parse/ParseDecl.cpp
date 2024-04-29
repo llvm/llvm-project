@@ -7038,18 +7038,23 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
 void Parser::ParseDecompositionDeclarator(Declarator &D) {
   assert(Tok.is(tok::l_square));
 
-  // If this doesn't look like a structured binding, maybe it's a misplaced
-  // array declarator.
-  // FIXME: Consume the l_square first so we don't need extra lookahead for
-  // this.
-  if (!(NextToken().is(tok::identifier) &&
-        GetLookAheadToken(2).isOneOf(tok::comma, tok::r_square)) &&
-      !(NextToken().is(tok::r_square) &&
-        GetLookAheadToken(2).isOneOf(tok::equal, tok::l_brace)))
-    return ParseMisplacedBracketDeclarator(D);
-
+  TentativeParsingAction PA(*this);
   BalancedDelimiterTracker T(*this, tok::l_square);
   T.consumeOpen();
+
+  if (isCXX11AttributeSpecifier())
+    DiagnoseAndSkipCXX11Attributes();
+
+  // If this doesn't look like a structured binding, maybe it's a misplaced
+  // array declarator.
+  if (!(Tok.is(tok::identifier) &&
+        NextToken().isOneOf(tok::comma, tok::r_square, tok::kw_alignas,
+                            tok::l_square)) &&
+      !(Tok.is(tok::r_square) &&
+        NextToken().isOneOf(tok::equal, tok::l_brace))) {
+    PA.Revert();
+    return ParseMisplacedBracketDeclarator(D);
+  }
 
   SmallVector<DecompositionDeclarator::Binding, 32> Bindings;
   while (Tok.isNot(tok::r_square)) {
@@ -7074,13 +7079,27 @@ void Parser::ParseDecompositionDeclarator(Declarator &D) {
       }
     }
 
+    if (isCXX11AttributeSpecifier())
+      DiagnoseAndSkipCXX11Attributes();
+
     if (Tok.isNot(tok::identifier)) {
       Diag(Tok, diag::err_expected) << tok::identifier;
       break;
     }
 
-    Bindings.push_back({Tok.getIdentifierInfo(), Tok.getLocation()});
+    IdentifierInfo *II = Tok.getIdentifierInfo();
+    SourceLocation Loc = Tok.getLocation();
     ConsumeToken();
+
+    ParsedAttributes Attrs(AttrFactory);
+    if (isCXX11AttributeSpecifier()) {
+      Diag(Tok, getLangOpts().CPlusPlus26
+                    ? diag::warn_cxx23_compat_decl_attrs_on_binding
+                    : diag::ext_decl_attrs_on_binding);
+      MaybeParseCXX11Attributes(Attrs);
+    }
+
+    Bindings.push_back({II, Loc, std::move(Attrs)});
   }
 
   if (Tok.isNot(tok::r_square))
@@ -7094,6 +7113,8 @@ void Parser::ParseDecompositionDeclarator(Declarator &D) {
 
     T.consumeClose();
   }
+
+  PA.Commit();
 
   return D.setDecompositionBindings(T.getOpenLocation(), Bindings,
                                     T.getCloseLocation());
