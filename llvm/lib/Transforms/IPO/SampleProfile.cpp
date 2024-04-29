@@ -1720,8 +1720,8 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
         // Weight is added by one to avoid propagation errors introduced by
         // 0 weights.
         Weights.push_back(static_cast<uint32_t>(
-          Weight == std::numeric_limits<uint32_t>::max() ? Weight : Weight + 1
-        ));
+            Weight == std::numeric_limits<uint32_t>::max() ? Weight
+                                                           : Weight + 1));
       } else {
         // Profi creates proper weights that do not require "+1" adjustments but
         // we evenly split the weight among branches with the same destination.
