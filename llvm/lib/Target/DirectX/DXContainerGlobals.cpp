@@ -75,12 +75,7 @@ GlobalVariable *DXContainerGlobals::getFeatureFlags(Module &M) {
 
   Constant *FeatureFlagsConstant =
       ConstantInt::get(M.getContext(), APInt(64, FeatureFlags));
-  auto *GV = new llvm::GlobalVariable(M, FeatureFlagsConstant->getType(), true,
-                                      GlobalValue::PrivateLinkage,
-                                      FeatureFlagsConstant, "dx.sfi0");
-  GV->setSection("SFI0");
-  GV->setAlignment(Align(4));
-  return GV;
+  return buildContainerGlobal(M, FeatureFlagsConstant, "dx.sfi0", "SFI0");
 }
 
 GlobalVariable *DXContainerGlobals::computeShaderHash(Module &M) {
@@ -103,12 +98,7 @@ GlobalVariable *DXContainerGlobals::computeShaderHash(Module &M) {
 
   Constant *ModuleConstant =
       ConstantDataArray::get(M.getContext(), arrayRefFromStringRef(Data));
-  auto *GV = new llvm::GlobalVariable(M, ModuleConstant->getType(), true,
-                                      GlobalValue::PrivateLinkage,
-                                      ModuleConstant, "dx.hash");
-  GV->setSection("HASH");
-  GV->setAlignment(Align(4));
-  return GV;
+  return buildContainerGlobal(M, ModuleConstant, "dx.hash", "HASH");
 }
 
 GlobalVariable *DXContainerGlobals::buildContainerGlobal(
@@ -133,12 +123,13 @@ GlobalVariable *DXContainerGlobals::buildSingature(Module &M, Signature &Sig,
 
 void DXContainerGlobals::addSingature(Module &M,
                                       SmallVector<GlobalValue *> &Globals) {
-  Signature InputSig;
-  Signature OutputSig;
   // FIXME: support graphics shader.
   //  see issue https://github.com/llvm/llvm-project/issues/90504.
 
+  Signature InputSig;
   Globals.emplace_back(buildSingature(M, InputSig, "dx.isg1", "ISG1"));
+
+  Signature OutputSig;
   Globals.emplace_back(buildSingature(M, OutputSig, "dx.osg1", "OSG1"));
 }
 
