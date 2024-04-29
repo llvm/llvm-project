@@ -695,9 +695,9 @@ BoxProcType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
 }
 
 static bool cannotBePointerOrHeapElementType(mlir::Type eleTy) {
-  return eleTy.isa<BoxType, BoxCharType, BoxProcType, ShapeType, ShapeShiftType,
+  return mlir::isa<BoxType, BoxCharType, BoxProcType, ShapeType, ShapeShiftType,
                    SliceType, FieldType, LenType, HeapType, PointerType,
-                   ReferenceType, TypeDescType>();
+                   ReferenceType, TypeDescType>(eleTy);
 }
 
 //===----------------------------------------------------------------------===//
@@ -776,10 +776,10 @@ void fir::CharacterType::print(mlir::AsmPrinter &printer) const {
 mlir::LogicalResult
 fir::ClassType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                        mlir::Type eleTy) {
-  if (eleTy.isa<fir::RecordType, fir::SequenceType, fir::HeapType,
+  if (mlir::isa<fir::RecordType, fir::SequenceType, fir::HeapType,
                 fir::PointerType, mlir::NoneType, mlir::IntegerType,
                 mlir::FloatType, fir::CharacterType, fir::LogicalType,
-                fir::ComplexType, mlir::ComplexType>())
+                fir::ComplexType, mlir::ComplexType>(eleTy))
     return mlir::success();
   return emitError() << "invalid element type\n";
 }
@@ -1050,8 +1050,8 @@ void fir::ReferenceType::print(mlir::AsmPrinter &printer) const {
 mlir::LogicalResult fir::ReferenceType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     mlir::Type eleTy) {
-  if (eleTy.isa<ShapeType, ShapeShiftType, SliceType, FieldType, LenType,
-                ReferenceType, TypeDescType>())
+  if (mlir::isa<ShapeType, ShapeShiftType, SliceType, FieldType, LenType,
+                ReferenceType, TypeDescType>(eleTy))
     return emitError() << "cannot build a reference to type: " << eleTy << '\n';
   return mlir::success();
 }
@@ -1126,9 +1126,9 @@ mlir::LogicalResult fir::SequenceType::verify(
     llvm::ArrayRef<int64_t> shape, mlir::Type eleTy,
     mlir::AffineMapAttr layoutMap) {
   // DIMENSION attribute can only be applied to an intrinsic or record type
-  if (eleTy.isa<BoxType, BoxCharType, BoxProcType, ShapeType, ShapeShiftType,
+  if (mlir::isa<BoxType, BoxCharType, BoxProcType, ShapeType, ShapeShiftType,
                 ShiftType, SliceType, FieldType, LenType, HeapType, PointerType,
-                ReferenceType, TypeDescType, SequenceType>())
+                ReferenceType, TypeDescType, SequenceType>(eleTy))
     return emitError() << "cannot build an array of this element type: "
                        << eleTy << '\n';
   return mlir::success();
@@ -1199,9 +1199,9 @@ void fir::TypeDescType::print(mlir::AsmPrinter &printer) const {
 mlir::LogicalResult fir::TypeDescType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     mlir::Type eleTy) {
-  if (eleTy.isa<BoxType, BoxCharType, BoxProcType, ShapeType, ShapeShiftType,
+  if (mlir::isa<BoxType, BoxCharType, BoxProcType, ShapeType, ShapeShiftType,
                 ShiftType, SliceType, FieldType, LenType, ReferenceType,
-                TypeDescType>())
+                TypeDescType>(eleTy))
     return emitError() << "cannot build a type descriptor of type: " << eleTy
                        << '\n';
   return mlir::success();
