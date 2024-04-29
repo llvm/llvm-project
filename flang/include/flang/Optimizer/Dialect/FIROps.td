@@ -2708,14 +2708,14 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
   let hasCanonicalizer = 1;
 }
 
-def FortranTypeAttr : Attr<And<[CPred<"$_self.isa<mlir::TypeAttr>()">,
-    Or<[CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::CharacterType,"
-              "fir::ComplexType, fir::IntegerType, fir::LogicalType,"
-              "fir::RealType, fir::RecordType>()">]>]>,
-    "Fortran surface type"> {
+def FortranTypeAttr : Attr<And<[CPred<"mlir::isa<mlir::TypeAttr>($_self)">,
+    Or<[CPred<"mlir::isa<fir::CharacterType, fir::ComplexType, "
+              "fir::IntegerType, fir::LogicalType, fir::RealType, "
+              "fir::RecordType>(mlir::cast<mlir::TypeAttr>($_self).getValue())"
+    >]>]>, "Fortran surface type"> {
   let storageType = [{ ::mlir::TypeAttr }];
   let returnType = "mlir::Type";
-  let convertFromStorage = "$_self.getValue().cast<mlir::Type>()";
+  let convertFromStorage = "mlir::cast<mlir::Type>($_self.getValue())";
 }
 
 def fir_TypeDescOp : fir_OneResultOp<"type_desc", [NoMemoryEffect]> {
@@ -3188,6 +3188,63 @@ def fir_CUDADataTransferOp : fir_Op<"cuda_data_transfer", []> {
   let assemblyFormat = [{
     $src `to` $dst attr-dict `:` type(operands)
   }];
+}
+
+def fir_CUDAAllocateOp : fir_Op<"cuda_allocate", [AttrSizedOperandSegments,
+    MemoryEffects<[MemAlloc<DefaultResource>]>]> {
+  let summary = "Perform the device allocation of data of an allocatable";
+
+  let description = [{
+    The fir.cuda_allocate operation performs the allocation on the device
+    of the data of an allocatable. The descriptor passed to the operation
+    is initialized before with the standard flang runtime calls.
+  }];
+
+  let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
+                       Optional<AnyIntegerType>:$stream,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
+                       fir_CUDADataAttributeAttr:$cuda_attr,
+                       UnitAttr:$hasStat);
+
+  let results = (outs AnyIntegerType:$stat);
+
+  let assemblyFormat = [{
+    $box `:` qualified(type($box))
+    ( `source` `(` $source^ `:` qualified(type($source) )`)` )?
+    ( `errmsg` `(` $errmsg^ `:` type($errmsg) `)` )?
+    ( `stream` `(` $stream^ `:` type($stream) `)` )?
+    ( `pinned` `(` $pinned^ `:` type($pinned) `)` )?
+    attr-dict `->` type($stat)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def fir_CUDADeallocateOp : fir_Op<"cuda_deallocate",
+    [MemoryEffects<[MemFree<DefaultResource>]>]> {
+  let summary = "Perform the device deallocation of data of an allocatable";
+
+  let description = [{
+    The fir.cuda_deallocate operation performs the deallocation on the device
+    of the data of an allocatable.
+  }];
+
+  let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
+                       fir_CUDADataAttributeAttr:$cuda_attr,
+                       UnitAttr:$hasStat);
+
+  let results = (outs AnyIntegerType:$stat);
+
+  let assemblyFormat = [{
+    $box `:` qualified(type($box))
+    ( `errmsg` `(` $errmsg^ `:` type($errmsg) `)` )?
+    attr-dict `->` type($stat)
+  }];
+
+  let hasVerifier = 1;
 }
 
 #endif

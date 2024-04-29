@@ -350,10 +350,7 @@ void Lint::visitCallBase(CallBase &I) {
     }
 
     case Intrinsic::vastart:
-      Check(I.getParent()->getParent()->isVarArg(),
-            "Undefined behavior: va_start called in a non-varargs function",
-            &I);
-
+      // vastart in non-varargs function is rejected by the verifier
       visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
                            std::nullopt, nullptr, MemRef::Read | MemRef::Write);
       break;

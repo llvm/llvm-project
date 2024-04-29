@@ -6454,6 +6454,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     case bitc::FUNC_CODE_DEBUG_RECORD_LABEL: {
       // DbgLabelRecords are placed after the Instructions that they are
       // attached to.
+      SeenDebugRecord = true;
       Instruction *Inst = getLastInstruction();
       if (!Inst)
         return error("Invalid dbg record: missing instruction");

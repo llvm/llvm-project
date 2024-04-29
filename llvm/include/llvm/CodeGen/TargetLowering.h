@@ -1804,6 +1804,13 @@ public:
   /// where the sext is redundant, and use x directly.
   virtual bool shouldRemoveRedundantExtend(SDValue Op) const { return true; }
 
+  /// Indicates if any padding is guaranteed to go at the most significant bits
+  /// when storing the type to memory and the type size isn't equal to the store
+  /// size.
+  bool isPaddedAtMostSignificantBitsWhenStored(EVT VT) const {
+    return VT.isScalarInteger() && !VT.isByteSized();
+  }
+
   /// When splitting a value of the specified type into parts, does the Lo
   /// or Hi part come first?  This usually follows the endianness, except
   /// for ppcf128, where the Hi part always comes first.
@@ -2798,6 +2805,12 @@ public:
                                      Type *Ty, unsigned AddrSpace,
                                      Instruction *I = nullptr) const;
 
+  /// Returns true if the targets addressing mode can target thread local
+  /// storage (TLS).
+  virtual bool addressingModeSupportsTLS(const GlobalValue &) const {
+    return false;
+  }
+
   /// Return the prefered common base offset.
   virtual int64_t getPreferredLargeGEPBaseOffset(int64_t MinOffset,
                                                  int64_t MaxOffset) const {
@@ -3133,7 +3146,7 @@ public:
 
   /// Lower a deinterleave intrinsic to a target specific load intrinsic.
   /// Return true on success. Currently only supports
-  /// llvm.experimental.vector.deinterleave2
+  /// llvm.vector.deinterleave2
   ///
   /// \p DI is the deinterleave intrinsic.
   /// \p LI is the accompanying load instruction
@@ -3144,7 +3157,7 @@ public:
 
   /// Lower an interleave intrinsic to a target specific store intrinsic.
   /// Return true on success. Currently only supports
-  /// llvm.experimental.vector.interleave2
+  /// llvm.vector.interleave2
   ///
   /// \p II is the interleave intrinsic.
   /// \p SI is the accompanying store instruction
@@ -4866,6 +4879,11 @@ public:
   bool verifyReturnAddressArgumentIsConstant(SDValue Op,
                                              SelectionDAG &DAG) const;
 
+#ifndef NDEBUG
+  /// Check the given SDNode.  Aborts if it is invalid.
+  virtual void verifyTargetSDNode(const SDNode *N) const {};
+#endif
+
   //===--------------------------------------------------------------------===//
   // Inline Asm Support hooks
   //
@@ -5219,6 +5237,9 @@ public:
 
   /// Expand fminnum/fmaxnum into fminnum_ieee/fmaxnum_ieee with quieted inputs.
   SDValue expandFMINNUM_FMAXNUM(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand fminimum/fmaximum into multiple comparison with selects.
+  SDValue expandFMINIMUM_FMAXIMUM(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand FP_TO_[US]INT_SAT into FP_TO_[US]INT and selects or min/max.
   /// \param N Node to expand

@@ -957,7 +957,8 @@ public:
 
   /// PopCleanupBlock - Will pop the cleanup entry on the stack and
   /// process all branch fixups.
-  void PopCleanupBlock(bool FallThroughIsBranchThrough = false);
+  void PopCleanupBlock(bool FallThroughIsBranchThrough = false,
+                       bool ForDeactivation = false);
 
   /// DeactivateCleanupBlock - Deactivates the given cleanup block.
   /// The block cannot be reactivated.  Pops it if it's the top of the
@@ -3296,12 +3297,12 @@ public:
                            llvm::Value *Index, QualType IndexType,
                            QualType IndexedType, bool Accessed);
 
-  // Find a struct's flexible array member. It may be embedded inside multiple
-  // sub-structs, but must still be the last field.
-  const FieldDecl *FindFlexibleArrayMemberField(ASTContext &Ctx,
-                                                const RecordDecl *RD,
-                                                StringRef Name,
-                                                uint64_t &Offset);
+  // Find a struct's flexible array member and get its offset. It may be
+  // embedded inside multiple sub-structs, but must still be the last field.
+  const FieldDecl *
+  FindFlexibleArrayMemberFieldAndOffset(ASTContext &Ctx, const RecordDecl *RD,
+                                        const FieldDecl *FAMDecl,
+                                        uint64_t &Offset);
 
   /// Find the FieldDecl specified in a FAM's "counted_by" attribute. Returns
   /// \p nullptr if either the attribute or the field doesn't exist.
@@ -4261,8 +4262,8 @@ public:
   LValue EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                 bool Accessed = false);
   LValue EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E);
-  LValue EmitOMPArraySectionExpr(const OMPArraySectionExpr *E,
-                                 bool IsLowerBound = true);
+  LValue EmitArraySectionExpr(const ArraySectionExpr *E,
+                              bool IsLowerBound = true);
   LValue EmitExtVectorElementExpr(const ExtVectorElementExpr *E);
   LValue EmitMemberExpr(const MemberExpr *E);
   LValue EmitObjCIsaExpr(const ObjCIsaExpr *E);

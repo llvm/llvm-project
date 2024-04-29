@@ -196,10 +196,6 @@ safety annotations.
   replacement scenarios from working, e.g. replacing `operator new` and
   expecting a non-replaced `operator new[]` to call the replaced `operator new`.
 
-**_LIBCPP_DISABLE_NODISCARD_EXT**:
-  This macro disables library-extensions of ``[[nodiscard]]``.
-  See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>` for more information.
-
 **_LIBCPP_DISABLE_DEPRECATION_WARNINGS**:
   This macro disables warnings when using deprecated components. For example,
   using `std::auto_ptr` when compiling in C++11 mode will normally trigger a
@@ -208,12 +204,6 @@ safety annotations.
 
 C++17 Specific Configuration Macros
 -----------------------------------
-**_LIBCPP_ENABLE_CXX17_REMOVED_FEATURES**:
-  This macro is used to re-enable all the features removed in C++17. The effect
-  is equivalent to manually defining each macro listed below.
-  This macro is deprecated and will be removed in LLVM-19. Use the
-  individual macros listed below.
-
 **_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR**:
   This macro is used to re-enable `auto_ptr`.
 
@@ -237,12 +227,6 @@ C++20 Specific Configuration Macros
 **_LIBCPP_ENABLE_CXX20_REMOVED_SHARED_PTR_UNIQUE**:
   This macro is used to re-enable the function
   ``std::shared_ptr<...>::unique()``.
-
-**_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES**:
-  This macro is used to re-enable all the features removed in C++20. The effect
-  is equivalent to manually defining each macro listed below.
-  This macro is deprecated and will be removed in LLVM-19. Use the
-  individual macros listed below.
 
 **_LIBCPP_ENABLE_CXX20_REMOVED_BINDER_TYPEDEFS**:
   This macro is used to re-enable the `argument_type`, `result_type`,
@@ -277,38 +261,19 @@ C++26 Specific Configuration Macros
 **_LIBCPP_ENABLE_CXX26_REMOVED_STRSTREAM**:
   This macro is used to re-enable all named declarations in ``<strstream>``.
 
+**_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS**:
+  This macro is used to re-enable all ``shared_ptr`` atomic access APIs in ``<memory>``.
+
 **_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT**:
   This macro is used to re-enable the ``wstring_convert`` and ``wbuffer_convert``
   in ``<locale>``.
+
 
 Libc++ Extensions
 =================
 
 This section documents various extensions provided by libc++, how they're
 provided, and any information regarding how to use them.
-
-.. _nodiscard extension:
-
-Extended applications of ``[[nodiscard]]``
-------------------------------------------
-
-The ``[[nodiscard]]`` attribute is intended to help users find bugs where
-function return values are ignored when they shouldn't be. After C++17 the
-C++ standard has started to declared such library functions as ``[[nodiscard]]``.
-However, this application is limited and applies only to dialects after C++17.
-Users who want help diagnosing misuses of STL functions may desire a more
-liberal application of ``[[nodiscard]]``.
-
-For this reason libc++ provides an extension that does just that! The
-extension is enabled by default and can be disabled by defining ``_LIBCPP_DISABLE_NODISCARD_EXT``.
-The extended applications of ``[[nodiscard]]`` takes two forms:
-
-1. Backporting ``[[nodiscard]]`` to entities declared as such by the
-   standard in newer dialects, but not in the present one.
-
-2. Extended applications of ``[[nodiscard]]``, at the library's discretion,
-   applied to entities never declared as such by the standard. You can find
-   all such applications by grepping for ``_LIBCPP_NODISCARD_EXT``.
 
 Extended integral type support
 ------------------------------

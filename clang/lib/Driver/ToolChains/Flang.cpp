@@ -15,7 +15,7 @@
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 
 #include <cassert>
@@ -118,7 +118,7 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
     Arg *gNArg = Args.getLastArg(options::OPT_gN_Group);
     DebugInfoKind = debugLevelToInfoKind(*gNArg);
   } else if (Args.hasArg(options::OPT_g_Flag)) {
-    DebugInfoKind = llvm::codegenoptions::DebugLineTablesOnly;
+    DebugInfoKind = llvm::codegenoptions::FullDebugInfo;
   } else {
     DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
   }
@@ -785,6 +785,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       break;
     }
   }
+
+  // Pass the path to compiler resource files.
+  CmdArgs.push_back("-resource-dir");
+  CmdArgs.push_back(D.ResourceDir.c_str());
 
   // Offloading related options
   addOffloadOptions(C, Inputs, JA, Args, CmdArgs);

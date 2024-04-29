@@ -822,33 +822,37 @@ CodeGenFunction::evaluateOrEmitBuiltinObjectSize(const Expr *E, unsigned Type,
   return ConstantInt::get(ResType, ObjectSize, /*isSigned=*/true);
 }
 
-const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
-    ASTContext &Ctx, const RecordDecl *RD, StringRef Name, uint64_t &Offset) {
+const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberFieldAndOffset(
+    ASTContext &Ctx, const RecordDecl *RD, const FieldDecl *FAMDecl,
+    uint64_t &Offset) {
   const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
       getLangOpts().getStrictFlexArraysLevel();
-  unsigned FieldNo = 0;
-  bool IsUnion = RD->isUnion();
+  uint32_t FieldNo = 0;
 
-  for (const Decl *D : RD->decls()) {
-    if (const auto *Field = dyn_cast<FieldDecl>(D);
-        Field && (Name.empty() || Field->getNameAsString() == Name) &&
+  if (RD->isImplicit())
+    return nullptr;
+
+  for (const FieldDecl *FD : RD->fields()) {
+    if ((!FAMDecl || FD == FAMDecl) &&
         Decl::isFlexibleArrayMemberLike(
-            Ctx, Field, Field->getType(), StrictFlexArraysLevel,
+            Ctx, FD, FD->getType(), StrictFlexArraysLevel,
             /*IgnoreTemplateOrMacroSubstitution=*/true)) {
       const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
       Offset += Layout.getFieldOffset(FieldNo);
-      return Field;
+      return FD;
     }
 
-    if (const auto *Record = dyn_cast<RecordDecl>(D))
-      if (const FieldDecl *Field =
-              FindFlexibleArrayMemberField(Ctx, Record, Name, Offset)) {
+    QualType Ty = FD->getType();
+    if (Ty->isRecordType()) {
+      if (const FieldDecl *Field = FindFlexibleArrayMemberFieldAndOffset(
+              Ctx, Ty->getAsRecordDecl(), FAMDecl, Offset)) {
         const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
         Offset += Layout.getFieldOffset(FieldNo);
         return Field;
       }
+    }
 
-    if (!IsUnion && isa<FieldDecl>(D))
+    if (!RD->isUnion())
       ++FieldNo;
   }
 
@@ -858,14 +862,13 @@ const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
 static unsigned CountCountedByAttrs(const RecordDecl *RD) {
   unsigned Num = 0;
 
-  for (const Decl *D : RD->decls()) {
-    if (const auto *FD = dyn_cast<FieldDecl>(D);
-        FD && FD->getType()->isCountAttributedType()) {
+  for (const FieldDecl *FD : RD->fields()) {
+    if (FD->getType()->isCountAttributedType())
       return ++Num;
-    }
 
-    if (const auto *Rec = dyn_cast<RecordDecl>(D))
-      Num += CountCountedByAttrs(Rec);
+    QualType Ty = FD->getType();
+    if (Ty->isRecordType())
+      Num += CountCountedByAttrs(Ty->getAsRecordDecl());
   }
 
   return Num;
@@ -928,12 +931,14 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
 
   // Get the flexible array member Decl.
   const RecordDecl *OuterRD = nullptr;
-  std::string FAMName;
+  const FieldDecl *FAMDecl = nullptr;
   if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
     // Check if \p Base is referencing the FAM itself.
     const ValueDecl *VD = ME->getMemberDecl();
     OuterRD = VD->getDeclContext()->getOuterLexicalRecordContext();
-    FAMName = VD->getNameAsString();
+    FAMDecl = dyn_cast<FieldDecl>(VD);
+    if (!FAMDecl)
+      return nullptr;
   } else if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
     // Check if we're pointing to the whole struct.
     QualType Ty = DRE->getDecl()->getType();
@@ -972,9 +977,11 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
   if (!OuterRD)
     return nullptr;
 
+  // We call FindFlexibleArrayMemberAndOffset even if FAMDecl is non-null to
+  // get its offset.
   uint64_t Offset = 0;
-  const FieldDecl *FAMDecl =
-      FindFlexibleArrayMemberField(Ctx, OuterRD, FAMName, Offset);
+  FAMDecl =
+      FindFlexibleArrayMemberFieldAndOffset(Ctx, OuterRD, FAMDecl, Offset);
   Offset = Ctx.toCharUnitsFromBits(Offset).getQuantity();
 
   if (!FAMDecl || !FAMDecl->getType()->isCountAttributedType())
@@ -3436,6 +3443,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Builder.CreateAssumption(ConstantInt::getTrue(getLLVMContext()), {OBD});
     return RValue::get(nullptr);
   }
+  case Builtin::BI__builtin_allow_runtime_check: {
+    StringRef Kind =
+        cast<StringLiteral>(E->getArg(0)->IgnoreParenCasts())->getString();
+    LLVMContext &Ctx = CGM.getLLVMContext();
+    llvm::Value *Allow = Builder.CreateCall(
+        CGM.getIntrinsic(llvm::Intrinsic::allow_runtime_check),
+        llvm::MetadataAsValue::get(Ctx, llvm::MDString::get(Ctx, Kind)));
+    return RValue::get(Allow);
+  }
   case Builtin::BI__arithmetic_fence: {
     // Create the builtin call if FastMath is selected, and the target
     // supports the builtin, otherwise just return the argument.
@@ -3612,7 +3628,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // frexpl instead of legalizing this type in the BE.
     if (&getTarget().getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble())
       break;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case Builtin::BI__builtin_frexp:
   case Builtin::BI__builtin_frexpf:
@@ -5356,7 +5372,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_ptrauth_auth_and_resign:
       if (Args[4]->getType()->isPointerTy())
         Args[4] = Builder.CreatePtrToInt(Args[4], IntPtrTy);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
 
     case Builtin::BI__builtin_ptrauth_auth:
     case Builtin::BI__builtin_ptrauth_sign_unauthenticated:
@@ -18200,7 +18216,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     return Builder.CreateIntrinsic(
         /*ReturnType=*/llvm::Type::getInt1Ty(getLLVMContext()),
-        Intrinsic::dx_any, ArrayRef<Value *>{Op0}, nullptr, "dx.any");
+        CGM.getHLSLRuntime().getAnyIntrinsic(), ArrayRef<Value *>{Op0}, nullptr,
+        "hlsl.any");
   }
   case Builtin::BI__builtin_hlsl_elementwise_clamp: {
     Value *OpX = EmitScalarExpr(E->getArg(0));
@@ -18261,8 +18278,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("lerp operand must have a float representation");
     return Builder.CreateIntrinsic(
-        /*ReturnType=*/X->getType(), Intrinsic::dx_lerp,
-        ArrayRef<Value *>{X, Y, S}, nullptr, "dx.lerp");
+        /*ReturnType=*/X->getType(), CGM.getHLSLRuntime().getLerpIntrinsic(),
+        ArrayRef<Value *>{X, Y, S}, nullptr, "hlsl.lerp");
   }
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
@@ -18290,28 +18307,43 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *M = EmitScalarExpr(E->getArg(0));
     Value *A = EmitScalarExpr(E->getArg(1));
     Value *B = EmitScalarExpr(E->getArg(2));
-    if (E->getArg(0)->getType()->hasFloatingRepresentation()) {
+    if (E->getArg(0)->getType()->hasFloatingRepresentation())
       return Builder.CreateIntrinsic(
           /*ReturnType*/ M->getType(), Intrinsic::fmuladd,
-          ArrayRef<Value *>{M, A, B}, nullptr, "dx.fmad");
-    }
+          ArrayRef<Value *>{M, A, B}, nullptr, "hlsl.fmad");
+
     if (E->getArg(0)->getType()->hasSignedIntegerRepresentation()) {
-      return Builder.CreateIntrinsic(
-          /*ReturnType*/ M->getType(), Intrinsic::dx_imad,
-          ArrayRef<Value *>{M, A, B}, nullptr, "dx.imad");
+      if (CGM.getTarget().getTriple().getArch() == llvm::Triple::dxil)
+        return Builder.CreateIntrinsic(
+            /*ReturnType*/ M->getType(), Intrinsic::dx_imad,
+            ArrayRef<Value *>{M, A, B}, nullptr, "dx.imad");
+
+      Value *Mul = Builder.CreateNSWMul(M, A);
+      return Builder.CreateNSWAdd(Mul, B);
     }
     assert(E->getArg(0)->getType()->hasUnsignedIntegerRepresentation());
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/M->getType(), Intrinsic::dx_umad,
-        ArrayRef<Value *>{M, A, B}, nullptr, "dx.umad");
+    if (CGM.getTarget().getTriple().getArch() == llvm::Triple::dxil)
+      return Builder.CreateIntrinsic(
+          /*ReturnType=*/M->getType(), Intrinsic::dx_umad,
+          ArrayRef<Value *>{M, A, B}, nullptr, "dx.umad");
+
+    Value *Mul = Builder.CreateNUWMul(M, A);
+    return Builder.CreateNUWAdd(Mul, B);
   }
   case Builtin::BI__builtin_hlsl_elementwise_rcp: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
       llvm_unreachable("rcp operand must have a float representation");
-    return Builder.CreateIntrinsic(
-        /*ReturnType=*/Op0->getType(), Intrinsic::dx_rcp,
-        ArrayRef<Value *>{Op0}, nullptr, "dx.rcp");
+    llvm::Type *Ty = Op0->getType();
+    llvm::Type *EltTy = Ty->getScalarType();
+    Constant *One =
+        Ty->isVectorTy()
+            ? ConstantVector::getSplat(
+                  ElementCount::getFixed(
+                      dyn_cast<FixedVectorType>(Ty)->getNumElements()),
+                  ConstantFP::get(EltTy, 1.0))
+            : ConstantFP::get(EltTy, 1.0);
+    return Builder.CreateFDiv(One, Op0, "hlsl.rcp");
   }
   case Builtin::BI__builtin_hlsl_elementwise_rsqrt: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
@@ -18824,7 +18856,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w64_gfx12:
       AppendFalseForOpselArg = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w32:
     case AMDGPU::BI__builtin_amdgcn_wmma_f16_16x16x16_f16_w64:
       ArgsForMatchingMatrixTypes = {2, 0}; // CD, AB
@@ -18833,7 +18865,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32_gfx12:
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64_gfx12:
       AppendFalseForOpselArg = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w32:
     case AMDGPU::BI__builtin_amdgcn_wmma_bf16_16x16x16_bf16_w64:
       ArgsForMatchingMatrixTypes = {2, 0}; // CD, AB
