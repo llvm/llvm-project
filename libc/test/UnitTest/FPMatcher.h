@@ -219,4 +219,25 @@ template <typename T> struct FPTest : public Test {
     }                                                                          \
   } while (0)
 
+#define EXPECT_FP_EQ_ROUNDING_MODE(expected, actual, rounding_mode)            \
+  do {                                                                         \
+    using namespace LIBC_NAMESPACE::fputil::testing;                           \
+    ForceRoundingMode __r((rounding_mode));                                    \
+    if (__r.success) {                                                         \
+      EXPECT_FP_EQ((expected), (actual));                                      \
+    }                                                                          \
+  } while (0)
+
+#define EXPECT_FP_EQ_ROUNDING_NEAREST(expected, actual)                        \
+  EXPECT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Nearest)
+
+#define EXPECT_FP_EQ_ROUNDING_UPWARD(expected, actual)                         \
+  EXPECT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Upward)
+
+#define EXPECT_FP_EQ_ROUNDING_DOWNWARD(expected, actual)                       \
+  EXPECT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Downward)
+
+#define EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(expected, actual)                    \
+  EXPECT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::TowardZero)
+
 #endif // LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H
