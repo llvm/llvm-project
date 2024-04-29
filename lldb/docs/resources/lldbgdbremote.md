@@ -183,8 +183,15 @@ an inferior process.
 
 This packet enables reporting of Error strings in remote packet
 replies from the server to client. If the server supports this
-feature, it should send an OK response. The client can expect the
-following error replies if this feature is enabled in the server:
+feature, it should send an OK response.
+
+```
+send packet: $QEnableErrorStrings
+read packet: $OK#00
+```
+
+The client can expect the following error replies if this feature is enabled in
+the server:
 ```
 EXX;AAAAAAAAA
 ```
@@ -199,13 +206,6 @@ error replies.
 
 Low. Only needed if the remote target wants to provide strings that
 are human readable along with an error code.
-
-### Example
-
-```
-send packet: $QEnableErrorStrings
-read packet: $OK#00
-```
 
 ## QSetSTDIN:\<ascii-hex-path\> / QSetSTDOUT:\<ascii-hex-path\> / QSetSTDERR:\<ascii-hex-path\>
 
@@ -249,8 +249,6 @@ an inferior process.
 Get the current working directory of the platform stub in
 ASCII hex encoding.
 
-### Example
-
 ```
 receive: qGetWorkingDir
 send:    2f4170706c65496e7465726e616c2f6c6c64622f73657474696e67732f342f5465737453657474696e67732e746573745f646973617373656d626c65725f73657474696e6773
@@ -283,6 +281,11 @@ Enable the `threads:` and `thread-pcs:` data in the question-mark packet
 ("T packet") responses when the stub reports that a program has
 stopped executing.
 
+```
+send packet: QListThreadsInStopReply
+read packet: OK
+```
+
 ### Priority To Implement
 
 Performance.  This is a performance benefit to lldb if the thread id's
@@ -290,18 +293,16 @@ and thread pc values are provided to lldb in the T stop packet -- if
 they are not provided to lldb, lldb will likely need to send one to
 two packets per thread to fetch the data at every private stop.
 
-### Example
-
-```
-send packet: QListThreadsInStopReply
-read packet: OK
-```
-
 ## jLLDBTraceSupported
 
 Get the processor tracing type supported by the gdb-server for the current
 inferior. Responses might be different depending on the architecture and
 capabilities of the underlying OS.
+
+```
+send packet: jLLDBTraceSupported
+read packet: {"name":<name>, "description":<description>}/E<error code>;AAAAAAAAA
+```
 
 ### Output Schema
 
@@ -317,18 +318,9 @@ capabilities of the underlying OS.
 If no tracing technology is supported for the inferior, or no process is
 running, then an error message is returned.
 
-### Note
-
-This packet is used by Trace plug-ins (see `lldb_private::Trace.h`) to
+**Note:** This packet is used by Trace plug-ins (see `lldb_private::Trace.h`) to
 do live tracing. Specifically, the name of the plug-in should match the name
 of the tracing technology returned by this packet.
-
-### Example
-
-```
-send packet: jLLDBTraceSupported
-read packet: {"name":<name>, "description":<description>}/E<error code>;AAAAAAAAA
-```
 
 ## jLLDBTraceStart
 
@@ -341,9 +333,19 @@ response is returned, or an error otherwise.
 This traces existing and future threads of the current process. An error is
 returned if the process is already being traced.
 
+```
+send packet: jLLDBTraceStart:{"type":<type>,...other params}]
+read packet: OK/E<error code>;AAAAAAAAA
+```
+
 ### Thread Tracing
 
 This traces specific threads.
+
+```
+send packet: jLLDBTraceStart:{"type":<type>,"tids":<tids>,...other params}]
+read packet: OK/E<error code>;AAAAAAAAA
+```
 
 ### Input Schema
 
@@ -360,8 +362,7 @@ This traces specific threads.
 }
 ```
 
-### Notes
-
+**Notes:**
 - If "tids" is not provided, then the operation is "process tracing",
   otherwise it's "thread tracing".
 - Each tracing technology can have different levels of support for "thread
@@ -468,20 +469,6 @@ Notes:
  - If "thread tracing" is attempted on a thread already being traced with
    either "thread tracing" or "process tracing", it fails.
 
-### Examples
-
-Process tracing:
-```
-send packet: jLLDBTraceStart:{"type":<type>,...other params}]
-read packet: OK/E<error code>;AAAAAAAAA
-```
-
-Thread tracing:
-```
-send packet: jLLDBTraceStart:{"type":<type>,"tids":<tids>,...other params}]
-read packet: OK/E<error code>;AAAAAAAAA
-```
-
 ## jLLDBTraceStop
 
 Stop tracing a process or its threads using a provided tracing technology.
@@ -493,10 +480,20 @@ response is returned, or an error otherwise.
 Stopping a process trace stops the active traces initiated with
 "thread tracing".
 
+```
+send packet: jLLDBTraceStop:{"type":<type>}]
+read packet: OK/E<error code>;AAAAAAAAA
+```
+
 ### Thread Trace Stopping
 
 This is a best effort request, which tries to stop as many traces as
 possible.
+
+```
+send packet: jLLDBTraceStop:{"type":<type>,"tids":<tids>}]
+read packet: OK/E<error code>;AAAAAAAAA
+```
 
 ### Input Schema
 
@@ -512,26 +509,11 @@ The schema for the input is
 }
 ```
 
-### Notes
-
-- If "tids" is not provided, then the operation is "process trace stopping".
+**Note:** If `tids` is not provided, then the operation is "process trace stopping".
 
 ### Intel Pt
 
 Stopping a specific thread trace started with "process tracing" is allowed.
-
-### Examples
-
-Process trace stopping:
-```
-send packet: jLLDBTraceStop:{"type":<type>}]
-read packet: OK/E<error code>;AAAAAAAAA
-```
-Thread trace stopping:
-```
-send packet: jLLDBTraceStop:{"type":<type>,"tids":<tids>}]
-read packet: OK/E<error code>;AAAAAAAAA
-```
 
 ## jLLDBTraceGetState
 
@@ -539,6 +521,11 @@ Get the current state of the process and its threads being traced by
 a given trace technology. The response is a JSON object with custom
 information depending on the trace technology. In case of errors, an
 error message is returned.
+
+```
+send packet: jLLDBTraceGetState:{"type":<type>}]
+read packet: {...object}/E<error code>;AAAAAAAAA
+```
 
 ### Input Schema
 
@@ -594,10 +581,8 @@ error message is returned.
 }
 ```
 
-### Notes
-
- - "traceThreads" includes all thread traced by both "process tracing" and
-   "thread tracing".
+**Note:** `tracedThreads` includes all threads traced by both "process tracing"
+and "thread tracing".
 
 ### Intel Pt
 
@@ -631,19 +616,17 @@ Additional attributes:
       }
       ```
 
-### Example
-
-```
-send packet: jLLDBTraceGetState:{"type":<type>}]
-read packet: {...object}/E<error code>;AAAAAAAAA
-```
-
 ## jLLDBTraceGetBinaryData
 
 Get binary data given a trace technology and a data identifier.
 The input is specified as a JSON object and the response has the same format
 as the "binary memory read" (aka "x") packet. In case of failures, an error
 message is returned.
+
+```
+send packet: jLLDBTraceGetBinaryData:{"type":<type>,"kind":<query>,"tid":<tid>,"offset":<offset>,"size":<size>}]
+read packet: <binary data>/E<error code>;AAAAAAAAA
+```
 
 ### Schema
 
@@ -659,13 +642,6 @@ The schema for the input is:
  "tid"?: <Optional decimal>,
      Tid in decimal if the data belongs to a thread.
 }
-```
-
-### Example
-
-```
-send packet: jLLDBTraceGetBinaryData:{"type":<type>,"kind":<query>,"tid":<tid>,"offset":<offset>,"size":<size>}]
-read packet: <binary data>/E<error code>;AAAAAAAAA
 ```
 
 ## qRegisterInfo\<hex-reg-id\>
@@ -1813,8 +1789,6 @@ Required.
 Get a list of matched disk files/directories by passing a boolean flag
 and a partial path.
 
-### Example
-
 ```
 receive: qPathComplete:0,6d61696e
 send:    M6d61696e2e637070
@@ -1832,8 +1806,6 @@ Paths denoting a directory should end with a directory separator (`/` or `\`.
 ## qKillSpawnedProcess (Platform Extension)
 
 Kill a process running on the target system.
-
-### Example
 
 ```
 receive: qKillSpawnedProcess:1337
@@ -2305,8 +2277,6 @@ mismatches or extensions.
 
 Get the size of a file on the target system, filename in ASCII hex.
 
-#### Example
-
 ```
 receive: vFile:size:2f746d702f61
 send:    Fc008
@@ -2318,8 +2288,6 @@ response is `F` followed by the file size in base 16.
 ### vFile:mode
 
 Get the mode bits of a file on the target system, filename in ASCII hex.
-
-#### Example
 
 ```
 receive: vFile:mode:2f746d702f61
@@ -2333,8 +2301,6 @@ correspond to `0755` in octal.
 ### vFile:unlink
 
 Remove a file on the target system.
-
-#### Example
 
 ```
 receive: vFile:unlink:2f746d702f61
@@ -2350,8 +2316,6 @@ value of errno if unlink failed.
 
 Create a symbolic link (symlink, soft-link) on the target system.
 
-#### Example
-
 ```
 receive: vFile:symlink:<SRC-FILE>,<DST-NAME>
 send:    F0,0
@@ -2364,8 +2328,6 @@ optionally followed by the value of errno if it failed, also base 16.
 ### vFile:open
 
 Open a file on the remote system and return the file descriptor of it.
-
-#### Example
 
 ```
 receive: vFile:open:2f746d702f61,00000001,00000180
@@ -2387,8 +2349,6 @@ response is `F` followed by the opened file descriptor in base 16.
 
 Close a previously opened file descriptor.
 
-#### Example
-
 ```
 receive: vFile:close:7
 send:    F0
@@ -2400,8 +2360,6 @@ errno is base 16.
 ### vFile:pread
 
 Read data from an opened file descriptor.
-
-#### Example
 
 ```
 receive: vFile:pread:7,1024,0
@@ -2420,8 +2378,6 @@ semicolon, followed by the data in the binary-escaped-data encoding.
 
 Write data to a previously opened file descriptor.
 
-#### Example
-
 ```
 receive: vFile:pwrite:8,0,\cf\fa\ed\fe\0c\00\00
 send:    F1024
@@ -2437,8 +2393,6 @@ Response is `F`, followed by the number of bytes written (base 16).
 ### vFile:MD5
 
 Generate an MD5 hash of the file at the given path.
-
-#### Example
 
 ```
 receive: vFile:MD5:2f746d702f61
@@ -2458,8 +2412,6 @@ or failed to hash.
 ### vFile:exists
 
 Check whether the file at the given path exists.
-
-#### Example
 
 ```
 receive: vFile:exists:2f746d702f61
