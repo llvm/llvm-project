@@ -6,10 +6,10 @@
 #define FUN(n) \
   (float z) { return n * z + n; }
 
-// CHECK-DDEFAULT: Function Attrs: noinline nounwind optnone{{$$}}
-// CHECK-DEBSTRICT: Function Attrs: noinline nounwind optnone strictfp{{$$}}
-// CHECK-FAST: Function Attrs: noinline nounwind optnone{{$$}}
-// CHECK-NOHONOR: Function Attrs: noinline nounwind optnone{{$$}}
+// CHECK-DDEFAULT: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
+// CHECK-DEBSTRICT: Function Attrs: mustprogress noinline nounwind optnone strictfp{{$$}}
+// CHECK-FAST: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
+// CHECK-NOHONOR: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
 float fun_default FUN(1)
 //CHECK-LABEL: define {{.*}} @_Z11fun_defaultf{{.*}}
 #if DEFAULT
@@ -32,10 +32,10 @@ float fun_default FUN(1)
 // Rule: precise must be enabled
 #pragma float_control(except, on)
 #endif
-    // CHECK-FAST: Function Attrs: noinline nounwind optnone{{$$}}
-    // CHECK-DDEFAULT: Function Attrs: noinline nounwind optnone strictfp{{$$}}
-    // CHECK-DEBSTRICT: Function Attrs: noinline nounwind optnone strictfp{{$$}}
-    // CHECK-NOHONOR: Function Attrs: noinline nounwind optnone strictfp{{$$}}
+    // CHECK-FAST: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
+    // CHECK-DDEFAULT: Function Attrs: mustprogress noinline nounwind optnone strictfp{{$$}}
+    // CHECK-DEBSTRICT: Function Attrs: mustprogress noinline nounwind optnone strictfp{{$$}}
+    // CHECK-NOHONOR: Function Attrs: mustprogress noinline nounwind optnone strictfp{{$$}}
     float exc_on FUN(2)
 //CHECK-LABEL: define {{.*}} @_Z6exc_onf{{.*}}
 #if DEFAULT
@@ -54,10 +54,10 @@ float fun_default FUN(1)
 #endif
 
 #pragma float_control(pop)
-    // CHECK-DDEFAULT: Function Attrs: noinline nounwind optnone{{$$}}
-    // CHECK-DEBSTRICT: Function Attrs: noinline nounwind optnone strictfp{{$$}}
-    // CHECK-FAST: Function Attrs: noinline nounwind optnone{{$$}}
-    // CHECK-NOHONOR: Function Attrs: noinline nounwind optnone{{$$}}
+    // CHECK-DDEFAULT: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
+    // CHECK-DEBSTRICT: Function Attrs: mustprogress noinline nounwind optnone strictfp{{$$}}
+    // CHECK-FAST: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
+    // CHECK-NOHONOR: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
     float exc_pop FUN(5)
 //CHECK-LABEL: define {{.*}} @_Z7exc_popf{{.*}}
 #if DEFAULT
@@ -223,10 +223,10 @@ float fun_default FUN(1)
 #pragma float_control(except, on)
 #endif
                                         float y();
-// CHECK-DDEFAULT: Function Attrs: noinline nounwind optnone{{$$}}
-// CHECK-DEBSTRICT: Function Attrs: noinline nounwind optnone strictfp{{$$}}
-// CHECK-FAST: Function Attrs: noinline nounwind optnone{{$$}}
-// CHECK-NOHONOR: Function Attrs: noinline nounwind optnone{{$$}}
+// CHECK-DDEFAULT: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
+// CHECK-DEBSTRICT: Function Attrs: mustprogress noinline nounwind optnone strictfp{{$$}}
+// CHECK-FAST: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
+// CHECK-NOHONOR: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
 class ON {
   // Settings for top level class initializer use program source setting.
   float z = 2 + y() * 7;
@@ -246,10 +246,10 @@ class ON {
 };
 ON on;
 #pragma float_control(except, off)
-// CHECK-DDEFAULT: Function Attrs: noinline nounwind optnone{{$$}}
-// CHECK-DEBSTRICT: Function Attrs: noinline nounwind optnone{{$$}}
-// CHECK-FAST: Function Attrs: noinline nounwind optnone{{$$}}
-// CHECK-NOHONOR: Function Attrs: noinline nounwind optnone{{$$}}
+// CHECK-DDEFAULT: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
+// CHECK-DEBSTRICT: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
+// CHECK-FAST: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
+// CHECK-NOHONOR: Function Attrs: mustprogress noinline nounwind optnone{{$$}}
 class OFF {
   float w = 2 + y() * 7;
 // CHECK-LABEL: define {{.*}} void @_ZN3OFFC2Ev{{.*}}

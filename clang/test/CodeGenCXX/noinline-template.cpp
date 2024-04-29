@@ -15,4 +15,4 @@ void foo() {
  strs.growStorageBy();
 }
 
-// CHECK: attributes [[NI]] = { noinline nounwind{{.*}} }
+// CHECK: attributes [[NI]] = { mustprogress noinline nounwind{{.*}} }

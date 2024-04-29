@@ -6,10 +6,10 @@
 
 // Check -ffinite-loops option in combination with various standard versions.
 // RUN: %clang_cc1 -std=c++98 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
-// RUN: %clang_cc1 -std=c++11 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
-// RUN: %clang_cc1 -std=c++14 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
-// RUN: %clang_cc1 -std=c++17 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
-// RUN: %clang_cc1 -std=c++20 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=FINITE %s
+// RUN: %clang_cc1 -std=c++11 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CXX11 %s
+// RUN: %clang_cc1 -std=c++14 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CXX11 %s
+// RUN: %clang_cc1 -std=c++17 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CXX11 %s
+// RUN: %clang_cc1 -std=c++20 -ffinite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CXX11 %s
 
 // Check -fno-finite-loops option in combination with various standard versions.
 // RUN: %clang_cc1 -std=c++98 -fno-finite-loops -triple=x86_64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CXX98 %s
@@ -23,6 +23,9 @@ int b = 0;
 
 // CHECK: datalayout
 
+// CXX98-NOT:  mustprogress
+// CXX11-NOT:  mustprogress
+// FINITE-NOT: mustprogress
 // CHECK-LABEL: @_Z2f0v(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %for.cond
@@ -34,6 +37,9 @@ void f0() {
   for (; ;) ;
 }
 
+// CXX98-NOT:  mustprogress
+// CXX11-NOT:  mustprogress
+// FINITE-NOT: mustprogress
 // CHECK-LABEL: @_Z2f1v(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %for.cond
@@ -51,6 +57,9 @@ void f1() {
     ;
 }
 
+// CXX98-NOT:  mustprogress
+// CXX11:      mustprogress
+// FINITE-NOT: mustprogress
 // CHECK-LABEL: @_Z2f2v(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %for.cond
@@ -71,6 +80,9 @@ void f2() {
     ;
 }
 
+// CXX98-NOT:  mustprogress
+// CXX11-NOT:  mustprogress
+// FINITE-NOT: mustprogress
 // CHECK-LABEL: @_Z1Fv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %for.cond
@@ -101,6 +113,9 @@ void F() {
     ;
 }
 
+// CXX98-NOT:  mustprogress
+// CXX11-NOT:  mustprogress
+// FINITE-NOT: mustprogress
 // CHECK-LABEL: @_Z2F2v(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %for.cond
@@ -131,6 +146,9 @@ void F2() {
     ;
 }
 
+// CXX98-NOT:  mustprogress
+// CXX11-NOT:  mustprogress
+// FINITE-NOT: mustprogress
 // CHECK-LABEL: @_Z2w1v(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %while.body
@@ -144,6 +162,9 @@ void w1() {
     ;
 }
 
+// CXX98-NOT:  mustprogress
+// CXX11:      mustprogress
+// FINITE-NOT: mustprogress
 // CHECK-LABEL: @_Z2w2v(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %while.cond
@@ -164,6 +185,9 @@ void w2() {
     ;
 }
 
+// CXX98-NOT:  mustprogress
+// CXX11-NOT:  mustprogress
+// FINITE-NOT: mustprogress
 // CHECK-LABEL: @_Z1Wv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %while.cond
@@ -190,6 +214,9 @@ void W() {
     ;
 }
 
+// CXX98-NOT:  mustprogress
+// CXX11-NOT:  mustprogress
+// FINITE-NOT: mustprogress
 // CHECK-LABEL: @_Z2W2v(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %while.body
@@ -205,6 +232,9 @@ void W2() {
     ;
 }
 
+// CXX98-NOT:  mustprogress
+// CXX11-NOT:  mustprogress
+// FINITE-NOT: mustprogress
 // CHECK-LABEL: @_Z2d1v(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %do.body
@@ -223,6 +253,9 @@ void d1() {
   while (1);
 }
 
+// CXX98-NOT:  mustprogress
+// CXX11:      mustprogress
+// FINITE-NOT: mustprogress
 // CHECK-LABEL: @_Z2d2v(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %do.body
@@ -244,6 +277,9 @@ void d2() {
   while (a == b);
 }
 
+// CXX98-NOT:  mustprogress
+// CXX11-NOT:  mustprogress
+// FINITE-NOT: mustprogress
 // CHECK-LABEL: @_Z1Dv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %do.body
@@ -276,6 +312,9 @@ void D() {
   while (a == b);
 }
 
+// CXX98-NOT:  mustprogress
+// CXX11-NOT:  mustprogress
+// FINITE-NOT: mustprogress
 // CHECK-LABEL: @_Z2D2v(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %do.body

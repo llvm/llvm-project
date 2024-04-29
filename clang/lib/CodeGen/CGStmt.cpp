@@ -943,8 +943,13 @@ bool CodeGenFunction::checkIfLoopMustProgress(const Expr *ControllingExpression,
   // following:
   // [...]
   // - continue execution of a trivial infinite loop ([stmt.iter.general]).
-  if (getLangOpts().CPlusPlus11)
-    return !(IsTrivialCXXLoop && CondIsTrue);
+  if (getLangOpts().CPlusPlus11) {
+    if (IsTrivialCXXLoop && CondIsTrue) {
+      CurFn->removeFnAttr(llvm::Attribute::MustProgress);
+      return false;
+    }
+    return true;
+  }
 
   return false;
 }

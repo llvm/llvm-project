@@ -14,7 +14,7 @@ void foo() {
 }
 
 #endif
-// CHECK: Function Attrs: nounwind
+// CHECK: Function Attrs: mustprogress nounwind
 // CHECK-LABEL: define {{[^@]+}}@_Z3foov
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
@@ -52,7 +52,7 @@ void foo() {
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-NOINLINE: Function Attrs: noinline nounwind
+// CHECK-NOINLINE: Function Attrs: mustprogress noinline nounwind
 // CHECK-NOINLINE-LABEL: define {{[^@]+}}@_Z3foov
 // CHECK-NOINLINE-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NOINLINE-NEXT:  entry:

@@ -614,6 +614,24 @@ public:
   // applies to.  nullptr if there is no 'musttail' on the current statement.
   const CallExpr *MustTailCall = nullptr;
 
+  /// Returns true if a function must make progress, which means the
+  /// mustprogress attribute can be added.
+  bool checkIfFunctionMustProgress() {
+    if (CGM.getCodeGenOpts().getFiniteLoops() ==
+        CodeGenOptions::FiniteLoopsKind::Never)
+      return false;
+
+    // C++11 and later guarantees that a thread eventually will do one of the
+    // following (C++11 [intro.multithread]p24 and C++17 [intro.progress]p1):
+    // - terminate,
+    //  - make a call to a library I/O function,
+    //  - perform an access through a volatile glvalue, or
+    //  - perform a synchronization operation or an atomic operation.
+    //
+    // Hence each function is 'mustprogress' in C++11 or later.
+    return getLangOpts().CPlusPlus11;
+  }
+
   /// Returns true if a loop must make progress, which means the mustprogress
   /// attribute can be added. \p HasConstantCond indicates whether the branch
   /// condition is a known constant.

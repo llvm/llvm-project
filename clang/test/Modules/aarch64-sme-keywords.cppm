@@ -31,7 +31,7 @@ import A;
 //
 // CHECK:declare void @_ZW1A14f_preserves_zav() #[[PRESERVES_ZA_DECL:[0-9]+]]
 //
-// CHECK:; Function Attrs: noinline nounwind optnone
+// CHECK:; Function Attrs: mustprogress noinline nounwind optnone
 // CHECK:define dso_local void @_Z21f_nonstreaming_callerv() #[[NORMAL_DEF:[0-9]+]] {
 // CHECK:entry:
 // CHECK:  call void @_ZW1A11f_streamingv() #[[STREAMING_USE:[0-9]+]]
