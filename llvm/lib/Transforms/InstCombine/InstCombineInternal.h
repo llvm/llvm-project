@@ -354,8 +354,9 @@ private:
   }
 
   bool willNotOverflowUnsignedMul(const Value *LHS, const Value *RHS,
-                                  const Instruction &CxtI) const {
-    return computeOverflowForUnsignedMul(LHS, RHS, &CxtI) ==
+                                  const Instruction &CxtI,
+                                  bool IsNSW = false) const {
+    return computeOverflowForUnsignedMul(LHS, RHS, &CxtI, IsNSW) ==
            OverflowResult::NeverOverflows;
   }
 
@@ -376,7 +377,7 @@ private:
     }
   }
 
-  Value *EmitGEPOffset(User *GEP);
+  Value *EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP = false);
   Instruction *scalarizePHI(ExtractElementInst &EI, PHINode *PN);
   Instruction *foldBitcastExtElt(ExtractElementInst &ExtElt);
   Instruction *foldCastedBitwiseLogic(BinaryOperator &I);

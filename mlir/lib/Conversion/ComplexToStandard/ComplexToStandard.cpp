@@ -857,7 +857,7 @@ struct SqrtOpConversion : public OpConversionPattern<complex::SqrtOp> {
     ImplicitLocOpBuilder b(op.getLoc(), rewriter);
 
     auto type = cast<ComplexType>(op.getType());
-    auto elementType = type.getElementType().cast<FloatType>();
+    auto elementType = cast<FloatType>(type.getElementType());
     arith::FastMathFlags fmf = op.getFastMathFlagsAttr().getValue();
 
     auto cst = [&](APFloat v) {

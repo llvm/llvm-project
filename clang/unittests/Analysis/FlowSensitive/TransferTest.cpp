@@ -3309,6 +3309,28 @@ TEST(TransferTest, ResultObjectLocationPropagatesThroughConditionalOperator) {
       });
 }
 
+TEST(TransferTest, ResultObjectLocationDontVisitNestedRecordDecl) {
+  // This is a crash repro.
+  // We used to crash because when propagating result objects, we would visit
+  // nested record and function declarations, but we don't model fields used
+  // only in these.
+  std::string Code = R"(
+    struct S1 {};
+    struct S2 { S1 s1; };
+    void target() {
+      struct Nested {
+        void f() {
+          S2 s2 = { S1() };
+        }
+      };
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {});
+}
+
 TEST(TransferTest, StaticCast) {
   std::string Code = R"(
     void target(int Foo) {
@@ -3348,20 +3370,11 @@ TEST(TransferTest, IntegralCast) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
-        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-        ASSERT_THAT(FooDecl, NotNull());
-
-        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
-        ASSERT_THAT(BarDecl, NotNull());
-
-        const auto *FooVal = Env.getValue(*FooDecl);
-        const auto *BarVal = Env.getValue(*BarDecl);
-        EXPECT_TRUE(isa<IntegerValue>(FooVal));
-        EXPECT_TRUE(isa<IntegerValue>(BarVal));
-        EXPECT_EQ(FooVal, BarVal);
+        const auto &FooVal = getValueForDecl<IntegerValue>(ASTCtx, Env, "Foo");
+        const auto &BarVal = getValueForDecl<IntegerValue>(ASTCtx, Env, "Bar");
+        EXPECT_EQ(&FooVal, &BarVal);
       });
 }
 
@@ -3376,17 +3389,10 @@ TEST(TransferTest, IntegraltoBooleanCast) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
-        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-        ASSERT_THAT(FooDecl, NotNull());
-
-        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
-        ASSERT_THAT(BarDecl, NotNull());
-
-        const auto *FooVal = Env.getValue(*FooDecl);
-        const auto *BarVal = Env.getValue(*BarDecl);
+        const auto &FooVal = getValueForDecl(ASTCtx, Env, "Foo");
+        const auto &BarVal = getValueForDecl(ASTCtx, Env, "Bar");
         EXPECT_TRUE(isa<IntegerValue>(FooVal));
         EXPECT_TRUE(isa<BoolValue>(BarVal));
       });
@@ -3404,21 +3410,36 @@ TEST(TransferTest, IntegralToBooleanCastFromBool) {
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
-        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
-        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
-        ASSERT_THAT(FooDecl, NotNull());
-
-        const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
-        ASSERT_THAT(BarDecl, NotNull());
-
-        const auto *FooVal = Env.getValue(*FooDecl);
-        const auto *BarVal = Env.getValue(*BarDecl);
-        EXPECT_TRUE(isa<BoolValue>(FooVal));
-        EXPECT_TRUE(isa<BoolValue>(BarVal));
-        EXPECT_EQ(FooVal, BarVal);
+        const auto &FooVal = getValueForDecl<BoolValue>(ASTCtx, Env, "Foo");
+        const auto &BarVal = getValueForDecl<BoolValue>(ASTCtx, Env, "Bar");
+        EXPECT_EQ(&FooVal, &BarVal);
       });
+}
+
+TEST(TransferTest, WidenBoolValueInIntegerVariable) {
+  // This is a crash repro.
+  // This test sets up a case where we perform widening on an integer variable
+  // that contains a `BoolValue` for the previous iteration and an
+  // `IntegerValue` for the current iteration. We used to crash on this because
+  // `widenDistinctValues()` assumed that if the previous iteration had a
+  // `BoolValue`, the current iteration would too.
+  // FIXME: The real fix here is to make sure we never store `BoolValue`s in
+  // integer variables; see also the comment in `widenDistinctValues()`.
+  std::string Code = R"cc(
+    struct S {
+      int i;
+      S *next;
+    };
+    void target(S *s) {
+      for (; s; s = s->next)
+        s->i = false;
+    }
+  )cc";
+  runDataflow(Code,
+              [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
+                 ASTContext &) {});
 }
 
 TEST(TransferTest, NullToPointerCast) {
@@ -3637,7 +3658,7 @@ TEST(TransferTest, VarDeclInitAssignConditionalOperator) {
     };
 
     void target(A Foo, A Bar, bool Cond) {
-      A Baz = Cond ?  Foo : Bar;
+      A Baz = Cond ?  A(Foo) : A(Bar);
       // Make sure A::i is modeled.
       Baz.i;
       /*[[p]]*/
@@ -5275,6 +5296,99 @@ TEST(TransferTest, BinaryOperatorComma) {
       });
 }
 
+TEST(TransferTest, ConditionalOperatorValue) {
+  std::string Code = R"(
+    void target(bool Cond, bool B1, bool B2) {
+      bool JoinSame = Cond ? B1 : B1;
+      bool JoinDifferent = Cond ? B1 : B2;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        Environment Env = getEnvironmentAtAnnotation(Results, "p").fork();
+
+        auto &B1 = getValueForDecl<BoolValue>(ASTCtx, Env, "B1");
+        auto &B2 = getValueForDecl<BoolValue>(ASTCtx, Env, "B2");
+        auto &JoinSame = getValueForDecl<BoolValue>(ASTCtx, Env, "JoinSame");
+        auto &JoinDifferent =
+            getValueForDecl<BoolValue>(ASTCtx, Env, "JoinDifferent");
+
+        EXPECT_EQ(&JoinSame, &B1);
+
+        const Formula &JoinDifferentEqB1 =
+            Env.arena().makeEquals(JoinDifferent.formula(), B1.formula());
+        EXPECT_TRUE(Env.allows(JoinDifferentEqB1));
+        EXPECT_FALSE(Env.proves(JoinDifferentEqB1));
+
+        const Formula &JoinDifferentEqB2 =
+            Env.arena().makeEquals(JoinDifferent.formula(), B2.formula());
+        EXPECT_TRUE(Env.allows(JoinDifferentEqB2));
+        EXPECT_FALSE(Env.proves(JoinDifferentEqB1));
+      });
+}
+
+TEST(TransferTest, ConditionalOperatorLocation) {
+  std::string Code = R"(
+    void target(bool Cond, int I1, int I2) {
+      int &JoinSame = Cond ? I1 : I1;
+      int &JoinDifferent = Cond ? I1 : I2;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        Environment Env = getEnvironmentAtAnnotation(Results, "p").fork();
+
+        StorageLocation &I1 = getLocForDecl(ASTCtx, Env, "I1");
+        StorageLocation &I2 = getLocForDecl(ASTCtx, Env, "I2");
+        StorageLocation &JoinSame = getLocForDecl(ASTCtx, Env, "JoinSame");
+        StorageLocation &JoinDifferent =
+            getLocForDecl(ASTCtx, Env, "JoinDifferent");
+
+        EXPECT_EQ(&JoinSame, &I1);
+
+        EXPECT_NE(&JoinDifferent, &I1);
+        EXPECT_NE(&JoinDifferent, &I2);
+      });
+}
+
+TEST(TransferTest, ConditionalOperatorOnConstantExpr) {
+  // This is a regression test: We used to crash when a `ConstantExpr` was used
+  // in the branches of a conditional operator.
+  std::string Code = R"cc(
+    consteval bool identity(bool B) { return B; }
+    void target(bool Cond) {
+      bool JoinTrueTrue = Cond ? identity(true) : identity(true);
+      bool JoinTrueFalse = Cond ? identity(true) : identity(false);
+      // [[p]]
+    }
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        Environment Env = getEnvironmentAtAnnotation(Results, "p").fork();
+
+        auto &JoinTrueTrue =
+            getValueForDecl<BoolValue>(ASTCtx, Env, "JoinTrueTrue");
+        // FIXME: This test documents the current behavior, namely that we
+        // don't actually use the constant result of the `ConstantExpr` and
+        // instead treat it like a normal function call.
+        EXPECT_EQ(JoinTrueTrue.formula().kind(), Formula::Kind::AtomRef);
+        // EXPECT_TRUE(JoinTrueTrue.formula().literal());
+
+        auto &JoinTrueFalse =
+            getValueForDecl<BoolValue>(ASTCtx, Env, "JoinTrueFalse");
+        EXPECT_EQ(JoinTrueFalse.formula().kind(), Formula::Kind::AtomRef);
+      },
+      LangStandard::lang_cxx20);
+}
+
 TEST(TransferTest, IfStmtBranchExtendsFlowCondition) {
   std::string Code = R"(
     void target(bool Foo) {
@@ -5522,10 +5636,7 @@ TEST(TransferTest, ContextSensitiveReturnReferenceWithConditionalOperator) {
         auto *Loc = Env.getReturnStorageLocation();
         EXPECT_THAT(Loc, NotNull());
 
-        // TODO: We would really like to make this stronger assertion, but that
-        // doesn't work because we don't propagate values correctly through
-        // the conditional operator yet.
-        // EXPECT_EQ(Loc, SLoc);
+        EXPECT_EQ(Loc, SLoc);
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }

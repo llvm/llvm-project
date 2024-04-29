@@ -2413,6 +2413,52 @@ def TransposeConv2DOp : Op<Transform_Dialect,
 }
 
 //===----------------------------------------------------------------------===//
+// TransposeMatmulOp
+//===----------------------------------------------------------------------===//
+
+def TransposeMatmulOp : Op<Transform_Dialect,
+    "structured.transpose_matmul",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformOpInterface, TransformEachOpTrait,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Convert Linalg matmul ops to transposed variants.
+
+    By default the LHS matrix is transposed. Specify `<rhs>` to instead
+    transpose RHS matrix.
+
+    #### Return modes:
+
+    This operation fails if `target` is unsupported, i.e., not a
+    `linalg.matmul` or `linalg.batch_matmul`. Otherwise, the operation succeeds
+    and returns a handle to the transposed matmul op.
+  }];
+
+  let arguments = (ins
+    TransformHandleTypeInterface:$target,
+    DefaultValuedAttr<TransposeMatmulInput,
+                      "TransposeMatmulInput::lhs">:$inputToTranspose);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+
+  let assemblyFormat = [{
+    $target (`<` $inputToTranspose^ `>`)?
+    attr-dict `:` functional-type($target, results)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$target)>
+  ];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::linalg::LinalgOp target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // InsertSliceToCopyOp
 //===----------------------------------------------------------------------===//
 

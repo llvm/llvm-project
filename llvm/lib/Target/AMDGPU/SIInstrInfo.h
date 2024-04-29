@@ -1194,6 +1194,15 @@ public:
                    unsigned Quantity) const override;
 
   void insertReturn(MachineBasicBlock &MBB) const;
+
+  /// Build instructions that simulate the behavior of a `s_trap 2` instructions
+  /// for hardware (namely, gfx11) that runs in PRIV=1 mode. There, s_trap is
+  /// interpreted as a nop.
+  MachineBasicBlock *insertSimulatedTrap(MachineRegisterInfo &MRI,
+                                         MachineBasicBlock &MBB,
+                                         MachineInstr &MI,
+                                         const DebugLoc &DL) const;
+
   /// Return the number of wait states that result from executing this
   /// instruction.
   static unsigned getNumWaitStates(const MachineInstr &MI);

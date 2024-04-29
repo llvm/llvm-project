@@ -834,6 +834,11 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       return InsnMatcher;
     }
 
+    if (SrcGIOrNull->TheDef->getName() == "G_FRAME_INDEX") {
+      InsnMatcher.addOperand(OpIdx++, Src.getName(), TempOpIdx);
+      return InsnMatcher;
+    }
+
     // Special case because the operand order is changed from setcc. The
     // predicate operand needs to be swapped from the last operand to the first
     // source.
@@ -1221,6 +1226,10 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     // FIXME: The target should be able to choose sign-extended when appropriate
     //        (e.g. on Mips).
     if (DstChild.getOperator()->getName() == "timm") {
+      DstMIBuilder.addRenderer<CopyRenderer>(DstChild.getName());
+      return InsertPt;
+    }
+    if (DstChild.getOperator()->getName() == "tframeindex") {
       DstMIBuilder.addRenderer<CopyRenderer>(DstChild.getName());
       return InsertPt;
     } else if (DstChild.getOperator()->getName() == "imm") {
@@ -2411,6 +2420,8 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   for (const PatternToMatch &Pat : CGP.ptms()) {
     ++NumPatternTotal;
 
+    if (Pat.getGISelShouldIgnore())
+      continue; // skip without warning
     auto MatcherOrErr = runOnPattern(Pat);
 
     // The pattern analysis can fail, indicating an unsupported pattern.
