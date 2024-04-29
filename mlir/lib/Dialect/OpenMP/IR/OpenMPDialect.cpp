@@ -2267,8 +2267,6 @@ LogicalResult PrivateClauseOp::verify() {
       return mlir::emitError(terminator->getLoc())
              << "expected exit block terminator to be an `omp.yield` op.";
 
-
-
     YieldOp yieldOp = llvm::cast<YieldOp>(terminator);
     TypeRange yieldedTypes = yieldOp.getResults().getTypes();
 
