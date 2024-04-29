@@ -12,7 +12,7 @@
 ! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization -o - %t/dyn_len.f90 2>&1 \
 ! RUN:   | FileCheck %s --check-prefix=DYN_LEN
 
-! --- static_len.f90
+!--- static_len.f90
 subroutine delayed_privatization_character_array_static_len(var1)
   implicit none
   character(len = 10)  :: var1(5)
