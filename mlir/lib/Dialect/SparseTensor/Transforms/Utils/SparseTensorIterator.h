@@ -76,6 +76,7 @@ enum class IterKind : uint8_t {
   kSubSect,
   kNonEmptySubSect,
   kFilter,
+  kPad,
 };
 
 /// Helper class that generates loop conditions, etc, to traverse a
@@ -302,6 +303,12 @@ makeSynLevelAndIterator(Value sz, unsigned tid, unsigned lvl,
 std::unique_ptr<SparseIterator>
 makeSlicedLevelIterator(std::unique_ptr<SparseIterator> &&sit, Value offset,
                         Value stride, Value size, SparseEmitStrategy strategy);
+
+/// Helper function to create a SparseIterator object that iterate over a
+/// padded sparse level (the padded value must be zero).
+std::unique_ptr<SparseIterator>
+makePaddedIterator(std::unique_ptr<SparseIterator> &&sit, Value padLow,
+                   Value padHigh, SparseEmitStrategy strategy);
 
 /// Helper function to create a SparseIterator object that iterate over the
 /// non-empty subsections set.
