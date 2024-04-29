@@ -31534,11 +31534,10 @@ static SDValue lowerAtomicArith(SDValue N, SelectionDAG &DAG,
     // Handle (atomic_load_xor p, SignBit) as (atomic_load_add p, SignBit) so we
     // can use LXADD as opposed to cmpxchg.
     if (Opc == ISD::ATOMIC_LOAD_SUB ||
-        (Opc == ISD::ATOMIC_LOAD_XOR && isMinSignedConstant(RHS))) {
-      RHS = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), RHS);
-      return DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, VT, Chain, LHS, RHS,
-                           AN->getMemOperand());
-    }
+        (Opc == ISD::ATOMIC_LOAD_XOR && isMinSignedConstant(RHS)))
+      return DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, VT, Chain, LHS,
+                           DAG.getNegative(RHS, DL, VT), AN->getMemOperand());
+
     assert(Opc == ISD::ATOMIC_LOAD_ADD &&
            "Used AtomicRMW ops other than Add should have been expanded!");
     return N;
