@@ -4047,6 +4047,7 @@ void RewriteInstance::patchELFPHDRTable() {
     NewWritableSegmentSize = NextAvailableAddress - NewWritableSegmentAddress;
   }
 
+  const uint64_t SavedPos = OS.tell();
   OS.seek(PHDRTableOffset);
 
   auto createNewTextPhdr = [&]() {
@@ -4151,6 +4152,8 @@ void RewriteInstance::patchELFPHDRTable() {
         << "BOLT-ERROR: could not find PT_GNU_STACK program header to modify\n";
     exit(1);
   }
+
+  OS.seek(SavedPos);
 }
 
 namespace {
@@ -5041,10 +5044,6 @@ void RewriteInstance::patchELFSymTabs(ELFObjectFile<ELFT> *File) {
   assert((DynSymSection || BC->IsStaticExecutable) &&
          "dynamic symbol table expected");
   if (DynSymSection) {
-    // Set pointer to the end of the section, so we can use pwrite to update
-    // the dynamic symbol table.
-    Out->os().seek(DynSymSection->sh_offset + DynSymSection->sh_size);
-
     updateELFSymbolTable(
         File,
         /*IsDynSym=*/true,
