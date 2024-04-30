@@ -684,7 +684,9 @@ private:
     for (auto &Case : I->cases()) {
       serialiseBlockLabel(Case.getCaseSuccessor());
     }
-
+    // safepoint:
+    CallInst *SMI = dyn_cast<CallInst>(I->getPrevNonDebugInstruction());
+    serialiseStackmapCall(SMI, VLMap);
     InstIdx++;
   }
 
