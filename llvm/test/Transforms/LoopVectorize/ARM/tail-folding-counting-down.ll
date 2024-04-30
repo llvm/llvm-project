@@ -107,9 +107,10 @@ while.body:
   %1 = load i8, ptr %b.addr.07, align 1
   %add = add i8 %1, %0
   %incdec.ptr4 = getelementptr inbounds i8, ptr %c.addr.08, i32 1
-  store i8 %add, ptr %c.addr.08, align 1
   %cmp = icmp sgt i32 %N.addr.09, 1
   %select = select i1 %cmp, i8 %0, i8 %1
+  %add2 = add i8 %add, %select
+  store i8 %add2, ptr %c.addr.08, align 1
   br i1 %cmp, label %while.body, label %while.end.loopexit
 
 while.end.loopexit:
