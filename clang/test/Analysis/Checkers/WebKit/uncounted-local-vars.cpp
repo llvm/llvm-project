@@ -187,3 +187,29 @@ void bar() {
 }
 
 } // namespace ignore_for_if
+
+namespace std {
+
+void memcpy(void*, void*, unsigned long);
+
+template <typename T>
+void some_function(T* a, T* b)
+{
+  T* temp = new T;
+  memcpy(temp, a, sizeof(T));
+  memcpy(a, b, sizeof(T));
+  memcpy(b, temp, sizeof(T));
+  delete temp;
+}
+
+} // std
+
+namespace ignore_std_namespace {
+
+RefCountable *ref_counted();
+
+void foo() {
+  std::some_function(ref_counted(), ref_counted());
+}
+
+} // ignore_std_namespace

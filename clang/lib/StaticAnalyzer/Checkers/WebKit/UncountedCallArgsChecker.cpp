@@ -53,6 +53,12 @@ public:
       bool shouldVisitTemplateInstantiations() const { return true; }
       bool shouldVisitImplicitCode() const { return false; }
 
+      bool TraverseNamespaceDecl(NamespaceDecl *Decl) {
+        if (safeGetName(Decl) == "std")
+          return true;
+        return RecursiveASTVisitor<LocalVisitor>::TraverseNamespaceDecl(Decl);
+      }
+
       bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) {
         if (isRefType(safeGetName(Decl)))
           return true;

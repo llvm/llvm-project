@@ -333,3 +333,30 @@ namespace cxx_member_operator_call {
     // expected-warning@-1{{Call argument for parameter 'bad' is uncounted and unsafe}}
   }
 }
+
+namespace std {
+
+template <typename T>
+T* other_function();
+
+template <typename T>
+void another_function(T*, T*);
+
+template <typename T>
+void some_function(T* a)
+{
+  another_function(other_function<T>(), a);
+}
+
+} // std
+
+namespace ignore_std_namespace {
+
+RefCountable *ref_counted();
+
+void foo() {
+  std::some_function(ref_counted());
+  // expected-warning@-1{{Call argument for parameter 'a' is uncounted and unsafe}}
+}
+
+} // ignore_std_namespace
