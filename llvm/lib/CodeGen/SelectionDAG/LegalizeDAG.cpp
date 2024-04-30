@@ -180,6 +180,13 @@ private:
                              SmallVectorImpl<SDValue> &Results);
   SDValue PromoteLegalFP_TO_INT_SAT(SDNode *Node, const SDLoc &dl);
 
+  /// Implements vector reduce operation promotion.
+  ///
+  /// All vector operands are promoted to a vector type with larger element
+  /// type, and the start value is promoted to a larger scalar type. Then the
+  /// result is truncated back to the original scalar type.
+  void PromoteReduction(SDNode *Node, SmallVectorImpl<SDValue> &Results);
+
   SDValue ExpandPARITY(SDValue Op, const SDLoc &dl);
 
   SDValue ExpandExtractFromVectorThroughStack(SDValue Op);
@@ -2979,6 +2986,47 @@ SDValue SelectionDAGLegalize::ExpandPARITY(SDValue Op, const SDLoc &dl) {
   return DAG.getNode(ISD::AND, dl, VT, Result, DAG.getConstant(1, dl, VT));
 }
 
+void SelectionDAGLegalize::PromoteReduction(SDNode *Node,
+                                            SmallVectorImpl<SDValue> &Results) {
+  MVT VecVT = Node->getOperand(1).getSimpleValueType();
+  MVT NewVecVT = TLI.getTypeToPromoteTo(Node->getOpcode(), VecVT);
+  MVT ScalarVT = Node->getSimpleValueType(0);
+  MVT NewScalarVT = NewVecVT.getVectorElementType();
+
+  SDLoc DL(Node);
+  SmallVector<SDValue, 4> Operands(Node->getNumOperands());
+
+  // promote the initial value.
+  // FIXME: Support integer.
+  assert(Node->getOperand(0).getValueType().isFloatingPoint() &&
+         "Only FP promotion is supported");
+  Operands[0] =
+      DAG.getNode(ISD::FP_EXTEND, DL, NewScalarVT, Node->getOperand(0));
+
+  for (unsigned j = 1; j != Node->getNumOperands(); ++j)
+    if (Node->getOperand(j).getValueType().isVector() &&
+        !(ISD::isVPOpcode(Node->getOpcode()) &&
+          ISD::getVPMaskIdx(Node->getOpcode()) == j)) { // Skip mask operand.
+      // promote the vector operand.
+      // FIXME: Support integer.
+      assert(Node->getOperand(j).getValueType().isFloatingPoint() &&
+             "Only FP promotion is supported");
+      Operands[j] =
+          DAG.getNode(ISD::FP_EXTEND, DL, NewVecVT, Node->getOperand(j));
+    } else {
+      Operands[j] = Node->getOperand(j); // Skip VL operand.
+    }
+
+  SDValue Res = DAG.getNode(Node->getOpcode(), DL, NewScalarVT, Operands,
+                            Node->getFlags());
+
+  assert(ScalarVT.isFloatingPoint() && "Only FP promotion is supported");
+  Res = DAG.getNode(ISD::FP_ROUND, DL, ScalarVT, Res,
+                    DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+
+  Results.push_back(Res);
+}
+
 bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   LLVM_DEBUG(dbgs() << "Trying to expand node\n");
   SmallVector<SDValue, 8> Results;
@@ -4955,7 +5003,12 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   if (Node->getOpcode() == ISD::STRICT_UINT_TO_FP ||
       Node->getOpcode() == ISD::STRICT_SINT_TO_FP ||
       Node->getOpcode() == ISD::STRICT_FSETCC ||
-      Node->getOpcode() == ISD::STRICT_FSETCCS)
+      Node->getOpcode() == ISD::STRICT_FSETCCS ||
+      Node->getOpcode() == ISD::VP_REDUCE_FADD ||
+      Node->getOpcode() == ISD::VP_REDUCE_FMUL ||
+      Node->getOpcode() == ISD::VP_REDUCE_FMAX ||
+      Node->getOpcode() == ISD::VP_REDUCE_FMIN ||
+      Node->getOpcode() == ISD::VP_REDUCE_SEQ_FADD)
     OVT = Node->getOperand(1).getSimpleValueType();
   if (Node->getOpcode() == ISD::BR_CC ||
       Node->getOpcode() == ISD::SELECT_CC)
@@ -5613,6 +5666,13 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                     DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)));
     break;
   }
+  case ISD::VP_REDUCE_FADD:
+  case ISD::VP_REDUCE_FMUL:
+  case ISD::VP_REDUCE_FMAX:
+  case ISD::VP_REDUCE_FMIN:
+  case ISD::VP_REDUCE_SEQ_FADD:
+    PromoteReduction(Node, Results);
+    break;
   }
 
   // Replace the original node with the legalized result.
