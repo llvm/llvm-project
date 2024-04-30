@@ -3654,11 +3654,12 @@ private:
   ExprResult ParseOpenACCIDExpression();
   /// Parses the variable list for the `cache` construct.
   void ParseOpenACCCacheVarList();
+
+  using OpenACCVarParseResult = std::pair<ExprResult, OpenACCParseCanContinue>;
   /// Parses a single variable in a variable list for OpenACC.
-  bool ParseOpenACCVar();
-  /// Parses the variable list for the variety of clauses that take a var-list,
-  /// including the optional Special Token listed for some,based on clause type.
-  bool ParseOpenACCClauseVarList(OpenACCClauseKind Kind);
+  OpenACCVarParseResult ParseOpenACCVar();
+  /// Parses the variable list for the variety of places that take a var-list.
+  llvm::SmallVector<Expr *> ParseOpenACCVarList();
   /// Parses any parameters for an OpenACC Clause, including required/optional
   /// parens.
   OpenACCClauseParseResult
