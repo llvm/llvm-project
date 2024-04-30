@@ -3030,10 +3030,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         // The import location will be the local one for now; we will adjust
         // all import locations of module imports after the global source
         // location info are setup, in ReadAST.
-        auto [ImportLoc, ImportModuleFileIndex] =
+        SourceLocation ImportLoc =
             ReadUntranslatedSourceLocation(Record[Idx++]);
-        // The import location must belong to the current module file itself.
-        assert(ImportModuleFileIndex == 0);
         off_t StoredSize = !IsImportingStdCXXModule ? (off_t)Record[Idx++] : 0;
         time_t StoredModTime =
             !IsImportingStdCXXModule ? (time_t)Record[Idx++] : 0;
@@ -3655,6 +3653,13 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
           std::make_pair(SourceManager::MaxLoadedOffset - F.SLocEntryBaseOffset
                            - SLocSpaceSize,&F));
 
+      // Initialize the remapping table.
+      // Invalid stays invalid.
+      F.SLocRemap.insertOrReplace(std::make_pair(0U, 0));
+      // This module. Base was 2 when being compiled.
+      F.SLocRemap.insertOrReplace(std::make_pair(
+          2U, static_cast<SourceLocation::IntTy>(F.SLocEntryBaseOffset - 2)));
+
       TotalNumSLocEntries += F.LocalNumSLocEntries;
       break;
     }
@@ -4042,7 +4047,18 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
   const unsigned char *DataEnd = Data + F.ModuleOffsetMap.size();
   F.ModuleOffsetMap = StringRef();
 
+  // If we see this entry before SOURCE_LOCATION_OFFSETS, add placeholders.
+  if (F.SLocRemap.find(0) == F.SLocRemap.end()) {
+    F.SLocRemap.insert(std::make_pair(0U, 0));
+    F.SLocRemap.insert(std::make_pair(2U, 1));
+  }
+
+  // Continuous range maps we may be updating in our module.
+  using SLocRemapBuilder =
+      ContinuousRangeMap<SourceLocation::UIntTy, SourceLocation::IntTy,
+                         2>::Builder;
   using RemapBuilder = ContinuousRangeMap<uint32_t, int, 2>::Builder;
+  SLocRemapBuilder SLocRemap(F.SLocRemap);
   RemapBuilder IdentifierRemap(F.IdentifierRemap);
   RemapBuilder MacroRemap(F.MacroRemap);
   RemapBuilder PreprocessedEntityRemap(F.PreprocessedEntityRemap);
@@ -4050,9 +4066,6 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
   RemapBuilder SelectorRemap(F.SelectorRemap);
   RemapBuilder DeclRemap(F.DeclRemap);
   RemapBuilder TypeRemap(F.TypeRemap);
-
-  auto &ImportedModuleVector = F.DependentModules;
-  assert(ImportedModuleVector.empty());
 
   while (Data < DataEnd) {
     // FIXME: Looking up dependency modules by filename is horrible. Let's
@@ -4069,14 +4082,15 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
                           ? ModuleMgr.lookupByModuleName(Name)
                           : ModuleMgr.lookupByFileName(Name));
     if (!OM) {
-      std::string Msg = "refers to unknown module, cannot find ";
+      std::string Msg =
+          "SourceLocation remap refers to unknown module, cannot find ";
       Msg.append(std::string(Name));
       Error(Msg);
       return;
     }
 
-    ImportedModuleVector.push_back(OM);
-
+    SourceLocation::UIntTy SLocOffset =
+        endian::readNext<uint32_t, llvm::endianness::little>(Data);
     uint32_t IdentifierIDOffset =
         endian::readNext<uint32_t, llvm::endianness::little>(Data);
     uint32_t MacroIDOffset =
@@ -4099,6 +4113,13 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
         Remap.insert(std::make_pair(Offset,
                                     static_cast<int>(BaseOffset - Offset)));
     };
+
+    constexpr SourceLocation::UIntTy SLocNone =
+        std::numeric_limits<SourceLocation::UIntTy>::max();
+    if (SLocOffset != SLocNone)
+      SLocRemap.insert(std::make_pair(
+          SLocOffset, static_cast<SourceLocation::IntTy>(
+                          OM->SLocEntryBaseOffset - SLocOffset)));
 
     mapOffset(IdentifierIDOffset, OM->BaseIdentifierID, IdentifierRemap);
     mapOffset(MacroIDOffset, OM->BaseMacroID, MacroRemap);
@@ -6235,8 +6256,8 @@ SourceRange ASTReader::ReadSkippedRange(unsigned GlobalIndex) {
   unsigned LocalIndex = GlobalIndex - M->BasePreprocessedSkippedRangeID;
   assert(LocalIndex < M->NumPreprocessedSkippedRanges);
   PPSkippedRange RawRange = M->PreprocessedSkippedRangeOffsets[LocalIndex];
-  SourceRange Range(ReadSourceLocation(*M, RawRange.getBegin()),
-                    ReadSourceLocation(*M, RawRange.getEnd()));
+  SourceRange Range(TranslateSourceLocation(*M, RawRange.getBegin()),
+                    TranslateSourceLocation(*M, RawRange.getEnd()));
   assert(Range.isValid());
   return Range;
 }
@@ -6272,8 +6293,8 @@ PreprocessedEntity *ASTReader::ReadPreprocessedEntity(unsigned Index) {
     return nullptr;
 
   // Read the record.
-  SourceRange Range(ReadSourceLocation(M, PPOffs.getBegin()),
-                    ReadSourceLocation(M, PPOffs.getEnd()));
+  SourceRange Range(TranslateSourceLocation(M, PPOffs.getBegin()),
+                    TranslateSourceLocation(M, PPOffs.getEnd()));
   PreprocessingRecord &PPRec = *PP.getPreprocessingRecord();
   StringRef Blob;
   RecordData Record;
@@ -6385,7 +6406,7 @@ struct PPEntityComp {
   }
 
   SourceLocation getLoc(const PPEntityOffset &PPE) const {
-    return Reader.ReadSourceLocation(M, PPE.getBegin());
+    return Reader.TranslateSourceLocation(M, PPE.getBegin());
   }
 };
 
@@ -6429,7 +6450,7 @@ PreprocessedEntityID ASTReader::findPreprocessedEntity(SourceLocation Loc,
       PPI = First;
       std::advance(PPI, Half);
       if (SourceMgr.isBeforeInTranslationUnit(
-              ReadSourceLocation(M, PPI->getEnd()), Loc)) {
+              TranslateSourceLocation(M, PPI->getEnd()), Loc)) {
         First = PPI;
         ++First;
         Count = Count - Half - 1;
@@ -6470,7 +6491,7 @@ std::optional<bool> ASTReader::isPreprocessedEntityInFileID(unsigned Index,
   unsigned LocalIndex = PPInfo.second;
   const PPEntityOffset &PPOffs = M.PreprocessedEntityOffsets[LocalIndex];
 
-  SourceLocation Loc = ReadSourceLocation(M, PPOffs.getBegin());
+  SourceLocation Loc = TranslateSourceLocation(M, PPOffs.getBegin());
   if (Loc.isInvalid())
     return false;
 
@@ -8943,7 +8964,7 @@ MacroID ASTReader::getGlobalMacroID(ModuleFile &M, unsigned LocalID) {
 }
 
 serialization::SubmoduleID
-ASTReader::getGlobalSubmoduleID(ModuleFile &M, unsigned LocalID) const {
+ASTReader::getGlobalSubmoduleID(ModuleFile &M, unsigned LocalID) {
   if (LocalID < NUM_PREDEF_SUBMODULE_IDS)
     return LocalID;
 
@@ -8976,7 +8997,7 @@ Module *ASTReader::getModule(unsigned ID) {
   return getSubmodule(ID);
 }
 
-ModuleFile *ASTReader::getLocalModuleFile(ModuleFile &M, unsigned ID) const {
+ModuleFile *ASTReader::getLocalModuleFile(ModuleFile &M, unsigned ID) {
   if (ID & 1) {
     // It's a module, look it up by submodule ID.
     auto I = GlobalSubmoduleMap.find(getGlobalSubmoduleID(M, ID >> 1));

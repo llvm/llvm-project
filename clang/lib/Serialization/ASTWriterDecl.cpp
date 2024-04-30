@@ -2809,16 +2809,14 @@ void ASTWriter::WriteDecl(ASTContext &Context, Decl *D) {
 
   // Record the offset for this declaration
   SourceLocation Loc = D->getLocation();
-  SourceLocationEncoding::RawLocEncoding RawLoc =
-      getRawSourceLocationEncoding(getAdjustedLocation(Loc));
-
   unsigned Index = ID.get() - FirstDeclID.get();
   if (DeclOffsets.size() == Index)
-    DeclOffsets.emplace_back(RawLoc, Offset, DeclTypesBlockStartOffset);
+    DeclOffsets.emplace_back(getAdjustedLocation(Loc), Offset,
+                             DeclTypesBlockStartOffset);
   else if (DeclOffsets.size() < Index) {
     // FIXME: Can/should this happen?
     DeclOffsets.resize(Index+1);
-    DeclOffsets[Index].setRawLoc(RawLoc);
+    DeclOffsets[Index].setLocation(getAdjustedLocation(Loc));
     DeclOffsets[Index].setBitOffset(Offset, DeclTypesBlockStartOffset);
   } else {
     llvm_unreachable("declarations should be emitted in ID order");
