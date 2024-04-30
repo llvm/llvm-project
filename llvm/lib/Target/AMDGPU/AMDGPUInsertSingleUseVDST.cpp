@@ -19,7 +19,6 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -87,7 +86,7 @@ public:
         // Gather a list of Registers used before updating use counts to avoid
         // double counting registers that appear multiple times in a single
         // MachineInstr.
-        DenseSet<MCRegUnit> RegistersUsed;
+        SmallVector<MCRegUnit> RegistersUsed;
 
         for (const auto &Operand : MI.all_defs()) {
           const auto Reg = Operand.getReg();
@@ -107,8 +106,10 @@ public:
           const auto Reg = Operand.getReg();
 
           // Count the number of times each register is read.
-          for (const MCRegUnit Unit : TRI->regunits(Reg))
-            RegistersUsed.insert(Unit);
+          for (const MCRegUnit Unit : TRI->regunits(Reg)) {
+            if (!llvm::is_contained(RegistersUsed, Unit))
+              RegistersUsed.push_back(Unit);
+          }
         }
         for (const MCRegUnit Unit : RegistersUsed)
           RegisterUseCount[Unit]++;
