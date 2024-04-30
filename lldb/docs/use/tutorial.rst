@@ -74,14 +74,14 @@ really no way to specify the function you want to break on.
 The lldb commands are more verbose but also more precise and allow for
 intelligent auto completion.
 
-To set the same file and line breakpoint in LLDB you can enter either of:
+To set the same file and line breakpoint in lldb you can enter either of:
 
 ::
 
    (lldb) breakpoint set --file foo.c --line 12
    (lldb) breakpoint set -f foo.c -l 12
 
-To set a breakpoint on a function named ``foo`` in LLDB you can enter either of:
+To set a breakpoint on a function named ``foo`` in lldb you can enter either of:
 
 ::
 
@@ -96,7 +96,7 @@ conditions or commands without having to specify them multiple times:
 
    (lldb) breakpoint set --name foo --name bar
 
-Setting breakpoints by name is even more specialized in LLDB as you can specify
+Setting breakpoints by name is even more specialized in lldb as you can specify
 that you want to set a breakpoint at a function by method name. To set a
 breakpoint on all C++ methods named ``foo`` you can enter either of:
 
