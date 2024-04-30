@@ -144,7 +144,6 @@ HashTable next_hashtable() {
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
-  char key[] = "key";
   global_status.buffer = reinterpret_cast<const char *>(data);
   global_status.remaining = size;
   HashTable table_a = next_hashtable();
@@ -164,8 +163,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
       break;
     }
     case Action::Tag::Insert: {
-      ENTRY *a = table_a.insert(ENTRY{key, key});
-      ENTRY *b = table_b.insert(ENTRY{key, key});
+      ENTRY *a = table_a.insert(ENTRY{action->key.data(), action->key.data()});
+      ENTRY *b = table_b.insert(ENTRY{action->key.data(), action->key.data()});
       if (a->data != b->data)
         __builtin_trap();
       break;
