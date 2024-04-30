@@ -701,7 +701,8 @@ public:
             } else if (auto read_char_box =
                            read.getBoxOf<fir::CharBoxValue>()) {
               fir::factory::genInlinedAllocation(*builder, loc, *new_box,
-                                                 std::nullopt, std::nullopt,
+                                                 /*lbounds=*/std::nullopt,
+                                                 /*extents=*/std::nullopt,
                                                  read_char_box->getLen(), name,
                                                  /*mustBeHeap=*/true);
             } else {
