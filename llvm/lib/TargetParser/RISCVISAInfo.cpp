@@ -667,11 +667,10 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     // version since the we don't have clear version scheme for that on
     // ISA spec.
     for (const auto *Ext : RISCVGImplications) {
-      if (auto Version = findDefaultVersion(Ext)) {
-        // Postpone AddExtension until end of this function
-        SeenExtMap[Ext] = {Version->Major, Version->Minor};
-      } else
-        llvm_unreachable("Default extension version not found?");
+      auto Version = findDefaultVersion(Ext);
+      assert(Version && "Default extension version not found?");
+      // Postpone AddExtension until end of this function
+      SeenExtMap[Ext] = {Version->Major, Version->Minor};
     }
   } else {
     // Baseline is `i` or `e`
