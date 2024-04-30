@@ -1452,8 +1452,6 @@ floating point semantic models: precise (the default), strict, and fast.
   "fenv_access", "off", "on", "off"
   "rounding_mode", "tonearest", "dynamic", "tonearest"
   "contract", "on", "off", "fast"
-  "denormal_fp_math", "IEEE", "IEEE", "IEEE"
-  "denormal_fp32_math", "IEEE","IEEE", "IEEE"
   "support_math_errno", "on", "on", "off"
   "no_honor_nans", "off", "off", "on"
   "no_honor_infinities", "off", "off", "on"
@@ -1461,6 +1459,14 @@ floating point semantic models: precise (the default), strict, and fast.
   "allow_reciprocal", "off", "off", "on"
   "allow_approximate_fns", "off", "off", "on"
   "allow_reassociation", "off", "off", "on"
+
+The ``-ffp-model`` option does not modify the ``fdenormal-fp-math``
+setting, but it does have an impact on whether ``crtfastmath.o`` is
+linked. Because linking ``crtfastmath.o`` has a global effect on the
+program, and because the global denormal handling can be changed in
+other ways, the state of ``fdenormal-fp-math`` handling cannot
+be assumed in any function based on fp-model. See :ref:`crtfastmath.o`
+for more details.
 
 .. option:: -ffast-math
 
@@ -1537,7 +1543,6 @@ floating point semantic models: precise (the default), strict, and fast.
    Also, this option resets following options to their target-dependent defaults.
 
    * ``-f[no-]math-errno``
-   * ``-fdenormal-fp-math=<value>``
 
    There is ambiguity about how ``-ffp-contract``, ``-ffast-math``,
    and ``-fno-fast-math`` behave when combined. To keep the value of
@@ -1560,8 +1565,7 @@ floating point semantic models: precise (the default), strict, and fast.
      ``-ffp-contract`` setting is determined by the default value of
      ``-ffp-contract``.
 
-   Note: ``-fno-fast-math`` implies ``-fdenormal-fp-math=ieee``.
-   ``-fno-fast-math`` causes ``crtfastmath.o`` to not be linked with code
+   Note: ``-fno-fast-math`` causes ``crtfastmath.o`` to not be linked with code
    unless ``-mdaz-ftz`` is present.
 
 .. option:: -fdenormal-fp-math=<value>
@@ -1694,7 +1698,6 @@ floating point semantic models: precise (the default), strict, and fast.
    * ``-fsigned-zeros``
    * ``-ftrapping-math``
    * ``-ffp-contract=on``
-   * ``-fdenormal-fp-math=ieee``
 
    There is ambiguity about how ``-ffp-contract``,
    ``-funsafe-math-optimizations``, and ``-fno-unsafe-math-optimizations``
