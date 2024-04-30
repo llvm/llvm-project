@@ -194,6 +194,7 @@ void OpenACCClausePrinter::VisitVectorLengthClause(
 
 void OpenACCClausePrinter::VisitPrivateClause(const OpenACCPrivateClause &C) {
   OS << "private(";
-  llvm::interleaveComma(C.getVarList(), OS);
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
   OS << ")";
 }
