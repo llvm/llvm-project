@@ -1057,7 +1057,7 @@ public:
 };
 } // namespace
 
-static void mergeArch(RISCVISAInfo::OrderedExtensionMap &mergedExts,
+static void mergeArch(RISCVISAUtils::OrderedExtensionMap &mergedExts,
                       unsigned &mergedXlen, const InputSectionBase *sec,
                       StringRef s) {
   auto maybeInfo = RISCVISAInfo::parseNormalizedArchString(s);
@@ -1084,62 +1084,10 @@ static void mergeArch(RISCVISAInfo::OrderedExtensionMap &mergedExts,
   }
 }
 
-static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
-                        const InputSectionBase *oldSection,
-                        const InputSectionBase *newSection, unsigned int oldTag,
-                        unsigned int newTag) {
-  using RISCVAttrs::RISCVAtomicAbiTag::AtomicABI;
-  // Same tags stay the same, and UNKNOWN is compatible with anything
-  if (oldTag == newTag || newTag == AtomicABI::UNKNOWN)
-    return;
-
-  switch (oldTag) {
-  case AtomicABI::UNKNOWN:
-    it->getSecond() = newTag;
-    return;
-  case AtomicABI::A6C:
-    switch (newTag) {
-    case AtomicABI::A6S:
-      it->getSecond() = AtomicABI::A6C;
-      return;
-    case AtomicABI::A7:
-      error(toString(oldSection) + " has atomic_abi=" + Twine(oldTag) +
-            " but " + toString(newSection) +
-            " has atomic_abi=" + Twine(newTag));
-      return;
-    };
-
-  case AtomicABI::A6S:
-    switch (newTag) {
-    case AtomicABI::A6C:
-      it->getSecond() = AtomicABI::A6C;
-      return;
-    case AtomicABI::A7:
-      it->getSecond() = AtomicABI::A7;
-      return;
-    };
-
-  case AtomicABI::A7:
-    switch (newTag) {
-    case AtomicABI::A6S:
-      it->getSecond() = AtomicABI::A7;
-      return;
-    case AtomicABI::A6C:
-      error(toString(oldSection) + " has atomic_abi=" + Twine(oldTag) +
-            " but " + toString(newSection) +
-            " has atomic_abi=" + Twine(newTag));
-      return;
-    };
-  default:
-    llvm_unreachable("unknown AtomicABI");
-  };
-}
-
 static RISCVAttributesSection *
 mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
-  RISCVISAInfo::OrderedExtensionMap exts;
+  RISCVISAUtils::OrderedExtensionMap exts;
   const InputSectionBase *firstStackAlign = nullptr;
-  const InputSectionBase *firstAtomicAbi = nullptr;
   unsigned firstStackAlignValue = 0, xlen = 0;
   bool hasArch = false;
 
@@ -1186,17 +1134,6 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
       case RISCVAttrs::PRIV_SPEC_MINOR:
       case RISCVAttrs::PRIV_SPEC_REVISION:
         break;
-
-      case llvm::RISCVAttrs::AttrType::ATOMIC_ABI:
-        if (auto i = parser.getAttributeValue(tag.attr)) {
-          auto r = merged.intAttr.try_emplace(tag.attr, *i);
-          if (r.second) {
-            firstAtomicAbi = sec;
-          } else {
-            mergeAtomic(r.first, firstAtomicAbi, sec, r.first->getSecond(), *i);
-          }
-        }
-        continue;
       }
 
       // Fallback for deprecated priv_spec* and other unknown attributes: retain
