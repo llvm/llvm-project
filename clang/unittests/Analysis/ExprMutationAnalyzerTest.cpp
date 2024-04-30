@@ -1176,7 +1176,7 @@ TEST(ExprMutationAnalyzerTest, CastToConstRef) {
 
 // section: comma expressions
 
-TEST(ExprMutationAnalyzerTest, CommaExprWithAnAssigment) {
+TEST(ExprMutationAnalyzerTest, CommaExprWithAnAssignment) {
   const auto AST = buildASTFromCodeWithArgs(
       "void f() { int x; int y; (x, y) = 5; }", {"-Wno-unused-value"});
   const auto Results =
@@ -1267,7 +1267,7 @@ TEST(ExprMutationAnalyzerTest, CommaExprAsReturnAsValue) {
   EXPECT_FALSE(isMutated(Results, AST.get()));
 }
 
-TEST(ExprMutationAnalyzerTest, CommaEpxrAsReturnAsNonConstRef) {
+TEST(ExprMutationAnalyzerTest, CommaExprAsReturnAsNonConstRef) {
   const auto AST = buildASTFromCodeWithArgs(
       "int& f() { int x, y; return (y, x); }", {"-Wno-unused-value"});
   const auto Results =
