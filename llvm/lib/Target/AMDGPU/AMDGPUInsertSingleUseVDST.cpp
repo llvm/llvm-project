@@ -107,7 +107,7 @@ public:
 
           // Count the number of times each register is read.
           for (const MCRegUnit Unit : TRI->regunits(Reg)) {
-            if (!llvm::is_contained(RegistersUsed, Unit))
+            if (!is_contained(RegistersUsed, Unit))
               RegistersUsed.push_back(Unit);
           }
         }
