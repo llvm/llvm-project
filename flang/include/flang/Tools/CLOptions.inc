@@ -104,7 +104,7 @@ void addNestedPassToOps(mlir::PassManager &pm, PassConstructor ctor) {
 void addNestedPassToAllTopLevelOperations(
     mlir::PassManager &pm, PassConstructor ctor) {
   addNestedPassToOps<mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
-      fir::GlobalOp>(pm, ctor);
+      mlir::omp::PrivateClauseOp, fir::GlobalOp>(pm, ctor);
 }
 
 void addNestedPassToAllTopLevelOperationsConditionally(mlir::PassManager &pm,
@@ -163,8 +163,8 @@ inline void addAVC(
 
 inline void addMemoryAllocationOpt(mlir::PassManager &pm) {
   addNestedPassConditionally<mlir::func::FuncOp>(pm, disableFirMao, [&]() {
-    return fir::createMemoryAllocationPass(
-        dynamicArrayStackToHeapAllocation, arrayStackAllocationThreshold);
+    return fir::createMemoryAllocationOpt(
+        {dynamicArrayStackToHeapAllocation, arrayStackAllocationThreshold});
   });
 }
 
@@ -243,22 +243,22 @@ inline void createDefaultFIROptimizerPassPipeline(
   config.enableRegionSimplification = false;
   pm.addPass(mlir::createCSEPass());
   fir::addAVC(pm, pc.OptLevel);
-  pm.addNestedPass<mlir::func::FuncOp>(fir::createCharacterConversionPass());
+  addNestedPassToAllTopLevelOperations(pm, fir::createCharacterConversion);
   pm.addPass(mlir::createCanonicalizerPass(config));
-  pm.addPass(fir::createSimplifyRegionLitePass());
+  pm.addPass(fir::createSimplifyRegionLite());
   if (pc.OptLevel.isOptimizingForSpeed()) {
     // These passes may increase code size.
-    pm.addPass(fir::createSimplifyIntrinsicsPass());
+    pm.addPass(fir::createSimplifyIntrinsics());
     pm.addPass(fir::createAlgebraicSimplificationPass(config));
   }
 
   if (pc.LoopVersioning)
-    pm.addPass(fir::createLoopVersioningPass());
+    pm.addPass(fir::createLoopVersioning());
 
   pm.addPass(mlir::createCSEPass());
 
   if (pc.StackArrays)
-    pm.addPass(fir::createStackArraysPass());
+    pm.addPass(fir::createStackArrays());
   else
     fir::addMemoryAllocationOpt(pm);
 
@@ -267,7 +267,7 @@ inline void createDefaultFIROptimizerPassPipeline(
   llvm::StringMap<mlir::OpPassManager> pipelines;
   pm.addPass(mlir::createInlinerPass(
       pipelines, addCanonicalizerPassWithoutRegionSimplification));
-  pm.addPass(fir::createSimplifyRegionLitePass());
+  pm.addPass(fir::createSimplifyRegionLite());
   pm.addPass(mlir::createCSEPass());
 
   // Polymorphic types
@@ -281,7 +281,7 @@ inline void createDefaultFIROptimizerPassPipeline(
   pm.addPass(mlir::createConvertSCFToCFPass());
 
   pm.addPass(mlir::createCanonicalizerPass(config));
-  pm.addPass(fir::createSimplifyRegionLitePass());
+  pm.addPass(fir::createSimplifyRegionLite());
   pm.addPass(mlir::createCSEPass());
 }
 

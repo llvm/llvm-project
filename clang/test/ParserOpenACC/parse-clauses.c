@@ -482,13 +482,13 @@ void VarListClauses() {
 #pragma acc serial copy(HasMem.MemArr[3].array[1:4]), seq
   for(;;){}
 
-  // expected-error@+3{{OpenMP array section is not allowed here}}
+  // expected-error@+3{{OpenACC sub-array is not allowed here}}
   // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(HasMem.MemArr[1:3].array[1]), seq
   for(;;){}
 
-  // expected-error@+3{{OpenMP array section is not allowed here}}
+  // expected-error@+3{{OpenACC sub-array is not allowed here}}
   // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(HasMem.MemArr[1:3].array[1:2]), seq

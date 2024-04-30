@@ -4441,10 +4441,8 @@ static SDValue concatSubVectors(SDValue V1, SDValue V2, SelectionDAG &DAG,
 static SDValue getOnesVector(EVT VT, SelectionDAG &DAG, const SDLoc &dl) {
   assert((VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()) &&
          "Expected a 128/256/512-bit vector type");
-
-  APInt Ones = APInt::getAllOnes(32);
   unsigned NumElts = VT.getSizeInBits() / 32;
-  SDValue Vec = DAG.getConstant(Ones, dl, MVT::getVectorVT(MVT::i32, NumElts));
+  SDValue Vec = DAG.getAllOnesConstant(dl, MVT::getVectorVT(MVT::i32, NumElts));
   return DAG.getBitcast(VT, Vec);
 }
 
@@ -20394,14 +20392,16 @@ static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
   EVT SrcVT = In.getValueType();
   EVT DstSVT = DstVT.getVectorElementType();
   EVT SrcSVT = SrcVT.getVectorElementType();
+  unsigned NumDstEltBits = DstSVT.getSizeInBits();
+  unsigned NumSrcEltBits = SrcSVT.getSizeInBits();
 
   // Check we have a truncation suited for PACKSS/PACKUS.
   if (!((SrcSVT == MVT::i16 || SrcSVT == MVT::i32 || SrcSVT == MVT::i64) &&
         (DstSVT == MVT::i8 || DstSVT == MVT::i16 || DstSVT == MVT::i32)))
     return SDValue();
 
-  assert(SrcSVT.getSizeInBits() > DstSVT.getSizeInBits() && "Bad truncation");
-  unsigned NumStages = Log2_32(SrcSVT.getSizeInBits() / DstSVT.getSizeInBits());
+  assert(NumSrcEltBits > NumDstEltBits && "Bad truncation");
+  unsigned NumStages = Log2_32(NumSrcEltBits / NumDstEltBits);
 
   // Truncation from 128-bit to vXi32 can be better handled with PSHUFD.
   // Truncation to sub-64-bit vXi16 can be better handled with PSHUFD/PSHUFLW.
@@ -20422,8 +20422,7 @@ static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
   if (Subtarget.hasAVX512() && NumStages > 1)
     return SDValue();
 
-  unsigned NumSrcEltBits = SrcVT.getScalarSizeInBits();
-  unsigned NumPackedSignBits = std::min<unsigned>(DstSVT.getSizeInBits(), 16);
+  unsigned NumPackedSignBits = std::min<unsigned>(NumDstEltBits, 16);
   unsigned NumPackedZeroBits = Subtarget.hasSSE41() ? NumPackedSignBits : 8;
 
   // Truncate with PACKUS if we are truncating a vector with leading zero
@@ -20445,7 +20444,7 @@ static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
   // a sign splat (or AVX512 VPSRAQ support). ComputeNumSignBits struggles to
   // see through BITCASTs later on and combines/simplifications can't then use
   // it.
-  if (DstSVT == MVT::i32 && NumSignBits != SrcSVT.getSizeInBits() &&
+  if (DstSVT == MVT::i32 && NumSignBits != NumSrcEltBits &&
       !Subtarget.hasAVX512())
     return SDValue();
 
@@ -24140,8 +24139,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
               DAG.getConstant(1, DL, VT));
         else
           Neg = CmpOp0;
-        SDValue Mask = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
-                                   Neg); // -(and (x, 0x1))
+        SDValue Mask = DAG.getNegative(Neg, DL, VT); // -(and (x, 0x1))
         SDValue And = DAG.getNode(ISD::AND, DL, VT, Mask, Src1); // Mask & z
         return DAG.getNode(Op2.getOpcode(), DL, VT, And, Src2);  // And Op y
       }
@@ -27896,7 +27894,7 @@ static SDValue LowerVectorCTLZInRegLUT(SDValue Op, const SDLoc &DL,
   SDValue InRegLUT = DAG.getBuildVector(CurrVT, DL, LUTVec);
 
   // Begin by bitcasting the input to byte vector, then split those bytes
-  // into lo/hi nibbles and use the PSHUFB LUT to perform CLTZ on each of them.
+  // into lo/hi nibbles and use the PSHUFB LUT to perform CTLZ on each of them.
   // If the hi input nibble is zero then we add both results together, otherwise
   // we just take the hi result (by masking the lo result to zero before the
   // add).
@@ -28150,9 +28148,8 @@ static SDValue LowerABS(SDValue Op, const X86Subtarget &Subtarget,
   // ABS(vXi64 X) --> VPBLENDVPD(X, 0-X, X).
   if ((VT == MVT::v2i64 || VT == MVT::v4i64) && Subtarget.hasSSE41()) {
     SDValue Src = Op.getOperand(0);
-    SDValue Sub =
-        DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Src);
-    return DAG.getNode(X86ISD::BLENDV, DL, VT, Src, Sub, Src);
+    SDValue Neg = DAG.getNegative(Src, DL, VT);
+    return DAG.getNode(X86ISD::BLENDV, DL, VT, Src, Neg, Src);
   }
 
   if (VT.is256BitVector() && !Subtarget.hasInt256()) {
@@ -29373,10 +29370,8 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   // +ve/-ve Amt = shift left/right.
   if (Subtarget.hasXOP() && (VT == MVT::v2i64 || VT == MVT::v4i32 ||
                              VT == MVT::v8i16 || VT == MVT::v16i8)) {
-    if (Opc == ISD::SRL || Opc == ISD::SRA) {
-      SDValue Zero = DAG.getConstant(0, dl, VT);
-      Amt = DAG.getNode(ISD::SUB, dl, VT, Zero, Amt);
-    }
+    if (Opc == ISD::SRL || Opc == ISD::SRA)
+      Amt = DAG.getNegative(Amt, dl, VT);
     if (Opc == ISD::SHL || Opc == ISD::SRL)
       return DAG.getNode(X86ISD::VPSHL, dl, VT, R, Amt);
     if (Opc == ISD::SRA)
@@ -45272,7 +45267,7 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG,
       ISD::getSetCCInverse(cast<CondCodeSDNode>(Cond.getOperand(2))->get(),
                            Cond.getOperand(0).getValueType());
   Cond = DAG.getSetCC(SDLoc(Cond), Cond.getValueType(), Cond.getOperand(0),
-		                        Cond.getOperand(1), NewCC);
+                      Cond.getOperand(1), NewCC);
   return DAG.getSelect(DL, LHS.getValueType(), Cond, RHS, LHS);
 }
 

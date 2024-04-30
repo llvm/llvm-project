@@ -27,6 +27,8 @@
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/Type.h"
+#include "lldb/Utility/Scalar.h"
+#include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-types.h"
 
@@ -109,6 +111,8 @@ public:
 
   virtual std::vector<lldb_private::CompilerContext>
   DeclGetCompilerContext(void *opaque_decl);
+
+  virtual Scalar DeclGetConstantValue(void *opaque_decl) { return Scalar(); }
 
   virtual CompilerType GetTypeForDecl(void *opaque_decl) = 0;
 
@@ -339,6 +343,11 @@ public:
   GetVirtualBaseClassAtIndex(lldb::opaque_compiler_type_t type, size_t idx,
                              uint32_t *bit_offset_ptr) = 0;
 
+  virtual CompilerDecl GetStaticFieldWithName(lldb::opaque_compiler_type_t type,
+                                              llvm::StringRef name) {
+    return CompilerDecl();
+  }
+
   virtual CompilerType GetChildCompilerTypeAtIndex(
       lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
       bool transparent_pointers, bool omit_empty_base_classes,
@@ -474,12 +483,10 @@ public:
     return IsPointerOrReferenceType(type, nullptr);
   }
 
-  virtual UserExpression *
-  GetUserExpression(llvm::StringRef expr, llvm::StringRef prefix,
-                    lldb::LanguageType language,
-                    Expression::ResultType desired_type,
-                    const EvaluateExpressionOptions &options,
-                    ValueObject *ctx_obj) {
+  virtual UserExpression *GetUserExpression(
+      llvm::StringRef expr, llvm::StringRef prefix, SourceLanguage language,
+      Expression::ResultType desired_type,
+      const EvaluateExpressionOptions &options, ValueObject *ctx_obj) {
     return nullptr;
   }
 

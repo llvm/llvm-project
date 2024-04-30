@@ -842,6 +842,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
   setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
+  setOperationAction(ISD::GET_FPMODE, MVT::i32, Custom);
+  setOperationAction(ISD::SET_FPMODE, MVT::i32, Custom);
+  setOperationAction(ISD::RESET_FPMODE, MVT::Other, Custom);
 
   setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i128, Custom);
   if (!Subtarget->hasLSE() && !Subtarget->outlineAtomics()) {
@@ -4870,6 +4873,65 @@ SDValue AArch64TargetLowering::LowerSET_ROUNDING(SDValue Op,
   return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops2);
 }
 
+SDValue AArch64TargetLowering::LowerGET_FPMODE(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+
+  // Get current value of FPCR.
+  SDValue Ops[] = {
+      Chain, DAG.getTargetConstant(Intrinsic::aarch64_get_fpcr, DL, MVT::i64)};
+  SDValue FPCR =
+      DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, {MVT::i64, MVT::Other}, Ops);
+  Chain = FPCR.getValue(1);
+  FPCR = FPCR.getValue(0);
+
+  // Truncate FPCR to 32 bits.
+  SDValue Result = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, FPCR);
+
+  return DAG.getMergeValues({Result, Chain}, DL);
+}
+
+SDValue AArch64TargetLowering::LowerSET_FPMODE(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+  SDValue Mode = Op->getOperand(1);
+
+  // Extend the specified value to 64 bits.
+  SDValue FPCR = DAG.getZExtOrTrunc(Mode, DL, MVT::i64);
+
+  // Set new value of FPCR.
+  SDValue Ops2[] = {
+      Chain, DAG.getConstant(Intrinsic::aarch64_set_fpcr, DL, MVT::i64), FPCR};
+  return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops2);
+}
+
+SDValue AArch64TargetLowering::LowerRESET_FPMODE(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+
+  // Get current value of FPCR.
+  SDValue Ops[] = {
+      Chain, DAG.getTargetConstant(Intrinsic::aarch64_get_fpcr, DL, MVT::i64)};
+  SDValue FPCR =
+      DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, {MVT::i64, MVT::Other}, Ops);
+  Chain = FPCR.getValue(1);
+  FPCR = FPCR.getValue(0);
+
+  // Clear bits that are not reserved.
+  SDValue FPSCRMasked = DAG.getNode(
+      ISD::AND, DL, MVT::i64, FPCR,
+      DAG.getConstant(AArch64::ReservedFPControlBits, DL, MVT::i64));
+
+  // Set new value of FPCR.
+  SDValue Ops2[] = {Chain,
+                    DAG.getConstant(Intrinsic::aarch64_set_fpcr, DL, MVT::i64),
+                    FPSCRMasked};
+  return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops2);
+}
+
 static unsigned selectUmullSmull(SDValue &N0, SDValue &N1, SelectionDAG &DAG,
                                  SDLoc DL, bool &IsMLA) {
   bool IsN0SExt = isSignExtended(N0, DAG);
@@ -6484,6 +6546,12 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerGET_ROUNDING(Op, DAG);
   case ISD::SET_ROUNDING:
     return LowerSET_ROUNDING(Op, DAG);
+  case ISD::GET_FPMODE:
+    return LowerGET_FPMODE(Op, DAG);
+  case ISD::SET_FPMODE:
+    return LowerSET_FPMODE(Op, DAG);
+  case ISD::RESET_FPMODE:
+    return LowerRESET_FPMODE(Op, DAG);
   case ISD::MUL:
     return LowerMUL(Op, DAG);
   case ISD::MULHS:
@@ -16330,7 +16398,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     IntrinsicInst *DI, LoadInst *LI) const {
   // Only deinterleave2 supported at present.
-  if (DI->getIntrinsicID() != Intrinsic::experimental_vector_deinterleave2)
+  if (DI->getIntrinsicID() != Intrinsic::vector_deinterleave2)
     return false;
 
   // Only a factor of 2 supported at present.
@@ -16405,7 +16473,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
 bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
     IntrinsicInst *II, StoreInst *SI) const {
   // Only interleave2 supported at present.
-  if (II->getIntrinsicID() != Intrinsic::experimental_vector_interleave2)
+  if (II->getIntrinsicID() != Intrinsic::vector_interleave2)
     return false;
 
   // Only a factor of 2 supported at present.
@@ -17585,12 +17653,32 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
     return false;
   };
 
+  // Can the const C be decomposed into (2^M + 1) * 2^N + 1), eg:
+  // C = 11 is equal to (1+4)*2+1, we don't decompose it into (1+2)*4-1 as
+  // the (2^N - 1) can't be execused via a single instruction.
+  auto isPowPlusPlusOneConst = [](APInt C, APInt &M, APInt &N) {
+    APInt CVMinus1 = C - 1;
+    if (CVMinus1.isNegative())
+      return false;
+    unsigned TrailingZeroes = CVMinus1.countr_zero();
+    APInt SCVMinus1 = CVMinus1.ashr(TrailingZeroes) - 1;
+    if (SCVMinus1.isPowerOf2()) {
+      unsigned BitWidth = SCVMinus1.getBitWidth();
+      M = APInt(BitWidth, SCVMinus1.logBase2());
+      N = APInt(BitWidth, TrailingZeroes);
+      return true;
+    }
+    return false;
+  };
+
   if (ConstValue.isNonNegative()) {
     // (mul x, (2^N + 1) * 2^M) => (shl (add (shl x, N), x), M)
     // (mul x, 2^N - 1) => (sub (shl x, N), x)
     // (mul x, (2^(N-M) - 1) * 2^M) => (sub (shl x, N), (shl x, M))
     // (mul x, (2^M + 1) * (2^N + 1))
     //     => MV = (add (shl x, M), x); (add (shl MV, N), MV)
+    // (mul x, (2^M + 1) * 2^N + 1))
+    //     =>  MV = add (shl x, M), x); add (shl MV, N), x)
     APInt SCVMinus1 = ShiftedConstValue - 1;
     APInt SCVPlus1 = ShiftedConstValue + 1;
     APInt CVPlus1 = ConstValue + 1;
@@ -17604,16 +17692,27 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
     } else if (SCVPlus1.isPowerOf2()) {
       ShiftAmt = SCVPlus1.logBase2() + TrailingZeroes;
       return Sub(Shl(N0, ShiftAmt), Shl(N0, TrailingZeroes));
-    } else if (Subtarget->hasALULSLFast() &&
-               isPowPlusPlusConst(ConstValue, CVM, CVN)) {
+    }
+    if (Subtarget->hasALULSLFast() &&
+        isPowPlusPlusConst(ConstValue, CVM, CVN)) {
       APInt CVMMinus1 = CVM - 1;
       APInt CVNMinus1 = CVN - 1;
       unsigned ShiftM1 = CVMMinus1.logBase2();
       unsigned ShiftN1 = CVNMinus1.logBase2();
-      // LSLFast implicate that Shifts <= 3 places are fast
-      if (ShiftM1 <= 3 && ShiftN1 <= 3) {
+      // ALULSLFast implicate that Shifts <= 4 places are fast
+      if (ShiftM1 <= 4 && ShiftN1 <= 4) {
         SDValue MVal = Add(Shl(N0, ShiftM1), N0);
         return Add(Shl(MVal, ShiftN1), MVal);
+      }
+    }
+    if (Subtarget->hasALULSLFast() &&
+        isPowPlusPlusOneConst(ConstValue, CVM, CVN)) {
+      unsigned ShiftM = CVM.getZExtValue();
+      unsigned ShiftN = CVN.getZExtValue();
+      // ALULSLFast implicate that Shifts <= 4 places are fast
+      if (ShiftM <= 4 && ShiftN <= 4) {
+        SDValue MVal = Add(Shl(N0, CVM.getZExtValue()), N0);
+        return Add(Shl(MVal, CVN.getZExtValue()), N0);
       }
     }
   } else {
@@ -18632,14 +18731,12 @@ static SDValue performConcatVectorsCombine(SDNode *N,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
-  // Optimise concat_vectors of two [us]avgceils or [us]avgfloors with a 128-bit
-  // destination size, combine into an avg of two contacts of the source
-  // vectors. eg: concat(uhadd(a,b), uhadd(c, d)) -> uhadd(concat(a, c),
-  // concat(b, d))
+  // Optimise concat_vectors of two identical binops with a 128-bit destination
+  // size, combine into an binop of two contacts of the source vectors. eg:
+  // concat(uhadd(a,b), uhadd(c, d)) -> uhadd(concat(a, c), concat(b, d))
   if (N->getNumOperands() == 2 && N0Opc == N1Opc && VT.is128BitVector() &&
-      (N0Opc == ISD::AVGCEILU || N0Opc == ISD::AVGCEILS ||
-       N0Opc == ISD::AVGFLOORU || N0Opc == ISD::AVGFLOORS) &&
-      N0->hasOneUse() && N1->hasOneUse()) {
+      DAG.getTargetLoweringInfo().isBinOp(N0Opc) && N0->hasOneUse() &&
+      N1->hasOneUse()) {
     SDValue N00 = N0->getOperand(0);
     SDValue N01 = N0->getOperand(1);
     SDValue N10 = N1->getOperand(0);
