@@ -51,6 +51,10 @@ void fir::runtime::genMain(
   mlir::OpBuilder::InsertionGuard insertGuard(builder);
   builder.setInsertionPointToStart(block);
 
+  // Create the list of any environment defaults for the runtime to set. The
+  // runtime default list is only created if there is a main program to ensure
+  // it only happens once and to provide consistent results if multiple files
+  // are compiled separately.
   auto env = fir::runtime::genEnvironmentDefaults(builder, loc, defs);
 
   llvm::SmallVector<mlir::Value, 4> args(block->getArguments());
