@@ -27,6 +27,7 @@ class GlobalOp;
 
 namespace mlir {
 class Location;
+class Value;
 } // namespace mlir
 
 namespace Fortran::lower {
@@ -38,7 +39,7 @@ namespace fir::runtime {
 /// Create the list of environment variable defaults for the runtime to set. The
 /// form of the generated list is defined in the runtime header file
 /// environment-default-list.h
-fir::GlobalOp genEnvironmentDefaults(
+mlir::Value genEnvironmentDefaults(
     fir::FirOpBuilder &builder, mlir::Location loc,
     const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults);
 
