@@ -25,8 +25,10 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Linkage.h"
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/PointerAuthOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/Visibility.h"
@@ -142,57 +144,117 @@ using CanQualType = CanQual<Type>;
 
 /// Pointer-authentication qualifiers.
 class PointerAuthQualifier {
-  enum {
+  enum : uint32_t {
     EnabledShift = 0,
     EnabledBits = 1,
     EnabledMask = 1 << EnabledShift,
     AddressDiscriminatedShift = EnabledShift + EnabledBits,
     AddressDiscriminatedBits = 1,
-    AddressDiscriminatedMask = 1 << AddressDiscriminatedBits,
-    KeyShift = AddressDiscriminatedShift + AddressDiscriminatedBits,
-    KeyBits = 14,
+    AddressDiscriminatedMask = 1 << AddressDiscriminatedShift,
+    AuthenticationModeShift =
+        AddressDiscriminatedShift + AddressDiscriminatedBits,
+    AuthenticationModeBits = 2,
+    AuthenticationModeMask = ((1 << AuthenticationModeBits) - 1)
+                             << AuthenticationModeShift,
+    IsaPointerShift = AuthenticationModeShift + AuthenticationModeBits,
+    IsaPointerBits = 1,
+    IsaPointerMask = ((1 << IsaPointerBits) - 1) << IsaPointerShift,
+    AuthenticatesNullValuesShift = IsaPointerShift + IsaPointerBits,
+    AuthenticatesNullValuesBits = 1,
+    AuthenticatesNullValuesMask = ((1 << AuthenticatesNullValuesBits) - 1)
+                                  << AuthenticatesNullValuesShift,
+    KeyShift = AuthenticatesNullValuesShift + AuthenticatesNullValuesBits,
+    KeyBits = 10,
     KeyMask = ((1 << KeyBits) - 1) << KeyShift,
     DiscriminatorShift = KeyShift + KeyBits,
-    DiscriminatorBits = 16
+    DiscriminatorBits = 16,
+    DiscriminatorMask = ((1u << DiscriminatorBits) - 1) << DiscriminatorShift,
   };
 
-  // bits:     |0      |1      |2..15|16   ...   31|
-  //           |Enabled|Address|Key  |Discriminator|
-  uint32_t Data;
+  // bits:     |0      |1      |2..3              |4          |
+  //           |Enabled|Address|AuthenticationMode|ISA pointer|
+  // bits:     |5                |6..15|   16...31   |
+  //           |AuthenticatesNull|Key  |Discriminator|
+  uint32_t Data = 0;
+
+  // The following static assertions check that each of the 32 bits is present
+  // exactly in one of the constants.
+  static_assert((EnabledBits + AddressDiscriminatedBits +
+                 AuthenticationModeBits + IsaPointerBits +
+                 AuthenticatesNullValuesBits + KeyBits + DiscriminatorBits) ==
+                    32,
+                "PointerAuthQualifier should be exactly 32 bits");
+  static_assert((EnabledMask + AddressDiscriminatedMask +
+                 AuthenticationModeMask + IsaPointerMask +
+                 AuthenticatesNullValuesMask + KeyMask + DiscriminatorMask) ==
+                    0xFFFFFFFF,
+                "All masks should cover the entire bits");
+  static_assert((EnabledMask ^ AddressDiscriminatedMask ^
+                 AuthenticationModeMask ^ IsaPointerMask ^
+                 AuthenticatesNullValuesMask ^ KeyMask ^ DiscriminatorMask) ==
+                    0xFFFFFFFF,
+                "All masks should cover the entire bits");
+
+  PointerAuthQualifier(unsigned Key, bool IsAddressDiscriminated,
+                       unsigned ExtraDiscriminator,
+                       PointerAuthenticationMode AuthenticationMode,
+                       bool IsIsaPointer, bool AuthenticatesNullValues)
+      : Data(EnabledMask |
+             (IsAddressDiscriminated
+                  ? llvm::to_underlying(AddressDiscriminatedMask)
+                  : 0) |
+             (Key << KeyShift) |
+             (llvm::to_underlying(AuthenticationMode)
+              << AuthenticationModeShift) |
+             (ExtraDiscriminator << DiscriminatorShift) |
+             (IsIsaPointer << IsaPointerShift) |
+             (AuthenticatesNullValues << AuthenticatesNullValuesShift)) {
+    assert(Key <= KeyNoneInternal);
+    assert(ExtraDiscriminator <= MaxDiscriminator);
+    assert((Data == 0) ==
+           (getAuthenticationMode() == PointerAuthenticationMode::None));
+  }
 
 public:
   enum {
+    KeyNoneInternal = (1u << KeyBits) - 1,
+
     /// The maximum supported pointer-authentication key.
-    MaxKey = (1u << KeyBits) - 1,
+    MaxKey = KeyNoneInternal - 1,
 
     /// The maximum supported pointer-authentication discriminator.
     MaxDiscriminator = (1u << DiscriminatorBits) - 1
   };
 
 public:
-  PointerAuthQualifier() : Data(0) {}
-  PointerAuthQualifier(unsigned key, bool isAddressDiscriminated,
-                       unsigned extraDiscriminator)
-    : Data(EnabledMask
-           | (isAddressDiscriminated ? AddressDiscriminatedMask : 0)
-           | (key << KeyShift)
-           | (extraDiscriminator << DiscriminatorShift)) {
-    assert(key <= MaxKey);
-    assert(extraDiscriminator <= MaxDiscriminator);
+  PointerAuthQualifier() = default;
+
+  static PointerAuthQualifier
+  Create(unsigned Key, bool IsAddressDiscriminated, unsigned ExtraDiscriminator,
+         PointerAuthenticationMode AuthenticationMode, bool IsIsaPointer,
+         bool AuthenticatesNullValues) {
+    if (Key == PointerAuthKeyNone)
+      Key = KeyNoneInternal;
+    assert(Key <= KeyNoneInternal && "out-of-range key value");
+    return PointerAuthQualifier(Key, IsAddressDiscriminated, ExtraDiscriminator,
+                                AuthenticationMode, IsIsaPointer,
+                                AuthenticatesNullValues);
   }
 
   bool isPresent() const {
+    assert((Data == 0) ==
+           (getAuthenticationMode() == PointerAuthenticationMode::None));
     return Data != 0;
   }
 
-  explicit operator bool() const {
-    return isPresent();
-  }
+  explicit operator bool() const { return isPresent(); }
 
   unsigned getKey() const {
     assert(isPresent());
     return (Data & KeyMask) >> KeyShift;
   }
+
+  bool hasKeyNone() const { return isPresent() && getKey() == KeyNoneInternal; }
 
   bool isAddressDiscriminated() const {
     assert(isPresent());
@@ -204,22 +266,45 @@ public:
     return (Data >> DiscriminatorShift);
   }
 
-  friend bool operator==(PointerAuthQualifier lhs, PointerAuthQualifier rhs) {
-    return lhs.Data == rhs.Data;
-  }
-  friend bool operator!=(PointerAuthQualifier lhs, PointerAuthQualifier rhs) {
-    return lhs.Data != rhs.Data;
+  PointerAuthenticationMode getAuthenticationMode() const {
+    return PointerAuthenticationMode((Data & AuthenticationModeMask) >>
+                                     AuthenticationModeShift);
   }
 
-  uint32_t getAsOpaqueValue() const {
-    return Data;
+  bool isIsaPointer() const {
+    assert(isPresent());
+    return (Data & IsaPointerMask) >> IsaPointerShift;
   }
+
+  bool authenticatesNullValues() const {
+    assert(isPresent());
+    return (Data & AuthenticatesNullValuesMask) >> AuthenticatesNullValuesShift;
+  }
+
+  PointerAuthQualifier withoutKeyNone() const {
+    return hasKeyNone() ? PointerAuthQualifier() : *this;
+  }
+
+  friend bool operator==(PointerAuthQualifier Lhs, PointerAuthQualifier Rhs) {
+    return Lhs.Data == Rhs.Data;
+  }
+  friend bool operator!=(PointerAuthQualifier Lhs, PointerAuthQualifier Rhs) {
+    return Lhs.Data != Rhs.Data;
+  }
+
+  bool isEquivalent(PointerAuthQualifier Other) const {
+    return withoutKeyNone() == Other.withoutKeyNone();
+  }
+
+  uint32_t getAsOpaqueValue() const { return Data; }
 
   // Deserialize pointer-auth qualifiers from an opaque representation.
-  static PointerAuthQualifier fromOpaqueValue(uint32_t opaque) {
-    PointerAuthQualifier result;
-    result.Data = opaque;
-    return result;
+  static PointerAuthQualifier fromOpaqueValue(uint32_t Opaque) {
+    PointerAuthQualifier Result;
+    Result.Data = Opaque;
+    assert((Result.Data == 0) ==
+           (Result.getAuthenticationMode() == PointerAuthenticationMode::None));
+    return Result;
   }
 
   std::string getAsString() const;
@@ -228,9 +313,7 @@ public:
   bool isEmptyWhenPrinted(const PrintingPolicy &Policy) const;
   void print(raw_ostream &OS, const PrintingPolicy &Policy) const;
 
-  void Profile(llvm::FoldingSetNodeID &ID) const {
-    ID.AddInteger(Data);
-  }
+  void Profile(llvm::FoldingSetNodeID &ID) const { ID.AddInteger(Data); }
 };
 
 /// The collection of all-type qualifiers we support.
@@ -241,8 +324,9 @@ public:
 /// * Objective C: the GC attributes (none, weak, or strong)
 class Qualifiers {
 public:
-  enum TQ { // NOTE: These flags must be kept in sync with DeclSpec::TQ.
-    Const    = 0x1,
+  enum TQ : uint64_t {
+    // NOTE: These flags must be kept in sync with DeclSpec::TQ.
+    Const = 0x1,
     Restrict = 0x2,
     Volatile = 0x4,
     CVRMask = Const | Volatile | Restrict
@@ -276,7 +360,7 @@ public:
     OCL_Autoreleasing
   };
 
-  enum {
+  enum : uint64_t {
     /// The maximum supported address space number.
     /// 23 bits should be enough for anyone.
     MaxAddressSpace = 0x7fffffu,
@@ -288,21 +372,30 @@ public:
     FastMask = (1 << FastWidth) - 1
   };
 
-  Qualifiers() : Mask(0), PtrAuth() {}
+  Qualifiers() : Mask(0) {}
 
   /// Returns the common set of qualifiers while removing them from
   /// the given sets.
   static Qualifiers removeCommonQualifiers(Qualifiers &L, Qualifiers &R) {
+    Qualifiers Q;
+    PointerAuthQualifier LPtrAuth = L.getPointerAuth();
+    if (LPtrAuth.isPresent() &&
+        LPtrAuth.getKey() != PointerAuthQualifier::KeyNoneInternal &&
+        LPtrAuth == R.getPointerAuth()) {
+      Q.setPointerAuth(LPtrAuth);
+      PointerAuthQualifier Empty;
+      L.setPointerAuth(Empty);
+      R.setPointerAuth(Empty);
+    }
+
     // If both are only CVR-qualified, bit operations are sufficient.
     if (!(L.Mask & ~CVRMask) && !(R.Mask & ~CVRMask)) {
-      Qualifiers Q;
       Q.Mask = L.Mask & R.Mask;
       L.Mask &= ~Q.Mask;
       R.Mask &= ~Q.Mask;
       return Q;
     }
 
-    Qualifiers Q;
     unsigned CommonCRV = L.getCVRQualifiers() & R.getCVRQualifiers();
     Q.addCVRQualifiers(CommonCRV);
     L.removeCVRQualifiers(CommonCRV);
@@ -324,12 +417,6 @@ public:
       Q.setAddressSpace(L.getAddressSpace());
       L.removeAddressSpace();
       R.removeAddressSpace();
-    }
-
-    if (L.PtrAuth == R.PtrAuth) {
-      Q.PtrAuth = L.PtrAuth;
-      L.PtrAuth = PointerAuthQualifier();
-      R.PtrAuth = PointerAuthQualifier();
     }
 
     return Q;
@@ -356,15 +443,12 @@ public:
   // Deserialize qualifiers from an opaque representation.
   static Qualifiers fromOpaqueValue(uint64_t opaque) {
     Qualifiers Qs;
-    Qs.Mask = uint32_t(opaque);
-    Qs.PtrAuth = PointerAuthQualifier::fromOpaqueValue(uint32_t(opaque >> 32));
+    Qs.Mask = opaque;
     return Qs;
   }
 
   // Serialize these qualifiers into an opaque representation.
-  uint64_t getAsOpaqueValue() const {
-    return uint64_t(Mask) | (uint64_t(PtrAuth.getAsOpaqueValue()) << 32);
-  }
+  uint64_t getAsOpaqueValue() const { return Mask; }
 
   bool hasConst() const { return Mask & Const; }
   bool hasOnlyConst() const { return Mask == Const; }
@@ -400,22 +484,22 @@ public:
   unsigned getCVRQualifiers() const { return Mask & CVRMask; }
   unsigned getCVRUQualifiers() const { return Mask & (CVRMask | UMask); }
 
-  void setCVRQualifiers(unsigned mask) {
+  void setCVRQualifiers(uint64_t mask) {
     assert(!(mask & ~CVRMask) && "bitmask contains non-CVR bits");
     Mask = (Mask & ~CVRMask) | mask;
   }
-  void removeCVRQualifiers(unsigned mask) {
+  void removeCVRQualifiers(uint64_t mask) {
     assert(!(mask & ~CVRMask) && "bitmask contains non-CVR bits");
     Mask &= ~mask;
   }
   void removeCVRQualifiers() {
     removeCVRQualifiers(CVRMask);
   }
-  void addCVRQualifiers(unsigned mask) {
+  void addCVRQualifiers(uint64_t mask) {
     assert(!(mask & ~CVRMask) && "bitmask contains non-CVR bits");
     Mask |= mask;
   }
-  void addCVRUQualifiers(unsigned mask) {
+  void addCVRUQualifiers(uint64_t mask) {
     assert(!(mask & ~CVRMask & ~UMask) && "bitmask contains non-CVRU bits");
     Mask |= mask;
   }
@@ -481,7 +565,7 @@ public:
 
   bool hasAddressSpace() const { return Mask & AddressSpaceMask; }
   LangAS getAddressSpace() const {
-    return static_cast<LangAS>(Mask >> AddressSpaceShift);
+    return static_cast<LangAS>((Mask & AddressSpaceMask) >> AddressSpaceShift);
   }
   bool hasTargetSpecificAddressSpace() const {
     return isTargetAddressSpace(getAddressSpace());
@@ -511,32 +595,36 @@ public:
     setAddressSpace(space);
   }
 
+  bool hasPointerAuth() const { return Mask & PtrAuthMask; }
   PointerAuthQualifier getPointerAuth() const {
-    return PtrAuth;
+    return PointerAuthQualifier::fromOpaqueValue(Mask >> PtrAuthShift);
   }
-  void setPointerAuth(PointerAuthQualifier q) {
-    PtrAuth = q;
+  void setPointerAuth(PointerAuthQualifier Q) {
+    Mask = (Mask & ~PtrAuthMask) |
+           (uint64_t(Q.getAsOpaqueValue()) << PtrAuthShift);
   }
-  void removePtrAuth() {
-    PtrAuth = PointerAuthQualifier();
+  void removePointerAuth() { Mask &= ~PtrAuthMask; }
+  void addPointerAuth(PointerAuthQualifier Q) {
+    assert(Q.isPresent());
+    setPointerAuth(Q);
   }
 
   // Fast qualifiers are those that can be allocated directly
   // on a QualType object.
   bool hasFastQualifiers() const { return getFastQualifiers(); }
   unsigned getFastQualifiers() const { return Mask & FastMask; }
-  void setFastQualifiers(unsigned mask) {
+  void setFastQualifiers(uint64_t mask) {
     assert(!(mask & ~FastMask) && "bitmask contains non-fast qualifier bits");
     Mask = (Mask & ~FastMask) | mask;
   }
-  void removeFastQualifiers(unsigned mask) {
+  void removeFastQualifiers(uint64_t mask) {
     assert(!(mask & ~FastMask) && "bitmask contains non-fast qualifier bits");
     Mask &= ~mask;
   }
   void removeFastQualifiers() {
     removeFastQualifiers(FastMask);
   }
-  void addFastQualifiers(unsigned mask) {
+  void addFastQualifiers(uint64_t mask) {
     assert(!(mask & ~FastMask) && "bitmask contains non-fast qualifier bits");
     Mask |= mask;
   }
@@ -544,7 +632,7 @@ public:
   /// Return true if the set contains any qualifiers which require an ExtQuals
   /// node to be allocated.
   bool hasNonFastQualifiers() const {
-    return (Mask & ~FastMask) || PtrAuth;
+    return (Mask & ~FastMask);
   }
   Qualifiers getNonFastQualifiers() const {
     Qualifiers Quals = *this;
@@ -553,7 +641,7 @@ public:
   }
 
   /// Return true if the set contains any qualifiers.
-  bool hasQualifiers() const { return Mask || PtrAuth; }
+  bool hasQualifiers() const { return Mask; }
   bool empty() const { return !hasQualifiers(); }
 
   /// Add the qualifiers from the given set to this set.
@@ -570,10 +658,9 @@ public:
         addObjCGCAttr(Q.getObjCGCAttr());
       if (Q.hasObjCLifetime())
         addObjCLifetime(Q.getObjCLifetime());
+      if (Q.hasPointerAuth())
+        addPointerAuth(Q.getPointerAuth());
     }
-
-    if (Q.PtrAuth)
-      PtrAuth = Q.PtrAuth;
   }
 
   /// Remove the qualifiers from the given set from this set.
@@ -590,10 +677,9 @@ public:
         removeObjCLifetime();
       if (getAddressSpace() == Q.getAddressSpace())
         removeAddressSpace();
+      if (getPointerAuth() == Q.getPointerAuth())
+        removePointerAuth();
     }
-
-    if (PtrAuth == Q.PtrAuth)
-      PtrAuth = PointerAuthQualifier();
   }
 
   /// Add the qualifiers from the given set to this set, given that
@@ -605,10 +691,9 @@ public:
            !hasObjCGCAttr() || !qs.hasObjCGCAttr());
     assert(getObjCLifetime() == qs.getObjCLifetime() ||
            !hasObjCLifetime() || !qs.hasObjCLifetime());
-    assert(!PtrAuth || !qs.PtrAuth || PtrAuth == qs.PtrAuth);
+    assert(!hasPointerAuth() || !qs.hasPointerAuth() ||
+           getPointerAuth() == qs.getPointerAuth());
     Mask |= qs.Mask;
-    if (qs.PtrAuth)
-      PtrAuth = qs.PtrAuth;
   }
 
   /// Returns true if address space A is equal to or a superset of B.
@@ -662,7 +747,7 @@ public:
            (getObjCGCAttr() == other.getObjCGCAttr() || !hasObjCGCAttr() ||
             !other.hasObjCGCAttr()) &&
            // Pointer-auth qualifiers must match exactly.
-           PtrAuth == other.PtrAuth &&
+           getPointerAuth() == other.getPointerAuth() &&
            // ObjC lifetime qualifiers must match exactly.
            getObjCLifetime() == other.getObjCLifetime() &&
            // CVR qualifiers may subset.
@@ -695,12 +780,8 @@ public:
   /// another set of qualifiers, not considering qualifier compatibility.
   bool isStrictSupersetOf(Qualifiers Other) const;
 
-  bool operator==(Qualifiers Other) const {
-    return Mask == Other.Mask && PtrAuth == Other.PtrAuth;
-  }
-  bool operator!=(Qualifiers Other) const {
-    return Mask != Other.Mask || PtrAuth != Other.PtrAuth;
-  }
+  bool operator==(Qualifiers Other) const { return Mask == Other.Mask; }
+  bool operator!=(Qualifiers Other) const { return Mask != Other.Mask; }
 
   explicit operator bool() const { return hasQualifiers(); }
 
@@ -736,27 +817,26 @@ public:
   void print(raw_ostream &OS, const PrintingPolicy &Policy,
              bool appendSpaceIfNonEmpty = false) const;
 
-  void Profile(llvm::FoldingSetNodeID &ID) const {
-    ID.AddInteger(Mask);
-    PtrAuth.Profile(ID);
-  }
+  void Profile(llvm::FoldingSetNodeID &ID) const { ID.AddInteger(Mask); }
 
 private:
-  // bits:     |0 1 2|3|4 .. 5|6  ..  8|9   ...   31|
-  //           |C R V|U|GCAttr|Lifetime|AddressSpace|
-  uint32_t Mask = 0;
+  // bits:     |0 1 2|3|4 .. 5|6  ..  8|9   ...   31|32 ... 63|
+  //           |C R V|U|GCAttr|Lifetime|AddressSpace| PtrAuth |
+  uint64_t Mask = 0;
+  static_assert(sizeof(PointerAuthQualifier) == sizeof(uint32_t),
+                "PointerAuthQualifier must be 32 bits");
 
-  PointerAuthQualifier PtrAuth;
-
-  static const uint32_t UMask = 0x8;
-  static const uint32_t UShift = 3;
-  static const uint32_t GCAttrMask = 0x30;
-  static const uint32_t GCAttrShift = 4;
-  static const uint32_t LifetimeMask = 0x1C0;
-  static const uint32_t LifetimeShift = 6;
-  static const uint32_t AddressSpaceMask =
-      ~(CVRMask | UMask | GCAttrMask | LifetimeMask);
-  static const uint32_t AddressSpaceShift = 9;
+  static constexpr uint64_t UMask = 0x8;
+  static constexpr uint64_t UShift = 3;
+  static constexpr uint64_t GCAttrMask = 0x30;
+  static constexpr uint64_t GCAttrShift = 4;
+  static constexpr uint64_t LifetimeMask = 0x1C0;
+  static constexpr uint64_t LifetimeShift = 6;
+  static constexpr uint64_t AddressSpaceShift = 9;
+  static constexpr uint64_t PtrAuthShift = 32;
+  static constexpr uint64_t PtrAuthMask = uint64_t(0xffffffff) << PtrAuthShift;
+  static constexpr uint64_t AddressSpaceMask =
+      ~(CVRMask | UMask | GCAttrMask | LifetimeMask | PtrAuthMask);
 };
 
 class QualifiersAndAtomic {
@@ -1376,7 +1456,9 @@ public:
   // true when Type is objc's weak and weak is enabled but ARC isn't.
   bool isNonWeakInMRRWithObjCWeak(const ASTContext &Context) const;
 
-  PointerAuthQualifier getPointerAuth() const;
+  PointerAuthQualifier getPointerAuth() const {
+    return getQualifiers().getPointerAuth();
+  }
 
   bool hasAddressDiscriminatedPointerAuth() const {
     if (auto ptrauth = getPointerAuth())
@@ -7418,11 +7500,6 @@ inline LangAS QualType::getAddressSpace() const {
 /// Return the gc attribute of this type.
 inline Qualifiers::GC QualType::getObjCGCAttr() const {
   return getQualifiers().getObjCGCAttr();
-}
-
-/// Return the pointer-auth qualifier of this type.
-inline PointerAuthQualifier QualType::getPointerAuth() const {
-  return getQualifiers().getPointerAuth();
 }
 
 inline bool QualType::hasNonTrivialToPrimitiveDefaultInitializeCUnion() const {

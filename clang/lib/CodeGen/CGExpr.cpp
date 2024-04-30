@@ -2164,7 +2164,7 @@ static RValue EmitLoadOfMatrixLValue(LValue LV, SourceLocation Loc,
 RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
   // Load from __ptrauth.
   if (auto ptrauth = LV.getQuals().getPointerAuth()) {
-    LV.getQuals().removePtrAuth();
+    LV.getQuals().removePointerAuth();
     auto value = EmitLoadOfLValue(LV, Loc).getScalarVal();
     return RValue::get(EmitPointerAuthUnqualify(ptrauth, value,
                                                 LV.getType(),
@@ -5736,7 +5736,7 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
     if (auto ptrauth = E->getLHS()->getType().getPointerAuth()) {
       LValue LV = EmitCheckedLValue(E->getLHS(), TCK_Store);
       LValue CopiedLV = LV;
-      CopiedLV.getQuals().removePtrAuth();
+      CopiedLV.getQuals().removePointerAuth();
       llvm::Value *RV = EmitPointerAuthQualify(ptrauth, E->getRHS(),
                                                CopiedLV.getAddress(*this));
       EmitNullabilityCheck(CopiedLV, RV, E->getExprLoc());
