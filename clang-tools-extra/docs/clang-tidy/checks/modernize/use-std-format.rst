@@ -36,7 +36,7 @@ Options
    and ``ssize_t``) as the opposite signedness to ensure that the output
    would matches that of a simple wrapper for ``std::sprintf`` that
    accepted a C-style variable argument list. For example, with
-   `StrictMode` enabled:
+   `StrictMode` enabled,
 
   .. code-block:: c++
 
