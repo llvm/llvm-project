@@ -61,13 +61,12 @@ func.func @conv_2d_nhwc_hwcf(%arg0: tensor<3x8x8x3xf32>, %arg1: tensor<5x5x3x1xf
                                      strides = dense<1> : tensor<2xi64>}
      ins (%padded, %arg1: tensor<3x12x12x3xf32>, tensor<5x5x3x1xf32>)
     outs (%arg2: tensor<3x8x8x1xf32>) -> tensor<3x8x8x1xf32>
+
+  bufferization.dealloc_tensor %padded : tensor<3x12x12x3xf32>
   return %ret : tensor<3x8x8x1xf32>
 }
 
 func.func @conv_2d_nhwc_hwcf_CCCC(%arg0: tensor<3x8x8x3xf32, #CCCC>, %arg1: tensor<5x5x3x1xf32>) -> tensor<3x8x8x1xf32> {
-  %c1 = arith.constant 1 : index
-  %c3 = arith.constant 3 : index
-  %c8 = arith.constant 8 : index
   %cst_0 = arith.constant 0.00000e+00 : f32
   %buf = tensor.empty() : tensor<3x8x8x1xf32>
   %s = linalg.fill ins(%cst_0 : f32) outs(%buf : tensor<3x8x8x1xf32>) -> tensor<3x8x8x1xf32>
@@ -165,5 +164,14 @@ func.func @main() {
   %CCCC_v = vector.transfer_read %CCCC_ret[%c0, %c0, %c0, %c0], %zero
       : tensor<3x8x8x1xf32>, vector<3x8x8x1xf32>
   vector.print %CCCC_v : vector<3x8x8x1xf32>
+
+  bufferization.dealloc_tensor %static_filter : tensor<5x5x3x1xf32>
+  bufferization.dealloc_tensor %static_input  : tensor<3x8x8x3xf32>
+  bufferization.dealloc_tensor %static_output : tensor<3x8x8x1xf32>
+
+  bufferization.dealloc_tensor %CCCC_ret : tensor<3x8x8x1xf32>
+
+  bufferization.dealloc_tensor %in2D_nhwc_CCCC : tensor<3x8x8x3xf32, #CCCC>
+
   return
 }

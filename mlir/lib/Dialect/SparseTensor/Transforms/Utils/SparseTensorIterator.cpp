@@ -578,7 +578,7 @@ public:
 };
 
 //
-// A pad iterator wrapped from another iterator. The pad iterator update
+// A pad iterator wrapped from another iterator. The pad iterator updates
 // the wrapped iterator *in-place*.
 //
 class PadIterator : public SimpleWrapIterator {
