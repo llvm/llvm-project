@@ -47,14 +47,14 @@ subroutine omp_do_firstprivate2(a, n)
   ! CHECK:  omp.parallel {
   ! CHECK: %[[I_PVT_REF:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
   ! CHECK: %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_REF]] {uniq_name = "_QFomp_do_firstprivate2Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! CHECK: %[[A_PVT_REF:.*]] = fir.alloca i32 {bindc_name = "a", pinned
-  ! CHECK: %[[A_PVT_DECL:.*]]:2 = hlfir.declare %[[A_PVT_REF]] {uniq_name = "_QFomp_do_firstprivate2Ea"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! CHECK: %[[LD:.*]] = fir.load %[[ARG0_DECL]]#0 : !fir.ref<i32>
-  ! CHECK: hlfir.assign %[[LD]] to %[[A_PVT_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
   ! CHECK: %[[N_PVT_REF:.*]] = fir.alloca i32 {bindc_name = "n", pinned, uniq_name = "_QFomp_do_firstprivate2En"}
   ! CHECK: %[[N_PVT_DECL:.*]]:2 = hlfir.declare %[[N_PVT_REF]] {uniq_name = "_QFomp_do_firstprivate2En"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! CHECK: %[[LD1:.*]] = fir.load %[[ARG1_DECL]]#0 : !fir.ref<i32>
   ! CHECK: hlfir.assign %[[LD1]] to %[[N_PVT_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
+  ! CHECK: %[[A_PVT_REF:.*]] = fir.alloca i32 {bindc_name = "a", pinned
+  ! CHECK: %[[A_PVT_DECL:.*]]:2 = hlfir.declare %[[A_PVT_REF]] {uniq_name = "_QFomp_do_firstprivate2Ea"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[LD:.*]] = fir.load %[[ARG0_DECL]]#0 : !fir.ref<i32>
+  ! CHECK: hlfir.assign %[[LD]] to %[[A_PVT_DECL]]#0 temporary_lhs : i32, !fir.ref<i32>
 
 
   ! CHECK: %[[LB:.*]] = fir.load %[[A_PVT_DECL]]#0 : !fir.ref<i32>

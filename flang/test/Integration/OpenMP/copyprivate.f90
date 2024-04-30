@@ -45,16 +45,16 @@
 !CHECK:       [[OMP_REGION_END]]:
 !CHECK:         %[[THREAD_NUM2:.*]] = call i32 @__kmpc_global_thread_num(ptr @[[LOC:.*]])
 !CHECK:         %[[DID_IT_VAL:.*]] = load i32, ptr %[[DID_IT]]
-!CHECK:         call void @__kmpc_copyprivate(ptr @[[LOC]], i32 %[[THREAD_NUM2]], i64 0, ptr %[[I]], ptr @_copy_i32, i32 %[[DID_IT_VAL]])
+!CHECK:         call void @__kmpc_copyprivate(ptr @[[LOC]], i32 %[[THREAD_NUM2]], i64 0, ptr %[[J]], ptr @_copy_i32, i32 %[[DID_IT_VAL]])
 !CHECK:         %[[THREAD_NUM3:.*]] = call i32 @__kmpc_global_thread_num(ptr @[[LOC]])
 !CHECK:         %[[DID_IT_VAL2:.*]] = load i32, ptr %[[DID_IT]]
-!CHECK:         call void @__kmpc_copyprivate(ptr @[[LOC]], i32 %[[THREAD_NUM3]], i64 0, ptr %[[J]], ptr @_copy_i32, i32 %[[DID_IT_VAL2]])
+!CHECK:         call void @__kmpc_copyprivate(ptr @[[LOC]], i32 %[[THREAD_NUM3]], i64 0, ptr %[[I]], ptr @_copy_i32, i32 %[[DID_IT_VAL2]])
 
 !CHECK:       [[OMP_REGION_BODY]]:
 !CHECK:         br label %[[OMP_SINGLE_REGION:.*]]
 !CHECK:       [[OMP_SINGLE_REGION]]:
-!CHECK:         store i32 11, ptr %[[I]]
-!CHECK:         store i32 22, ptr %[[J]]
+!CHECK:         store i32 11, ptr %[[J]]
+!CHECK:         store i32 22, ptr %[[I]]
 !CHECK:         br label %[[OMP_REGION_CONT3:.*]]
 !CHECK:       [[OMP_REGION_CONT3:.*]]:
 !CHECK:         store i32 1, ptr %[[DID_IT]]

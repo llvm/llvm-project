@@ -546,8 +546,10 @@ struct OpWithBodyGenInfo {
 
 /// Create the body (block) for an OpenMP Operation.
 ///
-/// \param [in]   op - the operation the body belongs to.
-/// \param [in] info - options controlling code-gen for the construction.
+/// \param [in]   op  - the operation the body belongs to.
+/// \param [in] info  - options controlling code-gen for the construction.
+/// \param [in] queue - work queue with nested constructs.
+/// \param [in] item  - item in the queue to generate body for.
 static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
                            const ConstructQueue &queue,
                            ConstructQueue::iterator item) {
@@ -2166,7 +2168,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
 
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
-                          eval, directive.v, clauses)};
+                          eval, directive.source, directive.v, clauses)};
 
   switch (directive.v) {
   default:
@@ -2229,9 +2231,9 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                  : List<Clause>{};
   mlir::Location currentLocation = converter.genLocation(verbatim.source);
 
-  ConstructQueue queue{
-      buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
-                          eval, llvm::omp::Directive::OMPD_flush, clauses)};
+  ConstructQueue queue{buildConstructQueue(
+      converter.getFirOpBuilder().getModule(), semaCtx, eval, verbatim.source,
+      llvm::omp::Directive::OMPD_flush, clauses)};
   genFlushOp(converter, symTable, semaCtx, eval, currentLocation, objects,
              clauses, queue, queue.begin());
 }
@@ -2378,9 +2380,11 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 
   llvm::omp::Directive directive =
       std::get<parser::OmpBlockDirective>(beginBlockDirective.t).v;
+  const parser::CharBlock &source =
+      std::get<parser::OmpBlockDirective>(beginBlockDirective.t).source;
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
-                          eval, directive, clauses)};
+                          eval, source, directive, clauses)};
   genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
 }
@@ -2396,9 +2400,9 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   List<Clause> clauses =
       makeClauses(std::get<Fortran::parser::OmpClauseList>(cd.t), semaCtx);
 
-  ConstructQueue queue{
-      buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
-                          eval, llvm::omp::Directive::OMPD_critical, clauses)};
+  ConstructQueue queue{buildConstructQueue(
+      converter.getFirOpBuilder().getModule(), semaCtx, eval, cd.source,
+      llvm::omp::Directive::OMPD_critical, clauses)};
 
   const auto &name = std::get<std::optional<Fortran::parser::Name>>(cd.t);
   mlir::Location currentLocation = converter.getCurrentLocation();
@@ -2437,9 +2441,11 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
 
   llvm::omp::Directive directive =
       std::get<parser::OmpLoopDirective>(beginLoopDirective.t).v;
+  const parser::CharBlock &source =
+      std::get<parser::OmpLoopDirective>(beginLoopDirective.t).source;
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
-                          eval, directive, clauses)};
+                          eval, source, directive, clauses)};
   genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
 }
@@ -2451,9 +2457,9 @@ genOMP(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenMPSectionConstruct &sectionConstruct) {
   mlir::Location loc = converter.getCurrentLocation();
-  ConstructQueue queue{
-      buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
-                          eval, llvm::omp::Directive::OMPD_section, {})};
+  ConstructQueue queue{buildConstructQueue(
+      converter.getFirOpBuilder().getModule(), semaCtx, eval,
+      sectionConstruct.source, llvm::omp::Directive::OMPD_section, {})};
   genSectionOp(converter, symTable, semaCtx, eval, loc,
                /*clauses=*/{}, queue, queue.begin());
 }
@@ -2478,9 +2484,11 @@ genOMP(Fortran::lower::AbstractConverter &converter,
 
   llvm::omp::Directive directive =
       std::get<parser::OmpSectionsDirective>(beginSectionsDirective.t).v;
+  const parser::CharBlock &source =
+      std::get<parser::OmpSectionsDirective>(beginSectionsDirective.t).source;
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
-                          eval, directive, clauses)};
+                          eval, source, directive, clauses)};
   genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
 }

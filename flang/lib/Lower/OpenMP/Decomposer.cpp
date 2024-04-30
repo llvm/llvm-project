@@ -22,6 +22,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/ClauseT.h"
+#include "llvm/Frontend/OpenMP/ConstructCompositionT.h"
 #include "llvm/Frontend/OpenMP/ConstructDecompositionT.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/raw_ostream.h"
@@ -67,6 +68,12 @@ struct ConstructDecomposition {
 };
 } // namespace
 
+static UnitConstruct mergeConstructs(uint32_t version,
+                                     llvm::ArrayRef<UnitConstruct> units) {
+  tomp::ConstructCompositionT compose(version, units);
+  return compose.merged;
+}
+
 namespace Fortran::lower::omp {
 LLVM_DUMP_METHOD llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                                const UnitConstruct &uc) {
@@ -80,8 +87,8 @@ LLVM_DUMP_METHOD llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
 
 ConstructQueue buildConstructQueue(
     mlir::ModuleOp modOp, Fortran::semantics::SemanticsContext &semaCtx,
-    Fortran::lower::pft::Evaluation &eval, llvm::omp::Directive compound,
-    const List<Clause> &clauses) {
+    Fortran::lower::pft::Evaluation &eval, const parser::CharBlock &source,
+    llvm::omp::Directive compound, const List<Clause> &clauses) {
 
   List<UnitConstruct> constructs;
 
@@ -91,17 +98,27 @@ ConstructQueue buildConstructQueue(
   llvm::SmallVector<llvm::omp::Directive> loweringUnits;
   std::ignore =
       llvm::omp::getLeafOrCompositeConstructs(compound, loweringUnits);
+  uint32_t version = getOpenMPVersionAttribute(modOp);
 
   int leafIndex = 0;
   for (llvm::omp::Directive dir_id : loweringUnits) {
-    constructs.push_back(UnitConstruct{dir_id});
-    UnitConstruct &uc = constructs.back();
     llvm::ArrayRef<llvm::omp::Directive> leafsOrSelf =
         llvm::omp::getLeafConstructsOrSelf(dir_id);
-    for (int i = 0, e = leafsOrSelf.size(); i != e; ++i) {
-      uc.clauses.append(decompose.output[leafIndex].clauses);
-      ++leafIndex;
+    size_t numLeafs = leafsOrSelf.size();
+
+    llvm::ArrayRef<UnitConstruct> toMerge{&decompose.output[leafIndex],
+                                          numLeafs};
+    auto &uc = constructs.emplace_back(mergeConstructs(version, toMerge));
+
+    if (!transferLocations(clauses, uc.clauses)) {
+      // If some clauses are left without source information, use the
+      // directive's source.
+      for (auto &clause : uc.clauses) {
+        if (clause.source.empty())
+          clause.source = source;
+      }
     }
+    leafIndex += numLeafs;
   }
 
   return constructs;

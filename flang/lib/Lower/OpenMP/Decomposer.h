@@ -10,6 +10,7 @@
 
 #include "Clauses.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/Frontend/OpenMP/ConstructCompositionT.h"
 #include "llvm/Frontend/OpenMP/ConstructDecompositionT.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Support/Compiler.h"
@@ -34,11 +35,12 @@ using ConstructQueue = List<UnitConstruct>;
 LLVM_DUMP_METHOD llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
                                                const UnitConstruct &uc);
 
-ConstructQueue
-buildConstructQueue(mlir::ModuleOp modOp,
-                    Fortran::semantics::SemanticsContext &semaCtx,
-                    Fortran::lower::pft::Evaluation &eval,
-                    llvm::omp::Directive compound, const List<Clause> &clauses);
+ConstructQueue buildConstructQueue(mlir::ModuleOp modOp,
+                                   semantics::SemanticsContext &semaCtx,
+                                   lower::pft::Evaluation &eval,
+                                   const parser::CharBlock &source,
+                                   llvm::omp::Directive compound,
+                                   const List<Clause> &clauses);
 } // namespace Fortran::lower::omp
 
 #endif // FORTRAN_LOWER_OPENMP_DECOMPOSER_H

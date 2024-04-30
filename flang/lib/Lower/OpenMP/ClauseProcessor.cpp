@@ -520,6 +520,7 @@ bool ClauseProcessor::processCopyin() const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::OpBuilder::InsertPoint insPt = firOpBuilder.saveInsertionPoint();
   firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
+
   auto checkAndCopyHostAssociateVar =
       [&](Fortran::semantics::Symbol *sym,
           mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) {
