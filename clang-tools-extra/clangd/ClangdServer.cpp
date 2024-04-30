@@ -898,6 +898,19 @@ void ClangdServer::incomingCalls(
                      });
 }
 
+void ClangdServer::outgoingCalls(
+    const CallHierarchyItem &Item,
+    Callback<std::vector<CallHierarchyOutgoingCall>> CB) {
+  auto Action = [Item,
+                 CB = std::move(CB)](Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    CB(clangd::outgoingCalls(InpAST->AST, Item));
+  };
+  WorkScheduler->runWithAST("Outgoing Calls", Item.uri.file(),
+                            std::move(Action));
+}
+
 void ClangdServer::inlayHints(PathRef File, std::optional<Range> RestrictRange,
                               Callback<std::vector<InlayHint>> CB) {
   auto Action = [RestrictRange(std::move(RestrictRange)),

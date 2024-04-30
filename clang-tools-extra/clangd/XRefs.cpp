@@ -42,6 +42,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/Analysis/CallGraph.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
@@ -2300,6 +2301,76 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
                          const CallHierarchyIncomingCall &B) {
     return A.from.name < B.from.name;
   });
+  return Results;
+}
+
+std::vector<CallHierarchyOutgoingCall>
+outgoingCalls(ParsedAST &AST, const CallHierarchyItem &Item) {
+  if (AST.tuPath() != Item.uri.file())
+    return {};
+
+  const auto &SM = AST.getSourceManager();
+  auto Loc = sourceLocationInMainFile(SM, Item.selectionRange.start);
+  if (!Loc) {
+    elog("outgoingCalls failed to convert position to source location: "
+         "{0}",
+         Loc.takeError());
+    return {};
+  }
+
+  // For user convenience, we allow cursors on declarations, in which case
+  // we will try to find the definition.
+  std::optional<std::pair<const NamedDecl *, const NamedDecl *>> DeclAndDef;
+  for (const NamedDecl *Decl : getDeclAtPosition(AST, *Loc, {})) {
+    if (getSymbolID(Decl).str() != Item.data)
+      continue;
+    DeclAndDef = std::make_pair(Decl, getDefinition(Decl));
+    break;
+  }
+  if (!DeclAndDef || !DeclAndDef->second)
+    return {};
+
+  // Collect calls.
+  CallGraph callGraph;
+  callGraph.addToCallGraph(const_cast<NamedDecl *>(DeclAndDef->second));
+  llvm::DenseMap<NamedDecl *, std::vector<Range>> CallsOut;
+  for (const CallGraphNode::CallRecord &CallRecord :
+       callGraph.getRoot()->callees()) {
+    if (CallRecord.Callee->getDecl() != DeclAndDef->first)
+      continue;
+    for (const CallGraphNode::CallRecord &CallRecord :
+         CallRecord.Callee->callees()) {
+      SourceLocation BeginLoc = CallRecord.CallExpr->getBeginLoc();
+      if (auto *M = dyn_cast_if_present<ObjCMessageExpr>(CallRecord.CallExpr)) {
+        BeginLoc = M->getSelectorStartLoc();
+      } else if (auto *M = dyn_cast_if_present<CXXMemberCallExpr>(
+                     CallRecord.CallExpr)) {
+        if (auto ME = dyn_cast_if_present<MemberExpr>(M->getCallee()))
+          BeginLoc = ME->getMemberLoc();
+      }
+      BeginLoc = SM.getFileLoc(BeginLoc);
+      Position NameBegin = sourceLocToPosition(SM, BeginLoc);
+      Position NameEnd = sourceLocToPosition(
+          SM, Lexer::getLocForEndOfToken(BeginLoc, 0, SM,
+                                         AST.getASTContext().getLangOpts()));
+      CallsOut[static_cast<NamedDecl *>(CallRecord.Callee->getDecl())]
+          .push_back(Range{NameBegin, NameEnd});
+    }
+    break;
+  }
+
+  // Create and sort items.
+  std::vector<CallHierarchyOutgoingCall> Results;
+  for (auto It = CallsOut.begin(); It != CallsOut.end(); ++It) {
+    if (auto CHI = declToCallHierarchyItem(*It->first, Item.uri.file())) {
+      Results.push_back(CallHierarchyOutgoingCall{std::move(*CHI), It->second});
+    }
+  }
+  llvm::sort(Results, [](const CallHierarchyOutgoingCall &A,
+                         const CallHierarchyOutgoingCall &B) {
+    return A.to.name < B.to.name;
+  });
+
   return Results;
 }
 
