@@ -30,3 +30,6 @@ void foo(int3 arg1, int8 arg2) {
   int res12[vec_step(void) == 1 ? 1 : -1];
 }
 
+void negativeShift32(int a,int b) {
+  char array0[((int)1)<<40];
+}
