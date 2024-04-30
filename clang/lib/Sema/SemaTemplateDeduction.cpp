@@ -2639,7 +2639,8 @@ static bool isSameTemplateArg(ASTContext &Context,
 /// argument.
 TemplateArgumentLoc
 Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
-                                    QualType NTTPType, SourceLocation Loc) {
+                                    QualType NTTPType, SourceLocation Loc,
+                                    NamedDecl *TemplateParam) {
   switch (Arg.getKind()) {
   case TemplateArgument::Null:
     llvm_unreachable("Can't get a NULL template argument here");
@@ -2651,7 +2652,8 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
   case TemplateArgument::Declaration: {
     if (NTTPType.isNull())
       NTTPType = Arg.getParamTypeForDecl();
-    Expr *E = BuildExpressionFromDeclTemplateArgument(Arg, NTTPType, Loc)
+    Expr *E = BuildExpressionFromDeclTemplateArgument(Arg, NTTPType, Loc,
+                                                      TemplateParam)
                   .getAs<Expr>();
     return TemplateArgumentLoc(TemplateArgument(E), E);
   }
@@ -2718,8 +2720,8 @@ static bool ConvertDeducedTemplateArgument(
     // Convert the deduced template argument into a template
     // argument that we can check, almost as if the user had written
     // the template argument explicitly.
-    TemplateArgumentLoc ArgLoc =
-        S.getTrivialTemplateArgumentLoc(Arg, QualType(), Info.getLocation());
+    TemplateArgumentLoc ArgLoc = S.getTrivialTemplateArgumentLoc(
+        Arg, QualType(), Info.getLocation(), Param);
 
     // Check the template argument, converting it as necessary.
     return S.CheckTemplateArgument(

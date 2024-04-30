@@ -8438,10 +8438,9 @@ void Sema::NoteTemplateParameterLocation(const NamedDecl &Decl) {
 /// declaration and the type of its corresponding non-type template
 /// parameter, produce an expression that properly refers to that
 /// declaration.
-ExprResult
-Sema::BuildExpressionFromDeclTemplateArgument(const TemplateArgument &Arg,
-                                              QualType ParamType,
-                                              SourceLocation Loc) {
+ExprResult Sema::BuildExpressionFromDeclTemplateArgument(
+    const TemplateArgument &Arg, QualType ParamType, SourceLocation Loc,
+    NamedDecl *TemplateParam) {
   // C++ [temp.param]p8:
   //
   //   A non-type template-parameter of type "array of T" or
@@ -8508,6 +8507,18 @@ Sema::BuildExpressionFromDeclTemplateArgument(const TemplateArgument &Arg,
   } else {
     assert(ParamType->isReferenceType() &&
            "unexpected type for decl template argument");
+    if (NonTypeTemplateParmDecl *NTTP =
+            dyn_cast_if_present<NonTypeTemplateParmDecl>(TemplateParam)) {
+      QualType TemplateParamType = NTTP->getType();
+      const AutoType *AT = TemplateParamType->getAs<AutoType>();
+      if (AT && AT->isDecltypeAuto()) {
+        RefExpr = new (getASTContext()) SubstNonTypeTemplateParmExpr(
+            ParamType->getPointeeType(), RefExpr.get()->getValueKind(),
+            RefExpr.get()->getExprLoc(), RefExpr.get(), VD, NTTP->getIndex(),
+            /*PackIndex=*/std::nullopt,
+            /*RefParam=*/true);
+      }
+    }
   }
 
   // At this point we should have the right value category.
