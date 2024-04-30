@@ -862,6 +862,7 @@ Error LinuxKernelRewriter::validateORCTables() {
                                toString(IPCursor.takeError()).c_str());
 
     assert(IP >= PrevIP && "Unsorted ORC table detected");
+    (void)PrevIP;
     PrevIP = IP;
   }
 
