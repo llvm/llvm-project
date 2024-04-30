@@ -9,6 +9,7 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_RUNTIME_MAIN_H
 #define FORTRAN_OPTIMIZER_BUILDER_RUNTIME_MAIN_H
 
+#include "flang/Lower/EnvironmentDefault.h"
 namespace mlir {
 class Location;
 } // namespace mlir
@@ -21,8 +22,7 @@ class GlobalOp;
 namespace fir::runtime {
 
 void genMain(fir::FirOpBuilder &builder, mlir::Location loc,
-             fir::GlobalOp &env);
-
+             const std::vector<Fortran::lower::EnvironmentDefault> &defs);
 }
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_MAIN_H

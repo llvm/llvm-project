@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/Runtime/Main.h"
+#include "flang/Lower/EnvironmentDefault.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -18,8 +20,9 @@
 using namespace Fortran::runtime;
 
 /// Create a `int main(...)` that calls the Fortran entry point
-void fir::runtime::genMain(fir::FirOpBuilder &builder, mlir::Location loc,
-                           fir::GlobalOp &env) {
+void fir::runtime::genMain(
+    fir::FirOpBuilder &builder, mlir::Location loc,
+    const std::vector<Fortran::lower::EnvironmentDefault> &defs) {
   auto *context = builder.getContext();
   auto argcTy = builder.getDefaultIntegerType();
   auto ptrTy = mlir::LLVM::LLVMPointerType::get(context);
@@ -48,10 +51,10 @@ void fir::runtime::genMain(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::OpBuilder::InsertionGuard insertGuard(builder);
   builder.setInsertionPointToStart(block);
 
+  auto env = fir::runtime::genEnvironmentDefaults(builder, loc, defs);
+
   llvm::SmallVector<mlir::Value, 4> args(block->getArguments());
-  auto envAddr =
-      builder.create<fir::AddrOfOp>(loc, env.getType(), env.getSymbol());
-  args.push_back(envAddr);
+  args.push_back(env);
 
   builder.create<fir::CallOp>(loc, startFn, args);
   builder.create<fir::CallOp>(loc, qqMainFn);
