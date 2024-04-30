@@ -1173,7 +1173,8 @@ def OMP_Distribute : Directive<"distribute"> {
     VersionedClause<OMPC_Private>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_LastPrivate>,
-    VersionedClause<OMPC_Allocate>
+    VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_Order, 51>
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Collapse>,
