@@ -74,7 +74,7 @@ Changes to the AArch64 Backend
 ------------------------------
 
 * Added support for Cortex-A78AE, Cortex-A520AE, Cortex-A720AE,
-  Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
+  Cortex-R82AE, Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
 
 Changes to the AMDGPU Backend
 -----------------------------
