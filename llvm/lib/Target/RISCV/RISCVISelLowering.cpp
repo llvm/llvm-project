@@ -15421,7 +15421,7 @@ static SDValue tryFoldSelectIntoOp(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
   SDValue OtherOp = TrueVal.getOperand(1 - OpToFold);
-  EVT OtherOpVT = OtherOp->getValueType(0);
+  EVT OtherOpVT = OtherOp.getValueType();
   SDValue IdentityOperand =
       DAG.getNeutralElement(Opc, DL, OtherOpVT, N->getFlags());
   if (!Commutative)
