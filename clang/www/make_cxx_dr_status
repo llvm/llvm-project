@@ -236,7 +236,7 @@ for dr in drs:
     avail = 'Extension'
     avail_style = ''
 
-  elif dr.status in ('open', 'drafting', 'review'):
+  elif dr.status in ('open', 'drafting', 'review', 'tentatively ready'):
     row_style = ' class="open"'
     try:
       avail, avail_style, unresolved_status = availability(dr.issue)

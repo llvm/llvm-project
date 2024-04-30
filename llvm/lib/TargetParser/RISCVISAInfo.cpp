@@ -398,11 +398,10 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
 
   for (auto &Feature : Features) {
     StringRef ExtName = Feature;
-    bool Experimental = false;
     assert(ExtName.size() > 1 && (ExtName[0] == '+' || ExtName[0] == '-'));
     bool Add = ExtName[0] == '+';
     ExtName = ExtName.drop_front(1); // Drop '+' or '-'
-    Experimental = stripExperimentalPrefix(ExtName);
+    bool Experimental = stripExperimentalPrefix(ExtName);
     auto ExtensionInfos = Experimental
                               ? ArrayRef(SupportedExperimentalExtensions)
                               : ArrayRef(SupportedExtensions);
@@ -639,7 +638,8 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   switch (Baseline) {
   default:
     return createStringError(errc::invalid_argument,
-                             "first letter should be 'e', 'i' or 'g'");
+                             "first letter after \'" + Arch.slice(0, 4) +
+                                 "\' should be 'e', 'i' or 'g'");
   case 'e':
   case 'i':
     break;
@@ -667,11 +667,10 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     // version since the we don't have clear version scheme for that on
     // ISA spec.
     for (const auto *Ext : RISCVGImplications) {
-      if (auto Version = findDefaultVersion(Ext)) {
-        // Postpone AddExtension until end of this function
-        SeenExtMap[Ext] = {Version->Major, Version->Minor};
-      } else
-        llvm_unreachable("Default extension version not found?");
+      auto Version = findDefaultVersion(Ext);
+      assert(Version && "Default extension version not found?");
+      // Postpone AddExtension until end of this function
+      SeenExtMap[Ext] = {Version->Major, Version->Minor};
     }
   } else {
     // Baseline is `i` or `e`

@@ -525,6 +525,7 @@ private:
 
   /// Calculate hash of the pcm content.
   std::pair<ASTFileSignature, ASTFileSignature> createSignature() const;
+  ASTFileSignature createSignatureForNamedModule() const;
 
   void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts);
   void WriteSourceManagerBlock(SourceManager &SourceMgr,
@@ -665,6 +666,10 @@ public:
   /// Emit a source location.
   void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
                          LocSeq *Seq = nullptr);
+
+  /// Return the raw encodings for source locations.
+  SourceLocationEncoding::RawLocEncoding
+  getRawSourceLocationEncoding(SourceLocation Loc, LocSeq *Seq = nullptr);
 
   /// Emit a source range.
   void AddSourceRange(SourceRange Range, RecordDataImpl &Record,
@@ -885,6 +890,8 @@ private:
 /// AST and semantic-analysis consumer that generates a
 /// precompiled header from the parsed source code.
 class PCHGenerator : public SemaConsumer {
+  void anchor() override;
+
   Preprocessor &PP;
   std::string OutputFile;
   std::string isysroot;
@@ -928,15 +935,32 @@ public:
   bool hasEmittedPCH() const { return Buffer->IsComplete; }
 };
 
-class ReducedBMIGenerator : public PCHGenerator {
+class CXX20ModulesGenerator : public PCHGenerator {
+  void anchor() override;
+
 protected:
   virtual Module *getEmittingModule(ASTContext &Ctx) override;
 
+  CXX20ModulesGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+                        StringRef OutputFile, bool GeneratingReducedBMI);
+
 public:
-  ReducedBMIGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-                      StringRef OutputFile);
+  CXX20ModulesGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+                        StringRef OutputFile)
+      : CXX20ModulesGenerator(PP, ModuleCache, OutputFile,
+                              /*GeneratingReducedBMI=*/false) {}
 
   void HandleTranslationUnit(ASTContext &Ctx) override;
+};
+
+class ReducedBMIGenerator : public CXX20ModulesGenerator {
+  void anchor() override;
+
+public:
+  ReducedBMIGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+                      StringRef OutputFile)
+      : CXX20ModulesGenerator(PP, ModuleCache, OutputFile,
+                              /*GeneratingReducedBMI=*/true) {}
 };
 
 /// If we can elide the definition of \param D in reduced BMI.
