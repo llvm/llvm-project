@@ -7706,7 +7706,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     // FIXME: The language rules don't say what happens in this case.
     // FIXME: We get an opaque dependent type out of decltype(auto) if the
     // expression is merely instantiation-dependent; is this enough?
-    if (CTAK == CTAK_Deduced && Arg->isTypeDependent()) {
+    if (Arg->isTypeDependent()) {
       auto *AT = dyn_cast<AutoType>(DeducedT);
       if (AT && AT->isDecltypeAuto()) {
         SugaredConverted = TemplateArgument(Arg);
