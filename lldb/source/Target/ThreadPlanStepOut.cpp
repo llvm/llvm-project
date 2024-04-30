@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/ThreadPlanStepOut.h"
+#include "lldb/API/SBLanguages.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectConstResult.h"
@@ -179,7 +180,7 @@ ThreadPlanStepOut::ThreadPlanStepOut(
   if (frame_idx == 0) {
     StackFrameSP frame_sp = GetThread().GetStackFrameAtIndex(0);
 #ifdef LLDB_ENABLE_SWIFT
-    if (frame_sp->GuessLanguage() == eLanguageTypeSwift) {
+    if (frame_sp->GuessLanguage().name == eLanguageNameSwift) {
       auto *swift_runtime 
           = SwiftLanguageRuntime::Get(m_process.shared_from_this());
       if (swift_runtime) {

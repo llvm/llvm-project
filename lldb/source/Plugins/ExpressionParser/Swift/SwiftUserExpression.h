@@ -82,7 +82,7 @@ public:
   ///     Additional options for the expression.
   //------------------------------------------------------------------
   SwiftUserExpression(ExecutionContextScope &exe_scope, llvm::StringRef expr,
-                      llvm::StringRef prefix, lldb::LanguageType language,
+                      llvm::StringRef prefix, SourceLanguage language,
                       ResultType desired_type,
                       const EvaluateExpressionOptions &options);
 

@@ -520,7 +520,7 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereImpl(Flags &flags,
     // could come up with some
     // good heuristic to identify function pointers in the mangled function
     // arguments.
-    auto frame_language = frame->GuessLanguage();
+    auto frame_language = frame->GuessLanguage().AsLanguageType();
     if (auto *runtime =
             GetThread().GetProcess()->GetLanguageRuntime(frame_language)) {
       std::vector<Address> interesting_addresses;

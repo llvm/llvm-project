@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/ThreadPlanCallFunction.h"
+#include "lldb/API/SBLanguages.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Address.h"
@@ -427,7 +428,7 @@ void ThreadPlanCallFunction::SetBreakpoints() {
     }
   }
 #ifdef LLDB_ENABLE_SWIFT
-  if (GetExpressionLanguage() == eLanguageTypeSwift) {
+  if (GetExpressionLanguage().name == eLanguageNameSwift) {
     auto *swift_runtime 
         = SwiftLanguageRuntime::Get(m_process.shared_from_this());
     if (swift_runtime) {

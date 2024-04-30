@@ -9,6 +9,7 @@
 #include "InstrumentationRuntimeMainThreadChecker.h"
 
 #include "Plugins/Process/Utility/HistoryThread.h"
+#include "lldb/API/SBLanguages.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -226,7 +227,7 @@ InstrumentationRuntimeMainThreadChecker::RetrieveReportData(
 
 #ifdef LLDB_ENABLE_SWIFT
   if (responsible_frame) {
-    if (responsible_frame->GetLanguage() == eLanguageTypeSwift) {
+    if (responsible_frame->GetLanguage().name == eLanguageNameSwift) {
       std::string swiftApiName =
           TranslateObjCNameToSwiftName(className, selector, responsible_frame);
       if (swiftApiName != "")

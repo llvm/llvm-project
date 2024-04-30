@@ -42,7 +42,7 @@ char LLVMUserExpression::ID;
 LLVMUserExpression::LLVMUserExpression(ExecutionContextScope &exe_scope,
                                        llvm::StringRef expr,
                                        llvm::StringRef prefix,
-                                       lldb::LanguageType language,
+                                       SourceLanguage language,
                                        ResultType desired_type,
                                        const EvaluateExpressionOptions &options)
     : UserExpression(exe_scope, expr, prefix, language, desired_type, options),
@@ -270,7 +270,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
     // the error result...
     Target *target = exe_ctx.GetTargetPtr();
     PersistentExpressionState *expression_state =
-        target->GetPersistentExpressionStateForLanguage(Language());
+        target->GetPersistentExpressionStateForLanguage(LanguageType());
     if (expression_state)
       result = expression_state->CreatePersistentVariable(
           error_backstop_result_sp);

@@ -528,7 +528,7 @@ BreakpointSP Target::CreateBreakpoint(
     if (skip_prologue == eLazyBoolCalculate)
       skip_prologue = GetSkipPrologue() ? eLazyBoolYes : eLazyBoolNo;
     if (language == lldb::eLanguageTypeUnknown)
-      language = GetLanguage();
+      language = GetLanguage().AsLanguageType();
 
     BreakpointResolverSP resolver_sp(new BreakpointResolverName(
         nullptr, func_name, func_name_type_mask, language, Breakpoint::Exact,
@@ -554,7 +554,7 @@ Target::CreateBreakpoint(const FileSpecList *containingModules,
     if (skip_prologue == eLazyBoolCalculate)
       skip_prologue = GetSkipPrologue() ? eLazyBoolYes : eLazyBoolNo;
     if (language == lldb::eLanguageTypeUnknown)
-      language = GetLanguage();
+      language = GetLanguage().AsLanguageType();
 
     BreakpointResolverSP resolver_sp(
         new BreakpointResolverName(nullptr, func_names, func_name_type_mask,
@@ -583,7 +583,7 @@ Target::CreateBreakpoint(const FileSpecList *containingModules,
         skip_prologue = eLazyBoolNo;
     }
     if (language == lldb::eLanguageTypeUnknown)
-      language = GetLanguage();
+      language = GetLanguage().AsLanguageType();
 
     BreakpointResolverSP resolver_sp(new BreakpointResolverName(
         nullptr, func_names, num_names, func_name_type_mask, language, offset,
@@ -2763,15 +2763,16 @@ Target::GetSwiftPersistentExpressionState(ExecutionContextScope &exe_scope) {
 #endif // LLDB_ENABLE_SWIFT
 
 UserExpression *Target::GetUserExpressionForLanguage(
-    llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
+    llvm::StringRef expr, llvm::StringRef prefix, SourceLanguage language,
     Expression::ResultType desired_type,
     const EvaluateExpressionOptions &options, ValueObject *ctx_obj,
     Status &error) {
-  auto type_system_or_err = GetScratchTypeSystemForLanguage(language);
+  auto type_system_or_err =
+      GetScratchTypeSystemForLanguage(language.AsLanguageType());
   if (auto err = type_system_or_err.takeError()) {
     error.SetErrorStringWithFormat(
         "Could not find type system for language %s: %s",
-        Language::GetNameForLanguageType(language),
+        Language::GetNameForLanguageType(language.AsLanguageType()),
         llvm::toString(std::move(err)).c_str());
     return nullptr;
   }
@@ -2780,7 +2781,7 @@ UserExpression *Target::GetUserExpressionForLanguage(
   if (!ts) {
     error.SetErrorStringWithFormat(
         "Type system for language %s is no longer live",
-        Language::GetNameForLanguageType(language));
+        language.GetDescription().data());
     return nullptr;
   }
 
@@ -2789,7 +2790,7 @@ UserExpression *Target::GetUserExpressionForLanguage(
   if (!user_expr)
     error.SetErrorStringWithFormat(
         "Could not create an expression for language %s",
-        Language::GetNameForLanguageType(language));
+        language.GetDescription().data());
 
   return user_expr;
 }
@@ -5320,9 +5321,9 @@ void TargetProperties::SetStandardErrorPath(llvm::StringRef path) {
   SetPropertyAtIndex(idx, path);
 }
 
-LanguageType TargetProperties::GetLanguage() const {
+SourceLanguage TargetProperties::GetLanguage() const {
   const uint32_t idx = ePropertyLanguage;
-  return GetPropertyAtIndexAs<LanguageType>(idx, {});
+  return {GetPropertyAtIndexAs<LanguageType>(idx, {})};
 }
 
 llvm::StringRef TargetProperties::GetExpressionPrefixContents() {
