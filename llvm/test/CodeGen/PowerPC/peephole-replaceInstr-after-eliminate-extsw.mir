@@ -1,0 +1,695 @@
+# RUN: llc -run-pass=ppc-mi-peepholes  -mtriple powerpc64-ibm-aix-xcoff %s -o - \
+# RUN:   -verify-machineinstrs | FileCheck %s
+
+--- |
+  ; ModuleID = '71030_tmp_reduce-O2.ll'
+  source_filename = "71030_tmp_reduce.c"
+  target datalayout = "E-m:a-Fi64-i64:64-n32:64-S128-v256:256:256-v512:512:512"
+  target triple = "powerpc64-ibm-aix-xcoff"
+
+  @globalShortValue = local_unnamed_addr global i16 1, align 2
+  @globalCharValue = local_unnamed_addr global i8 0, align 1
+  @largeNumber = local_unnamed_addr global i64 -3664682556119382352, align 8
+  @someIntValue = local_unnamed_addr global i32 378441747, align 4
+  @unitIncrement = local_unnamed_addr global i32 1, align 4
+  @computedResultUll = local_unnamed_addr global i64 0, align 8
+  @computedResultShort = local_unnamed_addr global i16 0, align 2
+  @computedResultUChar = local_unnamed_addr global i8 0, align 1
+  @computedResultBool = local_unnamed_addr global i8 0, align 1
+  @computedResultChar = local_unnamed_addr global i8 0, align 1
+  @shortArray = local_unnamed_addr global [8 x i16] zeroinitializer, align 2
+  @charArray = local_unnamed_addr global [8 x [8 x [8 x i8]]] zeroinitializer, align 1
+  @longArray = local_unnamed_addr global [8 x [8 x i64]] zeroinitializer, align 8
+  @resultArray = local_unnamed_addr global [8 x [8 x i16]] zeroinitializer, align 2
+  @ullArray = local_unnamed_addr global [8 x i64] zeroinitializer, align 8
+  @intArray = local_unnamed_addr global [8 x [8 x [8 x i32]]] zeroinitializer, align 4
+  @_MergedGlobals = private constant <{ [29 x i8], [46 x i8] }> <{ [29 x i8] c"Computed Result (ULL): %llx\0A\00", [46 x i8] c"Computed convert largeNumber&&&& (ULL): %llx\0A\00" }>, align 1
+
+  @.str.1 = private alias [29 x i8], ptr @_MergedGlobals
+  @.str = private alias [46 x i8], getelementptr inbounds (<{ [29 x i8], [46 x i8] }>, ptr @_MergedGlobals, i32 0, i32 1)
+
+  ; Function Attrs: nofree nounwind
+  define noundef signext i32 @main() local_unnamed_addr #0 {
+  entry:
+    store i16 -1, ptr getelementptr inbounds ([8 x i16], ptr @shortArray, i64 0, i64 3), align 2, !tbaa !3
+    %0 = load i64, ptr @largeNumber, align 8, !tbaa !7
+    %conv = trunc i64 %0 to i32
+    %sext = shl i32 %conv, 16
+    %conv1 = ashr exact i32 %sext, 16
+    %sub = add nsw i32 %conv1, -1705
+    %call = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) getelementptr inbounds (<{ [29 x i8], [46 x i8] }>, ptr @_MergedGlobals, i32 0, i32 1), i32 noundef signext %sub)
+    %1 = load i16, ptr @globalShortValue, align 2, !tbaa !3
+    %2 = load i32, ptr @someIntValue, align 4, !tbaa !9
+    %3 = trunc i32 %2 to i8
+    %conv20 = add i8 %3, -19
+    %4 = load i32, ptr @unitIncrement, align 4
+    %5 = load i8, ptr @globalCharValue, align 1
+    %conv45 = sext i8 %5 to i32
+    %computedResultShort.promoted = load i16, ptr @computedResultShort, align 2, !tbaa !3
+    %resultArray.promoted = load i16, ptr @resultArray, align 2, !tbaa !3
+    %computedResultChar.promoted149 = load i8, ptr @computedResultChar, align 1, !tbaa !11
+    %6 = sext i8 %conv20 to i64
+    %7 = load i16, ptr getelementptr inbounds ([8 x i16], ptr @shortArray, i64 0, i64 3), align 2, !tbaa !3
+    %8 = load i16, ptr getelementptr inbounds ([8 x i16], ptr @shortArray, i64 0, i64 2), align 2
+    %conv46 = sext i16 %8 to i32
+    %cond54 = tail call i32 @llvm.smin.i32(i32 %conv45, i32 %conv46)
+    %tobool = icmp ne i32 %cond54, 0
+    %conv55 = zext i1 %tobool to i8
+    %9 = load i64, ptr getelementptr inbounds ([8 x i64], ptr @ullArray, i64 0, i64 3), align 8
+    %tobool72 = icmp ne i64 %9, 0
+    %frombool = zext i1 %tobool72 to i8
+    %smax = tail call i64 @llvm.smax.i64(i64 %6, i64 4)
+    %10 = add nuw nsw i64 %smax, 3
+    %11 = sub i64 %10, %6
+    %12 = lshr i64 %11, 2
+    %13 = add nuw nsw i64 %12, 1
+    %n.vec = and i64 %13, 9223372036854775806
+    %14 = shl i64 %n.vec, 2
+    %ind.end = add i64 %14, %6
+    %15 = shl i64 %6, 2
+    %16 = shl i64 %6, 3
+    %17 = add nsw i64 %16, -64
+    %scevgep30 = getelementptr i8, ptr @longArray, i64 %17
+    %18 = add nsw i64 %15, 64
+    %scevgep31 = getelementptr i8, ptr @intArray, i64 %18
+    %19 = lshr i64 %13, 1
+    %20 = shl nuw nsw i64 %19, 1
+    %21 = add nsw i64 %20, -2
+    %22 = lshr i64 %21, 1
+    %23 = add nuw i64 %22, 1
+    br label %for.body16
+
+  for.cond.cleanup15:                               ; preds = %for.cond.cleanup25
+    %24 = tail call i16 @llvm.smin.i16(i16 %1, i16 %7)
+    %conv11.le = sext i16 %24 to i64
+    store i64 %conv11.le, ptr @computedResultUll, align 8, !tbaa !7
+    %call97 = tail call signext i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @_MergedGlobals, i64 noundef %conv11.le)
+    ret i32 0
+
+  for.body16:                                       ; preds = %for.cond.cleanup25, %entry
+    %lsr.iv29 = phi i32 [ %lsr.iv.next, %for.cond.cleanup25 ], [ 8, %entry ]
+    %conv36.lcssa132140 = phi i16 [ %computedResultShort.promoted, %entry ], [ %conv36.lcssa131, %for.cond.cleanup25 ]
+    %and.lcssa135139 = phi i16 [ %resultArray.promoted, %entry ], [ %and.lcssa134, %for.cond.cleanup25 ]
+    %conv81118.lcssa.lcssa137138 = phi i8 [ %computedResultChar.promoted149, %entry ], [ %conv81118.lcssa.lcssa136, %for.cond.cleanup25 ]
+    %25 = icmp slt i8 %conv20, 8
+    br i1 %25, label %for.body31.lr.ph, label %for.cond.cleanup25
+
+  for.body31.lr.ph:                                 ; preds = %for.body16
+    %26 = icmp ult i64 %11, 4
+    store i8 %conv55, ptr @computedResultUChar, align 1, !tbaa !11
+    br i1 %26, label %for.body31.preheader, label %vector.body.preheader
+
+  vector.body.preheader:                            ; preds = %for.body31.lr.ph
+    call void @llvm.set.loop.iterations.i64(i64 %23)
+    br label %vector.body
+
+  vector.body:                                      ; preds = %vector.body.preheader, %vector.body
+    %vec.phi = phi i16 [ %44, %vector.body ], [ %conv36.lcssa132140, %vector.body.preheader ]
+    %vec.phi159 = phi i16 [ %45, %vector.body ], [ 0, %vector.body.preheader ]
+    %vec.phi160 = phi i16 [ %46, %vector.body ], [ %and.lcssa135139, %vector.body.preheader ]
+    %vec.phi161 = phi i16 [ %47, %vector.body ], [ -1, %vector.body.preheader ]
+    %vec.phi162 = phi i8 [ %48, %vector.body ], [ %conv81118.lcssa.lcssa137138, %vector.body.preheader ]
+    %vec.phi163 = phi i8 [ %49, %vector.body ], [ 0, %vector.body.preheader ]
+    %27 = phi ptr [ %scevgep30, %vector.body.preheader ], [ %31, %vector.body ]
+    %28 = phi ptr [ %scevgep31, %vector.body.preheader ], [ %29, %vector.body ]
+    %29 = getelementptr i8, ptr %28, i64 32
+    %30 = getelementptr i8, ptr %29, i64 16
+    %31 = getelementptr i8, ptr %27, i64 64
+    %32 = getelementptr i8, ptr %31, i64 32
+    %33 = trunc i32 %4 to i16
+    %34 = load i64, ptr %31, align 8, !tbaa !7
+    %35 = load i64, ptr %32, align 8, !tbaa !7
+    %36 = trunc i64 %34 to i16
+    %37 = trunc i64 %35 to i16
+    %38 = load i32, ptr %29, align 4, !tbaa !9
+    %39 = load i32, ptr %30, align 4, !tbaa !9
+    %40 = trunc i32 %38 to i8
+    %41 = trunc i32 %39 to i8
+    %42 = mul i8 %40, -6
+    %43 = mul i8 %41, -6
+    %44 = sub i16 %vec.phi, %33
+    %45 = sub i16 %vec.phi159, %33
+    %46 = and i16 %vec.phi160, %36
+    %47 = and i16 %vec.phi161, %37
+    %48 = add i8 %42, %vec.phi162
+    %49 = add i8 %43, %vec.phi163
+    %50 = call i1 @llvm.loop.decrement.i64(i64 1)
+    br i1 %50, label %vector.body, label %middle.block, !llvm.loop !12
+
+  middle.block:                                     ; preds = %vector.body
+    %51 = icmp eq i64 %13, %n.vec
+    %bin.rdx = add i16 %45, %44
+    %bin.rdx164 = and i16 %47, %46
+    %bin.rdx165 = add i8 %49, %48
+    br i1 %51, label %for.cond21.for.cond.cleanup25_crit_edge, label %for.body31.preheader
+
+  for.body31.preheader:                             ; preds = %middle.block, %for.body31.lr.ph
+    %indvars.iv.ph = phi i64 [ %6, %for.body31.lr.ph ], [ %ind.end, %middle.block ]
+    %conv36121128.ph = phi i16 [ %conv36.lcssa132140, %for.body31.lr.ph ], [ %bin.rdx, %middle.block ]
+    %and122127.ph = phi i16 [ %and.lcssa135139, %for.body31.lr.ph ], [ %bin.rdx164, %middle.block ]
+    %conv81118.lcssa124126.ph = phi i8 [ %conv81118.lcssa.lcssa137138, %for.body31.lr.ph ], [ %bin.rdx165, %middle.block ]
+    %52 = shl i64 %indvars.iv.ph, 2
+    %53 = shl i64 %indvars.iv.ph, 3
+    %scevgep = getelementptr i8, ptr getelementptr ([8 x [8 x i64]], ptr @longArray, i64 -1, i64 7, i64 4), i64 %53
+    %scevgep32 = getelementptr i8, ptr getelementptr inbounds ([8 x [8 x [8 x i32]]], ptr @intArray, i64 0, i64 0, i64 2, i64 4), i64 %52
+    %smax33 = call i64 @llvm.smax.i64(i64 %indvars.iv.ph, i64 4)
+    %54 = add i64 %smax33, 3
+    %55 = sub i64 %54, %indvars.iv.ph
+    %56 = lshr i64 %55, 2
+    %57 = add nuw nsw i64 %56, 1
+    call void @llvm.set.loop.iterations.i64(i64 %57)
+    br label %for.body31
+
+  for.cond21.for.cond.cleanup25_crit_edge:          ; preds = %for.body31, %middle.block
+    %conv36.lcssa = phi i16 [ %bin.rdx, %middle.block ], [ %conv36, %for.body31 ]
+    %and.lcssa = phi i16 [ %bin.rdx164, %middle.block ], [ %and, %for.body31 ]
+    %.lcssa = phi i8 [ %bin.rdx165, %middle.block ], [ %67, %for.body31 ]
+    %58 = trunc i16 %1 to i8
+    store i16 %conv36.lcssa, ptr @computedResultShort, align 2, !tbaa !3
+    store i8 %58, ptr getelementptr inbounds ([8 x [8 x [8 x i8]]], ptr @charArray, i64 0, i64 2, i64 0, i64 3), align 1, !tbaa !11
+    store i16 %and.lcssa, ptr @resultArray, align 2, !tbaa !3
+    store i8 %frombool, ptr @computedResultBool, align 1, !tbaa !16
+    store i8 %.lcssa, ptr @computedResultChar, align 1, !tbaa !11
+    br label %for.cond.cleanup25
+
+  for.cond.cleanup25:                               ; preds = %for.cond21.for.cond.cleanup25_crit_edge, %for.body16
+    %conv81118.lcssa.lcssa136 = phi i8 [ %.lcssa, %for.cond21.for.cond.cleanup25_crit_edge ], [ %conv81118.lcssa.lcssa137138, %for.body16 ]
+    %and.lcssa134 = phi i16 [ %and.lcssa, %for.cond21.for.cond.cleanup25_crit_edge ], [ %and.lcssa135139, %for.body16 ]
+    %conv36.lcssa131 = phi i16 [ %conv36.lcssa, %for.cond21.for.cond.cleanup25_crit_edge ], [ %conv36.lcssa132140, %for.body16 ]
+    %lsr.iv.next = add nsw i32 %lsr.iv29, -1
+    %exitcond.not = icmp eq i32 %lsr.iv.next, 0
+    br i1 %exitcond.not, label %for.cond.cleanup15, label %for.body16, !llvm.loop !18
+
+  for.body31:                                       ; preds = %for.body31, %for.body31.preheader
+    %conv36121128 = phi i16 [ %conv36, %for.body31 ], [ %conv36121128.ph, %for.body31.preheader ]
+    %and122127 = phi i16 [ %and, %for.body31 ], [ %and122127.ph, %for.body31.preheader ]
+    %conv81118.lcssa124126 = phi i8 [ %67, %for.body31 ], [ %conv81118.lcssa124126.ph, %for.body31.preheader ]
+    %59 = phi ptr [ %scevgep, %for.body31.preheader ], [ %62, %for.body31 ]
+    %60 = phi ptr [ %scevgep32, %for.body31.preheader ], [ %61, %for.body31 ]
+    %61 = getelementptr i8, ptr %60, i64 16
+    %62 = getelementptr i8, ptr %59, i64 32
+    %63 = trunc i32 %4 to i16
+    %64 = load i64, ptr %62, align 8, !tbaa !7
+    %conv61 = trunc i64 %64 to i16
+    %65 = load i32, ptr %61, align 4, !tbaa !9
+    %66 = trunc i32 %65 to i8
+    %.neg = mul i8 %66, -6
+    %conv36 = sub i16 %conv36121128, %63
+    %and = and i16 %and122127, %conv61
+    %67 = add i8 %.neg, %conv81118.lcssa124126
+    %68 = call i1 @llvm.loop.decrement.i64(i64 1)
+    br i1 %68, label %for.body31, label %for.cond21.for.cond.cleanup25_crit_edge, !llvm.loop !19
+  }
+
+  ; Function Attrs: nofree nounwind
+  declare noundef signext i32 @printf(ptr nocapture noundef readonly, ...) local_unnamed_addr #0
+
+  ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+  declare i32 @llvm.smin.i32(i32, i32) #1
+
+  ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+  declare i16 @llvm.smin.i16(i16, i16) #1
+
+  ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+  declare i64 @llvm.smax.i64(i64, i64) #1
+
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare void @llvm.set.loop.iterations.i64(i64) #2
+
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare i1 @llvm.loop.decrement.i64(i64) #2
+
+  attributes #0 = { nofree nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pwr7" "target-features"="+altivec,+bpermd,+extdiv,+isa-v206-instructions,+vsx,-aix-small-local-exec-tls,-crbits,-crypto,-direct-move,-htm,-isa-v207-instructions,-isa-v30-instructions,-power8-vector,-power9-vector,-privileged,-quadword-atomics,-rop-protect,-spe" }
+  attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+  attributes #2 = { nocallback noduplicate nofree nosync nounwind willreturn }
+
+  !llvm.module.flags = !{!0, !1}
+  !llvm.ident = !{!2}
+
+  !0 = !{i32 1, !"wchar_size", i32 4}
+  !1 = !{i32 8, !"PIC Level", i32 2}
+  !2 = !{!"IBM Open XL C/C++ for AIX 17.1.3 (5725-C72, 5765-J18), version 17.1.3.0, clang version 19.0.0git"}
+  !3 = !{!4, !4, i64 0}
+  !4 = !{!"short", !5, i64 0}
+  !5 = !{!"omnipotent char", !6, i64 0}
+  !6 = !{!"Simple C/C++ TBAA"}
+  !7 = !{!8, !8, i64 0}
+  !8 = !{!"long long", !5, i64 0}
+  !9 = !{!10, !10, i64 0}
+  !10 = !{!"int", !5, i64 0}
+  !11 = !{!5, !5, i64 0}
+  !12 = distinct !{!12, !13, !14, !15}
+  !13 = !{!"llvm.loop.mustprogress"}
+  !14 = !{!"llvm.loop.isvectorized", i32 1}
+  !15 = !{!"llvm.loop.unroll.runtime.disable"}
+  !16 = !{!17, !17, i64 0}
+  !17 = !{!"_Bool", !5, i64 0}
+  !18 = distinct !{!18, !13}
+  !19 = distinct !{!19, !13, !14}
+
+...
+---
+name:            main
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+isOutlined:      false
+debugInstrRef:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: gprc, preferred-register: '' }
+  - { id: 1, class: gprc, preferred-register: '' }
+  - { id: 2, class: gprc, preferred-register: '' }
+  - { id: 3, class: gprc, preferred-register: '' }
+  - { id: 4, class: gprc, preferred-register: '' }
+  - { id: 5, class: gprc, preferred-register: '' }
+  - { id: 6, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 7, class: gprc, preferred-register: '' }
+  - { id: 8, class: gprc, preferred-register: '' }
+  - { id: 9, class: gprc, preferred-register: '' }
+  - { id: 10, class: g8rc, preferred-register: '' }
+  - { id: 11, class: g8rc, preferred-register: '' }
+  - { id: 12, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 13, class: g8rc, preferred-register: '' }
+  - { id: 14, class: g8rc, preferred-register: '' }
+  - { id: 15, class: g8rc, preferred-register: '' }
+  - { id: 16, class: g8rc, preferred-register: '' }
+  - { id: 17, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 18, class: gprc, preferred-register: '' }
+  - { id: 19, class: gprc, preferred-register: '' }
+  - { id: 20, class: gprc, preferred-register: '' }
+  - { id: 21, class: gprc, preferred-register: '' }
+  - { id: 22, class: gprc, preferred-register: '' }
+  - { id: 23, class: gprc, preferred-register: '' }
+  - { id: 24, class: gprc, preferred-register: '' }
+  - { id: 25, class: gprc, preferred-register: '' }
+  - { id: 26, class: gprc, preferred-register: '' }
+  - { id: 27, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 28, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 29, class: g8rc, preferred-register: '' }
+  - { id: 30, class: g8rc, preferred-register: '' }
+  - { id: 31, class: gprc, preferred-register: '' }
+  - { id: 32, class: gprc, preferred-register: '' }
+  - { id: 33, class: gprc, preferred-register: '' }
+  - { id: 34, class: gprc, preferred-register: '' }
+  - { id: 35, class: gprc, preferred-register: '' }
+  - { id: 36, class: gprc, preferred-register: '' }
+  - { id: 37, class: gprc, preferred-register: '' }
+  - { id: 38, class: gprc, preferred-register: '' }
+  - { id: 39, class: gprc, preferred-register: '' }
+  - { id: 40, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 41, class: gprc, preferred-register: '' }
+  - { id: 42, class: gprc, preferred-register: '' }
+  - { id: 43, class: gprc, preferred-register: '' }
+  - { id: 44, class: g8rc, preferred-register: '' }
+  - { id: 45, class: g8rc, preferred-register: '' }
+  - { id: 46, class: gprc, preferred-register: '' }
+  - { id: 47, class: gprc, preferred-register: '' }
+  - { id: 48, class: gprc, preferred-register: '' }
+  - { id: 49, class: gprc, preferred-register: '' }
+  - { id: 50, class: gprc, preferred-register: '' }
+  - { id: 51, class: gprc, preferred-register: '' }
+  - { id: 52, class: gprc, preferred-register: '' }
+  - { id: 53, class: gprc, preferred-register: '' }
+  - { id: 54, class: gprc, preferred-register: '' }
+  - { id: 55, class: gprc, preferred-register: '' }
+  - { id: 56, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 57, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 58, class: g8rc, preferred-register: '' }
+  - { id: 59, class: g8rc, preferred-register: '' }
+  - { id: 60, class: gprc, preferred-register: '' }
+  - { id: 61, class: gprc, preferred-register: '' }
+  - { id: 62, class: gprc, preferred-register: '' }
+  - { id: 63, class: gprc, preferred-register: '' }
+  - { id: 64, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 65, class: g8rc, preferred-register: '' }
+  - { id: 66, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 67, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 68, class: gprc, preferred-register: '' }
+  - { id: 69, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 70, class: g8rc, preferred-register: '' }
+  - { id: 71, class: g8rc, preferred-register: '' }
+  - { id: 72, class: g8rc, preferred-register: '' }
+  - { id: 73, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 74, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 75, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 76, class: gprc, preferred-register: '' }
+  - { id: 77, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 78, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 79, class: gprc, preferred-register: '' }
+  - { id: 80, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 81, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 82, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 83, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 84, class: g8rc, preferred-register: '' }
+  - { id: 85, class: g8rc, preferred-register: '' }
+  - { id: 86, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 87, class: crrc, preferred-register: '' }
+  - { id: 88, class: gprc, preferred-register: '' }
+  - { id: 89, class: crrc, preferred-register: '' }
+  - { id: 90, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 91, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 92, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 93, class: g8rc, preferred-register: '' }
+  - { id: 94, class: crrc, preferred-register: '' }
+  - { id: 95, class: gprc, preferred-register: '' }
+  - { id: 96, class: gprc, preferred-register: '' }
+  - { id: 97, class: crrc, preferred-register: '' }
+  - { id: 98, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 99, class: g8rc, preferred-register: '' }
+  - { id: 100, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 101, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 102, class: g8rc, preferred-register: '' }
+  - { id: 103, class: g8rc, preferred-register: '' }
+  - { id: 104, class: g8rc, preferred-register: '' }
+  - { id: 105, class: g8rc, preferred-register: '' }
+  - { id: 106, class: g8rc, preferred-register: '' }
+  - { id: 107, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 108, class: g8rc, preferred-register: '' }
+  - { id: 109, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 110, class: g8rc, preferred-register: '' }
+  - { id: 111, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 112, class: crrc, preferred-register: '' }
+  - { id: 113, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 114, class: crrc, preferred-register: '' }
+  - { id: 115, class: gprc, preferred-register: '' }
+  - { id: 116, class: gprc, preferred-register: '' }
+  - { id: 117, class: gprc, preferred-register: '' }
+  - { id: 118, class: gprc, preferred-register: '' }
+  - { id: 119, class: gprc, preferred-register: '' }
+  - { id: 120, class: gprc, preferred-register: '' }
+  - { id: 121, class: gprc, preferred-register: '' }
+  - { id: 122, class: gprc, preferred-register: '' }
+  - { id: 123, class: gprc, preferred-register: '' }
+  - { id: 124, class: gprc, preferred-register: '' }
+  - { id: 125, class: crbitrc, preferred-register: '' }
+  - { id: 126, class: crrc, preferred-register: '' }
+  - { id: 127, class: g8rc, preferred-register: '' }
+  - { id: 128, class: g8rc, preferred-register: '' }
+  - { id: 129, class: g8rc, preferred-register: '' }
+  - { id: 130, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 131, class: g8rc, preferred-register: '' }
+  - { id: 132, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 133, class: crrc, preferred-register: '' }
+  - { id: 134, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 135, class: g8rc, preferred-register: '' }
+  - { id: 136, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 137, class: g8rc, preferred-register: '' }
+  - { id: 138, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 139, class: g8rc, preferred-register: '' }
+  - { id: 140, class: gprc, preferred-register: '' }
+  - { id: 141, class: gprc, preferred-register: '' }
+  - { id: 142, class: gprc, preferred-register: '' }
+  - { id: 143, class: crbitrc, preferred-register: '' }
+  - { id: 144, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 145, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 146, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 147, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 148, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 149, class: crrc, preferred-register: '' }
+  - { id: 150, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 151, class: gprc_and_gprc_nor0, preferred-register: '' }
+  - { id: 152, class: crrc, preferred-register: '' }
+  - { id: 153, class: gprc, preferred-register: '' }
+  - { id: 154, class: g8rc, preferred-register: '' }
+  - { id: 155, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 156, class: g8rc, preferred-register: '' }
+  - { id: 157, class: g8rc, preferred-register: '' }
+  - { id: 158, class: g8rc, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+entry_values:    []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x80000000)
+  
+    %64:g8rc_and_g8rc_nox0 = LDtoc @shortArray, $x2 :: (load (s64) from got)
+    %65:g8rc = LI8 -1
+    STH8 killed %65, 6, %64 :: (store (s16) into `ptr getelementptr inbounds ([8 x i16], ptr @shortArray, i64 0, i64 3)`, !tbaa !3)
+    %66:g8rc_and_g8rc_nox0 = LDtoc @largeNumber, $x2 :: (load (s64) from got)
+    %67:gprc_and_gprc_nor0 = LHA 6, killed %66 :: (dereferenceable load (s16) from @largeNumber + 6, basealign 8, !tbaa !7)
+    %68:gprc = ADDI killed %67, -1705
+    ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
+    %69:g8rc_and_g8rc_nox0 = LDtoc @_MergedGlobals, $x2 :: (load (s64) from got)
+    %70:g8rc = nuw ADDI8 killed %69, 29
+    %71:g8rc = EXTSW_32_64 killed %68
+    $x3 = COPY %70
+    $x4 = COPY %71
+    BL8_NOP <mcsymbol .printf>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x2, implicit-def $r1, implicit-def $x3
+    ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
+    %73:g8rc_and_g8rc_nox0 = LDtoc @globalShortValue, $x2 :: (load (s64) from got)
+    %0:gprc = LHZ 0, killed %73 :: (dereferenceable load (s16) from @globalShortValue, !tbaa !3)
+    %74:g8rc_and_g8rc_nox0 = LDtoc @someIntValue, $x2 :: (load (s64) from got)
+    %75:gprc_and_gprc_nor0 = LBZ 3, killed %74 :: (dereferenceable load (s8) from @someIntValue + 3, basealign 4, !tbaa !9)
+    %76:gprc = ADDI killed %75, -19
+    %1:gprc = EXTSB %76
+    %77:g8rc_and_g8rc_nox0 = LDtoc @unitIncrement, $x2 :: (load (s64) from got)
+    %2:gprc = LWZ 0, killed %77 :: (dereferenceable load (s32) from @unitIncrement)
+    %78:g8rc_and_g8rc_nox0 = LDtoc @globalCharValue, $x2 :: (load (s64) from got)
+    %79:gprc = LBZ 0, killed %78 :: (dereferenceable load (s8) from @globalCharValue)
+    %80:gprc_and_gprc_nor0 = EXTSB killed %79
+    %81:g8rc_and_g8rc_nox0 = LDtoc @computedResultShort, $x2 :: (load (s64) from got)
+    %3:gprc = LHZ 0, %81 :: (dereferenceable load (s16) from @computedResultShort, !tbaa !3)
+    %82:g8rc_and_g8rc_nox0 = LDtoc @resultArray, $x2 :: (load (s64) from got)
+    %4:gprc = LHZ 0, %82 :: (dereferenceable load (s16) from @resultArray, !tbaa !3)
+    %83:g8rc_and_g8rc_nox0 = LDtoc @computedResultChar, $x2 :: (load (s64) from got)
+    %5:gprc = LBZ 0, %83 :: (dereferenceable load (s8) from @computedResultChar, !tbaa !11)
+    %85:g8rc = IMPLICIT_DEF
+    %84:g8rc = INSERT_SUBREG %85, %76, %subreg.sub_32
+    %6:g8rc_and_g8rc_nox0 = EXTSB8 killed %84
+    %7:gprc = LHZ 6, %64 :: (dereferenceable load (s16) from `ptr getelementptr inbounds ([8 x i16], ptr @shortArray, i64 0, i64 3)`, !tbaa !3)
+    %86:gprc_and_gprc_nor0 = LHA 4, %64 :: (dereferenceable load (s16) from `ptr getelementptr inbounds ([8 x i16], ptr @shortArray, i64 0, i64 2)`)
+    ; CHECK:  [[VIRREG1:%[0-9]+]]:gprc_and_gprc_nor0 = LHA 6, %64 :: (dereferenceable load (s16) from `ptr getelementptr inbounds ([8 x i16], ptr @shortArray, i64 0, i64 3)`, !tbaa !3) 
+    %87:crrc = CMPW %80, %86
+    %88:gprc = ISEL %80, %86, %87.sub_lt
+    %89:crrc = CMPLWI killed %88, 0
+    %91:gprc_and_gprc_nor0 = LI 1
+    %8:gprc = ISEL $zero, %91, %89.sub_eq
+    %92:g8rc_and_g8rc_nox0 = LDtoc @ullArray, $x2 :: (load (s64) from got)
+    %93:g8rc = LD 24, killed %92 :: (dereferenceable load (s64) from `ptr getelementptr inbounds ([8 x i64], ptr @ullArray, i64 0, i64 3)`)
+    %94:crrc = CMPLDI killed %93, 0
+    $cr7 = COPY %94
+    %95:gprc = MFOCRF $cr7
+    %96:gprc = RLWINM killed %95, 31, 31, 31
+    %9:gprc = XORI killed %96, 1
+    %97:crrc = CMPDI %6, 4
+    %98:g8rc_and_g8rc_nox0 = LI8 4
+    %99:g8rc = ISEL8 %6, %98, %97.sub_gt
+    %100:g8rc_and_g8rc_nox0 = SUBF8 %6, killed %99
+    %10:g8rc = ADDI8 killed %100, 3
+    %101:g8rc_and_g8rc_nox0 = RLDICL %10, 62, 2
+    %11:g8rc = nuw nsw ADDI8 killed %101, 1
+    %102:g8rc = RLDICL %11, 63, 1
+    %12:g8rc_and_g8rc_nox0 = RLDICL killed %102, 1, 1
+    %103:g8rc = RLDICR %11, 2, 60
+    %13:g8rc = ADD8 killed %103, %6
+    %104:g8rc = RLDICR %6, 2, 61
+    %105:g8rc = RLDICR %6, 3, 60
+    %106:g8rc = LDtoc @longArray, $x2 :: (load (s64) from got)
+    %107:g8rc_and_g8rc_nox0 = ADD8 killed %105, %106
+    %14:g8rc = ADDI8 killed %107, -64
+    %108:g8rc = LDtoc @intArray, $x2 :: (load (s64) from got)
+    %109:g8rc_and_g8rc_nox0 = ADD8 killed %104, %108
+    %15:g8rc = ADDI8 killed %109, 64
+    %110:g8rc = nsw ADDI8 %12, -2
+    %111:g8rc_and_g8rc_nox0 = RLDICL %110, 63, 1
+    %16:g8rc = nuw ADDI8 killed %111, 1
+    %63:gprc = LI 8
+    %112:crrc = CMPWI %1, 7
+    %113:g8rc_and_g8rc_nox0 = LDtoc @computedResultUChar, $x2 :: (load (s64) from got)
+    %114:crrc = CMPLDI %10, 4
+    %118:gprc = LIS 0
+    %116:gprc = ORI %118, 65535
+    %126:crrc = CMPLD %11, %12
+    B %bb.2
+  
+  bb.1.for.cond.cleanup15:
+    %150:gprc_and_gprc_nor0 = EXTSH %7
+    %151:gprc_and_gprc_nor0 = EXTSH %0
+
+    ; CHECK:      [[VIRREG2:%[0-9]+]]:gprc_and_gprc_nor0 = EXTSH killed %0 
+    %152:crrc = CMPW %151, %150
+    %153:gprc = ISEL %151, %150, %152.sub_lt
+    %154:g8rc = EXTSW_32_64 killed %153
+    ; CHECK-NEXT: [[VIRREG3:%[0-9]+]]:crrc = CMPW [[VIRREG2]], [[VIRREG1]]
+    ; CHECK-NEXT: %153:gprc = ISEL killed [[VIRREG2]], killed [[VIRREG1]], killed [[VIRREG3]].sub_lt
+    ; CHECK-NOT: EXTSW_32_64
+    %155:g8rc_and_g8rc_nox0 = LDtoc @computedResultUll, $x2 :: (load (s64) from got)
+    STD %154, 0, killed %155 :: (store (s64) into @computedResultUll, !tbaa !7)
+    ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
+    %156:g8rc = LDtoc @_MergedGlobals, $x2 :: (load (s64) from got)
+    $x3 = COPY %156
+    $x4 = COPY %154
+    BL8_NOP <mcsymbol .printf>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x2, implicit-def $r1, implicit-def $x3
+    ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
+    %158:g8rc = LI8 0
+    $x3 = COPY %158
+    BLR8 implicit $lr8, implicit $rm, implicit $x3
+  
+  bb.2.for.body16:
+    successors: %bb.3(0x40000000), %bb.9(0x40000000)
+  
+    %17:gprc_and_gprc_nor0 = PHI %63, %bb.0, %52, %bb.9
+    %18:gprc = PHI %3, %bb.0, %51, %bb.9
+    %19:gprc = PHI %4, %bb.0, %50, %bb.9
+    %20:gprc = PHI %5, %bb.0, %49, %bb.9
+    BCC 44, %112, %bb.9
+    B %bb.3
+  
+  bb.3.for.body31.lr.ph:
+    successors: %bb.7(0x40000000), %bb.4(0x40000000)
+  
+    STB %8, 0, %113 :: (store (s8) into @computedResultUChar, !tbaa !11)
+    BCC 12, %114, %bb.7
+    B %bb.4
+  
+  bb.4.vector.body.preheader:
+    successors: %bb.5(0x80000000)
+  
+    MTCTR8loop %16, implicit-def dead $ctr8
+    %117:gprc = LI 0
+    %115:gprc = COPY %117
+  
+  bb.5.vector.body:
+    successors: %bb.5(0x7c000000), %bb.6(0x04000000)
+  
+    %21:gprc = PHI %18, %bb.4, %31, %bb.5
+    %22:gprc = PHI %115, %bb.4, %32, %bb.5
+    %23:gprc = PHI %19, %bb.4, %33, %bb.5
+    %24:gprc = PHI %116, %bb.4, %34, %bb.5
+    %25:gprc = PHI %20, %bb.4, %35, %bb.5
+    %26:gprc = PHI %117, %bb.4, %36, %bb.5
+    %27:g8rc_and_g8rc_nox0 = PHI %14, %bb.4, %30, %bb.5
+    %28:g8rc_and_g8rc_nox0 = PHI %15, %bb.4, %29, %bb.5
+    %29:g8rc = ADDI8 %28, 32
+    %30:g8rc = ADDI8 %27, 64
+    %119:gprc = LHZ 70, %27 :: (load (s16) from %ir.31 + 6, basealign 8, !tbaa !7)
+    %120:gprc = LHZ 102, %27 :: (load (s16) from %ir.32 + 6, basealign 8, !tbaa !7)
+    %121:gprc = LBZ 35, %28 :: (load (s8) from %ir.29 + 3, basealign 4, !tbaa !9)
+    %122:gprc = LBZ 51, %28 :: (load (s8) from %ir.30 + 3, basealign 4, !tbaa !9)
+    %123:gprc = MULLI killed %121, -6
+    %124:gprc = MULLI killed %122, -6
+    %31:gprc = SUBF %2, %21
+    %32:gprc = SUBF %2, %22
+    %33:gprc = AND %23, killed %119
+    %34:gprc = AND %24, killed %120
+    %35:gprc = ADD4 killed %123, %25
+    %36:gprc = ADD4 killed %124, %26
+    BDNZ8 %bb.5, implicit-def $ctr8, implicit $ctr8
+    B %bb.6
+  
+  bb.6.middle.block:
+    successors: %bb.8(0x40000000), %bb.7(0x40000000)
+  
+    %37:gprc = ADD4 %32, %31
+    %38:gprc = AND %34, %33
+    %39:gprc = ADD4 %36, %35
+    BCC 76, %126, %bb.8
+    B %bb.7
+  
+  bb.7.for.body31.preheader:
+    successors: %bb.10(0x80000000)
+  
+    %40:g8rc_and_g8rc_nox0 = PHI %6, %bb.3, %13, %bb.6
+    %41:gprc = PHI %18, %bb.3, %37, %bb.6
+    %42:gprc = PHI %19, %bb.3, %38, %bb.6
+    %43:gprc = PHI %20, %bb.3, %39, %bb.6
+    %127:g8rc = RLDICR %40, 2, 61
+    %128:g8rc = RLDICR %40, 3, 60
+    %130:g8rc_and_g8rc_nox0 = ADD8 %106, killed %128
+    %44:g8rc = ADDI8 killed %130, -32
+    %132:g8rc_and_g8rc_nox0 = ADD8 %108, killed %127
+    %45:g8rc = ADDI8 killed %132, 80
+    %133:crrc = CMPDI %40, 4
+    %135:g8rc = ISEL8 %40, %98, %133.sub_gt
+    %136:g8rc_and_g8rc_nox0 = SUBF8 %40, killed %135
+    %137:g8rc = ADDI8 killed %136, 3
+    %138:g8rc_and_g8rc_nox0 = RLDICL %137, 62, 2
+    %139:g8rc = nuw nsw ADDI8 killed %138, 1
+    MTCTR8loop killed %139, implicit-def dead $ctr8
+    B %bb.10
+  
+  bb.8.for.cond21.for.cond.cleanup25_crit_edge:
+    successors: %bb.9(0x80000000)
+  
+    %46:gprc = PHI %37, %bb.6, %60, %bb.10
+    %47:gprc = PHI %38, %bb.6, %61, %bb.10
+    %48:gprc = PHI %39, %bb.6, %62, %bb.10
+    STH %46, 0, %81 :: (store (s16) into @computedResultShort, !tbaa !3)
+    %145:g8rc_and_g8rc_nox0 = LDtoc @charArray, $x2 :: (load (s64) from got)
+    STB %0, 131, killed %145 :: (store (s8) into `ptr getelementptr inbounds ([8 x [8 x [8 x i8]]], ptr @charArray, i64 0, i64 2, i64 0, i64 3)`, !tbaa !11)
+    STH %47, 0, %82 :: (store (s16) into @resultArray, !tbaa !3)
+    %147:g8rc_and_g8rc_nox0 = LDtoc @computedResultBool, $x2 :: (load (s64) from got)
+    STB %9, 0, killed %147 :: (store (s8) into @computedResultBool, !tbaa !16)
+    STB %48, 0, %83 :: (store (s8) into @computedResultChar, !tbaa !11)
+  
+  bb.9.for.cond.cleanup25:
+    successors: %bb.1(0x04000000), %bb.2(0x7c000000)
+  
+    %49:gprc = PHI %20, %bb.2, %48, %bb.8
+    %50:gprc = PHI %19, %bb.2, %47, %bb.8
+    %51:gprc = PHI %18, %bb.2, %46, %bb.8
+    %52:gprc = nsw ADDI %17, -1
+    %149:crrc = CMPLWI %52, 0
+    BCC 76, killed %149, %bb.1
+    B %bb.2
+  
+  bb.10.for.body31:
+    successors: %bb.10(0x7c000000), %bb.8(0x04000000)
+  
+    %53:gprc = PHI %41, %bb.7, %60, %bb.10
+    %54:gprc = PHI %42, %bb.7, %61, %bb.10
+    %55:gprc = PHI %43, %bb.7, %62, %bb.10
+    %56:g8rc_and_g8rc_nox0 = PHI %44, %bb.7, %59, %bb.10
+    %57:g8rc_and_g8rc_nox0 = PHI %45, %bb.7, %58, %bb.10
+    %58:g8rc = ADDI8 %57, 16
+    %59:g8rc = ADDI8 %56, 32
+    %140:gprc = LHZ 38, %56 :: (load (s16) from %ir.62 + 6, basealign 8, !tbaa !7)
+    %141:gprc = LBZ 19, %57 :: (load (s8) from %ir.61 + 3, basealign 4, !tbaa !9)
+    %142:gprc = MULLI killed %141, -6
+    %60:gprc = SUBF %2, %53
+    %61:gprc = AND %54, killed %140
+    %62:gprc = ADD4 killed %142, %55
+    BDNZ8 %bb.10, implicit-def $ctr8, implicit $ctr8
+    B %bb.8
+
+...
+
+
