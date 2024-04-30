@@ -697,8 +697,8 @@ InstallAPIContext Options::createContext() {
     }
     Expected<AliasMap> Result = parseAliasList(Buffer.get());
     if (!Result) {
-      Diags->Report(diag::err_cannot_read_alias_list)
-          << ListPath << toString(Result.takeError());
+      Diags->Report(diag::err_cannot_read_input_list)
+          << /*IsFileList=*/false << ListPath << toString(Result.takeError());
       return Ctx;
     }
     Aliases.insert(Result.get().begin(), Result.get().end());
@@ -717,8 +717,9 @@ InstallAPIContext Options::createContext() {
       return Ctx;
     }
     if (auto Err = FileListReader::loadHeaders(std::move(Buffer.get()),
-                                               Ctx.InputHeaders)) {
-      Diags->Report(diag::err_cannot_open_file) << ListPath << std::move(Err);
+                                               Ctx.InputHeaders, FM)) {
+      Diags->Report(diag::err_cannot_read_input_list)
+          << /*IsFileList=*/true << ListPath << std::move(Err);
       return Ctx;
     }
   }
