@@ -580,6 +580,22 @@ def VOP3_CVT_SR_F8_F32_Profile : VOP3_Profile<VOPProfile<[i32, f32, i32, f32]>,
                                           HasSrc2FloatMods>.ret>.ret);
 }
 
+class VOP3_CVT_SR_F8_ByteSel_Profile<ValueType SrcVT> :
+  VOP3_Profile<VOPProfile<[i32, SrcVT, i32, untyped]>> {
+  let IsFP8DstByteSel = 1;
+  let HasClamp = 0;
+  defvar bytesel = (ins VGPR_32:$vdst_in, ByteSel:$byte_sel);
+  let Ins64 = !con(getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
+                            HasClamp, HasModifiers, HasSrc2Mods,
+                            HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret,
+                   bytesel);
+  let InsVOP3Base = !con(
+    getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP,
+                   Src2VOP3DPP, NumSrcArgs, HasClamp, HasModifiers, HasSrc2Mods, HasOMod,
+                   Src0ModVOP3DPP, Src1ModVOP3DPP, Src2ModVOP3DPP, HasOpSel>.ret,
+    bytesel);
+}
+
 def IsPow2Plus1: PatLeaf<(i32 imm), [{
   uint32_t V = N->getZExtValue();
   return isPowerOf2_32(V - 1);
@@ -645,12 +661,17 @@ let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
   let Constraints = "$vdst = $vdst_in", DisableEncoding = "$vdst_in" in {
     defm V_CVT_PK_FP8_F32 : VOP3Inst<"v_cvt_pk_fp8_f32", VOP3_CVT_PK_F8_F32_Profile>;
     defm V_CVT_PK_BF8_F32 : VOP3Inst<"v_cvt_pk_bf8_f32", VOP3_CVT_PK_F8_F32_Profile>;
+
+    let SubtargetPredicate = isGFX12Plus in {
+      defm V_CVT_SR_FP8_F32_gfx12 : VOP3Inst<"v_cvt_sr_fp8_f32_gfx12", VOP3_CVT_SR_F8_ByteSel_Profile<f32>>;
+      defm V_CVT_SR_BF8_F32_gfx12 : VOP3Inst<"v_cvt_sr_bf8_f32_gfx12", VOP3_CVT_SR_F8_ByteSel_Profile<f32>>;
+    }
   }
 
   // These instructions have non-standard use of op_sel. In particular they are
   // using op_sel bits 2 and 3 while only having two sources. Therefore dummy
   // src2 is used to hold the op_sel value.
-  let Constraints = "$vdst = $src2", DisableEncoding = "$src2" in {
+  let Constraints = "$vdst = $src2", DisableEncoding = "$src2", SubtargetPredicate = isGFX940Plus in {
     defm V_CVT_SR_FP8_F32 : VOP3Inst<"v_cvt_sr_fp8_f32", VOP3_CVT_SR_F8_F32_Profile>;
     defm V_CVT_SR_BF8_F32 : VOP3Inst<"v_cvt_sr_bf8_f32", VOP3_CVT_SR_F8_F32_Profile>;
   }
@@ -667,15 +688,28 @@ class Cvt_SR_F8_F32_Pat<SDPatternOperator node, bits<2> index, VOP3_Pseudo inst>
           !if(index{0}, SRCMODS.OP_SEL_0, 0), $old, 0)
 >;
 
+class Cvt_SR_F8_ByteSel_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType SrcVT> : GCNPat<
+    (i32 (node (VOP3Mods SrcVT:$src0, i32:$src0_modifiers), (VOP3Mods i32:$src1, i32:$src1_modifiers),
+          i32:$old, timm:$byte_sel)),
+    (inst $src0_modifiers, $src0, $src1_modifiers, $src1, $old, (as_i32timm $byte_sel))
+>;
+
 let OtherPredicates = [HasFP8ConversionInsts] in {
 foreach Index = [0, -1] in {
   def : Cvt_PK_F8_F32_Pat<int_amdgcn_cvt_pk_fp8_f32, Index, V_CVT_PK_FP8_F32_e64>;
   def : Cvt_PK_F8_F32_Pat<int_amdgcn_cvt_pk_bf8_f32, Index, V_CVT_PK_BF8_F32_e64>;
 }
 
-foreach Index = [0, 1, 2, 3] in {
-  def : Cvt_SR_F8_F32_Pat<int_amdgcn_cvt_sr_fp8_f32, Index, V_CVT_SR_FP8_F32_e64>;
-  def : Cvt_SR_F8_F32_Pat<int_amdgcn_cvt_sr_bf8_f32, Index, V_CVT_SR_BF8_F32_e64>;
+let SubtargetPredicate = isGFX940Plus in {
+  foreach Index = [0, 1, 2, 3] in {
+    def : Cvt_SR_F8_F32_Pat<int_amdgcn_cvt_sr_fp8_f32, Index, V_CVT_SR_FP8_F32_e64>;
+    def : Cvt_SR_F8_F32_Pat<int_amdgcn_cvt_sr_bf8_f32, Index, V_CVT_SR_BF8_F32_e64>;
+  }
+}
+
+let SubtargetPredicate = isGFX12Plus in {
+  def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_fp8_f32, V_CVT_SR_FP8_F32_gfx12_e64, f32>;
+  def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_bf8_f32, V_CVT_SR_BF8_F32_gfx12_e64, f32>;
 }
 }
 
@@ -1040,8 +1074,8 @@ defm V_PERMLANEX16_VAR_B32 : VOP3Only_Real_Base_gfx12<0x310>;
 
 defm V_CVT_PK_FP8_F32  : VOP3Only_Realtriple_gfx12<0x369>;
 defm V_CVT_PK_BF8_F32  : VOP3Only_Realtriple_gfx12<0x36a>;
-defm V_CVT_SR_FP8_F32  : VOP3Only_Realtriple_gfx12<0x36b>;
-defm V_CVT_SR_BF8_F32  : VOP3Only_Realtriple_gfx12<0x36c>;
+defm V_CVT_SR_FP8_F32_gfx12 : VOP3_Realtriple_with_name_gfx12<0x36b, "V_CVT_SR_FP8_F32_gfx12", "v_cvt_sr_fp8_f32" >;
+defm V_CVT_SR_BF8_F32_gfx12 : VOP3_Realtriple_with_name_gfx12<0x36c, "V_CVT_SR_BF8_F32_gfx12", "v_cvt_sr_bf8_f32">;
 
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12

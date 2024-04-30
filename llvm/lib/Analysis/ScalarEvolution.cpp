@@ -928,11 +928,9 @@ static const SCEV *BinomialCoefficient(const SCEV *It, unsigned K,
   APInt OddFactorial(W, 1);
   unsigned T = 1;
   for (unsigned i = 3; i <= K; ++i) {
-    APInt Mult(W, i);
-    unsigned TwoFactors = Mult.countr_zero();
+    unsigned TwoFactors = countr_zero(i);
     T += TwoFactors;
-    Mult.lshrInPlace(TwoFactors);
-    OddFactorial *= Mult;
+    OddFactorial *= (i >> TwoFactors);
   }
 
   // We need at least W + T bits for the multiplication step
@@ -944,10 +942,7 @@ static const SCEV *BinomialCoefficient(const SCEV *It, unsigned K,
   // Calculate the multiplicative inverse of K! / 2^T;
   // this multiplication factor will perform the exact division by
   // K! / 2^T.
-  APInt Mod = APInt::getSignedMinValue(W+1);
-  APInt MultiplyFactor = OddFactorial.zext(W+1);
-  MultiplyFactor = MultiplyFactor.multiplicativeInverse(Mod);
-  MultiplyFactor = MultiplyFactor.trunc(W);
+  APInt MultiplyFactor = OddFactorial.multiplicativeInverse();
 
   // Calculate the product, at width T+W
   IntegerType *CalculationTy = IntegerType::get(SE.getContext(),
@@ -4244,7 +4239,7 @@ bool ScalarEvolution::canReuseInstruction(
       return false;
 
     // If the instruction can't create poison, we can recurse to its operands.
-    if (I->hasPoisonGeneratingFlagsOrMetadata())
+    if (I->hasPoisonGeneratingAnnotations())
       DropPoisonGeneratingInsts.push_back(I);
 
     for (Value *Op : I->operands())
@@ -6387,9 +6382,16 @@ uint32_t ScalarEvolution::getMinTrailingZeros(const SCEV *S) {
 
 /// Helper method to assign a range to V from metadata present in the IR.
 static std::optional<ConstantRange> GetRangeFromMetadata(Value *V) {
-  if (Instruction *I = dyn_cast<Instruction>(V))
+  if (Instruction *I = dyn_cast<Instruction>(V)) {
     if (MDNode *MD = I->getMetadata(LLVMContext::MD_range))
       return getConstantRangeFromMetadata(*MD);
+    if (const auto *CB = dyn_cast<CallBase>(V))
+      if (std::optional<ConstantRange> Range = CB->getRange())
+        return Range;
+  }
+  if (auto *A = dyn_cast<Argument>(V))
+    if (std::optional<ConstantRange> Range = A->getRange())
+      return Range;
 
   return std::nullopt;
 }
@@ -10086,10 +10088,8 @@ static const SCEV *SolveLinEquationWithOverflow(const APInt &A, const SCEV *B,
   // If D == 1, (N / D) == N == 2^BW, so we need one extra bit to represent
   // (N / D) in general. The inverse itself always fits into BW bits, though,
   // so we immediately truncate it.
-  APInt AD = A.lshr(Mult2).zext(BW + 1);  // AD = A / D
-  APInt Mod(BW + 1, 0);
-  Mod.setBit(BW - Mult2);  // Mod = N / D
-  APInt I = AD.multiplicativeInverse(Mod).trunc(BW);
+  APInt AD = A.lshr(Mult2).trunc(BW - Mult2); // AD = A / D
+  APInt I = AD.multiplicativeInverse().zext(BW);
 
   // 4. Compute the minimum unsigned root of the equation:
   // I * (B / D) mod (N / D)

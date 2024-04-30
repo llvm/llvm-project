@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-extensions=SPV_KHR_linkonce_odr %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV-EXT
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-extensions=SPV_KHR_linkonce_odr %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_linkonce_odr %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV-EXT
+; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_linkonce_odr %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-EXT: Capability Linkage
 ; CHECK-SPIRV-EXT: Extension "SPV_KHR_linkonce_odr"

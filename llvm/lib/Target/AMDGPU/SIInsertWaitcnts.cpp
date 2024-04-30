@@ -187,8 +187,12 @@ VmemType getVmemType(const MachineInstr &Inst) {
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Inst.getOpcode());
   const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
       AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
-  return BaseInfo->BVH ? VMEM_BVH
-                       : BaseInfo->Sampler ? VMEM_SAMPLER : VMEM_NOSAMPLER;
+  // The test for MSAA here is because gfx12+ image_msaa_load is actually
+  // encoded as VSAMPLE and requires the appropriate s_waitcnt variant for that.
+  // Pre-gfx12 doesn't care since all vmem types result in the same s_waitcnt.
+  return BaseInfo->BVH                         ? VMEM_BVH
+         : BaseInfo->Sampler || BaseInfo->MSAA ? VMEM_SAMPLER
+                                               : VMEM_NOSAMPLER;
 }
 
 unsigned &getCounterRef(AMDGPU::Waitcnt &Wait, InstCounterType T) {
@@ -708,9 +712,6 @@ public:
                                  WaitcntBrackets &ScoreBrackets,
                                  MachineInstr *OldWaitcntInstr,
                                  bool FlushVmCnt);
-  bool generateWaitcntBlockEnd(MachineBasicBlock &Block,
-                               WaitcntBrackets &ScoreBrackets,
-                               MachineInstr *OldWaitcntInstr);
   bool generateWaitcnt(AMDGPU::Waitcnt Wait,
                        MachineBasicBlock::instr_iterator It,
                        MachineBasicBlock &Block, WaitcntBrackets &ScoreBrackets,
@@ -1902,31 +1903,6 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
                          OldWaitcntInstr);
 }
 
-// Add a waitcnt to flush the LOADcnt, SAMPLEcnt and BVHcnt counters at the
-// end of the given block if needed.
-bool SIInsertWaitcnts::generateWaitcntBlockEnd(MachineBasicBlock &Block,
-                                               WaitcntBrackets &ScoreBrackets,
-                                               MachineInstr *OldWaitcntInstr) {
-  AMDGPU::Waitcnt Wait;
-
-  unsigned LoadCntPending = ScoreBrackets.hasPendingEvent(LOAD_CNT);
-  unsigned SampleCntPending = ScoreBrackets.hasPendingEvent(SAMPLE_CNT);
-  unsigned BvhCntPending = ScoreBrackets.hasPendingEvent(BVH_CNT);
-
-  if (LoadCntPending == 0 && SampleCntPending == 0 && BvhCntPending == 0)
-    return false;
-
-  if (LoadCntPending != 0)
-    Wait.LoadCnt = 0;
-  if (SampleCntPending != 0)
-    Wait.SampleCnt = 0;
-  if (BvhCntPending != 0)
-    Wait.BvhCnt = 0;
-
-  return generateWaitcnt(Wait, Block.instr_end(), Block, ScoreBrackets,
-                         OldWaitcntInstr);
-}
-
 bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
                                        MachineBasicBlock::instr_iterator It,
                                        MachineBasicBlock &Block,
@@ -2280,12 +2256,12 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     // Don't examine operands unless we need to track vccz correctness.
     if (ST->hasReadVCCZBug() || !ST->partialVCCWritesUpdateVCCZ()) {
-      if (Inst.definesRegister(AMDGPU::VCC_LO) ||
-          Inst.definesRegister(AMDGPU::VCC_HI)) {
+      if (Inst.definesRegister(AMDGPU::VCC_LO, /*TRI=*/nullptr) ||
+          Inst.definesRegister(AMDGPU::VCC_HI, /*TRI=*/nullptr)) {
         // Up to gfx9, writes to vcc_lo and vcc_hi don't update vccz.
         if (!ST->partialVCCWritesUpdateVCCZ())
           VCCZCorrect = false;
-      } else if (Inst.definesRegister(AMDGPU::VCC)) {
+      } else if (Inst.definesRegister(AMDGPU::VCC, /*TRI=*/nullptr)) {
         // There is a hardware bug on CI/SI where SMRD instruction may corrupt
         // vccz bit, so when we detect that an instruction may read from a
         // corrupt vccz bit, we need to:
@@ -2333,6 +2309,14 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     }
 #endif
 
+    if (ST->isPreciseMemoryEnabled() && Inst.mayLoadOrStore()) {
+      AMDGPU::Waitcnt Wait = WCG->getAllZeroWaitcnt(
+          Inst.mayStore() && !SIInstrInfo::isAtomicRet(Inst));
+      ScoreBrackets.simplifyWaitcnt(Wait);
+      Modified |= generateWaitcnt(Wait, std::next(Inst.getIterator()), Block,
+                                  ScoreBrackets, /*OldWaitcntInstr=*/nullptr);
+    }
+
     LLVM_DEBUG({
       Inst.print(dbgs());
       ScoreBrackets.dump();
@@ -2355,9 +2339,22 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     ++Iter;
   }
 
+  // Flush the LOADcnt, SAMPLEcnt and BVHcnt counters at the end of the block if
+  // needed.
+  AMDGPU::Waitcnt Wait;
   if (Block.getFirstTerminator() == Block.end() &&
-      isPreheaderToFlush(Block, ScoreBrackets))
-    Modified |= generateWaitcntBlockEnd(Block, ScoreBrackets, OldWaitcntInstr);
+      isPreheaderToFlush(Block, ScoreBrackets)) {
+    if (ScoreBrackets.hasPendingEvent(LOAD_CNT))
+      Wait.LoadCnt = 0;
+    if (ScoreBrackets.hasPendingEvent(SAMPLE_CNT))
+      Wait.SampleCnt = 0;
+    if (ScoreBrackets.hasPendingEvent(BVH_CNT))
+      Wait.BvhCnt = 0;
+  }
+
+  // Combine or remove any redundant waitcnts at the end of the block.
+  Modified |= generateWaitcnt(Wait, Block.instr_end(), Block, ScoreBrackets,
+                              OldWaitcntInstr);
 
   return Modified;
 }
@@ -2672,10 +2669,11 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   // instructions.
   for (MachineInstr *MI : ReleaseVGPRInsts) {
     if (ST->requiresNopBeforeDeallocVGPRs()) {
-      BuildMI(*MI->getParent(), MI, DebugLoc(), TII->get(AMDGPU::S_NOP))
+      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(AMDGPU::S_NOP))
           .addImm(0);
     }
-    BuildMI(*MI->getParent(), MI, DebugLoc(), TII->get(AMDGPU::S_SENDMSG))
+    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+            TII->get(AMDGPU::S_SENDMSG))
         .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
     Modified = true;
   }

@@ -1059,6 +1059,8 @@ public:
     SDNode *CurNode = &*ISelPosition;
     if (MDNode *MD = DAG.getPCSections(CurNode))
       DAG.addPCSections(N, MD);
+    if (MDNode *MMRA = DAG.getMMRAMetadata(CurNode))
+      DAG.addMMRAMetadata(N, MMRA);
   }
 };
 
@@ -1461,12 +1463,12 @@ static void processDbgDeclares(FunctionLoweringInfo &FuncInfo) {
     if (DI && processDbgDeclare(FuncInfo, DI->getAddress(), DI->getExpression(),
                                 DI->getVariable(), DI->getDebugLoc()))
       FuncInfo.PreprocessedDbgDeclares.insert(DI);
-    for (const DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
-      if (DPV.Type == DPValue::LocationType::Declare &&
-          processDbgDeclare(FuncInfo, DPV.getVariableLocationOp(0),
-                            DPV.getExpression(), DPV.getVariable(),
-                            DPV.getDebugLoc()))
-        FuncInfo.PreprocessedDPVDeclares.insert(&DPV);
+    for (const DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+      if (DVR.Type == DbgVariableRecord::LocationType::Declare &&
+          processDbgDeclare(FuncInfo, DVR.getVariableLocationOp(0),
+                            DVR.getExpression(), DVR.getVariable(),
+                            DVR.getDebugLoc()))
+        FuncInfo.PreprocessedDVRDeclares.insert(&DVR);
     }
   }
 }

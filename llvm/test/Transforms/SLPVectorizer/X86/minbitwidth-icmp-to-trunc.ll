@@ -18,17 +18,22 @@ define i1 @test(ptr noalias %0, i64 %1, ptr noalias %p, ptr %p1) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = and <2 x i24> [[TMP7]], <i24 255, i24 255>
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <2 x i24> [[TMP8]], <i24 24, i24 24>
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <2 x i1> [[TMP9]], <2 x i24> <i24 23, i24 23>, <2 x i24> [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = zext <2 x i24> [[TMP10]] to <2 x i32>
-; CHECK-NEXT:    [[TMP12:%.*]] = and <2 x i32> [[TMP11]], <i32 254, i32 254>
+; CHECK-NEXT:    [[TMP23:%.*]] = trunc <2 x i24> [[TMP10]] to <2 x i8>
+; CHECK-NEXT:    [[TMP26:%.*]] = zext <2 x i8> [[TMP23]] to <2 x i32>
+; CHECK-NEXT:    [[TMP12:%.*]] = and <2 x i32> [[TMP26]], <i32 254, i32 254>
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq <2 x i32> [[TMP12]], <i32 4, i32 4>
-; CHECK-NEXT:    [[TMP14:%.*]] = select <2 x i1> [[TMP13]], <2 x i32> <i32 2, i32 2>, <2 x i32> [[TMP11]]
+; CHECK-NEXT:    [[TMP25:%.*]] = select <2 x i1> [[TMP13]], <2 x i8> <i8 2, i8 2>, <2 x i8> [[TMP23]]
+; CHECK-NEXT:    [[TMP14:%.*]] = zext <2 x i8> [[TMP25]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq <2 x i32> [[TMP14]], <i32 32, i32 32>
-; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP15]], <2 x i32> <i32 31, i32 31>, <2 x i32> [[TMP14]]
+; CHECK-NEXT:    [[TMP18:%.*]] = select <2 x i1> [[TMP15]], <2 x i8> <i8 31, i8 31>, <2 x i8> [[TMP25]]
+; CHECK-NEXT:    [[TMP16:%.*]] = zext <2 x i8> [[TMP18]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq <2 x i32> [[TMP16]], <i32 54, i32 54>
-; CHECK-NEXT:    [[TMP18:%.*]] = select <2 x i1> [[TMP17]], <2 x i32> <i32 53, i32 53>, <2 x i32> [[TMP16]]
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i32> [[TMP18]], i32 0
+; CHECK-NEXT:    [[TMP21:%.*]] = select <2 x i1> [[TMP17]], <2 x i8> <i8 53, i8 53>, <2 x i8> [[TMP18]]
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i8> [[TMP21]], i32 0
+; CHECK-NEXT:    [[TMP19:%.*]] = zext i8 [[TMP22]] to i32
 ; CHECK-NEXT:    store i32 [[TMP19]], ptr [[P1]], align 4
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <2 x i32> [[TMP18]], i32 1
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x i8> [[TMP21]], i32 1
+; CHECK-NEXT:    [[TMP20:%.*]] = zext i8 [[TMP24]] to i32
 ; CHECK-NEXT:    [[CMP210_NOT:%.*]] = icmp eq i32 [[TMP19]], [[TMP20]]
 ; CHECK-NEXT:    ret i1 [[CMP210_NOT]]
 ;

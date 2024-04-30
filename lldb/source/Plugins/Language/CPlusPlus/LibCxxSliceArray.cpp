@@ -35,7 +35,7 @@ bool LibcxxStdSliceArraySummaryProvider(ValueObject &valobj, Stream &stream,
     return false;
   const size_t stride = ptr_sp->GetValueAsUnsigned(0);
 
-  stream.Printf("stride=%" PRIu64 " size=%" PRIu64, stride, size);
+  stream.Printf("stride=%zu size=%zu", stride, size);
 
   return true;
 }
@@ -73,9 +73,9 @@ private:
   size_t m_size = 0;
   /// slice_array.__stride_.
   size_t m_stride = 0;
-  /// The type of slize_array's template argument T.
+  /// The type of slice_array's template argument T.
   CompilerType m_element_type;
-  /// The sizeof slize_array's template argument T.
+  /// The sizeof slice_array's template argument T.
   uint32_t m_element_size = 0;
 };
 

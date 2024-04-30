@@ -2466,7 +2466,7 @@ def fir_CUDAKernelLaunch : fir_Op<"cuda_kernel_launch", [CallOpInterface,
   let assemblyFormat = [{
     $callee `<` `<` `<` $grid_x `,` $grid_y `,` $grid_z `,`$block_x `,`
         $block_y `,` $block_z ( `,` $bytes^ ( `,` $stream^ )? )? `>` `>` `>`
-        `` `(` ( $args^ `:` type($args) )? `)` attr-dict
+        `` `(` $args `)` ( `:` `(` type($args)^ `)` )? attr-dict
   }];
 
   let extraClassDeclaration = [{
@@ -2708,14 +2708,14 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
   let hasCanonicalizer = 1;
 }
 
-def FortranTypeAttr : Attr<And<[CPred<"$_self.isa<mlir::TypeAttr>()">,
-    Or<[CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::CharacterType,"
-              "fir::ComplexType, fir::IntegerType, fir::LogicalType,"
-              "fir::RealType, fir::RecordType>()">]>]>,
-    "Fortran surface type"> {
+def FortranTypeAttr : Attr<And<[CPred<"mlir::isa<mlir::TypeAttr>($_self)">,
+    Or<[CPred<"mlir::isa<fir::CharacterType, fir::ComplexType, "
+              "fir::IntegerType, fir::LogicalType, fir::RealType, "
+              "fir::RecordType>(mlir::cast<mlir::TypeAttr>($_self).getValue())"
+    >]>]>, "Fortran surface type"> {
   let storageType = [{ ::mlir::TypeAttr }];
   let returnType = "mlir::Type";
-  let convertFromStorage = "$_self.getValue().cast<mlir::Type>()";
+  let convertFromStorage = "mlir::cast<mlir::Type>($_self.getValue())";
 }
 
 def fir_TypeDescOp : fir_OneResultOp<"type_desc", [NoMemoryEffect]> {
@@ -3131,6 +3131,16 @@ def fir_BoxOffsetOp : fir_Op<"box_offset", [NoMemoryEffect]> {
 def fir_CUDAKernelOp : fir_Op<"cuda_kernel", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
 
+  let description = [{
+    Represent the CUDA Fortran kernel directive. The operation is a loop like
+    operation that represents the iteration range of the embedded loop nest.
+
+    When grid or block variadic operands are empty, a `*` only syntax was used
+    in the Fortran code.
+    If the `*` is mixed with values for either grid or block, these are
+    represented by a 0 constant value.
+  }];
+
   let arguments = (ins
     Variadic<I32>:$grid, // empty means `*`
     Variadic<I32>:$block, // empty means `*`
@@ -3153,6 +3163,142 @@ def fir_CUDAKernelOp : fir_Op<"cuda_kernel", [AttrSizedOperandSegments,
   }];
 
   let hasVerifier = 1;
+}
+
+def fir_CUDADataTransferOp : fir_Op<"cuda_data_transfer", []> {
+  let summary = "Represent a data transfer between host and device memory";
+
+  let description = [{
+    CUDA Fortran allows data transfer to be done via intrinsic assignment
+    between a host and a device variable. This operation is used to materialized
+    the data transfer between the lhs and rhs memory references.
+    The kind of transfer is specified in the attribute. 
+
+    ```
+      adev = a ! transfer host to device
+      a = adev ! transfer device to host
+      bdev = adev ! transfer device to device
+    ```
+  }];
+
+  let arguments = (ins Arg<AnyReferenceLike, "", [MemWrite]>:$src,
+                       Arg<AnyReferenceLike, "", [MemRead]>:$dst,
+                       fir_CUDADataTransferKindAttr:$transfer_kind);
+
+  let assemblyFormat = [{
+    $src `to` $dst attr-dict `:` type(operands)
+  }];
+}
+
+def fir_CUDAAllocateOp : fir_Op<"cuda_allocate", [AttrSizedOperandSegments,
+    MemoryEffects<[MemAlloc<DefaultResource>]>]> {
+  let summary = "Perform the device allocation of data of an allocatable";
+
+  let description = [{
+    The fir.cuda_allocate operation performs the allocation on the device
+    of the data of an allocatable. The descriptor passed to the operation
+    is initialized before with the standard flang runtime calls.
+  }];
+
+  let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
+                       Optional<AnyIntegerType>:$stream,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
+                       fir_CUDADataAttributeAttr:$cuda_attr,
+                       UnitAttr:$hasStat);
+
+  let results = (outs AnyIntegerType:$stat);
+
+  let assemblyFormat = [{
+    $box `:` qualified(type($box))
+    ( `source` `(` $source^ `:` qualified(type($source) )`)` )?
+    ( `errmsg` `(` $errmsg^ `:` type($errmsg) `)` )?
+    ( `stream` `(` $stream^ `:` type($stream) `)` )?
+    ( `pinned` `(` $pinned^ `:` type($pinned) `)` )?
+    attr-dict `->` type($stat)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def fir_CUDADeallocateOp : fir_Op<"cuda_deallocate",
+    [MemoryEffects<[MemFree<DefaultResource>]>]> {
+  let summary = "Perform the device deallocation of data of an allocatable";
+
+  let description = [{
+    The fir.cuda_deallocate operation performs the deallocation on the device
+    of the data of an allocatable.
+  }];
+
+  let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
+                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
+                       fir_CUDADataAttributeAttr:$cuda_attr,
+                       UnitAttr:$hasStat);
+
+  let results = (outs AnyIntegerType:$stat);
+
+  let assemblyFormat = [{
+    $box `:` qualified(type($box))
+    ( `errmsg` `(` $errmsg^ `:` type($errmsg) `)` )?
+    attr-dict `->` type($stat)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def fir_CUDAAllocOp : fir_Op<"cuda_alloc", [AttrSizedOperandSegments,
+    MemoryEffects<[MemAlloc]>]> {
+  let summary = "Allocate an object on device";
+
+  let description = [{
+    This is a drop in replacement for fir.alloca and fir.allocmem for device
+    object. Any device, managed or unified object declared in an host
+    subprogram needs to be allocated in the device memory through runtime calls.
+    The fir.cuda_alloc is an abstraction to the runtime calls and works together
+    with fir.cuda_free.
+  }];
+
+  let arguments = (ins
+    TypeAttr:$in_type,
+    OptionalAttr<StrAttr>:$uniq_name,
+    OptionalAttr<StrAttr>:$bindc_name,
+    Variadic<AnyIntegerType>:$typeparams,
+    Variadic<AnyIntegerType>:$shape,
+    fir_CUDADataAttributeAttr:$cuda_attr
+  );
+
+  let results = (outs fir_ReferenceType:$ptr);
+
+  let assemblyFormat = [{
+    $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
+        (`,` $shape^ `:` type($shape) )?  attr-dict `->` qualified(type($ptr))
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$inType, "llvm::StringRef":$uniqName,
+      "llvm::StringRef":$bindcName,
+      "fir::CUDADataAttributeAttr":$cudaAttr,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+}
+
+def fir_CUDAFreeOp : fir_Op<"cuda_free", [MemoryEffects<[MemFree]>]> {
+  let summary = "Free a device allocated object";
+
+  let description = [{
+    The fir.cuda_free operation frees the memory allocated by fir.cuda_alloc.
+    This is used for non-allocatable device, managed and unified device
+    variables declare in host subprogram.
+  }];
+
+  let arguments = (ins
+    Arg<AnyReferenceLike, "", [MemFree]>:$devptr,
+    fir_CUDADataAttributeAttr:$cuda_attr
+  );
+
+  let assemblyFormat = "$devptr `:` qualified(type($devptr)) attr-dict";
 }
 
 #endif

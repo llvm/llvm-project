@@ -777,7 +777,9 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"identity", SameType, Rank::scalar, Optionality::optional},
             {"ordered", AnyLogical, Rank::scalar, Optionality::optional}},
         SameType, Rank::scalar, IntrinsicClass::transformationalFunction},
-    {"repeat", {{"string", SameCharNoLen, Rank::scalar}, {"ncopies", AnyInt}},
+    {"repeat",
+        {{"string", SameCharNoLen, Rank::scalar},
+            {"ncopies", AnyInt, Rank::scalar}},
         SameCharNoLen, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"reshape",
         {{"source", SameType, Rank::array}, {"shape", AnyInt, Rank::shape},
@@ -903,6 +905,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"back", AnyLogical, Rank::elemental, Optionality::optional},
             DefaultingKIND},
         KINDInt},
+    {"__builtin_compiler_options", {}, DefaultChar},
+    {"__builtin_compiler_version", {}, DefaultChar},
     {"__builtin_fma", {{"f1", SameReal}, {"f2", SameReal}, {"f3", SameReal}},
         SameReal},
     {"__builtin_ieee_is_nan", {{"a", AnyFloating}}, DefaultLogical},
@@ -941,8 +945,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"__builtin_ieee_support_underflow_control",
         {{"x", AnyReal, Rank::elemental, Optionality::optional}},
         DefaultLogical},
-    {"__builtin_compiler_options", {}, DefaultChar},
-    {"__builtin_compiler_version", {}, DefaultChar},
+    {"__builtin_numeric_storage_size", {}, DefaultInt},
 };
 
 // TODO: Coarray intrinsic functions
@@ -2861,7 +2864,8 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
                                       characteristics::DummyArgument{"x"s,
                                           characteristics::DummyDataObject{
                                               std::move(*typeAndShape)}}},
-                                  characteristics::Procedure::Attrs{}}},
+                                  characteristics::Procedure::Attrs{
+                                      characteristics::Procedure::Attr::Pure}}},
           std::move(arguments)};
     }
   }

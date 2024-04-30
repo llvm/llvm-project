@@ -30,7 +30,7 @@ int main() {
 
   struct sigaction act = {};
   act.sa_handler = &handler;
-  if (sigaction(SIGALRM, &act, 0)) {
+  if (sigaction(SIGPROF, &act, 0)) {
     perror("sigaction");
     exit(1);
   }
@@ -39,7 +39,7 @@ int main() {
   t.it_value.tv_sec = 0;
   t.it_value.tv_usec = 10;
   t.it_interval = t.it_value;
-  if (setitimer(ITIMER_REAL, &t, 0)) {
+  if (setitimer(ITIMER_PROF, &t, 0)) {
     perror("setitimer");
     exit(1);
   }

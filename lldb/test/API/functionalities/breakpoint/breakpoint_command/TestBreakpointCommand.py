@@ -671,3 +671,20 @@ class BreakpointCommandTestCase(TestBase):
         self.assertNotEqual(breakpoints_stats, None)
         for breakpoint_stats in breakpoints_stats:
             self.assertIn("hitCount", breakpoint_stats)
+
+    @skipIf(oslist=no_match(["linux"]))
+    def test_break_at__dl_debug_state(self):
+        """
+        Test lldb is able to stop at _dl_debug_state if it is set before the
+        process is launched.
+        """
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("target create %s" % exe)
+        bpid = lldbutil.run_break_set_by_symbol(
+            self, "_dl_debug_state", num_expected_locations=-2
+        )
+        self.runCmd("run")
+        self.assertIsNotNone(
+            lldbutil.get_one_thread_stopped_at_breakpoint_id(self.process(), bpid)
+        )

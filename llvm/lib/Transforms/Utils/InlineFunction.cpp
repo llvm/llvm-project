@@ -1710,17 +1710,17 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
   };
 
   // Helper-util for updating debug-info records attached to instructions.
-  auto UpdateDPV = [&](DbgRecord *DPV) {
-    assert(DPV->getDebugLoc() && "Debug Value must have debug loc");
+  auto UpdateDVR = [&](DbgRecord *DVR) {
+    assert(DVR->getDebugLoc() && "Debug Value must have debug loc");
     if (NoInlineLineTables) {
-      DPV->setDebugLoc(TheCallDL);
+      DVR->setDebugLoc(TheCallDL);
       return;
     }
-    DebugLoc DL = DPV->getDebugLoc();
+    DebugLoc DL = DVR->getDebugLoc();
     DebugLoc IDL =
         inlineDebugLoc(DL, InlinedAtNode,
-                       DPV->getMarker()->getParent()->getContext(), IANodes);
-    DPV->setDebugLoc(IDL);
+                       DVR->getMarker()->getParent()->getContext(), IANodes);
+    DVR->setDebugLoc(IDL);
   };
 
   // Iterate over all instructions, updating metadata and debug-info records.
@@ -1728,8 +1728,8 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
     for (BasicBlock::iterator BI = FI->begin(), BE = FI->end(); BI != BE;
          ++BI) {
       UpdateInst(*BI);
-      for (DbgRecord &DPV : BI->getDbgRecordRange()) {
-        UpdateDPV(&DPV);
+      for (DbgRecord &DVR : BI->getDbgRecordRange()) {
+        UpdateDVR(&DVR);
       }
     }
 
@@ -1797,7 +1797,7 @@ static at::StorageToVarsMap collectEscapedLocals(const DataLayout &DL,
       EscapedLocals[Base].insert(at::VarRecord(DbgAssign));
     };
     for_each(at::getAssignmentMarkers(Base), CollectAssignsForStorage);
-    for_each(at::getDPVAssignmentMarkers(Base), CollectAssignsForStorage);
+    for_each(at::getDVRAssignmentMarkers(Base), CollectAssignsForStorage);
   }
   return EscapedLocals;
 }
@@ -1829,9 +1829,9 @@ static void fixupAssignments(Function::iterator Start, Function::iterator End) {
   // attachment or use, replace it with a new version.
   for (auto BBI = Start; BBI != End; ++BBI) {
     for (Instruction &I : *BBI) {
-      for (DPValue &DPV : filterDbgVars(I.getDbgRecordRange())) {
-        if (DPV.isDbgAssign())
-          DPV.setAssignId(GetNewID(DPV.getAssignID()));
+      for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+        if (DVR.isDbgAssign())
+          DVR.setAssignId(GetNewID(DVR.getAssignID()));
       }
       if (auto *ID = I.getMetadata(LLVMContext::MD_DIAssignID))
         I.setMetadata(LLVMContext::MD_DIAssignID, GetNewID(ID));

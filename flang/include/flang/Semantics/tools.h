@@ -53,7 +53,8 @@ const Symbol *FindPointerComponent(const Symbol &);
 const Symbol *FindInterface(const Symbol &);
 const Symbol *FindSubprogram(const Symbol &);
 const Symbol *FindFunctionResult(const Symbol &);
-const Symbol *FindOverriddenBinding(const Symbol &);
+const Symbol *FindOverriddenBinding(
+    const Symbol &, bool &isInaccessibleDeferred);
 const Symbol *FindGlobal(const Symbol &);
 
 const DeclTypeSpec *FindParentTypeSpec(const DerivedTypeSpec &);
@@ -211,6 +212,16 @@ inline bool IsCUDADeviceContext(const Scope *scope) {
   return false;
 }
 
+inline bool HasCUDAAttr(const Symbol &sym) {
+  if (const auto *details{
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
+    if (details->cudaDataAttr()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 const Scope *FindCUDADeviceContext(const Scope *);
 std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *);
 
@@ -281,6 +292,9 @@ const Symbol *FindExternallyVisibleObject(
 // Applies GetUltimate(), then if the symbol is a generic procedure shadowing a
 // specific procedure of the same name, return it instead.
 const Symbol &BypassGeneric(const Symbol &);
+
+// Given a cray pointee symbol, returns the related cray pointer symbol.
+const Symbol &GetCrayPointer(const Symbol &crayPointee);
 
 using SomeExpr = evaluate::Expr<evaluate::SomeType>;
 

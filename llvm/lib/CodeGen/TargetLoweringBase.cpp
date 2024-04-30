@@ -823,6 +823,12 @@ void TargetLoweringBase::initActions() {
   std::fill(std::begin(TargetDAGCombineArray),
             std::end(TargetDAGCombineArray), 0);
 
+  // Let extending atomic loads be unsupported by default.
+  for (MVT ValVT : MVT::all_valuetypes())
+    for (MVT MemVT : MVT::all_valuetypes())
+      setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, ValVT, MemVT,
+                             Expand);
+
   // We're somewhat special casing MVT::i2 and MVT::i4. Ideally we want to
   // remove this and targets should individually set these types if not legal.
   for (ISD::NodeType NT : enum_seq(ISD::DELETED_NODE, ISD::BUILTIN_OP_END,
@@ -1803,8 +1809,16 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
     else if (attr.hasRetAttr(Attribute::ZExt))
       Flags.setZExt();
 
-    for (unsigned i = 0; i < NumParts; ++i)
-      Outs.push_back(ISD::OutputArg(Flags, PartVT, VT, /*isfixed=*/true, 0, 0));
+    for (unsigned i = 0; i < NumParts; ++i) {
+      ISD::ArgFlagsTy OutFlags = Flags;
+      if (NumParts > 1 && i == 0)
+        OutFlags.setSplit();
+      else if (i == NumParts - 1 && i != 0)
+        OutFlags.setSplitEnd();
+
+      Outs.push_back(
+          ISD::OutputArg(OutFlags, PartVT, VT, /*isfixed=*/true, 0, 0));
+    }
   }
 }
 
@@ -2011,6 +2025,10 @@ bool TargetLoweringBase::isLegalAddressingMode(const DataLayout &DL,
   // The default implementation of this implements a conservative RISCy, r+r and
   // r+i addr mode.
 
+  // Scalable offsets not supported
+  if (AM.ScalableOffset)
+    return false;
+
   // Allows a sign-extended 16-bit immediate field.
   if (AM.BaseOffs <= -(1LL << 16) || AM.BaseOffs >= (1LL << 16)-1)
     return false;
@@ -2069,7 +2087,8 @@ void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
     // FreeBSD has "__stack_chk_guard" defined externally on libc.so
     if (M.getDirectAccessExternalData() &&
         !TM.getTargetTriple().isWindowsGNUEnvironment() &&
-        !TM.getTargetTriple().isOSFreeBSD() &&
+        !(TM.getTargetTriple().isPPC64() &&
+          TM.getTargetTriple().isOSFreeBSD()) &&
         (!TM.getTargetTriple().isOSDarwin() ||
          TM.getRelocationModel() == Reloc::Static))
       GV->setDSOLocal(true);

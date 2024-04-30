@@ -1048,7 +1048,7 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                       name->symbol->GetUltimate().owner();
                   if (!curScope.IsTopLevel()) {
                     const semantics::Scope &declScope =
-                        GetProgramUnitContaining(curScope);
+                        GetProgramUnitOrBlockConstructContaining(curScope);
                     const semantics::Symbol *sym{
                         declScope.parent().FindSymbol(name->symbol->name())};
                     if (sym &&
@@ -2286,10 +2286,11 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Reduction &x) {
     CheckReductionTypeList(x);
   }
 }
+
 bool OmpStructureChecker::CheckReductionOperators(
     const parser::OmpClause::Reduction &x) {
 
-  const auto &definedOp{std::get<0>(x.v.t)};
+  const auto &definedOp{std::get<parser::OmpReductionOperator>(x.v.t)};
   bool ok = false;
   common::visit(
       common::visitors{
@@ -2355,6 +2356,16 @@ void OmpStructureChecker::CheckReductionTypeList(
   // is not private in the parallel region that it binds to.
   if (llvm::omp::nestedReduceWorkshareAllowedSet.test(GetContext().directive)) {
     CheckSharedBindingInOuterContext(ompObjectList);
+  }
+
+  SymbolSourceMap symbols;
+  GetSymbolsInObjectList(ompObjectList, symbols);
+  for (auto &[symbol, source] : symbols) {
+    if (IsProcedurePointer(*symbol)) {
+      context_.Say(source,
+          "A procedure pointer '%s' must not appear in a REDUCTION clause."_err_en_US,
+          symbol->name());
+    }
   }
 }
 
@@ -2460,11 +2471,11 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Shared &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_shared);
-  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v);
+  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "SHARED");
 }
 void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_private);
-  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v);
+  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "PRIVATE");
   CheckIntentInPointer(x.v, llvm::omp::Clause::OMPC_private);
 }
 
@@ -2502,7 +2513,8 @@ bool OmpStructureChecker::IsDataRefTypeParamInquiry(
 }
 
 void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
-    const parser::CharBlock &source, const parser::OmpObjectList &objList) {
+    const parser::CharBlock &source, const parser::OmpObjectList &objList,
+    llvm::StringRef clause) {
   for (const auto &ompObject : objList.v) {
     common::visit(
         common::visitors{
@@ -2528,7 +2540,8 @@ void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
                     context_.Say(source,
                         "A variable that is part of another variable (as an "
                         "array or structure element) cannot appear in a "
-                        "PRIVATE or SHARED clause"_err_en_US);
+                        "%s clause"_err_en_US,
+                        clause.data());
                   }
                 }
               }
@@ -2541,6 +2554,8 @@ void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_firstprivate);
+
+  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "FIRSTPRIVATE");
   CheckIsLoopIvPartOfClause(llvmOmpClause::OMPC_firstprivate, x.v);
 
   SymbolSourceMap currSymbols;
@@ -2876,6 +2891,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyprivate &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_lastprivate);
+
+  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "LASTPRIVATE");
 
   DirectivesClauseTriple dirClauseTriple;
   SymbolSourceMap currSymbols;

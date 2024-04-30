@@ -64,42 +64,60 @@ public:
     bool InstructionEmitted = false;
 
     for (MachineBasicBlock &MBB : MF) {
-      DenseMap<MCPhysReg, unsigned> RegisterUseCount; // TODO: MCRegUnits
+      DenseMap<MCRegUnit, unsigned> RegisterUseCount;
 
       // Handle boundaries at the end of basic block separately to avoid
       // false positives. If they are live at the end of a basic block then
       // assume it has more uses later on.
-      for (const auto &Liveouts : MBB.liveouts())
-        RegisterUseCount[Liveouts.PhysReg] = 2;
+      for (const auto &Liveout : MBB.liveouts()) {
+        for (MCRegUnitMaskIterator Units(Liveout.PhysReg, TRI); Units.isValid();
+             ++Units) {
+          const auto [Unit, Mask] = *Units;
+          if ((Mask & Liveout.LaneMask).any())
+            RegisterUseCount[Unit] = 2;
+        }
+      }
 
       for (MachineInstr &MI : reverse(MBB.instrs())) {
         // All registers in all operands need to be single use for an
         // instruction to be marked as a single use producer.
         bool AllProducerOperandsAreSingleUse = true;
 
-        for (const auto &Operand : MI.operands()) {
-          if (!Operand.isReg())
-            continue;
+        // Gather a list of Registers used before updating use counts to avoid
+        // double counting registers that appear multiple times in a single
+        // MachineInstr.
+        SmallVector<MCRegUnit> RegistersUsed;
+
+        for (const auto &Operand : MI.all_defs()) {
+          const auto Reg = Operand.getReg();
+
+          const auto RegUnits = TRI->regunits(Reg);
+          if (any_of(RegUnits, [&RegisterUseCount](const MCRegUnit Unit) {
+                return RegisterUseCount[Unit] > 1;
+              }))
+            AllProducerOperandsAreSingleUse = false;
+
+          // Reset uses count when a register is no longer live.
+          for (const MCRegUnit Unit : RegUnits)
+            RegisterUseCount.erase(Unit);
+        }
+
+        for (const auto &Operand : MI.all_uses()) {
           const auto Reg = Operand.getReg();
 
           // Count the number of times each register is read.
-          if (Operand.readsReg())
-            RegisterUseCount[Reg]++;
-
-          // Do not attempt to optimise across exec mask changes.
-          if (MI.modifiesRegister(AMDGPU::EXEC, TRI)) {
-            for (auto &UsedReg : RegisterUseCount)
-              UsedReg.second = 2;
+          for (const MCRegUnit Unit : TRI->regunits(Reg)) {
+            if (!is_contained(RegistersUsed, Unit))
+              RegistersUsed.push_back(Unit);
           }
+        }
+        for (const MCRegUnit Unit : RegistersUsed)
+          RegisterUseCount[Unit]++;
 
-          // If we are at the point where the register first became live,
-          // check if the operands are single use.
-          if (!MI.modifiesRegister(Reg, TRI))
-            continue;
-          if (RegisterUseCount[Reg] > 1)
-            AllProducerOperandsAreSingleUse = false;
-          // Reset uses count when a register is no longer live.
-          RegisterUseCount.erase(Reg);
+        // Do not attempt to optimise across exec mask changes.
+        if (MI.modifiesRegister(AMDGPU::EXEC, TRI)) {
+          for (auto &UsedReg : RegisterUseCount)
+            UsedReg.second = 2;
         }
         if (AllProducerOperandsAreSingleUse && SIInstrInfo::isVALU(MI)) {
           // TODO: Replace with candidate logging for instruction grouping

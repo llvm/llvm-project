@@ -50,8 +50,8 @@ define <8 x half> @fadd_v8f16(<8 x half> %op1, <8 x half> %op2) {
 define void @fadd_v16f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: fadd_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    movprfx z1, z2
@@ -94,8 +94,8 @@ define <4 x float> @fadd_v4f32(<4 x float> %op1, <4 x float> %op2) {
 define void @fadd_v8f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: fadd_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    movprfx z1, z2
@@ -125,8 +125,8 @@ define <2 x double> @fadd_v2f64(<2 x double> %op1, <2 x double> %op2) {
 define void @fadd_v4f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: fadd_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fadd z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    movprfx z1, z2
@@ -186,8 +186,8 @@ define <8 x half> @fdiv_v8f16(<8 x half> %op1, <8 x half> %op2) {
 define void @fdiv_v16f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: fdiv_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fdivr z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    movprfx z1, z2
@@ -230,8 +230,8 @@ define <4 x float> @fdiv_v4f32(<4 x float> %op1, <4 x float> %op2) {
 define void @fdiv_v8f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: fdiv_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fdivr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    movprfx z1, z2
@@ -261,8 +261,8 @@ define <2 x double> @fdiv_v2f64(<2 x double> %op1, <2 x double> %op2) {
 define void @fdiv_v4f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: fdiv_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fdivr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    movprfx z1, z2
@@ -325,8 +325,8 @@ define <8 x half> @fma_v8f16(<8 x half> %op1, <8 x half> %op2, <8 x half> %op3) 
 define void @fma_v16f16(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: fma_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q4, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q5, [x2]
 ; CHECK-NEXT:    ldp q2, q3, [x0]
 ; CHECK-NEXT:    fmad z0.h, p0/m, z2.h, z1.h
@@ -373,8 +373,8 @@ define <4 x float> @fma_v4f32(<4 x float> %op1, <4 x float> %op2, <4 x float> %o
 define void @fma_v8f32(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: fma_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q4, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q5, [x2]
 ; CHECK-NEXT:    ldp q2, q3, [x0]
 ; CHECK-NEXT:    fmad z0.s, p0/m, z2.s, z1.s
@@ -407,8 +407,8 @@ define <2 x double> @fma_v2f64(<2 x double> %op1, <2 x double> %op2, <2 x double
 define void @fma_v4f64(ptr %a, ptr %b, ptr %c) {
 ; CHECK-LABEL: fma_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q4, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q5, [x2]
 ; CHECK-NEXT:    ldp q2, q3, [x0]
 ; CHECK-NEXT:    fmad z0.d, p0/m, z2.d, z1.d
@@ -470,8 +470,8 @@ define <8 x half> @fmul_v8f16(<8 x half> %op1, <8 x half> %op2) {
 define void @fmul_v16f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmul_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmul z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    movprfx z1, z2
@@ -514,8 +514,8 @@ define <4 x float> @fmul_v4f32(<4 x float> %op1, <4 x float> %op2) {
 define void @fmul_v8f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmul_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmul z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    movprfx z1, z2
@@ -545,8 +545,8 @@ define <2 x double> @fmul_v2f64(<2 x double> %op1, <2 x double> %op2) {
 define void @fmul_v4f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: fmul_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fmul z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    movprfx z1, z2
@@ -603,8 +603,8 @@ define <8 x half> @fneg_v8f16(<8 x half> %op) {
 define void @fneg_v16f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: fneg_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    fneg z0.h, p0/m, z0.h
 ; CHECK-NEXT:    fneg z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -642,8 +642,8 @@ define <4 x float> @fneg_v4f32(<4 x float> %op) {
 define void @fneg_v8f32(ptr %a) {
 ; CHECK-LABEL: fneg_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    fneg z0.s, p0/m, z0.s
 ; CHECK-NEXT:    fneg z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -669,8 +669,8 @@ define <2 x double> @fneg_v2f64(<2 x double> %op) {
 define void @fneg_v4f64(ptr %a) {
 ; CHECK-LABEL: fneg_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    fneg z0.d, p0/m, z0.d
 ; CHECK-NEXT:    fneg z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -724,8 +724,8 @@ define <8 x half> @fsqrt_v8f16(<8 x half> %op) {
 define void @fsqrt_v16f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: fsqrt_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    fsqrt z0.h, p0/m, z0.h
 ; CHECK-NEXT:    fsqrt z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -763,8 +763,8 @@ define <4 x float> @fsqrt_v4f32(<4 x float> %op) {
 define void @fsqrt_v8f32(ptr %a) {
 ; CHECK-LABEL: fsqrt_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    fsqrt z0.s, p0/m, z0.s
 ; CHECK-NEXT:    fsqrt z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -790,8 +790,8 @@ define <2 x double> @fsqrt_v2f64(<2 x double> %op) {
 define void @fsqrt_v4f64(ptr %a) {
 ; CHECK-LABEL: fsqrt_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    fsqrt z0.d, p0/m, z0.d
 ; CHECK-NEXT:    fsqrt z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -848,8 +848,8 @@ define <8 x half> @fsub_v8f16(<8 x half> %op1, <8 x half> %op2) {
 define void @fsub_v16f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: fsub_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fsubr z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    movprfx z1, z2
@@ -892,8 +892,8 @@ define <4 x float> @fsub_v4f32(<4 x float> %op1, <4 x float> %op2) {
 define void @fsub_v8f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: fsub_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fsubr z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    movprfx z1, z2
@@ -923,8 +923,8 @@ define <2 x double> @fsub_v2f64(<2 x double> %op1, <2 x double> %op2) {
 define void @fsub_v4f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: fsub_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q3, [x1]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q2, [x0]
 ; CHECK-NEXT:    fsubr z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    movprfx z1, z2
@@ -981,8 +981,8 @@ define <8 x half> @fabs_v8f16(<8 x half> %op) {
 define void @fabs_v16f16(ptr %a) {
 ; CHECK-LABEL: fabs_v16f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    fabs z0.h, p0/m, z0.h
 ; CHECK-NEXT:    fabs z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -1020,8 +1020,8 @@ define <4 x float> @fabs_v4f32(<4 x float> %op) {
 define void @fabs_v8f32(ptr %a) {
 ; CHECK-LABEL: fabs_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    fabs z0.s, p0/m, z0.s
 ; CHECK-NEXT:    fabs z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -1047,8 +1047,8 @@ define <2 x double> @fabs_v2f64(<2 x double> %op) {
 define void @fabs_v4f64(ptr %a) {
 ; CHECK-LABEL: fabs_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    fabs z0.d, p0/m, z0.d
 ; CHECK-NEXT:    fabs z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]

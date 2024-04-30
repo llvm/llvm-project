@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CodeGenHwModes.h"
-#include "CodeGenInstruction.h"
-#include "CodeGenTarget.h"
-#include "InfoByHwMode.h"
+#include "Common/CodeGenHwModes.h"
+#include "Common/CodeGenInstruction.h"
+#include "Common/CodeGenTarget.h"
+#include "Common/InfoByHwMode.h"
+#include "Common/VarLenCodeEmitterGen.h"
 #include "TableGenBackends.h"
-#include "VarLenCodeEmitterGen.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
@@ -54,10 +54,27 @@ using namespace llvm;
 
 extern cl::OptionCategory DisassemblerEmitterCat;
 
-cl::opt<bool> DecoderEmitterSuppressDuplicates(
+enum SuppressLevel {
+  SUPPRESSION_DISABLE,
+  SUPPRESSION_LEVEL1,
+  SUPPRESSION_LEVEL2
+};
+
+cl::opt<SuppressLevel> DecoderEmitterSuppressDuplicates(
     "suppress-per-hwmode-duplicates",
     cl::desc("Suppress duplication of instrs into per-HwMode decoder tables"),
-    cl::init(false), cl::cat(DisassemblerEmitterCat));
+    cl::values(
+        clEnumValN(
+            SUPPRESSION_DISABLE, "O0",
+            "Do not prevent DecoderTable duplications caused by HwModes"),
+        clEnumValN(
+            SUPPRESSION_LEVEL1, "O1",
+            "Remove duplicate DecoderTable entries generated due to HwModes"),
+        clEnumValN(
+            SUPPRESSION_LEVEL2, "O2",
+            "Extract HwModes-specific instructions into new DecoderTables, "
+            "significantly reducing Table Duplications")),
+    cl::init(SUPPRESSION_DISABLE), cl::cat(DisassemblerEmitterCat));
 
 namespace {
 
@@ -128,6 +145,7 @@ struct EncodingIDAndOpcode {
 };
 
 using EncodingIDsVec = std::vector<EncodingIDAndOpcode>;
+using NamespacesHwModesMap = std::map<std::string, std::set<StringRef>>;
 
 raw_ostream &operator<<(raw_ostream &OS, const EncodingAndInst &Value) {
   if (Value.EncodingDef != Value.Inst->TheDef)
@@ -2283,10 +2301,8 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case MCD::OPC_CheckField: {
       // Decode the start value.
-      unsigned Len;
-      unsigned Start = decodeULEB128(++Ptr, &Len);
-      Ptr += Len;
-      Len = *Ptr;)";
+      unsigned Start = decodeULEB128AndInc(++Ptr);
+      unsigned Len = *Ptr;)";
   if (IsVarLenInst)
     OS << "\n      makeUp(insn, Start + Len);";
   OS << R"(
@@ -2311,10 +2327,8 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       break;
     }
     case MCD::OPC_CheckPredicate: {
-      unsigned Len;
       // Decode the Predicate Index value.
-      unsigned PIdx = decodeULEB128(++Ptr, &Len);
-      Ptr += Len;
+      unsigned PIdx = decodeULEB128AndInc(++Ptr);
       // NumToSkip is a plain 24-bit integer.
       unsigned NumToSkip = *Ptr++;
       NumToSkip |= (*Ptr++) << 8;
@@ -2330,18 +2344,15 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       break;
     }
     case MCD::OPC_Decode: {
-      unsigned Len;
       // Decode the Opcode value.
-      unsigned Opc = decodeULEB128(++Ptr, &Len);
-      Ptr += Len;
-      unsigned DecodeIdx = decodeULEB128(Ptr, &Len);
-      Ptr += Len;
+      unsigned Opc = decodeULEB128AndInc(++Ptr);
+      unsigned DecodeIdx = decodeULEB128AndInc(Ptr);
 
       MI.clear();
       MI.setOpcode(Opc);
       bool DecodeComplete;)";
   if (IsVarLenInst) {
-    OS << "\n      Len = InstrLenTable[Opc];\n"
+    OS << "\n      unsigned Len = InstrLenTable[Opc];\n"
        << "      makeUp(insn, Len);";
   }
   OS << R"(
@@ -2354,12 +2365,9 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       return S;
     }
     case MCD::OPC_TryDecode: {
-      unsigned Len;
       // Decode the Opcode value.
-      unsigned Opc = decodeULEB128(++Ptr, &Len);
-      Ptr += Len;
-      unsigned DecodeIdx = decodeULEB128(Ptr, &Len);
-      Ptr += Len;
+      unsigned Opc = decodeULEB128AndInc(++Ptr);
+      unsigned DecodeIdx = decodeULEB128AndInc(Ptr);
       // NumToSkip is a plain 24-bit integer.
       unsigned NumToSkip = *Ptr++;
       NumToSkip |= (*Ptr++) << 8;
@@ -2391,11 +2399,8 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
     }
     case MCD::OPC_SoftFail: {
       // Decode the mask values.
-      unsigned Len;
-      uint64_t PositiveMask = decodeULEB128(++Ptr, &Len);
-      Ptr += Len;
-      uint64_t NegativeMask = decodeULEB128(Ptr, &Len);
-      Ptr += Len;
+      uint64_t PositiveMask = decodeULEB128AndInc(++Ptr);
+      uint64_t NegativeMask = decodeULEB128AndInc(Ptr);
       bool Fail = (insn & PositiveMask) != 0 || (~insn & NegativeMask) != 0;
       if (Fail)
         S = MCDisassembler::SoftFail;
@@ -2430,19 +2435,63 @@ static bool Check(DecodeStatus &Out, DecodeStatus In) {
 
 // Collect all HwModes referenced by the target for encoding purposes,
 // returning a vector of corresponding names.
-static void
-collectHwModesReferencedForEncodings(const CodeGenHwModes &HWM,
-                                     std::vector<StringRef> &Names) {
+static void collectHwModesReferencedForEncodings(
+    const CodeGenHwModes &HWM, std::vector<StringRef> &Names,
+    NamespacesHwModesMap &NamespacesWithHwModes) {
   SmallBitVector BV(HWM.getNumModeIds());
   for (const auto &MS : HWM.getHwModeSelects()) {
     for (const HwModeSelect::PairType &P : MS.second.Items) {
-      if (P.second->isSubClassOf("InstructionEncoding"))
+      if (P.second->isSubClassOf("InstructionEncoding")) {
+        std::string DecoderNamespace =
+            std::string(P.second->getValueAsString("DecoderNamespace"));
+        if (P.first == DefaultMode) {
+          NamespacesWithHwModes[DecoderNamespace].insert("");
+        } else {
+          NamespacesWithHwModes[DecoderNamespace].insert(
+              HWM.getMode(P.first).Name);
+        }
         BV.set(P.first);
+      }
     }
   }
   transform(BV.set_bits(), std::back_inserter(Names), [&HWM](const int &M) {
+    if (M == DefaultMode)
+      return StringRef("");
     return HWM.getModeName(M, /*IncludeDefault=*/true);
   });
+}
+
+static void
+handleHwModesUnrelatedEncodings(const CodeGenInstruction *Instr,
+                                const std::vector<StringRef> &HwModeNames,
+                                NamespacesHwModesMap &NamespacesWithHwModes,
+                                std::vector<EncodingAndInst> &GlobalEncodings) {
+  const Record *InstDef = Instr->TheDef;
+
+  switch (DecoderEmitterSuppressDuplicates) {
+  case SUPPRESSION_DISABLE: {
+    for (StringRef HwModeName : HwModeNames)
+      GlobalEncodings.emplace_back(InstDef, Instr, HwModeName);
+    break;
+  }
+  case SUPPRESSION_LEVEL1: {
+    std::string DecoderNamespace =
+        std::string(InstDef->getValueAsString("DecoderNamespace"));
+    auto It = NamespacesWithHwModes.find(DecoderNamespace);
+    if (It != NamespacesWithHwModes.end()) {
+      for (StringRef HwModeName : It->second)
+        GlobalEncodings.emplace_back(InstDef, Instr, HwModeName);
+    } else {
+      // Only emit the encoding once, as it's DecoderNamespace doesn't
+      // contain any HwModes.
+      GlobalEncodings.emplace_back(InstDef, Instr, "");
+    }
+    break;
+  }
+  case SUPPRESSION_LEVEL2:
+    GlobalEncodings.emplace_back(InstDef, Instr, "");
+    break;
+  }
 }
 
 // Emits disassembler code for instruction decoding.
@@ -2470,10 +2519,12 @@ namespace llvm {
   // Parameterize the decoders based on namespace and instruction width.
 
   // First, collect all encoding-related HwModes referenced by the target.
+  // And establish a mapping table between DecoderNamespace and HwMode.
   // If HwModeNames is empty, add the empty string so we always have one HwMode.
   const CodeGenHwModes &HWM = Target.getHwModes();
   std::vector<StringRef> HwModeNames;
-  collectHwModesReferencedForEncodings(HWM, HwModeNames);
+  NamespacesHwModesMap NamespacesWithHwModes;
+  collectHwModesReferencedForEncodings(HWM, HwModeNames, NamespacesWithHwModes);
   if (HwModeNames.empty())
     HwModeNames.push_back("");
 
@@ -2484,22 +2535,22 @@ namespace llvm {
     if (const RecordVal *RV = InstDef->getValue("EncodingInfos")) {
       if (DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
         EncodingInfoByHwMode EBM(DI->getDef(), HWM);
-        for (auto &KV : EBM)
-          NumberedEncodings.emplace_back(
-              KV.second, NumberedInstruction,
-              HWM.getModeName(KV.first, /*IncludeDefault=*/true));
+        for (auto &[ModeId, Encoding] : EBM) {
+          // DecoderTables with DefaultMode should not have any suffix.
+          if (ModeId == DefaultMode) {
+            NumberedEncodings.emplace_back(Encoding, NumberedInstruction, "");
+          } else {
+            NumberedEncodings.emplace_back(Encoding, NumberedInstruction,
+                                           HWM.getMode(ModeId).Name);
+          }
+        }
         continue;
       }
     }
-    // This instruction is encoded the same on all HwModes. Emit it for all
-    // HwModes by default, otherwise leave it in a single common table.
-    if (DecoderEmitterSuppressDuplicates) {
-      NumberedEncodings.emplace_back(InstDef, NumberedInstruction, "AllModes");
-    } else {
-      for (StringRef HwModeName : HwModeNames)
-        NumberedEncodings.emplace_back(InstDef, NumberedInstruction,
-                                       HwModeName);
-    }
+    // This instruction is encoded the same on all HwModes.
+    // According to user needs, provide varying degrees of suppression.
+    handleHwModesUnrelatedEncodings(NumberedInstruction, HwModeNames,
+                                    NamespacesWithHwModes, NumberedEncodings);
   }
   for (const auto &NumberedAlias :
        RK.getAllDerivedDefinitions("AdditionalEncoding"))

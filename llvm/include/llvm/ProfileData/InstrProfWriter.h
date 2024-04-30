@@ -60,8 +60,15 @@ private:
   // inline.
   llvm::MapVector<memprof::FrameId, memprof::Frame> MemProfFrameData;
 
+  // A map to hold call stack id to call stacks.
+  llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
+      MemProfCallStackData;
+
   // List of binary ids.
   std::vector<llvm::object::BuildID> BinaryIds;
+
+  // Read the vtable names from raw instr profile reader.
+  StringSet<> VTableNames;
 
   // An enum describing the attributes of the profile.
   InstrProfKind ProfileKind = InstrProfKind::Unknown;
@@ -75,11 +82,18 @@ private:
   // deployment of newer versions of llvm-profdata.
   bool WritePrevVersion = false;
 
+  // The MemProf version we should write.
+  memprof::IndexedVersion MemProfVersionRequested;
+
+  // Whether to serialize the full schema.
+  bool MemProfFullSchema;
+
 public:
-  InstrProfWriter(bool Sparse = false,
-                  uint64_t TemporalProfTraceReservoirSize = 0,
-                  uint64_t MaxTemporalProfTraceLength = 0,
-                  bool WritePrevVersion = false);
+  InstrProfWriter(
+      bool Sparse = false, uint64_t TemporalProfTraceReservoirSize = 0,
+      uint64_t MaxTemporalProfTraceLength = 0, bool WritePrevVersion = false,
+      memprof::IndexedVersion MemProfVersionRequested = memprof::Version0,
+      bool MemProfFullSchema = false);
   ~InstrProfWriter();
 
   StringMap<ProfilingData> &getProfileData() { return FunctionData; }
@@ -92,6 +106,7 @@ public:
   void addRecord(NamedInstrProfRecord &&I, function_ref<void(Error)> Warn) {
     addRecord(std::move(I), 1, Warn);
   }
+  void addVTableName(StringRef VTableName) { VTableNames.insert(VTableName); }
 
   /// Add \p SrcTraces using reservoir sampling where \p SrcStreamSize is the
   /// total number of temporal profiling traces the source has seen.
@@ -106,6 +121,12 @@ public:
   /// \p FrameId.
   bool addMemProfFrame(const memprof::FrameId, const memprof::Frame &F,
                        function_ref<void(Error)> Warn);
+
+  /// Add a call stack identified by the hash of the contents of the call stack
+  /// in \p CallStack.
+  bool addMemProfCallStack(const memprof::CallStackId CSId,
+                           const llvm::SmallVector<memprof::FrameId> &CallStack,
+                           function_ref<void(Error)> Warn);
 
   // Add a binary id to the binary ids list.
   void addBinaryIds(ArrayRef<llvm::object::BuildID> BIs);
@@ -180,9 +201,13 @@ public:
     return static_cast<bool>(ProfileKind & InstrProfKind::SingleByteCoverage);
   }
 
-  // Internal interface for testing purpose only.
+  // Internal interfaces for testing purpose only.
   void setValueProfDataEndianness(llvm::endianness Endianness);
   void setOutputSparse(bool Sparse);
+  void setMemProfVersionRequested(memprof::IndexedVersion Version) {
+    MemProfVersionRequested = Version;
+  }
+  void setMemProfFullSchema(bool Full) { MemProfFullSchema = Full; }
   // Compute the overlap b/w this object and Other. Program level result is
   // stored in Overlap and function level result is stored in FuncLevelOverlap.
   void overlapRecord(NamedInstrProfRecord &&Other, OverlapStats &Overlap,

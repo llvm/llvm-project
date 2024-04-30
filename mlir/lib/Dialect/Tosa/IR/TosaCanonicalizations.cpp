@@ -285,7 +285,7 @@ struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
       return failure();
     }
 
-    if (inputElementType.isa<FloatType>()) {
+    if (isa<FloatType>(inputElementType)) {
       // Unlike integer types, floating point types can represent infinity.
       auto minClamp = op.getMinFp();
       auto maxClamp = op.getMaxFp();
@@ -505,6 +505,19 @@ OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
 
   return binaryFolder<std::plus<APInt>, std::plus<APFloat>>(lhsAttr, rhsAttr,
                                                             resultTy);
+}
+
+OpFoldResult ArgMaxOp::fold(FoldAdaptor adaptor) {
+  auto inputTy = llvm::dyn_cast<RankedTensorType>(getInput().getType());
+  auto outputTy = llvm::dyn_cast<RankedTensorType>(getType());
+  if (!inputTy || !outputTy || !inputTy.hasStaticShape() ||
+      !outputTy.hasStaticShape())
+    return {};
+
+  if (inputTy.getDimSize(getAxis()) == 1)
+    return DenseElementsAttr::get(outputTy, 0);
+
+  return {};
 }
 
 OpFoldResult DivOp::fold(FoldAdaptor adaptor) {
@@ -795,7 +808,10 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
   if (!inputTy || !outputTy)
     return {};
 
-  if (inputTy == outputTy)
+  // Fold when the input and output types are the same. This is only safe when
+  // there is at most 1 dynamic dimension. For 2 or more dynamic dimensions,
+  // there may still be a productive reshape.
+  if (inputTy == outputTy && inputTy.getNumDynamicDims() < 2)
     return getInput1();
 
   // reshape(reshape(x)) -> reshape(x)
