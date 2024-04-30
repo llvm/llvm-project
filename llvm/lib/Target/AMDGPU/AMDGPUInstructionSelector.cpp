@@ -131,6 +131,12 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
   Register SrcReg = Src.getReg();
 
   if (isVCC(DstReg, *MRI)) {
+    if (SrcReg.isPhysical() && SrcReg != AMDGPU::SCC) {
+      const TargetRegisterClass *DstRC = MRI->getRegClassOrNull(DstReg);
+      if (DstRC)
+        return DstRC->contains(SrcReg);
+    }
+
     if (SrcReg == AMDGPU::SCC) {
       const TargetRegisterClass *RC
         = TRI.getConstrainedRegClassForOperand(Dst, *MRI);

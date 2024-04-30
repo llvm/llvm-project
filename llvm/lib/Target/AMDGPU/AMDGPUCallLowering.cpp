@@ -63,8 +63,7 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
                         const CCValAssign &VA) override {
-    if (VA.getLocVT() == MVT::i1 &&
-        MIRBuilder.getMF().getSubtarget<GCNSubtarget>().isWave64()) {
+    if (VA.getLocVT() == MVT::i1) {
       MIRBuilder.buildCopy(PhysReg, ValVReg);
       return;
     }
@@ -79,7 +78,7 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     if (TRI->isSGPRReg(MRI, PhysReg)) {
       LLT Ty = MRI.getType(ExtReg);
       LLT S32 = LLT::scalar(32);
-      if (Ty != S32 && Ty != LLT::scalar(64)) {
+      if (Ty != S32) {
         // FIXME: We should probably support readfirstlane intrinsics with all
         // legal 32-bit types.
         assert(Ty.getSizeInBits() == 32);
@@ -127,18 +126,19 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
                         const CCValAssign &VA) override {
     markPhysRegUsed(PhysReg);
 
+    if (VA.getLocVT() == MVT::i1) {
+      MIRBuilder.buildCopy(ValVReg, PhysReg);
+      MRI.setRegClass(ValVReg, MIRBuilder.getMF()
+                                   .getSubtarget<GCNSubtarget>()
+                                   .getRegisterInfo()
+                                   ->getBoolRC());
+      return;
+    }
+
     if (VA.getLocVT().getSizeInBits() < 32) {
       // 16-bit types are reported as legal for 32-bit registers. We need to do
       // a 32-bit copy, and truncate to avoid the verifier complaining about it.
-      //
-      // However, when function return type is i1, it may be in a 64b register.
-      unsigned CopyToBits =
-          (VA.getLocVT() == MVT::i1 &&
-           MIRBuilder.getMF().getSubtarget<GCNSubtarget>().isWave64())
-              ? 64
-              : 32;
-
-      auto Copy = MIRBuilder.buildCopy(LLT::scalar(CopyToBits), PhysReg);
+      auto Copy = MIRBuilder.buildCopy(LLT::scalar(32), PhysReg);
 
       // If we have signext/zeroext, it applies to the whole 32-bit register
       // before truncation.
@@ -248,8 +248,7 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
                         const CCValAssign &VA) override {
     MIB.addUse(PhysReg, RegState::Implicit);
 
-    if (VA.getLocVT() == MVT::i1 &&
-        MIRBuilder.getMF().getSubtarget<GCNSubtarget>().isWave64()) {
+    if (VA.getLocVT() == MVT::i1) {
       MIRBuilder.buildCopy(PhysReg, ValVReg);
       return;
     }
