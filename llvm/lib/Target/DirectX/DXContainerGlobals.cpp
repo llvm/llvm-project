@@ -34,9 +34,9 @@ class DXContainerGlobals : public llvm::ModulePass {
                                        StringRef Name, StringRef SectionName);
   GlobalVariable *getFeatureFlags(Module &M);
   GlobalVariable *computeShaderHash(Module &M);
-  GlobalVariable *buildSingature(Module &M, Signature &Sig, StringRef Name,
+  GlobalVariable *buildSignature(Module &M, Signature &Sig, StringRef Name,
                                  StringRef SectionName);
-  void addSingature(Module &M, SmallVector<GlobalValue *> &Globals);
+  void addSignature(Module &M, SmallVector<GlobalValue *> &Globals);
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -62,7 +62,7 @@ bool DXContainerGlobals::runOnModule(Module &M) {
   llvm::SmallVector<GlobalValue *> Globals;
   Globals.push_back(getFeatureFlags(M));
   Globals.push_back(computeShaderHash(M));
-  addSingature(M, Globals);
+  addSignature(M, Globals);
   appendToCompilerUsed(M, Globals);
   return true;
 }
@@ -110,7 +110,7 @@ GlobalVariable *DXContainerGlobals::buildContainerGlobal(
   return GV;
 }
 
-GlobalVariable *DXContainerGlobals::buildSingature(Module &M, Signature &Sig,
+GlobalVariable *DXContainerGlobals::buildSignature(Module &M, Signature &Sig,
                                                    StringRef Name,
                                                    StringRef SectionName) {
   SmallString<256> Data;
@@ -121,16 +121,16 @@ GlobalVariable *DXContainerGlobals::buildSingature(Module &M, Signature &Sig,
   return buildContainerGlobal(M, Constant, Name, SectionName);
 }
 
-void DXContainerGlobals::addSingature(Module &M,
+void DXContainerGlobals::addSignature(Module &M,
                                       SmallVector<GlobalValue *> &Globals) {
   // FIXME: support graphics shader.
   //  see issue https://github.com/llvm/llvm-project/issues/90504.
 
   Signature InputSig;
-  Globals.emplace_back(buildSingature(M, InputSig, "dx.isg1", "ISG1"));
+  Globals.emplace_back(buildSignature(M, InputSig, "dx.isg1", "ISG1"));
 
   Signature OutputSig;
-  Globals.emplace_back(buildSingature(M, OutputSig, "dx.osg1", "OSG1"));
+  Globals.emplace_back(buildSignature(M, OutputSig, "dx.osg1", "OSG1"));
 }
 
 char DXContainerGlobals::ID = 0;
