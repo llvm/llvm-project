@@ -3,7 +3,6 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=CHECK-AVX,CHECK-AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefixes=CHECK-AVX,CHECK-AVX512F,CHECK-NO-FASTFMA
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=skx -fp-contract=fast | FileCheck %s --check-prefixes=CHECK-AVX,CHECK-AVX512F,CHECK-FMA
-; XFAIL: *
 
 declare i16 @llvm.umax.i16(i16, i16)
 declare i64 @llvm.umin.i64(i64, i64)

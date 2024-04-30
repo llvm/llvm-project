@@ -3496,8 +3496,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
 
-    bool NUW = Op.getNode()->Flags.hasNoUnsignedWrap();
-    bool NSW = Op.getNode()->Flags.hasNoSignedWrap();
+    bool NUW = Op->getFlags().hasNoUnsignedWrap();
+    bool NSW = Op->getFlags().hasNoSignedWrap();
 
     bool ShAmtNonZero = Known2.isNonZero();
 
