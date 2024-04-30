@@ -276,7 +276,10 @@ Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
                                      /*Final=*/false);
 
     if (RelativeToPrimary &&
-        Function->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+        (Function->getTemplateSpecializationKind() ==
+             TSK_ExplicitSpecialization ||
+         (Function->getFriendObjectKind() &&
+          !Function->getPrimaryTemplate()->getFriendObjectKind())))
       return Response::UseNextDecl(Function);
 
     // If this function was instantiated from a specialized member that is
