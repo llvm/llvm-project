@@ -51,7 +51,6 @@ enum OpCode {
   OpCodePtrAdd,
   OpCodeBinOp,
   OpCodeCast,
-  OpCodeDeoptSafepoint,
   OpCodeSwitch,
   OpCodeUnimplemented = 255, // YKFIXME: Will eventually be deleted.
 };
@@ -397,6 +396,9 @@ private:
   }
 
   void serialiseStackmapCall(CallInst *I, ValueLoweringMap &VLMap) {
+    assert(I);
+    assert(I->getCalledFunction()->isIntrinsic());
+    assert(I->getIntrinsicID() == Intrinsic::experimental_stackmap);
     // stackmap ID:
     serialiseOperand(I, VLMap, I->getOperand(0));
 
@@ -461,12 +463,9 @@ private:
     }
     if (!I->getCalledFunction()->isDeclaration()) {
       // The next instruction will be the stackmap entry
-      CallInst *SMI = dyn_cast<CallInst>(I->getNextNonDebugInstruction());
-      assert(SMI);
-      assert(SMI->getCalledFunction()->isIntrinsic());
-      assert(SMI->getIntrinsicID() == Intrinsic::experimental_stackmap);
       // has_safepoint = 1:
       OutStreamer.emitInt8(1);
+      CallInst *SMI = dyn_cast<CallInst>(I->getNextNonDebugInstruction());
       serialiseStackmapCall(SMI, VLMap);
     } else {
       // has_safepoint = 0:
@@ -506,9 +505,6 @@ private:
       serialiseBlockLabel(I->getSuccessor(1));
 
       CallInst *SMI = dyn_cast<CallInst>(I->getPrevNonDebugInstruction());
-      assert(SMI);
-      assert(SMI->getCalledFunction()->isIntrinsic());
-      assert(SMI->getIntrinsicID() == Intrinsic::experimental_stackmap);
       serialiseStackmapCall(SMI, VLMap);
     }
     InstIdx++;
@@ -688,7 +684,9 @@ private:
     for (auto &Case : I->cases()) {
       serialiseBlockLabel(Case.getCaseSuccessor());
     }
-
+    // safepoint:
+    CallInst *SMI = dyn_cast<CallInst>(I->getPrevNonDebugInstruction());
+    serialiseStackmapCall(SMI, VLMap);
     InstIdx++;
   }
 
