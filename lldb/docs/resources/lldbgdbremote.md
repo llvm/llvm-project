@@ -1,14 +1,19 @@
 # GDB Remote Protocol Extensions
 
 LLDB has added new GDB server packets to better support multi-threaded and
-remote debugging.
+remote debugging. These extend the
+[protocol defined by GDB ](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Packets.html#Packets) (and [this page](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Host-I_002fO-Packets.html#Host-I_002fO-Packets) for `vFile` packets).
 
-Why? Normally you need to start the correct GDB and the
-correct GDB server when debugging. If you have mismatch, then things go wrong
-very quickly. LLDB makes extensive use of the GDB remote protocol and we
-wanted to make sure that the experience was a bit more dynamic where we can
-discover information about a remote target without having to know anything up
-front.
+If a packet is restated here it is because LLDB's version has some behaviour
+difference to GDB's version, or it provides some context for a following LLDB
+extension packet.
+
+Why did we add these? The most common reason is flexibility. Normally you need
+to start the correct GDB and the correct GDB server when debugging. If you have
+mismatch, then things go wrong very quickly. LLDB makes extensive use of the GDB
+remote protocol and we wanted to make sure that the experience was a bit more
+dynamic where we can discover information about a remote target without having
+to know anything up front.
 
 We also ran into performance issues with the existing GDB remote
 protocol that can be overcome when using a reliable communications layer.
@@ -21,9 +26,6 @@ registers will look (how many, their register number,name and offsets).
 We prefer to be able to dynamically determine what kind of architecture, OS and
 vendor we are debugging, as well as how things are laid out when it comes to
 the thread register contexts.
-
-Below are the details on the new packets we have added above and beyond the
-standard GDB remote protocol packets.
 
 ## QStartNoAckMode
 
