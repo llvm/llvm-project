@@ -603,6 +603,9 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.mbstate_t
+    .llvm-libc-types.char8_t
+    .llvm-libc-types.char16_t
+    .llvm-libc-types.char32_t
 )
 
 add_gen_header(
