@@ -15459,6 +15459,12 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   if (DAG.isGuaranteedNotToBeUndefOrPoison(N0, /*PoisonOnly*/ false))
     return N0;
 
+  // We currently avoid folding freeze over SRA/SRL, due to the problems seen
+  // with (freeze (assert ext)) blocking simplifications of SRA/SRL. See for
+  // example https://reviews.llvm.org/D136529#4120959.
+  if (N0.getOpcode() == ISD::SRA || N0.getOpcode() == ISD::SRL)
+    return SDValue();
+
   // Fold freeze(op(x, ...)) -> op(freeze(x), ...).
   // Try to push freeze through instructions that propagate but don't produce
   // poison as far as possible. If an operand of freeze follows three
@@ -15474,6 +15480,26 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   bool AllowMultipleMaybePoisonOperands = N0.getOpcode() == ISD::BUILD_VECTOR ||
                                           N0.getOpcode() == ISD::BUILD_PAIR ||
                                           N0.getOpcode() == ISD::CONCAT_VECTORS;
+
+  // Avoid turning a BUILD_VECTOR that can be recognized as "all zeros", "all
+  // ones" or "constant" into something that depends on FrozenUndef. We can
+  // instead pick undef values to keep those properties, while at the same time
+  // folding away the freeze.
+  // If we implement a more general solution for folding away freeze(undef) in
+  // the future, then this special handling can be removed.
+  if (N0.getOpcode() == ISD::BUILD_VECTOR) {
+    SDLoc DL(N0);
+    EVT VT = N0.getValueType();
+    if (llvm::ISD::isBuildVectorAllOnes(N0.getNode()))
+      return DAG.getAllOnesConstant(DL, VT);
+    if (llvm::ISD::isBuildVectorOfConstantSDNodes(N0.getNode())) {
+      SmallVector<SDValue, 8> NewVecC;
+      for (const SDValue &Op : N0->op_values())
+        NewVecC.push_back(
+            Op.isUndef() ? DAG.getConstant(0, DL, Op.getValueType()) : Op);
+      return DAG.getBuildVector(VT, DL, NewVecC);
+    }
+  }
 
   SmallSetVector<SDValue, 8> MaybePoisonOperands;
   for (SDValue Op : N0->ops()) {
