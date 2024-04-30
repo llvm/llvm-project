@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Attributes.h"
+#include "llvm-c/Core.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/LLVMContext.h"
@@ -306,6 +308,38 @@ TEST(Attributes, RemoveParamAttributes) {
   EXPECT_EQ(AL.getNumAttrSets(), 4U);
   AL = AL.removeParamAttribute(C, 1, Attribute::NoUndef);
   EXPECT_EQ(AL.getNumAttrSets(), 0U);
+}
+
+TEST(Attributes, ConstantRangeAttributeCAPI) {
+  LLVMContext C;
+  {
+    Type *IntTy = Type::getInt8Ty(C);
+
+    const uint64_t LowerWords[] = {0};
+    const uint64_t UpperWords[] = {42};
+
+    auto Range = ConstantRange(APInt(8, ArrayRef<uint64_t>(LowerWords, 1)),
+                               APInt(8, ArrayRef<uint64_t>(UpperWords, 1)));
+
+    Attribute RangeAttr = Attribute::get(C, Attribute::Range, Range);
+    auto OutAttr = unwrap(LLVMCreateConstantRangeAttribute(
+        wrap(&C), Attribute::Range, wrap(IntTy), 1, LowerWords, 1, UpperWords));
+    EXPECT_EQ(OutAttr, RangeAttr);
+  }
+  {
+    Type *IntTy = Type::getInt128Ty(C);
+
+    const uint64_t LowerWords[] = {1, 1};
+    const uint64_t UpperWords[] = {42, 42};
+
+    auto Range = ConstantRange(APInt(128, ArrayRef<uint64_t>(LowerWords, 2)),
+                               APInt(128, ArrayRef<uint64_t>(UpperWords, 2)));
+
+    Attribute RangeAttr = Attribute::get(C, Attribute::Range, Range);
+    auto OutAttr = unwrap(LLVMCreateConstantRangeAttribute(
+        wrap(&C), Attribute::Range, wrap(IntTy), 2, LowerWords, 2, UpperWords));
+    EXPECT_EQ(OutAttr, RangeAttr);
+  }
 }
 
 } // end anonymous namespace

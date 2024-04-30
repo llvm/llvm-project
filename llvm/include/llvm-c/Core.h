@@ -674,7 +674,7 @@ LLVMAttributeRef LLVMCreateTypeAttribute(LLVMContextRef C, unsigned KindID,
 LLVMTypeRef LLVMGetTypeAttributeValue(LLVMAttributeRef A);
 
 /**
- * Create a constantRange attribute
+ * Create a ConstantRange attribute.
  */
 LLVMAttributeRef LLVMCreateConstantRangeAttribute(
     LLVMContextRef C, unsigned KindID, LLVMTypeRef IntTy,
