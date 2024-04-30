@@ -71,9 +71,6 @@ defm compress_sections: EEq<"compress-sections",
   "Compress non-SHF_ALLOC output sections matching <section-glob>">,
   MetaVarName<"<section-glob>=[none|zlib|zstd]">;
 
-defm compression_level: EEq<"compression-level", "Set the compression level">,
-  MetaVarName<"level">;
-
 defm defsym: Eq<"defsym", "Define a symbol alias">, MetaVarName<"<symbol>=<value>">;
 
 defm optimize_bb_jumps: BB<"optimize-bb-jumps",

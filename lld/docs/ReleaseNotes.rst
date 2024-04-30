@@ -26,11 +26,9 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* ``--compress-sections <section-glib>=[none|zlib|zstd]`` is added to compress
+* ``--compress-sections <section-glib>={none,zlib,zstd}[:level]`` is added to compress
   matched output sections without the ``SHF_ALLOC`` flag.
   (`#84855 <https://github.com/llvm/llvm-project/pull/84855>`_)
-* ``--compression-level`` is added to set the compression level
-  for ``--compress-debug-sections=[zlib|zstd]`` and ``--compress-sections``.
   (`#90567 <https://github.com/llvm/llvm-project/pull/90567>`_)
 * ``GNU_PROPERTY_AARCH64_FEATURE_PAUTH`` notes, ``R_AARCH64_AUTH_ABS64`` and
   ``R_AARCH64_AUTH_RELATIVE`` relocations are now supported.

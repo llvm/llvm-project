@@ -335,12 +335,15 @@ template <class ELFT> void OutputSection::maybeCompress() {
   (void)sizeof(Elf_Chdr);
 
   DebugCompressionType ctype = DebugCompressionType::None;
-  for (auto &[glob, t] : config->compressSections)
+  int level = 0; // default compression level
+  for (auto &[glob, t, l] : config->compressSections)
     if (glob.match(name))
-      ctype = t;
+      std::tie(ctype, level) = {t, l};
   if (!(flags & SHF_ALLOC) && config->compressDebugSections &&
-      name.starts_with(".debug_") && size)
+      name.starts_with(".debug_") && size) {
     ctype = *config->compressDebugSections;
+    level = 0;
+  }
   if (ctype == DebugCompressionType::None)
     return;
   if (flags & SHF_ALLOC) {
@@ -379,8 +382,7 @@ template <class ELFT> void OutputSection::maybeCompress() {
     parallelFor(0, numShards, [&](size_t i) {
       SmallVector<uint8_t, 0> out;
       ZSTD_CCtx *cctx = ZSTD_createCCtx();
-      ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel,
-                             config->compressionLevel);
+      ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel, level);
       ZSTD_inBuffer zib = {shardsIn[i].data(), shardsIn[i].size(), 0};
       ZSTD_outBuffer zob = {nullptr, 0, 0};
       size_t size;
@@ -408,10 +410,10 @@ template <class ELFT> void OutputSection::maybeCompress() {
 
 #if LLVM_ENABLE_ZLIB
   // We chose 1 (Z_BEST_SPEED) as the default compression level because it is
-  // the fastest.
+  // fast and provides decent compression ratios.
   if (ctype == DebugCompressionType::Zlib) {
-    const int level =
-        config->compressionLevel ? config->compressionLevel : Z_BEST_SPEED;
+    if (!level)
+      level = Z_BEST_SPEED;
 
     // Compress shards and compute Alder-32 checksums. Use Z_SYNC_FLUSH for all
     // shards but the last to flush the output to a byte boundary to be

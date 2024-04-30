@@ -62,6 +62,10 @@
 # ERR3:      unknown --compress-sections value: zlib-gabi
 # ERR3-NEXT: --compress-sections: parse error, not 'section-glob=[none|zlib|zstd]'
 
+# RUN: not ld.lld a.o --compress-sections='.debug*=zlib:a' 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR4 --implicit-check-not=error:
+# ERR4: error: --compress-sections: integer compression level expected, but got 'a'
+
 .globl _start
 _start:
   ret

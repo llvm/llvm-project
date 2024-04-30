@@ -1233,7 +1233,6 @@ static void readConfigs(opt::InputArgList &args) {
     config->compressDebugSections =
         getCompressionType(arg->getValue(), "--compress-debug-sections");
   }
-  config->compressionLevel = args::getInteger(args, OPT_compression_level, 0);
   config->cref = args.hasArg(OPT_cref);
   config->optimizeBBJumps =
       args.hasFlag(OPT_optimize_bb_jumps, OPT_no_optimize_bb_jumps, false);
@@ -1534,9 +1533,14 @@ static void readConfigs(opt::InputArgList &args) {
             ": parse error, not 'section-glob=[none|zlib|zstd]'");
       continue;
     }
-    auto type = getCompressionType(fields[1], arg->getSpelling());
+    auto [typeStr, levelStr] = fields[1].split(':');
+    auto type = getCompressionType(typeStr, arg->getSpelling());
+    int level = 0;
+    if (!levelStr.empty() && !llvm::to_integer(levelStr, level))
+      error(arg->getSpelling() +
+            ": integer compression level expected, but got '" + levelStr + "'");
     if (Expected<GlobPattern> pat = GlobPattern::create(fields[0])) {
-      config->compressSections.emplace_back(std::move(*pat), type);
+      config->compressSections.emplace_back(std::move(*pat), type, level);
     } else {
       error(arg->getSpelling() + ": " + toString(pat.takeError()));
       continue;
