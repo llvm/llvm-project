@@ -9,43 +9,32 @@
 //
 //===----------------------------------------------------------------------===//
 
-// A SubtargetFeature that can be toggled from the command line, and therefore
-// has an AEK_* entry in ArmExtKind.
-class Extension<
-  string TargetFeatureName,            // String used for -target-feature.
-  string Spelling,                     // The XYZ in HasXYZ and AEK_XYZ.
-  string Desc,                         // Description.
-  list<SubtargetFeature> Implies = []  // List of dependent features.
-> : SubtargetFeature<TargetFeatureName, "Has" # Spelling, "true", Desc, Implies>
-{
-    string ArchExtKindSpelling = "AEK_" # Spelling; // ArchExtKind enum name.
-}
-
 // Each SubtargetFeature which corresponds to an Arm Architecture feature should
 // be annotated with the respective FEAT_ feature name from the Architecture
 // Reference Manual. If a SubtargetFeature enables instructions from multiple
 // Arm Architecture Features, it should list all the relevant features. Not all
 // FEAT_ features have a corresponding SubtargetFeature.
 
-def FeatureFPARMv8 : Extension<"fp-armv8", "FPARMv8", "Enable ARMv8 (FEAT_FP)">;
+def FeatureFPARMv8 : SubtargetFeature<"fp-armv8", "HasFPARMv8", "true",
+                                       "Enable ARMv8 FP (FEAT_FP)">;
 
-def FeatureNEON : Extension<"neon", "NEON",
+def FeatureNEON : SubtargetFeature<"neon", "HasNEON", "true",
   "Enable Advanced SIMD instructions (FEAT_AdvSIMD)", [FeatureFPARMv8]>;
 
-def FeatureSM4 : Extension<
-    "sm4", "SM4",
+def FeatureSM4 : SubtargetFeature<
+    "sm4", "HasSM4", "true",
     "Enable SM3 and SM4 support (FEAT_SM4, FEAT_SM3)", [FeatureNEON]>;
 
-def FeatureSHA2 : Extension<
-    "sha2", "SHA2",
+def FeatureSHA2 : SubtargetFeature<
+    "sha2", "HasSHA2", "true",
     "Enable SHA1 and SHA256 support (FEAT_SHA1, FEAT_SHA256)", [FeatureNEON]>;
 
-def FeatureSHA3 : Extension<
-    "sha3", "SHA3",
+def FeatureSHA3 : SubtargetFeature<
+    "sha3", "HasSHA3", "true",
     "Enable SHA512 and SHA3 support (FEAT_SHA3, FEAT_SHA512)", [FeatureNEON, FeatureSHA2]>;
 
-def FeatureAES : Extension<
-    "aes", "AES",
+def FeatureAES : SubtargetFeature<
+    "aes", "HasAES", "true",
     "Enable AES support (FEAT_AES, FEAT_PMULL)", [FeatureNEON]>;
 
 // Crypto has been split up and any combination is now valid (see the
@@ -56,20 +45,20 @@ def FeatureAES : Extension<
 // meaning anymore. We kept the Crypto definition here for backward
 // compatibility, and now imply features SHA2 and AES, which was the
 // "traditional" meaning of Crypto.
-def FeatureCrypto : Extension<"crypto", "Crypto",
+def FeatureCrypto : SubtargetFeature<"crypto", "HasCrypto", "true",
   "Enable cryptographic instructions", [FeatureNEON, FeatureSHA2, FeatureAES]>;
 
-def FeatureCRC : Extension<"crc", "CRC",
+def FeatureCRC : SubtargetFeature<"crc", "HasCRC", "true",
   "Enable ARMv8 CRC-32 checksum instructions (FEAT_CRC32)">;
 
-def FeatureRAS : Extension<"ras", "RAS",
+def FeatureRAS : SubtargetFeature<"ras", "HasRAS", "true",
   "Enable ARMv8 Reliability, Availability and Serviceability Extensions (FEAT_RAS, FEAT_RASv1p1)">;
 
-def FeatureRASv2 : Extension<"rasv2", "RASv2",
+def FeatureRASv2 : SubtargetFeature<"rasv2", "HasRASv2", "true",
   "Enable ARMv8.9-A Reliability, Availability and Serviceability Extensions (FEAT_RASv2)",
   [FeatureRAS]>;
 
-def FeatureLSE : Extension<"lse", "LSE",
+def FeatureLSE : SubtargetFeature<"lse", "HasLSE", "true",
   "Enable ARMv8.1 Large System Extension (LSE) atomic instructions (FEAT_LSE)">;
 
 def FeatureLSE2 : SubtargetFeature<"lse2", "HasLSE2", "true",
@@ -81,7 +70,7 @@ def FeatureOutlineAtomics : SubtargetFeature<"outline-atomics", "OutlineAtomics"
 def FeatureFMV : SubtargetFeature<"fmv", "HasFMV", "true",
   "Enable Function Multi Versioning support.">;
 
-def FeatureRDM : Extension<"rdm", "RDM",
+def FeatureRDM : SubtargetFeature<"rdm", "HasRDM", "true",
   "Enable ARMv8.1 Rounding Double Multiply Add/Subtract instructions (FEAT_RDM)",
   [FeatureNEON]>;
 
@@ -102,16 +91,16 @@ def FeatureVH : SubtargetFeature<"vh", "HasVH", "true",
 // This SubtargetFeature is special. It controls only whether codegen will turn
 // `llvm.readcyclecounter()` into an access to a PMUv3 System Register. The
 // `FEAT_PMUv3*` system registers are always available for assembly/disassembly.
-def FeaturePerfMon : Extension<"perfmon", "PerfMon",
+def FeaturePerfMon : SubtargetFeature<"perfmon", "HasPerfMon", "true",
   "Enable Code Generation for ARMv8 PMUv3 Performance Monitors extension (FEAT_PMUv3)">;
 
-def FeatureFullFP16 : Extension<"fullfp16", "FullFP16",
+def FeatureFullFP16 : SubtargetFeature<"fullfp16", "HasFullFP16", "true",
   "Full FP16 (FEAT_FP16)", [FeatureFPARMv8]>;
 
-def FeatureFP16FML : Extension<"fp16fml", "FP16FML",
+def FeatureFP16FML : SubtargetFeature<"fp16fml", "HasFP16FML", "true",
   "Enable FP16 FML instructions (FEAT_FHM)", [FeatureFullFP16]>;
 
-def FeatureSPE : Extension<"spe", "SPE",
+def FeatureSPE : SubtargetFeature<"spe", "HasSPE", "true",
   "Enable Statistical Profiling extension (FEAT_SPE)">;
 
 def FeaturePAN_RWV : SubtargetFeature<
@@ -126,13 +115,13 @@ def FeaturePsUAO : SubtargetFeature< "uaops", "HasPsUAO", "true",
 def FeatureCCPP : SubtargetFeature<"ccpp", "HasCCPP",
     "true", "Enable v8.2 data Cache Clean to Point of Persistence (FEAT_DPB)" >;
 
-def FeatureSVE : Extension<"sve", "SVE",
+def FeatureSVE : SubtargetFeature<"sve", "HasSVE", "true",
   "Enable Scalable Vector Extension (SVE) instructions (FEAT_SVE)", [FeatureFullFP16]>;
 
-def FeatureFPMR : Extension<"fpmr", "FPMR",
+def FeatureFPMR : SubtargetFeature<"fpmr", "HasFPMR", "true",
   "Enable FPMR Register (FEAT_FPMR)">;
 
-def FeatureFP8 : Extension<"fp8", "FP8",
+def FeatureFP8 : SubtargetFeature<"fp8", "HasFP8", "true",
   "Enable FP8 instructions (FEAT_FP8)">;
 
 // This flag is currently still labeled as Experimental, but when fully
@@ -156,33 +145,33 @@ def FeatureExperimentalZeroingPseudos
 def FeatureUseScalarIncVL : SubtargetFeature<"use-scalar-inc-vl",
   "UseScalarIncVL", "true", "Prefer inc/dec over add+cnt">;
 
-def FeatureBF16 : Extension<"bf16", "BF16",
-    "Enable BFloat16 Extension (FEAT_BF16)" >;
+def FeatureBF16 : SubtargetFeature<"bf16", "HasBF16",
+    "true", "Enable BFloat16 Extension (FEAT_BF16)" >;
 
 def FeatureNoSVEFPLD1R : SubtargetFeature<"no-sve-fp-ld1r",
   "NoSVEFPLD1R", "true", "Avoid using LD1RX instructions for FP">;
 
-def FeatureSVE2 : Extension<"sve2", "SVE2",
+def FeatureSVE2 : SubtargetFeature<"sve2", "HasSVE2", "true",
   "Enable Scalable Vector Extension 2 (SVE2) instructions (FEAT_SVE2)",
   [FeatureSVE, FeatureUseScalarIncVL]>;
 
-def FeatureSVE2AES : Extension<"sve2-aes", "SVE2AES",
+def FeatureSVE2AES : SubtargetFeature<"sve2-aes", "HasSVE2AES", "true",
   "Enable AES SVE2 instructions (FEAT_SVE_AES, FEAT_SVE_PMULL128)",
   [FeatureSVE2, FeatureAES]>;
 
-def FeatureSVE2SM4 : Extension<"sve2-sm4", "SVE2SM4",
+def FeatureSVE2SM4 : SubtargetFeature<"sve2-sm4", "HasSVE2SM4", "true",
   "Enable SM4 SVE2 instructions (FEAT_SVE_SM4)", [FeatureSVE2, FeatureSM4]>;
 
-def FeatureSVE2SHA3 : Extension<"sve2-sha3", "SVE2SHA3",
+def FeatureSVE2SHA3 : SubtargetFeature<"sve2-sha3", "HasSVE2SHA3", "true",
   "Enable SHA3 SVE2 instructions (FEAT_SVE_SHA3)", [FeatureSVE2, FeatureSHA3]>;
 
-def FeatureSVE2BitPerm : Extension<"sve2-bitperm", "SVE2BitPerm",
+def FeatureSVE2BitPerm : SubtargetFeature<"sve2-bitperm", "HasSVE2BitPerm", "true",
   "Enable bit permutation SVE2 instructions (FEAT_SVE_BitPerm)", [FeatureSVE2]>;
 
-def FeatureSVE2p1: Extension<"sve2p1", "SVE2p1",
+def FeatureSVE2p1: SubtargetFeature<"sve2p1", "HasSVE2p1", "true",
   "Enable Scalable Vector Extension 2.1 instructions", [FeatureSVE2]>;
 
-def FeatureB16B16 : Extension<"b16b16", "B16B16",
+def FeatureB16B16 : SubtargetFeature<"b16b16", "HasB16B16", "true",
   "Enable SVE2.1 or SME2.1 non-widening BFloat16 to BFloat16 instructions (FEAT_B16B16)", [FeatureBF16]>;
 
 def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",
@@ -314,23 +303,23 @@ def FeatureForce32BitJumpTables
    : SubtargetFeature<"force-32bit-jump-tables", "Force32BitJumpTables", "true",
                       "Force jump table entries to be 32-bits wide except at MinSize">;
 
-def FeatureRCPC : Extension<"rcpc", "RCPC",
-    "Enable support for RCPC extension (FEAT_LRCPC)">;
+def FeatureRCPC : SubtargetFeature<"rcpc", "HasRCPC", "true",
+                                   "Enable support for RCPC extension (FEAT_LRCPC)">;
 
 def FeatureUseRSqrt : SubtargetFeature<
     "use-reciprocal-square-root", "UseRSqrt", "true",
     "Use the reciprocal square root approximation">;
 
-def FeatureDotProd : Extension<
-    "dotprod", "DotProd",
+def FeatureDotProd : SubtargetFeature<
+    "dotprod", "HasDotProd", "true",
     "Enable dot product support (FEAT_DotProd)", [FeatureNEON]>;
 
-def FeaturePAuth : Extension<
-    "pauth", "PAuth",
+def FeaturePAuth : SubtargetFeature<
+    "pauth", "HasPAuth", "true",
     "Enable v8.3-A Pointer Authentication extension (FEAT_PAuth)">;
 
-def FeatureJS : Extension<
-    "jsconv", "JS",
+def FeatureJS : SubtargetFeature<
+    "jsconv", "HasJS", "true",
     "Enable v8.3-A JavaScript FP conversion instructions (FEAT_JSCVT)",
     [FeatureFPARMv8]>;
 
@@ -338,8 +327,8 @@ def FeatureCCIDX : SubtargetFeature<
     "ccidx", "HasCCIDX", "true",
     "Enable v8.3-A Extend of the CCSIDR number of sets (FEAT_CCIDX)">;
 
-def FeatureComplxNum : Extension<
-    "complxnum", "ComplxNum",
+def FeatureComplxNum : SubtargetFeature<
+    "complxnum", "HasComplxNum", "true",
     "Enable v8.3-A Floating-point complex number support (FEAT_FCMA)",
     [FeatureNEON]>;
 
@@ -376,8 +365,8 @@ def FeatureTLB_RMI : SubtargetFeature<
     "tlb-rmi", "HasTLB_RMI", "true",
     "Enable v8.4-A TLB Range and Maintenance Instructions (FEAT_TLBIOS, FEAT_TLBIRANGE)">;
 
-def FeatureFlagM : Extension<
-    "flagm", "FlagM",
+def FeatureFlagM : SubtargetFeature<
+    "flagm", "HasFlagM", "true",
     "Enable v8.4-A Flag Manipulation Instructions (FEAT_FlagM)">;
 
 // 8.4 RCPC enchancements: LDAPR & STLR instructions with Immediate Offset
@@ -425,50 +414,50 @@ def FeatureFRInt3264 : SubtargetFeature<"fptoint", "HasFRInt3264", "true",
 def FeatureSpecRestrict : SubtargetFeature<"specrestrict", "HasSpecRestrict",
   "true", "Enable architectural speculation restriction (FEAT_CSV2_2)">;
 
-def FeatureSB : Extension<"sb", "SB",
-  "Enable v8.5 Speculation Barrier (FEAT_SB)" >;
+def FeatureSB : SubtargetFeature<"sb", "HasSB",
+  "true", "Enable v8.5 Speculation Barrier (FEAT_SB)" >;
 
-def FeatureSSBS : Extension<"ssbs", "SSBS",
-  "Enable Speculative Store Bypass Safe bit (FEAT_SSBS, FEAT_SSBS2)" >;
+def FeatureSSBS : SubtargetFeature<"ssbs", "HasSSBS",
+  "true", "Enable Speculative Store Bypass Safe bit (FEAT_SSBS, FEAT_SSBS2)" >;
 
-def FeaturePredRes : Extension<"predres", "PredRes",
+def FeaturePredRes : SubtargetFeature<"predres", "HasPredRes", "true",
   "Enable v8.5a execution and data prediction invalidation instructions (FEAT_SPECRES)" >;
 
-def FeatureCacheDeepPersist : Extension<"ccdp", "CCDP",
-    "Enable v8.5 Cache Clean to Point of Deep Persistence (FEAT_DPB2)" >;
+def FeatureCacheDeepPersist : SubtargetFeature<"ccdp", "HasCCDP",
+    "true", "Enable v8.5 Cache Clean to Point of Deep Persistence (FEAT_DPB2)" >;
 
-def FeatureBranchTargetId : Extension<"bti", "BTI",
-    "Enable Branch Target Identification (FEAT_BTI)" >;
+def FeatureBranchTargetId : SubtargetFeature<"bti", "HasBTI",
+    "true", "Enable Branch Target Identification (FEAT_BTI)" >;
 
-def FeatureRandGen : Extension<"rand", "RandGen",
-    "Enable Random Number generation instructions (FEAT_RNG)" >;
+def FeatureRandGen : SubtargetFeature<"rand", "HasRandGen",
+    "true", "Enable Random Number generation instructions (FEAT_RNG)" >;
 
-def FeatureMTE : Extension<"mte", "MTE",
-    "Enable Memory Tagging Extension (FEAT_MTE, FEAT_MTE2)" >;
+def FeatureMTE : SubtargetFeature<"mte", "HasMTE",
+    "true", "Enable Memory Tagging Extension (FEAT_MTE, FEAT_MTE2)" >;
 
-def FeatureTRBE : Extension<"trbe", "TRBE",
-    "Enable Trace Buffer Extension (FEAT_TRBE)">;
+def FeatureTRBE : SubtargetFeature<"trbe", "HasTRBE",
+    "true", "Enable Trace Buffer Extension (FEAT_TRBE)">;
 
-def FeatureETE : Extension<"ete", "ETE",
-    "Enable Embedded Trace Extension (FEAT_ETE)",
+def FeatureETE : SubtargetFeature<"ete", "HasETE",
+    "true", "Enable Embedded Trace Extension (FEAT_ETE)",
     [FeatureTRBE]>;
 
-def FeatureTME : Extension<"tme", "TME",
-    "Enable Transactional Memory Extension (FEAT_TME)" >;
+def FeatureTME : SubtargetFeature<"tme", "HasTME",
+    "true", "Enable Transactional Memory Extension (FEAT_TME)" >;
 
 def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
 
-def FeatureMatMulInt8 : Extension<"i8mm", "MatMulInt8",
-    "Enable Matrix Multiply Int8 Extension (FEAT_I8MM)">;
+def FeatureMatMulInt8 : SubtargetFeature<"i8mm", "HasMatMulInt8",
+    "true", "Enable Matrix Multiply Int8 Extension (FEAT_I8MM)">;
 
-def FeatureMatMulFP32 : Extension<"f32mm", "MatMulFP32",
-    "Enable Matrix Multiply FP32 Extension (FEAT_F32MM)", [FeatureSVE]>;
+def FeatureMatMulFP32 : SubtargetFeature<"f32mm", "HasMatMulFP32",
+    "true", "Enable Matrix Multiply FP32 Extension (FEAT_F32MM)", [FeatureSVE]>;
 
-def FeatureMatMulFP64 : Extension<"f64mm", "MatMulFP64",
-    "Enable Matrix Multiply FP64 Extension (FEAT_F64MM)", [FeatureSVE]>;
+def FeatureMatMulFP64 : SubtargetFeature<"f64mm", "HasMatMulFP64",
+    "true", "Enable Matrix Multiply FP64 Extension (FEAT_F64MM)", [FeatureSVE]>;
 
 def FeatureXS : SubtargetFeature<"xs", "HasXS",
     "true", "Enable Armv8.7-A limited-TLB-maintenance instruction (FEAT_XS)">;
@@ -479,20 +468,20 @@ def FeatureWFxT : SubtargetFeature<"wfxt", "HasWFxT",
 def FeatureHCX : SubtargetFeature<
     "hcx", "HasHCX", "true", "Enable Armv8.7-A HCRX_EL2 system register (FEAT_HCX)">;
 
-def FeatureLS64 : Extension<"ls64", "LS64",
-    "Enable Armv8.7-A LD64B/ST64B Accelerator Extension (FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA)">;
+def FeatureLS64 : SubtargetFeature<"ls64", "HasLS64",
+    "true", "Enable Armv8.7-A LD64B/ST64B Accelerator Extension (FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA)">;
 
-def FeatureHBC : Extension<"hbc", "HBC",
-    "Enable Armv8.8-A Hinted Conditional Branches Extension (FEAT_HBC)">;
+def FeatureHBC : SubtargetFeature<"hbc", "HasHBC",
+    "true", "Enable Armv8.8-A Hinted Conditional Branches Extension (FEAT_HBC)">;
 
-def FeatureMOPS : Extension<"mops", "MOPS",
-    "Enable Armv8.8-A memcpy and memset acceleration instructions (FEAT_MOPS)">;
+def FeatureMOPS : SubtargetFeature<"mops", "HasMOPS",
+    "true", "Enable Armv8.8-A memcpy and memset acceleration instructions (FEAT_MOPS)">;
 
 def FeatureNMI : SubtargetFeature<"nmi", "HasNMI",
     "true", "Enable Armv8.8-A Non-maskable Interrupts (FEAT_NMI, FEAT_GICv3_NMI)">;
 
-def FeatureBRBE : Extension<"brbe", "BRBE",
-    "Enable Branch Record Buffer Extension (FEAT_BRBE)">;
+def FeatureBRBE : SubtargetFeature<"brbe", "HasBRBE",
+    "true", "Enable Branch Record Buffer Extension (FEAT_BRBE)">;
 
 def FeatureSPE_EEF : SubtargetFeature<"spe-eef", "HasSPE_EEF",
     "true", "Enable extra register in the Statistical Profiling Extension (FEAT_SPEv1p2)">;
@@ -507,57 +496,57 @@ def FeatureEnhancedCounterVirtualization :
 def FeatureRME : SubtargetFeature<"rme", "HasRME",
     "true", "Enable Realm Management Extension (FEAT_RME)">;
 
-def FeatureSME : Extension<"sme", "SME",
+def FeatureSME : SubtargetFeature<"sme", "HasSME", "true",
   "Enable Scalable Matrix Extension (SME) (FEAT_SME)", [FeatureBF16, FeatureUseScalarIncVL]>;
 
-def FeatureSMEF64F64 : Extension<"sme-f64f64", "SMEF64F64",
+def FeatureSMEF64F64 : SubtargetFeature<"sme-f64f64", "HasSMEF64F64", "true",
   "Enable Scalable Matrix Extension (SME) F64F64 instructions (FEAT_SME_F64F64)", [FeatureSME]>;
 
-def FeatureSMEI16I64 : Extension<"sme-i16i64", "SMEI16I64",
+def FeatureSMEI16I64 : SubtargetFeature<"sme-i16i64", "HasSMEI16I64", "true",
   "Enable Scalable Matrix Extension (SME) I16I64 instructions (FEAT_SME_I16I64)", [FeatureSME]>;
 
-def FeatureSMEFA64 : Extension<"sme-fa64", "SMEFA64",
+def FeatureSMEFA64 : SubtargetFeature<"sme-fa64", "HasSMEFA64", "true",
   "Enable the full A64 instruction set in streaming SVE mode (FEAT_SME_FA64)", [FeatureSME, FeatureSVE2]>;
 
-def FeatureSME2 : Extension<"sme2", "SME2",
+def FeatureSME2 : SubtargetFeature<"sme2", "HasSME2", "true",
   "Enable Scalable Matrix Extension 2 (SME2) instructions", [FeatureSME]>;
 
-def FeatureSMEF16F16 : Extension<"sme-f16f16", "SMEF16F16",
+def FeatureSMEF16F16 : SubtargetFeature<"sme-f16f16", "HasSMEF16F16", "true",
   "Enable SME non-widening Float16 instructions (FEAT_SME_F16F16)", [FeatureSME2]>;
 
-def FeatureSME2p1 : Extension<"sme2p1", "SME2p1",
+def FeatureSME2p1 : SubtargetFeature<"sme2p1", "HasSME2p1", "true",
   "Enable Scalable Matrix Extension 2.1 (FEAT_SME2p1) instructions", [FeatureSME2]>;
 
-def FeatureFAMINMAX: Extension<"faminmax", "FAMINMAX",
+def FeatureFAMINMAX: SubtargetFeature<"faminmax", "HasFAMINMAX", "true",
    "Enable FAMIN and FAMAX instructions (FEAT_FAMINMAX)">;
 
-def FeatureFP8FMA : Extension<"fp8fma", "FP8FMA",
+def FeatureFP8FMA : SubtargetFeature<"fp8fma", "HasFP8FMA", "true",
   "Enable fp8 multiply-add instructions (FEAT_FP8FMA)">;
 
-def FeatureSSVE_FP8FMA : Extension<"ssve-fp8fma", "SSVE_FP8FMA",
+def FeatureSSVE_FP8FMA : SubtargetFeature<"ssve-fp8fma", "HasSSVE_FP8FMA", "true",
   "Enable SVE2 fp8 multiply-add instructions (FEAT_SSVE_FP8FMA)", [FeatureSME2]>;
 
-def FeatureFP8DOT2: Extension<"fp8dot2", "FP8DOT2",
+def FeatureFP8DOT2: SubtargetFeature<"fp8dot2", "HasFP8DOT2", "true",
    "Enable fp8 2-way dot instructions (FEAT_FP8DOT2)">;
 
-def FeatureSSVE_FP8DOT2 : Extension<"ssve-fp8dot2", "SSVE_FP8DOT2",
+def FeatureSSVE_FP8DOT2 : SubtargetFeature<"ssve-fp8dot2", "HasSSVE_FP8DOT2", "true",
   "Enable SVE2 fp8 2-way dot product instructions (FEAT_SSVE_FP8DOT2)", [FeatureSME2]>;
 
-def FeatureFP8DOT4: Extension<"fp8dot4", "FP8DOT4",
+def FeatureFP8DOT4: SubtargetFeature<"fp8dot4", "HasFP8DOT4", "true",
    "Enable fp8 4-way dot instructions (FEAT_FP8DOT4)">;
 
-def FeatureSSVE_FP8DOT4 : Extension<"ssve-fp8dot4", "SSVE_FP8DOT4",
+def FeatureSSVE_FP8DOT4 : SubtargetFeature<"ssve-fp8dot4", "HasSSVE_FP8DOT4", "true",
   "Enable SVE2 fp8 4-way dot product instructions (FEAT_SSVE_FP8DOT4)", [FeatureSME2]>;
-def FeatureLUT: Extension<"lut", "LUT",
+def FeatureLUT: SubtargetFeature<"lut", "HasLUT", "true",
    "Enable Lookup Table instructions (FEAT_LUT)">;
 
-def FeatureSME_LUTv2 : Extension<"sme-lutv2", "SME_LUTv2",
+def FeatureSME_LUTv2 : SubtargetFeature<"sme-lutv2", "HasSME_LUTv2", "true",
   "Enable Scalable Matrix Extension (SME) LUTv2 instructions (FEAT_SME_LUTv2)">;
 
-def FeatureSMEF8F16 : Extension<"sme-f8f16", "SMEF8F16",
+def FeatureSMEF8F16 : SubtargetFeature<"sme-f8f16", "HasSMEF8F16", "true",
   "Enable Scalable Matrix Extension (SME) F8F16 instructions(FEAT_SME_F8F16)", [FeatureSME2, FeatureFP8]>;
 
-def FeatureSMEF8F32 : Extension<"sme-f8f32", "SMEF8F32",
+def FeatureSMEF8F32 : SubtargetFeature<"sme-f8f32", "HasSMEF8F32", "true",
   "Enable Scalable Matrix Extension (SME) F8F32 instructions (FEAT_SME_F8F32)", [FeatureSME2, FeatureFP8]>;
 
 def FeatureAppleA7SysReg  : SubtargetFeature<"apple-a7-sysreg", "HasAppleA7SysReg", "true",
@@ -569,7 +558,7 @@ def FeatureEL2VMSA : SubtargetFeature<"el2vmsa", "HasEL2VMSA", "true",
 def FeatureEL3 : SubtargetFeature<"el3", "HasEL3", "true",
   "Enable Exception Level 3">;
 
-def FeatureCSSC : Extension<"cssc", "CSSC",
+def FeatureCSSC : SubtargetFeature<"cssc", "HasCSSC", "true",
   "Enable Common Short Sequence Compression (CSSC) instructions (FEAT_CSSC)">;
 
 def FeatureFixCortexA53_835769 : SubtargetFeature<"fix-cortex-a53-835769",
@@ -583,8 +572,8 @@ def FeatureNoBTIAtReturnTwice : SubtargetFeature<"no-bti-at-return-twice",
 def FeatureCHK : SubtargetFeature<"chk", "HasCHK",
     "true", "Enable Armv8.0-A Check Feature Status Extension (FEAT_CHK)">;
 
-def FeatureGCS : Extension<"gcs", "GCS",
-    "Enable Armv9.4-A Guarded Call Stack Extension", [FeatureCHK]>;
+def FeatureGCS : SubtargetFeature<"gcs", "HasGCS",
+    "true", "Enable Armv9.4-A Guarded Call Stack Extension", [FeatureCHK]>;
 
 def FeatureCLRBHB : SubtargetFeature<"clrbhb", "HasCLRBHB",
     "true", "Enable Clear BHB instruction (FEAT_CLRBHB)">;
@@ -592,32 +581,32 @@ def FeatureCLRBHB : SubtargetFeature<"clrbhb", "HasCLRBHB",
 def FeaturePRFM_SLC : SubtargetFeature<"prfm-slc-target", "HasPRFM_SLC",
     "true", "Enable SLC target for PRFM instruction">;
 
-def FeatureSPECRES2 : Extension<"specres2", "SPECRES2",
-    "Enable Speculation Restriction Instruction (FEAT_SPECRES2)",
+def FeatureSPECRES2 : SubtargetFeature<"specres2", "HasSPECRES2",
+    "true", "Enable Speculation Restriction Instruction (FEAT_SPECRES2)",
     [FeaturePredRes]>;
 
 def FeatureMEC : SubtargetFeature<"mec", "HasMEC",
     "true", "Enable Memory Encryption Contexts Extension", [FeatureRME]>;
 
-def FeatureITE : Extension<"ite", "ITE",
-    "Enable Armv9.4-A Instrumentation Extension FEAT_ITE", [FeatureETE,
+def FeatureITE : SubtargetFeature<"ite", "HasITE",
+    "true", "Enable Armv9.4-A Instrumentation Extension FEAT_ITE", [FeatureETE,
     FeatureTRBE]>;
 
-def FeatureRCPC3 : Extension<"rcpc3", "RCPC3",
-    "Enable Armv8.9-A RCPC instructions for A64 and Advanced SIMD and floating-point instruction set (FEAT_LRCPC3)",
+def FeatureRCPC3 : SubtargetFeature<"rcpc3", "HasRCPC3",
+    "true", "Enable Armv8.9-A RCPC instructions for A64 and Advanced SIMD and floating-point instruction set (FEAT_LRCPC3)",
     [FeatureRCPC_IMMO]>;
 
-def FeatureTHE : Extension<"the", "THE",
-    "Enable Armv8.9-A Translation Hardening Extension (FEAT_THE)">;
+def FeatureTHE : SubtargetFeature<"the", "HasTHE",
+    "true", "Enable Armv8.9-A Translation Hardening Extension (FEAT_THE)">;
 
-def FeatureLSE128 : Extension<"lse128", "LSE128",
-    "Enable Armv9.4-A 128-bit Atomic Instructions (FEAT_LSE128)",
+def FeatureLSE128 : SubtargetFeature<"lse128", "HasLSE128",
+    "true", "Enable Armv9.4-A 128-bit Atomic Instructions (FEAT_LSE128)",
     [FeatureLSE]>;
 
 // FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, and FEAT_SYSINSTR128 are mutually implicit.
 // Therefore group them all under a single feature flag, d128:
-def FeatureD128 : Extension<"d128", "D128",
-    "Enable Armv9.4-A 128-bit Page Table Descriptors, System Registers "
+def FeatureD128 : SubtargetFeature<"d128", "HasD128",
+    "true", "Enable Armv9.4-A 128-bit Page Table Descriptors, System Registers "
     "and Instructions (FEAT_D128, FEAT_LVA3, FEAT_SYSREG128, FEAT_SYSINSTR128)",
     [FeatureLSE128]>;
 
@@ -635,13 +624,13 @@ def FeatureStpAlignedOnly : SubtargetFeature<"stp-aligned-only", "HasStpAlignedO
 
 // AArch64 2023 Architecture Extensions (v9.5-A)
 
-def FeatureCPA : Extension<"cpa", "CPA",
+def FeatureCPA : SubtargetFeature<"cpa", "HasCPA", "true",
     "Enable Armv9.5-A Checked Pointer Arithmetic (FEAT_CPA)">;
 
-def FeaturePAuthLR : Extension<"pauth-lr", "PAuthLR",
-    "Enable Armv9.5-A PAC enhancements (FEAT_PAuth_LR)">;
+def FeaturePAuthLR : SubtargetFeature<"pauth-lr", "HasPAuthLR",
+    "true", "Enable Armv9.5-A PAC enhancements (FEAT_PAuth_LR)">;
 
-def FeatureTLBIW : Extension<"tlbiw", "TLBIW",
+def FeatureTLBIW : SubtargetFeature<"tlbiw", "HasTLBIW", "true",
   "Enable ARMv9.5-A TLBI VMALL for Dirty State (FEAT_TLBIW)">;
 
 
