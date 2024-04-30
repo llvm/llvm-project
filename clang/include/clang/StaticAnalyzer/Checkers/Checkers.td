@@ -563,6 +563,7 @@ def MismatchedDeallocatorChecker : Checker<"MismatchedDeallocator">,
   Dependencies<[DynamicMemoryModeling]>,
   Documentation<HasDocumentation>;
 
+// This must appear before StdCLibraryFunctionsChecker because a dependency.
 def StreamChecker : Checker<"Stream">,
   HelpText<"Check stream handling functions">,
   WeakDependencies<[NonNullParamChecker]>,
