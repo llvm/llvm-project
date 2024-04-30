@@ -929,6 +929,12 @@ void RISCVISAInfo::updateMinVLen() {
 }
 
 void RISCVISAInfo::updateMaxELen() {
+  assert(MaxELenFp == 0 && MaxELen == 0);
+  if (Exts.count("v")) {
+    MaxELenFp = std::max(MaxELenFp, 64u);
+    MaxELen = std::max(MaxELen, 64u);
+  }
+
   // handles EEW restriction by sub-extension zve
   for (auto const &Ext : Exts) {
     StringRef ExtName = Ext.first;
@@ -936,12 +942,15 @@ void RISCVISAInfo::updateMaxELen() {
     if (IsZveExt) {
       if (ExtName.back() == 'f')
         MaxELenFp = std::max(MaxELenFp, 32u);
-      if (ExtName.back() == 'd')
+      else if (ExtName.back() == 'd')
         MaxELenFp = std::max(MaxELenFp, 64u);
+      else if (ExtName.back() != 'x')
+        continue;
+
       ExtName = ExtName.drop_back();
       unsigned ZveELen;
-      ExtName.getAsInteger(10, ZveELen);
-      MaxELen = std::max(MaxELen, ZveELen);
+      if (!ExtName.getAsInteger(10, ZveELen))
+        MaxELen = std::max(MaxELen, ZveELen);
     }
   }
 }
