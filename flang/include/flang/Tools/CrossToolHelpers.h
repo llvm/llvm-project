@@ -133,7 +133,8 @@ void setOpenMPVersionAttribute(mlir::ModuleOp &module, int64_t version) {
       mlir::omp::VersionAttr::get(module.getContext(), version));
 }
 
-int64_t getOpenMPVersionAttribute(mlir::ModuleOp module, int64_t fallback = -1) {
+int64_t getOpenMPVersionAttribute(
+    mlir::ModuleOp module, int64_t fallback = -1) {
   if (mlir::Attribute verAttr = module->getAttr("omp.version"))
     return llvm::cast<mlir::omp::VersionAttr>(verAttr).getVersion();
   return fallback;
