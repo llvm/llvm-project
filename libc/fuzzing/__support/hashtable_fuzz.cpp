@@ -157,8 +157,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
       return 0;
     switch (action->tag) {
     case Action::Tag::Find: {
-      if (table_a.find(action->key.c_str()) !=
-          table_b.find(action->key.c_str()))
+      if (static_cast<bool>(table_a.find(action->key.c_str())) !=
+          static_cast<bool>(table_b.find(action->key.c_str())))
         __builtin_trap();
       break;
     }
