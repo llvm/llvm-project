@@ -339,6 +339,10 @@ bool shouldInstrumentEntryBB() {
          PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
 }
 
+// FIXME(mtrofin): re-enable this for ctx profiling, for non-indirect calls. Ctx
+// profiling implicitly captures indirect call cases, but not other values.
+// Supporting other values is relatively straight-forward - just another counter
+// range within the context.
 bool isValueProfilingDisabled() {
   return DisableValueProfiling ||
          PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
@@ -897,6 +901,14 @@ static void instrumentOneFunc(
   if (PGOCtxProfLoweringPass::isContextualIRPGOEnabled()) {
     auto *CSIntrinsic =
         Intrinsic::getDeclaration(M, Intrinsic::instrprof_callsite);
+    // We want to count the instrumentable callsites, then instrument them. This
+    // is because the llvm.instrprof.callsite intrinsic has an argument (like
+    // the other instrprof intrinsics) capturing the total number of
+    // instrumented objects (counters, or callsites, in this case). In this
+    // case, we want that value so we can readily pass it to the compiler-rt
+    // APIs that may have to allocate memory based on the nr of callsites.
+    // The traversal logic is the same for both counting and instrumentation,
+    // just needs to be done in succession.
     auto Visit = [&](llvm::function_ref<void(CallBase * CB)> Visitor) {
       for (auto &BB : F)
         for (auto &Instr : BB)
@@ -908,10 +920,12 @@ static void instrumentOneFunc(
             Visitor(CS);
           }
     };
+    // First, count callsites.
     uint32_t TotalNrCallsites = 0;
     Visit([&TotalNrCallsites](auto *) { ++TotalNrCallsites; });
-    uint32_t CallsiteIndex = 0;
 
+    // Now instrument.
+    uint32_t CallsiteIndex = 0;
     Visit([&](auto *CB) {
       IRBuilder<> Builder(CB);
       Builder.CreateCall(CSIntrinsic,
@@ -2053,8 +2067,11 @@ static bool annotateAllFunctions(
 
   // If the profile marked as always instrument the entry BB, do the
   // same. Note this can be overwritten by the internal option in CFGMST.h
-  bool InstrumentFuncEntry =
-      PGOReader->instrEntryBBEnabled() || shouldInstrumentEntryBB();
+  bool InstrumentFuncEntry = PGOReader->instrEntryBBEnabled();
+  if (PGOInstrumentEntry.getNumOccurrences() > 0)
+    InstrumentFuncEntry = PGOInstrumentEntry;
+  InstrumentFuncEntry |= PGOCtxProfLoweringPass::isContextualIRPGOEnabled();
+
   bool HasSingleByteCoverage = PGOReader->hasSingleByteCoverage();
   for (auto &F : M) {
     if (skipPGOUse(F))

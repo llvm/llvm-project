@@ -12,7 +12,12 @@
 
 using namespace llvm;
 
-static cl::list<std::string> ContextRoots("profile-context-root");
+static cl::list<std::string> ContextRoots(
+    "profile-context-root", cl::Hidden,
+    cl::desc(
+        "A function name, assumed to be global, which will be treated as the "
+        "root of an interesting graph, which will be profiled independently "
+        "from other similar graphs."));
 
 bool PGOCtxProfLoweringPass::isContextualIRPGOEnabled() {
   return !ContextRoots.empty();
