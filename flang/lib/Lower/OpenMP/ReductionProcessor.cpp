@@ -811,14 +811,11 @@ void ReductionProcessor::addDeclareReduction(
             *reductionIntrinsic)) {
       ReductionProcessor::ReductionIdentifier redId =
           ReductionProcessor::getReductionType(*reductionIntrinsic);
-      for (const Object &object : objectList) {
-        const Fortran::semantics::Symbol *symbol = object.id();
-        mlir::Value symVal = converter.getSymbolAddress(*symbol);
-        if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
-          symVal = declOp.getBase();
+      for (mlir::Value symVal : reductionVars) {
         auto redType = mlir::cast<fir::ReferenceType>(symVal.getType());
         if (!redType.getEleTy().isIntOrIndexOrFloat())
-          TODO(currentLocation, "User Defined Reduction on non-trivial type");
+          TODO(currentLocation,
+               "Reduction of some types is not supported for intrinsics");
         decl = createDeclareReduction(
             firOpBuilder,
             getReductionName(getRealName(*reductionIntrinsic).ToString(),

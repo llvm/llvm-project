@@ -1,8 +1,8 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream -analyzer-output text \
-// RUN:   -analyzer-config alpha.unix.Stream:Pedantic=true \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Stream -analyzer-output text \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true \
 // RUN:   -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,unix.StdCLibraryFunctions -analyzer-output text \
-// RUN:   -analyzer-config alpha.unix.Stream:Pedantic=true \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Stream,unix.StdCLibraryFunctions -analyzer-output text \
+// RUN:   -analyzer-config unix.Stream:Pedantic=true \
 // RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true -verify=expected,stdargs %s
 
 #include "Inputs/system-header-simulator.h"
