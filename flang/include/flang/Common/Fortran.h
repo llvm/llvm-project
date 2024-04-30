@@ -114,8 +114,9 @@ static constexpr IgnoreTKRSet ignoreTKRAll{IgnoreTKR::Type, IgnoreTKR::Kind,
     IgnoreTKR::Rank, IgnoreTKR::Device, IgnoreTKR::Managed};
 std::string AsFortran(IgnoreTKRSet);
 
-bool AreCompatibleCUDADataAttrs(
-    std::optional<CUDADataAttr>, std::optional<CUDADataAttr>, IgnoreTKRSet);
+bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr>,
+    std::optional<CUDADataAttr>, IgnoreTKRSet,
+    bool allowUnifiedMatchingRule = false);
 
 static constexpr char blankCommonObjectName[] = "__BLNK__";
 
