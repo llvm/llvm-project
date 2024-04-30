@@ -2717,10 +2717,11 @@ multiclass VPseudoVGTR_VV_VX_VI<Operand ImmType = simm5, string Constraint = "">
   }
 }
 
-multiclass VPseudoVSALU_VV_VX_VI<Operand ImmType = simm5, string Constraint = ""> {
+multiclass VPseudoVSALU_VV_VX_VI<Operand ImmType = simm5, string Constraint = "",
+                                 bit Commutable = 0> {
   foreach m = MxList in {
     defvar mx = m.MX;
-    defm "" : VPseudoBinaryV_VV<m, Constraint, Commutable=1>,
+    defm "" : VPseudoBinaryV_VV<m, Constraint, Commutable=Commutable>,
               SchedBinary<"WriteVSALUV", "ReadVSALUV", "ReadVSALUX", mx,
                           forceMergeOpRead=true>;
     defm "" : VPseudoBinaryV_VX<m, Constraint>,
@@ -6450,8 +6451,8 @@ defm PseudoVMV_V : VPseudoUnaryVMV_V_X_I;
 // 12.1. Vector Single-Width Saturating Add and Subtract
 //===----------------------------------------------------------------------===//
 let Defs = [VXSAT], hasSideEffects = 1 in {
-  defm PseudoVSADDU : VPseudoVSALU_VV_VX_VI;
-  defm PseudoVSADD  : VPseudoVSALU_VV_VX_VI;
+  defm PseudoVSADDU : VPseudoVSALU_VV_VX_VI<Commutable=1>;
+  defm PseudoVSADD  : VPseudoVSALU_VV_VX_VI<Commutable=1>;
   defm PseudoVSSUBU : VPseudoVSALU_VV_VX;
   defm PseudoVSSUB  : VPseudoVSALU_VV_VX;
 }

@@ -1662,12 +1662,12 @@ public:
           TTI::SK_InsertSubvector, cast<VectorType>(Args[0]->getType()),
           std::nullopt, CostKind, Index, cast<VectorType>(Args[1]->getType()));
     }
-    case Intrinsic::experimental_vector_reverse: {
+    case Intrinsic::vector_reverse: {
       return thisT()->getShuffleCost(
           TTI::SK_Reverse, cast<VectorType>(Args[0]->getType()), std::nullopt,
           CostKind, 0, cast<VectorType>(RetTy));
     }
-    case Intrinsic::experimental_vector_splice: {
+    case Intrinsic::vector_splice: {
       unsigned Index = cast<ConstantInt>(Args[2])->getZExtValue();
       return thisT()->getShuffleCost(
           TTI::SK_Splice, cast<VectorType>(Args[0]->getType()), std::nullopt,

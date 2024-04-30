@@ -9901,6 +9901,9 @@ def warn_format_invalid_annotation : Warning<
 def warn_format_P_no_precision : Warning<
   "using '%%P' format specifier without precision">,
   InGroup<Format>;
+def warn_format_P_with_objc_pointer : Warning<
+  "using '%%P' format specifier with an Objective-C pointer results in dumping runtime object structure, not object value">,
+  InGroup<Format>;
 def warn_printf_ignored_flag: Warning<
   "flag '%0' is ignored when flag '%1' is present">,
   InGroup<Format>;
@@ -9950,6 +9953,8 @@ def warn_ret_stack_addr_ref : Warning<
 def warn_ret_local_temp_addr_ref : Warning<
   "returning %select{address of|reference to}0 local temporary object">,
   InGroup<ReturnStackAddress>;
+def err_ret_local_temp_ref : Error<
+  "returning reference to local temporary object">;
 def warn_ret_addr_label : Warning<
   "returning address of label, which is local">,
   InGroup<ReturnStackAddress>;
@@ -10328,9 +10333,13 @@ def err_shufflevector_nonconstant_argument : Error<
 def err_shufflevector_argument_too_large : Error<
   "index for __builtin_shufflevector must be less than the total number "
   "of vector elements">;
+def err_shufflevector_minus_one_is_undefined_behavior_constexpr : Error<
+  "index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position %0 not permitted in a constexpr context.">;
 
 def err_convertvector_non_vector : Error<
   "first argument to __builtin_convertvector must be a vector">;
+def err_convertvector_constexpr_unsupported_vector_cast : Error<
+  "unsupported vector cast from %0 to %1 in a constant expression.">;
 def err_builtin_non_vector_type : Error<
   "%0 argument to %1 must be of vector type">;
 def err_convertvector_incompatible_vector : Error<
@@ -11161,7 +11170,7 @@ def err_omp_declare_mapper_redefinition : Error<
   "redefinition of user-defined mapper for type %0 with name %1">;
 def err_omp_invalid_mapper: Error<
   "cannot find a valid user-defined mapper for type %0 with name %1">;
-def err_omp_array_section_use : Error<"OpenMP array section is not allowed here">;
+def err_array_section_use : Error<"%select{OpenACC sub-array|OpenMP array section}0 is not allowed here">;
 def err_omp_array_shaping_use : Error<"OpenMP array shaping operation is not allowed here">;
 def err_omp_iterator_use : Error<"OpenMP iterator is not allowed here">;
 def err_omp_typecheck_section_value : Error<
