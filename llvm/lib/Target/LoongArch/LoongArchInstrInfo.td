@@ -1607,6 +1607,13 @@ def PseudoLA_TLS_GD_LARGE : Pseudo<(outs GPR:$dst),
 } // Defs = [R20], Size = 20
 }
 
+// Used for expand PseudoLA_TLS_DESC_* instructions.
+let isCall = 1, isBarrier = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0,
+    Defs = [R4], Uses = [R4] in
+def PseudoDESC_CALL : Pseudo<(outs GPR:$rd), (ins GPR:$rj, simm16_lsl2:$imm16)>,
+                      PseudoInstExpansion<(JIRL GPR:$rd, GPR:$rj,
+                                           simm16_lsl2:$imm16)>;
+
 // TLSDESC
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isCodeGenOnly = 0,
     isAsmParserOnly = 1, Defs = [R1] in {
