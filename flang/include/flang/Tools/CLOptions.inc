@@ -271,7 +271,7 @@ inline void createDefaultFIROptimizerPassPipeline(
   pm.addPass(mlir::createCSEPass());
 
   // Polymorphic types
-  pm.addPass(fir::createPolymorphicOpConversionPass());
+  addNestedPassToAllTopLevelOperations(pm, fir::createPolymorphicOpConversion);
 
   if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
     pm.addPass(fir::createAliasTagsPass());
