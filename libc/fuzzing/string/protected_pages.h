@@ -1,3 +1,15 @@
+//===-- protected_pages.h -------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+// This file provides protected pages that fault when accessing prior or past
+// it. This is useful to check memory functions that must not access outside of
+// the provided size limited buffer.
+//===----------------------------------------------------------------------===//
+
 #ifndef LIBC_FUZZING_STRING_PROTECTED_PAGES_H
 #define LIBC_FUZZING_STRING_PROTECTED_PAGES_H
 
