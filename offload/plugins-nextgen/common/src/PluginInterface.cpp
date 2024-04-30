@@ -472,6 +472,7 @@ GenericKernelTy::getKernelLaunchEnvironment(
   // environment. Older versions of the compiler do not generate a kernel
   // launch environment.
   if (GenericDevice.Plugin.getRecordReplay().isReplaying() ||
+      !shouldSetupKernelEnvironment() ||
       Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
     return nullptr;
 
