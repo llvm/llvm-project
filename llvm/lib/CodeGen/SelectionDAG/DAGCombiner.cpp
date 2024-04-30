@@ -15489,7 +15489,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   // the future, then this special handling can be removed.
   if (N0.getOpcode() == ISD::BUILD_VECTOR) {
     SDLoc DL(N0);
-    MVT VT = N0.getSimpleValueType();
+    EVT VT = N0.getValueType();
     if (llvm::ISD::isBuildVectorAllOnes(N0.getNode()))
       return DAG.getAllOnesConstant(DL, VT);
     if (llvm::ISD::isBuildVectorOfConstantSDNodes(N0.getNode())) {
