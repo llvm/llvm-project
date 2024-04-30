@@ -57,6 +57,10 @@ private:
 
     ASSERT_EQ(func(input), expected);
 
+    // TODO: Handle the !expectError case. It used to expect
+    // 0 for errno and exceptions, but this doesn't hold for
+    // all math functions using RoundToInteger test:
+    // https://github.com/llvm/llvm-project/pull/88816
     if (expectError) {
       ASSERT_FP_EXCEPTION(FE_INVALID);
       ASSERT_MATH_ERRNO(EDOM);

@@ -174,24 +174,6 @@ template <typename T> struct FPTest : public Test {
     }                                                                          \
   } while (0)
 
-#define EXPECT_FP_EQ_NO_ERRNO_EXCEPTION(expected_val, actual_val)              \
-  do {                                                                         \
-    LIBC_NAMESPACE::libc_errno = 0;                                            \
-    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
-    EXPECT_FP_EQ(expected_val, actual_val);                                    \
-    EXPECT_FP_EXCEPTION(0);                                                    \
-    EXPECT_MATH_ERRNO(0);                                                      \
-  } while (0)
-
-#define ASSERT_FP_EQ_NO_ERRNO_EXCEPTION(expected_val, actual_val)              \
-  do {                                                                         \
-    LIBC_NAMESPACE::libc_errno = 0;                                            \
-    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
-    ASSERT_FP_EQ(expected_val, actual_val);                                    \
-    ASSERT_FP_EXCEPTION(0);                                                    \
-    ASSERT_MATH_ERRNO(0);                                                      \
-  } while (0)
-
 #define EXPECT_FP_EQ_WITH_EXCEPTION(expected_val, actual_val, expected_except) \
   do {                                                                         \
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
@@ -199,52 +181,11 @@ template <typename T> struct FPTest : public Test {
     EXPECT_FP_EXCEPTION(expected_except);                                      \
   } while (0)
 
-#define ASSERT_FP_EQ_WITH_EXCEPTION(expected_val, actual_val, expected_except) \
-  do {                                                                         \
-    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
-    ASSERT_FP_EQ(expected_val, actual_val);                                    \
-    ASSERT_FP_EXCEPTION(expected_except);                                      \
-  } while (0)
-
 #define EXPECT_FP_IS_NAN_WITH_EXCEPTION(actual_val, expected_except)           \
   do {                                                                         \
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
     EXPECT_FP_IS_NAN(actual_val);                                              \
     EXPECT_FP_EXCEPTION(expected_except);                                      \
-  } while (0)
-
-#define EXPECT_FP_EQ_WITH_ERRNO(expected_val, actual_val, expected_errno)      \
-  do {                                                                         \
-    LIBC_NAMESPACE::libc_errno = 0;                                            \
-    EXPECT_FP_EQ(expected_val, actual_val);                                    \
-    EXPECT_MATH_ERRNO(expected_errno);                                         \
-  } while (0)
-
-#define ASSERT_FP_EQ_WITH_ERRNO(expected_val, actual_val, expected_errno)      \
-  do {                                                                         \
-    LIBC_NAMESPACE::libc_errno = 0;                                            \
-    ASSERT_FP_EQ(expected_val, actual_val);                                    \
-    ASSERT_MATH_ERRNO(expected_errno);                                         \
-  } while (0)
-
-#define EXPECT_FP_EQ_WITH_ERRNO_EXCEPTION(expected_val, actual_val,            \
-                                          expected_errno, expected_except)     \
-  do {                                                                         \
-    LIBC_NAMESPACE::libc_errno = 0;                                            \
-    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
-    EXPECT_FP_EQ(expected_val, actual_val);                                    \
-    EXPECT_MATH_ERRNO(expected_errno);                                         \
-    EXPECT_FP_EXCEPTION(expected_except);                                      \
-  } while (0)
-
-#define ASSERT_FP_EQ_WITH_ERRNO_EXCEPTION(expected_val, actual_val,            \
-                                          expected_errno, expected_except)     \
-  do {                                                                         \
-    LIBC_NAMESPACE::libc_errno = 0;                                            \
-    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
-    ASSERT_FP_EQ(expected_val, actual_val);                                    \
-    ASSERT_MATH_ERRNO(expected_errno);                                         \
-    ASSERT_FP_EXCEPTION(expected_except);                                      \
   } while (0)
 
 #define EXPECT_FP_EQ_ALL_ROUNDING(expected, actual)                            \
@@ -288,52 +229,5 @@ template <typename T> struct FPTest : public Test {
 
 #define EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(expected, actual)                    \
   EXPECT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::TowardZero)
-
-#define EXPECT_FP_EQ_ALL_ROUNDING_NO_ERRNO_EXCEPTION(expected, actual)         \
-  do {                                                                         \
-    using namespace LIBC_NAMESPACE::fputil::testing;                           \
-    ForceRoundingMode __r1(RoundingMode::Nearest);                             \
-    if (__r1.success) {                                                        \
-      EXPECT_FP_EQ_NO_ERRNO_EXCEPTION((expected), (actual));                   \
-    }                                                                          \
-    ForceRoundingMode __r2(RoundingMode::Upward);                              \
-    if (__r2.success) {                                                        \
-      EXPECT_FP_EQ_NO_ERRNO_EXCEPTION((expected), (actual));                   \
-    }                                                                          \
-    ForceRoundingMode __r3(RoundingMode::Downward);                            \
-    if (__r3.success) {                                                        \
-      EXPECT_FP_EQ_NO_ERRNO_EXCEPTION((expected), (actual));                   \
-    }                                                                          \
-    ForceRoundingMode __r4(RoundingMode::TowardZero);                          \
-    if (__r4.success) {                                                        \
-      EXPECT_FP_EQ_NO_ERRNO_EXCEPTION((expected), (actual));                   \
-    }                                                                          \
-  } while (0)
-
-#define EXPECT_FP_EQ_ALL_ROUNDING_WITH_ERRNO_EXCEPTION(expected, actual,       \
-                                                       errno, exception)       \
-  do {                                                                         \
-    using namespace LIBC_NAMESPACE::fputil::testing;                           \
-    ForceRoundingMode __r1(RoundingMode::Nearest);                             \
-    if (__r1.success) {                                                        \
-      EXPECT_FP_EQ_WITH_ERRNO_EXCEPTION((expected), (actual), (errno),         \
-                                        (exception));                          \
-    }                                                                          \
-    ForceRoundingMode __r2(RoundingMode::Upward);                              \
-    if (__r2.success) {                                                        \
-      EXPECT_FP_EQ_WITH_ERRNO_EXCEPTION((expected), (actual), (errno),         \
-                                        (exception));                          \
-    }                                                                          \
-    ForceRoundingMode __r3(RoundingMode::Downward);                            \
-    if (__r3.success) {                                                        \
-      EXPECT_FP_EQ_WITH_ERRNO_EXCEPTION((expected), (actual), (errno),         \
-                                        (exception));                          \
-    }                                                                          \
-    ForceRoundingMode __r4(RoundingMode::TowardZero);                          \
-    if (__r4.success) {                                                        \
-      EXPECT_FP_EQ_WITH_ERRNO_EXCEPTION((expected), (actual), (errno),         \
-                                        (exception));                          \
-    }                                                                          \
-  } while (0)
 
 #endif // LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H

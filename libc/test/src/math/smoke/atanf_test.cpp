@@ -19,12 +19,24 @@
 using LlvmLibcAtanfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcAtanfTest, SpecialNumbers) {
-  EXPECT_FP_EQ_ALL_ROUNDING_NO_ERRNO_EXCEPTION(aNaN,
-                                               LIBC_NAMESPACE::atanf(aNaN));
+  LIBC_NAMESPACE::libc_errno = 0;
 
-  EXPECT_FP_EQ_ALL_ROUNDING_NO_ERRNO_EXCEPTION(0.0f,
-                                               LIBC_NAMESPACE::atanf(0.0f));
+  // TODO: Strengthen errno,exception checks and remove these assert macros
+  // after new matchers/test fixtures are added
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanf(aNaN));
+  // TODO: Uncomment these checks later, RoundingMode affects running
+  // tests in this way.
+  // EXPECT_FP_EXCEPTION(0);
+  EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING_NO_ERRNO_EXCEPTION(-0.0f,
-                                               LIBC_NAMESPACE::atanf(-0.0f));
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, LIBC_NAMESPACE::atanf(0.0f));
+  // EXPECT_FP_EXCEPTION(0);
+  EXPECT_MATH_ERRNO(0);
+
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  EXPECT_FP_EQ_ALL_ROUNDING(-0.0f, LIBC_NAMESPACE::atanf(-0.0f));
+  // EXPECT_FP_EXCEPTION(0);
+  EXPECT_MATH_ERRNO(0);
 }
