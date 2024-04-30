@@ -258,3 +258,20 @@ void void_call() { // EVAL-FN-LABEL: define {{.*}} @_Z9void_call
   void_test();
   // EVAL-FN: {{^}}}
 }
+
+
+namespace GH82154 {
+struct S1 { consteval S1(int) {} };
+struct S3 { constexpr S3(int) {} };
+
+void f() {
+    struct S2 {
+        S1 s = 0;
+        S3 s2 = 0;
+    };
+    S2 s;
+    // EVAL-FN-LABEL: define {{.*}} void @_ZZN7GH821541fEvEN2S2C2Ev
+    // EVAL-FN-NOT: call void @_ZN7GH821542S1C2Ei
+    // EVAL-FN:     call void @_ZN7GH821542S3C2Ei
+}
+}

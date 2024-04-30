@@ -32,7 +32,7 @@
 
 !llvm.module.flags = !{!0, !1, !2, !3, !4}
 
-!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
 !1 = !{i32 1, !"wchar_size", i32 4}
 !2 = !{i32 7, !"openmp", i32 50}
 !3 = !{i32 7, !"openmp-device", i32 50}

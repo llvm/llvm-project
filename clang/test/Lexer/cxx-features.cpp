@@ -34,6 +34,10 @@
 
 // --- C++26 features ---
 
+#if check(deleted_function, 202403, 202403, 202403, 202403, 202403, 202403, 202403)
+#error "wrong value for __cpp_deleted_function"
+#endif
+
 #if check(placeholder_variables, 202306, 202306, 202306, 202306, 202306, 202306, 202306)
 #error "wrong value for __cpp_placeholder_variables"
 #endif
@@ -45,7 +49,7 @@
 #endif
 
 
-#if check(implicit_move, 0, 0, 0, 0, 0, 202011, 202011)
+#if check(implicit_move, 0, 0, 0, 0, 0, 202207, 202207)
 #error "wrong value for __cpp_implicit_move"
 #endif
 
@@ -85,7 +89,7 @@
 #error "wrong value for __cpp_char8_t"
 #endif
 
-#if check(concepts, 0, 0, 0, 0, 201907, 201907, 201907)
+#if check(concepts, 0, 0, 0, 0, 202002, 202002, 202002)
 #error "wrong value for __cpp_concepts"
 #endif
 
@@ -218,7 +222,7 @@
 #error "wrong value for __cpp_aggregate_bases"
 #endif
 
-#if check(structured_bindings, 0, 0, 0, 201606, 201606, 201606, 201606)
+#if check(structured_bindings, 0, 0, 0, 202403L, 202403L, 202403L, 202403L)
 #error "wrong value for __cpp_structured_bindings"
 #endif
 
@@ -309,7 +313,7 @@
 #error "wrong value for __cpp_constexpr"
 #endif
 
-#if check(range_based_for, 0, 200907, 200907, 201603, 201603, 201603, 201603)
+#if check(range_based_for, 0, 200907, 200907, 201603, 201603, 202211, 202211)
 #error "wrong value for __cpp_range_based_for"
 #endif
 

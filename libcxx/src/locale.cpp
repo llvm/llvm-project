@@ -34,9 +34,7 @@
 #  define _CTYPE_DISABLE_MACROS
 #endif
 
-#if defined(_LIBCPP_MSVCRT) || defined(__MINGW32__)
-#  include "__support/win32/locale_win32.h"
-#elif !defined(__BIONIC__) && !defined(__NuttX__)
+#if !defined(_LIBCPP_MSVCRT) && !defined(__MINGW32__) && !defined(__BIONIC__) && !defined(__NuttX__)
 #  include <langinfo.h>
 #endif
 
@@ -499,7 +497,7 @@ constinit __no_destroy<locale::__imp>
     locale::__imp::classic_locale_imp_(__uninitialized_tag{}); // initialized below in classic()
 
 const locale& locale::classic() {
-  static const __no_destroy<locale> classic_locale(__private_tag{}, [] {
+  static const __no_destroy<locale> classic_locale(__private_constructor_tag{}, [] {
     // executed exactly once on first initialization of `classic_locale`
     locale::__imp::classic_locale_imp_.__emplace(1u);
     return &locale::__imp::classic_locale_imp_.__get();

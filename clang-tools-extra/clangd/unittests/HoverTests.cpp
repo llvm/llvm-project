@@ -1983,10 +1983,14 @@ TEST(Hover, All) {
             HI.Kind = index::SymbolKind::Macro;
             HI.Definition =
                 R"cpp(#define MACRO                                                                  \
-  { return 0; }
+  {                                                                            \
+    return 0;                                                                  \
+  }
 
 // Expands to
-{ return 0; })cpp";
+{
+  return 0;
+})cpp";
           }},
       {
           R"cpp(// Forward class declaration

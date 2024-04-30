@@ -374,24 +374,23 @@ define void @v_constrained_fptrunc_f32_to_f16_fpexcept_strict_noabi_fabs(float %
 ; GFX1011-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1011-NEXT:    v_cvt_f16_f32_e64 v0, |v0|
 ; GFX1011-NEXT:    s_setpc_b64 s[30:31]
-  %abs.arg = call float @llvm.fabs.f32(float %arg)
+  %abs.arg = call float @llvm.fabs.f32(float %arg) #0
   %result = call half @llvm.experimental.constrained.fptrunc.f16.f32(float %abs.arg, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret void
 }
 
-declare half @llvm.experimental.constrained.fptrunc.f16.f32(float, metadata, metadata) #1
-declare <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f32(<2 x float>, metadata, metadata) #1
-declare <3 x half> @llvm.experimental.constrained.fptrunc.v3f16.v3f32(<3 x float>, metadata, metadata) #1
+declare half @llvm.experimental.constrained.fptrunc.f16.f32(float, metadata, metadata)
+declare <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f32(<2 x float>, metadata, metadata)
+declare <3 x half> @llvm.experimental.constrained.fptrunc.v3f16.v3f32(<3 x float>, metadata, metadata)
 
-declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata) #1
-declare <2 x float> @llvm.experimental.constrained.fptrunc.v2f32.v2f64(<2 x double>, metadata, metadata) #1
-declare <3 x float> @llvm.experimental.constrained.fptrunc.v3f32.v3f64(<3 x double>, metadata, metadata) #1
+declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
+declare <2 x float> @llvm.experimental.constrained.fptrunc.v2f32.v2f64(<2 x double>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.fptrunc.v3f32.v3f64(<3 x double>, metadata, metadata)
 
-declare half @llvm.experimental.constrained.fptrunc.f16.f64(double, metadata, metadata) #1
-declare <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f64(<2 x double>, metadata, metadata) #1
-declare <3 x half> @llvm.experimental.constrained.fptrunc.v3f16.v3f64(<3 x double>, metadata, metadata) #1
+declare half @llvm.experimental.constrained.fptrunc.f16.f64(double, metadata, metadata)
+declare <2 x half> @llvm.experimental.constrained.fptrunc.v2f16.v2f64(<2 x double>, metadata, metadata)
+declare <3 x half> @llvm.experimental.constrained.fptrunc.v3f16.v3f64(<3 x double>, metadata, metadata)
 
-declare float @llvm.fabs.f32(float) #1
+declare float @llvm.fabs.f32(float)
 
 attributes #0 = { strictfp }
-attributes #1 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }

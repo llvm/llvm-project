@@ -25,42 +25,6 @@
 using namespace llvm;
 using namespace LegalizeActions;
 
-/// FIXME: The following static functions are SizeChangeStrategy functions
-/// that are meant to temporarily mimic the behaviour of the old legalization
-/// based on doubling/halving non-legal types as closely as possible. This is
-/// not entirly possible as only legalizing the types that are exactly a power
-/// of 2 times the size of the legal types would require specifying all those
-/// sizes explicitly.
-/// In practice, not specifying those isn't a problem, and the below functions
-/// should disappear quickly as we add support for legalizing non-power-of-2
-/// sized types further.
-static void addAndInterleaveWithUnsupported(
-    LegacyLegalizerInfo::SizeAndActionsVec &result,
-    const LegacyLegalizerInfo::SizeAndActionsVec &v) {
-  for (unsigned i = 0; i < v.size(); ++i) {
-    result.push_back(v[i]);
-    if (i + 1 < v[i].first && i + 1 < v.size() &&
-        v[i + 1].first != v[i].first + 1)
-      result.push_back({v[i].first + 1, LegacyLegalizeActions::Unsupported});
-  }
-}
-
-static LegacyLegalizerInfo::SizeAndActionsVec
-widen_8_16(const LegacyLegalizerInfo::SizeAndActionsVec &v) {
-  assert(v.size() >= 1);
-  assert(v[0].first > 17);
-  LegacyLegalizerInfo::SizeAndActionsVec result = {
-      {1, LegacyLegalizeActions::Unsupported},
-      {8, LegacyLegalizeActions::WidenScalar},
-      {9, LegacyLegalizeActions::Unsupported},
-      {16, LegacyLegalizeActions::WidenScalar},
-      {17, LegacyLegalizeActions::Unsupported}};
-  addAndInterleaveWithUnsupported(result, v);
-  auto Largest = result.back().first;
-  result.push_back({Largest + 1, LegacyLegalizeActions::Unsupported});
-  return result;
-}
-
 static bool AEABI(const ARMSubtarget &ST) {
   return ST.isTargetAEABI() || ST.isTargetGNUAEABI() || ST.isTargetMuslAEABI();
 }
@@ -118,15 +82,14 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .libcallFor({s32})
         .clampScalar(0, s32, s32);
 
-  for (unsigned Op : {G_SREM, G_UREM}) {
-    LegacyInfo.setLegalizeScalarToDifferentSizeStrategy(Op, 0, widen_8_16);
-    if (HasHWDivide)
-      LegacyInfo.setAction({Op, s32}, LegacyLegalizeActions::Lower);
-    else if (AEABI(ST))
-      LegacyInfo.setAction({Op, s32}, LegacyLegalizeActions::Custom);
-    else
-      LegacyInfo.setAction({Op, s32}, LegacyLegalizeActions::Libcall);
-  }
+  auto &REMBuilder =
+      getActionDefinitionsBuilder({G_SREM, G_UREM}).minScalar(0, s32);
+  if (HasHWDivide)
+    REMBuilder.lowerFor({s32});
+  else if (AEABI(ST))
+    REMBuilder.customFor({s32});
+  else
+    REMBuilder.libcallFor({s32});
 
   getActionDefinitionsBuilder(G_INTTOPTR)
       .legalFor({{p0, s32}})
@@ -193,14 +156,16 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .legalForCartesianProduct({s32}, {s32, s64});
     getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
         .legalForCartesianProduct({s32, s64}, {s32});
+
+    getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV}).legalFor({s32});
+    getActionDefinitionsBuilder(G_RESET_FPENV).alwaysLegal();
   } else {
     getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV})
         .libcallFor({s32, s64});
 
     LoadStoreBuilder.maxScalar(0, s32);
 
-    for (auto Ty : {s32, s64})
-      LegacyInfo.setAction({G_FNEG, Ty}, LegacyLegalizeActions::Lower);
+    getActionDefinitionsBuilder(G_FNEG).lowerFor({s32, s64});
 
     getActionDefinitionsBuilder(G_FCONSTANT).customFor({s32, s64});
 
@@ -219,6 +184,9 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .libcallForCartesianProduct({s32}, {s32, s64});
     getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
         .libcallForCartesianProduct({s32, s64}, {s32});
+
+    getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV, G_RESET_FPENV})
+        .libcall();
   }
 
   // Just expand whatever loads and stores are left.

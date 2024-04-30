@@ -129,7 +129,7 @@ define i32 @cmp_ult0(i32 inreg %a, i32 inreg %b, i32 inreg %x, i32 inreg %y) {
 ; CHECK-NEXT:    bt exit
 ; CHECK-NEXT:    nop
 entry:
-  %load = load i32, i32* @t, align 4
+  %load = load i32, ptr @t, align 4
   %sub = sub i32 %load, 17
   %cmp = icmp ult i32 %sub, 0
   br i1 %cmp, label %if.then, label %if.else
@@ -169,7 +169,7 @@ define i32 @cmp_gt0(i32 inreg %a, i32 inreg %b, i32 inreg %x, i32 inreg %y) {
 ; CHECK-NEXT:    bt exit
 ; CHECK-NEXT:    nop
 entry:
-  %load = load i32, i32* @t, align 4
+  %load = load i32, ptr @t, align 4
   %sub = sub i32 %load, 17
   %cmp = icmp sgt i32 %sub, 0
   br i1 %cmp, label %if.then, label %if.else

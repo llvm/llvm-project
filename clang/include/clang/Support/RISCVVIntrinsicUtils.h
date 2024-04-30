@@ -501,7 +501,9 @@ enum RVVRequire : uint32_t {
   RVV_REQ_Zvknhb = 1 << 13,
   RVV_REQ_Zvksed = 1 << 14,
   RVV_REQ_Zvksh = 1 << 15,
-  RVV_REQ_Experimental = 1 << 16,
+  RVV_REQ_Zvfbfwma = 1 << 16,
+  RVV_REQ_Zvfbfmin = 1 << 17,
+  RVV_REQ_Experimental = 1 << 18,
 
   LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_Experimental)
 };
@@ -553,7 +555,9 @@ struct RVVIntrinsicRecord {
   bool HasMaskPolicy : 1;
   bool HasFRMRoundModeOp : 1;
   bool IsTuple : 1;
+  LLVM_PREFERRED_TYPE(PolicyScheme)
   uint8_t UnMaskedPolicyScheme : 2;
+  LLVM_PREFERRED_TYPE(PolicyScheme)
   uint8_t MaskedPolicyScheme : 2;
 };
 

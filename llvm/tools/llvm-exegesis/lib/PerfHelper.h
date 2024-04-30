@@ -127,11 +127,10 @@ public:
   /// within the benchmarked code.
   /// If empty (or not specified), then no filtering will be done.
   /// Not all counters choose to use this.
-  virtual llvm::Expected<llvm::SmallVector<int64_t, 4>>
+  virtual Expected<SmallVector<int64_t, 4>>
   readOrError(StringRef FunctionBytes = StringRef()) const;
 
-  virtual llvm::Expected<llvm::SmallVector<int64_t>>
-  readValidationCountersOrError() const;
+  virtual Expected<SmallVector<int64_t>> readValidationCountersOrError() const;
 
   virtual int numValues() const;
 

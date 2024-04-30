@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=csky -verify-machineinstrs -csky-no-aliases -mattr=+2e3 < %s \
 ; RUN:   | FileCheck -check-prefix=CSKY %s
 
-define void @cmpxchg_i8_monotonic_monotonic(i8* %ptr, i8 %cmp, i8 %val) nounwind {
+define void @cmpxchg_i8_monotonic_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i8_monotonic_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -24,11 +24,11 @@ define void @cmpxchg_i8_monotonic_monotonic(i8* %ptr, i8 %cmp, i8 %val) nounwind
 ; CSKY-NEXT:  .LCPI0_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
 ;
-  %res = cmpxchg i8* %ptr, i8 %cmp, i8 %val monotonic monotonic
+  %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val monotonic monotonic
   ret void
 }
 
-define void @cmpxchg_i8_acquire_monotonic(i8* %ptr, i8 %cmp, i8 %val) nounwind {
+define void @cmpxchg_i8_acquire_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i8_acquire_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -50,11 +50,11 @@ define void @cmpxchg_i8_acquire_monotonic(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:  .LCPI1_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
 ;
-  %res = cmpxchg i8* %ptr, i8 %cmp, i8 %val acquire monotonic
+  %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val acquire monotonic
   ret void
 }
 
-define void @cmpxchg_i8_acquire_acquire(i8* %ptr, i8 %cmp, i8 %val) nounwind {
+define void @cmpxchg_i8_acquire_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i8_acquire_acquire:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -76,11 +76,11 @@ define void @cmpxchg_i8_acquire_acquire(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:  .LCPI2_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
 ;
-  %res = cmpxchg i8* %ptr, i8 %cmp, i8 %val acquire acquire
+  %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val acquire acquire
   ret void
 }
 
-define void @cmpxchg_i8_release_monotonic(i8* %ptr, i8 %cmp, i8 %val) nounwind {
+define void @cmpxchg_i8_release_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i8_release_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -102,11 +102,11 @@ define void @cmpxchg_i8_release_monotonic(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:  .LCPI3_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
 ;
-  %res = cmpxchg i8* %ptr, i8 %cmp, i8 %val release monotonic
+  %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val release monotonic
   ret void
 }
 
-define void @cmpxchg_i8_release_acquire(i8* %ptr, i8 %cmp, i8 %val) nounwind {
+define void @cmpxchg_i8_release_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i8_release_acquire:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -128,11 +128,11 @@ define void @cmpxchg_i8_release_acquire(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:  .LCPI4_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
 ;
-  %res = cmpxchg i8* %ptr, i8 %cmp, i8 %val release acquire
+  %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val release acquire
   ret void
 }
 
-define void @cmpxchg_i8_acq_rel_monotonic(i8* %ptr, i8 %cmp, i8 %val) nounwind {
+define void @cmpxchg_i8_acq_rel_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i8_acq_rel_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -154,11 +154,11 @@ define void @cmpxchg_i8_acq_rel_monotonic(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:  .LCPI5_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
 ;
-  %res = cmpxchg i8* %ptr, i8 %cmp, i8 %val acq_rel monotonic
+  %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val acq_rel monotonic
   ret void
 }
 
-define void @cmpxchg_i8_acq_rel_acquire(i8* %ptr, i8 %cmp, i8 %val) nounwind {
+define void @cmpxchg_i8_acq_rel_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i8_acq_rel_acquire:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -180,11 +180,11 @@ define void @cmpxchg_i8_acq_rel_acquire(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:  .LCPI6_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
 ;
-  %res = cmpxchg i8* %ptr, i8 %cmp, i8 %val acq_rel acquire
+  %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val acq_rel acquire
   ret void
 }
 
-define void @cmpxchg_i8_seq_cst_monotonic(i8* %ptr, i8 %cmp, i8 %val) nounwind {
+define void @cmpxchg_i8_seq_cst_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i8_seq_cst_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -206,11 +206,11 @@ define void @cmpxchg_i8_seq_cst_monotonic(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:  .LCPI7_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
 ;
-  %res = cmpxchg i8* %ptr, i8 %cmp, i8 %val seq_cst monotonic
+  %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val seq_cst monotonic
   ret void
 }
 
-define void @cmpxchg_i8_seq_cst_acquire(i8* %ptr, i8 %cmp, i8 %val) nounwind {
+define void @cmpxchg_i8_seq_cst_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i8_seq_cst_acquire:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -232,11 +232,11 @@ define void @cmpxchg_i8_seq_cst_acquire(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:  .LCPI8_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
 ;
-  %res = cmpxchg i8* %ptr, i8 %cmp, i8 %val seq_cst acquire
+  %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val seq_cst acquire
   ret void
 }
 
-define void @cmpxchg_i8_seq_cst_seq_cst(i8* %ptr, i8 %cmp, i8 %val) nounwind {
+define void @cmpxchg_i8_seq_cst_seq_cst(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i8_seq_cst_seq_cst:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -258,11 +258,11 @@ define void @cmpxchg_i8_seq_cst_seq_cst(i8* %ptr, i8 %cmp, i8 %val) nounwind {
 ; CSKY-NEXT:  .LCPI9_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_1
 ;
-  %res = cmpxchg i8* %ptr, i8 %cmp, i8 %val seq_cst seq_cst
+  %res = cmpxchg ptr %ptr, i8 %cmp, i8 %val seq_cst seq_cst
   ret void
 }
 
-define void @cmpxchg_i16_monotonic_monotonic(i16* %ptr, i16 %cmp, i16 %val) nounwind {
+define void @cmpxchg_i16_monotonic_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i16_monotonic_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -284,11 +284,11 @@ define void @cmpxchg_i16_monotonic_monotonic(i16* %ptr, i16 %cmp, i16 %val) noun
 ; CSKY-NEXT:  .LCPI10_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
 ;
-  %res = cmpxchg i16* %ptr, i16 %cmp, i16 %val monotonic monotonic
+  %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val monotonic monotonic
   ret void
 }
 
-define void @cmpxchg_i16_acquire_monotonic(i16* %ptr, i16 %cmp, i16 %val) nounwind {
+define void @cmpxchg_i16_acquire_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i16_acquire_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -310,11 +310,11 @@ define void @cmpxchg_i16_acquire_monotonic(i16* %ptr, i16 %cmp, i16 %val) nounwi
 ; CSKY-NEXT:  .LCPI11_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
 ;
-  %res = cmpxchg i16* %ptr, i16 %cmp, i16 %val acquire monotonic
+  %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val acquire monotonic
   ret void
 }
 
-define void @cmpxchg_i16_acquire_acquire(i16* %ptr, i16 %cmp, i16 %val) nounwind {
+define void @cmpxchg_i16_acquire_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i16_acquire_acquire:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -336,11 +336,11 @@ define void @cmpxchg_i16_acquire_acquire(i16* %ptr, i16 %cmp, i16 %val) nounwind
 ; CSKY-NEXT:  .LCPI12_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
 ;
-  %res = cmpxchg i16* %ptr, i16 %cmp, i16 %val acquire acquire
+  %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val acquire acquire
   ret void
 }
 
-define void @cmpxchg_i16_release_monotonic(i16* %ptr, i16 %cmp, i16 %val) nounwind {
+define void @cmpxchg_i16_release_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i16_release_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -362,11 +362,11 @@ define void @cmpxchg_i16_release_monotonic(i16* %ptr, i16 %cmp, i16 %val) nounwi
 ; CSKY-NEXT:  .LCPI13_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
 ;
-  %res = cmpxchg i16* %ptr, i16 %cmp, i16 %val release monotonic
+  %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val release monotonic
   ret void
 }
 
-define void @cmpxchg_i16_release_acquire(i16* %ptr, i16 %cmp, i16 %val) nounwind {
+define void @cmpxchg_i16_release_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i16_release_acquire:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -388,11 +388,11 @@ define void @cmpxchg_i16_release_acquire(i16* %ptr, i16 %cmp, i16 %val) nounwind
 ; CSKY-NEXT:  .LCPI14_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
 ;
-  %res = cmpxchg i16* %ptr, i16 %cmp, i16 %val release acquire
+  %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val release acquire
   ret void
 }
 
-define void @cmpxchg_i16_acq_rel_monotonic(i16* %ptr, i16 %cmp, i16 %val) nounwind {
+define void @cmpxchg_i16_acq_rel_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i16_acq_rel_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -414,11 +414,11 @@ define void @cmpxchg_i16_acq_rel_monotonic(i16* %ptr, i16 %cmp, i16 %val) nounwi
 ; CSKY-NEXT:  .LCPI15_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
 ;
-  %res = cmpxchg i16* %ptr, i16 %cmp, i16 %val acq_rel monotonic
+  %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val acq_rel monotonic
   ret void
 }
 
-define void @cmpxchg_i16_acq_rel_acquire(i16* %ptr, i16 %cmp, i16 %val) nounwind {
+define void @cmpxchg_i16_acq_rel_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i16_acq_rel_acquire:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -440,11 +440,11 @@ define void @cmpxchg_i16_acq_rel_acquire(i16* %ptr, i16 %cmp, i16 %val) nounwind
 ; CSKY-NEXT:  .LCPI16_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
 ;
-  %res = cmpxchg i16* %ptr, i16 %cmp, i16 %val acq_rel acquire
+  %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val acq_rel acquire
   ret void
 }
 
-define void @cmpxchg_i16_seq_cst_monotonic(i16* %ptr, i16 %cmp, i16 %val) nounwind {
+define void @cmpxchg_i16_seq_cst_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i16_seq_cst_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -466,11 +466,11 @@ define void @cmpxchg_i16_seq_cst_monotonic(i16* %ptr, i16 %cmp, i16 %val) nounwi
 ; CSKY-NEXT:  .LCPI17_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
 ;
-  %res = cmpxchg i16* %ptr, i16 %cmp, i16 %val seq_cst monotonic
+  %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val seq_cst monotonic
   ret void
 }
 
-define void @cmpxchg_i16_seq_cst_acquire(i16* %ptr, i16 %cmp, i16 %val) nounwind {
+define void @cmpxchg_i16_seq_cst_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i16_seq_cst_acquire:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -492,11 +492,11 @@ define void @cmpxchg_i16_seq_cst_acquire(i16* %ptr, i16 %cmp, i16 %val) nounwind
 ; CSKY-NEXT:  .LCPI18_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
 ;
-  %res = cmpxchg i16* %ptr, i16 %cmp, i16 %val seq_cst acquire
+  %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val seq_cst acquire
   ret void
 }
 
-define void @cmpxchg_i16_seq_cst_seq_cst(i16* %ptr, i16 %cmp, i16 %val) nounwind {
+define void @cmpxchg_i16_seq_cst_seq_cst(ptr %ptr, i16 %cmp, i16 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i16_seq_cst_seq_cst:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -518,11 +518,11 @@ define void @cmpxchg_i16_seq_cst_seq_cst(i16* %ptr, i16 %cmp, i16 %val) nounwind
 ; CSKY-NEXT:  .LCPI19_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_2
 ;
-  %res = cmpxchg i16* %ptr, i16 %cmp, i16 %val seq_cst seq_cst
+  %res = cmpxchg ptr %ptr, i16 %cmp, i16 %val seq_cst seq_cst
   ret void
 }
 
-define void @cmpxchg_i32_monotonic_monotonic(i32* %ptr, i32 %cmp, i32 %val) nounwind {
+define void @cmpxchg_i32_monotonic_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i32_monotonic_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -544,11 +544,11 @@ define void @cmpxchg_i32_monotonic_monotonic(i32* %ptr, i32 %cmp, i32 %val) noun
 ; CSKY-NEXT:  .LCPI20_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
 ;
-  %res = cmpxchg i32* %ptr, i32 %cmp, i32 %val monotonic monotonic
+  %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val monotonic monotonic
   ret void
 }
 
-define void @cmpxchg_i32_acquire_monotonic(i32* %ptr, i32 %cmp, i32 %val) nounwind {
+define void @cmpxchg_i32_acquire_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i32_acquire_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -570,11 +570,11 @@ define void @cmpxchg_i32_acquire_monotonic(i32* %ptr, i32 %cmp, i32 %val) nounwi
 ; CSKY-NEXT:  .LCPI21_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
 ;
-  %res = cmpxchg i32* %ptr, i32 %cmp, i32 %val acquire monotonic
+  %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val acquire monotonic
   ret void
 }
 
-define void @cmpxchg_i32_acquire_acquire(i32* %ptr, i32 %cmp, i32 %val) nounwind {
+define void @cmpxchg_i32_acquire_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i32_acquire_acquire:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -596,11 +596,11 @@ define void @cmpxchg_i32_acquire_acquire(i32* %ptr, i32 %cmp, i32 %val) nounwind
 ; CSKY-NEXT:  .LCPI22_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
 ;
-  %res = cmpxchg i32* %ptr, i32 %cmp, i32 %val acquire acquire
+  %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val acquire acquire
   ret void
 }
 
-define void @cmpxchg_i32_release_monotonic(i32* %ptr, i32 %cmp, i32 %val) nounwind {
+define void @cmpxchg_i32_release_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i32_release_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -622,11 +622,11 @@ define void @cmpxchg_i32_release_monotonic(i32* %ptr, i32 %cmp, i32 %val) nounwi
 ; CSKY-NEXT:  .LCPI23_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
 ;
-  %res = cmpxchg i32* %ptr, i32 %cmp, i32 %val release monotonic
+  %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val release monotonic
   ret void
 }
 
-define void @cmpxchg_i32_release_acquire(i32* %ptr, i32 %cmp, i32 %val) nounwind {
+define void @cmpxchg_i32_release_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i32_release_acquire:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -648,11 +648,11 @@ define void @cmpxchg_i32_release_acquire(i32* %ptr, i32 %cmp, i32 %val) nounwind
 ; CSKY-NEXT:  .LCPI24_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
 ;
-  %res = cmpxchg i32* %ptr, i32 %cmp, i32 %val release acquire
+  %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val release acquire
   ret void
 }
 
-define void @cmpxchg_i32_acq_rel_monotonic(i32* %ptr, i32 %cmp, i32 %val) nounwind {
+define void @cmpxchg_i32_acq_rel_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i32_acq_rel_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -674,11 +674,11 @@ define void @cmpxchg_i32_acq_rel_monotonic(i32* %ptr, i32 %cmp, i32 %val) nounwi
 ; CSKY-NEXT:  .LCPI25_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
 ;
-  %res = cmpxchg i32* %ptr, i32 %cmp, i32 %val acq_rel monotonic
+  %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val acq_rel monotonic
   ret void
 }
 
-define void @cmpxchg_i32_acq_rel_acquire(i32* %ptr, i32 %cmp, i32 %val) nounwind {
+define void @cmpxchg_i32_acq_rel_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i32_acq_rel_acquire:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -700,11 +700,11 @@ define void @cmpxchg_i32_acq_rel_acquire(i32* %ptr, i32 %cmp, i32 %val) nounwind
 ; CSKY-NEXT:  .LCPI26_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
 ;
-  %res = cmpxchg i32* %ptr, i32 %cmp, i32 %val acq_rel acquire
+  %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val acq_rel acquire
   ret void
 }
 
-define void @cmpxchg_i32_seq_cst_monotonic(i32* %ptr, i32 %cmp, i32 %val) nounwind {
+define void @cmpxchg_i32_seq_cst_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i32_seq_cst_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -726,11 +726,11 @@ define void @cmpxchg_i32_seq_cst_monotonic(i32* %ptr, i32 %cmp, i32 %val) nounwi
 ; CSKY-NEXT:  .LCPI27_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
 ;
-  %res = cmpxchg i32* %ptr, i32 %cmp, i32 %val seq_cst monotonic
+  %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val seq_cst monotonic
   ret void
 }
 
-define void @cmpxchg_i32_seq_cst_acquire(i32* %ptr, i32 %cmp, i32 %val) nounwind {
+define void @cmpxchg_i32_seq_cst_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i32_seq_cst_acquire:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -752,11 +752,11 @@ define void @cmpxchg_i32_seq_cst_acquire(i32* %ptr, i32 %cmp, i32 %val) nounwind
 ; CSKY-NEXT:  .LCPI28_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
 ;
-  %res = cmpxchg i32* %ptr, i32 %cmp, i32 %val seq_cst acquire
+  %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val seq_cst acquire
   ret void
 }
 
-define void @cmpxchg_i32_seq_cst_seq_cst(i32* %ptr, i32 %cmp, i32 %val) nounwind {
+define void @cmpxchg_i32_seq_cst_seq_cst(ptr %ptr, i32 %cmp, i32 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i32_seq_cst_seq_cst:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -778,11 +778,11 @@ define void @cmpxchg_i32_seq_cst_seq_cst(i32* %ptr, i32 %cmp, i32 %val) nounwind
 ; CSKY-NEXT:  .LCPI29_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_4
 ;
-  %res = cmpxchg i32* %ptr, i32 %cmp, i32 %val seq_cst seq_cst
+  %res = cmpxchg ptr %ptr, i32 %cmp, i32 %val seq_cst seq_cst
   ret void
 }
 
-define void @cmpxchg_i64_monotonic_monotonic(i64* %ptr, i64 %cmp, i64 %val) nounwind {
+define void @cmpxchg_i64_monotonic_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i64_monotonic_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -808,11 +808,11 @@ define void @cmpxchg_i64_monotonic_monotonic(i64* %ptr, i64 %cmp, i64 %val) noun
 ; CSKY-NEXT:  .LCPI30_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
 ;
-  %res = cmpxchg i64* %ptr, i64 %cmp, i64 %val monotonic monotonic
+  %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val monotonic monotonic
   ret void
 }
 
-define void @cmpxchg_i64_acquire_monotonic(i64* %ptr, i64 %cmp, i64 %val) nounwind {
+define void @cmpxchg_i64_acquire_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i64_acquire_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -839,11 +839,11 @@ define void @cmpxchg_i64_acquire_monotonic(i64* %ptr, i64 %cmp, i64 %val) nounwi
 ; CSKY-NEXT:  .LCPI31_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
 ;
-  %res = cmpxchg i64* %ptr, i64 %cmp, i64 %val acquire monotonic
+  %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val acquire monotonic
   ret void
 }
 
-define void @cmpxchg_i64_acquire_acquire(i64* %ptr, i64 %cmp, i64 %val) nounwind {
+define void @cmpxchg_i64_acquire_acquire(ptr %ptr, i64 %cmp, i64 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i64_acquire_acquire:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -869,11 +869,11 @@ define void @cmpxchg_i64_acquire_acquire(i64* %ptr, i64 %cmp, i64 %val) nounwind
 ; CSKY-NEXT:  .LCPI32_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
 ;
-  %res = cmpxchg i64* %ptr, i64 %cmp, i64 %val acquire acquire
+  %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val acquire acquire
   ret void
 }
 
-define void @cmpxchg_i64_release_monotonic(i64* %ptr, i64 %cmp, i64 %val) nounwind {
+define void @cmpxchg_i64_release_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i64_release_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -900,11 +900,11 @@ define void @cmpxchg_i64_release_monotonic(i64* %ptr, i64 %cmp, i64 %val) nounwi
 ; CSKY-NEXT:  .LCPI33_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
 ;
-  %res = cmpxchg i64* %ptr, i64 %cmp, i64 %val release monotonic
+  %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val release monotonic
   ret void
 }
 
-define void @cmpxchg_i64_release_acquire(i64* %ptr, i64 %cmp, i64 %val) nounwind {
+define void @cmpxchg_i64_release_acquire(ptr %ptr, i64 %cmp, i64 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i64_release_acquire:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -931,11 +931,11 @@ define void @cmpxchg_i64_release_acquire(i64* %ptr, i64 %cmp, i64 %val) nounwind
 ; CSKY-NEXT:  .LCPI34_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
 ;
-  %res = cmpxchg i64* %ptr, i64 %cmp, i64 %val release acquire
+  %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val release acquire
   ret void
 }
 
-define void @cmpxchg_i64_acq_rel_monotonic(i64* %ptr, i64 %cmp, i64 %val) nounwind {
+define void @cmpxchg_i64_acq_rel_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i64_acq_rel_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -962,11 +962,11 @@ define void @cmpxchg_i64_acq_rel_monotonic(i64* %ptr, i64 %cmp, i64 %val) nounwi
 ; CSKY-NEXT:  .LCPI35_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
 ;
-  %res = cmpxchg i64* %ptr, i64 %cmp, i64 %val acq_rel monotonic
+  %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val acq_rel monotonic
   ret void
 }
 
-define void @cmpxchg_i64_acq_rel_acquire(i64* %ptr, i64 %cmp, i64 %val) nounwind {
+define void @cmpxchg_i64_acq_rel_acquire(ptr %ptr, i64 %cmp, i64 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i64_acq_rel_acquire:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -993,11 +993,11 @@ define void @cmpxchg_i64_acq_rel_acquire(i64* %ptr, i64 %cmp, i64 %val) nounwind
 ; CSKY-NEXT:  .LCPI36_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
 ;
-  %res = cmpxchg i64* %ptr, i64 %cmp, i64 %val acq_rel acquire
+  %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val acq_rel acquire
   ret void
 }
 
-define void @cmpxchg_i64_seq_cst_monotonic(i64* %ptr, i64 %cmp, i64 %val) nounwind {
+define void @cmpxchg_i64_seq_cst_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i64_seq_cst_monotonic:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -1024,11 +1024,11 @@ define void @cmpxchg_i64_seq_cst_monotonic(i64* %ptr, i64 %cmp, i64 %val) nounwi
 ; CSKY-NEXT:  .LCPI37_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
 ;
-  %res = cmpxchg i64* %ptr, i64 %cmp, i64 %val seq_cst monotonic
+  %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val seq_cst monotonic
   ret void
 }
 
-define void @cmpxchg_i64_seq_cst_acquire(i64* %ptr, i64 %cmp, i64 %val) nounwind {
+define void @cmpxchg_i64_seq_cst_acquire(ptr %ptr, i64 %cmp, i64 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i64_seq_cst_acquire:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -1055,11 +1055,11 @@ define void @cmpxchg_i64_seq_cst_acquire(i64* %ptr, i64 %cmp, i64 %val) nounwind
 ; CSKY-NEXT:  .LCPI38_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
 ;
-  %res = cmpxchg i64* %ptr, i64 %cmp, i64 %val seq_cst acquire
+  %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val seq_cst acquire
   ret void
 }
 
-define void @cmpxchg_i64_seq_cst_seq_cst(i64* %ptr, i64 %cmp, i64 %val) nounwind {
+define void @cmpxchg_i64_seq_cst_seq_cst(ptr %ptr, i64 %cmp, i64 %val) nounwind {
 ; CSKY-LABEL: cmpxchg_i64_seq_cst_seq_cst:
 ; CSKY:       # %bb.0:
 ; CSKY-NEXT:    subi16 sp, sp, 4
@@ -1085,6 +1085,6 @@ define void @cmpxchg_i64_seq_cst_seq_cst(i64* %ptr, i64 %cmp, i64 %val) nounwind
 ; CSKY-NEXT:  .LCPI39_0:
 ; CSKY-NEXT:    .long __atomic_compare_exchange_8
 ;
-  %res = cmpxchg i64* %ptr, i64 %cmp, i64 %val seq_cst seq_cst
+  %res = cmpxchg ptr %ptr, i64 %cmp, i64 %val seq_cst seq_cst
   ret void
 }

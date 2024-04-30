@@ -32,7 +32,7 @@
 void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
                                           const SparsifierOptions &options) {
   // Rewrite named linalg ops into generic ops.
-  pm.addNestedPass<func::FuncOp>(createLinalgGeneralizationPass());
+  pm.addNestedPass<func::FuncOp>(createLinalgGeneralizeNamedOpsPass());
 
   // Sparsification and bufferization mini-pipeline.
   pm.addPass(createSparsificationAndBufferizationPass(

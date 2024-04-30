@@ -19,8 +19,6 @@
 #include "clang/Basic/OperatorPrecedence.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/Lexer.h"
-#include <memory>
-#include <optional>
 #include <unordered_set>
 
 namespace clang {
@@ -37,6 +35,8 @@ namespace format {
   TYPE(BinaryOperator)                                                         \
   TYPE(BitFieldColon)                                                          \
   TYPE(BlockComment)                                                           \
+  /* l_brace of a block that is not the body of a (e.g. loop) statement. */    \
+  TYPE(BlockLBrace)                                                            \
   TYPE(BracedListLBrace)                                                       \
   /* The colon at the end of a case label. */                                  \
   TYPE(CaseLabelColon)                                                         \
@@ -148,7 +148,24 @@ namespace format {
   TYPE(StructLBrace)                                                           \
   TYPE(StructRBrace)                                                           \
   TYPE(StructuredBindingLSquare)                                               \
+  TYPE(TableGenBangOperator)                                                   \
+  TYPE(TableGenCondOperator)                                                   \
+  TYPE(TableGenCondOperatorColon)                                              \
+  TYPE(TableGenCondOperatorComma)                                              \
+  TYPE(TableGenDAGArgCloser)                                                   \
+  TYPE(TableGenDAGArgListColon)                                                \
+  TYPE(TableGenDAGArgListColonToAlign)                                         \
+  TYPE(TableGenDAGArgListComma)                                                \
+  TYPE(TableGenDAGArgListCommaToBreak)                                         \
+  TYPE(TableGenDAGArgOpener)                                                   \
+  TYPE(TableGenDAGArgOpenerToBreak)                                            \
+  TYPE(TableGenDAGArgOperatorID)                                               \
+  TYPE(TableGenDAGArgOperatorToBreak)                                          \
+  TYPE(TableGenListCloser)                                                     \
+  TYPE(TableGenListOpener)                                                     \
   TYPE(TableGenMultiLineString)                                                \
+  TYPE(TableGenTrailingPasteOperator)                                          \
+  TYPE(TableGenValueSuffix)                                                    \
   TYPE(TemplateCloser)                                                         \
   TYPE(TemplateOpener)                                                         \
   TYPE(TemplateString)                                                         \
@@ -559,6 +576,9 @@ public:
   /// Is optional and can be removed.
   bool Optional = false;
 
+  /// Might be function declaration open/closing paren.
+  bool MightBeFunctionDeclParen = false;
+
   /// Number of optional braces to be inserted after this token:
   ///   -1: a single left brace
   ///    0: no braces
@@ -664,7 +684,9 @@ public:
   /// Determine whether the token is a simple-type-specifier.
   [[nodiscard]] bool isSimpleTypeSpecifier() const;
 
-  [[nodiscard]] bool isTypeOrIdentifier() const;
+  [[nodiscard]] bool isTypeName(bool IsCpp) const;
+
+  [[nodiscard]] bool isTypeOrIdentifier(bool IsCpp) const;
 
   bool isObjCAccessSpecifier() const {
     return is(tok::at) && Next &&
@@ -809,8 +831,8 @@ public:
 
   /// Returns whether the token is the left square bracket of a C++
   /// structured binding declaration.
-  bool isCppStructuredBinding(const FormatStyle &Style) const {
-    if (!Style.isCpp() || isNot(tok::l_square))
+  bool isCppStructuredBinding(bool IsCpp) const {
+    if (!IsCpp || isNot(tok::l_square))
       return false;
     const FormatToken *T = this;
     do {
@@ -1601,10 +1623,10 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_then;
 
   /// Returns \c true if \p Tok is a keyword or an identifier.
-  bool isWordLike(const FormatToken &Tok) const {
+  bool isWordLike(const FormatToken &Tok, bool IsVerilog = true) const {
     // getIdentifierinfo returns non-null for keywords as well as identifiers.
     return Tok.Tok.getIdentifierInfo() &&
-           !Tok.isOneOf(kw_verilogHash, kw_verilogHashHash, kw_apostrophe);
+           (!IsVerilog || !isVerilogKeywordSymbol(Tok));
   }
 
   /// Returns \c true if \p Tok is a true JavaScript identifier, returns
@@ -1731,6 +1753,10 @@ struct AdditionalKeywords {
              CSharpExtraKeywords.find(Tok.Tok.getIdentifierInfo()) ==
                  CSharpExtraKeywords.end();
     }
+  }
+
+  bool isVerilogKeywordSymbol(const FormatToken &Tok) const {
+    return Tok.isOneOf(kw_verilogHash, kw_verilogHashHash, kw_apostrophe);
   }
 
   bool isVerilogWordOperator(const FormatToken &Tok) const {

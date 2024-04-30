@@ -1,4 +1,4 @@
-//===- X86RecognizableInstr.h - Disassembler instruction spec ----*- C++ -*-===//
+//===- X86RecognizableInstr.h - Disassembler instruction spec ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_X86RECOGNIZABLEINSTR_H
 #define LLVM_UTILS_TABLEGEN_X86RECOGNIZABLEINSTR_H
 
-#include "CodeGenInstruction.h"
+#include "Common/CodeGenInstruction.h"
 #include "llvm/Support/X86DisassemblerDecoderCommon.h"
 #include <cstdint>
 #include <string>
@@ -106,6 +106,8 @@ enum {
   RawFrmImm16 = 8,
   AddCCFrm = 9,
   PrefixByte = 10,
+  MRMDestRegCC = 18,
+  MRMDestMemCC = 19,
   MRMDestMem4VOp3CC = 20,
   MRMr0 = 21,
   MRMSrcMemFSIB = 22,
@@ -214,6 +216,8 @@ struct RecognizableInstrBase {
   bool HasEVEX_B;
   /// The hasEVEX_NF field from the record
   bool HasEVEX_NF;
+  /// The hasTwoConditionalOps field from the record
+  bool HasTwoConditionalOps;
   /// Indicates that the instruction uses the L and L' fields for RC.
   bool EncodeRC;
   /// The isCodeGenOnly field from the record

@@ -956,14 +956,22 @@ void ASTStmtReader::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   E->setRBracketLoc(readSourceLocation());
 }
 
-void ASTStmtReader::VisitOMPArraySectionExpr(OMPArraySectionExpr *E) {
+void ASTStmtReader::VisitArraySectionExpr(ArraySectionExpr *E) {
   VisitExpr(E);
+  E->ASType = Record.readEnum<ArraySectionExpr::ArraySectionType>();
+
   E->setBase(Record.readSubExpr());
   E->setLowerBound(Record.readSubExpr());
   E->setLength(Record.readSubExpr());
-  E->setStride(Record.readSubExpr());
+
+  if (E->isOMPArraySection())
+    E->setStride(Record.readSubExpr());
+
   E->setColonLocFirst(readSourceLocation());
-  E->setColonLocSecond(readSourceLocation());
+
+  if (E->isOMPArraySection())
+    E->setColonLocSecond(readSourceLocation());
+
   E->setRBracketLoc(readSourceLocation());
 }
 
@@ -1047,30 +1055,22 @@ void ASTStmtReader::VisitMemberExpr(MemberExpr *E) {
   E->MemberDNLoc = Record.readDeclarationNameLoc(E->MemberDecl->getDeclName());
   E->MemberLoc = Record.readSourceLocation();
   E->MemberExprBits.IsArrow = CurrentUnpackingBits->getNextBit();
-  E->MemberExprBits.HasQualifierOrFoundDecl = HasQualifier || HasFoundDecl;
+  E->MemberExprBits.HasQualifier = HasQualifier;
+  E->MemberExprBits.HasFoundDecl = HasFoundDecl;
   E->MemberExprBits.HasTemplateKWAndArgsInfo = HasTemplateInfo;
   E->MemberExprBits.HadMultipleCandidates = CurrentUnpackingBits->getNextBit();
   E->MemberExprBits.NonOdrUseReason =
       CurrentUnpackingBits->getNextBits(/*Width=*/2);
   E->MemberExprBits.OperatorLoc = Record.readSourceLocation();
 
-  if (HasQualifier || HasFoundDecl) {
-    DeclAccessPair FoundDecl;
-    if (HasFoundDecl) {
-      auto *FoundD = Record.readDeclAs<NamedDecl>();
-      auto AS = (AccessSpecifier)CurrentUnpackingBits->getNextBits(/*Width=*/2);
-      FoundDecl = DeclAccessPair::make(FoundD, AS);
-    } else {
-      FoundDecl = DeclAccessPair::make(E->MemberDecl,
-                                       E->MemberDecl->getAccess());
-    }
-    E->getTrailingObjects<MemberExprNameQualifier>()->FoundDecl = FoundDecl;
+  if (HasQualifier)
+    new (E->getTrailingObjects<NestedNameSpecifierLoc>())
+        NestedNameSpecifierLoc(Record.readNestedNameSpecifierLoc());
 
-    NestedNameSpecifierLoc QualifierLoc;
-    if (HasQualifier)
-      QualifierLoc = Record.readNestedNameSpecifierLoc();
-    E->getTrailingObjects<MemberExprNameQualifier>()->QualifierLoc =
-        QualifierLoc;
+  if (HasFoundDecl) {
+    auto *FoundD = Record.readDeclAs<NamedDecl>();
+    auto AS = (AccessSpecifier)CurrentUnpackingBits->getNextBits(/*Width=*/2);
+    *E->getTrailingObjects<DeclAccessPair>() = DeclAccessPair::make(FoundD, AS);
   }
 
   if (HasTemplateInfo)
@@ -1849,6 +1849,7 @@ void ASTStmtReader::VisitCXXThisExpr(CXXThisExpr *E) {
   VisitExpr(E);
   E->setLocation(readSourceLocation());
   E->setImplicit(Record.readInt());
+  E->setCapturedByCopyInLambdaWithExplicitObjectParameter(Record.readInt());
 }
 
 void ASTStmtReader::VisitCXXThrowExpr(CXXThrowExpr *E) {
@@ -2103,7 +2104,6 @@ void ASTStmtReader::VisitUnresolvedMemberExpr(UnresolvedMemberExpr *E) {
 void ASTStmtReader::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
   VisitOverloadExpr(E);
   E->UnresolvedLookupExprBits.RequiresADL = CurrentUnpackingBits->getNextBit();
-  E->UnresolvedLookupExprBits.Overloaded = CurrentUnpackingBits->getNextBit();
   E->NamingClass = readDeclAs<CXXRecordDecl>();
 }
 
@@ -2172,6 +2172,18 @@ void ASTStmtReader::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
   } else if (!E->isValueDependent()) {
     E->Length = Record.readInt();
   }
+}
+
+void ASTStmtReader::VisitPackIndexingExpr(PackIndexingExpr *E) {
+  VisitExpr(E);
+  E->TransformedExpressions = Record.readInt();
+  E->EllipsisLoc = readSourceLocation();
+  E->RSquareLoc = readSourceLocation();
+  E->SubExprs[0] = Record.readStmt();
+  E->SubExprs[1] = Record.readStmt();
+  auto **Exprs = E->getTrailingObjects<Expr *>();
+  for (unsigned I = 0; I < E->TransformedExpressions; ++I)
+    Exprs[I] = Record.readExpr();
 }
 
 void ASTStmtReader::VisitSubstNonTypeTemplateParmExpr(
@@ -2764,6 +2776,7 @@ void ASTStmtReader::VisitOMPTeamsGenericLoopDirective(
 void ASTStmtReader::VisitOMPTargetTeamsGenericLoopDirective(
     OMPTargetTeamsGenericLoopDirective *D) {
   VisitOMPLoopDirective(D);
+  D->setCanBeParallelFor(Record.readBool());
 }
 
 void ASTStmtReader::VisitOMPParallelGenericLoopDirective(
@@ -2774,6 +2787,27 @@ void ASTStmtReader::VisitOMPParallelGenericLoopDirective(
 void ASTStmtReader::VisitOMPTargetParallelGenericLoopDirective(
     OMPTargetParallelGenericLoopDirective *D) {
   VisitOMPLoopDirective(D);
+}
+
+//===----------------------------------------------------------------------===//
+// OpenACC Constructs/Directives.
+//===----------------------------------------------------------------------===//
+void ASTStmtReader::VisitOpenACCConstructStmt(OpenACCConstructStmt *S) {
+  (void)Record.readInt();
+  S->Kind = Record.readEnum<OpenACCDirectiveKind>();
+  S->Range = Record.readSourceRange();
+  Record.readOpenACCClauseList(S->Clauses);
+}
+
+void ASTStmtReader::VisitOpenACCAssociatedStmtConstruct(
+    OpenACCAssociatedStmtConstruct *S) {
+  VisitOpenACCConstructStmt(S);
+  S->setAssociatedStmt(Record.readSubStmt());
+}
+
+void ASTStmtReader::VisitOpenACCComputeConstruct(OpenACCComputeConstruct *S) {
+  VisitStmt(S);
+  VisitOpenACCAssociatedStmtConstruct(S);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3064,8 +3098,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) MatrixSubscriptExpr(Empty);
       break;
 
-    case EXPR_OMP_ARRAY_SECTION:
-      S = new (Context) OMPArraySectionExpr(Empty);
+    case EXPR_ARRAY_SECTION:
+      S = new (Context) ArraySectionExpr(Empty);
       break;
 
     case EXPR_OMP_ARRAY_SHAPING:
@@ -4102,6 +4136,12 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
               /*NumPartialArgs=*/Record[ASTStmtReader::NumExprFields]);
       break;
 
+    case EXPR_PACK_INDEXING:
+      S = PackIndexingExpr::CreateDeserialized(
+          Context,
+          /*TransformedExprs=*/Record[ASTStmtReader::NumExprFields]);
+      break;
+
     case EXPR_SUBST_NON_TYPE_TEMPLATE_PARM:
       S = new (Context) SubstNonTypeTemplateParmExpr(Empty);
       break;
@@ -4188,7 +4228,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) ConceptSpecializationExpr(Empty);
       break;
     }
-
+    case STMT_OPENACC_COMPUTE_CONSTRUCT: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      S = OpenACCComputeConstruct::CreateEmpty(Context, NumClauses);
+      break;
+    }
     case EXPR_REQUIRES:
       unsigned numLocalParameters = Record[ASTStmtReader::NumExprFields];
       unsigned numRequirement = Record[ASTStmtReader::NumExprFields + 1];

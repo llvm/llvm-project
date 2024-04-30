@@ -1,4 +1,4 @@
-; REQUIRES: x86
+; REQUIRES: x86, non-root-user
 
 ; Basic ThinLTO tests.
 ; RUN: opt -module-summary %s -o %t1.o

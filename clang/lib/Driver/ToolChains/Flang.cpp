@@ -15,7 +15,7 @@
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 
 #include <cassert>
@@ -35,27 +35,18 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
 
 void Flang::addFortranDialectOptions(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
-  Args.addAllArgs(CmdArgs, {options::OPT_ffixed_form,
-                            options::OPT_ffree_form,
-                            options::OPT_ffixed_line_length_EQ,
-                            options::OPT_fopenmp,
-                            options::OPT_fopenmp_version_EQ,
-                            options::OPT_fopenacc,
-                            options::OPT_finput_charset_EQ,
-                            options::OPT_fimplicit_none,
-                            options::OPT_fno_implicit_none,
-                            options::OPT_fbackslash,
-                            options::OPT_fno_backslash,
-                            options::OPT_flogical_abbreviations,
-                            options::OPT_fno_logical_abbreviations,
-                            options::OPT_fxor_operator,
-                            options::OPT_fno_xor_operator,
-                            options::OPT_falternative_parameter_statement,
-                            options::OPT_fdefault_real_8,
-                            options::OPT_fdefault_integer_8,
-                            options::OPT_fdefault_double_8,
-                            options::OPT_flarge_sizes,
-                            options::OPT_fno_automatic});
+  Args.addAllArgs(
+      CmdArgs, {options::OPT_ffixed_form, options::OPT_ffree_form,
+                options::OPT_ffixed_line_length_EQ, options::OPT_fopenacc,
+                options::OPT_finput_charset_EQ, options::OPT_fimplicit_none,
+                options::OPT_fno_implicit_none, options::OPT_fbackslash,
+                options::OPT_fno_backslash, options::OPT_flogical_abbreviations,
+                options::OPT_fno_logical_abbreviations,
+                options::OPT_fxor_operator, options::OPT_fno_xor_operator,
+                options::OPT_falternative_parameter_statement,
+                options::OPT_fdefault_real_8, options::OPT_fdefault_integer_8,
+                options::OPT_fdefault_double_8, options::OPT_flarge_sizes,
+                options::OPT_fno_automatic});
 }
 
 void Flang::addPreprocessingOptions(const ArgList &Args,
@@ -127,7 +118,7 @@ void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
     Arg *gNArg = Args.getLastArg(options::OPT_gN_Group);
     DebugInfoKind = debugLevelToInfoKind(*gNArg);
   } else if (Args.hasArg(options::OPT_g_Flag)) {
-    DebugInfoKind = llvm::codegenoptions::DebugLineTablesOnly;
+    DebugInfoKind = llvm::codegenoptions::FullDebugInfo;
   } else {
     DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
   }
@@ -148,7 +139,6 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
                             options::OPT_flang_deprecated_no_hlfir,
-                            options::OPT_flang_experimental_polymorphism,
                             options::OPT_fno_ppc_native_vec_elem_order,
                             options::OPT_fppc_native_vec_elem_order});
 }
@@ -185,9 +175,7 @@ void Flang::AddAArch64TargetArgs(const ArgList &Args,
         Val.equals("256+") || Val.equals("512+") || Val.equals("1024+") ||
         Val.equals("2048+")) {
       unsigned Bits = 0;
-      if (Val.ends_with("+"))
-        Val = Val.substr(0, Val.size() - 1);
-      else {
+      if (!Val.consume_back("+")) {
         [[maybe_unused]] bool Invalid = Val.getAsInteger(10, Bits);
         assert(!Invalid && "Failed to parse value");
         CmdArgs.push_back(
@@ -251,6 +239,20 @@ void Flang::AddRISCVTargetArgs(const ArgList &Args,
   }
 }
 
+void Flang::AddX86_64TargetArgs(const ArgList &Args,
+                                ArgStringList &CmdArgs) const {
+  if (Arg *A = Args.getLastArg(options::OPT_masm_EQ)) {
+    StringRef Value = A->getValue();
+    if (Value == "intel" || Value == "att") {
+      CmdArgs.push_back(Args.MakeArgString("-mllvm"));
+      CmdArgs.push_back(Args.MakeArgString("-x86-asm-syntax=" + Value));
+    } else {
+      getToolChain().getDriver().Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Value;
+    }
+  }
+}
+
 static void addVSDefines(const ToolChain &TC, const ArgList &Args,
                          ArgStringList &CmdArgs) {
 
@@ -262,7 +264,7 @@ static void addVSDefines(const ToolChain &TC, const ArgList &Args,
   CmdArgs.push_back(Args.MakeArgString("-D_MSC_FULL_VER=" + Twine(ver)));
   CmdArgs.push_back(Args.MakeArgString("-D_WIN32"));
 
-  llvm::Triple triple = TC.getTriple();
+  const llvm::Triple &triple = TC.getTriple();
   if (triple.isAArch64()) {
     CmdArgs.push_back("-D_M_ARM64=1");
   } else if (triple.isX86() && triple.isArch32Bit()) {
@@ -280,7 +282,6 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
   assert(TC.getTriple().isKnownWindowsMSVCEnvironment() &&
          "can only add VS runtime library on Windows!");
   // if -fno-fortran-main has been passed, skip linking Fortran_main.a
-  bool LinkFortranMain = !Args.hasArg(options::OPT_no_fortran_main);
   if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
     CmdArgs.push_back(Args.MakeArgString(
         "--dependent-lib=" + TC.getCompilerRTBasename(Args, "builtins")));
@@ -298,8 +299,6 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
   case options::OPT__SLASH_MT:
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("--dependent-lib=libcmt");
-    if (LinkFortranMain)
-      CmdArgs.push_back("--dependent-lib=Fortran_main.static.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.static.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.static.lib");
     break;
@@ -307,8 +306,6 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("--dependent-lib=libcmtd");
-    if (LinkFortranMain)
-      CmdArgs.push_back("--dependent-lib=Fortran_main.static_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.static_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.static_dbg.lib");
     break;
@@ -316,8 +313,6 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_MT");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrt");
-    if (LinkFortranMain)
-      CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic.lib");
     break;
@@ -326,8 +321,6 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("-D_DEBUG");
     CmdArgs.push_back("-D_DLL");
     CmdArgs.push_back("--dependent-lib=msvcrtd");
-    if (LinkFortranMain)
-      CmdArgs.push_back("--dependent-lib=Fortran_main.dynamic_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranRuntime.dynamic_dbg.lib");
     CmdArgs.push_back("--dependent-lib=FortranDecimal.dynamic_dbg.lib");
     break;
@@ -354,6 +347,8 @@ void Flang::addTargetOptions(const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(CPU));
   }
 
+  addOutlineAtomicsArgs(D, getToolChain(), Args, CmdArgs, Triple);
+
   // Add the target features.
   switch (TC.getArch()) {
   default:
@@ -374,6 +369,7 @@ void Flang::addTargetOptions(const ArgList &Args,
     break;
   case llvm::Triple::x86_64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
+    AddX86_64TargetArgs(Args, CmdArgs);
     break;
   }
 
@@ -584,7 +580,7 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
 
   if (!HonorINFs && !HonorNaNs && AssociativeMath && ReciprocalMath &&
       ApproxFunc && !SignedZeros &&
-      (FPContract == "fast" || FPContract == "")) {
+      (FPContract == "fast" || FPContract.empty())) {
     CmdArgs.push_back("-ffast-math");
     return;
   }
@@ -674,7 +670,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Args.MakeArgString(TripleStr));
 
   if (isa<PreprocessJobAction>(JA)) {
-      CmdArgs.push_back("-E");
+    CmdArgs.push_back("-E");
+    if (Args.getLastArg(options::OPT_dM)) {
+      CmdArgs.push_back("-dM");
+    }
   } else if (isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) {
     if (JA.getType() == types::TY_Nothing) {
       CmdArgs.push_back("-fsyntax-only");
@@ -748,6 +747,39 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add other compile options
   addOtherOptions(Args, CmdArgs);
+
+  // Forward flags for OpenMP. We don't do this if the current action is an
+  // device offloading action other than OpenMP.
+  if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                   options::OPT_fno_openmp, false) &&
+      (JA.isDeviceOffloading(Action::OFK_None) ||
+       JA.isDeviceOffloading(Action::OFK_OpenMP))) {
+    switch (D.getOpenMPRuntime(Args)) {
+    case Driver::OMPRT_OMP:
+    case Driver::OMPRT_IOMP5:
+      // Clang can generate useful OpenMP code for these two runtime libraries.
+      CmdArgs.push_back("-fopenmp");
+      Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_version_EQ);
+
+      // FIXME: Clang supports a whole bunch more flags here.
+      break;
+    default:
+      // By default, if Clang doesn't know how to generate useful OpenMP code
+      // for a specific runtime library, we just don't pass the '-fopenmp' flag
+      // down to the actual compilation.
+      // FIXME: It would be better to have a mode which *only* omits IR
+      // generation based on the OpenMP support so that we get consistent
+      // semantic analysis, etc.
+      const Arg *A = Args.getLastArg(options::OPT_fopenmp_EQ);
+      D.Diag(diag::warn_drv_unsupported_openmp_library)
+          << A->getSpelling() << A->getValue();
+      break;
+    }
+  }
+
+  // Pass the path to compiler resource files.
+  CmdArgs.push_back("-resource-dir");
+  CmdArgs.push_back(D.ResourceDir.c_str());
 
   // Offloading related options
   addOffloadOptions(C, Inputs, JA, Args, CmdArgs);

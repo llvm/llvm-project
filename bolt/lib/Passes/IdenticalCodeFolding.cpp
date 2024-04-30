@@ -341,7 +341,7 @@ typedef std::unordered_map<BinaryFunction *, std::vector<BinaryFunction *>,
 namespace llvm {
 namespace bolt {
 
-void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
+Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
   const size_t OriginalFunctionCount = BC.getBinaryFunctions().size();
   uint64_t NumFunctionsFolded = 0;
   std::atomic<uint64_t> NumJTFunctionsFolded{0};
@@ -397,7 +397,7 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
     Timer SinglePass("single fold pass", "single fold pass");
     LLVM_DEBUG(SinglePass.startTimer());
 
-    ThreadPool *ThPool;
+    ThreadPoolInterface *ThPool;
     if (!opts::NoThreads)
       ThPool = &ParallelUtilities::getThreadPool();
 
@@ -508,14 +508,16 @@ void IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
   });
 
   if (NumFunctionsFolded)
-    outs() << "BOLT-INFO: ICF folded " << NumFunctionsFolded << " out of "
-           << OriginalFunctionCount << " functions in " << Iteration
-           << " passes. " << NumJTFunctionsFolded
-           << " functions had jump tables.\n"
-           << "BOLT-INFO: Removing all identical functions will save "
-           << format("%.2lf", (double)BytesSavedEstimate / 1024)
-           << " KB of code space. Folded functions were called " << NumCalled
-           << " times based on profile.\n";
+    BC.outs() << "BOLT-INFO: ICF folded " << NumFunctionsFolded << " out of "
+              << OriginalFunctionCount << " functions in " << Iteration
+              << " passes. " << NumJTFunctionsFolded
+              << " functions had jump tables.\n"
+              << "BOLT-INFO: Removing all identical functions will save "
+              << format("%.2lf", (double)BytesSavedEstimate / 1024)
+              << " KB of code space. Folded functions were called " << NumCalled
+              << " times based on profile.\n";
+
+  return Error::success();
 }
 
 } // namespace bolt

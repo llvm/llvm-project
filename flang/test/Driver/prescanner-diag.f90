@@ -12,8 +12,8 @@
 ! RUN: %flang -fsyntax-only -I %S/Inputs/ %s 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -fsyntax-only -I %S/Inputs/ %s 2>&1 | FileCheck %s
 
-! CHECK: prescanner-diag.f90:[[#@LINE+3]]:20: portability: #include: extra stuff ignored after file name
-! CHECK: prescanner-diag.f90:[[#@LINE+3]]:20: portability: #include: extra stuff ignored after file name
+! CHECK: prescanner-diag.f90:[[#@LINE+3]]:10: portability: #include: extra stuff ignored after file name
+! CHECK: prescanner-diag.f90:[[#@LINE+3]]:10: portability: #include: extra stuff ignored after file name
 
 #include <empty.h> comment
 #include "empty.h" comment

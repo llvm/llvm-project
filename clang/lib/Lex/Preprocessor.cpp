@@ -72,6 +72,9 @@
 
 using namespace clang;
 
+/// Minimum distance between two check points, in tokens.
+static constexpr unsigned CheckPointStepSize = 1024;
+
 LLVM_INSTANTIATE_REGISTRY(PragmaHandlerRegistry)
 
 ExternalPreprocessorSource::~ExternalPreprocessorSource() = default;
@@ -756,7 +759,7 @@ void Preprocessor::HandlePoisonedIdentifier(Token & Identifier) {
     Diag(Identifier,it->second) << Identifier.getIdentifierInfo();
 }
 
-void Preprocessor::updateOutOfDateIdentifier(IdentifierInfo &II) const {
+void Preprocessor::updateOutOfDateIdentifier(const IdentifierInfo &II) const {
   assert(II.isOutOfDate() && "not out of date");
   getExternalSource()->updateOutOfDateIdentifier(II);
 }
@@ -952,6 +955,11 @@ void Preprocessor::Lex(Token &Result) {
       ModuleDeclState.handleMisc();
       break;
     }
+  }
+
+  if (CurLexer && ++CheckPointCounter == CheckPointStepSize) {
+    CheckPoints[CurLexer->getFileID()].push_back(CurLexer->BufferPtr);
+    CheckPointCounter = 0;
   }
 
   LastTokenWasAt = Result.is(tok::at);
@@ -1557,4 +1565,20 @@ void Preprocessor::createPreprocessingRecord() {
 
   Record = new PreprocessingRecord(getSourceManager());
   addPPCallbacks(std::unique_ptr<PPCallbacks>(Record));
+}
+
+const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {
+  if (auto It = CheckPoints.find(FID); It != CheckPoints.end()) {
+    const SmallVector<const char *> &FileCheckPoints = It->second;
+    const char *Last = nullptr;
+    // FIXME: Do better than a linear search.
+    for (const char *P : FileCheckPoints) {
+      if (P > Start)
+        break;
+      Last = P;
+    }
+    return Last;
+  }
+
+  return nullptr;
 }

@@ -221,7 +221,7 @@ public:
     return BF.isSimple() && !BF.isIgnored() && BF.hasProfile() &&
            !BF.hasUnknownControlFlow();
   }
-  void runOnFunctions(BinaryContext &BC) override;
+  Error runOnFunctions(BinaryContext &BC) override;
 };
 
 } // namespace bolt

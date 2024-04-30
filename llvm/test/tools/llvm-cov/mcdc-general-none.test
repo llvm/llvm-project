@@ -1,12 +1,12 @@
 // Test visualization of general MC/DC constructs with 0 executed test vectors.
 
 // RUN: llvm-profdata merge %S/Inputs/mcdc-general-none.proftext -o %t.profdata
-// RUN: llvm-cov show --show-mcdc %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s
-// RUN: llvm-cov report --show-mcdc-summary %S/Inputs/mcdc-general.o -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s -check-prefix=REPORT
+// RUN: llvm-cov show --show-mcdc %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s
+// RUN: llvm-cov report --show-mcdc-summary %S/Inputs/mcdc-general.o -instr-profile %t.profdata -show-functions -path-equivalence=.,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s -check-prefix=REPORT
 
-// CHECK: test(bool
+//      CHECK: test(bool
 
-// CHECK:  ------------------
+//      CHECK:  ------------------
 // CHECK-NEXT:  |---> MC/DC Decision Region (12:7) to (12:27)
 // CHECK-NEXT:  |
 // CHECK-NEXT:  |  Number of Conditions: 4
@@ -29,10 +29,10 @@
 
 
 // Turn off MC/DC visualization.
-// RUN: llvm-cov show %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s -check-prefix=NOMCDC
+// RUN: llvm-cov show %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s -check-prefix=NOMCDC
 // NOMCDC-NOT: MC/DC Decision Region
 
-// REPORT: Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover    MC/DC Conditions    Miss   Cover
+//      REPORT: Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover    MC/DC Conditions    Miss   Cover
 // REPORT-NEXT: -------------------------------------------------------------------------------------------------------------------------------------------
 // REPORT-NEXT: _Z4testbbbb                      25       0 100.00%         9       0 100.00%        24       2  91.67%                  12      12   0.00%
 // REPORT-NEXT: main                              1       0 100.00%        11       0 100.00%         0       0   0.00%                   0       0   0.00%
@@ -40,19 +40,20 @@
 // REPORT-NEXT: TOTAL                            26       0 100.00%        20       0 100.00%        24       2  91.67%                  12      12   0.00%
 
 // Turn off MC/DC summary.
-// RUN: llvm-cov report %S/Inputs/mcdc-general.o -instr-profile %t.profdata -show-functions -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s -check-prefix=REPORT_NOMCDC
+// RUN: llvm-cov report %S/Inputs/mcdc-general.o -instr-profile %t.profdata -show-functions -path-equivalence=.,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s -check-prefix=REPORT_NOMCDC
 // REPORT_NOMCDC-NOT: TOTAL{{.*}}12                   12    0.00%
 
 
 // Test file-level report.
-// RUN: llvm-cov report --show-mcdc-summary %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s -check-prefix=FILEREPORT
+// RUN: llvm-cov report --show-mcdc-summary %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs %S/Inputs/mcdc-general.cpp | FileCheck %s -check-prefix=FILEREPORT
 // FILEREPORT: TOTAL{{.*}}12                   12    0.00%
 
 
 // Test html output.
-// RUN: llvm-cov show --show-mcdc-summary --show-mcdc %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=/tmp,%S/Inputs %S/Inputs/mcdc-general.cpp -format html -o %t.html.dir
-// RUN: FileCheck -check-prefix=HTML -input-file=%t.html.dir/coverage/tmp/mcdc-general.cpp.html %s
-// HTML-COUNT-4: MC/DC Decision Region (<span class='line-number'><a name='L{{[0-9]+}}' href='#L{{[0-9]+}}'><span>
+// RUN: rm -rf %t.html.dir
+// RUN: llvm-cov show --show-mcdc-summary --show-mcdc %S/Inputs/mcdc-general.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs -format html -o %t.html.dir
+// RUN: FileCheck -check-prefix=HTML -input-file=%t.html.dir/coverage/mcdc-general.cpp.html %s
+// HTML-COUNT-4: MC/DC Decision Region (<span class='line-number'><a href='#L{{[0-9]+}}'><span>
 
 // RUN: FileCheck -check-prefix HTML-INDEX -input-file %t.html.dir/index.html %s
 // HTML-INDEX-LABEL: <table>
@@ -71,12 +72,5 @@
 // HTML-INDEX: 0.00% (0/12)
 // HTML-INDEX: Totals
 
-Instructions for regenerating the test:
-
-# cd %S/Inputs
-cp mcdc-general.cpp /tmp
-
-clang -fcoverage-mcdc -fprofile-instr-generate -fcoverage-compilation-dir=. \
-    -fcoverage-mapping /tmp/mcdc-general.cpp -o /tmp/mcdc-general.o
-
-mv /tmp/mcdc-general.o %S/Inputs
+# How to regenerate Inputs/mcdc-general-none.proftext:
+# Copy Inputs/mcdc-general.proftext and replace all bitmap values with 0.

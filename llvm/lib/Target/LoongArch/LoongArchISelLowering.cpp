@@ -903,6 +903,24 @@ SDValue LoongArchTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
   return LowerCallTo(CLI).first;
 }
 
+SDValue LoongArchTargetLowering::getTLSDescAddr(GlobalAddressSDNode *N,
+                                                SelectionDAG &DAG, unsigned Opc,
+                                                bool Large) const {
+  SDLoc DL(N);
+  EVT Ty = getPointerTy(DAG.getDataLayout());
+  const GlobalValue *GV = N->getGlobal();
+
+  // This is not actually used, but is necessary for successfully matching the
+  // PseudoLA_*_LARGE nodes.
+  SDValue Tmp = DAG.getConstant(0, DL, Ty);
+
+  // Use a PC-relative addressing mode to access the global dynamic GOT address.
+  // This generates the pattern (PseudoLA_TLS_DESC_PC{,LARGE} sym).
+  SDValue Addr = DAG.getTargetGlobalAddress(GV, DL, Ty, 0, 0);
+  return Large ? SDValue(DAG.getMachineNode(Opc, DL, Ty, Tmp, Addr), 0)
+               : SDValue(DAG.getMachineNode(Opc, DL, Ty, Addr), 0);
+}
+
 SDValue
 LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
                                                SelectionDAG &DAG) const {
@@ -916,42 +934,46 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   assert(N->getOffset() == 0 && "unexpected offset in global node");
 
-  SDValue Addr;
+  bool IsDesc = DAG.getTarget().useTLSDESC();
+
   switch (getTargetMachine().getTLSModel(N->getGlobal())) {
   case TLSModel::GeneralDynamic:
     // In this model, application code calls the dynamic linker function
     // __tls_get_addr to locate TLS offsets into the dynamic thread vector at
     // runtime.
-    Addr = getDynamicTLSAddr(N, DAG,
-                             Large ? LoongArch::PseudoLA_TLS_GD_LARGE
-                                   : LoongArch::PseudoLA_TLS_GD,
-                             Large);
+    if (!IsDesc)
+      return getDynamicTLSAddr(N, DAG,
+                               Large ? LoongArch::PseudoLA_TLS_GD_LARGE
+                                     : LoongArch::PseudoLA_TLS_GD,
+                               Large);
     break;
   case TLSModel::LocalDynamic:
     // Same as GeneralDynamic, except for assembly modifiers and relocation
     // records.
-    Addr = getDynamicTLSAddr(N, DAG,
-                             Large ? LoongArch::PseudoLA_TLS_LD_LARGE
-                                   : LoongArch::PseudoLA_TLS_LD,
-                             Large);
+    if (!IsDesc)
+      return getDynamicTLSAddr(N, DAG,
+                               Large ? LoongArch::PseudoLA_TLS_LD_LARGE
+                                     : LoongArch::PseudoLA_TLS_LD,
+                               Large);
     break;
   case TLSModel::InitialExec:
     // This model uses the GOT to resolve TLS offsets.
-    Addr = getStaticTLSAddr(N, DAG,
+    return getStaticTLSAddr(N, DAG,
                             Large ? LoongArch::PseudoLA_TLS_IE_LARGE
                                   : LoongArch::PseudoLA_TLS_IE,
                             Large);
-    break;
   case TLSModel::LocalExec:
     // This model is used when static linking as the TLS offsets are resolved
     // during program linking.
     //
     // This node doesn't need an extra argument for the large code model.
-    Addr = getStaticTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_LE);
-    break;
+    return getStaticTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_LE);
   }
 
-  return Addr;
+  return getTLSDescAddr(N, DAG,
+                        Large ? LoongArch::PseudoLA_TLS_DESC_PC_LARGE
+                              : LoongArch::PseudoLA_TLS_DESC_PC,
+                        Large);
 }
 
 template <unsigned N>
@@ -2343,7 +2365,9 @@ Retry:
     return DAG.getNode(
         LoongArchISD::BSTRINS, DL, ValTy, N0.getOperand(0),
         DAG.getConstant(CN1->getSExtValue() >> MaskIdx0, DL, ValTy),
-        DAG.getConstant((MaskIdx0 + MaskLen0 - 1), DL, GRLenVT),
+        DAG.getConstant(ValBits == 32 ? (MaskIdx0 + (MaskLen0 & 31) - 1)
+                                      : (MaskIdx0 + MaskLen0 - 1),
+                        DL, GRLenVT),
         DAG.getConstant(MaskIdx0, DL, GRLenVT));
   }
 
@@ -4226,14 +4250,12 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // split it and then direct call can be matched by PseudoCALL.
   if (GlobalAddressSDNode *S = dyn_cast<GlobalAddressSDNode>(Callee)) {
     const GlobalValue *GV = S->getGlobal();
-    unsigned OpFlags =
-        getTargetMachine().shouldAssumeDSOLocal(*GV->getParent(), GV)
-            ? LoongArchII::MO_CALL
-            : LoongArchII::MO_CALL_PLT;
+    unsigned OpFlags = getTargetMachine().shouldAssumeDSOLocal(GV)
+                           ? LoongArchII::MO_CALL
+                           : LoongArchII::MO_CALL_PLT;
     Callee = DAG.getTargetGlobalAddress(S->getGlobal(), DL, PtrVT, 0, OpFlags);
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    unsigned OpFlags = getTargetMachine().shouldAssumeDSOLocal(
-                           *MF.getFunction().getParent(), nullptr)
+    unsigned OpFlags = getTargetMachine().shouldAssumeDSOLocal(nullptr)
                            ? LoongArchII::MO_CALL
                            : LoongArchII::MO_CALL_PLT;
     Callee = DAG.getTargetExternalSymbol(S->getSymbol(), PtrVT, OpFlags);
@@ -4876,20 +4898,19 @@ bool LoongArchTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (AM.BaseGV)
     return false;
 
-  // Require a 12 or 14 bit signed offset.
-  if (!isInt<12>(AM.BaseOffs) || !isShiftedInt<14, 2>(AM.BaseOffs))
+  // Require a 12-bit signed offset or 14-bit signed offset left-shifted by 2
+  // with `UAL` feature.
+  if (!isInt<12>(AM.BaseOffs) &&
+      !(isShiftedInt<14, 2>(AM.BaseOffs) && Subtarget.hasUAL()))
     return false;
 
   switch (AM.Scale) {
   case 0:
-    // "i" is not allowed.
-    if (!AM.HasBaseReg)
-      return false;
-    // Otherwise we have "r+i".
+    // "r+i" or just "i", depending on HasBaseReg.
     break;
   case 1:
     // "r+r+i" is not allowed.
-    if (AM.HasBaseReg && AM.BaseOffs != 0)
+    if (AM.HasBaseReg && AM.BaseOffs)
       return false;
     // Otherwise we have "r+r" or "r+i".
     break;
@@ -4897,7 +4918,7 @@ bool LoongArchTargetLowering::isLegalAddressingMode(const DataLayout &DL,
     // "2*r+r" or "2*r+i" is not allowed.
     if (AM.HasBaseReg || AM.BaseOffs)
       return false;
-    // Otherwise we have "r+r".
+    // Allow "2*r" as "r+r".
     break;
   default:
     return false;
@@ -4929,7 +4950,8 @@ bool LoongArchTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
   return TargetLowering::isZExtFree(Val, VT2);
 }
 
-bool LoongArchTargetLowering::isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const {
+bool LoongArchTargetLowering::isSExtCheaperThanZExt(EVT SrcVT,
+                                                    EVT DstVT) const {
   return Subtarget.is64Bit() && SrcVT == MVT::i32 && DstVT == MVT::i64;
 }
 
@@ -4939,4 +4961,9 @@ bool LoongArchTargetLowering::hasAndNotCompare(SDValue Y) const {
     return false;
 
   return !isa<ConstantSDNode>(Y);
+}
+
+ISD::NodeType LoongArchTargetLowering::getExtendForAtomicCmpSwapArg() const {
+  // TODO: LAMCAS will use amcas{_DB,}.[bhwd] which does not require extension.
+  return ISD::SIGN_EXTEND;
 }

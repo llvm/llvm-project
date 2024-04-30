@@ -67,7 +67,8 @@ def AffineApplyOp : Affine_Op<"apply", [Pure]> {
     OpBuilder<(ins "ArrayRef<AffineExpr> ":$exprList,"ValueRange":$mapOperands),
     [{
       build($_builder, $_state, $_builder.getIndexType(),
-            AffineMap::inferFromExprList(exprList).front(), mapOperands);
+            AffineMap::inferFromExprList(exprList, $_builder.getContext())
+                                        .front(), mapOperands);
     }]>
   ];
 
@@ -741,7 +742,8 @@ def AffineParallelOp : Affine_Op<"parallel",
 }
 
 def AffinePrefetchOp : Affine_Op<"prefetch",
-  [DeclareOpInterfaceMethods<AffineMapAccessInterface>]> {
+  [DeclareOpInterfaceMethods<AffineMapAccessInterface>,
+   MemRefsNormalizable]> {
   let summary = "affine prefetch operation";
   let description = [{
     The `affine.prefetch` op prefetches data from a memref location described

@@ -634,7 +634,6 @@ define i64 @zext_mul288(i32 signext %a) {
 }
 
 ; We can't use slli.uw becaues the shift amount is more than 31.
-; FIXME: The zext.w is unneeded.
 define i64 @zext_mul12884901888(i32 signext %a) {
 ; RV64I-LABEL: zext_mul12884901888:
 ; RV64I:       # %bb.0:
@@ -647,7 +646,6 @@ define i64 @zext_mul12884901888(i32 signext %a) {
 ;
 ; RV64ZBA-LABEL: zext_mul12884901888:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    andi a0, a0, -1
 ; RV64ZBA-NEXT:    sh1add a0, a0, a0
 ; RV64ZBA-NEXT:    slli a0, a0, 32
 ; RV64ZBA-NEXT:    ret
@@ -657,7 +655,6 @@ define i64 @zext_mul12884901888(i32 signext %a) {
 }
 
 ; We can't use slli.uw becaues the shift amount is more than 31.
-; FIXME: The zext.w is unneeded.
 define i64 @zext_mul21474836480(i32 signext %a) {
 ; RV64I-LABEL: zext_mul21474836480:
 ; RV64I:       # %bb.0:
@@ -670,7 +667,6 @@ define i64 @zext_mul21474836480(i32 signext %a) {
 ;
 ; RV64ZBA-LABEL: zext_mul21474836480:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    andi a0, a0, -1
 ; RV64ZBA-NEXT:    sh2add a0, a0, a0
 ; RV64ZBA-NEXT:    slli a0, a0, 32
 ; RV64ZBA-NEXT:    ret
@@ -680,7 +676,6 @@ define i64 @zext_mul21474836480(i32 signext %a) {
 }
 
 ; We can't use slli.uw becaues the shift amount is more than 31.
-; FIXME: The zext.w is unneeded.
 define i64 @zext_mul38654705664(i32 signext %a) {
 ; RV64I-LABEL: zext_mul38654705664:
 ; RV64I:       # %bb.0:
@@ -693,7 +688,6 @@ define i64 @zext_mul38654705664(i32 signext %a) {
 ;
 ; RV64ZBA-LABEL: zext_mul38654705664:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    andi a0, a0, -1
 ; RV64ZBA-NEXT:    sh3add a0, a0, a0
 ; RV64ZBA-NEXT:    slli a0, a0, 32
 ; RV64ZBA-NEXT:    ret
@@ -811,31 +805,49 @@ define i64 @adduw_imm(i32 signext %0) nounwind {
 }
 
 define i64 @mul258(i64 %a) {
-; CHECK-LABEL: mul258:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 258
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: mul258:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 258
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul258:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a1, a0, 8
+; RV64ZBA-NEXT:    sh1add a0, a0, a1
+; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 258
   ret i64 %c
 }
 
 define i64 @mul260(i64 %a) {
-; CHECK-LABEL: mul260:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 260
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: mul260:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 260
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul260:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a1, a0, 8
+; RV64ZBA-NEXT:    sh2add a0, a0, a1
+; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 260
   ret i64 %c
 }
 
 define i64 @mul264(i64 %a) {
-; CHECK-LABEL: mul264:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 264
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: mul264:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 264
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul264:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    slli a1, a0, 8
+; RV64ZBA-NEXT:    sh3add a0, a0, a1
+; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 264
   ret i64 %c
 }
@@ -945,8 +957,8 @@ define i64 @mul25(i64 %a) {
 ;
 ; RV64ZBA-LABEL: mul25:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    sh1add a1, a0, a0
-; RV64ZBA-NEXT:    sh3add a0, a1, a0
+; RV64ZBA-NEXT:    sh2add a0, a0, a0
+; RV64ZBA-NEXT:    sh2add a0, a0, a0
 ; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 25
   ret i64 %c
@@ -993,8 +1005,8 @@ define i64 @mul27(i64 %a) {
 ;
 ; RV64ZBA-LABEL: mul27:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    sh3add a0, a0, a0
 ; RV64ZBA-NEXT:    sh1add a0, a0, a0
+; RV64ZBA-NEXT:    sh3add a0, a0, a0
 ; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 27
   ret i64 %c
@@ -1009,8 +1021,8 @@ define i64 @mul45(i64 %a) {
 ;
 ; RV64ZBA-LABEL: mul45:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    sh3add a0, a0, a0
 ; RV64ZBA-NEXT:    sh2add a0, a0, a0
+; RV64ZBA-NEXT:    sh3add a0, a0, a0
 ; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 45
   ret i64 %c
@@ -1889,5 +1901,39 @@ define i64 @pack_i64_3(i32 signext %a, i32 signext %b) nounwind {
   %zextb = zext i32 %addb to i64
   %shl1 = shl i64 %zextb, 32
   %or = or i64 %shl1, %zexta
+  ret i64 %or
+}
+
+define i64 @pack_i64_disjoint(i64 %a, i64 %b) nounwind {
+; RV64I-LABEL: pack_i64_disjoint:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: pack_i64_disjoint:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    add.uw a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %shl = and i64 %a, 4294967295
+  %or = or disjoint i64 %b, %shl
+  ret i64 %or
+}
+
+define i64 @pack_i64_disjoint_2(i32 signext %a, i64 %b) nounwind {
+; RV64I-LABEL: pack_i64_disjoint_2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: pack_i64_disjoint_2:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    add.uw a0, a0, a1
+; RV64ZBA-NEXT:    ret
+  %zexta = zext i32 %a to i64
+  %or = or disjoint i64 %b, %zexta
   ret i64 %or
 }

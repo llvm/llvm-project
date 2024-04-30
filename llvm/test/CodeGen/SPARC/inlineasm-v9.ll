@@ -52,9 +52,9 @@ entry:
 ; Ensure that the input register value is not truncated to 32bit.
 ; CHECK-LABEL: test_constraint_input_type
 ; CHECK: ldx [%i0], %o0
-define void @test_constraint_input_type(i64* %arg1) {
+define void @test_constraint_input_type(ptr %arg1) {
 Entry:
-  %val = load i64, i64* %arg1
+  %val = load i64, ptr %arg1
   tail call void asm sideeffect "", "{o0}"(i64 %val)
   ret void
 }

@@ -738,6 +738,18 @@ func.func @extract_element_with_value_1d(%arg0: vector<16xf32>, %arg1: index) ->
 
 // -----
 
+func.func @extract_element_with_value_2d(%arg0: vector<1x16xf32>, %arg1: index) -> f32 {
+  %0 = vector.extract %arg0[0, %arg1]: f32 from vector<1x16xf32>
+  return %0 : f32
+}
+
+// Multi-dim vectors are not supported but this test shouldn't crash.
+
+// CHECK-LABEL: @extract_element_with_value_2d(
+//       CHECK:   vector.extract
+
+// -----
+
 // CHECK-LABEL: @insert_element_0d
 // CHECK-SAME: %[[A:.*]]: f32,
 func.func @insert_element_0d(%a: f32, %b: vector<f32>) -> vector<f32> {
@@ -850,6 +862,19 @@ func.func @insert_element_with_value_1d(%arg0: vector<16xf32>, %arg1: f32, %arg2
 //  CHECK-SAME:   %[[DST:.+]]: vector<16xf32>, %[[SRC:.+]]: f32, %[[INDEX:.+]]: index
 //       CHECK:   %[[UC:.+]] = builtin.unrealized_conversion_cast %[[INDEX]] : index to i64
 //       CHECK:   llvm.insertelement %[[SRC]], %[[DST]][%[[UC]] : i64] : vector<16xf32>
+
+// -----
+
+func.func @insert_element_with_value_2d(%base: vector<1x16xf32>, %value: f32, %idx: index)
+                                        -> vector<1x16xf32> {
+  %0 = vector.insert %value, %base[0, %idx]: f32 into vector<1x16xf32>
+  return %0 : vector<1x16xf32>
+}
+
+// Multi-dim vectors are not supported but this test shouldn't crash.
+
+// CHECK-LABEL: @insert_element_with_value_2d(
+//       CHECK:   vector.insert
 
 // -----
 
@@ -2459,4 +2484,65 @@ func.func @make_fixed_vector_of_scalable_vector(%f : f64) -> vector<3x[2]xf64>
   // CHECK: %{{.*}} = llvm.mlir.undef : !llvm.array<3 x vector<[2]xf64>>
   %res = vector.broadcast %f : f64 to vector<3x[2]xf64>
   return %res : vector<3x[2]xf64>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_interleave_0d
+//  CHECK-SAME:     %[[LHS:.*]]: vector<i8>, %[[RHS:.*]]: vector<i8>)
+func.func @vector_interleave_0d(%a: vector<i8>, %b: vector<i8>) -> vector<2xi8> {
+  // CHECK: %[[LHS_RANK1:.*]] = builtin.unrealized_conversion_cast %[[LHS]] : vector<i8> to vector<1xi8>
+  // CHECK: %[[RHS_RANK1:.*]] = builtin.unrealized_conversion_cast %[[RHS]] : vector<i8> to vector<1xi8>
+  // CHECK: %[[ZIP:.*]] = llvm.shufflevector %[[LHS_RANK1]], %[[RHS_RANK1]] [0, 1] : vector<1xi8>
+  // CHECK: return %[[ZIP]]
+  %0 = vector.interleave %a, %b : vector<i8>
+  return %0 : vector<2xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_interleave_1d
+//  CHECK-SAME:     %[[LHS:.*]]: vector<8xf32>, %[[RHS:.*]]: vector<8xf32>)
+func.func @vector_interleave_1d(%a: vector<8xf32>, %b: vector<8xf32>) -> vector<16xf32>
+{
+  // CHECK: %[[ZIP:.*]] = llvm.shufflevector %[[LHS]], %[[RHS]] [0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15] : vector<8xf32>
+  // CHECK: return %[[ZIP]]
+  %0 = vector.interleave %a, %b : vector<8xf32>
+  return %0 : vector<16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_interleave_1d_scalable
+//  CHECK-SAME:     %[[LHS:.*]]: vector<[4]xi32>, %[[RHS:.*]]: vector<[4]xi32>)
+func.func @vector_interleave_1d_scalable(%a: vector<[4]xi32>, %b: vector<[4]xi32>) -> vector<[8]xi32>
+{
+  // CHECK: %[[ZIP:.*]] = "llvm.intr.vector.interleave2"(%[[LHS]], %[[RHS]]) : (vector<[4]xi32>, vector<[4]xi32>) -> vector<[8]xi32>
+  // CHECK: return %[[ZIP]]
+  %0 = vector.interleave %a, %b : vector<[4]xi32>
+  return %0 : vector<[8]xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_interleave_2d
+//  CHECK-SAME:     %[[LHS:.*]]: vector<2x3xi8>, %[[RHS:.*]]: vector<2x3xi8>)
+func.func @vector_interleave_2d(%a: vector<2x3xi8>, %b: vector<2x3xi8>) -> vector<2x6xi8>
+{
+  // CHECK: llvm.shufflevector
+  // CHECK-NOT: vector.interleave {{.*}} : vector<2x3xi8>
+  %0 = vector.interleave %a, %b : vector<2x3xi8>
+  return %0 : vector<2x6xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @vector_interleave_2d_scalable
+//  CHECK-SAME:     %[[LHS:.*]]: vector<2x[8]xi16>, %[[RHS:.*]]: vector<2x[8]xi16>)
+func.func @vector_interleave_2d_scalable(%a: vector<2x[8]xi16>, %b: vector<2x[8]xi16>) -> vector<2x[16]xi16>
+{
+  // CHECK: llvm.intr.vector.interleave2
+  // CHECK-NOT: vector.interleave {{.*}} : vector<2x[8]xi16>
+  %0 = vector.interleave %a, %b : vector<2x[8]xi16>
+  return %0 : vector<2x[16]xi16>
 }

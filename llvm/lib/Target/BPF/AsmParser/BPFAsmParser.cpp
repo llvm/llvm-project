@@ -148,7 +148,7 @@ public:
   /// getEndLoc - Gets location of the last token of this operand
   SMLoc getEndLoc() const override { return EndLoc; }
 
-  unsigned getReg() const override {
+  MCRegister getReg() const override {
     assert(Kind == Register && "Invalid type access!");
     return Reg.RegNum;
   }
@@ -229,8 +229,10 @@ public:
     return StringSwitch<bool>(Name.lower())
         .Case("if", true)
         .Case("call", true)
+        .Case("callx", true)
         .Case("goto", true)
         .Case("gotol", true)
+        .Case("may_goto", true)
         .Case("*", true)
         .Case("exit", true)
         .Case("lock", true)
@@ -270,6 +272,7 @@ public:
         .Case("xchg32_32", true)
         .Case("cmpxchg_64", true)
         .Case("cmpxchg32_32", true)
+        .Case("addr_space_cast", true)
         .Default(false);
   }
 };

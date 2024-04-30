@@ -42,7 +42,7 @@ static constexpr fputil::ExceptValues<float, N_EXCEPTS> COSF_EXCEPTS{{
 
 LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
-  using Sign = fputil::Sign;
+
   FPBits xbits(x);
   xbits.set_sign(Sign::POS);
 
@@ -118,7 +118,7 @@ LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
     }
-    return x + FPBits::build_quiet_nan().get_val();
+    return x + FPBits::quiet_nan().get_val();
   }
 
   // Combine the results with the sine of sum formula:

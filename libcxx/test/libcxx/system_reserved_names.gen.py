@@ -10,7 +10,7 @@
 # alphabetic macros. Also ensure that we don't swallow the definition of user
 # provided macros (in other words, ensure that we push/pop correctly everywhere).
 
-# RUN: %{python} %s %{libcxx}/utils
+# RUN: %{python} %s %{libcxx-dir}/utils
 
 import sys
 sys.path.append(sys.argv[1])

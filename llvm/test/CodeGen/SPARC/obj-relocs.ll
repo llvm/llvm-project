@@ -27,11 +27,11 @@
 
 define i64 @foo(i64 %a) {
 entry:
-  %0 = load i64, i64* @AGlobalVar, align 4
+  %0 = load i64, ptr @AGlobalVar, align 4
   %1 = add i64 %a, %0
-  %2 = call i64 @bar(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.mystr, i32 0, i32 0), i64 %1)
+  %2 = call i64 @bar(ptr @.mystr, i64 %1)
   ret i64 %2
 }
 
 
-declare i64 @bar(i8*, i64)
+declare i64 @bar(ptr, i64)

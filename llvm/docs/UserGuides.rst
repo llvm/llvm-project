@@ -43,6 +43,7 @@ intermediate LLVM representation.
    HowToCrossCompileBuiltinsOnArm
    HowToCrossCompileLLVM
    HowToUpdateDebugInfo
+   InstCombineContributorGuide
    InstrProfileFormat
    InstrRefDebugInfo
    LinkTimeOptimization
@@ -57,7 +58,6 @@ intermediate LLVM representation.
    JITLink
    NewPassManager
    NVPTXUsage
-   Phabricator
    Passes
    ReportingGuide
    ResponseGuide
@@ -123,12 +123,13 @@ LLVM Builds and Distributions
 Optimizations
 -------------
 
-:doc:`WritingAnLLVMPass`
-   Information on how to write LLVM transformations and analyses.
-
 :doc:`WritingAnLLVMNewPMPass`
    Information on how to write LLVM transformations under the new pass
    manager.
+
+:doc:`WritingAnLLVMPass`
+   Information on how to write LLVM transformations and analyses under the
+   legacy pass manager.
 
 :doc:`Passes`
    A list of optimizations and analyses implemented in LLVM.
@@ -181,10 +182,14 @@ Optimizations
 
 :doc:`RemoveDIsDebugInfo`
    This is a migration guide describing how to move from debug info using
-   intrinsics such as dbg.value to using the non-instruction DPValue object.
+   intrinsics such as dbg.value to using the non-instruction DbgRecord object.
 
 :doc:`InstrProfileFormat`
    This document explains two binary formats of instrumentation-based profiles.
+
+:doc:`InstCombineContributorGuide`
+   This document specifies guidelines for contributions for InstCombine and
+   related passes.
 
 Code Generation
 ---------------

@@ -19,15 +19,13 @@ void testFloat(_Atomic(float) *fp) {
   _Atomic(float) x = 2.0f;
 
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[FP]]
-// CHECK-NEXT: [[T2:%.*]] = load atomic i32, ptr [[T0]] seq_cst, align 4
-// CHECK-NEXT: [[T3:%.*]] = bitcast i32 [[T2]] to float
-// CHECK-NEXT: store float [[T3]], ptr [[F]]
+// CHECK-NEXT: [[T2:%.*]] = load atomic float, ptr [[T0]] seq_cst, align 4
+// CHECK-NEXT: store float [[T2]], ptr [[F]]
   float f = *fp;
 
 // CHECK-NEXT: [[T0:%.*]] = load float, ptr [[F]], align 4
 // CHECK-NEXT: [[T1:%.*]] = load ptr, ptr [[FP]], align 4
-// CHECK-NEXT: [[T2:%.*]] = bitcast float [[T0]] to i32
-// CHECK-NEXT: store atomic i32 [[T2]], ptr [[T1]] seq_cst, align 4
+// CHECK-NEXT: store atomic float [[T0]], ptr [[T1]] seq_cst, align 4
   *fp = f;
 
 // CHECK-NEXT: ret void

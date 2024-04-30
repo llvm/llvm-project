@@ -509,8 +509,7 @@ public:
   bool isSparseLvlWithNonTrivialIdxExp(TensorLoopId b) const {
     if (isLvlWithNonTrivialIdxExp(b)) {
       auto lt = getLoopDependentLevelType(b);
-      return isCompressedLT(lt) || isSingletonLT(lt) ||
-             isLooseCompressedLT(lt) || is2OutOf4LT(lt);
+      return lt.hasSparseSemantic();
     }
     return false;
   }

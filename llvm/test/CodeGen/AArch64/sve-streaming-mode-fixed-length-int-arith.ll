@@ -262,8 +262,8 @@ define <16 x i8> @mul_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 define void @mul_v32i8(ptr %a, ptr %b) {
 ; SVE-LABEL: mul_v32i8:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.b, vl16
 ; SVE-NEXT:    ldp q0, q3, [x1]
+; SVE-NEXT:    ptrue p0.b, vl16
 ; SVE-NEXT:    ldp q1, q2, [x0]
 ; SVE-NEXT:    mul z0.b, p0/m, z0.b, z1.b
 ; SVE-NEXT:    movprfx z1, z2
@@ -352,8 +352,8 @@ define <8 x i16> @mul_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 define void @mul_v16i16(ptr %a, ptr %b) {
 ; SVE-LABEL: mul_v16i16:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.h, vl8
 ; SVE-NEXT:    ldp q0, q3, [x1]
+; SVE-NEXT:    ptrue p0.h, vl8
 ; SVE-NEXT:    ldp q1, q2, [x0]
 ; SVE-NEXT:    mul z0.h, p0/m, z0.h, z1.h
 ; SVE-NEXT:    movprfx z1, z2
@@ -421,8 +421,8 @@ define <4 x i32> @mul_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 define void @mul_v8i32(ptr %a, ptr %b) {
 ; SVE-LABEL: mul_v8i32:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.s, vl4
 ; SVE-NEXT:    ldp q0, q3, [x1]
+; SVE-NEXT:    ptrue p0.s, vl4
 ; SVE-NEXT:    ldp q1, q2, [x0]
 ; SVE-NEXT:    mul z0.s, p0/m, z0.s, z1.s
 ; SVE-NEXT:    movprfx z1, z2
@@ -490,8 +490,8 @@ define <2 x i64> @mul_v2i64(<2 x i64> %op1, <2 x i64> %op2) {
 define void @mul_v4i64(ptr %a, ptr %b) {
 ; SVE-LABEL: mul_v4i64:
 ; SVE:       // %bb.0:
-; SVE-NEXT:    ptrue p0.d, vl2
 ; SVE-NEXT:    ldp q0, q3, [x1]
+; SVE-NEXT:    ptrue p0.d, vl2
 ; SVE-NEXT:    ldp q1, q2, [x0]
 ; SVE-NEXT:    mul z0.d, p0/m, z0.d, z1.d
 ; SVE-NEXT:    movprfx z1, z2
@@ -746,8 +746,8 @@ define <16 x i8> @abs_v16i8(<16 x i8> %op1) {
 define void @abs_v32i8(ptr %a) {
 ; CHECK-LABEL: abs_v32i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    abs z0.b, p0/m, z0.b
 ; CHECK-NEXT:    abs z1.b, p0/m, z1.b
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -798,8 +798,8 @@ define <8 x i16> @abs_v8i16(<8 x i16> %op1) {
 define void @abs_v16i16(ptr %a) {
 ; CHECK-LABEL: abs_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    abs z0.h, p0/m, z0.h
 ; CHECK-NEXT:    abs z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -837,8 +837,8 @@ define <4 x i32> @abs_v4i32(<4 x i32> %op1) {
 define void @abs_v8i32(ptr %a) {
 ; CHECK-LABEL: abs_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    abs z0.s, p0/m, z0.s
 ; CHECK-NEXT:    abs z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -876,8 +876,8 @@ define <2 x i64> @abs_v2i64(<2 x i64> %op1) {
 define void @abs_v4i64(ptr %a) {
 ; CHECK-LABEL: abs_v4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    abs z0.d, p0/m, z0.d
 ; CHECK-NEXT:    abs z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]

@@ -176,6 +176,10 @@ Predefined Macros
    * - ``HIP_API_PER_THREAD_DEFAULT_STREAM``
      - Alias to ``__HIP_API_PER_THREAD_DEFAULT_STREAM__``. Deprecated.
 
+Note that some architecture specific AMDGPU macros will have default values when
+used from the HIP host compilation. Other :doc:`AMDGPU macros <AMDGPUSupport>`
+like ``__AMDGCN_WAVEFRONT_SIZE__`` will default to 64 for example.
+
 Compilation Modes
 =================
 
@@ -203,6 +207,20 @@ Host Code Compilation
 - Compiles to a relocatable object for each TU.
 - These relocatable objects are then linked together.
 - Host code within a TU can call host functions and launch kernels from another TU.
+
+Syntax Difference with CUDA
+===========================
+
+Clang's front end, used for both CUDA and HIP programming models, shares the same parsing and semantic analysis mechanisms. This includes the resolution of overloads concerning device and host functions. While there exists a comprehensive documentation on the syntax differences between Clang and NVCC for CUDA at `Dialect Differences Between Clang and NVCC <https://llvm.org/docs/CompileCudaWithLLVM.html#dialect-differences-between-clang-and-nvcc>`_, it is important to note that these differences also apply to HIP code compilation.
+
+Predefined Macros for Differentiation
+-------------------------------------
+
+To facilitate differentiation between HIP and CUDA code, as well as between device and host compilations within HIP, Clang defines specific macros:
+
+- ``__HIP__`` : This macro is defined only when compiling HIP code. It can be used to conditionally compile code specific to HIP, enabling developers to write portable code that can be compiled for both CUDA and HIP.
+
+- ``__HIP_DEVICE_COMPILE__`` : Defined exclusively during HIP device compilation, this macro allows for conditional compilation of device-specific code. It provides a mechanism to segregate device and host code, ensuring that each can be optimized for their respective execution environments.
 
 Function Pointers Support
 =========================

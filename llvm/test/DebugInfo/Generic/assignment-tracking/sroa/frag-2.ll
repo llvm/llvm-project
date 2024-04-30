@@ -72,7 +72,7 @@ entry:
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #1
 
 ; Function Attrs: nounwind uwtable
 define linkonce_odr dso_local void @_ZN1BC2E1a(ptr %this, <2 x float> %d.coerce0, <2 x float> %d.coerce1) unnamed_addr #2 comdat align 2 !dbg !48 {
@@ -126,7 +126,7 @@ entry:
   %5 = bitcast ptr %o to ptr, !dbg !91
   %e.i = getelementptr inbounds %class.B, ptr %n, i64 0, i32 1, !dbg !92
   %6 = bitcast ptr %e.i to ptr, !dbg !97
-  call void @llvm.memcpy.p0i8.p0i8.i64(ptr nonnull align 4 dereferenceable(16) %5, ptr nonnull align 4 dereferenceable(16) %6, i64 16, i1 false), !dbg !97, !DIAssignID !98
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 dereferenceable(16) %5, ptr nonnull align 4 dereferenceable(16) %6, i64 16, i1 false), !dbg !97, !DIAssignID !98
   call void @llvm.dbg.assign(metadata i1 undef, metadata !72, metadata !DIExpression(), metadata !98, metadata ptr %5, metadata !DIExpression()), !dbg !74
   call void @_ZN1a1cEv(ptr nonnull %o), !dbg !99
   ret void, !dbg !100

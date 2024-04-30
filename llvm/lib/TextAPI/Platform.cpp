@@ -49,7 +49,13 @@ PlatformType mapToPlatformType(const Triple &Target) {
   case Triple::WatchOS:
     return Target.isSimulatorEnvironment() ? PLATFORM_WATCHOSSIMULATOR
                                            : PLATFORM_WATCHOS;
-    // TODO: add bridgeOS & driverKit once in llvm::Triple
+  case Triple::BridgeOS:
+    return PLATFORM_BRIDGEOS;
+  case Triple::DriverKit:
+    return PLATFORM_DRIVERKIT;
+  case Triple::XROS:
+    return Target.isSimulatorEnvironment() ? PLATFORM_XROS_SIMULATOR
+                                           : PLATFORM_XROS;
   }
 }
 

@@ -80,13 +80,13 @@ entry:
   %call4 = call { float, float } %4()
   %5 = extractvalue { float, float } %call4, 0
   %6 = extractvalue { float, float } %call4, 1
-  store float %5, ptr getelementptr inbounds ({ float, float }, ptr @xy, i32 0, i32 0)
+  store float %5, ptr @xy
   store float %6, ptr getelementptr inbounds ({ float, float }, ptr @xy, i32 0, i32 1)
-  %xy.real = load float, ptr getelementptr inbounds ({ float, float }, ptr @xy, i32 0, i32 0)
+  %xy.real = load float, ptr @xy
   %xy.imag = load float, ptr getelementptr inbounds ({ float, float }, ptr @xy, i32 0, i32 1)
   %conv5 = fpext float %xy.real to double
   %conv6 = fpext float %xy.imag to double
-  %xy.real7 = load float, ptr getelementptr inbounds ({ float, float }, ptr @xy, i32 0, i32 0)
+  %xy.real7 = load float, ptr @xy
   %xy.imag8 = load float, ptr getelementptr inbounds ({ float, float }, ptr @xy, i32 0, i32 1)
   %conv9 = fpext float %xy.real7 to double
   %conv10 = fpext float %xy.imag8 to double
@@ -95,11 +95,11 @@ entry:
   %call12 = call { double, double } %7()
   %8 = extractvalue { double, double } %call12, 0
   %9 = extractvalue { double, double } %call12, 1
-  store double %8, ptr getelementptr inbounds ({ double, double }, ptr @xyd, i32 0, i32 0)
+  store double %8, ptr @xyd
   store double %9, ptr getelementptr inbounds ({ double, double }, ptr @xyd, i32 0, i32 1)
-  %xyd.real = load double, ptr getelementptr inbounds ({ double, double }, ptr @xyd, i32 0, i32 0)
+  %xyd.real = load double, ptr @xyd
   %xyd.imag = load double, ptr getelementptr inbounds ({ double, double }, ptr @xyd, i32 0, i32 1)
-  %xyd.real13 = load double, ptr getelementptr inbounds ({ double, double }, ptr @xyd, i32 0, i32 0)
+  %xyd.real13 = load double, ptr @xyd
   %xyd.imag14 = load double, ptr getelementptr inbounds ({ double, double }, ptr @xyd, i32 0, i32 1)
   %call15 = call i32 (ptr, ...) @printf(ptr @.str1, double %xyd.real, double %xyd.imag14)
   ret i32 0

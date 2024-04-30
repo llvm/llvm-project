@@ -9,6 +9,10 @@
 // UNSUPPORTED: no-exceptions
 // UNSUPPORTED: sanitizer-new-delete
 
+// Libc++ when built for z/OS doesn't contain the aligned allocation functions,
+// nor does the dynamic library shipped with z/OS.
+// XFAIL: target={{.+}}-zos{{.*}}
+
 #include <new>
 #include <cassert>
 #include <limits>

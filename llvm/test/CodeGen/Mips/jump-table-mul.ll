@@ -10,7 +10,7 @@ define i64 @test(i64 %arg) {
 ; CHECK-NEXT:    sltiu $1, $4, 11
 ; CHECK-NEXT:    beqz $1, .LBB0_4
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:  .LBB0_1: # %entry
+; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    daddiu $1, $2, %lo(%neg(%gp_rel(test)))
 ; CHECK-NEXT:    dsll $2, $4, 3
 ; CHECK-NEXT:    ld $3, %got_page(.LJTI0_0)($1)

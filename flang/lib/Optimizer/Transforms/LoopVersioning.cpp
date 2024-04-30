@@ -49,6 +49,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Dominance.h"
@@ -146,7 +147,7 @@ struct ArgsUsageInLoop {
 
 static fir::SequenceType getAsSequenceType(mlir::Value *v) {
   mlir::Type argTy = fir::unwrapPassByRefType(fir::unwrapRefType(v->getType()));
-  return argTy.dyn_cast<fir::SequenceType>();
+  return mlir::dyn_cast<fir::SequenceType>(argTy);
 }
 
 /// if a value comes from a fir.declare, follow it to the original source,
@@ -241,6 +242,12 @@ void LoopVersioningPass::runOnOperation() {
   mlir::ModuleOp module = func->getParentOfType<mlir::ModuleOp>();
   fir::KindMapping kindMap = fir::getKindMapping(module);
   mlir::SmallVector<ArgInfo, 4> argsOfInterest;
+  std::optional<mlir::DataLayout> dl =
+      fir::support::getOrSetDataLayout(module, /*allowDefaultLayout=*/false);
+  if (!dl)
+    mlir::emitError(module.getLoc(),
+                    "data layout attribute is required to perform " DEBUG_TYPE
+                    "pass");
   for (auto &arg : args) {
     // Optional arguments must be checked for IsPresent before
     // looking for the bounds. They are unsupported for the time being.
@@ -256,11 +263,13 @@ void LoopVersioningPass::runOnOperation() {
           seqTy.getShape()[0] == fir::SequenceType::getUnknownExtent()) {
         size_t typeSize = 0;
         mlir::Type elementType = fir::unwrapSeqOrBoxedSeqType(arg.getType());
-        if (elementType.isa<mlir::FloatType>() ||
-            elementType.isa<mlir::IntegerType>())
-          typeSize = elementType.getIntOrFloatBitWidth() / 8;
-        else if (auto cty = elementType.dyn_cast<fir::ComplexType>())
-          typeSize = 2 * cty.getEleType(kindMap).getIntOrFloatBitWidth() / 8;
+        if (mlir::isa<mlir::FloatType>(elementType) ||
+            mlir::isa<mlir::IntegerType>(elementType) ||
+            mlir::isa<fir::ComplexType>(elementType)) {
+          auto [eleSize, eleAlign] = fir::getTypeSizeAndAlignment(
+              arg.getLoc(), elementType, *dl, kindMap);
+          typeSize = llvm::alignTo(eleSize, eleAlign);
+        }
         if (typeSize)
           argsOfInterest.push_back({arg, typeSize, rank, {}});
         else
@@ -546,8 +555,4 @@ void LoopVersioningPass::runOnOperation() {
   LLVM_DEBUG(module->dump());
 
   LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
-}
-
-std::unique_ptr<mlir::Pass> fir::createLoopVersioningPass() {
-  return std::make_unique<LoopVersioningPass>();
 }

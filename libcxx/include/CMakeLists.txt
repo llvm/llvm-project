@@ -73,20 +73,6 @@ set(files
   __algorithm/pop_heap.h
   __algorithm/prev_permutation.h
   __algorithm/pstl_any_all_none_of.h
-  __algorithm/pstl_backend.h
-  __algorithm/pstl_backends/cpu_backend.h
-  __algorithm/pstl_backends/cpu_backends/any_of.h
-  __algorithm/pstl_backends/cpu_backends/backend.h
-  __algorithm/pstl_backends/cpu_backends/fill.h
-  __algorithm/pstl_backends/cpu_backends/find_if.h
-  __algorithm/pstl_backends/cpu_backends/for_each.h
-  __algorithm/pstl_backends/cpu_backends/libdispatch.h
-  __algorithm/pstl_backends/cpu_backends/merge.h
-  __algorithm/pstl_backends/cpu_backends/serial.h
-  __algorithm/pstl_backends/cpu_backends/stable_sort.h
-  __algorithm/pstl_backends/cpu_backends/thread.h
-  __algorithm/pstl_backends/cpu_backends/transform.h
-  __algorithm/pstl_backends/cpu_backends/transform_reduce.h
   __algorithm/pstl_copy.h
   __algorithm/pstl_count.h
   __algorithm/pstl_equal.h
@@ -110,6 +96,7 @@ set(files
   __algorithm/ranges_binary_search.h
   __algorithm/ranges_clamp.h
   __algorithm/ranges_contains.h
+  __algorithm/ranges_contains_subrange.h
   __algorithm/ranges_copy.h
   __algorithm/ranges_copy_backward.h
   __algorithm/ranges_copy_if.h
@@ -216,6 +203,7 @@ set(files
   __algorithm/shift_right.h
   __algorithm/shuffle.h
   __algorithm/sift_down.h
+  __algorithm/simd_utils.h
   __algorithm/sort.h
   __algorithm/sort_heap.h
   __algorithm/stable_partition.h
@@ -280,7 +268,9 @@ set(files
   __chrono/formatter.h
   __chrono/hh_mm_ss.h
   __chrono/high_resolution_clock.h
+  __chrono/leap_second.h
   __chrono/literals.h
+  __chrono/local_info.h
   __chrono/month.h
   __chrono/month_weekday.h
   __chrono/monthday.h
@@ -288,8 +278,11 @@ set(files
   __chrono/parser_std_format_spec.h
   __chrono/statically_widen.h
   __chrono/steady_clock.h
+  __chrono/sys_info.h
   __chrono/system_clock.h
   __chrono/time_point.h
+  __chrono/time_zone.h
+  __chrono/time_zone_link.h
   __chrono/tzdb.h
   __chrono/tzdb_list.h
   __chrono/weekday.h
@@ -339,6 +332,7 @@ set(files
   __coroutine/noop_coroutine_handle.h
   __coroutine/trivial_awaitables.h
   __debug_utils/randomize_range.h
+  __debug_utils/sanitizers.h
   __debug_utils/strict_weak_ordering_check.h
   __exception/exception.h
   __exception/exception_ptr.h
@@ -377,7 +371,6 @@ set(files
   __format/format_context.h
   __format/format_error.h
   __format/format_functions.h
-  __format/format_fwd.h
   __format/format_parse_context.h
   __format/format_string.h
   __format/format_to_n_result.h
@@ -391,6 +384,7 @@ set(files
   __format/formatter_pointer.h
   __format/formatter_string.h
   __format/formatter_tuple.h
+  __format/indic_conjunct_break_table.h
   __format/parser_std_format_spec.h
   __format/range_default_formatter.h
   __format/range_formatter.h
@@ -426,22 +420,28 @@ set(files
   __functional/weak_result_type.h
   __fwd/array.h
   __fwd/bit_reference.h
+  __fwd/complex.h
+  __fwd/deque.h
+  __fwd/format.h
   __fwd/fstream.h
-  __fwd/get.h
-  __fwd/hash.h
+  __fwd/functional.h
   __fwd/ios.h
   __fwd/istream.h
   __fwd/mdspan.h
+  __fwd/memory.h
   __fwd/memory_resource.h
   __fwd/ostream.h
   __fwd/pair.h
+  __fwd/queue.h
   __fwd/span.h
   __fwd/sstream.h
+  __fwd/stack.h
   __fwd/streambuf.h
   __fwd/string.h
   __fwd/string_view.h
   __fwd/subrange.h
   __fwd/tuple.h
+  __fwd/vector.h
   __hash_table
   __ios/fpos.h
   __iterator/access.h
@@ -487,9 +487,17 @@ set(files
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
   __locale
+  __locale_dir/locale_base_api.h
+  __locale_dir/locale_base_api/android.h
   __locale_dir/locale_base_api/bsd_locale_defaults.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
+  __locale_dir/locale_base_api/fuchsia.h
+  __locale_dir/locale_base_api/ibm.h
   __locale_dir/locale_base_api/locale_guard.h
+  __locale_dir/locale_base_api/musl.h
+  __locale_dir/locale_base_api/newlib.h
+  __locale_dir/locale_base_api/openbsd.h
+  __locale_dir/locale_base_api/win32.h
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -573,6 +581,20 @@ set(files
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
   __numeric/transform_reduce.h
+  __pstl/backends/libdispatch.h
+  __pstl/backends/serial.h
+  __pstl/backends/std_thread.h
+  __pstl/configuration.h
+  __pstl/configuration_fwd.h
+  __pstl/cpu_algos/any_of.h
+  __pstl/cpu_algos/cpu_traits.h
+  __pstl/cpu_algos/fill.h
+  __pstl/cpu_algos/find_if.h
+  __pstl/cpu_algos/for_each.h
+  __pstl/cpu_algos/merge.h
+  __pstl/cpu_algos/stable_sort.h
+  __pstl/cpu_algos/transform.h
+  __pstl/cpu_algos/transform_reduce.h
   __random/bernoulli_distribution.h
   __random/binomial_distribution.h
   __random/cauchy_distribution.h
@@ -666,16 +688,9 @@ set(files
   __string/char_traits.h
   __string/constexpr_c_functions.h
   __string/extern_template_lists.h
-  __support/android/locale_bionic.h
-  __support/fuchsia/xlocale.h
   __support/ibm/gettod_zos.h
   __support/ibm/locale_mgmt_zos.h
   __support/ibm/nanosleep.h
-  __support/ibm/xlocale.h
-  __support/musl/xlocale.h
-  __support/newlib/xlocale.h
-  __support/openbsd/xlocale.h
-  __support/win32/locale_win32.h
   __support/xlocale/__nop_locale_mgmt.h
   __support/xlocale/__posix_l_fallback.h
   __support/xlocale/__strtonum_fallback.h
@@ -688,18 +703,23 @@ set(files
   __thread/id.h
   __thread/jthread.h
   __thread/poll_with_backoff.h
+  __thread/support.h
+  __thread/support/c11.h
+  __thread/support/external.h
+  __thread/support/pthread.h
+  __thread/support/windows.h
   __thread/this_thread.h
   __thread/thread.h
   __thread/timed_backoff_policy.h
-  __threading_support
   __tree
+  __tuple/find_index.h
   __tuple/make_tuple_types.h
-  __tuple/pair_like.h
   __tuple/sfinae_helpers.h
   __tuple/tuple_element.h
   __tuple/tuple_indices.h
   __tuple/tuple_like.h
   __tuple/tuple_like_ext.h
+  __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
   __tuple/tuple_types.h
   __type_traits/add_const.h
@@ -722,6 +742,7 @@ set(files
   __type_traits/datasizeof.h
   __type_traits/decay.h
   __type_traits/dependent_type.h
+  __type_traits/desugars_to.h
   __type_traits/disjunction.h
   __type_traits/enable_if.h
   __type_traits/extent.h
@@ -746,10 +767,7 @@ set(files
   __type_traits/is_constant_evaluated.h
   __type_traits/is_constructible.h
   __type_traits/is_convertible.h
-  __type_traits/is_copy_assignable.h
-  __type_traits/is_copy_constructible.h
   __type_traits/is_core_convertible.h
-  __type_traits/is_default_constructible.h
   __type_traits/is_destructible.h
   __type_traits/is_empty.h
   __type_traits/is_enum.h
@@ -765,17 +783,10 @@ set(files
   __type_traits/is_member_function_pointer.h
   __type_traits/is_member_object_pointer.h
   __type_traits/is_member_pointer.h
-  __type_traits/is_move_assignable.h
-  __type_traits/is_move_constructible.h
   __type_traits/is_nothrow_assignable.h
   __type_traits/is_nothrow_constructible.h
   __type_traits/is_nothrow_convertible.h
-  __type_traits/is_nothrow_copy_assignable.h
-  __type_traits/is_nothrow_copy_constructible.h
-  __type_traits/is_nothrow_default_constructible.h
   __type_traits/is_nothrow_destructible.h
-  __type_traits/is_nothrow_move_assignable.h
-  __type_traits/is_nothrow_move_constructible.h
   __type_traits/is_null_pointer.h
   __type_traits/is_object.h
   __type_traits/is_pod.h
@@ -796,14 +807,10 @@ set(files
   __type_traits/is_trivial.h
   __type_traits/is_trivially_assignable.h
   __type_traits/is_trivially_constructible.h
-  __type_traits/is_trivially_copy_assignable.h
-  __type_traits/is_trivially_copy_constructible.h
   __type_traits/is_trivially_copyable.h
-  __type_traits/is_trivially_default_constructible.h
   __type_traits/is_trivially_destructible.h
   __type_traits/is_trivially_lexicographically_comparable.h
-  __type_traits/is_trivially_move_assignable.h
-  __type_traits/is_trivially_move_constructible.h
+  __type_traits/is_trivially_relocatable.h
   __type_traits/is_unbounded_array.h
   __type_traits/is_union.h
   __type_traits/is_unsigned.h
@@ -820,7 +827,6 @@ set(files
   __type_traits/nat.h
   __type_traits/negation.h
   __type_traits/noexcept_move_assign_container.h
-  __type_traits/operation_traits.h
   __type_traits/promote.h
   __type_traits/rank.h
   __type_traits/remove_all_extents.h
@@ -854,11 +860,13 @@ set(files
   __utility/in_place.h
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h
+  __utility/is_valid_range.h
   __utility/move.h
   __utility/no_destroy.h
   __utility/pair.h
   __utility/piecewise_construct.h
   __utility/priority_tag.h
+  __utility/private_constructor_tag.h
   __utility/rel_ops.h
   __utility/small_buffer.h
   __utility/swap.h
@@ -914,7 +922,6 @@ set(files
   execution
   expected
   experimental/__config
-  experimental/__memory
   experimental/__simd/aligned_tag.h
   experimental/__simd/declaration.h
   experimental/__simd/reference.h
@@ -950,7 +957,6 @@ set(files
   istream
   iterator
   latch
-  libcxx.imp
   limits
   list
   locale
@@ -960,6 +966,7 @@ set(files
   mdspan
   memory
   memory_resource
+  module.modulemap
   mutex
   new
   numbers
@@ -1013,18 +1020,10 @@ set(files
   wctype.h
   )
 
-foreach(feature LIBCXX_ENABLE_FILESYSTEM LIBCXX_ENABLE_LOCALIZATION LIBCXX_ENABLE_THREADS LIBCXX_ENABLE_WIDE_CHARACTERS)
-  if (NOT ${${feature}})
-    set(requires_${feature} "requires LIBCXX_CONFIGURED_WITHOUT_SUPPORT_FOR_THIS_HEADER")
-  endif()
-endforeach()
-
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
-configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap" @ONLY)
 configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" COPYONLY)
 
 set(_all_includes "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site"
-                  "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap"
                   "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler")
 foreach(f ${files})
   set(src "${CMAKE_CURRENT_SOURCE_DIR}/${f}")
@@ -1035,6 +1034,15 @@ foreach(f ${files})
     COMMENT "Copying CXX header ${f}")
   list(APPEND _all_includes "${dst}")
 endforeach()
+
+# Generate the IWYU mapping. This depends on all header files but it's also considered as an
+# "include" for dependency tracking.
+add_custom_command(OUTPUT "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
+  COMMAND "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/generate_iwyu_mapping.py" "-o" "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
+  DEPENDS ${_all_includes}
+  COMMENT "Generate the mapping file for include-what-you-use"
+)
+list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp")
 
 add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
 
@@ -1068,8 +1076,8 @@ if (LIBCXX_INSTALL_HEADERS)
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)
 
-  # Install the generated modulemap file to the generic include dir.
-  install(FILES "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap"
+  # Install the generated IWYU file to the generic include dir.
+  install(FILES "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
     DESTINATION "${LIBCXX_INSTALL_INCLUDE_DIR}"
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)

@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "prescan.h"
-#include "preprocessor.h"
-#include "token-sequence.h"
 #include "flang/Common/idioms.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
+#include "flang/Parser/preprocessor.h"
 #include "flang/Parser/source.h"
+#include "flang/Parser/token-sequence.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <cstring>
@@ -29,15 +29,18 @@ Prescanner::Prescanner(Messages &messages, CookedSource &cooked,
     Preprocessor &preprocessor, common::LanguageFeatureControl lfc)
     : messages_{messages}, cooked_{cooked}, preprocessor_{preprocessor},
       allSources_{preprocessor_.allSources()}, features_{lfc},
+      backslashFreeFormContinuation_{preprocessor.AnyDefinitions()},
       encoding_{allSources_.encoding()} {}
 
 Prescanner::Prescanner(const Prescanner &that)
     : messages_{that.messages_}, cooked_{that.cooked_},
       preprocessor_{that.preprocessor_}, allSources_{that.allSources_},
-      features_{that.features_}, inFixedForm_{that.inFixedForm_},
+      features_{that.features_},
+      backslashFreeFormContinuation_{that.backslashFreeFormContinuation_},
+      inFixedForm_{that.inFixedForm_},
       fixedFormColumnLimit_{that.fixedFormColumnLimit_},
-      encoding_{that.encoding_}, prescannerNesting_{that.prescannerNesting_ +
-                                     1},
+      encoding_{that.encoding_},
+      prescannerNesting_{that.prescannerNesting_ + 1},
       skipLeadingAmpersand_{that.skipLeadingAmpersand_},
       compilerDirectiveBloomFilter_{that.compilerDirectiveBloomFilter_},
       compilerDirectiveSentinels_{that.compilerDirectiveSentinels_} {}
@@ -630,9 +633,11 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     preventHollerith_ = false;
   } else if (IsLegalInIdentifier(*at_)) {
     int parts{1};
+    const char *afterLast{nullptr};
     do {
       EmitChar(tokens, *at_);
       ++at_, ++column_;
+      afterLast = at_;
       if (SkipToNextSignificantCharacter() && IsLegalIdentifierStart(*at_)) {
         tokens.CloseToken();
         ++parts;
@@ -640,12 +645,20 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     } while (IsLegalInIdentifier(*at_));
     if (parts >= 3) {
       // Subtlety: When an identifier is split across three or more continuation
-      // lines, its parts are kept as distinct pp-tokens so that macro
-      // operates on them independently.  This trick accommodates the historic
-      // practice of using line continuation for token pasting after
-      // replacement.
+      // lines (or two continuation lines, immediately preceded or followed
+      // by '&' free form continuation line markers, its parts are kept as
+      // distinct pp-tokens so that macro operates on them independently.
+      // This trick accommodates the historic practice of using line
+      // continuation for token pasting after replacement.
     } else if (parts == 2) {
-      tokens.ReopenLastToken();
+      if ((start > start_ && start[-1] == '&') ||
+          (afterLast < limit_ && (*afterLast == '&' || *afterLast == '\n'))) {
+        // call &                call foo&        call foo&
+        //   &MACRO&      OR       &MACRO&   OR     &MACRO
+        //   &foo(...)             &(...)
+      } else {
+        tokens.ReopenLastToken();
+      }
     }
     if (InFixedFormSource()) {
       SkipSpaces();
@@ -1216,9 +1229,14 @@ bool Prescanner::Continuation(bool mightNeedFixedFormSpace) {
     } else {
       return FreeFormContinuation();
     }
-  } else {
-    return false;
+  } else if (*at_ == '\\' && at_ + 2 == nextLine_ &&
+      backslashFreeFormContinuation_ && !inFixedForm_ && nextLine_ < limit_) {
+    // cpp-like handling of \ at end of a free form source line
+    BeginSourceLine(nextLine_);
+    NextLine();
+    return true;
   }
+  return false;
 }
 
 std::optional<Prescanner::LineClassification>

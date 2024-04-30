@@ -3,7 +3,7 @@
 
 --- |
   define void @add_scalable_offset(
-            <vscale x 1 x i64> *%pa,
+            ptr %pa,
             i64 %vl)
   {
     ret void

@@ -136,8 +136,8 @@ done:
 
 ; GCN-LABEL: {{^}}test_sink_scratch_small_offset_i32:
 ; GCN: s_and_saveexec_b64
-; GCN: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4092{{$}}
-; GCN: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4092 glc{{$}}
+; GCN: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4088{{$}}
+; GCN: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4088 glc{{$}}
 ; GCN: {{^}}.LBB4_2:
 define amdgpu_kernel void @test_sink_scratch_small_offset_i32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %arg) {
 entry:
@@ -166,7 +166,8 @@ done:
   ret void
 }
 
-; This ends up not fitting due to the reserved 4 bytes at offset 0
+; This used to be a special case when the scavenge slot was
+; fixed at offset 0.
 ; OPT-LABEL: @test_sink_scratch_small_offset_i32_reserved(
 ; OPT-NOT:  getelementptr [512 x i32]
 ; OPT: br i1
@@ -174,10 +175,8 @@ done:
 
 ; GCN-LABEL: {{^}}test_sink_scratch_small_offset_i32_reserved:
 ; GCN: s_and_saveexec_b64
-; GCN: v_mov_b32_e32 [[BASE_FI0:v[0-9]+]], 4
-; GCN: buffer_store_dword {{v[0-9]+}}, [[BASE_FI0]], {{s\[[0-9]+:[0-9]+\]}}, 0 offen offset:4092{{$}}
-; GCN: v_mov_b32_e32 [[BASE_FI1:v[0-9]+]], 4
-; GCN: buffer_load_dword {{v[0-9]+}}, [[BASE_FI1]], {{s\[[0-9]+:[0-9]+\]}}, 0 offen offset:4092 glc{{$}}
+; GCN: buffer_store_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4092{{$}}
+; GCN: buffer_load_dword {{v[0-9]+}}, off, {{s\[[0-9]+:[0-9]+\]}}, 0 offset:4092 glc{{$}}
 ; GCN: {{^.LBB[0-9]+}}_2:
 
 define amdgpu_kernel void @test_sink_scratch_small_offset_i32_reserved(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %arg) {

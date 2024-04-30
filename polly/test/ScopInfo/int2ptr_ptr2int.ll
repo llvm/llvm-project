@@ -11,9 +11,9 @@
 ;
 ; CHECK:        ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:       [val, ptr] -> { Stmt_for_body[i0] -> MemRef_A[9 + val] };
-; CHECK-NEXT:   ReadAccess :=	[Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:   ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:       [val, ptr] -> { Stmt_for_body[i0] -> MemRef_A[9 + ptr] };
-; CHECK-NEXT:   MustWriteAccess :=	[Reduction Type: +] [Scalar: 0]
+; CHECK-NEXT:   MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:       [val, ptr] -> { Stmt_for_body[i0] -> MemRef_A[9 + ptr] };
 ;
 ; IR:      entry:

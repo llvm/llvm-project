@@ -1471,7 +1471,9 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
          Token.is(MIToken::kw_exact) ||
          Token.is(MIToken::kw_nofpexcept) ||
          Token.is(MIToken::kw_noconvergent) ||
-         Token.is(MIToken::kw_unpredictable)) {
+         Token.is(MIToken::kw_unpredictable) ||
+         Token.is(MIToken::kw_nneg) ||
+         Token.is(MIToken::kw_disjoint)) {
     // clang-format on
     // Mine frame and fast math flags
     if (Token.is(MIToken::kw_frame_setup))
@@ -1504,6 +1506,10 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
       Flags |= MachineInstr::Unpredictable;
     if (Token.is(MIToken::kw_noconvergent))
       Flags |= MachineInstr::NoConvergent;
+    if (Token.is(MIToken::kw_nneg))
+      Flags |= MachineInstr::NonNeg;
+    if (Token.is(MIToken::kw_disjoint))
+      Flags |= MachineInstr::Disjoint;
 
     lex();
   }
@@ -1919,10 +1925,13 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
 
   if (Token.range().front() == 's') {
     auto ScalarSize = APSInt(Token.range().drop_front()).getZExtValue();
-    if (!verifyScalarSize(ScalarSize))
-      return error("invalid size for scalar type");
-
-    Ty = LLT::scalar(ScalarSize);
+    if (ScalarSize) {
+      if (!verifyScalarSize(ScalarSize))
+        return error("invalid size for scalar type");
+      Ty = LLT::scalar(ScalarSize);
+    } else {
+      Ty = LLT::token();
+    }
     lex();
     return false;
   } else if (Token.range().front() == 'p') {
@@ -1980,7 +1989,7 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
   if (Token.range().front() == 's') {
     auto ScalarSize = APSInt(Token.range().drop_front()).getZExtValue();
     if (!verifyScalarSize(ScalarSize))
-      return error("invalid size for scalar type");
+      return error("invalid size for scalar element in vector");
     Ty = LLT::scalar(ScalarSize);
   } else if (Token.range().front() == 'p') {
     const DataLayout &DL = MF.getDataLayout();
@@ -2181,10 +2190,10 @@ static bool parseGlobalValue(const MIToken &Token,
     unsigned GVIdx;
     if (getUnsigned(Token, GVIdx, ErrCB))
       return true;
-    if (GVIdx >= PFS.IRSlots.GlobalValues.size())
+    GV = PFS.IRSlots.GlobalValues.get(GVIdx);
+    if (!GV)
       return ErrCB(Token.location(), Twine("use of undefined global value '@") +
                                          Twine(GVIdx) + "'");
-    GV = PFS.IRSlots.GlobalValues[GVIdx];
     break;
   }
   default:

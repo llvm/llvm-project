@@ -71,7 +71,7 @@ void Decl::updateOutOfDate(IdentifierInfo &II) const {
 #include "clang/AST/DeclNodes.inc"
 
 void *Decl::operator new(std::size_t Size, const ASTContext &Context,
-                         unsigned ID, std::size_t Extra) {
+                         GlobalDeclID ID, std::size_t Extra) {
   // Allocate an extra 8 bytes worth of storage, which ensures that the
   // resulting pointer will still be 8-byte aligned.
   static_assert(sizeof(unsigned) * 2 >= alignof(Decl),
@@ -85,7 +85,7 @@ void *Decl::operator new(std::size_t Size, const ASTContext &Context,
   PrefixPtr[0] = 0;
 
   // Store the global declaration ID in the second 4 bytes.
-  PrefixPtr[1] = ID;
+  PrefixPtr[1] = ID.get();
 
   return Result;
 }
@@ -402,7 +402,7 @@ bool Decl::isInAnonymousNamespace() const {
 
 bool Decl::isInStdNamespace() const {
   const DeclContext *DC = getDeclContext();
-  return DC && DC->isStdNamespace();
+  return DC && DC->getNonTransparentContext()->isStdNamespace();
 }
 
 bool Decl::isFileContextDecl() const {
@@ -1102,6 +1102,10 @@ bool Decl::isInAnotherModuleUnit() const {
   return M != getASTContext().getCurrentNamedModule();
 }
 
+bool Decl::isFromExplicitGlobalModule() const {
+  return getOwningModule() && getOwningModule()->isExplicitGlobalModule();
+}
+
 static Decl::Kind getKind(const Decl *D) { return D->getKind(); }
 static Decl::Kind getKind(const DeclContext *DC) { return DC->getDeclKind(); }
 
@@ -1111,7 +1115,9 @@ int64_t Decl::getID() const {
 
 const FunctionType *Decl::getFunctionType(bool BlocksToo) const {
   QualType Ty;
-  if (const auto *D = dyn_cast<ValueDecl>(this))
+  if (isa<BindingDecl>(this))
+    return nullptr;
+  else if (const auto *D = dyn_cast<ValueDecl>(this))
     Ty = D->getType();
   else if (const auto *D = dyn_cast<TypedefNameDecl>(this))
     Ty = D->getUnderlyingType();
@@ -1352,6 +1358,7 @@ DeclContext *DeclContext::getPrimaryContext() {
   case Decl::ExternCContext:
   case Decl::LinkageSpec:
   case Decl::Export:
+  case Decl::TopLevelStmt:
   case Decl::Block:
   case Decl::Captured:
   case Decl::OMPDeclareReduction:
@@ -1842,9 +1849,9 @@ DeclContext::lookup(DeclarationName Name) const {
 
 DeclContext::lookup_result
 DeclContext::noload_lookup(DeclarationName Name) {
-  assert(getDeclKind() != Decl::LinkageSpec &&
-         getDeclKind() != Decl::Export &&
-         "should not perform lookups into transparent contexts");
+  // For transparent DeclContext, we should lookup in their enclosing context.
+  if (getDeclKind() == Decl::LinkageSpec || getDeclKind() == Decl::Export)
+    return getParent()->noload_lookup(Name);
 
   DeclContext *PrimaryContext = getPrimaryContext();
   if (PrimaryContext != this)

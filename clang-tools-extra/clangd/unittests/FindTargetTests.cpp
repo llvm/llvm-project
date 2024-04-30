@@ -427,7 +427,7 @@ TEST_F(TargetDeclTest, Types) {
     [[auto]] X = S{};
   )cpp";
   // FIXME: deduced type missing in AST. https://llvm.org/PR42914
-  EXPECT_DECLS("AutoTypeLoc");
+  EXPECT_DECLS("AutoTypeLoc", );
 
   Code = R"cpp(
     template <typename... E>
@@ -727,13 +727,13 @@ TEST_F(TargetDeclTest, BuiltinTemplates) {
     template <class T, int N>
     using make_integer_sequence = [[__make_integer_seq]]<integer_sequence, T, N>;
   )cpp";
-  EXPECT_DECLS("TemplateSpecializationTypeLoc");
+  EXPECT_DECLS("TemplateSpecializationTypeLoc", );
 
   Code = R"cpp(
     template <int N, class... Pack>
     using type_pack_element = [[__type_pack_element]]<N, Pack...>;
   )cpp";
-  EXPECT_DECLS("TemplateSpecializationTypeLoc");
+  EXPECT_DECLS("TemplateSpecializationTypeLoc", );
 }
 
 TEST_F(TargetDeclTest, MemberOfTemplate) {
@@ -1009,6 +1009,33 @@ TEST_F(TargetDeclTest, DependentTypes) {
       )cpp";
   EXPECT_DECLS("DependentTemplateSpecializationTypeLoc",
                "template <typename> struct B");
+
+  // Dependent name with recursive definition. We don't expect a
+  // result, but we shouldn't get into a stack overflow either.
+  Code = R"cpp(
+        template <int N>
+        struct waldo {
+          typedef typename waldo<N - 1>::type::[[next]] type;
+        };
+  )cpp";
+  EXPECT_DECLS("DependentNameTypeLoc", );
+
+  // Similar to above but using mutually recursive templates.
+  Code = R"cpp(
+        template <int N>
+        struct odd;
+
+        template <int N>
+        struct even {
+          using type = typename odd<N - 1>::type::next;
+        };
+
+        template <int N>
+        struct odd {
+          using type = typename even<N - 1>::type::[[next]];
+        };
+  )cpp";
+  EXPECT_DECLS("DependentNameTypeLoc", );
 }
 
 TEST_F(TargetDeclTest, TypedefCascade) {
@@ -1236,14 +1263,14 @@ TEST_F(TargetDeclTest, ObjC) {
     + ([[id]])sharedInstance;
     @end
   )cpp";
-  EXPECT_DECLS("TypedefTypeLoc");
+  EXPECT_DECLS("TypedefTypeLoc", );
 
   Code = R"cpp(
     @interface Foo
     + ([[instancetype]])sharedInstance;
     @end
   )cpp";
-  EXPECT_DECLS("TypedefTypeLoc");
+  EXPECT_DECLS("TypedefTypeLoc", );
 }
 
 class FindExplicitReferencesTest : public ::testing::Test {

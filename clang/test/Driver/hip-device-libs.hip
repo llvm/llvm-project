@@ -187,12 +187,25 @@
 // RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=ABI5
 
-// Test -mcode-object-version=5 with old device library without abi_version_400.bc
+// Test -mcode-object-version=5 with old device library without abi_version_500.bc
 // RUN: not %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
 // RUN:   -mcode-object-version=5 \
 // RUN:   --hip-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode-no-abi-ver   \
 // RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s --check-prefixes=NOABI5
+
+// Test -mcode-object-version=6
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -mcode-object-version=6 \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ABI6
+
+// Test -mcode-object-version=6 with old device library without abi_version_600.bc
+// RUN: not %clang -### --target=x86_64-linux-gnu --offload-arch=gfx900 \
+// RUN:   -mcode-object-version=6 \
+// RUN:   --hip-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode-no-abi-ver   \
+// RUN:   --rocm-path=%S/Inputs/rocm %S/Inputs/hip_multiple_inputs/b.hip \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=NOABI6
 
 // ALL-NOT: error:
 // ALL: {{"[^"]*clang[^"]*"}}
@@ -237,7 +250,10 @@
 // ABI4: "-mlink-builtin-bitcode" "{{.*}}oclc_abi_version_400.bc"
 // ABI5-NOT: error:
 // ABI5: "-mlink-builtin-bitcode" "{{.*}}oclc_abi_version_500.bc"
+// ABI6-NOT: error:
+// ABI6: "-mlink-builtin-bitcode" "{{.*}}oclc_abi_version_600.bc"
 // NOABI4-NOT: error:
 // NOABI4-NOT: "-mlink-builtin-bitcode" "{{.*}}oclc_abi_version_400.bc"
 // NOABI4-NOT: "-mlink-builtin-bitcode" "{{.*}}oclc_abi_version_500.bc"
 // NOABI5: error: cannot find ROCm device libraryfor ABI version 5; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library
+// NOABI6: error: cannot find ROCm device libraryfor ABI version 6; provide its path via '--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build without ROCm device library

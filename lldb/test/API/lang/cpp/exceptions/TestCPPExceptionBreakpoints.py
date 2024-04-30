@@ -65,7 +65,7 @@ class CPPBreakpointTestCase(TestBase):
 
         while frame_functions.count("throws_exception_on_even(int)") == 1:
             stopped_threads = lldbutil.continue_to_breakpoint(process, exception_bkpt)
-            self.assertEquals(len(stopped_threads), 1)
+            self.assertEqual(len(stopped_threads), 1)
 
             thread = stopped_threads[0]
             frame_functions = lldbutil.get_function_names(thread)

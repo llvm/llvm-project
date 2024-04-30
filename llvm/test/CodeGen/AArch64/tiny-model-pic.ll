@@ -7,25 +7,9 @@
 
 @src = external local_unnamed_addr global [65536 x i8], align 1
 @dst = external global [65536 x i8], align 1
-@ptr = external local_unnamed_addr global i8*, align 8
+@ptr = external local_unnamed_addr global ptr, align 8
 
 define dso_preemptable void @foo1() {
-; CHECK-LABEL: foo1:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr x8, :got:src
-; CHECK-NEXT:    ldrb w8, [x8]
-; CHECK-NEXT:    ldr x9, :got:dst
-; CHECK-NEXT:    strb w8, [x9]
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: foo1:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    ldr x8, :got:src
-; CHECK-GLOBISEL-NEXT:    ldrb w8, [x8]
-; CHECK-GLOBISEL-NEXT:    ldr x9, :got:dst
-; CHECK-GLOBISEL-NEXT:    strb w8, [x9]
-; CHECK-GLOBISEL-NEXT:    ret
-;
 ; CHECK-PIC-LABEL: foo1:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    ldr x8, :got:src
@@ -42,26 +26,12 @@ define dso_preemptable void @foo1() {
 ; CHECK-PIC-GLOBISEL-NEXT:    strb w8, [x9]
 ; CHECK-PIC-GLOBISEL-NEXT:    ret
 entry:
-  %0 = load i8, i8* getelementptr inbounds ([65536 x i8], [65536 x i8]* @src, i64 0, i64 0), align 1
-  store i8 %0, i8* getelementptr inbounds ([65536 x i8], [65536 x i8]* @dst, i64 0, i64 0), align 1
+  %0 = load i8, ptr @src, align 1
+  store i8 %0, ptr @dst, align 1
   ret void
 }
 
 define dso_preemptable void @foo2() {
-; CHECK-LABEL: foo2:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr x8, :got:ptr
-; CHECK-NEXT:    ldr x9, :got:dst
-; CHECK-NEXT:    str x9, [x8]
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: foo2:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    ldr x8, :got:ptr
-; CHECK-GLOBISEL-NEXT:    ldr x9, :got:dst
-; CHECK-GLOBISEL-NEXT:    str x9, [x8]
-; CHECK-GLOBISEL-NEXT:    ret
-;
 ; CHECK-PIC-LABEL: foo2:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    ldr x8, :got:ptr
@@ -76,30 +46,12 @@ define dso_preemptable void @foo2() {
 ; CHECK-PIC-GLOBISEL-NEXT:    str x9, [x8]
 ; CHECK-PIC-GLOBISEL-NEXT:    ret
 entry:
-  store i8* getelementptr inbounds ([65536 x i8], [65536 x i8]* @dst, i64 0, i64 0), i8** @ptr, align 8
+  store ptr @dst, ptr @ptr, align 8
   ret void
 }
 
 define dso_preemptable void @foo3() {
 ; FIXME: Needn't adr ptr
-;
-; CHECK-LABEL: foo3:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr x8, :got:src
-; CHECK-NEXT:    ldr x9, :got:ptr
-; CHECK-NEXT:    ldrb w8, [x8]
-; CHECK-NEXT:    ldr x9, [x9]
-; CHECK-NEXT:    strb w8, [x9]
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: foo3:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    ldr x8, :got:src
-; CHECK-GLOBISEL-NEXT:    ldr x9, :got:ptr
-; CHECK-GLOBISEL-NEXT:    ldrb w8, [x8]
-; CHECK-GLOBISEL-NEXT:    ldr x9, [x9]
-; CHECK-GLOBISEL-NEXT:    strb w8, [x9]
-; CHECK-GLOBISEL-NEXT:    ret
 ;
 ; CHECK-PIC-LABEL: foo3:
 ; CHECK-PIC:       // %bb.0: // %entry
@@ -119,33 +71,17 @@ define dso_preemptable void @foo3() {
 ; CHECK-PIC-GLOBISEL-NEXT:    strb w8, [x9]
 ; CHECK-PIC-GLOBISEL-NEXT:    ret
 entry:
-  %0 = load i8, i8* getelementptr inbounds ([65536 x i8], [65536 x i8]* @src, i64 0, i64 0), align 1
-  %1 = load i8*, i8** @ptr, align 8
-  store i8 %0, i8* %1, align 1
+  %0 = load i8, ptr @src, align 1
+  %1 = load ptr, ptr @ptr, align 8
+  store i8 %0, ptr %1, align 1
   ret void
 }
 
 @lsrc = internal global i8 0, align 4
 @ldst = internal global i8 0, align 4
-@lptr = internal global i8* null, align 8
+@lptr = internal global ptr null, align 8
 
 define dso_preemptable void @bar1() {
-; CHECK-LABEL: bar1:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adr x8, lsrc
-; CHECK-NEXT:    ldrb w8, [x8]
-; CHECK-NEXT:    adr x9, ldst
-; CHECK-NEXT:    strb w8, [x9]
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: bar1:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    adr x8, lsrc
-; CHECK-GLOBISEL-NEXT:    ldrb w8, [x8]
-; CHECK-GLOBISEL-NEXT:    adr x9, ldst
-; CHECK-GLOBISEL-NEXT:    strb w8, [x9]
-; CHECK-GLOBISEL-NEXT:    ret
-;
 ; CHECK-PIC-LABEL: bar1:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    adr x8, lsrc
@@ -162,26 +98,12 @@ define dso_preemptable void @bar1() {
 ; CHECK-PIC-GLOBISEL-NEXT:    strb w8, [x9]
 ; CHECK-PIC-GLOBISEL-NEXT:    ret
 entry:
-  %0 = load i8, i8* @lsrc, align 4
-  store i8 %0, i8* @ldst, align 4
+  %0 = load i8, ptr @lsrc, align 4
+  store i8 %0, ptr @ldst, align 4
   ret void
 }
 
 define dso_preemptable void @bar2() {
-; CHECK-LABEL: bar2:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adr x8, lptr
-; CHECK-NEXT:    adr x9, ldst
-; CHECK-NEXT:    str x9, [x8]
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: bar2:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    adr x8, lptr
-; CHECK-GLOBISEL-NEXT:    adr x9, ldst
-; CHECK-GLOBISEL-NEXT:    str x9, [x8]
-; CHECK-GLOBISEL-NEXT:    ret
-;
 ; CHECK-PIC-LABEL: bar2:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    adr x8, lptr
@@ -196,29 +118,12 @@ define dso_preemptable void @bar2() {
 ; CHECK-PIC-GLOBISEL-NEXT:    str x9, [x8]
 ; CHECK-PIC-GLOBISEL-NEXT:    ret
 entry:
-  store i8* @ldst, i8** @lptr, align 8
+  store ptr @ldst, ptr @lptr, align 8
   ret void
 }
 
 define dso_preemptable void @bar3() {
 ; FIXME: Needn't adr lptr
-;
-; CHECK-LABEL: bar3:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adr x8, lsrc
-; CHECK-NEXT:    ldrb w8, [x8]
-; CHECK-NEXT:    ldr x9, lptr
-; CHECK-NEXT:    strb w8, [x9]
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: bar3:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    adr x8, lsrc
-; CHECK-GLOBISEL-NEXT:    adr x9, lptr
-; CHECK-GLOBISEL-NEXT:    ldrb w8, [x8]
-; CHECK-GLOBISEL-NEXT:    ldr x9, [x9]
-; CHECK-GLOBISEL-NEXT:    strb w8, [x9]
-; CHECK-GLOBISEL-NEXT:    ret
 ;
 ; CHECK-PIC-LABEL: bar3:
 ; CHECK-PIC:       // %bb.0: // %entry
@@ -237,9 +142,9 @@ define dso_preemptable void @bar3() {
 ; CHECK-PIC-GLOBISEL-NEXT:    strb w8, [x9]
 ; CHECK-PIC-GLOBISEL-NEXT:    ret
 entry:
-  %0 = load i8, i8* @lsrc, align 4
-  %1 = load i8*, i8** @lptr, align 8
-  store i8 %0, i8* %1, align 1
+  %0 = load i8, ptr @lsrc, align 4
+  %1 = load ptr, ptr @lptr, align 8
+  store i8 %0, ptr %1, align 1
   ret void
 }
 
@@ -248,22 +153,6 @@ entry:
 @lbdst = internal global [65536 x i8] zeroinitializer, align 4
 
 define dso_preemptable void @baz1() {
-; CHECK-LABEL: baz1:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adr x8, lbsrc
-; CHECK-NEXT:    ldrb w8, [x8]
-; CHECK-NEXT:    adr x9, lbdst
-; CHECK-NEXT:    strb w8, [x9]
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: baz1:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    adr x8, lbsrc
-; CHECK-GLOBISEL-NEXT:    ldrb w8, [x8]
-; CHECK-GLOBISEL-NEXT:    adr x9, lbdst
-; CHECK-GLOBISEL-NEXT:    strb w8, [x9]
-; CHECK-GLOBISEL-NEXT:    ret
-;
 ; CHECK-PIC-LABEL: baz1:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    adr x8, lbsrc
@@ -280,26 +169,12 @@ define dso_preemptable void @baz1() {
 ; CHECK-PIC-GLOBISEL-NEXT:    strb w8, [x9]
 ; CHECK-PIC-GLOBISEL-NEXT:    ret
 entry:
-  %0 = load i8, i8* getelementptr inbounds ([65536 x i8], [65536 x i8]* @lbsrc, i64 0, i64 0), align 4
-  store i8 %0, i8* getelementptr inbounds ([65536 x i8], [65536 x i8]* @lbdst, i64 0, i64 0), align 4
+  %0 = load i8, ptr @lbsrc, align 4
+  store i8 %0, ptr @lbdst, align 4
   ret void
 }
 
 define dso_preemptable void @baz2() {
-; CHECK-LABEL: baz2:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adr x8, lptr
-; CHECK-NEXT:    adr x9, lbdst
-; CHECK-NEXT:    str x9, [x8]
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: baz2:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    adr x8, lptr
-; CHECK-GLOBISEL-NEXT:    adr x9, lbdst
-; CHECK-GLOBISEL-NEXT:    str x9, [x8]
-; CHECK-GLOBISEL-NEXT:    ret
-;
 ; CHECK-PIC-LABEL: baz2:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    adr x8, lptr
@@ -314,29 +189,12 @@ define dso_preemptable void @baz2() {
 ; CHECK-PIC-GLOBISEL-NEXT:    str x9, [x8]
 ; CHECK-PIC-GLOBISEL-NEXT:    ret
 entry:
-  store i8* getelementptr inbounds ([65536 x i8], [65536 x i8]* @lbdst, i64 0, i64 0), i8** @lptr, align 8
+  store ptr @lbdst, ptr @lptr, align 8
   ret void
 }
 
 define dso_preemptable void @baz3() {
 ; FIXME: Needn't adr lptr
-;
-; CHECK-LABEL: baz3:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adr x8, lbsrc
-; CHECK-NEXT:    ldrb w8, [x8]
-; CHECK-NEXT:    ldr x9, lptr
-; CHECK-NEXT:    strb w8, [x9]
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: baz3:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    adr x8, lbsrc
-; CHECK-GLOBISEL-NEXT:    adr x9, lptr
-; CHECK-GLOBISEL-NEXT:    ldrb w8, [x8]
-; CHECK-GLOBISEL-NEXT:    ldr x9, [x9]
-; CHECK-GLOBISEL-NEXT:    strb w8, [x9]
-; CHECK-GLOBISEL-NEXT:    ret
 ;
 ; CHECK-PIC-LABEL: baz3:
 ; CHECK-PIC:       // %bb.0: // %entry
@@ -355,26 +213,16 @@ define dso_preemptable void @baz3() {
 ; CHECK-PIC-GLOBISEL-NEXT:    strb w8, [x9]
 ; CHECK-PIC-GLOBISEL-NEXT:    ret
 entry:
-  %0 = load i8, i8* getelementptr inbounds ([65536 x i8], [65536 x i8]* @lbsrc, i64 0, i64 0), align 4
-  %1 = load i8*, i8** @lptr, align 8
-  store i8 %0, i8* %1, align 1
+  %0 = load i8, ptr @lbsrc, align 4
+  %1 = load ptr, ptr @lptr, align 8
+  store i8 %0, ptr %1, align 1
   ret void
 }
 
 
 declare void @func(...)
 
-define dso_preemptable i8* @externfuncaddr() {
-; CHECK-LABEL: externfuncaddr:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr x0, :got:func
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: externfuncaddr:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    ldr x0, :got:func
-; CHECK-GLOBISEL-NEXT:    ret
-;
+define dso_preemptable ptr @externfuncaddr() {
 ; CHECK-PIC-LABEL: externfuncaddr:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    ldr x0, :got:func
@@ -385,20 +233,10 @@ define dso_preemptable i8* @externfuncaddr() {
 ; CHECK-PIC-GLOBISEL-NEXT:    ldr x0, :got:func
 ; CHECK-PIC-GLOBISEL-NEXT:    ret
 entry:
-      ret i8* bitcast (void (...)* @func to i8*)
+      ret ptr @func
 }
 
-define dso_preemptable i8* @localfuncaddr() {
-; CHECK-LABEL: localfuncaddr:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adr x0, externfuncaddr
-; CHECK-NEXT:    ret
-;
-; CHECK-GLOBISEL-LABEL: localfuncaddr:
-; CHECK-GLOBISEL:       // %bb.0: // %entry
-; CHECK-GLOBISEL-NEXT:    adr x0, externfuncaddr
-; CHECK-GLOBISEL-NEXT:    ret
-;
+define dso_preemptable ptr @localfuncaddr() {
 ; CHECK-PIC-LABEL: localfuncaddr:
 ; CHECK-PIC:       // %bb.0: // %entry
 ; CHECK-PIC-NEXT:    ldr x0, :got:externfuncaddr
@@ -409,6 +247,6 @@ define dso_preemptable i8* @localfuncaddr() {
 ; CHECK-PIC-GLOBISEL-NEXT:    ldr x0, :got:externfuncaddr
 ; CHECK-PIC-GLOBISEL-NEXT:    ret
 entry:
-      ret i8* bitcast (i8* ()* @externfuncaddr to i8*)
+      ret ptr @externfuncaddr
 }
 

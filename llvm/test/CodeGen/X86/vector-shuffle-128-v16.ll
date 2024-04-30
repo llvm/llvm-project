@@ -953,13 +953,29 @@ define <16 x i8> @shuffle_v16i8_5_6_7_8_9_10_27_28_29_30_31_0_1_2_3_4(<16 x i8> 
 }
 
 define <16 x i8> @shuffle_v16i8_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30(<16 x i8> %a, <16 x i8> %b) {
-; SSE-LABEL: shuffle_v16i8_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; SSE-NEXT:    pand %xmm2, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: shuffle_v16i8_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    packuswb %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: shuffle_v16i8_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSSE3-NEXT:    pand %xmm2, %xmm1
+; SSSE3-NEXT:    pand %xmm2, %xmm0
+; SSSE3-NEXT:    packuswb %xmm1, %xmm0
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: shuffle_v16i8_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pand %xmm2, %xmm1
+; SSE41-NEXT:    pand %xmm2, %xmm0
+; SSE41-NEXT:    packuswb %xmm1, %xmm0
+; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: shuffle_v16i8_00_02_04_06_08_10_12_14_16_18_20_22_24_26_28_30:
 ; AVX1:       # %bb.0:
@@ -2186,13 +2202,29 @@ define <16 x i8> @shuffle_v16i8_02_03_04_05_06_07_00_01_10_11_12_13_14_15_08_09(
 }
 
 define <16 x i8> @PR12412(<16 x i8> %inval1, <16 x i8> %inval2) {
-; SSE-LABEL: PR12412:
-; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; SSE-NEXT:    pand %xmm2, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: PR12412:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    packuswb %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: PR12412:
+; SSSE3:       # %bb.0: # %entry
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSSE3-NEXT:    pand %xmm2, %xmm1
+; SSSE3-NEXT:    pand %xmm2, %xmm0
+; SSSE3-NEXT:    packuswb %xmm1, %xmm0
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: PR12412:
+; SSE41:       # %bb.0: # %entry
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE41-NEXT:    pand %xmm2, %xmm1
+; SSE41-NEXT:    pand %xmm2, %xmm0
+; SSE41-NEXT:    packuswb %xmm1, %xmm0
+; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: PR12412:
 ; AVX1:       # %bb.0: # %entry

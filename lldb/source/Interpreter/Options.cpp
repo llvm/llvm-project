@@ -1365,3 +1365,16 @@ llvm::Expected<Args> Options::Parse(const Args &args,
   argv.erase(argv.begin(), argv.begin() + OptionParser::GetOptionIndex());
   return ReconstituteArgsAfterParsing(argv, args);
 }
+
+llvm::Error lldb_private::CreateOptionParsingError(
+    llvm::StringRef option_arg, const char short_option,
+    llvm::StringRef long_option, llvm::StringRef additional_context) {
+  std::string buffer;
+  llvm::raw_string_ostream stream(buffer);
+  stream << "Invalid value ('" << option_arg << "') for -" << short_option;
+  if (!long_option.empty())
+    stream << " (" << long_option << ")";
+  if (!additional_context.empty())
+    stream << ": " << additional_context;
+  return llvm::createStringError(llvm::inconvertibleErrorCode(), buffer);
+}

@@ -1,5 +1,6 @@
 #include "mlir/Analysis/Presburger/Barvinok.h"
 #include "./Utils.h"
+#include "Parser.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -59,7 +60,8 @@ TEST(BarvinokTest, unimodularConeGeneratingFunction) {
   ParamPoint vertex =
       makeFracMatrix(2, 3, {{2, 2, 0}, {-1, -Fraction(1, 2), 1}});
 
-  GeneratingFunction gf = unimodularConeGeneratingFunction(vertex, 1, cone);
+  GeneratingFunction gf =
+      computeUnimodularConeGeneratingFunction(vertex, 1, cone);
 
   EXPECT_EQ_REPR_GENERATINGFUNCTION(
       gf, GeneratingFunction(
@@ -74,7 +76,7 @@ TEST(BarvinokTest, unimodularConeGeneratingFunction) {
 
   vertex = makeFracMatrix(3, 2, {{5, 2}, {6, 2}, {7, 1}});
 
-  gf = unimodularConeGeneratingFunction(vertex, 1, cone);
+  gf = computeUnimodularConeGeneratingFunction(vertex, 1, cone);
 
   EXPECT_EQ_REPR_GENERATINGFUNCTION(
       gf,
@@ -125,7 +127,7 @@ TEST(BarvinokTest, getCoefficientInRationalFunction) {
   EXPECT_EQ(coeff.getConstantTerm(), Fraction(55, 64));
 }
 
-TEST(BarvinokTest, computeNumTerms) {
+TEST(BarvinokTest, computeNumTermsCone) {
   // The following test is taken from
   // Verdoolaege, Sven, et al. "Counting integer points in parametric
   // polytopes using Barvinok's rational functions." Algorithmica 48 (2007):
@@ -233,4 +235,69 @@ TEST(BarvinokTest, computeNumTerms) {
     for (unsigned j = 0; j < 2; j++)
       for (unsigned k = 0; k < 2; k++)
         EXPECT_EQ(count[i][j][k], 1);
+}
+
+/// We define some simple polyhedra with unimodular tangent cones and verify
+/// that the returned generating functions correspond to those calculated by
+/// hand.
+TEST(BarvinokTest, computeNumTermsPolytope) {
+  // A cube of side 1.
+  PolyhedronH poly =
+      parseRelationFromSet("(x, y, z) : (x >= 0, y >= 0, z >= 0, -x + 1 >= 0, "
+                           "-y + 1 >= 0, -z + 1 >= 0)",
+                           0);
+
+  std::vector<std::pair<PresburgerSet, GeneratingFunction>> count =
+      computePolytopeGeneratingFunction(poly);
+  // There is only one chamber, as it is non-parametric.
+  EXPECT_EQ(count.size(), 9u);
+
+  GeneratingFunction gf = count[0].second;
+  EXPECT_EQ_REPR_GENERATINGFUNCTION(
+      gf,
+      GeneratingFunction(
+          0, {1, 1, 1, 1, 1, 1, 1, 1},
+          {makeFracMatrix(1, 3, {{1, 1, 1}}), makeFracMatrix(1, 3, {{0, 1, 1}}),
+           makeFracMatrix(1, 3, {{0, 1, 1}}), makeFracMatrix(1, 3, {{0, 0, 1}}),
+           makeFracMatrix(1, 3, {{0, 1, 1}}), makeFracMatrix(1, 3, {{0, 0, 1}}),
+           makeFracMatrix(1, 3, {{0, 0, 1}}),
+           makeFracMatrix(1, 3, {{0, 0, 0}})},
+          {{{-1, 0, 0}, {0, -1, 0}, {0, 0, -1}},
+           {{0, 0, 1}, {-1, 0, 0}, {0, -1, 0}},
+           {{0, 1, 0}, {-1, 0, 0}, {0, 0, -1}},
+           {{0, 1, 0}, {0, 0, 1}, {-1, 0, 0}},
+           {{1, 0, 0}, {0, -1, 0}, {0, 0, -1}},
+           {{1, 0, 0}, {0, 0, 1}, {0, -1, 0}},
+           {{1, 0, 0}, {0, 1, 0}, {0, 0, -1}},
+           {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}}));
+
+  // A right-angled triangle with side p.
+  poly =
+      parseRelationFromSet("(x, y)[N] : (x >= 0, y >= 0, -x - y + N >= 0)", 0);
+
+  count = computePolytopeGeneratingFunction(poly);
+  // There is only one chamber: p ≥ 0
+  EXPECT_EQ(count.size(), 4u);
+
+  gf = count[0].second;
+  EXPECT_EQ_REPR_GENERATINGFUNCTION(
+      gf, GeneratingFunction(
+              1, {1, 1, 1},
+              {makeFracMatrix(2, 2, {{0, 1}, {0, 0}}),
+               makeFracMatrix(2, 2, {{0, 1}, {0, 0}}),
+               makeFracMatrix(2, 2, {{0, 0}, {0, 0}})},
+              {{{-1, 1}, {-1, 0}}, {{1, -1}, {0, -1}}, {{1, 0}, {0, 1}}}));
+
+  // Cartesian product of a cube with side M and a right triangle with side N.
+  poly = parseRelationFromSet(
+      "(x, y, z, w, a)[M, N] : (x >= 0, y >= 0, z >= 0, -x + M >= 0, -y + M >= "
+      "0, -z + M >= 0, w >= 0, a >= 0, -w - a + N >= 0)",
+      0);
+
+  count = computePolytopeGeneratingFunction(poly);
+
+  EXPECT_EQ(count.size(), 25u);
+
+  gf = count[0].second;
+  EXPECT_EQ(gf.getNumerators().size(), 24u);
 }

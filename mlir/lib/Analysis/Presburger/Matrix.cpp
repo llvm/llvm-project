@@ -29,6 +29,22 @@ Matrix<T>::Matrix(unsigned rows, unsigned columns, unsigned reservedRows,
   data.reserve(std::max(nRows, reservedRows) * nReservedColumns);
 }
 
+/// We cannot use the default implementation of operator== as it compares
+/// fields like `reservedColumns` etc., which are not part of the data.
+template <typename T>
+bool Matrix<T>::operator==(const Matrix<T> &m) const {
+  if (nRows != m.getNumRows())
+    return false;
+  if (nColumns != m.getNumColumns())
+    return false;
+
+  for (unsigned i = 0; i < nRows; i++)
+    if (getRow(i) != m.getRow(i))
+      return false;
+
+  return true;
+}
+
 template <typename T>
 Matrix<T> Matrix<T>::identity(unsigned dimension) {
   Matrix matrix(dimension, dimension);
@@ -296,6 +312,12 @@ void Matrix<T>::addToRow(unsigned row, ArrayRef<T> rowVec, const T &scale) {
 }
 
 template <typename T>
+void Matrix<T>::scaleRow(unsigned row, const T &scale) {
+  for (unsigned col = 0; col < nColumns; ++col)
+    at(row, col) *= scale;
+}
+
+template <typename T>
 void Matrix<T>::addToColumn(unsigned sourceColumn, unsigned targetColumn,
                             const T &scale) {
   if (scale == 0)
@@ -314,6 +336,12 @@ template <typename T>
 void Matrix<T>::negateRow(unsigned row) {
   for (unsigned column = 0, e = getNumColumns(); column < e; ++column)
     at(row, column) = -at(row, column);
+}
+
+template <typename T>
+void Matrix<T>::negateMatrix() {
+  for (unsigned row = 0; row < nRows; ++row)
+    negateRow(row);
 }
 
 template <typename T>
@@ -355,12 +383,43 @@ static void modEntryColumnOperation(Matrix<MPInt> &m, unsigned row,
 }
 
 template <typename T>
+Matrix<T> Matrix<T>::getSubMatrix(unsigned fromRow, unsigned toRow,
+                                  unsigned fromColumn,
+                                  unsigned toColumn) const {
+  assert(fromRow <= toRow && "end of row range must be after beginning!");
+  assert(toRow < nRows && "end of row range out of bounds!");
+  assert(fromColumn <= toColumn &&
+         "end of column range must be after beginning!");
+  assert(toColumn < nColumns && "end of column range out of bounds!");
+  Matrix<T> subMatrix(toRow - fromRow + 1, toColumn - fromColumn + 1);
+  for (unsigned i = fromRow; i <= toRow; ++i)
+    for (unsigned j = fromColumn; j <= toColumn; ++j)
+      subMatrix(i - fromRow, j - fromColumn) = at(i, j);
+  return subMatrix;
+}
+
+template <typename T>
 void Matrix<T>::print(raw_ostream &os) const {
   for (unsigned row = 0; row < nRows; ++row) {
     for (unsigned column = 0; column < nColumns; ++column)
       os << at(row, column) << ' ';
     os << '\n';
   }
+}
+
+/// We iterate over the `indicator` bitset, checking each bit. If a bit is 1,
+/// we append it to one matrix, and if it is zero, we append it to the other.
+template <typename T>
+std::pair<Matrix<T>, Matrix<T>>
+Matrix<T>::splitByBitset(ArrayRef<int> indicator) {
+  Matrix<T> rowsForOne(0, nColumns), rowsForZero(0, nColumns);
+  for (unsigned i = 0; i < nRows; i++) {
+    if (indicator[i] == 1)
+      rowsForOne.appendExtraRow(getRow(i));
+    else
+      rowsForZero.appendExtraRow(getRow(i));
+  }
+  return {rowsForOne, rowsForZero};
 }
 
 template <typename T>
@@ -696,4 +755,21 @@ void FracMatrix::LLL(Fraction delta) {
       k = k > 1 ? k - 1 : 1;
     }
   }
+}
+
+IntMatrix FracMatrix::normalizeRows() const {
+  unsigned numRows = getNumRows();
+  unsigned numColumns = getNumColumns();
+  IntMatrix normalized(numRows, numColumns);
+
+  MPInt lcmDenoms = MPInt(1);
+  for (unsigned i = 0; i < numRows; i++) {
+    // For a row, first compute the LCM of the denominators.
+    for (unsigned j = 0; j < numColumns; j++)
+      lcmDenoms = lcm(lcmDenoms, at(i, j).den);
+    // Then, multiply by it throughout and convert to integers.
+    for (unsigned j = 0; j < numColumns; j++)
+      normalized(i, j) = (at(i, j) * lcmDenoms).getAsInteger();
+  }
+  return normalized;
 }

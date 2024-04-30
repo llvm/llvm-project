@@ -47,6 +47,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("simd128", SIMDLevel >= SIMD128)
       .Case("relaxed-simd", SIMDLevel >= RelaxedSIMD)
+      .Case("half-precision", HasHalfPrecision)
       .Case("nontrapping-fptoint", HasNontrappingFPToInt)
       .Case("sign-ext", HasSignExt)
       .Case("exception-handling", HasExceptionHandling)
@@ -147,19 +148,26 @@ void WebAssemblyTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
 bool WebAssemblyTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
-  if (CPU == "bleeding-edge") {
-    Features["nontrapping-fptoint"] = true;
-    Features["sign-ext"] = true;
-    Features["bulk-memory"] = true;
-    Features["atomics"] = true;
+  auto addGenericFeatures = [&]() {
+    Features["multivalue"] = true;
     Features["mutable-globals"] = true;
-    Features["tail-call"] = true;
     Features["reference-types"] = true;
-    Features["multimemory"] = true;
-    setSIMDLevel(Features, SIMD128, true);
-  } else if (CPU == "generic") {
     Features["sign-ext"] = true;
-    Features["mutable-globals"] = true;
+  };
+  auto addBleedingEdgeFeatures = [&]() {
+    addGenericFeatures();
+    Features["atomics"] = true;
+    Features["bulk-memory"] = true;
+    Features["multimemory"] = true;
+    Features["nontrapping-fptoint"] = true;
+    Features["tail-call"] = true;
+    Features["half-precision"] = true;
+    setSIMDLevel(Features, SIMD128, true);
+  };
+  if (CPU == "generic") {
+    addGenericFeatures();
+  } else if (CPU == "bleeding-edge") {
+    addBleedingEdgeFeatures();
   }
 
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
@@ -214,6 +222,15 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-bulk-memory") {
       HasBulkMemory = false;
+      continue;
+    }
+    if (Feature == "+half-precision") {
+      SIMDLevel = std::max(SIMDLevel, SIMD128);
+      HasHalfPrecision = true;
+      continue;
+    }
+    if (Feature == "-half-precision") {
+      HasHalfPrecision = false;
       continue;
     }
     if (Feature == "+atomics") {

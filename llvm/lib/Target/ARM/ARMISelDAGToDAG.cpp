@@ -3032,11 +3032,6 @@ void ARMDAGToDAGISel::SelectVLDDup(SDNode *N, bool IsIntrinsic,
   }
   if (is64BitVector || NumVecs == 1) {
     // Double registers and VLD1 quad registers are directly supported.
-  } else if (NumVecs == 2) {
-    const SDValue OpsA[] = {MemAddr, Align, Pred, Reg0, Chain};
-    SDNode *VLdA = CurDAG->getMachineNode(QOpcodes0[OpcodeIndex], dl, ResTy,
-                                          MVT::Other, OpsA);
-    Chain = SDValue(VLdA, 1);
   } else {
     SDValue ImplDef = SDValue(
         CurDAG->getMachineNode(TargetOpcode::IMPLICIT_DEF, dl, ResTy), 0);

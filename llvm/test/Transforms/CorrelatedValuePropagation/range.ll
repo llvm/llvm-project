@@ -102,9 +102,9 @@ if.end8:
 define i32 @test4(i32 %c) nounwind {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    switch i32 [[C:%.*]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 1, label [[SW_BB:%.*]]
-; CHECK-NEXT:    i32 2, label [[SW_BB]]
-; CHECK-NEXT:    i32 4, label [[SW_BB]]
+; CHECK-NEXT:      i32 1, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 2, label [[SW_BB]]
+; CHECK-NEXT:      i32 4, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    br i1 true, label [[IF_THEN:%.*]], label [[IF_END:%.*]]
@@ -207,8 +207,8 @@ define i1 @test7(i32 %c) nounwind {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    switch i32 [[C:%.*]], label [[SW_DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 6, label [[SW_BB:%.*]]
-; CHECK-NEXT:    i32 7, label [[SW_BB]]
+; CHECK-NEXT:      i32 6, label [[SW_BB:%.*]]
+; CHECK-NEXT:      i32 7, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    ret i1 true
@@ -243,7 +243,7 @@ define i1 @test8(ptr %p) {
 ; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P:%.*]], align 4, !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    ret i1 false
 ;
-  %a = load i64, i64* %p, !range !{i64 4, i64 255}
+  %a = load i64, ptr %p, !range !{i64 4, i64 255}
   %res = icmp eq i64 %a, 0
   ret i1 %res
 }
@@ -253,7 +253,7 @@ define i1 @test9(ptr %p) {
 ; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P:%.*]], align 4, !range [[RNG1:![0-9]+]]
 ; CHECK-NEXT:    ret i1 true
 ;
-  %a = load i64, i64* %p, !range !{i64 0, i64 1}
+  %a = load i64, ptr %p, !range !{i64 0, i64 1}
   %res = icmp eq i64 %a, 0
   ret i1 %res
 }
@@ -263,7 +263,7 @@ define i1 @test10(ptr %p) {
 ; CHECK-NEXT:    [[A:%.*]] = load i64, ptr [[P:%.*]], align 4, !range [[RNG2:![0-9]+]]
 ; CHECK-NEXT:    ret i1 false
 ;
-  %a = load i64, i64* %p, !range !{i64 4, i64 8, i64 15, i64 20}
+  %a = load i64, ptr %p, !range !{i64 4, i64 8, i64 15, i64 20}
   %res = icmp eq i64 %a, 0
   ret i1 %res
 }
@@ -278,7 +278,7 @@ define i1 @test11() {
 ; CHECK:       next:
 ; CHECK-NEXT:    ret i1 true
 ;
-  %positive = load i32, i32* @g, !range !{i32 1, i32 2048}
+  %positive = load i32, ptr @g, !range !{i32 1, i32 2048}
   %add = add i32 %positive, 1
   %test = icmp sgt i32 %add, 0
   br label %next
@@ -661,7 +661,7 @@ define i1 @test15(i32 %a) {
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;
-  %limit = load i32, i32* @limit, !range !{i32 0, i32 256}
+  %limit = load i32, ptr @limit, !range !{i32 0, i32 256}
   %cmp = icmp ult i32 %a, %limit
   br i1 %cmp, label %then, label %else
 
@@ -790,8 +790,8 @@ define i32 @test18(i8 %a) {
 ; CHECK-NEXT:    br label [[DISPATCH:%.*]]
 ; CHECK:       dispatch:
 ; CHECK-NEXT:    switch i8 [[A]], label [[DISPATCH]] [
-; CHECK-NEXT:    i8 93, label [[TARGET93:%.*]]
-; CHECK-NEXT:    i8 -111, label [[DISPATCH]]
+; CHECK-NEXT:      i8 93, label [[TARGET93:%.*]]
+; CHECK-NEXT:      i8 -111, label [[DISPATCH]]
 ; CHECK-NEXT:    ]
 ; CHECK:       target93:
 ; CHECK-NEXT:    ret i32 93
@@ -817,8 +817,8 @@ define i8 @test19(i8 %a) {
 ; CHECK-NEXT:    br label [[DISPATCH:%.*]]
 ; CHECK:       dispatch:
 ; CHECK-NEXT:    switch i8 [[A]], label [[DISPATCH]] [
-; CHECK-NEXT:    i8 93, label [[TARGET93:%.*]]
-; CHECK-NEXT:    i8 -111, label [[DISPATCH]]
+; CHECK-NEXT:      i8 93, label [[TARGET93:%.*]]
+; CHECK-NEXT:      i8 -111, label [[DISPATCH]]
 ; CHECK-NEXT:    ]
 ; CHECK:       target93:
 ; CHECK-NEXT:    ret i8 96
@@ -846,8 +846,8 @@ define i1 @test20(i64 %a) {
 ; CHECK-NEXT:    br label [[DISPATCH:%.*]]
 ; CHECK:       dispatch:
 ; CHECK-NEXT:    switch i64 [[A]], label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i64 0, label [[EXIT2:%.*]]
-; CHECK-NEXT:    i64 -2147483647, label [[EXIT2]]
+; CHECK-NEXT:      i64 0, label [[EXIT2:%.*]]
+; CHECK-NEXT:      i64 -2147483647, label [[EXIT2]]
 ; CHECK-NEXT:    ]
 ; CHECK:       default:
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[B]], 0
@@ -1121,6 +1121,70 @@ if:
 
 else:
   ret i1 true
+}
+
+define i1 @icmp_eq_range_attr(i8 range(i8 1, 0) %i) {
+; CHECK-LABEL: @icmp_eq_range_attr(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = icmp eq i8 %i, 0
+  ret i1 %cmp
+}
+
+define i1 @neg_icmp_eq_range_attr(i8 range(i8 -1, 1) %i) {
+; CHECK-LABEL: @neg_icmp_eq_range_attr(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[I:%.*]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = icmp eq i8 %i, 0
+  ret i1 %cmp
+}
+
+declare range(i8 1, 0) i8 @returns_non_zero_range_helper()
+declare range(i8 -1, 1) i8 @returns_contain_zero_range_helper()
+
+define i1 @icmp_eq_range_return() {
+; CHECK-LABEL: @icmp_eq_range_return(
+; CHECK-NEXT:    [[I:%.*]] = call i8 @returns_non_zero_range_helper()
+; CHECK-NEXT:    ret i1 false
+;
+  %i = call i8 @returns_non_zero_range_helper()
+  %cmp = icmp eq i8 %i, 0
+  ret i1 %cmp
+}
+
+define i1 @neg_icmp_eq_range_return() {
+; CHECK-LABEL: @neg_icmp_eq_range_return(
+; CHECK-NEXT:    [[I:%.*]] = call i8 @returns_contain_zero_range_helper()
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[I]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %i = call i8 @returns_contain_zero_range_helper()
+  %cmp = icmp eq i8 %i, 0
+  ret i1 %cmp
+}
+
+declare i8 @returns_i8_helper()
+
+define i1 @icmp_eq_range_call() {
+; CHECK-LABEL: @icmp_eq_range_call(
+; CHECK-NEXT:    [[I:%.*]] = call range(i8 1, 0) i8 @returns_i8_helper()
+; CHECK-NEXT:    ret i1 false
+;
+  %i = call range(i8 1, 0) i8 @returns_i8_helper()
+  %cmp = icmp eq i8 %i, 0
+  ret i1 %cmp
+}
+
+define i1 @neg_icmp_eq_range_call() {
+; CHECK-LABEL: @neg_icmp_eq_range_call(
+; CHECK-NEXT:    [[I:%.*]] = call range(i8 0, 11) i8 @returns_i8_helper()
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[I]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %i = call range(i8 0, 11) i8 @returns_i8_helper()
+  %cmp = icmp eq i8 %i, 0
+  ret i1 %cmp
 }
 
 declare i16 @llvm.ctlz.i16(i16, i1)

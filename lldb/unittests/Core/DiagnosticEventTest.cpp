@@ -11,6 +11,7 @@
 #include "Plugins/Platform/MacOSX/PlatformMacOSX.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteMacOSX.h"
 #include "TestingSupport/SubsystemRAII.h"
+#include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DebuggerEvents.h"
 #include "lldb/Host/FileSystem.h"
@@ -26,8 +27,6 @@ using namespace lldb_private::repro;
 static const constexpr std::chrono::seconds TIMEOUT(0);
 static const constexpr size_t DEBUGGERS = 3;
 
-static std::once_flag debugger_initialize_flag;
-
 namespace {
 class DiagnosticEventTest : public ::testing::Test {
 public:
@@ -35,7 +34,7 @@ public:
     FileSystem::Initialize();
     HostInfo::Initialize();
     PlatformMacOSX::Initialize();
-    std::call_once(debugger_initialize_flag,
+    std::call_once(TestUtilities::g_debugger_initialize_flag,
                    []() { Debugger::Initialize(nullptr); });
     ArchSpec arch("x86_64-apple-macosx-");
     Platform::SetHostPlatform(
