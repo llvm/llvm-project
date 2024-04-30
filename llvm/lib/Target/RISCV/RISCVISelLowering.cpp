@@ -13690,35 +13690,39 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
 
   // Rule 1
   using namespace SDPatternMatch;
-  auto getSelectCCPattern = [](SDValue Candidate, bool Inverse,
-                               SDValue &Select) -> auto {
+  auto matchSelectCC = [](SDValue Op, SDValue Candidate, bool Inverse,
+                          SDValue &Select) -> bool {
+    SDValue NegCandidate;
     if (Inverse)
-      return m_AllOf(
-          m_OneUse(m_Node(RISCVISD::SELECT_CC, m_Value(), m_Value(), m_Value(),
-                          /*TrueVal=*/m_Value(),
-                          /*FalseVal=*/m_Specific(Candidate))),
-          m_Value(Select));
+      return sd_match(
+                 Op,
+                 m_AllOf(m_OneUse(m_Node(RISCVISD::SELECT_CC, m_Value(),
+                                         m_Value(), m_Value(),
+                                         /*TrueVal=*/m_Value(NegCandidate),
+                                         /*FalseVal=*/m_Specific(Candidate))),
+                         m_Value(Select))) &&
+             NegCandidate != Candidate;
     else
-      return m_AllOf(
-          m_OneUse(m_Node(RISCVISD::SELECT_CC, m_Value(), m_Value(), m_Value(),
-                          /*TrueVal=*/m_Specific(Candidate),
-                          /*FalseVal=*/m_Value())),
-          m_Value(Select));
+      return sd_match(
+                 Op,
+                 m_AllOf(m_OneUse(m_Node(RISCVISD::SELECT_CC, m_Value(),
+                                         m_Value(), m_Value(),
+                                         /*TrueVal=*/m_Specific(Candidate),
+                                         /*FalseVal=*/m_Value(NegCandidate))),
+                         m_Value(Select))) &&
+             NegCandidate != Candidate;
   };
 
   auto buildSetCC = [&](SDValue Select, bool Inverse) -> SDValue {
     ISD::CondCode NewCC = cast<CondCodeSDNode>(Select->getOperand(2))->get();
     if (Inverse)
       NewCC = ISD::getSetCCInverse(NewCC, OpVT);
-    return DAG.getNode(
-        ISD::SETCC, DL, VT,
-        {Select->getOperand(0), Select->getOperand(1), DAG.getCondCode(NewCC)},
-        N->getFlags());
+    return DAG.getSetCC(DL, VT, Select->getOperand(0), Select->getOperand(1), NewCC);
   };
 
   SDValue SelectVal;
-  if (sd_match(N0, getSelectCCPattern(N1, false, SelectVal)) ||
-      sd_match(N1, getSelectCCPattern(N0, false, SelectVal))) {
+  if (matchSelectCC(N0, N1, false, SelectVal) ||
+      matchSelectCC(N1, N0, false, SelectVal)) {
     if (Cond == ISD::SETEQ) {
       // (seteq (SELECT_CC LHS, RHS, CC, N1, X), N1) => (setCC LHS, RHS)
       // (seteq N0, (SELECT_CC LHS, RHS, CC, N0, X)) => (setCC LHS, RHS)
@@ -13728,8 +13732,8 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
       // (setne N0, (SELECT_CC LHS, RHS, CC, N0, X)) => (setInvCC LHS, RHS)
       return buildSetCC(SelectVal, true);
     }
-  } else if (sd_match(N0, getSelectCCPattern(N1, true, SelectVal)) ||
-             sd_match(N1, getSelectCCPattern(N0, true, SelectVal))) {
+  } else if (matchSelectCC(N0, N1, true, SelectVal) ||
+             matchSelectCC(N1, N0, true, SelectVal)) {
     if (Cond == ISD::SETEQ) {
       // (seteq (SELECT_CC LHS, RHS, CC, X, N1), N1) => (setInvCC LHS, RHS)
       // (seteq N0, (SELECT_CC LHS, RHS, CC, X, N0)) => (setInvCC LHS, RHS)
