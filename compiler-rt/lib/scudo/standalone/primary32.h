@@ -365,7 +365,7 @@ public:
   }
 
   const char *getRegionInfoArrayAddress() const { return nullptr; }
-  static uptr getRegionInfoArraySize() { return 0; }
+  uptr getRegionInfoArraySize() { return 0; }
 
   static BlockInfo findNearestBlock(UNUSED const char *RegionInfoData,
                                     UNUSED uptr Ptr) {

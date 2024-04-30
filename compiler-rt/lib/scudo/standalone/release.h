@@ -19,7 +19,7 @@ namespace scudo {
 
 template <typename MemMapT> class RegionReleaseRecorder {
 public:
-  RegionReleaseRecorder(MemMapT *RegionMemMap, uptr Base, uptr Offset = 0)
+  RegionReleaseRecorder(MemMapT RegionMemMap, uptr Base, uptr Offset = 0)
       : RegionMemMap(RegionMemMap), Base(Base), Offset(Offset) {}
 
   uptr getReleasedRangesCount() const { return ReleasedRangesCount; }
@@ -32,7 +32,7 @@ public:
   // are offseted from `Base` + Offset.
   void releasePageRangeToOS(uptr From, uptr To) {
     const uptr Size = To - From;
-    RegionMemMap->releasePagesToOS(getBase() + Offset + From, Size);
+    RegionMemMap.releasePagesToOS(getBase() + Offset + From, Size);
     ReleasedRangesCount++;
     ReleasedBytes += Size;
   }
@@ -40,7 +40,7 @@ public:
 private:
   uptr ReleasedRangesCount = 0;
   uptr ReleasedBytes = 0;
-  MemMapT *RegionMemMap = nullptr;
+  MemMapT RegionMemMap = {};
   uptr Base = 0;
   // The release offset from Base. This is used when we know a given range after
   // Base will not be released.

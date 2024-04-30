@@ -210,6 +210,39 @@ struct TestConditionVariableConfig {
   };
   template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
 };
+
+struct TestMultiRegionsConfig {
+  static const bool MaySupportMemoryTagging = true;
+  template <class A>
+  using TSDRegistryT = TSDRegistrySharedT<A, 8U, 4U>; // Shared, max 8 TSDs.
+
+  struct Primary {
+    using SizeClassMap = AndroidSizeClassMap;
+    static const bool EnableMultiRegions = true;
+    static const bool EnableRandomOffset = false;
+    static const uptr RegionSizeLog = 18U;
+    static const uptr GroupSizeLog = 18U;
+    static const uptr MapSizeIncrement = 1UL << 18;
+    static const s32 MinReleaseToOsIntervalMs = 1000;
+    static const s32 MaxReleaseToOsIntervalMs = 1000;
+  };
+  template <typename Config> using PrimaryT = SizeClassAllocator64<Config>;
+
+  struct Secondary {
+    struct Cache {
+      static const u32 EntriesArraySize = 256U;
+      static const u32 QuarantineSize = 32U;
+      static const u32 DefaultMaxEntriesCount = 32U;
+      static const uptr DefaultMaxEntrySize = 2UL << 20;
+      static const s32 MinReleaseToOsIntervalMs = 0;
+      static const s32 MaxReleaseToOsIntervalMs = 1000;
+    };
+    template <typename Config> using CacheT = MapAllocatorCache<Config>;
+  };
+
+  template <typename Config> using SecondaryT = MapAllocator<Config>;
+};
+
 } // namespace scudo
 
 #if SCUDO_FUCHSIA
@@ -219,7 +252,8 @@ struct TestConditionVariableConfig {
 #define SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                              \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, DefaultConfig)                          \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, AndroidConfig)                          \
-  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConditionVariableConfig)
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConditionVariableConfig)            \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestMultiRegionsConfig)
 #endif
 
 #define SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TYPE)                             \

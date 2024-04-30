@@ -84,6 +84,20 @@ PRIMARY_OPTIONAL(const uptr, CompactPtrScale, SCUDO_MIN_ALIGNMENT_LOG)
 // Indicates support for offsetting the start of a region by a random number of
 // pages. This is only used if `EnableContiguousRegions` is enabled.
 PRIMARY_OPTIONAL(const bool, EnableRandomOffset, false)
+
+// This allows each size class to have multiple regions instead of one. Note
+// that this is an experimental option so it has a few constraints while using.
+//   a. Pointer compaction is diabled. Which means `CompactPtrT` needs to be the
+//      pointer integral type, i.e., uptr.
+//   b. `EnableRandomOffset` needs to be false. Pointer grouping requires
+//      the beginning of allocation address of a region to be aligned with
+//      `GroupSizeLog`. Without pointer compaction, it relies the region to be
+//      allocated with proper alignment and the random offset will break the
+//      assumption.
+//   c. Condition variable is not supported under this mode. This is still under
+//      developing.
+PRIMARY_OPTIONAL(const bool, EnableMultiRegions, false)
+
 PRIMARY_OPTIONAL(const s32, DefaultReleaseToOsIntervalMs, INT32_MIN)
 
 // When `EnableContiguousRegions` is true, all regions will be be arranged in

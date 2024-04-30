@@ -150,6 +150,24 @@ template <typename SizeClassMapT> struct TestConfig5 {
   };
 };
 
+template <typename SizeClassMapT> struct MultiRegionsConfig {
+  static const bool MaySupportMemoryTagging = true;
+  template <typename> using TSDRegistryT = void;
+  template <typename> using PrimaryT = void;
+  template <typename> using SecondaryT = void;
+
+  struct Primary {
+    using SizeClassMap = SizeClassMapT;
+    static const bool EnableMultiRegions = true;
+    static const scudo::uptr RegionSizeLog = 26U;
+    static const scudo::uptr GroupSizeLog = 18U;
+    static const bool EnableRandomOffset = false;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+    static const scudo::s32 MinReleaseToOsIntervalMs = 1000;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = 1000;
+  };
+};
+
 template <template <typename> class BaseConfig, typename SizeClassMapT>
 struct Config : public BaseConfig<SizeClassMapT> {};
 
@@ -168,6 +186,10 @@ struct TestAllocator : public SizeClassAllocator<BaseConfig, SizeClassMapT> {
     this->verifyAllBlocksAreReleasedTestOnly();
     this->unmapTestOnly();
   }
+  // TODO: Remove this when we support `iterateOverBlocks` with multiple-regions
+  // mode.
+  static const bool EnableMultiRegions =
+      scudo::PrimaryConfig<BaseConfig<SizeClassMapT>>::getEnableMultiRegions();
 
   void *operator new(size_t size) {
     void *p = nullptr;
@@ -191,7 +213,8 @@ struct ScudoPrimaryTest : public Test {};
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig2)                            \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig3)                            \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig4)                            \
-  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig5)
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig5)                            \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, MultiRegionsConfig)
 #endif
 
 #define SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TYPE)                             \
@@ -297,6 +320,8 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
 
 SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
   using Primary = TestAllocator<TypeParam, scudo::DefaultSizeClassMap>;
+  if (Primary::EnableMultiRegions)
+    return;
   std::unique_ptr<Primary> Allocator(new Primary);
   Allocator->init(/*ReleaseToOsInterval=*/-1);
   typename Primary::CacheT Cache;
