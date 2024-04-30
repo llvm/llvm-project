@@ -8785,9 +8785,12 @@ class sve_bfloat_convert<bit N, string asm>
   let mayRaiseFPException = 1;
 }
 
-multiclass sve_bfloat_convert<bit N, string asm, SDPatternOperator op> {
+multiclass sve_bfloat_convert<bit N, string asm, SDPatternOperator int_op, SDPatternOperator ir_op> {
   def NAME : sve_bfloat_convert<N, asm>;
-  def : SVE_3_Op_Pat<nxv8bf16, op, nxv8bf16, nxv8i1, nxv4f32, !cast<Instruction>(NAME)>;
+  def : SVE_3_Op_Pat<nxv8bf16, int_op, nxv8bf16, nxv8i1, nxv4f32, !cast<Instruction>(NAME)>;
+
+  def : SVE_1_Op_Passthru_Round_Pat<nxv2bf16, ir_op, nxv2i1, nxv2f32, !cast<Instruction>(NAME)>;
+  def : SVE_1_Op_Passthru_Round_Pat<nxv4bf16, ir_op, nxv4i1, nxv4f32, !cast<Instruction>(NAME)>;
 }
 
 //===----------------------------------------------------------------------===//
