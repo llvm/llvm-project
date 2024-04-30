@@ -51,7 +51,6 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  const MachineRegisterInfo *MRI = &MF.getRegInfo();
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   LLVM_DEBUG(dbgs() << "***** RISCVDeadRegisterDefinitions *****\n");
@@ -77,8 +76,7 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
           LLVM_DEBUG(dbgs() << "    Ignoring, def is tied operand.\n");
           continue;
         }
-        Register Reg = MO.getReg();
-        if (!MO.isDead() && !MRI->use_nodbg_empty(Reg))
+        if (!MO.isDead())
           continue;
         LLVM_DEBUG(dbgs() << "    Dead def operand #" << I << " in:\n      ";
                    MI.print(dbgs()));
@@ -88,7 +86,6 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
           continue;
         }
         MO.setReg(RISCV::X0);
-        MO.setIsDead();
         LLVM_DEBUG(dbgs() << "    Replacing with zero register. New:\n      ";
                    MI.print(dbgs()));
         ++NumDeadDefsReplaced;
