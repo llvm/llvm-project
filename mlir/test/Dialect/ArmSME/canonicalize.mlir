@@ -1,8 +1,6 @@
-// RUN: mlir-opt -canonicalize -split-input-file -verify-diagnostics %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s -canonicalize | mlir-opt | FileCheck %s
 
 // This tests that dead tile values are removed from control flow.
-
-// -----
 
 // CHECK-LABEL: @unused_ssa_tile_is_removed_from_blocks
 // CHECK-NOT: vector<[4]x[4]xf32>

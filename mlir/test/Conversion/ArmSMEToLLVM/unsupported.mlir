@@ -1,5 +1,4 @@
-// RUN: mlir-opt %s --pass-pipeline="builtin.module(func.func(convert-arm-sme-to-llvm))" \
-// RUN: -split-input-file -allow-unregistered-dialect -verify-diagnostics
+// RUN: mlir-opt %s --pass-pipeline="builtin.module(func.func(convert-arm-sme-to-llvm))" -verify-diagnostics
 
 //===----------------------------------------------------------------------===//
 // arm_sme.outerproduct

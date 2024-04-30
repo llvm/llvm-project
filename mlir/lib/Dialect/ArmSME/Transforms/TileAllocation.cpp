@@ -414,7 +414,7 @@ coalesceTileLiveRanges(DenseMap<Value, LiveRange> &initialLiveRanges) {
   return std::move(coalescedLiveRanges);
 }
 
-/// Greedily allocate tile IDs to live ranges spill using simple heuristics.
+/// Greedily allocate tile IDs to live ranges. Spill using simple heuristics.
 /// Note: This does not attempt to fill holes in live/allocated ranges.
 void allocateTilesToLiveRanges(ArrayRef<LiveRange *> liveRanges) {
   TileAllocator tileAllocator;
@@ -629,8 +629,8 @@ LogicalResult mlir::arm_sme::allocateSMETiles(FunctionOpInterface function,
     return failure();
   }
 
-  /// 6. Erase trivially dead tile operations (e.g. a ZeroOp with no
-  /// users). This prevents the LLVM conversion needlessly inserting spills.
+  // 6. Erase trivially dead tile operations (e.g. a ZeroOp with no
+  // users). This prevents the LLVM conversion needlessly inserting spills.
   eraseTriviallyDeadTileOps(rewriter, function);
   return success();
 }
