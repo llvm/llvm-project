@@ -2815,7 +2815,7 @@ private:
 
   /// Detect if current architecture is an APU.
   Error checkIfAPU() {
-#if (HIP_VERSION_MAJOR >= 6 && HIP_VERSION_MINOR >= 1)
+#if (HSA_AMD_INTERFACE_VERSION_MAJOR >= 1 && HSA_AMD_INTERFACE_VERSION_MINOR >= 5)
 
     uint8_t MemoryProperties[8];
 
