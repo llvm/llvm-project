@@ -328,7 +328,7 @@ public:
       cudaAttr = fir::CUDADataAttributeAttr::get(rewriter.getContext(), *attr);
     auto firDeclareOp = rewriter.create<fir::DeclareOp>(
         loc, memref.getType(), memref, declareOp.getShape(),
-        declareOp.getTypeparams(), /*dummy_scope=*/nullptr,
+        declareOp.getTypeparams(), declareOp.getDummyScope(),
         declareOp.getUniqName(), fortranAttrs, cudaAttr);
 
     // Propagate other attributes from hlfir.declare to fir.declare.
