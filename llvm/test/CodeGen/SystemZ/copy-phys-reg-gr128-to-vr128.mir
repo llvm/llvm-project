@@ -10,8 +10,7 @@ body:             |
     ; CHECK-LABEL: name: copy_gr128_to_vr128__r0q_to_v0
     ; CHECK: liveins: $r0q
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $v0 = VLVGG undef $v0, $r0d, $noreg, 0
-    ; CHECK-NEXT: $v0 = VLVGG $v0, $r1d, $noreg, 1
+    ; CHECK-NEXT: $v0 = VLVGP $r0d, $r1d
     ; CHECK-NEXT: Return implicit $v0
     $v0 = COPY $r0q
     Return implicit $v0
@@ -26,8 +25,7 @@ body:             |
     ; CHECK-LABEL: name: copy_gr128_to_vr128__r0q_to_v0_killed
     ; CHECK: liveins: $r0q
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $v0 = VLVGG undef $v0, $r0d, $noreg, 0
-    ; CHECK-NEXT: $v0 = VLVGG $v0, $r1d, $noreg, 1
+    ; CHECK-NEXT: $v0 = VLVGP $r0d, $r1d
     ; CHECK-NEXT: Return implicit $v0
     $v0 = COPY killed $r0q
     Return implicit $v0
@@ -57,8 +55,7 @@ body:             |
     ; CHECK-LABEL: name: copy_gr128_to_vr128__r0q_to_v0_subreg0
     ; CHECK: liveins: $r0d
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $v0 = VLVGG undef $v0, $r0d, $noreg, 0
-    ; CHECK-NEXT: $v0 = VLVGG $v0, $r1d, $noreg, 1
+    ; CHECK-NEXT: $v0 = VLVGP $r0d, $r1d
     ; CHECK-NEXT: Return implicit $v0
     $v0 = COPY $r0q
     Return implicit $v0
@@ -73,8 +70,7 @@ body:             |
     ; CHECK-LABEL: name: copy_gr128_to_vr128__r0q_to_v0_subreg1
     ; CHECK: liveins: $r1d
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $v0 = VLVGG undef $v0, $r0d, $noreg, 0
-    ; CHECK-NEXT: $v0 = VLVGG $v0, $r1d, $noreg, 1
+    ; CHECK-NEXT: $v0 = VLVGP $r0d, $r1d
     ; CHECK-NEXT: Return implicit $v0
     $v0 = COPY $r0q
     Return implicit $v0

@@ -845,12 +845,12 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     MCRegister DestH64 = RI.getSubReg(DestReg, SystemZ::subreg_h64);
     MCRegister DestL64 = RI.getSubReg(DestReg, SystemZ::subreg_l64);
 
-    BuildMI(MBB, MBBI, DL, get(SystemZ::VLGVG), DestL64)
+    BuildMI(MBB, MBBI, DL, get(SystemZ::VLGVG), DestH64)
         .addReg(SrcReg)
         .addReg(SystemZ::NoRegister)
         .addImm(0)
         .addDef(DestReg, RegState::Implicit);
-    BuildMI(MBB, MBBI, DL, get(SystemZ::VLGVG), DestH64)
+    BuildMI(MBB, MBBI, DL, get(SystemZ::VLGVG), DestL64)
         .addReg(SrcReg, getKillRegState(KillSrc))
         .addReg(SystemZ::NoRegister)
         .addImm(1);
@@ -859,19 +859,9 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (SystemZ::VR128BitRegClass.contains(DestReg) &&
       SystemZ::GR128BitRegClass.contains(SrcReg)) {
-    MCRegister SrcH64 = RI.getSubReg(SrcReg, SystemZ::subreg_h64);
-    MCRegister SrcL64 = RI.getSubReg(SrcReg, SystemZ::subreg_l64);
-
-    BuildMI(MBB, MBBI, DL, get(SystemZ::VLVGG), DestReg)
-        .addReg(DestReg, RegState::Undef)
-        .addReg(SrcH64)
-        .addReg(SystemZ::NoRegister)
-        .addImm(0);
-    BuildMI(MBB, MBBI, DL, get(SystemZ::VLVGG), DestReg)
-        .addReg(DestReg)
-        .addReg(SrcL64)
-        .addReg(SystemZ::NoRegister)
-        .addImm(1);
+    BuildMI(MBB, MBBI, DL, get(SystemZ::VLVGP), DestReg)
+        .addReg(RI.getSubReg(SrcReg, SystemZ::subreg_h64))
+        .addReg(RI.getSubReg(SrcReg, SystemZ::subreg_l64));
     return;
   }
 

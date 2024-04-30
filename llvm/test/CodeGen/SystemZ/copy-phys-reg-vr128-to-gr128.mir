@@ -10,8 +10,8 @@ body:             |
     ; CHECK-LABEL: name: copy_vr128_to_gr128__v0_to_r0q
     ; CHECK: liveins: $v0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $r1d = VLGVG $v0, $noreg, 0, implicit-def $r0q
-    ; CHECK-NEXT: $r0d = VLGVG $v0, $noreg, 1
+    ; CHECK-NEXT: $r0d = VLGVG $v0, $noreg, 0, implicit-def $r0q
+    ; CHECK-NEXT: $r1d = VLGVG $v0, $noreg, 1
     ; CHECK-NEXT: Return implicit $r0q
     $r0q = COPY $v0
     Return implicit $r0q
@@ -26,8 +26,8 @@ body:             |
     ; CHECK-LABEL: name: copy_vr128_to_gr128__v0_to_r0q_killed
     ; CHECK: liveins: $v0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $r1d = VLGVG $v0, $noreg, 0, implicit-def $r0q
-    ; CHECK-NEXT: $r0d = VLGVG killed $v0, $noreg, 1
+    ; CHECK-NEXT: $r0d = VLGVG $v0, $noreg, 0, implicit-def $r0q
+    ; CHECK-NEXT: $r1d = VLGVG killed $v0, $noreg, 1
     ; CHECK-NEXT: Return implicit $r0q
     $r0q = COPY killed $v0
     Return implicit $r0q
