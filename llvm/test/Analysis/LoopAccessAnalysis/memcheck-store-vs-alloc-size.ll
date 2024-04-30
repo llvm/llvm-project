@@ -6,8 +6,8 @@
 ; Here, we use i19 instead of i64 because it has a different alloc size to its store size.
 
 ;CHECK: function 'fastCopy':
-;CHECK: (Low: %op High: (27 + %op))
-;CHECK: (Low: %src High: (27 + %src))
+;CHECK: (Low: %op High: (27 + %op)<nuw>)
+;CHECK: (Low: %src High: (27 + %src)<nuw>)
 
 define void @fastCopy(ptr nocapture readonly %src, ptr nocapture %op) {
 entry:

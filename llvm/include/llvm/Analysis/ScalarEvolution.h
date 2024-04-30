@@ -1346,6 +1346,12 @@ public:
     }
   };
 
+  void setExprScope(const Loop *L);
+
+  void clearExprScope();
+
+  bool isScopedExpr(const SCEV *S);
+
 private:
   /// A CallbackVH to arrange for ScalarEvolution to be notified whenever a
   /// Value is deleted.
@@ -1434,6 +1440,14 @@ private:
 
   /// Memoized values for the getConstantMultiple
   DenseMap<const SCEV *, APInt> ConstantMultipleCache;
+
+  /// When not nullptr, this indicates the scope for which an expression needs
+  /// to be valid for. This allows creation of SCEV expressions that only need
+  /// to be valid in a specific loop, allowing to use more specific no-wrap
+  /// flags.
+  const Loop *ExprScope = nullptr;
+
+  SmallVector<const SCEV *> ScopedExprs;
 
   /// Return the Value set from which the SCEV expr is generated.
   ArrayRef<Value *> getSCEVValues(const SCEV *S);

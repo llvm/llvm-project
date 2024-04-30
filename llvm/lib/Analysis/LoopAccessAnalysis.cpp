@@ -17,6 +17,7 @@
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -208,7 +209,8 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
                                     PredicatedScalarEvolution &PSE,
                                     bool NeedsFreeze) {
   ScalarEvolution *SE = PSE.getSE();
-
+  SE->setExprScope(Lp);
+  auto ClearOnExit = make_scope_exit([SE]() { SE->clearExprScope(); });
   const SCEV *ScStart;
   const SCEV *ScEnd;
 
@@ -222,6 +224,10 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
     ScStart = AR->getStart();
     ScEnd = AR->evaluateAtIteration(Ex, *SE);
     const SCEV *Step = AR->getStepRecurrence(*SE);
+    if (AR->getNoWrapFlags(SCEV::FlagNUW) && SE->isScopedExpr(ScEnd)) {
+      if (auto *Comm = dyn_cast<SCEVCommutativeExpr>(ScEnd))
+        const_cast<SCEVCommutativeExpr *>(Comm)->setNoWrapFlags(SCEV::FlagNUW);
+    }
 
     // For expressions with negative step, the upper bound is ScStart and the
     // lower bound is ScEnd.
@@ -243,7 +249,13 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
   auto &DL = Lp->getHeader()->getModule()->getDataLayout();
   Type *IdxTy = DL.getIndexType(Ptr->getType());
   const SCEV *EltSizeSCEV = SE->getStoreSizeOfExpr(IdxTy, AccessTy);
-  ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV);
+  // TODO: this computes one-past-the-end. ScEnd + EltSizeSCEV - 1 is the last
+  // accessed byte. Not entirely sure if one-past-the-end must also not wrap? If
+  // it does, could compute and use last accessed byte instead.
+  if (SE->isScopedExpr(ScEnd))
+    ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV, SCEV::FlagNUW);
+  else
+    ScEnd = SE->getAddExpr(ScEnd, EltSizeSCEV, SCEV::FlagNUW);
 
   Pointers.emplace_back(Ptr, ScStart, ScEnd, WritePtr, DepSetId, ASId, PtrExpr,
                         NeedsFreeze);
@@ -378,6 +390,11 @@ SmallVector<RuntimePointerCheck, 4> RuntimePointerChecking::generateChecks() {
       if (needsChecking(CGI, CGJ)) {
         tryToCreateDiffCheck(CGI, CGJ);
         Checks.push_back(std::make_pair(&CGI, &CGJ));
+        if (SE->isKnownPredicate(CmpInst::ICMP_UGT, CGI.High, CGJ.Low) &&
+            SE->isKnownPredicate(CmpInst::ICMP_ULE, CGI.Low, CGJ.High)) {
+          AlwaysFalse = true;
+          return {};
+        }
       }
     }
   }
@@ -1273,6 +1290,7 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
   // If we can do run-time checks, but there are no checks, no runtime checks
   // are needed. This can happen when all pointers point to the same underlying
   // object for example.
+  CanDoRT &= !RtCheck.AlwaysFalse;
   RtCheck.Need = CanDoRT ? RtCheck.getNumberOfChecks() != 0 : MayNeedRTCheck;
 
   bool CanDoRTIfNeeded = !RtCheck.Need || CanDoRT;

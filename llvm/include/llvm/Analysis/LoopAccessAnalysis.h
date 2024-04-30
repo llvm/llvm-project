@@ -435,8 +435,10 @@ public:
   /// Reset the state of the pointer runtime information.
   void reset() {
     Need = false;
+    AlwaysFalse = false;
     Pointers.clear();
     Checks.clear();
+    CheckingGroups.clear();
   }
 
   /// Insert a pointer and calculate the start and end SCEVs.
@@ -492,6 +494,8 @@ public:
 
   /// This flag indicates if we need to add the runtime check.
   bool Need = false;
+
+  bool AlwaysFalse = false;
 
   /// Information about the pointers that may require checking.
   SmallVector<PointerInfo, 2> Pointers;

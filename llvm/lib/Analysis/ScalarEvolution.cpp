@@ -2981,6 +2981,26 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
   return getOrCreateAddExpr(Ops, ComputeFlags(Ops));
 }
 
+void ScalarEvolution::setExprScope(const Loop *L) {
+  assert(!ExprScope && "cannot overwrite existing expression scope");
+  ExprScope = L;
+}
+
+void ScalarEvolution::clearExprScope() { ExprScope = nullptr; }
+
+bool ScalarEvolution::isScopedExpr(const SCEV *S) {
+  if (!ExprScope || !isa<SCEVCommutativeExpr>(S))
+    return false;
+
+  FoldingSetNodeID ID;
+  ID.AddInteger(S->getSCEVType());
+  for (const SCEV *Op : S->operands())
+    ID.AddPointer(Op);
+  ID.AddPointer(ExprScope);
+  void *IP = nullptr;
+  return UniqueSCEVs.FindNodeOrInsertPos(ID, IP);
+}
+
 const SCEV *
 ScalarEvolution::getOrCreateAddExpr(ArrayRef<const SCEV *> Ops,
                                     SCEV::NoWrapFlags Flags) {
@@ -2988,6 +3008,8 @@ ScalarEvolution::getOrCreateAddExpr(ArrayRef<const SCEV *> Ops,
   ID.AddInteger(scAddExpr);
   for (const SCEV *Op : Ops)
     ID.AddPointer(Op);
+  if (ExprScope)
+    ID.AddPointer(ExprScope);
   void *IP = nullptr;
   SCEVAddExpr *S =
       static_cast<SCEVAddExpr *>(UniqueSCEVs.FindNodeOrInsertPos(ID, IP));
@@ -3034,6 +3056,8 @@ ScalarEvolution::getOrCreateMulExpr(ArrayRef<const SCEV *> Ops,
   ID.AddInteger(scMulExpr);
   for (const SCEV *Op : Ops)
     ID.AddPointer(Op);
+  if (ExprScope)
+    ID.AddPointer(ExprScope);
   void *IP = nullptr;
   SCEVMulExpr *S =
     static_cast<SCEVMulExpr *>(UniqueSCEVs.FindNodeOrInsertPos(ID, IP));
@@ -14746,12 +14770,15 @@ PredicatedScalarEvolution::PredicatedScalarEvolution(ScalarEvolution &SE,
 
 void ScalarEvolution::registerUser(const SCEV *User,
                                    ArrayRef<const SCEV *> Ops) {
-  for (const auto *Op : Ops)
+  for (const auto *Op : Ops) {
     // We do not expect that forgetting cached data for SCEVConstants will ever
     // open any prospects for sharpening or introduce any correctness issues,
     // so we don't bother storing their dependencies.
     if (!isa<SCEVConstant>(Op))
       SCEVUsers[Op].insert(User);
+    assert((ExprScope || !isScopedExpr(Op)) &&
+           "Non-scoped expression cannot have scoped operands!");
+  }
 }
 
 const SCEV *PredicatedScalarEvolution::getSCEV(Value *V) {

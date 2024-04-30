@@ -24,7 +24,7 @@ define void @forked_ptrs_simple(ptr nocapture readonly %Base1, ptr nocapture rea
 ; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.1, ptr %gep.2
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP1]]:
-; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest)<nuw>)
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group [[GRP2]]:
@@ -58,7 +58,7 @@ define void @forked_ptrs_simple(ptr nocapture readonly %Base1, ptr nocapture rea
 ; RECURSE-NEXT:          %select = select i1 %cmp, ptr %gep.1, ptr %gep.2
 ; RECURSE-NEXT:      Grouped accesses:
 ; RECURSE-NEXT:        Group [[GRP4]]:
-; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest))
+; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest)<nuw>)
 ; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
 ; RECURSE-NEXT:        Group [[GRP5]]:
@@ -132,10 +132,10 @@ define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture read
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds float, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP7]]:
-; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest)<nuw>)
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP8]]:
-; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds)<nuw>)
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP9]]:
 ; CHECK-NEXT:          (Low: %Base2 High: (400 + %Base2))
@@ -171,10 +171,10 @@ define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture read
 ; RECURSE-NEXT:          %.sink.in = getelementptr inbounds float, ptr %spec.select, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
 ; RECURSE-NEXT:        Group [[GRP11]]:
-; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest))
+; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest)<nuw>)
 ; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP12]]:
-; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds)<nuw>)
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP13]]:
 ; RECURSE-NEXT:          (Low: %Base2 High: (400 + %Base2))
@@ -232,10 +232,10 @@ define dso_local void @forked_ptrs_different_base_same_offset_64b(ptr nocapture 
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds double, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP15]]:
-; CHECK-NEXT:          (Low: %Dest High: (800 + %Dest))
+; CHECK-NEXT:          (Low: %Dest High: (800 + %Dest)<nuw>)
 ; CHECK-NEXT:            Member: {%Dest,+,8}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP16]]:
-; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds)<nuw>)
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP17]]:
 ; CHECK-NEXT:          (Low: %Base2 High: (800 + %Base2))
@@ -271,10 +271,10 @@ define dso_local void @forked_ptrs_different_base_same_offset_64b(ptr nocapture 
 ; RECURSE-NEXT:          %.sink.in = getelementptr inbounds double, ptr %spec.select, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
 ; RECURSE-NEXT:        Group [[GRP19]]:
-; RECURSE-NEXT:          (Low: %Dest High: (800 + %Dest))
+; RECURSE-NEXT:          (Low: %Dest High: (800 + %Dest)<nuw>)
 ; RECURSE-NEXT:            Member: {%Dest,+,8}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP20]]:
-; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds)<nuw>)
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP21]]:
 ; RECURSE-NEXT:          (Low: %Base2 High: (800 + %Base2))
@@ -332,10 +332,10 @@ define dso_local void @forked_ptrs_different_base_same_offset_23b(ptr nocapture 
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds i23, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP23]]:
-; CHECK-NEXT:          (Low: %Dest High: (399 + %Dest))
+; CHECK-NEXT:          (Low: %Dest High: (399 + %Dest)<nuw>)
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP24]]:
-; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds)<nuw>)
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP25]]:
 ; CHECK-NEXT:          (Low: %Base2 High: (399 + %Base2))
@@ -371,10 +371,10 @@ define dso_local void @forked_ptrs_different_base_same_offset_23b(ptr nocapture 
 ; RECURSE-NEXT:          %.sink.in = getelementptr inbounds i23, ptr %spec.select, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
 ; RECURSE-NEXT:        Group [[GRP27]]:
-; RECURSE-NEXT:          (Low: %Dest High: (399 + %Dest))
+; RECURSE-NEXT:          (Low: %Dest High: (399 + %Dest)<nuw>)
 ; RECURSE-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP28]]:
-; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds)<nuw>)
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP29]]:
 ; RECURSE-NEXT:          (Low: %Base2 High: (399 + %Base2))
@@ -432,10 +432,10 @@ define dso_local void @forked_ptrs_different_base_same_offset_6b(ptr nocapture r
 ; CHECK-NEXT:          %.sink.in = getelementptr inbounds i6, ptr %spec.select, i64 %indvars.iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP31]]:
-; CHECK-NEXT:          (Low: %Dest High: (100 + %Dest))
+; CHECK-NEXT:          (Low: %Dest High: (100 + %Dest)<nuw>)
 ; CHECK-NEXT:            Member: {%Dest,+,1}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP32]]:
-; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds)<nuw>)
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP33]]:
 ; CHECK-NEXT:          (Low: %Base2 High: (100 + %Base2))
@@ -471,10 +471,10 @@ define dso_local void @forked_ptrs_different_base_same_offset_6b(ptr nocapture r
 ; RECURSE-NEXT:          %.sink.in = getelementptr inbounds i6, ptr %spec.select, i64 %indvars.iv
 ; RECURSE-NEXT:      Grouped accesses:
 ; RECURSE-NEXT:        Group [[GRP35]]:
-; RECURSE-NEXT:          (Low: %Dest High: (100 + %Dest))
+; RECURSE-NEXT:          (Low: %Dest High: (100 + %Dest)<nuw>)
 ; RECURSE-NEXT:            Member: {%Dest,+,1}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP36]]:
-; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds)<nuw>)
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP37]]:
 ; RECURSE-NEXT:          (Low: %Base2 High: (100 + %Base2))
@@ -535,7 +535,7 @@ define dso_local void @forked_ptrs_different_base_same_offset_possible_poison(pt
 ; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nw><%for.body>
 ; CHECK-NEXT:        Group [[GRP40]]:
-; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds)<nuw>)
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP41]]:
 ; CHECK-NEXT:          (Low: %Base2 High: (400 + %Base2))
@@ -574,7 +574,7 @@ define dso_local void @forked_ptrs_different_base_same_offset_possible_poison(pt
 ; RECURSE-NEXT:          (Low: %Dest High: (400 + %Dest))
 ; RECURSE-NEXT:            Member: {%Dest,+,4}<nw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP44]]:
-; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds))
+; RECURSE-NEXT:          (Low: %Preds High: (400 + %Preds)<nuw>)
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP45]]:
 ; RECURSE-NEXT:          (Low: %Base2 High: (400 + %Base2))
@@ -696,10 +696,10 @@ define dso_local void @forked_ptrs_add_to_offset(ptr nocapture readonly %Base, p
 ; CHECK-NEXT:          %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP47]]:
-; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest)<nuw>)
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP48]]:
-; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds)<nuw>)
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP49]]:
 ; CHECK-NEXT:          (Low: ((4 * %extra_offset) + %Base) High: (404 + (4 * %extra_offset) + %Base))
@@ -764,10 +764,10 @@ define dso_local void @forked_ptrs_sub_from_offset(ptr nocapture readonly %Base,
 ; CHECK-NEXT:          %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP50]]:
-; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest)<nuw>)
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP51]]:
-; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds)<nuw>)
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP52]]:
 ; CHECK-NEXT:          (Low: ((-4 * %extra_offset) + %Base) High: (404 + (-4 * %extra_offset) + %Base))
@@ -832,10 +832,10 @@ define dso_local void @forked_ptrs_add_sub_offset(ptr nocapture readonly %Base, 
 ; CHECK-NEXT:          %arrayidx3 = getelementptr inbounds float, ptr %Base, i64 %offset
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP53]]:
-; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest))
+; CHECK-NEXT:          (Low: %Dest High: (400 + %Dest)<nuw>)
 ; CHECK-NEXT:            Member: {%Dest,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP54]]:
-; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds))
+; CHECK-NEXT:          (Low: %Preds High: (400 + %Preds)<nuw>)
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP55]]:
 ; CHECK-NEXT:          (Low: ((4 * %to_add) + (-4 * %to_sub) + %Base) High: (404 + (4 * %to_add) + (-4 * %to_sub) + %Base))
@@ -1256,7 +1256,7 @@ define void @sc_add_expr_ice(ptr %Base1, ptr %Base2, i64 %N) {
 ; CHECK-NEXT:          %fptr = getelementptr inbounds double, ptr %Base2, i64 %sel
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group [[GRP56]]:
-; CHECK-NEXT:          (Low: %Base1 High: (8 + %Base1))
+; CHECK-NEXT:          (Low: %Base1 High: (8 + %Base1)<nuw>)
 ; CHECK-NEXT:            Member: %Base1
 ; CHECK-NEXT:        Group [[GRP57]]:
 ; CHECK-NEXT:          (Low: %Base2 High: ((8 * %N) + %Base2))
@@ -1283,7 +1283,7 @@ define void @sc_add_expr_ice(ptr %Base1, ptr %Base2, i64 %N) {
 ; RECURSE-NEXT:          %fptr = getelementptr inbounds double, ptr %Base2, i64 %sel
 ; RECURSE-NEXT:      Grouped accesses:
 ; RECURSE-NEXT:        Group [[GRP58]]:
-; RECURSE-NEXT:          (Low: %Base1 High: (8 + %Base1))
+; RECURSE-NEXT:          (Low: %Base1 High: (8 + %Base1)<nuw>)
 ; RECURSE-NEXT:            Member: %Base1
 ; RECURSE-NEXT:        Group [[GRP59]]:
 ; RECURSE-NEXT:          (Low: %Base2 High: ((8 * %N) + %Base2))
@@ -1351,7 +1351,7 @@ define void @forked_ptrs_with_different_base(ptr nocapture readonly %Preds, ptr 
 ; CHECK-NEXT:          (Low: %2 High: (63992 + %2))
 ; CHECK-NEXT:            Member: {%2,+,8}<nw><%for.body>
 ; CHECK-NEXT:        Group [[GRP61]]:
-; CHECK-NEXT:          (Low: %Preds High: (31996 + %Preds))
+; CHECK-NEXT:          (Low: %Preds High: (31996 + %Preds)<nuw>)
 ; CHECK-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; CHECK-NEXT:        Group [[GRP62]]:
 ; CHECK-NEXT:          (Low: %0 High: (63992 + %0))
@@ -1395,7 +1395,7 @@ define void @forked_ptrs_with_different_base(ptr nocapture readonly %Preds, ptr 
 ; RECURSE-NEXT:          (Low: %2 High: (63992 + %2))
 ; RECURSE-NEXT:            Member: {%2,+,8}<nw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP65]]:
-; RECURSE-NEXT:          (Low: %Preds High: (31996 + %Preds))
+; RECURSE-NEXT:          (Low: %Preds High: (31996 + %Preds)<nuw>)
 ; RECURSE-NEXT:            Member: {%Preds,+,4}<nuw><%for.body>
 ; RECURSE-NEXT:        Group [[GRP66]]:
 ; RECURSE-NEXT:          (Low: %0 High: (63992 + %0))

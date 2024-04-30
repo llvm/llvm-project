@@ -277,14 +277,6 @@ define i32 @store_with_pointer_phi_incoming_phi(ptr %A, ptr %B, ptr %C, i1 %c.0,
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds double, ptr %A, i64 %iv
 ; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP4]]:
-; CHECK-NEXT:          (Low: %C High: (8 + %C))
-; CHECK-NEXT:            Member: %C
-; CHECK-NEXT:        Group [[GRP5]]:
-; CHECK-NEXT:          (Low: %B High: (8 + %B))
-; CHECK-NEXT:            Member: %B
-; CHECK-NEXT:        Group [[GRP6]]:
-; CHECK-NEXT:          (Low: %A High: (256000 + %A))
 ; CHECK-NEXT:            Member: {%A,+,8}<nuw><%loop.header>
 ; CHECK-NEXT:            Member: %A
 ; CHECK-EMPTY:
@@ -360,7 +352,6 @@ define i32 @store_with_pointer_phi_incoming_phi_irreducible_cycle(ptr %A, ptr %B
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds double, ptr %A, i64 %iv
 ; CHECK-NEXT:        ptr %A
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP7]]:
 ; CHECK-NEXT:          (Low: %C High: (8 + %C))
 ; CHECK-NEXT:            Member: %C
 ; CHECK-NEXT:        Group [[GRP8]]:
@@ -368,6 +359,16 @@ define i32 @store_with_pointer_phi_incoming_phi_irreducible_cycle(ptr %A, ptr %B
 ; CHECK-NEXT:            Member: %B
 ; CHECK-NEXT:        Group [[GRP9]]:
 ; CHECK-NEXT:          (Low: %A High: (256000 + %A))
+=======
+; CHECK-NEXT:        Group [[GRP7]]:
+; CHECK-NEXT:          (Low: %C High: (8 + %C)<nuw>)
+; CHECK-NEXT:            Member: %C
+; CHECK-NEXT:        Group [[GRP8]]:
+; CHECK-NEXT:          (Low: %B High: (8 + %B)<nuw>)
+; CHECK-NEXT:            Member: %B
+; CHECK-NEXT:        Group [[GRP9]]:
+; CHECK-NEXT:          (Low: %A High: (256000 + %A)<nuw>)
+>>>>>>> b250dd10a54f ([SCEV,LAA] Introduce scoped SCEV, use in LAA computations (WIP).)
 ; CHECK-NEXT:            Member: {%A,+,8}<nuw><%loop.header>
 ; CHECK-NEXT:            Member: %A
 ; CHECK-EMPTY:
@@ -532,7 +533,6 @@ define void @phi_load_store_memdep_check(i1 %c, ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:        ptr %B
 ; CHECK-NEXT:        ptr %B
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP10]]:
 ; CHECK-NEXT:          (Low: %A High: (2 + %A))
 ; CHECK-NEXT:            Member: %A
 ; CHECK-NEXT:            Member: %A
@@ -542,6 +542,18 @@ define void @phi_load_store_memdep_check(i1 %c, ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:            Member: %C
 ; CHECK-NEXT:        Group [[GRP12]]:
 ; CHECK-NEXT:          (Low: %B High: (2 + %B))
+=======
+; CHECK-NEXT:        Group [[GRP10]]:
+; CHECK-NEXT:          (Low: %A High: (2 + %A)<nuw>)
+; CHECK-NEXT:            Member: %A
+; CHECK-NEXT:            Member: %A
+; CHECK-NEXT:        Group [[GRP11]]:
+; CHECK-NEXT:          (Low: %C High: (2 + %C)<nuw>)
+; CHECK-NEXT:            Member: %C
+; CHECK-NEXT:            Member: %C
+; CHECK-NEXT:        Group [[GRP12]]:
+; CHECK-NEXT:          (Low: %B High: (2 + %B)<nuw>)
+>>>>>>> b250dd10a54f ([SCEV,LAA] Introduce scoped SCEV, use in LAA computations (WIP).)
 ; CHECK-NEXT:            Member: %B
 ; CHECK-NEXT:            Member: %B
 ; CHECK-EMPTY:

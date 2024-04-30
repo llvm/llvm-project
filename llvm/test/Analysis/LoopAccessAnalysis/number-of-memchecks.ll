@@ -95,15 +95,15 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:       %arrayidxB = getelementptr inbounds i16, ptr %b, i64 %ind
 ; CHECK-NEXT:   Grouped accesses:
 ; CHECK-NEXT:    Group {{.*}}[[ZERO]]:
-; CHECK-NEXT:       (Low: %c High: (80 + %c))
+; CHECK-NEXT:       (Low: %c High: (80 + %c)<nuw>)
 ; CHECK-NEXT:         Member: {(2 + %c)<nuw>,+,4}
 ; CHECK-NEXT:         Member: {%c,+,4}
 ; CHECK-NEXT:     Group {{.*}}[[ONE]]:
-; CHECK-NEXT:       (Low: %a High: (42 + %a))
+; CHECK-NEXT:       (Low: %a High: (42 + %a)<nuw>)
 ; CHECK-NEXT:         Member: {(2 + %a)<nuw>,+,2}
 ; CHECK-NEXT:         Member: {%a,+,2}
 ; CHECK-NEXT:     Group {{.*}}[[TWO]]:
-; CHECK-NEXT:       (Low: %b High: (40 + %b))
+; CHECK-NEXT:       (Low: %b High: (40 + %b)<nuw>)
 ; CHECK-NEXT:         Member: {%b,+,2}
 
 define void @testg(ptr %a,
@@ -167,7 +167,7 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:         %arrayidxB = getelementptr i16, ptr %b, i64 %ind
 ; CHECK-NEXT:   Grouped accesses:
 ; CHECK-NEXT:     Group {{.*}}[[ZERO]]:
-; CHECK-NEXT:       (Low: %c High: (80 + %c))
+; CHECK-NEXT:       (Low: %c High: (80 + %c)<nuw>)
 ; CHECK-NEXT:         Member: {(2 + %c)<nuw>,+,4}
 ; CHECK-NEXT:         Member: {%c,+,4}
 ; CHECK-NEXT:     Group {{.*}}[[ONE]]:

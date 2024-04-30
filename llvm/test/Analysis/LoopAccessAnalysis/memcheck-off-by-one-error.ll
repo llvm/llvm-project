@@ -19,8 +19,8 @@
 ; store a value at *%op touched memory under *%src.
 
 ;CHECK: function 'fastCopy':
-;CHECK: (Low: %op High: (32 + %op))
-;CHECK: (Low: %src High: (32 + %src))
+;CHECK: (Low: %op High: (32 + %op)<nuw>)
+;CHECK: (Low: %src High: (32 + %src)<nuw>)
 
 define void @fastCopy(ptr nocapture readonly %src, ptr nocapture %op) {
 entry:
