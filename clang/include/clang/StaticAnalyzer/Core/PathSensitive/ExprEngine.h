@@ -440,6 +440,12 @@ public:
 
   const CoreEngine &getCoreEngine() const { return Engine; }
 
+  ProgramStateRef handleCastingBeforeEvalCall(ExplodedNode *Pred,
+                                              const Expr *Ex,
+                                              SVal ValueToBind,
+                                              ProgramStateRef State,
+                                              StmtNodeBuilder* Bldr = nullptr) const;
+
 public:
   /// Visit - Transfer function logic for all statements.  Dispatches to
   ///  other functions that handle specific kinds of statements.

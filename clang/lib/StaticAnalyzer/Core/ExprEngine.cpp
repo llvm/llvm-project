@@ -681,6 +681,37 @@ ExprEngine::processRegionChanges(ProgramStateRef state,
                                                          LCtx, Call);
 }
 
+ProgramStateRef
+ExprEngine::handleCastingBeforeEvalCall(ExplodedNode *Pred, const Expr *Ex, 
+                                        SVal ValueToBind, ProgramStateRef State, StmtNodeBuilder* Bldr) const {
+  // TODO construct new Bldr if Bldr is null
+  bool DeleteAfter = false;
+  if (!Bldr) {
+    ExplodedNodeSet dstEvaluated;
+    Bldr = new StmtNodeBuilder(Pred, dstEvaluated, *currBldrCtx);
+    DeleteAfter = true;
+  }
+
+  if (auto *AsImplCast = dyn_cast_or_null<CastExpr>(Ex);
+      AsImplCast && AsImplCast->getSubExpr() && ValueToBind.isUndef()) {
+    const LocationContext *LCtx = Pred->getLocationContext();
+    if (!isa<CallExpr>(AsImplCast->getSubExpr())) {
+      return State;
+    }
+    SVal V = State->getSVal(AsImplCast->getSubExpr(), LCtx);
+    if (V.isUndef()) {
+      return State;
+    }
+    State = State->BindExpr(Ex, LCtx, V);
+    Bldr->generateNode(Ex, Pred, State);
+  }
+
+  if (DeleteAfter) {
+    delete Bldr;
+  }
+  return State;
+}
+
 static void
 printObjectsUnderConstructionJson(raw_ostream &Out, ProgramStateRef State,
                                   const char *NL, const LocationContext *LCtx,
@@ -3643,8 +3674,12 @@ void ExprEngine::evalStore(ExplodedNodeSet &Dst, const Expr *AssignE,
 
   if (location.isUndef())
     return;
-
+  
+  // UNCOMMENT THIS ONCE SOULTION IS FOUND
+  //state = handleCastingBeforeEvalCall(Pred, StoreE, Val);
+  //SVal ToBind = state->getSVal(StoreE, Pred->getLocationContext());
   for (const auto I : Tmp)
+    //evalBind(Dst, StoreE, I, location, ToBind, false);
     evalBind(Dst, StoreE, I, location, Val, false);
 }
 

@@ -641,14 +641,9 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
       // the handling of the casting is the responsible to bind the
       // sub expressions (in our case std::get call expressions) value
       // to the cast expression.
-      if (auto *AsImplCast = dyn_cast_or_null<CastExpr>(InitEx);
-          AsImplCast && InitVal.isUndef()) {
-        // InitVal = state->getSVal(AsImplCast->getSubExpr(), LC);
-        state = updateStateAfterSimpleCast(B, Pred, AsImplCast,
-                                           AsImplCast->getSubExpr());
-        B.generateNode(InitEx, Pred, state);
-        InitVal = state->getSVal(InitEx, LC);
-      }
+
+      state = handleCastingBeforeEvalCall(Pred, InitEx, InitVal, state, &B);
+      InitVal = state->getSVal(InitEx, LC);
 
       assert(DS->isSingleDecl());
       if (getObjectUnderConstruction(state, DS, LC)) {

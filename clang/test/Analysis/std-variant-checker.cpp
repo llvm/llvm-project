@@ -388,6 +388,6 @@ void stdEmplace() {
 void followHeldValue() {
   std::variant<int, char> v = 0;
   int a = std::get<int> (v);
-  int b = 5/a;
+  int b = 5/a; // expected-warning {{The right operand of '/' is a garbage value}}
   (void)b;
 }
