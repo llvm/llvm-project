@@ -12307,4 +12307,7 @@ def err_acc_num_gangs_num_args
             "OpenACC 'num_gangs' "
             "%select{|clause: '%1' directive expects maximum of %2, %3 were "
             "provided}0">;
+def err_acc_not_a_var_ref
+    : Error<"OpenACC variable is not a valid variable name, sub-array, array "
+            "element, or composite variable member">;
 } // end of sema component.

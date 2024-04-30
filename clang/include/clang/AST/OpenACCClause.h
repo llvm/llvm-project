@@ -156,51 +156,50 @@ public:
                                    Expr *ConditionExpr, SourceLocation EndLoc);
 };
 
-/// Represents a clause that has one or more IntExprs.  It does not own the
-/// IntExprs, but provides 'children' and other accessors.
-class OpenACCClauseWithIntExprs : public OpenACCClauseWithParams {
-  MutableArrayRef<Expr *> IntExprs;
+/// Represents a clause that has one or more expressions associated with it.
+class OpenACCClauseWithExprs : public OpenACCClauseWithParams {
+  MutableArrayRef<Expr *> Exprs;
 
 protected:
-  OpenACCClauseWithIntExprs(OpenACCClauseKind K, SourceLocation BeginLoc,
-                            SourceLocation LParenLoc, SourceLocation EndLoc)
+  OpenACCClauseWithExprs(OpenACCClauseKind K, SourceLocation BeginLoc,
+                         SourceLocation LParenLoc, SourceLocation EndLoc)
       : OpenACCClauseWithParams(K, BeginLoc, LParenLoc, EndLoc) {}
 
   /// Used only for initialization, the leaf class can initialize this to
   /// trailing storage.
-  void setIntExprs(MutableArrayRef<Expr *> NewIntExprs) {
-    assert(IntExprs.empty() && "Cannot change IntExprs list");
-    IntExprs = NewIntExprs;
+  void setExprs(MutableArrayRef<Expr *> NewExprs) {
+    assert(Exprs.empty() && "Cannot change Exprs list");
+    Exprs = NewExprs;
   }
 
-  /// Gets the entire list of integer expressions, but leave it to the
+  /// Gets the entire list of expressions, but leave it to the
   /// individual clauses to expose this how they'd like.
-  llvm::ArrayRef<Expr *> getIntExprs() const { return IntExprs; }
+  llvm::ArrayRef<Expr *> getExprs() const { return Exprs; }
 
 public:
   child_range children() {
-    return child_range(reinterpret_cast<Stmt **>(IntExprs.begin()),
-                       reinterpret_cast<Stmt **>(IntExprs.end()));
+    return child_range(reinterpret_cast<Stmt **>(Exprs.begin()),
+                       reinterpret_cast<Stmt **>(Exprs.end()));
   }
 
   const_child_range children() const {
     child_range Children =
-        const_cast<OpenACCClauseWithIntExprs *>(this)->children();
+        const_cast<OpenACCClauseWithExprs *>(this)->children();
     return const_child_range(Children.begin(), Children.end());
   }
 };
 
 class OpenACCNumGangsClause final
-    : public OpenACCClauseWithIntExprs,
+    : public OpenACCClauseWithExprs,
       public llvm::TrailingObjects<OpenACCNumGangsClause, Expr *> {
 
   OpenACCNumGangsClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                         ArrayRef<Expr *> IntExprs, SourceLocation EndLoc)
-      : OpenACCClauseWithIntExprs(OpenACCClauseKind::NumGangs, BeginLoc,
-                                  LParenLoc, EndLoc) {
+      : OpenACCClauseWithExprs(OpenACCClauseKind::NumGangs, BeginLoc, LParenLoc,
+                               EndLoc) {
     std::uninitialized_copy(IntExprs.begin(), IntExprs.end(),
                             getTrailingObjects<Expr *>());
-    setIntExprs(MutableArrayRef(getTrailingObjects<Expr *>(), IntExprs.size()));
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), IntExprs.size()));
   }
 
 public:
@@ -209,35 +208,35 @@ public:
          ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
 
   llvm::ArrayRef<Expr *> getIntExprs() {
-    return OpenACCClauseWithIntExprs::getIntExprs();
+    return OpenACCClauseWithExprs::getExprs();
   }
 
   llvm::ArrayRef<Expr *> getIntExprs() const {
-    return OpenACCClauseWithIntExprs::getIntExprs();
+    return OpenACCClauseWithExprs::getExprs();
   }
 };
 
 /// Represents one of a handful of clauses that have a single integer
 /// expression.
-class OpenACCClauseWithSingleIntExpr : public OpenACCClauseWithIntExprs {
+class OpenACCClauseWithSingleIntExpr : public OpenACCClauseWithExprs {
   Expr *IntExpr;
 
 protected:
   OpenACCClauseWithSingleIntExpr(OpenACCClauseKind K, SourceLocation BeginLoc,
                                  SourceLocation LParenLoc, Expr *IntExpr,
                                  SourceLocation EndLoc)
-      : OpenACCClauseWithIntExprs(K, BeginLoc, LParenLoc, EndLoc),
+      : OpenACCClauseWithExprs(K, BeginLoc, LParenLoc, EndLoc),
         IntExpr(IntExpr) {
-    setIntExprs(MutableArrayRef<Expr *>{&this->IntExpr, 1});
+    setExprs(MutableArrayRef<Expr *>{&this->IntExpr, 1});
   }
 
 public:
-  bool hasIntExpr() const { return !getIntExprs().empty(); }
+  bool hasIntExpr() const { return !getExprs().empty(); }
   const Expr *getIntExpr() const {
-    return hasIntExpr() ? getIntExprs()[0] : nullptr;
+    return hasIntExpr() ? getExprs()[0] : nullptr;
   }
 
-  Expr *getIntExpr() { return hasIntExpr() ? getIntExprs()[0] : nullptr; };
+  Expr *getIntExpr() { return hasIntExpr() ? getExprs()[0] : nullptr; };
 };
 
 class OpenACCNumWorkersClause : public OpenACCClauseWithSingleIntExpr {
@@ -259,6 +258,40 @@ public:
   static OpenACCVectorLengthClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
          Expr *IntExpr, SourceLocation EndLoc);
+};
+
+/// Represents a clause with one or more 'var' objects, represented as an expr,
+/// as its arguments. Var-list is expected to be stored in trailing storage.
+/// For now, we're just storing the original expression in its entirety, unlike
+/// OMP which has to do a bunch of work to create a private.
+class OpenACCClauseWithVarList : public OpenACCClauseWithExprs {
+protected:
+  OpenACCClauseWithVarList(OpenACCClauseKind K, SourceLocation BeginLoc,
+                           SourceLocation LParenLoc, SourceLocation EndLoc)
+      : OpenACCClauseWithExprs(K, BeginLoc, LParenLoc, EndLoc) {}
+
+public:
+  ArrayRef<Expr *> getVarList() { return getExprs(); }
+  ArrayRef<Expr *> getVarList() const { return getExprs(); }
+};
+
+class OpenACCPrivateClause final
+    : public OpenACCClauseWithVarList,
+      public llvm::TrailingObjects<OpenACCPrivateClause, Expr *> {
+
+  OpenACCPrivateClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                       ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::Private, BeginLoc,
+                                 LParenLoc, EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static OpenACCPrivateClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
 template <class Impl> class OpenACCClauseVisitor {
