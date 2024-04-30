@@ -95,6 +95,7 @@ class DebuggerAPITestCase(TestBase):
         exe = self.getBuildArtifact("a.out")
         self.yaml2obj("elf.yaml", exe)
         error = lldb.SBError()
+        self.dbg.SetSelectedPlatform(lldb.SBPlatform("remote-linux"))
         target1 = self.dbg.CreateTarget(exe, None, "remote-linux", False, error)
         self.assertSuccess(error)
         platform1 = target1.GetPlatform()
