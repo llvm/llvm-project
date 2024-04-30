@@ -204,6 +204,19 @@ static bool shouldCacheStatFailures(StringRef Filename) {
   StringRef Ext = llvm::sys::path::extension(Filename);
   if (Ext.empty())
     return false; // This may be the module cache directory.
+
+  // rdar://127079541
+  // With Swift, misconfigured Xcode projects currently may fail with
+  // negative 'stat' caching of `.framework` directories enabled,
+  // because they do not always explicitly specify their target
+  // dependencies and may be either getting lucky wih build timing, or
+  // compiling against wrong dependencies a lot of the time: e.g. an
+  // SDK variant of a dependency module, instead of one in the
+  // project's own build directory. Temporarily disable negative
+  // 'stat' caching here until all such projects are fixed.
+  if (Ext == ".framework")
+    return false;
+  
   return true;
 }
 
