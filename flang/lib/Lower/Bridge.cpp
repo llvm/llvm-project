@@ -2651,9 +2651,6 @@ private:
       builder->create<fir::StoreOp>(loc, convArg, value);
     }
 
-    builder->create<fir::FirEndOp>(loc);
-    builder->setInsertionPointToStart(&b);
-
     Fortran::lower::pft::Evaluation *crtEval = &getEval();
     if (crtEval->lowerAsStructured()) {
       crtEval = &crtEval->getFirstNestedEvaluation();
@@ -2665,6 +2662,7 @@ private:
     for (Fortran::lower::pft::Evaluation &e : crtEval->getNestedEvaluations())
       genFIR(e);
 
+    builder->create<fir::FirEndOp>(loc);
     builder->setInsertionPointAfter(op);
     localSymbols.popScope();
   }
