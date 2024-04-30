@@ -1607,6 +1607,27 @@ def PseudoLA_TLS_GD_LARGE : Pseudo<(outs GPR:$dst),
 } // Defs = [R20], Size = 20
 }
 
+// TLSDESC
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0, isCodeGenOnly = 0,
+    isAsmParserOnly = 1, Defs = [R1] in {
+def PseudoLA_TLS_DESC_ABS : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src),
+                                   [], "la.tls.desc", "$dst, $src">,
+                                   Requires<[IsLA32, HasLaGlobalWithAbs]>;
+def PseudoLA_TLS_DESC_ABS_LARGE : Pseudo<(outs GPR:$dst),
+                                         (ins GPR:$tmp, bare_symbol:$src), [],
+                                         "la.tls.desc", "$dst, $src">,
+                                  Requires<[IsLA64, HasLaGlobalWithAbs]>;
+def PseudoLA_TLS_DESC_PC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
+                                  "la.tls.desc", "$dst, $src">;
+}
+
+let isCall = 1, isBarrier = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0,
+    isCodeGenOnly = 0, isAsmParserOnly = 1, Defs = [R1, R4, R20], Size = 32 in
+def PseudoLA_TLS_DESC_PC_LARGE : Pseudo<(outs GPR:$dst),
+                                        (ins GPR:$tmp, bare_symbol:$src), [],
+                                        "la.tls.desc", "$dst, $tmp, $src">,
+                                 Requires<[IsLA64]>;
+
 // Load address inst alias: "la", "la.global" and "la.local".
 // Default:
 //     la = la.global = la.got
