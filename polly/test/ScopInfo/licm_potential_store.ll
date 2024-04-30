@@ -1,8 +1,8 @@
-; RUN: opt %loadNPMPolly -passes='sroa,instcombine,simplifycfg,reassociate,loop(loop-rotate),instcombine,indvars,polly-prepare,print<polly-function-scops>' \
+; RUN: opt %loadPolly -passes='sroa,instcombine,simplifycfg,reassociate,loop(loop-rotate),instcombine,indvars,polly-prepare,print<polly-function-scops>' \
 ; RUN:    -tailcallopt -disable-output < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=NOLICM
 
-; RUN: opt %loadNPMPolly -passes='sroa,instcombine,simplifycfg,reassociate,loop(loop-rotate),instcombine,indvars,loop-mssa(licm),polly-prepare,print<polly-function-scops>' \
+; RUN: opt %loadPolly -passes='sroa,instcombine,simplifycfg,reassociate,loop(loop-rotate),instcombine,indvars,loop-mssa(licm),polly-prepare,print<polly-function-scops>' \
 ; RUN:    -tailcallopt -disable-output < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=LICM
 

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -disable-output < %s
+; RUN: opt %loadPolly -passes=polly-codegen -disable-output < %s
 ;
 ; This caused dominance problems at some point as we do bail out during
 ; code generation. Just verify it runs through.
