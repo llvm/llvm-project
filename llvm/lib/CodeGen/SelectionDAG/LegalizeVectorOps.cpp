@@ -1049,6 +1049,13 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
+    if (SDValue Expanded = TLI.expandFMINIMUM_FMAXIMUM(Node, DAG)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:

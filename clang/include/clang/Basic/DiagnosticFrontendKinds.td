@@ -370,4 +370,7 @@ def warn_missing_symbol_graph_dir : Warning<
   "Missing symbol graph output directory, defaulting to working directory">,
   InGroup<ExtractAPIMisuse>;
 
+def err_ast_action_on_llvm_ir : Error<
+  "cannot apply AST actions to LLVM IR file '%0'">,
+  DefaultFatal;
 }

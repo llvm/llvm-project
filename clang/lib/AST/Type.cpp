@@ -2510,6 +2510,18 @@ bool Type::isSveVLSBuiltinType() const {
   return false;
 }
 
+QualType Type::getSizelessVectorEltType(const ASTContext &Ctx) const {
+  assert(isSizelessVectorType() && "Must be sizeless vector type");
+  // Currently supports SVE and RVV
+  if (isSVESizelessBuiltinType())
+    return getSveEltType(Ctx);
+
+  if (isRVVSizelessBuiltinType())
+    return getRVVEltType(Ctx);
+
+  llvm_unreachable("Unhandled type");
+}
+
 QualType Type::getSveEltType(const ASTContext &Ctx) const {
   assert(isSveVLSBuiltinType() && "unsupported type!");
 
@@ -3413,8 +3425,8 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "reserve_id_t";
   case IncompleteMatrixIdx:
     return "<incomplete matrix index type>";
-  case OMPArraySection:
-    return "<OpenMP array section type>";
+  case ArraySection:
+    return "<array section type>";
   case OMPArrayShaping:
     return "<OpenMP array shaping type>";
   case OMPIterator:
@@ -4710,7 +4722,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
     case BuiltinType::BuiltinFn:
     case BuiltinType::NullPtr:
     case BuiltinType::IncompleteMatrixIdx:
-    case BuiltinType::OMPArraySection:
+    case BuiltinType::ArraySection:
     case BuiltinType::OMPArrayShaping:
     case BuiltinType::OMPIterator:
       return false;

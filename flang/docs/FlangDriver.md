@@ -179,46 +179,20 @@ like this:
 
 ```
 $ flang -v -o example example.o
-"/usr/bin/ld" [...] example.o [...] "--whole-archive" "-lFortran_main"
-"--no-whole-archive" "-lFortranRuntime" "-lFortranDecimal" [...]
+"/usr/bin/ld" [...] example.o [...] "-lFortranRuntime" "-lFortranDecimal" [...]
 ```
 
 The automatically added libraries are:
 
-* `Fortran_main`: Provides the main entry point `main` that then invokes
-  `_QQmain` with the Fortran program unit.  This library has a dependency to
-  the `FortranRuntime` library.
 * `FortranRuntime`: Provides most of the Flang runtime library.
 * `FortranDecimal`: Provides operations for decimal numbers.
-
-The default is that, when using Flang as the linker, one of the Fortran
-translation units provides the program unit and therefore it is assumed that
-Fortran is the main code part (calling into C/C++ routines via `BIND (C)`
-interfaces).  When composing the linker commandline, Flang uses
-`--whole-archive` and `--no-whole-archive` (Windows: `/WHOLEARCHIVE:`,
-Darwin & AIX: *not implemented yet*) to make sure that all for `Fortran_main`
-is processed by the linker.  This is done to issue a proper error message when
-multiple definitions of `main` occur.  This happens, for instance, when linking
-a code that has a Fortran program unit with a C/C++ code that also defines a
-`main` function.  A user may be required to explicitly provide the C++ runtime
-libraries at link time (e.g., via `-lstdc++` for STL)
 
 If the code is C/C++ based and invokes Fortran routines, one can either use Clang
 or Flang as the linker driver.  If Clang is used, it will automatically all
 required runtime libraries needed by C++ (e.g., for STL) to the linker invocation.
 In this case, one has to explicitly provide the Fortran runtime libraries
-`FortranRuntime` and/or `FortranDecimal`.  An alternative is to use Flang to link
-and use the `-fno-fortran-main` flag.  This flag removes
-`Fortran_main` from the linker stage and hence requires one of the C/C++
-translation units to provide a definition of the `main` function. In this case,
-it may be required to explicitly supply C++ runtime libraries as mentioned above.
-
-When creating shared or static libraries using Flang with `-shared` or `-static`
-flag, Fortran_main is automatically removed from the linker stage (i.e.,
-`-fno-fortran-main` is on by default).  It is assumed that when creating a
-static or shared library, the generated library does not need a `main`
-function, as a final link stage will occur that will provide the `Fortran_main`
-library when creating the final executable.
+`FortranRuntime` and/or `FortranDecimal`.  An alternative is to use Flang to link.
+In this case, it may be required to explicitly supply C++ runtime libraries.
 
 On Darwin, the logical root where the system libraries are located (sysroot)
 must be specified. This can be done with the CMake build flag `DEFAULT_SYSROOT`
