@@ -289,6 +289,37 @@ struct FuseExtractSliceWithConcat
   }
 };
 
+/// Rewriting rule that fuses sparse_tensor.convert into producer.
+struct FoldConvertIntoProducer : public OpRewritePattern<ConvertOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ConvertOp op,
+                                PatternRewriter &rewriter) const override {
+    auto producer = op.getSource().getDefiningOp<GenericOp>();
+    if (!producer || producer.getDpsInits().size() != 1 ||
+        !isMaterializing(producer.getDpsInitOperand(0), false) ||
+        !producer.getResult(0).hasOneUse()) {
+      return failure();
+    }
+    rewriter.modifyOpInPlace(producer, [&]() {
+      producer.getResult(0).setType(op.getResult().getType());
+    });
+
+    Operation *materializeOp =
+        producer.getDpsInitOperand(0)->get().getDefiningOp();
+
+    rewriter.modifyOpInPlace(materializeOp, [&]() {
+      materializeOp->getResult(0).setType(op.getResult().getType());
+    });
+
+    rewriter.replaceAllOpUsesWith(op, producer);
+    op->erase();
+
+    return success();
+  }
+};
+
 /// Rewriting rule that converts direct yield of zero with initial allocation.
 struct FoldInvariantYield : public OpRewritePattern<GenericOp> {
 public:
@@ -1506,9 +1537,10 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
 //===---------------------------------------------------------------------===//
 
 void mlir::populatePreSparsificationRewriting(RewritePatternSet &patterns) {
-  patterns.add<FuseExtractSliceWithConcat, FoldInvariantYield,
-               FuseSparseMultiplyOverAdd, FuseTensorCast, GenSemiRingReduction,
-               GenSemiRingSelect, PrintRewriter>(patterns.getContext());
+  patterns.add<FuseExtractSliceWithConcat, FoldConvertIntoProducer,
+               FoldInvariantYield, FuseSparseMultiplyOverAdd, FuseTensorCast,
+               GenSemiRingReduction, GenSemiRingSelect, PrintRewriter>(
+      patterns.getContext());
 }
 
 void mlir::populateLowerSparseOpsToForeachPatterns(RewritePatternSet &patterns,

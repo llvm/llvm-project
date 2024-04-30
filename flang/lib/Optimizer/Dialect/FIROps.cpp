@@ -2498,10 +2498,8 @@ static constexpr llvm::StringRef getTargetOffsetAttr() {
 
 template <typename OpT>
 static mlir::LogicalResult verifyIntegralSwitchTerminator(OpT op) {
-  if (!op.getSelector()
-           .getType()
-           .template isa<mlir::IntegerType, mlir::IndexType,
-                         fir::IntegerType>())
+  if (!mlir::isa<mlir::IntegerType, mlir::IndexType, fir::IntegerType>(
+          op.getSelector().getType()))
     return op.emitOpError("must be an integer");
   auto cases =
       op->template getAttrOfType<mlir::ArrayAttr>(op.getCasesAttr()).getValue();
@@ -2576,7 +2574,7 @@ static void printIntegralSwitchTerminator(OpT op, mlir::OpAsmPrinter &p) {
     if (i)
       p << ", ";
     auto &attr = cases[i];
-    if (auto intAttr = attr.template dyn_cast_or_null<mlir::IntegerAttr>())
+    if (auto intAttr = mlir::dyn_cast_or_null<mlir::IntegerAttr>(attr))
       p << intAttr.getValue();
     else
       p.printAttribute(attr);

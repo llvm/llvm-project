@@ -117,32 +117,26 @@ static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
 }
 
 static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
-  if (S->getType()->isVectorTy() || isa<Constant>(S->getCondition()))
+  if (S->getType()->isVectorTy())
+    return false;
+  if (isa<Constant>(S->getCondition()))
     return false;
 
-  bool Changed = false;
-  for (Use &U : make_early_inc_range(S->uses())) {
-    auto *I = cast<Instruction>(U.getUser());
-    Constant *C;
-    if (auto *PN = dyn_cast<PHINode>(I))
-      C = LVI->getConstantOnEdge(S->getCondition(), PN->getIncomingBlock(U),
-                                 I->getParent(), I);
-    else
-      C = getConstantAt(S->getCondition(), I, LVI);
+  Constant *C = getConstantAt(S->getCondition(), S, LVI);
+  if (!C)
+    return false;
 
-    auto *CI = dyn_cast_or_null<ConstantInt>(C);
-    if (!CI)
-      continue;
+  ConstantInt *CI = dyn_cast<ConstantInt>(C);
+  if (!CI)
+    return false;
 
-    U.set(CI->isOne() ? S->getTrueValue() : S->getFalseValue());
-    Changed = true;
-    ++NumSelects;
-  }
+  Value *ReplaceWith = CI->isOne() ? S->getTrueValue() : S->getFalseValue();
+  S->replaceAllUsesWith(ReplaceWith);
+  S->eraseFromParent();
 
-  if (Changed && S->use_empty())
-    S->eraseFromParent();
+  ++NumSelects;
 
-  return Changed;
+  return true;
 }
 
 /// Try to simplify a phi with constant incoming values that match the edge

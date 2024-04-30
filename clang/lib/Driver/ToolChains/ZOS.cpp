@@ -36,12 +36,6 @@ void ZOS::addClangTargetOptions(const ArgList &DriverArgs,
   if (!DriverArgs.hasArgNoClaim(options::OPT_faligned_allocation,
                                 options::OPT_fno_aligned_allocation))
     CC1Args.push_back("-faligned-alloc-unavailable");
-
-  // Pass "-fno-sized-deallocation" only when the user hasn't manually enabled
-  // or disabled sized deallocations.
-  if (!DriverArgs.hasArgNoClaim(options::OPT_fsized_deallocation,
-                                options::OPT_fno_sized_deallocation))
-    CC1Args.push_back("-fno-sized-deallocation");
 }
 
 void zos::Assembler::ConstructJob(Compilation &C, const JobAction &JA,

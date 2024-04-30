@@ -306,6 +306,10 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
       APInt Offset(DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
       PtrOp = PtrOp->stripAndAccumulateConstantOffsets(
           DL, Offset, /* AllowNonInbounds */ true);
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(PtrOp)) {
+        if (II->getIntrinsicID() == Intrinsic::threadlocal_address)
+          PtrOp = II->getArgOperand(0);
+      }
       if (PtrOp == GV) {
         if (auto *Value = ConstantFoldLoadFromConst(Init, Ty, Offset, DL)) {
           LI->replaceAllUsesWith(Value);
@@ -318,6 +322,9 @@ static bool CleanupConstantGlobalUsers(GlobalVariable *GV,
     } else if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(U)) { // memset/cpy/mv
       if (getUnderlyingObject(MI->getRawDest()) == GV)
         EraseFromParent(MI);
+    } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
+      if (II->getIntrinsicID() == Intrinsic::threadlocal_address)
+        append_range(WorkList, II->users());
     }
   }
 

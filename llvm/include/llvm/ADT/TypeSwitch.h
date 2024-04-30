@@ -74,10 +74,7 @@ protected:
       ValueT &&value,
       std::enable_if_t<is_detected<has_dyn_cast_t, ValueT, CastT>::value> * =
           nullptr) {
-    // Silence warnings about MLIR's deprecated dyn_cast member functions.
-    LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
     return value.template dyn_cast<CastT>();
-    LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   }
 
   /// Attempt to dyn_cast the given `value` to `CastT`. This overload is
