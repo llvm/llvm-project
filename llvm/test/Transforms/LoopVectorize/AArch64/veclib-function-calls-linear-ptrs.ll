@@ -3,7 +3,9 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-; TODO: add mappings for frexp/frexpf
+; Vectorization can not happen because there is no scalar to vector mapping in
+; TLI for frexp/frexpf. Tests will need to be changed when such mappings are
+; added.
 
 define void @frexp_f64(ptr %in, ptr %out1, ptr %out2, i32 %N) {
 ; CHECK-LABEL: define void @frexp_f64(

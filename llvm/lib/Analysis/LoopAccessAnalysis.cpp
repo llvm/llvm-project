@@ -2496,9 +2496,9 @@ void LoopAccessInfo::analyzeLoop(AAResults *AA, LoopInfo *LI,
         // We can safety handle math functions that have vectorized
         // counterparts and have the memory write-only attribute set.
         if (isMathLibCallMemWriteOnly(TLI, I)) {
-          LLVM_DEBUG(dbgs()
-                     << "LAA: allow math function with write-only attribute:"
-                     << I << "\n");
+          LLVM_DEBUG(dbgs() << "LAA: Allow to vectorize math function with "
+                               "write-only attribute:"
+                            << I << "\n");
           continue;
         }
 

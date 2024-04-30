@@ -1,12 +1,10 @@
-; RUN: opt < %s -mattr=+sve -vector-library=ArmPL -passes=inject-tli-mappings,loop-vectorize -debug-only=loop-accesses -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='print<access-info>' -debug-only=loop-accesses -disable-output 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts
 
-target triple = "aarch64-unknown-linux-gnu"
-
-; TODO: add mappings for frexp/frexpf
 
 define void @frexp_f64(ptr %in, ptr %out1, ptr %out2, i32 %N) {
+; CHECK: LAA: Allow to vectorize math function with write-only attribute: %call = tail call double @frexp
 entry:
   %cmp4 = icmp sgt i32 %N, 0
   br i1 %cmp4, label %for.body.preheader, label %for.cond.cleanup
@@ -33,6 +31,7 @@ for.body:
 declare double @frexp(double, ptr) #1
 
 define void @frexp_f32(ptr readonly %in, ptr %out1, ptr %out2, i32 %N) {
+; CHECK: LAA: Allow to vectorize math function with write-only attribute: %call = tail call float @frexpf
 entry:
   %cmp4 = icmp sgt i32 %N, 0
   br i1 %cmp4, label %for.body.preheader, label %for.cond.cleanup
@@ -59,7 +58,7 @@ for.body:
 declare float @frexpf(float , ptr) #1
 
 define void @modf_f64(ptr %in, ptr %out1, ptr %out2, i32 %N) {
-; CHECK: LAA: allow math function with write-only attribute:  %call = tail call double @modf
+; CHECK: LAA: Allow to vectorize math function with write-only attribute: %call = tail call double @modf
 entry:
   %cmp7 = icmp sgt i32 %N, 0
   br i1 %cmp7, label %for.body.preheader, label %for.cond.cleanup
@@ -87,7 +86,7 @@ for.body:
 declare double @modf(double , ptr ) #1
 
 define void @modf_f32(ptr %in, ptr %out1, ptr %out2, i32 %N) {
-; CHECK: LAA: allow math function with write-only attribute:  %call = tail call float @modff
+; CHECK: LAA: Allow to vectorize math function with write-only attribute: %call = tail call float @modff
 entry:
   %cmp7 = icmp sgt i32 %N, 0
   br i1 %cmp7, label %for.body.preheader, label %for.cond.cleanup
