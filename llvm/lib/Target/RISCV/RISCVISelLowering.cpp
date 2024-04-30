@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -13678,9 +13679,69 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+  ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
   EVT VT = N->getValueType(0);
   EVT OpVT = N0.getValueType();
+  SDLoc DL(N);
 
+  // Both rules are looking for an equality compare.
+  if (!isIntEqualitySetCC(Cond))
+    return SDValue();
+
+  // Rule 1
+  using namespace SDPatternMatch;
+  auto getSelectCCPattern = [](SDValue Candidate, bool Inverse,
+                               SDValue &Select) -> auto {
+    if (Inverse)
+      return m_AllOf(
+          m_OneUse(m_Node(RISCVISD::SELECT_CC, m_Value(), m_Value(), m_Value(),
+                          /*TrueVal=*/m_Value(),
+                          /*FalseVal=*/m_Specific(Candidate))),
+          m_Value(Select));
+    else
+      return m_AllOf(
+          m_OneUse(m_Node(RISCVISD::SELECT_CC, m_Value(), m_Value(), m_Value(),
+                          /*TrueVal=*/m_Specific(Candidate),
+                          /*FalseVal=*/m_Value())),
+          m_Value(Select));
+  };
+
+  auto buildSetCC = [&](SDValue Select, bool Inverse) -> SDValue {
+    ISD::CondCode NewCC = cast<CondCodeSDNode>(Select->getOperand(2))->get();
+    if (Inverse)
+      NewCC = ISD::getSetCCInverse(NewCC, OpVT);
+    return DAG.getNode(
+        ISD::SETCC, DL, VT,
+        {Select->getOperand(0), Select->getOperand(1), DAG.getCondCode(NewCC)},
+        N->getFlags());
+  };
+
+  SDValue SelectVal;
+  if (sd_match(N0, getSelectCCPattern(N1, false, SelectVal)) ||
+      sd_match(N1, getSelectCCPattern(N0, false, SelectVal))) {
+    if (Cond == ISD::SETEQ) {
+      // (seteq (SELECT_CC LHS, RHS, CC, N1, X), N1) => (setCC LHS, RHS)
+      // (seteq N0, (SELECT_CC LHS, RHS, CC, N0, X)) => (setCC LHS, RHS)
+      return buildSetCC(SelectVal, false);
+    } else {
+      // (setne (SELECT_CC LHS, RHS, CC, N1, X), N1) => (setInvCC LHS, RHS)
+      // (setne N0, (SELECT_CC LHS, RHS, CC, N0, X)) => (setInvCC LHS, RHS)
+      return buildSetCC(SelectVal, true);
+    }
+  } else if (sd_match(N0, getSelectCCPattern(N1, true, SelectVal)) ||
+             sd_match(N1, getSelectCCPattern(N0, true, SelectVal))) {
+    if (Cond == ISD::SETEQ) {
+      // (seteq (SELECT_CC LHS, RHS, CC, X, N1), N1) => (setInvCC LHS, RHS)
+      // (seteq N0, (SELECT_CC LHS, RHS, CC, X, N0)) => (setInvCC LHS, RHS)
+      return buildSetCC(SelectVal, true);
+    } else {
+      // (setne (SELECT_CC LHS, RHS, CC, X, N1), N1) => (setCC LHS, RHS)
+      // (setne N0, (SELECT_CC LHS, RHS, CC, X, N0)) => (setCC LHS, RHS)
+      return buildSetCC(SelectVal, false);
+    }
+  }
+
+  // Rule 2
   if (OpVT != MVT::i64 || !Subtarget.is64Bit())
     return SDValue();
 
@@ -13695,11 +13756,6 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
       N0.getConstantOperandVal(1) != UINT64_C(0xffffffff))
     return SDValue();
 
-  // Looking for an equality compare.
-  ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  if (!isIntEqualitySetCC(Cond))
-    return SDValue();
-
   // Don't do this if the sign bit is provably zero, it will be turned back into
   // an AND.
   APInt SignMask = APInt::getOneBitSet(64, 31);
@@ -13708,16 +13764,15 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
 
   const APInt &C1 = N1C->getAPIntValue();
 
-  SDLoc dl(N);
   // If the constant is larger than 2^32 - 1 it is impossible for both sides
   // to be equal.
   if (C1.getActiveBits() > 32)
-    return DAG.getBoolConstant(Cond == ISD::SETNE, dl, VT, OpVT);
+    return DAG.getBoolConstant(Cond == ISD::SETNE, DL, VT, OpVT);
 
   SDValue SExtOp = DAG.getNode(ISD::SIGN_EXTEND_INREG, N, OpVT,
                                N0.getOperand(0), DAG.getValueType(MVT::i32));
-  return DAG.getSetCC(dl, VT, SExtOp, DAG.getConstant(C1.trunc(32).sext(64),
-                                                      dl, OpVT), Cond);
+  return DAG.getSetCC(DL, VT, SExtOp,
+                      DAG.getConstant(C1.trunc(32).sext(64), DL, OpVT), Cond);
 }
 
 static SDValue

@@ -155,14 +155,8 @@ define i1 @nxv2i32_cmp_evl(<vscale x 2 x i32> %src, <vscale x 2 x i1> %m, i32 %e
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; RV32-NEXT:    vmsne.vi v8, v8, 0, v0.t
-; RV32-NEXT:    vfirst.m a2, v8, v0.t
-; RV32-NEXT:    mv a1, a0
-; RV32-NEXT:    bltz a2, .LBB6_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a1, a2
-; RV32-NEXT:  .LBB6_2:
-; RV32-NEXT:    xor a0, a1, a0
-; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    vfirst.m a0, v8, v0.t
+; RV32-NEXT:    slti a0, a0, 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: nxv2i32_cmp_evl:
