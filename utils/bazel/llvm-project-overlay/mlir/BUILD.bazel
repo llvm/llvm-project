@@ -12635,6 +12635,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ComplexDialect",
+        ":DialectUtils",
         ":IR",
         "//llvm:Support",
     ],

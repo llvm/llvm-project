@@ -131,4 +131,43 @@ TEST_F(TransportInputTest, OutgoingNotification) {
   notifyFn(CompletionList{});
   EXPECT_THAT(getOutput(), HasSubstr("\"method\":\"outgoing-notification\""));
 }
+
+TEST_F(TransportInputTest, ResponseHandlerNotFound) {
+  // Unhandled responses are only reported via error logging. As a result, this
+  // test can't make any expectations -- but it prints the output anyway, by way
+  // of demonstration.
+  Logger::setLogLevel(Logger::Level::Error);
+  writeInput("{\"jsonrpc\":\"2.0\",\"id\":81,\"result\":null}\n");
+  runTransport();
+}
+
+TEST_F(TransportInputTest, OutgoingRequest) {
+  // Make some outgoing requests.
+  int responseCallbackInvoked = 0;
+  auto callFn = getMessageHandler().outgoingRequest<CompletionList>(
+      "outgoing-request",
+      [&responseCallbackInvoked](llvm::json::Value id,
+                                 llvm::Expected<llvm::json::Value> value) {
+        // Make expectations on the expected response.
+        EXPECT_EQ(id, 83);
+        ASSERT_TRUE((bool)value);
+        EXPECT_EQ(debugString(*value), "{\"foo\":6}");
+        responseCallbackInvoked += 1;
+        llvm::outs() << "here!!!\n";
+      });
+  callFn({}, 82);
+  callFn({}, 83);
+  callFn({}, 84);
+  EXPECT_THAT(getOutput(), HasSubstr("\"method\":\"outgoing-request\""));
+  EXPECT_EQ(responseCallbackInvoked, 0);
+
+  // One of the requests receives a response. The message handler handles this
+  // response by invoking the callback from above. Subsequent responses with the
+  // same ID are ignored.
+  writeInput("{\"jsonrpc\":\"2.0\",\"id\":83,\"result\":{\"foo\":6}}\n"
+             "// -----\n"
+             "{\"jsonrpc\":\"2.0\",\"id\":83,\"result\":{\"bar\":8}}\n");
+  runTransport();
+  EXPECT_EQ(responseCallbackInvoked, 1);
+}
 } // namespace
