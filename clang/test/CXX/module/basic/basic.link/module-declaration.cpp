@@ -9,26 +9,26 @@
 //
 // Module implementation for unknown and known module. (The former is ill-formed.)
 // RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify -x c++ %t/M.cpp \
-// RUN:            -DTEST=1 -DEXPORT= -DMODULE_NAME=z
+// RUN:            -DTEST=1
 // RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x=%t/x.pcm -fmodule-file=x.y=%t/x.y.pcm -verify -x c++ %t/M.cpp \
-// RUN:            -DTEST=2 -DEXPORT= -DMODULE_NAME=x
+// RUN:            -DTEST=2
 //
 // Module interface for unknown and known module. (The latter is ill-formed due to
 // redefinition.)
 // RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify %t/M.cpp \
-// RUN:            -DTEST=3 -DEXPORT=export -DMODULE_NAME=z
+// RUN:            -DTEST=3
 // RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify %t/M.cpp \
-// RUN:            -DTEST=4 -DEXPORT=export -DMODULE_NAME=x
+// RUN:            -DTEST=4
 //
 // Miscellaneous syntax.
 // RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify %t/M.cpp \
-// RUN:            -DTEST=7 -DEXPORT=export -DMODULE_NAME='z elderberry'
+// RUN:            -DTEST=7
 // RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify %t/M.cpp \
-// RUN:            -DTEST=8 -DEXPORT=export -DMODULE_NAME='z [[]]'
+// RUN:            -DTEST=8
 // RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify %t/M.cpp \
-// RUN:            -DTEST=9 -DEXPORT=export -DMODULE_NAME='z [[fancy]]'
+// RUN:            -DTEST=9
 // RUN: %clang_cc1 -std=c++20 -I%t -fmodule-file=x.y=%t/x.y.pcm -verify %t/M.cpp \
-// RUN:            -DTEST=10 -DEXPORT=export -DMODULE_NAME='z [[maybe_unused]]'
+// RUN:            -DTEST=10
 
 //--- x.cppm
 export module x;
@@ -40,15 +40,20 @@ int c;
 
 //--- M.cpp
 
-EXPORT module MODULE_NAME;
-#if TEST == 7
-// expected-error@-2 {{expected ';'}} expected-error@-2 {{a type specifier is required}}
+#if TEST == 1
+module z; // expected-error {{module 'z' not found}}
+#elif TEST == 2
+module x; // expected-no-diagnostics
+#elif TEST == 3
+export module z; // expected-no-diagnostics
+#elif TEST == 4
+export module x; // expected-no-diagnostics
+#elif TEST == 7
+export module z elderberry; // expected-error {{expected ';'}} expected-error {{a type specifier is required}}
 #elif TEST == 9
-// expected-warning@-4 {{unknown attribute 'fancy' ignored}}
+export module z [[fancy]]; // expected-warning {{unknown attribute 'fancy' ignored}}
 #elif TEST == 10
-// expected-error-re@-6 {{'maybe_unused' attribute cannot be applied to a module{{$}}}}
-#elif TEST == 1
-// expected-error@-8 {{module 'z' not found}}
+export module z [[maybe_unused]]; // expected-error-re {{'maybe_unused' attribute cannot be applied to a module{{$}}}}
 #else
 // expected-no-diagnostics
 #endif

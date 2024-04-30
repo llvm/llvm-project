@@ -1671,6 +1671,8 @@ def err_unexpected_module_decl : Error<
   "module declaration can only appear at the top level">;
 def err_module_expected_ident : Error<
   "expected a module name after '%select{module|import}0'">;
+def err_module_decl_cannot_be_macros : Error<
+  "module declaration cannot be a macro">;
 def err_attribute_not_module_attr : Error<
   "%0 attribute cannot be applied to a module">;
 def err_keyword_not_module_attr : Error<

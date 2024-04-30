@@ -2690,6 +2690,13 @@ bool Parser::ParseModuleName(
       return true;
     }
 
+    // P3034R1: Module Declarations Shouldn’t be Macros
+    if (!IsImport && Tok.getLocation().isMacroID()) {
+      Diag(Tok, diag::err_module_decl_cannot_be_macros);
+      SkipUntil(tok::semi);
+      return true;
+    }
+
     // Record this part of the module path.
     Path.push_back(std::make_pair(Tok.getIdentifierInfo(), Tok.getLocation()));
     ConsumeToken();

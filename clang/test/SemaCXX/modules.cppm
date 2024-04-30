@@ -7,6 +7,10 @@
 // expected-no-diagnostics
 #endif
 
+#if TEST == 3
+// expected-error {{module declaration cannot be a macro}}
+#endif //  TEST == 3
+
 export module foo;
 
 static int m;

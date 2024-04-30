@@ -35,9 +35,9 @@ int use_3 = c; // expected-error {{use of undeclared identifier 'c'}}
 
 //--- test.cpp
 #ifdef INTERFACE
-export module MODULE_NAME;
+export module MODULE_NAME; // expected-error {{module declaration cannot be a macro}}
 #else
-module MODULE_NAME;
+module MODULE_NAME; // expected-error {{module declaration cannot be a macro}}
 #endif
 
 import x;
