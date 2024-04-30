@@ -39,15 +39,15 @@ static void genCharacterSearch(FN func, fir::FirOpBuilder &builder,
 
 /// Helper function to recover the KIND from the FIR type.
 static int discoverKind(mlir::Type ty) {
-  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(ty))
+  if (auto charTy = ty.dyn_cast<fir::CharacterType>())
     return charTy.getFKind();
   if (auto eleTy = fir::dyn_cast_ptrEleTy(ty))
     return discoverKind(eleTy);
-  if (auto arrTy = mlir::dyn_cast<fir::SequenceType>(ty))
+  if (auto arrTy = ty.dyn_cast<fir::SequenceType>())
     return discoverKind(arrTy.getEleTy());
-  if (auto boxTy = mlir::dyn_cast<fir::BoxCharType>(ty))
+  if (auto boxTy = ty.dyn_cast<fir::BoxCharType>())
     return discoverKind(boxTy.getEleTy());
-  if (auto boxTy = mlir::dyn_cast<fir::BoxType>(ty))
+  if (auto boxTy = ty.dyn_cast<fir::BoxType>())
     return discoverKind(boxTy.getEleTy());
   llvm_unreachable("unexpected character type");
 }
