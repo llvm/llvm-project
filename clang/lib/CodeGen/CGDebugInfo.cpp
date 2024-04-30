@@ -5668,8 +5668,8 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
               // an opaque ptr, in this case its debug info may not match the
               // actual type of object being used as in the next instruction, so
               // we will need to emit a pseudo variable for type-casted value.
-              llvm::DILocalVariable *MDNode = dyn_cast<llvm::DILocalVariable>(
-                  dyn_cast<llvm::MetadataAsValue>(DbgDeclare->getOperand(1))
+              llvm::DILocalVariable *MDNode = cast<llvm::DILocalVariable>(
+                  cast<llvm::MetadataAsValue>(DbgDeclare->getOperand(1))
                       ->getMetadata());
               if (MDNode->getType() == Type)
                 return;

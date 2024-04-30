@@ -1789,7 +1789,7 @@ Value *ScalarExprEmitter::VisitMemberExpr(MemberExpr *E) {
 
   llvm::Value *Result = EmitLoadOfLValue(E);
 
-  // If -fdebug_info_for_profiling is specified, emit a pseudo variable and its
+  // If -fdebug-info-for-profiling is specified, emit a pseudo variable and its
   // debug info for the pointer, even if there is no variable associated with
   // the pointer's expression.
   if (CGF.CGM.getCodeGenOpts().DebugInfoForProfiling && CGF.getDebugInfo()) {
