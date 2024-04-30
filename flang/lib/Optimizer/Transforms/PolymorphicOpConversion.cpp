@@ -229,7 +229,9 @@ public:
 
   void runOnOperation() override {
     auto *context = &getContext();
-    auto mod = getOperation()->getParentOfType<ModuleOp>();
+    auto mod = mlir::dyn_cast_or_null<mlir::ModuleOp>(getOperation());
+    if (!mod)
+      mod = getOperation()->getParentOfType<ModuleOp>();
     mlir::RewritePatternSet patterns(context);
 
     BindingTables bindingTables;
@@ -470,8 +472,4 @@ SelectTypeConv::collectAncestors(fir::TypeInfoOp dt, mlir::ModuleOp mod) const {
     assert(dt && "parent type info not generated");
   }
   return ancestors;
-}
-
-std::unique_ptr<mlir::Pass> fir::createPolymorphicOpConversionPass() {
-  return std::make_unique<PolymorphicOpConversion>();
 }
