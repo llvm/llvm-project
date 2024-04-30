@@ -36,6 +36,7 @@
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
+#include "flang/Optimizer/Builder/Runtime/Main.h"
 #include "flang/Optimizer/Builder/Runtime/Ragged.h"
 #include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -359,8 +360,10 @@ public:
         // not need to be generated even if no defaults are specified.
         // However, generating main or changing when the runtime reads
         // environment variables is required to do so.
-        fir::runtime::genEnvironmentDefaults(*builder, toLocation(),
-                                             bridge.getEnvironmentDefaults());
+        auto env = fir::runtime::genEnvironmentDefaults(
+            *builder, toLocation(), bridge.getEnvironmentDefaults());
+
+        fir::runtime::genMain(*builder, toLocation(), env);
       });
 
     finalizeOpenACCLowering();
