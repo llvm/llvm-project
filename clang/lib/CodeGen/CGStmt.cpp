@@ -929,8 +929,8 @@ bool CodeGenFunction::checkIfLoopMustProgress(const Expr *ControllingExpression,
       (ControllingExpression->EvaluateAsInt(Result, getContext()) &&
        Result.Val.isInt());
 
-  bool CondIsTrue = CondIsConstInt &&
-                (!ControllingExpression || Result.Val.getInt().getBoolValue());
+  bool CondIsTrue = CondIsConstInt && (!ControllingExpression ||
+                                       Result.Val.getInt().getBoolValue());
 
   if (getLangOpts().C99 && CondIsConstInt)
     return false;
