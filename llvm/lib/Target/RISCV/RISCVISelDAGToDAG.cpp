@@ -2100,7 +2100,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // Establish the correct scalable-vector types for any fixed-length type.
     if (SubVecVT.isFixedLengthVector()) {
       SubVecContainerVT = TLI.getContainerForFixedLengthVector(SubVecVT);
-#ifndef NDEBUG
       TypeSize VecRegSize = TypeSize::getScalable(RISCV::RVVBitsPerBlock);
       [[maybe_unused]] bool ExactlyVecRegSized =
           Subtarget->expandVScale(SubVecVT.getSizeInBits())
@@ -2108,7 +2107,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       assert(isPowerOf2_64(Subtarget->expandVScale(SubVecVT.getSizeInBits())
                                .getKnownMinValue()));
       assert(Idx == 0 && (ExactlyVecRegSized || V.isUndef()));
-#endif
     }
     MVT ContainerVT = VT;
     if (VT.isFixedLengthVector())
