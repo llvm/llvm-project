@@ -13723,7 +13723,8 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
     ISD::CondCode NewCC = cast<CondCodeSDNode>(Select->getOperand(2))->get();
     if (Inverse)
       NewCC = ISD::getSetCCInverse(NewCC, OpVT);
-    return DAG.getSetCC(DL, VT, Select->getOperand(0), Select->getOperand(1), NewCC);
+    return DAG.getSetCC(DL, VT, Select->getOperand(0), Select->getOperand(1),
+                        NewCC);
   };
 
   SDValue SelectVal;
