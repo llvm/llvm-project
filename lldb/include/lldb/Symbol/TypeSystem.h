@@ -221,6 +221,14 @@ public:
 
   virtual uint32_t GetPointerByteSize() = 0;
 
+  virtual unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) = 0;
+
+  virtual unsigned
+  GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) = 0;
+
+  virtual bool
+  GetPtrAuthAddressDiversity(lldb::opaque_compiler_type_t type) = 0;
+
   // Accessors
 
   virtual ConstString GetTypeName(lldb::opaque_compiler_type_t type,
@@ -284,6 +292,9 @@ public:
   virtual CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type);
 
   virtual CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type);
+
+  virtual CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
+                                          uint32_t payload);
 
   /// \param opaque_payload      The m_payload field of Type, which may
   /// carry TypeSystem-specific extra information.
