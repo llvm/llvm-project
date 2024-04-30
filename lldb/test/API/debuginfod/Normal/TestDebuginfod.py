@@ -28,7 +28,6 @@ class DebugInfodTests(TestBase):
         if "Debuginfod" not in configuration.enabled_plugins:
             self.skipTest("The Debuginfod SymbolLocator plugin is not enabled")
 
-
     def test_normal_no_symbols(self):
         """
         Validate behavior with no symbols or symbol locator.
