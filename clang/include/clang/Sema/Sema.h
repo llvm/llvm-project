@@ -4101,7 +4101,7 @@ public:
   /// (or member function template). The exception-specification was parsed
   /// after the method itself was declared.
   void actOnDelayedExceptionSpecification(
-      Decl *Method, ExceptionSpecificationType EST,
+      Decl *D, ExceptionSpecificationType EST,
       SourceRange SpecificationRange, ArrayRef<ParsedType> DynamicExceptions,
       ArrayRef<SourceRange> DynamicExceptionRanges, Expr *NoexceptExpr);
 
