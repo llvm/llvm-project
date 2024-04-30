@@ -49,7 +49,8 @@ public:
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override;
 
   void EndOfMainFile() override {
@@ -68,8 +69,8 @@ void clang::AttachDependencyGraphGen(Preprocessor &PP, StringRef OutputFile,
 void DependencyGraphCallback::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
   if (!File)
     return;
 
@@ -110,8 +111,7 @@ void DependencyGraphCallback::OutputGraphFile() {
     writeNodeReference(OS, AllFiles[I]);
     OS << " [ shape=\"box\", label=\"";
     StringRef FileName = AllFiles[I].getName();
-    if (FileName.startswith(SysRoot))
-      FileName = FileName.substr(SysRoot.size());
+    FileName.consume_front(SysRoot);
 
     OS << DOT::EscapeString(std::string(FileName)) << "\"];\n";
   }

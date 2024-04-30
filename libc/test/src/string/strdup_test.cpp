@@ -15,9 +15,9 @@
 TEST(LlvmLibcStrDupTest, EmptyString) {
   const char *empty = "";
 
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   char *result = LIBC_NAMESPACE::strdup(empty);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   ASSERT_NE(result, static_cast<char *>(nullptr));
   ASSERT_NE(empty, const_cast<const char *>(result));
@@ -28,9 +28,9 @@ TEST(LlvmLibcStrDupTest, EmptyString) {
 TEST(LlvmLibcStrDupTest, AnyString) {
   const char *abc = "abc";
 
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   char *result = LIBC_NAMESPACE::strdup(abc);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   ASSERT_NE(result, static_cast<char *>(nullptr));
   ASSERT_NE(abc, const_cast<const char *>(result));
@@ -39,9 +39,9 @@ TEST(LlvmLibcStrDupTest, AnyString) {
 }
 
 TEST(LlvmLibcStrDupTest, NullPtr) {
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   char *result = LIBC_NAMESPACE::strdup(nullptr);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
 
   ASSERT_EQ(result, static_cast<char *>(nullptr));
 }

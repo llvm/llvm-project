@@ -823,7 +823,9 @@ TEST_F(DebugLineBasicFixture, ErrorForUnsupportedAddressSizeDefinedInHeader) {
                                                     nullptr, RecordRecoverable);
   EXPECT_THAT_ERROR(
       std::move(Recoverable),
-      FailedWithMessage("address size 0x09 of DW_LNE_set_address opcode at "
+      FailedWithMessage("parsing line table prologue at offset 0x00000000: "
+                        "invalid address size 9",
+                        "address size 0x09 of DW_LNE_set_address opcode at "
                         "offset 0x00000038 is unsupported"));
   ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
   ASSERT_EQ((*ExpectedLineTable)->Rows.size(), 3u);

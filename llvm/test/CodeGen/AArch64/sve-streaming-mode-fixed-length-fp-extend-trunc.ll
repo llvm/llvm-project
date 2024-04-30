@@ -11,8 +11,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @fcvt_v2f16_to_v2f32(<2 x half> %a, ptr %b) {
 ; CHECK-LABEL: fcvt_v2f16_to_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
 ; CHECK-NEXT:    str d0, [x0]
@@ -25,8 +25,8 @@ define void @fcvt_v2f16_to_v2f32(<2 x half> %a, ptr %b) {
 define void @fcvt_v4f16_to_v4f32(<4 x half> %a, ptr %b) {
 ; CHECK-LABEL: fcvt_v4f16_to_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    fcvt z0.s, p0/m, z0.h
 ; CHECK-NEXT:    str q0, [x0]
@@ -239,10 +239,10 @@ define void @fcvt_v16f16_v16f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov x8, #4 // =0x4
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z0.h
 ; CHECK-NEXT:    ld1h { z4.d }, p0/z, [x0, x8, lsl #1]
-; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
 ; CHECK-NEXT:    mov x8, #6 // =0x6
-; CHECK-NEXT:    fcvt z2.d, p0/m, z2.h
+; CHECK-NEXT:    fcvt z1.d, p0/m, z1.h
 ; CHECK-NEXT:    ld1h { z5.d }, p0/z, [x0, x8, lsl #1]
+; CHECK-NEXT:    fcvt z2.d, p0/m, z2.h
 ; CHECK-NEXT:    mov x8, #2 // =0x2
 ; CHECK-NEXT:    fcvt z3.d, p0/m, z3.h
 ; CHECK-NEXT:    ld1h { z7.d }, p0/z, [x0, x8, lsl #1]
@@ -255,8 +255,8 @@ define void @fcvt_v16f16_v16f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    stp q2, q3, [x1, #64]
 ; CHECK-NEXT:    movprfx z2, z7
 ; CHECK-NEXT:    fcvt z2.d, p0/m, z7.h
-; CHECK-NEXT:    stp q1, q2, [x1]
 ; CHECK-NEXT:    stp q4, q0, [x1, #32]
+; CHECK-NEXT:    stp q1, q2, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x half>, ptr %a
   %res = fpext <16 x half> %op1 to <16 x double>
@@ -371,8 +371,8 @@ define void @fcvt_v4f32_v4f16(ptr %a, ptr %b) {
 define void @fcvt_v8f32_v8f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: fcvt_v8f32_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    mov x8, #4 // =0x4
 ; CHECK-NEXT:    fcvt z0.h, p0/m, z0.s
 ; CHECK-NEXT:    fcvt z1.h, p0/m, z1.s
@@ -420,8 +420,8 @@ define void @fcvt_v2f64_v2f16(ptr %a, ptr %b) {
 define void @fcvt_v4f64_v4f16(ptr %a, ptr %b) {
 ; CHECK-LABEL: fcvt_v4f64_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov x8, #2 // =0x2
 ; CHECK-NEXT:    fcvt z0.h, p0/m, z0.d
 ; CHECK-NEXT:    fcvt z1.h, p0/m, z1.d
@@ -467,8 +467,8 @@ define void @fcvt_v2f64_v2f32(<2 x double> %op1, ptr %b) {
 define void @fcvt_v4f64_v4f32(ptr %a, ptr %b) {
 ; CHECK-LABEL: fcvt_v4f64_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov x8, #2 // =0x2
 ; CHECK-NEXT:    fcvt z0.s, p0/m, z0.d
 ; CHECK-NEXT:    fcvt z1.s, p0/m, z1.d

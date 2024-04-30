@@ -183,7 +183,7 @@ static MachineFunction &createFrameHelperMachineFunction(Module *M,
   MF.getProperties().reset(MachineFunctionProperties::Property::TracksLiveness);
   MF.getProperties().reset(MachineFunctionProperties::Property::IsSSA);
   MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
-  MF.getRegInfo().freezeReservedRegs(MF);
+  MF.getRegInfo().freezeReservedRegs();
 
   // Create entry block.
   BasicBlock *EntryBB = BasicBlock::Create(C, "entry", F);

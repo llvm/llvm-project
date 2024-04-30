@@ -71,8 +71,8 @@ define <4 x float> @nabsv4f32(<4 x float> %a) {
 define <2 x double> @nabsv2d64(<2 x double> %a) {
 ; CHECK-LABEL: nabsv2d64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-9223372036854775808
-; CHECK-NEXT:    dup v1.2d, x8
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    fneg v1.2d, v1.2d
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %conv = bitcast <2 x double> %a to <2 x i64>

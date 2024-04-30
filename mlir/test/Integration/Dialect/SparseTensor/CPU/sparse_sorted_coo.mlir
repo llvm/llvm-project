@@ -10,7 +10,7 @@
 // DEFINE: %{compile} = mlir-opt %s --sparsifier="%{sparsifier_opts}"
 // DEFINE: %{compile_sve} = mlir-opt %s --sparsifier="%{sparsifier_opts_sve}"
 // DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run_opts} = -e main -entry-point-result=void
 // DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
 // DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
 //
@@ -35,19 +35,19 @@
 !Filename = !llvm.ptr
 
 #SortedCOO = #sparse_tensor.encoding<{
-  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)
+  map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton(soa))
 }>
 
 #SortedCOOPermuted = #sparse_tensor.encoding<{
-  map = (d0, d1) -> (d1 : compressed(nonunique), d0 : singleton),
+  map = (d0, d1) -> (d1 : compressed(nonunique), d0 : singleton(soa)),
 }>
 
 #SortedCOO3D = #sparse_tensor.encoding<{
-  map = (d0, d1, d2) -> (d0 : compressed(nonunique), d1 : singleton(nonunique), d2 : singleton)
+  map = (d0, d1, d2) -> (d0 : compressed(nonunique), d1 : singleton(nonunique, soa), d2 : singleton(soa))
 }>
 
 #SortedCOO3DPermuted = #sparse_tensor.encoding<{
-  map = (d0, d1, d2) -> (d2 : compressed(nonunique), d0 : singleton(nonunique), d1 : singleton)
+  map = (d0, d1, d2) -> (d2 : compressed(nonunique), d0 : singleton(nonunique, soa), d1 : singleton(soa))
 
 }>
 
@@ -82,29 +82,7 @@ module {
     return %0 : tensor<?x?xf64, #SortedCOO>
   }
 
-  func.func @dumpi(%arg0: memref<?xindex>) {
-    %c0 = arith.constant 0 : index
-    %v = vector.transfer_read %arg0[%c0], %c0: memref<?xindex>, vector<20xindex>
-    vector.print %v : vector<20xindex>
-    return
-  }
-
-  func.func @dumpsi(%arg0: memref<?xindex, strided<[?], offset: ?>>) {
-    %c0 = arith.constant 0 : index
-    %v = vector.transfer_read %arg0[%c0], %c0: memref<?xindex, strided<[?], offset: ?>>, vector<20xindex>
-    vector.print %v : vector<20xindex>
-    return
-  }
-
-  func.func @dumpf(%arg0: memref<?xf64>) {
-    %c0 = arith.constant 0 : index
-    %nan = arith.constant 0x0 : f64
-    %v = vector.transfer_read %arg0[%c0], %nan: memref<?xf64>, vector<20xf64>
-    vector.print %v : vector<20xf64>
-    return
-  }
-
-  func.func @entry() {
+  func.func @main() {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
 
@@ -125,130 +103,88 @@ module {
     %4 = sparse_tensor.convert %m : tensor<5x4xf64> to tensor<?x?xf64, #SortedCOO>
 
     //
-    // CHECK:      ( 0, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 0, 0, 0, 1, 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 126, 127, 254, 1, 253, 2, 0, 1, 3, 98, 126, 127, 128, 249, 253, 255, 0, 0, 0 )
-    // CHECK-NEXT: ( -1, 2, -3, 4, -5, 6, -7, 8, -9, 10, -11, 12, -13, 14, -15, 16, -17, 0, 0, 0 )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 17
+    // CHECK-NEXT: dim = ( 4, 256 )
+    // CHECK-NEXT: lvl = ( 4, 256 )
+    // CHECK-NEXT: pos[0] : ( 0, 17
+    // CHECK-NEXT: crd[0] : ( 0, 0, 0, 0, 1, 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3
+    // CHECK-NEXT: crd[1] : ( 0, 126, 127, 254, 1, 253, 2, 0, 1, 3, 98, 126, 127, 128, 249, 253, 255
+    // CHECK-NEXT: values : ( -1, 2, -3, 4, -5, 6, -7, 8, -9, 10, -11, 12, -13, 14, -15, 16, -17
+    // CHECK-NEXT: ----
     //
-    %p0 = sparse_tensor.positions %0 { level = 0 : index }
-      : tensor<?x?xf64, #SortedCOO> to memref<?xindex>
-    %i00 = sparse_tensor.coordinates %0 { level = 0 : index }
-      : tensor<?x?xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
-    %i01 = sparse_tensor.coordinates %0 { level = 1 : index }
-      : tensor<?x?xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
-    %v0 = sparse_tensor.values %0
-      : tensor<?x?xf64, #SortedCOO> to memref<?xf64>
-    call @dumpi(%p0)  : (memref<?xindex>) -> ()
-    call @dumpsi(%i00) : (memref<?xindex, strided<[?], offset: ?>>) -> ()
-    call @dumpsi(%i01) : (memref<?xindex, strided<[?], offset: ?>>) -> ()
-    call @dumpf(%v0)  : (memref<?xf64>) -> ()
+    sparse_tensor.print %0 : tensor<?x?xf64, #SortedCOO>
 
     //
-    // CHECK-NEXT: ( 0, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 0, 1, 1, 2, 3, 98, 126, 126, 127, 127, 128, 249, 253, 253, 254, 255, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 3, 1, 3, 2, 3, 3, 0, 3, 0, 3, 3, 3, 1, 3, 0, 3, 0, 0, 0 )
-    // CHECK-NEXT: ( -1, 8, -5, -9, -7, 10, -11, 2, 12, -3, -13, 14, -15, 6, 16, 4, -17, 0, 0, 0 )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 17
+    // CHECK-NEXT: dim = ( 4, 256 )
+    // CHECK-NEXT: lvl = ( 256, 4 )
+    // CHECK-NEXT: pos[0] : ( 0, 17
+    // CHECK-NEXT: crd[0] : ( 0, 0, 1, 1, 2, 3, 98, 126, 126, 127, 127, 128, 249, 253, 253, 254, 255
+    // CHECK-NEXT: crd[1] : ( 0, 3, 1, 3, 2, 3, 3, 0, 3, 0, 3, 3, 3, 1, 3, 0, 3
+    // CHECK-NEXT: values : ( -1, 8, -5, -9, -7, 10, -11, 2, 12, -3, -13, 14, -15, 6, 16, 4, -17
+    // CHECK-NEXT: ----
     //
-    %p1 = sparse_tensor.positions %1 { level = 0 : index }
-      : tensor<?x?xf64, #SortedCOOPermuted> to memref<?xindex>
-    %i10 = sparse_tensor.coordinates %1 { level = 0 : index }
-      : tensor<?x?xf64, #SortedCOOPermuted> to memref<?xindex, strided<[?], offset: ?>>
-    %i11 = sparse_tensor.coordinates %1 { level = 1 : index }
-      : tensor<?x?xf64, #SortedCOOPermuted> to memref<?xindex, strided<[?], offset: ?>>
-    %v1 = sparse_tensor.values %1
-      : tensor<?x?xf64, #SortedCOOPermuted> to memref<?xf64>
-    call @dumpi(%p1)  : (memref<?xindex>) -> ()
-    call @dumpsi(%i10) : (memref<?xindex, strided<[?], offset: ?>>) -> ()
-    call @dumpsi(%i11) : (memref<?xindex, strided<[?], offset: ?>>) -> ()
-    call @dumpf(%v1)  : (memref<?xf64>) -> ()
+    sparse_tensor.print %1 : tensor<?x?xf64, #SortedCOOPermuted>
 
     //
-    // CHECK-NEXT: ( 0, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 0, 1, 1, 2, 2, 2, 2, 0, 0, 0, 1, 1, 1, 1, 2, 2, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 0, 1, 1, 2, 2, 2, 2, 0, 0, 0, 1, 1, 1, 1, 2, 2, 0, 0, 0 )
-    // CHECK-NEXT: ( 3, 63, 11, 100, 66, 61, 13, 43, 77, 10, 46, 61, 53, 3, 75, 22, 18, 0, 0, 0 )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 17
+    // CHECK-NEXT: dim = ( 2, 3, 4 )
+    // CHECK-NEXT: lvl = ( 2, 3, 4 )
+    // CHECK-NEXT: pos[0] : ( 0, 17
+    // CHECK-NEXT: crd[0] : ( 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1
+    // CHECK-NEXT: crd[1] : ( 0, 0, 1, 1, 2, 2, 2, 2, 0, 0, 0, 1, 1, 1, 1, 2, 2
+    // CHECK-NEXT: crd[2] : ( 2, 3, 1, 2, 0, 1, 2, 3, 0, 2, 3, 0, 1, 2, 3, 1, 2
+    // CHECK-NEXT: values : ( 3, 63, 11, 100, 66, 61, 13, 43, 77, 10, 46, 61, 53, 3, 75, 22, 18
+    // CHECK-NEXT: ----
     //
-    %p2 = sparse_tensor.positions %2 { level = 0 : index }
-      : tensor<?x?x?xf64, #SortedCOO3D> to memref<?xindex>
-    %i20 = sparse_tensor.coordinates %2 { level = 0 : index }
-      : tensor<?x?x?xf64, #SortedCOO3D> to memref<?xindex, strided<[?], offset: ?>>
-    %i21 = sparse_tensor.coordinates %2 { level = 1 : index }
-      : tensor<?x?x?xf64, #SortedCOO3D> to memref<?xindex, strided<[?], offset: ?>>
-    %i22 = sparse_tensor.coordinates %2 { level = 2 : index }
-      : tensor<?x?x?xf64, #SortedCOO3D> to memref<?xindex, strided<[?], offset: ?>>
-    %v2 = sparse_tensor.values %2
-      : tensor<?x?x?xf64, #SortedCOO3D> to memref<?xf64>
-    call @dumpi(%p2)  : (memref<?xindex>) -> ()
-    call @dumpsi(%i20) : (memref<?xindex, strided<[?], offset: ?>>) -> ()
-    call @dumpsi(%i21) : (memref<?xindex, strided<[?], offset: ?>>) -> ()
-    call @dumpsi(%i21) : (memref<?xindex, strided<[?], offset: ?>>) -> ()
-    call @dumpf(%v2)  : (memref<?xf64>) -> ()
+    sparse_tensor.print %2 : tensor<?x?x?xf64, #SortedCOO3D>
 
     //
-    // CHECK-NEXT: ( 0, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0 )
-    // CHECK-NEXT: ( 66, 77, 61, 11, 61, 53, 22, 3, 100, 13, 10, 3, 18, 63, 43, 46, 75, 0, 0, 0 )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 17
+    // CHECK-NEXT: dim = ( 2, 3, 4 )
+    // CHECK-NEXT: lvl = ( 4, 2, 3 )
+    // CHECK-NEXT: pos[0] : ( 0, 17
+    // CHECK-NEXT: crd[0] : ( 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3
+    // CHECK-NEXT: crd[1] : ( 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1
+    // CHECK-NEXT: crd[2] : ( 2, 0, 1, 1, 2, 1, 2, 0, 1, 2, 0, 1, 2, 0, 2, 0, 1
+    // CHECK-NEXT: values : ( 66, 77, 61, 11, 61, 53, 22, 3, 100, 13, 10, 3, 18, 63, 43, 46, 75
+    // CHECK-NEXT: ----
     //
-    %p3 = sparse_tensor.positions %3 { level = 0 : index }
-      : tensor<?x?x?xf64, #SortedCOO3DPermuted> to memref<?xindex>
-    %i30 = sparse_tensor.coordinates %3 { level = 0 : index }
-      : tensor<?x?x?xf64, #SortedCOO3DPermuted> to memref<?xindex, strided<[?], offset: ?>>
-    %i31 = sparse_tensor.coordinates %3 { level = 1 : index }
-      : tensor<?x?x?xf64, #SortedCOO3DPermuted> to memref<?xindex, strided<[?], offset: ?>>
-    %i32 = sparse_tensor.coordinates %3 { level = 2 : index }
-      : tensor<?x?x?xf64, #SortedCOO3DPermuted> to memref<?xindex, strided<[?], offset: ?>>
-    %v3 = sparse_tensor.values %3
-      : tensor<?x?x?xf64, #SortedCOO3DPermuted> to memref<?xf64>
-    call @dumpi(%p3)  : (memref<?xindex>) -> ()
-    call @dumpsi(%i30) : (memref<?xindex, strided<[?], offset: ?>>) -> ()
-    call @dumpsi(%i31) : (memref<?xindex, strided<[?], offset: ?>>) -> ()
-    call @dumpsi(%i31) : (memref<?xindex, strided<[?], offset: ?>>) -> ()
-    call @dumpf(%v3)  : (memref<?xf64>) -> ()
+    sparse_tensor.print %3 : tensor<?x?x?xf64, #SortedCOO3DPermuted>
 
     //
-    // CHECK-NEXT: ( 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 1, 2, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 3, 0, 3, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
-   // CHECK-NEXT: ( 6, 5, 4, 3, 2, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 6
+    // CHECK-NEXT: dim = ( 5, 4 )
+    // CHECK-NEXT: lvl = ( 5, 4 )
+    // CHECK-NEXT: pos[0] : ( 0, 6
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 2, 3, 4
+    // CHECK-NEXT: crd[1] : ( 0, 3, 0, 3, 1, 1
+    // CHECK-NEXT: values : ( 6, 5, 4, 3, 2, 11
+    // CHECK-NEXT: ----
     //
-    %p4 = sparse_tensor.positions %4 { level = 0 : index }
-      : tensor<?x?xf64, #SortedCOO> to memref<?xindex>
-    %i40 = sparse_tensor.coordinates %4 { level = 0 : index }
-      : tensor<?x?xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
-    %i41 = sparse_tensor.coordinates %4 { level = 1 : index }
-      : tensor<?x?xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
-    %v4 = sparse_tensor.values %4
-      : tensor<?x?xf64, #SortedCOO> to memref<?xf64>
-    call @dumpi(%p4)  : (memref<?xindex>) -> ()
-    call @dumpsi(%i40) : (memref<?xindex, strided<[?], offset: ?>>) -> ()
-    call @dumpsi(%i41) : (memref<?xindex, strided<[?], offset: ?>>) -> ()
-    call @dumpf(%v4)  : (memref<?xf64>) -> ()
+    sparse_tensor.print %4 : tensor<?x?xf64, #SortedCOO>
 
     // And last but not least, an actual operation applied to COO.
     // Note that this performs the operation "in place".
     %5 = call @sparse_scale(%4) : (tensor<?x?xf64, #SortedCOO>) -> tensor<?x?xf64, #SortedCOO>
 
     //
-    // CHECK-NEXT: ( 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 1, 2, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 3, 0, 3, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
-    // CHECK-NEXT: ( 12, 10, 8, 6, 4, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
+    // CHECK:      ---- Sparse Tensor ----
+    // CHECK-NEXT: nse = 6
+    // CHECK-NEXT: dim = ( 5, 4 )
+    // CHECK-NEXT: lvl = ( 5, 4 )
+    // CHECK-NEXT: pos[0] : ( 0, 6
+    // CHECK-NEXT: crd[0] : ( 0, 1, 2, 2, 3, 4
+    // CHECK-NEXT: crd[1] : ( 0, 3, 0, 3, 1, 1
+    // CHECK-NEXT: values : ( 12, 10, 8, 6, 4, 22
+    // CHECK-NEXT: ----
     //
-    %p5 = sparse_tensor.positions %5 { level = 0 : index }
-      : tensor<?x?xf64, #SortedCOO> to memref<?xindex>
-    %i50 = sparse_tensor.coordinates %5 { level = 0 : index }
-      : tensor<?x?xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
-    %i51 = sparse_tensor.coordinates %5 { level = 1 : index }
-      : tensor<?x?xf64, #SortedCOO> to memref<?xindex, strided<[?], offset: ?>>
-    %v5 = sparse_tensor.values %5
-      : tensor<?x?xf64, #SortedCOO> to memref<?xf64>
-    call @dumpi(%p5)  : (memref<?xindex>) -> ()
-    call @dumpsi(%i50) : (memref<?xindex, strided<[?], offset: ?>>) -> ()
-    call @dumpsi(%i51) : (memref<?xindex, strided<[?], offset: ?>>) -> ()
-    call @dumpf(%v5)  : (memref<?xf64>) -> ()
+    sparse_tensor.print %5 : tensor<?x?xf64, #SortedCOO>
 
     // Release the resources.
     bufferization.dealloc_tensor %0 : tensor<?x?xf64, #SortedCOO>

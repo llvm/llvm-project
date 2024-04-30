@@ -480,13 +480,14 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
     if (!(StoreReg = TII->isStoreToStackSlot(*NextMI, SecondSS, StoreSize)))
       continue;
     if (FirstSS != SecondSS || LoadReg != StoreReg || FirstSS == -1 ||
-        LoadSize != StoreSize)
+        LoadSize != StoreSize || !MFI->isSpillSlotObjectIndex(FirstSS))
       continue;
 
     ++NumDead;
     changed = true;
 
-    if (NextMI->findRegisterUseOperandIdx(LoadReg, true, nullptr) != -1) {
+    if (NextMI->findRegisterUseOperandIdx(LoadReg, /*TRI=*/nullptr, true) !=
+        -1) {
       ++NumDead;
       toErase.push_back(&*ProbableLoadMI);
     }

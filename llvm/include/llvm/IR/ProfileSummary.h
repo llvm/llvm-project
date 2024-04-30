@@ -73,10 +73,10 @@ public:
                  uint64_t MaxInternalCount, uint64_t MaxFunctionCount,
                  uint32_t NumCounts, uint32_t NumFunctions,
                  bool Partial = false, double PartialProfileRatio = 0)
-      : PSK(K), DetailedSummary(std::move(DetailedSummary)),
-        TotalCount(TotalCount), MaxCount(MaxCount),
-        MaxInternalCount(MaxInternalCount), MaxFunctionCount(MaxFunctionCount),
-        NumCounts(NumCounts), NumFunctions(NumFunctions), Partial(Partial),
+      : PSK(K), DetailedSummary(DetailedSummary), TotalCount(TotalCount),
+        MaxCount(MaxCount), MaxInternalCount(MaxInternalCount),
+        MaxFunctionCount(MaxFunctionCount), NumCounts(NumCounts),
+        NumFunctions(NumFunctions), Partial(Partial),
         PartialProfileRatio(PartialProfileRatio) {}
 
   Kind getKind() const { return PSK; }

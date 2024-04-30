@@ -29,12 +29,8 @@ func.func @simple_pad_and_pack(%input: tensor<5x1xf32>, %output: tensor<1x1x8x2x
 // CHECK-SAME:    %[[PAD_VAL:[a-zA-Z0-9]+]]
 // CHECK:         %[[PAD:.+]] = tensor.pad %[[SRC]] low[0, 0] high[3, 1]
 // CHECK:           tensor.yield %[[PAD_VAL]]
-// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<8x2xf32>
-// CHECK:         %[[TRANSP:.+]] = linalg.transpose
-// CHECK-SAME:      ins(%[[PAD]] : tensor<8x2xf32>)
-// CHECK-SAME:      outs(%[[EMPTY]] : tensor<8x2xf32>)
-// CHECK-SAME:      permutation = [0, 1]
-// CHECK:         %[[INSERT:.+]] = tensor.insert_slice %[[TRANSP]] into %[[DEST]]
+// CHECK-NOT:     linalg.transpose
+// CHECK:         %[[INSERT:.+]] = tensor.insert_slice %[[PAD]] into %[[DEST]]
 // CHECK-SAME:      [0, 0, 0, 0] [1, 1, 8, 2] [1, 1, 1, 1]
 // CHECK:         return %[[INSERT]]
 
@@ -47,12 +43,8 @@ func.func @simple_NC_to_CNnc(%arg0: tensor<32x8xf32>, %arg1: tensor<1x1x32x8xf32
 // CHECK-LABEL: func.func @simple_NC_to_CNnc
 // CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]
 // CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]
-// CHECK:         %[[EMPTY:.+]] = tensor.empty() : tensor<32x8xf32>
-// CHECK:         %[[TRANSP:.+]] =  linalg.transpose
-// CHECK-SAME:      ins(%[[SRC]] : tensor<32x8xf32>)
-// CHECK-SAME:      outs(%[[EMPTY]] : tensor<32x8xf32>)
-// CHECK-SAME:      permutation = [0, 1]
-// CHECK:         %[[INSERT:.+]] = tensor.insert_slice %[[TRANSP]] into %[[DEST]]
+// CHECK-NOT:     linalg.transpose
+// CHECK:         %[[INSERT:.+]] = tensor.insert_slice %[[SRC]] into %[[DEST]]
 // CHECK-SAME:      [0, 0, 0, 0] [1, 1, 32, 8] [1, 1, 1, 1]
 // CHECK:         return %[[INSERT]]
 

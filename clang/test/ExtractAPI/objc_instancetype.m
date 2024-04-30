@@ -1,8 +1,8 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
-             // RUN: %t/reference.output.json.in >> %t/reference.output.json
-// RUN: %clang_cc1 -extract-api -triple arm64-apple-macosx -x objective-c-header %t/input.h -o %t/output.json -verify
+// RUN: %t/reference.output.json.in >> %t/reference.output.json
+// RUN: %clang_cc1 -extract-api --pretty-sgf -triple arm64-apple-macosx -x objective-c-header %t/input.h -o %t/output.json -verify
 
 // Generator version is not consistent across test runs, normalize it.
 // RUN: sed -e "s@\"generator\": \".*\"@\"generator\": \"?\"@g" \

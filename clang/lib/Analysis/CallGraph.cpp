@@ -168,7 +168,7 @@ bool CallGraph::includeCalleeInGraph(const Decl *D) {
       return false;
 
     IdentifierInfo *II = FD->getIdentifier();
-    if (II && II->getName().startswith("__inline"))
+    if (II && II->getName().starts_with("__inline"))
       return false;
   }
 

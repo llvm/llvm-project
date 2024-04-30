@@ -1,4 +1,5 @@
 set (FILES
+  AlarmTest.cpp
   ConnectionFileDescriptorTest.cpp
   FileActionTest.cpp
   FileSystemTest.cpp

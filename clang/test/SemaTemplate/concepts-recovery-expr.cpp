@@ -180,3 +180,30 @@ void StaticMemOVCUse() {
   // expected-note@#SMEMOVC3 {{candidate template ignored: constraints not satisfied}}
   // expected-note@#SMEMOVC3REQ{{because substituted constraint expression is ill-formed: constraint depends on a previously diagnosed expression}}
 }
+
+namespace GH58548 {
+
+template <class, class> struct formatter; // #primary-template
+template <class, class> struct basic_format_context {};
+
+template <typename CharType>
+concept has_format_function =
+    format(basic_format_context<CharType, CharType>());
+
+template <typename ValueType, typename CharType>
+  requires has_format_function<CharType>
+struct formatter<ValueType, CharType> {
+  template <typename OutputIt>
+  CharType format(basic_format_context<OutputIt, CharType>);
+};
+
+template <class Ctx> int handle_replacement_field(Ctx arg) {
+  formatter<decltype(arg), int> ctx; // expected-error {{implicit instantiation of undefined template}}
+  return 0;
+}
+
+int x = handle_replacement_field(0);
+// expected-note@-1 {{template specialization 'GH58548::handle_replacement_field<int>' requested here}}
+// expected-note@#primary-template {{is declared here}}
+
+} // GH58548

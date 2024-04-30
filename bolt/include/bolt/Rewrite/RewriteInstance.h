@@ -17,7 +17,6 @@
 #include "bolt/Core/Linker.h"
 #include "bolt/Rewrite/MetadataManager.h"
 #include "bolt/Utils/NameResolver.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
@@ -47,11 +46,14 @@ public:
   // construction. Constructors can’t return errors, so clients must test \p Err
   // after the object is constructed. Use `create` method instead.
   RewriteInstance(llvm::object::ELFObjectFileBase *File, const int Argc,
-                  const char *const *Argv, StringRef ToolPath, Error &Err);
+                  const char *const *Argv, StringRef ToolPath,
+                  raw_ostream &Stdout, raw_ostream &Stderr, Error &Err);
 
   static Expected<std::unique_ptr<RewriteInstance>>
   create(llvm::object::ELFObjectFileBase *File, const int Argc,
-         const char *const *Argv, StringRef ToolPath);
+         const char *const *Argv, StringRef ToolPath,
+         raw_ostream &Stdout = llvm::outs(),
+         raw_ostream &Stderr = llvm::errs());
   ~RewriteInstance();
 
   /// Assign profile from \p Filename to this instance.
@@ -183,6 +185,9 @@ private:
   /// Process metadata in special sections after CFG is built for functions.
   void processMetadataPostCFG();
 
+  /// Make changes to metadata before the binary is emitted.
+  void finalizeMetadataPreEmit();
+
   /// Update debug and other auxiliary information in the file.
   void updateMetadata();
 
@@ -260,6 +265,11 @@ private:
   /// associated address.
   void createPLTBinaryFunction(uint64_t TargetAddress, uint64_t EntryAddress,
                                uint64_t EntrySize);
+
+  /// Disassemble PLT instruction.
+  void disassemblePLTInstruction(const BinarySection &Section,
+                                 uint64_t InstrOffset, MCInst &Instruction,
+                                 uint64_t &InstrSize);
 
   /// Disassemble aarch64-specific .plt \p Section auxiliary function
   void disassemblePLTSectionAArch64(BinarySection &Section);
@@ -358,13 +368,6 @@ private:
   /// rewritten binary.
   void patchBuildID();
 
-  /// Return file offset corresponding to a given virtual address.
-  uint64_t getFileOffsetFor(uint64_t Address) {
-    assert(Address >= NewTextSegmentAddress &&
-           "address in not in the new text segment");
-    return Address - NewTextSegmentAddress + NewTextSegmentOffset;
-  }
-
   /// Return file offset corresponding to a virtual \p Address.
   /// Return 0 if the address has no mapping in the file, including being
   /// part of .bss section.
@@ -387,9 +390,6 @@ public:
 
   /// Return true if the section holds debug information.
   static bool isDebugSection(StringRef SectionName);
-
-  /// Return true if the section holds linux kernel symbol information.
-  static bool isKSymtabSection(StringRef SectionName);
 
   /// Adds Debug section to overwrite.
   static void addToDebugSectionsToOverwrite(const char *Section) {
@@ -424,7 +424,11 @@ private:
 
   /// Common section names.
   static StringRef getEHFrameSectionName() { return ".eh_frame"; }
+  static StringRef getEHFrameHdrSectionName() { return ".eh_frame_hdr"; }
   static StringRef getRelaDynSectionName() { return ".rela.dyn"; }
+
+  /// FILE symbol name used for local fragments of global functions.
+  static StringRef getBOLTFileSymbolName() { return "bolt-pseudo.o"; }
 
   /// An instance of the input binary we are processing, externally owned.
   llvm::object::ELFObjectFileBase *InputFile;

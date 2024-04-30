@@ -39,59 +39,9 @@ class AArch64Subtarget final : public AArch64GenSubtargetInfo {
 public:
   enum ARMProcFamilyEnum : uint8_t {
     Others,
-    A64FX,
-    Ampere1,
-    Ampere1A,
-    AppleA7,
-    AppleA10,
-    AppleA11,
-    AppleA12,
-    AppleA13,
-    AppleA14,
-    AppleA15,
-    AppleA16,
-    AppleA17,
-    Carmel,
-    CortexA35,
-    CortexA53,
-    CortexA55,
-    CortexA510,
-    CortexA520,
-    CortexA57,
-    CortexA65,
-    CortexA72,
-    CortexA73,
-    CortexA75,
-    CortexA76,
-    CortexA77,
-    CortexA78,
-    CortexA78C,
-    CortexA710,
-    CortexA715,
-    CortexA720,
-    CortexR82,
-    CortexX1,
-    CortexX1C,
-    CortexX2,
-    CortexX3,
-    CortexX4,
-    ExynosM3,
-    Falkor,
-    Kryo,
-    NeoverseE1,
-    NeoverseN1,
-    NeoverseN2,
-    Neoverse512TVB,
-    NeoverseV1,
-    NeoverseV2,
-    Saphira,
-    ThunderX2T99,
-    ThunderX,
-    ThunderXT81,
-    ThunderXT83,
-    ThunderXT88,
-    ThunderX3T110,
-    TSV110
+#define ARM_PROCESSOR_FAMILY(ENUM) ENUM,
+#include "llvm/TargetParser/AArch64TargetParserDef.inc"
+#undef ARM_PROCESSOR_FAMILY
   };
 
 protected:
@@ -200,6 +150,9 @@ public:
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool enableMachineScheduler() const override { return true; }
   bool enablePostRAScheduler() const override { return usePostRAScheduler(); }
+
+  bool enableMachinePipeliner() const override;
+  bool useDFAforSMS() const override { return false; }
 
   /// Returns ARM processor family.
   /// Avoid this function! CPU specifics should be kept local to this class
@@ -349,6 +302,9 @@ public:
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            unsigned NumRegionInstrs) const override;
+  void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
+                             SDep &Dep,
+                             const TargetSchedModel *SchedModel) const override;
 
   bool enableEarlyIfConversion() const override;
 
@@ -359,6 +315,7 @@ public:
     case CallingConv::C:
     case CallingConv::Fast:
     case CallingConv::Swift:
+    case CallingConv::SwiftTail:
       return isTargetWindows();
     case CallingConv::Win64:
       return true;
@@ -394,6 +351,7 @@ public:
   void mirFileLoaded(MachineFunction &MF) const override;
 
   bool hasSVEorSME() const { return hasSVE() || hasSME(); }
+  bool hasSVE2orSME() const { return hasSVE2() || hasSME(); }
 
   // Return the known range for the bit length of SVE data registers. A value
   // of 0 means nothing is known about that particular limit beyong what's
@@ -433,13 +391,13 @@ public:
 
   const char* getChkStkName() const {
     if (isWindowsArm64EC())
-      return "__chkstk_arm64ec";
+      return "#__chkstk_arm64ec";
     return "__chkstk";
   }
 
   const char* getSecurityCheckCookieName() const {
     if (isWindowsArm64EC())
-      return "__security_check_cookie_arm64ec";
+      return "#__security_check_cookie_arm64ec";
     return "__security_check_cookie";
   }
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Tools/lsp-server-support/Transport.h"
+#include "mlir/Support/ToolUtilities.h"
 #include "mlir/Tools/lsp-server-support/Logging.h"
 #include "mlir/Tools/lsp-server-support/Protocol.h"
 #include "llvm/ADT/SmallString.h"
@@ -50,12 +51,12 @@ private:
 
 Reply::Reply(const llvm::json::Value &id, llvm::StringRef method,
              JSONTransport &transport, std::mutex &transportOutputMutex)
-    : id(id), transport(&transport),
+    : method(method), id(id), transport(&transport),
       transportOutputMutex(transportOutputMutex) {}
 
 Reply::Reply(Reply &&other)
-    : replied(other.replied.load()), id(std::move(other.id)),
-      transport(other.transport),
+    : method(other.method), replied(other.replied.load()),
+      id(std::move(other.id)), transport(other.transport),
       transportOutputMutex(other.transportOutputMutex) {
   other.transport = nullptr;
 }
@@ -345,9 +346,9 @@ LogicalResult JSONTransport::readDelimitedMessage(std::string &json) {
   llvm::SmallString<128> line;
   while (succeeded(readLine(in, line))) {
     StringRef lineRef = line.str().trim();
-    if (lineRef.startswith("//")) {
+    if (lineRef.starts_with("//")) {
       // Found a delimiter for the message.
-      if (lineRef == "// -----")
+      if (lineRef == kDefaultSplitMarker)
         break;
       continue;
     }

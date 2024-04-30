@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BracesAroundStatementsCheck.h"
+#include "../utils/BracesAroundStatement.h"
 #include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -17,12 +18,10 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::readability {
 
 static tok::TokenKind getTokenKind(SourceLocation Loc, const SourceManager &SM,
-                                   const ASTContext *Context) {
+                                   const LangOptions &LangOpts) {
   Token Tok;
-  SourceLocation Beginning =
-      Lexer::GetBeginningOfToken(Loc, SM, Context->getLangOpts());
-  const bool Invalid =
-      Lexer::getRawToken(Beginning, Tok, SM, Context->getLangOpts());
+  SourceLocation Beginning = Lexer::GetBeginningOfToken(Loc, SM, LangOpts);
+  const bool Invalid = Lexer::getRawToken(Beginning, Tok, SM, LangOpts);
   assert(!Invalid && "Expected a valid token.");
 
   if (Invalid)
@@ -33,62 +32,19 @@ static tok::TokenKind getTokenKind(SourceLocation Loc, const SourceManager &SM,
 
 static SourceLocation
 forwardSkipWhitespaceAndComments(SourceLocation Loc, const SourceManager &SM,
-                                 const ASTContext *Context) {
+                                 const LangOptions &LangOpts) {
   assert(Loc.isValid());
   for (;;) {
     while (isWhitespace(*SM.getCharacterData(Loc)))
       Loc = Loc.getLocWithOffset(1);
 
-    tok::TokenKind TokKind = getTokenKind(Loc, SM, Context);
+    tok::TokenKind TokKind = getTokenKind(Loc, SM, LangOpts);
     if (TokKind != tok::comment)
       return Loc;
 
     // Fast-forward current token.
-    Loc = Lexer::getLocForEndOfToken(Loc, 0, SM, Context->getLangOpts());
+    Loc = Lexer::getLocForEndOfToken(Loc, 0, SM, LangOpts);
   }
-}
-
-static SourceLocation findEndLocation(const Stmt &S, const SourceManager &SM,
-                                      const ASTContext *Context) {
-  SourceLocation Loc =
-      utils::lexer::getUnifiedEndLoc(S, SM, Context->getLangOpts());
-  if (!Loc.isValid())
-    return Loc;
-
-  // Start searching right after S.
-  Loc = Loc.getLocWithOffset(1);
-
-  for (;;) {
-    assert(Loc.isValid());
-    while (isHorizontalWhitespace(*SM.getCharacterData(Loc))) {
-      Loc = Loc.getLocWithOffset(1);
-    }
-
-    if (isVerticalWhitespace(*SM.getCharacterData(Loc))) {
-      // EOL, insert brace before.
-      break;
-    }
-    tok::TokenKind TokKind = getTokenKind(Loc, SM, Context);
-    if (TokKind != tok::comment) {
-      // Non-comment token, insert brace before.
-      break;
-    }
-
-    SourceLocation TokEndLoc =
-        Lexer::getLocForEndOfToken(Loc, 0, SM, Context->getLangOpts());
-    SourceRange TokRange(Loc, TokEndLoc);
-    StringRef Comment = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(TokRange), SM, Context->getLangOpts());
-    if (Comment.startswith("/*") && Comment.contains('\n')) {
-      // Multi-line block comment, insert brace before.
-      break;
-    }
-    // else: Trailing comment, insert brace after the newline.
-
-    // Fast-forward current token.
-    Loc = TokEndLoc;
-  }
-  return Loc;
 }
 
 BracesAroundStatementsCheck::BracesAroundStatementsCheck(
@@ -124,7 +80,7 @@ void BracesAroundStatementsCheck::check(
   } else if (const auto *S = Result.Nodes.getNodeAs<DoStmt>("do")) {
     checkStmt(Result, S->getBody(), S->getDoLoc(), S->getWhileLoc());
   } else if (const auto *S = Result.Nodes.getNodeAs<WhileStmt>("while")) {
-    SourceLocation StartLoc = findRParenLoc(S, SM, Context);
+    SourceLocation StartLoc = findRParenLoc(S, SM, Context->getLangOpts());
     if (StartLoc.isInvalid())
       return;
     checkStmt(Result, S->getBody(), StartLoc);
@@ -133,7 +89,7 @@ void BracesAroundStatementsCheck::check(
     if (S->isConsteval())
       return;
 
-    SourceLocation StartLoc = findRParenLoc(S, SM, Context);
+    SourceLocation StartLoc = findRParenLoc(S, SM, Context->getLangOpts());
     if (StartLoc.isInvalid())
       return;
     if (ForceBracesStmts.erase(S))
@@ -156,7 +112,7 @@ template <typename IfOrWhileStmt>
 SourceLocation
 BracesAroundStatementsCheck::findRParenLoc(const IfOrWhileStmt *S,
                                            const SourceManager &SM,
-                                           const ASTContext *Context) {
+                                           const LangOptions &LangOpts) {
   // Skip macros.
   if (S->getBeginLoc().isMacroID())
     return {};
@@ -170,14 +126,14 @@ BracesAroundStatementsCheck::findRParenLoc(const IfOrWhileStmt *S,
   }
 
   SourceLocation PastCondEndLoc =
-      Lexer::getLocForEndOfToken(CondEndLoc, 0, SM, Context->getLangOpts());
+      Lexer::getLocForEndOfToken(CondEndLoc, 0, SM, LangOpts);
   if (PastCondEndLoc.isInvalid())
     return {};
   SourceLocation RParenLoc =
-      forwardSkipWhitespaceAndComments(PastCondEndLoc, SM, Context);
+      forwardSkipWhitespaceAndComments(PastCondEndLoc, SM, LangOpts);
   if (RParenLoc.isInvalid())
     return {};
-  tok::TokenKind TokKind = getTokenKind(RParenLoc, SM, Context);
+  tok::TokenKind TokKind = getTokenKind(RParenLoc, SM, LangOpts);
   if (TokKind != tok::r_paren)
     return {};
   return RParenLoc;
@@ -188,86 +144,23 @@ BracesAroundStatementsCheck::findRParenLoc(const IfOrWhileStmt *S,
 bool BracesAroundStatementsCheck::checkStmt(
     const MatchFinder::MatchResult &Result, const Stmt *S,
     SourceLocation StartLoc, SourceLocation EndLocHint) {
-
   while (const auto *AS = dyn_cast<AttributedStmt>(S))
     S = AS->getSubStmt();
 
-  const SourceManager &SM = *Result.SourceManager;
-  const ASTContext *Context = Result.Context;
-
-  // 1) If there's a corresponding "else" or "while", the check inserts "} "
-  // right before that token.
-  // 2) If there's a multi-line block comment starting on the same line after
-  // the location we're inserting the closing brace at, or there's a non-comment
-  // token, the check inserts "\n}" right before that token.
-  // 3) Otherwise the check finds the end of line (possibly after some block or
-  // line comments) and inserts "\n}" right before that EOL.
-  if (!S || isa<CompoundStmt>(S)) {
-    // Already inside braces.
-    return false;
-  }
-
-  // When TreeTransform, Stmt in constexpr IfStmt will be transform to NullStmt.
-  // This NullStmt can be detected according to beginning token.
-  const SourceLocation StmtBeginLoc = S->getBeginLoc();
-  if (isa<NullStmt>(S) && StmtBeginLoc.isValid() &&
-      getTokenKind(StmtBeginLoc, SM, Context) == tok::l_brace)
-    return false;
-
-  if (StartLoc.isInvalid())
-    return false;
-
-  // Convert StartLoc to file location, if it's on the same macro expansion
-  // level as the start of the statement. We also need file locations for
-  // Lexer::getLocForEndOfToken working properly.
-  StartLoc = Lexer::makeFileCharRange(
-                 CharSourceRange::getCharRange(StartLoc, S->getBeginLoc()), SM,
-                 Context->getLangOpts())
-                 .getBegin();
-  if (StartLoc.isInvalid())
-    return false;
-  StartLoc =
-      Lexer::getLocForEndOfToken(StartLoc, 0, SM, Context->getLangOpts());
-
-  // StartLoc points at the location of the opening brace to be inserted.
-  SourceLocation EndLoc;
-  std::string ClosingInsertion;
-  if (EndLocHint.isValid()) {
-    EndLoc = EndLocHint;
-    ClosingInsertion = "} ";
-  } else {
-    EndLoc = findEndLocation(*S, SM, Context);
-    ClosingInsertion = "\n}";
-  }
-
-  assert(StartLoc.isValid());
-
-  // Don't require braces for statements spanning less than certain number of
-  // lines.
-  if (ShortStatementLines && !ForceBracesStmts.erase(S)) {
-    unsigned StartLine = SM.getSpellingLineNumber(StartLoc);
-    unsigned EndLine = SM.getSpellingLineNumber(EndLoc);
-    if (EndLine - StartLine < ShortStatementLines)
+  const auto BraceInsertionHints = utils::getBraceInsertionsHints(
+      S, Result.Context->getLangOpts(), *Result.SourceManager, StartLoc,
+      EndLocHint);
+  if (BraceInsertionHints) {
+    if (ShortStatementLines && !ForceBracesStmts.erase(S) &&
+        BraceInsertionHints.resultingCompoundLineExtent(*Result.SourceManager) <
+            ShortStatementLines)
       return false;
+    auto Diag = diag(BraceInsertionHints.DiagnosticPos,
+                     "statement should be inside braces");
+    if (BraceInsertionHints.offersFixIts())
+      Diag << BraceInsertionHints.openingBraceFixIt()
+           << BraceInsertionHints.closingBraceFixIt();
   }
-
-  auto Diag = diag(StartLoc, "statement should be inside braces");
-
-  // Change only if StartLoc and EndLoc are on the same macro expansion level.
-  // This will also catch invalid EndLoc.
-  // Example: LLVM_DEBUG( for(...) do_something() );
-  // In this case fix-it cannot be provided as the semicolon which is not
-  // visible here is part of the macro. Adding braces here would require adding
-  // another semicolon.
-  if (Lexer::makeFileCharRange(
-          CharSourceRange::getTokenRange(SourceRange(
-              SM.getSpellingLoc(StartLoc), SM.getSpellingLoc(EndLoc))),
-          SM, Context->getLangOpts())
-          .isInvalid())
-    return false;
-
-  Diag << FixItHint::CreateInsertion(StartLoc, " {")
-       << FixItHint::CreateInsertion(EndLoc, ClosingInsertion);
   return true;
 }
 

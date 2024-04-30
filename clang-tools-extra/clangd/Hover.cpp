@@ -960,7 +960,7 @@ std::optional<HoverInfo> getHoverContents(const Attr *A, ParsedAST &AST) {
 }
 
 bool isParagraphBreak(llvm::StringRef Rest) {
-  return Rest.ltrim(" \t").startswith("\n");
+  return Rest.ltrim(" \t").starts_with("\n");
 }
 
 bool punctuationIndicatesLineBreak(llvm::StringRef Line) {
@@ -984,7 +984,7 @@ bool isHardLineBreakIndicator(llvm::StringRef Rest) {
 
   if (llvm::isDigit(Rest.front())) {
     llvm::StringRef AfterDigit = Rest.drop_while(llvm::isDigit);
-    if (AfterDigit.startswith(".") || AfterDigit.startswith(")"))
+    if (AfterDigit.starts_with(".") || AfterDigit.starts_with(")"))
       return true;
   }
   return false;
@@ -1194,7 +1194,7 @@ void maybeAddSymbolProviders(ParsedAST &AST, HoverInfo &HI,
 
   const SourceManager &SM = AST.getSourceManager();
   llvm::SmallVector<include_cleaner::Header> RankedProviders =
-      include_cleaner::headersForSymbol(Sym, SM, AST.getPragmaIncludes().get());
+      include_cleaner::headersForSymbol(Sym, SM, &AST.getPragmaIncludes());
   if (RankedProviders.empty())
     return;
 
@@ -1254,7 +1254,7 @@ void maybeAddUsedSymbols(ParsedAST &AST, HoverInfo &HI, const Inclusion &Inc) {
   llvm::DenseSet<include_cleaner::Symbol> UsedSymbols;
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), collectMacroReferences(AST),
-      AST.getPragmaIncludes().get(), AST.getPreprocessor(),
+      &AST.getPragmaIncludes(), AST.getPreprocessor(),
       [&](const include_cleaner::SymbolReference &Ref,
           llvm::ArrayRef<include_cleaner::Header> Providers) {
         if (Ref.RT != include_cleaner::RefType::Explicit ||

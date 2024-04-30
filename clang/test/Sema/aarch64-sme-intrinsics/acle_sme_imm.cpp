@@ -10,9 +10,9 @@
 #define SVE_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
 #endif
 
-#include <arm_sme_draft_spec_subject_to_change.h>
+#include <arm_sme.h>
 
-void test_range_0_0(uint32_t slice, svbool_t pg, void *ptr) {
+void test_range_0_0(uint32_t slice, svbool_t pg, void *ptr) __arm_streaming __arm_inout("za") {
   // expected-error@+1 {{argument value 18446744073709551615 is outside the valid range [0, 0]}}
   SVE_ACLE_FUNC(svld1_hor_za8,,,)(-1, slice, pg, ptr);
   // expected-error@+1 {{argument value 1 is outside the valid range [0, 0]}}
@@ -32,7 +32,7 @@ void test_range_0_0(uint32_t slice, svbool_t pg, void *ptr) {
   SVE_ACLE_FUNC(svwrite_ver_za8, _s8, _m,)(1, slice, pg, svundef_s8());
 }
 
-void test_range_0_1(uint32_t slice, svbool_t pg, void *ptr) {
+void test_range_0_1(uint32_t slice, svbool_t pg, void *ptr) __arm_streaming __arm_inout("za") {
   // expected-error@+1 {{argument value 18446744073709551615 is outside the valid range [0, 1]}}
   SVE_ACLE_FUNC(svld1_hor_za16,,,)(-1, slice, pg, ptr);
   // expected-error@+1 {{argument value 2 is outside the valid range [0, 1]}}
@@ -52,7 +52,7 @@ void test_range_0_1(uint32_t slice, svbool_t pg, void *ptr) {
   SVE_ACLE_FUNC(svwrite_ver_za16, _s16, _m,)(2, slice, pg, svundef_s16());
 }
 
-void test_range_0_3(uint32_t slice, svbool_t pg, void *ptr) {
+void test_range_0_3(uint32_t slice, svbool_t pg, void *ptr) __arm_streaming __arm_inout("za") {
   // expected-error@+1 {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
   SVE_ACLE_FUNC(svld1_hor_za32,,,)(-1, slice, pg, ptr);
   // expected-error@+1 {{argument value 4 is outside the valid range [0, 3]}}
@@ -90,7 +90,7 @@ void test_range_0_3(uint32_t slice, svbool_t pg, void *ptr) {
   SVE_ACLE_FUNC(svusmops_za32, _u8, _m,)(-1, pg, pg, svundef_u8(), svundef_s8());
 }
 
-void test_range_0_7(uint32_t slice, svbool_t pg, void *ptr) {
+void test_range_0_7(uint32_t slice, svbool_t pg, void *ptr) __arm_streaming __arm_inout("za") {
   // expected-error@+1 {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
   SVE_ACLE_FUNC(svld1_hor_za64,,,)(-1, slice, pg, ptr);
   // expected-error@+1 {{argument value 8 is outside the valid range [0, 7]}}
@@ -133,7 +133,7 @@ void test_range_0_7(uint32_t slice, svbool_t pg, void *ptr) {
   SVE_ACLE_FUNC(svmops_za64, _f64, _m,)(-1, pg, pg, svundef_f64(), svundef_f64());
 }
 
-void test_range_0_15(uint32_t slice, svbool_t pg, void *ptr) {
+void test_range_0_15(uint32_t slice, svbool_t pg, void *ptr) __arm_streaming __arm_inout("za") {
   // expected-error@+1 {{argument value 18446744073709551615 is outside the valid range [0, 15]}}
   SVE_ACLE_FUNC(svld1_hor_za128,,,)(-1, slice, pg, ptr);
   // expected-error@+1 {{argument value 16 is outside the valid range [0, 15]}}
@@ -153,14 +153,14 @@ void test_range_0_15(uint32_t slice, svbool_t pg, void *ptr) {
   SVE_ACLE_FUNC(svwrite_ver_za128, _s8, _m,)(16, slice, pg, svundef_s8());
 }
 
-void test_range_0_255(svbool_t pg, void *ptr) {
+void test_range_0_255(svbool_t pg, void *ptr) __arm_streaming __arm_inout("za") {
   // expected-error@+1 {{argument value 256 is outside the valid range [0, 255]}}
   SVE_ACLE_FUNC(svzero_mask_za,,,)(256);
   // expected-error@+1 {{argument value 18446744073709551615 is outside the valid range [0, 255]}}
   SVE_ACLE_FUNC(svzero_mask_za,,,)(-1);
 }
 
-void test_constant(uint64_t u64, svbool_t pg, void *ptr) {
+void test_constant(uint64_t u64, svbool_t pg, void *ptr) __arm_streaming __arm_inout("za") {
   SVE_ACLE_FUNC(svld1_hor_za8,,,)(u64, u64, pg, ptr);  // expected-error {{argument to 'svld1_hor_za8' must be a constant integer}}
   SVE_ACLE_FUNC(svst1_hor_za32,,,)(u64, 0, pg, ptr); // expected-error {{argument to 'svst1_hor_za32' must be a constant integer}}
   SVE_ACLE_FUNC(svld1_hor_vnum_za8,,,)(u64, 0, pg, ptr, u64);  // expected-error {{argument to 'svld1_hor_vnum_za8' must be a constant integer}}

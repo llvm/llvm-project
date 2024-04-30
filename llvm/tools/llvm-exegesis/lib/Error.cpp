@@ -9,6 +9,7 @@
 #include "Error.h"
 
 #ifdef LLVM_ON_UNIX
+#include "llvm/Support/SystemZ/zOSSupport.h"
 #include <string.h>
 #endif // LLVM_ON_UNIX
 
@@ -42,6 +43,8 @@ void SnippetSignal::log(raw_ostream &OS) const {
   OS << "snippet crashed while running";
 #ifdef LLVM_ON_UNIX
   OS << ": " << strsignal(SignalNumber);
+#else
+  (void)SignalNumber;
 #endif // LLVM_ON_UNIX
 }
 

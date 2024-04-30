@@ -369,8 +369,7 @@ define i1 @ptr.int.struct.test.ult.due.to.second.dimension.var.index(ptr %start,
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[IDX]] to i64
 ; CHECK-NEXT:    [[START_0:%.*]] = getelementptr inbounds [[STRUCT_2]], ptr [[START]], i64 6, i32 0
 ; CHECK-NEXT:    [[START_0_CAST:%.*]] = bitcast ptr [[START_0]] to ptr
-; CHECK-NEXT:    [[C_0:%.*]] = icmp ult ptr [[START_0_CAST]], [[HIGH]]
-; CHECK-NEXT:    ret i1 [[C_0]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret i1 true
 ;

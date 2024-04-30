@@ -1,11 +1,13 @@
 include "config/public_api.td"
 
-include "spec/bsd_ext.td"
-include "spec/gnu_ext.td"
-include "spec/linux.td"
-include "spec/llvm_libc_ext.td"
-include "spec/posix.td"
 include "spec/stdc.td"
+include "spec/posix.td"
+include "spec/linux.td"
+include "spec/gnu_ext.td"
+include "spec/bsd_ext.td"
+include "spec/stdc_ext.td"
+include "spec/llvm_libc_ext.td"
+include "spec/llvm_libc_stdfix_ext.td"
 
 def AssertMacro : MacroDef<"assert"> {
   let Defn = [{
@@ -47,7 +49,10 @@ def CTypeAPI : PublicAPI<"ctype.h"> {
 }
 
 def FCntlAPI : PublicAPI<"fcntl.h"> {
-  let Types = ["mode_t"];
+  let Types = [
+    "mode_t",
+    "off_t",
+  ];
 }
 
 def IntTypesAPI : PublicAPI<"inttypes.h"> {
@@ -55,7 +60,7 @@ def IntTypesAPI : PublicAPI<"inttypes.h"> {
 }
 
 def MathAPI : PublicAPI<"math.h"> {
-  let Types = ["double_t", "float_t"];
+  let Types = ["double_t", "float_t", "float128"];
 }
 
 def FenvAPI: PublicAPI<"fenv.h"> {
@@ -74,9 +79,13 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
     SimpleMacroDef<"_IOFBF", "0">,
     SimpleMacroDef<"_IOLBF", "1">,
     SimpleMacroDef<"_IONBF", "2">,
-    SimpleMacroDef<"EOF", "-1">,
   ];
-  let Types = ["size_t", "FILE", "cookie_io_functions_t"];
+  let Types = [
+    "FILE",
+    "cookie_io_functions_t",
+    "off_t",
+    "size_t",
+  ];
 }
 
 def StdlibAPI : PublicAPI<"stdlib.h"> {
@@ -116,7 +125,7 @@ def SchedAPI : PublicAPI<"sched.h"> {
 }
 
 def SysMManAPI : PublicAPI<"sys/mman.h"> {
-  let Types = ["off_t", "size_t"];
+  let Types = ["off_t", "size_t", "mode_t"];
 }
 
 def SignalAPI : PublicAPI<"signal.h"> {
@@ -166,11 +175,13 @@ def PThreadAPI : PublicAPI<"pthread.h"> {
       "__pthread_start_t",
       "__pthread_tss_dtor_t",
       "pthread_attr_t",
+      "pthread_condattr_t",
+      "pthread_key_t",
       "pthread_mutex_t",
       "pthread_mutexattr_t",
-      "pthread_t",
-      "pthread_key_t",
       "pthread_once_t",
+      "pthread_rwlockattr_t",
+      "pthread_t",
   ];
 }
 
@@ -205,7 +216,12 @@ def SysSelectAPI : PublicAPI<"sys/select.h"> {
 }
 
 def SysSocketAPI : PublicAPI<"sys/socket.h"> {
-  let Types = ["struct sockaddr", "sa_family_t"];
+  let Types = [
+    "sa_family_t",
+    "socklen_t",
+    "struct sockaddr",
+    "struct sockaddr_un",
+  ];
 }
 
 def SysResourceAPI : PublicAPI<"sys/resource.h"> {
@@ -227,14 +243,39 @@ def SysSendfileAPI : PublicAPI<"sys/sendfile.h"> {
 }
 
 def SysTypesAPI : PublicAPI<"sys/types.h"> {
-  let Types = ["blkcnt_t", "blksize_t", "clockid_t", "dev_t", "gid_t", "ino_t",
-               "mode_t", "nlink_t", "off_t", "pid_t", "pthread_attr_t", "pthread_key_t",
-               "pthread_mutex_t", "pthread_mutexattr_t", "pthread_once_t", "pthread_t",
-               "size_t", "ssize_t", "suseconds_t", "time_t", "uid_t"];
+  let Types = [
+    "blkcnt_t",
+    "blksize_t",
+    "clockid_t",
+    "dev_t",
+    "gid_t",
+    "ino_t",
+    "mode_t",
+    "nlink_t",
+    "off_t",
+    "pid_t",
+    "pthread_attr_t",
+    "pthread_condattr_t",
+    "pthread_key_t",
+    "pthread_mutex_t",
+    "pthread_mutexattr_t",
+    "pthread_once_t",
+    "pthread_rwlockattr_t",
+    "pthread_t",
+    "size_t",
+    "ssize_t",
+    "suseconds_t",
+    "time_t",
+    "uid_t"
+  ];
 }
 
 def SysUtsNameAPI : PublicAPI<"sys/utsname.h"> {
   let Types = ["struct utsname"];
+}
+
+def SysEpollAPI : PublicAPI<"sys/epoll.h"> {
+  let Types = ["struct epoll_event", "struct epoll_data", "sigset_t", "struct timespec"];
 }
 
 def SpawnAPI : PublicAPI<"spawn.h"> {
@@ -251,4 +292,8 @@ def SetJmpAPI : PublicAPI<"setjmp.h"> {
 
 def SearchAPI : PublicAPI<"search.h"> {
   let Types = ["ACTION", "ENTRY", "struct hsearch_data"];
+}
+
+def SysStatvfsAPI : PublicAPI<"sys/statvfs.h"> {
+  let Types = ["fsblkcnt_t", "fsfilcnt_t", "struct statvfs"];
 }

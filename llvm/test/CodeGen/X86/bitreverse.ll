@@ -172,26 +172,10 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ;
 ; GFNI-LABEL: test_bitreverse_i64:
 ; GFNI:       # %bb.0:
-; GFNI-NEXT:    bswapq %rdi
-; GFNI-NEXT:    movq %rdi, %rax
-; GFNI-NEXT:    shrq $4, %rax
-; GFNI-NEXT:    movabsq $1085102592571150095, %rcx # imm = 0xF0F0F0F0F0F0F0F
-; GFNI-NEXT:    andq %rcx, %rax
-; GFNI-NEXT:    andq %rcx, %rdi
-; GFNI-NEXT:    shlq $4, %rdi
-; GFNI-NEXT:    orq %rax, %rdi
-; GFNI-NEXT:    movabsq $3689348814741910323, %rax # imm = 0x3333333333333333
-; GFNI-NEXT:    movq %rdi, %rcx
-; GFNI-NEXT:    andq %rax, %rcx
-; GFNI-NEXT:    shrq $2, %rdi
-; GFNI-NEXT:    andq %rax, %rdi
-; GFNI-NEXT:    leaq (%rdi,%rcx,4), %rax
-; GFNI-NEXT:    movabsq $6148914691236517205, %rcx # imm = 0x5555555555555555
-; GFNI-NEXT:    movq %rax, %rdx
-; GFNI-NEXT:    andq %rcx, %rdx
-; GFNI-NEXT:    shrq %rax
-; GFNI-NEXT:    andq %rcx, %rax
-; GFNI-NEXT:    leaq (%rax,%rdx,2), %rax
+; GFNI-NEXT:    vmovq %rdi, %xmm0
+; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNI-NEXT:    vmovq %xmm0, %rax
+; GFNI-NEXT:    bswapq %rax
 ; GFNI-NEXT:    retq
   %b = call i64 @llvm.bitreverse.i64(i64 %a)
   ret i64 %b
@@ -253,24 +237,10 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ;
 ; GFNI-LABEL: test_bitreverse_i32:
 ; GFNI:       # %bb.0:
-; GFNI-NEXT:    # kill: def $edi killed $edi def $rdi
-; GFNI-NEXT:    bswapl %edi
-; GFNI-NEXT:    movl %edi, %eax
-; GFNI-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; GFNI-NEXT:    shll $4, %eax
-; GFNI-NEXT:    shrl $4, %edi
-; GFNI-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
-; GFNI-NEXT:    orl %eax, %edi
-; GFNI-NEXT:    movl %edi, %eax
-; GFNI-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; GFNI-NEXT:    shrl $2, %edi
-; GFNI-NEXT:    andl $858993459, %edi # imm = 0x33333333
-; GFNI-NEXT:    leal (%rdi,%rax,4), %eax
-; GFNI-NEXT:    movl %eax, %ecx
-; GFNI-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
-; GFNI-NEXT:    shrl %eax
-; GFNI-NEXT:    andl $1431655765, %eax # imm = 0x55555555
-; GFNI-NEXT:    leal (%rax,%rcx,2), %eax
+; GFNI-NEXT:    vmovd %edi, %xmm0
+; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNI-NEXT:    vmovd %xmm0, %eax
+; GFNI-NEXT:    bswapl %eax
 ; GFNI-NEXT:    retq
   %b = call i32 @llvm.bitreverse.i32(i32 %a)
   ret i32 %b
@@ -335,24 +305,10 @@ define i24 @test_bitreverse_i24(i24 %a) nounwind {
 ;
 ; GFNI-LABEL: test_bitreverse_i24:
 ; GFNI:       # %bb.0:
-; GFNI-NEXT:    # kill: def $edi killed $edi def $rdi
-; GFNI-NEXT:    bswapl %edi
-; GFNI-NEXT:    movl %edi, %eax
-; GFNI-NEXT:    andl $252645135, %eax # imm = 0xF0F0F0F
-; GFNI-NEXT:    shll $4, %eax
-; GFNI-NEXT:    shrl $4, %edi
-; GFNI-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
-; GFNI-NEXT:    orl %eax, %edi
-; GFNI-NEXT:    movl %edi, %eax
-; GFNI-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; GFNI-NEXT:    shrl $2, %edi
-; GFNI-NEXT:    andl $858993459, %edi # imm = 0x33333333
-; GFNI-NEXT:    leal (%rdi,%rax,4), %eax
-; GFNI-NEXT:    movl %eax, %ecx
-; GFNI-NEXT:    andl $1431655680, %ecx # imm = 0x55555500
-; GFNI-NEXT:    shrl %eax
-; GFNI-NEXT:    andl $1431655680, %eax # imm = 0x55555500
-; GFNI-NEXT:    leal (%rax,%rcx,2), %eax
+; GFNI-NEXT:    vmovd %edi, %xmm0
+; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNI-NEXT:    vmovd %xmm0, %eax
+; GFNI-NEXT:    bswapl %eax
 ; GFNI-NEXT:    shrl $8, %eax
 ; GFNI-NEXT:    retq
   %b = call i24 @llvm.bitreverse.i24(i24 %a)
@@ -418,24 +374,10 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ;
 ; GFNI-LABEL: test_bitreverse_i16:
 ; GFNI:       # %bb.0:
-; GFNI-NEXT:    # kill: def $edi killed $edi def $rdi
-; GFNI-NEXT:    rolw $8, %di
-; GFNI-NEXT:    movl %edi, %eax
-; GFNI-NEXT:    andl $3855, %eax # imm = 0xF0F
-; GFNI-NEXT:    shll $4, %eax
-; GFNI-NEXT:    shrl $4, %edi
-; GFNI-NEXT:    andl $3855, %edi # imm = 0xF0F
-; GFNI-NEXT:    orl %eax, %edi
-; GFNI-NEXT:    movl %edi, %eax
-; GFNI-NEXT:    andl $13107, %eax # imm = 0x3333
-; GFNI-NEXT:    shrl $2, %edi
-; GFNI-NEXT:    andl $13107, %edi # imm = 0x3333
-; GFNI-NEXT:    leal (%rdi,%rax,4), %eax
-; GFNI-NEXT:    movl %eax, %ecx
-; GFNI-NEXT:    andl $21845, %ecx # imm = 0x5555
-; GFNI-NEXT:    shrl %eax
-; GFNI-NEXT:    andl $21845, %eax # imm = 0x5555
-; GFNI-NEXT:    leal (%rax,%rcx,2), %eax
+; GFNI-NEXT:    vmovd %edi, %xmm0
+; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNI-NEXT:    vmovd %xmm0, %eax
+; GFNI-NEXT:    rolw $8, %ax
 ; GFNI-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GFNI-NEXT:    retq
   %b = call i16 @llvm.bitreverse.i16(i16 %a)
@@ -490,19 +432,10 @@ define i8 @test_bitreverse_i8(i8 %a) {
 ;
 ; GFNI-LABEL: test_bitreverse_i8:
 ; GFNI:       # %bb.0:
-; GFNI-NEXT:    rolb $4, %dil
-; GFNI-NEXT:    movl %edi, %eax
-; GFNI-NEXT:    andb $51, %al
-; GFNI-NEXT:    shlb $2, %al
-; GFNI-NEXT:    shrb $2, %dil
-; GFNI-NEXT:    andb $51, %dil
-; GFNI-NEXT:    orb %dil, %al
-; GFNI-NEXT:    movl %eax, %ecx
-; GFNI-NEXT:    andb $85, %cl
-; GFNI-NEXT:    addb %cl, %cl
-; GFNI-NEXT:    shrb %al
-; GFNI-NEXT:    andb $85, %al
-; GFNI-NEXT:    orb %cl, %al
+; GFNI-NEXT:    vmovd %edi, %xmm0
+; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNI-NEXT:    vmovd %xmm0, %eax
+; GFNI-NEXT:    # kill: def $al killed $al killed $eax
 ; GFNI-NEXT:    retq
   %b = call i8 @llvm.bitreverse.i8(i8 %a)
   ret i8 %b
@@ -558,19 +491,11 @@ define i4 @test_bitreverse_i4(i4 %a) {
 ;
 ; GFNI-LABEL: test_bitreverse_i4:
 ; GFNI:       # %bb.0:
-; GFNI-NEXT:    # kill: def $edi killed $edi def $rdi
-; GFNI-NEXT:    movl %edi, %eax
-; GFNI-NEXT:    andb $8, %al
-; GFNI-NEXT:    leal (%rdi,%rdi), %ecx
-; GFNI-NEXT:    andb $4, %cl
-; GFNI-NEXT:    leal (,%rdi,8), %edx
-; GFNI-NEXT:    andb $8, %dl
-; GFNI-NEXT:    orb %cl, %dl
-; GFNI-NEXT:    shrb %dil
-; GFNI-NEXT:    andb $2, %dil
-; GFNI-NEXT:    orb %dil, %dl
-; GFNI-NEXT:    shrb $3, %al
-; GFNI-NEXT:    orb %dl, %al
+; GFNI-NEXT:    vmovd %edi, %xmm0
+; GFNI-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
+; GFNI-NEXT:    vmovd %xmm0, %eax
+; GFNI-NEXT:    shrb $4, %al
+; GFNI-NEXT:    # kill: def $al killed $al killed $eax
 ; GFNI-NEXT:    retq
   %b = call i4 @llvm.bitreverse.i4(i4 %a)
   ret i4 %b
@@ -587,17 +512,17 @@ define <2 x i16> @fold_v2i16() {
 ;
 ; X64-LABEL: fold_v2i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movaps {{.*#+}} xmm0 = <61440,240,u,u,u,u,u,u>
+; X64-NEXT:    movss {{.*#+}} xmm0 = [61440,240,0,0,0,0,0,0]
 ; X64-NEXT:    retq
 ;
 ; X86XOP-LABEL: fold_v2i16:
 ; X86XOP:       # %bb.0:
-; X86XOP-NEXT:    vbroadcastss {{.*#+}} xmm0 = [61440,240,61440,240,61440,240,61440,240]
+; X86XOP-NEXT:    vmovss {{.*#+}} xmm0 = [61440,240,0,0,0,0,0,0]
 ; X86XOP-NEXT:    retl
 ;
 ; GFNI-LABEL: fold_v2i16:
 ; GFNI:       # %bb.0:
-; GFNI-NEXT:    vbroadcastss {{.*#+}} xmm0 = [61440,240,61440,240,61440,240,61440,240]
+; GFNI-NEXT:    vmovss {{.*#+}} xmm0 = [61440,240,0,0,0,0,0,0]
 ; GFNI-NEXT:    retq
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> <i16 15, i16 3840>)
   ret <2 x i16> %b
@@ -1412,196 +1337,67 @@ define i528 @large_promotion(i528 %A) nounwind {
 ;
 ; GFNI-LABEL: large_promotion:
 ; GFNI:       # %bb.0:
-; GFNI-NEXT:    pushq %r15
 ; GFNI-NEXT:    pushq %r14
-; GFNI-NEXT:    pushq %r13
-; GFNI-NEXT:    pushq %r12
 ; GFNI-NEXT:    pushq %rbx
 ; GFNI-NEXT:    movq %rdi, %rax
-; GFNI-NEXT:    movq {{[0-9]+}}(%rsp), %r12
-; GFNI-NEXT:    movq {{[0-9]+}}(%rsp), %r15
-; GFNI-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
-; GFNI-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
+; GFNI-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [9241421688590303745,9241421688590303745]
+; GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
+; GFNI-NEXT:    vmovq %xmm1, %r10
+; GFNI-NEXT:    bswapq %r10
+; GFNI-NEXT:    vmovq %r9, %xmm1
+; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
+; GFNI-NEXT:    vmovq %xmm1, %rdi
 ; GFNI-NEXT:    bswapq %rdi
-; GFNI-NEXT:    movq %rdi, %r10
-; GFNI-NEXT:    shrq $4, %r10
-; GFNI-NEXT:    movabsq $1085102592571150095, %r11 # imm = 0xF0F0F0F0F0F0F0F
-; GFNI-NEXT:    andq %r11, %r10
-; GFNI-NEXT:    andq %r11, %rdi
-; GFNI-NEXT:    shlq $4, %rdi
-; GFNI-NEXT:    orq %r10, %rdi
-; GFNI-NEXT:    movabsq $3689348814741910323, %r10 # imm = 0x3333333333333333
-; GFNI-NEXT:    movq %rdi, %r14
-; GFNI-NEXT:    andq %r10, %r14
-; GFNI-NEXT:    shrq $2, %rdi
-; GFNI-NEXT:    andq %r10, %rdi
-; GFNI-NEXT:    leaq (%rdi,%r14,4), %rdi
-; GFNI-NEXT:    movabsq $6148820866244280320, %r14 # imm = 0x5555000000000000
-; GFNI-NEXT:    movq %rdi, %r13
-; GFNI-NEXT:    andq %r14, %r13
-; GFNI-NEXT:    shrq %rdi
-; GFNI-NEXT:    andq %r14, %rdi
-; GFNI-NEXT:    leaq (%rdi,%r13,2), %rdi
-; GFNI-NEXT:    bswapq %rbx
-; GFNI-NEXT:    movq %rbx, %r14
-; GFNI-NEXT:    shrq $4, %r14
-; GFNI-NEXT:    andq %r11, %r14
-; GFNI-NEXT:    andq %r11, %rbx
-; GFNI-NEXT:    shlq $4, %rbx
-; GFNI-NEXT:    orq %r14, %rbx
-; GFNI-NEXT:    movq %rbx, %r14
-; GFNI-NEXT:    andq %r10, %r14
-; GFNI-NEXT:    shrq $2, %rbx
-; GFNI-NEXT:    andq %r10, %rbx
-; GFNI-NEXT:    leaq (%rbx,%r14,4), %rbx
-; GFNI-NEXT:    movabsq $6148914691236517205, %r14 # imm = 0x5555555555555555
-; GFNI-NEXT:    movq %rbx, %r13
-; GFNI-NEXT:    andq %r14, %r13
-; GFNI-NEXT:    shrq %rbx
-; GFNI-NEXT:    andq %r14, %rbx
-; GFNI-NEXT:    leaq (%rbx,%r13,2), %rbx
-; GFNI-NEXT:    shrdq $48, %rbx, %rdi
-; GFNI-NEXT:    bswapq %r15
-; GFNI-NEXT:    movq %r15, %r13
-; GFNI-NEXT:    shrq $4, %r13
-; GFNI-NEXT:    andq %r11, %r13
-; GFNI-NEXT:    andq %r11, %r15
-; GFNI-NEXT:    shlq $4, %r15
-; GFNI-NEXT:    orq %r13, %r15
-; GFNI-NEXT:    movq %r15, %r13
-; GFNI-NEXT:    andq %r10, %r13
-; GFNI-NEXT:    shrq $2, %r15
-; GFNI-NEXT:    andq %r10, %r15
-; GFNI-NEXT:    leaq (%r15,%r13,4), %r15
-; GFNI-NEXT:    movq %r15, %r13
-; GFNI-NEXT:    andq %r14, %r13
-; GFNI-NEXT:    shrq %r15
-; GFNI-NEXT:    andq %r14, %r15
-; GFNI-NEXT:    leaq (%r15,%r13,2), %r15
-; GFNI-NEXT:    shrdq $48, %r15, %rbx
-; GFNI-NEXT:    bswapq %r12
-; GFNI-NEXT:    movq %r12, %r13
-; GFNI-NEXT:    shrq $4, %r13
-; GFNI-NEXT:    andq %r11, %r13
-; GFNI-NEXT:    andq %r11, %r12
-; GFNI-NEXT:    shlq $4, %r12
-; GFNI-NEXT:    orq %r13, %r12
-; GFNI-NEXT:    movq %r12, %r13
-; GFNI-NEXT:    andq %r10, %r13
-; GFNI-NEXT:    shrq $2, %r12
-; GFNI-NEXT:    andq %r10, %r12
-; GFNI-NEXT:    leaq (%r12,%r13,4), %r12
-; GFNI-NEXT:    movq %r12, %r13
-; GFNI-NEXT:    andq %r14, %r13
-; GFNI-NEXT:    shrq %r12
-; GFNI-NEXT:    andq %r14, %r12
-; GFNI-NEXT:    leaq (%r12,%r13,2), %r12
-; GFNI-NEXT:    shrdq $48, %r12, %r15
-; GFNI-NEXT:    bswapq %r9
-; GFNI-NEXT:    movq %r9, %r13
-; GFNI-NEXT:    shrq $4, %r13
-; GFNI-NEXT:    andq %r11, %r13
-; GFNI-NEXT:    andq %r11, %r9
-; GFNI-NEXT:    shlq $4, %r9
-; GFNI-NEXT:    orq %r13, %r9
-; GFNI-NEXT:    movq %r9, %r13
-; GFNI-NEXT:    andq %r10, %r13
-; GFNI-NEXT:    shrq $2, %r9
-; GFNI-NEXT:    andq %r10, %r9
-; GFNI-NEXT:    leaq (%r9,%r13,4), %r9
-; GFNI-NEXT:    movq %r9, %r13
-; GFNI-NEXT:    andq %r14, %r13
-; GFNI-NEXT:    shrq %r9
-; GFNI-NEXT:    andq %r14, %r9
-; GFNI-NEXT:    leaq (%r9,%r13,2), %r9
-; GFNI-NEXT:    shrdq $48, %r9, %r12
+; GFNI-NEXT:    vmovq %r8, %xmm1
+; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
+; GFNI-NEXT:    vmovq %xmm1, %r8
 ; GFNI-NEXT:    bswapq %r8
-; GFNI-NEXT:    movq %r8, %r13
-; GFNI-NEXT:    shrq $4, %r13
-; GFNI-NEXT:    andq %r11, %r13
-; GFNI-NEXT:    andq %r11, %r8
-; GFNI-NEXT:    shlq $4, %r8
-; GFNI-NEXT:    orq %r13, %r8
-; GFNI-NEXT:    movq %r8, %r13
-; GFNI-NEXT:    andq %r10, %r13
-; GFNI-NEXT:    shrq $2, %r8
-; GFNI-NEXT:    andq %r10, %r8
-; GFNI-NEXT:    leaq (%r8,%r13,4), %r8
-; GFNI-NEXT:    movq %r8, %r13
-; GFNI-NEXT:    andq %r14, %r13
-; GFNI-NEXT:    shrq %r8
-; GFNI-NEXT:    andq %r14, %r8
-; GFNI-NEXT:    leaq (%r8,%r13,2), %r8
-; GFNI-NEXT:    shrdq $48, %r8, %r9
+; GFNI-NEXT:    movq %r8, %r9
+; GFNI-NEXT:    shldq $16, %rdi, %r9
+; GFNI-NEXT:    shldq $16, %r10, %rdi
+; GFNI-NEXT:    vmovq %rcx, %xmm1
+; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
+; GFNI-NEXT:    vmovq %xmm1, %rcx
 ; GFNI-NEXT:    bswapq %rcx
-; GFNI-NEXT:    movq %rcx, %r13
-; GFNI-NEXT:    shrq $4, %r13
-; GFNI-NEXT:    andq %r11, %r13
-; GFNI-NEXT:    andq %r11, %rcx
-; GFNI-NEXT:    shlq $4, %rcx
-; GFNI-NEXT:    orq %r13, %rcx
-; GFNI-NEXT:    movq %rcx, %r13
-; GFNI-NEXT:    andq %r10, %r13
-; GFNI-NEXT:    shrq $2, %rcx
-; GFNI-NEXT:    andq %r10, %rcx
-; GFNI-NEXT:    leaq (%rcx,%r13,4), %rcx
-; GFNI-NEXT:    movq %rcx, %r13
-; GFNI-NEXT:    andq %r14, %r13
-; GFNI-NEXT:    shrq %rcx
-; GFNI-NEXT:    andq %r14, %rcx
-; GFNI-NEXT:    leaq (%rcx,%r13,2), %rcx
 ; GFNI-NEXT:    shrdq $48, %rcx, %r8
+; GFNI-NEXT:    vmovq %rdx, %xmm1
+; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
+; GFNI-NEXT:    vmovq %xmm1, %rdx
 ; GFNI-NEXT:    bswapq %rdx
-; GFNI-NEXT:    movq %rdx, %r13
-; GFNI-NEXT:    shrq $4, %r13
-; GFNI-NEXT:    andq %r11, %r13
-; GFNI-NEXT:    andq %r11, %rdx
-; GFNI-NEXT:    shlq $4, %rdx
-; GFNI-NEXT:    orq %r13, %rdx
-; GFNI-NEXT:    movq %rdx, %r13
-; GFNI-NEXT:    andq %r10, %r13
-; GFNI-NEXT:    shrq $2, %rdx
-; GFNI-NEXT:    andq %r10, %rdx
-; GFNI-NEXT:    leaq (%rdx,%r13,4), %rdx
-; GFNI-NEXT:    movq %rdx, %r13
-; GFNI-NEXT:    andq %r14, %r13
-; GFNI-NEXT:    shrq %rdx
-; GFNI-NEXT:    andq %r14, %rdx
-; GFNI-NEXT:    leaq (%rdx,%r13,2), %rdx
 ; GFNI-NEXT:    shrdq $48, %rdx, %rcx
+; GFNI-NEXT:    vmovq %rsi, %xmm1
+; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
+; GFNI-NEXT:    vmovq %xmm1, %rsi
 ; GFNI-NEXT:    bswapq %rsi
-; GFNI-NEXT:    movq %rsi, %r13
-; GFNI-NEXT:    shrq $4, %r13
-; GFNI-NEXT:    andq %r11, %r13
-; GFNI-NEXT:    andq %r11, %rsi
-; GFNI-NEXT:    shlq $4, %rsi
-; GFNI-NEXT:    orq %r13, %rsi
-; GFNI-NEXT:    movq %rsi, %r11
-; GFNI-NEXT:    andq %r10, %r11
-; GFNI-NEXT:    shrq $2, %rsi
-; GFNI-NEXT:    andq %r10, %rsi
-; GFNI-NEXT:    leaq (%rsi,%r11,4), %rsi
-; GFNI-NEXT:    movq %rsi, %r10
-; GFNI-NEXT:    andq %r14, %r10
-; GFNI-NEXT:    shrq %rsi
-; GFNI-NEXT:    andq %r14, %rsi
-; GFNI-NEXT:    leaq (%rsi,%r10,2), %rsi
 ; GFNI-NEXT:    shrdq $48, %rsi, %rdx
+; GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
+; GFNI-NEXT:    vmovq %xmm1, %r11
+; GFNI-NEXT:    bswapq %r11
+; GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm1
+; GFNI-NEXT:    vmovq %xmm1, %rbx
+; GFNI-NEXT:    bswapq %rbx
+; GFNI-NEXT:    shrdq $48, %rbx, %r11
+; GFNI-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; GFNI-NEXT:    vgf2p8affineqb $0, %xmm0, %xmm1, %xmm0
+; GFNI-NEXT:    vmovq %xmm0, %r14
+; GFNI-NEXT:    bswapq %r14
+; GFNI-NEXT:    shrdq $48, %r14, %rbx
+; GFNI-NEXT:    shrdq $48, %r10, %r14
 ; GFNI-NEXT:    shrq $48, %rsi
+; GFNI-NEXT:    movq %r14, 16(%rax)
+; GFNI-NEXT:    movq %rbx, 8(%rax)
+; GFNI-NEXT:    movq %r11, (%rax)
 ; GFNI-NEXT:    movq %rdx, 56(%rax)
 ; GFNI-NEXT:    movq %rcx, 48(%rax)
 ; GFNI-NEXT:    movq %r8, 40(%rax)
 ; GFNI-NEXT:    movq %r9, 32(%rax)
-; GFNI-NEXT:    movq %r12, 24(%rax)
-; GFNI-NEXT:    movq %r15, 16(%rax)
-; GFNI-NEXT:    movq %rbx, 8(%rax)
-; GFNI-NEXT:    movq %rdi, (%rax)
+; GFNI-NEXT:    movq %rdi, 24(%rax)
 ; GFNI-NEXT:    movw %si, 64(%rax)
 ; GFNI-NEXT:    popq %rbx
-; GFNI-NEXT:    popq %r12
-; GFNI-NEXT:    popq %r13
 ; GFNI-NEXT:    popq %r14
-; GFNI-NEXT:    popq %r15
 ; GFNI-NEXT:    retq
   %Z = call i528 @llvm.bitreverse.i528(i528 %A)
   ret i528 %Z

@@ -53,10 +53,12 @@ CudaVersion CudaStringToVersion(const llvm::Twine &S);
 enum class CudaArch {
   UNUSED,
   UNKNOWN,
+  // TODO: Deprecate and remove GPU architectures older than sm_52.
   SM_20,
   SM_21,
   SM_30,
-  SM_32,
+  // This has a name conflict with sys/mac.h on AIX, rename it as a workaround.
+  SM_32_,
   SM_35,
   SM_37,
   SM_50,
@@ -123,7 +125,15 @@ enum class CudaArch {
   LAST,
 
   CudaDefault = CudaArch::SM_52,
-  HIPDefault = CudaArch::GFX803,
+  HIPDefault = CudaArch::GFX906,
+};
+
+enum class CUDAFunctionTarget {
+  Device,
+  Global,
+  Host,
+  HostDevice,
+  InvalidTarget
 };
 
 static inline bool IsNVIDIAGpuArch(CudaArch A) {

@@ -1,4 +1,4 @@
-; RUN: opt -S %s -atomic-expand | FileCheck %s
+; RUN: opt -S %s -passes=atomic-expand | FileCheck %s
 
 ;;; NOTE: this test is actually target-independent -- any target which
 ;;; doesn't support inline atomics can be used. (E.g. X86 i386 would

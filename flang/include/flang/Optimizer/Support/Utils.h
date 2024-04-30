@@ -29,7 +29,9 @@
 namespace fir {
 /// Return the integer value of a arith::ConstantOp.
 inline std::int64_t toInt(mlir::arith::ConstantOp cop) {
-  return cop.getValue().cast<mlir::IntegerAttr>().getValue().getSExtValue();
+  return mlir::cast<mlir::IntegerAttr>(cop.getValue())
+      .getValue()
+      .getSExtValue();
 }
 
 // Reconstruct binding tables for dynamic dispatch.
@@ -133,6 +135,67 @@ inline void intrinsicTypeTODO(fir::FirOpBuilder &builder, mlir::Type type,
            fir::numericMlirTypeToFortran(builder, type, loc, intrinsicName) +
            " in " + intrinsicName);
 }
+
+inline fir::CUDADataAttributeAttr
+getCUDADataAttribute(mlir::MLIRContext *mlirContext,
+                     std::optional<Fortran::common::CUDADataAttr> cudaAttr) {
+  if (cudaAttr) {
+    fir::CUDADataAttribute attr;
+    switch (*cudaAttr) {
+    case Fortran::common::CUDADataAttr::Constant:
+      attr = fir::CUDADataAttribute::Constant;
+      break;
+    case Fortran::common::CUDADataAttr::Device:
+      attr = fir::CUDADataAttribute::Device;
+      break;
+    case Fortran::common::CUDADataAttr::Managed:
+      attr = fir::CUDADataAttribute::Managed;
+      break;
+    case Fortran::common::CUDADataAttr::Pinned:
+      attr = fir::CUDADataAttribute::Pinned;
+      break;
+    case Fortran::common::CUDADataAttr::Shared:
+      attr = fir::CUDADataAttribute::Shared;
+      break;
+    case Fortran::common::CUDADataAttr::Texture:
+      // Obsolete attribute
+      return {};
+    case Fortran::common::CUDADataAttr::Unified:
+      attr = fir::CUDADataAttribute::Unified;
+      break;
+    }
+    return fir::CUDADataAttributeAttr::get(mlirContext, attr);
+  }
+  return {};
+}
+
+inline fir::CUDAProcAttributeAttr getCUDAProcAttribute(
+    mlir::MLIRContext *mlirContext,
+    std::optional<Fortran::common::CUDASubprogramAttrs> cudaAttr) {
+  if (cudaAttr) {
+    fir::CUDAProcAttribute attr;
+    switch (*cudaAttr) {
+    case Fortran::common::CUDASubprogramAttrs::Host:
+      attr = fir::CUDAProcAttribute::Host;
+      break;
+    case Fortran::common::CUDASubprogramAttrs::Device:
+      attr = fir::CUDAProcAttribute::Device;
+      break;
+    case Fortran::common::CUDASubprogramAttrs::HostDevice:
+      attr = fir::CUDAProcAttribute::HostDevice;
+      break;
+    case Fortran::common::CUDASubprogramAttrs::Global:
+      attr = fir::CUDAProcAttribute::Global;
+      break;
+    case Fortran::common::CUDASubprogramAttrs::Grid_Global:
+      attr = fir::CUDAProcAttribute::GridGlobal;
+      break;
+    }
+    return fir::CUDAProcAttributeAttr::get(mlirContext, attr);
+  }
+  return {};
+}
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_SUPPORT_UTILS_H

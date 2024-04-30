@@ -48,6 +48,7 @@ write_lit_config("lit_site_cfg") {
     "CLANG_BUILT_STANDALONE=0",
     "CLANG_DEFAULT_CXX_STDLIB=",  # Empty string means "default value" here.
     "CLANG_DEFAULT_PIE_ON_LINUX=0",
+    "CLANG_ENABLE_CIR=0",
     "CLANG_PLUGIN_SUPPORT=0",  # FIXME: Analysis/plugins need global -fPIC
     "CURRENT_TOOLS_DIR=" + rebase_path("$root_out_dir/bin", dir),
     "CLANG_VENDOR_UTI=org.llvm.clang",
@@ -157,6 +158,7 @@ group("test") {
     "//clang/tools/clang-format",
     "//clang/tools/clang-fuzzer/dictionary:clang-fuzzer-dictionary",
     "//clang/tools/clang-import-test",
+    "//clang/tools/clang-installapi",
     "//clang/tools/clang-offload-bundler",
     "//clang/tools/clang-refactor",
     "//clang/tools/clang-rename",
@@ -187,6 +189,7 @@ group("test") {
     "//llvm/tools/llvm-profdata",
     "//llvm/tools/llvm-rc:symlinks",
     "//llvm/tools/llvm-readobj:symlinks",
+    "//llvm/tools/llvm-readtapi:symlinks",
     "//llvm/tools/llvm-symbolizer:symlinks",
     "//llvm/tools/opt",
     "//llvm/tools/yaml2obj",

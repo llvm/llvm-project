@@ -87,18 +87,18 @@ func.func @std_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
     %red:2 = scf.parallel (%i2) = (%min) to (%max) step (%i1)
                                       init (%zero, %int_zero) -> (f32, i32) {
       %one = arith.constant 1.0 : f32
-      scf.reduce(%one) : f32 {
+      %int_one = arith.constant 1 : i32
+      scf.reduce(%one, %int_one : f32, i32)  {
         ^bb0(%lhs : f32, %rhs: f32):
           %res = arith.addf %lhs, %rhs : f32
           scf.reduce.return %res : f32
-      }
-      %int_one = arith.constant 1 : i32
-      scf.reduce(%int_one) : i32 {
+      }, {
         ^bb0(%lhs : i32, %rhs: i32):
           %res = arith.muli %lhs, %rhs : i32
           scf.reduce.return %res : i32
       }
     }
+    scf.reduce
   }
   return
 }
@@ -121,25 +121,23 @@ func.func @std_parallel_loop(%arg0 : index, %arg1 : index, %arg2 : index,
 //  CHECK-SAME:          step (%[[I1]])
 //  CHECK-SAME:          init (%[[ZERO]], %[[INT_ZERO]]) -> (f32, i32) {
 //  CHECK-NEXT:       %[[ONE:.*]] = arith.constant 1.000000e+00 : f32
-//  CHECK-NEXT:       scf.reduce(%[[ONE]]) : f32 {
+//  CHECK-NEXT:       %[[INT_ONE:.*]] = arith.constant 1 : i32
+//  CHECK-NEXT:       scf.reduce(%[[ONE]], %[[INT_ONE]] : f32, i32) {
 //  CHECK-NEXT:       ^bb0(%[[LHS:.*]]: f32, %[[RHS:.*]]: f32):
 //  CHECK-NEXT:         %[[RES:.*]] = arith.addf %[[LHS]], %[[RHS]] : f32
 //  CHECK-NEXT:         scf.reduce.return %[[RES]] : f32
-//  CHECK-NEXT:       }
-//  CHECK-NEXT:       %[[INT_ONE:.*]] = arith.constant 1 : i32
-//  CHECK-NEXT:       scf.reduce(%[[INT_ONE]]) : i32 {
+//  CHECK-NEXT:       }, {
 //  CHECK-NEXT:       ^bb0(%[[LHS:.*]]: i32, %[[RHS:.*]]: i32):
 //  CHECK-NEXT:         %[[RES:.*]] = arith.muli %[[LHS]], %[[RHS]] : i32
 //  CHECK-NEXT:         scf.reduce.return %[[RES]] : i32
 //  CHECK-NEXT:       }
-//  CHECK-NEXT:       scf.yield
 //  CHECK-NEXT:     }
-//  CHECK-NEXT:     scf.yield
+//  CHECK-NEXT:     scf.reduce
 
 func.func @parallel_explicit_yield(
     %arg0: index, %arg1: index, %arg2: index) {
   scf.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
-    scf.yield
+    scf.reduce
   }
   return
 }
@@ -149,7 +147,7 @@ func.func @parallel_explicit_yield(
 //  CHECK-SAME: %[[ARG1:[A-Za-z0-9]+]]:
 //  CHECK-SAME: %[[ARG2:[A-Za-z0-9]+]]:
 //  CHECK-NEXT: scf.parallel (%{{.*}}) = (%[[ARG0]]) to (%[[ARG1]]) step (%[[ARG2]])
-//  CHECK-NEXT: scf.yield
+//  CHECK-NEXT: scf.reduce
 //  CHECK-NEXT: }
 //  CHECK-NEXT: return
 //  CHECK-NEXT: }

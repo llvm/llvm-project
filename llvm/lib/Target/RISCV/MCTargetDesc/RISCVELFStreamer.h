@@ -46,7 +46,6 @@ private:
   StringRef CurrentVendor;
 
   MCSection *AttributeSection = nullptr;
-  const MCSubtargetInfo &STI;
 
   void emitAttribute(unsigned Attribute, unsigned Value) override;
   void emitTextAttribute(unsigned Attribute, StringRef String) override;
@@ -76,7 +75,6 @@ public:
 MCELFStreamer *createRISCVELFStreamer(MCContext &C,
                                       std::unique_ptr<MCAsmBackend> MAB,
                                       std::unique_ptr<MCObjectWriter> MOW,
-                                      std::unique_ptr<MCCodeEmitter> MCE,
-                                      bool RelaxAll);
+                                      std::unique_ptr<MCCodeEmitter> MCE);
 }
 #endif

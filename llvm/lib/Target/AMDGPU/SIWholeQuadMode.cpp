@@ -553,7 +553,9 @@ char SIWholeQuadMode::scanInstructions(MachineFunction &MF,
         }
         continue;
       } else if (Opcode == AMDGPU::LDS_PARAM_LOAD ||
-                 Opcode == AMDGPU::LDS_DIRECT_LOAD) {
+                 Opcode == AMDGPU::DS_PARAM_LOAD ||
+                 Opcode == AMDGPU::LDS_DIRECT_LOAD ||
+                 Opcode == AMDGPU::DS_DIRECT_LOAD) {
         // Mark these STRICTWQM, but only for the instruction, not its operands.
         // This avoid unnecessarily marking M0 as requiring WQM.
         InstrInfo &II = Instructions[&MI];
@@ -1523,10 +1525,10 @@ void SIWholeQuadMode::lowerCopyInstrs() {
         MI->getOperand(0).setIsEarlyClobber(false);
         LIS->createAndComputeVirtRegInterval(Reg);
       }
-      int Index = MI->findRegisterUseOperandIdx(AMDGPU::EXEC);
+      int Index = MI->findRegisterUseOperandIdx(AMDGPU::EXEC, /*TRI=*/nullptr);
       while (Index >= 0) {
         MI->removeOperand(Index);
-        Index = MI->findRegisterUseOperandIdx(AMDGPU::EXEC);
+        Index = MI->findRegisterUseOperandIdx(AMDGPU::EXEC, /*TRI=*/nullptr);
       }
       MI->setDesc(TII->get(AMDGPU::COPY));
       LLVM_DEBUG(dbgs() << "  -> " << *MI);

@@ -15,10 +15,12 @@
 #include <__chrono/duration.h>
 #include <__chrono/file_clock.h>
 #include <__chrono/hh_mm_ss.h>
+#include <__chrono/local_info.h>
 #include <__chrono/month.h>
 #include <__chrono/month_weekday.h>
 #include <__chrono/monthday.h>
 #include <__chrono/statically_widen.h>
+#include <__chrono/sys_info.h>
 #include <__chrono/system_clock.h>
 #include <__chrono/weekday.h>
 #include <__chrono/year.h>
@@ -42,9 +44,16 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace chrono {
 
 template <class _CharT, class _Traits, class _Duration>
+  requires(!treat_as_floating_point_v<typename _Duration::rep> && _Duration{1} < days{1})
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
-operator<<(basic_ostream<_CharT, _Traits>& __os, const sys_time<_Duration> __tp) {
+operator<<(basic_ostream<_CharT, _Traits>& __os, const sys_time<_Duration>& __tp) {
   return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T}"), __tp);
+}
+
+template <class _CharT, class _Traits>
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const sys_days& __dp) {
+  return __os << year_month_day{__dp};
 }
 
 template <class _CharT, class _Traits, class _Duration>
@@ -254,6 +263,46 @@ _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const hh_mm_ss<_Duration> __hms) {
   return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%T}"), __hms);
 }
+
+#  if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+
+template <class _CharT, class _Traits>
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const sys_info& __info) {
+  // __info.abbrev is always std::basic_string<char>.
+  // Since these strings typically are short the conversion should be cheap.
+  std::basic_string<_CharT> __abbrev{__info.abbrev.begin(), __info.abbrev.end()};
+  return __os << std::format(
+             _LIBCPP_STATICALLY_WIDEN(_CharT, "[{:%F %T}, {:%F %T}) {:%T} {:%Q%q} \"{}\""),
+             __info.begin,
+             __info.end,
+             hh_mm_ss{__info.offset},
+             __info.save,
+             __abbrev);
+}
+
+template <class _CharT, class _Traits>
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const local_info& __info) {
+  auto __result = [&]() -> basic_string<_CharT> {
+    switch (__info.result) {
+    case local_info::unique:
+      return _LIBCPP_STATICALLY_WIDEN(_CharT, "unique");
+    case local_info::nonexistent:
+      return _LIBCPP_STATICALLY_WIDEN(_CharT, "non-existent");
+    case local_info::ambiguous:
+      return _LIBCPP_STATICALLY_WIDEN(_CharT, "ambiguous");
+
+    default:
+      return std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "unspecified result ({})"), __info.result);
+    };
+  };
+
+  return __os << std::format(
+             _LIBCPP_STATICALLY_WIDEN(_CharT, "{}: {{{}, {}}}"), __result(), __info.first, __info.second);
+}
+
+#  endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
 
 } // namespace chrono
 

@@ -41,6 +41,10 @@ namespace Intrinsic {
 typedef unsigned ID;
 } // end namespace Intrinsic
 
+// Choose ';' as the delimiter. ':' was used once but it doesn't work well for
+// Objective-C functions which commonly have :'s in their names.
+inline constexpr char kGlobalIdentifierDelimiter = ';';
+
 class GlobalValue : public Constant {
 public:
   /// An enumeration for the kinds of linkage for global values.
@@ -356,6 +360,7 @@ public:
   // storage is shared between `G1` and `G2`.
   void setSanitizerMetadata(SanitizerMetadata Meta);
   void removeSanitizerMetadata();
+  void setNoSanitizeMetadata();
 
   bool isTagged() const {
     return hasSanitizerMetadata() && getSanitizerMetadata().Memtag;
@@ -560,8 +565,7 @@ public:
   /// arbitrary GlobalValue, this is not the function you're looking for; see
   /// Mangler.h.
   static StringRef dropLLVMManglingEscape(StringRef Name) {
-    if (!Name.empty() && Name[0] == '\1')
-      return Name.substr(1);
+    Name.consume_front("\1");
     return Name;
   }
 

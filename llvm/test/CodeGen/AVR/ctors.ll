@@ -9,7 +9,7 @@ define void @do_nothing() addrspace(1) #0 {
 }
 
 ; CHECK: .globl __do_global_ctors
-@llvm.global_ctors = appending global [1 x { i32, void () addrspace(1)*, i8* }] [{ i32, void () addrspace(1)*, i8* } { i32 65535, void () addrspace(1)* @do_nothing, i8* null }]
+@llvm.global_ctors = appending global [1 x { i32, ptr addrspace(1), ptr }] [{ i32, ptr addrspace(1), ptr } { i32 65535, ptr addrspace(1) @do_nothing, ptr null }]
 
 ; CHECK: .globl __do_global_dtors
-@llvm.global_dtors = appending global [1 x { i32, void () addrspace(1)*, i8* }] [{ i32, void () addrspace(1)*, i8* } { i32 65535, void () addrspace(1)* @do_nothing, i8* null }]
+@llvm.global_dtors = appending global [1 x { i32, ptr addrspace(1), ptr }] [{ i32, ptr addrspace(1), ptr } { i32 65535, ptr addrspace(1) @do_nothing, ptr null }]

@@ -1,4 +1,5 @@
 ; RUN: opt -S -loop-reduce %s | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators -S -loop-reduce %s | FileCheck %s
 ;
 ; Test that LSR SCEV-based salvaging does not crash when translating SCEVs
 ; that contain integers with binary representations greater than 64-bits. 

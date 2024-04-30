@@ -230,8 +230,8 @@ TEST(LlvmLibcSScanfTest, FloatConvSimple) {
   int ret_val;
   float result = 0;
 
-  float inf = LIBC_NAMESPACE::fputil::FPBits<float>::inf();
-  float nan = LIBC_NAMESPACE::fputil::FPBits<float>::build_nan(1);
+  float inf = LIBC_NAMESPACE::fputil::FPBits<float>::inf().get_val();
+  float nan = LIBC_NAMESPACE::fputil::FPBits<float>::quiet_nan().get_val();
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%f", &result);
   EXPECT_EQ(ret_val, 1);
@@ -294,9 +294,9 @@ TEST(LlvmLibcSScanfTest, FloatConvLengthModifier) {
   double d_result = 0;
   long double ld_result = 0;
 
-  double d_inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf();
+  double d_inf = LIBC_NAMESPACE::fputil::FPBits<double>::inf().get_val();
   long double ld_nan =
-      LIBC_NAMESPACE::fputil::FPBits<long double>::build_nan(1);
+      LIBC_NAMESPACE::fputil::FPBits<long double>::quiet_nan().get_val();
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%lf", &d_result);
   EXPECT_EQ(ret_val, 1);
@@ -322,7 +322,7 @@ TEST(LlvmLibcSScanfTest, FloatConvLengthModifier) {
   EXPECT_EQ(ret_val, 1);
 // 1e600 may be larger than the maximum long double (if long double is double).
 // In that case both of these should be evaluated as inf.
-#ifdef LIBC_LONG_DOUBLE_IS_FLOAT64
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
   EXPECT_FP_EQ(ld_result, d_inf);
 #else
   EXPECT_FP_EQ(ld_result, 1.0e600L);
@@ -391,8 +391,8 @@ TEST(LlvmLibcSScanfTest, FloatConvComplexParsing) {
   int ret_val;
   float result = 0;
 
-  float inf = LIBC_NAMESPACE::fputil::FPBits<float>::inf();
-  float nan = LIBC_NAMESPACE::fputil::FPBits<float>::build_nan(1);
+  float inf = LIBC_NAMESPACE::fputil::FPBits<float>::inf().get_val();
+  float nan = LIBC_NAMESPACE::fputil::FPBits<float>::quiet_nan().get_val();
 
   ret_val = LIBC_NAMESPACE::sscanf("0x1.0e3", "%f", &result);
   EXPECT_EQ(ret_val, 1);
@@ -463,7 +463,7 @@ TEST(LlvmLibcSScanfTest, FloatConvMaxWidth) {
   int ret_val;
   float result = 0;
 
-  float inf = LIBC_NAMESPACE::fputil::FPBits<float>::inf();
+  float inf = LIBC_NAMESPACE::fputil::FPBits<float>::inf().get_val();
 
   ret_val = LIBC_NAMESPACE::sscanf("123", "%3f", &result);
   EXPECT_EQ(ret_val, 1);

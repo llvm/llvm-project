@@ -1314,7 +1314,7 @@ void HexagonGenInsert::selectCandidates() {
     // element found is adequate, we will put it back on the list, other-
     // wise the list will remain empty, and the entry for this register
     // will be removed (i.e. this register will not be replaced by insert).
-    IFListType::iterator MinI = std::min_element(LL.begin(), LL.end(), IFO);
+    IFListType::iterator MinI = llvm::min_element(LL, IFO);
     assert(MinI != LL.end());
     IFRecordWithRegSet M = *MinI;
     LL.clear();
