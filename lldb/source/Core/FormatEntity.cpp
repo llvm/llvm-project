@@ -659,6 +659,8 @@ static char ConvertValueObjectStyleToChar(
   return '\0';
 }
 
+static llvm::Regex LLVMFormatPattern{"x[-+]?\\d*|n|d", llvm::Regex::IgnoreCase};
+
 static bool DumpValueWithLLVMFormat(Stream &s, llvm::StringRef options,
                                     ValueObject &valobj) {
   std::string formatted;
@@ -666,18 +668,17 @@ static bool DumpValueWithLLVMFormat(Stream &s, llvm::StringRef options,
 
   // Options supported by format_provider<T> for integral arithmetic types.
   // See table in FormatProviders.h.
-  llvm::Regex int_format{"x[-+]?\\d*|n|d", llvm::Regex::IgnoreCase};
 
   auto type_info = valobj.GetTypeInfo();
-  if (type_info & eTypeIsInteger && int_format.match(options)) {
+  if (type_info & eTypeIsInteger && LLVMFormatPattern.match(options)) {
     if (type_info & eTypeIsSigned) {
       bool success = false;
-      auto integer = valobj.GetValueAsSigned(0, &success);
+      int64_t integer = valobj.GetValueAsSigned(0, &success);
       if (success)
         formatted = llvm::formatv(llvm_format.data(), integer);
     } else {
       bool success = false;
-      auto integer = valobj.GetValueAsUnsigned(0, &success);
+      uint64_t integer = valobj.GetValueAsUnsigned(0, &success);
       if (success)
         formatted = llvm::formatv(llvm_format.data(), integer);
     }
@@ -917,12 +918,13 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
   if (!is_array_range) {
     if (!llvm_format.empty()) {
       if (DumpValueWithLLVMFormat(s, llvm_format, *target)) {
-        LLDB_LOGF(log, "dumping using printf format");
+        LLDB_LOGF(log, "dumping using llvm format");
         return true;
       } else {
-        LLDB_LOG(log,
-                 "unsupported printf format '{0}' - for type info flags {1}",
-                 entry.printf_format, target->GetTypeInfo());
+        LLDB_LOG(
+            log,
+            "empty output using llvm format '{0}' - with type info flags {1}",
+            entry.printf_format, target->GetTypeInfo());
       }
     }
     LLDB_LOGF(log, "dumping ordinary printable output");
@@ -2267,6 +2269,13 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
           error = ParseEntry(variable, &g_root, entry);
           if (error.Fail())
             return error;
+
+          auto [_, llvm_format] = llvm::StringRef(entry.string).split(':');
+          if (!LLVMFormatPattern.match(llvm_format)) {
+            error.SetErrorStringWithFormat("invalid llvm format: '%s'",
+                                           llvm_format.data());
+            return error;
+          }
 
           if (verify_is_thread_id) {
             if (entry.type != Entry::Type::ThreadID &&
