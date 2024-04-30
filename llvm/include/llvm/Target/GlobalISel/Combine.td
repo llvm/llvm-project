@@ -224,8 +224,8 @@ def idempotent_prop : GICombineRule<
 // when Op0 is not guaranteed non-poison
 def push_freeze_to_prevent_poison_propagation : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (wip_match_opcode G_FREEZE):$root,
-         [{ return Helper.matchFreezeOfSingleMaybePoisonOperand(*${root}, ${matchinfo}); }]),
+  (match (G_FREEZE $dst, $src):$root,
+         [{ return !isGuaranteedNotToBePoison(${src}.getReg(), MRI) && Helper.matchFreezeOfSingleMaybePoisonOperand(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
 def extending_loads : GICombineRule<

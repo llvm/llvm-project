@@ -242,10 +242,10 @@ bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
   if (canCreateUndefOrPoison(OrigOp, MRI))
     return false;
 
-  std::optional<MachineOperand> MaybePoisonOperand = std::nullopt;
+  std::optional<MachineOperand> MaybePoisonOperand;
   for (MachineOperand &Operand : OrigDef->uses()) {
-    // Avoid working on non-register operands or physical registers.
-    if (!Operand.isReg() || Operand.getReg().isPhysical())
+    // Avoid working on non-register operands.
+    if (!Operand.isReg())
       return false;
 
     if (isGuaranteedNotToBeUndefOrPoison(Operand.getReg(), MRI))
@@ -258,14 +258,11 @@ bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
       return false;
   }
 
-  // Eliminate freeze if all operands are guaranteed non-poison
+  // Eliminate freeze if all operands are guaranteed non-poison.
   if (!MaybePoisonOperand) {
     MatchInfo = [=](MachineIRBuilder &B) { MRI.replaceRegWith(DstOp, OrigOp); };
     return true;
   }
-
-  if (!MaybePoisonOperand->isReg())
-    return false;
 
   Register MaybePoisonOperandReg = MaybePoisonOperand->getReg();
   LLT MaybePoisonOperandRegTy = MRI.getType(MaybePoisonOperandReg);
@@ -3118,7 +3115,6 @@ bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
   MachineInstr *RightHandInst = getDefIgnoringCopies(RHSReg, MRI);
   if (!LeftHandInst || !RightHandInst)
     return false;
-
   unsigned HandOpcode = LeftHandInst->getOpcode();
   if (HandOpcode != RightHandInst->getOpcode())
     return false;
