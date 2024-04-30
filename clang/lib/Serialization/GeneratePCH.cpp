@@ -117,7 +117,6 @@ void ReducedBMIGenerator::HandleTranslationUnit(ASTContext &Ctx) {
       getPreprocessor().getHeaderSearchInfo().getHeaderSearchOpts();
   HSOpts.ModulesSkipDiagnosticOptions = true;
   HSOpts.ModulesSkipHeaderSearchPaths = true;
-  HSOpts.ModulesSkipPragmaDiagnosticMappings = true;
 
   PCHGenerator::HandleTranslationUnit(Ctx);
 
