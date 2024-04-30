@@ -518,6 +518,7 @@ DEFAULT_FEATURES += [
     )
 ]
 
+
 # Detect whether dbx is on the system.
 def check_dbx(cfg):
     dbx_path = shutil.which("dbx")
@@ -534,6 +535,7 @@ DEFAULT_FEATURES += [
         actions=[AddSubstitution("%{dbx}", lambda cfg: shutil.which("dbx"))],
     )
 ]
+
 
 # Detect whether GDB is on the system, has Python scripting and supports
 # adding breakpoint commands. If so add a substitution to access it.
