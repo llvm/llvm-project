@@ -2256,7 +2256,7 @@ void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
                           ArrayRef<OpFoldResult> outputShape) {
   auto [staticOutputShape, dynamicOutputShape] =
       decomposeMixedValues(SmallVector<OpFoldResult>(outputShape));
-  build(builder, result, resultType.cast<MemRefType>(), src,
+  build(builder, result, llvm::cast<MemRefType>(resultType), src,
         getReassociationIndicesAttribute(builder, reassociation),
         dynamicOutputShape, staticOutputShape);
 }
@@ -2266,7 +2266,7 @@ void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
                           ArrayRef<ReassociationIndices> reassociation) {
   SmallVector<OpFoldResult> inputShape =
       getMixedSizes(builder, result.location, src);
-  MemRefType memrefResultTy = resultType.cast<MemRefType>();
+  MemRefType memrefResultTy = llvm::cast<MemRefType>(resultType);
   FailureOr<SmallVector<OpFoldResult>> outputShape = inferOutputShape(
       builder, result.location, memrefResultTy, reassociation, inputShape);
   // Failure of this assertion usually indicates presence of multiple
@@ -2867,7 +2867,8 @@ static bool haveCompatibleOffsets(MemRefType t1, MemRefType t2) {
 /// marked as dropped in `droppedDims`.
 static bool haveCompatibleStrides(MemRefType t1, MemRefType t2,
                                   const llvm::SmallBitVector &droppedDims) {
-  assert(size_t(t1.getRank()) == droppedDims.size() && "incorrect number of bits");
+  assert(size_t(t1.getRank()) == droppedDims.size() &&
+         "incorrect number of bits");
   assert(size_t(t1.getRank() - t2.getRank()) == droppedDims.count() &&
          "incorrect number of dropped dims");
   int64_t t1Offset, t2Offset;
