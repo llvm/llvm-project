@@ -1005,7 +1005,7 @@ llvm::DIType *CGDebugInfo::CreateQualifiedType(QualType Ty,
     unsigned Key = Qc.getPointerAuth().getKey();
     bool IsDiscr = Qc.getPointerAuth().isAddressDiscriminated();
     unsigned ExtraDiscr = Qc.getPointerAuth().getExtraDiscriminator();
-    Qc.removePtrAuth();
+    Qc.removePointerAuth();
     assert(Qc.empty() && "Unknown type qualifier for debug info");
     auto *FromTy = getOrCreateType(QualType(T, 0), Unit);
     return DBuilder.createPtrAuthQualifiedType(FromTy, Key, IsDiscr,
