@@ -842,6 +842,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
   setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
+  setOperationAction(ISD::GET_FPMODE, MVT::i32, Custom);
+  setOperationAction(ISD::SET_FPMODE, MVT::i32, Custom);
+  setOperationAction(ISD::RESET_FPMODE, MVT::Other, Custom);
 
   setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i128, Custom);
   if (!Subtarget->hasLSE() && !Subtarget->outlineAtomics()) {
@@ -4870,6 +4873,65 @@ SDValue AArch64TargetLowering::LowerSET_ROUNDING(SDValue Op,
   return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops2);
 }
 
+SDValue AArch64TargetLowering::LowerGET_FPMODE(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+
+  // Get current value of FPCR.
+  SDValue Ops[] = {
+      Chain, DAG.getTargetConstant(Intrinsic::aarch64_get_fpcr, DL, MVT::i64)};
+  SDValue FPCR =
+      DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, {MVT::i64, MVT::Other}, Ops);
+  Chain = FPCR.getValue(1);
+  FPCR = FPCR.getValue(0);
+
+  // Truncate FPCR to 32 bits.
+  SDValue Result = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, FPCR);
+
+  return DAG.getMergeValues({Result, Chain}, DL);
+}
+
+SDValue AArch64TargetLowering::LowerSET_FPMODE(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+  SDValue Mode = Op->getOperand(1);
+
+  // Extend the specified value to 64 bits.
+  SDValue FPCR = DAG.getZExtOrTrunc(Mode, DL, MVT::i64);
+
+  // Set new value of FPCR.
+  SDValue Ops2[] = {
+      Chain, DAG.getConstant(Intrinsic::aarch64_set_fpcr, DL, MVT::i64), FPCR};
+  return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops2);
+}
+
+SDValue AArch64TargetLowering::LowerRESET_FPMODE(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Chain = Op->getOperand(0);
+
+  // Get current value of FPCR.
+  SDValue Ops[] = {
+      Chain, DAG.getTargetConstant(Intrinsic::aarch64_get_fpcr, DL, MVT::i64)};
+  SDValue FPCR =
+      DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, {MVT::i64, MVT::Other}, Ops);
+  Chain = FPCR.getValue(1);
+  FPCR = FPCR.getValue(0);
+
+  // Clear bits that are not reserved.
+  SDValue FPSCRMasked = DAG.getNode(
+      ISD::AND, DL, MVT::i64, FPCR,
+      DAG.getConstant(AArch64::ReservedFPControlBits, DL, MVT::i64));
+
+  // Set new value of FPCR.
+  SDValue Ops2[] = {Chain,
+                    DAG.getConstant(Intrinsic::aarch64_set_fpcr, DL, MVT::i64),
+                    FPSCRMasked};
+  return DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops2);
+}
+
 static unsigned selectUmullSmull(SDValue &N0, SDValue &N1, SelectionDAG &DAG,
                                  SDLoc DL, bool &IsMLA) {
   bool IsN0SExt = isSignExtended(N0, DAG);
@@ -6484,6 +6546,12 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerGET_ROUNDING(Op, DAG);
   case ISD::SET_ROUNDING:
     return LowerSET_ROUNDING(Op, DAG);
+  case ISD::GET_FPMODE:
+    return LowerGET_FPMODE(Op, DAG);
+  case ISD::SET_FPMODE:
+    return LowerSET_FPMODE(Op, DAG);
+  case ISD::RESET_FPMODE:
+    return LowerRESET_FPMODE(Op, DAG);
   case ISD::MUL:
     return LowerMUL(Op, DAG);
   case ISD::MULHS:
@@ -16330,7 +16398,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
     IntrinsicInst *DI, LoadInst *LI) const {
   // Only deinterleave2 supported at present.
-  if (DI->getIntrinsicID() != Intrinsic::experimental_vector_deinterleave2)
+  if (DI->getIntrinsicID() != Intrinsic::vector_deinterleave2)
     return false;
 
   // Only a factor of 2 supported at present.
@@ -16405,7 +16473,7 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
 bool AArch64TargetLowering::lowerInterleaveIntrinsicToStore(
     IntrinsicInst *II, StoreInst *SI) const {
   // Only interleave2 supported at present.
-  if (II->getIntrinsicID() != Intrinsic::experimental_vector_interleave2)
+  if (II->getIntrinsicID() != Intrinsic::vector_interleave2)
     return false;
 
   // Only a factor of 2 supported at present.

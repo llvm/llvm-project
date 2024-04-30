@@ -7385,11 +7385,11 @@ QualType ASTReader::GetType(TypeID ID) {
     case PREDEF_TYPE_INCOMPLETE_MATRIX_IDX:
       T = Context.IncompleteMatrixIdxTy;
       break;
-    case PREDEF_TYPE_OMP_ARRAY_SECTION:
-      T = Context.OMPArraySectionTy;
+    case PREDEF_TYPE_ARRAY_SECTION:
+      T = Context.ArraySectionTy;
       break;
     case PREDEF_TYPE_OMP_ARRAY_SHAPING:
-      T = Context.OMPArraySectionTy;
+      T = Context.OMPArrayShapingTy;
       break;
     case PREDEF_TYPE_OMP_ITERATOR:
       T = Context.OMPIteratorTy;

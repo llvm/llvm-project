@@ -2708,14 +2708,14 @@ def fir_ConvertOp : fir_OneResultOp<"convert", [NoMemoryEffect]> {
   let hasCanonicalizer = 1;
 }
 
-def FortranTypeAttr : Attr<And<[CPred<"$_self.isa<mlir::TypeAttr>()">,
-    Or<[CPred<"$_self.cast<mlir::TypeAttr>().getValue().isa<fir::CharacterType,"
-              "fir::ComplexType, fir::IntegerType, fir::LogicalType,"
-              "fir::RealType, fir::RecordType>()">]>]>,
-    "Fortran surface type"> {
+def FortranTypeAttr : Attr<And<[CPred<"mlir::isa<mlir::TypeAttr>($_self)">,
+    Or<[CPred<"mlir::isa<fir::CharacterType, fir::ComplexType, "
+              "fir::IntegerType, fir::LogicalType, fir::RealType, "
+              "fir::RecordType>(mlir::cast<mlir::TypeAttr>($_self).getValue())"
+    >]>]>, "Fortran surface type"> {
   let storageType = [{ ::mlir::TypeAttr }];
   let returnType = "mlir::Type";
-  let convertFromStorage = "$_self.getValue().cast<mlir::Type>()";
+  let convertFromStorage = "mlir::cast<mlir::Type>($_self.getValue())";
 }
 
 def fir_TypeDescOp : fir_OneResultOp<"type_desc", [NoMemoryEffect]> {
@@ -3245,6 +3245,60 @@ def fir_CUDADeallocateOp : fir_Op<"cuda_deallocate",
   }];
 
   let hasVerifier = 1;
+}
+
+def fir_CUDAAllocOp : fir_Op<"cuda_alloc", [AttrSizedOperandSegments,
+    MemoryEffects<[MemAlloc]>]> {
+  let summary = "Allocate an object on device";
+
+  let description = [{
+    This is a drop in replacement for fir.alloca and fir.allocmem for device
+    object. Any device, managed or unified object declared in an host
+    subprogram needs to be allocated in the device memory through runtime calls.
+    The fir.cuda_alloc is an abstraction to the runtime calls and works together
+    with fir.cuda_free.
+  }];
+
+  let arguments = (ins
+    TypeAttr:$in_type,
+    OptionalAttr<StrAttr>:$uniq_name,
+    OptionalAttr<StrAttr>:$bindc_name,
+    Variadic<AnyIntegerType>:$typeparams,
+    Variadic<AnyIntegerType>:$shape,
+    fir_CUDADataAttributeAttr:$cuda_attr
+  );
+
+  let results = (outs fir_ReferenceType:$ptr);
+
+  let assemblyFormat = [{
+    $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
+        (`,` $shape^ `:` type($shape) )?  attr-dict `->` qualified(type($ptr))
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$inType, "llvm::StringRef":$uniqName,
+      "llvm::StringRef":$bindcName,
+      "fir::CUDADataAttributeAttr":$cudaAttr,
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::ValueRange", "{}">:$shape,
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>];
+}
+
+def fir_CUDAFreeOp : fir_Op<"cuda_free", [MemoryEffects<[MemFree]>]> {
+  let summary = "Free a device allocated object";
+
+  let description = [{
+    The fir.cuda_free operation frees the memory allocated by fir.cuda_alloc.
+    This is used for non-allocatable device, managed and unified device
+    variables declare in host subprogram.
+  }];
+
+  let arguments = (ins
+    Arg<AnyReferenceLike, "", [MemFree]>:$devptr,
+    fir_CUDADataAttributeAttr:$cuda_attr
+  );
+
+  let assemblyFormat = "$devptr `:` qualified(type($devptr)) attr-dict";
 }
 
 #endif

@@ -6889,8 +6889,8 @@ static Instruction *foldVectorCmp(CmpInst &Cmp,
     if (auto *I = dyn_cast<Instruction>(V))
       I->copyIRFlags(&Cmp);
     Module *M = Cmp.getModule();
-    Function *F = Intrinsic::getDeclaration(
-        M, Intrinsic::experimental_vector_reverse, V->getType());
+    Function *F =
+        Intrinsic::getDeclaration(M, Intrinsic::vector_reverse, V->getType());
     return CallInst::Create(F, V);
   };
 

@@ -327,7 +327,7 @@ OpenACCReductionOperator ParseReductionOperator(Parser &P) {
       return OpenACCReductionOperator::Max;
     if (ReductionKindTok.getIdentifierInfo()->isStr("min"))
       return OpenACCReductionOperator::Min;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     P.Diag(ReductionKindTok, diag::err_acc_invalid_reduction_operator);
     return OpenACCReductionOperator::Invalid;
@@ -945,7 +945,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       // the 'update' clause, so we have to handle it here.  U se an assert to
       // make sure we get the right differentiator.
       assert(DirKind == OpenACCDirectiveKind::Update);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case OpenACCClauseKind::Attach:
     case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::Delete:
