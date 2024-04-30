@@ -183,6 +183,20 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "lldb-sbapi-dwarf-enums",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-lldb-sbapi-dwarf-enum"],
+            "include/lldb/API/SBLanguages.h",
+        ),
+    ],
+    tblgen = ":lldb-tblgen",
+    td_file = "//llvm:include/llvm/BinaryFormat/Dwarf.def",
+    deps = [],
+)
+
 cc_library(
     name = "API",
     srcs = glob([
@@ -192,6 +206,7 @@ cc_library(
     hdrs = glob(["include/lldb/API/**/*.h"]),
     strip_include_prefix = "include",
     deps = [
+        ":lldb-sbapi-dwarf-enums",
         ":Breakpoint",
         ":Commands",
         ":Core",
@@ -272,6 +287,7 @@ cc_library(
     hdrs = glob(["include/lldb/Expression/**/*.h"]),
     strip_include_prefix = "include",
     deps = [
+        ":lldb-sbapi-dwarf-enums",
         ":Core",
         ":Headers",
         ":Host",
@@ -280,6 +296,7 @@ cc_library(
         ":TargetHeaders",
         ":Utility",
         "//lldb/source/Plugins:PluginSymbolFileDWARFHeaders",
+        "//llvm:BinaryFormat",
         "//llvm:Core",
         "//llvm:DebugInfoDWARF",
         "//llvm:ExecutionEngine",
@@ -346,7 +363,10 @@ cc_library(
     name = "ExpressionHeaders",
     hdrs = glob(["include/lldb/Expression/**/*.h"]),
     strip_include_prefix = "include",
-    deps = ["//llvm:ExecutionEngine"],
+    deps = [
+        ":lldb-sbapi-dwarf-enums",
+        "//llvm:ExecutionEngine"
+    ],
 )
 
 cc_library(
@@ -673,6 +693,7 @@ cc_library(
         ":TargetProperties",
         ":Utility",
         "//lldb/source/Plugins:PluginProcessUtility",
+        "//llvm:BinaryFormat",
         "//llvm:MC",
         "//llvm:Support",
     ],
