@@ -31,7 +31,7 @@ class FileSystem;
 
 namespace clang {
 namespace format {
-
+    
 enum class ParseError {
   Success = 0,
   Error,
@@ -5275,7 +5275,9 @@ inline StringRef getLanguageName(FormatStyle::LanguageKind Language) {
 
 bool isClangFormatOn(StringRef Comment);
 bool isClangFormatOff(StringRef Comment);
-
+llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,
+                       FormatStyle *Style, bool AllowUnknownOptions);
 } // end namespace format
 } // end namespace clang
 

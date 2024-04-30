@@ -1244,7 +1244,13 @@ public:
 
   // TALLY: Is this token a class or struct member variable name
   bool isMemberVarNameInDecl() const {
-      if (!HasSemiColonInLine || (!(IsClassScope || IsStructScope)) || LbraceCount == 0)
+      //if (!HasSemiColonInLine || (!(IsClassScope || IsStructScope)) || LbraceCount == 0)
+      //    return false;
+
+      if (!HasSemiColonInLine || LbraceCount == 0)
+          return false;
+
+      if (!((IsClassScope || IsStructScope) and  LbraceCount-RbraceCount==1))
           return false;
 
       return IsVariableNameWithDatatype;
@@ -1269,6 +1275,7 @@ public:
       bool nextOk = false;
       if (is(tok::identifier)) {
           const FormatToken* MyPrev = getPreviousNonComment();
+          const FormatToken* MyNext = getNextNonComment();
           if (MyPrev) {
               if (MyPrev->isDatatype()) {
                   prevOk = true;
@@ -1276,7 +1283,8 @@ public:
               else if (MyPrev && (MyPrev->isDatatype() || MyPrev->isPointerOrRef())) {
                   prevOk = true;
               }
-              else if (MyPrev && (MyPrev->is(tok::coloncolon)) && MyPrev->Previous && MyPrev->Previous->is(tok::identifier)) {
+              // TODO: condition might not be needed
+              else if (MyPrev && (MyPrev->is(tok::coloncolon) && MyNext && !MyNext->is(tok::semi)) && MyPrev->Previous && MyPrev->Previous->is(tok::identifier)) {
                   prevOk = true;
               }
               else if (MyPrev->IsInterimBeforeName) {
@@ -1289,7 +1297,6 @@ public:
                   }
               }
           }
-          const FormatToken* MyNext = getNextNonComment();
           if (MyNext) {
               if (MyNext->isOneOf(tok::equal, tok::semi, tok::l_square, tok::comma, tok::r_paren)) {
                   nextOk = true;
@@ -1302,7 +1309,7 @@ public:
               }
               else if (MyNext->is(tok::colon)) {
                   const FormatToken* MyNext2 = MyNext->getNextNonComment();
-                  if (MyNext2 && MyNext2->is(tok::numeric_constant)) {
+                  if (MyNext2 && (MyNext2->is(tok::numeric_constant) || MyNext2->is(tok::identifier))) {
                       nextOk = true;
                   }
               }

@@ -1,0 +1,357 @@
+﻿  DummyTest.cpp
+C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Tools\MSVC\14.38.33130\include\optional(11): warning STL4038: The contents of <optional> are available only with C++17 or later.
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(266,32): error C2039: 'optional': is not a member of 'std'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Tools\MSVC\14.38.33130\include\memory(31,1):
+  see declaration of 'std'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(266,32): error C2065: 'optional': undeclared identifier
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(266,8): error C2974: 'llvm::CastIsPossible': invalid template argument for 'From', type expected
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(253,1):
+  see declaration of 'llvm::CastIsPossible'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(266,8): error C2976: 'llvm::CastIsPossible': too few template arguments
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(253,1):
+  see declaration of 'llvm::CastIsPossible'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(266,45): error C2988: unrecognizable template declaration/definition
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(266,45): error C2143: syntax error: missing ';' before '>'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(266,1): error C2976: 'llvm::CastIsPossible': too few template arguments
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(253,1):
+  see declaration of 'llvm::CastIsPossible'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(266,45): error C2059: syntax error: '>'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(266,48): error C2143: syntax error: missing ';' before '{'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(266,48): error C2447: '{': missing function header (old-style formal list?)
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(280,2): error C2976: 'llvm::CastIsPossible': too few template arguments
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(278,8):
+  see declaration of 'llvm::CastIsPossible'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(330,14): error C2955: 'llvm::CastIsPossible': use of class template requires template argument list
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(278,8):
+  see declaration of 'llvm::CastIsPossible'
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(330,14):
+  the template instantiation context (the oldest one first) is
+  	D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(336,2):
+  	see reference to class template instantiation 'llvm::ValueFromPointerCast<To,From,Derived>' being compiled
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(343,31): error C2955: 'llvm::CastIsPossible': use of class template requires template argument list
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(278,8):
+  see declaration of 'llvm::CastIsPossible'
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(343,31):
+  the template instantiation context (the oldest one first) is
+  	D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(359,2):
+  	see reference to class template instantiation 'llvm::UniquePtrCast<To,From,Derived>' being compiled
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(366,14): error C2955: 'llvm::CastIsPossible': use of class template requires template argument list
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(278,8):
+  see declaration of 'llvm::CastIsPossible'
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(366,14):
+  the template instantiation context (the oldest one first) is
+  	D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(372,2):
+  	see reference to class template instantiation 'llvm::OptionalValueCast<To,From,Derived>' being compiled
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(368,16): error C2039: 'optional': is not a member of 'std'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Tools\MSVC\14.38.33130\include\memory(31,1):
+  see declaration of 'std'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(368,16): error C2065: 'optional': undeclared identifier
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(367,14): error C2974: 'llvm::DefaultDoCastIfPossible': invalid template argument for 'To', type expected
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(309,1):
+  see declaration of 'llvm::DefaultDoCastIfPossible'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(367,14): error C2976: 'llvm::DefaultDoCastIfPossible': too few template arguments
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(309,1):
+  see declaration of 'llvm::DefaultDoCastIfPossible'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(367,14): error C2955: 'llvm::DefaultDoCastIfPossible': use of class template requires template argument list
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(309,1):
+  see declaration of 'llvm::DefaultDoCastIfPossible'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(369,65): error C2143: syntax error: missing ',' before '>'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(369,22): error C2039: 'optional': is not a member of 'std'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Tools\MSVC\14.38.33130\include\memory(31,1):
+  see declaration of 'std'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(369,30): error C2143: syntax error: missing ';' before '<'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(369,22): error C7525: inline variables require at least '/std:c++17'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(369,1): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(369,48): error C2334: unexpected token(s) preceding '{'; skipping apparent function body
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(371,22): error C2039: 'optional': is not a member of 'std'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Tools\MSVC\14.38.33130\include\memory(31,1):
+  see declaration of 'std'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(371,30): error C2143: syntax error: missing ';' before '<'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(371,22): error C7525: inline variables require at least '/std:c++17'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(371,1): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(371,22): error C2086: 'int llvm::OptionalValueCast<To,From,Derived>::optional': redefinition
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(371,57): error C2334: unexpected token(s) preceding '{'; skipping apparent function body
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(475,26): error C2955: 'llvm::CastIsPossible': use of class template requires template argument list
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(278,8):
+  see declaration of 'llvm::CastIsPossible'
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(475,26):
+  the template instantiation context (the oldest one first) is
+  	D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(496,2):
+  	see reference to class template instantiation 'llvm::CastInfo<To,From,Enable>' being compiled
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(538,26): error C2039: 'optional': is not a member of 'std'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Tools\MSVC\14.38.33130\include\memory(31,1):
+  see declaration of 'std'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(538,26): error C2065: 'optional': undeclared identifier
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(538,8): error C2974: 'llvm::CastInfo': invalid template argument for 'From', type expected
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(475,1):
+  see declaration of 'llvm::CastInfo'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(538,8): error C2976: 'llvm::CastInfo': too few template arguments
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(475,1):
+  see declaration of 'llvm::CastInfo'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(538,39): error C2988: unrecognizable template declaration/definition
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(538,39): error C2143: syntax error: missing ';' before '>'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(538,1): error C2976: 'llvm::CastInfo': too few template arguments
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(475,1):
+  see declaration of 'llvm::CastInfo'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(538,39): error C2059: syntax error: '>'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(538,44): error C2059: syntax error: 'public'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(538,69): error C2065: 'To': undeclared identifier
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(538,73): error C2065: 'From': undeclared identifier
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(538,51): error C2923: 'llvm::OptionalValueCast': 'To' is not a valid template type argument for parameter 'To'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(538,69):
+  see declaration of 'To'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(538,51): error C2923: 'llvm::OptionalValueCast': 'From' is not a valid template type argument for parameter 'From'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(538,73):
+  see declaration of 'From'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(538,51): error C2976: 'llvm::OptionalValueCast': too few template arguments
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(366,1):
+  see declaration of 'llvm::OptionalValueCast'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(538,79): error C2143: syntax error: missing ';' before '{'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(538,79): error C2447: '{': missing function header (old-style formal list?)
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(608,50): error C2039: 'optional': is not a member of 'std'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Tools\MSVC\14.38.33130\include\memory(31,1):
+  see declaration of 'std'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(608,50): error C2065: 'optional': undeclared identifier
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(608,30): error C2974: 'llvm::ValueIsPresent': invalid template argument for 'T', type expected
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(601,47):
+  see declaration of 'llvm::ValueIsPresent'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(608,30): error C2976: 'llvm::ValueIsPresent': too few template arguments
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(601,47):
+  see declaration of 'llvm::ValueIsPresent'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(608,60): error C2988: unrecognizable template declaration/definition
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(608,60): error C2143: syntax error: missing ';' before '>'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(608,23): error C2976: 'llvm::ValueIsPresent': too few template arguments
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(601,47):
+  see declaration of 'llvm::ValueIsPresent'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(608,60): error C2059: syntax error: '>'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(608,63): error C2143: syntax error: missing ';' before '{'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(608,63): error C2447: '{': missing function header (old-style formal list?)
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(623,2): error C2976: 'llvm::ValueIsPresent': too few template arguments
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\Support\Casting.h(619,8):
+  see declaration of 'llvm::ValueIsPresent'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\SmallVector.h(362,10): error C2039: 'uninitialized_move': is not a member of 'std'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Tools\MSVC\14.38.33130\include\iterator(20,1):
+  see declaration of 'std'
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\SmallVector.h(361,15):
+  This diagnostic occurred in the compiler generated function 'void llvm::SmallVectorTemplateBase<T,__formal>::uninitialized_move(It1,It1,It2)'
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\SmallVector.h(362,10):
+  the template instantiation context (the oldest one first) is
+  	D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\SmallVector.h(442,2):
+  	see reference to class template instantiation 'llvm::SmallVectorTemplateBase<T,__formal>' being compiled
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(46,35): error C2039: 'optional': is not a member of 'std'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\SmallVector.h(1337,11):
+  see declaration of 'std'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(46,1): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(46,43): error C2988: unrecognizable template declaration/definition
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(46,43): error C2143: syntax error: missing ',' before '<'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(47,13): error C2039: 'optional': is not a member of 'std'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\SmallVector.h(1337,11):
+  see declaration of 'std'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(47,13): error C3613: missing return type after '->' ('int' assumed)
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(47,13): error C3646: 'optional': unknown override specifier
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(47,21): error C2988: unrecognizable template declaration/definition
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(47,21): error C2059: syntax error: '<'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(47,34): error C2065: 'O': undeclared identifier
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(47,34): error C3861: 'O': identifier not found
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(47,22): error C3553: decltype expects an expression not a type
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(47,39): error C2143: syntax error: missing ';' before '{'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(47,39): error C2447: '{': missing function header (old-style formal list?)
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(56,29): error C2039: 'optional': is not a member of 'std'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\SmallVector.h(1337,11):
+  see declaration of 'std'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(56,29): error C2065: 'optional': undeclared identifier
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(56,41): error C2988: unrecognizable template declaration/definition
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(56,41): error C2059: syntax error: '&&'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(57,13): error C2039: 'optional': is not a member of 'std'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\SmallVector.h(1337,11):
+  see declaration of 'std'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(57,44): error C2065: 'O': undeclared identifier
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(57,44): error C3861: 'O': identifier not found
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(57,22): error C3553: decltype expects an expression not a type
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(57,50): error C2143: syntax error: missing ';' before '{'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\STLForwardCompat.h(57,50): error C2447: '{': missing function header (old-style formal list?)
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\iterator_range.h(68,26): error C2988: unrecognizable template declaration/definition
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\iterator_range.h(68,26): error C2143: syntax error: missing ')' before '&&'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\iterator_range.h(68,26): error C2143: syntax error: missing ';' before '&&'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\iterator_range.h(68,16): error C2365: 'Container': redefinition; previous definition was 'template parameter'
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\iterator_range.h(67,20):
+  see declaration of 'Container'
+  
+D:\work\llvmwork\llvm-project\llvm\include\llvm\ADT\iterator_range.h(68,16): error C1003: error count exceeds 100; stopping compilation
+  (compiling source file '../../../../../clang/unittests/TWClangTests/DummyTest.cpp')
+  

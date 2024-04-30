@@ -110,7 +110,7 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
   columnarizeDeclarationSpecifierTokens();              // TALLY
   columnarizeDatatypeTokens();                          // TALLY
   columnarizeNoDiscardOrNoReturnOrTemplate ();          // TALLY
-  columnarizeIdentifierTokens();                        // TALLY
+  columnarizeIdentifierTokens();                        // TALLY {}
   columnarizeLParenTokensAndSplitArgs();                // TALLY
   alignConsecutiveAssignmentsOnScopedVarName();         // TALLY
   alignConsecutiveAssignmentsOnVarNameAcrossSections(); // TALLY
@@ -1058,11 +1058,11 @@ void WhitespaceManager::alignConsecutiveAssignmentsOnVarNameAcrossSections() {
     AlignTokens(Style,
         [&](const Change& C) {
 
-            return
-                C.Tok->isVarNameInDecl() &&
+            bool retval = C.Tok->isVarNameInDecl() &&
                 C.Tok->HasSemiColonInLine &&
                 C.Tok->LbraceCount > 0 &&
                 C.Tok->IsClassScope;
+            return retval;
         },
         Changes, /*IgnoreScope=*/false, /*IgnoreCommas=*/false, /*StartAt=*/0,
             /*MaxNewlinesBeforeSectionBreak=*/2, /*NonMatchingLineBreaksSection=*/false,
@@ -1084,6 +1084,8 @@ void WhitespaceManager::alignConsecutiveAssignmentsOnVarNameWithinSection() {
                 C.Tok->HasSemiColonInLine &&
                 !C.Tok->IsClassScope;
 
+            //bool retval = 
+            //    C.Tok->isVarNameInDecl() && C.Tok->HasSemiColonInLine;
             return retval;
         },
         Changes, /*IgnoreScope=*/false, /*IgnoreCommas=*/false, /*StartAt=*/0,
@@ -1432,6 +1434,8 @@ void WhitespaceManager::columnarizeDatatypeTokens() {
     if (!(MyTok->IsClassScope || MyTok->IsStructScope) || MyTok->LbraceCount == 0 || MyTok->LparenCount > 0) 
       continue;
 
+    if (MyTok->LbraceCount - MyTok->RbraceCount > 1) continue;
+
     if (MyTok->is(tok::less) && MyTok->Previous->is(tok::kw_template)) {
 
       ++bracecount;
@@ -1672,6 +1676,8 @@ void WhitespaceManager::columnarizeIdentifierTokens() {
         if ((!(MyTok->IsClassScope || MyTok->IsStructScope)) && (MyTok->LbraceCount == 0 || MyTok->LparenCount > 0))
             continue;
 
+        if (MyTok->LbraceCount - MyTok->RbraceCount > 1) continue;
+
         // Dont align bitfield specifiers.
         if (MyTok->Previous && MyTok->Previous->is(TT_BitFieldColon))
             continue;
@@ -1732,6 +1738,55 @@ void WhitespaceManager::columnarizeIdentifierTokens() {
                 MaxMemberNameLen = MaxMemberNameLen < tokSize ? tokSize : MaxMemberNameLen;
             }
 
+            // check if constructor has definition in hpp
+            // align definition with constructor name/noexcept
+            for (int j = i; j < Changes.size(); j++) {
+                const FormatToken* cur_tok = Changes[j].Tok;
+                
+                if (cur_tok->is(tok::semi)) {
+                    // if semicolon found
+                    // then it is only declaration
+
+                    break;
+
+                } else if (cur_tok->is(tok::l_brace)) {
+                    // if left brace found
+                    // then indent all lines till definition ends; 
+
+                    int old_spaces = Changes[j].Spaces;
+                    if (PrevTok && PrevTok->is(tok::kw_constexpr)) {
+                        Changes[j].Spaces = Changes[i-1].Spaces;
+                    } else {
+                        Changes[j].Spaces = Changes[i].Spaces;
+                    }
+
+                    int space_increment = Changes[j].Spaces - old_spaces;
+                    int lbrace_cout = 1;
+
+                    for (int k = j+1; k < Changes.size();k++) {
+                        if (Changes[k].NewlinesBefore != 0) {
+                            Changes[k].Spaces += space_increment;
+
+                            // correct StartOfTokenColumn of rest of tokens in the line
+                            for (int y=k; y < Changes.size() && Changes[y].NewlinesBefore == 0; y++) {
+                                Changes[y].StartOfTokenColumn += space_increment;
+                            }
+                        }
+                        if (Changes[k].Tok->is(tok::l_brace)) {
+                            lbrace_cout++;
+                        }
+                        if (Changes[k].Tok->is(tok::r_brace)) {
+                            lbrace_cout--;
+                        }
+                        if (lbrace_cout==0) {
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+            
+
             if (NextTok)
                 NextTok->PrevTokenSizeForColumnarization = tokSize;
         }
@@ -1786,24 +1841,35 @@ void WhitespaceManager::columnarizeLParenTokensAndSplitArgs() {
             continue;
 
         FormatToken* PrevTok = MyTok->getPreviousNonComment();
+        size_t lenDiff=0;
 
         if (MyTok->is(tok::l_paren) && !MyTok->IsInFunctionDefinitionScope && PrevTok && PrevTok->isFunctionOrCtorOrPrevIsDtor()) {
-            size_t lenDiff = MaxMemberNameLen - MyTok->PrevTokenSizeForColumnarization;
+            lenDiff = MaxMemberNameLen - MyTok->PrevTokenSizeForColumnarization;
             Changes[i].Spaces = pad + lenDiff;
             newlineargssize = toPad + MaxSpecifierTabs * Style.TabWidth + MaxDatatypeLen + pad + 2;
             insideargs = true;
         }
         else if (MyTok->is(tok::l_brace) && PrevTok && PrevTok->is(tok::identifier)
                 && MyTok->Previous->Previous && MyTok->Previous->Previous->is(tok::star)) {
-            size_t lenDiff = MaxGlobalVarNameLen - PrevTok->ColumnWidth;
+            lenDiff = MaxGlobalVarNameLen - PrevTok->ColumnWidth;
             Changes[i].Spaces = 1 + lenDiff;
             insideargs = false;
         }
         else if (MyTok->is(tok::l_brace) && PrevTok && PrevTok->is(tok::identifier)
                 && MyTok->Previous->Previous && MyTok->Previous->Previous->is(tok::kw_operator)) {
-            size_t lenDiff = MaxGlobalVarNameLen - PrevTok->ColumnWidth;
+            lenDiff = MaxGlobalVarNameLen - PrevTok->ColumnWidth;
             Changes[i].Spaces = pad + lenDiff;
             insideargs = false;
+        }
+
+        if (lenDiff!=0) {
+        
+            int j = i;
+
+            while (j < Changes.size() && Changes[j].NewlinesBefore == 0) {
+                Changes [j].StartOfTokenColumn += lenDiff;
+                ++j;
+            }
         }
 
         if (insideargs && MyTok->is(tok::r_paren))
@@ -2329,7 +2395,7 @@ void WhitespaceManager::alignTrailingComments(unsigned Start, unsigned End,
                                               unsigned Column) {
   for (unsigned i = Start; i != End; ++i) {
     int Shift = 0;
-    if (Changes[i].IsTrailingComment)
+    if (Changes[i].IsTrailingComment) 
       Shift = Column - Changes[i].StartOfTokenColumn;
     if (Changes[i].StartOfBlockComment) {
       Shift = Changes[i].IndentationOffset +
@@ -2913,9 +2979,12 @@ size_t WhitespaceManager::adjectIdentifierLocation (unsigned pad, unsigned idx, 
 
     MaxMemberNameLen = MaxMemberNameLen < tokSize ? tokSize : MaxMemberNameLen;
 
-    while (j < Changes.size() && Changes[j].NewlinesBefore == 0) {
-        Changes[j].StartOfTokenColumn += lenDiff;
-        ++j;
+    if (lenDiff!=0) {
+        j = idx;
+        while (j < Changes.size() && Changes[j].NewlinesBefore == 0) {
+            Changes[j].StartOfTokenColumn += lenDiff;
+            ++j;
+        }
     }
 
     return tokSize;
