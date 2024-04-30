@@ -16,7 +16,7 @@
 ## --compression-level specifies the level.
 # RUN: ld.lld %t.o -o %t.6 --compress-sections=.debug_info=zlib:6
 # RUN: llvm-readelf --sections %t.6 | FileCheck -check-prefixes=HEADER,LEVEL6 %s
-## zlib uses the default (6) when an invalid level is specified.
+## If the specified level is invalid, zlib will use the default (6).
 # RUN: ld.lld %t.o -o %t.bad --compress-sections=.debug_info=zlib:-1
 # RUN: cmp %t.6 %t.bad
 

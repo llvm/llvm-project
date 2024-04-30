@@ -68,8 +68,9 @@ defm compress_debug_sections:
   MetaVarName<"[none,zlib,zstd]">;
 
 defm compress_sections: EEq<"compress-sections",
-  "Compress non-SHF_ALLOC output sections matching <section-glob>">,
-  MetaVarName<"<section-glob>=[none|zlib|zstd]">;
+  "Compress non-SHF_ALLOC output sections matching <section-glob>. "
+  "If <level> is specified, use the specified compression level">,
+  MetaVarName<"<section-glob>={none,zlib,zstd}[:level]">;
 
 defm defsym: Eq<"defsym", "Define a symbol alias">, MetaVarName<"<symbol>=<value>">;
 

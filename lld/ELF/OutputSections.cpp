@@ -336,14 +336,12 @@ template <class ELFT> void OutputSection::maybeCompress() {
 
   DebugCompressionType ctype = DebugCompressionType::None;
   int level = 0; // default compression level
+  if (!(flags & SHF_ALLOC) && config->compressDebugSections &&
+      name.starts_with(".debug_") && size)
+    ctype = *config->compressDebugSections;
   for (auto &[glob, t, l] : config->compressSections)
     if (glob.match(name))
       std::tie(ctype, level) = {t, l};
-  if (!(flags & SHF_ALLOC) && config->compressDebugSections &&
-      name.starts_with(".debug_") && size) {
-    ctype = *config->compressDebugSections;
-    level = 0;
-  }
   if (ctype == DebugCompressionType::None)
     return;
   if (flags & SHF_ALLOC) {
