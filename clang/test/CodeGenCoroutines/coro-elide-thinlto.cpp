@@ -4,8 +4,8 @@
 // RUN: split-file %s %t
 // RUN: %clang --target=x86_64-linux -std=c++20 -O2 -flto=thin -I %S -c %t/coro-elide-callee.cpp -o %t/coro-elide-callee.o
 // RUN: %clang --target=x86_64-linux -std=c++20 -O2 -flto=thin -I %S -c %t/coro-elide-caller.cpp -o %t/coro-elide-caller.o
-// RUN: llvm-lto -thinlto %t/coro-elide-callee.o %t/coro-elide-caller.o -o summary
-// RUN: %clang_cc1 -O2 -x ir %t/coro-elide-caller.o -fthinlto-index=summary.thinlto.bc -emit-llvm -o - | FileCheck %s
+// RUN: llvm-lto -thinlto %t/coro-elide-callee.o %t/coro-elide-caller.o -o %t/summary
+// RUN: %clang_cc1 -O2 -x ir %t/coro-elide-caller.o -fthinlto-index=%t/summary.thinlto.bc -emit-llvm -o - | FileCheck %s
 
 //--- coro-elide-task.h
 #pragma once
