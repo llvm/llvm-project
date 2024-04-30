@@ -1024,3 +1024,43 @@ v_cvt_scalef32_pk_bf16_bf8 v1, v2, s3 op_sel:[1,0,0]
 // NOT-GFX950: :[[@LINE+2]]:{{[0-9]+}}: error:
 // GFX950: v_cvt_scalef32_pk_bf16_bf8 v1, s2, 3 op_sel:[1,0,0] ; encoding: [0x01,0x08,0x6a,0xd2,0x02,0x06,0x01,0x00]
 v_cvt_scalef32_pk_bf16_bf8 v1, s2, 3 op_sel:[1,0,0]
+
+// NOT-GFX950: error: instruction not supported on this GPU
+// GFX950: v_cvt_scalef32_pk_fp4_f16 v1, v2, v3    ; encoding: [0x01,0x00,0x4c,0xd2,0x02,0x07,0x02,0x00]
+v_cvt_scalef32_pk_fp4_f16 v1, v2, v3
+
+// NOT-GFX950: error: instruction not supported on this GPU
+// GFX950: v_cvt_scalef32_pk_fp4_f16 v1, s2, 3     ; encoding: [0x01,0x00,0x4c,0xd2,0x02,0x06,0x01,0x00]
+v_cvt_scalef32_pk_fp4_f16 v1, s2, 3
+
+// NOT-GFX950: error: instruction not supported on this GPU
+// GFX950: v_cvt_scalef32_pk_fp4_f16 v1, v2, v3 op_sel:[0,0,1,1] ; encoding: [0x01,0x60,0x4c,0xd2,0x02,0x07,0x02,0x00]
+v_cvt_scalef32_pk_fp4_f16 v1, v2, v3 op_sel:[0,0,1,1]
+
+// NOT-GFX950: error: instruction not supported on this GPU
+// GFX950: v_cvt_scalef32_pk_fp4_f16 v1, v2, v3 op_sel:[0,0,0,1] ; encoding: [0x01,0x40,0x4c,0xd2,0x02,0x07,0x02,0x00]
+v_cvt_scalef32_pk_fp4_f16 v1, v2, v3 op_sel:[0,0,0,1]
+
+// NOT-GFX950: error: instruction not supported on this GPU
+// GFX950: v_cvt_scalef32_pk_fp4_f16 v1, -|s2|, v3 ; encoding: [0x01,0x01,0x4c,0xd2,0x02,0x06,0x02,0x20]
+v_cvt_scalef32_pk_fp4_f16 v1, -|s2|, v3
+
+// NOT-GFX950: error: instruction not supported on this GPU
+// GFX950: v_cvt_scalef32_pk_fp4_bf16 v1, v2, v3   ; encoding: [0x01,0x00,0x4d,0xd2,0x02,0x07,0x02,0x00]
+v_cvt_scalef32_pk_fp4_bf16 v1, v2, v3
+
+// NOT-GFX950: error: instruction not supported on this GPU
+// GFX950: v_cvt_scalef32_pk_fp4_bf16 v1, s2, 3    ; encoding: [0x01,0x00,0x4d,0xd2,0x02,0x06,0x01,0x00]
+v_cvt_scalef32_pk_fp4_bf16 v1, s2, 3
+
+// NOT-GFX950: error: instruction not supported on this GPU
+// GFX950: v_cvt_scalef32_pk_fp4_bf16 v1, v2, v3 op_sel:[0,0,1,1] ; encoding: [0x01,0x60,0x4d,0xd2,0x02,0x07,0x02,0x00]
+v_cvt_scalef32_pk_fp4_bf16 v1, v2, v3 op_sel:[0,0,1,1]
+
+// NOT-GFX950: error: instruction not supported on this GPU
+// GFX950: v_cvt_scalef32_pk_fp4_bf16 v1, v2, v3 op_sel:[0,0,0,1] ; encoding: [0x01,0x40,0x4d,0xd2,0x02,0x07,0x02,0x00]
+v_cvt_scalef32_pk_fp4_bf16 v1, v2, v3 op_sel:[0,0,0,1]
+
+// NOT-GFX950: error: instruction not supported on this GPU
+// GFX950: v_cvt_scalef32_pk_fp4_bf16 v1, -|s2|, v3 ; encoding: [0x01,0x01,0x4d,0xd2,0x02,0x06,0x02,0x20]
+v_cvt_scalef32_pk_fp4_bf16 v1, -|s2|, v3
