@@ -19,10 +19,12 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#ifdef _WIN32
+#include "flang/Common/windows-include.h"
+#else
+#include <sys/time.h> // gettimeofday
 #include <sys/times.h>
 #include <unistd.h>
-#ifndef _WIN32
-#include <sys/time.h> // gettimeofday
 #endif
 
 // CPU_TIME (Fortran 2018 16.9.57)
@@ -376,11 +378,34 @@ void RTNAME(Etime)(const Descriptor *values, const Descriptor *time,
     const char *sourceFile, int line) {
   Fortran::runtime::Terminator terminator{sourceFile, line};
 
+  double usrTime = -1.0, sysTime = -1.0, realTime = -1.0;
+
+#ifdef _WIN32
+  FILETIME creationTime;
+  FILETIME exitTime;
+  FILETIME kernelTime;
+  FILETIME userTime;
+
+  if (GetProcessTimes(GetCurrentProcess(), &creationTime, &exitTime,
+          &kernelTime, &userTime) != -1) {
+    ULARGE_INTEGER userSystemTime;
+    ULARGE_INTEGER kernelSystemTime;
+
+    memcpy(&userSystemTime, &userTime, sizeof(FILETIME));
+    memcpy(&kernelSystemTime, &kernelTime, sizeof(FILETIME));
+
+    usrTime = double(userSystemTime.QuadPart / 10000);
+    sysTime = double(kernelSystemTime.QuadPart / 10000);
+    realTime = usrTime + sysTime;
+  }
+#else
   struct tms tms;
-  times(&tms);
-  auto usrTime = (double)(tms.tms_utime) / sysconf(_SC_CLK_TCK);
-  auto sysTime = (double)(tms.tms_stime) / sysconf(_SC_CLK_TCK);
-  auto realTime = usrTime + sysTime;
+  if (times(&tms) != -1) {
+    usrTime = (double)(tms.tms_utime) / sysconf(_SC_CLK_TCK);
+    sysTime = (double)(tms.tms_stime) / sysconf(_SC_CLK_TCK);
+    realTime = usrTime + sysTime;
+  }
+#endif
 
   if (values) {
     auto typeCode{values->type().GetCategoryAndKind()};
