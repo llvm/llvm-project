@@ -90,7 +90,6 @@ class SourceLocation {
   friend class ASTWriter;
   friend class SourceManager;
   friend struct llvm::FoldingSetTrait<SourceLocation, void>;
-  friend class SourceLocationEncoding;
 
 public:
   using UIntTy = uint32_t;
