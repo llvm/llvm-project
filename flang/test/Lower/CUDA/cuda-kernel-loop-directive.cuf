@@ -24,6 +24,7 @@ subroutine sub1()
 ! CHECK-NOT: fir.do_loop
 ! CHECK: %[[ARG0_I32:.*]] = fir.convert %[[ARG0]] : (index) -> i32
 ! CHECK: fir.store %[[ARG0_I32]] to %[[IV]]#1 : !fir.ref<i32>
+! CHECK: hlfir.assign
 
 
   !$cuf kernel do <<< *, * >>>
