@@ -620,6 +620,95 @@ public:
   }
 };
 
+class CIRGlobalOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::GlobalOp> {
+public:
+  using OpConversionPattern<mlir::cir::GlobalOp>::OpConversionPattern;
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::GlobalOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto moduleOp = op->getParentOfType<mlir::ModuleOp>();
+    if (!moduleOp)
+      return mlir::failure();
+
+    mlir::OpBuilder b(moduleOp.getContext());
+
+    const auto CIRSymType = op.getSymType();
+    auto convertedType = getTypeConverter()->convertType(CIRSymType);
+    if (!convertedType)
+      return mlir::failure();
+    auto memrefType = dyn_cast<mlir::MemRefType>(convertedType);
+    if (!memrefType)
+      memrefType = mlir::MemRefType::get({}, convertedType);
+    // Add an optional alignment to the global memref.
+    mlir::IntegerAttr memrefAlignment =
+        op.getAlignment()
+            ? mlir::IntegerAttr::get(b.getI64Type(), op.getAlignment().value())
+            : mlir::IntegerAttr();
+    // Add an optional initial value to the global memref.
+    mlir::Attribute initialValue = mlir::Attribute();
+    std::optional<mlir::Attribute> init = op.getInitialValue();
+    if (init.has_value()) {
+      if (auto constArr = init.value().dyn_cast<mlir::cir::ZeroAttr>()) {
+        if (memrefType.getShape().size()) {
+          auto rtt = mlir::RankedTensorType::get(memrefType.getShape(),
+                                                 memrefType.getElementType());
+          initialValue = mlir::DenseIntElementsAttr::get(rtt, 0);
+        } else {
+          auto rtt = mlir::RankedTensorType::get({}, convertedType);
+          initialValue = mlir::DenseIntElementsAttr::get(rtt, 0);
+        }
+      } else if (auto intAttr = init.value().dyn_cast<mlir::cir::IntAttr>()) {
+        auto rtt = mlir::RankedTensorType::get({}, convertedType);
+        initialValue = mlir::DenseIntElementsAttr::get(rtt, intAttr.getValue());
+      } else if (auto fltAttr = init.value().dyn_cast<mlir::cir::FPAttr>()) {
+        auto rtt = mlir::RankedTensorType::get({}, convertedType);
+        initialValue = mlir::DenseFPElementsAttr::get(rtt, fltAttr.getValue());
+      } else if (auto boolAttr = init.value().dyn_cast<mlir::cir::BoolAttr>()) {
+        auto rtt = mlir::RankedTensorType::get({}, convertedType);
+        initialValue =
+            mlir::DenseIntElementsAttr::get(rtt, (char)boolAttr.getValue());
+      } else
+        llvm_unreachable(
+            "GlobalOp lowering with initial value is not fully supported yet");
+    }
+
+    // Add symbol visibility
+    std::string sym_visibility = op.isPrivate() ? "private" : "public";
+
+    rewriter.replaceOpWithNewOp<mlir::memref::GlobalOp>(
+        op, b.getStringAttr(op.getSymName()),
+        /*sym_visibility=*/b.getStringAttr(sym_visibility),
+        /*type=*/memrefType, initialValue,
+        /*constant=*/op.getConstant(),
+        /*alignment=*/memrefAlignment);
+
+    return mlir::success();
+  }
+};
+
+class CIRGetGlobalOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::GetGlobalOp> {
+public:
+  using OpConversionPattern<mlir::cir::GetGlobalOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::GetGlobalOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // FIXME(cir): Premature DCE to avoid lowering stuff we're not using.
+    // CIRGen should mitigate this and not emit the get_global.
+    if (op->getUses().empty()) {
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
+
+    auto type = getTypeConverter()->convertType(op.getType());
+    auto symbol = op.getName();
+    rewriter.replaceOpWithNewOp<mlir::memref::GetGlobalOp>(op, type, symbol);
+    return mlir::success();
+  }
+};
+
 void populateCIRToMLIRConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRReturnLowering, CIRBrOpLowering>(patterns.getContext());
@@ -628,8 +717,8 @@ void populateCIRToMLIRConversionPatterns(mlir::RewritePatternSet &patterns,
                CIRBinOpLowering, CIRLoadOpLowering, CIRConstantOpLowering,
                CIRStoreOpLowering, CIRAllocaOpLowering, CIRFuncOpLowering,
                CIRScopeOpLowering, CIRBrCondOpLowering, CIRTernaryOpLowering,
-               CIRYieldOpLowering, CIRCosOpLowering>(converter,
-                                                     patterns.getContext());
+               CIRYieldOpLowering, CIRCosOpLowering, CIRGlobalOpLowering,
+               CIRGetGlobalOpLowering>(converter, patterns.getContext());
 }
 
 static mlir::TypeConverter prepareTypeConverter() {
@@ -639,6 +728,8 @@ static mlir::TypeConverter prepareTypeConverter() {
     // FIXME: The pointee type might not be converted (e.g. struct)
     if (!ty)
       return nullptr;
+    if (isa<mlir::cir::ArrayType>(type.getPointee()))
+      return ty;
     return mlir::MemRefType::get({}, ty);
   });
   converter.addConversion(
@@ -669,8 +760,17 @@ static mlir::TypeConverter prepareTypeConverter() {
     return converter.convertType(type.getUnderlying());
   });
   converter.addConversion([&](mlir::cir::ArrayType type) -> mlir::Type {
-    auto elementType = converter.convertType(type.getEltType());
-    return mlir::MemRefType::get(type.getSize(), elementType);
+    SmallVector<int64_t> shape;
+    mlir::Type curType = type;
+    while (auto arrayType = dyn_cast<mlir::cir::ArrayType>(curType)) {
+      shape.push_back(arrayType.getSize());
+      curType = arrayType.getEltType();
+    }
+    auto elementType = converter.convertType(curType);
+    // FIXME: The element type might not be converted (e.g. struct)
+    if (!elementType)
+      return nullptr;
+    return mlir::MemRefType::get(shape, elementType);
   });
 
   return converter;
