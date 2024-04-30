@@ -5681,21 +5681,21 @@ void Process::Flush() {
   m_queue_list_stop_id = 0;
 }
 
-lldb::addr_t Process::GetCodeAddressMask() {
+addr_t Process::GetCodeAddressMask() {
   if (uint32_t num_bits_setting = GetVirtualAddressableBits())
     return AddressableBits::AddressableBitToMask(num_bits_setting);
 
   return m_code_address_mask;
 }
 
-lldb::addr_t Process::GetDataAddressMask() {
+addr_t Process::GetDataAddressMask() {
   if (uint32_t num_bits_setting = GetVirtualAddressableBits())
     return AddressableBits::AddressableBitToMask(num_bits_setting);
 
   return m_data_address_mask;
 }
 
-lldb::addr_t Process::GetHighmemCodeAddressMask() {
+addr_t Process::GetHighmemCodeAddressMask() {
   if (uint32_t num_bits_setting = GetHighmemVirtualAddressableBits())
     return AddressableBits::AddressableBitToMask(num_bits_setting);
 
@@ -5704,7 +5704,7 @@ lldb::addr_t Process::GetHighmemCodeAddressMask() {
   return GetCodeAddressMask();
 }
 
-lldb::addr_t Process::GetHighmemDataAddressMask() {
+addr_t Process::GetHighmemDataAddressMask() {
   if (uint32_t num_bits_setting = GetHighmemVirtualAddressableBits())
     return AddressableBits::AddressableBitToMask(num_bits_setting);
 

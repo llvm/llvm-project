@@ -14,7 +14,12 @@ class AddressMasksTestCase(TestBase):
         process.SetAddressMask(
             lldb.eAddressMaskTypeAll,
             lldb.LLDB_INVALID_ADDRESS_MASK,
-            lldb.eAddressMaskRangeAll,
+            lldb.eAddressMaskRangeLow,
+        )
+        process.SetAddressMask(
+            lldb.eAddressMaskTypeAll,
+            lldb.LLDB_INVALID_ADDRESS_MASK,
+            lldb.eAddressMaskRangeHigh,
         )
         self.runCmd("settings set target.process.virtual-addressable-bits 0")
         self.runCmd("settings set target.process.highmem-virtual-addressable-bits 0")
@@ -144,6 +149,13 @@ class AddressMasksTestCase(TestBase):
 
         process.SetAddressableBits(
             lldb.eAddressMaskTypeAll, 64, lldb.eAddressMaskRangeLow
+        )
+        self.runCmd("settings set target.process.virtual-addressable-bits 47")
+        self.assertEqual(0xFFFFFE0044580BC4, process.FixAddress(0xFFE8FE0044580BC4))
+
+        self.reset_all_masks(process)
+        process.SetAddressableBits(
+            lldb.eAddressMaskTypeAll, 64, lldb.eAddressMaskRangeAll
         )
         self.runCmd("settings set target.process.virtual-addressable-bits 47")
         self.assertEqual(0xFFFFFE0044580BC4, process.FixAddress(0xFFE8FE0044580BC4))
