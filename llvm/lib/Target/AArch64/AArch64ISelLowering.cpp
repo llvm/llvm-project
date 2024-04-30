@@ -25599,9 +25599,7 @@ void AArch64TargetLowering::ReplaceNodeResults(
       return;
     }
     case Intrinsic::get_active_lane_mask: {
-      if (!VT.isFixedLengthVector())
-        return;
-      if (VT.getVectorElementType() != MVT::i1)
+      if (!VT.isFixedLengthVector() || VT.getVectorElementType() != MVT::i1)
         return;
 
       // NOTE: Only trivial type promotion is supported.
