@@ -372,13 +372,15 @@ template <class ELFT> void OutputSection::maybeCompress() {
   auto shardsOut = std::make_unique<SmallVector<uint8_t, 0>[]>(numShards);
 
 #if LLVM_ENABLE_ZSTD
-  // Use ZSTD's streaming compression API which permits parallel workers working
-  // on the stream. See http://facebook.github.io/zstd/zstd_manual.html
-  // "Streaming compression - HowTo".
+  // Use ZSTD's streaming compression API. See
+  // http://facebook.github.io/zstd/zstd_manual.html "Streaming compression -
+  // HowTo".
   if (ctype == DebugCompressionType::Zstd) {
     parallelFor(0, numShards, [&](size_t i) {
       SmallVector<uint8_t, 0> out;
       ZSTD_CCtx *cctx = ZSTD_createCCtx();
+      ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel,
+                             config->compressionLevel);
       ZSTD_inBuffer zib = {shardsIn[i].data(), shardsIn[i].size(), 0};
       ZSTD_outBuffer zob = {nullptr, 0, 0};
       size_t size;
@@ -406,12 +408,10 @@ template <class ELFT> void OutputSection::maybeCompress() {
 
 #if LLVM_ENABLE_ZLIB
   // We chose 1 (Z_BEST_SPEED) as the default compression level because it is
-  // the fastest. If -O2 is given, we use level 6 to compress debug info more by
-  // ~15%. We found that level 7 to 9 doesn't make much difference (~1% more
-  // compression) while they take significant amount of time (~2x), so level 6
-  // seems enough.
+  // the fastest.
   if (ctype == DebugCompressionType::Zlib) {
-    const int level = config->optimize >= 2 ? 6 : Z_BEST_SPEED;
+    const int level =
+        config->compressionLevel ? config->compressionLevel : Z_BEST_SPEED;
 
     // Compress shards and compute Alder-32 checksums. Use Z_SYNC_FLUSH for all
     // shards but the last to flush the output to a byte boundary to be

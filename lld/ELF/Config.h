@@ -226,6 +226,7 @@ struct Config {
   std::optional<llvm::DebugCompressionType> compressDebugSections;
   llvm::SmallVector<std::pair<llvm::GlobPattern, llvm::DebugCompressionType>, 0>
       compressSections;
+  int compressionLevel = 0;
   bool cref;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint64_t>, 0>
       deadRelocInNonAlloc;

@@ -1233,6 +1233,7 @@ static void readConfigs(opt::InputArgList &args) {
     config->compressDebugSections =
         getCompressionType(arg->getValue(), "--compress-debug-sections");
   }
+  config->compressionLevel = args::getInteger(args, OPT_compression_level, 0);
   config->cref = args.hasArg(OPT_cref);
   config->optimizeBBJumps =
       args.hasFlag(OPT_optimize_bb_jumps, OPT_no_optimize_bb_jumps, false);
