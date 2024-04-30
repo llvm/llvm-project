@@ -6,12 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/fcntl_macros.h"
+#include "hdr/types/struct_flock.h"
 #include "src/errno/libc_errno.h"
 #include "src/fcntl/fcntl.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
+
+#include <stdio.h>
+#include <sys/stat.h> // For S_IRWXU
 
 TEST(LlvmLibcFcntlTest, FcntlDupfd) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
