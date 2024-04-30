@@ -453,6 +453,9 @@ TARGET_BUILTIN(__builtin_amdgcn_ds_read_tr16_b64_v4i16, "V4sV4s*3", "nc", "gfx95
 TARGET_BUILTIN(__builtin_amdgcn_ashr_pk_i8_i32, "UsUiUiUi", "nc", "ashr-pk-insts")
 TARGET_BUILTIN(__builtin_amdgcn_ashr_pk_u8_i32, "UsUiUiUi", "nc", "ashr-pk-insts")
 
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_2xpk16_fp6_f32, "V6UiV16fV16ff", "nc", "gfx950-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_2xpk16_bf6_f32, "V6UiV16fV16ff", "nc", "gfx950-insts")
+
 //===----------------------------------------------------------------------===//
 // GFX12+ only builtins.
 //===----------------------------------------------------------------------===//
