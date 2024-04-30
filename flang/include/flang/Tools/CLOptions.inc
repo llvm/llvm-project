@@ -391,8 +391,7 @@ inline void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
 /// \param optLevel - optimization level used for creating FIR optimization
 ///   passes pipeline
 inline void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
-    MLIRToLLVMPassPipelineConfig &config,
-    llvm::StringRef inputFilename = {}) {
+    MLIRToLLVMPassPipelineConfig &config, llvm::StringRef inputFilename = {}) {
   fir::createHLFIRToFIRPassPipeline(pm, config.OptLevel);
 
   // Add default optimizer pass pipeline.
