@@ -682,7 +682,7 @@ std::optional<uint64_t> BasicBlock::getIrrLoopHeaderWeight() const {
   if (MDNode *MDIrrLoopHeader =
       TI->getMetadata(LLVMContext::MD_irr_loop)) {
     MDString *MDName = cast<MDString>(MDIrrLoopHeader->getOperand(0));
-    if (MDName->getString().equals("loop_header_weight")) {
+    if (MDName->getString() == "loop_header_weight") {
       auto *CI = mdconst::extract<ConstantInt>(MDIrrLoopHeader->getOperand(1));
       return std::optional<uint64_t>(CI->getValue().getZExtValue());
     }

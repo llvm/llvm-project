@@ -1195,8 +1195,7 @@ MDNode *MDNode::mergeDirectCallProfMetadata(MDNode *A, MDNode *B,
          "first operand should be a non-null MDString");
   StringRef AProfName = AMDS->getString();
   StringRef BProfName = BMDS->getString();
-  if (AProfName.equals("branch_weights") &&
-      BProfName.equals("branch_weights")) {
+  if (AProfName == "branch_weights" && BProfName == "branch_weights") {
     ConstantInt *AInstrWeight =
         mdconst::dyn_extract<ConstantInt>(A->getOperand(1));
     ConstantInt *BInstrWeight =
