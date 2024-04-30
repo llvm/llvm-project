@@ -414,6 +414,18 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses requires expressions with explicit object parameters.
 
+- Clang now looks up members of the current instantiation in the template definition context
+  if the current instantiation has no dependent base classes.
+
+  .. code-block:: c++
+
+     template<typename T>
+     struct A {
+       int f() {
+         return this->x; // error: no member named 'x' in 'A<T>'
+       }
+     };
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -614,6 +626,7 @@ Bug Fixes to C++ Support
 - Fix a bug on template partial specialization whose template parameter is `decltype(auto)`.
 - Fix a bug on template partial specialization with issue on deduction of nontype template parameter
   whose type is `decltype(auto)`. Fixes (#GH68885).
+- Clang now correctly treats the noexcept-specifier of a friend function to be a complete-class context.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

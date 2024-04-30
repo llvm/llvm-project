@@ -7703,6 +7703,12 @@ void ASTRecordWriter::writeOMPChildren(OMPChildren *Data) {
     AddStmt(Data->getChildren()[I]);
 }
 
+void ASTRecordWriter::writeOpenACCVarList(const OpenACCClauseWithVarList *C) {
+  writeUInt32(C->getVarList().size());
+  for (Expr *E : C->getVarList())
+    AddStmt(E);
+}
+
 void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   writeEnum(C->getClauseKind());
   writeSourceLocation(C->getBeginLoc());
@@ -7749,6 +7755,12 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     AddStmt(const_cast<Expr *>(NWC->getIntExpr()));
     return;
   }
+  case OpenACCClauseKind::Private: {
+    const auto *PC = cast<OpenACCPrivateClause>(C);
+    writeSourceLocation(PC->getLParenLoc());
+    writeOpenACCVarList(PC);
+    return;
+  }
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Seq:
@@ -7770,7 +7782,6 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::Link:
   case OpenACCClauseKind::NoCreate:
   case OpenACCClauseKind::Present:
-  case OpenACCClauseKind::Private:
   case OpenACCClauseKind::CopyOut:
   case OpenACCClauseKind::CopyIn:
   case OpenACCClauseKind::Create:
