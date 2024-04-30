@@ -14,3 +14,14 @@ add_libc_fuzzer(
     libc.src.__support.HashTable.table
     libc.src.string.memcpy
 )
+
+add_libc_fuzzer(
+  hashtable_opt_fuzz
+  SRCS
+    hashtable_fuzz.cpp
+  DEPENDS
+    libc.src.__support.HashTable.table
+    libc.src.string.memcpy
+  COMPILE_OPTIONS
+    -D__LIBC_EXPLICIT_SIMD_OPT
+) 
