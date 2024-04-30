@@ -2255,6 +2255,12 @@ let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn, ImmArg<ArgIndex<1>>
                                llvm_i1_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty]>;
+
+  def int_vp_cttz_elts : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
+                                  [ llvm_anyvector_ty,
+                                    llvm_i1_ty,
+                                    LLVMScalarOrSameVectorWidth<1, llvm_i1_ty>,
+                                    llvm_i32_ty]>;
 }
 
 def int_get_active_lane_mask:

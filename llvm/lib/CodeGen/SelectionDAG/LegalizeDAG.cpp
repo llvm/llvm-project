@@ -1227,6 +1227,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(
         Node->getOpcode(), Node->getOperand(1).getValueType());
     break;
+  case ISD::VP_CTTZ_ELTS:
+  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+    Action = TLI.getOperationAction(Node->getOpcode(),
+                                    Node->getOperand(0).getValueType());
+    break;
   default:
     if (Node->getOpcode() >= ISD::BUILTIN_OP_END) {
       Action = TLI.getCustomOperationAction(*Node);
@@ -4281,6 +4286,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
     Results.push_back(TLI.expandVecReduce(Node, DAG));
+    break;
+  case ISD::VP_CTTZ_ELTS:
+  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+    Results.push_back(TLI.expandVPCTTZElements(Node, DAG));
     break;
   case ISD::GLOBAL_OFFSET_TABLE:
   case ISD::GlobalAddress:
