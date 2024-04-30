@@ -4097,12 +4097,12 @@ public:
                                    SmallVectorImpl<QualType> &Exceptions,
                                    FunctionProtoType::ExceptionSpecInfo &ESI);
 
-  /// Add an exception-specification to the given member function
-  /// (or member function template). The exception-specification was parsed
-  /// after the method itself was declared.
+  /// Add an exception-specification to the given member or friend function
+  /// (or function template). The exception-specification was parsed
+  /// after the function itself was declared.
   void actOnDelayedExceptionSpecification(
-      Decl *Method, ExceptionSpecificationType EST,
-      SourceRange SpecificationRange, ArrayRef<ParsedType> DynamicExceptions,
+      Decl *D, ExceptionSpecificationType EST, SourceRange SpecificationRange,
+      ArrayRef<ParsedType> DynamicExceptions,
       ArrayRef<SourceRange> DynamicExceptionRanges, Expr *NoexceptExpr);
 
   class InheritedConstructorInfo;

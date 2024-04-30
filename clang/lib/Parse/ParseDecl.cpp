@@ -7416,12 +7416,20 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       std::optional<Sema::CXXThisScopeRAII> ThisScope;
       InitCXXThisScopeForDeclaratorIfRelevant(D, DS, ThisScope);
 
-      // Parse exception-specification[opt].
-      // FIXME: Per [class.mem]p6, all exception-specifications at class scope
-      // should be delayed, including those for non-members (eg, friend
-      // declarations). But only applying this to member declarations is
-      // consistent with what other implementations do.
-      bool Delayed = D.isFirstDeclarationOfMember() &&
+      // C++ [class.mem.general]p8:
+      //   A complete-class context of a class (template) is a
+      //     - function body,
+      //     - default argument,
+      //     - default template argument,
+      //     - noexcept-specifier, or
+      //     - default member initializer
+      //   within the member-specification of the class or class template.
+      //
+      // Parse exception-specification[opt]. If we are in the
+      // member-specification of a class or class template, this is a
+      // complete-class context and parsing of the noexcept-specifier should be
+      // delayed (even if this is a friend declaration).
+      bool Delayed = D.getContext() == DeclaratorContext::Member &&
                      D.isFunctionDeclaratorAFunctionDeclaration();
       if (Delayed && Actions.isLibstdcxxEagerExceptionSpecHack(D) &&
           GetLookAheadToken(0).is(tok::kw_noexcept) &&

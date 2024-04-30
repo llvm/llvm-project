@@ -614,6 +614,7 @@ Bug Fixes to C++ Support
 - Fix a bug on template partial specialization whose template parameter is `decltype(auto)`.
 - Fix a bug on template partial specialization with issue on deduction of nontype template parameter
   whose type is `decltype(auto)`. Fixes (#GH68885).
+- Clang now correctly treats the noexcept-specifier of a friend function to be a complete-class context.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
