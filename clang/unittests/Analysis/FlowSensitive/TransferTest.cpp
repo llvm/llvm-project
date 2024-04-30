@@ -5357,6 +5357,38 @@ TEST(TransferTest, ConditionalOperatorLocation) {
       });
 }
 
+TEST(TransferTest, ConditionalOperatorOnConstantExpr) {
+  // This is a regression test: We used to crash when a `ConstantExpr` was used
+  // in the branches of a conditional operator.
+  std::string Code = R"cc(
+    consteval bool identity(bool B) { return B; }
+    void target(bool Cond) {
+      bool JoinTrueTrue = Cond ? identity(true) : identity(true);
+      bool JoinTrueFalse = Cond ? identity(true) : identity(false);
+      // [[p]]
+    }
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        Environment Env = getEnvironmentAtAnnotation(Results, "p").fork();
+
+        auto &JoinTrueTrue =
+            getValueForDecl<BoolValue>(ASTCtx, Env, "JoinTrueTrue");
+        // FIXME: This test documents the current behavior, namely that we
+        // don't actually use the constant result of the `ConstantExpr` and
+        // instead treat it like a normal function call.
+        EXPECT_EQ(JoinTrueTrue.formula().kind(), Formula::Kind::AtomRef);
+        // EXPECT_TRUE(JoinTrueTrue.formula().literal());
+
+        auto &JoinTrueFalse =
+            getValueForDecl<BoolValue>(ASTCtx, Env, "JoinTrueFalse");
+        EXPECT_EQ(JoinTrueFalse.formula().kind(), Formula::Kind::AtomRef);
+      },
+      LangStandard::lang_cxx20);
+}
+
 TEST(TransferTest, IfStmtBranchExtendsFlowCondition) {
   std::string Code = R"(
     void target(bool Foo) {

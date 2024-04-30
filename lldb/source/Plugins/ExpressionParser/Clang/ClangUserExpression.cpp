@@ -56,6 +56,7 @@
 #include "clang/AST/DeclObjC.h"
 
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 
 using namespace lldb_private;
 
@@ -63,22 +64,21 @@ char ClangUserExpression::ID;
 
 ClangUserExpression::ClangUserExpression(
     ExecutionContextScope &exe_scope, llvm::StringRef expr,
-    llvm::StringRef prefix, lldb::LanguageType language,
-    ResultType desired_type, const EvaluateExpressionOptions &options,
-    ValueObject *ctx_obj)
+    llvm::StringRef prefix, SourceLanguage language, ResultType desired_type,
+    const EvaluateExpressionOptions &options, ValueObject *ctx_obj)
     : LLVMUserExpression(exe_scope, expr, prefix, language, desired_type,
                          options),
       m_type_system_helper(*m_target_wp.lock(), options.GetExecutionPolicy() ==
                                                     eExecutionPolicyTopLevel),
       m_result_delegate(exe_scope.CalculateTarget()), m_ctx_obj(ctx_obj) {
-  switch (m_language) {
-  case lldb::eLanguageTypeC_plus_plus:
+  switch (m_language.name) {
+  case llvm::dwarf::DW_LNAME_C_plus_plus:
     m_allow_cxx = true;
     break;
-  case lldb::eLanguageTypeObjC:
+  case llvm::dwarf::DW_LNAME_ObjC:
     m_allow_objc = true;
     break;
-  case lldb::eLanguageTypeObjC_plus_plus:
+  case llvm::dwarf::DW_LNAME_ObjC_plus_plus:
   default:
     m_allow_cxx = true;
     m_allow_objc = true;
@@ -624,7 +624,8 @@ bool ClangUserExpression::TryParse(
 void ClangUserExpression::SetupCppModuleImports(ExecutionContext &exe_ctx) {
   Log *log = GetLog(LLDBLog::Expressions);
 
-  CppModuleConfiguration module_config = GetModuleConfig(m_language, exe_ctx);
+  CppModuleConfiguration module_config =
+      GetModuleConfig(m_language.AsLanguageType(), exe_ctx);
   m_imported_cpp_modules = module_config.GetImportedModules();
   m_include_directories = module_config.GetIncludeDirs();
 
@@ -734,7 +735,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     if (register_execution_unit) {
       if (auto *persistent_state =
               exe_ctx.GetTargetPtr()->GetPersistentExpressionStateForLanguage(
-                  m_language))
+                  m_language.AsLanguageType()))
         persistent_state->RegisterExecutionUnit(m_execution_unit_sp);
     }
   }

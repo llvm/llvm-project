@@ -23,6 +23,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Serialization/SourceLocationEncoding.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Bitstream/BitCodes.h"
 #include <cassert>
@@ -167,45 +168,38 @@ const unsigned int NUM_PREDEF_SUBMODULE_IDS = 1;
 
 /// Source range/offset of a preprocessed entity.
 struct PPEntityOffset {
+  using RawLocEncoding = SourceLocationEncoding::RawLocEncoding;
+
   /// Raw source location of beginning of range.
-  SourceLocation::UIntTy Begin;
+  RawLocEncoding Begin;
 
   /// Raw source location of end of range.
-  SourceLocation::UIntTy End;
+  RawLocEncoding End;
 
   /// Offset in the AST file relative to ModuleFile::MacroOffsetsBase.
   uint32_t BitOffset;
 
-  PPEntityOffset(SourceRange R, uint32_t BitOffset)
-      : Begin(R.getBegin().getRawEncoding()), End(R.getEnd().getRawEncoding()),
-        BitOffset(BitOffset) {}
+  PPEntityOffset(RawLocEncoding Begin, RawLocEncoding End, uint32_t BitOffset)
+      : Begin(Begin), End(End), BitOffset(BitOffset) {}
 
-  SourceLocation getBegin() const {
-    return SourceLocation::getFromRawEncoding(Begin);
-  }
-
-  SourceLocation getEnd() const {
-    return SourceLocation::getFromRawEncoding(End);
-  }
+  RawLocEncoding getBegin() const { return Begin; }
+  RawLocEncoding getEnd() const { return End; }
 };
 
 /// Source range of a skipped preprocessor region
 struct PPSkippedRange {
+  using RawLocEncoding = SourceLocationEncoding::RawLocEncoding;
+
   /// Raw source location of beginning of range.
-  SourceLocation::UIntTy Begin;
+  RawLocEncoding Begin;
   /// Raw source location of end of range.
-  SourceLocation::UIntTy End;
+  RawLocEncoding End;
 
-  PPSkippedRange(SourceRange R)
-      : Begin(R.getBegin().getRawEncoding()), End(R.getEnd().getRawEncoding()) {
-  }
+  PPSkippedRange(RawLocEncoding Begin, RawLocEncoding End)
+      : Begin(Begin), End(End) {}
 
-  SourceLocation getBegin() const {
-    return SourceLocation::getFromRawEncoding(Begin);
-  }
-  SourceLocation getEnd() const {
-    return SourceLocation::getFromRawEncoding(End);
-  }
+  RawLocEncoding getBegin() const { return Begin; }
+  RawLocEncoding getEnd() const { return End; }
 };
 
 /// Offset in the AST file. Use splitted 64-bit integer into low/high
@@ -231,8 +225,10 @@ struct UnderalignedInt64 {
 
 /// Source location and bit offset of a declaration.
 struct DeclOffset {
+  using RawLocEncoding = SourceLocationEncoding::RawLocEncoding;
+
   /// Raw source location.
-  SourceLocation::UIntTy Loc = 0;
+  RawLocEncoding RawLoc = 0;
 
   /// Offset relative to the start of the DECLTYPES_BLOCK block. Keep
   /// structure alignment 32-bit and avoid padding gap because undefined
@@ -240,17 +236,15 @@ struct DeclOffset {
   UnderalignedInt64 BitOffset;
 
   DeclOffset() = default;
-  DeclOffset(SourceLocation Loc, uint64_t BitOffset,
-             uint64_t DeclTypesBlockStartOffset) {
-    setLocation(Loc);
+  DeclOffset(RawLocEncoding RawLoc, uint64_t BitOffset,
+             uint64_t DeclTypesBlockStartOffset)
+      : RawLoc(RawLoc) {
     setBitOffset(BitOffset, DeclTypesBlockStartOffset);
   }
 
-  void setLocation(SourceLocation L) { Loc = L.getRawEncoding(); }
+  void setRawLoc(RawLocEncoding Loc) { RawLoc = Loc; }
 
-  SourceLocation getLocation() const {
-    return SourceLocation::getFromRawEncoding(Loc);
-  }
+  RawLocEncoding getRawLoc() const { return RawLoc; }
 
   void setBitOffset(uint64_t Offset, const uint64_t DeclTypesBlockStartOffset) {
     BitOffset.setBitOffset(Offset - DeclTypesBlockStartOffset);
@@ -973,8 +967,8 @@ enum PredefinedTypeIDs {
   /// OpenCL reserve_id type.
   PREDEF_TYPE_RESERVE_ID_ID = 41,
 
-  /// The placeholder type for OpenMP array section.
-  PREDEF_TYPE_OMP_ARRAY_SECTION = 42,
+  /// The placeholder type for an array section.
+  PREDEF_TYPE_ARRAY_SECTION = 42,
 
   /// The '__float128' type
   PREDEF_TYPE_FLOAT128_ID = 43,
@@ -1926,7 +1920,7 @@ enum StmtCode {
   STMT_OMP_TARGET_TEAMS_GENERIC_LOOP_DIRECTIVE,
   STMT_OMP_PARALLEL_GENERIC_LOOP_DIRECTIVE,
   STMT_OMP_TARGET_PARALLEL_GENERIC_LOOP_DIRECTIVE,
-  EXPR_OMP_ARRAY_SECTION,
+  EXPR_ARRAY_SECTION,
   EXPR_OMP_ARRAY_SHAPING,
   EXPR_OMP_ITERATOR,
 
