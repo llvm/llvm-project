@@ -3205,6 +3205,17 @@ void ASTWriter::WriteType(QualType T) {
 // Declaration Serialization
 //===----------------------------------------------------------------------===//
 
+static bool IsInternalDeclFromFileContext(const Decl *D) {
+  auto *ND = dyn_cast<NamedDecl>(D);
+  if (!ND)
+    return false;
+
+  if (!D->getDeclContext()->getRedeclContext()->isFileContext())
+    return false;
+
+  return ND->getFormalLinkage() == Linkage::Internal;
+}
+
 /// Write the block containing all of the declaration IDs
 /// lexically declared within the given DeclContext.
 ///
@@ -3223,6 +3234,15 @@ uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
   SmallVector<DeclID, 128> KindDeclPairs;
   for (const auto *D : DC->decls()) {
     if (DoneWritingDeclsAndTypes && !wasDeclEmitted(D))
+      continue;
+
+    // We don't need to write decls with internal linkage into reduced BMI.
+    // If such decls gets emitted due to it get used from inline functions,
+    // the program illegal. However, there are too many use of static inline
+    // functions in the global module fragment and it will be breaking change
+    // to forbid that. So we have to allow to emit such declarations from GMF.
+    if (GeneratingReducedBMI && !D->isFromExplicitGlobalModule() &&
+        IsInternalDeclFromFileContext(D))
       continue;
 
     KindDeclPairs.push_back(D->getKind());
@@ -3886,6 +3906,13 @@ public:
           !Writer.wasDeclEmitted(DeclForLocalLookup))
         continue;
 
+      // Try to avoid writing internal decls to reduced BMI.
+      // See comments in ASTWriter::WriteDeclContextLexicalBlock for details.
+      if (Writer.isGeneratingReducedBMI() &&
+          !DeclForLocalLookup->isFromExplicitGlobalModule() &&
+          IsInternalDeclFromFileContext(DeclForLocalLookup))
+        continue;
+
       DeclIDs.push_back(Writer.GetDeclRef(DeclForLocalLookup));
     }
     return std::make_pair(Start, DeclIDs.size());
@@ -4255,6 +4282,12 @@ uint64_t ASTWriter::WriteDeclContextVisibleBlock(ASTContext &Context,
           continue;
 
         if (DoneWritingDeclsAndTypes && !wasDeclEmitted(ND))
+          continue;
+
+        // We don't need to force emitting internal decls into reduced BMI.
+        // See comments in ASTWriter::WriteDeclContextLexicalBlock for details.
+        if (GeneratingReducedBMI && !ND->isFromExplicitGlobalModule() &&
+            IsInternalDeclFromFileContext(ND))
           continue;
 
         GetDeclRef(ND);
@@ -4917,8 +4950,7 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
       // is ill-formed. However, in practice, there are a lot of projects
       // uses `static inline` in the headers. So we can't get rid of all
       // static entities in reduced BMI now.
-      if (auto *ND = dyn_cast<NamedDecl>(D);
-          ND && ND->getFormalLinkage() == Linkage::Internal)
+      if (IsInternalDeclFromFileContext(D))
         continue;
     }
 
