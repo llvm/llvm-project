@@ -28115,8 +28115,8 @@ bool DAGCombiner::mayAlias(SDNode *Op0, SDNode *Op1) const {
   if (UseAA && AA && MUC0.MMO->getValue() && MUC1.MMO->getValue() &&
       Size0.hasValue() && Size1.hasValue() &&
       // Can't represent a scalable size + fixed offset in LocationSize
-      (Size0.isScalable() || SrcValOffset0 == 0) &&
-      (Size1.isScalable() || SrcValOffset1 == 0)) {
+      (!Size0.isScalable() || SrcValOffset0 == 0) &&
+      (!Size1.isScalable() || SrcValOffset1 == 0)) {
     // Use alias analysis information.
     int64_t MinOffset = std::min(SrcValOffset0, SrcValOffset1);
     int64_t Overlap0 =
