@@ -154,7 +154,9 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
     // If the attribute has no arguments, then assume the argument is "this".
     if (!AttrExp)
       return CapabilityExpr(
-          Self, ClassifyDiagnostic(cast<CXXMethodDecl>(D)->getThisObjectType()),
+          Self,
+          ClassifyDiagnostic(
+              cast<CXXMethodDecl>(D)->getFunctionObjectParameterType()),
           false);
     else  // For most attributes.
       return translateAttrExpr(AttrExp, &Ctx);
@@ -993,7 +995,7 @@ void SExprBuilder::exitCFG(const CFGBlock *Last) {
   IncompleteArgs.clear();
 }
 
-/*
+#ifndef NDEBUG
 namespace {
 
 class TILPrinter :
@@ -1014,4 +1016,4 @@ void printSCFG(CFGWalker &Walker) {
 
 } // namespace threadSafety
 } // namespace clang
-*/
+#endif // NDEBUG

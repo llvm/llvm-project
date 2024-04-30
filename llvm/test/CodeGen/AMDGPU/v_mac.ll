@@ -1,6 +1,6 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mattr=+mad-mac-f32-insts -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck --check-prefixes=SI,GCN %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=VI-FLUSH,GCN %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false -march=amdgcn -mcpu=tonga -denormal-fp-math=ieee -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mattr=+mad-mac-f32-insts -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck --check-prefixes=SI,GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tonga -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefixes=VI-FLUSH,GCN %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=tonga -denormal-fp-math=ieee -denormal-fp-math-f32=preserve-sign -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}mac_vvv:
 ; GCN: buffer_load_dword [[A:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 glc{{$}}
@@ -253,7 +253,7 @@ bb:
 
 ; SI: v_add_f32_e32 [[TMP2:v[0-9]+]], [[CVT_A]], [[CVT_A]]
 ; SI: v_mad_f32 v{{[0-9]+}}, [[TMP2]], -4.0, 1.0
-; SI: v_mac_f32_e32 v{{[0-9]+}}, 0x41000000, v{{[0-9]+}}
+; SI: v_madmk_f32 v{{[0-9]+}}, v{{[0-9]+}}, 0x41000000, v{{[0-9]+}}
 
 ; VI-FLUSH: v_add_f16_e32 [[TMP2:v[0-9]+]], [[A]], [[A]]
 ; VI-FLUSH: v_mad_f16 v{{[0-9]+}}, [[TMP2]], -4.0, 1.0

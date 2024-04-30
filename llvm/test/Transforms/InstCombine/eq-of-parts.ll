@@ -584,17 +584,8 @@ define i1 @eq_21_not_adjacent(i32 %x, i32 %y) {
 
 define i1 @eq_shift_in_zeros(i32 %x, i32 %y) {
 ; CHECK-LABEL: @eq_shift_in_zeros(
-; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
-; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
-; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i24
-; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
-; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
-; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
-; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i24
-; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8 [[X_1]], [[Y_1]]
-; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i24 [[X_2]], [[Y_2]]
-; CHECK-NEXT:    [[C_210:%.*]] = and i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    [[C_210_UNSHIFTED:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp ult i32 [[C_210_UNSHIFTED]], 256
 ; CHECK-NEXT:    ret i1 [[C_210]]
 ;
   %x.321 = lshr i32 %x, 8
@@ -1249,17 +1240,8 @@ define i1 @ne_21_not_adjacent(i32 %x, i32 %y) {
 
 define i1 @ne_shift_in_zeros(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ne_shift_in_zeros(
-; CHECK-NEXT:    [[X_321:%.*]] = lshr i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[X_321]] to i8
-; CHECK-NEXT:    [[X_32:%.*]] = lshr i32 [[X]], 16
-; CHECK-NEXT:    [[X_2:%.*]] = trunc i32 [[X_32]] to i24
-; CHECK-NEXT:    [[Y_321:%.*]] = lshr i32 [[Y:%.*]], 8
-; CHECK-NEXT:    [[Y_1:%.*]] = trunc i32 [[Y_321]] to i8
-; CHECK-NEXT:    [[Y_32:%.*]] = lshr i32 [[Y]], 16
-; CHECK-NEXT:    [[Y_2:%.*]] = trunc i32 [[Y_32]] to i24
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i8 [[X_1]], [[Y_1]]
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ne i24 [[X_2]], [[Y_2]]
-; CHECK-NEXT:    [[C_210:%.*]] = or i1 [[C_2]], [[C_1]]
+; CHECK-NEXT:    [[C_210_UNSHIFTED:%.*]] = xor i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp ugt i32 [[C_210_UNSHIFTED]], 255
 ; CHECK-NEXT:    ret i1 [[C_210]]
 ;
   %x.321 = lshr i32 %x, 8
@@ -1332,4 +1314,127 @@ define i1 @ne_21_wrong_pred2(i32 %x, i32 %y) {
   %c.2 = icmp eq i8 %x.2, %y.2
   %c.210 = or i1 %c.2, %c.1
   ret i1 %c.210
+}
+
+define i1 @eq_optimized_highbits_cmp(i32 %x, i32 %y) {
+; CHECK-LABEL: @eq_optimized_highbits_cmp(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xor = xor i32 %y, %x
+  %cmp_hi = icmp ult i32 %xor, 33554432
+  %tx = trunc i32 %x to i25
+  %ty = trunc i32 %y to i25
+  %cmp_lo = icmp eq i25 %tx, %ty
+  %r = and i1 %cmp_hi, %cmp_lo
+  ret i1 %r
+}
+
+define i1 @eq_optimized_highbits_cmp_todo_overlapping(i32 %x, i32 %y) {
+; CHECK-LABEL: @eq_optimized_highbits_cmp_todo_overlapping(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP_HI:%.*]] = icmp ult i32 [[XOR]], 16777216
+; CHECK-NEXT:    [[TX:%.*]] = trunc i32 [[X]] to i25
+; CHECK-NEXT:    [[TY:%.*]] = trunc i32 [[Y]] to i25
+; CHECK-NEXT:    [[CMP_LO:%.*]] = icmp eq i25 [[TX]], [[TY]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP_HI]], [[CMP_LO]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xor = xor i32 %y, %x
+  %cmp_hi = icmp ult i32 %xor, 16777216
+  %tx = trunc i32 %x to i25
+  %ty = trunc i32 %y to i25
+  %cmp_lo = icmp eq i25 %tx, %ty
+  %r = and i1 %cmp_hi, %cmp_lo
+  ret i1 %r
+}
+
+define i1 @eq_optimized_highbits_cmp_fail_not_pow2(i32 %x, i32 %y) {
+; CHECK-LABEL: @eq_optimized_highbits_cmp_fail_not_pow2(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP_HI:%.*]] = icmp ult i32 [[XOR]], 16777215
+; CHECK-NEXT:    [[TX:%.*]] = trunc i32 [[X]] to i24
+; CHECK-NEXT:    [[TY:%.*]] = trunc i32 [[Y]] to i24
+; CHECK-NEXT:    [[CMP_LO:%.*]] = icmp eq i24 [[TX]], [[TY]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP_HI]], [[CMP_LO]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xor = xor i32 %y, %x
+  %cmp_hi = icmp ult i32 %xor, 16777215
+  %tx = trunc i32 %x to i24
+  %ty = trunc i32 %y to i24
+  %cmp_lo = icmp eq i24 %tx, %ty
+  %r = and i1 %cmp_hi, %cmp_lo
+  ret i1 %r
+}
+
+define i1 @ne_optimized_highbits_cmp(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_optimized_highbits_cmp(
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xor = xor i32 %y, %x
+  %cmp_hi = icmp ugt i32 %xor, 16777215
+  %tx = trunc i32 %x to i24
+  %ty = trunc i32 %y to i24
+  %cmp_lo = icmp ne i24 %tx, %ty
+  %r = or i1 %cmp_hi, %cmp_lo
+  ret i1 %r
+}
+
+define i1 @ne_optimized_highbits_cmp_fail_not_mask(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_optimized_highbits_cmp_fail_not_mask(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP_HI:%.*]] = icmp ugt i32 [[XOR]], 16777216
+; CHECK-NEXT:    [[TX:%.*]] = trunc i32 [[X]] to i24
+; CHECK-NEXT:    [[TY:%.*]] = trunc i32 [[Y]] to i24
+; CHECK-NEXT:    [[CMP_LO:%.*]] = icmp ne i24 [[TX]], [[TY]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP_HI]], [[CMP_LO]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xor = xor i32 %y, %x
+  %cmp_hi = icmp ugt i32 %xor, 16777216
+  %tx = trunc i32 %x to i24
+  %ty = trunc i32 %y to i24
+  %cmp_lo = icmp ne i24 %tx, %ty
+  %r = or i1 %cmp_hi, %cmp_lo
+  ret i1 %r
+}
+
+define i1 @ne_optimized_highbits_cmp_fail_no_combined_int(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_optimized_highbits_cmp_fail_no_combined_int(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP_HI:%.*]] = icmp ugt i32 [[XOR]], 16777215
+; CHECK-NEXT:    [[TX:%.*]] = trunc i32 [[X]] to i23
+; CHECK-NEXT:    [[TY:%.*]] = trunc i32 [[Y]] to i23
+; CHECK-NEXT:    [[CMP_LO:%.*]] = icmp ne i23 [[TX]], [[TY]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP_HI]], [[CMP_LO]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xor = xor i32 %y, %x
+  %cmp_hi = icmp ugt i32 %xor, 16777215
+  %tx = trunc i32 %x to i23
+  %ty = trunc i32 %y to i23
+  %cmp_lo = icmp ne i23 %tx, %ty
+  %r = or i1 %cmp_hi, %cmp_lo
+  ret i1 %r
+}
+
+define i1 @ne_optimized_highbits_cmp_todo_overlapping(i32 %x, i32 %y) {
+; CHECK-LABEL: @ne_optimized_highbits_cmp_todo_overlapping(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP_HI:%.*]] = icmp ugt i32 [[XOR]], 8388607
+; CHECK-NEXT:    [[TX:%.*]] = trunc i32 [[X]] to i24
+; CHECK-NEXT:    [[TY:%.*]] = trunc i32 [[Y]] to i24
+; CHECK-NEXT:    [[CMP_LO:%.*]] = icmp ne i24 [[TX]], [[TY]]
+; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP_HI]], [[CMP_LO]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xor = xor i32 %y, %x
+  %cmp_hi = icmp ugt i32 %xor, 8388607
+  %tx = trunc i32 %x to i24
+  %ty = trunc i32 %y to i24
+  %cmp_lo = icmp ne i24 %tx, %ty
+  %r = or i1 %cmp_hi, %cmp_lo
+  ret i1 %r
 }

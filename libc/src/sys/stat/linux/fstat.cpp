@@ -15,7 +15,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, fstat, (int fd, struct stat *statbuf)) {
   int err = statx(fd, "", AT_EMPTY_PATH, statbuf);
@@ -26,4 +26,4 @@ LLVM_LIBC_FUNCTION(int, fstat, (int fd, struct stat *statbuf)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

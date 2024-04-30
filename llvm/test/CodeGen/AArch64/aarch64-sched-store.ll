@@ -56,17 +56,17 @@ vector.body:                                      ; preds = %vector.body, %entry
   store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr %array0, align 8
   %array2 = getelementptr inbounds double, ptr %array0, i64 2
   store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr %array2, align 8
-  %index4 = or i64 %index, 4
+  %index4 = or disjoint i64 %index, 4
   %array4 = getelementptr inbounds double, ptr %array, i64 %index4
   store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr %array4, align 8
   %array6 = getelementptr inbounds double, ptr %array4, i64 2
   store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr %array6, align 8
-  %index8 = or i64 %index, 8
+  %index8 = or disjoint i64 %index, 8
   %array8 = getelementptr inbounds double, ptr %array, i64 %index8
   store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr %array8, align 8
   %array10 = getelementptr inbounds double, ptr %array8, i64 2
   store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr %array10, align 8
-  %index12 = or i64 %index, 12
+  %index12 = or disjoint i64 %index, 12
   %array12 = getelementptr inbounds double, ptr %array, i64 %index12
   store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr %array12, align 8
   %array14 = getelementptr inbounds double, ptr %array12, i64 2

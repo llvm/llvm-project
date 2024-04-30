@@ -382,6 +382,8 @@ public:
 
   /// Run the analysis on `sym`.
   void analyze(const Fortran::semantics::Symbol &sym) {
+    if (Fortran::semantics::IsProcedurePointer(sym))
+      return;
     if (symIsArray(sym)) {
       bool isConstant = !isAssumedSize(sym);
       llvm::SmallVector<int64_t> lbounds;

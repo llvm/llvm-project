@@ -1,12 +1,12 @@
 # RUN: llvm-mc -triple=riscv64 -mattr=+c -riscv-no-aliases < %s \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+c < %s \
-# RUN:     | llvm-objdump -d -M no-aliases - \
+# RUN:     | llvm-objdump --no-print-imm-hex -d -M no-aliases - \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
 # RUN: llvm-mc -triple=riscv64 -mattr=+zca -riscv-no-aliases < %s \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+zca < %s \
-# RUN:     | llvm-objdump --mattr=+zca -d -M no-aliases - \
+# RUN:     | llvm-objdump --no-print-imm-hex --mattr=+zca -d -M no-aliases - \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
 
 # The following check prefixes are used in this test:

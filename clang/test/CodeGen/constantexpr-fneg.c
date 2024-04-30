@@ -8,9 +8,11 @@
 // CHECK:      entry:
 // CHECK-NEXT:   %retval = alloca i32
 // CHECK-NEXT:   store i32 0, ptr %retval
+// CHECK-NEXT:   [[ZEXT:%.*]] = zext i1 true to i32
+// CHECK-NEXT:   [[SITOFP:%.*]] = sitofp i32 [[ZEXT]] to float
 // CHECK-NEXT:   [[LV:%.*]] = load ptr, ptr @c
-// CHECK-NEXT:   store float 1.000000e+00, ptr [[LV]], align 4
-// CHECK-NEXT:   [[FNEG:%.*]] = fneg float 1.000000e+00
+// CHECK-NEXT:   store float [[SITOFP]], ptr [[LV]], align 4
+// CHECK-NEXT:   [[FNEG:%.*]] = fneg float [[SITOFP]]
 // CHECK-NEXT:   [[CONV:%.*]] = fptosi float [[FNEG]] to i32
 // CHECK-NEXT:   ret i32 [[CONV]]
 

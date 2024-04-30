@@ -5673,8 +5673,16 @@ let TargetPrefix = "x86" in {
               Intrinsic<[], [llvm_i64_ty], []>;
 }
 
+let TargetPrefix = "x86" in {
+def int_x86_urdmsr : ClangBuiltin<"__builtin_ia32_urdmsr">,
+        Intrinsic<[llvm_i64_ty], [llvm_i64_ty],
+                  [IntrInaccessibleMemOnly]>;
+def int_x86_uwrmsr : ClangBuiltin<"__builtin_ia32_uwrmsr">,
+        Intrinsic<[], [llvm_i64_ty, llvm_i64_ty],
+                  [IntrInaccessibleMemOnly]>;
+}
+
 //===----------------------------------------------------------------------===//
-// avx512_fp16: vaddph
 let TargetPrefix = "x86" in {
   def int_x86_avx512fp16_add_ph_512
       : ClangBuiltin<"__builtin_ia32_addph512">,

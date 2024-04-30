@@ -13,7 +13,7 @@
 ; Num LargeConstants
 ; CHECK-NEXT:   .word 4
 ; Num Callsites
-; CHECK-NEXT:   .word 19
+; CHECK-NEXT:   .word 22
 
 ; Functions and stack size
 ; CHECK-NEXT:   .xword constantargs
@@ -40,9 +40,6 @@
 ; CHECK-NEXT:   .xword spilledValue
 ; CHECK-NEXT:   .xword 160
 ; CHECK-NEXT:   .xword 1
-; CHECK-NEXT:   .xword spilledStackMapValue
-; CHECK-NEXT:   .xword 128
-; CHECK-NEXT:   .xword 1
 ; CHECK-NEXT:   .xword liveConstant
 ; CHECK-NEXT:   .xword 16
 ; CHECK-NEXT:   .xword 1
@@ -50,6 +47,9 @@
 ; CHECK-NEXT:   .xword 64
 ; CHECK-NEXT:   .xword 2
 ; CHECK-NEXT:   .xword longid
+; CHECK-NEXT:   .xword 16
+; CHECK-NEXT:   .xword 4
+; CHECK-NEXT:   .xword statepoint_longid
 ; CHECK-NEXT:   .xword 16
 ; CHECK-NEXT:   .xword 4
 ; CHECK-NEXT:   .xword clobberLR
@@ -361,28 +361,6 @@ entry:
   ret void
 }
 
-; Spilled stack map values.
-;
-; Verify 30 stack map entries.
-;
-; CHECK-LABEL:  .word .L{{.*}}-spilledStackMapValue
-; CHECK-NEXT:   .hword 0
-; CHECK-NEXT:   .hword 30
-;
-; Check that at least one is a spilled entry from RBP.
-; Location: Indirect RBP + ...
-; CHECK:        .byte 3
-; CHECK-NEXT:   .byte   0
-; CHECK-NEXT:   .hword 8
-; CHECK-NEXT:   .hword 29
-; CHECK-NEXT:   .hword  0
-; CHECK-NEXT:   .word
-define webkit_jscc void @spilledStackMapValue(i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16, i64 %l17, i64 %l18, i64 %l19, i64 %l20, i64 %l21, i64 %l22, i64 %l23, i64 %l24, i64 %l25, i64 %l26, i64 %l27, i64 %l28, i64 %l29) {
-entry:
-  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 12, i32 16, i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16, i64 %l17, i64 %l18, i64 %l19, i64 %l20, i64 %l21, i64 %l22, i64 %l23, i64 %l24, i64 %l25, i64 %l26, i64 %l27, i64 %l28, i64 %l29)
-  ret void
-}
-
 ; Map a constant value.
 ;
 ; CHECK-LABEL:  .word .L{{.*}}-liveConstant
@@ -468,6 +446,26 @@ entry:
   ret void
 }
 
+; Test a 64-bit ID for statepoint.
+;
+; CHECK:        .xword 4294967295
+; CHECK-LABEL:  .word .L{{.*}}-statepoint_longid
+; CHECK:        .xword 4294967296
+; CHECK-LABEL:  .word .L{{.*}}-statepoint_longid
+; CHECK:        .xword 9223372036854775807
+; CHECK-LABEL:  .word .L{{.*}}-statepoint_longid
+; CHECK:        .xword -1
+; CHECK-LABEL:  .word .L{{.*}}-statepoint_longid
+define void @statepoint_longid() gc "statepoint-example" {
+entry:
+  %safepoint_token1 = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 4294967295, i32 0, ptr elementtype(void ()) @return_void, i32 0, i32 0, i32 0, i32 0)
+  %safepoint_token2 = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 4294967296, i32 0, ptr elementtype(void ()) @return_void, i32 0, i32 0, i32 0, i32 0)
+  %safepoint_token3 = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 9223372036854775807, i32 0, ptr elementtype(void ()) @return_void, i32 0, i32 0, i32 0, i32 0)
+  %safepoint_token4 = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 -1, i32 0, ptr elementtype(void ()) @return_void, i32 0, i32 0, i32 0, i32 0)
+  ret void
+}
+declare void @return_void()
+
 ; Map a value when R11 is the only free register.
 ; The scratch register should not be used for a live stackmap value.
 ;
@@ -488,8 +486,8 @@ define void @clobberLR(i32 %a) {
   ret void
 }
 
-; A stack frame which needs to be realigned at runtime (to meet alignment 
-; criteria for values on the stack) does not have a fixed frame size. 
+; A stack frame which needs to be realigned at runtime (to meet alignment
+; criteria for values on the stack) does not have a fixed frame size.
 ; CHECK-LABEL:  .word .L{{.*}}-needsStackRealignment
 ; CHECK-NEXT:   .hword 0
 ; 0 locations
@@ -562,3 +560,4 @@ define void @floats(float %f, double %g) {
 declare void @llvm.experimental.stackmap(i64, i32, ...)
 declare void @llvm.experimental.patchpoint.void(i64, i32, ptr, i32, ...)
 declare i64 @llvm.experimental.patchpoint.i64(i64, i32, ptr, i32, ...)
+declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)

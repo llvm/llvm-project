@@ -14,13 +14,13 @@
 #include "StrtolTest.h"
 #include "test/UnitTest/Test.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int64_t strtoint64(const char *__restrict str, char **__restrict str_end,
                    int base) {
   auto result = internal::strtointeger<int64_t>(str, base);
   if (result.has_error())
-    libc_errno = result.error;
+    LIBC_NAMESPACE::libc_errno = result.error;
 
   if (str_end != nullptr)
     *str_end = const_cast<char *>(str + result.parsed_len);
@@ -32,14 +32,14 @@ uint64_t strtouint64(const char *__restrict str, char **__restrict str_end,
                      int base) {
   auto result = internal::strtointeger<uint64_t>(str, base);
   if (result.has_error())
-    libc_errno = result.error;
+    LIBC_NAMESPACE::libc_errno = result.error;
 
   if (str_end != nullptr)
     *str_end = const_cast<char *>(str + result.parsed_len);
 
   return result;
 }
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-STRTOL_TEST(Strtoint64, __llvm_libc::strtoint64)
-STRTOL_TEST(Strtouint64, __llvm_libc::strtouint64)
+STRTOL_TEST(Strtoint64, LIBC_NAMESPACE::strtoint64)
+STRTOL_TEST(Strtouint64, LIBC_NAMESPACE::strtouint64)

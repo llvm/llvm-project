@@ -547,10 +547,10 @@ let Predicates = [HasLSE] in {
 let Predicates = [HasRCPC3, HasNEON] in {
   // LDAP1 loads
   def : Pat<(vector_insert (v2i64 VecListOne128:$Rd),
-                (i64 (acquiring_load<atomic_load_64> GPR64sp:$Rn)), VectorIndexD:$idx),
+                (i64 (acquiring_load<atomic_load_64> GPR64sp:$Rn)), (i64 VectorIndexD:$idx)),
             (LDAP1 VecListOne128:$Rd, VectorIndexD:$idx, GPR64sp:$Rn)>;
   def : Pat<(vector_insert (v2f64 VecListOne128:$Rd),
-                (f64 (bitconvert (i64 (acquiring_load<atomic_load_64> GPR64sp:$Rn)))), VectorIndexD:$idx),
+                (f64 (bitconvert (i64 (acquiring_load<atomic_load_64> GPR64sp:$Rn)))), (i64 VectorIndexD:$idx)),
             (LDAP1 VecListOne128:$Rd, VectorIndexD:$idx, GPR64sp:$Rn)>;
   def : Pat<(v1i64 (scalar_to_vector
                 (i64 (acquiring_load<atomic_load_64> GPR64sp:$Rn)))),
@@ -572,4 +572,35 @@ let Predicates = [HasRCPC3, HasNEON] in {
   def : Pat<(releasing_store<atomic_store_64> GPR64sp:$Rn,
                 (i64 (bitconvert (v1f64 VecListOne64:$Vt)))),
             (STL1 (SUBREG_TO_REG (i64 0), VecListOne64:$Vt, dsub), (i64 0), GPR64sp:$Rn)>;
+}
+
+// v8.4a FEAT_LRCPC2 patterns
+let Predicates = [HasRCPC_IMMO] in {
+  // Load-Acquire RCpc Register unscaled loads
+  def : Pat<(acquiring_load<atomic_load_az_8>
+               (am_unscaled8 GPR64sp:$Rn, simm9:$offset)),
+          (LDAPURBi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(acquiring_load<atomic_load_az_16>
+               (am_unscaled16 GPR64sp:$Rn, simm9:$offset)),
+          (LDAPURHi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(acquiring_load<atomic_load_32>
+               (am_unscaled32 GPR64sp:$Rn, simm9:$offset)),
+          (LDAPURi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(acquiring_load<atomic_load_64>
+               (am_unscaled64 GPR64sp:$Rn, simm9:$offset)),
+          (LDAPURXi GPR64sp:$Rn, simm9:$offset)>;
+
+  // Store-Release Register unscaled stores
+  def : Pat<(releasing_store<atomic_store_8>
+               (am_unscaled8 GPR64sp:$Rn, simm9:$offset), GPR32:$val),
+          (STLURBi GPR32:$val, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(releasing_store<atomic_store_16>
+               (am_unscaled16 GPR64sp:$Rn, simm9:$offset), GPR32:$val),
+          (STLURHi GPR32:$val, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(releasing_store<atomic_store_32>
+               (am_unscaled32 GPR64sp:$Rn, simm9:$offset), GPR32:$val),
+          (STLURWi GPR32:$val, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(releasing_store<atomic_store_64>
+               (am_unscaled64 GPR64sp:$Rn, simm9:$offset), GPR64:$val),
+          (STLURXi GPR64:$val, GPR64sp:$Rn, simm9:$offset)>;
 }

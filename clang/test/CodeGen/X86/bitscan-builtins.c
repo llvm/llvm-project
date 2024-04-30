@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-unknown-unknown -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-unknown-unknown -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-unknown-unknown -no-enable-noundef-analysis -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -x c++ -std=c++11 -ffreestanding %s -triple=x86_64-unknown-unknown -no-enable-noundef-analysis -emit-llvm -o - | FileCheck %s
 
 // PR33722
-// RUN: %clang_cc1 -x c -ffreestanding %s -triple x86_64-unknown-unknown -fms-extensions -fms-compatibility-version=19.00 -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -x c++ -ffreestanding %s -triple x86_64-unknown-unknown -fms-extensions -fms-compatibility-version=19.00 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -x c -ffreestanding %s -triple x86_64-unknown-unknown -fms-extensions -fms-compatibility-version=19.00 -no-enable-noundef-analysis -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -x c++ -ffreestanding %s -triple x86_64-unknown-unknown -fms-extensions -fms-compatibility-version=19.00 -no-enable-noundef-analysis -emit-llvm -o - | FileCheck %s
 
 #include <x86intrin.h>
 

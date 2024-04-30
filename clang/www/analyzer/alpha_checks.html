@@ -87,29 +87,6 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><a id="alpha.core.CallAndMessageUnInitRefArg"><div class="namedescr expandable"><span class="name">
-alpha.core.CallAndMessageUnInitRefArg</span><span class="lang">
-(C, C++)</span><div class="descr">
-Check for uninitialized arguments in function calls and Objective-C
-message expressions.</div></div></a></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-void test(void) {
-  int t;
-  int &p = t;
-  int &s = p;
-  int &q = s;
-  foo(q); // warn
-}
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void test(void) {
-  int x;
-  foo(&x); // warn
-}
-</pre></div></div></td></tr>
-
-
 <tr><td><a id="alpha.core.CastSize"><div class="namedescr expandable"><span class="name">
 alpha.core.CastSize</span><span class="lang">
 (C)</span><div class="descr">
@@ -339,8 +316,8 @@ their base class
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 NonVirtual *create() {
-  NonVirtual *x = new NVDerived(); // note: conversion from derived to base
-                                   //       happened here
+  NonVirtual *x = new NVDerived(); // note: Casting from 'NVDerived' to
+                                   //       'NonVirtual' here
   return x;
 }
 
@@ -349,25 +326,6 @@ void sink(NonVirtual *x) {
             //       destructor
 }
 </pre></div></div></td></tr>
-
-<tr><td><a id="alpha.cplusplus.EnumCastOutOfRange"><div class="namedescr expandable"><span class="name">
-alpha.cplusplus.EnumCastOutOfRange</span><span class="lang">
-(C++)</span><div class="descr">
-  Check for integer to enumeration casts that could result in undefined values.
-</div></div></a></td>
-  <td><div class="exampleContainer expandable">
-    <div class="example"><pre>
-enum TestEnum {
-  A = 0
-};
-
-void foo() {
-  TestEnum t = static_cast<TestEnum>(-1);
-      // warn: the value provided to the cast expression is not in
-               the valid range of values for the enum
-}
-</pre></div></div></td></tr>
-
 
 <tr><td><a id="alpha.cplusplus.InvalidatedIterator"><div class="namedescr expandable"><span class="name">
 alpha.cplusplus.InvalidatedIterator</span><span class="lang">
@@ -948,63 +906,6 @@ void test() {
     fclose(F);
 
   fclose(F); // warn: closing a previously closed file stream
-}
-</pre></div></div></td></tr>
-
-
-<tr><td><a id="alpha.unix.Stream"><div class="namedescr expandable"><span class="name">
-alpha.unix.Stream</span><span class="lang">
-(C)</span><div class="descr">
-Check stream handling functions:<div class=functions>fopen<br>
-tmpfile<br>
-fclose<br>
-fread<br>
-fwrite<br>
-fseek<br>
-ftell<br>
-rewind<br>
-fgetpos<br>
-fsetpos<br>
-clearerr<br>
-feof<br>
-ferror<br>
-fileno</div></div></div></a></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-void test() {
-  FILE *p = fopen("foo", "r");
-} // warn: opened file is never closed
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void test() {
-  FILE *p = fopen("foo", "r");
-  fseek(p, 1, SEEK_SET); // warn: stream pointer might be NULL
-  fclose(p);
-}
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void test() {
-  FILE *p = fopen("foo", "r");
-
-  if (p)
-    fseek(p, 1, 3);
-     // warn: third arg should be SEEK_SET, SEEK_END, or SEEK_CUR
-
-  fclose(p);
-}
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void test() {
-  FILE *p = fopen("foo", "r");
-  fclose(p);
-  fclose(p); // warn: already closed
-}
-</pre></div><div class="separator"></div>
-<div class="example"><pre>
-void test() {
-  FILE *p = tmpfile();
-  ftell(p); // warn: stream pointer might be NULL
-  fclose(p);
 }
 </pre></div></div></td></tr>
 

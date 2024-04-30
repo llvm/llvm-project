@@ -128,19 +128,15 @@ define i256 @imp_null_check_load_i256(ptr %x) {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:  Ltmp3:
-; CHECK-NEXT:    movq (%rsi), %rcx ## on-fault: LBB5_1
+; CHECK-NEXT:    movaps (%rsi), %xmm0 ## on-fault: LBB5_1
 ; CHECK-NEXT:  ## %bb.2: ## %not_null
-; CHECK-NEXT:    movq 8(%rsi), %rdx
-; CHECK-NEXT:    movq 16(%rsi), %rdi
-; CHECK-NEXT:    movq 24(%rsi), %rsi
-; CHECK-NEXT:    movq %rsi, 24(%rax)
-; CHECK-NEXT:    movq %rdi, 16(%rax)
-; CHECK-NEXT:    movq %rdx, 8(%rax)
-; CHECK-NEXT:    movq %rcx, (%rax)
+; CHECK-NEXT:    movaps 16(%rsi), %xmm1
+; CHECK-NEXT:    movaps %xmm1, 16(%rax)
+; CHECK-NEXT:    movaps %xmm0, (%rax)
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  LBB5_1: ## %is_null
-; CHECK-NEXT:    movq $0, 24(%rax)
-; CHECK-NEXT:    movq $0, 16(%rax)
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    movaps %xmm0, 16(%rax)
 ; CHECK-NEXT:    movq $0, 8(%rax)
 ; CHECK-NEXT:    movq $42, (%rax)
 ; CHECK-NEXT:    retq
@@ -622,7 +618,8 @@ define i64 @imp_null_check_load_shift_by_3_addr(ptr %x) {
 define i64 @imp_null_check_load_shift_add_addr(ptr %x) {
 ; CHECK-LABEL: imp_null_check_load_shift_add_addr:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK:         movq 3526(,%rdi,8), %rax ## on-fault: LBB23_1
+; CHECK-NEXT:  Ltmp19:
+; CHECK-NEXT:    movq 3526(,%rdi,8), %rax ## on-fault: LBB23_1
 ; CHECK-NEXT:  ## %bb.2: ## %not_null
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  LBB23_1: ## %is_null

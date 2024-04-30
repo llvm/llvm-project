@@ -15,7 +15,7 @@
 
 #include <stddef.h> // size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 [[maybe_unused]] LIBC_INLINE MemcmpReturnType
 inline_memcmp_riscv(CPtr p1, CPtr p2, size_t count) {
@@ -28,6 +28,6 @@ inline_memcmp_riscv(CPtr p1, CPtr p2, size_t count) {
 #endif
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_MEMCMP_H

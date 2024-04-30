@@ -6,17 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_GPU_QUICK_EXIT_H
-#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_GPU_QUICK_EXIT_H
-
-#include "quick_exit.h"
+#include "src/__support/OSUtil/quick_exit.h"
 
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/macros/properties/architectures.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
-void quick_exit(int status) {
+[[noreturn]] void quick_exit(int status) {
   // We want to first make sure the server is listening before we exit.
   rpc::Client::Port port = rpc::client.open<RPC_EXIT>();
   port.send_and_recv([](rpc::Buffer *) {}, [](rpc::Buffer *) {});
@@ -28,6 +25,4 @@ void quick_exit(int status) {
   gpu::end_program();
 }
 
-} // namespace __llvm_libc
-
-#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_GPU_QUICK_EXIT_H
+} // namespace LIBC_NAMESPACE

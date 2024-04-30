@@ -2,7 +2,7 @@
 # RUN: mkdir -p %t
 # RUN: llc -filetype=obj %p/../../Inputs/frame-dw2.ll -o %t/frame-dw2.o
 # RUN: llc -filetype=obj %p/../../Inputs/frame-dw4.ll -o %t/frame-dw4.o
-# RUN: dsymutil --linker llvm -f -oso-prepend-path=%t -y %s -o - | \
+# RUN: dsymutil --linker parallel -f -oso-prepend-path=%t -y %s -o - | \
 # RUN:   llvm-dwarfdump -debug-frame - | FileCheck %s
 
 # Check the handling of multiple different CIEs. To have CIEs that

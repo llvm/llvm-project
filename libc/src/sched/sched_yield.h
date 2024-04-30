@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_SCHED_SCHED_YIELD_H
 #define LLVM_LIBC_SRC_SCHED_SCHED_YIELD_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int sched_yield(void);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SCHED_SCHED_YIELD_H

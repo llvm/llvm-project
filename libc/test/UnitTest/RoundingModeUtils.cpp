@@ -10,9 +10,9 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 
-#include <fenv.h>
+#include "hdr/fenv_macros.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 namespace testing {
 
@@ -48,4 +48,4 @@ ForceRoundingMode::~ForceRoundingMode() {
 
 } // namespace testing
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

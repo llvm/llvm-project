@@ -139,12 +139,12 @@ define i32 @conversion_cost2(i32 %n, ptr nocapture %A, ptr nocapture %B) nounwin
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, ptr [[TMP16]], i32 0
-; CHECK-NEXT:    store <2 x float> [[TMP12]], ptr [[TMP20]], align 4
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, ptr [[TMP16]], i32 2
-; CHECK-NEXT:    store <2 x float> [[TMP13]], ptr [[TMP21]], align 4
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, ptr [[TMP16]], i32 4
-; CHECK-NEXT:    store <2 x float> [[TMP14]], ptr [[TMP22]], align 4
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, ptr [[TMP16]], i32 6
+; CHECK-NEXT:    store <2 x float> [[TMP12]], ptr [[TMP20]], align 4
+; CHECK-NEXT:    store <2 x float> [[TMP13]], ptr [[TMP21]], align 4
+; CHECK-NEXT:    store <2 x float> [[TMP14]], ptr [[TMP22]], align 4
 ; CHECK-NEXT:    store <2 x float> [[TMP15]], ptr [[TMP23]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD2]], <i64 2, i64 2>

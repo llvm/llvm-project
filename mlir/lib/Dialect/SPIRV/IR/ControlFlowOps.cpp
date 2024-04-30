@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 
 #include "SPIRVOpUtils.h"
@@ -85,7 +87,9 @@ ParseResult BranchConditionalOp::parse(OpAsmParser &parser,
         parser.parseRSquare())
       return failure();
 
-    result.addAttribute(kBranchWeightAttrName,
+    StringAttr branchWeightsAttrName =
+        BranchConditionalOp::getBranchWeightsAttrName(result.name);
+    result.addAttribute(branchWeightsAttrName,
                         builder.getArrayAttr({trueWeight, falseWeight}));
   }
 
@@ -197,11 +201,11 @@ LogicalResult FunctionCallOp::verify() {
 }
 
 CallInterfaceCallable FunctionCallOp::getCallableForCallee() {
-  return (*this)->getAttrOfType<SymbolRefAttr>(kCallee);
+  return (*this)->getAttrOfType<SymbolRefAttr>(getCalleeAttrName());
 }
 
 void FunctionCallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
-  (*this)->setAttr(kCallee, callee.get<SymbolRefAttr>());
+  (*this)->setAttr(getCalleeAttrName(), callee.get<SymbolRefAttr>());
 }
 
 Operation::operand_range FunctionCallOp::getArgOperands() {
@@ -363,12 +367,11 @@ Block *LoopOp::getMergeBlock() {
   return &getBody().back();
 }
 
-void LoopOp::addEntryAndMergeBlock() {
+void LoopOp::addEntryAndMergeBlock(OpBuilder &builder) {
   assert(getBody().empty() && "entry and merge block already exist");
-  getBody().push_back(new Block());
-  auto *mergeBlock = new Block();
-  getBody().push_back(mergeBlock);
-  OpBuilder builder = OpBuilder::atBlockEnd(mergeBlock);
+  OpBuilder::InsertionGuard g(builder);
+  builder.createBlock(&getBody());
+  builder.createBlock(&getBody());
 
   // Add a spirv.mlir.merge op into the merge block.
   builder.create<spirv::MergeOp>(getLoc());
@@ -427,6 +430,27 @@ LogicalResult SelectOp::verify() {
     }
   }
   return success();
+}
+
+// Custom availability implementation is needed for spirv.Select given the
+// syntax changes starting v1.4.
+SmallVector<ArrayRef<spirv::Extension>, 1> SelectOp::getExtensions() {
+  return {};
+}
+SmallVector<ArrayRef<spirv::Capability>, 1> SelectOp::getCapabilities() {
+  return {};
+}
+std::optional<spirv::Version> SelectOp::getMinVersion() {
+  // Per the spec, "Before version 1.4, results are only computed per
+  // component."
+  if (isa<spirv::ScalarType>(getCondition().getType()) &&
+      isa<spirv::CompositeType>(getType()))
+    return Version::V_1_4;
+
+  return Version::V_1_0;
+}
+std::optional<spirv::Version> SelectOp::getMaxVersion() {
+  return Version::V_1_6;
 }
 
 //===----------------------------------------------------------------------===//
@@ -502,11 +526,10 @@ Block *SelectionOp::getMergeBlock() {
   return &getBody().back();
 }
 
-void SelectionOp::addMergeBlock() {
+void SelectionOp::addMergeBlock(OpBuilder &builder) {
   assert(getBody().empty() && "entry and merge block already exist");
-  auto *mergeBlock = new Block();
-  getBody().push_back(mergeBlock);
-  OpBuilder builder = OpBuilder::atBlockEnd(mergeBlock);
+  OpBuilder::InsertionGuard guard(builder);
+  builder.createBlock(&getBody());
 
   // Add a spirv.mlir.merge op into the merge block.
   builder.create<spirv::MergeOp>(getLoc());
@@ -519,7 +542,7 @@ SelectionOp::createIfThen(Location loc, Value condition,
   auto selectionOp =
       builder.create<spirv::SelectionOp>(loc, spirv::SelectionControl::None);
 
-  selectionOp.addMergeBlock();
+  selectionOp.addMergeBlock(builder);
   Block *mergeBlock = selectionOp.getMergeBlock();
   Block *thenBlock = nullptr;
 

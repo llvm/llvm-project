@@ -8,5 +8,5 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcPlatformStreamTest, StdInSmokeTest) {
-  EXPECT_FALSE(__llvm_libc::stdin == nullptr);
+  EXPECT_FALSE(LIBC_NAMESPACE::stdin == nullptr);
 }

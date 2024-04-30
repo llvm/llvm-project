@@ -21,7 +21,7 @@ error here;
 
 #if !ENABLED_TRIGRAPHS
 // expected-error@11 {{}} expected-warning@11 {{trigraph ignored}}
-// expected-error@13 {{failed}} expected-warning@13 {{trigraph ignored}} expected-note@13 {{evaluates to ''?' == '#''}}
+// expected-error@13 {{failed}} expected-warning@13 {{trigraph ignored}} expected-note@13 {{evaluates to ''?' (0x3F, 63) == '#' (0x23, 35)'}}
 // expected-error@16 {{}}
 // expected-error@20 {{}}
 #else

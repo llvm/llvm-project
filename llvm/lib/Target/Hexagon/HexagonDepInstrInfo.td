@@ -5825,6 +5825,16 @@ let isExtentSigned = 1;
 let opExtentBits = 9;
 let opExtentAlign = 2;
 }
+def J2_rte : HInst<
+(outs),
+(ins),
+"rte",
+tc_b9bec29e, TypeJ>, Enc_e3b0c4 {
+let Inst{13-0} = 0b00000000000000;
+let Inst{31-16} = 0b0101011111100000;
+let Uses = [ELR];
+let Defs = [PC];
+}
 def J2_trap0 : HInst<
 (outs),
 (ins u8_0Imm:$Ii),
@@ -12444,6 +12454,20 @@ let opExtendable = 3;
 let isExtentSigned = 0;
 let opExtentBits = 6;
 let opExtentAlign = 0;
+}
+def L4_loadw_phys : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"$Rd32 = memw_phys($Rs32,$Rt32)",
+tc_ed3f8d2a, TypeLD>, Enc_5ab2be {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b10010010000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let accessSize = WordAccess;
+let mayLoad = 1;
+let isSolo = 1;
 }
 def L4_or_memopb_io : HInst<
 (outs),
@@ -40389,6 +40413,15 @@ let Inst{13-0} = 0b00000000000000;
 let Inst{31-16} = 0b0110110000100000;
 let isSolo = 1;
 }
+def Y2_ciad : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"ciad($Rs32)",
+tc_0a43be35, TypeCR>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00000001100000;
+let Inst{31-21} = 0b01100100000;
+let isSoloAX = 1;
+}
 def Y2_crswap0 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in),
@@ -40413,6 +40446,15 @@ let isPseudo = 1;
 let isCodeGenOnly = 1;
 let Constraints = "$Rx32 = $Rx32in";
 }
+def Y2_cswi : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"cswi($Rs32)",
+tc_0a43be35, TypeCR>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00000000100000;
+let Inst{31-21} = 0b01100100000;
+let isSoloAX = 1;
+}
 def Y2_dccleana : HInst<
 (outs),
 (ins IntRegs:$Rs32),
@@ -40423,6 +40465,15 @@ let Inst{31-21} = 0b10100000000;
 let isRestrictSlot1AOK = 1;
 let hasSideEffects = 1;
 }
+def Y2_dccleanidx : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"dccleanidx($Rs32)",
+tc_d234b61a, TypeST>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00000000000000;
+let Inst{31-21} = 0b10100010001;
+let isSoloAX = 1;
+}
 def Y2_dccleaninva : HInst<
 (outs),
 (ins IntRegs:$Rs32),
@@ -40432,6 +40483,15 @@ let Inst{13-0} = 0b00000000000000;
 let Inst{31-21} = 0b10100000010;
 let isRestrictSlot1AOK = 1;
 let hasSideEffects = 1;
+}
+def Y2_dccleaninvidx : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"dccleaninvidx($Rs32)",
+tc_d234b61a, TypeST>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00000000000000;
+let Inst{31-21} = 0b10100010011;
+let isSoloAX = 1;
 }
 def Y2_dcfetch : HInst<
 (outs),
@@ -40463,6 +40523,45 @@ let Inst{31-21} = 0b10100000001;
 let isRestrictSlot1AOK = 1;
 let hasSideEffects = 1;
 }
+def Y2_dcinvidx : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"dcinvidx($Rs32)",
+tc_d234b61a, TypeST>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00000000000000;
+let Inst{31-21} = 0b10100010010;
+let isSoloAX = 1;
+}
+def Y2_dckill : HInst<
+(outs),
+(ins),
+"dckill",
+tc_78f87ed3, TypeST>, Enc_e3b0c4 {
+let Inst{13-0} = 0b00000000000000;
+let Inst{31-16} = 0b1010001000000000;
+let isSolo = 1;
+}
+def Y2_dctagr : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32),
+"$Rd32 = dctagr($Rs32)",
+tc_a724463d, TypeST>, Enc_5e2823 {
+let Inst{13-5} = 0b000000000;
+let Inst{31-21} = 0b10100100001;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isSoloAX = 1;
+}
+def Y2_dctagw : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"dctagw($Rs32,$Rt32)",
+tc_6fb52018, TypeST>, Enc_ca3887 {
+let Inst{7-0} = 0b00000000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10100100000;
+let isSolo = 1;
+}
 def Y2_dczeroa : HInst<
 (outs),
 (ins IntRegs:$Rs32),
@@ -40474,6 +40573,58 @@ let isRestrictSlot1AOK = 1;
 let mayStore = 1;
 let hasSideEffects = 1;
 }
+def Y2_getimask : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32),
+"$Rd32 = getimask($Rs32)",
+tc_46c18ecf, TypeCR>, Enc_5e2823 {
+let Inst{13-5} = 0b000000000;
+let Inst{31-21} = 0b01100110000;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isSoloAX = 1;
+}
+def Y2_iassignr : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32),
+"$Rd32 = iassignr($Rs32)",
+tc_46c18ecf, TypeCR>, Enc_5e2823 {
+let Inst{13-5} = 0b000000000;
+let Inst{31-21} = 0b01100110011;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isSoloAX = 1;
+}
+def Y2_iassignw : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"iassignw($Rs32)",
+tc_0a43be35, TypeCR>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00000001000000;
+let Inst{31-21} = 0b01100100000;
+let isSoloAX = 1;
+}
+def Y2_icdatar : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32),
+"$Rd32 = icdatar($Rs32)",
+tc_9b20a062, TypeJ>, Enc_5e2823 {
+let Inst{13-5} = 0b000000000;
+let Inst{31-21} = 0b01010101101;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isSolo = 1;
+}
+def Y2_icdataw : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"icdataw($Rs32,$Rt32)",
+tc_5a222e89, TypeJ>, Enc_ca3887, Requires<[HasV66]> {
+let Inst{7-0} = 0b00000000;
+let Inst{13-13} = 0b1;
+let Inst{31-21} = 0b01010101110;
+let isSolo = 1;
+}
 def Y2_icinva : HInst<
 (outs),
 (ins IntRegs:$Rs32),
@@ -40483,6 +40634,45 @@ let Inst{13-0} = 0b00000000000000;
 let Inst{31-21} = 0b01010110110;
 let isSolo = 1;
 }
+def Y2_icinvidx : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"icinvidx($Rs32)",
+tc_7d6a2568, TypeJ>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00100000000000;
+let Inst{31-21} = 0b01010110110;
+let isSolo = 1;
+}
+def Y2_ickill : HInst<
+(outs),
+(ins),
+"ickill",
+tc_b9bec29e, TypeJ>, Enc_e3b0c4 {
+let Inst{13-0} = 0b01000000000000;
+let Inst{31-16} = 0b0101011011000000;
+let isSolo = 1;
+}
+def Y2_ictagr : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32),
+"$Rd32 = ictagr($Rs32)",
+tc_759e57be, TypeJ>, Enc_5e2823 {
+let Inst{13-5} = 0b000000000;
+let Inst{31-21} = 0b01010101111;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isSolo = 1;
+}
+def Y2_ictagw : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"ictagw($Rs32,$Rt32)",
+tc_139ef484, TypeJ>, Enc_ca3887 {
+let Inst{7-0} = 0b00000000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b01010101110;
+let isSolo = 1;
+}
 def Y2_isync : HInst<
 (outs),
 (ins),
@@ -40490,6 +40680,24 @@ def Y2_isync : HInst<
 tc_9b34f5e0, TypeJ>, Enc_e3b0c4 {
 let Inst{13-0} = 0b00000000000010;
 let Inst{31-16} = 0b0101011111000000;
+let isSolo = 1;
+}
+def Y2_k0lock : HInst<
+(outs),
+(ins),
+"k0lock",
+tc_7f58404a, TypeCR>, Enc_e3b0c4 {
+let Inst{13-0} = 0b00000001100000;
+let Inst{31-16} = 0b0110110000100000;
+let isSolo = 1;
+}
+def Y2_k0unlock : HInst<
+(outs),
+(ins),
+"k0unlock",
+tc_7f58404a, TypeCR>, Enc_e3b0c4 {
+let Inst{13-0} = 0b00000010000000;
+let Inst{31-16} = 0b0110110000100000;
 let isSolo = 1;
 }
 def Y2_k1lock_map : HInst<
@@ -40507,6 +40715,79 @@ def Y2_k1unlock_map : HInst<
 PSEUDO, TypeMAPPING>, Requires<[HasV65]> {
 let isPseudo = 1;
 let isCodeGenOnly = 1;
+}
+def Y2_l2cleaninvidx : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"l2cleaninvidx($Rs32)",
+tc_d234b61a, TypeST>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00000000000000;
+let Inst{31-21} = 0b10101000011;
+let isSoloAX = 1;
+}
+def Y2_l2kill : HInst<
+(outs),
+(ins),
+"l2kill",
+tc_b3d46584, TypeST>, Enc_e3b0c4 {
+let Inst{13-0} = 0b00000000000000;
+let Inst{31-16} = 0b1010100000100000;
+let isSolo = 1;
+}
+def Y2_resume : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"resume($Rs32)",
+tc_0a43be35, TypeCR>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00000000100000;
+let Inst{31-21} = 0b01100100010;
+let isSolo = 1;
+}
+def Y2_setimask : HInst<
+(outs),
+(ins PredRegs:$Pt4, IntRegs:$Rs32),
+"setimask($Pt4,$Rs32)",
+tc_d71ea8fa, TypeCR>, Enc_9e9047 {
+let Inst{7-0} = 0b00000000;
+let Inst{13-10} = 0b0000;
+let Inst{31-21} = 0b01100100100;
+let isSoloAX = 1;
+}
+def Y2_setprio : HInst<
+(outs),
+(ins PredRegs:$Pt4, IntRegs:$Rs32),
+"setprio($Pt4,$Rs32)",
+tc_d71ea8fa, TypeCR>, Enc_9e9047, Requires<[HasV66]> {
+let Inst{7-0} = 0b00100000;
+let Inst{13-10} = 0b0000;
+let Inst{31-21} = 0b01100100100;
+}
+def Y2_start : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"start($Rs32)",
+tc_0a43be35, TypeCR>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00000000100000;
+let Inst{31-21} = 0b01100100011;
+let isSolo = 1;
+}
+def Y2_stop : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"stop($Rs32)",
+tc_0a43be35, TypeCR>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00000000000000;
+let Inst{31-21} = 0b01100100011;
+let isSolo = 1;
+}
+def Y2_swi : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"swi($Rs32)",
+tc_0a43be35, TypeCR>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00000000000000;
+let Inst{31-21} = 0b01100100000;
+let isSoloAX = 1;
 }
 def Y2_syncht : HInst<
 (outs),
@@ -40536,6 +40817,54 @@ let Inst{13-7} = 0b0000000;
 let Inst{31-21} = 0b01100111000;
 let hasNewValue = 1;
 let opNewValue = 0;
+}
+def Y2_tlblock : HInst<
+(outs),
+(ins),
+"tlblock",
+tc_7f58404a, TypeCR>, Enc_e3b0c4 {
+let Inst{13-0} = 0b00000000100000;
+let Inst{31-16} = 0b0110110000100000;
+let isSolo = 1;
+}
+def Y2_tlbp : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32),
+"$Rd32 = tlbp($Rs32)",
+tc_6aa823ab, TypeCR>, Enc_5e2823 {
+let Inst{13-5} = 0b000000000;
+let Inst{31-21} = 0b01101100100;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isSolo = 1;
+}
+def Y2_tlbr : HInst<
+(outs DoubleRegs:$Rdd32),
+(ins IntRegs:$Rs32),
+"$Rdd32 = tlbr($Rs32)",
+tc_6aa823ab, TypeCR>, Enc_3a3d62 {
+let Inst{13-5} = 0b000000000;
+let Inst{31-21} = 0b01101100010;
+let isSolo = 1;
+}
+def Y2_tlbunlock : HInst<
+(outs),
+(ins),
+"tlbunlock",
+tc_7f58404a, TypeCR>, Enc_e3b0c4 {
+let Inst{13-0} = 0b00000001000000;
+let Inst{31-16} = 0b0110110000100000;
+let isSolo = 1;
+}
+def Y2_tlbw : HInst<
+(outs),
+(ins DoubleRegs:$Rss32, IntRegs:$Rt32),
+"tlbw($Rss32,$Rt32)",
+tc_b2196a3f, TypeCR>, Enc_46f33d {
+let Inst{7-0} = 0b00000000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b01101100000;
+let isSolo = 1;
 }
 def Y2_wait : HInst<
 (outs),
@@ -40582,6 +40911,45 @@ let isSoloAX = 1;
 let hasSideEffects = 1;
 let mayStore = 1;
 }
+def Y4_l2tagr : HInst<
+(outs IntRegs:$Rd32),
+(ins IntRegs:$Rs32),
+"$Rd32 = l2tagr($Rs32)",
+tc_a724463d, TypeST>, Enc_5e2823 {
+let Inst{13-5} = 0b000000000;
+let Inst{31-21} = 0b10100100011;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isSoloAX = 1;
+}
+def Y4_l2tagw : HInst<
+(outs),
+(ins IntRegs:$Rs32, IntRegs:$Rt32),
+"l2tagw($Rs32,$Rt32)",
+tc_512b1653, TypeST>, Enc_ca3887 {
+let Inst{7-0} = 0b00000000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b10100100010;
+let isSolo = 1;
+}
+def Y4_nmi : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"nmi($Rs32)",
+tc_0a43be35, TypeCR>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00000001000000;
+let Inst{31-21} = 0b01100100011;
+let isSolo = 1;
+}
+def Y4_siad : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"siad($Rs32)",
+tc_0a43be35, TypeCR>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00000001100000;
+let Inst{31-21} = 0b01100100100;
+let isSoloAX = 1;
+}
 def Y4_tfrscpp : HInst<
 (outs DoubleRegs:$Rdd32),
 (ins SysRegs64:$Sss128),
@@ -40609,6 +40977,27 @@ let Inst{13-0} = 0b00000000000000;
 let Inst{31-21} = 0b01100010010;
 let isSoloAX = 1;
 }
+def Y5_ctlbw : HInst<
+(outs IntRegs:$Rd32),
+(ins DoubleRegs:$Rss32, IntRegs:$Rt32),
+"$Rd32 = ctlbw($Rss32,$Rt32)",
+tc_bb78483e, TypeCR>, Enc_3d5b28 {
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b0;
+let Inst{31-21} = 0b01101100110;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isSolo = 1;
+}
+def Y5_l2cleanidx : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"l2cleanidx($Rs32)",
+tc_d234b61a, TypeST>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00000000000000;
+let Inst{31-21} = 0b10100110001;
+let isSoloAX = 1;
+}
 def Y5_l2fetch : HInst<
 (outs),
 (ins IntRegs:$Rs32, DoubleRegs:$Rtt32),
@@ -40620,6 +41009,81 @@ let Inst{31-21} = 0b10100110100;
 let isSoloAX = 1;
 let hasSideEffects = 1;
 let mayStore = 1;
+}
+def Y5_l2gclean : HInst<
+(outs),
+(ins),
+"l2gclean",
+tc_b3d46584, TypeST>, Enc_e3b0c4 {
+let Inst{13-0} = 0b01000000000000;
+let Inst{31-16} = 0b1010100000100000;
+let isSolo = 1;
+}
+def Y5_l2gcleaninv : HInst<
+(outs),
+(ins),
+"l2gcleaninv",
+tc_b3d46584, TypeST>, Enc_e3b0c4 {
+let Inst{13-0} = 0b01100000000000;
+let Inst{31-16} = 0b1010100000100000;
+let isSolo = 1;
+}
+def Y5_l2gunlock : HInst<
+(outs),
+(ins),
+"l2gunlock",
+tc_b3d46584, TypeST>, Enc_e3b0c4 {
+let Inst{13-0} = 0b00100000000000;
+let Inst{31-16} = 0b1010100000100000;
+let isSolo = 1;
+}
+def Y5_l2invidx : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"l2invidx($Rs32)",
+tc_d234b61a, TypeST>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00000000000000;
+let Inst{31-21} = 0b10100110010;
+let isSoloAX = 1;
+}
+def Y5_l2locka : HInst<
+(outs PredRegs:$Pd4),
+(ins IntRegs:$Rs32),
+"$Pd4 = l2locka($Rs32)",
+tc_a724463d, TypeST>, Enc_48b75f {
+let Inst{13-2} = 0b100000000000;
+let Inst{31-21} = 0b10100000111;
+let isPredicateLate = 1;
+let isSoloAX = 1;
+}
+def Y5_l2unlocka : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"l2unlocka($Rs32)",
+tc_d234b61a, TypeST>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00000000000000;
+let Inst{31-21} = 0b10100110011;
+let isSoloAX = 1;
+}
+def Y5_tlbasidi : HInst<
+(outs),
+(ins IntRegs:$Rs32),
+"tlbinvasid($Rs32)",
+tc_54f0cee2, TypeCR>, Enc_ecbcc8 {
+let Inst{13-0} = 0b00000000000000;
+let Inst{31-21} = 0b01101100101;
+let isSolo = 1;
+}
+def Y5_tlboc : HInst<
+(outs IntRegs:$Rd32),
+(ins DoubleRegs:$Rss32),
+"$Rd32 = tlboc($Rss32)",
+tc_6aa823ab, TypeCR>, Enc_90cd8b {
+let Inst{13-5} = 0b000000000;
+let Inst{31-21} = 0b01101100111;
+let hasNewValue = 1;
+let opNewValue = 0;
+let isSolo = 1;
 }
 def Y6_diag : HInst<
 (outs),
@@ -40713,6 +41177,26 @@ let Inst{31-16} = 0b1010100000000000;
 let hasNewValue = 1;
 let opNewValue = 0;
 let hasSideEffects = 1;
+let isSolo = 1;
+}
+def Y6_l2gcleaninvpa : HInst<
+(outs),
+(ins DoubleRegs:$Rtt32),
+"l2gcleaninv($Rtt32)",
+tc_7c28bd7e, TypeST>, Enc_598f6c {
+let Inst{7-0} = 0b00000000;
+let Inst{13-13} = 0b0;
+let Inst{31-16} = 0b1010011011000000;
+let isSolo = 1;
+}
+def Y6_l2gcleanpa : HInst<
+(outs),
+(ins DoubleRegs:$Rtt32),
+"l2gclean($Rtt32)",
+tc_7c28bd7e, TypeST>, Enc_598f6c {
+let Inst{7-0} = 0b00000000;
+let Inst{13-13} = 0b0;
+let Inst{31-16} = 0b1010011010100000;
 let isSolo = 1;
 }
 def dep_A2_addsat : HInst<

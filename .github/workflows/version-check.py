@@ -16,7 +16,7 @@ def get_version_from_tag(tag):
 
     m = re.match("llvmorg-([0-9]+)-init", tag)
     if m:
-        return (m.group(1), "0", "0")
+        return (m.group(1), "1", "0")
 
     raise Exception(f"error: Tag is not valid: {tag}")
 

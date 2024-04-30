@@ -65,23 +65,23 @@
   target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
   target triple = "i386-pc-windows-msvc19.0.24215"
 
-  %struct.string = type { i32, i32, i8* }
+  %struct.string = type { i32, i32, ptr }
 
-  define void @fun(%struct.string* noalias sret(%struct.string) %agg.result, %struct.string* noalias %str) !dbg !12 {
+  define void @fun(ptr noalias sret(%struct.string) %agg.result, ptr noalias %str) !dbg !12 {
   entry:
-    call void @llvm.dbg.value(metadata %struct.string* %agg.result, metadata !23, metadata !24), !dbg !25
-    call void @llvm.dbg.value(metadata %struct.string* %str, metadata !26, metadata !28), !dbg !25
-    %call = call dereferenceable(12) %struct.string* @getString(), !dbg !29
-    %0 = bitcast %struct.string* %agg.result to i8*, !dbg !29
-    %1 = bitcast %struct.string* %call to i8*, !dbg !29
-    call void @llvm.memcpy.p0i8.p0i8.i32(i8* %0, i8* %1, i32 12, i32 4, i1 false), !dbg !29
+    call void @llvm.dbg.value(metadata ptr %agg.result, metadata !23, metadata !24), !dbg !25
+    call void @llvm.dbg.value(metadata ptr %str, metadata !26, metadata !28), !dbg !25
+    %call = call dereferenceable(12) ptr @getString(), !dbg !29
+    %0 = bitcast ptr %agg.result to ptr, !dbg !29
+    %1 = bitcast ptr %call to ptr, !dbg !29
+    call void @llvm.memcpy.p0.p0.i32(ptr %0, ptr %1, i32 12, i32 4, i1 false), !dbg !29
     ret void, !dbg !30
   }
 
-  define i32 @len(%struct.string* %s, i32 %acc) !dbg !31 {
+  define i32 @len(ptr %s, i32 %acc) !dbg !31 {
   entry:
-    %0 = bitcast %struct.string* %s to i32*
-    %bytes = load i32, i32* %0, !dbg !34
+    %0 = bitcast ptr %s to ptr
+    %bytes = load i32, ptr %0, !dbg !34
     call void @llvm.dbg.declare(metadata i32 %bytes, metadata !35, metadata !28), !dbg !34
     %1 = add i32 %bytes, %acc, !dbg !36
     ret i32 %1, !dbg !36
@@ -93,13 +93,13 @@
   ; Function Attrs: nounwind readnone speculatable
   declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
-  declare dereferenceable(12) %struct.string* @getString()
+  declare dereferenceable(12) ptr @getString()
 
   ; Function Attrs: argmemonly nounwind
-  declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i32, i1) #1
+  declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture readonly, i32, i32, i1) #1
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #2
+  declare void @llvm.stackprotector(ptr, ptr) #2
 
   attributes #0 = { nounwind readnone speculatable }
   attributes #1 = { argmemonly nounwind }

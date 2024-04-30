@@ -17,6 +17,7 @@
 
 #if defined(LIBC_TARGET_ARCH_IS_AARCH64)
 
+#include "src/__support/CPP/type_traits.h" // cpp::always_false
 #include "src/__support/common.h"
 #include "src/string/memory_utils/op_generic.h"
 
@@ -24,7 +25,7 @@
 #include <arm_neon.h>
 #endif //__ARM_NEON
 
-namespace __llvm_libc::aarch64 {
+namespace LIBC_NAMESPACE::aarch64 {
 
 LIBC_INLINE_VAR constexpr bool kNeon = LLVM_LIBC_IS_DEFINED(__ARM_NEON);
 
@@ -105,9 +106,9 @@ template <size_t Size> struct Bcmp {
         if (auto value = Bcmp<BlockSize>::block(p1 + offset, p2 + offset))
           return value;
     } else {
-      deferred_static_assert("SIZE not implemented");
+      static_assert(cpp::always_false<decltype(Size)>, "SIZE not implemented");
     }
-    return BcmpReturnType::ZERO();
+    return BcmpReturnType::zero();
   }
 
   LIBC_INLINE static BcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
@@ -151,9 +152,9 @@ template <size_t Size> struct Bcmp {
       uint32x2_t abnocpdq_reduced = vqmovn_u64(abnocpdq);
       return vmaxv_u32(abnocpdq_reduced);
     } else {
-      deferred_static_assert("SIZE not implemented");
+      static_assert(cpp::always_false<decltype(Size)>, "SIZE not implemented");
     }
-    return BcmpReturnType::ZERO();
+    return BcmpReturnType::zero();
   }
 
   LIBC_INLINE static BcmpReturnType loop_and_tail(CPtr p1, CPtr p2,
@@ -169,9 +170,9 @@ template <size_t Size> struct Bcmp {
   }
 };
 
-} // namespace __llvm_libc::aarch64
+} // namespace LIBC_NAMESPACE::aarch64
 
-namespace __llvm_libc::generic {
+namespace LIBC_NAMESPACE::generic {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Specializations for uint16_t
@@ -216,7 +217,7 @@ LIBC_INLINE MemcmpReturnType cmp<uint64_t>(CPtr p1, CPtr p2, size_t offset) {
   const auto b = load_be<uint64_t>(p2, offset);
   if (a != b)
     return a > b ? 1 : -1;
-  return MemcmpReturnType::ZERO();
+  return MemcmpReturnType::zero();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -244,7 +245,7 @@ LIBC_INLINE MemcmpReturnType cmp<uint8x16_t>(CPtr p1, CPtr p2, size_t offset) {
       return cmp_neq_uint64_t(a, b);
     offset += sizeof(uint64_t);
   }
-  return MemcmpReturnType::ZERO();
+  return MemcmpReturnType::zero();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -261,9 +262,9 @@ LIBC_INLINE MemcmpReturnType cmp<uint8x16x2_t>(CPtr p1, CPtr p2,
       return cmp_neq_uint64_t(a, b);
     offset += sizeof(uint64_t);
   }
-  return MemcmpReturnType::ZERO();
+  return MemcmpReturnType::zero();
 }
-} // namespace __llvm_libc::generic
+} // namespace LIBC_NAMESPACE::generic
 
 #endif // LIBC_TARGET_ARCH_IS_AARCH64
 

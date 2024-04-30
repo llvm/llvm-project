@@ -89,10 +89,8 @@ Task bar() {
 // CHECK:         br i1 %{{.+}}, label %[[CASE1_AWAIT_READY:.+]], label %[[CASE1_AWAIT_SUSPEND:.+]]
 // CHECK:       [[CASE1_AWAIT_SUSPEND]]:
 // CHECK-NEXT:    %{{.+}} = call token @llvm.coro.save(ptr null)
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr %[[TMP1:.+]])
-
-// CHECK:    call void @llvm.lifetime.end.p0(i64 8, ptr %[[TMP1]])
-// CHECK-NEXT:    call void @llvm.coro.resume
+// CHECK-NEXT:    %[[HANDLE1_PTR:.+]] = call ptr @llvm.coro.await.suspend.handle
+// CHECK-NEXT:    call void @llvm.coro.resume(ptr %[[HANDLE1_PTR]])
 // CHECK-NEXT:    %{{.+}} = call i8 @llvm.coro.suspend
 // CHECK-NEXT:    switch i8 %{{.+}}, label %coro.ret [
 // CHECK-NEXT:      i8 0, label %[[CASE1_AWAIT_READY]]
@@ -106,10 +104,8 @@ Task bar() {
 // CHECK:         br i1 %{{.+}}, label %[[CASE2_AWAIT_READY:.+]], label %[[CASE2_AWAIT_SUSPEND:.+]]
 // CHECK:       [[CASE2_AWAIT_SUSPEND]]:
 // CHECK-NEXT:    %{{.+}} = call token @llvm.coro.save(ptr null)
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr %[[TMP2:.+]])
-
-// CHECK:    call void @llvm.lifetime.end.p0(i64 8, ptr %[[TMP2]])
-// CHECK-NEXT:    call void @llvm.coro.resume
+// CHECK-NEXT:    %[[HANDLE2_PTR:.+]] = call ptr @llvm.coro.await.suspend.handle
+// CHECK-NEXT:    call void @llvm.coro.resume(ptr %[[HANDLE2_PTR]])
 // CHECK-NEXT:    %{{.+}} = call i8 @llvm.coro.suspend
 // CHECK-NEXT:    switch i8 %{{.+}}, label %coro.ret [
 // CHECK-NEXT:      i8 0, label %[[CASE2_AWAIT_READY]]

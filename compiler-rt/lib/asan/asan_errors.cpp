@@ -362,8 +362,8 @@ void ErrorODRViolation::Print() {
   Printf("%s", d.Default());
   InternalScopedString g1_loc;
   InternalScopedString g2_loc;
-  PrintGlobalLocation(&g1_loc, global1);
-  PrintGlobalLocation(&g2_loc, global2);
+  PrintGlobalLocation(&g1_loc, global1, /*print_module_name=*/true);
+  PrintGlobalLocation(&g2_loc, global2, /*print_module_name=*/true);
   Printf("  [1] size=%zd '%s' %s\n", global1.size,
          MaybeDemangleGlobalName(global1.name), g1_loc.data());
   Printf("  [2] size=%zd '%s' %s\n", global2.size,

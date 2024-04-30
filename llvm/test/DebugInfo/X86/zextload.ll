@@ -1,4 +1,4 @@
-; RUN: opt -S -codegenprepare < %s | FileCheck %s
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' < %s | FileCheck %s
 ;
 ; This test case was generated from the following source code:
 ; 

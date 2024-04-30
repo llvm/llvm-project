@@ -870,7 +870,7 @@ void DataFlowGraph::build(const Config &config) {
     std::set<RegisterId> BaseSet;
     if (BuildCfg.Classes.empty()) {
       // Insert every register.
-      for (unsigned R = 0, E = getPRI().getTRI().getNumRegs(); R != E; ++R)
+      for (unsigned R = 1, E = getPRI().getTRI().getNumRegs(); R != E; ++R)
         BaseSet.insert(R);
     } else {
       for (const TargetRegisterClass *RC : BuildCfg.Classes) {
@@ -1790,7 +1790,7 @@ bool DataFlowGraph::hasUntrackedRef(Stmt S, bool IgnoreReserved) const {
   for (const MachineOperand &Op : S.Addr->getCode()->operands()) {
     if (!Op.isReg() && !Op.isRegMask())
       continue;
-    if (llvm::find(Ops, &Op) == Ops.end())
+    if (!llvm::is_contained(Ops, &Op))
       return true;
   }
   return false;

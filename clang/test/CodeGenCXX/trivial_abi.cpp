@@ -151,7 +151,7 @@ void testIgnoredSmall() {
 void testParamLarge(Large a) noexcept {
 }
 
-// CHECK: define{{.*}} void @_Z15testReturnLargev(ptr noalias sret(%[[STRUCT_LARGE]]) align 8 %[[AGG_RESULT:.*]])
+// CHECK: define{{.*}} void @_Z15testReturnLargev(ptr dead_on_unwind noalias writable sret(%[[STRUCT_LARGE]]) align 8 %[[AGG_RESULT:.*]])
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN5LargeC1Ev(ptr {{[^,]*}} %[[AGG_RESULT]])
 // CHECK: ret void
 // CHECK: }
@@ -178,7 +178,7 @@ void testCallLarge0() {
 
 // CHECK: define{{.*}} void @_Z14testCallLarge1v()
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_LARGE:.*]], align 8
-// CHECK: call void @_Z15testReturnLargev(ptr sret(%[[STRUCT_LARGE]]) align 8 %[[AGG_TMP]])
+// CHECK: call void @_Z15testReturnLargev(ptr dead_on_unwind writable sret(%[[STRUCT_LARGE]]) align 8 %[[AGG_TMP]])
 // CHECK: call void @_Z14testParamLarge5Large(ptr noundef %[[AGG_TMP]])
 // CHECK: ret void
 // CHECK: }
@@ -189,7 +189,7 @@ void testCallLarge1() {
 
 // CHECK: define{{.*}} void @_Z16testIgnoredLargev()
 // CHECK: %[[AGG_TMP_ENSURED:.*]] = alloca %[[STRUCT_LARGE:.*]], align 8
-// CHECK: call void @_Z15testReturnLargev(ptr sret(%[[STRUCT_LARGE]]) align 8 %[[AGG_TMP_ENSURED]])
+// CHECK: call void @_Z15testReturnLargev(ptr dead_on_unwind writable sret(%[[STRUCT_LARGE]]) align 8 %[[AGG_TMP_ENSURED]])
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN5LargeD1Ev(ptr {{[^,]*}} %[[AGG_TMP_ENSURED]])
 // CHECK: ret void
 // CHECK: }
@@ -210,7 +210,7 @@ Trivial testReturnHasTrivial() {
   return t;
 }
 
-// CHECK: define{{.*}} void @_Z23testReturnHasNonTrivialv(ptr noalias sret(%[[STRUCT_NONTRIVIAL:.*]]) align 4 %[[AGG_RESULT:.*]])
+// CHECK: define{{.*}} void @_Z23testReturnHasNonTrivialv(ptr dead_on_unwind noalias writable sret(%[[STRUCT_NONTRIVIAL:.*]]) align 4 %[[AGG_RESULT:.*]])
 // CHECK: %[[CALL:.*]] = call noundef ptr @_ZN10NonTrivialC1Ev(ptr {{[^,]*}} %[[AGG_RESULT]])
 // CHECK: ret void
 // CHECK: }

@@ -15,14 +15,14 @@ TEST(LlvmLibcNtohs, SmokeTest) {
   uint16_t original = 0x2301;
   uint16_t swapped = 0x0123;
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-  EXPECT_EQ(__llvm_libc::ntohs(original), swapped);
+  EXPECT_EQ(LIBC_NAMESPACE::ntohs(original), swapped);
 #endif
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-  EXPECT_EQ(__llvm_libc::ntohs(original), original);
+  EXPECT_EQ(LIBC_NAMESPACE::ntohs(original), original);
 #endif
 }
 
 TEST(LlvmLibcNtohs, CompleteTest) {
   uint16_t original = 0x0123;
-  EXPECT_EQ(__llvm_libc::ntohs(__llvm_libc::htons(original)), original);
+  EXPECT_EQ(LIBC_NAMESPACE::ntohs(LIBC_NAMESPACE::htons(original)), original);
 }

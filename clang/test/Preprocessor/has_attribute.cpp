@@ -1,16 +1,18 @@
+// RUN: %clang_cc1 -triple i386-unknown-unknown -fms-compatibility -std=c++03 -E -P %s -o - | FileCheck %s --check-prefixes=CHECK,ITANIUM --implicit-check-not=:
 // RUN: %clang_cc1 -triple i386-unknown-unknown -fms-compatibility -std=c++11 -E -P %s -o - | FileCheck %s --check-prefixes=CHECK,ITANIUM --implicit-check-not=:
+// RUN: %clang_cc1 -triple i386-windows -fms-compatibility -std=c++03 -E -P %s -o - | FileCheck %s --check-prefixes=CHECK,WINDOWS --implicit-check-not=:
 // RUN: %clang_cc1 -triple i386-windows -fms-compatibility -std=c++11 -E -P %s -o - | FileCheck %s --check-prefixes=CHECK,WINDOWS --implicit-check-not=:
 
 #define CXX11(x) x: __has_cpp_attribute(x)
 
-// CHECK: clang::fallthrough: 201603L
+// CHECK: clang::fallthrough: 1
 CXX11(clang::fallthrough)
 
 // CHECK: selectany: 0
 CXX11(selectany)
 
 // The attribute name can be bracketed with double underscores.
-// CHECK: clang::__fallthrough__: 201603L
+// CHECK: clang::__fallthrough__: 1
 CXX11(clang::__fallthrough__)
 
 // The scope cannot be bracketed with double underscores unless it is
@@ -18,11 +20,20 @@ CXX11(clang::__fallthrough__)
 // CHECK: __gsl__::suppress: 0
 CXX11(__gsl__::suppress)
 
-// CHECK: _Clang::fallthrough: 201603L
+// CHECK: _Clang::fallthrough: 1
 CXX11(_Clang::fallthrough)
 
 // CHECK: __nodiscard__: 201907L
 CXX11(__nodiscard__)
+
+// CHECK: warn_unused_result: 0
+CXX11(warn_unused_result)
+
+// CHECK: gnu::warn_unused_result: 1
+CXX11(gnu::warn_unused_result)
+
+// CHECK: clang::warn_unused_result: 1
+CXX11(clang::warn_unused_result)
 
 // CHECK: __gnu__::__const__: 1
 CXX11(__gnu__::__const__)
@@ -43,6 +54,7 @@ CXX11(fallthrough)
 CXX11(likely)
 CXX11(maybe_unused)
 CXX11(no_unique_address)
+CXX11(msvc::no_unique_address)
 CXX11(nodiscard)
 CXX11(noreturn)
 CXX11(unlikely)
@@ -56,6 +68,8 @@ CXX11(unlikely)
 // CHECK: maybe_unused: 201603L
 // ITANIUM: no_unique_address: 201803L
 // WINDOWS: no_unique_address: 0
+// ITANIUM: msvc::no_unique_address: 0
+// WINDOWS: msvc::no_unique_address: 201803L
 // CHECK: nodiscard: 201907L
 // CHECK: noreturn: 200809L
 // CHECK: unlikely: 201803L

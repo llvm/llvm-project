@@ -16,8 +16,8 @@ TEST(LlvmLibcIsAscii, DefaultLocale) {
   // return a non-zero integer and everything else returns zero.
   for (int ch = -255; ch < 255; ++ch) {
     if (0 <= ch && ch <= 0x7f)
-      EXPECT_NE(__llvm_libc::isascii(ch), 0);
+      EXPECT_NE(LIBC_NAMESPACE::isascii(ch), 0);
     else
-      EXPECT_EQ(__llvm_libc::isascii(ch), 0);
+      EXPECT_EQ(LIBC_NAMESPACE::isascii(ch), 0);
   }
 }

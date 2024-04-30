@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s
-; RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=redwood | FileCheck %s
+; RUN: llc < %s -mtriple=r600 -mcpu=cayman | FileCheck %s
 
 ; CHECK: {{^}}test:
 ; CHECK: BIT_ALIGN_INT T{{[0-9]}}.X

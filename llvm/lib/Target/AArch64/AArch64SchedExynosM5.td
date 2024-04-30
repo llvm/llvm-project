@@ -27,7 +27,7 @@ def ExynosM5Model : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
                                                     PAUnsupported.F,
                                                     SMEUnsupported.F,
-                                                    [HasMTE]);
+                                                    [HasMTE, HasCSSC]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -338,7 +338,6 @@ def M5WriteFDIV12  : SchedWriteRes<[M5UnitFDIV]>  { let Latency = 12;
 
 def M5WriteFMAC3   : SchedWriteRes<[M5UnitFMAC]>  { let Latency = 3; }
 def M5WriteFMAC4   : SchedWriteRes<[M5UnitFMAC]>  { let Latency = 4; }
-def M5WriteFMAC5   : SchedWriteRes<[M5UnitFMAC]>  { let Latency = 5; }
 
 def M5WriteFSQR5   : SchedWriteRes<[M5UnitFSQR]>  { let Latency = 5;
                                                     let ReleaseAtCycles = [2]; }
@@ -530,8 +529,7 @@ def M5WriteMOVI    : SchedWriteVariant<[SchedVar<IsZeroFPIdiomPred, [M5WriteZ0]>
 // Fast forwarding.
 def M5ReadFM1      : SchedReadAdvance<+1, [M5WriteF2]>;
 def M5ReadAESM2    : SchedReadAdvance<+2, [M5WriteNCRY2]>;
-def M5ReadFMACM1   : SchedReadAdvance<+1, [M5WriteFMAC4,
-                                           M5WriteFMAC5]>;
+def M5ReadFMACM1   : SchedReadAdvance<+1, [M5WriteFMAC4]>;
 def M5ReadNMULM1   : SchedReadAdvance<+1, [M5WriteNMUL3]>;
 
 //===----------------------------------------------------------------------===//

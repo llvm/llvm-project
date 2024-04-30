@@ -12,10 +12,10 @@ declare void @effect(i32);
 ; CHECK: %entry
 ; CHECK: %loop.top
 ; CHECK: %loop.latch
-; CHECK: %top.fakephi
 ; CHECK: %loop.end
 ; CHECK: %false
 ; CHECK: %ret
+; CHECK: %top.fakephi
 define void @no_successor_still_no_taildup (i32 %count, i32 %key) {
 entry:
   br label %loop.top

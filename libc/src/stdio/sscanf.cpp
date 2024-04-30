@@ -16,7 +16,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, sscanf,
                    (const char *__restrict buffer,
@@ -36,4 +36,4 @@ LLVM_LIBC_FUNCTION(int, sscanf,
   return (ret_val == -1) ? EOF : ret_val;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

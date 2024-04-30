@@ -1,4 +1,4 @@
-; RUN: llvm-reduce %s -o %t --delta-passes=operands-to-args --test FileCheck --test-arg %s --test-arg --match-full-lines --test-arg --check-prefix=INTERESTING --test-arg --input-file
+; RUN: llvm-reduce %s -o %t --abort-on-invalid-reduction --delta-passes=operands-to-args --test FileCheck --test-arg %s --test-arg --match-full-lines --test-arg --check-prefix=INTERESTING --test-arg --input-file
 ; RUN: FileCheck %s --input-file %t --check-prefixes=REDUCED,INTERESTING
 
 ; REDUCED-LABEL: define void @func(i32 %k, ptr %Local, ptr %Global) {

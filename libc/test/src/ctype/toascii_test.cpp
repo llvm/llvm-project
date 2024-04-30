@@ -17,8 +17,8 @@ TEST(LlvmLibcToAscii, DefaultLocale) {
   // mod 128 (which is equivalent to & 0x7f)
   for (int ch = -255; ch < 255; ++ch) {
     if (0 <= ch && ch <= 0x7f)
-      EXPECT_EQ(__llvm_libc::toascii(ch), ch);
+      EXPECT_EQ(LIBC_NAMESPACE::toascii(ch), ch);
     else
-      EXPECT_EQ(__llvm_libc::toascii(ch), ch & 0x7f);
+      EXPECT_EQ(LIBC_NAMESPACE::toascii(ch), ch & 0x7f);
   }
 }

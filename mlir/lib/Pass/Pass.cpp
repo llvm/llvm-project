@@ -36,9 +36,19 @@ using namespace mlir::detail;
 // PassExecutionAction
 //===----------------------------------------------------------------------===//
 
+PassExecutionAction::PassExecutionAction(ArrayRef<IRUnit> irUnits,
+                                         const Pass &pass)
+    : Base(irUnits), pass(pass) {}
+
 void PassExecutionAction::print(raw_ostream &os) const {
   os << llvm::formatv("`{0}` running `{1}` on Operation `{2}`", tag,
                       pass.getName(), getOp()->getName());
+}
+
+Operation *PassExecutionAction::getOp() const {
+  ArrayRef<IRUnit> irUnits = getContextIRUnits();
+  return irUnits.empty() ? nullptr
+                         : llvm::dyn_cast_if_present<Operation *>(irUnits[0]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -50,8 +60,16 @@ void PassExecutionAction::print(raw_ostream &os) const {
 void Pass::anchor() {}
 
 /// Attempt to initialize the options of this pass from the given string.
-LogicalResult Pass::initializeOptions(StringRef options) {
-  return passOptions.parseFromString(options);
+LogicalResult Pass::initializeOptions(
+    StringRef options,
+    function_ref<LogicalResult(const Twine &)> errorHandler) {
+  std::string errStr;
+  llvm::raw_string_ostream os(errStr);
+  if (failed(passOptions.parseFromString(options, os))) {
+    os.flush();
+    return errorHandler(errStr);
+  }
+  return success();
 }
 
 /// Copy the option values from 'other', which is another instance of this
@@ -372,15 +390,21 @@ StringRef OpPassManager::getOpAnchorName() const {
 
 /// Prints out the passes of the pass manager as the textual representation
 /// of pipelines.
-void OpPassManager::printAsTextualPipeline(raw_ostream &os) const {
-  os << getOpAnchorName() << "(";
+void printAsTextualPipeline(
+    raw_ostream &os, StringRef anchorName,
+    const llvm::iterator_range<OpPassManager::pass_iterator> &passes) {
+  os << anchorName << "(";
   llvm::interleave(
-      impl->passes,
-      [&](const std::unique_ptr<Pass> &pass) {
-        pass->printAsTextualPipeline(os);
-      },
+      passes, [&](mlir::Pass &pass) { pass.printAsTextualPipeline(os); },
       [&]() { os << ","; });
   os << ")";
+}
+void OpPassManager::printAsTextualPipeline(raw_ostream &os) const {
+  StringRef anchorName = getOpAnchorName();
+  ::printAsTextualPipeline(
+      os, anchorName,
+      {MutableArrayRef<std::unique_ptr<Pass>>{impl->passes}.begin(),
+       MutableArrayRef<std::unique_ptr<Pass>>{impl->passes}.end()});
 }
 
 void OpPassManager::dump() {
@@ -732,7 +756,7 @@ void OpToOpPassAdaptor::runOnOperationAsyncImpl(bool verifyPasses) {
   // Create the async executors if they haven't been created, or if the main
   // pipeline has changed.
   if (asyncExecutors.empty() || hasSizeMismatch(asyncExecutors.front(), mgrs))
-    asyncExecutors.assign(context->getThreadPool().getThreadCount(), mgrs);
+    asyncExecutors.assign(context->getThreadPool().getMaxConcurrency(), mgrs);
 
   // This struct represents the information for a single operation to be
   // scheduled on a pass manager.

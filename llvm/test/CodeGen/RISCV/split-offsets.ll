@@ -157,23 +157,21 @@ define void @test4(ptr %dest) {
 ; RV32I-LABEL: test4:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a0, a0, 2047
-; RV32I-NEXT:    addi a1, a0, 1
-; RV32I-NEXT:    li a2, 1
-; RV32I-NEXT:    sb a2, 1(a0)
-; RV32I-NEXT:    sb a2, 1(a1)
-; RV32I-NEXT:    sb a2, 2(a1)
-; RV32I-NEXT:    sb a2, 3(a1)
+; RV32I-NEXT:    li a1, 1
+; RV32I-NEXT:    sb a1, 1(a0)
+; RV32I-NEXT:    sb a1, 2(a0)
+; RV32I-NEXT:    sb a1, 3(a0)
+; RV32I-NEXT:    sb a1, 4(a0)
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: test4:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi a0, a0, 2047
-; RV64I-NEXT:    addi a1, a0, 1
-; RV64I-NEXT:    li a2, 1
-; RV64I-NEXT:    sb a2, 1(a0)
-; RV64I-NEXT:    sb a2, 1(a1)
-; RV64I-NEXT:    sb a2, 2(a1)
-; RV64I-NEXT:    sb a2, 3(a1)
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    sb a1, 1(a0)
+; RV64I-NEXT:    sb a1, 2(a0)
+; RV64I-NEXT:    sb a1, 3(a0)
+; RV64I-NEXT:    sb a1, 4(a0)
 ; RV64I-NEXT:    ret
   %p1 = getelementptr i8, ptr %dest, i32 2048
   store i8 1, ptr %p1

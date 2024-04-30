@@ -135,7 +135,7 @@ int large_combiner_test(S_large s) {
 // CHECK: [[T2:%.*]] = alloca %struct.Combiner
 // CHECK: [[T1:%.*]] = alloca %struct.Combiner
 // CHECK: [[T3:%.*]] = call noundef ptr @_ZN8CombinerC1E7S_large(ptr {{[^,]*}} [[T1]], [9 x i32] %s.coerce)
-// CHECK: call void @_ZN8Combiner1fEv(ptr nonnull sret(%struct.Combiner) align 4 [[T2]], ptr {{[^,]*}} [[T1]])
+// CHECK: call void @_ZN8Combiner1fEv(ptr dead_on_unwind nonnull writable sret(%struct.Combiner) align 4 [[T2]], ptr {{[^,]*}} [[T1]])
 // CHECK: [[T5:%.*]] = load i32, ptr [[T2]]
 // CHECK: ret i32 [[T5]]
 

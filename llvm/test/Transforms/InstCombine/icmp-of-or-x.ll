@@ -121,9 +121,9 @@ define i1 @or_ne_notY_eq_1s(i8 %x, i8 %y) {
 
 define i1 @or_ne_notY_eq_1s_fail_bad_not(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_ne_notY_eq_1s_fail_bad_not(
-; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -2
-; CHECK-NEXT:    [[OR:%.*]] = or i8 [[NY]], [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[OR]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP2]], -1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ny = xor i8 %y, -2
@@ -207,10 +207,8 @@ define i1 @or_sle_intmin_indirect_2(i8 %xx, i8 %C, i8 %z) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[C:%.*]], -128
 ; CHECK-NEXT:    br i1 [[CMP]], label [[NEG:%.*]], label [[POS:%.*]]
 ; CHECK:       neg:
-; CHECK-NEXT:    [[NC:%.*]] = sub i8 0, [[C]]
-; CHECK-NEXT:    [[CP2:%.*]] = and i8 [[NC]], [[C]]
 ; CHECK-NEXT:    [[X:%.*]] = add i8 [[XX:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[XN1:%.*]] = or i8 [[X]], [[CP2]]
+; CHECK-NEXT:    [[XN1:%.*]] = or i8 [[X]], -128
 ; CHECK-NEXT:    [[R:%.*]] = icmp sle i8 [[X]], [[XN1]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ; CHECK:       pos:
@@ -247,9 +245,7 @@ define i1 @or_sgt_intmin_indirect(i8 %x, i8 %C) {
 ; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq i8 [[C:%.*]], -128
 ; CHECK-NEXT:    br i1 [[C_NOT]], label [[NEG:%.*]], label [[POS:%.*]]
 ; CHECK:       neg:
-; CHECK-NEXT:    [[NC:%.*]] = sub i8 0, [[C]]
-; CHECK-NEXT:    [[CP2:%.*]] = and i8 [[NC]], [[C]]
-; CHECK-NEXT:    [[XN1:%.*]] = or i8 [[CP2]], [[X:%.*]]
+; CHECK-NEXT:    [[XN1:%.*]] = or i8 [[X:%.*]], -128
 ; CHECK-NEXT:    [[R:%.*]] = icmp sgt i8 [[XN1]], [[X]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ; CHECK:       pos:

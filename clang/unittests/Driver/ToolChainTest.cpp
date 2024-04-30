@@ -357,7 +357,8 @@ TEST(ToolChainTest, VFSGnuLibcxxPathNoSysroot) {
     Driver TheDriver("/bin/clang", "x86_64-unknown-linux-gnu", Diags,
                      "clang LLVM compiler", InMemoryFileSystem);
     std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(
-        {"/bin/clang", "-fsyntax-only", "-stdlib=libc++", "foo.cpp"}));
+        {"/bin/clang", "-fsyntax-only", "-stdlib=libc++",
+         "--sysroot=", "foo.cpp"}));
     ASSERT_TRUE(C);
     EXPECT_THAT(C->getJobs(), testing::ElementsAre(jobHasArgs(
                                   "-internal-isystem /usr/include/c++/v1")));
@@ -530,7 +531,7 @@ TEST(ToolChainTest, CommandOutput) {
   const auto &InFile = CmdCompile->getInputInfos().front().getFilename();
   EXPECT_STREQ(InFile, "foo.cpp");
   auto ObjFile = CmdCompile->getOutputFilenames().front();
-  EXPECT_TRUE(StringRef(ObjFile).endswith(".o"));
+  EXPECT_TRUE(StringRef(ObjFile).ends_with(".o"));
 
   const auto &CmdLink = Jobs.getJobs().back();
   const auto LinkInFile = CmdLink->getInputInfos().front().getFilename();

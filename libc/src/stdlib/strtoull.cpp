@@ -11,7 +11,7 @@
 #include "src/__support/str_to_integer.h"
 #include "src/errno/libc_errno.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(unsigned long long, strtoull,
                    (const char *__restrict str, char **__restrict str_end,
@@ -26,4 +26,4 @@ LLVM_LIBC_FUNCTION(unsigned long long, strtoull,
   return result;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

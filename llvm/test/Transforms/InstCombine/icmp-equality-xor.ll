@@ -4,8 +4,8 @@
 declare void @use(i32)
 define i1 @cmpeq_xor_cst1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @cmpeq_xor_cst1(
-; CHECK-NEXT:    [[C:%.*]] = xor i32 [[A:%.*]], 10
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 10
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %c = xor i32 %a, 10
@@ -37,8 +37,8 @@ define i1 @cmpeq_xor_cst3(i32 %a, i32 %b) {
 
 define i1 @cmpne_xor_cst1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @cmpne_xor_cst1(
-; CHECK-NEXT:    [[C:%.*]] = xor i32 [[A:%.*]], 10
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[C]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP1]], 10
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %c = xor i32 %a, 10
@@ -83,19 +83,21 @@ define i1 @cmpeq_xor_cst1_multiuse(i32 %a, i32 %b) {
 
 define i1 @cmpeq_xor_cst1_commuted(i32 %a, i32 %b) {
 ; CHECK-LABEL: @cmpeq_xor_cst1_commuted(
-; CHECK-NEXT:    [[C:%.*]] = xor i32 [[A:%.*]], 10
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C]], [[B:%.*]]
+; CHECK-NEXT:    [[B2:%.*]] = mul i32 [[B:%.*]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[B2]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 10
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
+  %b2 = mul i32 %b, %b ; thwart complexity-based canonicalization
   %c = xor i32 %a, 10
-  %cmp = icmp eq i32 %b, %c
+  %cmp = icmp eq i32 %b2, %c
   ret i1 %cmp
 }
 
 define <2 x i1> @cmpeq_xor_cst1_vec(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @cmpeq_xor_cst1_vec(
-; CHECK-NEXT:    [[C:%.*]] = xor <2 x i32> [[A:%.*]], <i32 10, i32 11>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[C]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 10, i32 11>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %c = xor <2 x i32> %a, <i32 10, i32 11>
@@ -106,10 +108,8 @@ define <2 x i1> @cmpeq_xor_cst1_vec(<2 x i32> %a, <2 x i32> %b) {
 ; tests from PR65968
 define i1 @foo1(i32 %x, i32 %y) {
 ; CHECK-LABEL: @foo1(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], -2147483648
-; CHECK-NEXT:    [[NEG:%.*]] = and i32 [[Y:%.*]], -2147483648
-; CHECK-NEXT:    [[AND1:%.*]] = xor i32 [[NEG]], -2147483648
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], [[AND1]]
+; CHECK-NEXT:    [[NEG1:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[NEG1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %and = and i32 %x, -2147483648
@@ -121,10 +121,8 @@ define i1 @foo1(i32 %x, i32 %y) {
 
 define i1 @foo2(i32 %x, i32 %y) {
 ; CHECK-LABEL: @foo2(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], -2147483648
-; CHECK-NEXT:    [[NEG:%.*]] = and i32 [[Y:%.*]], -2147483648
-; CHECK-NEXT:    [[AND1:%.*]] = xor i32 [[NEG]], -2147483648
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], [[AND1]]
+; CHECK-NEXT:    [[NEG1:%.*]] = xor i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[NEG1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %and = and i32 %x, -2147483648
@@ -132,4 +130,18 @@ define i1 @foo2(i32 %x, i32 %y) {
   %and1 = xor i32 %neg, -2147483648
   %cmp = icmp eq i32 %and, %and1
   ret i1 %cmp
+}
+
+; tests from PR67783
+define <2 x i1> @foo3(<2 x i8> %x) {
+; CHECK-LABEL: @foo3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[X:%.*]], <i8 -2, i8 -1>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[XOR]], <i8 9, i8 79>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+entry:
+  %xor = xor <2 x i8> %x, <i8 -2, i8 -1>
+  %cmp = icmp ne <2 x i8> %xor, <i8 9, i8 79>
+  ret <2 x i1> %cmp
 }

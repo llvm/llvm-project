@@ -15,10 +15,10 @@
 // RUN: %clang_cc1 -emit-llvm-bc -o /dev/null -fdebug-pass-manager -coverage-data-file=/dev/null %s 2>&1 | FileCheck --check-prefix=NEWPM %s
 // RUN: %clang_cc1 -emit-llvm-bc -o /dev/null -fdebug-pass-manager -coverage-data-file=/dev/null -O3 %s 2>&1 | FileCheck --check-prefix=NEWPM-O3 %s
 
-// NEWPM-NOT: Running pass
+// NEWPM: Running pass: VerifierPass
 // NEWPM: Running pass: GCOVProfilerPass
 
-// NEWPM-O3-NOT: Running pass
+// NEWPM-O3: Running pass: VerifierPass
 // NEWPM-O3: Running pass: Annotation2MetadataPass
 // NEWPM-O3: Running pass: ForceFunctionAttrsPass
 // NEWPM-O3: Running pass: GCOVProfilerPass

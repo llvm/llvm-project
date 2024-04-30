@@ -83,7 +83,7 @@ lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr, SMLoc loc) {
 
   // Pop the last line from the buffer string.
   auto popLastLine = [&]() -> std::optional<StringRef> {
-    size_t newlineOffset = buffer.find_last_of("\n");
+    size_t newlineOffset = buffer.find_last_of('\n');
     if (newlineOffset == StringRef::npos)
       return std::nullopt;
     StringRef lastLine = buffer.drop_front(newlineOffset).trim();
@@ -99,11 +99,11 @@ lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr, SMLoc loc) {
   SmallVector<StringRef> commentLines;
   while (std::optional<StringRef> line = popLastLine()) {
     // Check for a comment at the beginning of the line.
-    if (!line->startswith("//"))
+    if (!line->starts_with("//"))
       break;
 
     // Extract the document string from the comment.
-    commentLines.push_back(line->drop_while([](char c) { return c == '/'; }));
+    commentLines.push_back(line->ltrim('/'));
   }
 
   if (commentLines.empty())

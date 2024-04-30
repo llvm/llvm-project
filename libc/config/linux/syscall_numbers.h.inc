@@ -258,6 +258,10 @@
 #define SYS_epoll_pwait __NR_epoll_pwait
 #endif
 
+#ifdef __NR_epoll_pwait2
+#define SYS_epoll_pwait2 __NR_epoll_pwait2
+#endif
+
 #ifdef __NR_epoll_wait
 #define SYS_epoll_wait __NR_epoll_wait
 #endif
@@ -332,6 +336,10 @@
 
 #ifdef __NR_fchmodat
 #define SYS_fchmodat __NR_fchmodat
+#endif
+
+#ifdef __NR_fchmodat2
+#define SYS_fchmodat2 __NR_fchmodat2
 #endif
 
 #ifdef __NR_fchown

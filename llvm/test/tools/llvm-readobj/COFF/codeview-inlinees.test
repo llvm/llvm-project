@@ -28,7 +28,7 @@ CHECK:      Kind: S_INLINESITE (0x114D)
 CHECK:      Inlinee: f (0x1003)
 CHECK:    InlineesSym {
 CHECK-NEXT:      Kind: S_INLINEES (0x1168)
-CHECK-NEXT:      Callers [
+CHECK-NEXT:      Inlinees [
 CHECK-NEXT:        FuncID: f (0x1003)
 CHECK-NEXT:        FuncID: h (0x1004)
 CHECK-NEXT:      ]

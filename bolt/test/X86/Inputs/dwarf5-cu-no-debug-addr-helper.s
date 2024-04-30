@@ -4,7 +4,7 @@
 #       int i;
 # } Foo;
 
-# Manually modifed to remove DW_AT_addr_base and DW_AT_location.
+# Manually modified to remove DW_AT_addr_base and DW_AT_location.
 
 	.text
 	.file	"helper.cpp"
@@ -104,7 +104,7 @@
 	.long	.Lstr_offsets_base0             # DW_AT_str_offsets_base
 	.long	.Lline_table_start0             # DW_AT_stmt_list
 	.byte	2                               # DW_AT_comp_dir
-	#.long	.Laddr_table_base0              # DW_AT_addr_base mannually removed
+	#.long	.Laddr_table_base0              # DW_AT_addr_base manually removed
 	.byte	2                               # Abbrev [2] 0x1e:0xc DW_TAG_variable
 	.byte	3                               # DW_AT_name
 	.long	35                              # DW_AT_type

@@ -9,9 +9,11 @@
 #ifndef SUPPORT_FROM_RANGE_HELPERS_H
 #define SUPPORT_FROM_RANGE_HELPERS_H
 
+#include <array>
 #include <cstddef>
 #include <iterator>
 #include <type_traits>
+#include <vector>
 
 #include "min_allocator.h"
 #include "test_allocator.h"
@@ -31,6 +33,13 @@ template <class Iter, class Sent, std::ranges::input_range Range>
 constexpr auto wrap_input(Range&& input) {
   auto b = Iter(std::ranges::begin(input));
   auto e = Sent(Iter(std::ranges::end(input)));
+  return std::ranges::subrange(std::move(b), std::move(e));
+}
+
+template <class Iter, class Sent, class T, std::size_t N>
+constexpr auto wrap_input(std::array<T, N>& input) {
+  auto b = Iter(input.data());
+  auto e = Sent(Iter(input.data() + input.size()));
   return std::ranges::subrange(std::move(b), std::move(e));
 }
 

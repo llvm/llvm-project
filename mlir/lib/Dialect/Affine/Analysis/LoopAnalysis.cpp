@@ -39,7 +39,7 @@ void mlir::affine::getTripCountMapAndOperands(
     AffineForOp forOp, AffineMap *tripCountMap,
     SmallVectorImpl<Value> *tripCountOperands) {
   MLIRContext *context = forOp.getContext();
-  int64_t step = forOp.getStep();
+  int64_t step = forOp.getStepAsInt();
   int64_t loopSpan;
   if (forOp.hasConstantBounds()) {
     int64_t lb = forOp.getConstantLowerBound();
@@ -95,7 +95,7 @@ std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
   // Take the min if all trip counts are constant.
   std::optional<uint64_t> tripCount;
   for (auto resultExpr : map.getResults()) {
-    if (auto constExpr = resultExpr.dyn_cast<AffineConstantExpr>()) {
+    if (auto constExpr = dyn_cast<AffineConstantExpr>(resultExpr)) {
       if (tripCount.has_value())
         tripCount =
             std::min(*tripCount, static_cast<uint64_t>(constExpr.getValue()));
@@ -124,7 +124,7 @@ uint64_t mlir::affine::getLargestDivisorOfTripCount(AffineForOp forOp) {
   std::optional<uint64_t> gcd;
   for (auto resultExpr : map.getResults()) {
     uint64_t thisGcd;
-    if (auto constExpr = resultExpr.dyn_cast<AffineConstantExpr>()) {
+    if (auto constExpr = dyn_cast<AffineConstantExpr>(resultExpr)) {
       uint64_t tripCount = constExpr.getValue();
       // 0 iteration loops (greatest divisor is 2^64 - 1).
       if (tripCount == 0)
@@ -145,44 +145,35 @@ uint64_t mlir::affine::getLargestDivisorOfTripCount(AffineForOp forOp) {
   return *gcd;
 }
 
-/// Given an induction variable `iv` of type AffineForOp and an access `index`
-/// of type index, returns `true` if `index` is independent of `iv` and
-/// false otherwise. The determination supports composition with at most one
-/// AffineApplyOp. The 'at most one AffineApplyOp' comes from the fact that
-/// the composition of AffineApplyOp needs to be canonicalized by construction
-/// to avoid writing code that composes arbitrary numbers of AffineApplyOps
-/// everywhere. To achieve this, at the very least, the compose-affine-apply
-/// pass must have been run.
+/// Given an affine.for `iv` and an access `index` of type index, returns `true`
+/// if `index` is independent of `iv` and false otherwise.
 ///
-/// Prerequisites:
-///   1. `iv` and `index` of the proper type;
-///   2. at most one reachable AffineApplyOp from index;
-///
-/// Returns false in cases with more than one AffineApplyOp, this is
-/// conservative.
+/// Prerequisites: `iv` and `index` of the proper type;
 static bool isAccessIndexInvariant(Value iv, Value index) {
-  assert(isAffineForInductionVar(iv) && "iv must be a AffineForOp");
-  assert(isa<IndexType>(index.getType()) && "index must be of IndexType");
-  SmallVector<Operation *, 4> affineApplyOps;
-  getReachableAffineApplyOps({index}, affineApplyOps);
-
-  if (affineApplyOps.empty()) {
-    // Pointer equality test because of Value pointer semantics.
-    return index != iv;
-  }
-
-  if (affineApplyOps.size() > 1) {
-    affineApplyOps[0]->emitRemark(
-        "CompositionAffineMapsPass must have been run: there should be at most "
-        "one AffineApplyOp, returning false conservatively.");
-    return false;
-  }
-
-  auto composeOp = cast<AffineApplyOp>(affineApplyOps[0]);
-  // We need yet another level of indirection because the `dim` index of the
-  // access may not correspond to the `dim` index of composeOp.
-  return !composeOp.getAffineValueMap().isFunctionOf(0, iv);
+  assert(isAffineForInductionVar(iv) && "iv must be an affine.for iv");
+  assert(isa<IndexType>(index.getType()) && "index must be of 'index' type");
+  auto map = AffineMap::getMultiDimIdentityMap(/*numDims=*/1, iv.getContext());
+  SmallVector<Value> operands = {index};
+  AffineValueMap avm(map, operands);
+  avm.composeSimplifyAndCanonicalize();
+  return !avm.isFunctionOf(0, iv);
 }
+
+// Pre-requisite: Loop bounds should be in canonical form.
+template <typename LoadOrStoreOp>
+bool mlir::affine::isInvariantAccess(LoadOrStoreOp memOp, AffineForOp forOp) {
+  AffineValueMap avm(memOp.getAffineMap(), memOp.getMapOperands());
+  avm.composeSimplifyAndCanonicalize();
+  return !llvm::is_contained(avm.getOperands(), forOp.getInductionVar());
+}
+
+// Explicitly instantiate the template so that the compiler knows we need them.
+template bool mlir::affine::isInvariantAccess(AffineReadOpInterface,
+                                              AffineForOp);
+template bool mlir::affine::isInvariantAccess(AffineWriteOpInterface,
+                                              AffineForOp);
+template bool mlir::affine::isInvariantAccess(AffineLoadOp, AffineForOp);
+template bool mlir::affine::isInvariantAccess(AffineStoreOp, AffineForOp);
 
 DenseSet<Value> mlir::affine::getInvariantAccesses(Value iv,
                                                    ArrayRef<Value> indices) {
@@ -195,53 +186,35 @@ DenseSet<Value> mlir::affine::getInvariantAccesses(Value iv,
   return res;
 }
 
-/// Given:
-///   1. an induction variable `iv` of type AffineForOp;
-///   2. a `memoryOp` of type const LoadOp& or const StoreOp&;
-/// determines whether `memoryOp` has a contiguous access along `iv`. Contiguous
-/// is defined as either invariant or varying only along a unique MemRef dim.
-/// Upon success, the unique MemRef dim is written in `memRefDim` (or -1 to
-/// convey the memRef access is invariant along `iv`).
-///
-/// Prerequisites:
-///   1. `memRefDim` ~= nullptr;
-///   2. `iv` of the proper type;
-///   3. the MemRef accessed by `memoryOp` has no layout map or at most an
-///      identity layout map.
-///
-/// Currently only supports no layoutMap or identity layoutMap in the MemRef.
-/// Returns false if the MemRef has a non-identity layoutMap or more than 1
-/// layoutMap. This is conservative.
-///
-// TODO: check strides.
+// TODO: check access stride.
 template <typename LoadOrStoreOp>
-static bool isContiguousAccess(Value iv, LoadOrStoreOp memoryOp,
-                               int *memRefDim) {
-  static_assert(
-      llvm::is_one_of<LoadOrStoreOp, AffineLoadOp, AffineStoreOp>::value,
-      "Must be called on either LoadOp or StoreOp");
+bool mlir::affine::isContiguousAccess(Value iv, LoadOrStoreOp memoryOp,
+                                      int *memRefDim) {
+  static_assert(llvm::is_one_of<LoadOrStoreOp, AffineReadOpInterface,
+                                AffineWriteOpInterface>::value,
+                "Must be called on either an affine read or write op");
   assert(memRefDim && "memRefDim == nullptr");
   auto memRefType = memoryOp.getMemRefType();
 
   if (!memRefType.getLayout().isIdentity())
-    return memoryOp.emitError("NYI: non-trivial layoutMap"), false;
+    return memoryOp.emitError("NYI: non-trivial layout map"), false;
 
   int uniqueVaryingIndexAlongIv = -1;
   auto accessMap = memoryOp.getAffineMap();
   SmallVector<Value, 4> mapOperands(memoryOp.getMapOperands());
   unsigned numDims = accessMap.getNumDims();
   for (unsigned i = 0, e = memRefType.getRank(); i < e; ++i) {
-    // Gather map operands used result expr 'i' in 'exprOperands'.
+    // Gather map operands used in result expr 'i' in 'exprOperands'.
     SmallVector<Value, 4> exprOperands;
     auto resultExpr = accessMap.getResult(i);
     resultExpr.walk([&](AffineExpr expr) {
-      if (auto dimExpr = expr.dyn_cast<AffineDimExpr>())
+      if (auto dimExpr = dyn_cast<AffineDimExpr>(expr))
         exprOperands.push_back(mapOperands[dimExpr.getPosition()]);
-      else if (auto symExpr = expr.dyn_cast<AffineSymbolExpr>())
+      else if (auto symExpr = dyn_cast<AffineSymbolExpr>(expr))
         exprOperands.push_back(mapOperands[numDims + symExpr.getPosition()]);
     });
     // Check access invariance of each operand in 'exprOperands'.
-    for (auto exprOperand : exprOperands) {
+    for (Value exprOperand : exprOperands) {
       if (!isAccessIndexInvariant(iv, exprOperand)) {
         if (uniqueVaryingIndexAlongIv != -1) {
           // 2+ varying indices -> do not vectorize along iv.
@@ -258,6 +231,13 @@ static bool isContiguousAccess(Value iv, LoadOrStoreOp memoryOp,
     *memRefDim = memRefType.getRank() - (uniqueVaryingIndexAlongIv + 1);
   return true;
 }
+
+template bool mlir::affine::isContiguousAccess(Value iv,
+                                               AffineReadOpInterface loadOp,
+                                               int *memRefDim);
+template bool mlir::affine::isContiguousAccess(Value iv,
+                                               AffineWriteOpInterface loadOp,
+                                               int *memRefDim);
 
 template <typename LoadOrStoreOp>
 static bool isVectorElement(LoadOrStoreOp memoryOp) {
@@ -344,10 +324,13 @@ bool mlir::affine::isVectorizableLoopBody(
     auto load = dyn_cast<AffineLoadOp>(op);
     auto store = dyn_cast<AffineStoreOp>(op);
     int thisOpMemRefDim = -1;
-    bool isContiguous = load ? isContiguousAccess(loop.getInductionVar(), load,
-                                                  &thisOpMemRefDim)
-                             : isContiguousAccess(loop.getInductionVar(), store,
-                                                  &thisOpMemRefDim);
+    bool isContiguous =
+        load ? isContiguousAccess(loop.getInductionVar(),
+                                  cast<AffineReadOpInterface>(*load),
+                                  &thisOpMemRefDim)
+             : isContiguousAccess(loop.getInductionVar(),
+                                  cast<AffineWriteOpInterface>(*store),
+                                  &thisOpMemRefDim);
     if (thisOpMemRefDim != -1) {
       // If memory accesses vary across different dimensions then the loop is
       // not vectorizable.

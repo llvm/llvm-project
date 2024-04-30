@@ -104,7 +104,7 @@ public:
     return File;
   }
 
-  OptionalFileEntryRefDegradesToFileEntryPtr getFile() const {
+  OptionalFileEntryRef getFile() const {
     if (auto *P = Val.getPointer())
       return FileEntryRef(*P);
     return std::nullopt;
@@ -123,8 +123,8 @@ public:
 /// other modules.
 class ModuleFile {
 public:
-  ModuleFile(ModuleKind Kind, unsigned Generation)
-      : Kind(Kind), Generation(Generation) {}
+  ModuleFile(ModuleKind Kind, FileEntryRef File, unsigned Generation)
+      : Kind(Kind), File(File), Generation(Generation) {}
   ~ModuleFile();
 
   // === General information ===
@@ -176,7 +176,7 @@ public:
   bool DidReadTopLevelSubmodule = false;
 
   /// The file entry for the module file.
-  OptionalFileEntryRefDegradesToFileEntryPtr File;
+  FileEntryRef File;
 
   /// The signature of the module file, which may be used instead of the size
   /// and modification time to identify this particular file.
@@ -188,6 +188,9 @@ public:
 
   /// The bit vector denoting usage of each header search entry (true = used).
   llvm::BitVector SearchPathUsage;
+
+  /// The bit vector denoting usage of each VFS entry (true = used).
+  llvm::BitVector VFSUsage;
 
   /// Whether this module has been directly imported by the
   /// user.
@@ -291,13 +294,6 @@ public:
   /// Offsets for all of the source location entries in the
   /// AST file.
   const uint32_t *SLocEntryOffsets = nullptr;
-
-  /// SLocEntries that we're going to preload.
-  SmallVector<uint64_t, 4> PreloadSLocEntries;
-
-  /// Remapping table for source locations in this module.
-  ContinuousRangeMap<SourceLocation::UIntTy, SourceLocation::IntTy, 2>
-      SLocRemap;
 
   // === Identifiers ===
 
@@ -462,7 +458,7 @@ public:
   serialization::DeclID BaseDeclID = 0;
 
   /// Remapping table for declaration IDs in this module.
-  ContinuousRangeMap<uint32_t, int, 2> DeclRemap;
+  ContinuousRangeMap<serialization::DeclID, int, 2> DeclRemap;
 
   /// Mapping from the module files that this module file depends on
   /// to the base declaration ID for that module as it is understood within this
@@ -474,7 +470,7 @@ public:
   llvm::DenseMap<ModuleFile *, serialization::DeclID> GlobalToLocalDeclIDs;
 
   /// Array of file-level DeclIDs sorted by file.
-  const serialization::DeclID *FileSortedDecls = nullptr;
+  const LocalDeclID *FileSortedDecls = nullptr;
   unsigned NumFileSortedDecls = 0;
 
   /// Array of category list location information within this
@@ -512,8 +508,16 @@ public:
   /// List of modules which depend on this module
   llvm::SetVector<ModuleFile *> ImportedBy;
 
-  /// List of modules which this module depends on
+  /// List of modules which this module directly imported
   llvm::SetVector<ModuleFile *> Imports;
+
+  /// List of modules which this modules dependent on. Different
+  /// from `Imports`, this includes indirectly imported modules too.
+  /// The order of DependentModules is significant. It should keep
+  /// the same order with that module file manager when we write
+  /// the current module file. The value of the member will be initialized
+  /// in `ASTReader::ReadModuleOffsetMap`.
+  llvm::SmallVector<ModuleFile *, 16> DependentModules;
 
   /// Determine whether this module was directly imported at
   /// any point during translation.

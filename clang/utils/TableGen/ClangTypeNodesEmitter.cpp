@@ -104,7 +104,7 @@ void TypeNodeEmitter::emit() {
   if (Types.empty())
     PrintFatalError("no Type records in input!");
 
-  emitSourceFileHeader("An x-macro database of Clang type nodes", Out);
+  emitSourceFileHeader("An x-macro database of Clang type nodes", Out, Records);
 
   // Preamble
   addMacroToUndef(TypeMacroName);

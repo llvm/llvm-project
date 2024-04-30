@@ -21,5 +21,5 @@
 struct test_istream
     : public std::basic_istream<char, std::char_traits<wchar_t> > {};
 
-// expected-error-re@ios:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
+// expected-error-re@ios:* {{static assertion failed{{.*}}traits_type::char_type must be the same type as CharT}}
 // expected-error@istream:* {{only virtual member functions can be marked 'override'}}

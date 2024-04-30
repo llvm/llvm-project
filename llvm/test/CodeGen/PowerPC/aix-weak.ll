@@ -50,7 +50,7 @@ entry:
 ; BIT64-NEXT:           .vbyte	8, .foo_weak               # @foo_weak
 ; BIT64-NEXT:           .vbyte	8, TOC[TC0]
 ; BIT64-NEXT:           .vbyte	8, 0
-; COMMON-NEXT:          .csect [PR]
+; COMMON-NEXT:          .csect ..text..[PR]
 ; COMMON-NEXT:  .foo_weak:
 
 ; COMMON:               .weak   foo_ref_weak[DS]        # -- Begin function foo_ref_weak
@@ -63,7 +63,7 @@ entry:
 ; BIT64-NEXT:           .vbyte	8, .foo_ref_weak           # @foo_ref_weak
 ; BIT64-NEXT:           .vbyte	8, TOC[TC0]
 ; BIT64-NEXT:           .vbyte	8, 0
-; COMMON-NEXT:          .csect [PR]
+; COMMON-NEXT:          .csect ..text..[PR]
 ; COMMON-NEXT:  .foo_ref_weak:
 
 ; COMMON:               .globl  main[DS]                # -- Begin function main
@@ -76,7 +76,7 @@ entry:
 ; BIT64-NEXT:           .vbyte	8, .main                   # @main
 ; BIT64-NEXT:           .vbyte	8, TOC[TC0]
 ; BIT64-NEXT:           .vbyte	8, 0
-; COMMON-NEXT:          .csect [PR]
+; COMMON-NEXT:          .csect ..text..[PR]
 ; COMMON-NEXT:  .main:
 
 ; COMMON:     	        .csect .data[RW]
@@ -100,16 +100,15 @@ entry:
 ; CHECKSYM:      Symbols [
 ; CHECKSYM-NEXT:   Symbol {
 ; CHECKSYM-NEXT:     Index: 0
-; CHECKSYM-NEXT:     Name: <stdin>
+; CHECKSYM-NEXT:     Name: .file
 ; CHECKSYM-NEXT:     Value (SymbolTableIndex): 0x0
 ; CHECKSYM-NEXT:     Section: N_DEBUG
 ; CHECKSYM-NEXT:     Source Language ID: TB_CPLUSPLUS (0x9)
 ; CHECKSYM32-NEXT:   CPU Version ID: TCPU_COM (0x3)
 ; CHECKSYM64-NEXT:   CPU Version ID: TCPU_PPC64 (0x2)
 ; CHECKSYM-NEXT:     StorageClass: C_FILE (0x67)
-; CHECKSYM-NEXT:     NumberOfAuxEntries: 0
-; CHECKSYM-NEXT:   }
-; CHECKSYM-NEXT:   Symbol {
+; CHECKSYM-NEXT:     NumberOfAuxEntries: 2
+; CHECKSYM:        Symbol {
 ; CHECKSYM-NEXT:     Index: [[#Index:]]
 ; CHECKSYM-NEXT:     Name: 
 ; CHECKSYM-NEXT:     Value (RelocatableAddress): 0x0

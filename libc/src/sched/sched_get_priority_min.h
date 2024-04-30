@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_SCHED_SCHED_GET_PRIORITY_MIN_H
 #define LLVM_LIBC_SRC_SCHED_SCHED_GET_PRIORITY_MIN_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int sched_get_priority_min(int policy);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SCHED_SCHED_GET_PRIORITY_MIN_H

@@ -6,6 +6,8 @@ import mlir.dialects.python_test as test
 import mlir.dialects.tensor as tensor
 import mlir.dialects.arith as arith
 
+test.register_python_test_dialect(get_dialect_registry())
+
 
 def run(f):
     print("\nTEST:", f.__name__)
@@ -17,8 +19,6 @@ def run(f):
 @run
 def testAttributes():
     with Context() as ctx, Location.unknown():
-        ctx.allow_unregistered_dialects = True
-
         #
         # Check op construction with attributes.
         #
@@ -28,7 +28,7 @@ def testAttributes():
         two = IntegerAttr.get(i32, 2)
         unit = UnitAttr.get()
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK-DAG: mandatory_i32 = 1 : i32
         # CHECK-DAG: optional_i32 = 2 : i32
         # CHECK-DAG: unit
@@ -36,7 +36,7 @@ def testAttributes():
         op = test.AttributedOp(one, optional_i32=two, unit=unit)
         print(f"{op}")
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK: mandatory_i32 = 2 : i32
         # CHECK: }
         op2 = test.AttributedOp(two)
@@ -48,21 +48,21 @@ def testAttributes():
 
         assert "additional" not in op.attributes
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK-DAG: additional = 1 : i32
         # CHECK-DAG: mandatory_i32 = 2 : i32
         # CHECK: }
         op2.attributes["additional"] = one
         print(f"{op2}")
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK-DAG: additional = 2 : i32
         # CHECK-DAG: mandatory_i32 = 2 : i32
         # CHECK: }
         op2.attributes["additional"] = two
         print(f"{op2}")
 
-        # CHECK: "python_test.attributed_op"() {
+        # CHECK: python_test.attributed_op  {
         # CHECK-NOT: additional = 2 : i32
         # CHECK:     mandatory_i32 = 2 : i32
         # CHECK: }
@@ -139,7 +139,6 @@ def testAttributes():
 @run
 def attrBuilder():
     with Context() as ctx, Location.unknown():
-        ctx.allow_unregistered_dialects = True
         # CHECK: python_test.attributes_op
         op = test.AttributesOp(
             # CHECK-DAG: x_affinemap = affine_map<() -> (2)>
@@ -177,10 +176,10 @@ def attrBuilder():
             x_i16=42,  # CHECK-DAG: x_i16 = 42 : i16
             x_i32=6,  # CHECK-DAG: x_i32 = 6 : i32
             x_i32arr=[4, 5],  # CHECK-DAG: x_i32arr = [4 : i32, 5 : i32]
-            x_i32elems=[5, 6],  # CHECK-DAG: x_i32elems = dense<[5, 6]> : tensor<2xsi32>
+            x_i32elems=[5, 6],  # CHECK-DAG: x_i32elems = dense<[5, 6]> : tensor<2xi32>
             x_i64=9,  # CHECK-DAG: x_i64 = 9 : i64
             x_i64arr=[7, 8],  # CHECK-DAG: x_i64arr = [7, 8]
-            x_i64elems=[8, 9],  # CHECK-DAG: x_i64elems = dense<[8, 9]> : tensor<2xsi64>
+            x_i64elems=[8, 9],  # CHECK-DAG: x_i64elems = dense<[8, 9]> : tensor<2xi64>
             x_i64svecarr=[10, 11],  # CHECK-DAG: x_i64svecarr = [10, 11]
             x_i8=11,  # CHECK-DAG: x_i8 = 11 : i8
             x_idx=10,  # CHECK-DAG: x_idx = 10 : index
@@ -216,7 +215,6 @@ def attrBuilder():
 @run
 def inferReturnTypes():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         with InsertionPoint(module.body):
             op = test.InferResultsOp()
@@ -261,7 +259,6 @@ def inferReturnTypes():
 @run
 def resultTypesDefinedByTraits():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         with InsertionPoint(module.body):
             inferred = test.InferResultsOp()
@@ -296,8 +293,6 @@ def resultTypesDefinedByTraits():
 @run
 def testOptionalOperandOp():
     with Context() as ctx, Location.unknown():
-        test.register_python_test_dialect(ctx)
-
         module = Module.create()
         with InsertionPoint(module.body):
             op1 = test.OptionalOperandOp()
@@ -313,7 +308,6 @@ def testOptionalOperandOp():
 @run
 def testCustomAttribute():
     with Context() as ctx:
-        test.register_python_test_dialect(ctx)
         a = test.TestAttr.get()
         # CHECK: #python_test.test_attr
         print(a)
@@ -351,7 +345,6 @@ def testCustomAttribute():
 @run
 def testCustomType():
     with Context() as ctx:
-        test.register_python_test_dialect(ctx)
         a = test.TestType.get()
         # CHECK: !python_test.test_type
         print(a)
@@ -398,8 +391,6 @@ def testCustomType():
 # CHECK-LABEL: TEST: testTensorValue
 def testTensorValue():
     with Context() as ctx, Location.unknown():
-        test.register_python_test_dialect(ctx)
-
         i8 = IntegerType.get_signless(8)
 
         class Tensor(test.TestTensorValue):
@@ -426,12 +417,17 @@ def testTensorValue():
             # And it should be equal to the in-tree concrete type
             assert test.TestIntegerRankedTensorType.static_typeid == t.type.typeid
 
+            d = tensor.EmptyOp([1, 2, 3], IntegerType.get_signless(5)).result
+            # CHECK: Value(%{{.*}} = tensor.empty() : tensor<1x2x3xi5>)
+            print(d)
+            # CHECK: TestTensorValue
+            print(repr(d))
+
 
 # CHECK-LABEL: TEST: inferReturnTypeComponents
 @run
 def inferReturnTypeComponents():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         i32 = IntegerType.get_signless(32)
         with InsertionPoint(module.body):
@@ -483,8 +479,6 @@ def inferReturnTypeComponents():
 @run
 def testCustomTypeTypeCaster():
     with Context() as ctx, Location.unknown():
-        test.register_python_test_dialect(ctx)
-
         a = test.TestType.get()
         assert a.typeid is not None
 
@@ -503,17 +497,28 @@ def testCustomTypeTypeCaster():
         # CHECK: Type caster is already registered
         try:
 
+            @register_type_caster(c.typeid)
             def type_caster(pytype):
                 return test.TestIntegerRankedTensorType(pytype)
 
-            register_type_caster(c.typeid, type_caster)
         except RuntimeError as e:
             print(e)
 
+        # python_test dialect registers a caster for RankedTensorType in its extension (pybind) module.
+        # So this one replaces that one (successfully). And then just to be sure we restore the original caster below.
+        @register_type_caster(c.typeid, replace=True)
+        def type_caster(pytype):
+            return RankedTensorType(pytype)
+
+        d = tensor.EmptyOp([10, 10], IntegerType.get_signless(5)).result
+        # CHECK: tensor<10x10xi5>
+        print(d.type)
+        # CHECK: ranked tensor type RankedTensorType(tensor<10x10xi5>)
+        print("ranked tensor type", repr(d.type))
+
+        @register_type_caster(c.typeid, replace=True)
         def type_caster(pytype):
             return test.TestIntegerRankedTensorType(pytype)
-
-        register_type_caster(c.typeid, type_caster, replace=True)
 
         d = tensor.EmptyOp([10, 10], IntegerType.get_signless(5)).result
         # CHECK: tensor<10x10xi5>
@@ -526,7 +531,6 @@ def testCustomTypeTypeCaster():
 @run
 def testInferTypeOpInterface():
     with Context() as ctx, Location.unknown(ctx):
-        test.register_python_test_dialect(ctx)
         module = Module.create()
         with InsertionPoint(module.body):
             i64 = IntegerType.get_signless(64)

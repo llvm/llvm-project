@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_MEMCPY_H
-#define LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_MEMCPY_H
+#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_MEMCPY_H
+#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_MEMCPY_H
 
 #include "src/__support/macros/config.h" // LIBC_INLINE
 #include "src/string/memory_utils/op_builtin.h"
@@ -14,7 +14,7 @@
 
 #include <stddef.h> // size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_aarch64(Ptr __restrict dst, CPtr __restrict src, size_t count) {
@@ -43,6 +43,6 @@ inline_memcpy_aarch64(Ptr __restrict dst, CPtr __restrict src, size_t count) {
   return builtin::Memcpy<64>::loop_and_tail(dst, src, count);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_MEMCPY_H
+#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_MEMCPY_H

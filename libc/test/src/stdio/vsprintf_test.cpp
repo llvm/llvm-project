@@ -17,7 +17,7 @@
 int call_vsprintf(char *__restrict buffer, const char *__restrict format, ...) {
   va_list vlist;
   va_start(vlist, format);
-  int ret = __llvm_libc::vsprintf(buffer, format, vlist);
+  int ret = LIBC_NAMESPACE::vsprintf(buffer, format, vlist);
   va_end(vlist);
   return ret;
 }

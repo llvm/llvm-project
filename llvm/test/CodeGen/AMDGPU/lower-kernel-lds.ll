@@ -62,4 +62,4 @@ define amdgpu_ps void @k2() {
   ret void
 }
 
-; CHECK: !0 = !{i64 0, i64 1}
+; CHECK: !0 = !{i32 0, i32 1}

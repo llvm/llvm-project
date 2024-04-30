@@ -1,4 +1,4 @@
-; RUN: opt -codegenprepare -mtriple=arm7-unknown-unknown -S < %s | FileCheck %s
+; RUN: opt -passes='require<profile-summary>,function(codegenprepare)' -mtriple=arm7-unknown-unknown -S < %s | FileCheck %s
 
 declare void @llvm.memcpy.p0.p0.i32(ptr, ptr, i32, i1) nounwind
 declare void @llvm.memmove.p0.p0.i32(ptr, ptr, i32, i1) nounwind

@@ -11,11 +11,11 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 [[noreturn]] void __assert_fail(const char *assertion, const char *file,
                                 unsigned line, const char *function);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_ASSERT___ASSERT_FAIL_H

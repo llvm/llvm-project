@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STRING_STPCPY_H
 #define LLVM_LIBC_SRC_STRING_STPCPY_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 char *stpcpy(char *__restrict dest, const char *__restrict src);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_STPCPY_H

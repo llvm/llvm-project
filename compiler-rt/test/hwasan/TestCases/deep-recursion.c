@@ -17,7 +17,10 @@
 // Stack histories are currently not recorded on x86.
 // XFAIL: target=x86_64{{.*}}
 
+#include <assert.h>
+#include <sanitizer/hwasan_interface.h>
 #include <stdlib.h>
+
 // At least -O1 is needed for this function to not have a stack frame on
 // AArch64.
 void USE(void *x) { // pretend_to_do_something(void *x)
@@ -26,7 +29,24 @@ void USE(void *x) { // pretend_to_do_something(void *x)
 
 volatile int four = 4;
 
-__attribute__((noinline)) void OOB() { int x[4]; x[four] = 0; USE(&x[0]); }
+__attribute__((noinline)) void OOB() {
+  int x[4];
+  int y[4];
+
+  // Tags for stack-allocated variables can occasionally be zero, resulting in
+  // a false negative for this test. The tag allocation algorithm is not easy
+  // to fix, hence we work around it: if the tag is zero, we use the
+  // neighboring variable instead, which must have a different (hence non-zero)
+  // tag.
+  if (__hwasan_tag_pointer(x, 0) == x) {
+    assert(__hwasan_tag_pointer(y, 0) != y);
+    y[four] = 0;
+  } else {
+    x[four] = 0;
+  }
+  USE(&x[0]);
+  USE(&y[0]);
+}
 __attribute__((noinline)) void FUNC1() { int x; USE(&x); OOB(); }
 __attribute__((noinline)) void FUNC2() { int x; USE(&x); FUNC1(); }
 __attribute__((noinline)) void FUNC3() { int x; USE(&x); FUNC2(); }

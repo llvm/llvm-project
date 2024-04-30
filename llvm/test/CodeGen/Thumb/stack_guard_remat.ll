@@ -1,4 +1,6 @@
-; RUN: llc < %s -mtriple=thumb-apple-darwin -relocation-model=pic -no-integrated-as | FileCheck %s -check-prefix=PIC
+; RUN: cat %s > %t.pic.ll
+; RUN: echo -e '!llvm.module.flags = !{!0}\n!0 = !{i32 7, !"PIC Level", i32 2}' >> %t.pic.ll
+; RUN: llc < %t.pic.ll -mtriple=thumb-apple-darwin -relocation-model=pic -no-integrated-as | FileCheck %s -check-prefix=PIC
 ; RUN: llc < %s -mtriple=thumb-apple-darwin -relocation-model=static -no-integrated-as | FileCheck %s -check-prefix=NO-PIC  -check-prefix=STATIC
 ; RUN: llc < %s -mtriple=thumb-apple-darwin -relocation-model=dynamic-no-pic -no-integrated-as | FileCheck %s  -check-prefix=NO-PIC -check-prefix=DYNAMIC-NO-PIC
 
@@ -19,7 +21,7 @@
 ;NO-PIC:                add [[SAVED_GUARD:r[0-9]+]], sp, #904
 ;NO-PIC-NEXT:           ldr [[SAVED_GUARD]], [[[SAVED_GUARD]], #124]
 ;NO-PIC-NEXT:           ldr [[ORIGINAL_GUARD:r[0-9]+]], [[ORIGINAL_GUARD_LABEL:LCPI[0-9_]+]]
-;NO-PIC-NOT: LPC
+;DYNAMIC-NO-PIC:        add [[ORIGINAL_GUARD]], pc
 ;NO-PIC-NEXT:           ldr [[ORIGINAL_GUARD]], [[[ORIGINAL_GUARD]]]
 ;DYNAMIC-NO-PIC-NEXT:   ldr [[ORIGINAL_GUARD]], [[[ORIGINAL_GUARD]]]
 ;NO-PIC-NEXT:           cmp [[ORIGINAL_GUARD]], [[SAVED_GUARD]]
@@ -49,6 +51,3 @@ declare void @foo3(ptr)
 declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 attributes #0 = { nounwind ssp "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-
-!llvm.module.flags = !{!0}
-!0 = !{i32 7, !"PIC Level", i32 2}

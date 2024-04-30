@@ -35,7 +35,7 @@
 #include "sanitizer_common.h"
 #include "sanitizer_interface_internal.h"
 #include "sanitizer_internal_defs.h"
-#include "sanitizer_symbolizer_fuchsia.h"
+#  include "sanitizer_symbolizer_markup_constants.h"
 
 using namespace __sanitizer;
 

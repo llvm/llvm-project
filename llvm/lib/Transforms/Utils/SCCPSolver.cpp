@@ -107,9 +107,7 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
 static bool refineInstruction(SCCPSolver &Solver,
                               const SmallPtrSetImpl<Value *> &InsertedValues,
                               Instruction &Inst) {
-  if (!isa<OverflowingBinaryOperator>(Inst))
-    return false;
-
+  bool Changed = false;
   auto GetRange = [&Solver, &InsertedValues](Value *Op) {
     if (auto *Const = dyn_cast<ConstantInt>(Op))
       return ConstantRange(Const->getValue());
@@ -120,24 +118,54 @@ static bool refineInstruction(SCCPSolver &Solver,
     return getConstantRange(Solver.getLatticeValueFor(Op), Op->getType(),
                             /*UndefAllowed=*/false);
   };
-  auto RangeA = GetRange(Inst.getOperand(0));
-  auto RangeB = GetRange(Inst.getOperand(1));
-  bool Changed = false;
-  if (!Inst.hasNoUnsignedWrap()) {
-    auto NUWRange = ConstantRange::makeGuaranteedNoWrapRegion(
-        Instruction::BinaryOps(Inst.getOpcode()), RangeB,
-        OverflowingBinaryOperator::NoUnsignedWrap);
-    if (NUWRange.contains(RangeA)) {
-      Inst.setHasNoUnsignedWrap();
+
+  if (isa<OverflowingBinaryOperator>(Inst)) {
+    if (Inst.hasNoSignedWrap() && Inst.hasNoUnsignedWrap())
+      return false;
+
+    auto RangeA = GetRange(Inst.getOperand(0));
+    auto RangeB = GetRange(Inst.getOperand(1));
+    if (!Inst.hasNoUnsignedWrap()) {
+      auto NUWRange = ConstantRange::makeGuaranteedNoWrapRegion(
+          Instruction::BinaryOps(Inst.getOpcode()), RangeB,
+          OverflowingBinaryOperator::NoUnsignedWrap);
+      if (NUWRange.contains(RangeA)) {
+        Inst.setHasNoUnsignedWrap();
+        Changed = true;
+      }
+    }
+    if (!Inst.hasNoSignedWrap()) {
+      auto NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(
+          Instruction::BinaryOps(Inst.getOpcode()), RangeB,
+          OverflowingBinaryOperator::NoSignedWrap);
+      if (NSWRange.contains(RangeA)) {
+        Inst.setHasNoSignedWrap();
+        Changed = true;
+      }
+    }
+  } else if (isa<ZExtInst>(Inst) && !Inst.hasNonNeg()) {
+    auto Range = GetRange(Inst.getOperand(0));
+    if (Range.isAllNonNegative()) {
+      Inst.setNonNeg();
       Changed = true;
     }
-  }
-  if (!Inst.hasNoSignedWrap()) {
-    auto NSWRange = ConstantRange::makeGuaranteedNoWrapRegion(
-        Instruction::BinaryOps(Inst.getOpcode()), RangeB, OverflowingBinaryOperator::NoSignedWrap);
-    if (NSWRange.contains(RangeA)) {
-      Inst.setHasNoSignedWrap();
-      Changed = true;
+  } else if (TruncInst *TI = dyn_cast<TruncInst>(&Inst)) {
+    if (TI->hasNoSignedWrap() && TI->hasNoUnsignedWrap())
+      return false;
+
+    auto Range = GetRange(Inst.getOperand(0));
+    uint64_t DestWidth = TI->getDestTy()->getScalarSizeInBits();
+    if (!TI->hasNoUnsignedWrap()) {
+      if (Range.getActiveBits() <= DestWidth) {
+        TI->setHasNoUnsignedWrap(true);
+        Changed = true;
+      }
+    }
+    if (!TI->hasNoSignedWrap()) {
+      if (Range.getMinSignedBits() <= DestWidth) {
+        TI->setHasNoSignedWrap(true);
+        Changed = true;
+      }
     }
   }
 
@@ -170,7 +198,8 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     Value *Op0 = Inst.getOperand(0);
     if (InsertedValues.count(Op0) || !isNonNegative(Op0))
       return false;
-    NewInst = new ZExtInst(Op0, Inst.getType(), "", &Inst);
+    NewInst = new ZExtInst(Op0, Inst.getType(), "", Inst.getIterator());
+    NewInst->setNonNeg();
     break;
   }
   case Instruction::AShr: {
@@ -178,7 +207,8 @@ static bool replaceSignedInst(SCCPSolver &Solver,
     Value *Op0 = Inst.getOperand(0);
     if (InsertedValues.count(Op0) || !isNonNegative(Op0))
       return false;
-    NewInst = BinaryOperator::CreateLShr(Op0, Inst.getOperand(1), "", &Inst);
+    NewInst = BinaryOperator::CreateLShr(Op0, Inst.getOperand(1), "", Inst.getIterator());
+    NewInst->setIsExact(Inst.isExact());
     break;
   }
   case Instruction::SDiv:
@@ -190,7 +220,9 @@ static bool replaceSignedInst(SCCPSolver &Solver,
       return false;
     auto NewOpcode = Inst.getOpcode() == Instruction::SDiv ? Instruction::UDiv
                                                            : Instruction::URem;
-    NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", &Inst);
+    NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", Inst.getIterator());
+    if (Inst.getOpcode() == Instruction::SDiv)
+      NewInst->setIsExact(Inst.isExact());
     break;
   }
   default:
@@ -299,6 +331,7 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
         new UnreachableInst(DefaultDest->getContext(), NewUnreachableBB);
       }
 
+      DefaultDest->removePredecessor(BB);
       SI->setDefaultDest(NewUnreachableBB);
       Updates.push_back({DominatorTree::Delete, BB, DefaultDest});
       Updates.push_back({DominatorTree::Insert, BB, NewUnreachableBB});
@@ -415,6 +448,13 @@ private:
     assert(!V->getType()->isStructTy() && "structs should use mergeInValue");
     return markConstant(ValueState[V], V, C);
   }
+
+  /// markConstantRange - Mark the object as constant range with \p CR. If the
+  /// object is not a constant range with the range \p CR, add it to the
+  /// instruction work list so that the users of the instruction are updated
+  /// later.
+  bool markConstantRange(ValueLatticeElement &IV, Value *V,
+                         const ConstantRange &CR);
 
   // markOverdefined - Make a value be marked as "overdefined". If the
   // value is not already overdefined, add it to the overdefined instruction
@@ -776,6 +816,17 @@ public:
       markOverdefined(ValueState[V], V);
   }
 
+  void trackValueOfArgument(Argument *A) {
+    if (A->getType()->isIntegerTy()) {
+      if (std::optional<ConstantRange> Range = A->getRange()) {
+        markConstantRange(ValueState[A], A, *Range);
+        return;
+      }
+    }
+    // Assume nothing about the incoming arguments without range.
+    markOverdefined(A);
+  }
+
   bool isStructLatticeConstant(Function *F, StructType *STy);
 
   Constant *getConstant(const ValueLatticeElement &LV, Type *Ty) const;
@@ -857,6 +908,15 @@ bool SCCPInstVisitor::markConstant(ValueLatticeElement &IV, Value *V,
   if (!IV.markConstant(C, MayIncludeUndef))
     return false;
   LLVM_DEBUG(dbgs() << "markConstant: " << *C << ": " << *V << '\n');
+  pushToWorkList(IV, V);
+  return true;
+}
+
+bool SCCPInstVisitor::markConstantRange(ValueLatticeElement &IV, Value *V,
+                                        const ConstantRange &CR) {
+  if (!IV.markConstantRange(CR))
+    return false;
+  LLVM_DEBUG(dbgs() << "markConstantRange: " << CR << ": " << *V << '\n');
   pushToWorkList(IV, V);
   return true;
 }
@@ -1052,14 +1112,17 @@ void SCCPInstVisitor::getFeasibleSuccessors(Instruction &TI,
     // is ready.
     if (SCValue.isConstantRange(/*UndefAllowed=*/false)) {
       const ConstantRange &Range = SCValue.getConstantRange();
+      unsigned ReachableCaseCount = 0;
       for (const auto &Case : SI->cases()) {
         const APInt &CaseValue = Case.getCaseValue()->getValue();
-        if (Range.contains(CaseValue))
+        if (Range.contains(CaseValue)) {
           Succs[Case.getSuccessorIndex()] = true;
+          ++ReachableCaseCount;
+        }
       }
 
-      // TODO: Determine whether default case is reachable.
-      Succs[SI->case_default()->getSuccessorIndex()] = true;
+      Succs[SI->case_default()->getSuccessorIndex()] =
+          Range.isSizeLargerThan(ReachableCaseCount);
       return;
     }
 
@@ -1225,10 +1288,12 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
 
   if (Constant *OpC = getConstant(OpSt, I.getOperand(0)->getType())) {
     // Fold the constant as we build.
-    Constant *C = ConstantFoldCastOperand(I.getOpcode(), OpC, I.getType(), DL);
-    markConstant(&I, C);
-  } else if (I.getDestTy()->isIntegerTy() &&
-             I.getSrcTy()->isIntOrIntVectorTy()) {
+    if (Constant *C =
+            ConstantFoldCastOperand(I.getOpcode(), OpC, I.getType(), DL))
+      return (void)markConstant(&I, C);
+  }
+
+  if (I.getDestTy()->isIntegerTy() && I.getSrcTy()->isIntOrIntVectorTy()) {
     auto &LV = getValueState(&I);
     ConstantRange OpRange = getConstantRange(OpSt, I.getSrcTy());
 
@@ -1469,7 +1534,13 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
   // Try to simplify to a constant range.
   ConstantRange A = getConstantRange(V1State, I.getType());
   ConstantRange B = getConstantRange(V2State, I.getType());
-  ConstantRange R = A.binaryOp(cast<BinaryOperator>(&I)->getOpcode(), B);
+
+  auto *BO = cast<BinaryOperator>(&I);
+  ConstantRange R = ConstantRange::getEmpty(I.getType()->getScalarSizeInBits());
+  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(BO))
+    R = A.overflowingBinaryOp(BO->getOpcode(), B, OBO->getNoWrapKind());
+  else
+    R = A.binaryOp(BO->getOpcode(), B);
   mergeInValue(&I, ValueLatticeElement::getRange(R));
 
   // TODO: Currently we do not exploit special values that produce something
@@ -1558,10 +1629,15 @@ void SCCPInstVisitor::visitStoreInst(StoreInst &SI) {
 }
 
 static ValueLatticeElement getValueFromMetadata(const Instruction *I) {
-  if (MDNode *Ranges = I->getMetadata(LLVMContext::MD_range))
-    if (I->getType()->isIntegerTy())
+  if (I->getType()->isIntegerTy()) {
+    if (MDNode *Ranges = I->getMetadata(LLVMContext::MD_range))
       return ValueLatticeElement::getRange(
           getConstantRangeFromMetadata(*Ranges));
+
+    if (const auto *CB = dyn_cast<CallBase>(I))
+      if (std::optional<ConstantRange> Range = CB->getRange())
+        return ValueLatticeElement::getRange(*Range);
+  }
   if (I->hasMetadata(LLVMContext::MD_nonnull))
     return ValueLatticeElement::getNot(
         ConstantPointerNull::get(cast<PointerType>(I->getType())));
@@ -2066,6 +2142,10 @@ const SmallPtrSet<Function *, 16> SCCPSolver::getMRVFunctionsTracked() {
 }
 
 void SCCPSolver::markOverdefined(Value *V) { Visitor->markOverdefined(V); }
+
+void SCCPSolver::trackValueOfArgument(Argument *V) {
+  Visitor->trackValueOfArgument(V);
+}
 
 bool SCCPSolver::isStructLatticeConstant(Function *F, StructType *STy) {
   return Visitor->isStructLatticeConstant(F, STy);

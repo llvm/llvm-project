@@ -10,16 +10,19 @@ program openacc_init_validity
   integer :: i, j
   integer, parameter :: N = 256
   logical :: ifCondition = .TRUE.
+  integer :: ifInt
+  real :: ifReal
   real(8), dimension(N) :: a
 
   !$acc init
   !$acc init if(.TRUE.)
   !$acc init if(ifCondition)
+  !$acc init if(ifInt)
   !$acc init device_num(1)
   !$acc init device_num(i)
-  !$acc init device_type(i)
-  !$acc init device_type(2, i, j)
-  !$acc init device_num(i) device_type(i, j) if(ifCondition)
+  !$acc init device_type(default)
+  !$acc init device_type(nvidia, radeon)
+  !$acc init device_num(i) device_type(host, multicore) if(ifCondition)
 
   !$acc parallel
   !ERROR: Directive INIT may not be called within a compute region
@@ -91,6 +94,9 @@ program openacc_init_validity
   !$acc init device_num(1) device_num(i)
 
   !ERROR: At most one DEVICE_TYPE clause can appear on the INIT directive
-  !$acc init device_type(2) device_type(i, j)
+  !$acc init device_type(nvidia) device_type(default, *)
+
+  !ERROR: Must have LOGICAL or INTEGER type
+  !$acc init if(ifReal)
 
 end program openacc_init_validity

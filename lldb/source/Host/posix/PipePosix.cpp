@@ -31,8 +31,8 @@ enum PIPES { READ, WRITE }; // Constants 0 and 1 for READ and WRITE
 
 // pipe2 is supported by a limited set of platforms
 // TODO: Add more platforms that support pipe2.
-#if defined(__linux__) || (defined(__FreeBSD__) && __FreeBSD__ >= 10) ||       \
-    defined(__NetBSD__)
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) ||       \
+    defined(__OpenBSD__)
 #define PIPE2_SUPPORTED 1
 #else
 #define PIPE2_SUPPORTED 0
@@ -108,7 +108,7 @@ Status PipePosix::CreateNew(bool child_processes_inherit) {
 }
 
 Status PipePosix::CreateNew(llvm::StringRef name, bool child_process_inherit) {
-  std::scoped_lock<std::mutex, std::mutex> (m_read_mutex, m_write_mutex);
+  std::scoped_lock<std::mutex, std::mutex> guard(m_read_mutex, m_write_mutex);
   if (CanReadUnlocked() || CanWriteUnlocked())
     return Status("Pipe is already opened");
 
@@ -146,7 +146,7 @@ Status PipePosix::CreateWithUniqueName(llvm::StringRef prefix,
 
 Status PipePosix::OpenAsReader(llvm::StringRef name,
                                bool child_process_inherit) {
-  std::scoped_lock<std::mutex, std::mutex> (m_read_mutex, m_write_mutex);
+  std::scoped_lock<std::mutex, std::mutex> guard(m_read_mutex, m_write_mutex);
 
   if (CanReadUnlocked() || CanWriteUnlocked())
     return Status("Pipe is already opened");

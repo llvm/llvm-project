@@ -32,7 +32,6 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -52,7 +51,6 @@ char &llvm::SpillPlacementID = SpillPlacement::ID;
 INITIALIZE_PASS_BEGIN(SpillPlacement, DEBUG_TYPE,
                       "Spill Code Placement Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(EdgeBundles)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfo)
 INITIALIZE_PASS_END(SpillPlacement, DEBUG_TYPE,
                     "Spill Code Placement Analysis", true, true)
 
@@ -60,7 +58,6 @@ void SpillPlacement::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineBlockFrequencyInfo>();
   AU.addRequiredTransitive<EdgeBundles>();
-  AU.addRequiredTransitive<MachineLoopInfo>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -109,8 +106,10 @@ struct SpillPlacement::Node {
 
   /// clear - Reset per-query data, but preserve frequencies that only depend on
   /// the CFG.
-  void clear(const BlockFrequency &Threshold) {
-    BiasN = BiasP = Value = 0;
+  void clear(BlockFrequency Threshold) {
+    BiasN = BlockFrequency(0);
+    BiasP = BlockFrequency(0);
+    Value = 0;
     SumLinkWeights = Threshold;
     Links.clear();
   }
@@ -142,14 +141,14 @@ struct SpillPlacement::Node {
       BiasN += freq;
       break;
     case MustSpill:
-      BiasN = BlockFrequency::getMaxFrequency();
+      BiasN = BlockFrequency::max();
       break;
     }
   }
 
   /// update - Recompute Value from Bias and Links. Return true when node
   /// preference changes.
-  bool update(const Node nodes[], const BlockFrequency &Threshold) {
+  bool update(const Node nodes[], BlockFrequency Threshold) {
     // Compute the weighted sum of inputs.
     BlockFrequency SumN = BiasN;
     BlockFrequency SumP = BiasP;
@@ -193,7 +192,6 @@ struct SpillPlacement::Node {
 bool SpillPlacement::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
   bundles = &getAnalysis<EdgeBundles>();
-  loops = &getAnalysis<MachineLoopInfo>();
 
   assert(!nodes && "Leaking node array");
   nodes = new Node[bundles->getNumBundles()];
@@ -237,8 +235,10 @@ void SpillPlacement::activate(unsigned n) {
   // limiting the number of blocks visited and the number of links in the
   // Hopfield network.
   if (bundles->getBlocks(n).size() > 100) {
-    nodes[n].BiasP = 0;
-    nodes[n].BiasN = (MBFI->getEntryFreq() / 16);
+    nodes[n].BiasP = BlockFrequency(0);
+    BlockFrequency BiasN = MBFI->getEntryFreq();
+    BiasN >>= 4;
+    nodes[n].BiasN = BiasN;
   }
 }
 
@@ -247,12 +247,12 @@ void SpillPlacement::activate(unsigned n) {
 /// Set the threshold relative to \c Entry.  Since the threshold is used as a
 /// bound on the open interval (-Threshold;Threshold), 1 is the minimum
 /// threshold.
-void SpillPlacement::setThreshold(const BlockFrequency &Entry) {
+void SpillPlacement::setThreshold(BlockFrequency Entry) {
   // Apparently 2 is a good threshold when Entry==2^14, but we need to scale
   // it.  Divide by 2^13, rounding as appropriate.
   uint64_t Freq = Entry.getFrequency();
   uint64_t Scaled = (Freq >> 13) + bool(Freq & (1 << 12));
-  Threshold = std::max(UINT64_C(1), Scaled);
+  Threshold = BlockFrequency(std::max(UINT64_C(1), Scaled));
 }
 
 /// addConstraints - Compute node biases and weights from a set of constraints.

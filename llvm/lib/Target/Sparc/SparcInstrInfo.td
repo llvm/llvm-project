@@ -222,6 +222,7 @@ def calltarget : Operand<i32> {
 }
 
 def simm13Op : Operand<iPTR> {
+  let OperandType = "OPERAND_IMMEDIATE";
   let DecoderMethod = "DecodeSIMM13";
   let EncoderMethod = "getSImm13OpValue";
 }
@@ -692,38 +693,38 @@ let DecoderNamespace = "SparcV8", Predicates = [HasNoV9] in {
 }
 
 let rd = 0 in {
-  let Defs = [CPSR] in {
-    def STCSRrr : F3_1<3, 0b110101, (outs (MEMrr $rs1, $rs2):$addr), (ins),
+  let mayStore = 1, Uses = [CPSR] in {
+    def STCSRrr : F3_1<3, 0b110101, (outs), (ins (MEMrr $rs1, $rs2):$addr),
                        "st %csr, [$addr]", [], IIC_st>;
-    def STCSRri : F3_2<3, 0b110101, (outs (MEMri $rs1, $simm13):$addr), (ins),
+    def STCSRri : F3_2<3, 0b110101, (outs), (ins (MEMri $rs1, $simm13):$addr),
                        "st %csr, [$addr]", [], IIC_st>;
   }
-  let Defs = [CPQ] in {
-    def STDCQrr : F3_1<3, 0b110110, (outs (MEMrr $rs1, $rs2):$addr), (ins),
+  let mayStore = 1, Uses = [CPQ] in {
+    def STDCQrr : F3_1<3, 0b110110, (outs), (ins (MEMrr $rs1, $rs2):$addr),
                        "std %cq, [$addr]", [], IIC_std>;
-    def STDCQri : F3_2<3, 0b110110, (outs (MEMri $rs1, $simm13):$addr), (ins),
+    def STDCQri : F3_2<3, 0b110110, (outs), (ins (MEMri $rs1, $simm13):$addr),
                        "std %cq, [$addr]", [], IIC_std>;
   }
 }
 
 let rd = 0 in {
-  let Defs = [FSR] in {
-    def STFSRrr : F3_1<3, 0b100101, (outs (MEMrr $rs1, $rs2):$addr), (ins),
+  let mayStore = 1, Uses = [FSR] in {
+    def STFSRrr : F3_1<3, 0b100101, (outs), (ins (MEMrr $rs1, $rs2):$addr),
 		   "st %fsr, [$addr]", [], IIC_st>;
-    def STFSRri : F3_2<3, 0b100101, (outs (MEMri $rs1, $simm13):$addr), (ins),
+    def STFSRri : F3_2<3, 0b100101, (outs), (ins (MEMri $rs1, $simm13):$addr),
 		   "st %fsr, [$addr]", [], IIC_st>;
   }
-  let Defs = [FQ] in {
-    def STDFQrr : F3_1<3, 0b100110, (outs (MEMrr $rs1, $rs2):$addr), (ins),
+  let mayStore = 1, Defs = [FQ] in {
+    def STDFQrr : F3_1<3, 0b100110, (outs), (ins (MEMrr $rs1, $rs2):$addr),
 		   "std %fq, [$addr]", [], IIC_std>;
-    def STDFQri : F3_2<3, 0b100110, (outs (MEMri $rs1, $simm13):$addr), (ins),
+    def STDFQri : F3_2<3, 0b100110, (outs), (ins (MEMri $rs1, $simm13):$addr),
 		   "std %fq, [$addr]", [], IIC_std>;
   }
 }
-let rd = 1, Defs = [FSR] in {
-  def STXFSRrr : F3_1<3, 0b100101, (outs (MEMrr $rs1, $rs2):$addr), (ins),
+let rd = 1, mayStore = 1, Uses = [FSR] in {
+  def STXFSRrr : F3_1<3, 0b100101, (outs), (ins (MEMrr $rs1, $rs2):$addr),
 		 "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
-  def STXFSRri : F3_2<3, 0b100101, (outs (MEMri $rs1, $simm13):$addr), (ins),
+  def STXFSRri : F3_2<3, 0b100101, (outs), (ins (MEMri $rs1, $simm13):$addr),
 		 "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
 }
 
@@ -829,23 +830,14 @@ defm SUB    : F3_12  <"sub"  , 0b000100, sub, IntRegs, i32, simm13Op>;
 let Uses = [ICC], Defs = [ICC] in
   defm SUBE   : F3_12  <"subxcc" , 0b011100, sube, IntRegs, i32, simm13Op>;
 
-let Defs = [ICC] in
+let Defs = [ICC], hasPostISelHook = true in
   defm SUBCC  : F3_12  <"subcc", 0b010100, subc, IntRegs, i32, simm13Op>;
 
 let Uses = [ICC] in
   defm SUBC   : F3_12np <"subx", 0b001100>;
 
-// cmp (from Section A.3) is a specialized alias for subcc
-let Defs = [ICC], rd = 0 in {
-  def CMPrr   : F3_1<2, 0b010100,
-                     (outs), (ins IntRegs:$rs1, IntRegs:$rs2),
-                     "cmp $rs1, $rs2",
-                     [(SPcmpicc i32:$rs1, i32:$rs2)]>;
-  def CMPri   : F3_2<2, 0b010100,
-                     (outs), (ins IntRegs:$rs1, simm13Op:$simm13),
-                     "cmp $rs1, $simm13",
-                     [(SPcmpicc i32:$rs1, (i32 simm13:$simm13))]>;
-}
+def : Pat<(SPcmpicc i32:$lhs, i32:$rhs), (SUBCCrr $lhs, $rhs)>;
+def : Pat<(SPcmpicc i32:$lhs, (i32 simm13:$rhs)), (SUBCCri $lhs, imm:$rhs)>;
 
 // Section B.18 - Multiply Instructions, p. 113
 let Defs = [Y] in {

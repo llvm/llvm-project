@@ -13,7 +13,7 @@
 
 #include <termios.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, cfsetospeed, (struct termios * t, speed_t speed)) {
   constexpr speed_t NOT_SPEED_MASK = ~speed_t(CBAUD);
@@ -28,4 +28,4 @@ LLVM_LIBC_FUNCTION(int, cfsetospeed, (struct termios * t, speed_t speed)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

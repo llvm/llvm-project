@@ -58,13 +58,14 @@ define void @fma_v32f16(ptr %a, ptr %b, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
-; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
-; VBITS_GE_256-NEXT:    ld1h { z3.h }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    ld1h { z4.h }, p0/z, [x2, x8, lsl #1]
+; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x1, x8, lsl #1]
+; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x2, x8, lsl #1]
+; VBITS_GE_256-NEXT:    ld1h { z3.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    ld1h { z4.h }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    ld1h { z5.h }, p0/z, [x2]
-; VBITS_GE_256-NEXT:    fmad z0.h, p0/m, z2.h, z4.h
-; VBITS_GE_256-NEXT:    fmad z1.h, p0/m, z3.h, z5.h
+; VBITS_GE_256-NEXT:    fmad z0.h, p0/m, z1.h, z2.h
+; VBITS_GE_256-NEXT:    movprfx z1, z5
+; VBITS_GE_256-NEXT:    fmla z1.h, p0/m, z3.h, z4.h
 ; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    st1h { z1.h }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
@@ -174,13 +175,14 @@ define void @fma_v16f32(ptr %a, ptr %b, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
-; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
-; VBITS_GE_256-NEXT:    ld1w { z3.s }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    ld1w { z4.s }, p0/z, [x2, x8, lsl #2]
+; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x1, x8, lsl #2]
+; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x2, x8, lsl #2]
+; VBITS_GE_256-NEXT:    ld1w { z3.s }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    ld1w { z4.s }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    ld1w { z5.s }, p0/z, [x2]
-; VBITS_GE_256-NEXT:    fmad z0.s, p0/m, z2.s, z4.s
-; VBITS_GE_256-NEXT:    fmad z1.s, p0/m, z3.s, z5.s
+; VBITS_GE_256-NEXT:    fmad z0.s, p0/m, z1.s, z2.s
+; VBITS_GE_256-NEXT:    movprfx z1, z5
+; VBITS_GE_256-NEXT:    fmla z1.s, p0/m, z3.s, z4.s
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    st1w { z1.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
@@ -289,13 +291,14 @@ define void @fma_v8f64(ptr %a, ptr %b, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]
-; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    ld1d { z4.d }, p0/z, [x2, x8, lsl #3]
+; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1, x8, lsl #3]
+; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x2, x8, lsl #3]
+; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    ld1d { z4.d }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    ld1d { z5.d }, p0/z, [x2]
-; VBITS_GE_256-NEXT:    fmad z0.d, p0/m, z2.d, z4.d
-; VBITS_GE_256-NEXT:    fmad z1.d, p0/m, z3.d, z5.d
+; VBITS_GE_256-NEXT:    fmad z0.d, p0/m, z1.d, z2.d
+; VBITS_GE_256-NEXT:    movprfx z1, z5
+; VBITS_GE_256-NEXT:    fmla z1.d, p0/m, z3.d, z4.d
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret

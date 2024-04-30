@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn < %s -verify-machineinstrs | FileCheck -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga < %s -verify-machineinstrs | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn < %s -verify-machineinstrs | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s -verify-machineinstrs | FileCheck -check-prefix=SI %s
 
 ; If this occurs it is likely due to reordering and the restore was
 ; originally supposed to happen before SI_END_CF.

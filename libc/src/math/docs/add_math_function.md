@@ -30,7 +30,7 @@ added to the following locations:
 ```
   libc/src/math/CMakeLists.txt
 ```
-- Add function declaration (under `__llvm_libc` namespace) to:
+- Add function declaration (under `LIBC_NAMESPACE` namespace) to:
 ```
   libc/src/math/<func>.h
 ```
@@ -56,7 +56,7 @@ located at:
 ```
 - These are preferred to be included as header-only.
 - To manipulate bits of floating point numbers, use the template class
-`__llvm_libc::fputil::FPBits<>` in the header file:
+`LIBC_NAMESPACE::fputil::FPBits<>` in the header file:
 ```
   libc/src/__support/FPUtils/FPBits.h
 ```
@@ -71,7 +71,7 @@ compare your outputs with the corresponding MPFR function.  In
 order for your new function to be supported by these two macros,
 the following files will need to be updated:
 
-- Add the function enum to `__llvm_libc::testing::mpfr::Operation` in the
+- Add the function enum to `LIBC_NAMESPACE::testing::mpfr::Operation` in the
 header file:
 ```
   libc/utils/MPFRWrapper/MPFRUtils.h
@@ -129,11 +129,11 @@ implementation (which is very often glibc).
 
 - Add a performance test to:
 ```
-  libc/test/src/math/differential_testing/<func>_perf.cpp
+  libc/test/src/math/performance_testing/<func>_perf.cpp
 ```
 - Add the corresponding entry point to:
 ```
-  libc/test/src/math/differential_testing/CMakeLists.txt
+  libc/test/src/math/performance_testing/CMakeLists.txt
 ```
 
 ## Build and Run
@@ -177,7 +177,7 @@ implementation (which is very often glibc).
 
 - Build and Run a specific unit test:
 ```
-  $ ninja libc.test.src.math.<func>_test
+  $ ninja libc.test.src.math.<func>_test.__unit__
   $ projects/libc/test/src/math/libc.test.src.math.<func>_test
 ```
 
@@ -189,8 +189,8 @@ implementation (which is very often glibc).
 
 - Build and Run performance test:
 ```
-  $ ninja libc.test.src.math.differential_testing.<func>_perf
-  $ projects/libc/test/src/math/differential_testing/libc.test.src.math.differential_testing.<func>_perf
+  $ ninja libc.test.src.math.performance_testing.<func>_perf
+  $ projects/libc/test/src/math/performance_testing/libc.test.src.math.performance_testing.<func>_perf
   $ cat <func>_perf.log
 ```
 

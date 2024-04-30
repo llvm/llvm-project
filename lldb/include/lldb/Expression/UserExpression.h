@@ -56,7 +56,7 @@ public:
   ///     If not eResultTypeAny, the type to use for the expression
   ///     result.
   UserExpression(ExecutionContextScope &exe_scope, llvm::StringRef expr,
-                 llvm::StringRef prefix, lldb::LanguageType language,
+                 llvm::StringRef prefix, SourceLanguage language,
                  ResultType desired_type,
                  const EvaluateExpressionOptions &options);
 
@@ -192,9 +192,17 @@ public:
   /// expression.  Text() should contain the definition of this function.
   const char *FunctionName() override { return "$__lldb_expr"; }
 
+  /// Returns whether the call to Parse on this user expression is cacheable.
+  /// This function exists to provide an escape hatch for supporting languages
+  /// where parsing an expression in the exact same context is unsafe. For
+  /// example, languages where generic functions aren't monomorphized, but
+  /// implement some other mechanism to represent generic values, may be unsafe
+  /// to cache, as the concrete type substitution may be different in every
+  /// expression evaluation.
+  virtual bool IsParseCacheable() { return true; }
   /// Return the language that should be used when parsing.  To use the
   /// default, return eLanguageTypeUnknown.
-  lldb::LanguageType Language() const override { return m_language; }
+  SourceLanguage Language() const override { return m_language; }
 
   /// Return the desired result type of the function, or eResultTypeAny if
   /// indifferent.
@@ -307,19 +315,22 @@ protected:
                            lldb::ProcessSP &process_sp,
                            lldb::StackFrameSP &frame_sp);
 
-  Address m_address;       ///< The address the process is stopped in.
-  std::string m_expr_text; ///< The text of the expression, as typed by the user
-  std::string m_expr_prefix; ///< The text of the translation-level definitions,
-                             ///as provided by the user
-  std::string m_fixed_text; ///< The text of the expression with fix-its applied
-                            ///- this won't be set if the fixed text doesn't
-                            ///parse.
-  lldb::LanguageType m_language; ///< The language to use when parsing
-                                 ///(eLanguageTypeUnknown means use defaults)
-  ResultType m_desired_type; ///< The type to coerce the expression's result to.
-                             ///If eResultTypeAny, inferred from the expression.
-  EvaluateExpressionOptions
-      m_options; ///< Additional options provided by the user.
+  /// The address the process is stopped in.
+  Address m_address;
+  /// The text of the expression, as typed by the user.
+  std::string m_expr_text;
+  /// The text of the translation-level definitions, as provided by the user.
+  std::string m_expr_prefix;
+  /// The text of the expression with fix-its applied this won't be set if the
+  /// fixed text doesn't parse.
+  std::string m_fixed_text;
+  /// The language to use when parsing (unknown means use defaults).
+  SourceLanguage m_language;
+  /// The type to coerce the expression's result to. If eResultTypeAny, inferred
+  /// from the expression.
+  ResultType m_desired_type;
+  /// Additional options provided by the user.
+  EvaluateExpressionOptions m_options;
 };
 
 } // namespace lldb_private

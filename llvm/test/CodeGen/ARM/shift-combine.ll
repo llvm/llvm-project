@@ -1278,3 +1278,115 @@ define <4 x i32> @or_tree_with_mismatching_shifts_vec_i32(<4 x i32> %a, <4 x i32
   %r = or <4 x i32> %or.ab, %or.cd
   ret <4 x i32> %r
 }
+
+define arm_aapcscc i32 @test_shift15_and510(ptr nocapture %p) {
+; CHECK-ARM-LABEL: test_shift15_and510:
+; CHECK-ARM:       @ %bb.0: @ %entry
+; CHECK-ARM-NEXT:    ldrb r0, [r0, #2]
+; CHECK-ARM-NEXT:    lsl r0, r0, #1
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: test_shift15_and510:
+; CHECK-BE:       @ %bb.0: @ %entry
+; CHECK-BE-NEXT:    ldrb r0, [r0, #1]
+; CHECK-BE-NEXT:    lsl r0, r0, #1
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-THUMB-LABEL: test_shift15_and510:
+; CHECK-THUMB:       @ %bb.0: @ %entry
+; CHECK-THUMB-NEXT:    ldrb r0, [r0, #2]
+; CHECK-THUMB-NEXT:    lsls r0, r0, #1
+; CHECK-THUMB-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: test_shift15_and510:
+; CHECK-ALIGN:       @ %bb.0: @ %entry
+; CHECK-ALIGN-NEXT:    ldrb r0, [r0, #2]
+; CHECK-ALIGN-NEXT:    lsls r0, r0, #1
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: test_shift15_and510:
+; CHECK-V6M:       @ %bb.0: @ %entry
+; CHECK-V6M-NEXT:    ldrb r0, [r0, #2]
+; CHECK-V6M-NEXT:    lsls r0, r0, #1
+; CHECK-V6M-NEXT:    bx lr
+entry:
+  %load = load i32, ptr %p, align 4
+  %lshr = lshr i32 %load, 15
+  %and = and i32 %lshr, 510
+  ret i32 %and
+}
+
+define arm_aapcscc i32 @test_shift22_and1020(ptr nocapture %p) {
+; CHECK-ARM-LABEL: test_shift22_and1020:
+; CHECK-ARM:       @ %bb.0: @ %entry
+; CHECK-ARM-NEXT:    ldrb r0, [r0, #3]
+; CHECK-ARM-NEXT:    lsl r0, r0, #2
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: test_shift22_and1020:
+; CHECK-BE:       @ %bb.0: @ %entry
+; CHECK-BE-NEXT:    ldrb r0, [r0]
+; CHECK-BE-NEXT:    lsl r0, r0, #2
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-THUMB-LABEL: test_shift22_and1020:
+; CHECK-THUMB:       @ %bb.0: @ %entry
+; CHECK-THUMB-NEXT:    ldrb r0, [r0, #3]
+; CHECK-THUMB-NEXT:    lsls r0, r0, #2
+; CHECK-THUMB-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: test_shift22_and1020:
+; CHECK-ALIGN:       @ %bb.0: @ %entry
+; CHECK-ALIGN-NEXT:    ldrb r0, [r0, #3]
+; CHECK-ALIGN-NEXT:    lsls r0, r0, #2
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: test_shift22_and1020:
+; CHECK-V6M:       @ %bb.0: @ %entry
+; CHECK-V6M-NEXT:    ldrb r0, [r0, #3]
+; CHECK-V6M-NEXT:    lsls r0, r0, #2
+; CHECK-V6M-NEXT:    bx lr
+entry:
+  %load = load i32, ptr %p, align 4
+  %lshr = lshr i32 %load, 22
+  %and = and i32 %lshr, 1020
+  ret i32 %and
+}
+
+define arm_aapcscc i32 @test_zext_shift5_and2040(ptr nocapture %p) {
+; CHECK-ARM-LABEL: test_zext_shift5_and2040:
+; CHECK-ARM:       @ %bb.0: @ %entry
+; CHECK-ARM-NEXT:    ldrb r0, [r0, #1]
+; CHECK-ARM-NEXT:    lsl r0, r0, #3
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: test_zext_shift5_and2040:
+; CHECK-BE:       @ %bb.0: @ %entry
+; CHECK-BE-NEXT:    ldrb r0, [r0]
+; CHECK-BE-NEXT:    lsl r0, r0, #3
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-THUMB-LABEL: test_zext_shift5_and2040:
+; CHECK-THUMB:       @ %bb.0: @ %entry
+; CHECK-THUMB-NEXT:    ldrb r0, [r0, #1]
+; CHECK-THUMB-NEXT:    lsls r0, r0, #3
+; CHECK-THUMB-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: test_zext_shift5_and2040:
+; CHECK-ALIGN:       @ %bb.0: @ %entry
+; CHECK-ALIGN-NEXT:    ldrb r0, [r0, #1]
+; CHECK-ALIGN-NEXT:    lsls r0, r0, #3
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: test_zext_shift5_and2040:
+; CHECK-V6M:       @ %bb.0: @ %entry
+; CHECK-V6M-NEXT:    ldrb r0, [r0, #1]
+; CHECK-V6M-NEXT:    lsls r0, r0, #3
+; CHECK-V6M-NEXT:    bx lr
+entry:
+  %load = load i16, ptr %p, align 2
+  %zext = zext i16 %load to i32
+  %lshr = lshr i32 %zext, 5
+  %and = and i32 %lshr, 2040
+  ret i32 %and
+}

@@ -23,6 +23,7 @@
 #include "test_macros.h"
 #include "test_allocator.h"
 #include "min_allocator.h"
+#include "asan_testing.h"
 
 template <class S, class SV>
 TEST_CONSTEXPR_CXX20 void test(SV sv, std::size_t pos, std::size_t n) {
@@ -38,6 +39,7 @@ TEST_CONSTEXPR_CXX20 void test(SV sv, std::size_t pos, std::size_t n) {
     assert(T::compare(s2.data(), sv.data() + pos, rlen) == 0);
     assert(s2.get_allocator() == A());
     assert(s2.capacity() >= s2.size());
+    LIBCPP_ASSERT(is_string_asan_correct(s2));
   }
 #ifndef TEST_HAS_NO_EXCEPTIONS
   else if (!TEST_IS_CONSTANT_EVALUATED) {
@@ -77,68 +79,45 @@ TEST_CONSTEXPR_CXX20 void test(SV sv, std::size_t pos, std::size_t n, const type
 #endif
 }
 
+template <class Alloc>
+TEST_CONSTEXPR_CXX20 void test_string(const Alloc& a) {
+  typedef std::basic_string_view<char, std::char_traits<char> > SV;
+  typedef std::basic_string<char, std::char_traits<char>, Alloc> S;
+
+  test<S, SV>(SV(), 0, 0);
+  test<S, SV>(SV(), 0, 1);
+  test<S, SV>(SV(), 1, 0);
+  test<S, SV>(SV(), 1, 1);
+  test<S, SV>(SV(), 1, 2);
+  test<S, SV>(SV("1"), 0, 0);
+  test<S, SV>(SV("1"), 0, 1);
+  test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 0);
+  test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 1);
+  test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 10);
+  test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 100);
+
+  test<S, SV>(SV(), 0, 0, Alloc(a));
+  test<S, SV>(SV(), 0, 1, Alloc(a));
+  test<S, SV>(SV(), 1, 0, Alloc(a));
+  test<S, SV>(SV(), 1, 1, Alloc(a));
+  test<S, SV>(SV(), 1, 2, Alloc(a));
+  test<S, SV>(SV("1"), 0, 0, Alloc(a));
+  test<S, SV>(SV("1"), 0, 1, Alloc(a));
+  test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 0, Alloc(a));
+  test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 1, Alloc(a));
+  test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 10, Alloc(a));
+  test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 100, Alloc(a));
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef test_allocator<char> A;
-    typedef std::basic_string_view<char, std::char_traits<char> > SV;
-    typedef std::basic_string<char, std::char_traits<char>, A> S;
-
-    test<S, SV>(SV(), 0, 0);
-    test<S, SV>(SV(), 0, 1);
-    test<S, SV>(SV(), 1, 0);
-    test<S, SV>(SV(), 1, 1);
-    test<S, SV>(SV(), 1, 2);
-    test<S, SV>(SV("1"), 0, 0);
-    test<S, SV>(SV("1"), 0, 1);
-    test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 0);
-    test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 1);
-    test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 10);
-    test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 100);
-
-    test<S, SV>(SV(), 0, 0, A(4));
-    test<S, SV>(SV(), 0, 1, A(4));
-    test<S, SV>(SV(), 1, 0, A(4));
-    test<S, SV>(SV(), 1, 1, A(4));
-    test<S, SV>(SV(), 1, 2, A(4));
-    test<S, SV>(SV("1"), 0, 0, A(6));
-    test<S, SV>(SV("1"), 0, 1, A(6));
-    test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 0, A(8));
-    test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 1, A(8));
-    test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 10, A(8));
-    test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 100, A(8));
-  }
-
+  test_string(std::allocator<char>());
+  test_string(test_allocator<char>());
+  test_string(test_allocator<char>(8));
 #if TEST_STD_VER >= 11
-  {
-    typedef min_allocator<char> A;
-    typedef std::basic_string_view<char, std::char_traits<char> > SV;
-    typedef std::basic_string<char, std::char_traits<char>, A> S;
-
-    test<S, SV>(SV(), 0, 0);
-    test<S, SV>(SV(), 0, 1);
-    test<S, SV>(SV(), 1, 0);
-    test<S, SV>(SV(), 1, 1);
-    test<S, SV>(SV(), 1, 2);
-    test<S, SV>(SV("1"), 0, 0);
-    test<S, SV>(SV("1"), 0, 1);
-    test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 0);
-    test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 1);
-    test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 10);
-    test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 100);
-
-    test<S, SV>(SV(), 0, 0, A());
-    test<S, SV>(SV(), 0, 1, A());
-    test<S, SV>(SV(), 1, 0, A());
-    test<S, SV>(SV(), 1, 1, A());
-    test<S, SV>(SV(), 1, 2, A());
-    test<S, SV>(SV("1"), 0, 0, A());
-    test<S, SV>(SV("1"), 0, 1, A());
-    test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 0, A());
-    test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 1, A());
-    test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 10, A());
-    test<S, SV>(SV("1234567890123456789012345678901234567890123456789012345678901234567890"), 50, 100, A());
-  }
+  test_string(min_allocator<char>());
+  test_string(safe_allocator<char>());
 #endif
+
   {
     typedef std::string S;
     typedef std::string_view SV;

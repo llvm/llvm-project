@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs < %s | FileCheck %s
 
 ; The branch instruction in LOOP49 has a uniform condition, but PHI instructions
 ; introduced by the structurizecfg pass previously caused a false divergence

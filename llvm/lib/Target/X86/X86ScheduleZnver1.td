@@ -996,8 +996,8 @@ def ZnWriteBROADCAST : SchedWriteRes<[ZnAGU, ZnFPU13]> {
   let Latency = 8;
 }
 // VBROADCASTF128 / VBROADCASTI128.
-def : InstRW<[ZnWriteBROADCAST], (instrs VBROADCASTF128,
-                                         VBROADCASTI128)>;
+def : InstRW<[ZnWriteBROADCAST], (instrs VBROADCASTF128rm,
+                                         VBROADCASTI128rm)>;
 
 // EXTRACTPS.
 // r32,x,i.

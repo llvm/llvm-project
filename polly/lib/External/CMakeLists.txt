@@ -306,6 +306,7 @@ if (POLLY_BUNDLED_ISL)
 
   target_link_libraries(polly-isl-test PRIVATE
     PollyISL
+    LLVMSupport
     )
 
   # ISL requires at least C99 to compile. gcc < 5.0 use -std=gnu89 as default.

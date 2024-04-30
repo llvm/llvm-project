@@ -15,8 +15,8 @@ define i32 @phi3UndefInput(i1 %cond, i8 %arg0, i8 %arg1, i8 %arg2, i8 %arg3) {
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x i8> [ [[TMP3]], [[BB2]] ], [ <i8 0, i8 undef, i8 undef, i8 undef>, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call i8 @llvm.vector.reduce.or.v4i8(<4 x i8> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
 entry:
@@ -52,8 +52,8 @@ define i32 @phi2UndefInput(i1 %cond, i8 %arg0, i8 %arg1, i8 %arg2, i8 %arg3) {
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x i8> [ [[TMP3]], [[BB2]] ], [ <i8 0, i8 0, i8 undef, i8 undef>, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call i8 @llvm.vector.reduce.or.v4i8(<4 x i8> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
 entry:
@@ -89,8 +89,8 @@ define i32 @phi1UndefInput(i1 %cond, i8 %arg0, i8 %arg1, i8 %arg2, i8 %arg3) {
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x i8> [ [[TMP3]], [[BB2]] ], [ <i8 0, i8 0, i8 0, i8 undef>, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call i8 @llvm.vector.reduce.or.v4i8(<4 x i8> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
 entry:
@@ -127,8 +127,8 @@ define i32 @phi1Undef1PoisonInput(i1 %cond, i8 %arg0, i8 %arg1, i8 %arg2, i8 %ar
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x i8> [ [[TMP3]], [[BB2]] ], [ <i8 0, i8 0, i8 poison, i8 undef>, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call i8 @llvm.vector.reduce.or.v4i8(<4 x i8> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
 entry:
@@ -165,8 +165,8 @@ define i32 @phi1Undef2PoisonInputs(i1 %cond, i8 %arg0, i8 %arg1, i8 %arg2, i8 %a
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x i8> [ [[TMP3]], [[BB2]] ], [ <i8 0, i8 poison, i8 poison, i8 undef>, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call i8 @llvm.vector.reduce.or.v4i8(<4 x i8> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
 entry:
@@ -202,8 +202,8 @@ define i32 @phi1Undef1PoisonGapInput(i1 %cond, i8 %arg0, i8 %arg1, i8 %arg2, i8 
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x i8> [ [[TMP3]], [[BB2]] ], [ <i8 0, i8 0, i8 poison, i8 undef>, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP4]] to <4 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP5:%.*]] = call i8 @llvm.vector.reduce.or.v4i8(<4 x i8> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
 entry:

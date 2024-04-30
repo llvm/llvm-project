@@ -88,6 +88,19 @@ void f() {
   // CHECK-FIXES-NEXT: printf("Fibonacci number %d has address %p\n", I, &I);
   // CHECK-FIXES-NEXT: Sum += I + 2;
 
+  int Matrix[N][12];
+  unsigned size = 0;
+  for (int I = 0; I < N; ++I) {
+      size += sizeof(Matrix[I]);
+      size += sizeof Matrix[I];
+      size += sizeof((Matrix[I]));
+  }
+  // CHECK-MESSAGES: :[[@LINE-5]]:3: warning: use range-based for loop instead
+  // CHECK-FIXES: for (auto & I : Matrix)
+  // CHECK-FIXES-NEXT: size += sizeof(I);
+  // CHECK-FIXES-NEXT: size += sizeof I;
+  // CHECK-FIXES-NEXT: size += sizeof(I);
+
   Val Teas[N];
   for (int I = 0; I < N; ++I) {
     Teas[I].g();
@@ -939,4 +952,31 @@ void fundamentalTypesTest() {
   // CHECK-FIXES: for (double Double : Doubles)
 }
 
+template <unsigned  p> void _dependenceArrayTest() {
+  unsigned test[3][p];
+  for (unsigned i = 0; i < p; ++i)
+    for (unsigned j = 0; j < 3; ++j)
+      printf("%d", test[j][i]);
+  // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use range-based for loop instead
+  // CHECK-FIXES: (auto & j : test)
+  // CHECK-FIXES: printf("%d", j[i]);
+}
+void dependenceArrayTest() {
+  _dependenceArrayTest<1>();
+  _dependenceArrayTest<2>();
+}
+
 } // namespace PseudoArray
+
+namespace PR78381 {
+  struct blocked_range {
+    int begin() const;
+    int end() const;
+  };
+
+  void test() {
+    blocked_range r;
+    for (auto i = r.begin(); i!=r.end(); ++i) {
+    }
+  }
+}

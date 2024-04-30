@@ -4,7 +4,7 @@
 
 void failure1(void) _zero_call_used_regs();                   // expected-error {{takes one argument}}
 void failure2(void) _zero_call_used_regs("used", "used-gpr"); // expected-error {{takes one argument}}
-void failure3(void) _zero_call_used_regs(0);                  // expected-error {{requires a string}}
+void failure3(void) _zero_call_used_regs(0);                  // expected-error {{expected string literal}}
 void failure4(void) _zero_call_used_regs("hello");            // expected-warning {{argument not supported: hello}}
 
 void success1(void) _zero_call_used_regs("skip");

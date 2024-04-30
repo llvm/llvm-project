@@ -52,8 +52,8 @@ namespace CallingConv {
     /// Used by the High-Performance Erlang Compiler (HiPE).
     HiPE = 11,
 
-    /// Used for stack based JavaScript calls
-    WebKit_JS = 12,
+    /// OBSOLETED - Used for stack based JavaScript calls
+    // WebKit_JS = 12,
 
     /// Used for dynamic register based calls (e.g. stackmap and patchpoint
     /// intrinsics).
@@ -85,6 +85,9 @@ namespace CallingConv {
     /// but guarantees tail calls will be made by making the callee clean up
     /// their stack.
     SwiftTail = 20,
+
+    /// Used for runtime calls that preserves none general registers.
+    PreserveNone = 21,
 
     /// This is the start of the target-specific calling conventions, e.g.
     /// fastcall and thiscall on X86.
@@ -244,6 +247,25 @@ namespace CallingConv {
     /// Used on AMDGPUs to give the middle-end more control over argument
     /// placement. Preserves active lane values for input VGPRs.
     AMDGPU_CS_ChainPreserve = 105,
+
+    /// Used for M68k rtd-based CC (similar to X86's stdcall).
+    M68k_RTD = 106,
+
+    /// Used by GraalVM. Two additional registers are reserved.
+    GRAAL = 107,
+
+    /// Calling convention used in the ARM64EC ABI to implement calls between
+    /// x64 code and thunks. This is basically the x64 calling convention using
+    /// ARM64 register names. The first parameter is mapped to x9.
+    ARM64EC_Thunk_X64 = 108,
+
+    /// Calling convention used in the ARM64EC ABI to implement calls between
+    /// ARM64 code and thunks. This is just the ARM64 calling convention,
+    /// except that the first parameter is mapped to x9.
+    ARM64EC_Thunk_Native = 109,
+
+    /// Calling convention used for RISC-V V-extension.
+    RISCV_VectorCall = 110,
 
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023

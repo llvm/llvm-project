@@ -56,6 +56,13 @@ class AsanThreadContext final : public ThreadContextBase {
 // AsanThreadContext objects are never freed, so we need many of them.
 COMPILER_CHECK(sizeof(AsanThreadContext) <= 256);
 
+#if defined(_MSC_VER) && !defined(__clang__)
+// MSVC raises a warning about a nonstandard extension being used for the 0
+// sized element in this array. Disable this for warn-as-error builds.
+#  pragma warning(push)
+#  pragma warning(disable : 4200)
+#endif
+
 // AsanThread are stored in TSD and destroyed when the thread dies.
 class AsanThread {
  public:
@@ -184,6 +191,10 @@ class AsanThread {
 
   char start_data_[];
 };
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#  pragma warning(pop)
+#endif
 
 // Returns a single instance of registry.
 ThreadRegistry &asanThreadRegistry();

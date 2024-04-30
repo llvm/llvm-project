@@ -14,7 +14,7 @@
 #include "src/string/memory_utils/op_generic.h"
 #include "src/string/memory_utils/utils.h" // MemcmpReturnType
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 [[maybe_unused]] LIBC_INLINE MemcmpReturnType
 inline_memcmp_generic_gt16(CPtr p1, CPtr p2, size_t count) {
@@ -50,7 +50,7 @@ inline_memcmp_aarch64_neon_gt16(CPtr p1, CPtr p2, size_t count) {
 LIBC_INLINE MemcmpReturnType inline_memcmp_aarch64(CPtr p1, CPtr p2,
                                                    size_t count) {
   if (count == 0)
-    return MemcmpReturnType::ZERO();
+    return MemcmpReturnType::zero();
   if (count == 1)
     return generic::Memcmp<uint8_t>::block(p1, p2);
   if (count == 2)
@@ -66,6 +66,6 @@ LIBC_INLINE MemcmpReturnType inline_memcmp_aarch64(CPtr p1, CPtr p2,
   else
     return inline_memcmp_generic_gt16(p1, p2, count);
 }
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMCMP_H

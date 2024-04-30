@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_MEMMOVE_H
-#define LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_MEMMOVE_H
+#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_MEMMOVE_H
+#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_MEMMOVE_H
 
 #include "src/__support/macros/attributes.h"               // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h" // LIBC_TARGET_ARCH_IS_RISCV64
@@ -15,13 +15,13 @@
 
 #include <stddef.h> // size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 [[maybe_unused]] LIBC_INLINE void
 inline_memmove_riscv(Ptr __restrict dst, CPtr __restrict src, size_t count) {
   return inline_memmove_byte_per_byte(dst, src, count);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_MEMMOVE_H
+#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_MEMMOVE_H

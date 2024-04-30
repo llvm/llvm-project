@@ -13,12 +13,13 @@
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/explogxf.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, coshf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
+
   FPBits xbits(x);
-  xbits.set_sign(false);
+  xbits.set_sign(Sign::POS);
   x = xbits.get_val();
 
   uint32_t x_u = xbits.uintval();
@@ -35,7 +36,7 @@ LLVM_LIBC_FUNCTION(float, coshf, (float x)) {
 
     int rounding = fputil::quick_get_round();
     if (LIBC_UNLIKELY(rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO))
-      return FPBits(FPBits::MAX_NORMAL).get_val();
+      return FPBits::max_normal().get_val();
 
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_OVERFLOW);
@@ -51,4 +52,4 @@ LLVM_LIBC_FUNCTION(float, coshf, (float x)) {
   return static_cast<float>(exp_pm_eval</*is_sinh*/ false>(x));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

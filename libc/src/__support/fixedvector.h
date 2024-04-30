@@ -11,7 +11,9 @@
 
 #include "src/__support/CPP/array.h"
 
-namespace __llvm_libc {
+#include "src/__support/CPP/iterator.h"
+
+namespace LIBC_NAMESPACE {
 
 // A fixed size data store backed by an underlying cpp::array data structure. It
 // supports vector like API but is not resizable like a vector.
@@ -55,8 +57,14 @@ public:
   // matches the `destroy` API of those other data structures so that users
   // can easily swap one data structure for the other.
   static void destroy(FixedVector<T, CAPACITY> *store) { store->reset(); }
+
+  using reverse_iterator = typename cpp::array<T, CAPACITY>::reverse_iterator;
+  LIBC_INLINE constexpr reverse_iterator rbegin() {
+    return reverse_iterator{&store[item_count]};
+  }
+  LIBC_INLINE constexpr reverse_iterator rend() { return store.rend(); }
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FIXEDVECTOR_H

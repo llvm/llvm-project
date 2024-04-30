@@ -6,41 +6,39 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/asinf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <math.h>
 
 #include <errno.h>
 #include <stdint.h>
 
-using FPBits = __llvm_libc::fputil::FPBits<float>;
+using LlvmLibcAsinfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-DECLARE_SPECIAL_CONSTANTS(float)
+TEST_F(LlvmLibcAsinfTest, SpecialNumbers) {
+  LIBC_NAMESPACE::libc_errno = 0;
 
-TEST(LlvmLibcAsinfTest, SpecialNumbers) {
-  libc_errno = 0;
-
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::asinf(aNaN));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::asinf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, __llvm_libc::asinf(0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(0.0f, LIBC_NAMESPACE::asinf(0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(-0.0f, __llvm_libc::asinf(-0.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(-0.0f, LIBC_NAMESPACE::asinf(-0.0f));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::asinf(inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::asinf(inf));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::asinf(neg_inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::asinf(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::asinf(2.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::asinf(2.0f));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, __llvm_libc::asinf(-2.0f));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::asinf(-2.0f));
   EXPECT_MATH_ERRNO(EDOM);
 }

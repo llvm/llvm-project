@@ -121,6 +121,12 @@ public:
     return *this;
   }
   std::string MoveString() { return std::move(string_); }
+  bool operator==(const MessageFormattedText &that) const {
+    return severity_ == that.severity_ && string_ == that.string_;
+  }
+  bool operator!=(const MessageFormattedText &that) const {
+    return !(*this == that);
+  }
 
 private:
   void Format(const MessageFixedText *, ...);

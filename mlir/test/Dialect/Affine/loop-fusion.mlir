@@ -1541,5 +1541,37 @@ func.func @should_fuse_and_preserve_dep_on_constant() {
   return
 }
 
+// -----
+
+// CHECK-LABEL: @producer_consumer_with_outmost_user
+func.func @producer_consumer_with_outmost_user(%arg0 : f16) {
+  %c0 = arith.constant 0 : index
+  %src = memref.alloc() : memref<f16, 1>
+  %dst = memref.alloc() : memref<f16>
+  %tag = memref.alloc() : memref<1xi32>
+  affine.for %arg1 = 4 to 6 {
+    affine.for %arg2 = 0 to 1 {
+      %0 = arith.addf %arg0, %arg0 : f16
+      affine.store %0, %src[] : memref<f16, 1>
+    }
+    affine.for %arg3 = 0 to 1 {
+      %0 = affine.load %src[] : memref<f16, 1>
+    }
+  }
+  affine.dma_start %src[], %dst[], %tag[%c0], %c0 : memref<f16, 1>, memref<f16>, memref<1xi32>
+  // CHECK:       %[[CST_INDEX:.*]] = arith.constant 0 : index
+  // CHECK:       %[[DMA_SRC:.*]] = memref.alloc() : memref<f16, 1>
+  // CHECK:       %[[DMA_DST:.*]] = memref.alloc() : memref<f16>
+  // CHECK:       %[[DMA_TAG:.*]] = memref.alloc() : memref<1xi32>
+  // CHECK:       affine.for %arg1 = 4 to 6
+  // CHECK-NEXT:  affine.for %arg2 = 0 to 1
+  // CHECK-NEXT:  %[[RESULT_ADD:.*]] = arith.addf %arg0, %arg0 : f16
+  // CHECK-NEXT:  affine.store %[[RESULT_ADD]], %[[DMA_SRC]][] : memref<f16, 1>
+  // CHECK-NEXT:  affine.load %[[DMA_SRC]][] : memref<f16, 1>
+  // CHECK:       affine.dma_start %[[DMA_SRC]][], %[[DMA_DST]][], %[[DMA_TAG]][%[[CST_INDEX]]], %[[CST_INDEX]] : memref<f16, 1>, memref<f16>, memref<1xi32>
+  // CHECK-NEXT:  return
+  return
+}
+
 // Add further tests in mlir/test/Transforms/loop-fusion-4.mlir
 

@@ -11,8 +11,9 @@
 #include "src/__support/CPP/type_traits/is_same.h"
 #include "src/__support/CPP/type_traits/remove_cv.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // is_integral
 template <typename T> struct is_integral {
@@ -25,7 +26,7 @@ private:
 public:
   LIBC_INLINE_VAR static constexpr bool value = __is_unqualified_any_of<
       T,
-#ifdef __SIZEOF_INT128__
+#ifdef LIBC_TYPES_HAS_INT128
       __int128_t, __uint128_t,
 #endif
       char, signed char, unsigned char, short, unsigned short, int,
@@ -34,6 +35,6 @@ public:
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_integral_v = is_integral<T>::value;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_TYPE_TRAITS_IS_INTEGRAL_H

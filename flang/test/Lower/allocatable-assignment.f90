@@ -1,5 +1,5 @@
 ! Test allocatable assignments
-! RUN: bbc --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module alloc_assign
   type t
@@ -181,7 +181,7 @@ subroutine test_dyn_char_scalar(x, n)
 ! CHECK:  %[[c0_i32:.*]] = arith.constant 0 : i32
 ! CHECK:  %[[VAL_2B:.*]] = arith.cmpi sgt, %[[VAL_2A]], %[[c0_i32]] : i32
 ! CHECK:  %[[VAL_2:.*]] = arith.select %[[VAL_2B]], %[[VAL_2A]], %[[c0_i32]] : i32
-! CHECK:  %[[VAL_3:.*]] = fir.address_of(@_QQcl.48656C6C6F20776F726C6421) : !fir.ref<!fir.char<1,12>>
+! CHECK:  %[[VAL_3:.*]] = fir.address_of(@_QQclX48656C6C6F20776F726C6421) : !fir.ref<!fir.char<1,12>>
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 12 : index
 ! CHECK:  %[[VAL_5:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:  %[[VAL_6:.*]] = fir.box_addr %[[VAL_5]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
@@ -736,8 +736,8 @@ subroutine test_cst_char(x, c)
   character(10), allocatable  :: x(:)
   character(12) :: c(20)
 ! CHECK:         %[[VAL_2:.*]]:2 = fir.unboxchar %[[VAL_1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-! CHECK:         %[[VAL_3:.*]] = arith.constant 12 : index
 ! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<20x!fir.char<1,12>>>
+! CHECK:         %[[VAL_3:.*]] = arith.constant 12 : index
 ! CHECK:         %[[VAL_5:.*]] = arith.constant 20 : index
 ! CHECK:         %[[VAL_6:.*]] = arith.constant 20 : index
 ! CHECK:         %[[VAL_7:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>

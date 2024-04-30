@@ -19,7 +19,7 @@
 
 #include <errno.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // Exceptional cases for cosf.
 static constexpr size_t N_EXCEPTS = 6;
@@ -42,8 +42,9 @@ static constexpr fputil::ExceptValues<float, N_EXCEPTS> COSF_EXCEPTS{{
 
 LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
+
   FPBits xbits(x);
-  xbits.set_sign(false);
+  xbits.set_sign(Sign::POS);
 
   uint32_t x_abs = xbits.uintval();
   double xd = static_cast<double>(xbits.get_val());
@@ -117,7 +118,7 @@ LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
     }
-    return x + FPBits::build_quiet_nan(0);
+    return x + FPBits::quiet_nan().get_val();
   }
 
   // Combine the results with the sine of sum formula:
@@ -133,4 +134,4 @@ LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
       sin_y, -sin_k, fputil::multiply_add(cosm1_y, cos_k, cos_k)));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

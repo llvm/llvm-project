@@ -20,20 +20,20 @@
 ; Compilation flag:
 ;   clang -target bpf -O2 -g -S -emit-llvm test.c
 
-%struct.map_value = type { %struct.foo* }
+%struct.map_value = type { ptr }
 %struct.foo = type { i32 }
 
 ; Function Attrs: nounwind
 define dso_local void @test() local_unnamed_addr #0 !dbg !7 {
 entry:
   %v = alloca %struct.map_value, align 8
-  %0 = bitcast %struct.map_value* %v to i8*, !dbg !23
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0) #4, !dbg !23
-  call void @llvm.dbg.declare(metadata %struct.map_value* %v, metadata !11, metadata !DIExpression()), !dbg !24
-  %1 = bitcast %struct.map_value* %v to i64*, !dbg !24
-  store i64 0, i64* %1, align 8, !dbg !24
-  call void @func(%struct.map_value* noundef nonnull %v, %struct.foo* noundef null) #4, !dbg !25
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %0) #4, !dbg !26
+  %0 = bitcast ptr %v to ptr, !dbg !23
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %0) #4, !dbg !23
+  call void @llvm.dbg.declare(metadata ptr %v, metadata !11, metadata !DIExpression()), !dbg !24
+  %1 = bitcast ptr %v to ptr, !dbg !24
+  store i64 0, ptr %1, align 8, !dbg !24
+  call void @func(ptr noundef nonnull %v, ptr noundef null) #4, !dbg !25
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %0) #4, !dbg !26
   ret void, !dbg !26
 }
 
@@ -96,15 +96,15 @@ entry:
 ; CHECK:             .ascii  "tag1"                          # string offset=97
 
 ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: mustprogress nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 
-declare !dbg !27 dso_local void @func(%struct.map_value* noundef, %struct.foo* noundef) local_unnamed_addr #3
+declare !dbg !27 dso_local void @func(ptr noundef, ptr noundef) local_unnamed_addr #3
 
 ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 attributes #0 = { nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #1 = { argmemonly mustprogress nofree nosync nounwind willreturn }

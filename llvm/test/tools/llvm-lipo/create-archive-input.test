@@ -28,17 +28,27 @@
 # RUN: llvm-lipo %t-ir-armv7-x86_64-universal.o -thin x86_64 -output %t-ir-extracted-x86_64.o
 # RUN: cmp %t-ir-extracted-x86_64.o %t-ir-x86_64.o
 
-# RUN: llvm-ar cr %t.different_types0.a %t-i386.o %t-ir-x86_64.o
-# RUN: not llvm-lipo -create %t.different_types0.a -output /dev/null 2>&1 | FileCheck --check-prefix=ARCHIVE-WITH-MACHO-AND-IR %s
-# RUN: llvm-ar cr %t.different_types1.a %t-ir-x86_64.o %t-i386.o 
-# RUN: not llvm-lipo -create %t.different_types1.a -output /dev/null 2>&1 | FileCheck --check-prefix=ARCHIVE-WITH-IR-AND-MACHO %s
+# RUN: llvm-ar cr %t.different_types0-i386.a %t-i386.o
+# RUN: llvm-ar cr %t.different_types0-x86_64.a %t-x86_64.o %t-ir-x86_64.o
+# RUN: llvm-lipo -create %t.different_types0-i386.a %t.different_types0-x86_64.a -output %t.different_types0-universal.a
+# RUN: llvm-lipo %t.different_types0-universal.a -thin i386 -output %t.different_types0-extracted-i386.a
+# RUN: llvm-lipo %t.different_types0-universal.a -thin x86_64 -output %t.different_types0-extracted-x86_64.a
+# RUN: cmp %t.different_types0-extracted-i386.a %t.different_types0-i386.a
+# RUN: cmp %t.different_types0-extracted-x86_64.a %t.different_types0-x86_64.a
+
+# RUN: llvm-ar cr %t.different_types1-i386.a %t-i386.o
+# RUN: llvm-ar cr %t.different_types1-x86_64.a %t-ir-x86_64.o %t-x86_64.o
+# RUN: llvm-lipo -create %t.different_types1-x86_64.a %t.different_types1-i386.a -output %t.different_types1-universal.a
+# RUN: llvm-lipo %t.different_types1-universal.a -thin i386 -output %t.different_types1-extracted-i386.a
+# RUN: llvm-lipo %t.different_types1-universal.a -thin x86_64 -output %t.different_types1-extracted-x86_64.a
+# RUN: cmp %t.different_types1-extracted-i386.a %t.different_types1-i386.a
+# RUN: cmp %t.different_types1-extracted-x86_64.a %t.different_types1-x86_64.a
+
 # RUN: llvm-ar cr %t.different_architectures_ir.a %t-ir-x86_64.o %t-ir-armv7.o
 # RUN: not llvm-lipo -create %t.different_architectures_ir.a -output /dev/null 2>&1 | FileCheck --check-prefix=ARCHIVE-WITH-DIFFERENT-ARCHS %s
 
 # EMPTY-ARCHIVE: empty archive
 # ARCHIVE-WITH-DIFFERENT-ARCHS: all members must match
-# ARCHIVE-WITH-MACHO-AND-IR: is an LLVM IR object, while previous archive member {{.*}} was a MachO
-# ARCHIVE-WITH-IR-AND-MACHO: is a MachO, while previous archive member {{.*}} was an IR LLVM object
 # ARCHIVE-WITH-FAT-BINARY: fat file (not allowed in an archive)
 #
 # INFO-i386-x86_64: i386 x86_64

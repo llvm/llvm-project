@@ -26,6 +26,15 @@
 
 namespace lldb_private {
 
+class LanguageProperties : public Properties {
+public:
+  LanguageProperties();
+
+  static llvm::StringRef GetSettingName();
+
+  bool GetEnableFilterForLineBreakpoints() const;
+};
+
 class Language : public PluginInterface {
 public:
   class TypeScavenger {
@@ -159,6 +168,10 @@ public:
   static void ForEach(std::function<bool(Language *)> callback);
 
   virtual lldb::LanguageType GetLanguageType() const = 0;
+
+  // Implement this function to return the user-defined entry point name
+  // for the language.
+  virtual llvm::StringRef GetUserEntryPointName() const { return {}; }
 
   virtual bool IsTopLevelFunction(Function &function);
 
@@ -320,6 +333,8 @@ public:
   static LanguageSet GetLanguagesSupportingTypeSystemsForExpressions();
   static LanguageSet GetLanguagesSupportingREPLs();
 
+  static LanguageProperties &GetGlobalLanguageProperties();
+
   // Given a mangled function name, calculates some alternative manglings since
   // the compiler mangling may not line up with the symbol we are expecting.
   virtual std::vector<ConstString>
@@ -334,6 +349,15 @@ public:
   }
 
   virtual llvm::StringRef GetInstanceVariableName() { return {}; }
+
+  /// Returns true if this SymbolContext should be ignored when setting
+  /// breakpoints by line (number or regex). Helpful for languages that create
+  /// artificial functions without meaningful user code associated with them
+  /// (e.g. code that gets expanded in late compilation stages, like by
+  /// CoroSplitter).
+  virtual bool IgnoreForLineBreakpoints(const SymbolContext &) const {
+    return false;
+  }
 
 protected:
   // Classes that inherit from Language can see and modify these

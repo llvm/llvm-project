@@ -5,8 +5,8 @@
 
 #di_file = #llvm.di_file<"file.cpp" in "/folder/">
 #di_compile_unit = #llvm.di_compile_unit<
-  sourceLanguage = DW_LANG_C_plus_plus_14, file = #di_file,
-  isOptimized = true, emissionKind = Full
+  id = distinct[0]<>, sourceLanguage = DW_LANG_C_plus_plus_14,
+  file = #di_file, isOptimized = true, emissionKind = Full
 >
 #di_subprogram = #llvm.di_subprogram<
   compileUnit = #di_compile_unit, scope = #di_file,

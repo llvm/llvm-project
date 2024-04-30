@@ -96,14 +96,6 @@ std::string Fortran::lower::mangle::mangleName(
   if (auto *overrideName = ultimateSymbol.GetBindName())
     return *overrideName;
 
-  // TODO: A procedure that inherits BIND(C) through another interface
-  // (procedure(iface)) should be dealt with in GetBindName() or some wrapper.
-  if (!Fortran::semantics::IsPointer(ultimateSymbol) &&
-      Fortran::semantics::IsBindCProcedure(ultimateSymbol) &&
-      Fortran::semantics::ClassifyProcedure(symbol) !=
-          Fortran::semantics::ProcedureDefinitionClass::Internal)
-    return ultimateSymbol.name().ToString();
-
   llvm::StringRef symbolName = toStringRef(ultimateSymbol.name());
   llvm::SmallVector<llvm::StringRef> modules;
   llvm::SmallVector<llvm::StringRef> procs;
@@ -190,7 +182,8 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
                                    bool underscoring) {
   assert((symbol.owner().kind() !=
               Fortran::semantics::Scope::Kind::BlockConstruct ||
-          symbol.has<Fortran::semantics::SubprogramDetails>()) &&
+          symbol.has<Fortran::semantics::SubprogramDetails>() ||
+          Fortran::semantics::IsBindCProcedure(symbol)) &&
          "block object mangling must specify a scopeBlockIdMap");
   ScopeBlockIdMap scopeBlockIdMap;
   return mangleName(symbol, scopeBlockIdMap, keepExternalInScope, underscoring);

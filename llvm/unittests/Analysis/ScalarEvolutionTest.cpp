@@ -352,7 +352,7 @@ TEST_F(ScalarEvolutionsTest, CompareSCEVComplexity) {
 
 TEST_F(ScalarEvolutionsTest, CompareValueComplexity) {
   IntegerType *IntPtrTy = M.getDataLayout().getIntPtrType(Context);
-  PointerType *IntPtrPtrTy = IntPtrTy->getPointerTo();
+  PointerType *IntPtrPtrTy = PointerType::getUnqual(Context);
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), {IntPtrTy, IntPtrTy}, false);
@@ -677,7 +677,7 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
 
   Type *I64Ty = Type::getInt64Ty(Context);
   Type *I8Ty = Type::getInt8Ty(Context);
-  Type *I8PtrTy = Type::getInt8PtrTy(Context);
+  Type *I8PtrTy = PointerType::getUnqual(Context);
   Value *Accum = Constant::getNullValue(I8PtrTy);
   int Iters = 20;
   for (int i = 0; i < Iters; i++) {

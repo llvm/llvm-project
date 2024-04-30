@@ -25,6 +25,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: (lldb) break set -f local-variables.cpp -l 17
 // CHECK-NEXT: Breakpoint 1: where = local-variables.cpp.tmp.exe`main + {{.*}} at local-variables.cpp:{{.*}}, address = {{.*}}
 // CHECK-NEXT: (lldb) run a b c d e f g
+// CHECK-NEXT: Process {{.*}} launched: '{{.*}}local-variables.cpp.tmp.exe'
 // CHECK-NEXT: Process {{.*}} stopped
 // CHECK-NEXT: * thread #1, stop reason = breakpoint 1.1
 // CHECK-NEXT:     frame #0: {{.*}} local-variables.cpp.tmp.exe`main(argc=8, argv={{.*}}) at local-variables.cpp:{{.*}}
@@ -36,8 +37,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT:    19   }
 // CHECK-NEXT:    20
 
-// CHECK:      Process {{.*}} launched: '{{.*}}local-variables.cpp.tmp.exe'
-// CHECK-NEXT: (lldb) expression argc
+// CHECK:      (lldb) expression argc
 // CHECK-NEXT: (int) $0 = 8
 // CHECK-NEXT: (lldb) step
 // CHECK-NEXT: Process {{.*}} stopped

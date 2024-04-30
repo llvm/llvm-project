@@ -202,8 +202,8 @@ define <4 x i1> @vec_4xi32_splat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 define <4 x i1> @vec_4xi32_nonsplat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-LABEL: vec_4xi32_nonsplat_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    neg v1.4s, v1.4s
 ; CHECK-NEXT:    adrp x8, .LCPI13_0
+; CHECK-NEXT:    neg v1.4s, v1.4s
 ; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI13_0]
 ; CHECK-NEXT:    ushl v1.4s, v2.4s, v1.4s
 ; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b

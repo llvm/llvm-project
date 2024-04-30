@@ -1,6 +1,7 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter \
+// RUN: mlir-opt %s --transform-interpreter \
 // RUN:             --test-transform-dialect-erase-schedule \
 // RUN:             --math-uplift-to-fma \
+// RUN:             --convert-bufferization-to-memref \
 // RUN:             --test-lower-to-llvm |\
 // RUN: FileCheck %s
 
@@ -114,9 +115,9 @@ module attributes { transform.with_named_sequence } {
   // have no effect on the Halide IR as of 294f80c49bf3bb8582446613c25fcce03b82.
   // Also note that the order of dimensions in Halide is inverted, e.g., co and
   // n are the outermost loops in the respective reorder directives.
-  transform.sequence failures(propagate) {
+  transform.named_sequence @__transform_main(
   // This argument will point to the top-level module.
-  ^bb0(%arg0: !transform.any_op):
+      %arg0: !transform.any_op) {
 
     // 1. Find the operations we are going to transform usnig their names. This
     // is a simplistic approach that works when there are few operations in the
@@ -143,10 +144,10 @@ module attributes { transform.with_named_sequence } {
     // inside the loops produced by tiling.
     //
     //                                                             [n  y  x  c]
-    %co, %relu2 = transform.structured.tile_to_forall_op %relu
+    %relu2, %co = transform.structured.tile_using_forall %relu
                                                         tile_sizes [0, 0, 0, 64]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    %n_y_xo, %relu3 = transform.structured.tile_to_forall_op %relu2
+    %relu3, %n_y_xo = transform.structured.tile_using_forall %relu2
                                                         tile_sizes [1, 1, 5, 0]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
@@ -207,8 +208,8 @@ module attributes { transform.with_named_sequence } {
     // tile_size = 1 along all dimensions, so the reduction is entirely
     // performed by the generated loops. The combiner structured operation is
     // still produced and adds up the reduction result with the initial value.
-    %rz_ry_rx, %red_fill, %conv4, %combining
-    = transform.structured.tile_reduction_using_scf %conv3 by
+    %red_fill, %conv4, %combining, %rz_ry_rx
+    = transform.structured.tile_reduction_using_for %conv3 by
     //            n  y  x  c  rz ry rx
       tile_sizes=[0, 0, 0, 0, 1, 1, 1]
       : (!transform.any_op)
@@ -307,9 +308,21 @@ module attributes { transform.with_named_sequence } {
     // transformation process, so invalidation is not an issue. However, if
     // other transformations, such as loop unrolling, are required after
     // bufferization, new handles should be produced using the match operations.
+    //
+    // One-shot bufferization itself does not produce buffer deallocations,
+    // which may lead to leaks. So we have to run the buffer deallocation pass
+    // pipeline to avoid them. Note that the transform dialect seamlessly runs
+    // named passes and pass pipelines: if desired, one could replace complex
+    // --pass-pipeline expressions with operations. Note that we apply the
+    // pipeline to functions rather than entire module to avoid running it
+    // on the transform IR that is contained in the module.
     %arg1 = transform.bufferization.one_shot_bufferize %arg0 {
       bufferize_function_boundaries = true,
       function_boundary_type_conversion = 1 : i32 }
+      : (!transform.any_op) -> !transform.any_op
+    %f = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.apply_registered_pass "buffer-deallocation-pipeline" to %f
       : (!transform.any_op) -> !transform.any_op
 
     // Apply general canonicalization and CSE to each function after

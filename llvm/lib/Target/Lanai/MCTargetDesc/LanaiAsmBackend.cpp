@@ -46,7 +46,7 @@ class LanaiAsmBackend : public MCAsmBackend {
 
 public:
   LanaiAsmBackend(const Target &T, Triple::OSType OST)
-      : MCAsmBackend(support::big), OSType(OST) {}
+      : MCAsmBackend(llvm::endianness::big), OSType(OST) {}
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,

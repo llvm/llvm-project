@@ -649,7 +649,7 @@ define <2 x ptr> @test_pointer_vec_load(ptr %addr) {
 define void @test_inline_asm_mem_pointer(ptr %in) {
 ; CHECK-LABEL: test_inline_asm_mem_pointer:
 ; CHECK: str w0,
-  tail call void asm sideeffect "ldr x0, $0", "rm"(ptr %in)
+  tail call void asm sideeffect "ldr x0, $0", "m"(ptr %in)
   ret void
 }
 
@@ -758,6 +758,20 @@ define void @test_bzero(i64 %in)  {
 }
 
 declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1)
+
+define i1 @test_stackguard(ptr %p1) {
+; CHECK-LABEL: test_stackguard:
+; CHECK: adrp x[[TMP:[0-9]+]], ___stack_chk_guard@GOTPAGE
+; CHECK: ldr [[GUARD:w[0-9]+]], [x[[TMP]], ___stack_chk_guard@GOTPAGEOFF]
+; CHECK: cmp [[GUARD]], w
+
+  %p2 = call ptr @llvm.stackguard()
+  %res = icmp ne ptr %p2, %p1
+  ret i1 %res
+}
+declare ptr @llvm.stackguard()
+@__stack_chk_guard = external global i32
+
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 7, !"PIC Level", i32 2}

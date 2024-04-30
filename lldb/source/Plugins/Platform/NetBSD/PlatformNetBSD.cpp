@@ -228,7 +228,7 @@ CompilerType PlatformNetBSD::GetSiginfoType(const llvm::Triple &triple) {
 
   CompilerType sigval_type = ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "__lldb_sigval_t",
-      clang::TTK_Union, lldb::eLanguageTypeC);
+      llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(sigval_type);
   ast->AddFieldToRecordType(sigval_type, "sival_int", int_type,
                             lldb::eAccessPublic, 0);
@@ -238,7 +238,7 @@ CompilerType PlatformNetBSD::GetSiginfoType(const llvm::Triple &triple) {
 
   CompilerType ptrace_option_type = ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "",
-      clang::TTK_Union, lldb::eLanguageTypeC);
+      llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(ptrace_option_type);
   ast->AddFieldToRecordType(ptrace_option_type, "_pe_other_pid", pid_type,
                             lldb::eAccessPublic, 0);
@@ -249,13 +249,13 @@ CompilerType PlatformNetBSD::GetSiginfoType(const llvm::Triple &triple) {
   // siginfo_t
   CompilerType siginfo_type = ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "__lldb_siginfo_t",
-      clang::TTK_Union, lldb::eLanguageTypeC);
+      llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(siginfo_type);
 
   // struct _ksiginfo
   CompilerType ksiginfo_type = ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "",
-      clang::TTK_Struct, lldb::eLanguageTypeC);
+      llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(ksiginfo_type);
   ast->AddFieldToRecordType(ksiginfo_type, "_signo", int_type,
                             lldb::eAccessPublic, 0);
@@ -272,7 +272,7 @@ CompilerType PlatformNetBSD::GetSiginfoType(const llvm::Triple &triple) {
   // union used to hold the signal data
   CompilerType union_type = ast->CreateRecordType(
       nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "",
-      clang::TTK_Union, lldb::eLanguageTypeC);
+      llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeC);
   ast->StartTagDeclarationDefinition(union_type);
 
   ast->AddFieldToRecordType(

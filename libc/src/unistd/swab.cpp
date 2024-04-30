@@ -10,7 +10,7 @@
 
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, swab,
                    (const void *__restrict from, void *__restrict to,
@@ -23,4 +23,4 @@ LLVM_LIBC_FUNCTION(void, swab,
   }
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

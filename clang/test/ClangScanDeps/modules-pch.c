@@ -14,7 +14,7 @@
 // RUN: cat %t/result_pch.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-PCH
 //
 // Check we didn't build the PCH during dependency scanning.
-// RUN: not cat %/t/pch.h.gch
+// RUN: not cat %/t/pch.h.pch
 //
 // CHECK-PCH:      {
 // CHECK-PCH-NEXT:   "modules": [
@@ -129,7 +129,7 @@
 // CHECK-TU:            ],
 // CHECK-TU:            "file-deps": [
 // CHECK-TU-NEXT:         "[[PREFIX]]/tu.c",
-// CHECK-TU-NEXT:         "[[PREFIX]]/pch.h.gch"
+// CHECK-TU-NEXT:         "[[PREFIX]]/pch.h.pch"
 // CHECK-TU-NEXT:       ],
 // CHECK-TU-NEXT:       "input-file": "[[PREFIX]]/tu.c"
 // CHECK-TU-NEXT:     }
@@ -179,7 +179,7 @@
 // CHECK-TU-WITH-COMMON:            ],
 // CHECK-TU-WITH-COMMON:            "file-deps": [
 // CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/tu_with_common.c",
-// CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/pch.h.gch"
+// CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/pch.h.pch"
 // CHECK-TU-WITH-COMMON-NEXT:       ],
 // CHECK-TU-WITH-COMMON-NEXT:       "input-file": "[[PREFIX]]/tu_with_common.c"
 // CHECK-TU-WITH-COMMON-NEXT:     }

@@ -10,7 +10,7 @@
 
 #include "src/__support/CPP/type_traits/is_integral.h"
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
 // integer_sequence
 template <typename T, T... Ints> struct integer_sequence {
@@ -32,6 +32,6 @@ template <typename T, int N>
 using make_integer_sequence =
     typename detail::make_integer_sequence<T, N - 1>::type;
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_UTILITY_INTEGER_SEQUENCE_H

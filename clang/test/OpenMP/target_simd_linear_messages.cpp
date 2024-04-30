@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -DOMP52 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 -DOMP52 %s -Wuninitialized
 
 #pragma omp requires dynamic_allocators
 typedef void **omp_allocator_handle_t;
@@ -15,8 +17,8 @@ extern const omp_allocator_handle_t omp_pteam_mem_alloc;
 extern const omp_allocator_handle_t omp_thread_mem_alloc;
 
 void xxx(int argc) {
-  int i, lin, step; // expected-note {{initialize the variable 'lin' to silence this warning}} expected-note {{initialize the variable 'step' to silence this warning}}
-#pragma omp target simd linear(i, lin : step) // expected-warning {{variable 'lin' is uninitialized when used here}} expected-warning {{variable 'step' is uninitialized when used here}}
+  int i, lin, step_sz; // expected-note {{initialize the variable 'lin' to silence this warning}} expected-note {{initialize the variable 'step_sz' to silence this warning}}
+#pragma omp target simd linear(i, lin : step_sz) // expected-warning {{variable 'lin' is uninitialized when used here}} expected-warning {{variable 'step_sz' is uninitialized when used here}}
   for (i = 0; i < 10; ++i)
     ;
 }
@@ -271,16 +273,28 @@ int main(int argc, char **argv) {
 #pragma omp target simd linear(i)
     for (int k = 0; k < argc; ++k)
       ++k;
+#ifdef OMP52
+#pragma omp target simd linear(i : uval, step(4)) // expected-error {{variable of non-reference type 'int' can be used only with 'val' modifier, but used with 'uval'}}
+#else
 #pragma omp target simd linear(i : 4)
+#endif
     for (int k = 0; k < argc; ++k) {
       ++k;
       i += 4;
     }
   }
+#ifdef OMP52
+#pragma omp target simd linear(j: step() //omp52-error 2 {{expected expression}} omp52-error{{expected ')'}} omp52-note{{to match this '('}}
+#else
 #pragma omp target simd linear(j)
+#endif
   for (int k = 0; k < argc; ++k)
     ++k;
+#ifdef OMP52
+#pragma omp target simd linear(i: step(1), step(2)) // omp52-error {{multiple 'step size' found in linear clause}}
+#else  
 #pragma omp target simd linear(i)
+#endif
   for (int k = 0; k < argc; ++k)
     ++k;
 

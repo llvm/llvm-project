@@ -12,7 +12,7 @@
 #include "src/__support/fixedvector.h"
 #include "src/__support/threads/mutex.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 namespace {
 
@@ -28,8 +28,15 @@ struct AtExitUnit {
   constexpr AtExitUnit(AtExitCallback *c, void *p) : callback(c), payload(p) {}
 };
 
-#ifdef LIBC_COPT_PUBLIC_PACKAGING
-using ExitCallbackList = cpp::ReverseOrderBlockStore<AtExitUnit, 32>;
+#if defined(LIBC_TARGET_ARCH_IS_GPU)
+// The GPU build cannot handle the potentially recursive definitions required by
+// the BlockStore class. Additionally, the liklihood that someone exceeds this
+// while executing on the GPU is extremely small.
+// FIXME: It is not generally safe to use 'atexit' on the GPU because the
+//        mutexes simply passthrough. We will need a lock free stack.
+using ExitCallbackList = FixedVector<AtExitUnit, 64>;
+#elif defined(LIBC_COPT_PUBLIC_PACKAGING)
+using ExitCallbackList = ReverseOrderBlockStore<AtExitUnit, 32>;
 #else
 // BlockStore uses dynamic memory allocation. To avoid dynamic memory
 // allocation in tests, we use a fixed size callback list when built for
@@ -48,14 +55,10 @@ void stdc_at_exit_func(void *payload) {
   reinterpret_cast<StdCAtExitCallback *>(payload)();
 }
 
-} // namespace
-
-namespace internal {
-
 void call_exit_callbacks() {
   handler_list_mtx.lock();
   while (!exit_callbacks.empty()) {
-    auto unit = exit_callbacks.back();
+    AtExitUnit &unit = exit_callbacks.back();
     exit_callbacks.pop_back();
     handler_list_mtx.unlock();
     unit.callback(unit.payload);
@@ -64,23 +67,34 @@ void call_exit_callbacks() {
   ExitCallbackList::destroy(&exit_callbacks);
 }
 
-} // namespace internal
-
-static int add_atexit_unit(const AtExitUnit &unit) {
+int add_atexit_unit(const AtExitUnit &unit) {
   MutexLock lock(&handler_list_mtx);
-  if (!exit_callbacks.push_back(unit))
-    return -1;
-  return 0;
+  if (exit_callbacks.push_back(unit))
+    return 0;
+  return -1;
 }
+
+} // namespace
+
+extern "C" {
 
 // TODO: Handle the last dso handle argument.
-extern "C" int __cxa_atexit(AtExitCallback *callback, void *payload, void *) {
+int __cxa_atexit(AtExitCallback *callback, void *payload, void *) {
   return add_atexit_unit({callback, payload});
 }
+
+// TODO: Handle the dso handle argument. call_exit_callbacks should only invoke
+// the callbacks from this DSO. Requires adding support for __dso_handle.
+void __cxa_finalize(void *dso) {
+  if (!dso)
+    call_exit_callbacks();
+}
+
+} // extern "C"
 
 LLVM_LIBC_FUNCTION(int, atexit, (StdCAtExitCallback * callback)) {
   return add_atexit_unit(
       {&stdc_at_exit_func, reinterpret_cast<void *>(callback)});
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

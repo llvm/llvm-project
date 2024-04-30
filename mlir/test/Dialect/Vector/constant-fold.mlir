@@ -8,6 +8,6 @@ func.func @fold_extract_transpose_negative(%arg0: vector<4x4xf16>) -> vector<4x4
   // CHECK: %[[T:.+]] = vector.transpose
   %1 = vector.transpose %0, [0, 2, 1] : vector<1x4x4xf16> to vector<1x4x4xf16>
   // CHECK: vector.extract %[[T]][0]
-  %2 = vector.extract %1[0] : vector<1x4x4xf16>
+  %2 = vector.extract %1[0] : vector<4x4xf16> from vector<1x4x4xf16>
   return %2 : vector<4x4xf16>
 }

@@ -31,18 +31,16 @@ TEST_CONSTEXPR_CXX20 void test(S s) {
   assert(static_cast<std::size_t>(ce - cs.rbegin()) == cs.size());
 }
 
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  test(S());
+  test(S("123"));
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef std::string S;
-    test(S());
-    test(S("123"));
-  }
+  test_string<std::string>();
 #if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test(S());
-    test(S("123"));
-  }
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
 #endif
 
   return true;

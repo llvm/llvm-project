@@ -39,6 +39,6 @@ declare void @_Z7CapturePi(ptr)
 ; WINDOWS-ARM64EC: adrp x8, __security_cookie
 ; WINDOWS-ARM64EC: ldr x8, [x8, :lo12:__security_cookie]
 ; WINDOWS-ARM64EC: str x8, [sp, #8]
-; WINDOWS-ARM64EC: bl  _Z7CapturePi
+; WINDOWS-ARM64EC: bl "#_Z7CapturePi"
 ; WINDOWS-ARM64EC: ldr x0, [sp, #8]
-; WINDOWS-ARM64EC: bl  __security_check_cookie_arm64ec
+; WINDOWS-ARM64EC: bl "#__security_check_cookie_arm64ec"

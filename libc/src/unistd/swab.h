@@ -11,10 +11,10 @@
 
 #include <unistd.h> // For ssize_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 void swab(const void *__restrict from, void *__restrict to, ssize_t n);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_UNISTD_SWAB_H

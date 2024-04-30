@@ -41,9 +41,10 @@ bool isRootChanged(intptr_t k) { return k == ROOT_CHANGED; }
 //                      bug<--foo()--          JAIL_ENTERED<--foo()--
 class ChrootChecker : public Checker<eval::Call, check::PreCall> {
   // This bug refers to possibly break out of a chroot() jail.
-  mutable std::unique_ptr<BugType> BT_BreakJail;
+  const BugType BT_BreakJail{this, "Break out of jail"};
 
-  const CallDescription Chroot{{"chroot"}, 1}, Chdir{{"chdir"}, 1};
+  const CallDescription Chroot{CDM::CLibrary, {"chroot"}, 1},
+      Chdir{CDM::CLibrary, {"chdir"}, 1};
 
 public:
   ChrootChecker() {}
@@ -124,12 +125,10 @@ void ChrootChecker::checkPreCall(const CallEvent &Call,
   if (k)
     if (isRootChanged((intptr_t) *k))
       if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
-        if (!BT_BreakJail)
-          BT_BreakJail.reset(new BugType(this, "Break out of jail"));
         constexpr llvm::StringLiteral Msg =
             "No call of chdir(\"/\") immediately after chroot";
         C.emitReport(
-            std::make_unique<PathSensitiveBugReport>(*BT_BreakJail, Msg, N));
+            std::make_unique<PathSensitiveBugReport>(BT_BreakJail, Msg, N));
       }
 }
 

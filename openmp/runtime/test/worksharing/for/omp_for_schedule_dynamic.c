@@ -1,4 +1,5 @@
 // RUN: %libomp-compile-and-run
+// RUN: env KMP_AFFINITY=compact,0 %libomp-run
 /*
  * Test for dynamic scheduling with chunk size
  * Method: calculate how many times the iteration space is dispatched

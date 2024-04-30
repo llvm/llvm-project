@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "fold-implementation.h"
+#include "fold-matmul.h"
 #include "fold-reduction.h"
 
 namespace Fortran::evaluate {
@@ -51,16 +52,30 @@ public:
   Norm2Accumulator(
       const Constant<T> &array, const Constant<T> &maxAbs, Rounding rounding)
       : array_{array}, maxAbs_{maxAbs}, rounding_{rounding} {};
-  void operator()(Scalar<T> &element, const ConstantSubscripts &at) {
-    // Kahan summation of scaled elements
+  void operator()(
+      Scalar<T> &element, const ConstantSubscripts &at, bool /*first*/) {
+    // Kahan summation of scaled elements:
+    // Naively,
+    //   NORM2(A(:)) = SQRT(SUM(A(:)**2))
+    // For any T > 0, we have mathematically
+    //   SQRT(SUM(A(:)**2))
+    //     = SQRT(T**2 * (SUM(A(:)**2) / T**2))
+    //     = SQRT(T**2 * SUM(A(:)**2 / T**2))
+    //     = SQRT(T**2 * SUM((A(:)/T)**2))
+    //     = SQRT(T**2) * SQRT(SUM((A(:)/T)**2))
+    //     = T * SQRT(SUM((A(:)/T)**2))
+    // By letting T = MAXVAL(ABS(A)), we ensure that
+    // ALL(ABS(A(:)/T) <= 1), so ALL((A(:)/T)**2 <= 1), and the SUM will
+    // not overflow unless absolutely necessary.
     auto scale{maxAbs_.At(maxAbsAt_)};
     if (scale.IsZero()) {
-      // If maxAbs is zero, so are all elements, and result
+      // Maximum value is zero, and so will the result be.
+      // Avoid division by zero below.
       element = scale;
     } else {
       auto item{array_.At(at)};
       auto scaled{item.Divide(scale).value};
-      auto square{item.Multiply(scaled).value};
+      auto square{scaled.Multiply(scaled).value};
       auto next{square.Add(correction_, rounding_)};
       overflow_ |= next.flags.test(RealFlag::Overflow);
       auto sum{element.Add(next.value, rounding_)};
@@ -73,13 +88,16 @@ public:
   }
   bool overflow() const { return overflow_; }
   void Done(Scalar<T> &result) {
+    // result+correction == SUM((data(:)/maxAbs)**2)
+    // result = maxAbs * SQRT(result+correction)
     auto corrected{result.Add(correction_, rounding_)};
     overflow_ |= corrected.flags.test(RealFlag::Overflow);
     correction_ = Scalar<T>{};
-    auto rescaled{corrected.value.Multiply(maxAbs_.At(maxAbsAt_))};
+    auto root{corrected.value.SQRT().value};
+    auto product{root.Multiply(maxAbs_.At(maxAbsAt_))};
     maxAbs_.IncrementSubscripts(maxAbsAt_);
-    overflow_ |= rescaled.flags.test(RealFlag::Overflow);
-    result = rescaled.value.SQRT().value;
+    overflow_ |= product.flags.test(RealFlag::Overflow);
+    result = product.value;
   }
 
 private:
@@ -97,17 +115,18 @@ static Expr<Type<TypeCategory::Real, KIND>> FoldNorm2(FoldingContext &context,
   using T = Type<TypeCategory::Real, KIND>;
   using Element = typename Constant<T>::Element;
   std::optional<int> dim;
-  const Element identity{};
-  if (std::optional<Constant<T>> array{
-          ProcessReductionArgs<T>(context, funcRef.arguments(), dim, identity,
+  if (std::optional<ArrayAndMask<T>> arrayAndMask{
+          ProcessReductionArgs<T>(context, funcRef.arguments(), dim,
               /*X=*/0, /*DIM=*/1)}) {
     MaxvalMinvalAccumulator<T, /*ABS=*/true> maxAbsAccumulator{
-        RelationalOperator::GT, context, *array};
-    Constant<T> maxAbs{
-        DoReduction<T>(*array, dim, identity, maxAbsAccumulator)};
-    Norm2Accumulator norm2Accumulator{
-        *array, maxAbs, context.targetCharacteristics().roundingMode()};
-    Constant<T> result{DoReduction<T>(*array, dim, identity, norm2Accumulator)};
+        RelationalOperator::GT, context, arrayAndMask->array};
+    const Element identity{};
+    Constant<T> maxAbs{DoReduction<T>(arrayAndMask->array, arrayAndMask->mask,
+        dim, identity, maxAbsAccumulator)};
+    Norm2Accumulator norm2Accumulator{arrayAndMask->array, maxAbs,
+        context.targetCharacteristics().roundingMode()};
+    Constant<T> result{DoReduction<T>(arrayAndMask->array, arrayAndMask->mask,
+        dim, identity, norm2Accumulator)};
     if (norm2Accumulator.overflow()) {
       context.messages().Say(
           "NORM2() of REAL(%d) data overflowed"_warn_en_US, KIND);
@@ -253,6 +272,8 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
               }
               return result.value;
             }));
+  } else if (name == "matmul") {
+    return FoldMatmul(context, std::move(funcRef));
   } else if (name == "max") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Greater);
   } else if (name == "maxval") {
@@ -430,7 +451,6 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           return result.value;
         }));
   }
-  // TODO: matmul
   return Expr<T>{std::move(funcRef)};
 }
 

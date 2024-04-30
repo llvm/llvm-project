@@ -184,7 +184,7 @@ public:
 private:
   std::vector<std::string> Filenames;
   std::vector<ProfileMappingRecord> MappingRecords;
-  InstrProfSymtab ProfileNames;
+  std::unique_ptr<InstrProfSymtab> ProfileNames;
   size_t CurrentRecord = 0;
   std::vector<StringRef> FunctionsFilenames;
   std::vector<CounterExpression> Expressions;
@@ -195,28 +195,25 @@ private:
   // D69471, which can split up function records into multiple sections on ELF.
   FuncRecordsStorage FuncRecords;
 
-  BinaryCoverageReader(FuncRecordsStorage &&FuncRecords)
-      : FuncRecords(std::move(FuncRecords)) {}
+  BinaryCoverageReader(std::unique_ptr<InstrProfSymtab> Symtab,
+                       FuncRecordsStorage &&FuncRecords)
+      : ProfileNames(std::move(Symtab)), FuncRecords(std::move(FuncRecords)) {}
 
 public:
   BinaryCoverageReader(const BinaryCoverageReader &) = delete;
   BinaryCoverageReader &operator=(const BinaryCoverageReader &) = delete;
 
   static Expected<std::vector<std::unique_ptr<BinaryCoverageReader>>>
-  create(MemoryBufferRef ObjectBuffer,
-         StringRef Arch,
+  create(MemoryBufferRef ObjectBuffer, StringRef Arch,
          SmallVectorImpl<std::unique_ptr<MemoryBuffer>> &ObjectFileBuffers,
-         InstrProfSymtab& IndexedProfSymTab,
          StringRef CompilationDir = "",
          SmallVectorImpl<object::BuildIDRef> *BinaryIDs = nullptr);
 
   static Expected<std::unique_ptr<BinaryCoverageReader>>
-  createCoverageReaderFromBuffer(StringRef Coverage,
-                                 FuncRecordsStorage &&FuncRecords,
-                                 InstrProfSymtab &&ProfileNames,
-                                 uint8_t BytesInAddress,
-                                 support::endianness Endian,
-                                 StringRef CompilationDir = "");
+  createCoverageReaderFromBuffer(
+      StringRef Coverage, FuncRecordsStorage &&FuncRecords,
+      std::unique_ptr<InstrProfSymtab> ProfileNamesPtr, uint8_t BytesInAddress,
+      llvm::endianness Endian, StringRef CompilationDir = "");
 
   Error readNextRecord(CoverageMappingRecord &Record) override;
 };

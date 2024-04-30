@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "OutputSections.h"
+#include "Relocations.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -47,6 +49,7 @@ public:
                                         uint8_t stOther) const override;
   bool deleteFallThruJmpInsn(InputSection &is, InputFile *file,
                              InputSection *nextIS) const override;
+  bool relaxOnce(int pass) const override;
 };
 } // namespace
 
@@ -305,6 +308,44 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   return true;
 }
 
+bool X86_64::relaxOnce(int pass) const {
+  uint64_t minVA = UINT64_MAX, maxVA = 0;
+  for (OutputSection *osec : outputSections) {
+    minVA = std::min(minVA, osec->addr);
+    maxVA = std::max(maxVA, osec->addr + osec->size);
+  }
+  // If the max VA difference is under 2^31, GOT-generating relocations with a 32-bit range cannot overflow.
+  if (isUInt<31>(maxVA - minVA))
+    return false;
+
+  SmallVector<InputSection *, 0> storage;
+  bool changed = false;
+  for (OutputSection *osec : outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage)) {
+      for (Relocation &rel : sec->relocs()) {
+        if (rel.expr != R_RELAX_GOT_PC)
+          continue;
+
+        uint64_t v = sec->getRelocTargetVA(sec->file, rel.type, rel.addend,
+                                           sec->getOutputSection()->addr +
+                                               sec->outSecOff + rel.offset,
+                                           *rel.sym, rel.expr);
+        if (isInt<32>(v))
+          continue;
+        if (rel.sym->auxIdx == 0) {
+          rel.sym->allocateAux();
+          addGotEntry(*rel.sym);
+          changed = true;
+        }
+        rel.expr = R_GOT_PC;
+      }
+    }
+  }
+  return changed;
+}
+
 RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
                            const uint8_t *loc) const {
   switch (type) {
@@ -318,6 +359,7 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
   case R_X86_64_DTPOFF64:
     return R_DTPREL;
   case R_X86_64_TPOFF32:
+  case R_X86_64_TPOFF64:
     return R_TPREL;
   case R_X86_64_TLSDESC_CALL:
     return R_TLSDESC_CALL;
@@ -362,10 +404,10 @@ RelExpr X86_64::getRelExpr(RelType type, const Symbol &s,
 }
 
 void X86_64::writeGotPltHeader(uint8_t *buf) const {
-  // The first entry holds the value of _DYNAMIC. It is not clear why that is
-  // required, but it is documented in the psabi and the glibc dynamic linker
-  // seems to use it (note that this is relevant for linking ld.so, not any
-  // other program).
+  // The first entry holds the link-time address of _DYNAMIC. It is documented
+  // in the psABI and glibc before Aug 2021 used the entry to compute run-time
+  // load address of the shared object (note that this is relevant for linking
+  // ld.so, not any other program).
   write64le(buf, mainPart->dynamic->getVA());
 }
 
@@ -751,6 +793,7 @@ void X86_64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write32le(loc, val);
     break;
   case R_X86_64_64:
+  case R_X86_64_TPOFF64:
   case R_X86_64_DTPOFF64:
   case R_X86_64_PC64:
   case R_X86_64_SIZE64:
@@ -912,7 +955,8 @@ static void relaxGotNoPic(uint8_t *loc, uint64_t val, uint8_t op,
 }
 
 static void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) {
-  checkInt(loc, val, 32, rel);
+  assert(isInt<32>(val) &&
+         "GOTPCRELX should not have been relaxed if it overflows");
   const uint8_t op = loc[-2];
   const uint8_t modRm = loc[-1];
 
@@ -989,6 +1033,8 @@ void X86_64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   uint64_t secAddr = sec.getOutputSection()->addr;
   if (auto *s = dyn_cast<InputSection>(&sec))
     secAddr += s->outSecOff;
+  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
+    secAddr += ehIn->getParent()->outSecOff;
   for (const Relocation &rel : sec.relocs()) {
     if (rel.expr == R_NONE) // See deleteFallThruJmpInsn
       continue;

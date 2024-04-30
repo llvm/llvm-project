@@ -17,7 +17,7 @@
 #include "../ConvertibleToIntegral.h"
 #include "test_macros.h"
 
-// Helper file to implement combinatorical testing of extents constructor
+// Helper file to implement combinatorial testing of extents constructor
 //
 // std::extents can be constructed from just indices, a std::array, or a std::span
 // In each of those cases one can either provide all extents, or just the dynamic ones
@@ -45,7 +45,7 @@ constexpr void test_construction(AllExtents all_ext) {
 
   // test construction from just dynamic extents
   // create an array of just the extents corresponding to dynamic values
-  std::array<typename AllExtents::value_type, E::rank_dynamic()> dyn_ext{0};
+  std::array<typename AllExtents::value_type, E::rank_dynamic()> dyn_ext{};
   size_t dynamic_idx = 0;
   for (size_t r = 0; r < E::rank(); r++) {
     if (E::static_extent(r) == std::dynamic_extent) {
@@ -89,11 +89,11 @@ constexpr bool test_index_type_combo() {
   test<int, int, Test>();
   test<int, size_t, Test>();
   test<unsigned, int, Test>();
-  test<char, size_t, Test>();
+  test<signed char, size_t, Test>();
   test<long long, unsigned, Test>();
   test<size_t, int, Test>();
   test<size_t, size_t, Test>();
   test<int, IntType, Test>();
-  test<char, IntType, Test>();
+  test<signed char, IntType, Test>();
   return true;
 }

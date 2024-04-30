@@ -16,6 +16,7 @@
 
 #include <concepts>
 #include <memory>
+#include <ranges>
 #include <tuple>
 #include <utility>
 
@@ -28,25 +29,27 @@ constexpr decltype(auto) test_uses_allocator_construction_args(Args&&... args) {
   return std::uses_allocator_construction_args<Type>(std::forward<Args>(args)...);
 }
 
-constexpr bool test() {
+template <template <class> class CV>
+constexpr void testOne() {
   Alloc a(12);
   {
     std::same_as<std::tuple<std::allocator_arg_t, const Alloc&>> auto ret =
-        test_uses_allocator_construction_args<UsesAllocArgT>(a);
+        test_uses_allocator_construction_args<CV<UsesAllocArgT>>(a);
     assert(std::get<1>(ret).get_data() == 12);
   }
   {
-    std::same_as<std::tuple<const Alloc&>> auto ret = test_uses_allocator_construction_args<UsesAllocLast>(a);
+    std::same_as<std::tuple<const Alloc&>> auto ret = test_uses_allocator_construction_args<CV<UsesAllocLast>>(a);
     assert(std::get<0>(ret).get_data() == 12);
   }
   {
-    [[maybe_unused]] std::same_as<std::tuple<>> auto ret = test_uses_allocator_construction_args<NotAllocatorAware>(a);
+    [[maybe_unused]] std::same_as<std::tuple<>> auto ret =
+        test_uses_allocator_construction_args<CV<NotAllocatorAware>>(a);
   }
   {
     std::same_as<std::tuple<std::piecewise_construct_t,
                             std::tuple<std::allocator_arg_t, const Alloc&>,
                             std::tuple<const Alloc&>>> auto ret =
-        test_uses_allocator_construction_args<std::pair<UsesAllocArgT, UsesAllocLast>>(
+        test_uses_allocator_construction_args<CV<std::pair<UsesAllocArgT, UsesAllocLast>>>(
             a, std::piecewise_construct, std::tuple<>{}, std::tuple<>{});
     assert(std::get<1>(std::get<1>(ret)).get_data() == 12);
     assert(std::get<0>(std::get<2>(ret)).get_data() == 12);
@@ -55,7 +58,7 @@ constexpr bool test() {
     std::same_as<std::tuple<std::piecewise_construct_t,
                             std::tuple<std::allocator_arg_t, const Alloc&>,
                             std::tuple<const Alloc&>>> auto ret =
-        test_uses_allocator_construction_args<std::pair<UsesAllocArgT, UsesAllocLast>>(a);
+        test_uses_allocator_construction_args<CV<std::pair<UsesAllocArgT, UsesAllocLast>>>(a);
     assert(std::get<1>(std::get<1>(ret)).get_data() == 12);
     assert(std::get<0>(std::get<2>(ret)).get_data() == 12);
   }
@@ -64,7 +67,7 @@ constexpr bool test() {
     std::same_as<std::tuple<std::piecewise_construct_t,
                             std::tuple<std::allocator_arg_t, const Alloc&, int&>,
                             std::tuple<int&, const Alloc&>>> auto ret =
-        test_uses_allocator_construction_args<std::pair<UsesAllocArgT, UsesAllocLast>>(a, val, val);
+        test_uses_allocator_construction_args<CV<std::pair<UsesAllocArgT, UsesAllocLast>>>(a, val, val);
     assert(std::get<1>(std::get<1>(ret)).get_data() == 12);
     assert(std::get<1>(std::get<2>(ret)).get_data() == 12);
     assert(&std::get<2>(std::get<1>(ret)) == &val);
@@ -75,7 +78,7 @@ constexpr bool test() {
     std::same_as<std::tuple<std::piecewise_construct_t,
                             std::tuple<std::allocator_arg_t, const Alloc&, int&&>,
                             std::tuple<int&&, const Alloc&>>> auto ret =
-        test_uses_allocator_construction_args<std::pair<UsesAllocArgT, UsesAllocLast>>(
+        test_uses_allocator_construction_args<CV<std::pair<UsesAllocArgT, UsesAllocLast>>>(
             a, std::move(val), std::move(val));
     assert(std::get<1>(std::get<1>(ret)).get_data() == 12);
     assert(std::get<1>(std::get<2>(ret)).get_data() == 12);
@@ -89,7 +92,7 @@ constexpr bool test() {
     std::same_as<std::tuple<std::piecewise_construct_t,
                             std::tuple<std::allocator_arg_t, const Alloc&, int&>,
                             std::tuple<int&, const Alloc&>>> auto ret =
-        test_uses_allocator_construction_args<std::pair<UsesAllocArgT, UsesAllocLast>>(a, p);
+        test_uses_allocator_construction_args<CV<std::pair<UsesAllocArgT, UsesAllocLast>>>(a, p);
     assert(std::get<1>(std::get<1>(ret)).get_data() == 12);
     assert(std::get<1>(std::get<2>(ret)).get_data() == 12);
     assert(std::get<2>(std::get<1>(ret)) == 3);
@@ -101,7 +104,7 @@ constexpr bool test() {
     std::same_as<std::tuple<std::piecewise_construct_t,
                             std::tuple<std::allocator_arg_t, const Alloc&, const int&>,
                             std::tuple<const int&, const Alloc&>>> auto ret =
-        test_uses_allocator_construction_args<std::pair<UsesAllocArgT, UsesAllocLast>>(a, std::as_const(p));
+        test_uses_allocator_construction_args<CV<std::pair<UsesAllocArgT, UsesAllocLast>>>(a, std::as_const(p));
     assert(std::get<1>(std::get<1>(ret)).get_data() == 12);
     assert(std::get<1>(std::get<2>(ret)).get_data() == 12);
     assert(std::get<2>(std::get<1>(ret)) == 3);
@@ -112,7 +115,7 @@ constexpr bool test() {
     std::same_as<std::tuple<std::piecewise_construct_t,
                             std::tuple<std::allocator_arg_t, const Alloc&, int&&>,
                             std::tuple<int&&, const Alloc&>>> auto ret =
-        test_uses_allocator_construction_args<std::pair<UsesAllocArgT, UsesAllocLast>>(a, std::move(p));
+        test_uses_allocator_construction_args<CV<std::pair<UsesAllocArgT, UsesAllocLast>>>(a, std::move(p));
     assert(std::get<1>(std::get<1>(ret)).get_data() == 12);
     assert(std::get<1>(std::get<2>(ret)).get_data() == 12);
     assert(std::get<2>(std::get<1>(ret)) == 3);
@@ -124,7 +127,8 @@ constexpr bool test() {
     std::same_as<std::tuple<std::piecewise_construct_t,
                             std::tuple<std::allocator_arg_t, const Alloc&, const int&&>,
                             std::tuple<const int&&, const Alloc&>>> auto ret =
-        test_uses_allocator_construction_args<std::pair<UsesAllocArgT, UsesAllocLast>>(a, std::move(std::as_const(p)));
+        test_uses_allocator_construction_args<CV<std::pair<UsesAllocArgT, UsesAllocLast>>>(
+            a, std::move(std::as_const(p)));
     assert(std::get<1>(std::get<1>(ret)).get_data() == 12);
     assert(std::get<1>(std::get<2>(ret)).get_data() == 12);
     assert(std::get<2>(std::get<1>(ret)) == 3);
@@ -132,19 +136,57 @@ constexpr bool test() {
   }
 #endif
   {
-    ConvertibleToPair ctp {};
-    auto ret = test_uses_allocator_construction_args<std::pair<int, int>>(a, ctp);
+    ConvertibleToPair ctp{};
+    auto ret              = test_uses_allocator_construction_args<CV<std::pair<int, int>>>(a, ctp);
     std::pair<int, int> v = std::get<0>(ret);
     assert(std::get<0>(v) == 1);
     assert(std::get<1>(v) == 2);
   }
   {
-    ConvertibleToPair ctp {};
-    auto ret = test_uses_allocator_construction_args<std::pair<int, int>>(a, std::move(ctp));
+    ConvertibleToPair ctp{};
+    auto ret              = test_uses_allocator_construction_args<CV<std::pair<int, int>>>(a, std::move(ctp));
     std::pair<int, int> v = std::get<0>(ret);
     assert(std::get<0>(v) == 1);
     assert(std::get<1>(v) == 2);
   }
+#if TEST_STD_VER >= 23
+  // P2165R4 with LWG3821 applied
+  // uses_allocator_construction_args should have overload for pair-like
+  {
+    // pair-like with explicit ctr should work
+    struct Foo {
+      int i = 5;
+    };
+    struct Bar {
+      int i;
+      constexpr explicit Bar(Foo foo) : i(foo.i) {}
+    };
+
+    std::tuple<Foo, Foo> pair_like;
+    auto ret  = test_uses_allocator_construction_args<CV<std::pair<Bar, Bar>>>(a, pair_like);
+    auto pair = std::make_from_tuple<std::pair<Bar, Bar>>(std::move(ret));
+    assert(pair.first.i == 5);
+    assert(pair.second.i == 5);
+  }
+  {
+    // subrange should work
+    int i = 5;
+    std::ranges::subrange<int*, int*> r{&i, &i};
+    auto ret  = test_uses_allocator_construction_args<CV<std::pair<int*, int*>>>(a, r);
+    auto pair = std::make_from_tuple<std::pair<int*, int*>>(std::move(ret));
+    assert(pair.first == &i);
+    assert(pair.second == &i);
+  }
+#endif
+}
+
+constexpr bool test() {
+  testOne<std::type_identity_t>();
+
+  // LWG 3677. Is a cv-qualified pair specially handled in uses-allocator construction
+  testOne<std::add_const_t>();
+  testOne<std::add_volatile_t>();
+  testOne<std::add_cv_t>();
 
   return true;
 }

@@ -1,4 +1,4 @@
-;RUN: llc -march=r600 -mcpu=redwood -amdgpu-bypass-slow-div=0 < %s | FileCheck -check-prefix=EG %s
+;RUN: llc -mtriple=r600 -mcpu=redwood -amdgpu-bypass-slow-div=0 < %s | FileCheck -check-prefix=EG %s
 
 ;EG-LABEL: {{^}}s_test_sdiv:
 ;EG: RECIP_UINT

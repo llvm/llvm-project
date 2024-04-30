@@ -9,8 +9,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @test_revbv16i16(ptr %a) {
 ; CHECK-LABEL: test_revbv16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    revb z0.h, p0/m, z0.h
 ; CHECK-NEXT:    revb z1.h, p0/m, z1.h
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -25,8 +25,8 @@ define void @test_revbv16i16(ptr %a) {
 define void @test_revbv8i32(ptr %a) {
 ; CHECK-LABEL: test_revbv8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    revb z0.s, p0/m, z0.s
 ; CHECK-NEXT:    revb z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -41,8 +41,8 @@ define void @test_revbv8i32(ptr %a) {
 define void @test_revbv4i64(ptr %a) {
 ; CHECK-LABEL: test_revbv4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    revb z0.d, p0/m, z0.d
 ; CHECK-NEXT:    revb z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -57,8 +57,8 @@ define void @test_revbv4i64(ptr %a) {
 define void @test_revhv8i32(ptr %a) {
 ; CHECK-LABEL: test_revhv8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    revh z0.s, p0/m, z0.s
 ; CHECK-NEXT:    revh z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -73,8 +73,8 @@ define void @test_revhv8i32(ptr %a) {
 define void @test_revhv8f32(ptr %a) {
 ; CHECK-LABEL: test_revhv8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    revh z0.s, p0/m, z0.s
 ; CHECK-NEXT:    revh z1.s, p0/m, z1.s
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -89,8 +89,8 @@ define void @test_revhv8f32(ptr %a) {
 define void @test_revhv4i64(ptr %a) {
 ; CHECK-LABEL: test_revhv4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    revh z0.d, p0/m, z0.d
 ; CHECK-NEXT:    revh z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -105,8 +105,8 @@ define void @test_revhv4i64(ptr %a) {
 define void @test_revwv4i64(ptr %a) {
 ; CHECK-LABEL: test_revwv4i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    revw z0.d, p0/m, z0.d
 ; CHECK-NEXT:    revw z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -121,8 +121,8 @@ define void @test_revwv4i64(ptr %a) {
 define void @test_revwv4f64(ptr %a) {
 ; CHECK-LABEL: test_revwv4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    revw z0.d, p0/m, z0.d
 ; CHECK-NEXT:    revw z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -150,8 +150,8 @@ define <16 x i8> @test_revv16i8(ptr %a) {
 define void @test_revwv8i32v8i32(ptr %a, ptr %b) {
 ; CHECK-LABEL: test_revwv8i32v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldp q0, q1, [x1]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    revw z0.d, p0/m, z0.d
 ; CHECK-NEXT:    revw z1.d, p0/m, z1.d
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -166,8 +166,8 @@ define void @test_revwv8i32v8i32(ptr %a, ptr %b) {
 define void @test_revhv32i16(ptr %a) {
 ; CHECK-LABEL: test_revhv32i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldp q0, q1, [x0, #32]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldp q2, q3, [x0]
 ; CHECK-NEXT:    revh z0.d, p0/m, z0.d
 ; CHECK-NEXT:    revh z1.d, p0/m, z1.d
@@ -185,19 +185,11 @@ define void @test_revhv32i16(ptr %a) {
 define void @test_rev_elts_fail(ptr %a) {
 ; CHECK-LABEL: test_rev_elts_fail:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q1, q0, [x0]
-; CHECK-NEXT:    mov z2.d, z0.d[1]
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    mov z0.d, z1.d[1]
-; CHECK-NEXT:    fmov x9, d2
-; CHECK-NEXT:    stp x9, x8, [sp, #-32]!
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    stp x9, x8, [sp, #16]
-; CHECK-NEXT:    ldp q1, q0, [sp]
-; CHECK-NEXT:    stp q0, q1, [x0]
-; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    index z0.d, #1, #-1
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    tbl z1.d, { z1.d }, z0.d
+; CHECK-NEXT:    tbl z0.d, { z2.d }, z0.d
+; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i64>, ptr %a
   %tmp2 = shufflevector <4 x i64> %tmp1, <4 x i64> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
@@ -210,8 +202,8 @@ define void @test_rev_elts_fail(ptr %a) {
 define void @test_revdv4i64_sve2p1(ptr %a) #1 {
 ; CHECK-LABEL: test_revdv4i64_sve2p1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    revd z0.q, p0/m, z0.q
 ; CHECK-NEXT:    revd z1.q, p0/m, z1.q
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -225,8 +217,8 @@ define void @test_revdv4i64_sve2p1(ptr %a) #1 {
 define void @test_revdv4f64_sve2p1(ptr %a) #1 {
 ; CHECK-LABEL: test_revdv4f64_sve2p1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    revd z0.q, p0/m, z0.q
 ; CHECK-NEXT:    revd z1.q, p0/m, z1.q
 ; CHECK-NEXT:    stp q0, q1, [x0]
@@ -240,30 +232,11 @@ define void @test_revdv4f64_sve2p1(ptr %a) #1 {
 define void @test_revv8i32(ptr %a) {
 ; CHECK-LABEL: test_revv8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    ldp q0, q3, [x0]
-; CHECK-NEXT:    mov z1.s, z0.s[1]
-; CHECK-NEXT:    mov z2.s, z0.s[2]
-; CHECK-NEXT:    mov z4.s, z0.s[3]
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov z0.s, z3.s[1]
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    mov z1.s, z3.s[2]
-; CHECK-NEXT:    stp w9, w8, [sp, #24]
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    fmov w9, s4
-; CHECK-NEXT:    mov z2.s, z3.s[3]
-; CHECK-NEXT:    stp w9, w8, [sp, #16]
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    stp w9, w8, [sp, #8]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    fmov w9, s2
-; CHECK-NEXT:    stp w9, w8, [sp]
-; CHECK-NEXT:    ldp q0, q1, [sp]
-; CHECK-NEXT:    stp q0, q1, [x0]
-; CHECK-NEXT:    add sp, sp, #32
+; CHECK-NEXT:    index z0.s, #3, #-1
+; CHECK-NEXT:    ldp q2, q1, [x0]
+; CHECK-NEXT:    tbl z1.s, { z1.s }, z0.s
+; CHECK-NEXT:    tbl z0.s, { z2.s }, z0.s
+; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <8 x i32>, ptr %a
   %tmp2 = shufflevector <8 x i32> %tmp1, <8 x i32> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>

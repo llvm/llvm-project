@@ -28,6 +28,7 @@
 
 #include "MoveOnly.h"
 #include "test_macros.h"
+#include "../../types.h"
 
 // Test Constraints:
 static_assert(
@@ -90,13 +91,17 @@ constexpr bool test() {
     assert(m.get() == 0);
   }
 
+  // TailClobberer
+  {
+    std::expected<TailClobberer<0>, bool> e(std::in_place, {1, 2, 3});
+    assert(e.has_value());
+  }
+
   return true;
 }
 
 void testException() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
-  struct Except {};
-
   struct Throwing {
     Throwing(std::initializer_list<int>, int) { throw Except{}; };
   };

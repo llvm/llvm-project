@@ -7,7 +7,7 @@ define void @foo(i32 %x) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BUFFER:%.*]] = alloca [80 x i32], align 16
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[BUFFER]], i8 -86, i64 320, i1 false), !annotation !0
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[BUFFER]], i8 -86, i64 320, i1 false), !annotation [[META0:![0-9]+]]
 ; CHECK-NEXT:    br label [[DO_BODY:%.*]]
 ; CHECK:       do.body:
 ; CHECK-NEXT:    [[X_ADDR_0:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[DEC:%.*]], [[DO_COND:%.*]] ]
@@ -53,7 +53,7 @@ define void @bar(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[Y:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[BUFFER]], i8 -86, i64 320, i1 false), !annotation !0
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[BUFFER]], i8 -86, i64 320, i1 false), !annotation [[META0]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    br label [[DO_BODY:%.*]]
 ; CHECK:       do.body:
@@ -96,6 +96,45 @@ do.end:                                           ; preds = %do.cond
   br label %if.end
 
 if.end:                                           ; preds = %do.end, %entry
+  ret void
+}
+
+declare void @dummy()
+
+define void @unreachable_pred() {
+; CHECK-LABEL: @unreachable_pred(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P:%.*]] = alloca [2 x i16], i32 0, align 2
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 2, !annotation [[META0]]
+; CHECK-NEXT:    br i1 true, label [[LOOP:%.*]], label [[USEBB:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       a:
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       b:
+; CHECK-NEXT:    br label [[LOOP]]
+; CHECK:       usebb:
+; CHECK-NEXT:    [[USE_P:%.*]] = icmp ult ptr null, [[P]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p = alloca [2 x i16], i32 0, align 2
+  store i32 0, ptr %p, align 2, !annotation !0
+  br i1 true, label %loop, label %usebb
+
+loop:
+  call void @dummy()
+  br label %loop
+
+a:
+  br label %loop
+
+b:
+  br label %loop
+
+usebb:
+  %use_p = icmp ult ptr null, %p
   ret void
 }
 

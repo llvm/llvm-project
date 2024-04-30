@@ -6,7 +6,7 @@
 ! is a pointer to an array of T and never an array of pointer to T in
 ! Fortran.
 
-! RUN: bbc --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 module array_of_pointer_test
   type t

@@ -20,7 +20,7 @@
 
 #include <stddef.h> // size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 [[maybe_unused]] LIBC_INLINE uint32_t load32_aligned(CPtr ptr, size_t offset,
                                                      size_t alignment) {
@@ -28,7 +28,7 @@ namespace __llvm_libc {
     return load32_aligned<uint32_t>(ptr, offset);
   else if (alignment == 2)
     return load32_aligned<uint16_t, uint16_t>(ptr, offset);
-  else
+  else // 1, 3
     return load32_aligned<uint8_t, uint16_t, uint8_t>(ptr, offset);
 }
 
@@ -38,9 +38,11 @@ namespace __llvm_libc {
     return load64_aligned<uint64_t>(ptr, offset);
   else if (alignment == 4)
     return load64_aligned<uint32_t, uint32_t>(ptr, offset);
+  else if (alignment == 6)
+    return load64_aligned<uint16_t, uint32_t, uint16_t>(ptr, offset);
   else if (alignment == 2)
     return load64_aligned<uint16_t, uint16_t, uint16_t, uint16_t>(ptr, offset);
-  else
+  else // 1, 3, 5, 7
     return load64_aligned<uint8_t, uint16_t, uint16_t, uint16_t, uint8_t>(
         ptr, offset);
 }
@@ -133,7 +135,7 @@ inline_bcmp_aligned_access_32bit(CPtr p1, CPtr p2, size_t count) {
     uint32_t a = load32_aligned<uint32_t>(p1, offset);
     uint32_t b = load32_aligned(p2, offset, p2_alignment);
     if (a != b)
-      return BcmpReturnType::NONZERO();
+      return BcmpReturnType::nonzero();
   }
   return inline_bcmp_byte_per_byte(p1, p2, count, offset);
 }
@@ -152,7 +154,7 @@ inline_bcmp_aligned_access_64bit(CPtr p1, CPtr p2, size_t count) {
     uint64_t a = load64_aligned<uint64_t>(p1, offset);
     uint64_t b = load64_aligned(p2, offset, p2_alignment);
     if (a != b)
-      return BcmpReturnType::NONZERO();
+      return BcmpReturnType::nonzero();
   }
   return inline_bcmp_byte_per_byte(p1, p2, count, offset);
 }
@@ -200,6 +202,6 @@ inline_memcmp_aligned_access_64bit(CPtr p1, CPtr p2, size_t count) {
   return inline_memcmp_byte_per_byte(p1, p2, count, offset);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_ALIGNED_ACCESS_H

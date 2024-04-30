@@ -25,7 +25,6 @@
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Debug.h"
@@ -245,6 +244,10 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
   unsigned LineStart = 0;
   for (size_t I = 0; I < NumRegions; ++I) {
     Counter C, C2;
+    uint64_t BIDX, NC;
+    // They are stored as internal values plus 1 (min is -1)
+    uint64_t ID1, TID1, FID1;
+    mcdc::Parameters Params;
     CounterMappingRegion::RegionKind Kind = CounterMappingRegion::CodeRegion;
 
     // Read the combined counter + region kind.
@@ -294,6 +297,37 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
             return Err;
           if (auto Err = readCounter(C2))
             return Err;
+          break;
+        case CounterMappingRegion::MCDCBranchRegion:
+          // For a MCDC Branch Region, read two successive counters and 3 IDs.
+          Kind = CounterMappingRegion::MCDCBranchRegion;
+          if (auto Err = readCounter(C))
+            return Err;
+          if (auto Err = readCounter(C2))
+            return Err;
+          if (auto Err = readIntMax(ID1, std::numeric_limits<int16_t>::max()))
+            return Err;
+          if (auto Err = readIntMax(TID1, std::numeric_limits<int16_t>::max()))
+            return Err;
+          if (auto Err = readIntMax(FID1, std::numeric_limits<int16_t>::max()))
+            return Err;
+          if (ID1 == 0)
+            return make_error<CoverageMapError>(
+                coveragemap_error::malformed,
+                "MCDCConditionID shouldn't be zero");
+          Params = mcdc::BranchParameters{
+              static_cast<int16_t>(static_cast<int16_t>(ID1) - 1),
+              {static_cast<int16_t>(static_cast<int16_t>(FID1) - 1),
+               static_cast<int16_t>(static_cast<int16_t>(TID1) - 1)}};
+          break;
+        case CounterMappingRegion::MCDCDecisionRegion:
+          Kind = CounterMappingRegion::MCDCDecisionRegion;
+          if (auto Err = readIntMax(BIDX, std::numeric_limits<unsigned>::max()))
+            return Err;
+          if (auto Err = readIntMax(NC, std::numeric_limits<int16_t>::max()))
+            return Err;
+          Params = mcdc::DecisionParameters{static_cast<unsigned>(BIDX),
+                                            static_cast<uint16_t>(NC)};
           break;
         default:
           return make_error<CoverageMapError>(coveragemap_error::malformed,
@@ -348,9 +382,9 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
       dbgs() << "\n";
     });
 
-    auto CMR = CounterMappingRegion(C, C2, InferredFileID, ExpandedFileID,
-                                    LineStart, ColumnStart,
-                                    LineStart + NumLines, ColumnEnd, Kind);
+    auto CMR = CounterMappingRegion(
+        C, C2, InferredFileID, ExpandedFileID, LineStart, ColumnStart,
+        LineStart + NumLines, ColumnEnd, Kind, Params);
     if (CMR.startLoc() > CMR.endLoc())
       return make_error<CoverageMapError>(
           coveragemap_error::malformed,
@@ -467,9 +501,13 @@ Error InstrProfSymtab::create(SectionRef &Section) {
 
   // If this is a linked PE/COFF file, then we have to skip over the null byte
   // that is allocated in the .lprfn$A section in the LLVM profiling runtime.
+  // If the name section is .lprfcovnames, it doesn't have the null byte at the
+  // beginning.
   const ObjectFile *Obj = Section.getObject();
   if (isa<COFFObjectFile>(Obj) && !Obj->isRelocatableObject())
-    Data = Data.drop_front(1);
+    if (Expected<StringRef> NameOrErr = Section.getName())
+      if (*NameOrErr != getInstrProfSectionName(IPSK_covname, Triple::COFF))
+        Data = Data.drop_front(1);
 
   return Error::success();
 }
@@ -536,7 +574,7 @@ struct CovMapFuncRecordReader {
                       const char *OutOfLineMappingBuf,
                       const char *OutOfLineMappingBufEnd) = 0;
 
-  template <class IntPtrT, support::endianness Endian>
+  template <class IntPtrT, llvm::endianness Endian>
   static Expected<std::unique_ptr<CovMapFuncRecordReader>>
   get(CovMapVersion Version, InstrProfSymtab &P,
       std::vector<BinaryCoverageReader::ProfileMappingRecord> &R, StringRef D,
@@ -544,7 +582,7 @@ struct CovMapFuncRecordReader {
 };
 
 // A class for reading coverage mapping function records for a module.
-template <CovMapVersion Version, class IntPtrT, support::endianness Endian>
+template <CovMapVersion Version, class IntPtrT, llvm::endianness Endian>
 class VersionedCovMapFuncRecordReader : public CovMapFuncRecordReader {
   using FuncRecordType =
       typename CovMapTraits<Version, IntPtrT>::CovMapFuncRecordType;
@@ -768,7 +806,7 @@ public:
 
 } // end anonymous namespace
 
-template <class IntPtrT, support::endianness Endian>
+template <class IntPtrT, llvm::endianness Endian>
 Expected<std::unique_ptr<CovMapFuncRecordReader>> CovMapFuncRecordReader::get(
     CovMapVersion Version, InstrProfSymtab &P,
     std::vector<BinaryCoverageReader::ProfileMappingRecord> &R, StringRef D,
@@ -784,6 +822,7 @@ Expected<std::unique_ptr<CovMapFuncRecordReader>> CovMapFuncRecordReader::get(
   case CovMapVersion::Version4:
   case CovMapVersion::Version5:
   case CovMapVersion::Version6:
+  case CovMapVersion::Version7:
     // Decompress the name data.
     if (Error E = P.create(P.getNameData()))
       return std::move(E);
@@ -802,11 +841,14 @@ Expected<std::unique_ptr<CovMapFuncRecordReader>> CovMapFuncRecordReader::get(
     else if (Version == CovMapVersion::Version6)
       return std::make_unique<VersionedCovMapFuncRecordReader<
           CovMapVersion::Version6, IntPtrT, Endian>>(P, R, D, F);
+    else if (Version == CovMapVersion::Version7)
+      return std::make_unique<VersionedCovMapFuncRecordReader<
+          CovMapVersion::Version7, IntPtrT, Endian>>(P, R, D, F);
   }
   llvm_unreachable("Unsupported version");
 }
 
-template <typename T, support::endianness Endian>
+template <typename T, llvm::endianness Endian>
 static Error readCoverageMappingData(
     InstrProfSymtab &ProfileNames, StringRef CovMap, StringRef FuncRecords,
     std::vector<BinaryCoverageReader::ProfileMappingRecord> &Records,
@@ -852,33 +894,34 @@ static Error readCoverageMappingData(
 Expected<std::unique_ptr<BinaryCoverageReader>>
 BinaryCoverageReader::createCoverageReaderFromBuffer(
     StringRef Coverage, FuncRecordsStorage &&FuncRecords,
-    InstrProfSymtab &&ProfileNames, uint8_t BytesInAddress,
-    support::endianness Endian, StringRef CompilationDir) {
-  std::unique_ptr<BinaryCoverageReader> Reader(
-      new BinaryCoverageReader(std::move(FuncRecords)));
-  Reader->ProfileNames = std::move(ProfileNames);
+    std::unique_ptr<InstrProfSymtab> ProfileNamesPtr, uint8_t BytesInAddress,
+    llvm::endianness Endian, StringRef CompilationDir) {
+  if (ProfileNamesPtr == nullptr)
+    return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                        "Caller must provide ProfileNames");
+  std::unique_ptr<BinaryCoverageReader> Reader(new BinaryCoverageReader(
+      std::move(ProfileNamesPtr), std::move(FuncRecords)));
+  InstrProfSymtab &ProfileNames = *Reader->ProfileNames;
   StringRef FuncRecordsRef = Reader->FuncRecords->getBuffer();
-  if (BytesInAddress == 4 && Endian == support::endianness::little) {
-    if (Error E =
-            readCoverageMappingData<uint32_t, support::endianness::little>(
-                Reader->ProfileNames, Coverage, FuncRecordsRef,
-                Reader->MappingRecords, CompilationDir, Reader->Filenames))
+  if (BytesInAddress == 4 && Endian == llvm::endianness::little) {
+    if (Error E = readCoverageMappingData<uint32_t, llvm::endianness::little>(
+            ProfileNames, Coverage, FuncRecordsRef, Reader->MappingRecords,
+            CompilationDir, Reader->Filenames))
       return std::move(E);
-  } else if (BytesInAddress == 4 && Endian == support::endianness::big) {
-    if (Error E = readCoverageMappingData<uint32_t, support::endianness::big>(
-            Reader->ProfileNames, Coverage, FuncRecordsRef,
-            Reader->MappingRecords, CompilationDir, Reader->Filenames))
+  } else if (BytesInAddress == 4 && Endian == llvm::endianness::big) {
+    if (Error E = readCoverageMappingData<uint32_t, llvm::endianness::big>(
+            ProfileNames, Coverage, FuncRecordsRef, Reader->MappingRecords,
+            CompilationDir, Reader->Filenames))
       return std::move(E);
-  } else if (BytesInAddress == 8 && Endian == support::endianness::little) {
-    if (Error E =
-            readCoverageMappingData<uint64_t, support::endianness::little>(
-                Reader->ProfileNames, Coverage, FuncRecordsRef,
-                Reader->MappingRecords, CompilationDir, Reader->Filenames))
+  } else if (BytesInAddress == 8 && Endian == llvm::endianness::little) {
+    if (Error E = readCoverageMappingData<uint64_t, llvm::endianness::little>(
+            ProfileNames, Coverage, FuncRecordsRef, Reader->MappingRecords,
+            CompilationDir, Reader->Filenames))
       return std::move(E);
-  } else if (BytesInAddress == 8 && Endian == support::endianness::big) {
-    if (Error E = readCoverageMappingData<uint64_t, support::endianness::big>(
-            Reader->ProfileNames, Coverage, FuncRecordsRef,
-            Reader->MappingRecords, CompilationDir, Reader->Filenames))
+  } else if (BytesInAddress == 8 && Endian == llvm::endianness::big) {
+    if (Error E = readCoverageMappingData<uint64_t, llvm::endianness::big>(
+            ProfileNames, Coverage, FuncRecordsRef, Reader->MappingRecords,
+            CompilationDir, Reader->Filenames))
       return std::move(E);
   } else
     return make_error<CoverageMapError>(
@@ -890,7 +933,7 @@ BinaryCoverageReader::createCoverageReaderFromBuffer(
 static Expected<std::unique_ptr<BinaryCoverageReader>>
 loadTestingFormat(StringRef Data, StringRef CompilationDir) {
   uint8_t BytesInAddress = 8;
-  support::endianness Endian = support::endianness::little;
+  llvm::endianness Endian = llvm::endianness::little;
 
   // Read the magic and version.
   Data = Data.substr(sizeof(TestingFormatMagic));
@@ -898,7 +941,7 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
     return make_error<CoverageMapError>(coveragemap_error::malformed,
                                         "the size of data is too small");
   auto TestingVersion =
-      support::endian::byte_swap<uint64_t, support::endianness::little>(
+      support::endian::byte_swap<uint64_t, llvm::endianness::little>(
           *reinterpret_cast<const uint64_t *>(Data.data()));
   Data = Data.substr(sizeof(uint64_t));
 
@@ -923,8 +966,8 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
   if (Data.size() < ProfileNamesSize)
     return make_error<CoverageMapError>(coveragemap_error::malformed,
                                         "the size of ProfileNames is too big");
-  InstrProfSymtab ProfileNames;
-  if (Error E = ProfileNames.create(Data.substr(0, ProfileNamesSize), Address))
+  auto ProfileNames = std::make_unique<InstrProfSymtab>();
+  if (Error E = ProfileNames->create(Data.substr(0, ProfileNamesSize), Address))
     return std::move(E);
   Data = Data.substr(ProfileNamesSize);
 
@@ -958,7 +1001,7 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
   auto const *CovHeader = reinterpret_cast<const CovMapHeader *>(
       Data.substr(0, sizeof(CovMapHeader)).data());
   auto Version =
-      CovMapVersion(CovHeader->getVersion<support::endianness::little>());
+      CovMapVersion(CovHeader->getVersion<llvm::endianness::little>());
 
   // In Version1, the size of CoverageMapping is calculated.
   if (TestingVersion == uint64_t(TestingFormatVersion::Version1)) {
@@ -966,7 +1009,7 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
       CoverageMappingSize = Data.size();
     } else {
       auto FilenamesSize =
-          CovHeader->getFilenamesSize<support::endianness::little>();
+          CovHeader->getFilenamesSize<llvm::endianness::little>();
       CoverageMappingSize = sizeof(CovMapHeader) + FilenamesSize;
     }
   }
@@ -996,10 +1039,13 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
       BytesInAddress, Endian, CompilationDir);
 }
 
-/// Find all sections that match \p Name. There may be more than one if comdats
-/// are in use, e.g. for the __llvm_covfun section on ELF.
-static Expected<std::vector<SectionRef>> lookupSections(ObjectFile &OF,
-                                                        StringRef Name) {
+/// Find all sections that match \p IPSK name. There may be more than one if
+/// comdats are in use, e.g. for the __llvm_covfun section on ELF.
+static Expected<std::vector<SectionRef>>
+lookupSections(ObjectFile &OF, InstrProfSectKind IPSK) {
+  auto ObjFormat = OF.getTripleObjectFormat();
+  auto Name =
+      getInstrProfSectionName(IPSK, ObjFormat, /*AddSegmentInfo=*/false);
   // On COFF, the object file section name may end in "$M". This tells the
   // linker to sort these sections between "$A" and "$Z". The linker removes the
   // dollar and everything after it in the final binary. Do the same to match.
@@ -1014,31 +1060,22 @@ static Expected<std::vector<SectionRef>> lookupSections(ObjectFile &OF,
     Expected<StringRef> NameOrErr = Section.getName();
     if (!NameOrErr)
       return NameOrErr.takeError();
-    if (stripSuffix(*NameOrErr) == Name)
+    if (stripSuffix(*NameOrErr) == Name) {
+      // COFF profile name section contains two null bytes indicating the
+      // start/end of the section. If its size is 2 bytes, it's empty.
+      if (IsCOFF && IPSK == IPSK_name && Section.getSize() == 2)
+        continue;
       Sections.push_back(Section);
+    }
   }
   if (Sections.empty())
     return make_error<CoverageMapError>(coveragemap_error::no_data_found);
   return Sections;
 }
 
-static Error getProfileNamesFromDebugInfo(StringRef FileName,
-                                          InstrProfSymtab &ProfileNames) {
-  std::unique_ptr<InstrProfCorrelator> Correlator;
-  if (auto E = InstrProfCorrelator::get(FileName).moveInto(Correlator))
-    return E;
-  if (auto E = Correlator->correlateCovUnusedFuncNames(0))
-    return E;
-  if (auto E = ProfileNames.create(
-          StringRef(Correlator->getCovUnusedFuncNamesPointer(),
-                    Correlator->getCovUnusedFuncNamesSize())))
-    return E;
-  return Error::success();
-}
-
 static Expected<std::unique_ptr<BinaryCoverageReader>>
 loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
-                 InstrProfSymtab &ProfSymTab, StringRef CompilationDir = "",
+                 StringRef CompilationDir = "",
                  object::BuildIDRef *BinaryID = nullptr) {
   std::unique_ptr<ObjectFile> OF;
   if (auto *Universal = dyn_cast<MachOUniversalBinary>(Bin.get())) {
@@ -1061,39 +1098,31 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
 
   // The coverage uses native pointer sizes for the object it's written in.
   uint8_t BytesInAddress = OF->getBytesInAddress();
-  support::endianness Endian = OF->isLittleEndian()
-                                   ? support::endianness::little
-                                   : support::endianness::big;
+  llvm::endianness Endian =
+      OF->isLittleEndian() ? llvm::endianness::little : llvm::endianness::big;
 
   // Look for the sections that we are interested in.
-  auto ObjFormat = OF->getTripleObjectFormat();
-  // Without debug info correlation, all function names are stored in the
-  // binary's profile name section.
-  // When debug info correlation is enabled, instrumented function names are
-  // stored in the indexed profile file, and unused function names are stored in
-  // the binary's debug info.
-  InstrProfSymtab ProfileNames = ProfSymTab;
-  auto NamesSection =
-      lookupSections(*OF, getInstrProfSectionName(IPSK_name, ObjFormat,
-                                                  /*AddSegmentInfo=*/false));
+  auto ProfileNames = std::make_unique<InstrProfSymtab>();
+  std::vector<SectionRef> NamesSectionRefs;
+  // If IPSK_name is not found, fallback to search for IPK_covname, which is
+  // used when binary correlation is enabled.
+  auto NamesSection = lookupSections(*OF, IPSK_name);
   if (auto E = NamesSection.takeError()) {
-    if (OF->hasDebugInfo()) {
-      if (auto E =
-              getProfileNamesFromDebugInfo(OF->getFileName(), ProfileNames))
-        return make_error<CoverageMapError>(coveragemap_error::malformed);
-    }
     consumeError(std::move(E));
-  } else {
-    std::vector<SectionRef> NamesSectionRefs = *NamesSection;
-    if (NamesSectionRefs.size() != 1)
-      return make_error<CoverageMapError>(coveragemap_error::malformed);
-    if (Error E = ProfileNames.create(NamesSectionRefs.back()))
+    NamesSection = lookupSections(*OF, IPSK_covname);
+    if (auto E = NamesSection.takeError())
       return std::move(E);
   }
+  NamesSectionRefs = *NamesSection;
 
-  auto CoverageSection =
-      lookupSections(*OF, getInstrProfSectionName(IPSK_covmap, ObjFormat,
-                                                  /*AddSegmentInfo=*/false));
+  if (NamesSectionRefs.size() != 1)
+    return make_error<CoverageMapError>(
+        coveragemap_error::malformed,
+        "the size of coverage mapping section is not one");
+  if (Error E = ProfileNames->create(NamesSectionRefs.back()))
+    return std::move(E);
+
+  auto CoverageSection = lookupSections(*OF, IPSK_covmap);
   if (auto E = CoverageSection.takeError())
     return std::move(E);
   std::vector<SectionRef> CoverageSectionRefs = *CoverageSection;
@@ -1106,9 +1135,7 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
   StringRef CoverageMapping = CoverageMappingOrErr.get();
 
   // Look for the coverage records section (Version4 only).
-  auto CoverageRecordsSections =
-      lookupSections(*OF, getInstrProfSectionName(IPSK_covfun, ObjFormat,
-                                                  /*AddSegmentInfo=*/false));
+  auto CoverageRecordsSections = lookupSections(*OF, IPSK_covfun);
 
   BinaryCoverageReader::FuncRecordsStorage FuncRecords;
   if (auto E = CoverageRecordsSections.takeError()) {
@@ -1176,13 +1203,12 @@ Expected<std::vector<std::unique_ptr<BinaryCoverageReader>>>
 BinaryCoverageReader::create(
     MemoryBufferRef ObjectBuffer, StringRef Arch,
     SmallVectorImpl<std::unique_ptr<MemoryBuffer>> &ObjectFileBuffers,
-    InstrProfSymtab &ProfSymTab, StringRef CompilationDir,
-    SmallVectorImpl<object::BuildIDRef> *BinaryIDs) {
+    StringRef CompilationDir, SmallVectorImpl<object::BuildIDRef> *BinaryIDs) {
   std::vector<std::unique_ptr<BinaryCoverageReader>> Readers;
 
   if (ObjectBuffer.getBuffer().size() > sizeof(TestingFormatMagic)) {
     uint64_t Magic =
-        support::endian::byte_swap<uint64_t, support::endianness::little>(
+        support::endian::byte_swap<uint64_t, llvm::endianness::little>(
             *reinterpret_cast<const uint64_t *>(ObjectBuffer.getBufferStart()));
     if (Magic == TestingFormatMagic) {
       // This is a special format used for testing.
@@ -1221,8 +1247,8 @@ BinaryCoverageReader::create(
       }
 
       return BinaryCoverageReader::create(
-          ArchiveOrErr.get()->getMemoryBufferRef(), Arch,
-          ObjectFileBuffers, ProfSymTab, CompilationDir, BinaryIDs);
+          ArchiveOrErr.get()->getMemoryBufferRef(), Arch, ObjectFileBuffers,
+          CompilationDir, BinaryIDs);
     }
   }
 
@@ -1235,8 +1261,8 @@ BinaryCoverageReader::create(
         return ChildBufOrErr.takeError();
 
       auto ChildReadersOrErr = BinaryCoverageReader::create(
-          ChildBufOrErr.get(), Arch, ObjectFileBuffers, ProfSymTab,
-          CompilationDir, BinaryIDs);
+          ChildBufOrErr.get(), Arch, ObjectFileBuffers, CompilationDir,
+          BinaryIDs);
       if (!ChildReadersOrErr)
         return ChildReadersOrErr.takeError();
       for (auto &Reader : ChildReadersOrErr.get())
@@ -1256,9 +1282,8 @@ BinaryCoverageReader::create(
   }
 
   object::BuildIDRef BinaryID;
-  auto ReaderOrErr =
-      loadBinaryFormat(std::move(Bin), Arch, ProfSymTab, CompilationDir,
-                       BinaryIDs ? &BinaryID : nullptr);
+  auto ReaderOrErr = loadBinaryFormat(std::move(Bin), Arch, CompilationDir,
+                                      BinaryIDs ? &BinaryID : nullptr);
   if (!ReaderOrErr)
     return ReaderOrErr.takeError();
   Readers.push_back(std::move(ReaderOrErr.get()));

@@ -10,7 +10,7 @@
 #include "src/__support/threads/thread.h"
 #include "test/IntegrationTest/test.h"
 
-__llvm_libc::Mutex mutex(false, false, false);
+LIBC_NAMESPACE::Mutex mutex(false, false, false);
 
 int func(void *) {
   mutex.lock();
@@ -20,13 +20,13 @@ int func(void *) {
 
 void detach_simple_test() {
   mutex.lock();
-  __llvm_libc::Thread th;
+  LIBC_NAMESPACE::Thread th;
   th.run(func, nullptr, nullptr, 0);
 
   // Since |mutex| is held by the current thread, we guarantee that
   // th is running and hence it is safe to detach. Since the thread is
   // still running, it should be simple detach.
-  ASSERT_EQ(th.detach(), int(__llvm_libc::DetachType::SIMPLE));
+  ASSERT_EQ(th.detach(), int(LIBC_NAMESPACE::DetachType::SIMPLE));
 
   // We will release |mutex| now to let the thread finish an cleanup itself.
   mutex.unlock();
@@ -34,7 +34,7 @@ void detach_simple_test() {
 
 void detach_cleanup_test() {
   mutex.lock();
-  __llvm_libc::Thread th;
+  LIBC_NAMESPACE::Thread th;
   ASSERT_EQ(0, th.run(func, nullptr));
 
   // Since |mutex| is held by the current thread, we will release it
@@ -47,7 +47,7 @@ void detach_cleanup_test() {
 
   // Since |th| is now finished, detaching should cleanup the thread
   // resources.
-  ASSERT_EQ(th.detach(), int(__llvm_libc::DetachType::CLEANUP));
+  ASSERT_EQ(th.detach(), int(LIBC_NAMESPACE::DetachType::CLEANUP));
 }
 
 TEST_MAIN() {

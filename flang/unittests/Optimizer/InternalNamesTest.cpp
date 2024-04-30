@@ -13,7 +13,6 @@
 
 using namespace fir;
 using llvm::SmallVector;
-using llvm::StringRef;
 
 struct DeconstructedName {
   DeconstructedName(llvm::StringRef name) : name{name} {}

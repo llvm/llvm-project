@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefix=TONGA %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefix=TONGA %s
 
 ; On Tonga and Iceland, limited SGPR availability means care must be taken to
 ; allocate scratch registers correctly. Check that this test compiles without

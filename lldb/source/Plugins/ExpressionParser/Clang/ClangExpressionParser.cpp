@@ -392,8 +392,8 @@ ClangExpressionParser::ClangExpressionParser(
   // Make sure clang uses the same VFS as LLDB.
   m_compiler->createFileManager(FileSystem::Instance().GetVirtualFileSystem());
 
-  lldb::LanguageType frame_lang =
-      expr.Language(); // defaults to lldb::eLanguageTypeUnknown
+  // Defaults to lldb::eLanguageTypeUnknown.
+  lldb::LanguageType frame_lang = expr.Language().AsLanguageType();
 
   std::string abi;
   ArchSpec target_arch;
@@ -410,7 +410,7 @@ ClangExpressionParser::ClangExpressionParser(
   // Make sure the user hasn't provided a preferred execution language with
   // `expression --language X -- ...`
   if (frame_sp && frame_lang == lldb::eLanguageTypeUnknown)
-    frame_lang = frame_sp->GetLanguage();
+    frame_lang = frame_sp->GetLanguage().AsLanguageType();
 
   if (process_sp && frame_lang != lldb::eLanguageTypeUnknown) {
     LLDB_LOGF(log, "Frame has language of type %s",
@@ -445,8 +445,8 @@ ClangExpressionParser::ClangExpressionParser(
   // Supported subsets of x86
   if (target_machine == llvm::Triple::x86 ||
       target_machine == llvm::Triple::x86_64) {
-    m_compiler->getTargetOpts().Features.push_back("+sse");
-    m_compiler->getTargetOpts().Features.push_back("+sse2");
+    m_compiler->getTargetOpts().FeaturesAsWritten.push_back("+sse");
+    m_compiler->getTargetOpts().FeaturesAsWritten.push_back("+sse2");
   }
 
   // Set the target CPU to generate code for. This will be empty for any CPU
@@ -479,7 +479,7 @@ ClangExpressionParser::ClangExpressionParser(
   assert(m_compiler->hasTarget());
 
   // 4. Set language options.
-  lldb::LanguageType language = expr.Language();
+  lldb::LanguageType language = expr.Language().AsLanguageType();
   LangOptions &lang_opts = m_compiler->getLangOpts();
 
   switch (language) {
@@ -526,7 +526,10 @@ ClangExpressionParser::ClangExpressionParser(
     [[fallthrough]];
   case lldb::eLanguageTypeC_plus_plus_03:
     lang_opts.CPlusPlus = true;
-    if (process_sp)
+    if (process_sp
+        // We're stopped in a frame without debug-info. The user probably
+        // intends to make global queries (which should include Objective-C).
+        && !(frame_sp && frame_sp->HasDebugInformation()))
       lang_opts.ObjC =
           process_sp->GetLanguageRuntime(lldb::eLanguageTypeObjC) != nullptr;
     break;
@@ -575,6 +578,7 @@ ClangExpressionParser::ClangExpressionParser(
     lang_opts.GNUMode = true;
     lang_opts.GNUKeywords = true;
     lang_opts.CPlusPlus11 = true;
+    lang_opts.BuiltinHeadersInSystemModules = true;
 
     // The Darwin libc expects this macro to be set.
     lang_opts.GNUCVersion = 40201;
@@ -833,13 +837,13 @@ public:
     case CodeCompletionResult::RK_Declaration:
       return !(
           Result.Declaration->getIdentifier() &&
-          Result.Declaration->getIdentifier()->getName().startswith(Filter));
+          Result.Declaration->getIdentifier()->getName().starts_with(Filter));
     case CodeCompletionResult::RK_Keyword:
-      return !StringRef(Result.Keyword).startswith(Filter);
+      return !StringRef(Result.Keyword).starts_with(Filter);
     case CodeCompletionResult::RK_Macro:
-      return !Result.Macro->getName().startswith(Filter);
+      return !Result.Macro->getName().starts_with(Filter);
     case CodeCompletionResult::RK_Pattern:
-      return !StringRef(Result.Pattern->getAsString()).startswith(Filter);
+      return !StringRef(Result.Pattern->getAsString()).starts_with(Filter);
     }
     // If we trigger this assert or the above switch yields a warning, then
     // CodeCompletionResult has been enhanced with more kinds of completion
@@ -903,7 +907,7 @@ private:
     }
     // We also filter some internal lldb identifiers here. The user
     // shouldn't see these.
-    if (llvm::StringRef(ToInsert).startswith("$__lldb_"))
+    if (llvm::StringRef(ToInsert).starts_with("$__lldb_"))
       return std::nullopt;
     if (ToInsert.empty())
       return std::nullopt;
@@ -1077,13 +1081,14 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
   // While parsing the Sema will call this consumer with the provided
   // completion suggestions.
   if (completion_consumer) {
-    auto main_file = source_mgr.getFileEntryForID(source_mgr.getMainFileID());
+    auto main_file =
+        source_mgr.getFileEntryRefForID(source_mgr.getMainFileID());
     auto &PP = m_compiler->getPreprocessor();
     // Lines and columns start at 1 in Clang, but code completion positions are
     // indexed from 0, so we need to add 1 to the line and column here.
     ++completion_line;
     ++completion_column;
-    PP.SetCodeCompletionPoint(main_file, completion_line, completion_column);
+    PP.SetCodeCompletionPoint(*main_file, completion_line, completion_column);
   }
 
   ASTConsumer *ast_transformer =
@@ -1339,10 +1344,10 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
   {
     auto lang = m_expr.Language();
     LLDB_LOGF(log, "%s - Current expression language is %s\n", __FUNCTION__,
-              Language::GetNameForLanguageType(lang));
+              lang.GetDescription().data());
     lldb::ProcessSP process_sp = exe_ctx.GetProcessSP();
     if (process_sp && lang != lldb::eLanguageTypeUnknown) {
-      auto runtime = process_sp->GetLanguageRuntime(lang);
+      auto runtime = process_sp->GetLanguageRuntime(lang.AsLanguageType());
       if (runtime)
         runtime->GetIRPasses(custom_passes);
     }

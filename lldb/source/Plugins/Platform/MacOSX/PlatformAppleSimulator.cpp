@@ -335,8 +335,7 @@ PlatformSP PlatformAppleSimulator::CreateInstance(
 
   bool create = force;
   if (!create && arch && arch->IsValid()) {
-    if (std::count(supported_arch.begin(), supported_arch.end(),
-                   arch->GetMachine())) {
+    if (llvm::is_contained(supported_arch, arch->GetMachine())) {
       const llvm::Triple &triple = arch->GetTriple();
       switch (triple.getVendor()) {
       case llvm::Triple::Apple:
@@ -676,6 +675,41 @@ struct PlatformAppleWatchSimulator {
   }
 };
 
+static const char *g_xros_plugin_name = "xros-simulator";
+static const char *g_xros_description = "XROS simulator platform plug-in.";
+
+/// XRSimulator Plugin.
+struct PlatformXRSimulator {
+  static void Initialize() {
+    PluginManager::RegisterPlugin(g_xros_plugin_name, g_xros_description,
+                                  PlatformXRSimulator::CreateInstance);
+  }
+
+  static void Terminate() {
+    PluginManager::UnregisterPlugin(PlatformXRSimulator::CreateInstance);
+  }
+
+  static PlatformSP CreateInstance(bool force, const ArchSpec *arch) {
+    return PlatformAppleSimulator::CreateInstance(
+        "PlatformXRSimulator", g_xros_description,
+        ConstString(g_xros_plugin_name),
+        {llvm::Triple::aarch64, llvm::Triple::x86_64, llvm::Triple::x86},
+        llvm::Triple::XROS, {llvm::Triple::XROS},
+        {
+#ifdef __APPLE__
+#if __arm64__
+          "arm64e-apple-xros-simulator", "arm64-apple-xros-simulator",
+#else
+          "x86_64-apple-xros-simulator", "x86_64h-apple-xros-simulator",
+#endif
+#endif
+        },
+        "XRSimulator.Internal.sdk", "XRSimulator.sdk",
+        XcodeSDK::Type::XRSimulator,
+        CoreSimulatorSupport::DeviceType::ProductFamilyID::appleXR, force,
+        arch);
+  }
+};
 
 static unsigned g_initialize_count = 0;
 
@@ -686,12 +720,14 @@ void PlatformAppleSimulator::Initialize() {
     PlatformiOSSimulator::Initialize();
     PlatformAppleTVSimulator::Initialize();
     PlatformAppleWatchSimulator::Initialize();
+    PlatformXRSimulator::Initialize();
   }
 }
 
 void PlatformAppleSimulator::Terminate() {
   if (g_initialize_count > 0)
     if (--g_initialize_count == 0) {
+      PlatformXRSimulator::Terminate();
       PlatformAppleWatchSimulator::Terminate();
       PlatformAppleTVSimulator::Terminate();
       PlatformiOSSimulator::Terminate();

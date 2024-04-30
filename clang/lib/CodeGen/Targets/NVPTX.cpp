@@ -47,6 +47,10 @@ public:
                            CodeGen::CodeGenModule &M) const override;
   bool shouldEmitStaticExternCAliases() const override;
 
+  llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
+                                 llvm::PointerType *T,
+                                 QualType QT) const override;
+
   llvm::Type *getCUDADeviceBuiltinSurfaceDeviceType() const override {
     // On the device side, surface reference is represented as an object handle
     // in 64-bit integer.
@@ -81,7 +85,7 @@ private:
                                            LValue Src) {
     llvm::Value *Handle = nullptr;
     llvm::Constant *C =
-        llvm::dyn_cast<llvm::Constant>(Src.getAddress(CGF).getPointer());
+        llvm::dyn_cast<llvm::Constant>(Src.getAddress(CGF).emitRawPointer(CGF));
     // Lookup `addrspacecast` through the constant pointer if any.
     if (auto *ASC = llvm::dyn_cast_or_null<llvm::AddrSpaceCastOperator>(C))
       C = llvm::cast<llvm::Constant>(ASC->getPointerOperand());
@@ -285,27 +289,68 @@ void NVPTXTargetCodeGenInfo::addNVVMMetadata(llvm::GlobalValue *GV,
 bool NVPTXTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {
   return false;
 }
+
+llvm::Constant *
+NVPTXTargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
+                                       llvm::PointerType *PT,
+                                       QualType QT) const {
+  auto &Ctx = CGM.getContext();
+  if (PT->getAddressSpace() != Ctx.getTargetAddressSpace(LangAS::opencl_local))
+    return llvm::ConstantPointerNull::get(PT);
+
+  auto NPT = llvm::PointerType::get(
+      PT->getContext(), Ctx.getTargetAddressSpace(LangAS::opencl_generic));
+  return llvm::ConstantExpr::getAddrSpaceCast(
+      llvm::ConstantPointerNull::get(NPT), PT);
+}
 }
 
-void CodeGenModule::handleCUDALaunchBoundsAttr(
-    llvm::Function *F, const CUDALaunchBoundsAttr *Attr) {
+void CodeGenModule::handleCUDALaunchBoundsAttr(llvm::Function *F,
+                                               const CUDALaunchBoundsAttr *Attr,
+                                               int32_t *MaxThreadsVal,
+                                               int32_t *MinBlocksVal,
+                                               int32_t *MaxClusterRankVal) {
   // Create !{<func-ref>, metadata !"maxntidx", i32 <val>} node
   llvm::APSInt MaxThreads(32);
   MaxThreads = Attr->getMaxThreads()->EvaluateKnownConstInt(getContext());
-  if (MaxThreads > 0)
-    NVPTXTargetCodeGenInfo::addNVVMMetadata(F, "maxntidx",
-                                            MaxThreads.getExtValue());
+  if (MaxThreads > 0) {
+    if (MaxThreadsVal)
+      *MaxThreadsVal = MaxThreads.getExtValue();
+    if (F) {
+      // Create !{<func-ref>, metadata !"maxntidx", i32 <val>} node
+      NVPTXTargetCodeGenInfo::addNVVMMetadata(F, "maxntidx",
+                                              MaxThreads.getExtValue());
+    }
+  }
 
-  // min blocks is an optional argument for CUDALaunchBoundsAttr. If it was
-  // not specified in __launch_bounds__ or if the user specified a 0 value,
+  // min and max blocks is an optional argument for CUDALaunchBoundsAttr. If it
+  // was not specified in __launch_bounds__ or if the user specified a 0 value,
   // we don't have to add a PTX directive.
   if (Attr->getMinBlocks()) {
     llvm::APSInt MinBlocks(32);
     MinBlocks = Attr->getMinBlocks()->EvaluateKnownConstInt(getContext());
-    if (MinBlocks > 0)
-      // Create !{<func-ref>, metadata !"minctasm", i32 <val>} node
-      NVPTXTargetCodeGenInfo::addNVVMMetadata(F, "minctasm",
-                                              MinBlocks.getExtValue());
+    if (MinBlocks > 0) {
+      if (MinBlocksVal)
+        *MinBlocksVal = MinBlocks.getExtValue();
+      if (F) {
+        // Create !{<func-ref>, metadata !"minctasm", i32 <val>} node
+        NVPTXTargetCodeGenInfo::addNVVMMetadata(F, "minctasm",
+                                                MinBlocks.getExtValue());
+      }
+    }
+  }
+  if (Attr->getMaxBlocks()) {
+    llvm::APSInt MaxBlocks(32);
+    MaxBlocks = Attr->getMaxBlocks()->EvaluateKnownConstInt(getContext());
+    if (MaxBlocks > 0) {
+      if (MaxClusterRankVal)
+        *MaxClusterRankVal = MaxBlocks.getExtValue();
+      if (F) {
+        // Create !{<func-ref>, metadata !"maxclusterrank", i32 <val>} node
+        NVPTXTargetCodeGenInfo::addNVVMMetadata(F, "maxclusterrank",
+                                                MaxBlocks.getExtValue());
+      }
+    }
   }
 }
 

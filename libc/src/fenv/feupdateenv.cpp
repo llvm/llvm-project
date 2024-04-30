@@ -10,9 +10,9 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/common.h"
 
-#include <fenv.h>
+#include "hdr/types/fenv_t.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, feupdateenv, (const fenv_t *envp)) {
   int current_excepts = fputil::test_except(FE_ALL_EXCEPT);
@@ -21,4 +21,4 @@ LLVM_LIBC_FUNCTION(int, feupdateenv, (const fenv_t *envp)) {
   return fputil::raise_except(current_excepts);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

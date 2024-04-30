@@ -18,9 +18,9 @@ define void @main() {
 ; CHECK-NEXT:    ldr r0, [r0]
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    beq .LBB0_8
+; CHECK-NEXT:    beq .LBB0_7
 ; CHECK-NEXT:  @ %bb.1: @ %for.cond7.preheader.i.lr.ph.i.i
-; CHECK-NEXT:    bne .LBB0_8
+; CHECK-NEXT:    bne .LBB0_7
 ; CHECK-NEXT:  .LBB0_2: @ %for.cond14.preheader.us.i.i.i
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cbnz r0, .LBB0_6
@@ -35,8 +35,8 @@ define void @main() {
 ; CHECK-NEXT:  .LJTI0_0:
 ; CHECK-NEXT:    b.w .LBB0_5
 ; CHECK-NEXT:    b.w .LBB0_6
-; CHECK-NEXT:    b.w .LBB0_7
 ; CHECK-NEXT:    b.w .LBB0_8
+; CHECK-NEXT:    b.w .LBB0_7
 ; CHECK-NEXT:    b.w .LBB0_6
 ; CHECK-NEXT:    b.w .LBB0_6
 ; CHECK-NEXT:    b.w .LBB0_6
@@ -49,8 +49,8 @@ define void @main() {
 ; CHECK-NEXT:    @ in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:  .LBB0_6: @ %func_1.exit.loopexit
-; CHECK-NEXT:  .LBB0_7: @ %lbl_1394.i.i.i.loopexit
-; CHECK-NEXT:  .LBB0_8: @ %for.end476.i.i.i.loopexit
+; CHECK-NEXT:  .LBB0_7: @ %for.end476.i.i.i.loopexit
+; CHECK-NEXT:  .LBB0_8: @ %lbl_1394.i.i.i.loopexit
 entry:
   %0 = load volatile ptr, ptr @g_566, align 4
   br label %func_16.exit.i.i.i

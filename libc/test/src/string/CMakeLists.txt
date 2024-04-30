@@ -418,6 +418,16 @@ add_libc_test(
     libc.src.string.strxfrm
 )
 
+add_libc_test(
+  memset_explicit_test
+  SUITE
+    libc-string-tests
+  SRCS
+    memset_explicit_test.cpp
+  DEPENDS
+    libc.src.string.memset_explicit
+)
+
 # Tests all implementations that can run on the target CPU.
 function(add_libc_multi_impl_test name)
   get_property(fq_implementations GLOBAL PROPERTY ${name}_implementations)
@@ -425,8 +435,11 @@ function(add_libc_multi_impl_test name)
     get_target_property(required_cpu_features ${fq_config_name} REQUIRE_CPU_FEATURES)
     cpu_supports(can_run "${required_cpu_features}")
     if(can_run)
+      string(FIND ${fq_config_name} "." last_dot_loc REVERSE)
+      math(EXPR name_loc "${last_dot_loc} + 1")
+      string(SUBSTRING ${fq_config_name} ${name_loc} -1 target_name)
       add_libc_test(
-        ${fq_config_name}_test
+        ${target_name}_test
         SUITE
           libc-string-tests
         COMPILE_OPTIONS

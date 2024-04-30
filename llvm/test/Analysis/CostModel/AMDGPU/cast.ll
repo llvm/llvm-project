@@ -74,11 +74,11 @@ define i32 @zext_sext(<8 x i1> %in) {
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %E = trunc <4 x i64> undef to <4 x i32>
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F = trunc <8 x i32> undef to <8 x i16>
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F1 = trunc <16 x i16> undef to <16 x i8>
-; FAST-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %F2 = trunc <8 x i32> undef to <8 x i8>
-; FAST-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %F3 = trunc <4 x i64> undef to <4 x i8>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F2 = trunc <8 x i32> undef to <8 x i8>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F3 = trunc <4 x i64> undef to <4 x i8>
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %G = trunc <8 x i64> undef to <8 x i32>
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %G1 = trunc <16 x i32> undef to <16 x i16>
-; FAST-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %G2 = trunc <16 x i32> undef to <16 x i8>
+; FAST-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %G2 = trunc <16 x i32> undef to <16 x i8>
 ; FAST-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret i32 undef
 ;
 ; SLOW-LABEL: 'zext_sext'
@@ -134,11 +134,11 @@ define i32 @zext_sext(<8 x i1> %in) {
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %E = trunc <4 x i64> undef to <4 x i32>
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F = trunc <8 x i32> undef to <8 x i16>
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F1 = trunc <16 x i16> undef to <16 x i8>
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %F2 = trunc <8 x i32> undef to <8 x i8>
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %F3 = trunc <4 x i64> undef to <4 x i8>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F2 = trunc <8 x i32> undef to <8 x i8>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %F3 = trunc <4 x i64> undef to <4 x i8>
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %G = trunc <8 x i64> undef to <8 x i32>
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %G1 = trunc <16 x i32> undef to <16 x i16>
-; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %G2 = trunc <16 x i32> undef to <16 x i8>
+; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %G2 = trunc <16 x i32> undef to <16 x i8>
 ; FAST-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; SLOW-SIZE-LABEL: 'zext_sext'

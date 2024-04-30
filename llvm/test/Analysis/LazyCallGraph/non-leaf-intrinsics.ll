@@ -1,7 +1,7 @@
 ; RUN: opt -S -disable-output -passes=print-lcg < %s 2>&1 | FileCheck %s
 
 declare void @llvm.experimental.patchpoint.void(i64, i32, ptr, i32, ...)
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, ptr, i32, i32, ...)
+declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
 
 define private void @f() {
   ret void
@@ -11,7 +11,7 @@ define void @calls_statepoint(ptr addrspace(1) %arg) gc "statepoint-example" {
 ; CHECK: Edges in function: calls_statepoint
 ; CHECK-NEXT:  -> f
 entry:
-  %safepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, ptr elementtype(void ()) @f, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %arg, ptr addrspace(1) %arg, ptr addrspace(1) %arg, ptr addrspace(1) %arg), "deopt" (i32 0, i32 0, i32 0, i32 10, i32 0)]
+  %safepoint_token = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) @f, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %arg, ptr addrspace(1) %arg, ptr addrspace(1) %arg, ptr addrspace(1) %arg), "deopt" (i32 0, i32 0, i32 0, i32 10, i32 0)]
   ret void
 }
 

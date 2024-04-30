@@ -8,10 +8,11 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -split-machine-functions -mfs-split-ehcode | FileCheck %s -check-prefixes=MFS-EH-SPLIT,MFS-EH-SPLIT-X86
 ; RUN: llc < %s -mtriple=x86_64 -split-machine-functions -O0 -mfs-psi-cutoff=0 -mfs-count-threshold=10000 | FileCheck %s -check-prefixes=MFS-O0,MFS-O0-X86
 
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions | FileCheck %s -check-prefixes=MFS-DEFAULTS,MFS-DEFAULTS-AARCH64
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-psi-cutoff=0 -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefixes=MFS-OPTS1,MFS-OPTS1-AARCH64
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-psi-cutoff=950000 | FileCheck %s -check-prefixes=MFS-OPTS2,MFS-OPTS2-AARCH64
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions -mfs-split-ehcode | FileCheck %s -check-prefixes=MFS-EH-SPLIT,MFS-EH-SPLIT-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -aarch64-min-jump-table-entries=4 -enable-split-machine-functions | FileCheck %s -check-prefixes=MFS-DEFAULTS,MFS-DEFAULTS-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -aarch64-min-jump-table-entries=4 -enable-split-machine-functions -mfs-psi-cutoff=0 -mfs-count-threshold=2000 | FileCheck %s --dump-input=always -check-prefixes=MFS-OPTS1,MFS-OPTS1-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -aarch64-min-jump-table-entries=4 -enable-split-machine-functions -mfs-psi-cutoff=950000 | FileCheck %s -check-prefixes=MFS-OPTS2,MFS-OPTS2-AARCH64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -aarch64-min-jump-table-entries=4 -enable-split-machine-functions -mfs-split-ehcode | FileCheck %s -check-prefixes=MFS-EH-SPLIT,MFS-EH-SPLIT-AARCH64
+; RUN: llc < %s -mtriple=aarch64 -split-machine-functions -O0 -mfs-psi-cutoff=0 -mfs-count-threshold=10000 | FileCheck %s -check-prefixes=MFS-O0,MFS-O0-AARCH64
 ; RUN: llc < %s -mtriple=aarch64 -enable-split-machine-functions -aarch64-redzone | FileCheck %s -check-prefixes=MFS-REDZONE-AARCH64
 
 ; COM: Machine function splitting with AFDO profiles
@@ -259,25 +260,6 @@ exit:
   ret i32 %5
 }
 
-define void @foo9(i1 zeroext %0) nounwind #0 !prof !14 {
-;; Check that function with section attribute is not split.
-; MFS-DEFAULTS-LABEL: foo9
-; MFS-DEFAULTS-NOT:   foo9.cold:
-  br i1 %0, label %2, label %4, !prof !17
-
-2:                                                ; preds = %1
-  %3 = call i32 @bar()
-  br label %6
-
-4:                                                ; preds = %1
-  %5 = call i32 @baz()
-  br label %6
-
-6:                                                ; preds = %4, %2
-  %7 = tail call i32 @qux()
-  ret void
-}
-
 define i32 @foo10(i1 zeroext %0) personality ptr @__gxx_personality_v0 !prof !14 {
 ;; Check that nop is inserted just before the EH pad if it's beginning a section.
 ; MFS-DEFAULTS-LABEL:         foo10
@@ -470,9 +452,8 @@ define void @foo16(i1 zeroext %0) nounwind !prof !14 !section_prefix !15 {
 ; MFS-O0-LABEL:               foo16
 ; MFS-O0-X86:                 jmp
 ; MFS-O0-X86-NOT:             jmp
-; MFS-O0-AARCH64:                 br
-; MFS-O0-AARCH64:                 br
-; MFS-O0-AARCH64-NOT:             br
+; MFS-O0-AARCH64:                 b       foo16.cold
+; MFS-O0-AARCH64-NOT:             b       foo16.cold
 ; MFS-O0:                     .section        .text.split.foo16
 ; MFS-O0-NEXT:                foo16.cold
   %2 = call i32 @baz()
@@ -564,10 +545,10 @@ define i32 @foo19(i32 %in) !prof !14 !section_prefix !15 {
 ; MFS-DEFAULTS-LABEL:        foo19
 ; MFS-DEFAULTS:              .section        .text.split.foo19
 ; MFS-DEFAULTS-NEXT:         foo19.cold:
-; MFS-DEFAULTS-X86:            .LJTI18_0
-; MFS-DEFAULTS-AARCH64-NOT:    .LJTI18_0
+; MFS-DEFAULTS-X86:            .LJTI17_0
+; MFS-DEFAULTS-AARCH64-NOT:    .LJTI17_0
 ; MFS-DEFAULTS:              .section        .rodata
-; MFS-DEFAULTS:                .LJTI18_0
+; MFS-DEFAULTS:                .LJTI17_0
   %cmp = icmp sgt i32 %in, 3
   br i1 %cmp, label %hot, label %cold_switch, !prof !17
 
@@ -637,8 +618,6 @@ declare void @_Z1fv()
 declare i32 @__gxx_personality_v0(...)
 
 @_ZTIi = external constant ptr
-
-attributes #0 = { "implicit-section-name"="nosplit" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}

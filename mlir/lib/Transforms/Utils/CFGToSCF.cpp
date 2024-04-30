@@ -601,7 +601,7 @@ static FailureOr<StructuredLoopProperties> createSingleExitingLatch(
   {
     auto builder = OpBuilder::atBlockBegin(latchBlock);
     interface.createConditionalBranch(
-        builder.getUnknownLoc(), builder, shouldRepeat, loopHeader,
+        loc, builder, shouldRepeat, loopHeader,
         latchBlock->getArguments().take_front(loopHeader->getNumArguments()),
         /*falseDest=*/exitBlock,
         /*falseArgs=*/{});
@@ -720,7 +720,13 @@ transformToReduceLoop(Block *loopHeader, Block *exitBlock,
     auto checkValue = [&](Value value) {
       Value blockArgument;
       for (OpOperand &use : llvm::make_early_inc_range(value.getUses())) {
-        if (loopBlocks.contains(use.getOwner()->getBlock()))
+        // Go through all the parent blocks and find the one part of the region
+        // of the loop. If the block is part of the loop, then the value does
+        // not escape the loop through this use.
+        Block *currBlock = use.getOwner()->getBlock();
+        while (currBlock && currBlock->getParent() != loopHeader->getParent())
+          currBlock = currBlock->getParentOp()->getBlock();
+        if (loopBlocks.contains(currBlock))
           continue;
 
         // Block argument is only created the first time it is required.
@@ -1177,8 +1183,7 @@ static FailureOr<SmallVector<Block *>> transformToStructuredCFBranches(
     auto builder = OpBuilder::atBlockTerminator(user->getBlock());
     LogicalResult result = interface.createStructuredBranchRegionTerminatorOp(
         user->getLoc(), builder, structuredCondOp, user,
-        static_cast<OperandRange>(
-            getMutableSuccessorOperands(user->getBlock(), 0)));
+        getMutableSuccessorOperands(user->getBlock(), 0).getAsOperandRange());
     if (failed(result))
       return failure();
     user->erase();

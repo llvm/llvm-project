@@ -11,7 +11,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/RPC/rpc_client.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 void write_to_stderr(cpp::string_view msg) {
   rpc::Client::Port port = rpc::client.open<RPC_WRITE_TO_STDERR>();
@@ -20,4 +20,4 @@ void write_to_stderr(cpp::string_view msg) {
   port.close();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

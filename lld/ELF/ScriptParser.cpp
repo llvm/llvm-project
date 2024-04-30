@@ -36,6 +36,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include <cassert>
 #include <limits>
+#include <optional>
 #include <vector>
 
 using namespace llvm;
@@ -138,6 +139,10 @@ private:
 
   // A set to detect an INCLUDE() cycle.
   StringSet<> seen;
+
+  // If we are currently parsing a PROVIDE|PROVIDE_HIDDEN command,
+  // then this member is set to the PROVIDE symbol name.
+  std::optional<llvm::StringRef> activeProvideSym;
 };
 } // namespace
 
@@ -288,7 +293,8 @@ void ScriptParser::readDefsym(StringRef name) {
   Expr e = readExpr();
   if (!atEOF())
     setError("EOF expected, but got " + next());
-  auto *cmd = make<SymbolAssignment>(name, e, 0, getCurrentLocation());
+  auto *cmd = make<SymbolAssignment>(
+      name, e, 0, getCurrentMB().getBufferIdentifier().str());
   script->sectionCommands.push_back(cmd);
 }
 
@@ -444,6 +450,7 @@ static std::pair<ELFKind, uint16_t> parseBfdName(StringRef s) {
       .Case("elf32-msp430", {ELF32LEKind, EM_MSP430})
       .Case("elf32-loongarch", {ELF32LEKind, EM_LOONGARCH})
       .Case("elf64-loongarch", {ELF64LEKind, EM_LOONGARCH})
+      .Case("elf64-s390", {ELF64BEKind, EM_S390})
       .Default({ELFNoneKind, EM_NONE});
 }
 
@@ -531,13 +538,17 @@ void ScriptParser::readSearchDir() {
 // linker's sections sanity check failures.
 // https://sourceware.org/binutils/docs/ld/Overlay-Description.html#Overlay-Description
 SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
-  // VA and LMA expressions are optional, though for simplicity of
-  // implementation we assume they are not. That is what OVERLAY was designed
-  // for first of all: to allow sections with overlapping VAs at different LMAs.
-  Expr addrExpr = readExpr();
-  expect(":");
-  expect("AT");
-  Expr lmaExpr = readParenExpr();
+  Expr addrExpr;
+  if (consume(":")) {
+    addrExpr = [] { return script->getDot(); };
+  } else {
+    addrExpr = readExpr();
+    expect(":");
+  }
+  // When AT is omitted, LMA should equal VMA. script->getDot() when evaluating
+  // lmaExpr will ensure this, even if the start address is specified.
+  Expr lmaExpr =
+      consume("AT") ? readParenExpr() : [] { return script->getDot(); };
   expect("{");
 
   SmallVector<SectionCommand *, 0> v;
@@ -547,10 +558,15 @@ SmallVector<SectionCommand *, 0> ScriptParser::readOverlay() {
     // starting from the base load address specified.
     OutputDesc *osd = readOverlaySectionDescription();
     osd->osec.addrExpr = addrExpr;
-    if (prev)
+    if (prev) {
       osd->osec.lmaExpr = [=] { return prev->getLMA() + prev->size; };
-    else
+    } else {
       osd->osec.lmaExpr = lmaExpr;
+      // Use first section address for subsequent sections as initial addrExpr
+      // can be DOT. Ensure the first section, even if empty, is not discarded.
+      osd->osec.usedInExpression = true;
+      addrExpr = [=]() -> ExprValue { return {&osd->osec, false, 0, ""}; };
+    }
     v.push_back(osd);
     prev = &osd->osec;
   }
@@ -706,9 +722,19 @@ SmallVector<SectionPattern, 0> ScriptParser::readInputSectionsList() {
 
     StringMatcher SectionMatcher;
     // Break if the next token is ), EXCLUDE_FILE, or SORT*.
-    while (!errorCount() && peek() != ")" && peek() != "EXCLUDE_FILE" &&
-           peekSortKind() == SortSectionPolicy::Default)
+    while (!errorCount() && peekSortKind() == SortSectionPolicy::Default) {
+      StringRef s = peek();
+      if (s == ")" || s == "EXCLUDE_FILE")
+        break;
+      // Detect common mistakes when certain non-wildcard meta characters are
+      // used without a closing ')'.
+      if (!s.empty() && strchr("(){}", s[0])) {
+        skip();
+        setError("section pattern is expected");
+        break;
+      }
       SectionMatcher.addPattern(unquote(next()));
+    }
 
     if (!SectionMatcher.empty())
       ret.push_back({std::move(excludeFilePat), std::move(SectionMatcher)});
@@ -1034,6 +1060,9 @@ SymbolAssignment *ScriptParser::readProvideHidden(bool provide, bool hidden) {
       ;
     return nullptr;
   }
+  llvm::SaveAndRestore saveActiveProvideSym(activeProvideSym);
+  if (provide)
+    activeProvideSym = name;
   SymbolAssignment *cmd = readSymbolAssignment(name);
   cmd->provide = provide;
   cmd->hidden = hidden;
@@ -1549,7 +1578,10 @@ Expr ScriptParser::readPrimary() {
     tok = unquote(tok);
   else if (!isValidSymbolName(tok))
     setError("malformed number: " + tok);
-  script->referencedSymbols.push_back(tok);
+  if (activeProvideSym)
+    script->provideMap[*activeProvideSym].push_back(tok);
+  else
+    script->referencedSymbols.push_back(tok);
   return [=] { return script->getSymbolValue(tok, location); };
 }
 

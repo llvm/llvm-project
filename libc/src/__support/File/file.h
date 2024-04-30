@@ -17,7 +17,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 struct FileIOResult {
   size_t value;
@@ -76,7 +76,7 @@ public:
 private:
   enum class FileOp : uint8_t { NONE, READ, WRITE, SEEK };
 
-  // Platfrom specific functions which create new file objects should initialize
+  // Platform specific functions which create new file objects should initialize
   // these fields suitably via the constructor. Typically, they should be simple
   // syscall wrappers for the corresponding functionality.
   WriteFunc *platform_write;
@@ -299,7 +299,7 @@ private:
   }
 };
 
-// The implementaiton of this function is provided by the platfrom_file
+// The implementaiton of this function is provided by the platform_file
 // library.
 ErrorOr<File *> openfile(const char *path, const char *mode);
 
@@ -311,6 +311,6 @@ extern File *stdin;
 extern File *stdout;
 extern File *stderr;
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H

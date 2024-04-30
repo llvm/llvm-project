@@ -19,7 +19,6 @@ header_restrictions = {
     # transitive includers of the above headers
     "clocale": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "codecvt": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
-    "experimental/regex": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "fstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "iomanip": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "iostream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
@@ -30,6 +29,7 @@ header_restrictions = {
     "sstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "streambuf": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
     "strstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
+    "syncstream": "!defined(_LIBCPP_HAS_NO_LOCALIZATION)",
 
     # headers with #error directives
     "barrier": "!defined(_LIBCPP_HAS_NO_THREADS)",
@@ -55,22 +55,11 @@ lit_header_restrictions = {
     "coroutine": "// UNSUPPORTED: c++03, c++11, c++14, c++17",
     "cwchar": "// UNSUPPORTED: no-wide-characters",
     "cwctype": "// UNSUPPORTED: no-wide-characters",
-    "experimental/deque": "// UNSUPPORTED: c++03",
-    "experimental/forward_list": "// UNSUPPORTED: c++03",
     "experimental/iterator": "// UNSUPPORTED: c++03",
-    "experimental/list": "// UNSUPPORTED: c++03",
-    "experimental/map": "// UNSUPPORTED: c++03",
-    "experimental/memory_resource": "// UNSUPPORTED: c++03",
     "experimental/propagate_const": "// UNSUPPORTED: c++03",
-    "experimental/regex": "// UNSUPPORTED: no-localization, c++03",
-    "experimental/set": "// UNSUPPORTED: c++03",
     "experimental/simd": "// UNSUPPORTED: c++03",
-    "experimental/string": "// UNSUPPORTED: c++03",
     "experimental/type_traits": "// UNSUPPORTED: c++03",
-    "experimental/unordered_map": "// UNSUPPORTED: c++03",
-    "experimental/unordered_set": "// UNSUPPORTED: c++03",
     "experimental/utility": "// UNSUPPORTED: c++03",
-    "experimental/vector": "// UNSUPPORTED: c++03",
     "filesystem": "// UNSUPPORTED: no-filesystem, c++03, c++11, c++14",
     "fstream": "// UNSUPPORTED: no-localization, no-filesystem",
     "future": "// UNSUPPORTED: no-threads, c++03",
@@ -92,6 +81,7 @@ lit_header_restrictions = {
     "stop_token": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
     "streambuf": "// UNSUPPORTED: no-localization",
     "strstream": "// UNSUPPORTED: no-localization",
+    "syncstream": "// UNSUPPORTED: no-localization",
     "thread": "// UNSUPPORTED: no-threads, c++03",
     "wchar.h": "// UNSUPPORTED: no-wide-characters",
     "wctype.h": "// UNSUPPORTED: no-wide-characters",
@@ -127,7 +117,7 @@ mandatory_inclusions = {
     "stack": ["compare", "initializer_list"],
     "string_view": ["compare"],
     "string": ["compare", "initializer_list"],
-    # TODO "syncstream": ["ostream"],
+    "syncstream": ["ostream"],
     "system_error": ["compare"],
     "tgmath.h": ["cmath", "complex"],
     "thread": ["compare"],
@@ -148,42 +138,76 @@ mandatory_inclusions = {
 # implemented yet. They are used in the generated module input. The C++23 standard
 # modules will fail to build if a header is added but this list is not updated.
 headers_not_available = [
+    "debugging",
     "flat_map",
     "flat_set",
     "generator",
     "hazard_pointer",
+    "linalg",
     "rcu",
     "spanstream",
     "stacktrace",
     "stdfloat",
-    "syncstream",
     "text_encoding",
 ]
 
 
 def is_header(file):
     """Returns whether the given file is a header (i.e. not a directory or the modulemap file)."""
-    return (
-        not file.is_dir()
-        and not file.name == "module.modulemap.in"
-        and not file.name == "CMakeLists.txt"
-        and file.name != "libcxx.imp"
-    )
+    return not file.is_dir() and not file.name in [
+        "module.modulemap",
+        "CMakeLists.txt",
+        "libcxx.imp",
+    ]
+
+
+def is_public_header(header):
+    return "__" not in header and not header.startswith("ext/")
+
+
+def is_modulemap_header(header):
+    """Returns whether a header should be listed in the modulemap"""
+    # TODO: Should `__config_site` be in the modulemap?
+    if header == "__config_site":
+        return False
+
+    if header == "__assertion_handler":
+        return False
+
+    # exclude libc++abi files
+    if header in ["cxxabi.h", "__cxxabi_config.h"]:
+        return False
+
+    # exclude headers in __support/ - these aren't supposed to work everywhere,
+    # so they shouldn't be included in general
+    if header.startswith("__support/"):
+        return False
+
+    # exclude ext/ headers - these are non-standard extensions and are barely
+    # maintained. People should migrate away from these and we don't need to
+    # burden ourself with maintaining them in any way.
+    if header.startswith("ext/"):
+        return False
+    return True
 
 libcxx_root = pathlib.Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 include = pathlib.Path(os.path.join(libcxx_root, "include"))
 test = pathlib.Path(os.path.join(libcxx_root, "test"))
 assert libcxx_root.exists()
 
+all_headers = sorted(
+    p.relative_to(include).as_posix() for p in include.rglob("[_a-z]*") if is_header(p)
+)
 toplevel_headers = sorted(
-    p.relative_to(include).as_posix() for p in include.glob("[a-z]*") if is_header(p)
+    p.relative_to(include).as_posix() for p in include.glob("[_a-z]*") if is_header(p)
 )
 experimental_headers = sorted(
     p.relative_to(include).as_posix()
     for p in include.glob("experimental/[a-z]*")
     if is_header(p)
 )
-public_headers = toplevel_headers + experimental_headers
+
+public_headers = [p for p in all_headers if is_public_header(p)]
 
 # The headers used in the std and std.compat modules.
 #
@@ -191,7 +215,32 @@ public_headers = toplevel_headers + experimental_headers
 module_headers = [
     header
     for header in toplevel_headers
-    if not header.endswith(".h")
+    if not header.endswith(".h") and is_public_header(header)
     # These headers have been removed in C++20 so are never part of a module.
     and not header in ["ccomplex", "ciso646", "cstdbool", "ctgmath"]
+]
+
+# The C headers used in the std and std.compat modules.
+module_c_headers = [
+    "cassert",
+    "cctype",
+    "cerrno",
+    "cfenv",
+    "cfloat",
+    "cinttypes",
+    "climits",
+    "clocale",
+    "cmath",
+    "csetjmp",
+    "csignal",
+    "cstdarg",
+    "cstddef",
+    "cstdint",
+    "cstdio",
+    "cstdlib",
+    "cstring",
+    "ctime",
+    "cuchar",
+    "cwchar",
+    "cwctype",
 ]

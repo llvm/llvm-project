@@ -16,7 +16,7 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 using printf_core::FormatFlags;
@@ -38,6 +38,10 @@ namespace {
 #define CASE_LM(lm)                                                            \
   case (LengthModifier::lm):                                                   \
     tlog << #lm;                                                               \
+    break
+#define CASE_LM_BIT_WIDTH(lm, bw)                                              \
+  case (LengthModifier::lm):                                                   \
+    tlog << #lm << "\n\tbit width: :" << bw;                                   \
     break
 
 static void display(FormatSection form) {
@@ -67,6 +71,8 @@ static void display(FormatSection form) {
       CASE_LM(z);
       CASE_LM(t);
       CASE_LM(L);
+      CASE_LM_BIT_WIDTH(w, form.bit_width);
+      CASE_LM_BIT_WIDTH(wf, form.bit_width);
     }
     tlog << "\n";
     tlog << "\tconversion name: " << form.conv_name << "\n";
@@ -77,7 +83,7 @@ static void display(FormatSection form) {
            << "\n";
     else if (form.conv_name != '%')
       tlog << "\tvalue: "
-           << int_to_hex<fputil::FPBits<long double>::UIntType>(
+           << int_to_hex<fputil::FPBits<long double>::StorageType>(
                   form.conv_val_raw)
            << "\n";
   }
@@ -94,4 +100,4 @@ void FormatSectionMatcher::explainError() {
 }
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

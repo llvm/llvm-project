@@ -1,7 +1,7 @@
 ! This test checks the lowering of parallel do
 
-! RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s
-! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fopenmp %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! The string "EXPECTED" denotes the expected FIR
 
@@ -12,7 +12,8 @@
 ! CHECK: %[[const_1:.*]] = arith.constant 1 : i32
 ! CHECK: %[[const_2:.*]] = arith.constant 10 : i32
 ! CHECK: %[[const_3:.*]] = arith.constant 1 : i32
-! CHECK: omp.wsloop   for  (%[[ARG:.*]]) : i32 = (%[[const_1]]) to (%[[const_2]]) inclusive step (%[[const_3]]) {
+! CHECK: omp.wsloop {
+! CHECK-NEXT: omp.loop_nest (%[[ARG:.*]]) : i32 = (%[[const_1]]) to (%[[const_2]]) inclusive step (%[[const_3]]) {
 ! CHECK: fir.store %[[ARG]] to %[[TEMP]] : !fir.ref<i32>
 ! EXPECTED: %[[temp_1:.*]] = fir.load %[[PRIVATE_Z]] : !fir.ref<i32>
 ! CHECK: %[[temp_1:.*]] = fir.load %{{.*}} : !fir.ref<i32>
@@ -21,6 +22,8 @@
 ! EXPECTED: fir.store %[[result]] to %[[PRIVATE_Y]] : !fir.ref<i32>
 ! CHECK: fir.store %[[result]] to %{{.*}} : !fir.ref<i32>
 ! CHECK: omp.yield
+! CHECK: }
+! CHECK: omp.terminator
 ! CHECK: }
 ! CHECK: omp.terminator
 ! CHECK: }

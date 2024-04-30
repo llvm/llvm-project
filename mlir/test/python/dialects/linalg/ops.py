@@ -157,3 +157,82 @@ def testOpResultFromOtherOp():
                 return linalg.matmul(lhs, rhs, outs=init)
 
     print(module)
+
+
+# CHECK-LABEL: TEST: testIdentityRegionOps
+@run
+def testIdentityRegionOps():
+    with Context(), Location.unknown():
+        module = Module.create()
+        f32 = F32Type.get()
+        with InsertionPoint(module.body):
+            # CHECK: %[[VAL_0:.*]] = tensor.empty() : tensor<1x13xf32>
+            # CHECK: %[[VAL_1:.*]] = tensor.empty() : tensor<13x1xf32>
+            op1 = tensor.EmptyOp([1, 13], f32)
+            op2 = tensor.EmptyOp([13, 1], f32)
+            # CHECK: %[[VAL_2:.*]] = linalg.transpose ins(%[[VAL_0]] : tensor<1x13xf32>) outs(%[[VAL_1]] : tensor<13x1xf32>) permutation = [1, 0]
+            op3 = linalg.TransposeOp(
+                result=[RankedTensorType.get((13, 1), f32)],
+                input=op1,
+                init=op2,
+                permutation=[1, 0],
+            )
+            linalg.fill_builtin_region(op3.operation)
+
+            # CHECK: %[[VAL_3:.*]] = linalg.transpose ins(%[[VAL_1]] : tensor<13x1xf32>) outs(%[[VAL_0]] : tensor<1x13xf32>) permutation = [1, 0]
+            op4 = linalg.transpose(op2, outs=[op1], permutation=[1, 0])
+
+            # CHECK:         func.func @transpose_op(%[[VAL_4:.*]]: memref<1x13xf32>, %[[VAL_5:.*]]: memref<13x1xf32>)
+            @func.FuncOp.from_py_func(
+                MemRefType.get((1, 13), f32),
+                MemRefType.get((13, 1), f32),
+            )
+            def transpose_op(op1, op2):
+                # CHECK: linalg.transpose ins(%[[VAL_4]] : memref<1x13xf32>) outs(%[[VAL_5]] : memref<13x1xf32>) permutation = [1, 0]
+                op3 = linalg.TransposeOp(
+                    result=[],
+                    input=op1,
+                    init=op2,
+                    permutation=[1, 0],
+                )
+                linalg.fill_builtin_region(op3.operation)
+                # CHECK: linalg.transpose ins(%[[VAL_5]] : memref<13x1xf32>) outs(%[[VAL_4]] : memref<1x13xf32>) permutation = [1, 0]
+                op4 = linalg.transpose(op2, outs=[op1], permutation=[1, 0])
+
+            # CHECK: %[[VAL_6:.*]] = tensor.empty() : tensor<16xf32>
+            # CHECK: %[[VAL_7:.*]] = tensor.empty() : tensor<16x64xf32>
+            op1 = tensor.EmptyOp([16], f32)
+            op2 = tensor.EmptyOp([16, 64], f32)
+            # CHECK: %[[VAL_8:.*]] = linalg.broadcast ins(%[[VAL_6]] : tensor<16xf32>) outs(%[[VAL_7]] : tensor<16x64xf32>) dimensions = [1]
+            op3 = linalg.BroadcastOp(
+                result=[RankedTensorType.get((16, 64), f32)],
+                input=op1,
+                init=op2,
+                dimensions=[1],
+            )
+            linalg.fill_builtin_region(op3.operation)
+
+            # CHECK: %[[VAL_9:.*]] = tensor.empty() : tensor<64xf32>
+            op4 = tensor.EmptyOp([64], f32)
+            # CHECK: %[[VAL_10:.*]] = linalg.broadcast ins(%[[VAL_9]] : tensor<64xf32>) outs(%[[VAL_7]] : tensor<16x64xf32>) dimensions = [0]
+            op5 = linalg.broadcast(op4, outs=[op2], dimensions=[0])
+
+            # CHECK: func.func @broadcast_op(%[[VAL_11:.*]]: memref<16xf32>, %[[VAL_12:.*]]: memref<16x64xf32>, %[[VAL_13:.*]]: memref<64xf32>)
+            @func.FuncOp.from_py_func(
+                MemRefType.get((16,), f32),
+                MemRefType.get((16, 64), f32),
+                MemRefType.get((64,), f32),
+            )
+            def broadcast_op(op1, op2, op3):
+                # CHECK: linalg.broadcast ins(%[[VAL_11]] : memref<16xf32>) outs(%[[VAL_12]] : memref<16x64xf32>) dimensions = [1]
+                op4 = linalg.BroadcastOp(
+                    result=[],
+                    input=op1,
+                    init=op2,
+                    dimensions=[1],
+                )
+                linalg.fill_builtin_region(op4.operation)
+                # CHECK: linalg.broadcast ins(%[[VAL_13]] : memref<64xf32>) outs(%[[VAL_12]] : memref<16x64xf32>) dimensions = [0]
+                op5 = linalg.broadcast(op3, outs=[op2], dimensions=[0])
+
+    print(module)

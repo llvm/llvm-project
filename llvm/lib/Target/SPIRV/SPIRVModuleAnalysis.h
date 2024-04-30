@@ -45,13 +45,13 @@ struct Requirements {
   const bool IsSatisfiable;
   const std::optional<Capability::Capability> Cap;
   const ExtensionList Exts;
-  const unsigned MinVer; // 0 if no min version is required.
-  const unsigned MaxVer; // 0 if no max version is required.
+  const VersionTuple MinVer; // 0 if no min version is required.
+  const VersionTuple MaxVer; // 0 if no max version is required.
 
   Requirements(bool IsSatisfiable = false,
                std::optional<Capability::Capability> Cap = {},
-               ExtensionList Exts = {}, unsigned MinVer = 0,
-               unsigned MaxVer = 0)
+               ExtensionList Exts = {}, VersionTuple MinVer = VersionTuple(),
+               VersionTuple MaxVer = VersionTuple())
       : IsSatisfiable(IsSatisfiable), Cap(Cap), Exts(Exts), MinVer(MinVer),
         MaxVer(MaxVer) {}
   Requirements(Capability::Capability Cap) : Requirements(true, {Cap}) {}
@@ -60,30 +60,34 @@ struct Requirements {
 struct RequirementHandler {
 private:
   CapabilityList MinimalCaps;
+
+  // AllCaps and AvailableCaps are related but different. AllCaps is a subset of
+  // AvailableCaps. AvailableCaps is the complete set of capabilities that are
+  // available to the current target. AllCaps is the set of capabilities that
+  // are required by the current module.
   SmallSet<Capability::Capability, 8> AllCaps;
-  SmallSet<Extension::Extension, 4> AllExtensions;
-  unsigned MinVersion; // 0 if no min version is defined.
-  unsigned MaxVersion; // 0 if no max version is defined.
   DenseSet<unsigned> AvailableCaps;
-  // Remove a list of capabilities from dedupedCaps and add them to AllCaps,
-  // recursing through their implicitly declared capabilities too.
-  void pruneCapabilities(const CapabilityList &ToPrune);
+
+  SmallSet<Extension::Extension, 4> AllExtensions;
+  VersionTuple MinVersion; // 0 if no min version is defined.
+  VersionTuple MaxVersion; // 0 if no max version is defined.
+  // Add capabilities to AllCaps, recursing through their implicitly declared
+  // capabilities too.
+  void recursiveAddCapabilities(const CapabilityList &ToPrune);
 
   void initAvailableCapabilitiesForOpenCL(const SPIRVSubtarget &ST);
   void initAvailableCapabilitiesForVulkan(const SPIRVSubtarget &ST);
 
 public:
-  RequirementHandler() : MinVersion(0), MaxVersion(0) {}
+  RequirementHandler() {}
   void clear() {
     MinimalCaps.clear();
     AllCaps.clear();
     AvailableCaps.clear();
     AllExtensions.clear();
-    MinVersion = 0;
-    MaxVersion = 0;
+    MinVersion = VersionTuple();
+    MaxVersion = VersionTuple();
   }
-  unsigned getMinVersion() const { return MinVersion; }
-  unsigned getMaxVersion() const { return MaxVersion; }
   const CapabilityList &getMinimalCapabilities() const { return MinimalCaps; }
   const SmallSet<Extension::Extension, 4> &getExtensions() const {
     return AllExtensions;
@@ -157,8 +161,8 @@ struct ModuleAnalysisInfo {
   Register getFuncReg(const Function *F) {
     assert(F && "Function is null");
     auto FuncPtrRegPair = FuncMap.find(F);
-    assert(FuncPtrRegPair != FuncMap.end() && "Cannot find function ID");
-    return FuncPtrRegPair->second;
+    return FuncPtrRegPair == FuncMap.end() ? Register(0)
+                                           : FuncPtrRegPair->second;
   }
   Register getExtInstSetReg(unsigned SetNum) { return ExtInstSetMap[SetNum]; }
   InstrList &getMSInstrs(unsigned MSType) { return MS[MSType]; }
@@ -183,7 +187,7 @@ struct ModuleAnalysisInfo {
   }
   unsigned getNextID() { return MaxID++; }
   bool hasMBBRegister(const MachineBasicBlock &MBB) {
-    return BBNumToRegMap.find(MBB.getNumber()) != BBNumToRegMap.end();
+    return BBNumToRegMap.contains(MBB.getNumber());
   }
   // Convert MBB's number to corresponding ID register.
   Register getOrCreateMBBRegister(const MachineBasicBlock &MBB) {
@@ -218,6 +222,8 @@ private:
   void collectFuncNames(MachineInstr &MI, const Function *F);
   void processOtherInstrs(const Module &M);
   void numberRegistersGlobally(const Module &M);
+  void collectFuncPtrs();
+  void collectFuncPtrs(MachineInstr *MI);
 
   const SPIRVSubtarget *ST;
   SPIRVGlobalRegistry *GR;

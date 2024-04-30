@@ -54,11 +54,10 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
   auto makeFeature = [&Args](Twine T, bool Enable) -> StringRef {
     const std::string &S = T.str();
     StringRef Opt(S);
-    if (Opt.endswith("="))
-      Opt = Opt.drop_back(1);
-    if (Opt.startswith("mno-"))
+    Opt.consume_back("=");
+    if (Opt.starts_with("mno-"))
       Opt = Opt.drop_front(4);
-    else if (Opt.startswith("m"))
+    else if (Opt.starts_with("m"))
       Opt = Opt.drop_front(1);
     return Args.MakeArgString(Twine(Enable ? "+" : "-") + Twine(Opt));
   };
@@ -218,11 +217,11 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   addSanitizerRuntimes(HTC, Args, CmdArgs);
 
+  assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
     CmdArgs.push_back("-o");
     CmdArgs.push_back(Output.getFilename());
   } else {
-    assert(Output.isNothing() && "Unexpected output");
     CmdArgs.push_back("-fsyntax-only");
   }
 
@@ -363,7 +362,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
 
     CmdArgs.push_back(
         Args.MakeArgString(StringRef("-L") + D.SysRoot + "/usr/lib"));
-    Args.AddAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_s,
+    Args.addAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_s,
                               options::OPT_t, options::OPT_u_Group});
     AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
 
@@ -377,7 +376,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
         linkXRayRuntimeDeps(HTC, Args, CmdArgs);
 
       CmdArgs.push_back("-lclang_rt.builtins-hexagon");
-      CmdArgs.push_back("-lc");
+      if (!Args.hasArg(options::OPT_nolibc))
+        CmdArgs.push_back("-lc");
     }
     if (D.CCCIsCXX()) {
       if (HTC.ShouldLinkCXXStdlib(Args))
@@ -411,7 +411,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   const std::string MCpuSuffix = "/" + CpuVer.str();
   const std::string MCpuG0Suffix = MCpuSuffix + "/G0";
   const std::string RootDir =
-      HTC.getHexagonTargetDir(D.InstalledDir, D.PrefixDirs) + "/";
+      HTC.getHexagonTargetDir(D.Dir, D.PrefixDirs) + "/";
   const std::string StartSubDir =
       "hexagon/lib" + (UseG0 ? MCpuG0Suffix : MCpuSuffix);
 
@@ -450,7 +450,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   //----------------------------------------------------------------------------
   //
   //----------------------------------------------------------------------------
-  Args.AddAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_s,
+  Args.addAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_s,
                             options::OPT_t, options::OPT_u_Group});
 
   AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
@@ -470,7 +470,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     if (!IsShared) {
       for (StringRef Lib : OsLibs)
         CmdArgs.push_back(Args.MakeArgString("-l" + Lib));
-      CmdArgs.push_back("-lc");
+      if (!Args.hasArg(options::OPT_nolibc))
+        CmdArgs.push_back("-lc");
     }
     CmdArgs.push_back("-lgcc");
 
@@ -548,7 +549,7 @@ std::string HexagonToolChain::getCompilerRTPath() const {
   if (!SelectedMultilibs.empty()) {
     Dir += SelectedMultilibs.back().gccSuffix();
   }
-  return std::string(Dir.str());
+  return std::string(Dir);
 }
 
 void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
@@ -568,8 +569,7 @@ void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
   std::copy(D.PrefixDirs.begin(), D.PrefixDirs.end(),
             std::back_inserter(RootDirs));
 
-  std::string TargetDir = getHexagonTargetDir(D.getInstalledDir(),
-                                              D.PrefixDirs);
+  std::string TargetDir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
   if (!llvm::is_contained(RootDirs, TargetDir))
     RootDirs.push_back(TargetDir);
 
@@ -596,8 +596,7 @@ void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
 HexagonToolChain::HexagonToolChain(const Driver &D, const llvm::Triple &Triple,
                                    const llvm::opt::ArgList &Args)
     : Linux(D, Triple, Args) {
-  const std::string TargetDir = getHexagonTargetDir(D.getInstalledDir(),
-                                                    D.PrefixDirs);
+  const std::string TargetDir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
 
   // Note: Generic_GCC::Generic_GCC adds InstalledDir and getDriver().Dir to
   // program paths
@@ -727,8 +726,7 @@ void HexagonToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   if (HasSysRoot)
     return;
-  std::string TargetDir = getHexagonTargetDir(D.getInstalledDir(),
-                                              D.PrefixDirs);
+  std::string TargetDir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
   addExternCSystemInclude(DriverArgs, CC1Args, TargetDir + "/hexagon/include");
 }
 
@@ -743,7 +741,7 @@ void HexagonToolChain::addLibCxxIncludePaths(
     addLibStdCXXIncludePaths("/usr/include/c++/v1", "", "", DriverArgs,
                              CC1Args);
   else {
-    std::string TargetDir = getHexagonTargetDir(D.InstalledDir, D.PrefixDirs);
+    std::string TargetDir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
     addLibStdCXXIncludePaths(TargetDir + "/hexagon/include/c++/v1", "", "",
                              DriverArgs, CC1Args);
   }
@@ -752,7 +750,7 @@ void HexagonToolChain::addLibStdCxxIncludePaths(
     const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
-  std::string TargetDir = getHexagonTargetDir(D.InstalledDir, D.PrefixDirs);
+  std::string TargetDir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
   addLibStdCXXIncludePaths(TargetDir + "/hexagon/include/c++", "", "",
                            DriverArgs, CC1Args);
 }
@@ -799,7 +797,6 @@ StringRef HexagonToolChain::GetTargetCPUVersion(const ArgList &Args) {
     CpuArg = A;
 
   StringRef CPU = CpuArg ? CpuArg->getValue() : GetDefaultCPU();
-  if (CPU.startswith("hexagon"))
-    return CPU.substr(sizeof("hexagon") - 1);
+  CPU.consume_front("hexagon");
   return CPU;
 }

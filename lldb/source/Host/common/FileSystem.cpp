@@ -259,7 +259,6 @@ void FileSystem::Resolve(FileSpec &file_spec) {
     file_spec.SetDirectory(path);
   else
     file_spec.SetPath(path);
-  file_spec.SetIsResolved(true);
 }
 
 template <typename T>

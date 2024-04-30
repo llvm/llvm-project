@@ -45,15 +45,16 @@ int main() {
 }
 
 namespace N {
-  template<typename T> struct S { static int n; };
+  template<typename T> struct S { static int n; }; // expected-note {{declared here}}
   template<typename T> int S<T>::n = 5;
   void g(int*);
   template<typename T> int f() {
-    int k[S<T>::n];
+    int k[S<T>::n]; // expected-warning {{variable length arrays in C++ are a Clang extension}} \
+                       expected-note {{read of non-const variable 'n' is not allowed in a constant expression}}
     g(k);
     return k[3];
   }
-  int j = f<int>();
+  int j = f<int>(); // expected-note {{in instantiation of function template specialization 'N::f<int>' requested here}}
 }
 
 #else

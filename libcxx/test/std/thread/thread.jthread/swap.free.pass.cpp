@@ -17,6 +17,7 @@
 #include <thread>
 #include <type_traits>
 
+#include "make_test_thread.h"
 #include "test_macros.h"
 
 template <class T>
@@ -30,7 +31,7 @@ int main(int, char**) {
   // x is default constructed
   {
     std::jthread t1;
-    std::jthread t2{[] {}};
+    std::jthread t2        = support::make_test_jthread([] {});
     const auto originalId2 = t2.get_id();
     swap(t1, t2);
 
@@ -40,7 +41,7 @@ int main(int, char**) {
 
   // y is default constructed
   {
-    std::jthread t1([] {});
+    std::jthread t1 = support::make_test_jthread([] {});
     std::jthread t2{};
     const auto originalId1 = t1.get_id();
     swap(t1, t2);
@@ -51,8 +52,8 @@ int main(int, char**) {
 
   // both not default constructed
   {
-    std::jthread t1([] {});
-    std::jthread t2{[] {}};
+    std::jthread t1        = support::make_test_jthread([] {});
+    std::jthread t2        = support::make_test_jthread([] {});
     const auto originalId1 = t1.get_id();
     const auto originalId2 = t2.get_id();
     swap(t1, t2);

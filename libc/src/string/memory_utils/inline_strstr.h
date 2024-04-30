@@ -13,7 +13,7 @@
 #include "src/string/string_utils.h"
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 template <typename Comp>
 LIBC_INLINE constexpr char *inline_strstr(const char *haystack,
@@ -24,6 +24,6 @@ LIBC_INLINE constexpr char *inline_strstr(const char *haystack,
   return static_cast<char *>(result);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_STRSTR_H

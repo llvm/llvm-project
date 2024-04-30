@@ -27,6 +27,7 @@ public:
                     void *Var);
   void parseString(const char *S);
   void printFlagDescriptions();
+  void parseStringPair(const char *Name, const char *Value);
 
 private:
   static const u32 MaxFlags = 20;
@@ -45,7 +46,7 @@ private:
   void skipWhitespace();
   void parseFlags();
   void parseFlag();
-  bool runHandler(const char *Name, const char *Value);
+  bool runHandler(const char *Name, const char *Value, char Sep);
 };
 
 void reportUnrecognizedFlags();

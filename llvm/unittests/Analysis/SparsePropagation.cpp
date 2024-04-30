@@ -488,7 +488,7 @@ TEST_F(SparsePropagationTest, ComputeInstructionState) {
 ///
 /// declare internal void @g()
 ///
-/// define internal void @f() personality i8* bitcast (void ()* @p to i8*) {
+/// define internal void @f() personality ptr @p {
 /// entry:
 ///   invoke void @g()
 ///           to label %exit unwind label %catch.pad
@@ -513,9 +513,7 @@ TEST_F(SparsePropagationTest, ExceptionalTerminatorInsts) {
                                  GlobalValue::InternalLinkage, "g", &M);
   Function *F = Function::Create(FunctionType::get(Builder.getVoidTy(), false),
                                  GlobalValue::InternalLinkage, "f", &M);
-  Constant *C =
-      ConstantExpr::getCast(Instruction::BitCast, P, Builder.getInt8PtrTy());
-  F->setPersonalityFn(C);
+  F->setPersonalityFn(P);
   BasicBlock *Entry = BasicBlock::Create(Context, "entry", F);
   BasicBlock *Pad = BasicBlock::Create(Context, "catch.pad", F);
   BasicBlock *Body = BasicBlock::Create(Context, "catch.body", F);

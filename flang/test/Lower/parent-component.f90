@@ -1,7 +1,7 @@
 ! Test different ways of passing the parent component of an extended
 ! derived-type to a subroutine or the runtime.
 
-! RUN: bbc --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 program parent_comp
   type p
@@ -29,20 +29,20 @@ contains
     type(p), intent(in) :: a
     print*, a
   end subroutine
-  ! CHECK-LABEL: func.func @_QFPprint_scalar(%{{.*}}: !fir.ref<!fir.type<_QFTp{a:i32}>> {fir.bindc_name = "a"})
+  ! CHECK-LABEL: func.func private @_QFPprint_scalar(%{{.*}}: !fir.ref<!fir.type<_QFTp{a:i32}>> {fir.bindc_name = "a"})
 
   subroutine print_p(a)
     type(p), intent(in) :: a(2)
     print*, a
   end subroutine
-  ! CHECK-LABEL: func.func @_QFPprint_p(%{{.*}}: !fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>> {fir.bindc_name = "a"})
+  ! CHECK-LABEL: func.func private @_QFPprint_p(%{{.*}}: !fir.ref<!fir.array<2x!fir.type<_QFTp{a:i32}>>> {fir.bindc_name = "a"})
 
   subroutine init_with_slice()
     type(c) :: y(2) = [ c(11, 21), c(12, 22) ]
     call print_p(y(:)%p)
     print*,y(:)%p
   end subroutine
-  ! CHECK-LABEL: func.func @_QFPinit_with_slice()
+  ! CHECK-LABEL: func.func private @_QFPinit_with_slice()
   ! CHECK: %[[Y:.*]] = fir.address_of(@_QFFinit_with_sliceEy) : !fir.ref<!fir.array<2x!fir.type<_QFTc{a:i32,b:i32}>>>
   ! CHECK: %[[C2:.*]] = arith.constant 2 : index
   ! CHECK: %[[C1:.*]] = arith.constant 1 : index
@@ -78,7 +78,7 @@ contains
     call print_p(y%p)
     print*,y%p
   end subroutine
-  ! CHECK-LABEL: func.func @_QFPinit_no_slice()
+  ! CHECK-LABEL: func.func private @_QFPinit_no_slice()
   ! CHECK: %[[Y:.*]] = fir.address_of(@_QFFinit_no_sliceEy) : !fir.ref<!fir.array<2x!fir.type<_QFTc{a:i32,b:i32}>>>
   ! CHECK: %[[C2:.*]] = arith.constant 2 : index
   ! CHECK: %[[SHAPE:.*]] = fir.shape %[[C2]] : (index) -> !fir.shape<1>
@@ -106,7 +106,7 @@ contains
     print*,y%p
   end subroutine
 
-  ! CHECK-LABEL: func.func @_QFPinit_allocatable()
+  ! CHECK-LABEL: func.func private @_QFPinit_allocatable()
   ! CHECK: %[[ALLOC:.*]] = fir.alloca !fir.heap<!fir.array<?x!fir.type<_QFTc{a:i32,b:i32}>>> {uniq_name = "_QFFinit_allocatableEy.addr"}
   ! CHECK: %[[LB0:.*]] = fir.alloca index {uniq_name = "_QFFinit_allocatableEy.lb0"}
   ! CHECK: %[[EXT0:.*]] = fir.alloca index {uniq_name = "_QFFinit_allocatableEy.ext0"}
@@ -139,7 +139,7 @@ contains
     print*,s%p
   end subroutine
 
-  ! CHECK-LABEL: func.func @_QFPinit_scalar()
+  ! CHECK-LABEL: func.func private @_QFPinit_scalar()
   ! CHECK: %[[S:.*]] = fir.address_of(@_QFFinit_scalarEs) : !fir.ref<!fir.type<_QFTc{a:i32,b:i32}>>
   ! CHECK: %[[CAST:.*]] = fir.convert %[[S]] : (!fir.ref<!fir.type<_QFTc{a:i32,b:i32}>>) -> !fir.ref<!fir.type<_QFTp{a:i32}>>
   ! CHECK: fir.call @_QFPprint_scalar(%[[CAST]]) {{.*}}: (!fir.ref<!fir.type<_QFTp{a:i32}>>) -> ()
@@ -154,7 +154,7 @@ contains
     print*,y%p
   end subroutine
 
-  ! CHECK-LABEL: func.func @_QFPinit_assumed(
+  ! CHECK-LABEL: func.func private @_QFPinit_assumed(
   ! CHECK-SAME: %[[ARG0:.*]]: !fir.box<!fir.array<?x!fir.type<_QFTc{a:i32,b:i32}>>
   ! CHECK: %[[BOX:.*]] = fir.rebox %[[ARG0]] : (!fir.box<!fir.array<?x!fir.type<_QFTc{a:i32,b:i32}>>>) -> !fir.box<!fir.array<?x!fir.type<_QFTp{a:i32}>>>
 
@@ -167,7 +167,7 @@ contains
     call print_p(y%c%p)
   end subroutine
 
-  ! CHECK-LABEL: func.func @_QFPinit_existing_field
+  ! CHECK-LABEL: func.func private @_QFPinit_existing_field
   ! CHECK: %[[C2:.*]] = arith.constant 2 : index
   ! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.array<2x!fir.type<_QFTz{k:i32,c:!fir.type<_QFTc{a:i32,b:i32}>}>> {bindc_name = "y", uniq_name = "_QFFinit_existing_fieldEy"}
   ! CHECK: %[[FIELD_C:.*]] = fir.field_index c, !fir.type<_QFTz{k:i32,c:!fir.type<_QFTc{a:i32,b:i32}>}>
@@ -183,7 +183,7 @@ contains
     a%p = B
   end subroutine
 
-! CHECK-LABEL: func.func @_QFPparent_comp_lhs()
+! CHECK-LABEL: func.func private @_QFPparent_comp_lhs()
 ! CHECK: %[[BOX:.*]] = fir.alloca !fir.box<!fir.type<_QFTp{a:i32}>>
 ! CHECK: %[[A:.*]] = fir.alloca !fir.type<_QFTc{a:i32,b:i32}> {bindc_name = "a", uniq_name = "_QFFparent_comp_lhsEa"}
 ! CHECK: %[[B:.*]] = fir.alloca !fir.type<_QFTp{a:i32}> {bindc_name = "b", uniq_name = "_QFFparent_comp_lhsEb"}

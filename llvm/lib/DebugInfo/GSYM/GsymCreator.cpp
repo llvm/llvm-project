@@ -9,6 +9,7 @@
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/LineTable.h"
+#include "llvm/DebugInfo/GSYM/OutputAggregator.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -55,15 +56,16 @@ uint32_t GsymCreator::copyFile(const GsymCreator &SrcGC, uint32_t FileIdx) {
     return 0;
   const FileEntry SrcFE = SrcGC.Files[FileIdx];
   // Copy the strings for the file and then add the newly converted file entry.
-  uint32_t Dir = StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Dir)->second);
+  uint32_t Dir =
+      SrcFE.Dir == 0
+          ? 0
+          : StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Dir)->second);
   uint32_t Base = StrTab.add(SrcGC.StringOffsetMap.find(SrcFE.Base)->second);
   FileEntry DstFE(Dir, Base);
   return insertFileEntry(DstFE);
 }
 
-
-llvm::Error GsymCreator::save(StringRef Path,
-                              llvm::support::endianness ByteOrder,
+llvm::Error GsymCreator::save(StringRef Path, llvm::endianness ByteOrder,
                               std::optional<uint64_t> SegmentSize) const {
   if (SegmentSize)
     return saveSegments(Path, ByteOrder, *SegmentSize);
@@ -187,7 +189,7 @@ llvm::Error GsymCreator::encode(FileWriter &O) const {
   return ErrorSuccess();
 }
 
-llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
+llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
   std::lock_guard<std::mutex> Guard(Mutex);
   if (Finalized)
     return createStringError(std::errc::invalid_argument, "already finalized");
@@ -246,26 +248,29 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
             // address ranges that have debug info are last in
             // the sort.
             if (!(Prev == Curr)) {
-              if (Prev.hasRichInfo() && Curr.hasRichInfo()) {
-                if (!Quiet) {
-                  OS << "warning: same address range contains "
-                        "different debug "
-                    << "info. Removing:\n"
-                    << Prev << "\nIn favor of this one:\n"
-                    << Curr << "\n";
-                }
-              }
+              if (Prev.hasRichInfo() && Curr.hasRichInfo())
+                Out.Report(
+                    "Duplicate address ranges with different debug info.",
+                    [&](raw_ostream &OS) {
+                      OS << "warning: same address range contains "
+                            "different debug "
+                         << "info. Removing:\n"
+                         << Prev << "\nIn favor of this one:\n"
+                         << Curr << "\n";
+                    });
+
               // We want to swap the current entry with the previous since
               // later entries with the same range always have more debug info
               // or different debug info.
               std::swap(Prev, Curr);
             }
           } else {
-            if (!Quiet) { // print warnings about overlaps
+            Out.Report("Overlapping function ranges", [&](raw_ostream &OS) {
+              // print warnings about overlaps
               OS << "warning: function ranges overlap:\n"
                 << Prev << "\n"
                 << Curr << "\n";
-            }
+            });
             FinalizedFuncs.emplace_back(std::move(Curr));
           }
         } else {
@@ -292,8 +297,8 @@ llvm::Error GsymCreator::finalize(llvm::raw_ostream &OS) {
         Funcs.back().Range = {Funcs.back().Range.start(), Range->end()};
       }
     }
-    OS << "Pruned " << NumBefore - Funcs.size() << " functions, ended with "
-      << Funcs.size() << " total\n";
+    Out << "Pruned " << NumBefore - Funcs.size() << " functions, ended with "
+        << Funcs.size() << " total\n";
   }
   return Error::success();
 }
@@ -478,7 +483,7 @@ uint64_t GsymCreator::copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncIdx)
 }
 
 llvm::Error GsymCreator::saveSegments(StringRef Path,
-                                      llvm::support::endianness ByteOrder,
+                                      llvm::endianness ByteOrder,
                                       uint64_t SegmentSize) const {
   if (SegmentSize == 0)
     return createStringError(std::errc::invalid_argument,
@@ -493,8 +498,9 @@ llvm::Error GsymCreator::saveSegments(StringRef Path,
       GsymCreator *GC = ExpectedGC->get();
       if (GC == NULL)
         break; // We had not more functions to encode.
-      raw_null_ostream ErrorStrm;
-      llvm::Error Err = GC->finalize(ErrorStrm);
+      // Don't collect any messages at all
+      OutputAggregator Out(nullptr);
+      llvm::Error Err = GC->finalize(Out);
       if (Err)
         return Err;
       std::string SegmentedGsymPath;

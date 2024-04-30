@@ -27,6 +27,6 @@
 ; BOLT-MAIN: DW_AT_abstract_origin [DW_FORM_ref4]  (cu + 0x005a => {0x0000005a} "_Z11doStuffSamei")
 ; BOLT-MAIN: DW_AT_call_file [DW_FORM_data1] (0x00)
 ; BOLT-MAIN: DW_AT_call_line [DW_FORM_data1] (16)
-; BOLT-MAIN: DW_AT_call_column [DW_FORM_data1] (0x1d)
+; BOLT-MAIN: DW_AT_call_column [DW_FORM_data1] (29)
 ; BOLT-MAIN: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000002) address = <unresolved>)
 ; BOLT-MAIN: DW_AT_high_pc [DW_FORM_data4] (0x00000042)

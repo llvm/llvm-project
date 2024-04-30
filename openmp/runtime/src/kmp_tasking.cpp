@@ -839,6 +839,14 @@ static void __kmpc_omp_task_begin_if0_ompt(ident_t *loc_ref, kmp_int32 gtid,
 // loc_ref: source location information; points to beginning of task block.
 // gtid: global thread number.
 // task: task thunk for the started task.
+#ifdef __s390x__
+// This is required for OMPT_GET_FRAME_ADDRESS(1) to compile on s390x.
+// In order for it to work correctly, the caller also needs to be compiled with
+// backchain. If a caller is compiled without backchain,
+// OMPT_GET_FRAME_ADDRESS(1) will produce an incorrect value, but will not
+// crash.
+__attribute__((target("backchain")))
+#endif
 void __kmpc_omp_task_begin_if0(ident_t *loc_ref, kmp_int32 gtid,
                                kmp_task_t *task) {
 #if OMPT_SUPPORT
@@ -1554,7 +1562,7 @@ kmp_task_t *__kmp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   task = KMP_TASKDATA_TO_TASK(taskdata);
 
 // Make sure task & taskdata are aligned appropriately
-#if KMP_ARCH_X86 || KMP_ARCH_PPC64 || !KMP_HAVE_QUAD
+#if KMP_ARCH_X86 || KMP_ARCH_PPC64 || KMP_ARCH_S390X || !KMP_HAVE_QUAD
   KMP_DEBUG_ASSERT((((kmp_uintptr_t)taskdata) & (sizeof(double) - 1)) == 0);
   KMP_DEBUG_ASSERT((((kmp_uintptr_t)task) & (sizeof(double) - 1)) == 0);
 #else
@@ -1737,8 +1745,12 @@ __kmpc_omp_reg_task_with_affinity(ident_t *loc_ref, kmp_int32 gtid,
 // gtid: global thread ID of caller
 // task: the task to invoke
 // current_task: the task to resume after task invocation
-static void __kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
-                              kmp_taskdata_t *current_task) {
+#ifdef __s390x__
+__attribute__((target("backchain")))
+#endif
+static void
+__kmp_invoke_task(kmp_int32 gtid, kmp_task_t *task,
+                  kmp_taskdata_t *current_task) {
   kmp_taskdata_t *taskdata = KMP_TASK_TO_TASKDATA(task);
   kmp_info_t *thread;
   int discard = 0 /* false */;
@@ -2650,8 +2662,8 @@ void *__kmpc_task_reduction_get_th_data(int gtid, void *tskgrp, void *data) {
   if (tg == NULL)
     tg = thread->th.th_current_task->td_taskgroup;
   KMP_ASSERT(tg != NULL);
-  kmp_taskred_data_t *arr = (kmp_taskred_data_t *)(tg->reduce_data);
-  kmp_int32 num = tg->reduce_num_data;
+  kmp_taskred_data_t *arr;
+  kmp_int32 num;
   kmp_int32 tid = thread->th.th_info.ds.ds_tid;
 
 #if OMPX_TASKGRAPH
@@ -2668,6 +2680,8 @@ void *__kmpc_task_reduction_get_th_data(int gtid, void *tskgrp, void *data) {
 
   KMP_ASSERT(data != NULL);
   while (tg != NULL) {
+    arr = (kmp_taskred_data_t *)(tg->reduce_data);
+    num = tg->reduce_num_data;
     for (int i = 0; i < num; ++i) {
       if (!arr[i].flags.lazy_priv) {
         if (data == arr[i].reduce_shar ||
@@ -2701,8 +2715,6 @@ void *__kmpc_task_reduction_get_th_data(int gtid, void *tskgrp, void *data) {
     }
     KMP_ASSERT(tg->parent);
     tg = tg->parent;
-    arr = (kmp_taskred_data_t *)(tg->reduce_data);
-    num = tg->reduce_num_data;
   }
   KMP_ASSERT2(0, "Unknown task reduction item");
   return NULL; // ERROR, this line never executed
@@ -3207,7 +3219,7 @@ static kmp_task_t *__kmp_remove_my_task(kmp_info_t *thread, kmp_int32 gtid,
 // __kmp_steal_task: remove a task from another thread's deque
 // Assume that calling thread has already checked existence of
 // task_team thread_data before calling this routine.
-static kmp_task_t *__kmp_steal_task(kmp_info_t *victim_thr, kmp_int32 gtid,
+static kmp_task_t *__kmp_steal_task(kmp_int32 victim_tid, kmp_int32 gtid,
                                     kmp_task_team_t *task_team,
                                     std::atomic<kmp_int32> *unfinished_threads,
                                     int *thread_finished,
@@ -3217,15 +3229,18 @@ static kmp_task_t *__kmp_steal_task(kmp_info_t *victim_thr, kmp_int32 gtid,
   kmp_taskdata_t *current;
   kmp_thread_data_t *victim_td, *threads_data;
   kmp_int32 target;
-  kmp_int32 victim_tid;
+  kmp_info_t *victim_thr;
 
   KMP_DEBUG_ASSERT(__kmp_tasking_mode != tskm_immediate_exec);
 
   threads_data = task_team->tt.tt_threads_data;
   KMP_DEBUG_ASSERT(threads_data != NULL); // Caller should check this condition
+  KMP_DEBUG_ASSERT(victim_tid >= 0);
+  KMP_DEBUG_ASSERT(victim_tid < task_team->tt.tt_nproc);
 
-  victim_tid = victim_thr->th.th_info.ds.ds_tid;
   victim_td = &threads_data[victim_tid];
+  victim_thr = victim_td->td.td_thr;
+  (void)victim_thr; // Use in TRACE messages which aren't always enabled.
 
   KA_TRACE(10, ("__kmp_steal_task(enter): T#%d try to steal from T#%d: "
                 "task_team=%p ntasks=%d head=%u tail=%u\n",
@@ -3440,9 +3455,9 @@ static inline int __kmp_execute_tasks_template(
 
         if (!asleep) {
           // We have a victim to try to steal from
-          task = __kmp_steal_task(other_thread, gtid, task_team,
-                                  unfinished_threads, thread_finished,
-                                  is_constrained);
+          task =
+              __kmp_steal_task(victim_tid, gtid, task_team, unfinished_threads,
+                               thread_finished, is_constrained);
         }
         if (task != NULL) { // set last stolen to victim
           if (threads_data[tid].td.td_deque_last_stolen != victim_tid) {

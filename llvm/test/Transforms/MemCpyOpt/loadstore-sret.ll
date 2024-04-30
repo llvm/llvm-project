@@ -7,7 +7,7 @@ target triple = "x86_64-apple-darwin10.0.0"
 
 %"class.std::auto_ptr" = type { ptr }
 
-define void @_Z3foov(ptr noalias nocapture sret(%"class.std::auto_ptr") %agg.result) ssp {
+define void @_Z3foov(ptr noalias nocapture writable sret(%"class.std::auto_ptr") %agg.result) ssp {
 ; CHECK-LABEL: @_Z3foov(
 ; CHECK-NEXT:  _ZNSt8auto_ptrIiED1Ev.exit:
 ; CHECK-NEXT:    [[TEMP_LVALUE:%.*]] = alloca %"class.std::auto_ptr", align 8

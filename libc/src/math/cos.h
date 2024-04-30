@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_MATH_COS_H
 #define LLVM_LIBC_SRC_MATH_COS_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 double cos(double x);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_COS_H

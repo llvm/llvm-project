@@ -407,9 +407,11 @@ ___kmp_env_blk_parse_unix(kmp_env_blk_t *block, // M: Env block to fill.
     int i;
     var = bulk;
     for (i = 0; i < count; ++i) {
+      KMP_ASSERT(var < bulk + size);
+      [[maybe_unused]] size_t ssize = size - (var - bulk);
       // Copy variable to bulk.
       len = KMP_STRLEN(env[i]);
-      KMP_MEMCPY_S(var, size, env[i], len + 1);
+      KMP_MEMCPY_S(var, ssize, env[i], len + 1);
       // Save found variable in vars array.
       __kmp_str_split(var, '=', &name, &value);
       vars[i].name = name;

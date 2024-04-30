@@ -52,14 +52,18 @@ TEST(HeaderAnalysisTest, IsSelfContained) {
   const auto &SM = AST.sourceManager();
   auto &FM = SM.getFileManager();
   auto &HI = AST.preprocessor().getHeaderSearchInfo();
-  EXPECT_TRUE(isSelfContainedHeader(FM.getFile("headerguard.h").get(), SM, HI));
-  EXPECT_TRUE(isSelfContainedHeader(FM.getFile("pragmaonce.h").get(), SM, HI));
-  EXPECT_TRUE(isSelfContainedHeader(FM.getFile("imported.h").get(), SM, HI));
   EXPECT_TRUE(
-      isSelfContainedHeader(SM.getFileEntryForID(SM.getMainFileID()), SM, HI));
+      isSelfContainedHeader(*FM.getOptionalFileRef("headerguard.h"), SM, HI));
+  EXPECT_TRUE(
+      isSelfContainedHeader(*FM.getOptionalFileRef("pragmaonce.h"), SM, HI));
+  EXPECT_TRUE(
+      isSelfContainedHeader(*FM.getOptionalFileRef("imported.h"), SM, HI));
+  EXPECT_TRUE(isSelfContainedHeader(
+      *SM.getFileEntryRefForID(SM.getMainFileID()), SM, HI));
 
-  EXPECT_FALSE(isSelfContainedHeader(FM.getFile("unguarded.h").get(), SM, HI));
-  EXPECT_FALSE(isSelfContainedHeader(FM.getFile("bad.h").get(), SM, HI));
+  EXPECT_FALSE(
+      isSelfContainedHeader(*FM.getOptionalFileRef("unguarded.h"), SM, HI));
+  EXPECT_FALSE(isSelfContainedHeader(*FM.getOptionalFileRef("bad.h"), SM, HI));
 }
 
 TEST(HeaderAnalysisTest, CodeContainsImports) {

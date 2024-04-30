@@ -10,14 +10,14 @@
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GPU_FMA_H
 
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/macros/config.h"
 
-// These intrinsics map to the FMA instrunctions in the target ISA for the GPU.
+// These intrinsics map to the FMA instructions in the target ISA for the GPU.
 // The default rounding mode generated from these will be to the nearest even.
-static_assert(LIBC_HAS_BUILTIN(__builtin_fma), "FMA builtins must be defined");
-static_assert(LIBC_HAS_BUILTIN(__builtin_fmaf), "FMA builtins must be defined");
+#if !__has_builtin(__builtin_fma) || !__has_builtin(__builtin_fmaf)
+#error "FMA builtins must be defined");
+#endif
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 template <typename T>
@@ -31,6 +31,6 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_same_v<T, double>, T> fma(T x, T y, T z) {
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_GPU_FMA_H

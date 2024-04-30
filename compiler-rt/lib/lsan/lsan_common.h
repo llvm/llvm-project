@@ -120,6 +120,10 @@ void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads);
 void LockAllocator();
 void UnlockAllocator();
 
+// Lock/unlock global mutext.
+void LockGlobal();
+void UnlockGlobal();
+
 // Returns the address range occupied by the global allocator object.
 void GetAllocatorGlobalRange(uptr *begin, uptr *end);
 // If p points into a chunk that has been allocated to the user, returns its

@@ -13,7 +13,7 @@
 
 #include <threads.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, tss_set, (tss_t key, void *data)) {
   if (set_tss_value(key, data))
@@ -22,4 +22,4 @@ LLVM_LIBC_FUNCTION(int, tss_set, (tss_t key, void *data)) {
     return thrd_error;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

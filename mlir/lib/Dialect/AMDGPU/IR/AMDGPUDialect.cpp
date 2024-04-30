@@ -44,6 +44,21 @@ void AMDGPUDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
+// 8-bit float ops
+//===----------------------------------------------------------------------===//
+LogicalResult PackedTrunc2xFp8Op::verify() {
+  if (getExisting() && getExisting().getType() != getResult().getType())
+    return emitOpError("existing values must have same type as result");
+  return success();
+}
+
+LogicalResult PackedStochRoundFp8Op::verify() {
+  if (getExisting() && getExisting().getType() != getResult().getType())
+    return emitOpError("existing values must have same type as result");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // RawBuffer*Op
 //===----------------------------------------------------------------------===//
 template <typename T>
@@ -212,8 +227,8 @@ LogicalResult WMMAOp::verify() {
   Type sourceAType = getSourceA().getType();
   Type destType = getDestC().getType();
 
-  VectorType sourceVectorAType = sourceAType.dyn_cast<VectorType>();
-  VectorType destVectorType = destType.dyn_cast<VectorType>();
+  VectorType sourceVectorAType = dyn_cast<VectorType>(sourceAType);
+  VectorType destVectorType = dyn_cast<VectorType>(destType);
 
   Type sourceAElemType = sourceVectorAType.getElementType();
   Type destElemType = destVectorType.getElementType();

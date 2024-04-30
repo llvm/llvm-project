@@ -114,29 +114,50 @@ public:
     return Pos == Map.end()? ValueT() : Vector[Pos->second].second;
   }
 
-  std::pair<iterator, bool> insert(const std::pair<KeyT, ValueT> &KV) {
-    std::pair<KeyT, typename MapType::mapped_type> Pair = std::make_pair(KV.first, 0);
-    std::pair<typename MapType::iterator, bool> Result = Map.insert(Pair);
-    auto &I = Result.first->second;
-    if (Result.second) {
-      Vector.push_back(std::make_pair(KV.first, KV.second));
-      I = Vector.size() - 1;
+  template <typename... Ts>
+  std::pair<iterator, bool> try_emplace(const KeyT &Key, Ts &&...Args) {
+    auto [It, Inserted] = Map.insert(std::make_pair(Key, 0));
+    if (Inserted) {
+      It->second = Vector.size();
+      Vector.emplace_back(std::piecewise_construct, std::forward_as_tuple(Key),
+                          std::forward_as_tuple(std::forward<Ts>(Args)...));
       return std::make_pair(std::prev(end()), true);
     }
-    return std::make_pair(begin() + I, false);
+    return std::make_pair(begin() + It->second, false);
+  }
+  template <typename... Ts>
+  std::pair<iterator, bool> try_emplace(KeyT &&Key, Ts &&...Args) {
+    auto [It, Inserted] = Map.insert(std::make_pair(Key, 0));
+    if (Inserted) {
+      It->second = Vector.size();
+      Vector.emplace_back(std::piecewise_construct,
+                          std::forward_as_tuple(std::move(Key)),
+                          std::forward_as_tuple(std::forward<Ts>(Args)...));
+      return std::make_pair(std::prev(end()), true);
+    }
+    return std::make_pair(begin() + It->second, false);
   }
 
+  std::pair<iterator, bool> insert(const std::pair<KeyT, ValueT> &KV) {
+    return try_emplace(KV.first, KV.second);
+  }
   std::pair<iterator, bool> insert(std::pair<KeyT, ValueT> &&KV) {
-    // Copy KV.first into the map, then move it into the vector.
-    std::pair<KeyT, typename MapType::mapped_type> Pair = std::make_pair(KV.first, 0);
-    std::pair<typename MapType::iterator, bool> Result = Map.insert(Pair);
-    auto &I = Result.first->second;
-    if (Result.second) {
-      Vector.push_back(std::move(KV));
-      I = Vector.size() - 1;
-      return std::make_pair(std::prev(end()), true);
-    }
-    return std::make_pair(begin() + I, false);
+    return try_emplace(std::move(KV.first), std::move(KV.second));
+  }
+
+  template <typename V>
+  std::pair<iterator, bool> insert_or_assign(const KeyT &Key, V &&Val) {
+    auto Ret = try_emplace(Key, std::forward<V>(Val));
+    if (!Ret.second)
+      Ret.first->second = std::forward<V>(Val);
+    return Ret;
+  }
+  template <typename V>
+  std::pair<iterator, bool> insert_or_assign(KeyT &&Key, V &&Val) {
+    auto Ret = try_emplace(std::move(Key), std::forward<V>(Val));
+    if (!Ret.second)
+      Ret.first->second = std::forward<V>(Val);
+    return Ret;
   }
 
   bool contains(const KeyT &Key) const { return Map.find(Key) != Map.end(); }

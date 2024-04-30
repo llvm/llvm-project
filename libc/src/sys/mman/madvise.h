@@ -11,10 +11,10 @@
 
 #include <sys/mman.h> // For size_t and off_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int madvise(void *addr, size_t size, int advice);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_SYS_MMAN_MADVISE_H

@@ -15,9 +15,10 @@
 #ifndef LLVM_CLANG_AST_INTERP_FUNCTION_H
 #define LLVM_CLANG_AST_INTERP_FUNCTION_H
 
-#include "Pointer.h"
+#include "Descriptor.h"
 #include "Source.h"
 #include "clang/AST/ASTLambda.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -25,6 +26,7 @@ namespace clang {
 namespace interp {
 class Program;
 class ByteCodeEmitter;
+class Pointer;
 enum PrimType : uint32_t;
 
 /// Describes a scope block.
@@ -107,6 +109,8 @@ public:
   /// Checks if the first argument is a RVO pointer.
   bool hasRVO() const { return HasRVO; }
 
+  bool hasNonNullAttr() const { return getDecl()->hasAttr<NonNullAttr>(); }
+
   /// Range over the scope blocks.
   llvm::iterator_range<llvm::SmallVector<Scope, 2>::const_iterator>
   scopes() const {
@@ -169,15 +173,28 @@ public:
   /// Checks if the function already has a body attached.
   bool hasBody() const { return HasBody; }
 
+  /// Checks if the function is defined.
+  bool isDefined() const { return Defined; }
+
+  bool isVariadic() const { return Variadic; }
+
   unsigned getBuiltinID() const { return F->getBuiltinID(); }
 
   bool isBuiltin() const { return F->getBuiltinID() != 0; }
 
-  /// Does this function need its arguments to be classified at runtime
-  /// rather than at bytecode-compile-time?
-  bool needsRuntimeArgPop(const ASTContext &Ctx) const;
+  bool isUnevaluatedBuiltin() const { return IsUnevaluatedBuiltin; }
 
   unsigned getNumParams() const { return ParamTypes.size(); }
+
+  /// Returns the number of parameter this function takes when it's called,
+  /// i.e excluding the instance pointer and the RVO pointer.
+  unsigned getNumWrittenParams() const {
+    assert(getNumParams() >= (unsigned)(hasThisPointer() + hasRVO()));
+    return getNumParams() - hasThisPointer() - hasRVO();
+  }
+  unsigned getWrittenArgSize() const {
+    return ArgSize - (align(primSize(PT_Ptr)) * (hasThisPointer() + hasRVO()));
+  }
 
   unsigned getParamOffset(unsigned ParamIndex) const {
     return ParamOffsets[ParamIndex];
@@ -189,7 +206,7 @@ private:
            llvm::SmallVectorImpl<PrimType> &&ParamTypes,
            llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
            llvm::SmallVectorImpl<unsigned> &&ParamOffsets, bool HasThisPointer,
-           bool HasRVO);
+           bool HasRVO, bool UnevaluatedBuiltin);
 
   /// Sets the code of a function.
   void setCode(unsigned NewFrameSize, std::vector<std::byte> &&NewCode,
@@ -204,6 +221,7 @@ private:
   }
 
   void setIsFullyCompiled(bool FC) { IsFullyCompiled = FC; }
+  void setDefined(bool D) { Defined = D; }
 
 private:
   friend class Program;
@@ -245,6 +263,9 @@ private:
   bool HasRVO = false;
   /// If we've already compiled the function's body.
   bool HasBody = false;
+  bool Defined = false;
+  bool Variadic = false;
+  bool IsUnevaluatedBuiltin = false;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().

@@ -2032,23 +2032,23 @@ define <4 x i64> @avx2_psrlv_q_256_allbig(<4 x i64> %v) {
   ret <4 x i64> %1
 }
 
-; The shift amount is 0 (the undef lane could be 0), so we return the unshifted input.
+; The shift amount is 0 (the poison lane could be 0), so we return the unshifted input.
 
-define <2 x i64> @avx2_psrlv_q_128_undef(<2 x i64> %v) {
-; CHECK-LABEL: @avx2_psrlv_q_128_undef(
+define <2 x i64> @avx2_psrlv_q_128_poison(<2 x i64> %v) {
+; CHECK-LABEL: @avx2_psrlv_q_128_poison(
 ; CHECK-NEXT:    ret <2 x i64> [[V:%.*]]
 ;
-  %1 = insertelement <2 x i64> <i64 0, i64 8>, i64 undef, i64 1
+  %1 = insertelement <2 x i64> <i64 0, i64 8>, i64 poison, i64 1
   %2 = tail call <2 x i64> @llvm.x86.avx2.psrlv.q(<2 x i64> %v, <2 x i64> %1)
   ret <2 x i64> %2
 }
 
-define <4 x i64> @avx2_psrlv_q_256_undef(<4 x i64> %v) {
-; CHECK-LABEL: @avx2_psrlv_q_256_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i64> [[V:%.*]], <i64 undef, i64 8, i64 16, i64 31>
+define <4 x i64> @avx2_psrlv_q_256_poison(<4 x i64> %v) {
+; CHECK-LABEL: @avx2_psrlv_q_256_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i64> [[V:%.*]], <i64 poison, i64 8, i64 16, i64 31>
 ; CHECK-NEXT:    ret <4 x i64> [[TMP1]]
 ;
-  %1 = insertelement <4 x i64> <i64 0, i64 8, i64 16, i64 31>, i64 undef, i64 0
+  %1 = insertelement <4 x i64> <i64 0, i64 8, i64 16, i64 31>, i64 poison, i64 0
   %2 = tail call <4 x i64> @llvm.x86.avx2.psrlv.q.256(<4 x i64> %v, <4 x i64> %1)
   ret <4 x i64> %2
 }
@@ -2435,21 +2435,21 @@ define <4 x i64> @avx2_psllv_q_256_allbig(<4 x i64> %v) {
 
 ; The shift amount is 0 (the undef lane could be 0), so we return the unshifted input.
 
-define <2 x i64> @avx2_psllv_q_128_undef(<2 x i64> %v) {
-; CHECK-LABEL: @avx2_psllv_q_128_undef(
+define <2 x i64> @avx2_psllv_q_128_poison(<2 x i64> %v) {
+; CHECK-LABEL: @avx2_psllv_q_128_poison(
 ; CHECK-NEXT:    ret <2 x i64> [[V:%.*]]
 ;
-  %1 = insertelement <2 x i64> <i64 0, i64 8>, i64 undef, i64 1
+  %1 = insertelement <2 x i64> <i64 0, i64 8>, i64 poison, i64 1
   %2 = tail call <2 x i64> @llvm.x86.avx2.psllv.q(<2 x i64> %v, <2 x i64> %1)
   ret <2 x i64> %2
 }
 
-define <4 x i64> @avx2_psllv_q_256_undef(<4 x i64> %v) {
-; CHECK-LABEL: @avx2_psllv_q_256_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <4 x i64> [[V:%.*]], <i64 undef, i64 8, i64 16, i64 31>
+define <4 x i64> @avx2_psllv_q_256_poison(<4 x i64> %v) {
+; CHECK-LABEL: @avx2_psllv_q_256_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <4 x i64> [[V:%.*]], <i64 poison, i64 8, i64 16, i64 31>
 ; CHECK-NEXT:    ret <4 x i64> [[TMP1]]
 ;
-  %1 = insertelement <4 x i64> <i64 0, i64 8, i64 16, i64 31>, i64 undef, i64 0
+  %1 = insertelement <4 x i64> <i64 0, i64 8, i64 16, i64 31>, i64 poison, i64 0
   %2 = tail call <4 x i64> @llvm.x86.avx2.psllv.q.256(<4 x i64> %v, <4 x i64> %1)
   ret <4 x i64> %2
 }
@@ -2772,8 +2772,8 @@ define <2 x i64> @sse2_psll_q_128_masked_bitcast(<2 x i64> %v, <2 x i64> %a) {
 ; CHECK-NEXT:    [[I:%.*]] = insertelement <4 x i32> [[M]], i32 0, i64 1
 ; CHECK-NEXT:    [[SHAMT:%.*]] = bitcast <4 x i32> [[I]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[SHAMT]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[V:%.*]], [[TMP1]]
-; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i64> [[V:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %b = bitcast <2 x i64> %a to <4 x i32>
   %m = and <4 x i32> %b, <i32 31, i32 poison, i32 poison, i32 poison>
@@ -2856,7 +2856,7 @@ define <8 x i32> @avx2_psrai_d_256_masked(<8 x i32> %v, i32 %a) {
 define <8 x i64> @avx512_psrai_q_512_masked(<8 x i64> %v, i32 %a) {
 ; CHECK-LABEL: @avx512_psrai_q_512_masked(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 63
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i64> [[DOTSPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = ashr <8 x i64> [[V:%.*]], [[DOTSPLAT]]
@@ -2883,7 +2883,7 @@ define <4 x i32> @sse2_psrli_d_128_masked(<4 x i32> %v, i32 %a) {
 define <4 x i64> @avx2_psrli_q_256_masked(<4 x i64> %v, i32 %a) {
 ; CHECK-LABEL: @avx2_psrli_q_256_masked(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 63
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i64> [[DOTSPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr <4 x i64> [[V:%.*]], [[DOTSPLAT]]
@@ -2911,7 +2911,7 @@ define <32 x i16> @avx512_psrli_w_512_masked(<32 x i16> %v, i32 %a) {
 define <2 x i64> @sse2_pslli_q_128_masked(<2 x i64> %v, i32 %a) {
 ; CHECK-LABEL: @sse2_pslli_q_128_masked(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 63
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i64> [[DOTSPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl <2 x i64> [[V:%.*]], [[DOTSPLAT]]
@@ -2963,7 +2963,7 @@ define <4 x i32> @avx2_psrav_d_128_masked(<4 x i32> %v, <4 x i32> %a) {
 define <4 x i32> @avx2_psrav_d_128_masked_shuffle(<4 x i32> %v, <4 x i32> %a) {
 ; CHECK-LABEL: @avx2_psrav_d_128_masked_shuffle(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[A:%.*]], <i32 poison, i32 poison, i32 15, i32 31>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = ashr <4 x i32> [[V:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP3]]
 ;

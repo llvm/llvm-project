@@ -32,16 +32,12 @@ Align getAlign(DataLayout const &DL, const GlobalVariable *GV) {
 }
 
 bool isDynamicLDS(const GlobalVariable &GV) {
-  // external zero size addrspace(3) without initializer implies cuda/hip extern
-  // __shared__ the semantics for such a variable appears to be that all extern
-  // __shared__ variables alias one another. This hits different handling.
+  // external zero size addrspace(3) without initializer is dynlds.
   const Module *M = GV.getParent();
   const DataLayout &DL = M->getDataLayout();
-  if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS) {
+  if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
     return false;
-  }
-  uint64_t AllocSize = DL.getTypeAllocSize(GV.getValueType());
-  return GV.hasExternalLinkage() && AllocSize == 0;
+  return DL.getTypeAllocSize(GV.getValueType()) == 0;
 }
 
 bool isLDSVariableToLower(const GlobalVariable &GV) {
@@ -74,6 +70,16 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(DefInst)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::amdgcn_s_barrier:
+    case Intrinsic::amdgcn_s_barrier_signal:
+    case Intrinsic::amdgcn_s_barrier_signal_var:
+    case Intrinsic::amdgcn_s_barrier_signal_isfirst:
+    case Intrinsic::amdgcn_s_barrier_signal_isfirst_var:
+    case Intrinsic::amdgcn_s_barrier_init:
+    case Intrinsic::amdgcn_s_barrier_join:
+    case Intrinsic::amdgcn_s_barrier_wait:
+    case Intrinsic::amdgcn_s_barrier_leave:
+    case Intrinsic::amdgcn_s_get_barrier_state:
+    case Intrinsic::amdgcn_s_wakeup_barrier:
     case Intrinsic::amdgcn_wave_barrier:
     case Intrinsic::amdgcn_sched_barrier:
     case Intrinsic::amdgcn_sched_group_barrier:

@@ -137,10 +137,7 @@ define i8 @smax_xor_pow2_neg(i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[Y:%.*]], -128
 ; CHECK-NEXT:    br i1 [[CMP]], label [[NEG:%.*]], label [[POS:%.*]]
 ; CHECK:       neg:
-; CHECK-NEXT:    [[NY:%.*]] = sub i8 0, [[Y]]
-; CHECK-NEXT:    [[YP2:%.*]] = and i8 [[NY]], [[Y]]
-; CHECK-NEXT:    [[X_XOR:%.*]] = xor i8 [[YP2]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 [[X_XOR]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[X:%.*]], 127
 ; CHECK-NEXT:    ret i8 [[R]]
 ; CHECK:       pos:
 ; CHECK-NEXT:    call void @barrier()

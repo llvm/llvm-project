@@ -10,4 +10,4 @@
 
 #include "src/math/ldexpl.h"
 
-LIST_LDEXP_TESTS(long double, __llvm_libc::ldexpl)
+LIST_LDEXP_TESTS(long double, LIBC_NAMESPACE::ldexpl)

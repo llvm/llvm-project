@@ -38,14 +38,14 @@ void test1(void) {
   (void)__atomic_store(&a1, &a2, memory_order_seq_cst);
 
 // ARM-LABEL: define{{.*}} void @test1
-// ARM: = call{{.*}} zeroext i8 @__atomic_load_1(ptr noundef @c1
-// ARM: call{{.*}} void @__atomic_store_1(ptr noundef @c1, i8 noundef zeroext
-// ARM: = call{{.*}} zeroext i16 @__atomic_load_2(ptr noundef @s1
-// ARM: call{{.*}} void @__atomic_store_2(ptr noundef @s1, i16 noundef zeroext
-// ARM: = call{{.*}} i32 @__atomic_load_4(ptr noundef @i1
-// ARM: call{{.*}} void @__atomic_store_4(ptr noundef @i1, i32 noundef
-// ARM: = call{{.*}} i64 @__atomic_load_8(ptr noundef @ll1
-// ARM: call{{.*}} void @__atomic_store_8(ptr noundef @ll1, i64 noundef
+// ARM: = load atomic i8, ptr @c1 seq_cst, align 1
+// ARM: store atomic i8 {{.*}}, ptr @c1 seq_cst, align 1
+// ARM: = load atomic i16, ptr @s1 seq_cst, align 2
+// ARM: store atomic i16 {{.*}}, ptr @s1 seq_cst, align 2
+// ARM: = load atomic i32, ptr @i1 seq_cst, align 4
+// ARM: store atomic i32 {{.*}}, ptr @i1 seq_cst, align 4
+// ARM: = load atomic i64, ptr @ll1 seq_cst, align 8
+// ARM: store atomic i64 {{.*}}, ptr @ll1 seq_cst, align 8
 // ARM: call{{.*}} void @__atomic_load(i32 noundef 100, ptr noundef @a1, ptr noundef @a2
 // ARM: call{{.*}} void @__atomic_store(i32 noundef 100, ptr noundef @a1, ptr noundef @a2
 
@@ -56,8 +56,8 @@ void test1(void) {
 // PPC32: store atomic i16 {{.*}}, ptr @s1 seq_cst, align 2
 // PPC32: = load atomic i32, ptr @i1 seq_cst, align 4
 // PPC32: store atomic i32 {{.*}}, ptr @i1 seq_cst, align 4
-// PPC32: = call i64 @__atomic_load_8(ptr noundef @ll1
-// PPC32: call void @__atomic_store_8(ptr noundef @ll1, i64
+// PPC32: = load atomic i64, ptr @ll1 seq_cst, align 8
+// PPC32: store atomic i64 {{.*}}, ptr @ll1 seq_cst, align 8
 // PPC32: call void @__atomic_load(i32 noundef 100, ptr noundef @a1, ptr noundef @a2
 // PPC32: call void @__atomic_store(i32 noundef 100, ptr noundef @a1, ptr noundef @a2
 
@@ -80,8 +80,8 @@ void test1(void) {
 // MIPS32: store atomic i16 {{.*}}, ptr @s1 seq_cst, align 2
 // MIPS32: = load atomic i32, ptr @i1 seq_cst, align 4
 // MIPS32: store atomic i32 {{.*}}, ptr @i1 seq_cst, align 4
-// MIPS32: call i64 @__atomic_load_8(ptr noundef @ll1
-// MIPS32: call void @__atomic_store_8(ptr noundef @ll1, i64
+// MIPS32: = load atomic i64, ptr @ll1 seq_cst, align 8
+// MIPS32: store atomic i64 {{.*}}, ptr @ll1 seq_cst, align 8
 // MIPS32: call void @__atomic_load(i32 noundef signext 100, ptr noundef @a1, ptr noundef @a2
 // MIPS32: call void @__atomic_store(i32 noundef signext 100, ptr noundef @a1, ptr noundef @a2
 
@@ -94,7 +94,7 @@ void test1(void) {
 // MIPS64: store atomic i32 {{.*}}, ptr @i1 seq_cst, align 4
 // MIPS64: = load atomic i64, ptr @ll1 seq_cst, align 8
 // MIPS64: store atomic i64 {{.*}}, ptr @ll1 seq_cst, align 8
-// MIPS64: call void @__atomic_load(i64 noundef zeroext 100, ptr noundef @a1
+// MIPS64: call void @__atomic_load(i64 noundef zeroext 100, ptr noundef @a1, ptr noundef @a2
 // MIPS64: call void @__atomic_store(i64 noundef zeroext 100, ptr noundef @a1, ptr noundef @a2
 
 // SPARC-LABEL: define{{.*}} void @test1
@@ -104,12 +104,12 @@ void test1(void) {
 // SPARC: store atomic i16 {{.*}}, ptr @s1 seq_cst, align 2
 // SPARC: = load atomic i32, ptr @i1 seq_cst, align 4
 // SPARC: store atomic i32 {{.*}}, ptr @i1 seq_cst, align 4
-// SPARCV8: call i64 @__atomic_load_8(ptr noundef @ll1
-// SPARCV8: call void @__atomic_store_8(ptr noundef @ll1, i64
-// SPARCV9: load atomic i64, ptr @ll1 seq_cst, align 8
-// SPARCV9: store atomic i64 {{.*}}, ptr @ll1 seq_cst, align 8
+// SPARC: load atomic i64, ptr @ll1 seq_cst, align 8
+// SPARC: store atomic i64 {{.*}}, ptr @ll1 seq_cst, align 8
 // SPARCV8: call void @__atomic_load(i32 noundef 100, ptr noundef @a1, ptr noundef @a2
 // SPARCV8: call void @__atomic_store(i32 noundef 100, ptr noundef @a1, ptr noundef @a2
+// SPARCV9: call void @__atomic_load(i64 noundef 100, ptr noundef @a1, ptr noundef @a2
+// SPARCV9: call void @__atomic_store(i64 noundef 100, ptr noundef @a1, ptr noundef @a2
 
 // NVPTX-LABEL: define{{.*}} void @test1
 // NVPTX: = load atomic i8, ptr @c1 seq_cst, align 1
@@ -120,7 +120,7 @@ void test1(void) {
 // NVPTX: store atomic i32 {{.*}}, ptr @i1 seq_cst, align 4
 // NVPTX: = load atomic i64, ptr @ll1 seq_cst, align 8
 // NVPTX: store atomic i64 {{.*}}, ptr @ll1 seq_cst, align 8
-// NVPTX: call void @__atomic_load(i64 noundef 100, ptr noundef @a1, ptr noundef @a2, i32 noundef 5)
-// NVPTX: call void @__atomic_store(i64 noundef 100, ptr noundef @a1, ptr noundef @a2, i32 noundef 5)
+// NVPTX: call void @__atomic_load(i64 noundef 100, ptr noundef @a1, ptr noundef @a2
+// NVPTX: call void @__atomic_store(i64 noundef 100, ptr noundef @a1, ptr noundef @a2
 
 }

@@ -16,7 +16,7 @@
 
 #include <stddef.h> // size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 [[maybe_unused]] LIBC_INLINE BcmpReturnType inline_bcmp_aarch64(CPtr p1,
                                                                 CPtr p2,
@@ -27,7 +27,7 @@ namespace __llvm_libc {
     }
     switch (count) {
     case 0:
-      return BcmpReturnType::ZERO();
+      return BcmpReturnType::zero();
     case 1:
       return generic::Bcmp<uint8_t>::block(p1, p2);
     case 2:
@@ -65,6 +65,6 @@ namespace __llvm_libc {
   return aarch64::Bcmp<32>::loop_and_tail(p1, p2, count);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_BCMP_H

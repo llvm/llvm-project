@@ -15,7 +15,7 @@
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace scanf_core {
 
 // convert will call a conversion function to convert the FormatSection into
@@ -28,6 +28,6 @@ int convert(Reader *reader, const FormatSection &to_conv);
 int raw_match(Reader *reader, cpp::string_view raw_string);
 
 } // namespace scanf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_SCANF_CORE_CONVERTER_H

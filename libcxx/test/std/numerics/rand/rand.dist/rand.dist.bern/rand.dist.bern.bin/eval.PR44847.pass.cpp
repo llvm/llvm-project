@@ -18,6 +18,9 @@
 // Serializing/deserializing the state of the RNG requires iostreams
 // UNSUPPORTED: no-localization
 
+// This test appears to hang with picolibc & qemu.
+// UNSUPPORTED: LIBCXX-PICOLIBC-FIXME
+
 #include <random>
 #include <numeric>
 #include <vector>

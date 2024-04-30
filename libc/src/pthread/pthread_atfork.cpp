@@ -14,7 +14,7 @@
 #include <errno.h>
 #include <pthread.h> // For pthread_* type definitions.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, pthread_atfork,
                    (__atfork_callback_t prepare, __atfork_callback_t parent,
@@ -22,4 +22,4 @@ LLVM_LIBC_FUNCTION(int, pthread_atfork,
   return register_atfork_callbacks(prepare, parent, child) ? 0 : ENOMEM;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

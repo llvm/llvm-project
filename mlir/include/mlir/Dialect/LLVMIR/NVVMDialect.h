@@ -15,6 +15,7 @@
 #define MLIR_DIALECT_LLVMIR_NVVMDIALECT_H_
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
+#include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -26,7 +27,8 @@
 namespace mlir {
 namespace NVVM {
 
-#include "mlir/Dialect/LLVMIR/NVVMOpsInterface.h.inc"
+// Shared memory has 128-bit alignment
+constexpr int kSharedMemoryAlignmentBit = 128;
 
 /// NVVM memory space identifiers.
 enum NVVMMemorySpace {

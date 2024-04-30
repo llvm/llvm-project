@@ -15,6 +15,7 @@
 
 #include "Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include <optional>
 
@@ -61,6 +62,20 @@ void populateGpuShufflePatterns(RewritePatternSet &patterns);
 
 /// Collect a set of patterns to rewrite all-reduce ops within the GPU dialect.
 void populateGpuAllReducePatterns(RewritePatternSet &patterns);
+
+/// Collect a set of patterns to break down subgroup_reduce ops into smaller
+/// ones supported by the target of `size <= maxShuffleBitwidth`, where `size`
+/// is the subgroup_reduce value bitwidth.
+void populateGpuBreakDownSubgrupReducePatterns(RewritePatternSet &patterns,
+                                               unsigned maxShuffleBitwidth = 32,
+                                               PatternBenefit benefit = 1);
+
+/// Collect a set of patterns to lower `gpu.subgroup_reduce` into `gpu.shuffle`
+/// ops over `shuffleBitwidth` scalar types. Assumes that the subgroup has
+/// `subgroupSize` lanes. Uses the butterfly shuffle algorithm.
+void populateGpuLowerSubgroupReduceToShufflePattenrs(
+    RewritePatternSet &patterns, unsigned subgroupSize,
+    unsigned shuffleBitwidth = 32, PatternBenefit benefit = 1);
 
 /// Collect all patterns to rewrite ops within the GPU dialect.
 inline void populateGpuRewritePatterns(RewritePatternSet &patterns) {
@@ -132,24 +147,10 @@ protected:
 // Registration
 //===----------------------------------------------------------------------===//
 
-/// Register pass to serialize GPU kernel functions to a CUBIN binary
-/// annotation.
-LLVM_DEPRECATED("use Target attributes instead", "")
-void registerGpuSerializeToCubinPass();
-
 /// Register pass to serialize GPU kernel functions to a HSAco binary
 /// annotation.
 LLVM_DEPRECATED("use Target attributes instead", "")
 void registerGpuSerializeToHsacoPass();
-
-/// Create an instance of the GPU kernel function to CUBIN binary serialization
-/// pass with optLevel (default level 2).
-LLVM_DEPRECATED("use Target attributes instead", "")
-std::unique_ptr<Pass> createGpuSerializeToCubinPass(StringRef triple,
-                                                    StringRef chip,
-                                                    StringRef features,
-                                                    int optLevel = 2,
-                                                    bool dumpPtx = false);
 
 /// Create an instance of the GPU kernel function to HSAco binary serialization
 /// pass.
@@ -164,6 +165,9 @@ void populateGpuDecomposeMemrefsPatterns(RewritePatternSet &patterns);
 
 /// Pass decomposes memref ops inside `gpu.launch` body.
 std::unique_ptr<Pass> createGpuDecomposeMemrefsPass();
+
+/// Erase barriers that do not enforce conflicting memory side effects.
+void populateGpuEliminateBarriersPatterns(RewritePatternSet &patterns);
 
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION

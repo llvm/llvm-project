@@ -51,8 +51,9 @@ TEST_MAIN(int argc, char **argv, char **envp) {
 
 #ifndef INTEGRATION_DISABLE_PRINTF
   char buf[100];
-  ASSERT_EQ(__llvm_libc::sprintf(buf, argv[1], argv[2], argv[3][0], argv[4][0]),
-            14);
+  ASSERT_EQ(
+      LIBC_NAMESPACE::sprintf(buf, argv[1], argv[2], argv[3][0], argv[4][0]),
+      14);
   ASSERT_TRUE(my_streq(buf, "First arg a 48"));
 #endif
 

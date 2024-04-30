@@ -12,7 +12,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/DialectRegistry.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/ValueRange.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
+#include "mlir/Support/TypeID.h"
 #include "toy/Dialect.h"
 #include "toy/Passes.h"
 
@@ -22,7 +32,15 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Casting.h"
+#include <algorithm>
+#include <cstdint>
+#include <functional>
+#include <memory>
+#include <utility>
 
 using namespace mlir;
 
@@ -155,8 +173,7 @@ struct ConstantOpLowering : public OpRewritePattern<toy::ConstantOp> {
     SmallVector<Value, 8> constantIndices;
 
     if (!valueShape.empty()) {
-      for (auto i : llvm::seq<int64_t>(
-               0, *std::max_element(valueShape.begin(), valueShape.end())))
+      for (auto i : llvm::seq<int64_t>(0, *llvm::max_element(valueShape)))
         constantIndices.push_back(
             rewriter.create<arith::ConstantIndexOp>(loc, i));
     } else {
@@ -242,8 +259,8 @@ struct PrintOpLowering : public OpConversionPattern<toy::PrintOp> {
                   ConversionPatternRewriter &rewriter) const final {
     // We don't lower "toy.print" in this pass, but we need to update its
     // operands.
-    rewriter.updateRootInPlace(op,
-                               [&] { op->setOperands(adaptor.getOperands()); });
+    rewriter.modifyOpInPlace(op,
+                             [&] { op->setOperands(adaptor.getOperands()); });
     return success();
   }
 };

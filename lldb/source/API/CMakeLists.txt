@@ -20,6 +20,10 @@ if(LLDB_ENABLE_LUA)
   set(lldb_lua_wrapper ${lua_bindings_dir}/LLDBWrapLua.cpp)
 endif()
 
+lldb_tablegen(../../include/lldb/API/SBLanguages.h -gen-lldb-sbapi-dwarf-enum
+  SOURCE ${LLVM_MAIN_INCLUDE_DIR}/llvm/BinaryFormat/Dwarf.def
+  TARGET lldb-sbapi-dwarf-enums)
+
 add_lldb_library(liblldb SHARED ${option_framework}
   SBAddress.cpp
   SBAttachInfo.cpp
@@ -45,6 +49,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBFileSpec.cpp
   SBFile.cpp
   SBFileSpecList.cpp
+  SBFormat.cpp
   SBFrame.cpp
   SBFunction.cpp
   SBHostOS.cpp
@@ -61,12 +66,14 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBPlatform.cpp
   SBProcess.cpp
   SBProcessInfo.cpp
+  SBProcessInfoList.cpp
   SBQueue.cpp
   SBQueueItem.cpp
   SBReproducer.cpp
   SBScriptObject.cpp
   SBSection.cpp
   SBSourceManager.cpp
+  SBStatisticsOptions.cpp
   SBStream.cpp
   SBStringList.cpp
   SBStructuredData.cpp
@@ -97,6 +104,9 @@ add_lldb_library(liblldb SHARED ${option_framework}
   ${lldb_python_wrapper}
   ${lldb_lua_wrapper}
 
+  DEPENDS
+    lldb-sbapi-dwarf-enums
+  
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -177,12 +187,58 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
     # from working on some systems but limits the liblldb size.
     MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb namespace")
     add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb.exports)
-  else()
-    # Don't use an explicit export.  Instead, tell the linker to
-    # export all symbols.
+  elseif (NOT LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE)
+    # Don't use an explicit export. Instead, tell the linker to export all symbols.
     MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
+    MESSAGE(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
+                    "Only the SB API is guaranteed to be stable.")
     add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb-private.exports)
+  else ()
+    MESSAGE("-- Symbols (liblldb): exporting all symbols specified in the exports "
+            " file '${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}'")
+    MESSAGE(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
+                    "Only the SB API is guaranteed to be stable.")
+    add_llvm_symbol_exports(liblldb "${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}")
   endif()
+  set_target_properties(liblldb_exports PROPERTIES FOLDER "lldb misc")
+elseif (LLDB_EXPORT_ALL_SYMBOLS)
+  MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
+
+  # Pull out the various lldb libraries linked into liblldb, these will be used
+  # when looking for symbols to extract. We ignore most plugin libraries here,
+  # because we may expose more symbols than the DLL limit and these symbols
+  # aren't useful to expose.
+  get_target_property(all_liblldb_libs liblldb LINK_LIBRARIES)
+  set(lldb_libs "")
+  foreach(lib ${all_liblldb_libs})
+    if(TARGET ${lib} AND ${lib} MATCHES "^lldb" AND
+       (${lib} IN_LIST LLDB_EXPORT_ALL_SYMBOLS_PLUGINS OR
+        NOT ${lib} MATCHES "^lldbPlugin"))
+      get_target_property(lib_type ${lib} TYPE)
+      if("${lib_type}" STREQUAL "STATIC_LIBRARY")
+        list(APPEND lldb_libs ${lib})
+      endif()
+    endif()
+  endforeach(lib)
+  list(REMOVE_DUPLICATES lldb_libs)
+
+  # Extract all of the private symbols and produce a single file we can use for
+  # the exports.
+  set(exported_symbol_file ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/liblldb_private.symbols)
+  get_host_tool_path(llvm-nm LLVM_NM llvm_nm_exe llvm_nm_target)
+  add_custom_command(
+    OUTPUT ${exported_symbol_file}
+    COMMAND "${Python3_EXECUTABLE}"
+      ${LLDB_SOURCE_DIR}/scripts/msvc_extract_private_symbols.py
+      ${lldb_libs} -o ${exported_symbol_file} --nm=${llvm_nm_exe}
+    WORKING_DIRECTORY ${LLVM_LIBRARY_OUTPUT_INTDIR}
+    DEPENDS ${LLDB_SOURCE_DIR}/scripts/msvc_extract_private_symbols.py
+      ${lldb_libs} ${llvm_nm_target}
+    VERBATIM
+    COMMENT "Generating liblldb private export list"
+  )
+
+  add_llvm_symbol_exports(liblldb ${exported_symbol_file})
   set_target_properties(liblldb_exports PROPERTIES FOLDER "lldb misc")
 endif()
 

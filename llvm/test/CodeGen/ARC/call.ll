@@ -73,14 +73,14 @@ define i64 @ret1() nounwind {
   ret i64 281470698455295
 }
 
-@funcptr = external global i32 (i32)*, align 4
+@funcptr = external global ptr, align 4
 ; Indirect calls use JL
 ; CHECK-LABEL: call_indirect
 ; CHECK-DAG: ld %r[[REG:[0-9]+]], [@funcptr]
 ; CHECK-DAG: mov %r0, 12
 ; CHECK:     jl [%r[[REG]]]
 define i32 @call_indirect(i32 %x) nounwind {
-  %f = load i32 (i32)*, i32 (i32)** @funcptr, align 4
+  %f = load ptr, ptr @funcptr, align 4
   %call = call i32 %f(i32 12)
   %add = add nsw i32 %call, %x
   ret i32 %add

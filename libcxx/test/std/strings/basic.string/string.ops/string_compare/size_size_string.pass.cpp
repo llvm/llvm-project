@@ -42,7 +42,7 @@ TEST_CONSTEXPR_CXX20 void test(const S& s, typename S::size_type pos1, typename 
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void test0() {
+TEST_CONSTEXPR_CXX20 bool test0() {
   test(S(""), 0, 0, S(""), 0);
   test(S(""), 0, 0, S("abcde"), -5);
   test(S(""), 0, 0, S("abcdefghij"), -10);
@@ -143,10 +143,11 @@ TEST_CONSTEXPR_CXX20 void test0() {
   test(S("abcde"), 5, 1, S("abcde"), -5);
   test(S("abcde"), 5, 1, S("abcdefghij"), -10);
   test(S("abcde"), 5, 1, S("abcdefghijklmnopqrst"), -20);
+  return true;
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void test1() {
+TEST_CONSTEXPR_CXX20 bool test1() {
   test(S("abcde"), 6, 0, S(""), 0);
   test(S("abcde"), 6, 0, S("abcde"), 0);
   test(S("abcde"), 6, 0, S("abcdefghij"), 0);
@@ -247,10 +248,11 @@ TEST_CONSTEXPR_CXX20 void test1() {
   test(S("abcdefghij"), 11, 0, S("abcde"), 0);
   test(S("abcdefghij"), 11, 0, S("abcdefghij"), 0);
   test(S("abcdefghij"), 11, 0, S("abcdefghijklmnopqrst"), 0);
+  return true;
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void test2() {
+TEST_CONSTEXPR_CXX20 bool test2() {
   test(S("abcdefghijklmnopqrst"), 0, 0, S(""), 0);
   test(S("abcdefghijklmnopqrst"), 0, 0, S("abcde"), -5);
   test(S("abcdefghijklmnopqrst"), 0, 0, S("abcdefghij"), -10);
@@ -347,38 +349,30 @@ TEST_CONSTEXPR_CXX20 void test2() {
   test(S("abcdefghijklmnopqrst"), 21, 0, S("abcde"), 0);
   test(S("abcdefghijklmnopqrst"), 21, 0, S("abcdefghij"), 0);
   test(S("abcdefghijklmnopqrst"), 21, 0, S("abcdefghijklmnopqrst"), 0);
+  return true;
 }
 
-TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef std::string S;
-    test0<S>();
-    test1<S>();
-    test2<S>();
-  }
-#if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test0<S>();
-    test1<S>();
-    test2<S>();
-  }
-#endif
+template <class S>
+void test() {
+  test0<S>();
+  test1<S>();
+  test2<S>();
 
+#if TEST_STD_VER > 17
+  static_assert(test0<S>());
+  static_assert(test1<S>());
+  static_assert(test2<S>());
+#endif
+}
+
+int main(int, char**) {
+  test<std::string>();
 #if TEST_STD_VER >= 11
+  test<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
   { // LWG 2946
     std::string s = " !";
     assert(s.compare(0, 1, {"abc", 1}) < 0);
   }
-#endif
-
-  return true;
-}
-
-int main(int, char**) {
-  test();
-#if TEST_STD_VER > 17
-  static_assert(test());
 #endif
 
   return 0;

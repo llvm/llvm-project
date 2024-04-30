@@ -12,7 +12,7 @@
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
-#include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Runtime/matmul-transpose.h"
 #include "flang/Runtime/matmul.h"
 #include "flang/Runtime/transformational.h"
@@ -160,9 +160,7 @@ void fir::runtime::genBesselJn(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::func::FuncOp func;
   auto xTy = x.getType();
 
-  if (xTy.isF16() || xTy.isBF16())
-    TODO(loc, "half-precision BESSEL_JN");
-  else if (xTy.isF32())
+  if (xTy.isF32())
     func = fir::runtime::getRuntimeFunc<mkRTKey(BesselJn_4)>(loc, builder);
   else if (xTy.isF64())
     func = fir::runtime::getRuntimeFunc<mkRTKey(BesselJn_8)>(loc, builder);
@@ -171,7 +169,7 @@ void fir::runtime::genBesselJn(fir::FirOpBuilder &builder, mlir::Location loc,
   else if (xTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedBesselJn_16>(loc, builder);
   else
-    fir::emitFatalError(loc, "invalid type in BESSEL_JN");
+    fir::intrinsicTypeTODO(builder, xTy, loc, "BESSEL_JN");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -189,9 +187,7 @@ void fir::runtime::genBesselJnX0(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Value n1, mlir::Value n2) {
   mlir::func::FuncOp func;
 
-  if (xTy.isF16() || xTy.isBF16())
-    TODO(loc, "half-precision BESSEL_JN");
-  else if (xTy.isF32())
+  if (xTy.isF32())
     func = fir::runtime::getRuntimeFunc<mkRTKey(BesselJnX0_4)>(loc, builder);
   else if (xTy.isF64())
     func = fir::runtime::getRuntimeFunc<mkRTKey(BesselJnX0_8)>(loc, builder);
@@ -200,7 +196,7 @@ void fir::runtime::genBesselJnX0(fir::FirOpBuilder &builder, mlir::Location loc,
   else if (xTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedBesselJnX0_16>(loc, builder);
   else
-    fir::emitFatalError(loc, "invalid type in BESSEL_JN");
+    fir::intrinsicTypeTODO(builder, xTy, loc, "BESSEL_JN");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -219,9 +215,7 @@ void fir::runtime::genBesselYn(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::func::FuncOp func;
   auto xTy = x.getType();
 
-  if (xTy.isF16() || xTy.isBF16())
-    TODO(loc, "half-precision BESSEL_YN");
-  else if (xTy.isF32())
+  if (xTy.isF32())
     func = fir::runtime::getRuntimeFunc<mkRTKey(BesselYn_4)>(loc, builder);
   else if (xTy.isF64())
     func = fir::runtime::getRuntimeFunc<mkRTKey(BesselYn_8)>(loc, builder);
@@ -230,7 +224,7 @@ void fir::runtime::genBesselYn(fir::FirOpBuilder &builder, mlir::Location loc,
   else if (xTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedBesselYn_16>(loc, builder);
   else
-    fir::emitFatalError(loc, "invalid type in BESSEL_YN");
+    fir::intrinsicTypeTODO(builder, xTy, loc, "BESSEL_YN");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -248,9 +242,7 @@ void fir::runtime::genBesselYnX0(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Value n1, mlir::Value n2) {
   mlir::func::FuncOp func;
 
-  if (xTy.isF16() || xTy.isBF16())
-    TODO(loc, "half-precision BESSEL_YN");
-  else if (xTy.isF32())
+  if (xTy.isF32())
     func = fir::runtime::getRuntimeFunc<mkRTKey(BesselYnX0_4)>(loc, builder);
   else if (xTy.isF64())
     func = fir::runtime::getRuntimeFunc<mkRTKey(BesselYnX0_8)>(loc, builder);
@@ -259,7 +251,7 @@ void fir::runtime::genBesselYnX0(fir::FirOpBuilder &builder, mlir::Location loc,
   else if (xTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedBesselYnX0_16>(loc, builder);
   else
-    fir::emitFatalError(loc, "invalid type in BESSEL_YN");
+    fir::intrinsicTypeTODO(builder, xTy, loc, "BESSEL_YN");
 
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);

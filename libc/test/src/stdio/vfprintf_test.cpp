@@ -25,10 +25,10 @@
 
 namespace printf_test {
 #ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
-using __llvm_libc::fclose;
-using __llvm_libc::ferror;
-using __llvm_libc::fopen;
-using __llvm_libc::fread;
+using LIBC_NAMESPACE::fclose;
+using LIBC_NAMESPACE::ferror;
+using LIBC_NAMESPACE::fopen;
+using LIBC_NAMESPACE::fread;
 #else  // defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
 using ::fclose;
 using ::ferror;
@@ -41,7 +41,7 @@ int call_vfprintf(::FILE *__restrict stream, const char *__restrict format,
                   ...) {
   va_list vlist;
   va_start(vlist, format);
-  int ret = __llvm_libc::vfprintf(stream, format, vlist);
+  int ret = LIBC_NAMESPACE::vfprintf(stream, format, vlist);
   va_end(vlist);
   return ret;
 }

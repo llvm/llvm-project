@@ -38,10 +38,9 @@ class TlsGlobalTestCase(TestBase):
     # TLS works differently on Windows, this would need to be implemented
     # separately.
     @skipIfWindows
-    @expectedFailureAll(
-        bugnumber="llvm.org/pr28392",
-        oslist=no_match(lldbplatformutil.getDarwinOSTriples()),
-    )
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=no_match([lldbplatformutil.getDarwinOSTriples(), "linux"]))
+    @expectedFailureIf(lldbplatformutil.xcode15LinkerBug())
     def test(self):
         """Test thread-local storage."""
         self.build()

@@ -35,8 +35,9 @@ class TestQueues(TestBase):
         self.main_source = "main.c"
 
     def check_queue_for_valid_queue_id(self, queue):
-        self.assertTrue(
-            queue.GetQueueID() != 0,
+        self.assertNotEqual(
+            queue.GetQueueID(),
+            0,
             "Check queue %s for valid QueueID (got 0x%x)"
             % (queue.GetName(), queue.GetQueueID()),
         )
@@ -363,8 +364,8 @@ class TestQueues(TestBase):
                 "Skipped because libBacktraceRecording.dylib was not loaded into the process."
             )
 
-        self.assertTrue(
-            process.GetNumQueues() >= 4, "Found the correct number of queues."
+        self.assertGreaterEqual(
+            process.GetNumQueues(), 4, "Found the correct number of queues."
         )
 
         queue_submittor_1 = lldb.SBQueue()
@@ -456,8 +457,8 @@ class TestQueues(TestBase):
             "doing_the_work_2",
             "queue 2's pending item #0 should be doing_the_work_2",
         )
-        self.assertTrue(
-            queue_performer_2.GetPendingItemAtIndex(9999).IsValid() == False,
+        self.assertFalse(
+            queue_performer_2.GetPendingItemAtIndex(9999).IsValid(),
             "queue 2's pending item #9999 is invalid",
         )
 

@@ -1,6 +1,6 @@
 add_custom_target(libc_stdio_unittests)
 
-add_libc_unittest(
+add_libc_test(
   fileop_test
   SUITE
     libc_stdio_unittests
@@ -14,6 +14,7 @@ add_libc_unittest(
     libc.src.stdio.feof
     libc.src.stdio.ferror
     libc.src.stdio.fflush
+    libc.src.stdio.fileno
     libc.src.stdio.fopen
     libc.src.stdio.fputs
     libc.src.stdio.fread
@@ -21,7 +22,7 @@ add_libc_unittest(
     libc.src.stdio.fwrite
 )
 
-add_libc_unittest(
+add_libc_test(
   ungetc_test
   SUITE
     libc_stdio_unittests
@@ -37,7 +38,7 @@ add_libc_unittest(
     libc.src.stdio.ungetc
 )
 
-add_libc_unittest(
+add_libc_test(
   setbuf_test
   SUITE
     libc_stdio_unittests
@@ -53,7 +54,7 @@ add_libc_unittest(
     libc.src.stdio.ungetc
 )
 
-add_libc_unittest(
+add_libc_test(
   setvbuf_test
   SUITE
     libc_stdio_unittests
@@ -69,7 +70,7 @@ add_libc_unittest(
     libc.src.stdio.setvbuf
 )
 
-add_libc_unittest(
+add_libc_test(
   unlocked_fileop_test
   SUITE
     libc_stdio_unittests
@@ -89,7 +90,7 @@ add_libc_unittest(
     libc.src.stdio.fwrite_unlocked
 )
 
-add_libc_unittest(
+add_libc_test(
   fopencookie_test
   SUITE
     libc_stdio_unittests
@@ -121,6 +122,9 @@ endif()
 if(LIBC_CONF_PRINTF_DISABLE_WRITE_INT)
   list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_WRITE_INT")
 endif()
+if(LIBC_CONF_PRINTF_DISABLE_FIXED_POINT)
+  list(APPEND sprintf_test_copts "-DLIBC_COPT_PRINTF_DISABLE_FIXED_POINT")
+endif()
 
 add_fp_unittest(
   sprintf_test
@@ -132,12 +136,12 @@ add_fp_unittest(
   DEPENDS
     libc.src.stdio.sprintf
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.platform_defs
+    libc.include.inttypes
   COMPILE_OPTIONS
     ${sprintf_test_copts}
 )
 
-add_libc_unittest(
+add_libc_test(
   snprintf_test
   SUITE
     libc_stdio_unittests
@@ -163,7 +167,7 @@ else()
  set(use_system_file "-DLIBC_COPT_STDIO_USE_SYSTEM_FILE")
 endif()
 
-add_libc_unittest(
+add_libc_test(
   fprintf_test
   SUITE
     libc_stdio_unittests
@@ -198,7 +202,7 @@ add_fp_unittest(
     libc.src.stdio.vsprintf
 )
 
-add_libc_unittest(
+add_libc_test(
   vsnprintf_test
   SUITE
     libc_stdio_unittests
@@ -208,7 +212,7 @@ add_libc_unittest(
     libc.src.stdio.vsnprintf
 )
 
-add_libc_unittest(
+add_libc_test(
   vfprintf_test
   SUITE
     libc_stdio_unittests
@@ -243,7 +247,7 @@ if(LLVM_LIBC_FULL_BUILD)
   )
 endif()
 
-add_libc_unittest(
+add_libc_test(
   fscanf_test
   SUITE
     libc_stdio_unittests
@@ -257,7 +261,7 @@ add_libc_unittest(
     ${use_system_file}
 )
 
-add_libc_unittest(
+add_libc_test(
   sscanf_test
   SUITE
     libc_stdio_unittests
@@ -335,7 +339,7 @@ add_libc_test(
 )
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
-  add_libc_unittest(
+  add_libc_test(
     remove_test
     SUITE
       libc_stdio_unittests
@@ -349,6 +353,21 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       libc.src.sys.stat.mkdirat
       libc.src.unistd.access
       libc.src.unistd.close
+  )
+
+  add_libc_test(
+    rename_test
+    SUITE
+      libc_stdio_unittests
+    SRCS
+      rename_test.cpp
+    DEPENDS
+      libc.src.errno.errno
+      libc.src.fcntl.open
+      libc.src.stdio.rename
+      libc.src.unistd.access
+      libc.src.unistd.close
+      libc.test.UnitTest.ErrnoSetterMatcher
   )
 endif()
 
@@ -370,7 +389,7 @@ add_libc_test(
     libc.src.stdio.getc
 )
 
-add_libc_unittest(
+add_libc_test(
   fgetc_unlocked_test
   SUITE
     libc_stdio_unittests
@@ -409,7 +428,7 @@ add_libc_test(
     libc.src.stdio.fwrite
 )
 
-add_libc_unittest(
+add_libc_test(
   ftell_test
   SUITE
     libc_stdio_unittests
@@ -423,6 +442,8 @@ add_libc_unittest(
     libc.src.stdio.fread
     libc.src.stdio.fseek
     libc.src.stdio.ftell
+    libc.src.stdio.fseeko
+    libc.src.stdio.ftello
     libc.src.stdio.fwrite
     libc.src.stdio.setvbuf
 )
@@ -430,7 +451,7 @@ add_libc_unittest(
 # Create an output directory for any temporary test files.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testdata)
 
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+if(LIBC_TARGET_OS_IS_GPU)
   return()
 endif()
 

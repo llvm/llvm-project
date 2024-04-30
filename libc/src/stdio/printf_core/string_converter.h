@@ -10,14 +10,13 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_STRING_CONVERTER_H
 
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/common.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 LIBC_INLINE int convert_string(Writer *writer, const FormatSection &to_conv) {
@@ -26,7 +25,7 @@ LIBC_INLINE int convert_string(Writer *writer, const FormatSection &to_conv) {
 
 #ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
   if (str_ptr == nullptr) {
-    str_ptr = "null";
+    str_ptr = "(null)";
   }
 #endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 
@@ -59,6 +58,6 @@ LIBC_INLINE int convert_string(Writer *writer, const FormatSection &to_conv) {
 }
 
 } // namespace printf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_STRING_CONVERTER_H

@@ -49,7 +49,7 @@ define void @f2(ptr noundef %x) !kcfi_type !2 {
 
 ; KCFI:       BUNDLE{{.*}} {
 ; KCFI-NEXT:    KCFI_CHECK $x0, 12345678, implicit-def $x9, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
-; KCFI-NEXT:    BLR killed $x0, implicit-def $lr, implicit $sp
+; KCFI-NEXT:    BLR killed $x0, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def dead $lr, implicit $sp, implicit-def $sp
 ; KCFI-NEXT:    HINT 36
 ; KCFI-NEXT:  }
 
@@ -73,11 +73,11 @@ define void @f3(ptr noundef %x) {
 ; MIR-LABEL: name: f3
 ; MIR: body:
 
-; ISEL: TCRETURNriBTI %1, 0, csr_aarch64_aapcs, implicit $sp, cfi-type 12345678
+; ISEL: TCRETURNrix16x17 %1, 0, csr_aarch64_aapcs, implicit $sp, cfi-type 12345678
 
 ; KCFI:       BUNDLE{{.*}} {
 ; KCFI-NEXT:    KCFI_CHECK $x16, 12345678, implicit-def $x9, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
-; KCFI-NEXT:    TCRETURNriBTI internal killed $x16, 0, csr_aarch64_aapcs, implicit $sp
+; KCFI-NEXT:    TCRETURNrix16x17 internal killed $x16, 0, csr_aarch64_aapcs, implicit $sp
 ; KCFI-NEXT:  }
 
   tail call void %x() [ "kcfi"(i32 12345678) ]

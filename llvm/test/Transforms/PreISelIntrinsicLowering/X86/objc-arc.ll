@@ -146,10 +146,14 @@ entry:
 	ret ptr %0
 }
 
+; Note: we don't want this intrinsic to have its argument marked 'returned',
+; since that breaks the autorelease elision marker optimization when
+; save/restores of the reciever are introduced between the msg send and the
+; retain. See issue#69658.
 define ptr @test_objc_retainAutoreleasedReturnValue(ptr %arg0) {
 ; CHECK-LABEL: test_objc_retainAutoreleasedReturnValue
 ; CHECK-NEXT: entry
-; CHECK-NEXT: %0 = tail call ptr @objc_retainAutoreleasedReturnValue(ptr returned %arg0)
+; CHECK-NEXT: %0 = tail call ptr @objc_retainAutoreleasedReturnValue(ptr %arg0)
 ; CHECK-NEXT: ret ptr %0
 entry:
   %0 = call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %arg0)
@@ -210,10 +214,14 @@ entry:
 	ret ptr %0
 }
 
+; Note: we don't want this intrinsic to have its argument marked 'returned',
+; since that breaks the autorelease elision marker optimization when
+; save/restores of the reciever are introduced between the msg send and the
+; claim. See issue#69658.
 define ptr @test_objc_unsafeClaimAutoreleasedReturnValue(ptr %arg0) {
 ; CHECK-LABEL: test_objc_unsafeClaimAutoreleasedReturnValue
 ; CHECK-NEXT: entry
-; CHECK-NEXT: %0 = tail call ptr @objc_unsafeClaimAutoreleasedReturnValue(ptr returned %arg0)
+; CHECK-NEXT: %0 = tail call ptr @objc_unsafeClaimAutoreleasedReturnValue(ptr %arg0)
 ; CHECK-NEXT: ret ptr %0
 entry:
   %0 = call ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue(ptr %arg0)

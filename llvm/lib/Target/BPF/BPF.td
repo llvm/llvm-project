@@ -11,6 +11,7 @@ include "llvm/Target/Target.td"
 include "BPFRegisterInfo.td"
 include "BPFCallingConv.td"
 include "BPFInstrInfo.td"
+include "GISel/BPFRegisterBanks.td"
 
 def BPFInstrInfo : InstrInfo;
 

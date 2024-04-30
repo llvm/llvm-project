@@ -1576,6 +1576,8 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
         ArchSpec::eRISCV_float_abi_quad)
       features_str += "+f,+d,+q,";
     // FIXME: how do we detect features such as `+a`, `+m`?
+    // Turn them on by default now, since everyone seems to use them
+    features_str += "+a,+m,";
   }
 
   // We use m_disasm_up.get() to tell whether we are valid or not, so if this

@@ -54,6 +54,7 @@ public:
   bool SelectAddrRegImmINX(SDValue Addr, SDValue &Base, SDValue &Offset) {
     return SelectAddrRegImm(Addr, Base, Offset, true);
   }
+  bool SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base, SDValue &Offset);
 
   bool SelectAddrRegRegScale(SDValue Addr, unsigned MaxShiftAmount,
                              SDValue &Base, SDValue &Index, SDValue &Scale);
@@ -159,6 +160,8 @@ public:
 
   void selectVSETVLI(SDNode *Node);
 
+  void selectSF_VC_X_SE(SDNode *Node);
+
   // Return the RISC-V condition code that matches the given DAG integer
   // condition code. The CondCode must be one of those supported by the RISC-V
   // ISA (see translateSetCCForBranch).
@@ -189,7 +192,6 @@ private:
   bool doPeepholeMaskedRVV(MachineSDNode *Node);
   bool doPeepholeMergeVVMFold();
   bool doPeepholeNoRegPassThru();
-  bool performVMergeToVMv(SDNode *N);
   bool performCombineVMergeAndVOps(SDNode *N);
 };
 
@@ -259,12 +261,6 @@ struct VLX_VSXPseudo {
   uint16_t Pseudo;
 };
 
-struct RISCVMaskedPseudoInfo {
-  uint16_t MaskedPseudo;
-  uint16_t UnmaskedPseudo;
-  uint8_t MaskOpIdx;
-};
-
 #define GET_RISCVVSSEGTable_DECL
 #define GET_RISCVVLSEGTable_DECL
 #define GET_RISCVVLXSEGTable_DECL
@@ -273,8 +269,6 @@ struct RISCVMaskedPseudoInfo {
 #define GET_RISCVVSETable_DECL
 #define GET_RISCVVLXTable_DECL
 #define GET_RISCVVSXTable_DECL
-#define GET_RISCVMaskedPseudosTable_DECL
-#include "RISCVGenSearchableTables.inc"
 } // namespace RISCV
 
 } // namespace llvm

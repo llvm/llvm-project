@@ -14,26 +14,25 @@
 #include "src/stdlib/strtof.h"
 #include "src/stdlib/strtold.h"
 
-#include "src/__support/FPUtil/FloatProperties.h"
+#include "src/__support/FPUtil/FPBits.h"
 
-#include <math.h>
+#include "hdr/math_macros.h"
 #include <stddef.h>
 #include <stdint.h>
 
 #include "utils/MPFRWrapper/mpfr_inc.h"
 
-using __llvm_libc::fputil::FloatProperties;
+using LIBC_NAMESPACE::fputil::FPBits;
 
 // This function calculates the effective precision for a given float type and
 // exponent. Subnormals have a lower effective precision since they don't
 // necessarily use all of the bits of the mantissa.
 template <typename F> inline constexpr int effective_precision(int exponent) {
-  const int full_precision = FloatProperties<F>::MANTISSA_PRECISION;
+  const int full_precision = FPBits<F>::FRACTION_LEN + 1;
 
   // This is intended to be 0 when the exponent is the lowest normal and
   // increase as the exponent's magnitude increases.
-  const int bits_below_normal =
-      (-exponent) - (FloatProperties<F>::EXPONENT_BIAS - 1);
+  const int bits_below_normal = (-exponent) - (FPBits<F>::EXP_BIAS - 1);
 
   // The precision should be the normal, full precision, minus the bits lost
   // by this being a subnormal, minus one for the implicit leading one.
@@ -113,7 +112,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     mpfr_init2(mpfr_float, float_precision);
     mpfr_strtofr(mpfr_float, str_ptr, &out_ptr, base, MPFR_RNDN);
     float volatile float_result = mpfr_get_flt(mpfr_float, MPFR_RNDN);
-    auto volatile strtof_result = __llvm_libc::strtof(str_ptr, &out_ptr);
+    auto volatile strtof_result = LIBC_NAMESPACE::strtof(str_ptr, &out_ptr);
     ptrdiff_t strtof_strlen = out_ptr - str_ptr;
     if (result_strlen != strtof_strlen)
       __builtin_trap();
@@ -132,8 +131,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     mpfr_init2(mpfr_double, double_precision);
     mpfr_strtofr(mpfr_double, str_ptr, &out_ptr, base, MPFR_RNDN);
     double volatile double_result = mpfr_get_d(mpfr_double, MPFR_RNDN);
-    auto volatile strtod_result = __llvm_libc::strtod(str_ptr, &out_ptr);
-    auto volatile atof_result = __llvm_libc::atof(str_ptr);
+    auto volatile strtod_result = LIBC_NAMESPACE::strtod(str_ptr, &out_ptr);
+    auto volatile atof_result = LIBC_NAMESPACE::atof(str_ptr);
     ptrdiff_t strtod_strlen = out_ptr - str_ptr;
     if (result_strlen != strtod_strlen)
       __builtin_trap();
@@ -153,7 +152,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     mpfr_strtofr(mpfr_long_double, str_ptr, &out_ptr, base, MPFR_RNDN);
     long double volatile long_double_result =
         mpfr_get_ld(mpfr_long_double, MPFR_RNDN);
-    auto volatile strtold_result = __llvm_libc::strtold(str_ptr, &out_ptr);
+    auto volatile strtold_result = LIBC_NAMESPACE::strtold(str_ptr, &out_ptr);
     ptrdiff_t strtold_strlen = out_ptr - str_ptr;
     if (result_strlen != strtold_strlen)
       __builtin_trap();

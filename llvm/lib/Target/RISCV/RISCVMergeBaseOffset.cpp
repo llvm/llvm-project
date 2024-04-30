@@ -19,7 +19,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetOptions.h"
 #include <optional>
-#include <set>
 using namespace llvm;
 
 #define DEBUG_TYPE "riscv-merge-base-offset"
@@ -182,7 +181,7 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
   Register Reg = Rs == GAReg ? Rt : Rs;
 
   // Can't fold if the register has more than one use.
-  if (!MRI->hasOneUse(Reg))
+  if (!Reg.isVirtual() || !MRI->hasOneUse(Reg))
     return false;
   // This can point to an ADDI(W) or a LUI:
   MachineInstr &OffsetTail = *MRI->getVRegDef(Reg);
@@ -193,9 +192,18 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
     MachineOperand &AddiImmOp = OffsetTail.getOperand(2);
     if (AddiImmOp.getTargetFlags() != RISCVII::MO_None)
       return false;
+    Register AddiReg = OffsetTail.getOperand(1).getReg();
     int64_t OffLo = AddiImmOp.getImm();
-    MachineInstr &OffsetLui =
-        *MRI->getVRegDef(OffsetTail.getOperand(1).getReg());
+
+    // Handle rs1 of ADDI is X0.
+    if (AddiReg == RISCV::X0) {
+      LLVM_DEBUG(dbgs() << "  Offset Instrs: " << OffsetTail);
+      foldOffset(Hi, Lo, TailAdd, OffLo);
+      OffsetTail.eraseFromParent();
+      return true;
+    }
+
+    MachineInstr &OffsetLui = *MRI->getVRegDef(AddiReg);
     MachineOperand &LuiImmOp = OffsetLui.getOperand(1);
     if (OffsetLui.getOpcode() != RISCV::LUI ||
         LuiImmOp.getTargetFlags() != RISCVII::MO_None ||
@@ -205,7 +213,7 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
     Offset += OffLo;
     // RV32 ignores the upper 32 bits. ADDIW sign extends the result.
     if (!ST->is64Bit() || OffsetTail.getOpcode() == RISCV::ADDIW)
-       Offset = SignExtend64<32>(Offset);
+      Offset = SignExtend64<32>(Offset);
     // We can only fold simm32 offsets.
     if (!isInt<32>(Offset))
       return false;
@@ -247,14 +255,14 @@ bool RISCVMergeBaseOffsetOpt::foldShiftedOffset(MachineInstr &Hi,
           TailShXAdd.getOpcode() == RISCV::SH3ADD) &&
          "Expected SHXADD instruction!");
 
-  // The first source is the shifted operand.
-  Register Rs1 = TailShXAdd.getOperand(1).getReg();
-
   if (GAReg != TailShXAdd.getOperand(2).getReg())
     return false;
 
+  // The first source is the shifted operand.
+  Register Rs1 = TailShXAdd.getOperand(1).getReg();
+
   // Can't fold if the register has more than one use.
-  if (!MRI->hasOneUse(Rs1))
+  if (!Rs1.isVirtual() || !MRI->hasOneUse(Rs1))
     return false;
   // This can point to an ADDI X0, C.
   MachineInstr &OffsetTail = *MRI->getVRegDef(Rs1);
@@ -361,6 +369,8 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
   // Tail: lw vreg3, 8(vreg2)
 
   std::optional<int64_t> CommonOffset;
+  DenseMap<const MachineInstr *, SmallVector<unsigned>>
+      InlineAsmMemoryOpIndexesMap;
   for (const MachineInstr &UseMI : MRI->use_instructions(DestReg)) {
     switch (UseMI.getOpcode()) {
     default:
@@ -395,6 +405,49 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
       if (CommonOffset && Offset != CommonOffset)
         return false;
       CommonOffset = Offset;
+      break;
+    }
+    case RISCV::INLINEASM:
+    case RISCV::INLINEASM_BR: {
+      SmallVector<unsigned> InlineAsmMemoryOpIndexes;
+      unsigned NumOps = 0;
+      for (unsigned I = InlineAsm::MIOp_FirstOperand;
+           I < UseMI.getNumOperands(); I += 1 + NumOps) {
+        const MachineOperand &FlagsMO = UseMI.getOperand(I);
+        // Should be an imm.
+        if (!FlagsMO.isImm())
+          continue;
+
+        const InlineAsm::Flag Flags(FlagsMO.getImm());
+        NumOps = Flags.getNumOperandRegisters();
+
+        // Memory constraints have two operands.
+        if (NumOps != 2 || !Flags.isMemKind())
+          continue;
+
+        // We can't do this for constraint A because AMO instructions don't have
+        // an immediate offset field.
+        if (Flags.getMemoryConstraintID() == InlineAsm::ConstraintCode::A)
+          return false;
+
+        const MachineOperand &AddrMO = UseMI.getOperand(I + 1);
+        if (!AddrMO.isReg() || AddrMO.getReg() != DestReg)
+          continue;
+
+        const MachineOperand &OffsetMO = UseMI.getOperand(I + 2);
+        if (!OffsetMO.isImm())
+          continue;
+
+        // All inline asm memory operands must use the same offset.
+        int64_t Offset = OffsetMO.getImm();
+        if (CommonOffset && Offset != CommonOffset)
+          return false;
+        CommonOffset = Offset;
+        InlineAsmMemoryOpIndexes.push_back(I + 1);
+      }
+      InlineAsmMemoryOpIndexesMap.insert(
+          std::make_pair(&UseMI, InlineAsmMemoryOpIndexes));
+      break;
     }
     }
   }
@@ -419,13 +472,36 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
   // Update the immediate in the load/store instructions to add the offset.
   for (MachineInstr &UseMI :
        llvm::make_early_inc_range(MRI->use_instructions(DestReg))) {
-    UseMI.removeOperand(2);
-    UseMI.addOperand(ImmOp);
-    // Update the base reg in the Tail instruction to feed from LUI.
-    // Output of Hi is only used in Lo, no need to use MRI->replaceRegWith().
-    UseMI.getOperand(1).setReg(Hi.getOperand(0).getReg());
+    if (UseMI.getOpcode() == RISCV::INLINEASM ||
+        UseMI.getOpcode() == RISCV::INLINEASM_BR) {
+      auto &InlineAsmMemoryOpIndexes = InlineAsmMemoryOpIndexesMap[&UseMI];
+      for (unsigned I : InlineAsmMemoryOpIndexes) {
+        MachineOperand &MO = UseMI.getOperand(I + 1);
+        switch (ImmOp.getType()) {
+        case MachineOperand::MO_GlobalAddress:
+          MO.ChangeToGA(ImmOp.getGlobal(), ImmOp.getOffset(),
+                        ImmOp.getTargetFlags());
+          break;
+        case MachineOperand::MO_MCSymbol:
+          MO.ChangeToMCSymbol(ImmOp.getMCSymbol(), ImmOp.getTargetFlags());
+          MO.setOffset(ImmOp.getOffset());
+          break;
+        case MachineOperand::MO_BlockAddress:
+          MO.ChangeToBA(ImmOp.getBlockAddress(), ImmOp.getOffset(),
+                        ImmOp.getTargetFlags());
+          break;
+        default:
+          report_fatal_error("unsupported machine operand type");
+          break;
+        }
+      }
+    } else {
+      UseMI.removeOperand(2);
+      UseMI.addOperand(ImmOp);
+    }
   }
 
+  MRI->replaceRegWith(Lo.getOperand(0).getReg(), Hi.getOperand(0).getReg());
   Lo.eraseFromParent();
   return true;
 }

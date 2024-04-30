@@ -18,7 +18,7 @@
 
 #include <stddef.h> // size_t
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_byte_per_byte(Ptr dst, CPtr src, size_t count,
@@ -56,8 +56,8 @@ inline_bcmp_byte_per_byte(CPtr p1, CPtr p2, size_t count, size_t offset = 0) {
   LIBC_LOOP_NOUNROLL
   for (; offset < count; ++offset)
     if (p1[offset] != p2[offset])
-      return BcmpReturnType::NONZERO();
-  return BcmpReturnType::ZERO();
+      return BcmpReturnType::nonzero();
+  return BcmpReturnType::zero();
 }
 
 [[maybe_unused]] LIBC_INLINE MemcmpReturnType
@@ -70,9 +70,9 @@ inline_memcmp_byte_per_byte(CPtr p1, CPtr p2, size_t count, size_t offset = 0) {
     if (diff)
       return diff;
   }
-  return MemcmpReturnType::ZERO();
+  return MemcmpReturnType::zero();
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_GENERIC_BYTE_PER_BYTE_H

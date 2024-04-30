@@ -32,7 +32,7 @@ struct S {
   // CHECK-NEXT: CXXCtorInitializer Field 0x{{[^ ]*}} 'j' 'int'
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:17> 'int' 0
   // CHECK-NEXT: CXXCtorInitializer Field 0x{{[^ ]*}} 'r' 'R'
-  // CHECK-NEXT: CXXConstructExpr 0x{{[^ ]*}} <col:3> 'R':'R' 'void () noexcept'
+  // CHECK-NEXT: CXXConstructExpr 0x{{[^ ]*}} <col:3> 'R' 'void () noexcept'
   // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:20, col:21>
 
   void a();

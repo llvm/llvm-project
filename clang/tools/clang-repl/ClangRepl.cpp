@@ -15,6 +15,8 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Interpreter/CodeCompletion.h"
 #include "clang/Interpreter/Interpreter.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/Sema.h"
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/LineEditor/LineEditor.h"
@@ -23,6 +25,14 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include <optional>
+
+// Disable LSan for this test.
+// FIXME: Re-enable once we can assume GCC 13.2 or higher.
+// https://llvm.org/github.com/llvm/llvm-project/issues/67586.
+#if LLVM_ADDRESS_SANITIZER_BUILD || LLVM_HWADDRESS_SANITIZER_BUILD
+#include <sanitizer/lsan_interface.h>
+LLVM_ATTRIBUTE_USED int __lsan_is_turned_off() { return 1; }
+#endif
 
 static llvm::cl::opt<bool> CudaEnabled("cuda", llvm::cl::Hidden);
 static llvm::cl::opt<std::string> CudaPath("cuda-path", llvm::cl::Hidden);
@@ -115,22 +125,14 @@ ReplListCompleter::operator()(llvm::StringRef Buffer, size_t Pos,
 
     return {};
   }
-
-  codeComplete(
-      const_cast<clang::CompilerInstance *>((*Interp)->getCompilerInstance()),
-      Buffer, Lines, Pos + 1, MainInterp.getCompilerInstance(), Results);
-
-  size_t space_pos = Buffer.rfind(" ");
-  llvm::StringRef Prefix;
-  if (space_pos == llvm::StringRef::npos) {
-    Prefix = Buffer;
-  } else {
-    Prefix = Buffer.substr(space_pos + 1);
-  }
-
+  auto *MainCI = (*Interp)->getCompilerInstance();
+  auto CC = clang::ReplCodeCompleter();
+  CC.codeComplete(MainCI, Buffer, Lines, Pos + 1,
+                  MainInterp.getCompilerInstance(), Results);
   for (auto c : Results) {
-    if (c.find(Prefix) == 0)
-      Comps.push_back(llvm::LineEditor::Completion(c.substr(Prefix.size()), c));
+    if (c.find(CC.Prefix) == 0)
+      Comps.push_back(
+          llvm::LineEditor::Completion(c.substr(CC.Prefix.size()), c));
   }
   return Comps;
 }
@@ -150,11 +152,10 @@ int main(int argc, const char **argv) {
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmPrinters();
+  llvm::InitializeAllAsmParsers();
 
   if (OptHostSupportsJit) {
-    auto J = llvm::orc::LLJITBuilder()
-               .setEnableDebuggerSupport(true)
-               .create();
+    auto J = llvm::orc::LLJITBuilder().create();
     if (J)
       llvm::outs() << "true\n";
     else {
@@ -214,12 +215,14 @@ int main(int argc, const char **argv) {
   } else
     Interp = ExitOnErr(clang::Interpreter::create(std::move(CI)));
 
-  for (const std::string &input : OptInputs) {
-    if (auto Err = Interp->ParseAndExecute(input))
-      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-  }
-
   bool HasError = false;
+
+  for (const std::string &input : OptInputs) {
+    if (auto Err = Interp->ParseAndExecute(input)) {
+      llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+      HasError = true;
+    }
+  }
 
   if (OptInputs.empty()) {
     llvm::LineEditor LE("clang-repl");
@@ -228,7 +231,7 @@ int main(int argc, const char **argv) {
     while (std::optional<std::string> Line = LE.readLine()) {
       llvm::StringRef L = *Line;
       L = L.trim();
-      if (L.endswith("\\")) {
+      if (L.ends_with("\\")) {
         // FIXME: Support #ifdef X \ ...
         Input += L.drop_back(1);
         LE.setPrompt("clang-repl...   ");
@@ -240,18 +243,13 @@ int main(int argc, const char **argv) {
         break;
       }
       if (Input == R"(%undo)") {
-        if (auto Err = Interp->Undo()) {
+        if (auto Err = Interp->Undo())
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-          HasError = true;
-        }
       } else if (Input.rfind("%lib ", 0) == 0) {
-        if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5)) {
+        if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5))
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-          HasError = true;
-        }
       } else if (auto Err = Interp->ParseAndExecute(Input)) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
-        HasError = true;
       }
 
       Input = "";

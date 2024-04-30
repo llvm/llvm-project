@@ -21,6 +21,8 @@ LANGOPT(Name, Bits, Default)
 
 ENUM_LANGOPT(FPContractMode, FPModeKind, 2, FPM_Fast) ///< FP Contract Mode (off/fast)
 
+/// Indicate a build without the standard GPU libraries.
+LANGOPT(NoGPULib  , 1, false)
 /// Permit floating point optimization without regard to infinities
 LANGOPT(NoHonorInfs, 1, false)
 /// Permit floating point optimization without regard to NaN
@@ -52,6 +54,9 @@ LANGOPT(OpenMPTeamSubscription, 1, 0)
 LANGOPT(OpenMPNoThreadState, 1, 0)
 /// Assume that no thread in a parallel region will encounter a parallel region
 LANGOPT(OpenMPNoNestedParallelism, 1, 0)
+
+LANGOPT(VScaleMin, 32, 0)  ///< Minimum vscale range value
+LANGOPT(VScaleMax, 32, 0)  ///< Maximum vscale range value
 
 #undef LANGOPT
 #undef ENUM_LANGOPT

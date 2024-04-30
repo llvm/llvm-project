@@ -54,11 +54,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
   const char *needle = reinterpret_cast<const char *>(container);
   const char *haystack = reinterpret_cast<const char *>(data + i);
-  const char *result = __llvm_libc::strstr(haystack, needle);
+  const char *result = LIBC_NAMESPACE::strstr(haystack, needle);
 
   // A null terminator may exist earlier in each, so this needs to be recorded.
-  const size_t haystack_size = __llvm_libc::strlen(haystack);
-  const size_t needle_size = __llvm_libc::strlen(needle);
+  const size_t haystack_size = LIBC_NAMESPACE::strlen(haystack);
+  const size_t needle_size = LIBC_NAMESPACE::strlen(needle);
 
   if (result) {
     // The needle is in the haystack.

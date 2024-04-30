@@ -67,7 +67,7 @@ public:
 static std::string getDefaultOutputPath(const NewArchiveMember &FirstMember) {
   SmallString<128> Val = StringRef(FirstMember.Buf->getBufferIdentifier());
   sys::path::replace_extension(Val, ".lib");
-  return std::string(Val.str());
+  return std::string(Val);
 }
 
 static std::vector<StringRef> getSearchPaths(opt::InputArgList *Args,
@@ -392,9 +392,34 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
       return 1;
     }
 
-    return writeImportLibrary(Def->OutputFile, OutputPath, Def->Exports,
-                              LibMachine,
-                              /*MinGW=*/false)
+    std::vector<COFFShortExport> NativeExports;
+    std::string OutputFile = Def->OutputFile;
+
+    if (isArm64EC(LibMachine) && Args.hasArg(OPT_nativedeffile)) {
+      std::unique_ptr<MemoryBuffer> NativeMB =
+          openFile(Args.getLastArg(OPT_nativedeffile)->getValue());
+      if (!NativeMB)
+        return 1;
+
+      if (!NativeMB->getBufferSize()) {
+        llvm::errs() << "native definition file empty\n";
+        return 1;
+      }
+
+      Expected<COFFModuleDefinition> NativeDef =
+          parseCOFFModuleDefinition(*NativeMB, COFF::IMAGE_FILE_MACHINE_ARM64);
+
+      if (!NativeDef) {
+        llvm::errs() << "error parsing native definition\n"
+                     << errorToErrorCode(NativeDef.takeError()).message();
+        return 1;
+      }
+      NativeExports = std::move(NativeDef->Exports);
+      OutputFile = std::move(NativeDef->OutputFile);
+    }
+
+    return writeImportLibrary(OutputFile, OutputPath, Def->Exports, LibMachine,
+                              /*MinGW=*/false, NativeExports)
                ? 1
                : 0;
   }

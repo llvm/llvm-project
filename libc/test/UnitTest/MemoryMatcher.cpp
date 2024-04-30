@@ -10,9 +10,11 @@
 
 #include "test/UnitTest/Test.h"
 
-using __llvm_libc::testing::tlog;
+#if LIBC_TEST_HAS_MATCHERS()
 
-namespace __llvm_libc {
+using LIBC_NAMESPACE::testing::tlog;
+
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 template <typename T>
@@ -75,4 +77,6 @@ void MemoryMatcher::explainError() {
 }
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
+
+#endif // LIBC_TEST_HAS_MATCHERS()
