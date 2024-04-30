@@ -719,11 +719,12 @@ GVNSink::analyzeInstructionForSinking(LockstepReverseIterator &LRI,
   // try and continue making progress.
   Instruction *I0 = NewInsts[0];
 
-  auto isNotSameOperation = [&I0](Instruction *I) {
-    return !I0->isSameOperationAs(I);
+  // If all instructions that are going to participate don't have the same
+  // number of operands, we can't do any useful PHI analysis for all operands.
+  auto hasDifferentNumOperands = [&I0](Instruction *I) {
+    return I->getNumOperands() != I0->getNumOperands();
   };
-
-  if (any_of(NewInsts, isNotSameOperation))
+  if (any_of(NewInsts, hasDifferentNumOperands))
     return std::nullopt;
 
   for (unsigned OpNum = 0, E = I0->getNumOperands(); OpNum != E; ++OpNum) {
