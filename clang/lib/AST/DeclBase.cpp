@@ -1115,7 +1115,7 @@ int64_t Decl::getID() const {
 
 const FunctionType *Decl::getFunctionType(bool BlocksToo) const {
   QualType Ty;
-  if (const auto *D = dyn_cast<BindingDecl>(this))
+  if (isa<BindingDecl>(this))
     return nullptr;
   else if (const auto *D = dyn_cast<ValueDecl>(this))
     Ty = D->getType();
