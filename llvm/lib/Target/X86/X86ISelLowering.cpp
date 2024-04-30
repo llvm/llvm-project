@@ -4639,6 +4639,7 @@ static ConstantPoolSDNode *getTargetConstantPoolFromBasePtr(SDValue Ptr) {
   return dyn_cast<ConstantPoolSDNode>(Ptr);
 }
 
+// TODO: Add support for non-zero offsets.
 static const Constant *getTargetConstantFromBasePtr(SDValue Ptr) {
   ConstantPoolSDNode *CNode = getTargetConstantPoolFromBasePtr(Ptr);
   if (!CNode || CNode->isMachineConstantPoolEntry() || CNode->getOffset() != 0)
