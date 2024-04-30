@@ -254,6 +254,9 @@ FUNCTION_ANALYSIS("demanded-bits", DemandedBitsAnalysis())
 FUNCTION_ANALYSIS("domfrontier", DominanceFrontierAnalysis())
 FUNCTION_ANALYSIS("domtree", DominatorTreeAnalysis())
 FUNCTION_ANALYSIS("func-properties", FunctionPropertiesAnalysis())
+FUNCTION_ANALYSIS(
+    "machine-function-info",
+    MachineFunctionAnalysis(static_cast<const LLVMTargetMachine *>(TM)))
 FUNCTION_ANALYSIS("gc-function", GCFunctionAnalysis())
 FUNCTION_ANALYSIS("inliner-size-estimator", InlineSizeEstimatorAnalysis())
 FUNCTION_ANALYSIS("lazy-value-info", LazyValueAnalysis())
