@@ -214,7 +214,7 @@ public:
   ///
   /// Clang AST contexts like to own their AST sources, so this is a state-
   /// free proxy object.
-  class ClangASTSourceProxy : public clang::ExternalASTSource {
+  class ClangASTSourceProxy : public ImporterBackedASTSource {
   public:
     ClangASTSourceProxy(ClangASTSource &original) : m_original(original) {}
 
