@@ -13217,6 +13217,26 @@ bool TreeTransform<Derived>::TransformOverloadExprDecls(OverloadExpr *Old,
   // Resolve a kind, but don't do any further analysis.  If it's
   // ambiguous, the callee needs to deal with it.
   R.resolveKind();
+
+  if (Old->hasTemplateKeyword() && !R.empty()) {
+    NamedDecl *FoundDecl = R.getRepresentativeDecl()->getUnderlyingDecl();
+    getSema().FilterAcceptableTemplateNames(R,
+                                            /*AllowFunctionTemplates=*/true,
+                                            /*AllowDependent=*/true);
+    if (R.empty()) {
+      // If a 'template' keyword was used, a lookup that finds only non-template
+      // names is an error.
+      getSema().Diag(R.getNameLoc(),
+                     diag::err_template_kw_refers_to_non_template)
+          << R.getLookupName() << Old->getQualifierLoc().getSourceRange()
+          << Old->hasTemplateKeyword() << Old->getTemplateKeywordLoc();
+      getSema().Diag(FoundDecl->getLocation(),
+                     diag::note_template_kw_refers_to_non_template)
+          << R.getLookupName();
+      return true;
+    }
+  }
+
   return false;
 }
 
