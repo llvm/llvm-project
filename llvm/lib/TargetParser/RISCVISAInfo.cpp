@@ -425,10 +425,10 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
-  if (llvm::any_of(Arch, isupper)) {
+  if (llvm::any_of(Arch, isupper))
     return createStringError(errc::invalid_argument,
                              "string must be lowercase");
-  }
+
   // Must start with a valid base ISA name.
   unsigned XLen = 0;
   if (Arch.consume_front("rv32"))
@@ -588,10 +588,9 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                               bool ExperimentalExtensionVersionCheck,
                               bool IgnoreUnknown) {
   // RISC-V ISA strings must be lowercase.
-  if (llvm::any_of(Arch, isupper)) {
+  if (llvm::any_of(Arch, isupper))
     return createStringError(errc::invalid_argument,
                              "string must be lowercase");
-  }
 
   if (Arch.starts_with("rvi") || Arch.starts_with("rva") ||
       Arch.starts_with("rvb") || Arch.starts_with("rvm")) {
