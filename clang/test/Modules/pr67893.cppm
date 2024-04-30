@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 %t/a.cppm \
 // RUN:      -emit-module-interface -o %t/a.pcm
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 %t/m.cppm \
-// RUN:      -emit-module-interface -fprebuilt-module-path=%t -o %t/m.pcm
+// RUN:      -emit-module-interface -fprebuilt-module-path=%t
 // RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 %t/m.pcm  \
 // RUN:      -fprebuilt-module-path=%t -S -emit-llvm -o - | FileCheck %t/m.cppm
 
