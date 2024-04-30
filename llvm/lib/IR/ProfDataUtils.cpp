@@ -62,7 +62,7 @@ bool isTargetMD(const MDNode *ProfData, const char *Name, unsigned MinOps) {
   if (!ProfDataName)
     return false;
 
-  return ProfDataName->getString().equals(Name);
+  return ProfDataName->getString() == Name;
 }
 
 } // namespace
@@ -161,7 +161,7 @@ bool extractProfTotalWeight(const MDNode *ProfileData, uint64_t &TotalVal) {
   if (!ProfDataName)
     return false;
 
-  if (ProfDataName->getString().equals("branch_weights")) {
+  if (ProfDataName->getString() == "branch_weights") {
     for (unsigned Idx = 1; Idx < ProfileData->getNumOperands(); Idx++) {
       auto *V = mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(Idx));
       assert(V && "Malformed branch_weight in MD_prof node");
@@ -170,8 +170,7 @@ bool extractProfTotalWeight(const MDNode *ProfileData, uint64_t &TotalVal) {
     return true;
   }
 
-  if (ProfDataName->getString().equals("VP") &&
-      ProfileData->getNumOperands() > 3) {
+  if (ProfDataName->getString() == "VP" && ProfileData->getNumOperands() > 3) {
     TotalVal = mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(2))
                    ->getValue()
                    .getZExtValue();
@@ -197,8 +196,8 @@ void scaleProfData(Instruction &I, uint64_t S, uint64_t T) {
     return;
 
   auto *ProfDataName = dyn_cast<MDString>(ProfileData->getOperand(0));
-  if (!ProfDataName || (!ProfDataName->getString().equals("branch_weights") &&
-                        !ProfDataName->getString().equals("VP")))
+  if (!ProfDataName || (ProfDataName->getString() != "branch_weights" &&
+                        ProfDataName->getString() != "VP"))
     return;
 
   LLVMContext &C = I.getContext();
@@ -207,7 +206,7 @@ void scaleProfData(Instruction &I, uint64_t S, uint64_t T) {
   SmallVector<Metadata *, 3> Vals;
   Vals.push_back(ProfileData->getOperand(0));
   APInt APS(128, S), APT(128, T);
-  if (ProfDataName->getString().equals("branch_weights") &&
+  if (ProfDataName->getString() == "branch_weights" &&
       ProfileData->getNumOperands() > 0) {
     // Using APInt::div may be expensive, but most cases should fit 64 bits.
     APInt Val(128, mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(1))
@@ -216,7 +215,7 @@ void scaleProfData(Instruction &I, uint64_t S, uint64_t T) {
     Val *= APS;
     Vals.push_back(MDB.createConstant(ConstantInt::get(
         Type::getInt32Ty(C), Val.udiv(APT).getLimitedValue(UINT32_MAX))));
-  } else if (ProfDataName->getString().equals("VP"))
+  } else if (ProfDataName->getString() == "VP")
     for (unsigned i = 1; i < ProfileData->getNumOperands(); i += 2) {
       // The first value is the key of the value profile, which will not change.
       Vals.push_back(ProfileData->getOperand(i));
