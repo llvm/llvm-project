@@ -553,6 +553,8 @@ void RISCVPassConfig::addPostRegAlloc() {
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableRedundantCopyElimination)
     addPass(createRISCVRedundantCopyEliminationPass());
+  // RISCVInsertVSETVLI may leave some defs of AVLs dead, so remove them.
+  addPass(&DeadMachineInstructionElimID);
 }
 
 yaml::MachineFunctionInfo *

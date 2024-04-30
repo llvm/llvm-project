@@ -1402,20 +1402,9 @@ void RISCVInsertVSETVLI::emitVSETVLIs(MachineBasicBlock &MBB) {
       if (RISCVII::hasVLOp(TSFlags)) {
         MachineOperand &VLOp = MI.getOperand(getVLOpNum(MI));
         if (VLOp.isReg()) {
-          Register Reg = VLOp.getReg();
-          MachineInstr *VLOpDef = MRI->getVRegDef(Reg);
-
           // Erase the AVL operand from the instruction.
           VLOp.setReg(RISCV::NoRegister);
           VLOp.setIsKill(false);
-
-          // If the AVL was an immediate > 31, then it would have been emitted
-          // as an ADDI. However, the ADDI might not have been used in the
-          // vsetvli, or a vsetvli might not have been emitted, so it may be
-          // dead now.
-          if (VLOpDef && TII->isAddImmediate(*VLOpDef, Reg) &&
-              MRI->use_nodbg_empty(Reg))
-            VLOpDef->eraseFromParent();
         }
         MI.addOperand(MachineOperand::CreateReg(RISCV::VL, /*isDef*/ false,
                                                 /*isImp*/ true));
@@ -1670,17 +1659,9 @@ bool RISCVCoalesceVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) {
           if (NextMI->getOperand(1).isReg())
             NextMI->getOperand(1).setReg(RISCV::NoRegister);
 
-          if (OldVLReg && OldVLReg.isVirtual()) {
+          if (OldVLReg && OldVLReg.isVirtual())
             // NextMI no longer uses OldVLReg so shrink its LiveInterval.
             LIS->shrinkToUses(&LIS->getInterval(OldVLReg));
-
-            MachineInstr *VLOpDef = MRI->getUniqueVRegDef(OldVLReg);
-            if (VLOpDef && TII->isAddImmediate(*VLOpDef, OldVLReg) &&
-                MRI->use_nodbg_empty(OldVLReg)) {
-              VLOpDef->eraseFromParent();
-              LIS->removeInterval(OldVLReg);
-            }
-          }
           MI.setDesc(NextMI->getDesc());
         }
         MI.getOperand(2).setImm(NextMI->getOperand(2).getImm());
