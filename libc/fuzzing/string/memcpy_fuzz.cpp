@@ -17,16 +17,16 @@
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t data_size) {
   static constexpr size_t MAX_SIZE = 1024;
-  static ProtectedPages regions;
-  static const Page write_buffer = regions.GetPageA().WithAccess(PROT_WRITE);
+  static ProtectedPages pages;
+  static const Page write_buffer = pages.GetPageA().WithAccess(PROT_WRITE);
   static const Page read_buffer = [&]() {
     // We fetch page B in write mode.
-    auto region = regions.GetPageB().WithAccess(PROT_WRITE);
+    auto page = pages.GetPageB().WithAccess(PROT_WRITE);
     // And fill it with random numbers.
-    for (size_t i = 0; i < region.page_size; ++i)
-      region.page_ptr[i] = rand();
+    for (size_t i = 0; i < page.page_size; ++i)
+      page.page_ptr[i] = rand();
     // Then return it in read mode.
-    return region.WithAccess(PROT_READ);
+    return page.WithAccess(PROT_READ);
   }();
   // We fill 'size' with data coming from lib_fuzzer, this limits exploration to
   // 2 bytes.

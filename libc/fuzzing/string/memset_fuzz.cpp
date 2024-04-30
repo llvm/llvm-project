@@ -16,8 +16,8 @@
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t data_size) {
   static constexpr size_t MAX_SIZE = 1024;
-  static ProtectedPages regions;
-  static const Page write_buffer = regions.GetPageA().WithAccess(PROT_WRITE);
+  static ProtectedPages pages;
+  static const Page write_buffer = pages.GetPageA().WithAccess(PROT_WRITE);
   // We fill 'size' with data coming from lib_fuzzer, this limits exploration to
   // 2 bytes.
   uint16_t size = 0;
