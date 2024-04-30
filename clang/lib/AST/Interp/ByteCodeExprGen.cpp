@@ -2095,10 +2095,16 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
   if (T->isRecordType()) {
     const CXXConstructorDecl *Ctor = E->getConstructor();
 
-    // Trivial zero initialization.
-    if (E->requiresZeroInitialization() && Ctor->isTrivial()) {
+    // Zero initialization.
+    if (E->requiresZeroInitialization()) {
       const Record *R = getRecord(E->getType());
-      return this->visitZeroRecordInitializer(R, E);
+
+      if (!this->visitZeroRecordInitializer(R, E))
+        return false;
+
+      // If the constructor is trivial anyway, we're done.
+      if (Ctor->isTrivial())
+        return true;
     }
 
     const Function *Func = getFunction(Ctor);
