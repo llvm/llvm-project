@@ -603,7 +603,6 @@ class MarshallingInfoVisibility<KeyPathAndMacro kpm, code default>
 // Key paths that are constant during parsing of options with the same key path prefix.
 defvar cplusplus = LangOpts<"CPlusPlus">;
 defvar cpp11 = LangOpts<"CPlusPlus11">;
-defvar cpp14 = LangOpts<"CPlusPlus14">;
 defvar cpp17 = LangOpts<"CPlusPlus17">;
 defvar cpp20 = LangOpts<"CPlusPlus20">;
 defvar c99 = LangOpts<"C99">;
@@ -1608,6 +1607,13 @@ def fasynchronous_unwind_tables : Flag<["-"], "fasynchronous-unwind-tables">, Gr
 defm double_square_bracket_attributes : BoolFOption<"double-square-bracket-attributes",
   LangOpts<"DoubleSquareBracketAttributes">, DefaultTrue, PosFlag<SetTrue>,
  NegFlag<SetFalse>>;
+
+defm experimental_late_parse_attributes : BoolFOption<"experimental-late-parse-attributes",
+  LangOpts<"ExperimentalLateParseAttributes">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption, CC1Option],
+          " experimental late parsing of attributes">>;
 
 defm autolink : BoolFOption<"autolink",
   CodeGenOpts<"Autolink">, DefaultTrue,
@@ -2887,6 +2893,17 @@ def flax_vector_conversions : Flag<["-"], "flax-vector-conversions">, Group<f_Gr
 def flimited_precision_EQ : Joined<["-"], "flimited-precision=">, Group<f_Group>;
 def fapple_link_rtlib : Flag<["-"], "fapple-link-rtlib">, Group<f_Group>,
   HelpText<"Force linking the clang builtins runtime library">;
+
+/// ClangIR-specific options - BEGIN
+defm clangir : BoolFOption<"clangir",
+  FrontendOpts<"UseClangIRPipeline">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use the ClangIR pipeline to compile">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Use the AST -> LLVM pipeline to compile">,
+  BothFlags<[], [ClangOption, CC1Option], "">>;
+def emit_cir : Flag<["-"], "emit-cir">, Visibility<[CC1Option]>,
+  Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR">;
+/// ClangIR-specific options - END
+
 def flto_EQ : Joined<["-"], "flto=">,
   Visibility<[ClangOption, CLOption, CC1Option, FC1Option, FlangOption]>,
   Group<f_Group>,
@@ -3371,9 +3388,10 @@ defm relaxed_template_template_args : BoolFOption<"relaxed-template-template-arg
           "Enable C++17 relaxed template template argument matching">,
   NegFlag<SetFalse>>;
 defm sized_deallocation : BoolFOption<"sized-deallocation",
-  LangOpts<"SizedDeallocation">, Default<cpp14.KeyPath>,
-  PosFlag<SetTrue, [], [], "Enable C++14 sized global deallocation functions">,
-  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
+  LangOpts<"SizedDeallocation">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enable C++14 sized global deallocation functions">,
+  NegFlag<SetFalse>>;
 defm aligned_allocation : BoolFOption<"aligned-allocation",
   LangOpts<"AlignedAllocation">, Default<cpp17.KeyPath>,
   PosFlag<SetTrue, [], [ClangOption], "Enable C++17 aligned allocation functions">,
@@ -6588,12 +6606,6 @@ def J : JoinedOrSeparate<["-"], "J">,
   Flags<[RenderJoined]>, Visibility<[FlangOption, FC1Option]>,
   Group<gfortran_Group>,
   Alias<module_dir>;
-
-let Visibility = [FlangOption] in {
-def no_fortran_main : Flag<["-"], "fno-fortran-main">,
-  Visibility<[FlangOption]>, Group<f_Group>,
-  HelpText<"Do not include Fortran_main.a (provided by Flang) when linking">;
-} // let Visibility = [ FlangOption ]
 
 //===----------------------------------------------------------------------===//
 // FC1 Options

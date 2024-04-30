@@ -104,7 +104,7 @@ void addNestedPassToOps(mlir::PassManager &pm, PassConstructor ctor) {
 void addNestedPassToAllTopLevelOperations(
     mlir::PassManager &pm, PassConstructor ctor) {
   addNestedPassToOps<mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
-      fir::GlobalOp>(pm, ctor);
+      mlir::omp::PrivateClauseOp, fir::GlobalOp>(pm, ctor);
 }
 
 void addNestedPassToAllTopLevelOperationsConditionally(mlir::PassManager &pm,
