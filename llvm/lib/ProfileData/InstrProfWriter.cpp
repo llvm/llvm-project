@@ -624,6 +624,11 @@ uint64_t InstrProfWriter::writeHeader(ProfOStream &OS,
 }
 
 Error InstrProfWriter::writeImpl(ProfOStream &OS) {
+  HeaderFieldOffsets Offsets;
+
+  // FIXME: The return value will be used in a future patch.
+  (void)this->writeHeader(OS, Offsets);
+
   using namespace IndexedInstrProf;
   using namespace support;
 
@@ -635,17 +640,13 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   InfoObj->CSSummaryBuilder = &CSISB;
 
   // Populate the hash table generator.
-  SmallVector<std::pair<StringRef, const ProfilingData *>, 0> OrderedData;
+  SmallVector<std::pair<StringRef, const ProfilingData *>> OrderedData;
   for (const auto &I : FunctionData)
     if (shouldEncodeData(I.getValue()))
       OrderedData.emplace_back((I.getKey()), &I.getValue());
   llvm::sort(OrderedData, less_first());
   for (const auto &I : OrderedData)
     Generator.insert(I.first, I.second);
-
-  HeaderFieldOffsets Offsets;
-
-  (void)this->writeHeader(OS, Offsets);
 
   // Reserve space to write profile summary data.
   uint32_t NumEntries = ProfileSummaryBuilder::DefaultCutoffs.size();

@@ -197,6 +197,14 @@ public:
                      const OverlapFuncFilters &FuncFilter);
 
 private:
+  // A profile (with header and payloads) is written out in one pass; profile
+  // header records the byte offsets of individual payload sections.
+  // When the byte size of a payload section is not known before being written
+  // into the output stream, profile writer reserves space for the byte offset
+  // of this section to allow back patching at the specified offset later.
+  //
+  // This struct is produced by `InstrProfWriter::writeHeader` to store the byte
+  // offset of header fields, and used later for back patching.
   struct HeaderFieldOffsets {
     uint64_t HashTableStartFieldOffset;
     uint64_t MemProfSectionOffset;
