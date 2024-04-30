@@ -462,11 +462,54 @@ public:
   Value posHi;
 };
 
+// A util base-iterator that delegates all methods to the wrapped iterator.
+class SimpleWrapIterator : public SparseIterator {
+public:
+  SimpleWrapIterator(std::unique_ptr<SparseIterator> &&wrap, IterKind kind)
+      : SparseIterator(kind, *wrap), wrap(std::move(wrap)) {}
+
+  SmallVector<Type> getCursorValTypes(OpBuilder &b) const override {
+    return wrap->getCursorValTypes(b);
+  }
+  bool isBatchIterator() const override { return wrap->isBatchIterator(); }
+  bool randomAccessible() const override { return wrap->randomAccessible(); };
+  bool iteratableByFor() const override { return wrap->iteratableByFor(); };
+  SmallVector<Value> serialize() const override { return wrap->serialize(); };
+  void deserialize(ValueRange vs) override { wrap->deserialize(vs); };
+  ValueRange getCurPosition() const override { return wrap->getCurPosition(); }
+  void genInitImpl(OpBuilder &b, Location l,
+                   const SparseIterator *parent) override {
+    wrap->genInit(b, l, parent);
+  }
+  Value genNotEndImpl(OpBuilder &b, Location l) override {
+    return wrap->genNotEndImpl(b, l);
+  }
+  ValueRange forwardImpl(OpBuilder &b, Location l) override {
+    return wrap->forward(b, l);
+  };
+  Value upperBound(OpBuilder &b, Location l) const override {
+    return wrap->upperBound(b, l);
+  };
+
+  Value derefImpl(OpBuilder &b, Location l) override {
+    return wrap->derefImpl(b, l);
+  }
+
+  void locateImpl(OpBuilder &b, Location l, Value crd) override {
+    return wrap->locate(b, l, crd);
+  }
+
+  SparseIterator &getWrappedIterator() const { return *wrap; }
+
+protected:
+  std::unique_ptr<SparseIterator> wrap;
+};
+
 //
 // A filter iterator wrapped from another iterator. The filter iterator update
 // the wrapped iterator *in-place*.
 //
-class FilterIterator : public SparseIterator {
+class FilterIterator : public SimpleWrapIterator {
   // Coorindate translation between crd loaded from the wrap iterator and the
   // filter iterator.
   Value fromWrapCrd(OpBuilder &b, Location l, Value wrapCrd) const {
@@ -487,8 +530,8 @@ public:
   // when crd always < size.
   FilterIterator(std::unique_ptr<SparseIterator> &&wrap, Value offset,
                  Value stride, Value size)
-      : SparseIterator(IterKind::kFilter, *wrap), offset(offset),
-        stride(stride), size(size), wrap(std::move(wrap)) {}
+      : SimpleWrapIterator(std::move(wrap), IterKind::kFilter), offset(offset),
+        stride(stride), size(size) {}
 
   // For LLVM-style RTTI.
   static bool classof(const SparseIterator *from) {
@@ -498,18 +541,9 @@ public:
   std::string getDebugInterfacePrefix() const override {
     return std::string("filter<") + wrap->getDebugInterfacePrefix() + ">";
   }
-  SmallVector<Type> getCursorValTypes(OpBuilder &b) const override {
-    return wrap->getCursorValTypes(b);
-  }
 
-  bool isBatchIterator() const override { return wrap->isBatchIterator(); }
-  bool randomAccessible() const override { return wrap->randomAccessible(); };
   bool iteratableByFor() const override { return randomAccessible(); };
   Value upperBound(OpBuilder &b, Location l) const override { return size; };
-
-  SmallVector<Value> serialize() const override { return wrap->serialize(); };
-  void deserialize(ValueRange vs) override { wrap->deserialize(vs); };
-  ValueRange getCurPosition() const override { return wrap->getCurPosition(); }
 
   void genInitImpl(OpBuilder &b, Location l,
                    const SparseIterator *parent) override {
@@ -541,7 +575,47 @@ public:
   ValueRange forwardImpl(OpBuilder &b, Location l) override;
 
   Value offset, stride, size;
-  std::unique_ptr<SparseIterator> wrap;
+};
+
+//
+// A pad iterator wrapped from another iterator. The pad iterator updates
+// the wrapped iterator *in-place*.
+//
+class PadIterator : public SimpleWrapIterator {
+
+public:
+  PadIterator(std::unique_ptr<SparseIterator> &&wrap, Value padLow,
+              Value padHigh)
+      : SimpleWrapIterator(std::move(wrap), IterKind::kPad), padLow(padLow),
+        padHigh(padHigh) {
+    assert(!randomAccessible() && "Not implemented.");
+  }
+
+  // For LLVM-style RTTI.
+  static bool classof(const SparseIterator *from) {
+    return from->kind == IterKind::kPad;
+  }
+
+  std::string getDebugInterfacePrefix() const override {
+    return std::string("pad<") + wrap->getDebugInterfacePrefix() + ">";
+  }
+
+  // The upper bound after padding becomes `size + padLow + padHigh`.
+  Value upperBound(OpBuilder &b, Location l) const override {
+    return ADDI(ADDI(wrap->upperBound(b, l), padLow), padHigh);
+  };
+
+  // The pad_coord = coord + pad_lo
+  Value derefImpl(OpBuilder &b, Location l) override {
+    updateCrd(ADDI(wrap->deref(b, l), padLow));
+    return getCrd();
+  }
+
+  void locateImpl(OpBuilder &b, Location l, Value crd) override {
+    assert(randomAccessible());
+  }
+
+  Value padLow, padHigh;
 };
 
 class NonEmptySubSectIterator : public SparseIterator {
@@ -1408,10 +1482,19 @@ sparse_tensor::makeSlicedLevelIterator(std::unique_ptr<SparseIterator> &&sit,
   return ret;
 }
 
+std::unique_ptr<SparseIterator>
+sparse_tensor::makePaddedIterator(std::unique_ptr<SparseIterator> &&sit,
+                                  Value padLow, Value padHigh,
+                                  SparseEmitStrategy strategy) {
+  auto ret = std::make_unique<PadIterator>(std::move(sit), padLow, padHigh);
+  ret->setSparseEmitStrategy(strategy);
+  return ret;
+}
+
 static const SparseIterator *tryUnwrapFilter(const SparseIterator *it) {
   auto *filter = llvm::dyn_cast_or_null<FilterIterator>(it);
   if (filter)
-    return filter->wrap.get();
+    return &filter->getWrappedIterator();
   return it;
 }
 
