@@ -257,7 +257,8 @@ static int getArgumentStackToRestore(MachineFunction &MF,
   if (MBB.end() != MBBI) {
     unsigned RetOpcode = MBBI->getOpcode();
     IsTailCallReturn = RetOpcode == ARM::TCRETURNdi ||
-                       RetOpcode == ARM::TCRETURNri;
+                       RetOpcode == ARM::TCRETURNri ||
+                       RetOpcode == ARM::TCRETURNrinotr12;
   }
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
 
@@ -486,6 +487,7 @@ static MachineBasicBlock::iterator insertSEH(MachineBasicBlock::iterator MBBI,
 
   case ARM::tBX_RET:
   case ARM::TCRETURNri:
+  case ARM::TCRETURNrinotr12:
     MIB = BuildMI(MF, DL, TII.get(ARM::SEH_Nop_Ret))
               .addImm(/*Wide=*/0)
               .setMIFlags(Flags);
@@ -1615,7 +1617,9 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
   if (MBB.end() != MI) {
     DL = MI->getDebugLoc();
     unsigned RetOpcode = MI->getOpcode();
-    isTailCall = (RetOpcode == ARM::TCRETURNdi || RetOpcode == ARM::TCRETURNri);
+    isTailCall =
+        (RetOpcode == ARM::TCRETURNdi || RetOpcode == ARM::TCRETURNri ||
+         RetOpcode == ARM::TCRETURNrinotr12);
     isInterrupt =
         RetOpcode == ARM::SUBS_PC_LR || RetOpcode == ARM::t2SUBS_PC_LR;
     isTrap =
