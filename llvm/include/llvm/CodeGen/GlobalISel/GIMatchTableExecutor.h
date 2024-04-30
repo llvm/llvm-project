@@ -721,7 +721,8 @@ public:
   // - Unchecked execution, assumes no error.
   // - Fast common case handling (1 byte values).
   LLVM_ATTRIBUTE_ALWAYS_INLINE static uint64_t
-  fastDecodeULEB128(const uint8_t *MatchTable, uint64_t &CurrentIdx) {
+  fastDecodeULEB128(const uint8_t *LLVM_ATTRIBUTE_RESTRICT MatchTable,
+                    uint64_t &CurrentIdx) {
     uint64_t Value = MatchTable[CurrentIdx++];
     if (LLVM_UNLIKELY(Value >= 128)) {
       Value &= 0x7f;
