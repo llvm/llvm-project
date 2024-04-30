@@ -566,6 +566,8 @@ public:
 
   Error tryExtractDIEsIfNeeded(bool CUDieOnly);
 
+  void freeDIEs();
+
 private:
   /// Size in bytes of the .debug_info data associated with this compile unit.
   size_t getDebugInfoSize() const {

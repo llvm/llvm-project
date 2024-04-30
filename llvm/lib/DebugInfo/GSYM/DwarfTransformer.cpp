@@ -625,8 +625,9 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
             StrStream.flush();
             Out << storage;
           }
-          // Release the line table, once we're done.
+          // Release the line table and DIEs once we're done.
           DICtx.clearLineTableForUnit(CU.get());
+          CU->freeDIEs();
 
           Out.Merge(ThreadOut);
         });
@@ -634,6 +635,8 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
     }
     pool.wait();
   }
+  for (const auto &CU : DICtx.compile_units())
+    CU->freeDIEs();
   size_t FunctionsAddedCount = Gsym.getNumFunctionInfos() - NumBefore;
   Out << "Loaded " << FunctionsAddedCount << " functions from DWARF.\n";
   return Error::success();

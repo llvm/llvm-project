@@ -495,6 +495,11 @@ void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
     Context.getRecoverableErrorHandler()(std::move(e));
 }
 
+void DWARFUnit::freeDIEs() {
+  if (DieArray.capacity())
+    std::vector<DWARFDebugInfoEntry>().swap(DieArray);
+}
+
 Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
   if ((CUDieOnly && !DieArray.empty()) ||
       DieArray.size() > 1)
