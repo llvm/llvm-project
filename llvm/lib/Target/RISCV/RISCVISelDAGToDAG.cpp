@@ -317,8 +317,11 @@ void RISCVDAGToDAGISel::addVectorLoadStoreOperands(
   Operands.push_back(VL);
 
   MVT XLenVT = Subtarget->getXLenVT();
-  SDValue SEWOp = CurDAG->getTargetConstant(Log2SEW, DL, XLenVT);
-  Operands.push_back(SEWOp);
+  // Add SEW operand if it is indexed or mask load/store instruction.
+  if (Log2SEW == 0 || IndexVT) {
+    SDValue SEWOp = CurDAG->getTargetConstant(Log2SEW, DL, XLenVT);
+    Operands.push_back(SEWOp);
+  }
 
   // At the IR layer, all the masked load intrinsics have policy operands,
   // none of the others do.  All have passthru operands.  For our pseudos,
@@ -2232,7 +2235,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       selectVLOp(Node->getOperand(2), VL);
 
     unsigned Log2SEW = Log2_32(VT.getScalarSizeInBits());
-    SDValue SEW = CurDAG->getTargetConstant(Log2SEW, DL, XLenVT);
 
     // If VL=1, then we don't need to do a strided load and can just do a
     // regular load.
@@ -2249,7 +2251,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       Operands.push_back(CurDAG->getRegister(RISCV::X0, XLenVT));
     uint64_t Policy = RISCVII::MASK_AGNOSTIC | RISCVII::TAIL_AGNOSTIC;
     SDValue PolicyOp = CurDAG->getTargetConstant(Policy, DL, XLenVT);
-    Operands.append({VL, SEW, PolicyOp, Ld->getChain()});
+    Operands.append({VL, PolicyOp, Ld->getChain()});
 
     RISCVII::VLMUL LMUL = RISCVTargetLowering::getLMUL(VT);
     const RISCV::VLEPseudo *P = RISCV::getVLEPseudo(
@@ -2976,7 +2978,7 @@ static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
 
   const MCInstrDesc &MCID = TII->get(User->getMachineOpcode());
   const uint64_t TSFlags = MCID.TSFlags;
-  if (!RISCVII::hasSEWOp(TSFlags))
+  if (!RISCVII::hasSEW(TSFlags))
     return false;
   assert(RISCVII::hasVLOp(TSFlags));
 
@@ -2986,7 +2988,9 @@ static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
   bool HasVecPolicyOp = RISCVII::hasVecPolicyOp(TSFlags);
   unsigned VLIdx =
       User->getNumOperands() - HasVecPolicyOp - HasChainOp - HasGlueOp - 2;
-  const unsigned Log2SEW = User->getConstantOperandVal(VLIdx + 1);
+  const unsigned Log2SEW = RISCVII::hasSEWOp(TSFlags)
+                               ? User->getConstantOperandVal(VLIdx + 1)
+                               : RISCVII::getLog2SEW(TSFlags);
 
   if (UserOpNo == VLIdx)
     return false;
@@ -3701,12 +3705,18 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
       return false;
   }
 
+  SDLoc DL(N);
+
   // The vector policy operand may be present for masked intrinsics
   bool HasVecPolicyOp = RISCVII::hasVecPolicyOp(TrueTSFlags);
-  unsigned TrueVLIndex =
-      True.getNumOperands() - HasVecPolicyOp - HasChainOp - HasGlueOp - 2;
+  bool HasSEWOp = RISCVII::hasSEWOp(TrueTSFlags);
+  unsigned TrueVLIndex = True.getNumOperands() - HasVecPolicyOp - HasChainOp -
+                         HasGlueOp - 1 - HasSEWOp;
   SDValue TrueVL = True.getOperand(TrueVLIndex);
-  SDValue SEW = True.getOperand(TrueVLIndex + 1);
+  SDValue SEW =
+      HasSEWOp ? True.getOperand(TrueVLIndex + 1)
+               : CurDAG->getTargetConstant(RISCVII::getLog2SEW(TrueTSFlags), DL,
+                                           Subtarget->getXLenVT());
 
   auto GetMinVL = [](SDValue LHS, SDValue RHS) {
     if (LHS == RHS)
@@ -3736,8 +3746,6 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
     if (mayRaiseFPException(True.getNode()) &&
         !True->getFlags().hasNoFPExcept())
       return false;
-
-  SDLoc DL(N);
 
   // From the preconditions we checked above, we know the mask and thus glue
   // for the result node will be taken from True.
@@ -3804,7 +3812,10 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   if (HasRoundingMode)
     Ops.push_back(True->getOperand(TrueVLIndex - 1));
 
-  Ops.append({VL, SEW, PolicyOp});
+  Ops.push_back(VL);
+  if (RISCVII::hasSEWOp(TrueTSFlags))
+    Ops.push_back(SEW);
+  Ops.push_back(PolicyOp);
 
   // Result node should have chain operand of True.
   if (HasChainOp)

@@ -128,9 +128,9 @@ body:             |
     SD killed renamable $x13, %stack.1, 0, debug-location !8
     DBG_VALUE %stack.1, $noreg, !11, !DIExpression(DW_OP_deref), debug-location !8
 
-    PseudoVSE32_V_M1 killed renamable $v8, %stack.2, 8, 5, debug-location !DILocation(line: 5, column: 1, scope: !5)
+    PseudoVSE32_V_M1 killed renamable $v8, %stack.2, 8, debug-location !DILocation(line: 5, column: 1, scope: !5)
     DBG_VALUE %stack.2, $noreg, !12, !DIExpression(DW_OP_deref), debug-location !DILocation(line: 5, column: 1, scope: !5)
-    PseudoVSE32_V_M1 killed renamable $v9, %stack.3, 8, 5, debug-location !DILocation(line: 6, column: 1, scope: !5)
+    PseudoVSE32_V_M1 killed renamable $v9, %stack.3, 8, debug-location !DILocation(line: 6, column: 1, scope: !5)
     DBG_VALUE %stack.3, $noreg, !13, !DIExpression(DW_OP_deref), debug-location !DILocation(line: 6, column: 1, scope: !5)
 
     PseudoVSM_V_B64 killed renamable $v0, %stack.4, 8, 0, debug-location !DILocation(line: 2, column: 1, scope: !5)

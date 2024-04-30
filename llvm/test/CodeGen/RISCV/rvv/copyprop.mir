@@ -68,7 +68,7 @@ body:             |
 
   bb.4.entry:
     %33:vr = PHI %31, %bb.2, %25, %bb.3
-    PseudoVSE64_V_M1 killed %33, %2, 1, 6 /* e64 */
+    PseudoVSE64_V_M1 killed %33, %2, 1
     PseudoRET
 
 ...

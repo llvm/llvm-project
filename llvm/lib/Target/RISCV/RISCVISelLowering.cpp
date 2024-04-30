@@ -17968,7 +17968,6 @@ static MachineBasicBlock *emitVFROUND_NOEXCEPT_MASK(MachineInstr &MI,
       .add(MI.getOperand(3))
       .add(MachineOperand::CreateImm(7)) // frm = DYN
       .add(MI.getOperand(4))
-      .add(MI.getOperand(5))
       .add(MI.getOperand(6))
       .add(MachineOperand::CreateReg(RISCV::FRM,
                                      /*IsDef*/ false,
