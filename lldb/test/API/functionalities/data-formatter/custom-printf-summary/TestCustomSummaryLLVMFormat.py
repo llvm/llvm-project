@@ -14,5 +14,8 @@ class TestCase(TestBase):
     def test_bad_format(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.c"))
-        self.runCmd("type summary add -s '${var.ubyte:y}!' Bytes")
-        self.expect("v bytes", substrs=[" = '0'!"])
+        self.expect(
+            "type summary add -s '${var.ubyte:y}!' Bytes",
+            error=True,
+            substrs=["invalid llvm format"],
+        )
