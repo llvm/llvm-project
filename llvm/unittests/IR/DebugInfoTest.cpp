@@ -1044,6 +1044,9 @@ TEST(MetadataTest, ConvertDbgToDbgVariableRecord) {
 TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   LLVMContext C;
 
+  bool OldDbgValueMode = UseNewDbgInfoFormat;
+  UseNewDbgInfoFormat = false;
+
   std::unique_ptr<Module> M = parseIR(C, R"(
     define i16 @f(i16 %a) !dbg !6 {
       call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
@@ -1182,7 +1185,7 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   EXPECT_EQ(DVI2->getVariable(), DLV2);
   EXPECT_EQ(DVI2->getExpression(), Expr2);
 
-  UseNewDbgInfoFormat = false;
+  UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
 } // end namespace

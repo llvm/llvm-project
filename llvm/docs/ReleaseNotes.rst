@@ -161,6 +161,12 @@ Changes to the Metadata Info
 Changes to the Debug Info
 ---------------------------------
 
+* LLVM has switched from using debug intrinsics internally to using debug
+  records. This should happen transparently when using the DIBuilder to
+  construct debug variable information, but will require changes for any code
+  that interacts with debug intrinsics directly; for more information, see
+  https://llvm.org/docs/RemoveDIsDebugInfo.html.
+
 Changes to the LLVM tools
 ---------------------------------
 * llvm-nm and llvm-objdump can now print symbol information from linked
