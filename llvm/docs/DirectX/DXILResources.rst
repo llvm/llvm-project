@@ -38,8 +38,8 @@ There are a number of properties associated with a resource in DXIL.
 
 `Binding information`
    Information about where the resource comes from. This is either (a) a
-   binding space, lower bound in that space, and size of the binding, or (b) an
-   index into a dynamic resource heap.
+   register space, lower bound in that space, and size of the binding, or (b)
+   an index into a dynamic resource heap.
 
    In LLVM we represent binding information in the arguments of the
    :ref:`handle creation intrinsics <dxil-resources-handles>`. When generating
@@ -228,14 +228,14 @@ subsumes it.
      -
      - A ``target()`` type
      - A handle which can be operated on
-   * - ``%bind_space``
+   * - ``%reg_space``
      - 1
      - ``i32``
-     - Bind space ID in the root signature for this resource.
+     - Register space ID in the root signature for this resource.
    * - ``%lower_bound``
      - 2
      - ``i32``
-     - Lower bound of the binding in its bind space.
+     - Lower bound of the binding in its register space.
    * - ``%range_size``
      - 3
      - ``i32``
