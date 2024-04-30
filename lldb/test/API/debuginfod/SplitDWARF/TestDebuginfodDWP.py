@@ -21,13 +21,13 @@ This file is for split-dwarf (dwp) scenarios.
 """
 
 
-# It looks like Linux-AArch64 doesn't support build-id's on the LLDB builtbots
 class DebugInfodDWPTests(TestBase):
     # No need to try every flavor of debug inf.
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
         TestBase.setUp(self)
+        # Don't run these tests if we don't have Debuginfod support
         if "Debuginfod" not in configuration.enabled_plugins:
             self.skipTest("The Debuginfod SymbolLocator plugin is not enabled")
 
