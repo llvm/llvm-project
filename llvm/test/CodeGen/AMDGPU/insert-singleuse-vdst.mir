@@ -136,6 +136,7 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
   ; CHECK-NEXT:   $vgpr2 = V_ADD_U32_e32 $vgpr1, $vgpr1, implicit $exec
   ; CHECK-NEXT: {{  $}}
@@ -278,6 +279,31 @@ body: |
     liveins: $vgpr2, $vgpr3
 ...
 
+# Second use is an instruction that reads and writes v1.
+---
+name: multiple_uses_4
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: multiple_uses_4
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr2 = V_ADD_U32_e32 $vgpr0, $vgpr1, implicit $exec
+  ; CHECK-NEXT:   $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr1, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
+  bb.0:
+    liveins: $vgpr0
+    $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
+    $vgpr2 = V_ADD_U32_e32 $vgpr0, $vgpr1, implicit $exec
+    $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr1, implicit $exec
+  bb.1:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+...
+
 # Results are live-in to another basic block.
 ---
 name: basic_block_1
@@ -398,7 +424,6 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr0_sgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   $exec = COPY $sgpr0_sgpr1
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
@@ -424,7 +449,6 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   $exec_lo = COPY $sgpr0
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
@@ -450,7 +474,6 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   $exec_hi = COPY $sgpr0
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
