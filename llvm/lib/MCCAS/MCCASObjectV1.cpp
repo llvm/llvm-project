@@ -2690,7 +2690,7 @@ MCCASBuilder::createDebugStrOffsetsRef() {
   return *DbgStrOffsetsRef;
 #else
   auto DbgStrOffsetsRef =
-      DebugStrOffsetsRef::create(*this, toStringRef(CompressedBuff));
+      DebugStrOffsetsRef::create(*this, toStringRef(*DebugStrOffsetsData));
   if (!DbgStrOffsetsRef)
     return DbgStrOffsetsRef.takeError();
   return *DbgStrOffsetsRef;
