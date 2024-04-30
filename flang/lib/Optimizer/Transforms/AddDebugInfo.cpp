@@ -11,6 +11,7 @@
 /// This pass populates some debug information for the module and functions.
 //===----------------------------------------------------------------------===//
 
+#include "DebugTypeGenerator.h"
 #include "flang/Common/Version.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -106,14 +107,27 @@ void AddDebugInfoPass::runOnOperation() {
       filePath = llvm::sys::path::parent_path(funcLoc.getFilename().getValue());
     }
 
-    mlir::StringAttr funcName =
+    mlir::StringAttr fullName =
         mlir::StringAttr::get(context, funcOp.getName());
-    mlir::LLVM::DIBasicTypeAttr bT = mlir::LLVM::DIBasicTypeAttr::get(
-        context, llvm::dwarf::DW_TAG_base_type, "void", /*sizeInBits=*/0,
-        /*encoding=*/1);
-    // FIXME: Provide proper type for subroutine
+    auto result = fir::NameUniquer::deconstruct(funcOp.getName());
+    mlir::StringAttr funcName =
+        mlir::StringAttr::get(context, result.second.name);
+
+    llvm::SmallVector<mlir::LLVM::DITypeAttr> types;
+    fir::DebugTypeGenerator typeGen(module);
+    for (auto resTy : funcOp.getResultTypes()) {
+      auto tyAttr =
+          typeGen.convertType(resTy, fileAttr, cuAttr, funcOp.getLoc());
+      types.push_back(tyAttr);
+    }
+    for (auto inTy : funcOp.getArgumentTypes()) {
+      auto tyAttr = typeGen.convertType(fir::unwrapRefType(inTy), fileAttr,
+                                        cuAttr, funcOp.getLoc());
+      types.push_back(tyAttr);
+    }
+
     mlir::LLVM::DISubroutineTypeAttr subTypeAttr =
-        mlir::LLVM::DISubroutineTypeAttr::get(context, CC, {bT, bT});
+        mlir::LLVM::DISubroutineTypeAttr::get(context, CC, types);
     mlir::LLVM::DIFileAttr funcFileAttr =
         mlir::LLVM::DIFileAttr::get(context, fileName, filePath);
 
@@ -130,11 +144,13 @@ void AddDebugInfoPass::runOnOperation() {
       subprogramFlags =
           subprogramFlags | mlir::LLVM::DISubprogramFlags::Definition;
     }
-    // FIXME: Provide proper line and scopeline.
+    unsigned line = 1;
+    if (auto funcLoc = l.dyn_cast<mlir::FileLineColLoc>())
+      line = funcLoc.getLine();
+
     auto spAttr = mlir::LLVM::DISubprogramAttr::get(
-        context, id, compilationUnit, fileAttr, funcName, funcName,
-        funcFileAttr, /*line=*/1, /*scopeline=*/1, subprogramFlags,
-        subTypeAttr);
+        context, id, compilationUnit, fileAttr, funcName, fullName,
+        funcFileAttr, line, line, subprogramFlags, subTypeAttr);
     funcOp->setLoc(builder.getFusedLoc({funcOp->getLoc()}, spAttr));
   });
 }
