@@ -11104,13 +11104,15 @@ template <typename Derived>
 class OpenACCClauseTransform final
     : public OpenACCClauseVisitor<OpenACCClauseTransform<Derived>> {
   TreeTransform<Derived> &Self;
+  ArrayRef<const OpenACCClause *> ExistingClauses;
   SemaOpenACC::OpenACCParsedClause &ParsedClause;
   OpenACCClause *NewClause = nullptr;
 
 public:
   OpenACCClauseTransform(TreeTransform<Derived> &Self,
+                         ArrayRef<const OpenACCClause *> ExistingClauses,
                          SemaOpenACC::OpenACCParsedClause &PC)
-      : Self(Self), ParsedClause(PC) {}
+      : Self(Self), ExistingClauses(ExistingClauses), ParsedClause(PC) {}
 
   OpenACCClause *CreatedClause() const { return NewClause; }
 
@@ -11196,6 +11198,31 @@ void OpenACCClauseTransform<Derived>::VisitNumGangsClause(
       ParsedClause.getLParenLoc(), ParsedClause.getIntExprs(),
       ParsedClause.getEndLoc());
 }
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitPrivateClause(
+    const OpenACCPrivateClause &C) {
+  llvm::SmallVector<Expr *> InstantiatedVarList;
+
+  for (Expr *CurVar : C.getVarList()) {
+    ExprResult Res = Self.TransformExpr(CurVar);
+
+    if (!Res.isUsable())
+      return;
+
+    Res = Self.getSema().OpenACC().ActOnVar(Res.get());
+
+    if (Res.isUsable())
+      InstantiatedVarList.push_back(Res.get());
+  }
+  ParsedClause.setVarListDetails(std::move(InstantiatedVarList));
+
+  NewClause = OpenACCPrivateClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
 template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitNumWorkersClause(
     const OpenACCNumWorkersClause &C) {
@@ -11254,7 +11281,8 @@ OpenACCClause *TreeTransform<Derived>::TransformOpenACCClause(
   if (const auto *WithParms = dyn_cast<OpenACCClauseWithParams>(OldClause))
     ParsedClause.setLParenLoc(WithParms->getLParenLoc());
 
-  OpenACCClauseTransform<Derived> Transform{*this, ParsedClause};
+  OpenACCClauseTransform<Derived> Transform{*this, ExistingClauses,
+                                            ParsedClause};
   Transform.Visit(OldClause);
 
   return Transform.CreatedClause();
@@ -13217,6 +13245,26 @@ bool TreeTransform<Derived>::TransformOverloadExprDecls(OverloadExpr *Old,
   // Resolve a kind, but don't do any further analysis.  If it's
   // ambiguous, the callee needs to deal with it.
   R.resolveKind();
+
+  if (Old->hasTemplateKeyword() && !R.empty()) {
+    NamedDecl *FoundDecl = R.getRepresentativeDecl()->getUnderlyingDecl();
+    getSema().FilterAcceptableTemplateNames(R,
+                                            /*AllowFunctionTemplates=*/true,
+                                            /*AllowDependent=*/true);
+    if (R.empty()) {
+      // If a 'template' keyword was used, a lookup that finds only non-template
+      // names is an error.
+      getSema().Diag(R.getNameLoc(),
+                     diag::err_template_kw_refers_to_non_template)
+          << R.getLookupName() << Old->getQualifierLoc().getSourceRange()
+          << Old->hasTemplateKeyword() << Old->getTemplateKeywordLoc();
+      getSema().Diag(FoundDecl->getLocation(),
+                     diag::note_template_kw_refers_to_non_template)
+          << R.getLookupName();
+      return true;
+    }
+  }
+
   return false;
 }
 

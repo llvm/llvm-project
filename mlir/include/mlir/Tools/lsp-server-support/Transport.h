@@ -15,6 +15,7 @@
 #ifndef MLIR_TOOLS_LSPSERVERSUPPORT_TRANSPORT_H
 #define MLIR_TOOLS_LSPSERVERSUPPORT_TRANSPORT_H
 
+#include "mlir/Support/DebugStringHelper.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Tools/lsp-server-support/Logging.h"
@@ -100,6 +101,18 @@ using Callback = llvm::unique_function<void(llvm::Expected<T>)>;
 template <typename T>
 using OutgoingNotification = llvm::unique_function<void(const T &)>;
 
+/// An OutgoingRequest<T> is a function used for outgoing requests to send to
+/// the client.
+template <typename T>
+using OutgoingRequest =
+    llvm::unique_function<void(const T &, llvm::json::Value id)>;
+
+/// An `OutgoingRequestCallback` is invoked when an outgoing request to the
+/// client receives a response in turn. It is passed the original request's ID,
+/// as well as the result JSON.
+using OutgoingRequestCallback =
+    std::function<void(llvm::json::Value, llvm::Expected<llvm::json::Value>)>;
+
 /// A handler used to process the incoming transport messages.
 class MessageHandler {
 public:
@@ -170,6 +183,26 @@ public:
     };
   }
 
+  /// Create an OutgoingRequest function that, when called, sends a request with
+  /// the given method via the transport. Should the outgoing request be
+  /// met with a response, the response callback is invoked to handle that
+  /// response.
+  template <typename T>
+  OutgoingRequest<T> outgoingRequest(llvm::StringLiteral method,
+                                     OutgoingRequestCallback callback) {
+    return [&, method, callback](const T &params, llvm::json::Value id) {
+      {
+        std::lock_guard<std::mutex> lock(responseHandlersMutex);
+        responseHandlers.insert(
+            {debugString(id), std::make_pair(method.str(), callback)});
+      }
+
+      std::lock_guard<std::mutex> transportLock(transportOutputMutex);
+      Logger::info("--> {0}({1})", method, id);
+      transport.call(method, llvm::json::Value(params), id);
+    };
+  }
+
 private:
   template <typename HandlerT>
   using HandlerMap = llvm::StringMap<llvm::unique_function<HandlerT>>;
@@ -177,6 +210,14 @@ private:
   HandlerMap<void(llvm::json::Value)> notificationHandlers;
   HandlerMap<void(llvm::json::Value, Callback<llvm::json::Value>)>
       methodHandlers;
+
+  /// A pair of (1) the original request's method name, and (2) the callback
+  /// function to be invoked for responses.
+  using ResponseHandlerTy = std::pair<std::string, OutgoingRequestCallback>;
+  /// A mapping from request/response ID to response handler.
+  llvm::StringMap<ResponseHandlerTy> responseHandlers;
+  /// Mutex to guard insertion into the response handler map.
+  std::mutex responseHandlersMutex;
 
   JSONTransport &transport;
 
