@@ -1386,6 +1386,15 @@ public:
   // This is used if an operand is a 32 bit register but needs to be aligned
   // regardless.
   void enforceOperandRCAlignment(MachineInstr &MI, unsigned OpName) const;
+
+  bool isBarrierStart(uint16_t Opcode) const {
+    return
+      Opcode == AMDGPU::S_BARRIER ||
+      Opcode == AMDGPU::S_BARRIER_SIGNAL_M0 ||
+      Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0 ||
+      Opcode == AMDGPU::S_BARRIER_SIGNAL_IMM ||
+      Opcode == AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM;
+  }
 };
 
 /// \brief Returns true if a reg:subreg pair P has a TRC class
