@@ -1142,9 +1142,11 @@ struct UsesAllocatorsT {
   using MemSpace = E;
   using TraitsArray = ObjectT<I, E>;
   using Allocator = E;
-  using AllocatorSpec =
-      std::tuple<OPT(MemSpace), OPT(TraitsArray), Allocator>; // Not a spec name
-  using Allocators = ListT<AllocatorSpec>;                    // Not a spec name
+  struct AllocatorSpec { // Not a spec name
+    using TupleTrait = std::true_type;
+    std::tuple<OPT(MemSpace), OPT(TraitsArray), Allocator> t;
+  };
+  using Allocators = ListT<AllocatorSpec>; // Not a spec name
   using WrapperTrait = std::true_type;
   Allocators v;
 };
