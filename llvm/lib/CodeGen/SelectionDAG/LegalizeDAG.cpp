@@ -3020,11 +3020,9 @@ void SelectionDAGLegalize::PromoteReduction(SDNode *Node,
   SDValue Res = DAG.getNode(Node->getOpcode(), DL, NewScalarVT, Operands,
                             Node->getFlags());
 
-  if (ScalarVT.isFloatingPoint())
-    Res = DAG.getNode(ISD::FP_ROUND, DL, ScalarVT, Res,
-                      DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
-  else
-    Res = DAG.getNode(ISD::TRUNCATE, DL, ScalarVT, Res);
+  assert(ScalarVT.isFloatingPoint() && "Only FP promotion is supported");
+  Res = DAG.getNode(ISD::FP_ROUND, DL, ScalarVT, Res,
+                    DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
 
   Results.push_back(Res);
 }
