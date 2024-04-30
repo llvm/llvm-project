@@ -21,6 +21,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/TensorEncoding.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
@@ -1693,7 +1694,20 @@ CollapseShapeOp::inferCollapsedType(RankedTensorType type,
     currentDim += dim;
   }
 
-  return RankedTensorType::get(newShape, type.getElementType());
+  auto encoding = type.getEncoding();
+  if (auto v = encoding.dyn_cast_or_null<VerifiableTensorEncoding>()) {
+    auto ignoreError = [&] {
+      auto emitter = mlir::emitError(UnknownLoc::get(type.getContext()));
+      emitter.abandon();
+      return emitter;
+    };
+    if (failed(
+            v.verifyEncoding(newShape, type.getElementType(), ignoreError))) {
+      // strip the encoding if it is not valid for the new shape.
+      encoding = Attribute();
+    }
+  }
+  return RankedTensorType::get(newShape, type.getElementType(), encoding);
 }
 
 void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
@@ -1961,7 +1975,8 @@ RankedTensorType ExtractSliceOp::inferResultType(
   assert(static_cast<int64_t>(staticSizes.size()) ==
              sourceTensorType.getRank() &&
          "unexpected staticSizes not equal to rank of source");
-  return RankedTensorType::get(staticSizes, sourceTensorType.getElementType());
+  return RankedTensorType::get(staticSizes, sourceTensorType.getElementType(),
+                               sourceTensorType.getEncoding());
 }
 
 RankedTensorType ExtractSliceOp::inferResultType(
@@ -2002,7 +2017,8 @@ RankedTensorType ExtractSliceOp::inferCanonicalRankReducedResultType(
       if (!dimsToProject.test(pos))
         projectedShape.push_back(shape[pos]);
     inferredType =
-        RankedTensorType::get(projectedShape, inferredType.getElementType());
+        RankedTensorType::get(projectedShape, inferredType.getElementType(),
+                              inferredType.getEncoding());
   }
   return inferredType;
 }
@@ -2874,7 +2890,8 @@ RankedTensorType PadOp::inferResultType(RankedTensorType sourceType,
     }
   }
 
-  return RankedTensorType::get(inferredShape, sourceType.getElementType());
+  return RankedTensorType::get(inferredShape, sourceType.getElementType(),
+                               sourceType.getEncoding());
 }
 
 void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
@@ -3660,9 +3677,9 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
         "tiling factors must equal the number of dimensions to tile");
   }
 
-  ShapedType packedType = (std::is_same<OpTy, PackOp>::value)
-                              ? packOrUnPack.getDestType()
-                              : packOrUnPack.getSourceType();
+  RankedTensorType packedType = (std::is_same<OpTy, PackOp>::value)
+                                    ? packOrUnPack.getDestType()
+                                    : packOrUnPack.getSourceType();
   size_t packedRank = packedType.getRank();
   // Require output rank to match input rank + number of blocking factors.
   if (unpackedRank + mixedTiles.size() != packedRank) {
@@ -3945,7 +3962,8 @@ RankedTensorType PackOp::inferPackedType(RankedTensorType sourceType,
                                          ArrayRef<int64_t> outerDimsPerm) {
   SmallVector<int64_t> resultShape = getPackOpResultTypeShape(
       sourceType.getShape(), innerTileSizes, innerDimsPos, outerDimsPerm);
-  return RankedTensorType::get(resultShape, sourceType.getElementType());
+  return RankedTensorType::get(resultShape, sourceType.getElementType(),
+                               sourceType.getEncoding());
 }
 
 Value PackOp::createDestinationTensor(OpBuilder &b, Location loc, Value source,
