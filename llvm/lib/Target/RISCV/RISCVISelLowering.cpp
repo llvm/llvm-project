@@ -13673,8 +13673,10 @@ static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &D
 
 // We're performing 2 combinations here:
 // === Rule 1 ===
-// Given (seteq (riscv_selectcc LHS, RHS, CC, X, Y), X), we can replace it with
-// (setCC LHS, RHS). Similar replacements are done for `setne` too.
+// Given VFirst = (vfirst_vl ..., EVL) and
+// (seteq (riscv_selectLT VFirst, 0, EVL, VFirst), EVL), we can replace it with
+// (setLT VFirst, 0). Similar replacements are done for variants w/ `setne` and
+// `riscv_selectGE`.
 //
 // === Rule 2 ===
 // Replace (seteq (i64 (and X, 0xffffffff)), C1) with
@@ -13696,27 +13698,32 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
 
   // Rule 1
   using namespace SDPatternMatch;
-  auto matchSelectCC = [](SDValue Op, SDValue Candidate, bool Inverse,
+  auto matchSelectCC = [](SDValue Op, SDValue VLCandidate, bool Inverse,
                           SDValue &Select) -> bool {
-    SDValue NegCandidate;
+    SDValue VFirst, CC;
+    // FIXME: These pattern will fail to match if VFIRST_VL is coming from
+    // a llvm.vp.cttz.elts that doesn't return XLen type. Due to non-trivial
+    // number of sext(_inreg) and zext interleaving between the nodes.
+    // That said, this is not really problem as long as we always generate the
+    // said intrinsics with XLen return type.
+    auto VFirstPattern = m_AllOf(m_Node(RISCVISD::VFIRST_VL, m_Value(),
+                                        m_Value(), m_Specific(VLCandidate)),
+                                 m_Value(VFirst));
+    auto SelectCCPattern =
+        m_Node(RISCVISD::SELECT_CC, VFirstPattern, m_SpecificInt(0),
+               m_Value(CC), m_Specific(VLCandidate), m_Deferred(VFirst));
+    auto InvSelectCCPattern =
+        m_Node(RISCVISD::SELECT_CC, VFirstPattern, m_SpecificInt(0),
+               m_Value(CC), m_Deferred(VFirst), m_Specific(VLCandidate));
+
     if (Inverse)
-      return sd_match(
-                 Op,
-                 m_AllOf(m_OneUse(m_Node(RISCVISD::SELECT_CC, m_Value(),
-                                         m_Value(), m_Value(),
-                                         /*TrueVal=*/m_Value(NegCandidate),
-                                         /*FalseVal=*/m_Specific(Candidate))),
-                         m_Value(Select))) &&
-             NegCandidate != Candidate;
+      return sd_match(Op,
+                      m_AllOf(m_OneUse(InvSelectCCPattern), m_Value(Select))) &&
+             cast<CondCodeSDNode>(CC)->get() == ISD::SETGE;
     else
-      return sd_match(
-                 Op,
-                 m_AllOf(m_OneUse(m_Node(RISCVISD::SELECT_CC, m_Value(),
-                                         m_Value(), m_Value(),
-                                         /*TrueVal=*/m_Specific(Candidate),
-                                         /*FalseVal=*/m_Value(NegCandidate))),
-                         m_Value(Select))) &&
-             NegCandidate != Candidate;
+      return sd_match(Op,
+                      m_AllOf(m_OneUse(SelectCCPattern), m_Value(Select))) &&
+             cast<CondCodeSDNode>(CC)->get() == ISD::SETLT;
   };
 
   auto buildSetCC = [&](SDValue Select, bool Inverse) -> SDValue {
