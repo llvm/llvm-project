@@ -24,13 +24,16 @@ public:
   UniqueDWARFASTType() : m_type_sp(), m_die(), m_declaration() {}
 
   UniqueDWARFASTType(lldb::TypeSP &type_sp, const DWARFDIE &die,
-                     const Declaration &decl, int32_t byte_size)
+                     const Declaration &decl, int32_t byte_size,
+                     bool is_forward_declaration)
       : m_type_sp(type_sp), m_die(die), m_declaration(decl),
-        m_byte_size(byte_size) {}
+        m_byte_size(byte_size),
+        m_is_forward_declaration(is_forward_declaration) {}
 
   UniqueDWARFASTType(const UniqueDWARFASTType &rhs)
       : m_type_sp(rhs.m_type_sp), m_die(rhs.m_die),
-        m_declaration(rhs.m_declaration), m_byte_size(rhs.m_byte_size) {}
+        m_declaration(rhs.m_declaration), m_byte_size(rhs.m_byte_size),
+        m_is_forward_declaration(rhs.m_is_forward_declaration) {}
 
   ~UniqueDWARFASTType() = default;
 
@@ -40,6 +43,7 @@ public:
       m_die = rhs.m_die;
       m_declaration = rhs.m_declaration;
       m_byte_size = rhs.m_byte_size;
+      m_is_forward_declaration = rhs.m_is_forward_declaration;
     }
     return *this;
   }
@@ -48,6 +52,8 @@ public:
   DWARFDIE m_die;
   Declaration m_declaration;
   int32_t m_byte_size = -1;
+  // True if the m_die is a forward declaration DIE.
+  bool m_is_forward_declaration = true;
 };
 
 class UniqueDWARFASTTypeList {
@@ -63,7 +69,8 @@ public:
   }
 
   bool Find(const DWARFDIE &die, const Declaration &decl,
-            const int32_t byte_size, UniqueDWARFASTType &entry) const;
+            const int32_t byte_size, bool is_forward_declaration,
+            UniqueDWARFASTType &entry) const;
 
 protected:
   typedef std::vector<UniqueDWARFASTType> collection;
@@ -81,11 +88,13 @@ public:
   }
 
   bool Find(ConstString name, const DWARFDIE &die, const Declaration &decl,
-            const int32_t byte_size, UniqueDWARFASTType &entry) const {
+            const int32_t byte_size, bool is_forward_declaration,
+            UniqueDWARFASTType &entry) const {
     const char *unique_name_cstr = name.GetCString();
     collection::const_iterator pos = m_collection.find(unique_name_cstr);
     if (pos != m_collection.end()) {
-      return pos->second.Find(die, decl, byte_size, entry);
+      return pos->second.Find(die, decl, byte_size, is_forward_declaration,
+                              entry);
     }
     return false;
   }
