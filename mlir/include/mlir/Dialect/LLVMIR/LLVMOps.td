@@ -63,12 +63,12 @@ class LLVM_IntArithmeticOpWithOverflowFlag<string mnemonic, string instName,
   let arguments = !con(commonArgs, iofArg);
 
   let builders = [
-    OpBuilder<(ins "Type":$type, "Value":$lhs, "Value":$rhs, 
+    OpBuilder<(ins "Type":$type, "Value":$lhs, "Value":$rhs,
                    "IntegerOverflowFlags":$overflowFlags), [{
       build($_builder, $_state, type, lhs, rhs);
       $_state.getOrAddProperties<Properties>().overflowFlags = overflowFlags;
     }]>,
-    OpBuilder<(ins "Value":$lhs, "Value":$rhs, 
+    OpBuilder<(ins "Value":$lhs, "Value":$rhs,
                    "IntegerOverflowFlags":$overflowFlags), [{
       build($_builder, $_state, lhs, rhs);
       $_state.getOrAddProperties<Properties>().overflowFlags = overflowFlags;
@@ -1052,7 +1052,7 @@ def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
 ////////////////////////////////////////////////////////////////////////////////
 
 def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
-    [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+    [Pure, ConstantLike, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let arguments = (ins FlatSymbolRefAttr:$global_name);
   let results = (outs LLVM_AnyPointer:$res);
 
@@ -1114,6 +1114,8 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
   }];
 
   let assemblyFormat = "$global_name attr-dict `:` qualified(type($res))";
+
+  let hasFolder = 1;
 }
 
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",
