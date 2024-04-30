@@ -1663,7 +1663,7 @@ void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
                           ArrayRef<OpFoldResult> outputShape) {
   auto [staticOutputShape, dynamicOutputShape] =
       decomposeMixedValues(SmallVector<OpFoldResult>(outputShape));
-  build(builder, result, resultType.cast<RankedTensorType>(), src,
+  build(builder, result, cast<RankedTensorType>(resultType), src,
         getReassociationIndicesAttribute(builder, reassociation),
         dynamicOutputShape, staticOutputShape);
 }
@@ -1673,7 +1673,7 @@ void ExpandShapeOp::build(OpBuilder &builder, OperationState &result,
                           ArrayRef<ReassociationIndices> reassociation) {
   SmallVector<OpFoldResult> inputShape =
       getMixedSizes(builder, result.location, src);
-  auto tensorResultTy = resultType.cast<RankedTensorType>();
+  auto tensorResultTy = cast<RankedTensorType>(resultType);
   FailureOr<SmallVector<OpFoldResult>> outputShape = inferOutputShape(
       builder, result.location, tensorResultTy, reassociation, inputShape);
   // Failure of this assertion usually indicates presence of multiple
