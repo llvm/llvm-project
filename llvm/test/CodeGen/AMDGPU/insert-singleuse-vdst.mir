@@ -398,7 +398,6 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr0_sgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   $exec = COPY $sgpr0_sgpr1
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
@@ -424,7 +423,6 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   $exec_lo = COPY $sgpr0
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
@@ -450,7 +448,6 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   $exec_hi = COPY $sgpr0
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
