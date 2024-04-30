@@ -2379,8 +2379,8 @@ void Verifier::verifyFunctionMetadata(
             "expected string with name of the !prof annotation", MD);
       MDString *MDS = cast<MDString>(MD->getOperand(0));
       StringRef ProfName = MDS->getString();
-      Check(ProfName.equals("function_entry_count") ||
-                ProfName.equals("synthetic_function_entry_count"),
+      Check(ProfName == "function_entry_count" ||
+                ProfName == "synthetic_function_entry_count",
             "first operand should be 'function_entry_count'"
             " or 'synthetic_function_entry_count'",
             MD);
@@ -4785,7 +4785,7 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
   StringRef ProfName = MDS->getString();
 
   // Check consistency of !prof branch_weights metadata.
-  if (ProfName.equals("branch_weights")) {
+  if (ProfName == "branch_weights") {
     if (isa<InvokeInst>(&I)) {
       Check(MD->getNumOperands() == 2 || MD->getNumOperands() == 3,
             "Wrong number of InvokeInst branch_weights operands", MD);
