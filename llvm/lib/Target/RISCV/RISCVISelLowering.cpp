@@ -13671,6 +13671,12 @@ static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &D
   return true;
 }
 
+// We're performing 2 combinations here:
+// === Rule 1 ===
+// Given (seteq (riscv_selectcc LHS, RHS, CC, X, Y), X), we can replace it with
+// (setCC LHS, RHS). Similar replacements are done for `setne` too.
+//
+// === Rule 2 ===
 // Replace (seteq (i64 (and X, 0xffffffff)), C1) with
 // (seteq (i64 (sext_inreg (X, i32)), C1')) where C1' is C1 sign extended from
 // bit 31. Same for setne. C1' may be cheaper to materialize and the sext_inreg
@@ -13721,27 +13727,27 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
   };
 
   SDValue SelectVal;
-  if (matchSelectCC(N0, N1, false, SelectVal) ||
-      matchSelectCC(N1, N0, false, SelectVal)) {
+  if (matchSelectCC(N0, N1, /*Inverse=*/false, SelectVal) ||
+      matchSelectCC(N1, N0, /*Inverse=*/false, SelectVal)) {
     if (Cond == ISD::SETEQ) {
       // (seteq (SELECT_CC LHS, RHS, CC, N1, X), N1) => (setCC LHS, RHS)
       // (seteq N0, (SELECT_CC LHS, RHS, CC, N0, X)) => (setCC LHS, RHS)
-      return buildSetCC(SelectVal, false);
+      return buildSetCC(SelectVal, /*Inverse=*/false);
     } else {
       // (setne (SELECT_CC LHS, RHS, CC, N1, X), N1) => (setInvCC LHS, RHS)
       // (setne N0, (SELECT_CC LHS, RHS, CC, N0, X)) => (setInvCC LHS, RHS)
-      return buildSetCC(SelectVal, true);
+      return buildSetCC(SelectVal, /*Inverse=*/true);
     }
-  } else if (matchSelectCC(N0, N1, true, SelectVal) ||
-             matchSelectCC(N1, N0, true, SelectVal)) {
+  } else if (matchSelectCC(N0, N1, /*Inverse=*/true, SelectVal) ||
+             matchSelectCC(N1, N0, /*Inverse=*/true, SelectVal)) {
     if (Cond == ISD::SETEQ) {
       // (seteq (SELECT_CC LHS, RHS, CC, X, N1), N1) => (setInvCC LHS, RHS)
       // (seteq N0, (SELECT_CC LHS, RHS, CC, X, N0)) => (setInvCC LHS, RHS)
-      return buildSetCC(SelectVal, true);
+      return buildSetCC(SelectVal, /*Inverse=*/true);
     } else {
       // (setne (SELECT_CC LHS, RHS, CC, X, N1), N1) => (setCC LHS, RHS)
       // (setne N0, (SELECT_CC LHS, RHS, CC, X, N0)) => (setCC LHS, RHS)
-      return buildSetCC(SelectVal, false);
+      return buildSetCC(SelectVal, /*Inverse=*/false);
     }
   }
 
