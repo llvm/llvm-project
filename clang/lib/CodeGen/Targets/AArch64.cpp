@@ -171,7 +171,22 @@ public:
   void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,
                             const FunctionDecl *Caller,
                             const FunctionDecl *Callee,
-                            const CallArgList &Args) const override;
+                            const CallArgList &Args,
+                            QualType ReturnType) const override;
+
+private:
+  // Diagnose calls between functions with incompatible Streaming SVE
+  // attributes.
+  void checkFunctionCallABIStreaming(CodeGenModule &CGM, SourceLocation CallLoc,
+                                     const FunctionDecl *Caller,
+                                     const FunctionDecl *Callee) const;
+  // Diagnose calls which must pass arguments in floating-point registers when
+  // the selected target does not have floating-point registers.
+  void checkFunctionCallABISoftFloat(CodeGenModule &CGM, SourceLocation CallLoc,
+                                     const FunctionDecl *Caller,
+                                     const FunctionDecl *Callee,
+                                     const CallArgList &Args,
+                                     QualType ReturnType) const;
 };
 
 class WindowsAArch64TargetCodeGenInfo : public AArch64TargetCodeGenInfo {
@@ -881,9 +896,9 @@ void AArch64TargetCodeGenInfo::checkFunctionABI(
   }
 }
 
-void AArch64TargetCodeGenInfo::checkFunctionCallABI(
+void AArch64TargetCodeGenInfo::checkFunctionCallABIStreaming(
     CodeGenModule &CGM, SourceLocation CallLoc, const FunctionDecl *Caller,
-    const FunctionDecl *Callee, const CallArgList &Args) const {
+    const FunctionDecl *Callee) const {
   if (!Caller || !Callee || !Callee->hasAttr<AlwaysInlineAttr>())
     return;
 
@@ -901,6 +916,51 @@ void AArch64TargetCodeGenInfo::checkFunctionCallABI(
     if (NewAttr->isNewZA())
       CGM.getDiags().Report(CallLoc, diag::err_function_always_inline_new_za)
           << Callee->getDeclName();
+}
+
+// If the target does not have floating-point registers, but we are using a
+// hard-float ABI, there is no way to pass floating-point, vector or HFA values
+// to functions, so we report an error.
+void AArch64TargetCodeGenInfo::checkFunctionCallABISoftFloat(
+    CodeGenModule &CGM, SourceLocation CallLoc, const FunctionDecl *Caller,
+    const FunctionDecl *Callee, const CallArgList &Args,
+    QualType ReturnType) const {
+  const AArch64ABIInfo &ABIInfo = getABIInfo<AArch64ABIInfo>();
+  const TargetInfo &TI = ABIInfo.getContext().getTargetInfo();
+
+  if (!Caller || TI.hasFeature("fp") || ABIInfo.isSoftFloat())
+    return;
+
+  for (const CallArg &Arg : Args) {
+    const QualType Ty = Arg.getType();
+    const Type *HABase = nullptr;
+    uint64_t HAMembers = 0;
+
+    if (Ty->isFloatingType() || Ty->isVectorType() ||
+        ABIInfo.isHomogeneousAggregate(Ty, HABase, HAMembers)) {
+      CGM.getDiags().Report(CallLoc, diag::err_target_unsupported_type_for_abi)
+          << Caller->getDeclName() << Ty << TI.getABI();
+    }
+  }
+
+  const Type *HABase = nullptr;
+  uint64_t HAMembers = 0;
+
+  if (ReturnType->isFloatingType() || ReturnType->isVectorType() ||
+      ABIInfo.isHomogeneousAggregate(ReturnType, HABase, HAMembers)) {
+    CGM.getDiags().Report(CallLoc, diag::err_target_unsupported_type_for_abi)
+        << Caller->getDeclName() << ReturnType << TI.getABI();
+  }
+}
+
+void AArch64TargetCodeGenInfo::checkFunctionCallABI(CodeGenModule &CGM,
+                                                    SourceLocation CallLoc,
+                                                    const FunctionDecl *Caller,
+                                                    const FunctionDecl *Callee,
+                                                    const CallArgList &Args,
+                                                    QualType ReturnType) const {
+  checkFunctionCallABIStreaming(CGM, CallLoc, Caller, Callee);
+  checkFunctionCallABISoftFloat(CGM, CallLoc, Caller, Callee, Args, ReturnType);
 }
 
 void AArch64ABIInfo::appendAttributeMangling(TargetClonesAttr *Attr,
