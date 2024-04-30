@@ -1119,6 +1119,32 @@ LogicalResult tosa::TransposeOp::verify() {
   return success();
 }
 
+LogicalResult TransposeOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+
+  SmallVector<int64_t> transposePerms;
+  if (getConstantPerms(transposePerms).failed())
+    return failure();
+
+  Value input = getInput1();
+  auto inputType = input.getType().cast<TensorType>();
+
+  SmallVector<OpFoldResult> returnedDims(inputType.getRank());
+  for (auto dim : transposePerms) {
+    int64_t dimInInput = transposePerms[dim];
+    if (inputType.isDynamicDim(dimInInput))
+      returnedDims[dim] =
+          builder.create<tensor::DimOp>(getLoc(), input, dimInInput)
+              .getResult();
+    else
+      returnedDims[dim] =
+          builder.getIndexAttr(inputType.getDimSize(dimInInput));
+  }
+
+  reifiedReturnShapes.emplace_back(std::move(returnedDims));
+  return success();
+}
+
 LogicalResult tosa::GatherOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     GatherOp::Adaptor adaptor,
