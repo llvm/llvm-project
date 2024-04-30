@@ -16,7 +16,6 @@
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
-#include "llvm/CodeGen/FreeMachineFunction.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -120,11 +119,11 @@ int llvm::compileModuleWithNewPM(
   SI.registerCallbacks(PIC);
   registerCodeGenCallback(PIC, LLVMTM);
 
+  MachineFunctionAnalysisManager MFAM;
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
-  MachineFunctionAnalysisManager MFAM;
   PassBuilder PB(Target.get(), PipelineTuningOptions(), std::nullopt, &PIC);
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
@@ -137,6 +136,7 @@ int llvm::compileModuleWithNewPM(
   MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
   ModulePassManager MPM;
+  FunctionPassManager FPM;
 
   if (!PassPipeline.empty()) {
     // Construct a custom pass pipeline that starts after instruction
@@ -152,10 +152,10 @@ int llvm::compileModuleWithNewPM(
     MPM.addPass(PrintMIRPreparePass(*OS));
     MachineFunctionPassManager MFPM;
     MFPM.addPass(PrintMIRPass(*OS));
-    MFPM.addPass(FreeMachineFunctionPass());
-    MPM.addPass(createModuleToMachineFunctionPassAdaptor(std::move(MFPM)));
+    FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+    MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
 
-    if (MIR->parseMachineFunctions(*M, MMI))
+    if (MIR->parseMachineFunctions(*M, MAM))
       return 1;
   } else {
     ExitOnErr(LLVMTM.buildCodeGenPipeline(
