@@ -3,7 +3,6 @@
 //
 // RUN: rm -rf %t
 // RUN: split-file %s %t
-// RUN: cd %t
 //
 // RUN: %clang_cc1 -std=c++20 %t/A.cppm -emit-module-interface -o %t/A.pcm
 // RUN: %clang_cc1 -std=c++20 %t/A.v1.cppm -emit-module-interface -o %t/A.v1.pcm
@@ -24,10 +23,6 @@
 // RUN: %clang_cc1 -std=c++20 %t/C.cppm -emit-module-interface -fmodule-file=A=%t/A.v1.pcm \
 // RUN:     -o %t/C.v1.pcm
 // RUN: not diff %t/C.v1.pcm %t/C.pcm  &> /dev/null
-//
-// RUN: rm -rf %t
-// RUN: split-file %s %t
-// RUN: cd %t
 //
 // Test again with reduced BMI.
 // RUN: %clang_cc1 -std=c++20 %t/A.cppm -emit-reduced-module-interface -o %t/A.pcm
