@@ -88,32 +88,36 @@ ASTDeserializationListener *PCHGenerator::GetASTDeserializationListener() {
   return &Writer;
 }
 
-CXX20ModulesGenerator::CXX20ModulesGenerator(Preprocessor &PP,
-                                             InMemoryModuleCache &ModuleCache,
-                                             StringRef OutputFile,
-                                             bool GeneratingReducedBMI)
+ReducedBMIGenerator::ReducedBMIGenerator(Preprocessor &PP,
+                                         InMemoryModuleCache &ModuleCache,
+                                         StringRef OutputFile)
     : PCHGenerator(
           PP, ModuleCache, OutputFile, llvm::StringRef(),
           std::make_shared<PCHBuffer>(),
           /*Extensions=*/ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
           /*AllowASTWithErrors*/ false, /*IncludeTimestamps=*/false,
           /*BuildingImplicitModule=*/false, /*ShouldCacheASTInMemory=*/false,
-          GeneratingReducedBMI) {}
+          /*GeneratingReducedBMI=*/true) {}
 
-Module *CXX20ModulesGenerator::getEmittingModule(ASTContext &Ctx) {
+Module *ReducedBMIGenerator::getEmittingModule(ASTContext &Ctx) {
   Module *M = Ctx.getCurrentNamedModule();
   assert(M && M->isNamedModuleUnit() &&
-         "CXX20ModulesGenerator should only be used with C++20 Named modules.");
+         "ReducedBMIGenerator should only be used with C++20 Named modules.");
   return M;
 }
 
-void CXX20ModulesGenerator::HandleTranslationUnit(ASTContext &Ctx) {
+void ReducedBMIGenerator::HandleTranslationUnit(ASTContext &Ctx) {
+  // We need to do this to make sure the size of reduced BMI not to be larger
+  // than full BMI.
+  //
   // FIMXE: We'd better to wrap such options to a new class ASTWriterOptions
   // since this is not about searching header really.
+  // FIXME2: We'd better to move the class writing full BMI with reduced BMI.
   HeaderSearchOptions &HSOpts =
       getPreprocessor().getHeaderSearchInfo().getHeaderSearchOpts();
   HSOpts.ModulesSkipDiagnosticOptions = true;
   HSOpts.ModulesSkipHeaderSearchPaths = true;
+  HSOpts.ModulesSkipPragmaDiagnosticMappings = true;
 
   PCHGenerator::HandleTranslationUnit(Ctx);
 
