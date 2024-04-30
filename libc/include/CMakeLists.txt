@@ -45,7 +45,7 @@ add_gen_header(
     .llvm-libc-types.mode_t
     .llvm-libc-types.struct_flock
     .llvm-libc-types.struct_flock64
-    .llvm-libc-types.off64
+    .llvm-libc-types.off64_t
     .llvm-libc-types.pid_t
     .llvm-libc-types.off_t
     .llvm_libc_common_h
