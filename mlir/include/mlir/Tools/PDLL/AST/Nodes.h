@@ -597,7 +597,7 @@ public:
   }
 
   /// Return the range result type of this expression.
-  RangeType getType() const { return Base::getType().cast<RangeType>(); }
+  RangeType getType() const { return mlir::cast<RangeType>(Base::getType()); }
 
 private:
   RangeExpr(SMRange loc, RangeType type, unsigned numElements)
@@ -630,7 +630,7 @@ public:
   }
 
   /// Return the tuple result type of this expression.
-  TupleType getType() const { return Base::getType().cast<TupleType>(); }
+  TupleType getType() const { return mlir::cast<TupleType>(Base::getType()); }
 
 private:
   TupleExpr(SMRange loc, TupleType type) : Base(loc, type) {}
