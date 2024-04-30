@@ -1526,7 +1526,7 @@ class Base(unittest.TestCase):
                     os.path.join(os.environ["LLDB_SRC"], "include"),
                     os.path.join(configuration.lldb_obj_root, "include"),
                 ),
-                "LD_EXTRAS": "-shared -l%s\liblldb.lib" % lib_dir,
+                "LD_EXTRAS": "-shared -l%s\\liblldb.lib" % lib_dir,
             }
         else:
             d = {
