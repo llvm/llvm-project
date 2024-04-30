@@ -518,13 +518,15 @@ public:
   /// getInt128Align() - Returns the alignment of Int128.
   unsigned getInt128Align() const { return Int128Align; }
 
-  /// getBitIntAlign/Width - Return aligned size of '_BitInt' and 
+  /// getBitIntAlign/Width - Return aligned size of '_BitInt' and
   /// 'unsigned _BitInt' for this target, in bits.
   unsigned getBitIntWidth(unsigned NumBits) const {
-    return llvm::alignTo(NumBits, getBitIntAlign(NumBits));}
+    return llvm::alignTo(NumBits, getBitIntAlign(NumBits));
+  }
   virtual unsigned getBitIntAlign(unsigned NumBits) const {
-    return std::clamp<unsigned>(llvm::PowerOf2Ceil(NumBits), getCharWidth(), 
-                                getLongLongAlign());}
+    return std::clamp<unsigned>(llvm::PowerOf2Ceil(NumBits), getCharWidth(),
+                                getLongLongAlign());
+  }
 
   /// getShortAccumWidth/Align - Return the size of 'signed short _Accum' and
   /// 'unsigned short _Accum' for this target, in bits.
