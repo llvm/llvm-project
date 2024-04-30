@@ -47,12 +47,6 @@ int64_t getCollapseValue(const List<Clause> &clauses) {
   return 1;
 }
 
-uint32_t getOpenMPVersion(mlir::ModuleOp mod, uint32_t fallback) {
-  if (mlir::Attribute verAttr = mod->getAttr("omp.version"))
-    return llvm::cast<mlir::omp::VersionAttr>(verAttr).getVersion();
-  return fallback;
-}
-
 void genObjectList(const ObjectList &objects,
                    Fortran::lower::AbstractConverter &converter,
                    llvm::SmallVectorImpl<mlir::Value> &operands) {

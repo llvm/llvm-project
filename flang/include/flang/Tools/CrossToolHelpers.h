@@ -133,4 +133,10 @@ void setOpenMPVersionAttribute(mlir::ModuleOp &module, int64_t version) {
       mlir::omp::VersionAttr::get(module.getContext(), version));
 }
 
+int64_t getOpenMPVersionAttribute(mlir::ModuleOp module, int64_t fallback = -1) {
+  if (mlir::Attribute verAttr = module->getAttr("omp.version"))
+    return llvm::cast<mlir::omp::VersionAttr>(verAttr).getVersion();
+  return fallback;
+}
+
 #endif // FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H
