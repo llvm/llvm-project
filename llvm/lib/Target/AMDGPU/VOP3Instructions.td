@@ -970,6 +970,13 @@ let SubtargetPredicate = HasFP6BF6ConversionScaleInsts, mayRaiseFPException = 0 
   defm V_CVT_SCALEF32_PK32_BF16_BF6 : VOP3Inst<"v_cvt_scalef32_pk32_bf16_bf6", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V32BF16_V6I32_F32>>;
 }
 
+let SubtargetPredicate = HasF16BF16ToFP6BF6ConversionScaleInsts, mayRaiseFPException = 0 in {
+  defm V_CVT_SCALEF32_PK32_FP6_F16   : VOP3Inst<"v_cvt_scalef32_pk32_fp6_f16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32F16_F32>,  int_amdgcn_cvt_scalef32_pk32_fp6_f16>;
+  defm V_CVT_SCALEF32_PK32_BF6_F16   : VOP3Inst<"v_cvt_scalef32_pk32_bf6_f16",  VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32F16_F32>,  int_amdgcn_cvt_scalef32_pk32_bf6_f16>;
+  defm V_CVT_SCALEF32_PK32_FP6_BF16  : VOP3Inst<"v_cvt_scalef32_pk32_fp6_bf16", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32BF16_F32>, int_amdgcn_cvt_scalef32_pk32_fp6_bf16>;
+  defm V_CVT_SCALEF32_PK32_BF6_BF16  : VOP3Inst<"v_cvt_scalef32_pk32_bf6_bf16", VOP3_CVT_SCALEF32_PK_F864_Profile<VOP_V6I32_V32BF16_F32>, int_amdgcn_cvt_scalef32_pk32_bf6_bf16>;
+}
+
 let SubtargetPredicate = isGFX10Plus in {
   let isCommutable = 1, isReMaterializable = 1 in {
     defm V_XOR3_B32 : VOP3Inst <"v_xor3_b32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
@@ -1895,4 +1902,11 @@ defm V_CVT_SCALEF32_PK32_F16_FP6  : VOP3_Real_gfx9<0x260, "v_cvt_scalef32_pk32_f
 defm V_CVT_SCALEF32_PK32_BF16_FP6 : VOP3_Real_gfx9<0x261, "v_cvt_scalef32_pk32_bf16_fp6">;
 defm V_CVT_SCALEF32_PK32_F16_BF6  : VOP3_Real_gfx9<0x262, "v_cvt_scalef32_pk32_f16_bf6">;
 defm V_CVT_SCALEF32_PK32_BF16_BF6 : VOP3_Real_gfx9<0x263, "v_cvt_scalef32_pk32_bf16_bf6">;
+}
+
+let OtherPredicates = [HasF16BF16ToFP6BF6ConversionScaleInsts] in {
+defm V_CVT_SCALEF32_PK32_FP6_F16  : VOP3_Real_gfx9<0x258, "v_cvt_scalef32_pk32_fp6_f16">;
+defm V_CVT_SCALEF32_PK32_FP6_BF16 : VOP3_Real_gfx9<0x259, "v_cvt_scalef32_pk32_fp6_bf16">;
+defm V_CVT_SCALEF32_PK32_BF6_F16  : VOP3_Real_gfx9<0x25a, "v_cvt_scalef32_pk32_bf6_f16">;
+defm V_CVT_SCALEF32_PK32_BF6_BF16 : VOP3_Real_gfx9<0x25b, "v_cvt_scalef32_pk32_bf6_bf16">;
 }
