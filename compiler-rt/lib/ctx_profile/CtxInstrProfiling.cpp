@@ -20,30 +20,44 @@
 using namespace __ctx_profile;
 
 namespace {
+// Keep track of all the context roots we actually saw, so we can then traverse
+// them when the user asks for the profile in __llvm_ctx_profile_fetch
 __sanitizer::SpinMutex AllContextsMutex;
 SANITIZER_GUARDED_BY(AllContextsMutex)
 __sanitizer::Vector<ContextRoot *> AllContextRoots;
 
+// utility to taint a pointer by setting the LSB. There is an assumption
+// throughout that the addresses of contexts are even (really, they should be
+// align(8), but "even"-ness is the minimum assumption)
 ContextNode *markAsScratch(const ContextNode *Ctx) {
   return reinterpret_cast<ContextNode *>(reinterpret_cast<uint64_t>(Ctx) | 1);
 }
 
-template <typename T> T consume(T &V) {
+// Used when getting the data from TLS. We don't *really* need to reset, but
+// it's a simpler system if we do.
+template <typename T> inline T consume(T &V) {
   auto R = V;
   V = {0};
   return R;
 }
 
+// We allocate at least kBuffSize Arena pages. The scratch buffer is also that
+// large.
 constexpr size_t kPower = 20;
 constexpr size_t kBuffSize = 1 << kPower;
 
+// Highly unlikely we need more than kBuffSize for a context.
 size_t getArenaAllocSize(size_t Needed) {
   if (Needed >= kBuffSize)
     return 2 * Needed;
   return kBuffSize;
 }
 
+// verify the structural integrity of the context
 bool validate(const ContextRoot *Root) {
+  // all contexts should be laid out in some arena page. Go over each arena
+  // allocated for this Root, and jump over contained contexts based on
+  // self-reported sizes.
   __sanitizer::DenseMap<uint64_t, bool> ContextStartAddrs;
   for (const auto *Mem = Root->FirstMemBlock; Mem; Mem = Mem->next()) {
     const auto *Pos = Mem->start();
@@ -56,6 +70,8 @@ bool validate(const ContextRoot *Root) {
     }
   }
 
+  // Now traverse the contexts again the same way, but validate all nonull
+  // subcontext addresses appear in the set computed above.
   for (const auto *Mem = Root->FirstMemBlock; Mem; Mem = Mem->next()) {
     const auto *Pos = Mem->start();
     while (Pos < Mem->pos()) {
@@ -72,10 +88,19 @@ bool validate(const ContextRoot *Root) {
 }
 } // namespace
 
+// the scratch buffer - what we give when we can't produce a real context (the
+// scratch isn't "real" in that it's expected to be clobbered carelessly - we
+// don't read it). The other important thing is that the callees from a scratch
+// context also get a scratch context.
+// Eventually this can be replaced with per-function buffers, a'la the typical
+// (flat) instrumented FDO buffers. The clobbering aspect won't apply there, but
+// the part about determining the nature of the subcontexts does.
 __thread char __Buffer[kBuffSize] = {0};
 
 #define TheScratchContext                                                      \
   markAsScratch(reinterpret_cast<ContextNode *>(__Buffer))
+
+// init the TLSes
 __thread void *volatile __llvm_ctx_profile_expected_callee[2] = {nullptr,
                                                                  nullptr};
 __thread ContextNode **volatile __llvm_ctx_profile_callsite[2] = {0, 0};
@@ -108,6 +133,7 @@ inline ContextNode *ContextNode::alloc(char *Place, GUID Guid,
                                        uint32_t NrCounters,
                                        uint32_t NrCallsites,
                                        ContextNode *Next) {
+  assert(reinterpret_cast<uint64_t>(Place) % sizeof(void*) == 0);
   return new (Place) ContextNode(Guid, NrCounters, NrCallsites, Next);
 }
 
@@ -119,12 +145,19 @@ void ContextNode::reset() {
       Next->reset();
 }
 
+// If this is the first time we hit a callsite with this (Guid) particular
+// callee, we need to allocate.
 ContextNode *getCallsiteSlow(uint64_t Guid, ContextNode **InsertionPoint,
                              uint32_t NrCounters, uint32_t NrCallsites) {
   auto AllocSize = ContextNode::getAllocSize(NrCounters, NrCallsites);
   auto *Mem = __llvm_ctx_profile_current_context_root->CurrentMem;
   char *AllocPlace = Mem->tryBumpAllocate(AllocSize);
   if (!AllocPlace) {
+    // if we failed to allocate on the current arena, allocate a new arena,
+    // and place it on __llvm_ctx_profile_current_context_root->CurrentMem so we
+    // find it from now on for other cases when we need to getCallsiteSlow.
+    // Note that allocateNewArena will link the allocated memory in the list of
+    // Arenas.
     __llvm_ctx_profile_current_context_root->CurrentMem = Mem =
         Mem->allocateNewArena(getArenaAllocSize(AllocSize), Mem);
   }
@@ -137,13 +170,29 @@ ContextNode *getCallsiteSlow(uint64_t Guid, ContextNode **InsertionPoint,
 ContextNode *__llvm_ctx_profile_get_context(void *Callee, GUID Guid,
                                             uint32_t NrCounters,
                                             uint32_t NrCallsites) {
-  if (!__llvm_ctx_profile_current_context_root) {
+  // fast "out" if we're not even doing contextual collection.
+  if (!__llvm_ctx_profile_current_context_root)
     return TheScratchContext;
-  }
+
+  // also fast "out" if the caller is scratch.
   auto **CallsiteContext = consume(__llvm_ctx_profile_callsite[0]);
   if (!CallsiteContext || isScratch(*CallsiteContext))
     return TheScratchContext;
 
+  // if the callee isn't the expected one, return scratch.
+  // Signal handler(s) could have been invoked at any point in the execution.
+  // Should that have happened, and had it (the handler) be built with
+  // instrumentation, its __llvm_ctx_profile_get_context would have failed here.
+  // Its sub call graph would have then populated
+  // __llvm_ctx_profile_{expected_callee | callsite} at index 1.
+  // The normal call graph may be impacted in that, if the signal handler
+  // happened somewhere before we read the TLS here, we'd see the TLS reset and
+  // we'd also fail here. That would just mean we would loose counter values for
+  // the normal subgraph, this time around. That should be very unlikely, but if
+  // it happens too frequently, we should be able to detect discrepancies in
+  // entry counts (caller-callee). At the moment, the design goes on the
+  // assumption that is so unfrequent, though, that it's not worth doing more
+  // for that case.
   auto *ExpectedCallee = consume(__llvm_ctx_profile_expected_callee[0]);
   if (ExpectedCallee != Callee)
     return TheScratchContext;
@@ -165,6 +214,8 @@ ContextNode *__llvm_ctx_profile_get_context(void *Callee, GUID Guid,
   return Ret;
 }
 
+// This should be called once for a Root. Allocate the first arena, set up the
+// first context.
 void setupContext(ContextRoot *Root, GUID Guid, uint32_t NrCounters,
                   uint32_t NrCallsites) {
   __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(

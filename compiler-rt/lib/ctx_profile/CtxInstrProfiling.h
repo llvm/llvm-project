@@ -53,6 +53,28 @@ private:
   const uint64_t Size;
 };
 
+/// The contextual profile is a directed tree where each node has one parent. A
+/// node (ContextNode) corresponds to a function activation. The root of the
+/// tree is at a function that was marked as entrypoint to the compiler. A node
+/// stores counter values for edges and a vector of subcontexts. These are the
+/// contexts of callees. The index in the subcontext vector corresponds to the
+/// index of the callsite (as was instrumented via llvm.instrprof.callsite). At
+/// that index we find a linked list, potentially empty, of ContextNodes. Direct
+/// calls will have 0 or 1 values in the linked list, but indirect callsites may
+/// have more.
+///
+/// The ContextNode has a fixed sized header describing it - the GUID of the
+/// function, the size of the counter and callsite vectors. It is also an
+/// (intrusive) linked list for the purposes of the indirect call case above.
+///
+/// Allocation is expected to happen on an Arena.
+///
+/// The structure of the ContextNode is known to LLVM, because LLVM needs to:
+///   (1) increment countes, and
+///   (2) form a GEP for the position in the subcontext list of a callsite
+/// This means changes to LLVM contextual profile lowering and changes here
+/// must be coupled.
+/// Note: the header content isn't interesting to LLVM (other than its size)
 class ContextNode final {
   const GUID Guid;
   ContextNode *const Next;
@@ -100,13 +122,16 @@ public:
 
   void reset();
 
+  // since we go through the runtime to get a context back to LLVM, in the entry
+  // basic block, might as well handle incrementing the entry basic block
+  // counter.
   void onEntry() { ++counters()[0]; }
 
   uint64_t entrycount() const { return counters()[0]; }
 };
 
-/// ContextRoots are allocated by LLVM for entrypoints. The main concern is
-/// the total size, LLVM doesn't actually dereference members.
+/// ContextRoots are allocated by LLVM for entrypoints. LLVM is only concerned
+/// with allocating and zero-initializing the global value for it.
 struct ContextRoot {
   ContextNode *FirstNode = nullptr;
   Arena *FirstMemBlock = nullptr;
@@ -118,7 +143,8 @@ struct ContextRoot {
   static_assert(sizeof(Taken) == 1);
 };
 
-/// This API is exposed for testing.
+/// This API is exposed for testing. See the APIs below about the contract with
+/// LLVM.
 inline bool isScratch(const ContextNode *Ctx) {
   return (reinterpret_cast<uint64_t>(Ctx) & 1);
 }
@@ -128,13 +154,20 @@ inline bool isScratch(const ContextNode *Ctx) {
 extern "C" {
 
 // LLVM fills these in when lowering a llvm.instrprof.callsite intrinsic.
-// position 0 is used when the current context isn't scratch, 1 when it is.
+// position 0 is used when the current context isn't scratch, 1 when it is. They
+// are volatile because of signal handlers - we mean to specifically control
+// when the data is loaded.
+//
+/// TLS where LLVM stores the pointer of the called value, as part of lowering a
+/// llvm.instrprof.callsite
 extern __thread void *volatile __llvm_ctx_profile_expected_callee[2];
+/// TLS where LLVM stores the pointer inside a caller's subcontexts vector that
+/// corresponds to the callsite being lowered.
 extern __thread __ctx_profile::ContextNode *
     *volatile __llvm_ctx_profile_callsite[2];
 
 // __llvm_ctx_profile_current_context_root is exposed for unit testing,
-// othwerise it's only used internally.
+// othwerise it's only used internally by compiler-rt/ctx_profile.
 extern __thread __ctx_profile::ContextRoot
     *volatile __llvm_ctx_profile_current_context_root;
 
@@ -156,7 +189,7 @@ __llvm_ctx_profile_get_context(void *Callee, __ctx_profile::GUID Guid,
                                uint32_t NrCounters, uint32_t NrCallsites);
 
 /// Prepares for collection. Currently this resets counter values but preserves
-/// internal structure.
+/// internal context tree structure.
 void __llvm_ctx_profile_start_collection();
 
 /// Completely free allocated memory.
@@ -165,6 +198,9 @@ void __llvm_ctx_profile_free();
 /// Used to obtain the profile. The Writer is called for each root ContextNode,
 /// with the ContextRoot::Taken taken. The Writer is responsible for traversing
 /// the structure underneath.
+/// The Writer's first parameter is an object it knows about, which is what the
+/// caller of __llvm_ctx_profile_fetch passes as the Data parameter. The second
+/// parameter is the root of a context tree.
 bool __llvm_ctx_profile_fetch(
     void *Data, bool (*Writer)(void *, const __ctx_profile::ContextNode &));
 }
