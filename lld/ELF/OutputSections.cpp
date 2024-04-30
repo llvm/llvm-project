@@ -226,6 +226,8 @@ void OutputSection::finalizeInputSections(LinkerScript *script) {
         i = std::prev(mergeSections.end());
         syn->entsize = ms->entsize;
         isd->sections.push_back(syn);
+        // The merge synthetic section inherits the potential spill locations of
+        // its first contained section.
         if (script)
           script->copySpillList(syn, ms);
       }

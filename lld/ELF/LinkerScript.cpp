@@ -584,7 +584,10 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
   // input order).
   sortByPositionThenCommandLine(sizeAfterPrevSort, ret.size());
 
-  // Replace matches after the first with potential spill sections.
+  // The flag --enable-non-contiguous-regions may cause sections to match an
+  // InputSectionDescription in more than one OutputSection. Matches after the
+  // first were collected in the spills set, so replace these with potential
+  // spill sections.
   if (!spills.empty()) {
     for (InputSectionBase *&sec : ret) {
       if (!spills.contains(sec))
@@ -1127,12 +1130,11 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
     // It calculates and assigns the offsets for each section and also
     // updates the output section size.
 
-    DenseSet<InputSection *> spills;
     auto &sections = cast<InputSectionDescription>(cmd)->sections;
     for (InputSection *isec : sections) {
       assert(isec->getParent() == sec);
 
-      // Skip all possible spills.
+      // Skip all potential spill locations.
       if (isa<SpillInputSection>(isec))
         continue;
 
@@ -1432,7 +1434,7 @@ const Defined *LinkerScript::assignAddresses() {
   return getChangedSymbolAssignment(oldValues);
 }
 
-static bool isRegionOverflowed(MemoryRegion *mr) {
+static bool hasRegionOverflowed(MemoryRegion *mr) {
   if (!mr)
     return false;
   return mr->curPos - mr->getOrigin() > mr->getLength();
@@ -1456,16 +1458,19 @@ bool LinkerScript::spillSections() {
     if (!osec->size || !osec->memRegion)
       continue;
 
-    DenseSet<InputSection *> spills;
+    // Input sections that have replaced a potential spill and should be removed
+    // from their input section description.
+    DenseSet<InputSection *> spilledInputSections;
+
     for (SectionCommand *cmd : reverse(osec->commands)) {
-      if (!isRegionOverflowed(osec->memRegion) &&
-          !isRegionOverflowed(osec->lmaRegion))
+      if (!hasRegionOverflowed(osec->memRegion) &&
+          !hasRegionOverflowed(osec->lmaRegion))
         break;
 
-      auto *is = dyn_cast<InputSectionDescription>(cmd);
-      if (!is)
+      auto *isd = dyn_cast<InputSectionDescription>(cmd);
+      if (!isd)
         continue;
-      for (InputSection *isec : reverse(is->sections)) {
+      for (InputSection *isec : reverse(isd->sections)) {
         // Potential spill locations cannot be spilled.
         if (isa<SpillInputSection>(isec))
           continue;
@@ -1484,29 +1489,35 @@ bool LinkerScript::spillSections() {
         else
           list.head = spill->next;
 
-        spills.insert(isec);
+        spilledInputSections.insert(isec);
 
         // Replace the next spill location with the spilled section and adjust
         // its properties to match the new location.
         *llvm::find(spill->isd->sections, spill) = isec;
         isec->parent = spill->parent;
+
         // The alignment of the spill section may have diverged from the
-        // original, but correct assignment requires the spill's alignment,
-        // not the original.
+        // original due to e.g. a SUBALIGN. Correct assignment requires the
+        // spill's alignment to be used, not the original.
         isec->addralign = spill->addralign;
 
-        // Record the reduction in overage.
+        // Record the (potential) reduction in the region's end position.
         osec->memRegion->curPos -= isec->getSize();
         if (osec->lmaRegion)
           osec->lmaRegion->curPos -= isec->getSize();
-        if (!isRegionOverflowed(osec->memRegion) &&
-            !isRegionOverflowed(osec->lmaRegion))
+
+        // Spilling continues until the end position no longer overflows the
+        // region. Then, another round of address assignment will either confirm
+        // the spill's success or lead to yet more spilling.
+        if (!hasRegionOverflowed(osec->memRegion) &&
+            !hasRegionOverflowed(osec->lmaRegion))
           break;
       }
-      // Remove any spilled sections.
-      if (!spills.empty())
-        llvm::erase_if(is->sections, [&](InputSection *isec) {
-          return spills.contains(isec);
+
+      // Remove any spilled input sections to complete their move.
+      if (!spilledInputSections.empty())
+        llvm::erase_if(isd->sections, [&](InputSection *isec) {
+          return spilledInputSections.contains(isec);
         });
     }
   }
