@@ -50,6 +50,7 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   bool HasReferenceTypes = false;
   bool HasExtendedConst = false;
   bool HasMultiMemory = false;
+  bool HasHalfPrecision = false;
 
   /// What processor and OS we're targeting.
   Triple TargetTriple;
@@ -93,6 +94,7 @@ public:
   bool hasAddr64() const { return TargetTriple.isArch64Bit(); }
   bool hasSIMD128() const { return SIMDLevel >= SIMD128; }
   bool hasRelaxedSIMD() const { return SIMDLevel >= RelaxedSIMD; }
+  bool hasHalfPrecision() const { return HasHalfPrecision; }
   bool hasAtomics() const { return HasAtomics; }
   bool hasNontrappingFPToInt() const { return HasNontrappingFPToInt; }
   bool hasSignExt() const { return HasSignExt; }
