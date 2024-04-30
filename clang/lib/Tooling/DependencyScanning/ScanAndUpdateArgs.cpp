@@ -26,11 +26,19 @@ void tooling::dependencies::configureInvocationForCaching(
   auto &FrontendOpts = CI.getFrontendOpts();
   FrontendOpts.CacheCompileJob = true;
   FrontendOpts.IncludeTimestamps = false;
+
   // Clear this otherwise it defeats the purpose of making the compilation key
   // independent of certain arguments.
-  CI.getCodeGenOpts().DwarfDebugFlags.clear();
+  auto &CodeGenOpts = CI.getCodeGenOpts();
+  if (CI.getFrontendOpts().ProgramAction != frontend::ActionKind::EmitObj) {
+    CodeGenOpts.UseCASBackend = false;
+    CodeGenOpts.EmitCASIDFile = false;
+    auto &LLVMArgs = FrontendOpts.LLVMArgs;
+    llvm::erase(LLVMArgs, "-cas-friendly-debug-info");
+  }
+  CodeGenOpts.DwarfDebugFlags.clear();
   resetBenignCodeGenOptions(FrontendOpts.ProgramAction, CI.getLangOpts(),
-                            CI.getCodeGenOpts());
+                            CodeGenOpts);
 
   HeaderSearchOptions &HSOpts = CI.getHeaderSearchOpts();
   // Avoid writing potentially volatile diagnostic options into pcms.
@@ -78,7 +86,7 @@ void tooling::dependencies::configureInvocationForCaching(
       // Disable `-gmodules` to avoid debug info referencing a non-existent PCH
       // filename.
       // FIXME: we should also allow -gmodules if there is no PCH involved.
-      CI.getCodeGenOpts().DebugTypeExtRefs = false;
+      CodeGenOpts.DebugTypeExtRefs = false;
       HSOpts.ModuleFormat = "raw";
     }
     // Clear APINotes options.
