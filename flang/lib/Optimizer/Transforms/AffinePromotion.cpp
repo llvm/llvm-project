@@ -111,7 +111,7 @@ private:
 
   bool analyzeReference(mlir::Value memref, mlir::Operation *op) {
     if (auto acoOp = memref.getDefiningOp<ArrayCoorOp>()) {
-      if (acoOp.getMemref().getType().isa<fir::BoxType>()) {
+      if (mlir::isa<fir::BoxType>(acoOp.getMemref().getType())) {
         // TODO: Look if and how fir.box can be promoted to affine.
         LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: cannot promote loop, "
                                    "array memory operation uses fir.box\n";
@@ -222,7 +222,7 @@ private:
       return affineBinaryOp(mlir::AffineExprKind::Mod, op.getLhs(),
                             op.getRhs());
     if (auto op = value.getDefiningOp<mlir::arith::ConstantOp>())
-      if (auto intConstant = op.getValue().dyn_cast<IntegerAttr>())
+      if (auto intConstant = mlir::dyn_cast<IntegerAttr>(op.getValue()))
         return toAffineExpr(intConstant.getInt());
     if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(value)) {
       affineArgs.push_back(value);
@@ -331,15 +331,16 @@ static mlir::AffineMap createArrayIndexAffineMap(unsigned dimensions,
 
 static std::optional<int64_t> constantIntegerLike(const mlir::Value value) {
   if (auto definition = value.getDefiningOp<mlir::arith::ConstantOp>())
-    if (auto stepAttr = definition.getValue().dyn_cast<IntegerAttr>())
+    if (auto stepAttr = mlir::dyn_cast<IntegerAttr>(definition.getValue()))
       return stepAttr.getInt();
   return {};
 }
 
 static mlir::Type coordinateArrayElement(fir::ArrayCoorOp op) {
   if (auto refType =
-          op.getMemref().getType().dyn_cast_or_null<ReferenceType>()) {
-    if (auto seqType = refType.getEleTy().dyn_cast_or_null<SequenceType>()) {
+          mlir::dyn_cast_or_null<ReferenceType>(op.getMemref().getType())) {
+    if (auto seqType =
+            mlir::dyn_cast_or_null<SequenceType>(refType.getEleTy())) {
       return seqType.getEleTy();
     }
   }
