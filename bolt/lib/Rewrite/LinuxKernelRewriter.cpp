@@ -248,6 +248,9 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   /// Update ORC data in the binary.
   Error rewriteORCTables();
 
+  /// Validate written ORC tables after binary emission.
+  Error validateORCTables();
+
   /// Static call table handling.
   Error readStaticCalls();
   Error rewriteStaticCalls();
@@ -356,6 +359,9 @@ public:
     updateLKMarkers();
 
     if (Error E = updateStaticKeysJumpTablePostEmit())
+      return E;
+
+    if (Error E = validateORCTables())
       return E;
 
     return Error::success();
@@ -832,6 +838,31 @@ Error LinuxKernelRewriter::rewriteORCTables() {
   while (UnwindWriter.bytesRemaining()) {
     if (Error E = emitORCEntry(LastIP, NullORC, nullptr, /*Force*/ true))
       return E;
+  }
+
+  return Error::success();
+}
+
+Error LinuxKernelRewriter::validateORCTables() {
+  if (!ORCUnwindIPSection)
+    return Error::success();
+
+  const uint64_t IPSectionAddress = ORCUnwindIPSection->getAddress();
+  DataExtractor IPDE = DataExtractor(ORCUnwindIPSection->getOutputContents(),
+                                     BC.AsmInfo->isLittleEndian(),
+                                     BC.AsmInfo->getCodePointerSize());
+  DataExtractor::Cursor IPCursor(0);
+  uint64_t PrevIP = 0;
+  for (uint32_t Index = 0; Index < NumORCEntries; ++Index) {
+    const uint64_t IP =
+        IPSectionAddress + IPCursor.tell() + (int32_t)IPDE.getU32(IPCursor);
+    if (!IPCursor)
+      return createStringError(errc::executable_format_error,
+                               "out of bounds while reading ORC IP table: %s",
+                               toString(IPCursor.takeError()).c_str());
+
+    assert(IP >= PrevIP && "Unsorted ORC table detected");
+    PrevIP = IP;
   }
 
   return Error::success();
