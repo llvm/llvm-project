@@ -43,12 +43,6 @@ private:
 
 public:
   BaseIndexOffset() = default;
-  BaseIndexOffset(Register Base, Register Index, bool IsIndexSignExt)
-      : BaseReg(Base), IndexReg(Index) {}
-  BaseIndexOffset(Register Base, Register Index, int64_t Offset,
-                  bool IsIndexSignExt)
-      : BaseReg(Base), IndexReg(Index), Offset(Offset) {}
-
   Register getBase() { return BaseReg; }
   Register getBase() const { return BaseReg; }
   Register getIndex() { return IndexReg; }
