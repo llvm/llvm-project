@@ -17,7 +17,10 @@ namespace detail {
 LogicalResult verifyArmSMETileOpInterface(Operation *);
 }
 
+// The first in-memory SME tile ID. This is set to 16 as that is the first tile
+// ID larger than any virtual tile ID supported by the SME ISA.
 static constexpr unsigned kInMemoryTileIdBase = 16;
+
 #include "mlir/Dialect/ArmSME/IR/ArmSMEOpInterfaces.h.inc"
 } // namespace mlir::arm_sme
 

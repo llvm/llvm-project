@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-arm-sme-tile-allocation -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s -test-arm-sme-tile-allocation -split-input-file | FileCheck %s
 
 // -----
 

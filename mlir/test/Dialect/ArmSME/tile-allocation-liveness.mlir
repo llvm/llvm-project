@@ -3,14 +3,14 @@
 
 // This file tests some simple aspects of using liveness in the SME tile allocator.
 
-//       CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
-//  CHECK-LIVE-RANGE-NEXT: @constant_with_multiple_users
-//       CHECK-LIVE-RANGE: ^bb0:
-//       CHECK-LIVE-RANGE: S  arm_sme.zero
-//  CHECK-LIVE-RANGE-NEXT: |S arm_sme.move_vector_to_tile_slice
-//  CHECK-LIVE-RANGE-NEXT: || arm_sme.move_vector_to_tile_slice
-//  CHECK-LIVE-RANGE-NEXT: |E test.some_use
-//  CHECK-LIVE-RANGE-NEXT: E  test.some_use
+//  CHECK-LIVE-RANGE-LABEL: @constant_with_multiple_users
+//        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
+//        CHECK-LIVE-RANGE: ^bb0:
+//        CHECK-LIVE-RANGE: S  arm_sme.zero
+//   CHECK-LIVE-RANGE-NEXT: |S arm_sme.move_vector_to_tile_slice
+//   CHECK-LIVE-RANGE-NEXT: || arm_sme.move_vector_to_tile_slice
+//   CHECK-LIVE-RANGE-NEXT: |E test.some_use
+//   CHECK-LIVE-RANGE-NEXT: E  test.some_use
 
 // CHECK-LABEL: @constant_with_multiple_users(
 // CHECK-SAME:                                %[[VECTOR_A:.*]]: vector<[4]xf32>, %[[VECTOR_B:.*]]: vector<[4]xf32>
@@ -29,13 +29,13 @@ func.func @constant_with_multiple_users(%a: vector<[4]xf32>, %b: vector<[4]xf32>
 
 // -----
 
-//       CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
-//  CHECK-LIVE-RANGE-NEXT: @value_with_multiple_users
-//       CHECK-LIVE-RANGE: ^bb0:
-//  CHECK-LIVE-RANGE-NEXT: |S arm_sme.move_vector_to_tile_slice
-//  CHECK-LIVE-RANGE-NEXT: || arm_sme.move_vector_to_tile_slice
-//  CHECK-LIVE-RANGE-NEXT: |E test.some_use
-//  CHECK-LIVE-RANGE-NEXT: E  test.some_use
+//  CHECK-LIVE-RANGE-LABEL: @value_with_multiple_users
+//        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
+//        CHECK-LIVE-RANGE: ^bb0:
+//   CHECK-LIVE-RANGE-NEXT: |S arm_sme.move_vector_to_tile_slice
+//   CHECK-LIVE-RANGE-NEXT: || arm_sme.move_vector_to_tile_slice
+//   CHECK-LIVE-RANGE-NEXT: |E test.some_use
+//   CHECK-LIVE-RANGE-NEXT: E  test.some_use
 
 func.func @value_with_multiple_users(%tile: vector<[4]x[4]xf32>, %a: vector<[4]xf32>, %b: vector<[4]xf32>, %index: index) {
   // expected-error@below {{op failed to rectify tile operand with tile result (move required)}}
@@ -48,31 +48,31 @@ func.func @value_with_multiple_users(%tile: vector<[4]x[4]xf32>, %a: vector<[4]x
 
 // -----
 
-//       CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
-//  CHECK-LIVE-RANGE-NEXT: @reuse_tiles_after_initial_use
-//       CHECK-LIVE-RANGE: ^bb0:
-//  CHECK-LIVE-RANGE-NEXT: S        arm_sme.get_tile
-//  CHECK-LIVE-RANGE-NEXT: |S       arm_sme.get_tile
-//  CHECK-LIVE-RANGE-NEXT: ||S      arm_sme.get_tile
-//  CHECK-LIVE-RANGE-NEXT: |||S     arm_sme.get_tile
-//  CHECK-LIVE-RANGE-NEXT: ||||     test.dummy
-//  CHECK-LIVE-RANGE-NEXT: ||||     test.dummy
-//  CHECK-LIVE-RANGE-NEXT: ||||     test.dummy
-//  CHECK-LIVE-RANGE-NEXT: E|||     test.some_use
-//  CHECK-LIVE-RANGE-NEXT:  E||     test.some_use
-//  CHECK-LIVE-RANGE-NEXT:   E|     test.some_use
-//  CHECK-LIVE-RANGE-NEXT:    E     test.some_use
-//  CHECK-LIVE-RANGE-NEXT:     S    arm_sme.zero
-//  CHECK-LIVE-RANGE-NEXT:     |S   arm_sme.zero
-//  CHECK-LIVE-RANGE-NEXT:     ||S  arm_sme.zero
-//  CHECK-LIVE-RANGE-NEXT:     |||S arm_sme.zero
-//  CHECK-LIVE-RANGE-NEXT:     |||| test.dummy
-//  CHECK-LIVE-RANGE-NEXT:     |||| test.dummy
-//  CHECK-LIVE-RANGE-NEXT:     |||| test.dummy
-//  CHECK-LIVE-RANGE-NEXT:     E||| test.some_use
-//  CHECK-LIVE-RANGE-NEXT:      E|| test.some_use
-//  CHECK-LIVE-RANGE-NEXT:       E| test.some_use
-//  CHECK-LIVE-RANGE-NEXT:        E test.some_use
+//  CHECK-LIVE-RANGE-LABEL: @reuse_tiles_after_initial_use
+//        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
+//        CHECK-LIVE-RANGE: ^bb0:
+//   CHECK-LIVE-RANGE-NEXT: S        arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT: |S       arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT: ||S      arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT: |||S     arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT: ||||     test.dummy
+//   CHECK-LIVE-RANGE-NEXT: ||||     test.dummy
+//   CHECK-LIVE-RANGE-NEXT: ||||     test.dummy
+//   CHECK-LIVE-RANGE-NEXT: E|||     test.some_use
+//   CHECK-LIVE-RANGE-NEXT:  E||     test.some_use
+//   CHECK-LIVE-RANGE-NEXT:   E|     test.some_use
+//   CHECK-LIVE-RANGE-NEXT:    E     test.some_use
+//   CHECK-LIVE-RANGE-NEXT:     S    arm_sme.zero
+//   CHECK-LIVE-RANGE-NEXT:     |S   arm_sme.zero
+//   CHECK-LIVE-RANGE-NEXT:     ||S  arm_sme.zero
+//   CHECK-LIVE-RANGE-NEXT:     |||S arm_sme.zero
+//   CHECK-LIVE-RANGE-NEXT:     |||| test.dummy
+//   CHECK-LIVE-RANGE-NEXT:     |||| test.dummy
+//   CHECK-LIVE-RANGE-NEXT:     |||| test.dummy
+//   CHECK-LIVE-RANGE-NEXT:     E||| test.some_use
+//   CHECK-LIVE-RANGE-NEXT:      E|| test.some_use
+//   CHECK-LIVE-RANGE-NEXT:       E| test.some_use
+//   CHECK-LIVE-RANGE-NEXT:        E test.some_use
 
 // CHECK-LABEL: @reuse_tiles_after_initial_use
 func.func @reuse_tiles_after_initial_use() {
@@ -111,16 +111,16 @@ func.func @reuse_tiles_after_initial_use() {
 
 // -----
 
-//       CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
-//  CHECK-LIVE-RANGE-NEXT: @non_overlapping_branches
-//       CHECK-LIVE-RANGE: ^bb1:
-//  CHECK-LIVE-RANGE-NEXT: S arm_sme.zero
-//  CHECK-LIVE-RANGE-NEXT: | arm_sme.copy_tile
-//  CHECK-LIVE-RANGE-NEXT: E cf.br
-//  CHECK-LIVE-RANGE-NEXT: ^bb2:
-//  CHECK-LIVE-RANGE-NEXT: S arm_sme.get_tile
-//  CHECK-LIVE-RANGE-NEXT: | arm_sme.copy_tile
-//  CHECK-LIVE-RANGE-NEXT: E cf.br
+//  CHECK-LIVE-RANGE-LABEL: @non_overlapping_branches
+//        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
+//        CHECK-LIVE-RANGE: ^bb1:
+//   CHECK-LIVE-RANGE-NEXT: S arm_sme.zero
+//   CHECK-LIVE-RANGE-NEXT: | arm_sme.copy_tile
+//   CHECK-LIVE-RANGE-NEXT: E cf.br
+//   CHECK-LIVE-RANGE-NEXT: ^bb2:
+//   CHECK-LIVE-RANGE-NEXT: S arm_sme.get_tile
+//   CHECK-LIVE-RANGE-NEXT: | arm_sme.copy_tile
+//   CHECK-LIVE-RANGE-NEXT: E cf.br
 
 // CHECK-LABEL: @non_overlapping_branches
 func.func @non_overlapping_branches(%cond: i1) {
@@ -141,8 +141,20 @@ func.func @non_overlapping_branches(%cond: i1) {
 
 // -----
 
-//       CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
-// <deliberately omitted>
+// Here %vecA and %vecB are not merged into the same live range (as they are unknown values).
+// This means that %vecA and %vecB are both allocated to different tiles (which is not legal).
+func.func @overlapping_branches(%cond: i1, %vecA: vector<[4]x[4]xf32>, %vecB: vector<[4]x[4]xf32>) {
+  // expected-error@below {{op failed to rectify tile operand with tile result (move required)}}
+  %tile = scf.if %cond -> vector<[4]x[4]xf32> {
+    scf.yield %vecA : vector<[4]x[4]xf32>
+  } else {
+    scf.yield %vecB : vector<[4]x[4]xf32>
+  }
+  "test.some_use"(%tile) : (vector<[4]x[4]xf32>) -> ()
+  return
+}
+
+// -----
 
 // CHECK-LABEL: @constant_loop_init_with_multiple_users
 func.func @constant_loop_init_with_multiple_users(%a: vector<[4]xf32>, %b: vector<[4]xf32>) {
@@ -169,14 +181,14 @@ func.func @constant_loop_init_with_multiple_users(%a: vector<[4]xf32>, %b: vecto
 
 // -----
 
-//       CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
-//  CHECK-LIVE-RANGE-NEXT: @run_out_of_tiles_but_avoid_spill
-//       CHECK-LIVE-RANGE: ^bb2:
-//  CHECK-LIVE-RANGE-NEXT: |S    arm_sme.copy_tile
-//  CHECK-LIVE-RANGE-NEXT: ||S   arm_sme.copy_tile
-//  CHECK-LIVE-RANGE-NEXT: |||S  arm_sme.copy_tile
-//  CHECK-LIVE-RANGE-NEXT: ||||S arm_sme.copy_tile
-//  CHECK-LIVE-RANGE-NEXT: EEEEE cf.br
+//  CHECK-LIVE-RANGE-LABEL: @run_out_of_tiles_but_avoid_spill
+//        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
+//        CHECK-LIVE-RANGE: ^bb2:
+//   CHECK-LIVE-RANGE-NEXT: |S    arm_sme.copy_tile
+//   CHECK-LIVE-RANGE-NEXT: ||S   arm_sme.copy_tile
+//   CHECK-LIVE-RANGE-NEXT: |||S  arm_sme.copy_tile
+//   CHECK-LIVE-RANGE-NEXT: ||||S arm_sme.copy_tile
+//   CHECK-LIVE-RANGE-NEXT: EEEEE cf.br
 
 // Note in the live ranges (above) there is five tile values, but we only have four tiles.
 
@@ -222,20 +234,20 @@ func.func @run_out_of_tiles_but_avoid_spill(%a: vector<[4]xf32>, %b: vector<[4]x
 // We should be able to avoid spills like this, but logic handling this case is
 // not implemented yet. Note tile ID >= 16 means a spill/in-memory tile.
 
-//       CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
-//  CHECK-LIVE-RANGE-NEXT: @avoidable_spill
-//       CHECK-LIVE-RANGE: ^bb2:
-//  CHECK-LIVE-RANGE-NEXT: ||     test.some_use
-//  CHECK-LIVE-RANGE-NEXT: ||S    arm_sme.move_vector_to_tile_slice
-//  CHECK-LIVE-RANGE-NEXT: |||S   arm_sme.move_vector_to_tile_slice
-//  CHECK-LIVE-RANGE-NEXT: ||||S  arm_sme.move_vector_to_tile_slice
-//  CHECK-LIVE-RANGE-NEXT: |||||S arm_sme.move_vector_to_tile_slice
-//  CHECK-LIVE-RANGE-NEXT: ||E||| test.some_use
-//  CHECK-LIVE-RANGE-NEXT: || E|| test.some_use
-//  CHECK-LIVE-RANGE-NEXT: ||  E| test.some_use
-//  CHECK-LIVE-RANGE-NEXT: ||   E test.some_use
-//  CHECK-LIVE-RANGE-NEXT: ||     arith.addi
-//  CHECK-LIVE-RANGE-NEXT: EE     cf.br
+//  CHECK-LIVE-RANGE-LABEL: @avoidable_spill
+//        CHECK-LIVE-RANGE: ========== Coalesced Live Ranges:
+//        CHECK-LIVE-RANGE: ^bb2:
+//   CHECK-LIVE-RANGE-NEXT: ||     test.some_use
+//   CHECK-LIVE-RANGE-NEXT: ||S    arm_sme.move_vector_to_tile_slice
+//   CHECK-LIVE-RANGE-NEXT: |||S   arm_sme.move_vector_to_tile_slice
+//   CHECK-LIVE-RANGE-NEXT: ||||S  arm_sme.move_vector_to_tile_slice
+//   CHECK-LIVE-RANGE-NEXT: |||||S arm_sme.move_vector_to_tile_slice
+//   CHECK-LIVE-RANGE-NEXT: ||E||| test.some_use
+//   CHECK-LIVE-RANGE-NEXT: || E|| test.some_use
+//   CHECK-LIVE-RANGE-NEXT: ||  E| test.some_use
+//   CHECK-LIVE-RANGE-NEXT: ||   E test.some_use
+//   CHECK-LIVE-RANGE-NEXT: ||     arith.addi
+//   CHECK-LIVE-RANGE-NEXT: EE     cf.br
 
 // Note in the live ranges (above) there is two constant live-ins (first two ranges),
 // which gives six overlapping live ranges. The allocator currently will spill the

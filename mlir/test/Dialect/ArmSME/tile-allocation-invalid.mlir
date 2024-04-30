@@ -1,6 +1,4 @@
-// RUN: mlir-opt %s -convert-scf-to-cf -test-arm-sme-tile-allocation -split-input-file -verify-diagnostics
-
-// -----
+// RUN: mlir-opt %s -convert-scf-to-cf -test-arm-sme-tile-allocation -verify-diagnostics
 
 // Select between tileA and tileB. This is currently unsupported as it would
 // require inserting (runtime) tile moves.

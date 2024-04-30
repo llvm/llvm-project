@@ -126,20 +126,20 @@ def EnableArmStreaming
 
 def TestTileAllocation
     : Pass<"test-arm-sme-tile-allocation", "mlir::func::FuncOp"> {
-  let summary = "Tests SME tile allocation";
+  let summary = "Tests SME 'virtual tile' allocation";
   let description = [{
     This pass does tile allocation for SME "virtual tiles". It is run at the
     'func.func' op level, and assigns tile IDs (via an attribute) to all ops
     that implement the `ArmSMETileOpInterface`. Note: This pass is only intended
     to be used for testing, tile allocation is done as part of the ArmSME to
-    LLVM conversion.
+    LLVM conversion (`convert-arm-sme-to-llvm`).
   }];
   let options = [
     Option<"dumpTileLiveRanges", "dump-tile-live-ranges",
            "bool", /*default=*/"false",
            "Dump the live ranges of SME tiles (for debugging)">
   ];
-  let dependentDialects = ["func::FuncDialect"];
+  let dependentDialects = ["func::FuncDialect", "arm_sme::ArmSMEDialect"];
 }
 
 def OuterProductFusion
