@@ -9,7 +9,7 @@ via a configuration option, modifying the format string appropriately and
 removing now-unnecessary calls to ``std::string::c_str()`` and
 ``std::string::data()``.
 
-In other words, it turns lines like:
+For example, it turns lines like
 
 .. code-block:: c++
 
