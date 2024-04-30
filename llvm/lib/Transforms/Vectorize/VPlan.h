@@ -1455,14 +1455,17 @@ class VPWidenCallRecipe : public VPSingleDefRecipe {
   /// chosen vectorized variant, so there will be a different vplan for each
   /// VF with a valid variant.
   Function *Variant;
+  /// Result type for the cast.
+  Type *ResultTy;
 
 public:
   template <typename IterT>
   VPWidenCallRecipe(Value *UV, iterator_range<IterT> CallArguments,
-                    Intrinsic::ID VectorIntrinsicID, DebugLoc DL = {},
-                    Function *Variant = nullptr)
+                    Intrinsic::ID VectorIntrinsicID, Type *ResultTy,
+                    DebugLoc DL = {}, Function *Variant = nullptr)
       : VPSingleDefRecipe(VPDef::VPWidenCallSC, CallArguments, UV, DL),
-        VectorIntrinsicID(VectorIntrinsicID), Variant(Variant) {
+        VectorIntrinsicID(VectorIntrinsicID), Variant(Variant),
+        ResultTy(ResultTy) {
     assert(
         isa<Function>(getOperand(getNumOperands() - 1)->getLiveInIRValue()) &&
         "last operand must be the called function");
@@ -1472,7 +1475,7 @@ public:
 
   VPWidenCallRecipe *clone() override {
     return new VPWidenCallRecipe(getUnderlyingValue(), operands(),
-                                 VectorIntrinsicID, getDebugLoc(), Variant);
+                                 VectorIntrinsicID, ResultTy, getDebugLoc(), Variant);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCallSC)
@@ -1496,6 +1499,11 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
+
+  /// Returns the result type of the cast.
+  Type *getResultType() const { return ResultTy; }
+
+  void setResultType(Type *newResTy) { ResultTy = newResTy; }
 };
 
 /// A recipe for widening select instructions.

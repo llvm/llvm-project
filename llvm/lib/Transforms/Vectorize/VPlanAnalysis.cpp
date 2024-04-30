@@ -110,11 +110,6 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
   llvm_unreachable("Unhandled opcode!");
 }
 
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenCallRecipe *R) {
-  auto &CI = *cast<CallInst>(R->getUnderlyingInstr());
-  return CI.getType();
-}
-
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenMemoryRecipe *R) {
   assert((isa<VPWidenLoadRecipe>(R) || isa<VPWidenLoadEVLRecipe>(R)) &&
          "Store recipes should not define any values");
@@ -238,7 +233,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
             return inferScalarType(R->getOperand(0));
           })
           .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
-                VPWidenCallRecipe, VPWidenMemoryRecipe, VPWidenSelectRecipe>(
+                VPWidenMemoryRecipe, VPWidenSelectRecipe>(
               [this](const auto *R) { return inferScalarTypeForRecipe(R); })
           .Case<VPInterleaveRecipe>([V](const VPInterleaveRecipe *R) {
             // TODO: Use info from interleave group.
@@ -248,6 +243,8 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
               [](const VPWidenCastRecipe *R) { return R->getResultType(); })
           .Case<VPScalarCastRecipe>(
               [](const VPScalarCastRecipe *R) { return R->getResultType(); })
+          .Case<VPWidenCallRecipe>(
+              [](const VPWidenCallRecipe *R) { return R->getResultType(); })
           .Case<VPExpandSCEVRecipe>([](const VPExpandSCEVRecipe *R) {
             return R->getSCEV()->getType();
           });

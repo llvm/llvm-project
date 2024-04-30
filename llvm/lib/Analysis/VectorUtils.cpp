@@ -611,6 +611,14 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
         !InstructionSet.count(I))
       continue;
 
+    // Byteswaps require at least 16 bits
+    if (const auto *II = dyn_cast<IntrinsicInst>(I)) {
+      if (II->getIntrinsicID() == Intrinsic::bswap) {
+        DBits[Leader] |= 0xFFFF;
+        DBits[I] |= 0xFFFF;
+      }
+    }
+
     // Unsafe casts terminate a chain unsuccessfully. We can't do anything
     // useful with bitcasts, ptrtoints or inttoptrs and it'd be unsafe to
     // transform anything that relies on them.
@@ -687,6 +695,30 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
                 isa<ShlOperator, LShrOperator, AShrOperator>(U.getUser()) &&
                 U.getOperandNo() == 1)
               return CI->uge(MinBW);
+            // Ignore the call pointer when considering intrinsics that
+            // DemandedBits understands.
+            if (U->getType()->isPointerTy() && isa<CallInst>(U.getUser()) &&
+                dyn_cast<CallInst>(U.getUser())->getCalledFunction() ==
+                    dyn_cast<Function>(U)) {
+              if (const auto *II = dyn_cast<IntrinsicInst>(U.getUser())) {
+                // Only ignore cases that DemandedBits understands.
+                switch (II->getIntrinsicID()) {
+                default:
+                  break;
+                case Intrinsic::umax:
+                case Intrinsic::umin:
+                case Intrinsic::smax:
+                case Intrinsic::smin:
+                case Intrinsic::fshl:
+                case Intrinsic::fshr:
+                case Intrinsic::cttz:
+                case Intrinsic::ctlz:
+                case Intrinsic::bitreverse:
+                case Intrinsic::bswap:
+                  return false;
+                }
+              }
+            }
             uint64_t BW = bit_width(DB.getDemandedBits(&U).getZExtValue());
             return bit_ceil(BW) > MinBW;
           }))
