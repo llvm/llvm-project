@@ -3249,7 +3249,7 @@ ASTReader::RecordLocation ASTReader::DeclCursorForID(GlobalDeclID ID,
   ModuleFile *M = I->second;
   const DeclOffset &DOffs =
       M->DeclOffsets[ID.get() - M->BaseDeclID - NUM_PREDEF_DECL_IDS];
-  Loc = TranslateSourceLocation(*M, DOffs.getLocation());
+  Loc = ReadSourceLocation(*M, DOffs.getRawLoc());
   return RecordLocation(M, DOffs.getBitOffset(M->DeclsBlockStartOffset));
 }
 
