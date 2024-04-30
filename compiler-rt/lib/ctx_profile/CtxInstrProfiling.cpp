@@ -133,7 +133,7 @@ inline ContextNode *ContextNode::alloc(char *Place, GUID Guid,
                                        uint32_t NrCounters,
                                        uint32_t NrCallsites,
                                        ContextNode *Next) {
-  assert(reinterpret_cast<uint64_t>(Place) % sizeof(void*) == 0);
+  assert(reinterpret_cast<uint64_t>(Place) % sizeof(void *) == 0);
   return new (Place) ContextNode(Guid, NrCounters, NrCallsites, Next);
 }
 
