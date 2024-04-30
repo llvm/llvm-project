@@ -1612,8 +1612,6 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   if (Op2Info.isConstant())
     ConstantMatCost += getConstantMatCost(1, Op2Info);
 
-  // Assuming all other instructions have the same cost until a need arises to
-  // differentiate them.
   unsigned Op;
   switch (TLI->InstructionOpcodeToISD(Opcode)) {
   case ISD::ADD:
@@ -1658,6 +1656,8 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     Op = RISCV::VFSGNJN_VV;
     break;
   default:
+    // Assuming all other instructions have the same cost until a need arises to
+    // differentiate them.
     return ConstantMatCost + BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind,
                                                            Op1Info, Op2Info,
                                                            Args, CxtI);
