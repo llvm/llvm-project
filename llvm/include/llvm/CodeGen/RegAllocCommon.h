@@ -10,22 +10,24 @@
 #define LLVM_CODEGEN_REGALLOCCOMMON_H
 
 #include <functional>
+#include <llvm/CodeGen/Register.h>
 
 namespace llvm {
 
-class TargetRegisterClass;
 class TargetRegisterInfo;
+class MachineRegisterInfo;
 
 typedef std::function<bool(const TargetRegisterInfo &TRI,
-                           const TargetRegisterClass &RC)> RegClassFilterFunc;
+                           const MachineRegisterInfo &MRI, const Register Reg)>
+    RegClassFilterFunc;
 
 /// Default register class filter function for register allocation. All virtual
 /// registers should be allocated.
 static inline bool allocateAllRegClasses(const TargetRegisterInfo &,
-                                         const TargetRegisterClass &) {
+                                         const MachineRegisterInfo &,
+                                         const Register) {
   return true;
 }
-
 }
 
 #endif // LLVM_CODEGEN_REGALLOCCOMMON_H

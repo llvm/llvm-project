@@ -417,8 +417,7 @@ INITIALIZE_PASS(RegAllocFast, "regallocfast", "Fast Register Allocator", false,
 
 bool RegAllocFast::shouldAllocateRegister(const Register Reg) const {
   assert(Reg.isVirtual());
-  const TargetRegisterClass &RC = *MRI->getRegClass(Reg);
-  return ShouldAllocateClass(*TRI, RC);
+  return ShouldAllocateClass(*TRI, *MRI, Reg);
 }
 
 void RegAllocFast::setPhysRegState(MCPhysReg PhysReg, unsigned NewState) {
