@@ -102,7 +102,7 @@ struct Group {
     //  - This only happens if there is at least 1 true match.
     //  - The chance of this happening is very low (< 1% chance per byte).
     static constexpr bitmask_t ONES = repeat_byte(0x01ul);
-    auto cmp = data ^ repeat_byte(byte);
+    auto cmp = data ^ repeat_byte(static_cast<bitmask_t>(byte) & 0xFFul);
     auto result =
         LIBC_NAMESPACE::Endian::to_little_endian((cmp - ONES) & ~cmp & MASK);
     return {BitMask{result}};
