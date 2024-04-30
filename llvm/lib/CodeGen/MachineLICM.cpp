@@ -1265,9 +1265,8 @@ bool MachineLICMBase::IsProfitableToHoist(MachineInstr &MI,
   // If we have a COPY with other uses in the loop, hoist to allow the users to
   // also be hoisted.
   Register DefReg;
-  if (MI.isCopy() && MI.getOperand(0).isReg() &&
-      (DefReg = MI.getOperand(0).getReg()).isVirtual() &&
-      MI.getOperand(1).isReg() && MI.getOperand(1).getReg().isVirtual() &&
+  if (MI.isCopy() && (DefReg = MI.getOperand(0).getReg()).isVirtual() &&
+      MI.getOperand(1).getReg().isVirtual() &&
       IsLoopInvariantInst(MI, CurLoop) &&
       any_of(MRI->use_nodbg_instructions(MI.getOperand(0).getReg()),
              [&CurLoop, this, DefReg, Cost](MachineInstr &UseMI) {
