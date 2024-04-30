@@ -17,7 +17,7 @@
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
   
-  define hidden fastcc i64 @amd64_push_arguments(i32 *%regcache, i32 *%args) unnamed_addr !dbg !4 {
+  define hidden fastcc i64 @amd64_push_arguments(ptr %regcache, ptr %args) unnamed_addr !dbg !4 {
     ret i64 0
   }
   
@@ -106,6 +106,7 @@ liveins:
   - { reg: '$rdi', virtual-reg: '%15' }
 frameInfo:
   maxAlignment:    8
+  adjustsStack:    true
   hasCalls:        true
 stack:
   - { id: 0, size: 8, alignment: 8 }
@@ -259,7 +260,7 @@ body:             |
     %10:gr32 = PHI %4, %bb.20, %4, %bb.17, %6, %bb.16, debug-location !9
     %11:gr64 = PHI %8, %bb.20, undef %45:gr64, %bb.17, undef %47:gr64, %bb.16
     %12:gr32 = PHI %42, %bb.20, %46, %bb.17, %48, %bb.16, debug-location !9
-    %49:gr32 = MOV32rm killed %11, 1, $noreg, 0, $noreg, debug-location !9 :: (load (s32) from `i32 *undef`)
+    %49:gr32 = MOV32rm killed %11, 1, $noreg, 0, $noreg, debug-location !9 :: (load (s32) from `ptr undef`)
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !9
     $rdi = COPY %50, debug-location !9
     CALL64pcrel32 target-flags(x86-plt) &memcpy, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit undef $rsi, implicit undef $rdx, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax, debug-location !9

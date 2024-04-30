@@ -158,8 +158,3 @@ Pattern {
 
 // CHECK: expected `;` after native declaration
 Constraint Foo() [{}]
-
-// -----
-
-// CHECK: native Constraints currently do not support returning results
-Constraint Foo() -> Op;

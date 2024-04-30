@@ -583,7 +583,7 @@ TEST(MinimizeSourceToDependencyDirectivesTest, UnderscorePragma) {
       R"(_Pragma(u"clang module import"))", Out));
   EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
 
-  // FIXME: R"()" strings depend on using C++ 11 language mode
+  // FIXME: R"()" strings depend on using C++11 language mode
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(
       R"(_Pragma(R"abc(clang module import)abc"))", Out));
   EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());

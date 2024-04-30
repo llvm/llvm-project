@@ -145,6 +145,10 @@ void TypeQuery::AddLanguage(LanguageType language) {
   m_languages->Insert(language);
 }
 
+void TypeQuery::SetLanguages(LanguageSet languages) {
+  m_languages = std::move(languages);
+}
+
 bool TypeQuery::ContextMatches(
     llvm::ArrayRef<CompilerContext> context_chain) const {
   if (GetExactMatch() || context_chain.size() == m_context.size())
@@ -484,7 +488,7 @@ std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
   return {};
 }
 
-uint32_t Type::GetNumChildren(bool omit_empty_base_classes) {
+llvm::Expected<uint32_t> Type::GetNumChildren(bool omit_empty_base_classes) {
   return GetForwardCompilerType().GetNumChildren(omit_empty_base_classes, nullptr);
 }
 
@@ -1172,21 +1176,8 @@ bool TypeImpl::GetDescription(lldb_private::Stream &strm,
 CompilerType TypeImpl::FindDirectNestedType(llvm::StringRef name) {
   if (name.empty())
     return CompilerType();
-  auto type_system = GetTypeSystem(/*prefer_dynamic*/ false);
-  auto *symbol_file = type_system->GetSymbolFile();
-  if (!symbol_file)
-    return CompilerType();
-  auto decl_context = type_system->GetCompilerDeclContextForType(m_static_type);
-  if (!decl_context.IsValid())
-    return CompilerType();
-  TypeQuery query(decl_context, ConstString(name),
-                  TypeQueryOptions::e_find_one);
-  TypeResults results;
-  symbol_file->FindTypes(query, results);
-  TypeSP type_sp = results.GetFirstType();
-  if (type_sp)
-    return type_sp->GetFullCompilerType();
-  return CompilerType();
+  return GetCompilerType(/*prefer_dynamic=*/false)
+      .GetDirectNestedTypeWithName(name);
 }
 
 bool TypeMemberFunctionImpl::IsValid() {

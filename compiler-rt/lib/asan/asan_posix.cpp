@@ -146,33 +146,37 @@ void PlatformTSDDtor(void *tsd) {
 #    endif
   AsanThread::TSDDtor(tsd);
 }
-#endif
+#  endif
+
+static void BeforeFork() {
+  if (CAN_SANITIZE_LEAKS) {
+    __lsan::LockGlobal();
+  }
+  // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and lock the
+  // stuff we need.
+  __lsan::LockThreads();
+  __lsan::LockAllocator();
+  StackDepotLockBeforeFork();
+}
+
+static void AfterFork(bool fork_child) {
+  StackDepotUnlockAfterFork(fork_child);
+  // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and unlock
+  // the stuff we need.
+  __lsan::UnlockAllocator();
+  __lsan::UnlockThreads();
+  if (CAN_SANITIZE_LEAKS) {
+    __lsan::UnlockGlobal();
+  }
+}
 
 void InstallAtForkHandler() {
 #  if SANITIZER_SOLARIS || SANITIZER_NETBSD || SANITIZER_APPLE
   return;  // FIXME: Implement FutexWait.
 #  endif
-  auto before = []() {
-    if (CAN_SANITIZE_LEAKS) {
-      __lsan::LockGlobal();
-    }
-    // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and lock the
-    // stuff we need.
-    __lsan::LockThreads();
-    __lsan::LockAllocator();
-    StackDepotLockAll();
-  };
-  auto after = []() {
-    StackDepotUnlockAll();
-    // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and unlock
-    // the stuff we need.
-    __lsan::UnlockAllocator();
-    __lsan::UnlockThreads();
-    if (CAN_SANITIZE_LEAKS) {
-      __lsan::UnlockGlobal();
-    }
-  };
-  pthread_atfork(before, after, after);
+  pthread_atfork(
+      &BeforeFork, []() { AfterFork(/* fork_child= */ false); },
+      []() { AfterFork(/* fork_child= */ true); });
 }
 
 void InstallAtExitCheckLeaks() {

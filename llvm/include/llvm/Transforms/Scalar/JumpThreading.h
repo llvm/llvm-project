@@ -22,6 +22,7 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <optional>
 #include <utility>
 
@@ -114,11 +115,10 @@ public:
   bool processBlock(BasicBlock *BB);
   bool maybeMergeBasicBlockIntoOnlyPred(BasicBlock *BB);
   void updateSSA(BasicBlock *BB, BasicBlock *NewBB,
-                 DenseMap<Instruction *, Value *> &ValueMapping);
-  DenseMap<Instruction *, Value *> cloneInstructions(BasicBlock::iterator BI,
-                                                     BasicBlock::iterator BE,
-                                                     BasicBlock *NewBB,
-                                                     BasicBlock *PredBB);
+                 ValueToValueMapTy &ValueMapping);
+  void cloneInstructions(ValueToValueMapTy &ValueMapping,
+                         BasicBlock::iterator BI, BasicBlock::iterator BE,
+                         BasicBlock *NewBB, BasicBlock *PredBB);
   bool tryThreadEdge(BasicBlock *BB,
                      const SmallVectorImpl<BasicBlock *> &PredBBs,
                      BasicBlock *SuccBB);

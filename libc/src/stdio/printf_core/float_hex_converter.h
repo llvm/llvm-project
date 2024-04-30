@@ -10,10 +10,8 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FLOAT_HEX_CONVERTER_H
 
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/rounding_mode.h"
-#include "src/__support/common.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/float_inf_nan_converter.h"
@@ -43,7 +41,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
     fraction_bits = LDBits::FRACTION_LEN;
     LDBits::StorageType float_raw = to_conv.conv_val_raw;
     LDBits float_bits(float_raw);
-    is_negative = float_bits.get_sign();
+    is_negative = float_bits.is_neg();
     exponent = float_bits.get_explicit_exponent();
     mantissa = float_bits.get_explicit_mantissa();
     is_inf_or_nan = float_bits.is_inf_or_nan();
@@ -53,7 +51,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
     LBits::StorageType float_raw =
         static_cast<LBits::StorageType>(to_conv.conv_val_raw);
     LBits float_bits(float_raw);
-    is_negative = float_bits.get_sign();
+    is_negative = float_bits.is_neg();
     exponent = float_bits.get_explicit_exponent();
     mantissa = float_bits.get_explicit_mantissa();
     is_inf_or_nan = float_bits.is_inf_or_nan();

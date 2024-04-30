@@ -77,8 +77,8 @@ define i64 @ashr_i64(i64 %x, i64 %y) {
 ; LA32-NEXT:    slli.w $a6, $a1, 1
 ; LA32-NEXT:    sll.w $a2, $a6, $a2
 ; LA32-NEXT:    or $a0, $a0, $a2
-; LA32-NEXT:    sra.w $a1, $a1, $a4
 ; LA32-NEXT:    maskeqz $a0, $a0, $a5
+; LA32-NEXT:    sra.w $a1, $a1, $a4
 ; LA32-NEXT:    masknez $a1, $a1, $a5
 ; LA32-NEXT:    or $a0, $a0, $a1
 ; LA32-NEXT:    move $a1, $a3
@@ -154,8 +154,8 @@ define i32 @ashr_i32_3(i32 %x) {
 define i64 @ashr_i64_3(i64 %x) {
 ; LA32-LABEL: ashr_i64_3:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    srli.w $a0, $a0, 3
 ; LA32-NEXT:    slli.w $a2, $a1, 29
+; LA32-NEXT:    srli.w $a0, $a0, 3
 ; LA32-NEXT:    or $a0, $a0, $a2
 ; LA32-NEXT:    srai.w $a1, $a1, 3
 ; LA32-NEXT:    ret

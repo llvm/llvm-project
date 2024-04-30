@@ -29,7 +29,7 @@
 // CHECK:   Matching formal operand class MCK_FR16 against actual operand at index 3 (Reg:xmm5): match success using generic matcher
 // CHECK:   Matching formal operand class InvalidMatchClass against actual operand at index 4: actual operand index out of range
 // CHECK:   Opcode result: complete match, selecting this opcode
-// CHECK: AsmMatcher: found 2 encodings with mnemonic 'crc32l'
+// CHECK: AsmMatcher: found 4 encodings with mnemonic 'crc32l'
 // CHECK: Trying to match opcode CRC32r32r32
 // CHECK:   Matching formal operand class MCK_GR32 against actual operand at index 1 (Memory: ModeSize=64,BaseReg=rbx,IndexReg=rcx,Scale=8,Disp=2125315823,SegReg=gs): Opcode result: multiple operand mismatches, ignoring this opcode
 // CHECK: Trying to match opcode CRC32r32m32

@@ -156,7 +156,7 @@ subroutine return_char(n)
 end subroutine
 ! CHECK-LABEL: func.func @_QPreturn_char(
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare {{.*}}n
-! CHECK:  %[[VAL_2:.*]] = arith.constant -1 : i32
+! CHECK:  %[[VAL_2:.*]] = arith.constant 6 : i32
 ! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<i64>
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i64) -> index
 ! CHECK:  %[[VAL_9:.*]] = arith.constant 0 : index
@@ -186,3 +186,16 @@ subroutine alternate_return_call(n1, n2, k)
   ! CHECK: ^[[block2]]: // pred: ^bb0
 7 k =  1; return
 end
+
+! -----------------------------------------------------------------------------
+!     Test calls to user procedures with intrinsic interfaces
+! -----------------------------------------------------------------------------
+
+! CHECK-NAME: func.func @_QPintrinsic_iface()
+subroutine intrinsic_iface()
+  intrinsic acos
+  real :: x
+  procedure(acos) :: proc
+  x = proc(1.0)
+end subroutine
+! CHECK" fir.call @_QPproc(%{{.*}}) {{.*}}: (!fir.ref<f32>) -> f32

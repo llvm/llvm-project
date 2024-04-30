@@ -21,6 +21,7 @@
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/empty.h>
+#include <__ranges/size.h>
 #include <__type_traits/is_class.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/remove_cv.h>
@@ -51,16 +52,24 @@ class view_interface {
 public:
   template <class _D2 = _Derived>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool empty()
-    requires forward_range<_D2>
+    requires sized_range<_D2> || forward_range<_D2>
   {
-    return ranges::begin(__derived()) == ranges::end(__derived());
+    if constexpr (sized_range<_D2>) {
+      return ranges::size(__derived()) == 0;
+    } else {
+      return ranges::begin(__derived()) == ranges::end(__derived());
+    }
   }
 
   template <class _D2 = _Derived>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool empty() const
-    requires forward_range<const _D2>
+    requires sized_range<const _D2> || forward_range<const _D2>
   {
-    return ranges::begin(__derived()) == ranges::end(__derived());
+    if constexpr (sized_range<const _D2>) {
+      return ranges::size(__derived()) == 0;
+    } else {
+      return ranges::begin(__derived()) == ranges::end(__derived());
+    }
   }
 
   template <class _D2 = _Derived>
@@ -109,7 +118,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) front()
     requires forward_range<_D2>
   {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !empty(), "Precondition `!empty()` not satisfied. `.front()` called on an empty view.");
     return *ranges::begin(__derived());
   }
@@ -118,7 +127,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) front() const
     requires forward_range<const _D2>
   {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !empty(), "Precondition `!empty()` not satisfied. `.front()` called on an empty view.");
     return *ranges::begin(__derived());
   }
@@ -127,7 +136,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) back()
     requires bidirectional_range<_D2> && common_range<_D2>
   {
-    _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "Precondition `!empty()` not satisfied. `.back()` called on an empty view.");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        !empty(), "Precondition `!empty()` not satisfied. `.back()` called on an empty view.");
     return *ranges::prev(ranges::end(__derived()));
   }
 
@@ -135,7 +145,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) back() const
     requires bidirectional_range<const _D2> && common_range<const _D2>
   {
-    _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "Precondition `!empty()` not satisfied. `.back()` called on an empty view.");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        !empty(), "Precondition `!empty()` not satisfied. `.back()` called on an empty view.");
     return *ranges::prev(ranges::end(__derived()));
   }
 

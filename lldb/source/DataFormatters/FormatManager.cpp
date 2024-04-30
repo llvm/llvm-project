@@ -91,7 +91,7 @@ static bool GetFormatFromFormatChar(char format_char, Format &format) {
 }
 
 static bool GetFormatFromFormatName(llvm::StringRef format_name,
-                                    bool partial_match_ok, Format &format) {
+                                    Format &format) {
   uint32_t i;
   for (i = 0; i < g_num_format_infos; ++i) {
     if (format_name.equals_insensitive(g_format_infos[i].format_name)) {
@@ -100,13 +100,11 @@ static bool GetFormatFromFormatName(llvm::StringRef format_name,
     }
   }
 
-  if (partial_match_ok) {
-    for (i = 0; i < g_num_format_infos; ++i) {
-      if (llvm::StringRef(g_format_infos[i].format_name)
-              .starts_with_insensitive(format_name)) {
-        format = g_format_infos[i].format;
-        return true;
-      }
+  for (i = 0; i < g_num_format_infos; ++i) {
+    if (llvm::StringRef(g_format_infos[i].format_name)
+            .starts_with_insensitive(format_name)) {
+      format = g_format_infos[i].format;
+      return true;
     }
   }
   format = eFormatInvalid;
@@ -124,7 +122,6 @@ void FormatManager::Changed() {
 }
 
 bool FormatManager::GetFormatFromCString(const char *format_cstr,
-                                         bool partial_match_ok,
                                          lldb::Format &format) {
   bool success = false;
   if (format_cstr && format_cstr[0]) {
@@ -134,7 +131,7 @@ bool FormatManager::GetFormatFromCString(const char *format_cstr,
         return true;
     }
 
-    success = GetFormatFromFormatName(format_cstr, partial_match_ok, format);
+    success = GetFormatFromFormatName(format_cstr, format);
   }
   if (!success)
     format = eFormatInvalid;
@@ -454,8 +451,13 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
   if (valobj.GetSummaryFormat().get() != nullptr)
     return valobj.GetSummaryFormat()->IsOneLiner();
 
+  auto num_children = valobj.GetNumChildren();
+  if (!num_children) {
+    llvm::consumeError(num_children.takeError());
+    return true;
+  }
   // no children, no party
-  if (valobj.GetNumChildren() == 0)
+  if (*num_children == 0)
     return false;
 
   // ask the type if it has any opinion about this eLazyBoolCalculate == no
@@ -474,7 +476,7 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
 
   size_t total_children_name_len = 0;
 
-  for (size_t idx = 0; idx < valobj.GetNumChildren(); idx++) {
+  for (size_t idx = 0; idx < *num_children; idx++) {
     bool is_synth_val = false;
     ValueObjectSP child_sp(valobj.GetChildAtIndex(idx));
     // something is wrong here - bail out
@@ -526,7 +528,7 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
     }
 
     // if this child has children..
-    if (child_sp->GetNumChildren()) {
+    if (child_sp->HasChildren()) {
       // ...and no summary...
       // (if it had a summary and the summary wanted children, we would have
       // bailed out anyway

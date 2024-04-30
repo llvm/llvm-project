@@ -30,8 +30,8 @@ namespace mlir {
 //===----------------------------------------------------------------------===//
 
 /// A result type used to indicate if a change happened. Boolean operations on
-/// ChangeResult behave as though `Change` is truthy.
-enum class ChangeResult {
+/// ChangeResult behave as though `Change` is truth.
+enum class [[nodiscard]] ChangeResult {
   NoChange,
   Change,
 };

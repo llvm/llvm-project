@@ -12,13 +12,13 @@ if lit.util.isAIXTriple(config.target_triple):
 
 config.substitutions.append(('%{flags}', '-pthread'))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -D__LIBC_NO_CPP_MATH_OVERLOADS__ -I %{include} -I %{libcxx}/test/support'
+    '-nostdinc++ -D__LIBC_NO_CPP_MATH_OVERLOADS__ -I %{include-dir} -I %{libcxx-dir}/test/support'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{lib} -lc++ -lc++abi -latomic -Wl,-bbigtoc'
+    '-nostdlib++ -L %{lib-dir} -lc++ -lc++abi -latomic -Wl,-bbigtoc'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T --env LIBPATH=%{lib} -- '
+    '%{executor} --execdir %T --env LIBPATH=%{lib-dir} -- '
 ))
 
 # LIBCXX-AIX-FIXME is the feature name used to XFAIL the

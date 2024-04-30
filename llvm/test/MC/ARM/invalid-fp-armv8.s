@@ -88,6 +88,8 @@ vrinta.f64.f64 s3, q0
 vrintn.f32.f32 d3, d0
 @ V8: error: instruction requires: NEON
 vrintp.f32 q3, q0
-@ V8: error: instruction requires: NEON
+@ V8: error: invalid instruction, any one of the following would fix this:
+@ V8: note: instruction requires: mve.fp
+@ V8: note: instruction requires: NEON
 vrintmlt.f32 q3, q0
 @ V8: error: instruction 'vrintm' is not predicable, but condition code specified

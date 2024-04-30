@@ -925,9 +925,9 @@ _Complex _Float16 defined_complex_func_f16_ret(_Complex _Float16 c) {
 // CLFINITEONLY-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca { double, double }, align 8
 // CLFINITEONLY-NEXT:    [[CONV:%.*]] = fpext float [[F32]] to double
 // CLFINITEONLY-NEXT:    [[CF16_REAL:%.*]] = load half, ptr [[CF16]], align 8
-// CLFINITEONLY-NEXT:    [[CF16_IMAGP:%.*]] = getelementptr inbounds { half, half }, ptr [[CF16]], i64 0, i32 1
+// CLFINITEONLY-NEXT:    [[CF16_IMAGP:%.*]] = getelementptr inbounds i8, ptr [[CF16]], i64 2
 // CLFINITEONLY-NEXT:    [[CF16_IMAG:%.*]] = load half, ptr [[CF16_IMAGP]], align 2
-// CLFINITEONLY-NEXT:    [[INDIRECT_ARG_TEMP_IMAGP:%.*]] = getelementptr inbounds { double, double }, ptr [[INDIRECT_ARG_TEMP]], i64 0, i32 1
+// CLFINITEONLY-NEXT:    [[INDIRECT_ARG_TEMP_IMAGP:%.*]] = getelementptr inbounds i8, ptr [[INDIRECT_ARG_TEMP]], i64 8
 // CLFINITEONLY-NEXT:    store double [[CF64_COERCE0]], ptr [[INDIRECT_ARG_TEMP]], align 8
 // CLFINITEONLY-NEXT:    store double [[CF64_COERCE1]], ptr [[INDIRECT_ARG_TEMP_IMAGP]], align 8
 // CLFINITEONLY-NEXT:    [[COERCE5_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x half> poison, half [[CF16_REAL]], i64 0
@@ -1176,9 +1176,9 @@ float call_variadic(float f32, double f64, _Float16 f16,
 // CLFINITEONLY-NEXT:    [[INDIRECT_ARG_TEMP:%.*]] = alloca { double, double }, align 8
 // CLFINITEONLY-NEXT:    [[CONV:%.*]] = fpext float [[F32]] to double
 // CLFINITEONLY-NEXT:    [[CF16_REAL:%.*]] = load half, ptr [[CF16]], align 8
-// CLFINITEONLY-NEXT:    [[CF16_IMAGP:%.*]] = getelementptr inbounds { half, half }, ptr [[CF16]], i64 0, i32 1
+// CLFINITEONLY-NEXT:    [[CF16_IMAGP:%.*]] = getelementptr inbounds i8, ptr [[CF16]], i64 2
 // CLFINITEONLY-NEXT:    [[CF16_IMAG:%.*]] = load half, ptr [[CF16_IMAGP]], align 2
-// CLFINITEONLY-NEXT:    [[INDIRECT_ARG_TEMP_IMAGP:%.*]] = getelementptr inbounds { double, double }, ptr [[INDIRECT_ARG_TEMP]], i64 0, i32 1
+// CLFINITEONLY-NEXT:    [[INDIRECT_ARG_TEMP_IMAGP:%.*]] = getelementptr inbounds i8, ptr [[INDIRECT_ARG_TEMP]], i64 8
 // CLFINITEONLY-NEXT:    store double [[CF64_COERCE0]], ptr [[INDIRECT_ARG_TEMP]], align 8
 // CLFINITEONLY-NEXT:    store double [[CF64_COERCE1]], ptr [[INDIRECT_ARG_TEMP_IMAGP]], align 8
 // CLFINITEONLY-NEXT:    [[COERCE5_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x half> poison, half [[CF16_REAL]], i64 0

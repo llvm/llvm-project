@@ -1,0 +1,340 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc unistd.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "access_test",
+    srcs = ["access_test.cpp"],
+    libc_function_deps = [
+        "//libc:open",
+        "//libc:access",
+        "//libc:close",
+        "//libc:unlink",
+    ],
+)
+
+# libc_test(
+#     name = "chdir_test",
+#     srcs = ["chdir_test.cpp"],
+#     libc_function_deps = [
+#         "//libc:open",
+#         "//libc:chdir",
+#         "//libc:close",
+#     ],
+# )
+
+libc_test(
+    name = "dup_test",
+    srcs = ["dup_test.cpp"],
+    libc_function_deps = [
+        "//libc:open",
+        "//libc:close",
+        "//libc:dup",
+        "//libc:read",
+        "//libc:unlink",
+        "//libc:write",
+    ],
+)
+
+libc_test(
+    name = "dup2_test",
+    srcs = ["dup2_test.cpp"],
+    libc_function_deps = [
+        "//libc:open",
+        "//libc:close",
+        "//libc:dup2",
+        "//libc:read",
+        "//libc:unlink",
+        "//libc:write",
+    ],
+)
+
+libc_test(
+    name = "dup3_test",
+    srcs = ["dup3_test.cpp"],
+    libc_function_deps = [
+        "//libc:open",
+        "//libc:close",
+        "//libc:dup3",
+        "//libc:read",
+        "//libc:unlink",
+        "//libc:write",
+    ],
+)
+
+# libc_test(
+#     name = "fchdir_test",
+#     srcs = ["fchdir_test.cpp"],
+#     libc_function_deps = [
+#         "//libc:open",
+#         "//libc:fchdir",
+#         "//libc:close",
+#     ],
+# )
+
+libc_test(
+    name = "ftruncate_test",
+    srcs = ["ftruncate_test.cpp"],
+    libc_function_deps = [
+        "//libc:open",
+        "//libc:close",
+        "//libc:read",
+        "//libc:ftruncate",
+        "//libc:unlink",
+        "//libc:write",
+    ],
+    deps = [
+        "//libc:__support_cpp_string_view",
+    ],
+)
+
+libc_test(
+    name = "pread_pwrite_test",
+    srcs = ["pread_pwrite_test.cpp"],
+    libc_function_deps = [
+        "//libc:open",
+        "//libc:close",
+        "//libc:fsync",
+        "//libc:pread",
+        "//libc:pwrite",
+        "//libc:unlink",
+        "//libc:write",
+    ],
+)
+
+libc_test(
+    name = "read_write_test",
+    srcs = ["read_write_test.cpp"],
+    libc_function_deps = [
+        "//libc:open",
+        "//libc:close",
+        "//libc:fsync",
+        "//libc:read",
+        "//libc:write",
+        "//libc:remove",
+    ],
+)
+
+libc_test(
+    name = "link_test",
+    srcs = ["link_test.cpp"],
+    libc_function_deps = [
+        "//libc:open",
+        "//libc:close",
+        "//libc:link",
+        "//libc:unlink",
+    ],
+)
+
+# libc_test(
+#     name = "linkat_test",
+#     srcs = ["linkat_test.cpp"],
+#     libc_function_deps = [
+#         "//libc:open",
+#         "//libc:close",
+#         "//libc:linkat",
+#         "//libc:unlink",
+#     ],
+# )
+
+# libc_test(
+#     name = "lseek_test",
+#     srcs = ["lseek_test.cpp"],
+#     libc_function_deps = [
+#         "//libc:open",
+#         "//libc:close",
+#         "//libc:lseek",
+#         "//libc:read",
+#     ],
+# )
+
+# libc_test(
+#     name = "rmdir_test",
+#     srcs = ["rmdir_test.cpp"],
+#     libc_function_deps = [
+#         "//libc:mkdir",
+#         "//libc:rmdir",
+#     ],
+# )
+
+libc_test(
+    name = "swab_test",
+    srcs = ["swab_test.cpp"],
+    libc_function_deps = [
+        "//libc:swab",
+    ],
+    deps = [
+        "//libc:string_utils",
+    ],
+)
+
+# libc_test(
+#     name = "readlink_test",
+#     srcs = ["readlink_test.cpp"],
+#     libc_function_deps = [
+#         "//libc:readlink",
+#         "//libc:symlink",
+#         "//libc:unlink",
+#     ],
+#     deps = [
+#         "//libc:__support_cpp_string_view",
+#     ],
+# )
+
+# libc_test(
+#     name = "readlinkat_test",
+#     srcs = ["readlinkat_test.cpp"],
+#     libc_function_deps = [
+#         "//libc:readlinkat",
+#         "//libc:symlink",
+#         "//libc:unlink",
+#     ],
+#     deps = [
+#         "//libc:__support_cpp_string_view",
+#     ],
+# )
+
+libc_test(
+    name = "symlink_test",
+    srcs = ["symlink_test.cpp"],
+    libc_function_deps = [
+        "//libc:open",
+        "//libc:close",
+        "//libc:symlink",
+        "//libc:unlink",
+    ],
+)
+
+# libc_test(
+#     name = "symlinkat_test",
+#     srcs = ["symlinkat_test.cpp"],
+#     libc_function_deps = [
+#         "//libc:open",
+#         "//libc:close",
+#         "//libc:symlinkat",
+#         "//libc:unlink",
+#     ],
+# )
+
+libc_test(
+    name = "truncate_test",
+    srcs = ["truncate_test.cpp"],
+    libc_function_deps = [
+        "//libc:open",
+        "//libc:close",
+        "//libc:read",
+        "//libc:truncate",
+        "//libc:unlink",
+        "//libc:write",
+    ],
+    deps = [
+        "//libc:__support_cpp_string_view",
+    ],
+)
+
+libc_test(
+    name = "unlink_test",
+    srcs = ["unlink_test.cpp"],
+    libc_function_deps = [
+        "//libc:open",
+        "//libc:close",
+        "//libc:unlink",
+    ],
+)
+
+# libc_test(
+#     name = "unlinkat_test",
+#     srcs = ["unlinkat_test.cpp"],
+#     libc_function_deps = [
+#         "//libc:open",
+#         "//libc:openat",
+#         "//libc:close",
+#         "//libc:unlinkat",
+#     ],
+# )
+
+libc_test(
+    name = "getpid_test",
+    srcs = ["getpid_test.cpp"],
+    libc_function_deps = [
+        "//libc:getpid",
+    ],
+)
+
+libc_test(
+    name = "getppid_test",
+    srcs = ["getppid_test.cpp"],
+    libc_function_deps = [
+        "//libc:getppid",
+    ],
+)
+
+libc_test(
+    name = "getuid_test",
+    srcs = ["getuid_test.cpp"],
+    libc_function_deps = [
+        "//libc:getuid",
+    ],
+)
+
+libc_test(
+    name = "isatty_test",
+    srcs = ["isatty_test.cpp"],
+    libc_function_deps = [
+        "//libc:isatty",
+        "//libc:open",
+        "//libc:close",
+    ],
+)
+
+libc_test(
+    name = "geteuid_test",
+    srcs = ["geteuid_test.cpp"],
+    libc_function_deps = [
+        "//libc:geteuid",
+    ],
+)
+
+#TODO: Enable once fullbuild is added to bazel, since this depends on a macro
+# definition in the public header
+
+# libc_test(
+#     name = "syscall_test",
+#     srcs = ["syscall_test.cpp"],
+#     libc_function_deps = [
+#         "//libc:syscall",
+#     ],
+# )
+
+# TODO: add once sysconf is complete
+
+# libc_test(
+#     name = "sysconf_test",
+#     srcs = ["sysconf_test.cpp"],
+#     libc_function_deps = [
+#         "//libc:sysconf",
+#     ],
+# )
+
+# TODO: add fopencookie and fflush
+
+# libc_test(
+#     name = "getopt_test",
+#     srcs = ["getopt_test.cpp"],
+#     libc_function_deps = [
+#         "//libc:getopt",
+#         "//libc:fopencookie",
+#         "//libc:fflush",
+#     ],
+#     deps = [
+#         "//libc:__support_cpp_array",
+#     ],
+# )

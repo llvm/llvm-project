@@ -259,6 +259,7 @@ void ScalarEnumerationTraits<CallingConvention>::enumeration(
   IO.enumCase(Value, "ClrCall", CallingConvention::ClrCall);
   IO.enumCase(Value, "Inline", CallingConvention::Inline);
   IO.enumCase(Value, "NearVector", CallingConvention::NearVector);
+  IO.enumCase(Value, "Swift", CallingConvention::Swift);
 }
 
 void ScalarEnumerationTraits<PointerKind>::enumeration(IO &IO,

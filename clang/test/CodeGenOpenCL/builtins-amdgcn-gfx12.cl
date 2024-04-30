@@ -5,6 +5,21 @@
 
 typedef unsigned int uint;
 
+// CHECK-LABEL: @test_s_sleep_var(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[D_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    store i32 [[D:%.*]], ptr addrspace(5) [[D_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[D_ADDR]], align 4
+// CHECK-NEXT:    call void @llvm.amdgcn.s.sleep.var(i32 [[TMP0]])
+// CHECK-NEXT:    call void @llvm.amdgcn.s.sleep.var(i32 15)
+// CHECK-NEXT:    ret void
+//
+void test_s_sleep_var(int d)
+{
+  __builtin_amdgcn_s_sleep_var(d);
+  __builtin_amdgcn_s_sleep_var(15);
+}
+
 // CHECK-LABEL: @test_permlane16_var(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
@@ -220,3 +235,25 @@ unsigned test_s_get_barrier_state(int a)
   unsigned State = __builtin_amdgcn_s_get_barrier_state(a);
   return State;
 }
+
+// CHECK-LABEL: @test_s_ttracedata(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.amdgcn.s.ttracedata(i32 1)
+// CHECK-NEXT:    ret void
+//
+void test_s_ttracedata()
+{
+  __builtin_amdgcn_s_ttracedata(1);
+}
+
+// CHECK-LABEL: @test_s_ttracedata_imm(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.amdgcn.s.ttracedata.imm(i16 1)
+// CHECK-NEXT:    ret void
+//
+void test_s_ttracedata_imm()
+{
+  __builtin_amdgcn_s_ttracedata_imm(1);
+}
+
+

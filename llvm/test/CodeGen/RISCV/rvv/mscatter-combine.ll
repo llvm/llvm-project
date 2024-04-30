@@ -58,7 +58,7 @@ define void @strided_store_zero_start(i64 %n, ptr %p) {
 ; RV64-NEXT:    ret
   %step = tail call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
   %gep = getelementptr inbounds %struct, ptr %p, <vscale x 1 x i64> %step, i32 6
-  tail call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> %gep, i32 8, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i32 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer))
+  tail call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> %gep, i32 8, <vscale x 1 x i1> splat (i1 true))
   ret void
 }
 
@@ -93,7 +93,7 @@ define void @strided_store_offset_start(i64 %n, ptr %p) {
   %.splat = shufflevector <vscale x 1 x i64> %.splatinsert, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
   %add = add <vscale x 1 x i64> %step, %.splat
   %gep = getelementptr inbounds %struct, ptr %p, <vscale x 1 x i64> %add, i32 6
-  tail call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> %gep, i32 8, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i32 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer))
+  tail call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> %gep, i32 8, <vscale x 1 x i1> splat (i1 true))
   ret void
 }
 
@@ -118,7 +118,7 @@ define void @stride_one_store(i64 %n, ptr %p) {
 ; RV64-NEXT:    ret
   %step = tail call <vscale x 1 x i64> @llvm.experimental.stepvector.nxv1i64()
   %gep = getelementptr inbounds i64, ptr %p, <vscale x 1 x i64> %step
-  tail call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> %gep, i32 8, <vscale x 1 x i1> shufflevector (<vscale x 1 x i1> insertelement (<vscale x 1 x i1> poison, i1 true, i32 0), <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer))
+  tail call void @llvm.masked.scatter.nxv1i64.nxv1p0(<vscale x 1 x i64> zeroinitializer, <vscale x 1 x ptr> %gep, i32 8, <vscale x 1 x i1> splat (i1 true))
   ret void
 }
 

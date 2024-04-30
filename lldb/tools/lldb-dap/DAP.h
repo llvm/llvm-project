@@ -162,6 +162,8 @@ struct DAP {
   std::vector<std::string> exit_commands;
   std::vector<std::string> stop_commands;
   std::vector<std::string> terminate_commands;
+  // Map step in target id to list of function targets that user can choose.
+  llvm::DenseMap<lldb::addr_t, std::string> step_in_targets;
   // A copy of the last LaunchRequest or AttachRequest so we can reuse its
   // arguments if we get a RestartRequest.
   std::optional<llvm::json::Object> last_launch_or_attach_request;
@@ -189,7 +191,6 @@ struct DAP {
   StartDebuggingRequestHandler start_debugging_request_handler;
   ReplModeRequestHandler repl_mode_request_handler;
   ReplMode repl_mode;
-  bool auto_repl_mode_collision_warning;
   std::string command_escape_prefix = "`";
   lldb::SBFormat frame_format;
   lldb::SBFormat thread_format;
@@ -225,8 +226,12 @@ struct DAP {
 
   llvm::json::Value CreateTopLevelScopes();
 
-  ExpressionContext DetectExpressionContext(lldb::SBFrame &frame,
-                                            std::string &text);
+  /// \return
+  ///   Attempt to determine if an expression is a variable expression or
+  ///   lldb command using a hueristic based on the first term of the
+  ///   expression.
+  ExpressionContext DetectExpressionContext(lldb::SBFrame frame,
+                                            std::string &expression);
 
   /// \return
   ///   \b false if a fatal error was found while executing these commands,

@@ -706,13 +706,17 @@ void LoopConvertCheck::doConversion(
         ReplaceText = Usage.Kind == Usage::UK_MemberThroughArrow
                           ? VarNameOrStructuredBinding + "."
                           : VarNameOrStructuredBinding;
-        auto Parents = Context->getParents(*Usage.Expression);
+        const DynTypedNodeList Parents = Context->getParents(*Usage.Expression);
         if (Parents.size() == 1) {
           if (const auto *Paren = Parents[0].get<ParenExpr>()) {
             // Usage.Expression will be replaced with the new index variable,
             // and parenthesis around a simple DeclRefExpr can always be
-            // removed.
-            Range = Paren->getSourceRange();
+            // removed except in case of a `sizeof` operator call.
+            const DynTypedNodeList GrandParents = Context->getParents(*Paren);
+            if (GrandParents.size() != 1 ||
+                GrandParents[0].get<UnaryExprOrTypeTraitExpr>() == nullptr) {
+              Range = Paren->getSourceRange();
+            }
           } else if (const auto *UOP = Parents[0].get<UnaryOperator>()) {
             // If we are taking the address of the loop variable, then we must
             // not use a copy, as it would mean taking the address of the loop's
@@ -942,11 +946,15 @@ bool LoopConvertCheck::isConvertible(ASTContext *Context,
         CanonicalInitVarType->isPointerType()) {
       // If the initializer and the variable are both pointers check if the
       // un-qualified pointee types match, otherwise we don't use auto.
-      if (!Context->hasSameUnqualifiedType(
-              CanonicalBeginType->getPointeeType(),
-              CanonicalInitVarType->getPointeeType()))
-        return false;
+      return Context->hasSameUnqualifiedType(
+          CanonicalBeginType->getPointeeType(),
+          CanonicalInitVarType->getPointeeType());
     }
+
+    if (CanonicalBeginType->isBuiltinType() ||
+        CanonicalInitVarType->isBuiltinType())
+      return false;
+
   } else if (FixerKind == LFK_PseudoArray) {
     if (const auto *EndCall = Nodes.getNodeAs<CXXMemberCallExpr>(EndCallName)) {
       // This call is required to obtain the container.

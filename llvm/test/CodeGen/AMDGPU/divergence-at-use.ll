@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 - < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 - < %s | FileCheck %s
 
 @local = addrspace(3) global i32 undef
 

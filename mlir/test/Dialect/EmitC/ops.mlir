@@ -15,6 +15,25 @@ func.func @f(%arg0: i32, %f: !emitc.opaque<"int32_t">) {
   return
 }
 
+emitc.declare_func @func
+
+emitc.func @func(%arg0 : i32) {
+  emitc.call_opaque "foo"(%arg0) : (i32) -> ()
+  emitc.return
+}
+
+emitc.func @return_i32() -> i32 attributes {specifiers = ["static","inline"]} {
+  %0 = emitc.call_opaque "foo"(): () -> i32
+  emitc.return %0 : i32
+}
+
+emitc.func @call() -> i32 {
+  %0 = emitc.call @return_i32() : () -> (i32)
+  emitc.return %0 : i32
+}
+
+emitc.func private @extern(i32) attributes {specifiers = ["extern"]}
+
 func.func @cast(%arg0: i32) {
   %1 = emitc.cast %arg0: i32 to f32
   return
@@ -39,6 +58,21 @@ func.func @add_int(%arg0: i32, %arg1: i32) {
 func.func @add_pointer(%arg0: !emitc.ptr<f32>, %arg1: i32, %arg2: !emitc.opaque<"unsigned int">) {
   %1 = "emitc.add" (%arg0, %arg1) : (!emitc.ptr<f32>, i32) -> !emitc.ptr<f32>
   %2 = "emitc.add" (%arg0, %arg2) : (!emitc.ptr<f32>, !emitc.opaque<"unsigned int">) -> !emitc.ptr<f32>
+  return
+}
+
+func.func @bitwise(%arg0: i32, %arg1: i32) -> () {
+  %0 = emitc.bitwise_and %arg0, %arg1 : (i32, i32) -> i32
+  %1 = emitc.bitwise_left_shift %arg0, %arg1 : (i32, i32) -> i32
+  %2 = emitc.bitwise_not %arg0 : (i32) -> i32
+  %3 = emitc.bitwise_or %arg0, %arg1 : (i32, i32) -> i32
+  %4 = emitc.bitwise_right_shift %arg0, %arg1 : (i32, i32) -> i32
+  %5 = emitc.bitwise_xor %arg0, %arg1 : (i32, i32) -> i32
+  return
+}
+
+func.func @cond(%cond: i1, %arg0: i32, %arg1: i32) -> () {
+  %0 = emitc.conditional %cond, %arg0, %arg1 : i32
   return
 }
 
@@ -98,6 +132,19 @@ func.func @cmp(%arg0 : i32, %arg1 : f32, %arg2 : i64, %arg3 : f64, %arg4 : !emit
   return
 }
 
+func.func @logical(%arg0: i32, %arg1: i32) {
+  %0 = emitc.logical_and %arg0, %arg1 : i32, i32
+  %1 = emitc.logical_not %arg0 : i32
+  %2 = emitc.logical_or %arg0, %arg1 : i32, i32
+  return
+}
+
+func.func @unary(%arg0: i32) {
+  %0 = emitc.unary_minus %arg0 : (i32) -> i32
+  %1 = emitc.unary_plus %arg0 : (i32) -> i32
+  return
+}
+
 func.func @test_if(%arg0: i1, %arg1: f32) {
   emitc.if %arg0 {
      %0 = emitc.call_opaque "func_const"(%arg1) : (f32) -> i32
@@ -128,6 +175,23 @@ func.func @test_assign(%arg1: f32) {
   return
 }
 
+func.func @test_expression(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: f32, %arg4: f32) -> i32 {
+  %c7 = "emitc.constant"() {value = 7 : i32} : () -> i32
+  %q = emitc.expression : i32 {
+    %a = emitc.rem %arg1, %c7 : (i32, i32) -> i32
+    emitc.yield %a : i32
+  }
+  %r = emitc.expression noinline : i32 {
+    %a = emitc.add %arg0, %arg1 : (i32, i32) -> i32
+    %b = emitc.call_opaque "bar" (%a, %arg2, %q) : (i32, i32, i32) -> (i32)
+    %c = emitc.mul %arg3, %arg4 : (f32, f32) -> f32
+    %d = emitc.cast %c : f32 to i32
+    %e = emitc.sub %b, %d : (i32, i32) -> i32
+    emitc.yield %e : i32
+  }
+  return %r : i32
+}
+
 func.func @test_for(%arg0 : index, %arg1 : index, %arg2 : index) {
   emitc.for %i0 = %arg0 to %arg1 step %arg2 {
     %0 = emitc.call_opaque "func_const"(%i0) : (index) -> i32
@@ -148,4 +212,36 @@ func.func @test_for_not_index_induction(%arg0 : i16, %arg1 : i16, %arg2 : i16) {
     %0 = emitc.call_opaque "func_const"(%i0) : (i16) -> i32
   }
   return
+}
+
+func.func @test_subscript(%arg0 : !emitc.array<2x3xf32>, %arg1 : !emitc.ptr<i32>, %arg2 : !emitc.opaque<"std::map<char, int>">, %idx0 : index, %idx1 : i32, %idx2 : !emitc.opaque<"char">) {
+  %0 = emitc.subscript %arg0[%idx0, %idx1] : (!emitc.array<2x3xf32>, index, i32) -> f32
+  %1 = emitc.subscript %arg1[%idx0] : (!emitc.ptr<i32>, index) -> i32
+  %2 = emitc.subscript %arg2[%idx2] : (!emitc.opaque<"std::map<char, int>">, !emitc.opaque<"char">) -> !emitc.opaque<"int">
+  return
+}
+
+emitc.verbatim "#ifdef __cplusplus"
+emitc.verbatim "extern \"C\" {"
+emitc.verbatim "#endif  // __cplusplus"
+
+emitc.verbatim "#ifdef __cplusplus"
+emitc.verbatim "}  // extern \"C\""
+emitc.verbatim "#endif  // __cplusplus"
+
+emitc.verbatim "typedef int32_t i32;"
+emitc.verbatim "typedef float f32;"
+
+
+emitc.global @uninit : i32
+emitc.global @myglobal_int : i32 = 4
+emitc.global extern @external_linkage : i32
+emitc.global static @internal_linkage : i32
+emitc.global @myglobal : !emitc.array<2xf32> = dense<4.000000e+00>
+emitc.global const @myconstant : !emitc.array<2xi16> = dense<2>
+
+func.func @use_global(%i: index) -> f32 {
+  %0 = emitc.get_global @myglobal : !emitc.array<2xf32>
+  %1 = emitc.subscript %0[%i] : (!emitc.array<2xf32>, index) -> f32
+  return %1 : f32
 }

@@ -14,3 +14,6 @@ def GPRRegBank : RegisterBank<"GPR", [GR64]>;
 
 /// Floating Point/Vector Registers
 def VECRRegBank : RegisterBank<"VECR", [VR512]>;
+
+/// Pseudo Registers: RFP80
+def PSRRegBank : RegisterBank<"PSR", [RFP32, RFP64, RFP80]>;

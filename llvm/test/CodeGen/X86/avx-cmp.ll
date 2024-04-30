@@ -26,40 +26,33 @@ declare void @scale() nounwind
 define void @render(double %a0) nounwind {
 ; CHECK-LABEL: render:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    vmovsd %xmm0, (%rsp) # 8-byte Spill
+; CHECK-NEXT:    subq $16, %rsp
+; CHECK-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB2_6
+; CHECK-NEXT:    jne .LBB2_5
 ; CHECK-NEXT:  # %bb.1: # %for.cond5.preheader
-; CHECK-NEXT:    xorl %ebx, %ebx
-; CHECK-NEXT:    movb $1, %bpl
+; CHECK-NEXT:    movb $1, %bl
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB2_2: # %for.cond5
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    jne .LBB2_2
-; CHECK-NEXT:  # %bb.3: # %for.cond5
+; CHECK-NEXT:  # %bb.3: # %for.body33.preheader
 ; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
-; CHECK-NEXT:    testb %bpl, %bpl
-; CHECK-NEXT:    jne .LBB2_2
-; CHECK-NEXT:  # %bb.4: # %for.body33.preheader
-; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
-; CHECK-NEXT:    vmovsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
 ; CHECK-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    jne .LBB2_5
+; CHECK-NEXT:    jne .LBB2_4
 ; CHECK-NEXT:    jnp .LBB2_2
-; CHECK-NEXT:  .LBB2_5: # %if.then
+; CHECK-NEXT:  .LBB2_4: # %if.then
 ; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
 ; CHECK-NEXT:    callq scale@PLT
 ; CHECK-NEXT:    jmp .LBB2_2
-; CHECK-NEXT:  .LBB2_6: # %for.end52
-; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:  .LBB2_5: # %for.end52
+; CHECK-NEXT:    addq $16, %rsp
 ; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
 entry:
   br i1 undef, label %for.cond5, label %for.end52

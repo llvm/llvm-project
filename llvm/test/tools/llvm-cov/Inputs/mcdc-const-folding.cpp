@@ -75,10 +75,6 @@ bool casen(bool a, bool b) {
     return b || 0 || a;
 }
 
-extern "C" {
-  extern void __llvm_profile_write_file(void);
-}
-
 int main(int argc, char *argv[])
 {
     bool a = atoi(argv[1]);
@@ -112,6 +108,5 @@ int main(int argc, char *argv[])
     c = casem(a, b);
     c = casen(a, b);
 
-    __llvm_profile_write_file();
     return 0;
 }

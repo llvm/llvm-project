@@ -42,10 +42,10 @@ define void @multiply(ptr %A, ptr %B, ptr %C) {
 ; CHECK:       no_alias3:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi ptr [ [[B]], [[NO_ALIAS]] ], [ [[B]], [[ALIAS_CONT1]] ], [ [[TMP6]], [[COPY2]] ]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP3]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP3]], i64 4
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[TMP3]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <2 x double>, ptr [[TMP7]], align 8
-; CHECK-NEXT:    [[VEC_GEP10:%.*]] = getelementptr double, ptr [[TMP7]], i64 4
+; CHECK-NEXT:    [[VEC_GEP10:%.*]] = getelementptr i8, ptr [[TMP7]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD11:%.*]] = load <2 x double>, ptr [[VEC_GEP10]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD9]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT]]
@@ -55,13 +55,13 @@ define void @multiply(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT17]]
 ; CHECK-NEXT:    [[SPLAT_SPLAT20:%.*]] = shufflevector <2 x double> [[COL_LOAD11]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP11:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD8]], <2 x double> [[SPLAT_SPLAT20]], <2 x double> [[TMP10]])
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr double, ptr [[TMP3]], i64 8
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP3]], i64 64
 ; CHECK-NEXT:    [[COL_LOAD21:%.*]] = load <2 x double>, ptr [[TMP12]], align 8
-; CHECK-NEXT:    [[VEC_GEP22:%.*]] = getelementptr double, ptr [[TMP3]], i64 12
+; CHECK-NEXT:    [[VEC_GEP22:%.*]] = getelementptr i8, ptr [[TMP3]], i64 96
 ; CHECK-NEXT:    [[COL_LOAD23:%.*]] = load <2 x double>, ptr [[VEC_GEP22]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr double, ptr [[TMP7]], i64 2
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP7]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD24:%.*]] = load <2 x double>, ptr [[TMP13]], align 8
-; CHECK-NEXT:    [[VEC_GEP25:%.*]] = getelementptr double, ptr [[TMP7]], i64 6
+; CHECK-NEXT:    [[VEC_GEP25:%.*]] = getelementptr i8, ptr [[TMP7]], i64 48
 ; CHECK-NEXT:    [[COL_LOAD26:%.*]] = load <2 x double>, ptr [[VEC_GEP25]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT30:%.*]] = shufflevector <2 x double> [[COL_LOAD24]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD21]], <2 x double> [[SPLAT_SPLAT30]], <2 x double> [[TMP9]])
@@ -72,14 +72,14 @@ define void @multiply(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[SPLAT_SPLAT40:%.*]] = shufflevector <2 x double> [[COL_LOAD26]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP17:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD23]], <2 x double> [[SPLAT_SPLAT40]], <2 x double> [[TMP16]])
 ; CHECK-NEXT:    store <2 x double> [[TMP15]], ptr [[C]], align 8
-; CHECK-NEXT:    [[VEC_GEP41:%.*]] = getelementptr double, ptr [[C]], i64 4
+; CHECK-NEXT:    [[VEC_GEP41:%.*]] = getelementptr i8, ptr [[C]], i64 32
 ; CHECK-NEXT:    store <2 x double> [[TMP17]], ptr [[VEC_GEP41]], align 8
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr double, ptr [[TMP3]], i64 2
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[TMP3]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD42:%.*]] = load <2 x double>, ptr [[TMP18]], align 8
-; CHECK-NEXT:    [[VEC_GEP43:%.*]] = getelementptr double, ptr [[TMP3]], i64 6
+; CHECK-NEXT:    [[VEC_GEP43:%.*]] = getelementptr i8, ptr [[TMP3]], i64 48
 ; CHECK-NEXT:    [[COL_LOAD44:%.*]] = load <2 x double>, ptr [[VEC_GEP43]], align 8
 ; CHECK-NEXT:    [[COL_LOAD45:%.*]] = load <2 x double>, ptr [[TMP7]], align 8
-; CHECK-NEXT:    [[VEC_GEP46:%.*]] = getelementptr double, ptr [[TMP7]], i64 4
+; CHECK-NEXT:    [[VEC_GEP46:%.*]] = getelementptr i8, ptr [[TMP7]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD47:%.*]] = load <2 x double>, ptr [[VEC_GEP46]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT50:%.*]] = shufflevector <2 x double> [[COL_LOAD45]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP19:%.*]] = fmul contract <2 x double> [[COL_LOAD42]], [[SPLAT_SPLAT50]]
@@ -89,13 +89,13 @@ define void @multiply(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP21:%.*]] = fmul contract <2 x double> [[COL_LOAD42]], [[SPLAT_SPLAT56]]
 ; CHECK-NEXT:    [[SPLAT_SPLAT59:%.*]] = shufflevector <2 x double> [[COL_LOAD47]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP22:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD44]], <2 x double> [[SPLAT_SPLAT59]], <2 x double> [[TMP21]])
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr double, ptr [[TMP3]], i64 10
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[TMP3]], i64 80
 ; CHECK-NEXT:    [[COL_LOAD60:%.*]] = load <2 x double>, ptr [[TMP23]], align 8
-; CHECK-NEXT:    [[VEC_GEP61:%.*]] = getelementptr double, ptr [[TMP3]], i64 14
+; CHECK-NEXT:    [[VEC_GEP61:%.*]] = getelementptr i8, ptr [[TMP3]], i64 112
 ; CHECK-NEXT:    [[COL_LOAD62:%.*]] = load <2 x double>, ptr [[VEC_GEP61]], align 8
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr double, ptr [[TMP7]], i64 2
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP7]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD63:%.*]] = load <2 x double>, ptr [[TMP24]], align 8
-; CHECK-NEXT:    [[VEC_GEP64:%.*]] = getelementptr double, ptr [[TMP7]], i64 6
+; CHECK-NEXT:    [[VEC_GEP64:%.*]] = getelementptr i8, ptr [[TMP7]], i64 48
 ; CHECK-NEXT:    [[COL_LOAD65:%.*]] = load <2 x double>, ptr [[VEC_GEP64]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT69:%.*]] = shufflevector <2 x double> [[COL_LOAD63]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP25:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD60]], <2 x double> [[SPLAT_SPLAT69]], <2 x double> [[TMP20]])
@@ -105,16 +105,16 @@ define void @multiply(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP27:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD60]], <2 x double> [[SPLAT_SPLAT76]], <2 x double> [[TMP22]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT79:%.*]] = shufflevector <2 x double> [[COL_LOAD65]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP28:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD62]], <2 x double> [[SPLAT_SPLAT79]], <2 x double> [[TMP27]])
-; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr double, ptr [[C]], i64 2
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[C]], i64 16
 ; CHECK-NEXT:    store <2 x double> [[TMP26]], ptr [[TMP29]], align 8
-; CHECK-NEXT:    [[VEC_GEP80:%.*]] = getelementptr double, ptr [[C]], i64 6
+; CHECK-NEXT:    [[VEC_GEP80:%.*]] = getelementptr i8, ptr [[C]], i64 48
 ; CHECK-NEXT:    store <2 x double> [[TMP28]], ptr [[VEC_GEP80]], align 8
 ; CHECK-NEXT:    [[COL_LOAD81:%.*]] = load <2 x double>, ptr [[TMP3]], align 8
-; CHECK-NEXT:    [[VEC_GEP82:%.*]] = getelementptr double, ptr [[TMP3]], i64 4
+; CHECK-NEXT:    [[VEC_GEP82:%.*]] = getelementptr i8, ptr [[TMP3]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD83:%.*]] = load <2 x double>, ptr [[VEC_GEP82]], align 8
-; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr double, ptr [[TMP7]], i64 8
+; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr i8, ptr [[TMP7]], i64 64
 ; CHECK-NEXT:    [[COL_LOAD84:%.*]] = load <2 x double>, ptr [[TMP30]], align 8
-; CHECK-NEXT:    [[VEC_GEP85:%.*]] = getelementptr double, ptr [[TMP7]], i64 12
+; CHECK-NEXT:    [[VEC_GEP85:%.*]] = getelementptr i8, ptr [[TMP7]], i64 96
 ; CHECK-NEXT:    [[COL_LOAD86:%.*]] = load <2 x double>, ptr [[VEC_GEP85]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT89:%.*]] = shufflevector <2 x double> [[COL_LOAD84]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP31:%.*]] = fmul contract <2 x double> [[COL_LOAD81]], [[SPLAT_SPLAT89]]
@@ -124,13 +124,13 @@ define void @multiply(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP33:%.*]] = fmul contract <2 x double> [[COL_LOAD81]], [[SPLAT_SPLAT95]]
 ; CHECK-NEXT:    [[SPLAT_SPLAT98:%.*]] = shufflevector <2 x double> [[COL_LOAD86]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP34:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD83]], <2 x double> [[SPLAT_SPLAT98]], <2 x double> [[TMP33]])
-; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr double, ptr [[TMP3]], i64 8
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr i8, ptr [[TMP3]], i64 64
 ; CHECK-NEXT:    [[COL_LOAD99:%.*]] = load <2 x double>, ptr [[TMP35]], align 8
-; CHECK-NEXT:    [[VEC_GEP100:%.*]] = getelementptr double, ptr [[TMP3]], i64 12
+; CHECK-NEXT:    [[VEC_GEP100:%.*]] = getelementptr i8, ptr [[TMP3]], i64 96
 ; CHECK-NEXT:    [[COL_LOAD101:%.*]] = load <2 x double>, ptr [[VEC_GEP100]], align 8
-; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr double, ptr [[TMP7]], i64 10
+; CHECK-NEXT:    [[TMP36:%.*]] = getelementptr i8, ptr [[TMP7]], i64 80
 ; CHECK-NEXT:    [[COL_LOAD102:%.*]] = load <2 x double>, ptr [[TMP36]], align 8
-; CHECK-NEXT:    [[VEC_GEP103:%.*]] = getelementptr double, ptr [[TMP7]], i64 14
+; CHECK-NEXT:    [[VEC_GEP103:%.*]] = getelementptr i8, ptr [[TMP7]], i64 112
 ; CHECK-NEXT:    [[COL_LOAD104:%.*]] = load <2 x double>, ptr [[VEC_GEP103]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT108:%.*]] = shufflevector <2 x double> [[COL_LOAD102]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP37:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD99]], <2 x double> [[SPLAT_SPLAT108]], <2 x double> [[TMP32]])
@@ -140,17 +140,17 @@ define void @multiply(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP39:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD99]], <2 x double> [[SPLAT_SPLAT115]], <2 x double> [[TMP34]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT118:%.*]] = shufflevector <2 x double> [[COL_LOAD104]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP40:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD101]], <2 x double> [[SPLAT_SPLAT118]], <2 x double> [[TMP39]])
-; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr double, ptr [[C]], i64 8
+; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr i8, ptr [[C]], i64 64
 ; CHECK-NEXT:    store <2 x double> [[TMP38]], ptr [[TMP41]], align 8
-; CHECK-NEXT:    [[VEC_GEP119:%.*]] = getelementptr double, ptr [[C]], i64 12
+; CHECK-NEXT:    [[VEC_GEP119:%.*]] = getelementptr i8, ptr [[C]], i64 96
 ; CHECK-NEXT:    store <2 x double> [[TMP40]], ptr [[VEC_GEP119]], align 8
-; CHECK-NEXT:    [[TMP42:%.*]] = getelementptr double, ptr [[TMP3]], i64 2
+; CHECK-NEXT:    [[TMP42:%.*]] = getelementptr i8, ptr [[TMP3]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD120:%.*]] = load <2 x double>, ptr [[TMP42]], align 8
-; CHECK-NEXT:    [[VEC_GEP121:%.*]] = getelementptr double, ptr [[TMP3]], i64 6
+; CHECK-NEXT:    [[VEC_GEP121:%.*]] = getelementptr i8, ptr [[TMP3]], i64 48
 ; CHECK-NEXT:    [[COL_LOAD122:%.*]] = load <2 x double>, ptr [[VEC_GEP121]], align 8
-; CHECK-NEXT:    [[TMP43:%.*]] = getelementptr double, ptr [[TMP7]], i64 8
+; CHECK-NEXT:    [[TMP43:%.*]] = getelementptr i8, ptr [[TMP7]], i64 64
 ; CHECK-NEXT:    [[COL_LOAD123:%.*]] = load <2 x double>, ptr [[TMP43]], align 8
-; CHECK-NEXT:    [[VEC_GEP124:%.*]] = getelementptr double, ptr [[TMP7]], i64 12
+; CHECK-NEXT:    [[VEC_GEP124:%.*]] = getelementptr i8, ptr [[TMP7]], i64 96
 ; CHECK-NEXT:    [[COL_LOAD125:%.*]] = load <2 x double>, ptr [[VEC_GEP124]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT128:%.*]] = shufflevector <2 x double> [[COL_LOAD123]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP44:%.*]] = fmul contract <2 x double> [[COL_LOAD120]], [[SPLAT_SPLAT128]]
@@ -160,13 +160,13 @@ define void @multiply(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP46:%.*]] = fmul contract <2 x double> [[COL_LOAD120]], [[SPLAT_SPLAT134]]
 ; CHECK-NEXT:    [[SPLAT_SPLAT137:%.*]] = shufflevector <2 x double> [[COL_LOAD125]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP47:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD122]], <2 x double> [[SPLAT_SPLAT137]], <2 x double> [[TMP46]])
-; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr double, ptr [[TMP3]], i64 10
+; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr i8, ptr [[TMP3]], i64 80
 ; CHECK-NEXT:    [[COL_LOAD138:%.*]] = load <2 x double>, ptr [[TMP48]], align 8
-; CHECK-NEXT:    [[VEC_GEP139:%.*]] = getelementptr double, ptr [[TMP3]], i64 14
+; CHECK-NEXT:    [[VEC_GEP139:%.*]] = getelementptr i8, ptr [[TMP3]], i64 112
 ; CHECK-NEXT:    [[COL_LOAD140:%.*]] = load <2 x double>, ptr [[VEC_GEP139]], align 8
-; CHECK-NEXT:    [[TMP49:%.*]] = getelementptr double, ptr [[TMP7]], i64 10
+; CHECK-NEXT:    [[TMP49:%.*]] = getelementptr i8, ptr [[TMP7]], i64 80
 ; CHECK-NEXT:    [[COL_LOAD141:%.*]] = load <2 x double>, ptr [[TMP49]], align 8
-; CHECK-NEXT:    [[VEC_GEP142:%.*]] = getelementptr double, ptr [[TMP7]], i64 14
+; CHECK-NEXT:    [[VEC_GEP142:%.*]] = getelementptr i8, ptr [[TMP7]], i64 112
 ; CHECK-NEXT:    [[COL_LOAD143:%.*]] = load <2 x double>, ptr [[VEC_GEP142]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT147:%.*]] = shufflevector <2 x double> [[COL_LOAD141]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP50:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD138]], <2 x double> [[SPLAT_SPLAT147]], <2 x double> [[TMP45]])
@@ -176,9 +176,9 @@ define void @multiply(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP52:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD138]], <2 x double> [[SPLAT_SPLAT154]], <2 x double> [[TMP47]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT157:%.*]] = shufflevector <2 x double> [[COL_LOAD143]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP53:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD140]], <2 x double> [[SPLAT_SPLAT157]], <2 x double> [[TMP52]])
-; CHECK-NEXT:    [[TMP54:%.*]] = getelementptr double, ptr [[C]], i64 10
+; CHECK-NEXT:    [[TMP54:%.*]] = getelementptr i8, ptr [[C]], i64 80
 ; CHECK-NEXT:    store <2 x double> [[TMP51]], ptr [[TMP54]], align 8
-; CHECK-NEXT:    [[VEC_GEP158:%.*]] = getelementptr double, ptr [[C]], i64 14
+; CHECK-NEXT:    [[VEC_GEP158:%.*]] = getelementptr i8, ptr [[C]], i64 112
 ; CHECK-NEXT:    store <2 x double> [[TMP53]], ptr [[VEC_GEP158]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -234,7 +234,7 @@ define void @multiply_reuse_load(ptr noalias %A, ptr noalias %B, ptr noalias %C)
 ; CHECK-LABEL: @multiply_reuse_load(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[A]], i64 4
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT]]
@@ -244,13 +244,13 @@ define void @multiply_reuse_load(ptr noalias %A, ptr noalias %B, ptr noalias %C)
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT10]]
 ; CHECK-NEXT:    [[SPLAT_SPLAT13:%.*]] = shufflevector <2 x double> [[COL_LOAD1]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD1]], <2 x double> [[SPLAT_SPLAT13]], <2 x double> [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[A]], i64 8
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 64
 ; CHECK-NEXT:    [[COL_LOAD14:%.*]] = load <2 x double>, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[VEC_GEP15:%.*]] = getelementptr double, ptr [[A]], i64 12
+; CHECK-NEXT:    [[VEC_GEP15:%.*]] = getelementptr i8, ptr [[A]], i64 96
 ; CHECK-NEXT:    [[COL_LOAD16:%.*]] = load <2 x double>, ptr [[VEC_GEP15]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD17:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[VEC_GEP18:%.*]] = getelementptr double, ptr [[A]], i64 6
+; CHECK-NEXT:    [[VEC_GEP18:%.*]] = getelementptr i8, ptr [[A]], i64 48
 ; CHECK-NEXT:    [[COL_LOAD19:%.*]] = load <2 x double>, ptr [[VEC_GEP18]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT23:%.*]] = shufflevector <2 x double> [[COL_LOAD17]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD14]], <2 x double> [[SPLAT_SPLAT23]], <2 x double> [[TMP1]])
@@ -261,14 +261,14 @@ define void @multiply_reuse_load(ptr noalias %A, ptr noalias %B, ptr noalias %C)
 ; CHECK-NEXT:    [[SPLAT_SPLAT33:%.*]] = shufflevector <2 x double> [[COL_LOAD19]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP9:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD16]], <2 x double> [[SPLAT_SPLAT33]], <2 x double> [[TMP8]])
 ; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[C:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP34:%.*]] = getelementptr double, ptr [[C]], i64 4
+; CHECK-NEXT:    [[VEC_GEP34:%.*]] = getelementptr i8, ptr [[C]], i64 32
 ; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr [[VEC_GEP34]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD35:%.*]] = load <2 x double>, ptr [[TMP10]], align 8
-; CHECK-NEXT:    [[VEC_GEP36:%.*]] = getelementptr double, ptr [[A]], i64 6
+; CHECK-NEXT:    [[VEC_GEP36:%.*]] = getelementptr i8, ptr [[A]], i64 48
 ; CHECK-NEXT:    [[COL_LOAD37:%.*]] = load <2 x double>, ptr [[VEC_GEP36]], align 8
 ; CHECK-NEXT:    [[COL_LOAD38:%.*]] = load <2 x double>, ptr [[A]], align 8
-; CHECK-NEXT:    [[VEC_GEP39:%.*]] = getelementptr double, ptr [[A]], i64 4
+; CHECK-NEXT:    [[VEC_GEP39:%.*]] = getelementptr i8, ptr [[A]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD40:%.*]] = load <2 x double>, ptr [[VEC_GEP39]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT43:%.*]] = shufflevector <2 x double> [[COL_LOAD38]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul contract <2 x double> [[COL_LOAD35]], [[SPLAT_SPLAT43]]
@@ -278,13 +278,13 @@ define void @multiply_reuse_load(ptr noalias %A, ptr noalias %B, ptr noalias %C)
 ; CHECK-NEXT:    [[TMP13:%.*]] = fmul contract <2 x double> [[COL_LOAD35]], [[SPLAT_SPLAT49]]
 ; CHECK-NEXT:    [[SPLAT_SPLAT52:%.*]] = shufflevector <2 x double> [[COL_LOAD40]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP14:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD37]], <2 x double> [[SPLAT_SPLAT52]], <2 x double> [[TMP13]])
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr double, ptr [[A]], i64 10
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[A]], i64 80
 ; CHECK-NEXT:    [[COL_LOAD53:%.*]] = load <2 x double>, ptr [[TMP15]], align 8
-; CHECK-NEXT:    [[VEC_GEP54:%.*]] = getelementptr double, ptr [[A]], i64 14
+; CHECK-NEXT:    [[VEC_GEP54:%.*]] = getelementptr i8, ptr [[A]], i64 112
 ; CHECK-NEXT:    [[COL_LOAD55:%.*]] = load <2 x double>, ptr [[VEC_GEP54]], align 8
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD56:%.*]] = load <2 x double>, ptr [[TMP16]], align 8
-; CHECK-NEXT:    [[VEC_GEP57:%.*]] = getelementptr double, ptr [[A]], i64 6
+; CHECK-NEXT:    [[VEC_GEP57:%.*]] = getelementptr i8, ptr [[A]], i64 48
 ; CHECK-NEXT:    [[COL_LOAD58:%.*]] = load <2 x double>, ptr [[VEC_GEP57]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT62:%.*]] = shufflevector <2 x double> [[COL_LOAD56]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP17:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD53]], <2 x double> [[SPLAT_SPLAT62]], <2 x double> [[TMP12]])
@@ -294,16 +294,16 @@ define void @multiply_reuse_load(ptr noalias %A, ptr noalias %B, ptr noalias %C)
 ; CHECK-NEXT:    [[TMP19:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD53]], <2 x double> [[SPLAT_SPLAT69]], <2 x double> [[TMP14]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT72:%.*]] = shufflevector <2 x double> [[COL_LOAD58]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP20:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD55]], <2 x double> [[SPLAT_SPLAT72]], <2 x double> [[TMP19]])
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr double, ptr [[C]], i64 2
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[C]], i64 16
 ; CHECK-NEXT:    store <2 x double> [[TMP18]], ptr [[TMP21]], align 8
-; CHECK-NEXT:    [[VEC_GEP73:%.*]] = getelementptr double, ptr [[C]], i64 6
+; CHECK-NEXT:    [[VEC_GEP73:%.*]] = getelementptr i8, ptr [[C]], i64 48
 ; CHECK-NEXT:    store <2 x double> [[TMP20]], ptr [[VEC_GEP73]], align 8
 ; CHECK-NEXT:    [[COL_LOAD74:%.*]] = load <2 x double>, ptr [[A]], align 8
-; CHECK-NEXT:    [[VEC_GEP75:%.*]] = getelementptr double, ptr [[A]], i64 4
+; CHECK-NEXT:    [[VEC_GEP75:%.*]] = getelementptr i8, ptr [[A]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD76:%.*]] = load <2 x double>, ptr [[VEC_GEP75]], align 8
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr double, ptr [[A]], i64 8
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[A]], i64 64
 ; CHECK-NEXT:    [[COL_LOAD77:%.*]] = load <2 x double>, ptr [[TMP22]], align 8
-; CHECK-NEXT:    [[VEC_GEP78:%.*]] = getelementptr double, ptr [[A]], i64 12
+; CHECK-NEXT:    [[VEC_GEP78:%.*]] = getelementptr i8, ptr [[A]], i64 96
 ; CHECK-NEXT:    [[COL_LOAD79:%.*]] = load <2 x double>, ptr [[VEC_GEP78]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT82:%.*]] = shufflevector <2 x double> [[COL_LOAD77]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP23:%.*]] = fmul contract <2 x double> [[COL_LOAD74]], [[SPLAT_SPLAT82]]
@@ -313,13 +313,13 @@ define void @multiply_reuse_load(ptr noalias %A, ptr noalias %B, ptr noalias %C)
 ; CHECK-NEXT:    [[TMP25:%.*]] = fmul contract <2 x double> [[COL_LOAD74]], [[SPLAT_SPLAT88]]
 ; CHECK-NEXT:    [[SPLAT_SPLAT91:%.*]] = shufflevector <2 x double> [[COL_LOAD79]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP26:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD76]], <2 x double> [[SPLAT_SPLAT91]], <2 x double> [[TMP25]])
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr double, ptr [[A]], i64 8
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[A]], i64 64
 ; CHECK-NEXT:    [[COL_LOAD92:%.*]] = load <2 x double>, ptr [[TMP27]], align 8
-; CHECK-NEXT:    [[VEC_GEP93:%.*]] = getelementptr double, ptr [[A]], i64 12
+; CHECK-NEXT:    [[VEC_GEP93:%.*]] = getelementptr i8, ptr [[A]], i64 96
 ; CHECK-NEXT:    [[COL_LOAD94:%.*]] = load <2 x double>, ptr [[VEC_GEP93]], align 8
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr double, ptr [[A]], i64 10
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[A]], i64 80
 ; CHECK-NEXT:    [[COL_LOAD95:%.*]] = load <2 x double>, ptr [[TMP28]], align 8
-; CHECK-NEXT:    [[VEC_GEP96:%.*]] = getelementptr double, ptr [[A]], i64 14
+; CHECK-NEXT:    [[VEC_GEP96:%.*]] = getelementptr i8, ptr [[A]], i64 112
 ; CHECK-NEXT:    [[COL_LOAD97:%.*]] = load <2 x double>, ptr [[VEC_GEP96]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT101:%.*]] = shufflevector <2 x double> [[COL_LOAD95]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP29:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD92]], <2 x double> [[SPLAT_SPLAT101]], <2 x double> [[TMP24]])
@@ -329,17 +329,17 @@ define void @multiply_reuse_load(ptr noalias %A, ptr noalias %B, ptr noalias %C)
 ; CHECK-NEXT:    [[TMP31:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD92]], <2 x double> [[SPLAT_SPLAT108]], <2 x double> [[TMP26]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT111:%.*]] = shufflevector <2 x double> [[COL_LOAD97]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP32:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD94]], <2 x double> [[SPLAT_SPLAT111]], <2 x double> [[TMP31]])
-; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr double, ptr [[C]], i64 8
+; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr i8, ptr [[C]], i64 64
 ; CHECK-NEXT:    store <2 x double> [[TMP30]], ptr [[TMP33]], align 8
-; CHECK-NEXT:    [[VEC_GEP112:%.*]] = getelementptr double, ptr [[C]], i64 12
+; CHECK-NEXT:    [[VEC_GEP112:%.*]] = getelementptr i8, ptr [[C]], i64 96
 ; CHECK-NEXT:    store <2 x double> [[TMP32]], ptr [[VEC_GEP112]], align 8
-; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr double, ptr [[A]], i64 2
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr i8, ptr [[A]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD113:%.*]] = load <2 x double>, ptr [[TMP34]], align 8
-; CHECK-NEXT:    [[VEC_GEP114:%.*]] = getelementptr double, ptr [[A]], i64 6
+; CHECK-NEXT:    [[VEC_GEP114:%.*]] = getelementptr i8, ptr [[A]], i64 48
 ; CHECK-NEXT:    [[COL_LOAD115:%.*]] = load <2 x double>, ptr [[VEC_GEP114]], align 8
-; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr double, ptr [[A]], i64 8
+; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr i8, ptr [[A]], i64 64
 ; CHECK-NEXT:    [[COL_LOAD116:%.*]] = load <2 x double>, ptr [[TMP35]], align 8
-; CHECK-NEXT:    [[VEC_GEP117:%.*]] = getelementptr double, ptr [[A]], i64 12
+; CHECK-NEXT:    [[VEC_GEP117:%.*]] = getelementptr i8, ptr [[A]], i64 96
 ; CHECK-NEXT:    [[COL_LOAD118:%.*]] = load <2 x double>, ptr [[VEC_GEP117]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT121:%.*]] = shufflevector <2 x double> [[COL_LOAD116]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP36:%.*]] = fmul contract <2 x double> [[COL_LOAD113]], [[SPLAT_SPLAT121]]
@@ -349,9 +349,9 @@ define void @multiply_reuse_load(ptr noalias %A, ptr noalias %B, ptr noalias %C)
 ; CHECK-NEXT:    [[TMP38:%.*]] = fmul contract <2 x double> [[COL_LOAD113]], [[SPLAT_SPLAT127]]
 ; CHECK-NEXT:    [[SPLAT_SPLAT130:%.*]] = shufflevector <2 x double> [[COL_LOAD118]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP39:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD115]], <2 x double> [[SPLAT_SPLAT130]], <2 x double> [[TMP38]])
-; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr double, ptr [[A]], i64 10
+; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr i8, ptr [[A]], i64 80
 ; CHECK-NEXT:    [[COL_LOAD131:%.*]] = load <2 x double>, ptr [[TMP40]], align 8
-; CHECK-NEXT:    [[VEC_GEP132:%.*]] = getelementptr double, ptr [[A]], i64 14
+; CHECK-NEXT:    [[VEC_GEP132:%.*]] = getelementptr i8, ptr [[A]], i64 112
 ; CHECK-NEXT:    [[COL_LOAD133:%.*]] = load <2 x double>, ptr [[VEC_GEP132]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT140:%.*]] = shufflevector <2 x double> [[COL_LOAD131]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP41:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD131]], <2 x double> [[SPLAT_SPLAT140]], <2 x double> [[TMP37]])
@@ -361,9 +361,9 @@ define void @multiply_reuse_load(ptr noalias %A, ptr noalias %B, ptr noalias %C)
 ; CHECK-NEXT:    [[TMP43:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD131]], <2 x double> [[SPLAT_SPLAT147]], <2 x double> [[TMP39]])
 ; CHECK-NEXT:    [[SPLAT_SPLAT150:%.*]] = shufflevector <2 x double> [[COL_LOAD133]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP44:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD133]], <2 x double> [[SPLAT_SPLAT150]], <2 x double> [[TMP43]])
-; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr double, ptr [[C]], i64 10
+; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr i8, ptr [[C]], i64 80
 ; CHECK-NEXT:    store <2 x double> [[TMP42]], ptr [[TMP45]], align 8
-; CHECK-NEXT:    [[VEC_GEP151:%.*]] = getelementptr double, ptr [[C]], i64 14
+; CHECK-NEXT:    [[VEC_GEP151:%.*]] = getelementptr i8, ptr [[C]], i64 112
 ; CHECK-NEXT:    store <2 x double> [[TMP44]], ptr [[VEC_GEP151]], align 8
 ; CHECK-NEXT:    ret void
 ;

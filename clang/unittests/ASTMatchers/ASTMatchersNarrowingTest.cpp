@@ -2107,6 +2107,20 @@ TEST_P(ASTMatchersTest, IsPure) {
   EXPECT_TRUE(notMatches("class X { int f(); };", cxxMethodDecl(isPure())));
 }
 
+TEST_P(ASTMatchersTest, IsExplicitObjectMemberFunction) {
+  if (!GetParam().isCXX23OrLater()) {
+    return;
+  }
+
+  auto ExpObjParamFn = cxxMethodDecl(isExplicitObjectMemberFunction());
+  EXPECT_TRUE(
+      notMatches("struct A { static int operator()(int); };", ExpObjParamFn));
+  EXPECT_TRUE(notMatches("struct A { int operator+(int); };", ExpObjParamFn));
+  EXPECT_TRUE(
+      matches("struct A { int operator-(this A, int); };", ExpObjParamFn));
+  EXPECT_TRUE(matches("struct A { void fun(this A &&self); };", ExpObjParamFn));
+}
+
 TEST_P(ASTMatchersTest, IsCopyAssignmentOperator) {
   if (!GetParam().isCXX()) {
     return;
@@ -3637,6 +3651,11 @@ TEST_P(ASTMatchersTest, InStdNamespace) {
                       "  class vector {};"
                       "}",
                       cxxRecordDecl(hasName("vector"), isInStdNamespace())));
+
+  EXPECT_TRUE(matches("namespace std {"
+                      "  extern \"C++\" class vector {};"
+                      "}",
+                      cxxRecordDecl(hasName("vector"), isInStdNamespace())));
 }
 
 TEST_P(ASTMatchersTest, InAnonymousNamespace) {
@@ -4103,15 +4122,102 @@ TEST_P(ASTMatchersTest, IsComparisonOperator) {
       notMatches("void x() { int a; if(a = 0) return; }", BinCompOperator));
 }
 
-TEST_P(ASTMatchersTest, HasInit) {
-  if (!GetParam().isCXX11OrLater()) {
-    // FIXME: Add a test for `hasInit()` that does not depend on C++.
+TEST_P(ASTMatchersTest, isRightFold) {
+  if (!GetParam().isCXX17OrLater()) {
     return;
   }
 
-  EXPECT_TRUE(matches("int x{0};", initListExpr(hasInit(0, expr()))));
-  EXPECT_FALSE(matches("int x{0};", initListExpr(hasInit(1, expr()))));
-  EXPECT_FALSE(matches("int x;", initListExpr(hasInit(0, expr()))));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (0 + ... + args); }",
+                       cxxFoldExpr(isRightFold())));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ... + 0); }",
+                      cxxFoldExpr(isRightFold())));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (... + args); };",
+                       cxxFoldExpr(isRightFold())));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ...); };",
+                      cxxFoldExpr(isRightFold())));
+}
+
+TEST_P(ASTMatchersTest, isLeftFold) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr(isLeftFold())));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (args + ... + 0); }",
+                       cxxFoldExpr(isLeftFold())));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (... + args); };",
+                      cxxFoldExpr(isLeftFold())));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (args + ...); };",
+                       cxxFoldExpr(isLeftFold())));
+}
+
+TEST_P(ASTMatchersTest, isUnaryFold) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (0 + ... + args); }",
+                       cxxFoldExpr(isUnaryFold())));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (args + ... + 0); }",
+                       cxxFoldExpr(isUnaryFold())));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (... + args); };",
+                      cxxFoldExpr(isUnaryFold())));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ...); };",
+                      cxxFoldExpr(isUnaryFold())));
+}
+
+TEST_P(ASTMatchersTest, isBinaryFold) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr(isBinaryFold())));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ... + 0); }",
+                      cxxFoldExpr(isBinaryFold())));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (... + args); };",
+                       cxxFoldExpr(isBinaryFold())));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (args + ...); };",
+                       cxxFoldExpr(isBinaryFold())));
+}
+
+TEST_P(ASTMatchersTest, hasOperator) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr(hasOperatorName("+"))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (... + args); };",
+                      cxxFoldExpr(hasOperatorName("+"))));
+
+  EXPECT_FALSE(
+      matches("template <typename... Args> auto multiply(Args... args) { "
+              "return (0 * ... * args); }",
+              cxxFoldExpr(hasOperatorName("+"))));
+  EXPECT_FALSE(
+      matches("template <typename... Args> auto multiply(Args... args) { "
+              "return (... * args); };",
+              cxxFoldExpr(hasOperatorName("+"))));
 }
 
 TEST_P(ASTMatchersTest, IsMain) {

@@ -157,21 +157,10 @@
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "arguments": [
 # CHECK-NEXT:        {
-# CHECK-NEXT:          "changeAnnotations": {
-# CHECK-NEXT:            "AddAllMissingIncludes0": {
-# CHECK-NEXT:              "label": "",
-# CHECK-NEXT:              "needsConfirmation": true
-# CHECK-NEXT:            },
-# CHECK-NEXT:            "AddAllMissingIncludes1": {
-# CHECK-NEXT:              "label": "",
-# CHECK-NEXT:              "needsConfirmation": true
-# CHECK-NEXT:            }
-# CHECK-NEXT:          },
 # CHECK-NEXT:          "documentChanges": [
 # CHECK-NEXT:            {
 # CHECK-NEXT:              "edits": [
 # CHECK-NEXT:                {
-# CHECK-NEXT:                  "annotationId": "AddAllMissingIncludes0",
 # CHECK-NEXT:                  "newText": "#include {{.*}}bar.h{{.*}}",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {
@@ -185,7 +174,6 @@
 # CHECK-NEXT:                  }
 # CHECK-NEXT:                },
 # CHECK-NEXT:                {
-# CHECK-NEXT:                  "annotationId": "AddAllMissingIncludes1",
 # CHECK-NEXT:                  "newText": "#include {{.*}}foo.h{{.*}}",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {
@@ -213,29 +201,10 @@
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "arguments": [
 # CHECK-NEXT:        {
-# CHECK-NEXT:          "changeAnnotations": {
-# CHECK-NEXT:            "AddAllMissingIncludes0": {
-# CHECK-NEXT:              "label": "",
-# CHECK-NEXT:              "needsConfirmation": true
-# CHECK-NEXT:            },
-# CHECK-NEXT:            "AddAllMissingIncludes1": {
-# CHECK-NEXT:              "label": "",
-# CHECK-NEXT:              "needsConfirmation": true
-# CHECK-NEXT:            },
-# CHECK-NEXT:            "RemoveAllUnusedIncludes0": {
-# CHECK-NEXT:              "label": "",
-# CHECK-NEXT:              "needsConfirmation": true
-# CHECK-NEXT:            },
-# CHECK-NEXT:            "RemoveAllUnusedIncludes1": {
-# CHECK-NEXT:              "label": "",
-# CHECK-NEXT:              "needsConfirmation": true
-# CHECK-NEXT:            }
-# CHECK-NEXT:          },
 # CHECK-NEXT:          "documentChanges": [
 # CHECK-NEXT:            {
 # CHECK-NEXT:              "edits": [
 # CHECK-NEXT:                {
-# CHECK-NEXT:                  "annotationId": "RemoveAllUnusedIncludes0",
 # CHECK-NEXT:                  "newText": "",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {
@@ -249,7 +218,6 @@
 # CHECK-NEXT:                  }
 # CHECK-NEXT:                },
 # CHECK-NEXT:                {
-# CHECK-NEXT:                  "annotationId": "RemoveAllUnusedIncludes1",
 # CHECK-NEXT:                  "newText": "",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {
@@ -263,7 +231,6 @@
 # CHECK-NEXT:                  }
 # CHECK-NEXT:                },
 # CHECK-NEXT:                {
-# CHECK-NEXT:                  "annotationId": "AddAllMissingIncludes0",
 # CHECK-NEXT:                  "newText": "#include {{.*}}bar.h{{.*}}",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {
@@ -277,7 +244,6 @@
 # CHECK-NEXT:                  }
 # CHECK-NEXT:                },
 # CHECK-NEXT:                {
-# CHECK-NEXT:                  "annotationId": "AddAllMissingIncludes1",
 # CHECK-NEXT:                  "newText": "#include {{.*}}foo.h{{.*}}",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {
@@ -342,21 +308,10 @@
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "arguments": [
 # CHECK-NEXT:        {
-# CHECK-NEXT:          "changeAnnotations": {
-# CHECK-NEXT:            "RemoveAllUnusedIncludes0": {
-# CHECK-NEXT:              "label": "",
-# CHECK-NEXT:              "needsConfirmation": true
-# CHECK-NEXT:            },
-# CHECK-NEXT:            "RemoveAllUnusedIncludes1": {
-# CHECK-NEXT:              "label": "",
-# CHECK-NEXT:              "needsConfirmation": true
-# CHECK-NEXT:            }
-# CHECK-NEXT:          },
 # CHECK-NEXT:          "documentChanges": [
 # CHECK-NEXT:            {
 # CHECK-NEXT:              "edits": [
 # CHECK-NEXT:                {
-# CHECK-NEXT:                  "annotationId": "RemoveAllUnusedIncludes0",
 # CHECK-NEXT:                  "newText": "",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {
@@ -370,7 +325,6 @@
 # CHECK-NEXT:                  }
 # CHECK-NEXT:                },
 # CHECK-NEXT:                {
-# CHECK-NEXT:                  "annotationId": "RemoveAllUnusedIncludes1",
 # CHECK-NEXT:                  "newText": "",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {
@@ -398,29 +352,10 @@
 # CHECK-NEXT:    {
 # CHECK-NEXT:      "arguments": [
 # CHECK-NEXT:        {
-# CHECK-NEXT:          "changeAnnotations": {
-# CHECK-NEXT:            "AddAllMissingIncludes0": {
-# CHECK-NEXT:              "label": "",
-# CHECK-NEXT:              "needsConfirmation": true
-# CHECK-NEXT:            },
-# CHECK-NEXT:            "AddAllMissingIncludes1": {
-# CHECK-NEXT:              "label": "",
-# CHECK-NEXT:              "needsConfirmation": true
-# CHECK-NEXT:            },
-# CHECK-NEXT:            "RemoveAllUnusedIncludes0": {
-# CHECK-NEXT:              "label": "",
-# CHECK-NEXT:              "needsConfirmation": true
-# CHECK-NEXT:            },
-# CHECK-NEXT:            "RemoveAllUnusedIncludes1": {
-# CHECK-NEXT:              "label": "",
-# CHECK-NEXT:              "needsConfirmation": true
-# CHECK-NEXT:            }
-# CHECK-NEXT:          },
 # CHECK-NEXT:          "documentChanges": [
 # CHECK-NEXT:            {
 # CHECK-NEXT:              "edits": [
 # CHECK-NEXT:                {
-# CHECK-NEXT:                  "annotationId": "RemoveAllUnusedIncludes0",
 # CHECK-NEXT:                  "newText": "",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {
@@ -434,7 +369,6 @@
 # CHECK-NEXT:                  }
 # CHECK-NEXT:                },
 # CHECK-NEXT:                {
-# CHECK-NEXT:                  "annotationId": "RemoveAllUnusedIncludes1",
 # CHECK-NEXT:                  "newText": "",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {
@@ -448,7 +382,6 @@
 # CHECK-NEXT:                  }
 # CHECK-NEXT:                },
 # CHECK-NEXT:                {
-# CHECK-NEXT:                  "annotationId": "AddAllMissingIncludes0",
 # CHECK-NEXT:                  "newText": "#include {{.*}}bar.h{{.*}}",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {
@@ -462,7 +395,6 @@
 # CHECK-NEXT:                  }
 # CHECK-NEXT:                },
 # CHECK-NEXT:                {
-# CHECK-NEXT:                  "annotationId": "AddAllMissingIncludes1",
 # CHECK-NEXT:                  "newText": "#include {{.*}}foo.h{{.*}}",
 # CHECK-NEXT:                  "range": {
 # CHECK-NEXT:                    "end": {

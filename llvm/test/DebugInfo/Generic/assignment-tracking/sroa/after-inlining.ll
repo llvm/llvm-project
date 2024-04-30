@@ -1,4 +1,5 @@
 ; RUN: opt %s -S -passes=sroa -o - | FileCheck %s
+; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=sroa -o - | FileCheck %s
 
 ;; Check that SROA preserves the InlinedAt status of new dbg.assign intriniscs
 ;; it inserts.
@@ -41,8 +42,8 @@
 @e = dso_local local_unnamed_addr global i32 0, align 4, !dbg !6
 
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #1
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #2
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
 
 define dso_local void @l() local_unnamed_addr #4 !dbg !73 {
 entry:
@@ -51,12 +52,12 @@ entry:
   ; deleted as redundant.
   call void @llvm.dbg.assign(metadata i1 false, metadata !64, metadata !DIExpression(), metadata !74, metadata ptr %j.i, metadata !DIExpression()) #5, !dbg !75
   %0 = bitcast ptr %j.i to ptr, !dbg !77
-  call void @llvm.lifetime.start.p0i8(i64 4, ptr nonnull %0) #5, !dbg !77
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %0) #5, !dbg !77
   %arrayidx.i.i = getelementptr inbounds %struct.c, ptr %j.i, i64 0, i32 1, i64 0, !dbg !78
   %1 = load i32, ptr %arrayidx.i.i, align 4, !dbg !78
   store i32 1, ptr @f, align 4, !dbg !80
   store i32 %1, ptr @e, align 4, !dbg !81
-  call void @llvm.lifetime.end.p0i8(i64 4, ptr nonnull %0) #5, !dbg !82
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %0) #5, !dbg !82
   ret void, !dbg !83
 }
 

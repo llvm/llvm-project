@@ -989,3 +989,119 @@ while.end.i:
   %bool = icmp eq i64 %sub.ptr.sub.i, 0
   ret i1 %bool
 }
+
+; Test cmp(or), where one of argument to OR is a SUB of ptr2int with a recursive GEP.
+define i1 @recursiveGEP_orcmp(ptr %val1, i64 %val2) {
+; CHECK-LABEL: @recursiveGEP_orcmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
+; CHECK:       while.cond.i:
+; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 2
+; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
+; CHECK:       while.end.i:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  br label %while.cond.i
+
+while.cond.i:
+  %a.pn.i = phi ptr [ %test.0.i, %while.cond.i ], [ %val1, %entry ]
+  %test.0.i = getelementptr inbounds i8, ptr %a.pn.i, i64 1
+  %0 = load i8, ptr %test.0.i, align 2
+  %cmp3.not.i = icmp eq i8 %0, 0
+  br i1 %cmp3.not.i, label %while.end.i, label %while.cond.i
+
+while.end.i:
+  %sub.ptr.lhs.cast.i = ptrtoint ptr %test.0.i to i64
+  %sub.ptr.rhs.cast.i = ptrtoint ptr %val1 to i64
+  %sub.ptr.sub.i = sub i64 %sub.ptr.lhs.cast.i, %sub.ptr.rhs.cast.i
+  %orval = or i64 %sub.ptr.sub.i, %val2
+  %bool = icmp eq i64 %orval, 0
+  ret i1 %bool
+}
+
+define i1 @recursiveGEP_orcmp_orOperandsCommuted(ptr %val1, i64 %val2) {
+; CHECK-LABEL: @recursiveGEP_orcmp_orOperandsCommuted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
+; CHECK:       while.cond.i:
+; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 2
+; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
+; CHECK:       while.end.i:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  br label %while.cond.i
+
+while.cond.i:
+  %a.pn.i = phi ptr [ %test.0.i, %while.cond.i ], [ %val1, %entry ]
+  %test.0.i = getelementptr inbounds i8, ptr %a.pn.i, i64 1
+  %0 = load i8, ptr %test.0.i, align 2
+  %cmp3.not.i = icmp eq i8 %0, 0
+  br i1 %cmp3.not.i, label %while.end.i, label %while.cond.i
+
+while.end.i:
+  %sub.ptr.lhs.cast.i = ptrtoint ptr %test.0.i to i64
+  %sub.ptr.rhs.cast.i = ptrtoint ptr %val1 to i64
+  %sub.ptr.sub.i = sub i64 %sub.ptr.lhs.cast.i, %sub.ptr.rhs.cast.i
+  %orval = or i64 %val2, %sub.ptr.sub.i
+  %bool = icmp eq i64 %orval, 0
+  ret i1 %bool
+}
+
+; Test one of the argument to SUB is a ptr2int of a recursive GEP, with multiple use of SUB.
+define i1 @recursiveGEP_orcmpMultiUse(ptr %val1, i64 %val2, ptr %dv1, ptr %dv2) {
+; CHECK-LABEL: @recursiveGEP_orcmpMultiUse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[WHILE_COND_I:%.*]]
+; CHECK:       while.cond.i:
+; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 2
+; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
+; CHECK:       while.end.i:
+; CHECK-NEXT:    br i1 false, label [[IF_THEN:%.*]], label [[IF_END4:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[CLEANUP:%.*]]
+; CHECK:       if.end4:
+; CHECK-NEXT:    br label [[CLEANUP]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  br label %while.cond.i
+
+while.cond.i:
+  %a.pn.i = phi ptr [ %test.0.i, %while.cond.i ], [ %val1, %entry ]
+  %test.0.i = getelementptr inbounds i8, ptr %a.pn.i, i64 1
+  %0 = load i8, ptr %test.0.i, align 2
+  %cmp3.not.i = icmp eq i8 %0, 0
+  br i1 %cmp3.not.i, label %while.end.i, label %while.cond.i
+
+while.end.i:
+  %sub.ptr.lhs.cast.i = ptrtoint ptr %test.0.i to i64
+  %sub.ptr.rhs.cast.i = ptrtoint ptr %val1 to i64
+  %sub.ptr.sub.i = sub i64 %sub.ptr.lhs.cast.i, %sub.ptr.rhs.cast.i
+  %orval = or i64 %sub.ptr.sub.i, %val2
+  %or.cond = icmp eq i64 %orval, 0
+  br i1 %or.cond, label %if.then, label %if.end4
+
+if.then:
+  %cmp = icmp eq ptr %dv1, %dv2
+  br label %cleanup
+
+if.end4:
+  %tobool = icmp ne i64 %sub.ptr.sub.i, 0
+  br label %cleanup
+
+cleanup:
+  %retval.0 = phi i1 [ %cmp, %if.then ], [ %tobool, %if.end4 ]
+  ret i1 %retval.0
+}

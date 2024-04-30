@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FormatTestUtils.h"
+#include "FormatTestBase.h"
 #include "clang/Format/Format.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "gtest/gtest.h"
 
-#define DEBUG_TYPE "format-test"
+#define DEBUG_TYPE "sort-includes-test"
 
 namespace clang {
 namespace format {
 namespace {
 
-class SortIncludesTest : public ::testing::Test {
+class SortIncludesTest : public test::FormatTestBase {
 protected:
   std::vector<tooling::Range> GetCodeRange(StringRef Code) {
     return std::vector<tooling::Range>(1, tooling::Range(0, Code.size()));
@@ -821,6 +821,122 @@ TEST_F(SortIncludesTest, CalculatesCorrectCursorPositionWithRegrouping) {
   EXPECT_EQ(27u, newCursor(Code, 28)); // Start of last line
 }
 
+TEST_F(SortIncludesTest,
+       CalculatesCorrectCursorPositionWhenNoReplacementsWithRegroupingAndCRLF) {
+  Style.IncludeBlocks = Style.IBS_Regroup;
+  FmtStyle.LineEnding = FormatStyle::LE_CRLF;
+  Style.IncludeCategories = {
+      {"^\"a\"", 0, 0, false}, {"^\"b\"", 1, 1, false}, {".*", 2, 2, false}};
+  std::string Code = "#include \"a\"\r\n" // Start of line: 0
+                     "\r\n"               // Start of line: 14
+                     "#include \"b\"\r\n" // Start of line: 16
+                     "\r\n"               // Start of line: 30
+                     "#include \"c\"\r\n" // Start of line: 32
+                     "\r\n"               // Start of line: 46
+                     "int i;";            // Start of line: 48
+  verifyNoChange(Code);
+  EXPECT_EQ(0u, newCursor(Code, 0));
+  EXPECT_EQ(14u, newCursor(Code, 14));
+  EXPECT_EQ(16u, newCursor(Code, 16));
+  EXPECT_EQ(30u, newCursor(Code, 30));
+  EXPECT_EQ(32u, newCursor(Code, 32));
+  EXPECT_EQ(46u, newCursor(Code, 46));
+  EXPECT_EQ(48u, newCursor(Code, 48));
+}
+
+TEST_F(
+    SortIncludesTest,
+    CalculatesCorrectCursorPositionWhenRemoveLinesReplacementsWithRegroupingAndCRLF) {
+  Style.IncludeBlocks = Style.IBS_Regroup;
+  FmtStyle.LineEnding = FormatStyle::LE_CRLF;
+  Style.IncludeCategories = {{".*", 0, 0, false}};
+  std::string Code = "#include \"a\"\r\n"     // Start of line: 0
+                     "\r\n"                   // Start of line: 14
+                     "#include \"b\"\r\n"     // Start of line: 16
+                     "\r\n"                   // Start of line: 30
+                     "#include \"c\"\r\n"     // Start of line: 32
+                     "\r\n"                   // Start of line: 46
+                     "int i;";                // Start of line: 48
+  std::string Expected = "#include \"a\"\r\n" // Start of line: 0
+                         "#include \"b\"\r\n" // Start of line: 14
+                         "#include \"c\"\r\n" // Start of line: 28
+                         "\r\n"               // Start of line: 42
+                         "int i;";            // Start of line: 44
+  EXPECT_EQ(Expected, sort(Code));
+  EXPECT_EQ(0u, newCursor(Code, 0));
+  EXPECT_EQ(
+      14u,
+      newCursor(Code, 14)); // cursor on empty line in include block is ignored
+  EXPECT_EQ(14u, newCursor(Code, 16));
+  EXPECT_EQ(
+      30u,
+      newCursor(Code, 30)); // cursor on empty line in include block is ignored
+  EXPECT_EQ(28u, newCursor(Code, 32));
+  EXPECT_EQ(42u, newCursor(Code, 46));
+  EXPECT_EQ(44u, newCursor(Code, 48));
+}
+
+// FIXME: the tests below should pass.
+#if 0
+TEST_F(
+    SortIncludesTest,
+    CalculatesCorrectCursorPositionWhenNewLineReplacementsWithRegroupingAndCRLF) {
+  Style.IncludeBlocks = Style.IBS_Regroup;
+  FmtStyle.LineEnding = FormatStyle::LE_CRLF;
+  Style.IncludeCategories = {
+      {"^\"a\"", 0, 0, false}, {"^\"b\"", 1, 1, false}, {".*", 2, 2, false}};
+  std::string Code = "#include \"a\"\r\n"     // Start of line: 0
+                     "#include \"b\"\r\n"     // Start of line: 14
+                     "#include \"c\"\r\n"     // Start of line: 28
+                     "\r\n"                   // Start of line: 42
+                     "int i;";                // Start of line: 44
+  std::string Expected = "#include \"a\"\r\n" // Start of line: 0
+                         "\r\n"               // Start of line: 14
+                         "#include \"b\"\r\n" // Start of line: 16
+                         "\r\n"               // Start of line: 30
+                         "#include \"c\"\r\n" // Start of line: 32
+                         "\r\n"               // Start of line: 46
+                         "int i;";            // Start of line: 48
+  EXPECT_EQ(Expected, sort(Code));
+  EXPECT_EQ(0u, newCursor(Code, 0));
+  EXPECT_EQ(15u, newCursor(Code, 16));
+  EXPECT_EQ(30u, newCursor(Code, 32));
+  EXPECT_EQ(44u, newCursor(Code, 46));
+  EXPECT_EQ(46u, newCursor(Code, 48));
+}
+
+TEST_F(
+    SortIncludesTest,
+    CalculatesCorrectCursorPositionWhenNoNewLineReplacementsWithRegroupingAndCRLF) {
+  Style.IncludeBlocks = Style.IBS_Regroup;
+  FmtStyle.LineEnding = FormatStyle::LE_CRLF;
+  Style.IncludeCategories = {
+      {"^\"a\"", 0, 0, false}, {"^\"b\"", 1, 1, false}, {".*", 2, 2, false}};
+  std::string Code = "#include \"a\"\r\n"     // Start of line: 0
+                     "\r\n"                   // Start of line: 14
+                     "#include \"c\"\r\n"     // Start of line: 16
+                     "\r\n"                   // Start of line: 30
+                     "#include \"b\"\r\n"     // Start of line: 32
+                     "\r\n"                   // Start of line: 46
+                     "int i;";                // Start of line: 48
+  std::string Expected = "#include \"a\"\r\n" // Start of line: 0
+                         "\r\n"               // Start of line: 14
+                         "#include \"b\"\r\n" // Start of line: 16
+                         "\r\n"               // Start of line: 30
+                         "#include \"c\"\r\n" // Start of line: 32
+                         "\r\n"               // Start of line: 46
+                         "int i;";            // Start of line: 48
+  EXPECT_EQ(Expected, sort(Code));
+  EXPECT_EQ(0u, newCursor(Code, 0));
+  EXPECT_EQ(14u, newCursor(Code, 14));
+  EXPECT_EQ(30u, newCursor(Code, 32));
+  EXPECT_EQ(30u, newCursor(Code, 30));
+  EXPECT_EQ(15u, newCursor(Code, 15));
+  EXPECT_EQ(44u, newCursor(Code, 46));
+  EXPECT_EQ(46u, newCursor(Code, 48));
+}
+#endif
+
 TEST_F(SortIncludesTest, DeduplicateIncludes) {
   EXPECT_EQ("#include <a>\n"
             "#include <b>\n"
@@ -974,6 +1090,112 @@ TEST_F(SortIncludesTest,
                      "\r\n"
                      "#include <a.h>\r\n";
   EXPECT_EQ(Code, sort(Code, "input.h", 0));
+}
+
+TEST_F(SortIncludesTest, MainIncludeChar) {
+  std::string Code = "#include <a>\n"
+                     "#include \"quote/input.h\"\n"
+                     "#include <angle-bracket/input.h>\n";
+
+  // Default behavior
+  EXPECT_EQ("#include \"quote/input.h\"\n"
+            "#include <a>\n"
+            "#include <angle-bracket/input.h>\n",
+            sort(Code, "input.cc", 1));
+
+  Style.MainIncludeChar = tooling::IncludeStyle::MICD_Quote;
+  EXPECT_EQ("#include \"quote/input.h\"\n"
+            "#include <a>\n"
+            "#include <angle-bracket/input.h>\n",
+            sort(Code, "input.cc", 1));
+
+  Style.MainIncludeChar = tooling::IncludeStyle::MICD_AngleBracket;
+  EXPECT_EQ("#include <angle-bracket/input.h>\n"
+            "#include \"quote/input.h\"\n"
+            "#include <a>\n",
+            sort(Code, "input.cc", 1));
+}
+
+TEST_F(SortIncludesTest, MainIncludeCharAnyPickQuote) {
+  Style.MainIncludeChar = tooling::IncludeStyle::MICD_Any;
+  EXPECT_EQ("#include \"input.h\"\n"
+            "#include <a>\n"
+            "#include <b>\n",
+            sort("#include <a>\n"
+                 "#include \"input.h\"\n"
+                 "#include <b>\n",
+                 "input.cc", 1));
+}
+
+TEST_F(SortIncludesTest, MainIncludeCharAnyPickAngleBracket) {
+  Style.MainIncludeChar = tooling::IncludeStyle::MICD_Any;
+  EXPECT_EQ("#include <input.h>\n"
+            "#include <a>\n"
+            "#include <b>\n",
+            sort("#include <a>\n"
+                 "#include <input.h>\n"
+                 "#include <b>\n",
+                 "input.cc", 1));
+}
+
+TEST_F(SortIncludesTest, MainIncludeCharQuoteAndRegroup) {
+  Style.IncludeCategories = {
+      {"lib-a", 1, 0, false}, {"lib-b", 2, 0, false}, {"lib-c", 3, 0, false}};
+  Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
+  Style.MainIncludeChar = tooling::IncludeStyle::MICD_Quote;
+
+  EXPECT_EQ("#include \"lib-b/input.h\"\n"
+            "\n"
+            "#include <lib-a/h-1.h>\n"
+            "#include <lib-a/h-3.h>\n"
+            "#include <lib-a/input.h>\n"
+            "\n"
+            "#include <lib-b/h-1.h>\n"
+            "#include <lib-b/h-3.h>\n"
+            "\n"
+            "#include <lib-c/h-1.h>\n"
+            "#include <lib-c/h-2.h>\n"
+            "#include <lib-c/h-3.h>\n",
+            sort("#include <lib-c/h-1.h>\n"
+                 "#include <lib-c/h-2.h>\n"
+                 "#include <lib-c/h-3.h>\n"
+                 "#include <lib-b/h-1.h>\n"
+                 "#include \"lib-b/input.h\"\n"
+                 "#include <lib-b/h-3.h>\n"
+                 "#include <lib-a/h-1.h>\n"
+                 "#include <lib-a/input.h>\n"
+                 "#include <lib-a/h-3.h>\n",
+                 "input.cc"));
+}
+
+TEST_F(SortIncludesTest, MainIncludeCharAngleBracketAndRegroup) {
+  Style.IncludeCategories = {
+      {"lib-a", 1, 0, false}, {"lib-b", 2, 0, false}, {"lib-c", 3, 0, false}};
+  Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
+  Style.MainIncludeChar = tooling::IncludeStyle::MICD_AngleBracket;
+
+  EXPECT_EQ("#include <lib-a/input.h>\n"
+            "\n"
+            "#include <lib-a/h-1.h>\n"
+            "#include <lib-a/h-3.h>\n"
+            "\n"
+            "#include \"lib-b/input.h\"\n"
+            "#include <lib-b/h-1.h>\n"
+            "#include <lib-b/h-3.h>\n"
+            "\n"
+            "#include <lib-c/h-1.h>\n"
+            "#include <lib-c/h-2.h>\n"
+            "#include <lib-c/h-3.h>\n",
+            sort("#include <lib-c/h-1.h>\n"
+                 "#include <lib-c/h-2.h>\n"
+                 "#include <lib-c/h-3.h>\n"
+                 "#include <lib-b/h-1.h>\n"
+                 "#include \"lib-b/input.h\"\n"
+                 "#include <lib-b/h-3.h>\n"
+                 "#include <lib-a/h-1.h>\n"
+                 "#include <lib-a/input.h>\n"
+                 "#include <lib-a/h-3.h>\n",
+                 "input.cc"));
 }
 
 TEST_F(SortIncludesTest, DoNotRegroupGroupsInGoogleObjCStyle) {

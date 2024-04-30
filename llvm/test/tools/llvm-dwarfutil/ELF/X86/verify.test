@@ -7,23 +7,23 @@
 
 ## Verify resulting debug info after --garbage-collection optimisation.
 # RUN: llvm-dwarfutil %t.o %t1 --verify
-# RUN: llvm-dwarfutil --linker llvm %t.o %t1 --verify
+# RUN: llvm-dwarfutil --linker parallel %t.o %t1 --verify
 
 ## Verify separate debug file after --garbage-collection optimisation.
 # RUN: llvm-dwarfutil %t.o --separate-debug-file %t1 --verify
-# RUN: llvm-dwarfutil --linker llvm %t.o --separate-debug-file %t1 --verify
+# RUN: llvm-dwarfutil --linker parallel %t.o --separate-debug-file %t1 --verify
 
 ## Verify not optimised resulting debug info.
 # RUN: not llvm-dwarfutil --no-garbage-collection %t.o %t1 --verify 2>&1 | FileCheck %s -DFILE=%t1
-# RUN: not llvm-dwarfutil --linker llvm --no-garbage-collection %t.o %t1 --verify 2>&1 | FileCheck %s -DFILE=%t1
+# RUN: not llvm-dwarfutil --linker parallel --no-garbage-collection %t.o %t1 --verify 2>&1 | FileCheck %s -DFILE=%t1
 
 ## Verify not optimised resulting separate debug file.
 # RUN: not llvm-dwarfutil --no-garbage-collection %t.o --separate-debug-file %t1 --verify 2>&1 | FileCheck %s -DFILE=%t1.debug
-# RUN: not llvm-dwarfutil --linker llvm --no-garbage-collection %t.o --separate-debug-file %t1 --verify 2>&1 | FileCheck %s -DFILE=%t1.debug
+# RUN: not llvm-dwarfutil --linker parallel --no-garbage-collection %t.o --separate-debug-file %t1 --verify 2>&1 | FileCheck %s -DFILE=%t1.debug
 
 ## Check that verification is disabled when destination is stdout.
 # RUN: llvm-dwarfutil %t.o - --verify 2>&1 | FileCheck %s --check-prefix=CHECK-STDOUT
-# RUN: llvm-dwarfutil --linker llvm %t.o - --verify 2>&1 | FileCheck %s --check-prefix=CHECK-STDOUT
+# RUN: llvm-dwarfutil --linker parallel %t.o - --verify 2>&1 | FileCheck %s --check-prefix=CHECK-STDOUT
 
 # CHECK: error: '[[FILE]]': output verification failed
 # CHECK-STDOUT: warning: verification skipped because writing to stdout

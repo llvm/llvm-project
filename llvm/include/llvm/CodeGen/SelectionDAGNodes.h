@@ -30,9 +30,9 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
@@ -381,6 +381,7 @@ private:
   bool NoUnsignedWrap : 1;
   bool NoSignedWrap : 1;
   bool Exact : 1;
+  bool Disjoint : 1;
   bool NonNeg : 1;
   bool NoNaNs : 1;
   bool NoInfs : 1;
@@ -402,10 +403,11 @@ private:
 public:
   /// Default constructor turns off all optimization flags.
   SDNodeFlags()
-      : NoUnsignedWrap(false), NoSignedWrap(false), Exact(false), NonNeg(false),
-        NoNaNs(false), NoInfs(false), NoSignedZeros(false),
-        AllowReciprocal(false), AllowContract(false), ApproximateFuncs(false),
-        AllowReassociation(false), NoFPExcept(false), Unpredictable(false) {}
+      : NoUnsignedWrap(false), NoSignedWrap(false), Exact(false),
+        Disjoint(false), NonNeg(false), NoNaNs(false), NoInfs(false),
+        NoSignedZeros(false), AllowReciprocal(false), AllowContract(false),
+        ApproximateFuncs(false), AllowReassociation(false), NoFPExcept(false),
+        Unpredictable(false) {}
 
   /// Propagate the fast-math-flags from an IR FPMathOperator.
   void copyFMF(const FPMathOperator &FPMO) {
@@ -422,6 +424,7 @@ public:
   void setNoUnsignedWrap(bool b) { NoUnsignedWrap = b; }
   void setNoSignedWrap(bool b) { NoSignedWrap = b; }
   void setExact(bool b) { Exact = b; }
+  void setDisjoint(bool b) { Disjoint = b; }
   void setNonNeg(bool b) { NonNeg = b; }
   void setNoNaNs(bool b) { NoNaNs = b; }
   void setNoInfs(bool b) { NoInfs = b; }
@@ -437,6 +440,7 @@ public:
   bool hasNoUnsignedWrap() const { return NoUnsignedWrap; }
   bool hasNoSignedWrap() const { return NoSignedWrap; }
   bool hasExact() const { return Exact; }
+  bool hasDisjoint() const { return Disjoint; }
   bool hasNonNeg() const { return NonNeg; }
   bool hasNoNaNs() const { return NoNaNs; }
   bool hasNoInfs() const { return NoInfs; }
@@ -454,6 +458,7 @@ public:
     NoUnsignedWrap &= Flags.NoUnsignedWrap;
     NoSignedWrap &= Flags.NoSignedWrap;
     Exact &= Flags.Exact;
+    Disjoint &= Flags.Disjoint;
     NonNeg &= Flags.NonNeg;
     NoNaNs &= Flags.NoNaNs;
     NoInfs &= Flags.NoInfs;
@@ -553,6 +558,7 @@ BEGIN_TWO_BYTE_PACK()
 
   class LoadSDNodeBitfields {
     friend class LoadSDNode;
+    friend class AtomicSDNode;
     friend class VPLoadSDNode;
     friend class VPStridedLoadSDNode;
     friend class MaskedLoadSDNode;
@@ -693,6 +699,8 @@ public:
         return false;
       case ISD::STRICT_FP16_TO_FP:
       case ISD::STRICT_FP_TO_FP16:
+      case ISD::STRICT_BF16_TO_FP:
+      case ISD::STRICT_FP_TO_BF16:
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
       case ISD::STRICT_##DAGN:
 #include "llvm/IR/ConstrainedOps.def"
@@ -924,8 +932,14 @@ public:
   /// Helper method returns the integer value of a ConstantSDNode operand.
   inline uint64_t getConstantOperandVal(unsigned Num) const;
 
+  /// Helper method returns the zero-extended integer value of a ConstantSDNode.
+  inline uint64_t getAsZExtVal() const;
+
   /// Helper method returns the APInt of a ConstantSDNode operand.
   inline const APInt &getConstantOperandAPInt(unsigned Num) const;
+
+  /// Helper method returns the APInt value of a ConstantSDNode.
+  inline const APInt &getAsAPIntVal() const;
 
   const SDValue &getOperand(unsigned Num) const {
     assert(Num < NumOperands && "Invalid child # of SDNode!");
@@ -984,6 +998,13 @@ public:
   /// Clear any flags in this node that aren't also set in Flags.
   /// If Flags is not in a defined state then this has no effect.
   void intersectFlagsWith(const SDNodeFlags Flags);
+
+  bool hasPoisonGeneratingFlags() const {
+    SDNodeFlags Flags = getFlags();
+    return Flags.hasNoUnsignedWrap() || Flags.hasNoSignedWrap() ||
+           Flags.hasExact() || Flags.hasDisjoint() || Flags.hasNonNeg() ||
+           Flags.hasNoNaNs() || Flags.hasNoInfs();
+  }
 
   void setCFIType(uint32_t Type) { CFIType = Type; }
   uint32_t getCFIType() const { return CFIType; }
@@ -1269,8 +1290,10 @@ private:
   unsigned DestAddrSpace;
 
 public:
-  AddrSpaceCastSDNode(unsigned Order, const DebugLoc &dl, EVT VT,
-                      unsigned SrcAS, unsigned DestAS);
+  AddrSpaceCastSDNode(unsigned Order, const DebugLoc &dl, SDVTList VTs,
+                      unsigned SrcAS, unsigned DestAS)
+      : SDNode(ISD::ADDRSPACECAST, Order, dl, VTs), SrcAddrSpace(SrcAS),
+        DestAddrSpace(DestAS) {}
 
   unsigned getSrcAddressSpace() const { return SrcAddrSpace; }
   unsigned getDestAddressSpace() const { return DestAddrSpace; }
@@ -1462,6 +1485,16 @@ public:
             MMO->isAtomic()) && "then why are we using an AtomicSDNode?");
   }
 
+  void setExtensionType(ISD::LoadExtType ETy) {
+    assert(getOpcode() == ISD::ATOMIC_LOAD && "Only used for atomic loads.");
+    LoadSDNodeBits.ExtTy = ETy;
+  }
+
+  ISD::LoadExtType getExtensionType() const {
+    assert(getOpcode() == ISD::ATOMIC_LOAD && "Only used for atomic loads.");
+    return static_cast<ISD::LoadExtType>(LoadSDNodeBits.ExtTy);
+  }
+
   const SDValue &getBasePtr() const {
     return getOpcode() == ISD::ATOMIC_STORE ? getOperand(2) : getOperand(1);
   }
@@ -1549,8 +1582,9 @@ class ShuffleVectorSDNode : public SDNode {
 protected:
   friend class SelectionDAG;
 
-  ShuffleVectorSDNode(EVT VT, unsigned Order, const DebugLoc &dl, const int *M)
-      : SDNode(ISD::VECTOR_SHUFFLE, Order, dl, getSDVTList(VT)), Mask(M) {}
+  ShuffleVectorSDNode(SDVTList VTs, unsigned Order, const DebugLoc &dl,
+                      const int *M)
+      : SDNode(ISD::VECTOR_SHUFFLE, Order, dl, VTs), Mask(M) {}
 
 public:
   ArrayRef<int> getMask() const {
@@ -1604,9 +1638,10 @@ class ConstantSDNode : public SDNode {
 
   const ConstantInt *Value;
 
-  ConstantSDNode(bool isTarget, bool isOpaque, const ConstantInt *val, EVT VT)
+  ConstantSDNode(bool isTarget, bool isOpaque, const ConstantInt *val,
+                 SDVTList VTs)
       : SDNode(isTarget ? ISD::TargetConstant : ISD::Constant, 0, DebugLoc(),
-               getSDVTList(VT)),
+               VTs),
         Value(val) {
     ConstantSDNodeBits.IsOpaque = isOpaque;
   }
@@ -1640,8 +1675,16 @@ uint64_t SDNode::getConstantOperandVal(unsigned Num) const {
   return cast<ConstantSDNode>(getOperand(Num))->getZExtValue();
 }
 
+uint64_t SDNode::getAsZExtVal() const {
+  return cast<ConstantSDNode>(this)->getZExtValue();
+}
+
 const APInt &SDNode::getConstantOperandAPInt(unsigned Num) const {
   return cast<ConstantSDNode>(getOperand(Num))->getAPIntValue();
+}
+
+const APInt &SDNode::getAsAPIntVal() const {
+  return cast<ConstantSDNode>(this)->getAPIntValue();
 }
 
 class ConstantFPSDNode : public SDNode {
@@ -1649,9 +1692,9 @@ class ConstantFPSDNode : public SDNode {
 
   const ConstantFP *Value;
 
-  ConstantFPSDNode(bool isTarget, const ConstantFP *val, EVT VT)
+  ConstantFPSDNode(bool isTarget, const ConstantFP *val, SDVTList VTs)
       : SDNode(isTarget ? ISD::TargetConstantFP : ISD::ConstantFP, 0,
-               DebugLoc(), getSDVTList(VT)),
+               DebugLoc(), VTs),
         Value(val) {}
 
 public:
@@ -1784,8 +1827,10 @@ class GlobalAddressSDNode : public SDNode {
   unsigned TargetFlags;
 
   GlobalAddressSDNode(unsigned Opc, unsigned Order, const DebugLoc &DL,
-                      const GlobalValue *GA, EVT VT, int64_t o,
-                      unsigned TF);
+                      const GlobalValue *GA, SDVTList VTs, int64_t o,
+                      unsigned TF)
+      : SDNode(Opc, Order, DL, VTs), TheGlobal(GA), Offset(o), TargetFlags(TF) {
+  }
 
 public:
   const GlobalValue *getGlobal() const { return TheGlobal; }
@@ -1807,10 +1852,10 @@ class FrameIndexSDNode : public SDNode {
 
   int FI;
 
-  FrameIndexSDNode(int fi, EVT VT, bool isTarg)
-    : SDNode(isTarg ? ISD::TargetFrameIndex : ISD::FrameIndex,
-      0, DebugLoc(), getSDVTList(VT)), FI(fi) {
-  }
+  FrameIndexSDNode(int fi, SDVTList VTs, bool isTarg)
+      : SDNode(isTarg ? ISD::TargetFrameIndex : ISD::FrameIndex, 0, DebugLoc(),
+               VTs),
+        FI(fi) {}
 
 public:
   int getIndex() const { return FI; }
@@ -1885,10 +1930,10 @@ class JumpTableSDNode : public SDNode {
   int JTI;
   unsigned TargetFlags;
 
-  JumpTableSDNode(int jti, EVT VT, bool isTarg, unsigned TF)
-    : SDNode(isTarg ? ISD::TargetJumpTable : ISD::JumpTable,
-      0, DebugLoc(), getSDVTList(VT)), JTI(jti), TargetFlags(TF) {
-  }
+  JumpTableSDNode(int jti, SDVTList VTs, bool isTarg, unsigned TF)
+      : SDNode(isTarg ? ISD::TargetJumpTable : ISD::JumpTable, 0, DebugLoc(),
+               VTs),
+        JTI(jti), TargetFlags(TF) {}
 
 public:
   int getIndex() const { return JTI; }
@@ -1911,19 +1956,19 @@ class ConstantPoolSDNode : public SDNode {
   Align Alignment; // Minimum alignment requirement of CP.
   unsigned TargetFlags;
 
-  ConstantPoolSDNode(bool isTarget, const Constant *c, EVT VT, int o,
+  ConstantPoolSDNode(bool isTarget, const Constant *c, SDVTList VTs, int o,
                      Align Alignment, unsigned TF)
       : SDNode(isTarget ? ISD::TargetConstantPool : ISD::ConstantPool, 0,
-               DebugLoc(), getSDVTList(VT)),
+               DebugLoc(), VTs),
         Offset(o), Alignment(Alignment), TargetFlags(TF) {
     assert(Offset >= 0 && "Offset is too large");
     Val.ConstVal = c;
   }
 
-  ConstantPoolSDNode(bool isTarget, MachineConstantPoolValue *v, EVT VT, int o,
-                     Align Alignment, unsigned TF)
+  ConstantPoolSDNode(bool isTarget, MachineConstantPoolValue *v, SDVTList VTs,
+                     int o, Align Alignment, unsigned TF)
       : SDNode(isTarget ? ISD::TargetConstantPool : ISD::ConstantPool, 0,
-               DebugLoc(), getSDVTList(VT)),
+               DebugLoc(), VTs),
         Offset(o), Alignment(Alignment), TargetFlags(TF) {
     assert(Offset >= 0 && "Offset is too large");
     Val.MachineCPVal = v;
@@ -1971,9 +2016,9 @@ class TargetIndexSDNode : public SDNode {
   int64_t Offset;
 
 public:
-  TargetIndexSDNode(int Idx, EVT VT, int64_t Ofs, unsigned TF)
-      : SDNode(ISD::TargetIndex, 0, DebugLoc(), getSDVTList(VT)),
-        TargetFlags(TF), Index(Idx), Offset(Ofs) {}
+  TargetIndexSDNode(int Idx, SDVTList VTs, int64_t Ofs, unsigned TF)
+      : SDNode(ISD::TargetIndex, 0, DebugLoc(), VTs), TargetFlags(TF),
+        Index(Idx), Offset(Ofs) {}
 
   unsigned getTargetFlags() const { return TargetFlags; }
   int getIndex() const { return Index; }
@@ -2183,8 +2228,8 @@ class RegisterSDNode : public SDNode {
 
   Register Reg;
 
-  RegisterSDNode(Register reg, EVT VT)
-    : SDNode(ISD::Register, 0, DebugLoc(), getSDVTList(VT)), Reg(reg) {}
+  RegisterSDNode(Register reg, SDVTList VTs)
+      : SDNode(ISD::Register, 0, DebugLoc(), VTs), Reg(reg) {}
 
 public:
   Register getReg() const { return Reg; }
@@ -2219,10 +2264,10 @@ class BlockAddressSDNode : public SDNode {
   int64_t Offset;
   unsigned TargetFlags;
 
-  BlockAddressSDNode(unsigned NodeTy, EVT VT, const BlockAddress *ba,
+  BlockAddressSDNode(unsigned NodeTy, SDVTList VTs, const BlockAddress *ba,
                      int64_t o, unsigned Flags)
-    : SDNode(NodeTy, 0, DebugLoc(), getSDVTList(VT)),
-             BA(ba), Offset(o), TargetFlags(Flags) {}
+      : SDNode(NodeTy, 0, DebugLoc(), VTs), BA(ba), Offset(o),
+        TargetFlags(Flags) {}
 
 public:
   const BlockAddress *getBlockAddress() const { return BA; }
@@ -2260,9 +2305,10 @@ class ExternalSymbolSDNode : public SDNode {
   const char *Symbol;
   unsigned TargetFlags;
 
-  ExternalSymbolSDNode(bool isTarget, const char *Sym, unsigned TF, EVT VT)
+  ExternalSymbolSDNode(bool isTarget, const char *Sym, unsigned TF,
+                       SDVTList VTs)
       : SDNode(isTarget ? ISD::TargetExternalSymbol : ISD::ExternalSymbol, 0,
-               DebugLoc(), getSDVTList(VT)),
+               DebugLoc(), VTs),
         Symbol(Sym), TargetFlags(TF) {}
 
 public:
@@ -2280,8 +2326,8 @@ class MCSymbolSDNode : public SDNode {
 
   MCSymbol *Symbol;
 
-  MCSymbolSDNode(MCSymbol *Symbol, EVT VT)
-      : SDNode(ISD::MCSymbol, 0, DebugLoc(), getSDVTList(VT)), Symbol(Symbol) {}
+  MCSymbolSDNode(MCSymbol *Symbol, SDVTList VTs)
+      : SDNode(ISD::MCSymbol, 0, DebugLoc(), VTs), Symbol(Symbol) {}
 
 public:
   MCSymbol *getMCSymbol() const { return Symbol; }
@@ -2994,8 +3040,8 @@ class AssertAlignSDNode : public SDNode {
   Align Alignment;
 
 public:
-  AssertAlignSDNode(unsigned Order, const DebugLoc &DL, EVT VT, Align A)
-      : SDNode(ISD::AssertAlign, Order, DL, getSDVTList(VT)), Alignment(A) {}
+  AssertAlignSDNode(unsigned Order, const DebugLoc &DL, SDVTList VTs, Align A)
+      : SDNode(ISD::AssertAlign, Order, DL, VTs), Alignment(A) {}
 
   Align getAlign() const { return Alignment; }
 

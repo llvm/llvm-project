@@ -20,6 +20,10 @@ if(LLDB_ENABLE_LUA)
   set(lldb_lua_wrapper ${lua_bindings_dir}/LLDBWrapLua.cpp)
 endif()
 
+lldb_tablegen(../../include/lldb/API/SBLanguages.h -gen-lldb-sbapi-dwarf-enum
+  SOURCE ${LLVM_MAIN_INCLUDE_DIR}/llvm/BinaryFormat/Dwarf.def
+  TARGET lldb-sbapi-dwarf-enums)
+
 add_lldb_library(liblldb SHARED ${option_framework}
   SBAddress.cpp
   SBAttachInfo.cpp
@@ -69,6 +73,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBScriptObject.cpp
   SBSection.cpp
   SBSourceManager.cpp
+  SBStatisticsOptions.cpp
   SBStream.cpp
   SBStringList.cpp
   SBStructuredData.cpp
@@ -99,6 +104,9 @@ add_lldb_library(liblldb SHARED ${option_framework}
   ${lldb_python_wrapper}
   ${lldb_lua_wrapper}
 
+  DEPENDS
+    lldb-sbapi-dwarf-enums
+  
   LINK_LIBS
     lldbBreakpoint
     lldbCore

@@ -42,13 +42,29 @@
 // is_equal() with use_strcmp=false so the string names are not compared.
 
 #include <cstdint>
+#include <cassert>
 #include <string.h>
+#include "abort_message.h"
 
 #ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
-#include "abort_message.h"
 #include <sys/syslog.h>
 #include <atomic>
 #endif
+
+#if __has_feature(ptrauth_calls)
+#include <ptrauth.h>
+#endif
+
+
+template<typename T>
+static inline
+T *
+get_vtable(T *vtable) {
+#if __has_feature(ptrauth_calls)
+    vtable = ptrauth_strip(vtable, ptrauth_key_cxx_vtable_pointer);
+#endif
+    return vtable;
+}
 
 static inline
 bool
@@ -102,6 +118,7 @@ void dyn_cast_get_derived_info(derived_object_info* info, const void* static_ptr
     info->dynamic_type = *(reinterpret_cast<const __class_type_info* const*>(ptr_to_ti_proxy));
 #else
     void **vtable = *static_cast<void ** const *>(static_ptr);
+    vtable = get_vtable(vtable);
     info->offset_to_derived = reinterpret_cast<ptrdiff_t>(vtable[-2]);
     info->dynamic_ptr = static_cast<const char*>(static_ptr) + info->offset_to_derived;
     info->dynamic_type = static_cast<const __class_type_info*>(vtable[-1]);
@@ -160,15 +177,9 @@ const void* dyn_cast_to_derived(const void* static_ptr,
     // Fallback to the slow path to check that static_type is a public
     //   base type of dynamic_type.
     // Using giant short cut.  Add that information to info.
-    __dynamic_cast_info info = {
-        dst_type,
-        static_ptr,
-        static_type,
-        src2dst_offset,
-        0, 0, 0, 0, 0, 0, 0, 0,
-        1,  // number_of_dst_type
-        false, false, false
-    };
+    __dynamic_cast_info info = {dst_type, static_ptr, static_type, src2dst_offset, 0,      0, 0, 0, 0, 0, 0, 0,
+                                1, // number_of_dst_type
+                                false,    false,      false,       true,           nullptr};
     // Do the  search
     dst_type->search_above_dst(&info, dynamic_ptr, dynamic_ptr, public_path, false);
 #ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
@@ -187,13 +198,8 @@ const void* dyn_cast_to_derived(const void* static_ptr,
                     "should have public visibility. At least one of them is hidden. %s"
                     ", %s.\n", static_type->name(), dst_type->name());
         // Redo the search comparing type_info's using strcmp
-        info = {
-            dst_type,
-            static_ptr,
-            static_type,
-            src2dst_offset,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, false, false, false
-        };
+        info = {dst_type, static_ptr, static_type, src2dst_offset, 0,     0,     0,    0,      0, 0,
+                0,        0,          0,           false,          false, false, true, nullptr};
         info.number_of_dst_type = 1;
         dst_type->search_above_dst(&info, dynamic_ptr, dynamic_ptr, public_path, true);
     }
@@ -232,15 +238,24 @@ const void* dyn_cast_try_downcast(const void* static_ptr,
     }
 
     // Try to search a path from dynamic_type to dst_type.
-    __dynamic_cast_info dynamic_to_dst_info = {
-        dynamic_type,
-        dst_ptr_to_static,
-        dst_type,
-        src2dst_offset,
-        0, 0, 0, 0, 0, 0, 0, 0,
-        1,  // number_of_dst_type
-        false, false, false
-    };
+    __dynamic_cast_info dynamic_to_dst_info = {dynamic_type,
+                                               dst_ptr_to_static,
+                                               dst_type,
+                                               src2dst_offset,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               1, // number_of_dst_type
+                                               false,
+                                               false,
+                                               false,
+                                               true,
+                                               nullptr};
     dynamic_type->search_above_dst(&dynamic_to_dst_info, dynamic_ptr, dynamic_ptr, public_path, false);
     if (dynamic_to_dst_info.path_dst_ptr_to_static_ptr != unknown) {
         // We have found at least one path from dynamic_ptr to dst_ptr. The
@@ -261,13 +276,8 @@ const void* dyn_cast_slow(const void* static_ptr,
     // Not using giant short cut.  Do the search
 
     // Initialize info struct for this search.
-    __dynamic_cast_info info = {
-        dst_type,
-        static_ptr,
-        static_type,
-        src2dst_offset,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, false, false, false
-    };
+    __dynamic_cast_info info = {dst_type, static_ptr, static_type, src2dst_offset, 0,     0,     0,    0,      0, 0,
+                                0,        0,          0,           false,          false, false, true, nullptr};
 
     dynamic_type->search_below_dst(&info, dynamic_ptr, public_path, false);
 #ifdef _LIBCXXABI_FORGIVING_DYNAMIC_CAST
@@ -287,13 +297,8 @@ const void* dyn_cast_slow(const void* static_ptr,
                             "%s, %s, %s.\n", static_type->name(), dynamic_type->name(),
                     dst_type->name());
         // Redo the search comparing type_info's using strcmp
-        info = {
-            dst_type,
-            static_ptr,
-            static_type,
-            src2dst_offset,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, false, false, false
-        };
+        info = {dst_type, static_ptr, static_type, src2dst_offset, 0,     0,     0,    0,      0, 0,
+                0,        0,          0,           false,          false, false, true, nullptr};
         dynamic_type->search_below_dst(&info, dynamic_ptr, public_path, true);
     }
 #endif // _LIBCXXABI_FORGIVING_DYNAMIC_CAST
@@ -481,7 +486,8 @@ __class_type_info::can_catch(const __shim_type_info* thrown_type,
     if (thrown_class_type == 0)
         return false;
     // bullet 2
-    __dynamic_cast_info info = {thrown_class_type, 0, this, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,};
+    _LIBCXXABI_ASSERT(adjustedPtr, "catching a class without an object?");
+    __dynamic_cast_info info = {thrown_class_type, 0, this, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, true, nullptr};
     info.number_of_dst_type = 1;
     thrown_class_type->has_unambiguous_public_base(&info, adjustedPtr, public_path);
     if (info.path_dst_ptr_to_static_ptr == public_path)
@@ -496,32 +502,46 @@ __class_type_info::can_catch(const __shim_type_info* thrown_type,
 #pragma clang diagnostic pop
 #endif
 
+// When we have an object to inspect - we just pass the pointer to the sub-
+// object that matched the static_type we just checked.  If that is different
+// from any previously recorded pointer to that object type, then we have
+// an ambiguous case.
+
+// When we have no object to inspect, we need to account for virtual bases
+// explicitly.
+// info->vbase_cookie is a pointer to the name of the innermost virtual base
+// type, or nullptr if there is no virtual base on the path so far.
+// adjustedPtr points to the subobject we just found.
+// If vbase_cookie != any previously recorded (including the case of nullptr
+// representing an already-found static sub-object) then we have an ambiguous
+// case.  Assuming that the vbase_cookie values agree; if then we have a
+// different offset (adjustedPtr) from any previously recorded, this indicates
+// an ambiguous case within the virtual base.
+
 void
 __class_type_info::process_found_base_class(__dynamic_cast_info* info,
                                                void* adjustedPtr,
                                                int path_below) const
 {
-    if (info->dst_ptr_leading_to_static_ptr == 0)
-    {
-        // First time here
-        info->dst_ptr_leading_to_static_ptr = adjustedPtr;
-        info->path_dst_ptr_to_static_ptr = path_below;
-        info->number_to_static_ptr = 1;
-    }
-    else if (info->dst_ptr_leading_to_static_ptr == adjustedPtr)
-    {
-        // We've been here before.  Update path to "most public"
-        if (info->path_dst_ptr_to_static_ptr == not_public_path)
-            info->path_dst_ptr_to_static_ptr = path_below;
-    }
-    else
-    {
-        // We've detected an ambiguous cast from (thrown_class_type, adjustedPtr)
-        //   to a static_type
-        info->number_to_static_ptr += 1;
-        info->path_dst_ptr_to_static_ptr = not_public_path;
-        info->search_done = true;
-    }
+  if (info->number_to_static_ptr == 0) {
+    // First time we found this base
+    info->dst_ptr_leading_to_static_ptr = adjustedPtr;
+    info->path_dst_ptr_to_static_ptr = path_below;
+    // stash the virtual base cookie.
+    info->dst_ptr_not_leading_to_static_ptr = info->vbase_cookie;
+    info->number_to_static_ptr = 1;
+  } else if (info->dst_ptr_not_leading_to_static_ptr == info->vbase_cookie &&
+             info->dst_ptr_leading_to_static_ptr == adjustedPtr) {
+    // We've been here before.  Update path to "most public"
+    if (info->path_dst_ptr_to_static_ptr == not_public_path)
+      info->path_dst_ptr_to_static_ptr = path_below;
+  } else {
+    // We've detected an ambiguous cast from (thrown_class_type, adjustedPtr)
+    // to a static_type.
+    info->number_to_static_ptr += 1;
+    info->path_dst_ptr_to_static_ptr = not_public_path;
+    info->search_done = true;
+  }
 }
 
 void
@@ -549,16 +569,31 @@ __base_class_type_info::has_unambiguous_public_base(__dynamic_cast_info* info,
                                                     void* adjustedPtr,
                                                     int path_below) const
 {
-    ptrdiff_t offset_to_base = 0;
-    if (adjustedPtr != nullptr)
-    {
-        offset_to_base = __offset_flags >> __offset_shift;
-        if (__offset_flags & __virtual_mask)
-        {
-            const char* vtable = *static_cast<const char*const*>(adjustedPtr);
-            offset_to_base = update_offset_to_base(vtable, offset_to_base);
-        }
+  bool is_virtual = __offset_flags & __virtual_mask;
+  ptrdiff_t offset_to_base = 0;
+  if (info->have_object) {
+    /* We have an object to inspect, we can look through its vtables to
+       find the layout.  */
+    offset_to_base = __offset_flags >> __offset_shift;
+    if (is_virtual) {
+      const char* vtable = *static_cast<const char* const*>(adjustedPtr);
+      vtable = get_vtable(vtable);
+      offset_to_base = update_offset_to_base(vtable, offset_to_base);
     }
+  } else if (!is_virtual) {
+    /* We have no object; however, for non-virtual bases, (since we do not
+       need to inspect any content) we can pretend to have an object based
+       at '0'.  */
+    offset_to_base = __offset_flags >> __offset_shift;
+  } else {
+    /* No object to inspect, and the next base is virtual.
+       We cannot indirect through the vtable to find the actual object offset.
+       So, update vbase_cookie to the new innermost virtual base using the
+       pointer to the typeinfo name as a key.  */
+    info->vbase_cookie = static_cast<const void*>(__base_type->name());
+    // .. and reset the pointer.
+    adjustedPtr = nullptr;
+  }
     __base_type->has_unambiguous_public_base(
             info,
             static_cast<char*>(adjustedPtr) + offset_to_base,
@@ -679,14 +714,22 @@ __pointer_type_info::can_catch(const __shim_type_info* thrown_type,
         dynamic_cast<const __class_type_info*>(thrown_pointer_type->__pointee);
     if (thrown_class_type == 0)
         return false;
-    __dynamic_cast_info info = {thrown_class_type, 0, catch_class_type, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,};
+    bool have_object = adjustedPtr != nullptr;
+    __dynamic_cast_info info = {thrown_class_type, 0,      catch_class_type, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                have_object,       nullptr};
     info.number_of_dst_type = 1;
     thrown_class_type->has_unambiguous_public_base(&info, adjustedPtr, public_path);
     if (info.path_dst_ptr_to_static_ptr == public_path)
     {
-        if (adjustedPtr != NULL)
-            adjustedPtr = const_cast<void*>(info.dst_ptr_leading_to_static_ptr);
-        return true;
+      // In the case of a thrown null pointer, we have no object but we might
+      // well have computed the offset to where a public sub-object would be.
+      // However, we do not want to return that offset to the user; we still
+      // want them to catch a null ptr.
+      if (have_object)
+        adjustedPtr = const_cast<void*>(info.dst_ptr_leading_to_static_ptr);
+      else
+        adjustedPtr = nullptr;
+      return true;
     }
     return false;
 }
@@ -1475,6 +1518,7 @@ __base_class_type_info::search_above_dst(__dynamic_cast_info* info,
     if (__offset_flags & __virtual_mask)
     {
         const char* vtable = *static_cast<const char*const*>(current_ptr);
+        vtable = get_vtable(vtable);
         offset_to_base = update_offset_to_base(vtable, offset_to_base);
     }
     __base_type->search_above_dst(info, dst_ptr,
@@ -1495,6 +1539,7 @@ __base_class_type_info::search_below_dst(__dynamic_cast_info* info,
     if (__offset_flags & __virtual_mask)
     {
         const char* vtable = *static_cast<const char*const*>(current_ptr);
+        vtable = get_vtable(vtable);
         offset_to_base = update_offset_to_base(vtable, offset_to_base);
     }
     __base_type->search_below_dst(info,

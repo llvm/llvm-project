@@ -11,7 +11,7 @@ define void @test(i32 %x, ptr %p) nounwind {
 ; CHECK-NEXT:    andi $1, $4, 1
 ; CHECK-NEXT:    bgtz $1, $BB0_1
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:  # %bb.1: # %foo
+; CHECK-NEXT:  $BB0_1: # %foo
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    nop
   %y = and i32 %x, 1

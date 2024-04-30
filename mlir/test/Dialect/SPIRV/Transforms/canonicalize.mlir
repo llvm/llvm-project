@@ -1007,6 +1007,102 @@ func.func @umod_fail_fold(%arg0: i32) -> (i32, i32) {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.SNegate
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @snegate_twice
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+func.func @snegate_twice(%arg0 : i32) -> i32 {
+  %0 = spirv.SNegate %arg0 : i32
+  %1 = spirv.SNegate %0 : i32
+
+  // CHECK: return %[[ARG]] : i32
+  return %1 : i32
+}
+
+// CHECK-LABEL: @snegate_min
+func.func @snegate_min() -> (i8, i8) {
+  // CHECK: %[[MIN:.*]] = spirv.Constant -128 : i8
+  %cmin = spirv.Constant -128 : i8
+
+  %0 = spirv.SNegate %cmin : i8
+  %1 = spirv.SNegate %0 : i8
+
+  // CHECK: return %[[MIN]], %[[MIN]]
+  return %0, %1 : i8, i8
+}
+
+// CHECK-LABEL: @const_fold_scalar_snegate
+func.func @const_fold_scalar_snegate() -> (i32, i32, i32) {
+  %c0 = spirv.Constant 0 : i32
+  %c3 = spirv.Constant 3 : i32
+  %cn3 = spirv.Constant -3 : i32
+
+  // CHECK-DAG: %[[THREE:.*]] = spirv.Constant 3 : i32
+  // CHECK-DAG: %[[NTHREE:.*]] = spirv.Constant -3 : i32
+  // CHECK-DAG: %[[ZERO:.*]] = spirv.Constant 0 : i32
+  %0 = spirv.SNegate %c0 : i32
+  %1 = spirv.SNegate %c3 : i32
+  %2 = spirv.SNegate %cn3 : i32
+
+  // CHECK: return %[[ZERO]], %[[NTHREE]], %[[THREE]]
+  return %0, %1, %2  : i32, i32, i32
+}
+
+// CHECK-LABEL: @const_fold_vector_snegate
+func.func @const_fold_vector_snegate() -> vector<3xi32> {
+  // CHECK: spirv.Constant dense<[0, 3, -3]>
+  %cv = spirv.Constant dense<[0, -3, 3]> : vector<3xi32>
+  %0 = spirv.SNegate %cv : vector<3xi32>
+  return %0  : vector<3xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.Not
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @not_twice
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+func.func @not_twice(%arg0 : i32) -> i32 {
+  %0 = spirv.Not %arg0 : i32
+  %1 = spirv.Not %0 : i32
+
+  // CHECK: return %[[ARG]] : i32
+  return %1 : i32
+}
+
+// CHECK-LABEL: @const_fold_scalar_not
+func.func @const_fold_scalar_not() -> (i32, i32, i32) {
+  %c0 = spirv.Constant 0 : i32
+  %c3 = spirv.Constant 3 : i32
+  %cn3 = spirv.Constant -3 : i32
+
+  // CHECK-DAG: %[[TWO:.*]] = spirv.Constant 2 : i32
+  // CHECK-DAG: %[[NFOUR:.*]] = spirv.Constant -4 : i32
+  // CHECK-DAG: %[[NONE:.*]] = spirv.Constant -1 : i32
+  %0 = spirv.Not %c0 : i32
+  %1 = spirv.Not %c3 : i32
+  %2 = spirv.Not %cn3 : i32
+
+  // CHECK: return %[[NONE]], %[[NFOUR]], %[[TWO]]
+  return %0, %1, %2  : i32, i32, i32
+}
+
+// CHECK-LABEL: @const_fold_vector_not
+func.func @const_fold_vector_not() -> vector<3xi32> {
+  %cv = spirv.Constant dense<[-1, -4, 2]> : vector<3xi32>
+
+  // CHECK: spirv.Constant dense<[0, 3, -3]>
+  %0 = spirv.Not %cv : vector<3xi32>
+
+  return %0 : vector<3xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.LogicalAnd
 //===----------------------------------------------------------------------===//
 
@@ -1040,6 +1136,38 @@ func.func @convert_logical_and_true_false_vector(%arg: vector<3xi1>) -> (vector<
 // spirv.LogicalNot
 //===----------------------------------------------------------------------===//
 
+// CHECK-LABEL: @logical_not_twice
+// CHECK-SAME: (%[[ARG:.*]]: i1)
+func.func @logical_not_twice(%arg0 : i1) -> i1 {
+  %0 = spirv.LogicalNot %arg0 : i1
+  %1 = spirv.LogicalNot %0 : i1
+
+  // CHECK: return %[[ARG]] : i1
+  return %1 : i1
+}
+
+// CHECK-LABEL: @const_fold_scalar_logical_not
+func.func @const_fold_scalar_logical_not() -> i1 {
+  %true = spirv.Constant true
+
+  // CHECK: spirv.Constant false
+  %0 = spirv.LogicalNot %true : i1
+
+  return %0 : i1
+}
+
+// CHECK-LABEL: @const_fold_vector_logical_not
+func.func @const_fold_vector_logical_not() -> vector<2xi1> {
+  %cv = spirv.Constant dense<[true, false]> : vector<2xi1>
+
+  // CHECK: spirv.Constant dense<[false, true]>
+  %0 = spirv.LogicalNot %cv : vector<2xi1>
+
+  return %0 : vector<2xi1>
+}
+
+// -----
+
 func.func @convert_logical_not_to_not_equal(%arg0: vector<3xi64>, %arg1: vector<3xi64>) -> vector<3xi1> {
   // CHECK: %[[RESULT:.*]] = spirv.INotEqual {{%.*}}, {{%.*}} : vector<3xi64>
   // CHECK-NEXT: spirv.ReturnValue %[[RESULT]] : vector<3xi1>
@@ -1048,6 +1176,48 @@ func.func @convert_logical_not_to_not_equal(%arg0: vector<3xi64>, %arg1: vector<
   spirv.ReturnValue %3 : vector<3xi1>
 }
 
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.LogicalEqual
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @logical_equal_same
+func.func @logical_equal_same(%arg0 : i1, %arg1 : vector<3xi1>) -> (i1, vector<3xi1>) {
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CVTRUE:.*]] = spirv.Constant dense<true>
+
+  %0 = spirv.LogicalEqual %arg0, %arg0 : i1
+  %1 = spirv.LogicalEqual %arg1, %arg1 : vector<3xi1>
+  // CHECK: return %[[CTRUE]], %[[CVTRUE]]
+  return %0, %1 : i1, vector<3xi1>
+}
+
+// CHECK-LABEL: @const_fold_scalar_logical_equal
+func.func @const_fold_scalar_logical_equal() -> (i1, i1) {
+  %true = spirv.Constant true
+  %false = spirv.Constant false
+
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  %0 = spirv.LogicalEqual %true, %false : i1
+  %1 = spirv.LogicalEqual %false, %false : i1
+
+  // CHECK: return %[[CFALSE]], %[[CTRUE]]
+  return %0, %1 : i1, i1
+}
+
+// CHECK-LABEL: @const_fold_vector_logical_equal
+func.func @const_fold_vector_logical_equal() -> vector<3xi1> {
+  %cv0 = spirv.Constant dense<[true, false, true]> : vector<3xi1>
+  %cv1 = spirv.Constant dense<[true, false, false]> : vector<3xi1>
+
+  // CHECK: %[[RET:.*]] = spirv.Constant dense<[true, true, false]>
+  %0 = spirv.LogicalEqual %cv0, %cv1 : vector<3xi1>
+
+  // CHECK: return %[[RET]]
+  return %0 : vector<3xi1>
+}
 
 // -----
 
@@ -1062,6 +1232,43 @@ func.func @convert_logical_not_equal_false(%arg: vector<4xi1>) -> vector<4xi1> {
   // CHECK: spirv.ReturnValue %[[ARG]] : vector<4xi1>
   %0 = spirv.LogicalNotEqual %arg, %cst : vector<4xi1>
   spirv.ReturnValue %0 : vector<4xi1>
+}
+
+// CHECK-LABEL: @logical_not_equal_same
+func.func @logical_not_equal_same(%arg0 : i1, %arg1 : vector<3xi1>) -> (i1, vector<3xi1>) {
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  // CHECK-DAG: %[[CVFALSE:.*]] = spirv.Constant dense<false>
+  %0 = spirv.LogicalNotEqual %arg0, %arg0 : i1
+  %1 = spirv.LogicalNotEqual %arg1, %arg1 : vector<3xi1>
+
+  // CHECK: return %[[CFALSE]], %[[CVFALSE]]
+  return %0, %1 : i1, vector<3xi1>
+}
+
+// CHECK-LABEL: @const_fold_scalar_logical_not_equal
+func.func @const_fold_scalar_logical_not_equal() -> (i1, i1) {
+  %true = spirv.Constant true
+  %false = spirv.Constant false
+
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  %0 = spirv.LogicalNotEqual %true, %false : i1
+  %1 = spirv.LogicalNotEqual %false, %false : i1
+
+  // CHECK: return %[[CTRUE]], %[[CFALSE]]
+  return %0, %1 : i1, i1
+}
+
+// CHECK-LABEL: @const_fold_vector_logical_not_equal
+func.func @const_fold_vector_logical_not_equal() -> vector<3xi1> {
+  %cv0 = spirv.Constant dense<[true, false, true]> : vector<3xi1>
+  %cv1 = spirv.Constant dense<[true, false, false]> : vector<3xi1>
+
+  // CHECK: %[[RET:.*]] = spirv.Constant dense<[false, false, true]>
+  %0 = spirv.LogicalNotEqual %cv0, %cv1 : vector<3xi1>
+
+  // CHECK: return %[[RET]]
+  return %0 : vector<3xi1>
 }
 
 // -----
@@ -1135,6 +1342,490 @@ func.func @convert_logical_or_true_false_vector(%arg: vector<3xi1>) -> (vector<3
   %1 = spirv.LogicalOr %arg, %false: vector<3xi1>
   // CHECK: return %[[TRUE]], %[[ARG]]
   return %0, %1: vector<3xi1>, vector<3xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.Select
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @convert_select_scalar
+// CHECK-SAME: %[[ARG1:.+]]: i32, %[[ARG2:.+]]: i32
+func.func @convert_select_scalar(%arg1: i32, %arg2: i32) -> (i32, i32) {
+  %true = spirv.Constant true
+  %false = spirv.Constant false
+  %0 = spirv.Select %true, %arg1, %arg2 : i1, i32
+  %1 = spirv.Select %false, %arg1, %arg2 : i1, i32
+
+  // CHECK: return %[[ARG1]], %[[ARG2]]
+  return %0, %1 : i32, i32
+}
+
+// CHECK-LABEL: @convert_select_vector
+// CHECK-SAME: %[[ARG1:.+]]: vector<3xi32>, %[[ARG2:.+]]: vector<3xi32>
+func.func @convert_select_vector(%arg1: vector<3xi32>, %arg2: vector<3xi32>) -> (vector<3xi32>, vector<3xi32>) {
+  %true = spirv.Constant dense<true> : vector<3xi1>
+  %false = spirv.Constant dense<false> : vector<3xi1>
+  %0 = spirv.Select %true, %arg1, %arg2 : vector<3xi1>, vector<3xi32>
+  %1 = spirv.Select %false, %arg1, %arg2 : vector<3xi1>, vector<3xi32>
+
+  // CHECK: return %[[ARG1]], %[[ARG2]]
+  return %0, %1: vector<3xi32>, vector<3xi32>
+}
+
+// CHECK-LABEL: @convert_select_vector_extra
+// CHECK-SAME: %[[CONDITIONS:.+]]: vector<2xi1>, %[[ARG1:.+]]: vector<2xi32>
+func.func @convert_select_vector_extra(%conditions: vector<2xi1>, %arg1: vector<2xi32>) -> (vector<2xi32>, vector<2xi32>) {
+  %true_false = spirv.Constant dense<[true, false]> : vector<2xi1>
+  %cvec_1 = spirv.Constant dense<[42, -132]> : vector<2xi32>
+  %cvec_2 = spirv.Constant dense<[0, 42]> : vector<2xi32>
+
+  // CHECK: %[[RES:.+]] = spirv.Constant dense<42>
+  %0 = spirv.Select %true_false, %cvec_1, %cvec_2: vector<2xi1>, vector<2xi32>
+
+  %1 = spirv.Select %conditions, %arg1, %arg1 : vector<2xi1>, vector<2xi32>
+
+  // CHECK: return %[[RES]], %[[ARG1]]
+  return %0, %1: vector<2xi32>, vector<2xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.IEqual
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @iequal_same
+func.func @iequal_same(%arg0 : i32, %arg1 : vector<3xi32>) -> (i1, vector<3xi1>) {
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CVTRUE:.*]] = spirv.Constant dense<true>
+  %0 = spirv.IEqual %arg0, %arg0 : i32
+  %1 = spirv.IEqual %arg1, %arg1 : vector<3xi32>
+
+  // CHECK: return %[[CTRUE]], %[[CVTRUE]]
+  return %0, %1 : i1, vector<3xi1>
+}
+
+// CHECK-LABEL: @const_fold_scalar_iequal
+func.func @const_fold_scalar_iequal() -> (i1, i1) {
+  %c5 = spirv.Constant 5 : i32
+  %c6 = spirv.Constant 6 : i32
+
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  %0 = spirv.IEqual %c5, %c6 : i32
+  %1 = spirv.IEqual %c5, %c5 : i32
+
+  // CHECK: return %[[CFALSE]], %[[CTRUE]]
+  return %0, %1 : i1, i1
+}
+
+// CHECK-LABEL: @const_fold_vector_iequal
+func.func @const_fold_vector_iequal() -> vector<3xi1> {
+  %cv0 = spirv.Constant dense<[-1, -4, 2]> : vector<3xi32>
+  %cv1 = spirv.Constant dense<[-1, -3, 2]> : vector<3xi32>
+
+  // CHECK: %[[RET:.*]] = spirv.Constant dense<[true, false, true]>
+  %0 = spirv.IEqual %cv0, %cv1 : vector<3xi32>
+
+  // CHECK: return %[[RET]]
+  return %0 : vector<3xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.INotEqual
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @inotequal_same
+func.func @inotequal_same(%arg0 : i32, %arg1 : vector<3xi32>) -> (i1, vector<3xi1>) {
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  // CHECK-DAG: %[[CVFALSE:.*]] = spirv.Constant dense<false>
+  %0 = spirv.INotEqual %arg0, %arg0 : i32
+  %1 = spirv.INotEqual %arg1, %arg1 : vector<3xi32>
+
+  // CHECK: return %[[CFALSE]], %[[CVFALSE]]
+  return %0, %1 : i1, vector<3xi1>
+}
+
+// CHECK-LABEL: @const_fold_scalar_inotequal
+func.func @const_fold_scalar_inotequal() -> (i1, i1) {
+  %c5 = spirv.Constant 5 : i32
+  %c6 = spirv.Constant 6 : i32
+
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  %0 = spirv.INotEqual %c5, %c6 : i32
+  %1 = spirv.INotEqual %c5, %c5 : i32
+
+  // CHECK: return %[[CTRUE]], %[[CFALSE]]
+  return %0, %1 : i1, i1
+}
+
+// CHECK-LABEL: @const_fold_vector_inotequal
+func.func @const_fold_vector_inotequal() -> vector<3xi1> {
+  %cv0 = spirv.Constant dense<[-1, -4, 2]> : vector<3xi32>
+  %cv1 = spirv.Constant dense<[-1, -3, 2]> : vector<3xi32>
+
+  // CHECK: %[[RET:.*]] = spirv.Constant dense<[false, true, false]>
+  %0 = spirv.INotEqual %cv0, %cv1 : vector<3xi32>
+
+  // CHECK: return %[[RET]]
+  return %0 : vector<3xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.SGreaterThan
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @sgt_same
+func.func @sgt_same(%arg0 : i32, %arg1 : vector<3xi32>) -> (i1, vector<3xi1>) {
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  // CHECK-DAG: %[[CVFALSE:.*]] = spirv.Constant dense<false>
+  %0 = spirv.SGreaterThan %arg0, %arg0 : i32
+  %1 = spirv.SGreaterThan %arg1, %arg1 : vector<3xi32>
+
+  // CHECK: return %[[CFALSE]], %[[CVFALSE]]
+  return %0, %1 : i1, vector<3xi1>
+}
+
+// CHECK-LABEL: @const_fold_scalar_sgt
+func.func @const_fold_scalar_sgt() -> (i1, i1) {
+  %c4 = spirv.Constant 4 : i32
+  %c5 = spirv.Constant 5 : i32
+  %c6 = spirv.Constant 6 : i32
+
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  %0 = spirv.SGreaterThan %c5, %c6 : i32
+  %1 = spirv.SGreaterThan %c5, %c4 : i32
+
+  // CHECK: return %[[CFALSE]], %[[CTRUE]]
+  return %0, %1 : i1, i1
+}
+
+// CHECK-LABEL: @const_fold_vector_sgt
+func.func @const_fold_vector_sgt() -> vector<3xi1> {
+  %cv0 = spirv.Constant dense<[-1, -4, 3]> : vector<3xi32>
+  %cv1 = spirv.Constant dense<[-1, -3, 2]> : vector<3xi32>
+
+  // CHECK: %[[RET:.*]] = spirv.Constant dense<[false, false, true]>
+  %0 = spirv.SGreaterThan %cv0, %cv1 : vector<3xi32>
+
+  // CHECK: return %[[RET]]
+  return %0 : vector<3xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.SGreaterThanEqual
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @sge_same
+func.func @sge_same(%arg0 : i32, %arg1 : vector<3xi32>) -> (i1, vector<3xi1>) {
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CVTRUE:.*]] = spirv.Constant dense<true>
+  %0 = spirv.SGreaterThanEqual %arg0, %arg0 : i32
+  %1 = spirv.SGreaterThanEqual %arg1, %arg1 : vector<3xi32>
+
+  // CHECK: return %[[CTRUE]], %[[CVTRUE]]
+  return %0, %1 : i1, vector<3xi1>
+}
+
+// CHECK-LABEL: @const_fold_scalar_sge
+func.func @const_fold_scalar_sge() -> (i1, i1) {
+  %c4 = spirv.Constant 4 : i32
+  %c5 = spirv.Constant 5 : i32
+  %c6 = spirv.Constant 6 : i32
+
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  %0 = spirv.SGreaterThanEqual %c5, %c6 : i32
+  %1 = spirv.SGreaterThanEqual %c5, %c4 : i32
+
+  // CHECK: return %[[CFALSE]], %[[CTRUE]]
+  return %0, %1 : i1, i1
+}
+
+// CHECK-LABEL: @const_fold_vector_sge
+func.func @const_fold_vector_sge() -> vector<3xi1> {
+  %cv0 = spirv.Constant dense<[-1, -4, 3]> : vector<3xi32>
+  %cv1 = spirv.Constant dense<[-1, -3, 2]> : vector<3xi32>
+
+  // CHECK: %[[RET:.*]] = spirv.Constant dense<[true, false, true]>
+  %0 = spirv.SGreaterThanEqual %cv0, %cv1 : vector<3xi32>
+
+  // CHECK: return %[[RET]]
+  return %0 : vector<3xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.UGreaterThan
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @ugt_same
+func.func @ugt_same(%arg0 : i32, %arg1 : vector<3xi32>) -> (i1, vector<3xi1>) {
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  // CHECK-DAG: %[[CVFALSE:.*]] = spirv.Constant dense<false>
+  %0 = spirv.UGreaterThan %arg0, %arg0 : i32
+  %1 = spirv.UGreaterThan %arg1, %arg1 : vector<3xi32>
+
+  // CHECK: return %[[CFALSE]], %[[CVFALSE]]
+  return %0, %1 : i1, vector<3xi1>
+}
+
+// CHECK-LABEL: @const_fold_scalar_ugt
+func.func @const_fold_scalar_ugt() -> (i1, i1) {
+  %c4 = spirv.Constant 4 : i32
+  %c5 = spirv.Constant 5 : i32
+  %cn6 = spirv.Constant -6 : i32
+
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  %0 = spirv.UGreaterThan %c5, %cn6 : i32
+  %1 = spirv.UGreaterThan %c5, %c4 : i32
+
+  // CHECK: return %[[CFALSE]], %[[CTRUE]]
+  return %0, %1 : i1, i1
+}
+
+// CHECK-LABEL: @const_fold_vector_ugt
+func.func @const_fold_vector_ugt() -> vector<3xi1> {
+  %cv0 = spirv.Constant dense<[-1, -4, 3]> : vector<3xi32>
+  %cv1 = spirv.Constant dense<[-1, -3, 2]> : vector<3xi32>
+
+  // CHECK: %[[RET:.*]] = spirv.Constant dense<[false, false, true]>
+  %0 = spirv.UGreaterThan %cv0, %cv1 : vector<3xi32>
+
+  // CHECK: return %[[RET]]
+  return %0 : vector<3xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.UGreaterThanEqual
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @uge_same
+func.func @uge_same(%arg0 : i32, %arg1 : vector<3xi32>) -> (i1, vector<3xi1>) {
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CVTRUE:.*]] = spirv.Constant dense<true>
+  %0 = spirv.UGreaterThanEqual %arg0, %arg0 : i32
+  %1 = spirv.UGreaterThanEqual %arg1, %arg1 : vector<3xi32>
+
+  // CHECK: return %[[CTRUE]], %[[CVTRUE]]
+  return %0, %1 : i1, vector<3xi1>
+}
+
+// CHECK-LABEL: @const_fold_scalar_uge
+func.func @const_fold_scalar_uge() -> (i1, i1) {
+  %c4 = spirv.Constant 4 : i32
+  %c5 = spirv.Constant 5 : i32
+  %cn6 = spirv.Constant -6 : i32
+
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  %0 = spirv.UGreaterThanEqual %c5, %cn6 : i32
+  %1 = spirv.UGreaterThanEqual %c5, %c4 : i32
+
+  // CHECK: return %[[CFALSE]], %[[CTRUE]]
+  return %0, %1 : i1, i1
+}
+
+// CHECK-LABEL: @const_fold_vector_uge
+func.func @const_fold_vector_uge() -> vector<3xi1> {
+  %cv0 = spirv.Constant dense<[-1, -4, 3]> : vector<3xi32>
+  %cv1 = spirv.Constant dense<[-1, -3, 2]> : vector<3xi32>
+
+  // CHECK: %[[RET:.*]] = spirv.Constant dense<[true, false, true]>
+  %0 = spirv.UGreaterThanEqual %cv0, %cv1 : vector<3xi32>
+
+  // CHECK: return %[[RET]]
+  return %0 : vector<3xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.SLessThan
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @slt_same
+func.func @slt_same(%arg0 : i32, %arg1 : vector<3xi32>) -> (i1, vector<3xi1>) {
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  // CHECK-DAG: %[[CVFALSE:.*]] = spirv.Constant dense<false>
+  %0 = spirv.SLessThan %arg0, %arg0 : i32
+  %1 = spirv.SLessThan %arg1, %arg1 : vector<3xi32>
+
+  // CHECK: return %[[CFALSE]], %[[CVFALSE]]
+  return %0, %1 : i1, vector<3xi1>
+}
+
+// CHECK-LABEL: @const_fold_scalar_slt
+func.func @const_fold_scalar_slt() -> (i1, i1) {
+  %c4 = spirv.Constant 4 : i32
+  %c5 = spirv.Constant 5 : i32
+  %c6 = spirv.Constant 6 : i32
+
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  %0 = spirv.SLessThan %c5, %c6 : i32
+  %1 = spirv.SLessThan %c5, %c4 : i32
+
+  // CHECK: return %[[CTRUE]], %[[CFALSE]]
+  return %0, %1 : i1, i1
+}
+
+// CHECK-LABEL: @const_fold_vector_slt
+func.func @const_fold_vector_slt() -> vector<3xi1> {
+  %cv0 = spirv.Constant dense<[-1, -4, 3]> : vector<3xi32>
+  %cv1 = spirv.Constant dense<[-1, -3, 2]> : vector<3xi32>
+
+  // CHECK: %[[RET:.*]] = spirv.Constant dense<[false, true, false]>
+  %0 = spirv.SLessThan %cv0, %cv1 : vector<3xi32>
+
+  // CHECK: return %[[RET]]
+  return %0 : vector<3xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.SLessThanEqual
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @sle_same
+func.func @sle_same(%arg0 : i32, %arg1 : vector<3xi32>) -> (i1, vector<3xi1>) {
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CVTRUE:.*]] = spirv.Constant dense<true>
+  %0 = spirv.SLessThanEqual %arg0, %arg0 : i32
+  %1 = spirv.SLessThanEqual %arg1, %arg1 : vector<3xi32>
+
+  // CHECK: return %[[CTRUE]], %[[CVTRUE]]
+  return %0, %1 : i1, vector<3xi1>
+}
+
+// CHECK-LABEL: @const_fold_scalar_sle
+func.func @const_fold_scalar_sle() -> (i1, i1) {
+  %c4 = spirv.Constant 4 : i32
+  %c5 = spirv.Constant 5 : i32
+  %c6 = spirv.Constant 6 : i32
+
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  %0 = spirv.SLessThanEqual %c5, %c6 : i32
+  %1 = spirv.SLessThanEqual %c5, %c4 : i32
+
+  // CHECK: return %[[CTRUE]], %[[CFALSE]]
+  return %0, %1 : i1, i1
+}
+
+// CHECK-LABEL: @const_fold_vector_sle
+func.func @const_fold_vector_sle() -> vector<3xi1> {
+  %cv0 = spirv.Constant dense<[-1, -4, 3]> : vector<3xi32>
+  %cv1 = spirv.Constant dense<[-1, -3, 2]> : vector<3xi32>
+
+  // CHECK: %[[RET:.*]] = spirv.Constant dense<[true, true, false]>
+  %0 = spirv.SLessThanEqual %cv0, %cv1 : vector<3xi32>
+
+  // CHECK: return %[[RET]]
+  return %0 : vector<3xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.ULessThan
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @ult_same
+func.func @ult_same(%arg0 : i32, %arg1 : vector<3xi32>) -> (i1, vector<3xi1>) {
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  // CHECK-DAG: %[[CVFALSE:.*]] = spirv.Constant dense<false>
+  %0 = spirv.ULessThan %arg0, %arg0 : i32
+  %1 = spirv.ULessThan %arg1, %arg1 : vector<3xi32>
+
+  // CHECK: return %[[CFALSE]], %[[CVFALSE]]
+  return %0, %1 : i1, vector<3xi1>
+}
+
+// CHECK-LABEL: @const_fold_scalar_ult
+func.func @const_fold_scalar_ult() -> (i1, i1) {
+  %c4 = spirv.Constant 4 : i32
+  %c5 = spirv.Constant 5 : i32
+  %cn6 = spirv.Constant -6 : i32
+
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  %0 = spirv.ULessThan %c5, %cn6 : i32
+  %1 = spirv.ULessThan %c5, %c4 : i32
+
+  // CHECK: return %[[CTRUE]], %[[CFALSE]]
+  return %0, %1 : i1, i1
+}
+
+// CHECK-LABEL: @const_fold_vector_ult
+func.func @const_fold_vector_ult() -> vector<3xi1> {
+  %cv0 = spirv.Constant dense<[-1, -4, 3]> : vector<3xi32>
+  %cv1 = spirv.Constant dense<[-1, -3, 2]> : vector<3xi32>
+
+  // CHECK: %[[RET:.*]] = spirv.Constant dense<[false, true, false]>
+  %0 = spirv.ULessThan %cv0, %cv1 : vector<3xi32>
+
+  // CHECK: return %[[RET]]
+  return %0 : vector<3xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.ULessThanEqual
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @ule_same
+func.func @ule_same(%arg0 : i32, %arg1 : vector<3xi32>) -> (i1, vector<3xi1>) {
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CVTRUE:.*]] = spirv.Constant dense<true>
+  %0 = spirv.ULessThanEqual %arg0, %arg0 : i32
+  %1 = spirv.ULessThanEqual %arg1, %arg1 : vector<3xi32>
+
+  // CHECK: return %[[CTRUE]], %[[CVTRUE]]
+  return %0, %1 : i1, vector<3xi1>
+}
+
+// CHECK-LABEL: @const_fold_scalar_ule
+func.func @const_fold_scalar_ule() -> (i1, i1) {
+  %c4 = spirv.Constant 4 : i32
+  %c5 = spirv.Constant 5 : i32
+  %cn6 = spirv.Constant -6 : i32
+
+  // CHECK-DAG: %[[CTRUE:.*]] = spirv.Constant true
+  // CHECK-DAG: %[[CFALSE:.*]] = spirv.Constant false
+  %0 = spirv.ULessThanEqual %c5, %cn6 : i32
+  %1 = spirv.ULessThanEqual %c5, %c4 : i32
+
+  // CHECK: return %[[CTRUE]], %[[CFALSE]]
+  return %0, %1 : i1, i1
+}
+
+// CHECK-LABEL: @const_fold_vector_ule
+func.func @const_fold_vector_ule() -> vector<3xi1> {
+  %cv0 = spirv.Constant dense<[-1, -4, 3]> : vector<3xi32>
+  %cv1 = spirv.Constant dense<[-1, -3, 2]> : vector<3xi32>
+
+  // CHECK: %[[RET:.*]] = spirv.Constant dense<[true, true, false]>
+  %0 = spirv.ULessThanEqual %cv0, %cv1 : vector<3xi32>
+
+  // CHECK: return %[[RET]]
+  return %0 : vector<3xi1>
 }
 
 // -----

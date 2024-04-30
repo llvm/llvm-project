@@ -15,10 +15,12 @@
 
 #include "clang/AST/ASTDumperUtils.h"
 #include "clang/AST/AttrIterator.h"
+#include "clang/AST/DeclID.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/SelectorLocationsKind.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -357,7 +359,7 @@ protected:
   /// \param Ctx The context in which we will allocate memory.
   /// \param ID The global ID of the deserialized declaration.
   /// \param Extra The amount of extra space to allocate after the object.
-  void *operator new(std::size_t Size, const ASTContext &Ctx, unsigned ID,
+  void *operator new(std::size_t Size, const ASTContext &Ctx, GlobalDeclID ID,
                      std::size_t Extra = 0);
 
   /// Allocate memory for a non-deserialized declaration.
@@ -488,6 +490,15 @@ public:
   // Return true if this is a FileContext Decl.
   bool isFileContextDecl() const;
 
+  /// Whether it resembles a flexible array member. This is a static member
+  /// because we want to be able to call it with a nullptr. That allows us to
+  /// perform non-Decl specific checks based on the object's type and strict
+  /// flex array level.
+  static bool isFlexibleArrayMemberLike(
+      ASTContext &Context, const Decl *D, QualType Ty,
+      LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
+      bool IgnoreTemplateOrMacroSubstitution);
+
   ASTContext &getASTContext() const LLVM_READONLY;
 
   /// Helper to get the language options from the ASTContext.
@@ -538,16 +549,17 @@ public:
     return hasAttrs() ? getAttrs().end() : nullptr;
   }
 
-  template <typename T>
-  void dropAttr() {
+  template <typename... Ts> void dropAttrs() {
     if (!HasAttrs) return;
 
     AttrVec &Vec = getAttrs();
-    llvm::erase_if(Vec, [](Attr *A) { return isa<T>(A); });
+    llvm::erase_if(Vec, [](Attr *A) { return isa<Ts...>(A); });
 
     if (Vec.empty())
       HasAttrs = false;
   }
+
+  template <typename T> void dropAttr() { dropAttrs<T>(); }
 
   template <typename T>
   llvm::iterator_range<specific_attr_iterator<T>> specific_attrs() const {
@@ -658,9 +670,8 @@ public:
   /// Whether this declaration comes from another module unit.
   bool isInAnotherModuleUnit() const;
 
-  /// FIXME: Implement discarding declarations actually in global module
-  /// fragment. See [module.global.frag]p3,4 for details.
-  bool isDiscardedInGlobalModuleFragment() const { return false; }
+  /// Whether this declaration comes from explicit global module.
+  bool isFromExplicitGlobalModule() const;
 
   /// Return true if this declaration has an attribute which acts as
   /// definition of the entity, such as 'alias' or 'ifunc'.
@@ -766,10 +777,10 @@ public:
 
   /// Retrieve the global declaration ID associated with this
   /// declaration, which specifies where this Decl was loaded from.
-  unsigned getGlobalID() const {
+  GlobalDeclID getGlobalID() const {
     if (isFromASTFile())
-      return *((const unsigned*)this - 1);
-    return 0;
+      return (*((const GlobalDeclID *)this - 1));
+    return GlobalDeclID();
   }
 
   /// Retrieve the global ID of the module that owns this particular
@@ -1697,7 +1708,7 @@ class DeclContext {
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsVirtualAsWritten : 1;
     LLVM_PREFERRED_TYPE(bool)
-    uint64_t IsPure : 1;
+    uint64_t IsPureVirtual : 1;
     LLVM_PREFERRED_TYPE(bool)
     uint64_t HasInheritedPrototype : 1;
     LLVM_PREFERRED_TYPE(bool)
@@ -1719,7 +1730,7 @@ class DeclContext {
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsExplicitlyDefaulted : 1;
     LLVM_PREFERRED_TYPE(bool)
-    uint64_t HasDefaultedFunctionInfo : 1;
+    uint64_t HasDefaultedOrDeletedInfo : 1;
 
     /// For member functions of complete types, whether this is an ineligible
     /// special member function or an unselected destructor. See
@@ -2109,6 +2120,7 @@ public:
     case Decl::Block:
     case Decl::Captured:
     case Decl::ObjCMethod:
+    case Decl::TopLevelStmt:
       return true;
     default:
       return getDeclKind() >= Decl::firstFunction &&

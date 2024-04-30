@@ -30,6 +30,10 @@ using namespace llvm;
 #define DEBUG_TYPE "nvptx-isel"
 #define PASS_NAME "NVPTX DAG->DAG Pattern Instruction Selection"
 
+static cl::opt<bool>
+    EnableRsqrtOpt("nvptx-rsqrt-approx-opt", cl::init(true), cl::Hidden,
+                   cl::desc("Enable reciprocal sqrt optimization"));
+
 /// createNVPTXISelDag - This pass converts a legalized DAG into a
 /// NVPTX-specific DAG, ready for instruction scheduling.
 FunctionPass *llvm::createNVPTXISelDag(NVPTXTargetMachine &TM,
@@ -74,9 +78,7 @@ bool NVPTXDAGToDAGISel::allowUnsafeFPMath() const {
   return TL->allowUnsafeFPMath(*MF);
 }
 
-bool NVPTXDAGToDAGISel::useShortPointers() const {
-  return TM.useShortPointers();
-}
+bool NVPTXDAGToDAGISel::doRsqrtOpt() const { return EnableRsqrtOpt; }
 
 /// Select - Select instructions not customized! Used for
 /// expanded, promoted and normal instructions.
@@ -309,6 +311,12 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   case NVPTXISD::TexUnifiedCubeArrayS32FloatLevel:
   case NVPTXISD::TexUnifiedCubeArrayU32Float:
   case NVPTXISD::TexUnifiedCubeArrayU32FloatLevel:
+  case NVPTXISD::TexUnifiedCubeFloatFloatGrad:
+  case NVPTXISD::TexUnifiedCubeS32FloatGrad:
+  case NVPTXISD::TexUnifiedCubeU32FloatGrad:
+  case NVPTXISD::TexUnifiedCubeArrayFloatFloatGrad:
+  case NVPTXISD::TexUnifiedCubeArrayS32FloatGrad:
+  case NVPTXISD::TexUnifiedCubeArrayU32FloatGrad:
   case NVPTXISD::Tld4UnifiedR2DFloatFloat:
   case NVPTXISD::Tld4UnifiedG2DFloatFloat:
   case NVPTXISD::Tld4UnifiedB2DFloatFloat:
@@ -513,7 +521,7 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
 }
 
 bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
-  unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  unsigned IID = N->getConstantOperandVal(1);
   switch (IID) {
   default:
     return false;
@@ -730,7 +738,7 @@ static bool canLowerToLDG(MemSDNode *N, const NVPTXSubtarget &Subtarget,
 }
 
 bool NVPTXDAGToDAGISel::tryIntrinsicNoChain(SDNode *N) {
-  unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
+  unsigned IID = N->getConstantOperandVal(0);
   switch (IID) {
   default:
     return false;
@@ -762,22 +770,25 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
     switch (SrcAddrSpace) {
     default: report_fatal_error("Bad address space in addrspacecast");
     case ADDRESS_SPACE_GLOBAL:
-      Opc = TM.is64Bit() ? NVPTX::cvta_global_yes_64 : NVPTX::cvta_global_yes;
+      Opc = TM.is64Bit() ? NVPTX::cvta_global_64 : NVPTX::cvta_global;
       break;
     case ADDRESS_SPACE_SHARED:
-      Opc = TM.is64Bit() ? (useShortPointers() ? NVPTX::cvta_shared_yes_6432
-                                               : NVPTX::cvta_shared_yes_64)
-                         : NVPTX::cvta_shared_yes;
+      Opc = TM.is64Bit() ? (TM.getPointerSizeInBits(SrcAddrSpace) == 32
+                                ? NVPTX::cvta_shared_6432
+                                : NVPTX::cvta_shared_64)
+                         : NVPTX::cvta_shared;
       break;
     case ADDRESS_SPACE_CONST:
-      Opc = TM.is64Bit() ? (useShortPointers() ? NVPTX::cvta_const_yes_6432
-                                               : NVPTX::cvta_const_yes_64)
-                         : NVPTX::cvta_const_yes;
+      Opc = TM.is64Bit() ? (TM.getPointerSizeInBits(SrcAddrSpace) == 32
+                                ? NVPTX::cvta_const_6432
+                                : NVPTX::cvta_const_64)
+                         : NVPTX::cvta_const;
       break;
     case ADDRESS_SPACE_LOCAL:
-      Opc = TM.is64Bit() ? (useShortPointers() ? NVPTX::cvta_local_yes_6432
-                                               : NVPTX::cvta_local_yes_64)
-                         : NVPTX::cvta_local_yes;
+      Opc = TM.is64Bit() ? (TM.getPointerSizeInBits(SrcAddrSpace) == 32
+                                ? NVPTX::cvta_local_6432
+                                : NVPTX::cvta_local_64)
+                         : NVPTX::cvta_local;
       break;
     }
     ReplaceNode(N, CurDAG->getMachineNode(Opc, SDLoc(N), N->getValueType(0),
@@ -791,23 +802,25 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
     switch (DstAddrSpace) {
     default: report_fatal_error("Bad address space in addrspacecast");
     case ADDRESS_SPACE_GLOBAL:
-      Opc = TM.is64Bit() ? NVPTX::cvta_to_global_yes_64
-                         : NVPTX::cvta_to_global_yes;
+      Opc = TM.is64Bit() ? NVPTX::cvta_to_global_64 : NVPTX::cvta_to_global;
       break;
     case ADDRESS_SPACE_SHARED:
-      Opc = TM.is64Bit() ? (useShortPointers() ? NVPTX::cvta_to_shared_yes_3264
-                                                : NVPTX::cvta_to_shared_yes_64)
-                         : NVPTX::cvta_to_shared_yes;
+      Opc = TM.is64Bit() ? (TM.getPointerSizeInBits(DstAddrSpace) == 32
+                                ? NVPTX::cvta_to_shared_3264
+                                : NVPTX::cvta_to_shared_64)
+                         : NVPTX::cvta_to_shared;
       break;
     case ADDRESS_SPACE_CONST:
-      Opc = TM.is64Bit() ? (useShortPointers() ? NVPTX::cvta_to_const_yes_3264
-                                             : NVPTX::cvta_to_const_yes_64)
-                         : NVPTX::cvta_to_const_yes;
+      Opc = TM.is64Bit() ? (TM.getPointerSizeInBits(DstAddrSpace) == 32
+                                ? NVPTX::cvta_to_const_3264
+                                : NVPTX::cvta_to_const_64)
+                         : NVPTX::cvta_to_const;
       break;
     case ADDRESS_SPACE_LOCAL:
-      Opc = TM.is64Bit() ? (useShortPointers() ? NVPTX::cvta_to_local_yes_3264
-                                               : NVPTX::cvta_to_local_yes_64)
-                         : NVPTX::cvta_to_local_yes;
+      Opc = TM.is64Bit() ? (TM.getPointerSizeInBits(DstAddrSpace) == 32
+                                ? NVPTX::cvta_to_local_3264
+                                : NVPTX::cvta_to_local_64)
+                         : NVPTX::cvta_to_local;
       break;
     case ADDRESS_SPACE_PARAM:
       Opc = TM.is64Bit() ? NVPTX::nvvm_ptr_gen_to_param_64
@@ -1246,7 +1259,7 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
   if (N->getOpcode() == ISD::INTRINSIC_W_CHAIN) {
     Op1 = N->getOperand(2);
     Mem = cast<MemIntrinsicSDNode>(N);
-    unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+    unsigned IID = N->getConstantOperandVal(1);
     switch (IID) {
     default:
       return false;
@@ -2076,7 +2089,7 @@ bool NVPTXDAGToDAGISel::tryLoadParam(SDNode *Node) {
     VTs = CurDAG->getVTList(EVTs);
   }
 
-  unsigned OffsetVal = cast<ConstantSDNode>(Offset)->getZExtValue();
+  unsigned OffsetVal = Offset->getAsZExtVal();
 
   SmallVector<SDValue, 2> Ops;
   Ops.push_back(CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32));
@@ -2091,7 +2104,7 @@ bool NVPTXDAGToDAGISel::tryStoreRetval(SDNode *N) {
   SDLoc DL(N);
   SDValue Chain = N->getOperand(0);
   SDValue Offset = N->getOperand(1);
-  unsigned OffsetVal = cast<ConstantSDNode>(Offset)->getZExtValue();
+  unsigned OffsetVal = Offset->getAsZExtVal();
   MemSDNode *Mem = cast<MemSDNode>(N);
 
   // How many elements do we have?
@@ -2129,6 +2142,21 @@ bool NVPTXDAGToDAGISel::tryStoreRetval(SDNode *N) {
                              NVPTX::StoreRetvalI8, NVPTX::StoreRetvalI16,
                              NVPTX::StoreRetvalI32, NVPTX::StoreRetvalI64,
                              NVPTX::StoreRetvalF32, NVPTX::StoreRetvalF64);
+    if (Opcode == NVPTX::StoreRetvalI8) {
+      // Fine tune the opcode depending on the size of the operand.
+      // This helps to avoid creating redundant COPY instructions in
+      // InstrEmitter::AddRegisterOperand().
+      switch (Ops[0].getSimpleValueType().SimpleTy) {
+      default:
+        break;
+      case MVT::i32:
+        Opcode = NVPTX::StoreRetvalI8TruncI32;
+        break;
+      case MVT::i64:
+        Opcode = NVPTX::StoreRetvalI8TruncI64;
+        break;
+      }
+    }
     break;
   case 2:
     Opcode = pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,
@@ -2158,9 +2186,9 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
   SDLoc DL(N);
   SDValue Chain = N->getOperand(0);
   SDValue Param = N->getOperand(1);
-  unsigned ParamVal = cast<ConstantSDNode>(Param)->getZExtValue();
+  unsigned ParamVal = Param->getAsZExtVal();
   SDValue Offset = N->getOperand(2);
-  unsigned OffsetVal = cast<ConstantSDNode>(Offset)->getZExtValue();
+  unsigned OffsetVal = Offset->getAsZExtVal();
   MemSDNode *Mem = cast<MemSDNode>(N);
   SDValue Glue = N->getOperand(N->getNumOperands() - 1);
 
@@ -2205,6 +2233,21 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
                                NVPTX::StoreParamI8, NVPTX::StoreParamI16,
                                NVPTX::StoreParamI32, NVPTX::StoreParamI64,
                                NVPTX::StoreParamF32, NVPTX::StoreParamF64);
+      if (Opcode == NVPTX::StoreParamI8) {
+        // Fine tune the opcode depending on the size of the operand.
+        // This helps to avoid creating redundant COPY instructions in
+        // InstrEmitter::AddRegisterOperand().
+        switch (Ops[0].getSimpleValueType().SimpleTy) {
+        default:
+          break;
+        case MVT::i32:
+          Opcode = NVPTX::StoreParamI8TruncI32;
+          break;
+        case MVT::i64:
+          Opcode = NVPTX::StoreParamI8TruncI64;
+          break;
+        }
+      }
       break;
     case 2:
       Opcode = pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,
@@ -2762,6 +2805,24 @@ bool NVPTXDAGToDAGISel::tryTextureIntrinsic(SDNode *N) {
     break;
   case NVPTXISD::Tld4UnifiedA2DU64Float:
     Opc = NVPTX::TLD4_UNIFIED_A_2D_U32_F32_R;
+    break;
+  case NVPTXISD::TexUnifiedCubeFloatFloatGrad:
+    Opc = NVPTX::TEX_UNIFIED_CUBE_F32_F32_GRAD_R;
+    break;
+  case NVPTXISD::TexUnifiedCubeS32FloatGrad:
+    Opc = NVPTX::TEX_UNIFIED_CUBE_S32_F32_GRAD_R;
+    break;
+  case NVPTXISD::TexUnifiedCubeU32FloatGrad:
+    Opc = NVPTX::TEX_UNIFIED_CUBE_U32_F32_GRAD_R;
+    break;
+  case NVPTXISD::TexUnifiedCubeArrayFloatFloatGrad:
+    Opc = NVPTX::TEX_UNIFIED_CUBE_ARRAY_F32_F32_GRAD_R;
+    break;
+  case NVPTXISD::TexUnifiedCubeArrayS32FloatGrad:
+    Opc = NVPTX::TEX_UNIFIED_CUBE_ARRAY_S32_F32_GRAD_R;
+    break;
+  case NVPTXISD::TexUnifiedCubeArrayU32FloatGrad:
+    Opc = NVPTX::TEX_UNIFIED_CUBE_ARRAY_U32_F32_GRAD_R;
     break;
   }
 
