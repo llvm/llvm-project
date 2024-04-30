@@ -109,7 +109,7 @@ void multipleTaintedArgs(void) {
   scanf("%1022s %1023s", cmd, file); // expected-note {{Taint originated here}}
                           // expected-note@-1 {{Taint propagated to the 2nd argument, 3rd argument}}
   strcpy(buf, cmd);// expected-note {{Taint propagated to the 1st argument}}
-  strcat(buf," ");// expected-note {{Taint propagated to the 1st argument}}
+  strcat(buf, " ");// expected-note {{Taint propagated to the 1st argument}}
   strcat(buf, file);// expected-note {{Taint propagated to the 1st argument}}
   system(buf); // expected-warning {{Untrusted data is passed to a system call}}
                // expected-note@-1{{Untrusted data is passed to a system call}}
