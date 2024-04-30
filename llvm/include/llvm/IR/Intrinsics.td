@@ -2577,15 +2577,15 @@ def int_preserve_static_offset : DefaultAttrsIntrinsic<[llvm_ptr_ty],
 
 //===------------ Intrinsics to perform common vector shuffles ------------===//
 
-def int_experimental_vector_reverse : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                                            [LLVMMatchType<0>],
-                                                            [IntrNoMem]>;
+def int_vector_reverse : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                               [LLVMMatchType<0>],
+                                               [IntrNoMem]>;
 
-def int_experimental_vector_splice : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                                           [LLVMMatchType<0>,
-                                                            LLVMMatchType<0>,
-                                                            llvm_i32_ty],
-                                                           [IntrNoMem, ImmArg<ArgIndex<2>>]>;
+def int_vector_splice : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                              [LLVMMatchType<0>,
+                                               LLVMMatchType<0>,
+                                               llvm_i32_ty],
+                                              [IntrNoMem, ImmArg<ArgIndex<2>>]>;
 
 //===---------- Intrinsics to query properties of scalable vectors --------===//
 def int_vscale : DefaultAttrsIntrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
@@ -2600,15 +2600,15 @@ def int_vector_extract : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                                [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<1>>]>;
 
 
-def int_experimental_vector_interleave2   : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                                                  [LLVMHalfElementsVectorType<0>,
-                                                                   LLVMHalfElementsVectorType<0>],
-                                                                  [IntrNoMem]>;
+def int_vector_interleave2   : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                                     [LLVMHalfElementsVectorType<0>,
+                                                      LLVMHalfElementsVectorType<0>],
+                                                     [IntrNoMem]>;
 
-def int_experimental_vector_deinterleave2 : DefaultAttrsIntrinsic<[LLVMHalfElementsVectorType<0>,
-                                                                   LLVMHalfElementsVectorType<0>],
-                                                                  [llvm_anyvector_ty],
-                                                                  [IntrNoMem]>;
+def int_vector_deinterleave2 : DefaultAttrsIntrinsic<[LLVMHalfElementsVectorType<0>,
+                                                      LLVMHalfElementsVectorType<0>],
+                                                     [llvm_anyvector_ty],
+                                                     [IntrNoMem]>;
 
 //===----------------- Pointer Authentication Intrinsics ------------------===//
 //

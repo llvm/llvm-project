@@ -181,6 +181,7 @@ protected:
   bool visitVarDecl(const VarDecl *VD);
   /// Visit an APValue.
   bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
+  bool visitAPValueInitializer(const APValue &Val, const Expr *E);
 
   /// Visits an expression and converts it to a boolean.
   bool visitBool(const Expr *E);
@@ -224,7 +225,8 @@ protected:
     return this->emitFinishInitPop(I);
   }
 
-  bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *E);
+  bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *ArrayFiller,
+                     const Expr *E);
   bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init);
 
   /// Creates a local primitive value.

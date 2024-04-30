@@ -50,41 +50,8 @@ static const char *RISCVGImplications[] = {
 #define GET_SUPPORTED_EXTENSIONS
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
 
-static constexpr RISCVProfile SupportedProfiles[] = {
-    {"rvi20u32", "rv32i"},
-    {"rvi20u64", "rv64i"},
-    {"rva20u64", "rv64imafdc_ziccamoa_ziccif_zicclsm_ziccrse_zicntr_za128rs"},
-    {"rva20s64", "rv64imafdc_ziccamoa_ziccif_zicclsm_ziccrse_zicntr_zifencei_"
-                 "za128rs_ssccptr_sstvala_sstvecd_svade_svbare"},
-    {"rva22u64",
-     "rv64imafdc_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_"
-     "zicntr_zihintpause_zihpm_za64rs_zfhmin_zba_zbb_zbs_zkt"},
-    {"rva22s64",
-     "rv64imafdc_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_"
-     "zicntr_zifencei_zihintpause_zihpm_za64rs_zfhmin_zba_zbb_zbs_zkt_ssccptr_"
-     "sscounterenw_sstvala_sstvecd_svade_svbare_svinval_svpbmt"},
-    {"rva23u64",
-     "rv64imafdcv_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_"
-     "zicntr_zicond_zihintntl_zihintpause_zihpm_zimop_za64rs_zawrs_zfa_zfhmin_"
-     "zcb_zcmop_zba_zbb_zbs_zkt_zvbb_zvfhmin_zvkt"},
-    {"rva23s64",
-     "rv64imafdcvh_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_"
-     "zicntr_zicond_zifencei_zihintntl_zihintpause_zihpm_zimop_za64rs_zawrs_"
-     "zfa_zfhmin_zcb_zcmop_zba_zbb_zbs_zkt_zvbb_zvfhmin_zvkt_shcounterenw_"
-     "shgatpa_shtvala_shvsatpa_shvstvala_shvstvecd_ssccptr_sscofpmf_"
-     "sscounterenw_ssnpm0p8_ssstateen_sstc_sstvala_sstvecd_ssu64xl_svade_"
-     "svbare_svinval_svnapot_svpbmt"},
-    {"rvb23u64", "rv64imafdc_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_"
-                 "zicclsm_ziccrse_zicntr_zicond_zihintntl_zihintpause_zihpm_"
-                 "zimop_za64rs_zawrs_zfa_zcb_zcmop_zba_zbb_zbs_zkt"},
-    {"rvb23s64",
-     "rv64imafdc_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_"
-     "zicntr_zicond_zifencei_zihintntl_zihintpause_zihpm_zimop_za64rs_zawrs_"
-     "zfa_zcb_zcmop_zba_zbb_zbs_zkt_ssccptr_sscofpmf_sscounterenw_sstc_sstvala_"
-     "sstvecd_ssu64xl_svade_svbare_svinval_svnapot_svpbmt"},
-    {"rvm23u32", "rv32im_zicbop_zicond_zicsr_zihintntl_zihintpause_zimop_zca_"
-                 "zcb_zce_zcmop_zcmp_zcmt_zba_zbb_zbs"},
-};
+#define GET_SUPPORTED_PROFILES
+#include "llvm/TargetParser/RISCVTargetParserDef.inc"
 
 static void verifyTables() {
 #ifndef NDEBUG
@@ -112,7 +79,7 @@ void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
   outs() << "All available -march extensions for RISC-V\n\n";
   PrintExtension("Name", "Version", (DescMap.empty() ? "" : "Description"));
 
-  RISCVISAInfo::OrderedExtensionMap ExtMap;
+  RISCVISAUtils::OrderedExtensionMap ExtMap;
   for (const auto &E : SupportedExtensions)
     ExtMap[E.Name] = {E.Version.Major, E.Version.Minor};
   for (const auto &E : ExtMap) {
@@ -431,11 +398,10 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
 
   for (auto &Feature : Features) {
     StringRef ExtName = Feature;
-    bool Experimental = false;
     assert(ExtName.size() > 1 && (ExtName[0] == '+' || ExtName[0] == '-'));
     bool Add = ExtName[0] == '+';
     ExtName = ExtName.drop_front(1); // Drop '+' or '-'
-    Experimental = stripExperimentalPrefix(ExtName);
+    bool Experimental = stripExperimentalPrefix(ExtName);
     auto ExtensionInfos = Experimental
                               ? ArrayRef(SupportedExperimentalExtensions)
                               : ArrayRef(SupportedExtensions);
@@ -672,7 +638,8 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
   switch (Baseline) {
   default:
     return createStringError(errc::invalid_argument,
-                             "first letter should be 'e', 'i' or 'g'");
+                             "first letter after \'" + Arch.slice(0, 4) +
+                                 "\' should be 'e', 'i' or 'g'");
   case 'e':
   case 'i':
     break;
@@ -700,11 +667,10 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     // version since the we don't have clear version scheme for that on
     // ISA spec.
     for (const auto *Ext : RISCVGImplications) {
-      if (auto Version = findDefaultVersion(Ext)) {
-        // Postpone AddExtension until end of this function
-        SeenExtMap[Ext] = {Version->Major, Version->Minor};
-      } else
-        llvm_unreachable("Default extension version not found?");
+      auto Version = findDefaultVersion(Ext);
+      assert(Version && "Default extension version not found?");
+      // Postpone AddExtension until end of this function
+      SeenExtMap[Ext] = {Version->Major, Version->Minor};
     }
   } else {
     // Baseline is `i` or `e`

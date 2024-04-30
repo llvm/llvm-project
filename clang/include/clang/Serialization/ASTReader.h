@@ -1771,6 +1771,7 @@ public:
 
   /// Retrieve the module manager.
   ModuleManager &getModuleManager() { return ModuleMgr; }
+  const ModuleManager &getModuleManager() const { return ModuleMgr; }
 
   /// Retrieve the preprocessor.
   Preprocessor &getPreprocessor() const { return PP; }
@@ -2177,8 +2178,8 @@ public:
 
   /// Retrieve the global submodule ID given a module and its local ID
   /// number.
-  serialization::SubmoduleID
-  getGlobalSubmoduleID(ModuleFile &M, unsigned LocalID);
+  serialization::SubmoduleID getGlobalSubmoduleID(ModuleFile &M,
+                                                  unsigned LocalID) const;
 
   /// Retrieve the submodule that corresponds to a global submodule ID.
   ///
@@ -2191,7 +2192,7 @@ public:
 
   /// Retrieve the module file with a given local ID within the specified
   /// ModuleFile.
-  ModuleFile *getLocalModuleFile(ModuleFile &M, unsigned ID);
+  ModuleFile *getLocalModuleFile(ModuleFile &M, unsigned ID) const;
 
   /// Get an ID for the given module file.
   unsigned getModuleFileID(ModuleFile *M);
@@ -2227,33 +2228,46 @@ public:
     return Sema::AlignPackInfo::getFromRawEncoding(Raw);
   }
 
+  using RawLocEncoding = SourceLocationEncoding::RawLocEncoding;
+
   /// Read a source location from raw form and return it in its
   /// originating module file's source location space.
-  SourceLocation ReadUntranslatedSourceLocation(SourceLocation::UIntTy Raw,
-                                                LocSeq *Seq = nullptr) const {
+  std::pair<SourceLocation, unsigned>
+  ReadUntranslatedSourceLocation(RawLocEncoding Raw,
+                                 LocSeq *Seq = nullptr) const {
     return SourceLocationEncoding::decode(Raw, Seq);
   }
 
   /// Read a source location from raw form.
-  SourceLocation ReadSourceLocation(ModuleFile &ModuleFile,
-                                    SourceLocation::UIntTy Raw,
+  SourceLocation ReadSourceLocation(ModuleFile &MF, RawLocEncoding Raw,
                                     LocSeq *Seq = nullptr) const {
-    SourceLocation Loc = ReadUntranslatedSourceLocation(Raw, Seq);
-    return TranslateSourceLocation(ModuleFile, Loc);
+    if (!MF.ModuleOffsetMap.empty())
+      ReadModuleOffsetMap(MF);
+
+    auto [Loc, ModuleFileIndex] = ReadUntranslatedSourceLocation(Raw, Seq);
+    ModuleFile *OwningModuleFile =
+        ModuleFileIndex == 0 ? &MF : MF.DependentModules[ModuleFileIndex - 1];
+
+    assert(!SourceMgr.isLoadedSourceLocation(Loc) &&
+           "Run out source location space");
+
+    return TranslateSourceLocation(*OwningModuleFile, Loc);
   }
 
   /// Translate a source location from another module file's source
   /// location space into ours.
   SourceLocation TranslateSourceLocation(ModuleFile &ModuleFile,
                                          SourceLocation Loc) const {
-    if (!ModuleFile.ModuleOffsetMap.empty())
-      ReadModuleOffsetMap(ModuleFile);
-    assert(ModuleFile.SLocRemap.find(Loc.getOffset()) !=
-               ModuleFile.SLocRemap.end() &&
-           "Cannot find offset to remap.");
-    SourceLocation::IntTy Remap =
-        ModuleFile.SLocRemap.find(Loc.getOffset())->second;
-    return Loc.getLocWithOffset(Remap);
+    if (Loc.isInvalid())
+      return Loc;
+
+    // FIXME: TranslateSourceLocation is not re-enterable. It is problematic
+    // to call TranslateSourceLocation on a translated source location.
+    // We either need a method to know whether or not a source location is
+    // translated or refactor the code to make it clear that
+    // TranslateSourceLocation won't be called with translated source location.
+
+    return Loc.getLocWithOffset(ModuleFile.SLocEntryBaseOffset - 2);
   }
 
   /// Read a source location.

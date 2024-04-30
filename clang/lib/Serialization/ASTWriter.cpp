@@ -1174,26 +1174,47 @@ ASTWriter::createSignature() const {
   return std::make_pair(ASTBlockHash, Signature);
 }
 
+ASTFileSignature ASTWriter::createSignatureForNamedModule() const {
+  llvm::SHA1 Hasher;
+  Hasher.update(StringRef(Buffer.data(), Buffer.size()));
+
+  assert(WritingModule);
+  assert(WritingModule->isNamedModule());
+
+  // We need to combine all the export imported modules no matter
+  // we used it or not.
+  for (auto [ExportImported, _] : WritingModule->Exports)
+    Hasher.update(ExportImported->Signature);
+
+  return ASTFileSignature::create(Hasher.result());
+}
+
+static void BackpatchSignatureAt(llvm::BitstreamWriter &Stream,
+                                 const ASTFileSignature &S, uint64_t BitNo) {
+  for (uint8_t Byte : S) {
+    Stream.BackpatchByte(BitNo, Byte);
+    BitNo += 8;
+  }
+}
+
 ASTFileSignature ASTWriter::backpatchSignature() {
+  if (isWritingStdCXXNamedModules()) {
+    ASTFileSignature Signature = createSignatureForNamedModule();
+    BackpatchSignatureAt(Stream, Signature, SignatureOffset);
+    return Signature;
+  }
+
   if (!WritingModule ||
       !PP->getHeaderSearchInfo().getHeaderSearchOpts().ModulesHashContent)
     return {};
 
   // For implicit modules, write the hash of the PCM as its signature.
-
-  auto BackpatchSignatureAt = [&](const ASTFileSignature &S, uint64_t BitNo) {
-    for (uint8_t Byte : S) {
-      Stream.BackpatchByte(BitNo, Byte);
-      BitNo += 8;
-    }
-  };
-
   ASTFileSignature ASTBlockHash;
   ASTFileSignature Signature;
   std::tie(ASTBlockHash, Signature) = createSignature();
 
-  BackpatchSignatureAt(ASTBlockHash, ASTBlockHashOffset);
-  BackpatchSignatureAt(Signature, SignatureOffset);
+  BackpatchSignatureAt(Stream, ASTBlockHash, ASTBlockHashOffset);
+  BackpatchSignatureAt(Stream, Signature, SignatureOffset);
 
   return Signature;
 }
@@ -1210,9 +1231,11 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
   RecordData Record;
   Stream.EnterSubblock(UNHASHED_CONTROL_BLOCK_ID, 5);
 
-  // For implicit modules, write the hash of the PCM as its signature.
-  if (WritingModule &&
-      PP.getHeaderSearchInfo().getHeaderSearchOpts().ModulesHashContent) {
+  // For implicit modules and C++20 named modules, write the hash of the PCM as
+  // its signature.
+  if (isWritingStdCXXNamedModules() ||
+      (WritingModule &&
+       PP.getHeaderSearchInfo().getHeaderSearchOpts().ModulesHashContent)) {
     // At this point, we don't know the actual signature of the file or the AST
     // block - we're only able to compute those at the end of the serialization
     // process. Let's store dummy signatures for now, and replace them with the
@@ -1223,20 +1246,23 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
     auto Dummy = ASTFileSignature::createDummy();
     SmallString<128> Blob{Dummy.begin(), Dummy.end()};
 
-    auto Abbrev = std::make_shared<BitCodeAbbrev>();
-    Abbrev->Add(BitCodeAbbrevOp(AST_BLOCK_HASH));
-    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-    unsigned ASTBlockHashAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+    // We don't need AST Block hash in named modules.
+    if (!isWritingStdCXXNamedModules()) {
+      auto Abbrev = std::make_shared<BitCodeAbbrev>();
+      Abbrev->Add(BitCodeAbbrevOp(AST_BLOCK_HASH));
+      Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
+      unsigned ASTBlockHashAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
 
-    Abbrev = std::make_shared<BitCodeAbbrev>();
+      Record.push_back(AST_BLOCK_HASH);
+      Stream.EmitRecordWithBlob(ASTBlockHashAbbrev, Record, Blob);
+      ASTBlockHashOffset = Stream.GetCurrentBitNo() - Blob.size() * 8;
+      Record.clear();
+    }
+
+    auto Abbrev = std::make_shared<BitCodeAbbrev>();
     Abbrev->Add(BitCodeAbbrevOp(SIGNATURE));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
     unsigned SignatureAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
-
-    Record.push_back(AST_BLOCK_HASH);
-    Stream.EmitRecordWithBlob(ASTBlockHashAbbrev, Record, Blob);
-    ASTBlockHashOffset = Stream.GetCurrentBitNo() - Blob.size() * 8;
-    Record.clear();
 
     Record.push_back(SIGNATURE);
     Stream.EmitRecordWithBlob(SignatureAbbrev, Record, Blob);
@@ -2677,8 +2703,10 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
 
     uint64_t Offset = Stream.GetCurrentBitNo() - MacroOffsetsBase;
     assert((Offset >> 32) == 0 && "Preprocessed entity offset too large");
-    PreprocessedEntityOffsets.push_back(
-        PPEntityOffset(getAdjustedRange((*E)->getSourceRange()), Offset));
+    SourceRange R = getAdjustedRange((*E)->getSourceRange());
+    PreprocessedEntityOffsets.emplace_back(
+        getRawSourceLocationEncoding(R.getBegin()),
+        getRawSourceLocationEncoding(R.getEnd()), Offset);
 
     if (auto *MD = dyn_cast<MacroDefinitionRecord>(*E)) {
       // Record this macro definition's ID.
@@ -2745,7 +2773,9 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
     std::vector<PPSkippedRange> SerializedSkippedRanges;
     SerializedSkippedRanges.reserve(SkippedRanges.size());
     for (auto const& Range : SkippedRanges)
-      SerializedSkippedRanges.emplace_back(Range);
+      SerializedSkippedRanges.emplace_back(
+          getRawSourceLocationEncoding(Range.getBegin()),
+          getRawSourceLocationEncoding(Range.getEnd()));
 
     using namespace llvm;
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
@@ -2911,8 +2941,8 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
       ParentID = SubmoduleIDs[Mod->Parent];
     }
 
-    uint64_t DefinitionLoc =
-        SourceLocationEncoding::encode(getAdjustedLocation(Mod->DefinitionLoc));
+    SourceLocationEncoding::RawLocEncoding DefinitionLoc =
+        getRawSourceLocationEncoding(getAdjustedLocation(Mod->DefinitionLoc));
 
     // Emit the definition of the block.
     {
@@ -3205,6 +3235,17 @@ void ASTWriter::WriteType(QualType T) {
 // Declaration Serialization
 //===----------------------------------------------------------------------===//
 
+static bool IsInternalDeclFromFileContext(const Decl *D) {
+  auto *ND = dyn_cast<NamedDecl>(D);
+  if (!ND)
+    return false;
+
+  if (!D->getDeclContext()->getRedeclContext()->isFileContext())
+    return false;
+
+  return ND->getFormalLinkage() == Linkage::Internal;
+}
+
 /// Write the block containing all of the declaration IDs
 /// lexically declared within the given DeclContext.
 ///
@@ -3223,6 +3264,15 @@ uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
   SmallVector<DeclID, 128> KindDeclPairs;
   for (const auto *D : DC->decls()) {
     if (DoneWritingDeclsAndTypes && !wasDeclEmitted(D))
+      continue;
+
+    // We don't need to write decls with internal linkage into reduced BMI.
+    // If such decls gets emitted due to it get used from inline functions,
+    // the program illegal. However, there are too many use of static inline
+    // functions in the global module fragment and it will be breaking change
+    // to forbid that. So we have to allow to emit such declarations from GMF.
+    if (GeneratingReducedBMI && !D->isFromExplicitGlobalModule() &&
+        IsInternalDeclFromFileContext(D))
       continue;
 
     KindDeclPairs.push_back(D->getKind());
@@ -3886,6 +3936,13 @@ public:
           !Writer.wasDeclEmitted(DeclForLocalLookup))
         continue;
 
+      // Try to avoid writing internal decls to reduced BMI.
+      // See comments in ASTWriter::WriteDeclContextLexicalBlock for details.
+      if (Writer.isGeneratingReducedBMI() &&
+          !DeclForLocalLookup->isFromExplicitGlobalModule() &&
+          IsInternalDeclFromFileContext(DeclForLocalLookup))
+        continue;
+
       DeclIDs.push_back(Writer.GetDeclRef(DeclForLocalLookup));
     }
     return std::make_pair(Start, DeclIDs.size());
@@ -4255,6 +4312,12 @@ uint64_t ASTWriter::WriteDeclContextVisibleBlock(ASTContext &Context,
           continue;
 
         if (DoneWritingDeclsAndTypes && !wasDeclEmitted(ND))
+          continue;
+
+        // We don't need to force emitting internal decls into reduced BMI.
+        // See comments in ASTWriter::WriteDeclContextLexicalBlock for details.
+        if (GeneratingReducedBMI && !ND->isFromExplicitGlobalModule() &&
+            IsInternalDeclFromFileContext(ND))
           continue;
 
         GetDeclRef(ND);
@@ -4917,8 +4980,7 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
       // is ill-formed. However, in practice, there are a lot of projects
       // uses `static inline` in the headers. So we can't get rid of all
       // static entities in reduced BMI now.
-      if (auto *ND = dyn_cast<NamedDecl>(D);
-          ND && ND->getFormalLinkage() == Linkage::Internal)
+      if (IsInternalDeclFromFileContext(D))
         continue;
     }
 
@@ -5296,7 +5358,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
         // These values should be unique within a chain, since they will be read
         // as keys into ContinuousRangeMaps.
-        writeBaseIDOrNone(M.SLocEntryBaseOffset, M.LocalNumSLocEntries);
         writeBaseIDOrNone(M.BaseIdentifierID, M.LocalNumIdentifiers);
         writeBaseIDOrNone(M.BaseMacroID, M.LocalNumMacros);
         writeBaseIDOrNone(M.BasePreprocessedEntityID,
@@ -5789,10 +5850,34 @@ void ASTWriter::AddFileID(FileID FID, RecordDataImpl &Record) {
   Record.push_back(getAdjustedFileID(FID).getOpaqueValue());
 }
 
+SourceLocationEncoding::RawLocEncoding
+ASTWriter::getRawSourceLocationEncoding(SourceLocation Loc, LocSeq *Seq) {
+  unsigned BaseOffset = 0;
+  unsigned ModuleFileIndex = 0;
+
+  // See SourceLocationEncoding.h for the encoding details.
+  if (Context->getSourceManager().isLoadedSourceLocation(Loc) &&
+      Loc.isValid()) {
+    assert(getChain());
+    auto SLocMapI = getChain()->GlobalSLocOffsetMap.find(
+        SourceManager::MaxLoadedOffset - Loc.getOffset() - 1);
+    assert(SLocMapI != getChain()->GlobalSLocOffsetMap.end() &&
+           "Corrupted global sloc offset map");
+    ModuleFile *F = SLocMapI->second;
+    BaseOffset = F->SLocEntryBaseOffset - 2;
+    // 0 means the location is not loaded. So we need to add 1 to the index to
+    // make it clear.
+    ModuleFileIndex = F->Index + 1;
+    assert(&getChain()->getModuleManager()[F->Index] == F);
+  }
+
+  return SourceLocationEncoding::encode(Loc, BaseOffset, ModuleFileIndex, Seq);
+}
+
 void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
                                   SourceLocationSequence *Seq) {
   Loc = getAdjustedLocation(Loc);
-  Record.push_back(SourceLocationEncoding::encode(Loc, Seq));
+  Record.push_back(getRawSourceLocationEncoding(Loc, Seq));
 }
 
 void ASTWriter::AddSourceRange(SourceRange Range, RecordDataImpl &Record,
