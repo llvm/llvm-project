@@ -2090,6 +2090,24 @@ inline bool ArrayElemPop(InterpState &S, CodePtr OpPC, uint32_t Index) {
   return true;
 }
 
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool CopyArray(InterpState &S, CodePtr OpPC, uint32_t SrcIndex, uint32_t DestIndex, uint32_t Size) {
+  const auto &SrcPtr = S.Stk.pop<Pointer>();
+  const auto &DestPtr = S.Stk.peek<Pointer>();
+
+  for (uint32_t I = 0; I != Size; ++I) {
+    const Pointer &SP = SrcPtr.atIndex(SrcIndex + I);
+
+    if (!CheckLoad(S, OpPC, SP))
+      return false;
+
+    const Pointer &DP = DestPtr.atIndex(DestIndex + I);
+    DP.deref<T>() = SP.deref<T>();
+    DP.initialize();
+  }
+  return true;
+}
+
 /// Just takes a pointer and checks if it's an incomplete
 /// array type.
 inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
