@@ -116,7 +116,6 @@ int llvm::compileModuleWithNewPM(
 
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(Context, Opt.DebugPM, !NoVerify);
-  SI.registerCallbacks(PIC);
   registerCodeGenCallback(PIC, LLVMTM);
 
   MachineFunctionAnalysisManager MFAM;
@@ -124,6 +123,7 @@ int llvm::compileModuleWithNewPM(
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
+  SI.registerCallbacks(PIC, &MAM);
   PassBuilder PB(Target.get(), PipelineTuningOptions(), std::nullopt, &PIC);
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
