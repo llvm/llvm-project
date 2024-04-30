@@ -1281,6 +1281,31 @@ bool Sema::CppLookupName(LookupResult &R, Scope *S) {
       if (DeclContext *DC = PreS->getEntity())
         DeclareImplicitMemberFunctionsWithName(*this, Name, R.getNameLoc(), DC);
   }
+  // C++23 [temp.dep.general]p2:
+  //   The component name of an unqualified-id is dependent if
+  //   - it is a conversion-function-id whose conversion-type-id
+  //     is dependent, or
+  //   - it is operator= and the current class is a templated entity, or
+  //   - the unqualified-id is the postfix-expression in a dependent call.
+  if (Name.getNameKind() == DeclarationName::CXXConversionFunctionName &&
+      Name.getCXXNameType()->isDependentType()) {
+    R.setNotFoundInCurrentInstantiation();
+    return false;
+  }
+
+  // If this is the name of an implicitly-declared special member function,
+  // go through the scope stack to implicitly declare
+  if (isImplicitlyDeclaredMemberFunctionName(Name)) {
+    for (Scope *PreS = S; PreS; PreS = PreS->getParent())
+      if (DeclContext *DC = PreS->getEntity()) {
+        if (DC->isDependentContext() && isa<CXXRecordDecl>(DC) &&
+            Name.getCXXOverloadedOperator() == OO_Equal) {
+          R.setNotFoundInCurrentInstantiation();
+          return false;
+        }
+        DeclareImplicitMemberFunctionsWithName(*this, Name, R.getNameLoc(), DC);
+      }
+  }
 
   // C++23 [temp.dep.general]p2:
   //   The component name of an unqualified-id is dependent if
@@ -2439,8 +2464,8 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
 
   if (LookupDirect(*this, R, LookupCtx)) {
     R.resolveKind();
-    if (isa<CXXRecordDecl>(LookupCtx))
-      R.setNamingClass(cast<CXXRecordDecl>(LookupCtx));
+    if (LookupRec)
+      R.setNamingClass(LookupRec);
     return true;
   }
 
@@ -2674,38 +2699,54 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
 }
 
 bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
-                            bool AllowBuiltinCreation, bool EnteringContext) {
-  if (SS && SS->isInvalid()) {
-    // When the scope specifier is invalid, don't even look for
-    // anything.
+                            QualType ObjectType, bool AllowBuiltinCreation,
+                            bool EnteringContext) {
+  // When the scope specifier is invalid, don't even look for anything.
+  if (SS && SS->isInvalid())
     return false;
-  }
 
-  if (SS && SS->isSet()) {
-    NestedNameSpecifier *NNS = SS->getScopeRep();
-    if (NNS->getKind() == NestedNameSpecifier::Super)
+  // Determine where to perform name lookup
+  DeclContext *DC = nullptr;
+  bool IsDependent = false;
+  if (!ObjectType.isNull()) {
+    // This nested-name-specifier occurs in a member access expression, e.g.,
+    // x->B::f, and we are looking into the type of the object.
+    assert((!SS || SS->isEmpty()) &&
+           "ObjectType and scope specifier cannot coexist");
+    DC = computeDeclContext(ObjectType);
+    IsDependent = !DC && ObjectType->isDependentType();
+    assert(((!DC && ObjectType->isDependentType()) ||
+            !ObjectType->isIncompleteType() || !ObjectType->getAs<TagType>() ||
+            ObjectType->castAs<TagType>()->isBeingDefined()) &&
+           "Caller should have completed object type");
+  } else if (SS && SS->isNotEmpty()) {
+    if (NestedNameSpecifier *NNS = SS->getScopeRep();
+        NNS->getKind() == NestedNameSpecifier::Super)
       return LookupInSuper(R, NNS->getAsRecordDecl());
-
-    if (DeclContext *DC = computeDeclContext(*SS, EnteringContext)) {
-      // We have resolved the scope specifier to a particular declaration
-      // contex, and will perform name lookup in that context.
+    // This nested-name-specifier occurs after another nested-name-specifier,
+    // so long into the context associated with the prior nested-name-specifier.
+    if ((DC = computeDeclContext(*SS, EnteringContext))) {
+      // The declaration context must be complete.
       if (!DC->isDependentContext() && RequireCompleteDeclContext(*SS, DC))
         return false;
-
       R.setContextRange(SS->getRange());
-      return LookupQualifiedName(R, DC);
     }
+    IsDependent = !DC && isDependentScopeSpecifier(*SS);
+  } else {
+    // Perform unqualified name lookup starting in the given scope.
+    return LookupName(R, S, AllowBuiltinCreation);
+  }
 
+  // If we were able to compute a declaration context, perform qualified name
+  // lookup in that context.
+  if (DC)
+    return LookupQualifiedName(R, DC);
+  else if (IsDependent)
     // We could not resolve the scope specified to a specific declaration
     // context, which means that SS refers to an unknown specialization.
     // Name lookup can't find anything in this case.
     R.setNotFoundInCurrentInstantiation();
-    R.setContextRange(SS->getRange());
-    return false;
-  }
-
-  // Perform unqualified name lookup starting in the given scope.
-  return LookupName(R, S, AllowBuiltinCreation);
+  return false;
 }
 
 bool Sema::LookupInSuper(LookupResult &R, CXXRecordDecl *Class) {
@@ -4923,8 +4964,9 @@ static void LookupPotentialTypoResult(Sema &SemaRef,
     return;
   }
 
-  SemaRef.LookupParsedName(Res, S, SS, /*AllowBuiltinCreation=*/false,
-                           EnteringContext);
+  SemaRef.LookupParsedName(Res, S, SS,
+                           /*ObjectType=*/QualType(),
+                           /*AllowBuiltinCreation=*/false, EnteringContext);
 
   // Fake ivar lookup; this should really be part of
   // LookupParsedName.
