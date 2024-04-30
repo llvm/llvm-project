@@ -97,8 +97,8 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
     // Get derived type information.
     mlir::Type declaredType =
         fir::getDerivedType(dispatch.getObject().getType().getEleTy());
-    assert(declaredType.isa<fir::RecordType>() && "expecting fir.type");
-    auto recordType = declaredType.dyn_cast<fir::RecordType>();
+    assert(mlir::isa<fir::RecordType>(declaredType) && "expecting fir.type");
+    auto recordType = mlir::dyn_cast<fir::RecordType>(declaredType);
 
     // Lookup for the binding table.
     auto bindingsIter = bindingTables.find(recordType.getName());
@@ -157,7 +157,7 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
 
     // Load the bindings descriptor.
     auto bindingsCompName = Fortran::semantics::bindingDescCompName;
-    fir::RecordType typeDescRecTy = typeDescTy.cast<fir::RecordType>();
+    fir::RecordType typeDescRecTy = mlir::cast<fir::RecordType>(typeDescTy);
     mlir::Value field = rewriter.create<fir::FieldIndexOp>(
         loc, fieldTy, bindingsCompName, typeDescRecTy, mlir::ValueRange{});
     mlir::Type coorTy =
@@ -168,8 +168,8 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
 
     // Load the correct binding.
     mlir::Value bindings = rewriter.create<fir::BoxAddrOp>(loc, bindingBox);
-    fir::RecordType bindingTy =
-        fir::unwrapIfDerived(bindingBox.getType().cast<fir::BaseBoxType>());
+    fir::RecordType bindingTy = fir::unwrapIfDerived(
+        mlir::cast<fir::BaseBoxType>(bindingBox.getType()));
     mlir::Type bindingAddrTy = fir::ReferenceType::get(bindingTy);
     mlir::Value bindingIdxVal = rewriter.create<mlir::arith::ConstantOp>(
         loc, rewriter.getIndexType(), rewriter.getIndexAttr(bindingIdx));
@@ -181,7 +181,7 @@ struct DispatchOpConv : public OpConversionPattern<fir::DispatchOp> {
     mlir::Value procField = rewriter.create<fir::FieldIndexOp>(
         loc, fieldTy, procCompName, bindingTy, mlir::ValueRange{});
     fir::RecordType procTy =
-        bindingTy.getType(procCompName).cast<fir::RecordType>();
+        mlir::cast<fir::RecordType>(bindingTy.getType(procCompName));
     mlir::Type procRefTy = fir::ReferenceType::get(procTy);
     mlir::Value procRef = rewriter.create<fir::CoordinateOp>(
         loc, procRefTy, bindingAddr, procField);
@@ -298,13 +298,13 @@ mlir::LogicalResult SelectTypeConv::matchAndRewrite(
   //   before in the list to respect point 3. above. Otherwise it is just
   //   added in order at the end.
   for (unsigned t = 0; t < typeGuardNum; ++t) {
-    if (auto a = typeGuards[t].dyn_cast<fir::ExactTypeAttr>()) {
+    if (auto a = mlir::dyn_cast<fir::ExactTypeAttr>(typeGuards[t])) {
       orderedTypeGuards.push_back(t);
       continue;
     }
 
-    if (auto a = typeGuards[t].dyn_cast<fir::SubclassAttr>()) {
-      if (auto recTy = a.getType().dyn_cast<fir::RecordType>()) {
+    if (auto a = mlir::dyn_cast<fir::SubclassAttr>(typeGuards[t])) {
+      if (auto recTy = mlir::dyn_cast<fir::RecordType>(a.getType())) {
         auto dt = mod.lookupSymbol<fir::TypeInfoOp>(recTy.getName());
         assert(dt && "dispatch table not found");
         llvm::SmallSet<llvm::StringRef, 4> ancestors =
@@ -313,8 +313,8 @@ mlir::LogicalResult SelectTypeConv::matchAndRewrite(
           auto it = orderedClassIsGuards.begin();
           while (it != orderedClassIsGuards.end()) {
             fir::SubclassAttr sAttr =
-                typeGuards[*it].dyn_cast<fir::SubclassAttr>();
-            if (auto ty = sAttr.getType().dyn_cast<fir::RecordType>()) {
+                mlir::dyn_cast<fir::SubclassAttr>(typeGuards[*it]);
+            if (auto ty = mlir::dyn_cast<fir::RecordType>(sAttr.getType())) {
               if (ancestors.contains(ty.getName()))
                 break;
             }
@@ -339,7 +339,7 @@ mlir::LogicalResult SelectTypeConv::matchAndRewrite(
     auto *dest = selectType.getSuccessor(idx);
     std::optional<mlir::ValueRange> destOps =
         selectType.getSuccessorOperands(operands, idx);
-    if (typeGuards[idx].dyn_cast<mlir::UnitAttr>())
+    if (mlir::dyn_cast<mlir::UnitAttr>(typeGuards[idx]))
       rewriter.replaceOpWithNewOp<mlir::cf::BranchOp>(
           selectType, dest, destOps.value_or(mlir::ValueRange{}));
     else if (mlir::failed(genTypeLadderStep(loc, selector, typeGuards[idx],
@@ -357,9 +357,9 @@ mlir::LogicalResult SelectTypeConv::genTypeLadderStep(
     fir::KindMapping &kindMap) const {
   mlir::Value cmp;
   // TYPE IS type guard comparison are all done inlined.
-  if (auto a = attr.dyn_cast<fir::ExactTypeAttr>()) {
+  if (auto a = mlir::dyn_cast<fir::ExactTypeAttr>(attr)) {
     if (fir::isa_trivial(a.getType()) ||
-        a.getType().isa<fir::CharacterType>()) {
+        mlir::isa<fir::CharacterType>(a.getType())) {
       // For type guard statement with Intrinsic type spec the type code of
       // the descriptor is compared.
       int code = fir::getTypeCode(a.getType(), kindMap);
@@ -383,10 +383,10 @@ mlir::LogicalResult SelectTypeConv::genTypeLadderStep(
       cmp = res;
     }
     // CLASS IS type guard statement is done with a runtime call.
-  } else if (auto a = attr.dyn_cast<fir::SubclassAttr>()) {
+  } else if (auto a = mlir::dyn_cast<fir::SubclassAttr>(attr)) {
     // Retrieve the type descriptor from the type guard statement record type.
-    assert(a.getType().isa<fir::RecordType>() && "expect fir.record type");
-    fir::RecordType recTy = a.getType().dyn_cast<fir::RecordType>();
+    assert(mlir::isa<fir::RecordType>(a.getType()) && "expect fir.record type");
+    fir::RecordType recTy = mlir::dyn_cast<fir::RecordType>(a.getType());
     std::string typeDescName =
         fir::NameUniquer::getTypeDescriptorName(recTy.getName());
     auto typeDescGlobal = mod.lookupSymbol<fir::GlobalOp>(typeDescName);
@@ -438,8 +438,8 @@ mlir::Value
 SelectTypeConv::genTypeDescCompare(mlir::Location loc, mlir::Value selector,
                                    mlir::Type ty, mlir::ModuleOp mod,
                                    mlir::PatternRewriter &rewriter) const {
-  assert(ty.isa<fir::RecordType>() && "expect fir.record type");
-  fir::RecordType recTy = ty.dyn_cast<fir::RecordType>();
+  assert(mlir::isa<fir::RecordType>(ty) && "expect fir.record type");
+  fir::RecordType recTy = mlir::dyn_cast<fir::RecordType>(ty);
   std::string typeDescName =
       fir::NameUniquer::getTypeDescriptorName(recTy.getName());
   auto typeDescGlobal = mod.lookupSymbol<fir::GlobalOp>(typeDescName);

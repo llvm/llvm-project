@@ -524,8 +524,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     if (Subtarget.is64Bit())
       setOperationAction(ISD::FPOWI, MVT::i32, Custom);
 
-    if (!Subtarget.hasStdExtZfa())
-      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16, Custom);
+    setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16,
+                       Subtarget.hasStdExtZfa() ? Legal : Custom);
   }
 
   if (Subtarget.hasStdExtFOrZfinx()) {
@@ -548,10 +548,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP_TO_FP16, MVT::f32, Custom);
     setOperationAction(ISD::FP16_TO_FP, MVT::f32, Custom);
 
-    if (Subtarget.hasStdExtZfa())
+    if (Subtarget.hasStdExtZfa()) {
       setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
-    else
+      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f32, Legal);
+    } else {
       setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f32, Custom);
+    }
   }
 
   if (Subtarget.hasStdExtFOrZfinx() && Subtarget.is64Bit())
@@ -566,6 +568,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     if (Subtarget.hasStdExtZfa()) {
       setOperationAction(FPRndMode, MVT::f64, Legal);
       setOperationAction(ISD::FNEARBYINT, MVT::f64, Legal);
+      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f64, Legal);
     } else {
       if (Subtarget.is64Bit())
         setOperationAction(FPRndMode, MVT::f64, Custom);
@@ -16165,28 +16168,36 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return performSELECTCombine(N, DAG, Subtarget);
   case RISCVISD::CZERO_EQZ:
   case RISCVISD::CZERO_NEZ: {
-    SDValue LHS = N->getOperand(0);
-    SDValue RHS = N->getOperand(1);
-    // czero_eq X, (xor Y, 1) -> czero_ne X, Y if Y is 0 or 1.
-    // czero_ne X, (xor Y, 1) -> czero_eq X, Y if Y is 0 or 1.
-    if (RHS.getOpcode() == ISD::XOR && isOneConstant(RHS.getOperand(1))) {
-      SDValue Cond = RHS.getOperand(0);
-      APInt Mask = APInt::getBitsSetFrom(Cond.getValueSizeInBits(), 1);
-      if (DAG.MaskedValueIsZero(Cond, Mask)) {
-        unsigned NewOpc = N->getOpcode() == RISCVISD::CZERO_EQZ
-                              ? RISCVISD::CZERO_NEZ
-                              : RISCVISD::CZERO_EQZ;
-        return DAG.getNode(NewOpc, SDLoc(N), N->getValueType(0), LHS, Cond);
-      }
+    SDValue Val = N->getOperand(0);
+    SDValue Cond = N->getOperand(1);
+
+    unsigned Opc = N->getOpcode();
+
+    // czero_eqz x, x -> x
+    if (Opc == RISCVISD::CZERO_EQZ && Val == Cond)
+      return Val;
+
+    unsigned InvOpc =
+        Opc == RISCVISD::CZERO_EQZ ? RISCVISD::CZERO_NEZ : RISCVISD::CZERO_EQZ;
+
+    // czero_eqz X, (xor Y, 1) -> czero_nez X, Y if Y is 0 or 1.
+    // czero_nez X, (xor Y, 1) -> czero_eqz X, Y if Y is 0 or 1.
+    if (Cond.getOpcode() == ISD::XOR && isOneConstant(Cond.getOperand(1))) {
+      SDValue NewCond = Cond.getOperand(0);
+      APInt Mask = APInt::getBitsSetFrom(NewCond.getValueSizeInBits(), 1);
+      if (DAG.MaskedValueIsZero(NewCond, Mask))
+        return DAG.getNode(InvOpc, SDLoc(N), N->getValueType(0), Val, NewCond);
     }
-    // czero_eqz x, (setcc x, 0, ne) -> x
-    // czero_nez x, (setcc x, 0, eq) -> x
-    if (RHS.getOpcode() == ISD::SETCC && isNullConstant(RHS.getOperand(1)) &&
-        cast<CondCodeSDNode>(RHS.getOperand(2))->get() ==
-            (N->getOpcode() == RISCVISD::CZERO_EQZ ? ISD::CondCode::SETNE
-                                                   : ISD::CondCode::SETEQ) &&
-        LHS == RHS.getOperand(0))
-      return LHS;
+    // czero_eqz x, (setcc y, 0, ne) -> czero_eqz x, y
+    // czero_nez x, (setcc y, 0, ne) -> czero_nez x, y
+    // czero_eqz x, (setcc y, 0, eq) -> czero_nez x, y
+    // czero_nez x, (setcc y, 0, eq) -> czero_eqz x, y
+    if (Cond.getOpcode() == ISD::SETCC && isNullConstant(Cond.getOperand(1))) {
+      ISD::CondCode CCVal = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+      if (ISD::isIntEqualitySetCC(CCVal))
+        return DAG.getNode(CCVal == ISD::SETNE ? Opc : InvOpc, SDLoc(N),
+                           N->getValueType(0), Val, Cond.getOperand(0));
+    }
     return SDValue();
   }
   case RISCVISD::SELECT_CC: {
@@ -21012,7 +21023,7 @@ bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI,
   IRBuilder<> Builder(LI);
 
   // Only deinterleave2 supported at present.
-  if (DI->getIntrinsicID() != Intrinsic::experimental_vector_deinterleave2)
+  if (DI->getIntrinsicID() != Intrinsic::vector_deinterleave2)
     return false;
 
   unsigned Factor = 2;
@@ -21062,7 +21073,7 @@ bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
   IRBuilder<> Builder(SI);
 
   // Only interleave2 supported at present.
-  if (II->getIntrinsicID() != Intrinsic::experimental_vector_interleave2)
+  if (II->getIntrinsicID() != Intrinsic::vector_interleave2)
     return false;
 
   unsigned Factor = 2;
