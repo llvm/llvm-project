@@ -411,8 +411,8 @@ struct STempl {
   // CHECK-NEXT: private clause
   // CHECK-NEXT: MemberExpr{{.*}} 'U' lvalue ->ThisMember
   // CHECK-NEXT: CXXThisExpr{{.*}} 'STempl<U> *' implicit this
-  // CHECK-NEXT: ArraySubscriptExpr{{.*}} '<dependent type>' lvalue
-  // CHECK-NEXT: CXXDependentScopeMemberExpr{{.*}} '<dependent type>' lvalue ->ThisMemberArray
+  // CHECK-NEXT: ArraySubscriptExpr{{.*}} 'U' lvalue
+  // CHECK-NEXT: MemberExpr{{.*}} 'U[5]' lvalue ->ThisMemberArray
   // CHECK-NEXT: CXXThisExpr{{.*}} 'STempl<U> *' this
   // CHECK-NEXT: IntegerLiteral{{.*}}'int' 1
   // CHECK-NEXT: WhileStmt
@@ -455,8 +455,8 @@ struct STempl {
   // CHECK-NEXT: private clause
   // CHECK-NEXT: MemberExpr{{.*}} 'U' lvalue ->ThisMember
   // CHECK-NEXT: CXXThisExpr{{.*}} 'STempl<U> *' implicit this
-  // CHECK-NEXT: ArraySubscriptExpr{{.*}} '<dependent type>' lvalue
-  // CHECK-NEXT: CXXDependentScopeMemberExpr{{.*}} '<dependent type>' lvalue ->ThisMemberArray
+  // CHECK-NEXT: ArraySubscriptExpr{{.*}} 'U' lvalue
+  // CHECK-NEXT: MemberExpr{{.*}} 'U[5]' lvalue ->ThisMemberArray
   // CHECK-NEXT: CXXThisExpr{{.*}} 'STempl<U> *' this
   // CHECK-NEXT: IntegerLiteral{{.*}}'int' 1
   // CHECK-NEXT: WhileStmt
