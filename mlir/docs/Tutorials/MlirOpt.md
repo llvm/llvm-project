@@ -104,14 +104,47 @@ one region like `func.func`,
 or multiple regions like [`scf.if`](https://mlir.llvm.org/docs/Dialects/SCFDialect/#scfif-scfifop),
 which has a region for each of its two control flow branches.
 
-The second program is a sequence of two loops
-that exhibit poor cache locality.
+The second program is a sequence of loops
+that exhibits poor cache locality.
 
 ```mlir
-
+func.func @producer_consumer_fusion(%arg0: memref<10xf32>, %arg1: memref<10xf32>) {
+  %0 = memref.alloc() : memref<10xf32>
+  %1 = memref.alloc() : memref<10xf32>
+  %cst = arith.constant 0.000000e+00 : f32
+  affine.for %arg2 = 0 to 10 {
+    affine.store %cst, %0[%arg2] : memref<10xf32>
+    affine.store %cst, %1[%arg2] : memref<10xf32>
+  }
+  affine.for %arg2 = 0 to 10 {
+    %2 = affine.load %0[%arg2] : memref<10xf32>
+    %3 = arith.addf %2, %2 : f32
+    affine.store %3, %arg0[%arg2] : memref<10xf32>
+  }
+  affine.for %arg2 = 0 to 10 {
+    %2 = affine.load %1[%arg2] : memref<10xf32>
+    %3 = arith.mulf %2, %2 : f32
+    affine.store %3, %arg1[%arg2] : memref<10xf32>
+  }
+  return
+}
 ```
 
-## Lowering `ctlz`
+This program introduces some additional dialects.
+The [`affine` dialect](https://mlir.llvm.org/docs/Dialects/Affine/) mentioned in the introduction
+represents well-structured loop nests,
+and the [`affine.for` operation](https://mlir.llvm.org/docs/Dialects/Affine/#affinefor-affineaffineforop)
+whose region corresponds to the loop body.
+`affine.for` also showcases some custom-defined syntax
+to represent the loop bounds and loop induction variable.
+The [`memref` dialect](https://mlir.llvm.org/docs/Dialects/MemRef/)
+defines types and operations related to memory management
+with pointer semantics.
+Note also that while `memref` has store and load operations,
+`affine` has its own that limit what types of memory accesses are allowed,
+so as to ensure the well-structuredness of the loop nest.
+
+## Lowering `ctlz` in two ways
 
 The second version of this program has a software implementation of the `ctlz` function and calls it.
 
