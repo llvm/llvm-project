@@ -164,6 +164,7 @@ LANGOPT(ExperimentalLibrary, 1, 0, "enable unstable and experimental library fea
 LANGOPT(PointerAuthIntrinsics, 1, 0, "pointer authentication intrinsics")
 
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, "'[[]]' attributes extension for all language standard modes")
+LANGOPT(ExperimentalLateParseAttributes, 1, 0, "experimental late parsing of attributes")
 
 COMPATIBLE_LANGOPT(RecoveryAST, 1, 1, "Preserve expressions in AST when encountering errors")
 COMPATIBLE_LANGOPT(RecoveryASTType, 1, 1, "Preserve the type in recovery expressions")

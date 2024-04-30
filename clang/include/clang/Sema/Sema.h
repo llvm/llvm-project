@@ -9253,7 +9253,8 @@ public:
   void NoteTemplateParameterLocation(const NamedDecl &Decl);
 
   ExprResult BuildExpressionFromDeclTemplateArgument(
-      const TemplateArgument &Arg, QualType ParamType, SourceLocation Loc);
+      const TemplateArgument &Arg, QualType ParamType, SourceLocation Loc,
+      NamedDecl *TemplateParam = nullptr);
   ExprResult
   BuildExpressionFromNonTypeTemplateArgument(const TemplateArgument &Arg,
                                              SourceLocation Loc);
@@ -9576,9 +9577,10 @@ public:
 
   bool isSameOrCompatibleFunctionType(QualType Param, QualType Arg);
 
-  TemplateArgumentLoc getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
-                                                    QualType NTTPType,
-                                                    SourceLocation Loc);
+  TemplateArgumentLoc
+  getTrivialTemplateArgumentLoc(const TemplateArgument &Arg, QualType NTTPType,
+                                SourceLocation Loc,
+                                NamedDecl *TemplateParam = nullptr);
 
   /// Get a template argument mapping the given template parameter to itself,
   /// e.g. for X in \c template<int X>, this would return an expression template

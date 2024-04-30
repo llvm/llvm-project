@@ -261,6 +261,10 @@ New Compiler Flags
 - ``-fexperimental-modules-reduced-bmi`` enables the Reduced BMI for C++20 named modules.
   See the document of standard C++ modules for details.
 
+- ``-fexperimental-late-parse-attributes`` enables an experimental feature to
+  allow late parsing certain attributes in specific contexts where they would
+  not normally be late parsed.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -612,6 +616,9 @@ Bug Fixes to C++ Support
   immediate function context.
 - Fix CTAD for ``std::initializer_list``. This allows ``std::initializer_list{1, 2, 3}`` to be deduced as
   ``std::initializer_list<int>`` as intended.
+- Fix a bug on template partial specialization whose template parameter is `decltype(auto)`.
+- Fix a bug on template partial specialization with issue on deduction of nontype template parameter
+  whose type is `decltype(auto)`. Fixes (#GH68885).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
