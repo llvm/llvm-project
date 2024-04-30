@@ -46875,7 +46875,7 @@ static bool canReduceVMulWidth(SDNode *N, SelectionDAG &DAG, ShrinkMode &Mode) {
 /// If %2 == zext32(trunc16(%2)), i.e., the scalar value range of %2 is
 /// 0 to 65535, and the scalar value range of %4 is also 0 to 65535,
 /// generate pmullw+pmulhuw for it (MULU16 mode).
-static SDValue reduceVMULWidth(SDNode *N, SelectionDAG &DAG,
+static SDValue reduceVMULWidth(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
                                const X86Subtarget &Subtarget) {
   // Check for legality
   // pmullw/pmulhw are not supported by SSE.
@@ -46894,7 +46894,6 @@ static SDValue reduceVMULWidth(SDNode *N, SelectionDAG &DAG,
   if (!canReduceVMulWidth(N, DAG, Mode))
     return SDValue();
 
-  SDLoc DL(N);
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getOperand(0).getValueType();
@@ -47034,7 +47033,8 @@ static SDValue combineMulSpecial(uint64_t MulAmt, SDNode *N, SelectionDAG &DAG,
 // If the upper 17 bits of either element are zero and the other element are
 // zero/sign bits then we can use PMADDWD, which is always at least as quick as
 // PMULLD, except on KNL.
-static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
+static SDValue combineMulToPMADDWD(SDNode *N, const SDLoc &DL,
+                                   SelectionDAG &DAG,
                                    const X86Subtarget &Subtarget) {
   if (!Subtarget.hasSSE2())
     return SDValue();
@@ -47096,19 +47096,18 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
       return Op;
     // Mask off upper 16-bits of sign-extended constants.
     if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode()))
-      return DAG.getNode(ISD::AND, SDLoc(N), VT, Op,
-                         DAG.getConstant(0xFFFF, SDLoc(N), VT));
+      return DAG.getNode(ISD::AND, DL, VT, Op, DAG.getConstant(0xFFFF, DL, VT));
     if (Op.getOpcode() == ISD::SIGN_EXTEND && N->isOnlyUserOf(Op.getNode())) {
       SDValue Src = Op.getOperand(0);
       // Convert sext(vXi16) to zext(vXi16).
       if (Src.getScalarValueSizeInBits() == 16 && VT.getSizeInBits() <= 128)
-        return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, Src);
+        return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Src);
       // Convert sext(vXi8) to zext(vXi16 sext(vXi8)) on pre-SSE41 targets
       // which will expand the extension.
       if (Src.getScalarValueSizeInBits() < 16 && !Subtarget.hasSSE41()) {
         EVT ExtVT = VT.changeVectorElementType(MVT::i16);
-        Src = DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N), ExtVT, Src);
-        return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, Src);
+        Src = DAG.getNode(ISD::SIGN_EXTEND, DL, ExtVT, Src);
+        return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Src);
       }
     }
     // Convert SIGN_EXTEND_VECTOR_INREG to ZEXT_EXTEND_VECTOR_INREG.
@@ -47116,12 +47115,12 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
         N->isOnlyUserOf(Op.getNode())) {
       SDValue Src = Op.getOperand(0);
       if (Src.getScalarValueSizeInBits() == 16)
-        return DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, SDLoc(N), VT, Src);
+        return DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, DL, VT, Src);
     }
     // Convert VSRAI(Op, 16) to VSRLI(Op, 16).
     if (Op.getOpcode() == X86ISD::VSRAI && Op.getConstantOperandVal(1) == 16 &&
         N->isOnlyUserOf(Op.getNode())) {
-      return DAG.getNode(X86ISD::VSRLI, SDLoc(N), VT, Op.getOperand(0),
+      return DAG.getNode(X86ISD::VSRLI, DL, VT, Op.getOperand(0),
                          Op.getOperand(1));
     }
     return SDValue();
@@ -47142,11 +47141,10 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
                        DAG.getBitcast(OpVT, Ops[0]),
                        DAG.getBitcast(OpVT, Ops[1]));
   };
-  return SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT, {N0, N1},
-                          PMADDWDBuilder);
+  return SplitOpsAndApply(DAG, Subtarget, DL, VT, {N0, N1}, PMADDWDBuilder);
 }
 
-static SDValue combineMulToPMULDQ(SDNode *N, SelectionDAG &DAG,
+static SDValue combineMulToPMULDQ(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
                                   const X86Subtarget &Subtarget) {
   if (!Subtarget.hasSSE2())
     return SDValue();
@@ -47170,8 +47168,8 @@ static SDValue combineMulToPMULDQ(SDNode *N, SelectionDAG &DAG,
                             ArrayRef<SDValue> Ops) {
       return DAG.getNode(X86ISD::PMULDQ, DL, Ops[0].getValueType(), Ops);
     };
-    return SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT, { N0, N1 },
-                            PMULDQBuilder, /*CheckBWI*/false);
+    return SplitOpsAndApply(DAG, Subtarget, DL, VT, {N0, N1}, PMULDQBuilder,
+                            /*CheckBWI*/ false);
   }
 
   // If the upper bits are zero we can use a single pmuludq.
@@ -47181,8 +47179,8 @@ static SDValue combineMulToPMULDQ(SDNode *N, SelectionDAG &DAG,
                              ArrayRef<SDValue> Ops) {
       return DAG.getNode(X86ISD::PMULUDQ, DL, Ops[0].getValueType(), Ops);
     };
-    return SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT, { N0, N1 },
-                            PMULUDQBuilder, /*CheckBWI*/false);
+    return SplitOpsAndApply(DAG, Subtarget, DL, VT, {N0, N1}, PMULUDQBuilder,
+                            /*CheckBWI*/ false);
   }
 
   return SDValue();
@@ -47192,15 +47190,16 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
-  if (SDValue V = combineMulToPMADDWD(N, DAG, Subtarget))
+  if (SDValue V = combineMulToPMADDWD(N, DL, DAG, Subtarget))
     return V;
 
-  if (SDValue V = combineMulToPMULDQ(N, DAG, Subtarget))
+  if (SDValue V = combineMulToPMULDQ(N, DL, DAG, Subtarget))
     return V;
 
   if (DCI.isBeforeLegalize() && VT.isVector())
-    return reduceVMULWidth(N, DAG, Subtarget);
+    return reduceVMULWidth(N, DL, DAG, Subtarget);
 
   // Optimize a single multiply with constant into two operations in order to
   // implement it with two cheaper instructions, e.g. LEA + SHL, LEA + LEA.
@@ -47240,7 +47239,6 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
   assert(SignMulAmt != INT64_MIN && "Int min should have been handled!");
   uint64_t AbsMulAmt = SignMulAmt < 0 ? -SignMulAmt : SignMulAmt;
 
-  SDLoc DL(N);
   SDValue NewMul = SDValue();
   if (VT == MVT::i64 || VT == MVT::i32) {
     if (AbsMulAmt == 3 || AbsMulAmt == 5 || AbsMulAmt == 9) {
