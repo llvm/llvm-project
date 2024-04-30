@@ -162,8 +162,7 @@ public:
     Value lhs = op.getLhs();
     Value rhs = op.getRhs();
 
-    Location loc = op.getLoc();
-    Value cmp = rewriter.create<arith::CmpIOp>(loc, pred, lhs, rhs);
+    Value cmp = rewriter.create<arith::CmpIOp>(op.getLoc(), pred, lhs, rhs);
     rewriter.replaceOpWithNewOp<arith::SelectOp>(op, cmp, lhs, rhs);
     return success();
   }
