@@ -51,7 +51,6 @@ enum OpCode {
   OpCodePtrAdd,
   OpCodeBinOp,
   OpCodeCast,
-  OpCodeDeoptSafepoint,
   OpCodeSwitch,
   OpCodeUnimplemented = 255, // YKFIXME: Will eventually be deleted.
 };
