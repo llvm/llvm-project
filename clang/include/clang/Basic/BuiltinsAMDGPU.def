@@ -545,6 +545,10 @@ TARGET_BUILTIN(__builtin_amdgcn_swmmac_f32_16x16x32_bf8_fp8_w64, "V4fiV2iV4fs", 
 TARGET_BUILTIN(__builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w64, "V4fiV2iV4fs", "nc", "gfx12-insts,wavefrontsize64")
 
 TARGET_BUILTIN(__builtin_amdgcn_prng_b32, "UiUi", "nc", "prng-inst")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk32_fp6_f16, "V6UiV32hf", "nc", "f16bf16-to-fp6bf6-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk32_bf6_f16, "V6UiV32hf", "nc", "f16bf16-to-fp6bf6-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk32_fp6_bf16, "V6UiV32yf", "nc", "f16bf16-to-fp6bf6-cvt-scale-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk32_bf6_bf16, "V6UiV32yf", "nc", "f16bf16-to-fp6bf6-cvt-scale-insts")
 
 //===----------------------------------------------------------------------===//
 // GFX1210+ only builtins.
@@ -630,12 +634,8 @@ TARGET_BUILTIN(__builtin_amdgcn_cvt_scale_pk8_f32_bf8, "V8fV2UiUiIUc", "nc", "gf
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scale_pk8_f32_fp4, "V8fUiUiIUc", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk32_fp6_f32, "V6UiV32ff", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk32_bf6_f32, "V6UiV32ff", "nc", "gfx12-10-insts")
-TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk32_fp6_f16, "V6UiV32hf", "nc", "gfx12-10-insts")
-TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk32_bf6_f16, "V6UiV32hf", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk8_fp8_bf16, "V2UiV8yf", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk8_bf8_bf16, "V2UiV8yf", "nc", "gfx12-10-insts")
-TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk32_fp6_bf16, "V6UiV32yf", "nc", "gfx12-10-insts")
-TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk32_bf6_bf16, "V6UiV32yf", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk8_fp8_f16, "V2UiV8hf", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk8_bf8_f16, "V2UiV8hf", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_scalef32_pk8_fp8_f32, "V2UiV8ff", "nc", "gfx12-10-insts")
