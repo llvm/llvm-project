@@ -10,6 +10,8 @@
 #define FORTRAN_OPTIMIZER_BUILDER_RUNTIME_MAIN_H
 
 #include "flang/Lower/EnvironmentDefault.h"
+#include <vector>
+
 namespace mlir {
 class Location;
 } // namespace mlir
