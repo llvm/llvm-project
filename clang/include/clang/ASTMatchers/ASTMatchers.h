@@ -764,9 +764,9 @@ AST_POLYMORPHIC_MATCHER(isImplicit,
   return Node.isImplicit();
 }
 
-/// Matches classTemplateSpecializations, templateSpecializationType and
-/// functionDecl that have at least one TemplateArgument matching the given
-/// InnerMatcher.
+/// Matches templateSpecializationTypes, class template specializations,
+/// variable template specializations, and function template specializations
+/// that have at least one TemplateArgument matching the given InnerMatcher.
 ///
 /// Given
 /// \code
@@ -1047,8 +1047,9 @@ AST_MATCHER(Expr, isTypeDependent) { return Node.isTypeDependent(); }
 /// expr(isValueDependent()) matches return Size
 AST_MATCHER(Expr, isValueDependent) { return Node.isValueDependent(); }
 
-/// Matches classTemplateSpecializations, templateSpecializationType and
-/// functionDecl where the n'th TemplateArgument matches the given InnerMatcher.
+/// Matches templateSpecializationType, class template specializations,
+/// variable template specializations, and function template specializations
+/// where the n'th TemplateArgument matches the given InnerMatcher.
 ///
 /// Given
 /// \code
@@ -5303,9 +5304,10 @@ AST_POLYMORPHIC_MATCHER_P(parameterCountIs,
   return Node.getNumParams() == N;
 }
 
-/// Matches classTemplateSpecialization, templateSpecializationType and
-/// functionDecl nodes where the template argument matches the inner matcher.
-/// This matcher may produce multiple matches.
+/// Matches templateSpecializationType, class template specialization,
+/// variable template specialization, and function template specialization
+/// nodes where the template argument matches the inner matcher. This matcher
+/// may produce multiple matches.
 ///
 /// Given
 /// \code
@@ -5329,7 +5331,8 @@ AST_POLYMORPHIC_MATCHER_P(parameterCountIs,
 AST_POLYMORPHIC_MATCHER_P(
     forEachTemplateArgument,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
-                                    TemplateSpecializationType, FunctionDecl),
+                                    VarTemplateSpecializationDecl, FunctionDecl,
+                                    TemplateSpecializationType),
     internal::Matcher<TemplateArgument>, InnerMatcher) {
   ArrayRef<TemplateArgument> TemplateArgs =
       clang::ast_matchers::internal::getTemplateSpecializationArgs(Node);
@@ -6904,8 +6907,10 @@ extern const internal::VariadicDynCastAllOfMatcher<
     TypeLoc, TemplateSpecializationTypeLoc>
     templateSpecializationTypeLoc;
 
-/// Matches template specialization `TypeLoc`s that have at least one
-/// `TemplateArgumentLoc` matching the given `InnerMatcher`.
+/// Matches template specialization `TypeLoc`s, class template specializations,
+/// variable template specializations, and function template specializations
+/// that have at least one `TemplateArgumentLoc` matching the given
+/// `InnerMatcher`.
 ///
 /// Given
 /// \code
@@ -6927,8 +6932,9 @@ AST_POLYMORPHIC_MATCHER_P(
   return false;
 }
 
-/// Matches template specialization `TypeLoc`s where the n'th
-/// `TemplateArgumentLoc` matches the given `InnerMatcher`.
+/// Matches template specialization `TypeLoc`s, class template specializations,
+/// variable template specializations, and function template specializations
+/// where the n'th `TemplateArgumentLoc` matches the given `InnerMatcher`.
 ///
 /// Given
 /// \code
