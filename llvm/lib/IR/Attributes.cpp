@@ -173,8 +173,8 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   LLVMContextImpl *pImpl = Context.pImpl;
   FoldingSetNodeID ID;
   ID.AddInteger(Kind);
-  ID.AddInteger(CR.getLower());
-  ID.AddInteger(CR.getUpper());
+  CR.getLower().Profile(ID);
+  CR.getUpper().Profile(ID);
 
   void *InsertPoint;
   AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
