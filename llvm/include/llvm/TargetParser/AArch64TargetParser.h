@@ -103,31 +103,90 @@ enum CPUFeatures {
 static_assert(FEAT_MAX < 62,
               "Number of features in CPUFeatures are limited to 62 entries");
 
-// Each ArchExtKind correponds directly to a possible -target-feature.
+// Arch extension modifiers for CPUs. These are labelled with their Arm ARM
+// feature name (though the canonical reference for those is AArch64.td)
+// clang-format off
 enum ArchExtKind : unsigned {
-  AEK_NONE = 1,
-#define ARM_EXTENSION(NAME, ENUM) ENUM,
-#include "llvm/TargetParser/AArch64TargetParserDef.inc"
-  AEK_NUM_EXTENSIONS,
-
-  // FIXME temporary fixes for inconsistent naming.
-  AEK_F32MM = AEK_MATMULFP32,
-  AEK_F64MM = AEK_MATMULFP64,
-  AEK_FCMA = AEK_COMPLXNUM,
-  AEK_FP = AEK_FPARMV8,
-  AEK_FP16 = AEK_FULLFP16,
-  AEK_I8MM = AEK_MATMULINT8,
-  AEK_JSCVT = AEK_JS,
-  AEK_PROFILE = AEK_SPE,
-  AEK_RASv2 = AEK_RASV2,
-  AEK_RAND = AEK_RANDGEN,
-  AEK_SIMD = AEK_NEON,
-  AEK_SME2p1 = AEK_SME2P1,
-  AEK_SVE2p1 = AEK_SVE2P1,
-  AEK_SME_LUTv2 = AEK_SME_LUTV2,
-
+  AEK_NONE =          1,
+  AEK_CRC =           2,  // FEAT_CRC32
+  AEK_CRYPTO =        3,
+  AEK_FP =            4,  // FEAT_FP
+  AEK_SIMD =          5,  // FEAT_AdvSIMD
+  AEK_FP16 =          6,  // FEAT_FP16
+  AEK_PROFILE =       7,  // FEAT_SPE
+  AEK_RAS =           8,  // FEAT_RAS, FEAT_RASv1p1
+  AEK_LSE =           9,  // FEAT_LSE
+  AEK_SVE =           10, // FEAT_SVE
+  AEK_DOTPROD =       11, // FEAT_DotProd
+  AEK_RCPC =          12, // FEAT_LRCPC
+  AEK_RDM =           13, // FEAT_RDM
+  AEK_SM4 =           14, // FEAT_SM4, FEAT_SM3
+  AEK_SHA3 =          15, // FEAT_SHA3, FEAT_SHA512
+  AEK_SHA2 =          16, // FEAT_SHA1, FEAT_SHA256
+  AEK_AES =           17, // FEAT_AES, FEAT_PMULL
+  AEK_FP16FML =       18, // FEAT_FHM
+  AEK_RAND =          19, // FEAT_RNG
+  AEK_MTE =           20, // FEAT_MTE, FEAT_MTE2
+  AEK_SSBS =          21, // FEAT_SSBS, FEAT_SSBS2
+  AEK_SB =            22, // FEAT_SB
+  AEK_PREDRES =       23, // FEAT_SPECRES
+  AEK_SVE2 =          24, // FEAT_SVE2
+  AEK_SVE2AES =       25, // FEAT_SVE_AES, FEAT_SVE_PMULL128
+  AEK_SVE2SM4 =       26, // FEAT_SVE_SM4
+  AEK_SVE2SHA3 =      27, // FEAT_SVE_SHA3
+  AEK_SVE2BITPERM =   28, // FEAT_SVE_BitPerm
+  AEK_TME =           29, // FEAT_TME
+  AEK_BF16 =          30, // FEAT_BF16
+  AEK_I8MM =          31, // FEAT_I8MM
+  AEK_F32MM =         32, // FEAT_F32MM
+  AEK_F64MM =         33, // FEAT_F64MM
+  AEK_LS64 =          34, // FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA
+  AEK_BRBE =          35, // FEAT_BRBE
+  AEK_PAUTH =         36, // FEAT_PAuth
+  AEK_FLAGM =         37, // FEAT_FlagM
+  AEK_SME =           38, // FEAT_SME
+  AEK_SMEF64F64 =     39, // FEAT_SME_F64F64
+  AEK_SMEI16I64 =     40, // FEAT_SME_I16I64
+  AEK_HBC =           41, // FEAT_HBC
+  AEK_MOPS =          42, // FEAT_MOPS
+  AEK_PERFMON =       43, // FEAT_PMUv3
+  AEK_SME2 =          44, // FEAT_SME2
+  AEK_SVE2p1 =        45, // FEAT_SVE2p1
+  AEK_SME2p1 =        46, // FEAT_SME2p1
+  AEK_B16B16 =        47, // FEAT_B16B16
+  AEK_SMEF16F16 =     48, // FEAT_SMEF16F16
+  AEK_CSSC =          49, // FEAT_CSSC
+  AEK_RCPC3 =         50, // FEAT_LRCPC3
+  AEK_THE =           51, // FEAT_THE
+  AEK_D128 =          52, // FEAT_D128
+  AEK_LSE128 =        53, // FEAT_LSE128
+  AEK_SPECRES2 =      54, // FEAT_SPECRES2
+  AEK_RASv2 =         55, // FEAT_RASv2
+  AEK_ITE =           56, // FEAT_ITE
+  AEK_GCS =           57, // FEAT_GCS
+  AEK_FPMR =          58, // FEAT_FPMR
+  AEK_FP8 =           59, // FEAT_FP8
+  AEK_FAMINMAX =      60, // FEAT_FAMINMAX
+  AEK_FP8FMA =        61, // FEAT_FP8FMA
+  AEK_SSVE_FP8FMA =   62, // FEAT_SSVE_FP8FMA
+  AEK_FP8DOT2 =       63, // FEAT_FP8DOT2
+  AEK_SSVE_FP8DOT2 =  64, // FEAT_SSVE_FP8DOT2
+  AEK_FP8DOT4 =       65, // FEAT_FP8DOT4
+  AEK_SSVE_FP8DOT4 =  66, // FEAT_SSVE_FP8DOT4
+  AEK_LUT =           67, // FEAT_LUT
+  AEK_SME_LUTv2 =     68, // FEAT_SME_LUTv2
+  AEK_SMEF8F16 =      69, // FEAT_SME_F8F16
+  AEK_SMEF8F32 =      70, // FEAT_SME_F8F32
+  AEK_SMEFA64 =       71, // FEAT_SME_FA64
+  AEK_CPA =           72, // FEAT_CPA
+  AEK_PAUTHLR =       73, // FEAT_PAuth_LR
+  AEK_TLBIW =         74, // FEAT_TLBIW
+  AEK_JSCVT =         75, // FEAT_JSCVT
+  AEK_FCMA =          76, // FEAT_FCMA
+  AEK_NUM_EXTENSIONS
 };
 using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
+// clang-format on
 
 // Represents an extension that can be enabled with -march=<arch>+<extension>.
 // Typically these correspond to Arm Architecture extensions, unlike
