@@ -77,10 +77,8 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
           LLVM_DEBUG(dbgs() << "    Ignoring, def is tied operand.\n");
           continue;
         }
-        // We should not have any relevant physreg defs that are replacable by
-        // zero before register allocation. So we just check for dead vreg defs.
         Register Reg = MO.getReg();
-        if (!Reg.isVirtual() || (!MO.isDead() && !MRI->use_nodbg_empty(Reg)))
+        if (!MO.isDead() && !MRI->use_nodbg_empty(Reg))
           continue;
         LLVM_DEBUG(dbgs() << "    Dead def operand #" << I << " in:\n      ";
                    MI.print(dbgs()));

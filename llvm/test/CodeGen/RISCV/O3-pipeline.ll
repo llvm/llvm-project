@@ -116,7 +116,6 @@
 ; CHECK-NEXT:       RISC-V Pre-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       RISC-V Merge Base Offset
 ; CHECK-NEXT:       RISC-V Insert VSETVLI pass
-; CHECK-NEXT:       RISC-V Dead register definitions
 ; CHECK-NEXT:       RISC-V Insert Read/Write CSR Pass
 ; CHECK-NEXT:       RISC-V Insert Write VXRM Pass
 ; CHECK-NEXT:       Detect Dead Lanes
@@ -153,6 +152,7 @@
 ; CHECK-NEXT:       Machine Copy Propagation Pass
 ; CHECK-NEXT:       Machine Loop Invariant Code Motion
 ; CHECK-NEXT:       RISC-V Redundant Copy Elimination
+; CHECK-NEXT:       RISC-V Dead register definitions
 ; CHECK-NEXT:       Remove Redundant DEBUG_VALUE analysis
 ; CHECK-NEXT:       Fixup Statepoint Caller Saved
 ; CHECK-NEXT:       PostRA Machine Sink
