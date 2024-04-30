@@ -116,9 +116,7 @@ public:
       return const_cast<OpenACCParsedClause *>(this)->getIntExprs();
     }
 
-    // Non-const version that permits modifying of the VarList for the purposes
-    // of Sema enforcement.
-    SmallVector<Expr *> &getVarList() {
+    ArrayRef<Expr *> getVarList() {
       assert(ClauseKind == OpenACCClauseKind::Private &&
              "Parsed clause kind does not have a var-list");
       return std::get<VarListDetails>(Details).VarList;

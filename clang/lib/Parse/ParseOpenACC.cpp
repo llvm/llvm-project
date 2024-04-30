@@ -934,11 +934,9 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     case OpenACCClauseKind::UseDevice:
       ParseOpenACCVarList();
       break;
-    case OpenACCClauseKind::Private: {
-      llvm::SmallVector<Expr *> Vars = ParseOpenACCVarList();
-      ParsedClause.setVarListDetails(std::move(Vars));
+    case OpenACCClauseKind::Private:
+      ParsedClause.setVarListDetails(ParseOpenACCVarList());
       break;
-    }
     case OpenACCClauseKind::Collapse: {
       tryParseAndConsumeSpecialTokenKind(*this, OpenACCSpecialTokenKind::Force,
                                          ClauseKind);

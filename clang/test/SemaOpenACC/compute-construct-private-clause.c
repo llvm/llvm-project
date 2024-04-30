@@ -135,4 +135,11 @@ void uses(int IntParam, void *PointerParam, float ArrayParam[5], Complete Compos
   while(1);
 #pragma acc parallel private(ArrayParam[2])
   while(1);
+
+  // expected-error@+1{{OpenACC sub-array is not allowed here}}
+#pragma acc parallel private((float*)ArrayParam[2:5])
+  while(1);
+  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
+#pragma acc parallel private((float)ArrayParam[2])
+  while(1);
 }
