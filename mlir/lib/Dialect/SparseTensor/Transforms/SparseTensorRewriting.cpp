@@ -1063,8 +1063,15 @@ public:
       auto rtp = getRankedTensorType(op.getResult());
       auto denseTp =
           RankedTensorType::get(rtp.getShape(), rtp.getElementType());
-      auto reshape = rewriter.create<ReshapeOp>(loc, denseTp, op.getSrc(),
-                                                op.getReassociation());
+      ReshapeOp reshape;
+      if constexpr (std::is_same<ReshapeOp, tensor::ExpandShapeOp>::value) {
+        reshape = rewriter.create<ReshapeOp>(
+            loc, denseTp, op.getSrc(), op.getReassociation(),
+            op.getOutputShape(), op.getStaticOutputShape());
+      } else {
+        reshape = rewriter.create<ReshapeOp>(loc, denseTp, op.getSrc(),
+                                             op.getReassociation());
+      }
       Value convert = rewriter.create<ConvertOp>(loc, rtp, reshape);
       rewriter.replaceOp(op, convert);
       return success();
