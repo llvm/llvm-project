@@ -63,6 +63,12 @@ ABI Changes in This Version
   MSVC uses a different mangling for these objects, compatibility is not affected.
   (#GH85423).
 
+- Fixed Microsoft calling convention for returning certain classes with a
+  templated constructor. If a class has a templated constructor, it should
+  be returned indirectly even if it meets all the other requirements for
+  returning a class in a register. This affects some uses of std::pair.
+  (#GH86384).
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
@@ -721,6 +727,11 @@ AIX Support
 
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
+
+The -mcpu=generic configuration now enables multivalue and reference-types.These
+proposals are standardized and available in all major engines. Enabling
+multivalue here only enables the language feature but does not turn on the
+multivalue ABI (this enables non-ABI uses of multivalue, like exnref).
 
 AVR Support
 ^^^^^^^^^^^
