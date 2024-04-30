@@ -87,9 +87,8 @@ struct constant_op_binder {
 
     // Fold the constant to an attribute.
     SmallVector<OpFoldResult, 1> foldedOp;
-    LogicalResult result = op->fold(/*operands=*/std::nullopt, foldedOp);
-    (void)result;
-    assert(succeeded(result) && "expected ConstantLike op to be foldable");
+    if (failed(op->fold(/*operands=*/std::nullopt, foldedOp)))
+      return false;
 
     if (auto attr = llvm::dyn_cast<AttrT>(foldedOp.front().get<Attribute>())) {
       if (bind_value)

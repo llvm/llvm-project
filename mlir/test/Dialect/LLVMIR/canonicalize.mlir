@@ -248,3 +248,4 @@ llvm.func @volatile_load(%x : !llvm.ptr) {
   %3 = llvm.load %x  atomic unordered { alignment = 1 } : !llvm.ptr -> i8
   llvm.return
 }
+
