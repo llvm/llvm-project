@@ -57,12 +57,6 @@
 #endif
 
 #if defined(__has_include)
-#if __has_include("hip/hip_version.h")
-#include "hip/hip_version.h"
-#else
-#include "hip_version.h"
-#endif
-
 #if __has_include("hsa/hsa.h")
 #include "hsa/hsa.h"
 #include "hsa/hsa_ext_amd.h"
@@ -2815,7 +2809,8 @@ private:
 
   /// Detect if current architecture is an APU.
   Error checkIfAPU() {
-#if (HSA_AMD_INTERFACE_VERSION_MAJOR >= 1 && HSA_AMD_INTERFACE_VERSION_MINOR >= 5)
+#if (HSA_AMD_INTERFACE_VERSION_MAJOR >= 1 &&                                   \
+     HSA_AMD_INTERFACE_VERSION_MINOR >= 5)
 
     uint8_t MemoryProperties[8];
 
