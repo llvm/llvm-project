@@ -718,12 +718,21 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{CDM::CLibraryMaybeHardened, {{"stpcpy"}}},
        TR::Prop({{1}}, {{0, ReturnValueIndex}})},
       {{CDM::CLibraryMaybeHardened, {{"strcat"}}},
-       TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+       TR::Prop({{0, 1}}, {{0, ReturnValueIndex}})},
       {{CDM::CLibraryMaybeHardened, {{"wcsncat"}}},
-       TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+       TR::Prop({{0, 1}}, {{0, ReturnValueIndex}})},
       {{CDM::CLibrary, {{"strdup"}}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{CDM::CLibrary, {{"strdupa"}}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
       {{CDM::CLibrary, {{"wcsdup"}}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, BI.getName(Builtin::BImemcpy)},
+       TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibrary, {BI.getName(Builtin::BImemmove)}},
+       TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibrary, {BI.getName(Builtin::BIstrncpy)}},
+       TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
+      {{CDM::CLibrary, {BI.getName(Builtin::BIstrndup)}},
+       TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{CDM::CLibrary, {"bcopy"}}, TR::Prop({{0, 2}}, {{1}})},
 
       // Sinks
       {{{"system"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
@@ -745,23 +754,7 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       // sophisticated sanitation heuristics.
       {{{{"setproctitle"}}}, TR::Sink({{0}, 1}, MsgUncontrolledFormatString)},
       {{{{"setproctitle_fast"}}},
-       TR::Sink({{0}, 1}, MsgUncontrolledFormatString)},
-
-      // SinkProps
-      {{CDM::CLibraryMaybeHardened, BI.getName(Builtin::BImemcpy)},
-       TR::SinkProp({{2}}, {{1, 2}}, {{0, ReturnValueIndex}},
-                    MsgTaintedBufferSize)},
-      {{CDM::CLibraryMaybeHardened, {BI.getName(Builtin::BImemmove)}},
-       TR::SinkProp({{2}}, {{1, 2}}, {{0, ReturnValueIndex}},
-                    MsgTaintedBufferSize)},
-      {{CDM::CLibraryMaybeHardened, {BI.getName(Builtin::BIstrncpy)}},
-       TR::SinkProp({{2}}, {{1, 2}}, {{0, ReturnValueIndex}},
-                    MsgTaintedBufferSize)},
-      {{CDM::CLibrary, {BI.getName(Builtin::BIstrndup)}},
-       TR::SinkProp({{1}}, {{0, 1}}, {{ReturnValueIndex}},
-                    MsgTaintedBufferSize)},
-      {{CDM::CLibrary, {{"bcopy"}}},
-       TR::SinkProp({{2}}, {{0, 2}}, {{1}}, MsgTaintedBufferSize)}};
+       TR::Sink({{0}, 1}, MsgUncontrolledFormatString)}
   };
 
   // `getenv` returns taint only in untrusted environments.
