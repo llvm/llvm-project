@@ -1565,7 +1565,7 @@ bool MemoryAddressSpacePredicateMatcher::isIdentical(
 
 void MemoryAddressSpacePredicateMatcher::emitPredicateOpcodes(
     MatchTable &Table, RuleMatcher &Rule) const {
-  assert(AddrSpaces.size() < 255);
+  assert(AddrSpaces.size() < 256);
   Table << MatchTable::Opcode("GIM_CheckMemoryAddressSpace")
         << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
         << MatchTable::Comment("MMO")

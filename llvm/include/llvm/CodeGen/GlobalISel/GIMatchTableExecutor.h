@@ -722,8 +722,9 @@ public:
   // - Fast common case handling (1 byte values).
   LLVM_ATTRIBUTE_ALWAYS_INLINE static uint64_t
   fastDecodeULEB128(const uint8_t *MatchTable, uint64_t &CurrentIdx) {
-    uint64_t Value = MatchTable[CurrentIdx] & 0x7f;
-    if (LLVM_UNLIKELY(MatchTable[CurrentIdx++] >= 128)) {
+    uint64_t Value = MatchTable[CurrentIdx++];
+    if (LLVM_UNLIKELY(Value >= 128)) {
+      Value &= 0x7f;
       unsigned Shift = 7;
       do {
         uint64_t Slice = MatchTable[CurrentIdx] & 0x7f;
