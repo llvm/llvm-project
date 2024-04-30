@@ -1696,19 +1696,10 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
           if (NextMI->getOperand(1).isReg())
             NextMI->getOperand(1).setReg(RISCV::NoRegister);
 
-          if (OldVLReg && OldVLReg.isVirtual()) {
-            // NextMI no longer uses OldVLReg so shrink its LiveInterval.
-            if (LIS)
-              LIS->shrinkToUses(&LIS->getInterval(OldVLReg));
+          // NextMI no longer uses OldVLReg so shrink its LiveInterval.
+          if (OldVLReg && OldVLReg.isVirtual() && LIS)
+            LIS->shrinkToUses(&LIS->getInterval(OldVLReg), &ToDelete);
 
-            MachineInstr *VLOpDef = MRI->getUniqueVRegDef(OldVLReg);
-            if (VLOpDef && TII->isAddImmediate(*VLOpDef, OldVLReg) &&
-                MRI->use_nodbg_empty(OldVLReg)) {
-              VLOpDef->eraseFromParent();
-              if (LIS)
-                LIS->removeInterval(OldVLReg);
-            }
-          }
           MI.setDesc(NextMI->getDesc());
         }
         MI.getOperand(2).setImm(NextMI->getOperand(2).getImm());
@@ -1720,11 +1711,22 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
     Used = getDemanded(MI, ST);
   }
 
-  NumCoalescedVSETVL += ToDelete.size();
   for (auto *MI : ToDelete) {
+    bool SawStore = false;
+    if (!MI->isSafeToMove(nullptr, SawStore) || MI->isBundled() ||
+        MI->isInlineAsm()) {
+      assert(!isVectorConfigInstr(*MI));
+      continue;
+    }
+
     if (LIS)
       LIS->RemoveMachineInstrFromMaps(*MI);
     MI->eraseFromParent();
+    if (LIS)
+      for (MachineOperand &MO : MI->uses())
+        if (MO.isReg() && MO.getReg().isVirtual())
+          LIS->shrinkToUses(&LIS->getInterval(MO.getReg()));
+    NumCoalescedVSETVL++;
   }
 }
 
