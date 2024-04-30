@@ -611,6 +611,7 @@ namespace test21 {
   template <class T> class A<T>::Inner {};
   class B {
     template <class T> class A<T>::Inner; // expected-error{{non-friend class member 'Inner' cannot have a qualified name}}
+                                          // expected-error@-1{{forward declaration of class cannot have a nested name specifier}}
   };
 
   void test() {

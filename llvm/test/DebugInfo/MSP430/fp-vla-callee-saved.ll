@@ -30,16 +30,16 @@ define void @foo() {
 
   %n = load i16, ptr @N, align 2
   %vla = alloca i8, i16 %n, align 1
-  %t1 = load volatile float, float* @g
-  %t2 = load volatile float, float* @g
-  %t3 = load volatile float, float* @g
-  %t4 = load volatile float, float* @g
-  %t5 = load volatile float, float* @g
-  store volatile float %t1, float* @g
-  store volatile float %t2, float* @g
-  store volatile float %t3, float* @g
-  store volatile float %t4, float* @g
-  store volatile float %t5, float* @g
+  %t1 = load volatile float, ptr @g
+  %t2 = load volatile float, ptr @g
+  %t3 = load volatile float, ptr @g
+  %t4 = load volatile float, ptr @g
+  %t5 = load volatile float, ptr @g
+  store volatile float %t1, ptr @g
+  store volatile float %t2, ptr @g
+  store volatile float %t3, ptr @g
+  store volatile float %t4, ptr @g
+  store volatile float %t5, ptr @g
   
 ; CHECK: mov r4, r1
 ; CHECK-NEXT: sub #10, r1

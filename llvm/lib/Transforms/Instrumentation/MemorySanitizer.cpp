@@ -152,6 +152,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -211,6 +212,9 @@ using namespace llvm;
 
 DEBUG_COUNTER(DebugInsertCheck, "msan-insert-check",
               "Controls which checks to insert");
+
+DEBUG_COUNTER(DebugInstrumentInstruction, "msan-instrument-instruction",
+              "Controls which instruction to instrument");
 
 static const unsigned kOriginSize = 4;
 static const Align kMinOriginAlignment = Align(4);
@@ -284,9 +288,6 @@ static cl::opt<bool> ClHandleLifetimeIntrinsics(
 // passed into an assembly call. Note that this may cause false positives.
 // Because it's impossible to figure out the array sizes, we can only unpoison
 // the first sizeof(type) bytes for each type* pointer.
-// The instrumentation is only enabled in KMSAN builds, and only if
-// -msan-handle-asm-conservative is on. This is done because we may want to
-// quickly disable assembly instrumentation when it breaks.
 static cl::opt<bool> ClHandleAsmConservative(
     "msan-handle-asm-conservative",
     cl::desc("conservative handling of inline assembly"), cl::Hidden,
@@ -1043,8 +1044,8 @@ void MemorySanitizer::initializeModule(Module &M) {
   OriginTy = IRB.getInt32Ty();
   PtrTy = IRB.getPtrTy();
 
-  ColdCallWeights = MDBuilder(*C).createBranchWeights(1, 1000);
-  OriginStoreWeights = MDBuilder(*C).createBranchWeights(1, 1000);
+  ColdCallWeights = MDBuilder(*C).createUnlikelyBranchWeights();
+  OriginStoreWeights = MDBuilder(*C).createUnlikelyBranchWeights();
 
   if (!CompileKernel) {
     if (TrackOrigins)
@@ -1339,7 +1340,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  // Returns true if Debug Location curresponds to multiple warnings.
+  // Returns true if Debug Location corresponds to multiple warnings.
   bool shouldDisambiguateWarningLocation(const DebugLoc &DebugLoc) {
     if (MS.TrackOrigins < 2)
       return false;
@@ -1464,19 +1465,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void materializeChecks() {
-    llvm::stable_sort(InstrumentationList,
-                      [](const ShadowOriginAndInsertPoint &L,
-                         const ShadowOriginAndInsertPoint &R) {
-                        return L.OrigIns < R.OrigIns;
-                      });
+#ifndef NDEBUG
+    // For assert below.
+    SmallPtrSet<Instruction *, 16> Done;
+#endif
 
     for (auto I = InstrumentationList.begin();
          I != InstrumentationList.end();) {
-      auto J =
-          std::find_if(I + 1, InstrumentationList.end(),
-                       [L = I->OrigIns](const ShadowOriginAndInsertPoint &R) {
-                         return L != R.OrigIns;
-                       });
+      auto OrigIns = I->OrigIns;
+      // Checks are grouped by the original instruction. We call all
+      // `insertShadowCheck` for an instruction at once.
+      assert(Done.insert(OrigIns).second);
+      auto J = std::find_if(I + 1, InstrumentationList.end(),
+                            [OrigIns](const ShadowOriginAndInsertPoint &R) {
+                              return OrigIns != R.OrigIns;
+                            });
       // Process all checks of instruction at once.
       materializeInstructionChecks(ArrayRef<ShadowOriginAndInsertPoint>(I, J));
       I = J;
@@ -1952,8 +1955,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       unsigned ArgOffset = 0;
       const DataLayout &DL = F->getParent()->getDataLayout();
       for (auto &FArg : F->args()) {
-        if (!FArg.getType()->isSized()) {
-          LLVM_DEBUG(dbgs() << "Arg is not sized\n");
+        if (!FArg.getType()->isSized() || FArg.getType()->isScalableTy()) {
+          LLVM_DEBUG(dbgs() << (FArg.getType()->isScalableTy()
+                                    ? "vscale not fully supported\n"
+                                    : "Arg is not sized\n"));
+          if (A == &FArg) {
+            ShadowPtr = getCleanShadow(V);
+            setOrigin(A, getCleanOrigin());
+            break;
+          }
           continue;
         }
 
@@ -2134,8 +2144,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     OrderingTable[(int)AtomicOrderingCABI::seq_cst] =
         (int)AtomicOrderingCABI::seq_cst;
 
-    return ConstantDataVector::get(IRB.getContext(),
-                                   ArrayRef(OrderingTable, NumOrderings));
+    return ConstantDataVector::get(IRB.getContext(), OrderingTable);
   }
 
   AtomicOrdering addAcquireOrdering(AtomicOrdering a) {
@@ -2169,8 +2178,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     OrderingTable[(int)AtomicOrderingCABI::seq_cst] =
         (int)AtomicOrderingCABI::seq_cst;
 
-    return ConstantDataVector::get(IRB.getContext(),
-                                   ArrayRef(OrderingTable, NumOrderings));
+    return ConstantDataVector::get(IRB.getContext(), OrderingTable);
   }
 
   // ------------------- Visitors.
@@ -2181,6 +2189,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Don't want to visit if we're in the prologue
     if (isInPrologue(I))
       return;
+    if (!DebugCounter::shouldExecute(DebugInstrumentInstruction)) {
+      LLVM_DEBUG(dbgs() << "Skipping instruction: " << I << "\n");
+      // We still need to set the shadow and origin to clean values.
+      setShadow(&I, getCleanShadow(&I));
+      setOrigin(&I, getCleanOrigin());
+      return;
+    }
     InstVisitor<MemorySanitizerVisitor>::visit(I);
   }
 
@@ -2498,6 +2513,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   Value *CreateShadowCast(IRBuilder<> &IRB, Value *V, Type *dstTy,
                           bool Signed = false) {
     Type *srcTy = V->getType();
+    if (srcTy == dstTy)
+      return V;
     size_t srcSizeInBits = VectorOrPrimitiveTypeSizeInBits(srcTy);
     size_t dstSizeInBits = VectorOrPrimitiveTypeSizeInBits(dstTy);
     if (srcSizeInBits > 1 && dstSizeInBits == 1)
@@ -3718,8 +3735,32 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(&I, 0));
   }
 
+  void handleArithmeticWithOverflow(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *Shadow0 = getShadow(&I, 0);
+    Value *Shadow1 = getShadow(&I, 1);
+    Value *ShadowElt0 = IRB.CreateOr(Shadow0, Shadow1);
+    Value *ShadowElt1 =
+        IRB.CreateICmpNE(ShadowElt0, getCleanShadow(ShadowElt0));
+
+    Value *Shadow = PoisonValue::get(getShadowTy(&I));
+    Shadow = IRB.CreateInsertValue(Shadow, ShadowElt0, 0);
+    Shadow = IRB.CreateInsertValue(Shadow, ShadowElt1, 1);
+
+    setShadow(&I, Shadow);
+    setOriginForNaryOp(I);
+  }
+
   void visitIntrinsicInst(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
+    case Intrinsic::uadd_with_overflow:
+    case Intrinsic::sadd_with_overflow:
+    case Intrinsic::usub_with_overflow:
+    case Intrinsic::ssub_with_overflow:
+    case Intrinsic::umul_with_overflow:
+    case Intrinsic::smul_with_overflow:
+      handleArithmeticWithOverflow(I);
+      break;
     case Intrinsic::abs:
       handleAbsIntrinsic(I);
       break;
@@ -4103,7 +4144,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // do the usual thing: check argument shadow and mark all outputs as
       // clean. Note that any side effects of the inline asm that are not
       // immediately visible in its constraints are not handled.
-      if (ClHandleAsmConservative && MS.CompileKernel)
+      if (ClHandleAsmConservative)
         visitAsmInstruction(CB);
       else
         visitInstruction(CB);
@@ -4164,6 +4205,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         LLVM_DEBUG(dbgs() << "Arg " << i << " is not sized: " << CB << "\n");
         continue;
       }
+
+      if (A->getType()->isScalableTy()) {
+        LLVM_DEBUG(dbgs() << "Arg  " << i << " is vscale: " << CB << "\n");
+        // Handle as noundef, but don't reserve tls slots.
+        insertShadowCheck(A, &CB);
+        continue;
+      }
+
       unsigned Size = 0;
       const DataLayout &DL = F.getParent()->getDataLayout();
 
@@ -4555,9 +4604,23 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
     if (!ElemTy->isSized())
       return;
-    Value *SizeVal =
-      IRB.CreateTypeSize(MS.IntptrTy, DL.getTypeStoreSize(ElemTy));
-    IRB.CreateCall(MS.MsanInstrumentAsmStoreFn, {Operand, SizeVal});
+    auto Size = DL.getTypeStoreSize(ElemTy);
+    Value *SizeVal = IRB.CreateTypeSize(MS.IntptrTy, Size);
+    if (MS.CompileKernel) {
+      IRB.CreateCall(MS.MsanInstrumentAsmStoreFn, {Operand, SizeVal});
+    } else {
+      // ElemTy, derived from elementtype(), does not encode the alignment of
+      // the pointer. Conservatively assume that the shadow memory is unaligned.
+      // When Size is large, avoid StoreInst as it would expand to many
+      // instructions.
+      auto [ShadowPtr, _] =
+          getShadowOriginPtrUserspace(Operand, IRB, IRB.getInt8Ty(), Align(1));
+      if (Size <= 32)
+        IRB.CreateAlignedStore(getCleanShadow(ElemTy), ShadowPtr, Align(1));
+      else
+        IRB.CreateMemSet(ShadowPtr, ConstantInt::getNullValue(IRB.getInt8Ty()),
+                         SizeVal, Align(1));
+    }
   }
 
   /// Get the number of output arguments returned by pointers.
@@ -5253,8 +5316,8 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
                                  Align(8), /*isStore*/ true)
               .first;
 
-      Value *GrSrcPtr = IRB.CreateInBoundsGEP(IRB.getInt8Ty(), VAArgTLSCopy,
-                                              GrRegSaveAreaShadowPtrOff);
+      Value *GrSrcPtr =
+          IRB.CreateInBoundsPtrAdd(VAArgTLSCopy, GrRegSaveAreaShadowPtrOff);
       Value *GrCopySize = IRB.CreateSub(GrArgSize, GrRegSaveAreaShadowPtrOff);
 
       IRB.CreateMemCpy(GrRegSaveAreaShadowPtr, Align(8), GrSrcPtr, Align(8),
@@ -5269,10 +5332,9 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
                                  Align(8), /*isStore*/ true)
               .first;
 
-      Value *VrSrcPtr = IRB.CreateInBoundsGEP(
-          IRB.getInt8Ty(),
-          IRB.CreateInBoundsGEP(IRB.getInt8Ty(), VAArgTLSCopy,
-                                IRB.getInt32(AArch64VrBegOffset)),
+      Value *VrSrcPtr = IRB.CreateInBoundsPtrAdd(
+          IRB.CreateInBoundsPtrAdd(VAArgTLSCopy,
+                                   IRB.getInt32(AArch64VrBegOffset)),
           VrRegSaveAreaShadowPtrOff);
       Value *VrCopySize = IRB.CreateSub(VrArgSize, VrRegSaveAreaShadowPtrOff);
 
@@ -5285,8 +5347,8 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
                                  Align(16), /*isStore*/ true)
               .first;
 
-      Value *StackSrcPtr = IRB.CreateInBoundsGEP(
-          IRB.getInt8Ty(), VAArgTLSCopy, IRB.getInt32(AArch64VAEndOffset));
+      Value *StackSrcPtr = IRB.CreateInBoundsPtrAdd(
+          VAArgTLSCopy, IRB.getInt32(AArch64VAEndOffset));
 
       IRB.CreateMemCpy(StackSaveAreaShadowPtr, Align(16), StackSrcPtr,
                        Align(16), VAArgOverflowSize);

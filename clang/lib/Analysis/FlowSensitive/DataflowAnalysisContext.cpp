@@ -14,6 +14,7 @@
 
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "clang/Analysis/FlowSensitive/DebugSupport.h"
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Logger.h"
@@ -174,6 +175,9 @@ Solver::Result DataflowAnalysisContext::querySolver(
 
 bool DataflowAnalysisContext::flowConditionImplies(Atom Token,
                                                    const Formula &F) {
+  if (F.isLiteral(true))
+    return true;
+
   // Returns true if and only if truth assignment of the flow condition implies
   // that `F` is also true. We prove whether or not this property holds by
   // reducing the problem to satisfiability checking. In other words, we attempt
@@ -188,6 +192,9 @@ bool DataflowAnalysisContext::flowConditionImplies(Atom Token,
 
 bool DataflowAnalysisContext::flowConditionAllows(Atom Token,
                                                   const Formula &F) {
+  if (F.isLiteral(false))
+    return false;
+
   llvm::SetVector<const Formula *> Constraints;
   Constraints.insert(&arena().makeAtomRef(Token));
   Constraints.insert(&F);
@@ -282,8 +289,8 @@ void DataflowAnalysisContext::dumpFlowCondition(Atom Token,
   }
 }
 
-const ControlFlowContext *
-DataflowAnalysisContext::getControlFlowContext(const FunctionDecl *F) {
+const AdornedCFG *
+DataflowAnalysisContext::getAdornedCFG(const FunctionDecl *F) {
   // Canonicalize the key:
   F = F->getDefinition();
   if (F == nullptr)
@@ -292,11 +299,11 @@ DataflowAnalysisContext::getControlFlowContext(const FunctionDecl *F) {
   if (It != FunctionContexts.end())
     return &It->second;
 
-  if (F->hasBody()) {
-    auto CFCtx = ControlFlowContext::build(*F);
+  if (F->doesThisDeclarationHaveABody()) {
+    auto ACFG = AdornedCFG::build(*F);
     // FIXME: Handle errors.
-    assert(CFCtx);
-    auto Result = FunctionContexts.insert({F, std::move(*CFCtx)});
+    assert(ACFG);
+    auto Result = FunctionContexts.insert({F, std::move(*ACFG)});
     return &Result.first->second;
   }
 
@@ -353,55 +360,3 @@ DataflowAnalysisContext::~DataflowAnalysisContext() = default;
 
 } // namespace dataflow
 } // namespace clang
-
-using namespace clang;
-
-const Expr &clang::dataflow::ignoreCFGOmittedNodes(const Expr &E) {
-  const Expr *Current = &E;
-  if (auto *EWC = dyn_cast<ExprWithCleanups>(Current)) {
-    Current = EWC->getSubExpr();
-    assert(Current != nullptr);
-  }
-  Current = Current->IgnoreParens();
-  assert(Current != nullptr);
-  return *Current;
-}
-
-const Stmt &clang::dataflow::ignoreCFGOmittedNodes(const Stmt &S) {
-  if (auto *E = dyn_cast<Expr>(&S))
-    return ignoreCFGOmittedNodes(*E);
-  return S;
-}
-
-// FIXME: Does not precisely handle non-virtual diamond inheritance. A single
-// field decl will be modeled for all instances of the inherited field.
-static void getFieldsFromClassHierarchy(QualType Type,
-                                        clang::dataflow::FieldSet &Fields) {
-  if (Type->isIncompleteType() || Type->isDependentType() ||
-      !Type->isRecordType())
-    return;
-
-  for (const FieldDecl *Field : Type->getAsRecordDecl()->fields())
-    Fields.insert(Field);
-  if (auto *CXXRecord = Type->getAsCXXRecordDecl())
-    for (const CXXBaseSpecifier &Base : CXXRecord->bases())
-      getFieldsFromClassHierarchy(Base.getType(), Fields);
-}
-
-/// Gets the set of all fields in the type.
-clang::dataflow::FieldSet clang::dataflow::getObjectFields(QualType Type) {
-  FieldSet Fields;
-  getFieldsFromClassHierarchy(Type, Fields);
-  return Fields;
-}
-
-bool clang::dataflow::containsSameFields(
-    const clang::dataflow::FieldSet &Fields,
-    const clang::dataflow::RecordStorageLocation::FieldToLoc &FieldLocs) {
-  if (Fields.size() != FieldLocs.size())
-    return false;
-  for ([[maybe_unused]] auto [Field, Loc] : FieldLocs)
-    if (!Fields.contains(cast_or_null<FieldDecl>(Field)))
-      return false;
-  return true;
-}

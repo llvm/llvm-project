@@ -149,6 +149,22 @@ struct ForcedNorm2Real16 {
   }
 };
 
+/// Placeholder for real*16 version of Norm2Dim Intrinsic
+struct ForcedNorm2DimReal16 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(Norm2DimReal16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto boxTy =
+          fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(
+          ctx, {fir::ReferenceType::get(boxTy), boxTy, intTy, strTy, intTy},
+          mlir::NoneType::get(ctx));
+    };
+  }
+};
+
 /// Placeholder for real*10 version of Product Intrinsic
 struct ForcedProductReal10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ProductReal10));
@@ -650,7 +666,7 @@ void fir::runtime::genMaxloc(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
   fir::factory::CharacterExprHelper charHelper{builder, loc};
   if (eleTy.isF32())
     func = fir::runtime::getRuntimeFunc<mkRTKey(MaxlocReal4)>(loc, builder);
@@ -697,7 +713,7 @@ mlir::Value fir::runtime::genMaxval(fir::FirOpBuilder &builder,
   mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
   auto dim = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
 
   if (eleTy.isF32())
@@ -765,7 +781,7 @@ void fir::runtime::genMinloc(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
   fir::factory::CharacterExprHelper charHelper{builder, loc};
   if (eleTy.isF32())
     func = fir::runtime::getRuntimeFunc<mkRTKey(MinlocReal4)>(loc, builder);
@@ -837,7 +853,7 @@ mlir::Value fir::runtime::genMinval(fir::FirOpBuilder &builder,
   mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
   auto dim = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
 
   if (eleTy.isF32())
@@ -876,7 +892,14 @@ mlir::Value fir::runtime::genMinval(fir::FirOpBuilder &builder,
 void fir::runtime::genNorm2Dim(fir::FirOpBuilder &builder, mlir::Location loc,
                                mlir::Value resultBox, mlir::Value arrayBox,
                                mlir::Value dim) {
-  auto func = fir::runtime::getRuntimeFunc<mkRTKey(Norm2Dim)>(loc, builder);
+  mlir::func::FuncOp func;
+  auto ty = arrayBox.getType();
+  auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
+  if (eleTy.isF128())
+    func = fir::runtime::getRuntimeFunc<ForcedNorm2DimReal16>(loc, builder);
+  else
+    func = fir::runtime::getRuntimeFunc<mkRTKey(Norm2Dim)>(loc, builder);
   auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
@@ -894,7 +917,7 @@ mlir::Value fir::runtime::genNorm2(fir::FirOpBuilder &builder,
   mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
   auto dim = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
 
   if (eleTy.isF32())
@@ -945,7 +968,7 @@ mlir::Value fir::runtime::genProduct(fir::FirOpBuilder &builder,
   mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
   auto dim = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
 
   if (eleTy.isF32())
@@ -1046,7 +1069,7 @@ mlir::Value fir::runtime::genDotProduct(fir::FirOpBuilder &builder,
   else if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(16)))
     func =
         fir::runtime::getRuntimeFunc<ForcedDotProductInteger16>(loc, builder);
-  else if (eleTy.isa<fir::LogicalType>())
+  else if (mlir::isa<fir::LogicalType>(eleTy))
     func =
         fir::runtime::getRuntimeFunc<mkRTKey(DotProductLogical)>(loc, builder);
   else
@@ -1088,7 +1111,7 @@ mlir::Value fir::runtime::genSum(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::func::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
-  auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
+  auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();
   auto dim = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
 
   if (eleTy.isF32())
@@ -1150,7 +1173,7 @@ mlir::Value fir::runtime::genSum(fir::FirOpBuilder &builder, mlir::Location loc,
     mlir::func::FuncOp func;                                                   \
     auto ty = arrayBox.getType();                                              \
     auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);                              \
-    auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();                   \
+    auto eleTy = mlir::cast<fir::SequenceType>(arrTy).getEleTy();              \
     auto dim = builder.createIntegerConstant(loc, builder.getIndexType(), 0);  \
                                                                                \
     if (eleTy.isInteger(builder.getKindMap().getIntegerBitsize(1)))            \

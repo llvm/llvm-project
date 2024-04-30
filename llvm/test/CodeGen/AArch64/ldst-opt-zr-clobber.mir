@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass aarch64-ldst-opt  -verify-machineinstrs  -o - %s | FileCheck %s
 
 --- |
-  define i1 @no-clobber-zr(i64* %p, i64 %x) { ret i1 0 }
+  define i1 @no-clobber-zr(ptr %p, i64 %x) { ret i1 0 }
 ...
 ---
 # Check that write of xzr doesn't inhibit pairing of xzr stores since

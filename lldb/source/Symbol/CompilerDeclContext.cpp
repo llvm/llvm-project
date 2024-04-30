@@ -59,6 +59,13 @@ bool CompilerDeclContext::IsContainedInLookup(CompilerDeclContext other) const {
                                                        other.m_opaque_decl_ctx);
 }
 
+std::vector<lldb_private::CompilerContext>
+CompilerDeclContext::GetCompilerContext() const {
+  if (IsValid())
+    return m_type_system->DeclContextGetCompilerContext(m_opaque_decl_ctx);
+  return {};
+}
+
 bool lldb_private::operator==(const lldb_private::CompilerDeclContext &lhs,
                               const lldb_private::CompilerDeclContext &rhs) {
   return lhs.GetTypeSystem() == rhs.GetTypeSystem() &&

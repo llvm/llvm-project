@@ -80,7 +80,7 @@ void BM_ConstructFromRange(benchmark::State& st, Container, GenInputs gen) {
 }
 
 template <class Container>
-void BM_Pushback(benchmark::State& state, Container c) {
+void BM_Pushback_no_grow(benchmark::State& state, Container c) {
   int count = state.range(0);
   c.reserve(count);
   while (state.KeepRunningBatch(count)) {

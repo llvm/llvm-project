@@ -13,7 +13,6 @@
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -24,7 +23,6 @@
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <type_traits>
 
@@ -254,7 +252,7 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
   LogicalResult
   matchAndRewrite(memref::LoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto convertedType = adaptor.getMemref().getType().cast<MemRefType>();
+    auto convertedType = cast<MemRefType>(adaptor.getMemref().getType());
     auto convertedElementType = convertedType.getElementType();
     auto oldElementType = op.getMemRefType().getElementType();
     int srcBits = oldElementType.getIntOrFloatBitWidth();
@@ -351,7 +349,7 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
   LogicalResult
   matchAndRewrite(memref::StoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto convertedType = adaptor.getMemref().getType().cast<MemRefType>();
+    auto convertedType = cast<MemRefType>(adaptor.getMemref().getType());
     int srcBits = op.getMemRefType().getElementTypeBitWidth();
     int dstBits = convertedType.getElementTypeBitWidth();
     auto dstIntegerType = rewriter.getIntegerType(dstBits);
@@ -430,6 +428,33 @@ struct ConvertMemRefSubview final : OpConversionPattern<memref::SubViewOp> {
   }
 };
 
+//===----------------------------------------------------------------------===//
+// ConvertMemRefCollapseShape
+//===----------------------------------------------------------------------===//
+
+/// Emulating a `memref.collapse_shape` becomes a no-op after emulation given
+/// that we flatten memrefs to a single dimension as part of the emulation and
+/// there is no dimension to collapse any further.
+struct ConvertMemRefCollapseShape final
+    : OpConversionPattern<memref::CollapseShapeOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::CollapseShapeOp collapseShapeOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value srcVal = adaptor.getSrc();
+    auto newTy = dyn_cast<MemRefType>(srcVal.getType());
+    if (!newTy)
+      return failure();
+
+    if (newTy.getRank() != 1)
+      return failure();
+
+    rewriter.replaceOp(collapseShapeOp, srcVal);
+    return success();
+  }
+};
+
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -442,7 +467,8 @@ void memref::populateMemRefNarrowTypeEmulationPatterns(
 
   // Populate `memref.*` conversion patterns.
   patterns.add<ConvertMemRefAllocation<memref::AllocOp>,
-               ConvertMemRefAllocation<memref::AllocaOp>, ConvertMemRefLoad,
+               ConvertMemRefAllocation<memref::AllocaOp>,
+               ConvertMemRefCollapseShape, ConvertMemRefLoad,
                ConvertMemrefStore, ConvertMemRefAssumeAlignment,
                ConvertMemRefSubview, ConvertMemRefReinterpretCast>(
       typeConverter, patterns.getContext());

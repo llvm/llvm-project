@@ -30,7 +30,7 @@ int taintDiagnosticOutOfBound(void) {
   scanf("%d", &index); // expected-note {{Taint originated here}}
                        // expected-note@-1 {{Taint propagated to the 2nd argument}}
   return Array[index]; // expected-warning {{Potential out of bound access to 'Array' with tainted index}}
-                       // expected-note@-1 {{Access of 'Array' with a tainted index that may be too large}}
+                       // expected-note@-1 {{Access of 'Array' with a tainted index}}
 }
 
 int taintDiagnosticDivZero(int operand) {
@@ -46,8 +46,8 @@ void taintDiagnosticVLA(void) {
   scanf("%d", &x); // expected-note {{Value assigned to 'x'}}
                    // expected-note@-1 {{Taint originated here}}
                    // expected-note@-2 {{Taint propagated to the 2nd argument}}
-  int vla[x]; // expected-warning {{Declared variable-length array (VLA) has tainted size}}
-              // expected-note@-1 {{Declared variable-length array (VLA) has tainted size}}
+  int vla[x]; // expected-warning {{Declared variable-length array (VLA) has tainted}}
+              // expected-note@-1 {{Declared variable-length array (VLA) has tainted}}
 }
 
 

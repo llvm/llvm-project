@@ -18,13 +18,13 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <optional>
 
 namespace llvm {
 class InstructionCost;
 class RISCVSubtarget;
 struct RISCVRegisterInfo;
+class RVVArgDispatcher;
 
 namespace RISCVISD {
 // clang-format off
@@ -59,6 +59,12 @@ enum NodeType : unsigned {
 
   // Multiply high for signedxunsigned.
   MULHSU,
+
+  // Represents (ADD (SHL a, b), c) with the arguments appearing in the order
+  // a, b, c.  'b' must be a constant.  Maps to sh1add/sh2add/sh3add with zba
+  // or addsl with XTheadBa.
+  SHL_ADD,
+
   // RV64I shifts, directly matching the semantics of the named RISC-V
   // instructions.
   SLLW,
@@ -126,9 +132,11 @@ enum NodeType : unsigned {
   // Floating point fmax and fmin matching the RISC-V instruction semantics.
   FMAX, FMIN,
 
-  // READ_CYCLE_WIDE - A read of the 64-bit cycle CSR on a 32-bit target
-  // (returns (Lo, Hi)). It takes a chain operand.
-  READ_CYCLE_WIDE,
+  // A read of the 64-bit counter CSR on a 32-bit target (returns (Lo, Hi)).
+  // It takes a chain operand and another two target constant operands (the
+  // CSR numbers of the low and high parts of the counter).
+  READ_COUNTER_WIDE,
+
   // brev8, orc.b, zip, and unzip from Zbb and Zbkb. All operands are i32 or
   // XLenVT.
   BREV8,
@@ -141,6 +149,9 @@ enum NodeType : unsigned {
   SHA256SIG0, SHA256SIG1, SHA256SUM0, SHA256SUM1,
   SM4KS, SM4ED,
   SM3P0, SM3P1,
+
+  // May-Be-Operations
+  MOPR, MOPRR,
 
   // Vector Extension
   FIRST_VL_VECTOR_OP,
@@ -253,6 +264,11 @@ enum NodeType : unsigned {
   SSUBSAT_VL,
   USUBSAT_VL,
 
+  // Averaging adds of unsigned integers.
+  AVGFLOORU_VL,
+  // Rounding averaging adds of unsigned integers.
+  AVGCEILU_VL,
+
   MULHS_VL,
   MULHU_VL,
   FADD_VL,
@@ -330,12 +346,9 @@ enum NodeType : unsigned {
   // operand is VL.
   SETCC_VL,
 
-  // Vector select with an additional VL operand. This operation is unmasked.
-  VSELECT_VL,
-  // Vector select with operand #2 (the value when the condition is false) tied
-  // to the destination and an additional VL operand. This operation is
-  // unmasked.
-  VP_MERGE_VL,
+  // General vmerge node with mask, true, false, passthru, and vl operands.
+  // Tail agnostic vselect can be implemented by setting passthru to undef.
+  VMERGE_VL,
 
   // Mask binary operators.
   VMAND_VL,
@@ -412,6 +425,33 @@ enum NodeType : unsigned {
   STRICT_FSETCCS_VL,
   STRICT_VFROUND_NOEXCEPT_VL,
   LAST_RISCV_STRICTFP_OPCODE = STRICT_VFROUND_NOEXCEPT_VL,
+
+  SF_VC_XV_SE,
+  SF_VC_IV_SE,
+  SF_VC_VV_SE,
+  SF_VC_FV_SE,
+  SF_VC_XVV_SE,
+  SF_VC_IVV_SE,
+  SF_VC_VVV_SE,
+  SF_VC_FVV_SE,
+  SF_VC_XVW_SE,
+  SF_VC_IVW_SE,
+  SF_VC_VVW_SE,
+  SF_VC_FVW_SE,
+  SF_VC_V_X_SE,
+  SF_VC_V_I_SE,
+  SF_VC_V_XV_SE,
+  SF_VC_V_IV_SE,
+  SF_VC_V_VV_SE,
+  SF_VC_V_FV_SE,
+  SF_VC_V_XVV_SE,
+  SF_VC_V_IVV_SE,
+  SF_VC_V_VVV_SE,
+  SF_VC_V_FVV_SE,
+  SF_VC_V_XVW_SE,
+  SF_VC_V_IVW_SE,
+  SF_VC_V_VVW_SE,
+  SF_VC_V_FVW_SE,
 
   // WARNING: Do not add anything in the end unless you want the node to
   // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
@@ -528,7 +568,8 @@ public:
 
   InstructionCost getVRGatherVVCost(MVT VT) const;
   InstructionCost getVRGatherVICost(MVT VT) const;
-  InstructionCost getVSlideCost(MVT VT) const;
+  InstructionCost getVSlideVXCost(MVT VT) const;
+  InstructionCost getVSlideVICost(MVT VT) const;
 
   // Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
@@ -549,6 +590,12 @@ public:
   unsigned ComputeNumSignBitsForTargetNode(SDValue Op,
                                            const APInt &DemandedElts,
                                            const SelectionDAG &DAG,
+                                           unsigned Depth) const override;
+
+  bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
+                                           const APInt &DemandedElts,
+                                           const SelectionDAG &DAG,
+                                           bool PoisonOnly, bool ConsiderFlags,
                                            unsigned Depth) const override;
 
   const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const override;
@@ -630,9 +677,7 @@ public:
     return ISD::SIGN_EXTEND;
   }
 
-  ISD::NodeType getExtendForAtomicCmpSwapArg() const override {
-    return ISD::SIGN_EXTEND;
-  }
+  ISD::NodeType getExtendForAtomicCmpSwapArg() const override;
 
   bool shouldTransformSignedTruncationCheck(EVT XVT,
                                             unsigned KeptBits) const override;
@@ -744,7 +789,13 @@ public:
     // The following equations have been reordered to prevent loss of precision
     // when calculating fractional LMUL.
     return ((VectorBits / EltSize) * MinSize) / RISCV::RVVBitsPerBlock;
-  };
+  }
+
+  // Return inclusive (low, high) bounds on the value of VLMAX for the
+  // given scalable container type given known bounds on VLEN.
+  static std::pair<unsigned, unsigned>
+  computeVLMAXBounds(MVT ContainerVT, const RISCVSubtarget &Subtarget);
+
   static unsigned getRegClassIDForLMUL(RISCVII::VLMUL LMul);
   static unsigned getSubregIndexByMVT(MVT VT, unsigned Index);
   static unsigned getRegClassIDForVecVT(MVT VT);
@@ -770,8 +821,7 @@ public:
   bool isVScaleKnownToBeAPowerOfTwo() const override;
 
   bool getIndexedAddressParts(SDNode *Op, SDValue &Base, SDValue &Offset,
-                              ISD::MemIndexedMode &AM, bool &IsInc,
-                              SelectionDAG &DAG) const;
+                              ISD::MemIndexedMode &AM, SelectionDAG &DAG) const;
   bool getPreIndexedAddressParts(SDNode *N, SDValue &Base, SDValue &Offset,
                                  ISD::MemIndexedMode &AM,
                                  SelectionDAG &DAG) const override;
@@ -832,7 +882,7 @@ public:
                                ISD::ArgFlagsTy ArgFlags, CCState &State,
                                bool IsFixed, bool IsRet, Type *OrigTy,
                                const RISCVTargetLowering &TLI,
-                               std::optional<unsigned> FirstMaskArgument);
+                               RVVArgDispatcher &RVVDispatcher);
 
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
@@ -849,6 +899,7 @@ private:
   SDValue getStaticTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
                            bool UseGOT) const;
   SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG) const;
+  SDValue getTLSDescAddr(GlobalAddressSDNode *N, SelectionDAG &DAG) const;
 
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
@@ -899,11 +950,13 @@ private:
   SDValue lowerFixedLengthVectorSelectToRVV(SDValue Op,
                                             SelectionDAG &DAG) const;
   SDValue lowerToScalableOp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerUnsignedAvgFloor(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerLogicVPOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPExtMaskOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPSetCCMaskOp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVPSpliceExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPReverseExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPStridedLoad(SDValue Op, SelectionDAG &DAG) const;
@@ -940,6 +993,8 @@ private:
   bool shouldExpandGetVectorLength(EVT TripCountVT, unsigned VF,
                                    bool IsScalable) const override;
 
+  bool shouldExpandCttzElements(EVT VT) const override;
+
   /// RVV code generation for fixed length vectors does not lower all
   /// BUILD_VECTORs. This makes BUILD_VECTOR legalisation a source of stores to
   /// merge. However, merging them creates a BUILD_VECTOR that is just as
@@ -954,7 +1009,7 @@ private:
   /// RISC-V doesn't have flags so it's better to perform the and/or in a GPR.
   bool shouldNormalizeToSelectSequence(LLVMContext &, EVT) const override {
     return false;
-  };
+  }
 
   /// For available scheduling models FDIV + two independent FMULs are much
   /// faster than two FDIVs.
@@ -969,25 +1024,77 @@ private:
   unsigned getMinimumJumpTableEntries() const override;
 };
 
+/// As per the spec, the rules for passing vector arguments are as follows:
+///
+/// 1. For the first vector mask argument, use v0 to pass it.
+/// 2. For vector data arguments or rest vector mask arguments, starting from
+/// the v8 register, if a vector register group between v8-v23 that has not been
+/// allocated can be found and the first register number is a multiple of LMUL,
+/// then allocate this vector register group to the argument and mark these
+/// registers as allocated. Otherwise, pass it by reference and are replaced in
+/// the argument list with the address.
+/// 3. For tuple vector data arguments, starting from the v8 register, if
+/// NFIELDS consecutive vector register groups between v8-v23 that have not been
+/// allocated can be found and the first register number is a multiple of LMUL,
+/// then allocate these vector register groups to the argument and mark these
+/// registers as allocated. Otherwise, pass it by reference and are replaced in
+/// the argument list with the address.
+class RVVArgDispatcher {
+public:
+  static constexpr unsigned NumArgVRs = 16;
+
+  struct RVVArgInfo {
+    unsigned NF;
+    MVT VT;
+    bool FirstVMask = false;
+  };
+
+  template <typename Arg>
+  RVVArgDispatcher(const MachineFunction *MF, const RISCVTargetLowering *TLI,
+                   ArrayRef<Arg> ArgList)
+      : MF(MF), TLI(TLI) {
+    constructArgInfos(ArgList);
+    compute();
+  }
+
+  RVVArgDispatcher() = default;
+
+  MCPhysReg getNextPhysReg();
+
+private:
+  SmallVector<RVVArgInfo, 4> RVVArgInfos;
+  SmallVector<MCPhysReg, 4> AllocatedPhysRegs;
+
+  const MachineFunction *MF = nullptr;
+  const RISCVTargetLowering *TLI = nullptr;
+
+  unsigned CurIdx = 0;
+
+  template <typename Arg> void constructArgInfos(ArrayRef<Arg> Ret);
+  void compute();
+  void allocatePhysReg(unsigned NF = 1, unsigned LMul = 1,
+                       unsigned StartReg = 0);
+};
+
 namespace RISCV {
 
 bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
               MVT ValVT, MVT LocVT, CCValAssign::LocInfo LocInfo,
               ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsFixed,
               bool IsRet, Type *OrigTy, const RISCVTargetLowering &TLI,
-              std::optional<unsigned> FirstMaskArgument);
+              RVVArgDispatcher &RVVDispatcher);
 
 bool CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
                      MVT ValVT, MVT LocVT, CCValAssign::LocInfo LocInfo,
                      ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsFixed,
                      bool IsRet, Type *OrigTy, const RISCVTargetLowering &TLI,
-                     std::optional<unsigned> FirstMaskArgument);
+                     RVVArgDispatcher &RVVDispatcher);
 
 bool CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
                   CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
                   CCState &State);
 
-ArrayRef<MCPhysReg> getArgGPRs();
+ArrayRef<MCPhysReg> getArgGPRs(const RISCVABI::ABI ABI);
 
 } // end namespace RISCV
 

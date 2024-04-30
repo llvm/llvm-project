@@ -947,8 +947,9 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
         (Inst->isCopy() && Inst->getOperand(0).getReg() == AMDGPU::SCC)) {
       auto I = Inst->getIterator();
       auto E = Inst->getParent()->end();
-      while (++I != E && !I->findRegisterDefOperand(AMDGPU::SCC)) {
-        if (I->readsRegister(AMDGPU::SCC))
+      while (++I != E &&
+             !I->findRegisterDefOperand(AMDGPU::SCC, /*TRI=*/nullptr)) {
+        if (I->readsRegister(AMDGPU::SCC, /*TRI=*/nullptr))
           Users.push_back(&*I);
       }
     } else if (Inst->getNumExplicitDefs() != 0) {
@@ -973,9 +974,8 @@ bool SIFixSGPRCopies::needToBeConvertedToVALU(V2SCopyInfo *Info) {
     Info->Score = 0;
     return true;
   }
-  Info->Siblings = SiblingPenalty[*std::max_element(
-      Info->SChain.begin(), Info->SChain.end(),
-      [&](MachineInstr *A, MachineInstr *B) -> bool {
+  Info->Siblings = SiblingPenalty[*llvm::max_element(
+      Info->SChain, [&](MachineInstr *A, MachineInstr *B) -> bool {
         return SiblingPenalty[A].size() < SiblingPenalty[B].size();
       })];
   Info->Siblings.remove_if([&](unsigned ID) { return ID == Info->ID; });

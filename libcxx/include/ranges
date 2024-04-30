@@ -93,6 +93,11 @@ namespace std::ranges {
   template<class T>
   concept viewable_range = see below;
 
+  // [range.adaptor.object], range adaptor objects
+  template<class D>
+    requires is_class_v<D> && same_as<D, remove_cv_t<D>>
+  class range_adaptor_closure { };  // Since c++23
+
   // [view.interface], class template view_interface
   template<class D>
     requires is_class_v<D> && same_as<D, remove_cv_t<D>>
@@ -375,7 +380,6 @@ namespace std {
 }
 */
 
-#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__ranges/access.h>
 #include <__ranges/all.h>
@@ -417,7 +421,7 @@ namespace std {
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
-#include <__ranges/istream_view.h>
+#  include <__ranges/istream_view.h>
 #endif
 
 // standard-mandated includes

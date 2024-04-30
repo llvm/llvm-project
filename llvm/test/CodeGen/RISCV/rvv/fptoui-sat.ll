@@ -342,4 +342,3 @@ define <vscale x 4 x i64> @test_signed_v4f16_v4i64(<vscale x 4 x half> %f) {
     %x = call <vscale x 4 x i64> @llvm.fptoui.sat.nxv4f16.nxv4i64(<vscale x 4 x half> %f)
     ret <vscale x 4 x i64> %x
 }
-

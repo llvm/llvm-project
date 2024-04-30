@@ -9,6 +9,7 @@ declare i8 @llvm.umax.i8(i8, i8)
 declare void @llvm.assume(i1)
 
 declare void @use.i8(i8)
+declare void @use.i1(i1)
 
 define i8 @xor_1(i8 %a, i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: @xor_1(
@@ -131,6 +132,24 @@ define i8 @sub_2(i8 %a, i1 %c, i8 %x, i8 %y) {
   %ab = sub i8 %a, %b
   %not_ab = xor i8 %ab, -1
   ret i8 %not_ab
+}
+
+; Same as above but with a type larger than i64 to make sure we create -2
+; correctly.
+define i128 @sub_3(i128 %a, i1 %c, i128 %x, i128 %y) {
+; CHECK-LABEL: @sub_3(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i128 [[Y:%.*]], -124
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[C:%.*]], i128 [[X:%.*]], i128 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i128 [[TMP2]], [[A:%.*]]
+; CHECK-NEXT:    [[NOT_AB:%.*]] = sub i128 -2, [[TMP3]]
+; CHECK-NEXT:    ret i128 [[NOT_AB]]
+;
+  %nx = xor i128 %x, -1
+  %yy = xor i128 %y, 123
+  %b = select i1 %c, i128 %nx, i128 %yy
+  %ab = sub i128 %a, %b
+  %not_ab = xor i128 %ab, -1
+  ret i128 %not_ab
 }
 
 define i8 @sub_fail(i8 %a, i1 %c, i8 %x, i8 %y) {
@@ -526,11 +545,198 @@ define i8 @lshr_not_nneg(i8 %x, i8 %y) {
 define i8 @lshr_not_nneg2(i8 %x) {
 ; CHECK-LABEL: @lshr_not_nneg2(
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[X:%.*]], 1
-; CHECK-NEXT:    [[SHR_NOT1:%.*]] = or disjoint i8 [[SHR]], -128
-; CHECK-NEXT:    ret i8 [[SHR_NOT1]]
+; CHECK-NEXT:    [[SHR_NOT:%.*]] = or disjoint i8 [[SHR]], -128
+; CHECK-NEXT:    ret i8 [[SHR_NOT]]
 ;
   %x.not = xor i8 %x, -1
   %shr = lshr i8 %x.not, 1
   %shr.not = xor i8 %shr, -1
   ret i8 %shr.not
+}
+
+define i1 @test_inv_free(i1 %c1, i1 %c2, i1 %c3, i1 %c4) {
+; CHECK-LABEL: @test_inv_free(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[B1:%.*]], label [[B2:%.*]]
+; CHECK:       b1:
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[EXIT:%.*]], label [[B3:%.*]]
+; CHECK:       b2:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       b3:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[VAL_NOT:%.*]] = phi i1 [ false, [[B1]] ], [ true, [[B2]] ], [ [[C3:%.*]], [[B3]] ]
+; CHECK-NEXT:    [[COND_NOT:%.*]] = and i1 [[VAL_NOT]], [[C4:%.*]]
+; CHECK-NEXT:    br i1 [[COND_NOT]], label [[B5:%.*]], label [[B4:%.*]]
+; CHECK:       b4:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       b5:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  br i1 %c1, label %b1, label %b2
+b1:
+  br i1 %c2, label %exit, label %b3
+b2:
+  br label %exit
+b3:
+  %invc3 = xor i1 %c3, true
+  br label %exit
+exit:
+  %val = phi i1 [ true, %b1 ], [ false, %b2 ], [ %invc3, %b3 ]
+  %inv = xor i1 %c4, true
+  %cond = or i1 %val, %inv
+  br i1 %cond, label %b4, label %b5
+b4:
+  ret i1 true
+b5:
+  ret i1 false
+}
+
+define i32 @test_inv_free_i32(i1 %c1, i1 %c2, i32 %c3, i32 %c4) {
+; CHECK-LABEL: @test_inv_free_i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[B1:%.*]], label [[B2:%.*]]
+; CHECK:       b1:
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[EXIT:%.*]], label [[B3:%.*]]
+; CHECK:       b2:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       b3:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, [[B1]] ], [ -1, [[B2]] ], [ [[C3:%.*]], [[B3]] ]
+; CHECK-NEXT:    [[COND:%.*]] = xor i32 [[TMP0]], [[C4:%.*]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+entry:
+  br i1 %c1, label %b1, label %b2
+b1:
+  br i1 %c2, label %exit, label %b3
+b2:
+  br label %exit
+b3:
+  %invc3 = xor i32 %c3, -1
+  br label %exit
+exit:
+  %val = phi i32 [ -1, %b1 ], [ 0, %b2 ], [ %invc3, %b3 ]
+  %inv = xor i32 %c4, -1
+  %cond = xor i32 %val, %inv
+  ret i32 %cond
+}
+
+; Negative tests
+
+define i1 @test_inv_free_multiuse(i1 %c1, i1 %c2, i1 %c3, i1 %c4) {
+; CHECK-LABEL: @test_inv_free_multiuse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[B1:%.*]], label [[B2:%.*]]
+; CHECK:       b1:
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[EXIT:%.*]], label [[B3:%.*]]
+; CHECK:       b2:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       b3:
+; CHECK-NEXT:    [[INVC3:%.*]] = xor i1 [[C3:%.*]], true
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[VAL:%.*]] = phi i1 [ true, [[B1]] ], [ false, [[B2]] ], [ [[INVC3]], [[B3]] ]
+; CHECK-NEXT:    call void @use.i1(i1 [[VAL]])
+; CHECK-NEXT:    [[INV:%.*]] = xor i1 [[C4:%.*]], true
+; CHECK-NEXT:    [[COND:%.*]] = or i1 [[VAL]], [[INV]]
+; CHECK-NEXT:    br i1 [[COND]], label [[B4:%.*]], label [[B5:%.*]]
+; CHECK:       b4:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       b5:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  br i1 %c1, label %b1, label %b2
+b1:
+  br i1 %c2, label %exit, label %b3
+b2:
+  br label %exit
+b3:
+  %invc3 = xor i1 %c3, true
+  br label %exit
+exit:
+  %val = phi i1 [ true, %b1 ], [ false, %b2 ], [ %invc3, %b3 ]
+  call void @use.i1(i1 %val)
+  %inv = xor i1 %c4, true
+  %cond = or i1 %val, %inv
+  br i1 %cond, label %b4, label %b5
+b4:
+  ret i1 true
+b5:
+  ret i1 false
+}
+
+define i32 @test_inv_free_i32_newinst(i1 %c1, i1 %c2, i32 %c3, i32 %c4) {
+; CHECK-LABEL: @test_inv_free_i32_newinst(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[B1:%.*]], label [[B2:%.*]]
+; CHECK:       b1:
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[EXIT:%.*]], label [[B3:%.*]]
+; CHECK:       b2:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       b3:
+; CHECK-NEXT:    [[ASHR:%.*]] = ashr i32 -8, [[C3:%.*]]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ -1, [[B1]] ], [ 0, [[B2]] ], [ [[ASHR]], [[B3]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i32 [[VAL]], [[C4:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = xor i32 [[TMP0]], -1
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+entry:
+  br i1 %c1, label %b1, label %b2
+b1:
+  br i1 %c2, label %exit, label %b3
+b2:
+  br label %exit
+b3:
+  %ashr = ashr i32 -8, %c3
+  br label %exit
+exit:
+  %val = phi i32 [ -1, %b1 ], [ 0, %b2 ], [ %ashr, %b3 ]
+  %inv = xor i32 %c4, -1
+  %cond = xor i32 %val, %inv
+  ret i32 %cond
+}
+
+define i1 @test_inv_free_loop(i1 %c1, i1 %c2, i1 %c3, i1 %c4) {
+; CHECK-LABEL: @test_inv_free_loop(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[B1:%.*]], label [[B2:%.*]]
+; CHECK:       b1:
+; CHECK-NEXT:    br i1 [[C2:%.*]], label [[EXIT:%.*]], label [[B3:%.*]]
+; CHECK:       b2:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       b3:
+; CHECK-NEXT:    [[INVC3:%.*]] = xor i1 [[C3:%.*]], true
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[VAL:%.*]] = phi i1 [ true, [[B1]] ], [ false, [[B2]] ], [ [[INVC3]], [[B3]] ], [ [[NOT:%.*]], [[EXIT]] ]
+; CHECK-NEXT:    [[INV:%.*]] = xor i1 [[C4:%.*]], true
+; CHECK-NEXT:    [[COND:%.*]] = or i1 [[VAL]], [[INV]]
+; CHECK-NEXT:    [[NOT]] = xor i1 [[VAL]], true
+; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[B4:%.*]]
+; CHECK:       b4:
+; CHECK-NEXT:    ret i1 true
+;
+entry:
+  br i1 %c1, label %b1, label %b2
+b1:
+  br i1 %c2, label %exit, label %b3
+b2:
+  br label %exit
+b3:
+  %invc3 = xor i1 %c3, true
+  br label %exit
+exit:
+  %val = phi i1 [ true, %b1 ], [ false, %b2 ], [ %invc3, %b3 ], [ %not, %exit ]
+  %inv = xor i1 %c4, true
+  %cond = or i1 %val, %inv
+  %not = xor i1 %val, true
+  br i1 %cond, label %exit, label %b4
+b4:
+  ret i1 true
 }

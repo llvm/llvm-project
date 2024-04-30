@@ -25,6 +25,7 @@
 
 namespace clang {
 
+class APValue;
 class Decl;
 class IdentifierInfo;
 class NestedNameSpecifier;
@@ -100,6 +101,8 @@ public:
 
   // Save booleans until the end to lower the size of data to process.
   void AddBoolean(bool value);
+
+  void AddStructuralValue(const APValue &);
 
   static bool isSubDeclToBeProcessed(const Decl *D, const DeclContext *Parent);
 

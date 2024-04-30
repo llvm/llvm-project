@@ -13,7 +13,7 @@
 
 #include "WebAssemblyUtilities.h"
 #include "WebAssemblyMachineFunctionInfo.h"
-#include "WebAssemblySubtarget.h"
+#include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/IR/Function.h"
@@ -134,7 +134,7 @@ MCSymbolWasm *WebAssembly::getOrCreateFuncrefCallTableSymbol(
     Sym->setWeak(true);
 
     wasm::WasmLimits Limits = {0, 1, 1};
-    wasm::WasmTableType TableType = {wasm::WASM_TYPE_FUNCREF, Limits};
+    wasm::WasmTableType TableType = {wasm::ValType::FUNCREF, Limits};
     Sym->setType(wasm::WASM_SYMBOL_TYPE_TABLE);
     Sym->setTableType(TableType);
   }
@@ -178,4 +178,16 @@ unsigned WebAssembly::getCopyOpcodeForRegClass(const TargetRegisterClass *RC) {
   default:
     llvm_unreachable("Unexpected register class");
   }
+}
+
+bool WebAssembly::canLowerMultivalueReturn(
+    const WebAssemblySubtarget *Subtarget) {
+  const auto &TM = static_cast<const WebAssemblyTargetMachine &>(
+      Subtarget->getTargetLowering()->getTargetMachine());
+  return Subtarget->hasMultivalue() && TM.usesMultivalueABI();
+}
+
+bool WebAssembly::canLowerReturn(size_t ResultSize,
+                                 const WebAssemblySubtarget *Subtarget) {
+  return ResultSize <= 1 || canLowerMultivalueReturn(Subtarget);
 }

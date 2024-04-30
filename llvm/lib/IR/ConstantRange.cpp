@@ -746,7 +746,7 @@ ConstantRange ConstantRange::castOp(Instruction::CastOps CastOp,
       Min = Min.zext(ResultBitWidth);
       Max = Max.zext(ResultBitWidth);
     }
-    return ConstantRange(std::move(Min), std::move(Max));
+    return getNonEmpty(std::move(Min), std::move(Max) + 1);
   }
   case Instruction::SIToFP: {
     // TODO: use input range if available
@@ -757,7 +757,7 @@ ConstantRange ConstantRange::castOp(Instruction::CastOps CastOp,
       SMin = SMin.sext(ResultBitWidth);
       SMax = SMax.sext(ResultBitWidth);
     }
-    return ConstantRange(std::move(SMin), std::move(SMax));
+    return getNonEmpty(std::move(SMin), std::move(SMax) + 1);
   }
   case Instruction::FPTrunc:
   case Instruction::FPExt:
@@ -1467,7 +1467,22 @@ ConstantRange ConstantRange::binaryXor(const ConstantRange &Other) const {
   if (isSingleElement() && getSingleElement()->isAllOnes())
     return Other.binaryNot();
 
-  return fromKnownBits(toKnownBits() ^ Other.toKnownBits(), /*IsSigned*/false);
+  KnownBits LHSKnown = toKnownBits();
+  KnownBits RHSKnown = Other.toKnownBits();
+  KnownBits Known = LHSKnown ^ RHSKnown;
+  ConstantRange CR = fromKnownBits(Known, /*IsSigned*/ false);
+  // Typically the following code doesn't improve the result if BW = 1.
+  if (getBitWidth() == 1)
+    return CR;
+
+  // If LHS is known to be the subset of RHS, treat LHS ^ RHS as RHS -nuw/nsw
+  // LHS. If RHS is known to be the subset of LHS, treat LHS ^ RHS as LHS
+  // -nuw/nsw RHS.
+  if ((~LHSKnown.Zero).isSubsetOf(RHSKnown.One))
+    CR = CR.intersectWith(Other.sub(*this), PreferredRangeType::Unsigned);
+  else if ((~RHSKnown.Zero).isSubsetOf(LHSKnown.One))
+    CR = CR.intersectWith(this->sub(Other), PreferredRangeType::Unsigned);
+  return CR;
 }
 
 ConstantRange

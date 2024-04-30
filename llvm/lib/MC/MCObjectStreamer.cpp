@@ -34,6 +34,8 @@ MCObjectStreamer::MCObjectStreamer(MCContext &Context,
       EmitEHFrame(true), EmitDebugFrame(false) {
   if (Assembler->getBackendPtr())
     setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
+  if (Context.getTargetOptions() && Context.getTargetOptions()->MCRelaxAll)
+    Assembler->setRelaxAll(true);
 }
 
 MCObjectStreamer::~MCObjectStreamer() = default;
@@ -898,11 +900,13 @@ void MCObjectStreamer::emitFileDirective(StringRef Filename) {
 }
 
 void MCObjectStreamer::emitFileDirective(StringRef Filename,
-                                         StringRef CompilerVerion,
+                                         StringRef CompilerVersion,
                                          StringRef TimeStamp,
                                          StringRef Description) {
   getAssembler().addFileName(Filename);
-  // TODO: add additional info to integrated assembler.
+  getAssembler().setCompilerVersion(CompilerVersion.str());
+  // TODO: add TimeStamp and Description to .file symbol table entry
+  // with the integrated assembler.
 }
 
 void MCObjectStreamer::emitAddrsig() {

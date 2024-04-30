@@ -23,7 +23,7 @@ namespace {
 
 bool isInformativeQualifierChunk(CodeCompletionString::Chunk const &Chunk) {
   return Chunk.Kind == CodeCompletionString::CK_Informative &&
-         llvm::StringRef(Chunk.Text).endswith("::");
+         llvm::StringRef(Chunk.Text).ends_with("::");
 }
 
 void appendEscapeSnippet(const llvm::StringRef Text, std::string *Out) {
@@ -165,7 +165,7 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
       //   Completing a method declaration itself (not a method expression) is
       //   similar except that we use the `RequiredQualifiers` to store the
       //   text before the selector, e.g. `- (void)`.
-      if (!llvm::StringRef(Chunk.Text).endswith(":")) { // Treat as C++.
+      if (!llvm::StringRef(Chunk.Text).ends_with(":")) { // Treat as C++.
         if (RequiredQualifiers)
           *RequiredQualifiers = std::move(*Signature);
         Signature->clear();
@@ -253,7 +253,7 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
       if (!IncludeFunctionArguments &&
           ResultKind == CodeCompletionResult::RK_Declaration)
         TruncateSnippetAt.emplace(Snippet->size());
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case CodeCompletionString::CK_RightParen:
     case CodeCompletionString::CK_LeftBracket:
     case CodeCompletionString::CK_RightBracket:

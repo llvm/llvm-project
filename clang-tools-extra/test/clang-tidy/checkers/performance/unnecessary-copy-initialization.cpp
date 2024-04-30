@@ -41,6 +41,10 @@ struct Container {
   ConstIterator<T> end() const;
   void nonConstMethod();
   bool constMethod() const;
+
+  const T& at(int) const;
+  T& at(int);
+
 };
 
 using ExpensiveToCopyContainerAlias = Container<ExpensiveToCopyType>;
@@ -225,25 +229,25 @@ void PositiveOperatorCallConstValueParamAlias(const ExpensiveToCopyContainerAlia
   VarCopyConstructed.constMethod();
 }
 
-void PositiveOperatorCallConstValueParam(const Container<ExpensiveToCopyType>* C) {
+void PositiveOperatorCallConstPtrParam(const Container<ExpensiveToCopyType>* C) {
   const auto AutoAssigned = (*C)[42];
-  // TODO-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned'
-  // TODO-FIXES: const auto& AutoAssigned = (*C)[42];
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoAssigned'
+  // CHECK-FIXES: const auto& AutoAssigned = (*C)[42];
   AutoAssigned.constMethod();
 
   const auto AutoCopyConstructed((*C)[42]);
-  // TODO-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoCopyConstructed'
-  // TODO-FIXES: const auto& AutoCopyConstructed((*C)[42]);
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: the const qualified variable 'AutoCopyConstructed'
+  // CHECK-FIXES: const auto& AutoCopyConstructed((*C)[42]);
   AutoCopyConstructed.constMethod();
 
-  const ExpensiveToCopyType VarAssigned = C->operator[](42);
-  // TODO-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarAssigned'
-  // TODO-FIXES: const ExpensiveToCopyType& VarAssigned = C->operator[](42);
+  const ExpensiveToCopyType VarAssigned = C->at(42);
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarAssigned'
+  // CHECK-FIXES: const ExpensiveToCopyType& VarAssigned = C->at(42);
   VarAssigned.constMethod();
 
-  const ExpensiveToCopyType VarCopyConstructed(C->operator[](42));
-  // TODO-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarCopyConstructed'
-  // TODO-FIXES: const ExpensiveToCopyType& VarCopyConstructed(C->operator[](42));
+  const ExpensiveToCopyType VarCopyConstructed(C->at(42));
+  // CHECK-MESSAGES: [[@LINE-1]]:29: warning: the const qualified variable 'VarCopyConstructed'
+  // CHECK-FIXES: const ExpensiveToCopyType& VarCopyConstructed(C->at(42));
   VarCopyConstructed.constMethod();
 }
 
@@ -876,3 +880,4 @@ void negativeNonConstMemberExpr() {
     mutate(&Copy.Member);
   }
 }
+

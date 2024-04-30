@@ -244,8 +244,6 @@ public:
 
   bool GetInjectLocalVariables(ExecutionContext *exe_ctx) const;
 
-  void SetInjectLocalVariables(ExecutionContext *exe_ctx, bool b);
-
   void SetRequireHardwareBreakpoints(bool b);
 
   bool GetRequireHardwareBreakpoints() const;
@@ -259,6 +257,10 @@ public:
   bool GetDebugUtilityExpression() const;
 
 private:
+  std::optional<bool>
+  GetExperimentalPropertyValue(size_t prop_idx,
+                               ExecutionContext *exe_ctx = nullptr) const;
+
   // Callbacks for m_launch_info.
   void Arg0ValueChangedCallback();
   void RunArgsValueChangedCallback();
@@ -497,9 +499,9 @@ public:
 
   // These two functions fill out the Broadcaster interface:
 
-  static ConstString &GetStaticBroadcasterClass();
+  static llvm::StringRef GetStaticBroadcasterClass();
 
-  ConstString &GetBroadcasterClass() const override {
+  llvm::StringRef GetBroadcasterClass() const override {
     return GetStaticBroadcasterClass();
   }
 
@@ -1599,7 +1601,8 @@ public:
   ///
   /// \return
   ///     Returns a JSON value that contains all target metrics.
-  llvm::json::Value ReportStatistics();
+  llvm::json::Value
+  ReportStatistics(const lldb_private::StatisticsOptions &options);
 
   TargetStats &GetStatistics() { return m_stats; }
 

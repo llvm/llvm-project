@@ -98,6 +98,40 @@ entry:
   ret void
 }
 
+define void @MemsetHugeUpper_m1(i1 %bool) {
+; CHECK-LABEL: MemsetHugeUpper_m1 dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT:   x[4]: full-set
+entry:
+  %x = alloca i32, align 4
+  br i1 %bool, label %if.then, label %if.end
+
+if.then:
+  call void @llvm.memset.p0.i64(ptr %x, i8 0, i64 -1, i1 false)
+  br label %if.end
+
+if.end:
+  ret void
+}
+
+define void @MemsetHugeUpper_m2(i1 %bool) {
+; CHECK-LABEL: MemsetHugeUpper_m2 dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT:   x[4]: full-set
+entry:
+  %x = alloca i32, align 4
+  br i1 %bool, label %if.then, label %if.end
+
+if.then:
+  call void @llvm.memset.p0.i64(ptr %x, i8 0, i64 -2, i1 false)
+  br label %if.end
+
+if.end:
+  ret void
+}
+
 define void @MemcpyInBounds() {
 ; CHECK-LABEL: MemcpyInBounds dso_preemptable{{$}}
 ; CHECK-NEXT: args uses:

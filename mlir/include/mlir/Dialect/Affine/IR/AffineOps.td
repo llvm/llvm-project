@@ -24,7 +24,7 @@ def Affine_Dialect : Dialect {
   let name = "affine";
   let cppNamespace = "::mlir::affine";
   let hasConstantMaterializer = 1;
-  let dependentDialects = ["arith::ArithDialect"];
+  let dependentDialects = ["arith::ArithDialect", "ub::UBDialect"];
 }
 
 // Base class for Affine dialect ops.
@@ -67,7 +67,8 @@ def AffineApplyOp : Affine_Op<"apply", [Pure]> {
     OpBuilder<(ins "ArrayRef<AffineExpr> ":$exprList,"ValueRange":$mapOperands),
     [{
       build($_builder, $_state, $_builder.getIndexType(),
-            AffineMap::inferFromExprList(exprList).front(), mapOperands);
+            AffineMap::inferFromExprList(exprList, $_builder.getContext())
+                                        .front(), mapOperands);
     }]>
   ];
 

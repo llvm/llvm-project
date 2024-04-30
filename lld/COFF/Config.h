@@ -54,7 +54,8 @@ enum class EmitKind { Obj, LLVM, ASM };
 struct Export {
   StringRef name;       // N in /export:N or /export:E=N
   StringRef extName;    // E in /export:E=N
-  StringRef aliasTarget; // GNU specific: N in "alias == N"
+  StringRef exportAs;   // E in /export:N,EXPORTAS,E
+  StringRef importName; // GNU specific: N in "othername == N"
   Symbol *sym = nullptr;
   uint16_t ordinal = 0;
   bool noname = false;
@@ -73,10 +74,9 @@ struct Export {
   StringRef exportName; // Name in DLL
 
   bool operator==(const Export &e) const {
-    return (name == e.name && extName == e.extName &&
-            aliasTarget == e.aliasTarget &&
-            ordinal == e.ordinal && noname == e.noname &&
-            data == e.data && isPrivate == e.isPrivate);
+    return (name == e.name && extName == e.extName && exportAs == e.exportAs &&
+            importName == e.importName && ordinal == e.ordinal &&
+            noname == e.noname && data == e.data && isPrivate == e.isPrivate);
   }
 };
 
@@ -130,9 +130,9 @@ struct Configuration {
   bool forceMultipleRes = false;
   bool forceUnresolved = false;
   bool debug = false;
-  bool debugDwarf = false;
+  bool includeDwarfChunks = false;
   bool debugGHashes = false;
-  bool debugSymtab = false;
+  bool writeSymtab = false;
   bool driver = false;
   bool driverUponly = false;
   bool driverWdm = false;
@@ -186,9 +186,9 @@ struct Configuration {
   // Used for /opt:lldltopartitions=N
   unsigned ltoPartitions = 1;
 
-  // Used for /opt:lldltocache=path
+  // Used for /lldltocache=path
   StringRef ltoCache;
-  // Used for /opt:lldltocachepolicy=policy
+  // Used for /lldltocachepolicy=policy
   llvm::CachePruningPolicy ltoCachePolicy;
 
   // Used for /opt:[no]ltodebugpassmanager
@@ -262,6 +262,9 @@ struct Configuration {
 
   // Used for /lto-pgo-warn-mismatch:
   bool ltoPGOWarnMismatch = true;
+
+  // Used for /lto-sample-profile:
+  llvm::StringRef ltoSampleProfileName;
 
   // Used for /call-graph-ordering-file:
   llvm::MapVector<std::pair<const SectionChunk *, const SectionChunk *>,

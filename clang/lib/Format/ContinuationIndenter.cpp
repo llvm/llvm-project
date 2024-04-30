@@ -161,7 +161,7 @@ static bool opensProtoMessageField(const FormatToken &LessTok,
 // string.  For example, the delimiter of R"deli(cont)deli" is deli.
 static std::optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
   if (TokenText.size() < 5 // The smallest raw string possible is 'R"()"'.
-      || !TokenText.startswith("R\"") || !TokenText.endswith("\"")) {
+      || !TokenText.starts_with("R\"") || !TokenText.ends_with("\"")) {
     return std::nullopt;
   }
 
@@ -177,7 +177,7 @@ static std::optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
   size_t RParenPos = TokenText.size() - Delimiter.size() - 2;
   if (TokenText[RParenPos] != ')')
     return std::nullopt;
-  if (!TokenText.substr(RParenPos + 1).startswith(Delimiter))
+  if (!TokenText.substr(RParenPos + 1).starts_with(Delimiter))
     return std::nullopt;
   return Delimiter;
 }
@@ -328,9 +328,17 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
 
   // Don't break after very short return types (e.g. "void") as that is often
   // unexpected.
-  if (Current.is(TT_FunctionDeclarationName) && State.Column < 6) {
-    if (Style.AlwaysBreakAfterReturnType == FormatStyle::RTBS_None)
+  if (Current.is(TT_FunctionDeclarationName)) {
+    if (Style.BreakAfterReturnType == FormatStyle::RTBS_None &&
+        State.Column < 6) {
       return false;
+    }
+
+    if (Style.BreakAfterReturnType == FormatStyle::RTBS_ExceptShortType) {
+      assert(State.Column >= State.FirstIndent);
+      if (State.Column - State.FirstIndent < 6)
+        return false;
+    }
   }
 
   // If binary operators are moved to the next line (including commas for some
@@ -398,7 +406,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   }
   if ((startsNextParameter(Current, Style) || Previous.is(tok::semi) ||
        (Previous.is(TT_TemplateCloser) && Current.is(TT_StartOfName) &&
-        Style.isCpp() &&
+        State.Line->First->isNot(TT_AttributeSquare) && Style.isCpp() &&
         // FIXME: This is a temporary workaround for the case where clang-format
         // sets BreakBeforeParameter to avoid bin packing and this creates a
         // completely unnecessary line break after a template type that isn't
@@ -561,7 +569,9 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
           return true;
         }
       }
-      return Style.AlwaysBreakTemplateDeclarations != FormatStyle::BTDS_No;
+      return Style.BreakTemplateDeclarations != FormatStyle::BTDS_No &&
+             (Style.BreakTemplateDeclarations != FormatStyle::BTDS_Leave ||
+              Current.NewlinesBefore > 0);
     }
     if (Previous.is(TT_FunctionAnnotationRParen) &&
         State.Line->Type != LT_PreprocessorDirective) {
@@ -583,17 +593,15 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       return true;
   }
 
-  // If the return type spans multiple lines, wrap before the function name.
-  if (((Current.is(TT_FunctionDeclarationName) &&
-        !State.Line->ReturnTypeWrapped &&
-        // Don't break before a C# function when no break after return type.
-        (!Style.isCSharp() ||
-         Style.AlwaysBreakAfterReturnType != FormatStyle::RTBS_None) &&
-        // Don't always break between a JavaScript `function` and the function
-        // name.
-        !Style.isJavaScript()) ||
-       (Current.is(tok::kw_operator) && Previous.isNot(tok::coloncolon))) &&
-      Previous.isNot(tok::kw_template) && CurrentState.BreakBeforeParameter) {
+  if (Current.is(TT_FunctionDeclarationName) &&
+      !State.Line->ReturnTypeWrapped &&
+      // Don't break before a C# function when no break after return type.
+      (!Style.isCSharp() ||
+       Style.BreakAfterReturnType > FormatStyle::RTBS_ExceptShortType) &&
+      // Don't always break between a JavaScript `function` and the function
+      // name.
+      !Style.isJavaScript() && Previous.isNot(tok::kw_template) &&
+      CurrentState.BreakBeforeParameter) {
     return true;
   }
 
@@ -608,7 +616,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
 
   if (Current.is(tok::lessless) &&
       ((Previous.is(tok::identifier) && Previous.TokenText == "endl") ||
-       (Previous.Tok.isLiteral() && (Previous.TokenText.endswith("\\n\"") ||
+       (Previous.Tok.isLiteral() && (Previous.TokenText.ends_with("\\n\"") ||
                                      Previous.TokenText == "\'\\n\'")))) {
     return true;
   }
@@ -676,7 +684,13 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
         // arguments to function calls. We do this by ensuring that either all
         // arguments (including any lambdas) go on the same line as the function
         // call, or we break before the first argument.
-        auto PrevNonComment = Current.getPreviousNonComment();
+        const auto *Prev = Current.Previous;
+        if (!Prev)
+          return false;
+        // For example, `/*Newline=*/false`.
+        if (Prev->is(TT_BlockComment) && Current.SpacesRequiredBefore == 0)
+          return false;
+        const auto *PrevNonComment = Current.getPreviousNonComment();
         if (!PrevNonComment || PrevNonComment->isNot(tok::l_paren))
           return false;
         if (Current.isOneOf(tok::comment, tok::l_paren, TT_LambdaLSquare))
@@ -705,7 +719,9 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
 
   if (Current.is(tok::equal) &&
       (State.Line->First->is(tok::kw_for) || Current.NestingLevel == 0) &&
-      CurrentState.VariablePos == 0) {
+      CurrentState.VariablePos == 0 &&
+      (!Previous.Previous ||
+       Previous.Previous->isNot(TT_DesignatedInitializerPeriod))) {
     CurrentState.VariablePos = State.Column;
     // Move over * and & if they are bound to the variable name.
     const FormatToken *Tok = &Previous;
@@ -740,7 +756,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
 
   if (!DryRun) {
     Whitespaces.replaceWhitespace(Current, /*Newlines=*/0, Spaces,
-                                  State.Column + Spaces + PPColumnCorrection);
+                                  State.Column + Spaces + PPColumnCorrection,
+                                  /*IsAligned=*/false, State.Line->InMacroBody);
   }
 
   // If "BreakBeforeInheritanceComma" mode, don't break within the inheritance
@@ -770,15 +787,25 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   // parenthesis by disallowing any further line breaks if there is no line
   // break after the opening parenthesis. Don't break if it doesn't conserve
   // columns.
+  auto IsOpeningBracket = [&](const FormatToken &Tok) {
+    auto IsStartOfBracedList = [&]() {
+      return Tok.is(tok::l_brace) && Tok.isNot(BK_Block) &&
+             Style.Cpp11BracedListStyle;
+    };
+    if (!Tok.isOneOf(tok::l_paren, TT_TemplateOpener, tok::l_square) &&
+        !IsStartOfBracedList()) {
+      return false;
+    }
+    if (!Tok.Previous)
+      return true;
+    if (Tok.Previous->isIf())
+      return Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak;
+    return !Tok.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
+                                  tok::kw_switch);
+  };
   if ((Style.AlignAfterOpenBracket == FormatStyle::BAS_AlwaysBreak ||
        Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) &&
-      (Previous.isOneOf(tok::l_paren, TT_TemplateOpener, tok::l_square) ||
-       (Previous.is(tok::l_brace) && Previous.isNot(BK_Block) &&
-        Style.Cpp11BracedListStyle)) &&
-      State.Column > getNewLineColumn(State) &&
-      (!Previous.Previous ||
-       !Previous.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
-                                   tok::kw_switch)) &&
+      IsOpeningBracket(Previous) && State.Column > getNewLineColumn(State) &&
       // Don't do this for simple (no expressions) one-argument function calls
       // as that feels like needlessly wasting whitespace, e.g.:
       //
@@ -800,6 +827,8 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
   if (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign &&
       !CurrentState.IsCSharpGenericTypeConstraint && Previous.opensScope() &&
       Previous.isNot(TT_ObjCMethodExpr) && Previous.isNot(TT_RequiresClause) &&
+      Previous.isNot(TT_TableGenDAGArgOpener) &&
+      Previous.isNot(TT_TableGenDAGArgOpenerToBreak) &&
       !(Current.MacroParent && Previous.MacroParent) &&
       (Current.isNot(TT_LineComment) ||
        Previous.isOneOf(BK_BracedInit, TT_VerilogMultiLineListLParen))) {
@@ -1229,7 +1258,7 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return CurrentState.Indent;
   }
   if ((Current.isOneOf(tok::r_brace, tok::r_square) ||
-       (Current.is(tok::greater) && Style.isProto())) &&
+       (Current.is(tok::greater) && (Style.isProto() || Style.isTableGen()))) &&
       State.Stack.size() > 1) {
     if (Current.closesBlockOrBlockTypeList(Style))
       return State.Stack[State.Stack.size() - 2].NestedBlockIndent;
@@ -1255,6 +1284,12 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   if (Current.is(tok::r_paren) && State.Stack.size() > 1 &&
       (!Current.Next ||
        Current.Next->isOneOf(tok::semi, tok::kw_const, tok::l_brace))) {
+    return State.Stack[State.Stack.size() - 2].LastSpace;
+  }
+  // When DAGArg closer exists top of line, it should be aligned in the similar
+  // way as function call above.
+  if (Style.isTableGen() && Current.is(TT_TableGenDAGArgCloser) &&
+      State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
   if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent &&
@@ -1416,7 +1451,9 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
       Style.BreakInheritanceList == FormatStyle::BILS_AfterColon) {
     return CurrentState.Indent;
   }
-  if (Previous.is(tok::r_paren) && !Current.isBinaryOperator() &&
+  if (Previous.is(tok::r_paren) &&
+      Previous.isNot(TT_TableGenDAGArgOperatorToBreak) &&
+      !Current.isBinaryOperator() &&
       !Current.isOneOf(tok::colon, tok::comment)) {
     return ContinuationIndent;
   }
@@ -1593,6 +1630,9 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
     State.StartOfStringLiteral = State.Column + 1;
   if (Current.is(TT_CSharpStringLiteral) && State.StartOfStringLiteral == 0) {
     State.StartOfStringLiteral = State.Column + 1;
+  } else if (Current.is(TT_TableGenMultiLineString) &&
+             State.StartOfStringLiteral == 0) {
+    State.StartOfStringLiteral = State.Column + 1;
   } else if (Current.isStringLiteral() && State.StartOfStringLiteral == 0) {
     State.StartOfStringLiteral = State.Column;
   } else if (!Current.isOneOf(tok::comment, tok::identifier, tok::hash) &&
@@ -1672,7 +1712,10 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
         (!Previous || Previous->isNot(tok::kw_return) ||
          (Style.Language != FormatStyle::LK_Java && PrecedenceLevel > 0)) &&
         (Style.AlignAfterOpenBracket != FormatStyle::BAS_DontAlign ||
-         PrecedenceLevel != prec::Comma || Current.NestingLevel == 0)) {
+         PrecedenceLevel != prec::Comma || Current.NestingLevel == 0) &&
+        (!Style.isTableGen() ||
+         (Previous && Previous->isOneOf(TT_TableGenDAGArgListComma,
+                                        TT_TableGenDAGArgListCommaToBreak)))) {
       NewParenState.Indent = std::max(
           std::max(State.Column, NewParenState.Indent), CurrentState.LastSpace);
     }
@@ -1680,8 +1723,11 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     // Special case for generic selection expressions, its comma-separated
     // expressions are not aligned to the opening paren like regular calls, but
     // rather continuation-indented relative to the _Generic keyword.
-    if (Previous && Previous->endsSequence(tok::l_paren, tok::kw__Generic))
-      NewParenState.Indent = CurrentState.LastSpace;
+    if (Previous && Previous->endsSequence(tok::l_paren, tok::kw__Generic) &&
+        State.Stack.size() > 1) {
+      NewParenState.Indent = State.Stack[State.Stack.size() - 2].Indent +
+                             Style.ContinuationIndentWidth;
+    }
 
     if ((shouldUnindentNextOperator(Current) ||
          (Previous &&
@@ -1767,7 +1813,7 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
   }
 
   if (Current.MatchingParen && Current.is(BK_Block)) {
-    moveStateToNewBlock(State);
+    moveStateToNewBlock(State, Newline);
     return;
   }
 
@@ -1805,6 +1851,17 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
     NewIndent =
         Style.ContinuationIndentWidth +
         std::max(CurrentState.LastSpace, CurrentState.StartOfFunctionCall);
+
+    if (Style.isTableGen() && Current.is(TT_TableGenDAGArgOpenerToBreak) &&
+        Style.TableGenBreakInsideDAGArg == FormatStyle::DAS_BreakElements) {
+      // For the case the next token is a TableGen DAGArg operator identifier
+      // that is not marked to have a line break after it.
+      // In this case the option DAS_BreakElements requires to align the
+      // DAGArg elements to the operator.
+      const FormatToken *Next = Current.Next;
+      if (Next && Next->is(TT_TableGenDAGArgOperatorID))
+        NewIndent = State.Column + Next->TokenText.size() + 2;
+    }
 
     // Ensure that different different brackets force relative alignment, e.g.:
     // void SomeFunction(vector<  // break
@@ -1915,6 +1972,7 @@ void ContinuationIndenter::moveStatePastScopeCloser(LineState &State) {
       (Current.isOneOf(tok::r_paren, tok::r_square, TT_TemplateString) ||
        (Current.is(tok::r_brace) && State.NextToken != State.Line->First) ||
        State.NextToken->is(TT_TemplateCloser) ||
+       State.NextToken->is(TT_TableGenListCloser) ||
        (Current.is(tok::greater) && Current.is(TT_DictLiteral)))) {
     State.Stack.pop_back();
   }
@@ -1954,7 +2012,7 @@ void ContinuationIndenter::moveStatePastScopeCloser(LineState &State) {
   }
 }
 
-void ContinuationIndenter::moveStateToNewBlock(LineState &State) {
+void ContinuationIndenter::moveStateToNewBlock(LineState &State, bool NewLine) {
   if (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
       State.NextToken->is(TT_LambdaLBrace) &&
       !State.Line->MightBeFunctionDecl) {
@@ -1966,10 +2024,18 @@ void ContinuationIndenter::moveStateToNewBlock(LineState &State) {
       NestedBlockIndent + (State.NextToken->is(TT_ObjCBlockLBrace)
                                ? Style.ObjCBlockIndentWidth
                                : Style.IndentWidth);
+
+  // Even when wrapping before lambda body, the left brace can still be added to
+  // the same line. This occurs when checking whether the whole lambda body can
+  // go on a single line. In this case we have to make sure there are no line
+  // breaks in the body, otherwise we could just end up with a regular lambda
+  // body without the brace wrapped.
+  bool NoLineBreak = Style.BraceWrapping.BeforeLambdaBody && !NewLine &&
+                     State.NextToken->is(TT_LambdaLBrace);
+
   State.Stack.push_back(ParenState(State.NextToken, NewIndent,
                                    State.Stack.back().LastSpace,
-                                   /*AvoidBinPacking=*/true,
-                                   /*NoLineBreak=*/false));
+                                   /*AvoidBinPacking=*/true, NoLineBreak));
   State.Stack.back().NestedBlockIndent = NestedBlockIndent;
   State.Stack.back().BreakBeforeParameter = true;
 }
@@ -2293,12 +2359,13 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
     if (Style.isVerilog() || Style.Language == FormatStyle::LK_Java ||
         Style.isJavaScript() || Style.isCSharp()) {
       BreakableStringLiteralUsingOperators::QuoteStyleType QuoteStyle;
-      if (Style.isJavaScript() && Text.startswith("'") && Text.endswith("'")) {
+      if (Style.isJavaScript() && Text.starts_with("'") &&
+          Text.ends_with("'")) {
         QuoteStyle = BreakableStringLiteralUsingOperators::SingleQuotes;
-      } else if (Style.isCSharp() && Text.startswith("@\"") &&
-                 Text.endswith("\"")) {
+      } else if (Style.isCSharp() && Text.starts_with("@\"") &&
+                 Text.ends_with("\"")) {
         QuoteStyle = BreakableStringLiteralUsingOperators::AtDoubleQuotes;
-      } else if (Text.startswith("\"") && Text.endswith("\"")) {
+      } else if (Text.starts_with("\"") && Text.ends_with("\"")) {
         QuoteStyle = BreakableStringLiteralUsingOperators::DoubleQuotes;
       } else {
         return nullptr;
@@ -2315,12 +2382,14 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
     // FIXME: Store Prefix and Suffix (or PrefixLength and SuffixLength to
     // reduce the overhead) for each FormatToken, which is a string, so that we
     // don't run multiple checks here on the hot path.
-    if ((Text.endswith(Postfix = "\"") &&
-         (Text.startswith(Prefix = "@\"") || Text.startswith(Prefix = "\"") ||
-          Text.startswith(Prefix = "u\"") || Text.startswith(Prefix = "U\"") ||
-          Text.startswith(Prefix = "u8\"") ||
-          Text.startswith(Prefix = "L\""))) ||
-        (Text.startswith(Prefix = "_T(\"") && Text.endswith(Postfix = "\")"))) {
+    if ((Text.ends_with(Postfix = "\"") &&
+         (Text.starts_with(Prefix = "@\"") || Text.starts_with(Prefix = "\"") ||
+          Text.starts_with(Prefix = "u\"") ||
+          Text.starts_with(Prefix = "U\"") ||
+          Text.starts_with(Prefix = "u8\"") ||
+          Text.starts_with(Prefix = "L\""))) ||
+        (Text.starts_with(Prefix = "_T(\"") &&
+         Text.ends_with(Postfix = "\")"))) {
       return std::make_unique<BreakableStringLiteral>(
           Current, StartColumn, Prefix, Postfix, UnbreakableTailLength,
           State.Line->InPPDirective, Encoding, Style);
@@ -2342,7 +2411,7 @@ ContinuationIndenter::createBreakableToken(const FormatToken &Current,
     bool RegularComments = [&]() {
       for (const FormatToken *T = &Current; T && T->is(TT_LineComment);
            T = T->Next) {
-        if (!(T->TokenText.startswith("//") || T->TokenText.startswith("#")))
+        if (!(T->TokenText.starts_with("//") || T->TokenText.starts_with("#")))
           return false;
       }
       return true;
@@ -2754,7 +2823,7 @@ bool ContinuationIndenter::nextIsMultilineString(const LineState &State) {
   // We never consider raw string literals "multiline" for the purpose of
   // AlwaysBreakBeforeMultilineStrings implementation as they are special-cased
   // (see TokenAnnotator::mustBreakBefore().
-  if (Current.TokenText.startswith("R\""))
+  if (Current.TokenText.starts_with("R\""))
     return false;
   if (Current.IsMultiline)
     return true;

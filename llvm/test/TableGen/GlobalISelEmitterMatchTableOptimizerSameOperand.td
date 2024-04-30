@@ -9,7 +9,7 @@ def InstThreeOperands : I<(outs GPR32:$dst), (ins GPR32:$cond, GPR32:$src,GPR32:
 // Make sure the GIM_CheckIsSameOperand check is not hoisted into the common header group
 
 // CHECK:       GIM_Try, /*On fail goto*//*Label 1*/
-// CHECK-NEXT:  GIM_CheckRegBankForClass, /*MI*/0, /*Op*/0, /*RC*/MyTarget::GPR32RegClassID,
+// CHECK-NEXT:  GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // CHECK-NOT:   GIM_CheckIsSameOperand
 // CHECK-NEXT:  GIM_Try, /*On fail goto*//*Label 2*/
 // CHECK:       GIM_CheckIsSameOperand, /*MI*/0, /*OpIdx*/3, /*OtherMI*/2, /*OtherOpIdx*/1,

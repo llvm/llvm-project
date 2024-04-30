@@ -6,7 +6,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefix=AVX2
 
-define i32 @PR15215_bad(<4 x i32> %input) {
+define i32 @PR15215_bad(<4 x i32> %input) nounwind {
 ; X86-LABEL: PR15215_bad:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
@@ -59,12 +59,10 @@ entry:
   ret i32 %2
 }
 
-define i32 @PR15215_good(<4 x i32> %input) {
+define i32 @PR15215_good(<4 x i32> %input) nounwind {
 ; X86-LABEL: PR15215_good:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -77,7 +75,6 @@ define i32 @PR15215_good(<4 x i32> %input) {
 ; X86-NEXT:    leal (%edx,%ecx,4), %ecx
 ; X86-NEXT:    leal (%ecx,%eax,8), %eax
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR15215_good:

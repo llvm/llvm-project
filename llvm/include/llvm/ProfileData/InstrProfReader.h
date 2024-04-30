@@ -123,9 +123,6 @@ public:
 
   virtual bool instrEntryBBEnabled() const = 0;
 
-  /// Return true if we must provide debug info to create PGO profiles.
-  virtual bool useDebugInfoCorrelate() const { return false; }
-
   /// Return true if the profile has single byte counters representing coverage.
   virtual bool hasSingleByteCoverage() const = 0;
 
@@ -329,12 +326,16 @@ private:
   uint64_t NamesDelta;
   const RawInstrProf::ProfileData<IntPtrT> *Data;
   const RawInstrProf::ProfileData<IntPtrT> *DataEnd;
+  const RawInstrProf::VTableProfileData<IntPtrT> *VTableBegin = nullptr;
+  const RawInstrProf::VTableProfileData<IntPtrT> *VTableEnd = nullptr;
   const char *CountersStart;
   const char *CountersEnd;
   const char *BitmapStart;
   const char *BitmapEnd;
   const char *NamesStart;
   const char *NamesEnd;
+  const char *VNamesStart = nullptr;
+  const char *VNamesEnd = nullptr;
   // After value profile is all read, this pointer points to
   // the header of next profile data (if exists)
   const uint8_t *ValueDataStart;
@@ -377,12 +378,6 @@ public:
   bool instrEntryBBEnabled() const override {
     return (Version & VARIANT_MASK_INSTR_ENTRY) != 0;
   }
-
-  bool useDebugInfoCorrelate() const override {
-    return (Version & VARIANT_MASK_DBG_CORRELATE) != 0;
-  }
-
-  bool useCorrelate() const { return useDebugInfoCorrelate(); }
 
   bool hasSingleByteCoverage() const override {
     return (Version & VARIANT_MASK_BYTE_COVERAGE) != 0;
@@ -513,9 +508,9 @@ public:
     using namespace support;
 
     offset_type KeyLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     offset_type DataLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+        endian::readNext<offset_type, llvm::endianness::little>(D);
     return std::make_pair(KeyLen, DataLen);
   }
 
@@ -565,6 +560,8 @@ using MemProfRecordHashTable =
     OnDiskIterableChainedHashTable<memprof::RecordLookupTrait>;
 using MemProfFrameHashTable =
     OnDiskIterableChainedHashTable<memprof::FrameLookupTrait>;
+using MemProfCallStackHashTable =
+    OnDiskIterableChainedHashTable<memprof::CallStackLookupTrait>;
 
 template <typename HashTableImpl>
 class InstrProfReaderItaniumRemapper;
@@ -631,6 +628,12 @@ public:
   InstrProfKind getProfileKind() const override;
 
   Error populateSymtab(InstrProfSymtab &Symtab) override {
+    // FIXME: the create method calls 'finalizeSymtab' and sorts a bunch of
+    // arrays/maps. Since there are other data sources other than 'HashTable' to
+    // populate a symtab, it might make sense to have something like this
+    // 1. Let each data source populate Symtab and init the arrays/maps without
+    // calling 'finalizeSymtab'
+    // 2. Call 'finalizeSymtab' once to get all arrays/maps sorted if needed.
     return Symtab.create(HashTable->keys());
   }
 };
@@ -642,6 +645,26 @@ public:
   virtual Error populateRemappings() { return Error::success(); }
   virtual Error getRecords(StringRef FuncName,
                            ArrayRef<NamedInstrProfRecord> &Data) = 0;
+};
+
+class IndexedMemProfReader {
+private:
+  /// MemProf profile schema (if available).
+  memprof::MemProfSchema Schema;
+  /// MemProf record profile data on-disk indexed via llvm::md5(FunctionName).
+  std::unique_ptr<MemProfRecordHashTable> MemProfRecordTable;
+  /// MemProf frame profile data on-disk indexed via frame id.
+  std::unique_ptr<MemProfFrameHashTable> MemProfFrameTable;
+  /// MemProf call stack data on-disk indexed via call stack id.
+  std::unique_ptr<MemProfCallStackHashTable> MemProfCallStackTable;
+
+public:
+  IndexedMemProfReader() = default;
+
+  Error deserialize(const unsigned char *Start, uint64_t MemProfOffset);
+
+  Expected<memprof::MemProfRecord>
+  getMemProfRecord(const uint64_t FuncNameHash) const;
 };
 
 /// Reader for the indexed binary instrprof format.
@@ -659,12 +682,16 @@ private:
   std::unique_ptr<ProfileSummary> Summary;
   /// Context sensitive profile summary data.
   std::unique_ptr<ProfileSummary> CS_Summary;
-  /// MemProf profile schema (if available).
-  memprof::MemProfSchema Schema;
-  /// MemProf record profile data on-disk indexed via llvm::md5(FunctionName).
-  std::unique_ptr<MemProfRecordHashTable> MemProfRecordTable;
-  /// MemProf frame profile data on-disk indexed via frame id.
-  std::unique_ptr<MemProfFrameHashTable> MemProfFrameTable;
+  IndexedMemProfReader MemProfReader;
+  /// VTableNamePtr points to the beginning of compressed vtable names.
+  /// When a symtab is constructed from profiles by llvm-profdata, the list of
+  /// names could be decompressed based on `VTableNamePtr` and
+  /// `CompressedVTableNamesLen`.
+  /// A compiler that reads indexed profiles could construct symtab from module
+  /// IR so it doesn't need the decompressed names.
+  const char *VTableNamePtr = nullptr;
+  /// The length of compressed vtable names.
+  uint64_t CompressedVTableNamesLen = 0;
   /// Total size of binary ids.
   uint64_t BinaryIdsSize{0};
   /// Start address of binary id length and data pairs.
@@ -739,15 +766,17 @@ public:
 
   /// Return the memprof record for the function identified by
   /// llvm::md5(Name).
-  Expected<memprof::MemProfRecord> getMemProfRecord(uint64_t FuncNameHash);
+  Expected<memprof::MemProfRecord> getMemProfRecord(uint64_t FuncNameHash) {
+    return MemProfReader.getMemProfRecord(FuncNameHash);
+  }
 
   /// Fill Counts with the profile data for the given function name.
   Error getFunctionCounts(StringRef FuncName, uint64_t FuncHash,
                           std::vector<uint64_t> &Counts);
 
-  /// Fill Bitmap Bytes with the profile data for the given function name.
-  Error getFunctionBitmapBytes(StringRef FuncName, uint64_t FuncHash,
-                               std::vector<uint8_t> &BitmapBytes);
+  /// Fill Bitmap with the profile data for the given function name.
+  Error getFunctionBitmap(StringRef FuncName, uint64_t FuncHash,
+                          BitVector &Bitmap);
 
   /// Return the maximum of all known function counts.
   /// \c UseCS indicates whether to use the context-sensitive count.

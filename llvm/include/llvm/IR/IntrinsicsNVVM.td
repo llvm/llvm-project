@@ -557,6 +557,10 @@ let TargetPrefix = "nvvm" in {
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
         [IntrNoMem, IntrSpeculatable]>;
 
+  def int_nvvm_nanosleep : ClangBuiltin<"__nvvm_nanosleep">,
+      DefaultAttrsIntrinsic<[], [llvm_i32_ty],
+                            [IntrConvergent, IntrNoMem, IntrHasSideEffects]>;
+
 //
 // Min Max
 //
@@ -614,6 +618,13 @@ let TargetPrefix = "nvvm" in {
 //
 // Multiplication
 //
+
+  def int_nvvm_mulhi_s : ClangBuiltin<"__nvvm_mulhi_s">,
+      DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty],
+        [IntrNoMem, IntrSpeculatable, Commutative]>;
+  def int_nvvm_mulhi_us : ClangBuiltin<"__nvvm_mulhi_us">,
+      DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty],
+        [IntrNoMem, IntrSpeculatable, Commutative]>;
 
   def int_nvvm_mulhi_i : ClangBuiltin<"__nvvm_mulhi_i">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
@@ -730,12 +741,27 @@ let TargetPrefix = "nvvm" in {
 // Sad
 //
 
+  def int_nvvm_sad_s : ClangBuiltin<"__nvvm_sad_s">,
+      DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+        [IntrNoMem, Commutative, IntrSpeculatable]>;
+  def int_nvvm_sad_us : ClangBuiltin<"__nvvm_sad_us">,
+      DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i16_ty, llvm_i16_ty, llvm_i16_ty],
+        [IntrNoMem, Commutative, IntrSpeculatable]>;
+
   def int_nvvm_sad_i : ClangBuiltin<"__nvvm_sad_i">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-        [IntrNoMem, Commutative]>;
+        [IntrNoMem, Commutative, IntrSpeculatable]>;
   def int_nvvm_sad_ui : ClangBuiltin<"__nvvm_sad_ui">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-        [IntrNoMem, Commutative]>;
+        [IntrNoMem, Commutative, IntrSpeculatable]>;
+
+  def int_nvvm_sad_ll : ClangBuiltin<"__nvvm_sad_ll">,
+      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i64_ty],
+        [IntrNoMem, Commutative, IntrSpeculatable]>;
+  def int_nvvm_sad_ull : ClangBuiltin<"__nvvm_sad_ull">,
+      DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty, llvm_i64_ty],
+        [IntrNoMem, Commutative, IntrSpeculatable]>;
+
 
 //
 // Floor  Ceil
@@ -977,6 +1003,8 @@ let TargetPrefix = "nvvm" in {
 
   def int_nvvm_rsqrt_approx_ftz_f : ClangBuiltin<"__nvvm_rsqrt_approx_ftz_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
+  def int_nvvm_rsqrt_approx_ftz_d : ClangBuiltin<"__nvvm_rsqrt_approx_ftz_d">,
+      DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty], [IntrNoMem]>;
   def int_nvvm_rsqrt_approx_f : ClangBuiltin<"__nvvm_rsqrt_approx_f">,
       DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty], [IntrNoMem]>;
   def int_nvvm_rsqrt_approx_d : ClangBuiltin<"__nvvm_rsqrt_approx_d">,
@@ -1372,6 +1400,14 @@ let TargetPrefix = "nvvm" in {
   def int_nvvm_barrier_cluster_wait :
       Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
 
+  // 'aligned' versions of the above barrier.cluster.* intrinsics
+  def int_nvvm_barrier_cluster_arrive_aligned :
+      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
+  def int_nvvm_barrier_cluster_arrive_relaxed_aligned :
+      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
+  def int_nvvm_barrier_cluster_wait_aligned :
+      Intrinsic<[], [], [IntrConvergent, IntrNoCallback]>;
+
   // Membar
   def int_nvvm_membar_cta : ClangBuiltin<"__nvvm_membar_cta">,
       Intrinsic<[], [], [IntrNoCallback]>;
@@ -1423,6 +1459,16 @@ def int_nvvm_cp_async_wait_group :
 def int_nvvm_cp_async_wait_all :
     ClangBuiltin<"__nvvm_cp_async_wait_all">,
     Intrinsic<[],[],[]>;
+
+// cp.async.bulk variants of the commit/wait group
+def int_nvvm_cp_async_bulk_commit_group :
+    Intrinsic<[],[],[]>;
+
+def int_nvvm_cp_async_bulk_wait_group :
+    Intrinsic<[],[llvm_i32_ty],[ImmArg<ArgIndex<0>>]>;
+
+def int_nvvm_cp_async_bulk_wait_group_read :
+    Intrinsic<[],[llvm_i32_ty],[ImmArg<ArgIndex<0>>]>;
 
 // mbarrier
 def int_nvvm_mbarrier_init : ClangBuiltin<"__nvvm_mbarrier_init">,
@@ -1581,7 +1627,8 @@ def int_nvvm_compiler_warn :
     Intrinsic<[], [llvm_anyptr_ty], [], "llvm.nvvm.compiler.warn">;
 
 def int_nvvm_reflect :
-  Intrinsic<[llvm_i32_ty], [llvm_anyptr_ty], [IntrNoMem], "llvm.nvvm.reflect">;
+  Intrinsic<[llvm_i32_ty], [llvm_ptr_ty], [IntrNoMem], "llvm.nvvm.reflect">,
+  ClangBuiltin<"__nvvm_reflect">;
 
 // isspacep.{const, global, local, shared}
 def int_nvvm_isspacep_const
@@ -2490,6 +2537,47 @@ def int_nvvm_tex_unified_cube_array_level_v4u32_f32
               [llvm_i64_ty, llvm_i32_ty,
                llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty], [],
               "llvm.nvvm.tex.unified.cube.array.level.v4u32.f32">;
+
+def int_nvvm_tex_unified_cube_grad_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], [],
+              "llvm.nvvm.tex.unified.cube.grad.v4f32.f32">;
+def int_nvvm_tex_unified_cube_grad_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], [],
+              "llvm.nvvm.tex.unified.cube.grad.v4s32.f32">;
+def int_nvvm_tex_unified_cube_grad_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], [],
+              "llvm.nvvm.tex.unified.cube.grad.v4u32.f32">;
+
+def int_nvvm_tex_unified_cube_array_grad_v4f32_f32
+  : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
+              [llvm_i64_ty, llvm_i32_ty,
+              llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], [],
+              "llvm.nvvm.tex.unified.cube.array.grad.v4f32.f32">;
+def int_nvvm_tex_unified_cube_array_grad_v4s32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty,
+              llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], [],
+              "llvm.nvvm.tex.unified.cube.array.grad.v4s32.f32">;
+def int_nvvm_tex_unified_cube_array_grad_v4u32_f32
+  : Intrinsic<[llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+              [llvm_i64_ty, llvm_i32_ty,
+              llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty,
+               llvm_float_ty, llvm_float_ty, llvm_float_ty], [],
+              "llvm.nvvm.tex.unified.cube.array.grad.v4u32.f32">;
 
 def int_nvvm_tld4_unified_r_2d_v4f32_f32
   : Intrinsic<[llvm_float_ty, llvm_float_ty, llvm_float_ty, llvm_float_ty],
@@ -4425,6 +4513,8 @@ def int_nvvm_read_ptx_sreg_lanemask_gt :
 def int_nvvm_read_ptx_sreg_clock : PTXReadNCSRegIntrinsic_r32<"clock">;
 def int_nvvm_read_ptx_sreg_clock64 : PTXReadNCSRegIntrinsic_r64<"clock64">;
 
+def int_nvvm_read_ptx_sreg_globaltimer : PTXReadNCSRegIntrinsic_r64<"globaltimer">;
+
 def int_nvvm_read_ptx_sreg_pm0 : PTXReadNCSRegIntrinsic_r32<"pm0">;
 def int_nvvm_read_ptx_sreg_pm1 : PTXReadNCSRegIntrinsic_r32<"pm1">;
 def int_nvvm_read_ptx_sreg_pm2 : PTXReadNCSRegIntrinsic_r32<"pm2">;
@@ -4517,6 +4607,14 @@ def int_nvvm_vote_ballot_sync :
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i1_ty],
             [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback], "llvm.nvvm.vote.ballot.sync">,
   ClangBuiltin<"__nvvm_vote_ballot_sync">;
+
+//
+// ACTIVEMASK
+//
+def int_nvvm_activemask :
+  Intrinsic<[llvm_i32_ty], [],
+            [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback, IntrHasSideEffects], "llvm.nvvm.activemask">,
+  ClangBuiltin<"__nvvm_activemask">;
 
 //
 // MATCH.SYNC
@@ -4709,5 +4807,19 @@ def int_nvvm_is_explicit_cluster
   : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
               [IntrNoMem, IntrSpeculatable, NoUndef<RetIndex>],
               "llvm.nvvm.is_explicit_cluster">;
+
+// Setmaxnreg inc/dec intrinsics
+def int_nvvm_setmaxnreg_inc_sync_aligned_u32
+  : DefaultAttrsIntrinsic<[], [llvm_i32_ty],
+              [IntrConvergent, IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>],
+              "llvm.nvvm.setmaxnreg.inc.sync.aligned.u32">;
+def int_nvvm_setmaxnreg_dec_sync_aligned_u32
+  : DefaultAttrsIntrinsic<[], [llvm_i32_ty],
+              [IntrConvergent, IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>],
+              "llvm.nvvm.setmaxnreg.dec.sync.aligned.u32">;
+
+// Exit
+def int_nvvm_exit : ClangBuiltin<"__nvvm_exit">,
+    Intrinsic<[], [], [IntrConvergent, IntrInaccessibleMemOnly, IntrNoReturn]>;
 
 } // let TargetPrefix = "nvvm"

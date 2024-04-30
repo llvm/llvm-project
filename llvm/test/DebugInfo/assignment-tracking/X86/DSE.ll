@@ -1,6 +1,10 @@
 ; RUN: llc %s -stop-before=finalize-isel -o - \
 ; RUN: | FileCheck %s
 
+
+; RUN: llc --try-experimental-debuginfo-iterators %s -stop-before=finalize-isel -o - \
+; RUN: | FileCheck %s
+
 ; Check basic lowering behaviour of dbg.assign intrinsics. The first
 ; assignment to `local`, which has been DSE'd, should be represented with a
 ; constant value DBG_VALUE. The second assignment should have a DBG_VALUE

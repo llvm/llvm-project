@@ -124,7 +124,7 @@ protected:
     // TODO: Print error messages in failure logs, use them to audit this list.
     // Some architectures may be unsupportable or missing key components, but
     // some may just be failing due to bugs in this testcase.
-    if (Triple.startswith("armv7") || Triple.startswith("armv8l"))
+    if (Triple.starts_with("armv7") || Triple.starts_with("armv8l"))
       return false;
     return true;
   }
@@ -512,42 +512,15 @@ TEST_F(OrcCAPITestBase, AddObjectBuffer) {
   ASSERT_TRUE(!!SumAddr);
 }
 
-// This must be kept in sync with gdb/gdb/jit.h .
-extern "C" {
-
-typedef enum {
-  JIT_NOACTION = 0,
-  JIT_REGISTER_FN,
-  JIT_UNREGISTER_FN
-} jit_actions_t;
-
-struct jit_code_entry {
-  struct jit_code_entry *next_entry;
-  struct jit_code_entry *prev_entry;
-  const char *symfile_addr;
-  uint64_t symfile_size;
-};
-
-struct jit_descriptor {
-  uint32_t version;
-  // This should be jit_actions_t, but we want to be specific about the
-  // bit-width.
-  uint32_t action_flag;
-  struct jit_code_entry *relevant_entry;
-  struct jit_code_entry *first_entry;
-};
-
-// We put information about the JITed function in this global, which the
-// debugger reads.  Make sure to specify the version statically, because the
-// debugger checks the version before we can set it during runtime.
-extern struct jit_descriptor __jit_debug_descriptor;
+// JITLink debug support plugins put information about JITed code in this GDB
+// JIT Interface global from OrcTargetProcess.
+extern "C" struct jit_descriptor __jit_debug_descriptor;
 
 static void *findLastDebugDescriptorEntryPtr() {
   struct jit_code_entry *Last = __jit_debug_descriptor.first_entry;
   while (Last && Last->next_entry)
     Last = Last->next_entry;
   return Last;
-}
 }
 
 #if defined(_AIX) or not(defined(__ELF__) or defined(__MACH__))
@@ -708,24 +681,7 @@ void Materialize(void *Ctx, LLVMOrcMaterializationResponsibilityRef MR) {
   LLVMOrcDisposeMaterializationResponsibility(OtherMR);
 
   // FIXME: Implement async lookup
-  // A real test of the dependence tracking in the success case would require
-  // async lookups. You could:
-  // 1. Materialize foo, making foo depend on other.
-  // 2. In the caller, verify that the lookup callback for foo has not run (due
-  // to the dependence)
-  // 3. Materialize other by looking it up.
-  // 4. In the caller, verify that the lookup callback for foo has now run.
-
-  LLVMOrcRetainSymbolStringPoolEntry(TargetSym.Name);
   LLVMOrcRetainSymbolStringPoolEntry(DependencySymbol);
-  LLVMOrcCDependenceMapPair Dependency = {JD, {&DependencySymbol, 1}};
-  LLVMOrcMaterializationResponsibilityAddDependencies(MR, TargetSym.Name,
-                                                      &Dependency, 1);
-
-  LLVMOrcRetainSymbolStringPoolEntry(DependencySymbol);
-  LLVMOrcMaterializationResponsibilityAddDependenciesForAll(MR, &Dependency, 1);
-
-  // See FIXME above
   LLVMOrcCSymbolMapPair Pair = {DependencySymbol, Sym};
   LLVMOrcMaterializationResponsibilityNotifyResolved(MR, &Pair, 1);
   // DependencySymbol no longer owned by us
@@ -733,7 +689,14 @@ void Materialize(void *Ctx, LLVMOrcMaterializationResponsibilityRef MR) {
   Pair = {TargetSym.Name, Sym};
   LLVMOrcMaterializationResponsibilityNotifyResolved(MR, &Pair, 1);
 
-  LLVMOrcMaterializationResponsibilityNotifyEmitted(MR);
+  LLVMOrcRetainSymbolStringPoolEntry(TargetSym.Name);
+  LLVMOrcCDependenceMapPair Dependency = {JD, {&DependencySymbol, 1}};
+  LLVMOrcCSymbolDependenceGroup DependenceSet = {
+      /*.Symbols = */ {/*.Symbols = */ &TargetSym.Name, /* .Length = */ 1},
+      /* .Dependencies = */ &Dependency,
+      /* .NumDependencies = */ 1};
+
+  LLVMOrcMaterializationResponsibilityNotifyEmitted(MR, &DependenceSet, 1);
   LLVMOrcDisposeMaterializationResponsibility(MR);
 }
 

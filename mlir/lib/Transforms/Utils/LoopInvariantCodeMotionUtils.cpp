@@ -279,6 +279,13 @@ MatchingSubsets::populateSubsetOpsAtIterArg(LoopLikeOpInterface loopLike,
 
       if (auto insertionOp =
               dyn_cast<SubsetInsertionOpInterface>(use.getOwner())) {
+        // Current implementation expects that the insertionOp implement
+        // the destinationStyleOpInterface as well. Abort if that tha is not
+        // the case
+        if (!isa<DestinationStyleOpInterface>(use.getOwner())) {
+          return failure();
+        }
+
         // The value must be used as a destination. (In case of a source, the
         // entire tensor would be read, which would prevent any hoisting.)
         if (&use != &insertionOp.getDestinationOperand())
@@ -365,8 +372,8 @@ static LoopLikeOpInterface hoistSubsetAtIterArg(RewriterBase &rewriter,
       iterArg = loopLike.getRegionIterArgs()[iterArgIdx];
       OpResult loopResult = loopLike.getTiedLoopResult(iterArg);
       OpResult newLoopResult = loopLike.getLoopResults()->back();
-      extractionOp->moveBefore(loopLike);
-      insertionOp->moveAfter(loopLike);
+      rewriter.moveOpBefore(extractionOp, loopLike);
+      rewriter.moveOpAfter(insertionOp, loopLike);
       rewriter.replaceAllUsesWith(insertionOp.getUpdatedDestination(),
                                   insertionOp.getDestinationOperand().get());
       extractionOp.getSourceOperand().set(

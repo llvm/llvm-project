@@ -845,8 +845,9 @@ void SymbolMapper::MapSymbolExprs(Symbol &symbol) {
                        },
           [&](ProcEntityDetails &proc) {
             if (const Symbol *
-                mappedSymbol{MapInterface(proc.procInterface())}) {
-              proc.set_procInterface(*mappedSymbol);
+                mappedSymbol{MapInterface(proc.rawProcInterface())}) {
+              proc.set_procInterfaces(
+                  *mappedSymbol, BypassGeneric(mappedSymbol->GetUltimate()));
             } else if (const DeclTypeSpec * mappedType{MapType(proc.type())}) {
               proc.set_type(*mappedType);
             }

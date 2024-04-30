@@ -12,41 +12,44 @@
 #include "src/unistd/close.h"
 #include "src/unistd/unlink.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
+#include "test/UnitTest/LibcTest.h"
 #include "test/UnitTest/Test.h"
 
+#include <sys/stat.h>
 #include <unistd.h>
 
 TEST(LlvmLibcAccessTest, CreateAndTest) {
   // The test strategy is to repeatedly create a file in different modes and
   // test that it is accessable in those modes but not in others.
-  libc_errno = 0;
+  LIBC_NAMESPACE::libc_errno = 0;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *TEST_FILE = "testdata/access.test";
+  constexpr const char *FILENAME = "access.test";
+  auto TEST_FILE = libc_make_test_file_path(FILENAME);
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
   ASSERT_EQ(LIBC_NAMESPACE::access(TEST_FILE, F_OK), 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(LIBC_NAMESPACE::access(TEST_FILE, X_OK | W_OK | R_OK), 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE), Succeeds(0));
 
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IXUSR);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
   ASSERT_EQ(LIBC_NAMESPACE::access(TEST_FILE, F_OK), 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(LIBC_NAMESPACE::access(TEST_FILE, X_OK), 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(LIBC_NAMESPACE::access(TEST_FILE, R_OK), -1);
-  ASSERT_EQ(libc_errno, EACCES);
-  libc_errno = 0;
+  ASSERT_ERRNO_EQ(EACCES);
+  LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_EQ(LIBC_NAMESPACE::access(TEST_FILE, W_OK), -1);
-  ASSERT_EQ(libc_errno, EACCES);
-  libc_errno = 0;
+  ASSERT_ERRNO_EQ(EACCES);
+  LIBC_NAMESPACE::libc_errno = 0;
   ASSERT_THAT(LIBC_NAMESPACE::unlink(TEST_FILE), Succeeds(0));
 }
 

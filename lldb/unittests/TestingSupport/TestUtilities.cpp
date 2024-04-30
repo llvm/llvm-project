@@ -19,6 +19,7 @@ using namespace lldb_private;
 
 extern const char *TestMainArgv0;
 
+std::once_flag TestUtilities::g_debugger_initialize_flag;
 std::string lldb_private::GetInputFilePath(const llvm::Twine &name) {
   llvm::SmallString<128> result = llvm::sys::path::parent_path(TestMainArgv0);
   llvm::sys::fs::make_absolute(result);
