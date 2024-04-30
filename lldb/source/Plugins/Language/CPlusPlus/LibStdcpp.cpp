@@ -281,6 +281,7 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
           addr_of_string + process_sp->GetAddressByteSize(), error);
       if (error.Fail())
         return false;
+
       options.SetSourceSize(size_of_data);
       options.SetHasSourceSize(true);
 
@@ -301,15 +302,13 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
 
       lldb::offset_t offset = 0;
       AddressType child_addressType = valobj.GetAddressTypeOfChildren();
-      if (child_addressType == eAddressTypeLoad)
-      {
+      if (child_addressType == eAddressTypeLoad) {
         // We have the host address of our std::string
         // But we need to read the pointee data from the debugged process.
         ProcessSP process_sp(valobj.GetProcessSP());
         // We want to read the address from std::string, which is the first 8 bytes.
         lldb::addr_t addr = data.GetAddress(&offset);
-        if (!addr)
-        {
+        if (!addr) {
           stream.Printf("nullptr");
           return true;
         }
@@ -322,8 +321,7 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
         return true;
       }
 
-      if (child_addressType == eAddressTypeHost)
-      {
+      if (child_addressType == eAddressTypeHost) {
         lldb::offset_t size = data.GetByteSize();
         const void* dataStart = data.GetData(&offset, size);
         if (!dataStart)
