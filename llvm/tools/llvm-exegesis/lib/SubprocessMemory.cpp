@@ -132,7 +132,7 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
 }
 
 SubprocessMemory::~SubprocessMemory() {
-  for (std::string SharedMemoryName : SharedMemoryNames) {
+  for (const std::string &SharedMemoryName : SharedMemoryNames) {
     if (shm_unlink(SharedMemoryName.c_str()) != 0) {
       errs() << "Failed to unlink shared memory section: " << strerror(errno)
              << "\n";
