@@ -1594,9 +1594,9 @@ replacement=\ *string-literal*
   the deprecated declaration with the new declaration specified.
 
 environment=\ *identifier*
-  Target environment in which this declaration is available. If present, 
+  Target environment in which this declaration is available. If present,
   the availability attribute applies only to targets with the same platform
-  and environment. 
+  and environment.
 
 Multiple availability attributes can be placed on a declaration, which may
 correspond to different platforms. For most platforms, the availability
