@@ -295,6 +295,10 @@ public:
   /// AST file.
   const uint32_t *SLocEntryOffsets = nullptr;
 
+  /// Remapping table for source locations in this module.
+  ContinuousRangeMap<SourceLocation::UIntTy, SourceLocation::IntTy, 2>
+      SLocRemap;
+
   // === Identifiers ===
 
   /// The number of identifiers in this AST file.
@@ -508,16 +512,8 @@ public:
   /// List of modules which depend on this module
   llvm::SetVector<ModuleFile *> ImportedBy;
 
-  /// List of modules which this module directly imported
+  /// List of modules which this module depends on
   llvm::SetVector<ModuleFile *> Imports;
-
-  /// List of modules which this modules dependent on. Different
-  /// from `Imports`, this includes indirectly imported modules too.
-  /// The order of DependentModules is significant. It should keep
-  /// the same order with that module file manager when we write
-  /// the current module file. The value of the member will be initialized
-  /// in `ASTReader::ReadModuleOffsetMap`.
-  llvm::SmallVector<ModuleFile *, 16> DependentModules;
 
   /// Determine whether this module was directly imported at
   /// any point during translation.
