@@ -56,6 +56,17 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
   for (const StringRef &Arch : ARMArchVals.keys())
     OS << "ARM_ARCHITECTURE(" << Arch << ")\n";
   OS << "\n#undef ARM_ARCHITECTURE\n\n";
+
+  // Emit information for each defined Extension; used to build ArmExtKind.
+  OS << "#ifndef ARM_EXTENSION\n"
+     << "#define ARM_EXTENSION(NAME, ENUM)\n"
+     << "#endif\n\n";
+  for (const Record *Rec : RK.getAllDerivedDefinitions("Extension")) {
+    StringRef Name = Rec->getValueAsString("Name");
+    std::string Enum = Rec->getValueAsString("ArchExtKindSpelling").upper();
+    OS << "ARM_EXTENSION(" << Name << ", " << Enum << ")\n";
+  }
+  OS << "\n#undef ARM_EXTENSION\n\n";
 }
 
 static TableGen::Emitter::Opt
