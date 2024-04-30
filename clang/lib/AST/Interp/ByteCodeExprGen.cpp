@@ -2292,26 +2292,54 @@ bool ByteCodeExprGen<Emitter>::VisitCXXScalarValueInitExpr(
   if (std::optional<PrimType> T = classify(Ty))
     return this->visitZeroInitializer(*T, Ty, E);
 
-  assert(Ty->isAnyComplexType());
-  if (!Initializing) {
-    std::optional<unsigned> LocalIndex = allocateLocal(E, /*IsExtended=*/false);
-    if (!LocalIndex)
-      return false;
-    if (!this->emitGetPtrLocal(*LocalIndex, E))
-      return false;
+  if (const auto *CT = Ty->getAs<ComplexType>()) {
+    if (!Initializing) {
+      std::optional<unsigned> LocalIndex =
+          allocateLocal(E, /*IsExtended=*/false);
+      if (!LocalIndex)
+        return false;
+      if (!this->emitGetPtrLocal(*LocalIndex, E))
+        return false;
+    }
+
+    // Initialize both fields to 0.
+    QualType ElemQT = CT->getElementType();
+    PrimType ElemT = classifyPrim(ElemQT);
+
+    for (unsigned I = 0; I != 2; ++I) {
+      if (!this->visitZeroInitializer(ElemT, ElemQT, E))
+        return false;
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    return true;
   }
 
-  // Initialize both fields to 0.
-  QualType ElemQT = Ty->getAs<ComplexType>()->getElementType();
-  PrimType ElemT = classifyPrim(ElemQT);
+  if (const auto *VT = Ty->getAs<VectorType>()) {
+    // FIXME: Code duplication with the _Complex case above.
+    if (!Initializing) {
+      std::optional<unsigned> LocalIndex =
+          allocateLocal(E, /*IsExtended=*/false);
+      if (!LocalIndex)
+        return false;
+      if (!this->emitGetPtrLocal(*LocalIndex, E))
+        return false;
+    }
 
-  for (unsigned I = 0; I != 2; ++I) {
-    if (!this->visitZeroInitializer(ElemT, ElemQT, E))
-      return false;
-    if (!this->emitInitElem(ElemT, I, E))
-      return false;
+    // Initialize all fields to 0.
+    QualType ElemQT = VT->getElementType();
+    PrimType ElemT = classifyPrim(ElemQT);
+
+    for (unsigned I = 0, N = VT->getNumElements(); I != N; ++I) {
+      if (!this->visitZeroInitializer(ElemT, ElemQT, E))
+        return false;
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    return true;
   }
-  return true;
+
+  return false;
 }
 
 template <class Emitter>
