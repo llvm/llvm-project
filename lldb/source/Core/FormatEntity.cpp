@@ -57,6 +57,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/TargetParser/Triple.h"
 
 #include <cctype>
@@ -658,6 +659,38 @@ static char ConvertValueObjectStyleToChar(
   return '\0';
 }
 
+static llvm::Regex LLVMFormatPattern{"x[-+]?\\d*|n|d", llvm::Regex::IgnoreCase};
+
+static bool DumpValueWithLLVMFormat(Stream &s, llvm::StringRef options,
+                                    ValueObject &valobj) {
+  std::string formatted;
+  std::string llvm_format = ("{0:" + options + "}").str();
+
+  // Options supported by format_provider<T> for integral arithmetic types.
+  // See table in FormatProviders.h.
+
+  auto type_info = valobj.GetTypeInfo();
+  if (type_info & eTypeIsInteger && LLVMFormatPattern.match(options)) {
+    if (type_info & eTypeIsSigned) {
+      bool success = false;
+      int64_t integer = valobj.GetValueAsSigned(0, &success);
+      if (success)
+        formatted = llvm::formatv(llvm_format.data(), integer);
+    } else {
+      bool success = false;
+      uint64_t integer = valobj.GetValueAsUnsigned(0, &success);
+      if (success)
+        formatted = llvm::formatv(llvm_format.data(), integer);
+    }
+  }
+
+  if (formatted.empty())
+    return false;
+
+  s.Write(formatted.data(), formatted.size());
+  return true;
+}
+
 static bool DumpValue(Stream &s, const SymbolContext *sc,
                       const ExecutionContext *exe_ctx,
                       const FormatEntity::Entry &entry, ValueObject *valobj) {
@@ -728,9 +761,12 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     return RunScriptFormatKeyword(s, sc, exe_ctx, valobj, entry.string.c_str());
   }
 
-  llvm::StringRef subpath(entry.string);
+  auto split = llvm::StringRef(entry.string).split(':');
+  auto subpath = split.first;
+  auto llvm_format = split.second;
+
   // simplest case ${var}, just print valobj's value
-  if (entry.string.empty()) {
+  if (subpath.empty()) {
     if (entry.printf_format.empty() && entry.fmt == eFormatDefault &&
         entry.number == ValueObject::eValueObjectRepresentationStyleValue)
       was_plain_var = true;
@@ -739,7 +775,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     target = valobj;
   } else // this is ${var.something} or multiple .something nested
   {
-    if (entry.string[0] == '[')
+    if (subpath[0] == '[')
       was_var_indexed = true;
     ScanBracketedRange(subpath, close_bracket_index,
                        var_name_final_if_array_range, index_lower,
@@ -747,14 +783,11 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
 
     Status error;
 
-    const std::string &expr_path = entry.string;
-
-    LLDB_LOGF(log, "[Debugger::FormatPrompt] symbol to expand: %s",
-              expr_path.c_str());
+    LLDB_LOG(log, "[Debugger::FormatPrompt] symbol to expand: {0}", subpath);
 
     target =
         valobj
-            ->GetValueForExpressionPath(expr_path.c_str(), &reason_to_stop,
+            ->GetValueForExpressionPath(subpath, &reason_to_stop,
                                         &final_value_type, options, &what_next)
             .get();
 
@@ -883,8 +916,18 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
   }
 
   if (!is_array_range) {
-    LLDB_LOGF(log,
-              "[Debugger::FormatPrompt] dumping ordinary printable output");
+    if (!llvm_format.empty()) {
+      if (DumpValueWithLLVMFormat(s, llvm_format, *target)) {
+        LLDB_LOGF(log, "dumping using llvm format");
+        return true;
+      } else {
+        LLDB_LOG(
+            log,
+            "empty output using llvm format '{0}' - with type info flags {1}",
+            entry.printf_format, target->GetTypeInfo());
+      }
+    }
+    LLDB_LOGF(log, "dumping ordinary printable output");
     return target->DumpPrintableRepresentation(s, val_obj_display,
                                                custom_format);
   } else {
@@ -2226,6 +2269,13 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
           error = ParseEntry(variable, &g_root, entry);
           if (error.Fail())
             return error;
+
+          auto [_, llvm_format] = llvm::StringRef(entry.string).split(':');
+          if (!LLVMFormatPattern.match(llvm_format)) {
+            error.SetErrorStringWithFormat("invalid llvm format: '%s'",
+                                           llvm_format.data());
+            return error;
+          }
 
           if (verify_is_thread_id) {
             if (entry.type != Entry::Type::ThreadID &&
