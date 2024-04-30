@@ -114,7 +114,7 @@ struct SA {
     #pragma omp target map(b[true:true])
     {}
 
-    #pragma omp target map(: c,f) // lt60-error {{missing map type}}
+    #pragma omp target map(: c,f) // lt60-error {{missing map type}} // ge60-error {{empty modifier-specification-list is not allowed}}
     {}
     #pragma omp target map(always, tofrom: c,f)
     {}

@@ -4231,9 +4231,10 @@ bool Parser::parseMapperModifier(SemaOpenMP::OpenMPVarListDataTy &Data) {
 static OpenMPMapClauseKind isMapType(Parser &P);
 
 /// Parse map-type-modifiers in map clause.
-/// map([ [map-type-modifier[,] [map-type-modifier[,] ...] map-type : ] list)
+/// map([ [map-type-modifier[,] [map-type-modifier[,] ...] [map-type] : ] list)
 /// where, map-type-modifier ::= always | close | mapper(mapper-identifier) |
 /// present
+/// where, map-type ::= alloc | delete | from | release | to | tofrom
 bool Parser::parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data) {
   bool HasMapType = false;
   SourceLocation PreMapLoc = Tok.getLocation();
@@ -4708,6 +4709,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     // Only parse map-type-modifier[s] and map-type if a colon is present in
     // the map clause.
     if (ColonPresent) {
+      if (getLangOpts().OpenMP >= 60 && getCurToken().is(tok::colon))
+        Diag(Tok, diag::err_omp_map_modifier_specification_list);
       IsInvalidMapperModifier = parseMapTypeModifiers(Data);
       if (getLangOpts().OpenMP < 60 && !IsInvalidMapperModifier)
         parseMapType(*this, Data);
