@@ -3074,7 +3074,7 @@ def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
     AnyRefOrBox:$memref,
     Optional<AnyShapeOrShiftType>:$shape,
     Variadic<AnyIntegerType>:$typeparams,
-    Optional<I1>:$dummy_scope,
+    Optional<fir_DummyScopeType>:$dummy_scope,
     Builtin_StringAttr:$uniq_name,
     OptionalAttr<fir_FortranVariableFlagsAttr>:$fortran_attrs,
     OptionalAttr<fir_CUDADataAttributeAttr>:$cuda_attr
@@ -3325,7 +3325,7 @@ def fir_DummyScopeOp : fir_Op<"dummy_scope",
     This is guaranteed by the write memory effect on the DebuggingResource.
   }];
 
-  let results = (outs I1);
+  let results = (outs fir_DummyScopeType);
   let assemblyFormat = "attr-dict `:` type(results)";
 }
 
