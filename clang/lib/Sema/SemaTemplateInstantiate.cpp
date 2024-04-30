@@ -281,6 +281,20 @@ Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
     if (Function->getPrimaryTemplate()->isMemberSpecialization())
       return Response::Done();
 
+    if (Function->getFriendObjectKind())
+      if (const ClassTemplateSpecializationDecl *TD =
+              dyn_cast<ClassTemplateSpecializationDecl>(
+                  Function->getLexicalDeclContext())) {
+        const CXXRecordDecl *TemplatePattern =
+            TD->getTemplateInstantiationPattern();
+        const FunctionDecl *FunctionPattern =
+            Function->getTemplateInstantiationPattern();
+        if (TemplatePattern && FunctionPattern &&
+            TemplatePattern->getTemplateDepth() ==
+                FunctionPattern->getTemplateDepth())
+          return Response::Done();
+      }
+
     // If this function is a generic lambda specialization, we are done.
     if (!ForConstraintInstantiation &&
         isGenericLambdaCallOperatorOrStaticInvokerSpecialization(Function)) {
