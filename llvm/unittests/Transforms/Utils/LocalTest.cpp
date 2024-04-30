@@ -732,6 +732,67 @@ TEST(Local, FindDbgUsers) {
   EXPECT_EQ(Vals.size(), 1u);
 }
 
+TEST(Local, FindDbgRecords) {
+  // DbgRecord copy of the FindDbgUsers test above.
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx,
+                                      R"(
+  define dso_local void @fun(ptr %a) #0 !dbg !11 {
+  entry:
+    call void @llvm.dbg.assign(metadata ptr %a, metadata !16, metadata !DIExpression(), metadata !15, metadata ptr %a, metadata !DIExpression()), !dbg !19
+    ret void
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3, !9}
+  !llvm.ident = !{!10}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 17.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "test.cpp", directory: "/")
+  !2 = !{i32 7, !"Dwarf Version", i32 5}
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = !{i32 1, !"wchar_size", i32 4}
+  !9 = !{i32 7, !"debug-info-assignment-tracking", i1 true}
+  !10 = !{!"clang version 17.0.0"}
+  !11 = distinct !DISubprogram(name: "fun", linkageName: "fun", scope: !1, file: !1, line: 1, type: !12, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !14)
+  !12 = !DISubroutineType(types: !13)
+  !13 = !{null}
+  !14 = !{}
+  !15 = distinct !DIAssignID()
+  !16 = !DILocalVariable(name: "x", scope: !11, file: !1, line: 2, type: !17)
+  !17 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !18, size: 64)
+  !18 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !19 = !DILocation(line: 0, scope: !11)
+  )");
+
+  bool BrokenDebugInfo = true;
+  verifyModule(*M, &errs(), &BrokenDebugInfo);
+  ASSERT_FALSE(BrokenDebugInfo);
+  bool NewDbgInfoFormat = UseNewDbgInfoFormat;
+  UseNewDbgInfoFormat = true;
+  M->convertToNewDbgValues();
+
+  Function &Fun = *cast<Function>(M->getNamedValue("fun"));
+  Value *Arg = Fun.getArg(0);
+
+  SmallVector<DbgVariableIntrinsic *> Users;
+  SmallVector<DbgVariableRecord *> Records;
+  // Arg (%a) is used twice by a single dbg_assign. Check findDbgUsers returns
+  // only 1 pointer to it rather than 2.
+  findDbgUsers(Users, Arg, &Records);
+  EXPECT_EQ(Users.size(), 0u);
+  EXPECT_EQ(Records.size(), 1u);
+
+  SmallVector<DbgValueInst *> Vals;
+  Records.clear();
+  // Arg (%a) is used twice by a single dbg_assign. Check findDbgValues returns
+  // only 1 pointer to it rather than 2.
+  findDbgValues(Vals, Arg, &Records);
+  EXPECT_EQ(Vals.size(), 0u);
+  EXPECT_EQ(Records.size(), 1u);
+  UseNewDbgInfoFormat = NewDbgInfoFormat;
+}
+
 TEST(Local, ReplaceAllDbgUsesWith) {
   using namespace llvm::dwarf;
 
