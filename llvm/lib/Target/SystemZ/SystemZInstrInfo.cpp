@@ -622,9 +622,18 @@ MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
       !MRI->hasOneNonDBGUse(FoldAsLoadDefReg))
     return nullptr;
 
-  int UseOpIdx = MI.findRegisterUseOperandIdx(FoldAsLoadDefReg);
+  int UseOpIdx =
+      MI.findRegisterUseOperandIdx(FoldAsLoadDefReg, /*TRI=*/nullptr);
   assert(UseOpIdx != -1 && "Expected FoldAsLoadDefReg to be used by MI.");
-  return foldMemoryOperand(MI, {((unsigned) UseOpIdx)}, *DefMI);
+
+  // Check whether we can fold the load.
+  if (MachineInstr *FoldMI =
+          foldMemoryOperand(MI, {((unsigned)UseOpIdx)}, *DefMI)) {
+    FoldAsLoadDefReg = 0;
+    return FoldMI;
+  }
+
+  return nullptr;
 }
 
 bool SystemZInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
@@ -955,8 +964,9 @@ static LogicOp interpretAndImmediate(unsigned Opcode) {
 }
 
 static void transferDeadCC(MachineInstr *OldMI, MachineInstr *NewMI) {
-  if (OldMI->registerDefIsDead(SystemZ::CC)) {
-    MachineOperand *CCDef = NewMI->findRegisterDefOperand(SystemZ::CC);
+  if (OldMI->registerDefIsDead(SystemZ::CC, /*TRI=*/nullptr)) {
+    MachineOperand *CCDef =
+        NewMI->findRegisterDefOperand(SystemZ::CC, /*TRI=*/nullptr);
     if (CCDef != nullptr)
       CCDef->setIsDead(true);
   }
@@ -1453,8 +1463,8 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     assert(LoadMI != InsertPt && "Assuming InsertPt not to be first in MBB.");
     for (MachineBasicBlock::iterator MII = std::prev(InsertPt);;
          --MII) {
-      if (MII->definesRegister(SystemZ::CC)) {
-        if (!MII->registerDefIsDead(SystemZ::CC))
+      if (MII->definesRegister(SystemZ::CC, /*TRI=*/nullptr)) {
+        if (!MII->registerDefIsDead(SystemZ::CC, /*TRI=*/nullptr))
           return nullptr;
         break;
       }
@@ -1467,9 +1477,8 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   }
 
   Register FoldAsLoadDefReg = LoadMI.getOperand(0).getReg();
-  // We don't really need Ops, but do a sanity check:
-  assert(Ops.size() == 1 && FoldAsLoadDefReg == MI.getOperand(Ops[0]).getReg() &&
-         "Expected MI to have the only use of the load.");
+  if (Ops.size() != 1 || FoldAsLoadDefReg != MI.getOperand(Ops[0]).getReg())
+    return nullptr;
   Register DstReg = MI.getOperand(0).getReg();
   MachineOperand LHS = MI.getOperand(1);
   MachineOperand RHS = MI.getOperand(2);
