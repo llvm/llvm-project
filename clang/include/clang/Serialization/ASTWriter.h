@@ -928,28 +928,15 @@ public:
   bool hasEmittedPCH() const { return Buffer->IsComplete; }
 };
 
-class CXX20ModulesGenerator : public PCHGenerator {
+class ReducedBMIGenerator : public PCHGenerator {
 protected:
   virtual Module *getEmittingModule(ASTContext &Ctx) override;
 
-  CXX20ModulesGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-                        StringRef OutputFile, bool GeneratingReducedBMI);
-
-public:
-  CXX20ModulesGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-                        StringRef OutputFile)
-      : CXX20ModulesGenerator(PP, ModuleCache, OutputFile,
-                              /*GeneratingReducedBMI=*/false) {}
-
-  void HandleTranslationUnit(ASTContext &Ctx) override;
-};
-
-class ReducedBMIGenerator : public CXX20ModulesGenerator {
 public:
   ReducedBMIGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-                      StringRef OutputFile)
-      : CXX20ModulesGenerator(PP, ModuleCache, OutputFile,
-                              /*GeneratingReducedBMI=*/true) {}
+                      StringRef OutputFile);
+
+  void HandleTranslationUnit(ASTContext &Ctx) override;
 };
 
 /// If we can elide the definition of \param D in reduced BMI.
