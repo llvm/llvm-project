@@ -1608,6 +1608,13 @@ defm double_square_bracket_attributes : BoolFOption<"double-square-bracket-attri
   LangOpts<"DoubleSquareBracketAttributes">, DefaultTrue, PosFlag<SetTrue>,
  NegFlag<SetFalse>>;
 
+defm experimental_late_parse_attributes : BoolFOption<"experimental-late-parse-attributes",
+  LangOpts<"ExperimentalLateParseAttributes">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption, CC1Option],
+          " experimental late parsing of attributes">>;
+
 defm autolink : BoolFOption<"autolink",
   CodeGenOpts<"Autolink">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],

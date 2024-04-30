@@ -256,6 +256,10 @@ New Compiler Flags
 - ``-fexperimental-modules-reduced-bmi`` enables the Reduced BMI for C++20 named modules.
   See the document of standard C++ modules for details.
 
+- ``-fexperimental-late-parse-attributes`` enables an experimental feature to
+  allow late parsing certain attributes in specific contexts where they would
+  not normally be late parsed.
+
 Deprecated Compiler Flags
 -------------------------
 
