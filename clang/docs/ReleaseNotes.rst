@@ -611,6 +611,9 @@ Bug Fixes to C++ Support
   immediate function context.
 - Fix CTAD for ``std::initializer_list``. This allows ``std::initializer_list{1, 2, 3}`` to be deduced as
   ``std::initializer_list<int>`` as intended.
+- Fix a bug on template partial specialization whose template parameter is `decltype(auto)`.
+- Fix a bug on template partial specialization with issue on deduction of nontype template parameter
+  whose type is `decltype(auto)`. Fixes (#GH68885).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
