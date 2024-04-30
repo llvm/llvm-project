@@ -35,7 +35,7 @@ extern cl::opt<bool> WriteNewDbgInfoFormat;
 // Backup all of the existing settings that may be modified when
 // PreserveInputDbgFormat=true, so that when the test is finished we return them
 // (and the "preserve" setting) to their original values.
-auto TempSettingChange() {
+static auto SaveDbgInfoFormat() {
   return make_scope_exit(
       [OldPreserveInputDbgFormat = PreserveInputDbgFormat.getValue(),
        OldUseNewDbgInfoFormat = UseNewDbgInfoFormat.getValue(),
@@ -141,7 +141,7 @@ TEST(Local, ReplaceDbgDeclare) {
   // FIXME: PreserveInputDbgFormat is set to true because this test has
   // been written to expect debug intrinsics rather than debug records; use the
   // intrinsic format until we update the test checks.
-  auto SettingGuard = TempSettingChange();
+  auto SettingGuard = SaveDbgInfoFormat();
   PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
 
   // Original C source to get debug info for a local variable:
@@ -525,7 +525,7 @@ struct SalvageDebugInfoTest : ::testing::Test {
     // the intrinsic format until we update the test checks. Note that the
     // temporary setting of this flag only needs to cover the parsing step, not
     // the test body itself.
-    auto SettingGuard = TempSettingChange();
+    auto SettingGuard = SaveDbgInfoFormat();
     PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
 
     M = parseIR(C,
@@ -627,9 +627,10 @@ TEST_F(SalvageDebugInfoTest, RecursiveBlockSimplification) {
 TEST(Local, wouldInstructionBeTriviallyDead) {
   LLVMContext Ctx;
   // FIXME: PreserveInputDbgFormat is set to true because this test has
-  // been written to expect debug intrinsics rather than debug records; use the
-  // intrinsic format until we update the test checks.
-  auto SettingGuard = TempSettingChange();
+  // been written to expect debug intrinsics rather than debug records.
+  // TODO: This test doesn't have a DbgRecord equivalent form so delete
+  // it when debug intrinsics are removed.
+  auto SettingGuard = SaveDbgInfoFormat();
   PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
   std::unique_ptr<Module> M = parseIR(Ctx,
                                       R"(
@@ -723,7 +724,7 @@ TEST(Local, FindDbgUsers) {
   // FIXME: PreserveInputDbgFormat is set to true because this test has
   // been written to expect debug intrinsics rather than debug records; use the
   // intrinsic format until we update the test checks.
-  auto SettingGuard = TempSettingChange();
+  auto SettingGuard = SaveDbgInfoFormat();
   PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
   std::unique_ptr<Module> M = parseIR(Ctx,
                                       R"(
@@ -784,7 +785,7 @@ TEST(Local, ReplaceAllDbgUsesWith) {
   // FIXME: PreserveInputDbgFormat is set to true because this test has
   // been written to expect debug intrinsics rather than debug records; use the
   // intrinsic format until we update the test checks.
-  auto SettingGuard = TempSettingChange();
+  auto SettingGuard = SaveDbgInfoFormat();
   PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
 
   // Note: The datalayout simulates Darwin/x86_64.
@@ -1337,7 +1338,7 @@ TEST(Local, ReplaceDbgVariableRecord) {
   // FIXME: PreserveInputDbgFormat is set to true because this test has
   // been written to expect debug intrinsics rather than debug records; use the
   // intrinsic format until we update the test checks.
-  auto SettingGuard = TempSettingChange();
+  auto SettingGuard = SaveDbgInfoFormat();
   PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
 
   // Test that RAUW also replaces the operands of DbgVariableRecord objects,

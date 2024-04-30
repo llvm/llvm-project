@@ -31,7 +31,7 @@ extern cl::opt<bool> WriteNewDbgInfoFormat;
 // Backup all of the existing settings that may be modified when
 // PreserveInputDbgFormat=true, so that when the test is finished we return them
 // (and the "preserve" setting) to their original values.
-auto TempSettingChange() {
+static auto SaveDbgInfoFormat() {
   return make_scope_exit(
       [OldPreserveInputDbgFormat = PreserveInputDbgFormat.getValue(),
        OldUseNewDbgInfoFormat = UseNewDbgInfoFormat.getValue(),
@@ -1345,7 +1345,7 @@ TEST(IRInstructionMapper, DebugInfoInvisible) {
 
                           declare void @llvm.dbg.value(metadata)
                           !0 = distinct !{!"test\00", i32 10})";
-  auto SettingGuard = TempSettingChange();
+  auto SettingGuard = SaveDbgInfoFormat();
   PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
   LLVMContext Context;
   std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
@@ -1968,7 +1968,7 @@ TEST(IRSimilarityCandidate, IdenticalWithDebug) {
                           declare void @llvm.dbg.value(metadata)
                           !0 = distinct !{!"test\00", i32 10}
                           !1 = distinct !{!"test\00", i32 11})";
-  auto SettingGuard = TempSettingChange();
+  auto SettingGuard = SaveDbgInfoFormat();
   PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
   LLVMContext Context;
   std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
