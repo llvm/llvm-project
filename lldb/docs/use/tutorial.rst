@@ -25,7 +25,7 @@ all commands. The command syntax for basic commands is very simple.
   with a backslash ``\``.
 
 This makes lldb's commands more regular, but it also means you may have to quote
-some arguments in lldb that you wouldn't in gdb.
+some arguments in lldb that you would not in gdb.
 
 There is one other special quote character in lldb - the backtick `````.
 If you put backticks around an argument or option value, lldb will run the text
@@ -40,7 +40,7 @@ will be passed to the command.  So for instance, if ``len`` is a local
 Will receive the value ``5`` for the count option, rather than the string ``len``.
 
 Options can be placed anywhere on the command line, but if the arguments begin
-with a ``-`` then you have to tell lldb that you're done with options for the
+with a ``-`` then you have to tell lldb that you are done with options for the
 current command by adding an option termination: ``--``.
 
 So for instance, if you want to launch a process and give the ``process launch``
@@ -171,15 +171,15 @@ and then have to type them all the way out.
 However, users are free to customize lldb's command set however they like, and
 since lldb reads the file ``~/.lldbinit`` at startup, you can store all your
 aliases there and they will be generally available to you. Your aliases are
-also documented in the ``help`` command so you can remind yourself of what you've
+also documented in the ``help`` command so you can remind yourself of what you have
 set up.
 
 One alias of note that we do include by popular demand is a weak emulator of
-gdb's ``break`` command. It doesn't try to do everything that gdb's break command
-does (for instance, it doesn't handle ``foo.c::bar``). But it mostly works, and
+gdb's ``break`` command. It does not try to do everything that gdb's break command
+does (for instance, it does not handle ``foo.c::bar``). But it mostly works, and
 makes the transition easier. Also, by popular demand, it is aliased to ``b``. If you
 actually want to learn the lldb command set natively, that means it will get in
-the way of the rest of the breakpoint commands. Fortunately, if you don't like
+the way of the rest of the breakpoint commands. Fortunately, if you do not like
 one of our aliases, you can easily get rid of it by running, for example:
 
 ::
@@ -202,7 +202,7 @@ For instance, the ``expression`` command is a "raw" command for obvious reasons.
 The ``help`` output for a command will tell you if it is "raw" or not, so you
 know what to expect. The one thing you have to watch out for is that since raw
 commands still can have options, if your command string has dashes in it,
-you'll have to indicate these are not option markers by putting ``--`` after the
+you will have to indicate these are not option markers by putting ``--`` after the
 command name, but before your command string.
 
 lldb also has a built-in Python interpreter, which is accessible by the
@@ -283,7 +283,7 @@ Which means that lldb will always make a breakpoint from your specification, eve
 could not find any locations that match the specification. You can tell whether
 the expression was resolved or not by checking the locations field in
 ``breakpoint list``, and we report the breakpoint as ``pending`` when you set it so
-you can tell you've made a typo more easily, if that was indeed the reason no
+you can tell you have made a typo more easily, if that was indeed the reason no
 locations were found:
 
 ::
@@ -359,7 +359,7 @@ a group. So when you make the breakpoint you would do:
 
    (lldb) breakpoint set -N SelfNil
 
-Then when you've made all your breakpoints, you can set up or modify the options
+Then when you have made all your breakpoints, you can set up or modify the options
 using the name to collect all the relevant breakpoints.
 
 ::
@@ -367,7 +367,7 @@ using the name to collect all the relevant breakpoints.
    (lldb) breakpoint modify -c "self == nil" -C bt --auto-continue SelfNil
 
 That is better, but suffers from the problem that when new breakpoints get
-added, they don't pick up these modifications, and the options only exist in
+added, they do not pick up these modifications, and the options only exist in
 the context of actual breakpoints, so they are hard to store and reuse.
 
 An even better solution is to make a fully configured breakpoint name:
