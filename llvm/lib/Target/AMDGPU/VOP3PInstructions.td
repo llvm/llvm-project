@@ -2027,6 +2027,9 @@ multiclass VOP3P_Real_gfx12_gfx13<bits<7> op> :
 
 multiclass VOP3P_Real_gfx1210<bits<7> op> : VOP3P_Real_Base<GFX12_10Gen, op>;
 
+multiclass VOP3P_Real_gfx1210_gfx13<bits<7> op> :
+  VOP3P_Real_gfx1210<op>, VOP3P_Real_Base<GFX13Gen, op>;
+
 multiclass VOP3P_Real_with_name_gfx12_gfx13<bits<7> op,
                           string backing_ps_name = NAME,
                           string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> :
@@ -2044,23 +2047,23 @@ defm V_DOT4_F32_BF8_FP8 : VOP3P_Realtriple<GFX12Gen, 0x25>;
 defm V_DOT4_F32_FP8_FP8 : VOP3P_Realtriple<GFX12Gen, 0x26>;
 defm V_DOT4_F32_BF8_BF8 : VOP3P_Realtriple<GFX12Gen, 0x27>;
 
-defm V_PK_FMA_F32 : VOP3P_Real_gfx12<0x1f>;
-defm V_PK_MUL_F32 : VOP3P_Real_gfx12<0x28>;
-defm V_PK_ADD_F32 : VOP3P_Real_gfx12<0x29>;
+defm V_PK_FMA_F32 : VOP3P_Real_gfx12_gfx13<0x1f>;
+defm V_PK_MUL_F32 : VOP3P_Real_gfx12_gfx13<0x28>;
+defm V_PK_ADD_F32 : VOP3P_Real_gfx12_gfx13<0x29>;
 
-defm V_PK_ADD_MAX_I16  : VOP3P_Real_gfx1210<0x14>;
-defm V_PK_ADD_MAX_U16  : VOP3P_Real_gfx1210<0x15>;
-defm V_PK_ADD_MIN_I16  : VOP3P_Real_gfx1210<0x2d>;
-defm V_PK_ADD_MIN_U16  : VOP3P_Real_gfx1210<0x2e>;
-defm V_PK_MAX3_I16     : VOP3P_Real_gfx1210<0x2f>;
-defm V_PK_MAX3_U16     : VOP3P_Real_gfx1210<0x30>;
-defm V_PK_MIN3_I16     : VOP3P_Real_gfx1210<0x31>;
-defm V_PK_MIN3_U16     : VOP3P_Real_gfx1210<0x32>;
-defm V_PK_FMA_BF16     : VOP3P_Real_gfx1210<0x11>;
-defm V_PK_ADD_BF16     : VOP3P_Real_gfx1210<0x23>;
-defm V_PK_MUL_BF16     : VOP3P_Real_gfx1210<0x2a>;
-defm V_PK_MIN_NUM_BF16 : VOP3P_Real_gfx1210<0x2b>;
-defm V_PK_MAX_NUM_BF16 : VOP3P_Real_gfx1210<0x2c>;
+defm V_PK_ADD_MAX_I16  : VOP3P_Real_gfx1210_gfx13<0x14>;
+defm V_PK_ADD_MAX_U16  : VOP3P_Real_gfx1210_gfx13<0x15>;
+defm V_PK_ADD_MIN_I16  : VOP3P_Real_gfx1210_gfx13<0x2d>;
+defm V_PK_ADD_MIN_U16  : VOP3P_Real_gfx1210_gfx13<0x2e>;
+defm V_PK_MAX3_I16     : VOP3P_Real_gfx1210_gfx13<0x2f>;
+defm V_PK_MAX3_U16     : VOP3P_Real_gfx1210_gfx13<0x30>;
+defm V_PK_MIN3_I16     : VOP3P_Real_gfx1210_gfx13<0x31>;
+defm V_PK_MIN3_U16     : VOP3P_Real_gfx1210_gfx13<0x32>;
+defm V_PK_FMA_BF16     : VOP3P_Real_gfx1210_gfx13<0x11>;
+defm V_PK_ADD_BF16     : VOP3P_Real_gfx1210_gfx13<0x23>;
+defm V_PK_MUL_BF16     : VOP3P_Real_gfx1210_gfx13<0x2a>;
+defm V_PK_MIN_NUM_BF16 : VOP3P_Real_gfx1210_gfx13<0x2b>;
+defm V_PK_MAX_NUM_BF16 : VOP3P_Real_gfx1210_gfx13<0x2c>;
 
 defm V_WMMA_LD_SCALE_PAIRED_B32 : VOP3P_Real_gfx1210<0x35>;
 

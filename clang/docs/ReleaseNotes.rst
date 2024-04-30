@@ -95,6 +95,18 @@ C++14 Feature Support
 - Sized deallocation is enabled by default in C++14 onwards. The user may specify
   ``-fno-sized-deallocation`` to disable it if there are some regressions.
 
+C++17 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
+- Clang now exposes ``__GCC_DESTRUCTIVE_SIZE`` and ``__GCC_CONSTRUCTIVE_SIZE``
+  predefined macros to support standard library implementations of
+  ``std::hardware_destructive_interference_size`` and
+  ``std::hardware_constructive_interference_size``, respectively. These macros
+  are predefined in all C and C++ language modes. The values the macros
+  expand to are not stable between releases of Clang and do not need to match
+  the values produced by GCC, so these macros should not be used from header
+  files because they may not be stable across multiple TUs (the values may vary
+  based on compiler version as well as CPU tuning). #GH60174
+
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
