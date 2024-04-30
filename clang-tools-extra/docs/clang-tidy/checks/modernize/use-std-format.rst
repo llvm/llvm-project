@@ -45,7 +45,7 @@ Options
     unsigned int u = 0xffffffff;
     return strprintf("%d %u\n", i, u);
 
-  would be converted to:
+  would be converted to
 
   .. code-block:: c++
 
