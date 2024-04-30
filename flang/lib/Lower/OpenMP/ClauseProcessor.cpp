@@ -780,18 +780,37 @@ bool ClauseProcessor::processTargetDepend(
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   // Create the new omp.task op.
-  // As per the OpenMP Spec a target directive creates a mergeable 'target
-  // task'
+  // Whether we create a mergeable task or not depends upon the presence of the
+  // nowait clause on the target construct.
+  // If the nowait clause is not present on the target construct, then as per
+  // the spec, the target task is an included task. We add if(0) clause to the
+  // task that we create. A task with an if clause that evaluates to false is
+  // undeferred and because this value is known at compile time, it is an
+  // included task. And an included task is also mergeable. So, we don't bother
+  // with the mergeable clause here. If the nowait clause is present on the
+  // target construct, then as per the spec, the execution of the target task
+  // may be deferred. This makes it trivially not mergeable.
+  mlir::omp::NowaitClauseOps nowaitClauseOp;
+  markClauseOccurrence<omp::clause::Nowait>(nowaitClauseOp.nowaitAttr);
+
   mlir::omp::TaskOp taskOp = firOpBuilder.create<mlir::omp::TaskOp>(
-      currentLocation, /*if_expr*/ mlir::Value(),
+      currentLocation,
+      /*if_expr*/ nowaitClauseOp.nowaitAttr
+          ? firOpBuilder.createBool(currentLocation, true)
+          : firOpBuilder.createBool(currentLocation, false),
       /*final_expr*/ mlir::Value(), /*untied*/ mlir::UnitAttr(),
-      /*mergeable*/ firOpBuilder.getUnitAttr(),
+      /*mergeable*/ mlir::UnitAttr(),
       /*in_reduction_vars*/ mlir::ValueRange(), /*in_reductions*/ nullptr,
       /*priority*/ mlir::Value(),
       mlir::ArrayAttr::get(converter.getFirOpBuilder().getContext(),
                            clauseOps.dependTypeAttrs),
       clauseOps.dependVars, /*allocate_vars*/ mlir::ValueRange(),
       /*allocate_vars*/ mlir::ValueRange());
+
+  // Clear the dependencies so that the subsequent omp.target op doesn't have
+  // dependencies
+  clauseOps.dependTypeAttrs.clear();
+  clauseOps.dependVars.clear();
 
   firOpBuilder.createBlock(&taskOp.getRegion());
   firOpBuilder.create<mlir::omp::TerminatorOp>(currentLocation);
