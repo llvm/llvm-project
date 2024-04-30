@@ -194,6 +194,11 @@ def TuneR82 : SubtargetFeature<"cortex-r82", "ARMProcFamily",
                                "Cortex-R82 ARM processors", [
                                FeaturePostRAScheduler]>;
 
+def TuneR82AE : SubtargetFeature<"cortex-r82ae", "ARMProcFamily",
+                                 "CortexR82AE",
+                                 "Cortex-R82-AE ARM processors",
+                                 [FeaturePostRAScheduler]>;
+
 def TuneX1 : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
                                   "Cortex-X1 ARM processors", [
                                   FeatureCmpBccFusion,
@@ -667,7 +672,13 @@ def ProcessorFeatures {
   list<SubtargetFeature> R82  = [HasV8_0rOps, FeaturePerfMon, FeatureFullFP16,
                                  FeatureFP16FML, FeatureSSBS, FeaturePredRes,
                                  FeatureSB, FeatureRDM, FeatureDotProd,
-                                 FeatureComplxNum, FeatureJS];
+                                 FeatureComplxNum, FeatureJS,
+                                 FeatureCacheDeepPersist];
+  list<SubtargetFeature> R82AE = [HasV8_0rOps, FeaturePerfMon, FeatureFullFP16,
+                                  FeatureFP16FML, FeatureSSBS, FeaturePredRes,
+                                  FeatureSB, FeatureRDM, FeatureDotProd,
+                                  FeatureComplxNum, FeatureJS,
+                                  FeatureCacheDeepPersist];
   list<SubtargetFeature> X1   = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
                                  FeatureNEON, FeatureRCPC, FeaturePerfMon,
                                  FeatureSPE, FeatureFullFP16, FeatureDotProd,
@@ -854,6 +865,8 @@ def : ProcessorModel<"cortex-a720ae", NeoverseN2Model, ProcessorFeatures.A720AE,
                      [TuneA720AE]>;
 def : ProcessorModel<"cortex-r82", CortexA55Model, ProcessorFeatures.R82,
                      [TuneR82]>;
+def : ProcessorModel<"cortex-r82ae", CortexA55Model, ProcessorFeatures.R82AE,
+                     [TuneR82AE]>;
 def : ProcessorModel<"cortex-x1", CortexA57Model, ProcessorFeatures.X1,
                      [TuneX1]>;
 def : ProcessorModel<"cortex-x1c", CortexA57Model, ProcessorFeatures.X1C,
