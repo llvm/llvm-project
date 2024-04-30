@@ -144,14 +144,6 @@ OpenACCPrivateClause *OpenACCPrivateClause::Create(const ASTContext &C,
   return new (Mem) OpenACCPrivateClause(BeginLoc, LParenLoc, VarList, EndLoc);
 }
 
-// ValueDecl *getDeclFromExpr(Expr *RefExpr) {
-//   //RefExpr = RefExpr->IgnoreParenImpCasts();
-//
-//   ////while (isa<ArraySubscriptExpr, ArraySectionExpr>(RefExpr)) {
-//   ////}
-//   // TODO:
-// }
-
 //===----------------------------------------------------------------------===//
 //  OpenACC clauses printing methods
 //===----------------------------------------------------------------------===//
