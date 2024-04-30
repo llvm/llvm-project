@@ -18,8 +18,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t data_size) {
   static constexpr size_t MAX_SIZE = 1024;
   static ProtectedPages pages;
   static const Page write_buffer = pages.GetPageA().WithAccess(PROT_WRITE);
-  // We fill 'size' with data coming from lib_fuzzer, this limits exploration to
-  // 2 bytes.
+  // We fill 'size' and 'fill_char' with data coming from lib_fuzzer, this
+  // limits exploration to 3 bytes.
   uint16_t size = 0;
   uint8_t fill_char = 0;
   if (data_size != sizeof(size) + sizeof(fill_char))
@@ -28,10 +28,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t data_size) {
   __builtin_memcpy(&fill_char, data + sizeof(size), sizeof(fill_char));
   if (size >= MAX_SIZE || size >= GetPageSize())
     return 0;
-  // We cross-check the function from two sources and two destinations.
-  // The first of them (bottom) is always page aligned.
-  // The second one (top) is not necessarily aligned.
-  // Both sources and destinations are checked for out of bound accesses.
+  // We cross-check the function with two destinations.
+  // - The first of them (bottom) is always page aligned and faults when
+  //   accessing bytes before it.
+  // - The second one (top) is not necessarily aligned and faults when accessing
+  //   bytes after it.
   uint8_t *destinations[2] = {write_buffer.bottom(size),
                               write_buffer.top(size)};
   for (uint8_t *dst : destinations) {

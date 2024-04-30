@@ -36,10 +36,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t data_size) {
   __builtin_memcpy(&size, data, sizeof(size));
   if (size >= MAX_SIZE || size >= GetPageSize())
     return 0;
-  // We cross-check the function from two sources and two destinations.
-  // The first of them (bottom) is always page aligned.
-  // The second one (top) is not necessarily aligned.
-  // Both sources and destinations are checked for out of bound accesses.
+  // We cross-check the function with two sources and two destinations.
+  //  - The first of them (bottom) is always page aligned and faults when
+  //    accessing bytes before it.
+  //  - The second one (top) is not necessarily aligned and faults when
+  //    accessing bytes after it.
   const uint8_t *sources[2] = {read_buffer.bottom(size), read_buffer.top(size)};
   uint8_t *destinations[2] = {write_buffer.bottom(size),
                               write_buffer.top(size)};
