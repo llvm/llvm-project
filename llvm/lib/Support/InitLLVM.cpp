@@ -43,26 +43,6 @@ InitLLVM::InitLLVM(int &Argc, const char **&Argv,
   assert(!Initialized && "InitLLVM was already initialized!");
   Initialized = true;
 #endif
-#ifdef _WIN32
-  // Avoid searching user directories for shared libraries:
-  //   Avoid searching the current directory:
-  (void)SetDllDirectoryA("");
-  wchar_t CurrentPath[MAX_PATH];
-  (void)GetCurrentDirectory(MAX_PATH, CurrentPath);
-  //   Avoid searching the directory from which the application is loaded:
-  wchar_t Appname[MAX_PATH];
-  (void)GetModuleFileName(NULL, Appname, MAX_PATH);
-  std::array<wchar_t, MAX_PATH> AN;
-  std::copy(std::begin(Appname), std::end(Appname), std::begin(AN));
-  std::string LP{AN.begin(), AN.end()};
-  LP = LP.substr(0, LP.rfind('\\'));
-  auto Path = std::wstring(LP.begin(), LP.end());
-  auto LoadPath = Path.c_str();
-  (void)SetCurrentDirectory(LoadPath);
-  (void)SetDllDirectoryA("");
-  (void)SetCurrentDirectory(CurrentPath); // reset cwd
-  // FIXME: check for errors
-#endif
 #ifdef __MVS__
   // Bring stdin/stdout/stderr into a known state.
   sys::AddSignalHandler(CleanupStdHandles, nullptr);
