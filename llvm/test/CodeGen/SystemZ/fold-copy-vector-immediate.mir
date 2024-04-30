@@ -13,8 +13,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64bit = COPY $r2d
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:addr64bit = COPY [[COPY]]
     ; CHECK-NEXT: [[VGBM:%[0-9]+]]:vr128bit = VGBM 0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr128bit = COPY [[VGBM]]
-    ; CHECK-NEXT: $r0q = COPY [[COPY2]]
+    ; CHECK-NEXT: [[LGHI:%[0-9]+]]:gr64bit = LGHI 0
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:gr128bit = REG_SEQUENCE [[LGHI]], %subreg.subreg_h64, [[LGHI]], %subreg.subreg_l64
+    ; CHECK-NEXT: $r0q = COPY [[REG_SEQUENCE]]
     ; CHECK-NEXT: Return implicit $r0q
     %0:gr64bit = COPY $r2d
     %1:addr64bit = COPY %0
@@ -127,8 +128,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64bit = COPY $r2d
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:addr64bit = COPY [[COPY]]
     ; CHECK-NEXT: [[VGBM:%[0-9]+]]:vr128bit = VGBM 1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gr128bit = COPY [[VGBM]]
-    ; CHECK-NEXT: $r0q = COPY [[COPY2]]
+    ; CHECK-NEXT: [[LGHI:%[0-9]+]]:gr64bit = LGHI 1
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:gr128bit = REG_SEQUENCE [[LGHI]], %subreg.subreg_h64, [[LGHI]], %subreg.subreg_l64
+    ; CHECK-NEXT: $r0q = COPY [[REG_SEQUENCE]]
     ; CHECK-NEXT: Return implicit $r0q
     %0:gr64bit = COPY $r2d
     %1:addr64bit = COPY %0
