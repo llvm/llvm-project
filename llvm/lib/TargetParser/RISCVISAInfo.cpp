@@ -478,9 +478,7 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
                                "failed to parse major version number");
     ISAInfo->addExtension(ExtName, {MajorVersion, MinorVersion});
   }
-  ISAInfo->updateFLen();
-  ISAInfo->updateMinVLen();
-  ISAInfo->updateMaxELen();
+  ISAInfo->updateImpliedLengths();
   return std::move(ISAInfo);
 }
 
@@ -907,28 +905,14 @@ void RISCVISAInfo::updateCombination() {
   } while (MadeChange);
 }
 
-void RISCVISAInfo::updateFLen() {
-  FLen = 0;
+void RISCVISAInfo::updateImpliedLengths() {
+  assert(FLen == 0);
   // TODO: Handle q extension.
   if (Exts.count("d"))
     FLen = 64;
   else if (Exts.count("f"))
     FLen = 32;
-}
 
-void RISCVISAInfo::updateMinVLen() {
-  for (auto const &Ext : Exts) {
-    StringRef ExtName = Ext.first;
-    bool IsZvlExt = ExtName.consume_front("zvl") && ExtName.consume_back("b");
-    if (IsZvlExt) {
-      unsigned ZvlLen;
-      if (!ExtName.getAsInteger(10, ZvlLen))
-        MinVLen = std::max(MinVLen, ZvlLen);
-    }
-  }
-}
-
-void RISCVISAInfo::updateMaxELen() {
   assert(MaxELenFp == 0 && MaxELen == 0);
   if (Exts.count("v")) {
     MaxELenFp = std::max(MaxELenFp, 64u);
@@ -951,6 +935,17 @@ void RISCVISAInfo::updateMaxELen() {
       unsigned ZveELen;
       if (!ExtName.getAsInteger(10, ZveELen))
         MaxELen = std::max(MaxELen, ZveELen);
+    }
+  }
+
+  // FIXME: Merge these loops.
+  for (auto const &Ext : Exts) {
+    StringRef ExtName = Ext.first;
+    bool IsZvlExt = ExtName.consume_front("zvl") && ExtName.consume_back("b");
+    if (IsZvlExt) {
+      unsigned ZvlLen;
+      if (!ExtName.getAsInteger(10, ZvlLen))
+        MinVLen = std::max(MinVLen, ZvlLen);
     }
   }
 }
@@ -976,9 +971,7 @@ llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 RISCVISAInfo::postProcessAndChecking(std::unique_ptr<RISCVISAInfo> &&ISAInfo) {
   ISAInfo->updateImplication();
   ISAInfo->updateCombination();
-  ISAInfo->updateFLen();
-  ISAInfo->updateMinVLen();
-  ISAInfo->updateMaxELen();
+  ISAInfo->updateImpliedLengths();
 
   if (Error Result = ISAInfo->checkDependency())
     return std::move(Result);
