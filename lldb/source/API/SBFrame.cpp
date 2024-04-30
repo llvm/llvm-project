@@ -1244,7 +1244,8 @@ lldb::SBStructuredData SBFrame::GetLanguageSpecificData() const {
   auto *process = exe_ctx.GetProcessPtr();
   auto *frame = exe_ctx.GetFramePtr();
   if (process && frame)
-    if (auto *runtime = process->GetLanguageRuntime(frame->GuessLanguage()))
+    if (auto *runtime = process->GetLanguageRuntime(
+            frame->GuessLanguage().AsLanguageType()))
       if (auto *data = runtime->GetLanguageSpecificData(*frame))
         return SBStructuredData(*data);
 

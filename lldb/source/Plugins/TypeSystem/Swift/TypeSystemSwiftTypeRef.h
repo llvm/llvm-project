@@ -531,7 +531,7 @@ public:
   /// Forwards to SwiftASTContext.
   UserExpression *GetUserExpression(llvm::StringRef expr,
                                     llvm::StringRef prefix,
-                                    lldb::LanguageType language,
+                                    SourceLanguage language,
                                     Expression::ResultType desired_type,
                                     const EvaluateExpressionOptions &options,
                                     ValueObject *ctx_obj) override;

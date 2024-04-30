@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/ValueObjectDynamicValue.h"
+#include "lldb/API/SBLanguages.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -168,7 +169,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
   // An Objective-C object inside a Swift frame.
   if (known_type == eLanguageTypeObjC)
     if ((exe_ctx.GetFramePtr() &&
-         exe_ctx.GetFramePtr()->GetLanguage() == lldb::eLanguageTypeSwift) ||
+         exe_ctx.GetFramePtr()->GetLanguage().name == eLanguageNameSwift) ||
         (exe_ctx.GetTargetPtr() && exe_ctx.GetTargetPtr()->IsSwiftREPL())) {
       runtime = process->GetLanguageRuntime(lldb::eLanguageTypeSwift);
       if (runtime)

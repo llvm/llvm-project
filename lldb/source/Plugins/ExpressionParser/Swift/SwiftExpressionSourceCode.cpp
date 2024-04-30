@@ -11,6 +11,7 @@
 
 #include "Plugins/ExpressionParser/Swift/SwiftASTManipulator.h"
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#include "lldb/API/SBLanguages.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Target.h"
@@ -554,8 +555,8 @@ uint32_t SwiftExpressionSourceCode::GetNumBodyLines() {
 }
 
 Status SwiftExpressionSourceCode::GetText(
-    std::string &text, lldb::LanguageType wrapping_language,
-    bool needs_object_ptr, bool static_method, bool is_class, bool weak_self,
+    std::string &text, SourceLanguage wrapping_language, bool needs_object_ptr,
+    bool static_method, bool is_class, bool weak_self,
     const EvaluateExpressionOptions &options,
     const std::optional<SwiftLanguageRuntime::GenericSignature> &generic_sig,
     ExecutionContext &exe_ctx, uint32_t &first_body_line,
@@ -570,7 +571,7 @@ Status SwiftExpressionSourceCode::GetText(
     const uint32_t pound_line = options.GetPoundLineLine();
     StreamString pound_body;
     if (pound_file && pound_line) {
-      if (wrapping_language == eLanguageTypeSwift) {
+      if (wrapping_language.name == eLanguageNameSwift) {
         pound_body.Printf("#sourceLocation(file: \"%s\", line: %u)\n%s",
                           pound_file, pound_line, body);
       } else {
@@ -579,7 +580,7 @@ Status SwiftExpressionSourceCode::GetText(
       body = pound_body.GetString().data();
     }
 
-    if (wrapping_language != eLanguageTypeSwift) {
+    if (wrapping_language.name != eLanguageNameSwift) {
       status.SetErrorString("language is not Swift");
       return status;
     }

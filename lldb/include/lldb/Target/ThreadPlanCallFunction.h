@@ -97,7 +97,7 @@ public:
 
   virtual void SetStopOthers(bool new_value) override;
 
-  lldb::LanguageType GetExpressionLanguage() { return m_expression_language; }
+  SourceLanguage GetExpressionLanguage() { return m_expression_language; }
 
   bool HitErrorBackstop() { return m_hit_error_backstop; }
 
@@ -148,7 +148,7 @@ protected:
   bool m_should_clear_cxx_exception_bp;
   lldb::addr_t m_stop_address; // This is the address we stopped at.  Also set
                                // in DoTakedown;
-  lldb::LanguageType
+  SourceLanguage
       m_expression_language; // Set from the incoming ExpressionOptions.
   lldb::BreakpointSP m_error_backstop_bp_sp;
   bool m_hit_error_backstop;

@@ -43,7 +43,7 @@ public:
   uint32_t GetNumBodyLines();
 
   Status GetText(
-      std::string &text, lldb::LanguageType wrapping_language,
+      std::string &text, SourceLanguage wrapping_language,
       bool needs_object_ptr, bool static_method, bool is_class, bool weak_self,
       const EvaluateExpressionOptions &options,
       const std::optional<SwiftLanguageRuntime::GenericSignature> &generic_sig,

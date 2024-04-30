@@ -270,7 +270,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
     // the error result...
     Target *target = exe_ctx.GetTargetPtr();
     PersistentExpressionState *expression_state =
-        target->GetPersistentExpressionStateForLanguage(Language());
+        target->GetPersistentExpressionStateForLanguage(LanguageType());
     if (expression_state)
       result = expression_state->CreatePersistentVariable(
           error_backstop_result_sp);
