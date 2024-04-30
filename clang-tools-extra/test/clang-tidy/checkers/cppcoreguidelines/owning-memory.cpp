@@ -309,6 +309,8 @@ struct HeapArray {                                          // Ok, since destruc
 
   HeapArray(HeapArray &&other) : _data(other._data), size(other.size) { // Ok
     other._data = nullptr;                                              // Ok
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: expected assignment source to be of type 'gsl::owner<>'; got 'std::nullptr_t'
+    // FIXME: This warning is emitted because an ImplicitCastExpr for the NullToPointer conversion isn't created for dependent types.
     other.size = 0;
   }
 

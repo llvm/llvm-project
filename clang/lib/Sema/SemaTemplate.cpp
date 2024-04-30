@@ -210,10 +210,11 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
   AssumedTemplateKind AssumedTemplate;
   LookupResult R(*this, TName, Name.getBeginLoc(), LookupOrdinaryName);
   if (LookupTemplateName(R, S, SS, ObjectType, EnteringContext,
-                         MemberOfUnknownSpecialization, SourceLocation(),
+                         /*RequiredTemplate=*/SourceLocation(),
                          &AssumedTemplate,
                          /*AllowTypoCorrection=*/!Disambiguation))
     return TNK_Non_template;
+  MemberOfUnknownSpecialization = R.wasNotFoundInCurrentInstantiation();
 
   if (AssumedTemplate != AssumedTemplateKind::None) {
     TemplateResult = TemplateTy::make(Context.getAssumedTemplateName(TName));
@@ -320,15 +321,12 @@ TemplateNameKind Sema::isTemplateName(Scope *S,
 bool Sema::isDeductionGuideName(Scope *S, const IdentifierInfo &Name,
                                 SourceLocation NameLoc, CXXScopeSpec &SS,
                                 ParsedTemplateTy *Template /*=nullptr*/) {
-  bool MemberOfUnknownSpecialization = false;
-
   // We could use redeclaration lookup here, but we don't need to: the
   // syntactic form of a deduction guide is enough to identify it even
   // if we can't look up the template name at all.
   LookupResult R(*this, DeclarationName(&Name), NameLoc, LookupOrdinaryName);
   if (LookupTemplateName(R, S, SS, /*ObjectType*/ QualType(),
-                         /*EnteringContext*/ false,
-                         MemberOfUnknownSpecialization))
+                         /*EnteringContext*/ false))
     return false;
 
   if (R.empty()) return false;
@@ -374,11 +372,8 @@ bool Sema::DiagnoseUnknownTemplateName(const IdentifierInfo &II,
   return true;
 }
 
-bool Sema::LookupTemplateName(LookupResult &Found,
-                              Scope *S, CXXScopeSpec &SS,
-                              QualType ObjectType,
-                              bool EnteringContext,
-                              bool &MemberOfUnknownSpecialization,
+bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
+                              QualType ObjectType, bool EnteringContext,
                               RequiredTemplateKind RequiredTemplate,
                               AssumedTemplateKind *ATK,
                               bool AllowTypoCorrection) {
@@ -391,7 +386,6 @@ bool Sema::LookupTemplateName(LookupResult &Found,
   Found.setTemplateNameLookup(true);
 
   // Determine where to perform name lookup
-  MemberOfUnknownSpecialization = false;
   DeclContext *LookupCtx = nullptr;
   bool IsDependent = false;
   if (!ObjectType.isNull()) {
@@ -548,7 +542,7 @@ bool Sema::LookupTemplateName(LookupResult &Found,
   FilterAcceptableTemplateNames(Found, AllowFunctionTemplatesInLookup);
   if (Found.empty()) {
     if (IsDependent) {
-      MemberOfUnknownSpecialization = true;
+      Found.setNotFoundInCurrentInstantiation();
       return false;
     }
 
@@ -5595,11 +5589,9 @@ Sema::BuildQualifiedTemplateIdExpr(CXXScopeSpec &SS,
       RequireCompleteDeclContext(SS, DC))
     return BuildDependentDeclRefExpr(SS, TemplateKWLoc, NameInfo, TemplateArgs);
 
-  bool MemberOfUnknownSpecialization;
   LookupResult R(*this, NameInfo, LookupOrdinaryName);
   if (LookupTemplateName(R, (Scope *)nullptr, SS, QualType(),
-                         /*Entering*/false, MemberOfUnknownSpecialization,
-                         TemplateKWLoc))
+                         /*Entering*/ false, TemplateKWLoc))
     return ExprError();
 
   if (R.isAmbiguous())
@@ -5720,14 +5712,13 @@ TemplateNameKind Sema::ActOnTemplateName(Scope *S,
     DeclarationNameInfo DNI = GetNameFromUnqualifiedId(Name);
     LookupResult R(*this, DNI.getName(), Name.getBeginLoc(),
                    LookupOrdinaryName);
-    bool MOUS;
     // Tell LookupTemplateName that we require a template so that it diagnoses
     // cases where it finds a non-template.
     RequiredTemplateKind RTK = TemplateKWLoc.isValid()
                                    ? RequiredTemplateKind(TemplateKWLoc)
                                    : TemplateNameIsRequired;
-    if (!LookupTemplateName(R, S, SS, ObjectType.get(), EnteringContext, MOUS,
-                            RTK, nullptr, /*AllowTypoCorrection=*/false) &&
+    if (!LookupTemplateName(R, S, SS, ObjectType.get(), EnteringContext, RTK,
+                            /*ATK=*/nullptr, /*AllowTypoCorrection=*/false) &&
         !R.isAmbiguous()) {
       if (LookupCtx)
         Diag(Name.getBeginLoc(), diag::err_no_member)
@@ -5816,7 +5807,7 @@ bool Sema::CheckTemplateTypeArgument(
 
     if (auto *II = NameInfo.getName().getAsIdentifierInfo()) {
       LookupResult Result(*this, NameInfo, LookupOrdinaryName);
-      LookupParsedName(Result, CurScope, &SS);
+      LookupParsedName(Result, CurScope, &SS, /*ObjectType=*/QualType());
 
       if (Result.getAsSingle<TypeDecl>() ||
           Result.getResultKind() ==
@@ -11190,7 +11181,8 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
                            : TSK_ExplicitInstantiationDeclaration;
 
   LookupResult Previous(*this, NameInfo, LookupOrdinaryName);
-  LookupParsedName(Previous, S, &D.getCXXScopeSpec());
+  LookupParsedName(Previous, S, &D.getCXXScopeSpec(),
+                   /*ObjectType=*/QualType());
 
   if (!R->isFunctionType()) {
     // C++ [temp.explicit]p1:
