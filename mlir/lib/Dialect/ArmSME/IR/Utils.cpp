@@ -153,10 +153,10 @@ OpOperand *getTileOpOperand(arm_sme::ArmSMETileOpInterface tileOp) {
   auto isTileOperandType = [](OpOperand &operand) {
     return arm_sme::isValidSMETileVectorType(operand.get().getType());
   };
-  OpOperand *tileOperand =
-      llvm::find_if(tileOp->getOpOperands(), isTileOperandType);
   assert(llvm::count_if(tileOp->getOpOperands(), isTileOperandType) <= 1 &&
          "expected at most one tile operand");
+  OpOperand *tileOperand =
+      llvm::find_if(tileOp->getOpOperands(), isTileOperandType);
   if (tileOperand == tileOp->getOpOperands().end())
     return nullptr;
   return tileOperand;

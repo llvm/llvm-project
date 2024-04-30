@@ -5,10 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file declares the Target dialect for ArmSME in MLIR.
-//
-//===----------------------------------------------------------------------===//
 
 #ifndef MLIR_DIALECT_ARMSME_OPINTERFACES_H
 #define MLIR_DIALECT_ARMSME_OPINTERFACES_H

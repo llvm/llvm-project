@@ -131,7 +131,7 @@ static ArrayRef<TileMask> getMasks(ArmSMETileType type) {
 
 class TileAllocator {
 public:
-  /// Allocates and returns a tile ID.
+  /// Allocates and returns a tile ID. Fails if there are no tiles left.
   FailureOr<unsigned> allocateTileId(ArmSMETileType tileType) {
     auto masks = getMasks(tileType);
     for (auto [tileId, tileMask] : llvm::enumerate(masks)) {
@@ -198,7 +198,7 @@ void splitCondBranches(IRRewriter &rewriter, FunctionOpInterface function) {
   }
 }
 
-/// Inserts tile copies `cf.br` operations.
+/// Inserts tile copies at `cf.br` operations.
 void insertCopiesAtBranches(IRRewriter &rewriter,
                             FunctionOpInterface function) {
   splitCondBranches(rewriter, function);
@@ -278,10 +278,8 @@ generateOperationNumbering(FunctionOpInterface function) {
       // This is only correct if all ArmSME have been converted to CF.
 #ifndef NDEBUG
       op.walk([&](ArmSMETileOpInterface nestedOp) {
-        if (&op != nestedOp.getOperation()) {
-          assert(false &&
-                 "ArmSME tile allocation does not support nested regions");
-        }
+        assert(&op == nestedOp.getOperation() &&
+               "ArmSME tile allocation does not support nested regions");
       });
 #endif
       operationToIndexMap.try_emplace(&op, index++);
