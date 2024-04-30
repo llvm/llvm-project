@@ -429,16 +429,16 @@ private:
 // A marker for a potential spill location for another input section. This
 // broadly acts as if it were the original section until address assignment.
 // Then it is either replaced with the real input section or removed.
-class SpillInputSection : public InputSection {
+class PotentialSpillSection : public InputSection {
 public:
   // The containing input section description; used to quickly replace this stub
   // with the actual section.
   InputSectionDescription *isd;
 
-  // Next spill location for the same source input section.
-  SpillInputSection *next = nullptr;
+  // Next potential spill location for the same source input section.
+  PotentialSpillSection *next = nullptr;
 
-  SpillInputSection(InputSectionBase *source, InputSectionDescription *cmd);
+  PotentialSpillSection(InputSectionBase *source, InputSectionDescription *cmd);
 
   static bool classof(const SectionBase *sec) {
     return sec->kind() == InputSectionBase::Spill;

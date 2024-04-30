@@ -1494,7 +1494,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
 
   // Sizes are no longer allowed to grow, so all allowable spills have been
   // taken. Remove any leftover potential spills.
-  script->eraseSpillSections();
+  script->erasePotentialSpillSections();
 }
 
 // If Input Sections have been shrunk (basic block sections) then

@@ -593,18 +593,19 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
       if (!spills.contains(sec))
         continue;
 
-      SpillInputSection *sis = make<SpillInputSection>(
+      PotentialSpillSection *pss = make<PotentialSpillSection>(
           sec, const_cast<InputSectionDescription *>(cmd));
 
       // Append the spill input section to the list for the input section,
       // creating it if necessary.
-      auto res = spillLists.try_emplace(sec, SpillList{sis, sis});
+      auto res =
+          potentialSpillLists.try_emplace(sec, PotentialSpillList{pss, pss});
       if (!res.second) {
-        SpillInputSection *&tail = res.first->second.tail;
-        tail = tail->next = sis;
+        PotentialSpillSection *&tail = res.first->second.tail;
+        tail = tail->next = pss;
       }
 
-      sec = sis;
+      sec = pss;
     }
   }
 
@@ -967,11 +968,12 @@ void LinkerScript::diagnoseMissingSGSectionAddress() const {
     error("no address assigned to the veneers output section " + sec->name);
 }
 
-void LinkerScript::copySpillList(InputSectionBase *dst, InputSectionBase *src) {
-  auto i = spillLists.find(src);
-  if (i == spillLists.end())
+void LinkerScript::copyPotentialSpillList(InputSectionBase *dst,
+                                          InputSectionBase *src) {
+  auto i = potentialSpillLists.find(src);
+  if (i == potentialSpillLists.end())
     return;
-  spillLists.try_emplace(dst, i->second);
+  potentialSpillLists.try_emplace(dst, i->second);
 }
 
 // This function searches for a memory region to place the given output
@@ -1135,7 +1137,7 @@ void LinkerScript::assignOffsets(OutputSection *sec) {
       assert(isec->getParent() == sec);
 
       // Skip all potential spill locations.
-      if (isa<SpillInputSection>(isec))
+      if (isa<PotentialSpillSection>(isec))
         continue;
 
       const uint64_t pos = dot;
@@ -1472,20 +1474,20 @@ bool LinkerScript::spillSections() {
         continue;
       for (InputSection *isec : reverse(isd->sections)) {
         // Potential spill locations cannot be spilled.
-        if (isa<SpillInputSection>(isec))
+        if (isa<PotentialSpillSection>(isec))
           continue;
 
         // Find the next spill location.
-        auto it = spillLists.find(isec);
-        if (it == spillLists.end())
+        auto it = potentialSpillLists.find(isec);
+        if (it == potentialSpillLists.end())
           continue;
 
         spilled = true;
-        SpillList &list = it->second;
+        PotentialSpillList &list = it->second;
 
-        SpillInputSection *spill = list.head;
+        PotentialSpillSection *spill = list.head;
         if (!spill->next)
-          spillLists.erase(isec);
+          potentialSpillLists.erase(isec);
         else
           list.head = spill->next;
 
@@ -1526,22 +1528,23 @@ bool LinkerScript::spillSections() {
 }
 
 // Erase any potential spill sections that were not used.
-void LinkerScript::eraseSpillSections() {
-  if (spillLists.empty())
+void LinkerScript::erasePotentialSpillSections() {
+  if (potentialSpillLists.empty())
     return;
 
   // Collect the set of input section descriptions that contain potential
   // spills.
   DenseSet<InputSectionDescription *> isds;
-  for (const auto &[_, list] : spillLists)
-    for (SpillInputSection *s = list.head; s; s = s->next)
+  for (const auto &[_, list] : potentialSpillLists)
+    for (PotentialSpillSection *s = list.head; s; s = s->next)
       isds.insert(s->isd);
 
   for (InputSectionDescription *isd : isds)
-    llvm::erase_if(isd->sections,
-                   [](InputSection *s) { return isa<SpillInputSection>(s); });
+    llvm::erase_if(isd->sections, [](InputSection *s) {
+      return isa<PotentialSpillSection>(s);
+    });
 
-  spillLists.clear();
+  potentialSpillLists.clear();
 }
 
 // Creates program headers as instructed by PHDRS linker script command.

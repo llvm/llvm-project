@@ -314,14 +314,14 @@ class LinkerScript final {
 
   uint64_t dot;
 
-  // List of potential spill locations (SpillInputSection) for an input
+  // List of potential spill locations (PotentialSpillSection) for an input
   // section.
-  struct SpillList {
+  struct PotentialSpillList {
     // Never nullptr.
-    SpillInputSection *head;
-    SpillInputSection *tail;
+    PotentialSpillSection *head;
+    PotentialSpillSection *tail;
   };
-  llvm::DenseMap<InputSectionBase *, SpillList> spillLists;
+  llvm::DenseMap<InputSectionBase *, PotentialSpillList> potentialSpillLists;
 
 public:
   OutputDesc *createOutputSection(StringRef name, StringRef location);
@@ -336,7 +336,7 @@ public:
   void addOrphanSections();
   void diagnoseOrphanHandling() const;
   void diagnoseMissingSGSectionAddress() const;
-  void copySpillList(InputSectionBase *dst, InputSectionBase *src);
+  void copyPotentialSpillList(InputSectionBase *dst, InputSectionBase *src);
   void adjustOutputSections();
   void adjustSectionsAfterSorting();
 
@@ -346,7 +346,7 @@ public:
   bool shouldKeep(InputSectionBase *s);
   const Defined *assignAddresses();
   bool spillSections();
-  void eraseSpillSections();
+  void erasePotentialSpillSections();
   void allocateHeaders(SmallVector<PhdrEntry *, 0> &phdrs);
   void processSectionCommands();
   void processSymbolAssignments();

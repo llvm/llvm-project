@@ -310,8 +310,8 @@ std::string InputSectionBase::getObjMsg(uint64_t off) const {
       .str();
 }
 
-SpillInputSection::SpillInputSection(InputSectionBase *source,
-                                     InputSectionDescription *isd)
+PotentialSpillSection::PotentialSpillSection(InputSectionBase *source,
+                                             InputSectionDescription *isd)
     : InputSection(source->file, source->flags, source->type, source->addralign,
                    {}, source->name, SectionBase::Spill),
       isd(isd) {}
