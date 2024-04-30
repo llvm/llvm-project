@@ -2160,9 +2160,7 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
     auto on_exit = llvm::make_scope_exit([&]() {
       swift_ast_sp->m_ast_context_ap->SetPreModuleImportCallback(
           [](llvm::StringRef module_name,
-             swift::ASTContext::ModuleImportKind kind) {
-            Progress("Importing Swift modules");
-          });
+             swift::ASTContext::ModuleImportKind kind) {});
     });
 
     swift::ModuleDecl *stdlib =
@@ -2716,9 +2714,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     auto on_exit = llvm::make_scope_exit([&]() {
       swift_ast_sp->m_ast_context_ap->SetPreModuleImportCallback(
           [](llvm::StringRef module_name,
-             swift::ASTContext::ModuleImportKind kind) {
-            Progress("Importing Swift modules");
-          });
+             swift::ASTContext::ModuleImportKind kind) {});
     });
 
     swift::ModuleDecl *stdlib =
@@ -3825,20 +3821,22 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
 
   // Report progress on module importing by using a callback function in
   // swift::ASTContext.
-  Progress progress("Importing Swift modules");
+  std::unique_ptr<Progress> progress;
   ast->SetPreModuleImportCallback(
       [&progress](llvm::StringRef module_name,
                   swift::ASTContext::ModuleImportKind kind) {
+        if (!progress)
+          progress = std::make_unique<Progress>("Importing Swift modules");
         switch (kind) {
         case swift::ASTContext::Module:
-          progress.Increment(1, module_name.str());
+          progress->Increment(1, module_name.str());
           break;
         case swift::ASTContext::Overlay:
-          progress.Increment(1, module_name.str() + " (overlay)");
+          progress->Increment(1, module_name.str() + " (overlay)");
           break;
         case swift::ASTContext::BridgingHeader:
-          progress.Increment(1,
-                             "Compiling bridging header: " + module_name.str());
+          progress->Increment(1, "Compiling bridging header: " +
+                                     module_name.str());
           break;
         }
       });
@@ -3848,9 +3846,7 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
   auto on_exit = llvm::make_scope_exit([&]() {
     ast->SetPreModuleImportCallback(
         [](llvm::StringRef module_name,
-           swift::ASTContext::ModuleImportKind kind) {
-          Progress("Importing Swift modules");
-        });
+           swift::ASTContext::ModuleImportKind kind) {});
   });
 
   // Perform the import.

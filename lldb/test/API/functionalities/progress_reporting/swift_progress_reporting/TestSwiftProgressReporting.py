@@ -45,11 +45,21 @@ class TestSwiftProgressReporting(TestBase):
             "Importing Swift standard library",
         ]
 
+        importing_swift_reports = []
         while len(beacons):
             event = lldbutil.fetch_next_event(self, self.listener, self.broadcaster)
             ret_args = lldb.SBDebugger.GetProgressFromEvent(event)
             if self.TraceOn():
                 print(ret_args[0])
+
+            # When importing Swift modules, make sure that we don't get two reports
+            # in a row with the title "Importing Swift modules", i.e. there should be
+            # a report with that title followed by a report with that title and details
+            # attached.
+            if ret_args[0] == "Importing Swift modules":
+                next_event = lldbutil.fetch_next_event(self, self.listener, self.broadcaster)
+                next_ret_args = lldb.SBDebugger.GetProgressFromEvent(next_event)
+                self.assertRegexpMatches(next_ret_args[0], r"Importing Swift modules:+")
 
             for beacon in beacons:
                 if beacon in ret_args[0]:
