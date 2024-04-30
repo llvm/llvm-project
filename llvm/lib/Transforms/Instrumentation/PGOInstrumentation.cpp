@@ -327,6 +327,9 @@ extern cl::opt<PGOViewCountsType> PGOViewCounts;
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
 extern cl::opt<std::string> ViewBlockFreqFuncName;
 
+// Command line option to enable vtable value profiling. Defined in
+// ProfileData/InstrProf.cpp: -enable-vtable-value-profiling=
+extern cl::opt<bool> EnableVTableValueProfiling;
 extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
 
@@ -581,6 +584,8 @@ public:
       NumOfPGOMemIntrinsics += ValueSites[IPVK_MemOPSize].size();
       NumOfPGOBB += MST.bbInfoSize();
       ValueSites[IPVK_IndirectCallTarget] = VPC.get(IPVK_IndirectCallTarget);
+      if (EnableVTableValueProfiling)
+        ValueSites[IPVK_VTableTarget] = VPC.get(IPVK_VTableTarget);
     } else {
       NumOfCSPGOSelectInsts += SIVisitor.getNumOfSelectInsts();
       NumOfCSPGOMemIntrinsics += ValueSites[IPVK_MemOPSize].size();
@@ -1362,6 +1367,7 @@ void PGOUseFunc::populateCoverage(IndexedInstrProfReader *PGOReader) {
     handleInstrProfError(std::move(Err), MismatchedFuncSum);
     return;
   }
+  IsCS ? NumOfCSPGOFunc++ : NumOfPGOFunc++;
 
   std::vector<uint64_t> &CountsFromProfile = Result.get().Counts;
   DenseMap<const BasicBlock *, bool> Coverage;
@@ -1775,6 +1781,15 @@ static bool InstrumentAllFunctions(
   // (before LTO/ThinLTO linking) to create these variables.
   if (!IsCS)
     createIRLevelProfileFlagVar(M, /*IsCS=*/false);
+
+  Triple TT(M.getTargetTriple());
+  LLVMContext &Ctx = M.getContext();
+  if (!TT.isOSBinFormatELF() && EnableVTableValueProfiling)
+    Ctx.diagnose(DiagnosticInfoPGOProfile(
+        M.getName().data(),
+        Twine("VTable value profiling is presently not "
+              "supported for non-ELF object formats"),
+        DS_Warning));
   std::unordered_multimap<Comdat *, GlobalValue *> ComdatMembers;
   collectComdatMembers(M, ComdatMembers);
 

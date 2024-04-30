@@ -19,6 +19,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/CallInterfaces.h"
@@ -394,6 +395,13 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
   config.listener =
       static_cast<RewriterBase::Listener *>(rewriter.getListener());
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
+
+  config.maxIterations = getMaxIterations() == static_cast<uint64_t>(-1)
+                             ? GreedyRewriteConfig::kNoLimit
+                             : getMaxIterations();
+  config.maxNumRewrites = getMaxNumRewrites() == static_cast<uint64_t>(-1)
+                              ? GreedyRewriteConfig::kNoLimit
+                              : getMaxNumRewrites();
 
   // Apply patterns and CSE repetitively until a fixpoint is reached. If no CSE
   // was requested, apply the greedy pattern rewrite only once. (The greedy
@@ -819,7 +827,7 @@ bool transform::CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   assert(outputs.size() == 1 && "expected one output");
   return llvm::all_of(
       std::initializer_list<Type>{inputs.front(), outputs.front()},
-      [](Type ty) { return isa<transform::TransformHandleTypeInterface>(ty); });
+      llvm::IsaPred<transform::TransformHandleTypeInterface>);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1607,7 +1615,7 @@ transform::GetTypeOp::apply(transform::TransformRewriter &rewriter,
     }
     params.push_back(TypeAttr::get(type));
   }
-  results.setParams(getResult().cast<OpResult>(), params);
+  results.setParams(cast<OpResult>(getResult()), params);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -2209,14 +2217,14 @@ transform::NumAssociationsOp::apply(transform::TransformRewriter &rewriter,
             llvm_unreachable("unknown kind of transform dialect type");
             return 0;
           });
-  results.setParams(getNum().cast<OpResult>(),
+  results.setParams(cast<OpResult>(getNum()),
                     rewriter.getI64IntegerAttr(numAssociations));
   return DiagnosedSilenceableFailure::success();
 }
 
 LogicalResult transform::NumAssociationsOp::verify() {
   // Verify that the result type accepts an i64 attribute as payload.
-  auto resultType = getNum().getType().cast<TransformParamTypeInterface>();
+  auto resultType = cast<TransformParamTypeInterface>(getNum().getType());
   return resultType
       .checkPayload(getLoc(), {Builder(getContext()).getI64IntegerAttr(0)})
       .checkAndReport();
@@ -2627,14 +2635,26 @@ transform::PrintOp::apply(transform::TransformRewriter &rewriter,
   if (getName().has_value())
     llvm::outs() << *getName() << " ";
 
+  OpPrintingFlags printFlags;
+  if (getAssumeVerified().value_or(false))
+    printFlags.assumeVerified();
+  if (getUseLocalScope().value_or(false))
+    printFlags.useLocalScope();
+  if (getSkipRegions().value_or(false))
+    printFlags.skipRegions();
+
   if (!getTarget()) {
-    llvm::outs() << "top-level ]]]\n" << *state.getTopLevel() << "\n";
+    llvm::outs() << "top-level ]]]\n";
+    state.getTopLevel()->print(llvm::outs(), printFlags);
+    llvm::outs() << "\n";
     return DiagnosedSilenceableFailure::success();
   }
 
   llvm::outs() << "]]]\n";
-  for (Operation *target : state.getPayloadOps(getTarget()))
-    llvm::outs() << *target << "\n";
+  for (Operation *target : state.getPayloadOps(getTarget())) {
+    target->print(llvm::outs(), printFlags);
+    llvm::outs() << "\n";
+  }
 
   return DiagnosedSilenceableFailure::success();
 }

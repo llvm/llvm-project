@@ -28,6 +28,7 @@ void MachineIRBuilder::setMF(MachineFunction &MF) {
   State.TII = MF.getSubtarget().getInstrInfo();
   State.DL = DebugLoc();
   State.PCSections = nullptr;
+  State.MMRA = nullptr;
   State.II = MachineBasicBlock::iterator();
   State.Observer = nullptr;
 }
@@ -37,7 +38,8 @@ void MachineIRBuilder::setMF(MachineFunction &MF) {
 //------------------------------------------------------------------------------
 
 MachineInstrBuilder MachineIRBuilder::buildInstrNoInsert(unsigned Opcode) {
-  return BuildMI(getMF(), {getDL(), getPCSections()}, getTII().get(Opcode));
+  return BuildMI(getMF(), {getDL(), getPCSections(), getMMRAMetadata()},
+                 getTII().get(Opcode));
 }
 
 MachineInstrBuilder MachineIRBuilder::insertInstr(MachineInstrBuilder MIB) {
@@ -1278,7 +1280,7 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
         return DstTy.isScalar();
       else
         return DstTy.isVector() &&
-               DstTy.getNumElements() == Op0Ty.getNumElements();
+               DstTy.getElementCount() == Op0Ty.getElementCount();
     }() && "Type Mismatch");
     break;
   }

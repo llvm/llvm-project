@@ -319,6 +319,8 @@ def IIT_FUNCREF : IIT_VT<funcref, 55>;
 def IIT_I2 : IIT_Int<2, 57>;
 def IIT_I4 : IIT_Int<4, 58>;
 def IIT_AARCH64_SVCOUNT : IIT_VT<aarch64svcount, 59>;
+def IIT_V6 : IIT_Vec<6, 60>;
+def IIT_V10 : IIT_Vec<10, 61>;
 }
 
 defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
@@ -911,6 +913,11 @@ def int_instrprof_increment : Intrinsic<[],
 def int_instrprof_increment_step : Intrinsic<[],
                                         [llvm_ptr_ty, llvm_i64_ty,
                                          llvm_i32_ty, llvm_i32_ty, llvm_i64_ty]>;
+
+// Callsite instrumentation for contextual profiling
+def int_instrprof_callsite : Intrinsic<[],
+                                        [llvm_ptr_ty, llvm_i64_ty,
+                                         llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty]>;
 
 // A timestamp for instrumentation based profiling.
 def int_instrprof_timestamp : Intrinsic<[], [llvm_ptr_ty, llvm_i64_ty,
@@ -1731,6 +1738,15 @@ def int_debugtrap : Intrinsic<[]>,
 def int_ubsantrap : Intrinsic<[], [llvm_i8_ty],
                               [IntrNoReturn, IntrCold, ImmArg<ArgIndex<0>>]>;
 
+// Return true if ubsan check is allowed.
+def int_allow_ubsan_check : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i8_ty],
+    [IntrInaccessibleMemOnly, IntrWriteMem, ImmArg<ArgIndex<0>>, NoUndef<RetIndex>]>;
+
+// Return true if runtime check is allowed.
+def int_allow_runtime_check : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_metadata_ty],
+    [IntrInaccessibleMemOnly, IntrWriteMem, NoUndef<RetIndex>]>,
+    ClangBuiltin<"__builtin_allow_runtime_check">;
+
 // Support for dynamic deoptimization (or de-specialization)
 def int_experimental_deoptimize : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
                                             [Throws]>;
@@ -2352,12 +2368,33 @@ def int_load_relative: DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_a
 def int_asan_check_memaccess :
   Intrinsic<[],[llvm_ptr_ty, llvm_i32_ty], [ImmArg<ArgIndex<1>>]>;
 
+// HWASan intrinsics to test whether a pointer is addressable.
+//===----------------------------------------------------------------------===//
+//
+// Variant 1) is the OG memaccess intrinsic
+// Parameters: Shadow base (passed in a register), pointer to be checked for
+// validity, AccessInfo (AccessInfo is defined in HWAddressSanitizer.h)
 def int_hwasan_check_memaccess :
   Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty],
             [ImmArg<ArgIndex<2>>]>;
+
+// Variant 2) supports short granule checks
+// Parameters: same as Variant 1
 def int_hwasan_check_memaccess_shortgranules :
   Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty, llvm_i32_ty],
             [ImmArg<ArgIndex<2>>]>;
+
+// Variant 3) assumes a fixed shadow offset
+// Parameters: Pointer to be checked for validity, AccessInfo, Shadow base
+def int_hwasan_check_memaccess_fixedshadow :
+  Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty, llvm_i64_ty],
+            [ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+
+// Variant 4) supports short granule checks and assumes a fixed shadow offset
+// Parameters: same as Variant 3
+def int_hwasan_check_memaccess_shortgranules_fixedshadow :
+  Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty, llvm_i64_ty],
+            [ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 
 // Xray intrinsics
 //===----------------------------------------------------------------------===//

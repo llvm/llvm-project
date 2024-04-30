@@ -245,8 +245,11 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0xd4a", "neoverse-e1")
         .Case("0xd0c", "neoverse-n1")
         .Case("0xd49", "neoverse-n2")
+        .Case("0xd8e", "neoverse-n3")
         .Case("0xd40", "neoverse-v1")
         .Case("0xd4f", "neoverse-v2")
+        .Case("0xd84", "neoverse-v3")
+        .Case("0xd83", "neoverse-v3ae")
         .Default("generic");
   }
 

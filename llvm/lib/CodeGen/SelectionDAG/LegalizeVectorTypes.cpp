@@ -1388,6 +1388,13 @@ void DAGTypeLegalizer::SplitVecRes_BITCAST(SDNode *N, SDValue &Lo,
     report_fatal_error("Scalarization of scalable vectors is not supported.");
   }
 
+  if (LoVT.isScalableVector()) {
+    auto [InLo, InHi] = DAG.SplitVectorOperand(N, 0);
+    Lo = DAG.getNode(ISD::BITCAST, dl, LoVT, InLo);
+    Hi = DAG.getNode(ISD::BITCAST, dl, HiVT, InHi);
+    return;
+  }
+
   // In the general case, convert the input to an integer and split it by hand.
   EVT LoIntVT = EVT::getIntegerVT(*DAG.getContext(), LoVT.getSizeInBits());
   EVT HiIntVT = EVT::getIntegerVT(*DAG.getContext(), HiVT.getSizeInBits());
@@ -3259,16 +3266,25 @@ SDValue DAGTypeLegalizer::SplitVecOp_BITCAST(SDNode *N) {
   // For example, i64 = BITCAST v4i16 on alpha.  Typically the vector will
   // end up being split all the way down to individual components.  Convert the
   // split pieces into integers and reassemble.
+  EVT ResVT = N->getValueType(0);
   SDValue Lo, Hi;
   GetSplitVector(N->getOperand(0), Lo, Hi);
+  SDLoc dl(N);
+
+  if (ResVT.isScalableVector()) {
+    auto [LoVT, HiVT] = DAG.GetSplitDestVTs(ResVT);
+    Lo = DAG.getNode(ISD::BITCAST, dl, LoVT, Lo);
+    Hi = DAG.getNode(ISD::BITCAST, dl, HiVT, Hi);
+    return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResVT, Lo, Hi);
+  }
+
   Lo = BitConvertToInteger(Lo);
   Hi = BitConvertToInteger(Hi);
 
   if (DAG.getDataLayout().isBigEndian())
     std::swap(Lo, Hi);
 
-  return DAG.getNode(ISD::BITCAST, SDLoc(N), N->getValueType(0),
-                     JoinIntegers(Lo, Hi));
+  return DAG.getNode(ISD::BITCAST, dl, ResVT, JoinIntegers(Lo, Hi));
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_INSERT_SUBVECTOR(SDNode *N,
@@ -4226,7 +4242,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     break;
 
   case ISD::IS_FPCLASS:
-    Res = WidenVecRes_IS_FPCLASS(N);
+  case ISD::FPTRUNC_ROUND:
+    Res = WidenVecRes_UnarySameEltsWithScalarArg(N);
     break;
 
   case ISD::FLDEXP:
@@ -4988,7 +5005,10 @@ SDValue DAGTypeLegalizer::WidenVecRes_FCOPYSIGN(SDNode *N) {
   return DAG.UnrollVectorOp(N, WidenVT.getVectorNumElements());
 }
 
-SDValue DAGTypeLegalizer::WidenVecRes_IS_FPCLASS(SDNode *N) {
+/// Result and first source operand are different scalar types, but must have
+/// the same number of elements. There is an additional control argument which
+/// should be passed through unchanged.
+SDValue DAGTypeLegalizer::WidenVecRes_UnarySameEltsWithScalarArg(SDNode *N) {
   SDValue FpValue = N->getOperand(0);
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   if (getTypeAction(FpValue.getValueType()) != TargetLowering::TypeWidenVector)

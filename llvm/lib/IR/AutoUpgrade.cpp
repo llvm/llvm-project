@@ -846,6 +846,18 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return false; // No other 'aarch64.sve.bf*'.
       }
 
+      if (Name.consume_front("addqv")) {
+        // 'aarch64.sve.addqv'.
+        if (!F->getReturnType()->isFPOrFPVectorTy())
+          return false;
+
+        auto Args = F->getFunctionType()->params();
+        Type *Tys[] = {F->getReturnType(), Args[1]};
+        NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                          Intrinsic::aarch64_sve_faddqv, Tys);
+        return true;
+      }
+
       if (Name.consume_front("ld")) {
         // 'aarch64.sve.ld*'.
         static const Regex LdRegex("^[234](.nxv[a-z0-9]+|$)");
@@ -983,7 +995,8 @@ static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   return Intrinsic::not_intrinsic;
 }
 
-static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
+static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
+                                      bool CanUpgradeDebugIntrinsicsToRecords) {
   assert(F && "Illegal to upgrade a non-existent Function.");
 
   StringRef Name = F->getName();
@@ -1057,7 +1070,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   case 'd':
     if (Name.consume_front("dbg.")) {
       // Mark debug intrinsics for upgrade to new debug format.
-      if (F->getParent()->IsNewDbgInfoFormat) {
+      if (CanUpgradeDebugIntrinsicsToRecords &&
+          F->getParent()->IsNewDbgInfoFormat) {
         if (Name == "addr" || Name == "value" || Name == "assign" ||
             Name == "declare" || Name == "label") {
           // There's no function to replace these with.
@@ -1413,9 +1427,11 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   return false;
 }
 
-bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn) {
+bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
+                                    bool CanUpgradeDebugIntrinsicsToRecords) {
   NewFn = nullptr;
-  bool Upgraded = upgradeIntrinsicFunction1(F, NewFn);
+  bool Upgraded =
+      upgradeIntrinsicFunction1(F, NewFn, CanUpgradeDebugIntrinsicsToRecords);
   assert(F != NewFn && "Intrinsic function upgraded to the same function");
 
   // Upgrade intrinsic attributes.  This does not change the function.
@@ -2412,6 +2428,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   Builder.SetInsertPoint(CI->getParent(), CI->getIterator());
 
   if (!NewFn) {
+    bool FallthroughToDefaultUpgrade = false;
     // Get the Function's name.
     StringRef Name = F->getName();
 
@@ -4262,16 +4279,30 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = upgradeARMIntrinsicCall(Name, CI, F, Builder);
     } else if (IsAMDGCN) {
       Rep = upgradeAMDGCNIntrinsicCall(Name, CI, F, Builder);
-    } else if (IsDbg && CI->getModule()->IsNewDbgInfoFormat) {
-      upgradeDbgIntrinsicToDbgRecord(Name, CI);
+    } else if (IsDbg) {
+      // We might have decided we don't want the new format after all between
+      // first requesting the upgrade and now; skip the conversion if that is
+      // the case, and check here to see if the intrinsic needs to be upgraded
+      // normally.
+      if (!CI->getModule()->IsNewDbgInfoFormat) {
+        bool NeedsUpgrade =
+            upgradeIntrinsicFunction1(CI->getCalledFunction(), NewFn, false);
+        if (!NeedsUpgrade)
+          return;
+        FallthroughToDefaultUpgrade = true;
+      } else {
+        upgradeDbgIntrinsicToDbgRecord(Name, CI);
+      }
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
 
-    if (Rep)
-      CI->replaceAllUsesWith(Rep);
-    CI->eraseFromParent();
-    return;
+    if (!FallthroughToDefaultUpgrade) {
+      if (Rep)
+        CI->replaceAllUsesWith(Rep);
+      CI->eraseFromParent();
+      return;
+    }
   }
 
   const auto &DefaultCase = [&]() -> void {
@@ -5248,6 +5279,14 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
   F.removeRetAttrs(AttributeFuncs::typeIncompatible(F.getReturnType()));
   for (auto &Arg : F.args())
     Arg.removeAttrs(AttributeFuncs::typeIncompatible(Arg.getType()));
+
+  // Older versions of LLVM treated an "implicit-section-name" attribute
+  // similarly to directly setting the section on a Function.
+  if (Attribute A = F.getFnAttribute("implicit-section-name");
+      A.isValid() && A.isStringAttribute()) {
+    F.setSection(A.getValueAsString());
+    F.removeFnAttr("implicit-section-name");
+  }
 }
 
 static bool isOldLoopArgument(Metadata *MD) {
@@ -5314,10 +5353,11 @@ MDNode *llvm::upgradeInstructionLoopAttachment(MDNode &N) {
 
 std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
   Triple T(TT);
-  // The only data layout upgrades needed for pre-GCN are setting the address
-  // space of globals to 1.
-  if (T.isAMDGPU() && !T.isAMDGCN() && !DL.contains("-G") &&
-      !DL.starts_with("G")) {
+  // The only data layout upgrades needed for pre-GCN, SPIR or SPIRV are setting
+  // the address space of globals to 1. This does not apply to SPIRV Logical.
+  if (((T.isAMDGPU() && !T.isAMDGCN()) ||
+       (T.isSPIR() || (T.isSPIRV() && !T.isSPIRVLogical()))) &&
+      !DL.contains("-G") && !DL.starts_with("G")) {
     return DL.empty() ? std::string("G1") : (DL + "-G1").str();
   }
 

@@ -1049,7 +1049,7 @@ public:
   union {
     /// When Kind == IK_Identifier, the parsed identifier, or when
     /// Kind == IK_UserLiteralId, the identifier suffix.
-    IdentifierInfo *Identifier;
+    const IdentifierInfo *Identifier;
 
     /// When Kind == IK_OperatorFunctionId, the overloaded operator
     /// that we parsed.
@@ -1111,7 +1111,7 @@ public:
   /// \param IdLoc the location of the parsed identifier.
   void setIdentifier(const IdentifierInfo *Id, SourceLocation IdLoc) {
     Kind = UnqualifiedIdKind::IK_Identifier;
-    Identifier = const_cast<IdentifierInfo *>(Id);
+    Identifier = Id;
     StartLocation = EndLocation = IdLoc;
   }
 
@@ -1154,9 +1154,9 @@ public:
   ///
   /// \param IdLoc the location of the identifier.
   void setLiteralOperatorId(const IdentifierInfo *Id, SourceLocation OpLoc,
-                              SourceLocation IdLoc) {
+                            SourceLocation IdLoc) {
     Kind = UnqualifiedIdKind::IK_LiteralOperatorId;
-    Identifier = const_cast<IdentifierInfo *>(Id);
+    Identifier = Id;
     StartLocation = OpLoc;
     EndLocation = IdLoc;
   }
@@ -1225,7 +1225,7 @@ public:
   /// \param Id the identifier.
   void setImplicitSelfParam(const IdentifierInfo *Id) {
     Kind = UnqualifiedIdKind::IK_ImplicitSelfParam;
-    Identifier = const_cast<IdentifierInfo *>(Id);
+    Identifier = Id;
     StartLocation = EndLocation = SourceLocation();
   }
 
@@ -1327,7 +1327,7 @@ struct DeclaratorChunk {
   /// Parameter type lists will have type info (if the actions module provides
   /// it), but may have null identifier info: e.g. for 'void foo(int X, int)'.
   struct ParamInfo {
-    IdentifierInfo *Ident;
+    const IdentifierInfo *Ident;
     SourceLocation IdentLoc;
     Decl *Param;
 
@@ -1339,11 +1339,10 @@ struct DeclaratorChunk {
     std::unique_ptr<CachedTokens> DefaultArgTokens;
 
     ParamInfo() = default;
-    ParamInfo(IdentifierInfo *ident, SourceLocation iloc,
-              Decl *param,
+    ParamInfo(const IdentifierInfo *ident, SourceLocation iloc, Decl *param,
               std::unique_ptr<CachedTokens> DefArgTokens = nullptr)
-      : Ident(ident), IdentLoc(iloc), Param(param),
-        DefaultArgTokens(std::move(DefArgTokens)) {}
+        : Ident(ident), IdentLoc(iloc), Param(param),
+          DefaultArgTokens(std::move(DefArgTokens)) {}
   };
 
   struct TypeAndRange {
@@ -2326,7 +2325,7 @@ public:
     return BindingGroup.isSet();
   }
 
-  IdentifierInfo *getIdentifier() const {
+  const IdentifierInfo *getIdentifier() const {
     if (Name.getKind() == UnqualifiedIdKind::IK_Identifier)
       return Name.Identifier;
 
@@ -2335,7 +2334,7 @@ public:
   SourceLocation getIdentifierLoc() const { return Name.StartLocation; }
 
   /// Set the name of this declarator to be the given identifier.
-  void SetIdentifier(IdentifierInfo *Id, SourceLocation IdLoc) {
+  void SetIdentifier(const IdentifierInfo *Id, SourceLocation IdLoc) {
     Name.setIdentifier(Id, IdLoc);
   }
 

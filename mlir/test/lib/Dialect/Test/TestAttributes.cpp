@@ -19,6 +19,7 @@
 #include "mlir/IR/Types.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -244,7 +245,7 @@ static void printConditionalAlias(AsmPrinter &p, StringAttr value) {
 //===----------------------------------------------------------------------===//
 
 #include "TestAttrInterfaces.cpp.inc"
-
+#include "TestOpEnums.cpp.inc"
 #define GET_ATTRDEF_CLASSES
 #include "TestAttrDefs.cpp.inc"
 

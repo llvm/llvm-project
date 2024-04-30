@@ -18,22 +18,26 @@
 
 namespace Fortran::runtime::io {
 
-template <typename CONTEXT, typename CHAR>
+template <typename CONTEXT, typename CHAR, bool NL_ADVANCES_RECORD = true>
 RT_API_ATTRS bool EmitEncoded(
     CONTEXT &to, const CHAR *data, std::size_t chars) {
   ConnectionState &connection{to.GetConnectionState()};
-  if (connection.access == Access::Stream &&
-      connection.internalIoCharKind == 0) {
-    // Stream output: treat newlines as record advancements so that the left tab
-    // limit is correctly managed
-    while (const CHAR * nl{FindCharacter(data, CHAR{'\n'}, chars)}) {
-      auto pos{static_cast<std::size_t>(nl - data)};
-      if (!EmitEncoded(to, data, pos)) {
-        return false;
+  if constexpr (NL_ADVANCES_RECORD) {
+    if (connection.access == Access::Stream &&
+        connection.internalIoCharKind == 0) {
+      // Stream output: treat newlines as record advancements so that the left
+      // tab limit is correctly managed
+      while (const CHAR * nl{FindCharacter(data, CHAR{'\n'}, chars)}) {
+        auto pos{static_cast<std::size_t>(nl - data)};
+        // The [data, data + pos) does not contain the newline,
+        // so we can avoid the recursion by calling proper specialization.
+        if (!EmitEncoded<CONTEXT, CHAR, false>(to, data, pos)) {
+          return false;
+        }
+        data += pos + 1;
+        chars -= pos + 1;
+        to.AdvanceRecord();
       }
-      data += pos + 1;
-      chars -= pos + 1;
-      to.AdvanceRecord();
     }
   }
   if (connection.useUTF8<CHAR>()) {

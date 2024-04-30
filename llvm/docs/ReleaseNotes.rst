@@ -50,6 +50,8 @@ Update on required toolchains to build LLVM
 Changes to the LLVM IR
 ----------------------
 
+- Added Memory Model Relaxation Annotations (MMRAs).
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -67,7 +69,8 @@ Changes to Interprocedural Optimizations
 Changes to the AArch64 Backend
 ------------------------------
 
-* Added support for Cortex-A78AE, Cortex-A520AE and Cortex-A720AE CPUs.
+* Added support for Cortex-A78AE, Cortex-A520AE, Cortex-A720AE,
+  Neoverse-N3, Neoverse-V3 and Neoverse-V3AE CPUs.
 
 Changes to the AMDGPU Backend
 -----------------------------
@@ -110,6 +113,8 @@ Changes to the RISC-V Backend
 * The experimental Ssqosid extension is supported.
 * Zacas is no longer experimental.
 * Added the CSR names from the Resumable Non-Maskable Interrupts (Smrnmi) extension.
+* llvm-objdump now prints disassembled opcode bytes in groups of 2 or 4 bytes to
+  match GNU objdump. The bytes within the groups are in big endian order.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -133,7 +138,7 @@ Changes to the C API
   functions for accessing the values in a blockaddress constant.
 
 * Added ``LLVMConstStringInContext2`` function, which better matches the C++
-  API by using ``size_t`` for string length. Deprecated ``LLVMConstStringInContext``. 
+  API by using ``size_t`` for string length. Deprecated ``LLVMConstStringInContext``.
 
 * Added the following functions for accessing a function's prefix data:
 
@@ -148,6 +153,9 @@ Changes to the C API
   * ``LLVMSetPrologueData``
 
 * Deprecated ``LLVMConstNUWNeg`` and ``LLVMBuildNUWNeg``.
+
+* Added ``LLVMAtomicRMWBinOpUIncWrap`` and ``LLVMAtomicRMWBinOpUDecWrap`` to
+  ``LLVMAtomicRMWBinOp`` enum for AtomicRMW instructions.
 
 Changes to the CodeGen infrastructure
 -------------------------------------
@@ -174,6 +182,10 @@ Changes to the LLVM tools
 * llvm-ar now allows specifying COFF archive format with ``--format`` argument
   and uses it by default for COFF targets.
 
+* llvm-ranlib now supports ``-V`` as an alias for ``--version``.
+  ``-v`` (``--verbose`` in llvm-ar) has been removed.
+  (`#87661 <https://github.com/llvm/llvm-project/pull/87661>`_)
+
 * llvm-objcopy now supports ``--set-symbol-visibility`` and
   ``--set-symbols-visibility`` options for ELF input to change the
   visibility of symbols.
@@ -182,10 +194,18 @@ Changes to the LLVM tools
   for ELF input to skip the specified symbols when executing other options
   that can change a symbol's name, binding or visibility.
 
+* llvm-objcopy now supports ``--compress-sections`` to compress or decompress
+  arbitrary sections not within a segment.
+  (`#85036 <https://github.com/llvm/llvm-project/pull/85036>`_.)
+
 * llvm-profgen now supports COFF+DWARF binaries. This enables Sample-based PGO
   on Windows using Intel VTune's SEP. For details on usage, see the `end-user
   documentation for SPGO
   <https://clang.llvm.org/docs/UsersManual.html#using-sampling-profilers>`_.
+
+* llvm-readelf's ``-r`` output for RELR has been improved.
+  (`#89162 <https://github.com/llvm/llvm-project/pull/89162>`_)
+  ``--raw-relr`` has been removed.
 
 Changes to LLDB
 ---------------------------------

@@ -115,6 +115,22 @@ public:
     return withEncoding(enc.withoutBitWidths());
   }
 
+  SparseTensorType withExplicitVal(Attribute explicitVal) const {
+    return withEncoding(enc.withExplicitVal(explicitVal));
+  }
+
+  SparseTensorType withoutExplicitVal() const {
+    return withEncoding(enc.withoutExplicitVal());
+  }
+
+  SparseTensorType withImplicitVal(Attribute implicitVal) const {
+    return withEncoding(enc.withImplicitVal(implicitVal));
+  }
+
+  SparseTensorType withoutImplicitVal() const {
+    return withEncoding(enc.withoutImplicitVal());
+  }
+
   SparseTensorType
   withDimSlices(ArrayRef<SparseTensorDimSliceAttr> dimSlices) const {
     return withEncoding(enc.withDimSlices(dimSlices));
@@ -327,19 +343,17 @@ public:
   /// Returns the position-overhead bitwidth, defaulting to zero.
   unsigned getPosWidth() const { return enc ? enc.getPosWidth() : 0; }
 
+  /// Returns the explicit value, defaulting to null Attribute for unset.
+  Attribute getExplicitVal() const { return enc.getExplicitVal(); }
+
+  /// Returns the implicit value, defaulting to null Attribute for 0.
+  Attribute getImplicitVal() const { return enc.getImplicitVal(); }
+
   /// Returns the coordinate-overhead MLIR type, defaulting to `IndexType`.
-  Type getCrdType() const {
-    if (getCrdWidth())
-      return IntegerType::get(getContext(), getCrdWidth());
-    return IndexType::get(getContext());
-  }
+  Type getCrdType() const { return enc.getCrdElemType(); }
 
   /// Returns the position-overhead MLIR type, defaulting to `IndexType`.
-  Type getPosType() const {
-    if (getPosWidth())
-      return IntegerType::get(getContext(), getPosWidth());
-    return IndexType::get(getContext());
-  }
+  Type getPosType() const { return enc.getPosElemType(); }
 
   /// Returns true iff this sparse tensor type has a trailing
   /// COO region starting at the given level. By default, it

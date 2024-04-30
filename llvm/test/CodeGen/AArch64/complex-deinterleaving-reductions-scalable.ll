@@ -15,13 +15,13 @@ define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_v2f64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov z1.d, #0 // =0x0
-; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    cntd x9
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    neg x10, x9
+; CHECK-NEXT:    mov w11, #100 // =0x64
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    neg x9, x9
-; CHECK-NEXT:    mov w10, #100 // =0x64
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    and x10, x9, x10
+; CHECK-NEXT:    and x10, x10, x11
 ; CHECK-NEXT:    rdvl x11, #2
 ; CHECK-NEXT:    zip2 z0.d, z1.d, z1.d
 ; CHECK-NEXT:    zip1 z1.d, z1.d, z1.d
@@ -33,7 +33,7 @@ define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x12, #1, mul vl]
 ; CHECK-NEXT:    ld1b { z4.b }, p1/z, [x1, x8]
 ; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x13, #1, mul vl]
-; CHECK-NEXT:    adds x10, x10, x9
+; CHECK-NEXT:    subs x10, x10, x9
 ; CHECK-NEXT:    add x8, x8, x11
 ; CHECK-NEXT:    fcmla z1.d, p0/m, z4.d, z2.d, #0
 ; CHECK-NEXT:    fcmla z0.d, p0/m, z5.d, z3.d, #0
@@ -101,18 +101,18 @@ exit.block:                                     ; preds = %vector.body
 define %"class.std::complex" @complex_mul_nonzero_init_v2f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_nonzero_init_v2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d, vl1
 ; CHECK-NEXT:    fmov d0, #1.00000000
 ; CHECK-NEXT:    mov z1.d, #0 // =0x0
-; CHECK-NEXT:    fmov d2, #2.00000000
 ; CHECK-NEXT:    cntd x9
-; CHECK-NEXT:    mov w10, #100 // =0x64
+; CHECK-NEXT:    fmov d2, #2.00000000
+; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    neg x10, x9
 ; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    neg x9, x9
+; CHECK-NEXT:    mov w11, #100 // =0x64
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    and x10, x9, x10
-; CHECK-NEXT:    rdvl x11, #2
 ; CHECK-NEXT:    sel z3.d, p0, z0.d, z1.d
+; CHECK-NEXT:    and x10, x10, x11
+; CHECK-NEXT:    rdvl x11, #2
 ; CHECK-NEXT:    mov z1.d, p0/m, z2.d
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    zip2 z0.d, z1.d, z3.d
@@ -125,7 +125,7 @@ define %"class.std::complex" @complex_mul_nonzero_init_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x12, #1, mul vl]
 ; CHECK-NEXT:    ld1b { z4.b }, p1/z, [x1, x8]
 ; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x13, #1, mul vl]
-; CHECK-NEXT:    adds x10, x10, x9
+; CHECK-NEXT:    subs x10, x10, x9
 ; CHECK-NEXT:    add x8, x8, x11
 ; CHECK-NEXT:    fcmla z1.d, p0/m, z4.d, z2.d, #0
 ; CHECK-NEXT:    fcmla z0.d, p0/m, z5.d, z3.d, #0
@@ -190,14 +190,14 @@ define %"class.std::complex" @complex_mul_v2f64_unrolled(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_v2f64_unrolled:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov z1.d, #0 // =0x0
-; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    cntw x9
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    neg x9, x9
-; CHECK-NEXT:    mov w10, #1000 // =0x3e8
+; CHECK-NEXT:    mov w11, #1000 // =0x3e8
+; CHECK-NEXT:    neg x10, x9
 ; CHECK-NEXT:    rdvl x12, #2
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    and x10, x9, x10
+; CHECK-NEXT:    and x10, x10, x11
 ; CHECK-NEXT:    zip2 z0.d, z1.d, z1.d
 ; CHECK-NEXT:    zip1 z1.d, z1.d, z1.d
 ; CHECK-NEXT:    add x11, x1, x12
@@ -219,7 +219,7 @@ define %"class.std::complex" @complex_mul_v2f64_unrolled(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ld1d { z17.d }, p0/z, [x15, #1, mul vl]
 ; CHECK-NEXT:    ld1b { z18.b }, p1/z, [x11, x8]
 ; CHECK-NEXT:    ld1d { z19.d }, p0/z, [x17, #1, mul vl]
-; CHECK-NEXT:    adds x10, x10, x9
+; CHECK-NEXT:    subs x10, x10, x9
 ; CHECK-NEXT:    add x8, x8, x13
 ; CHECK-NEXT:    fcmla z1.d, p0/m, z7.d, z4.d, #0
 ; CHECK-NEXT:    fcmla z0.d, p0/m, z16.d, z5.d, #0
@@ -324,10 +324,10 @@ define dso_local %"class.std::complex" @reduction_mix(ptr %a, ptr %b, ptr noalia
 ; CHECK-LABEL: reduction_mix:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov z2.d, #0 // =0x0
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    cntd x9
-; CHECK-NEXT:    neg x10, x9
 ; CHECK-NEXT:    mov w11, #100 // =0x64
+; CHECK-NEXT:    neg x10, x9
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    and x10, x10, x11
 ; CHECK-NEXT:    rdvl x11, #2
@@ -349,8 +349,8 @@ define dso_local %"class.std::complex" @reduction_mix(ptr %a, ptr %b, ptr noalia
 ; CHECK-NEXT:    uaddv d2, p0, z2.d
 ; CHECK-NEXT:    uzp2 z3.d, z1.d, z0.d
 ; CHECK-NEXT:    uzp1 z1.d, z1.d, z0.d
-; CHECK-NEXT:    fmov x8, d2
 ; CHECK-NEXT:    faddv d0, p0, z3.d
+; CHECK-NEXT:    fmov x8, d2
 ; CHECK-NEXT:    faddv d1, p0, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 killed $z1

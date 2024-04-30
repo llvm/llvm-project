@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___ALGORITHM_SIMD_UTILS_H
 #define _LIBCPP___ALGORITHM_SIMD_UTILS_H
 
+#include <__algorithm/min.h>
 #include <__bit/bit_cast.h>
 #include <__bit/countr.h>
 #include <__config>
@@ -22,8 +23,11 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 // TODO: Find out how altivec changes things and allow vectorizations there too.
-#if _LIBCPP_STD_VER >= 14 && defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 1700 && !defined(__ALTIVEC__)
+#if _LIBCPP_STD_VER >= 14 && defined(_LIBCPP_CLANG_VER) && !defined(__ALTIVEC__)
 #  define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 1
 #else
 #  define _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS 0
@@ -94,7 +98,8 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI size_t __find_first_set(__simd_vector<_T
 
   // This has MSan disabled du to https://github.com/llvm/llvm-project/issues/85876
   auto __impl = [&]<class _MaskT>(_MaskT) _LIBCPP_NO_SANITIZE("memory") noexcept {
-    return std::__countr_zero(__builtin_bit_cast(_MaskT, __builtin_convertvector(__vec, __mask_vec)));
+    return std::min<size_t>(
+        _Np, std::__countr_zero(__builtin_bit_cast(_MaskT, __builtin_convertvector(__vec, __mask_vec))));
   };
 
   if constexpr (sizeof(__mask_vec) == sizeof(uint8_t)) {
@@ -119,5 +124,7 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI size_t __find_first_not_set(__simd_vecto
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_SIMD_UTILS_H

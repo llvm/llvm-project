@@ -2411,6 +2411,8 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   for (const PatternToMatch &Pat : CGP.ptms()) {
     ++NumPatternTotal;
 
+    if (Pat.getGISelShouldIgnore())
+      continue; // skip without warning
     auto MatcherOrErr = runOnPattern(Pat);
 
     // The pattern analysis can fail, indicating an unsupported pattern.

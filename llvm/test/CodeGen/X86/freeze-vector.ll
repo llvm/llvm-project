@@ -173,16 +173,14 @@ define void @freeze_extractelement(ptr %origin0, ptr %origin1, ptr %dst) nounwin
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    vmovdqa (%edx), %xmm0
 ; X86-NEXT:    vpand (%ecx), %xmm0, %xmm0
-; X86-NEXT:    vpextrb $6, %xmm0, %ecx
-; X86-NEXT:    movb %cl, (%eax)
+; X86-NEXT:    vpextrb $6, %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_extractelement:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovdqa (%rdi), %xmm0
 ; X64-NEXT:    vpand (%rsi), %xmm0, %xmm0
-; X64-NEXT:    vpextrb $6, %xmm0, %eax
-; X64-NEXT:    movb %al, (%rdx)
+; X64-NEXT:    vpextrb $6, %xmm0, (%rdx)
 ; X64-NEXT:    retq
   %i0 = load <16 x i8>, ptr %origin0
   %i1 = load <16 x i8>, ptr %origin1

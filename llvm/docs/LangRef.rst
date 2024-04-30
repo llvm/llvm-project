@@ -5557,6 +5557,8 @@ RISC-V:
 
 Sparc:
 
+- ``L``: Print the low-order register of a two-register operand.
+- ``H``: Print the high-order register of a two-register operand.
 - ``r``: No effect.
 
 SystemZ:
@@ -11110,11 +11112,12 @@ For most of these operations, the type of '<value>' must be an integer
 type whose bit width is a power of two greater than or equal to eight
 and less than or equal to a target-specific size limit. For xchg, this
 may also be a floating point or a pointer type with the same size constraints
-as integers.  For fadd/fsub/fmax/fmin, this must be a floating point type.  The
-type of the '``<pointer>``' operand must be a pointer to that type. If
-the ``atomicrmw`` is marked as ``volatile``, then the optimizer is not
-allowed to modify the number or order of execution of this
-``atomicrmw`` with other :ref:`volatile operations <volatile>`.
+as integers.  For fadd/fsub/fmax/fmin, this must be a floating-point
+or fixed vector of floating-point type.  The type of the '``<pointer>``'
+operand must be a pointer to that type. If the ``atomicrmw`` is marked
+as ``volatile``, then the optimizer is not allowed to modify the
+number or order of execution of this ``atomicrmw`` with other
+:ref:`volatile operations <volatile>`.
 
 Note: if the alignment is not greater or equal to the size of the `<value>`
 type, the atomic operation is likely to require a lock and have poor
@@ -11445,7 +11448,7 @@ and converts the remaining bits to ``ty2``. Since the source size must
 be larger than the destination size, ``trunc`` cannot be a *no-op cast*.
 It will always truncate bits.
 
-If the ``nuw`` keyword is present, and any of the truncated bits are zero,
+If the ``nuw`` keyword is present, and any of the truncated bits are non-zero,
 the result is a :ref:`poison value <poisonvalues>`. If the ``nsw`` keyword
 is present, and any of the truncated bits are not the same as the top bit
 of the truncation result, the result is a :ref:`poison value <poisonvalues>`.
@@ -11748,6 +11751,10 @@ Overview:
 The '``uitofp``' instruction regards ``value`` as an unsigned integer
 and converts that value to the ``ty2`` type.
 
+The ``nneg`` (non-negative) flag, if present, specifies that the
+operand is non-negative. This property may be used by optimization
+passes to later convert the ``uitofp`` into a ``sitofp``.
+
 Arguments:
 """"""""""
 
@@ -11765,6 +11772,9 @@ integer quantity and converts it to the corresponding floating-point
 value. If the value cannot be exactly represented, it is rounded using
 the default rounding mode.
 
+If the ``nneg`` flag is set, and the ``uitofp`` argument is negative,
+the result is a poison value.
+
 
 Example:
 """"""""
@@ -11773,6 +11783,9 @@ Example:
 
       %X = uitofp i32 257 to float         ; yields float:257.0
       %Y = uitofp i8 -1 to double          ; yields double:255.0
+
+      %a = uitofp nneg i32 256 to i32      ; yields float:256.0
+      %b = uitofp nneg i32 -256 to i32     ; yields i32 poison
 
 '``sitofp .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -12504,7 +12517,7 @@ This instruction requires several arguments:
       ``llvm::GuaranteedTailCallOpt`` is ``true``, or the calling convention
       is ``tailcc``
    -  `Platform-specific constraints are
-      met. <CodeGenerator.html#tailcallopt>`_
+      met. <CodeGenerator.html#tail-call-optimization>`_
 
 #. The optional ``notail`` marker indicates that the optimizers should not add
    ``tail`` or ``musttail`` markers to the call. It is used to prevent tail
@@ -14125,6 +14138,41 @@ The last argument specifies the value of the increment of the counter variable.
 Semantics:
 """"""""""
 See description of '``llvm.instrprof.increment``' intrinsic.
+
+'``llvm.instrprof.callsite``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.instrprof.callsite(ptr <name>, i64 <hash>,
+                                            i32 <num-counters>,
+                                            i32 <index>, ptr <callsite>)
+
+Overview:
+"""""""""
+
+.. FIXME: detail when it's emitted once the support is added
+
+The '``llvm.instrprof.callsite``' intrinsic should be emitted before a callsite
+that's not to a "fake" callee (like another intrinsic or asm).
+
+Arguments:
+""""""""""
+The first 4 arguments are similar to ``llvm.instrprof.increment``. The indexing
+is specific to callsites, meaning callsites are indexed from 0, independent from
+the indexes used by the other intrinsics (such as 
+``llvm.instrprof.increment[.step]``).
+
+The last argument is the called value of the callsite this intrinsic precedes.
+
+Semantics:
+""""""""""
+.. FIXME: detail how when the lowering pass is added.
+
+This is lowered by contextual profiling.
 
 '``llvm.instrprof.timestamp``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -27839,6 +27887,120 @@ constant `true`. However it is always correct to replace
 it with any other `i1` value. Any pass can
 freely do it if it can benefit from non-default lowering.
 
+'``llvm.allow.ubsan.check``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare i1 @llvm.allow.ubsan.check(i8 immarg %kind)
+
+Overview:
+"""""""""
+
+This intrinsic returns ``true`` if and only if the compiler opted to enable the
+ubsan check in the current basic block.
+
+Rules to allow ubsan checks are not part of the intrinsic declaration, and
+controlled by compiler options.
+
+This intrinsic is the ubsan specific version of ``@llvm.allow.runtime.check()``.
+
+Arguments:
+""""""""""
+
+An integer describing the kind of ubsan check guarded by the intrinsic.
+
+Semantics:
+""""""""""
+
+The intrinsic ``@llvm.allow.ubsan.check()`` returns either ``true`` or
+``false``, depending on compiler options. 
+
+For each evaluation of a call to this intrinsic, the program must be valid and
+correct both if it returns ``true`` and if it returns ``false``.
+
+When used in a branch condition, it selects one of the two paths:
+
+* `true``: Executes the UBSan check and reports any failures.
+
+* `false`: Bypasses the check, assuming it always succeeds.
+
+Example:
+
+.. code-block:: text
+
+    %allow = call i1 @llvm.allow.ubsan.check(i8 5)
+    %not.allow = xor i1 %allow, true
+    %cond = or i1 %ubcheck, %not.allow
+    br i1 %cond, label %cont, label %trap
+
+  cont:
+    ; Proceed
+
+  trap:
+    call void @llvm.ubsantrap(i8 5)
+    unreachable
+
+
+'``llvm.allow.runtime.check``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare i1 @llvm.allow.runtime.check(metadata %kind)
+
+Overview:
+"""""""""
+
+This intrinsic returns ``true`` if and only if the compiler opted to enable
+runtime checks in the current basic block.
+
+Rules to allow runtime checks are not part of the intrinsic declaration, and
+controlled by compiler options.
+
+This intrinsic is non-ubsan specific version of ``@llvm.allow.ubsan.check()``.
+
+Arguments:
+""""""""""
+
+A string identifying the kind of runtime check guarded by the intrinsic. The
+string can be used to control rules to allow checks.
+
+Semantics:
+""""""""""
+
+The intrinsic ``@llvm.allow.runtime.check()`` returns either ``true`` or
+``false``, depending on compiler options. 
+
+For each evaluation of a call to this intrinsic, the program must be valid and
+correct both if it returns ``true`` and if it returns ``false``.
+
+When used in a branch condition, it allows us to choose between
+two alternative correct solutions for the same problem. 
+
+If the intrinsic is evaluated as ``true``, program should execute a guarded
+check. If the intrinsic is evaluated as ``false``, the program should avoid any
+unnecessary checks.
+
+Example:
+
+.. code-block:: text
+
+    %allow = call i1 @llvm.allow.runtime.check(metadata !"my_check")
+    br i1 %allow, label %fast_path, label %slow_path
+
+  fast_path:
+    ; Omit diagnostics.
+
+  slow_path:
+    ; Additional diagnostics.
+
 
 '``llvm.load.relative``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -28003,7 +28165,8 @@ Syntax:
 Arguments:
 """"""""""
 
-The first argument is a pointer, which refers to a thread local global.
+The `llvm.threadlocal.address` intrinsic requires a global value argument (a
+:ref:`global variable <globalvars>` or alias) that is thread local.
 
 Semantics:
 """"""""""

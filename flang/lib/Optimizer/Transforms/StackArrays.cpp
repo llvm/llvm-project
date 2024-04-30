@@ -776,7 +776,3 @@ void StackArraysPass::runOnFunc(mlir::Operation *func) {
     signalPassFailure();
   }
 }
-
-std::unique_ptr<mlir::Pass> fir::createStackArraysPass() {
-  return std::make_unique<StackArraysPass>();
-}

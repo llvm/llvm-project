@@ -72,6 +72,9 @@ class SimplifyIntrinsicsPass
       mlir::Type elementType)>;
 
 public:
+  using fir::impl::SimplifyIntrinsicsBase<
+      SimplifyIntrinsicsPass>::SimplifyIntrinsicsBase;
+
   /// Generate a new function implementing a simplified version
   /// of a Fortran runtime function defined by \p basename name.
   /// \p typeGenerator is a callback that generates the new function's type.
@@ -1004,10 +1007,8 @@ mlir::func::FuncOp SimplifyIntrinsicsPass::getOrCreateFunction(
   //          We can also avoid this by using internal linkage, but
   //          this may increase the size of final executable/shared library.
   std::string replacementName = mlir::Twine{baseName, "_simplified"}.str();
-  mlir::ModuleOp module = builder.getModule();
   // If we already have a function, just return it.
-  mlir::func::FuncOp newFunc =
-      fir::FirOpBuilder::getNamedFunction(module, replacementName);
+  mlir::func::FuncOp newFunc = builder.getNamedFunction(replacementName);
   mlir::FunctionType fType = typeGenerator(builder);
   if (newFunc) {
     assert(newFunc.getFunctionType() == fType &&
@@ -1017,8 +1018,7 @@ mlir::func::FuncOp SimplifyIntrinsicsPass::getOrCreateFunction(
 
   // Need to build the function!
   auto loc = mlir::UnknownLoc::get(builder.getContext());
-  newFunc =
-      fir::FirOpBuilder::createFunction(loc, module, replacementName, fType);
+  newFunc = builder.createFunction(loc, replacementName, fType);
   auto inlineLinkage = mlir::LLVM::linkage::Linkage::LinkonceODR;
   auto linkage =
       mlir::LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
@@ -1389,7 +1389,4 @@ void SimplifyIntrinsicsPass::getDependentDialects(
     mlir::DialectRegistry &registry) const {
   // LLVM::LinkageAttr creation requires that LLVM dialect is loaded.
   registry.insert<mlir::LLVM::LLVMDialect>();
-}
-std::unique_ptr<mlir::Pass> fir::createSimplifyIntrinsicsPass() {
-  return std::make_unique<SimplifyIntrinsicsPass>();
 }

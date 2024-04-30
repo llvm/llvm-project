@@ -51,7 +51,6 @@ private:
   using packed = support::detail::packed_endian_specific_integral<Ty, E, 1>;
 
 public:
-  static const endianness TargetEndianness = E;
   static const endianness Endianness = E;
   static const bool Is64Bits = Is64;
 

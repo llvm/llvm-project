@@ -1466,6 +1466,34 @@ static void CheckImage_Index(evaluate::ActualArguments &arguments,
   }
 }
 
+// Ensure that any optional argument that might be absent at run time
+// does not require data conversion.
+static void CheckMaxMin(const characteristics::Procedure &proc,
+    evaluate::ActualArguments &arguments,
+    parser::ContextualMessages &messages) {
+  if (proc.functionResult) {
+    if (const auto *typeAndShape{proc.functionResult->GetTypeAndShape()}) {
+      for (std::size_t j{2}; j < arguments.size(); ++j) {
+        if (arguments[j]) {
+          if (const auto *expr{arguments[j]->UnwrapExpr()};
+              expr && evaluate::MayBePassedAsAbsentOptional(*expr)) {
+            if (auto thisType{expr->GetType()}) {
+              if (thisType->category() == TypeCategory::Character &&
+                  typeAndShape->type().category() == TypeCategory::Character &&
+                  thisType->kind() == typeAndShape->type().kind()) {
+                // don't care about lengths
+              } else if (*thisType != typeAndShape->type()) {
+                messages.Say(arguments[j]->sourceLocation(),
+                    "An actual argument to MAX/MIN requiring data conversion may not be OPTIONAL, POINTER, or ALLOCATABLE"_err_en_US);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 // MOVE_ALLOC (F'2023 16.9.147)
 static void CheckMove_Alloc(evaluate::ActualArguments &arguments,
     parser::ContextualMessages &messages) {
@@ -1574,8 +1602,8 @@ static void CheckReduce(
     if (const auto *expr{operation->UnwrapExpr()}) {
       if (const auto *designator{
               std::get_if<evaluate::ProcedureDesignator>(&expr->u)}) {
-        procChars =
-            characteristics::Procedure::Characterize(*designator, context);
+        procChars = characteristics::Procedure::Characterize(
+            *designator, context, /*emitError=*/true);
       } else if (const auto *ref{
                      std::get_if<evaluate::ProcedureRef>(&expr->u)}) {
         procChars = characteristics::Procedure::Characterize(*ref, context);
@@ -1733,13 +1761,15 @@ static void CheckTransfer(evaluate::ActualArguments &arguments,
   }
 }
 
-static void CheckSpecificIntrinsic(evaluate::ActualArguments &arguments,
-    SemanticsContext &context, const Scope *scope,
-    const evaluate::SpecificIntrinsic &intrinsic) {
+static void CheckSpecificIntrinsic(const characteristics::Procedure &proc,
+    evaluate::ActualArguments &arguments, SemanticsContext &context,
+    const Scope *scope, const evaluate::SpecificIntrinsic &intrinsic) {
   if (intrinsic.name == "associated") {
     CheckAssociated(arguments, context, scope);
   } else if (intrinsic.name == "image_index") {
     CheckImage_Index(arguments, context.foldingContext().messages());
+  } else if (intrinsic.name == "max" || intrinsic.name == "min") {
+    CheckMaxMin(proc, arguments, context.foldingContext().messages());
   } else if (intrinsic.name == "move_alloc") {
     CheckMove_Alloc(arguments, context.foldingContext().messages());
   } else if (intrinsic.name == "present") {
@@ -1790,7 +1820,7 @@ static parser::Messages CheckExplicitInterface(
     CheckElementalConformance(messages, proc, actuals, foldingContext);
   }
   if (intrinsic) {
-    CheckSpecificIntrinsic(actuals, context, scope, *intrinsic);
+    CheckSpecificIntrinsic(proc, actuals, context, scope, *intrinsic);
   }
   return buffer;
 }
@@ -1899,6 +1929,7 @@ bool CheckArguments(const characteristics::Procedure &proc,
   bool explicitInterface{proc.HasExplicitInterface()};
   evaluate::FoldingContext foldingContext{context.foldingContext()};
   parser::ContextualMessages &messages{foldingContext.messages()};
+  bool allowArgumentConversions{true};
   if (!explicitInterface || treatingExternalAsImplicit) {
     parser::Messages buffer;
     {
@@ -1915,11 +1946,12 @@ bool CheckArguments(const characteristics::Procedure &proc,
       }
       return false; // don't pile on
     }
+    allowArgumentConversions = false;
   }
   if (explicitInterface) {
     auto buffer{CheckExplicitInterface(proc, actuals, context, &scope,
-        intrinsic, /*allowArgumentConversions=*/true, /*extentErrors=*/true,
-        ignoreImplicitVsExplicit)};
+        intrinsic, allowArgumentConversions,
+        /*extentErrors=*/true, ignoreImplicitVsExplicit)};
     if (!buffer.empty()) {
       if (treatingExternalAsImplicit) {
         if (auto *msg{messages.Say(
