@@ -12,73 +12,582 @@ typedef half  v10h   __attribute__((ext_vector_type(10)));
 typedef half  v18h   __attribute__((ext_vector_type(18)));
 typedef half  v36h   __attribute__((ext_vector_type(36)));
 
+typedef __bf16  v2bf16   __attribute__((ext_vector_type(2)));
+typedef __bf16  v4bf16   __attribute__((ext_vector_type(4)));
+typedef __bf16  v6bf16   __attribute__((ext_vector_type(6)));
+typedef __bf16  v8bf16   __attribute__((ext_vector_type(8)));
+typedef __bf16  v10bf16   __attribute__((ext_vector_type(10)));
+typedef __bf16  v18bf16   __attribute__((ext_vector_type(18)));
+typedef __bf16  v36bf16   __attribute__((ext_vector_type(36)));
 
-// 3x3
+typedef float  v4f   __attribute__((ext_vector_type(4)));
 
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_3x3_8x4(
+typedef int    v2i   __attribute__((ext_vector_type(2)));
+typedef int    v3i   __attribute__((ext_vector_type(3)));
+typedef int    v4i   __attribute__((ext_vector_type(4)));
+typedef int    v5i   __attribute__((ext_vector_type(5)));
+typedef int    v9i   __attribute__((ext_vector_type(9)));
+typedef int   v18i   __attribute__((ext_vector_type(18)));
+
+
+
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp32_iu4_3x3_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.3x3.v8f16.v8f16.v10f16.v8f16(<8 x half> [[ACC:%.*]], <10 x half> [[WEIGHTS:%.*]], <8 x half> [[COL_CENTER:%.*]], <8 x half> [[COL_LEFT:%.*]], <8 x half> [[COL_RIGHT:%.*]], i32 42, i1 true)
-// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4:![0-9]+]]
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wconv.fp32.iu4.3x3.v4f32.v4f32.v18i32.v3i32(<4 x float> [[ACC:%.*]], <18 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4:![0-9]+]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_wconv_3x3_8x4(global v8h* out, v8h acc, v10h weights, v8h col_center, v8h col_left, v8h col_right)
+void test_amdgcn_builtin_amdgcn_wconv_fp32_iu4_3x3_4x2(global v4f* out, v4f acc, v18i weights, v3i col_center, v3i col_left, v3i col_right)
 {
-  *out = __builtin_amdgcn_wconv_3x3_8x4(acc, weights, col_center, col_left, col_right, 42, true);
+   *out = __builtin_amdgcn_wconv_fp32_iu4_3x3_4x2(acc, weights, col_center, col_left, col_right, 42, true);
 }
-
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_3x3_4x4(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_iu4_3x3_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.3x3.v8f16.v8f16.v18f16.v6f16(<8 x half> [[ACC:%.*]], <18 x half> [[WEIGHTS:%.*]], <6 x half> [[COL_CENTER:%.*]], <6 x half> [[COL_LEFT:%.*]], <6 x half> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.wconv.fp16.iu4.3x3.v4f16.v4f16.v18i32.v3i32(<4 x half> [[ACC:%.*]], <18 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_iu4_3x3_4x2(global v4h* out, v4h acc, v18i weights, v3i col_center, v3i col_left, v3i col_right)
+{
+   *out = __builtin_amdgcn_wconv_fp16_iu4_3x3_4x2(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_iu4_3x3_4x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.fp16.iu4.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> [[ACC:%.*]], <9 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_wconv_3x3_4x4(global v8h* out, v8h acc, v18h weights, v6h col_center, v6h col_left, v6h col_right)
+void test_amdgcn_builtin_amdgcn_wconv_fp16_iu4_3x3_4x4(global v8h* out, v8h acc, v9i weights, v3i col_center, v3i col_left, v3i col_right)
 {
-  *out = __builtin_amdgcn_wconv_3x3_4x4(acc, weights, col_center, col_left, col_right, 42, true);
+   *out = __builtin_amdgcn_wconv_fp16_iu4_3x3_4x4(acc, weights, col_center, col_left, col_right, 42, true);
 }
-
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_3x3_4x2(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_iu4_3x3_8x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.3x3.v8f16.v8f16.v36f16.v6f16(<8 x half> [[ACC:%.*]], <36 x half> [[WEIGHTS:%.*]], <6 x half> [[COL_CENTER:%.*]], <6 x half> [[COL_LEFT:%.*]], <6 x half> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.fp16.iu4.3x3.v8f16.v8f16.v5i32.v4i32(<8 x half> [[ACC:%.*]], <5 x i32> [[WEIGHTS:%.*]], <4 x i32> [[COL_CENTER:%.*]], <4 x i32> [[COL_LEFT:%.*]], <4 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_wconv_3x3_4x2(global v8h* out, v8h acc, v36h weights, v6h col_center, v6h col_left, v6h col_right)
+void test_amdgcn_builtin_amdgcn_wconv_fp16_iu4_3x3_8x4(global v8h* out, v8h acc, v5i weights, v4i col_center, v4i col_left, v4i col_right)
 {
-  *out = __builtin_amdgcn_wconv_3x3_4x2(acc, weights, col_center, col_left, col_right, 42, true);
+   *out = __builtin_amdgcn_wconv_fp16_iu4_3x3_8x4(acc, weights, col_center, col_left, col_right, 42, true);
 }
-
-// 1x1
-
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_1x1_8x4(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_i32_iu4_3x3_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.1x1.v8f16.v8f16.v2f16.v4f16(<8 x half> [[ACC:%.*]], <2 x half> [[WEIGHTS:%.*]], <4 x half> [[TEN_0:%.*]], <4 x half> [[TEN_1:%.*]], <4 x half> [[TEN_2:%.*]], <4 x half> [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.wconv.i32.iu4.3x3.v4i32.v4i32.v18i32.v3i32(<4 x i32> [[ACC:%.*]], <18 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_i32_iu4_3x3_4x2(global v4i* out, v4i acc, v18i weights, v3i col_center, v3i col_left, v3i col_right)
+{
+   *out = __builtin_amdgcn_wconv_i32_iu4_3x3_4x2(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_f32i32_iu4_3x3_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wconv.f32i32.iu4.3x3.v4f32.v4i32.v18i32.v3i32(<4 x i32> [[ACC:%.*]], <18 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_f32i32_iu4_3x3_4x2(global v4f* out, v4i acc, v18i weights, v3i col_center, v3i col_left, v3i col_right)
+{
+   *out = __builtin_amdgcn_wconv_f32i32_iu4_3x3_4x2(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp32_iu8_3x3_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wconv.fp32.iu8.3x3.v4f32.v4f32.v18i32.v3i32(<4 x float> [[ACC:%.*]], <18 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp32_iu8_3x3_4x2(global v4f* out, v4f acc, v18i weights, v3i col_center, v3i col_left, v3i col_right)
+{
+   *out = __builtin_amdgcn_wconv_fp32_iu8_3x3_4x2(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_iu8_3x3_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.wconv.fp16.iu8.3x3.v4f16.v4f16.v18i32.v3i32(<4 x half> [[ACC:%.*]], <18 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_iu8_3x3_4x2(global v4h* out, v4h acc, v18i weights, v3i col_center, v3i col_left, v3i col_right)
+{
+   *out = __builtin_amdgcn_wconv_fp16_iu8_3x3_4x2(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_iu8_3x3_4x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.fp16.iu8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> [[ACC:%.*]], <9 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_wconv_1x1_8x4(global v8h* out, v8h acc, v2h weights, v4h ten_0, v4h ten_1, v4h ten_2, v4h ten_3)
+void test_amdgcn_builtin_amdgcn_wconv_fp16_iu8_3x3_4x4(global v8h* out, v8h acc, v9i weights, v3i col_center, v3i col_left, v3i col_right)
 {
-  *out = __builtin_amdgcn_wconv_1x1_8x4(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+   *out = __builtin_amdgcn_wconv_fp16_iu8_3x3_4x4(acc, weights, col_center, col_left, col_right, 42, true);
 }
-
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_1x1_4x4(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_iu8_3x3_8x4(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.1x1.v8f16.v8f16.v2f16.v2f16(<8 x half> [[ACC:%.*]], <2 x half> [[WEIGHTS:%.*]], <2 x half> [[TEN_0:%.*]], <2 x half> [[TEN_1:%.*]], <2 x half> [[TEN_2:%.*]], <2 x half> [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.fp16.iu8.3x3.v8f16.v8f16.v5i32.v4i32(<8 x half> [[ACC:%.*]], <5 x i32> [[WEIGHTS:%.*]], <4 x i32> [[COL_CENTER:%.*]], <4 x i32> [[COL_LEFT:%.*]], <4 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_wconv_1x1_4x4(global v8h* out, v8h acc, v2h weights, v2h ten_0, v2h ten_1, v2h ten_2, v2h ten_3)
+void test_amdgcn_builtin_amdgcn_wconv_fp16_iu8_3x3_8x4(global v8h* out, v8h acc, v5i weights, v4i col_center, v4i col_left, v4i col_right)
 {
-  *out = __builtin_amdgcn_wconv_1x1_4x4(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+   *out = __builtin_amdgcn_wconv_fp16_iu8_3x3_8x4(acc, weights, col_center, col_left, col_right, 42, true);
 }
-
-// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_1x1_4x2(
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_i32_iu8_3x3_4x2(
 // CHECK-GFX1300-NEXT:  entry:
-// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.1x1.v8f16.v8f16.v4f16.v2f16(<8 x half> [[ACC:%.*]], <4 x half> [[WEIGHTS:%.*]], <2 x half> [[TEN_0:%.*]], <2 x half> [[TEN_1:%.*]], <2 x half> [[TEN_2:%.*]], <2 x half> [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.wconv.i32.iu8.3x3.v4i32.v4i32.v18i32.v3i32(<4 x i32> [[ACC:%.*]], <18 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_i32_iu8_3x3_4x2(global v4i* out, v4i acc, v18i weights, v3i col_center, v3i col_left, v3i col_right)
+{
+   *out = __builtin_amdgcn_wconv_i32_iu8_3x3_4x2(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_f32i32_iu8_3x3_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wconv.f32i32.iu8.3x3.v4f32.v4i32.v18i32.v3i32(<4 x i32> [[ACC:%.*]], <18 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_f32i32_iu8_3x3_4x2(global v4f* out, v4i acc, v18i weights, v3i col_center, v3i col_left, v3i col_right)
+{
+   *out = __builtin_amdgcn_wconv_f32i32_iu8_3x3_4x2(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp32_fp8_3x3_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wconv.fp32.fp8.3x3.v4f32.v4f32.v18i32.v3i32(<4 x float> [[ACC:%.*]], <18 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp32_fp8_3x3_4x2(global v4f* out, v4f acc, v18i weights, v3i col_center, v3i col_left, v3i col_right)
+{
+   *out = __builtin_amdgcn_wconv_fp32_fp8_3x3_4x2(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_fp8_3x3_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.wconv.fp16.fp8.3x3.v4f16.v4f16.v18i32.v3i32(<4 x half> [[ACC:%.*]], <18 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_fp8_3x3_4x2(global v4h* out, v4h acc, v18i weights, v3i col_center, v3i col_left, v3i col_right)
+{
+   *out = __builtin_amdgcn_wconv_fp16_fp8_3x3_4x2(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_fp8_3x3_4x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.fp16.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> [[ACC:%.*]], <9 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
 // CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_builtin_amdgcn_wconv_1x1_4x2(global v8h* out, v8h acc, v4h weights, v2h ten_0, v2h ten_1, v2h ten_2, v2h ten_3)
+void test_amdgcn_builtin_amdgcn_wconv_fp16_fp8_3x3_4x4(global v8h* out, v8h acc, v9i weights, v3i col_center, v3i col_left, v3i col_right)
 {
-  *out = __builtin_amdgcn_wconv_1x1_4x2(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+   *out = __builtin_amdgcn_wconv_fp16_fp8_3x3_4x4(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_fp8_3x3_8x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.fp16.fp8.3x3.v8f16.v8f16.v5i32.v4i32(<8 x half> [[ACC:%.*]], <5 x i32> [[WEIGHTS:%.*]], <4 x i32> [[COL_CENTER:%.*]], <4 x i32> [[COL_LEFT:%.*]], <4 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_fp8_3x3_8x4(global v8h* out, v8h acc, v5i weights, v4i col_center, v4i col_left, v4i col_right)
+{
+   *out = __builtin_amdgcn_wconv_fp16_fp8_3x3_8x4(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp32_bf8_3x3_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wconv.fp32.bf8.3x3.v4f32.v4f32.v18i32.v3i32(<4 x float> [[ACC:%.*]], <18 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp32_bf8_3x3_4x2(global v4f* out, v4f acc, v18i weights, v3i col_center, v3i col_left, v3i col_right)
+{
+   *out = __builtin_amdgcn_wconv_fp32_bf8_3x3_4x2(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_bf16_bf8_3x3_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.wconv.bf16.bf8.3x3.v4bf16.v4bf16.v18i32.v3i32(<4 x bfloat> [[ACC:%.*]], <18 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_bf16_bf8_3x3_4x2(global v4bf16* out, v4bf16 acc, v18i weights, v3i col_center, v3i col_left, v3i col_right)
+{
+   *out = __builtin_amdgcn_wconv_bf16_bf8_3x3_4x2(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_bf16_bf8_3x3_4x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.wconv.bf16.bf8.3x3.v8bf16.v8bf16.v9i32.v3i32(<8 x bfloat> [[ACC:%.*]], <9 x i32> [[WEIGHTS:%.*]], <3 x i32> [[COL_CENTER:%.*]], <3 x i32> [[COL_LEFT:%.*]], <3 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_bf16_bf8_3x3_4x4(global v8bf16* out, v8bf16 acc, v9i weights, v3i col_center, v3i col_left, v3i col_right)
+{
+   *out = __builtin_amdgcn_wconv_bf16_bf8_3x3_4x4(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_bf16_bf8_3x3_8x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.wconv.bf16.bf8.3x3.v8bf16.v8bf16.v5i32.v4i32(<8 x bfloat> [[ACC:%.*]], <5 x i32> [[WEIGHTS:%.*]], <4 x i32> [[COL_CENTER:%.*]], <4 x i32> [[COL_LEFT:%.*]], <4 x i32> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_bf16_bf8_3x3_8x4(global v8bf16* out, v8bf16 acc, v5i weights, v4i col_center, v4i col_left, v4i col_right)
+{
+   *out = __builtin_amdgcn_wconv_bf16_bf8_3x3_8x4(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp32_fp16_3x3_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wconv.fp32.fp16.3x3.v4f32.v4f32.v36f16.v6f16(<4 x float> [[ACC:%.*]], <36 x half> [[WEIGHTS:%.*]], <6 x half> [[COL_CENTER:%.*]], <6 x half> [[COL_LEFT:%.*]], <6 x half> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp32_fp16_3x3_4x2(global v4f* out, v4f acc, v36h weights, v6h col_center, v6h col_left, v6h col_right)
+{
+   *out = __builtin_amdgcn_wconv_fp32_fp16_3x3_4x2(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_fp16_3x3_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.wconv.fp16.fp16.3x3.v4f16.v4f16.v36f16.v6f16(<4 x half> [[ACC:%.*]], <36 x half> [[WEIGHTS:%.*]], <6 x half> [[COL_CENTER:%.*]], <6 x half> [[COL_LEFT:%.*]], <6 x half> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_fp16_3x3_4x2(global v4h* out, v4h acc, v36h weights, v6h col_center, v6h col_left, v6h col_right)
+{
+   *out = __builtin_amdgcn_wconv_fp16_fp16_3x3_4x2(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_fp16_3x3_4x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.fp16.fp16.3x3.v8f16.v8f16.v18f16.v6f16(<8 x half> [[ACC:%.*]], <18 x half> [[WEIGHTS:%.*]], <6 x half> [[COL_CENTER:%.*]], <6 x half> [[COL_LEFT:%.*]], <6 x half> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_fp16_3x3_4x4(global v8h* out, v8h acc, v18h weights, v6h col_center, v6h col_left, v6h col_right)
+{
+   *out = __builtin_amdgcn_wconv_fp16_fp16_3x3_4x4(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_fp16_3x3_8x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.fp16.fp16.3x3.v8f16.v8f16.v10f16.v8f16(<8 x half> [[ACC:%.*]], <10 x half> [[WEIGHTS:%.*]], <8 x half> [[COL_CENTER:%.*]], <8 x half> [[COL_LEFT:%.*]], <8 x half> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_fp16_3x3_8x4(global v8h* out, v8h acc, v10h weights, v8h col_center, v8h col_left, v8h col_right)
+{
+   *out = __builtin_amdgcn_wconv_fp16_fp16_3x3_8x4(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp32_bf16_3x3_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wconv.fp32.bf16.3x3.v4f32.v4f32.v36bf16.v6bf16(<4 x float> [[ACC:%.*]], <36 x bfloat> [[WEIGHTS:%.*]], <6 x bfloat> [[COL_CENTER:%.*]], <6 x bfloat> [[COL_LEFT:%.*]], <6 x bfloat> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp32_bf16_3x3_4x2(global v4f* out, v4f acc, v36bf16 weights, v6bf16 col_center, v6bf16 col_left, v6bf16 col_right)
+{
+   *out = __builtin_amdgcn_wconv_fp32_bf16_3x3_4x2(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_bf16_bf16_3x3_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.wconv.bf16.bf16.3x3.v4bf16.v4bf16.v36bf16.v6bf16(<4 x bfloat> [[ACC:%.*]], <36 x bfloat> [[WEIGHTS:%.*]], <6 x bfloat> [[COL_CENTER:%.*]], <6 x bfloat> [[COL_LEFT:%.*]], <6 x bfloat> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_bf16_bf16_3x3_4x2(global v4bf16* out, v4bf16 acc, v36bf16 weights, v6bf16 col_center, v6bf16 col_left, v6bf16 col_right)
+{
+   *out = __builtin_amdgcn_wconv_bf16_bf16_3x3_4x2(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_bf16_bf16_3x3_4x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.wconv.bf16.bf16.3x3.v8bf16.v8bf16.v18bf16.v6bf16(<8 x bfloat> [[ACC:%.*]], <18 x bfloat> [[WEIGHTS:%.*]], <6 x bfloat> [[COL_CENTER:%.*]], <6 x bfloat> [[COL_LEFT:%.*]], <6 x bfloat> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_bf16_bf16_3x3_4x4(global v8bf16* out, v8bf16 acc, v18bf16 weights, v6bf16 col_center, v6bf16 col_left, v6bf16 col_right)
+{
+   *out = __builtin_amdgcn_wconv_bf16_bf16_3x3_4x4(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_bf16_bf16_3x3_8x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.wconv.bf16.bf16.3x3.v8bf16.v8bf16.v10bf16.v8bf16(<8 x bfloat> [[ACC:%.*]], <10 x bfloat> [[WEIGHTS:%.*]], <8 x bfloat> [[COL_CENTER:%.*]], <8 x bfloat> [[COL_LEFT:%.*]], <8 x bfloat> [[COL_RIGHT:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_bf16_bf16_3x3_8x4(global v8bf16* out, v8bf16 acc, v10bf16 weights, v8bf16 col_center, v8bf16 col_left, v8bf16 col_right)
+{
+   *out = __builtin_amdgcn_wconv_bf16_bf16_3x3_8x4(acc, weights, col_center, col_left, col_right, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp32_iu4_1x1_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wconv.fp32.iu4.1x1.v4f32.v4f32.v2i32.i32(<4 x float> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], i32 [[TEN_0:%.*]], i32 [[TEN_1:%.*]], i32 [[TEN_2:%.*]], i32 [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp32_iu4_1x1_4x2(global v4f* out, v4f acc, v2i weights, int ten_0, int ten_1, int ten_2, int ten_3)
+{
+   *out = __builtin_amdgcn_wconv_fp32_iu4_1x1_4x2(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_iu4_1x1_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.wconv.fp16.iu4.1x1.v4f16.v4f16.v2i32.i32(<4 x half> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], i32 [[TEN_0:%.*]], i32 [[TEN_1:%.*]], i32 [[TEN_2:%.*]], i32 [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_iu4_1x1_4x2(global v4h* out, v4h acc, v2i weights, int ten_0, int ten_1, int ten_2, int ten_3)
+{
+   *out = __builtin_amdgcn_wconv_fp16_iu4_1x1_4x2(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_iu4_1x1_4x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.fp16.iu4.1x1.v8f16.v8f16.i32.i32(<8 x half> [[ACC:%.*]], i32 [[WEIGHTS:%.*]], i32 [[TEN_0:%.*]], i32 [[TEN_1:%.*]], i32 [[TEN_2:%.*]], i32 [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_iu4_1x1_4x4(global v8h* out, v8h acc, int weights, int ten_0, int ten_1, int ten_2, int ten_3)
+{
+   *out = __builtin_amdgcn_wconv_fp16_iu4_1x1_4x4(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_iu4_1x1_8x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.fp16.iu4.1x1.v8f16.v8f16.i32.v2i32(<8 x half> [[ACC:%.*]], i32 [[WEIGHTS:%.*]], <2 x i32> [[TEN_0:%.*]], <2 x i32> [[TEN_1:%.*]], <2 x i32> [[TEN_2:%.*]], <2 x i32> [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_iu4_1x1_8x4(global v8h* out, v8h acc, int weights, v2i ten_0, v2i ten_1, v2i ten_2, v2i ten_3)
+{
+   *out = __builtin_amdgcn_wconv_fp16_iu4_1x1_8x4(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_i32_iu4_1x1_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.wconv.i32.iu4.1x1.v4i32.v4i32.v2i32.i32(<4 x i32> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], i32 [[TEN_0:%.*]], i32 [[TEN_1:%.*]], i32 [[TEN_2:%.*]], i32 [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_i32_iu4_1x1_4x2(global v4i* out, v4i acc, v2i weights, int ten_0, int ten_1, int ten_2, int ten_3)
+{
+   *out = __builtin_amdgcn_wconv_i32_iu4_1x1_4x2(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_f32i32_iu4_1x1_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wconv.f32i32.iu4.1x1.v4f32.v4i32.v2i32.i32(<4 x i32> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], i32 [[TEN_0:%.*]], i32 [[TEN_1:%.*]], i32 [[TEN_2:%.*]], i32 [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_f32i32_iu4_1x1_4x2(global v4f* out, v4i acc, v2i weights, int ten_0, int ten_1, int ten_2, int ten_3)
+{
+   *out = __builtin_amdgcn_wconv_f32i32_iu4_1x1_4x2(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp32_iu8_1x1_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wconv.fp32.iu8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], i32 [[TEN_0:%.*]], i32 [[TEN_1:%.*]], i32 [[TEN_2:%.*]], i32 [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp32_iu8_1x1_4x2(global v4f* out, v4f acc, v2i weights, int ten_0, int ten_1, int ten_2, int ten_3)
+{
+   *out = __builtin_amdgcn_wconv_fp32_iu8_1x1_4x2(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_iu8_1x1_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.wconv.fp16.iu8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], i32 [[TEN_0:%.*]], i32 [[TEN_1:%.*]], i32 [[TEN_2:%.*]], i32 [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_iu8_1x1_4x2(global v4h* out, v4h acc, v2i weights, int ten_0, int ten_1, int ten_2, int ten_3)
+{
+   *out = __builtin_amdgcn_wconv_fp16_iu8_1x1_4x2(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_iu8_1x1_4x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.fp16.iu8.1x1.v8f16.v8f16.i32.i32(<8 x half> [[ACC:%.*]], i32 [[WEIGHTS:%.*]], i32 [[TEN_0:%.*]], i32 [[TEN_1:%.*]], i32 [[TEN_2:%.*]], i32 [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_iu8_1x1_4x4(global v8h* out, v8h acc, int weights, int ten_0, int ten_1, int ten_2, int ten_3)
+{
+   *out = __builtin_amdgcn_wconv_fp16_iu8_1x1_4x4(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_iu8_1x1_8x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.fp16.iu8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> [[ACC:%.*]], i32 [[WEIGHTS:%.*]], <2 x i32> [[TEN_0:%.*]], <2 x i32> [[TEN_1:%.*]], <2 x i32> [[TEN_2:%.*]], <2 x i32> [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_iu8_1x1_8x4(global v8h* out, v8h acc, int weights, v2i ten_0, v2i ten_1, v2i ten_2, v2i ten_3)
+{
+   *out = __builtin_amdgcn_wconv_fp16_iu8_1x1_8x4(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_i32_iu8_1x1_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x i32> @llvm.amdgcn.wconv.i32.iu8.1x1.v4i32.v4i32.v2i32.i32(<4 x i32> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], i32 [[TEN_0:%.*]], i32 [[TEN_1:%.*]], i32 [[TEN_2:%.*]], i32 [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x i32> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_i32_iu8_1x1_4x2(global v4i* out, v4i acc, v2i weights, int ten_0, int ten_1, int ten_2, int ten_3)
+{
+   *out = __builtin_amdgcn_wconv_i32_iu8_1x1_4x2(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_f32i32_iu8_1x1_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wconv.f32i32.iu8.1x1.v4f32.v4i32.v2i32.i32(<4 x i32> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], i32 [[TEN_0:%.*]], i32 [[TEN_1:%.*]], i32 [[TEN_2:%.*]], i32 [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_f32i32_iu8_1x1_4x2(global v4f* out, v4i acc, v2i weights, int ten_0, int ten_1, int ten_2, int ten_3)
+{
+   *out = __builtin_amdgcn_wconv_f32i32_iu8_1x1_4x2(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp32_fp8_1x1_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wconv.fp32.fp8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], i32 [[TEN_0:%.*]], i32 [[TEN_1:%.*]], i32 [[TEN_2:%.*]], i32 [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp32_fp8_1x1_4x2(global v4f* out, v4f acc, v2i weights, int ten_0, int ten_1, int ten_2, int ten_3)
+{
+   *out = __builtin_amdgcn_wconv_fp32_fp8_1x1_4x2(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_fp8_1x1_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.wconv.fp16.fp8.1x1.v4f16.v4f16.v2i32.i32(<4 x half> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], i32 [[TEN_0:%.*]], i32 [[TEN_1:%.*]], i32 [[TEN_2:%.*]], i32 [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_fp8_1x1_4x2(global v4h* out, v4h acc, v2i weights, int ten_0, int ten_1, int ten_2, int ten_3)
+{
+   *out = __builtin_amdgcn_wconv_fp16_fp8_1x1_4x2(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_fp8_1x1_4x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.fp16.fp8.1x1.v8f16.v8f16.i32.i32(<8 x half> [[ACC:%.*]], i32 [[WEIGHTS:%.*]], i32 [[TEN_0:%.*]], i32 [[TEN_1:%.*]], i32 [[TEN_2:%.*]], i32 [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_fp8_1x1_4x4(global v8h* out, v8h acc, int weights, int ten_0, int ten_1, int ten_2, int ten_3)
+{
+   *out = __builtin_amdgcn_wconv_fp16_fp8_1x1_4x4(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_fp8_1x1_8x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.fp16.fp8.1x1.v8f16.v8f16.i32.v2i32(<8 x half> [[ACC:%.*]], i32 [[WEIGHTS:%.*]], <2 x i32> [[TEN_0:%.*]], <2 x i32> [[TEN_1:%.*]], <2 x i32> [[TEN_2:%.*]], <2 x i32> [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_fp8_1x1_8x4(global v8h* out, v8h acc, int weights, v2i ten_0, v2i ten_1, v2i ten_2, v2i ten_3)
+{
+   *out = __builtin_amdgcn_wconv_fp16_fp8_1x1_8x4(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp32_bf8_1x1_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wconv.fp32.bf8.1x1.v4f32.v4f32.v2i32.i32(<4 x float> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], i32 [[TEN_0:%.*]], i32 [[TEN_1:%.*]], i32 [[TEN_2:%.*]], i32 [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp32_bf8_1x1_4x2(global v4f* out, v4f acc, v2i weights, int ten_0, int ten_1, int ten_2, int ten_3)
+{
+   *out = __builtin_amdgcn_wconv_fp32_bf8_1x1_4x2(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_bf16_bf8_1x1_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.wconv.bf16.bf8.1x1.v4bf16.v4bf16.v2i32.i32(<4 x bfloat> [[ACC:%.*]], <2 x i32> [[WEIGHTS:%.*]], i32 [[TEN_0:%.*]], i32 [[TEN_1:%.*]], i32 [[TEN_2:%.*]], i32 [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_bf16_bf8_1x1_4x2(global v4bf16* out, v4bf16 acc, v2i weights, int ten_0, int ten_1, int ten_2, int ten_3)
+{
+   *out = __builtin_amdgcn_wconv_bf16_bf8_1x1_4x2(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_bf16_bf8_1x1_4x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.wconv.bf16.bf8.1x1.v8bf16.v8bf16.i32.i32(<8 x bfloat> [[ACC:%.*]], i32 [[WEIGHTS:%.*]], i32 [[TEN_0:%.*]], i32 [[TEN_1:%.*]], i32 [[TEN_2:%.*]], i32 [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_bf16_bf8_1x1_4x4(global v8bf16* out, v8bf16 acc, int weights, int ten_0, int ten_1, int ten_2, int ten_3)
+{
+   *out = __builtin_amdgcn_wconv_bf16_bf8_1x1_4x4(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_bf16_bf8_1x1_8x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.wconv.bf16.bf8.1x1.v8bf16.v8bf16.i32.v2i32(<8 x bfloat> [[ACC:%.*]], i32 [[WEIGHTS:%.*]], <2 x i32> [[TEN_0:%.*]], <2 x i32> [[TEN_1:%.*]], <2 x i32> [[TEN_2:%.*]], <2 x i32> [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_bf16_bf8_1x1_8x4(global v8bf16* out, v8bf16 acc, int weights, v2i ten_0, v2i ten_1, v2i ten_2, v2i ten_3)
+{
+   *out = __builtin_amdgcn_wconv_bf16_bf8_1x1_8x4(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp32_fp16_1x1_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wconv.fp32.fp16.1x1.v4f32.v4f32.v4f16.v2f16(<4 x float> [[ACC:%.*]], <4 x half> [[WEIGHTS:%.*]], <2 x half> [[TEN_0:%.*]], <2 x half> [[TEN_1:%.*]], <2 x half> [[TEN_2:%.*]], <2 x half> [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp32_fp16_1x1_4x2(global v4f* out, v4f acc, v4h weights, v2h ten_0, v2h ten_1, v2h ten_2, v2h ten_3)
+{
+   *out = __builtin_amdgcn_wconv_fp32_fp16_1x1_4x2(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_fp16_1x1_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x half> @llvm.amdgcn.wconv.fp16.fp16.1x1.v4f16.v4f16.v4f16.v2f16(<4 x half> [[ACC:%.*]], <4 x half> [[WEIGHTS:%.*]], <2 x half> [[TEN_0:%.*]], <2 x half> [[TEN_1:%.*]], <2 x half> [[TEN_2:%.*]], <2 x half> [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_fp16_1x1_4x2(global v4h* out, v4h acc, v4h weights, v2h ten_0, v2h ten_1, v2h ten_2, v2h ten_3)
+{
+   *out = __builtin_amdgcn_wconv_fp16_fp16_1x1_4x2(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_fp16_1x1_4x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.fp16.fp16.1x1.v8f16.v8f16.v2f16.v2f16(<8 x half> [[ACC:%.*]], <2 x half> [[WEIGHTS:%.*]], <2 x half> [[TEN_0:%.*]], <2 x half> [[TEN_1:%.*]], <2 x half> [[TEN_2:%.*]], <2 x half> [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_fp16_1x1_4x4(global v8h* out, v8h acc, v2h weights, v2h ten_0, v2h ten_1, v2h ten_2, v2h ten_3)
+{
+   *out = __builtin_amdgcn_wconv_fp16_fp16_1x1_4x4(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp16_fp16_1x1_8x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.amdgcn.wconv.fp16.fp16.1x1.v8f16.v8f16.v2f16.v4f16(<8 x half> [[ACC:%.*]], <2 x half> [[WEIGHTS:%.*]], <4 x half> [[TEN_0:%.*]], <4 x half> [[TEN_1:%.*]], <4 x half> [[TEN_2:%.*]], <4 x half> [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp16_fp16_1x1_8x4(global v8h* out, v8h acc, v2h weights, v4h ten_0, v4h ten_1, v4h ten_2, v4h ten_3)
+{
+   *out = __builtin_amdgcn_wconv_fp16_fp16_1x1_8x4(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_fp32_bf16_1x1_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.amdgcn.wconv.fp32.bf16.1x1.v4f32.v4f32.v4bf16.v2bf16(<4 x float> [[ACC:%.*]], <4 x bfloat> [[WEIGHTS:%.*]], <2 x bfloat> [[TEN_0:%.*]], <2 x bfloat> [[TEN_1:%.*]], <2 x bfloat> [[TEN_2:%.*]], <2 x bfloat> [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_fp32_bf16_1x1_4x2(global v4f* out, v4f acc, v4bf16 weights, v2bf16 ten_0, v2bf16 ten_1, v2bf16 ten_2, v2bf16 ten_3)
+{
+   *out = __builtin_amdgcn_wconv_fp32_bf16_1x1_4x2(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_bf16_bf16_1x1_4x2(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <4 x bfloat> @llvm.amdgcn.wconv.bf16.bf16.1x1.v4bf16.v4bf16.v4bf16.v2bf16(<4 x bfloat> [[ACC:%.*]], <4 x bfloat> [[WEIGHTS:%.*]], <2 x bfloat> [[TEN_0:%.*]], <2 x bfloat> [[TEN_1:%.*]], <2 x bfloat> [[TEN_2:%.*]], <2 x bfloat> [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <4 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 8, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_bf16_bf16_1x1_4x2(global v4bf16* out, v4bf16 acc, v4bf16 weights, v2bf16 ten_0, v2bf16 ten_1, v2bf16 ten_2, v2bf16 ten_3)
+{
+   *out = __builtin_amdgcn_wconv_bf16_bf16_1x1_4x2(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_bf16_bf16_1x1_4x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.wconv.bf16.bf16.1x1.v8bf16.v8bf16.v2bf16.v2bf16(<8 x bfloat> [[ACC:%.*]], <2 x bfloat> [[WEIGHTS:%.*]], <2 x bfloat> [[TEN_0:%.*]], <2 x bfloat> [[TEN_1:%.*]], <2 x bfloat> [[TEN_2:%.*]], <2 x bfloat> [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_bf16_bf16_1x1_4x4(global v8bf16* out, v8bf16 acc, v2bf16 weights, v2bf16 ten_0, v2bf16 ten_1, v2bf16 ten_2, v2bf16 ten_3)
+{
+   *out = __builtin_amdgcn_wconv_bf16_bf16_1x1_4x4(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
+}
+// CHECK-GFX1300-LABEL: @test_amdgcn_builtin_amdgcn_wconv_bf16_bf16_1x1_8x4(
+// CHECK-GFX1300-NEXT:  entry:
+// CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = tail call <8 x bfloat> @llvm.amdgcn.wconv.bf16.bf16.1x1.v8bf16.v8bf16.v2bf16.v4bf16(<8 x bfloat> [[ACC:%.*]], <2 x bfloat> [[WEIGHTS:%.*]], <4 x bfloat> [[TEN_0:%.*]], <4 x bfloat> [[TEN_1:%.*]], <4 x bfloat> [[TEN_2:%.*]], <4 x bfloat> [[TEN_3:%.*]], i32 42, i1 true)
+// CHECK-GFX1300-NEXT:    store <8 x bfloat> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 16, !tbaa [[TBAA4]]
+// CHECK-GFX1300-NEXT:    ret void
+//
+void test_amdgcn_builtin_amdgcn_wconv_bf16_bf16_1x1_8x4(global v8bf16* out, v8bf16 acc, v2bf16 weights, v4bf16 ten_0, v4bf16 ten_1, v4bf16 ten_2, v4bf16 ten_3)
+{
+   *out = __builtin_amdgcn_wconv_bf16_bf16_1x1_8x4(acc, weights, ten_0, ten_1, ten_2, ten_3, 42, true);
 }

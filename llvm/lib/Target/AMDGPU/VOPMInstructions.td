@@ -211,15 +211,62 @@ class Conv_Profile<list<ValueType> ArgTy, int PixelShape, bit FilterType3x3> : V
   int FilterType = FilterType3x3;
 }
 
-// V_WCONV_FP16_FP16
-//                                               dest   acc    weights tensor
-def VOP5M_CONV_FP16_FP16_3x3_8x4 : Conv_Profile<[v8f16, v8f16, v10f16, v8f16], 1, 1>;
-def VOP5M_CONV_FP16_FP16_3x3_4x4 : Conv_Profile<[v8f16, v8f16, v18f16, v6f16], 0, 1>;
-def VOP5M_CONV_FP16_FP16_3x3_4x2 : Conv_Profile<[v8f16, v8f16, v36f16, v6f16], 2, 1>;
+multiclass Conv_Profile_Reg<int AccReg, int WeightsReg, int TensorReg, string OutputBaseTy, string AccInBaseTy, string WeightsTensorBaseTy, int PixelShape, bit FilterTy3x3> {
 
-def VOP5M_CONV_FP16_FP16_1x1_8x4 : Conv_Profile<[v8f16, v8f16, v2f16, v4f16], 1, 0>;
-def VOP5M_CONV_FP16_FP16_1x1_4x4 : Conv_Profile<[v8f16, v8f16, v2f16, v2f16], 0, 0>;
-def VOP5M_CONV_FP16_FP16_1x1_4x2 : Conv_Profile<[v8f16, v8f16, v4f16, v2f16], 2, 0>;
+  defvar AMult = !if(!eq(!find(AccInBaseTy, "16"), -1), 1, 2);
+  defvar WTMult = !if(!eq(!find(WeightsTensorBaseTy, "16"), -1), 1, 2);
+
+  defvar AccElCount = !mul(AMult, AccReg);
+  defvar WeightsElCount = !mul(WTMult, WeightsReg);
+  defvar TensorElCount = !mul(WTMult, TensorReg);
+
+  defvar AccElPrefix = !if(!eq(AccElCount, 1), "", "v" # AccElCount);
+  defvar WeightsElPrefix = !if(!eq(WeightsElCount, 1), "" , "v" # WeightsElCount);
+  defvar TensorElPrefix = !if(!eq(TensorElCount, 1), "", "v" # TensorElCount);
+
+  defvar OutputFullTy = !cast<ValueType>(AccElPrefix # OutputBaseTy);
+  defvar AccInFullTy = !cast<ValueType>(AccElPrefix # AccInBaseTy);
+  defvar WeightsFullTy = !cast<ValueType>(WeightsElPrefix # WeightsTensorBaseTy);
+  defvar TensorFullTy = !cast<ValueType>(TensorElPrefix # WeightsTensorBaseTy);
+
+  def NAME : Conv_Profile<[OutputFullTy, AccInFullTy, WeightsFullTy, TensorFullTy], PixelShape, FilterTy3x3>;
+}
+
+multiclass Conv_Profile_Multi<string OutputBaseTy, string WeightsTensorBaseTy, string AccInBaseTy = OutputBaseTy>{
+
+  // 4x2 with 16-bit accumulators require 2 registers for accumulator/output, not 4.
+  defvar Acc_Reg_4x2 = !if(!eq(!find(AccInBaseTy, "16"), -1), 4, 2);
+
+  defm _3x3_8x4 : Conv_Profile_Reg<4, 5, 4, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, 1, 1>;
+  defm _3x3_4x4 : Conv_Profile_Reg<4, 9, 3, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, 0, 1>;
+  defm _3x3_4x2 : Conv_Profile_Reg<Acc_Reg_4x2, 18, 3, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, 2, 1>;
+
+  defm _1x1_8x4 : Conv_Profile_Reg<4, 1, 2, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, 1, 0>;
+  defm _1x1_4x4 : Conv_Profile_Reg<4, 1, 1, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, 0, 0>;
+  defm _1x1_4x2 : Conv_Profile_Reg<Acc_Reg_4x2, 2, 1, OutputBaseTy, AccInBaseTy, WeightsTensorBaseTy, 2, 0>;
+}
+
+//                                             dest    weights/tensor
+defm VOPM_CONV_FP16_FP16 : Conv_Profile_Multi<"f16", "f16">;
+defm VOPM_CONV_BF16_BF16 : Conv_Profile_Multi<"bf16", "bf16">;
+
+defm VOPM_CONV_FP16_FP8 : Conv_Profile_Multi<"f16", "i32">;
+defm VOPM_CONV_BF16_BF8 : Conv_Profile_Multi<"bf16", "i32">;
+defm VOPM_CONV_FP16_IU8 : Conv_Profile_Multi<"f16", "i32">;
+defm VOPM_CONV_FP16_IU4 : Conv_Profile_Multi<"f16", "i32">;
+
+defm VOPM_CONV_FP32_FP16 : Conv_Profile_Multi<"f32", "f16">;
+defm VOPM_CONV_FP32_BF16 : Conv_Profile_Multi<"f32", "bf16">;
+defm VOPM_CONV_FP32_FP8 : Conv_Profile_Multi<"f32", "i32">;
+defm VOPM_CONV_FP32_BF8 : Conv_Profile_Multi<"f32", "i32">;
+defm VOPM_CONV_FP32_IU8 : Conv_Profile_Multi<"f32", "i32">;
+defm VOPM_CONV_FP32_IU4 : Conv_Profile_Multi<"f32", "i32">;
+defm VOPM_CONV_I32_IU8 : Conv_Profile_Multi<"i32", "i32">;
+defm VOPM_CONV_I32_IU4 : Conv_Profile_Multi<"i32", "i32">;
+
+//                                              dest   weights/tensor acc_in
+defm VOPM_CONV_F32I32_IU8 : Conv_Profile_Multi<"f32", "i32", "i32">;
+defm VOPM_CONV_F32I32_IU4 : Conv_Profile_Multi<"f32", "i32", "i32">;
 
 class VOPM_Pseudo <VOPProfile P, list<dag> pattern = [], string opName = !tolower(NAME)> :
   VOP_Pseudo<opName, "", P, P.Outs64, P.Ins64, "", pattern> {
@@ -246,8 +293,7 @@ let SchedRW = [Write32Bit, Write32Bit] in {
                                                          [(set i32:$vdst, i32:$src2, (int_amdgcn_permute_pack_tensor_2src_b64 i32:$src0, i32:$src1, timm:$aux_data))]>;
 }
 
-multiclass VOPM_Conv_MultiPseudos<string ProfilePrefix>
-{
+multiclass VOPM_Conv_MultiPseudos<string ProfilePrefix> {
   def _1x1_8x4 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_1x1_8x4")>;
   def _1x1_4x4 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_1x1_4x4")>;
   def _1x1_4x2 : VOPM_Pseudo<!cast<Conv_Profile>(ProfilePrefix #"_1x1_4x2")>;
@@ -258,7 +304,24 @@ multiclass VOPM_Conv_MultiPseudos<string ProfilePrefix>
 
 }
 
-defm V_WCONV_FP16_FP16 : VOPM_Conv_MultiPseudos<"VOP5M_CONV_FP16_FP16">;
+defm V_WCONV_FP16_FP16 : VOPM_Conv_MultiPseudos<"VOPM_CONV_FP16_FP16">;
+defm V_WCONV_BF16_BF16 : VOPM_Conv_MultiPseudos <"VOPM_CONV_BF16_BF16">;
+
+defm V_WCONV_FP16_FP8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_FP16_FP8">;
+defm V_WCONV_BF16_BF8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_BF16_BF8">;
+defm V_WCONV_FP16_IU8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_FP16_IU8">;
+defm V_WCONV_FP16_IU4 : VOPM_Conv_MultiPseudos <"VOPM_CONV_FP16_IU4">;
+
+defm V_WCONV_FP32_FP16 : VOPM_Conv_MultiPseudos <"VOPM_CONV_FP32_FP16">;
+defm V_WCONV_FP32_BF16 : VOPM_Conv_MultiPseudos <"VOPM_CONV_FP32_BF16">;
+defm V_WCONV_FP32_FP8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_FP32_FP8">;
+defm V_WCONV_FP32_BF8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_FP32_BF8">;
+defm V_WCONV_FP32_IU8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_FP32_IU8">;
+defm V_WCONV_FP32_IU4 : VOPM_Conv_MultiPseudos <"VOPM_CONV_FP32_IU4">;
+defm V_WCONV_I32_IU8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_I32_IU8">;
+defm V_WCONV_I32_IU4 : VOPM_Conv_MultiPseudos <"VOPM_CONV_I32_IU4">;
+defm V_WCONV_F32I32_IU8 : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32I32_IU8">;
+defm V_WCONV_F32I32_IU4 : VOPM_Conv_MultiPseudos <"VOPM_CONV_F32I32_IU4">;
 
 //===----------------------------------------------------------------------===//
 // VOPM Reals
@@ -354,7 +417,7 @@ multiclass VOP5M_Conv_Real_gfx13<bits<8> op, string psName> {
   defm _4x2 : VOP5M_Real_Base<GFX13Gen, op, psName#"_3x3_4x2", !tolower(psName)>;
 }
 
-multiclass VOP6M_Real_Base<GFXGen Gen, bits<8> op,
+multiclass VOP6M_Conv_Real_Base<GFXGen Gen, bits<8> op,
                                 string backing_ps_name = NAME,
                                 string asmName = !cast<VOPM_Pseudo>(NAME).Mnemonic> {
   defvar ps = !cast<VOPM_Pseudo>(backing_ps_name);
@@ -372,9 +435,9 @@ multiclass VOP6M_Real_Base<GFXGen Gen, bits<8> op,
 }
 
 multiclass VOP6M_Conv_Real_gfx13<bits<8> op, string psName> {
-  defm _8x4 : VOP6M_Real_Base<GFX13Gen, op, psName#"_1x1_8x4", !tolower(psName)>;
-  defm _4x4 : VOP6M_Real_Base<GFX13Gen, op, psName#"_1x1_4x4", !tolower(psName)>;
-  defm _4x2 : VOP6M_Real_Base<GFX13Gen, op, psName#"_1x1_4x2", !tolower(psName)>;
+  defm _8x4 : VOP6M_Conv_Real_Base<GFX13Gen, op, psName#"_1x1_8x4", !tolower(psName)>;
+  defm _4x4 : VOP6M_Conv_Real_Base<GFX13Gen, op, psName#"_1x1_4x4", !tolower(psName)>;
+  defm _4x2 : VOP6M_Conv_Real_Base<GFX13Gen, op, psName#"_1x1_4x2", !tolower(psName)>;
 }
 
 multiclass Conv_Real_gfx13<bits<8> op> {
@@ -394,7 +457,24 @@ defm V_MOV_2SRC_B64                       : VOP2M_Real_gfx13 <0x4>;
 defm V_PERMUTE_PAIR_2SRC_INTERLEAVE_B64   : VOP3M_Real_gfx13 <0x3E>;
 defm V_PERMUTE_PACK_TENSOR_2SRC_B64       : VOP3M_Real_gfx13 <0x3F>;
 
-defm V_WCONV_FP16_FP16 : Conv_Real_gfx13 <0x7e>;
+
+defm V_WCONV_FP16_FP16 : Conv_Real_gfx13 <0x30>;
+defm V_WCONV_BF16_BF16 : Conv_Real_gfx13 <0x31>;
+defm V_WCONV_FP16_FP8 : Conv_Real_gfx13 <0x32>;
+defm V_WCONV_BF16_BF8 : Conv_Real_gfx13 <0x33>;
+defm V_WCONV_FP16_IU8 : Conv_Real_gfx13 <0x34>;
+defm V_WCONV_FP16_IU4 : Conv_Real_gfx13 <0x35>;
+
+defm V_WCONV_FP32_FP16 : Conv_Real_gfx13 <0x36>;
+defm V_WCONV_FP32_BF16 : Conv_Real_gfx13 <0x37>;
+defm V_WCONV_FP32_FP8 : Conv_Real_gfx13 <0x38>;
+defm V_WCONV_FP32_BF8 : Conv_Real_gfx13 <0x39>;
+defm V_WCONV_FP32_IU8 : Conv_Real_gfx13 <0x3a>;
+defm V_WCONV_FP32_IU4 : Conv_Real_gfx13 <0x3b>;
+defm V_WCONV_I32_IU8 : Conv_Real_gfx13 <0x3c>;
+defm V_WCONV_I32_IU4 : Conv_Real_gfx13 <0x3d>;
+defm V_WCONV_F32I32_IU8 : Conv_Real_gfx13 <0x3e>;
+defm V_WCONV_F32I32_IU4 : Conv_Real_gfx13 <0x3f>;
 
 //===----------------------------------------------------------------------===//
 // VOPM Patterns
@@ -407,13 +487,32 @@ multiclass ConvPat_VOPM<string Inst, SDPatternOperator node, string ProfileName>
                 (P.DstVT !setdagop(P.ConvOutPat, !cast<Instruction>(Inst)))>;
 }
 
-multiclass ConvPatMulti_VOPM<string Inst, SDPatternOperator node, string ProfilePrefix>
-{
+multiclass ConvPatMulti_VOPM<string Inst, SDPatternOperator node, string ProfilePrefix> {
   defm : ConvPat_VOPM<Inst # "_8x4", node, ProfilePrefix # "_8x4">;
   defm : ConvPat_VOPM<Inst # "_4x4", node, ProfilePrefix # "_4x4">;
   defm : ConvPat_VOPM<Inst # "_4x2", node, ProfilePrefix # "_4x2">;
 }
 
-defm : ConvPatMulti_VOPM<"V_WCONV_FP16_FP16_1x1", int_amdgcn_wconv_1x1, "VOP5M_CONV_FP16_FP16_1x1">;
-defm : ConvPatMulti_VOPM<"V_WCONV_FP16_FP16_3x3", int_amdgcn_wconv_3x3, "VOP5M_CONV_FP16_FP16_3x3">;
+multiclass ConvPatMultiFilters_VOPM<string TypeNames, string NodePrefix> {
+  defm _1x1 : ConvPatMulti_VOPM<"V_WCONV_" # TypeNames # "_1x1", !cast<SDPatternOperator>(NodePrefix # "_1x1"), "VOPM_CONV_" # TypeNames # "_1x1">;
+  defm _3x3 : ConvPatMulti_VOPM<"V_WCONV_" # TypeNames # "_3x3", !cast<SDPatternOperator>(NodePrefix # "_3x3"), "VOPM_CONV_" # TypeNames # "_3x3">;
+}
+
+defm : ConvPatMultiFilters_VOPM<"FP16_FP16", "int_amdgcn_wconv_fp16_fp16">;
+defm : ConvPatMultiFilters_VOPM<"BF16_BF16", "int_amdgcn_wconv_bf16_bf16">;
+defm : ConvPatMultiFilters_VOPM<"FP16_FP8", "int_amdgcn_wconv_fp16_fp8">;
+defm : ConvPatMultiFilters_VOPM<"BF16_BF8", "int_amdgcn_wconv_bf16_bf8">;
+defm : ConvPatMultiFilters_VOPM<"FP16_IU8", "int_amdgcn_wconv_fp16_iu8">;
+defm : ConvPatMultiFilters_VOPM<"FP16_IU4", "int_amdgcn_wconv_fp16_iu4">;
+
+defm : ConvPatMultiFilters_VOPM<"FP32_FP16", "int_amdgcn_wconv_fp32_fp16">;
+defm : ConvPatMultiFilters_VOPM<"FP32_BF16", "int_amdgcn_wconv_fp32_bf16">;
+defm : ConvPatMultiFilters_VOPM<"FP32_FP8", "int_amdgcn_wconv_fp32_fp8">;
+defm : ConvPatMultiFilters_VOPM<"FP32_BF8", "int_amdgcn_wconv_fp32_bf8">;
+defm : ConvPatMultiFilters_VOPM<"FP32_IU8", "int_amdgcn_wconv_fp32_iu8">;
+defm : ConvPatMultiFilters_VOPM<"FP32_IU4", "int_amdgcn_wconv_fp32_iu4">;
+defm : ConvPatMultiFilters_VOPM<"I32_IU8", "int_amdgcn_wconv_i32_iu8">;
+defm : ConvPatMultiFilters_VOPM<"I32_IU4", "int_amdgcn_wconv_i32_iu4">;
+defm : ConvPatMultiFilters_VOPM<"F32I32_IU8", "int_amdgcn_wconv_f32i32_iu8">;
+defm : ConvPatMultiFilters_VOPM<"F32I32_IU4", "int_amdgcn_wconv_f32i32_iu4">;
 

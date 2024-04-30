@@ -3203,13 +3203,13 @@ class AMDGPUDiscard : DefaultAttrsIntrinsic<
 foreach size = ["b32", "b128", "b1024"] in
   def int_amdgcn_discard_#size : AMDGPUDiscard;
 
-def int_amdgcn_wconv_3x3 :
+class Conv3x3<LLVMType outTy, LLVMType weightsTensorTy, LLVMType accinTy> :
   DefaultAttrsIntrinsic<
-    [llvm_any_ty],      // %out
+    [outTy],            // %out
     [
-      llvm_any_ty,      // %accumulator
-      llvm_any_ty,      // %weights
-      llvm_any_ty,      // %tensor_col_center
+      accinTy,          // %accumulator
+      weightsTensorTy,  // %weights
+      weightsTensorTy,  // %tensor_col_center
       LLVMMatchType<3>, // %tensor_col_left
       LLVMMatchType<3>, // %tensor_col_right
       llvm_i32_ty,      // %aux_data
@@ -3218,13 +3218,13 @@ def int_amdgcn_wconv_3x3 :
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<5>>, ImmArg<ArgIndex<6>>]
   >;
 
-def int_amdgcn_wconv_1x1 :
+class Conv1x1<LLVMType outTy, LLVMType weightsTensorTy, LLVMType accinTy> :
   DefaultAttrsIntrinsic<
-    [llvm_any_ty], // %out
+    [outTy], // %out
     [
-      llvm_any_ty,      // %accumulator
-      llvm_any_ty,      // %weights
-      llvm_any_ty,      // %tensor_0
+      accinTy,          // %accumulator
+      weightsTensorTy,  // %weights
+      weightsTensorTy,  // %tensor_0
       LLVMMatchType<3>, // %tensor_1
       LLVMMatchType<3>, // %tensor_2
       LLVMMatchType<3>, // %tensor_3
@@ -3233,6 +3233,30 @@ def int_amdgcn_wconv_1x1 :
     ],
     [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>]
   >;
+
+multiclass Conv<LLVMType outTy, LLVMType weightsTensorTy, LLVMType accinTy = outTy> {
+  def _1x1 : Conv1x1<outTy, weightsTensorTy, accinTy>;
+  def _3x3 : Conv3x3<outTy, weightsTensorTy, accinTy>;
+}
+
+defm int_amdgcn_wconv_fp16_fp16 : Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+defm int_amdgcn_wconv_bf16_bf16: Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+defm int_amdgcn_wconv_fp16_fp8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_wconv_bf16_bf8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_wconv_fp16_iu8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_wconv_fp16_iu4: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+
+defm int_amdgcn_wconv_fp32_fp16: Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+defm int_amdgcn_wconv_fp32_bf16: Conv<llvm_anyfloat_ty, llvm_anyfloat_ty>;
+defm int_amdgcn_wconv_fp32_fp8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_wconv_fp32_bf8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_wconv_fp32_iu8: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_wconv_fp32_iu4: Conv<llvm_anyfloat_ty, llvm_anyint_ty>;
+defm int_amdgcn_wconv_i32_iu8: Conv<llvm_anyint_ty, llvm_anyint_ty>;
+defm int_amdgcn_wconv_i32_iu4: Conv<llvm_anyint_ty, llvm_anyint_ty>;
+
+defm int_amdgcn_wconv_f32i32_iu8: Conv<llvm_anyfloat_ty, llvm_anyint_ty, llvm_anyint_ty>;
+defm int_amdgcn_wconv_f32i32_iu4: Conv<llvm_anyfloat_ty, llvm_anyint_ty, llvm_anyint_ty>;
 
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
