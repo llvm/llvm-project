@@ -4,7 +4,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestCase(TestBase):
-
     def test_raw_bytes(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.c"))
