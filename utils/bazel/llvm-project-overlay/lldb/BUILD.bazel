@@ -183,6 +183,19 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "lldb-sbapi-dwarf-enums",
+    tbl_outs = [
+        (
+            ["-gen-lldb-sbapi-dwarf-enum"],
+            "include/lldb/API/SBLanguages.h",
+        ),
+    ],
+    tblgen = ":lldb-tblgen",
+    td_file = "//llvm:include/llvm/BinaryFormat/Dwarf.def",
+    deps = [],
+)
+
 cc_library(
     name = "API",
     srcs = glob([
@@ -192,6 +205,7 @@ cc_library(
     hdrs = glob(["include/lldb/API/**/*.h"]),
     strip_include_prefix = "include",
     deps = [
+        ":lldb-sbapi-dwarf-enums",
         ":Breakpoint",
         ":Commands",
         ":Core",
