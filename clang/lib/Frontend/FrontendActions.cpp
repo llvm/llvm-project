@@ -274,7 +274,6 @@ GenerateModuleInterfaceAction::CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) {
   CI.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
   CI.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
-  CI.getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings = true;
 
   std::vector<std::unique_ptr<ASTConsumer>> Consumers =
       CreateMultiplexConsumer(CI, InFile);
