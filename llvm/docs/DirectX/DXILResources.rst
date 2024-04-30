@@ -111,7 +111,7 @@ Constant Buffers
 
 The "dx.CBuffer" type is a constant buffer of the given size. Note that despite
 the name this is distinct from the buffer types, and can only be read using the
-"dx.CBufferLoad" and "dx.CBufferLoadLegacy" operations.
+``llvm.dx.cbufferLoad`` operation.
 
 Buffers
 -------
@@ -151,7 +151,6 @@ Textures
 .. code-block:: llvm
 
    target("dx.Texture1D", ElementType, IsWriteable, IsROV)
-   target("dx.Texture1D", ...)
    target("dx.Texture1DArray", ...)
    target("dx.Texture2D", ...)
    target("dx.Texture2DArray", ...)
@@ -170,7 +169,7 @@ different in their dimensions. These are distinct so that we can overload the
 various sample and texture load/store operations such that their parameters are
 appropriate to the type.
 
-.. list-table:: Buffer Fields
+.. list-table:: Texture Fields
    :header-rows: 1
 
    * - Field
@@ -185,10 +184,6 @@ appropriate to the type.
      - Sample count for a multisampled texture.
    * - FeedbackType
      - Feedback type for a feedback texture.
-
-.. note:: TODO: Should dimensions be specified as a type?
-
-   We could probably get rid of the 1D/2D/etc distinctions...
 
 Raytracing Resources
 --------------------
