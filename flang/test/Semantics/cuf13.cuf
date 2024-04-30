@@ -1,0 +1,28 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+
+module matching
+  interface sub
+    module procedure sub_host
+    module procedure sub_device
+  end interface
+
+contains
+  subroutine sub_host(a)
+    integer :: a(:)
+  end
+
+  subroutine sub_device(a)
+    integer, device :: a(:)
+  end
+
+end module
+
+program m
+  use matching
+
+  integer, pinned, allocatable :: a(:)
+  logical :: plog
+  allocate(a(100), pinned = plog)
+
+  call sub(a)
+end
