@@ -587,6 +587,8 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
       DWARFDie Die = getDie(*CU);
       CUInfo CUI(DICtx, dyn_cast<DWARFCompileUnit>(CU.get()));
       handleDie(Out, CUI, Die);
+      // Release the line table, once we're done.
+      DICtx.clearLineTableForUnit(CU.get());
     }
   } else {
     // LLVM Dwarf parser is not thread-safe and we need to parse all DWARF up
@@ -612,7 +614,7 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
       DWARFDie Die = getDie(*CU);
       if (Die) {
         CUInfo CUI(DICtx, dyn_cast<DWARFCompileUnit>(CU.get()));
-        pool.async([this, CUI, &LogMutex, &Out, Die]() mutable {
+        pool.async([this, CUI, &CU, &LogMutex, &Out, Die]() mutable {
           std::string storage;
           raw_string_ostream StrStream(storage);
           OutputAggregator ThreadOut(Out.GetOS() ? &StrStream : nullptr);
@@ -623,6 +625,9 @@ Error DwarfTransformer::convert(uint32_t NumThreads, OutputAggregator &Out) {
             StrStream.flush();
             Out << storage;
           }
+          // Release the line table, once we're done.
+          DICtx.clearLineTableForUnit(CU.get());
+
           Out.Merge(ThreadOut);
         });
       }
