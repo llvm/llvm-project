@@ -46,10 +46,6 @@
 #define O_RDWR 00000002
 #define O_WRONLY 00000001
 
-#define F_RDLCK 0
-#define F_WRLCK 1
-#define F_UNLCK 2
-
 // Special directory FD to indicate that the path argument to
 // openat is relative to the current directory.
 #define AT_FDCWD -100
@@ -93,7 +89,7 @@
 #define F_CLOEXEC 1
 
 #define F_RDLCK 0
-#define F_WRLOCK 1
+#define F_WRLCK 1
 #define F_UNLCK 2
 
 // For Large File Support
