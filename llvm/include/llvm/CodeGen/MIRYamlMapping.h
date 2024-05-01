@@ -645,6 +645,7 @@ struct MachineFrameInfo {
   bool HasVAStart = false;
   bool HasMustTailInVarArgFunc = false;
   bool HasTailCall = false;
+  bool IsCalleeSavedInfoValid = false;
   unsigned LocalFrameSize = 0;
   StringValue SavePoint;
   StringValue RestorePoint;
@@ -668,7 +669,8 @@ struct MachineFrameInfo {
            HasMustTailInVarArgFunc == Other.HasMustTailInVarArgFunc &&
            HasTailCall == Other.HasTailCall &&
            LocalFrameSize == Other.LocalFrameSize &&
-           SavePoint == Other.SavePoint && RestorePoint == Other.RestorePoint;
+           SavePoint == Other.SavePoint && RestorePoint == Other.RestorePoint &&
+           IsCalleeSavedInfoValid == Other.IsCalleeSavedInfoValid;
   }
 };
 
@@ -696,6 +698,8 @@ template <> struct MappingTraits<MachineFrameInfo> {
     YamlIO.mapOptional("hasMustTailInVarArgFunc", MFI.HasMustTailInVarArgFunc,
                        false);
     YamlIO.mapOptional("hasTailCall", MFI.HasTailCall, false);
+    YamlIO.mapOptional("isCalleeSavedInfoValid", MFI.IsCalleeSavedInfoValid,
+                       false);
     YamlIO.mapOptional("localFrameSize", MFI.LocalFrameSize, (unsigned)0);
     YamlIO.mapOptional("savePoint", MFI.SavePoint,
                        StringValue()); // Don't print it out when it's empty.
