@@ -12,6 +12,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
 
 using namespace lldb;
@@ -111,4 +112,66 @@ TEST(StructuredDataTest, ParseJSONFromFile) {
   StreamString S;
   object_sp->Dump(S, false);
   EXPECT_EQ("[1,2,3]", S.GetString());
+}
+
+struct ArraySplitStringTestCase {
+  llvm::StringRef s;
+  char separator;
+  int maxSplit;
+  bool keepEmpty;
+  std::vector<std::string> expected;
+};
+
+TEST(StructuredDataTest, ArraySplitString) {
+  ArraySplitStringTestCase test_cases[] = {
+      // Happy path
+      {
+          "1,2,,3",
+          ',',
+          -1,
+          true,
+          {"1", "2", "", "3"},
+      },
+      // No splits
+      {
+          "1,2,,3",
+          ',',
+          0,
+          true,
+          {"1,2,,3"},
+      },
+      // 1 split
+      {
+          "1,2,,3",
+          ',',
+          1,
+          true,
+          {"1", "2,,3"},
+      },
+      // No empty substrings
+      {
+          "1,2,,3",
+          ',',
+          -1,
+          false,
+          {"1", "2", "3"},
+      },
+      // Empty substrings count towards splits
+      {
+          ",1,2,3",
+          ',',
+          1,
+          false,
+          {"1,2,3"},
+      },
+  };
+  for (const auto &test_case : test_cases) {
+    auto array = StructuredData::Array::SplitString(
+        test_case.s, test_case.separator, test_case.maxSplit,
+        test_case.keepEmpty);
+    EXPECT_EQ(test_case.expected.size(), array->GetSize());
+    for (unsigned int i = 0; i < test_case.expected.size(); ++i) {
+      EXPECT_EQ(test_case.expected[i], array->GetItemAtIndexAsString(i)->str());
+    }
+  }
 }
