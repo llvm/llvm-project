@@ -19,7 +19,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/float128.h"
 #include <memory>
 
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
@@ -355,9 +354,6 @@ public:
   Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const;
   double convertToDouble() const;
-#ifdef HAS_IEE754_FLOAT128
-  float128 convertToQuad() const;
-#endif
   float convertToFloat() const;
 
   /// @}
@@ -1221,15 +1217,6 @@ public:
   /// the host double type without loss of precision. It can be IEEEdouble and
   /// shorter semantics, like IEEEsingle and others.
   double convertToDouble() const;
-
-  /// Converts this APFloat to host float value.
-  ///
-  /// \pre The APFloat must be built using semantics, that can be represented by
-  /// the host float type without loss of precision. It can be IEEEquad and
-  /// shorter semantics, like IEEEdouble and others.
-#ifdef HAS_IEE754_FLOAT128
-  float128 convertToQuad() const;
-#endif
 
   /// Converts this APFloat to host float value.
   ///
