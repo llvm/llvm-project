@@ -138,7 +138,7 @@ ReductionProcessor::getReductionInitValue(mlir::Location loc, mlir::Type type,
     TODO(loc, "Reduction of some types is not supported");
   switch (redId) {
   case ReductionIdentifier::MAX: {
-    if (auto ty = mlir::dyn_cast<mlir::FloatType>(type)) {
+    if (auto ty = type.dyn_cast<mlir::FloatType>()) {
       const llvm::fltSemantics &sem = ty.getFloatSemantics();
       return builder.createRealConstant(
           loc, type, llvm::APFloat::getLargest(sem, /*Negative=*/true));
@@ -148,7 +148,7 @@ ReductionProcessor::getReductionInitValue(mlir::Location loc, mlir::Type type,
     return builder.createIntegerConstant(loc, type, minInt);
   }
   case ReductionIdentifier::MIN: {
-    if (auto ty = mlir::dyn_cast<mlir::FloatType>(type)) {
+    if (auto ty = type.dyn_cast<mlir::FloatType>()) {
       const llvm::fltSemantics &sem = ty.getFloatSemantics();
       return builder.createRealConstant(
           loc, type, llvm::APFloat::getLargest(sem, /*Negative=*/false));
@@ -188,12 +188,12 @@ ReductionProcessor::getReductionInitValue(mlir::Location loc, mlir::Type type,
       return fir::factory::Complex{builder, loc}.createComplex(type, initRe,
                                                                initIm);
     }
-    if (mlir::isa<mlir::FloatType>(type))
+    if (type.isa<mlir::FloatType>())
       return builder.create<mlir::arith::ConstantOp>(
           loc, type,
           builder.getFloatAttr(type, (double)getOperationIdentity(redId, loc)));
 
-    if (mlir::isa<fir::LogicalType>(type)) {
+    if (type.isa<fir::LogicalType>()) {
       mlir::Value intConst = builder.create<mlir::arith::ConstantOp>(
           loc, builder.getI1Type(),
           builder.getIntegerAttr(builder.getI1Type(),
@@ -474,11 +474,11 @@ createReductionCleanupRegion(fir::FirOpBuilder &builder, mlir::Location loc,
 
 // like fir::unwrapSeqOrBoxedSeqType except it also works for non-sequence boxes
 static mlir::Type unwrapSeqOrBoxedType(mlir::Type ty) {
-  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
+  if (auto seqTy = ty.dyn_cast<fir::SequenceType>())
     return seqTy.getEleTy();
-  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty)) {
+  if (auto boxTy = ty.dyn_cast<fir::BaseBoxType>()) {
     auto eleTy = fir::unwrapRefType(boxTy.getEleTy());
-    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy))
+    if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>())
       return seqTy.getEleTy();
     return eleTy;
   }
@@ -790,7 +790,7 @@ void ReductionProcessor::addDeclareReduction(
     for (mlir::Value symVal : reductionVars) {
       auto redType = mlir::cast<fir::ReferenceType>(symVal.getType());
       const auto &kindMap = firOpBuilder.getKindMap();
-      if (mlir::isa<fir::LogicalType>(redType.getEleTy()))
+      if (redType.getEleTy().isa<fir::LogicalType>())
         decl = createDeclareReduction(firOpBuilder,
                                       getReductionName(intrinsicOp, kindMap,
                                                        firOpBuilder.getI1Type(),
@@ -816,7 +816,7 @@ void ReductionProcessor::addDeclareReduction(
         mlir::Value symVal = converter.getSymbolAddress(*symbol);
         if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
           symVal = declOp.getBase();
-        auto redType = mlir::cast<fir::ReferenceType>(symVal.getType());
+        auto redType = symVal.getType().cast<fir::ReferenceType>();
         if (!redType.getEleTy().isIntOrIndexOrFloat())
           TODO(currentLocation, "User Defined Reduction on non-trivial type");
         decl = createDeclareReduction(
