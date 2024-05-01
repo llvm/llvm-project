@@ -224,8 +224,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"etime",
      &I::genEtime,
-     {{{"values", asBox},
-       {"time", asBox}}},
+     {{{"values", asBox}, {"time", asBox}}},
      /*isElemental=*/false},
     {"execute_command_line",
      &I::genExecuteCommandLine,
@@ -3236,8 +3235,7 @@ void IntrinsicLibrary::genExecuteCommandLine(
 }
 
 // ETIME
-void IntrinsicLibrary::genEtime(
-    llvm::ArrayRef<fir::ExtendedValue> args) {
+void IntrinsicLibrary::genEtime(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
 
   mlir::Value values = fir::getBase(args[0]);
