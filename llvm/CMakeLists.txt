@@ -1158,7 +1158,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "OS390")
   add_compile_definitions(_UNIX03_THREADS) # Multithreading support.
   # Need to build LLVM as ASCII application.
   # This can't be a global setting because other projects may
-  # need to build in EBCDIC mode.
+  # need to be built in EBCDIC mode.
   append("-fzos-le-char-mode=ascii" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
   append("-m64" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
 endif()
