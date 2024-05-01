@@ -4497,7 +4497,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Copy a Predicate register by ORRing with itself.
   if (AArch64::PPRRegClass.contains(DestReg) &&
       AArch64::PPRRegClass.contains(SrcReg)) {
-    assert(Subtarget.hasSVEorSME() && "Unexpected SVE register.");
+    assert(Subtarget.isSVEorStreamingSVEAvailable() &&
+           "Unexpected SVE register.");
     BuildMI(MBB, I, DL, get(AArch64::ORR_PPzPP), DestReg)
       .addReg(SrcReg) // Pg
       .addReg(SrcReg)
@@ -4532,7 +4533,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Copy a Z register by ORRing with itself.
   if (AArch64::ZPRRegClass.contains(DestReg) &&
       AArch64::ZPRRegClass.contains(SrcReg)) {
-    assert(Subtarget.hasSVEorSME() && "Unexpected SVE register.");
+    assert(Subtarget.isSVEorStreamingSVEAvailable() &&
+           "Unexpected SVE register.");
     BuildMI(MBB, I, DL, get(AArch64::ORR_ZZZ), DestReg)
       .addReg(SrcReg)
       .addReg(SrcReg, getKillRegState(KillSrc));
@@ -4544,7 +4546,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
        AArch64::ZPR2StridedOrContiguousRegClass.contains(DestReg)) &&
       (AArch64::ZPR2RegClass.contains(SrcReg) ||
        AArch64::ZPR2StridedOrContiguousRegClass.contains(SrcReg))) {
-    assert(Subtarget.hasSVEorSME() && "Unexpected SVE register.");
+    assert(Subtarget.isSVEorStreamingSVEAvailable() &&
+           "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1};
     copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
                      Indices);
@@ -4554,7 +4557,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // Copy a Z register triple by copying the individual sub-registers.
   if (AArch64::ZPR3RegClass.contains(DestReg) &&
       AArch64::ZPR3RegClass.contains(SrcReg)) {
-    assert(Subtarget.hasSVEorSME() && "Unexpected SVE register.");
+    assert(Subtarget.isSVEorStreamingSVEAvailable() &&
+           "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1,
                                        AArch64::zsub2};
     copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
@@ -4567,7 +4571,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
        AArch64::ZPR4StridedOrContiguousRegClass.contains(DestReg)) &&
       (AArch64::ZPR4RegClass.contains(SrcReg) ||
        AArch64::ZPR4StridedOrContiguousRegClass.contains(SrcReg))) {
-    assert(Subtarget.hasSVEorSME() && "Unexpected SVE register.");
+    assert(Subtarget.isSVEorStreamingSVEAvailable() &&
+           "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1,
                                        AArch64::zsub2, AArch64::zsub3};
     copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
@@ -4834,7 +4839,7 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     if (AArch64::FPR16RegClass.hasSubClassEq(RC))
       Opc = AArch64::STRHui;
     else if (IsPNR || AArch64::PPRRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register store without SVE store instructions");
       assert((!IsPNR || Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
              "Unexpected register store without SVE2p1 or SME2");
@@ -4886,7 +4891,7 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                               AArch64::sube64, AArch64::subo64, FI, MMO);
       return;
     } else if (AArch64::ZPRRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register store without SVE store instructions");
       Opc = AArch64::STR_ZXI;
       StackID = TargetStackID::ScalableVector;
@@ -4910,7 +4915,7 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       Offset = false;
     } else if (AArch64::ZPR2RegClass.hasSubClassEq(RC) ||
                AArch64::ZPR2StridedOrContiguousRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register store without SVE store instructions");
       Opc = AArch64::STR_ZZXI;
       StackID = TargetStackID::ScalableVector;
@@ -4922,7 +4927,7 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       Opc = AArch64::ST1Threev2d;
       Offset = false;
     } else if (AArch64::ZPR3RegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register store without SVE store instructions");
       Opc = AArch64::STR_ZZZXI;
       StackID = TargetStackID::ScalableVector;
@@ -4935,7 +4940,7 @@ void AArch64InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       Offset = false;
     } else if (AArch64::ZPR4RegClass.hasSubClassEq(RC) ||
                AArch64::ZPR4StridedOrContiguousRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register store without SVE store instructions");
       Opc = AArch64::STR_ZZZZXI;
       StackID = TargetStackID::ScalableVector;
@@ -5008,7 +5013,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     if (AArch64::FPR16RegClass.hasSubClassEq(RC))
       Opc = AArch64::LDRHui;
     else if (IsPNR || AArch64::PPRRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register load without SVE load instructions");
       assert((!IsPNR || Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
              "Unexpected register load without SVE2p1 or SME2");
@@ -5062,7 +5067,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                AArch64::subo64, FI, MMO);
       return;
     } else if (AArch64::ZPRRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register load without SVE load instructions");
       Opc = AArch64::LDR_ZXI;
       StackID = TargetStackID::ScalableVector;
@@ -5086,7 +5091,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       Offset = false;
     } else if (AArch64::ZPR2RegClass.hasSubClassEq(RC) ||
                AArch64::ZPR2StridedOrContiguousRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register load without SVE load instructions");
       Opc = AArch64::LDR_ZZXI;
       StackID = TargetStackID::ScalableVector;
@@ -5098,7 +5103,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       Opc = AArch64::LD1Threev2d;
       Offset = false;
     } else if (AArch64::ZPR3RegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register load without SVE load instructions");
       Opc = AArch64::LDR_ZZZXI;
       StackID = TargetStackID::ScalableVector;
@@ -5111,7 +5116,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       Offset = false;
     } else if (AArch64::ZPR4RegClass.hasSubClassEq(RC) ||
                AArch64::ZPR4StridedOrContiguousRegClass.hasSubClassEq(RC)) {
-      assert(Subtarget.hasSVEorSME() &&
+      assert(Subtarget.isSVEorStreamingSVEAvailable() &&
              "Unexpected register load without SVE load instructions");
       Opc = AArch64::LDR_ZZZZXI;
       StackID = TargetStackID::ScalableVector;
