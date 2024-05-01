@@ -297,6 +297,10 @@ Modified Compiler Flags
 - Carved out ``-Wformat`` warning about scoped enums into a subwarning and
   make it controlled by ``-Wformat-pedantic``. Fixes #GH88595.
 
+- Trivial infinite loops (i.e loops with a constant controlling expresion
+  evaluating to ``true`` and an empty body such as ``while(1);``)
+  are considered infinite, even when the ``-ffinite-loop`` flag is set.
+
 Removed Compiler Flags
 -------------------------
 

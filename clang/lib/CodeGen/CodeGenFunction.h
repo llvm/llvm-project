@@ -636,7 +636,7 @@ public:
   /// Returns true if a loop must make progress, which means the mustprogress
   /// attribute can be added. \p HasConstantCond indicates whether the branch
   /// condition is a known constant.
-  bool checkIfLoopMustProgress(const Expr *, bool IsTrivialCXXLoop);
+  bool checkIfLoopMustProgress(const Expr *, bool HasEmptyBody);
 
   const CodeGen::CGBlockInfo *BlockInfo = nullptr;
   llvm::Value *BlockPointer = nullptr;

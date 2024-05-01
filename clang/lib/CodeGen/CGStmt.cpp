@@ -909,15 +909,11 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
 }
 
 bool CodeGenFunction::checkIfLoopMustProgress(const Expr *ControllingExpression,
-                                              bool IsTrivialCXXLoop) {
+                                              bool HasEmptyBody) {
   if (CGM.getCodeGenOpts().getFiniteLoops() ==
       CodeGenOptions::FiniteLoopsKind::Never)
     return false;
 
-  if (CGM.getCodeGenOpts().getFiniteLoops() ==
-          CodeGenOptions::FiniteLoopsKind::Always &&
-      !getLangOpts().CPlusPlus11)
-    return true;
   // Now apply rules for plain C (see  6.8.5.6 in C11).
   // Loops with constant conditions do not have to make progress in any C
   // version.
@@ -944,8 +940,10 @@ bool CodeGenFunction::checkIfLoopMustProgress(const Expr *ControllingExpression,
   // following:
   // [...]
   // - continue execution of a trivial infinite loop ([stmt.iter.general]).
-  if (getLangOpts().CPlusPlus11) {
-    if (IsTrivialCXXLoop && CondIsTrue) {
+  if (CGM.getCodeGenOpts().getFiniteLoops() ==
+          CodeGenOptions::FiniteLoopsKind::Always ||
+      getLangOpts().CPlusPlus11) {
+    if (HasEmptyBody && CondIsTrue) {
       CurFn->removeFnAttr(llvm::Attribute::MustProgress);
       return false;
     }

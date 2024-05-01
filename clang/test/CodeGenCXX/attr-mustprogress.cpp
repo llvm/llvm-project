@@ -32,7 +32,7 @@ int b = 0;
 // CHECK:       for.cond:
 // CXX98-NOT:    br {{.*}} llvm.loop
 // CXX11-NOT:    br {{.*}} llvm.loop
-// FINITE-NEXT:  br label %for.cond, !llvm.loop [[LOOP1:!.*]]
+// FINITE-NOT:   br {{.*}} llvm.loop
 void f0() {
   for (; ;) ;
 }
@@ -48,7 +48,7 @@ void f0() {
 // CHECK:       for.body:
 // CXX98-NOT:    br {{.*}}, !llvm.loop
 // CXX11-NOT:    br {{.*}} llvm.loop
-// FINITE-NEXT:  br label %for.cond, !llvm.loop [[LOOP2:!.*]]
+// FINITE-NOT:   br {{.*}} llvm.loop
 // CHECK:       for.end:
 // CHECK-NEXT:    ret void
 //
@@ -91,7 +91,7 @@ void f2() {
 // CHECK:       for.body:
 // CXX98-NOT:     br {{.*}}, !llvm.loop
 // CXX11-NOT:     br {{.*}}, !llvm.loop
-// FINITE-NEXT:   br label %for.cond, !llvm.loop [[LOOP4:!.*]]
+// FINITE-NOT:    br {{.*}}, !llvm.loop
 // CHECK:       for.end:
 // CHECK-NEXT:    br label %for.cond1
 // CHECK:       for.cond1:
@@ -135,7 +135,7 @@ void F() {
 // CHECK:       for.body2:
 // CXX98-NOT:     br {{.*}}, !llvm.loop
 // CXX11-NOT:     br {{.*}}, !llvm.loop
-// FINITE-NEXT:   br label %for.cond1, !llvm.loop [[LOOP7:!.*]]
+// FINITE-NOT:    br {{.*}}, !llvm.loop
 // CHECK:       for.end3:
 // CHECK-NEXT:    ret void
 //
@@ -155,7 +155,7 @@ void F2() {
 // CHECK:       while.body:
 // CXX98-NOT:     br {{.*}}, !llvm.loop
 // CXX11-NOT:     br {{.*}}, !llvm.loop
-// FINITE-NEXT:   br label %while.body, !llvm.loop [[LOOP8:!.*]]
+// FINITE-NOT:    br {{.*}}, !llvm.loop
 //
 void w1() {
   while (1)
@@ -205,7 +205,7 @@ void w2() {
 // CHECK:       while.body2:
 // CXX98-NOT:    br {{.*}}, !llvm.loop
 // CXX11-NOT:    br {{.*}}, !llvm.loop
-// FINITE-NEXT:  br label %while.body2, !llvm.loop [[LOOP11:!.*]]
+// FINITE-NOT:   br {{.*}}, !llvm.loop
 //
 void W() {
   while (a == b)
@@ -223,7 +223,7 @@ void W() {
 // CHECK:       while.body:
 // CXX98-NOT:     br {{.*}}, !llvm.loop
 // CXX11-NOT:     br {{.*}}, !llvm.loop
-// FINITE-NEXT:   br label %while.body, !llvm.loop [[LOOP12:!.*]]
+// FINITE-NOT:    br {{.*}}, !llvm.loop
 //
 void W2() {
   while (1)
@@ -243,7 +243,7 @@ void W2() {
 // CHECK:       do.cond:
 // CXX98-NOT:     br {{.*}}, !llvm.loop
 // CXX11-NOT:     br {{.*}}, !llvm.loop
-// FINITE-NEXT:   br i1 true, label %do.body, label %do.end, !llvm.loop [[LOOP13:!.*]]
+// FINITE-NOT:    br {{.*}}, !llvm.loop
 // CHECK:       do.end:
 // CHECK-NEXT:    ret void
 //
@@ -288,7 +288,7 @@ void d2() {
 // CHECK:       do.cond:
 // CXX98-NOT:     br {{.*}}, !llvm.loop
 // CXX11-NOT:     br {{.*}}, !llvm.loop
-// FINITE-NEXT:   br i1 true, label %do.body, label %do.end, !llvm.loop [[LOOP15:!.*]]
+// FINITE-NOT:    br {{.*}}, !llvm.loop
 // CHECK:       do.end:
 // CHECK-NEXT:    br label %do.body1
 // CHECK:       do.body1:
@@ -334,7 +334,7 @@ void D() {
 // CHECK:       do.cond2:
 // CXX98-NOT:     br {{.*}}, !llvm.loop
 // CXX11-NOT:     br {{.*}}, !llvm.loop
-// FINITE-NEXT:   br i1 true, label %do.body1, label %do.end3, !llvm.loop [[LOOP18:!.*]]
+// FINITE-NOT:    br {{.*}}, !llvm.loop
 // CHECK:       do.end3:
 // CHECK-NEXT:    ret void
 //
@@ -354,9 +354,9 @@ void D2() {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %for.cond
 // CHECK:       for.cond:
-// CXX98-NOT:    br {{.*}} llvm.loop
-// CXX11-NOT:    br {{.*}} llvm.loop
-// FINITE-NEXT:  br label %for.cond, !llvm.loop [[LOOP19:!.*]]
+// CXX98-NOT:    br {{.*}}, !llvm.loop
+// CXX11-NOT:    br {{.*}}, !llvm.loop
+// FINITE-NOT:   br {{.*}}, !llvm.loop
 void compound0() {
   for (; ;) {}
 }
@@ -368,9 +368,9 @@ void compound0() {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %for.cond
 // CHECK:       for.cond:
-// CXX98-NOT:    br {{.*}} llvm.loop
-// CXX11-NOT:    br {{.*}} llvm.loop
-// FINITE-NEXT:  br label %for.cond, !llvm.loop [[LOOP20:!.*]]
+// CXX98-NOT:    br {{.*}}, llvm.loop
+// CXX11-NOT:    br {{.*}}, llvm.loop
+// FINITE-NOT:   br {{.*}}, !llvm.loop
 void compound1() {
   for (; ;) {/*! */}
 }
@@ -384,9 +384,9 @@ void compound1() {
 // CHECK:       do.body:
 // CHECK-NEXT:    br label %do.cond
 // CHECK:       do.cond:
-// CXX98-NOT:     br {{.*}}, !llvm.loop
-// CXX11-NOT:     br {{.*}}, !llvm.loop
-// FINITE-NEXT:   br i1 true, label %do.body, label %do.end, !llvm.loop [[LOOP21:!.*]]
+// CXX98-NOT:    br {{.*}}, !llvm.loop
+// CXX11-NOT:    br {{.*}}, !llvm.loop
+// FINITE-NOT:   br {{.*}}, !llvm.loop
 // CHECK:       do.end:
 // CHECK-NEXT:    ret void
 //
@@ -396,7 +396,7 @@ void compound2() {
 
 // CXX98-NOT:  mustprogress
 // CXX11    :  mustprogress
-// FINITE-NOT: mustprogress
+// FINITE   :  mustprogress
 // CHECK-LABEL: @_Z5Falsev(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    br label %do.body
