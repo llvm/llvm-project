@@ -2407,7 +2407,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
   if (isTailCall) {
     // Check if it's really possible to do a tail call.
-    isTailCall = IsEligibleForTailCallOptimization(CLI, CCInfo, ArgLocs, PreferIndirect);
+    isTailCall =
+        IsEligibleForTailCallOptimization(CLI, CCInfo, ArgLocs, PreferIndirect);
 
     if (isTailCall && !getTargetMachine().Options.GuaranteedTailCallOpt &&
         CallConv != CallingConv::Tail && CallConv != CallingConv::SwiftTail)
@@ -2983,16 +2984,18 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
 
 /// IsEligibleForTailCallOptimization - Check whether the call is eligible
 /// for tail call optimization. Targets which want to do tail call
-/// optimization should implement this function.
+/// optimization should implement this function. Note that this function also
+/// processes musttail calls, in which case any case where this function returns
+/// true for valid musttail call results in a fatal backend error.
 bool ARMTargetLowering::IsEligibleForTailCallOptimization(
     TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
     SmallVectorImpl<CCValAssign> &ArgLocs, const bool isIndirect) const {
   CallingConv::ID CalleeCC = CLI.CallConv;
   SDValue Callee = CLI.Callee;
   bool isVarArg = CLI.IsVarArg;
-  const SmallVector<ISD::OutputArg, 32> &Outs = CLI.Outs;
-  const SmallVector<SDValue, 32> &OutVals = CLI.OutVals;
-  const SmallVector<ISD::InputArg, 32> &Ins = CLI.Ins;
+  const SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  const SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
+  const SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
   const SelectionDAG &DAG = CLI.DAG;
   MachineFunction &MF = DAG.getMachineFunction();
   const Function &CallerF = MF.getFunction();
@@ -3029,7 +3032,7 @@ bool ARMTargetLowering::IsEligibleForTailCallOptimization(
 
   // Also avoid sibcall optimization if either caller or callee uses struct
   // return semantics.
-  bool isCalleeStructRet = (Outs.empty()) ? false : Outs[0].Flags.isSRet();
+  bool isCalleeStructRet = Outs.empty() ? false : Outs[0].Flags.isSRet();
   bool isCallerStructRet = MF.getFunction().hasStructRetAttr();
   if (isCalleeStructRet || isCallerStructRet)
     return false;
