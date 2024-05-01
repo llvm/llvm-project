@@ -51,6 +51,15 @@ def Feature64Bit
 def FeatureDummy
     : SubtargetFeature<"dummy", "Dummy", "true", "Dummy">;
 
+class RISCVProfile<string name, list<SubtargetFeature> features>
+    : SubtargetFeature<name, "Is" # NAME, "true",
+                       "RISC-V " # name # " profile", features>;
+
+def RVI20U32 : RISCVProfile<"rvi20u32", [Feature32Bit, FeatureStdExtI]>;
+def RVI20U64 : RISCVProfile<"rvi20u64", [Feature64Bit, FeatureStdExtI]>;
+def ProfileDummy : RISCVProfile<"dummy", [Feature64Bit, FeatureStdExtI,
+                                          FeatureStdExtF, FeatureStdExtZidummy]>;
+
 class RISCVProcessorModel<string n,
                           SchedMachineModel m,
                           list<SubtargetFeature> f,
@@ -120,6 +129,17 @@ def ROCKET : RISCVTuneProcessorModel<"rocket",
 // CHECK-NEXT: };
 
 // CHECK:      #endif // GET_IMPLIED_EXTENSIONS
+
+// CHECK:      #ifdef GET_SUPPORTED_PROFILES
+// CHECK-NEXT: #undef GET_SUPPORTED_PROFILES
+
+// CHECK:      static constexpr RISCVProfile SupportedProfiles[] = {
+// CHECK-NEXT:     {"dummy","rv64i2p1_f2p2_zidummy0p1"},
+// CHECK-NEXT:     {"rvi20u32","rv32i2p1"},
+// CHECK-NEXT:     {"rvi20u64","rv64i2p1"},
+// CHECK-NEXT: };
+
+// CHECK:      #endif // GET_SUPPORTED_PROFILES
 
 // CHECK:      #ifndef PROC
 // CHECK-NEXT: #define PROC(ENUM, NAME, DEFAULT_MARCH, FAST_UNALIGNED_ACCESS)
