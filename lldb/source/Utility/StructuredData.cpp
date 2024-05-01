@@ -15,8 +15,6 @@
 #include <cerrno>
 #include <cinttypes>
 #include <cstdlib>
-#include <memory>
-#include <sstream>
 
 using namespace lldb_private;
 using namespace llvm;

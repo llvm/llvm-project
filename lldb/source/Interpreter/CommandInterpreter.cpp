@@ -1893,6 +1893,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
   m_transcript_stream << "(lldb) " << command_line << '\n';
 
+  // The same `transcript_item` will be used below to add output and error of
+  // the command.
   auto transcript_item = std::make_shared<StructuredData::Dictionary>();
   transcript_item->AddStringItem("command", command_line);
   m_transcript_structured->AddItem(transcript_item);
