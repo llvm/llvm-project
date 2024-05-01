@@ -806,6 +806,7 @@ inline CondCode_match m_CondCode() { return CondCode_match(nullptr); }
 inline CondCode_match m_CondCode(ISD::CondCode &CC) {
   return CondCode_match(&CC);
 }
+/// Match a conditional code SDNode with a specific ISD::CondCode.
 inline CondCode_match m_SpecificCondCode(ISD::CondCode CC) {
   return CondCode_match(CC);
 }
