@@ -143,6 +143,49 @@ using InstrLoc = std::tuple<size_t, size_t>;
 // instruction.
 using ValueLoweringMap = map<Instruction *, InstrLoc>;
 
+// Function lowering context.
+//
+// This groups together some per-function lowering bits so that they can be
+// passed down through the serialiser together (and so that they can die
+// together).
+class FuncLowerCtxt {
+  // The local variable mapping for one function.
+  ValueLoweringMap VLMap;
+  // Local variable indices that require patching once we have finished
+  // lowwering the function.
+  vector<tuple<Instruction *, MCSymbol *>> InstIdxPatchUps;
+
+public:
+  // Create an empty function lowering context.
+  FuncLowerCtxt() : VLMap(ValueLoweringMap()), InstIdxPatchUps({}){};
+
+  // Defer (patch up later) the use-site of the (as-yet unknown) instruction
+  // index of the instruction  `I`, which has the symbol `Sym`.
+  void deferInstIdx(Instruction *I, MCSymbol *Sym) {
+    InstIdxPatchUps.push_back({I, Sym});
+  }
+
+  // Fill in instruction indices that had to be deferred.
+  void patchUpInstIdxs(MCStreamer &OutStreamer) {
+    MCContext &MCtxt = OutStreamer.getContext();
+    for (auto &[Inst, Sym] : InstIdxPatchUps) {
+      auto [_, InstIdx] = VLMap.at(Inst);
+      OutStreamer.emitAssignment(Sym, MCConstantExpr::create(InstIdx, MCtxt));
+    }
+  }
+
+  // Add/update an entry in the value lowering map.
+  void updateVLMap(Instruction *I, InstrLoc L) { VLMap[I] = L; }
+
+  // Get the entry for `I` in the value lowering map.
+  //
+  // Raises `std::out_of_range` if not present.
+  InstrLoc lookupInVLMap(Instruction *I) { return VLMap.at(I); }
+
+  // Determines if there's an entry for `I` in the value lowering map.
+  bool vlMapContains(Instruction *I) { return VLMap.count(I) == 1; }
+};
+
 // The class responsible for serialising our IR into the interpreter binary.
 //
 // It walks over the LLVM IR, lowering each function, block, instruction, etc.
@@ -157,10 +200,11 @@ using ValueLoweringMap = map<Instruction *, InstrLoc>;
 //    we must increment the current instruction index (InstIdx).
 //
 //  - When we are done lowering an LLVM instruction that generates a value, we
-//    must update the `VLMap` with an entry that maps the LLVM instruction to
-//    the final Yk IR instruction in the lowering. If the LLVM instruction
-//    doesn't generate a value, or the LLVM instruction lowered to exactly zero
-//    Yk IR instructions, then there is no need to update the `VLMap`.
+//    must update the `VLMap` (found inside the `FuncLowerCtxt`) with an entry
+//    that maps the LLVM instruction to the final Yk IR instruction in the
+//    lowering. If the LLVM instruction doesn't generate a value, or the LLVM
+//    instruction lowered to exactly zero Yk IR instructions, then there is no
+//    need to update the `VLMap`.
 //
 // These invariants are required so that when we encounter a local variable as
 // an operand to an LLVM instruction, we can quickly find the corresponding Yk
@@ -174,18 +218,6 @@ private:
   vector<llvm::Type *> Types;
   vector<llvm::Constant *> Constants;
   vector<llvm::GlobalVariable *> Globals;
-
-  // Instruction indices that need to be patched up later.
-  vector<tuple<Instruction *, MCSymbol *>> InstIdxPacthUps;
-
-  // Fill in instruction indices that had to be deferred.
-  void patchUpInstIdxs(ValueLoweringMap &VLMap) {
-    MCContext &MCtxt = OutStreamer.getContext();
-    for (auto &[Inst, Sym] : InstIdxPacthUps) {
-      auto [_, InstIdx] = VLMap.at(Inst);
-      OutStreamer.emitAssignment(Sym, MCConstantExpr::create(InstIdx, MCtxt));
-    }
-  }
 
   // Return the index of the LLVM type `Ty`, inserting a new entry if
   // necessary.
@@ -256,12 +288,12 @@ private:
     OutStreamer.emitSizeT(constantIndex(C));
   }
 
-  void serialiseLocalVariableOperand(Instruction *I, ValueLoweringMap &VLMap) {
+  void serialiseLocalVariableOperand(Instruction *I, FuncLowerCtxt &FLCtxt) {
     serialiseOperandKind(OperandKindLocal);
     OutStreamer.emitSizeT(getIndex(&M, I->getFunction()));
 
-    if (VLMap.count(I) == 1) {
-      auto [BBIdx, InstIdx] = VLMap.at(I);
+    if (FLCtxt.vlMapContains(I)) {
+      auto [BBIdx, InstIdx] = FLCtxt.lookupInVLMap(I);
       OutStreamer.emitSizeT(BBIdx);
       OutStreamer.emitSizeT(InstIdx);
     } else {
@@ -282,7 +314,7 @@ private:
       MCContext &MCtxt = OutStreamer.getContext();
       MCSymbol *PatchUpSym = MCtxt.createTempSymbol();
       OutStreamer.emitSymbolValue(PatchUpSym, sizeof(size_t));
-      InstIdxPacthUps.push_back({I, PatchUpSym});
+      FLCtxt.deferInstIdx(I, PatchUpSym);
     }
   }
 
@@ -296,7 +328,7 @@ private:
     OutStreamer.emitSizeT(getIndex(BB->getParent(), BB));
   }
 
-  void serialiseArgOperand(ValueLoweringMap &VLMap, Argument *A) {
+  void serialiseArgOperand(Argument *A) {
     // This assumes that the argument indices match in both IRs.
 
     // opcode:
@@ -312,8 +344,7 @@ private:
     OutStreamer.emitSizeT(globalIndex(G));
   }
 
-  void serialiseOperand(Instruction *Parent, ValueLoweringMap &VLMap,
-                        Value *V) {
+  void serialiseOperand(Instruction *Parent, FuncLowerCtxt &FLCtxt, Value *V) {
     if (llvm::GlobalVariable *G = dyn_cast<llvm::GlobalVariable>(V)) {
       serialiseGlobalOperand(G);
     } else if (llvm::Function *F = dyn_cast<llvm::Function>(V)) {
@@ -321,9 +352,9 @@ private:
     } else if (llvm::Constant *C = dyn_cast<llvm::Constant>(V)) {
       serialiseConstantOperand(Parent, C);
     } else if (llvm::Argument *A = dyn_cast<llvm::Argument>(V)) {
-      serialiseArgOperand(VLMap, A);
+      serialiseArgOperand(A);
     } else if (Instruction *I = dyn_cast<Instruction>(V)) {
-      serialiseLocalVariableOperand(I, VLMap);
+      serialiseLocalVariableOperand(I, FLCtxt);
     } else {
       llvm::report_fatal_error(
           StringRef("attempt to serialise non-yk-operand: " + toString(V)));
@@ -331,20 +362,20 @@ private:
   }
 
   void serialiseBinaryOperatorInst(llvm::BinaryOperator *I,
-                                   ValueLoweringMap &VLMap, unsigned BBIdx,
+                                   FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                                    unsigned &InstIdx) {
     assert(I->getNumOperands() == 2);
 
     // opcode:
     serialiseOpcode(OpCodeBinOp);
     // left-hand side:
-    serialiseOperand(I, VLMap, I->getOperand(0));
+    serialiseOperand(I, FLCtxt, I->getOperand(0));
     // binary operator:
     serialiseBinOperator(I->getOpcode());
     // right-hand side:
-    serialiseOperand(I, VLMap, I->getOperand(1));
+    serialiseOperand(I, FLCtxt, I->getOperand(1));
 
-    VLMap[I] = {BBIdx, InstIdx};
+    FLCtxt.updateVLMap(I, {BBIdx, InstIdx});
     InstIdx++;
   }
 
@@ -413,8 +444,8 @@ private:
     }
   }
 
-  void serialiseAllocaInst(AllocaInst *I, ValueLoweringMap &VLMap,
-                           unsigned BBIdx, unsigned &InstIdx) {
+  void serialiseAllocaInst(AllocaInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
+                           unsigned &InstIdx) {
     // opcode:
     serialiseOpcode(OpCodeAlloca);
 
@@ -426,27 +457,27 @@ private:
     // XXX guard cast
     OutStreamer.emitSizeT(CI->getZExtValue());
 
-    VLMap[I] = {BBIdx, InstIdx};
+    FLCtxt.updateVLMap(I, {BBIdx, InstIdx});
     InstIdx++;
   }
 
-  void serialiseStackmapCall(CallInst *I, ValueLoweringMap &VLMap) {
+  void serialiseStackmapCall(CallInst *I, FuncLowerCtxt &FLCtxt) {
     assert(I);
     assert(I->getCalledFunction()->isIntrinsic());
     assert(I->getIntrinsicID() == Intrinsic::experimental_stackmap);
     // stackmap ID:
-    serialiseOperand(I, VLMap, I->getOperand(0));
+    serialiseOperand(I, FLCtxt, I->getOperand(0));
 
     // num_lives:
     OutStreamer.emitInt32(I->arg_size() - 2);
 
     // lives:
     for (unsigned OI = 2; OI < I->arg_size(); OI++) {
-      serialiseOperand(I, VLMap, I->getOperand(OI));
+      serialiseOperand(I, FLCtxt, I->getOperand(OI));
     }
   }
 
-  void serialiseCallInst(CallInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
+  void serialiseCallInst(CallInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                          unsigned &InstIdx) {
     if (I->isInlineAsm()) {
       // For now we omit calls to empty inline asm blocks.
@@ -456,7 +487,7 @@ private:
       // if (!(cast<InlineAsm>(Callee)->getAsmString().empty())) {
       if (!(cast<InlineAsm>(I->getCalledOperand())->getAsmString().empty())) {
         // Non-empty asm block. We can't ignore it.
-        serialiseUnimplementedInstruction(I, VLMap, BBIdx, InstIdx);
+        serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
       }
       return;
     }
@@ -494,14 +525,14 @@ private:
     OutStreamer.emitInt32(I->arg_size());
     // args:
     for (unsigned OI = 0; OI < I->arg_size(); OI++) {
-      serialiseOperand(I, VLMap, I->getOperand(OI));
+      serialiseOperand(I, FLCtxt, I->getOperand(OI));
     }
     if (!I->getCalledFunction()->isDeclaration()) {
       // The next instruction will be the stackmap entry
       // has_safepoint = 1:
       OutStreamer.emitInt8(1);
       CallInst *SMI = dyn_cast<CallInst>(I->getNextNonDebugInstruction());
-      serialiseStackmapCall(SMI, VLMap);
+      serialiseStackmapCall(SMI, FLCtxt);
     } else {
       // has_safepoint = 0:
       OutStreamer.emitInt8(0);
@@ -509,13 +540,13 @@ private:
 
     // If the return type is non-void, then this defines a local.
     if (!I->getType()->isVoidTy()) {
-      VLMap[I] = {BBIdx, InstIdx};
+      FLCtxt.updateVLMap(I, {BBIdx, InstIdx});
     }
     InstIdx++;
   }
 
-  void serialiseBranchInst(BranchInst *I, ValueLoweringMap &VLMap,
-                           unsigned BBIdx, unsigned &InstIdx) {
+  void serialiseBranchInst(BranchInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
+                           unsigned &InstIdx) {
     // We split LLVM's `br` into two Yk IR instructions: one for unconditional
     // branching, another for conidtional branching.
     if (!I->isConditional()) {
@@ -533,44 +564,44 @@ private:
       // guards.
       //
       // cond:
-      serialiseOperand(I, VLMap, I->getCondition());
+      serialiseOperand(I, FLCtxt, I->getCondition());
       // true_bb:
       serialiseBlockLabel(I->getSuccessor(0));
       // false_bb:
       serialiseBlockLabel(I->getSuccessor(1));
 
       CallInst *SMI = dyn_cast<CallInst>(I->getPrevNonDebugInstruction());
-      serialiseStackmapCall(SMI, VLMap);
+      serialiseStackmapCall(SMI, FLCtxt);
     }
     InstIdx++;
   }
 
-  void serialiseLoadInst(LoadInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
+  void serialiseLoadInst(LoadInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                          unsigned &InstIdx) {
     // opcode:
     serialiseOpcode(OpCodeLoad);
     // ptr:
-    serialiseOperand(I, VLMap, I->getPointerOperand());
+    serialiseOperand(I, FLCtxt, I->getPointerOperand());
     // type_idx:
     OutStreamer.emitSizeT(typeIndex(I->getType()));
 
-    VLMap[I] = {BBIdx, InstIdx};
+    FLCtxt.updateVLMap(I, {BBIdx, InstIdx});
     InstIdx++;
   }
 
-  void serialiseStoreInst(StoreInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
+  void serialiseStoreInst(StoreInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                           unsigned &InstIdx) {
     // opcode:
     serialiseOpcode(OpCodeStore);
     // value:
-    serialiseOperand(I, VLMap, I->getValueOperand());
+    serialiseOperand(I, FLCtxt, I->getValueOperand());
     // ptr:
-    serialiseOperand(I, VLMap, I->getPointerOperand());
+    serialiseOperand(I, FLCtxt, I->getPointerOperand());
 
     InstIdx++;
   }
 
-  void serialiseGetElementPtrInst(GetElementPtrInst *I, ValueLoweringMap &VLMap,
+  void serialiseGetElementPtrInst(GetElementPtrInst *I, FuncLowerCtxt &FLCtxt,
                                   unsigned BBIdx, unsigned &InstIdx) {
     unsigned BitWidth = 64;
     MapVector<Value *, APInt> Offsets;
@@ -584,11 +615,11 @@ private:
     // type_idx:
     OutStreamer.emitSizeT(typeIndex(I->getType()));
     // pointer:
-    serialiseOperand(I, VLMap, I->getPointerOperand());
+    serialiseOperand(I, FLCtxt, I->getPointerOperand());
     // offset:
-    serialiseOperand(I, VLMap, ConstantInt::get(I->getContext(), Offset));
+    serialiseOperand(I, FLCtxt, ConstantInt::get(I->getContext(), Offset));
 
-    VLMap[I] = {BBIdx, InstIdx};
+    FLCtxt.updateVLMap(I, {BBIdx, InstIdx});
     InstIdx++;
   }
 
@@ -632,25 +663,25 @@ private:
     OutStreamer.emitInt8(LP.value());
   }
 
-  void serialiseICmpInst(ICmpInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
+  void serialiseICmpInst(ICmpInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                          unsigned &InstIdx) {
     // opcode:
     serialiseOpcode(OpCodeICmp);
     // type_idx:
     OutStreamer.emitSizeT(typeIndex(I->getType()));
     // lhs:
-    serialiseOperand(I, VLMap, I->getOperand(0));
+    serialiseOperand(I, FLCtxt, I->getOperand(0));
     // predicate:
     serialisePredicate(I->getPredicate());
     // rhs:
-    serialiseOperand(I, VLMap, I->getOperand(1));
+    serialiseOperand(I, FLCtxt, I->getOperand(1));
 
-    VLMap[I] = {BBIdx, InstIdx};
+    FLCtxt.updateVLMap(I, {BBIdx, InstIdx});
     InstIdx++;
   }
 
-  void serialiseReturnInst(ReturnInst *I, ValueLoweringMap &VLMap,
-                           unsigned BBIdx, unsigned &InstIdx) {
+  void serialiseReturnInst(ReturnInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
+                           unsigned &InstIdx) {
     // opcode:
     serialiseOpcode(OpCodeRet);
 
@@ -662,20 +693,20 @@ private:
       // has_val = 1:
       OutStreamer.emitInt8(1);
       // value:
-      serialiseOperand(I, VLMap, RV);
+      serialiseOperand(I, FLCtxt, RV);
     }
 
     InstIdx++;
   }
 
-  void serialiseInsertValueInst(InsertValueInst *I, ValueLoweringMap &VLMap,
+  void serialiseInsertValueInst(InsertValueInst *I, FuncLowerCtxt &FLCtxt,
                                 unsigned BBIdx, unsigned &InstIdx) {
     // opcode:
     serialiseOpcode(OpCodeInsertValue);
     // agg:
-    serialiseOperand(I, VLMap, I->getAggregateOperand());
+    serialiseOperand(I, FLCtxt, I->getAggregateOperand());
     // elem:
-    serialiseOperand(I, VLMap, I->getInsertedValueOperand());
+    serialiseOperand(I, FLCtxt, I->getInsertedValueOperand());
 
     InstIdx++;
   }
@@ -683,27 +714,27 @@ private:
   void serialiseCastKind(enum CastKind Cast) { OutStreamer.emitInt8(Cast); }
 
   /// Serialise a cast-like insruction.
-  void serialiseSExtInst(SExtInst *I, ValueLoweringMap &VLMap, unsigned BBIdx,
+  void serialiseSExtInst(SExtInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                          unsigned &InstIdx) {
     // opcode:
     serialiseOpcode(OpCodeCast);
     // cast_kind:
     serialiseCastKind(CastKindSignExt);
     // val:
-    serialiseOperand(I, VLMap, I->getOperand(0));
+    serialiseOperand(I, FLCtxt, I->getOperand(0));
     // dest_type_idx:
     OutStreamer.emitSizeT(typeIndex(I->getDestTy()));
 
-    VLMap[I] = {BBIdx, InstIdx};
+    FLCtxt.updateVLMap(I, {BBIdx, InstIdx});
     InstIdx++;
   }
 
-  void serialiseSwitchInst(SwitchInst *I, ValueLoweringMap &VLMap,
-                           unsigned BBIdx, unsigned &InstIdx) {
+  void serialiseSwitchInst(SwitchInst *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
+                           unsigned &InstIdx) {
     // opcode:
     serialiseOpcode(OpCodeSwitch);
     // test_val:
-    serialiseOperand(I, VLMap, I->getCondition());
+    serialiseOperand(I, FLCtxt, I->getCondition());
     // default_dest:
     serialiseBlockLabel(I->getDefaultDest());
     // num_cases:
@@ -721,11 +752,11 @@ private:
     }
     // safepoint:
     CallInst *SMI = dyn_cast<CallInst>(I->getPrevNonDebugInstruction());
-    serialiseStackmapCall(SMI, VLMap);
+    serialiseStackmapCall(SMI, FLCtxt);
     InstIdx++;
   }
 
-  void serialisePhiInst(PHINode *I, ValueLoweringMap &VLMap, unsigned BBIdx,
+  void serialisePhiInst(PHINode *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                         unsigned &InstIdx) {
     // opcode:
     serialiseOpcode(OpCodePHI);
@@ -738,19 +769,19 @@ private:
     }
     // incoming_vals:
     for (size_t J = 0; J < NumIncoming; J++) {
-      serialiseOperand(I, VLMap, I->getIncomingValue(J));
+      serialiseOperand(I, FLCtxt, I->getIncomingValue(J));
     }
 
-    VLMap[I] = {BBIdx, InstIdx};
+    FLCtxt.updateVLMap(I, {BBIdx, InstIdx});
     InstIdx++;
   }
 
-  void serialiseInst(Instruction *I, ValueLoweringMap &VLMap, unsigned BBIdx,
+  void serialiseInst(Instruction *I, FuncLowerCtxt &FLCtxt, unsigned BBIdx,
                      unsigned &InstIdx) {
     // Macro to make the dispatch below easier to read/sort.
 #define INST_SERIALISE(LLVM_INST, LLVM_INST_TYPE, SERIALISER)                  \
   if (LLVM_INST_TYPE *II = dyn_cast<LLVM_INST_TYPE>(LLVM_INST)) {              \
-    SERIALISER(II, VLMap, BBIdx, InstIdx);                                     \
+    SERIALISER(II, FLCtxt, BBIdx, InstIdx);                                    \
     return;                                                                    \
   }
 
@@ -770,11 +801,10 @@ private:
 
     // INST_SERIALISE does an early return upon a match, so if we get here then
     // the instruction wasn't handled.
-    serialiseUnimplementedInstruction(I, VLMap, BBIdx, InstIdx);
+    serialiseUnimplementedInstruction(I, FLCtxt, BBIdx, InstIdx);
   }
 
-  void serialiseUnimplementedInstruction(Instruction *I,
-                                         ValueLoweringMap &VLMap,
+  void serialiseUnimplementedInstruction(Instruction *I, FuncLowerCtxt &FLCtxt,
                                          unsigned BBIdx, unsigned &InstIdx) {
     // opcode:
     serialiseOpcode(OpCodeUnimplemented);
@@ -782,13 +812,12 @@ private:
     serialiseString(toString(I));
 
     if (!I->getType()->isVoidTy()) {
-      VLMap[I] = {BBIdx, InstIdx};
+      FLCtxt.updateVLMap(I, {BBIdx, InstIdx});
     }
     InstIdx++;
   }
 
-  void serialiseBlock(BasicBlock &BB, ValueLoweringMap &VLMap,
-                      unsigned &BBIdx) {
+  void serialiseBlock(BasicBlock &BB, FuncLowerCtxt &FLCtxt, unsigned &BBIdx) {
     auto ShouldSkipInstr = [](Instruction *I) {
       // Skip non-semantic instrucitons for now.
       //
@@ -823,7 +852,7 @@ private:
       if (ShouldSkipInstr(&I)) {
         continue;
       }
-      serialiseInst(&I, VLMap, BBIdx, InstIdx);
+      serialiseInst(&I, FLCtxt, BBIdx, InstIdx);
     }
 
     // Now that we have finished serialising instructions, we know how many
@@ -850,15 +879,11 @@ private:
     OutStreamer.emitSizeT(F.size());
     // blocks:
     unsigned BBIdx = 0;
-    ValueLoweringMap VLMap;
+    FuncLowerCtxt FLCtxt;
     for (BasicBlock &BB : F) {
-      serialiseBlock(BB, VLMap, BBIdx);
+      serialiseBlock(BB, FLCtxt, BBIdx);
     }
-
-    patchUpInstIdxs(VLMap);
-    // FIXME: it'd be better to make a new patchup struct for each function and
-    // just let it fall out of scope when done. Lots of plumbing...
-    InstIdxPacthUps.clear();
+    FLCtxt.patchUpInstIdxs(OutStreamer);
   }
 
   void serialiseFunctionType(FunctionType *Ty) {
