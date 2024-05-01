@@ -75,7 +75,7 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
                      m_Shl(m_Value(ShVal0), m_Value(ShAmt)),
                      m_LShr(m_Value(ShVal1),
                             m_Sub(m_SpecificInt(Width), m_Deferred(ShAmt))))))) {
-        return Intrinsic::fshl;
+      return Intrinsic::fshl;
     }
 
     // fshr(ShVal0, ShVal1, ShAmt)
@@ -84,7 +84,7 @@ static bool foldGuardedFunnelShift(Instruction &I, const DominatorTree &DT) {
               m_OneUse(m_c_Or(m_Shl(m_Value(ShVal0), m_Sub(m_SpecificInt(Width),
                                                            m_Value(ShAmt))),
                               m_LShr(m_Value(ShVal1), m_Deferred(ShAmt)))))) {
-        return Intrinsic::fshr;
+      return Intrinsic::fshr;
     }
 
     return Intrinsic::not_intrinsic;
@@ -401,21 +401,11 @@ static bool tryToFPToSat(Instruction &I, TargetTransformInfo &TTI) {
 /// Try to replace a mathlib call to sqrt with the LLVM intrinsic. This avoids
 /// pessimistic codegen that has to account for setting errno and can enable
 /// vectorization.
-static bool foldSqrt(Instruction &I, TargetTransformInfo &TTI,
+static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
                      TargetLibraryInfo &TLI, AssumptionCache &AC,
                      DominatorTree &DT) {
-  // Match a call to sqrt mathlib function.
-  auto *Call = dyn_cast<CallInst>(&I);
-  if (!Call)
-    return false;
 
   Module *M = Call->getModule();
-  LibFunc Func;
-  if (!TLI.getLibFunc(*Call, Func) || !isLibFuncEmittable(M, &TLI, Func))
-    return false;
-
-  if (Func != LibFunc_sqrt && Func != LibFunc_sqrtf && Func != LibFunc_sqrtl)
-    return false;
 
   // If (1) this is a sqrt libcall, (2) we can assume that NAN is not created
   // (because NNAN or the operand arg must not be less than -0.0) and (2) we
@@ -428,18 +418,18 @@ static bool foldSqrt(Instruction &I, TargetTransformInfo &TTI,
   if (TTI.haveFastSqrt(Ty) &&
       (Call->hasNoNaNs() ||
        cannotBeOrderedLessThanZero(
-           Arg, 0, SimplifyQuery(M->getDataLayout(), &TLI, &DT, &AC, &I)))) {
-    IRBuilder<> Builder(&I);
+           Arg, 0, SimplifyQuery(M->getDataLayout(), &TLI, &DT, &AC, Call)))) {
+    IRBuilder<> Builder(Call);
     IRBuilderBase::FastMathFlagGuard Guard(Builder);
     Builder.setFastMathFlags(Call->getFastMathFlags());
 
     Function *Sqrt = Intrinsic::getDeclaration(M, Intrinsic::sqrt, Ty);
     Value *NewSqrt = Builder.CreateCall(Sqrt, Arg, "sqrt");
-    I.replaceAllUsesWith(NewSqrt);
+    Call->replaceAllUsesWith(NewSqrt);
 
     // Explicitly erase the old call because a call with side effects is not
     // trivially dead.
-    I.eraseFromParent();
+    Call->eraseFromParent();
     return true;
   }
 
@@ -932,18 +922,17 @@ static cl::opt<unsigned> StrNCmpInlineThreshold(
 namespace {
 class StrNCmpInliner {
 public:
-  StrNCmpInliner(CallInst *CI, LibFunc Func, Function::iterator &BBNext,
-                 DomTreeUpdater *DTU, const DataLayout &DL)
-      : CI(CI), Func(Func), BBNext(BBNext), DTU(DTU), DL(DL) {}
+  StrNCmpInliner(CallInst *CI, LibFunc Func, DomTreeUpdater *DTU,
+                 const DataLayout &DL)
+      : CI(CI), Func(Func), DTU(DTU), DL(DL) {}
 
   bool optimizeStrNCmp();
 
 private:
-  bool inlineCompare(Value *LHS, StringRef RHS, uint64_t N, bool Switched);
+  bool inlineCompare(Value *LHS, StringRef RHS, uint64_t N, bool Swapped);
 
   CallInst *CI;
   LibFunc Func;
-  Function::iterator &BBNext;
   DomTreeUpdater *DTU;
   const DataLayout &DL;
 };
@@ -952,7 +941,7 @@ private:
 
 /// First we normalize calls to strncmp/strcmp to the form of
 /// compare(s1, s2, N), which means comparing first N bytes of s1 and s2
-/// (without considering '\0')
+/// (without considering '\0').
 ///
 /// Examples:
 ///
@@ -969,49 +958,53 @@ private:
 ///   strncmp(s, s2, 3) -> compare(s, s2, 3)
 /// \endcode
 ///
-/// We only handle cases that N and exactly one of s1 and s2 are constant. Cases
-/// that s1 and s2 are both constant are already handled by the instcombine
-/// pass.
+/// We only handle cases where N and exactly one of s1 and s2 are constant.
+/// Cases that s1 and s2 are both constant are already handled by the
+/// instcombine pass.
 ///
-/// We do not handle cases that N > StrNCmpInlineThreshold.
+/// We do not handle cases where N > StrNCmpInlineThreshold.
 ///
-/// We also do not handles cases that N < 2, which are already
+/// We also do not handles cases where N < 2, which are already
 /// handled by the instcombine pass.
 ///
 bool StrNCmpInliner::optimizeStrNCmp() {
   if (StrNCmpInlineThreshold < 2)
     return false;
 
+  if (!isOnlyUsedInZeroComparison(CI))
+    return false;
+
   Value *Str1P = CI->getArgOperand(0);
   Value *Str2P = CI->getArgOperand(1);
-  // should be handled elsewhere
+  // Should be handled elsewhere.
   if (Str1P == Str2P)
     return false;
 
   StringRef Str1, Str2;
   bool HasStr1 = getConstantStringInfo(Str1P, Str1, false);
   bool HasStr2 = getConstantStringInfo(Str2P, Str2, false);
-  if (!(HasStr1 ^ HasStr2))
+  if (HasStr1 == HasStr2)
     return false;
 
-  // note that '\0' and characters after it are not trimmed
+  // Note that '\0' and characters after it are not trimmed.
   StringRef Str = HasStr1 ? Str1 : Str2;
 
   size_t Idx = Str.find('\0');
   uint64_t N = Idx == StringRef::npos ? UINT64_MAX : Idx + 1;
   if (Func == LibFunc_strncmp) {
-    if (!isa<ConstantInt>(CI->getArgOperand(2)))
+    if (auto ConstInt = dyn_cast<ConstantInt>(CI->getArgOperand(2)))
+      N = std::min(N, ConstInt->getZExtValue());
+    else
       return false;
-    N = std::min(N, cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue());
   }
-  // now N means how many bytes we need to compare at most
+  // Now N means how many bytes we need to compare at most.
   if (N > Str.size() || N < 2 || N > StrNCmpInlineThreshold)
     return false;
 
   Value *StrP = HasStr1 ? Str2P : Str1P;
 
-  // cases that StrP has two or more dereferenceable bytes might be better
-  // optimized elsewhere
+  // Cases where StrP has two or more dereferenceable bytes might be better
+  // optimized elsewhere.
   bool CanBeNull = false, CanBeFreed = false;
   if (StrP->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed) > 1)
     return false;
@@ -1054,7 +1047,7 @@ bool StrNCmpInliner::optimizeStrNCmp() {
 ///             BBSubs[N-1]    (sub) ---------+
 ///
 bool StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
-                                   bool Switched) {
+                                   bool Swapped) {
   auto &Ctx = CI->getContext();
   IRBuilder<> B(Ctx);
 
@@ -1076,12 +1069,12 @@ bool StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
   Value *Base = LHS;
   for (uint64_t i = 0; i < N; ++i) {
     B.SetInsertPoint(BBSubs[i]);
-    Value *VL = B.CreateZExt(
-        B.CreateLoad(B.getInt8Ty(),
-                     B.CreateInBoundsGEP(B.getInt8Ty(), Base, B.getInt64(i))),
-        CI->getType());
+    Value *VL =
+        B.CreateZExt(B.CreateLoad(B.getInt8Ty(),
+                                  B.CreateInBoundsPtrAdd(Base, B.getInt64(i))),
+                     CI->getType());
     Value *VR = ConstantInt::get(CI->getType(), RHS[i]);
-    Value *Sub = Switched ? B.CreateSub(VR, VL) : B.CreateSub(VL, VR);
+    Value *Sub = Swapped ? B.CreateSub(VR, VL) : B.CreateSub(VL, VR);
     if (i < N - 1)
       B.CreateCondBr(B.CreateICmpNE(Sub, ConstantInt::get(CI->getType(), 0)),
                      BBNE, BBSubs[i + 1]);
@@ -1094,12 +1087,8 @@ bool StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
   CI->replaceAllUsesWith(Phi);
   CI->eraseFromParent();
 
-  BBNext = BBCI->getIterator();
-
-  // Update DomTree
   if (DTU) {
     SmallVector<DominatorTree::UpdateType, 8> Updates;
-    Updates.push_back({DominatorTree::Delete, BBBefore, BBCI});
     Updates.push_back({DominatorTree::Insert, BBBefore, BBSubs[0]});
     for (uint64_t i = 0; i < N; ++i) {
       if (i < N - 1)
@@ -1107,54 +1096,47 @@ bool StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
       Updates.push_back({DominatorTree::Insert, BBSubs[i], BBNE});
     }
     Updates.push_back({DominatorTree::Insert, BBNE, BBCI});
+    Updates.push_back({DominatorTree::Delete, BBBefore, BBCI});
     DTU->applyUpdates(Updates);
   }
   return true;
 }
 
-static bool inlineLibCalls(Function &F, TargetLibraryInfo &TLI,
-                           const TargetTransformInfo &TTI, DominatorTree &DT,
-                           const DataLayout &DL, bool &MadeCFGChange) {
-  MadeCFGChange = false;
+static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
+                         TargetLibraryInfo &TLI, llvm::AssumptionCache &AC,
+                         DominatorTree &DT, const DataLayout &DL,
+                         bool &MadeCFGChange) {
+
+  auto *CI = dyn_cast<CallInst>(&I);
+  if (!CI || CI->isNoBuiltin())
+    return false;
+
+  Function *CalledFunc = CI->getCalledFunction();
+  if (!CalledFunc)
+    return false;
+
+  LibFunc LF;
+  if (!TLI.getLibFunc(*CalledFunc, LF) ||
+      !isLibFuncEmittable(CI->getModule(), &TLI, LF))
+    return false;
+
   DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
-  bool MadeChange = false;
-
-  Function::iterator CurrBB;
-  for (Function::iterator BB = F.begin(), BE = F.end(); BB != BE;) {
-    CurrBB = BB++;
-
-    for (BasicBlock::iterator II = CurrBB->begin(), IE = CurrBB->end();
-         II != IE; ++II) {
-      CallInst *Call = dyn_cast<CallInst>(&*II);
-      Function *CalledFunc;
-
-      if (!Call || !(CalledFunc = Call->getCalledFunction()))
-        continue;
-
-      LibFunc LF;
-      if (!TLI.getLibFunc(*CalledFunc, LF))
-        continue;
-
-      switch (LF) {
-      case LibFunc_strcmp:
-      case LibFunc_strncmp: {
-        if (StrNCmpInliner(Call, LF, BB, &DTU, DL).optimizeStrNCmp()) {
-          MadeCFGChange = true;
-          break;
-        }
-        continue;
-      }
-      default:
-        continue;
-      }
-
-      MadeChange = true;
-      break;
+  switch (LF) {
+  case LibFunc_sqrt:
+  case LibFunc_sqrtf:
+  case LibFunc_sqrtl:
+    return foldSqrt(CI, LF, TTI, TLI, AC, DT);
+  case LibFunc_strcmp:
+  case LibFunc_strncmp:
+    if (StrNCmpInliner(CI, LF, &DTU, DL).optimizeStrNCmp()) {
+      MadeCFGChange = true;
+      return true;
     }
+    break;
+  default:;
   }
-
-  return MadeChange;
+  return false;
 }
 
 /// This is the entry point for folds that could be implemented in regular
@@ -1163,7 +1145,7 @@ static bool inlineLibCalls(Function &F, TargetLibraryInfo &TLI,
 static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
                                 TargetTransformInfo &TTI,
                                 TargetLibraryInfo &TLI, AliasAnalysis &AA,
-                                AssumptionCache &AC) {
+                                AssumptionCache &AC, bool &MadeCFGChange) {
   bool MadeChange = false;
   for (BasicBlock &BB : F) {
     // Ignore unreachable basic blocks.
@@ -1188,7 +1170,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       // NOTE: This function introduces erasing of the instruction `I`, so it
       // needs to be called at the end of this sequence, otherwise we may make
       // bugs.
-      MadeChange |= foldSqrt(I, TTI, TLI, AC, DT);
+      MadeChange |= foldLibCalls(I, TTI, TLI, AC, DT, DL, MadeCFGChange);
     }
   }
 
@@ -1209,8 +1191,7 @@ static bool runImpl(Function &F, AssumptionCache &AC, TargetTransformInfo &TTI,
   const DataLayout &DL = F.getParent()->getDataLayout();
   TruncInstCombine TIC(AC, TLI, DL, DT);
   MadeChange |= TIC.run(F);
-  MadeChange |= inlineLibCalls(F, TLI, TTI, DT, DL, MadeCFGChange);
-  MadeChange |= foldUnusualPatterns(F, DT, TTI, TLI, AA, AC);
+  MadeChange |= foldUnusualPatterns(F, DT, TTI, TLI, AA, AC, MadeCFGChange);
   return MadeChange;
 }
 
