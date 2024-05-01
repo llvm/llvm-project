@@ -385,7 +385,7 @@ define i32 @test_cvt_sr_bf8_f32_byte1(float %x, i32 %r, i32 %old) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_cvt_sr_bf8_f32 v2, v0, v1 op_sel:[0,0,1,0]
+; GFX12-NEXT:    v_cvt_sr_bf8_f32 v2, v0, v1 byte_sel:1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -409,7 +409,7 @@ define i32 @test_cvt_sr_bf8_f32_byte2(float %x, i32 %r, i32 %old) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_cvt_sr_bf8_f32 v2, v0, v1 op_sel:[0,0,0,1]
+; GFX12-NEXT:    v_cvt_sr_bf8_f32 v2, v0, v1 byte_sel:2
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -433,7 +433,7 @@ define i32 @test_cvt_sr_bf8_f32_byte3(float %x, i32 %r, i32 %old) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_cvt_sr_bf8_f32 v2, v0, v1 op_sel:[0,0,1,1]
+; GFX12-NEXT:    v_cvt_sr_bf8_f32 v2, v0, v1 byte_sel:3
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -479,7 +479,7 @@ define i32 @test_cvt_sr_fp8_f32_byte1(float %x, i32 %r, i32 %old) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_cvt_sr_fp8_f32 v2, v0, v1 op_sel:[0,0,1,0]
+; GFX12-NEXT:    v_cvt_sr_fp8_f32 v2, v0, v1 byte_sel:1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -503,7 +503,7 @@ define i32 @test_cvt_sr_fp8_f32_byte2(float %x, i32 %r, i32 %old) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_cvt_sr_fp8_f32 v2, v0, v1 op_sel:[0,0,0,1]
+; GFX12-NEXT:    v_cvt_sr_fp8_f32 v2, v0, v1 byte_sel:2
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -527,7 +527,7 @@ define i32 @test_cvt_sr_fp8_f32_byte3(float %x, i32 %r, i32 %old) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_cvt_sr_fp8_f32 v2, v0, v1 op_sel:[0,0,1,1]
+; GFX12-NEXT:    v_cvt_sr_fp8_f32 v2, v0, v1 byte_sel:3
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]

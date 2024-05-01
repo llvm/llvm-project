@@ -32,7 +32,7 @@ namespace ref_counted {
   void consume_ref_counted(Ref<RefCountable>) {}
 
   void foo() {
-    consume_refcntbl(provide_ref_counted().get());
+    consume_refcntbl(provide_ref_counted().ptr());
     // no warning
   }
 }

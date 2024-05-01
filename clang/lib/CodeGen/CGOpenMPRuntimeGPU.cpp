@@ -92,9 +92,9 @@ static const ValueDecl *getPrivateItem(const Expr *RefExpr) {
     while (const auto *TempASE = dyn_cast<ArraySubscriptExpr>(Base))
       Base = TempASE->getBase()->IgnoreParenImpCasts();
     RefExpr = Base;
-  } else if (auto *OASE = dyn_cast<OMPArraySectionExpr>(RefExpr)) {
+  } else if (auto *OASE = dyn_cast<ArraySectionExpr>(RefExpr)) {
     const Expr *Base = OASE->getBase()->IgnoreParenImpCasts();
-    while (const auto *TempOASE = dyn_cast<OMPArraySectionExpr>(Base))
+    while (const auto *TempOASE = dyn_cast<ArraySectionExpr>(Base))
       Base = TempOASE->getBase()->IgnoreParenImpCasts();
     while (const auto *TempASE = dyn_cast<ArraySubscriptExpr>(Base))
       Base = TempASE->getBase()->IgnoreParenImpCasts();
