@@ -21,9 +21,11 @@
 #include <thread>
 
 #ifndef _WIN32
+#ifndef __wasi__
 #include <poll.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#endif
 #else
 #include "llvm/Support/Windows/WindowsSupport.h"
 // winsock2.h must be included before afunix.h. Briefly turn off clang-format to
@@ -54,13 +56,16 @@ WSABalancer::~WSABalancer() { WSACleanup(); }
 #endif // _WIN32
 
 static std::error_code getLastSocketErrorCode() {
-#ifdef _WIN32
+#ifdef __wasi__
+  return std::error_code(ENOTSUP, std::generic_category());
+#elif defined(_WIN32)
   return std::error_code(::WSAGetLastError(), std::system_category());
 #else
   return errnoAsErrorCode();
 #endif
 }
 
+#ifndef __wasi__
 static sockaddr_un setSocketAddr(StringRef SocketPath) {
   struct sockaddr_un Addr;
   memset(&Addr, 0, sizeof(Addr));
@@ -68,8 +73,13 @@ static sockaddr_un setSocketAddr(StringRef SocketPath) {
   strncpy(Addr.sun_path, SocketPath.str().c_str(), sizeof(Addr.sun_path) - 1);
   return Addr;
 }
+#endif
 
 static Expected<int> getSocketFD(StringRef SocketPath) {
+#ifdef __wasi__
+  return llvm::make_error<StringError>(getLastSocketErrorCode(),
+                                       "Connect socket failed");
+#else
 #ifdef _WIN32
   SOCKET Socket = socket(AF_UNIX, SOCK_STREAM, 0);
   if (Socket == INVALID_SOCKET) {
@@ -91,6 +101,7 @@ static Expected<int> getSocketFD(StringRef SocketPath) {
 #else
   return Socket;
 #endif // _WIN32
+#endif // __wasi__
 }
 
 ListeningSocket::ListeningSocket(int SocketFD, StringRef SocketPath,
@@ -140,13 +151,16 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
   WSABalancer _;
   SOCKET Socket = socket(AF_UNIX, SOCK_STREAM, 0);
   if (Socket == INVALID_SOCKET)
+#elif defined(__wasi__)
+  return llvm::make_error<StringError>(getLastSocketErrorCode(),
+                                       "socket create failed");
 #else
   int Socket = socket(AF_UNIX, SOCK_STREAM, 0);
   if (Socket == -1)
 #endif
     return llvm::make_error<StringError>(getLastSocketErrorCode(),
                                          "socket create failed");
-
+#ifndef __wasi__
   struct sockaddr_un Addr = setSocketAddr(SocketPath);
   if (::bind(Socket, (struct sockaddr *)&Addr, sizeof(Addr)) == -1) {
     // Grab error code from call to ::bind before calling ::close
@@ -175,10 +189,15 @@ Expected<ListeningSocket> ListeningSocket::createUnix(StringRef SocketPath,
 #else
   return ListeningSocket{Socket, SocketPath, PipeFD};
 #endif // _WIN32
+#endif
 }
 
 Expected<std::unique_ptr<raw_socket_stream>>
 ListeningSocket::accept(std::chrono::milliseconds Timeout) {
+#ifdef __wasi__
+  return llvm::make_error<StringError>(getLastSocketErrorCode(),
+                                       "Socket accept failed");
+#else
 
   struct pollfd FDs[2];
   FDs[0].events = POLLIN;
@@ -250,6 +269,7 @@ ListeningSocket::accept(std::chrono::milliseconds Timeout) {
     return llvm::make_error<StringError>(getLastSocketErrorCode(),
                                          "Socket accept failed");
   return std::make_unique<raw_socket_stream>(AcceptFD);
+#endif
 }
 
 void ListeningSocket::shutdown() {

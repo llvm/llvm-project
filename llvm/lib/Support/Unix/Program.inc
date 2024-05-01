@@ -96,6 +96,7 @@ ErrorOr<std::string> sys::findProgramByName(StringRef Name,
   return errc::no_such_file_or_directory;
 }
 
+#ifndef __wasi__
 static bool RedirectIO(std::optional<StringRef> Path, int FD, std::string *ErrMsg) {
   if (!Path) // Noop
     return false;
@@ -123,6 +124,7 @@ static bool RedirectIO(std::optional<StringRef> Path, int FD, std::string *ErrMs
   close(InFD); // Close the original FD
   return false;
 }
+#endif
 
 #ifdef HAVE_POSIX_SPAWN
 static bool RedirectIO_PS(const std::string *Path, int FD, std::string *ErrMsg,
@@ -143,6 +145,7 @@ static bool RedirectIO_PS(const std::string *Path, int FD, std::string *ErrMsg,
 }
 #endif
 
+#ifndef __wasi__
 static void TimeOutHandler(int Sig) {}
 
 static void SetMemoryLimits(unsigned size) {
@@ -171,6 +174,7 @@ toNullTerminatedCStringArray(ArrayRef<StringRef> Strings, StringSaver &Saver) {
   Result.push_back(nullptr);
   return Result;
 }
+#endif
 
 static bool Execute(ProcessInfo &PI, StringRef Program,
                     ArrayRef<StringRef> Args,
@@ -178,6 +182,10 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
                     ArrayRef<std::optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg,
                     BitVector *AffinityMask, bool DetachProcess) {
+#ifdef __wasi__
+  *ErrMsg = std::string("Spawning processes on WASI is not supported");
+  return false;
+#else
   if (!llvm::sys::fs::exists(Program)) {
     if (ErrMsg)
       *ErrMsg = std::string("Executable \"") + Program.str() +
@@ -347,6 +355,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   PI.Process = child;
 
   return true;
+#endif
 }
 
 namespace llvm {
@@ -354,7 +363,7 @@ namespace sys {
 
 #if defined(_AIX)
 static pid_t(wait4)(pid_t pid, int *status, int options, struct rusage *usage);
-#elif !defined(__Fuchsia__)
+#elif !defined(__Fuchsia__) && !defined(__wasi__)
 using ::wait4;
 #endif
 
@@ -400,6 +409,7 @@ ProcessInfo llvm::sys::Wait(const ProcessInfo &PI,
                             std::string *ErrMsg,
                             std::optional<ProcessStatistics> *ProcStat,
                             bool Polling) {
+#ifndef __wasi__
   struct sigaction Act, Old;
   assert(PI.Pid && "invalid pid to wait on, process not started?");
 
@@ -516,6 +526,11 @@ ProcessInfo llvm::sys::Wait(const ProcessInfo &PI,
     // signal during execution as opposed to failing to execute.
     WaitResult.ReturnCode = -2;
   }
+#else
+  ProcessInfo WaitResult;
+  WaitResult.Pid = 3;
+  WaitResult.ReturnCode = -1;
+#endif
   return WaitResult;
 }
 

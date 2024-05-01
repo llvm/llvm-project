@@ -32,7 +32,9 @@
 #endif
 
 #include <dirent.h>
+#ifndef __wasi__
 #include <pwd.h>
+#endif
 #include <sys/file.h>
 
 #ifdef __APPLE__
@@ -191,7 +193,9 @@ static char *getprogpath(char ret[PATH_MAX], const char *bin) {
 /// GetMainExecutable - Return the path to the main executable, given the
 /// value of argv[0] from program startup.
 std::string getMainExecutable(const char *argv0, void *MainAddr) {
-#if defined(__APPLE__)
+#if defined(__wasi__)
+  return argv0;
+#elif defined(__APPLE__)
   // On OS X the executable path is saved to the stack by dyld. Reading it
   // from there is much faster than calling dladdr, especially for large
   // binaries with symbols.
@@ -505,7 +509,7 @@ static bool is_local_impl(struct STATVFS &Vfs) {
 #elif defined(__Fuchsia__)
   // Fuchsia doesn't yet support remote filesystem mounts.
   return true;
-#elif defined(__EMSCRIPTEN__)
+#elif defined(__EMSCRIPTEN__) || defined(__wasi__)
   // Emscripten doesn't currently support remote filesystem mounts.
   return true;
 #elif defined(__HAIKU__)
@@ -651,6 +655,7 @@ std::error_code equivalent(const Twine &A, const Twine &B, bool &result) {
 }
 
 static void expandTildeExpr(SmallVectorImpl<char> &Path) {
+#ifndef __wasi__
   StringRef PathStr(Path.begin(), Path.size());
   if (PathStr.empty() || !PathStr.starts_with("~"))
     return;
@@ -694,6 +699,7 @@ static void expandTildeExpr(SmallVectorImpl<char> &Path) {
   Path.clear();
   Path.append(Entry->pw_dir, Entry->pw_dir + strlen(Entry->pw_dir));
   llvm::sys::path::append(Path, Storage);
+#endif
 }
 
 void expand_tilde(const Twine &path, SmallVectorImpl<char> &dest) {
@@ -770,11 +776,15 @@ std::error_code status(int FD, file_status &Result) {
 }
 
 unsigned getUmask() {
+#ifdef __wasi__
+  return 0644;
+#else
   // Chose arbitary new mask and reset the umask to the old mask.
   // umask(2) never fails so ignore the return of the second call.
   unsigned Mask = ::umask(0);
   (void)::umask(Mask);
   return Mask;
+#endif
 }
 
 std::error_code setPermissions(const Twine &Path, perms Permissions) {
@@ -829,6 +839,9 @@ std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
 
 std::error_code mapped_file_region::init(int FD, uint64_t Offset,
                                          mapmode Mode) {
+#ifdef __wasi__
+  return std::error_code(ENOTSUP, std::generic_category());
+#else
   assert(Size != 0);
 
   int flags = (Mode == readwrite) ? MAP_SHARED : MAP_PRIVATE;
@@ -860,6 +873,7 @@ std::error_code mapped_file_region::init(int FD, uint64_t Offset,
   if (Mapping == MAP_FAILED)
     return errnoAsErrorCode();
   return std::error_code();
+#endif
 }
 
 mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
@@ -872,11 +886,14 @@ mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
 }
 
 void mapped_file_region::unmapImpl() {
+#ifndef __wasi__
   if (Mapping)
     ::munmap(Mapping, Size);
+#endif
 }
 
 void mapped_file_region::dontNeedImpl() {
+#ifndef __wasi__
   assert(Mode == mapped_file_region::readonly);
   if (!Mapping)
     return;
@@ -886,6 +903,7 @@ void mapped_file_region::dontNeedImpl() {
   ::posix_madvise(Mapping, Size, POSIX_MADV_DONTNEED);
 #else
   ::madvise(Mapping, Size, MADV_DONTNEED);
+#endif
 #endif
 }
 
@@ -920,7 +938,7 @@ static file_type direntType(dirent *Entry) {
   // Note that while glibc provides a macro to see if this is supported,
   // _DIRENT_HAVE_D_TYPE, it's not defined on BSD/Mac, so we test for the
   // d_type-to-mode_t conversion macro instead.
-#if defined(DTTOIF)
+#if defined(DTTOIF) && !defined(__wasi__)
   return typeForMode(DTTOIF(Entry->d_type));
 #else
   // Other platforms such as Solaris require a stat() to get the type.
@@ -1224,6 +1242,9 @@ Expected<size_t> readNativeFileSlice(file_t FD, MutableArrayRef<char> Buf,
 }
 
 std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
+#if defined(__wasi__)
+  return std::error_code();
+#else
   auto Start = std::chrono::steady_clock::now();
   auto End = Start + Timeout;
   do {
@@ -1241,9 +1262,13 @@ std::error_code tryLockFile(int FD, std::chrono::milliseconds Timeout) {
     usleep(1000);
   } while (std::chrono::steady_clock::now() < End);
   return make_error_code(errc::no_lock_available);
+#endif
 }
 
 std::error_code lockFile(int FD) {
+#if defined(__wasi__)
+  return std::error_code();
+#else
   struct flock Lock;
   memset(&Lock, 0, sizeof(Lock));
   Lock.l_type = F_WRLCK;
@@ -1253,9 +1278,13 @@ std::error_code lockFile(int FD) {
   if (::fcntl(FD, F_SETLKW, &Lock) != -1)
     return std::error_code();
   return errnoAsErrorCode();
+#endif
 }
 
 std::error_code unlockFile(int FD) {
+#if defined(__wasi__)
+  return std::error_code();
+#else
   struct flock Lock;
   Lock.l_type = F_UNLCK;
   Lock.l_whence = SEEK_SET;
@@ -1264,6 +1293,7 @@ std::error_code unlockFile(int FD) {
   if (::fcntl(FD, F_SETLK, &Lock) != -1)
     return std::error_code();
   return errnoAsErrorCode();
+#endif
 }
 
 std::error_code closeFile(file_t &F) {
@@ -1335,11 +1365,15 @@ std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
 }
 
 std::error_code changeFileOwnership(int FD, uint32_t Owner, uint32_t Group) {
+#ifdef __wasi__
+  return std::error_code(ENOTSUP, std::generic_category());
+#else
   auto FChown = [&]() { return ::fchown(FD, Owner, Group); };
   // Retry if fchown call fails due to interruption.
   if ((sys::RetryAfterSignal(-1, FChown)) < 0)
     return errnoAsErrorCode();
   return std::error_code();
+#endif
 }
 
 } // end namespace fs
@@ -1347,6 +1381,9 @@ std::error_code changeFileOwnership(int FD, uint32_t Owner, uint32_t Group) {
 namespace path {
 
 bool home_directory(SmallVectorImpl<char> &result) {
+#ifdef __wasi__
+  return false;
+#else
   std::unique_ptr<char[]> Buf;
   char *RequestedDir = getenv("HOME");
   if (!RequestedDir) {
@@ -1366,6 +1403,7 @@ bool home_directory(SmallVectorImpl<char> &result) {
   result.clear();
   result.append(RequestedDir, RequestedDir + strlen(RequestedDir));
   return true;
+#endif
 }
 
 static bool getDarwinConfDir(bool TempDir, SmallVectorImpl<char> &Result) {

@@ -36,6 +36,7 @@ extern "C" void sys_icache_invalidate(const void *Addr, size_t len);
 extern "C" void __clear_cache(void *, void *);
 #endif
 
+#ifndef __wasi__
 static int getPosixProtectionFlags(unsigned Flags) {
   switch (Flags & llvm::sys::Memory::MF_RWE_MASK) {
   case llvm::sys::Memory::MF_READ:
@@ -66,6 +67,7 @@ static int getPosixProtectionFlags(unsigned Flags) {
   // Provide a default return value as required by some compilers.
   return PROT_NONE;
 }
+#endif
 
 namespace llvm {
 namespace sys {
@@ -77,6 +79,17 @@ MemoryBlock Memory::allocateMappedMemory(size_t NumBytes,
   if (NumBytes == 0)
     return MemoryBlock();
 
+#ifdef __wasi__
+  MemoryBlock Result;
+  Result.Address = malloc(NumBytes);
+  if (!Result.Address) {
+    EC = errnoAsErrorCode();
+    Result.AllocatedSize = 0;
+  } else {
+    Result.AllocatedSize = NumBytes;
+  }
+  return Result;
+#else
   // On platforms that have it, we can use MAP_ANON to get a memory-mapped
   // page without file backing, but we need a fallback of opening /dev/zero
   // for strictly POSIX platforms instead.
@@ -146,14 +159,19 @@ MemoryBlock Memory::allocateMappedMemory(size_t NumBytes,
   }
 
   return Result;
+#endif
 }
 
 std::error_code Memory::releaseMappedMemory(MemoryBlock &M) {
+#ifdef __wasi__
+  free(M.Address);
+#else
   if (M.Address == nullptr || M.AllocatedSize == 0)
     return std::error_code();
 
   if (0 != ::munmap(M.Address, M.AllocatedSize))
     return errnoAsErrorCode();
+#endif
 
   M.Address = nullptr;
   M.AllocatedSize = 0;
@@ -163,6 +181,7 @@ std::error_code Memory::releaseMappedMemory(MemoryBlock &M) {
 
 std::error_code Memory::protectMappedMemory(const MemoryBlock &M,
                                             unsigned Flags) {
+#ifndef __wasi__
   static const Align PageSize = Align(Process::getPageSizeEstimate());
   if (M.Address == nullptr || M.AllocatedSize == 0)
     return std::error_code();
@@ -200,6 +219,7 @@ std::error_code Memory::protectMappedMemory(const MemoryBlock &M,
 
   if (InvalidateCache)
     Memory::InvalidateInstructionCache(M.Address, M.AllocatedSize);
+#endif
 
   return std::error_code();
 }

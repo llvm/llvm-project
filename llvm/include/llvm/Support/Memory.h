@@ -41,7 +41,9 @@ namespace sys {
   private:
     void *Address;    ///< Address of first byte of memory area
     size_t AllocatedSize; ///< Size, in bytes of the memory area
+#ifndef __wasi__
     unsigned Flags = 0;
+#endif
     friend class Memory;
   };
 
