@@ -22,34 +22,38 @@ using LlvmLibcAtanhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 // TODO: This test needs to have its checks for exceptions, errno
-// tightened
+// tightened https://github.com/llvm/llvm-project/issues/88819.
 TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
 
   LIBC_NAMESPACE::libc_errno = 0;
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanhf(aNaN));
   // TODO: Uncomment these checks later, RoundingMode affects running
-  // tests in this way.
+  // tests in this way https://github.com/llvm/llvm-project/issues/90653.
   // EXPECT_FP_EXCEPTION(0);
   EXPECT_MATH_ERRNO(0);
 
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ_ALL_ROUNDING(0.0f, LIBC_NAMESPACE::atanhf(0.0f));
+  // See above TODO
   // EXPECT_FP_EXCEPTION(0);
   EXPECT_MATH_ERRNO(0);
 
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ_ALL_ROUNDING(-0.0f, LIBC_NAMESPACE::atanhf(-0.0f));
+  // See above TODO
   // EXPECT_FP_EXCEPTION(0);
   EXPECT_MATH_ERRNO(0);
 
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::atanhf(1.0f));
+  // See above TODO
   // EXPECT_FP_EXCEPTION(FE_DIVBYZERO);
   EXPECT_MATH_ERRNO(ERANGE);
 
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ_ALL_ROUNDING(neg_inf, LIBC_NAMESPACE::atanhf(-1.0f));
+  // See above TODO
   // EXPECT_FP_EXCEPTION(FE_DIVBYZERO);
   EXPECT_MATH_ERRNO(ERANGE);
 
@@ -64,11 +68,13 @@ TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   bt.set_sign(Sign::NEG);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanhf(bt.get_val()));
+  // See above TODO
   // EXPECT_FP_EXCEPTION(FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
 
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanhf(2.0f));
+  // See above TODO
   // EXPECT_FP_EXCEPTION(FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
 
@@ -79,11 +85,13 @@ TEST_F(LlvmLibcAtanhfTest, SpecialNumbers) {
 
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanhf(inf));
+  // See above TODO
   // EXPECT_FP_EXCEPTION(FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
 
   bt.set_sign(Sign::NEG);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanhf(neg_inf));
+  // See above TODO
   // EXPECT_FP_EXCEPTION(FE_INVALID);
   EXPECT_MATH_ERRNO(EDOM);
 }
