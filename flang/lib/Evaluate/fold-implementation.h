@@ -1686,7 +1686,7 @@ Expr<TO> FoldOperation(
     Convert<TO, FROMCAT> &convert;
   } msvcWorkaround{context, convert};
   return common::visit(
-      [&msvcWorkaround, &context](auto &kindExpr) -> Expr<TO> {
+      [&msvcWorkaround](auto &kindExpr) -> Expr<TO> {
         using Operand = ResultType<decltype(kindExpr)>;
         // This variable is a workaround for msvc which emits an error when
         // using the FROMCAT template parameter below.
@@ -1699,7 +1699,7 @@ Expr<TO> FoldOperation(
             if constexpr (FromCat == TypeCategory::Integer) {
               auto converted{Scalar<TO>::ConvertSigned(*value)};
               if (converted.overflow &&
-                  context.languageFeatures().ShouldWarn(
+                  msvcWorkaround.context.languageFeatures().ShouldWarn(
                       common::UsageWarning::FoldingException)) {
                 ctx.messages().Say(
                     "INTEGER(%d) to INTEGER(%d) conversion overflowed"_warn_en_US,
@@ -1708,7 +1708,7 @@ Expr<TO> FoldOperation(
               return ScalarConstantToExpr(std::move(converted.value));
             } else if constexpr (FromCat == TypeCategory::Real) {
               auto converted{value->template ToInteger<Scalar<TO>>()};
-              if (context.languageFeatures().ShouldWarn(
+              if (msvcWorkaround.context.languageFeatures().ShouldWarn(
                       common::UsageWarning::FoldingException)) {
                 if (converted.flags.test(RealFlag::InvalidArgument)) {
                   ctx.messages().Say(
