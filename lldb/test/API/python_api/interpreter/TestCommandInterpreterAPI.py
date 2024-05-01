@@ -1,5 +1,6 @@
 """Test the SBCommandInterpreter APIs."""
 
+import json
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -85,3 +86,44 @@ class CommandInterpreterAPICase(TestBase):
         self.assertEqual(res.GetOutput(), "")
         self.assertIsNotNone(res.GetError())
         self.assertEqual(res.GetError(), "")
+
+    def test_structured_transcript(self):
+        """Test structured transcript generation and retrieval."""
+        ci = self.dbg.GetCommandInterpreter()
+        self.assertTrue(ci, VALID_COMMAND_INTERPRETER)
+
+        # Send a few commands through the command interpreter
+        res = lldb.SBCommandReturnObject()
+        ci.HandleCommand("version", res)
+        ci.HandleCommand("an-unknown-command", res)
+
+        # Retrieve the transcript and convert it into a Python object
+        transcript = ci.GetTranscript()
+        self.assertTrue(transcript.IsValid())
+
+        stream = lldb.SBStream()
+        self.assertTrue(stream)
+
+        error = transcript.GetAsJSON(stream)
+        self.assertSuccess(error)
+
+        transcript = json.loads(stream.GetData())
+
+        # Validate the transcript.
+        #
+        # Notes:
+        # 1. The following asserts rely on the exact output format of the
+        #    commands. Hopefully we are not changing them any time soon.
+        # 2. The transcript will contain a bunch of commands that are run
+        #    automatically. We only want to validate for the ones that are
+        #    handled in the above, hence the negative indices to find them.
+        self.assertEqual(transcript[-2]["command"], "version")
+        self.assertTrue("lldb version" in transcript[-2]["output"][0])
+        self.assertEqual(transcript[-1],
+            {
+                "command": "an-unknown-command",
+                "output": [],
+                "error": [
+                    "error: 'an-unknown-command' is not a valid command.",
+                ],
+            })
