@@ -758,7 +758,8 @@ InstrBuilder::createInstruction(const MCInst &MCI,
   for (const WriteDescriptor &WD : D.Writes) {
     RegID = WD.isImplicitWrite() ? WD.RegisterID
                                  : MCI.getOperand(WD.OpIndex).getReg();
-    // Check if this is a optional definition that references NoReg.
+    // Check if this is a optional definition that references NoReg or a write
+    // to a constant register.
     if ((WD.IsOptionalDef && !RegID) || MRI.isConstant(RegID)) {
       ++WriteIndex;
       continue;
