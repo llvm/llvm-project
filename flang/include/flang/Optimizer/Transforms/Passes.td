@@ -298,7 +298,7 @@ def AlgebraicSimplification : Pass<"flang-algebraic-simplification"> {
   let constructor = "::fir::createAlgebraicSimplificationPass()";
 }
 
-def PolymorphicOpConversion : Pass<"fir-polymorphic-op"> {
+def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "mlir::ModuleOp"> {
   let summary =
     "Simplify operations on polymorphic types";
   let description = [{
