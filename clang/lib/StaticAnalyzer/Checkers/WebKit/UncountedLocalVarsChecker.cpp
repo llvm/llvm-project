@@ -178,6 +178,11 @@ public:
     if (shouldSkipVarDecl(V))
       return;
 
+    if (auto *FD = dyn_cast<FunctionDecl>(V->getDeclContext())) {
+      if (FD->isInlined())
+        return;
+    }
+
     const auto *ArgType = V->getType().getTypePtr();
     if (!ArgType)
       return;
