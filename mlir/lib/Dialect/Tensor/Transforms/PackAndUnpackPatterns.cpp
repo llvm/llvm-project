@@ -374,13 +374,10 @@ struct FoldProducerUnPackWithConsumerLinalgTransposeOp
     for (auto dim : innerDimsPos)
       newInnerDimsPosVec.push_back(transposePermutation[dim]);
 
-    Value output = unPackOp.createDestinationTensor(
-        rewriter, transposeOp.getLoc(), unPackOp.getSource(),
-        unPackOp.getMixedTiles(), newInnerDimsPosVec, newOuterDimsPermVec);
-
+    // Reuse the destination of the transpose op.
     rewriter.replaceOpWithNewOp<UnPackOp>(
-        transposeOp, unPackOp.getSource(), output, newInnerDimsPosVec,
-        unPackOp.getMixedTiles(), newOuterDimsPermVec);
+        transposeOp, unPackOp.getSource(), transposeOp.getDpsInits()[0],
+        newInnerDimsPosVec, unPackOp.getMixedTiles(), newOuterDimsPermVec);
 
     return success();
   }
