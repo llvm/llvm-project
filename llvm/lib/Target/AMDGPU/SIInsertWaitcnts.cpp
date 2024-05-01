@@ -187,12 +187,12 @@ VmemType getVmemType(const MachineInstr &Inst) {
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Inst.getOpcode());
   const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
       AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
-  // The test for MSAA here is because gfx12+ image_msaa_load is actually
-  // encoded as VSAMPLE and requires the appropriate s_waitcnt variant for that.
-  // Pre-gfx12 doesn't care since all vmem types result in the same s_waitcnt.
-  return BaseInfo->BVH                         ? VMEM_BVH
-         : BaseInfo->Sampler || BaseInfo->MSAA ? VMEM_SAMPLER
-                                               : VMEM_NOSAMPLER;
+  // We have to make an additional check for isVSAMPLE here since some
+  // instructions don't have a sampler, but are still classified as sampler
+  // instructions for the purposes of e.g. waitcnt.
+  return BaseInfo->BVH                                         ? VMEM_BVH
+         : (BaseInfo->Sampler || SIInstrInfo::isVSAMPLE(Inst)) ? VMEM_SAMPLER
+                                                               : VMEM_NOSAMPLER;
 }
 
 unsigned &getCounterRef(AMDGPU::Waitcnt &Wait, InstCounterType T) {
