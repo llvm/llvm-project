@@ -590,6 +590,8 @@ Bug Fixes to C++ Support
 - Fixed a use-after-free bug in parsing of type constraints with default arguments that involve lambdas. (#GH67235)
 - Fixed bug in which the body of a consteval lambda within a template was not parsed as within an
   immediate function context.
+- Fix CTAD for ``std::initializer_list``. This allows ``std::initializer_list{1, 2, 3}`` to be deduced as
+  ``std::initializer_list<int>`` as intended.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
