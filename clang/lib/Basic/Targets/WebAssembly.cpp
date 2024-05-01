@@ -88,7 +88,7 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_half_precision__");
   if (HasMultivalue)
     Builder.defineMacro("__wasm_multivalue__");
- if (HasMutableGlobals)
+  if (HasMutableGlobals)
     Builder.defineMacro("__wasm_mutable_globals__");
   if (HasNontrappingFPToInt)
     Builder.defineMacro("__wasm_nontrapping_fptoint__");
