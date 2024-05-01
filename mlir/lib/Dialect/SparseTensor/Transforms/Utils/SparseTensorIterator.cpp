@@ -97,7 +97,7 @@ public:
   ValuePair peekRangeAt(OpBuilder &b, Location l, ValueRange batchPrefix,
                         ValueRange parentPos, Value inPadZone) const override {
     assert(parentPos.size() == 1 && "Dense level can not be non-unique.");
-    assert(!inPadZone && "Not implememnted");
+    assert(!inPadZone && "Not implemented");
     Value p = parentPos.front();
     Value posLo = MULI(p, lvlSize);
     return {posLo, lvlSize};
@@ -117,7 +117,7 @@ public:
 
   ValuePair peekRangeAt(OpBuilder &b, Location l, ValueRange,
                         ValueRange parentPos, Value inPadZone) const override {
-    assert(!inPadZone && "Not implememnted");
+    assert(!inPadZone && "Not implemented");
     assert(parentPos.size() == 1 && "Dense level can not be non-unique.");
     // No need to linearize the position for non-annotated tensors.
     return {C_IDX(0), lvlSize};
@@ -151,13 +151,14 @@ public:
 
     SmallVector<Type, 2> types{b.getIndexType(), b.getIndexType()};
     scf::IfOp posRangeIf = b.create<scf::IfOp>(l, types, inPadZone, true);
-    // True branch.
+    // True branch, returns a "fake" empty range [0, 0) if parent
+    // iterator is in pad zone.
     b.setInsertionPointToStart(posRangeIf.thenBlock());
-    // Returns a "fake" empty range [0, 0) if parent iterator is in pad zone.
+
     SmallVector<Value, 2> emptyRange{C_IDX(0), C_IDX(0)};
     b.create<scf::YieldOp>(l, emptyRange);
 
-    // False branch.
+    // False branch, returns the actual range.
     b.setInsertionPointToStart(posRangeIf.elseBlock());
     auto [pLo, pHi] = loadRange();
     SmallVector<Value, 2> loadedRange{pLo, pHi};
@@ -179,7 +180,7 @@ public:
                         ValueRange parentPos, Value inPadZone) const override {
     assert(parentPos.size() == 1 &&
            "loose-compressed level must be the first non-unique level.");
-    assert(!inPadZone && "Not implememnted");
+    assert(!inPadZone && "Not implemented");
     SmallVector<Value> memCrd(batchPrefix);
     Value p = parentPos.front();
     p = MULI(p, C_IDX(2));
@@ -200,7 +201,7 @@ public:
   ValuePair peekRangeAt(OpBuilder &b, Location l, ValueRange batchPrefix,
                         ValueRange parentPos, Value inPadZone) const override {
     assert(parentPos.size() == 1 || parentPos.size() == 2);
-    assert(!inPadZone && "Not implememnted");
+    assert(!inPadZone && "Not implemented");
     Value p = parentPos.front();
     Value segHi = parentPos.size() == 2 ? parentPos.back() : nullptr;
 
@@ -221,7 +222,7 @@ public:
                         ValueRange parentPos, Value inPadZone) const override {
     assert(parentPos.size() == 1 && isUnique() &&
            "n:m level can not be non-unique.");
-    assert(!inPadZone && "Not implememnted");
+    assert(!inPadZone && "Not implemented");
     // Each n:m blk has exactly n specified elements.
     auto n = getN(lt);
     Value posLo = MULI(parentPos.front(), C_IDX(n));
@@ -487,6 +488,7 @@ public:
   bool isBatchIterator() const override { return wrap->isBatchIterator(); }
   bool randomAccessible() const override { return wrap->randomAccessible(); };
   bool iteratableByFor() const override { return wrap->iteratableByFor(); };
+
   SmallVector<Value> serialize() const override { return wrap->serialize(); };
   void deserialize(ValueRange vs) override { wrap->deserialize(vs); };
   ValueRange getCurPosition() const override { return wrap->getCurPosition(); }
@@ -601,9 +603,7 @@ public:
               Value padHigh)
       : SimpleWrapIterator(std::move(wrap), IterKind::kPad,
                            wrap->randomAccessible() ? 1 : 0),
-        padLow(padLow), padHigh(padHigh) {
-    // assert(!randomAccessible());
-  }
+        padLow(padLow), padHigh(padHigh) {}
 
   // For LLVM-style RTTI.
   static bool classof(const SparseIterator *from) {
@@ -614,13 +614,20 @@ public:
     return std::string("pad<") + wrap->getDebugInterfacePrefix() + ">";
   }
 
+  // Returns a pair of values for *upper*, *lower* bound respectively.
+  ValuePair genForCond(OpBuilder &b, Location l) override {
+    if (randomAccessible())
+      return {getCrd(), upperBound(b, l)};
+    return wrap->genForCond(b, l);
+  }
+
   // For padded dense iterator, we append a `inPadZone: bool` in addition to
   // values used by the wrapped iterator.
   ValueRange getCurPosition() const override { return getCursor(); }
 
   SmallVector<Type> getCursorValTypes(OpBuilder &b) const override {
     SmallVector<Type> ret = wrap->getCursorValTypes(b);
-    // Need a extra boolean value `inPadZone` for padded dense iterator.
+    // Need an extra boolean value `inPadZone` for padded dense iterator.
     if (randomAccessible())
       ret.push_back(b.getI1Type());
 
