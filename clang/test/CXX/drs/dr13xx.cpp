@@ -281,13 +281,10 @@ namespace cwg1330 { // cwg1330: 4 c++11
   decltype(f<char>()) f2; // #cwg1330-f-char
   bool f3 = noexcept(f<float>()); /// #cwg1330-f-float
 #endif
-  // In C++17 onwards, substituting explicit template arguments into the
-  // function type substitutes into the exception specification (because it's
-  // part of the type). In earlier languages, we don't notice there's a problem
-  // until we've already started to instantiate.
   template int f<short>(); // #cwg1330-f-short
-  // since-cxx17-error@-1 {{explicit instantiation of 'f' does not refer to a function template, variable template, member function, member class, or static data member}}
-  //   since-cxx17-note@#cwg1330-f {{candidate template ignored: substitution failure [with T = short]: type 'short' cannot be used prior to '::' because it has no members}}
+  // since-cxx17-error@#cwg1330-f {{type 'short' cannot be used prior to '::' because it has no members}}
+  //   since-cxx17-note@#cwg1330-f {{in instantiation of exception specification for 'f<short>' requested here}}
+  //   since-cxx17-note@#cwg1330-f-short {{in instantiation of function template specialization 'cwg1330::f<short>' requested here}}
 
   template<typename T> struct C {
     C() throw(typename T::type); // #cwg1330-C
@@ -500,7 +497,7 @@ namespace cwg1359 { // cwg1359: 3.5
   union B { constexpr B() = default; int a; }; // #cwg1359-B
   // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr before C++23}}
   union C { constexpr C() = default; int a, b; }; // #cwg1359-C
-  // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr}} 
+  // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr}}
   struct X { constexpr X() = default; union {}; };
   // since-cxx11-error@-1 {{declaration does not declare anything}}
   struct Y { constexpr Y() = default; union { int a; }; }; // #cwg1359-Y
@@ -720,7 +717,7 @@ struct A {
 } // namespace cwg1397
 
 namespace cwg1399 { // cwg1399: dup 1388
-  template<typename ...T> void f(T..., int, T...) {} // #cwg1399-f 
+  template<typename ...T> void f(T..., int, T...) {} // #cwg1399-f
   // cxx98-error@-1 {{variadic templates are a C++11 extension}}
   void g() {
     f(0);

@@ -1325,11 +1325,11 @@ bool Sema::isSameOrCompatibleFunctionType(QualType P, QualType A) {
   // Noreturn and noexcept adjustment.
   QualType AdjustedParam;
   if (IsFunctionConversion(P, A, AdjustedParam))
-    return Context.hasSameType(AdjustedParam, A);
+    return Context.hasSameFunctionTypeIgnoringExceptionSpec(AdjustedParam, A);
 
   // FIXME: Compatible calling conventions.
 
-  return Context.hasSameType(P, A);
+  return Context.hasSameFunctionTypeIgnoringExceptionSpec(P, A);
 }
 
 /// Get the index of the first template parameter that was originally from the
@@ -4686,13 +4686,6 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
       Specialization->isImmediateEscalating() &&
       CheckIfFunctionSpecializationIsImmediate(Specialization,
                                                Info.getLocation()))
-    return TemplateDeductionResult::MiscellaneousDeductionFailure;
-
-  auto *SpecializationFPT =
-      Specialization->getType()->castAs<FunctionProtoType>();
-  if (IsAddressOfFunction && getLangOpts().CPlusPlus17 &&
-      isUnresolvedExceptionSpec(SpecializationFPT->getExceptionSpecType()) &&
-      !ResolveExceptionSpec(Info.getLocation(), SpecializationFPT))
     return TemplateDeductionResult::MiscellaneousDeductionFailure;
 
   // Adjust the exception specification of the argument to match the
