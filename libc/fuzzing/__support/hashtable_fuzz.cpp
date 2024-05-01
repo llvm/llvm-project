@@ -50,11 +50,13 @@ extern "C" size_t LLVMFuzzerCustomMutator(uint8_t *data, size_t size,
         return i;
       // skip the action byte
       ++i;
+      // create a limit of string size such that there can be more insertions
+      size_t limit = max_size < i + 256 ? max_size : i + 256;
       // skip the null-terminated string
-      while (i < max_size && data[i] != 0)
+      while (i < limit && data[i] != 0)
         ++i;
       // in the case the string is not null-terminated, null-terminate it
-      if (i == max_size && data[i - 1] != 0)
+      if (i == limit && data[i - 1] != 0)
         data[i - 1] = 0;
       break;
     }
