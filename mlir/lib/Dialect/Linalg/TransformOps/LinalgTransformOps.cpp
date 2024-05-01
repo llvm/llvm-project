@@ -1860,6 +1860,7 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
         extractFromIntegerArrayAttr<int64_t>(getPaddingDimensions());
 
     SmallVector<int64_t> padToMultipleOf;
+    // TODO: This should probably be a common utility function.
     for (OpFoldResult sz : getMixedPadToMultipleOf()) {
       if (sz.is<Attribute>()) {
         auto attr = sz.get<Attribute>();
@@ -1876,8 +1877,9 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
 
       auto szPayloads = state.getPayloadOps(sz.get<Value>());
       if (!llvm::hasSingleElement(szPayloads)) {
-        auto diag = this->emitOpError("requires pad_to_multiple_of handle that "
-                                      "is mapped to 1 payload op");
+        auto diag = this->emitOpError()
+                    << "requires " << kPadToMultipleOfKeyword
+                    << " handle that is mapped to 1 payload op";
         diag.attachNote(sz.get<Value>().getLoc())
             << "mapped to " << llvm::range_size(szPayloads) << " payload ops";
         return DiagnosedSilenceableFailure::definiteFailure();
@@ -1886,18 +1888,20 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
       Operation *szPayloadOp = *szPayloads.begin();
       if (szPayloadOp->getNumResults() != 1 ||
           !szPayloadOp->getResult(0).getType().isIndex()) {
-        auto diag = this->emitOpError(
-            "requires vector pad_to_multiple_of op with 1 index result");
+        auto diag = this->emitOpError()
+                    << "requires " << kPadToMultipleOfKeyword
+                    << " to be result of op with 1 index result";
         diag.attachNote(szPayloadOp->getLoc())
-            << "pad_to_multiple_of payload op";
+            << kPadToMultipleOfKeyword << " payload op";
         return DiagnosedSilenceableFailure::definiteFailure();
       }
 
       IntegerAttr attr;
       if (!matchPattern(szPayloadOp->getResult(0), m_Constant(&attr))) {
-        auto diag = this->emitOpError("requires constant pad_to_multiple_of");
+        auto diag = this->emitOpError()
+                    << "requires constant " << kPadToMultipleOfKeyword;
         diag.attachNote(szPayloadOp->getLoc())
-            << "pad_to_multiple_of payload op";
+            << kPadToMultipleOfKeyword << " payload op";
         return DiagnosedSilenceableFailure::definiteFailure();
       }
 
