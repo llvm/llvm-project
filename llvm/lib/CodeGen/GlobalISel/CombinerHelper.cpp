@@ -234,12 +234,13 @@ bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
 
   MachineInstr *OrigDef = MRI.getUniqueVRegDef(OrigOp);
   // Avoid trying to fold G_PHI, G_UNMERGE_VALUES, G_FREEZE (the latter is
-  // handled by idempotent_prop)
+  // handled by idempotent_prop).
   if (!OrigDef || OrigDef->isPHI() || isa<GUnmerge>(OrigDef) ||
       isa<GFreeze>(OrigDef))
     return false;
 
-  if (canCreateUndefOrPoison(OrigOp, MRI))
+  if (canCreateUndefOrPoison(OrigOp, MRI,
+                             /*ConsiderFlagsAndMetadata*/ false))
     return false;
 
   std::optional<MachineOperand> MaybePoisonOperand;
@@ -257,6 +258,8 @@ bool CombinerHelper::matchFreezeOfSingleMaybePoisonOperand(
     else
       return false;
   }
+
+  cast<GenericMachineInstr>(OrigDef)->dropPoisonGeneratingFlags();
 
   // Eliminate freeze if all operands are guaranteed non-poison.
   if (!MaybePoisonOperand) {

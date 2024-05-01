@@ -1745,6 +1745,15 @@ static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,
                                    UndefPoisonKind Kind) {
   MachineInstr *RegDef = MRI.getVRegDef(Reg);
 
+  if (auto *GMI = dyn_cast<GenericMachineInstr>(RegDef)) {
+    if (ConsiderFlagsAndMetadata && includesPoison(Kind) &&
+        GMI->hasPoisonGeneratingFlags())
+      return true;
+  }
+  // Conservatively return true.
+  else
+    return true;
+
   switch (RegDef->getOpcode()) {
   case TargetOpcode::G_FREEZE:
     return false;
