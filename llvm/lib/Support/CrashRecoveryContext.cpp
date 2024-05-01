@@ -518,7 +518,8 @@ static void RunSafelyOnThread_Dispatch(void *UserData) {
 bool CrashRecoveryContext::RunSafelyOnThread(function_ref<void()> Fn,
                                              unsigned RequestedStackSize) {
   bool UseBackgroundPriority = hasThreadBackgroundPriority();
-  auto [OutsOverride, ErrsOverride] = ScopedOutsAndErrsOverride::getActiveOverrides();
+  auto [OutsOverride, ErrsOverride] =
+      ScopedOutsAndErrsOverride::getActiveOverrides();
   RunSafelyOnThreadInfo Info = {
       Fn, this, OutsOverride, ErrsOverride, UseBackgroundPriority, false};
   llvm::thread Thread(RequestedStackSize == 0

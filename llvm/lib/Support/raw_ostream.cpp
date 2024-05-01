@@ -915,11 +915,11 @@ raw_fd_ostream &llvm::errs() {
   if (auto *TLSErrs = OutsOverride; TLSErrs != nullptr)
     return *TLSErrs;
 
-  // Set standard error to be unbuffered and tied to outs() by default.
 #ifdef __MVS__
   std::error_code EC = enableAutoConversion(STDERR_FILENO);
   assert(!EC);
 #endif
+  // Set standard error to be unbuffered and tied to stderr by default.
   static raw_fd_ostream S(STDERR_FILENO, false, true);
   return S;
 }
