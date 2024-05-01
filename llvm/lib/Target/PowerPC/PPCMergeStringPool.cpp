@@ -118,8 +118,12 @@ private:
 // sure that they can be replaced.
 static bool hasReplaceableUsers(GlobalVariable &GV) {
   for (User *CurrentUser : GV.users()) {
-    if (isa<Instruction>(CurrentUser)) {
-      if (auto *II = dyn_cast<IntrinsicInst>(CurrentUser)) {
+    if (auto *I = dyn_cast<Instruction>(CurrentUser)) {
+      // Do not merge globals in exception pads.
+      if (I->isEHPad())
+        return false;
+
+      if (auto *II = dyn_cast<IntrinsicInst>(I)) {
         // Some intrinsics require a plain global.
         if (II->getIntrinsicID() == Intrinsic::eh_typeid_for)
           return false;
