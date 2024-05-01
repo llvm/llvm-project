@@ -387,22 +387,22 @@ void RTNAME(Etime)(const Descriptor *values, const Descriptor *time,
   FILETIME userTime;
 
   if (GetProcessTimes(GetCurrentProcess(), &creationTime, &exitTime,
-          &kernelTime, &userTime) != -1) {
+          &kernelTime, &userTime) == 0) {
     ULARGE_INTEGER userSystemTime;
     ULARGE_INTEGER kernelSystemTime;
 
     memcpy(&userSystemTime, &userTime, sizeof(FILETIME));
     memcpy(&kernelSystemTime, &kernelTime, sizeof(FILETIME));
 
-    usrTime = double(userSystemTime.QuadPart / 10000);
-    sysTime = double(kernelSystemTime.QuadPart / 10000);
+    usrTime = ((double)(userSystemTime.QuadPart)) / 10000000.0;
+    sysTime = ((double)(kernelSystemTime.QuadPart)) / 10000000.0;
     realTime = usrTime + sysTime;
   }
 #else
   struct tms tms;
   if (times(&tms) != -1) {
-    usrTime = (double)(tms.tms_utime) / sysconf(_SC_CLK_TCK);
-    sysTime = (double)(tms.tms_stime) / sysconf(_SC_CLK_TCK);
+    usrTime = ((double)(tms.tms_utime)) / sysconf(_SC_CLK_TCK);
+    sysTime = ((double)(tms.tms_stime)) / sysconf(_SC_CLK_TCK);
     realTime = usrTime + sysTime;
   }
 #endif
