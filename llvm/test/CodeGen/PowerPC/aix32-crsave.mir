@@ -65,8 +65,8 @@ body:             |
     BLR implicit $lr, implicit $rm, implicit $r3
 
     ; CHECK-LABEL: fixedStack:
-    ; CHECK-NEXT:  - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, stack-id: default, 
-    ; CHECK-NEXT:      callee-saved-register: '$r31', callee-saved-restored: true, debug-info-variable: '', 
+    ; CHECK-NEXT:  - { id: 0, type: spill-slot, offset: -4, size: 4, alignment: 4, stack-id: default,
+    ; CHECK-NEXT:      callee-saved-register: '$r31', callee-saved-restored: true, debug-info-variable: '',
     ; CHECK-NEXT:      debug-info-expression: '', debug-info-location: '' }
     ; CHECK-NEXT:  - { id: 1, type: default, offset: 4, size: 4, alignment: 4, stack-id: default,
     ; CHECK-NEXT:      isImmutable: true, isAliased: false, callee-saved-register: '$cr3',
