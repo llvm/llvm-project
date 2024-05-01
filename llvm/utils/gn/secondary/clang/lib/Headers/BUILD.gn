@@ -312,6 +312,7 @@ copy("Headers") {
     "xsavesintrin.h",
     "xtestintrin.h",
     "yvals_core.h",
+    "zos_wrappers/builtins.h",
   ]
   outputs = [ "$clang_resource_dir/include/{{source_target_relative}}" ]
 }
