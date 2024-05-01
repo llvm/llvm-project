@@ -487,7 +487,9 @@ class DebugCommunication(object):
         )
 
     def get_local_variable(self, name, frameIndex=0, threadId=None, is_hex=None):
-        locals = self.get_local_variables(frameIndex=frameIndex, threadId=threadId, is_hex=is_hex)
+        locals = self.get_local_variables(
+            frameIndex=frameIndex, threadId=threadId, is_hex=is_hex
+        )
         for local in locals:
             if "name" in local and local["name"] == name:
                 return local
@@ -501,13 +503,15 @@ class DebugCommunication(object):
             return variable["value"]
         return None
 
-    def get_local_variable_child(self, name, child_name, frameIndex=0, threadId=None, is_hex=None):
+    def get_local_variable_child(
+        self, name, child_name, frameIndex=0, threadId=None, is_hex=None
+    ):
         local = self.get_local_variable(name, frameIndex, threadId)
         if local["variablesReference"] == 0:
             return None
-        children = self.request_variables(local["variablesReference"], is_hex=is_hex)["body"][
-            "variables"
-        ]
+        children = self.request_variables(local["variablesReference"], is_hex=is_hex)[
+            "body"
+        ]["variables"]
         for child in children:
             if child["name"] == child_name:
                 return child
@@ -1035,7 +1039,9 @@ class DebugCommunication(object):
             self.threads = None
         return response
 
-    def request_variables(self, variablesReference, start=None, count=None, is_hex=None):
+    def request_variables(
+        self, variablesReference, start=None, count=None, is_hex=None
+    ):
         args_dict = {"variablesReference": variablesReference}
         if start is not None:
             args_dict["start"] = start
