@@ -1,14 +1,19 @@
 # GDB Remote Protocol Extensions
 
 LLDB has added new GDB server packets to better support multi-threaded and
-remote debugging.
+remote debugging. These extend the
+[protocol defined by GDB ](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Packets.html#Packets) (and [this page](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Host-I_002fO-Packets.html#Host-I_002fO-Packets) for `vFile` packets).
 
-Why? Normally you need to start the correct GDB and the
-correct GDB server when debugging. If you have mismatch, then things go wrong
-very quickly. LLDB makes extensive use of the GDB remote protocol and we
-wanted to make sure that the experience was a bit more dynamic where we can
-discover information about a remote target without having to know anything up
-front.
+If a packet is restated here it is because LLDB's version has some behaviour
+difference to GDB's version, or it provides some context for a following LLDB
+extension packet.
+
+Why did we add these? The most common reason is flexibility. Normally you need
+to start the correct GDB and the correct GDB server when debugging. If you have
+mismatch, then things go wrong very quickly. LLDB makes extensive use of the GDB
+remote protocol and we wanted to make sure that the experience was a bit more
+dynamic where we can discover information about a remote target without having
+to know anything up front.
 
 We also ran into performance issues with the existing GDB remote
 protocol that can be overcome when using a reliable communications layer.
@@ -22,71 +27,48 @@ We prefer to be able to dynamically determine what kind of architecture, OS and
 vendor we are debugging, as well as how things are laid out when it comes to
 the thread register contexts.
 
-Below are the details on the new packets we have added above and beyond the
-standard GDB remote protocol packets.
+## _M\<size\>,\<permissions\>
 
-## QStartNoAckMode
+Allocate memory on the remote target with the specified size and
+permissions.
 
-Try to enable no ACK mode to skip sending ACKs and NACKs.
-
-Having to send an ACK/NACK after every packet slows things down a bit, so we
-have a way to disable ACK packets to minimize the traffic for reliable
-communication interfaces (like sockets). Below GDB or LLDB will send this
-packet to try and disable ACKs. All lines that start with "send packet: " are
-from GDB/LLDB, and all lines that start with "read packet: " are from the GDB
-remote server:
+The allocate memory packet starts with `_M<size>,<permissions>`. It returns a
+raw big endian address value, or an empty response for unimplemented, or `EXX` for an error
+code. The packet is formatted as:
 ```
-send packet: $QStartNoAckMode#b0
-read packet: +
-read packet: $OK#9a
-send packet: +
-```
-
-### Priority To Implement
-
-High. Any GDB remote server that can implement this should if the
-connection is reliable. This improves packet throughput and increases
-the performance of the connection.
-
-## QSupported
-
-Query the GDB remote server for features it supports
-
-QSupported is a standard GDB Remote Serial Protocol packet, but
-there are several additions to the response that lldb can parse.
-They are not all listed here.
-
-An example exchange:
-```
-send packet: qSupported:xmlRegisters=i386,arm,mips,arc;multiprocess+;fork-events+;vfork-events+
-
-read packet: qXfer:features:read+;PacketSize=20000;qEcho+;native-signals+;SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;SupportedWatchpointTypes=aarch64-mask,aarch64-bas;
+char packet[256];
+int packet_len;
+packet_len = ::snprintf (
+    packet,
+    sizeof(packet),
+    "_M%zx,%s%s%s",
+    (size_t)size,
+    permissions & lldb::ePermissionsReadable ? "r" : "",
+    permissions & lldb::ePermissionsWritable ? "w" : "",
+    permissions & lldb::ePermissionsExecutable ? "x" : "");
 ```
 
-In the example above, three lldb extensions are shown:
+You request a size and give the permissions. This packet does NOT need to be
+implemented if you don't want to support running JITed code. The return value
+is just the address of the newly allocated memory as raw big endian hex bytes.
 
-  * `PacketSize=20000`
-    * The base 16 maximum packet size that the stub can handle.
-  * `SupportedCompressions=<item,item,...>`
-    * A list of compression types that the stub can use to compress packets
-    when the QEnableCompression packet is used to request one of them.
-  * `SupportedWatchpointTypes=<item,item,...>`
-    * A list of watchpoint types that this stub can manage. Currently defined 
-      names are:
-        * `x86_64` - 64-bit x86-64 watchpoints (1, 2, 4, 8 byte watchpoints
-          aligned to those amounts)
-        * `aarch64-bas`  AArch64 Byte Address Select watchpoints
-                     (any number of contiguous bytes within a doubleword)
-        * `aarch64-mask` AArch64 MASK watchpoints
-                     (any power-of-2 region of memory from 8 to 2GB, aligned)
+**Priority To Implement:** High if you want LLDB to be able to JIT code and run
+that code. JIT code also needs data which is also allocated and tracked. Low if
+you don't support running JIT'ed code.
 
-      If nothing is specified, lldb will default to sending power-of-2
-      watchpoints, up to a pointer size, `sizeof(void*)`, a reasonable
-      baseline assumption.
+## _m\<addr\>
 
-### Priority To Implement
+Deallocate memory that was previously allocated using an allocate
+memory pack.
 
-Optional.
+The deallocate memory packet is `_m<addr>` where you pass in the address you
+got back from a previous call to the allocate memory packet. It returns `OK`
+if the memory was successfully deallocated, or `EXX`" for an error, or an
+empty response if not supported.
+
+**Priority To Implement:** High if you want LLDB to be able to JIT code and run
+that code. JIT code also needs data which is also allocated and tracked. Low if
+you don't support running JIT'ed code.
 
 ## "A" - launch args packet
 
@@ -111,224 +93,305 @@ The above packet helps when you have remote debugging abilities where you
 could launch a process on a remote host, this isn't needed for bare board
 debugging.
 
-### Priority To Implement
-
-Low. Only needed if the remote target wants to launch a target after
-making a connection to a GDB server that isn't already connected to
+**Priority To Implement:** Low. Only needed if the remote target wants to launch
+a target after making a connection to a GDB server that isn't already connected to
 an inferior process.
 
-## qLaunchSuccess
+## "D" - Detach and stay stopped
 
-Check whether launching a process with the `A` packet succeeded.
-
-Returns the status of the last attempt to launch a process.
-Either `OK` if no error ocurred, or `E` followed by a string
-describing the error.
-
-### Priority To Implement
-
-High, launching processes is a key part of LLDB's platform mode.
-
-## QEnvironment:NAME=VALUE
-
-Setup the environment up for a new child process that will soon be
-launched using the "A" packet.
-
-NB: key/value pairs are sent as-is so gdb-remote protocol meta characters
-(e.g. `#` or `$`) are not acceptable.  If any non-printable or
-metacharacters are present in the strings, `QEnvironmentHexEncoded`
-should be used instead if it is available.  If you don't want to
-scan the environment strings before sending, prefer
-the `QEnvironmentHexEncoded` packet over `QEnvironment`, if it is
-available.
-
-Both GDB and LLDB support passing down environment variables. Is it ok to
-respond with a `$#00` (unimplemented):
+We extended the "D" packet to specify that the monitor should keep the
+target suspended on detach.  The normal behavior is to resume execution
+on detach.  We will send:
 ```
-send packet: $QEnvironment:ACK_COLOR_FILENAME=bold yellow#00
-read packet: $OK#00
-```
-This packet can be sent one or more times _prior_ to sending a "A" packet.
-
-### Priority To Implement
-
-Low. Only needed if the remote target wants to launch a target after
-making a connection to a GDB server that isn't already connected to
-an inferior process.
-
-## QEnvironmentHexEncoded:HEX-ENCODING(NAME=VALUE)
-
-Setup the environment up for a new child process that will soon be
-launched using the "A" packet.
-
-The only difference between this packet and `QEnvironment` is that the
-environment key-value pair is ascii hex encoded for transmission.
-This allows values with gdb-remote metacharacters like `#` to be sent.
-
-Both GDB and LLDB support passing down environment variables. Is it ok to
-respond with a `$#00` (unimplemented):
-```
-send packet: $QEnvironment:41434b5f434f4c4f525f46494c454e414d453d626f6c642379656c6c6f77#00
-read packet: $OK#00
-```
-This packet can be sent one or more times _prior_ to sending a "A" packet.
-
-### Priority To Implement
-
-Low. Only needed if the remote target wants to launch a target after
-making a connection to a GDB server that isn't already connected to
-an inferior process.
-
-## QEnableErrorStrings
-
-This packet enables reporting of Error strings in remote packet
-replies from the server to client. If the server supports this
-feature, it should send an OK response. The client can expect the
-following error replies if this feature is enabled in the server:
-```
-EXX;AAAAAAAAA
-```
-where `AAAAAAAAA` will be a hex encoded ASCII string.
-`XX`` is hex encoded byte number.
-
-It must be noted that even if the client has enabled reporting
-strings in error replies, it must not expect error strings to all
-error replies.
-
-### Priority To Implement
-
-Low. Only needed if the remote target wants to provide strings that
-are human readable along with an error code.
-
-### Example
-
-```
-send packet: $QEnableErrorStrings
-read packet: $OK#00
+qSupportsDetachAndStayStopped:
 ```
 
-## QSetSTDIN:\<ascii-hex-path\> / QSetSTDOUT:\<ascii-hex-path\> / QSetSTDERR:\<ascii-hex-path\>
-
-Setup where STDIN, STDOUT, and STDERR go prior to sending an "A"
-packet.
-
-When launching a program through the GDB remote protocol with the "A" packet,
-you might also want to specify where stdin/out/err go:
+to query whether the monitor supports the extended detach, and if it does,
+when we want the monitor to detach but not resume the target, we will
+send:
 ```
-QSetSTDIN:<ascii-hex-path>
-QSetSTDOUT:<ascii-hex-path>
-QSetSTDERR:<ascii-hex-path>
+D1
 ```
-These packets must be sent  _prior_ to sending a "A" packet.
-
-### Priority To Implement
-
-Low. Only needed if the remote target wants to launch a target after
-making a connection to a GDB server that isn't already connected to
-an inferior process.
-
-
-## QSetWorkingDir:\<ascii-hex-path\>
-
-Set the working directory prior to sending an "A" packet.
-
-Or specify the working directory:
+In any case, if we want the normal detach behavior we will just send:
 ```
-QSetWorkingDir:<ascii-hex-path>
-```
-This packet must be sent  _prior_ to sending a "A" packet.
-
-### Priority To Implement
-
-Low. Only needed if the remote target wants to launch a target after
-making a connection to a GDB server that isn't already connected to
-an inferior process.
-
-## qGetWorkingDir
-
-Get the current working directory of the platform stub in
-ASCII hex encoding.
-
-### Example
-
-```
-receive: qGetWorkingDir
-send:    2f4170706c65496e7465726e616c2f6c6c64622f73657474696e67732f342f5465737453657474696e67732e746573745f646973617373656d626c65725f73657474696e6773
+D
 ```
 
-## QSetDisableASLR:\<bool\>
+## jGetDyldProcessState
 
-Enable or disable ASLR on the next "A" packet.
-
-Or control if ASLR is enabled/disabled:
-```
-send packet: QSetDisableASLR:1
-read packet: OK
-
-send packet: QSetDisableASLR:0
-read packet: OK
-```
-This packet must be sent  _prior_ to sending a "A" packet.
-
-### Priority To Implement
-
-Low. Only needed if the remote target wants to launch a target after
-making a connection to a GDB server that isn't already connected to
-an inferior process and if the target supports disabling ASLR
-(Address space layout randomization).
-
-## QListThreadsInStopReply
-
-Enable the `threads:` and `thread-pcs:` data in the question-mark packet
-("T packet") responses when the stub reports that a program has
-stopped executing.
-
-### Priority To Implement
-
-Performance.  This is a performance benefit to lldb if the thread id's
-and thread pc values are provided to lldb in the T stop packet -- if
-they are not provided to lldb, lldb will likely need to send one to
-two packets per thread to fetch the data at every private stop.
-
-### Example
+This packet fetches the process launch state, as reported by libdyld on
+Darwin systems, most importantly to indicate when the system libraries
+have initialized sufficiently to safely call utility functions.
 
 ```
-send packet: QListThreadsInStopReply
-read packet: OK
+LLDB SENDS: jGetDyldProcessState
+STUB REPLIES: {"process_state_value":48,"process_state string":"dyld_process_state_libSystem_initialized"}
 ```
 
-## jLLDBTraceSupported
+**Priority To Implement:** Low. This packet is needed to prevent lldb's utility
+functions for scanning the Objective-C class list from running very early in
+process startup.
 
-Get the processor tracing type supported by the gdb-server for the current
-inferior. Responses might be different depending on the architecture and
-capabilities of the underlying OS.
+## jGetLoadedDynamicLibrariesInfos
+
+This packet asks the remote debug stub to send the details about libraries
+being added/removed from the process as a performance optimization.
+
+There are two ways this packet can be used.  Both return a dictionary of
+binary images formatted the same way.
+
+One requests information on all shared libraries:
+```
+jGetLoadedDynamicLibrariesInfos:{"fetch_all_solibs":true}
+```
+with an optional `"report_load_commands":false` which can be added, asking
+that only the dyld SPI information (load addresses, filenames) be returned.
+The default behavior is that debugserver scans the mach-o header and load
+commands of each binary, and returns it in the JSON reply.
+
+And the second requests information about a list of shared libraries, given their load addresses:
+```
+jGetLoadedDynamicLibrariesInfos:{"solib_addresses":[8382824135,3258302053,830202858503]}
+```
+
+The second call is both a performance optimization (instead of having lldb read the mach-o header/load commands
+out of memory with generic read packets) but also adds additional information in the form of the
+filename of the shared libraries (which is not available in the mach-o header/load commands.)
+
+An example using the OS X 10.11 style call:
+```
+LLDB SENDS: jGetLoadedDynamicLibrariesInfos:{"image_count":1,"image_list_address":140734800075128}
+STUB REPLIES: ${"images":[{"load_address":4294967296,"mod_date":0,"pathname":"/tmp/a.out","uuid":"02CF262C-ED6F-3965-9E14-63538B465CFF","mach_header":{"magic":4277009103,"cputype":16777223,"cpusubtype":18446744071562067971,"filetype":2},"segments":{"name":"__PAGEZERO","vmaddr":0,"vmsize":4294967296,"fileoff":0,"filesize":0,"maxprot":0},{"name":"__TEXT","vmaddr":4294967296,"vmsize":4096,"fileoff":0,"filesize":4096,"maxprot":7},{"name":"__LINKEDIT","vmaddr":4294971392,"vmsize":4096,"fileoff":4096,"filesize":152,"maxprot":7}}]}#00
+```
+
+Or pretty-printed:
+```
+STUB REPLIES: ${"images":
+                [
+                    {"load_address":4294967296,
+                     "mod_date":0,
+                     "pathname":"/tmp/a.out",
+                     "uuid":"02CF262C-ED6F-3965-9E14-63538B465CFF",
+                     "mach_header":
+                        {"magic":4277009103,
+                         "cputype":16777223,
+                         "cpusubtype":18446744071562067971,
+                         "filetype":2
+                         },
+                     "segments":
+                      [
+                        {"name":"__PAGEZERO",
+                         "vmaddr":0,
+                         "vmsize":4294967296,
+                         "fileoff":0,
+                         "filesize":0,
+                         "maxprot":0
+                        },
+                        {"name":"__TEXT",
+                         "vmaddr":4294967296,
+                         "vmsize":4096,
+                         "fileoff":0,
+                         "filesize":4096,
+                         "maxprot":7
+                        },
+                        {"name":"__LINKEDIT",
+                         "vmaddr":4294971392,
+                         "vmsize":4096,
+                         "fileoff":4096,
+                         "filesize":152,
+                         "maxprot":7
+                        }
+                      ]
+                    }
+                ]
+            }
+```
+
+This is similar to the `qXfer:libraries:read` packet, and it could
+be argued that it should be merged into that packet.  A separate
+packet was created primarily because lldb needs to specify the
+number of images to be read and the address from which the initial
+information is read.  Also the XML DTD would need to be extended
+quite a bit to provide all the information that the `DynamicLoaderMacOSX`
+would need to work correctly on this platform.
+
+**Priority To Implement:**
+
+On OS X 10.11, iOS 9, tvOS 9, watchOS 2 and older: Low.  If this packet is absent,
+lldb will read the Mach-O headers/load commands out of memory.
+On macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer: High.  If this packet is absent,
+lldb will not know anything about shared libraries in the inferior, or where the main
+executable loaded.
+
+## jGetSharedCacheInfo
+
+This packet asks the remote debug stub to send the details about the inferior's
+shared cache. The shared cache is a collection of common libraries/frameworks that
+are mapped into every process at the same address on Darwin systems, and can be
+identified by a load address and UUID.
+
+```
+LLDB SENDS: jGetSharedCacheInfo:{}
+STUB REPLIES: ${"shared_cache_base_address":140735683125248,"shared_cache_uuid":"DDB8D70C-C9A2-3561-B2C8-BE48A4F33F96","no_shared_cache":false,"shared_cache_private_cache":false]}#00
+```
+
+**Priority To Implement:** Low
+
+When both lldb and the inferior process are running on the same computer, and lldb
+and the inferior process have the same shared cache, lldb may (as an optimization) read
+the shared cache out of its own memory instead of using gdb-remote read packets to read
+them from the inferior process.
+
+## jModulesInfo:[{"file":"...",triple:"..."}, ...]
+
+Get information for a list of modules by given module path and
+architecture.
+
+The response is a JSON array of dictionaries containing the following keys:
+* `uuid`
+* `triple`
+* `file_path`
+* `file_offset`
+* `file_size`
+
+The meaning of the fields is the same as in the `qModuleInfo` packet. The server
+signals the failure to retrieve the module info for a file by ommiting the
+corresponding array entry from the response. The server may also
+include entries the client did not ask for, if it has reason to
+the modules will be interesting to the client.
+
+**Priority To Implement:** Optional. If not implemented, `qModuleInfo` packet
+will be used, which may be slower if the target contains a large number of modules
+and the communication link has a non-negligible latency.
+
+## jLLDBTraceGetBinaryData
+
+Get binary data given a trace technology and a data identifier.
+The input is specified as a JSON object and the response has the same format
+as the "binary memory read" (aka "x") packet. In case of failures, an error
+message is returned.
+
+```
+send packet: jLLDBTraceGetBinaryData:{"type":<type>,"kind":<query>,"tid":<tid>,"offset":<offset>,"size":<size>}]
+read packet: <binary data>/E<error code>;AAAAAAAAA
+```
+
+### Schema
+
+The schema for the input is:
+```
+{
+ "type": <string>,
+     Tracing technology name, e.g. intel-pt, arm-etm.
+ "kind": <string>,
+     Identifier for the data.
+ "cpuId": <Optional decimal>,
+     Core id in decimal if the data belongs to a CPU core.
+ "tid"?: <Optional decimal>,
+     Tid in decimal if the data belongs to a thread.
+}
+```
+
+## jLLDBTraceGetState
+
+Get the current state of the process and its threads being traced by
+a given trace technology. The response is a JSON object with custom
+information depending on the trace technology. In case of errors, an
+error message is returned.
+
+```
+send packet: jLLDBTraceGetState:{"type":<type>}]
+read packet: {...object}/E<error code>;AAAAAAAAA
+```
+
+### Input Schema
+
+```
+{
+   "type": <string>
+      Tracing technology name, e.g. intel-pt, arm-etm.
+}
+```
 
 ### Output Schema
 
 ```
- {
-   "name": <string>,
-       Tracing technology name, e.g. intel-pt, arm-etm.
-   "description": <string>,
-       Description for this technology.
- }
+{
+  "tracedThreads": [{
+    "tid": <decimal integer>,
+    "binaryData": [
+      {
+        "kind": <string>,
+            Identifier for some binary data related to this thread to
+            fetch with the jLLDBTraceGetBinaryData packet.
+        "size": <decimal integer>,
+            Size in bytes of this thread data.
+      },
+    ]
+  }],
+  "processBinaryData": [
+    {
+      "kind": <string>,
+          Identifier for some binary data related to this process to
+          fetch with the jLLDBTraceGetBinaryData packet.
+      "size": <decimal integer>,
+          Size in bytes of this thread data.
+    },
+  ],
+  "cpus"?: [
+    "id": <decimal integer>,
+        Identifier for this CPU logical core.
+    "binaryData": [
+      {
+        "kind": <string>,
+            Identifier for some binary data related to this thread to
+            fetch with the jLLDBTraceGetBinaryData packet.
+        "size": <decimal integer>,
+            Size in bytes of this cpu core data.
+      },
+    ]
+  ],
+  "warnings"?: [<string>],
+      Non-fatal messages useful for troubleshooting.
+
+  ... other attributes specific to the given tracing technology
+}
 ```
 
-If no tracing technology is supported for the inferior, or no process is
-running, then an error message is returned.
+**Note:** `tracedThreads` includes all threads traced by both "process tracing"
+and "thread tracing".
 
-### Note
+### Intel Pt
 
-This packet is used by Trace plug-ins (see `lldb_private::Trace.h`) to
-do live tracing. Specifically, the name of the plug-in should match the name
-of the tracing technology returned by this packet.
+If per-cpu process tracing is enabled, "tracedThreads" will contain all
+the threads of the process without any trace buffers. Besides that, the
+"cpus" field will also be returned with per cpu core trace buffers.
+A side effect of per-cpu tracing is that all the threads of unrelated
+processes will also be traced, thus polluting the tracing data.
 
-### Example
+Binary data kinds:
+  - iptTrace: trace buffer for a thread or a cpu.
+  - perfContextSwitchTrace: context switch trace for a cpu generated by
+                            perf_event_open.
+  - procfsCpuInfo: contents of the /proc/cpuinfo file.
 
-```
-send packet: jLLDBTraceSupported
-read packet: {"name":<name>, "description":<description>}/E<error code>;AAAAAAAAA
-```
+Additional attributes:
+  * tscPerfZeroConversion
+    * This field allows converting Intel processor's TSC values to nanoseconds.
+      It is available through the Linux perf_event API when cap_user_time and cap_user_time_zero
+      are set.
+      See the documentation of time_zero in
+      https://man7.org/linux/man-pages/man2/perf_event_open.2.html for more information about
+      the calculation and the meaning of the values in the schema below.
+
+      Schema for this field:
+      ```
+      "tscPerfZeroConversion": {
+        "timeMult": <decimal integer>,
+        "timeShift": <decimal integer>,
+        "timeZero": <decimal integer>,
+      }
+      ```
 
 ## jLLDBTraceStart
 
@@ -341,9 +404,19 @@ response is returned, or an error otherwise.
 This traces existing and future threads of the current process. An error is
 returned if the process is already being traced.
 
+```
+send packet: jLLDBTraceStart:{"type":<type>,...other params}]
+read packet: OK/E<error code>;AAAAAAAAA
+```
+
 ### Thread Tracing
 
 This traces specific threads.
+
+```
+send packet: jLLDBTraceStart:{"type":<type>,"tids":<tids>,...other params}]
+read packet: OK/E<error code>;AAAAAAAAA
+```
 
 ### Input Schema
 
@@ -360,8 +433,7 @@ This traces specific threads.
 }
 ```
 
-### Notes
-
+**Notes:**
 - If "tids" is not provided, then the operation is "process tracing",
   otherwise it's "thread tracing".
 - Each tracing technology can have different levels of support for "thread
@@ -468,20 +540,6 @@ Notes:
  - If "thread tracing" is attempted on a thread already being traced with
    either "thread tracing" or "process tracing", it fails.
 
-### Examples
-
-Process tracing:
-```
-send packet: jLLDBTraceStart:{"type":<type>,...other params}]
-read packet: OK/E<error code>;AAAAAAAAA
-```
-
-Thread tracing:
-```
-send packet: jLLDBTraceStart:{"type":<type>,"tids":<tids>,...other params}]
-read packet: OK/E<error code>;AAAAAAAAA
-```
-
 ## jLLDBTraceStop
 
 Stop tracing a process or its threads using a provided tracing technology.
@@ -493,10 +551,20 @@ response is returned, or an error otherwise.
 Stopping a process trace stops the active traces initiated with
 "thread tracing".
 
+```
+send packet: jLLDBTraceStop:{"type":<type>}]
+read packet: OK/E<error code>;AAAAAAAAA
+```
+
 ### Thread Trace Stopping
 
 This is a best effort request, which tries to stop as many traces as
 possible.
+
+```
+send packet: jLLDBTraceStop:{"type":<type>,"tids":<tids>}]
+read packet: OK/E<error code>;AAAAAAAAA
+```
 
 ### Input Schema
 
@@ -512,161 +580,998 @@ The schema for the input is
 }
 ```
 
-### Notes
-
-- If "tids" is not provided, then the operation is "process trace stopping".
+**Note:** If `tids` is not provided, then the operation is "process trace stopping".
 
 ### Intel Pt
 
 Stopping a specific thread trace started with "process tracing" is allowed.
 
-### Examples
+## jLLDBTraceSupported
 
-Process trace stopping:
-```
-send packet: jLLDBTraceStop:{"type":<type>}]
-read packet: OK/E<error code>;AAAAAAAAA
-```
-Thread trace stopping:
-```
-send packet: jLLDBTraceStop:{"type":<type>,"tids":<tids>}]
-read packet: OK/E<error code>;AAAAAAAAA
-```
-
-## jLLDBTraceGetState
-
-Get the current state of the process and its threads being traced by
-a given trace technology. The response is a JSON object with custom
-information depending on the trace technology. In case of errors, an
-error message is returned.
-
-### Input Schema
+Get the processor tracing type supported by the gdb-server for the current
+inferior. Responses might be different depending on the architecture and
+capabilities of the underlying OS.
 
 ```
-{
-   "type": <string>
-      Tracing technology name, e.g. intel-pt, arm-etm.
-}
+send packet: jLLDBTraceSupported
+read packet: {"name":<name>, "description":<description>}/E<error code>;AAAAAAAAA
 ```
 
 ### Output Schema
 
 ```
-{
-  "tracedThreads": [{
-    "tid": <decimal integer>,
-    "binaryData": [
-      {
-        "kind": <string>,
-            Identifier for some binary data related to this thread to
-            fetch with the jLLDBTraceGetBinaryData packet.
-        "size": <decimal integer>,
-            Size in bytes of this thread data.
-      },
-    ]
-  }],
-  "processBinaryData": [
-    {
-      "kind": <string>,
-          Identifier for some binary data related to this process to
-          fetch with the jLLDBTraceGetBinaryData packet.
-      "size": <decimal integer>,
-          Size in bytes of this thread data.
-    },
-  ],
-  "cpus"?: [
-    "id": <decimal integer>,
-        Identifier for this CPU logical core.
-    "binaryData": [
-      {
-        "kind": <string>,
-            Identifier for some binary data related to this thread to
-            fetch with the jLLDBTraceGetBinaryData packet.
-        "size": <decimal integer>,
-            Size in bytes of this cpu core data.
-      },
-    ]
-  ],
-  "warnings"?: [<string>],
-      Non-fatal messages useful for troubleshooting.
-
-  ... other attributes specific to the given tracing technology
-}
+ {
+   "name": <string>,
+       Tracing technology name, e.g. intel-pt, arm-etm.
+   "description": <string>,
+       Description for this technology.
+ }
 ```
 
-### Notes
+If no tracing technology is supported for the inferior, or no process is
+running, then an error message is returned.
 
- - "traceThreads" includes all thread traced by both "process tracing" and
-   "thread tracing".
+**Note:** This packet is used by Trace plug-ins (see `lldb_private::Trace.h`) to
+do live tracing. Specifically, the name of the plug-in should match the name
+of the tracing technology returned by this packet.
 
-### Intel Pt
+## jThreadExtendedInfo
 
-If per-cpu process tracing is enabled, "tracedThreads" will contain all
-the threads of the process without any trace buffers. Besides that, the
-"cpus" field will also be returned with per cpu core trace buffers.
-A side effect of per-cpu tracing is that all the threads of unrelated
-processes will also be traced, thus polluting the tracing data.
+This packet, which takes its arguments as JSON and sends its reply as
+JSON, allows the gdb remote stub to provide additional information
+about a given thread.
 
-Binary data kinds:
-  - iptTrace: trace buffer for a thread or a cpu.
-  - perfContextSwitchTrace: context switch trace for a cpu generated by
-                            perf_event_open.
-  - procfsCpuInfo: contents of the /proc/cpuinfo file.
+This packet takes its arguments in [JSON](http://www.json.org).
+At a minimum, a thread must be specified, for example:
+```
+jThreadExtendedInfo:{"thread":612910}
+```
 
-Additional attributes:
-  * tscPerfZeroConversion
-    * This field allows converting Intel processor's TSC values to nanoseconds.
-      It is available through the Linux perf_event API when cap_user_time and cap_user_time_zero
-      are set.
-      See the documentation of time_zero in
-      https://man7.org/linux/man-pages/man2/perf_event_open.2.html for more information about
-      the calculation and the meaning of the values in the schema below.
+Because this is a JSON string, the thread number is provided in base 10.
+Additional key-value pairs may be provided by lldb to the gdb remote
+stub.  For instance, on some versions of macOS, lldb can read offset
+information out of the system libraries.  Using those offsets, debugserver
+is able to find the Thread Specific Address (TSD) for a thread and include
+that in the return information.  So lldb will send these additional fields
+like so:
+```
+jThreadExtendedInfo:{"plo_pthread_tsd_base_address_offset":0,"plo_pthread_tsd_base_offset":224,"plo_pthread_tsd_entry_size":8,"thread":612910}
+```
 
-      Schema for this field:
-      ```
-      "tscPerfZeroConversion": {
-        "timeMult": <decimal integer>,
-        "timeShift": <decimal integer>,
-        "timeZero": <decimal integer>,
+There are no requirements for what is included in the response.  A simple
+reply on a OS X Yosemite / iOS 8 may include the pthread_t value, the
+Thread Specific Data (TSD) address, the dispatch_queue_t value if the thread
+is associated with a GCD queue, and the requested Quality of Service (QoS)
+information about that thread.  For instance, a reply may look like:
+```
+{"tsd_address":4371349728,"requested_qos":{"enum_value":33,"constant_name":"QOS_CLASS_USER_INTERACTIVE","printable_name":"User Interactive"},"pthread_t":4371349504,"dispatch_queue_t":140735087127872}
+```
+
+`tsd_address`, `pthread_t`, and `dispatch_queue_t` are all simple key-value pairs.
+The JSON standard requires that numbers be expressed in base 10 - so all of
+these are. `requested_qos` is a dictionary with three key-value pairs in it -
+so the UI layer may choose the form most appropriate for displaying to the user.
+
+Sending JSON over gdb-remote protocol introduces some problems.  We may be
+sending strings with arbitrary contents in them, including the `#`, `$`, and `*`
+characters that have special meaning in gdb-remote protocol and cannot occur
+in the middle of the string. The standard solution for this would be to require
+ascii-hex encoding of all strings, or ascii-hex encode the entire JSON payload.
+
+Instead, the binary escaping convention is used for JSON data.  This convention
+(e.g. used for the `X` packet) says that if `#`, `$`, `*`, or `}` are to occur in
+the payload, the character `}` (`0x7d`) is emitted, then the metacharacter is emitted
+xor'ed by `0x20`. The `}` character occurs in every JSON payload at least once, and
+`} ^ 0x20` happens to be `]` so the raw packet characters for a request will look
+like:
+```
+jThreadExtendedInfo:{"thread":612910}]
+```
+
+**Priority To Implement:** Low. This packet is only needed if the gdb remote stub
+wants to provide interesting additional information about a thread for the user.
+
+## jThreadsInfo
+
+Ask for the server for thread stop information of all threads.
+
+The data in this packet is very similar to the stop reply packets, but is packaged in
+JSON and uses JSON arrays where applicable. The JSON output looks like:
+```
+    [
+      { "tid":1580681,
+        "metype":6,
+        "medata":[2,0],
+        "reason":"exception",
+        "qaddr":140735118423168,
+        "registers": {
+          "0":"8000000000000000",
+          "1":"0000000000000000",
+          "2":"20fabf5fff7f0000",
+          "3":"e8f8bf5fff7f0000",
+          "4":"0100000000000000",
+          "5":"d8f8bf5fff7f0000",
+          "6":"b0f8bf5fff7f0000",
+          "7":"20f4bf5fff7f0000",
+          "8":"8000000000000000",
+          "9":"61a8db78a61500db",
+          "10":"3200000000000000",
+          "11":"4602000000000000",
+          "12":"0000000000000000",
+          "13":"0000000000000000",
+          "14":"0000000000000000",
+          "15":"0000000000000000",
+          "16":"960b000001000000",
+          "17":"0202000000000000",
+          "18":"2b00000000000000",
+          "19":"0000000000000000",
+          "20":"0000000000000000"
+        },
+        "memory":[
+          {"address":140734799804592,"bytes":"c8f8bf5fff7f0000c9a59e8cff7f0000"},
+          {"address":140734799804616,"bytes":"00000000000000000100000000000000"}
+        ]
       }
-      ```
-
-### Example
-
-```
-send packet: jLLDBTraceGetState:{"type":<type>}]
-read packet: {...object}/E<error code>;AAAAAAAAA
+    ]
 ```
 
-## jLLDBTraceGetBinaryData
+It contains an array of dictionaries with all of the key value pairs that are
+normally in the stop reply packet, including the expedited registers. The registers are
+passed as hex-encoded JSON string in debuggee-endian byte order. Note that the register
+numbers are decimal numbers, unlike the stop-reply packet, where they are written in
+hex. The packet also contains expedited memory in the `memory` key.  This allows the
+server to expedite memory that the client is likely to use (e.g., areas around the
+stack pointer, which are needed for computing backtraces) and it reduces the packet
+count.
 
-Get binary data given a trace technology and a data identifier.
-The input is specified as a JSON object and the response has the same format
-as the "binary memory read" (aka "x") packet. In case of failures, an error
-message is returned.
+On macOS with debugserver, we expedite the frame pointer backchain for a thread
+(up to 256 entries) by reading 2 pointers worth of bytes at the frame pointer (for
+the previous FP and PC), and follow the backchain. Most backtraces on macOS and
+iOS now don't require us to read any memory!
 
-### Schema
+**Priority To Implement:** Low
 
-The schema for the input is:
+This is a performance optimization, which speeds up debugging by avoiding
+multiple round-trips for retrieving thread information. The information from this
+packet can be retrieved using a combination of `qThreadStopInfo` and `m` packets.
+
+## QEnvironment:NAME=VALUE
+
+Setup the environment up for a new child process that will soon be
+launched using the "A" packet.
+
+NB: key/value pairs are sent as-is so gdb-remote protocol meta characters
+(e.g. `#` or `$`) are not acceptable.  If any non-printable or
+metacharacters are present in the strings, `QEnvironmentHexEncoded`
+should be used instead if it is available.  If you don't want to
+scan the environment strings before sending, prefer
+the `QEnvironmentHexEncoded` packet over `QEnvironment`, if it is
+available.
+
+Both GDB and LLDB support passing down environment variables. Is it ok to
+respond with a `$#00` (unimplemented):
 ```
-{
- "type": <string>,
-     Tracing technology name, e.g. intel-pt, arm-etm.
- "kind": <string>,
-     Identifier for the data.
- "cpuId": <Optional decimal>,
-     Core id in decimal if the data belongs to a CPU core.
- "tid"?: <Optional decimal>,
-     Tid in decimal if the data belongs to a thread.
-}
+send packet: $QEnvironment:ACK_COLOR_FILENAME=bold yellow#00
+read packet: $OK#00
+```
+This packet can be sent one or more times _prior_ to sending a "A" packet.
+
+**Priority To Implement:** Low. Only needed if the remote target wants to launch
+a target after making a connection to a GDB server that isn't already connected to
+an inferior process.
+
+## QEnvironmentHexEncoded:HEX-ENCODING(NAME=VALUE)
+
+Setup the environment up for a new child process that will soon be
+launched using the "A" packet.
+
+The only difference between this packet and `QEnvironment` is that the
+environment key-value pair is ascii hex encoded for transmission.
+This allows values with gdb-remote metacharacters like `#` to be sent.
+
+Both GDB and LLDB support passing down environment variables. Is it ok to
+respond with a `$#00` (unimplemented):
+```
+send packet: $QEnvironment:41434b5f434f4c4f525f46494c454e414d453d626f6c642379656c6c6f77#00
+read packet: $OK#00
+```
+This packet can be sent one or more times _prior_ to sending a "A" packet.
+
+**Priority To Implement:** Low. Only needed if the remote target wants to launch
+a target after making a connection to a GDB server that isn't already connected to
+an inferior process.
+
+## QEnableCompression
+
+This packet enables compression of the packets that the debug stub sends to lldb.
+If the debug stub can support compression, it indictes this in the reply of the
+"qSupported" packet. For example:
+```
+LLDB SENDS:    qSupported:xmlRegisters=i386,arm,mips
+STUB REPLIES:  qXfer:features:read+;SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;
 ```
 
-### Example
+If lldb knows how to use any of these compression algorithms, it can ask that this
+compression mode be enabled.
+```
+QEnableCompression:type:zlib-deflate;
+```
+
+The debug stub should reply with an uncompressed `OK` packet to indicate that the
+request was accepted.  All further packets the stub sends will use this compression.
+
+Packets are compressed as the last step before they are sent from the stub, and
+decompressed as the first step after they are received.  The packet format in compressed
+mode becomes one of two:
+```
+$N<uncompressed payload>#00
+
+$C<size of uncompressed payload in base 10>:<compressed payload>#00
+```
+
+Where `#00` is the actual checksum value if noack mode is not enabled. The checksum
+value is for the `N<uncompressed payload>` or
+`C<size of uncompressed payload in base 10>:<compressed payload>` bytes in the packet.
+
+The size of the uncompressed payload in base 10 is provided because it will simplify
+decompression if the final buffer size needed is known ahead of time.
+
+Compression on low-latency connections is unlikely to be an improvement. Particularly
+when the debug stub and lldb are running on the same host. It should only be used
+for slow connections, and likely only for larger packets.
+
+Example compression algorithms that may be used include:
+* `zlib-deflate` -
+  The raw DEFLATE format as described in IETF RFC 1951.  With the ZLIB library, you
+  can compress to this format with an initialization like
+      deflateInit2 (&stream, 5, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY)
+  and you can decompress with an initialization like
+      inflateInit2 (&stream, -15).
+* `lz4` -
+  https://en.wikipedia.org/wiki/LZ4_(compression_algorithm)
+  https://github.com/Cyan4973/lz4
+  The libcompression APIs on darwin systems call this `COMPRESSION_LZ4_RAW`.
+* `lzfse` -
+  Compression algorithm added in macOS 10.11, with open source C reference
+  implementation on github.
+  https://en.wikipedia.org/wiki/LZFSE
+  https://github.com/lzfse/lzfse
+* `lzma` -
+  libcompression implements "LZMA level 6", the default compression for the
+  open source LZMA implementation.
+
+
+## QEnableErrorStrings
+
+This packet enables reporting of Error strings in remote packet
+replies from the server to client. If the server supports this
+feature, it should send an OK response.
 
 ```
-send packet: jLLDBTraceGetBinaryData:{"type":<type>,"kind":<query>,"tid":<tid>,"offset":<offset>,"size":<size>}]
-read packet: <binary data>/E<error code>;AAAAAAAAA
+send packet: $QEnableErrorStrings
+read packet: $OK#00
 ```
+
+The client can expect the following error replies if this feature is enabled in
+the server:
+```
+EXX;AAAAAAAAA
+```
+where `AAAAAAAAA` will be a hex encoded ASCII string.
+`XX`` is hex encoded byte number.
+
+It must be noted that even if the client has enabled reporting
+strings in error replies, it must not expect error strings to all
+error replies.
+
+**Priority To Implement:** Low. Only needed if the remote target wants to
+provide strings that are human readable along with an error code.
+
+## QListThreadsInStopReply
+
+Enable the `threads:` and `thread-pcs:` data in the question-mark packet
+("T packet") responses when the stub reports that a program has
+stopped executing.
+
+```
+send packet: QListThreadsInStopReply
+read packet: OK
+```
+
+**Priority To Implement:** Performance.  This is a performance benefit to lldb
+if the thread id's and thread pc values are provided to lldb in the T stop packet
+-- if they are not provided to lldb, lldb will likely need to send one to
+two packets per thread to fetch the data at every private stop.
+
+## QRestoreRegisterState:\<save_id\> / QRestoreRegisterState:\<save_id\>;thread:XXXX;
+
+The `QRestoreRegisterState` packet tells the remote debugserver to
+restore all registers using the `save_id` which is an unsigned
+integer that was returned from a previous call to
+`QSaveRegisterState`. The restoration process can only be done once
+as the data backing the register state will be freed upon the
+completion of the `QRestoreRegisterState` command.
+
+If thread suffixes are enabled the second form of this packet is
+used, otherwise the first form is used.
+
+The response is either:
+* `OK` - if all registers were successfully restored
+* `EXX` - for any errors
+
+**Priority To Implement:** Low, this is mostly a convenience packet to avoid
+having to send all registers with a `g` packet. It should only be implemented
+if support for the `QSaveRegisterState` is added.
+
+## QSaveRegisterState / QSaveRegisterState;thread:XXXX;
+
+The `QSaveRegisterState` packet tells the remote debugserver to save
+all registers and return a non-zero unique integer ID that
+represents these save registers. If thread suffixes are enabled the
+second form of this packet is used, otherwise the first form is
+used. This packet is called prior to executing an expression, so
+the remote GDB server should do anything it needs to in order to
+ensure the registers that are saved are correct. On macOS this
+involves calling `thread_abort_safely(mach_port_t thread)` to
+ensure we get the correct registers for a thread in case it is
+currently having code run on its behalf in the kernel.
+
+The response is either:
+* `<unsigned int>` - The save_id result is a non-zero unsigned integer value
+                 that can be passed back to the GDB server using a
+                 `QRestoreRegisterState` packet to restore the registers
+                 one time.
+* `EXX` - or an error code in the form of `EXX` where `XX` is a
+          hex error code.
+
+**Priority To Implement:** Low, this is mostly a convenience packet to avoid
+having to send all registers with a `g` packet. It should only be implemented if
+support for the `QRestoreRegisterState` is added.
+
+## QSetDetachOnError
+
+Sets what the server should do when the communication channel with LLDB
+goes down. Either kill the inferior process (`0`) or remove breakpoints and
+detach (`1`).
+
+The data in this packet is a single a character, which should be `0` if the
+inferior process should be killed, or `1` if the server should remove all
+breakpoints and detach from the inferior.
+
+**Priority To Implement:** Low. Only required if the target wants to keep the
+inferior process alive when the communication channel goes down.
+
+## QSetDisableASLR:\<bool\>
+
+Enable or disable ASLR on the next "A" packet.
+
+Or control if ASLR is enabled/disabled:
+```
+send packet: QSetDisableASLR:1
+read packet: OK
+
+send packet: QSetDisableASLR:0
+read packet: OK
+```
+This packet must be sent  _prior_ to sending a "A" packet.
+
+**Priority To Implement:** Low. Only needed if the remote target wants to launch
+a target after making a connection to a GDB server that isn't already connected to
+an inferior process and if the target supports disabling ASLR
+(Address space layout randomization).
+
+## QSetSTDIN:\<ascii-hex-path\> / QSetSTDOUT:\<ascii-hex-path\> / QSetSTDERR:\<ascii-hex-path\>
+
+Setup where STDIN, STDOUT, and STDERR go prior to sending an "A"
+packet.
+
+When launching a program through the GDB remote protocol with the "A" packet,
+you might also want to specify where stdin/out/err go:
+```
+QSetSTDIN:<ascii-hex-path>
+QSetSTDOUT:<ascii-hex-path>
+QSetSTDERR:<ascii-hex-path>
+```
+These packets must be sent  _prior_ to sending a "A" packet.
+
+**Priority To Implement:** Low. Only needed if the remote target wants to launch
+a target after making a connection to a GDB server that isn't already connected to
+an inferior process.
+
+## QSetWorkingDir:\<ascii-hex-path\>
+
+Set the working directory prior to sending an "A" packet.
+
+Or specify the working directory:
+```
+QSetWorkingDir:<ascii-hex-path>
+```
+This packet must be sent  _prior_ to sending a "A" packet.
+
+**Priority To Implement:** Low. Only needed if the remote target wants to launch
+a target after making a connection to a GDB server that isn't already connected to
+an inferior process.
+
+## QStartNoAckMode
+
+Try to enable no ACK mode to skip sending ACKs and NACKs.
+
+Having to send an ACK/NACK after every packet slows things down a bit, so we
+have a way to disable ACK packets to minimize the traffic for reliable
+communication interfaces (like sockets). Below GDB or LLDB will send this
+packet to try and disable ACKs. All lines that start with "send packet: " are
+from GDB/LLDB, and all lines that start with "read packet: " are from the GDB
+remote server:
+```
+send packet: $QStartNoAckMode#b0
+read packet: +
+read packet: $OK#9a
+send packet: +
+```
+
+**Priority To Implement:** High. Any GDB remote server that can implement this
+should if the connection is reliable. This improves packet throughput and increases
+the performance of the connection.
+
+## QSupported
+
+Query the GDB remote server for features it supports
+
+QSupported is a standard GDB Remote Serial Protocol packet, but
+there are several additions to the response that lldb can parse.
+They are not all listed here.
+
+An example exchange:
+```
+send packet: qSupported:xmlRegisters=i386,arm,mips,arc;multiprocess+;fork-events+;vfork-events+
+
+read packet: qXfer:features:read+;PacketSize=20000;qEcho+;native-signals+;SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;SupportedWatchpointTypes=aarch64-mask,aarch64-bas;
+```
+
+In the example above, three lldb extensions are shown:
+
+  * `PacketSize=20000`
+    * The base 16 maximum packet size that the stub can handle.
+  * `SupportedCompressions=<item,item,...>`
+    * A list of compression types that the stub can use to compress packets
+    when the QEnableCompression packet is used to request one of them.
+  * `SupportedWatchpointTypes=<item,item,...>`
+    * A list of watchpoint types that this stub can manage. Currently defined 
+      names are:
+        * `x86_64` - 64-bit x86-64 watchpoints (1, 2, 4, 8 byte watchpoints
+          aligned to those amounts)
+        * `aarch64-bas`  AArch64 Byte Address Select watchpoints
+                     (any number of contiguous bytes within a doubleword)
+        * `aarch64-mask` AArch64 MASK watchpoints
+                     (any power-of-2 region of memory from 8 to 2GB, aligned)
+
+      If nothing is specified, lldb will default to sending power-of-2
+      watchpoints, up to a pointer size, `sizeof(void*)`, a reasonable
+      baseline assumption.
+
+**Priority To Implement:** Optional
+
+## QThreadSuffixSupported
+
+Try to enable thread suffix support for the `g`, `G`, `p`, and `P` packets.
+
+When reading thread registers, you currently need to set the current
+thread, then read the registers. This is kind of cumbersome, so we added the
+ability to query if the remote GDB server supports adding a `thread:<tid>;`
+suffix to all packets that request information for a thread. To test if the
+remote GDB server supports this feature:
+```
+send packet: $QThreadSuffixSupported#00
+read packet: OK
+```
+
+If `OK` is returned, then the `g`, `G`, `p` and `P` packets can accept a
+thread suffix. So to send a `g` packet (read all register values):
+```
+send packet: $g;thread:<tid>;#00
+read packet: ....
+
+send packet: $G;thread:<tid>;#00
+read packet: ....
+
+send packet: $p1a;thread:<tid>;#00
+read packet: ....
+
+send packet: $P1a=1234abcd;thread:<tid>;#00
+read packet: ....
+```
+
+otherwise, without this you would need to always send two packets:
+```
+send packet: $Hg<tid>#00
+read packet: ....
+send packet: $g#00
+read packet: ....
+```
+
+We also added support for allocating and deallocating memory. We use this to
+allocate memory so we can run JITed code.
+
+**Priority To Implement:** High
+
+Adding a thread suffix allows us to read and write registers
+more efficiently and stops us from having to select a thread with
+one packet and then read registers with a second packet. It also
+makes sure that no errors can occur where the debugger thinks it
+already has a thread selected (see the `Hg` packet from the standard
+GDB remote protocol documentation) yet the remote GDB server actually
+has another thread selected.
+
+## qAttachOrWaitSupported
+
+This is a binary "is it supported" query. Return OK if you support
+`vAttachOrWait`.
+
+**Priority To Implement:** Low. This is required if you support `vAttachOrWait`,
+otherwise no support is needed since the standard "I don't recognize this packet"
+response will do the right thing.
+
+## qFileLoadAddress:\<file_path\>
+
+Get the load address of a memory mapped file.
+The load address is defined as the address of the first memory
+region what contains data mapped from the specified file.
+
+The response is either:
+* `<unsigned-hex64>` - Load address of the file in big endian encoding
+* `E01` - the requested file isn't loaded
+* `EXX` - for any other errors
+
+**Priority To Implement:** Low, required if dynamic linker don't fill in the load
+address of some object file in the rendezvous data structure.
+
+## qfProcessInfo / qsProcessInfo (Platform Extension)
+
+Get the first process info (`qfProcessInfo`) or subsequent process
+info (`qsProcessInfo`) for one or more processes on the remote
+platform. The first call gets the first match and subsequent calls
+to `qsProcessInfo` gets the subsequent matches. Return an error `EXX`,
+where `XX` are two hex digits, when no more matches are available.
+
+The `qfProcessInfo` packet can be followed by a `:` and
+some key value pairs. The key value pairs in the command are:
+* `name` - `ascii-hex` -
+  An ASCII hex string that contains the name of the process that will be matched.
+* `name_match` - `enum` -
+  One of:
+    * `equals`
+    * `starts_with`
+    * `ends_with`
+    * `contains`
+    * `regex`
+* `pid` - `integer`- A string value containing the decimal process ID
+* `parent_pid` - `integer` - A string value containing the decimal parent process ID
+* `uid` - `integer` - A string value containing the decimal user ID
+* `gid` - `integer` - A string value containing the decimal group ID
+* `euid` - `integer` - A string value containing the decimal effective user ID
+* `egid` - `integer` - A string value containing the decimal effective group ID
+* `all_users` - `bool` -
+  A boolean value that specifies if processes should
+  be listed for all users, not just the user that the
+  platform is running as
+* `triple` - `string` -
+  An ASCII triple string (`x86_64`, `x86_64-apple-macosx`, `armv7-apple-ios`)
+* `args` - `string` -
+  A string value containing the process arguments separated by the character `-`,
+  where each argument is hex-encoded. It includes `argv[0]`.
+
+The response consists of key/value pairs where the key is separated from the
+values with colons and each pair is terminated with a semi colon. For a list
+of the key/value pairs in the response see the `qProcessInfoPID` packet
+documentation.
+
+Sample packet/response:
+```
+send packet: $qfProcessInfo#00
+read packet: $pid:60001;ppid:59948;uid:7746;gid:11;euid:7746;egid:11;name:6c6c6462;triple:x86_64-apple-macosx;#00
+send packet: $qsProcessInfo#00
+read packet: $pid:59992;ppid:192;uid:7746;gid:11;euid:7746;egid:11;name:6d64776f726b6572;triple:x86_64-apple-macosx;#00
+send packet: $qsProcessInfo#00
+read packet: $E04#00
+```
+
+**Priority To Implement:** Required
+
+
+## qGDBServerVersion
+
+Get version information about this implementation of the gdb-remote
+protocol.
+
+The goal of this packet is to provide enough information about an
+implementation of the gdb-remote-protocol server that lldb can
+work around implementation problems that are discovered after the
+version has been released/deployed.  The name and version number
+should be sufficiently unique that lldb can unambiguously identify
+the origin of the program (for instance, debugserver from lldb) and
+the version/submission number/patch level of the program - whatever
+is appropriate for your server implementation.
+
+The packet follows the key-value pair model, semicolon separated.
+```
+send packet: $qGDBServerVersion#00
+read packet: $name:debugserver;version:310.2;#00
+```
+
+Other clients may find other key-value pairs to be useful for identifying
+a gdb stub.  Patch level, release name, build number may all be keys that
+better describe your implementation's version.
+
+Suggested key names:
+* `name`: the name of your remote server - "debugserver" is the lldb standard
+          implementation
+* `version`: identifies the version number of this server
+* `patch_level`: the patch level of this server
+* `release_name`: the name of this release, if your project uses names
+* `build_number`: if you use a build system with increasing build numbers,
+                  this may be the right key name for your server
+* `major_version`: major version number
+* `minor_version`: minor version number
+
+**Priority To Implement:** High. This packet is usually very easy to implement
+and can help LLDB to work around bugs in a server's implementation when they
+are found.
+
+## qGetWorkingDir
+
+Get the current working directory of the platform stub in
+ASCII hex encoding.
+
+```
+receive: qGetWorkingDir
+send:    2f4170706c65496e7465726e616c2f6c6c64622f73657474696e67732f342f5465737453657474696e67732e746573745f646973617373656d626c65725f73657474696e6773
+```
+
+## qHostInfo
+
+Get information about the host we are remotely connected to.
+
+LLDB supports a host info call that gets all sorts of details of the system
+that is being debugged:
+```
+send packet: $qHostInfo#00
+read packet: $cputype:16777223;cpusubtype:3;ostype:darwin;vendor:apple;endian:little;ptrsize:8;#00
+```
+
+Key value pairs are one of:
+* `cputype`: is a number that is the mach-o CPU type that is being debugged (base 10)
+* `cpusubtype`: is a number that is the mach-o CPU subtype type that is being debugged (base 10)
+* `triple`: a string for the target triple (x86_64-apple-macosx) that can be used to specify arch + vendor + os in one entry
+* `vendor`: a string for the vendor (apple), not needed if "triple" is specified
+* `ostype`: a string for the OS being debugged (macosx, linux, freebsd, ios, watchos), not needed if "triple" is specified
+* `endian`: is one of "little", "big", or "pdp"
+* `ptrsize`: an unsigned number that represents how big pointers are in bytes on the debug target
+* `hostname`: the hostname of the host that is running the GDB server if available
+* `os_build`: a string for the OS build for the remote host as a string value
+* `os_kernel`: a string describing the kernel version
+* `os_version`: a version string that represents the current OS version (10.8.2)
+* `watchpoint_exceptions_received`: one of "before" or "after" to specify if a watchpoint is triggered before or after the pc when it stops
+* `default_packet_timeout`: an unsigned number that specifies the default timeout in seconds
+* `distribution_id`: optional. For linux, specifies distribution id (e.g. ubuntu, fedora, etc.)
+* `osmajor`: optional, specifies the major version number of the OS (e.g. for macOS 10.12.2, it would be 10)
+* `osminor`: optional, specifies the minor version number of the OS (e.g. for macOS 10.12.2, it would be 12)
+* `ospatch`: optional, specifies the patch level number of the OS (e.g. for macOS 10.12.2, it would be 2)
+* `vm-page-size`: optional, specifies the target system VM page size, base 10.
+  Needed for the "dirty-pages:" list in the qMemoryRegionInfo
+  packet, where a list of dirty pages is sent from the remote
+  stub.  This page size tells lldb how large each dirty page is.
+* `addressing_bits`: optional, specifies how many bits in addresses are
+	significant for addressing, base 10.  If bits 38..0
+	in a 64-bit pointer are significant for addressing,
+	then the value is 39.  This is needed on e.g. AArch64
+	v8.3 ABIs that use pointer authentication, so lldb
+	knows which bits to clear/set to get the actual
+	addresses.
+* `low_mem_addressing_bits`: optional, specifies how many bits in
+  addresses in low memory are significant for addressing, base 10.
+  AArch64 can have different page table setups for low and high
+  memory, and therefore a different number of bits used for addressing.
+* `high_mem_addressing_bits`: optional, specifies how many bits in
+  addresses in high memory are significant for addressing, base 10.
+  AArch64 can have different page table setups for low and high
+  memory, and therefore a different number of bits used for addressing.
+
+**Priority To Implement:** High. This packet is usually very easy to implement
+and can help LLDB select the correct plug-ins for the job based on the target
+triple information that is supplied.
+
+## qKillSpawnedProcess (Platform Extension)
+
+Kill a process running on the target system.
+
+```
+receive: qKillSpawnedProcess:1337
+send:    OK
+```
+The request packet has the process ID in base 10.
+
+## qLaunchGDBServer (Platform Extension)
+
+Have the remote platform launch a GDB server.
+
+The `qLaunchGDBServer` packet must be followed by a `:` and
+some key value pairs. The key value pairs in the command are:
+* `port` - `integer` -
+  A string value containing the decimal port ID or zero if the port should be
+  bound and returned
+* `host` - `integer` -
+  The host that connections should be limited to when the GDB server is connected to.
+
+Sample packet/response:
+```
+send packet: $qLaunchGDBServer:port:0;host:lldb.apple.com;#00
+read packet: $pid:60025;port:50776;#00
+```
+
+The `pid` key/value pair is only specified if the remote platform launched
+a separate process for the GDB remote server and can be omitted if no
+process was separately launched.
+
+The `port` key/value pair in the response lets clients know what port number
+to attach to in case zero was specified as the "port" in the sent command.
+
+**Priority To Implement:** Required
+
+
+## qLaunchSuccess
+
+Check whether launching a process with the `A` packet succeeded.
+
+Returns the status of the last attempt to launch a process.
+Either `OK` if no error ocurred, or `E` followed by a string
+describing the error.
+
+**Priority To Implement:** High, launching processes is a key part of LLDB's
+platform mode.
+
+## qMemoryRegionInfo:\<addr\>
+
+Get information about the address range that contains `<addr>`.
+
+We added a way to get information for a memory region. The packet is:
+```
+qMemoryRegionInfo:<addr>
+```
+
+Where `<addr>` is a big endian hex address. The response is returned in a series
+of tuples like the data returned in a stop reply packet. The currently valid
+tuples to return are:
+* `start:<start-addr>;` - `<start-addr>` is a big endian hex address that is
+                          the start address of the range that contains `<addr>`
+* `size:<size>;` - `<size>` is a big endian hex byte size of the address
+                   of the range that contains `<addr>`
+* `permissions:<permissions>;` - `<permissions>` is a string that contains one
+                                 or more of the characters from `rwx`
+* `name:<name>;` - `<name>` is a hex encoded string that contains the name of
+                   the memory region mapped at the given address. In case of
+                   regions backed by a file it have to be the absolute path of
+                   the file while for anonymous regions it have to be the name
+                   associated to the region if that is available.
+* `flags:<flags-string>;` - where `<flags-string>` is a space separated string
+                            of flag names. Currently the only supported flag
+                            is `mt` for AArch64 memory tagging. lldb will
+                            ignore any other flags in this field.
+* `type:[<type>][,<type>];` - memory types that apply to this region, e.g.
+                              `stack` for stack memory.
+* `error:<ascii-byte-error-string>;` - where `<ascii-byte-error-string>` is
+                                       a hex encoded string value that
+                                       contains an error string
+* `dirty-pages:[<hexaddr>][,<hexaddr];` -
+  A list of memory pages within this
+  region that are "dirty" -- they have been modified.
+  Page addresses are in base 16. The size of a page can
+  be found from the `qHostInfo`'s `page-size` key-value.
+  
+  If the stub supports identifying dirty pages within a
+  memory region, this key should always be present for all
+  `qMemoryRegionInfo` replies.  This key with no pages
+  listed (`dirty-pages:;`) indicates no dirty pages in
+  this memory region.  The *absence* of this key means
+  that this stub cannot determine dirty pages.
+
+If the address requested is not in a mapped region (e.g. we've jumped through
+a NULL pointer and are at 0x0) currently lldb expects to get back the size
+of the unmapped region -- that is, the distance to the next valid region.
+For instance, with a macOS process which has nothing mapped in the first
+4GB of its address space, if we're asking about address 0x2:
+```
+  qMemoryRegionInfo:2
+  start:2;size:fffffffe;
+```
+
+The lack of `permissions:` indicates that none of read/write/execute are valid
+for this region.
+
+**Priority To Implement:** Medium
+
+This is nice to have, but it isn't necessary. It helps LLDB
+do stack unwinding when we branch into memory that isn't executable.
+If we can detect that the code we are stopped in isn't executable,
+then we can recover registers for stack frames above the current
+frame. Otherwise we must assume we are in some JIT'ed code (not JIT
+code that LLDB has made) and assume that no registers are available
+in higher stack frames.
+
+## qModuleInfo:\<module_path\>;\<arch triple\>
+
+Get information for a module by given module path and architecture.
+
+The response is either:
+* `(uuid|md5):...;triple:...;file_offset:...;file_size...;`
+* `EXX` - for any errors
+
+**Priority To Implement:** Optional, required if dynamic loader cannot fetch
+module's information like UUID directly from inferior's memory.
+
+## qPathComplete (Platform Extension)
+
+Get a list of matched disk files/directories by passing a boolean flag
+and a partial path.
+
+```
+receive: qPathComplete:0,6d61696e
+send:    M6d61696e2e637070
+receive: qPathComplete:1,746573
+send:    M746573742f,74657374732f
+```
+
+If the first argument is zero, the result should contain all
+files (including directories) starting with the given path. If the
+argument is one, the result should contain only directories.
+
+The result should be a comma-separated list of hex-encoded paths.
+Paths denoting a directory should end with a directory separator (`/` or `\`.
+
+
+## qPlatform_mkdir
+
+Creates a new directory on the connected remote machine.
+
+Request: `qPlatform_mkdir:<hex-file-mode>,<ascii-hex-path>`
+
+The request packet has the fields:
+   1. mode bits in base 16
+   2. file path in ascii-hex encoding
+
+Reply: 
+  * `F<mkdir-return-code>`
+    (mkdir called successfully and returned with the given return code)
+  * `Exx` (An error occurred)
+
+**Priority To Implement:** Low
+
+## qPlatform_shell
+
+Run a command in a shell on the connected remote machine.
+
+The request consists of the command to be executed encoded in ASCII characters
+converted into hex bytes.
+
+The response to this packet consists of the letter F followed by the return code,
+followed by the signal number (or 0 if no signal was delivered), and escaped bytes
+of captured program output.
+
+Below is an example communication from a client sending an "ls -la" command:
+```
+send packet: $qPlatform_shell:6c73202d6c61,00000002#ec
+read packet: $F,00000000,00000000,total 4736
+drwxrwxr-x 16 username groupname    4096 Aug 15 21:36 .
+drwxr-xr-x 17 username groupname    4096 Aug 10 16:39 ..
+-rw-rw-r--  1 username groupname   73875 Aug 12 16:46 notes.txt
+drwxrwxr-x  5 username groupname    4096 Aug 15 21:36 source.cpp
+-rw-r--r--  1 username groupname    2792 Aug 12 16:46 a.out
+-rw-r--r--  1 username groupname    3190 Aug 12 16:46 Makefile
+```
+
+**Priority To Implement:** High
+
+## qProcessInfo
+
+Get information about the process we are currently debugging.
+
+**Priority To Implement:** Medium
+
+On systems which can launch multiple different architecture processes,
+the qHostInfo may not disambiguate sufficiently to know what kind of
+process is being debugged.
+
+For example on a 64-bit x86 Mac system both 32-bit and 64-bit user processes are possible,
+and with Mach-O universal files, the executable file may contain both 32- and
+64-bit slices so it may be impossible to know until you're attached to a real
+process to know what you're working with.
+
+All numeric fields return base 16 numbers without any "0x" prefix.
+
+An i386 process:
+```
+send packet: $qProcessInfo#00
+read packet: $pid:42a8;parent-pid:42bf;real-uid:ecf;real-gid:b;effective-uid:ecf;effective-gid:b;cputype:7;cpusubtype:3;ostype:macosx;vendor:apple;endian:little;ptrsize:4;#00
+```
+
+An x86_64 process:
+```
+send packet: $qProcessInfo#00
+read packet: $pid:d22c;parent-pid:d34d;real-uid:ecf;real-gid:b;effective-uid:ecf;effective-gid:b;cputype:1000007;cpusubtype:3;ostype:macosx;vendor:apple;endian:little;ptrsize:8;#00
+```
+
+Key value pairs include:
+* `pid`: the process id
+* `parent-pid`: the process of the parent process (often debugserver will become the parent when attaching)
+* `real-uid`: the real user id of the process
+* `real-gid`: the real group id of the process
+* `effective-uid`: the effective user id of the process
+* `effective-gid`: the effective group id of the process
+* `cputype`: the Mach-O CPU type of the process  (base 16)
+* `cpusubtype`: the Mach-O CPU subtype of the process  (base 16)
+* `ostype`: is a string the represents the OS being debugged (darwin, linux, freebsd)
+* `vendor`: is a string that represents the vendor (apple)
+* `endian`: is one of "little", "big", or "pdp"
+* `ptrsize`: is a number that represents how big pointers are in bytes
+* `main-binary-uuid`: is the UUID of a firmware type binary that the gdb stub knows about
+* `main-binary-address`: is the load address of the firmware type binary
+* `main-binary-slide`: is the slide of the firmware type binary, if address isn't known
+* `binary-addresses`: A comma-separated list of binary load addresses base 16.
+                      lldb will parse the binaries in memory to get UUIDs, then
+                      try to find the binaries & debug info by UUID.  Intended for
+                      use with a small number of firmware type binaries where the
+                      search for binary/debug info may be expensive.
+
+## qProcessInfoPID:PID (Platform Extension)
+
+Have the remote platform get detailed information on a process by
+ID. PID is specified as a decimal integer.
+
+The response consists of key/value pairs where the key is separated from the
+values with colons and each pair is terminated with a semi colon.
+
+The key value pairs in the response are:
+* `pid` - `integer` - Process ID as a decimal integer string
+* `ppid` - `integer` - Parent process ID as a decimal integer string
+* `uid` - `integer` - A string value containing the decimal user ID
+* `gid` - `integer` - A string value containing the decimal group ID
+* `euid` - `integer` - A string value containing the decimal effective user ID
+* `egid` - `integer` - A string value containing the decimal effective group ID
+* `name` - `ascii-hex` - An ASCII hex string that contains the name of the process
+* `triple` - `string` - A target triple (`x86_64-apple-macosx`, `armv7-apple-ios`)
+
+Sample packet/response:
+```
+send packet: $qProcessInfoPID:60050#00
+read packet: $pid:60050;ppid:59948;uid:7746;gid:11;euid:7746;egid:11;name:6c6c6462;triple:x86_64-apple-macosx;#00
+```
+
+**Priority To Implement:** Optional
+
+## qQueryGDBServer
+
+Ask the platform for the list of gdbservers we have to connect
+
+If the remote platform automatically started one or more gdbserver instance (without
+lldb asking it) then it have to return the list of port number or socket name for
+each of them what can be used by lldb to connect to those instances.
+
+The data in this packet is a JSON array of JSON objects with the following keys:
+* `port`: `<the port number to connect>` (optional)
+* `socket_name`: `<the name of the socket to connect>` (optional)
+
+Example packet:
+```
+[
+    { "port": 1234 },
+    { "port": 5432 },
+    { "socket_name": "foo" }
+]
+```
+
+**Priority To Implement:** Low
+
+The packet is required to support connecting to gdbserver started
+by the platform instance automatically.
 
 ## qRegisterInfo\<hex-reg-id\>
 
@@ -937,232 +1842,19 @@ The keys and values are detailed below:
   modifying the CPSR register can cause the r8 - r14 and cpsr value to
   change depending on if the mode has changed.
 
-### Priority To Implement
-
-High. Any target that can self describe its registers, should do so.
-This means if new registers are ever added to a remote target, they
+**Priority To Implement:** High. Any target that can self describe its registers,
+should do so. This means if new registers are ever added to a remote target, they
 will get picked up automatically, and allows registers to change
 depending on the actual CPU type that is used.
 
-NB: `qRegisterInfo` is deprecated in favor of the standard gdb remote
-serial protocol register description method,
-`qXfer:features:read:target.xml`.
+**Note:** `qRegisterInfo` is deprecated in favor of the standard gdb remote
+serial protocol register description method, `qXfer:features:read:target.xml`.
 If `qXfer:features:read:target.xml` is supported, `qRegisterInfo` does
 not need to be implemented.  The target.xml format is used by most
 gdb RSP stubs whereas `qRegisterInfo` was an lldb-only design.
 `qRegisterInfo` requires one packet per register and can have undesirable
 performance costs at the start of a debug session, whereas target.xml
 may be able to describe all registers in a single packet.
-
-## qPlatform_shell
-
-Run a command in a shell on the connected remote machine.
-
-The request consists of the command to be executed encoded in ASCII characters
-converted into hex bytes.
-
-The response to this packet consists of the letter F followed by the return code,
-followed by the signal number (or 0 if no signal was delivered), and escaped bytes
-of captured program output.
-
-Below is an example communication from a client sending an "ls -la" command:
-```
-send packet: $qPlatform_shell:6c73202d6c61,00000002#ec
-read packet: $F,00000000,00000000,total 4736
-drwxrwxr-x 16 username groupname    4096 Aug 15 21:36 .
-drwxr-xr-x 17 username groupname    4096 Aug 10 16:39 ..
--rw-rw-r--  1 username groupname   73875 Aug 12 16:46 notes.txt
-drwxrwxr-x  5 username groupname    4096 Aug 15 21:36 source.cpp
--rw-r--r--  1 username groupname    2792 Aug 12 16:46 a.out
--rw-r--r--  1 username groupname    3190 Aug 12 16:46 Makefile
-```
-
-### Priority To Implement
-
-High. This command allows LLDB clients to run arbitrary shell
-commands on a remote host.
-
-## qPlatform_mkdir
-
-Creates a new directory on the connected remote machine.
-
-Request: `qPlatform_mkdir:<hex-file-mode>,<ascii-hex-path>`
-
-The request packet has the fields:
-   1. mode bits in base 16
-   2. file path in ascii-hex encoding
-
-Reply: 
-  * `F<mkdir-return-code>`
-    (mkdir called successfully and returned with the given return code)
-  * `Exx` (An error occurred)
-
-### Priority To Implement
-
-Low. This command allows LLDB clients to create new directories on
-a remote host.
-
-## vFile:chmod / qPlatform_chmod
-
-Change the permissions of a file on the connected remote machine.
-
-Request: `qPlatform_chmod:<hex-file-mode>,<ascii-hex-path>`
-
-Reply:
-* `F<chmod-return-code>`
-  (chmod called successfully and returned with the given return code)
-* `Exx` (An error occurred)
-
-### Priority To Implement
-
-Low.
-
-## qHostInfo
-
-Get information about the host we are remotely connected to.
-
-LLDB supports a host info call that gets all sorts of details of the system
-that is being debugged:
-```
-send packet: $qHostInfo#00
-read packet: $cputype:16777223;cpusubtype:3;ostype:darwin;vendor:apple;endian:little;ptrsize:8;#00
-```
-
-Key value pairs are one of:
-* `cputype`: is a number that is the mach-o CPU type that is being debugged (base 10)
-* `cpusubtype`: is a number that is the mach-o CPU subtype type that is being debugged (base 10)
-* `triple`: a string for the target triple (x86_64-apple-macosx) that can be used to specify arch + vendor + os in one entry
-* `vendor`: a string for the vendor (apple), not needed if "triple" is specified
-* `ostype`: a string for the OS being debugged (macosx, linux, freebsd, ios, watchos), not needed if "triple" is specified
-* `endian`: is one of "little", "big", or "pdp"
-* `ptrsize`: an unsigned number that represents how big pointers are in bytes on the debug target
-* `hostname`: the hostname of the host that is running the GDB server if available
-* `os_build`: a string for the OS build for the remote host as a string value
-* `os_kernel`: a string describing the kernel version
-* `os_version`: a version string that represents the current OS version (10.8.2)
-* `watchpoint_exceptions_received`: one of "before" or "after" to specify if a watchpoint is triggered before or after the pc when it stops
-* `default_packet_timeout`: an unsigned number that specifies the default timeout in seconds
-* `distribution_id`: optional. For linux, specifies distribution id (e.g. ubuntu, fedora, etc.)
-* `osmajor`: optional, specifies the major version number of the OS (e.g. for macOS 10.12.2, it would be 10)
-* `osminor`: optional, specifies the minor version number of the OS (e.g. for macOS 10.12.2, it would be 12)
-* `ospatch`: optional, specifies the patch level number of the OS (e.g. for macOS 10.12.2, it would be 2)
-* `vm-page-size`: optional, specifies the target system VM page size, base 10.
-  Needed for the "dirty-pages:" list in the qMemoryRegionInfo
-  packet, where a list of dirty pages is sent from the remote
-  stub.  This page size tells lldb how large each dirty page is.
-* `addressing_bits`: optional, specifies how many bits in addresses are
-	significant for addressing, base 10.  If bits 38..0
-	in a 64-bit pointer are significant for addressing,
-	then the value is 39.  This is needed on e.g. AArch64
-	v8.3 ABIs that use pointer authentication, so lldb
-	knows which bits to clear/set to get the actual
-	addresses.
-* `low_mem_addressing_bits`: optional, specifies how many bits in
-  addresses in low memory are significant for addressing, base 10.
-  AArch64 can have different page table setups for low and high
-  memory, and therefore a different number of bits used for addressing.
-* `high_mem_addressing_bits`: optional, specifies how many bits in
-  addresses in high memory are significant for addressing, base 10.
-  AArch64 can have different page table setups for low and high
-  memory, and therefore a different number of bits used for addressing.
-
-### Priority To Implement
-
-High. This packet is usually very easy to implement and can help
-LLDB select the correct plug-ins for the job based on the target
-triple information that is supplied.
-
-## qGDBServerVersion
-
-Get version information about this implementation of the gdb-remote
-protocol.
-
-The goal of this packet is to provide enough information about an
-implementation of the gdb-remote-protocol server that lldb can
-work around implementation problems that are discovered after the
-version has been released/deployed.  The name and version number
-should be sufficiently unique that lldb can unambiguously identify
-the origin of the program (for instance, debugserver from lldb) and
-the version/submission number/patch level of the program - whatever
-is appropriate for your server implementation.
-
-The packet follows the key-value pair model, semicolon separated.
-```
-send packet: $qGDBServerVersion#00
-read packet: $name:debugserver;version:310.2;#00
-```
-
-Other clients may find other key-value pairs to be useful for identifying
-a gdb stub.  Patch level, release name, build number may all be keys that
-better describe your implementation's version.
-
-Suggested key names:
-* `name`: the name of your remote server - "debugserver" is the lldb standard
-          implementation
-* `version`: identifies the version number of this server
-* `patch_level`: the patch level of this server
-* `release_name`: the name of this release, if your project uses names
-* `build_number`: if you use a build system with increasing build numbers,
-                  this may be the right key name for your server
-* `major_version`: major version number
-* `minor_version`: minor version number
-
-### Priority To Implement
-
-High. This packet is usually very easy to implement and can help
-LLDB to work around bugs in a server's implementation when they
-are found.
-
-## qProcessInfo
-
-Get information about the process we are currently debugging.
-
-### Priority To Implement
-
-Medium.  On systems which can launch multiple different architecture processes,
-the qHostInfo may not disambiguate sufficiently to know what kind of
-process is being debugged.
-
-For example on a 64-bit x86 Mac system both 32-bit and 64-bit user processes are possible,
-and with Mach-O universal files, the executable file may contain both 32- and
-64-bit slices so it may be impossible to know until you're attached to a real
-process to know what you're working with.
-
-All numeric fields return base 16 numbers without any "0x" prefix.
-
-An i386 process:
-```
-send packet: $qProcessInfo#00
-read packet: $pid:42a8;parent-pid:42bf;real-uid:ecf;real-gid:b;effective-uid:ecf;effective-gid:b;cputype:7;cpusubtype:3;ostype:macosx;vendor:apple;endian:little;ptrsize:4;#00
-```
-
-An x86_64 process:
-```
-send packet: $qProcessInfo#00
-read packet: $pid:d22c;parent-pid:d34d;real-uid:ecf;real-gid:b;effective-uid:ecf;effective-gid:b;cputype:1000007;cpusubtype:3;ostype:macosx;vendor:apple;endian:little;ptrsize:8;#00
-```
-
-Key value pairs include:
-* `pid`: the process id
-* `parent-pid`: the process of the parent process (often debugserver will become the parent when attaching)
-* `real-uid`: the real user id of the process
-* `real-gid`: the real group id of the process
-* `effective-uid`: the effective user id of the process
-* `effective-gid`: the effective group id of the process
-* `cputype`: the Mach-O CPU type of the process  (base 16)
-* `cpusubtype`: the Mach-O CPU subtype of the process  (base 16)
-* `ostype`: is a string the represents the OS being debugged (darwin, linux, freebsd)
-* `vendor`: is a string that represents the vendor (apple)
-* `endian`: is one of "little", "big", or "pdp"
-* `ptrsize`: is a number that represents how big pointers are in bytes
-* `main-binary-uuid`: is the UUID of a firmware type binary that the gdb stub knows about
-* `main-binary-address`: is the load address of the firmware type binary
-* `main-binary-slide`: is the slide of the firmware type binary, if address isn't known
-* `binary-addresses`: A comma-separated list of binary load addresses base 16.
-                      lldb will parse the binaries in memory to get UUIDs, then
-                      try to find the binaries & debug info by UUID.  Intended for
-                      use with a small number of firmware type binaries where the
-                      search for binary/debug info may be expensive.
 
 ## qShlibInfoAddr
 
@@ -1180,9 +1872,9 @@ send packet: $qShlibInfoAddr#00
 read packet: $7fff5fc40040#00
 ```
 
-### Priority To Implement
+**Priority To Implement:** High
 
-High if you have a dynamic loader plug-in in LLDB for your target
+If you have a dynamic loader plug-in in LLDB for your target
 triple (see the "qHostInfo" packet) that can use this information.
 Many times address load randomization can make it hard to detect
 where the dynamic loader binary and data structures are located and
@@ -1203,343 +1895,15 @@ remote packets love to think that there is only _one_ reason that _one_ thread
 stops at a time. This allows us to see why all threads stopped and allows us
 to implement better multi-threaded debugging support.
 
-### Priority To Implement
+**Priority To Implement:** High
 
-High if you need to support multi-threaded or multi-core debugging.
+If you need to support multi-threaded or multi-core debugging.
 Many times one thread will hit a breakpoint and while the debugger
 is in the process of suspending the other threads, other threads
 will also hit a breakpoint. This packet allows LLDB to know why all
 threads (live system debug) / cores (JTAG) in your program have
 stopped and allows LLDB to display and control your program
 correctly.
-
-## QThreadSuffixSupported
-
-Try to enable thread suffix support for the `g`, `G`, `p`, and `P` packets.
-
-When reading thread registers, you currently need to set the current
-thread, then read the registers. This is kind of cumbersome, so we added the
-ability to query if the remote GDB server supports adding a `thread:<tid>;`
-suffix to all packets that request information for a thread. To test if the
-remote GDB server supports this feature:
-```
-send packet: $QThreadSuffixSupported#00
-read packet: OK
-```
-
-If `OK` is returned, then the `g`, `G`, `p` and `P` packets can accept a
-thread suffix. So to send a `g` packet (read all register values):
-```
-send packet: $g;thread:<tid>;#00
-read packet: ....
-
-send packet: $G;thread:<tid>;#00
-read packet: ....
-
-send packet: $p1a;thread:<tid>;#00
-read packet: ....
-
-send packet: $P1a=1234abcd;thread:<tid>;#00
-read packet: ....
-```
-
-otherwise, without this you would need to always send two packets:
-```
-send packet: $Hg<tid>#00
-read packet: ....
-send packet: $g#00
-read packet: ....
-```
-
-We also added support for allocating and deallocating memory. We use this to
-allocate memory so we can run JITed code.
-
-### Priority To Implement
-
-High. Adding a thread suffix allows us to read and write registers
-more efficiently and stops us from having to select a thread with
-one packet and then read registers with a second packet. It also
-makes sure that no errors can occur where the debugger thinks it
-already has a thread selected (see the `Hg` packet from the standard
-GDB remote protocol documentation) yet the remote GDB server actually
-has another thread selected.
-
-## _M\<size\>,\<permissions\>
-
-Allocate memory on the remote target with the specified size and
-permissions.
-
-The allocate memory packet starts with `_M<size>,<permissions>`. It returns a
-raw big endian address value, or an empty response for unimplemented, or `EXX` for an error
-code. The packet is formatted as:
-```
-char packet[256];
-int packet_len;
-packet_len = ::snprintf (
-    packet,
-    sizeof(packet),
-    "_M%zx,%s%s%s",
-    (size_t)size,
-    permissions & lldb::ePermissionsReadable ? "r" : "",
-    permissions & lldb::ePermissionsWritable ? "w" : "",
-    permissions & lldb::ePermissionsExecutable ? "x" : "");
-```
-
-You request a size and give the permissions. This packet does NOT need to be
-implemented if you don't want to support running JITed code. The return value
-is just the address of the newly allocated memory as raw big endian hex bytes.
-
-### Priority To Implement
-
-High if you want LLDB to be able to JIT code and run that code. JIT
-code also needs data which is also allocated and tracked.
-
-Low if you don't support running JIT'ed code.
-
-## _m\<addr\>
-
-Deallocate memory that was previously allocated using an allocate
-memory pack.
-
-The deallocate memory packet is `_m<addr>` where you pass in the address you
-got back from a previous call to the allocate memory packet. It returns `OK`
-if the memory was successfully deallocated, or `EXX`" for an error, or an
-empty response if not supported.
-
-### Priority To Implement
-
-High if you want LLDB to be able to JIT code and run that code. JIT
-code also needs data which is also allocated and tracked.
-
-Low if you don't support running JIT'ed code.
-
-## qMemoryRegionInfo:\<addr\>
-
-Get information about the address range that contains `<addr>`.
-
-We added a way to get information for a memory region. The packet is:
-```
-qMemoryRegionInfo:<addr>
-```
-
-Where `<addr>` is a big endian hex address. The response is returned in a series
-of tuples like the data returned in a stop reply packet. The currently valid
-tuples to return are:
-* `start:<start-addr>;` - `<start-addr>` is a big endian hex address that is
-                          the start address of the range that contains `<addr>`
-* `size:<size>;` - `<size>` is a big endian hex byte size of the address
-                   of the range that contains `<addr>`
-* `permissions:<permissions>;` - `<permissions>` is a string that contains one
-                                 or more of the characters from `rwx`
-* `name:<name>;` - `<name>` is a hex encoded string that contains the name of
-                   the memory region mapped at the given address. In case of
-                   regions backed by a file it have to be the absolute path of
-                   the file while for anonymous regions it have to be the name
-                   associated to the region if that is available.
-* `flags:<flags-string>;` - where `<flags-string>` is a space separated string
-                            of flag names. Currently the only supported flag
-                            is `mt` for AArch64 memory tagging. lldb will
-                            ignore any other flags in this field.
-* `type:[<type>][,<type>];` - memory types that apply to this region, e.g.
-                              `stack` for stack memory.
-* `error:<ascii-byte-error-string>;` - where `<ascii-byte-error-string>` is
-                                       a hex encoded string value that
-                                       contains an error string
-* `dirty-pages:[<hexaddr>][,<hexaddr];` -
-  A list of memory pages within this
-  region that are "dirty" -- they have been modified.
-  Page addresses are in base 16. The size of a page can
-  be found from the `qHostInfo`'s `page-size` key-value.
-  
-  If the stub supports identifying dirty pages within a
-  memory region, this key should always be present for all
-  `qMemoryRegionInfo` replies.  This key with no pages
-  listed (`dirty-pages:;`) indicates no dirty pages in
-  this memory region.  The *absence* of this key means
-  that this stub cannot determine dirty pages.
-
-If the address requested is not in a mapped region (e.g. we've jumped through
-a NULL pointer and are at 0x0) currently lldb expects to get back the size
-of the unmapped region -- that is, the distance to the next valid region.
-For instance, with a macOS process which has nothing mapped in the first
-4GB of its address space, if we're asking about address 0x2:
-```
-  qMemoryRegionInfo:2
-  start:2;size:fffffffe;
-```
-
-The lack of `permissions:` indicates that none of read/write/execute are valid
-for this region.
-
-### Priority To Implement
-
-Medium. This is nice to have, but it isn't necessary. It helps LLDB
-do stack unwinding when we branch into memory that isn't executable.
-If we can detect that the code we are stopped in isn't executable,
-then we can recover registers for stack frames above the current
-frame. Otherwise we must assume we are in some JIT'ed code (not JIT
-code that LLDB has made) and assume that no registers are available
-in higher stack frames.
-
-## "x" - Binary memory read
-
-Like the `m` (read) and `M` (write) packets, this is a partner to the
-`X` (write binary data) packet, `x`.
-
-It is called like
-```
-xADDRESS,LENGTH
-```
-
-where both `ADDRESS` and `LENGTH` are big-endian base 16 values.
-
-To test if this packet is available, send a addr/len of 0:
-```
-x0,0
-```
-You will get an `OK` response if it is supported.
-
-The reply will be the data requested in 8-bit binary data format.
-The standard quoting is applied to the payload. Characters `}  #  $  *`
-will all be escaped with `}` (`0x7d`) character and then XOR'ed with `0x20`.
-
-A typical use to read 512 bytes at 0x1000 would look like:
-```
-x0x1000,0x200
-```
-The `0x` prefixes are optional - like most of the gdb-remote packets,
-omitting them will work fine; these numbers are always base 16.
-
-The length of the payload is not provided.  A reliable, 8-bit clean,
-transport layer is assumed.
-
-## Detach and stay stopped
-
-We extended the "D" packet to specify that the monitor should keep the
-target suspended on detach.  The normal behavior is to resume execution
-on detach.  We will send:
-```
-qSupportsDetachAndStayStopped:
-```
-
-to query whether the monitor supports the extended detach, and if it does,
-when we want the monitor to detach but not resume the target, we will
-send:
-```
-D1
-```
-In any case, if we want the normal detach behavior we will just send:
-```
-D
-```
-
-## QSaveRegisterState / QSaveRegisterState;thread:XXXX;
-
-The `QSaveRegisterState` packet tells the remote debugserver to save
-all registers and return a non-zero unique integer ID that
-represents these save registers. If thread suffixes are enabled the
-second form of this packet is used, otherwise the first form is
-used. This packet is called prior to executing an expression, so
-the remote GDB server should do anything it needs to in order to
-ensure the registers that are saved are correct. On macOS this
-involves calling `thread_abort_safely(mach_port_t thread)` to
-ensure we get the correct registers for a thread in case it is
-currently having code run on its behalf in the kernel.
-
-### Response
-
-* `<unsigned int>` - The save_id result is a non-zero unsigned integer value
-                 that can be passed back to the GDB server using a
-                 `QRestoreRegisterState` packet to restore the registers
-                 one time.
-* `EXX` - or an error code in the form of `EXX` where `XX` is a
-          hex error code.
-
-### Priority To Implement
-
-Low, this is mostly a convenience packet to avoid having to send all
-registers with a `g` packet. It should only be implemented if support
-for the `QRestoreRegisterState` is added.
-
-## QRestoreRegisterState:\<save_id\> / QRestoreRegisterState:\<save_id\>;thread:XXXX;
-
-The `QRestoreRegisterState` packet tells the remote debugserver to
-restore all registers using the `save_id` which is an unsigned
-integer that was returned from a previous call to
-`QSaveRegisterState`. The restoration process can only be done once
-as the data backing the register state will be freed upon the
-completion of the `QRestoreRegisterState` command.
-
-If thread suffixes are enabled the second form of this packet is
-used, otherwise the first form is used.
-
-### Response
-
-* `OK` - if all registers were successfully restored
-* `EXX` - for any errors
-
-### Priority To Implement
-
-Low, this is mostly a convenience packet to avoid having to send all
-registers with a `g` packet. It should only be implemented if support
-for the `QSaveRegisterState` is added.
-
-## qFileLoadAddress:\<file_path\>
-
-Get the load address of a memory mapped file.
-The load address is defined as the address of the first memory
-region what contains data mapped from the specified file.
-
-### Response
-
-* `<unsigned-hex64>` - Load address of the file in big endian encoding
-* `E01` - the requested file isn't loaded
-* `EXX` - for any other errors
-
-### Priority To Implement
-
-Low, required if dynamic linker don't fill in the load address of
-some object file in the rendezvous data structure.
-
-## qModuleInfo:\<module_path\>;\<arch triple\>
-
-Get information for a module by given module path and architecture.
-
-### Response
-
-* `(uuid|md5):...;triple:...;file_offset:...;file_size...;`
-* `EXX` - for any errors
-
-### Priority To Implement
-
-Optional, required if dynamic loader cannot fetch module's information like
-UUID directly from inferior's memory.
-
-## jModulesInfo:[{"file":"...",triple:"..."}, ...]
-
-Get information for a list of modules by given module path and
-architecture.
-
-### Response
-
-A JSON array of dictionaries containing the following keys:
-* `uuid`
-* `triple`
-* `file_path`
-* `file_offset`
-* `file_size`
-
-The meaning of the fields is the same as in the `qModuleInfo` packet. The server
-signals the failure to retrieve the module info for a file by ommiting the
-corresponding array entry from the response. The server may also
-include entries the client did not ask for, if it has reason to
-the modules will be interesting to the client.
-
-### Priority To Implement
-
-Optional. If not implemented, `qModuleInfo` packet will be used, which
-may be slower if the target contains a large number of modules and
-the communication link has a non-negligible latency.
 
 ## Stop reply packet extensions
 
@@ -1748,186 +2112,16 @@ program correctly. What if a real SIGTRAP was delivered to a thread
 while we were trying to single step? We wouldn't know the difference
 with a standard GDB remote server and we could do the wrong thing.
 
-### Priority To Implement
-
-High. Having the extra information in your stop reply packets makes
-your debug session more reliable and informative.
-
-## qfProcessInfo / qsProcessInfo (Platform Extension)
-
-Get the first process info (`qfProcessInfo`) or subsequent process
-info (`qsProcessInfo`) for one or more processes on the remote
-platform. The first call gets the first match and subsequent calls
-to `qsProcessInfo` gets the subsequent matches. Return an error `EXX`,
-where `XX` are two hex digits, when no more matches are available.
-
-
- The `qfProcessInfo` packet can be followed by a `:` and
-some key value pairs. The key value pairs in the command are:
-* `name` - `ascii-hex` -
-  An ASCII hex string that contains the name of the process that will be matched.
-* `name_match` - `enum` -
-  One of:
-    * `equals`
-    * `starts_with`
-    * `ends_with`
-    * `contains`
-    * `regex`
-* `pid` - `integer`- A string value containing the decimal process ID
-* `parent_pid` - `integer` - A string value containing the decimal parent process ID
-* `uid` - `integer` - A string value containing the decimal user ID
-* `gid` - `integer` - A string value containing the decimal group ID
-* `euid` - `integer` - A string value containing the decimal effective user ID
-* `egid` - `integer` - A string value containing the decimal effective group ID
-* `all_users` - `bool` -
-  A boolean value that specifies if processes should
-  be listed for all users, not just the user that the
-  platform is running as
-* `triple` - `string` -
-  An ASCII triple string (`x86_64`, `x86_64-apple-macosx`, `armv7-apple-ios`)
-* `args` - `string` -
-  A string value containing the process arguments separated by the character `-`,
-  where each argument is hex-encoded. It includes `argv[0]`.
-
-The response consists of key/value pairs where the key is separated from the
-values with colons and each pair is terminated with a semi colon. For a list
-of the key/value pairs in the response see the `qProcessInfoPID` packet
-documentation.
-
-Sample packet/response:
-```
-send packet: $qfProcessInfo#00
-read packet: $pid:60001;ppid:59948;uid:7746;gid:11;euid:7746;egid:11;name:6c6c6462;triple:x86_64-apple-macosx;#00
-send packet: $qsProcessInfo#00
-read packet: $pid:59992;ppid:192;uid:7746;gid:11;euid:7746;egid:11;name:6d64776f726b6572;triple:x86_64-apple-macosx;#00
-send packet: $qsProcessInfo#00
-read packet: $E04#00
-```
-
-### Priority To Implement
-
-Required.
-
-## qPathComplete (Platform Extension)
-
-Get a list of matched disk files/directories by passing a boolean flag
-and a partial path.
-
-### Example
-
-```
-receive: qPathComplete:0,6d61696e
-send:    M6d61696e2e637070
-receive: qPathComplete:1,746573
-send:    M746573742f,74657374732f
-```
-
-If the first argument is zero, the result should contain all
-files (including directories) starting with the given path. If the
-argument is one, the result should contain only directories.
-
-The result should be a comma-separated list of hex-encoded paths.
-Paths denoting a directory should end with a directory separator (`/` or `\`.
-
-## qKillSpawnedProcess (Platform Extension)
-
-Kill a process running on the target system.
-
-### Example
-
-```
-receive: qKillSpawnedProcess:1337
-send:    OK
-```
-The request packet has the process ID in base 10.
-
-## qLaunchGDBServer (Platform Extension)
-
-Have the remote platform launch a GDB server.
-
-The `qLaunchGDBServer` packet must be followed by a `:` and
-some key value pairs. The key value pairs in the command are:
-* `port` - `integer` -
-  A string value containing the decimal port ID or zero if the port should be
-  bound and returned
-* `host` - `integer` -
-  The host that connections should be limited to when the GDB server is connected to.
-
-Sample packet/response:
-```
-send packet: $qLaunchGDBServer:port:0;host:lldb.apple.com;#00
-read packet: $pid:60025;port:50776;#00
-```
-
-The `pid` key/value pair is only specified if the remote platform launched
-a separate process for the GDB remote server and can be omitted if no
-process was separately launched.
-
-The `port` key/value pair in the response lets clients know what port number
-to attach to in case zero was specified as the "port" in the sent command.
-
-### Priority To Implement
-
-Required.
-
-## qProcessInfoPID:PID (Platform Extension)
-
-Have the remote platform get detailed information on a process by
-ID. PID is specified as a decimal integer.
-
-The response consists of key/value pairs where the key is separated from the
-values with colons and each pair is terminated with a semi colon.
-
-The key value pairs in the response are:
-* `pid` - `integer` - Process ID as a decimal integer string
-* `ppid` - `integer` - Parent process ID as a decimal integer string
-* `uid` - `integer` - A string value containing the decimal user ID
-* `gid` - `integer` - A string value containing the decimal group ID
-* `euid` - `integer` - A string value containing the decimal effective user ID
-* `egid` - `integer` - A string value containing the decimal effective group ID
-* `name` - `ascii-hex` - An ASCII hex string that contains the name of the process
-* `triple` - `string` - A target triple (`x86_64-apple-macosx`, `armv7-apple-ios`)
-
-Sample packet/response:
-```
-send packet: $qProcessInfoPID:60050#00
-read packet: $pid:60050;ppid:59948;uid:7746;gid:11;euid:7746;egid:11;name:6c6c6462;triple:x86_64-apple-macosx;#00
-```
-
-### Priority To Implement
-
-Optional.
+**Priority To Implement:** High. Having the extra information in your stop reply
+packets makes your debug session more reliable and informative.
 
 ## vAttachName
 
 Same as `vAttach`, except instead of a `pid` you send a process name.
 
-### Priority To Implement
-
-Low. Only needed for `process attach -n`.  If the packet isn't supported
-then `process attach -n` will fail gracefully.  So you need only to support
-it if attaching to a process by name makes sense for your environment.
-
-## vAttachWait
-
-Same as `vAttachName`, except that the stub should wait for the next instance
-of a process by that name to be launched and attach to that.
-
-### Priority To Implement
-
-Low. Only needed to support `process attach -w -n` which will fail
-gracefully if the packet is not supported.
-
-## qAttachOrWaitSupported
-
-This is a binary "is it supported" query. Return OK if you support
-`vAttachOrWait`.
-
-### Priority To Implement
-
-Low. This is required if you support `vAttachOrWait`, otherwise no support
-is needed since the standard "I don't recognize this packet" response
-will do the right thing.
+**Priority To Implement:** Low. Only needed for `process attach -n`. If the
+packet isn't supported then `process attach -n` will fail gracefully. So you need
+only to support it if attaching to a process by name makes sense for your environment.
 
 ## vAttachOrWait
 
@@ -1935,9 +2129,9 @@ Same as `vAttachWait`, except that the stub will attach to a process
 by name if it exists, and if it does not, it will wait for a process
 of that name to appear and attach to it.
 
-### Priority To Implement
+**Priority To Implement:** Low
 
-Low. Only needed to implement `process attach -w -i false -n`.  If
+Only needed to implement `process attach -w -i false -n`.  If
 you don't implement it but do implement `-n` AND lldb can somehow get
 a process list from your device, it will fall back on scanning the
 process list, and sending `vAttach` or `vAttachWait` depending on
@@ -1945,355 +2139,13 @@ whether the requested process exists already.  This is racy,
 however, so if you want to support this behavior it is better to
 support this packet.
 
-## jThreadExtendedInfo
+## vAttachWait
 
-This packet, which takes its arguments as JSON and sends its reply as
-JSON, allows the gdb remote stub to provide additional information
-about a given thread.
+Same as `vAttachName`, except that the stub should wait for the next instance
+of a process by that name to be launched and attach to that.
 
-This packet takes its arguments in [JSON](http://www.json.org).
-At a minimum, a thread must be specified, for example:
-```
-jThreadExtendedInfo:{"thread":612910}
-```
-
-Because this is a JSON string, the thread number is provided in base 10.
-Additional key-value pairs may be provided by lldb to the gdb remote
-stub.  For instance, on some versions of macOS, lldb can read offset
-information out of the system libraries.  Using those offsets, debugserver
-is able to find the Thread Specific Address (TSD) for a thread and include
-that in the return information.  So lldb will send these additional fields
-like so:
-```
-jThreadExtendedInfo:{"plo_pthread_tsd_base_address_offset":0,"plo_pthread_tsd_base_offset":224,"plo_pthread_tsd_entry_size":8,"thread":612910}
-```
-
-There are no requirements for what is included in the response.  A simple
-reply on a OS X Yosemite / iOS 8 may include the pthread_t value, the
-Thread Specific Data (TSD) address, the dispatch_queue_t value if the thread
-is associated with a GCD queue, and the requested Quality of Service (QoS)
-information about that thread.  For instance, a reply may look like:
-```
-{"tsd_address":4371349728,"requested_qos":{"enum_value":33,"constant_name":"QOS_CLASS_USER_INTERACTIVE","printable_name":"User Interactive"},"pthread_t":4371349504,"dispatch_queue_t":140735087127872}
-```
-
-`tsd_address`, `pthread_t`, and `dispatch_queue_t` are all simple key-value pairs.
-The JSON standard requires that numbers be expressed in base 10 - so all of
-these are. `requested_qos` is a dictionary with three key-value pairs in it -
-so the UI layer may choose the form most appropriate for displaying to the user.
-
-Sending JSON over gdb-remote protocol introduces some problems.  We may be
-sending strings with arbitrary contents in them, including the `#`, `$`, and `*`
-characters that have special meaning in gdb-remote protocol and cannot occur
-in the middle of the string. The standard solution for this would be to require
-ascii-hex encoding of all strings, or ascii-hex encode the entire JSON payload.
-
-Instead, the binary escaping convention is used for JSON data.  This convention
-(e.g. used for the `X` packet) says that if `#`, `$`, `*`, or `}` are to occur in
-the payload, the character `}` (`0x7d`) is emitted, then the metacharacter is emitted
-xor'ed by `0x20`. The `}` character occurs in every JSON payload at least once, and
-`} ^ 0x20` happens to be `]` so the raw packet characters for a request will look
-like:
-```
-jThreadExtendedInfo:{"thread":612910}]
-```
-
-### Priority To Implement
-
-Low.  This packet is only needed if the gdb remote stub wants to
-provide interesting additional information about a thread for the
-user.
-
-## QEnableCompression
-
-This packet enables compression of the packets that the debug stub sends to lldb.
-If the debug stub can support compression, it indictes this in the reply of the
-"qSupported" packet. For example:
-```
-LLDB SENDS:    qSupported:xmlRegisters=i386,arm,mips
-STUB REPLIES:  qXfer:features:read+;SupportedCompressions=lzfse,zlib-deflate,lz4,lzma;
-```
-
-If lldb knows how to use any of these compression algorithms, it can ask that this
-compression mode be enabled.
-```
-QEnableCompression:type:zlib-deflate;
-```
-
-The debug stub should reply with an uncompressed `OK` packet to indicate that the
-request was accepted.  All further packets the stub sends will use this compression.
-
-Packets are compressed as the last step before they are sent from the stub, and
-decompressed as the first step after they are received.  The packet format in compressed
-mode becomes one of two:
-```
-$N<uncompressed payload>#00
-
-$C<size of uncompressed payload in base 10>:<compressed payload>#00
-```
-
-Where `#00` is the actual checksum value if noack mode is not enabled. The checksum
-value is for the `N<uncompressed payload>` or
-`C<size of uncompressed payload in base 10>:<compressed payload>` bytes in the packet.
-
-The size of the uncompressed payload in base 10 is provided because it will simplify
-decompression if the final buffer size needed is known ahead of time.
-
-Compression on low-latency connections is unlikely to be an improvement. Particularly
-when the debug stub and lldb are running on the same host. It should only be used
-for slow connections, and likely only for larger packets.
-
-Example compression algorithms that may be used include:
-* `zlib-deflate` -
-  The raw DEFLATE format as described in IETF RFC 1951.  With the ZLIB library, you
-  can compress to this format with an initialization like
-      deflateInit2 (&stream, 5, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY)
-  and you can decompress with an initialization like
-      inflateInit2 (&stream, -15).
-* `lz4` -
-  https://en.wikipedia.org/wiki/LZ4_(compression_algorithm)
-  https://github.com/Cyan4973/lz4
-  The libcompression APIs on darwin systems call this `COMPRESSION_LZ4_RAW`.
-* `lzfse` -
-  Compression algorithm added in macOS 10.11, with open source C reference
-  implementation on github.
-  https://en.wikipedia.org/wiki/LZFSE
-  https://github.com/lzfse/lzfse
-* `lzma` -
-  libcompression implements "LZMA level 6", the default compression for the
-  open source LZMA implementation.
-
-## jGetLoadedDynamicLibrariesInfos
-
-This packet asks the remote debug stub to send the details about libraries
-being added/removed from the process as a performance optimization.
-
-There are two ways this packet can be used.  Both return a dictionary of
-binary images formatted the same way.
-
-One requests information on all shared libraries:
-```
-jGetLoadedDynamicLibrariesInfos:{"fetch_all_solibs":true}
-```
-with an optional `"report_load_commands":false` which can be added, asking
-that only the dyld SPI information (load addresses, filenames) be returned.
-The default behavior is that debugserver scans the mach-o header and load
-commands of each binary, and returns it in the JSON reply.
-
-And the second requests information about a list of shared libraries, given their load addresses:
-```
-jGetLoadedDynamicLibrariesInfos:{"solib_addresses":[8382824135,3258302053,830202858503]}
-```
-
-The second call is both a performance optimization (instead of having lldb read the mach-o header/load commands
-out of memory with generic read packets) but also adds additional information in the form of the
-filename of the shared libraries (which is not available in the mach-o header/load commands.)
-
-An example using the OS X 10.11 style call:
-```
-LLDB SENDS: jGetLoadedDynamicLibrariesInfos:{"image_count":1,"image_list_address":140734800075128}
-STUB REPLIES: ${"images":[{"load_address":4294967296,"mod_date":0,"pathname":"/tmp/a.out","uuid":"02CF262C-ED6F-3965-9E14-63538B465CFF","mach_header":{"magic":4277009103,"cputype":16777223,"cpusubtype":18446744071562067971,"filetype":2},"segments":{"name":"__PAGEZERO","vmaddr":0,"vmsize":4294967296,"fileoff":0,"filesize":0,"maxprot":0},{"name":"__TEXT","vmaddr":4294967296,"vmsize":4096,"fileoff":0,"filesize":4096,"maxprot":7},{"name":"__LINKEDIT","vmaddr":4294971392,"vmsize":4096,"fileoff":4096,"filesize":152,"maxprot":7}}]}#00
-```
-
-Or pretty-printed:
-```
-STUB REPLIES: ${"images":
-                [
-                    {"load_address":4294967296,
-                     "mod_date":0,
-                     "pathname":"/tmp/a.out",
-                     "uuid":"02CF262C-ED6F-3965-9E14-63538B465CFF",
-                     "mach_header":
-                        {"magic":4277009103,
-                         "cputype":16777223,
-                         "cpusubtype":18446744071562067971,
-                         "filetype":2
-                         },
-                     "segments":
-                      [
-                        {"name":"__PAGEZERO",
-                         "vmaddr":0,
-                         "vmsize":4294967296,
-                         "fileoff":0,
-                         "filesize":0,
-                         "maxprot":0
-                        },
-                        {"name":"__TEXT",
-                         "vmaddr":4294967296,
-                         "vmsize":4096,
-                         "fileoff":0,
-                         "filesize":4096,
-                         "maxprot":7
-                        },
-                        {"name":"__LINKEDIT",
-                         "vmaddr":4294971392,
-                         "vmsize":4096,
-                         "fileoff":4096,
-                         "filesize":152,
-                         "maxprot":7
-                        }
-                      ]
-                    }
-                ]
-            }
-```
-
-This is similar to the `qXfer:libraries:read` packet, and it could
-be argued that it should be merged into that packet.  A separate
-packet was created primarily because lldb needs to specify the
-number of images to be read and the address from which the initial
-information is read.  Also the XML DTD would need to be extended
-quite a bit to provide all the information that the `DynamicLoaderMacOSX`
-would need to work correctly on this platform.
-
-### Priority To Implement
-
-On OS X 10.11, iOS 9, tvOS 9, watchOS 2 and older: Low.  If this packet is absent,
-lldb will read the Mach-O headers/load commands out of memory.
-On macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer: High.  If this packet is absent,
-lldb will not know anything about shared libraries in the inferior, or where the main
-executable loaded.
-
-## jThreadsInfo
-
-Ask for the server for thread stop information of all threads.
-
-The data in this packet is very similar to the stop reply packets, but is packaged in
-JSON and uses JSON arrays where applicable. The JSON output looks like:
-```
-    [
-      { "tid":1580681,
-        "metype":6,
-        "medata":[2,0],
-        "reason":"exception",
-        "qaddr":140735118423168,
-        "registers": {
-          "0":"8000000000000000",
-          "1":"0000000000000000",
-          "2":"20fabf5fff7f0000",
-          "3":"e8f8bf5fff7f0000",
-          "4":"0100000000000000",
-          "5":"d8f8bf5fff7f0000",
-          "6":"b0f8bf5fff7f0000",
-          "7":"20f4bf5fff7f0000",
-          "8":"8000000000000000",
-          "9":"61a8db78a61500db",
-          "10":"3200000000000000",
-          "11":"4602000000000000",
-          "12":"0000000000000000",
-          "13":"0000000000000000",
-          "14":"0000000000000000",
-          "15":"0000000000000000",
-          "16":"960b000001000000",
-          "17":"0202000000000000",
-          "18":"2b00000000000000",
-          "19":"0000000000000000",
-          "20":"0000000000000000"
-        },
-        "memory":[
-          {"address":140734799804592,"bytes":"c8f8bf5fff7f0000c9a59e8cff7f0000"},
-          {"address":140734799804616,"bytes":"00000000000000000100000000000000"}
-        ]
-      }
-    ]
-```
-
-It contains an array of dictionaries with all of the key value pairs that are
-normally in the stop reply packet, including the expedited registers. The registers are
-passed as hex-encoded JSON string in debuggee-endian byte order. Note that the register
-numbers are decimal numbers, unlike the stop-reply packet, where they are written in
-hex. The packet also contains expedited memory in the `memory` key.  This allows the
-server to expedite memory that the client is likely to use (e.g., areas around the
-stack pointer, which are needed for computing backtraces) and it reduces the packet
-count.
-
-On macOS with debugserver, we expedite the frame pointer backchain for a thread
-(up to 256 entries) by reading 2 pointers worth of bytes at the frame pointer (for
-the previous FP and PC), and follow the backchain. Most backtraces on macOS and
-iOS now don't require us to read any memory!
-
-### Priority To Implement
-
-Low. This is a performance optimization, which speeds up debugging by avoiding
-multiple round-trips for retrieving thread information. The information from this
-packet can be retrieved using a combination of `qThreadStopInfo` and `m` packets.
-
-## jGetSharedCacheInfo
-
-This packet asks the remote debug stub to send the details about the inferior's
-shared cache. The shared cache is a collection of common libraries/frameworks that
-are mapped into every process at the same address on Darwin systems, and can be
-identified by a load address and UUID.
-
-```
-LLDB SENDS: jGetSharedCacheInfo:{}
-STUB REPLIES: ${"shared_cache_base_address":140735683125248,"shared_cache_uuid":"DDB8D70C-C9A2-3561-B2C8-BE48A4F33F96","no_shared_cache":false,"shared_cache_private_cache":false]}#00
-```
-
-### Priority To Implement
-
-Low.  When both lldb and the inferior process are running on the same computer, and lldb
-and the inferior process have the same shared cache, lldb may (as an optimization) read
-the shared cache out of its own memory instead of using gdb-remote read packets to read
-them from the inferior process.
-
-## qQueryGDBServer
-
-Ask the platform for the list of gdbservers we have to connect
-
-If the remote platform automatically started one or more gdbserver instance (without
-lldb asking it) then it have to return the list of port number or socket name for
-each of them what can be used by lldb to connect to those instances.
-
-The data in this packet is a JSON array of JSON objects with the following keys:
-* `port`: `<the port number to connect>` (optional)
-* `socket_name`: `<the name of the socket to connect>` (optional)
-
-Example packet:
-```
-[
-    { "port": 1234 },
-    { "port": 5432 },
-    { "socket_name": "foo" }
-]
-```
-
-### Priority To Implement
-
-Low. The packet is required to support connecting to gdbserver started
-by the platform instance automatically.
-
-## QSetDetachOnError
-
-Sets what the server should do when the communication channel with LLDB
-goes down. Either kill the inferior process (`0`) or remove breakpoints and
-detach (`1`).
-
-The data in this packet is a single a character, which should be `0` if the
-inferior process should be killed, or `1` if the server should remove all
-breakpoints and detach from the inferior.
-
-### Priority To Implement
-
-Low. Only required if the target wants to keep the inferior process alive
-when the communication channel goes down.
-
-## jGetDyldProcessState
-
-This packet fetches the process launch state, as reported by libdyld on
-Darwin systems, most importantly to indicate when the system libraries
-have initialized sufficiently to safely call utility functions.
-
-```
-LLDB SENDS: jGetDyldProcessState
-STUB REPLIES: {"process_state_value":48,"process_state string":"dyld_process_state_libSystem_initialized"}
-```
-
-### Priority To Implement
-
-Low. This packet is needed to prevent lldb's utility functions for
-scanning the Objective-C class list from running very early in
-process startup.
+**Priority To Implement:** Low. Only needed to support `process attach -w -n`
+which will fail gracefully if the packet is not supported.
 
 ## vFile Packets
 
@@ -2301,25 +2153,68 @@ Though some of these may match the ones described in GDB's protocol
 documentation, we include our own expectations here in case of
 mismatches or extensions.
 
-### vFile:size
+### vFile:chmod / qPlatform_chmod
 
-Get the size of a file on the target system, filename in ASCII hex.
+Change the permissions of a file on the connected remote machine.
 
-#### Example
+Request: `qPlatform_chmod:<hex-file-mode>,<ascii-hex-path>`
+
+Reply:
+* `F<chmod-return-code>`
+  (chmod called successfully and returned with the given return code)
+* `Exx` (An error occurred)
+
+### vFile:close
+
+Close a previously opened file descriptor.
 
 ```
-receive: vFile:size:2f746d702f61
-send:    Fc008
+receive: vFile:close:7
+send:    F0
 ```
 
-response is `F` followed by the file size in base 16.
-`F-1,errno` with the errno if an error occurs, base 16.
+File descriptor is in base 16. `F-1,errno` with the errno if an error occurs,
+errno is base 16.
+
+### vFile:exists
+
+Check whether the file at the given path exists.
+
+```
+receive: vFile:exists:2f746d702f61
+send         (exists): F,1
+send (does not exist): F,0
+```
+
+Request packet contains the ASCII hex encoded filename.
+
+The response is a return code where 1 means the file exists
+and 0 means it does not.
+
+**Priority To Implement:** Low
+
+### vFile:MD5
+
+Generate an MD5 hash of the file at the given path.
+
+```
+receive: vFile:MD5:2f746d702f61
+send (success): F,00000000000000001111111111111111
+send (failure): F,x
+```
+
+Request packet contains the ASCII hex encoded filename.
+
+If the hash succeeded, the response is `F,` followed by the low 64
+bits of the result, and finally the high 64 bits of the result. Both are in
+hex format without a prefix.
+
+The response is `F,`, followed by `x` if the file did not exist
+or failed to hash.
 
 ### vFile:mode
 
 Get the mode bits of a file on the target system, filename in ASCII hex.
-
-#### Example
 
 ```
 receive: vFile:mode:2f746d702f61
@@ -2330,42 +2225,9 @@ response is `F` followed by the mode bits in base 16, this `0x1ed` would
 correspond to `0755` in octal.
 `F-1,errno` with the errno if an error occurs, base 16.
 
-### vFile:unlink
-
-Remove a file on the target system.
-
-#### Example
-
-```
-receive: vFile:unlink:2f746d702f61
-send:    F0
-```
-
-Argument is a file path in ascii-hex encoding.
-Response is `F` plus the return value of `unlink()`, base 16 encoding.
-Return value may optionally be followed by a comma and the base16
-value of errno if unlink failed.
-
-### vFile:symlink
-
-Create a symbolic link (symlink, soft-link) on the target system.
-
-#### Example
-
-```
-receive: vFile:symlink:<SRC-FILE>,<DST-NAME>
-send:    F0,0
-```
-
-Argument file paths are in ascii-hex encoding.
-Response is `F` plus the return value of `symlink()`, base 16 encoding,
-optionally followed by the value of errno if it failed, also base 16.
-
 ### vFile:open
 
 Open a file on the remote system and return the file descriptor of it.
-
-#### Example
 
 ```
 receive: vFile:open:2f746d702f61,00000001,00000180
@@ -2383,25 +2245,9 @@ request packet has the fields:
 response is `F` followed by the opened file descriptor in base 16.
 `F-1,errno` with the errno if an error occurs, base 16.
 
-### vFile:close
-
-Close a previously opened file descriptor.
-
-#### Example
-
-```
-receive: vFile:close:7
-send:    F0
-```
-
-File descriptor is in base 16. `F-1,errno` with the errno if an error occurs,
-errno is base 16.
-
 ### vFile:pread
 
 Read data from an opened file descriptor.
-
-#### Example
 
 ```
 receive: vFile:pread:7,1024,0
@@ -2420,8 +2266,6 @@ semicolon, followed by the data in the binary-escaped-data encoding.
 
 Write data to a previously opened file descriptor.
 
-#### Example
-
 ```
 receive: vFile:pwrite:8,0,\cf\fa\ed\fe\0c\00\00
 send:    F1024
@@ -2434,40 +2278,73 @@ Request packet has the fields:
 
 Response is `F`, followed by the number of bytes written (base 16).
 
-### vFile:MD5
+### vFile:size
 
-Generate an MD5 hash of the file at the given path.
-
-#### Example
+Get the size of a file on the target system, filename in ASCII hex.
 
 ```
-receive: vFile:MD5:2f746d702f61
-send (success): F,00000000000000001111111111111111
-send (failure): F,x
+receive: vFile:size:2f746d702f61
+send:    Fc008
 ```
 
-Request packet contains the ASCII hex encoded filename.
+response is `F` followed by the file size in base 16.
+`F-1,errno` with the errno if an error occurs, base 16.
 
-If the hash succeeded, the response is `F,` followed by the low 64
-bits of the result, and finally the high 64 bits of the result. Both are in
-hex format without a prefix.
+### vFile:symlink
 
-The response is `F,`, followed by `x` if the file did not exist
-or failed to hash.
-
-### vFile:exists
-
-Check whether the file at the given path exists.
-
-#### Example
+Create a symbolic link (symlink, soft-link) on the target system.
 
 ```
-receive: vFile:exists:2f746d702f61
-send         (exists): F,1
-send (does not exist): F,0
+receive: vFile:symlink:<SRC-FILE>,<DST-NAME>
+send:    F0,0
 ```
 
-Request packet contains the ASCII hex encoded filename.
+Argument file paths are in ascii-hex encoding.
+Response is `F` plus the return value of `symlink()`, base 16 encoding,
+optionally followed by the value of errno if it failed, also base 16.
 
-The response is a return code where 1 means the file exists
-and 0 means it does not.
+### vFile:unlink
+
+Remove a file on the target system.
+
+```
+receive: vFile:unlink:2f746d702f61
+send:    F0
+```
+
+Argument is a file path in ascii-hex encoding.
+Response is `F` plus the return value of `unlink()`, base 16 encoding.
+Return value may optionally be followed by a comma and the base16
+value of errno if unlink failed.
+
+## "x" - Binary memory read
+
+Like the `m` (read) and `M` (write) packets, this is a partner to the
+`X` (write binary data) packet, `x`.
+
+It is called like
+```
+xADDRESS,LENGTH
+```
+
+where both `ADDRESS` and `LENGTH` are big-endian base 16 values.
+
+To test if this packet is available, send a addr/len of 0:
+```
+x0,0
+```
+You will get an `OK` response if it is supported.
+
+The reply will be the data requested in 8-bit binary data format.
+The standard quoting is applied to the payload. Characters `}  #  $  *`
+will all be escaped with `}` (`0x7d`) character and then XOR'ed with `0x20`.
+
+A typical use to read 512 bytes at 0x1000 would look like:
+```
+x0x1000,0x200
+```
+The `0x` prefixes are optional - like most of the gdb-remote packets,
+omitting them will work fine; these numbers are always base 16.
+
+The length of the payload is not provided.  A reliable, 8-bit clean,
+transport layer is assumed.

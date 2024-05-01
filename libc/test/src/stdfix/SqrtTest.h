@@ -42,7 +42,7 @@ public:
 
     constexpr size_t COUNT = 255;
     constexpr StorageType STEP =
-        ~StorageType(0) / static_cast<StorageType>(COUNT);
+        StorageType(~StorageType(0)) / static_cast<StorageType>(COUNT);
     constexpr double ERR = 3.0 * static_cast<double>(eps);
     StorageType x = 0;
     for (size_t i = 0; i < COUNT; ++i, x += STEP) {

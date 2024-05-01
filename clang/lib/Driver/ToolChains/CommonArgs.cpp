@@ -737,7 +737,7 @@ bool tools::isTLSDESCEnabled(const ToolChain &TC,
   StringRef V = A->getValue();
   bool SupportedArgument = false, EnableTLSDESC = false;
   bool Unsupported = !Triple.isOSBinFormatELF();
-  if (Triple.isRISCV()) {
+  if (Triple.isLoongArch() || Triple.isRISCV()) {
     SupportedArgument = V == "desc" || V == "trad";
     EnableTLSDESC = V == "desc";
   } else if (Triple.isX86()) {
