@@ -35,15 +35,21 @@ void test_svst1_bf16(svbool_t pg, bfloat16_t *base, svbfloat16_t data)
 // CHECK-LABEL: @test_svst1_vnum_bf16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 8 x bfloat>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
-// CHECK-NEXT:    tail call void @llvm.masked.store.nxv8bf16.p0(<vscale x 8 x bfloat> [[DATA:%.*]], ptr [[TMP1]], i32 1, <vscale x 8 x i1> [[TMP0]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP2]], [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
+// CHECK-NEXT:    tail call void @llvm.masked.store.nxv8bf16.p0(<vscale x 8 x bfloat> [[DATA:%.*]], ptr [[TMP3]], i32 1, <vscale x 8 x i1> [[TMP0]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z20test_svst1_vnum_bf16u10__SVBool_tPu6__bf16lu14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 8 x bfloat>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
-// CPP-CHECK-NEXT:    tail call void @llvm.masked.store.nxv8bf16.p0(<vscale x 8 x bfloat> [[DATA:%.*]], ptr [[TMP1]], i32 1, <vscale x 8 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP2]], [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
+// CPP-CHECK-NEXT:    tail call void @llvm.masked.store.nxv8bf16.p0(<vscale x 8 x bfloat> [[DATA:%.*]], ptr [[TMP3]], i32 1, <vscale x 8 x i1> [[TMP0]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1_vnum_bf16(svbool_t pg, bfloat16_t *base, int64_t vnum, svbfloat16_t data)
