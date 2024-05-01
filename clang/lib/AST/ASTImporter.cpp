@@ -2055,7 +2055,7 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
       continue;
     }
 
-    if (Importer.hasLLDBRedeclCompletion()) {
+    if (!Importer.hasLLDBRedeclCompletion()) {
       FieldDecl *FieldFrom = dyn_cast_or_null<FieldDecl>(From);
       Decl *ImportedDecl = *ImportedOrErr;
       FieldDecl *FieldTo = dyn_cast_or_null<FieldDecl>(ImportedDecl);

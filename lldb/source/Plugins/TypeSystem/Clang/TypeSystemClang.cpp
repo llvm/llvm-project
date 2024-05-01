@@ -1732,6 +1732,8 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
       static_cast<TagDecl::TagKind>(kind));
   class_template_specialization_decl->setDeclContext(decl_ctx);
   class_template_specialization_decl->setInstantiationOf(class_template_decl);
+  if (TypeSystemClang::UseRedeclCompletion())
+    ast.getTypeDeclType(class_template_specialization_decl, nullptr);
   class_template_specialization_decl->setTemplateArgs(
       TemplateArgumentList::CreateCopy(ast, args));
   class_template_specialization_decl->setDeclName(
