@@ -1,0 +1,14 @@
+// RUN: cir-translate %s -cir-to-llvmir | FileCheck %s
+
+
+module {
+  cir.func @omp_taskwait_1() {
+    omp.taskwait
+    cir.return
+  }
+}
+
+// CHECK: define void @omp_taskwait_1()
+// CHECK: call i32 @__kmpc_global_thread_num(ptr {{.*}})
+// CHECK: call i32 @__kmpc_omp_taskwait(ptr {{.*}}, i32 {{.*}})
+// CHECK: ret void
