@@ -820,7 +820,26 @@ void RewriteInstance::discoverFileObjects() {
       return std::hash<decltype(DataRefImpl::p)>{}(S.getRawDataRefImpl().p);
     }
   };
+
+  // Sort symbols in the file by value. Ignore symbols from non-allocatable
+  // sections. We memoize getAddress(), as it has rather high overhead.
+  struct SymbolInfo {
+    uint64_t Address;
+    SymbolRef Symbol;
+  };
+  auto isSymbolInMemory = [this](const SymbolRef &Sym) {
+    if (cantFail(Sym.getType()) == SymbolRef::ST_File)
+      return false;
+    if (cantFail(Sym.getFlags()) & SymbolRef::SF_Absolute)
+      return true;
+    if (cantFail(Sym.getFlags()) & SymbolRef::SF_Undefined)
+      return false;
+    BinarySection Section(*BC, *cantFail(Sym.getSection()));
+    return Section.isAllocatable();
+  };
+  std::vector<SymbolInfo> SortedSymbols;
   std::unordered_map<SymbolRef, StringRef, SymbolRefHash> SymbolToFileName;
+
   for (const ELFSymbolRef &Symbol : InputFile->symbols()) {
     Expected<StringRef> NameOrError = Symbol.getName();
     if (NameOrError && NameOrError->starts_with("__asan_init")) {
@@ -835,6 +854,8 @@ void RewriteInstance::discoverFileObjects() {
              "support. Cannot optimize.\n";
       exit(1);
     }
+    if (isSymbolInMemory(Symbol))
+      SortedSymbols.push_back({cantFail(Symbol.getAddress()), Symbol});
 
     if (cantFail(Symbol.getFlags()) & SymbolRef::SF_Undefined)
       continue;
@@ -855,27 +876,6 @@ void RewriteInstance::discoverFileObjects() {
         !(cantFail(Symbol.getFlags()) & SymbolRef::SF_Global))
       SymbolToFileName[Symbol] = FileSymbolName;
   }
-
-  // Sort symbols in the file by value. Ignore symbols from non-allocatable
-  // sections. We memoize getAddress(), as it has rather high overhead.
-  struct SymbolInfo {
-    uint64_t Address;
-    SymbolRef Symbol;
-  };
-  std::vector<SymbolInfo> SortedSymbols;
-  auto isSymbolInMemory = [this](const SymbolRef &Sym) {
-    if (cantFail(Sym.getType()) == SymbolRef::ST_File)
-      return false;
-    if (cantFail(Sym.getFlags()) & SymbolRef::SF_Absolute)
-      return true;
-    if (cantFail(Sym.getFlags()) & SymbolRef::SF_Undefined)
-      return false;
-    BinarySection Section(*BC, *cantFail(Sym.getSection()));
-    return Section.isAllocatable();
-  };
-  for (const SymbolRef &Symbol : InputFile->symbols())
-    if (isSymbolInMemory(Symbol))
-      SortedSymbols.push_back({cantFail(Symbol.getAddress()), Symbol});
 
   auto CompareSymbols = [this](const SymbolInfo &A, const SymbolInfo &B) {
     if (A.Address != B.Address)
