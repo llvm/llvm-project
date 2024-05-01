@@ -742,10 +742,10 @@ AIX Support
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
-The -mcpu=generic configuration now enables multivalue and reference-types.These
-proposals are standardized and available in all major engines. Enabling
-multivalue here only enables the language feature but does not turn on the
-multivalue ABI (this enables non-ABI uses of multivalue, like exnref).
+The -mcpu=generic configuration now enables multivalue feature, which is
+standardized and available in all major engines. Enabling multivalue here only
+enables the language feature but does not turn on the multivalue ABI (this
+enables non-ABI uses of multivalue, like exnref).
 
 AVR Support
 ^^^^^^^^^^^
