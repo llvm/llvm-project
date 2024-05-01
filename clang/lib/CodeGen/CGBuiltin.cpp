@@ -822,8 +822,9 @@ CodeGenFunction::evaluateOrEmitBuiltinObjectSize(const Expr *E, unsigned Type,
   return ConstantInt::get(ResType, ObjectSize, /*isSigned=*/true);
 }
 
-const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
-    ASTContext &Ctx, const RecordDecl *RD, StringRef Name, uint64_t &Offset) {
+const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberFieldAndOffset(
+    ASTContext &Ctx, const RecordDecl *RD, const FieldDecl *FAMDecl,
+    uint64_t &Offset) {
   const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
       getLangOpts().getStrictFlexArraysLevel();
   uint32_t FieldNo = 0;
@@ -832,7 +833,7 @@ const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
     return nullptr;
 
   for (const FieldDecl *FD : RD->fields()) {
-    if ((Name.empty() || FD->getNameAsString() == Name) &&
+    if ((!FAMDecl || FD == FAMDecl) &&
         Decl::isFlexibleArrayMemberLike(
             Ctx, FD, FD->getType(), StrictFlexArraysLevel,
             /*IgnoreTemplateOrMacroSubstitution=*/true)) {
@@ -843,8 +844,8 @@ const FieldDecl *CodeGenFunction::FindFlexibleArrayMemberField(
 
     QualType Ty = FD->getType();
     if (Ty->isRecordType()) {
-      if (const FieldDecl *Field = FindFlexibleArrayMemberField(
-              Ctx, Ty->getAsRecordDecl(), Name, Offset)) {
+      if (const FieldDecl *Field = FindFlexibleArrayMemberFieldAndOffset(
+              Ctx, Ty->getAsRecordDecl(), FAMDecl, Offset)) {
         const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
         Offset += Layout.getFieldOffset(FieldNo);
         return Field;
@@ -930,12 +931,14 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
 
   // Get the flexible array member Decl.
   const RecordDecl *OuterRD = nullptr;
-  std::string FAMName;
+  const FieldDecl *FAMDecl = nullptr;
   if (const auto *ME = dyn_cast<MemberExpr>(Base)) {
     // Check if \p Base is referencing the FAM itself.
     const ValueDecl *VD = ME->getMemberDecl();
     OuterRD = VD->getDeclContext()->getOuterLexicalRecordContext();
-    FAMName = VD->getNameAsString();
+    FAMDecl = dyn_cast<FieldDecl>(VD);
+    if (!FAMDecl)
+      return nullptr;
   } else if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
     // Check if we're pointing to the whole struct.
     QualType Ty = DRE->getDecl()->getType();
@@ -974,9 +977,11 @@ CodeGenFunction::emitFlexibleArrayMemberSize(const Expr *E, unsigned Type,
   if (!OuterRD)
     return nullptr;
 
+  // We call FindFlexibleArrayMemberAndOffset even if FAMDecl is non-null to
+  // get its offset.
   uint64_t Offset = 0;
-  const FieldDecl *FAMDecl =
-      FindFlexibleArrayMemberField(Ctx, OuterRD, FAMName, Offset);
+  FAMDecl =
+      FindFlexibleArrayMemberFieldAndOffset(Ctx, OuterRD, FAMDecl, Offset);
   Offset = Ctx.toCharUnitsFromBits(Offset).getQuantity();
 
   if (!FAMDecl || !FAMDecl->getType()->isCountAttributedType())

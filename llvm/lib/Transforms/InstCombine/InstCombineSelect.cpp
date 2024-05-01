@@ -1722,11 +1722,11 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
       return match(CmpRHS, m_Zero()) && match(FalseVal, matchInner);
 
     if (NotMask == NotInner) {
-      return match(FalseVal,
-                   m_c_BinOp(OuterOpc, m_Not(matchInner), m_Specific(CmpRHS)));
+      return match(FalseVal, m_c_BinOp(OuterOpc, m_NotForbidPoison(matchInner),
+                                       m_Specific(CmpRHS)));
     } else if (NotMask == NotRHS) {
-      return match(FalseVal,
-                   m_c_BinOp(OuterOpc, matchInner, m_Not(m_Specific(CmpRHS))));
+      return match(FalseVal, m_c_BinOp(OuterOpc, matchInner,
+                                       m_NotForbidPoison(m_Specific(CmpRHS))));
     } else {
       return match(FalseVal,
                    m_c_BinOp(OuterOpc, matchInner, m_Specific(CmpRHS)));

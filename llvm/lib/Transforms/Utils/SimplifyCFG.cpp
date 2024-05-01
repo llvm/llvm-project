@@ -51,6 +51,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
@@ -1677,7 +1678,8 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(BasicBlock *BB,
     for (auto &SuccIter : OtherSuccIterRange) {
       Instruction *I2 = &*SuccIter;
       HasTerminator |= I2->isTerminator();
-      if (AllInstsAreIdentical && !I1->isIdenticalToWhenDefined(I2))
+      if (AllInstsAreIdentical && (!I1->isIdenticalToWhenDefined(I2) ||
+                                   MMRAMetadata(*I1) != MMRAMetadata(*I2)))
         AllInstsAreIdentical = false;
     }
 
@@ -1964,6 +1966,7 @@ static bool canSinkInstructions(
   }
 
   const Instruction *I0 = Insts.front();
+  const auto I0MMRA = MMRAMetadata(*I0);
   for (auto *I : Insts) {
     if (!I->isSameOperationAs(I0))
       return false;
@@ -1974,6 +1977,11 @@ static bool canSinkInstructions(
     if (isa<StoreInst>(I) && I->getOperand(1)->isSwiftError())
       return false;
     if (isa<LoadInst>(I) && I->getOperand(0)->isSwiftError())
+      return false;
+
+    // Treat MMRAs conservatively. This pass can be quite aggressive and
+    // could drop a lot of MMRAs otherwise.
+    if (MMRAMetadata(*I) != I0MMRA)
       return false;
   }
 

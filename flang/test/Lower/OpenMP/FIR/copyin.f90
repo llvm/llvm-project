@@ -145,10 +145,13 @@ end
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 1 : i32
-! CHECK:           omp.wsloop   for  (%[[VAL_9:.*]]) : i32 = (%[[VAL_6]]) to (%[[VAL_7]]) inclusive step (%[[VAL_8]]) {
-! CHECK:             fir.store %[[VAL_9]] to %[[VAL_3]] : !fir.ref<i32>
-! CHECK:             fir.call @_QPsub4(%[[VAL_4]]) {{.*}}: (!fir.ref<i32>) -> ()
-! CHECK:             omp.yield
+! CHECK:           omp.wsloop {
+! CHECK-NEXT:        omp.loop_nest (%[[VAL_9:.*]]) : i32 = (%[[VAL_6]]) to (%[[VAL_7]]) inclusive step (%[[VAL_8]]) {
+! CHECK:               fir.store %[[VAL_9]] to %[[VAL_3]] : !fir.ref<i32>
+! CHECK:               fir.call @_QPsub4(%[[VAL_4]]) {{.*}}: (!fir.ref<i32>) -> ()
+! CHECK:               omp.yield
+! CHECK:             }
+! CHECK:             omp.terminator
 ! CHECK:           }
 ! CHECK:           omp.terminator
 ! CHECK:         }
@@ -286,13 +289,16 @@ end subroutine
 !CHECK: %[[val_c1_i32:.*]] = arith.constant 1 : i32
 !CHECK: %[[val_19:.*]] = fir.load %[[val_13]] : !fir.ref<i32>
 !CHECK: %[[val_c1_i32_2:.*]] = arith.constant 1 : i32
-!CHECK: omp.wsloop   for (%[[arg:.*]]) : i32 = (%[[val_c1_i32]]) to (%[[val_19]]) inclusive step (%[[val_c1_i32_2]]) {
+!CHECK: omp.wsloop {
+!CHECK-NEXT: omp.loop_nest (%[[arg:.*]]) : i32 = (%[[val_c1_i32]]) to (%[[val_19]]) inclusive step (%[[val_c1_i32_2]]) {
 !CHECK: fir.store %[[arg]] to %[[val_9]] : !fir.ref<i32>
 !CHECK: %[[val_20:.*]] = fir.load %[[val_16]] : !fir.ref<i32>
 !CHECK: %[[val_21:.*]] = fir.load %[[val_9]] : !fir.ref<i32>
 !CHECK: %[[val_22:.*]] = arith.addi %[[val_20]], %[[val_21]] : i32
 !CHECK: fir.store %[[val_22]] to %[[val_16]] : !fir.ref<i32>
 !CHECK: omp.yield
+!CHECK: }
+!CHECK: omp.terminator
 !CHECK: }
 !CHECK: omp.terminator
 !CHECK: }
