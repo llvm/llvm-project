@@ -205,7 +205,7 @@ USEVAR(VarTmpl<ExplicitSpec_Imported>)
 // Functions
 //===----------------------------------------------------------------------===//
 
-// GNU-DAG: declare dso_local void @_ZdlPv{{j|y}}(ptr, i{{32|64}})
+// GNU-DAG: declare dso_local void @_ZdlPv(ptr)
 
 // Import function declaration.
 // MSC-DAG: declare dllimport void @"?decl@@YAXXZ"()
@@ -358,7 +358,7 @@ __declspec(dllimport) void operator delete(void*);
 __declspec(dllimport) inline int *ReferencingImportedNew() { return new int[2]; }
 // MO1-DAG: define available_externally dllimport ptr @"?ReferencingImportedNew@@YAPAHXZ"
 __declspec(dllimport) inline int *ReferencingImportedDelete() { delete (int*)nullptr; }
-// MO1-DAG: declare dllimport ptr @"?ReferencingImportedDelete@@YAPAHXZ"
+// MO1-DAG: define available_externally dllimport ptr @"?ReferencingImportedDelete@@YAPAHXZ"
 USE(ReferencingImportedNew)
 USE(ReferencingImportedDelete)
 struct ClassWithDtor { ~ClassWithDtor() {} };
