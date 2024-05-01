@@ -254,26 +254,27 @@ public:
 };
 
 Value *getMatchingValue(LoadValue LV, LoadInst *LI, unsigned CurrentGeneration,
+                        BatchAAResults &BAA,
                         function_ref<MemorySSA *()> GetMSSA) {
   if (!LV.DefI)
+    return nullptr;
+  if (LV.DefI->getType() != LI->getType())
     return nullptr;
   if (LV.Generation != CurrentGeneration) {
     MemorySSA *MSSA = GetMSSA();
     if (!MSSA)
       return nullptr;
     auto *EarlierMA = MSSA->getMemoryAccess(LV.DefI);
-    MemoryAccess *LaterDef = MSSA->getWalker()->getClobberingMemoryAccess(LI);
+    MemoryAccess *LaterDef =
+        MSSA->getWalker()->getClobberingMemoryAccess(LI, BAA);
     if (!MSSA->dominates(LaterDef, EarlierMA))
       return nullptr;
   }
-
-  if (LV.DefI->getType() != LI->getType())
-    return nullptr;
   return LV.DefI;
 }
 
 void loadCSE(Loop *L, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI,
-             function_ref<MemorySSA *()> GetMSSA) {
+             BatchAAResults &BAA, function_ref<MemorySSA *()> GetMSSA) {
   ScopedHashTable<const SCEV *, LoadValue> AvailableLoads;
   SmallVector<std::unique_ptr<StackNode>> NodesToProcess;
   DomTreeNode *HeaderD = DT.getNode(L->getHeader());
@@ -282,11 +283,8 @@ void loadCSE(Loop *L, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI,
 
   unsigned CurrentGeneration = 0;
   while (!NodesToProcess.empty()) {
-    // Grab the first item off the stack. Set the current generation, remove
-    // the node from the stack, and process it.
     StackNode *NodeToProcess = &*NodesToProcess.back();
 
-    // Initialize class members.
     CurrentGeneration = NodeToProcess->currentGeneration();
 
     if (!NodeToProcess->isProcessed()) {
@@ -312,8 +310,8 @@ void loadCSE(Loop *L, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI,
 
         const SCEV *PtrSCEV = SE.getSCEV(Load->getPointerOperand());
         LoadValue LV = AvailableLoads.lookup(PtrSCEV);
-        if (Value *M = getMatchingValue(LV, Load, CurrentGeneration, GetMSSA)) {
-
+        if (Value *M =
+                getMatchingValue(LV, Load, CurrentGeneration, BAA, GetMSSA)) {
           if (LI.replacementPreservesLCSSAForm(Load, M)) {
             Load->replaceAllUsesWith(M);
             Load->eraseFromParent();
@@ -326,12 +324,12 @@ void loadCSE(Loop *L, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI,
       NodeToProcess->process();
     } else if (NodeToProcess->childIter() != NodeToProcess->end()) {
       // Push the next child onto the stack.
-      DomTreeNode *child = NodeToProcess->nextChild();
-      if (!L->contains(child->getBlock()))
+      DomTreeNode *Child = NodeToProcess->nextChild();
+      if (!L->contains(Child->getBlock()))
         continue;
       NodesToProcess.emplace_back(
-          new StackNode(AvailableLoads, NodeToProcess->childGeneration(), child,
-                        child->begin(), child->end()));
+          new StackNode(AvailableLoads, NodeToProcess->childGeneration(), Child,
+                        Child->begin(), Child->end()));
     } else {
       // It has been processed, and there are no more children to process,
       // so delete it and pop it off the stack.
@@ -365,7 +363,8 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 
     if (AA) {
       std::unique_ptr<MemorySSA> MSSA = nullptr;
-      loadCSE(L, *DT, *SE, *LI, [L, AA, DT, &MSSA]() -> MemorySSA * {
+      BatchAAResults BAA(*AA);
+      loadCSE(L, *DT, *SE, *LI, BAA, [L, AA, DT, &MSSA]() -> MemorySSA * {
         if (!MSSA)
           MSSA.reset(new MemorySSA(*L, AA, DT));
         return &*MSSA;
