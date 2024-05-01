@@ -99,8 +99,6 @@ define void @fmaxnm_v8f32(ptr %a, ptr %b) {
 define <1 x double> @fmaxnm_v1f64(<1 x double> %op1, <1 x double> %op2) {
 ; CHECK-LABEL: fmaxnm_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fmaxnm d0, d0, d1
 ; CHECK-NEXT:    ret
   %res = call <1 x double> @llvm.maxnum.v1f64(<1 x double> %op1, <1 x double> %op2)
@@ -233,8 +231,6 @@ define void @fminnm_v8f32(ptr %a, ptr %b) {
 define <1 x double> @fminnm_v1f64(<1 x double> %op1, <1 x double> %op2) {
 ; CHECK-LABEL: fminnm_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fminnm d0, d0, d1
 ; CHECK-NEXT:    ret
   %res = call <1 x double> @llvm.minnum.v1f64(<1 x double> %op1, <1 x double> %op2)
@@ -367,8 +363,6 @@ define void @fmax_v8f32(ptr %a, ptr %b) {
 define <1 x double> @fmax_v1f64(<1 x double> %op1, <1 x double> %op2) {
 ; CHECK-LABEL: fmax_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fmax d0, d0, d1
 ; CHECK-NEXT:    ret
   %res = call <1 x double> @llvm.maximum.v1f64(<1 x double> %op1, <1 x double> %op2)
@@ -501,8 +495,6 @@ define void @fmin_v8f32(ptr %a, ptr %b) {
 define <1 x double> @fmin_v1f64(<1 x double> %op1, <1 x double> %op2) {
 ; CHECK-LABEL: fmin_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    fmin d0, d0, d1
 ; CHECK-NEXT:    ret
   %res = call <1 x double> @llvm.minimum.v1f64(<1 x double> %op1, <1 x double> %op2)

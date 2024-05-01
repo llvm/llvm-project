@@ -234,19 +234,8 @@ bool ClauseProcessor::processMotionClauses(
               mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
 
           if (object.id()->owner().IsDerivedType()) {
-            std::optional<Fortran::evaluate::DataRef> dataRef =
-                ExtractDataRef(object.designator);
-            assert(
-                dataRef.has_value() &&
-                "DataRef could not be extracted during mapping of derived type "
-                "cannot proceed");
-            const Fortran::semantics::Symbol *parentSym =
-                &dataRef->GetFirstSymbol();
-            assert(parentSym && "Could not find parent symbol during lower of "
-                                "a component member in OpenMP map clause");
-            llvm::SmallVector<int> indices;
-            generateMemberPlacementIndices(object, indices, semaCtx);
-            parentMemberIndices[parentSym].push_back({indices, mapOp});
+            addChildIndexAndMapToParent(object, parentMemberIndices, mapOp,
+                                        semaCtx);
           } else {
             result.mapVars.push_back(mapOp);
             mapSymbols.push_back(object.id());

@@ -22,7 +22,7 @@
 /// The pass also adds MapInfoOp's that are members of a parent object but are
 /// not directly used in the body of a target region to its BlockArgument list
 /// to maintain consistency across all MapInfoOp's tied to a region directly or
-/// indirectly via an parent object.
+/// indirectly via a parent object.
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
@@ -159,8 +159,8 @@ class OMPMapInfoFinalizationPass
   //    map(tofrom: x%y)
   //
   // Will generate a mapping for "x" (the parent) and "y" (the member).
-  // The parent "x" will not be mapped (entirely), but the member "y"
-  // will. However, we must have the parent as a BlockArg and MapOperand
+  // The parent "x" will not be mapped, but the member "y" will.
+  // However, we must have the parent as a BlockArg and MapOperand
   // in these cases, to maintain the correct uses within the region and
   // to help tracking that the member is part of a larger object.
   //
@@ -168,12 +168,12 @@ class OMPMapInfoFinalizationPass
   //    map(tofrom: x%y, x%z)
   //
   // The parent member becomes more critical, as we perform a partial
-  // structure mapping where we link the mapping of x and y together
-  // via the parent. We do this at a kernel argument level in LLVM IR
-  // and not just MLIR, which is important to maintain similarity to
-  // Clang and for the runtime to do the correct thing. However, we
-  // still do not map the structure in its totality but rather we
-  // generate an un-sized "binding" map entry for it.
+  // structure mapping where we link the mapping of the members y
+  // and z together via the parent x. We do this at a kernel argument
+  // level in LLVM IR and not just MLIR, which is important to maintain
+  // similarity to Clang and for the runtime to do the correct thing.
+  // However, we still do not map the structure in its totality but
+  // rather we generate an un-sized "binding" map entry for it.
   //
   // In the case of:
   //    map(tofrom: x, x%y, x%z)
@@ -195,6 +195,7 @@ class OMPMapInfoFinalizationPass
 
     llvm::SmallVector<mlir::Value> newMapOps;
     mlir::OperandRange mapOperandsArr = mapClauseOwner.getMapOperands();
+    auto targetOp = llvm::dyn_cast<mlir::omp::TargetOp>(target);
 
     for (size_t i = 0; i < mapOperandsArr.size(); ++i) {
       if (mapOperandsArr[i] == op) {
@@ -205,7 +206,7 @@ class OMPMapInfoFinalizationPass
           // as the printing and later processing currently requires a 1:1
           // mapping of BlockArgs to MapInfoOp's at the same placement in
           // each array (BlockArgs and MapOperands).
-          if (auto targetOp = llvm::dyn_cast<mlir::omp::TargetOp>(target)) {
+          if (targetOp) {
             targetOp.getRegion().insertArgument(i + j, mapMember.getType(),
                                                 targetOp->getLoc());
           }

@@ -55,10 +55,6 @@ struct OmpMapMemberIndicesData {
   mlir::omp::MapInfoOp memberMap;
 };
 
-void generateMemberPlacementIndices(
-    const Object &object, llvm::SmallVectorImpl<int> &indices,
-    Fortran::semantics::SemanticsContext &semaCtx);
-
 mlir::omp::MapInfoOp
 createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::Value baseAddr, mlir::Value varPtrPtr, std::string name,
@@ -67,6 +63,12 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::DenseIntElementsAttr membersIndex, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
                 bool partialMap = false);
+
+void addChildIndexAndMapToParent(
+    const omp::Object &object,
+    std::map<const Fortran::semantics::Symbol *,
+             llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
+    mlir::omp::MapInfoOp &mapOp, Fortran::semantics::SemanticsContext &semaCtx);
 
 void insertChildMapInfoIntoParent(
     Fortran::lower::AbstractConverter &converter,

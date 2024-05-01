@@ -151,9 +151,10 @@ getComponentObject(std::optional<Object> object,
   return getComponentObject(baseObj.value(), semaCtx);
 }
 
-void generateMemberPlacementIndices(
-    const Object &object, llvm::SmallVectorImpl<int> &indices,
-    Fortran::semantics::SemanticsContext &semaCtx) {
+static void
+generateMemberPlacementIndices(const Object &object,
+                               llvm::SmallVectorImpl<int> &indices,
+                               Fortran::semantics::SemanticsContext &semaCtx) {
   auto compObj = getComponentObject(object, semaCtx);
   while (compObj) {
     indices.push_back(getComponentPlacementInParent(compObj->id()));
@@ -162,6 +163,25 @@ void generateMemberPlacementIndices(
   }
 
   indices = llvm::SmallVector<int>{llvm::reverse(indices)};
+}
+
+void addChildIndexAndMapToParent(
+    const omp::Object &object,
+    std::map<const Fortran::semantics::Symbol *,
+             llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
+    mlir::omp::MapInfoOp &mapOp,
+    Fortran::semantics::SemanticsContext &semaCtx) {
+  std::optional<Fortran::evaluate::DataRef> dataRef =
+      ExtractDataRef(object.designator);
+  assert(dataRef.has_value() &&
+         "DataRef could not be extracted during mapping of derived type "
+         "cannot proceed");
+  const Fortran::semantics::Symbol *parentSym = &dataRef->GetFirstSymbol();
+  assert(parentSym && "Could not find parent symbol during lower of "
+                      "a component member in OpenMP map clause");
+  llvm::SmallVector<int> indices;
+  generateMemberPlacementIndices(object, indices, semaCtx);
+  parentMemberIndices[parentSym].push_back({indices, mapOp});
 }
 
 static void calculateShapeAndFillIndices(
@@ -255,10 +275,10 @@ void insertChildMapInfoIntoParent(
       uint64_t mapType = indices.second[0].memberMap.getMapType().value_or(0);
 
       // create parent to emplace and bind members
-      auto origSymbol = converter.getSymbolAddress(*indices.first);
+      mlir::Value origSymbol = converter.getSymbolAddress(*indices.first);
 
       llvm::SmallVector<mlir::Value> members;
-      for (auto memberIndicesData : indices.second)
+      for (OmpMapMemberIndicesData memberIndicesData : indices.second)
         members.push_back((mlir::Value)memberIndicesData.memberMap);
 
       mlir::Value mapOp = createMapInfoOp(

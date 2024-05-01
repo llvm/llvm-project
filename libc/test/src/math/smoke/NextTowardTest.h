@@ -15,6 +15,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -30,7 +31,7 @@
   ASSERT_FP_EQ_WITH_EXCEPTION(result, expected, FE_INEXACT | FE_OVERFLOW)
 
 template <typename T>
-class NextTowardTestTemplate : public LIBC_NAMESPACE::testing::Test {
+class NextTowardTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
   using ToFPBits = LIBC_NAMESPACE::fputil::FPBits<long double>;
   using StorageType = typename FPBits::StorageType;

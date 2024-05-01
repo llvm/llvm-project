@@ -2124,7 +2124,8 @@ SDValue SITargetLowering::getPreloadedValue(SelectionDAG &DAG,
       AMDGPU::isEntryFunctionCC(CC) && !MFI.hasWorkGroupIDZ() ? ~0u : 0xFFFFu);
   const ArgDescriptor WorkGroupIDZ =
       ArgDescriptor::createRegister(AMDGPU::TTMP7, 0xFFFF0000u);
-  if (Subtarget->hasArchitectedSGPRs() && AMDGPU::isCompute(CC)) {
+  if (Subtarget->hasArchitectedSGPRs() &&
+      (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
     switch (PVID) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       Reg = &WorkGroupIDX;
@@ -2798,7 +2799,9 @@ SDValue SITargetLowering::LowerFormalArguments(
     (void)UserSGPRInfo;
     if (!Subtarget->enableFlatScratch())
       assert(!UserSGPRInfo.hasFlatScratchInit());
-    if (CallConv != CallingConv::AMDGPU_CS || !Subtarget->hasArchitectedSGPRs())
+    if ((CallConv != CallingConv::AMDGPU_CS &&
+         CallConv != CallingConv::AMDGPU_Gfx) ||
+        !Subtarget->hasArchitectedSGPRs())
       assert(!Info->hasWorkGroupIDX() && !Info->hasWorkGroupIDY() &&
              !Info->hasWorkGroupIDZ());
   }
@@ -5402,6 +5405,14 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MI.eraseFromParent();
     return SplitBB;
   }
+  case AMDGPU::SIMULATED_TRAP: {
+    assert(Subtarget->hasPrivEnabledTrap2NopBug());
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+    MachineBasicBlock *SplitBB =
+        TII->insertSimulatedTrap(MRI, *BB, MI, MI.getDebugLoc());
+    MI.eraseFromParent();
+    return SplitBB;
+  }
   default:
     if (TII->isImage(MI) || TII->isMUBUF(MI)) {
       if (!MI.mayStore())
@@ -6619,6 +6630,11 @@ SDValue SITargetLowering::lowerTrapHsa(
     SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue Chain = Op.getOperand(0);
+
+  // We need to simulate the 's_trap 2' instruction on targets that run in
+  // PRIV=1 (where it is treated as a nop).
+  if (Subtarget->hasPrivEnabledTrap2NopBug())
+    return DAG.getNode(AMDGPUISD::SIMULATED_TRAP, SL, MVT::Other, Chain);
 
   uint64_t TrapID = static_cast<uint64_t>(GCNSubtarget::TrapID::LLVMAMDHSATrap);
   SDValue Ops[] = {
