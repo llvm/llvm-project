@@ -1689,12 +1689,10 @@ DWARFDIE SymbolFileDWARF::FindDefinitionDIE(const DWARFDIE &die) {
       // and this DIE isn't the complete definition (we checked
       // is_complete_objc_class above and know it is false), so the real
       // definition is in here somewhere
-      type_sp =
-          FindCompleteObjCDefinitionTypeForDIE(die, attrs.name, true);
+      type_sp = FindCompleteObjCDefinitionTypeForDIE(die, attrs.name, true);
 
       if (!type_sp) {
-        SymbolFileDWARFDebugMap *debug_map_symfile =
-            GetDebugMapSymfile();
+        SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
         if (debug_map_symfile) {
           // We weren't able to find a full declaration in this DWARF,
           // see if we have a declaration anywhere else...
