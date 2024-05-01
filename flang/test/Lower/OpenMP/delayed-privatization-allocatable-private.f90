@@ -28,7 +28,7 @@ end subroutine
 ! CHECK-NEXT:   %[[ALLOC_COND:.*]] = arith.cmpi ne, %[[PRIV_ARG_ADDR]], %[[C0]] : i64
 
 ! CHECK-NEXT:   fir.if %[[ALLOC_COND]] {
-! CHECK-NEXT:     %[[PRIV_ALLOCMEM:.*]] = fir.allocmem i32 {fir.must_be_heap = true, uniq_name = "_QFdelayed_privatization_allocatableEvar1.alloc"}
+! CHECK:          %[[PRIV_ALLOCMEM:.*]] = fir.allocmem i32 {fir.must_be_heap = true, uniq_name = "_QFdelayed_privatization_allocatableEvar1.alloc"}
 ! CHECK-NEXT:     %[[PRIV_ALLOCMEM_BOX:.*]] = fir.embox %[[PRIV_ALLOCMEM]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
 ! CHECK-NEXT:     fir.store %[[PRIV_ALLOCMEM_BOX]] to %[[PRIV_ALLOC]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK-NEXT:   } else {
