@@ -153,7 +153,7 @@ VoidTask silly_task() {
 // Allocate promise.
 
 // CHECK: %[[#VoidTaskAddr:]] = cir.alloca ![[VoidTask]], {{.*}}, ["__retval"]
-// CHECK: %[[#SavedFrameAddr:]] = cir.alloca !cir.ptr<!void>, cir.ptr <!cir.ptr<!void>>, ["__coro_frame_addr"] {alignment = 8 : i64}
+// CHECK: %[[#SavedFrameAddr:]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["__coro_frame_addr"] {alignment = 8 : i64}
 // CHECK: %[[#VoidPromisseAddr:]] = cir.alloca ![[VoidPromisse]], {{.*}}, ["__promise"]
 
 // Get coroutine id with __builtin_coro_id.
@@ -166,13 +166,13 @@ VoidTask silly_task() {
 // call __builtin_coro_begin for the final coroutine frame address.
 
 // CHECK: %[[#ShouldAlloc:]] = cir.call @__builtin_coro_alloc(%[[#CoroId]]) : (!u32i) -> !cir.bool
-// CHECK: cir.store %[[#NullPtr]], %[[#SavedFrameAddr]] : !cir.ptr<!void>, cir.ptr <!cir.ptr<!void>>
+// CHECK: cir.store %[[#NullPtr]], %[[#SavedFrameAddr]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CHECK: cir.if %[[#ShouldAlloc]] {
 // CHECK:   %[[#CoroSize:]] = cir.call @__builtin_coro_size() : () -> !u64i
 // CHECK:   %[[#AllocAddr:]] = cir.call @_Znwm(%[[#CoroSize]]) : (!u64i) -> !cir.ptr<!void>
-// CHECK:   cir.store %[[#AllocAddr]], %[[#SavedFrameAddr]] : !cir.ptr<!void>, cir.ptr <!cir.ptr<!void>>
+// CHECK:   cir.store %[[#AllocAddr]], %[[#SavedFrameAddr]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CHECK: }
-// CHECK: %[[#Load0:]] = cir.load %[[#SavedFrameAddr]] : cir.ptr <!cir.ptr<!void>>, !cir.ptr<!void>
+// CHECK: %[[#Load0:]] = cir.load %[[#SavedFrameAddr]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CHECK: %[[#CoroFrameAddr:]] = cir.call @__builtin_coro_begin(%[[#CoroId]], %[[#Load0]])
 
 // Call promise.get_return_object() to retrieve the task object.
@@ -222,7 +222,7 @@ VoidTask silly_task() {
 // CHECK:     cir.store %[[#FromAddrRes]], %[[#CoroHandlePromiseAddr]] : ![[CoroHandlePromise]]
 // CHECK:     %[[#CoroHandlePromiseReload:]] = cir.load %[[#CoroHandlePromiseAddr]]
 // CHECK:     cir.call @_ZNSt16coroutine_handleIvEC1IN5folly4coro4TaskIvE12promise_typeEEES_IT_E(%[[#CoroHandleVoidAddr]], %[[#CoroHandlePromiseReload]])
-// CHECK:     %[[#CoroHandleVoidReload:]] = cir.load %[[#CoroHandleVoidAddr]] : cir.ptr <![[CoroHandleVoid]]>, ![[CoroHandleVoid]]
+// CHECK:     %[[#CoroHandleVoidReload:]] = cir.load %[[#CoroHandleVoidAddr]] : !cir.ptr<![[CoroHandleVoid]]>, ![[CoroHandleVoid]]
 // CHECK:     cir.call @_ZNSt14suspend_always13await_suspendESt16coroutine_handleIvE(%[[#SuspendAlwaysAddr]], %[[#CoroHandleVoidReload]])
 // CHECK:     cir.yield
 
@@ -304,7 +304,7 @@ folly::coro::Task<int> go1() {
 }
 
 // CHECK: cir.func coroutine @_Z3go1v()
-// CHECK: %[[#IntTaskAddr:]] = cir.alloca ![[IntTask]], cir.ptr <![[IntTask]]>, ["task", init]
+// CHECK: %[[#IntTaskAddr:]] = cir.alloca ![[IntTask]], !cir.ptr<![[IntTask]]>, ["task", init]
 
 // CHECK:   cir.await(init, ready : {
 // CHECK:   }, suspend : {
@@ -314,21 +314,21 @@ folly::coro::Task<int> go1() {
 
 // The call to go(1) has its own scope due to full-expression rules.
 // CHECK: cir.scope {
-// CHECK:   %[[#OneAddr:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["ref.tmp1", init] {alignment = 4 : i64}
+// CHECK:   %[[#OneAddr:]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp1", init] {alignment = 4 : i64}
 // CHECK:   %[[#One:]] = cir.const(#cir.int<1> : !s32i) : !s32i
-// CHECK:   cir.store %[[#One]], %[[#OneAddr]] : !s32i, cir.ptr <!s32i>
+// CHECK:   cir.store %[[#One]], %[[#OneAddr]] : !s32i, !cir.ptr<!s32i>
 // CHECK:   %[[#IntTaskTmp:]] = cir.call @_Z2goRKi(%[[#OneAddr]]) : (!cir.ptr<!s32i>) -> ![[IntTask]]
-// CHECK:   cir.store %[[#IntTaskTmp]], %[[#IntTaskAddr]] : ![[IntTask]], cir.ptr <![[IntTask]]>
+// CHECK:   cir.store %[[#IntTaskTmp]], %[[#IntTaskAddr]] : ![[IntTask]], !cir.ptr<![[IntTask]]>
 // CHECK: }
 
-// CHECK: %[[#CoReturnValAddr:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["__coawait_resume_rval"] {alignment = 1 : i64}
+// CHECK: %[[#CoReturnValAddr:]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__coawait_resume_rval"] {alignment = 1 : i64}
 // CHECK: cir.await(user, ready : {
 // CHECK: }, suspend : {
 // CHECK: }, resume : {
 // CHECK:   %[[#ResumeVal:]] = cir.call @_ZN5folly4coro4TaskIiE12await_resumeEv(%3)
-// CHECK:   cir.store %[[#ResumeVal]], %[[#CoReturnValAddr]] : !s32i, cir.ptr <!s32i>
+// CHECK:   cir.store %[[#ResumeVal]], %[[#CoReturnValAddr]] : !s32i, !cir.ptr<!s32i>
 // CHECK: },)
-// CHECK: %[[#V:]] = cir.load %[[#CoReturnValAddr]] : cir.ptr <!s32i>, !s32i
+// CHECK: %[[#V:]] = cir.load %[[#CoReturnValAddr]] : !cir.ptr<!s32i>, !s32i
 // CHECK: cir.call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi({{.*}}, %[[#V]])
 
 folly::coro::Task<int> go1_lambda() {
@@ -356,23 +356,23 @@ folly::coro::Task<int> go4() {
 // CHECK: }
 
 // CHECK: %12 = cir.scope {
-// CHECK:   %17 = cir.alloca !ty_22anon2E522, cir.ptr <!ty_22anon2E522>, ["ref.tmp1"] {alignment = 1 : i64}
+// CHECK:   %17 = cir.alloca !ty_22anon2E522, !cir.ptr<!ty_22anon2E522>, ["ref.tmp1"] {alignment = 1 : i64}
 
 // Get the lambda invoker ptr via `lambda operator folly::coro::Task<int> (*)(int const&)()`
 // CHECK:   %18 = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%17) : (!cir.ptr<!ty_22anon2E522>) -> !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
 // CHECK:   %19 = cir.unary(plus, %18) : !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>, !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
 // CHECK:   cir.yield %19 : !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
 // CHECK: }
-// CHECK: cir.store %12, %3 : !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>, cir.ptr <!cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>>
+// CHECK: cir.store %12, %3 : !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>, !cir.ptr<!cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>>
 // CHECK: cir.scope {
-// CHECK:   %17 = cir.alloca !s32i, cir.ptr <!s32i>, ["ref.tmp2", init] {alignment = 4 : i64}
-// CHECK:   %18 = cir.load %3 : cir.ptr <!cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>>, !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
+// CHECK:   %17 = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp2", init] {alignment = 4 : i64}
+// CHECK:   %18 = cir.load %3 : !cir.ptr<!cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>>, !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
 // CHECK:   %19 = cir.const(#cir.int<3> : !s32i) : !s32i
-// CHECK:   cir.store %19, %17 : !s32i, cir.ptr <!s32i>
+// CHECK:   cir.store %19, %17 : !s32i, !cir.ptr<!s32i>
 
 // Call invoker, which calls operator() indirectly.
 // CHECK:   %20 = cir.call %18(%17) : (!cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>, !cir.ptr<!s32i>) -> ![[IntTask]]
-// CHECK:   cir.store %20, %4 : ![[IntTask]], cir.ptr <![[IntTask]]>
+// CHECK:   cir.store %20, %4 : ![[IntTask]], !cir.ptr<![[IntTask]]>
 // CHECK: }
 
 // CHECK:   cir.await(user, ready : {

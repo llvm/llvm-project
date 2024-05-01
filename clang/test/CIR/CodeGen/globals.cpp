@@ -37,10 +37,10 @@ int use_func() { return func<int>(); }
 // CHECK-NEXT: cir.global external @d = #cir.int<0> : !s32i
 
 // CHECK-NEXT: cir.func internal private @__cxx_global_var_init()
-// CHECK-NEXT:   [[TMP0:%.*]] = cir.get_global @d : cir.ptr <!s32i>
-// CHECK-NEXT:   [[TMP1:%.*]] = cir.get_global @a : cir.ptr <!s32i>
-// CHECK-NEXT:   [[TMP2:%.*]] = cir.load [[TMP1]] : cir.ptr <!s32i>, !s32i
-// CHECK-NEXT:   cir.store [[TMP2]], [[TMP0]] : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT:   [[TMP0:%.*]] = cir.get_global @d : !cir.ptr<!s32i>
+// CHECK-NEXT:   [[TMP1:%.*]] = cir.get_global @a : !cir.ptr<!s32i>
+// CHECK-NEXT:   [[TMP2:%.*]] = cir.load [[TMP1]] : !cir.ptr<!s32i>, !s32i
+// CHECK-NEXT:   cir.store [[TMP2]], [[TMP0]] : !s32i, !cir.ptr<!s32i>
 
 // CHECK: cir.global external @e = #false
 // CHECK-NEXT: cir.global external @y = #cir.fp<3.400000e+00> : !cir.float
@@ -58,34 +58,34 @@ int use_func() { return func<int>(); }
 // CHECK-NEXT: cir.global external @s2 = #cir.global_view<@".str"> : !cir.ptr<!s8i>
 
 //      CHECK: cir.func @_Z10use_globalv()
-// CHECK-NEXT:     %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["li", init] {alignment = 4 : i64}
-// CHECK-NEXT:     %1 = cir.get_global @a : cir.ptr <!s32i>
-// CHECK-NEXT:     %2 = cir.load %1 : cir.ptr <!s32i>, !s32i
-// CHECK-NEXT:     cir.store %2, %0 : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT:     %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["li", init] {alignment = 4 : i64}
+// CHECK-NEXT:     %1 = cir.get_global @a : !cir.ptr<!s32i>
+// CHECK-NEXT:     %2 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+// CHECK-NEXT:     cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
 
 //      CHECK: cir.func @_Z17use_global_stringv()
-// CHECK-NEXT:   %0 = cir.alloca !u8i, cir.ptr <!u8i>, ["c", init] {alignment = 1 : i64}
-// CHECK-NEXT:   %1 = cir.get_global @s2 : cir.ptr <!cir.ptr<!s8i>>
-// CHECK-NEXT:   %2 = cir.load %1 : cir.ptr <!cir.ptr<!s8i>>, !cir.ptr<!s8i>
+// CHECK-NEXT:   %0 = cir.alloca !u8i, !cir.ptr<!u8i>, ["c", init] {alignment = 1 : i64}
+// CHECK-NEXT:   %1 = cir.get_global @s2 : !cir.ptr<!cir.ptr<!s8i>>
+// CHECK-NEXT:   %2 = cir.load %1 : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
 // CHECK-NEXT:   %3 = cir.const(#cir.int<0> : !s32i) : !s32i
 // CHECK-NEXT:   %4 = cir.ptr_stride(%2 : !cir.ptr<!s8i>, %3 : !s32i), !cir.ptr<!s8i>
-// CHECK-NEXT:   %5 = cir.load %4 : cir.ptr <!s8i>, !s8i
+// CHECK-NEXT:   %5 = cir.load %4 : !cir.ptr<!s8i>, !s8i
 // CHECK-NEXT:   %6 = cir.cast(integral, %5 : !s8i), !u8i
-// CHECK-NEXT:   cir.store %6, %0 : !u8i, cir.ptr <!u8i>
+// CHECK-NEXT:   cir.store %6, %0 : !u8i, !cir.ptr<!u8i>
 // CHECK-NEXT:   cir.return
 
 //      CHECK:  cir.func linkonce_odr @_Z4funcIiET_v() -> !s32i
-// CHECK-NEXT:    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
+// CHECK-NEXT:    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK-NEXT:    %1 = cir.const(#cir.int<0> : !s32i) : !s32i
-// CHECK-NEXT:    cir.store %1, %0 : !s32i, cir.ptr <!s32i>
-// CHECK-NEXT:    %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT:    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT:    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:    cir.return %2 : !s32i
 // CHECK-NEXT:  }
 // CHECK-NEXT:  cir.func @_Z8use_funcv() -> !s32i
-// CHECK-NEXT:    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
+// CHECK-NEXT:    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK-NEXT:    %1 = cir.call @_Z4funcIiET_v() : () -> !s32i
-// CHECK-NEXT:    cir.store %1, %0 : !s32i, cir.ptr <!s32i>
-// CHECK-NEXT:    %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT:    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT:    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:    cir.return %2 : !s32i
 // CHECK-NEXT:  }
 
@@ -104,19 +104,19 @@ long long ll[] = {999999999, 0, 0, 0};
 void get_globals() {
   // CHECK: cir.func @_Z11get_globalsv()
   char *s = string;
-  // CHECK: %[[RES:[0-9]+]] = cir.get_global @string : cir.ptr <!cir.array<!s8i x 8>>
+  // CHECK: %[[RES:[0-9]+]] = cir.get_global @string : !cir.ptr<!cir.array<!s8i x 8>>
   // CHECK: %{{[0-9]+}} = cir.cast(array_to_ptrdecay, %[[RES]] : !cir.ptr<!cir.array<!s8i x 8>>), !cir.ptr<!s8i>
   unsigned *u = uint;
-  // CHECK: %[[RES:[0-9]+]] = cir.get_global @uint : cir.ptr <!cir.array<!u32i x 1>>
+  // CHECK: %[[RES:[0-9]+]] = cir.get_global @uint : !cir.ptr<!cir.array<!u32i x 1>>
   // CHECK: %{{[0-9]+}} = cir.cast(array_to_ptrdecay, %[[RES]] : !cir.ptr<!cir.array<!u32i x 1>>), !cir.ptr<!u32i>
   short *ss = sshort;
-  // CHECK: %[[RES:[0-9]+]] = cir.get_global @sshort : cir.ptr <!cir.array<!s16i x 2>>
+  // CHECK: %[[RES:[0-9]+]] = cir.get_global @sshort : !cir.ptr<!cir.array<!s16i x 2>>
   // CHECK: %{{[0-9]+}} = cir.cast(array_to_ptrdecay, %[[RES]] : !cir.ptr<!cir.array<!s16i x 2>>), !cir.ptr<!s16i>
   int *si = sint;
-  // CHECK: %[[RES:[0-9]+]] = cir.get_global @sint : cir.ptr <!cir.array<!s32i x 3>>
+  // CHECK: %[[RES:[0-9]+]] = cir.get_global @sint : !cir.ptr<!cir.array<!s32i x 3>>
   // CHECK: %{{[0-9]+}} = cir.cast(array_to_ptrdecay, %[[RES]] : !cir.ptr<!cir.array<!s32i x 3>>), !cir.ptr<!s32i>
   long long *l = ll;
-  // CHECK: %[[RES:[0-9]+]] = cir.get_global @ll : cir.ptr <!cir.array<!s64i x 4>>
+  // CHECK: %[[RES:[0-9]+]] = cir.get_global @ll : !cir.ptr<!cir.array<!s64i x 4>>
   // CHECK: %{{[0-9]+}} = cir.cast(array_to_ptrdecay, %[[RES]] : !cir.ptr<!cir.array<!s64i x 4>>), !cir.ptr<!s64i>
 }
 
@@ -125,7 +125,7 @@ extern int externVar;
 int testExternVar(void) { return externVar; }
 // CHECK: cir.global "private" external @externVar : !s32i
 // CHECK: cir.func @{{.+}}testExternVar
-// CHECK:   cir.get_global @externVar : cir.ptr <!s32i>
+// CHECK:   cir.get_global @externVar : !cir.ptr<!s32i>
 
 // Should constant initialize global with constant address.
 int var = 1;

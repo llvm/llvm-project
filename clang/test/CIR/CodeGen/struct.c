@@ -27,17 +27,17 @@ void baz(void) {
 // CHECK-DAG: !ty_22Foo22 = !cir.struct<struct "Foo" {!cir.int<s, 32>, !cir.int<s, 8>, !cir.struct<struct "Bar" {!cir.int<s, 32>, !cir.int<s, 8>}>}>
 //  CHECK-DAG: module {{.*}} {
      // CHECK:   cir.func @baz()
-// CHECK-NEXT:     %0 = cir.alloca !ty_22Bar22, cir.ptr <!ty_22Bar22>, ["b"] {alignment = 4 : i64}
-// CHECK-NEXT:     %1 = cir.alloca !ty_22Foo22, cir.ptr <!ty_22Foo22>, ["f"] {alignment = 4 : i64}
+// CHECK-NEXT:     %0 = cir.alloca !ty_22Bar22, !cir.ptr<!ty_22Bar22>, ["b"] {alignment = 4 : i64}
+// CHECK-NEXT:     %1 = cir.alloca !ty_22Foo22, !cir.ptr<!ty_22Foo22>, ["f"] {alignment = 4 : i64}
 // CHECK-NEXT:     cir.return
 // CHECK-NEXT:   }
 
 void shouldConstInitStructs(void) {
 // CHECK: cir.func @shouldConstInitStructs
   struct Foo f = {1, 2, {3, 4}};
-  // CHECK: %[[#V0:]] = cir.alloca !ty_22Foo22, cir.ptr <!ty_22Foo22>, ["f"] {alignment = 4 : i64}
+  // CHECK: %[[#V0:]] = cir.alloca !ty_22Foo22, !cir.ptr<!ty_22Foo22>, ["f"] {alignment = 4 : i64}
   // CHECK: %[[#V1:]] = cir.const(#cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s8i, #cir.const_struct<{#cir.int<3> : !s32i, #cir.int<4> : !s8i}> : !ty_22Bar22}> : !ty_22Foo22) : !ty_22Foo22
-  // CHECK: cir.store %[[#V1]], %[[#V0]] : !ty_22Foo22, cir.ptr <!ty_22Foo22>
+  // CHECK: cir.store %[[#V1]], %[[#V0]] : !ty_22Foo22, !cir.ptr<!ty_22Foo22>
 }
 
 // Should zero-initialize uninitialized global structs.
@@ -71,7 +71,7 @@ struct S3 {
 void shouldCopyStructAsCallArg(struct S1 s) {
 // CHECK-DAG: cir.func @shouldCopyStructAsCallArg
   shouldCopyStructAsCallArg(s);
-  // CHECK-DAG: %[[#LV:]] = cir.load %{{.+}} : cir.ptr <!ty_22S122>, !ty_22S122
+  // CHECK-DAG: %[[#LV:]] = cir.load %{{.+}} : !cir.ptr<!ty_22S122>, !ty_22S122
   // CHECK-DAG: cir.call @shouldCopyStructAsCallArg(%[[#LV]]) : (!ty_22S122) -> ()
 }
 
@@ -86,7 +86,7 @@ struct Bar shouldGenerateAndAccessStructArrays(void) {
 // CHECK-DAG: cir.copy %[[#ELT]] to %{{.+}} : !cir.ptr<!ty_22Bar22>
 
 // CHECK-DAG: cir.func @local_decl
-// CHECK-DAG: {{%.}} = cir.alloca !ty_22Local22, cir.ptr <!ty_22Local22>, ["a"] 
+// CHECK-DAG: {{%.}} = cir.alloca !ty_22Local22, !cir.ptr<!ty_22Local22>, ["a"] 
 void local_decl(void) {
   struct Local {
     int i;

@@ -50,29 +50,29 @@ void m() {
 }
 
 // CHECK:   cir.func @_Z1mv()
-// CHECK:   cir.alloca !ty_22yolm22, cir.ptr <!ty_22yolm22>, ["q"] {alignment = 4 : i64}
-// CHECK:   cir.alloca !ty_22yolm222, cir.ptr <!ty_22yolm222>, ["q2"] {alignment = 8 : i64}
-// CHECK:   cir.alloca !ty_22yolm322, cir.ptr <!ty_22yolm322>, ["q3"] {alignment = 4 : i64}
+// CHECK:   cir.alloca !ty_22yolm22, !cir.ptr<!ty_22yolm22>, ["q"] {alignment = 4 : i64}
+// CHECK:   cir.alloca !ty_22yolm222, !cir.ptr<!ty_22yolm222>, ["q2"] {alignment = 8 : i64}
+// CHECK:   cir.alloca !ty_22yolm322, !cir.ptr<!ty_22yolm322>, ["q3"] {alignment = 4 : i64}
 
 void shouldGenerateUnionAccess(union U u) {
   u.b = true;
   // CHECK: %[[#BASE:]] = cir.get_member %0[0] {name = "b"} : !cir.ptr<!ty_22U22> -> !cir.ptr<!cir.bool>
-  // CHECK: cir.store %{{.+}}, %[[#BASE]] : !cir.bool, cir.ptr <!cir.bool>
+  // CHECK: cir.store %{{.+}}, %[[#BASE]] : !cir.bool, !cir.ptr<!cir.bool>
   u.b;
   // CHECK: cir.get_member %0[0] {name = "b"} : !cir.ptr<!ty_22U22> -> !cir.ptr<!cir.bool>
   u.i = 1;
   // CHECK: %[[#BASE:]] = cir.get_member %0[2] {name = "i"} : !cir.ptr<!ty_22U22> -> !cir.ptr<!s32i>
-  // CHECK: cir.store %{{.+}}, %[[#BASE]] : !s32i, cir.ptr <!s32i>
+  // CHECK: cir.store %{{.+}}, %[[#BASE]] : !s32i, !cir.ptr<!s32i>
   u.i;
   // CHECK: %[[#BASE:]] = cir.get_member %0[2] {name = "i"} : !cir.ptr<!ty_22U22> -> !cir.ptr<!s32i>
   u.f = 0.1F;
   // CHECK: %[[#BASE:]] = cir.get_member %0[3] {name = "f"} : !cir.ptr<!ty_22U22> -> !cir.ptr<!cir.float>
-  // CHECK: cir.store %{{.+}}, %[[#BASE]] : !cir.float, cir.ptr <!cir.float>
+  // CHECK: cir.store %{{.+}}, %[[#BASE]] : !cir.float, !cir.ptr<!cir.float>
   u.f;
   // CHECK: %[[#BASE:]] = cir.get_member %0[3] {name = "f"} : !cir.ptr<!ty_22U22> -> !cir.ptr<!cir.float>
   u.d = 0.1;
   // CHECK: %[[#BASE:]] = cir.get_member %0[4] {name = "d"} : !cir.ptr<!ty_22U22> -> !cir.ptr<!cir.double>
-  // CHECK: cir.store %{{.+}}, %[[#BASE]] : !cir.double, cir.ptr <!cir.double>
+  // CHECK: cir.store %{{.+}}, %[[#BASE]] : !cir.double, !cir.ptr<!cir.double>
   u.d;
   // CHECK: %[[#BASE:]] = cir.get_member %0[4] {name = "d"} : !cir.ptr<!ty_22U22> -> !cir.ptr<!cir.double>
 }
@@ -84,8 +84,8 @@ typedef union {
  
 void noCrushOnDifferentSizes() {
   A a = {0};
-  // CHECK:  %[[#TMP0:]] = cir.alloca !ty_22A22, cir.ptr <!ty_22A22>, ["a"] {alignment = 4 : i64}
+  // CHECK:  %[[#TMP0:]] = cir.alloca !ty_22A22, !cir.ptr<!ty_22A22>, ["a"] {alignment = 4 : i64}
   // CHECK:  %[[#TMP1:]] = cir.cast(bitcast, %[[#TMP0]] : !cir.ptr<!ty_22A22>), !cir.ptr<!ty_anon_struct>
   // CHECK:  %[[#TMP2:]] = cir.const(#cir.zero : !ty_anon_struct) : !ty_anon_struct
-  // CHECK:  cir.store %[[#TMP2]], %[[#TMP1]] : !ty_anon_struct, cir.ptr <!ty_anon_struct>
+  // CHECK:  cir.store %[[#TMP2]], %[[#TMP1]] : !ty_anon_struct, !cir.ptr<!ty_anon_struct>
 }

@@ -7,8 +7,8 @@ int f() {
 }
 
 // CHECK: cir.func @_Z1fv() -> !s32i
-// CHECK:   %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
+// CHECK:   %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK:   %1 = cir.call @_Z1pv() : () -> !cir.ptr<!s32i>
-// CHECK:   %2 = cir.load %1 : cir.ptr <!s32i>, !s32i
+// CHECK:   %2 = cir.load %1 : !cir.ptr<!s32i>, !s32i
 // CHECK:   %3 = cir.const(#cir.int<22> : !s32i) : !s32i
 // CHECK:   %4 = cir.binop(sub, %2, %3) nsw : !s32i

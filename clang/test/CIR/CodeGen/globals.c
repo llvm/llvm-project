@@ -81,7 +81,7 @@ int foo() {
 }
 // CHECK: cir.global "private" external @optind : !s32i
 // CHECK: cir.func {{.*@foo}}
-// CHECK:   {{.*}} = cir.get_global @optind : cir.ptr <!s32i>
+// CHECK:   {{.*}} = cir.get_global @optind : !cir.ptr<!s32i>
 
 struct Glob {
   double a[42];

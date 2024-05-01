@@ -14,7 +14,7 @@ void f() {
 }
 
 // CHECK: cir.func @_Z1fv()
-// CHECK:     %0 = cir.alloca !ty_22Zero22, cir.ptr <!ty_22Zero22>, ["z0", init]
-// CHECK:     %1 = cir.alloca !ty_22Zero22, cir.ptr <!ty_22Zero22>, ["z1"]
+// CHECK:     %0 = cir.alloca !ty_22Zero22, !cir.ptr<!ty_22Zero22>, ["z0", init]
+// CHECK:     %1 = cir.alloca !ty_22Zero22, !cir.ptr<!ty_22Zero22>, ["z1"]
 // CHECK:     cir.call @_ZN4ZeroC1Ev(%0) : (!cir.ptr<!ty_22Zero22>) -> ()
 // CHECK:     cir.return

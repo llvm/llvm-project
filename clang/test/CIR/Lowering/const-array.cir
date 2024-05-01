@@ -7,7 +7,7 @@ module {
   // LLVM: @normal_url_char = internal global [4 x i8] c"\00\01\00\00"
 
   cir.func @c0() -> !cir.ptr<!cir.array<!u8i x 4>> {
-    %0 = cir.get_global @normal_url_char : cir.ptr <!cir.array<!u8i x 4>>
+    %0 = cir.get_global @normal_url_char : !cir.ptr<!cir.array<!u8i x 4>>
     cir.return %0 : !cir.ptr<!cir.array<!u8i x 4>>
   }
   // LLVM: define ptr @c0()

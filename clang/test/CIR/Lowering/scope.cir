@@ -6,9 +6,9 @@
 module {
   cir.func @foo() {
     cir.scope {
-      %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["a", init] {alignment = 4 : i64}
+      %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init] {alignment = 4 : i64}
       %1 = cir.const(#cir.int<4> : !u32i) : !u32i
-      cir.store %1, %0 : !u32i, cir.ptr <!u32i>
+      cir.store %1, %0 : !u32i, !cir.ptr<!u32i>
     }
     cir.return
   }
@@ -50,14 +50,14 @@ module {
 
 
   cir.func @scope_with_return() -> !u32i {
-    %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["__retval"] {alignment = 4 : i64}
+    %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["__retval"] {alignment = 4 : i64}
     cir.scope {
       %2 = cir.const(#cir.int<0> : !u32i) : !u32i
-      cir.store %2, %0 : !u32i, cir.ptr <!u32i>
-      %3 = cir.load %0 : cir.ptr <!u32i>, !u32i
+      cir.store %2, %0 : !u32i, !cir.ptr<!u32i>
+      %3 = cir.load %0 : !cir.ptr<!u32i>, !u32i
       cir.return %3 : !u32i
     }
-    %1 = cir.load %0 : cir.ptr <!u32i>, !u32i
+    %1 = cir.load %0 : !cir.ptr<!u32i>, !u32i
     cir.return %1 : !u32i
   }
 

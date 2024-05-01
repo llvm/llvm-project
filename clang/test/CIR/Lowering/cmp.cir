@@ -4,57 +4,57 @@
 !s32i = !cir.int<s, 32>
 module {
   cir.func @foo() {
-    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["a"] {alignment = 4 : i64}
-    %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["b"] {alignment = 4 : i64}
-    %2 = cir.alloca !cir.float, cir.ptr <!cir.float>, ["c"] {alignment = 4 : i64}
-    %3 = cir.alloca !cir.float, cir.ptr <!cir.float>, ["d"] {alignment = 4 : i64}
-    %4 = cir.alloca !cir.bool, cir.ptr <!cir.bool>, ["e"] {alignment = 1 : i64}
-    %5 = cir.load %0 : cir.ptr <!s32i>, !s32i
-    %6 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["b"] {alignment = 4 : i64}
+    %2 = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["c"] {alignment = 4 : i64}
+    %3 = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["d"] {alignment = 4 : i64}
+    %4 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["e"] {alignment = 1 : i64}
+    %5 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    %6 = cir.load %1 : !cir.ptr<!s32i>, !s32i
     %7 = cir.cmp(gt, %5, %6) : !s32i, !cir.bool
     // CHECK: llvm.icmp "sgt"
-    %8 = cir.load %0 : cir.ptr <!s32i>, !s32i
-    %9 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %8 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    %9 = cir.load %1 : !cir.ptr<!s32i>, !s32i
     %10 = cir.cmp(eq, %8, %9) : !s32i, !cir.bool
     // CHECK: llvm.icmp "eq"
-    %11 = cir.load %0 : cir.ptr <!s32i>, !s32i
-    %12 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %11 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    %12 = cir.load %1 : !cir.ptr<!s32i>, !s32i
     %13 = cir.cmp(lt, %11, %12) : !s32i, !cir.bool
     // CHECK: llvm.icmp "slt"
-    %14 = cir.load %0 : cir.ptr <!s32i>, !s32i
-    %15 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %14 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    %15 = cir.load %1 : !cir.ptr<!s32i>, !s32i
     %16 = cir.cmp(ge, %14, %15) : !s32i, !cir.bool
     // CHECK: llvm.icmp "sge"
-    %17 = cir.load %0 : cir.ptr <!s32i>, !s32i
-    %18 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %17 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    %18 = cir.load %1 : !cir.ptr<!s32i>, !s32i
     %19 = cir.cmp(ne, %17, %18) : !s32i, !cir.bool
     // CHECK: llvm.icmp "ne"
-    %20 = cir.load %0 : cir.ptr <!s32i>, !s32i
-    %21 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %20 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    %21 = cir.load %1 : !cir.ptr<!s32i>, !s32i
     %22 = cir.cmp(le, %20, %21) : !s32i, !cir.bool
     // CHECK: llvm.icmp "sle"
-    %23 = cir.load %2 : cir.ptr <!cir.float>, !cir.float
-    %24 = cir.load %3 : cir.ptr <!cir.float>, !cir.float
+    %23 = cir.load %2 : !cir.ptr<!cir.float>, !cir.float
+    %24 = cir.load %3 : !cir.ptr<!cir.float>, !cir.float
     %25 = cir.cmp(gt, %23, %24) : !cir.float, !cir.bool
     // CHECK: llvm.fcmp "ogt"
-    %26 = cir.load %2 : cir.ptr <!cir.float>, !cir.float
-    %27 = cir.load %3 : cir.ptr <!cir.float>, !cir.float
+    %26 = cir.load %2 : !cir.ptr<!cir.float>, !cir.float
+    %27 = cir.load %3 : !cir.ptr<!cir.float>, !cir.float
     %28 = cir.cmp(eq, %26, %27) : !cir.float, !cir.bool
     // CHECK: llvm.fcmp "oeq"
-    %29 = cir.load %2 : cir.ptr <!cir.float>, !cir.float
-    %30 = cir.load %3 : cir.ptr <!cir.float>, !cir.float
+    %29 = cir.load %2 : !cir.ptr<!cir.float>, !cir.float
+    %30 = cir.load %3 : !cir.ptr<!cir.float>, !cir.float
     %31 = cir.cmp(lt, %29, %30) : !cir.float, !cir.bool
     // CHECK: llvm.fcmp "olt"
-    %32 = cir.load %2 : cir.ptr <!cir.float>, !cir.float
-    %33 = cir.load %3 : cir.ptr <!cir.float>, !cir.float
+    %32 = cir.load %2 : !cir.ptr<!cir.float>, !cir.float
+    %33 = cir.load %3 : !cir.ptr<!cir.float>, !cir.float
     %34 = cir.cmp(ge, %32, %33) : !cir.float, !cir.bool
     // CHECK: llvm.fcmp "oge"
-    %35 = cir.load %2 : cir.ptr <!cir.float>, !cir.float
-    %36 = cir.load %3 : cir.ptr <!cir.float>, !cir.float
+    %35 = cir.load %2 : !cir.ptr<!cir.float>, !cir.float
+    %36 = cir.load %3 : !cir.ptr<!cir.float>, !cir.float
     %37 = cir.cmp(ne, %35, %36) : !cir.float, !cir.bool
     // CHECK: llvm.fcmp "une"
-    %38 = cir.load %2 : cir.ptr <!cir.float>, !cir.float
-    %39 = cir.load %3 : cir.ptr <!cir.float>, !cir.float
+    %38 = cir.load %2 : !cir.ptr<!cir.float>, !cir.float
+    %39 = cir.load %3 : !cir.ptr<!cir.float>, !cir.float
     %40 = cir.cmp(le, %38, %39) : !cir.float, !cir.bool
     // CHECK: llvm.fcmp "ole"
 

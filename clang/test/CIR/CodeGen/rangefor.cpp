@@ -26,40 +26,40 @@ void init(unsigned numImages) {
 // CHECK-DAG: ![[VEC_IT:.*]] = !cir.struct<struct "__vector_iterator<triple, triple *, triple &>" {!cir.ptr<!cir.struct<struct "triple" {!cir.int<u, 32>, !cir.ptr<!cir.void>, !cir.int<u, 32>}>
 
 // CHECK: cir.func @_Z4initj(%arg0: !u32i
-// CHECK:   %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["numImages", init] {alignment = 4 : i64}
-// CHECK:   %1 = cir.alloca ![[VEC]], cir.ptr <![[VEC]]>, ["images", init] {alignment = 8 : i64}
-// CHECK:   cir.store %arg0, %0 : !u32i, cir.ptr <!u32i>
-// CHECK:   %2 = cir.load %0 : cir.ptr <!u32i>, !u32i
+// CHECK:   %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["numImages", init] {alignment = 4 : i64}
+// CHECK:   %1 = cir.alloca ![[VEC]], !cir.ptr<![[VEC]]>, ["images", init] {alignment = 8 : i64}
+// CHECK:   cir.store %arg0, %0 : !u32i, !cir.ptr<!u32i>
+// CHECK:   %2 = cir.load %0 : !cir.ptr<!u32i>, !u32i
 // CHECK:   %3 = cir.cast(integral, %2 : !u32i), !u64i
 // CHECK:   cir.call @_ZNSt6vectorI6tripleEC1Em(%1, %3) : (!cir.ptr<![[VEC]]>, !u64i) -> ()
 // CHECK:   cir.scope {
-// CHECK:     %4 = cir.alloca !cir.ptr<![[VEC]]>, cir.ptr <!cir.ptr<![[VEC]]>>, ["__range1", init] {alignment = 8 : i64}
-// CHECK:     %5 = cir.alloca ![[VEC_IT]], cir.ptr <![[VEC_IT]]>, ["__begin1", init] {alignment = 8 : i64}
-// CHECK:     %6 = cir.alloca ![[VEC_IT]], cir.ptr <![[VEC_IT]]>, ["__end1", init] {alignment = 8 : i64}
-// CHECK:     %7 = cir.alloca !cir.ptr<!ty_22triple22>, cir.ptr <!cir.ptr<!ty_22triple22>>, ["image", init] {alignment = 8 : i64}
-// CHECK:     cir.store %1, %4 : !cir.ptr<![[VEC]]>, cir.ptr <!cir.ptr<![[VEC]]>>
-// CHECK:     %8 = cir.load %4 : cir.ptr <!cir.ptr<![[VEC]]>>, !cir.ptr<![[VEC]]>
+// CHECK:     %4 = cir.alloca !cir.ptr<![[VEC]]>, !cir.ptr<!cir.ptr<![[VEC]]>>, ["__range1", init] {alignment = 8 : i64}
+// CHECK:     %5 = cir.alloca ![[VEC_IT]], !cir.ptr<![[VEC_IT]]>, ["__begin1", init] {alignment = 8 : i64}
+// CHECK:     %6 = cir.alloca ![[VEC_IT]], !cir.ptr<![[VEC_IT]]>, ["__end1", init] {alignment = 8 : i64}
+// CHECK:     %7 = cir.alloca !cir.ptr<!ty_22triple22>, !cir.ptr<!cir.ptr<!ty_22triple22>>, ["image", init] {alignment = 8 : i64}
+// CHECK:     cir.store %1, %4 : !cir.ptr<![[VEC]]>, !cir.ptr<!cir.ptr<![[VEC]]>>
+// CHECK:     %8 = cir.load %4 : !cir.ptr<!cir.ptr<![[VEC]]>>, !cir.ptr<![[VEC]]>
 // CHECK:     %9 = cir.call @_ZNSt6vectorI6tripleE5beginEv(%8) : (!cir.ptr<![[VEC]]>) -> ![[VEC_IT]]
-// CHECK:     cir.store %9, %5 : ![[VEC_IT]], cir.ptr <![[VEC_IT]]>
-// CHECK:     %10 = cir.load %4 : cir.ptr <!cir.ptr<![[VEC]]>>, !cir.ptr<![[VEC]]>
+// CHECK:     cir.store %9, %5 : ![[VEC_IT]], !cir.ptr<![[VEC_IT]]>
+// CHECK:     %10 = cir.load %4 : !cir.ptr<!cir.ptr<![[VEC]]>>, !cir.ptr<![[VEC]]>
 // CHECK:     %11 = cir.call @_ZNSt6vectorI6tripleE3endEv(%10) : (!cir.ptr<![[VEC]]>) -> ![[VEC_IT]]
-// CHECK:     cir.store %11, %6 : ![[VEC_IT]], cir.ptr <![[VEC_IT]]>
+// CHECK:     cir.store %11, %6 : ![[VEC_IT]], !cir.ptr<![[VEC_IT]]>
 // CHECK:     cir.for : cond {
 // CHECK:       %12 = cir.call @_ZNK17__vector_iteratorI6triplePS0_RS0_EneERKS3_(%5, %6) : (!cir.ptr<![[VEC_IT]]>, !cir.ptr<![[VEC_IT]]>) -> !cir.bool
 // CHECK:       cir.condition(%12)
 // CHECK:     } body {
 // CHECK:       %12 = cir.call @_ZNK17__vector_iteratorI6triplePS0_RS0_EdeEv(%5) : (!cir.ptr<![[VEC_IT]]>) -> !cir.ptr<!ty_22triple22>
-// CHECK:       cir.store %12, %7 : !cir.ptr<!ty_22triple22>, cir.ptr <!cir.ptr<!ty_22triple22>>
+// CHECK:       cir.store %12, %7 : !cir.ptr<!ty_22triple22>, !cir.ptr<!cir.ptr<!ty_22triple22>>
 // CHECK:       cir.scope {
-// CHECK:         %13 = cir.alloca !ty_22triple22, cir.ptr <!ty_22triple22>, ["ref.tmp0"] {alignment = 8 : i64}
+// CHECK:         %13 = cir.alloca !ty_22triple22, !cir.ptr<!ty_22triple22>, ["ref.tmp0"] {alignment = 8 : i64}
 // CHECK:         %14 = cir.const(#cir.zero : !ty_22triple22) : !ty_22triple22
-// CHECK:         cir.store %14, %13 : !ty_22triple22, cir.ptr <!ty_22triple22>
+// CHECK:         cir.store %14, %13 : !ty_22triple22, !cir.ptr<!ty_22triple22>
 // CHECK:         %15 = cir.get_member %13[0] {name = "type"} : !cir.ptr<!ty_22triple22> -> !cir.ptr<!u32i>
 // CHECK:         %16 = cir.const(#cir.int<1000024002> : !u32i) : !u32i
-// CHECK:         cir.store %16, %15 : !u32i, cir.ptr <!u32i>
+// CHECK:         cir.store %16, %15 : !u32i, !cir.ptr<!u32i>
 // CHECK:         %17 = cir.get_member %13[1] {name = "next"} : !cir.ptr<!ty_22triple22> -> !cir.ptr<!cir.ptr<!void>>
 // CHECK:         %18 = cir.get_member %13[2] {name = "image"} : !cir.ptr<!ty_22triple22> -> !cir.ptr<!u32i>
-// CHECK:         %19 = cir.load %7 : cir.ptr <!cir.ptr<!ty_22triple22>>, !cir.ptr<!ty_22triple22>
+// CHECK:         %19 = cir.load %7 : !cir.ptr<!cir.ptr<!ty_22triple22>>, !cir.ptr<!ty_22triple22>
 // CHECK:         %20 = cir.call @_ZN6tripleaSEOS_(%19, %13) : (!cir.ptr<!ty_22triple22>, !cir.ptr<!ty_22triple22>) -> !cir.ptr<!ty_22triple22>
 // CHECK:       }
 // CHECK:       cir.yield

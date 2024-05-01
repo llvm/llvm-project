@@ -63,7 +63,7 @@ void *ptr_cast_to_complete(Base *ptr) {
 }
 
 //      BEFORE: cir.func @_Z20ptr_cast_to_completeP4Base
-//      BEFORE:   %[[#V19:]] = cir.load %{{.+}} : cir.ptr <!cir.ptr<!ty_22Base22>>, !cir.ptr<!ty_22Base22>
+//      BEFORE:   %[[#V19:]] = cir.load %{{.+}} : !cir.ptr<!cir.ptr<!ty_22Base22>>, !cir.ptr<!ty_22Base22>
 // BEFORE-NEXT:   %[[#V20:]] = cir.cast(ptr_to_bool, %[[#V19]] : !cir.ptr<!ty_22Base22>), !cir.bool
 // BEFORE-NEXT:   %[[#V21:]] = cir.unary(not, %[[#V20]]) : !cir.bool, !cir.bool
 // BEFORE-NEXT:   %{{.+}} = cir.ternary(%[[#V21]], true {
@@ -71,9 +71,9 @@ void *ptr_cast_to_complete(Base *ptr) {
 // BEFORE-NEXT:     cir.yield %[[#V22]] : !cir.ptr<!void>
 // BEFORE-NEXT:   }, false {
 // BEFORE-NEXT:     %[[#V23:]] = cir.cast(bitcast, %[[#V19]] : !cir.ptr<!ty_22Base22>), !cir.ptr<!cir.ptr<!s64i>>
-// BEFORE-NEXT:     %[[#V24:]] = cir.load %[[#V23]] : cir.ptr <!cir.ptr<!s64i>>, !cir.ptr<!s64i>
-// BEFORE-NEXT:     %[[#V25:]] = cir.vtable.address_point( %[[#V24]] : !cir.ptr<!s64i>, vtable_index = 0, address_point_index = -2) : cir.ptr <!s64i>
-// BEFORE-NEXT:     %[[#V26:]] = cir.load %[[#V25]] : cir.ptr <!s64i>, !s64i
+// BEFORE-NEXT:     %[[#V24:]] = cir.load %[[#V23]] : !cir.ptr<!cir.ptr<!s64i>>, !cir.ptr<!s64i>
+// BEFORE-NEXT:     %[[#V25:]] = cir.vtable.address_point( %[[#V24]] : !cir.ptr<!s64i>, vtable_index = 0, address_point_index = -2) : !cir.ptr<!s64i>
+// BEFORE-NEXT:     %[[#V26:]] = cir.load %[[#V25]] : !cir.ptr<!s64i>, !s64i
 // BEFORE-NEXT:     %[[#V27:]] = cir.cast(bitcast, %[[#V19]] : !cir.ptr<!ty_22Base22>), !cir.ptr<!u8i>
 // BEFORE-NEXT:     %[[#V28:]] = cir.ptr_stride(%[[#V27]] : !cir.ptr<!u8i>, %[[#V26]] : !s64i), !cir.ptr<!u8i>
 // BEFORE-NEXT:     %[[#V29:]] = cir.cast(bitcast, %[[#V28]] : !cir.ptr<!u8i>), !cir.ptr<!void>

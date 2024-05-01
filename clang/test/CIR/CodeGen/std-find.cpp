@@ -10,7 +10,7 @@ int test_find(unsigned char n = 3)
     // CHECK: cir.func @_Z9test_findh(%arg0: !u8i
     unsigned num_found = 0;
     std::array<unsigned char, 9> v = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-    // CHECK: %[[array_addr:.*]] = cir.alloca ![[array]], cir.ptr <![[array]]>, ["v"]
+    // CHECK: %[[array_addr:.*]] = cir.alloca ![[array]], !cir.ptr<![[array]]>, ["v"]
 
     auto f = std::find(v.begin(), v.end(), n);
     // CHECK: {{.*}} cir.call @_ZNSt5arrayIhLj9EE5beginEv(%[[array_addr]])

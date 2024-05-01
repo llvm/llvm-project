@@ -38,9 +38,9 @@ void vector_int_test(int x) {
 
   // Insert element
   a[x] = x;
-  // CHECK: %[[#LOADEDVI:]] = cir.load %[[#STORAGEVI:]] : cir.ptr <!cir.vector<!s32i x 4>>, !cir.vector<!s32i x 4>
+  // CHECK: %[[#LOADEDVI:]] = cir.load %[[#STORAGEVI:]] : !cir.ptr<!cir.vector<!s32i x 4>>, !cir.vector<!s32i x 4>
   // CHECK: %[[#UPDATEDVI:]] = cir.vec.insert %{{[0-9]+}}, %[[#LOADEDVI]][%{{[0-9]+}} : !s32i] : !cir.vector<!s32i x 4>
-  // CHECK: cir.store %[[#UPDATEDVI]], %[[#STORAGEVI]] : !cir.vector<!s32i x 4>, cir.ptr <!cir.vector<!s32i x 4>>
+  // CHECK: cir.store %[[#UPDATEDVI]], %[[#STORAGEVI]] : !cir.vector<!s32i x 4>, !cir.ptr<!cir.vector<!s32i x 4>>
 
   // Binary arithmetic operations
   vi4 d = a + b;
@@ -120,9 +120,9 @@ void vector_double_test(int x, double y) {
 
   // Insert element
   a[x] = y;
-  // CHECK: %[[#LOADEDVF:]] = cir.load %[[#STORAGEVF:]] : cir.ptr <!cir.vector<!cir.double x 2>>, !cir.vector<!cir.double x 2>
+  // CHECK: %[[#LOADEDVF:]] = cir.load %[[#STORAGEVF:]] : !cir.ptr<!cir.vector<!cir.double x 2>>, !cir.vector<!cir.double x 2>
   // CHECK: %[[#UPDATEDVF:]] = cir.vec.insert %{{[0-9]+}}, %[[#LOADEDVF]][%{{[0-9]+}} : !s32i] : !cir.vector<!cir.double x 2>
-  // CHECK: cir.store %[[#UPDATEDVF]], %[[#STORAGEVF]] : !cir.vector<!cir.double x 2>, cir.ptr <!cir.vector<!cir.double x 2>>
+  // CHECK: cir.store %[[#UPDATEDVF]], %[[#STORAGEVF]] : !cir.vector<!cir.double x 2>, !cir.ptr<!cir.vector<!cir.double x 2>>
 
   // Binary arithmetic operations
   vd2 d = a + b;

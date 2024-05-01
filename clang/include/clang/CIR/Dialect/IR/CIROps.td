@@ -392,7 +392,7 @@ def AllocaOp : CIR_Op<"alloca", [
     %0 = cir.alloca i32, !cir.ptr<i32>, ["count", init] {alignment = 4 : i64}
 
     // int *ptr;
-    %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["ptr"] {alignment = 8 : i64}
+    %1 = cir.alloca !cir.ptr<i32>, !cir.ptr<!cir.ptr<i32>>, ["ptr"] {alignment = 8 : i64}
     ...
     ```
   }];
@@ -434,10 +434,8 @@ def AllocaOp : CIR_Op<"alloca", [
     bool isDynamic() { return (bool)getDynAllocSize(); }
   }];
 
-  // FIXME: we should not be printing `cir.ptr` below, that should come
-  // from the pointer type directly.
   let assemblyFormat = [{
-    $allocaType `,` `cir.ptr` type($addr) `,`
+    $allocaType `,` qualified(type($addr)) `,`
     ($dynAllocSize^ `:` type($dynAllocSize) `,`)?
     `[` $name
        (`,` `init` $init^)?
@@ -474,7 +472,7 @@ def LoadOp : CIR_Op<"load", [
 
     // Load address from memory at address %0. %3 is used by at least one
     // operation that dereferences a pointer.
-    %3 = cir.load deref %0 : cir.ptr <!cir.ptr<i32>>
+    %3 = cir.load deref %0 : !cir.ptr<!cir.ptr<i32>>
 
     // Perform a volatile load from address in %0.
     %4 = cir.load volatile %0 : !cir.ptr<i32>, i32
@@ -487,13 +485,11 @@ def LoadOp : CIR_Op<"load", [
                        OptionalAttr<MemOrder>:$mem_order);
   let results = (outs CIR_AnyType:$result);
 
-  // FIXME: we should not be printing `cir.ptr` below, that should come
-  // from the pointer type directly.
   let assemblyFormat = [{
     (`deref` $isDeref^)?
     (`volatile` $is_volatile^)?
     (`atomic` `(` $mem_order^ `)`)?
-    $addr `:` `cir.ptr` type($addr) `,` type($result) attr-dict
+    $addr `:` qualified(type($addr)) `,` type($result) attr-dict
   }];
 
   // FIXME: add verifier.
@@ -532,12 +528,10 @@ def StoreOp : CIR_Op<"store", [
                        UnitAttr:$is_volatile,
                        OptionalAttr<MemOrder>:$mem_order);
 
-  // FIXME: we should not be printing `cir.ptr` below, that should come
-  // from the pointer type directly.
   let assemblyFormat = [{
     (`volatile` $is_volatile^)?
     (`atomic` `(` $mem_order^ `)`)?
-    $value `,` $addr attr-dict `:` type($value) `,` `cir.ptr` type($addr)
+    $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
   }];
 
   // FIXME: add verifier.
@@ -999,7 +993,7 @@ def BinOp : CIR_Op<"binop", [Pure,
                        UnitAttr:$no_signed_wrap);
 
   let assemblyFormat = [{
-    `(` $kind `,` $lhs `,` $rhs  `)` 
+    `(` $kind `,` $lhs `,` $rhs  `)`
     (`nsw` $no_signed_wrap^)?
     (`nuw` $no_unsigned_wrap^)?
     `:` type($lhs) attr-dict
@@ -1871,11 +1865,9 @@ def GetGlobalOp : CIR_Op<"get_global",
   let arguments = (ins FlatSymbolRefAttr:$name, UnitAttr:$tls);
   let results = (outs Res<CIR_PointerType, "", []>:$addr);
 
-  // FIXME: we should not be printing `cir.ptr` below, that should come
-  // from the pointer type directly.
   let assemblyFormat = [{
     (`thread_local` $tls^)?
-    $name `:` `cir.ptr` type($addr) attr-dict
+    $name `:` qualified(type($addr)) attr-dict
   }];
 
   // `GetGlobalOp` is fully verified by its traits.
@@ -1904,7 +1896,7 @@ def VTableAddrPointOp : CIR_Op<"vtable.address_point",
     ```mlir
     cir.global linkonce_odr @_ZTV1B = ...
     ...
-    %3 = cir.vtable.address_point(@_ZTV1B, vtable_index = 0, address_point_index = 2) : cir.ptr <!cir.ptr<() -> i32>>
+    %3 = cir.vtable.address_point(@_ZTV1B, vtable_index = 0, address_point_index = 2) : !cir.ptr<!cir.ptr<() -> i32>>
     ```
   }];
 
@@ -1914,8 +1906,6 @@ def VTableAddrPointOp : CIR_Op<"vtable.address_point",
                        I32Attr:$address_point_index);
   let results = (outs Res<CIR_PointerType, "", []>:$addr);
 
-  // FIXME: we should not be printing `cir.ptr` below, that should come
-  // from the pointer type directly.
   let assemblyFormat = [{
     `(`
       ($name^)?
@@ -1924,7 +1914,7 @@ def VTableAddrPointOp : CIR_Op<"vtable.address_point",
         `vtable_index` `=` $vtable_index `,`
         `address_point_index` `=` $address_point_index
     `)`
-    `:` `cir.ptr` type($addr) attr-dict
+    `:` qualified(type($addr)) attr-dict
   }];
 
   let hasVerifier = 1;
@@ -1972,7 +1962,7 @@ def SetBitfieldOp : CIR_Op<"set_bitfield"> {
     #bfi_d = #cir.bitfield_info<name = "d", storage_type = !u32i, size = 2, offset = 17, is_signed = true>
 
     %1 = cir.const(#cir.int<3> : !s32i) : !s32i
-    %2 = cir.load %0 : cir.ptr <!cir.ptr<!struct_type>>, !cir.ptr<!struct_type>
+    %2 = cir.load %0 : !cir.ptr<!cir.ptr<!struct_type>>, !cir.ptr<!struct_type>
     %3 = cir.get_member %2[1] {name = "d"} : !cir.ptr<!struct_type> -> !cir.ptr<!u32i>
     %4 = cir.set_bitfield(#bfi_d, %3 : !cir.ptr<!u32i>, %1 : !s32i) -> !s32i
     ```
@@ -2051,7 +2041,7 @@ def GetBitfieldOp : CIR_Op<"get_bitfield"> {
     !struct_type = !cir.struct<struct "S" {!cir.int<u, 32>, !cir.int<u, 32>, !cir.int<u, 16>} #cir.record.decl.ast>
     #bfi_d = #cir.bitfield_info<name = "d", storage_type = !u32i, size = 2, offset = 17, is_signed = true>
 
-    %2 = cir.load %0 : cir.ptr <!cir.ptr<!struct_type>>, !cir.ptr<!struct_type>
+    %2 = cir.load %0 : !cir.ptr<!cir.ptr<!struct_type>>, !cir.ptr<!struct_type>
     %3 = cir.get_member %2[1] {name = "d"} : !cir.ptr<!struct_type> -> !cir.ptr<!u32i>
     %4 = cir.get_bitfield(#bfi_d, %3 : !cir.ptr<!u32i>) -> !s32i
     ```
@@ -2453,12 +2443,10 @@ def BaseClassAddrOp : CIR_Op<"base_class_addr"> {
 
   let results = (outs Res<CIR_PointerType, "">:$base_addr);
 
-  // FIXME: we should not be printing `cir.ptr` below, that should come
-  // from the pointer type directly.
   let assemblyFormat = [{
     `(`
-      $derived_addr `:` `cir.ptr` type($derived_addr)
-    `)` `->` `cir.ptr` type($base_addr) attr-dict
+      $derived_addr `:` qualified(type($derived_addr))
+    `)` `->` qualified(type($base_addr)) attr-dict
   }];
 
   // FIXME: add verifier.
@@ -2752,7 +2740,7 @@ def TryCallOp : CIR_CallOp<"try_call"> {
 
     ```mlir
     cir.try {
-      %0 = cir.alloca !cir.ptr<!cir.eh.info>, cir.ptr <!cir.ptr<!cir.eh.info>>
+      %0 = cir.alloca !cir.ptr<!cir.eh.info>, !cir.ptr<!cir.ptr<!cir.eh.info>>
       ...
       %r = cir.try_call %exception(%0) @division(%1, %2)
     } ...
@@ -3384,10 +3372,10 @@ def StackRestoreOp : CIR_Op<"stack_restore"> {
     Useful for implementing language features like variable length arrays.
 
     ```mlir
-    %0 = cir.alloca !cir.ptr<!u8i>, cir.ptr <!cir.ptr<!u8i>>, ["saved_stack"] {alignment = 8 : i64}
+    %0 = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"] {alignment = 8 : i64}
     %1 = cir.stack_save : <!u8i>
-    cir.store %1, %0 : !cir.ptr<!u8i>, cir.ptr <!cir.ptr<!u8i>>
-    %2 = cir.load %0 : cir.ptr <!cir.ptr<!u8i>>, !cir.ptr<!u8i>
+    cir.store %1, %0 : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
+    %2 = cir.load %0 : !cir.ptr<!cir.ptr<!u8i>>, !cir.ptr<!u8i>
     cir.stack_restore %2 : !cir.ptr<!u8i>
     ```
     }];
@@ -3410,16 +3398,16 @@ def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
   let description = [{
     The `cir.asm` operation represents C/C++ asm inline.
 
-    CIR constraints strings follow barelly the same rules that are established 
-    for the C level assembler constraints with several differences caused by 
-    clang::AsmStmt processing. 
+    CIR constraints strings follow barelly the same rules that are established
+    for the C level assembler constraints with several differences caused by
+    clang::AsmStmt processing.
 
     Thus, numbers that appears in the constraint string may also refer to:
     - the output variable index referenced by the input operands.
     - the index of early-clobber operand
 
     Operand attributes is a storage, where each element corresponds to the operand with
-    the same index. The first index relates to the operation result (if any). 
+    the same index. The first index relates to the operation result (if any).
     Note, the operands themselves are stored as VariadicOfVariadic in the next order:
     output, input and then in/out operands.
 
@@ -3432,16 +3420,16 @@ def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
     __asm__("bar $42 %[val]" : [val] "=r" (x), "+&r"(x));
     __asm__("baz $42 %[val]" : [val] "=r" (x), "+&r"(x) : "[val]"(y));
     ```
-    
+
     ```mlir
     !ty_22anon2E022 = !cir.struct<struct "anon.0" {!cir.int<s, 32>, !cir.int<s, 32>}>
     !ty_22anon2E122 = !cir.struct<struct "anon.1" {!cir.int<s, 32>, !cir.int<s, 32>}>
     ...
-    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["x", init] 
-    %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["y", init]
-    ... 
-    %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
-    %3 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init]
+    ...
+    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    %3 = cir.load %1 : !cir.ptr<!s32i>, !s32i
 
     cir.asm(x86_att,
       out = [],
@@ -3484,7 +3472,7 @@ def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
     "ArrayRef<Attribute>":$operand_attrs
   )>
   ];
-  
+
   let hasCustomAssemblyFormat = 1;
 }
 

@@ -9,11 +9,11 @@
 
 module {
   cir.func @average(%arg0: !s32i, ...) -> !s32i {
-    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["count", init] {alignment = 4 : i64}
-    %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
-    %2 = cir.alloca !cir.array<!ty_22__va_list_tag22 x 1>, cir.ptr <!cir.array<!ty_22__va_list_tag22 x 1>>, ["args"] {alignment = 16 : i64}
-    %3 = cir.alloca !cir.array<!ty_22__va_list_tag22 x 1>, cir.ptr <!cir.array<!ty_22__va_list_tag22 x 1>>, ["args_copy"] {alignment = 16 : i64}
-    cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["count", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+    %2 = cir.alloca !cir.array<!ty_22__va_list_tag22 x 1>, !cir.ptr<!cir.array<!ty_22__va_list_tag22 x 1>>, ["args"] {alignment = 16 : i64}
+    %3 = cir.alloca !cir.array<!ty_22__va_list_tag22 x 1>, !cir.ptr<!cir.array<!ty_22__va_list_tag22 x 1>>, ["args_copy"] {alignment = 16 : i64}
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
     %4 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<!ty_22__va_list_tag22 x 1>>), !cir.ptr<!ty_22__va_list_tag22>
     cir.va.start %4 : !cir.ptr<!ty_22__va_list_tag22>
     //      MLIR: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"struct.__va_list_tag", (i32, i32, ptr, ptr)>
@@ -33,8 +33,8 @@ module {
     // MLIR-NEXT: %{{[0-9]+}} = llvm.bitcast %{{[0-9]+}} : !llvm.ptr to !llvm.ptr
     // MLIR-NEXT: llvm.intr.vaend %{{[0-9]+}} : !llvm.ptr
     %8 = cir.const(#cir.int<0> : !s32i) : !s32i
-    cir.store %8, %1 : !s32i, cir.ptr <!s32i>
-    %9 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    cir.store %8, %1 : !s32i, !cir.ptr<!s32i>
+    %9 = cir.load %1 : !cir.ptr<!s32i>, !s32i
     cir.return %9 : !s32i
   }
 }

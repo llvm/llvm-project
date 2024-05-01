@@ -14,19 +14,19 @@ void baz() {
 // CHECK: !ty_22Struk22 = !cir.struct<struct "Struk" {!cir.int<s, 32>}>
 
 // CHECK:   cir.func linkonce_odr @_ZN5StrukC2Ev(%arg0: !cir.ptr<!ty_22Struk22>
-// CHECK-NEXT:     %0 = cir.alloca !cir.ptr<!ty_22Struk22>, cir.ptr <!cir.ptr<!ty_22Struk22>>, ["this", init] {alignment = 8 : i64}
-// CHECK-NEXT:     cir.store %arg0, %0 : !cir.ptr<!ty_22Struk22>, cir.ptr <!cir.ptr<!ty_22Struk22>>
-// CHECK-NEXT:     %1 = cir.load %0 : cir.ptr <!cir.ptr<!ty_22Struk22>>, !cir.ptr<!ty_22Struk22>
+// CHECK-NEXT:     %0 = cir.alloca !cir.ptr<!ty_22Struk22>, !cir.ptr<!cir.ptr<!ty_22Struk22>>, ["this", init] {alignment = 8 : i64}
+// CHECK-NEXT:     cir.store %arg0, %0 : !cir.ptr<!ty_22Struk22>, !cir.ptr<!cir.ptr<!ty_22Struk22>>
+// CHECK-NEXT:     %1 = cir.load %0 : !cir.ptr<!cir.ptr<!ty_22Struk22>>, !cir.ptr<!ty_22Struk22>
 // CHECK-NEXT:     cir.return
 
 // CHECK:   cir.func linkonce_odr @_ZN5StrukC1Ev(%arg0: !cir.ptr<!ty_22Struk22>
-// CHECK-NEXT:     %0 = cir.alloca !cir.ptr<!ty_22Struk22>, cir.ptr <!cir.ptr<!ty_22Struk22>>, ["this", init] {alignment = 8 : i64}
-// CHECK-NEXT:     cir.store %arg0, %0 : !cir.ptr<!ty_22Struk22>, cir.ptr <!cir.ptr<!ty_22Struk22>>
-// CHECK-NEXT:     %1 = cir.load %0 : cir.ptr <!cir.ptr<!ty_22Struk22>>, !cir.ptr<!ty_22Struk22>
+// CHECK-NEXT:     %0 = cir.alloca !cir.ptr<!ty_22Struk22>, !cir.ptr<!cir.ptr<!ty_22Struk22>>, ["this", init] {alignment = 8 : i64}
+// CHECK-NEXT:     cir.store %arg0, %0 : !cir.ptr<!ty_22Struk22>, !cir.ptr<!cir.ptr<!ty_22Struk22>>
+// CHECK-NEXT:     %1 = cir.load %0 : !cir.ptr<!cir.ptr<!ty_22Struk22>>, !cir.ptr<!ty_22Struk22>
 // CHECK-NEXT:     cir.call @_ZN5StrukC2Ev(%1) : (!cir.ptr<!ty_22Struk22>) -> ()
 // CHECK-NEXT:     cir.return
 
 // CHECK:   cir.func @_Z3bazv()
-// CHECK-NEXT:     %0 = cir.alloca !ty_22Struk22, cir.ptr <!ty_22Struk22>, ["s", init] {alignment = 4 : i64}
+// CHECK-NEXT:     %0 = cir.alloca !ty_22Struk22, !cir.ptr<!ty_22Struk22>, ["s", init] {alignment = 4 : i64}
 // CHECK-NEXT:     cir.call @_ZN5StrukC1Ev(%0) : (!cir.ptr<!ty_22Struk22>) -> ()
 // CHECK-NEXT:     cir.return

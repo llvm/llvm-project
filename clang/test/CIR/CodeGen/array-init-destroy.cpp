@@ -39,17 +39,17 @@ void x() {
 // AFTER: %[[ConstTwo:.*]] = cir.const(#cir.int<2> : !u64i) : !u64i
 // AFTER: %[[ArrayBegin:.*]] = cir.cast(array_to_ptrdecay, %[[ArrayAddr0]] : !cir.ptr<!cir.array<!ty_22xpto22 x 2>>), !cir.ptr<!ty_22xpto22>
 // AFTER: %[[ArrayPastEnd:.*]] = cir.ptr_stride(%[[ArrayBegin]] : !cir.ptr<!ty_22xpto22>, %[[ConstTwo]] : !u64i), !cir.ptr<!ty_22xpto22>
-// AFTER: %[[TmpIdx:.*]] = cir.alloca !cir.ptr<!ty_22xpto22>, cir.ptr <!cir.ptr<!ty_22xpto22>>, ["__array_idx"] {alignment = 1 : i64}
-// AFTER: cir.store %[[ArrayBegin]], %[[TmpIdx]] : !cir.ptr<!ty_22xpto22>, cir.ptr <!cir.ptr<!ty_22xpto22>>
+// AFTER: %[[TmpIdx:.*]] = cir.alloca !cir.ptr<!ty_22xpto22>, !cir.ptr<!cir.ptr<!ty_22xpto22>>, ["__array_idx"] {alignment = 1 : i64}
+// AFTER: cir.store %[[ArrayBegin]], %[[TmpIdx]] : !cir.ptr<!ty_22xpto22>, !cir.ptr<!cir.ptr<!ty_22xpto22>>
 // AFTER: cir.do {
-// AFTER:   %[[ArrayElt:.*]] = cir.load %[[TmpIdx]] : cir.ptr <!cir.ptr<!ty_22xpto22>>, !cir.ptr<!ty_22xpto22>
+// AFTER:   %[[ArrayElt:.*]] = cir.load %[[TmpIdx]] : !cir.ptr<!cir.ptr<!ty_22xpto22>>, !cir.ptr<!ty_22xpto22>
 // AFTER:   %[[ConstOne:.*]] = cir.const(#cir.int<1> : !u64i) : !u64i
 // AFTER:   cir.call @_ZN4xptoC1Ev(%[[ArrayElt]]) : (!cir.ptr<!ty_22xpto22>) -> ()
 // AFTER:   %[[NextElt:.*]] = cir.ptr_stride(%[[ArrayElt]] : !cir.ptr<!ty_22xpto22>, %[[ConstOne]] : !u64i), !cir.ptr<!ty_22xpto22>
-// AFTER:   cir.store %[[NextElt]], %[[TmpIdx]] : !cir.ptr<!ty_22xpto22>, cir.ptr <!cir.ptr<!ty_22xpto22>>
+// AFTER:   cir.store %[[NextElt]], %[[TmpIdx]] : !cir.ptr<!ty_22xpto22>, !cir.ptr<!cir.ptr<!ty_22xpto22>>
 // AFTER:   cir.yield
 // AFTER: } while {
-// AFTER:   %[[ArrayElt:.*]] = cir.load %[[TmpIdx]] : cir.ptr <!cir.ptr<!ty_22xpto22>>, !cir.ptr<!ty_22xpto22>
+// AFTER:   %[[ArrayElt:.*]] = cir.load %[[TmpIdx]] : !cir.ptr<!cir.ptr<!ty_22xpto22>>, !cir.ptr<!ty_22xpto22>
 // AFTER:   %[[ExitCond:.*]] = cir.cmp(eq, %[[ArrayElt]], %[[ArrayPastEnd]]) : !cir.ptr<!ty_22xpto22>, !cir.bool
 // AFTER:   cir.condition(%[[ExitCond]])
 // AFTER: }

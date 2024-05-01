@@ -10,26 +10,26 @@ module {
   cir.global external @aa = #cir.zero : !cir.array<!cir.array<!u32i x 256> x 256>
 
   cir.func @get_global_int_value() -> !u32i {
-    %0 = cir.get_global @i : cir.ptr <!u32i>
-    %1 = cir.load %0 : cir.ptr <!u32i>, !u32i
+    %0 = cir.get_global @i : !cir.ptr<!u32i>
+    %1 = cir.load %0 : !cir.ptr<!u32i>, !u32i
     cir.return %1 : !u32i
   }
   cir.func @get_global_float_value() -> !cir.float {
-    %0 = cir.get_global @f : cir.ptr <!cir.float>
-    %1 = cir.load %0 : cir.ptr <!cir.float>, !cir.float
+    %0 = cir.get_global @f : !cir.ptr<!cir.float>
+    %1 = cir.load %0 : !cir.ptr<!cir.float>, !cir.float
     cir.return %1 : !cir.float
   }
   cir.func @get_global_bool_value() -> !cir.bool {
-    %0 = cir.get_global @b : cir.ptr <!cir.bool>
-    %1 = cir.load %0 : cir.ptr <!cir.bool>, !cir.bool
+    %0 = cir.get_global @b : !cir.ptr<!cir.bool>
+    %1 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
     cir.return %1 : !cir.bool
   }
   cir.func @get_global_array_pointer() -> !cir.ptr<!cir.array<!u32i x 100>> {
-    %0 = cir.get_global @a : cir.ptr <!cir.array<!u32i x 100>>
+    %0 = cir.get_global @a : !cir.ptr<!cir.array<!u32i x 100>>
     cir.return %0 : !cir.ptr<!cir.array<!u32i x 100>>
   }
   cir.func @get_global_multi_array_pointer() -> !cir.ptr<!cir.array<!cir.array<!u32i x 256> x 256>> {
-    %0 = cir.get_global @aa : cir.ptr <!cir.array<!cir.array<!u32i x 256> x 256>>
+    %0 = cir.get_global @aa : !cir.ptr<!cir.array<!cir.array<!u32i x 256> x 256>>
     cir.return %0 : !cir.ptr<!cir.array<!cir.array<!u32i x 256> x 256>>
   }
 }

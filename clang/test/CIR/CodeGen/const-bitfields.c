@@ -28,7 +28,7 @@ struct Inner var = { 1, 0, 1, 21};
 
 
 // CHECK: cir.func {{.*@getZ()}}
-// CHECK:   %1 = cir.get_global @GV : cir.ptr <!ty_anon_struct>
+// CHECK:   %1 = cir.get_global @GV : !cir.ptr<!ty_anon_struct>
 // CHECK:   %2 = cir.cast(bitcast, %1 : !cir.ptr<!ty_anon_struct>), !cir.ptr<!ty_22T22>
 // CHECK:   %3 = cir.cast(bitcast, %2 : !cir.ptr<!ty_22T22>), !cir.ptr<!cir.array<!u8i x 3>>
 // CHECK:   %4 = cir.get_bitfield(#bfi_Z, %3 : !cir.ptr<!cir.array<!u8i x 3>>) -> !s32i
@@ -38,7 +38,7 @@ int getZ() {
 
 // check the type used is the type of T struct for plain field
 // CHECK:  cir.func {{.*@getW()}}
-// CHECK:    %1 = cir.get_global @GV : cir.ptr <!ty_anon_struct>
+// CHECK:    %1 = cir.get_global @GV : !cir.ptr<!ty_anon_struct>
 // CHECK:    %2 = cir.cast(bitcast, %1 : !cir.ptr<!ty_anon_struct>), !cir.ptr<!ty_22T22>
 // CHECK:    %3 = cir.get_member %2[1] {name = "W"} : !cir.ptr<!ty_22T22> -> !cir.ptr<!s32i>
 int getW() {

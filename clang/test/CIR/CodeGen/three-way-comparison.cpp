@@ -65,8 +65,8 @@ auto three_way_weak(float x, float y) {
 // BEFORE: }
 
 //      AFTER: cir.func @_Z14three_way_weakff
-//      AFTER:   %[[#LHS:]] = cir.load %0 : cir.ptr <!cir.float>, !cir.float
-// AFTER-NEXT:   %[[#RHS:]] = cir.load %1 : cir.ptr <!cir.float>, !cir.float
+//      AFTER:   %[[#LHS:]] = cir.load %0 : !cir.ptr<!cir.float>, !cir.float
+// AFTER-NEXT:   %[[#RHS:]] = cir.load %1 : !cir.ptr<!cir.float>, !cir.float
 // AFTER-NEXT:   %[[#LT:]] = cir.const(#cir.int<-1> : !s8i) : !s8i
 // AFTER-NEXT:   %[[#EQ:]] = cir.const(#cir.int<0> : !s8i) : !s8i
 // AFTER-NEXT:   %[[#GT:]] = cir.const(#cir.int<1> : !s8i) : !s8i

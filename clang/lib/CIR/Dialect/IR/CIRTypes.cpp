@@ -96,23 +96,6 @@ void CIRDialect::printType(Type type, DialectAsmPrinter &os) const {
       });
 }
 
-Type PointerType::parse(mlir::AsmParser &parser) {
-  if (parser.parseLess())
-    return Type();
-  Type pointeeType;
-  if (parser.parseType(pointeeType))
-    return Type();
-  if (parser.parseGreater())
-    return Type();
-  return get(parser.getContext(), pointeeType);
-}
-
-void PointerType::print(mlir::AsmPrinter &printer) const {
-  printer << "<";
-  printer.printType(getPointee());
-  printer << '>';
-}
-
 Type BoolType::parse(mlir::AsmParser &parser) {
   return get(parser.getContext());
 }

@@ -19,13 +19,13 @@ int basic_binop_fetch(int *i) {
 }
 
 // CHECK: cir.func @_Z17basic_binop_fetchPi
-// CHECK:  %[[ARGI:.*]] = cir.alloca !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>, ["i", init] {alignment = 8 : i64}
-// CHECK:  %[[ONE_ADDR:.*]] = cir.alloca !s32i, cir.ptr <!s32i>, [".atomictmp"] {alignment = 4 : i64}
-// CHECK:  cir.store %arg0, %[[ARGI]] : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
-// CHECK:  %[[I:.*]] = cir.load %[[ARGI]] : cir.ptr <!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CHECK:  %[[ARGI:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["i", init] {alignment = 8 : i64}
+// CHECK:  %[[ONE_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, [".atomictmp"] {alignment = 4 : i64}
+// CHECK:  cir.store %arg0, %[[ARGI]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+// CHECK:  %[[I:.*]] = cir.load %[[ARGI]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CHECK:  %[[ONE:.*]] = cir.const(#cir.int<1> : !s32i) : !s32i
-// CHECK:  cir.store %[[ONE]], %[[ONE_ADDR]] : !s32i, cir.ptr <!s32i>
-// CHECK:  %[[VAL:.*]] = cir.load %[[ONE_ADDR]] : cir.ptr <!s32i>, !s32i
+// CHECK:  cir.store %[[ONE]], %[[ONE_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CHECK:  %[[VAL:.*]] = cir.load %[[ONE_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CHECK:  cir.atomic.fetch(add, %[[I]] : !cir.ptr<!s32i>, %[[VAL]] : !s32i, seq_cst) : !s32i
 
 // LLVM: define i32 @_Z17basic_binop_fetchPi
@@ -293,7 +293,7 @@ bool fi4c(atomic_int *i) {
 // CHECK: %old, %cmp = cir.atomic.cmp_xchg({{.*}} : !cir.ptr<!s32i>, {{.*}} : !s32i, {{.*}} : !s32i, success = seq_cst, failure = seq_cst) : (!s32i, !cir.bool)
 // CHECK: %[[CMP:.*]] = cir.unary(not, %cmp) : !cir.bool, !cir.bool
 // CHECK: cir.if %[[CMP:.*]] {
-// CHECK:   cir.store %old, {{.*}} : !s32i, cir.ptr <!s32i>
+// CHECK:   cir.store %old, {{.*}} : !s32i, !cir.ptr<!s32i>
 // CHECK: }
 
 // LLVM-LABEL: @_Z4fi4cPU7_Atomici

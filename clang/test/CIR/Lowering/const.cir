@@ -36,9 +36,9 @@ module {
   // CHECK:    llvm.return
 
   cir.func @testConstArrayOfStructs() {
-    %0 = cir.alloca !cir.array<!ty_22anon2E122 x 1>, cir.ptr <!cir.array<!ty_22anon2E122 x 1>>, ["a"] {alignment = 4 : i64}
+    %0 = cir.alloca !cir.array<!ty_22anon2E122 x 1>, !cir.ptr<!cir.array<!ty_22anon2E122 x 1>>, ["a"] {alignment = 4 : i64}
     %1 = cir.const(#cir.const_array<[#cir.const_struct<{#cir.int<0> : !s32i, #cir.int<1> : !s32i}> : !ty_22anon2E122]> : !cir.array<!ty_22anon2E122 x 1>) : !cir.array<!ty_22anon2E122 x 1>
-    cir.store %1, %0 : !cir.array<!ty_22anon2E122 x 1>, cir.ptr <!cir.array<!ty_22anon2E122 x 1>>
+    cir.store %1, %0 : !cir.array<!ty_22anon2E122 x 1>, !cir.ptr<!cir.array<!ty_22anon2E122 x 1>>
     cir.return
   }
   // CHECK:  llvm.func @testConstArrayOfStructs()
@@ -55,9 +55,9 @@ module {
   // CHECK:    llvm.return
 
   cir.func @testArrWithTrailingZeros() {
-    %0 = cir.alloca !cir.array<!s32i x 10>, cir.ptr <!cir.array<!s32i x 10>>, ["a"] {alignment = 16 : i64}
+    %0 = cir.alloca !cir.array<!s32i x 10>, !cir.ptr<!cir.array<!s32i x 10>>, ["a"] {alignment = 16 : i64}
     %1 = cir.const(#cir.const_array<[#cir.int<1> : !s32i], trailing_zeros> : !cir.array<!s32i x 10>) : !cir.array<!s32i x 10>
-    cir.store %1, %0 : !cir.array<!s32i x 10>, cir.ptr <!cir.array<!s32i x 10>>
+    cir.store %1, %0 : !cir.array<!s32i x 10>, !cir.ptr<!cir.array<!s32i x 10>>
     cir.return
   }
   // CHECK: llvm.func @testArrWithTrailingZeros()

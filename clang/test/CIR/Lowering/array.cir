@@ -6,7 +6,7 @@
 
 module {
   cir.func @foo() {
-    %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["a"] {alignment = 16 : i64}
+    %0 = cir.alloca !cir.array<i32 x 10>, !cir.ptr<!cir.array<i32 x 10>>, ["a"] {alignment = 16 : i64}
     cir.return
   }
 

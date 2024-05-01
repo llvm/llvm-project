@@ -4,19 +4,19 @@
 !s32i = !cir.int<s, 32>
 module {
   cir.func @foo() {
-    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["a", init] {alignment = 4 : i64}
-    %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["b", init] {alignment = 4 : i64}
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init] {alignment = 4 : i64}
     %2 = cir.const(#cir.int<2> : !s32i) : !s32i
-    cir.store %2, %0 : !s32i, cir.ptr <!s32i>
-    cir.store %2, %1 : !s32i, cir.ptr <!s32i>
+    cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
+    cir.store %2, %1 : !s32i, !cir.ptr<!s32i>
 
-    %3 = cir.load %0 : cir.ptr <!s32i>, !s32i
+    %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
     %4 = cir.unary(plus, %3) : !s32i, !s32i
-    cir.store %4, %0 : !s32i, cir.ptr <!s32i>
+    cir.store %4, %0 : !s32i, !cir.ptr<!s32i>
 
-    %5 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %5 = cir.load %1 : !cir.ptr<!s32i>, !s32i
     %6 = cir.unary(minus, %5) : !s32i, !s32i
-    cir.store %6, %1 : !s32i, cir.ptr <!s32i>
+    cir.store %6, %1 : !s32i, !cir.ptr<!s32i>
     cir.return
   }
 }

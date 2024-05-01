@@ -50,7 +50,7 @@ struct RecursiveStruct {
 // CHECK3: testRecursiveStruct(%arg0: !cir.ptr<![[STRUCT]]>
 void testRecursiveStruct(struct RecursiveStruct *arg) {
   // CHECK3: %[[#NEXT:]] = cir.get_member %{{.+}}[1] {name = "next"} : !cir.ptr<![[STRUCT]]> -> !cir.ptr<!cir.ptr<![[STRUCT]]>>
-  // CHECK3: %[[#DEREF:]] = cir.load %[[#NEXT]] : cir.ptr <!cir.ptr<![[STRUCT]]>>, !cir.ptr<![[STRUCT]]>
+  // CHECK3: %[[#DEREF:]] = cir.load %[[#NEXT]] : !cir.ptr<!cir.ptr<![[STRUCT]]>>, !cir.ptr<![[STRUCT]]>
   // CHECK3: cir.get_member %[[#DEREF]][0] {name = "value"} : !cir.ptr<![[STRUCT]]> -> !cir.ptr<!s32i>
   arg->next->value;
 }
@@ -81,9 +81,9 @@ struct StructNodeB {
 
 void testIndirectSelfReference(struct StructNodeA arg) {
   // CHECK4: %[[#V1:]] = cir.get_member %{{.+}}[1] {name = "next"} : !cir.ptr<![[A]]> -> !cir.ptr<!cir.ptr<![[B]]>>
-  // CHECK4: %[[#V2:]] = cir.load %[[#V1]] : cir.ptr <!cir.ptr<![[B]]>>, !cir.ptr<![[B]]>
+  // CHECK4: %[[#V2:]] = cir.load %[[#V1]] : !cir.ptr<!cir.ptr<![[B]]>>, !cir.ptr<![[B]]>
   // CHECK4: %[[#V3:]] = cir.get_member %[[#V2]][1] {name = "next"} : !cir.ptr<![[B]]> -> !cir.ptr<!cir.ptr<![[A]]>>
-  // CHECK4: %[[#V4:]] = cir.load %[[#V3]] : cir.ptr <!cir.ptr<![[A]]>>, !cir.ptr<![[A]]>
+  // CHECK4: %[[#V4:]] = cir.load %[[#V3]] : !cir.ptr<!cir.ptr<![[A]]>>, !cir.ptr<![[A]]>
   // CHECK4: cir.get_member %[[#V4]][0] {name = "value"} : !cir.ptr<![[A]]> -> !cir.ptr<!s32i>
   arg.next->next->value;
 }
