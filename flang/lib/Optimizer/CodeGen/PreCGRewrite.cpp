@@ -281,6 +281,20 @@ public:
   }
 };
 
+class DummyScopeOpConversion
+    : public mlir::OpRewritePattern<fir::DummyScopeOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::DummyScopeOp dummyScopeOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<fir::UndefOp>(dummyScopeOp,
+                                              dummyScopeOp.getType());
+    return mlir::success();
+  }
+};
+
 class CodeGenRewrite : public fir::impl::CodeGenRewriteBase<CodeGenRewrite> {
 public:
   void runOnOperation() override final {
@@ -293,6 +307,7 @@ public:
     target.addIllegalOp<fir::ArrayCoorOp>();
     target.addIllegalOp<fir::ReboxOp>();
     target.addIllegalOp<fir::DeclareOp>();
+    target.addIllegalOp<fir::DummyScopeOp>();
     target.addDynamicallyLegalOp<fir::EmboxOp>([](fir::EmboxOp embox) {
       return !(embox.getShape() ||
                mlir::isa<fir::SequenceType>(
@@ -321,5 +336,6 @@ std::unique_ptr<mlir::Pass> fir::createFirCodeGenRewritePass() {
 
 void fir::populatePreCGRewritePatterns(mlir::RewritePatternSet &patterns) {
   patterns.insert<EmboxConversion, ArrayCoorConversion, ReboxConversion,
-                  DeclareOpConversion>(patterns.getContext());
+                  DeclareOpConversion, DummyScopeOpConversion>(
+      patterns.getContext());
 }
