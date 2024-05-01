@@ -238,7 +238,7 @@ inline void registerDefaultInlinerPass(MLIRToLLVMPassPipelineConfig &config) {
       [](mlir::PassManager &pm, llvm::OptimizationLevel level) {
         llvm::StringMap<mlir::OpPassManager> pipelines;
         // The default inliner pass adds the canonicalizer pass with the default
-        // configuration. Create the inliner pass with tco config.
+        // configuration.
         pm.addPass(mlir::createInlinerPass(
             pipelines, addCanonicalizerPassWithoutRegionSimplification));
       });
