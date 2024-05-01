@@ -26,7 +26,9 @@ FOOTER = """\
 #endif
 """
 
-REGEX = re.compile(r'(^ *HANDLE_DW_LNAME *\( *([^,]+), ([^,]+), )"(.*)",.*\).*')
+REGEX = re.compile(
+    r'^ *HANDLE_DW_LNAME *\( *(?P<value>[^,]+), (?P<comment>[^,]+), "(?P<name>.*)",.*\)'
+)
 
 
 def emit_enum(input, output):
@@ -42,11 +44,11 @@ def emit_enum(input, output):
 
         # Emit the enum values.
         for line in lines:
-            match = REGEX.search(line)
+            match = REGEX.match(line)
             if not match:
                 continue
-            f.write(f"  /// {match.group(4)}.\n")
-            f.write(f"  eLanguageName{match.group(3)} = {match.group(2)},\n")
+            f.write(f"  /// {match.group('comment')}.\n")
+            f.write(f"  eLanguageName{match.group('name')} = {match.group('value')},\n")
 
         # Emit the footer
         f.write(FOOTER)
