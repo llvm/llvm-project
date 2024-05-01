@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/IRSimilarityIdentifier.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -21,6 +22,27 @@
 
 using namespace llvm;
 using namespace IRSimilarity;
+
+extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
+extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
+extern bool WriteNewDbgInfoFormatToBitcode;
+extern cl::opt<bool> WriteNewDbgInfoFormat;
+
+// Backup all of the existing settings that may be modified when
+// PreserveInputDbgFormat=true, so that when the test is finished we return them
+// (and the "preserve" setting) to their original values.
+static auto SaveDbgInfoFormat() {
+  return make_scope_exit(
+      [OldPreserveInputDbgFormat = PreserveInputDbgFormat.getValue(),
+       OldUseNewDbgInfoFormat = UseNewDbgInfoFormat.getValue(),
+       OldWriteNewDbgInfoFormatToBitcode = WriteNewDbgInfoFormatToBitcode,
+       OldWriteNewDbgInfoFormat = WriteNewDbgInfoFormat.getValue()] {
+        PreserveInputDbgFormat = OldPreserveInputDbgFormat;
+        UseNewDbgInfoFormat = OldUseNewDbgInfoFormat;
+        WriteNewDbgInfoFormatToBitcode = OldWriteNewDbgInfoFormatToBitcode;
+        WriteNewDbgInfoFormat = OldWriteNewDbgInfoFormat;
+      });
+}
 
 static std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context,
                                               StringRef ModuleStr) {
@@ -1308,6 +1330,9 @@ TEST(IRInstructionMapper, CallBrInstIllegal) {
 
 // Checks that an debuginfo intrinsics are mapped to be invisible.  Since they
 // do not semantically change the program, they can be recognized as similar.
+// FIXME: PreserveInputDbgFormat is set to true because this test contains
+// malformed debug info that cannot be converted to the new debug info format;
+// this test should be updated later to use valid debug info.
 TEST(IRInstructionMapper, DebugInfoInvisible) {
   StringRef ModuleString = R"(
                           define i32 @f(i32 %a, i32 %b) {
@@ -1320,6 +1345,8 @@ TEST(IRInstructionMapper, DebugInfoInvisible) {
 
                           declare void @llvm.dbg.value(metadata)
                           !0 = distinct !{!"test\00", i32 10})";
+  auto SettingGuard = SaveDbgInfoFormat();
+  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
   LLVMContext Context;
   std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
 
@@ -1916,6 +1943,9 @@ TEST(IRSimilarityCandidate, CheckRegionsDifferentTypes) {
 
 // Check that debug instructions do not impact similarity. They are marked as
 // invisible.
+// FIXME: PreserveInputDbgFormat is set to true because this test contains
+// malformed debug info that cannot be converted to the new debug info format;
+// this test should be updated later to use valid debug info.
 TEST(IRSimilarityCandidate, IdenticalWithDebug) {
   StringRef ModuleString = R"(
                           define i32 @f(i32 %a, i32 %b) {
@@ -1938,6 +1968,8 @@ TEST(IRSimilarityCandidate, IdenticalWithDebug) {
                           declare void @llvm.dbg.value(metadata)
                           !0 = distinct !{!"test\00", i32 10}
                           !1 = distinct !{!"test\00", i32 11})";
+  auto SettingGuard = SaveDbgInfoFormat();
+  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
   LLVMContext Context;
   std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
 
