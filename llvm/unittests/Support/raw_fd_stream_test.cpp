@@ -19,6 +19,13 @@ using namespace llvm;
 
 namespace {
 
+// While these are marked as "internal" APIs, they seem to work and be pretty
+// widely used for their exact documented behavior.
+using ::testing::internal::CaptureStderr;
+using ::testing::internal::CaptureStdout;
+using ::testing::internal::GetCapturedStderr;
+using ::testing::internal::GetCapturedStdout;
+
 TEST(raw_fd_streamTest, ReadAfterWrite) {
   SmallString<64> Path;
   int FD;
@@ -92,6 +99,9 @@ TEST(raw_fd_streamTest, OverrideOutsAndErrs) {
   OS.read(Buffer, sizeof(Buffer));
   EXPECT_EQ("errs", StringRef(Buffer, sizeof(Buffer)));
 
+  // Seek back before overrides to improve the restore test.
+  OS.seek(0);
+
   // Now try nesting a new set of redirects.
   {
     SmallString<64> Path2;
@@ -101,15 +111,57 @@ TEST(raw_fd_streamTest, OverrideOutsAndErrs) {
     raw_fd_stream OS2(Path, EC);
     ASSERT_TRUE(!EC);
 
+    ScopedOutsAndErrsOverride Overrides(&OS2, &OS2);
+
     llvm::outs() << "te";
     llvm::outs().flush();
     llvm::errs() << "st";
     llvm::errs().flush();
-    char Buffer[4];
     OS2.seek(0);
     OS2.read(Buffer, sizeof(Buffer));
     EXPECT_EQ("test", StringRef(Buffer, sizeof(Buffer)));
   }
+
+  // Nest and un-override to ensure we can reach stdout and stderr again.
+  {
+    ScopedOutsAndErrsOverride Overrides(nullptr, nullptr);
+
+    CaptureStdout();
+    CaptureStderr();
+    llvm::outs() << "llvm";
+    llvm::outs().flush();
+    llvm::errs() << "clang";
+    llvm::errs().flush();
+    std::string OutResult = GetCapturedStdout();
+    std::string ErrResult = GetCapturedStderr();
+
+    EXPECT_EQ("llvm", OutResult);
+    EXPECT_EQ("clang", ErrResult);
+  }
+
+  // Make sure the prior override is restored.
+  llvm::outs() << "sw";
+  llvm::outs().flush();
+  llvm::errs() << "im";
+  llvm::errs().flush();
+  OS.seek(0);
+  OS.read(Buffer, sizeof(Buffer));
+  EXPECT_EQ("swim", StringRef(Buffer, sizeof(Buffer)));
+
+  // Last but not least, make sure our overrides are propagated into the crash
+  // recovery context.
+  OS.seek(0);
+  CrashRecoveryContext CRC;
+
+  ASSERT_TRUE(CRC.RunSafelyOnThread([] {
+    llvm::outs() << "bo";
+    llvm::outs().flush();
+    llvm::errs() << "om";
+    llvm::errs().flush();
+  }));
+  OS.seek(0);
+  OS.read(Buffer, sizeof(Buffer));
+  EXPECT_EQ("boom", StringRef(Buffer, sizeof(Buffer)));
 }
 
 } // namespace
