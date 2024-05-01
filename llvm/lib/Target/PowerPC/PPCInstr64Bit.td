@@ -935,7 +935,7 @@ defm SRW8  : XForm_6r<31, 536, (outs g8rc:$RA), (ins g8rc:$RST, g8rc:$RB),
 
 defm SRAW8 : XForm_6rc<31, 792, (outs g8rc:$RA), (ins g8rc:$RST, g8rc:$RB),
                       "sraw", "$RA, $RST, $RB", IIC_IntShift,
-                      [(set i64:$RA, (PPCsra i64:$RST, i64:$RB))]>, SExt32To64;
+                      []>, SExt32To64;
 
 defm SRAWI8 : XForm_10rc<31, 824, (outs g8rc:$RA), (ins g8rc:$RST, u5imm:$RB),
             "srawi", "$RA, $RST, $RB", IIC_IntShift, []>, SExt32To64;
