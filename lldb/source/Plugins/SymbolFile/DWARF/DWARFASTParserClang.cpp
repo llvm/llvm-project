@@ -770,7 +770,9 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
     (void)authentication_mode;
 
     clang::Qualifiers qualifiers;
-    clang::PointerAuthQualifier ptr_auth(key, addr_disc, extra);
+    clang::PointerAuthQualifier ptr_auth = clang::PointerAuthQualifier::Create(
+        key, addr_disc, extra, clang::PointerAuthenticationMode::SignAndAuth,
+        /*IsIsaPointer*/ false, /*AuthenticatesNullValues*/ true);
     qualifiers.setPointerAuth(ptr_auth);
     auto &ctx = m_ast.getASTContext();
     auto qual_type = ctx.getQualifiedType(ptr_type, qualifiers);
