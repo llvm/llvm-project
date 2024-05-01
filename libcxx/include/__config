@@ -1390,7 +1390,7 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_NO_DESTROY
 #  endif
 
-#  if __has_attribute(__diagnose_if__) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
+#  if __has_attribute(__diagnose_if__)
 #    define _LIBCPP_DIAGNOSE_WARNING(...) __attribute__((__diagnose_if__(__VA_ARGS__, "warning")))
 #  else
 #    define _LIBCPP_DIAGNOSE_WARNING(...)

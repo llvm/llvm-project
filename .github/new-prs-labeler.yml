@@ -1,3 +1,6 @@
+BOLT:
+  - bolt/**/*
+
 ClangIR:
   - clang/include/clang/CIR/**/*
   - clang/lib/CIR/**/*
@@ -467,6 +470,7 @@ backend:m68k:
 
 libc++:
   - libcxx/**
+  - .github/workflows/libcxx-*
 
 libc++abi:
   - libcxxabi/**

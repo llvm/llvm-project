@@ -5,11 +5,6 @@
 ; computed as the type id from the type operand bundle.
 ; RUN: llc --call-graph-section -mtriple=x86_64-unknown-linux %s -stop-before=finalize-isel -o - | FileCheck %s
 
-; ModuleID = 'test.c'
-source_filename = "test.c"
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
-
 define dso_local void @foo(i8 signext %a) !type !3 {
 entry:
   ret void
@@ -20,13 +15,13 @@ define dso_local i32 @main() !type !4 {
 entry:
   %retval = alloca i32, align 4
   %fp = alloca void (i8)*, align 8
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   store void (i8)* @foo, void (i8)** %fp, align 8
-  %0 = load void (i8)*, void (i8)** %fp, align 8
+  %pfoo = load void (i8)*, void (i8)** %fp, align 8
   ; CHECK: callSites:
   ; CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], typeId:
   ; CHECK-NEXT: 7854600665770582568 }
-  call void %0(i8 signext 97) [ "type"(metadata !"_ZTSFvcE.generalized") ]
+  call void %pfoo(i8 signext 97) [ "type"(metadata !"_ZTSFvcE.generalized") ]
   ret i32 0
 }
 

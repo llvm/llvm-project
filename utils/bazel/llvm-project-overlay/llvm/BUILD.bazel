@@ -22,6 +22,7 @@ licenses(["notice"])
 exports_files([
     "LICENSE.TXT",
     "cmake/modules/llvm-driver-template.cpp.in",
+    "include/llvm/BinaryFormat/Dwarf.def",
     "include/llvm/CodeGen/SDNodeProperties.td",
     "include/llvm/CodeGen/ValueTypes.td",
     "include/llvm/Frontend/Directive/DirectiveBase.td",
@@ -3111,12 +3112,26 @@ cc_library(
 )
 
 cc_library(
-    name = "llvm-mca-headers",
+    name = "MCAApplication",
+    srcs = glob([
+        "tools/llvm-mca/Views/*.cpp",
+    ]) + [
+        mca_source
+        for mca_source in glob(["tools/llvm-mca/*.cpp"])
+        if mca_source != "tools/llvm-mca/llvm-mca.cpp"
+    ],
     hdrs = glob([
         "tools/llvm-mca/*.h",
         "tools/llvm-mca/Views/*.h",
     ]),
     strip_include_prefix = "tools/llvm-mca",
+    deps = [
+        ":MC",
+        ":MCA",
+        ":MCParser",
+        ":Support",
+        ":TargetParser",
+    ],
 )
 
 cc_library(
@@ -4034,12 +4049,9 @@ cc_binary(
 
 cc_binary(
     name = "llvm-mca",
-    srcs = glob([
-        "tools/llvm-mca/*.cpp",
-        "tools/llvm-mca/*.h",
-        "tools/llvm-mca/Views/*.cpp",
-        "tools/llvm-mca/Views/*.h",
-    ]),
+    srcs =[
+        "tools/llvm-mca/llvm-mca.cpp",
+    ],
     copts = llvm_copts,
     stamp = 0,
     deps = [
@@ -4049,10 +4061,10 @@ cc_binary(
         ":AllTargetsMCAs",
         ":MC",
         ":MCA",
+        ":MCAApplication",
         ":MCParser",
         ":Support",
         ":TargetParser",
-        ":llvm-mca-headers",
     ],
 )
 
