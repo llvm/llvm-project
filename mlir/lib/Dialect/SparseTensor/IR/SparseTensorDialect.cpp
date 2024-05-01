@@ -664,8 +664,7 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
         explicitVal = result;
       } else if (auto result = llvm::dyn_cast<IntegerAttr>(attr)) {
         explicitVal = result;
-      } else if (auto result =
-                     llvm::dyn_cast<::mlir::complex::NumberAttr>(attr)) {
+      } else if (auto result = llvm::dyn_cast<complex::NumberAttr>(attr)) {
         explicitVal = result;
       } else {
         parser.emitError(parser.getNameLoc(),
@@ -682,8 +681,7 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
         implicitVal = result;
       } else if (auto result = llvm::dyn_cast<IntegerAttr>(attr)) {
         implicitVal = result;
-      } else if (auto result =
-                     llvm::dyn_cast<::mlir::complex::NumberAttr>(attr)) {
+      } else if (auto result = llvm::dyn_cast<complex::NumberAttr>(attr)) {
         implicitVal = result;
       } else {
         parser.emitError(parser.getNameLoc(),
