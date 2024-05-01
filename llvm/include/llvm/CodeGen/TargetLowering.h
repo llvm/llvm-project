@@ -470,6 +470,12 @@ public:
   /// expanded using generic code in SelectionDAGBuilder.
   virtual bool shouldExpandCttzElements(EVT VT) const { return true; }
 
+  /// Return the minimum number of bits required to hold the maximum possible
+  /// number of trailing zero vector elements.
+  unsigned getBitWidthForCttzElements(Type *RetTy, ElementCount EC,
+                                      bool ZeroIsPoison,
+                                      const ConstantRange *VScaleRange) const;
+
   // Return true if op(vecreduce(x), vecreduce(y)) should be reassociated to
   // vecreduce(op(x, y)) for the reduction opcode RedOpc.
   virtual bool shouldReassociateReduction(unsigned RedOpc, EVT VT) const {
