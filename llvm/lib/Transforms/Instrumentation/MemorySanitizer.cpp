@@ -1135,6 +1135,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   std::unique_ptr<VarArgHelper> VAHelper;
   const TargetLibraryInfo *TLI;
   Instruction *FnPrologueEnd;
+  SmallVector<Instruction *, 128> Instructions;
 
   // The following flags disable parts of MSan instrumentation based on
   // exclusion list contents and command-line options.
@@ -1519,6 +1520,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // For PHI nodes we create dummy shadow PHIs which will be finalized later.
     for (BasicBlock *BB : depth_first(FnPrologueEnd->getParent()))
       visit(*BB);
+
+    // `visit` above only collects instructions. Process them after iterating
+    // CFG to avoid requirement on CFG transformations.
+    for (Instruction *I : Instructions)
+      instrument(*I);
 
     // Finalize PHI nodes.
     for (PHINode *PN : ShadowPHINodes) {
@@ -2181,14 +2187,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return ConstantDataVector::get(IRB.getContext(), OrderingTable);
   }
 
-  // ------------------- Visitors.
-  using InstVisitor<MemorySanitizerVisitor>::visit;
-  void visit(Instruction &I) {
-    if (I.getMetadata(LLVMContext::MD_nosanitize))
-      return;
-    // Don't want to visit if we're in the prologue
-    if (isInPrologue(I))
-      return;
+  void instrument(Instruction &I) {
     if (!DebugCounter::shouldExecute(DebugInstrumentInstruction)) {
       LLVM_DEBUG(dbgs() << "Skipping instruction: " << I << "\n");
       // We still need to set the shadow and origin to clean values.
@@ -2197,6 +2196,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       return;
     }
     InstVisitor<MemorySanitizerVisitor>::visit(I);
+  }
+
+  // ------------------- Visitors.
+  using InstVisitor<MemorySanitizerVisitor>::visit;
+  void visit(Instruction &I) {
+    if (I.getMetadata(LLVMContext::MD_nosanitize))
+      return;
+    // Don't want to visit if we're in the prologue
+    if (isInPrologue(I))
+      return;
+
+    Instructions.push_back(&I);
   }
 
   /// Instrument LoadInst
