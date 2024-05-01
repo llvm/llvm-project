@@ -890,7 +890,7 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
 
     if (MI->isCandidateForCallSiteEntry() &&
         (DAG->getTarget().Options.EmitCallSiteInfo ||
-         DAG->getTarget().Options.EmitCallGraphSection)) {      
+         DAG->getTarget().Options.EmitCallGraphSection)) {
       MF.addCallSiteInfo(MI, DAG->getCallSiteInfo(Node));
     }
 

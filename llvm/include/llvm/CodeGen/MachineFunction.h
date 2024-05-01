@@ -502,11 +502,8 @@ public:
         return;
 
       auto Opt = CB.getOperandBundle(LLVMContext::OB_type);
-      if (!Opt.has_value()) {
-        errs() << "warning: cannot find indirect call type operand bundle for  "
-                  "call graph section\n";
+      if (!Opt.has_value())
         return;
-      }
 
       // Get generalized type id string
       auto OB = Opt.value();
