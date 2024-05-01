@@ -202,7 +202,7 @@ static void HarvestInitializerSymbols(
           HarvestInitializerSymbols(set, *dtSym.scope());
         }
       } else {
-        CHECK(dtSym.has<UseErrorDetails>());
+        CHECK(dtSym.has<UseDetails>() || dtSym.has<UseErrorDetails>());
       }
     } else if (IsNamedConstant(*symbol) || scope.IsDerivedType()) {
       if (const auto *object{symbol->detailsIf<ObjectEntityDetails>()}) {
