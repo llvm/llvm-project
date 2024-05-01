@@ -95,12 +95,13 @@ struct array_of_ints_count {
 
 struct not_a_fam {
   int count;
-  struct bar *non_fam __counted_by(count); // expected-error {{'counted_by' only applies to C99 flexible array members}}
+  // expected-error@+1{{'counted_by' cannot be applied a pointer with pointee with unknown size because 'struct bar' is an incomplete type}}
+  struct bar *non_fam __counted_by(count);
 };
 
 struct not_a_c99_fam {
   int count;
-  struct bar *non_c99_fam[0] __counted_by(count); // expected-error {{'counted_by' only applies to C99 flexible array members}}
+  struct bar *non_c99_fam[0] __counted_by(count); // expected-error {{'counted_by' on arrays only applies to C99 flexible array members}}
 };
 
 struct annotated_with_anon_struct {
