@@ -97,12 +97,8 @@ std::string AsFortran(IgnoreTKRSet tkr) {
   return result;
 }
 
-/// Check compatibilty of CUDA attribute.
-/// When `allowUnifiedMatchingRule` is enabled, argument `x` represents the
-/// dummy argument attribute while `y` represents the actual argument attribute.
 bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
-    std::optional<CUDADataAttr> y, IgnoreTKRSet ignoreTKR,
-    bool allowUnifiedMatchingRule) {
+    std::optional<CUDADataAttr> y, IgnoreTKRSet ignoreTKR) {
   if (!x && !y) {
     return true;
   } else if (x && y && *x == *y) {
@@ -118,24 +114,6 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
       x.value_or(CUDADataAttr::Managed) == CUDADataAttr::Managed &&
       y.value_or(CUDADataAttr::Managed) == CUDADataAttr::Managed) {
     return true;
-  } else if (allowUnifiedMatchingRule) {
-    if (!x) { // Dummy argument has no attribute -> host
-      if (y && *y == CUDADataAttr::Managed || *y == CUDADataAttr::Unified) {
-        return true;
-      }
-    } else {
-      if (*x == CUDADataAttr::Device && y &&
-          (*y == CUDADataAttr::Managed || *y == CUDADataAttr::Unified)) {
-        return true;
-      } else if (*x == CUDADataAttr::Managed && y &&
-          *y == CUDADataAttr::Unified) {
-        return true;
-      } else if (*x == CUDADataAttr::Unified && y &&
-          *y == CUDADataAttr::Managed) {
-        return true;
-      }
-    }
-    return false;
   } else {
     return false;
   }
