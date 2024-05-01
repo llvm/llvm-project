@@ -3509,23 +3509,6 @@ TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
   if (FunctionType) {
     auto EPI = Proto->getExtProtoInfo();
     EPI.ExtParameterInfos = ExtParamInfos.getPointerOrNull(ParamTypes.size());
-
-    // In C++1z onwards, exception specifications are part of the function type,
-    // so substitution into the type must also substitute into the exception
-    // specification.
-    SmallVector<QualType, 4> ExceptionStorage;
-    if (getLangOpts().CPlusPlus17 &&
-        SubstExceptionSpec(
-            Function->getLocation(), EPI.ExceptionSpec, ExceptionStorage,
-            getTemplateInstantiationArgs(
-                FunctionTemplate, nullptr, /*Final=*/true,
-                /*Innermost=*/SugaredExplicitArgumentList->asArray(),
-                /*RelativeToPrimary=*/false,
-                /*Pattern=*/nullptr,
-                /*ForConstraintInstantiation=*/false,
-                /*SkipForSpecialization=*/true)))
-      return TemplateDeductionResult::SubstitutionFailure;
-
     *FunctionType = BuildFunctionType(ResultType, ParamTypes,
                                       Function->getLocation(),
                                       Function->getDeclName(),
