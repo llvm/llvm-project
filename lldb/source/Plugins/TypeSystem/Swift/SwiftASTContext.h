@@ -216,6 +216,9 @@ public:
   CreateInstance(const SymbolContext &sc,
                  TypeSystemSwiftTypeRefForExpressions &typeref_typesystem);
 
+  /// Returns true if Swift C++ interop is enabled for the given compiler unit.
+  static bool ShouldEnableCXXInterop(CompileUnit *cu);
+
   static void EnumerateSupportedLanguages(
       std::set<lldb::LanguageType> &languages_for_types,
       std::set<lldb::LanguageType> &languages_for_expressions);
