@@ -839,7 +839,6 @@ void RewriteInstance::discoverFileObjects() {
   };
   std::vector<SymbolInfo> SortedSymbols;
   std::unordered_map<SymbolRef, StringRef, SymbolRefHash> SymbolToFileName;
-
   for (const ELFSymbolRef &Symbol : InputFile->symbols()) {
     Expected<StringRef> NameOrError = Symbol.getName();
     if (NameOrError && NameOrError->starts_with("__asan_init")) {
