@@ -23,7 +23,10 @@ func.func @constant_with_multiple_users(%a: vector<[4]xf32>, %b: vector<[4]xf32>
 
 // -----
 
-// (No CHECK-BAD -- the current tile allocator ignores this case)
+// (No tile IDs -- the current tile allocator ignores this case)
+
+// CHECK-BAD-LABEL: @value_with_multiple_users
+// CHECK-BAD-NOT: tile_id
 func.func @value_with_multiple_users(%tile: vector<[4]x[4]xf32>, %a: vector<[4]xf32>, %b: vector<[4]xf32>, %index: index) {
   // A future allocator should error here (as `%tile` would need to be copied).
   %tile_a = arm_sme.move_vector_to_tile_slice %a, %tile, %index : vector<[4]xf32> into vector<[4]x[4]xf32>
