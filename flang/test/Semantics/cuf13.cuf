@@ -6,10 +6,6 @@ module matching
     module procedure sub_device
   end interface
 
-  interface subman
-    module procedure sub_host
-  end interface
-
 contains
   subroutine sub_host(a)
     integer :: a(:)
@@ -25,13 +21,8 @@ program m
   use matching
 
   integer, pinned, allocatable :: a(:)
-  integer, managed, allocatable :: b(:)
   logical :: plog
   allocate(a(100), pinned = plog)
-  allocate(b(200))
 
   call sub(a)
-
-  call subman(b)
-
 end
