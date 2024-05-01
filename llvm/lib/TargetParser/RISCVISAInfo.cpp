@@ -425,10 +425,10 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
-  if (llvm::any_of(Arch, isupper)) {
+  if (llvm::any_of(Arch, isupper))
     return createStringError(errc::invalid_argument,
                              "string must be lowercase");
-  }
+
   // Must start with a valid base ISA name.
   unsigned XLen = 0;
   if (Arch.consume_front("rv32"))
@@ -588,10 +588,9 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                               bool ExperimentalExtensionVersionCheck,
                               bool IgnoreUnknown) {
   // RISC-V ISA strings must be lowercase.
-  if (llvm::any_of(Arch, isupper)) {
+  if (llvm::any_of(Arch, isupper))
     return createStringError(errc::invalid_argument,
                              "string must be lowercase");
-  }
 
   if (Arch.starts_with("rvi") || Arch.starts_with("rva") ||
       Arch.starts_with("rvb") || Arch.starts_with("rvm")) {
@@ -930,6 +929,12 @@ void RISCVISAInfo::updateMinVLen() {
 }
 
 void RISCVISAInfo::updateMaxELen() {
+  assert(MaxELenFp == 0 && MaxELen == 0);
+  if (Exts.count("v")) {
+    MaxELenFp = std::max(MaxELenFp, 64u);
+    MaxELen = std::max(MaxELen, 64u);
+  }
+
   // handles EEW restriction by sub-extension zve
   for (auto const &Ext : Exts) {
     StringRef ExtName = Ext.first;
@@ -937,12 +942,15 @@ void RISCVISAInfo::updateMaxELen() {
     if (IsZveExt) {
       if (ExtName.back() == 'f')
         MaxELenFp = std::max(MaxELenFp, 32u);
-      if (ExtName.back() == 'd')
+      else if (ExtName.back() == 'd')
         MaxELenFp = std::max(MaxELenFp, 64u);
+      else if (ExtName.back() != 'x')
+        continue;
+
       ExtName = ExtName.drop_back();
       unsigned ZveELen;
-      ExtName.getAsInteger(10, ZveELen);
-      MaxELen = std::max(MaxELen, ZveELen);
+      if (!ExtName.getAsInteger(10, ZveELen))
+        MaxELen = std::max(MaxELen, ZveELen);
     }
   }
 }
