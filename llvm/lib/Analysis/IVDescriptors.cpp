@@ -639,9 +639,9 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
   Instruction *Cmp = nullptr;
 
   if (SI) {
+    // Check that SelectInst is related to the this PHI reduction.
     bool HasOrigPhiUser = false;
     bool SelectNonPHIUserInLoop = false;
-    auto Blocks = Loop->getBlocksVector();
     for (User *U : SI->users()) {
       Instruction *Inst = dyn_cast<Instruction>(U);
       if (!Inst)
@@ -649,12 +649,12 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
       if (Inst == OrigPhi) {
         HasOrigPhiUser = true;
       } else {
-        if (std::find(Blocks.begin(), Blocks.end(), Inst->getParent()) !=
-            Blocks.end())
+        if (Loop->contains(Inst->getParent()))
           SelectNonPHIUserInLoop = true;
       }
     }
     Cmp = dyn_cast<CmpInst>(SI->getOperand(0));
+    // Checking the current CmpInst is safe as a recurrent reduction.
     if (Cmp && !Cmp->hasOneUse() && HasOrigPhiUser && !SelectNonPHIUserInLoop) {
       bool IsSafeCMP = true;
       for (User *U : Cmp->users()) {
@@ -662,19 +662,17 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
         if (!UInst)
           continue;
         if (SelectInst *SI1 = dyn_cast<SelectInst>(U)) {
-          if (!llvm::all_of(SI1->users(), [Blocks](User *USI) {
+          if (!llvm::all_of(SI1->users(), [Loop](User *USI) {
                 Instruction *Inst1 = dyn_cast<Instruction>(USI);
-                if (!Inst1 || (std::find(Blocks.begin(), Blocks.end(),
-                                         Inst1->getParent()) == Blocks.end() ||
-                               isa<PHINode>(Inst1)))
+                if (!Inst1 || !Loop->contains(Inst1->getParent()) ||
+                    isa<PHINode>(Inst1))
                   return true;
                 return false;
               }))
             IsSafeCMP = false;
         }
         if (IsSafeCMP && !isa<BranchInst>(UInst) && !isa<SelectInst>(UInst) &&
-            std::find(Blocks.begin(), Blocks.end(), UInst->getParent()) !=
-                Blocks.end())
+            Loop->contains(UInst->getParent()))
           IsSafeCMP = false;
       }
       if (!IsSafeCMP)
