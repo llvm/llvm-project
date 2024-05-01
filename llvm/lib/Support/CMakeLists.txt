@@ -312,7 +312,7 @@ add_llvm_component_library(LLVMSupport
   Demangle
   )
 
-# Link icu library if it is an external library.
+# Link ICU library if it is an external library.
 if(ICU_FOUND)
   target_link_libraries(LLVMSupport
   PRIVATE

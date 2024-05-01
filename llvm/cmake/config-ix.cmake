@@ -294,14 +294,14 @@ if(LLVM_HAS_LOGF128)
   set(LLVM_HAS_LOGF128 "${HAS_LOGF128}")
 endif()
 
-#Check for icu.
+# Check for ICU.
 if(LLVM_ENABLE_ICU)
   set(LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".so")
   if (LLVM_ENABLE_ICU STREQUAL FORCE_ON)
     find_package(ICU REQUIRED COMPONENTS uc i18n)
     if (NOT ICU_FOUND)
-      message(FATAL_ERROR "Failed to configure icu, but LLVM_ENABLE_ICU is FORCE_ON")
+      message(FATAL_ERROR "Failed to configure ICU, but LLVM_ENABLE_ICU is FORCE_ON")
     endif()
   else()
     find_package(ICU COMPONENTS uc i18n)
