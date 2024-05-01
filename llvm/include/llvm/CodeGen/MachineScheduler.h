@@ -807,6 +807,10 @@ public:
   // constructor for empty set
   explicit ResourceSegments(){};
   bool empty() const { return _Intervals.empty(); }
+  explicit ResourceSegments(const std::list<IntervalTy> &Intervals)
+      : _Intervals(Intervals) {
+    sortAndMerge();
+  }
 
   friend bool operator==(const ResourceSegments &c1,
                          const ResourceSegments &c2) {
