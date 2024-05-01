@@ -72,6 +72,8 @@ TEST(BasicBlockDbgInfoTest, InsertAfterSelf) {
     !11 = !DILocation(line: 1, column: 1, scope: !6)
 )");
 
+  // Convert the module to "new" form debug-info.
+  M->convertToNewDbgValues();
   // Fetch the entry block.
   BasicBlock &BB = M->getFunction("f")->getEntryBlock();
 
@@ -101,6 +103,8 @@ TEST(BasicBlockDbgInfoTest, InsertAfterSelf) {
   EXPECT_TRUE(RetInst->hasDbgRecords());
   auto Range2 = RetInst->getDbgRecordRange();
   EXPECT_EQ(std::distance(Range2.begin(), Range2.end()), 1u);
+
+  M->convertFromNewDbgValues();
 
   UseNewDbgInfoFormat = false;
 }
@@ -192,6 +196,8 @@ TEST(BasicBlockDbgInfoTest, MarkerOperations) {
 
   // Fetch the entry block,
   BasicBlock &BB = M->getFunction("f")->getEntryBlock();
+  // Convert the module to "new" form debug-info.
+  M->convertToNewDbgValues();
   EXPECT_EQ(BB.size(), 2u);
 
   // Fetch out our two markers,
@@ -326,6 +332,8 @@ TEST(BasicBlockDbgInfoTest, HeadBitOperations) {
   // Test that the movement of debug-data when using moveBefore etc and
   // insertBefore etc are governed by the "head" bit of iterators.
   BasicBlock &BB = M->getFunction("f")->getEntryBlock();
+  // Convert the module to "new" form debug-info.
+  M->convertToNewDbgValues();
 
   // Test that the head bit behaves as expected: it should be set when the
   // code wants the _start_ of the block, but not otherwise.
@@ -433,6 +441,8 @@ TEST(BasicBlockDbgInfoTest, InstrDbgAccess) {
   // Check that DbgVariableRecords can be accessed from Instructions without
   // digging into the depths of DbgMarkers.
   BasicBlock &BB = M->getFunction("f")->getEntryBlock();
+  // Convert the module to "new" form debug-info.
+  M->convertToNewDbgValues();
 
   Instruction *BInst = &*BB.begin();
   Instruction *CInst = BInst->getNextNode();
@@ -569,6 +579,7 @@ protected:
   void SetUp() override {
     UseNewDbgInfoFormat = true;
     M = parseIR(C, SpliceTestIR.c_str());
+    M->convertToNewDbgValues();
 
     BBEntry = &M->getFunction("f")->getEntryBlock();
     BBExit = BBEntry->getNextNode();
@@ -1208,6 +1219,7 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceTrailing) {
 
   BasicBlock &Entry = M->getFunction("f")->getEntryBlock();
   BasicBlock &Exit = *Entry.getNextNode();
+  M->convertToNewDbgValues();
 
   // Begin by forcing entry block to have dangling DbgVariableRecord.
   Entry.getTerminator()->eraseFromParent();
@@ -1261,6 +1273,7 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsert) {
 )");
 
   BasicBlock &Entry = M->getFunction("f")->getEntryBlock();
+  M->convertToNewDbgValues();
 
   // Fetch the relevant instructions from the converted function.
   Instruction *SubInst = &*Entry.begin();
@@ -1339,6 +1352,7 @@ TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsertForOneDbgVariableRecord) {
 )");
 
   BasicBlock &Entry = M->getFunction("f")->getEntryBlock();
+  M->convertToNewDbgValues();
 
   // Fetch the relevant instructions from the converted function.
   Instruction *SubInst = &*Entry.begin();
@@ -1422,6 +1436,7 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceToEmpty1) {
   Function &F = *M->getFunction("f");
   BasicBlock &Entry = F.getEntryBlock();
   BasicBlock &Exit = *Entry.getNextNode();
+  M->convertToNewDbgValues();
 
   // Begin by forcing entry block to have dangling DbgVariableRecord.
   Entry.getTerminator()->eraseFromParent();
@@ -1491,6 +1506,7 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceToEmpty2) {
   Function &F = *M->getFunction("f");
   BasicBlock &Entry = F.getEntryBlock();
   BasicBlock &Exit = *Entry.getNextNode();
+  M->convertToNewDbgValues();
 
   // Begin by forcing entry block to have dangling DbgVariableRecord.
   Entry.getTerminator()->eraseFromParent();
@@ -1560,6 +1576,7 @@ TEST(BasicBlockDbgInfoTest, DbgMoveToEnd) {
   Function &F = *M->getFunction("f");
   BasicBlock &Entry = F.getEntryBlock();
   BasicBlock &Exit = *Entry.getNextNode();
+  M->convertToNewDbgValues();
 
   // Move the return to the end of the entry block.
   Instruction *Br = Entry.getTerminator();
