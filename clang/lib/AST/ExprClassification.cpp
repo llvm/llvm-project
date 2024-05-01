@@ -217,9 +217,8 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
                  cast<SubstNonTypeTemplateParmExpr>(E)->getReplacement());
 
   case Expr::PackIndexingExprClass: {
-    // A dependent pack-index-expression is now supposed to denote a function
-    // parameter pack, an NTTP pack, or the pack introduced by a structured
-    // binding. Consider it as an LValue expression.
+    // A pack-index-expression always expand to an id-expression. 
+    // Consider it as an LValue expression.
     if (cast<PackIndexingExpr>(E)->isInstantiationDependent())
       return Cl::CL_LValue;
     return ClassifyInternal(Ctx, cast<PackIndexingExpr>(E)->getSelectedExpr());
