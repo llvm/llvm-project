@@ -465,10 +465,38 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto *tc = getTypeConverter();
     const auto resultTy = tc->convertType(ptrStrideOp.getType());
-    const auto elementTy = tc->convertType(ptrStrideOp.getElementTy());
-    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(ptrStrideOp, resultTy,
-                                                   elementTy, adaptor.getBase(),
-                                                   adaptor.getStride());
+    auto elementTy = tc->convertType(ptrStrideOp.getElementTy());
+    auto ctx = elementTy.getContext();
+
+    // void doesn't really have a layout to use in GEPs, make it i8 instead.
+    bool isVoid = false;
+    if (elementTy.isa<mlir::LLVM::LLVMVoidType>()) {
+      elementTy = mlir::IntegerType::get(elementTy.getContext(), 8,
+                                         mlir::IntegerType::Signless);
+      isVoid = true;
+    }
+
+    // Zero-extend or sign-extend the pointer value according to
+    // whether the index is signed or not.
+    // FIXME: generalize this logic when element type isn't void.
+    auto index = adaptor.getStride();
+    auto width = index.getType().cast<mlir::IntegerType>().getWidth();
+    mlir::DataLayout LLVMLayout(
+        index.getDefiningOp()->getParentOfType<mlir::ModuleOp>());
+    auto layoutWidth =
+        LLVMLayout.getTypeIndexBitwidth(adaptor.getBase().getType());
+    if (isVoid && layoutWidth && width < *layoutWidth) {
+      auto llvmDstType = mlir::IntegerType::get(ctx, *layoutWidth);
+      if (ptrStrideOp.getStride().getType().isUnsigned())
+        index = rewriter.create<mlir::LLVM::ZExtOp>(ptrStrideOp.getLoc(),
+                                                    llvmDstType, index);
+      else
+        index = rewriter.create<mlir::LLVM::SExtOp>(ptrStrideOp.getLoc(),
+                                                    llvmDstType, index);
+    }
+
+    rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+        ptrStrideOp, resultTy, elementTy, adaptor.getBase(), index);
     return mlir::success();
   }
 };
