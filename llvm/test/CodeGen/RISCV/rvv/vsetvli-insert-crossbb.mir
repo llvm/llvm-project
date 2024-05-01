@@ -1048,6 +1048,18 @@ body:             |
 ---
 name: pre_undemanded_vl
 body: |
+  ; CHECK-LABEL: name: pre_undemanded_vl
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   PseudoBR %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 1, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   %x:gpr = PseudoVMV_X_S undef $noreg, 6 /* e64 */, implicit $vtype
+  ; CHECK-NEXT:   PseudoBR %bb.1
   bb.0:
     PseudoBR %bb.1
   bb.1:
