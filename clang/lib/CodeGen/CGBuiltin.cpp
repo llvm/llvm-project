@@ -18770,17 +18770,13 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
            EmitScalarExpr(E->getArg(2))});
     }
 
-    uint64_t Mask = 0;
-    for (unsigned I = 3; I < E->getNumArgs(); I++) {
-      auto NextArg = EmitScalarExpr(E->getArg(I));
-      auto ArgLiteral = cast<ConstantInt>(NextArg)->getZExtValue();
-      Mask |= (uint64_t)1 << ArgLiteral;
-    }
-
     return Builder.CreateCall(
         CGM.getIntrinsic(Intrinsic::amdgcn_sched_group_barrier_rule),
         {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1)),
-         EmitScalarExpr(E->getArg(2)), llvm::ConstantInt::get(Int64Ty, Mask)});
+         EmitScalarExpr(E->getArg(2)),
+         llvm::ConstantInt::get(
+             Int64Ty,
+             cast<ConstantInt>(EmitScalarExpr(E->getArg(3)))->getZExtValue())});
   }
 
   // r600 intrinsics

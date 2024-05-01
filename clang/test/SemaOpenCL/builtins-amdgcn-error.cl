@@ -230,8 +230,6 @@ void test_atomic_dec64() {
 
 void test_sched_group_barrier_rule()
 {
-  __builtin_amdgcn_sched_group_barrier(0, 1, 2, -1);  // expected-error {{builtin requires RuleIDs in range [0,63]}}
-  __builtin_amdgcn_sched_group_barrier(1, 2, 4, 64);  // expected-error {{builtin requires RuleIDs in range [0,63]}}
-  __builtin_amdgcn_sched_group_barrier(1, 2, 4, 101);  // expected-error {{builtin requires RuleIDs in range [0,63]}}
-  __builtin_amdgcn_sched_group_barrier(1, 2, 4, -2147483648); // expected-error {{builtin requires RuleIDs in range [0,63]}}
+  __builtin_amdgcn_sched_group_barrier(2, 4, 6, 0, 1, 2, 3, 4, 5, 6, 7); // expected-error {{too many arguments to function call, expected at most 4, have 11}}
+  __builtin_amdgcn_sched_group_barrier(2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0); // expected-error {{too many arguments to function call, expected at most 4, have 14}}
 }

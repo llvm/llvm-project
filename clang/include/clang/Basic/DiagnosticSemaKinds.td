@@ -12098,11 +12098,6 @@ def warn_tcb_enforcement_violation : Warning<
   "calling %0 is a violation of trusted computing base '%1'">,
   InGroup<DiagGroup<"tcb-enforcement">>;
 
-// AMDGCN Diagnostics
-def err_amdgcn_builtin_int_value_too_large : Error<
-  "builtin requires RuleIDs in range [%0,%1]">;
-
-
 // RISC-V builtin required extension warning
 def err_riscv_builtin_requires_extension : Error<
   "builtin requires%select{| at least one of the following extensions}0: %1">;

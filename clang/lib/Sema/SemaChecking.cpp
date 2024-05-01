@@ -5321,23 +5321,12 @@ bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
                                           CallExpr *TheCall) {
 
   if (BuiltinID == AMDGPU::BI__builtin_amdgcn_sched_group_barrier) {
-    if (TheCall->getNumArgs() == 3)
-      return false;
-
-    for (unsigned I = 3; I < TheCall->getNumArgs(); I++) {
-      auto ArgExpr = TheCall->getArg(I);
-      Expr::EvalResult ArgResult;
-      if (!ArgExpr->EvaluateAsInt(ArgResult, Context))
-        return Diag(ArgExpr->getExprLoc(), diag::err_typecheck_expect_int)
-               << ArgExpr->getType();
-      auto ArgLiteral = ArgResult.Val.getInt();
-      if (ArgLiteral > 63 || ArgLiteral < 0) {
-        return Diag(ArgExpr->getExprLoc(),
-                    diag::err_amdgcn_builtin_int_value_too_large)
-               << 0 << 63;
-      }
-    }
-
+    auto NumArgs = TheCall->getNumArgs();
+    if (TheCall->getNumArgs() > 4)
+      return Diag(TheCall->getEndLoc(),
+                  diag::err_typecheck_call_too_many_args_at_most)
+             << 0 /*function call*/ << 4 << NumArgs << /*is non object*/ 0
+             << TheCall->getSourceRange();
     return false;
   }
 

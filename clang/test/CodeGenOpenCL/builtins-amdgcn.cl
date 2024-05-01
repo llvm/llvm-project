@@ -438,17 +438,15 @@ void test_sched_group_barrier()
 
 // CHECK-LABEL: @test_sched_group_barrier_rule
 // CHECK: call void @llvm.amdgcn.sched.group.barrier.rule(i32 0, i32 1, i32 2, i64 1)
-// CHECK: call void @llvm.amdgcn.sched.group.barrier.rule(i32 1, i32 2, i32 4, i64 1)
+// CHECK: call void @llvm.amdgcn.sched.group.barrier.rule(i32 1, i32 2, i32 4, i64 0)
 // CHECK: call void @llvm.amdgcn.sched.group.barrier.rule(i32 1, i32 2, i32 4, i64 -9223372036854775808)
 // CHECK: call void @llvm.amdgcn.sched.group.barrier.rule(i32 2, i32 4, i32 6, i64 255)
-// CHECK: call void @llvm.amdgcn.sched.group.barrier.rule(i32 2, i32 4, i32 6, i64 1)
 void test_sched_group_barrier_rule()
 {
-  __builtin_amdgcn_sched_group_barrier(0, 1, 2, 0);
+  __builtin_amdgcn_sched_group_barrier(0, 1, 2, 1);
   __builtin_amdgcn_sched_group_barrier(1, 2, 4, 0);
-  __builtin_amdgcn_sched_group_barrier(1, 2, 4, 63);
-  __builtin_amdgcn_sched_group_barrier(2, 4, 6, 0, 1, 2, 3, 4, 5, 6, 7);
-  __builtin_amdgcn_sched_group_barrier(2, 4, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+  __builtin_amdgcn_sched_group_barrier(1, 2, 4, 9223372036854775808);
+  __builtin_amdgcn_sched_group_barrier(2, 4, 6, 255);
 }
 
 

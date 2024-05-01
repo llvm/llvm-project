@@ -86,8 +86,8 @@ define amdgpu_kernel void @rule2(ptr addrspace(7) noalias %in, ptr addrspace(3) 
 ; GCN-NEXT:    ; kill: killed $vgpr10
 ; GCN-NEXT:    ; kill: killed $vgpr11
 ; GCN-NEXT:    ; kill: killed $vgpr1
-; GCN-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(1) Rule(2)
-; GCN-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(1) Rule(2)
+; GCN-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(1) RuleMask(0x00000000000002)
+; GCN-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(1) RuleMask(0x00000000000002)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(1)
 ; GCN-NEXT:    ; sched_group_barrier mask(0x00000020) size(1) SyncID(1)
 ; GCN-NEXT:    s_cbranch_scc1 .LBB0_1

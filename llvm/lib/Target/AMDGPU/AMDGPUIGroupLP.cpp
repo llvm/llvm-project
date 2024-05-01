@@ -2761,15 +2761,12 @@ void IGroupLPDAGMutation::initSchedGroupBarrierPipelineStage(
     uint64_t TheMask = *RuleMask;
     unsigned NextID = 0;
     while (TheMask) {
-      if (!(TheMask & 0x1)) {
-        TheMask >>= 1;
-        ++NextID;
-        continue;
-      }
-      if (NextID > SchedGroupBarrierRuleCallBacks.size() - 1)
-        llvm_unreachable("Bad rule ID!");
+      if (TheMask & 0x1) {
+        if (NextID > SchedGroupBarrierRuleCallBacks.size() - 1)
+          llvm_unreachable("Bad rule ID!");
 
-      SG->addRule(SchedGroupBarrierRuleCallBacks[NextID](SG->getSGID(), TII));
+        SG->addRule(SchedGroupBarrierRuleCallBacks[NextID](SG->getSGID(), TII));
+      }
       TheMask >>= 1;
       ++NextID;
     }
