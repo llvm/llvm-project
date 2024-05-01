@@ -140,6 +140,21 @@ bool isPointerType(Expr *E) {
     return type && type->isAnyPointerType();
 }
 
+void GenICFGVisitor::saveNpeSuspectedSources(const SourceRange &range) {
+    ordered_json loc;
+    // something wrong with location
+    if (!saveLocationInfo(*Context, range, loc))
+        return;
+    // source outside current project
+    const std::string &file = loc["file"];
+    if (!Global.isUnderProject(file))
+        return;
+
+    reservoirSamplingAddElement(Global.npeSuspectedSources, loc,
+                                // 100000
+                                1000);
+}
+
 bool GenICFGVisitor::VisitVarDecl(VarDecl *D) {
     // 加入 NPE 可疑的 source 中
 
@@ -151,11 +166,7 @@ bool GenICFGVisitor::VisitVarDecl(VarDecl *D) {
     if (!init || !isPointerType(init))
         return true;
 
-    ordered_json loc;
-    if (saveLocationInfo(*Context, D->getSourceRange(), loc)) {
-        if (Global.isUnderProject(loc["file"]))
-            Global.npeSuspectedSources.insert(loc);
-    }
+    saveNpeSuspectedSources(D->getSourceRange());
 
     return true;
 }
@@ -171,11 +182,7 @@ bool GenICFGVisitor::VisitBinaryOperator(BinaryOperator *S) {
     if (!isPointerType(S))
         return true;
 
-    ordered_json loc;
-    if (saveLocationInfo(*Context, S->getSourceRange(), loc)) {
-        if (Global.isUnderProject(loc["file"]))
-            Global.npeSuspectedSources.insert(loc);
-    }
+    saveNpeSuspectedSources(S->getSourceRange());
 
     return true;
 }

@@ -26,6 +26,8 @@ class GenICFGVisitor : public RecursiveASTVisitor<GenICFGVisitor> {
         return llvm::demangle(getMangledName(D));
     }
 
+    void saveNpeSuspectedSources(const SourceRange &range);
+
   public:
     explicit GenICFGVisitor(ASTContext *Context, fs::path filePath)
         : Context(Context), filePath(filePath) {}
