@@ -16,7 +16,7 @@ cbuffer Mix2
     float M6 ;
 }
 
-// expected-error@+1{{attribute 'packoffset' only applies to cbuffer constant}}
+// expected-error@+1{{attribute 'packoffset' only applies to shader constant in a constant buffer}}
 float4 g : packoffset(c0);
 
 cbuffer IllegalOffset

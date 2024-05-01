@@ -7317,7 +7317,7 @@ static void handleHLSLSV_DispatchThreadIDAttr(Sema &S, Decl *D,
 static void handleHLSLPackOffsetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!isa<VarDecl>(D) || !isa<HLSLBufferDecl>(D->getDeclContext())) {
     S.Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_ast_node)
-        << AL << "cbuffer constant";
+        << AL << "shader constant in a constant buffer";
     return;
   }
 
