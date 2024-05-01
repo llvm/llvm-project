@@ -359,5 +359,17 @@ struct PseudoInfo {
 
 } // end namespace RISCVVPseudosTable
 
+namespace RISCV {
+
+struct RISCVMaskedPseudoInfo {
+  uint16_t MaskedPseudo;
+  uint16_t UnmaskedPseudo;
+  uint8_t MaskOpIdx;
+  uint8_t MaskAffectsResult : 1;
+};
+#define GET_RISCVMaskedPseudosTable_DECL
+#include "RISCVGenSearchableTables.inc"
+} // end namespace RISCV
+
 } // end namespace llvm
 #endif

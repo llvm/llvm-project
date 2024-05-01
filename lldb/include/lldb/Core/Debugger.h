@@ -89,7 +89,7 @@ public:
 
   using DebuggerList = std::vector<lldb::DebuggerSP>;
 
-  static ConstString GetStaticBroadcasterClass();
+  static llvm::StringRef GetStaticBroadcasterClass();
 
   /// Get the public broadcaster for this debugger.
   Broadcaster &GetBroadcaster() { return m_broadcaster; }

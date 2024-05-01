@@ -12,18 +12,20 @@
 #include "src/fenv/fetestexceptflag.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
+#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/Test.h"
 
-TEST(LlvmLibcFenvTest, GetSetTestExceptFlag) {
+#include "excepts.h"
+
+using LlvmLibcFEnvTest = LIBC_NAMESPACE::testing::FEnvSafeTest;
+
+TEST_F(LlvmLibcFEnvTest, GetSetTestExceptFlag) {
   // We will disable all exceptions to prevent invocation of the exception
   // handler.
   LIBC_NAMESPACE::fputil::disable_except(FE_ALL_EXCEPT);
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
 
-  int excepts[] = {FE_DIVBYZERO, FE_INVALID, FE_INEXACT, FE_OVERFLOW,
-                   FE_UNDERFLOW};
-
-  for (int e : excepts) {
+  for (int e : EXCEPTS) {
     // The overall idea is to raise an except and save the exception flags.
     // Next, clear the flags and then set the saved exception flags. This
     // should set the flag corresponding to the previously raised exception.

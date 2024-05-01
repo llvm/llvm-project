@@ -295,6 +295,33 @@ mlir::Value ReductionProcessor::createScalarCombiner(
   return reductionOp;
 }
 
+/// Generate a fir::ShapeShift op describing the provided boxed array.
+static fir::ShapeShiftOp getShapeShift(fir::FirOpBuilder &builder,
+                                       mlir::Location loc, mlir::Value box) {
+  fir::SequenceType sequenceType = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(box.getType()));
+  const unsigned rank = sequenceType.getDimension();
+  llvm::SmallVector<mlir::Value> lbAndExtents;
+  lbAndExtents.reserve(rank * 2);
+
+  mlir::Type idxTy = builder.getIndexType();
+  for (unsigned i = 0; i < rank; ++i) {
+    // TODO: ideally we want to hoist box reads out of the critical section.
+    // We could do this by having box dimensions in block arguments like
+    // OpenACC does
+    mlir::Value dim = builder.createIntegerConstant(loc, idxTy, i);
+    auto dimInfo =
+        builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, box, dim);
+    lbAndExtents.push_back(dimInfo.getLowerBound());
+    lbAndExtents.push_back(dimInfo.getExtent());
+  }
+
+  auto shapeShiftTy = fir::ShapeShiftType::get(builder.getContext(), rank);
+  auto shapeShift =
+      builder.create<fir::ShapeShiftOp>(loc, shapeShiftTy, lbAndExtents);
+  return shapeShift;
+}
+
 /// Create reduction combiner region for reduction variables which are boxed
 /// arrays
 static void genBoxCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -330,29 +357,7 @@ static void genBoxCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
     return;
   }
 
-  const unsigned rank = seqTy.getDimension();
-  llvm::SmallVector<mlir::Value> extents;
-  extents.reserve(rank);
-  llvm::SmallVector<mlir::Value> lbAndExtents;
-  lbAndExtents.reserve(rank * 2);
-
-  // Get box lowerbounds and extents:
-  mlir::Type idxTy = builder.getIndexType();
-  for (unsigned i = 0; i < rank; ++i) {
-    // TODO: ideally we want to hoist box reads out of the critical section.
-    // We could do this by having box dimensions in block arguments like
-    // OpenACC does
-    mlir::Value dim = builder.createIntegerConstant(loc, idxTy, i);
-    auto dimInfo =
-        builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, lhs, dim);
-    extents.push_back(dimInfo.getExtent());
-    lbAndExtents.push_back(dimInfo.getLowerBound());
-    lbAndExtents.push_back(dimInfo.getExtent());
-  }
-
-  auto shapeShiftTy = fir::ShapeShiftType::get(builder.getContext(), rank);
-  auto shapeShift =
-      builder.create<fir::ShapeShiftOp>(loc, shapeShiftTy, lbAndExtents);
+  fir::ShapeShiftOp shapeShift = getShapeShift(builder, loc, lhs);
 
   // Iterate over array elements, applying the equivalent scalar reduction:
 
@@ -364,8 +369,8 @@ static void genBoxCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
   // loop nest directly.
   // This function already controls all of the code in this region so we
   // know this won't miss any opportuinties for clever elemental inlining
-  hlfir::LoopNest nest =
-      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true);
+  hlfir::LoopNest nest = hlfir::genLoopNest(
+      loc, builder, shapeShift.getExtents(), /*isUnordered=*/true);
   builder.setInsertionPointToStart(nest.innerLoop.getBody());
   mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
   auto lhsEleAddr = builder.create<fir::ArrayCoorOp>(
@@ -561,7 +566,8 @@ createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
     }
 
     // Create the private copy from the initial fir.box:
-    hlfir::Entity source = hlfir::Entity{blockArg};
+    mlir::Value loadedBox = builder.loadIfRef(loc, blockArg);
+    hlfir::Entity source = hlfir::Entity{loadedBox};
 
     // Allocating on the heap in case the whole reduction is nested inside of a
     // loop
@@ -585,11 +591,23 @@ createReductionInitRegion(fir::FirOpBuilder &builder, mlir::Location loc,
     }
 
     // Put the temporary inside of a box:
-    hlfir::Entity box = hlfir::genVariableBox(loc, builder, temp);
-    // hlfir::genVariableBox removes fir.heap<> around the element type
-    mlir::Value convertedBox = builder.createConvert(loc, ty, box.getBase());
-    builder.create<hlfir::AssignOp>(loc, initValue, convertedBox);
-    builder.create<fir::StoreOp>(loc, convertedBox, boxAlloca);
+    // hlfir::genVariableBox doesn't handle non-default lower bounds
+    mlir::Value box;
+    fir::ShapeShiftOp shapeShift = getShapeShift(builder, loc, loadedBox);
+    mlir::Type boxType = loadedBox.getType();
+    if (mlir::isa<fir::BaseBoxType>(temp.getType()))
+      // the box created by the declare form createTempFromMold is missing lower
+      // bounds info
+      box = builder.create<fir::ReboxOp>(loc, boxType, temp, shapeShift,
+                                         /*shift=*/mlir::Value{});
+    else
+      box = builder.create<fir::EmboxOp>(
+          loc, boxType, temp, shapeShift,
+          /*slice=*/mlir::Value{},
+          /*typeParams=*/llvm::ArrayRef<mlir::Value>{});
+
+    builder.create<hlfir::AssignOp>(loc, initValue, box);
+    builder.create<fir::StoreOp>(loc, box, boxAlloca);
     if (ifUnallocated)
       builder.setInsertionPointAfter(ifUnallocated);
     return boxAlloca;
