@@ -9489,7 +9489,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           ArrayRef<Value *> Ops = E->getOperand(I);
           if (all_of(Ops, [&](Value *Op) {
                 auto *CI = dyn_cast<ConstantInt>(Op);
-                return CI && CI->getValue().countr_one() == It->second.first;
+                return CI && CI->getValue().countr_one() >= It->second.first;
               }))
             return CommonCost;
         }
@@ -12984,7 +12984,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           ArrayRef<Value *> Ops = E->getOperand(I);
           if (all_of(Ops, [&](Value *Op) {
                 auto *CI = dyn_cast<ConstantInt>(Op);
-                return CI && CI->getValue().countr_one() == It->second.first;
+                return CI && CI->getValue().countr_one() >= It->second.first;
               })) {
             V = FinalShuffle(I == 0 ? RHS : LHS, E, VecTy);
             E->VectorizedValue = V;
