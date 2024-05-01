@@ -1242,6 +1242,18 @@ public:
   }
 };
 
+// A trait indicating that the single region contained in the operation has
+// parallel execution semantics. This may have implications in a certain pass.
+// For example, buffer hoisting is illegal in parallel loops, and local buffers
+// may be accessed by parallel threads simultaneously.
+template <typename ConcreteType>
+class HasParallelRegion : public TraitBase<ConcreteType, HasParallelRegion> {
+public:
+  static LogicalResult verifyTrait(Operation *op) {
+    return impl::verifyOneRegion(op);
+  }
+};
+
 /// This class provides the API for ops that are known to be isolated from
 /// above.
 template <typename ConcreteType>
