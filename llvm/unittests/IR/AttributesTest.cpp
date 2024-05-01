@@ -313,31 +313,33 @@ TEST(Attributes, RemoveParamAttributes) {
 TEST(Attributes, ConstantRangeAttributeCAPI) {
   LLVMContext C;
   {
-    const unsigned numBits = 8;
+    const unsigned NumBits = 8;
+    const unsigned NumWords = 1;
     const uint64_t LowerWords[] = {0};
     const uint64_t UpperWords[] = {42};
 
     auto Range =
-        ConstantRange(APInt(numBits, ArrayRef<uint64_t>(LowerWords, 1)),
-                      APInt(numBits, ArrayRef<uint64_t>(UpperWords, 1)));
+        ConstantRange(APInt(NumBits, ArrayRef<uint64_t>(LowerWords, NumWords)),
+                      APInt(NumBits, ArrayRef<uint64_t>(UpperWords, NumWords)));
 
     Attribute RangeAttr = Attribute::get(C, Attribute::Range, Range);
     auto OutAttr = unwrap(LLVMCreateConstantRangeAttribute(
-        wrap(&C), Attribute::Range, numBits, 1, LowerWords, 1, UpperWords));
+        wrap(&C), Attribute::Range, NumBits, NumWords, LowerWords, UpperWords));
     EXPECT_EQ(OutAttr, RangeAttr);
   }
   {
-    const unsigned numBits = 128;
+    const unsigned NumBits = 128;
+    const unsigned NumWords = 2;
     const uint64_t LowerWords[] = {1, 1};
     const uint64_t UpperWords[] = {42, 42};
 
     auto Range =
-        ConstantRange(APInt(numBits, ArrayRef<uint64_t>(LowerWords, 2)),
-                      APInt(numBits, ArrayRef<uint64_t>(UpperWords, 2)));
+        ConstantRange(APInt(NumBits, ArrayRef<uint64_t>(LowerWords, NumWords)),
+                      APInt(NumBits, ArrayRef<uint64_t>(UpperWords, NumWords)));
 
     Attribute RangeAttr = Attribute::get(C, Attribute::Range, Range);
     auto OutAttr = unwrap(LLVMCreateConstantRangeAttribute(
-        wrap(&C), Attribute::Range, numBits, 2, LowerWords, 2, UpperWords));
+        wrap(&C), Attribute::Range, NumBits, NumWords, LowerWords, UpperWords));
     EXPECT_EQ(OutAttr, RangeAttr);
   }
 }
