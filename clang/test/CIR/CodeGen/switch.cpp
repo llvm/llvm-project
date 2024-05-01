@@ -18,10 +18,10 @@ void sw1(int a) {
 // CHECK: cir.func @_Z3sw1i
 // CHECK: cir.switch (%3 : !s32i) [
 // CHECK-NEXT: case (equal, 0)  {
-// CHECK-NEXT:   %4 = cir.load %1 : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT:   %4 = cir.load %1 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:   %5 = cir.const(#cir.int<1> : !s32i) : !s32i
 // CHECK-NEXT:   %6 = cir.binop(add, %4, %5) : !s32i
-// CHECK-NEXT:   cir.store %6, %1 : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT:   cir.store %6, %1 : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT:   cir.break
 // CHECK-NEXT: },
 // CHECK-NEXT: case (equal, 1)  {
@@ -29,13 +29,13 @@ void sw1(int a) {
 // CHECK-NEXT: },
 // CHECK-NEXT: case (equal, 2)  {
 // CHECK-NEXT:   cir.scope {
-// CHECK-NEXT:       %4 = cir.alloca !s32i, cir.ptr <!s32i>, ["yolo", init]
-// CHECK-NEXT:       %5 = cir.load %1 : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT:       %4 = cir.alloca !s32i, !cir.ptr<!s32i>, ["yolo", init]
+// CHECK-NEXT:       %5 = cir.load %1 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:       %6 = cir.const(#cir.int<1> : !s32i) : !s32i
 // CHECK-NEXT:       %7 = cir.binop(add, %5, %6) : !s32i
-// CHECK-NEXT:       cir.store %7, %1 : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT:       cir.store %7, %1 : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT:       %8 = cir.const(#cir.int<100> : !s32i) : !s32i
-// CHECK-NEXT:       cir.store %8, %4 : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT:       cir.store %8, %4 : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT:       cir.break
 // CHECK-NEXT:     }
 // CHECK-NEXT:     cir.yield
@@ -53,12 +53,12 @@ void sw2(int a) {
 
 // CHECK: cir.func @_Z3sw2i
 // CHECK: cir.scope {
-// CHECK-NEXT:   %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["yolo", init]
-// CHECK-NEXT:   %2 = cir.alloca !s32i, cir.ptr <!s32i>, ["fomo", init]
+// CHECK-NEXT:   %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["yolo", init]
+// CHECK-NEXT:   %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["fomo", init]
 // CHECK:        cir.switch (%4 : !s32i) [
 // CHECK-NEXT:   case (equal, 3)  {
 // CHECK-NEXT:     %5 = cir.const(#cir.int<0> : !s32i) : !s32i
-// CHECK-NEXT:     cir.store %5, %2 : !s32i, cir.ptr <!s32i>
+// CHECK-NEXT:     cir.store %5, %2 : !s32i, !cir.ptr<!s32i>
 
 void sw3(int a) {
   switch (a) {
@@ -69,7 +69,7 @@ void sw3(int a) {
 
 // CHECK: cir.func @_Z3sw3i
 // CHECK: cir.scope {
-// CHECK-NEXT:   %1 = cir.load %0 : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT:   %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:   cir.switch (%1 : !s32i) [
 // CHECK-NEXT:   case (default)  {
 // CHECK-NEXT:     cir.break
@@ -92,16 +92,16 @@ int sw4(int a) {
 // CHECK-NEXT:       case (equal, 42)  {
 // CHECK-NEXT:         cir.scope {
 // CHECK-NEXT:           %5 = cir.const(#cir.int<3> : !s32i) : !s32i
-// CHECK-NEXT:           cir.store %5, %1 : !s32i, cir.ptr <!s32i>
-// CHECK-NEXT:           %6 = cir.load %1 : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT:           cir.store %5, %1 : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT:           %6 = cir.load %1 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:           cir.return %6 : !s32i
 // CHECK-NEXT:         }
 // CHECK-NEXT:         cir.yield
 // CHECK-NEXT:       },
 // CHECK-NEXT:       case (default)  {
 // CHECK-NEXT:         %5 = cir.const(#cir.int<2> : !s32i) : !s32i
-// CHECK-NEXT:         cir.store %5, %1 : !s32i, cir.ptr <!s32i>
-// CHECK-NEXT:         %6 = cir.load %1 : cir.ptr <!s32i>, !s32i
+// CHECK-NEXT:         cir.store %5, %1 : !s32i, !cir.ptr<!s32i>
+// CHECK-NEXT:         %6 = cir.load %1 : !cir.ptr<!s32i>, !s32i
 // CHECK-NEXT:         cir.return %6 : !s32i
 // CHECK-NEXT:       }
 // CHECK-NEXT:       ]

@@ -44,9 +44,9 @@ public:
 // CHECK: ![[ClassB:ty_.*]] = !cir.struct<class "B" {!cir.struct<class "A" {!cir.ptr<!cir.ptr<!cir.func<!cir.int<u, 32> ()>>>} #cir.record.decl.ast>}>
 
 // CHECK: cir.func @_Z4bluev()
-// CHECK:   %0 = cir.alloca !ty_22PSEvent22, cir.ptr <!ty_22PSEvent22>, ["p", init] {alignment = 8 : i64}
+// CHECK:   %0 = cir.alloca !ty_22PSEvent22, !cir.ptr<!ty_22PSEvent22>, ["p", init] {alignment = 8 : i64}
 // CHECK:   %1 = cir.const(#cir.int<1> : !s32i) : !s32i
-// CHECK:   %2 = cir.get_global @".str" : cir.ptr <!cir.array<!s8i x 5>>
+// CHECK:   %2 = cir.get_global @".str" : !cir.ptr<!cir.array<!s8i x 5>>
 // CHECK:   %3 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<!s8i x 5>>), !cir.ptr<!s8i>
 // CHECK:   cir.call @_ZN7PSEventC1E6EFModePKc(%0, %1, %3) : (!cir.ptr<!ty_22PSEvent22>, !s32i, !cir.ptr<!s8i>) -> ()
 // CHECK:   cir.return
@@ -70,9 +70,9 @@ public:
 // Calls operator delete
 //
 // CHECK:   cir.func linkonce_odr @_ZN1BD0Ev(%arg0: !cir.ptr<![[ClassB]]>
-// CHECK:     %0 = cir.alloca !cir.ptr<![[ClassB]]>, cir.ptr <!cir.ptr<![[ClassB]]>>, ["this", init] {alignment = 8 : i64}
-// CHECK:     cir.store %arg0, %0 : !cir.ptr<![[ClassB]]>, cir.ptr <!cir.ptr<![[ClassB]]>>
-// CHECK:     %1 = cir.load %0 : cir.ptr <!cir.ptr<![[ClassB]]>>, !cir.ptr<![[ClassB]]>
+// CHECK:     %0 = cir.alloca !cir.ptr<![[ClassB]]>, !cir.ptr<!cir.ptr<![[ClassB]]>>, ["this", init] {alignment = 8 : i64}
+// CHECK:     cir.store %arg0, %0 : !cir.ptr<![[ClassB]]>, !cir.ptr<!cir.ptr<![[ClassB]]>>
+// CHECK:     %1 = cir.load %0 : !cir.ptr<!cir.ptr<![[ClassB]]>>, !cir.ptr<![[ClassB]]>
 // CHECK:     cir.call @_ZN1BD2Ev(%1) : (!cir.ptr<![[ClassB]]>) -> ()
 // CHECK:     %2 = cir.cast(bitcast, %1 : !cir.ptr<![[ClassB]]>), !cir.ptr<!void>
 // CHECK:     cir.call @_ZdlPv(%2) : (!cir.ptr<!void>) -> ()

@@ -5,14 +5,14 @@
 !s32i = !cir.int<s, 32>
 module {
   cir.func @dot(%arg0: !cir.ptr<f64>) -> !s32i {
-    %0 = cir.alloca !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>, ["x", init] {alignment = 8 : i64}
-    %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
-    %2 = cir.alloca !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>, ["y", init] {alignment = 8 : i64}
-    cir.store %arg0, %0 : !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>
-    %3 = cir.load %0 : cir.ptr <!cir.ptr<f64>>, !cir.ptr<f64>
-    cir.store %3, %2 : !cir.ptr<f64>, cir.ptr <!cir.ptr<f64>>
+    %0 = cir.alloca !cir.ptr<f64>, !cir.ptr<!cir.ptr<f64>>, ["x", init] {alignment = 8 : i64}
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+    %2 = cir.alloca !cir.ptr<f64>, !cir.ptr<!cir.ptr<f64>>, ["y", init] {alignment = 8 : i64}
+    cir.store %arg0, %0 : !cir.ptr<f64>, !cir.ptr<!cir.ptr<f64>>
+    %3 = cir.load %0 : !cir.ptr<!cir.ptr<f64>>, !cir.ptr<f64>
+    cir.store %3, %2 : !cir.ptr<f64>, !cir.ptr<!cir.ptr<f64>>
     %4 = cir.const(#cir.int<0> : !s32i) : !s32i
-    %5 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %5 = cir.load %1 : !cir.ptr<!s32i>, !s32i
     cir.return %5 : !s32i
   }
 }

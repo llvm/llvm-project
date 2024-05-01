@@ -5,9 +5,9 @@
 #true = #cir.bool<true> : !cir.bool
 module {
   cir.func @foo() {
-    %0 = cir.alloca !cir.bool, cir.ptr <!cir.bool>, ["a", init] {alignment = 1 : i64}
+    %0 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a", init] {alignment = 1 : i64}
     %1 = cir.const(#true) : !cir.bool
-    cir.store %1, %0 : !cir.bool, cir.ptr <!cir.bool>
+    cir.store %1, %0 : !cir.bool, !cir.ptr<!cir.bool>
     cir.return
   }
 }

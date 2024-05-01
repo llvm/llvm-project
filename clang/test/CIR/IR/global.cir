@@ -14,7 +14,7 @@ module {
   cir.global "private" constant internal @".str2" = #cir.const_array<"example\00" : !cir.array<!s8i x 8>> : !cir.array<!s8i x 8> {alignment = 1 : i64}
   cir.global external @s = #cir.global_view<@".str2"> : !cir.ptr<!s8i>
   cir.func @use_global() {
-    %0 = cir.get_global @a : cir.ptr <!s32i>
+    %0 = cir.get_global @a : !cir.ptr<!s32i>
     cir.return
   }
   cir.global external @table = #cir.global_view<@s> : !cir.ptr<!s8i>
@@ -35,11 +35,11 @@ module {
   cir.func private @_ZN4InitC1Eb(!cir.ptr<!ty_22Init22>, !s8i)
   cir.func private @_ZN4InitD1Ev(!cir.ptr<!ty_22Init22>)
   cir.global "private" internal @_ZL8__ioinit = ctor : !ty_22Init22 {
-    %0 = cir.get_global @_ZL8__ioinit : cir.ptr <!ty_22Init22>
+    %0 = cir.get_global @_ZL8__ioinit : !cir.ptr<!ty_22Init22>
     %1 = cir.const(#cir.int<3> : !s8i) : !s8i
     cir.call @_ZN4InitC1Eb(%0, %1) : (!cir.ptr<!ty_22Init22>, !s8i) -> ()
   } dtor {
-    %0 = cir.get_global @_ZL8__ioinit : cir.ptr <!ty_22Init22>
+    %0 = cir.get_global @_ZL8__ioinit : !cir.ptr<!ty_22Init22>
     cir.call @_ZN4InitD1Ev(%0) : (!cir.ptr<!ty_22Init22>) -> ()
   }
 
@@ -66,7 +66,7 @@ module {
 
   cir.global "private" external tls_dyn @batata : !s32i
   cir.func @f35() {
-    %0 = cir.get_global thread_local @batata : cir.ptr <!s32i>
+    %0 = cir.get_global thread_local @batata : !cir.ptr<!s32i>
     cir.return
   }
 }
@@ -81,10 +81,10 @@ module {
 
 
 // CHECK: cir.func @use_global()
-// CHECK-NEXT: %0 = cir.get_global @a : cir.ptr <!s32i>
+// CHECK-NEXT: %0 = cir.get_global @a : !cir.ptr<!s32i>
 
 // CHECK:      cir.global "private" internal @_ZL8__ioinit = ctor : !ty_22Init22 {
-// CHECK-NEXT:  %0 = cir.get_global @_ZL8__ioinit : cir.ptr <!ty_22Init22>
+// CHECK-NEXT:  %0 = cir.get_global @_ZL8__ioinit : !cir.ptr<!ty_22Init22>
 // CHECK-NEXT:  %1 = cir.const(#cir.int<3> : !s8i) : !s8i
 // CHECK-NEXT:  cir.call @_ZN4InitC1Eb(%0, %1) : (!cir.ptr<!ty_22Init22>, !s8i) -> ()
 // CHECK-NEXT: }
@@ -101,6 +101,6 @@ module {
 
 // CHECK: cir.global "private" external tls_dyn @batata : !s32i
 // CHECK: cir.func @f35() {
-// CHECK:   %0 = cir.get_global thread_local @batata : cir.ptr <!s32i>
+// CHECK:   %0 = cir.get_global thread_local @batata : !cir.ptr<!s32i>
 // CHECK:   cir.return
 // CHECK: }

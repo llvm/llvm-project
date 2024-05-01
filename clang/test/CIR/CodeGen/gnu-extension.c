@@ -4,10 +4,10 @@
 int foo(void) { return __extension__ 0b101010; }
 
 //CHECK: cir.func @foo()
-//CHECK-NEXT:    [[ADDR:%.*]] = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
+//CHECK-NEXT:    [[ADDR:%.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 //CHECK-NEXT:    [[VAL:%.*]] = cir.const(#cir.int<42> : !s32i) : !s32i
-//CHECK-NEXT:    cir.store [[VAL]], [[ADDR]] : !s32i, cir.ptr <!s32i>
-//CHECK-NEXT:    [[LOAD_VAL:%.*]] = cir.load [[ADDR]] : cir.ptr <!s32i>, !s32i
+//CHECK-NEXT:    cir.store [[VAL]], [[ADDR]] : !s32i, !cir.ptr<!s32i>
+//CHECK-NEXT:    [[LOAD_VAL:%.*]] = cir.load [[ADDR]] : !cir.ptr<!s32i>, !s32i
 //CHECK-NEXT:    cir.return [[LOAD_VAL]] : !s32i
 
 void bar(void) {
@@ -15,5 +15,5 @@ void bar(void) {
 }
 
 //CHECK:  cir.func @bar()
-//CHECK:    {{.*}} = cir.get_global @bar : cir.ptr <!cir.func<!void ()>>
+//CHECK:    {{.*}} = cir.get_global @bar : !cir.ptr<!cir.func<!void ()>>
 //CHECK:    cir.return

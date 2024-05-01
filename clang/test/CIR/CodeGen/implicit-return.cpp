@@ -16,11 +16,11 @@ void ret_void() {}
 int ret_non_void() {}
 
 //      CHECK-O0: cir.func @_Z12ret_non_voidv() -> !s32i
-// CHECK-O0-NEXT:   %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"]
+// CHECK-O0-NEXT:   %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CHECK-O0-NEXT:   cir.trap
 // CHECK-O0-NEXT: }
 
 //      CHECK-O2: cir.func @_Z12ret_non_voidv() -> !s32i
-// CHECK-O2-NEXT:   %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"]
+// CHECK-O2-NEXT:   %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CHECK-O2-NEXT:   cir.unreachable
 // CHECK-O2-NEXT: }

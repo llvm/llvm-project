@@ -132,7 +132,7 @@ cir.func @cast2(%p: !cir.ptr<!u32i>) {
 
 !u32i = !cir.int<u, 32>
 cir.func @cast3(%p: !cir.ptr<!u32i>) {
-  %0 = cir.alloca !cir.array<!u32i x 10>, cir.ptr <!cir.array<!u32i x 10>>, ["x", init]
+  %0 = cir.alloca !cir.array<!u32i x 10>, !cir.ptr<!cir.array<!u32i x 10>>, ["x", init]
   %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<!u32i x 10>>), !cir.ptr<!cir.float> // expected-error {{requires same type for array element and pointee result}}
   cir.return
 }
@@ -397,11 +397,11 @@ cir.func @vec_extract_non_int_idx() {
 !s32i = !cir.int<s, 32>
 !u32i = !cir.int<u, 32>
 cir.func @vec_extract_bad_type() {
-  %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["x", init] {alignment = 4 : i64}
+  %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init] {alignment = 4 : i64}
   %1 = cir.const(#cir.int<0> : !s32i) : !s32i
   %2 = cir.vec.create(%1, %1 : !s32i, !s32i) : !cir.vector<!s32i x 2>
   %3 = cir.vec.extract %2[%1 : !s32i] : !cir.vector<!s32i x 2> // expected-note {{prior use here}}
-  cir.store %3, %0 : !u32i, cir.ptr<!u32i> // expected-error {{use of value '%3' expects different type than prior uses: '!cir.int<u, 32>' vs '!cir.int<s, 32>'}}
+  cir.store %3, %0 : !u32i, !cir.ptr<!u32i> // expected-error {{use of value '%3' expects different type than prior uses: '!cir.int<u, 32>' vs '!cir.int<s, 32>'}}
   cir.return
 }
 
@@ -727,7 +727,7 @@ module {
 module {
   cir.func private @_ZN4InitC1Eb(!cir.ptr<!ty_22Init22>)
   cir.global "private" internal @_ZL8__ioinit = ctor : !ty_22Init22 {
-    %0 = cir.get_global @_ZL8__ioinit : cir.ptr <!ty_22Init22>
+    %0 = cir.get_global @_ZL8__ioinit : !cir.ptr<!ty_22Init22>
     cir.call @_ZN4InitC1Eb(%0) : (!cir.ptr<!ty_22Init22>) -> ()
   } dtor {}
   // expected-error@+1 {{custom op 'cir.global' dtor region must have exactly one block}}
@@ -741,9 +741,9 @@ module {
   cir.global "private" constant external @_ZTIPKc : !cir.ptr<!u8i>
   cir.func @_Z8divisionii() {
     %11 = cir.alloc_exception(!cir.ptr<!u8i>) -> <!cir.ptr<!u8i>>
-    %12 = cir.get_global @".str" : cir.ptr <!cir.array<!u8i x 28>>
+    %12 = cir.get_global @".str" : !cir.ptr<!cir.array<!u8i x 28>>
     %13 = cir.cast(array_to_ptrdecay, %12 : !cir.ptr<!cir.array<!u8i x 28>>), !cir.ptr<!u8i>
-    cir.store %13, %11 : !cir.ptr<!u8i>, cir.ptr <!cir.ptr<!u8i>>
+    cir.store %13, %11 : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
     cir.throw(%11 : !cir.ptr<!cir.ptr<!u8i>>) // expected-error {{'type_info' symbol attribute missing}}
   }
 }
@@ -801,7 +801,7 @@ module {
 module {
   cir.func @tmp(%arg0: !cir.float) {
     // expected-error@+1 {{operand #0 must be primitive int}}
-    %0 = cir.alloca !s32i, cir.ptr <!s32i>, %arg0 : !cir.float, ["tmp"]
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, %arg0 : !cir.float, ["tmp"]
     cir.return
   }
 }
@@ -861,7 +861,7 @@ cir.func @const_type_mismatch() -> () {
 
 module {
   cir.func @invalid_base_type(%arg0 : !cir.data_member<!u32i in !struct1>) {
-    %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["tmp"] {alignment = 4 : i64}
+    %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["tmp"] {alignment = 4 : i64}
     // expected-error@+1 {{'cir.get_runtime_member' op operand #0 must be !cir.struct*}}
     %1 = cir.get_runtime_member %0[%arg0 : !cir.data_member<!u32i in !struct1>] : !cir.ptr<!u32i> -> !cir.ptr<!u32i>
     cir.return
@@ -877,7 +877,7 @@ module {
 
 module {
   cir.func @invalid_base_type(%arg0 : !cir.data_member<!u32i in !struct1>) {
-    %0 = cir.alloca !struct2, cir.ptr <!struct2>, ["tmp"] {alignment = 4 : i64}
+    %0 = cir.alloca !struct2, !cir.ptr<!struct2>, ["tmp"] {alignment = 4 : i64}
     // expected-error@+1 {{record type does not match the member pointer type}}
     %1 = cir.get_runtime_member %0[%arg0 : !cir.data_member<!u32i in !struct1>] : !cir.ptr<!struct2> -> !cir.ptr<!u32i>
     cir.return
@@ -892,7 +892,7 @@ module {
 
 module {
   cir.func @invalid_base_type(%arg0 : !cir.data_member<!u32i in !struct1>) {
-    %0 = cir.alloca !struct1, cir.ptr <!struct1>, ["tmp"] {alignment = 4 : i64}
+    %0 = cir.alloca !struct1, !cir.ptr<!struct1>, ["tmp"] {alignment = 4 : i64}
     // expected-error@+1 {{result type does not match the member pointer type}}
     %1 = cir.get_runtime_member %0[%arg0 : !cir.data_member<!u32i in !struct1>] : !cir.ptr<!struct1> -> !cir.ptr<!u16i>
     cir.return
@@ -1064,7 +1064,7 @@ module {
   cir.global "private" external @batata : !s32i
   cir.func @f35() {
     // expected-error@+1 {{access to global not marked thread local}}
-    %0 = cir.get_global thread_local @batata : cir.ptr <!s32i>
+    %0 = cir.get_global thread_local @batata : !cir.ptr<!s32i>
     cir.return
   }
 }

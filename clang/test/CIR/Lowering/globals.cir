@@ -44,35 +44,35 @@ module {
   cir.global external @s1 = #cir.global_view<@".str1"> : !cir.ptr<!s8i>
   cir.global external @s2 = #cir.global_view<@".str"> : !cir.ptr<!s8i>
   cir.func @_Z10use_globalv() {
-    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["li", init] {alignment = 4 : i64}
-    %1 = cir.get_global @a : cir.ptr <!s32i>
-    %2 = cir.load %1 : cir.ptr <!s32i>, !s32i
-    cir.store %2, %0 : !s32i, cir.ptr <!s32i>
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["li", init] {alignment = 4 : i64}
+    %1 = cir.get_global @a : !cir.ptr<!s32i>
+    %2 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+    cir.store %2, %0 : !s32i, !cir.ptr<!s32i>
     cir.return
   }
   cir.func @_Z17use_global_stringv() {
-    %0 = cir.alloca !u8i, cir.ptr <!u8i>, ["c", init] {alignment = 1 : i64}
-    %1 = cir.get_global @s2 : cir.ptr <!cir.ptr<!s8i>>
-    %2 = cir.load %1 : cir.ptr <!cir.ptr<!s8i>>, !cir.ptr<!s8i>
+    %0 = cir.alloca !u8i, !cir.ptr<!u8i>, ["c", init] {alignment = 1 : i64}
+    %1 = cir.get_global @s2 : !cir.ptr<!cir.ptr<!s8i>>
+    %2 = cir.load %1 : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
     %3 = cir.const(#cir.int<0> : !s32i) : !s32i
     %4 = cir.ptr_stride(%2 : !cir.ptr<!s8i>, %3 : !s32i), !cir.ptr<!s8i>
-    %5 = cir.load %4 : cir.ptr <!s8i>, !s8i
+    %5 = cir.load %4 : !cir.ptr<!s8i>, !s8i
     %6 = cir.cast(integral, %5 : !s8i), !u8i
-    cir.store %6, %0 : !u8i, cir.ptr <!u8i>
+    cir.store %6, %0 : !u8i, !cir.ptr<!u8i>
     cir.return
   }
   cir.func linkonce_odr @_Z4funcIiET_v() -> !s32i {
-    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
     %1 = cir.const(#cir.int<0> : !s32i) : !s32i
-    cir.store %1, %0 : !s32i, cir.ptr <!s32i>
-    %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
     cir.return %2 : !s32i
   }
   cir.func @_Z8use_funcv() -> !s32i {
-    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
     %1 = cir.call @_Z4funcIiET_v() : () -> !s32i
-    cir.store %1, %0 : !s32i, cir.ptr <!s32i>
-    %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+    %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
     cir.return %2 : !s32i
   }
   cir.global external @string = #cir.const_array<[#cir.int<119> : !s8i, #cir.int<104> : !s8i, #cir.int<97> : !s8i, #cir.int<116> : !s8i, #cir.int<110> : !s8i, #cir.int<111> : !s8i, #cir.int<119> : !s8i, #cir.int<0> : !s8i]> : !cir.array<!s8i x 8>
@@ -98,36 +98,36 @@ module {
   // LLVM: @nestedStringPtr = global %struct.StringStructPtr { ptr @.str }
 
   cir.func @_Z11get_globalsv() {
-    %0 = cir.alloca !cir.ptr<!s8i>, cir.ptr <!cir.ptr<!s8i>>, ["s", init] {alignment = 8 : i64}
-    %1 = cir.alloca !cir.ptr<!u32i>, cir.ptr <!cir.ptr<!u32i>>, ["u", init] {alignment = 8 : i64}
-    %2 = cir.alloca !cir.ptr<!s16i>, cir.ptr <!cir.ptr<!s16i>>, ["ss", init] {alignment = 8 : i64}
-    %3 = cir.alloca !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>, ["si", init] {alignment = 8 : i64}
-    %4 = cir.alloca !cir.ptr<!s64i>, cir.ptr <!cir.ptr<!s64i>>, ["l", init] {alignment = 8 : i64}
-    %5 = cir.get_global @string : cir.ptr <!cir.array<!s8i x 8>>
+    %0 = cir.alloca !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>, ["s", init] {alignment = 8 : i64}
+    %1 = cir.alloca !cir.ptr<!u32i>, !cir.ptr<!cir.ptr<!u32i>>, ["u", init] {alignment = 8 : i64}
+    %2 = cir.alloca !cir.ptr<!s16i>, !cir.ptr<!cir.ptr<!s16i>>, ["ss", init] {alignment = 8 : i64}
+    %3 = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["si", init] {alignment = 8 : i64}
+    %4 = cir.alloca !cir.ptr<!s64i>, !cir.ptr<!cir.ptr<!s64i>>, ["l", init] {alignment = 8 : i64}
+    %5 = cir.get_global @string : !cir.ptr<!cir.array<!s8i x 8>>
     %6 = cir.cast(array_to_ptrdecay, %5 : !cir.ptr<!cir.array<!s8i x 8>>), !cir.ptr<!s8i>
     // MLIR: %[[RES:[0-9]+]] = llvm.mlir.addressof @string : !llvm.ptr
     // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr, i8
-    cir.store %6, %0 : !cir.ptr<!s8i>, cir.ptr <!cir.ptr<!s8i>>
-    %7 = cir.get_global @uint : cir.ptr <!cir.array<!u32i x 1>>
+    cir.store %6, %0 : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
+    %7 = cir.get_global @uint : !cir.ptr<!cir.array<!u32i x 1>>
     %8 = cir.cast(array_to_ptrdecay, %7 : !cir.ptr<!cir.array<!u32i x 1>>), !cir.ptr<!u32i>
     // MLIR: %[[RES:[0-9]+]] = llvm.mlir.addressof @uint : !llvm.ptr
     // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr, i32
-    cir.store %8, %1 : !cir.ptr<!u32i>, cir.ptr <!cir.ptr<!u32i>>
-    %9 = cir.get_global @sshort : cir.ptr <!cir.array<!s16i x 2>>
+    cir.store %8, %1 : !cir.ptr<!u32i>, !cir.ptr<!cir.ptr<!u32i>>
+    %9 = cir.get_global @sshort : !cir.ptr<!cir.array<!s16i x 2>>
     %10 = cir.cast(array_to_ptrdecay, %9 : !cir.ptr<!cir.array<!s16i x 2>>), !cir.ptr<!s16i>
     // MLIR: %[[RES:[0-9]+]] = llvm.mlir.addressof @sshort : !llvm.ptr
     // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr, i16
-    cir.store %10, %2 : !cir.ptr<!s16i>, cir.ptr <!cir.ptr<!s16i>>
-    %11 = cir.get_global @sint : cir.ptr <!cir.array<!s32i x 3>>
+    cir.store %10, %2 : !cir.ptr<!s16i>, !cir.ptr<!cir.ptr<!s16i>>
+    %11 = cir.get_global @sint : !cir.ptr<!cir.array<!s32i x 3>>
     %12 = cir.cast(array_to_ptrdecay, %11 : !cir.ptr<!cir.array<!s32i x 3>>), !cir.ptr<!s32i>
     // MLIR: %[[RES:[0-9]+]] = llvm.mlir.addressof @sint : !llvm.ptr
     // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr, i32
-    cir.store %12, %3 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
-    %13 = cir.get_global @ll : cir.ptr <!cir.array<!s64i x 4>>
+    cir.store %12, %3 : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+    %13 = cir.get_global @ll : !cir.ptr<!cir.array<!s64i x 4>>
     %14 = cir.cast(array_to_ptrdecay, %13 : !cir.ptr<!cir.array<!s64i x 4>>), !cir.ptr<!s64i>
     // MLIR: %[[RES:[0-9]+]] = llvm.mlir.addressof @ll : !llvm.ptr
     // MLIR: %{{[0-9]+}} = llvm.getelementptr %[[RES]][0] : (!llvm.ptr) -> !llvm.ptr, i64
-    cir.store %14, %4 : !cir.ptr<!s64i>, cir.ptr <!cir.ptr<!s64i>>
+    cir.store %14, %4 : !cir.ptr<!s64i>, !cir.ptr<!cir.ptr<!s64i>>
     cir.return
   }
   cir.global external @flt = #cir.const_array<[#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float]> : !cir.array<!cir.float x 2>
@@ -151,22 +151,22 @@ module {
 
   cir.global "private" internal @Handlers = #cir.const_array<[#cir.const_struct<{#cir.global_view<@myfun> : !cir.ptr<!cir.func<!void (!s32i)>>}> : !ty_22anon2E122]> : !cir.array<!ty_22anon2E122 x 1>
   cir.func internal private @myfun(%arg0: !s32i) {
-    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["a", init] {alignment = 4 : i64}
-    cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
     cir.return
   }
   cir.func @foo(%arg0: !s32i, %arg1: !s32i) {
-    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
-    %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["flag", init] {alignment = 4 : i64}
-    cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
-    cir.store %arg1, %1 : !s32i, cir.ptr <!s32i>
-    %2 = cir.get_global @Handlers : cir.ptr <!cir.array<!ty_22anon2E122 x 1>>
-    %3 = cir.load %0 : cir.ptr <!s32i>, !s32i
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["flag", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+    cir.store %arg1, %1 : !s32i, !cir.ptr<!s32i>
+    %2 = cir.get_global @Handlers : !cir.ptr<!cir.array<!ty_22anon2E122 x 1>>
+    %3 = cir.load %0 : !cir.ptr<!s32i>, !s32i
     %4 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<!ty_22anon2E122 x 1>>), !cir.ptr<!ty_22anon2E122>
     %5 = cir.ptr_stride(%4 : !cir.ptr<!ty_22anon2E122>, %3 : !s32i), !cir.ptr<!ty_22anon2E122>
     %6 = cir.get_member %5[0] {name = "func"} : !cir.ptr<!ty_22anon2E122> -> !cir.ptr<!cir.ptr<!cir.func<!void (!s32i)>>>
-    %7 = cir.load %6 : cir.ptr <!cir.ptr<!cir.func<!void (!s32i)>>>, !cir.ptr<!cir.func<!void (!s32i)>>
-    %8 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %7 = cir.load %6 : !cir.ptr<!cir.ptr<!cir.func<!void (!s32i)>>>, !cir.ptr<!cir.func<!void (!s32i)>>
+    %8 = cir.load %1 : !cir.ptr<!s32i>, !s32i
     cir.call %7(%8) : (!cir.ptr<!cir.func<!void (!s32i)>>, !s32i) -> ()
     cir.return
   }
@@ -183,7 +183,7 @@ module {
     %0 = cir.const(#cir.global_view<@zero_array> : !cir.ptr<!s32i>) : !cir.ptr<!s32i>
     %1 = cir.const(#cir.int<0> : !s32i) : !s32i
     %2 = cir.ptr_stride(%0 : !cir.ptr<!s32i>, %1 : !s32i), !cir.ptr<!s32i>
-    %3 = cir.load %2 : cir.ptr <!s32i>, !s32i
+    %3 = cir.load %2 : !cir.ptr<!s32i>, !s32i
     cir.return
   }
   // MLIR:  %0 = llvm.mlir.addressof @zero_array

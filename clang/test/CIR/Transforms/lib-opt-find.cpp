@@ -7,7 +7,7 @@ int test1(unsigned char n = 3)
 {
     // CHECK: test1
     unsigned num_found = 0;
-    // CHECK: %[[pattern_addr:.*]] = cir.alloca !u8i, cir.ptr <!u8i>, ["n"
+    // CHECK: %[[pattern_addr:.*]] = cir.alloca !u8i, !cir.ptr<!u8i>, ["n"
     std::array<unsigned char, 9> v = {1, 2, 3, 4, 5, 6, 7, 8, 9};
 
     auto f = std::find(v.begin(), v.end(), n);
@@ -15,7 +15,7 @@ int test1(unsigned char n = 3)
     // CHECK: %[[first:.*]] = cir.call @_ZNSt5arrayIhLj9EE5beginEv
     // CHECK: %[[last:.*]] = cir.call @_ZNSt5arrayIhLj9EE3endEv
     // CHECK: %[[cast_to_void:.*]] = cir.cast(bitcast, %[[first]] : !cir.ptr<!u8i>), !cir.ptr<!void>
-    // CHECK: %[[load_pattern:.*]] = cir.load %[[pattern_addr]] : cir.ptr <!u8i>, !u8i
+    // CHECK: %[[load_pattern:.*]] = cir.load %[[pattern_addr]] : !cir.ptr<!u8i>, !u8i
     // CHECK: %[[pattern:.*]] = cir.cast(integral, %[[load_pattern:.*]] : !u8i), !s32i
 
     // CHECK-NOT: {{.*}} cir.call @_ZSt4findIPhhET_S1_S1_RKT0_(
@@ -42,13 +42,13 @@ unsigned char* test2(unsigned char* first, unsigned char* last, unsigned char v)
     return std::find(first, last, v);
     // CHECK: test2
 
-    // CHECK: %[[first_storage:.*]] = cir.alloca !cir.ptr<!u8i>, cir.ptr <!cir.ptr<!u8i>>, ["first", init]
-    // CHECK: %[[last_storage:.*]] = cir.alloca !cir.ptr<!u8i>, cir.ptr <!cir.ptr<!u8i>>, ["last", init]
-    // CHECK: %[[pattern_storage:.*]] = cir.alloca !u8i, cir.ptr <!u8i>, ["v", init]
+    // CHECK: %[[first_storage:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["first", init]
+    // CHECK: %[[last_storage:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["last", init]
+    // CHECK: %[[pattern_storage:.*]] = cir.alloca !u8i, !cir.ptr<!u8i>, ["v", init]
     // CHECK: %[[first:.*]] = cir.load %[[first_storage]]
     // CHECK: %[[last:.*]] = cir.load %[[last_storage]]
     // CHECK: %[[cast_to_void:.*]] = cir.cast(bitcast, %[[first]] : !cir.ptr<!u8i>), !cir.ptr<!void>
-    // CHECK: %[[load_pattern:.*]] = cir.load %[[pattern_storage]] : cir.ptr <!u8i>, !u8i
+    // CHECK: %[[load_pattern:.*]] = cir.load %[[pattern_storage]] : !cir.ptr<!u8i>, !u8i
     // CHECK: %[[pattern:.*]] = cir.cast(integral, %[[load_pattern:.*]] : !u8i), !s32i
 
     // CHECK-NOT: {{.*}} cir.call @_ZSt4findIPhhET_S1_S1_RKT0_(

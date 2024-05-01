@@ -127,7 +127,7 @@ def PrimitiveInt
 // FloatType
 //===----------------------------------------------------------------------===//
 
-class CIR_FloatType<string name, string mnemonic> 
+class CIR_FloatType<string name, string mnemonic>
     : CIR_Type<name, mnemonic,
           [
             DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
@@ -196,7 +196,7 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr",
 
   let parameters = (ins "mlir::Type":$pointee);
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "`<` $pointee `>`";
 }
 
 //===----------------------------------------------------------------------===//

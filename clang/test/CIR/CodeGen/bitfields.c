@@ -65,7 +65,7 @@ typedef struct {
 // CHECK: #bfi_d = #cir.bitfield_info<name = "d", storage_type = !cir.array<!u8i x 3>, size = 2, offset = 17, is_signed = true>
 
 // CHECK: cir.func {{.*@store_field}}
-// CHECK:   [[TMP0:%.*]] = cir.alloca !ty_22S22, cir.ptr <!ty_22S22>
+// CHECK:   [[TMP0:%.*]] = cir.alloca !ty_22S22, !cir.ptr<!ty_22S22>
 // CHECK:   [[TMP1:%.*]] = cir.const(#cir.int<3> : !s32i) : !s32i
 // CHECK:   [[TMP2:%.*]] = cir.get_member [[TMP0]][2] {name = "e"} : !cir.ptr<!ty_22S22> -> !cir.ptr<!u16i>
 // CHECK:   cir.set_bitfield(#bfi_e, [[TMP2]] : !cir.ptr<!u16i>, [[TMP1]] : !s32i)            
@@ -75,8 +75,8 @@ void store_field() {
 }
 
 // CHECK: cir.func {{.*@load_field}}
-// CHECK:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!ty_22S22>, cir.ptr <!cir.ptr<!ty_22S22>>, ["s", init]
-// CHECK:   [[TMP1:%.*]] = cir.load [[TMP0]] : cir.ptr <!cir.ptr<!ty_22S22>>, !cir.ptr<!ty_22S22>
+// CHECK:   [[TMP0:%.*]] = cir.alloca !cir.ptr<!ty_22S22>, !cir.ptr<!cir.ptr<!ty_22S22>>, ["s", init]
+// CHECK:   [[TMP1:%.*]] = cir.load [[TMP0]] : !cir.ptr<!cir.ptr<!ty_22S22>>, !cir.ptr<!ty_22S22>
 // CHECK:   [[TMP2:%.*]] = cir.get_member [[TMP1]][1] {name = "d"} : !cir.ptr<!ty_22S22> -> !cir.ptr<!cir.array<!u8i x 3>>
 // CHECK:   [[TMP3:%.*]] = cir.get_bitfield(#bfi_d, [[TMP2]] : !cir.ptr<!cir.array<!u8i x 3>>) -> !s32i
 int load_field(S* s) {
@@ -122,10 +122,10 @@ void createU() {
 
 // for this struct type we create an anon structure with different storage types in initialization
 // CHECK: cir.func {{.*@createD}}
-// CHECK:   %0 = cir.alloca !ty_22D22, cir.ptr <!ty_22D22>, ["d"] {alignment = 4 : i64}
+// CHECK:   %0 = cir.alloca !ty_22D22, !cir.ptr<!ty_22D22>, ["d"] {alignment = 4 : i64}
 // CHECK:   %1 = cir.cast(bitcast, %0 : !cir.ptr<!ty_22D22>), !cir.ptr<!ty_anon_struct>
 // CHECK:   %2 = cir.const(#cir.const_struct<{#cir.int<33> : !u8i, #cir.int<0> : !u8i, #cir.int<3> : !s32i}> : !ty_anon_struct) : !ty_anon_struct
-// CHECK:   cir.store %2, %1 : !ty_anon_struct, cir.ptr <!ty_anon_struct>
+// CHECK:   cir.store %2, %1 : !ty_anon_struct, !cir.ptr<!ty_anon_struct>
 void createD() {
   D d = {1,2,3};
 }

@@ -5,11 +5,11 @@
 module {
   cir.func @testFor() {
     cir.scope {
-      %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
+      %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
       %1 = cir.const(#cir.int<1> : !s32i) : !s32i
-      cir.store %1, %0 : !s32i, cir.ptr <!s32i>
+      cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
       cir.for : cond {
-        %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+        %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
         %3 = cir.const(#cir.int<10> : !s32i) : !s32i
         %4 = cir.cmp(lt, %2, %3) : !s32i, !s32i
         %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool
@@ -17,7 +17,7 @@ module {
       } body {
         cir.scope {
           cir.scope {
-            %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+            %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
             %3 = cir.const(#cir.int<5> : !s32i) : !s32i
             %4 = cir.cmp(eq, %2, %3) : !s32i, !s32i
             %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool
@@ -28,9 +28,9 @@ module {
         }
         cir.yield
       } step {
-        %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+        %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
         %3 = cir.unary(inc, %2) : !s32i, !s32i
-        cir.store %3, %0 : !s32i, cir.ptr <!s32i>
+        cir.store %3, %0 : !s32i, !cir.ptr<!s32i>
         cir.yield
       }
     }
@@ -67,11 +67,11 @@ module {
 
   cir.func @testForNested() {
     cir.scope {
-      %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
+      %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
       %1 = cir.const(#cir.int<1> : !s32i) : !s32i
-      cir.store %1, %0 : !s32i, cir.ptr <!s32i>
+      cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
       cir.for : cond {
-        %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+        %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
         %3 = cir.const(#cir.int<10> : !s32i) : !s32i
         %4 = cir.cmp(lt, %2, %3) : !s32i, !s32i
         %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool
@@ -79,11 +79,11 @@ module {
       } body {
         cir.scope {
           cir.scope {
-            %2 = cir.alloca !s32i, cir.ptr <!s32i>, ["j", init] {alignment = 4 : i64}
+            %2 = cir.alloca !s32i, !cir.ptr<!s32i>, ["j", init] {alignment = 4 : i64}
             %3 = cir.const(#cir.int<1> : !s32i) : !s32i
-            cir.store %3, %2 : !s32i, cir.ptr <!s32i>
+            cir.store %3, %2 : !s32i, !cir.ptr<!s32i>
             cir.for : cond {
-              %4 = cir.load %2 : cir.ptr <!s32i>, !s32i
+              %4 = cir.load %2 : !cir.ptr<!s32i>, !s32i
               %5 = cir.const(#cir.int<10> : !s32i) : !s32i
               %6 = cir.cmp(lt, %4, %5) : !s32i, !s32i
               %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
@@ -91,7 +91,7 @@ module {
             } body {
               cir.scope {
                 cir.scope {
-                  %4 = cir.load %2 : cir.ptr <!s32i>, !s32i
+                  %4 = cir.load %2 : !cir.ptr<!s32i>, !s32i
                   %5 = cir.const(#cir.int<5> : !s32i) : !s32i
                   %6 = cir.cmp(eq, %4, %5) : !s32i, !s32i
                   %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
@@ -102,18 +102,18 @@ module {
               }
               cir.yield
             } step {
-              %4 = cir.load %2 : cir.ptr <!s32i>, !s32i
+              %4 = cir.load %2 : !cir.ptr<!s32i>, !s32i
               %5 = cir.unary(inc, %4) : !s32i, !s32i
-              cir.store %5, %2 : !s32i, cir.ptr <!s32i>
+              cir.store %5, %2 : !s32i, !cir.ptr<!s32i>
               cir.yield
             }
           }
         }
         cir.yield
       } step {
-        %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+        %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
         %3 = cir.unary(inc, %2) : !s32i, !s32i
-        cir.store %3, %0 : !s32i, cir.ptr <!s32i>
+        cir.store %3, %0 : !s32i, !cir.ptr<!s32i>
         cir.yield
       }
     }
@@ -167,22 +167,22 @@ module {
   // CHECK:  }
 
   cir.func  @testWhile() {
-    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
     %1 = cir.const(#cir.int<0> : !s32i) : !s32i
-    cir.store %1, %0 : !s32i, cir.ptr <!s32i>
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
     cir.scope {
       cir.while {
-        %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+        %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
         %3 = cir.const(#cir.int<10> : !s32i) : !s32i
         %4 = cir.cmp(lt, %2, %3) : !s32i, !s32i
         %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool
         cir.condition(%5)
       } do {
-        %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+        %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
         %3 = cir.unary(inc, %2) : !s32i, !s32i
-        cir.store %3, %0 : !s32i, cir.ptr <!s32i>
+        cir.store %3, %0 : !s32i, !cir.ptr<!s32i>
         cir.scope {
-          %4 = cir.load %0 : cir.ptr <!s32i>, !s32i
+          %4 = cir.load %0 : !cir.ptr<!s32i>, !s32i
           %5 = cir.const(#cir.int<5> : !s32i) : !s32i
           %6 = cir.cmp(eq, %4, %5) : !s32i, !s32i
           %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
@@ -222,16 +222,16 @@ module {
   // CHECK:  }
  
 cir.func @testDoWhile() {
-    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
     %1 = cir.const(#cir.int<0> : !s32i) : !s32i
-    cir.store %1, %0 : !s32i, cir.ptr <!s32i>
+    cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
     cir.scope {
       cir.do {
-        %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+        %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
         %3 = cir.unary(inc, %2) : !s32i, !s32i
-        cir.store %3, %0 : !s32i, cir.ptr <!s32i>
+        cir.store %3, %0 : !s32i, !cir.ptr<!s32i>
         cir.scope {
-          %4 = cir.load %0 : cir.ptr <!s32i>, !s32i
+          %4 = cir.load %0 : !cir.ptr<!s32i>, !s32i
           %5 = cir.const(#cir.int<5> : !s32i) : !s32i
           %6 = cir.cmp(eq, %4, %5) : !s32i, !s32i
           %7 = cir.cast(int_to_bool, %6 : !s32i), !cir.bool
@@ -241,7 +241,7 @@ cir.func @testDoWhile() {
         }
         cir.yield
       } while {
-        %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
+        %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
         %3 = cir.const(#cir.int<10> : !s32i) : !s32i
         %4 = cir.cmp(lt, %2, %3) : !s32i, !s32i
         %5 = cir.cast(int_to_bool, %4 : !s32i), !cir.bool

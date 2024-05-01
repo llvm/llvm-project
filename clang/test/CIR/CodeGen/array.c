@@ -25,8 +25,8 @@ void useFoo(int i) {
   foo[i] = 42;
 }
 // CHECK: @useFoo
-// CHECK: %[[#V2:]] = cir.get_global @foo : cir.ptr <!cir.array<!s32i x 0>>
-// CHECK: %[[#V3:]] = cir.load %{{.+}} : cir.ptr <!s32i>, !s32i
+// CHECK: %[[#V2:]] = cir.get_global @foo : !cir.ptr<!cir.array<!s32i x 0>>
+// CHECK: %[[#V3:]] = cir.load %{{.+}} : !cir.ptr<!s32i>, !s32i
 // CHECK: %[[#V4:]] = cir.cast(array_to_ptrdecay, %[[#V2]] : !cir.ptr<!cir.array<!s32i x 0>>), !cir.ptr<!s32i>
 // CHECK: %[[#V5:]] = cir.ptr_stride(%[[#V4]] : !cir.ptr<!s32i>, %[[#V3]] : !s32i), !cir.ptr<!s32i>
-// CHECK: cir.store %{{.+}}, %[[#V5]] : !s32i, cir.ptr <!s32i>
+// CHECK: cir.store %{{.+}}, %[[#V5]] : !s32i, !cir.ptr<!s32i>

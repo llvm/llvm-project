@@ -12,7 +12,7 @@
 
 module {
   cir.func @test() {
-    %1 = cir.alloca !ty_22S22, cir.ptr <!ty_22S22>, ["x"] {alignment = 4 : i64}
+    %1 = cir.alloca !ty_22S22, !cir.ptr<!ty_22S22>, ["x"] {alignment = 4 : i64}
     // CHECK: %[[#ARRSIZE:]] = llvm.mlir.constant(1 : index) : i64
     // CHECK: %[[#STRUCT:]] = llvm.alloca %[[#ARRSIZE]] x !llvm.struct<"struct.S", (i8, i32)>
     %3 = cir.get_member %1[0] {name = "c"} : !cir.ptr<!ty_22S22> -> !cir.ptr<!u8i>
@@ -23,9 +23,9 @@ module {
   }
 
   cir.func @shouldConstInitLocalStructsWithConstStructAttr() {
-    %0 = cir.alloca !ty_22S2A22, cir.ptr <!ty_22S2A22>, ["s"] {alignment = 4 : i64}
+    %0 = cir.alloca !ty_22S2A22, !cir.ptr<!ty_22S2A22>, ["s"] {alignment = 4 : i64}
     %1 = cir.const(#cir.const_struct<{#cir.int<1> : !s32i}> : !ty_22S2A22) : !ty_22S2A22
-    cir.store %1, %0 : !ty_22S2A22, cir.ptr <!ty_22S2A22>
+    cir.store %1, %0 : !ty_22S2A22, !cir.ptr<!ty_22S2A22>
     cir.return
   }
   // CHECK: llvm.func @shouldConstInitLocalStructsWithConstStructAttr()
@@ -82,10 +82,10 @@ module {
 
   cir.func @shouldLowerStructCopies() {
   // CHECK: llvm.func @shouldLowerStructCopies()
-    %1 = cir.alloca !ty_22S22, cir.ptr <!ty_22S22>, ["a"] {alignment = 4 : i64}
+    %1 = cir.alloca !ty_22S22, !cir.ptr<!ty_22S22>, ["a"] {alignment = 4 : i64}
     // CHECK: %[[#ONE:]] = llvm.mlir.constant(1 : index) : i64
     // CHECK: %[[#SA:]] = llvm.alloca %[[#ONE]] x !llvm.struct<"struct.S", (i8, i32)> {alignment = 4 : i64} : (i64) -> !llvm.ptr
-    %2 = cir.alloca !ty_22S22, cir.ptr <!ty_22S22>, ["b", init] {alignment = 4 : i64}
+    %2 = cir.alloca !ty_22S22, !cir.ptr<!ty_22S22>, ["b", init] {alignment = 4 : i64}
     // CHECK: %[[#ONE:]] = llvm.mlir.constant(1 : index) : i64
     // CHECK: %[[#SB:]] = llvm.alloca %[[#ONE]] x !llvm.struct<"struct.S", (i8, i32)> {alignment = 4 : i64} : (i64) -> !llvm.ptr
     cir.copy %1 to %2 : !cir.ptr<!ty_22S22>

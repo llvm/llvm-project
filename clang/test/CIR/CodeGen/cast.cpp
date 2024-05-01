@@ -6,13 +6,13 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 }
 
 // CHECK: cir.func @_Z15cxxstaticcast_0j
-// CHECK:    %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["x", init] {alignment = 4 : i64}
-// CHECK:    %1 = cir.alloca !u8i, cir.ptr <!u8i>, ["__retval"] {alignment = 1 : i64}
-// CHECK:    cir.store %arg0, %0 : !u32i, cir.ptr <!u32i>
-// CHECK:    %2 = cir.load %0 : cir.ptr <!u32i>, !u32i
+// CHECK:    %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init] {alignment = 4 : i64}
+// CHECK:    %1 = cir.alloca !u8i, !cir.ptr<!u8i>, ["__retval"] {alignment = 1 : i64}
+// CHECK:    cir.store %arg0, %0 : !u32i, !cir.ptr<!u32i>
+// CHECK:    %2 = cir.load %0 : !cir.ptr<!u32i>, !u32i
 // CHECK:    %3 = cir.cast(integral, %2 : !u32i), !u8i
-// CHECK:    cir.store %3, %1 : !u8i, cir.ptr <!u8i>
-// CHECK:    %4 = cir.load %1 : cir.ptr <!u8i>, !u8i
+// CHECK:    cir.store %3, %1 : !u8i, !cir.ptr<!u8i>
+// CHECK:    %4 = cir.load %1 : !cir.ptr<!u8i>, !u8i
 // CHECK:    cir.return %4 : !u8i
 // CHECK:  }
 
@@ -92,9 +92,9 @@ bool cptr(void *d) {
 }
 
 // CHECK: cir.func @_Z4cptrPv(%arg0: !cir.ptr<!void>
-// CHECK:   %0 = cir.alloca !cir.ptr<!void>, cir.ptr <!cir.ptr<!void>>, ["d", init] {alignment = 8 : i64}
+// CHECK:   %0 = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["d", init] {alignment = 8 : i64}
 
-// CHECK:   %3 = cir.load %0 : cir.ptr <!cir.ptr<!void>>, !cir.ptr<!void>
+// CHECK:   %3 = cir.load %0 : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CHECK:   %4 = cir.cast(ptr_to_bool, %3 : !cir.ptr<!void>), !cir.bool
 
 void call_cptr(void *d) {
@@ -103,10 +103,10 @@ void call_cptr(void *d) {
 }
 
 // CHECK: cir.func @_Z9call_cptrPv(%arg0: !cir.ptr<!void>
-// CHECK:   %0 = cir.alloca !cir.ptr<!void>, cir.ptr <!cir.ptr<!void>>, ["d", init] {alignment = 8 : i64}
+// CHECK:   %0 = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["d", init] {alignment = 8 : i64}
 
 // CHECK:   cir.scope {
-// CHECK:     %1 = cir.load %0 : cir.ptr <!cir.ptr<!void>>, !cir.ptr<!void>
+// CHECK:     %1 = cir.load %0 : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CHECK:     %2 = cir.call @_Z4cptrPv(%1) : (!cir.ptr<!void>) -> !cir.bool
 // CHECK:     %3 = cir.unary(not, %2) : !cir.bool, !cir.bool
 // CHECK:     cir.if %3 {
@@ -117,7 +117,7 @@ void lvalue_cast(int x) {
 
 // CHECK: cir.func @_Z11lvalue_cast
 // CHECK:   %1 = cir.const(#cir.int<42> : !s32i) : !s32i 
-// CHECK:   cir.store %1, %0 : !s32i, cir.ptr <!s32i> 
+// CHECK:   cir.store %1, %0 : !s32i, !cir.ptr<!s32i> 
 
 struct A { int x; };
 
@@ -128,10 +128,10 @@ void null_cast(long ptr) {
 
 // CHECK: cir.func @_Z9null_castl
 // CHECK:   %[[ADDR:[0-9]+]] = cir.const(#cir.ptr<null> : !cir.ptr<!s32i>) : !cir.ptr<!s32i>
-// CHECK:   cir.store %{{[0-9]+}}, %[[ADDR]] : !s32i, cir.ptr <!s32i>
+// CHECK:   cir.store %{{[0-9]+}}, %[[ADDR]] : !s32i, !cir.ptr<!s32i>
 // CHECK:   %[[BASE:[0-9]+]] = cir.const(#cir.ptr<null> : !cir.ptr<!ty_22A22>) : !cir.ptr<!ty_22A22>
 // CHECK:   %[[FIELD:[0-9]+]] = cir.get_member %[[BASE]][0] {name = "x"} : !cir.ptr<!ty_22A22> -> !cir.ptr<!s32i>
-// CHECK:   cir.store %{{[0-9]+}}, %[[FIELD]] : !s32i, cir.ptr <!s32i>
+// CHECK:   cir.store %{{[0-9]+}}, %[[FIELD]] : !s32i, !cir.ptr<!s32i>
 
 void int_cast(long ptr) {
   ((A *)ptr)->x = 0;
@@ -140,5 +140,5 @@ void int_cast(long ptr) {
 // CHECK: cir.func @_Z8int_castl
 // CHECK:   %[[BASE:[0-9]+]] = cir.cast(int_to_ptr, %{{[0-9]+}} : !u64i), !cir.ptr<!ty_22A22>
 // CHECK:   %[[FIELD:[0-9]+]] = cir.get_member %[[BASE]][0] {name = "x"} : !cir.ptr<!ty_22A22> -> !cir.ptr<!s32i>
-// CHECK:   cir.store %{{[0-9]+}}, %[[FIELD]] : !s32i, cir.ptr <!s32i>
+// CHECK:   cir.store %{{[0-9]+}}, %[[FIELD]] : !s32i, !cir.ptr<!s32i>
 

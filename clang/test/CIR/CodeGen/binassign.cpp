@@ -16,7 +16,7 @@ int foo(int a, int b) {
   return x;
 }
 
-// CHECK: [[Value:%[0-9]+]] = cir.alloca !s32i, cir.ptr <!s32i>, ["x", init] {alignment = 4 : i64}
+// CHECK: [[Value:%[0-9]+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
 // CHECK: = cir.binop(mul,
 // CHECK: = cir.load {{.*}}[[Value]]
 // CHECK: = cir.binop(mul,
@@ -61,10 +61,10 @@ void exec() {
 }
 
 // CHECK: cir.func @_Z4execv()
-// CHECK:   %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["r"] {alignment = 4 : i64}
+// CHECK:   %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["r"] {alignment = 4 : i64}
 // CHECK:   cir.scope {
 // CHECK:     %1 = cir.call @_Z5gettyv() : () -> !u32i
-// CHECK:     cir.store %1, %0 : !u32i, cir.ptr <!u32i>
+// CHECK:     cir.store %1, %0 : !u32i, !cir.ptr<!u32i>
 // CHECK:     %2 = cir.cast(integral, %1 : !u32i), !s32i
 // CHECK:     %3 = cir.const(#cir.int<0> : !s32i) : !s32i
 // CHECK:     %4 = cir.cmp(lt, %2, %3) : !s32i, !cir.bool
