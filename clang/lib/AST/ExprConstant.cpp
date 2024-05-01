@@ -14547,15 +14547,18 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   default:
     return false;
 
+  case Builtin::BI__builtin_frexp:
   case Builtin::BI__builtin_frexpf:
-  case Builtin::BI__builtin_frexp: {
+  case Builtin::BI__builtin_frexpl: {
     LValue Pointer;
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluatePointer(E->getArg(1), Pointer, Info))
       return false;
     llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
     int FrexpExp;
-    Result = llvm::frexp(Result, FrexpExp, RM);
+    FrexpExp = ilogb(Result);
+    FrexpExp = FrexpExp == llvm::detail::IEEEFloat::IEK_Zero ? 0 : FrexpExp + 1;
+    Result =  scalbn(Result, -FrexpExp, RM);
     return true;
   }
   case Builtin::BI__builtin_huge_val:
@@ -14651,6 +14654,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
   case Builtin::BIfmin:
   case Builtin::BIfminf:
+  case Builtin::BIfminl:
   case Builtin::BI__builtin_fmin:
   case Builtin::BI__builtin_fminf:
   case Builtin::BI__builtin_fminl:

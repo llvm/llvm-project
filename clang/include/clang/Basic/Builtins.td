@@ -3443,6 +3443,7 @@ def Frexp : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, Constexpr];
   let Prototype = "T(T, int*)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Ldexp : FPMathTemplate, LibBuiltin<"math.h"> {
