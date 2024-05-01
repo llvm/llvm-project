@@ -348,8 +348,7 @@ class CGDebugInfo {
       const FieldDecl *BitFieldDecl, const llvm::DIDerivedType *BitFieldDI,
       llvm::ArrayRef<llvm::Metadata *> PreviousFieldsDI, const RecordDecl *RD);
 
-  /// A cache that maps artificial inlined function names used for
-  /// __builtin_verbose_trap to subprograms.
+  /// A cache that maps names of artificial inlined functions to subprograms.
   llvm::StringMap<llvm::DISubprogram *> InlinedTrapFuncMap;
 
   /// A function that returns the subprogram corresponding to the artificial
@@ -618,7 +617,7 @@ public:
   ///
   /// * `<Prefix>:<Category>:<FailureMsg>`
   ///
-  /// `<Prefix>` is "__llvm_verbose_trap".
+  /// `<Prefix>` is "__trap_msg".
   ///
   /// This is used to store failure reasons for traps.
   llvm::DILocation *CreateTrapFailureMessageFor(llvm::DebugLoc TrapLocation,

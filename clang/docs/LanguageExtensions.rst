@@ -3501,13 +3501,13 @@ The debugging information would look as if it were produced for the following co
 .. code-block:: c++
 
     __attribute__((always_inline))
-    inline void "__llvm_verbose_trap$check null$Argument must not be null!"() {
+    inline void "__trap_msg$check null$Argument must not be null!"() {
       __builtin_trap();
     }
 
     void foo(int* p) {
       if (p == nullptr)
-        "__llvm_verbose_trap$check null$Argument must not be null!"();
+        "__trap_msg$check null$Argument must not be null!"();
     }
 
 However, the generated code would not actually contain a call to the artificial

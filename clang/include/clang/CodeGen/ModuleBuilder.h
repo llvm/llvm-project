@@ -27,8 +27,8 @@ namespace llvm {
   }
 }
 
-// Prefix for __builtin_verbose_trap.
-#define CLANG_VERBOSE_TRAP_PREFIX "__llvm_verbose_trap"
+// Prefix of the name of the artificial inline frame.
+#define CLANG_TRAP_PREFIX "__trap_msg"
 
 namespace clang {
   class CodeGenOptions;
