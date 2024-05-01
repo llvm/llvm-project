@@ -1713,6 +1713,16 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                /*copyBackOp=*/b.getStringAttr(copyBackOp));
 }
 
+void PadOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getTarget(), effects);
+  onlyReadsHandle(getPadToMultipleOf(), effects);
+  producesHandle(getPadded(), effects);
+  producesHandle(getPad(), effects);
+  producesHandle(getCopy(), effects);
+  modifiesPayload(effects);
+}
+
 SmallVector<OpFoldResult> PadOp::getMixedPadToMultipleOf() {
   OpBuilder b(getContext());
   return getMixedValues(getStaticPadToMultipleOf(), getPadToMultipleOf(), b);
@@ -1848,9 +1858,55 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
     LinalgPaddingOptions options;
     options.paddingDimensions =
         extractFromIntegerArrayAttr<int64_t>(getPaddingDimensions());
-    SmallVector<int64_t> padToMultipleOf(options.paddingDimensions.size(), 1);
-    if (!getStaticPadToMultipleOf().empty())
-      padToMultipleOf = llvm::to_vector(getStaticPadToMultipleOf());
+
+    SmallVector<int64_t> padToMultipleOf;
+    for (OpFoldResult sz : getMixedPadToMultipleOf()) {
+      if (sz.is<Attribute>()) {
+        auto attr = sz.get<Attribute>();
+        padToMultipleOf.push_back(cast<IntegerAttr>(attr).getInt());
+        continue;
+      } else if (sz.is<Value>() && isa<ParamType>(sz.get<Value>().getType())) {
+        ArrayRef<Attribute> params = state.getParams(sz.get<Value>());
+        if (params.size() != 1)
+          return emitSilenceableFailure(getLoc()) << "expected a single param";
+        padToMultipleOf.push_back(
+            cast<IntegerAttr>(params.front()).getValue().getSExtValue());
+        continue;
+      }
+
+      auto szPayloads = state.getPayloadOps(sz.get<Value>());
+      if (!llvm::hasSingleElement(szPayloads)) {
+        auto diag = this->emitOpError("requires pad_to_multiple_of handle that "
+                                      "is mapped to 1 payload op");
+        diag.attachNote(sz.get<Value>().getLoc())
+            << "mapped to " << llvm::range_size(szPayloads) << " payload ops";
+        return DiagnosedSilenceableFailure::definiteFailure();
+      }
+
+      Operation *szPayloadOp = *szPayloads.begin();
+      if (szPayloadOp->getNumResults() != 1 ||
+          !szPayloadOp->getResult(0).getType().isIndex()) {
+        auto diag = this->emitOpError(
+            "requires vector pad_to_multiple_of op with 1 index result");
+        diag.attachNote(szPayloadOp->getLoc())
+            << "pad_to_multiple_of payload op";
+        return DiagnosedSilenceableFailure::definiteFailure();
+      }
+
+      IntegerAttr attr;
+      if (!matchPattern(szPayloadOp->getResult(0), m_Constant(&attr))) {
+        auto diag = this->emitOpError("requires constant pad_to_multiple_of");
+        diag.attachNote(szPayloadOp->getLoc())
+            << "pad_to_multiple_of payload op";
+        return DiagnosedSilenceableFailure::definiteFailure();
+      }
+
+      padToMultipleOf.push_back(attr.getInt());
+    }
+    if (padToMultipleOf.empty())
+      padToMultipleOf =
+          SmallVector<int64_t>(options.paddingDimensions.size(), 1);
+
     options.padToMultipleOf = padToMultipleOf;
     options.paddingValues = paddingValues;
     options.packPaddings = packPaddings;

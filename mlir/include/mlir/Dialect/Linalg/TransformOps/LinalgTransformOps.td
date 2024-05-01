@@ -978,8 +978,8 @@ def PackTransposeOp : Op<Transform_Dialect, "structured.pack_transpose", [
 //===----------------------------------------------------------------------===//
 
 def PadOp : Op<Transform_Dialect, "structured.pad",
-    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
-     DeclareOpInterfaceMethods<TransformOpInterface>,
+    [FunctionalStyleTransformOpTrait, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     TransformOpInterface,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
     Pads the operations pointed to by the target handle using the options
@@ -1052,11 +1052,10 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
 
     SmallVector<OpFoldResult> getMixedPadToMultipleOf();
 
-    ::mlir::DiagnosedSilenceableFailure applyToOne(
-        ::mlir::transform::TransformRewriter &rewriter,
-        ::mlir::linalg::LinalgOp target,
-        ::mlir::transform::ApplyToEachResultList &results,
-        ::mlir::transform::TransformState &state);
+    ::mlir::DiagnosedSilenceableFailure apply(
+      ::mlir::transform::TransformRewriter &rewriter,
+      ::mlir::transform::TransformResults &results,
+      ::mlir::transform::TransformState &state);
   }];
 }
 
