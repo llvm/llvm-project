@@ -9,61 +9,78 @@
 /// Fuzzing test for llvm-libc hashtable implementations.
 ///
 //===----------------------------------------------------------------------===//
-#include "src/__support/CPP/new.h"
-#include "src/__support/CPP/optional.h"
-#include "src/__support/CPP/string.h"
-#include "src/__support/CPP/utility/forward.h"
+#include "include/llvm-libc-types/ENTRY.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/HashTable/table.h"
-#include <stdint.h>
+
 namespace LIBC_NAMESPACE {
 
-template <typename T> class UniquePtr {
-  T *ptr;
+// A fuzzing payload starts with
+// - uint16_t: initial capacity for table A
+// - uint64_t: seed for table A
+// - uint16_t: initial capacity for table B
+// - uint64_t: seed for table B
+// Followed by a sequence of actions:
+// - CrossCheck: only a single byte valued 3
+// - Find: a single byte valued 0 followed by a null-terminated string
+// - Insert: a single byte valued 1 followed by a null-terminated string
+static constexpr size_t INITIAL_HEADER_SIZE =
+    2 * (sizeof(uint16_t) + sizeof(uint64_t));
+extern "C" size_t LLVMFuzzerMutate(uint8_t *data, size_t size, size_t max_size);
+extern "C" size_t LLVMFuzzerCustomMutator(uint8_t *data, size_t size,
+                                          size_t max_size, unsigned int seed) {
+  size = LLVMFuzzerMutate(data, size, max_size);
+  // not enough to read the initial capacities and seeds
+  if (size < INITIAL_HEADER_SIZE)
+    return 0;
 
-public:
-  UniquePtr(T *ptr) : ptr(ptr) {}
-  ~UniquePtr() { delete ptr; }
-  UniquePtr(UniquePtr &&other) : ptr(other.ptr) { other.ptr = nullptr; }
-  UniquePtr &operator=(UniquePtr &&other) {
-    delete ptr;
-    ptr = other.ptr;
-    other.ptr = nullptr;
-    return *this;
+  // skip the initial capacities and seeds
+  size_t i = INITIAL_HEADER_SIZE;
+  while (i < size) {
+    switch (data[i] % 3) {
+    case 2:
+      // cross check
+      break;
+
+    default:
+      // find or insert
+      // check if there is enough space for the action byte and the
+      // null-terminator
+      if (i + 2 >= max_size)
+        return i;
+      // skip the action byte
+      ++i;
+      // skip the null-terminated string
+      while (i < max_size && data[i] != 0)
+        ++i;
+      // in the case the string is not null-terminated, null-terminate it
+      if (i == max_size && data[i - 1] != 0)
+        data[i - 1] = 0;
+      break;
+    }
+    // move to the next action
+    ++i;
   }
-  T *operator->() { return ptr; }
-  template <typename... U> static UniquePtr create(U &&...x) {
-    AllocChecker ac;
-    T *ptr = new (ac) T(cpp::forward<U>(x)...);
-    if (!ac)
-      return {nullptr};
-    return UniquePtr(ptr);
-  }
-  operator bool() { return ptr != nullptr; }
-  T *get() { return ptr; }
-};
+  // return the new size
+  return i;
+}
 
 // a tagged union
 struct Action {
   enum class Tag { Find, Insert, CrossCheck } tag;
-  cpp::string key;
-  UniquePtr<Action> next;
-  Action(Tag tag, cpp::string key, UniquePtr<Action> next)
-      : tag(tag), key(cpp::move(key)), next(cpp::move(next)) {}
+  cpp::string_view key;
 };
 
 static struct {
-  UniquePtr<Action> actions = nullptr;
   size_t remaining;
   const char *buffer;
 
-  template <typename T> cpp::optional<T> next() {
+  template <typename T> T next() {
     static_assert(cpp::is_integral<T>::value, "T must be an integral type");
     union {
       T result;
       char data[sizeof(T)];
     };
-    if (remaining < sizeof(result))
-      return cpp::nullopt;
     for (size_t i = 0; i < sizeof(result); i++)
       data[i] = buffer[i];
     buffer += sizeof(result);
@@ -71,48 +88,23 @@ static struct {
     return result;
   }
 
-  cpp::optional<cpp::string> next_string() {
-    if (cpp::optional<uint16_t> len = next<uint16_t>()) {
-      uint64_t length;
-      for (length = 0; length < *len && length < remaining; length++)
-        if (buffer[length] == '\0')
-          break;
-      cpp::string result(buffer, length);
-      result += '\0';
-      buffer += length;
-      remaining -= length;
-      return result;
-    }
-    return cpp::nullopt;
+  cpp::string_view next_string() {
+    cpp::string_view result(buffer);
+    buffer += result.size() + 1;
+    remaining -= result.size() + 1;
+    return result;
   }
-  Action *next_action() {
-    if (cpp::optional<uint8_t> action = next<uint8_t>()) {
-      switch (*action % 3) {
-      case 0: {
-        if (cpp::optional<cpp::string> key = next_string())
-          actions = UniquePtr<Action>::create(
-              Action::Tag::Find, cpp::move(*key), cpp::move(actions));
-        else
-          return nullptr;
-        break;
-      }
-      case 1: {
-        if (cpp::optional<cpp::string> key = next_string())
-          actions = UniquePtr<Action>::create(
-              Action::Tag::Insert, cpp::move(*key), cpp::move(actions));
-        else
-          return nullptr;
-        break;
-      }
-      case 2: {
-        actions = UniquePtr<Action>::create(Action::Tag::CrossCheck, "",
-                                            cpp::move(actions));
-        break;
-      }
-      }
-      return actions.get();
+
+  Action next_action() {
+    uint8_t byte = next<uint8_t>();
+    switch (byte % 3) {
+    case 2:
+      return {Action::Tag::CrossCheck, {}};
+    case 1:
+      return {Action::Tag::Insert, next_string()};
+    default:
+      return {Action::Tag::Find, next_string()};
     }
-    return nullptr;
   }
 } global_status;
 
@@ -136,35 +128,35 @@ public:
 };
 
 HashTable next_hashtable() {
-  if (cpp::optional<uint16_t> size = global_status.next<uint16_t>())
-    if (cpp::optional<uint64_t> seed = global_status.next<uint64_t>())
-      return HashTable(*size, *seed);
-
-  return HashTable(0, 0);
+  size_t size = global_status.next<uint16_t>();
+  uint64_t seed = global_status.next<uint64_t>();
+  return HashTable(size, seed);
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   global_status.buffer = reinterpret_cast<const char *>(data);
   global_status.remaining = size;
-  HashTable table_a = next_hashtable();
-  HashTable table_b = next_hashtable();
-  if (!table_a.is_valid() || !table_b.is_valid())
+
+  if (global_status.remaining < INITIAL_HEADER_SIZE)
     return 0;
 
+  HashTable table_a = next_hashtable();
+  HashTable table_b = next_hashtable();
   for (;;) {
-    Action *action = global_status.next_action();
-    if (!action)
-      return 0;
-    switch (action->tag) {
+    if (global_status.remaining == 0)
+      break;
+    Action action = global_status.next_action();
+    switch (action.tag) {
     case Action::Tag::Find: {
-      if (static_cast<bool>(table_a.find(action->key.c_str())) !=
-          static_cast<bool>(table_b.find(action->key.c_str())))
+      if (static_cast<bool>(table_a.find(action.key.data())) !=
+          static_cast<bool>(table_b.find(action.key.data())))
         __builtin_trap();
       break;
     }
     case Action::Tag::Insert: {
-      ENTRY *a = table_a.insert(ENTRY{action->key.data(), action->key.data()});
-      ENTRY *b = table_b.insert(ENTRY{action->key.data(), action->key.data()});
+      char *ptr = const_cast<char *>(action.key.data());
+      ENTRY *a = table_a.insert(ENTRY{ptr, ptr});
+      ENTRY *b = table_b.insert(ENTRY{ptr, ptr});
       if (a->data != b->data)
         __builtin_trap();
       break;

@@ -12,7 +12,6 @@ add_libc_fuzzer(
     hashtable_fuzz.cpp
   DEPENDS
     libc.src.__support.HashTable.table
-    libc.src.string.memcpy
 )
 
 add_libc_fuzzer(
@@ -21,7 +20,6 @@ add_libc_fuzzer(
     hashtable_fuzz.cpp
   DEPENDS
     libc.src.__support.HashTable.table
-    libc.src.string.memcpy
   COMPILE_OPTIONS
     -D__LIBC_EXPLICIT_SIMD_OPT
 ) 
