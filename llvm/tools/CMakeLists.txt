@@ -28,12 +28,14 @@ endif()
 # Add LTO, llvm-ar, llvm-config, and llvm-profdata before clang, ExternalProject
 # requires targets specified in DEPENDS to exist before the call to
 # ExternalProject_Add.
+if (NOT WASI)
 add_llvm_tool_subdirectory(lto)
 add_llvm_tool_subdirectory(gold)
 add_llvm_tool_subdirectory(llvm-ar)
 add_llvm_tool_subdirectory(llvm-config)
 add_llvm_tool_subdirectory(llvm-lto)
 add_llvm_tool_subdirectory(llvm-profdata)
+endif ()
 
 # Projects supported via LLVM_EXTERNAL_*_SOURCE_DIR need to be explicitly
 # specified.
@@ -43,6 +45,7 @@ add_llvm_external_project(mlir)
 # accordingly so place them afterwards
 add_llvm_external_project(clang)
 add_llvm_external_project(flang)
+if (NOT WASI)
 add_llvm_external_project(lldb)
 add_llvm_external_project(bolt)
 
@@ -54,6 +57,7 @@ add_llvm_external_project(polly)
 
 # libclc depends on clang
 add_llvm_external_project(libclc)
+endif ()
 
 # Add subprojects specified using LLVM_EXTERNAL_PROJECTS
 foreach(p ${LLVM_EXTERNAL_PROJECTS})
