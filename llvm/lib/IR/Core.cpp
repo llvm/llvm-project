@@ -180,16 +180,15 @@ LLVMTypeRef LLVMGetTypeAttributeValue(LLVMAttributeRef A) {
 }
 
 LLVMAttributeRef LLVMCreateConstantRangeAttribute(
-    LLVMContextRef C, unsigned KindID, LLVMTypeRef IntTy,
-    unsigned LowerNumWords, const uint64_t LowerWords[], unsigned UpperNumWords,
+    LLVMContextRef C, unsigned KindID, unsigned NumBits, unsigned LowerNumWords,
+    const uint64_t LowerWords[], unsigned UpperNumWords,
     const uint64_t UpperWords[]) {
-  unsigned BitWidth = unwrap<IntegerType>(IntTy)->getBitWidth();
   auto &Ctx = *unwrap(C);
   auto AttrKind = (Attribute::AttrKind)KindID;
   return wrap(Attribute::get(
       Ctx, AttrKind,
-      ConstantRange(APInt(BitWidth, ArrayRef(LowerWords, LowerNumWords)),
-                    APInt(BitWidth, ArrayRef(UpperWords, UpperNumWords)))));
+      ConstantRange(APInt(NumBits, ArrayRef(LowerWords, LowerNumWords)),
+                    APInt(NumBits, ArrayRef(UpperWords, UpperNumWords)))));
 }
 
 LLVMAttributeRef LLVMCreateStringAttribute(LLVMContextRef C,
