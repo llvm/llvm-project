@@ -637,6 +637,11 @@ public:
   // be nested.
   ~ScopedOutsAndErrsOverride();
 
+  // Extract any current overrides. This is mostly useful for propagating one
+  // thread's overrides to another thread. The `outs` override is first and the
+  // `errs` second.
+  static std::pair<raw_fd_ostream *, raw_fd_ostream *> getActiveOverrides();
+
 private:
   raw_fd_ostream *PrevOuts;
   raw_fd_ostream *PrevErrs;

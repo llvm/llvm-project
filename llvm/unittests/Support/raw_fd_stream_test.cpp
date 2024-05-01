@@ -9,6 +9,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/raw_ostream.h"
@@ -90,6 +91,25 @@ TEST(raw_fd_streamTest, OverrideOutsAndErrs) {
   OS.seek(0);
   OS.read(Buffer, sizeof(Buffer));
   EXPECT_EQ("errs", StringRef(Buffer, sizeof(Buffer)));
+
+  // Now try nesting a new set of redirects.
+  {
+    SmallString<64> Path2;
+    int FD2;
+    ASSERT_FALSE(sys::fs::createTemporaryFile("foo2", "bar2", FD2, Path2));
+    FileRemover Cleanup(Path2);
+    raw_fd_stream OS2(Path, EC);
+    ASSERT_TRUE(!EC);
+
+    llvm::outs() << "te";
+    llvm::outs().flush();
+    llvm::errs() << "st";
+    llvm::errs().flush();
+    char Buffer[4];
+    OS2.seek(0);
+    OS2.read(Buffer, sizeof(Buffer));
+    EXPECT_EQ("test", StringRef(Buffer, sizeof(Buffer)));
+  }
 }
 
 } // namespace

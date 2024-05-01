@@ -897,9 +897,8 @@ static thread_local raw_fd_ostream *OutsOverride = nullptr;
 static thread_local raw_fd_ostream *ErrsOverride = nullptr;
 
 raw_fd_ostream &llvm::outs() {
-  if (auto *TLSOuts = OutsOverride; TLSOuts != nullptr) {
+  if (auto *TLSOuts = OutsOverride; TLSOuts != nullptr)
     return *TLSOuts;
-  }
 
   // Set buffer settings to model stdout behavior.
   std::error_code EC;
@@ -913,9 +912,8 @@ raw_fd_ostream &llvm::outs() {
 }
 
 raw_fd_ostream &llvm::errs() {
-  if (auto *TLSErrs = OutsOverride; TLSErrs != nullptr) {
+  if (auto *TLSErrs = OutsOverride; TLSErrs != nullptr)
     return *TLSErrs;
-  }
 
   // Set standard error to be unbuffered and tied to outs() by default.
 #ifdef __MVS__
@@ -942,6 +940,11 @@ ScopedOutsAndErrsOverride::ScopedOutsAndErrsOverride(raw_fd_ostream *NewOuts,
 ScopedOutsAndErrsOverride::~ScopedOutsAndErrsOverride() {
   OutsOverride = PrevOuts;
   ErrsOverride = PrevErrs;
+}
+
+std::pair<raw_fd_ostream *, raw_fd_ostream *>
+ScopedOutsAndErrsOverride::getActiveOverrides() {
+  return {OutsOverride, ErrsOverride};
 }
 
 //===----------------------------------------------------------------------===//
