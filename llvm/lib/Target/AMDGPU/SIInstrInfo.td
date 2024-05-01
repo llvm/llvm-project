@@ -1002,6 +1002,9 @@ def SDWAVopcDst : BoolRC {
 class NamedIntOperand<ValueType Type, string Prefix, bit Optional = 1,
                       string name = NAME>
     : CustomOperand<Type, Optional, name> {
+  let PredicateMethod =
+    "getPredicate([](const AMDGPUOperand &Op) -> bool { "#
+    "return Op.isImmTy(AMDGPUOperand::"#ImmTy#"); })";
   string Validator = "[](int64_t V) { return true; }";
   string ConvertMethod = "[](int64_t &V) { return "#Validator#"(V); }";
   let ParserMethod =
