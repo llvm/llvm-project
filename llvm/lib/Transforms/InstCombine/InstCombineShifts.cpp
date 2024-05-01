@@ -778,7 +778,7 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
   // (X / +DivC) >> (Width - 1) --> ext (X <= -DivC)
   // (X / -DivC) >> (Width - 1) --> ext (X >= +DivC)
   const APInt *DivC;
-  if (!IsLeftShift && match(C1, m_SpecificIntAllowUndef(TypeBits - 1)) &&
+  if (!IsLeftShift && match(C1, m_SpecificIntAllowPoison(TypeBits - 1)) &&
       match(Op0, m_SDiv(m_Value(X), m_APInt(DivC))) && !DivC->isZero() &&
       !DivC->isMinSignedValue()) {
     Constant *NegDivC = ConstantInt::get(Ty, -(*DivC));
@@ -1120,14 +1120,6 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
       return BinaryOperator::CreateAnd(Trunc, ConstantInt::get(Ty, Mask));
     }
 
-    if (match(Op0, m_Shl(m_Value(X), m_APInt(C1))) && C1->ult(BitWidth)) {
-      unsigned AmtSum = ShAmtC + C1->getZExtValue();
-      // Oversized shifts are simplified to zero in InstSimplify.
-      if (AmtSum < BitWidth)
-        // (X << C1) << C2 --> X << (C1 + C2)
-        return BinaryOperator::CreateShl(X, ConstantInt::get(Ty, AmtSum));
-    }
-
     // If we have an opposite shift by the same amount, we may be able to
     // reorder binops and shifts to eliminate math/logic.
     auto isSuitableBinOpcode = [](Instruction::BinaryOps BinOpcode) {
@@ -1264,7 +1256,7 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
 
   // (iN (~X) u>> (N - 1)) --> zext (X > -1)
   if (match(Op0, m_OneUse(m_Not(m_Value(X)))) &&
-      match(Op1, m_SpecificIntAllowUndef(BitWidth - 1)))
+      match(Op1, m_SpecificIntAllowPoison(BitWidth - 1)))
     return new ZExtInst(Builder.CreateIsNotNeg(X, "isnotneg"), Ty);
 
   if (match(Op1, m_APInt(C))) {
@@ -1392,14 +1384,6 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
         Value *Signbit = Builder.CreateLShr(X, ShAmtC);
         return BinaryOperator::CreateAnd(Signbit, X);
       }
-    }
-
-    // (X >>u C1) >>u C --> X >>u (C1 + C)
-    if (match(Op0, m_LShr(m_Value(X), m_APInt(C1)))) {
-      // Oversized shifts are simplified to zero in InstSimplify.
-      unsigned AmtSum = ShAmtC + C1->getZExtValue();
-      if (AmtSum < BitWidth)
-        return BinaryOperator::CreateLShr(X, ConstantInt::get(Ty, AmtSum));
     }
 
     Instruction *TruncSrc;
@@ -1666,9 +1650,9 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
   // as the pattern to splat the lowest bit.
   // FIXME: iff X is already masked, we don't need the one-use check.
   Value *X;
-  if (match(Op1, m_SpecificIntAllowUndef(BitWidth - 1)) &&
+  if (match(Op1, m_SpecificIntAllowPoison(BitWidth - 1)) &&
       match(Op0, m_OneUse(m_Shl(m_Value(X),
-                                m_SpecificIntAllowUndef(BitWidth - 1))))) {
+                                m_SpecificIntAllowPoison(BitWidth - 1))))) {
     Constant *Mask = ConstantInt::get(Ty, 1);
     // Retain the knowledge about the ignored lanes.
     Mask = Constant::mergeUndefsWith(

@@ -32,7 +32,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 set( LIBCLC_MIN_LLVM 3.9.0 )
 
 set( LIBCLC_TARGETS_TO_BUILD "all"
-    CACHE STRING "Semicolon-separated list of targets to build, or 'all'." )
+    CACHE STRING "Semicolon-separated list of libclc targets to build, or 'all'." )
 
 option( ENABLE_RUNTIME_SUBNORMAL "Enable runtime linking of subnormal support." OFF )
 
@@ -50,11 +50,13 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
   endif()
 
   # Import required tools as targets
-  foreach( tool IN ITEMS clang llvm-as llvm-link opt )
-    find_program( LLVM_TOOL_${tool} ${tool} PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
-    add_executable( libclc::${tool} IMPORTED GLOBAL )
-    set_target_properties( libclc::${tool} PROPERTIES IMPORTED_LOCATION ${LLVM_TOOL_${tool}} )
-  endforeach()
+  if( NOT EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
+    foreach( tool IN ITEMS clang llvm-as llvm-link opt )
+      find_program( LLVM_TOOL_${tool} ${tool} PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
+      add_executable( libclc::${tool} IMPORTED GLOBAL )
+      set_target_properties( libclc::${tool} PROPERTIES IMPORTED_LOCATION ${LLVM_TOOL_${tool}} )
+    endforeach()
+  endif()
 else()
   # In-tree configuration
   set( LIBCLC_STANDALONE_BUILD FALSE )
@@ -68,18 +70,43 @@ else()
     message(FATAL_ERROR "Clang is not enabled, but is required to build libclc in-tree")
   endif()
 
+  if( NOT EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
+    foreach( tool IN ITEMS clang llvm-as llvm-link opt )
+      add_executable(libclc::${tool} ALIAS ${tool})
+    endforeach()
+  endif()
+endif()
+
+if( EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
+  message( WARNING "Using custom LLVM tools to build libclc: "
+    "${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR}, "
+    " ensure the tools are up to date." )
+  # Note - use a differently named variable than LLVM_TOOL_${tool} as above, as
+  # the variable name is used to cache the result of find_program. If we used
+  # the same name, a user wouldn't be able to switch a build between default
+  # and custom tools.
   foreach( tool IN ITEMS clang llvm-as llvm-link opt )
-    add_executable(libclc::${tool} ALIAS ${tool})
+    find_program( LLVM_CUSTOM_TOOL_${tool} ${tool}
+      PATHS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
+    add_executable( libclc::${tool} IMPORTED GLOBAL )
+    set_target_properties( libclc::${tool} PROPERTIES
+      IMPORTED_LOCATION ${LLVM_CUSTOM_TOOL_${tool}} )
   endforeach()
 endif()
 
-if( NOT TARGET libclc::clang OR NOT TARGET libclc::opt
-    OR NOT TARGET libclc::llvm-as OR NOT TARGET libclc::llvm-link )
-  message( FATAL_ERROR "libclc toolchain incomplete!" )
-endif()
+foreach( tool IN ITEMS clang opt llvm-as llvm-link )
+  if( NOT TARGET libclc::${tool} )
+    message( FATAL_ERROR "libclc toolchain incomplete - missing tool ${tool}!" )
+  endif()
+endforeach()
 
 # llvm-spirv is an optional dependency, used to build spirv-* targets.
 find_program( LLVM_SPIRV llvm-spirv PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
+
+if( LLVM_SPIRV )
+  add_executable( libclc::llvm-spirv IMPORTED GLOBAL )
+  set_target_properties( libclc::llvm-spirv PROPERTIES IMPORTED_LOCATION ${LLVM_SPIRV} )
+endif()
 
 # List of all targets. Note that some are added dynamically below.
 set( LIBCLC_TARGETS_ALL
@@ -101,7 +128,7 @@ endif()
 
 # spirv-mesa3d and spirv64-mesa3d targets can only be built with the (optional)
 # llvm-spirv external tool.
-if( LLVM_SPIRV )
+if( TARGET libclc::llvm-spirv )
   list( APPEND LIBCLC_TARGETS_ALL  spirv-mesa3d- spirv64-mesa3d- )
 endif()
 
@@ -114,7 +141,7 @@ list( SORT LIBCLC_TARGETS_TO_BUILD )
 # Verify that the user hasn't requested mesa3d targets without an available
 # llvm-spirv tool.
 if( "spirv-mesa3d-" IN_LIST LIBCLC_TARGETS_TO_BUILD OR "spirv64-mesa3d-" IN_LIST LIBCLC_TARGETS_TO_BUILD )
-  if( NOT LLVM_SPIRV )
+  if( NOT TARGET libclc::llvm-spirv )
     message( FATAL_ERROR "SPIR-V targets requested, but spirv-tools is not installed" )
   endif()
 endif()
@@ -363,7 +390,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     if( ARCH STREQUAL spirv OR ARCH STREQUAL spirv64 )
       set( spv_suffix ${arch_suffix}.spv )
       add_custom_command( OUTPUT ${spv_suffix}
-        COMMAND ${LLVM_SPIRV} ${spvflags} -o ${spv_suffix} ${builtins_link_lib}
+        COMMAND libclc::llvm-spirv ${spvflags} -o ${spv_suffix} ${builtins_link_lib}
         DEPENDS ${builtins_link_lib}
       )
       add_custom_target( "prepare-${spv_suffix}" ALL DEPENDS "${spv_suffix}" )

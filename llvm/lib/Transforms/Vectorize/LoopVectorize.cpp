@@ -460,9 +460,9 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
   // must use intrinsics to interleave.
   if (VecTy->isScalableTy()) {
     VectorType *WideVecTy = VectorType::getDoubleElementsVectorType(VecTy);
-    return Builder.CreateIntrinsic(
-        WideVecTy, Intrinsic::experimental_vector_interleave2, Vals,
-        /*FMFSource=*/nullptr, Name);
+    return Builder.CreateIntrinsic(WideVecTy, Intrinsic::vector_interleave2,
+                                   Vals,
+                                   /*FMFSource=*/nullptr, Name);
   }
 
   // Fixed length. Start by concatenating all vectors into a wide vector.
@@ -2517,9 +2517,8 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
       SmallVector<Value *, 2> Ops = {BlockInMaskPart, BlockInMaskPart};
       auto *MaskTy =
           VectorType::get(Builder.getInt1Ty(), VF.getKnownMinValue() * 2, true);
-      return Builder.CreateIntrinsic(
-          MaskTy, Intrinsic::experimental_vector_interleave2, Ops,
-          /*FMFSource=*/nullptr, "interleaved.mask");
+      return Builder.CreateIntrinsic(MaskTy, Intrinsic::vector_interleave2, Ops,
+                                     /*FMFSource=*/nullptr, "interleaved.mask");
     }
 
     if (!BlockInMask)
@@ -2571,7 +2570,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         // Scalable vectors cannot use arbitrary shufflevectors (only splats),
         // so must use intrinsics to deinterleave.
         Value *DI = Builder.CreateIntrinsic(
-            Intrinsic::experimental_vector_deinterleave2, VecTy, NewLoads[Part],
+            Intrinsic::vector_deinterleave2, VecTy, NewLoads[Part],
             /*FMFSource=*/nullptr, "strided.vec");
         unsigned J = 0;
         for (unsigned I = 0; I < InterleaveFactor; ++I) {
@@ -3868,6 +3867,13 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
     if (!ScalarInd)
       continue;
 
+    // If the induction variable update is a fixed-order recurrence, neither the
+    // induction variable or its update should be marked scalar after
+    // vectorization.
+    auto *IndUpdatePhi = dyn_cast<PHINode>(IndUpdate);
+    if (IndUpdatePhi && Legal->isFixedOrderRecurrence(IndUpdatePhi))
+      continue;
+
     // Determine if all users of the induction variable update instruction are
     // scalar after vectorization.
     auto ScalarIndUpdate =
@@ -4160,7 +4166,6 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
 
   // Worklist containing uniform instructions demanding lane 0.
   SetVector<Instruction *> Worklist;
-  BasicBlock *Latch = TheLoop->getLoopLatch();
 
   // Add uniform instructions demanding lane 0 to the worklist. Instructions
   // that are scalar with predication must not be considered uniform after
@@ -4182,12 +4187,16 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     Worklist.insert(I);
   };
 
-  // Start with the conditional branch. If the branch condition is an
-  // instruction contained in the loop that is only used by the branch, it is
-  // uniform.
-  auto *Cmp = dyn_cast<Instruction>(Latch->getTerminator()->getOperand(0));
-  if (Cmp && TheLoop->contains(Cmp) && Cmp->hasOneUse())
-    addToWorklistIfAllowed(Cmp);
+  // Start with the conditional branches exiting the loop. If the branch
+  // condition is an instruction contained in the loop that is only used by the
+  // branch, it is uniform.
+  SmallVector<BasicBlock *> Exiting;
+  TheLoop->getExitingBlocks(Exiting);
+  for (BasicBlock *E : Exiting) {
+    auto *Cmp = dyn_cast<Instruction>(E->getTerminator()->getOperand(0));
+    if (Cmp && TheLoop->contains(Cmp) && Cmp->hasOneUse())
+      addToWorklistIfAllowed(Cmp);
+  }
 
   auto PrevVF = VF.divideCoefficientBy(2);
   // Return true if all lanes perform the same memory operation, and we can
@@ -4328,6 +4337,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   // nodes separately. An induction variable will remain uniform if all users
   // of the induction variable and induction variable update remain uniform.
   // The code below handles both pointer and non-pointer induction variables.
+  BasicBlock *Latch = TheLoop->getLoopLatch();
   for (const auto &Induction : Legal->getInductionVars()) {
     auto *Ind = Induction.first;
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
@@ -5814,7 +5824,8 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
         // invalid scalarization costs.
         // Do not apply discount logic if hacked cost is needed
         // for emulated masked memrefs.
-        if (!VF.isScalable() && !useEmulatedMaskMemRefHack(&I, VF) &&
+        if (!isScalarAfterVectorization(&I, VF) && !VF.isScalable() &&
+            !useEmulatedMaskMemRefHack(&I, VF) &&
             computePredInstDiscount(&I, ScalarCosts, VF) >= 0)
           ScalarCostsVF.insert(ScalarCosts.begin(), ScalarCosts.end());
         // Remember that BB will remain after vectorization.
@@ -6865,11 +6876,15 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     // In cases of scalarized and predicated instructions, there will be VF
     // predicated blocks in the vectorized loop. Each branch around these
     // blocks requires also an extract of its vector compare i1 element.
+    // Note that the conditional branch from the loop latch will be replaced by
+    // a single branch controlling the loop, so there is no extra overhead from
+    // scalarization.
     bool ScalarPredicatedBB = false;
     BranchInst *BI = cast<BranchInst>(I);
     if (VF.isVector() && BI->isConditional() &&
         (PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(0)) ||
-         PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(1))))
+         PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(1))) &&
+        BI->getParent() != TheLoop->getLoopLatch())
       ScalarPredicatedBB = true;
 
     if (ScalarPredicatedBB) {
@@ -8809,12 +8824,24 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     // Only handle constant strides for now.
     if (!ScevStride)
       continue;
-    Constant *CI = ConstantInt::get(Stride->getType(), ScevStride->getAPInt());
 
-    auto *ConstVPV = Plan->getOrAddLiveIn(CI);
-    // The versioned value may not be used in the loop directly, so just add a
-    // new live-in in those cases.
-    Plan->getOrAddLiveIn(StrideV)->replaceAllUsesWith(ConstVPV);
+    auto *CI = Plan->getOrAddLiveIn(
+        ConstantInt::get(Stride->getType(), ScevStride->getAPInt()));
+    if (VPValue *StrideVPV = Plan->getLiveIn(StrideV))
+      StrideVPV->replaceAllUsesWith(CI);
+
+    // The versioned value may not be used in the loop directly but through a
+    // sext/zext. Add new live-ins in those cases.
+    for (Value *U : StrideV->users()) {
+      if (!isa<SExtInst, ZExtInst>(U))
+        continue;
+      VPValue *StrideVPV = Plan->getLiveIn(U);
+      if (!StrideVPV)
+        continue;
+      VPValue *CI = Plan->getOrAddLiveIn(ConstantInt::get(
+          U->getType(), ScevStride->getAPInt().getSExtValue()));
+      StrideVPV->replaceAllUsesWith(CI);
+    }
   }
 
   VPlanTransforms::dropPoisonGeneratingRecipes(*Plan, [this](BasicBlock *BB) {
@@ -9316,52 +9343,6 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
       State.ILV->scalarizeInstruction(UI, this, VPIteration(Part, Lane), State);
 }
 
-/// Creates either vp_store or vp_scatter intrinsics calls to represent
-/// predicated store/scatter.
-static Instruction *
-lowerStoreUsingVectorIntrinsics(IRBuilderBase &Builder, Value *Addr,
-                                Value *StoredVal, bool IsScatter, Value *Mask,
-                                Value *EVL, const Align &Alignment) {
-  CallInst *Call;
-  if (IsScatter) {
-    Call = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),
-                                   Intrinsic::vp_scatter,
-                                   {StoredVal, Addr, Mask, EVL});
-  } else {
-    VectorBuilder VBuilder(Builder);
-    VBuilder.setEVL(EVL).setMask(Mask);
-    Call = cast<CallInst>(VBuilder.createVectorInstruction(
-        Instruction::Store, Type::getVoidTy(EVL->getContext()),
-        {StoredVal, Addr}));
-  }
-  Call->addParamAttr(
-      1, Attribute::getWithAlignment(Call->getContext(), Alignment));
-  return Call;
-}
-
-/// Creates either vp_load or vp_gather intrinsics calls to represent
-/// predicated load/gather.
-static Instruction *lowerLoadUsingVectorIntrinsics(IRBuilderBase &Builder,
-                                                   VectorType *DataTy,
-                                                   Value *Addr, bool IsGather,
-                                                   Value *Mask, Value *EVL,
-                                                   const Align &Alignment) {
-  CallInst *Call;
-  if (IsGather) {
-    Call =
-        Builder.CreateIntrinsic(DataTy, Intrinsic::vp_gather, {Addr, Mask, EVL},
-                                nullptr, "wide.masked.gather");
-  } else {
-    VectorBuilder VBuilder(Builder);
-    VBuilder.setEVL(EVL).setMask(Mask);
-    Call = cast<CallInst>(VBuilder.createVectorInstruction(
-        Instruction::Load, DataTy, Addr, "vp.op.load"));
-  }
-  Call->addParamAttr(
-      0, Attribute::getWithAlignment(Call->getContext(), Alignment));
-  return Call;
-}
-
 void VPWidenLoadRecipe::execute(VPTransformState &State) {
   auto *LI = cast<LoadInst>(&Ingredient);
 
@@ -9383,46 +9364,60 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
         Mask = Builder.CreateVectorReverse(Mask, "reverse");
     }
 
-    // TODO: split this into several classes for better design.
-    if (State.EVL) {
-      assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
-                              "explicit vector length.");
-      assert(cast<VPInstruction>(State.EVL)->getOpcode() ==
-                 VPInstruction::ExplicitVectorLength &&
-             "EVL must be VPInstruction::ExplicitVectorLength.");
-      Value *EVL = State.get(State.EVL, VPIteration(0, 0));
-      // If EVL is not nullptr, then EVL must be a valid value set during plan
-      // creation, possibly default value = whole vector register length. EVL
-      // is created only if TTI prefers predicated vectorization, thus if EVL
-      // is not nullptr it also implies preference for predicated
-      // vectorization.
-      // FIXME: Support reverse loading after vp_reverse is added.
-      NewLI = lowerLoadUsingVectorIntrinsics(
-          Builder, DataTy, State.get(getAddr(), Part, !CreateGather),
-          CreateGather, Mask, EVL, Alignment);
-    } else if (CreateGather) {
-      Value *VectorGep = State.get(getAddr(), Part);
-      NewLI = Builder.CreateMaskedGather(DataTy, VectorGep, Alignment, Mask,
-                                         nullptr, "wide.masked.gather");
-      State.addMetadata(NewLI, LI);
+    Value *Addr = State.get(getAddr(), Part, /*IsScalar*/ !CreateGather);
+    if (CreateGather) {
+      NewLI = Builder.CreateMaskedGather(DataTy, Addr, Alignment, Mask, nullptr,
+                                         "wide.masked.gather");
+    } else if (Mask) {
+      NewLI = Builder.CreateMaskedLoad(DataTy, Addr, Alignment, Mask,
+                                       PoisonValue::get(DataTy),
+                                       "wide.masked.load");
     } else {
-      auto *VecPtr = State.get(getAddr(), Part, /*IsScalar*/ true);
-      if (Mask)
-        NewLI = Builder.CreateMaskedLoad(DataTy, VecPtr, Alignment, Mask,
-                                         PoisonValue::get(DataTy),
-                                         "wide.masked.load");
-      else
-        NewLI =
-            Builder.CreateAlignedLoad(DataTy, VecPtr, Alignment, "wide.load");
-
-      // Add metadata to the load, but setVectorValue to the reverse shuffle.
-      State.addMetadata(NewLI, LI);
-      if (Reverse)
-        NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
+      NewLI = Builder.CreateAlignedLoad(DataTy, Addr, Alignment, "wide.load");
     }
-
+    // Add metadata to the load, but setVectorValue to the reverse shuffle.
+    State.addMetadata(NewLI, LI);
+    if (Reverse)
+      NewLI = Builder.CreateVectorReverse(NewLI, "reverse");
     State.set(this, NewLI, Part);
   }
+}
+
+void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
+  assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
+                          "explicit vector length.");
+  // FIXME: Support reverse loading after vp_reverse is added.
+  assert(!isReverse() && "Reverse loads are not implemented yet.");
+
+  auto *LI = cast<LoadInst>(&Ingredient);
+
+  Type *ScalarDataTy = getLoadStoreType(&Ingredient);
+  auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+  bool CreateGather = !isConsecutive();
+
+  auto &Builder = State.Builder;
+  State.setDebugLocFrom(getDebugLoc());
+  CallInst *NewLI;
+  Value *EVL = State.get(getEVL(), VPIteration(0, 0));
+  Value *Addr = State.get(getAddr(), 0, !CreateGather);
+  Value *Mask = getMask()
+                    ? State.get(getMask(), 0)
+                    : Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  if (CreateGather) {
+    NewLI =
+        Builder.CreateIntrinsic(DataTy, Intrinsic::vp_gather, {Addr, Mask, EVL},
+                                nullptr, "wide.masked.gather");
+  } else {
+    VectorBuilder VBuilder(Builder);
+    VBuilder.setEVL(EVL).setMask(Mask);
+    NewLI = cast<CallInst>(VBuilder.createVectorInstruction(
+        Instruction::Load, DataTy, Addr, "vp.op.load"));
+  }
+  NewLI->addParamAttr(
+      0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
+  State.addMetadata(NewLI, LI);
+  State.set(this, NewLI, 0);
 }
 
 void VPWidenStoreRecipe::execute(VPTransformState &State) {
@@ -9448,43 +9443,60 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
 
     Value *StoredVal = State.get(StoredVPValue, Part);
     if (isReverse()) {
-      assert(!State.EVL && "reversing not yet implemented with EVL");
       // If we store to reverse consecutive memory locations, then we need
       // to reverse the order of elements in the stored value.
       StoredVal = Builder.CreateVectorReverse(StoredVal, "reverse");
       // We don't want to update the value in the map as it might be used in
       // another expression. So don't call resetVectorValue(StoredVal).
     }
-    // TODO: split this into several classes for better design.
-    if (State.EVL) {
-      assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
-                              "explicit vector length.");
-      assert(cast<VPInstruction>(State.EVL)->getOpcode() ==
-                 VPInstruction::ExplicitVectorLength &&
-             "EVL must be VPInstruction::ExplicitVectorLength.");
-      Value *EVL = State.get(State.EVL, VPIteration(0, 0));
-      // If EVL is not nullptr, then EVL must be a valid value set during plan
-      // creation, possibly default value = whole vector register length. EVL
-      // is created only if TTI prefers predicated vectorization, thus if EVL
-      // is not nullptr it also implies preference for predicated
-      // vectorization.
-      // FIXME: Support reverse store after vp_reverse is added.
-      NewSI = lowerStoreUsingVectorIntrinsics(
-          Builder, State.get(getAddr(), Part, !CreateScatter), StoredVal,
-          CreateScatter, Mask, EVL, Alignment);
-    } else if (CreateScatter) {
-      Value *VectorGep = State.get(getAddr(), Part);
-      NewSI =
-          Builder.CreateMaskedScatter(StoredVal, VectorGep, Alignment, Mask);
-    } else {
-      auto *VecPtr = State.get(getAddr(), Part, /*IsScalar*/ true);
-      if (Mask)
-        NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr, Alignment, Mask);
-      else
-        NewSI = Builder.CreateAlignedStore(StoredVal, VecPtr, Alignment);
-    }
+    Value *Addr = State.get(getAddr(), Part, /*IsScalar*/ !CreateScatter);
+    if (CreateScatter)
+      NewSI = Builder.CreateMaskedScatter(StoredVal, Addr, Alignment, Mask);
+    else if (Mask)
+      NewSI = Builder.CreateMaskedStore(StoredVal, Addr, Alignment, Mask);
+    else
+      NewSI = Builder.CreateAlignedStore(StoredVal, Addr, Alignment);
     State.addMetadata(NewSI, SI);
   }
+}
+
+void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
+  assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
+                          "explicit vector length.");
+  // FIXME: Support reverse loading after vp_reverse is added.
+  assert(!isReverse() && "Reverse store are not implemented yet.");
+
+  auto *SI = cast<StoreInst>(&Ingredient);
+
+  VPValue *StoredValue = getStoredValue();
+  bool CreateScatter = !isConsecutive();
+  const Align Alignment = getLoadStoreAlignment(&Ingredient);
+
+  auto &Builder = State.Builder;
+  State.setDebugLocFrom(getDebugLoc());
+
+  CallInst *NewSI = nullptr;
+  Value *StoredVal = State.get(StoredValue, 0);
+  Value *EVL = State.get(getEVL(), VPIteration(0, 0));
+  // FIXME: Support reverse store after vp_reverse is added.
+  Value *Mask = getMask()
+                    ? State.get(getMask(), 0)
+                    : Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  Value *Addr = State.get(getAddr(), 0, !CreateScatter);
+  if (CreateScatter) {
+    NewSI = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),
+                                    Intrinsic::vp_scatter,
+                                    {StoredVal, Addr, Mask, EVL});
+  } else {
+    VectorBuilder VBuilder(Builder);
+    VBuilder.setEVL(EVL).setMask(Mask);
+    NewSI = cast<CallInst>(VBuilder.createVectorInstruction(
+        Instruction::Store, Type::getVoidTy(EVL->getContext()),
+        {StoredVal, Addr}));
+  }
+  NewSI->addParamAttr(
+      1, Attribute::getWithAlignment(NewSI->getContext(), Alignment));
+  State.addMetadata(NewSI, SI);
 }
 
 // Determine how to lower the scalar epilogue, which depends on 1) optimising

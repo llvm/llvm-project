@@ -5688,6 +5688,13 @@ let Predicates = [UseSSE41, OptForSize] in {
 // SSE4.1 - Packed Bit Test
 //===----------------------------------------------------------------------===//
 
+// ptest is commutable if only the Z flag is used. If the C flag is used,
+// commuting would change which operand is inverted.
+def X86ptest_commutable : PatFrag<(ops node:$src1, node:$src2),
+                                  (X86ptest node:$src1, node:$src2), [{
+  return onlyUsesZeroFlag(SDValue(Node, 0));
+}]>;
+
 // ptest instruction we'll lower to this in X86ISelLowering primarily from
 // the intel intrinsic that corresponds to this.
 let Defs = [EFLAGS], Predicates = [HasAVX] in {
@@ -5723,6 +5730,17 @@ def PTESTrm : SS48I<0x17, MRMSrcMem, (outs), (ins VR128:$src1, f128mem:$src2),
               Sched<[SchedWriteVecTest.XMM.Folded, SchedWriteVecTest.XMM.ReadAfterFold]>;
 }
 
+let Predicates = [HasAVX] in {
+  def : Pat<(X86ptest_commutable (loadv2i64 addr:$src2), VR128:$src1),
+            (VPTESTrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86ptest_commutable (loadv4i64 addr:$src2), VR256:$src1),
+            (VPTESTYrm VR256:$src1, addr:$src2)>;
+}
+let Predicates = [UseSSE41] in {
+  def : Pat<(X86ptest_commutable (memopv2i64 addr:$src2), VR128:$src1),
+            (PTESTrm VR128:$src1, addr:$src2)>;
+}
+
 // The bit test instructions below are AVX only
 multiclass avx_bittest<bits<8> opc, string OpcodeStr, RegisterClass RC,
                        X86MemOperand x86memop, PatFrag mem_frag, ValueType vt,
@@ -5737,6 +5755,13 @@ multiclass avx_bittest<bits<8> opc, string OpcodeStr, RegisterClass RC,
             Sched<[sched.Folded, sched.ReadAfterFold]>, VEX;
 }
 
+// testps/testpd are commutable if only the Z flag is used. If the C flag is
+// used, commuting would change which operand is inverted.
+def X86testp_commutable : PatFrag<(ops node:$src1, node:$src2),
+                                  (X86testp node:$src1, node:$src2), [{
+  return onlyUsesZeroFlag(SDValue(Node, 0));
+}]>;
+
 let Defs = [EFLAGS], Predicates = [HasAVX] in {
 let ExeDomain = SSEPackedSingle in {
 defm VTESTPS  : avx_bittest<0x0E, "vtestps", VR128, f128mem, loadv4f32, v4f32,
@@ -5750,6 +5775,18 @@ defm VTESTPD  : avx_bittest<0x0F, "vtestpd", VR128, f128mem, loadv2f64, v2f64,
 defm VTESTPDY : avx_bittest<0x0F, "vtestpd", VR256, f256mem, loadv4f64, v4f64,
                             SchedWriteFTest.YMM>, VEX_L;
 }
+}
+
+let Predicates = [HasAVX] in {
+  def : Pat<(X86testp_commutable (loadv4f32 addr:$src2), VR128:$src),
+            (VTESTPSrm VR128:$src, addr:$src2)>;
+  def : Pat<(X86testp_commutable (loadv8f32 addr:$src2), VR256:$src),
+            (VTESTPSYrm VR256:$src, addr:$src2)>;
+
+  def : Pat<(X86testp_commutable (loadv2f64 addr:$src2), VR128:$src),
+            (VTESTPDrm VR128:$src, addr:$src2)>;
+  def : Pat<(X86testp_commutable (loadv4f64 addr:$src2), VR256:$src),
+            (VTESTPDYrm VR256:$src, addr:$src2)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -6689,31 +6726,31 @@ let Predicates = [HasCRC32, HasEGPR, In64BitMode], OpMap = T_MAP4, OpEnc = EncEV
 
 // FIXME: Is there a better scheduler class for SHA than WriteVecIMul?
 multiclass SHAI_binop<bits<8> Opc, string OpcodeStr, Intrinsic IntId,
-                      X86FoldableSchedWrite sched, string Suffix = "", bit UsesXMM0 = 0> {
-  def rr#Suffix : I<Opc, MRMSrcReg, (outs VR128:$dst),
-                    (ins VR128:$src1, VR128:$src2),
-                    !if(UsesXMM0,
-                        !strconcat(OpcodeStr, "\t{%xmm0, $src2, $dst|$dst, $src2, xmm0}"),
-                        !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}")),
-                    [!if(UsesXMM0,
-                         (set VR128:$dst, (IntId VR128:$src1, VR128:$src2, XMM0)),
-                         (set VR128:$dst, (IntId VR128:$src1, VR128:$src2)))]>,
-                    T8, Sched<[sched]>;
+                      X86FoldableSchedWrite sched, bit UsesXMM0 = 0> {
+  def rr : I<Opc, MRMSrcReg, (outs VR128:$dst),
+             (ins VR128:$src1, VR128:$src2),
+             !if(UsesXMM0,
+                 !strconcat(OpcodeStr, "\t{%xmm0, $src2, $dst|$dst, $src2, xmm0}"),
+                 !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}")),
+             [!if(UsesXMM0,
+                  (set VR128:$dst, (IntId VR128:$src1, VR128:$src2, XMM0)),
+                  (set VR128:$dst, (IntId VR128:$src1, VR128:$src2)))]>,
+             T8, Sched<[sched]>;
 
-  def rm#Suffix : I<Opc, MRMSrcMem, (outs VR128:$dst),
-                    (ins VR128:$src1, i128mem:$src2),
-                    !if(UsesXMM0,
-                        !strconcat(OpcodeStr, "\t{%xmm0, $src2, $dst|$dst, $src2, xmm0}"),
-                        !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}")),
-                    [!if(UsesXMM0,
-                         (set VR128:$dst, (IntId VR128:$src1,
-                           (memop addr:$src2), XMM0)),
-                         (set VR128:$dst, (IntId VR128:$src1,
-                           (memop addr:$src2))))]>, T8,
-                    Sched<[sched.Folded, sched.ReadAfterFold]>;
+  def rm : I<Opc, MRMSrcMem, (outs VR128:$dst),
+             (ins VR128:$src1, i128mem:$src2),
+             !if(UsesXMM0,
+                 !strconcat(OpcodeStr, "\t{%xmm0, $src2, $dst|$dst, $src2, xmm0}"),
+                 !strconcat(OpcodeStr, "\t{$src2, $dst|$dst, $src2}")),
+             [!if(UsesXMM0,
+                  (set VR128:$dst, (IntId VR128:$src1,
+                    (memop addr:$src2), XMM0)),
+                  (set VR128:$dst, (IntId VR128:$src1,
+                    (memop addr:$src2))))]>, T8,
+             Sched<[sched.Folded, sched.ReadAfterFold]>;
 }
 
-let Constraints = "$src1 = $dst", Predicates = [HasSHA, NoEGPR] in {
+let Constraints = "$src1 = $dst", Predicates = [HasSHA] in {
   def SHA1RNDS4rri : Ii8<0xCC, MRMSrcReg, (outs VR128:$dst),
                          (ins VR128:$src1, VR128:$src2, u8imm:$src3),
                          "sha1rnds4\t{$src3, $src2, $dst|$dst, $src2, $src3}",
@@ -6740,7 +6777,7 @@ let Constraints = "$src1 = $dst", Predicates = [HasSHA, NoEGPR] in {
 
   let Uses=[XMM0] in
   defm SHA256RNDS2 : SHAI_binop<0xCB, "sha256rnds2", int_x86_sha256rnds2,
-                                SchedWriteVecIMul.XMM, "", 1>;
+                                SchedWriteVecIMul.XMM, 1>;
 
   defm SHA256MSG1 : SHAI_binop<0xCC, "sha256msg1", int_x86_sha256msg1,
                                SchedWriteVecIMul.XMM>;
@@ -6748,47 +6785,6 @@ let Constraints = "$src1 = $dst", Predicates = [HasSHA, NoEGPR] in {
                                SchedWriteVecIMul.XMM>;
 }
 
-let Constraints = "$src1 = $dst", Predicates = [HasSHA, HasEGPR, In64BitMode] in {
-  def SHA1RNDS4rri_EVEX: Ii8<0xD4, MRMSrcReg, (outs VR128:$dst),
-                             (ins VR128:$src1, VR128:$src2, u8imm:$src3),
-                             "sha1rnds4\t{$src3, $src2, $dst|$dst, $src2, $src3}",
-                             [(set VR128:$dst,
-                               (int_x86_sha1rnds4 VR128:$src1, VR128:$src2,
-                                (i8 timm:$src3)))]>,
-                         EVEX, NoCD8, T_MAP4, Sched<[SchedWriteVecIMul.XMM]>;
-  def SHA1RNDS4rmi_EVEX: Ii8<0xD4, MRMSrcMem, (outs VR128:$dst),
-                             (ins VR128:$src1, i128mem:$src2, u8imm:$src3),
-                             "sha1rnds4\t{$src3, $src2, $dst|$dst, $src2, $src3}",
-                             [(set VR128:$dst,
-                               (int_x86_sha1rnds4 VR128:$src1,
-                                (memop addr:$src2),
-                                (i8 timm:$src3)))]>,
-                         EVEX, NoCD8, T_MAP4,
-                         Sched<[SchedWriteVecIMul.XMM.Folded,
-                                SchedWriteVecIMul.XMM.ReadAfterFold]>;
-
-  defm SHA1NEXTE : SHAI_binop<0xD8, "sha1nexte", int_x86_sha1nexte,
-                                   SchedWriteVecIMul.XMM, "_EVEX">,
-                        EVEX, NoCD8, T_MAP4;
-  defm SHA1MSG1  : SHAI_binop<0xD9, "sha1msg1", int_x86_sha1msg1,
-                              SchedWriteVecIMul.XMM, "_EVEX">,
-                   EVEX, NoCD8, T_MAP4;
-  defm SHA1MSG2  : SHAI_binop<0xDA, "sha1msg2", int_x86_sha1msg2,
-                              SchedWriteVecIMul.XMM, "_EVEX">,
-                   EVEX, NoCD8, T_MAP4;
-
-  let Uses=[XMM0] in
-  defm SHA256RNDS2 : SHAI_binop<0xDB, "sha256rnds2", int_x86_sha256rnds2,
-                                SchedWriteVecIMul.XMM, "_EVEX", 1>,
-                     EVEX, NoCD8, T_MAP4;
-
-  defm SHA256MSG1 : SHAI_binop<0xDC, "sha256msg1", int_x86_sha256msg1,
-                               SchedWriteVecIMul.XMM, "_EVEX">,
-                    EVEX, NoCD8, T_MAP4;
-  defm SHA256MSG2 : SHAI_binop<0xDD, "sha256msg2", int_x86_sha256msg2,
-                               SchedWriteVecIMul.XMM, "_EVEX">,
-                    EVEX, NoCD8, T_MAP4;
-}
 
 //===----------------------------------------------------------------------===//
 // AES-NI Instructions

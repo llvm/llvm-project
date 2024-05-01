@@ -777,7 +777,9 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"identity", SameType, Rank::scalar, Optionality::optional},
             {"ordered", AnyLogical, Rank::scalar, Optionality::optional}},
         SameType, Rank::scalar, IntrinsicClass::transformationalFunction},
-    {"repeat", {{"string", SameCharNoLen, Rank::scalar}, {"ncopies", AnyInt}},
+    {"repeat",
+        {{"string", SameCharNoLen, Rank::scalar},
+            {"ncopies", AnyInt, Rank::scalar}},
         SameCharNoLen, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"reshape",
         {{"source", SameType, Rank::array}, {"shape", AnyInt, Rank::shape},
@@ -2862,7 +2864,8 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
                                       characteristics::DummyArgument{"x"s,
                                           characteristics::DummyDataObject{
                                               std::move(*typeAndShape)}}},
-                                  characteristics::Procedure::Attrs{}}},
+                                  characteristics::Procedure::Attrs{
+                                      characteristics::Procedure::Attr::Pure}}},
           std::move(arguments)};
     }
   }

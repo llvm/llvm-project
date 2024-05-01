@@ -309,6 +309,7 @@ private:
   SDValue PromoteIntRes_CTLZ(SDNode *N);
   SDValue PromoteIntRes_CTPOP_PARITY(SDNode *N);
   SDValue PromoteIntRes_CTTZ(SDNode *N);
+  SDValue PromoteIntRes_VP_CttzElements(SDNode *N);
   SDValue PromoteIntRes_EXTRACT_VECTOR_ELT(SDNode *N);
   SDValue PromoteIntRes_FP_TO_XINT(SDNode *N);
   SDValue PromoteIntRes_FP_TO_XINT_SAT(SDNode *N);
@@ -389,7 +390,6 @@ private:
   SDValue PromoteIntOp_MLOAD(MaskedLoadSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_MSCATTER(MaskedScatterSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_MGATHER(MaskedGatherSDNode *N, unsigned OpNo);
-  SDValue PromoteIntOp_ADDSUBO_CARRY(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_FRAMERETURNADDR(SDNode *N);
   SDValue PromoteIntOp_FIX(SDNode *N);
   SDValue PromoteIntOp_ExpOp(SDNode *N);
@@ -692,6 +692,7 @@ private:
   SDValue PromoteFloatRes_FP_ROUND(SDNode *N);
   SDValue PromoteFloatRes_STRICT_FP_ROUND(SDNode *N);
   SDValue PromoteFloatRes_LOAD(SDNode *N);
+  SDValue PromoteFloatRes_ATOMIC_LOAD(SDNode *N);
   SDValue PromoteFloatRes_SELECT(SDNode *N);
   SDValue PromoteFloatRes_SELECT_CC(SDNode *N);
   SDValue PromoteFloatRes_UnaryOp(SDNode *N);
@@ -735,6 +736,7 @@ private:
   SDValue SoftPromoteHalfRes_FFREXP(SDNode *N);
   SDValue SoftPromoteHalfRes_FP_ROUND(SDNode *N);
   SDValue SoftPromoteHalfRes_LOAD(SDNode *N);
+  SDValue SoftPromoteHalfRes_ATOMIC_LOAD(SDNode *N);
   SDValue SoftPromoteHalfRes_SELECT(SDNode *N);
   SDValue SoftPromoteHalfRes_SELECT_CC(SDNode *N);
   SDValue SoftPromoteHalfRes_UnaryOp(SDNode *N);
@@ -911,6 +913,7 @@ private:
   SDValue SplitVecOp_FP_ROUND(SDNode *N);
   SDValue SplitVecOp_FPOpDifferentTypes(SDNode *N);
   SDValue SplitVecOp_FP_TO_XINT_SAT(SDNode *N);
+  SDValue SplitVecOp_VP_CttzElements(SDNode *N);
 
   //===--------------------------------------------------------------------===//
   // Vector Widening Support: LegalizeVectorTypes.cpp
@@ -985,7 +988,7 @@ private:
   SDValue WidenVecRes_FP_TO_XINT_SAT(SDNode *N);
   SDValue WidenVecRes_XRINT(SDNode *N);
   SDValue WidenVecRes_FCOPYSIGN(SDNode *N);
-  SDValue WidenVecRes_IS_FPCLASS(SDNode *N);
+  SDValue WidenVecRes_UnarySameEltsWithScalarArg(SDNode *N);
   SDValue WidenVecRes_ExpOp(SDNode *N);
   SDValue WidenVecRes_Unary(SDNode *N);
   SDValue WidenVecRes_InregOp(SDNode *N);
@@ -1018,6 +1021,7 @@ private:
   SDValue WidenVecOp_VECREDUCE_SEQ(SDNode *N);
   SDValue WidenVecOp_VP_REDUCE(SDNode *N);
   SDValue WidenVecOp_ExpOp(SDNode *N);
+  SDValue WidenVecOp_VP_CttzElements(SDNode *N);
 
   /// Helper function to generate a set of operations to perform
   /// a vector operation for a wider type.

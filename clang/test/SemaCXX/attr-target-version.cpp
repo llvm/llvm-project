@@ -25,13 +25,13 @@ int __attribute__((target_version("dpb"))) diff_link(void);
 
 int __attribute__((target_version("memtag"))) diff_link1(void) { return 1; }
 //expected-error@+1 {{multiversioned function declaration has a different linkage}}
-static int __attribute__((target_version("mops"))) diff_link1(void);
+static int __attribute__((target_version("bti"))) diff_link1(void);
 
 int __attribute__((target_version("flagm2"))) diff_link2(void) { return 1; }
 extern int __attribute__((target_version("flagm"))) diff_link2(void);
 
 namespace {
-static int __attribute__((target_version("memtag"))) diff_link2(void) { return 2; }
+static int __attribute__((target_version("memtag3"))) diff_link2(void) { return 2; }
 int __attribute__((target_version("sve2-bitperm"))) diff_link2(void) { return 1; }
 } // namespace
 
@@ -49,7 +49,7 @@ double __attribute__((target_version("rcpc"))) diff_type1(void);
 
 auto __attribute__((target_version("rcpc2"))) diff_type2(void) -> int { return 1; }
 //expected-error@+1 {{multiversioned function declaration has a different return type}}
-auto __attribute__((target_version("sve2-aes"))) diff_type2(void) -> long { return (long)1; }
+auto __attribute__((target_version("sve-bf16"))) diff_type2(void) -> long { return (long)1; }
 
 int __attribute__((target_version("fp16fml"))) diff_type3(void) noexcept(false) { return 1; }
 //expected-error@+2 {{exception specification in declaration does not match previous declaration}}
@@ -75,7 +75,7 @@ auto __attribute__((target_version("dpb2"))) ret3(void) -> int { return 1; }
 class Cls {
   __attribute__((target_version("rng"))) Cls();
   // expected-error@-1 {{attribute 'target_version' multiversioned functions do not yet support constructors}}
-  __attribute__((target_version("sve2-aes"))) ~Cls();
+  __attribute__((target_version("sve-i8mm"))) ~Cls();
   // expected-error@-1 {{attribute 'target_version' multiversioned functions do not yet support destructors}}
 
   Cls &__attribute__((target_version("f32mm"))) operator=(const Cls &) = default;
@@ -98,11 +98,11 @@ __attribute__((target_version("jscvt"))) void Decl();
 } // namespace Nms
 
 class Out {
-  int __attribute__((target_version("mops"))) func(void);
-  int __attribute__((target_version("ssbs"))) func(void);
+  int __attribute__((target_version("bti"))) func(void);
+  int __attribute__((target_version("ssbs2"))) func(void);
 };
-int __attribute__((target_version("mops"))) Out::func(void) { return 1; }
-int __attribute__((target_version("ssbs"))) Out::func(void) { return 2; }
+int __attribute__((target_version("bti"))) Out::func(void) { return 1; }
+int __attribute__((target_version("ssbs2"))) Out::func(void) { return 2; }
 // expected-error@+3 {{out-of-line definition of 'func' does not match any declaration in 'Out'}}
 // expected-note@-3 {{member declaration nearly matches}}
 // expected-note@-3 {{member declaration nearly matches}}

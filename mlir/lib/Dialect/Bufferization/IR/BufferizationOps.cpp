@@ -23,9 +23,9 @@ using namespace mlir::bufferization;
 // Helper functions
 //===----------------------------------------------------------------------===//
 
-FailureOr<Value>
-mlir::bufferization::castOrReallocMemRefValue(OpBuilder &b, Value value,
-                                              MemRefType destType) {
+FailureOr<Value> mlir::bufferization::castOrReallocMemRefValue(
+    OpBuilder &b, Value value, MemRefType destType,
+    const BufferizationOptions &options) {
   auto srcType = llvm::cast<MemRefType>(value.getType());
 
   // Element type, rank and memory space must match.
@@ -73,18 +73,21 @@ mlir::bufferization::castOrReallocMemRefValue(OpBuilder &b, Value value,
     Value size = b.create<memref::DimOp>(loc, value, i);
     dynamicOperands.push_back(size);
   }
-  // TODO: Use alloc/memcpy callback from BufferizationOptions if called via
-  // BufferizableOpInterface impl of ToMemrefOp.
-  Value copy = b.create<memref::AllocOp>(loc, destType, dynamicOperands);
-  b.create<memref::CopyOp>(loc, value, copy);
+
+  FailureOr<Value> copy =
+      options.createAlloc(b, loc, destType, dynamicOperands);
+  if (failed(copy))
+    return failure();
+  if (failed(options.createMemCpy(b, loc, value, *copy)))
+    return failure();
   return copy;
 }
 
 /// Try to fold to_memref(to_tensor(x)). If x's type and the result type of the
 /// to_memref op are different, a memref.cast is needed.
-LogicalResult
-mlir::bufferization::foldToMemrefToTensorPair(RewriterBase &rewriter,
-                                              ToMemrefOp toMemref) {
+LogicalResult mlir::bufferization::foldToMemrefToTensorPair(
+    RewriterBase &rewriter, ToMemrefOp toMemref,
+    const BufferizationOptions &options) {
   auto memrefToTensor = toMemref.getTensor().getDefiningOp<ToTensorOp>();
   if (!memrefToTensor)
     return failure();
@@ -105,7 +108,7 @@ mlir::bufferization::foldToMemrefToTensorPair(RewriterBase &rewriter,
   // Ranked memref -> Ranked memref cast.
   if (rankedSrcType && rankedDestType) {
     FailureOr<Value> replacement = castOrReallocMemRefValue(
-        rewriter, memrefToTensor.getMemref(), rankedDestType);
+        rewriter, memrefToTensor.getMemref(), rankedDestType, options);
     if (failed(replacement))
       return failure();
 
@@ -795,7 +798,9 @@ struct ToMemrefToTensorFolding : public OpRewritePattern<ToMemrefOp> {
 
   LogicalResult matchAndRewrite(ToMemrefOp toMemref,
                                 PatternRewriter &rewriter) const final {
-    return foldToMemrefToTensorPair(rewriter, toMemref);
+    BufferizationOptions options;
+    options.bufferAlignment = 0;
+    return foldToMemrefToTensorPair(rewriter, toMemref, options);
   }
 };
 
@@ -843,7 +848,7 @@ void ToMemrefOp::getCanonicalizationPatterns(RewritePatternSet &results,
 LogicalResult ToMemrefOp::bufferize(RewriterBase &rewriter,
                                     const BufferizationOptions &options) {
   // Fold to_memref(to_tensor(x)) to x. Insert a cast if necessary.
-  (void)foldToMemrefToTensorPair(rewriter, *this);
+  (void)foldToMemrefToTensorPair(rewriter, *this, options);
   // Note: The return value of `bufferize` indicates whether there was an error
   // or not. (And not whether the pattern matched or not.)
   return success();

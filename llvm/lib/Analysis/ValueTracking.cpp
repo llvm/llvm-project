@@ -2632,6 +2632,13 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
             Q.DL.getTypeSizeInBits(I->getType()).getFixedValue())
       return isKnownNonZero(I->getOperand(0), Q, Depth);
     break;
+  case Instruction::Trunc:
+    // nuw/nsw trunc preserves zero/non-zero status of input.
+    if (auto *TI = dyn_cast<TruncInst>(I))
+      if (TI->hasNoSignedWrap() || TI->hasNoUnsignedWrap())
+        return isKnownNonZero(TI->getOperand(0), Q, Depth);
+    break;
+
   case Instruction::Sub:
     return isNonZeroSub(DemandedElts, Depth, Q, BitWidth, I->getOperand(0),
                         I->getOperand(1));
@@ -2682,7 +2689,6 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     if (cast<PossiblyExactOperator>(I)->isExact())
       return isKnownNonZero(I->getOperand(0), DemandedElts, Q, Depth);
 
-    std::optional<bool> XUgeY;
     KnownBits XKnown =
         computeKnownBits(I->getOperand(0), DemandedElts, Depth, Q);
     // If X is fully unknown we won't be able to figure anything out so don't
@@ -2698,7 +2704,7 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
       YKnown = YKnown.abs(/*IntMinIsPoison*/ false);
     }
     // If X u>= Y then div is non zero (0/0 is UB).
-    XUgeY = KnownBits::uge(XKnown, YKnown);
+    std::optional<bool> XUgeY = KnownBits::uge(XKnown, YKnown);
     // If X is total unknown or X u< Y we won't be able to prove non-zero
     // with compute known bits so just return early.
     return XUgeY && *XUgeY;
@@ -4116,7 +4122,7 @@ std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
                                                       Value *LHS, Value *RHS,
                                                       bool LookThroughSrc) {
   const APFloat *ConstRHS;
-  if (!match(RHS, m_APFloatAllowUndef(ConstRHS)))
+  if (!match(RHS, m_APFloatAllowPoison(ConstRHS)))
     return {nullptr, fcAllFlags};
 
   return fcmpToClassTest(Pred, F, LHS, ConstRHS, LookThroughSrc);
@@ -4517,7 +4523,7 @@ std::tuple<Value *, FPClassTest, FPClassTest>
 llvm::fcmpImpliesClass(CmpInst::Predicate Pred, const Function &F, Value *LHS,
                        Value *RHS, bool LookThroughSrc) {
   const APFloat *ConstRHS;
-  if (!match(RHS, m_APFloatAllowUndef(ConstRHS)))
+  if (!match(RHS, m_APFloatAllowPoison(ConstRHS)))
     return {nullptr, fcAllFlags, fcAllFlags};
 
   // TODO: Just call computeKnownFPClass for RHS to handle non-constants.
@@ -6255,6 +6261,10 @@ bool llvm::isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
     return true;
   case Intrinsic::ptrmask:
     return !MustPreserveNullness;
+  case Intrinsic::threadlocal_address:
+    // The underlying variable changes with thread ID. The Thread ID may change
+    // at coroutine suspend points.
+    return !Call->getParent()->getParent()->isPresplitCoroutine();
   default:
     return false;
   }
@@ -6676,9 +6686,15 @@ llvm::computeConstantRangeIncludingKnownBits(const WithCache<const Value *> &V,
 
 OverflowResult llvm::computeOverflowForUnsignedMul(const Value *LHS,
                                                    const Value *RHS,
-                                                   const SimplifyQuery &SQ) {
+                                                   const SimplifyQuery &SQ,
+                                                   bool IsNSW) {
   KnownBits LHSKnown = computeKnownBits(LHS, /*Depth=*/0, SQ);
   KnownBits RHSKnown = computeKnownBits(RHS, /*Depth=*/0, SQ);
+
+  // mul nsw of two non-negative numbers is also nuw.
+  if (IsNSW && LHSKnown.isNonNegative() && RHSKnown.isNonNegative())
+    return OverflowResult::NeverOverflows;
+
   ConstantRange LHSRange = ConstantRange::fromKnownBits(LHSKnown, false);
   ConstantRange RHSRange = ConstantRange::fromKnownBits(RHSKnown, false);
   return mapOverflowResult(LHSRange.unsignedMulMayOverflow(RHSRange));
@@ -6951,7 +6967,7 @@ static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
                                    bool ConsiderFlagsAndMetadata) {
 
   if (ConsiderFlagsAndMetadata && includesPoison(Kind) &&
-      Op->hasPoisonGeneratingFlagsOrMetadata())
+      Op->hasPoisonGeneratingAnnotations())
     return true;
 
   unsigned Opcode = Op->getOpcode();
@@ -8039,17 +8055,27 @@ static SelectPatternResult matchMinMax(CmpInst::Predicate Pred,
   return {SPF_UNKNOWN, SPNB_NA, false};
 }
 
-bool llvm::isKnownNegation(const Value *X, const Value *Y, bool NeedNSW) {
+bool llvm::isKnownNegation(const Value *X, const Value *Y, bool NeedNSW,
+                           bool AllowPoison) {
   assert(X && Y && "Invalid operand");
 
-  // X = sub (0, Y) || X = sub nsw (0, Y)
-  if ((!NeedNSW && match(X, m_Sub(m_ZeroInt(), m_Specific(Y)))) ||
-      (NeedNSW && match(X, m_NSWNeg(m_Specific(Y)))))
-    return true;
+  auto IsNegationOf = [&](const Value *X, const Value *Y) {
+    if (!match(X, m_Neg(m_Specific(Y))))
+      return false;
 
-  // Y = sub (0, X) || Y = sub nsw (0, X)
-  if ((!NeedNSW && match(Y, m_Sub(m_ZeroInt(), m_Specific(X)))) ||
-      (NeedNSW && match(Y, m_NSWNeg(m_Specific(X)))))
+    auto *BO = cast<BinaryOperator>(X);
+    if (NeedNSW && !BO->hasNoSignedWrap())
+      return false;
+
+    auto *Zero = cast<Constant>(BO->getOperand(0));
+    if (!AllowPoison && !Zero->isNullValue())
+      return false;
+
+    return true;
+  };
+
+  // X = -Y or Y = -X
+  if (IsNegationOf(X, Y) || IsNegationOf(Y, X))
     return true;
 
   // X = sub (A, B), Y = sub (B, A) || X = sub nsw (A, B), Y = sub nsw (B, A)

@@ -63,6 +63,12 @@ ABI Changes in This Version
   MSVC uses a different mangling for these objects, compatibility is not affected.
   (#GH85423).
 
+- Fixed Microsoft calling convention for returning certain classes with a
+  templated constructor. If a class has a templated constructor, it should
+  be returned indirectly even if it meets all the other requirements for
+  returning a class in a register. This affects some uses of std::pair.
+  (#GH86384).
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
@@ -88,6 +94,19 @@ sections with improvements to Clang's support for those languages.
 
 C++ Language Changes
 --------------------
+- Implemented ``_BitInt`` literal suffixes ``__wb`` or ``__WB`` as a Clang extension with ``unsigned`` modifiers also allowed. (#GH85223).
+
+C++17 Feature Support
+^^^^^^^^^^^^^^^^^^^^^
+- Clang now exposes ``__GCC_DESTRUCTIVE_SIZE`` and ``__GCC_CONSTRUCTIVE_SIZE``
+  predefined macros to support standard library implementations of
+  ``std::hardware_destructive_interference_size`` and
+  ``std::hardware_constructive_interference_size``, respectively. These macros
+  are predefined in all C and C++ language modes. The values the macros
+  expand to are not stable between releases of Clang and do not need to match
+  the values produced by GCC, so these macros should not be used from header
+  files because they may not be stable across multiple TUs (the values may vary
+  based on compiler version as well as CPU tuning). #GH60174
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -130,6 +149,9 @@ C++2c Feature Support
 
 - Implemented `P2573R2: = delete("should have a reason"); <https://wg21.link/P2573R2>`_
 
+- Implemented `P0609R3: Attributes for Structured Bindings <https://wg21.link/P0609R3>`_
+
+- Implemented `P2748R5 Disallow Binding a Returned Glvalue to a Temporary <https://wg21.link/P2748R5>`_.
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -179,6 +201,9 @@ C23 Feature Support
 - Clang now supports `N3018 The constexpr specifier for object definitions`
   <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3018.htm>`_.
 
+- Properly promote bit-fields of bit-precise integer types to the field's type
+  rather than to ``int``. #GH87641
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
@@ -203,6 +228,20 @@ Non-comprehensive list of changes in this release
 - ``__typeof_unqual__`` is available in all C modes as an extension, which behaves
   like ``typeof_unqual`` from C23, similar to ``__typeof__`` and ``typeof``.
 
+- ``__builtin_reduce_{add|mul|xor|or|and|min|max}`` builtins now support scalable vectors.
+
+* Shared libraries linked with either the ``-ffast-math``, ``-Ofast``, or
+  ``-funsafe-math-optimizations`` flags will no longer enable flush-to-zero
+  floating-point mode by default. This decision can be overridden with use of
+  ``-mdaz-ftz``. This behavior now matches GCC's behavior.
+  (`#57589 <https://github.com/llvm/llvm-project/issues/57589>`_)
+
+* ``-fdenormal-fp-math=preserve-sign`` is no longer implied by ``-ffast-math``
+  on x86 systems.
+
+- Builtins ``__builtin_shufflevector()`` and ``__builtin_convertvector()`` may
+  now be used within constant expressions.
+
 New Compiler Flags
 ------------------
 - ``-fsanitize=implicit-bitfield-conversion`` checks implicit truncation and
@@ -216,6 +255,10 @@ New Compiler Flags
 
 - ``-fexperimental-modules-reduced-bmi`` enables the Reduced BMI for C++20 named modules.
   See the document of standard C++ modules for details.
+
+- ``-fexperimental-late-parse-attributes`` enables an experimental feature to
+  allow late parsing certain attributes in specific contexts where they would
+  not normally be late parsed.
 
 Deprecated Compiler Flags
 -------------------------
@@ -248,6 +291,8 @@ Modified Compiler Flags
        f3 *c = (f3 *)x;
      }
 
+- Carved out ``-Wformat`` warning about scoped enums into a subwarning and
+  make it controlled by ``-Wformat-pedantic``. Fixes #GH88595.
 
 Removed Compiler Flags
 -------------------------
@@ -286,6 +331,9 @@ Attribute Changes in Clang
 
   This allows the ``_Nullable`` and ``_Nonnull`` family of type attributes to
   apply to this class.
+
+- Clang now warns that the ``exclude_from_explicit_instantiation`` attribute
+  is ignored when applied to a local class or a member thereof.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -366,6 +414,18 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses requires expressions with explicit object parameters.
 
+- Clang now looks up members of the current instantiation in the template definition context
+  if the current instantiation has no dependent base classes.
+
+  .. code-block:: c++
+
+     template<typename T>
+     struct A {
+       int f() {
+         return this->x; // error: no member named 'x' in 'A<T>'
+       }
+     };
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -406,8 +466,14 @@ Bug Fixes in This Version
   operator.
   Fixes (#GH83267).
 
+- Fix crash on ill-formed partial specialization with CRTP.
+  Fixes (#GH89374).
+
 - Clang now correctly generates overloads for bit-precise integer types for
   builtin operators in C++. Fixes #GH82998.
+
+- Fix crash when destructor definition is preceded with an equals sign.
+  Fixes (#GH89544).
 
 - When performing mixed arithmetic between ``_Complex`` floating-point types and integers,
   Clang now correctly promotes the integer to its corresponding real floating-point
@@ -423,6 +489,18 @@ Bug Fixes in This Version
   incorrect constraint substitution. (#GH86769).
 
 - Fixed an assertion failure on invalid InitListExpr in C89 mode (#GH88008).
+
+- Fixed missing destructor calls when we branch from middle of an expression.
+  This could happen through a branch in stmt-expr or in an expression containing a coroutine
+  suspension. Fixes (#GH63818) (#GH88478).
+
+- Clang will no longer diagnose an erroneous non-dependent ``switch`` condition
+  during instantiation, and instead will only diagnose it once, during checking
+  of the function template.
+
+- Clang now allows the value of unroll count to be zero in ``#pragma GCC unroll`` and ``#pragma unroll``.
+  The values of 0 and 1 block any unrolling of the loop. This keeps the same behavior with GCC.
+  Fixes (`#88624 <https://github.com/llvm/llvm-project/issues/88624>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -527,6 +605,8 @@ Bug Fixes to C++ Support
 - Fix an issue caused by not handling invalid cases when substituting into the parameter mapping of a constraint. Fixes (#GH86757).
 - Fixed a bug that prevented member function templates of class templates declared with a deduced return type
   from being explicitly specialized for a given implicit instantiation of the class template.
+- Fixed a crash when ``this`` is used in a dependent class scope function template specialization
+  that instantiates to a static member function.
 
 - Fix crash when inheriting from a cv-qualified type. Fixes #GH35603
 - Fix a crash when the using enum declaration uses an anonymous enumeration. Fixes (#GH86790).
@@ -536,6 +616,20 @@ Bug Fixes to C++ Support
   Fixes (#GH70604), (#GH79754), (#GH84163), (#GH84425), (#GH86054), (#GH86398), and (#GH86399).
 - Fix a crash when deducing ``auto`` from an invalid dereference (#GH88329).
 - Fix a crash in requires expression with templated base class member function. Fixes (#GH84020).
+- Fix a crash caused by defined struct in a type alias template when the structure
+  has fields with dependent type. Fixes (#GH75221).
+- Fix the Itanium mangling of lambdas defined in a member of a local class (#GH88906)
+- Fixed a crash when trying to evaluate a user-defined ``static_assert`` message whose ``size()``
+  function returns a large or negative value. Fixes (#GH89407).
+- Fixed a use-after-free bug in parsing of type constraints with default arguments that involve lambdas. (#GH67235)
+- Fixed bug in which the body of a consteval lambda within a template was not parsed as within an
+  immediate function context.
+- Fix CTAD for ``std::initializer_list``. This allows ``std::initializer_list{1, 2, 3}`` to be deduced as
+  ``std::initializer_list<int>`` as intended.
+- Fix a bug on template partial specialization whose template parameter is `decltype(auto)`.
+- Fix a bug on template partial specialization with issue on deduction of nontype template parameter
+  whose type is `decltype(auto)`. Fixes (#GH68885).
+- Clang now correctly treats the noexcept-specifier of a friend function to be a complete-class context.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -544,6 +638,9 @@ Bug Fixes to AST Handling
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fixed an infinite recursion in ASTImporter, on return type declared inside
+  body of C++11 lambda without trailing return (#GH68775).
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -585,6 +682,10 @@ Arm and AArch64 Support
     * Arm Cortex-A78AE (cortex-a78ae).
     * Arm Cortex-A520AE (cortex-a520ae).
     * Arm Cortex-A720AE (cortex-a720ae).
+    * Arm Cortex-R82AE (cortex-r82ae).
+    * Arm Neoverse-N3 (neoverse-n3).
+    * Arm Neoverse-V3 (neoverse-v3).
+    * Arm Neoverse-V3AE (neoverse-v3ae).
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -632,8 +733,19 @@ CUDA Support
 AIX Support
 ^^^^^^^^^^^
 
+- Introduced the ``-maix-small-local-dynamic-tls`` option to produce a faster
+  access sequence for local-dynamic TLS variables where the offset from the TLS
+  base is encoded as an immediate operand.
+  This access sequence is not used for TLS variables larger than 32KB, and is
+  currently only supported on 64-bit mode.
+
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
+
+The -mcpu=generic configuration now enables multivalue and reference-types.These
+proposals are standardized and available in all major engines. Enabling
+multivalue here only enables the language feature but does not turn on the
+multivalue ABI (this enables non-ABI uses of multivalue, like exnref).
 
 AVR Support
 ^^^^^^^^^^^
@@ -673,6 +785,9 @@ clang-format
 libclang
 --------
 
+- ``clang_getSpellingLocation`` now correctly resolves macro expansions; that
+  is, it returns the spelling location instead of the expansion location.
+
 Static Analyzer
 ---------------
 
@@ -682,6 +797,8 @@ Static Analyzer
 - Support C++23 static operator calls. (#GH84972)
 - Fixed a crash in ``security.cert.env.InvalidPtr`` checker when accidentally
   matched user-defined ``strerror`` and similar library functions. (GH#88181)
+- Fixed a crash when storing through an address that refers to the address of
+  a label. (GH#89185)
 
 New features
 ^^^^^^^^^^^^

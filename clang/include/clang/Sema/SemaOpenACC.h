@@ -44,8 +44,17 @@ public:
       Expr *ConditionExpr;
     };
 
-    std::variant<std::monostate, DefaultDetails, ConditionDetails> Details =
-        std::monostate{};
+    struct IntExprDetails {
+      SmallVector<Expr *> IntExprs;
+    };
+
+    struct VarListDetails {
+      SmallVector<Expr *> VarList;
+    };
+
+    std::variant<std::monostate, DefaultDetails, ConditionDetails,
+                 IntExprDetails, VarListDetails>
+        Details = std::monostate{};
 
   public:
     OpenACCParsedClause(OpenACCDirectiveKind DirKind,
@@ -87,6 +96,36 @@ public:
       return std::get<ConditionDetails>(Details).ConditionExpr;
     }
 
+    unsigned getNumIntExprs() const {
+      assert((ClauseKind == OpenACCClauseKind::NumGangs ||
+              ClauseKind == OpenACCClauseKind::NumWorkers ||
+              ClauseKind == OpenACCClauseKind::VectorLength) &&
+             "Parsed clause kind does not have a int exprs");
+      return std::get<IntExprDetails>(Details).IntExprs.size();
+    }
+
+    ArrayRef<Expr *> getIntExprs() {
+      assert((ClauseKind == OpenACCClauseKind::NumGangs ||
+              ClauseKind == OpenACCClauseKind::NumWorkers ||
+              ClauseKind == OpenACCClauseKind::VectorLength) &&
+             "Parsed clause kind does not have a int exprs");
+      return std::get<IntExprDetails>(Details).IntExprs;
+    }
+
+    ArrayRef<Expr *> getIntExprs() const {
+      return const_cast<OpenACCParsedClause *>(this)->getIntExprs();
+    }
+
+    ArrayRef<Expr *> getVarList() {
+      assert(ClauseKind == OpenACCClauseKind::Private &&
+             "Parsed clause kind does not have a var-list");
+      return std::get<VarListDetails>(Details).VarList;
+    }
+
+    ArrayRef<Expr *> getVarList() const {
+      return const_cast<OpenACCParsedClause *>(this)->getVarList();
+    }
+
     void setLParenLoc(SourceLocation EndLoc) { LParenLoc = EndLoc; }
     void setEndLoc(SourceLocation EndLoc) { ClauseRange.setEnd(EndLoc); }
 
@@ -108,6 +147,33 @@ public:
              "Condition expression type not scalar/dependent");
 
       Details = ConditionDetails{ConditionExpr};
+    }
+
+    void setIntExprDetails(ArrayRef<Expr *> IntExprs) {
+      assert((ClauseKind == OpenACCClauseKind::NumGangs ||
+              ClauseKind == OpenACCClauseKind::NumWorkers ||
+              ClauseKind == OpenACCClauseKind::VectorLength) &&
+             "Parsed clause kind does not have a int exprs");
+      Details = IntExprDetails{{IntExprs.begin(), IntExprs.end()}};
+    }
+    void setIntExprDetails(llvm::SmallVector<Expr *> &&IntExprs) {
+      assert((ClauseKind == OpenACCClauseKind::NumGangs ||
+              ClauseKind == OpenACCClauseKind::NumWorkers ||
+              ClauseKind == OpenACCClauseKind::VectorLength) &&
+             "Parsed clause kind does not have a int exprs");
+      Details = IntExprDetails{std::move(IntExprs)};
+    }
+
+    void setVarListDetails(ArrayRef<Expr *> VarList) {
+      assert(ClauseKind == OpenACCClauseKind::Private &&
+             "Parsed clause kind does not have a var-list");
+      Details = VarListDetails{{VarList.begin(), VarList.end()}};
+    }
+
+    void setVarListDetails(llvm::SmallVector<Expr *> &&VarList) {
+      assert(ClauseKind == OpenACCClauseKind::Private &&
+             "Parsed clause kind does not have a var-list");
+      Details = VarListDetails{std::move(VarList)};
     }
   };
 
@@ -148,6 +214,21 @@ public:
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.
   DeclGroupRef ActOnEndDeclDirective();
+
+  /// Called when encountering an 'int-expr' for OpenACC, and manages
+  /// conversions and diagnostics to 'int'.
+  ExprResult ActOnIntExpr(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                          SourceLocation Loc, Expr *IntExpr);
+
+  /// Called when encountering a 'var' for OpenACC, ensures it is actually a
+  /// declaration reference to a variable of the correct type.
+  ExprResult ActOnVar(Expr *VarExpr);
+
+  /// Checks and creates an Array Section used in an OpenACC construct/clause.
+  ExprResult ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
+                                   Expr *LowerBound,
+                                   SourceLocation ColonLocFirst, Expr *Length,
+                                   SourceLocation RBLoc);
 };
 
 } // namespace clang

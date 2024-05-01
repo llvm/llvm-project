@@ -73,14 +73,6 @@ set(files
   __algorithm/pop_heap.h
   __algorithm/prev_permutation.h
   __algorithm/pstl_any_all_none_of.h
-  __algorithm/pstl_backends/cpu_backends/any_of.h
-  __algorithm/pstl_backends/cpu_backends/fill.h
-  __algorithm/pstl_backends/cpu_backends/find_if.h
-  __algorithm/pstl_backends/cpu_backends/for_each.h
-  __algorithm/pstl_backends/cpu_backends/merge.h
-  __algorithm/pstl_backends/cpu_backends/stable_sort.h
-  __algorithm/pstl_backends/cpu_backends/transform.h
-  __algorithm/pstl_backends/cpu_backends/transform_reduce.h
   __algorithm/pstl_copy.h
   __algorithm/pstl_count.h
   __algorithm/pstl_equal.h
@@ -278,6 +270,7 @@ set(files
   __chrono/high_resolution_clock.h
   __chrono/leap_second.h
   __chrono/literals.h
+  __chrono/local_info.h
   __chrono/month.h
   __chrono/month_weekday.h
   __chrono/monthday.h
@@ -593,7 +586,15 @@ set(files
   __pstl/backends/std_thread.h
   __pstl/configuration.h
   __pstl/configuration_fwd.h
+  __pstl/cpu_algos/any_of.h
   __pstl/cpu_algos/cpu_traits.h
+  __pstl/cpu_algos/fill.h
+  __pstl/cpu_algos/find_if.h
+  __pstl/cpu_algos/for_each.h
+  __pstl/cpu_algos/merge.h
+  __pstl/cpu_algos/stable_sort.h
+  __pstl/cpu_algos/transform.h
+  __pstl/cpu_algos/transform_reduce.h
   __random/bernoulli_distribution.h
   __random/binomial_distribution.h
   __random/cauchy_distribution.h
@@ -956,7 +957,6 @@ set(files
   istream
   iterator
   latch
-  libcxx.imp
   limits
   list
   locale
@@ -1035,6 +1035,15 @@ foreach(f ${files})
   list(APPEND _all_includes "${dst}")
 endforeach()
 
+# Generate the IWYU mapping. This depends on all header files but it's also considered as an
+# "include" for dependency tracking.
+add_custom_command(OUTPUT "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
+  COMMAND "${Python3_EXECUTABLE}" "${LIBCXX_SOURCE_DIR}/utils/generate_iwyu_mapping.py" "-o" "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
+  DEPENDS ${_all_includes}
+  COMMENT "Generate the mapping file for include-what-you-use"
+)
+list(APPEND _all_includes "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp")
+
 add_custom_target(generate-cxx-headers ALL DEPENDS ${_all_includes})
 
 add_library(cxx-headers INTERFACE)
@@ -1067,8 +1076,8 @@ if (LIBCXX_INSTALL_HEADERS)
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)
 
-  # Install the generated modulemap file to the generic include dir.
-  install(FILES "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap"
+  # Install the generated IWYU file to the generic include dir.
+  install(FILES "${LIBCXX_GENERATED_INCLUDE_DIR}/libcxx.imp"
     DESTINATION "${LIBCXX_INSTALL_INCLUDE_DIR}"
     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     COMPONENT cxx-headers)

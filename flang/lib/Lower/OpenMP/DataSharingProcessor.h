@@ -18,6 +18,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/symbol.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 
 namespace mlir {
 namespace omp {
@@ -40,6 +41,8 @@ private:
   llvm::SetVector<const Fortran::semantics::Symbol *> defaultSymbols;
   llvm::SetVector<const Fortran::semantics::Symbol *> symbolsInNestedRegions;
   llvm::SetVector<const Fortran::semantics::Symbol *> symbolsInParentRegions;
+  llvm::DenseMap<const Fortran::semantics::Symbol *, mlir::omp::PrivateClauseOp>
+      symToPrivatizer;
   Fortran::lower::AbstractConverter &converter;
   fir::FirOpBuilder &firOpBuilder;
   omp::List<omp::Clause> clauses;
@@ -78,13 +81,12 @@ private:
 public:
   DataSharingProcessor(Fortran::lower::AbstractConverter &converter,
                        Fortran::semantics::SemanticsContext &semaCtx,
-                       const Fortran::parser::OmpClauseList &opClauseList,
+                       const List<Clause> &clauses,
                        Fortran::lower::pft::Evaluation &eval,
                        bool useDelayedPrivatization = false,
                        Fortran::lower::SymMap *symTable = nullptr)
       : hasLastPrivateOp(false), converter(converter),
-        firOpBuilder(converter.getFirOpBuilder()),
-        clauses(omp::makeClauses(opClauseList, semaCtx)), eval(eval),
+        firOpBuilder(converter.getFirOpBuilder()), clauses(clauses), eval(eval),
         useDelayedPrivatization(useDelayedPrivatization), symTable(symTable) {}
 
   // Privatisation is split into two steps.

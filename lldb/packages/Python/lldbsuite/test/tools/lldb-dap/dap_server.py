@@ -811,23 +811,34 @@ class DebugCommunication(object):
         command_dict = {"command": "next", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
-    def request_stepIn(self, threadId):
+    def request_stepIn(self, threadId, targetId):
         if self.exit_status is not None:
-            raise ValueError("request_continue called after process exited")
-        args_dict = {"threadId": threadId}
+            raise ValueError("request_stepIn called after process exited")
+        args_dict = {"threadId": threadId, "targetId": targetId}
         command_dict = {"command": "stepIn", "type": "request", "arguments": args_dict}
+        return self.send_recv(command_dict)
+
+    def request_stepInTargets(self, frameId):
+        if self.exit_status is not None:
+            raise ValueError("request_stepInTargets called after process exited")
+        args_dict = {"frameId": frameId}
+        command_dict = {
+            "command": "stepInTargets",
+            "type": "request",
+            "arguments": args_dict,
+        }
         return self.send_recv(command_dict)
 
     def request_stepOut(self, threadId):
         if self.exit_status is not None:
-            raise ValueError("request_continue called after process exited")
+            raise ValueError("request_stepOut called after process exited")
         args_dict = {"threadId": threadId}
         command_dict = {"command": "stepOut", "type": "request", "arguments": args_dict}
         return self.send_recv(command_dict)
 
     def request_pause(self, threadId=None):
         if self.exit_status is not None:
-            raise ValueError("request_continue called after process exited")
+            raise ValueError("request_pause called after process exited")
         if threadId is None:
             threadId = self.get_thread_id()
         args_dict = {"threadId": threadId}

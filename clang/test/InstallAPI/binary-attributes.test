@@ -43,7 +43,7 @@
 ; RUN: -current_version 1.2.3  -compatibility_version 1 \
 ; RUN: -allowable_client Foo -allowable_client Bar \
 ; RUN: -o tmp.tbd --verify-against=%t/Simple 2>&1 | FileCheck -check-prefix=ALLOWABLE %s
-; ALLOWABLE: error: allowable client missing from binary file: 'Foo [ x86_64 ]'
+; ALLOWABLE: error: allowable client missing from binary file: '{{Foo|Bar}} [ x86_64 ]'
 
 ; RUN: not clang-installapi -target x86_64-apple-macos10.12 \
 ; RUN: -install_name /System/Library/Frameworks/Simple.framework/Versions/A/Simple \

@@ -364,50 +364,43 @@ template <class ELFT> void OutputSection::maybeCompress() {
   // useful when there are many compressed output sections.
   addralign = 1;
 
+  // Split input into 1-MiB shards.
+  [[maybe_unused]] constexpr size_t shardSize = 1 << 20;
+  auto shardsIn = split(ArrayRef<uint8_t>(buf.get(), size), shardSize);
+  const size_t numShards = shardsIn.size();
+  compressed.numShards = numShards;
+  auto shardsOut = std::make_unique<SmallVector<uint8_t, 0>[]>(numShards);
+
 #if LLVM_ENABLE_ZSTD
   // Use ZSTD's streaming compression API which permits parallel workers working
   // on the stream. See http://facebook.github.io/zstd/zstd_manual.html
   // "Streaming compression - HowTo".
   if (ctype == DebugCompressionType::Zstd) {
-    // Allocate a buffer of half of the input size, and grow it by 1.5x if
-    // insufficient.
-    compressed.type = ELFCOMPRESS_ZSTD;
-    compressed.shards = std::make_unique<SmallVector<uint8_t, 0>[]>(1);
-    SmallVector<uint8_t, 0> &out = compressed.shards[0];
-    out.resize_for_overwrite(std::max<size_t>(size / 2, 32));
-    size_t pos = 0;
-
-    ZSTD_CCtx *cctx = ZSTD_createCCtx();
-    // Ignore error if zstd was not built with ZSTD_MULTITHREAD.
-    (void)ZSTD_CCtx_setParameter(cctx, ZSTD_c_nbWorkers,
-                                 parallel::strategy.compute_thread_count());
-    ZSTD_outBuffer zob = {out.data(), out.size(), 0};
-    ZSTD_EndDirective directive = ZSTD_e_continue;
-    const size_t blockSize = ZSTD_CStreamInSize();
-    do {
-      const size_t n = std::min(static_cast<size_t>(size - pos), blockSize);
-      if (n == size - pos)
-        directive = ZSTD_e_end;
-      ZSTD_inBuffer zib = {buf.get() + pos, n, 0};
-      size_t bytesRemaining = 0;
-      while (zib.pos != zib.size ||
-             (directive == ZSTD_e_end && bytesRemaining != 0)) {
+    parallelFor(0, numShards, [&](size_t i) {
+      SmallVector<uint8_t, 0> out;
+      ZSTD_CCtx *cctx = ZSTD_createCCtx();
+      ZSTD_inBuffer zib = {shardsIn[i].data(), shardsIn[i].size(), 0};
+      ZSTD_outBuffer zob = {nullptr, 0, 0};
+      size_t size;
+      do {
+        // Allocate a buffer of half of the input size, and grow it by 1.5x if
+        // insufficient.
         if (zob.pos == zob.size) {
-          out.resize_for_overwrite(out.size() * 3 / 2);
-          zob.dst = out.data();
-          zob.size = out.size();
+          out.resize_for_overwrite(
+              zob.size ? zob.size * 3 / 2 : std::max<size_t>(zib.size / 4, 64));
+          zob = {out.data(), out.size(), zob.pos};
         }
-        bytesRemaining = ZSTD_compressStream2(cctx, &zob, &zib, directive);
-        assert(!ZSTD_isError(bytesRemaining));
-      }
-      pos += n;
-    } while (directive != ZSTD_e_end);
-    out.resize(zob.pos);
-    ZSTD_freeCCtx(cctx);
-
-    size = sizeof(Elf_Chdr) + out.size();
-    flags |= SHF_COMPRESSED;
-    return;
+        size = ZSTD_compressStream2(cctx, &zob, &zib, ZSTD_e_end);
+        assert(!ZSTD_isError(size));
+      } while (size != 0);
+      out.truncate(zob.pos);
+      ZSTD_freeCCtx(cctx);
+      shardsOut[i] = std::move(out);
+    });
+    compressed.type = ELFCOMPRESS_ZSTD;
+    size = sizeof(Elf_Chdr);
+    for (size_t i = 0; i != numShards; ++i)
+      size += shardsOut[i].size();
   }
 #endif
 
@@ -417,37 +410,32 @@ template <class ELFT> void OutputSection::maybeCompress() {
   // ~15%. We found that level 7 to 9 doesn't make much difference (~1% more
   // compression) while they take significant amount of time (~2x), so level 6
   // seems enough.
-  const int level = config->optimize >= 2 ? 6 : Z_BEST_SPEED;
+  if (ctype == DebugCompressionType::Zlib) {
+    const int level = config->optimize >= 2 ? 6 : Z_BEST_SPEED;
 
-  // Split input into 1-MiB shards.
-  constexpr size_t shardSize = 1 << 20;
-  auto shardsIn = split(ArrayRef<uint8_t>(buf.get(), size), shardSize);
-  const size_t numShards = shardsIn.size();
+    // Compress shards and compute Alder-32 checksums. Use Z_SYNC_FLUSH for all
+    // shards but the last to flush the output to a byte boundary to be
+    // concatenated with the next shard.
+    auto shardsAdler = std::make_unique<uint32_t[]>(numShards);
+    parallelFor(0, numShards, [&](size_t i) {
+      shardsOut[i] = deflateShard(shardsIn[i], level,
+                                  i != numShards - 1 ? Z_SYNC_FLUSH : Z_FINISH);
+      shardsAdler[i] = adler32(1, shardsIn[i].data(), shardsIn[i].size());
+    });
 
-  // Compress shards and compute Alder-32 checksums. Use Z_SYNC_FLUSH for all
-  // shards but the last to flush the output to a byte boundary to be
-  // concatenated with the next shard.
-  auto shardsOut = std::make_unique<SmallVector<uint8_t, 0>[]>(numShards);
-  auto shardsAdler = std::make_unique<uint32_t[]>(numShards);
-  parallelFor(0, numShards, [&](size_t i) {
-    shardsOut[i] = deflateShard(shardsIn[i], level,
-                                i != numShards - 1 ? Z_SYNC_FLUSH : Z_FINISH);
-    shardsAdler[i] = adler32(1, shardsIn[i].data(), shardsIn[i].size());
-  });
-
-  // Update section size and combine Alder-32 checksums.
-  uint32_t checksum = 1;       // Initial Adler-32 value
-  size = sizeof(Elf_Chdr) + 2; // Elf_Chdir and zlib header
-  for (size_t i = 0; i != numShards; ++i) {
-    size += shardsOut[i].size();
-    checksum = adler32_combine(checksum, shardsAdler[i], shardsIn[i].size());
+    // Update section size and combine Alder-32 checksums.
+    uint32_t checksum = 1;       // Initial Adler-32 value
+    size = sizeof(Elf_Chdr) + 2; // Elf_Chdir and zlib header
+    for (size_t i = 0; i != numShards; ++i) {
+      size += shardsOut[i].size();
+      checksum = adler32_combine(checksum, shardsAdler[i], shardsIn[i].size());
+    }
+    size += 4; // checksum
+    compressed.type = ELFCOMPRESS_ZLIB;
+    compressed.checksum = checksum;
   }
-  size += 4; // checksum
 
-  compressed.type = ELFCOMPRESS_ZLIB;
   compressed.shards = std::move(shardsOut);
-  compressed.numShards = numShards;
-  compressed.checksum = checksum;
   flags |= SHF_COMPRESSED;
 #endif
 }
@@ -479,25 +467,22 @@ void OutputSection::writeTo(uint8_t *buf, parallel::TaskGroup &tg) {
     chdr->ch_size = compressed.uncompressedSize;
     chdr->ch_addralign = addralign;
     buf += sizeof(*chdr);
-    if (compressed.type == ELFCOMPRESS_ZSTD) {
-      memcpy(buf, compressed.shards[0].data(), compressed.shards[0].size());
-      return;
+
+    auto offsets = std::make_unique<size_t[]>(compressed.numShards);
+    if (compressed.type == ELFCOMPRESS_ZLIB) {
+      buf[0] = 0x78;  // CMF
+      buf[1] = 0x01;  // FLG: best speed
+      offsets[0] = 2; // zlib header
+      write32be(buf + (size - sizeof(*chdr) - 4), compressed.checksum);
     }
 
     // Compute shard offsets.
-    auto offsets = std::make_unique<size_t[]>(compressed.numShards);
-    offsets[0] = 2; // zlib header
     for (size_t i = 1; i != compressed.numShards; ++i)
       offsets[i] = offsets[i - 1] + compressed.shards[i - 1].size();
-
-    buf[0] = 0x78; // CMF
-    buf[1] = 0x01; // FLG: best speed
     parallelFor(0, compressed.numShards, [&](size_t i) {
       memcpy(buf + offsets[i], compressed.shards[i].data(),
              compressed.shards[i].size());
     });
-
-    write32be(buf + (size - sizeof(*chdr) - 4), compressed.checksum);
     return;
   }
 

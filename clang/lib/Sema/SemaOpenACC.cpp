@@ -14,6 +14,7 @@
 #include "clang/Sema/SemaOpenACC.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/Support/Casting.h"
 
@@ -83,6 +84,30 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     case OpenACCDirectiveKind::Serial:
     case OpenACCDirectiveKind::Kernels:
     case OpenACCDirectiveKind::Update:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::NumGangs:
+  case OpenACCClauseKind::NumWorkers:
+  case OpenACCClauseKind::VectorLength:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Kernels:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::KernelsLoop:
+      return true;
+    default:
+      return false;
+    }
+  case OpenACCClauseKind::Private:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::Loop:
     case OpenACCDirectiveKind::ParallelLoop:
     case OpenACCDirectiveKind::SerialLoop:
     case OpenACCDirectiveKind::KernelsLoop:
@@ -218,6 +243,93 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
         getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
         Clause.getConditionExpr(), Clause.getEndLoc());
   }
+  case OpenACCClauseKind::NumGangs: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // There is no prose in the standard that says duplicates aren't allowed,
+    // but this diagnostic is present in other compilers, as well as makes
+    // sense.
+    if (checkAlreadyHasClauseOfKind(*this, ExistingClauses, Clause))
+      return nullptr;
+
+    if (Clause.getIntExprs().empty())
+      Diag(Clause.getBeginLoc(), diag::err_acc_num_gangs_num_args)
+          << /*NoArgs=*/0;
+
+    unsigned MaxArgs =
+        (Clause.getDirectiveKind() == OpenACCDirectiveKind::Parallel ||
+         Clause.getDirectiveKind() == OpenACCDirectiveKind::ParallelLoop)
+            ? 3
+            : 1;
+    if (Clause.getIntExprs().size() > MaxArgs)
+      Diag(Clause.getBeginLoc(), diag::err_acc_num_gangs_num_args)
+          << /*NoArgs=*/1 << Clause.getDirectiveKind() << MaxArgs
+          << Clause.getIntExprs().size();
+
+    // Create the AST node for the clause even if the number of expressions is
+    // incorrect.
+    return OpenACCNumGangsClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getIntExprs(), Clause.getEndLoc());
+    break;
+  }
+  case OpenACCClauseKind::NumWorkers: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // There is no prose in the standard that says duplicates aren't allowed,
+    // but this diagnostic is present in other compilers, as well as makes
+    // sense.
+    if (checkAlreadyHasClauseOfKind(*this, ExistingClauses, Clause))
+      return nullptr;
+
+    assert(Clause.getIntExprs().size() == 1 &&
+           "Invalid number of expressions for NumWorkers");
+    return OpenACCNumWorkersClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getIntExprs()[0], Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::VectorLength: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // There is no prose in the standard that says duplicates aren't allowed,
+    // but this diagnostic is present in other compilers, as well as makes
+    // sense.
+    if (checkAlreadyHasClauseOfKind(*this, ExistingClauses, Clause))
+      return nullptr;
+
+    assert(Clause.getIntExprs().size() == 1 &&
+           "Invalid number of expressions for VectorLength");
+    return OpenACCVectorLengthClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getIntExprs()[0], Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::Private: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, so there
+    // really isn't anything to do here. GCC does some duplicate-finding, though
+    // it isn't apparent in the standard where this is justified.
+
+    return OpenACCPrivateClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getVarList(), Clause.getEndLoc());
+  }
   default:
     break;
   }
@@ -246,6 +358,157 @@ void SemaOpenACC::ActOnConstruct(OpenACCDirectiveKind K,
     Diag(StartLoc, diag::warn_acc_construct_unimplemented) << K;
     break;
   }
+}
+
+ExprResult SemaOpenACC::ActOnIntExpr(OpenACCDirectiveKind DK,
+                                     OpenACCClauseKind CK, SourceLocation Loc,
+                                     Expr *IntExpr) {
+
+  assert(((DK != OpenACCDirectiveKind::Invalid &&
+           CK == OpenACCClauseKind::Invalid) ||
+          (DK == OpenACCDirectiveKind::Invalid &&
+           CK != OpenACCClauseKind::Invalid)) &&
+         "Only one of directive or clause kind should be provided");
+
+  class IntExprConverter : public Sema::ICEConvertDiagnoser {
+    OpenACCDirectiveKind DirectiveKind;
+    OpenACCClauseKind ClauseKind;
+    Expr *IntExpr;
+
+  public:
+    IntExprConverter(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                     Expr *IntExpr)
+        : ICEConvertDiagnoser(/*AllowScopedEnumerations=*/false,
+                              /*Suppress=*/false,
+                              /*SuppressConversion=*/true),
+          DirectiveKind(DK), ClauseKind(CK), IntExpr(IntExpr) {}
+
+    bool match(QualType T) override {
+      // OpenACC spec just calls this 'integer expression' as having an
+      // 'integer type', so fall back on C99's 'integer type'.
+      return T->isIntegerType();
+    }
+    SemaBase::SemaDiagnosticBuilder diagnoseNotInt(Sema &S, SourceLocation Loc,
+                                                   QualType T) override {
+      if (ClauseKind != OpenACCClauseKind::Invalid)
+        return S.Diag(Loc, diag::err_acc_int_expr_requires_integer) <<
+               /*Clause=*/0 << ClauseKind << T;
+
+      return S.Diag(Loc, diag::err_acc_int_expr_requires_integer) <<
+             /*Directive=*/1 << DirectiveKind << T;
+    }
+
+    SemaBase::SemaDiagnosticBuilder
+    diagnoseIncomplete(Sema &S, SourceLocation Loc, QualType T) override {
+      return S.Diag(Loc, diag::err_acc_int_expr_incomplete_class_type)
+             << T << IntExpr->getSourceRange();
+    }
+
+    SemaBase::SemaDiagnosticBuilder
+    diagnoseExplicitConv(Sema &S, SourceLocation Loc, QualType T,
+                         QualType ConvTy) override {
+      return S.Diag(Loc, diag::err_acc_int_expr_explicit_conversion)
+             << T << ConvTy;
+    }
+
+    SemaBase::SemaDiagnosticBuilder noteExplicitConv(Sema &S,
+                                                     CXXConversionDecl *Conv,
+                                                     QualType ConvTy) override {
+      return S.Diag(Conv->getLocation(), diag::note_acc_int_expr_conversion)
+             << ConvTy->isEnumeralType() << ConvTy;
+    }
+
+    SemaBase::SemaDiagnosticBuilder
+    diagnoseAmbiguous(Sema &S, SourceLocation Loc, QualType T) override {
+      return S.Diag(Loc, diag::err_acc_int_expr_multiple_conversions) << T;
+    }
+
+    SemaBase::SemaDiagnosticBuilder
+    noteAmbiguous(Sema &S, CXXConversionDecl *Conv, QualType ConvTy) override {
+      return S.Diag(Conv->getLocation(), diag::note_acc_int_expr_conversion)
+             << ConvTy->isEnumeralType() << ConvTy;
+    }
+
+    SemaBase::SemaDiagnosticBuilder
+    diagnoseConversion(Sema &S, SourceLocation Loc, QualType T,
+                       QualType ConvTy) override {
+      llvm_unreachable("conversion functions are permitted");
+    }
+  } IntExprDiagnoser(DK, CK, IntExpr);
+
+  ExprResult IntExprResult = SemaRef.PerformContextualImplicitConversion(
+      Loc, IntExpr, IntExprDiagnoser);
+  if (IntExprResult.isInvalid())
+    return ExprError();
+
+  IntExpr = IntExprResult.get();
+  if (!IntExpr->isTypeDependent() && !IntExpr->getType()->isIntegerType())
+    return ExprError();
+
+  // TODO OpenACC: Do we want to perform usual unary conversions here? When
+  // doing codegen we might find that is necessary, but skip it for now.
+  return IntExpr;
+}
+
+ExprResult SemaOpenACC::ActOnVar(Expr *VarExpr) {
+  // We still need to retain the array subscript/subarray exprs, so work on a
+  // copy.
+  Expr *CurVarExpr = VarExpr->IgnoreParenImpCasts();
+
+  // Sub-arrays/subscript-exprs are fine as long as the base is a
+  // VarExpr/MemberExpr. So strip all of those off.
+  while (isa<ArraySectionExpr, ArraySubscriptExpr>(CurVarExpr)) {
+    if (auto *SubScrpt = dyn_cast<ArraySubscriptExpr>(CurVarExpr))
+      CurVarExpr = SubScrpt->getBase()->IgnoreParenImpCasts();
+    else
+      CurVarExpr =
+          cast<ArraySectionExpr>(CurVarExpr)->getBase()->IgnoreParenImpCasts();
+  }
+
+  // References to a VarDecl are fine.
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(CurVarExpr)) {
+    if (isa<VarDecl, NonTypeTemplateParmDecl>(
+            DRE->getDecl()->getCanonicalDecl()))
+      return VarExpr;
+  }
+
+  // A MemberExpr that references a Field is valid.
+  if (const auto *ME = dyn_cast<MemberExpr>(CurVarExpr)) {
+    if (isa<FieldDecl>(ME->getMemberDecl()->getCanonicalDecl()))
+      return VarExpr;
+  }
+
+  // Referring to 'this' is always OK.
+  if (isa<CXXThisExpr>(CurVarExpr))
+    return VarExpr;
+
+  // Nothing really we can do here, as these are dependent.  So just return they
+  // are valid.
+  if (isa<DependentScopeDeclRefExpr, CXXDependentScopeMemberExpr>(CurVarExpr))
+    return VarExpr;
+
+  // There isn't really anything we can do in the case of a recovery expr, so
+  // skip the diagnostic rather than produce a confusing diagnostic.
+  if (isa<RecoveryExpr>(CurVarExpr))
+    return ExprError();
+
+  Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref);
+  return ExprError();
+}
+
+ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
+                                              Expr *LowerBound,
+                                              SourceLocation ColonLoc,
+                                              Expr *Length,
+                                              SourceLocation RBLoc) {
+  ASTContext &Context = getASTContext();
+
+  // TODO OpenACC: We likely have to reproduce a lot of the same logic from the
+  // OMP version of this, but at the moment we don't have a good way to test it,
+  // so for now we'll just create the node.
+  return new (Context)
+      ArraySectionExpr(Base, LowerBound, Length, Context.ArraySectionTy,
+                       VK_LValue, OK_Ordinary, ColonLoc, RBLoc);
 }
 
 bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,

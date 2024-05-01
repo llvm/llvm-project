@@ -334,8 +334,8 @@ define void @vec_shuff_reorder() #0 {
 ; CHECK-LABEL: @vec_shuff_reorder(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr @fb, align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr @fa, align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP1]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fsub <4 x float> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP5]], <4 x float> [[TMP6]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>

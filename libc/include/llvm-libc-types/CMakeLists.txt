@@ -54,6 +54,7 @@ add_header(pthread_key_t HDR pthread_key_t.h)
 add_header(pthread_mutex_t HDR pthread_mutex_t.h DEPENDS .__futex_word .__mutex_type)
 add_header(pthread_mutexattr_t HDR pthread_mutexattr_t.h)
 add_header(pthread_once_t HDR pthread_once_t.h DEPENDS .__futex_word)
+add_header(pthread_rwlockattr_t HDR pthread_rwlockattr_t.h)
 add_header(pthread_t HDR pthread_t.h DEPENDS .__thread_type)
 add_header(rlim_t HDR rlim_t.h)
 add_header(time_t HDR time_t.h)
@@ -89,6 +90,21 @@ add_header(tcflag_t HDR tcflag_t.h)
 add_header(struct_termios HDR struct_termios.h DEPENDS .cc_t .speed_t .tcflag_t)
 add_header(__getoptargv_t HDR __getoptargv_t.h)
 add_header(wchar_t HDR wchar_t.h)
+add_header(char8_t HDR char8_t.h)
+add_header(
+    char16_t 
+  HDR 
+    char16_t.h
+  DEPENDS
+    libc.include.llvm-libc-macros.stdint_macros
+)
+add_header(
+    char32_t 
+  HDR 
+    char32_t.h
+  DEPENDS
+    libc.include.llvm-libc-macros.stdint_macros
+)
 add_header(wint_t HDR wint_t.h)
 add_header(sa_family_t HDR sa_family_t.h)
 add_header(socklen_t HDR socklen_t.h)

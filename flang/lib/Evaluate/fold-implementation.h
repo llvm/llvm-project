@@ -201,11 +201,12 @@ std::optional<Constant<T>> Folder<T>::ApplySubscripts(const Constant<T> &array,
   ConstantSubscripts resultShape;
   ConstantSubscripts ssLB;
   for (const auto &ss : subscripts) {
-    CHECK(ss.Rank() <= 1);
     if (ss.Rank() == 1) {
       resultShape.push_back(static_cast<ConstantSubscript>(ss.size()));
       elements *= ss.size();
       ssLB.push_back(ss.lbounds().front());
+    } else if (ss.Rank() > 1) {
+      return std::nullopt; // error recovery
     }
   }
   ConstantSubscripts ssAt(rank, 0), at(rank, 0), tmp(1, 0);

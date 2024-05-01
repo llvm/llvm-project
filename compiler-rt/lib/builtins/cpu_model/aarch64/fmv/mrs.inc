@@ -16,6 +16,8 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     hwcap2 = arg->_hwcap2;
   if (hwcap & HWCAP_CRC32)
     setCPUFeature(FEAT_CRC);
+  if (hwcap & HWCAP_PMULL)
+    setCPUFeature(FEAT_PMULL);
   if (hwcap & HWCAP_FLAGM)
     setCPUFeature(FEAT_FLAGM);
   if (hwcap2 & HWCAP2_FLAGM2) {
@@ -32,12 +34,16 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_FP16);
     setCPUFeature(FEAT_FP);
   }
+  if (hwcap & HWCAP_DIT)
+    setCPUFeature(FEAT_DIT);
   if (hwcap & HWCAP_ASIMDRDM)
     setCPUFeature(FEAT_RDM);
   if (hwcap & HWCAP_ILRCPC)
     setCPUFeature(FEAT_RCPC2);
   if (hwcap & HWCAP_AES)
     setCPUFeature(FEAT_AES);
+  if (hwcap & HWCAP_SHA1)
+    setCPUFeature(FEAT_SHA1);
   if (hwcap & HWCAP_SHA2)
     setCPUFeature(FEAT_SHA2);
   if (hwcap & HWCAP_JSCVT)
@@ -47,11 +53,22 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
   if (hwcap & HWCAP_SB)
     setCPUFeature(FEAT_SB);
   if (hwcap & HWCAP_SSBS)
-    setCPUFeature(FEAT_SSBS);
-  if (hwcap2 & HWCAP2_MTE)
+    setCPUFeature(FEAT_SSBS2);
+  if (hwcap2 & HWCAP2_MTE) {
     setCPUFeature(FEAT_MEMTAG);
+    setCPUFeature(FEAT_MEMTAG2);
+  }
+  if (hwcap2 & HWCAP2_MTE3) {
+    setCPUFeature(FEAT_MEMTAG);
+    setCPUFeature(FEAT_MEMTAG2);
+    setCPUFeature(FEAT_MEMTAG3);
+  }
   if (hwcap2 & HWCAP2_SVEAES)
     setCPUFeature(FEAT_SVE_AES);
+  if (hwcap2 & HWCAP2_SVEPMULL) {
+    setCPUFeature(FEAT_SVE_AES);
+    setCPUFeature(FEAT_SVE_PMULL128);
+  }
   if (hwcap2 & HWCAP2_SVEBITPERM)
     setCPUFeature(FEAT_SVE_BITPERM);
   if (hwcap2 & HWCAP2_SVESHA3)
@@ -66,12 +83,22 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_RNG);
   if (hwcap2 & HWCAP2_I8MM)
     setCPUFeature(FEAT_I8MM);
+  if (hwcap2 & HWCAP2_EBF16)
+    setCPUFeature(FEAT_EBF16);
+  if (hwcap2 & HWCAP2_SVE_EBF16)
+    setCPUFeature(FEAT_SVE_EBF16);
+  if (hwcap2 & HWCAP2_DGH)
+    setCPUFeature(FEAT_DGH);
   if (hwcap2 & HWCAP2_FRINT)
     setCPUFeature(FEAT_FRINTTS);
+  if (hwcap2 & HWCAP2_SVEI8MM)
+    setCPUFeature(FEAT_SVE_I8MM);
   if (hwcap2 & HWCAP2_SVEF32MM)
     setCPUFeature(FEAT_SVE_F32MM);
   if (hwcap2 & HWCAP2_SVEF64MM)
     setCPUFeature(FEAT_SVE_F64MM);
+  if (hwcap2 & HWCAP2_BTI)
+    setCPUFeature(FEAT_BTI);
   if (hwcap2 & HWCAP2_RPRES)
     setCPUFeature(FEAT_RPRES);
   if (hwcap2 & HWCAP2_WFXT)
@@ -114,6 +141,9 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
       // ID_AA64ZFR0_EL1.SVEver == 0b0001
       if (extractBits(ftr, 0, 4) == 0x1)
         setCPUFeature(FEAT_SVE2);
+      // ID_AA64ZFR0_EL1.BF16 != 0b0000
+      if (extractBits(ftr, 20, 4) != 0x0)
+        setCPUFeature(FEAT_SVE_BF16);
     }
     getCPUFeature(ID_AA64ISAR0_EL1, ftr);
     // ID_AA64ISAR0_EL1.SHA3 != 0b0000
@@ -138,6 +168,12 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     // ID_AA64ISAR1_EL1.LS64 >= 0b0001
     if (extractBits(ftr, 60, 4) >= 0x1)
       setCPUFeature(FEAT_LS64);
+    // ID_AA64ISAR1_EL1.LS64 >= 0b0010
+    if (extractBits(ftr, 60, 4) >= 0x2)
+      setCPUFeature(FEAT_LS64_V);
+    // ID_AA64ISAR1_EL1.LS64 >= 0b0011
+    if (extractBits(ftr, 60, 4) >= 0x3)
+      setCPUFeature(FEAT_LS64_ACCDATA);
   } else {
     // Set some features in case of no CPUID support
     if (hwcap & (HWCAP_FP | HWCAP_FPHP)) {
@@ -151,6 +187,8 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
       setCPUFeature(FEAT_RCPC);
     if (hwcap2 & HWCAP2_BF16 || hwcap2 & HWCAP2_EBF16)
       setCPUFeature(FEAT_BF16);
+    if (hwcap2 & HWCAP2_SVEBF16)
+      setCPUFeature(FEAT_SVE_BF16);
     if (hwcap2 & HWCAP2_SVE2 && hwcap & HWCAP_SVE)
       setCPUFeature(FEAT_SVE2);
     if (hwcap & HWCAP_SHA3)

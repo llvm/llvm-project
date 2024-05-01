@@ -687,7 +687,7 @@ protected:
       Symbol &, bool respectImplicitNoneType = true);
   void CheckEntryDummyUse(SourceName, Symbol *);
   bool ConvertToObjectEntity(Symbol &);
-  bool ConvertToProcEntity(Symbol &);
+  bool ConvertToProcEntity(Symbol &, std::optional<SourceName> = std::nullopt);
 
   const DeclTypeSpec &MakeNumericType(
       TypeCategory, const std::optional<parser::KindSelector> &);
@@ -1779,7 +1779,6 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
       !symbol.attrs().test(Attr::BIND_C)) {
     return;
   }
-
   std::optional<std::string> label{
       evaluate::GetScalarConstantValue<evaluate::Ascii>(bindName_)};
   // 18.9.2(2): discard leading and trailing blanks
@@ -1798,16 +1797,18 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
   } else {
     label = symbol.name().ToString();
   }
-  // Check if a symbol has two Bind names.
+  // Checks whether a symbol has two Bind names.
   std::string oldBindName;
-  if (symbol.GetBindName()) {
-    oldBindName = *symbol.GetBindName();
+  if (const auto *bindName{symbol.GetBindName()}) {
+    oldBindName = *bindName;
   }
   symbol.SetBindName(std::move(*label));
   if (!oldBindName.empty()) {
     if (const std::string * newBindName{symbol.GetBindName()}) {
       if (oldBindName != *newBindName) {
-        Say(symbol.name(), "The entity '%s' has multiple BIND names"_err_en_US);
+        Say(symbol.name(),
+            "The entity '%s' has multiple BIND names ('%s' and '%s')"_err_en_US,
+            symbol.name(), oldBindName, *newBindName);
       }
     }
   }
@@ -2253,14 +2254,19 @@ void ScopeHandler::SayWithReason(const parser::Name &name, Symbol &symbol,
 
 void ScopeHandler::SayWithDecl(
     const parser::Name &name, Symbol &symbol, MessageFixedText &&msg) {
-  bool isFatal{msg.IsFatal()};
-  Say(name, std::move(msg), symbol.name())
-      .Attach(Message{symbol.name(),
-          symbol.test(Symbol::Flag::Implicit)
-              ? "Implicit declaration of '%s'"_en_US
-              : "Declaration of '%s'"_en_US,
-          name.source});
-  context().SetError(symbol, isFatal);
+  auto &message{Say(name, std::move(msg), symbol.name())
+                    .Attach(Message{symbol.name(),
+                        symbol.test(Symbol::Flag::Implicit)
+                            ? "Implicit declaration of '%s'"_en_US
+                            : "Declaration of '%s'"_en_US,
+                        name.source})};
+  if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
+    if (auto usedAsProc{proc->usedAsProcedureHere()}) {
+      if (usedAsProc->begin() != symbol.name().begin()) {
+        message.Attach(Message{*usedAsProc, "Referenced as a procedure"_en_US});
+      }
+    }
+  }
 }
 
 void ScopeHandler::SayLocalMustBeVariable(
@@ -2659,9 +2665,9 @@ bool ScopeHandler::ConvertToObjectEntity(Symbol &symbol) {
   return true;
 }
 // Convert symbol to be a ProcEntity or return false if it can't be.
-bool ScopeHandler::ConvertToProcEntity(Symbol &symbol) {
+bool ScopeHandler::ConvertToProcEntity(
+    Symbol &symbol, std::optional<SourceName> usedHere) {
   if (symbol.has<ProcEntityDetails>()) {
-    // nothing to do
   } else if (symbol.has<UnknownDetails>()) {
     symbol.set_details(ProcEntityDetails{});
   } else if (auto *details{symbol.detailsIf<EntityDetails>()}) {
@@ -2683,6 +2689,10 @@ bool ScopeHandler::ConvertToProcEntity(Symbol &symbol) {
     return hostDetails->symbol().has<ProcEntityDetails>();
   } else {
     return false;
+  }
+  auto &proc{symbol.get<ProcEntityDetails>()};
+  if (usedHere && !proc.usedAsProcedureHere()) {
+    proc.set_usedAsProcedureHere(*usedHere);
   }
   return true;
 }
@@ -3650,7 +3660,7 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
       misparsedStmtFuncFound_ = true;
       return false;
     }
-    if (DoesScopeContain(&ultimate.owner(), currScope())) {
+    if (IsHostAssociated(*symbol, currScope())) {
       if (context().ShouldWarn(
               common::LanguageFeature::StatementFunctionExtensions)) {
         Say(name,
@@ -4805,7 +4815,7 @@ bool DeclarationVisitor::Pre(const parser::ExternalStmt &x) {
   HandleAttributeStmt(Attr::EXTERNAL, x.v);
   for (const auto &name : x.v) {
     auto *symbol{FindSymbol(name)};
-    if (!ConvertToProcEntity(DEREF(symbol))) {
+    if (!ConvertToProcEntity(DEREF(symbol), name.source)) {
       // Check if previous symbol is an interface.
       if (auto *details{symbol->detailsIf<SubprogramDetails>()}) {
         if (details->isInterface()) {
@@ -4845,7 +4855,7 @@ void DeclarationVisitor::DeclareIntrinsic(const parser::Name &name) {
   auto &symbol{DEREF(FindSymbol(name))};
   if (symbol.has<GenericDetails>()) {
     // Generic interface is extending intrinsic; ok
-  } else if (!ConvertToProcEntity(symbol)) {
+  } else if (!ConvertToProcEntity(symbol, name.source)) {
     SayWithDecl(
         name, symbol, "INTRINSIC attribute not allowed on '%s'"_err_en_US);
   } else if (symbol.attrs().test(Attr::EXTERNAL)) { // C840
@@ -4977,7 +4987,9 @@ Symbol &DeclarationVisitor::DeclareUnknownEntity(
     if (symbol.attrs().test(Attr::EXTERNAL)) {
       ConvertToProcEntity(symbol);
     }
-    SetBindNameOn(symbol);
+    if (attrs.test(Attr::BIND_C)) {
+      SetBindNameOn(symbol);
+    }
     return symbol;
   }
 }
@@ -7705,6 +7717,7 @@ const parser::Name *DeclarationVisitor::ResolveDataRef(
               } else if (!context().HasError(*name->symbol)) {
                 SayWithDecl(*name, *name->symbol,
                     "Cannot reference function '%s' as data"_err_en_US);
+                context().SetError(*name->symbol);
               }
             }
             return name;
@@ -8119,7 +8132,7 @@ void ResolveNamesVisitor::HandleProcedureName(
       symbol = &MakeSymbol(context().globalScope(), name.source, Attrs{});
     }
     Resolve(name, *symbol);
-    ConvertToProcEntity(*symbol);
+    ConvertToProcEntity(*symbol, name.source);
     if (!symbol->attrs().test(Attr::INTRINSIC)) {
       if (CheckImplicitNoneExternal(name.source, *symbol)) {
         MakeExternal(*symbol);
@@ -8144,7 +8157,7 @@ void ResolveNamesVisitor::HandleProcedureName(
       name.symbol = symbol;
     }
     CheckEntryDummyUse(name.source, symbol);
-    bool convertedToProcEntity{ConvertToProcEntity(*symbol)};
+    bool convertedToProcEntity{ConvertToProcEntity(*symbol, name.source)};
     if (convertedToProcEntity && !symbol->attrs().test(Attr::EXTERNAL) &&
         IsIntrinsic(symbol->name(), flag) && !IsDummy(*symbol)) {
       AcquireIntrinsicProcedureFlags(*symbol);
@@ -8203,7 +8216,7 @@ void ResolveNamesVisitor::NoteExecutablePartCall(
             ? Symbol::Flag::Function
             : Symbol::Flag::Subroutine};
     if (!symbol->test(other)) {
-      ConvertToProcEntity(*symbol);
+      ConvertToProcEntity(*symbol, name);
       if (auto *details{symbol->detailsIf<ProcEntityDetails>()}) {
         symbol->set(flag);
         if (IsDummy(*symbol)) {
@@ -8240,11 +8253,13 @@ bool ResolveNamesVisitor::SetProcFlag(
   if (symbol.test(Symbol::Flag::Function) && flag == Symbol::Flag::Subroutine) {
     SayWithDecl(
         name, symbol, "Cannot call function '%s' like a subroutine"_err_en_US);
+    context().SetError(symbol);
     return false;
   } else if (symbol.test(Symbol::Flag::Subroutine) &&
       flag == Symbol::Flag::Function) {
     SayWithDecl(
         name, symbol, "Cannot call subroutine '%s' like a function"_err_en_US);
+    context().SetError(symbol);
     return false;
   } else if (flag == Symbol::Flag::Function &&
       IsLocallyImplicitGlobalSymbol(symbol, name) &&
@@ -8263,6 +8278,7 @@ bool ResolveNamesVisitor::SetProcFlag(
   } else if (symbol.GetType() && flag == Symbol::Flag::Subroutine) {
     SayWithDecl(
         name, symbol, "Cannot call function '%s' like a subroutine"_err_en_US);
+    context().SetError(symbol);
   } else if (symbol.attrs().test(Attr::INTRINSIC)) {
     AcquireIntrinsicProcedureFlags(symbol);
   }
@@ -8724,7 +8740,7 @@ bool ResolveNamesVisitor::Pre(const parser::PointerAssignmentStmt &x) {
           context().globalScope(), name->source, Attrs{Attr::EXTERNAL})};
       symbol.implicitAttrs().set(Attr::EXTERNAL);
       Resolve(*name, symbol);
-      ConvertToProcEntity(symbol);
+      ConvertToProcEntity(symbol, name->source);
       return false;
     }
   }
@@ -8873,7 +8889,7 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       }
     }
   } else {
-    Say(x.source, "Compiler directive was ignored"_warn_en_US);
+    Say(x.source, "Unrecognized compiler directive was ignored"_warn_en_US);
   }
 }
 
@@ -8888,7 +8904,7 @@ bool ResolveNamesVisitor::Pre(const parser::ProgramUnit &x) {
     ResolveAccParts(context(), x, &topScope_);
     return false;
   }
-  auto root{ProgramTree::Build(x)};
+  auto root{ProgramTree::Build(x, context())};
   SetScope(topScope_);
   ResolveSpecificationParts(root);
   FinishSpecificationParts(root);

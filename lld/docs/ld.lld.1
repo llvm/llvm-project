@@ -172,6 +172,14 @@ This is like a generalized
 Output cross reference table. If
 .Fl Map
 is specified, print to the map file.
+.It Fl -debug-names
+Generate a merged
+.Li .debug_names
+section.
+.It Fl -default-script Ns = Ns Ar file , Fl dT Ar file
+In the absence of
+.Fl -script ,
+read this default linker script.
 .It Fl -defsym Ns = Ns Ar symbol Ns = Ns Ar expression
 Define a symbol alias.
 .Ar expression
