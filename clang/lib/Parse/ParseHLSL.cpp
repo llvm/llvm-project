@@ -235,15 +235,19 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
       }
       switch (ComponentStr[0]) {
       case 'x':
+      case 'r':
         Component = 0;
         break;
       case 'y':
+      case 'g':
         Component = 1;
         break;
       case 'z':
+      case 'b':
         Component = 2;
         break;
       case 'w':
+      case 'a':
         Component = 3;
         break;
       default:
@@ -256,8 +260,7 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
     ASTContext &Ctx = Actions.getASTContext();
     ArgExprs.push_back(IntegerLiteral::Create(
         Ctx, llvm::APInt(Ctx.getTypeSize(Ctx.getSizeType()), Offset),
-        Ctx.getSizeType(),
-        SourceLocation())); // Dummy location for integer literal.
+        Ctx.getSizeType(), OffsetLoc));
     if (ExpectAndConsume(tok::r_paren, diag::err_expected)) {
       SkipUntil(tok::r_paren, StopAtSemi); // skip through )
       return;

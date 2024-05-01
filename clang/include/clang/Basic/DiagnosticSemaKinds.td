@@ -12170,6 +12170,7 @@ def err_hlsl_expected_space : Error<"invalid space specifier '%0' used; expected
 def err_hlsl_packoffset_mix : Error<"cannot mix packoffset elements with nonpackoffset elements in a cbuffer">;
 def err_hlsl_packoffset_overlap : Error<"packoffset overlap between %0, %1">;
 def err_hlsl_packoffset_cross_reg_boundary : Error<"packoffset cannot cross register boundary">;
+def err_hlsl_packoffset_alignment_mismatch : Error<"packoffset at 'y' not match alignment %0 required by %1">;
 def err_hlsl_pointers_unsupported : Error<
   "%select{pointers|references}0 are unsupported in HLSL">;
 

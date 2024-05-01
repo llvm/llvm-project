@@ -7332,17 +7332,28 @@ static void handleHLSLPackOffsetAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
   unsigned ComponentNum = Offset & 0x3;
   // Check ComponentNum is valid for T.
-  if (IsAggregateTy) {
-    if (ComponentNum != 0) {
+  if (ComponentNum) {
+    unsigned Size = S.getASTContext().getTypeSize(T);
+    if (IsAggregateTy || Size > 128) {
       S.Diag(AL.getLoc(), diag::err_hlsl_packoffset_cross_reg_boundary);
       return;
-    }
-  } else {
-    unsigned size = S.getASTContext().getTypeSize(T);
-    // Make sure ComponentNum + sizeof(T) <= 4.
-    if ((ComponentNum * 32 + size) > 128) {
-      S.Diag(AL.getLoc(), diag::err_hlsl_packoffset_cross_reg_boundary);
-      return;
+    } else {
+      // Make sure ComponentNum + sizeof(T) <= 4.
+      if ((ComponentNum * 32 + Size) > 128) {
+        S.Diag(AL.getLoc(), diag::err_hlsl_packoffset_cross_reg_boundary);
+        return;
+      }
+      QualType EltTy = T;
+      if (const auto *VT = T->getAs<VectorType>())
+        EltTy = VT->getElementType();
+      unsigned Align = S.getASTContext().getTypeAlign(EltTy);
+      if (Align > 32 && ComponentNum == 1) {
+        // NOTE: ComponentNum 3 will hit err_hlsl_packoffset_cross_reg_boundary.
+        // So we only need to check ComponentNum 1 here.
+        S.Diag(AL.getLoc(), diag::err_hlsl_packoffset_alignment_mismatch)
+            << Align << EltTy;
+        return;
+      }
     }
   }
 
