@@ -173,14 +173,17 @@ Value *findAvailablePtrLoadStore(const MemoryLocation &Loc, Type *AccessTy,
                                  unsigned MaxInstsToScan, BatchAAResults *AA,
                                  bool *IsLoadCSE, unsigned *NumScanedInst);
 
-/// Returns true if a pointer value \p A can be replace with another pointer
-/// value \B if they are deemed equal through some means (e.g. information from
+/// Returns true if a pointer value \p From can be replaced with another pointer
+/// value \To if they are deemed equal through some means (e.g. information from
 /// conditions).
-/// NOTE: the current implementations is incomplete and unsound. It does not
-/// reject all invalid cases yet, but will be made stricter in the future. In
-/// particular this means returning true means unknown if replacement is safe.
-bool canReplacePointersIfEqual(Value *A, Value *B, const DataLayout &DL,
-                               Instruction *CtxI);
+/// NOTE: The current implementation allows replacement in Icmp and PtrToInt
+/// instructions, as well as when we are replacing with a null pointer.
+/// Additionally it also allows replacement of pointers when both pointers have
+/// the same underlying object.
+bool canReplacePointersIfEqual(const Value *From, const Value *To,
+                               const DataLayout &DL);
+bool canReplacePointersInUseIfEqual(const Use &U, const Value *To,
+                                    const DataLayout &DL);
 }
 
 #endif

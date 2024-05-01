@@ -98,6 +98,8 @@ class SPIRVEmitIntrinsics
     return B.CreateIntrinsic(IntrID, {Types}, Args);
   }
 
+  void buildAssignPtr(IRBuilder<> &B, Type *ElemTy, Value *Arg);
+
   void replaceMemInstrUses(Instruction *Old, Instruction *New, IRBuilder<> &B);
   void processInstrAfterVisit(Instruction *I, IRBuilder<> &B);
   void insertAssignPtrTypeIntrs(Instruction *I, IRBuilder<> &B);
@@ -111,6 +113,7 @@ class SPIRVEmitIntrinsics
   void insertPtrCastOrAssignTypeInstr(Instruction *I, IRBuilder<> &B);
   void processGlobalValue(GlobalVariable &GV, IRBuilder<> &B);
   void processParamTypes(Function *F, IRBuilder<> &B);
+  void processParamTypesByFunHeader(Function *F, IRBuilder<> &B);
   Type *deduceFunParamElementType(Function *F, unsigned OpIdx);
   Type *deduceFunParamElementType(Function *F, unsigned OpIdx,
                                   std::unordered_set<Function *> &FVisited);
@@ -194,6 +197,17 @@ static inline void reportFatalOnTokenType(const Instruction *I) {
                        false);
 }
 
+void SPIRVEmitIntrinsics::buildAssignPtr(IRBuilder<> &B, Type *ElemTy,
+                                         Value *Arg) {
+  CallInst *AssignPtrTyCI =
+      buildIntrWithMD(Intrinsic::spv_assign_ptr_type, {Arg->getType()},
+                      Constant::getNullValue(ElemTy), Arg,
+                      {B.getInt32(getPointerAddressSpace(Arg->getType()))}, B);
+  GR->addDeducedElementType(AssignPtrTyCI, ElemTy);
+  GR->addDeducedElementType(Arg, ElemTy);
+  AssignPtrTypeInstr[Arg] = AssignPtrTyCI;
+}
+
 // Set element pointer type to the given value of ValueTy and tries to
 // specify this type further (recursively) by Operand value, if needed.
 Type *SPIRVEmitIntrinsics::deduceElementTypeByValueDeep(
@@ -229,6 +243,19 @@ Type *SPIRVEmitIntrinsics::deduceElementTypeByUsersDeep(
         return Ty;
     }
   }
+  return nullptr;
+}
+
+// Implements what we know in advance about intrinsics and builtin calls
+// TODO: consider feasibility of this particular case to be generalized by
+// encoding knowledge about intrinsics and builtin calls by corresponding
+// specification rules
+static Type *getPointeeTypeByCallInst(StringRef DemangledName,
+                                      Function *CalledF, unsigned OpIdx) {
+  if ((DemangledName.starts_with("__spirv_ocl_printf(") ||
+       DemangledName.starts_with("printf(")) &&
+      OpIdx == 0)
+    return IntegerType::getInt8Ty(CalledF->getContext());
   return nullptr;
 }
 
@@ -795,6 +822,8 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
     return;
 
   // collect information about formal parameter types
+  std::string DemangledName =
+      getOclOrSpirvBuiltinDemangledName(CI->getCalledFunction()->getName());
   Function *CalledF = CI->getCalledFunction();
   SmallVector<Type *, 4> CalledArgTys;
   bool HaveTypes = false;
@@ -811,10 +840,15 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
       if (!ElemTy && hasPointeeTypeAttr(CalledArg))
         ElemTy = getPointeeTypeByAttr(CalledArg);
       if (!ElemTy) {
-        for (User *U : CalledArg->users()) {
-          if (Instruction *Inst = dyn_cast<Instruction>(U)) {
-            if ((ElemTy = deduceElementTypeHelper(Inst)) != nullptr)
-              break;
+        ElemTy = getPointeeTypeByCallInst(DemangledName, CalledF, OpIdx);
+        if (ElemTy) {
+          GR->addDeducedElementType(CalledArg, ElemTy);
+        } else {
+          for (User *U : CalledArg->users()) {
+            if (Instruction *Inst = dyn_cast<Instruction>(U)) {
+              if ((ElemTy = deduceElementTypeHelper(Inst)) != nullptr)
+                break;
+            }
           }
         }
       }
@@ -823,8 +857,6 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
     }
   }
 
-  std::string DemangledName =
-      getOclOrSpirvBuiltinDemangledName(CI->getCalledFunction()->getName());
   if (DemangledName.empty() && !HaveTypes)
     return;
 
@@ -835,8 +867,14 @@ void SPIRVEmitIntrinsics::insertPtrCastOrAssignTypeInstr(Instruction *I,
       continue;
 
     // Constants (nulls/undefs) are handled in insertAssignPtrTypeIntrs()
-    if (!isa<Instruction>(ArgOperand) && !isa<Argument>(ArgOperand))
-      continue;
+    if (!isa<Instruction>(ArgOperand) && !isa<Argument>(ArgOperand)) {
+      // However, we may have assumptions about the formal argument's type and
+      // may have a need to insert a ptr cast for the actual parameter of this
+      // call.
+      Argument *CalledArg = CalledF->getArg(OpIdx);
+      if (!GR->findDeducedElementType(CalledArg))
+        continue;
+    }
 
     Type *ExpectedType =
         OpIdx < CalledArgTys.size() ? CalledArgTys[OpIdx] : nullptr;
@@ -1102,9 +1140,13 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
                  (II->paramHasAttr(OpNo, Attribute::ImmArg))))
         continue;
       B.SetInsertPoint(I);
-      auto *NewOp =
-          buildIntrWithMD(Intrinsic::spv_track_constant,
-                          {Op->getType(), Op->getType()}, Op, Op, {}, B);
+      Value *OpTyVal = Op;
+      if (Op->getType()->isTargetExtTy())
+        OpTyVal = Constant::getNullValue(
+            IntegerType::get(I->getContext(), GR->getPointerSize()));
+      auto *NewOp = buildIntrWithMD(Intrinsic::spv_track_constant,
+                                    {Op->getType(), OpTyVal->getType()}, Op,
+                                    OpTyVal, {}, B);
       I->setOperand(OpNo, NewOp);
     }
   }
@@ -1179,28 +1221,29 @@ Type *SPIRVEmitIntrinsics::deduceFunParamElementType(
   return nullptr;
 }
 
+void SPIRVEmitIntrinsics::processParamTypesByFunHeader(Function *F,
+                                                       IRBuilder<> &B) {
+  B.SetInsertPointPastAllocas(F);
+  for (unsigned OpIdx = 0; OpIdx < F->arg_size(); ++OpIdx) {
+    Argument *Arg = F->getArg(OpIdx);
+    if (!isUntypedPointerTy(Arg->getType()))
+      continue;
+    Type *ElemTy = GR->findDeducedElementType(Arg);
+    if (!ElemTy && hasPointeeTypeAttr(Arg) &&
+        (ElemTy = getPointeeTypeByAttr(Arg)) != nullptr)
+      buildAssignPtr(B, ElemTy, Arg);
+  }
+}
+
 void SPIRVEmitIntrinsics::processParamTypes(Function *F, IRBuilder<> &B) {
   B.SetInsertPointPastAllocas(F);
   for (unsigned OpIdx = 0; OpIdx < F->arg_size(); ++OpIdx) {
     Argument *Arg = F->getArg(OpIdx);
     if (!isUntypedPointerTy(Arg->getType()))
       continue;
-
     Type *ElemTy = GR->findDeducedElementType(Arg);
-    if (!ElemTy) {
-      if (hasPointeeTypeAttr(Arg) &&
-          (ElemTy = getPointeeTypeByAttr(Arg)) != nullptr) {
-        GR->addDeducedElementType(Arg, ElemTy);
-      } else if ((ElemTy = deduceFunParamElementType(F, OpIdx)) != nullptr) {
-        CallInst *AssignPtrTyCI = buildIntrWithMD(
-            Intrinsic::spv_assign_ptr_type, {Arg->getType()},
-            Constant::getNullValue(ElemTy), Arg,
-            {B.getInt32(getPointerAddressSpace(Arg->getType()))}, B);
-        GR->addDeducedElementType(AssignPtrTyCI, ElemTy);
-        GR->addDeducedElementType(Arg, ElemTy);
-        AssignPtrTypeInstr[Arg] = AssignPtrTyCI;
-      }
-    }
+    if (!ElemTy && (ElemTy = deduceFunParamElementType(F, OpIdx)) != nullptr)
+      buildAssignPtr(B, ElemTy, Arg);
   }
 }
 
@@ -1216,6 +1259,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   AggrConsts.clear();
   AggrConstTypes.clear();
   AggrStores.clear();
+
+  processParamTypesByFunHeader(F, B);
 
   // StoreInst's operand type can be changed during the next transformations,
   // so we need to store it in the set. Also store already transformed types.

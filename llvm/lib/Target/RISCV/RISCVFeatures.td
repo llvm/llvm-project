@@ -391,7 +391,7 @@ def HasStdExtZcb : Predicate<"Subtarget->hasStdExtZcb()">,
 def FeatureStdExtZcd
     : RISCVExtension<"zcd", 1, 0,
                      "'Zcd' (Compressed Double-Precision Floating-Point Instructions)",
-                     [FeatureStdExtZca]>;
+                     [FeatureStdExtD, FeatureStdExtZca]>;
 
 def HasStdExtCOrZcd
     : Predicate<"Subtarget->hasStdExtCOrZcd()">,
@@ -402,7 +402,7 @@ def HasStdExtCOrZcd
 def FeatureStdExtZcf
     : RISCVExtension<"zcf", 1, 0,
                      "'Zcf' (Compressed Single-Precision Floating-Point Instructions)",
-                     [FeatureStdExtZca]>;
+                     [FeatureStdExtF, FeatureStdExtZca]>;
 
 def FeatureStdExtZcmp
     : RISCVExtension<"zcmp", 1, 0,
@@ -423,8 +423,7 @@ def HasStdExtZcmt : Predicate<"Subtarget->hasStdExtZcmt()">,
 def FeatureStdExtZce
     : RISCVExtension<"zce", 1, 0,
                      "'Zce' (Compressed extensions for microcontrollers)",
-                     [FeatureStdExtZca, FeatureStdExtZcb, FeatureStdExtZcmp,
-                      FeatureStdExtZcmt]>;
+                     [FeatureStdExtZcb, FeatureStdExtZcmp, FeatureStdExtZcmt]>;
 
 def HasStdExtCOrZcfOrZce
     : Predicate<"Subtarget->hasStdExtC() || Subtarget->hasStdExtZcf() "
@@ -1088,7 +1087,7 @@ def HasVendorXSfvqmaccqoq
 def FeatureVendorXSfvfwmaccqqq
     : RISCVExtension<"xsfvfwmaccqqq", 1, 0,
                      "'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction and 4-by-4))",
-                     [FeatureStdExtZve32f, FeatureStdExtZvfbfmin]>;
+                     [FeatureStdExtZvfbfmin]>;
 def HasVendorXSfvfwmaccqqq
     : Predicate<"Subtarget->hasVendorXSfvfwmaccqqq()">,
       AssemblerPredicate<(all_of FeatureVendorXSfvfwmaccqqq),

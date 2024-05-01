@@ -187,8 +187,12 @@ VmemType getVmemType(const MachineInstr &Inst) {
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Inst.getOpcode());
   const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
       AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
-  return BaseInfo->BVH ? VMEM_BVH
-                       : BaseInfo->Sampler ? VMEM_SAMPLER : VMEM_NOSAMPLER;
+  // The test for MSAA here is because gfx12+ image_msaa_load is actually
+  // encoded as VSAMPLE and requires the appropriate s_waitcnt variant for that.
+  // Pre-gfx12 doesn't care since all vmem types result in the same s_waitcnt.
+  return BaseInfo->BVH                         ? VMEM_BVH
+         : BaseInfo->Sampler || BaseInfo->MSAA ? VMEM_SAMPLER
+                                               : VMEM_NOSAMPLER;
 }
 
 unsigned &getCounterRef(AMDGPU::Waitcnt &Wait, InstCounterType T) {
@@ -2252,12 +2256,12 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     // Don't examine operands unless we need to track vccz correctness.
     if (ST->hasReadVCCZBug() || !ST->partialVCCWritesUpdateVCCZ()) {
-      if (Inst.definesRegister(AMDGPU::VCC_LO) ||
-          Inst.definesRegister(AMDGPU::VCC_HI)) {
+      if (Inst.definesRegister(AMDGPU::VCC_LO, /*TRI=*/nullptr) ||
+          Inst.definesRegister(AMDGPU::VCC_HI, /*TRI=*/nullptr)) {
         // Up to gfx9, writes to vcc_lo and vcc_hi don't update vccz.
         if (!ST->partialVCCWritesUpdateVCCZ())
           VCCZCorrect = false;
-      } else if (Inst.definesRegister(AMDGPU::VCC)) {
+      } else if (Inst.definesRegister(AMDGPU::VCC, /*TRI=*/nullptr)) {
         // There is a hardware bug on CI/SI where SMRD instruction may corrupt
         // vccz bit, so when we detect that an instruction may read from a
         // corrupt vccz bit, we need to:

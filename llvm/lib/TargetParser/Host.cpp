@@ -214,6 +214,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0xc18", "cortex-r8")
         .Case("0xd13", "cortex-r52")
         .Case("0xd15", "cortex-r82")
+        .Case("0xd14", "cortex-r82ae")
         .Case("0xd02", "cortex-a34")
         .Case("0xd04", "cortex-a35")
         .Case("0xd03", "cortex-a53")
@@ -245,8 +246,11 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
         .Case("0xd4a", "neoverse-e1")
         .Case("0xd0c", "neoverse-n1")
         .Case("0xd49", "neoverse-n2")
+        .Case("0xd8e", "neoverse-n3")
         .Case("0xd40", "neoverse-v1")
         .Case("0xd4f", "neoverse-v2")
+        .Case("0xd84", "neoverse-v3")
+        .Case("0xd83", "neoverse-v3ae")
         .Default("generic");
   }
 
@@ -1284,8 +1288,10 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(X86::FEATURE_AVX2);
   if (HasLeaf7 && ((EBX >> 8) & 1))
     setFeature(X86::FEATURE_BMI2);
-  if (HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save)
+  if (HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save) {
     setFeature(X86::FEATURE_AVX512F);
+    setFeature(X86::FEATURE_EVEX512);
+  }
   if (HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save)
     setFeature(X86::FEATURE_AVX512DQ);
   if (HasLeaf7 && ((EBX >> 19) & 1))
@@ -1796,6 +1802,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["rtm"]        = HasLeaf7 && ((EBX >> 11) & 1);
   // AVX512 is only supported if the OS supports the context save for it.
   Features["avx512f"]    = HasLeaf7 && ((EBX >> 16) & 1) && HasAVX512Save;
+  Features["evex512"]    = Features["avx512f"];
   Features["avx512dq"]   = HasLeaf7 && ((EBX >> 17) & 1) && HasAVX512Save;
   Features["rdseed"]     = HasLeaf7 && ((EBX >> 18) & 1);
   Features["adx"]        = HasLeaf7 && ((EBX >> 19) & 1);

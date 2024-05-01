@@ -2083,8 +2083,9 @@ public:
   /// Return true if the specified operand is an ISD::OR or ISD::XOR node
   /// that can be treated as an ISD::ADD node.
   /// or(x,y) == add(x,y) iff haveNoCommonBitsSet(x,y)
-  /// xor(x,y) == add(x,y) iff isMinSignedConstant(y)
-  bool isADDLike(SDValue Op) const;
+  /// xor(x,y) == add(x,y) iff isMinSignedConstant(y) && !NoWrap
+  /// If \p NoWrap is true, this will not match ISD::XOR.
+  bool isADDLike(SDValue Op, bool NoWrap = false) const;
 
   /// Return true if the specified operand is an ISD::ADD with a ConstantSDNode
   /// on the right-hand side, or if it is an ISD::OR with a ConstantSDNode that
@@ -2146,6 +2147,10 @@ public:
   const APInt *getValidShiftAmountConstant(SDValue V,
                                            const APInt &DemandedElts) const;
 
+  /// If a SHL/SRA/SRL node \p V has a constant or splat constant shift amount
+  /// that is less than the element bit-width of the shift node, return it.
+  const APInt *getValidShiftAmountConstant(SDValue V) const;
+
   /// If a SHL/SRA/SRL node \p V has constant shift amounts that are all less
   /// than the element bit-width of the shift node, return the minimum value.
   const APInt *
@@ -2153,10 +2158,20 @@ public:
                                      const APInt &DemandedElts) const;
 
   /// If a SHL/SRA/SRL node \p V has constant shift amounts that are all less
+  /// than the element bit-width of the shift node, return the minimum value.
+  const APInt *
+  getValidMinimumShiftAmountConstant(SDValue V) const;
+
+  /// If a SHL/SRA/SRL node \p V has constant shift amounts that are all less
   /// than the element bit-width of the shift node, return the maximum value.
   const APInt *
   getValidMaximumShiftAmountConstant(SDValue V,
                                      const APInt &DemandedElts) const;
+
+  /// If a SHL/SRA/SRL node \p V has constant shift amounts that are all less
+  /// than the element bit-width of the shift node, return the maximum value.
+  const APInt *
+  getValidMaximumShiftAmountConstant(SDValue V) const;
 
   /// Match a binop + shuffle pyramid that represents a horizontal reduction
   /// over the elements of a vector starting from the EXTRACT_VECTOR_ELT node /p

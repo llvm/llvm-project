@@ -173,8 +173,8 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   LLVMContextImpl *pImpl = Context.pImpl;
   FoldingSetNodeID ID;
   ID.AddInteger(Kind);
-  ID.AddInteger(CR.getLower());
-  ID.AddInteger(CR.getUpper());
+  CR.getLower().Profile(ID);
+  CR.getUpper().Profile(ID);
 
   void *InsertPoint;
   AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
@@ -1530,6 +1530,13 @@ AttributeList::addDereferenceableOrNullParamAttr(LLVMContext &C, unsigned Index,
   return addParamAttributes(C, Index, B);
 }
 
+AttributeList AttributeList::addRangeRetAttr(LLVMContext &C,
+                                             const ConstantRange &CR) const {
+  AttrBuilder B(C);
+  B.addRangeAttr(CR);
+  return addRetAttributes(C, B);
+}
+
 AttributeList AttributeList::addAllocSizeParamAttr(
     LLVMContext &C, unsigned Index, unsigned ElemSizeArg,
     const std::optional<unsigned> &NumElemsArg) {
@@ -2275,7 +2282,7 @@ struct StrBoolAttr {
   static bool isSet(const Function &Fn,
                     StringRef Kind) {
     auto A = Fn.getFnAttribute(Kind);
-    return A.getValueAsString().equals("true");
+    return A.getValueAsString() == "true";
   }
 
   static void set(Function &Fn,

@@ -897,8 +897,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         actualDataAttr = common::CUDADataAttr::Device;
       }
     }
-    if (!common::AreCompatibleCUDADataAttrs(
-            dummyDataAttr, actualDataAttr, dummy.ignoreTKR)) {
+    if (!common::AreCompatibleCUDADataAttrs(dummyDataAttr, actualDataAttr,
+            dummy.ignoreTKR,
+            /*allowUnifiedMatchingRule=*/true)) {
       auto toStr{[](std::optional<common::CUDADataAttr> x) {
         return x ? "ATTRIBUTES("s +
                 parser::ToUpperCaseLetters(common::EnumToString(*x)) + ")"s
@@ -1929,6 +1930,7 @@ bool CheckArguments(const characteristics::Procedure &proc,
   bool explicitInterface{proc.HasExplicitInterface()};
   evaluate::FoldingContext foldingContext{context.foldingContext()};
   parser::ContextualMessages &messages{foldingContext.messages()};
+  bool allowArgumentConversions{true};
   if (!explicitInterface || treatingExternalAsImplicit) {
     parser::Messages buffer;
     {
@@ -1945,11 +1947,12 @@ bool CheckArguments(const characteristics::Procedure &proc,
       }
       return false; // don't pile on
     }
+    allowArgumentConversions = false;
   }
   if (explicitInterface) {
     auto buffer{CheckExplicitInterface(proc, actuals, context, &scope,
-        intrinsic, /*allowArgumentConversions=*/true, /*extentErrors=*/true,
-        ignoreImplicitVsExplicit)};
+        intrinsic, allowArgumentConversions,
+        /*extentErrors=*/true, ignoreImplicitVsExplicit)};
     if (!buffer.empty()) {
       if (treatingExternalAsImplicit) {
         if (auto *msg{messages.Say(
