@@ -373,10 +373,11 @@ class PadOp(PadOp):
     def __init__(
         self,
         target: Union[Operation, OpView, Value],
+        pad_to_multiple_of: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
         *,
         padding_values: Optional[Union[ArrayAttr, Sequence[Attribute]]] = None,
         padding_dimensions: OptionalIntList = None,
-        pad_to_multiple_of: OptionalIntList = None,
+        static_pad_to_multiple_of: OptionalIntList = None,
         pack_paddings: OptionalIntList = None,
         transpose_paddings: Optional[
             Union[ArrayAttr, Sequence[Union[ArrayAttr, IntOrAttrList]]]
@@ -385,6 +386,20 @@ class PadOp(PadOp):
         loc=None,
         ip=None,
     ):
+        if (
+            static_pad_to_multiple_of is None
+            and pad_to_multiple_of is None
+        ):
+            dynamic_pad_to_multiple_of = []
+        elif static_pad_to_multiple_of is None:
+            (
+                dynamic_pad_to_multiple_of,
+                static_pad_to_multiple_of,
+                _,
+            ) = _dispatch_dynamic_index_list(pad_to_multiple_of)
+        else:
+            dynamic_pad_to_multiple_of = pad_to_multiple_of
+
         transpose_paddings = _get_int_array_array_attr(transpose_paddings)
 
         any_op_type = transform.AnyOpType.get()
@@ -393,9 +408,10 @@ class PadOp(PadOp):
             any_op_type,
             any_op_type,
             target,
+            pad_to_multiple_of=dynamic_pad_to_multiple_of,
             padding_values=padding_values,
             padding_dimensions=padding_dimensions,
-            pad_to_multiple_of=pad_to_multiple_of,
+            static_pad_to_multiple_of=static_pad_to_multiple_of,
             pack_paddings=pack_paddings,
             transpose_paddings=transpose_paddings,
             copy_back_op=copy_back_op,

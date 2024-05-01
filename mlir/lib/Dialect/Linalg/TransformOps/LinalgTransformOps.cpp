@@ -1664,6 +1664,8 @@ transform::PackTransposeOp::apply(transform::TransformRewriter &rewriter,
 // PadOp
 //===---------------------------------------------------------------------===//
 
+static const StringLiteral kPadToMultipleOfKeyword = "pad_to_multiple_of";
+
 void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                              ArrayRef<int64_t> paddingDimensions,
                              ArrayRef<int64_t> padToMultipleOf,
@@ -1677,12 +1679,109 @@ void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
                /*target=*/target,
                /*paddingValues=*/ArrayAttr(), // let inference handle this
                /*paddingDimensions=*/b.getI64ArrayAttr(paddingDimensions),
+               /*padToMultipleOf=*/ValueRange{},
                /*padToMultipleOf=*/
-               (padToMultipleOf.empty() ? ArrayAttr()
-                                        : b.getI64ArrayAttr(padToMultipleOf)),
+               (padToMultipleOf.empty()
+                    ? DenseI64ArrayAttr()
+                    : b.getDenseI64ArrayAttr(padToMultipleOf)),
                /*packPaddings=*/b.getI64ArrayAttr(packPaddings),
                /*transposePaddings=*/b.getArrayAttr(transposePaddings),
                /*copyBackOp=*/b.getStringAttr(copyBackOp));
+}
+
+void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
+                             ArrayRef<int64_t> paddingDimensions,
+                             ArrayRef<OpFoldResult> mixedPadToMultipleOf,
+                             ArrayRef<int64_t> packPaddings,
+                             ArrayRef<Attribute> transposePaddings,
+                             StringRef copyBackOp) {
+  auto resultType = transform::AnyOpType::get(b.getContext());
+  SmallVector<int64_t> staticPadToMultipleOf;
+  SmallVector<Value> dynamicPadToMultipleOf;
+  dispatchIndexOpFoldResults(mixedPadToMultipleOf, dynamicPadToMultipleOf,
+                             staticPadToMultipleOf);
+  return build(/*builder=*/b,
+               /*result=*/result,
+               /*types=*/TypeRange{resultType, resultType},
+               /*target=*/target,
+               /*paddingValues=*/ArrayAttr(), // let inference handle this
+               /*paddingDimensions=*/b.getI64ArrayAttr(paddingDimensions),
+               /*padToMultipleOf=*/dynamicPadToMultipleOf,
+               /*padToMultipleOf=*/staticPadToMultipleOf,
+               /*packPaddings=*/b.getI64ArrayAttr(packPaddings),
+               /*transposePaddings=*/b.getArrayAttr(transposePaddings),
+               /*copyBackOp=*/b.getStringAttr(copyBackOp));
+}
+
+SmallVector<OpFoldResult> PadOp::getMixedPadToMultipleOf() {
+  OpBuilder b(getContext());
+  return getMixedValues(getStaticPadToMultipleOf(), getPadToMultipleOf(), b);
+}
+
+ParseResult transform::PadOp::parse(OpAsmParser &parser,
+                                    OperationState &result) {
+  OpAsmParser::UnresolvedOperand target;
+  SmallVector<OpAsmParser::UnresolvedOperand> dynamicPadToMultipleOf;
+  DenseI64ArrayAttr padToMultipleOf;
+  FunctionType functionalType;
+  llvm::SMLoc operandLoc;
+
+  if (parser.parseOperand(target) || parser.getCurrentLocation(&operandLoc))
+    return ParseResult::failure();
+
+  if (succeeded(parser.parseOptionalKeyword(kPadToMultipleOfKeyword))) {
+    if (failed(parseDynamicIndexList(parser, dynamicPadToMultipleOf,
+                                     padToMultipleOf)))
+      return ParseResult::failure();
+  }
+
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(functionalType) ||
+      parser.resolveOperand(target, functionalType.getInputs().front(),
+                            result.operands) ||
+      parser.resolveOperands(dynamicPadToMultipleOf,
+                             functionalType.getInputs().drop_front(),
+                             operandLoc, result.operands))
+    return ParseResult::failure();
+
+  if (padToMultipleOf)
+    result.addAttribute(getStaticPadToMultipleOfAttrName(result.name),
+                        padToMultipleOf);
+
+  result.addTypes(functionalType.getResults());
+
+  return success();
+}
+
+void transform::PadOp::print(OpAsmPrinter &p) {
+  p << ' ' << getTarget() << ' ';
+  if (!getMixedPadToMultipleOf().empty()) {
+    p << kPadToMultipleOfKeyword << ' ';
+    printDynamicIndexList(p, getOperation(), getPadToMultipleOf(),
+                          getStaticPadToMultipleOfAttr(),
+                          /*valueTypes=*/{},
+                          /*scalables=*/{}, OpAsmParser::Delimiter::Square);
+  }
+
+  OpBuilder builder((*this)->getContext());
+  SmallVector<StringRef, 6> elidedAttrs({getStaticPadToMultipleOfAttrName()});
+  if (getCopyBackOpAttr() ==
+      builder.getStringAttr(
+          bufferization::MaterializeInDestinationOp::getOperationName()))
+    elidedAttrs.push_back(getCopyBackOpAttrName());
+  if (getPackPaddingsAttr() == builder.getI64ArrayAttr({}))
+    elidedAttrs.push_back(getPackPaddingsAttrName());
+  if (getTransposePaddingsAttr() == builder.getI64ArrayAttr({}))
+    elidedAttrs.push_back(getTransposePaddingsAttrName());
+  if (getPaddingDimensionsAttr() == builder.getI64ArrayAttr({}))
+    elidedAttrs.push_back(getPaddingDimensionsAttrName());
+  if (getPaddingValuesAttr() == builder.getArrayAttr({}))
+    elidedAttrs.push_back(getPaddingValuesAttrName());
+
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          /*elidedAttrs=*/elidedAttrs);
+  p << " : ";
+  p.printFunctionalType(getOperands().getTypes(), getResults().getTypes());
 }
 
 DiagnosedSilenceableFailure
@@ -1750,9 +1849,8 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
     options.paddingDimensions =
         extractFromIntegerArrayAttr<int64_t>(getPaddingDimensions());
     SmallVector<int64_t> padToMultipleOf(options.paddingDimensions.size(), 1);
-    if (getPadToMultipleOf().has_value())
-      padToMultipleOf =
-          extractFromIntegerArrayAttr<int64_t>(*getPadToMultipleOf());
+    if (!getStaticPadToMultipleOf().empty())
+      padToMultipleOf = llvm::to_vector(getStaticPadToMultipleOf());
     options.padToMultipleOf = padToMultipleOf;
     options.paddingValues = paddingValues;
     options.packPaddings = packPaddings;
@@ -1819,8 +1917,8 @@ LogicalResult transform::PadOp::verify() {
                             "integers, found "
                          << getPaddingDimensions();
   }
-  if (getPadToMultipleOf().has_value()) {
-    if (getPadToMultipleOf()->size() != paddingDimensions.size()) {
+  if (!getMixedPadToMultipleOf().empty()) {
+    if (getMixedPadToMultipleOf().size() != paddingDimensions.size()) {
       return emitOpError() << "expects as many multiples as padding_dimensions";
     }
   }
