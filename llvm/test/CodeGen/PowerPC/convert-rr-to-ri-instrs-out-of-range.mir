@@ -779,7 +779,7 @@ body:             |
     %2 = LI 80
     %3 = COPY %0.sub_32
     %4 = SRAW_rec killed %3, %2, implicit-def dead $carry, implicit-def $cr0
-    ; CHECK: killed %10, killed %12, implicit-def $carry, implicit-def $cr0, implicit-def dead $carry, implicit-def $cr0
+    ; CHECK: SRAW8_rec killed %10, killed %12, implicit-def $carry, implicit-def $cr0, implicit-def dead $carry, implicit-def $cr0
     ; CHECK-LATE: sraw. 3, 3, 4
     %5 = COPY killed $cr0
     %6 = ISEL %2, %4, %5.sub_eq
