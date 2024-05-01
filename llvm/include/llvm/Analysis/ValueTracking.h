@@ -131,7 +131,8 @@ bool isKnownNonZero(const Value *V, const SimplifyQuery &Q, unsigned Depth = 0);
 /// Currently can recoginze Value pair:
 /// 1: <X, Y> if X = sub (0, Y) or Y = sub (0, X)
 /// 2: <X, Y> if X = sub (A, B) and Y = sub (B, A)
-bool isKnownNegation(const Value *X, const Value *Y, bool NeedNSW = false);
+bool isKnownNegation(const Value *X, const Value *Y, bool NeedNSW = false,
+                     bool AllowPoison = true);
 
 /// Returns true if the give value is known to be non-negative.
 bool isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,

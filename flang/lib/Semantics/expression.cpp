@@ -2989,8 +2989,8 @@ void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
   for (const auto &arg : actualArgList) {
     analyzer.Analyze(arg, true /* is subroutine call */);
   }
-  auto chevrons{AnalyzeChevrons(callStmt)};
-  if (!analyzer.fatalErrors() && chevrons) {
+  if (auto chevrons{AnalyzeChevrons(callStmt)};
+      chevrons && !analyzer.fatalErrors()) {
     if (std::optional<CalleeAndArguments> callee{
             GetCalleeAndArguments(std::get<parser::ProcedureDesignator>(call.t),
                 analyzer.GetActuals(), true /* subroutine */)}) {
