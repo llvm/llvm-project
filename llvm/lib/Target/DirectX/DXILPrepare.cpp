@@ -11,10 +11,13 @@
 /// Language (DXIL).
 //===----------------------------------------------------------------------===//
 
+#include "DXILResourceAnalysis.h"
+#include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/IRBuilder.h"
@@ -80,6 +83,60 @@ constexpr bool isValidForDXIL(Attribute::AttrKind Attr) {
                       Attr);
 }
 
+static void collectDeadStringAttrs(AttributeMask &DeadAttrs, AttributeSet &&AS,
+                                   StringSet<> LiveKeys) {
+  for (auto &Attr : AS) {
+    if (!Attr.isStringAttribute())
+      continue;
+    StringRef Key = Attr.getKindAsString();
+    if (LiveKeys.contains(Key))
+      continue;
+    DeadAttrs.addAttribute(Key);
+  }
+}
+
+static void removeStringFunctionAttributes(Function &F) {
+  AttributeList Attrs = F.getAttributes();
+  StringSet<> LiveKeys = {"waveops-include-helper-lanes"
+                          "fp32-denorm-mode"};
+  // Collect DeadKeys in FnAttrs.
+  AttributeMask DeadAttrs;
+  collectDeadStringAttrs(DeadAttrs, Attrs.getFnAttrs(), LiveKeys);
+  collectDeadStringAttrs(DeadAttrs, Attrs.getRetAttrs(), LiveKeys);
+
+  F.removeFnAttrs(DeadAttrs);
+  F.removeRetAttrs(DeadAttrs);
+}
+
+static void cleanModuleFlags(Module &M) {
+  NamedMDNode *MDFlags = M.getModuleFlagsMetadata();
+  if (!MDFlags)
+    return;
+
+  StringSet<> LiveKeys = {"Dwarf Version", "Debug Info Version"};
+
+  SmallVector<llvm::Module::ModuleFlagEntry> FlagEntries;
+  M.getModuleFlagsMetadata(FlagEntries);
+
+  bool HasDeadKey = false;
+  for (auto &Flag : FlagEntries) {
+    if (!LiveKeys.count(Flag.Key->getString())) {
+      HasDeadKey = true;
+      break;
+    }
+  }
+  if (!HasDeadKey)
+    return;
+
+  MDFlags->eraseFromParent();
+
+  for (auto &Flag : FlagEntries) {
+    if (!LiveKeys.count(Flag.Key->getString()))
+      continue;
+    M.addModuleFlag(Flag.Behavior, Flag.Key->getString(), Flag.Val);
+  }
+}
+
 class DXILPrepareModule : public ModulePass {
 
   static Value *maybeGenerateBitcast(IRBuilder<> &Builder,
@@ -113,6 +170,7 @@ public:
     for (auto &F : M.functions()) {
       F.removeFnAttrs(AttrMask);
       F.removeRetAttrs(AttrMask);
+      removeStringFunctionAttributes(F);
       for (size_t Idx = 0, End = F.arg_size(); Idx < End; ++Idx)
         F.removeParamAttrs(Idx, AttrMask);
 
@@ -168,11 +226,16 @@ public:
         }
       }
     }
+    // Remove flags not in llvm3.7.
+    cleanModuleFlags(M);
     return true;
   }
 
   DXILPrepareModule() : ModulePass(ID) {}
-
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<ShaderFlagsAnalysisWrapper>();
+    AU.addPreserved<DXILResourceWrapper>();
+  }
   static char ID; // Pass identification.
 };
 char DXILPrepareModule::ID = 0;

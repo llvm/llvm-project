@@ -1,4 +1,6 @@
 ; RUN: opt -S -dxil-metadata-emit %s | FileCheck %s
+; RUN: opt -S -dxil-prepare  %s | FileCheck %s  --check-prefix=REMOVE_EXTRA_ATTRIBUTE
+
 target triple = "dxil-pc-shadermodel6.6-compute"
 
 ; CHECK: !dx.shaderModel = !{![[SM:[0-9]+]]}
@@ -9,4 +11,6 @@ entry:
   ret void
 }
 
+; Make sure extra attribute like hlsl.numthreads are removed.
+; REMOVE_EXTRA_ATTRIBUTE:attributes #0 = { noinline nounwind } 
 attributes #0 = { noinline nounwind "hlsl.numthreads"="1,2,1" "hlsl.shader"="compute" }

@@ -19,8 +19,8 @@ define float @fma2(float %0, float %1, float %2) #1 {
   ret float %5
 }
 
-; CHECK: attributes #0 = { nounwind readnone "disable-tail-calls"="false" }
+; CHECK: attributes #0 = { nounwind readnone }
 attributes #0 = { norecurse nounwind readnone willreturn "disable-tail-calls"="false" }
 
-; CHECK: attributes #1 = { readnone "disable-tail-calls"="false" }
+; CHECK: attributes #1 = { readnone }
 attributes #1 = { norecurse memory(none) willreturn "disable-tail-calls"="false" }

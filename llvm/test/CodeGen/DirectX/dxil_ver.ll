@@ -1,4 +1,5 @@
 ; RUN: opt -S -dxil-metadata-emit < %s | FileCheck %s
+; RUN: opt -S -dxil-prepare  %s | FileCheck %s  --check-prefix=REMOVE_EXTRA_MODULE_FLAG
 target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-n8:16:32:64"
 target triple = "dxil-pc-shadermodel6.3-library"
 
@@ -10,6 +11,10 @@ target triple = "dxil-pc-shadermodel6.3-library"
 ; CHECK-DAG:![[valver]] = !{i32 1, i32 1}
 ; Make sure wchar_size still exist.
 ; CHECK-DAG:!{i32 1, !"wchar_size", i32 4}
+
+; Make sure no !llvm.module.flags left.
+; REMOVE_EXTRA_MODULE_FLAG: target triple = "dxil-pc-shadermodel6.3-library"
+; REMOVE_EXTRA_MODULE_FLAG-NOT: !llvm.module.flags
 
 !llvm.module.flags = !{!0}
 !dx.valver = !{!1}
