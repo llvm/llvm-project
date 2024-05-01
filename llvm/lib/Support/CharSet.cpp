@@ -8,7 +8,7 @@
 ///
 /// \file
 /// This file provides utility classes to convert between different character
-/// set encoding.
+/// set encodings.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -80,7 +80,7 @@ enum ConversionType {
   IBM1047ToUTF,
 };
 
-// Support conversion between EBCDIC 1047 and UTF8. This class uses
+// Support conversion between EBCDIC 1047 and UTF-8. This class uses
 // built-in translation tables that allow for translation between the
 // aforementioned character sets. The use of tables for conversion is only
 // possible because EBCDIC 1047 is a single-byte, stateless encoding; other
@@ -166,9 +166,8 @@ CharSetConverterICU::convert(StringRef Source,
           Capacity < std::numeric_limits<size_t>::max()) {
         HandleOverflow(Capacity, Output, OutputLength, Result);
         continue;
-      } else
-        // Some other error occured.
-        return std::error_code(EILSEQ, std::generic_category());
+      // Some other error occured.
+      return std::error_code(EILSEQ, std::generic_category());
     }
     break;
   } while (true);

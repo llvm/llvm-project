@@ -240,7 +240,7 @@
 /* Have host's ___chkstk_ms */
 #cmakedefine HAVE____CHKSTK_MS ${HAVE____CHKSTK_MS}
 
-/* Define if icu library is available */
+/* Define if ICU library is available */
 #cmakedefine HAVE_ICU ${HAVE_ICU}
 
 /* Define if iconv library is available */
