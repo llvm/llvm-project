@@ -417,6 +417,18 @@ Improvements to Clang's diagnostics
 
 - Clang now diagnoses requires expressions with explicit object parameters.
 
+- Clang now looks up members of the current instantiation in the template definition context
+  if the current instantiation has no dependent base classes.
+
+  .. code-block:: c++
+
+     template<typename T>
+     struct A {
+       int f() {
+         return this->x; // error: no member named 'x' in 'A<T>'
+       }
+     };
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -462,6 +474,9 @@ Bug Fixes in This Version
 
 - Clang now correctly generates overloads for bit-precise integer types for
   builtin operators in C++. Fixes #GH82998.
+
+- Fix crash when destructor definition is preceded with an equals sign.
+  Fixes (#GH89544).
 
 - When performing mixed arithmetic between ``_Complex`` floating-point types and integers,
   Clang now correctly promotes the integer to its corresponding real floating-point
@@ -617,6 +632,7 @@ Bug Fixes to C++ Support
 - Fix a bug on template partial specialization whose template parameter is `decltype(auto)`.
 - Fix a bug on template partial specialization with issue on deduction of nontype template parameter
   whose type is `decltype(auto)`. Fixes (#GH68885).
+- Clang now correctly treats the noexcept-specifier of a friend function to be a complete-class context.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

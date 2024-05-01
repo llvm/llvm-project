@@ -17,7 +17,6 @@
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Semantics/tools.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 
 namespace Fortran {
 namespace lower {
@@ -52,10 +51,37 @@ void DataSharingProcessor::processStep2(mlir::Operation *op, bool isLoop) {
 }
 
 void DataSharingProcessor::insertDeallocs() {
-  // TODO Extend delayed privatization to include a `dealloc` region.
   for (const Fortran::semantics::Symbol *sym : privatizedSymbols)
     if (Fortran::semantics::IsAllocatable(sym->GetUltimate())) {
+      if (!useDelayedPrivatization) {
+        converter.createHostAssociateVarCloneDealloc(*sym);
+        return;
+      }
+
+      Fortran::lower::SymbolBox hsb = converter.lookupOneLevelUpSymbol(*sym);
+      assert(hsb && "Host symbol box not found");
+      mlir::Type symType = hsb.getAddr().getType();
+      mlir::Location symLoc = hsb.getAddr().getLoc();
+      fir::ExtendedValue symExV = converter.getSymbolExtendedValue(*sym);
+      mlir::omp::PrivateClauseOp privatizer = symToPrivatizer.at(sym);
+
+      symTable->pushScope();
+
+      mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
+
+      mlir::Region &deallocRegion = privatizer.getDeallocRegion();
+      fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+      mlir::Block *deallocEntryBlock = firOpBuilder.createBlock(
+          &deallocRegion, /*insertPt=*/{}, symType, symLoc);
+
+      firOpBuilder.setInsertionPointToEnd(deallocEntryBlock);
+      symTable->addSymbol(*sym,
+                          fir::substBase(symExV, deallocRegion.getArgument(0)));
+
       converter.createHostAssociateVarCloneDealloc(*sym);
+      firOpBuilder.create<mlir::omp::YieldOp>(hsb.getAddr().getLoc());
+
+      symTable->popScope();
     }
 }
 
@@ -440,6 +466,8 @@ void DataSharingProcessor::doPrivatize(
 
   if (privateSyms)
     privateSyms->push_back(sym);
+
+  symToPrivatizer[sym] = privatizerOp;
 }
 
 } // namespace omp
