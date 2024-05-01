@@ -131,7 +131,7 @@ amd_comgr_status_t addDeviceLibraries(DataAction *ActionInfo,
   bool CorrectlyRoundedSqrt = false, DazOpt = false, FiniteOnly = false,
        UnsafeMath = false, Wavefrontsize64 = false;
   unsigned CodeObjectVersion = 0;
-  for (auto &Option : ActionInfo->getOptions(true)) {
+  for (auto &Option : ActionInfo->getOptions()) {
     // Parse code_object_v<N>
     if (StringRef CoV = Option; CoV.consume_front("code_object_v")) {
       // String is invalid if:

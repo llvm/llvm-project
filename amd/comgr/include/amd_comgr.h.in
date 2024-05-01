@@ -1234,91 +1234,10 @@ amd_comgr_action_info_get_language(
   amd_comgr_language_t *language) AMD_COMGR_VERSION_1_8;
 
 /**
- * @brief Set the options string of an action info object.
- *
- * When an action info object is created it has an empty options string.
- *
- * This overrides any option strings or arrays previously set by calls to this
- * function or @p amd_comgr_action_info_set_option_list.
- *
- * An @p action_info object which had its options set with this function can
- * only have its option inspected with @p amd_comgr_action_info_get_options.
- *
- * @param[in] action_info A handle to the action info object to be
- * updated.
- *
- * @param[in] options A null terminated string that is the options. If
- * NULL or the empty string then the options are cleared.
- *
- * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
- * been executed successfully.
- *
- * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p
- * action_info is an invalid action info object.
- *
- * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
- * Unable to update action info object as out of resources.
- *
- * @deprecated since 1.3
- * @see amd_comgr_action_info_set_option_list
- */
-AMD_COMGR_DEPRECATED("Will be removed in Comgr v3.0 (Rocm v6.0). Use "
-                     "amd_comgr_action_info_set_option_list() instead")
-amd_comgr_status_t AMD_COMGR_API
-amd_comgr_action_info_set_options(
-  amd_comgr_action_info_t action_info,
-  const char *options) AMD_COMGR_VERSION_1_8;
-
-/**
- * @brief Get the options string and/or options strings length of an action
- * info object.
- *
- * The @p action_info object must have had its options set with @p
- * amd_comgr_action_info_set_options.
- *
- * @param[in] action_info The action info object to query.
- *
- * @param[in, out] size On entry, the size of @p options. On return, if @p
- * options is NULL, set to the size of the options including the terminating
- * null character.
- *
- * @param[out] options If not NULL, then the first @p size characters of
- * the options are copied. If the options are not set then an empty
- * string is copied. If NULL, options is not copied, and only @p size
- * is updated (useful inorder to find the size of buffer required to
- * copy the options).
- *
- * @retval ::AMD_COMGR_STATUS_SUCCESS The function has
- * been executed successfully.
- *
- * @retval ::AMD_COMGR_STATUS_ERROR The options of @p action_info were not set
- * with @p amd_comgr_action_info_set_options.
- *
- * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p
- * action_info is an invalid action info object. @p size is NULL.
- *
- * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
- * Unable to update the data object as out of resources.
- *
- * @deprecated since 1.3
- * @see amd_comgr_action_info_get_option_list_count and
- * amd_comgr_action_info_get_option_list_item
- */
-AMD_COMGR_DEPRECATED("Will be removed in Comgr v3.0 (Rocm v6.0). Use "
-                     "amd_comgr_action_info_get_option_list_count() "
-                     "and amd_comgr_action_info_get_option_list_item() "
-                     "instead")
-amd_comgr_status_t AMD_COMGR_API
-amd_comgr_action_info_get_options(
-  amd_comgr_action_info_t action_info,
-  size_t *size,
-  char *options) AMD_COMGR_VERSION_1_8;
-
-/**
  * @brief Set the options array of an action info object.
  *
  * This overrides any option strings or arrays previously set by calls to this
- * function or @p amd_comgr_action_info_set_options.
+ * function.
  *
  * An @p action_info object which had its options set with this function can
  * only have its option inspected with @p
@@ -1385,7 +1304,7 @@ amd_comgr_action_info_get_option_list_count(
  *
  * @param[in] index The index of the option to be returned. The first option
  * index is 0. The order is the same as the options when they were added in @p
- * amd_comgr_action_info_set_options.
+ * amd_comgr_action_info_set_option_list.
  *
  * @param[in, out] size On entry, the size of @p option. On return, if @option
  * is NULL, set to the size of the Nth option string including the terminating

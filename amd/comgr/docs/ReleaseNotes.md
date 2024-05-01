@@ -126,6 +126,11 @@ Deprecated APIs
 
 Removed APIs
 ------------
+- amd\_comgr\_action\_info\_set\_options() (v3.0)
+- amd\_comgr\_action\_info\_get\_options() (v3.0)
+  - Use  amd\_comgr\_action\_info\_set\_option\_list(),
+    amd\_comgr\_action\_info\_get\_option\_list\_count(), and
+    amd\_comgr\_action\_info\_get\_option\_list\_item() instead
 
 New Comgr Actions and Data Types
 --------------------------------

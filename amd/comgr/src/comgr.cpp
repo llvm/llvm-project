@@ -452,7 +452,7 @@ DataSet::~DataSet() {
 
 DataAction::DataAction()
     : IsaName(nullptr), Path(nullptr), Language(AMD_COMGR_LANGUAGE_NONE),
-      Logging(false), AreOptionsList(false) {}
+      Logging(false) {}
 
 DataAction::~DataAction() {
   free(IsaName);
@@ -467,22 +467,7 @@ amd_comgr_status_t DataAction::setActionPath(llvm::StringRef ActionPath) {
   return setCStr(this->Path, ActionPath);
 }
 
-amd_comgr_status_t DataAction::setOptionsFlat(StringRef Options) {
-  AreOptionsList = false;
-  FlatOptions = Options.str();
-  return AMD_COMGR_STATUS_SUCCESS;
-}
-
-amd_comgr_status_t DataAction::getOptionsFlat(StringRef &Options) {
-  if (AreOptionsList) {
-    return AMD_COMGR_STATUS_ERROR;
-  }
-  Options = StringRef(FlatOptions.c_str(), FlatOptions.size() + 1);
-  return AMD_COMGR_STATUS_SUCCESS;
-}
-
 amd_comgr_status_t DataAction::setOptionList(ArrayRef<const char *> Options) {
-  AreOptionsList = true;
   ListOptions.clear();
   for (auto &Option : Options) {
     ListOptions.push_back(Option);
@@ -491,18 +476,12 @@ amd_comgr_status_t DataAction::setOptionList(ArrayRef<const char *> Options) {
 }
 
 amd_comgr_status_t DataAction::getOptionListCount(size_t &Size) {
-  if (!AreOptionsList) {
-    return AMD_COMGR_STATUS_ERROR;
-  }
   Size = ListOptions.size();
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
 amd_comgr_status_t DataAction::getOptionListItem(size_t Index,
                                                  StringRef &Option) {
-  if (!AreOptionsList) {
-    return AMD_COMGR_STATUS_ERROR;
-  }
   if (Index >= ListOptions.size()) {
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
@@ -511,25 +490,7 @@ amd_comgr_status_t DataAction::getOptionListItem(size_t Index,
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-ArrayRef<std::string> DataAction::getOptions(bool IsDeviceLibs) {
-  // In the legacy path the ListOptions is used as a buffer to split the
-  // options in. We have to do this lazily as the delimiter depends on
-  // IsDeviceLibs. We could avoid re-splitting in the case where the same call
-  // is repeated, but this path will be deprecated and removed anyway.
-  if (!AreOptionsList) {
-    ListOptions.clear();
-    StringRef OptionsRef(FlatOptions);
-    SmallVector<StringRef, 16> OptionRefs;
-    if (IsDeviceLibs) {
-      OptionsRef.split(OptionRefs, ',', -1, false);
-    } else {
-      OptionsRef.split(OptionRefs, ' ');
-    }
-    for (auto &Option : OptionRefs) {
-      ListOptions.push_back(std::string(Option));
-    }
-  }
-
+ArrayRef<std::string> DataAction::getOptions() {
   return ListOptions;
 }
 
@@ -1119,45 +1080,6 @@ amd_comgr_status_t AMD_COMGR_API
 
 amd_comgr_status_t AMD_COMGR_API
     // NOLINTNEXTLINE(readability-identifier-naming)
-    amd_comgr_action_info_set_options
-    //
-    (amd_comgr_action_info_t ActionInfo, const char *Options) {
-  DataAction *ActionP = DataAction::convert(ActionInfo);
-
-  if (!ActionP) {
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-  }
-
-  return ActionP->setOptionsFlat(Options);
-}
-
-amd_comgr_status_t AMD_COMGR_API
-    // NOLINTNEXTLINE(readability-identifier-naming)
-    amd_comgr_action_info_get_options
-    //
-    (amd_comgr_action_info_t ActionInfo, size_t *Size, char *Options) {
-  DataAction *ActionP = DataAction::convert(ActionInfo);
-
-  if (!ActionP || !Size) {
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-  }
-
-  StringRef ActionOptions;
-  if (auto Status = ActionP->getOptionsFlat(ActionOptions)) {
-    return Status;
-  }
-
-  if (Options) {
-    memcpy(Options, ActionOptions.data(), *Size);
-  } else {
-    *Size = ActionOptions.size();
-  }
-
-  return AMD_COMGR_STATUS_SUCCESS;
-}
-
-amd_comgr_status_t AMD_COMGR_API
-    // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_action_info_set_option_list
     //
     (amd_comgr_action_info_t ActionInfo, const char *Options[], size_t Count) {
@@ -1427,8 +1349,7 @@ amd_comgr_status_t AMD_COMGR_API
         << "\t  ActionKind: " << getActionKindName(ActionKind) << '\n'
         << "\t     IsaName: " << ActionInfoP->IsaName << '\n'
         << "\t     Options:";
-      for (auto &Option : ActionInfoP->getOptions(
-          ActionKind == AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES)) {
+      for (auto &Option : ActionInfoP->getOptions()) {
         *LogP << ' ';
         printQuotedOption(*LogP, Option);
       }
