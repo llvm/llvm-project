@@ -225,7 +225,7 @@ struct Config {
   bool checkDynamicRelocs;
   std::optional<llvm::DebugCompressionType> compressDebugSections;
   llvm::SmallVector<
-      std::tuple<llvm::GlobPattern, llvm::DebugCompressionType, int>, 0>
+      std::tuple<llvm::GlobPattern, llvm::DebugCompressionType, unsigned>, 0>
       compressSections;
   bool cref;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint64_t>, 0>

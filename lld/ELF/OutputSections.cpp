@@ -301,7 +301,11 @@ static SmallVector<uint8_t, 0> deflateShard(ArrayRef<uint8_t> in, int level,
   // 15 and 8 are default. windowBits=-15 is negative to generate raw deflate
   // data with no zlib header or trailer.
   z_stream s = {};
-  deflateInit2(&s, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
+  auto res = deflateInit2(&s, level, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
+  if (res != 0) {
+    errorOrWarn("--compress-sections: deflateInit2 returned " + Twine(res));
+    return {};
+  }
   s.next_in = const_cast<uint8_t *>(in.data());
   s.avail_in = in.size();
 
@@ -335,7 +339,7 @@ template <class ELFT> void OutputSection::maybeCompress() {
   (void)sizeof(Elf_Chdr);
 
   DebugCompressionType ctype = DebugCompressionType::None;
-  int level = 0; // default compression level
+  unsigned level = 0; // default compression level
   if (!(flags & SHF_ALLOC) && config->compressDebugSections &&
       name.starts_with(".debug_") && size)
     ctype = *config->compressDebugSections;

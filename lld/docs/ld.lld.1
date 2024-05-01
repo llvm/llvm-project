@@ -163,11 +163,11 @@ Use the default compression level in zstd.
 .Pp
 .It Fl -compress-sections Ns = Ns Ar section-glob={none,zlib,zstd}[:level]
 Compress output sections that match the glob and do not have the SHF_ALLOC flag.
+The compression level is
+.Cm level
+(if specified) or a default speed-focused level.
 This is like a generalized
 .Cm --compress-debug-sections.
-If
-.Cm level
-is specified, use the specified compression level.
 .It Fl -cref
 Output cross reference table. If
 .Fl Map

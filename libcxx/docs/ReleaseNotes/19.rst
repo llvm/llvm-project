@@ -118,6 +118,9 @@ Deprecations and Removals
   a ``std::basic_*fstream`` from a ``std::basic_string_view``, a input-iterator or a C-string, instead
   you can construct a temporary ``std::basic_string``. This change has been applied to C++17 and later.
 
+- The ``_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS`` macro has been removed and is not honored anymore. Additional
+  warnings provided by libc++ as a matter of QoI will now be provided unconditionally.
+
 
 Upcoming Deprecations and Removals
 ----------------------------------

@@ -1535,10 +1535,13 @@ static void readConfigs(opt::InputArgList &args) {
     }
     auto [typeStr, levelStr] = fields[1].split(':');
     auto type = getCompressionType(typeStr, arg->getSpelling());
-    int level = 0;
-    if (!levelStr.empty() && !llvm::to_integer(levelStr, level))
+    unsigned level = 0;
+    if (fields[1].size() != typeStr.size() &&
+        !llvm::to_integer(levelStr, level)) {
       error(arg->getSpelling() +
-            ": integer compression level expected, but got '" + levelStr + "'");
+            ": expected a non-negative integer compression level, but got '" +
+            levelStr + "'");
+    }
     if (Expected<GlobPattern> pat = GlobPattern::create(fields[0])) {
       config->compressSections.emplace_back(std::move(*pat), type, level);
     } else {

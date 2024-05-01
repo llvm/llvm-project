@@ -62,9 +62,15 @@
 # ERR3:      unknown --compress-sections value: zlib-gabi
 # ERR3-NEXT: --compress-sections: parse error, not 'section-glob=[none|zlib|zstd]'
 
-# RUN: not ld.lld a.o --compress-sections='.debug*=zlib:a' 2>&1 | \
+# RUN: not ld.lld a.o --compress-sections='a=zlib:' --compress-sections='a=zlib:-1' 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR4 --implicit-check-not=error:
-# ERR4: error: --compress-sections: integer compression level expected, but got 'a'
+# ERR4: error: --compress-sections: expected a non-negative integer compression level, but got ''
+# ERR4: error: --compress-sections: expected a non-negative integer compression level, but got '-1'
+
+## Invalid compression level for zlib.
+# RUN: not ld.lld a.o --compress-sections='.debug*=zlib:99' 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR6 --implicit-check-not=error:
+# ERR6: error: --compress-sections: deflateInit2 returned -2
 
 .globl _start
 _start:
