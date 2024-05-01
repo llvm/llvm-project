@@ -139,7 +139,7 @@ void TosaDialect::initialize() {
   addInterfaces<TosaDialectBytecodeInterface, TosaInlinerInterface>();
   declarePromisedInterfaces<
       mesh::ShardingInterface, ClampOp, SigmoidOp, TanhOp, AddOp,
-      ArithmeticRightShiftOp, BitwiseAndOp, BitwiseOrOp, BitwiseXorOp, DivOp,
+      ArithmeticRightShiftOp, BitwiseAndOp, BitwiseOrOp, BitwiseXorOp, IntDivOp,
       LogicalAndOp, LogicalLeftShiftOp, LogicalRightShiftOp, LogicalOrOp,
       LogicalXorOp, MaximumOp, MinimumOp, MulOp, PowOp, SubOp, AbsOp,
       BitwiseNotOp, CeilOp, ClzOp, ExpOp, FloorOp, LogOp, LogicalNotOp,
@@ -1381,12 +1381,12 @@ NARY_SHAPE_INFER(tosa::CeilOp)
 NARY_SHAPE_INFER(tosa::ClampOp)
 NARY_SHAPE_INFER(tosa::ClzOp)
 NARY_SHAPE_INFER(tosa::CosOp)
-NARY_SHAPE_INFER(tosa::DivOp)
 NARY_SHAPE_INFER(tosa::ExpOp)
 NARY_SHAPE_INFER(tosa::FloorOp)
 NARY_SHAPE_INFER(tosa::GreaterEqualOp)
 NARY_SHAPE_INFER(tosa::GreaterOp)
 NARY_SHAPE_INFER(tosa::IdentityOp)
+NARY_SHAPE_INFER(tosa::IntDivOp)
 NARY_SHAPE_INFER(tosa::LogOp)
 NARY_SHAPE_INFER(tosa::LogicalAndOp)
 NARY_SHAPE_INFER(tosa::LogicalLeftShiftOp)
