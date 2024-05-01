@@ -1050,8 +1050,16 @@ bool PPCMIPeephole::simplifyCode() {
         } else if (MI.getOpcode() == PPC::EXTSW_32_64 &&
                    TII->isSignExtended(NarrowReg, MRI)) {
           // We can eliminate EXTSW if the input is known to be already
-          // sign-extended.
-          TII->replaceInstrAfterElimExt32To64(NarrowReg, MRI, 0, LV);
+          // sign-extended. but we are not sure whether a spill will occur
+          // during register allocation. All these instructions in the chain
+          // used to deduce sign extension to eliminate the 'extsw' will need to
+          // be promoted to 64-bit pseudo instructions when the 'extsw' is
+          // eliminated. If there is no promotion, it will use the 'stw' instead
+          // of 'std', and 'lwz' instead of 'ld' when spilling, since the
+          // register class is 32-bits. Consequently, the high 32-bit
+          // information will be lost.
+          TII->PromoteSignExtendedInstr32To64(NarrowReg, MRI, 0, LV);
+
           LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
           Register TmpReg =
               MF->getRegInfo().createVirtualRegister(&PPC::G8RCRegClass);
