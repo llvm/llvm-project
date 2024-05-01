@@ -91,11 +91,6 @@ static cl::opt<bool>
                            cl::desc("Enable the loop data prefetch pass"),
                            cl::init(true));
 
-static cl::opt<bool>
-    EnableSplitRegAlloc("riscv-split-regalloc", cl::Hidden,
-                        cl::desc("Enable Split RegisterAlloc for RVV"),
-                        cl::init(true));
-
 static cl::opt<bool> EnableMISchedLoadClustering(
     "riscv-misched-load-clustering", cl::Hidden,
     cl::desc("Enable load clustering in the machine scheduler"),
@@ -121,6 +116,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVExpandPseudoPass(*PR);
   initializeRISCVFoldMasksPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
+  initializeRISCVCoalesceVSETVLIPass(*PR);
   initializeRISCVInsertReadWriteCSRPass(*PR);
   initializeRISCVInsertWriteVXRMPass(*PR);
   initializeRISCVDAGToDAGISelPass(*PR);
@@ -278,21 +274,7 @@ public:
 
 static bool onlyAllocateRVVReg(const TargetRegisterInfo &TRI,
                                const TargetRegisterClass &RC) {
-  return RISCV::VRRegClass.hasSubClassEq(&RC) ||
-         RISCV::VRM2RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRM4RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRM8RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN2M1RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN2M2RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN2M4RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN3M1RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN3M2RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN4M1RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN4M2RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN5M1RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN6M1RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN7M1RegClass.hasSubClassEq(&RC) ||
-         RISCV::VRN8M1RegClass.hasSubClassEq(&RC);
+  return RISCVRegisterInfo::isRVVRegClass(&RC);
 }
 
 static FunctionPass *useDefaultRegisterAllocator() { return nullptr; }
@@ -406,16 +388,15 @@ FunctionPass *RISCVPassConfig::createRVVRegAllocPass(bool Optimized) {
 }
 
 bool RISCVPassConfig::addRegAssignAndRewriteFast() {
-  if (EnableSplitRegAlloc)
-    addPass(createRVVRegAllocPass(false));
+  addPass(createRVVRegAllocPass(false));
+  addPass(createRISCVCoalesceVSETVLIPass());
   return TargetPassConfig::addRegAssignAndRewriteFast();
 }
 
 bool RISCVPassConfig::addRegAssignAndRewriteOptimized() {
-  if (EnableSplitRegAlloc) {
-    addPass(createRVVRegAllocPass(true));
-    addPass(createVirtRegRewriter(false));
-  }
+  addPass(createRVVRegAllocPass(true));
+  addPass(createVirtRegRewriter(false));
+  addPass(createRISCVCoalesceVSETVLIPass());
   return TargetPassConfig::addRegAssignAndRewriteOptimized();
 }
 

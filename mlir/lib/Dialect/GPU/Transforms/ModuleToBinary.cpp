@@ -52,7 +52,7 @@ void GpuModuleToBinaryPass::getDependentDialects(
 #if MLIR_ENABLE_CUDA_CONVERSIONS
   registry.insert<NVVM::NVVMDialect>();
 #endif
-#if MLIR_ROCM_CONVERSIONS_ENABLED == 1
+#if MLIR_ENABLE_ROCM_CONVERSIONS
   registry.insert<ROCDL::ROCDLDialect>();
 #endif
   registry.insert<spirv::SPIRVDialect>();
@@ -88,10 +88,7 @@ void GpuModuleToBinaryPass::runOnOperation() {
   TargetOptions targetOptions(toolkitPath, linkFiles, cmdOptions, *targetFormat,
                               lazyTableBuilder);
   if (failed(transformGpuModulesToBinaries(
-          getOperation(),
-          offloadingHandler ? dyn_cast<OffloadingLLVMTranslationAttrInterface>(
-                                  offloadingHandler.getValue())
-                            : OffloadingLLVMTranslationAttrInterface(nullptr),
+          getOperation(), OffloadingLLVMTranslationAttrInterface(nullptr),
           targetOptions)))
     return signalPassFailure();
 }

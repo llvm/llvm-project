@@ -518,10 +518,13 @@ The compressed offload bundle begins with a header followed by the compressed bi
     This is a unique identifier to distinguish compressed offload bundles. The value is the string 'CCOB' (Compressed Clang Offload Bundle).
 
 - **Version Number (16-bit unsigned int)**:
-    This denotes the version of the compressed offload bundle format. The current version is `1`.
+    This denotes the version of the compressed offload bundle format. The current version is `2`.
 
 - **Compression Method (16-bit unsigned int)**:
     This field indicates the compression method used. The value corresponds to either `zlib` or `zstd`, represented as a 16-bit unsigned integer cast from the LLVM compression enumeration.
+
+- **Total File Size (32-bit unsigned int)**:
+    This is the total size (in bytes) of the file, including the header. Available in version 2 and above.
 
 - **Uncompressed Binary Size (32-bit unsigned int)**:
     This is the size (in bytes) of the binary data before it was compressed.

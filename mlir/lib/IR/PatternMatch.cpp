@@ -11,6 +11,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Iterators.h"
 #include "mlir/IR/RegionKindInterface.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
 
@@ -110,39 +111,20 @@ RewriterBase::~RewriterBase() {
   // Out of line to provide a vtable anchor for the class.
 }
 
-/// This method replaces the uses of the results of `op` with the values in
-/// `newValues` when the provided `functor` returns true for a specific use.
-/// The number of values in `newValues` is required to match the number of
-/// results of `op`.
-void RewriterBase::replaceOpWithIf(
-    Operation *op, ValueRange newValues, bool *allUsesReplaced,
-    llvm::unique_function<bool(OpOperand &) const> functor) {
-  assert(op->getNumResults() == newValues.size() &&
-         "incorrect number of values to replace operation");
-
+void RewriterBase::replaceAllOpUsesWith(Operation *from, ValueRange to) {
   // Notify the listener that we're about to replace this op.
   if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
-    rewriteListener->notifyOperationReplaced(op, newValues);
+    rewriteListener->notifyOperationReplaced(from, to);
 
-  // Replace each use of the results when the functor is true.
-  bool replacedAllUses = true;
-  for (auto it : llvm::zip(op->getResults(), newValues)) {
-    replaceUsesWithIf(std::get<0>(it), std::get<1>(it), functor);
-    replacedAllUses &= std::get<0>(it).use_empty();
-  }
-  if (allUsesReplaced)
-    *allUsesReplaced = replacedAllUses;
+  replaceAllUsesWith(from->getResults(), to);
 }
 
-/// This method replaces the uses of the results of `op` with the values in
-/// `newValues` when a use is nested within the given `block`. The number of
-/// values in `newValues` is required to match the number of results of `op`.
-/// If all uses of this operation are replaced, the operation is erased.
-void RewriterBase::replaceOpWithinBlock(Operation *op, ValueRange newValues,
-                                        Block *block, bool *allUsesReplaced) {
-  replaceOpWithIf(op, newValues, allUsesReplaced, [block](OpOperand &use) {
-    return block->getParentOp()->isProperAncestor(use.getOwner());
-  });
+void RewriterBase::replaceAllOpUsesWith(Operation *from, Operation *to) {
+  // Notify the listener that we're about to replace this op.
+  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
+    rewriteListener->notifyOperationReplaced(from, to);
+
+  replaceAllUsesWith(from->getResults(), to->getResults());
 }
 
 /// This method replaces the results of the operation with the specified list of
@@ -152,13 +134,8 @@ void RewriterBase::replaceOp(Operation *op, ValueRange newValues) {
   assert(op->getNumResults() == newValues.size() &&
          "incorrect # of replacement values");
 
-  // Notify the listener that we're about to replace this op.
-  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
-    rewriteListener->notifyOperationReplaced(op, newValues);
-
-  // Replace results one-by-one. Also notifies the listener of modifications.
-  for (auto it : llvm::zip(op->getResults(), newValues))
-    replaceAllUsesWith(std::get<0>(it), std::get<1>(it));
+  // Replace all result uses. Also notifies the listener of modifications.
+  replaceAllOpUsesWith(op, newValues);
 
   // Erase op and notify listener.
   eraseOp(op);
@@ -172,13 +149,8 @@ void RewriterBase::replaceOp(Operation *op, Operation *newOp) {
   assert(op->getNumResults() == newOp->getNumResults() &&
          "ops have different number of results");
 
-  // Notify the listener that we're about to replace this op.
-  if (auto *rewriteListener = dyn_cast_if_present<Listener>(listener))
-    rewriteListener->notifyOperationReplaced(op, newOp);
-
-  // Replace results one-by-one. Also notifies the listener of modifications.
-  for (auto it : llvm::zip(op->getResults(), newOp->getResults()))
-    replaceAllUsesWith(std::get<0>(it), std::get<1>(it));
+  // Replace all result uses. Also notifies the listener of modifications.
+  replaceAllOpUsesWith(op, newOp->getResults());
 
   // Erase op and notify listener.
   eraseOp(op);
@@ -229,7 +201,10 @@ void RewriterBase::eraseOp(Operation *op) {
       // until the region is empty. (The block graph could be disconnected.)
       while (!r.empty()) {
         SmallVector<Block *> erasedBlocks;
-        for (Block *b : llvm::post_order(&r.front())) {
+        // Some blocks may have invalid successor, use a set including nullptr
+        // to avoid null pointer.
+        llvm::SmallPtrSet<Block *, 4> visited{nullptr};
+        for (Block *b : llvm::post_order_ext(&r.front(), visited)) {
           // Visit ops in reverse order.
           for (Operation &op :
                llvm::make_early_inc_range(ReverseIterator::makeIterable(*b)))
@@ -276,15 +251,41 @@ void RewriterBase::finalizeOpModification(Operation *op) {
     rewriteListener->notifyOperationModified(op);
 }
 
-/// Find uses of `from` and replace them with `to` if the `functor` returns
-/// true. It also marks every modified uses and notifies the rewriter that an
-/// in-place operation modification is about to happen.
+void RewriterBase::replaceAllUsesExcept(
+    Value from, Value to, const SmallPtrSetImpl<Operation *> &preservedUsers) {
+  return replaceUsesWithIf(from, to, [&](OpOperand &use) {
+    Operation *user = use.getOwner();
+    return !preservedUsers.contains(user);
+  });
+}
+
 void RewriterBase::replaceUsesWithIf(Value from, Value to,
-                                     function_ref<bool(OpOperand &)> functor) {
+                                     function_ref<bool(OpOperand &)> functor,
+                                     bool *allUsesReplaced) {
+  bool allReplaced = true;
   for (OpOperand &operand : llvm::make_early_inc_range(from.getUses())) {
-    if (functor(operand))
+    bool replace = functor(operand);
+    if (replace)
       modifyOpInPlace(operand.getOwner(), [&]() { operand.set(to); });
+    allReplaced &= replace;
   }
+  if (allUsesReplaced)
+    *allUsesReplaced = allReplaced;
+}
+
+void RewriterBase::replaceUsesWithIf(ValueRange from, ValueRange to,
+                                     function_ref<bool(OpOperand &)> functor,
+                                     bool *allUsesReplaced) {
+  assert(from.size() == to.size() && "incorrect number of replacements");
+  bool allReplaced = true;
+  for (auto it : llvm::zip_equal(from, to)) {
+    bool r;
+    replaceUsesWithIf(std::get<0>(it), std::get<1>(it), functor,
+                      /*allUsesReplaced=*/&r);
+    allReplaced &= r;
+  }
+  if (allUsesReplaced)
+    *allUsesReplaced = allReplaced;
 }
 
 void RewriterBase::inlineBlockBefore(Block *source, Block *dest,

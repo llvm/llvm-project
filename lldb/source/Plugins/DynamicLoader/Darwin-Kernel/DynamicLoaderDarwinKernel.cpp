@@ -22,6 +22,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
+#include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -1109,7 +1110,7 @@ void DynamicLoaderDarwinKernel::LoadKernelModuleIfNeeded() {
           // T1Sz is 25, then 64-25 == 39, bits 0..38 are used for
           // addressing, bits 39..63 are used for PAC/TBI or whatever.
           uint32_t virt_addr_bits = 64 - sym_value;
-          addr_t mask = ~((1ULL << virt_addr_bits) - 1);
+          addr_t mask = AddressableBits::AddressableBitToMask(virt_addr_bits);
           m_process->SetCodeAddressMask(mask);
           m_process->SetDataAddressMask(mask);
         } else {

@@ -27,6 +27,7 @@ enum ActionType {
   GenOptionDefs,
   GenPropertyDefs,
   GenPropertyEnumDefs,
+  GenSBAPIDWARFEnum
 };
 
 static cl::opt<ActionType> Action(
@@ -40,6 +41,8 @@ static cl::opt<ActionType> Action(
                clEnumValN(GenPropertyDefs, "gen-lldb-property-defs",
                           "Generate lldb property definitions"),
                clEnumValN(GenPropertyEnumDefs, "gen-lldb-property-enum-defs",
+                          "Generate lldb property enum definitions"),
+               clEnumValN(GenSBAPIDWARFEnum, "gen-lldb-sbapi-dwarf-enum",
                           "Generate lldb property enum definitions")));
 
 static bool LLDBTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
@@ -59,6 +62,8 @@ static bool LLDBTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
   case GenPropertyEnumDefs:
     EmitPropertyEnumDefs(Records, OS);
     break;
+  case GenSBAPIDWARFEnum:
+    llvm_unreachable("already handled");
   }
   return false;
 }
@@ -67,8 +72,10 @@ int main(int argc, char **argv) {
   sys::PrintStackTraceOnErrorSignal(argv[0]);
   PrettyStackTraceProgram X(argc, argv);
   cl::ParseCommandLineOptions(argc, argv);
-
   llvm_shutdown_obj Y;
+
+  if (Action == GenSBAPIDWARFEnum)
+    return EmitSBAPIDWARFEnum(argc, argv);
 
   return TableGenMain(argv[0], &LLDBTableGenMain);
 }

@@ -33,8 +33,6 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
             RetValSpec<VoidType>,
             [ArgSpec<FloatType>, ArgSpec<FloatPtr>, ArgSpec<FloatPtr>]
         >,
-        FunctionSpec<"exp10", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
-        FunctionSpec<"exp10f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
       ]
   >;
 

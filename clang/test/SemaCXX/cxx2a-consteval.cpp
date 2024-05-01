@@ -54,7 +54,7 @@ struct C {
 
 struct D {
   C c;
-  consteval D() = default; // expected-error {{cannot be consteval}}
+  consteval D() = default; // expected-error {{cannot be marked consteval}}
   consteval ~D() = default; // expected-error {{destructor cannot be declared consteval}}
 };
 
@@ -258,6 +258,26 @@ auto l1 = [](int i) constexpr { // expected-error{{cannot take address of immedi
 
 int(*test)(int)  = l1;
 
+}
+
+namespace consteval_lambda_in_template {
+struct S {
+    int *value;
+    constexpr S(int v) : value(new int {v}) {}
+    constexpr ~S() { delete value; }
+};
+consteval S fn() { return S(5); }
+
+template <typename T>
+void fn2() {
+    (void)[]() consteval -> int {
+      return *(fn().value);  // OK, immediate context
+    };
+}
+
+void caller() {
+    fn2<int>();
+}
 }
 
 namespace std {

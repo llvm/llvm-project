@@ -82,7 +82,8 @@ static long_double_Complex_t CMPLXL(long double r, long double i) {
  * supports __builtin_complex. For Clang, require >=12.0.
  * Otherwise, rely on the memory layout compatibility.
  */
-#if (defined(__clang_major__) && (__clang_major__ >= 12)) || defined(__GNUC__)
+#if (defined(__clang_major__) && (__clang_major__ >= 12)) || \
+    (defined(__GNUC__) && !defined(__clang__))
 #define CMPLXF128 __builtin_complex
 #else
 static CFloat128ComplexType CMPLXF128(CFloat128Type r, CFloat128Type i) {
@@ -153,4 +154,26 @@ ADAPT_REDUCTION(DotProductComplex10, long_double_Complex_t,
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 ADAPT_REDUCTION(DotProductComplex16, CFloat128ComplexType, CppComplexFloat128,
     CMPLXF128, DOT_PRODUCT_ARGS, DOT_PRODUCT_ARG_NAMES)
+#endif
+
+/* REDUCE() */
+#define RARGS REDUCE_ARGS(float_Complex_t)
+ADAPT_REDUCTION(ReduceComplex4, float_Complex_t, CppComplexFloat, CMPLXF, RARGS,
+    REDUCE_ARG_NAMES)
+#undef RARGS
+#define RARGS REDUCE_ARGS(double_Complex_t)
+ADAPT_REDUCTION(ReduceComplex8, double_Complex_t, CppComplexDouble, CMPLX,
+    RARGS, REDUCE_ARG_NAMES)
+#undef RARGS
+#if LDBL_MANT_DIG == 64
+#define RARGS REDUCE_ARGS(long_double_Complex_t)
+ADAPT_REDUCTION(ReduceComplex10, long_double_Complex_t, CppComplexLongDouble,
+    CMPLXL, RARGS, REDUCE_ARG_NAMES)
+#undef RARGS
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+#define RARGS REDUCE_ARGS(CFloat128ComplexType)
+ADAPT_REDUCTION(ReduceComplex16, CFloat128ComplexType, CppComplexFloat128,
+    CMPLXF128, RARGS, REDUCE_ARG_NAMES)
+#undef RARGS
 #endif

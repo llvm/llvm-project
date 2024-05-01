@@ -143,6 +143,18 @@ int FunctionComparator::cmpAttrs(const AttributeList L,
         if (int Res = cmpNumbers((uint64_t)TyL, (uint64_t)TyR))
           return Res;
         continue;
+      } else if (LA.isConstantRangeAttribute() &&
+                 RA.isConstantRangeAttribute()) {
+        if (LA.getKindAsEnum() != RA.getKindAsEnum())
+          return cmpNumbers(LA.getKindAsEnum(), RA.getKindAsEnum());
+
+        ConstantRange LCR = LA.getRange();
+        ConstantRange RCR = RA.getRange();
+        if (int Res = cmpAPInts(LCR.getLower(), RCR.getLower()))
+          return Res;
+        if (int Res = cmpAPInts(LCR.getUpper(), RCR.getUpper()))
+          return Res;
+        continue;
       }
       if (LA < RA)
         return -1;
@@ -426,9 +438,19 @@ int FunctionComparator::cmpConstants(const Constant *L,
         return Res;
       if (int Res = cmpNumbers(GEPL->isInBounds(), GEPR->isInBounds()))
         return Res;
-      if (int Res = cmpNumbers(GEPL->getInRangeIndex().value_or(unsigned(-1)),
-                               GEPR->getInRangeIndex().value_or(unsigned(-1))))
-        return Res;
+
+      std::optional<ConstantRange> InRangeL = GEPL->getInRange();
+      std::optional<ConstantRange> InRangeR = GEPR->getInRange();
+      if (InRangeL) {
+        if (!InRangeR)
+          return 1;
+        if (int Res = cmpAPInts(InRangeL->getLower(), InRangeR->getLower()))
+          return Res;
+        if (int Res = cmpAPInts(InRangeL->getUpper(), InRangeR->getUpper()))
+          return Res;
+      } else if (InRangeR) {
+        return -1;
+      }
     }
     if (auto *OBOL = dyn_cast<OverflowingBinaryOperator>(LE)) {
       auto *OBOR = cast<OverflowingBinaryOperator>(RE);

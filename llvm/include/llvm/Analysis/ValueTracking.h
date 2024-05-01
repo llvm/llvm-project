@@ -20,6 +20,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/FMF.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Intrinsics.h"
 #include <cassert>
@@ -124,17 +125,14 @@ bool isOnlyUsedInZeroEqualityComparison(const Instruction *CxtI);
 /// specified, perform context-sensitive analysis and return true if the
 /// pointer couldn't possibly be null at the specified instruction.
 /// Supports values with integer or pointer type and vectors of integers.
-bool isKnownNonZero(const Value *V, const DataLayout &DL, unsigned Depth = 0,
-                    AssumptionCache *AC = nullptr,
-                    const Instruction *CxtI = nullptr,
-                    const DominatorTree *DT = nullptr,
-                    bool UseInstrInfo = true);
+bool isKnownNonZero(const Value *V, const SimplifyQuery &Q, unsigned Depth = 0);
 
 /// Return true if the two given values are negation.
 /// Currently can recoginze Value pair:
 /// 1: <X, Y> if X = sub (0, Y) or Y = sub (0, X)
 /// 2: <X, Y> if X = sub (A, B) and Y = sub (B, A)
-bool isKnownNegation(const Value *X, const Value *Y, bool NeedNSW = false);
+bool isKnownNegation(const Value *X, const Value *Y, bool NeedNSW = false,
+                     bool AllowPoison = true);
 
 /// Returns true if the give value is known to be non-negative.
 bool isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
@@ -596,10 +594,11 @@ Value *isBytewiseValue(Value *V, const DataLayout &DL);
 /// indexed is already around as a register, for example if it were inserted
 /// directly into the aggregate.
 ///
-/// If InsertBefore is not null, this function will duplicate (modified)
+/// If InsertBefore is not empty, this function will duplicate (modified)
 /// insertvalues when a part of a nested struct is extracted.
-Value *FindInsertedValue(Value *V, ArrayRef<unsigned> idx_range,
-                         Instruction *InsertBefore = nullptr);
+Value *FindInsertedValue(
+    Value *V, ArrayRef<unsigned> idx_range,
+    std::optional<BasicBlock::iterator> InsertBefore = std::nullopt);
 
 /// Analyze the specified pointer to see if it can be expressed as a base
 /// pointer plus a constant offset. Return the base and offset to the caller.
@@ -693,11 +692,11 @@ inline Value *getArgumentAliasingToReturnedPointer(CallBase *Call,
 bool isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
     const CallBase *Call, bool MustPreserveNullness);
 
-/// This method strips off any GEP address adjustments and pointer casts from
-/// the specified value, returning the original object being addressed. Note
-/// that the returned value has pointer type if the specified value does. If
-/// the MaxLookup value is non-zero, it limits the number of instructions to
-/// be stripped off.
+/// This method strips off any GEP address adjustments, pointer casts
+/// or `llvm.threadlocal.address` from the specified value \p V, returning the
+/// original object being addressed. Note that the returned value has pointer
+/// type if the specified value does. If the \p MaxLookup value is non-zero, it
+/// limits the number of instructions to be stripped off.
 const Value *getUnderlyingObject(const Value *V, unsigned MaxLookup = 6);
 inline Value *getUnderlyingObject(Value *V, unsigned MaxLookup = 6) {
   // Force const to avoid infinite recursion.
@@ -793,6 +792,15 @@ bool isSafeToSpeculativelyExecute(const Instruction *I,
                                   const DominatorTree *DT = nullptr,
                                   const TargetLibraryInfo *TLI = nullptr);
 
+inline bool
+isSafeToSpeculativelyExecute(const Instruction *I, BasicBlock::iterator CtxI,
+                             AssumptionCache *AC = nullptr,
+                             const DominatorTree *DT = nullptr,
+                             const TargetLibraryInfo *TLI = nullptr) {
+  // Take an iterator, and unwrap it into an Instruction *.
+  return isSafeToSpeculativelyExecute(I, &*CtxI, AC, DT, TLI);
+}
+
 /// This returns the same result as isSafeToSpeculativelyExecute if Opcode is
 /// the actual opcode of Inst. If the provided and actual opcode differ, the
 /// function (virtually) overrides the opcode of Inst with the provided
@@ -852,7 +860,8 @@ enum class OverflowResult {
 };
 
 OverflowResult computeOverflowForUnsignedMul(const Value *LHS, const Value *RHS,
-                                             const SimplifyQuery &SQ);
+                                             const SimplifyQuery &SQ,
+                                             bool IsNSW = false);
 OverflowResult computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
                                            const SimplifyQuery &SQ);
 OverflowResult
@@ -1018,6 +1027,15 @@ bool isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC = nullptr,
                                const Instruction *CtxI = nullptr,
                                const DominatorTree *DT = nullptr,
                                unsigned Depth = 0);
+
+inline bool isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC,
+                                      BasicBlock::iterator CtxI,
+                                      const DominatorTree *DT = nullptr,
+                                      unsigned Depth = 0) {
+  // Takes an iterator as a position, passes down to Instruction *
+  // implementation.
+  return isGuaranteedNotToBePoison(V, AC, &*CtxI, DT, Depth);
+}
 
 /// Returns true if V cannot be undef, but may be poison.
 bool isGuaranteedNotToBeUndef(const Value *V, AssumptionCache *AC = nullptr,
@@ -1195,6 +1213,13 @@ std::optional<bool> isImpliedByDomCondition(CmpInst::Predicate Pred,
                                             const Value *LHS, const Value *RHS,
                                             const Instruction *ContextI,
                                             const DataLayout &DL);
+
+/// Call \p InsertAffected on all Values whose known bits / value may be
+/// affected by the condition \p Cond. Used by AssumptionCache and
+/// DomConditionCache.
+void findValuesAffectedByCondition(Value *Cond, bool IsAssume,
+                                   function_ref<void(Value *)> InsertAffected);
+
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_VALUETRACKING_H

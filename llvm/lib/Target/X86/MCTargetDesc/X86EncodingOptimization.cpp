@@ -52,8 +52,8 @@ bool X86::optimizeInstFromVEX3ToVEX2(MCInst &MI, const MCInstrDesc &Desc) {
   case X86::VCMPPDYrri:
   case X86::VCMPPSrri:
   case X86::VCMPPSYrri:
-  case X86::VCMPSDrr:
-  case X86::VCMPSSrr: {
+  case X86::VCMPSDrri:
+  case X86::VCMPSSrri: {
     switch (MI.getOperand(3).getImm() & 0x7) {
     default:
       return false;

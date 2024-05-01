@@ -115,6 +115,22 @@ public:
     return withEncoding(enc.withoutBitWidths());
   }
 
+  SparseTensorType withExplicitVal(Attribute explicitVal) const {
+    return withEncoding(enc.withExplicitVal(explicitVal));
+  }
+
+  SparseTensorType withoutExplicitVal() const {
+    return withEncoding(enc.withoutExplicitVal());
+  }
+
+  SparseTensorType withImplicitVal(Attribute implicitVal) const {
+    return withEncoding(enc.withImplicitVal(implicitVal));
+  }
+
+  SparseTensorType withoutImplicitVal() const {
+    return withEncoding(enc.withoutImplicitVal());
+  }
+
   SparseTensorType
   withDimSlices(ArrayRef<SparseTensorDimSliceAttr> dimSlices) const {
     return withEncoding(enc.withDimSlices(dimSlices));
@@ -247,16 +263,19 @@ public:
   /// Returns the dimension-shape.
   ArrayRef<Size> getDimShape() const { return rtp.getShape(); }
 
-  /// Returns the Level-shape.
+  /// Returns the level-shape.
   SmallVector<Size> getLvlShape() const {
-    return getEncoding().tranlateShape(getDimShape(),
-                                       CrdTransDirectionKind::dim2lvl);
+    return getEncoding().translateShape(getDimShape(),
+                                        CrdTransDirectionKind::dim2lvl);
   }
 
-  /// Returns the Level-shape.
+  /// Returns the batched level-rank.
+  unsigned getBatchLvlRank() const { return getEncoding().getBatchLvlRank(); }
+
+  /// Returns the batched level-shape.
   SmallVector<Size> getBatchLvlShape() const {
-    auto lvlShape = getEncoding().tranlateShape(getDimShape(),
-                                                CrdTransDirectionKind::dim2lvl);
+    auto lvlShape = getEncoding().translateShape(
+        getDimShape(), CrdTransDirectionKind::dim2lvl);
     lvlShape.truncate(getEncoding().getBatchLvlRank());
     return lvlShape;
   }
@@ -324,19 +343,21 @@ public:
   /// Returns the position-overhead bitwidth, defaulting to zero.
   unsigned getPosWidth() const { return enc ? enc.getPosWidth() : 0; }
 
-  /// Returns the coordinate-overhead MLIR type, defaulting to `IndexType`.
-  Type getCrdType() const {
-    if (getCrdWidth())
-      return IntegerType::get(getContext(), getCrdWidth());
-    return IndexType::get(getContext());
+  /// Returns the explicit value, defaulting to null Attribute for unset.
+  Attribute getExplicitVal() const {
+    return enc ? enc.getExplicitVal() : nullptr;
   }
 
-  /// Returns the position-overhead MLIR type, defaulting to `IndexType`.
-  Type getPosType() const {
-    if (getPosWidth())
-      return IntegerType::get(getContext(), getPosWidth());
-    return IndexType::get(getContext());
+  /// Returns the implicit value, defaulting to null Attribute for 0.
+  Attribute getImplicitVal() const {
+    return enc ? enc.getImplicitVal() : nullptr;
   }
+
+  /// Returns the coordinate-overhead MLIR type, defaulting to `IndexType`.
+  Type getCrdType() const { return enc.getCrdElemType(); }
+
+  /// Returns the position-overhead MLIR type, defaulting to `IndexType`.
+  Type getPosType() const { return enc.getPosElemType(); }
 
   /// Returns true iff this sparse tensor type has a trailing
   /// COO region starting at the given level. By default, it

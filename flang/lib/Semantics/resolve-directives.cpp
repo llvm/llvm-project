@@ -487,6 +487,9 @@ public:
       const auto namePair{
           currScope().try_emplace(name->source, Attrs{}, ProcEntityDetails{})};
       auto &newSymbol{*namePair.first->second};
+      if (context_.intrinsics().IsIntrinsic(name->ToString())) {
+        newSymbol.attrs().set(Attr::INTRINSIC);
+      }
       name->symbol = &newSymbol;
     };
     if (const auto *procD{parser::Unwrap<parser::ProcedureDesignator>(opr.u)}) {
@@ -1646,6 +1649,15 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
       break;
     }
   }
+  // If this symbol already has a data-sharing attribute then there is nothing
+  // to do here.
+  if (const Symbol * symbol{iv.symbol}) {
+    for (auto symMap : targetIt->objectWithDSA) {
+      if (symMap.first->name() == symbol->name()) {
+        return;
+      }
+    }
+  }
   // If this symbol is already Private or Firstprivate in the enclosing
   // OpenMP parallel or task then there is nothing to do here.
   if (auto *symbol{targetIt->scope.FindSymbol(iv.source)}) {
@@ -2009,6 +2021,11 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
         }
       }
     }
+
+    if (Symbol * found{currScope().FindSymbol(name.source)}) {
+      if (found->test(semantics::Symbol::Flag::OmpThreadprivate))
+        return;
+    }
     std::vector<Symbol *> defaultDSASymbols;
     for (int dirDepth{0}; dirDepth < (int)dirContext_.size(); ++dirDepth) {
       DirContext &dirContext = dirContext_[dirDepth];
@@ -2079,15 +2096,10 @@ Symbol *OmpAttributeVisitor::ResolveOmpCommonBlockName(
   if (!name) {
     return nullptr;
   }
-  // First check if the Common Block is declared in the current scope
-  if (auto *cur{GetContext().scope.FindCommonBlock(name->source)}) {
-    name->symbol = cur;
-    return cur;
-  }
-  // Then check parent scope
-  if (auto *prev{GetContext().scope.parent().FindCommonBlock(name->source)}) {
-    name->symbol = prev;
-    return prev;
+  if (auto *cb{GetProgramUnitOrBlockConstructContaining(GetContext().scope)
+                   .FindCommonBlock(name->source)}) {
+    name->symbol = cb;
+    return cb;
   }
   return nullptr;
 }

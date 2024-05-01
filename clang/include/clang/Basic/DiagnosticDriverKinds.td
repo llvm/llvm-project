@@ -142,6 +142,9 @@ def warn_drv_unsupported_diag_option_for_flang : Warning<
 def warn_drv_unsupported_option_for_processor : Warning<
   "ignoring '%0' option as it is not currently supported for processor '%1'">,
   InGroup<OptionIgnored>;
+def warn_drv_unsupported_openmp_library : Warning<
+  "The library '%0=%1' is not supported, openmp is not be enabled">,
+  InGroup<OptionIgnored>;
 
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
@@ -548,6 +551,12 @@ def err_drv_extract_api_wrong_kind : Error<
   "header file '%0' input '%1' does not match the type of prior input "
   "in api extraction; use '-x %2' to override">;
 
+def err_drv_missing_symbol_graph_dir: Error<
+  "Must provide a symbol graph output directory using --symbol-graph-dir=<directory>">;
+
+def err_drv_unexpected_symbol_graph_output : Error<
+  "Unexpected output symbol graph '%1'; please provide --symbol-graph-dir=<directory> instead">;
+
 def warn_slash_u_filename : Warning<"'/U%0' treated as the '/U' option">,
   InGroup<DiagGroup<"slash-u-filename">>;
 def note_use_dashdash : Note<
@@ -587,6 +596,9 @@ def warn_drv_unsupported_gpopt : Warning<
   "ignoring '-mgpopt' option as it cannot be used with %select{|the implicit"
   " usage of }0-mabicalls">,
   InGroup<UnsupportedGPOpt>;
+def warn_drv_unsupported_tocdata: Warning<
+  "ignoring '-mtocdata' as it is only supported for -mcmodel=small">,
+  InGroup<OptionIgnored>;
 def warn_drv_unsupported_sdata : Warning<
   "ignoring '-msmall-data-limit=' with -mcmodel=large for -fpic or RV64">,
   InGroup<OptionIgnored>;
@@ -654,6 +666,7 @@ def warn_drv_darwin_sdk_invalid_settings : Warning<
   "SDK settings were ignored as 'SDKSettings.json' could not be parsed">,
   InGroup<DiagGroup<"darwin-sdk-settings">>;
 
+def err_missing_sysroot : Error<"no such sysroot directory: '%0'">;
 def err_drv_darwin_sdk_missing_arclite : Error<
   "SDK does not contain 'libarclite' at the path '%0'; try increasing the minimum deployment target">;
 
@@ -750,7 +763,8 @@ def err_drv_hlsl_unsupported_target : Error<
   "HLSL code generation is unsupported for target '%0'">;
 def err_drv_hlsl_bad_shader_required_in_target : Error<
   "%select{shader model|Vulkan environment|shader stage}0 is required as %select{OS|environment}1 in target '%2' for HLSL code generation">;
-
+def err_drv_hlsl_16bit_types_unsupported: Error<
+  "'%0' option requires target HLSL Version >= 2018%select{| and shader model >= 6.2}1, but HLSL Version is '%2'%select{| and shader model is '%3'}1">;
 def err_drv_hlsl_bad_shader_unsupported : Error<
   "%select{shader model|Vulkan environment|shader stage}0 '%1' in target '%2' is invalid for HLSL code generation">;
 def warn_drv_dxc_missing_dxv : Warning<"dxv not found. "

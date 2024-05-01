@@ -63,10 +63,10 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
@@ -399,7 +399,9 @@ void PrintPreprocessedAction::executeAction() {
 
   // Format or dump the prescanner's output
   CompilerInstance &ci = this->getInstance();
-  if (ci.getInvocation().getPreprocessorOpts().noReformat) {
+  if (ci.getInvocation().getPreprocessorOpts().showMacros) {
+    ci.getParsing().EmitPreprocessorMacros(outForPP);
+  } else if (ci.getInvocation().getPreprocessorOpts().noReformat) {
     ci.getParsing().DumpCookedChars(outForPP);
   } else {
     ci.getParsing().EmitPreprocessedSource(
@@ -807,7 +809,7 @@ void CodeGenAction::generateLLVMIR() {
   }
 
   // Create the pass pipeline
-  fir::createMLIRToLLVMPassPipeline(pm, config);
+  fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());
   (void)mlir::applyPassManagerCLOptions(pm);
 
   // run the pass manager
@@ -859,7 +861,6 @@ getOutputStream(CompilerInstance &ci, llvm::StringRef inFile,
     return ci.createDefaultOutputFile(
         /*Binary=*/false, inFile, /*extension=*/"ll");
   case BackendActionTy::Backend_EmitFIR:
-    LLVM_FALLTHROUGH;
   case BackendActionTy::Backend_EmitHLFIR:
     return ci.createDefaultOutputFile(
         /*Binary=*/false, inFile, /*extension=*/"mlir");

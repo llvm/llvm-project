@@ -748,9 +748,10 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
     auto line = line_entry.GetLine();
     if (line && line != LLDB_INVALID_LINE_NUMBER)
       object.try_emplace("line", line);
+    else
+      object.try_emplace("line", 0);
     auto column = line_entry.GetColumn();
-    if (column && column != LLDB_INVALID_COLUMN_NUMBER)
-      object.try_emplace("column", column);
+    object.try_emplace("column", column);
   } else {
     object.try_emplace("line", 0);
     object.try_emplace("column", 0);

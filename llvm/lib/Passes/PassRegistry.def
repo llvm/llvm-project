@@ -254,6 +254,9 @@ FUNCTION_ANALYSIS("demanded-bits", DemandedBitsAnalysis())
 FUNCTION_ANALYSIS("domfrontier", DominanceFrontierAnalysis())
 FUNCTION_ANALYSIS("domtree", DominatorTreeAnalysis())
 FUNCTION_ANALYSIS("func-properties", FunctionPropertiesAnalysis())
+FUNCTION_ANALYSIS(
+    "machine-function-info",
+    MachineFunctionAnalysis(static_cast<const LLVMTargetMachine *>(TM)))
 FUNCTION_ANALYSIS("gc-function", GCFunctionAnalysis())
 FUNCTION_ANALYSIS("inliner-size-estimator", InlineSizeEstimatorAnalysis())
 FUNCTION_ANALYSIS("lazy-value-info", LazyValueAnalysis())
@@ -363,6 +366,7 @@ FUNCTION_PASS("loop-load-elim", LoopLoadEliminationPass())
 FUNCTION_PASS("loop-simplify", LoopSimplifyPass())
 FUNCTION_PASS("loop-sink", LoopSinkPass())
 FUNCTION_PASS("loop-versioning", LoopVersioningPass())
+FUNCTION_PASS("lower-allow-check", LowerAllowCheckPass())
 FUNCTION_PASS("lower-atomic", LowerAtomicPass())
 FUNCTION_PASS("lower-constant-intrinsics", LowerConstantIntrinsicsPass())
 FUNCTION_PASS("lower-expect", LowerExpectIntrinsicPass())
@@ -586,6 +590,9 @@ LOOP_ANALYSIS("ddg", DDGAnalysis())
 LOOP_ANALYSIS("iv-users", IVUsersAnalysis())
 LOOP_ANALYSIS("no-op-loop", NoOpLoopAnalysis())
 LOOP_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
+LOOP_ANALYSIS("should-run-extra-simple-loop-unswitch",
+                  ShouldRunExtraSimpleLoopUnswitch())
+
 #undef LOOP_ANALYSIS
 
 #ifndef LOOP_PASS

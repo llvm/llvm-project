@@ -64,7 +64,7 @@ static bool runPass(Function &F) {
 
   CastInst *AllocaInsertionPoint = new BitCastInst(
       Constant::getNullValue(Type::getInt32Ty(F.getContext())),
-      Type::getInt32Ty(F.getContext()), "reg2mem alloca point", &*I);
+      Type::getInt32Ty(F.getContext()), "reg2mem alloca point", I);
 
   // Find the escaped instructions. But don't create stack slots for
   // allocas in entry block.
@@ -76,7 +76,7 @@ static bool runPass(Function &F) {
   // Demote escaped instructions
   NumRegsDemoted += WorkList.size();
   for (Instruction *I : WorkList)
-    DemoteRegToStack(*I, false, AllocaInsertionPoint);
+    DemoteRegToStack(*I, false, AllocaInsertionPoint->getIterator());
 
   WorkList.clear();
 
@@ -88,7 +88,7 @@ static bool runPass(Function &F) {
   // Demote phi nodes
   NumPhisDemoted += WorkList.size();
   for (Instruction *I : WorkList)
-    DemotePHIToStack(cast<PHINode>(I), AllocaInsertionPoint);
+    DemotePHIToStack(cast<PHINode>(I), AllocaInsertionPoint->getIterator());
 
   return true;
 }

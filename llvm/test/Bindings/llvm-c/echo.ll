@@ -334,6 +334,20 @@ define void @test_fast_math_flags_call_outer(float %a) {
   ret void
 }
 
+define void @test_func_prefix_data_01() prefix i32 123 {
+  ret void
+}
+
+define void @test_func_prefix_data_02() prefix i64 2000 {
+  ret void
+}
+
+%func_prolog_struct = type <{ i8, i8, ptr }>
+
+define void @test_func_prologue_data_01() prologue %func_prolog_struct <{ i8 235, i8 8, ptr zeroinitializer}> {
+  ret void
+}
+
 !llvm.dbg.cu = !{!0, !2}
 !llvm.module.flags = !{!3}
 

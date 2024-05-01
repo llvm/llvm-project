@@ -27,6 +27,23 @@ LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 class RecordsSlice;
 
+// Defines lightweight source location for records.
+struct RecordLoc {
+  RecordLoc() = default;
+  RecordLoc(std::string File, unsigned Line)
+      : File(std::move(File)), Line(Line) {}
+
+  /// Whether there is source location tied to the RecordLoc object.
+  bool isValid() const { return !File.empty(); }
+
+  bool operator==(const RecordLoc &O) const {
+    return std::tie(File, Line) == std::tie(O.File, O.Line);
+  }
+
+  const std::string File;
+  const unsigned Line = 0;
+};
+
 // Defines a list of linkage types.
 enum class RecordLinkage : uint8_t {
   // Unknown linkage.
@@ -51,7 +68,8 @@ class Record {
 public:
   Record() = default;
   Record(StringRef Name, RecordLinkage Linkage, SymbolFlags Flags)
-      : Name(Name), Linkage(Linkage), Flags(mergeFlags(Flags, Linkage)) {}
+      : Name(Name), Linkage(Linkage), Flags(mergeFlags(Flags, Linkage)),
+        Verified(false) {}
 
   bool isWeakDefined() const {
     return (Flags & SymbolFlags::WeakDefined) == SymbolFlags::WeakDefined;
@@ -79,6 +97,9 @@ public:
   bool isExported() const { return Linkage >= RecordLinkage::Rexported; }
   bool isRexported() const { return Linkage == RecordLinkage::Rexported; }
 
+  bool isVerified() const { return Verified; }
+  void setVerify(bool V = true) { Verified = V; }
+
   StringRef getName() const { return Name; }
   SymbolFlags getFlags() const { return Flags; }
 
@@ -89,6 +110,7 @@ protected:
   StringRef Name;
   RecordLinkage Linkage;
   SymbolFlags Flags;
+  bool Verified;
 
   friend class RecordsSlice;
 };
@@ -103,8 +125,8 @@ public:
   };
 
   GlobalRecord(StringRef Name, RecordLinkage Linkage, SymbolFlags Flags,
-               Kind GV)
-      : Record({Name, Linkage, Flags}), GV(GV) {}
+               Kind GV, bool Inlined)
+      : Record({Name, Linkage, Flags}), GV(GV), Inlined(Inlined) {}
 
   bool isFunction() const { return GV == Kind::Function; }
   bool isVariable() const { return GV == Kind::Variable; }
@@ -112,9 +134,11 @@ public:
     if (GV == Kind::Unknown)
       GV = V;
   }
+  bool isInlined() const { return Inlined; }
 
 private:
   Kind GV;
+  bool Inlined = false;
 };
 
 // Define Objective-C instance variable records.
@@ -143,6 +167,7 @@ public:
   ObjCIVarRecord *addObjCIVar(StringRef IVar, RecordLinkage Linkage);
   ObjCIVarRecord *findObjCIVar(StringRef IVar) const;
   std::vector<ObjCIVarRecord *> getObjCIVars() const;
+  RecordLinkage getLinkage() const { return Linkage; }
 
 private:
   RecordMap<ObjCIVarRecord> IVars;

@@ -1083,7 +1083,8 @@ DWARFVerifier::DWARFVerifier(raw_ostream &S, DWARFContext &D,
                              DIDumpOptions DumpOpts)
     : OS(S), DCtx(D), DumpOpts(std::move(DumpOpts)), IsObjectFile(false),
       IsMachOObject(false) {
-  ErrorCategory.ShowDetail(DumpOpts.Verbose || !DumpOpts.ShowAggregateErrors);
+  ErrorCategory.ShowDetail(this->DumpOpts.Verbose ||
+                           !this->DumpOpts.ShowAggregateErrors);
   if (const auto *F = DCtx.getDWARFObj().getFile()) {
     IsObjectFile = F->isRelocatableObject();
     IsMachOObject = F->isMachO();

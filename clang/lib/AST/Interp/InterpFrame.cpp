@@ -152,6 +152,13 @@ void print(llvm::raw_ostream &OS, const Pointer &P, ASTContext &Ctx,
 }
 
 void InterpFrame::describe(llvm::raw_ostream &OS) const {
+  // We create frames for builtin functions as well, but we can't reliably
+  // diagnose them. The 'in call to' diagnostics for them add no value to the
+  // user _and_ it doesn't generally work since the argument types don't always
+  // match the function prototype. Just ignore them.
+  if (const auto *F = getFunction(); F && F->isBuiltin())
+    return;
+
   const FunctionDecl *F = getCallee();
   if (const auto *M = dyn_cast<CXXMethodDecl>(F);
       M && M->isInstance() && !isa<CXXConstructorDecl>(F)) {
@@ -190,6 +197,8 @@ SourceRange InterpFrame::getCallRange() const {
 }
 
 const FunctionDecl *InterpFrame::getCallee() const {
+  if (!Func)
+    return nullptr;
   return Func->getDecl();
 }
 

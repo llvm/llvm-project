@@ -18,6 +18,7 @@
 #include "kmp_itt.h"
 #include "kmp_lock.h"
 #include "kmp_stats.h"
+#include "kmp_utils.h"
 #include "ompt-specific.h"
 
 #define MAX_MESSAGE 512
@@ -4233,7 +4234,7 @@ void __kmpc_doacross_wait(ident_t *loc, int gtid, const kmp_int64 *vec) {
   up = pr_buf->th_doacross_info[3];
   st = pr_buf->th_doacross_info[4];
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-  ompt_dependence_t deps[num_dims];
+  SimpleVLA<ompt_dependence_t> deps(num_dims);
 #endif
   if (st == 1) { // most common case
     if (vec[0] < lo || vec[0] > up) {
@@ -4345,7 +4346,7 @@ void __kmpc_doacross_post(ident_t *loc, int gtid, const kmp_int64 *vec) {
   lo = pr_buf->th_doacross_info[2];
   st = pr_buf->th_doacross_info[4];
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-  ompt_dependence_t deps[num_dims];
+  SimpleVLA<ompt_dependence_t> deps(num_dims);
 #endif
   if (st == 1) { // most common case
     iter_number = vec[0] - lo;

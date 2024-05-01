@@ -26,11 +26,9 @@
 #include <__type_traits/can_extract_key.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_const.h>
-#include <__type_traits/is_copy_constructible.h>
-#include <__type_traits/is_nothrow_copy_constructible.h>
-#include <__type_traits/is_nothrow_default_constructible.h>
-#include <__type_traits/is_nothrow_move_assignable.h>
-#include <__type_traits/is_nothrow_move_constructible.h>
+#include <__type_traits/is_constructible.h>
+#include <__type_traits/is_nothrow_assignable.h>
+#include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>

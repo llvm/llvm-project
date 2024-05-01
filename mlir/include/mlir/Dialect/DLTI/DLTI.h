@@ -100,6 +100,9 @@ public:
   /// Returns the list of entries.
   DataLayoutEntryListRef getEntries() const;
 
+  /// Returns the endiannes identifier.
+  StringAttr getEndiannessIdentifier(MLIRContext *context) const;
+
   /// Returns the alloca memory space identifier.
   StringAttr getAllocaMemorySpaceIdentifier(MLIRContext *context) const;
 

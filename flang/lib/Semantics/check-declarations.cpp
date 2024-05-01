@@ -632,6 +632,11 @@ void CheckHelper::CheckObjectEntity(
     const Symbol &symbol, const ObjectEntityDetails &details) {
   CheckSymbolType(symbol);
   CheckArraySpec(symbol, details.shape());
+  CheckConflicting(symbol, Attr::ALLOCATABLE, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::ASYNCHRONOUS, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::SAVE, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::TARGET, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::VOLATILE, Attr::PARAMETER);
   Check(details.shape());
   Check(details.coshape());
   if (details.shape().Rank() > common::maxRank) {
@@ -946,9 +951,9 @@ void CheckHelper::CheckObjectEntity(
       break;
     case common::CUDADataAttr::Managed:
       if (!IsAutomatic(symbol) && !IsAllocatable(symbol) &&
-          !details.isDummy()) {
+          !details.isDummy() && !evaluate::IsExplicitShape(symbol)) {
         messages_.Say(
-            "Object '%s' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, or a dummy argument"_err_en_US,
+            "Object '%s' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, explicit shape, or a dummy argument"_err_en_US,
             symbol.name());
       }
       break;
@@ -975,6 +980,16 @@ void CheckHelper::CheckObjectEntity(
       } else if (!inDeviceSubprogram) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(SHARED) must be declared in a device subprogram"_err_en_US,
+            symbol.name());
+      }
+      break;
+    case common::CUDADataAttr::Unified:
+      if (((!subpDetails &&
+               symbol.owner().kind() != Scope::Kind::MainProgram) ||
+              inDeviceSubprogram) &&
+          !isComponent) {
+        messages_.Say(
+            "Object '%s' with ATTRIBUTES(UNIFIED) must be declared in a host subprogram"_err_en_US,
             symbol.name());
       }
       break;
@@ -1025,9 +1040,10 @@ void CheckHelper::CheckObjectEntity(
             parser::ToUpperCaseLetters(common::EnumToString(attr)));
       }
     } else if (!subpDetails && symbol.owner().kind() != Scope::Kind::Module &&
-        symbol.owner().kind() != Scope::Kind::MainProgram) {
+        symbol.owner().kind() != Scope::Kind::MainProgram &&
+        symbol.owner().kind() != Scope::Kind::BlockConstruct) {
       messages_.Say(
-          "ATTRIBUTES(%s) may apply only to module, host subprogram, or device subprogram data"_err_en_US,
+          "ATTRIBUTES(%s) may apply only to module, host subprogram, block, or device subprogram data"_err_en_US,
           parser::ToUpperCaseLetters(common::EnumToString(attr)));
     }
   }
@@ -1195,9 +1211,7 @@ void CheckHelper::CheckArraySpec(
 void CheckHelper::CheckProcEntity(
     const Symbol &symbol, const ProcEntityDetails &details) {
   CheckSymbolType(symbol);
-  const Symbol *interface {
-    details.procInterface() ? &details.procInterface()->GetUltimate() : nullptr
-  };
+  const Symbol *interface{details.procInterface()};
   if (details.isDummy()) {
     if (!symbol.attrs().test(Attr::POINTER) && // C843
         (symbol.attrs().test(Attr::INTENT_IN) ||
@@ -1425,10 +1439,6 @@ void CheckHelper::CheckSubprogram(
   }
   if (cudaAttrs && *cudaAttrs != common::CUDASubprogramAttrs::Host) {
     // CUDA device subprogram checks
-    if (symbol.attrs().HasAny({Attr::RECURSIVE, Attr::PURE, Attr::ELEMENTAL})) {
-      messages_.Say(symbol.name(),
-          "A device subprogram may not be RECURSIVE, PURE, or ELEMENTAL"_err_en_US);
-    }
     if (ClassifyProcedure(symbol) == ProcedureDefinitionClass::Internal) {
       messages_.Say(symbol.name(),
           "A device subprogram may not be an internal subprogram"_err_en_US);
@@ -1481,7 +1491,8 @@ void CheckHelper::CheckExternal(const Symbol &symbol) {
           if (auto globalChars{Characterize(*global)}) {
             if (chars->HasExplicitInterface()) {
               std::string whyNot;
-              if (!chars->IsCompatibleWith(*globalChars, &whyNot)) {
+              if (!chars->IsCompatibleWith(*globalChars,
+                      /*ignoreImplicitVsExplicit=*/false, &whyNot)) {
                 msg = WarnIfNotInModuleFile(
                     "The global subprogram '%s' is not compatible with its local procedure declaration (%s)"_warn_en_US,
                     global->name(), whyNot);
@@ -1507,7 +1518,8 @@ void CheckHelper::CheckExternal(const Symbol &symbol) {
       if (auto chars{Characterize(symbol)}) {
         if (auto previousChars{Characterize(previous)}) {
           std::string whyNot;
-          if (!chars->IsCompatibleWith(*previousChars, &whyNot)) {
+          if (!chars->IsCompatibleWith(*previousChars,
+                  /*ignoreImplicitVsExplicit=*/false, &whyNot)) {
             if (auto *msg{WarnIfNotInModuleFile(
                     "The external interface '%s' is not compatible with an earlier definition (%s)"_warn_en_US,
                     symbol.name(), whyNot)}) {
@@ -2341,7 +2353,14 @@ void CheckHelper::CheckProcBinding(
         "Intrinsic procedure '%s' is not a specific intrinsic permitted for use in the definition of binding '%s'"_err_en_US,
         binding.symbol().name(), symbol.name());
   }
-  if (const Symbol *overridden{FindOverriddenBinding(symbol)}) {
+  bool isInaccessibleDeferred{false};
+  if (const Symbol *
+      overridden{FindOverriddenBinding(symbol, isInaccessibleDeferred)}) {
+    if (isInaccessibleDeferred) {
+      SayWithDeclaration(*overridden,
+          "Override of PRIVATE DEFERRED '%s' must appear in its module"_err_en_US,
+          symbol.name());
+    }
     if (overridden->attrs().test(Attr::NON_OVERRIDABLE)) {
       SayWithDeclaration(*overridden,
           "Override of NON_OVERRIDABLE '%s' is not permitted"_err_en_US,
@@ -3234,6 +3253,8 @@ void CheckHelper::CheckSymbolType(const Symbol &symbol) {
   const Symbol *result{FindFunctionResult(symbol)};
   const Symbol &relevant{result ? *result : symbol};
   if (IsAllocatable(relevant)) { // always ok
+  } else if (IsProcedurePointer(symbol) && result && IsPointer(*result)) {
+    // procedure pointer returning allocatable or pointer: ok
   } else if (IsPointer(relevant) && !IsProcedure(relevant)) {
     // object pointers are always ok
   } else if (auto dyType{evaluate::DynamicType::From(relevant)}) {

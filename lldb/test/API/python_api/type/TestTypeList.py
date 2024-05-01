@@ -18,6 +18,47 @@ class TypeAndTypeListTestCase(TestBase):
         self.source = "main.cpp"
         self.line = line_number(self.source, "// Break at this line")
 
+    def _find_nested_type_in_Pointer_template_arg(self, pointer_type):
+        self.assertTrue(pointer_type)
+        self.DebugSBType(pointer_type)
+        pointer_info_type = pointer_type.template_args[1]
+        self.assertTrue(pointer_info_type)
+        self.DebugSBType(pointer_info_type)
+
+        pointer_masks1_type = pointer_info_type.FindDirectNestedType("Masks1")
+        self.assertTrue(pointer_masks1_type)
+        self.DebugSBType(pointer_masks1_type)
+
+        pointer_masks2_type = pointer_info_type.FindDirectNestedType("Masks2")
+        self.assertTrue(pointer_masks2_type)
+        self.DebugSBType(pointer_masks2_type)
+
+    def _find_static_field_in_Task_pointer(self, task_pointer):
+        self.assertTrue(task_pointer)
+        self.DebugSBType(task_pointer)
+
+        task_type = task_pointer.GetPointeeType()
+        self.assertTrue(task_type)
+        self.DebugSBType(task_type)
+
+        static_constexpr_field = task_type.GetStaticFieldWithName(
+            "static_constexpr_field"
+        )
+        self.assertTrue(static_constexpr_field)
+        self.assertEqual(static_constexpr_field.GetName(), "static_constexpr_field")
+        self.assertEqual(static_constexpr_field.GetType().GetName(), "const long")
+
+        value = static_constexpr_field.GetConstantValue(self.target())
+        self.DebugSBValue(value)
+        self.assertEqual(value.GetValueAsSigned(), 47)
+
+        static_mutable_field = task_type.GetStaticFieldWithName("static_mutable_field")
+        self.assertTrue(static_mutable_field)
+        self.assertEqual(static_mutable_field.GetName(), "static_mutable_field")
+        self.assertEqual(static_mutable_field.GetType().GetName(), "int")
+
+        self.assertFalse(static_mutable_field.GetConstantValue(self.target()))
+
     @skipIf(compiler="clang", compiler_version=["<", "17.0"])
     def test(self):
         """Exercise SBType and SBTypeList API."""
@@ -151,22 +192,21 @@ class TypeAndTypeListTestCase(TestBase):
         invalid_type = task_type.FindDirectNestedType(None)
         self.assertFalse(invalid_type)
 
-        # Check that FindDirectNestedType works with types from AST
-        pointer = frame0.FindVariable("pointer")
-        pointer_type = pointer.GetType()
-        self.assertTrue(pointer_type)
-        self.DebugSBType(pointer_type)
-        pointer_info_type = pointer_type.template_args[1]
-        self.assertTrue(pointer_info_type)
-        self.DebugSBType(pointer_info_type)
+        # Check that FindDirectNestedType works with types from module and
+        # expression ASTs.
+        self._find_nested_type_in_Pointer_template_arg(
+            frame0.FindVariable("pointer").GetType()
+        )
+        self._find_nested_type_in_Pointer_template_arg(
+            frame0.EvaluateExpression("pointer").GetType()
+        )
 
-        pointer_masks1_type = pointer_info_type.FindDirectNestedType("Masks1")
-        self.assertTrue(pointer_masks1_type)
-        self.DebugSBType(pointer_masks1_type)
-
-        pointer_masks2_type = pointer_info_type.FindDirectNestedType("Masks2")
-        self.assertTrue(pointer_masks2_type)
-        self.DebugSBType(pointer_masks2_type)
+        self._find_static_field_in_Task_pointer(
+            frame0.FindVariable("task_head").GetType()
+        )
+        self._find_static_field_in_Task_pointer(
+            frame0.EvaluateExpression("task_head").GetType()
+        )
 
         # We'll now get the child member 'id' from 'task_head'.
         id = task_head.GetChildMemberWithName("id")

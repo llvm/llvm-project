@@ -10,6 +10,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/ConfigManager.h"
@@ -528,7 +529,7 @@ static Expected<NewSymbolInfo> parseNewSymbolInfo(StringRef FlagValue) {
 // ArgValue, loads data from the file, and stores section name and data
 // into the vector of new sections \p NewSections.
 static Error loadNewSectionData(StringRef ArgValue, StringRef OptionName,
-                                std::vector<NewSectionInfo> &NewSections) {
+                                SmallVector<NewSectionInfo, 0> &NewSections) {
   if (!ArgValue.contains('='))
     return createStringError(errc::invalid_argument,
                              "bad format for " + OptionName + ": missing '='");
@@ -733,6 +734,42 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
     if (const char *Reason = compression::getReasonIfUnsupported(
             compression::formatFor(Config.CompressionType)))
       return createStringError(errc::invalid_argument, Reason);
+  }
+
+  for (const auto *A : InputArgs.filtered(OBJCOPY_compress_sections)) {
+    SmallVector<StringRef, 0> Fields;
+    StringRef(A->getValue()).split(Fields, '=');
+    if (Fields.size() != 2 || Fields[1].empty()) {
+      return createStringError(
+          errc::invalid_argument,
+          A->getSpelling() +
+              ": parse error, not 'section-glob=[none|zlib|zstd]'");
+    }
+
+    auto Type = StringSwitch<DebugCompressionType>(Fields[1])
+                    .Case("zlib", DebugCompressionType::Zlib)
+                    .Case("zstd", DebugCompressionType::Zstd)
+                    .Default(DebugCompressionType::None);
+    if (Type == DebugCompressionType::None && Fields[1] != "none") {
+      return createStringError(
+          errc::invalid_argument,
+          "invalid or unsupported --compress-sections format: %s",
+          A->getValue());
+    }
+
+    auto &P = Config.compressSections.emplace_back();
+    P.second = Type;
+    auto Matcher =
+        NameOrPattern::create(Fields[0], SectionMatchStyle, ErrorCallback);
+    // =none allows overriding a previous =zlib or =zstd. Reject negative
+    // patterns, which would be confusing.
+    if (Matcher && !Matcher->isPositiveMatch()) {
+      return createStringError(
+          errc::invalid_argument,
+          "--compress-sections: negative pattern is unsupported");
+    }
+    if (Error E = P.first.addMatcher(std::move(Matcher)))
+      return std::move(E);
   }
 
   Config.AddGnuDebugLink = InputArgs.getLastArgValue(OBJCOPY_add_gnu_debuglink);
@@ -975,6 +1012,15 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
   for (auto *Arg : InputArgs.filtered(OBJCOPY_keep_symbols))
     if (Error E =
             addSymbolsFromFile(Config.SymbolsToKeep, DC.Alloc, Arg->getValue(),
+                               SymbolMatchStyle, ErrorCallback))
+      return std::move(E);
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_skip_symbol))
+    if (Error E = Config.SymbolsToSkip.addMatcher(NameOrPattern::create(
+            Arg->getValue(), SymbolMatchStyle, ErrorCallback)))
+      return std::move(E);
+  for (auto *Arg : InputArgs.filtered(OBJCOPY_skip_symbols))
+    if (Error E =
+            addSymbolsFromFile(Config.SymbolsToSkip, DC.Alloc, Arg->getValue(),
                                SymbolMatchStyle, ErrorCallback))
       return std::move(E);
   for (auto *Arg : InputArgs.filtered(OBJCOPY_add_symbol)) {

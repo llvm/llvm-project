@@ -64,6 +64,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasReferenceTypes = false;
   bool HasExtendedConst = false;
   bool HasMultiMemory = false;
+  bool HasHalfPrecision = false;
 
   std::string ABI;
 
@@ -84,6 +85,7 @@ public:
     SizeType = UnsignedLong;
     PtrDiffType = SignedLong;
     IntPtrType = SignedLong;
+    HasUnalignedAccess = true;
   }
 
   StringRef getABI() const override;
