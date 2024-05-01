@@ -502,37 +502,15 @@ TEST(MemProf, IndexedMemProfRecordToMemProfRecord) {
   IndexedRecord.CallSiteIds.push_back(llvm::memprof::hashCallStack(CS3));
   IndexedRecord.CallSiteIds.push_back(llvm::memprof::hashCallStack(CS4));
 
-  bool CSIdMissing = false;
-  bool FrameIdMissing = false;
+  llvm::memprof::FrameIdConverter<decltype(FrameIdMap)> FrameIdConv(FrameIdMap);
+  llvm::memprof::CallStackIdConverter<decltype(CallStackIdMap)> CSIdConv(
+      CallStackIdMap, FrameIdConv);
 
-  auto Callback = [&](CallStackId CSId) -> llvm::SmallVector<Frame> {
-    llvm::SmallVector<Frame> CallStack;
-    llvm::SmallVector<FrameId> FrameIds;
-
-    auto Iter = CallStackIdMap.find(CSId);
-    if (Iter == CallStackIdMap.end())
-      CSIdMissing = true;
-    else
-      FrameIds = Iter->second;
-
-    for (FrameId Id : FrameIds) {
-      Frame F(0, 0, 0, false);
-      auto Iter = FrameIdMap.find(Id);
-      if (Iter == FrameIdMap.end())
-        FrameIdMissing = true;
-      else
-        F = Iter->second;
-      CallStack.push_back(F);
-    }
-
-    return CallStack;
-  };
-
-  MemProfRecord Record = IndexedRecord.toMemProfRecord(Callback);
+  MemProfRecord Record = IndexedRecord.toMemProfRecord(CSIdConv);
 
   // Make sure that all lookups are successful.
-  ASSERT_FALSE(CSIdMissing);
-  ASSERT_FALSE(FrameIdMissing);
+  ASSERT_EQ(FrameIdConv.LastUnmappedId, std::nullopt);
+  ASSERT_EQ(CSIdConv.LastUnmappedId, std::nullopt);
 
   // Verify the contents of Record.
   ASSERT_THAT(Record.AllocSites, SizeIs(2));
