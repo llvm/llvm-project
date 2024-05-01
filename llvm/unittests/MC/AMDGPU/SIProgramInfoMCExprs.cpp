@@ -77,5 +77,5 @@ TEST_F(SIProgramInfoMCExprsTest, TestDeathHSAKernelEmit) {
   Func.setCallingConv(CallingConv::AMDGPU_KERNEL);
   AMDGPU::HSAMD::MetadataStreamerMsgPackV4 MD;
   EXPECT_DEATH(MD.emitKernel(*MF, PI),
-               "Could not resolve expression when required.");
+               "could not resolve expression when required.");
 }

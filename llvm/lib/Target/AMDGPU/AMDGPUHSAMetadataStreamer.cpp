@@ -468,7 +468,7 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
     int64_t Val;
     if (!Value->evaluateAsAbsolute(Val)) {
       MCContext &Ctx = MF.getContext();
-      Ctx.reportError(SMLoc(), "Could not resolve expression when required.");
+      Ctx.reportError(SMLoc(), "could not resolve expression when required.");
       Val = 0;
     }
     return static_cast<uint64_t>(Val);
