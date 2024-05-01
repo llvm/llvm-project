@@ -170,6 +170,9 @@ Removed Comgr Actions and Data Types
   - This is a legacy action that was never implemented
 - (Language) AMD\_COMGR\_LANGUAGE\_HC
   - This is a legacy language that was never used
+- (Action) AMD\_COMGR\_ACTION\_ADD\_DEVICE\_LIBRARIES
+  - This has been replaced with
+  AMD\_COMGR\_ACTION\_COMPILE\_SOURCE\_WITH\_DEVICE\_LIBS\_TO\_BC
 
 Comgr Testing, Debugging, and Logging Updates
 ---------------------------------------------

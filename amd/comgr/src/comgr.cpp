@@ -202,8 +202,6 @@ static amd_comgr_status_t dispatchAddAction(amd_comgr_action_kind_t ActionKind,
   switch (ActionKind) {
   case AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS:
     return addPrecompiledHeaders(ActionInfo, ResultSet);
-  case AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES:
-    return addDeviceLibraries(ActionInfo, ResultSet);
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
@@ -217,8 +215,6 @@ StringRef getActionKindName(amd_comgr_action_kind_t ActionKind) {
     return "AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS";
   case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC:
     return "AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC";
-  case AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES:
-    return "AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES";
   case AMD_COMGR_ACTION_LINK_BC_TO_BC:
     return "AMD_COMGR_ACTION_LINK_BC_TO_BC";
   case AMD_COMGR_ACTION_CODEGEN_BC_TO_RELOCATABLE:
@@ -1379,7 +1375,6 @@ amd_comgr_status_t AMD_COMGR_API
                                             ResultSetP, *LogP);
       break;
     case AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS:
-    case AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES:
       ActionStatus =
         dispatchAddAction(ActionKind, ActionInfoP, InputSetP, ResultSetP);
       break;
