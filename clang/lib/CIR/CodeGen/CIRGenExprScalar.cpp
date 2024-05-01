@@ -1203,10 +1203,12 @@ static mlir::Value buildPointerArithmetic(CIRGenFunction &CGF,
   // Explicitly handle GNU void* and function pointer arithmetic extensions. The
   // GNU void* casts amount to no-ops since our void* type is i8*, but this is
   // future proof.
+  mlir::Type elemTy;
   if (elementType->isVoidType() || elementType->isFunctionType())
-    llvm_unreachable("GNU void* and func ptr arithmetic extensions are NYI");
+    elemTy = CGF.UInt8Ty;
+  else
+    elemTy = CGF.convertTypeForMem(elementType);
 
-  mlir::Type elemTy = CGF.convertTypeForMem(elementType);
   if (CGF.getLangOpts().isSignedOverflowDefined())
     return CGF.getBuilder().create<mlir::cir::PtrStrideOp>(
         CGF.getLoc(op.E->getExprLoc()), pointer.getType(), pointer, index);
