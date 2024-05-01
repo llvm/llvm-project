@@ -290,6 +290,9 @@ public:
 
     void GetDescription(lldb_private::Stream &s) const override;
 
+    static ArraySP SplitString(llvm::StringRef s, char separator, int maxSplit,
+                               bool keepEmpty);
+
   protected:
     typedef std::vector<ObjectSP> collection;
     collection m_items;
@@ -366,10 +369,10 @@ public:
   class String : public Object {
   public:
     String() : Object(lldb::eStructuredDataTypeString) {}
-    explicit String(llvm::StringRef S)
-        : Object(lldb::eStructuredDataTypeString), m_value(S) {}
+    explicit String(llvm::StringRef s)
+        : Object(lldb::eStructuredDataTypeString), m_value(s) {}
 
-    void SetValue(llvm::StringRef S) { m_value = std::string(S); }
+    void SetValue(llvm::StringRef s) { m_value = std::string(s); }
 
     llvm::StringRef GetValue() { return m_value; }
 
@@ -432,7 +435,7 @@ public:
       }
       return success;
     }
-      
+
     template <class IntType>
     bool GetValueForKeyAsInteger(llvm::StringRef key, IntType &result) const {
       ObjectSP value_sp = GetValueForKey(key);

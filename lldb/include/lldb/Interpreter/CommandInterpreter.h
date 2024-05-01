@@ -22,6 +22,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
 
@@ -241,7 +242,7 @@ public:
     eCommandTypesAllThem = 0xFFFF  //< all commands
   };
 
-  // The CommandAlias and CommandInterpreter both have a hand in 
+  // The CommandAlias and CommandInterpreter both have a hand in
   // substituting for alias commands.  They work by writing special tokens
   // in the template form of the Alias command, and then detecting them when the
   // command is executed.  These are the special tokens:
@@ -576,7 +577,7 @@ public:
   void SetEchoCommentCommands(bool enable);
 
   bool GetRepeatPreviousCommand() const;
-  
+
   bool GetRequireCommandOverwrite() const;
 
   const CommandObject::CommandMap &GetUserCommands() const {
@@ -647,6 +648,7 @@ public:
   }
 
   llvm::json::Value GetStatistics();
+  StructuredData::ArraySP GetTranscript() const;
 
 protected:
   friend class Debugger;
@@ -766,6 +768,12 @@ private:
   CommandUsageMap m_command_usages;
 
   StreamString m_transcript_stream;
+
+  /// Contains a list of handled commands, output and error. Each element in
+  /// the list is a dictionary with three keys: "command" (string), "output"
+  /// (list of strings) and optionally "error" (list of strings). Each string
+  /// in "output" and "error" is a line (without EOL characteres).
+  StructuredData::ArraySP m_transcript_structured;
 };
 
 } // namespace lldb_private

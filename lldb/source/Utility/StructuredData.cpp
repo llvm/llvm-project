@@ -10,10 +10,13 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cerrno>
 #include <cinttypes>
 #include <cstdlib>
+#include <memory>
+#include <sstream>
 
 using namespace lldb_private;
 using namespace llvm;
@@ -288,4 +291,36 @@ void StructuredData::Null::GetDescription(lldb_private::Stream &s) const {
 
 void StructuredData::Generic::GetDescription(lldb_private::Stream &s) const {
   s.Printf("%p", m_object);
+}
+
+/// This is the same implementation as `StringRef::split`. Not depending on
+/// `StringRef::split` because it will involve a temporary `SmallVectorImpl`.
+StructuredData::ArraySP StructuredData::Array::SplitString(llvm::StringRef s,
+                                                           char separator,
+                                                           int maxSplit,
+                                                           bool keepEmpty) {
+  auto array_sp = std::make_shared<StructuredData::Array>();
+
+  // Count down from MaxSplit. When MaxSplit is -1, this will just split
+  // "forever". This doesn't support splitting more than 2^31 times
+  // intentionally; if we ever want that we can make MaxSplit a 64-bit integer
+  // but that seems unlikely to be useful.
+  while (maxSplit-- != 0) {
+    size_t idx = s.find(separator);
+    if (idx == llvm::StringLiteral::npos)
+      break;
+
+    // Push this split.
+    if (keepEmpty || idx > 0)
+      array_sp->AddStringItem(s.slice(0, idx));
+
+    // Jump forward.
+    s = s.slice(idx + 1, llvm::StringLiteral::npos);
+  }
+
+  // Push the tail.
+  if (keepEmpty || !s.empty())
+    array_sp->AddStringItem(s);
+
+  return array_sp;
 }

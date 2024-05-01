@@ -573,7 +573,13 @@ SBStructuredData SBCommandInterpreter::GetStatistics() {
 
 SBStructuredData SBCommandInterpreter::GetTranscript() {
   LLDB_INSTRUMENT_VA(this);
-  return SBStructuredData();
+
+  SBStructuredData data;
+  if (!IsValid())
+    return data;
+
+  data.m_impl_up->SetObjectSP(m_opaque_ptr->GetTranscript());
+  return data;
 }
 
 lldb::SBCommand SBCommandInterpreter::AddMultiwordCommand(const char *name,

@@ -51,6 +51,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timer.h"
 
 #include "lldb/Host/Config.h"
@@ -135,7 +136,8 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
       m_skip_lldbinit_files(false), m_skip_app_init_files(false),
       m_comment_char('#'), m_batch_command_mode(false),
       m_truncation_warning(eNoOmission), m_max_depth_warning(eNoOmission),
-      m_command_source_depth(0) {
+      m_command_source_depth(0),
+      m_transcript_structured(std::make_shared<StructuredData::Array>()) {
   SetEventName(eBroadcastBitThreadShouldExit, "thread-should-exit");
   SetEventName(eBroadcastBitResetPrompt, "reset-prompt");
   SetEventName(eBroadcastBitQuitCommandReceived, "quit");
@@ -1891,6 +1893,10 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
   m_transcript_stream << "(lldb) " << command_line << '\n';
 
+  auto transcript_item = std::make_shared<StructuredData::Dictionary>();
+  transcript_item->AddStringItem("command", command_line);
+  m_transcript_structured->AddItem(transcript_item);
+
   bool empty_command = false;
   bool comment_command = false;
   if (command_string.empty())
@@ -2043,6 +2049,15 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
   m_transcript_stream << result.GetOutputData();
   m_transcript_stream << result.GetErrorData();
+
+  // Add output and error to the transcript item after splitting lines. In the
+  // future, other aspects of the command (e.g. perf) can be added, too.
+  transcript_item->AddItem(
+      "output", StructuredData::Array::SplitString(result.GetOutputData(), '\n',
+                                                   -1, false));
+  transcript_item->AddItem(
+      "error", StructuredData::Array::SplitString(result.GetErrorData(), '\n',
+                                                  -1, false));
 
   return result.Succeeded();
 }
@@ -3553,4 +3568,8 @@ llvm::json::Value CommandInterpreter::GetStatistics() {
   for (const auto &command_usage : m_command_usages)
     stats.try_emplace(command_usage.getKey(), command_usage.getValue());
   return stats;
+}
+
+StructuredData::ArraySP CommandInterpreter::GetTranscript() const {
+  return m_transcript_structured;
 }
