@@ -376,14 +376,14 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM:
     return 8;
-  case AMDGPU::DS_READ_B32:      [[fallthrough]];
-  case AMDGPU::DS_READ_B32_gfx9: [[fallthrough]];
-  case AMDGPU::DS_WRITE_B32:     [[fallthrough]];
+  case AMDGPU::DS_READ_B32:
+  case AMDGPU::DS_READ_B32_gfx9:
+  case AMDGPU::DS_WRITE_B32:
   case AMDGPU::DS_WRITE_B32_gfx9:
     return 1;
-  case AMDGPU::DS_READ_B64:      [[fallthrough]];
-  case AMDGPU::DS_READ_B64_gfx9: [[fallthrough]];
-  case AMDGPU::DS_WRITE_B64:     [[fallthrough]];
+  case AMDGPU::DS_READ_B64:
+  case AMDGPU::DS_READ_B64_gfx9:
+  case AMDGPU::DS_WRITE_B64:
   case AMDGPU::DS_WRITE_B64_gfx9:
     return 2;
   default:
