@@ -46,12 +46,12 @@ public:
   ///   - std::errc::invalid_argument: The input contains an incomplete
   ///     multibyte sequence.
   ///
+  /// If the destination charset is a stateful character set, the shift state
+  /// will be set to the initial state.
+  ///
   /// In case of an error, the result string contains the successfully converted
   /// part of the input string.
   ///
-  /// If the destination charset is a stateful character set, the shift state
-  /// will be set to the initial state.
-
   virtual std::error_code convert(StringRef Source,
                                   SmallVectorImpl<char> &Result) const = 0;
 };
@@ -70,7 +70,6 @@ enum class id {
 
 /// Utility class to convert between different character set encodings.
 class CharSetConverter {
-  // details::CharSetConverterImplBase *Converter;
   std::unique_ptr<details::CharSetConverterImplBase> Converter;
 
   CharSetConverter(std::unique_ptr<details::CharSetConverterImplBase> Converter)
@@ -78,8 +77,8 @@ class CharSetConverter {
 
 public:
   /// Creates a CharSetConverter instance.
-  /// \param[in] CSFrom name of the source character encoding
-  /// \param[in] CSTo name of the target character encoding
+  /// \param[in] CSFrom the source character encoding
+  /// \param[in] CSTo the target character encoding
   /// \return a CharSetConverter instance
   static CharSetConverter create(text_encoding::id CSFrom,
                                  text_encoding::id CSTo);
@@ -95,9 +94,8 @@ public:
   CharSetConverter(const CharSetConverter &) = delete;
   CharSetConverter &operator=(const CharSetConverter &) = delete;
 
-  CharSetConverter(CharSetConverter &&Other) {
-    Converter = std::move(Other.Converter);
-  }
+  CharSetConverter(CharSetConverter &&Other)
+      : Converter(std::move(Other.Converter)) {}
 
   CharSetConverter &operator=(CharSetConverter &&Other) {
     if (this != &Other)
