@@ -217,7 +217,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
                  cast<SubstNonTypeTemplateParmExpr>(E)->getReplacement());
 
   case Expr::PackIndexingExprClass: {
-    // A pack-index-expression always expand to an id-expression. 
+    // A pack-index-expression always expands to an id-expression. 
     // Consider it as an LValue expression.
     if (cast<PackIndexingExpr>(E)->isInstantiationDependent())
       return Cl::CL_LValue;
