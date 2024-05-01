@@ -65,6 +65,22 @@ struct fmt::formatter<std::filesystem::path> : fmt::formatter<std::string> {
     }
 };
 
+template <> struct fmt::formatter<json> : fmt::formatter<std::string> {
+    auto format(const json &j, format_context &ctx) const
+        -> decltype(ctx.out()) {
+        return formatter<std::string>::format(
+            j.dump(4, ' ', false, json::error_handler_t::replace), ctx);
+    }
+};
+
+template <> struct fmt::formatter<ordered_json> : fmt::formatter<std::string> {
+    auto format(const ordered_json &j, format_context &ctx) const
+        -> decltype(ctx.out()) {
+        return formatter<std::string>::format(
+            j.dump(4, ' ', false, json::error_handler_t::replace), ctx);
+    }
+};
+
 /*****************************************************************
  * Utility functions
  *****************************************************************/
