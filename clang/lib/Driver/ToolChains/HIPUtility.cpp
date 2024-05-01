@@ -106,9 +106,9 @@ private:
         std::string ID = IA->getId().str();
         if (!ID.empty()) {
           ID = llvm::utohexstr(llvm::MD5Hash(ID), /*LowerCase=*/true);
-          FatBinSymbols.insert(Twine(FatBinPrefix + "_" + ID).str());
+          FatBinSymbols.insert((FatBinPrefix + Twine('_') + ID).str());
           GPUBinHandleSymbols.insert(
-              Twine(GPUBinHandlePrefix + "_" + ID).str());
+              (GPUBinHandlePrefix + Twine('_') + ID).str());
           continue;
         }
         if (IA->getInputArg().getNumValues() == 0)
