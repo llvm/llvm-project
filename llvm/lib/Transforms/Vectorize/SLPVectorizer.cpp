@@ -4326,6 +4326,11 @@ calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
   return Expander.expandCodeFor(Stride, Stride->getType(), Inst);
 }
 
+static std::pair<InstructionCost, InstructionCost>
+getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
+            Value *BasePtr, unsigned Opcode, TTI::TargetCostKind CostKind,
+            Type *ScalarTy, VectorType *VecTy);
+
 BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
     ArrayRef<Value *> VL, const Value *VL0, SmallVectorImpl<unsigned> &Order,
     SmallVectorImpl<Value *> &PointerOps, bool TryRecursiveCheck) const {
@@ -4464,31 +4469,56 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
         if (VectorizedCnt == VL.size() / VF) {
           // Compare masked gather cost and loads + insersubvector costs.
           TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-          InstructionCost MaskedGatherCost = TTI.getGatherScatterOpCost(
-              Instruction::Load, VecTy,
-              cast<LoadInst>(VL0)->getPointerOperand(),
-              /*VariableMask=*/false, CommonAlignment, CostKind);
+          auto [ScalarGEPCost, VectorGEPCost] = getGEPCosts(
+              TTI, PointerOps, PointerOps.front(), Instruction::GetElementPtr,
+              CostKind, ScalarTy, VecTy);
+          InstructionCost MaskedGatherCost =
+              TTI.getGatherScatterOpCost(
+                  Instruction::Load, VecTy,
+                  cast<LoadInst>(VL0)->getPointerOperand(),
+                  /*VariableMask=*/false, CommonAlignment, CostKind) +
+              VectorGEPCost - ScalarGEPCost;
           InstructionCost VecLdCost = 0;
           auto *SubVecTy = FixedVectorType::get(ScalarTy, VF);
           for (auto [I, LS] : enumerate(States)) {
             auto *LI0 = cast<LoadInst>(VL[I * VF]);
             switch (LS) {
-            case LoadsState::Vectorize:
+            case LoadsState::Vectorize: {
+              auto [ScalarGEPCost, VectorGEPCost] =
+                  getGEPCosts(TTI, ArrayRef(PointerOps).slice(I * VF, VF),
+                              LI0->getPointerOperand(), Instruction::Load,
+                              CostKind, ScalarTy, SubVecTy);
               VecLdCost += TTI.getMemoryOpCost(
-                  Instruction::Load, SubVecTy, LI0->getAlign(),
-                  LI0->getPointerAddressSpace(), CostKind,
-                  TTI::OperandValueInfo());
+                               Instruction::Load, SubVecTy, LI0->getAlign(),
+                               LI0->getPointerAddressSpace(), CostKind,
+                               TTI::OperandValueInfo()) +
+                           VectorGEPCost - ScalarGEPCost;
               break;
-            case LoadsState::StridedVectorize:
-              VecLdCost += TTI.getStridedMemoryOpCost(
-                  Instruction::Load, SubVecTy, LI0->getPointerOperand(),
-                  /*VariableMask=*/false, CommonAlignment, CostKind);
+            }
+            case LoadsState::StridedVectorize: {
+              auto [ScalarGEPCost, VectorGEPCost] =
+                  getGEPCosts(TTI, ArrayRef(PointerOps).slice(I * VF, VF),
+                              LI0->getPointerOperand(), Instruction::Load,
+                              CostKind, ScalarTy, SubVecTy);
+              VecLdCost +=
+                  TTI.getStridedMemoryOpCost(
+                      Instruction::Load, SubVecTy, LI0->getPointerOperand(),
+                      /*VariableMask=*/false, CommonAlignment, CostKind) +
+                  VectorGEPCost - ScalarGEPCost;
               break;
-            case LoadsState::ScatterVectorize:
-              VecLdCost += TTI.getGatherScatterOpCost(
-                  Instruction::Load, SubVecTy, LI0->getPointerOperand(),
-                  /*VariableMask=*/false, CommonAlignment, CostKind);
+            }
+            case LoadsState::ScatterVectorize: {
+              auto [ScalarGEPCost, VectorGEPCost] = getGEPCosts(
+                  TTI, ArrayRef(PointerOps).slice(I * VF, VF),
+                  LI0->getPointerOperand(), Instruction::GetElementPtr,
+                  CostKind, ScalarTy, SubVecTy);
+              VecLdCost +=
+                  TTI.getGatherScatterOpCost(
+                      Instruction::Load, SubVecTy, LI0->getPointerOperand(),
+                      /*VariableMask=*/false, CommonAlignment, CostKind) +
+                  VectorGEPCost - ScalarGEPCost;
               break;
+            }
             case LoadsState::Gather:
               llvm_unreachable(
                   "Expected only consecutive, strided or masked gather loads.");
@@ -4497,13 +4527,13 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
             for (int Idx : seq<int>(0, VL.size()))
               ShuffleMask[Idx] = Idx / VF == I ? VL.size() + Idx % VF : Idx;
             VecLdCost +=
-                TTI.getShuffleCost(TTI ::SK_InsertSubvector, VecTy,
-                                   ShuffleMask, CostKind, I * VF, SubVecTy);
+                TTI.getShuffleCost(TTI::SK_InsertSubvector, VecTy, ShuffleMask,
+                                   CostKind, I * VF, SubVecTy);
           }
           // If masked gather cost is higher - better to vectorize, so
           // consider it as a gather node. It will be better estimated
           // later.
-          if (MaskedGatherCost > VecLdCost)
+          if (MaskedGatherCost >= VecLdCost)
             return true;
         }
       }
@@ -7951,7 +7981,13 @@ getGEPCosts(const TargetTransformInfo &TTI, ArrayRef<Value *> Ptrs,
 
     ScalarCost =
         TTI.getPointersChainCost(Ptrs, BasePtr, PtrsInfo, ScalarTy, CostKind);
-    if (auto *BaseGEP = dyn_cast<GEPOperator>(BasePtr)) {
+    auto *BaseGEP = dyn_cast<GEPOperator>(BasePtr);
+    if (!BaseGEP) {
+      auto *It = find_if(Ptrs, IsaPred<GEPOperator>);
+      if (It != Ptrs.end())
+        BaseGEP = cast<GEPOperator>(*It);
+    }
+    if (BaseGEP) {
       SmallVector<const Value *> Indices(BaseGEP->indices());
       VecCost = TTI.getGEPCost(BaseGEP->getSourceElementType(),
                                BaseGEP->getPointerOperand(), Indices, VecTy,
