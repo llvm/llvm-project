@@ -30,6 +30,10 @@ def HasRelaxedSIMD :
     Predicate<"Subtarget->hasRelaxedSIMD()">,
     AssemblerPredicate<(all_of FeatureRelaxedSIMD), "relaxed-simd">;
 
+def HasHalfPrecision :
+    Predicate<"Subtarget->hasHalfPrecision()">,
+    AssemblerPredicate<(all_of FeatureHalfPrecision), "half-precision">;
+
 def HasAtomics :
     Predicate<"Subtarget->hasAtomics()">,
     AssemblerPredicate<(all_of FeatureAtomics), "atomics">;
@@ -73,6 +77,10 @@ def HasExtendedConst :
 def HasMultiMemory :
     Predicate<"Subtarget->hasMultiMemory()">,
     AssemblerPredicate<(all_of FeatureMultiMemory), "multimemory">;
+
+def HasMutableGlobals:
+    Predicate<"Subtarget->hasMutableGlobals()">,
+    AssemblerPredicate<(all_of FeatureMutableGlobals), "mutable-globals">;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.

@@ -1586,6 +1586,11 @@ bool CodeGenModule::ReturnTypeUsesSRet(const CGFunctionInfo &FI) {
   return RI.isIndirect() || (RI.isInAlloca() && RI.getInAllocaSRet());
 }
 
+bool CodeGenModule::ReturnTypeHasInReg(const CGFunctionInfo &FI) {
+  const auto &RI = FI.getReturnInfo();
+  return RI.getInReg();
+}
+
 bool CodeGenModule::ReturnSlotInterferesWithArgs(const CGFunctionInfo &FI) {
   return ReturnTypeUsesSRet(FI) &&
          getTargetCodeGenInfo().doesReturnSlotInterfereWithArgs();
@@ -4694,11 +4699,11 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     AggValueSlot Slot = args.isUsingInAlloca()
         ? createPlaceholderSlot(*this, type) : CreateAggTemp(type, "agg.tmp");
 
-    bool DestroyedInCallee = true, NeedsEHCleanup = true;
+    bool DestroyedInCallee = true, NeedsCleanup = true;
     if (const auto *RD = type->getAsCXXRecordDecl())
       DestroyedInCallee = RD->hasNonTrivialDestructor();
     else
-      NeedsEHCleanup = needsEHCleanup(type.isDestructedType());
+      NeedsCleanup = type.isDestructedType();
 
     if (DestroyedInCallee)
       Slot.setExternallyDestructed();
@@ -4707,14 +4712,15 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     RValue RV = Slot.asRValue();
     args.add(RV, type);
 
-    if (DestroyedInCallee && NeedsEHCleanup) {
+    if (DestroyedInCallee && NeedsCleanup) {
       // Create a no-op GEP between the placeholder and the cleanup so we can
       // RAUW it successfully.  It also serves as a marker of the first
       // instruction where the cleanup is active.
-      pushFullExprCleanup<DestroyUnpassedArg>(EHCleanup, Slot.getAddress(),
-                                              type);
+      pushFullExprCleanup<DestroyUnpassedArg>(NormalAndEHCleanup,
+                                              Slot.getAddress(), type);
       // This unreachable is a temporary marker which will be removed later.
-      llvm::Instruction *IsActive = Builder.CreateUnreachable();
+      llvm::Instruction *IsActive =
+          Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
       args.addArgCleanupDeactivation(EHStack.stable_begin(), IsActive);
     }
     return;
@@ -5014,6 +5020,11 @@ static unsigned getMaxVectorWidth(const llvm::Type *Ty) {
     for (auto *I : ST->elements())
       MaxVectorWidth = std::max(MaxVectorWidth, getMaxVectorWidth(I));
   return MaxVectorWidth;
+}
+
+static bool isCXXDeclType(const FunctionDecl *FD) {
+  return isa<CXXConstructorDecl>(FD) || isa<CXXMethodDecl>(FD) ||
+         isa<CXXDestructorDecl>(FD);
 }
 
 RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
@@ -5689,32 +5700,29 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   Attrs = AllocAlignAttrEmitter.TryEmitAsCallSiteAttribute(Attrs);
 
   if (CGM.getCodeGenOpts().CallGraphSection) {
-    // FIXME: create operand bundle only for indirect calls, not for all
-
-    assert((TargetDecl && TargetDecl->getFunctionType() ||
-            Callee.getAbstractInfo().getCalleeFunctionProtoType()) &&
-           "cannot find callsite type");
-
-    QualType CST;
-    if (TargetDecl && TargetDecl->getFunctionType())
-      CST = QualType(TargetDecl->getFunctionType(), 0);
-    else if (const auto *FPT =
-                 Callee.getAbstractInfo().getCalleeFunctionProtoType())
-      CST = QualType(FPT, 0);
-
-    if (!CST.isNull()) {
-      auto *TypeIdMD = CGM.CreateMetadataIdentifierGeneralized(CST);
-      auto *TypeIdMDVal =
-          llvm::MetadataAsValue::get(getLLVMContext(), TypeIdMD);
-      BundleList.emplace_back("type", TypeIdMDVal);
-    }
-
-    // Set type identifier metadata of indirect calls for call graph section.
+    // Create operand bundle only for indirect calls, not for all
     if (callOrInvoke && *callOrInvoke && (*callOrInvoke)->isIndirectCall()) {
+      assert((TargetDecl && TargetDecl->getFunctionType() ||
+              Callee.getAbstractInfo().getCalleeFunctionProtoType()) &&
+             "cannot find callsite type");
+      QualType CST;
+      if (TargetDecl && TargetDecl->getFunctionType())
+        CST = QualType(TargetDecl->getFunctionType(), 0);
+      else if (const auto *FPT =
+                   Callee.getAbstractInfo().getCalleeFunctionProtoType())
+        CST = QualType(FPT, 0);
+
+      if (!CST.isNull()) {
+        auto *TypeIdMD = CGM.CreateMetadataIdentifierGeneralized(CST);
+        auto *TypeIdMDVal =
+            llvm::MetadataAsValue::get(getLLVMContext(), TypeIdMD);
+        BundleList.emplace_back("type", TypeIdMDVal);
+      }
+
+      // Set type identifier metadata of indirect calls for call graph section.
       if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
         // Type id metadata is set only for C/C++ contexts.
-        if (isa<CXXConstructorDecl>(FD) || isa<CXXMethodDecl>(FD) ||
-            isa<CXXDestructorDecl>(FD)) {
+        if (isCXXDeclType(FD)) {
           CGM.CreateFunctionTypeMetadataForIcall(FD->getType(), *callOrInvoke);
         }
       }
