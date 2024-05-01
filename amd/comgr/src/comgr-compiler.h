@@ -94,8 +94,6 @@ class AMDGPUCompiler {
   std::string HIPIncludePath;
   std::string ClangIncludePath;
   std::string ClangIncludePath2;
-  /// Perform out-of-process compilation.
-  bool CompileOOP = false;
   /// Precompiled header file paths.
   llvm::SmallVector<llvm::SmallString<128>, 2> PrecompiledHeaders;
   /// Arguments common to all driver invocations in the current action.
@@ -123,8 +121,6 @@ class AMDGPUCompiler {
                                               bool CompilingSrc);
   amd_comgr_status_t addCompilationFlags();
   amd_comgr_status_t addDeviceLibraries();
-  amd_comgr_status_t
-  executeOutOfProcessHIPCompilation(llvm::ArrayRef<const char *> Args);
 
   amd_comgr_status_t executeInProcessDriver(llvm::ArrayRef<const char *> Args);
 
@@ -143,7 +139,6 @@ public:
   amd_comgr_status_t assembleToRelocatable();
   amd_comgr_status_t linkToRelocatable();
   amd_comgr_status_t linkToExecutable();
-  amd_comgr_status_t compileToFatBin();
   amd_comgr_status_t compileToExecutable();
 
   amd_comgr_language_t getLanguage() const { return ActionInfo->Language; }

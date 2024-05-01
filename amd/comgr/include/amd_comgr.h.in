@@ -1762,28 +1762,6 @@ typedef enum amd_comgr_action_kind_s {
   AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE = 0xD,
   /**
    * Compile each source data object in @p input in order. For each
-   * successful compilation add a fat binary to @p result. Resolve
-   * any include source names using the names of include data objects
-   * in @p input. Resolve any include relative path names using the
-   * working directory path in @p info. Produce fat binary for isa name in @p
-   * info. Compile the source for the language in @p info.
-   *
-   * Return @p AMD_COMGR_STATUS_ERROR if any compilation
-   * fails.
-   *
-   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
-   * if isa name or language is not set in @p info.
-   *
-   * @deprecated since 2.5
-   * @see in-process compilation via AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC, etc.
-   * insteaad
-   */
-  AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN
-  AMD_COMGR_DEPRECATED("Will be removed in Comgr v3.0 (Rocm v6.0). Use "
-                       "AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC, etc. "
-                       "instead") = 0xE,
-  /**
-   * Compile each source data object in @p input in order. For each
    * successful compilation add a bc data object to @p result. Resolve
    * any include source names using the names of include data objects
    * in @p input. Resolve any include relative path names using the
@@ -1798,7 +1776,7 @@ typedef enum amd_comgr_action_kind_s {
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
    * if isa name or language is not set in @p info.
    */
-  AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC = 0xF,
+  AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC = 0xE,
   /**
    * Compile a single source data object in @p input in order. For each
    * successful compilation add a relocatable data object to @p result.
@@ -1815,7 +1793,7 @@ typedef enum amd_comgr_action_kind_s {
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
    * if isa name or language is not set in @p info.
    */
-  AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE = 0x10,
+  AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE = 0xF,
   /**
    * Compile each source data object in @p input and create a single executabele
    * in @p result. Resolve any include source names using the names of include
@@ -1831,7 +1809,7 @@ typedef enum amd_comgr_action_kind_s {
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
    * if isa name or language is not set in @p info.
    */
-  AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE = 0x11,
+  AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE = 0x10,
 
    /**
    * Unbundle each source data object in @p input. These objects can be
@@ -1845,7 +1823,7 @@ typedef enum amd_comgr_action_kind_s {
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
    * if isa name or language is not set in @p info.
    */
-  AMD_COMGR_ACTION_UNBUNDLE = 0x12,
+  AMD_COMGR_ACTION_UNBUNDLE = 0x11,
 
   /**
    * Marker for last valid action kind.

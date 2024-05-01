@@ -163,6 +163,9 @@ Deprecated Comgr Actions and Data Types
 
 Removed Comgr Actions and Data Types
 ------------------------------------
+- (Action) AMD\_COMGR\_ACTION\_COMPILE\_SOURCE\_TO\_FATBIN
+  - This workaround has been removed in favor of
+  \*\_COMPILE\_SOURCE\_(WITH\_DEVICE\_LIBS\_)TO\_BC
 
 Comgr Testing, Debugging, and Logging Updates
 ---------------------------------------------

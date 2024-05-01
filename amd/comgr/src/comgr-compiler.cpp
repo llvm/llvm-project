@@ -837,44 +837,6 @@ amd_comgr_status_t AMDGPUCompiler::removeTmpDirs() {
 #endif
 }
 
-amd_comgr_status_t AMDGPUCompiler::executeOutOfProcessHIPCompilation(
-    llvm::ArrayRef<const char *> Args) {
-  std::string Exec = (Twine(env::getHIPPath()) + "/bin/hipcc").str();
-  std::vector<StringRef> ArgsV;
-  ArgsV.push_back(Exec);
-  for (unsigned I = 0, E = Args.size(); I != E; ++I) {
-    if (strcmp(Args[I], "-hip-path") == 0) {
-      ++I;
-      if (I == E) {
-        LogS << "Error: -hip-path option misses argument.\n";
-        return AMD_COMGR_STATUS_ERROR;
-      }
-      Exec = (Twine(Args[I]) + "/bin/hipcc").str();
-      ArgsV[0] = Exec;
-
-    } else {
-      ArgsV.push_back(Args[I]);
-    }
-  }
-
-  ArgsV.push_back("--genco");
-
-  if (env::shouldEmitVerboseLogs()) {
-    LogS << "\t    hipcc Command: ";
-    for (auto A : ArgsV)
-      LogS << A << " ";
-    LogS << "\n";
-  }
-
-  llvm::ArrayRef<std::optional<StringRef>> Redirects;
-  std::string ErrMsg;
-  int RC = sys::ExecuteAndWait(Exec, ArgsV,
-                               /*env=*/std::nullopt, Redirects, /*secondsToWait=*/0,
-                               /*memoryLimit=*/0, &ErrMsg);
-  LogS << ErrMsg;
-  return RC ? AMD_COMGR_STATUS_ERROR : AMD_COMGR_STATUS_SUCCESS;
-}
-
 amd_comgr_status_t AMDGPUCompiler::processFile(const char *InputFilePath,
                                                const char *OutputFilePath) {
   SmallVector<const char *, 128> Argv = Args;
@@ -900,11 +862,6 @@ amd_comgr_status_t AMDGPUCompiler::processFile(const char *InputFilePath,
 
   Argv.push_back("-o");
   Argv.push_back(OutputFilePath);
-
-  // For HIP OOP compilation, we launch a process.
-  if (CompileOOP && getLanguage() == AMD_COMGR_LANGUAGE_HIP) {
-    return executeOutOfProcessHIPCompilation(Argv);
-  }
 
   return executeInProcessDriver(Argv);
 }
@@ -1241,23 +1198,6 @@ amd_comgr_status_t AMDGPUCompiler::compileToRelocatable() {
   }
 
   return processFiles(AMD_COMGR_DATA_KIND_RELOCATABLE, ".o");
-}
-
-amd_comgr_status_t AMDGPUCompiler::compileToFatBin() {
-  if (auto Status = createTmpDirs()) {
-    return Status;
-  }
-
-  if (ActionInfo->Language != AMD_COMGR_LANGUAGE_HIP) {
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-  }
-
-  // This is a workaround to support HIP OOP Fatbin Compilation
-  CompileOOP = true;
-  auto Status = processFiles(AMD_COMGR_DATA_KIND_FATBIN, ".fatbin");
-  CompileOOP = false;
-
-  return Status;
 }
 
 amd_comgr_status_t AMDGPUCompiler::unbundle() {
