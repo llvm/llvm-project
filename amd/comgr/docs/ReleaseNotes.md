@@ -166,6 +166,10 @@ Removed Comgr Actions and Data Types
 - (Action) AMD\_COMGR\_ACTION\_COMPILE\_SOURCE\_TO\_FATBIN
   - This workaround has been removed in favor of
   \*\_COMPILE\_SOURCE\_(WITH\_DEVICE\_LIBS\_)TO\_BC
+- (Action) AMD\_COMGR\_ACTION\_OPTIMIZE\_BC\_TO\_BC
+  - This is a legacy action that was never implemented
+- (Language) AMD\_COMGR\_LANGUAGE\_HC
+  - This is a legacy language that was never used
 
 Comgr Testing, Debugging, and Logging Updates
 ---------------------------------------------

@@ -278,17 +278,13 @@ typedef enum amd_comgr_language_s {
    */
   AMD_COMGR_LANGUAGE_OPENCL_2_0 = 0x2,
   /**
-   * AMD Hetrogeneous C++ (HC).
-   */
-  AMD_COMGR_LANGUAGE_HC = 0x3,
-  /**
    * HIP.
    */
-  AMD_COMGR_LANGUAGE_HIP = 0x4,
+  AMD_COMGR_LANGUAGE_HIP = 0x3,
   /**
    * LLVM IR, either textual (.ll) or bitcode (.bc) format.
    */
-  AMD_COMGR_LANGUAGE_LLVM_IR = 0x5,
+  AMD_COMGR_LANGUAGE_LLVM_IR = 0x4,
   /**
    * Marker for last valid language.
    */
@@ -1645,17 +1641,6 @@ typedef enum amd_comgr_action_kind_s {
    */
   AMD_COMGR_ACTION_LINK_BC_TO_BC = 0x4,
   /**
-   * Optimize each bc data object in @p input and create an optimized bc data
-   * object to @p result.
-   *
-   * Return @p AMD_COMGR_STATUS_ERROR if the optimization fails.
-   *
-   * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
-   * if isa name is not set in @p info and does not match the isa name
-   * of all bc data objects in @p input.
-   */
-  AMD_COMGR_ACTION_OPTIMIZE_BC_TO_BC = 0x5,
-  /**
    * Perform code generation for each bc data object in @p input in
    * order. For each successful code generation add a relocatable data
    * object to @p result.
@@ -1667,7 +1652,7 @@ typedef enum amd_comgr_action_kind_s {
    * if isa name is not set in @p info and does not match the isa name
    * of all bc data objects in @p input.
    */
-  AMD_COMGR_ACTION_CODEGEN_BC_TO_RELOCATABLE = 0x6,
+  AMD_COMGR_ACTION_CODEGEN_BC_TO_RELOCATABLE = 0x5,
   /**
    * Perform code generation for each bc data object in @p input in
    * order. For each successful code generation add an assembly source data
@@ -1680,7 +1665,7 @@ typedef enum amd_comgr_action_kind_s {
    * if isa name is not set in @p info and does not match the isa name
    * of all bc data objects in @p input.
    */
-  AMD_COMGR_ACTION_CODEGEN_BC_TO_ASSEMBLY = 0x7,
+  AMD_COMGR_ACTION_CODEGEN_BC_TO_ASSEMBLY = 0x6,
   /**
    * Link each relocatable data object in @p input together and add
    * the linked relocatable data object to @p result. Any device
@@ -1693,7 +1678,7 @@ typedef enum amd_comgr_action_kind_s {
    * if isa name is not set in @p info and does not match the isa name
    * of all relocatable data objects in @p input.
    */
-  AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_RELOCATABLE = 0x8,
+  AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_RELOCATABLE = 0x7,
   /**
    * Link each relocatable data object in @p input together and add
    * the linked executable data object to @p result. Any device
@@ -1706,7 +1691,7 @@ typedef enum amd_comgr_action_kind_s {
    * if isa name is not set in @p info and does not match the isa name
    * of all relocatable data objects in @p input.
    */
-  AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE = 0x9,
+  AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE = 0x8,
   /**
    * Assemble each source data object in @p input in order into machine code.
    * For each successful assembly add a relocatable data object to @p result.
@@ -1719,7 +1704,7 @@ typedef enum amd_comgr_action_kind_s {
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT if isa name is not set in
    * @p info.
    */
-  AMD_COMGR_ACTION_ASSEMBLE_SOURCE_TO_RELOCATABLE = 0xA,
+  AMD_COMGR_ACTION_ASSEMBLE_SOURCE_TO_RELOCATABLE = 0x9,
   /**
    * Disassemble each relocatable data object in @p input in
    * order. For each successful disassembly add a source data object to
@@ -1732,7 +1717,7 @@ typedef enum amd_comgr_action_kind_s {
    * if isa name is not set in @p info and does not match the isa name
    * of all relocatable data objects in @p input.
    */
-  AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE = 0xB,
+  AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE = 0xA,
   /**
    * Disassemble each executable data object in @p input in order. For
    * each successful disassembly add a source data object to @p result.
@@ -1744,7 +1729,7 @@ typedef enum amd_comgr_action_kind_s {
    * if isa name is not set in @p info and does not match the isa name
    * of all relocatable data objects in @p input.
    */
-  AMD_COMGR_ACTION_DISASSEMBLE_EXECUTABLE_TO_SOURCE = 0xC,
+  AMD_COMGR_ACTION_DISASSEMBLE_EXECUTABLE_TO_SOURCE = 0xB,
   /**
    * Disassemble each bytes data object in @p input in order. For each
    * successful disassembly add a source data object to @p
@@ -1759,7 +1744,7 @@ typedef enum amd_comgr_action_kind_s {
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
    * if isa name is not set in @p info
    */
-  AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE = 0xD,
+  AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE = 0xC,
   /**
    * Compile each source data object in @p input in order. For each
    * successful compilation add a bc data object to @p result. Resolve
@@ -1776,7 +1761,7 @@ typedef enum amd_comgr_action_kind_s {
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
    * if isa name or language is not set in @p info.
    */
-  AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC = 0xE,
+  AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC = 0xD,
   /**
    * Compile a single source data object in @p input in order. For each
    * successful compilation add a relocatable data object to @p result.
@@ -1793,7 +1778,7 @@ typedef enum amd_comgr_action_kind_s {
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
    * if isa name or language is not set in @p info.
    */
-  AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE = 0xF,
+  AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE = 0xE,
   /**
    * Compile each source data object in @p input and create a single executabele
    * in @p result. Resolve any include source names using the names of include
@@ -1809,7 +1794,7 @@ typedef enum amd_comgr_action_kind_s {
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
    * if isa name or language is not set in @p info.
    */
-  AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE = 0x10,
+  AMD_COMGR_ACTION_COMPILE_SOURCE_TO_EXECUTABLE = 0xF,
 
    /**
    * Unbundle each source data object in @p input. These objects can be
@@ -1823,7 +1808,7 @@ typedef enum amd_comgr_action_kind_s {
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
    * if isa name or language is not set in @p info.
    */
-  AMD_COMGR_ACTION_UNBUNDLE = 0x11,
+  AMD_COMGR_ACTION_UNBUNDLE = 0x10,
 
   /**
    * Marker for last valid action kind.
