@@ -12,15 +12,15 @@ declare i32 @strcmp(ptr nocapture, ptr nocapture)
 define i1 @test_strncmp_1(ptr nocapture readonly %s) {
 ; CHECK-LABEL: define i1 @test_strncmp_1(
 ; CHECK-SAME: ptr nocapture readonly [[S:%.*]]) {
-; CHECK-NEXT:  entry.before:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[SUB:%.*]]
-; CHECK:       sub:
+; CHECK:       sub_0:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[S]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 97, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[NE:%.*]], label [[SUB1:%.*]]
-; CHECK:       sub1:
+; CHECK:       sub_1:
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
@@ -29,7 +29,7 @@ define i1 @test_strncmp_1(ptr nocapture readonly %s) {
 ; CHECK:       ne:
 ; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP2]], [[SUB]] ], [ [[TMP7]], [[SUB1]] ]
 ; CHECK-NEXT:    br label [[ENTRY:%.*]]
-; CHECK:       entry:
+; CHECK:       entry.tail:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP8]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -42,22 +42,22 @@ entry:
 define i1 @test_strncmp_2(ptr nocapture readonly %s) {
 ; CHECK-LABEL: define i1 @test_strncmp_2(
 ; CHECK-SAME: ptr nocapture readonly [[S:%.*]]) {
-; CHECK-NEXT:  entry.before:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[SUB:%.*]]
-; CHECK:       sub:
+; CHECK:       sub_0:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[S]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 97, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[NE:%.*]], label [[SUB1:%.*]]
-; CHECK:       sub1:
+; CHECK:       sub_1:
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 98, [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i32 [[TMP7]], 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[NE]], label [[SUB2:%.*]]
-; CHECK:       sub2:
+; CHECK:       sub_2:
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i8 [[TMP10]] to i32
@@ -66,7 +66,7 @@ define i1 @test_strncmp_2(ptr nocapture readonly %s) {
 ; CHECK:       ne:
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ [[TMP2]], [[SUB]] ], [ [[TMP7]], [[SUB1]] ], [ [[TMP12]], [[SUB2]] ]
 ; CHECK-NEXT:    br label [[ENTRY:%.*]]
-; CHECK:       entry:
+; CHECK:       entry.tail:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP13]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -79,22 +79,22 @@ entry:
 define i1 @test_strncmp_3(ptr nocapture readonly %s) {
 ; CHECK-LABEL: define i1 @test_strncmp_3(
 ; CHECK-SAME: ptr nocapture readonly [[S:%.*]]) {
-; CHECK-NEXT:  entry.before:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[SUB:%.*]]
-; CHECK:       sub:
+; CHECK:       sub_0:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[S]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 97, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[NE:%.*]], label [[SUB1:%.*]]
-; CHECK:       sub1:
+; CHECK:       sub_1:
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 98, [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i32 [[TMP7]], 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[NE]], label [[SUB2:%.*]]
-; CHECK:       sub2:
+; CHECK:       sub_2:
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i8 [[TMP10]] to i32
@@ -103,7 +103,7 @@ define i1 @test_strncmp_3(ptr nocapture readonly %s) {
 ; CHECK:       ne:
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ [[TMP2]], [[SUB]] ], [ [[TMP7]], [[SUB1]] ], [ [[TMP12]], [[SUB2]] ]
 ; CHECK-NEXT:    br label [[ENTRY:%.*]]
-; CHECK:       entry:
+; CHECK:       entry.tail:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP13]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -116,15 +116,15 @@ entry:
 define i1 @test_strcmp_1(ptr nocapture readonly %s) {
 ; CHECK-LABEL: define i1 @test_strcmp_1(
 ; CHECK-SAME: ptr nocapture readonly [[S:%.*]]) {
-; CHECK-NEXT:  entry.before:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[SUB:%.*]]
-; CHECK:       sub:
+; CHECK:       sub_0:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[S]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], 97
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[NE:%.*]], label [[SUB1:%.*]]
-; CHECK:       sub1:
+; CHECK:       sub_1:
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
@@ -132,7 +132,7 @@ define i1 @test_strcmp_1(ptr nocapture readonly %s) {
 ; CHECK:       ne:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP2]], [[SUB]] ], [ [[TMP6]], [[SUB1]] ]
 ; CHECK-NEXT:    br label [[ENTRY:%.*]]
-; CHECK:       entry:
+; CHECK:       entry.tail:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP7]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -145,22 +145,22 @@ entry:
 define i1 @test_strcmp_2(ptr nocapture readonly %s) {
 ; CHECK-LABEL: define i1 @test_strcmp_2(
 ; CHECK-SAME: ptr nocapture readonly [[S:%.*]]) {
-; CHECK-NEXT:  entry.before:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[SUB:%.*]]
-; CHECK:       sub:
+; CHECK:       sub_0:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[S]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP1]], 97
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[NE:%.*]], label [[SUB1:%.*]]
-; CHECK:       sub1:
+; CHECK:       sub_1:
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP6]], 98
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i32 [[TMP7]], 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[NE]], label [[SUB2:%.*]]
-; CHECK:       sub2:
+; CHECK:       sub_2:
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i8 [[TMP10]] to i32
@@ -168,7 +168,7 @@ define i1 @test_strcmp_2(ptr nocapture readonly %s) {
 ; CHECK:       ne:
 ; CHECK-NEXT:    [[TMP12:%.*]] = phi i32 [ [[TMP2]], [[SUB]] ], [ [[TMP7]], [[SUB1]] ], [ [[TMP11]], [[SUB2]] ]
 ; CHECK-NEXT:    br label [[ENTRY:%.*]]
-; CHECK:       entry:
+; CHECK:       entry.tail:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[TMP12]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -181,22 +181,22 @@ entry:
 define i1 @test_strcmp_3(ptr nocapture readonly %s) {
 ; CHECK-LABEL: define i1 @test_strcmp_3(
 ; CHECK-SAME: ptr nocapture readonly [[S:%.*]]) {
-; CHECK-NEXT:  entry.before:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[SUB:%.*]]
-; CHECK:       sub:
+; CHECK:       sub_0:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[S]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 97, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[NE:%.*]], label [[SUB1:%.*]]
-; CHECK:       sub1:
+; CHECK:       sub_1:
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 98, [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i32 [[TMP7]], 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[NE]], label [[SUB2:%.*]]
-; CHECK:       sub2:
+; CHECK:       sub_2:
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[S]], i64 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i8 [[TMP10]] to i32
@@ -205,7 +205,7 @@ define i1 @test_strcmp_3(ptr nocapture readonly %s) {
 ; CHECK:       ne:
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ [[TMP2]], [[SUB]] ], [ [[TMP7]], [[SUB1]] ], [ [[TMP12]], [[SUB2]] ]
 ; CHECK-NEXT:    br label [[ENTRY:%.*]]
-; CHECK:       entry:
+; CHECK:       entry.tail:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[TMP13]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

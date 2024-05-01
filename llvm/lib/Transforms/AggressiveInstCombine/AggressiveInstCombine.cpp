@@ -1038,13 +1038,13 @@ bool StrNCmpInliner::optimizeStrNCmp() {
 /// BBCI
 ///
 /// (after)
-/// BBBefore -> BBSubs[0] (sub,icmp) --NE-> BBNE -> BBCI
-///                      |                    ^
-///                      E                    |
-///                      |                    |
-///             BBSubs[1] (sub,icmp) --NE-----+
-///                     ...                   |
-///             BBSubs[N-1]    (sub) ---------+
+/// BBCI -> BBSubs[0] (sub,icmp) --NE-> BBNE -> BBTail
+///                 |                    ^
+///                 E                    |
+///                 |                    |
+///        BBSubs[1] (sub,icmp) --NE-----+
+///                ...                   |
+///        BBSubs[N-1]    (sub) ---------+
 ///
 bool StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
                                    bool Swapped) {
@@ -1052,19 +1052,20 @@ bool StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
   IRBuilder<> B(Ctx);
 
   BasicBlock *BBCI = CI->getParent();
-  BasicBlock *BBBefore = splitBlockBefore(BBCI, CI, DTU, nullptr, nullptr,
-                                          BBCI->getName() + ".before");
+  BasicBlock *BBTail =
+      SplitBlock(BBCI, CI, DTU, nullptr, nullptr, BBCI->getName() + ".tail");
 
   SmallVector<BasicBlock *> BBSubs;
   for (uint64_t i = 0; i < N; ++i)
-    BBSubs.push_back(BasicBlock::Create(Ctx, "sub", BBCI->getParent(), BBCI));
-  BasicBlock *BBNE = BasicBlock::Create(Ctx, "ne", BBCI->getParent(), BBCI);
+    BBSubs.push_back(BasicBlock::Create(Ctx, "sub_" + std::to_string(i),
+                                        BBCI->getParent(), BBTail));
+  BasicBlock *BBNE = BasicBlock::Create(Ctx, "ne", BBCI->getParent(), BBTail);
 
-  cast<BranchInst>(BBBefore->getTerminator())->setSuccessor(0, BBSubs[0]);
+  cast<BranchInst>(BBCI->getTerminator())->setSuccessor(0, BBSubs[0]);
 
   B.SetInsertPoint(BBNE);
   PHINode *Phi = B.CreatePHI(CI->getType(), N);
-  B.CreateBr(BBCI);
+  B.CreateBr(BBTail);
 
   Value *Base = LHS;
   for (uint64_t i = 0; i < N; ++i) {
@@ -1089,14 +1090,14 @@ bool StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
 
   if (DTU) {
     SmallVector<DominatorTree::UpdateType, 8> Updates;
-    Updates.push_back({DominatorTree::Insert, BBBefore, BBSubs[0]});
+    Updates.push_back({DominatorTree::Insert, BBCI, BBSubs[0]});
     for (uint64_t i = 0; i < N; ++i) {
       if (i < N - 1)
         Updates.push_back({DominatorTree::Insert, BBSubs[i], BBSubs[i + 1]});
       Updates.push_back({DominatorTree::Insert, BBSubs[i], BBNE});
     }
-    Updates.push_back({DominatorTree::Insert, BBNE, BBCI});
-    Updates.push_back({DominatorTree::Delete, BBBefore, BBCI});
+    Updates.push_back({DominatorTree::Insert, BBNE, BBTail});
+    Updates.push_back({DominatorTree::Delete, BBCI, BBTail});
     DTU->applyUpdates(Updates);
   }
   return true;
