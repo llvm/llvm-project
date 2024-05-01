@@ -7620,6 +7620,7 @@ SDValue DAGCombiner::visitORLike(SDValue N0, SDValue N1, const SDLoc &DL) {
 static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
                                   SDNode *N) {
   EVT VT = N0.getValueType();
+  unsigned BW = VT.getScalarSizeInBits();
   SDLoc DL(N);
 
   auto peekThroughResize = [](SDValue V) {
@@ -7688,6 +7689,26 @@ static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
       N0.getOperand(1) == N1.getOperand(0) &&
       peekThroughZext(N0.getOperand(2)) == peekThroughZext(N1.getOperand(1)))
     return N0;
+
+  // Attempt to match a legalized build_pair-esque pattern:
+  // or(shl(aext(Hi),BW/2),zext(Lo))
+  SDValue Lo, Hi;
+  if (sd_match(N0,
+               m_OneUse(m_Shl(m_AnyExt(m_Value(Hi)), m_SpecificInt(BW / 2)))) &&
+      sd_match(N1, m_ZExt(m_Value(Lo))) &&
+      Lo.getScalarValueSizeInBits() == (BW / 2) &&
+      Lo.getValueType() == Hi.getValueType()) {
+    // Fold build_pair(not(Lo),not(Hi)) -> not(build_pair(Lo,Hi)).
+    SDValue NotLo, NotHi;
+    if (sd_match(Lo, m_OneUse(m_Not(m_Value(NotLo)))) &&
+        sd_match(Hi, m_OneUse(m_Not(m_Value(NotHi))))) {
+      Lo = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, NotLo);
+      Hi = DAG.getNode(ISD::ANY_EXTEND, DL, VT, NotHi);
+      Hi = DAG.getNode(ISD::SHL, DL, VT, Hi,
+                       DAG.getShiftAmountConstant(BW / 2, VT, DL));
+      return DAG.getNOT(DL, DAG.getNode(ISD::OR, DL, VT, Lo, Hi), VT);
+    }
+  }
 
   return SDValue();
 }
