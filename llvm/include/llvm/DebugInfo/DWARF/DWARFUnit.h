@@ -22,6 +22,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFLocationExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/RWMutex.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -256,6 +257,9 @@ class DWARFUnit {
       iterator_range<std::vector<DWARFDebugInfoEntry>::iterator>;
 
   std::shared_ptr<DWARFUnit> DWO;
+
+  mutable llvm::sys::RWMutex m_cu_die_array_mutex;
+  mutable llvm::sys::RWMutex m_all_die_array_mutex;
 
 protected:
   friend dwarf_linker::parallel::CompileUnit;
@@ -566,7 +570,8 @@ public:
 
   Error tryExtractDIEsIfNeeded(bool CUDieOnly);
 
-  void freeDIEs();
+  /// clearDIEs - Clear parsed DIEs to keep memory usage low.
+  void clearDIEs(bool KeepCUDie);
 
 private:
   /// Size in bytes of the .debug_info data associated with this compile unit.
@@ -582,9 +587,6 @@ private:
   /// extractDIEsToVector - Appends all parsed DIEs to a vector.
   void extractDIEsToVector(bool AppendCUDie, bool AppendNonCUDIEs,
                            std::vector<DWARFDebugInfoEntry> &DIEs) const;
-
-  /// clearDIEs - Clear parsed DIEs to keep memory usage low.
-  void clearDIEs(bool KeepCUDie);
 
   /// parseDWO - Parses .dwo file for current compile unit. Returns true if
   /// it was actually constructed.
