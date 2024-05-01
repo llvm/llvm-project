@@ -245,6 +245,13 @@ void setClangPath(const char *argv0) {
     requireTrue(fs::exists(Global.clangppPath), "clang not found");
 }
 
+int randomInt(int a, int b) {
+    std::random_device rd;  // 用于获取随机数的设备
+    std::mt19937 gen(rd()); // 使用 Mersenne Twister 算法生成随机数
+    std::uniform_int_distribution<> dis(a, b);
+    return dis(gen);
+}
+
 /*****************************************************************
  * 以下是没用到的函数
  *****************************************************************/
