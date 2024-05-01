@@ -108,3 +108,18 @@ behavior between Clang and DXC. Some examples include:
   diagnostic notifying the user of the conversion rather than silently altering
   precision relative to the other overloads (as FXC does) or generating code
   that will fail validation (as DXC does).
+
+Mix packoffset and non-packoffset
+=================================
+
+DXC allows mixing packoffset and non-packoffset elements in the same cbuffer,
+accompanied by a warning.
+
+However, both Clang and FXC do not permit this and instead report an error.
+
+.. code-block:: hlsl
+
+  cbuffer CB {
+    float4 A;
+    float4 B : packoffset(c0);
+  }

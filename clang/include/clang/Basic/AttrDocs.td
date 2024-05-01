@@ -7405,7 +7405,7 @@ The packoffset attribute is used to change the layout of a cbuffer.
 Attribute spelling in HLSL is: ``packoffset( c[Subcomponent][.component] )``.
 A subcomponent is a register number, which is an integer. A component is in the form of [.xyzw].
 
-Here're packoffset examples with and without component:
+Examples:
 
 .. code-block:: c++
 
