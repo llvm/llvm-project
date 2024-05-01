@@ -948,7 +948,7 @@ This intrinsic is provided in subroutine forms only.
 | `TIME`     | The type shall be REAL(4).                                            |
 
 #### Example
-
+Here is an example usage from [Gfortran ETIME](https://gcc.gnu.org/onlinedocs/gfortran/ETIME.html)
 ```Fortran
 program test_etime
     integer(8) :: i, j
