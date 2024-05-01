@@ -43,17 +43,23 @@ static Expr<T> FoldDotProduct(
       Expr<T> products{Fold(
           context, Expr<T>{std::move(conjgA)} * Expr<T>{Constant<T>{*vb}})};
       Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
-      Element correction{}; // Use Kahan summation for greater precision.
+      [[maybe_unused]] Element correction{};
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
-        auto next{correction.Add(x, rounding)};
-        overflow |= next.flags.test(RealFlag::Overflow);
-        auto added{sum.Add(next.value, rounding)};
-        overflow |= added.flags.test(RealFlag::Overflow);
-        correction = added.value.Subtract(sum, rounding)
-                         .value.Subtract(next.value, rounding)
-                         .value;
-        sum = std::move(added.value);
+        if constexpr (useKahanSummation) {
+          auto next{correction.Add(x, rounding)};
+          overflow |= next.flags.test(RealFlag::Overflow);
+          auto added{sum.Add(next.value, rounding)};
+          overflow |= added.flags.test(RealFlag::Overflow);
+          correction = added.value.Subtract(sum, rounding)
+                           .value.Subtract(next.value, rounding)
+                           .value;
+          sum = std::move(added.value);
+        } else {
+          auto added{sum.Add(x, rounding)};
+          overflow |= added.flags.test(RealFlag::Overflow);
+          sum = std::move(added.value);
+        }
       }
     } else if constexpr (T::category == TypeCategory::Logical) {
       Expr<T> conjunctions{Fold(context,
@@ -80,17 +86,23 @@ static Expr<T> FoldDotProduct(
       Expr<T> products{
           Fold(context, Expr<T>{Constant<T>{*va}} * Expr<T>{Constant<T>{*vb}})};
       Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
-      Element correction{}; // Use Kahan summation for greater precision.
+      [[maybe_unused]] Element correction{};
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
-        auto next{correction.Add(x, rounding)};
-        overflow |= next.flags.test(RealFlag::Overflow);
-        auto added{sum.Add(next.value, rounding)};
-        overflow |= added.flags.test(RealFlag::Overflow);
-        correction = added.value.Subtract(sum, rounding)
-                         .value.Subtract(next.value, rounding)
-                         .value;
-        sum = std::move(added.value);
+        if constexpr (useKahanSummation) {
+          auto next{correction.Add(x, rounding)};
+          overflow |= next.flags.test(RealFlag::Overflow);
+          auto added{sum.Add(next.value, rounding)};
+          overflow |= added.flags.test(RealFlag::Overflow);
+          correction = added.value.Subtract(sum, rounding)
+                           .value.Subtract(next.value, rounding)
+                           .value;
+          sum = std::move(added.value);
+        } else {
+          auto added{sum.Add(x, rounding)};
+          overflow |= added.flags.test(RealFlag::Overflow);
+          sum = std::move(added.value);
+        }
       }
     }
     if (overflow) {
