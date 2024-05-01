@@ -2492,6 +2492,8 @@ static bool CheckCompatibleArguments(
   return true;
 }
 
+static constexpr int cudaInfMatchingValue{std::numeric_limits<int>::max()};
+
 // Compute the matching distance as described in section 3.2.3 of the CUDA
 // Fortran references.
 static int GetMatchingDistance(const characteristics::DummyArgument &dummy,
@@ -2524,14 +2526,14 @@ static int GetMatchingDistance(const characteristics::DummyArgument &dummy,
     if (!actualDataAttr) {
       return 0;
     } else if (*actualDataAttr == common::CUDADataAttr::Device) {
-      return std::numeric_limits<int>::max();
+      return cudaInfMatchingValue;
     } else if (*actualDataAttr == common::CUDADataAttr::Managed ||
         *actualDataAttr == common::CUDADataAttr::Unified) {
       return 3;
     }
   } else if (*dummyDataAttr == common::CUDADataAttr::Device) {
     if (!actualDataAttr) {
-      return std::numeric_limits<int>::max();
+      return cudaInfMatchingValue;
     } else if (*actualDataAttr == common::CUDADataAttr::Device) {
       return 0;
     } else if (*actualDataAttr == common::CUDADataAttr::Managed ||
@@ -2540,7 +2542,7 @@ static int GetMatchingDistance(const characteristics::DummyArgument &dummy,
     }
   } else if (*dummyDataAttr == common::CUDADataAttr::Managed) {
     if (!actualDataAttr || *actualDataAttr == common::CUDADataAttr::Device) {
-      return std::numeric_limits<int>::max();
+      return cudaInfMatchingValue;
     } else if (*actualDataAttr == common::CUDADataAttr::Managed) {
       return 0;
     } else if (*actualDataAttr == common::CUDADataAttr::Unified) {
@@ -2548,14 +2550,14 @@ static int GetMatchingDistance(const characteristics::DummyArgument &dummy,
     }
   } else if (*dummyDataAttr == common::CUDADataAttr::Unified) {
     if (!actualDataAttr || *actualDataAttr == common::CUDADataAttr::Device) {
-      return std::numeric_limits<int>::max();
+      return cudaInfMatchingValue;
     } else if (*actualDataAttr == common::CUDADataAttr::Managed) {
       return 1;
     } else if (*actualDataAttr == common::CUDADataAttr::Unified) {
       return 0;
     }
   }
-  return std::numeric_limits<int>::max();
+  return cudaInfMatchingValue;
 }
 
 static int ComputeCudaMatchingDistance(
@@ -2563,12 +2565,12 @@ static int ComputeCudaMatchingDistance(
     const ActualArguments &actuals) {
   const auto &dummies{procedure.dummyArguments};
   CHECK(dummies.size() == actuals.size());
-  int distance = 0;
+  int distance{0};
   for (std::size_t i{0}; i < dummies.size(); ++i) {
     const characteristics::DummyArgument &dummy{dummies[i]};
     const std::optional<ActualArgument> &actual{actuals[i]};
-    int d = GetMatchingDistance(dummy, actual);
-    if (d == std::numeric_limits<int>::max())
+    int d{GetMatchingDistance(dummy, actual)};
+    if (d == cudaInfMatchingValue)
       return d;
     distance += d;
   }
@@ -2622,7 +2624,7 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
   const Symbol *elemental{nullptr}; // matching elemental specific proc
   const Symbol *nonElemental{nullptr}; // matching non-elemental specific
   const Symbol &ultimate{symbol.GetUltimate()};
-  int crtMatchingDistance{std::numeric_limits<int>::max()};
+  int crtMatchingDistance{cudaInfMatchingValue};
   // Check for a match with an explicit INTRINSIC
   if (ultimate.attrs().test(semantics::Attr::INTRINSIC)) {
     parser::Messages buffer;
