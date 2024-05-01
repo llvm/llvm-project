@@ -105,3 +105,84 @@ define void @test_load_store_add_float(ptr %a, ptr %b) sanitize_memory {
   store <vscale x 2 x float> %2, ptr %b
   ret void
 }
+
+define <vscale x 2 x float> @fn_ret(ptr %a) sanitize_memory {
+; CHECK-LABEL: define <vscale x 2 x float> @fn_ret(
+; CHECK-SAME: ptr [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP1:%.*]] = load <vscale x 2 x float>, ptr [[A]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[_MSLD:%.*]] = load <vscale x 2 x i32>, ptr [[TMP4]], align 8
+; CHECK-NEXT:    store <vscale x 2 x i32> [[_MSLD]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    ret <vscale x 2 x float> [[TMP1]]
+;
+  %1 = load <vscale x 2 x float>, ptr %a
+  ret <vscale x 2 x float> %1
+}
+
+define void @test_ret(ptr %a, ptr %b) sanitize_memory {
+; CHECK-LABEL: define void @test_ret(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    store i64 [[TMP1]], ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    store <vscale x 2 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x float> @fn_ret(ptr [[A]])
+; CHECK-NEXT:    [[_MSRET:%.*]] = load <vscale x 2 x i32>, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[B]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    store <vscale x 2 x i32> [[_MSRET]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    store <vscale x 2 x float> [[TMP5]], ptr [[B]], align 8
+; CHECK-NEXT:    ret void
+;
+  %1 = call <vscale x 2 x float> @fn_ret(ptr %a)
+  store <vscale x 2 x float> %1, ptr %b
+  ret void
+}
+
+define void @fn_param(<vscale x 2 x float> %a, ptr %b) sanitize_memory {
+; CHECK-LABEL: define void @fn_param(
+; CHECK-SAME: <vscale x 2 x float> [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[B]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
+; CHECK-NEXT:    store <vscale x 2 x i32> zeroinitializer, ptr [[TMP3]], align 8
+; CHECK-NEXT:    store <vscale x 2 x float> [[A]], ptr [[B]], align 8
+; CHECK-NEXT:    ret void
+;
+  store <vscale x 2 x float> %a, ptr %b
+  ret void
+}
+
+define void @test_param(ptr %a, ptr %b) sanitize_memory {
+; CHECK-LABEL: define void @test_param(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 2 x float>, ptr [[A]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[A]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080
+; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
+; CHECK-NEXT:    [[_MSLD:%.*]] = load <vscale x 2 x i32>, ptr [[TMP5]], align 8
+; CHECK-NEXT:    store i64 [[TMP1]], ptr @__msan_param_tls, align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.or.nxv2i32(<vscale x 2 x i32> [[_MSLD]])
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP6]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK:       7:
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    unreachable
+; CHECK:       8:
+; CHECK-NEXT:    call void @fn_param(<vscale x 2 x float> [[TMP2]], ptr [[B]])
+; CHECK-NEXT:    ret void
+;
+  %1 = load <vscale x 2 x float>, ptr %a
+  call void @fn_param(<vscale x 2 x float> %1, ptr %b)
+  ret void
+}
+;.
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
+;.
