@@ -1,3 +1,4 @@
+// REQUIRES: x86_64-linux
 // This tests that the coroutine elide optimization could happen succesfully with ThinLTO.
 // This test is adapted from coro-elide.cpp and splits functions into two files.
 //
