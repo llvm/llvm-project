@@ -247,13 +247,13 @@ public:
                                        lldb::SBStringList &matches,
                                        lldb::SBStringList &descriptions);
 
-  /// Returns whether an interrupt flag was raised either by the SBDebugger - 
+  /// Returns whether an interrupt flag was raised either by the SBDebugger -
   /// when the function is not running on the RunCommandInterpreter thread, or
   /// by SBCommandInterpreter::InterruptCommand if it is.  If your code is doing
-  /// interruptible work, check this API periodically, and interrupt if it 
+  /// interruptible work, check this API periodically, and interrupt if it
   /// returns true.
   bool WasInterrupted() const;
-  
+
   /// Interrupts the command currently executing in the RunCommandInterpreter
   /// thread.
   ///
@@ -317,6 +317,12 @@ public:
   void ResolveCommand(const char *command_line, SBCommandReturnObject &result);
 
   SBStructuredData GetStatistics();
+
+  /// Returns a list of handled commands, output and error. Each element in
+  /// the list is a dictionary with three keys: "command" (string), "output"
+  /// (list of strings) and optionally "error" (list of strings). Each string
+  /// in "output" and "error" is a line (without EOL characteres).
+  SBStructuredData GetTranscript();
 
 protected:
   friend class lldb_private::CommandPluginInterfaceImplementation;

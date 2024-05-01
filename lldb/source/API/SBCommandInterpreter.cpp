@@ -150,7 +150,7 @@ bool SBCommandInterpreter::WasInterrupted() const {
 
 bool SBCommandInterpreter::InterruptCommand() {
   LLDB_INSTRUMENT_VA(this);
-  
+
   return (IsValid() ? m_opaque_ptr->InterruptCommand() : false);
 }
 
@@ -569,6 +569,11 @@ SBStructuredData SBCommandInterpreter::GetStatistics() {
       llvm::formatv("{0:2}", m_opaque_ptr->GetStatistics()).str();
   data.m_impl_up->SetObjectSP(StructuredData::ParseJSON(json_str));
   return data;
+}
+
+SBStructuredData SBCommandInterpreter::GetTranscript() {
+  LLDB_INSTRUMENT_VA(this);
+  return SBStructuredData();
 }
 
 lldb::SBCommand SBCommandInterpreter::AddMultiwordCommand(const char *name,
