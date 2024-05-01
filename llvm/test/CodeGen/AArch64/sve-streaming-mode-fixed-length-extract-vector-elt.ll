@@ -90,8 +90,6 @@ define float @extractelement_v8f32(ptr %a) {
 define double @extractelement_v1f64(<1 x double> %op1) {
 ; CHECK-LABEL: extractelement_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %r = extractelement <1 x double> %op1, i64 0
   ret double %r

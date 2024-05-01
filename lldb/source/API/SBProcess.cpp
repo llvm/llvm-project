@@ -77,7 +77,7 @@ SBProcess::~SBProcess() = default;
 const char *SBProcess::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
-  return Process::GetStaticBroadcasterClass().AsCString();
+  return ConstString(Process::GetStaticBroadcasterClass()).AsCString();
 }
 
 const char *SBProcess::GetPluginName() {
@@ -807,7 +807,7 @@ SBBroadcaster SBProcess::GetBroadcaster() const {
 const char *SBProcess::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
-  return Process::GetStaticBroadcasterClass().AsCString();
+  return ConstString(Process::GetStaticBroadcasterClass()).AsCString();
 }
 
 size_t SBProcess::ReadMemory(addr_t addr, void *dst, size_t dst_len,

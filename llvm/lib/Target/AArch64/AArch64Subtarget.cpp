@@ -144,7 +144,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexA78C:
   case CortexR82:
   case CortexX1:
-  case CortexX1C:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
