@@ -604,6 +604,15 @@ def PthreadLockChecker : Checker<"PthreadLock">,
 def StreamChecker : Checker<"Stream">,
   HelpText<"Check stream handling functions">,
   WeakDependencies<[NonNullParamChecker]>,
+  CheckerOptions<[
+    CmdLineOption<Boolean,
+                  "Pedantic",
+                  "If false, assume that stream operations which are often not "
+                  "checked for error do not fail."
+                  "fail.",
+                  "false",
+                  InAlpha>
+  ]>,
   Documentation<HasDocumentation>;
 
 def SimpleStreamChecker : Checker<"SimpleStream">,
@@ -621,6 +630,11 @@ def BlockInCriticalSectionChecker : Checker<"BlockInCriticalSection">,
 //===----------------------------------------------------------------------===//
 
 let ParentPackage = Cplusplus in {
+
+def ArrayDeleteChecker : Checker<"ArrayDelete">,
+  HelpText<"Reports destructions of arrays of polymorphic objects that are "
+           "destructed as their base class.">,
+  Documentation<HasDocumentation>;
 
 def InnerPointerChecker : Checker<"InnerPointer">,
   HelpText<"Check for inner pointers of C++ containers used after "
@@ -777,11 +791,6 @@ def ContainerModeling : Checker<"ContainerModeling">,
   Documentation<NotDocumented>,
   Hidden;
 
-def CXXArrayDeleteChecker : Checker<"ArrayDelete">,
-  HelpText<"Reports destructions of arrays of polymorphic objects that are "
-           "destructed as their base class.">,
-  Documentation<HasDocumentation>;
-
 def DeleteWithNonVirtualDtorChecker : Checker<"DeleteWithNonVirtualDtor">,
   HelpText<"Reports destructions of polymorphic objects with a non-virtual "
            "destructor in their base class">,
@@ -908,7 +917,7 @@ def PaddingChecker : Checker<"Padding">,
                   "24",
                   Released>
   ]>,
-  Documentation<NotDocumented>;
+  Documentation<HasDocumentation>;
 
 } // end: "padding"
 

@@ -279,7 +279,6 @@ class SelectionDAG {
   SDDbgInfo *DbgInfo;
 
   using CallSiteInfo = MachineFunction::CallSiteInfo;
-  using CallSiteInfoImpl = MachineFunction::CallSiteInfoImpl;
 
   struct NodeExtraInfo {
     CallSiteInfo CSInfo;
@@ -2259,7 +2258,7 @@ public:
   }
 
   /// Set CallSiteInfo to be associated with Node.
-  void addCallSiteInfo(const SDNode *Node, CallSiteInfoImpl &&CallInfo) {
+  void addCallSiteInfo(const SDNode *Node, CallSiteInfo &&CallInfo) {
     SDEI[Node].CSInfo = std::move(CallInfo);
   }
   /// Return CallSiteInfo associated with Node, or a default if none exists.

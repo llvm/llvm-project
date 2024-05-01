@@ -475,6 +475,12 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
         II->getIntrinsicID() == Intrinsic::launder_invariant_group)
       return true;
 
+    // Intrinsics declare sideeffects to prevent them from moving, but they are
+    // nops without users.
+    if (II->getIntrinsicID() == Intrinsic::allow_runtime_check ||
+        II->getIntrinsicID() == Intrinsic::allow_ubsan_check)
+      return true;
+
     if (II->isLifetimeStartOrEnd()) {
       auto *Arg = II->getArgOperand(1);
       // Lifetime intrinsics are dead when their right-hand is undef.
@@ -3621,10 +3627,12 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
     return createIntegerExpression(C);
 
   auto *FP = dyn_cast<ConstantFP>(&C);
-  if (FP && (Ty.isFloatTy() || Ty.isDoubleTy())) {
+  if (FP && Ty.isFloatingPointTy() && Ty.getScalarSizeInBits() <= 64) {
     const APFloat &APF = FP->getValueAPF();
-    return DIB.createConstantValueExpression(
-        APF.bitcastToAPInt().getZExtValue());
+    APInt const &API = APF.bitcastToAPInt();
+    if (auto Temp = API.getZExtValue())
+      return DIB.createConstantValueExpression(static_cast<uint64_t>(Temp));
+    return DIB.createConstantValueExpression(*API.getRawData());
   }
 
   if (!Ty.isPointerTy())

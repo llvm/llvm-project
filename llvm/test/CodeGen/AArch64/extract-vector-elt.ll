@@ -25,20 +25,9 @@ entry:
 }
 
 define i64 @extract_v2i64_undef_vector(<2 x i64> %a, i32 %c) {
-; CHECK-SD-LABEL: extract_v2i64_undef_vector:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: extract_v2i64_undef_vector:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sub sp, sp, #16
-; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    mov w9, w0
-; CHECK-GI-NEXT:    mov x8, sp
-; CHECK-GI-NEXT:    and x9, x9, #0x1
-; CHECK-GI-NEXT:    ldr x0, [x8, x9, lsl #3]
-; CHECK-GI-NEXT:    add sp, sp, #16
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: extract_v2i64_undef_vector:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
 entry:
   %d = extractelement <2 x i64> undef, i32 %c
   ret i64 %d
@@ -130,7 +119,6 @@ define i64 @extract_v2i64_extract_of_insert_different_const(<2 x i64> %a, i64 %e
 ;
 ; CHECK-GI-LABEL: extract_v2i64_extract_of_insert_different_const:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v0.d[0], x0
 ; CHECK-GI-NEXT:    mov d0, v0.d[1]
 ; CHECK-GI-NEXT:    fmov x0, d0
 ; CHECK-GI-NEXT:    ret

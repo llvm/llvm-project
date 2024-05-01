@@ -796,7 +796,13 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
 std::optional<std::string> ToolChain::getRuntimePath() const {
   SmallString<128> P(D.ResourceDir);
   llvm::sys::path::append(P, "lib");
-  return getTargetSubDirPath(P);
+  if (auto Ret = getTargetSubDirPath(P))
+    return Ret;
+  // Darwin does not use per-target runtime directory.
+  if (Triple.isOSDarwin())
+    return {};
+  llvm::sys::path::append(P, Triple.str());
+  return std::string(P);
 }
 
 std::optional<std::string> ToolChain::getStdlibPath() const {

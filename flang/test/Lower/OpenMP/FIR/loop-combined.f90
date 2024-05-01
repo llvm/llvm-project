@@ -75,7 +75,7 @@ program main
   ! TARGET SIMD
   ! ----------------------------------------------------------------------------
   ! CHECK: omp.target
-  ! CHECK: omp.simdloop
+  ! CHECK: omp.simd
   !$omp target simd
   do i = 1, 10
   end do

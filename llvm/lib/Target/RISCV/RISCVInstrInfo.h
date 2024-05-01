@@ -49,6 +49,16 @@ unsigned getBrCond(CondCode CC);
 
 } // end of namespace RISCVCC
 
+// RISCV MachineCombiner patterns
+enum RISCVMachineCombinerPattern : unsigned {
+  FMADD_AX = MachineCombinerPattern::TARGET_PATTERN_START,
+  FMADD_XA,
+  FMSUB,
+  FNMSUB,
+  SHXADD_ADD_SLLI_OP1,
+  SHXADD_ADD_SLLI_OP2,
+};
+
 class RISCVInstrInfo : public RISCVGenInstrInfo {
 
 public:
@@ -69,7 +79,7 @@ public:
   void copyPhysRegVector(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                          MCRegister DstReg, MCRegister SrcReg, bool KillSrc,
-                         unsigned Opc, unsigned NF = 1) const;
+                         const TargetRegisterClass *RegClass) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                    const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg,
                    bool KillSrc) const override;
@@ -229,26 +239,29 @@ public:
                           unsigned OpIdx,
                           const TargetRegisterInfo *TRI) const override;
 
-  void getVLENFactoredAmount(
-      MachineFunction &MF, MachineBasicBlock &MBB,
-      MachineBasicBlock::iterator II, const DebugLoc &DL, Register DestReg,
-      int64_t Amount, MachineInstr::MIFlag Flag = MachineInstr::NoFlags) const;
+  /// Generate code to multiply the value in DestReg by Amt - handles all
+  /// the common optimizations for this idiom, and supports fallback for
+  /// subtargets which don't support multiply instructions.
+  void mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
+              MachineBasicBlock::iterator II, const DebugLoc &DL,
+              Register DestReg, uint32_t Amt, MachineInstr::MIFlag Flag) const;
 
   bool useMachineCombiner() const override { return true; }
 
   MachineTraceStrategy getMachineCombinerTraceStrategy() const override;
 
-  bool
-  getMachineCombinerPatterns(MachineInstr &Root,
-                             SmallVectorImpl<MachineCombinerPattern> &Patterns,
-                             bool DoRegPressureReduce) const override;
+  CombinerObjective getCombinerObjective(unsigned Pattern) const override;
+
+  bool getMachineCombinerPatterns(MachineInstr &Root,
+                                  SmallVectorImpl<unsigned> &Patterns,
+                                  bool DoRegPressureReduce) const override;
 
   void
-  finalizeInsInstrs(MachineInstr &Root, MachineCombinerPattern &P,
+  finalizeInsInstrs(MachineInstr &Root, unsigned &Pattern,
                     SmallVectorImpl<MachineInstr *> &InsInstrs) const override;
 
   void genAlternativeCodeSequence(
-      MachineInstr &Root, MachineCombinerPattern Pattern,
+      MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;

@@ -39,6 +39,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -553,6 +554,22 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
       MIFlags |= MachineInstr::MIFlag::NoSWrap;
     if (OB->hasNoUnsignedWrap())
       MIFlags |= MachineInstr::MIFlag::NoUWrap;
+  } else if (const TruncInst *TI = dyn_cast<TruncInst>(&I)) {
+    if (TI->hasNoSignedWrap())
+      MIFlags |= MachineInstr::MIFlag::NoSWrap;
+    if (TI->hasNoUnsignedWrap())
+      MIFlags |= MachineInstr::MIFlag::NoUWrap;
+  }
+
+  // Copy the nonneg flag.
+  if (const PossiblyNonNegInst *PNI = dyn_cast<PossiblyNonNegInst>(&I)) {
+    if (PNI->hasNonNeg())
+      MIFlags |= MachineInstr::MIFlag::NonNeg;
+    // Copy the disjoint flag.
+  } else if (const PossiblyDisjointInst *PD =
+                 dyn_cast<PossiblyDisjointInst>(&I)) {
+    if (PD->isDisjoint())
+      MIFlags |= MachineInstr::MIFlag::Disjoint;
   }
 
   // Copy the exact flag.
@@ -1306,6 +1323,7 @@ static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
   LocationSize WidthB = MMOb->getSize();
   bool KnownWidthA = WidthA.hasValue();
   bool KnownWidthB = WidthB.hasValue();
+  bool BothMMONonScalable = !WidthA.isScalable() && !WidthB.isScalable();
 
   const Value *ValA = MMOa->getValue();
   const Value *ValB = MMOb->getValue();
@@ -1321,12 +1339,14 @@ static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
       SameVal = true;
   }
 
-  if (SameVal) {
+  if (SameVal && BothMMONonScalable) {
     if (!KnownWidthA || !KnownWidthB)
       return true;
     int64_t MaxOffset = std::max(OffsetA, OffsetB);
-    LocationSize LowWidth = (MinOffset == OffsetA) ? WidthA : WidthB;
-    return (MinOffset + (int)LowWidth.getValue() > MaxOffset);
+    int64_t LowWidth = (MinOffset == OffsetA)
+                           ? WidthA.getValue().getKnownMinValue()
+                           : WidthB.getValue().getKnownMinValue();
+    return (MinOffset + LowWidth > MaxOffset);
   }
 
   if (!AA)
@@ -1338,15 +1358,29 @@ static bool MemOperandsHaveAlias(const MachineFrameInfo &MFI, AAResults *AA,
   assert((OffsetA >= 0) && "Negative MachineMemOperand offset");
   assert((OffsetB >= 0) && "Negative MachineMemOperand offset");
 
-  int64_t OverlapA = KnownWidthA ? WidthA.getValue() + OffsetA - MinOffset
-                                 : MemoryLocation::UnknownSize;
-  int64_t OverlapB = KnownWidthB ? WidthB.getValue() + OffsetB - MinOffset
-                                 : MemoryLocation::UnknownSize;
+  // If Scalable Location Size has non-zero offset, Width + Offset does not work
+  // at the moment
+  if ((WidthA.isScalable() && OffsetA > 0) ||
+      (WidthB.isScalable() && OffsetB > 0))
+    return true;
+
+  int64_t OverlapA =
+      KnownWidthA ? WidthA.getValue().getKnownMinValue() + OffsetA - MinOffset
+                  : MemoryLocation::UnknownSize;
+  int64_t OverlapB =
+      KnownWidthB ? WidthB.getValue().getKnownMinValue() + OffsetB - MinOffset
+                  : MemoryLocation::UnknownSize;
+
+  LocationSize LocA = (WidthA.isScalable() || !KnownWidthA)
+                          ? WidthA
+                          : LocationSize::precise(OverlapA);
+  LocationSize LocB = (WidthB.isScalable() || !KnownWidthB)
+                          ? WidthB
+                          : LocationSize::precise(OverlapB);
 
   return !AA->isNoAlias(
-      MemoryLocation(ValA, OverlapA, UseTBAA ? MMOa->getAAInfo() : AAMDNodes()),
-      MemoryLocation(ValB, OverlapB,
-                     UseTBAA ? MMOb->getAAInfo() : AAMDNodes()));
+      MemoryLocation(ValA, LocA, UseTBAA ? MMOa->getAAInfo() : AAMDNodes()),
+      MemoryLocation(ValB, LocB, UseTBAA ? MMOb->getAAInfo() : AAMDNodes()));
 }
 
 bool MachineInstr::mayAlias(AAResults *AA, const MachineInstr &Other,
@@ -1689,6 +1723,10 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "nofpexcept ";
   if (getFlag(MachineInstr::NoMerge))
     OS << "nomerge ";
+  if (getFlag(MachineInstr::NonNeg))
+    OS << "nneg ";
+  if (getFlag(MachineInstr::Disjoint))
+    OS << "disjoint ";
 
   // Print the opcode name.
   if (TII)

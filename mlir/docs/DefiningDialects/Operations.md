@@ -640,12 +640,22 @@ The available directives are as follows:
 
 *   `attr-dict`
 
-    -   Represents the attribute dictionary of the operation.
+    -   Represents the attribute dictionary of the operation. Any inherent 
+    -   attributes that are not used elsewhere in the format are printed as
+    -   part of the attribute dictionary unless a `prop-dict` is present.
+    -   Discardable attributes are always part of the `attr-dict`.  
 
 *   `attr-dict-with-keyword`
 
     -   Represents the attribute dictionary of the operation, but prefixes the
         dictionary with an `attributes` keyword.
+
+*   `prop-dict`
+
+    -   Represents the properties of the operation converted to a dictionary.
+    -   Any property or inherent attribute that are not used elsewhere in the
+    -   format are parsed and printed as part of this dictionary.
+    -   If present, the `attr-dict` will not contain any inherent attributes.
 
 *   `custom` < UserDirective > ( Params )
 

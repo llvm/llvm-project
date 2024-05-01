@@ -1591,10 +1591,10 @@ writePrettyPrintFunction(const Record &R,
     std::string Variety = Spellings[I].variety();
 
     if (Variety == "GNU") {
-      Prefix = " __attribute__((";
+      Prefix = "__attribute__((";
       Suffix = "))";
     } else if (Variety == "CXX11" || Variety == "C23") {
-      Prefix = " [[";
+      Prefix = "[[";
       Suffix = "]]";
       std::string Namespace = Spellings[I].nameSpace();
       if (!Namespace.empty()) {
@@ -1602,13 +1602,13 @@ writePrettyPrintFunction(const Record &R,
         Spelling += "::";
       }
     } else if (Variety == "Declspec") {
-      Prefix = " __declspec(";
+      Prefix = "__declspec(";
       Suffix = ")";
     } else if (Variety == "Microsoft") {
       Prefix = "[";
       Suffix = "]";
     } else if (Variety == "Keyword") {
-      Prefix = " ";
+      Prefix = "";
       Suffix = "";
     } else if (Variety == "Pragma") {
       Prefix = "#pragma ";
@@ -1618,7 +1618,7 @@ writePrettyPrintFunction(const Record &R,
         Spelling += Namespace;
         Spelling += " ";
       }
-    } else if (Variety == "HLSLSemantic") {
+    } else if (Variety == "HLSLAnnotation") {
       Prefix = ":";
       Suffix = "";
     } else {
@@ -3317,37 +3317,6 @@ void EmitClangAttrList(RecordKeeper &Records, raw_ostream &OS) {
 }
 
 // Emits the enumeration list for attributes.
-void EmitClangAttrPrintList(const std::string &FieldName, RecordKeeper &Records,
-                            raw_ostream &OS) {
-  emitSourceFileHeader(
-      "List of attributes that can be print on the left side of a decl", OS,
-      Records);
-
-  AttrClassHierarchy Hierarchy(Records);
-
-  std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
-  std::vector<Record *> PragmaAttrs;
-  bool first = false;
-
-  for (auto *Attr : Attrs) {
-    if (!Attr->getValueAsBit("ASTNode"))
-      continue;
-
-    if (!Attr->getValueAsBit(FieldName))
-      continue;
-
-    if (!first) {
-      first = true;
-      OS << "#define CLANG_ATTR_LIST_" << FieldName;
-    }
-
-    OS << " \\\n case attr::" << Attr->getName() << ":";
-  }
-
-  OS << '\n';
-}
-
-// Emits the enumeration list for attributes.
 void EmitClangAttrSubjectMatchRuleList(RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader(
       "List of all attribute subject matching rules that Clang recognizes", OS,
@@ -3639,7 +3608,7 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   // and declspecs. Then generate a big switch statement for each of them.
   std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
   std::vector<std::pair<const Record *, FlattenedSpelling>> Declspec, Microsoft,
-      GNU, Pragma, HLSLSemantic;
+      GNU, Pragma, HLSLAnnotation;
   std::map<std::string,
            std::vector<std::pair<const Record *, FlattenedSpelling>>>
       CXX, C23;
@@ -3662,8 +3631,8 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
         C23[SI.nameSpace()].emplace_back(R, SI);
       else if (Variety == "Pragma")
         Pragma.emplace_back(R, SI);
-      else if (Variety == "HLSLSemantic")
-        HLSLSemantic.emplace_back(R, SI);
+      else if (Variety == "HLSLAnnotation")
+        HLSLAnnotation.emplace_back(R, SI);
     }
   }
 
@@ -3681,9 +3650,9 @@ void EmitClangAttrHasAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
   OS << "case AttributeCommonInfo::Syntax::AS_Pragma:\n";
   OS << "  return llvm::StringSwitch<int>(Name)\n";
   GenerateHasAttrSpellingStringSwitch(Pragma, OS, "Pragma");
-  OS << "case AttributeCommonInfo::Syntax::AS_HLSLSemantic:\n";
+  OS << "case AttributeCommonInfo::Syntax::AS_HLSLAnnotation:\n";
   OS << "  return llvm::StringSwitch<int>(Name)\n";
-  GenerateHasAttrSpellingStringSwitch(HLSLSemantic, OS, "HLSLSemantic");
+  GenerateHasAttrSpellingStringSwitch(HLSLAnnotation, OS, "HLSLAnnotation");
   auto fn = [&OS](const char *Spelling,
                   const std::map<
                       std::string,
@@ -4700,7 +4669,7 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
 
   std::vector<Record *> Attrs = Records.getAllDerivedDefinitions("Attr");
   std::vector<StringMatcher::StringPair> GNU, Declspec, Microsoft, CXX11,
-      Keywords, Pragma, C23, HLSLSemantic;
+      Keywords, Pragma, C23, HLSLAnnotation;
   std::set<std::string> Seen;
   for (const auto *A : Attrs) {
     const Record &Attr = *A;
@@ -4751,8 +4720,8 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
           Matches = &Keywords;
         else if (Variety == "Pragma")
           Matches = &Pragma;
-        else if (Variety == "HLSLSemantic")
-          Matches = &HLSLSemantic;
+        else if (Variety == "HLSLAnnotation")
+          Matches = &HLSLAnnotation;
 
         assert(Matches && "Unsupported spelling variety found");
 
@@ -4788,8 +4757,8 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
   StringMatcher("Name", Keywords, OS).Emit();
   OS << "  } else if (AttributeCommonInfo::AS_Pragma == Syntax) {\n";
   StringMatcher("Name", Pragma, OS).Emit();
-  OS << "  } else if (AttributeCommonInfo::AS_HLSLSemantic == Syntax) {\n";
-  StringMatcher("Name", HLSLSemantic, OS).Emit();
+  OS << "  } else if (AttributeCommonInfo::AS_HLSLAnnotation == Syntax) {\n";
+  StringMatcher("Name", HLSLAnnotation, OS).Emit();
   OS << "  }\n";
   OS << "  return AttributeCommonInfo::UnknownAttribute;\n"
      << "}\n";
@@ -4907,7 +4876,7 @@ enum class SpellingKind : size_t {
   Microsoft,
   Keyword,
   Pragma,
-  HLSLSemantic,
+  HLSLAnnotation,
   NumSpellingKinds
 };
 static const size_t NumSpellingKinds = (size_t)SpellingKind::NumSpellingKinds;
@@ -4921,15 +4890,16 @@ public:
   }
 
   void add(const Record &Attr, FlattenedSpelling Spelling) {
-    SpellingKind Kind = StringSwitch<SpellingKind>(Spelling.variety())
-                            .Case("GNU", SpellingKind::GNU)
-                            .Case("CXX11", SpellingKind::CXX11)
-                            .Case("C23", SpellingKind::C23)
-                            .Case("Declspec", SpellingKind::Declspec)
-                            .Case("Microsoft", SpellingKind::Microsoft)
-                            .Case("Keyword", SpellingKind::Keyword)
-                            .Case("Pragma", SpellingKind::Pragma)
-                            .Case("HLSLSemantic", SpellingKind::HLSLSemantic);
+    SpellingKind Kind =
+        StringSwitch<SpellingKind>(Spelling.variety())
+            .Case("GNU", SpellingKind::GNU)
+            .Case("CXX11", SpellingKind::CXX11)
+            .Case("C23", SpellingKind::C23)
+            .Case("Declspec", SpellingKind::Declspec)
+            .Case("Microsoft", SpellingKind::Microsoft)
+            .Case("Keyword", SpellingKind::Keyword)
+            .Case("Pragma", SpellingKind::Pragma)
+            .Case("HLSLAnnotation", SpellingKind::HLSLAnnotation);
     std::string Name;
     if (!Spelling.nameSpace().empty()) {
       switch (Kind) {
@@ -5038,7 +5008,8 @@ static void WriteDocumentation(RecordKeeper &Records,
   // so it must be last.
   OS << ".. csv-table:: Supported Syntaxes\n";
   OS << "   :header: \"GNU\", \"C++11\", \"C23\", \"``__declspec``\",";
-  OS << " \"Keyword\", \"``#pragma``\", \"HLSL Semantic\", \"``#pragma clang ";
+  OS << " \"Keyword\", \"``#pragma``\", \"HLSL Annotation\", \"``#pragma "
+        "clang ";
   OS << "attribute``\"\n\n   \"";
   for (size_t Kind = 0; Kind != NumSpellingKinds; ++Kind) {
     SpellingKind K = (SpellingKind)Kind;

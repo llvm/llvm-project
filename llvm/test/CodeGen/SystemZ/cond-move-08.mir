@@ -155,9 +155,7 @@ body:             |
     J %bb.4
 
   bb.4.bb33:
-    ADJCALLSTACKDOWN 0, 0
     CallBRASL @fun, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc
-    ADJCALLSTACKUP 0, 0
     STRL %4, @globvar :: (store (s32) into @globvar)
     CLFIMux undef %23:grx32bit, 1, implicit-def $cc
     %25:grx32bit = LHIMux 0

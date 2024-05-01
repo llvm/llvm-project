@@ -803,7 +803,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst TmpInst;
   const bool IsPPC64 = Subtarget->isPPC64();
   const bool IsAIX = Subtarget->isAIXABI();
-  const bool HasAIXSmallLocalExecTLS = Subtarget->hasAIXSmallLocalExecTLS();
+  const bool HasAIXSmallLocalTLS = Subtarget->hasAIXSmallLocalExecTLS() ||
+                                   Subtarget->hasAIXSmallLocalDynamicTLS();
   const Module *M = MF->getFunction().getParent();
   PICLevel::Level PL = M->getPICLevel();
 
@@ -1147,15 +1148,27 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     MCSymbolRefExpr::VariantKind VK = GetVKForMO(MO);
 
-    // Always use TOC on AIX. Map the global address operand to be a reference
-    // to the TOC entry we will synthesize later. 'TOCEntry' is a label used to
-    // reference the storage allocated in the TOC which contains the address of
-    // 'MOSymbol'.
-    MCSymbol *TOCEntry =
-        lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
-    const MCExpr *Exp = MCSymbolRefExpr::create(TOCEntry,
-                                                MCSymbolRefExpr::VK_PPC_U,
-                                                OutContext);
+    // If the symbol isn't toc-data then use the TOC on AIX.
+    // Map the global address operand to be a reference to the TOC entry we
+    // will synthesize later. 'TOCEntry' is a label used to reference the
+    // storage allocated in the TOC which contains the address of 'MOSymbol'.
+    // If the toc-data attribute is used, the TOC entry contains the data
+    // rather than the address of the MOSymbol.
+    if (![](const MachineOperand &MO) {
+          if (!MO.isGlobal())
+            return false;
+
+          const GlobalVariable *GV = dyn_cast<GlobalVariable>(MO.getGlobal());
+          if (!GV)
+            return false;
+
+          return GV->hasAttribute("toc-data");
+        }(MO)) {
+      MOSymbol = lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
+    }
+
+    const MCExpr *Exp = MCSymbolRefExpr::create(
+        MOSymbol, MCSymbolRefExpr::VK_PPC_U, OutContext);
     TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
@@ -1272,25 +1285,32 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }
+  case PPC::ADDItocL:
   case PPC::ADDItocL8: {
-    // Transform %xd = ADDItocL8 %xs, @sym
+    // Transform %xd = ADDItocL %xs, @sym
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
-    // Change the opcode to ADDI8. If the global address is external, then
-    // generate a TOC entry and reference that. Otherwise, reference the
-    // symbol directly.
-    TmpInst.setOpcode(PPC::ADDI8);
+    unsigned Op = MI->getOpcode();
+
+    // Change the opcode to load address for tocdata
+    TmpInst.setOpcode(Op == PPC::ADDItocL8 ? PPC::ADDI8 : PPC::LA);
 
     const MachineOperand &MO = MI->getOperand(2);
-    assert((MO.isGlobal() || MO.isCPI()) && "Invalid operand for ADDItocL8.");
+    assert((Op == PPC::ADDItocL8)
+               ? (MO.isGlobal() || MO.isCPI())
+               : MO.isGlobal() && "Invalid operand for ADDItocL8.");
+    assert(!(MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal())) &&
+           "Interposable definitions must use indirect accesses.");
 
-    LLVM_DEBUG(assert(
-        !(MO.isGlobal() && Subtarget->isGVIndirectSymbol(MO.getGlobal())) &&
-        "Interposable definitions must use indirect access."));
+    // Map the operand to its corresponding MCSymbol.
+    const MCSymbol *const MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
 
-    const MCExpr *Exp =
-        MCSymbolRefExpr::create(getMCSymbolForTOCPseudoMO(MO, *this),
-                                MCSymbolRefExpr::VK_PPC_TOC_LO, OutContext);
+    const MCExpr *Exp = MCSymbolRefExpr::create(
+        MOSymbol,
+        Op == PPC::ADDItocL8 ? MCSymbolRefExpr::VK_PPC_TOC_LO
+                             : MCSymbolRefExpr::VK_PPC_L,
+        OutContext);
+
     TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
@@ -1612,11 +1632,11 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::LFD:
   case PPC::STFD:
   case PPC::ADDI8: {
-    // A faster non-TOC-based local-exec sequence is represented by `addi`
-    // or a load/store instruction (that directly loads or stores off of the
-    // thread pointer) with an immediate operand having the MO_TPREL_FLAG.
+    // A faster non-TOC-based local-[exec|dynamic] sequence is represented by
+    // `addi` or a load/store instruction (that directly loads or stores off of
+    // the thread pointer) with an immediate operand having the MO_TPREL_FLAG.
     // Such instructions do not otherwise arise.
-    if (!HasAIXSmallLocalExecTLS)
+    if (!HasAIXSmallLocalTLS)
       break;
     bool IsMIADDI8 = MI->getOpcode() == PPC::ADDI8;
     unsigned OpNum = IsMIADDI8 ? 2 : 1;
@@ -1624,7 +1644,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     unsigned Flag = MO.getTargetFlags();
     if (Flag == PPCII::MO_TPREL_FLAG ||
         Flag == PPCII::MO_GOT_TPREL_PCREL_FLAG ||
-        Flag == PPCII::MO_TPREL_PCREL_FLAG) {
+        Flag == PPCII::MO_TPREL_PCREL_FLAG || Flag == PPCII::MO_TLSLD_FLAG) {
       LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
       const MCExpr *Expr = getAdjustedLocalExecExpr(MO, MO.getOffset());
@@ -1672,7 +1692,12 @@ const MCExpr *PPCAsmPrinter::getAdjustedLocalExecExpr(const MachineOperand &MO,
 
   assert(MO.isGlobal() && "Only expecting a global MachineOperand here!");
   const GlobalValue *GValue = MO.getGlobal();
-  assert(TM.getTLSModel(GValue) == TLSModel::LocalExec &&
+  // TODO: Handle the aix-small-local-dynamic-tls non-zero offset case.
+  TLSModel::Model Model = TM.getTLSModel(GValue);
+  if (Model == TLSModel::LocalDynamic) {
+    return nullptr;
+  }
+  assert(Model == TLSModel::LocalExec &&
          "Only local-exec accesses are handled!");
 
   bool IsGlobalADeclaration = GValue->isDeclarationForLinker();

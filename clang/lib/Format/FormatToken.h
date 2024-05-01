@@ -35,6 +35,8 @@ namespace format {
   TYPE(BinaryOperator)                                                         \
   TYPE(BitFieldColon)                                                          \
   TYPE(BlockComment)                                                           \
+  /* l_brace of a block that is not the body of a (e.g. loop) statement. */    \
+  TYPE(BlockLBrace)                                                            \
   TYPE(BracedListLBrace)                                                       \
   /* The colon at the end of a case label. */                                  \
   TYPE(CaseLabelColon)                                                         \
@@ -573,6 +575,9 @@ public:
 
   /// Is optional and can be removed.
   bool Optional = false;
+
+  /// Might be function declaration open/closing paren.
+  bool MightBeFunctionDeclParen = false;
 
   /// Number of optional braces to be inserted after this token:
   ///   -1: a single left brace

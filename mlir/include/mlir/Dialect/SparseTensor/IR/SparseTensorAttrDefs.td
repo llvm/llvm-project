@@ -402,6 +402,26 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     bool isAllOrdered() const;
 
     //
+    // Storage type methods.
+    //
+
+    /// Returns the coordinate-overhead MLIR type, defaulting to `IndexType`.
+    Type getCrdElemType() const;
+
+    /// Returns the position-overhead MLIR type, defaulting to `IndexType`.
+    Type getPosElemType() const;
+
+    /// Returns the coordinate-memref MLIR type, an optional tensorDimShape is
+    /// used to refine the leading batch dimensions (if any).
+    MemRefType getCrdMemRefType(
+      std::optional<ArrayRef<int64_t>> tensorDimShape = std::nullopt) const;
+
+    /// Returns the position-memref MLIR type, an optional tensorDimShape is
+    /// used to refine the leading batch dimensions (if any).
+    MemRefType getPosMemRefType(
+      std::optional<ArrayRef<int64_t>> tensorDimShape = std::nullopt) const;
+
+    //
     // dimToLvl methods.
     //
 

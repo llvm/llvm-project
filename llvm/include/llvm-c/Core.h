@@ -361,35 +361,39 @@ typedef enum {
 } LLVMAtomicOrdering;
 
 typedef enum {
-    LLVMAtomicRMWBinOpXchg, /**< Set the new value and return the one old */
-    LLVMAtomicRMWBinOpAdd, /**< Add a value and return the old one */
-    LLVMAtomicRMWBinOpSub, /**< Subtract a value and return the old one */
-    LLVMAtomicRMWBinOpAnd, /**< And a value and return the old one */
-    LLVMAtomicRMWBinOpNand, /**< Not-And a value and return the old one */
-    LLVMAtomicRMWBinOpOr, /**< OR a value and return the old one */
-    LLVMAtomicRMWBinOpXor, /**< Xor a value and return the old one */
-    LLVMAtomicRMWBinOpMax, /**< Sets the value if it's greater than the
-                             original using a signed comparison and return
-                             the old one */
-    LLVMAtomicRMWBinOpMin, /**< Sets the value if it's Smaller than the
-                             original using a signed comparison and return
-                             the old one */
-    LLVMAtomicRMWBinOpUMax, /**< Sets the value if it's greater than the
-                             original using an unsigned comparison and return
-                             the old one */
-    LLVMAtomicRMWBinOpUMin, /**< Sets the value if it's greater than the
-                              original using an unsigned comparison and return
-                              the old one */
-    LLVMAtomicRMWBinOpFAdd, /**< Add a floating point value and return the
-                              old one */
-    LLVMAtomicRMWBinOpFSub, /**< Subtract a floating point value and return the
+  LLVMAtomicRMWBinOpXchg, /**< Set the new value and return the one old */
+  LLVMAtomicRMWBinOpAdd,  /**< Add a value and return the old one */
+  LLVMAtomicRMWBinOpSub,  /**< Subtract a value and return the old one */
+  LLVMAtomicRMWBinOpAnd,  /**< And a value and return the old one */
+  LLVMAtomicRMWBinOpNand, /**< Not-And a value and return the old one */
+  LLVMAtomicRMWBinOpOr,   /**< OR a value and return the old one */
+  LLVMAtomicRMWBinOpXor,  /**< Xor a value and return the old one */
+  LLVMAtomicRMWBinOpMax,  /**< Sets the value if it's greater than the
+                            original using a signed comparison and return
+                            the old one */
+  LLVMAtomicRMWBinOpMin,  /**< Sets the value if it's Smaller than the
+                            original using a signed comparison and return
+                            the old one */
+  LLVMAtomicRMWBinOpUMax, /**< Sets the value if it's greater than the
+                           original using an unsigned comparison and return
+                           the old one */
+  LLVMAtomicRMWBinOpUMin, /**< Sets the value if it's greater than the
+                            original using an unsigned comparison and return
+                            the old one */
+  LLVMAtomicRMWBinOpFAdd, /**< Add a floating point value and return the
                             old one */
-    LLVMAtomicRMWBinOpFMax, /**< Sets the value if it's greater than the
-                             original using an floating point comparison and
-                             return the old one */
-    LLVMAtomicRMWBinOpFMin, /**< Sets the value if it's smaller than the
-                             original using an floating point comparison and
-                             return the old one */
+  LLVMAtomicRMWBinOpFSub, /**< Subtract a floating point value and return the
+                          old one */
+  LLVMAtomicRMWBinOpFMax, /**< Sets the value if it's greater than the
+                           original using an floating point comparison and
+                           return the old one */
+  LLVMAtomicRMWBinOpFMin, /**< Sets the value if it's smaller than the
+                           original using an floating point comparison and
+                           return the old one */
+  LLVMAtomicRMWBinOpUIncWrap, /**< Increments the value, wrapping back to zero
+                               when incremented above input value */
+  LLVMAtomicRMWBinOpUDecWrap, /**< Decrements the value, wrapping back to
+                               the input value when decremented below zero */
 } LLVMAtomicRMWBinOp;
 
 typedef enum {
@@ -1867,6 +1871,14 @@ void LLVMDumpValue(LLVMValueRef Val);
 char *LLVMPrintValueToString(LLVMValueRef Val);
 
 /**
+ * Return a string representation of the DbgRecord. Use
+ * LLVMDisposeMessage to free the string.
+ *
+ * @see llvm::DbgRecord::print()
+ */
+char *LLVMPrintDbgRecordToString(LLVMDbgRecordRef Record);
+
+/**
  * Replace all uses of a value with another one.
  *
  * @see llvm::Value::replaceAllUsesWith()
@@ -2316,7 +2328,9 @@ LLVMValueRef LLVMAlignOf(LLVMTypeRef Ty);
 LLVMValueRef LLVMSizeOf(LLVMTypeRef Ty);
 LLVMValueRef LLVMConstNeg(LLVMValueRef ConstantVal);
 LLVMValueRef LLVMConstNSWNeg(LLVMValueRef ConstantVal);
-LLVMValueRef LLVMConstNUWNeg(LLVMValueRef ConstantVal);
+LLVM_ATTRIBUTE_C_DEPRECATED(
+    LLVMValueRef LLVMConstNUWNeg(LLVMValueRef ConstantVal),
+    "Use LLVMConstNull instead.");
 LLVMValueRef LLVMConstNot(LLVMValueRef ConstantVal);
 LLVMValueRef LLVMConstAdd(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
 LLVMValueRef LLVMConstNSWAdd(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant);
@@ -4152,8 +4166,10 @@ LLVMValueRef LLVMBuildBinOp(LLVMBuilderRef B, LLVMOpcode Op,
 LLVMValueRef LLVMBuildNeg(LLVMBuilderRef, LLVMValueRef V, const char *Name);
 LLVMValueRef LLVMBuildNSWNeg(LLVMBuilderRef B, LLVMValueRef V,
                              const char *Name);
-LLVMValueRef LLVMBuildNUWNeg(LLVMBuilderRef B, LLVMValueRef V,
-                             const char *Name);
+LLVM_ATTRIBUTE_C_DEPRECATED(LLVMValueRef LLVMBuildNUWNeg(LLVMBuilderRef B,
+                                                         LLVMValueRef V,
+                                                         const char *Name),
+                            "Use LLVMBuildNeg + LLVMSetNUW instead.");
 LLVMValueRef LLVMBuildFNeg(LLVMBuilderRef, LLVMValueRef V, const char *Name);
 LLVMValueRef LLVMBuildNot(LLVMBuilderRef, LLVMValueRef V, const char *Name);
 

@@ -34,10 +34,10 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
         [ShapedTypeInterface], "::mlir::TensorType"> {
   let summary = "TensorDesc describing regions of interested data.";
   let description = [{
-    TensorDesc is a type designed to describe regions of the interested data as well as some 
-    features that are unique to Intel hardware. Different with the builtin tensor type in MLIR, 
-    it essentially only contains the meta data, and doesn't hold the data by itself. It is designed 
-    to mainly support 2D block load/store and DPAS (matrix multiplication instruction) on Intel GPU. 
+    TensorDesc is a type designed to describe regions of the interested data as well as some
+    features that are unique to Intel hardware. Different with the builtin tensor type in MLIR,
+    it essentially only contains the meta data, and doesn't hold the data by itself. It is designed
+    to mainly support 2D block load/store and DPAS (matrix multiplication instruction) on Intel GPU.
     It encodes the following information:
 
     * shape:  the sizes/shape of the intereted data block, e.g., 8x16 means 8 rows
@@ -46,15 +46,15 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
               is set or not.
     * element_type: the data type of the data element, e.g., f16, f32.
 
-    Similar to the builtin tensor, it also provides an optinal attribute to encoding 
+    Similar to the builtin tensor, it also provides an optinal attribute to encoding
     the following information via the TensorDescAttr object:
-    * memory_scope (xegpu::MemoryScope): [optional] where the data is located, 
+    * memory_scope (xegpu::MemoryScope): [optional] where the data is located,
                 global memory or shared memory. It is default to Global.
     * array_length (int): [optional] The number of contiguous blocks with size as `shape`,
                that will be loaded by block load at a time. It is default to 1.
-    * boundary_check (bool): [optional] indicates whether the operation detects the boundary 
+    * boundary_check (bool): [optional] indicates whether the operation detects the boundary
                 and pads with zero for out-of-boundary access. It is default to do boundary check.
-    
+
 
     Syntax:
 
@@ -63,7 +63,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     element-type ::= float-type | integer-type | index-type
     dim-list := (static-dim-list `x`)?
     static-dim-list ::= decimal-literal `x` decimal-literal
-    attr-list = (, memory_scope = value)? (, arr_len = value)? (, boundary_check = value)?
+    attr-list = (, memory_scope = value)? (, arr_len = value)? (, boundary_check = value)? (, scattered = value)?
     ```
 
     Examples:
@@ -83,6 +83,17 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
   let parameters = (ins ArrayRefParameter<"int64_t">: $shape,
                         "mlir::Type": $elementType,
                         OptionalParameter<"mlir::Attribute">: $encoding);
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "llvm::ArrayRef<int64_t>": $shape,
+      "mlir::Type": $elementType,
+      CArg<"bool", "false">: $scattered,
+      CArg<"int", "1">: $array_length,
+      CArg<"xegpu::MemoryScope", "xegpu::MemoryScope::Global">:$memory_scope,
+      CArg<"bool", "true">: $boundary_check
+    )>
+  ];
 
   let extraClassDeclaration = [{
     using TensorType::clone;
@@ -116,7 +127,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       if (attr && attr.getArrayLength())
         return attr.getArrayLength().getInt();
       // return default value
-      return 1; 
+      return 1;
     }
 
     bool getBoundaryCheck() {
@@ -126,10 +137,18 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       // return default value
       return true;
     }
+
+    bool getScattered() {
+      auto attr = getEncodingAsTensorDescAttr();
+      if (attr && attr.getScattered())
+        return attr.getScattered().getValue();
+      // return default value
+      return false;
+    }
   }];
 
   let hasCustomAssemblyFormat = true;
-  
+
 }
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUTYPES_TD

@@ -254,7 +254,7 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
   LogicalResult
   matchAndRewrite(memref::LoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto convertedType = adaptor.getMemref().getType().cast<MemRefType>();
+    auto convertedType = cast<MemRefType>(adaptor.getMemref().getType());
     auto convertedElementType = convertedType.getElementType();
     auto oldElementType = op.getMemRefType().getElementType();
     int srcBits = oldElementType.getIntOrFloatBitWidth();
@@ -351,7 +351,7 @@ struct ConvertMemrefStore final : OpConversionPattern<memref::StoreOp> {
   LogicalResult
   matchAndRewrite(memref::StoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto convertedType = adaptor.getMemref().getType().cast<MemRefType>();
+    auto convertedType = cast<MemRefType>(adaptor.getMemref().getType());
     int srcBits = op.getMemRefType().getElementTypeBitWidth();
     int dstBits = convertedType.getElementTypeBitWidth();
     auto dstIntegerType = rewriter.getIntegerType(dstBits);

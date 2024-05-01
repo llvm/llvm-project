@@ -87,8 +87,13 @@ PRIMARY_REQUIRED(const s32, MaxReleaseToOsIntervalMs)
 // PRIMARY_OPTIONAL(TYPE, NAME, DEFAULT)
 //
 // Indicates support for offsetting the start of a region by a random number of
-// pages. Only used with primary64.
+// pages. This is only used if `EnableContiguousRegions` is enabled.
 PRIMARY_OPTIONAL(const bool, EnableRandomOffset, false)
+
+// When `EnableContiguousRegions` is true, all regions will be be arranged in
+// adjacency. This will reduce the fragmentation caused by region allocations
+// but may require a huge amount of contiguous pages at initialization.
+PRIMARY_OPTIONAL(const bool, EnableContiguousRegions, true)
 
 // PRIMARY_OPTIONAL_TYPE(NAME, DEFAULT)
 //

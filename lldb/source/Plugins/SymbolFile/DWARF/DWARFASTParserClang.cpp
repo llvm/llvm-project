@@ -854,35 +854,25 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
                DW_TAG_value_to_name(tag), type_name_cstr);
 
   CompilerType enumerator_clang_type;
-  CompilerType clang_type;
-  clang_type = CompilerType(
-      m_ast.weak_from_this(),
-      dwarf->GetForwardDeclDIEToCompilerType().lookup(die.GetDIE()));
-  if (!clang_type) {
-    if (attrs.type.IsValid()) {
-      Type *enumerator_type =
-          dwarf->ResolveTypeUID(attrs.type.Reference(), true);
-      if (enumerator_type)
-        enumerator_clang_type = enumerator_type->GetFullCompilerType();
-    }
-
-    if (!enumerator_clang_type) {
-      if (attrs.byte_size) {
-        enumerator_clang_type = m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
-            "", DW_ATE_signed, *attrs.byte_size * 8);
-      } else {
-        enumerator_clang_type = m_ast.GetBasicType(eBasicTypeInt);
-      }
-    }
-
-    clang_type = m_ast.CreateEnumerationType(
-        attrs.name.GetStringRef(),
-        GetClangDeclContextContainingDIE(die, nullptr),
-        GetOwningClangModule(die), attrs.decl, enumerator_clang_type,
-        attrs.is_scoped_enum);
-  } else {
-    enumerator_clang_type = m_ast.GetEnumerationIntegerType(clang_type);
+  if (attrs.type.IsValid()) {
+    Type *enumerator_type = dwarf->ResolveTypeUID(attrs.type.Reference(), true);
+    if (enumerator_type)
+      enumerator_clang_type = enumerator_type->GetFullCompilerType();
   }
+
+  if (!enumerator_clang_type) {
+    if (attrs.byte_size) {
+      enumerator_clang_type = m_ast.GetBuiltinTypeForDWARFEncodingAndBitSize(
+          "", DW_ATE_signed, *attrs.byte_size * 8);
+    } else {
+      enumerator_clang_type = m_ast.GetBasicType(eBasicTypeInt);
+    }
+  }
+
+  CompilerType clang_type = m_ast.CreateEnumerationType(
+      attrs.name.GetStringRef(), GetClangDeclContextContainingDIE(die, nullptr),
+      GetOwningClangModule(die), attrs.decl, enumerator_clang_type,
+      attrs.is_scoped_enum);
 
   LinkDeclContextToDIE(TypeSystemClang::GetDeclContextForType(clang_type), die);
 
@@ -1781,65 +1771,59 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   assert(tag_decl_kind != -1);
   UNUSED_IF_ASSERT_DISABLED(tag_decl_kind);
   bool clang_type_was_created = false;
-  clang_type = CompilerType(
-      m_ast.weak_from_this(),
-      dwarf->GetForwardDeclDIEToCompilerType().lookup(die.GetDIE()));
-  if (!clang_type) {
-    clang::DeclContext *decl_ctx =
-        GetClangDeclContextContainingDIE(die, nullptr);
+  clang::DeclContext *decl_ctx = GetClangDeclContextContainingDIE(die, nullptr);
 
-    PrepareContextToReceiveMembers(m_ast, GetClangASTImporter(), decl_ctx, die,
-                                   attrs.name.GetCString());
+  PrepareContextToReceiveMembers(m_ast, GetClangASTImporter(), decl_ctx, die,
+                                 attrs.name.GetCString());
 
-    if (attrs.accessibility == eAccessNone && decl_ctx) {
-      // Check the decl context that contains this class/struct/union. If
-      // it is a class we must give it an accessibility.
-      const clang::Decl::Kind containing_decl_kind = decl_ctx->getDeclKind();
-      if (DeclKindIsCXXClass(containing_decl_kind))
-        attrs.accessibility = default_accessibility;
-    }
+  if (attrs.accessibility == eAccessNone && decl_ctx) {
+    // Check the decl context that contains this class/struct/union. If
+    // it is a class we must give it an accessibility.
+    const clang::Decl::Kind containing_decl_kind = decl_ctx->getDeclKind();
+    if (DeclKindIsCXXClass(containing_decl_kind))
+      attrs.accessibility = default_accessibility;
+  }
 
-    ClangASTMetadata metadata;
-    metadata.SetUserID(die.GetID());
-    metadata.SetIsDynamicCXXType(dwarf->ClassOrStructIsVirtual(die));
+  ClangASTMetadata metadata;
+  metadata.SetUserID(die.GetID());
+  metadata.SetIsDynamicCXXType(dwarf->ClassOrStructIsVirtual(die));
 
-    TypeSystemClang::TemplateParameterInfos template_param_infos;
-    if (ParseTemplateParameterInfos(die, template_param_infos)) {
-      clang::ClassTemplateDecl *class_template_decl =
-          m_ast.ParseClassTemplateDecl(
-              decl_ctx, GetOwningClangModule(die), attrs.accessibility,
-              attrs.name.GetCString(), tag_decl_kind, template_param_infos);
-      if (!class_template_decl) {
-        if (log) {
-          dwarf->GetObjectFile()->GetModule()->LogMessage(
-              log,
-              "SymbolFileDWARF({0:p}) - {1:x16}: {2} type \"{3}\" "
-              "clang::ClassTemplateDecl failed to return a decl.",
-              static_cast<void *>(this), die.GetOffset(),
-              DW_TAG_value_to_name(tag), attrs.name.GetCString());
-        }
-        return TypeSP();
+  TypeSystemClang::TemplateParameterInfos template_param_infos;
+  if (ParseTemplateParameterInfos(die, template_param_infos)) {
+    clang::ClassTemplateDecl *class_template_decl =
+        m_ast.ParseClassTemplateDecl(
+            decl_ctx, GetOwningClangModule(die), attrs.accessibility,
+            attrs.name.GetCString(), tag_decl_kind, template_param_infos);
+    if (!class_template_decl) {
+      if (log) {
+        dwarf->GetObjectFile()->GetModule()->LogMessage(
+            log,
+            "SymbolFileDWARF({0:p}) - {1:x16}: {2} type \"{3}\" "
+            "clang::ClassTemplateDecl failed to return a decl.",
+            static_cast<void *>(this), die.GetOffset(),
+            DW_TAG_value_to_name(tag), attrs.name.GetCString());
       }
-
-      clang::ClassTemplateSpecializationDecl *class_specialization_decl =
-          m_ast.CreateClassTemplateSpecializationDecl(
-              decl_ctx, GetOwningClangModule(die), class_template_decl,
-              tag_decl_kind, template_param_infos);
-      clang_type = m_ast.CreateClassTemplateSpecializationType(
-          class_specialization_decl);
-      clang_type_was_created = true;
-
-      m_ast.SetMetadata(class_template_decl, metadata);
-      m_ast.SetMetadata(class_specialization_decl, metadata);
+      return TypeSP();
     }
 
-    if (!clang_type_was_created) {
-      clang_type_was_created = true;
-      clang_type = m_ast.CreateRecordType(
-          decl_ctx, GetOwningClangModule(die), attrs.accessibility,
-          attrs.name.GetCString(), tag_decl_kind, attrs.class_language,
-          &metadata, attrs.exports_symbols);
-    }
+    clang::ClassTemplateSpecializationDecl *class_specialization_decl =
+        m_ast.CreateClassTemplateSpecializationDecl(
+            decl_ctx, GetOwningClangModule(die), class_template_decl,
+            tag_decl_kind, template_param_infos);
+    clang_type =
+        m_ast.CreateClassTemplateSpecializationType(class_specialization_decl);
+    clang_type_was_created = true;
+
+    m_ast.SetMetadata(class_template_decl, metadata);
+    m_ast.SetMetadata(class_specialization_decl, metadata);
+  }
+
+  if (!clang_type_was_created) {
+    clang_type_was_created = true;
+    clang_type = m_ast.CreateRecordType(
+        decl_ctx, GetOwningClangModule(die), attrs.accessibility,
+        attrs.name.GetCString(), tag_decl_kind, attrs.class_language, &metadata,
+        attrs.exports_symbols);
   }
 
   // Store a forward declaration to this class type in case any
@@ -1924,8 +1908,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       // Can't assume m_ast.GetSymbolFile() is actually a
       // SymbolFileDWARF, it can be a SymbolFileDWARFDebugMap for Apple
       // binaries.
-      dwarf->GetForwardDeclDIEToCompilerType()[die.GetDIE()] =
-          clang_type.GetOpaqueQualType();
       dwarf->GetForwardDeclCompilerTypeToDIE().try_emplace(
           ClangUtil::RemoveFastQualifiers(clang_type).GetOpaqueQualType(),
           *die.GetDIERef());

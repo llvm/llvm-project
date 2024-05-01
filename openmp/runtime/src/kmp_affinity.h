@@ -1172,6 +1172,50 @@ public:
     qsort(items, depth, sizeof(item_t), hw_subset_compare);
   }
   bool specified(kmp_hw_t type) const { return ((set & (1ull << type)) > 0); }
+
+  // Canonicalize the KMP_HW_SUBSET value if it is not an absolute subset.
+  // This means putting each of {sockets, cores, threads} in the topology if
+  // they are not specified:
+  // e.g., 1s,2c => 1s,2c,*t | 2c,1t => *s,2c,1t | 1t => *s,*c,1t | etc.
+  // e.g., 3module => *s,3module,*c,*t
+  // By doing this, the runtime assumes users who fiddle with KMP_HW_SUBSET
+  // are expecting the traditional sockets/cores/threads topology. For newer
+  // hardware, there can be intervening layers like dies/tiles/modules
+  // (usually corresponding to a cache level). So when a user asks for
+  // 1s,6c,2t and the topology is really 1s,2modules,4cores,2threads, the user
+  // should get 12 hardware threads across 6 cores and effectively ignore the
+  // module layer.
+  void canonicalize(const kmp_topology_t *top) {
+    // Layers to target for KMP_HW_SUBSET canonicalization
+    kmp_hw_t targeted[] = {KMP_HW_SOCKET, KMP_HW_CORE, KMP_HW_THREAD};
+
+    // Do not target-layer-canonicalize absolute KMP_HW_SUBSETS
+    if (is_absolute())
+      return;
+
+    // Do not target-layer-canonicalize KMP_HW_SUBSETS when the
+    // topology doesn't have these layers
+    for (kmp_hw_t type : targeted)
+      if (top->get_level(type) == KMP_HW_UNKNOWN)
+        return;
+
+    // Put targeted layers in topology if they do not exist
+    for (kmp_hw_t type : targeted) {
+      bool found = false;
+      for (int i = 0; i < get_depth(); ++i) {
+        if (top->get_equivalent_type(items[i].type) == type) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        push_back(USE_ALL, type, 0, kmp_hw_attr_t{});
+      }
+    }
+    sort();
+    // Set as an absolute topology that only targets the targeted layers
+    set_absolute();
+  }
   void dump() const {
     printf("**********************\n");
     printf("*** kmp_hw_subset: ***\n");

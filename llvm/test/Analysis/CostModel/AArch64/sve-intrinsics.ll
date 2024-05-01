@@ -829,7 +829,7 @@ define <vscale x 8 x i32> @masked_gather_nxv8i32(<vscale x 8 x ptr> %ld, <vscale
 
 define <4 x i32> @masked_gather_v4i32(<4 x ptr> %ld, <4 x i1> %masks, <4 x i32> %passthru) {
 ; CHECK-LABEL: 'masked_gather_v4i32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %ld, i32 0, <4 x i1> %masks, <4 x i32> %passthru)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %res
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_gather_v4i32'
@@ -842,7 +842,7 @@ define <4 x i32> @masked_gather_v4i32(<4 x ptr> %ld, <4 x i1> %masks, <4 x i32> 
 
 define <1 x i128> @masked_gather_v1i128(<1 x ptr> %ld, <1 x i1> %masks, <1 x i128> %passthru) {
 ; CHECK-LABEL: 'masked_gather_v1i128'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> %ld, i32 0, <1 x i1> %masks, <1 x i128> %passthru)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %res = call <1 x i128> @llvm.masked.gather.v1i128.v1p0(<1 x ptr> %ld, i32 0, <1 x i1> %masks, <1 x i128> %passthru)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <1 x i128> %res
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_gather_v1i128'
@@ -883,7 +883,7 @@ define void @masked_scatter_nxv8i32(<vscale x 8 x i32> %data, <vscale x 8 x ptr>
 
 define void @masked_scatter_v4i32(<4 x i32> %data, <4 x ptr> %ptrs, <4 x i1> %masks) {
 ; CHECK-LABEL: 'masked_scatter_v4i32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> %ptrs, i32 0, <4 x i1> %masks)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %data, <4 x ptr> %ptrs, i32 0, <4 x i1> %masks)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_scatter_v4i32'
@@ -897,7 +897,7 @@ define void @masked_scatter_v4i32(<4 x i32> %data, <4 x ptr> %ptrs, <4 x i1> %ma
 
 define void @masked_scatter_v1i128(<1 x i128> %data, <1 x ptr> %ptrs, <1 x i1> %masks) {
 ; CHECK-LABEL: 'masked_scatter_v1i128'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> %ptrs, i32 0, <1 x i1> %masks)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: call void @llvm.masked.scatter.v1i128.v1p0(<1 x i128> %data, <1 x ptr> %ptrs, i32 0, <1 x i1> %masks)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; TYPE_BASED_ONLY-LABEL: 'masked_scatter_v1i128'

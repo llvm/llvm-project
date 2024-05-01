@@ -116,14 +116,14 @@ define <2 x i32> @ctpop3v(<2 x i32> %0) {
   ret <2 x i32> %5
 }
 
-define <2 x i32> @ctpop3v_undef(<2 x i32> %0) {
-; CHECK-LABEL: @ctpop3v_undef(
+define <2 x i32> @ctpop3v_poison(<2 x i32> %0) {
+; CHECK-LABEL: @ctpop3v_poison(
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[TMP0:%.*]], i1 false), !range [[RNG0]]
 ; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
 ;
   %2 = sub <2 x i32> zeroinitializer, %0
   %3 = and <2 x i32> %2, %0
-  %4 = add <2 x i32> %3, <i32 -1, i32 undef>
+  %4 = add <2 x i32> %3, <i32 -1, i32 poison>
   %5 = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %4)
   ret <2 x i32> %5
 }

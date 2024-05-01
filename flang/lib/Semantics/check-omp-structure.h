@@ -42,6 +42,7 @@ static const OmpDirectiveSet noWaitClauseNotAllowedSet{
     Directive::OMPD_do_simd,
     Directive::OMPD_sections,
     Directive::OMPD_single,
+    Directive::OMPD_workshare,
 };
 } // namespace omp
 } // namespace llvm

@@ -825,7 +825,7 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
       };
       auto IsArrayOfZero = [](const ArrayType *AT) {
         const auto *CAT = dyn_cast<ConstantArrayType>(AT);
-        return CAT && CAT->getSize() == 0;
+        return CAT && CAT->isZeroSize();
       };
       auto IsArrayOfOne = [](const ArrayType *AT) {
         const auto *CAT = dyn_cast<ConstantArrayType>(AT);

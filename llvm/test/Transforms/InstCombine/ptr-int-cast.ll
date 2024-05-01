@@ -6,8 +6,7 @@ define i1 @test1(ptr %x) nounwind {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[X:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP0]] to i1
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
 entry:

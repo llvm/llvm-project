@@ -49,7 +49,7 @@ class TestRosetta(TestBase):
         if rosetta_debugserver_installed():
             broadcaster = self.dbg.GetBroadcaster()
             listener = lldbutil.start_listening_from(
-                broadcaster, lldb.SBDebugger.eBroadcastBitWarning
+                broadcaster, lldb.eBroadcastBitWarning
             )
 
             target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(

@@ -84,7 +84,7 @@ bool isLifetimeIntrinsic(Value *V);
 Value *readRegister(IRBuilder<> &IRB, StringRef Name);
 Value *getFP(IRBuilder<> &IRB);
 Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB);
-Value *getAndroidSanitizerSlotPtr(IRBuilder<> &IRB);
+Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot);
 
 } // namespace memtag
 } // namespace llvm

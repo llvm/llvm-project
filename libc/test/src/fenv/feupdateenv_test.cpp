@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/types/fenv_t.h"
 #include "src/fenv/feupdateenv.h"
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "test/UnitTest/Test.h"
 
-#include <fenv.h>
 #include <signal.h>
 
 TEST(LlvmLibcFEnvTest, UpdateEnvTest) {

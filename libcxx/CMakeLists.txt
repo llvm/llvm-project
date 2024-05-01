@@ -123,7 +123,6 @@ option(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS
    to provide compile-time errors when using features unavailable on some version of
    the shared library they shipped should turn this on and see `include/__availability`
    for more details." OFF)
-option(LIBCXX_ENABLE_CLANG_TIDY "Whether to compile and run clang-tidy checks" OFF)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(LIBCXX_DEFAULT_TEST_CONFIG "llvm-libc++-shared-gcc.cfg.in")
@@ -301,9 +300,9 @@ option(LIBCXX_HAS_EXTERNAL_THREAD_API
    This option may only be set to ON when LIBCXX_ENABLE_THREADS=ON." OFF)
 
 if (LIBCXX_ENABLE_THREADS)
-  set(LIBCXX_PSTL_CPU_BACKEND "std_thread" CACHE STRING "Which PSTL CPU backend to use")
+  set(LIBCXX_PSTL_BACKEND "std_thread" CACHE STRING "Which PSTL backend to use")
 else()
-  set(LIBCXX_PSTL_CPU_BACKEND "serial" CACHE STRING "Which PSTL CPU backend to use")
+  set(LIBCXX_PSTL_BACKEND "serial" CACHE STRING "Which PSTL backend to use")
 endif()
 
 # Misc options ----------------------------------------------------------------
@@ -793,14 +792,14 @@ elseif (LIBCXX_HARDENING_MODE STREQUAL "debug")
   config_define(8 _LIBCPP_HARDENING_MODE_DEFAULT)
 endif()
 
-if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "serial")
-  config_define(1 _LIBCPP_PSTL_CPU_BACKEND_SERIAL)
-elseif(LIBCXX_PSTL_CPU_BACKEND STREQUAL "std_thread")
-  config_define(1 _LIBCPP_PSTL_CPU_BACKEND_THREAD)
-elseif(LIBCXX_PSTL_CPU_BACKEND STREQUAL "libdispatch")
-  config_define(1 _LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH)
+if (LIBCXX_PSTL_BACKEND STREQUAL "serial")
+  config_define(1 _LIBCPP_PSTL_BACKEND_SERIAL)
+elseif(LIBCXX_PSTL_BACKEND STREQUAL "std_thread")
+  config_define(1 _LIBCPP_PSTL_BACKEND_STD_THREAD)
+elseif(LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")
+  config_define(1 _LIBCPP_PSTL_BACKEND_LIBDISPATCH)
 else()
-  message(FATAL_ERROR "LIBCXX_PSTL_CPU_BACKEND is set to ${LIBCXX_PSTL_CPU_BACKEND}, which is not a valid backend.
+  message(FATAL_ERROR "LIBCXX_PSTL_BACKEND is set to ${LIBCXX_PSTL_BACKEND}, which is not a valid backend.
                        Valid backends are: serial, std_thread and libdispatch")
 endif()
 
@@ -862,10 +861,6 @@ add_subdirectory(utils)
 add_subdirectory(modules)
 
 set(LIBCXX_TEST_DEPS "cxx_experimental")
-
-if (LIBCXX_ENABLE_CLANG_TIDY)
-  list(APPEND LIBCXX_TEST_DEPS cxx-tidy)
-endif()
 
 list(APPEND LIBCXX_TEST_DEPS generate-cxx-modules)
 

@@ -268,6 +268,23 @@ define i64 @mul96(i64 %a) {
   ret i64 %c
 }
 
+define i64 @mul137(i64 %a) {
+; RV64I-LABEL: mul137:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 137
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64XTHEADBA-LABEL: mul137:
+; RV64XTHEADBA:       # %bb.0:
+; RV64XTHEADBA-NEXT:    th.addsl a1, a0, a0, 3
+; RV64XTHEADBA-NEXT:    slli a0, a0, 7
+; RV64XTHEADBA-NEXT:    add a0, a0, a1
+; RV64XTHEADBA-NEXT:    ret
+  %c = mul i64 %a, 137
+  ret i64 %c
+}
+
 define i64 @mul160(i64 %a) {
 ; RV64I-LABEL: mul160:
 ; RV64I:       # %bb.0:

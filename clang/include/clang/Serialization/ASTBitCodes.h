@@ -41,7 +41,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 29;
+const unsigned VERSION_MAJOR = 30;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -65,6 +65,8 @@ using IdentifierID = uint32_t;
 /// discovery), with values below NUM_PREDEF_DECL_IDS being reserved.
 /// At the start of a chain of precompiled headers, declaration ID 1 is
 /// used for the translation unit declaration.
+///
+/// FIXME: Merge with Decl::DeclID
 using DeclID = uint32_t;
 
 // FIXME: Turn these into classes so we can have some type safety when
@@ -698,6 +700,10 @@ enum ASTRecordTypes {
   /// Record code for an unterminated \#pragma clang assume_nonnull begin
   /// recorded in a preamble.
   PP_ASSUME_NONNULL_LOC = 67,
+
+  /// Record code for lexical and visible block for delayed namespace in
+  /// reduced BMI.
+  DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD = 68,
 };
 
 /// Record types used within a source manager block.
@@ -2051,35 +2057,6 @@ enum CtorInitializerType {
 
 /// Kinds of cleanup objects owned by ExprWithCleanups.
 enum CleanupObjectKind { COK_Block, COK_CompoundLiteral };
-
-/// Describes the redeclarations of a declaration.
-struct LocalRedeclarationsInfo {
-  // The ID of the first declaration
-  DeclID FirstID;
-
-  // Offset into the array of redeclaration chains.
-  unsigned Offset;
-
-  friend bool operator<(const LocalRedeclarationsInfo &X,
-                        const LocalRedeclarationsInfo &Y) {
-    return X.FirstID < Y.FirstID;
-  }
-
-  friend bool operator>(const LocalRedeclarationsInfo &X,
-                        const LocalRedeclarationsInfo &Y) {
-    return X.FirstID > Y.FirstID;
-  }
-
-  friend bool operator<=(const LocalRedeclarationsInfo &X,
-                         const LocalRedeclarationsInfo &Y) {
-    return X.FirstID <= Y.FirstID;
-  }
-
-  friend bool operator>=(const LocalRedeclarationsInfo &X,
-                         const LocalRedeclarationsInfo &Y) {
-    return X.FirstID >= Y.FirstID;
-  }
-};
 
 /// Describes the categories of an Objective-C class.
 struct ObjCCategoriesInfo {

@@ -1469,7 +1469,7 @@ void test_cleanup_functions2(int m) {
 // CHECK:       [B1]
 // CHECK-NEXT:    1: CFGScopeBegin(f)
 // CHECK-NEXT:    2:  (CXXConstructExpr, [B1.3], F)
-// CHECK-NEXT:    3: __attribute__((cleanup(cleanup_F))) F f;
+// CHECK-NEXT:    3: F f __attribute__((cleanup(cleanup_F)));
 // CHECK-NEXT:    4: CleanupFunction (cleanup_F)
 // CHECK-NEXT:    5: [B1.3].~F() (Implicit destructor)
 // CHECK-NEXT:    6: CFGScopeEnd(f)

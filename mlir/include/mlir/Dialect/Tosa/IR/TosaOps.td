@@ -49,6 +49,7 @@ def Tosa_ArgMaxOp : Tosa_InferShapedTypeOp<"argmax"> {
     Tosa_Tensor: $output
   );
 
+  let hasFolder = 1;
   let hasVerifier = 1;
 }
 
@@ -1942,7 +1943,7 @@ def Tosa_ConstOp : Tosa_Op<"const", [ConstantLike, Pure,
   );
 
   let results = (outs
-    TensorOf<[AnyTypeOf<[Tosa_AnyNumber_Plus_F64, Tosa_Int4]>]>:$output
+    TensorOf<[AnyTypeOf<[Tosa_AnyNumber_Plus_F64]>]>:$output
   );
 
   let hasFolder = 1;

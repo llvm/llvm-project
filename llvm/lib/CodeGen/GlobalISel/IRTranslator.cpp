@@ -1562,9 +1562,14 @@ bool IRTranslator::translateCast(unsigned Opcode, const User &U,
   if (U.getType()->getScalarType()->isBFloatTy() ||
       U.getOperand(0)->getType()->getScalarType()->isBFloatTy())
     return false;
+
+  uint32_t Flags = 0;
+  if (const Instruction *I = dyn_cast<Instruction>(&U))
+    Flags = MachineInstr::copyFlagsFromInstruction(*I);
+
   Register Op = getOrCreateVReg(*U.getOperand(0));
   Register Res = getOrCreateVReg(U);
-  MIRBuilder.buildInstr(Opcode, {Res}, {Op});
+  MIRBuilder.buildInstr(Opcode, {Res}, {Op}, Flags);
   return true;
 }
 
@@ -1771,6 +1776,32 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
   return true;
 }
 
+bool IRTranslator::translateTrap(const CallInst &CI,
+                                 MachineIRBuilder &MIRBuilder,
+                                 unsigned Opcode) {
+  StringRef TrapFuncName =
+      CI.getAttributes().getFnAttr("trap-func-name").getValueAsString();
+  if (TrapFuncName.empty()) {
+    if (Opcode == TargetOpcode::G_UBSANTRAP) {
+      uint64_t Code = cast<ConstantInt>(CI.getOperand(0))->getZExtValue();
+      MIRBuilder.buildInstr(Opcode, {}, ArrayRef<llvm::SrcOp>{Code});
+    } else {
+      MIRBuilder.buildInstr(Opcode);
+    }
+    return true;
+  }
+
+  CallLowering::CallLoweringInfo Info;
+  if (Opcode == TargetOpcode::G_UBSANTRAP)
+    Info.OrigArgs.push_back({getOrCreateVRegs(*CI.getArgOperand(0)),
+                             CI.getArgOperand(0)->getType(), 0});
+
+  Info.Callee = MachineOperand::CreateES(TrapFuncName.data());
+  Info.CB = &CI;
+  Info.OrigRet = {Register(), Type::getVoidTy(CI.getContext()), 0};
+  return CLI->lowerCall(MIRBuilder, Info);
+}
+
 bool IRTranslator::translateVectorInterleave2Intrinsic(
     const CallInst &CI, MachineIRBuilder &MIRBuilder) {
   assert(CI.getIntrinsicID() == Intrinsic::experimental_vector_interleave2 &&
@@ -1924,6 +1955,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_PTRMASK;
     case Intrinsic::lrint:
       return TargetOpcode::G_INTRINSIC_LRINT;
+    case Intrinsic::llrint:
+      return TargetOpcode::G_INTRINSIC_LLRINT;
     // FADD/FMUL require checking the FMF, so are handled elsewhere.
     case Intrinsic::vector_reduce_fmin:
       return TargetOpcode::G_VECREDUCE_FMIN;
@@ -2459,22 +2492,16 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return true;
   }
   case Intrinsic::trap:
+    return translateTrap(CI, MIRBuilder, TargetOpcode::G_TRAP);
   case Intrinsic::debugtrap:
-  case Intrinsic::ubsantrap: {
-    StringRef TrapFuncName =
-        CI.getAttributes().getFnAttr("trap-func-name").getValueAsString();
-    if (TrapFuncName.empty())
-      break; // Use the default handling.
-    CallLowering::CallLoweringInfo Info;
-    if (ID == Intrinsic::ubsantrap) {
-      Info.OrigArgs.push_back({getOrCreateVRegs(*CI.getArgOperand(0)),
-                               CI.getArgOperand(0)->getType(), 0});
-    }
-    Info.Callee = MachineOperand::CreateES(TrapFuncName.data());
-    Info.CB = &CI;
-    Info.OrigRet = {Register(), Type::getVoidTy(CI.getContext()), 0};
-    return CLI->lowerCall(MIRBuilder, Info);
-  }
+    return translateTrap(CI, MIRBuilder, TargetOpcode::G_DEBUGTRAP);
+  case Intrinsic::ubsantrap:
+    return translateTrap(CI, MIRBuilder, TargetOpcode::G_UBSANTRAP);
+  case Intrinsic::allow_runtime_check:
+  case Intrinsic::allow_ubsan_check:
+    MIRBuilder.buildCopy(getOrCreateVReg(CI),
+                         getOrCreateVReg(*ConstantInt::getTrue(CI.getType())));
+    return true;
   case Intrinsic::amdgcn_cs_chain:
     return translateCallBase(CI, MIRBuilder);
   case Intrinsic::fptrunc_round: {
@@ -2523,6 +2550,10 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   }
   case Intrinsic::reset_fpmode: {
     MIRBuilder.buildInstr(TargetOpcode::G_RESET_FPMODE, {}, {});
+    return true;
+  }
+  case Intrinsic::vscale: {
+    MIRBuilder.buildVScale(getOrCreateVReg(CI), 1);
     return true;
   }
   case Intrinsic::prefetch: {
@@ -3047,7 +3078,7 @@ bool IRTranslator::translateUnreachable(const User &U, MachineIRBuilder &MIRBuil
     }
   }
 
-  MIRBuilder.buildIntrinsic(Intrinsic::trap, ArrayRef<Register>());
+  MIRBuilder.buildTrap();
   return true;
 }
 
@@ -3062,7 +3093,21 @@ bool IRTranslator::translateInsertElement(const User &U,
   Register Res = getOrCreateVReg(U);
   Register Val = getOrCreateVReg(*U.getOperand(0));
   Register Elt = getOrCreateVReg(*U.getOperand(1));
-  Register Idx = getOrCreateVReg(*U.getOperand(2));
+  unsigned PreferredVecIdxWidth = TLI->getVectorIdxTy(*DL).getSizeInBits();
+  Register Idx;
+  if (auto *CI = dyn_cast<ConstantInt>(U.getOperand(2))) {
+    if (CI->getBitWidth() != PreferredVecIdxWidth) {
+      APInt NewIdx = CI->getValue().zextOrTrunc(PreferredVecIdxWidth);
+      auto *NewIdxCI = ConstantInt::get(CI->getContext(), NewIdx);
+      Idx = getOrCreateVReg(*NewIdxCI);
+    }
+  }
+  if (!Idx)
+    Idx = getOrCreateVReg(*U.getOperand(2));
+  if (MRI->getType(Idx).getSizeInBits() != PreferredVecIdxWidth) {
+    const LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+    Idx = MIRBuilder.buildZExtOrTrunc(VecIdxTy, Idx).getReg(0);
+  }
   MIRBuilder.buildInsertVectorElement(Res, Val, Elt, Idx);
   return true;
 }

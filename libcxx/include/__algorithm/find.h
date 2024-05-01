@@ -169,7 +169,7 @@ struct __find_segment {
 
 // public API
 template <class _InputIterator, class _Tp>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
 find(_InputIterator __first, _InputIterator __last, const _Tp& __value) {
   __identity __proj;
   return std::__rewrap_iter(

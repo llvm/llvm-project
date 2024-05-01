@@ -15,4 +15,11 @@
 
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 
+#include "llvm/ADT/ArrayRef.h"
+
+namespace llvm::omp {
+ArrayRef<Directive> getLeafConstructs(Directive D);
+Directive getCompoundConstruct(ArrayRef<Directive> Parts);
+} // namespace llvm::omp
+
 #endif // LLVM_FRONTEND_OPENMP_OMP_H

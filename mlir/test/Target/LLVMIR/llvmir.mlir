@@ -2251,14 +2251,14 @@ llvm.func @vararg_function(%arg0: i32, ...) {
   %1 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[ALLOCA0:.+]] = alloca %struct.va_list, align 8
   %2 = llvm.alloca %1 x !llvm.struct<"struct.va_list", (ptr)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  // CHECK: call void @llvm.va_start(ptr %[[ALLOCA0]])
+  // CHECK: call void @llvm.va_start.p0(ptr %[[ALLOCA0]])
   llvm.intr.vastart %2 : !llvm.ptr
   // CHECK: %[[ALLOCA1:.+]] = alloca ptr, align 8
   %4 = llvm.alloca %0 x !llvm.ptr {alignment = 8 : i64} : (i32) -> !llvm.ptr
-  // CHECK: call void @llvm.va_copy(ptr %[[ALLOCA1]], ptr %[[ALLOCA0]])
+  // CHECK: call void @llvm.va_copy.p0(ptr %[[ALLOCA1]], ptr %[[ALLOCA0]])
   llvm.intr.vacopy %2 to %4 : !llvm.ptr, !llvm.ptr
-  // CHECK: call void @llvm.va_end(ptr %[[ALLOCA1]])
-  // CHECK: call void @llvm.va_end(ptr %[[ALLOCA0]])
+  // CHECK: call void @llvm.va_end.p0(ptr %[[ALLOCA1]])
+  // CHECK: call void @llvm.va_end.p0(ptr %[[ALLOCA0]])
   llvm.intr.vaend %4 : !llvm.ptr
   llvm.intr.vaend %2 : !llvm.ptr
   // CHECK: ret void

@@ -16,6 +16,7 @@
 #include "SystemZMachineFunctionInfo.h"
 #include "SystemZTargetMachine.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
@@ -23,6 +24,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsS390.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include <cctype>
 #include <optional>
@@ -293,6 +295,15 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD,     MVT::i128, Custom);
   setOperationAction(ISD::ATOMIC_STORE,    MVT::i128, Custom);
 
+  // Mark sign/zero extending atomic loads as legal, which will make
+  // DAGCombiner fold extensions into atomic loads if possible.
+  setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i64,
+                         {MVT::i8, MVT::i16, MVT::i32}, Legal);
+  setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i32,
+                         {MVT::i8, MVT::i16}, Legal);
+  setAtomicLoadExtAction({ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i16,
+                         MVT::i8, Legal);
+
   // We can use the CC result of compare-and-swap to implement
   // the "success" result of ATOMIC_CMP_SWAP_WITH_SUCCESS.
   setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i32, Custom);
@@ -441,6 +452,10 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SRA, VT, Custom);
       setOperationAction(ISD::SRL, VT, Custom);
       setOperationAction(ISD::ROTL, VT, Custom);
+
+      // Add ISD::VECREDUCE_ADD as custom in order to implement
+      // it with VZERO+VSUM
+      setOperationAction(ISD::VECREDUCE_ADD, VT, Custom);
 
       // Map SETCCs onto one of VCE, VCH or VCHL, swapping the operands
       // and inverting the result as necessary.
@@ -3750,7 +3765,7 @@ SDValue SystemZTargetLowering::lowerConstantPool(ConstantPoolSDNode *CP,
 
 SDValue SystemZTargetLowering::lowerFRAMEADDR(SDValue Op,
                                               SelectionDAG &DAG) const {
-  auto *TFL = Subtarget.getFrameLowering<SystemZELFFrameLowering>();
+  auto *TFL = Subtarget.getFrameLowering<SystemZFrameLowering>();
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setFrameAddressIsTaken(true);
@@ -3801,17 +3816,19 @@ SDValue SystemZTargetLowering::lowerRETURNADDR(SDValue Op,
       report_fatal_error("Unsupported stack frame traversal count");
 
     SDValue FrameAddr = lowerFRAMEADDR(Op, DAG);
-    auto *TFL = Subtarget.getFrameLowering<SystemZELFFrameLowering>();
-    int Offset = (TFL->usePackedStack(MF) ? -2 : 14) *
-                 getTargetMachine().getPointerSize(0);
+    const auto *TFL = Subtarget.getFrameLowering<SystemZFrameLowering>();
+    int Offset = TFL->getReturnAddressOffset(MF);
     SDValue Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, FrameAddr,
                               DAG.getConstant(Offset, DL, PtrVT));
     return DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), Ptr,
                        MachinePointerInfo());
   }
 
-  // Return R14D, which has the return address. Mark it an implicit live-in.
-  Register LinkReg = MF.addLiveIn(SystemZ::R14D, &SystemZ::GR64BitRegClass);
+  // Return R14D (Elf) / R7D (XPLINK), which has the return address. Mark it an
+  // implicit live-in.
+  SystemZCallingConventionRegisters *CCR = Subtarget.getSpecialRegisters();
+  Register LinkReg = MF.addLiveIn(CCR->getReturnFunctionAddressRegister(),
+                                  &SystemZ::GR64BitRegClass);
   return DAG.getCopyFromReg(DAG.getEntryNode(), DL, LinkReg, PtrVT);
 }
 
@@ -6158,6 +6175,8 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerOR(Op, DAG);
   case ISD::CTPOP:
     return lowerCTPOP(Op, DAG);
+  case ISD::VECREDUCE_ADD:
+    return lowerVECREDUCE_ADD(Op, DAG);
   case ISD::ATOMIC_FENCE:
     return lowerATOMIC_FENCE(Op, DAG);
   case ISD::ATOMIC_SWAP:
@@ -6614,27 +6633,6 @@ SDValue SystemZTargetLowering::combineTruncateExtract(
   return SDValue();
 }
 
-// Replace ALoad with a new ATOMIC_LOAD with a result that is extended to VT
-// per ETy.
-static SDValue extendAtomicLoad(AtomicSDNode *ALoad, EVT VT, SelectionDAG &DAG,
-                                ISD::LoadExtType ETy) {
-  if (VT.getSizeInBits() > 64)
-    return SDValue();
-  EVT OrigVT = ALoad->getValueType(0);
-  assert(OrigVT.getSizeInBits() < VT.getSizeInBits() && "VT should be wider.");
-  EVT MemoryVT = ALoad->getMemoryVT();
-  auto *NewALoad = dyn_cast<AtomicSDNode>(DAG.getAtomic(
-      ISD::ATOMIC_LOAD, SDLoc(ALoad), MemoryVT, VT, ALoad->getChain(),
-      ALoad->getBasePtr(), ALoad->getMemOperand()));
-  NewALoad->setExtensionType(ETy);
-  DAG.ReplaceAllUsesOfValueWith(
-      SDValue(ALoad, 0),
-      DAG.getNode(ISD::TRUNCATE, SDLoc(ALoad), OrigVT, SDValue(NewALoad, 0)));
-  // Update the chain uses.
-  DAG.ReplaceAllUsesOfValueWith(SDValue(ALoad, 1), SDValue(NewALoad, 1));
-  return SDValue(NewALoad, 0);
-}
-
 SDValue SystemZTargetLowering::combineZERO_EXTEND(
     SDNode *N, DAGCombinerInfo &DCI) const {
   // Convert (zext (select_ccmask C1, C2)) into (select_ccmask C1', C2')
@@ -6680,12 +6678,6 @@ SDValue SystemZTargetLowering::combineZERO_EXTEND(
       }
     }
   }
-
-  // Fold into ATOMIC_LOAD unless it is already sign extending.
-  if (auto *ALoad = dyn_cast<AtomicSDNode>(N0))
-    if (ALoad->getOpcode() == ISD::ATOMIC_LOAD &&
-        ALoad->getExtensionType() != ISD::SEXTLOAD)
-      return extendAtomicLoad(ALoad, VT, DAG, ISD::ZEXTLOAD);
 
   return SDValue();
 }
@@ -6738,12 +6730,6 @@ SDValue SystemZTargetLowering::combineSIGN_EXTEND(
       }
     }
   }
-
-  // Fold into ATOMIC_LOAD unless it is already zero extending.
-  if (auto *ALoad = dyn_cast<AtomicSDNode>(N0))
-    if (ALoad->getOpcode() == ISD::ATOMIC_LOAD &&
-        ALoad->getExtensionType() != ISD::ZEXTLOAD)
-      return extendAtomicLoad(ALoad, VT, DAG, ISD::SEXTLOAD);
 
   return SDValue();
 }
@@ -7834,7 +7820,7 @@ static APInt getDemandedSrcElements(SDValue Op, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::s390_vperm:
-      SrcDemE = APInt(NumElts, 1);
+      SrcDemE = APInt(NumElts, -1);
       break;
     default:
       llvm_unreachable("Unhandled intrinsic.");
@@ -8195,6 +8181,27 @@ static void createPHIsForSelects(SmallVector<MachineInstr*, 8> &Selects,
   }
 
   MF->getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+}
+
+MachineBasicBlock *
+SystemZTargetLowering::emitAdjCallStack(MachineInstr &MI,
+                                        MachineBasicBlock *BB) const {
+  MachineFunction &MF = *BB->getParent();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  auto *TFL = Subtarget.getFrameLowering<SystemZFrameLowering>();
+  assert(TFL->hasReservedCallFrame(MF) &&
+         "ADJSTACKDOWN and ADJSTACKUP should be no-ops");
+  (void)TFL;
+  // Get the MaxCallFrameSize value and erase MI since it serves no further
+  // purpose as the call frame is statically reserved in the prolog. Set
+  // AdjustsStack as MI is *not* mapped as a frame instruction.
+  uint32_t NumBytes = MI.getOperand(0).getImm();
+  if (NumBytes > MFI.getMaxCallFrameSize())
+    MFI.setMaxCallFrameSize(NumBytes);
+  MFI.setAdjustsStack(true);
+
+  MI.eraseFromParent();
+  return BB;
 }
 
 // Implement EmitInstrWithCustomInserter for pseudo Select* instruction MI.
@@ -9400,6 +9407,10 @@ getBackchainAddress(SDValue SP, SelectionDAG &DAG) const {
 MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *MBB) const {
   switch (MI.getOpcode()) {
+  case SystemZ::ADJCALLSTACKDOWN:
+  case SystemZ::ADJCALLSTACKUP:
+    return emitAdjCallStack(MI, MBB);
+
   case SystemZ::Select32:
   case SystemZ::Select64:
   case SystemZ::Select128:
@@ -9598,4 +9609,39 @@ SDValue SystemZTargetLowering::lowerGET_ROUNDING(SDValue Op,
   RetVal = DAG.getZExtOrTrunc(RetVal, dl, Op.getValueType());
 
   return DAG.getMergeValues({RetVal, Chain}, dl);
+}
+
+SDValue SystemZTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
+                                                  SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  Op = Op.getOperand(0);
+  EVT OpVT = Op.getValueType();
+
+  assert(OpVT.isVector() && "Operand type for VECREDUCE_ADD is not a vector.");
+
+  SDLoc DL(Op);
+
+  // load a 0 vector for the third operand of VSUM.
+  SDValue Zero = DAG.getSplatBuildVector(OpVT, DL, DAG.getConstant(0, DL, VT));
+
+  // execute VSUM.
+  switch (OpVT.getScalarSizeInBits()) {
+  case 8:
+  case 16:
+    Op = DAG.getNode(SystemZISD::VSUM, DL, MVT::v4i32, Op, Zero);
+    LLVM_FALLTHROUGH;
+  case 32:
+  case 64:
+    Op = DAG.getNode(SystemZISD::VSUM, DL, MVT::i128, Op,
+                     DAG.getBitcast(Op.getValueType(), Zero));
+    break;
+  case 128:
+    break; // VSUM over v1i128 should not happen and would be a noop
+  default:
+    llvm_unreachable("Unexpected scalar size.");
+  }
+  // Cast to original vector type, retrieve last element.
+  return DAG.getNode(
+      ISD::EXTRACT_VECTOR_ELT, DL, VT, DAG.getBitcast(OpVT, Op),
+      DAG.getConstant(OpVT.getVectorNumElements() - 1, DL, MVT::i32));
 }

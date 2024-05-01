@@ -135,10 +135,13 @@ public:
 // IRBuilder to be used for replacement atomic instructions.
 struct ReplacementIRBuilder : IRBuilder<InstSimplifyFolder> {
   // Preserves the DebugLoc from I, and preserves still valid metadata.
+  // Enable StrictFP builder mode when appropriate.
   explicit ReplacementIRBuilder(Instruction *I, const DataLayout &DL)
       : IRBuilder(I->getContext(), DL) {
     SetInsertPoint(I);
     this->CollectMetadataToCopy(I, {LLVMContext::MD_pcsections});
+    if (BB->getParent()->getAttributes().hasFnAttr(Attribute::StrictFP))
+      this->setIsFPConstrained(true);
   }
 };
 
@@ -559,9 +562,9 @@ static void createCmpXchgInstFun(IRBuilderBase &Builder, Value *Addr,
                                  Value *&Success, Value *&NewLoaded) {
   Type *OrigTy = NewVal->getType();
 
-  // This code can go away when cmpxchg supports FP types.
+  // This code can go away when cmpxchg supports FP and vector types.
   assert(!OrigTy->isPointerTy());
-  bool NeedBitcast = OrigTy->isFloatingPointTy();
+  bool NeedBitcast = OrigTy->isFloatingPointTy() || OrigTy->isVectorTy();
   if (NeedBitcast) {
     IntegerType *IntTy = Builder.getIntNTy(OrigTy->getPrimitiveSizeInBits());
     NewVal = Builder.CreateBitCast(NewVal, IntTy);
@@ -728,7 +731,7 @@ static PartwordMaskValues createMaskInstrs(IRBuilderBase &Builder,
   unsigned ValueSize = DL.getTypeStoreSize(ValueType);
 
   PMV.ValueType = PMV.IntValueType = ValueType;
-  if (PMV.ValueType->isFloatingPointTy())
+  if (PMV.ValueType->isFloatingPointTy() || PMV.ValueType->isVectorTy())
     PMV.IntValueType =
         Type::getIntNTy(Ctx, ValueType->getPrimitiveSizeInBits());
 

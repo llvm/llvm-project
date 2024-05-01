@@ -18,7 +18,7 @@ static void MyHandler(int, siginfo_t *s, void *c) {
 
 static void* sendsignal(void *p) {
   barrier_wait(&barrier);
-  pthread_kill(mainth, SIGALRM);
+  pthread_kill(mainth, SIGPROF);
   return 0;
 }
 
@@ -37,7 +37,7 @@ int main() {
   mainth = pthread_self();
   struct sigaction act = {};
   act.sa_sigaction = &MyHandler;
-  sigaction(SIGALRM, &act, 0);
+  sigaction(SIGPROF, &act, 0);
   pthread_t th;
   pthread_create(&th, 0, sendsignal, 0);
   loop();
@@ -46,7 +46,7 @@ int main() {
 }
 
 // CHECK: WARNING: ThreadSanitizer: signal handler spoils errno
-// CHECK:   Signal 14 handler invoked at:
+// CHECK:   Signal 27 handler invoked at:
 // CHECK:     #0 MyHandler(int, {{(__)?}}siginfo{{(_t)?}}*, void*) {{.*}}signal_errno.cpp
 // CHECK:     main
 // CHECK: SUMMARY: ThreadSanitizer: signal handler spoils errno{{.*}}MyHandler

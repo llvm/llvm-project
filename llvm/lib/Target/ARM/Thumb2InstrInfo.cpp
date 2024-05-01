@@ -286,6 +286,25 @@ MachineInstr *Thumb2InstrInfo::commuteInstructionImpl(MachineInstr &MI,
   return ARMBaseInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
 }
 
+bool Thumb2InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
+                                           const MachineBasicBlock *MBB,
+                                           const MachineFunction &MF) const {
+  // BTI clearing instructions shall not take part in scheduling regions as
+  // they must stay in their intended place. Although PAC isn't BTI clearing,
+  // it can be transformed into PACBTI after the pre-RA Machine Scheduling
+  // has taken place, so its movement must also be restricted.
+  switch (MI.getOpcode()) {
+  case ARM::t2BTI:
+  case ARM::t2PAC:
+  case ARM::t2PACBTI:
+  case ARM::t2SG:
+    return true;
+  default:
+    break;
+  }
+  return ARMBaseInstrInfo::isSchedulingBoundary(MI, MBB, MF);
+}
+
 void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator &MBBI,
                                   const DebugLoc &dl, Register DestReg,

@@ -790,6 +790,7 @@
 // RUN: %clang_cl -vctoolsdir "" /arm64EC /c -### -- %s 2>&1 | FileCheck --check-prefix=ARM64EC %s 
 // ARM64EC-NOT: /arm64EC has been overridden by specified target
 // ARM64EC: "-triple" "arm64ec-pc-windows-msvc19.33.0"
+// ARM64EC-SAME: "--dependent-lib=softintrin"
 
 // RUN: %clang_cl -vctoolsdir "" /arm64EC /c -target x86_64-pc-windows-msvc  -### -- %s 2>&1 | FileCheck --check-prefix=ARM64EC_OVERRIDE %s
 // ARM64EC_OVERRIDE: warning: /arm64EC has been overridden by specified target: x86_64-pc-windows-msvc; option ignored

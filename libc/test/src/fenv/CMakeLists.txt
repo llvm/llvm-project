@@ -20,6 +20,7 @@ add_libc_unittest(
   DEPENDS
     libc.src.fenv.feclearexcept
     libc.src.fenv.feraiseexcept
+    libc.src.fenv.fesetexcept
     libc.src.fenv.fetestexcept
     libc.src.__support.FPUtil.fenv_impl
 )
@@ -47,6 +48,7 @@ add_libc_unittest(
   DEPENDS
     libc.src.fenv.fegetexceptflag
     libc.src.fenv.fesetexceptflag
+    libc.src.fenv.fetestexceptflag
     libc.src.__support.FPUtil.fenv_impl
 )
 
@@ -117,7 +119,7 @@ if (NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
     SRCS
       feholdexcept_test.cpp
     DEPENDS
-      libc.include.fenv
+      libc.hdr.fenv_macros
       libc.src.fenv.feholdexcept
       libc.src.__support.FPUtil.fenv_impl
     LINK_LIBRARIES

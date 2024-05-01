@@ -307,26 +307,6 @@ void test(int x) {
 <tbody>
 
 
-<tr><td><a id="alpha.cplusplus.ArrayDelete"><div class="namedescr expandable"><span class="name">
-alpha.cplusplus.ArrayDelete</span><span class="lang">
-(C++)</span><div class="descr">
-Reports destructions of arrays of polymorphic objects that are destructed as
-their base class
-</div></div></a></td>
-<td><div class="exampleContainer expandable">
-<div class="example"><pre>
-Base *create() {
-  Base *x = new Derived[10]; // note: Casting from 'Derived' to 'Base' here
-  return x;
-}
-
-void sink(Base *x) {
-  delete[] x; // warn: Deleting an array of 'Derived' objects as their base class 'Base' undefined
-}
-
-</pre></div></div></td></tr>
-
-
 <tr><td><a id="alpha.cplusplus.DeleteWithNonVirtualDtor"><div class="namedescr expandable"><span class="name">
 alpha.cplusplus.DeleteWithNonVirtualDtor</span><span class="lang">
 (C++)</span><div class="descr">

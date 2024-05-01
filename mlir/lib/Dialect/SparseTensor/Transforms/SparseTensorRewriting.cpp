@@ -476,8 +476,8 @@ private:
     if (!sel)
       return std::nullopt;
 
-    auto tVal = sel.getTrueValue().dyn_cast<BlockArgument>();
-    auto fVal = sel.getFalseValue().dyn_cast<BlockArgument>();
+    auto tVal = dyn_cast<BlockArgument>(sel.getTrueValue());
+    auto fVal = dyn_cast<BlockArgument>(sel.getFalseValue());
     // TODO: For simplicity, we only handle cases where both true/false value
     // are directly loaded the input tensor. We can probably admit more cases
     // in theory.
@@ -487,7 +487,7 @@ private:
     // Helper lambda to determine whether the value is loaded from a dense input
     // or is a loop invariant.
     auto isValFromDenseInputOrInvariant = [&op](Value v) -> bool {
-      if (auto bArg = v.dyn_cast<BlockArgument>();
+      if (auto bArg = dyn_cast<BlockArgument>(v);
           bArg && !isSparseTensor(op.getDpsInputOperand(bArg.getArgNumber())))
         return true;
       // If the value is defined outside the loop, it is a loop invariant.
@@ -648,7 +648,9 @@ public:
             loc, lvl, vector::PrintPunctuation::NoPunctuation);
         rewriter.create<vector::PrintOp>(loc, rewriter.getStringAttr("] : "));
         Value crd = nullptr;
-        // TODO: eliminates ToCoordinateBufferOp!
+        // For COO AoS storage, we want to print a single, linear view of
+        // the full coordinate storage at this level. For any other storage,
+        // we show the coordinate storage for every indivual level.
         if (stt.getAoSCOOStart() == l)
           crd = rewriter.create<ToCoordinatesBufferOp>(loc, tensor);
         else

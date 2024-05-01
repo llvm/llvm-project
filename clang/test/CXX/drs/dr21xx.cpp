@@ -11,7 +11,7 @@
 // cxx98-error@-1 {{variadic macros are a C99 feature}}
 #endif
 
-namespace dr2100 { // dr2100: 12
+namespace cwg2100 { // cwg2100: 12
   template<const int *P, bool = true> struct X {};
   template<typename T> struct A {
     static const int n = 1;
@@ -19,10 +19,10 @@ namespace dr2100 { // dr2100: 12
       return X<&n>::n; // ok, value-dependent
     }
     int g() {
-      static const int n = 2; // #dr2100-n
+      static const int n = 2; // #cwg2100-n
       return X<&n>::n; // ok, value-dependent
       // cxx98-14-error@-1 {{non-type template argument refers to object 'n' that does not have linkage}}
-      //   cxx98-14-note@#dr2100-n {{non-type template argument refers to object here}}
+      //   cxx98-14-note@#cwg2100-n {{non-type template argument refers to object here}}
     }
   };
   template<const int *P> struct X<P> {
@@ -41,12 +41,12 @@ namespace dr2100 { // dr2100: 12
     static const int n = 1;
     int f() {
       return Y<n>::declared_later;
-      // expected-error@-1 {{no member named 'declared_later' in 'dr2100::Y<1>'}}
+      // expected-error@-1 {{no member named 'declared_later' in 'cwg2100::Y<1>'}}
     }
     int g() {
       static const int n = 2;
       return Y<n>::declared_later;
-      // expected-error@-1 {{no member named 'declared_later' in 'dr2100::Y<2>'}}
+      // expected-error@-1 {{no member named 'declared_later' in 'cwg2100::Y<2>'}}
     }
   };
   template<int N> struct Y<N> {
@@ -54,22 +54,22 @@ namespace dr2100 { // dr2100: 12
   };
 }
 
-namespace dr2103 { // dr2103: yes
+namespace cwg2103 { // cwg2103: yes
   void f() {
     int a;
-    int &r = a; // #dr2103-r
+    int &r = a; // #cwg2103-r
     struct Inner {
       void f() {
         int &s = r;
-        // expected-error@-1 {{reference to local variable 'r' declared in enclosing function 'dr2103::f'}}
-        //   expected-note@#dr2103-r {{'r' declared here}}
+        // expected-error@-1 {{reference to local variable 'r' declared in enclosing function 'cwg2103::f'}}
+        //   expected-note@#cwg2103-r {{'r' declared here}}
         (void)s;
       }
     };
   }
 }
 
-namespace dr2120 { // dr2120: 7
+namespace cwg2120 { // cwg2120: 7
   struct A {};
   struct B : A {};
   struct C { A a; };
@@ -80,7 +80,7 @@ namespace dr2120 { // dr2120: 7
   static_assert(!__is_standard_layout(E), "");
 }
 
-namespace dr2126 { // dr2126: 12
+namespace cwg2126 { // cwg2126: 12
 #if __cplusplus >= 201103L
   struct A { int n; };
 
@@ -88,16 +88,16 @@ namespace dr2126 { // dr2126: 12
   A &b = (A &)(const A &)A{1};   // const temporary
   A &&c = (A &&)(const A &)A{1}; // const temporary
 
-  A &&d = {1};                   // non-const temporary #dr21260-d
-  const A &e = (A &)(A &&) A{1}; // non-const temporary #dr21260-e
-  A &&f = (A &&)(A &&) A{1};     // non-const temporary #dr21260-f
+  A &&d = {1};                   // non-const temporary #cwg21260-d
+  const A &e = (A &)(A &&) A{1}; // non-const temporary #cwg21260-e
+  A &&f = (A &&)(A &&) A{1};     // non-const temporary #cwg21260-f
 
   constexpr const A &g = {1};    // const temporary
-  constexpr A &&h = {1};         // non-const temporary #dr21260-h
+  constexpr A &&h = {1};         // non-const temporary #cwg21260-h
 
   struct B { const A &a; };
-  B i = {{1}};           // extending decl not usable in constant expr #dr21260-i
-  const B j = {{1}};     // extending decl not usable in constant expr #dr21260-j
+  B i = {{1}};           // extending decl not usable in constant expr #cwg21260-i
+  const B j = {{1}};     // extending decl not usable in constant expr #cwg21260-j
   constexpr B k = {{1}}; // extending decl usable in constant expr
 
   static_assert(a.n == 1, "");
@@ -106,33 +106,33 @@ namespace dr2126 { // dr2126: 12
   static_assert(d.n == 1, "");
   // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
   //   since-cxx11-note@-2 {{read of temporary is not allowed in a constant expression outside the expression that created the temporary}}
-  //   since-cxx11-note@#dr21260-d {{temporary created here}}
+  //   since-cxx11-note@#cwg21260-d {{temporary created here}}
   static_assert(e.n == 1, "");
   // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
   //   since-cxx11-note@-2 {{read of temporary is not allowed in a constant expression outside the expression that created the temporary}}
-  //   since-cxx11-note@#dr21260-e {{temporary created here}}
+  //   since-cxx11-note@#cwg21260-e {{temporary created here}}
   static_assert(f.n == 1, "");
   // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
   //   since-cxx11-note@-2 {{read of temporary is not allowed in a constant expression outside the expression that created the temporary}}
-  //   since-cxx11-note@#dr21260-f {{temporary created here}}
+  //   since-cxx11-note@#cwg21260-f {{temporary created here}}
   static_assert(g.n == 1, "");
   static_assert(h.n == 1, "");
   // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
   //   since-cxx11-note@-2 {{read of temporary is not allowed in a constant expression outside the expression that created the temporary}}
-  //   since-cxx11-note@#dr21260-h {{temporary created here}}
+  //   since-cxx11-note@#cwg21260-h {{temporary created here}}
   static_assert(i.a.n == 1, "");
   // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
   //   since-cxx11-note@-2 {{read of non-constexpr variable 'i' is not allowed in a constant expression}}
-  //   since-cxx11-note@#dr21260-i {{declared here}}
+  //   since-cxx11-note@#cwg21260-i {{declared here}}
   static_assert(j.a.n == 1, "");
   // since-cxx11-error@-1 {{static assertion expression is not an integral constant expression}}
   //   since-cxx11-note@-2 {{read of temporary is not allowed in a constant expression outside the expression that created the temporary}}
-  //   since-cxx11-note@#dr21260-j {{temporary created here}}
+  //   since-cxx11-note@#cwg21260-j {{temporary created here}}
   static_assert(k.a.n == 1, "");
 #endif
 }
 
-namespace dr2140 { // dr2140: 9
+namespace cwg2140 { // cwg2140: 9
 #if __cplusplus >= 201103L
   union U { int a; decltype(nullptr) b; };
   constexpr int *test(U u) {
@@ -142,7 +142,7 @@ namespace dr2140 { // dr2140: 9
 #endif
 }
 
-namespace dr2141 { // dr2141: 17
+namespace cwg2141 { // cwg2141: 17
 struct A{};
 
 template <typename T>
@@ -175,34 +175,34 @@ void foo() {
 }
 }
 
-namespace dr2157 { // dr2157: 11
+namespace cwg2157 { // cwg2157: 11
 #if __cplusplus >= 201103L
   enum E : int;
   struct X {
-    enum dr2157::E : int();
+    enum cwg2157::E : int();
     // since-cxx11-error@-1 {{ISO C++ only allows ':' in member enumeration declaration to introduce a fixed underlying type, not an anonymous bit-field}}
   };
 #endif
 }
 
-// dr2165: na
+// cwg2165: na
 
-namespace dr2170 { // dr2170: 9
+namespace cwg2170 { // cwg2170: 9
 #if __cplusplus >= 201103L
   void f() {
-    constexpr int arr[3] = {1, 2, 3}; // #dr2170-arr
+    constexpr int arr[3] = {1, 2, 3}; // #cwg2170-arr
     struct S {
       int get(int n) { return arr[n]; }
       const int &get_ref(int n) { return arr[n]; }
       // since-cxx11-warning@-1 {{reference to stack memory associated with local variable 'arr' returned}} FIXME
-      // since-cxx11-error@-2 {{reference to local variable 'arr' declared in enclosing function 'dr2170::f'}}
-      //   since-cxx11-note@#dr2170-arr {{'arr' declared here}}
+      // since-cxx11-error@-2 {{reference to local variable 'arr' declared in enclosing function 'cwg2170::f'}}
+      //   since-cxx11-note@#cwg2170-arr {{'arr' declared here}}
     };
   }
 #endif
 }
 
-namespace dr2171 { // dr2171: 15
+namespace cwg2171 { // cwg2171: 15
 #if __cplusplus >= 201103L
 
 struct NonConstCopy {
@@ -227,40 +227,40 @@ static_assert(!__is_trivially_assignable(NonConstCopy &&, NonConstCopy), "");
 static_assert(!__is_trivially_assignable(NonConstCopy &&, NonConstCopy &&), "");
 
 #endif
-} // namespace dr2171
+} // namespace cwg2171
 
-namespace dr2180 { // dr2180: yes
+namespace cwg2180 { // cwg2180: yes
   class A {
-    A &operator=(const A &); // #dr2180-A-copy
-    A &operator=(A &&); // #dr2180-A-move
+    A &operator=(const A &); // #cwg2180-A-copy
+    A &operator=(A &&); // #cwg2180-A-move
     // cxx98-error@-1 {{rvalue references are a C++11 extension}}
   };
 
-  struct B : virtual A { // #dr2180-B
+  struct B : virtual A { // #cwg2180-B
     B &operator=(const B &);
     B &operator=(B &&);
     // cxx98-error@-1 {{rvalue references are a C++11 extension}}
     virtual void foo() = 0;
   };
-  B &B::operator=(const B&) = default; // #dr2180-B-copy
+  B &B::operator=(const B&) = default; // #cwg2180-B-copy
   // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
-  // cxx98-error@-2 {{'operator=' is a private member of 'dr2180::A'}}
-  //   cxx98-note@-3 {{in defaulted copy assignment operator for 'dr2180::B' first required here}}
-  //   cxx98-note@#dr2180-A-copy {{implicitly declared private here}}
-  // since-cxx11-error@#dr2180-B-copy {{defaulting this copy assignment operator would delete it after its first declaration}}
-  //   since-cxx11-note@#dr2180-B {{copy assignment operator of 'B' is implicitly deleted because base class 'A' has an inaccessible copy assignment operator}}
-  B &B::operator=(B&&) = default; // #dr2180-B-move
+  // cxx98-error@-2 {{'operator=' is a private member of 'cwg2180::A'}}
+  //   cxx98-note@-3 {{in defaulted copy assignment operator for 'cwg2180::B' first required here}}
+  //   cxx98-note@#cwg2180-A-copy {{implicitly declared private here}}
+  // since-cxx11-error@#cwg2180-B-copy {{defaulting this copy assignment operator would delete it after its first declaration}}
+  //   since-cxx11-note@#cwg2180-B {{copy assignment operator of 'B' is implicitly deleted because base class 'A' has an inaccessible copy assignment operator}}
+  B &B::operator=(B&&) = default; // #cwg2180-B-move
   // cxx98-error@-1 {{rvalue references are a C++11 extension}}
   // cxx98-error@-2 {{defaulted function definitions are a C++11 extension}}
-  // cxx98-error@-3 {{'operator=' is a private member of 'dr2180::A'}}
-  //   cxx98-note@-4 {{in defaulted move assignment operator for 'dr2180::B' first required here}}
-  //   cxx98-note@#dr2180-A-move {{implicitly declared private here}}
-  // since-cxx11-error@#dr2180-B-move {{defaulting this move assignment operator would delete it after its first declaration}}
-  //   since-cxx11-note@#dr2180-B {{move assignment operator of 'B' is implicitly deleted because base class 'A' has an inaccessible move assignment operator}}
+  // cxx98-error@-3 {{'operator=' is a private member of 'cwg2180::A'}}
+  //   cxx98-note@-4 {{in defaulted move assignment operator for 'cwg2180::B' first required here}}
+  //   cxx98-note@#cwg2180-A-move {{implicitly declared private here}}
+  // since-cxx11-error@#cwg2180-B-move {{defaulting this move assignment operator would delete it after its first declaration}}
+  //   since-cxx11-note@#cwg2180-B {{move assignment operator of 'B' is implicitly deleted because base class 'A' has an inaccessible move assignment operator}}
 }
 
-namespace dr2199 { // dr2199: 3.8
-                   // NB: reusing part of dr407 test
+namespace cwg2199 { // cwg2199: 3.8
+                   // NB: reusing part of cwg407 test
 namespace A {
   struct S {};
 }

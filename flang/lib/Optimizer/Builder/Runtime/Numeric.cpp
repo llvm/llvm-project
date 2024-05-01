@@ -118,6 +118,20 @@ struct ForcedMod16 {
   }
 };
 
+/// Placeholder for real*10 version of Modulo Intrinsic
+struct ForcedModulo10 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ModuloReal10));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto fltTy = mlir::FloatType::getF80(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {fltTy, fltTy, strTy, intTy},
+                                     {fltTy});
+    };
+  }
+};
+
 /// Placeholder for real*16 version of Modulo Intrinsic
 struct ForcedModulo16 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ModuloReal16));
@@ -349,7 +363,13 @@ mlir::Value fir::runtime::genModulo(fir::FirOpBuilder &builder,
 
   // MODULO is lowered into math operations in intrinsics lowering,
   // so genModulo() should only be used for F128 data type now.
-  if (fltTy.isF128())
+  if (fltTy.isF32())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ModuloReal4)>(loc, builder);
+  else if (fltTy.isF64())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ModuloReal8)>(loc, builder);
+  else if (fltTy.isF80())
+    func = fir::runtime::getRuntimeFunc<ForcedModulo10>(loc, builder);
+  else if (fltTy.isF128())
     func = fir::runtime::getRuntimeFunc<ForcedModulo16>(loc, builder);
   else
     fir::intrinsicTypeTODO(builder, fltTy, loc, "MODULO");

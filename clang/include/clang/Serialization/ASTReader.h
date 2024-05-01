@@ -501,6 +501,8 @@ private:
   /// = I + 1 has already been loaded.
   llvm::PagedVector<Decl *> DeclsLoaded;
 
+  static_assert(std::is_same_v<serialization::DeclID, Decl::DeclID>);
+
   using GlobalDeclMapType =
       ContinuousRangeMap<serialization::DeclID, ModuleFile *, 4>;
 
@@ -516,6 +518,20 @@ private:
   /// Declarations that have modifications residing in a later file
   /// in the chain.
   DeclUpdateOffsetsMap DeclUpdateOffsets;
+
+  using DelayedNamespaceOffsetMapTy = llvm::DenseMap<
+      serialization::DeclID,
+      std::pair</*LexicalOffset*/ uint64_t, /*VisibleOffset*/ uint64_t>>;
+
+  /// Mapping from global declaration IDs to the lexical and visible block
+  /// offset for delayed namespace in reduced BMI.
+  ///
+  /// We can't use the existing DeclUpdate mechanism since the DeclUpdate
+  /// may only be applied in an outer most read. However, we need to know
+  /// whether or not a DeclContext has external storage during the recursive
+  /// reading. So we need to apply the offset immediately after we read the
+  /// namespace as if it is not delayed.
+  DelayedNamespaceOffsetMapTy DelayedNamespaceOffsetMap;
 
   struct PendingUpdateRecord {
     Decl *D;
@@ -590,7 +606,11 @@ private:
 
   /// An array of lexical contents of a declaration context, as a sequence of
   /// Decl::Kind, DeclID pairs.
-  using LexicalContents = ArrayRef<llvm::support::unaligned_uint32_t>;
+  using unalighed_decl_id_t =
+      llvm::support::detail::packed_endian_specific_integral<
+          serialization::DeclID, llvm::endianness::native,
+          llvm::support::unaligned>;
+  using LexicalContents = ArrayRef<unalighed_decl_id_t>;
 
   /// Map from a DeclContext to its lexical contents.
   llvm::DenseMap<const DeclContext*, std::pair<ModuleFile*, LexicalContents>>
@@ -859,7 +879,7 @@ private:
 
   /// Our current depth in #pragma cuda force_host_device begin/end
   /// macros.
-  unsigned ForceCUDAHostDeviceDepth = 0;
+  unsigned ForceHostDeviceDepth = 0;
 
   /// The IDs of the declarations Sema stores directly.
   ///
@@ -1077,31 +1097,17 @@ private:
   ///
   /// The declarations on the identifier chain for these identifiers will be
   /// loaded once the recursive loading has completed.
-  llvm::MapVector<IdentifierInfo *, SmallVector<uint32_t, 4>>
-    PendingIdentifierInfos;
+  llvm::MapVector<IdentifierInfo *, SmallVector<serialization::DeclID, 4>>
+      PendingIdentifierInfos;
 
   /// The set of lookup results that we have faked in order to support
   /// merging of partially deserialized decls but that we have not yet removed.
-  llvm::SmallMapVector<IdentifierInfo *, SmallVector<NamedDecl*, 2>, 16>
-    PendingFakeLookupResults;
+  llvm::SmallMapVector<const IdentifierInfo *, SmallVector<NamedDecl *, 2>, 16>
+      PendingFakeLookupResults;
 
   /// The generation number of each identifier, which keeps track of
   /// the last time we loaded information about this identifier.
-  llvm::DenseMap<IdentifierInfo *, unsigned> IdentifierGeneration;
-
-  class InterestingDecl {
-    Decl *D;
-    bool DeclHasPendingBody;
-
-  public:
-    InterestingDecl(Decl *D, bool HasBody)
-        : D(D), DeclHasPendingBody(HasBody) {}
-
-    Decl *getDecl() { return D; }
-
-    /// Whether the declaration has a pending body.
-    bool hasPendingBody() { return DeclHasPendingBody; }
-  };
+  llvm::DenseMap<const IdentifierInfo *, unsigned> IdentifierGeneration;
 
   /// Contains declarations and definitions that could be
   /// "interesting" to the ASTConsumer, when we get that AST consumer.
@@ -1109,7 +1115,7 @@ private:
   /// "Interesting" declarations are those that have data that may
   /// need to be emitted, such as inline function definitions or
   /// Objective-C protocols.
-  std::deque<InterestingDecl> PotentiallyInterestingDecls;
+  std::deque<Decl *> PotentiallyInterestingDecls;
 
   /// The list of deduced function types that we have not yet read, because
   /// they might contain a deduced return type that refers to a local type
@@ -1506,6 +1512,7 @@ public:
   getModuleFileLevelDecls(ModuleFile &Mod);
 
 private:
+  bool isConsumerInterestedIn(Decl *D);
   void PassInterestingDeclsToConsumer();
   void PassInterestingDeclToConsumer(Decl *D);
 
@@ -1910,22 +1917,22 @@ public:
   /// Resolve a declaration ID into a declaration, potentially
   /// building a new declaration.
   Decl *GetDecl(serialization::DeclID ID);
-  Decl *GetExternalDecl(uint32_t ID) override;
+  Decl *GetExternalDecl(serialization::DeclID ID) override;
 
   /// Resolve a declaration ID into a declaration. Return 0 if it's not
   /// been loaded yet.
   Decl *GetExistingDecl(serialization::DeclID ID);
 
   /// Reads a declaration with the given local ID in the given module.
-  Decl *GetLocalDecl(ModuleFile &F, uint32_t LocalID) {
+  Decl *GetLocalDecl(ModuleFile &F, serialization::DeclID LocalID) {
     return GetDecl(getGlobalDeclID(F, LocalID));
   }
 
   /// Reads a declaration with the given local ID in the given module.
   ///
   /// \returns The requested declaration, casted to the given return type.
-  template<typename T>
-  T *GetLocalDeclAs(ModuleFile &F, uint32_t LocalID) {
+  template <typename T>
+  T *GetLocalDeclAs(ModuleFile &F, serialization::DeclID LocalID) {
     return cast_or_null<T>(GetLocalDecl(F, LocalID));
   }
 
@@ -2117,9 +2124,10 @@ public:
   void LoadSelector(Selector Sel);
 
   void SetIdentifierInfo(unsigned ID, IdentifierInfo *II);
-  void SetGloballyVisibleDecls(IdentifierInfo *II,
-                               const SmallVectorImpl<uint32_t> &DeclIDs,
-                               SmallVectorImpl<Decl *> *Decls = nullptr);
+  void
+  SetGloballyVisibleDecls(IdentifierInfo *II,
+                          const SmallVectorImpl<serialization::DeclID> &DeclIDs,
+                          SmallVectorImpl<Decl *> *Decls = nullptr);
 
   /// Report a diagnostic.
   DiagnosticBuilder Diag(unsigned DiagID) const;
@@ -2344,10 +2352,10 @@ public:
   void ReadDefinedMacros() override;
 
   /// Update an out-of-date identifier.
-  void updateOutOfDateIdentifier(IdentifierInfo &II) override;
+  void updateOutOfDateIdentifier(const IdentifierInfo &II) override;
 
   /// Note that this identifier is up-to-date.
-  void markIdentifierUpToDate(IdentifierInfo *II);
+  void markIdentifierUpToDate(const IdentifierInfo *II);
 
   /// Load all external visible decls in the given DeclContext.
   void completeVisibleDeclsMap(const DeclContext *DC) override;
@@ -2456,6 +2464,12 @@ private:
   uint32_t Value;
   uint32_t CurrentBitsIndex = ~0;
 };
+
+inline bool shouldSkipCheckingODR(const Decl *D) {
+  return D->getASTContext().getLangOpts().SkipODRCheckInGMF &&
+         D->isFromExplicitGlobalModule();
+}
+
 } // namespace clang
 
 #endif // LLVM_CLANG_SERIALIZATION_ASTREADER_H

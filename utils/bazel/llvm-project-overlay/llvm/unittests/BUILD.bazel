@@ -357,10 +357,11 @@ cc_test(
         [
             "IR/*.cpp",
             "IR/*.h",
-            "Support/KnownBitsTest.h",
         ],
         allow_empty = False,
-    ),
+    ) + [
+        "Support/KnownBitsTest.h",
+    ],
     shard_count = 20,
     deps = [
         "//llvm:Analysis",
