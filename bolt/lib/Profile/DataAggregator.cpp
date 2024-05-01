@@ -861,14 +861,17 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
   return true;
 }
 
-bool DataAggregator::recordTrace(
-    BinaryFunction &BF, const LBREntry &FirstLBR, const LBREntry &SecondLBR,
-    uint64_t Count,
-    SmallVector<std::pair<uint64_t, uint64_t>, 16> &Branches) const {
+std::optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
+DataAggregator::getFallthroughsInTrace(BinaryFunction &BF,
+                                       const LBREntry &FirstLBR,
+                                       const LBREntry &SecondLBR,
+                                       uint64_t Count) const {
+  SmallVector<std::pair<uint64_t, uint64_t>, 16> Branches;
+
   BinaryContext &BC = BF.getBinaryContext();
 
   if (!BF.isSimple())
-    return false;
+    return std::nullopt;
 
   assert(BF.hasCFG() && "can only record traces in CFG state");
 
@@ -877,13 +880,13 @@ bool DataAggregator::recordTrace(
   const uint64_t To = SecondLBR.From - BF.getAddress();
 
   if (From > To)
-    return false;
+    return std::nullopt;
 
   const BinaryBasicBlock *FromBB = BF.getBasicBlockContainingOffset(From);
   const BinaryBasicBlock *ToBB = BF.getBasicBlockContainingOffset(To);
 
   if (!FromBB || !ToBB)
-    return false;
+    return std::nullopt;
 
   // Adjust FromBB if the first LBR is a return from the last instruction in
   // the previous block (that instruction should be a call).
@@ -907,7 +910,7 @@ bool DataAggregator::recordTrace(
   // within the same basic block, e.g. when two call instructions are in the
   // same block. In this case we skip the processing.
   if (FromBB == ToBB)
-    return true;
+    return Branches;
 
   // Process blocks in the original layout order.
   BinaryBasicBlock *BB = BF.getLayout().getBlock(FromBB->getIndex());
@@ -921,7 +924,7 @@ bool DataAggregator::recordTrace(
       LLVM_DEBUG(dbgs() << "no fall-through for the trace:\n"
                         << "  " << FirstLBR << '\n'
                         << "  " << SecondLBR << '\n');
-      return false;
+      return std::nullopt;
     }
 
     const MCInst *Instr = BB->getLastNonPseudoInstr();
@@ -945,20 +948,7 @@ bool DataAggregator::recordTrace(
     BI.Count += Count;
   }
 
-  return true;
-}
-
-std::optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
-DataAggregator::getFallthroughsInTrace(BinaryFunction &BF,
-                                       const LBREntry &FirstLBR,
-                                       const LBREntry &SecondLBR,
-                                       uint64_t Count) const {
-  SmallVector<std::pair<uint64_t, uint64_t>, 16> Res;
-
-  if (!recordTrace(BF, FirstLBR, SecondLBR, Count, Res))
-    return std::nullopt;
-
-  return Res;
+  return Branches;
 }
 
 bool DataAggregator::recordEntry(BinaryFunction &BF, uint64_t To, bool Mispred,
