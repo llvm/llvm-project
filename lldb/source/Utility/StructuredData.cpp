@@ -291,8 +291,6 @@ void StructuredData::Generic::GetDescription(lldb_private::Stream &s) const {
   s.Printf("%p", m_object);
 }
 
-/// This is the same implementation as `StringRef::split`. Not depending on
-/// `StringRef::split` because it will involve a temporary `SmallVectorImpl`.
 StructuredData::ArraySP StructuredData::Array::SplitString(llvm::StringRef s,
                                                            char separator,
                                                            int maxSplit,
