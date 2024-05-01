@@ -39,7 +39,7 @@ long double testinc(_Atomic long double *addr) {
 // CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw fsub ptr [[TMP0]], float -1.000000e+00 seq_cst, align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw fsub ptr [[TMP0]], float 1.000000e+00 seq_cst, align 16
 // CHECK-NEXT:    store float [[TMP1]], ptr [[RETVAL]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = load x86_fp80, ptr [[RETVAL]], align 16
 // CHECK-NEXT:    ret x86_fp80 [[TMP2]]
@@ -51,7 +51,7 @@ long double testinc(_Atomic long double *addr) {
 // CHECK32-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK32-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR]], align 4
 // CHECK32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 4
-// CHECK32-NEXT:    [[TMP1:%.*]] = atomicrmw fsub ptr [[TMP0]], float -1.000000e+00 seq_cst, align 4
+// CHECK32-NEXT:    [[TMP1:%.*]] = atomicrmw fsub ptr [[TMP0]], float 1.000000e+00 seq_cst, align 4
 // CHECK32-NEXT:    store float [[TMP1]], ptr [[RETVAL]], align 4
 // CHECK32-NEXT:    [[TMP2:%.*]] = load x86_fp80, ptr [[RETVAL]], align 4
 // CHECK32-NEXT:    ret x86_fp80 [[TMP2]]
@@ -209,7 +209,7 @@ long double test_volatile_inc(volatile _Atomic long double *addr) {
 // CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw fsub ptr [[TMP0]], float -1.000000e+00 seq_cst, align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw fsub ptr [[TMP0]], float 1.000000e+00 seq_cst, align 16
 // CHECK-NEXT:    store float [[TMP1]], ptr [[RETVAL]], align 16
 // CHECK-NEXT:    [[TMP2:%.*]] = load x86_fp80, ptr [[RETVAL]], align 16
 // CHECK-NEXT:    ret x86_fp80 [[TMP2]]
@@ -221,7 +221,7 @@ long double test_volatile_inc(volatile _Atomic long double *addr) {
 // CHECK32-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK32-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR]], align 4
 // CHECK32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ADDR_ADDR]], align 4
-// CHECK32-NEXT:    [[TMP1:%.*]] = atomicrmw fsub ptr [[TMP0]], float -1.000000e+00 seq_cst, align 4
+// CHECK32-NEXT:    [[TMP1:%.*]] = atomicrmw fsub ptr [[TMP0]], float 1.000000e+00 seq_cst, align 4
 // CHECK32-NEXT:    store float [[TMP1]], ptr [[RETVAL]], align 4
 // CHECK32-NEXT:    [[TMP2:%.*]] = load x86_fp80, ptr [[RETVAL]], align 4
 // CHECK32-NEXT:    ret x86_fp80 [[TMP2]]

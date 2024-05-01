@@ -30,7 +30,7 @@ float test_float_post_inc()
 // CHECK-LABEL: define dso_local float @test_float_post_dc(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr @test_float_post_dc.n, float -1.000000e+00 seq_cst, align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr @test_float_post_dc.n, float 1.000000e+00 seq_cst, align 4
 // CHECK-NEXT:    ret float [[TMP0]]
 //
 float test_float_post_dc()
@@ -42,8 +42,8 @@ float test_float_post_dc()
 // CHECK-LABEL: define dso_local float @test_float_pre_dc(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr @test_float_pre_dc.n, float -1.000000e+00 seq_cst, align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = fsub float [[TMP0]], -1.000000e+00
+// CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr @test_float_pre_dc.n, float 1.000000e+00 seq_cst, align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = fsub float [[TMP0]], 1.000000e+00
 // CHECK-NEXT:    ret float [[TMP1]]
 //
 float test_float_pre_dc()

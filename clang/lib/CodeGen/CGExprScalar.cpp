@@ -2799,7 +2799,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       llvm::Instruction::BinaryOps op =
           isInc ? llvm::Instruction::FAdd : llvm::Instruction::FSub;
       llvm::Value *amt = llvm::ConstantFP::get(
-          VMContext, llvm::APFloat(static_cast<float>(amount)));
+          VMContext, llvm::APFloat(static_cast<float>(1.0)));
       llvm::Value *old =
           Builder.CreateAtomicRMW(aop, LV.getAddress(CGF), amt,
                                   llvm::AtomicOrdering::SequentiallyConsistent);
