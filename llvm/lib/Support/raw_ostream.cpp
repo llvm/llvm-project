@@ -893,8 +893,8 @@ void raw_fd_ostream::anchor() {}
 //  outs(), errs(), nulls()
 //===----------------------------------------------------------------------===//
 
-static thread_local raw_fd_ostream *OutsOverride = nullptr;
-static thread_local raw_fd_ostream *ErrsOverride = nullptr;
+static LLVM_THREAD_LOCAL raw_fd_ostream *OutsOverride = nullptr;
+static LLVM_THREAD_LOCAL raw_fd_ostream *ErrsOverride = nullptr;
 
 raw_fd_ostream &llvm::outs() {
   if (auto *TLSOuts = OutsOverride; TLSOuts != nullptr)
