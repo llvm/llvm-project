@@ -32,6 +32,9 @@ class GenICFGVisitor : public RecursiveASTVisitor<GenICFGVisitor> {
 
     bool VisitFunctionDecl(clang::FunctionDecl *D);
     bool VisitCXXRecordDecl(clang::CXXRecordDecl *D);
+
+    bool VisitVarDecl(VarDecl *D);
+    bool VisitBinaryOperator(BinaryOperator *S);
 };
 
 class GenICFGConsumer : public clang::ASTConsumer {

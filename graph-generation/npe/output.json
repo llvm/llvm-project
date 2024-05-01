@@ -618,6 +618,32 @@
                     "content": "int useAlias(const A &alias) {\n    int value;\n    if (branch > 0)\n        value  ..."
                 }
             ]
+        },
+        {
+            "type": "npe-good-source",
+            "locations": [
+                {
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/main.cpp",
+                    "beginLine": 9,
+                    "beginColumn": 5,
+                    "endLine": 9,
+                    "endColumn": 13,
+                    "content": "A *q = p"
+                }
+            ]
+        },
+        {
+            "type": "npe-good-source",
+            "locations": [
+                {
+                    "file": "/home/thebesttv/vul/llvm-project/graph-generation/npe/modifyPointer.cpp",
+                    "beginLine": 26,
+                    "beginColumn": 5,
+                    "endLine": 26,
+                    "endColumn": 21,
+                    "content": "ASSIGN_NULL(ptr)"
+                }
+            ]
         }
     ]
 }

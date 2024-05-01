@@ -1,4 +1,5 @@
 #include "GenICFG.h"
+#include "DumpPath.h"
 #include "GenAST.h"
 #include "ICFG.h"
 #include "utils.h"
@@ -131,6 +132,51 @@ bool GenICFGVisitor::VisitFunctionDecl(FunctionDecl *D) {
 
 bool GenICFGVisitor::VisitCXXRecordDecl(CXXRecordDecl *D) {
     // llvm::errs() << D->getQualifiedNameAsString() << "\n";
+    return true;
+}
+
+bool isPointerType(Expr *E) {
+    auto type = E->getType().getTypePtrOrNull();
+    return type && type->isAnyPointerType();
+}
+
+bool GenICFGVisitor::VisitVarDecl(VarDecl *D) {
+    // 加入 NPE 可疑的 source 中
+
+    // must be declared within a function
+    if (!D->getParentFunctionOrMethod())
+        return true;
+
+    Expr *init = D->getInit();
+    if (!init || !isPointerType(init))
+        return true;
+
+    ordered_json loc;
+    if (saveLocationInfo(*Context, D->getSourceRange(), loc)) {
+        if (Global.isUnderProject(loc["file"]))
+            Global.npeSuspectedSources.insert(loc);
+    }
+
+    return true;
+}
+
+bool GenICFGVisitor::VisitBinaryOperator(BinaryOperator *S) {
+    // 加入 NPE 可疑的 source 中
+
+    // equivalent to: !(S->isAssignmentOp() && !S->isCompoundAssignmentOp())
+    // i.e. is assignment & not compount assignment
+    if (S->getOpcode() != BO_Assign)
+        return true;
+
+    if (!isPointerType(S))
+        return true;
+
+    ordered_json loc;
+    if (saveLocationInfo(*Context, S->getSourceRange(), loc)) {
+        if (Global.isUnderProject(loc["file"]))
+            Global.npeSuspectedSources.insert(loc);
+    }
+
     return true;
 }
 

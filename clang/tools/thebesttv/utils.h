@@ -184,6 +184,8 @@ struct GlobalStat {
     ICFG icfg;
 
     std::string clangPath, clangppPath;
+
+    std::set<ordered_json> npeSuspectedSources; // 每个元素是可疑的 source
 };
 
 SourceLocation getEndOfMacroExpansion(SourceLocation loc, ASTContext &Context);

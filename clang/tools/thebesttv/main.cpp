@@ -445,6 +445,26 @@ void handleInputEntry(const VarLocResult &from, int fromLine, VarLocResult to,
         }
         if (!found)
             logger.warn("Unable to find any path for NPE fix version!");
+
+        // 根据有缺陷的 source，删除可疑的 source
+        auto &npeSuspectedSources = Global.npeSuspectedSources;
+        for (auto it = npeSuspectedSources.begin();
+             it != npeSuspectedSources.end();) {
+            const auto &loc = *it;
+            const std::string &file = loc["file"];
+            int beginLine = loc["beginLine"];
+            int endLine = loc["endLine"];
+
+            auto &fromFile = Global.functionLocations[from.fid].file;
+            if (beginLine <= fromLine && fromLine <= endLine &&
+                file == fromFile) {
+                logger.info("Removing suspected good source: {}:{}:{}", file,
+                            beginLine, loc["beginColumn"]);
+                it = npeSuspectedSources.erase(it);
+            } else {
+                it++;
+            }
+        }
     } else {
         logger.info("Handle unknown type: {}", type);
         requireTrue(from.isValid());
@@ -533,6 +553,13 @@ void generateFromInput(const ordered_json &input, fs::path outputDir) {
         } catch (const std::exception &e) {
             logger.error("Exception encountered: {}", e.what());
         }
+    }
+
+    for (const auto &loc : Global.npeSuspectedSources) {
+        ordered_json j;
+        j["type"] = "npe-good-source";
+        j["locations"].push_back(loc);
+        output["results"].push_back(j);
     }
 
     std::ofstream o(jsonResult);
