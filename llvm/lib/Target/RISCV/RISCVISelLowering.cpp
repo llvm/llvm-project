@@ -13700,9 +13700,13 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
   using namespace SDPatternMatch;
   auto matchSelectCC = [](SDValue Op, SDValue VLCandidate, bool Inverse,
                           SDValue &Select) -> bool {
+    // It's almost certain the VL which this pattern tries to match
+    // (the EVL parameter from VP intrinsics and the value setcc compares
+    // against) is zext from i32.
+    auto ZExtVL = m_And(m_Value(), m_SpecificInt(APInt::getLowBitsSet(64, 32)));
+
     // Remove any sext or zext
-    auto ExtPattern =
-        m_AnyOf(m_Opc(ISD::SIGN_EXTEND_INREG), m_And(m_Value(), m_AllOnes()));
+    auto ExtPattern = m_AnyOf(m_Opc(ISD::SIGN_EXTEND_INREG), ZExtVL);
     if (sd_match(VLCandidate, ExtPattern))
       VLCandidate = VLCandidate->getOperand(0);
     if (sd_match(Op, ExtPattern))
@@ -13711,7 +13715,7 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
     // Matching VLCandidate or sext/zext + VLCandidate
     auto VLCandPattern = m_AnyOf(
         m_Node(ISD::SIGN_EXTEND_INREG, m_Specific(VLCandidate), m_Value()),
-        m_And(m_Specific(VLCandidate), m_AllOnes()), m_Specific(VLCandidate));
+        ZExtVL, m_Specific(VLCandidate));
 
     SDValue VFirst, CC;
     auto VFirstPattern = m_AllOf(
