@@ -490,7 +490,7 @@ public:
   }
   void removeCVRQualifiers(uint64_t mask) {
     assert(!(mask & ~CVRMask) && "bitmask contains non-CVR bits");
-    Mask &= ~mask;
+    Mask &= ~static_cast<uint64_t>(mask);
   }
   void removeCVRQualifiers() {
     removeCVRQualifiers(CVRMask);
@@ -619,7 +619,7 @@ public:
   }
   void removeFastQualifiers(uint64_t mask) {
     assert(!(mask & ~FastMask) && "bitmask contains non-fast qualifier bits");
-    Mask &= ~mask;
+    Mask &= ~static_cast<uint64_t>(mask);
   }
   void removeFastQualifiers() {
     removeFastQualifiers(FastMask);
