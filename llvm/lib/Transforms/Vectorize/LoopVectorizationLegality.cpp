@@ -831,8 +831,16 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           Requirements->addExactFPMathInst(RedDes.getExactFPMathInst());
           AllowedExit.insert(RedDes.getLoopExitInstr());
           Reductions[Phi] = RedDes;
-          Instruction *Cmp = RedDes.getMultiCmp();
-          if (Cmp) {
+          CmpInst *Cmp = nullptr;
+          for (Value *V :
+               {Phi->getIncomingValue(0), Phi->getIncomingValue(1)}) {
+            if (Instruction *SI = dyn_cast<SelectInst>(V))
+              Cmp = dyn_cast<CmpInst>(SI->getOperand(0));
+          }
+          if (Cmp && !Cmp->hasOneUse()) {
+            RecurKind Kind = RedDes.getRecurrenceKind();
+            assert((Kind == RecurKind::IAnyOf || Kind == RecurKind::FAnyOf) &&
+                   "Unexpected type of recurrence");
             if (MultiCmpsRed.contains(Cmp))
               MultiCmpsRed[Cmp]++;
             else

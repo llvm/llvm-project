@@ -256,7 +256,6 @@ bool RecurrenceDescriptor::AddReductionVar(
   SmallPtrSet<Instruction *, 4> CastInsts;
   unsigned MinWidthCastToRecurrenceType;
   Instruction *Start = Phi;
-  Instruction *MultiCMP = nullptr;
   bool IsSigned = false;
 
   SmallPtrSet<Instruction *, 8> VisitedInsts;
@@ -401,8 +400,6 @@ bool RecurrenceDescriptor::AddReductionVar(
     }
 
     bool IsASelect = isa<SelectInst>(Cur);
-    if (IsASelect)
-      MultiCMP = ReduxDesc.getMultiCmp();
 
     // A conditional reduction operation must only have 2 or less uses in
     // VisitedInsts.
@@ -600,8 +597,7 @@ bool RecurrenceDescriptor::AddReductionVar(
   // Save the description of this reduction variable.
   RecurrenceDescriptor RD(RdxStart, ExitInstruction, IntermediateStore, Kind,
                           FMF, ExactFPMathInst, RecurrenceType, IsSigned,
-                          IsOrdered, CastInsts, MinWidthCastToRecurrenceType,
-                          MultiCMP);
+                          IsOrdered, CastInsts, MinWidthCastToRecurrenceType);
   RedDes = RD;
 
   return true;
@@ -639,11 +635,9 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
       return InstDesc(Select, Prev.getRecKind());
   }
 
-  // Find the compare instruction that is associated with OrigPhi, i.e
-  // recurrent-reduction. And determine that SelectInst and CmpInst multiple
-  // instructions usage are safe to vectorise.
   SelectInst *SI = dyn_cast<SelectInst>(I);
   Instruction *Cmp = nullptr;
+
   if (SI) {
     bool HasOrigPhiUser = false;
     bool SelectNonPHIUserInLoop = false;
@@ -655,8 +649,6 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
       if (Inst == OrigPhi) {
         HasOrigPhiUser = true;
       } else {
-        // If we found SelectInstr usage in the loop then the reduction stops
-        // to be recurrent and it is not safe to procede further.
         if (std::find(Blocks.begin(), Blocks.end(), Inst->getParent()) !=
             Blocks.end())
           SelectNonPHIUserInLoop = true;
@@ -687,8 +679,6 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
       }
       if (!IsSafeCMP)
         Cmp = nullptr;
-    } else {
-      Cmp = nullptr;
     }
   }
 
@@ -711,10 +701,8 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
   if (!Loop->isLoopInvariant(NonPhi))
     return InstDesc(false, I);
 
-  return InstDesc(I,
-                  isa<ICmpInst>(I->getOperand(0)) ? RecurKind::IAnyOf
-                                                  : RecurKind::FAnyOf,
-                  nullptr, Cmp);
+  return InstDesc(I, isa<ICmpInst>(I->getOperand(0)) ? RecurKind::IAnyOf
+                                                     : RecurKind::FAnyOf);
 }
 
 RecurrenceDescriptor::InstDesc
