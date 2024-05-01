@@ -27,7 +27,7 @@ FOOTER = """\
 """
 
 REGEX = re.compile(
-    r'^ *HANDLE_DW_LNAME *\( *(?P<value>[^,]+), (?P<comment>[^"]+), "(?P<name>.*)",.*\)'
+    r'^ *HANDLE_DW_LNAME *\( *(?P<value>[^,]+), (?P<name>.*), "(?P<comment>[^"]+)",.*\)'
 )
 
 
