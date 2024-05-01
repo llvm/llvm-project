@@ -2722,8 +2722,9 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
 
 /// Check whether the call is eligible for tail call optimization. Targets
 /// that want to do tail call optimization should implement this function.
-/// Note that musttail calls are not checked for eligibility! The rest of x86
-/// tail call lowering must be prepared to forward arguments of any type.
+/// Note that the x86 backend does not check musttail calls for eligibility! The
+/// rest of x86 tail call lowering must be prepared to forward arguments of any
+/// type.
 bool X86TargetLowering::IsEligibleForTailCallOptimization(
     TargetLowering::CallLoweringInfo &CLI, CCState &CCInfo,
     SmallVectorImpl<CCValAssign> &ArgLocs, bool IsCalleePopSRet) const {
