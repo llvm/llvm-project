@@ -2289,7 +2289,7 @@ struct StrBoolAttr {
   static bool isSet(const Function &Fn,
                     StringRef Kind) {
     auto A = Fn.getFnAttribute(Kind);
-    return A.getValueAsString().equals("true");
+    return A.getValueAsString() == "true";
   }
 
   static void set(Function &Fn,

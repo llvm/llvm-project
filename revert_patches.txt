@@ -9,3 +9,38 @@ Revert :breaks hip catch tests.
 1de7e6c8cba2 [clang] move -Wcast-function-type under -Wextra (#77178)
 999d4f840777 Split -Wcast-function-type into a separate group (#86131)   
 
+---
+Revert: 8009bbe
+  Commit title:
+    Revert "Reapply "[Clang][Sema] Diagnose class member access expressions
+    naming non-existent members of the current instantiation prior to
+    instantiation in the absence of dependent base classes (#84050)"
+    (#90152)"
+
+  Reason for revert:
+    - Breaks composable kernels:
+
+      [2024-05-01T03:06:52.796Z] /jenkins/workspace/compiler-psdb-amd-staging/Libs/composable_kernel/include/ck/tensor_operation/gpu/block/blockwise_gemm_xdlops.hpp:799:32: error: no member named 'a_origin' in 'BlockwiseGemmXdlops_v2<BlockSize, FloatAB, FloatAcc, ATileDesc, BTileDesc, AMmaTileDesc, BMmaTileDesc, MPerBlock, NPerBlock, KPerBlock, MPerXDL, NPerXDL, MRepeat, NRepeat, KPack, TransposeC, AMmaKStride, BMmaKStride>'
+      [2024-05-01T03:06:52.796Z]   799 |         : a_thread_copy_(other.a_origin), b_thread_copy_(other.b_origin)
+      [2024-05-01T03:06:52.796Z]       |                          ~~~~~ ^
+      [2024-05-01T03:06:52.796Z] /jenkins/workspace/compiler-psdb-amd-staging/Libs/composable_kernel/include/ck/tensor_operation/gpu/block/blockwise_gemm_xdlops.hpp:799:64: error: no member named 'b_origin' in 'BlockwiseGemmXdlops_v2<BlockSize, FloatAB, FloatAcc, ATileDesc, BTileDesc, AMmaTileDesc, BMmaTileDesc, MPerBlock, NPerBlock, KPerBlock, MPerXDL, NPerXDL, MRepeat, NRepeat, KPack, TransposeC, AMmaKStride, BMmaKStride>'
+      [2024-05-01T03:06:52.796Z]   799 |         : a_thread_copy_(other.a_origin), b_thread_copy_(other.b_origin)
+
+    - Breaks rocthrust:
+
+      [2024-05-01T03:18:40.779Z] /jenkins/workspace/compiler-psdb-amd-staging_2/Libs/rocThrust/thrust/../thrust/optional.h:2756:11: error: no member named 'construct' in 'optional<type-parameter-0-0 &>'
+      [2024-05-01T03:18:40.779Z]  2756 |     this->construct(std::forward<Args>(args)...);
+
+  Contacts:
+    Sam, Konstantin
+---
+Revert: 41f9c78
+  Commit title:
+    Revert "[OpenACC] Fix test failure from fa67986d"
+
+  Reason for revert:
+    - Descendant of a previous revert (8009bbe)
+
+  Contacts:
+    Konstantin
+---
