@@ -13700,21 +13700,30 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
   using namespace SDPatternMatch;
   auto matchSelectCC = [](SDValue Op, SDValue VLCandidate, bool Inverse,
                           SDValue &Select) -> bool {
+    // Remove any sext or zext
+    auto ExtPattern =
+        m_AnyOf(m_Opc(ISD::SIGN_EXTEND_INREG), m_And(m_Value(), m_AllOnes()));
+    if (sd_match(VLCandidate, ExtPattern))
+      VLCandidate = VLCandidate->getOperand(0);
+    if (sd_match(Op, ExtPattern))
+      Op = Op->getOperand(0);
+
+    // Matching VLCandidate or sext/zext + VLCandidate
+    auto VLCandPattern = m_AnyOf(
+        m_Node(ISD::SIGN_EXTEND_INREG, m_Specific(VLCandidate), m_Value()),
+        m_And(m_Specific(VLCandidate), m_AllOnes()), m_Specific(VLCandidate));
+
     SDValue VFirst, CC;
-    // FIXME: These pattern will fail to match if VFIRST_VL is coming from
-    // a llvm.vp.cttz.elts that doesn't return XLen type. Due to non-trivial
-    // number of sext(_inreg) and zext interleaving between the nodes.
-    // That said, this is not really problem as long as we always generate the
-    // said intrinsics with XLen return type.
-    auto VFirstPattern = m_AllOf(m_Node(RISCVISD::VFIRST_VL, m_Value(),
-                                        m_Value(), m_Specific(VLCandidate)),
-                                 m_Value(VFirst));
+    auto VFirstPattern = m_AllOf(
+        m_Node(RISCVISD::VFIRST_VL, m_Value(), m_Value(), VLCandPattern),
+        m_Value(VFirst));
+
     auto SelectCCPattern =
         m_Node(RISCVISD::SELECT_CC, VFirstPattern, m_SpecificInt(0),
-               m_Value(CC), m_Specific(VLCandidate), m_Deferred(VFirst));
+               m_Value(CC), VLCandPattern, m_Deferred(VFirst));
     auto InvSelectCCPattern =
         m_Node(RISCVISD::SELECT_CC, VFirstPattern, m_SpecificInt(0),
-               m_Value(CC), m_Deferred(VFirst), m_Specific(VLCandidate));
+               m_Value(CC), m_Deferred(VFirst), VLCandPattern);
 
     if (Inverse)
       return sd_match(Op,
