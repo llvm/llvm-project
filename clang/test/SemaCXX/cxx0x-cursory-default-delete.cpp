@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -std=c++03 -Wno-c++11-extensions -fsyntax-only -verify %s
 
 #if __cplusplus < 201103L
-#define static_assert _Static_assert
+#define static_assert __extension__ _Static_assert
 #define nullptr 0
 #define noexcept throw()
 #endif

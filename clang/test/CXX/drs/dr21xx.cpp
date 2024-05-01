@@ -246,19 +246,13 @@ namespace cwg2180 { // cwg2180: yes
   };
   B &B::operator=(const B&) = default; // #cwg2180-B-copy
   // cxx98-error@-1 {{defaulted function definitions are a C++11 extension}}
-  // cxx98-error@-2 {{'operator=' is a private member of 'cwg2180::A'}}
-  //   cxx98-note@-3 {{in defaulted copy assignment operator for 'cwg2180::B' first required here}}
-  //   cxx98-note@#cwg2180-A-copy {{implicitly declared private here}}
-  // since-cxx11-error@#cwg2180-B-copy {{defaulting this copy assignment operator would delete it after its first declaration}}
-  //   since-cxx11-note@#cwg2180-B {{copy assignment operator of 'B' is implicitly deleted because base class 'A' has an inaccessible copy assignment operator}}
+  // expected-error@#cwg2180-B-copy {{defaulting this copy assignment operator would delete it after its first declaration}}
+  //   expected-note@#cwg2180-B {{copy assignment operator of 'B' is implicitly deleted because base class 'A' has an inaccessible copy assignment operator}}
   B &B::operator=(B&&) = default; // #cwg2180-B-move
   // cxx98-error@-1 {{rvalue references are a C++11 extension}}
   // cxx98-error@-2 {{defaulted function definitions are a C++11 extension}}
-  // cxx98-error@-3 {{'operator=' is a private member of 'cwg2180::A'}}
-  //   cxx98-note@-4 {{in defaulted move assignment operator for 'cwg2180::B' first required here}}
-  //   cxx98-note@#cwg2180-A-move {{implicitly declared private here}}
-  // since-cxx11-error@#cwg2180-B-move {{defaulting this move assignment operator would delete it after its first declaration}}
-  //   since-cxx11-note@#cwg2180-B {{move assignment operator of 'B' is implicitly deleted because base class 'A' has an inaccessible move assignment operator}}
+  // expected-error@#cwg2180-B-move {{defaulting this move assignment operator would delete it after its first declaration}}
+  //   expected-note@#cwg2180-B {{move assignment operator of 'B' is implicitly deleted because base class 'A' has an inaccessible move assignment operator}}
 }
 
 namespace cwg2199 { // cwg2199: 3.8
