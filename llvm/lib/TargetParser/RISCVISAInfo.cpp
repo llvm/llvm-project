@@ -598,14 +598,14 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     XLen = 64;
   } else {
     // Try parsing as a profile.
-    const auto *FoundProfile =
-        llvm::find_if(SupportedProfiles, [Arch](const RISCVProfile &Profile) {
-          return Arch.starts_with(Profile.Name);
-        });
+    auto I = llvm::upper_bound(SupportedProfiles, Arch,
+                               [](StringRef Arch, const RISCVProfile &Profile) {
+                                 return Arch < Profile.Name;
+                               });
 
-    if (FoundProfile != std::end(SupportedProfiles)) {
-      std::string NewArch = FoundProfile->MArch.str();
-      StringRef ArchWithoutProfile = Arch.drop_front(FoundProfile->Name.size());
+    if (I != std::begin(SupportedProfiles) && Arch.starts_with((--I)->Name)) {
+      std::string NewArch = I->MArch.str();
+      StringRef ArchWithoutProfile = Arch.drop_front(I->Name.size());
       if (!ArchWithoutProfile.empty()) {
         if (ArchWithoutProfile.front() != '_')
           return createStringError(
