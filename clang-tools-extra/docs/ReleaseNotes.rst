@@ -261,7 +261,8 @@ Changes in existing checks
 
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by avoiding infinite recursion
-  for recursive forwarding reference.
+  for recursive functions with forwarding reference parameters and reference
+  variables which refer to themselves.
 
 - Improved :doc:`misc-definitions-in-headers
   <clang-tidy/checks/misc/definitions-in-headers>` check by replacing the local
