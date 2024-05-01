@@ -1395,12 +1395,19 @@ public:
         return LookAheadHeuristics::ScoreSplat;
       }
 
+      auto CheckSameEntryOrFail = [&]() {
+        if (const TreeEntry *TE1 = R.getTreeEntry(V1);
+            TE1 && TE1 == R.getTreeEntry(V2))
+          return LookAheadHeuristics::ScoreSplatLoads;
+        return LookAheadHeuristics::ScoreFail;
+      };
+
       auto *LI1 = dyn_cast<LoadInst>(V1);
       auto *LI2 = dyn_cast<LoadInst>(V2);
       if (LI1 && LI2) {
         if (LI1->getParent() != LI2->getParent() || !LI1->isSimple() ||
             !LI2->isSimple())
-          return LookAheadHeuristics::ScoreFail;
+          return CheckSameEntryOrFail();
 
         std::optional<int> Dist = getPointersDiff(
             LI1->getType(), LI1->getPointerOperand(), LI2->getType(),
@@ -1412,7 +1419,7 @@ public:
                   FixedVectorType::get(LI1->getType(), NumLanes),
                   LI1->getAlign()))
             return LookAheadHeuristics::ScoreMaskedGatherCandidate;
-          return LookAheadHeuristics::ScoreFail;
+          return CheckSameEntryOrFail();
         }
         // The distance is too large - still may be profitable to use masked
         // loads/gathers.
@@ -1469,14 +1476,14 @@ public:
           }
           return LookAheadHeuristics::ScoreAltOpcodes;
         }
-        return LookAheadHeuristics::ScoreFail;
+        return CheckSameEntryOrFail();
       }
 
       auto *I1 = dyn_cast<Instruction>(V1);
       auto *I2 = dyn_cast<Instruction>(V2);
       if (I1 && I2) {
         if (I1->getParent() != I2->getParent())
-          return LookAheadHeuristics::ScoreFail;
+          return CheckSameEntryOrFail();
         SmallVector<Value *, 4> Ops(MainAltOps.begin(), MainAltOps.end());
         Ops.push_back(I1);
         Ops.push_back(I2);
@@ -1497,7 +1504,7 @@ public:
       if (isa<UndefValue>(V2))
         return LookAheadHeuristics::ScoreUndef;
 
-      return LookAheadHeuristics::ScoreFail;
+      return CheckSameEntryOrFail();
     }
 
     /// Go through the operands of \p LHS and \p RHS recursively until
@@ -1660,6 +1667,7 @@ public:
     const DataLayout &DL;
     ScalarEvolution &SE;
     const BoUpSLP &R;
+    const Loop *L = nullptr;
 
     /// \returns the operand data at \p OpIdx and \p Lane.
     OperandData &getData(unsigned OpIdx, unsigned Lane) {
@@ -1828,8 +1836,9 @@ public:
       // Track if the operand must be marked as used. If the operand is set to
       // Score 1 explicitly (because of non power-of-2 unique scalars, we may
       // want to reestimate the operands again on the following iterations).
-      bool IsUsed =
-          RMode == ReorderingMode::Splat || RMode == ReorderingMode::Constant;
+      bool IsUsed = RMode == ReorderingMode::Splat ||
+                    RMode == ReorderingMode::Constant ||
+                    RMode == ReorderingMode::Load;
       // Iterate through all unused operands and look for the best.
       for (unsigned Idx = 0; Idx != NumOperands; ++Idx) {
         // Get the operand at Idx and Lane.
@@ -1850,23 +1859,44 @@ public:
         // Look for an operand that matches the current mode.
         switch (RMode) {
         case ReorderingMode::Load:
-        case ReorderingMode::Constant:
         case ReorderingMode::Opcode: {
           bool LeftToRight = Lane > LastLane;
           Value *OpLeft = (LeftToRight) ? OpLastLane : Op;
           Value *OpRight = (LeftToRight) ? Op : OpLastLane;
           int Score = getLookAheadScore(OpLeft, OpRight, MainAltOps, Lane,
                                         OpIdx, Idx, IsUsed);
-          if (Score > static_cast<int>(BestOp.Score)) {
+          if (Score > static_cast<int>(BestOp.Score) ||
+              (Score > 0 && Score == static_cast<int>(BestOp.Score) &&
+               Idx == OpIdx)) {
             BestOp.Idx = Idx;
             BestOp.Score = Score;
             BestScoresPerLanes[std::make_pair(OpIdx, Lane)] = Score;
           }
           break;
         }
-        case ReorderingMode::Splat:
-          if (Op == OpLastLane)
+        case ReorderingMode::Constant:
+          if (isa<Constant>(Op) ||
+              (!BestOp.Score && L && L->isLoopInvariant(Op))) {
             BestOp.Idx = Idx;
+            if (isa<Constant>(Op)) {
+              BestOp.Score = LookAheadHeuristics::ScoreConstants;
+              BestScoresPerLanes[std::make_pair(OpIdx, Lane)] =
+                  LookAheadHeuristics::ScoreConstants;
+            }
+            if (isa<UndefValue>(Op) || !isa<Constant>(Op))
+              IsUsed = false;
+          }
+          break;
+        case ReorderingMode::Splat:
+          if (Op == OpLastLane || (!BestOp.Score && isa<Constant>(Op))) {
+            IsUsed = Op == OpLastLane;
+            if (Op == OpLastLane) {
+              BestOp.Score = LookAheadHeuristics::ScoreSplat;
+              BestScoresPerLanes[std::make_pair(OpIdx, Lane)] =
+                  LookAheadHeuristics::ScoreSplat;
+            }
+            BestOp.Idx = Idx;
+          }
           break;
         case ReorderingMode::Failed:
           llvm_unreachable("Not expected Failed reordering mode.");
@@ -2059,10 +2089,12 @@ public:
     void clear() { OpsVec.clear(); }
 
     /// \Returns true if there are enough operands identical to \p Op to fill
-    /// the whole vector.
+    /// the whole vector (it is mixed with constants or loop invariant values).
     /// Note: This modifies the 'IsUsed' flag, so a cleanUsed() must follow.
     bool shouldBroadcast(Value *Op, unsigned OpIdx, unsigned Lane) {
       bool OpAPO = getData(OpIdx, Lane).APO;
+      bool IsInvariant = L && L->isLoopInvariant(Op);
+      unsigned Cnt = 0;
       for (unsigned Ln = 0, Lns = getNumLanes(); Ln != Lns; ++Ln) {
         if (Ln == Lane)
           continue;
@@ -2072,22 +2104,51 @@ public:
           OperandData &Data = getData(OpI, Ln);
           if (Data.APO != OpAPO || Data.IsUsed)
             continue;
-          if (Data.V == Op) {
+          Value *OpILane = getValue(OpI, Lane);
+          bool IsConstantOp = isa<Constant>(OpILane);
+          // Consider the broadcast candidate if:
+          // 1. Same value is found in one of the operands.
+          if (Data.V == Op ||
+              // 2. The operand in the given lane is not constant but there is a
+              // constant operand in another lane (which can be moved to the
+              // given lane). In this case we can represent it as a simple
+              // permutation of constant and broadcast.
+              (!IsConstantOp &&
+               ((Lns > 2 && isa<Constant>(Data.V)) ||
+                // 2.1. If we have only 2 lanes, need to check that value in the
+                // next lane does not build same opcode sequence.
+                (Lns == 2 &&
+                 !getSameOpcode({Op, getValue((OpI + 1) % OpE, Ln)}, TLI)
+                      .getOpcode() &&
+                 isa<Constant>(Data.V)))) ||
+              // 3. The operand in the current lane is loop invariant (can be
+              // hoisted out) and another operand is also a loop invariant
+              // (though not a constant). In this case the whole vector can be
+              // hoisted out.
+              // FIXME: need to teach the cost model about this case for better
+              // estimation.
+              (IsInvariant && !isa<Constant>(Data.V) &&
+               !getSameOpcode({Op, Data.V}, TLI).getOpcode() &&
+               L->isLoopInvariant(Data.V))) {
             FoundCandidate = true;
-            Data.IsUsed = true;
+            Data.IsUsed = Data.V == Op;
+            if (Data.V == Op)
+              ++Cnt;
             break;
           }
         }
         if (!FoundCandidate)
           return false;
       }
-      return true;
+      return getNumLanes() == 2 || Cnt > 1;
     }
 
   public:
     /// Initialize with all the operands of the instruction vector \p RootVL.
     VLOperands(ArrayRef<Value *> RootVL, const BoUpSLP &R)
-        : TLI(*R.TLI), DL(*R.DL), SE(*R.SE), R(R) {
+        : TLI(*R.TLI), DL(*R.DL), SE(*R.SE), R(R),
+          L(R.LI->getLoopFor(
+              (cast<Instruction>(RootVL.front())->getParent()))) {
       // Append all the operands of RootVL.
       appendOperandsOfVL(RootVL);
     }
@@ -2219,8 +2280,6 @@ public:
                 // getBestOperand().
                 swap(OpIdx, *BestIdx, Lane);
               } else {
-                // We failed to find a best operand, set mode to 'Failed'.
-                ReorderingModes[OpIdx] = ReorderingMode::Failed;
                 // Enable the second pass.
                 StrategyFailed = true;
               }
@@ -7934,6 +7993,33 @@ void BoUpSLP::transformNodes() {
       }
       break;
     }
+    case Instruction::Store: {
+      Type *ScalarTy =
+          cast<StoreInst>(E.getMainOp())->getValueOperand()->getType();
+      auto *VecTy = FixedVectorType::get(ScalarTy, E.Scalars.size());
+      Align CommonAlignment = computeCommonAlignment<StoreInst>(E.Scalars);
+      // Check if profitable to represent consecutive load + reverse as strided
+      // load with stride -1.
+      if (isReverseOrder(E.ReorderIndices) &&
+          TTI->isLegalStridedLoadStore(VecTy, CommonAlignment)) {
+        SmallVector<int> Mask;
+        inversePermutation(E.ReorderIndices, Mask);
+        auto *BaseSI = cast<StoreInst>(E.Scalars.back());
+        InstructionCost OriginalVecCost =
+            TTI->getMemoryOpCost(Instruction::Store, VecTy, BaseSI->getAlign(),
+                                 BaseSI->getPointerAddressSpace(), CostKind,
+                                 TTI::OperandValueInfo()) +
+            ::getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, Mask, CostKind);
+        InstructionCost StridedCost = TTI->getStridedMemoryOpCost(
+            Instruction::Store, VecTy, BaseSI->getPointerOperand(),
+            /*VariableMask=*/false, CommonAlignment, CostKind, BaseSI);
+        if (StridedCost < OriginalVecCost)
+          // Strided load is more profitable than consecutive load + reverse -
+          // transform the node to strided load.
+          E.State = TreeEntry::StridedVectorize;
+      }
+      break;
+    }
     default:
       break;
     }
@@ -9466,11 +9552,22 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         cast<StoreInst>(IsReorder ? VL[E->ReorderIndices.front()] : VL0);
     auto GetVectorCost = [=](InstructionCost CommonCost) {
       // We know that we can merge the stores. Calculate the cost.
-      TTI::OperandValueInfo OpInfo = getOperandInfo(E->getOperand(0));
-      return TTI->getMemoryOpCost(Instruction::Store, VecTy, BaseSI->getAlign(),
-                                  BaseSI->getPointerAddressSpace(), CostKind,
-                                  OpInfo) +
-             CommonCost;
+      InstructionCost VecStCost;
+      if (E->State == TreeEntry::StridedVectorize) {
+        Align CommonAlignment =
+            computeCommonAlignment<StoreInst>(UniqueValues.getArrayRef());
+        VecStCost = TTI->getStridedMemoryOpCost(
+            Instruction::Store, VecTy, BaseSI->getPointerOperand(),
+            /*VariableMask=*/false, CommonAlignment, CostKind);
+      } else {
+        assert(E->State == TreeEntry::Vectorize &&
+               "Expected either strided or consecutive stores.");
+        TTI::OperandValueInfo OpInfo = getOperandInfo(E->getOperand(0));
+        VecStCost = TTI->getMemoryOpCost(
+            Instruction::Store, VecTy, BaseSI->getAlign(),
+            BaseSI->getPointerAddressSpace(), CostKind, OpInfo);
+      }
+      return VecStCost + CommonCost;
     };
     SmallVector<Value *> PointerOps(VL.size());
     for (auto [I, V] : enumerate(VL)) {
@@ -12398,7 +12495,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
   bool IsReverseOrder = isReverseOrder(E->ReorderIndices);
   auto FinalShuffle = [&](Value *V, const TreeEntry *E, VectorType *VecTy) {
     ShuffleInstructionBuilder ShuffleBuilder(ScalarTy, Builder, *this);
-    if (E->getOpcode() == Instruction::Store) {
+    if (E->getOpcode() == Instruction::Store &&
+        E->State == TreeEntry::Vectorize) {
       ArrayRef<int> Mask =
           ArrayRef(reinterpret_cast<const int *>(E->ReorderIndices.begin()),
                    E->ReorderIndices.size());
@@ -12986,8 +13084,27 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       VecValue = FinalShuffle(VecValue, E, VecTy);
 
       Value *Ptr = SI->getPointerOperand();
-      StoreInst *ST =
-          Builder.CreateAlignedStore(VecValue, Ptr, SI->getAlign());
+      Instruction *ST;
+      if (E->State == TreeEntry::Vectorize) {
+        ST = Builder.CreateAlignedStore(VecValue, Ptr, SI->getAlign());
+      } else {
+        assert(E->State == TreeEntry::StridedVectorize &&
+               "Expected either strided or conseutive stores.");
+        Align CommonAlignment = computeCommonAlignment<StoreInst>(E->Scalars);
+        Type *StrideTy = DL->getIndexType(SI->getPointerOperandType());
+        auto *Inst = Builder.CreateIntrinsic(
+            Intrinsic::experimental_vp_strided_store,
+            {VecTy, Ptr->getType(), StrideTy},
+            {VecValue, Ptr,
+             ConstantInt::get(
+                 StrideTy, -static_cast<int>(DL->getTypeAllocSize(ScalarTy))),
+             Builder.getAllOnesMask(VecTy->getElementCount()),
+             Builder.getInt32(E->Scalars.size())});
+        Inst->addParamAttr(
+            /*ArgNo=*/1,
+            Attribute::getWithAlignment(Inst->getContext(), CommonAlignment));
+        ST = Inst;
+      }
 
       Value *V = propagateMetadata(ST, E->Scalars);
 
