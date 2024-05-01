@@ -744,7 +744,7 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
 Expected<std::unique_ptr<TargetMachine>>
 codegen::createTargetMachineForTriple(StringRef TargetTriple,
                                       CodeGenOptLevel OptLevel) {
-  Triple TheTriple(TargetTriple);
+  Triple TheTriple(llvm::Triple::normalize(TargetTriple.str()));
   std::string Error;
   const auto *TheTarget =
       TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);

@@ -587,7 +587,8 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   LangOpts.SpeculativeLoadHardening = CodeGenOpts.SpeculativeLoadHardening;
   LangOpts.CurrentModule = LangOpts.ModuleName;
 
-  llvm::Triple T(TargetOpts.Triple);
+  llvm::Triple T(llvm::Triple::normalize(TargetOpts.Triple));
+
   llvm::Triple::ArchType Arch = T.getArch();
 
   CodeGenOpts.CodeModel = TargetOpts.CodeModel;
@@ -4675,7 +4676,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   // FIXME: We shouldn't have to pass the DashX option around here
   InputKind DashX = Res.getFrontendOpts().DashX;
   ParseTargetArgs(Res.getTargetOpts(), Args, Diags);
-  llvm::Triple T(Res.getTargetOpts().Triple);
+  llvm::Triple T(llvm::Triple::normalize(Res.getTargetOpts().Triple));
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
   ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
@@ -4901,7 +4902,7 @@ std::string CompilerInvocation::getModuleHash() const {
 
 void CompilerInvocationBase::generateCC1CommandLine(
     ArgumentConsumer Consumer) const {
-  llvm::Triple T(getTargetOpts().Triple);
+  llvm::Triple T(llvm::Triple::normalize(getTargetOpts().Triple));
 
   GenerateFileSystemArgs(getFileSystemOpts(), Consumer);
   GenerateMigratorArgs(getMigratorOpts(), Consumer);

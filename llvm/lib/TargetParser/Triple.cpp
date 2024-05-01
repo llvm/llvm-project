@@ -115,6 +115,30 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
     if (SubArch == AArch64SubArch_arm64e)
       return "arm64e";
     break;
+  case Triple::dxil:
+    switch (SubArch) {
+    case Triple::NoSubArch:
+    case Triple::DXILSubArch_v1_0:
+      return "dxilv1.0";
+    case Triple::DXILSubArch_v1_1:
+      return "dxilv1.1";
+    case Triple::DXILSubArch_v1_2:
+      return "dxilv1.2";
+    case Triple::DXILSubArch_v1_3:
+      return "dxilv1.3";
+    case Triple::DXILSubArch_v1_4:
+      return "dxilv1.4";
+    case Triple::DXILSubArch_v1_5:
+      return "dxilv1.5";
+    case Triple::DXILSubArch_v1_6:
+      return "dxilv1.6";
+    case Triple::DXILSubArch_v1_7:
+      return "dxilv1.7";
+    case Triple::DXILSubArch_v1_8:
+      return "dxilv1.8";
+    default:
+      return "";
+    }
   default:
     break;
   }
@@ -1204,6 +1228,27 @@ std::string Triple::normalize(StringRef Str) {
       Components.resize(5);
       Components[4] = getObjectFormatTypeName(ObjectFormat);
     }
+  }
+
+  // Normalize DXIL triple if it does not include DXIL version number.
+  // Determine DXIL version number using the minor version number of Shader
+  // Model version specified in target triple, if any. Prior to decoupling DXIL
+  // version numbering from that of Shader Model DXIL version 1.Y corresponds to
+  // SM 6.Y. E.g., dxilv1.Y-unknown-shadermodelX.Y-hull
+  if (Components[0] == "dxil") {
+    std::string DXILVerStr{"dxilv1."};
+    if (Components.size() > 2) {
+      // OS component specified
+      if (Components[2].starts_with("shadermodel6.")) {
+        Components[0] = DXILVerStr.append(
+            Components[2].drop_front(strlen("shadermodel6.")));
+      } else if (Components[2].starts_with("shadermodel")) {
+        // If shader model specified is other than 6.x, set DXIL Version to 1.0
+        Components[0] = DXILVerStr.append("0");
+      }
+    }
+    // DXIL version is not set for a non-specified OS string or one that does
+    // not starts with shadermodel.
   }
 
   // Stick the corrected components back together to form the normalized string.
