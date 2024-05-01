@@ -53,7 +53,7 @@ void Half(half2 H);
 //   (c) When called with double it will resolve to double because it is an
 //   exact match.
 
-// CHECK: FunctionDecl {{.*}} Case1 'void (half2, float2, double2)'
+// CHECK-LABEL: FunctionDecl {{.*}} Case1 'void (half2, float2, double2)'
 void Case1(half2 H, float2 F, double2 D) {
   // CHECK: CallExpr {{.*}} 'void'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(half2)' <FunctionToPointerDecay>
@@ -79,7 +79,7 @@ void Case1(half2 H, float2 F, double2 D) {
 //   (c) When called with double it will resolve to double because it is an
 //   exact match.
 
-// CHECK: FunctionDecl {{.*}} Case2 'void (half2, float2, double2)'
+// CHECK-LABEL: FunctionDecl {{.*}} Case2 'void (half2, float2, double2)'
 void Case2(half2 H, float2 F, double2 D) {
   // CHECK: CallExpr {{.*}} 'void'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(float2)' <FunctionToPointerDecay>
@@ -105,7 +105,7 @@ void Case2(half2 H, float2 F, double2 D) {
 //   (c) When called with double, it will resolve to double because it is an
 //   exact match.
 
-// CHECK: FunctionDecl {{.*}} Case3 'void (half2, float2, double2)'
+// CHECK-LABEL: FunctionDecl {{.*}} Case3 'void (half2, float2, double2)'
 void Case3(half2 H, float2 F, double2 D) {
   // CHECK: CallExpr {{.*}} 'void'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(half2)' <FunctionToPointerDecay>
@@ -131,7 +131,7 @@ void Case3(half2 H, float2 F, double2 D) {
 //   (c) When called with double it will resolve to float because it is the
 //   float is higher rank than half.
 
-// CHECK: FunctionDecl {{.*}} Case4 'void (half2, float2, double2)'
+// CHECK-LABEL: FunctionDecl {{.*}} Case4 'void (half2, float2, double2)'
 void Case4(half2 H, float2 F, double2 D) {
   // CHECK: CallExpr {{.*}} 'void'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(half2)' <FunctionToPointerDecay>
@@ -157,7 +157,7 @@ void Case4(half2 H, float2 F, double2 D) {
 //   (c) When called with double it will resolve to double because it is an
 //   exact match.
 
-// CHECK: FunctionDecl {{.*}} Case5 'void (half2, float2, double2)'
+// CHECK-LABEL: FunctionDecl {{.*}} Case5 'void (half2, float2, double2)'
 void Case5(half2 H, float2 F, double2 D) {
   // CHECK: CallExpr {{.*}} 'void'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(double2)' <FunctionToPointerDecay>
@@ -183,7 +183,7 @@ void Case5(half2 H, float2 F, double2 D) {
 //   (c) When called with double it will resolve to float because it is a
 //   valid conversion.
 
-// CHECK: FunctionDecl {{.*}} Case6 'void (half2, float2, double2)'
+// CHECK-LABEL: FunctionDecl {{.*}} Case6 'void (half2, float2, double2)'
 void Case6(half2 H, float2 F, double2 D) {
   // CHECK: CallExpr {{.*}} 'void'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(float2)' <FunctionToPointerDecay>
@@ -209,7 +209,7 @@ void Case6(half2 H, float2 F, double2 D) {
 //   (c) When called with double it will resolve to float because it is a
 //   valid conversion.
 
-// CHECK: FunctionDecl {{.*}} Case7 'void (half2, float2, double2)'
+// CHECK-LABEL: FunctionDecl {{.*}} Case7 'void (half2, float2, double2)'
 void Case7(half2 H, float2 F, double2 D) {
   // CHECK: CallExpr {{.*}} 'void'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(half2)' <FunctionToPointerDecay>
