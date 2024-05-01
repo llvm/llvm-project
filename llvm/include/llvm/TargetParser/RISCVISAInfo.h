@@ -78,13 +78,12 @@ public:
   static std::string getTargetFeatureForExtension(StringRef Ext);
 
 private:
-  RISCVISAInfo(unsigned XLen)
-      : XLen(XLen), FLen(0), MinVLen(0), MaxELen(0), MaxELenFp(0) {}
+  RISCVISAInfo(unsigned XLen) : XLen(XLen) {}
 
   unsigned XLen;
-  unsigned FLen;
-  unsigned MinVLen;
-  unsigned MaxELen, MaxELenFp;
+  unsigned FLen = 0;
+  unsigned MinVLen = 0;
+  unsigned MaxELen = 0, MaxELenFp = 0;
 
   RISCVISAUtils::OrderedExtensionMap Exts;
 
@@ -94,9 +93,9 @@ private:
 
   void updateImplication();
   void updateCombination();
-  void updateFLen();
-  void updateMinVLen();
-  void updateMaxELen();
+
+  /// Update FLen, MinVLen, MaxELen, and MaxELenFp.
+  void updateImpliedLengths();
 };
 
 } // namespace llvm

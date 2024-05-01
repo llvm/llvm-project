@@ -478,9 +478,7 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
                                "failed to parse major version number");
     ISAInfo->addExtension(ExtName, {MajorVersion, MinorVersion});
   }
-  ISAInfo->updateFLen();
-  ISAInfo->updateMinVLen();
-  ISAInfo->updateMaxELen();
+  ISAInfo->updateImpliedLengths();
   return std::move(ISAInfo);
 }
 
@@ -906,50 +904,51 @@ void RISCVISAInfo::updateCombination() {
   } while (MadeChange);
 }
 
-void RISCVISAInfo::updateFLen() {
-  FLen = 0;
+void RISCVISAInfo::updateImpliedLengths() {
+  assert(FLen == 0 && MaxELenFp == 0 && MaxELen == 0 && MinVLen == 0 &&
+         "Expected lengths to be initialied to zero");
+
   // TODO: Handle q extension.
   if (Exts.count("d"))
     FLen = 64;
   else if (Exts.count("f"))
     FLen = 32;
-}
 
-void RISCVISAInfo::updateMinVLen() {
-  for (auto const &Ext : Exts) {
-    StringRef ExtName = Ext.first;
-    bool IsZvlExt = ExtName.consume_front("zvl") && ExtName.consume_back("b");
-    if (IsZvlExt) {
-      unsigned ZvlLen;
-      if (!ExtName.getAsInteger(10, ZvlLen))
-        MinVLen = std::max(MinVLen, ZvlLen);
-    }
-  }
-}
-
-void RISCVISAInfo::updateMaxELen() {
-  assert(MaxELenFp == 0 && MaxELen == 0);
   if (Exts.count("v")) {
     MaxELenFp = std::max(MaxELenFp, 64u);
     MaxELen = std::max(MaxELen, 64u);
   }
 
-  // handles EEW restriction by sub-extension zve
   for (auto const &Ext : Exts) {
     StringRef ExtName = Ext.first;
-    bool IsZveExt = ExtName.consume_front("zve");
-    if (IsZveExt) {
-      if (ExtName.back() == 'f')
-        MaxELenFp = std::max(MaxELenFp, 32u);
-      else if (ExtName.back() == 'd')
-        MaxELenFp = std::max(MaxELenFp, 64u);
-      else if (ExtName.back() != 'x')
+    // Infer MaxELen and MaxELenFp from Zve(32/64)(x/f/d)
+    if (ExtName.consume_front("zve")) {
+      unsigned ZveELen;
+      if (ExtName.consumeInteger(10, ZveELen))
         continue;
 
-      ExtName = ExtName.drop_back();
-      unsigned ZveELen;
-      if (!ExtName.getAsInteger(10, ZveELen))
-        MaxELen = std::max(MaxELen, ZveELen);
+      if (ExtName == "f")
+        MaxELenFp = std::max(MaxELenFp, 32u);
+      else if (ExtName == "d")
+        MaxELenFp = std::max(MaxELenFp, 64u);
+      else if (ExtName != "x")
+        continue;
+
+      MaxELen = std::max(MaxELen, ZveELen);
+      continue;
+    }
+
+    // Infer MinVLen from zvl*b.
+    if (ExtName.consume_front("zvl")) {
+      unsigned ZvlLen;
+      if (ExtName.consumeInteger(10, ZvlLen))
+        continue;
+
+      if (ExtName != "b")
+        continue;
+
+      MinVLen = std::max(MinVLen, ZvlLen);
+      continue;
     }
   }
 }
@@ -975,9 +974,7 @@ llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 RISCVISAInfo::postProcessAndChecking(std::unique_ptr<RISCVISAInfo> &&ISAInfo) {
   ISAInfo->updateImplication();
   ISAInfo->updateCombination();
-  ISAInfo->updateFLen();
-  ISAInfo->updateMinVLen();
-  ISAInfo->updateMaxELen();
+  ISAInfo->updateImpliedLengths();
 
   if (Error Result = ISAInfo->checkDependency())
     return std::move(Result);
