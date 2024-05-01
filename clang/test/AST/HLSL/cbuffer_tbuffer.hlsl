@@ -1,12 +1,14 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -ast-dump -o - %s | FileCheck %s
 
-// CHECK:HLSLBufferDecl 0x[[CB:[0-9a-f]+]] {{.*}} line:5:9 cbuffer CB
+// CHECK:HLSLBufferDecl 0x[[CB:[0-9a-f]+]] {{.*}} line:6:9 cbuffer CB
+// CHECK-NEXT:HLSLResourceAttr {{.*}} <<invalid sloc>> Implicit CBuffer CBuffer
 // CHECK-NEXT:VarDecl 0x[[A:[0-9a-f]+]] {{.*}} col:9 used a 'float'
 cbuffer CB {
   float a;
 }
 
-// CHECK:HLSLBufferDecl 0x[[TB:[0-9a-f]+]] {{.*}} line:11:9 tbuffer TB
+// CHECK:HLSLBufferDecl 0x[[TB:[0-9a-f]+]] {{.*}} line:13:9 tbuffer TB
+// CHECK-NEXT:HLSLResourceAttr {{.*}} <<invalid sloc>> Implicit SRV TBuffer
 // CHECK-NEXT:VarDecl 0x[[B:[0-9a-f]+]] {{.*}} col:9 used b 'float'
 tbuffer TB {
   float b;

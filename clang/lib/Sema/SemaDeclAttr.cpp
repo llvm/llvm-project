@@ -7355,10 +7355,8 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
       PrintingPolicy PP = S.getPrintingPolicy();
       std::string typestr = QualType::getAsString(QT.split(), PP);
 
-      if (Slot[0] != 't')
-        S.Diag(ArgLoc,
-               diag::err_hlsl_mismatching_register_builtin_type_and_name)
-            << Slot.substr(0, 1) << typestr << "'t'";
+      S.Diag(ArgLoc, diag::err_hlsl_unsupported_register_resource_type)
+          << typestr;
       return;
     }
 
@@ -7377,7 +7375,13 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
     DeclResourceClass = Attr->getResourceClass();
     VarTy = TheRecordDecl->getName();
   } else {
-    DeclResourceClass = llvm::hlsl::ResourceClass::CBuffer;
+    HLSLResourceAttr *Attr = CBufferOrTBuffer->getAttr<HLSLResourceAttr>();
+    DeclResourceClass = Attr->getResourceClass();
+    if (CBufferOrTBuffer->isCBuffer()) {
+      VarTy = "cbuffer";
+    } else {
+      VarTy = "tbuffer";
+    }
   }
   switch (DeclResourceClass) {
   case llvm::hlsl::ResourceClass::SRV: {
@@ -7392,15 +7396,10 @@ static void DiagnoseHLSLResourceRegType(Sema &S, SourceLocation &ArgLoc,
   }
   case llvm::hlsl::ResourceClass::CBuffer: {
     // could be CBuffer or TBuffer
-    if (CBufferOrTBuffer->isCBuffer()) {
-      VarTy = "cbuffer";
+    if (VarTy == "cbuffer") {
       if (Slot[0] == 'b')
         return;
-    } else {
-      VarTy = "tbuffer";
-      // This isn't an SRV, but we need the diagnostic to emit
-      // the same binding prefix that would be expected on an SRV.
-      DeclResourceClass = llvm::hlsl::ResourceClass::SRV;
+    } else if (VarTy == "tbuffer") {
       if (Slot[0] == 't')
         return;
     }
@@ -7460,7 +7459,7 @@ static void handleHLSLResourceBindingAttr(Sema &S, Decl *D,
     case 't':
       break;
     default:
-      S.Diag(ArgLoc, diag::err_hlsl_unsupported_register_type)
+      S.Diag(ArgLoc, diag::err_hlsl_unsupported_register_prefix)
           << Slot.substr(0, 1);
       return;
     }

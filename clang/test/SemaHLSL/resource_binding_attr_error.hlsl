@@ -44,7 +44,7 @@ void foo2() {
   // expected-warning@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
   extern RWBuffer<float> U2 : register(u5);
 }
-// expected-error@+1 {{invalid register name prefix 'u' for 'float' (expected 't')}}
+// expected-error@+1 {{invalid resource 'float' used}}
 float b : register(u0, space1);
 
 // expected-warning@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}

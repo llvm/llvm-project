@@ -1,13 +1,15 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -ast-dump -o - %s | FileCheck %s
 
-// CHECK:HLSLBufferDecl 0x[[CB:[0-9a-f]+]] {{.*}} line:6:9 cbuffer CB
+// CHECK:HLSLBufferDecl 0x[[CB:[0-9a-f]+]] {{.*}} line:7:9 cbuffer CB
+// CHECK-NEXT:HLSLResourceAttr 0x[[CB:[0-9a-f]+]] {{.*}} Implicit CBuffer CBuffer
 // CHECK-NEXT:HLSLResourceBindingAttr 0x{{[0-9a-f]+}} <col:14> "b3" "space2"
 // CHECK-NEXT:VarDecl 0x[[A:[0-9a-f]+]] {{.*}} col:9 used a 'float'
 cbuffer CB : register(b3, space2) {
   float a;
 }
 
-// CHECK:HLSLBufferDecl 0x[[TB:[0-9a-f]+]] {{.*}} line:13:9 tbuffer TB
+// CHECK:HLSLBufferDecl 0x[[TB:[0-9a-f]+]] {{.*}} line:15:9 tbuffer TB
+// CHECK-NEXT:HLSLResourceAttr 0x[[CB:[0-9a-f]+]] {{.*}} Implicit SRV TBuffer
 // CHECK-NEXT:HLSLResourceBindingAttr 0x{{[0-9a-f]+}} <col:14> "t2" "space1"
 // CHECK-NEXT:VarDecl 0x[[B:[0-9a-f]+]] {{.*}} col:9 used b 'float'
 tbuffer TB : register(t2, space1) {

@@ -24,6 +24,25 @@ using namespace clang;
 
 SemaHLSL::SemaHLSL(Sema &S) : SemaBase(S) {}
 
+HLSLResourceAttr *SemaHLSL::mergeHLSLResourceAttr(bool CBuffer) {
+  // cbuffer case
+  if (CBuffer) {
+    HLSLResourceAttr *attr = HLSLResourceAttr::CreateImplicit(
+        getASTContext(), llvm::hlsl::ResourceClass::CBuffer,
+        llvm::hlsl::ResourceKind::CBuffer,
+        /*IsROV=*/false);
+    return attr;
+  }
+  // tbuffer case
+  else {
+    HLSLResourceAttr *attr = HLSLResourceAttr::CreateImplicit(
+        getASTContext(), llvm::hlsl::ResourceClass::SRV,
+        llvm::hlsl::ResourceKind::TBuffer,
+        /*IsROV=*/false);
+    return attr;
+  }
+}
+
 Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
                                  SourceLocation KwLoc, IdentifierInfo *Ident,
                                  SourceLocation IdentLoc,
@@ -32,7 +51,9 @@ Decl *SemaHLSL::ActOnStartBuffer(Scope *BufferScope, bool CBuffer,
   DeclContext *LexicalParent = SemaRef.getCurLexicalContext();
   HLSLBufferDecl *Result = HLSLBufferDecl::Create(
       getASTContext(), LexicalParent, CBuffer, KwLoc, Ident, IdentLoc, LBrace);
-
+  HLSLResourceAttr *NewAttr = mergeHLSLResourceAttr(CBuffer);
+  if (NewAttr)
+    Result->addAttr(NewAttr);
   SemaRef.PushOnScopeChains(Result, BufferScope);
   SemaRef.PushDeclContext(BufferScope, Result);
 
