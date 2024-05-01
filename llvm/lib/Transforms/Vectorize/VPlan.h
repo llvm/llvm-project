@@ -1475,7 +1475,8 @@ public:
 
   VPWidenCallRecipe *clone() override {
     return new VPWidenCallRecipe(getUnderlyingValue(), operands(),
-                                 VectorIntrinsicID, ResultTy, getDebugLoc(), Variant);
+                                 VectorIntrinsicID, ResultTy, getDebugLoc(),
+                                 Variant);
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenCallSC)
