@@ -297,14 +297,6 @@ void unwrapAndPrint(raw_ostream &OS, Any IR) {
     auto *M = unwrapModule(IR);
     assert(M && "should have unwrapped module");
     printIR(OS, M);
-
-    if (const auto *MF = unwrapIR<MachineFunction>(IR)) {
-      auto &MMI = MF->getMMI();
-      for (const auto &F : *M) {
-        if (auto *MF = MMI.getMachineFunction(F))
-          MF->print(OS);
-      }
-    }
     return;
   }
 

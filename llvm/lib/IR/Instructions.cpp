@@ -2889,7 +2889,7 @@ bool ShuffleVectorInst::isOneUseSingleSourceMask(int VF) const {
 bool ShuffleVectorInst::isInterleave(unsigned Factor) {
   FixedVectorType *OpTy = dyn_cast<FixedVectorType>(getOperand(0)->getType());
   // shuffle_vector can only interleave fixed length vectors - for scalable
-  // vectors, see the @llvm.experimental.vector.interleave2 intrinsic
+  // vectors, see the @llvm.vector.interleave2 intrinsic
   if (!OpTy)
     return false;
   unsigned OpNumElts = OpTy->getNumElements();
