@@ -32,30 +32,34 @@ struct DescriptorFinderForwarder : public swift::reflection::DescriptorFinder {
 
   std::unique_ptr<swift::reflection::BuiltinTypeDescriptorBase>
   getBuiltinTypeDescriptor(const swift::reflection::TypeRef *TR) override {
-    if (m_descriptor_finder && shouldConsultDescriptorFinder())
-      return m_descriptor_finder->getBuiltinTypeDescriptor(TR);
+    if (!m_descriptor_finders.empty() && shouldConsultDescriptorFinder())
+      return m_descriptor_finders.back()->getBuiltinTypeDescriptor(TR);
     return nullptr;
   }
 
   std::unique_ptr<swift::reflection::FieldDescriptorBase>
   getFieldDescriptor(const swift::reflection::TypeRef *TR) override {
-    if (m_descriptor_finder && shouldConsultDescriptorFinder())
-      return m_descriptor_finder->getFieldDescriptor(TR);
+    if (!m_descriptor_finders.empty() && shouldConsultDescriptorFinder())
+      return m_descriptor_finders.back()->getFieldDescriptor(TR);
     return nullptr;
   }
 
   std::unique_ptr<swift::reflection::MultiPayloadEnumDescriptorBase>
   getMultiPayloadEnumDescriptor(const swift::reflection::TypeRef *TR) override {
-    if (m_descriptor_finder && shouldConsultDescriptorFinder())
-      return m_descriptor_finder->getMultiPayloadEnumDescriptor(TR);
+    if (!m_descriptor_finders.empty() && shouldConsultDescriptorFinder())
+      return m_descriptor_finders.back()->getMultiPayloadEnumDescriptor(TR);
     return nullptr;
   }
-  void SetExternalDescriptorFinder(
-      swift::reflection::DescriptorFinder *desciptor_finder) {
-    m_descriptor_finder = desciptor_finder;
+
+  void PushExternalDescriptorFinder(
+      swift::reflection::DescriptorFinder *descriptor_finder) {
+    m_descriptor_finders.push_back(descriptor_finder);
   }
 
-  void ClearExternalDescriptorFinder() { m_descriptor_finder = nullptr; }
+  void PopExternalDescriptorFinder() {
+    assert(!m_descriptor_finders.empty() && "m_descriptor_finders is empty!");
+    m_descriptor_finders.pop_back();
+  }
 
   void SetImageAdded(bool image_added) {
     m_image_added |= image_added;
@@ -76,7 +80,8 @@ private:
     }
   }
 
-  swift::reflection::DescriptorFinder *m_descriptor_finder = nullptr;
+  llvm::SmallVector<swift::reflection::DescriptorFinder *, 1>
+      m_descriptor_finders;
   bool m_image_added = false;
 };
 
@@ -138,17 +143,17 @@ public:
   }
 
   /// Sets the descriptor finder, and on scope exit clears it out.
-  auto SetDescriptorFinderAndClearOnExit(
+  auto PushDescriptorFinderAndPopOnExit(
       swift::reflection::DescriptorFinder *descriptor_finder) {
-    m_forwader.SetExternalDescriptorFinder(descriptor_finder);
+    m_forwader.PushExternalDescriptorFinder(descriptor_finder);
     return llvm::make_scope_exit(
-        [&]() { m_forwader.ClearExternalDescriptorFinder(); });
+        [&]() { m_forwader.PopExternalDescriptorFinder(); });
   }
 
   const swift::reflection::TypeRef *GetTypeRefOrNull(
       swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
       swift::reflection::DescriptorFinder *descriptor_finder) override {
-    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
+    auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
     auto type_ref_or_err =
         swift::Demangle::decodeMangledType(m_reflection_ctx.getBuilder(), node);
     if (type_ref_or_err.isError()) {
@@ -164,7 +169,7 @@ public:
       const swift::reflection::TypeRef *type_ref,
       swift::remote::TypeInfoProvider *provider,
       swift::reflection::DescriptorFinder *descriptor_finder) override {
-    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
+    auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
     if (!type_ref)
       return nullptr;
 
@@ -188,7 +193,7 @@ public:
   GetTypeInfo(const swift::reflection::TypeRef *type_ref,
               swift::remote::TypeInfoProvider *provider,
               swift::reflection::DescriptorFinder *descriptor_finder) override {
-    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
+    auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
     if (!type_ref)
       return nullptr;
 
@@ -226,7 +231,7 @@ public:
   const swift::reflection::TypeInfo *GetTypeInfoFromInstance(
       lldb::addr_t instance, swift::remote::TypeInfoProvider *provider,
       swift::reflection::DescriptorFinder *descriptor_finder) override {
-    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
+    auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
     return m_reflection_ctx.getInstanceTypeInfo(instance, provider);
   }
 
@@ -237,7 +242,7 @@ public:
   const swift::reflection::TypeRef *LookupSuperclass(
       const swift::reflection::TypeRef *tr,
       swift::reflection::DescriptorFinder *descriptor_finder) override {
-    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
+    auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
     return m_reflection_ctx.getBuilder().lookupSuperclass(tr);
   }
 
@@ -263,7 +268,7 @@ public:
                         swift::reflection::DescriptorFinder *descriptor_finder,
                         lldb::addr_t pointer,
                         std::function<bool(SuperClassType)> fn) override {
-    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
+    auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
     // Guard against faulty self-referential metadata.
     unsigned limit = 256;
     auto md_ptr = m_reflection_ctx.readMetadataFromInstance(pointer);
@@ -298,7 +303,7 @@ public:
       const swift::reflection::TypeRef *enum_type_ref,
       swift::remote::TypeInfoProvider *provider,
       swift::reflection::DescriptorFinder *descriptor_finder) override {
-    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
+    auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
     int32_t case_idx;
     if (m_reflection_ctx.projectEnumValue(enum_addr, enum_type_ref, &case_idx,
                                           provider))
@@ -312,7 +317,7 @@ public:
       swift::reflection::RemoteAddress existential_address,
       const swift::reflection::TypeRef &existential_tr,
       swift::reflection::DescriptorFinder *descriptor_finder) override {
-    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
+    auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
     return m_reflection_ctx.projectExistentialAndUnwrapClass(
         existential_address, existential_tr);
   }
@@ -321,7 +326,7 @@ public:
   ReadTypeFromMetadata(lldb::addr_t metadata_address,
                        swift::reflection::DescriptorFinder *descriptor_finder,
                        bool skip_artificial_subclasses) override {
-    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
+    auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
     return m_reflection_ctx.readTypeFromMetadata(metadata_address,
                                                  skip_artificial_subclasses);
   }
@@ -330,7 +335,7 @@ public:
   ReadTypeFromInstance(lldb::addr_t instance_address,
                        swift::reflection::DescriptorFinder *descriptor_finder,
                        bool skip_artificial_subclasses) override {
-    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
+    auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
     auto metadata_address =
         m_reflection_ctx.readMetadataFromInstance(instance_address);
     if (!metadata_address) {
@@ -354,7 +359,7 @@ public:
       const swift::reflection::TypeRef *type_ref,
       swift::reflection::GenericArgumentMap substitutions,
       swift::reflection::DescriptorFinder *descriptor_finder) override {
-    auto on_exit = SetDescriptorFinderAndClearOnExit(descriptor_finder);
+    auto on_exit = PushDescriptorFinderAndPopOnExit(descriptor_finder);
     return type_ref->subst(m_reflection_ctx.getBuilder(), substitutions);
   }
 
