@@ -1863,7 +1863,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // not, we need to ensure the subtarget is capable of backing off barrier
   // instructions in case there are any outstanding memory operations that may
   // cause an exception. Otherwise, insert an explicit S_WAITCNT 0 here.
-  if (MI.getOpcode() == AMDGPU::S_BARRIER &&
+  if (TII->isBarrierStart(MI.getOpcode()) &&
       !ST->hasAutoWaitcntBeforeBarrier() && !ST->supportsBackOffBarrier()) {
     Wait = Wait.combined(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/true));
   }
