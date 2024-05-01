@@ -30,6 +30,7 @@
 
 #include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Support/LogicalResult.h"
 
 namespace clang {
 class Expr;
@@ -993,6 +994,10 @@ public:
 
   // OpenMP gen functions:
   mlir::LogicalResult buildOMPParallelDirective(const OMPParallelDirective &S);
+  mlir::LogicalResult buildOMPTaskwaitDirective(const OMPTaskwaitDirective &S);
+  mlir::LogicalResult
+  buildOMPTaskyieldDirective(const OMPTaskyieldDirective &S);
+  mlir::LogicalResult buildOMPBarrierDirective(const OMPBarrierDirective &S);
 
   LValue buildOpaqueValueLValue(const OpaqueValueExpr *e);
 

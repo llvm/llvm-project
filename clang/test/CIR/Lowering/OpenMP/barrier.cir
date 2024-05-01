@@ -1,0 +1,15 @@
+
+// RUN: cir-translate %s -cir-to-llvmir | FileCheck %s
+
+
+module {
+  cir.func @omp_barrier_1() {
+    omp.barrier
+    cir.return
+  }
+}
+
+// CHECK: define void @omp_barrier_1()
+// CHECK: call i32 @__kmpc_global_thread_num(ptr {{.*}})
+// CHECK: call void @__kmpc_barrier(ptr {{.*}}, i32 {{.*}})
+// CHECK: ret void

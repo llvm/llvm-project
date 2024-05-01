@@ -135,6 +135,7 @@ struct UnimplementedFeature {
   static bool CUDA() { return false; }
   static bool openMP() { return false; }
   static bool openMPRuntime() { return false; }
+  static bool openMPRegionInfo() { return false; }
   static bool openMPTarget() { return false; }
   static bool isVarArg() { return false; }
   static bool setNonGC() { return false; }
