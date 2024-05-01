@@ -322,14 +322,6 @@ void PPCMergeStringPool::replaceUsesWithGEP(GlobalVariable *GlobalToReplace,
     Users.push_back(CurrentUser);
 
   for (User *CurrentUser : Users) {
-    Instruction *UserInstruction = dyn_cast<Instruction>(CurrentUser);
-    Constant *UserConstant = dyn_cast<Constant>(CurrentUser);
-
-    // At this point we expect that the user is either an instruction or a
-    // constant.
-    assert((UserConstant || UserInstruction) &&
-           "Expected the user to be an instruction or a constant.");
-
     // The user was not found so it must have been replaced earlier.
     if (!userHasOperand(CurrentUser, GlobalToReplace))
       continue;
