@@ -268,8 +268,6 @@ TEST_F(SelectionDAGPatternMatchTest, optionalResizing) {
   SDValue Op32 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int32VT);
   SDValue Op64 = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, Int64VT);
   SDValue ZExt = DAG->getNode(ISD::ZERO_EXTEND, DL, Int64VT, Op32);
-  SDValue AndZExt = DAG->getNode(ISD::AND, DL, Int64VT, Op64,
-                                 DAG->getConstant(~0U, DL, Int64VT));
   SDValue SExt = DAG->getNode(ISD::SIGN_EXTEND, DL, Int64VT, Op32);
   SDValue SExtInReg = DAG->getNode(ISD::SIGN_EXTEND_INREG, DL, Int64VT, Op64,
                                    DAG->getValueType(Int32VT));
@@ -282,8 +280,6 @@ TEST_F(SelectionDAGPatternMatchTest, optionalResizing) {
   EXPECT_TRUE(A == Op32);
   EXPECT_TRUE(sd_match(ZExt, m_ZExtOrSelf(m_Value(A))));
   EXPECT_TRUE(A == Op32);
-  EXPECT_TRUE(sd_match(AndZExt, m_ZExtOrSelf(m_Value(A))));
-  EXPECT_TRUE(A == Op64);
   EXPECT_TRUE(sd_match(Op64, m_SExtOrSelf(m_Value(A))));
   EXPECT_TRUE(A == Op64);
   EXPECT_TRUE(sd_match(SExt, m_SExtOrSelf(m_Value(A))));

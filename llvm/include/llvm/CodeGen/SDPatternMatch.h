@@ -633,6 +633,10 @@ inline UnaryOpc_match<Opnd, true> m_ChainedUnaryOp(unsigned Opc,
   return UnaryOpc_match<Opnd, true>(Opc, Op);
 }
 
+template <typename Opnd> inline UnaryOpc_match<Opnd> m_ZExt(const Opnd &Op) {
+  return UnaryOpc_match<Opnd>(ISD::ZERO_EXTEND, Op);
+}
+
 template <typename Opnd> inline auto m_SExt(Opnd &&Op) {
   return m_AnyOf(
       UnaryOpc_match<Opnd>(ISD::SIGN_EXTEND, Op),
@@ -645,6 +649,12 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_AnyExt(const Opnd &Op) {
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_Trunc(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::TRUNCATE, Op);
+}
+
+/// Match a zext or identity
+/// Allows to peek through optional extensions
+template <typename Opnd> inline auto m_ZExtOrSelf(Opnd &&Op) {
+  return m_AnyOf(m_ZExt(std::forward<Opnd>(Op)), std::forward<Opnd>(Op));
 }
 
 /// Match a sext or identity
@@ -722,20 +732,6 @@ inline SpecificInt_match m_SpecificInt(uint64_t V) {
 inline SpecificInt_match m_Zero() { return m_SpecificInt(0U); }
 inline SpecificInt_match m_One() { return m_SpecificInt(1U); }
 inline SpecificInt_match m_AllOnes() { return m_SpecificInt(~0U); }
-
-// FIXME: We probably ought to move constant matchers before
-// most of the others so that m_ZExt/m_ZExtOrSelf can be
-// with other extension matchers.
-template <typename Opnd> inline auto m_ZExt(const Opnd &Op) {
-  return m_AnyOf(UnaryOpc_match<Opnd>(ISD::ZERO_EXTEND, Op),
-                 m_And(Op, m_AllOnes()));
-}
-
-/// Match a zext or identity
-/// Allows to peek through optional extensions
-template <typename Opnd> inline auto m_ZExtOrSelf(Opnd &&Op) {
-  return m_AnyOf(m_ZExt(std::forward<Opnd>(Op)), std::forward<Opnd>(Op));
-}
 
 /// Match true boolean value based on the information provided by
 /// TargetLowering.
