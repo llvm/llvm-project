@@ -40,7 +40,7 @@ Paper Status
 .. note::
 
    .. [#note-P2510R3] This paper is applied as DR against C++20. (MSVC STL and libstdc++ will do the same.)
-   .. [#note-P2546R5] AIX and Picolib support is not implemented.
+   .. [#note-P2546R5] Picolib support is not implemented.
 
 .. _issues-status-cxx2c:
 

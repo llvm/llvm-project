@@ -50,7 +50,11 @@ void test() {
   static_assert(noexcept(std::is_debugger_present()));
 
   std::same_as<bool> decltype(auto) isDebuggerPresent = std::is_debugger_present();
+#if defined(TEST_HAS_NO_FILESYSTEM)
+  MarkAsLive(!isDebuggerPresent);
+#else
   MarkAsLive(isDebuggerPresent);
+#endif
   StopForDebugger(&isDebuggerPresent);
 }
 

@@ -47,25 +47,15 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // `breakpoint()` implementation
 
+_LIBCPP_EXPORTED_FROM_ABI void __breakpoint() noexcept {
 #  if defined(_LIBCPP_WIN32API)
-
-static void __breakpoint() noexcept { DebugBreak(); }
-
+  DebugBreak();
 #  elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__linux__) || defined(_AIX)
-
-static void __breakpoint() {
-#    if __has_builtin(__builtin_debugtrap)
-  __builtin_debugtrap();
-#    else
   raise(SIGTRAP);
-#    endif
-}
-
 #  else
-
 #    error "'std::breakpoint()' is not implemented on this platform."
-
 #  endif // defined(_LIBCPP_WIN32API)
+}
 
 // `is_debugger_present()` implementation
 
@@ -152,7 +142,7 @@ static bool __is_debugger_present() noexcept {
 
 #  elif defined(_AIX)
 
-_LIBCPP_HIDE_FROM_ABI bool __is_debugger_present() noexcept {
+static bool __is_debugger_present() noexcept {
   // Get the status information of a process by memory mapping the file /proc/PID/status.
   // https://www.ibm.com/docs/en/aix/7.3?topic=files-proc-file
   char filename[] = "/proc/4294967295/status";
@@ -186,13 +176,6 @@ _LIBCPP_HIDE_FROM_ABI bool __is_debugger_present() noexcept {
 #    error "'std::is_debugger_present()' is not implemented on this platform."
 
 #  endif // defined(_LIBCPP_WIN32API)
-
-_LIBCPP_EXPORTED_FROM_ABI void breakpoint() noexcept { __breakpoint(); }
-
-_LIBCPP_EXPORTED_FROM_ABI void breakpoint_if_debugging() noexcept {
-  if (__is_debugger_present())
-    __breakpoint();
-}
 
 _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_WEAK bool is_debugger_present() noexcept { return __is_debugger_present(); }
 

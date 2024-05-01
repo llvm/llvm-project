@@ -11,7 +11,7 @@
 // The Android libc++ tests are run on a non-Android host, connected to an
 // Android device over adb.
 // UNSUPPORTED: android, linux && no-filesystem && no-localization
-// XFAIL: LIBCXX-AIX-FIXME, LIBCXX-PICOLIBC-FIXME
+// XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // RUN: "%{lldb}" %t.exe -o "command script import %S/is_debugger_present_with_debugger_lldb.py"
@@ -48,7 +48,11 @@ void test() {
   static_assert(noexcept(std::is_debugger_present()));
 
   std::same_as<bool> decltype(auto) isDebuggerPresent = std::is_debugger_present();
+#if defined(TEST_HAS_NO_FILESYSTEM)
+  MarkAsLive(!isDebuggerPresent);
+#else
   MarkAsLive(isDebuggerPresent);
+#endif
   StopForDebugger(&isDebuggerPresent);
 }
 
