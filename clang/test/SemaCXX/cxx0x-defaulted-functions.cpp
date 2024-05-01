@@ -1,4 +1,9 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify -fcxx-exceptions -Wno-deprecated-builtins %s
+// RUN: %clang_cc1 -std=c++03 -Wno-c++11-extensions -fsyntax-only -verify -fcxx-exceptions -Wno-deprecated-builtins %s
+
+#if __cplusplus < 201103L
+#define static_assert _Static_assert
+#endif
 
 void fn() = default; // expected-error {{only special member}}
 struct foo {
@@ -43,6 +48,7 @@ void tester() {
   b = c;
 }
 
+#if __cplusplus >= 201103L
 template<typename T> struct S : T {
   constexpr S() = default;         // expected-note {{previous declaration is here}}
   constexpr S(const S&) = default; // expected-note {{previous declaration is here}}
@@ -118,6 +124,7 @@ namespace DefaultedFnExceptionSpec {
     *p = *p; // expected-note {{instantiation of}}
   }
 }
+#endif
 
 namespace PR13527 {
   struct X {
@@ -135,6 +142,7 @@ namespace PR13527 {
   X &X::operator=(X&&) = default; // expected-error {{redefinition}}
   X::~X() = default; // expected-error {{redefinition}}
 
+#if __cplusplus >= 201103L
   struct Y {
     Y() = default;
     Y(const Y&) = default;
@@ -149,6 +157,7 @@ namespace PR13527 {
   Y &Y::operator=(const Y&) noexcept = default; // expected-error {{definition of explicitly defaulted}}
   Y &Y::operator=(Y&&) noexcept = default; // expected-error {{definition of explicitly defaulted}}
   Y::~Y() = default; // expected-error {{definition of explicitly defaulted}}
+#endif
 }
 
 namespace PR27699 {
@@ -185,6 +194,7 @@ extern "C" { // expected-note {{extern "C" language linkage specification begins
  void PR13573(const _Tp&) = delete;
 }
 
+#if __cplusplus >= 201103L
 namespace PR15597 {
   template<typename T> struct A {
     A() noexcept(true) = default;
@@ -197,6 +207,7 @@ namespace PR15597 {
   A<int> a;
   B<int> b;
 }
+#endif
 
 namespace PR27941 {
 struct ExplicitBool {
@@ -245,6 +256,7 @@ E<Type>::E(const int&) {}  // expected-error {{definition of explicitly defaulte
 
 }
 
+#if __cplusplus >= 201103L
 namespace P1286R2 {
   struct X {
     X();
@@ -286,3 +298,4 @@ struct B {
   auto operator = (RM<B>) -> RV<B> = delete;
 };
 }
+#endif
