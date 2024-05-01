@@ -203,15 +203,16 @@ static MCStreamer *
 createPPCELFStreamer(const Triple &T, MCContext &Context,
                      std::unique_ptr<MCAsmBackend> &&MAB,
                      std::unique_ptr<MCObjectWriter> &&OW,
-                     std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll) {
+                     std::unique_ptr<MCCodeEmitter> &&Emitter) {
   return createPPCELFStreamer(Context, std::move(MAB), std::move(OW),
                               std::move(Emitter));
 }
 
-static MCStreamer *createPPCXCOFFStreamer(
-    const Triple &T, MCContext &Context, std::unique_ptr<MCAsmBackend> &&MAB,
-    std::unique_ptr<MCObjectWriter> &&OW,
-    std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll) {
+static MCStreamer *
+createPPCXCOFFStreamer(const Triple &T, MCContext &Context,
+                       std::unique_ptr<MCAsmBackend> &&MAB,
+                       std::unique_ptr<MCObjectWriter> &&OW,
+                       std::unique_ptr<MCCodeEmitter> &&Emitter) {
   return createPPCXCOFFStreamer(Context, std::move(MAB), std::move(OW),
                                 std::move(Emitter));
 }

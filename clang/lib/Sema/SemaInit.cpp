@@ -7753,9 +7753,9 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
     break;
   }
 
-  case Stmt::OMPArraySectionExprClass: {
+  case Stmt::ArraySectionExprClass: {
     visitLocalsRetainedByInitializer(Path,
-                                     cast<OMPArraySectionExpr>(Init)->getBase(),
+                                     cast<ArraySectionExpr>(Init)->getBase(),
                                      Visit, true, EnableLifetimeWarnings);
     break;
   }
@@ -8340,8 +8340,17 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
             << Entity.getType()->isReferenceType() << CLE->getInitializer() << 2
             << DiagRange;
       } else {
-        Diag(DiagLoc, diag::warn_ret_local_temp_addr_ref)
-         << Entity.getType()->isReferenceType() << DiagRange;
+        // P2748R5: Disallow Binding a Returned Glvalue to a Temporary.
+        // [stmt.return]/p6: In a function whose return type is a reference,
+        // other than an invented function for std::is_convertible ([meta.rel]),
+        // a return statement that binds the returned reference to a temporary
+        // expression ([class.temporary]) is ill-formed.
+        if (getLangOpts().CPlusPlus26 && Entity.getType()->isReferenceType())
+          Diag(DiagLoc, diag::err_ret_local_temp_ref)
+              << Entity.getType()->isReferenceType() << DiagRange;
+        else
+          Diag(DiagLoc, diag::warn_ret_local_temp_addr_ref)
+              << Entity.getType()->isReferenceType() << DiagRange;
       }
       break;
     }
@@ -10789,8 +10798,6 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
 
   // FIXME: Perform "exact type" matching first, per CWG discussion?
   //        Or implement this via an implied 'T(T) -> T' deduction guide?
-
-  // FIXME: Do we need/want a std::initializer_list<T> special case?
 
   // Look up deduction guides, including those synthesized from constructors.
   //

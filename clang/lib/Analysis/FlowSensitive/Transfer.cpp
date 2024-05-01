@@ -41,7 +41,11 @@ namespace dataflow {
 
 const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
   auto BlockIt = ACFG.getStmtToBlock().find(&ignoreCFGOmittedNodes(S));
-  assert(BlockIt != ACFG.getStmtToBlock().end());
+  if (BlockIt == ACFG.getStmtToBlock().end()) {
+    assert(false);
+    // Return null to avoid dereferencing the end iterator in non-assert builds.
+    return nullptr;
+  }
   if (!ACFG.isBlockReachable(*BlockIt->getSecond()))
     return nullptr;
   if (BlockIt->getSecond()->getBlockID() == CurBlockID)

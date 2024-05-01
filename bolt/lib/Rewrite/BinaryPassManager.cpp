@@ -356,7 +356,7 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   // order they're registered.
 
   // Run this pass first to use stats for the original functions.
-  Manager.registerPass(std::make_unique<PrintProgramStats>(NeverPrint));
+  Manager.registerPass(std::make_unique<PrintProgramStats>());
 
   if (opts::PrintProfileStats)
     Manager.registerPass(std::make_unique<PrintProfileStats>(NeverPrint));

@@ -77,7 +77,7 @@ bool CombinerHelper::matchExtractVectorElement(MachineInstr &MI,
 
   // Fold extractVectorElement(Vector, TOOLARGE) -> undef
   if (IndexC && VectorTy.isFixedVector() &&
-      IndexC->getZExtValue() >= VectorTy.getNumElements() &&
+      IndexC->uge(VectorTy.getNumElements()) &&
       isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}})) {
     // For fixed-length vectors, it's invalid to extract out-of-range elements.
     MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
@@ -323,4 +323,27 @@ bool CombinerHelper::matchExtractVectorElementWithBuildVectorTrunc(
   };
 
   return true;
+}
+
+bool CombinerHelper::matchInsertVectorElementOOB(MachineInstr &MI,
+                                                 BuildFnTy &MatchInfo) {
+  GInsertVectorElement *Insert = cast<GInsertVectorElement>(&MI);
+
+  Register Dst = Insert->getReg(0);
+  LLT DstTy = MRI.getType(Dst);
+  Register Index = Insert->getIndexReg();
+
+  if (!DstTy.isFixedVector())
+    return false;
+
+  std::optional<ValueAndVReg> MaybeIndex =
+      getIConstantVRegValWithLookThrough(Index, MRI);
+
+  if (MaybeIndex && MaybeIndex->Value.uge(DstTy.getNumElements()) &&
+      isLegalOrBeforeLegalizer({TargetOpcode::G_IMPLICIT_DEF, {DstTy}})) {
+    MatchInfo = [=](MachineIRBuilder &B) { B.buildUndef(Dst); };
+    return true;
+  }
+
+  return false;
 }
