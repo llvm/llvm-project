@@ -21,9 +21,10 @@ namespace LIBC_NAMESPACE {
 // - uint16_t: initial capacity for table B
 // - uint64_t: seed for table B
 // Followed by a sequence of actions:
-// - CrossCheck: only a single byte valued 3
-// - Find: a single byte valued 0 followed by a null-terminated string
-// - Insert: a single byte valued 1 followed by a null-terminated string
+// - CrossCheck: only a single byte valued (4 mod 5)
+// - Find: a single byte valued (3 mod 5) followed by a null-terminated string
+// - Insert: a single byte valued (0,1,2 mod 5) followed by a null-terminated
+// string
 static constexpr size_t INITIAL_HEADER_SIZE =
     2 * (sizeof(uint16_t) + sizeof(uint64_t));
 extern "C" size_t LLVMFuzzerMutate(uint8_t *data, size_t size, size_t max_size);
@@ -37,29 +38,29 @@ extern "C" size_t LLVMFuzzerCustomMutator(uint8_t *data, size_t size,
   // skip the initial capacities and seeds
   size_t i = INITIAL_HEADER_SIZE;
   while (i < size) {
-    switch (data[i] % 3) {
-    case 2:
-      // cross check
-      break;
-
-    default:
-      // find or insert
-      // check if there is enough space for the action byte and the
-      // null-terminator
-      if (i + 2 >= max_size)
-        return i;
-      // skip the action byte
+    // cross check
+    if (static_cast<uint8_t>(data[i]) % 5 == 4) {
+      // skip the cross check byte
       ++i;
-      // create a limit of string size such that there can be more insertions
-      size_t limit = max_size < i + 256 ? max_size : i + 256;
-      // skip the null-terminated string
-      while (i < limit && data[i] != 0)
-        ++i;
-      // in the case the string is not null-terminated, null-terminate it
-      if (i == limit && data[i - 1] != 0)
-        data[i - 1] = 0;
-      break;
+      continue;
     }
+
+    // find or insert
+    // check if there is enough space for the action byte and the
+    // null-terminator
+    if (i + 2 >= max_size)
+      return i;
+    // skip the action byte
+    ++i;
+    // skip the null-terminated string
+    while (i < max_size && data[i] != 0)
+      ++i;
+    // in the case the string is not null-terminated, null-terminate it
+    if (i == max_size && data[i - 1] != 0) {
+      data[i - 1] = 0;
+      return max_size;
+    }
+
     // move to the next action
     ++i;
   }
@@ -92,20 +93,20 @@ static struct {
 
   cpp::string_view next_string() {
     cpp::string_view result(buffer);
-    buffer += result.size() + 1;
+    buffer = result.end() + 1;
     remaining -= result.size() + 1;
     return result;
   }
 
   Action next_action() {
     uint8_t byte = next<uint8_t>();
-    switch (byte % 3) {
-    case 2:
+    switch (byte % 5) {
+    case 4:
       return {Action::Tag::CrossCheck, {}};
-    case 1:
-      return {Action::Tag::Insert, next_string()};
-    default:
+    case 3:
       return {Action::Tag::Find, next_string()};
+    default:
+      return {Action::Tag::Insert, next_string()};
     }
   }
 } global_status;
@@ -138,7 +139,6 @@ HashTable next_hashtable() {
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   global_status.buffer = reinterpret_cast<const char *>(data);
   global_status.remaining = size;
-
   if (global_status.remaining < INITIAL_HEADER_SIZE)
     return 0;
 
