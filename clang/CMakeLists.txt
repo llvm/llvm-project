@@ -166,6 +166,10 @@ if(CLANG_ENABLE_LIBXML2)
 endif()
 
 if(CLANG_ENABLE_CIR)
+  if (CLANG_BUILT_STANDALONE)
+    message(FATAL_ERROR
+      "ClangIR is not yet supported in the standalone build.")
+  endif()
   if (NOT "${LLVM_ENABLE_PROJECTS}" MATCHES "MLIR|mlir")
     message(FATAL_ERROR
       "Cannot build ClangIR without MLIR in LLVM_ENABLE_PROJECTS")

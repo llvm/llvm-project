@@ -3,7 +3,7 @@
 // RUN: %clang -### -c -save-temps -integrated-as --target=x86_64 %s 2>&1 | FileCheck %s
 
 // CHECK: cc1as
-// CHECK: -mrelax-all
+// CHECK-NOT: -mrelax-all
 
 // RISC-V does not enable -mrelax-all
 // RUN: %clang -### -c -save-temps -integrated-as --target=riscv64 %s 2>&1 | FileCheck %s -check-prefix=RISCV-RELAX
