@@ -4228,13 +4228,20 @@ bool Parser::parseMapperModifier(SemaOpenMP::OpenMPVarListDataTy &Data) {
   return T.consumeClose();
 }
 
+static OpenMPMapClauseKind isMapType(Parser &P);
+
 /// Parse map-type-modifiers in map clause.
-/// map([ [map-type-modifier[,] [map-type-modifier[,] ...] map-type : ] list)
+/// map([ [map-type-modifier[,] [map-type-modifier[,] ...] [map-type] : ] list)
 /// where, map-type-modifier ::= always | close | mapper(mapper-identifier) |
 /// present
+/// where, map-type ::= alloc | delete | from | release | to | tofrom
 bool Parser::parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data) {
+  bool HasMapType = false;
+  SourceLocation PreMapLoc = Tok.getLocation();
+  StringRef PreMapName = "";
   while (getCurToken().isNot(tok::colon)) {
     OpenMPMapModifierKind TypeModifier = isMapModifier(*this);
+    OpenMPMapClauseKind MapKind = isMapType(*this);
     if (TypeModifier == OMPC_MAP_MODIFIER_always ||
         TypeModifier == OMPC_MAP_MODIFIER_close ||
         TypeModifier == OMPC_MAP_MODIFIER_present ||
@@ -4257,6 +4264,19 @@ bool Parser::parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data) {
         Diag(Data.MapTypeModifiersLoc.back(), diag::err_omp_missing_comma)
             << "map type modifier";
 
+    } else if (getLangOpts().OpenMP >= 60 && MapKind != OMPC_MAP_unknown) {
+      if (!HasMapType) {
+        HasMapType = true;
+        Data.ExtraModifier = MapKind;
+        MapKind = OMPC_MAP_unknown;
+        PreMapLoc = Tok.getLocation();
+        PreMapName = Tok.getIdentifierInfo()->getName();
+      } else {
+        Diag(Tok, diag::err_omp_more_one_map_type);
+        Diag(PreMapLoc, diag::note_previous_map_type_specified_here)
+            << PreMapName;
+      }
+      ConsumeToken();
     } else {
       // For the case of unknown map-type-modifier or a map-type.
       // Map-type is followed by a colon; the function returns when it
@@ -4267,8 +4287,14 @@ bool Parser::parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data) {
         continue;
       }
       // Potential map-type token as it is followed by a colon.
-      if (PP.LookAhead(0).is(tok::colon))
-        return false;
+      if (PP.LookAhead(0).is(tok::colon)) {
+        if (getLangOpts().OpenMP >= 60) {
+          break;
+        } else {
+          return false;
+        }
+      }
+
       Diag(Tok, diag::err_omp_unknown_map_type_modifier)
           << (getLangOpts().OpenMP >= 51 ? (getLangOpts().OpenMP >= 52 ? 2 : 1)
                                          : 0)
@@ -4277,6 +4303,14 @@ bool Parser::parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data) {
     }
     if (getCurToken().is(tok::comma))
       ConsumeToken();
+  }
+  if (getLangOpts().OpenMP >= 60 && !HasMapType) {
+    if (!Tok.is(tok::colon)) {
+      Diag(Tok, diag::err_omp_unknown_map_type);
+      ConsumeToken();
+    } else {
+      Data.ExtraModifier = OMPC_MAP_unknown;
+    }
   }
   return false;
 }
@@ -4675,8 +4709,10 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     // Only parse map-type-modifier[s] and map-type if a colon is present in
     // the map clause.
     if (ColonPresent) {
+      if (getLangOpts().OpenMP >= 60 && getCurToken().is(tok::colon))
+        Diag(Tok, diag::err_omp_map_modifier_specification_list);
       IsInvalidMapperModifier = parseMapTypeModifiers(Data);
-      if (!IsInvalidMapperModifier)
+      if (getLangOpts().OpenMP < 60 && !IsInvalidMapperModifier)
         parseMapType(*this, Data);
       else
         SkipUntil(tok::colon, tok::annot_pragma_openmp_end, StopBeforeMatch);
