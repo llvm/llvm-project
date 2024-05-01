@@ -49058,8 +49058,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
       APInt MulCLowBit = MulC & (-MulC);
       if (MulC.uge(AndC) && !MulC.isPowerOf2() &&
           (MulCLowBit + MulC).isPowerOf2()) {
-        SDValue Neg = DAG.getNode(ISD::SUB, dl, VT, DAG.getConstant(0, dl, VT),
-                                  N0.getOperand(0));
+        SDValue Neg = DAG.getNegative(N0.getOperand(0), dl, VT);
         int32_t MulCLowBitLog = MulCLowBit.exactLogBase2();
         assert(MulCLowBitLog != -1 &&
                "Isolated lowbit is somehow not a power of 2!");
@@ -49759,8 +49758,7 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
   // Commute and try again (negate the result for subtracts).
   if (SDValue ADCOrSBB = combineAddOrSubToADCOrSBB(IsSub, DL, VT, Y, X, DAG)) {
     if (IsSub)
-      ADCOrSBB =
-          DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), ADCOrSBB);
+      ADCOrSBB = DAG.getNegative(ADCOrSBB, DL, VT);
     return ADCOrSBB;
   }
 
@@ -54522,7 +54520,7 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
     if (SDNode *GenericAddSub = DAG.getNodeIfExists(GenericOpc, VTs, Ops)) {
       SDValue Op(N, 0);
       if (Negate)
-        Op = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Op);
+        Op = DAG.getNegative(Op, DL, VT);
       DCI.CombineTo(GenericAddSub, Op);
     }
   };
