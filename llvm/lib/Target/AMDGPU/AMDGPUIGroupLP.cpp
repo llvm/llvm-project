@@ -2766,8 +2766,7 @@ void IGroupLPDAGMutation::initSchedGroupBarrierPipelineStage(
         ++NextID;
         continue;
       }
-      if ((!SchedGroupBarrierRuleCallBacks.size() ||
-           NextID > SchedGroupBarrierRuleCallBacks.size() - 1))
+      if (NextID > SchedGroupBarrierRuleCallBacks.size() - 1)
         llvm_unreachable("Bad rule ID!");
 
       SG->addRule(SchedGroupBarrierRuleCallBacks[NextID](SG->getSGID(), TII));

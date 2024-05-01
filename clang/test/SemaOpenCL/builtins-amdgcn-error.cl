@@ -227,3 +227,11 @@ void test_atomic_dec64() {
   __INT64_TYPE__ signedVal = 15;
   signedVal = __builtin_amdgcn_atomic_dec64(&signedVal, signedVal, __ATOMIC_ACQUIRE, ""); // expected-warning {{passing '__private long *' to parameter of type 'volatile __private unsigned long *' converts between pointers to integer types with different sign}}
 }
+
+void test_sched_group_barrier_rule()
+{
+  __builtin_amdgcn_sched_group_barrier(0, 1, 2, -1);  // expected-error {{builtin requires RuleIDs in range [0,63]}}
+  __builtin_amdgcn_sched_group_barrier(1, 2, 4, 64);  // expected-error {{builtin requires RuleIDs in range [0,63]}}
+  __builtin_amdgcn_sched_group_barrier(1, 2, 4, 101);  // expected-error {{builtin requires RuleIDs in range [0,63]}}
+  __builtin_amdgcn_sched_group_barrier(1, 2, 4, -2147483648); // expected-error {{builtin requires RuleIDs in range [0,63]}}
+}
