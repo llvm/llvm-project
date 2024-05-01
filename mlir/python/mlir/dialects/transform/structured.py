@@ -386,10 +386,7 @@ class PadOp(PadOp):
         loc=None,
         ip=None,
     ):
-        if (
-            static_pad_to_multiple_of is None
-            and pad_to_multiple_of is None
-        ):
+        if static_pad_to_multiple_of is None and pad_to_multiple_of is None:
             dynamic_pad_to_multiple_of = []
         elif static_pad_to_multiple_of is None:
             (
