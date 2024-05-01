@@ -1,6 +1,9 @@
 // General tests that the driver handles combinations of --rtlib=XXX and
 // --unwindlib=XXX properly.
 //
+// DEFINE: %{arch} = x86_64
+// DEFINE: %{suffix} = -DSUFFIX=%if !per_target_runtime_dir %{-%{arch}%}
+//
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=libgcc --unwindlib=platform \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
@@ -51,18 +54,18 @@
 // RUN: %clang -### %s 2>&1   \
 // RUN:     --target=x86_64-unknown-linux -rtlib=compiler-rt \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
-// RUN:   | FileCheck --check-prefix=RTLIB-COMPILER-RT %s
-// RTLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins.a"
+// RUN:   | FileCheck --check-prefix=RTLIB-COMPILER-RT %s %{suffix}
+// RTLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins[[SUFFIX]].a"
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=compiler-rt --unwindlib=libunwind \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
-// RUN:   | FileCheck --check-prefix=RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT %s
+// RUN:   | FileCheck --check-prefix=RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT %s %{suffix}
 // RUN: %clangxx -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=compiler-rt --unwindlib=libunwind \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
-// RUN:   | FileCheck --check-prefix=RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT %s
-// RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins.a"
+// RUN:   | FileCheck --check-prefix=RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT %s %{suffix}
+// RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins[[SUFFIX]].a"
 // RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT-SAME: "--as-needed"
 // RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT-SAME: "-lunwind"
 // RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT-SAME: "--no-as-needed"
@@ -70,15 +73,15 @@
 // RUN: %clang -### %s 2>&1   \
 // RUN:     --target=x86_64-unknown-linux -rtlib=compiler-rt --unwindlib=libgcc \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
-// RUN:   | FileCheck --check-prefix=RTLIB-COMPILER-RT-UNWINDLIB-GCC %s
-// RTLIB-COMPILER-RT-UNWINDLIB-GCC: "{{.*}}libclang_rt.builtins.a"
+// RUN:   | FileCheck --check-prefix=RTLIB-COMPILER-RT-UNWINDLIB-GCC %s %{suffix}
+// RTLIB-COMPILER-RT-UNWINDLIB-GCC: "{{.*}}libclang_rt.builtins[[SUFFIX]].a"
 // RTLIB-COMPILER-RT-UNWINDLIB-GCC-SAME: "-lgcc_s"
 //
 // RUN: %clang -### %s 2>&1              \
 // RUN:     --target=x86_64-unknown-linux -rtlib=compiler-rt --unwindlib=libgcc \
 // RUN:     -static -resource-dir=%S/Inputs/resource_dir \
-// RUN:   | FileCheck --check-prefix=RTLIB-COMPILER-RT-UNWINDLIB-GCC-STATIC %s
-// RTLIB-COMPILER-RT-UNWINDLIB-GCC-STATIC: "{{.*}}libclang_rt.builtins.a"
+// RUN:   | FileCheck --check-prefix=RTLIB-COMPILER-RT-UNWINDLIB-GCC-STATIC %s %{suffix}
+// RTLIB-COMPILER-RT-UNWINDLIB-GCC-STATIC: "{{.*}}libclang_rt.builtins[[SUFFIX]].a"
 // RTLIB-COMPILER-RT-UNWINDLIB-GCC-STATIC-SAME: "-lgcc_eh"
 //
 // RUN: not %clang %s 2> %t.err              \
@@ -97,22 +100,22 @@
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-w64-mingw32 -rtlib=compiler-rt --unwindlib=libunwind \
 // RUN:     -shared-libgcc \
-// RUN:   | FileCheck --check-prefix=MINGW-RTLIB-COMPILER-RT-SHARED-UNWINDLIB-COMPILER-RT %s
-// MINGW-RTLIB-COMPILER-RT-SHARED-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins.a"
+// RUN:   | FileCheck --check-prefix=MINGW-RTLIB-COMPILER-RT-SHARED-UNWINDLIB-COMPILER-RT %s %{suffix}
+// MINGW-RTLIB-COMPILER-RT-SHARED-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins[[SUFFIX]].a"
 // MINGW-RTLIB-COMPILER-RT-SHARED-UNWINDLIB-COMPILER-RT-SAME: "-l:libunwind.dll.a"
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-w64-mingw32 -rtlib=compiler-rt --unwindlib=libunwind \
 // RUN:     -static-libgcc \
-// RUN:   | FileCheck --check-prefix=MINGW-RTLIB-COMPILER-RT-STATIC-UNWINDLIB-COMPILER-RT %s
-// MINGW-RTLIB-COMPILER-RT-STATIC-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins.a"
+// RUN:   | FileCheck --check-prefix=MINGW-RTLIB-COMPILER-RT-STATIC-UNWINDLIB-COMPILER-RT %s %{suffix}
+// MINGW-RTLIB-COMPILER-RT-STATIC-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins[[SUFFIX]].a"
 // MINGW-RTLIB-COMPILER-RT-STATIC-UNWINDLIB-COMPILER-RT-SAME: "-l:libunwind.a"
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-w64-mingw32 -rtlib=compiler-rt --unwindlib=libunwind \
-// RUN:   | FileCheck --check-prefix=MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT %s
+// RUN:   | FileCheck --check-prefix=MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT %s %{suffix}
 // RUN: %clangxx -### %s 2>&1 \
 // RUN:     --target=x86_64-w64-mingw32 -rtlib=compiler-rt --unwindlib=libunwind \
-// RUN:   | FileCheck --check-prefix=MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT %s
-// MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins.a"
+// RUN:   | FileCheck --check-prefix=MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT %s %{suffix}
+// MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT: "{{.*}}libclang_rt.builtins[[SUFFIX]].a"
 // MINGW-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT-SAME: "-lunwind"

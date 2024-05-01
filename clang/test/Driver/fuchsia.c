@@ -1,3 +1,4 @@
+// REQUIRES: per_target_runtime_dir
 // RUN: %clang -### %s --target=x86_64-unknown-fuchsia \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=ld 2>&1 \

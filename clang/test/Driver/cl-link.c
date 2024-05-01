@@ -9,24 +9,27 @@
 // LINK: "bar"
 // LINK: "baz"
 
-// RUN: %clang_cl -m32 -arch:IA32 --target=i386-pc-win32 /Tc%s -fuse-ld=link -### -fsanitize=address 2>&1 | FileCheck --check-prefix=ASAN %s
+// DEFINE: %{arch} = i386
+// DEFINE: %{suffix} = -DSUFFIX=%if !per_target_runtime_dir %{-%{arch}%}
+
+// RUN: %clang_cl -m32 -arch:IA32 --target=i386-pc-win32 /Tc%s -fuse-ld=link -### -fsanitize=address 2>&1 | FileCheck --check-prefix=ASAN %s %{suffix}
 // ASAN: link.exe
 // ASAN: "-debug"
 // ASAN: "-incremental:no"
-// ASAN: "{{[^"]*}}clang_rt.asan-i386.lib"
-// ASAN: "-wholearchive:{{.*}}clang_rt.asan-i386.lib"
-// ASAN: "{{[^"]*}}clang_rt.asan_cxx-i386.lib"
-// ASAN: "-wholearchive:{{.*}}clang_rt.asan_cxx-i386.lib"
+// ASAN: "{{[^"]*}}clang_rt.asan[[SUFFIX]].lib"
+// ASAN: "-wholearchive:{{.*}}clang_rt.asan[[SUFFIX]].lib"
+// ASAN: "{{[^"]*}}clang_rt.asan_cxx[[SUFFIX]].lib"
+// ASAN: "-wholearchive:{{.*}}clang_rt.asan_cxx[[SUFFIX]].lib"
 // ASAN: "{{.*}}cl-link{{.*}}.obj"
 
-// RUN: %clang_cl -m32 -arch:IA32 --target=i386-pc-win32 /MD /Tc%s -fuse-ld=link -### -fsanitize=address 2>&1 | FileCheck --check-prefix=ASAN-MD %s
+// RUN: %clang_cl -m32 -arch:IA32 --target=i386-pc-win32 /MD /Tc%s -fuse-ld=link -### -fsanitize=address 2>&1 | FileCheck --check-prefix=ASAN-MD %s %{suffix}
 // ASAN-MD: link.exe
 // ASAN-MD: "-debug"
 // ASAN-MD: "-incremental:no"
-// ASAN-MD: "{{.*}}clang_rt.asan_dynamic-i386.lib"
-// ASAN-MD: "{{[^"]*}}clang_rt.asan_dynamic_runtime_thunk-i386.lib"
+// ASAN-MD: "{{.*}}clang_rt.asan_dynamic[[SUFFIX]].lib"
+// ASAN-MD: "{{[^"]*}}clang_rt.asan_dynamic_runtime_thunk[[SUFFIX]].lib"
 // ASAN-MD: "-include:___asan_seh_interceptor"
-// ASAN-MD: "-wholearchive:{{.*}}clang_rt.asan_dynamic_runtime_thunk-i386.lib"
+// ASAN-MD: "-wholearchive:{{.*}}clang_rt.asan_dynamic_runtime_thunk[[SUFFIX]].lib"
 // ASAN-MD: "{{.*}}cl-link{{.*}}.obj"
 
 // RUN: %clang_cl /LD -fuse-ld=link -### /Tc%s 2>&1 | FileCheck --check-prefix=DLL %s
@@ -34,13 +37,13 @@
 // DLL: link.exe
 // "-dll"
 
-// RUN: %clang_cl -m32 -arch:IA32 --target=i386-pc-win32 /LD /Tc%s -fuse-ld=link -### -fsanitize=address 2>&1 | FileCheck --check-prefix=ASAN-DLL %s
-// RUN: not %clang_cl -m32 -arch:IA32 --target=i386-pc-win32 /LDd /Tc%s -fuse-ld=link -### -fsanitize=address 2>&1 | FileCheck --check-prefix=ASAN-DLL %s
+// RUN: %clang_cl -m32 -arch:IA32 --target=i386-pc-win32 /LD /Tc%s -fuse-ld=link -### -fsanitize=address 2>&1 | FileCheck --check-prefix=ASAN-DLL %s %{suffix}
+// RUN: not %clang_cl -m32 -arch:IA32 --target=i386-pc-win32 /LDd /Tc%s -fuse-ld=link -### -fsanitize=address 2>&1 | FileCheck --check-prefix=ASAN-DLL %s %{suffix}
 // ASAN-DLL: link.exe
 // ASAN-DLL: "-dll"
 // ASAN-DLL: "-debug"
 // ASAN-DLL: "-incremental:no"
-// ASAN-DLL: "{{.*}}clang_rt.asan_dll_thunk-i386.lib"
+// ASAN-DLL: "{{.*}}clang_rt.asan_dll_thunk[[SUFFIX]].lib"
 // ASAN-DLL: "{{.*}}cl-link{{.*}}.obj"
 
 // RUN: %clang_cl /Zi /Tc%s -fuse-ld=link -### 2>&1 | FileCheck --check-prefix=DEBUG %s

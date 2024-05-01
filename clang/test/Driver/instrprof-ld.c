@@ -1,4 +1,5 @@
 // Test instrumented profiling ld flags.
+// REQUIRES: per_target_runtime_dir
 //
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fprofile-instr-generate -fuse-ld=ld \
