@@ -15,6 +15,7 @@
 #include "Plugins/TypeSystem/Swift/StoringDiagnosticConsumer.h"
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 
+#include "lldb/Utility/Log.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTDemangler.h"
 #include "swift/AST/ASTMangler.h"
@@ -59,6 +60,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -1674,9 +1676,72 @@ void RemoveExplicitModules(std::vector<std::string> &args) {
 
 } // namespace
 
-void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string> &ExtraArgs) {
+/// LLDB wrapper for `clang::driver::applyOverrideOptions` (which implements
+/// CCC_OVERRIDE_OPTIONS behavior).
+static void applyOverrideOptions(std::vector<std::string> &args,
+                                 llvm::StringRef overrideOpts) {
+  if (overrideOpts.empty())
+    return;
+
+  // Convert input args to the type required by applyOverrideOptions.
+  llvm::SmallVector<const char *, 64> raw_args;
+  // Add placeholder clang executable, which applyOverrideOptions expects to be
+  // the first argument.
+  raw_args.push_back("clang");
+  for (const std::string &arg : args)
+    raw_args.push_back(arg.data());
+
+  // LLVM stream backed by a callback. This is used to redirect
+  // applyOverrideOptions logging to LLDB.
+  struct CallbackStream : public llvm::raw_ostream {
+    using callback_t = std::function<void(const char *, size_t)>;
+    callback_t m_callback;
+    uint64_t m_pos = 0;
+
+    CallbackStream(callback_t callback) : m_callback(callback) {}
+    ~CallbackStream() override { flush(); }
+
+    void write_impl(const char *Ptr, size_t Size) override {
+      m_callback(Ptr, Size);
+      m_pos += Size;
+    }
+
+    uint64_t current_pos() const override { return m_pos; }
+  };
+
+  // Perform the override operations.
+  llvm::StringSet<> savedStrings;
+  auto *log = GetLog(LLDBLog::Expressions);
+  CallbackStream log_stream{[log](const char *Ptr, size_t Size) {
+    if (!log)
+      return;
+    if (Ptr[Size] == '\n')
+      // Skip the newline because LLDB logging writes a newline.
+      Size--;
+    log->PutString({Ptr, Size});
+  }};
+
+  clang::driver::applyOverrideOptions(raw_args, overrideOpts.data(),
+                                      savedStrings, &log_stream);
+
+  // Delete the placeholder "clang" executable argument.
+  raw_args.erase(raw_args.begin());
+
+  // Copy `raw_args` into a new args vector.
+  std::vector<std::string> new_args;
+  for (const char *arg : raw_args)
+    new_args.emplace_back(arg);
+
+  // Only now that `raw_args` has been copied into `new_args`, can `args` be
+  // overwritten. This is because `args` owns the data pointed to by `raw_args`.
+  args = new_args;
+}
+
+void SwiftASTContext::AddExtraClangArgs(
+    const std::vector<std::string> &ExtraArgs, StringRef overrideOpts) {
   swift::ClangImporterOptions &importer_options = GetClangImporterOptions();
   AddExtraClangArgs(ExtraArgs, importer_options.ExtraArgs);
+  applyOverrideOptions(importer_options.ExtraArgs, overrideOpts);
   if (HasNonexistentExplicitModule(importer_options.ExtraArgs))
     RemoveExplicitModules(importer_options.ExtraArgs);
 
@@ -2109,7 +2174,8 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   // Apply the working directory to all relative paths.
   std::vector<std::string> DeserializedArgs = swift_ast_sp->GetClangArguments();
   swift_ast_sp->GetClangImporterOptions().ExtraArgs.clear();
-  swift_ast_sp->AddExtraClangArgs(DeserializedArgs);
+  StringRef overrideOpts = target ? target->GetSwiftClangOverrideOptions() : "";
+  swift_ast_sp->AddExtraClangArgs(DeserializedArgs, overrideOpts);
   if (target)
     swift_ast_sp->AddUserClangArgs(*target);
   else
@@ -2632,7 +2698,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
                     use_all_compiler_flags, module_filter, target, triple,
                     plugin_search_options, module_search_paths,
                     framework_search_paths, extra_clang_args);
-      swift_ast_sp->AddExtraClangArgs(extra_clang_args);
+      swift_ast_sp->AddExtraClangArgs(extra_clang_args,
+                                      target.GetSwiftClangOverrideOptions());
     }
 
   for (const FileSpec &path : target.GetSwiftModuleSearchPaths())
@@ -2944,7 +3011,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
                   use_all_compiler_flags, module_filter, target, triple,
                   plugin_search_options, module_search_paths,
                   framework_search_paths, extra_clang_args);
-    swift_ast_sp->AddExtraClangArgs(extra_clang_args);
+    swift_ast_sp->AddExtraClangArgs(extra_clang_args,
+                                    target.GetSwiftClangOverrideOptions());
   }
 
   // Now fold any extra options we were passed. This has to be done

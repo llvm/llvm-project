@@ -223,6 +223,9 @@ let Definition = "target" in {
   def SwiftExtraClangFlags: Property<"swift-extra-clang-flags", "String">,
     DefaultStringValue<"">,
     Desc<"Additional -Xcc flags to be passed to the Swift ClangImporter.">;
+  def SwiftClangOverrideOptions: Property<"swift-clang-override-options", "String">,
+    DefaultStringValue<"">,
+    Desc<"Specify CCC_OVERRIDE_OPTIONS for ClangImporter flags.">;
   def SwiftAutoImportFrameworks : Property<"swift-auto-import-frameworks", "Boolean">,
      DefaultFalse,
      Desc<"Automatically import all frameworks and dynamic libraries that are autolinked by Swift modules in the target.">;
