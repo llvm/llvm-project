@@ -18,12 +18,12 @@ Refer to [LICENSE.TXT](LICENSE.TXT) for license information.
 
 ## BUILDING
 
-The build requires clang and several llvm development tools. This can
-be built using the amd-stg-open branch of the RadeonOpenCompute
-modified llvm-project repository where this subdirectory now lives,
-but the upstream llvm-project should also work.
+The build requires clang and several llvm development tools. These tools can
+be built using the amd-staging branch of https://github.com/ROCm/llvm-project
+where this subdirectory now lives. Using dev tools build from upstream
+llvm-project ( https://github.com/llvm/llvm-project/ ) should also work.
 
-There are two different methods to build the device libraries; as a
+There are two different methods to build the device libraries: as a
 standalone project or as an llvm external subproject.
 
 For a standalone build, this will find preexisting clang and llvm
@@ -31,7 +31,7 @@ tools using the standard cmake search mechanisms. If you wish to use a
 specific build, you can specify this with the CMAKE_PREFIX_PATH
 variable:
 
-    git clone https://github.com/RadeonOpenCompute/llvm-project.git -b amd-stg-open
+    git clone https://github.com/ROCm/llvm-project.git -b amd-staging
     cd llvm-project/amd/device-libs
 
 Then run the following commands:
@@ -45,7 +45,7 @@ Then run the following commands:
 To build as an llvm external project:
 
     LLVM_PROJECT_ROOT=llvm-project-rocm
-    git clone https://github.com/RadeonOpenCompute/llvm-project.git -b amd-stg-open ${LLVM_PROJECT_ROOT}
+    git clone https://github.com/ROCm/llvm-project.git -b amd-staging ${LLVM_PROJECT_ROOT}
     cd ${LLVM_PROJECT_ROOT}
     mkdir -p build
     cd build
@@ -65,7 +65,7 @@ To create packages for the library:
 
 ## USING BITCODE LIBRARIES
 
-The ROCm language compilers and runtimes automatically link the
+The ROCm compilers and runtimes automatically link the
 required bitcode files invoked during the process of creating a code
 object. clang will search for these libraries by default when
 targeting amdhsa, in the default ROCm install location. To specify a
