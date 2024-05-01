@@ -371,6 +371,10 @@ template <typename Pred> struct Not {
 // Explicit deduction guide.
 template <typename Pred> Not(const Pred &P) -> Not<Pred>;
 
+template <typename Pred> inline Not<Pred> m_IsNot(const Pred &P) {
+  return Not{P};
+}
+
 template <typename... Preds> And<Preds...> m_AllOf(Preds &&...preds) {
   return And<Preds...>(std::forward<Preds>(preds)...);
 }
@@ -380,7 +384,7 @@ template <typename... Preds> Or<Preds...> m_AnyOf(Preds &&...preds) {
 }
 
 template <typename... Preds> auto m_NoneOf(Preds &&...preds) {
-  return Not{m_AnyOf(std::forward<Preds>(preds)...)};
+  return m_IsNot(m_AnyOf(std::forward<Preds>(preds)...));
 }
 
 // === Generic node matching ===
