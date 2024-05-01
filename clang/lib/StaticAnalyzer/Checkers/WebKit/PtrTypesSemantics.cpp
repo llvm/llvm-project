@@ -372,8 +372,8 @@ public:
 
   bool
   VisitSubstNonTypeTemplateParmExpr(const SubstNonTypeTemplateParmExpr *E) {
-    // Non-type template paramter is trivial if the replacement is trivial.
-    return Visit(E->getReplacement());
+    // Non-type template paramter is compile time constant and trivial.
+    return true;
   }
 
   bool VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E) {
