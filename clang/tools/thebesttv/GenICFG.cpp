@@ -107,6 +107,8 @@ bool GenICFGVisitor::VisitFunctionDecl(FunctionDecl *D) {
     Global.icfg.addFunction(Global.getIdOfFunction(fullSignature, pLoc->file),
                             *cfg);
 
+    NpeSourceVisitor(Context).TraverseDecl(D);
+
     /*
     // traverse CFGBlocks
     for (auto BI = cfg->begin(); BI != cfg->end(); ++BI) {
@@ -140,7 +142,7 @@ bool isPointerType(Expr *E) {
     return type && type->isAnyPointerType();
 }
 
-void GenICFGVisitor::saveNpeSuspectedSources(const SourceRange &range) {
+void NpeSourceVisitor::saveNpeSuspectedSources(const SourceRange &range) {
     ordered_json loc;
     // something wrong with location
     if (!saveLocationInfo(*Context, range, loc))
@@ -150,12 +152,10 @@ void GenICFGVisitor::saveNpeSuspectedSources(const SourceRange &range) {
     if (!Global.isUnderProject(file))
         return;
 
-    reservoirSamplingAddElement(Global.npeSuspectedSources, loc,
-                                // 100000
-                                1000);
+    reservoirSamplingAddElement(Global.npeSuspectedSources, loc, 100000);
 }
 
-bool GenICFGVisitor::VisitVarDecl(VarDecl *D) {
+bool NpeSourceVisitor::VisitVarDecl(VarDecl *D) {
     // 加入 NPE 可疑的 source 中
 
     // must be declared within a function
@@ -171,7 +171,7 @@ bool GenICFGVisitor::VisitVarDecl(VarDecl *D) {
     return true;
 }
 
-bool GenICFGVisitor::VisitBinaryOperator(BinaryOperator *S) {
+bool NpeSourceVisitor::VisitBinaryOperator(BinaryOperator *S) {
     // 加入 NPE 可疑的 source 中
 
     // equivalent to: !(S->isAssignmentOp() && !S->isCompoundAssignmentOp())

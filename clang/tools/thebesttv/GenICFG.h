@@ -26,14 +26,21 @@ class GenICFGVisitor : public RecursiveASTVisitor<GenICFGVisitor> {
         return llvm::demangle(getMangledName(D));
     }
 
-    void saveNpeSuspectedSources(const SourceRange &range);
-
   public:
     explicit GenICFGVisitor(ASTContext *Context, fs::path filePath)
         : Context(Context), filePath(filePath) {}
 
     bool VisitFunctionDecl(clang::FunctionDecl *D);
     bool VisitCXXRecordDecl(clang::CXXRecordDecl *D);
+};
+
+class NpeSourceVisitor : public RecursiveASTVisitor<NpeSourceVisitor> {
+
+    ASTContext *Context;
+    void saveNpeSuspectedSources(const SourceRange &range);
+
+  public:
+    explicit NpeSourceVisitor(ASTContext *Context) : Context(Context) {}
 
     bool VisitVarDecl(VarDecl *D);
     bool VisitBinaryOperator(BinaryOperator *S);
