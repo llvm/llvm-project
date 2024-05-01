@@ -3944,8 +3944,11 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
     switch (FormatTok->Tok.getKind()) {
     case tok::l_paren:
       // We can have macros in between 'class' and the class name.
-      if (!IsNonMacroIdentifier(Previous))
+      if (!IsNonMacroIdentifier(Previous) ||
+          // e.g. `struct macro(a) S { int i; };`
+          Previous->Previous == &InitialToken) {
         parseParens();
+      }
       break;
     case tok::coloncolon:
       break;

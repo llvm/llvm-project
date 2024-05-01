@@ -438,6 +438,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   EXPECT_TOKEN(Tokens[2], tok::l_brace, TT_StructLBrace);
   EXPECT_TOKEN(Tokens[3], tok::r_brace, TT_StructRBrace);
 
+  Tokens = annotate("struct macro(a) S {};");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_StructLBrace);
+  EXPECT_TOKEN(Tokens[7], tok::r_brace, TT_StructRBrace);
+
   Tokens = annotate("struct EXPORT_MACRO [[nodiscard]] C { int i; };");
   ASSERT_EQ(Tokens.size(), 15u) << Tokens;
   EXPECT_TOKEN(Tokens[8], tok::l_brace, TT_StructLBrace);
@@ -447,6 +452,14 @@ TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
   EXPECT_TOKEN(Tokens[12], tok::l_brace, TT_StructLBrace);
   EXPECT_TOKEN(Tokens[16], tok::r_brace, TT_StructRBrace);
+
+  Tokens = annotate("struct macro(a) S {\n"
+                    "  void f(T &t);\n"
+                    "};");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_StructLBrace);
+  EXPECT_TOKEN(Tokens[11], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[15], tok::r_brace, TT_StructRBrace);
 
   Tokens = annotate("template <typename T> struct S<const T[N]> {};");
   ASSERT_EQ(Tokens.size(), 18u) << Tokens;
