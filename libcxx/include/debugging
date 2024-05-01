@@ -36,8 +36,6 @@ _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_EXPORTED_FROM_ABI void __breakpoint();
 _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_HIDE_FROM_ABI void breakpoint() noexcept {
 #  if __has_builtin(__builtin_debugtrap)
   __builtin_debugtrap();
-#  elif __has_builtin(__builtin_trap)
-  __builtin_trap();
 #  else
   __breakpoint();
 #  endif
