@@ -525,6 +525,7 @@ private:
 
   /// Calculate hash of the pcm content.
   std::pair<ASTFileSignature, ASTFileSignature> createSignature() const;
+  ASTFileSignature createSignatureForNamedModule() const;
 
   void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts);
   void WriteSourceManagerBlock(SourceManager &SourceMgr,
@@ -885,6 +886,8 @@ private:
 /// AST and semantic-analysis consumer that generates a
 /// precompiled header from the parsed source code.
 class PCHGenerator : public SemaConsumer {
+  void anchor() override;
+
   Preprocessor &PP;
   std::string OutputFile;
   std::string isysroot;
@@ -929,6 +932,8 @@ public:
 };
 
 class CXX20ModulesGenerator : public PCHGenerator {
+  void anchor() override;
+
 protected:
   virtual Module *getEmittingModule(ASTContext &Ctx) override;
 
@@ -945,6 +950,8 @@ public:
 };
 
 class ReducedBMIGenerator : public CXX20ModulesGenerator {
+  void anchor() override;
+
 public:
   ReducedBMIGenerator(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
                       StringRef OutputFile)
