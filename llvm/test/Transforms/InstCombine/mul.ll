@@ -2061,8 +2061,8 @@ define i32 @mul_sext_icmp_with_zero(i32 %x) {
 
 define i32 @test_mul_sext_bool(i1 %x, i32 %y) {
 ; CHECK-LABEL: @test_mul_sext_bool(
-; CHECK-NEXT:    [[Y_NEG:%.*]] = sub i32 0, [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[Y_NEG]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %sext = sext i1 %x to i32
@@ -2072,8 +2072,8 @@ define i32 @test_mul_sext_bool(i1 %x, i32 %y) {
 
 define i32 @test_mul_sext_bool_nuw(i1 %x, i32 %y) {
 ; CHECK-LABEL: @test_mul_sext_bool_nuw(
-; CHECK-NEXT:    [[Y_NEG:%.*]] = sub i32 0, [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[Y_NEG]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %sext = sext i1 %x to i32
@@ -2083,8 +2083,8 @@ define i32 @test_mul_sext_bool_nuw(i1 %x, i32 %y) {
 
 define i32 @test_mul_sext_bool_nsw(i1 %x, i32 %y) {
 ; CHECK-LABEL: @test_mul_sext_bool_nsw(
-; CHECK-NEXT:    [[Y_NEG:%.*]] = sub nsw i32 0, [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[Y_NEG]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %sext = sext i1 %x to i32
@@ -2094,8 +2094,8 @@ define i32 @test_mul_sext_bool_nsw(i1 %x, i32 %y) {
 
 define i32 @test_mul_sext_bool_nuw_nsw(i1 %x, i32 %y) {
 ; CHECK-LABEL: @test_mul_sext_bool_nuw_nsw(
-; CHECK-NEXT:    [[Y_NEG:%.*]] = sub nsw i32 0, [[Y:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[Y_NEG]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = sub nsw i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %sext = sext i1 %x to i32
@@ -2106,8 +2106,8 @@ define i32 @test_mul_sext_bool_nuw_nsw(i1 %x, i32 %y) {
 define i32 @test_mul_sext_bool_commuted(i1 %x, i32 %y) {
 ; CHECK-LABEL: @test_mul_sext_bool_commuted(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[Y:%.*]], -2
-; CHECK-NEXT:    [[YY_NEG1:%.*]] = add i32 [[TMP1]], 1
-; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[YY_NEG1]], i32 0
+; CHECK-NEXT:    [[YY_NEG:%.*]] = add i32 [[TMP1]], 1
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[X:%.*]], i32 [[YY_NEG]], i32 0
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %yy = xor i32 %y, 1
@@ -2138,4 +2138,64 @@ define i32 @test_mul_sext_multiuse(i1 %x, i32 %y) {
   tail call void @use(i32 %sext)
   %mul = mul i32 %sext, %y
   ret i32 %mul
+}
+
+define i8 @mul_nsw_nonneg(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_nsw_nonneg(
+; CHECK-NEXT:    [[X_NNEG:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NNEG]])
+; CHECK-NEXT:    [[Y_NNEG:%.*]] = icmp sgt i8 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_NNEG]])
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i8 [[X]], [[Y]]
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+  %x.nneg = icmp sge i8 %x, 0
+  call void @llvm.assume(i1 %x.nneg)
+  %y.nneg = icmp sge i8 %y, 0
+  call void @llvm.assume(i1 %y.nneg)
+  %mul = mul nsw i8 %x, %y
+  ret i8 %mul
+}
+
+define i8 @mul_nsw_not_nonneg1(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_nsw_not_nonneg1(
+; CHECK-NEXT:    [[Y_NNEG:%.*]] = icmp sgt i8 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_NNEG]])
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+  %y.nneg = icmp sge i8 %y, 0
+  call void @llvm.assume(i1 %y.nneg)
+  %mul = mul nsw i8 %x, %y
+  ret i8 %mul
+}
+
+define i8 @mul_nsw_not_nonneg2(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_nsw_not_nonneg2(
+; CHECK-NEXT:    [[X_NNEG:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NNEG]])
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+  %x.nneg = icmp sge i8 %x, 0
+  call void @llvm.assume(i1 %x.nneg)
+  %mul = mul nsw i8 %x, %y
+  ret i8 %mul
+}
+
+define i8 @mul_not_nsw_nonneg(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_not_nsw_nonneg(
+; CHECK-NEXT:    [[X_NNEG:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NNEG]])
+; CHECK-NEXT:    [[Y_NNEG:%.*]] = icmp sgt i8 [[Y:%.*]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_NNEG]])
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X]], [[Y]]
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+  %x.nneg = icmp sge i8 %x, 0
+  call void @llvm.assume(i1 %x.nneg)
+  %y.nneg = icmp sge i8 %y, 0
+  call void @llvm.assume(i1 %y.nneg)
+  %mul = mul i8 %x, %y
+  ret i8 %mul
 }

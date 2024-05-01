@@ -39,12 +39,6 @@ using namespace clang;
 
 #define DEBUG_TYPE "file-search"
 
-ALWAYS_ENABLED_STATISTIC(NumDirLookups, "Number of directory lookups.");
-ALWAYS_ENABLED_STATISTIC(NumFileLookups, "Number of file lookups.");
-ALWAYS_ENABLED_STATISTIC(NumDirCacheMisses,
-                         "Number of directory cache misses.");
-ALWAYS_ENABLED_STATISTIC(NumFileCacheMisses, "Number of file cache misses.");
-
 //===----------------------------------------------------------------------===//
 // Common logic.
 //===----------------------------------------------------------------------===//
@@ -654,6 +648,14 @@ StringRef FileManager::getCanonicalName(const void *Entry, StringRef Name) {
 
   CanonicalNames.insert({Entry, CanonicalName});
   return CanonicalName;
+}
+
+void FileManager::AddStats(const FileManager &Other) {
+  assert(&Other != this && "Collecting stats into the same FileManager");
+  NumDirLookups += Other.NumDirLookups;
+  NumFileLookups += Other.NumFileLookups;
+  NumDirCacheMisses += Other.NumDirCacheMisses;
+  NumFileCacheMisses += Other.NumFileCacheMisses;
 }
 
 void FileManager::PrintStats() const {

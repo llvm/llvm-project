@@ -81,6 +81,7 @@ public:
   void Undefine(std::string macro);
   bool IsNameDefined(const CharBlock &);
   bool IsFunctionLikeDefinition(const CharBlock &);
+  bool AnyDefinitions() const { return !definitions_.empty(); }
 
   // When called with partialFunctionLikeMacro not null, MacroReplacement()
   // and ReplaceMacros() handle an unclosed function-like macro reference
