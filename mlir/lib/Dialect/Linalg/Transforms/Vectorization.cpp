@@ -1499,11 +1499,11 @@ vectorizeAsTensorPackOp(RewriterBase &rewriter, tensor::PackOp packOp,
   // If the input vector sizes are not provided, then the vector sizes are
   // determined by the result tensor shape. In case the vector sizes aren't
   // provided, we update the inBounds attribute instead of masking.
-  bool useInBoundsInsteadOfMasking = true;
+  bool useInBoundsInsteadOfMasking = false;
   if (inputVectorSizes.empty()) {
     ArrayRef<int64_t> resultTensorShape = packOp.getDestType().getShape();
     inputVectorSizes = resultTensorShape.take_front(packOp.getSourceRank());
-    useInBoundsInsteadOfMasking = false;
+    useInBoundsInsteadOfMasking = true;
   }
 
   // Create masked TransferReadOp.
@@ -1612,7 +1612,8 @@ vectorizeAsTensorUnpackOp(RewriterBase &rewriter, tensor::UnPackOp unpackOp,
   // to shape of source, then a mask is necessary.
   Value readResult = vector::createReadOrMaskedRead(
       rewriter, loc, unpackOp.getSource(),
-      ArrayRef<int64_t>(readMaskShape.begin(), readMaskShape.end()), padValue);
+      ArrayRef<int64_t>(readMaskShape.begin(), readMaskShape.end()), padValue,
+      /*useInBoundsInsteadOfMasking=*/false);
 
   PackingMetadata packMetadata;
   SmallVector<int64_t> lastDimToInsertPosPerm =
@@ -1669,7 +1670,8 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
   (void)status; // prevent unused variable warning on non-assert builds
   assert(succeeded(status) && "failed to reify result shapes");
   auto maskedRead = vector::createReadOrMaskedRead(
-      rewriter, loc, padOp.getSource(), inputVectorSizes, padValue);
+      rewriter, loc, padOp.getSource(), inputVectorSizes, padValue,
+      /*useInBoundsInsteadOfMasking=*/false);
   Operation *write = createWriteOrMaskedWrite(
       rewriter, loc, maskedRead, reifiedReturnShapes[0], inputVectorSizes);
   newResults.push_back(write->getResult(0));

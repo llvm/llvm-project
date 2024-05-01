@@ -161,7 +161,10 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
                                     actualOffset->offset()) /
                       actualType.type().kind();
                 }
-                if (actualChars < dummyChars) {
+                if (actualChars < dummyChars &&
+                    (extentErrors ||
+                        context.ShouldWarn(
+                            common::UsageWarning::ShortCharacterActual))) {
                   auto msg{
                       "Actual argument has fewer characters remaining in storage sequence (%jd) than %s (%jd)"_warn_en_US};
                   if (extentErrors) {
@@ -177,7 +180,10 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
                       foldingContext,
                       evaluate::GetSize(evaluate::Shape(actualType.shape()))))};
                   actualSize &&
-                  *actualSize * *actualLength < *dummySize * *dummyLength) {
+                  *actualSize * *actualLength < *dummySize * *dummyLength &&
+                  (extentErrors ||
+                      context.ShouldWarn(
+                          common::UsageWarning::ShortCharacterActual))) {
                 auto msg{
                     "Actual argument array has fewer characters (%jd) than %s array (%jd)"_warn_en_US};
                 if (extentErrors) {
@@ -255,12 +261,15 @@ static void ConvertIntegerActual(evaluate::Expr<evaluate::SomeType> &actual,
                 common::LanguageFeature::ActualIntegerConvertedToSmallerKind)) {
           msg =
               "Actual argument scalar expression of type INTEGER(%d) cannot beimplicitly converted to smaller dummy argument type INTEGER(%d)"_err_en_US;
-        } else {
+        } else if (semanticsContext.ShouldWarn(
+                       common::LanguageFeature::ConvertedArgument)) {
           msg =
               "Actual argument scalar expression of type INTEGER(%d) was converted to smaller dummy argument type INTEGER(%d)"_port_en_US;
         }
-        messages.Say(std::move(msg.value()), actualType.type().kind(),
-            dummyType.type().kind());
+        if (msg) {
+          messages.Say(std::move(msg.value()), actualType.type().kind(),
+              dummyType.type().kind());
+        }
       }
     }
     actualType = dummyType;
@@ -336,7 +345,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     if (const auto *constantChar{
             evaluate::UnwrapConstantValue<evaluate::Ascii>(actual)};
         constantChar && constantChar->wasHollerith() &&
-        dummy.type.type().IsUnlimitedPolymorphic()) {
+        dummy.type.type().IsUnlimitedPolymorphic() &&
+        context.ShouldWarn(common::LanguageFeature::HollerithPolymorphic)) {
       messages.Say(
           "passing Hollerith to unlimited polymorphic as if it were CHARACTER"_port_en_US);
     }
@@ -589,7 +599,10 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
                       *actualSymTypeBytes;
                 }
               }
-              if (actualElements && *actualElements < *dummySize) {
+              if (actualElements && *actualElements < *dummySize &&
+                  (extentErrors ||
+                      context.ShouldWarn(
+                          common::UsageWarning::ShortArrayActual))) {
                 auto msg{
                     "Actual argument has fewer elements remaining in storage sequence (%jd) than %s array (%jd)"_warn_en_US};
                 if (extentErrors) {
@@ -604,7 +617,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         } else { // actualRank > 0 || actualIsAssumedRank
           if (auto actualSize{evaluate::ToInt64(evaluate::Fold(foldingContext,
                   evaluate::GetSize(evaluate::Shape(actualType.shape()))))};
-              actualSize && *actualSize < *dummySize) {
+              actualSize && *actualSize < *dummySize &&
+              (extentErrors ||
+                  context.ShouldWarn(common::UsageWarning::ShortArrayActual))) {
             auto msg{
                 "Actual argument array has fewer elements (%jd) than %s array (%jd)"_warn_en_US};
             if (extentErrors) {
@@ -706,7 +721,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         // Extension (Intel, NAG, XLF): a NULL() pointer is an acceptable
         // actual argument for an INTENT(IN) allocatable dummy, and it
         // is treated as an unassociated allocatable.
-        if (context.languageFeatures().ShouldWarn(
+        if (context.ShouldWarn(
                 common::LanguageFeature::NullActualForAllocatable)) {
           messages.Say(
               "Allocatable %s is associated with a null pointer"_port_en_US,
@@ -897,8 +912,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         actualDataAttr = common::CUDADataAttr::Device;
       }
     }
-    if (!common::AreCompatibleCUDADataAttrs(
-            dummyDataAttr, actualDataAttr, dummy.ignoreTKR)) {
+    if (!common::AreCompatibleCUDADataAttrs(dummyDataAttr, actualDataAttr,
+            dummy.ignoreTKR,
+            /*allowUnifiedMatchingRule=*/true)) {
       auto toStr{[](std::optional<common::CUDADataAttr> x) {
         return x ? "ATTRIBUTES("s +
                 parser::ToUpperCaseLetters(common::EnumToString(*x)) + ")"s
@@ -1160,8 +1176,8 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                     evaluate::IsNullPointer(*expr)) {
                   if (object.intent == common::Intent::In) {
                     // Extension (Intel, NAG, XLF); see CheckExplicitDataArg.
-                    if (context.languageFeatures().ShouldWarn(common::
-                                LanguageFeature::NullActualForAllocatable)) {
+                    if (context.ShouldWarn(common::LanguageFeature::
+                                NullActualForAllocatable)) {
                       messages.Say(
                           "Allocatable %s is associated with NULL()"_port_en_US,
                           dummyName);
@@ -1390,6 +1406,11 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
                     msg =
                         "Procedures '%s' and '%s' may not be completely compatible: %s"_warn_en_US;
                     whyNot = std::move(*warning);
+                  } else if (msg &&
+                      msg->severity() != parser::Severity::Error &&
+                      !semanticsContext.ShouldWarn(
+                          common::UsageWarning::ProcPointerCompatibility)) {
+                    msg.reset();
                   }
                   if (msg) {
                     msg->set_severity(parser::Severity::Warning);
@@ -1736,7 +1757,7 @@ static void CheckTransfer(evaluate::ActualArguments &arguments,
               messages.Say(
                   "Element size of MOLD= array may not be zero when SOURCE= is not empty"_err_en_US);
             }
-          } else {
+          } else if (context.ShouldWarn(common::UsageWarning::VoidMold)) {
             messages.Say(
                 "Element size of MOLD= array may not be zero unless SOURCE= is empty"_warn_en_US);
           }
@@ -1929,6 +1950,7 @@ bool CheckArguments(const characteristics::Procedure &proc,
   bool explicitInterface{proc.HasExplicitInterface()};
   evaluate::FoldingContext foldingContext{context.foldingContext()};
   parser::ContextualMessages &messages{foldingContext.messages()};
+  bool allowArgumentConversions{true};
   if (!explicitInterface || treatingExternalAsImplicit) {
     parser::Messages buffer;
     {
@@ -1945,16 +1967,22 @@ bool CheckArguments(const characteristics::Procedure &proc,
       }
       return false; // don't pile on
     }
+    allowArgumentConversions = false;
   }
   if (explicitInterface) {
     auto buffer{CheckExplicitInterface(proc, actuals, context, &scope,
-        intrinsic, /*allowArgumentConversions=*/true, /*extentErrors=*/true,
-        ignoreImplicitVsExplicit)};
+        intrinsic, allowArgumentConversions,
+        /*extentErrors=*/true, ignoreImplicitVsExplicit)};
     if (!buffer.empty()) {
       if (treatingExternalAsImplicit) {
-        if (auto *msg{messages.Say(
-                "If the procedure's interface were explicit, this reference would be in error"_warn_en_US)}) {
-          buffer.AttachTo(*msg, parser::Severity::Because);
+        if (context.ShouldWarn(
+                common::UsageWarning::KnownBadImplicitInterface)) {
+          if (auto *msg{messages.Say(
+                  "If the procedure's interface were explicit, this reference would be in error"_warn_en_US)}) {
+            buffer.AttachTo(*msg, parser::Severity::Because);
+          }
+        } else {
+          buffer.clear();
         }
       }
       if (auto *msgs{messages.messages()}) {

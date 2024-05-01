@@ -108,6 +108,27 @@ bool CompilerType::IsConst() const {
   return false;
 }
 
+unsigned CompilerType::GetPtrAuthKey() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPtrAuthKey(m_type);
+  return 0;
+}
+
+unsigned CompilerType::GetPtrAuthDiscriminator() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPtrAuthDiscriminator(m_type);
+  return 0;
+}
+
+bool CompilerType::GetPtrAuthAddressDiversity() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPtrAuthAddressDiversity(m_type);
+  return false;
+}
+
 bool CompilerType::IsFunctionType() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -664,6 +685,13 @@ CompilerType CompilerType::GetPointerType() const {
   return CompilerType();
 }
 
+CompilerType CompilerType::AddPtrAuthModifier(uint32_t payload) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->AddPtrAuthModifier(m_type, payload);
+  return CompilerType();
+}
+
 CompilerType CompilerType::GetLValueReferenceType() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -847,6 +875,12 @@ CompilerType::GetVirtualBaseClassAtIndex(size_t idx,
       return type_system_sp->GetVirtualBaseClassAtIndex(m_type, idx,
                                                      bit_offset_ptr);
   return CompilerType();
+}
+
+CompilerDecl CompilerType::GetStaticFieldWithName(llvm::StringRef name) const {
+  if (IsValid())
+    return GetTypeSystem()->GetStaticFieldWithName(m_type, name);
+  return CompilerDecl();
 }
 
 uint32_t CompilerType::GetIndexOfFieldWithName(

@@ -823,8 +823,8 @@ TargetSP Debugger::FindTargetWithProcess(Process *process) {
   return target_sp;
 }
 
-ConstString Debugger::GetStaticBroadcasterClass() {
-  static ConstString class_name("lldb.debugger");
+llvm::StringRef Debugger::GetStaticBroadcasterClass() {
+  static constexpr llvm::StringLiteral class_name("lldb.debugger");
   return class_name;
 }
 
@@ -846,7 +846,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_loaded_plugins(), m_event_handler_thread(), m_io_handler_thread(),
       m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
       m_broadcaster(m_broadcaster_manager_sp,
-                    GetStaticBroadcasterClass().AsCString()),
+                    GetStaticBroadcasterClass().str()),
       m_forward_listener_sp(), m_clear_once() {
   // Initialize the debugger properties as early as possible as other parts of
   // LLDB will start querying them during construction.
