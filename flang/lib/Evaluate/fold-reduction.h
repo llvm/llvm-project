@@ -105,7 +105,9 @@ static Expr<T> FoldDotProduct(
         }
       }
     }
-    if (overflow) {
+    if (overflow &&
+        context.languageFeatures().ShouldWarn(
+            common::UsageWarning::FoldingException)) {
       context.messages().Say(
           "DOT_PRODUCT of %s data overflowed during computation"_warn_en_US,
           T::AsFortran());
@@ -321,7 +323,9 @@ static Expr<T> FoldProduct(
     ProductAccumulator accumulator{arrayAndMask->array};
     auto result{Expr<T>{DoReduction<T>(
         arrayAndMask->array, arrayAndMask->mask, dim, identity, accumulator)}};
-    if (accumulator.overflow()) {
+    if (accumulator.overflow() &&
+        context.languageFeatures().ShouldWarn(
+            common::UsageWarning::FoldingException)) {
       context.messages().Say(
           "PRODUCT() of %s data overflowed"_warn_en_US, T::AsFortran());
     }
@@ -387,7 +391,9 @@ static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
         arrayAndMask->array, context.targetCharacteristics().roundingMode()};
     auto result{Expr<T>{DoReduction<T>(
         arrayAndMask->array, arrayAndMask->mask, dim, identity, accumulator)}};
-    if (accumulator.overflow()) {
+    if (accumulator.overflow() &&
+        context.languageFeatures().ShouldWarn(
+            common::UsageWarning::FoldingException)) {
       context.messages().Say(
           "SUM() of %s data overflowed"_warn_en_US, T::AsFortran());
     }
