@@ -302,7 +302,7 @@ AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadic,
 
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
-        return getNaturalAlignIndirect(Ty);
+        return getNaturalAlignIndirect(Ty, false);
 
     return (isPromotableIntegerTypeForABI(Ty) && isDarwinPCS()
                 ? ABIArgInfo::getExtend(Ty)
