@@ -118,18 +118,24 @@ TEST(ParseArchString, RejectsUpperCase) {
 TEST(ParseArchString, RejectsInvalidBaseISA) {
   for (StringRef Input : {"rv32", "rv64", "rv65i"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "string must begin with rv32{i,e,g} or rv64{i,e,g}");
+              "string must begin with rv32{i,e,g}, rv64{i,e,g}, or a supported "
+              "profile name");
   }
-  for (StringRef Input : {"rv32j", "rv64k", "rv32_i"}) {
+
+  for (StringRef Input : {"rv32j", "rv32_i"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "first letter should be 'e', 'i' or 'g'");
+              "first letter after 'rv32' should be 'e', 'i' or 'g'");
   }
+
+  EXPECT_EQ(toString(RISCVISAInfo::parseArchString("rv64k", true).takeError()),
+            "first letter after 'rv64' should be 'e', 'i' or 'g'");
 }
 
 TEST(ParseArchString, RejectsUnsupportedBaseISA) {
   for (StringRef Input : {"rv128i", "rv128g"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "string must begin with rv32{i,e,g} or rv64{i,e,g}");
+              "string must begin with rv32{i,e,g}, rv64{i,e,g}, or a supported "
+              "profile name");
   }
 }
 
@@ -395,7 +401,7 @@ TEST(ParseArchString, AcceptsAmbiguousFromRelaxExtensions) {
 TEST(ParseArchString, RejectsRelaxExtensionsNotStartWithEorIorG) {
   EXPECT_EQ(
       toString(RISCVISAInfo::parseArchString("rv32zba_im", true).takeError()),
-      "first letter should be 'e', 'i' or 'g'");
+      "first letter after 'rv32' should be 'e', 'i' or 'g'");
 }
 
 TEST(ParseArchString,

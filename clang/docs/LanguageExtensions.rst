@@ -2931,7 +2931,7 @@ Query for this feature with ``__has_builtin(__builtin_dump_struct)``
 ``__builtin_shufflevector`` is used to express generic vector
 permutation/shuffle/swizzle operations.  This builtin is also very important
 for the implementation of various target-specific header files like
-``<xmmintrin.h>``.
+``<xmmintrin.h>``. This builtin can be used within constant expressions.
 
 **Syntax**:
 
@@ -2958,7 +2958,7 @@ for the implementation of various target-specific header files like
   // Concatenate every other element of 8-element vectors V1 and V2.
   __builtin_shufflevector(V1, V2, 0, 2, 4, 6, 8, 10, 12, 14)
 
-  // Shuffle v1 with some elements being undefined
+  // Shuffle v1 with some elements being undefined. Not allowed in constexpr.
   __builtin_shufflevector(v1, v1, 3, -1, 1, -1)
 
 **Description**:
@@ -2971,6 +2971,7 @@ starting with the first vector, continuing into the second vector.  Thus, if
 ``vec1`` is a 4-element vector, index 5 would refer to the second element of
 ``vec2``. An index of -1 can be used to indicate that the corresponding element
 in the returned vector is a don't care and can be optimized by the backend.
+Values of -1 are not supported in constant expressions.
 
 The result of ``__builtin_shufflevector`` is a vector with the same element
 type as ``vec1``/``vec2`` but that has an element count equal to the number of
@@ -2985,7 +2986,8 @@ Query for this feature with ``__has_builtin(__builtin_shufflevector)``.
 
 ``__builtin_convertvector`` is used to express generic vector
 type-conversion operations. The input vector and the output vector
-type must have the same number of elements.
+type must have the same number of elements. This builtin can be used within
+constant expressions.
 
 **Syntax**:
 
