@@ -86,7 +86,7 @@ TEST(DataLayoutUpgradeTest, NoDataLayoutUpgrade) {
       "-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64"
       "-f80:128:128-n8:16:32:64-S128");
   EXPECT_EQ(DL2, "e-m:e-i64:64-n32:64");
-  EXPECT_EQ(DL3, "e-m:o-i64:64-i128:128-n32:64-S128");
+  EXPECT_EQ(DL3, "e-m:o-i64:64-i128:128-n32:64-S128-Fn32");
 
   // Check that AMDGPU targets don't add -G1 if there is already a -G flag.
   EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32-G2", "r600"), "e-p:32:32-G2");

@@ -5390,7 +5390,7 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
   // AArch64 data layout upgrades.
   if (T.isAArch64()) {
     // Add "-Fn32"
-    if (!DL.contains("-Fn32"))
+    if (!DL.empty() && !DL.contains("-Fn32"))
       Res.append("-Fn32");
     return Res;
   }
