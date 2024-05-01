@@ -169,15 +169,15 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI [[nodiscard]] constexpr auto operator*() const { return __reference_type(__pos_, *__current_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
+  _LIBCPP_HIDE_FROM_ABI [[nodiscard]] constexpr __iterator& operator++() {
     ++__current_;
     ++__pos_;
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { return ++*this; }
+  _LIBCPP_HIDE_FROM_ABI [[nodiscard]] constexpr void operator++(int) { return ++*this; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int)
+  _LIBCPP_HIDE_FROM_ABI [[nodiscard]] constexpr __iterator operator++(int)
     requires forward_range<_Base>
   {
     auto __temp = *this;
@@ -185,7 +185,7 @@ public:
     return __temp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator--()
+  _LIBCPP_HIDE_FROM_ABI [[nodiscard]] constexpr __iterator& operator--()
     requires bidirectional_range<_Base>
   {
     --__current_;
@@ -201,7 +201,7 @@ public:
     return *__temp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator+=(difference_type __n)
+  _LIBCPP_HIDE_FROM_ABI [[nodiscard]] constexpr __iterator& operator+=(difference_type __n)
     requires random_access_range<_Base>
   {
     __current_ += __n;
@@ -209,7 +209,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator-=(difference_type __n)
+  _LIBCPP_HIDE_FROM_ABI [[nodiscard]] constexpr __iterator& operator-=(difference_type __n)
     requires random_access_range<_Base>
   {
     __current_ -= __n;
