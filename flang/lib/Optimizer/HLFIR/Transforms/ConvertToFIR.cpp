@@ -328,8 +328,8 @@ public:
       cudaAttr = fir::CUDADataAttributeAttr::get(rewriter.getContext(), *attr);
     auto firDeclareOp = rewriter.create<fir::DeclareOp>(
         loc, memref.getType(), memref, declareOp.getShape(),
-        declareOp.getTypeparams(), declareOp.getUniqName(), fortranAttrs,
-        cudaAttr);
+        declareOp.getTypeparams(), declareOp.getDummyScope(),
+        declareOp.getUniqName(), fortranAttrs, cudaAttr);
 
     // Propagate other attributes from hlfir.declare to fir.declare.
     // OpenACC's acc.declare is one example. Right now, the propagation
