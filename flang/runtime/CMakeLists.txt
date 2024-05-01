@@ -103,7 +103,6 @@ append(${NO_LTO_FLAGS} CMAKE_CXX_FLAGS)
 add_definitions(-U_GLIBCXX_ASSERTIONS)
 add_definitions(-U_LIBCPP_ENABLE_ASSERTIONS)
 
-add_subdirectory(FortranMain)
 add_subdirectory(Float128Math)
 
 set(sources
@@ -193,6 +192,7 @@ set(supported_files
   environment.cpp
   extrema.cpp
   external-unit.cpp
+  file.cpp
   findloc.cpp
   format.cpp
   inquiry.cpp

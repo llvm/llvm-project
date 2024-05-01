@@ -6876,11 +6876,15 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     // In cases of scalarized and predicated instructions, there will be VF
     // predicated blocks in the vectorized loop. Each branch around these
     // blocks requires also an extract of its vector compare i1 element.
+    // Note that the conditional branch from the loop latch will be replaced by
+    // a single branch controlling the loop, so there is no extra overhead from
+    // scalarization.
     bool ScalarPredicatedBB = false;
     BranchInst *BI = cast<BranchInst>(I);
     if (VF.isVector() && BI->isConditional() &&
         (PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(0)) ||
-         PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(1))))
+         PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(1))) &&
+        BI->getParent() != TheLoop->getLoopLatch())
       ScalarPredicatedBB = true;
 
     if (ScalarPredicatedBB) {
