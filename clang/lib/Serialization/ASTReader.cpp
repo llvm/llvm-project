@@ -2630,6 +2630,14 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       F.StandardCXXModule && FileChange.Kind == Change::None)
     FileChange = HasInputContentChanged(FileChange);
 
+  // When we have StoredTime equal to zero and ValidateASTInputFilesContent,
+  // it is better to check the content of the input files because we cannot rely
+  // on the file modification time, which will be the same (zero) for these
+  // files.
+  if (!StoredTime && ValidateASTInputFilesContent &&
+      FileChange.Kind == Change::None)
+    FileChange = HasInputContentChanged(FileChange);
+
   // For an overridden file, there is nothing to validate.
   if (!Overridden && FileChange.Kind != Change::None) {
     if (Complain && !Diags.isDiagnosticInFlight()) {
