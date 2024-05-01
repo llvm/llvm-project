@@ -424,6 +424,33 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
       CGM.CreateRuntimeFunction(FTy, LaunchKernelName);
   CGF.EmitCall(FI, CGCallee::forDirect(cudaLaunchKernelFn), ReturnValueSlot(),
                LaunchKernelArgs);
+
+  // To prevent CUDA device stub functions from being merged by ICF in MSVC
+  // environment, create an unique global variable for each kernel and write to
+  // the variable in the device stub.
+  if (CGM.getContext().getTargetInfo().getCXXABI().isMicrosoft() &&
+      !CGF.getLangOpts().HIP) {
+    llvm::Function *KernelFunction = llvm::cast<llvm::Function>(Kernel);
+    std::string GlobalVarName = (KernelFunction->getName() + ".id").str();
+
+    llvm::GlobalVariable *HandleVar =
+        CGM.getModule().getNamedGlobal(GlobalVarName);
+    if (!HandleVar) {
+      HandleVar = new llvm::GlobalVariable(
+          CGM.getModule(), CGM.Int8Ty,
+          /*Constant=*/false, KernelFunction->getLinkage(),
+          llvm::ConstantInt::get(CGM.Int8Ty, 0), GlobalVarName);
+      HandleVar->setDSOLocal(KernelFunction->isDSOLocal());
+      HandleVar->setVisibility(KernelFunction->getVisibility());
+      if (KernelFunction->hasComdat())
+        HandleVar->setComdat(CGM.getModule().getOrInsertComdat(GlobalVarName));
+    }
+
+    CGF.Builder.CreateAlignedStore(llvm::ConstantInt::get(CGM.Int8Ty, 1),
+                                   HandleVar, CharUnits::One(),
+                                   /*IsVolatile=*/true);
+  }
+
   CGF.EmitBranch(EndBlock);
 
   CGF.EmitBlock(EndBlock);
