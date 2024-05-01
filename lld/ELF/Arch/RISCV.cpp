@@ -15,8 +15,8 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 
 using namespace llvm;
 using namespace llvm::object;
