@@ -64,7 +64,8 @@
 
 // RUN: %clang -### -ffp-model=strict -fdenormal-fp-math=preserve-sign,preserve-sign -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN10 %s
-// WARN10: warning: overriding '-ffp-model=strict' option with '-fdenormal-fp-math=preserve-sign,preserve-sign' [-Woverriding-option]
+// WARN10: "-cc1"
+// WARN10-NOT: warning: overriding '-ffp-model=strict' option with '-fdenormal-fp-math=preserve-sign,preserve-sign' [-Woverriding-option]
 
 // RUN: %clang -### -ffp-model=fast -ffp-model=strict -c %s 2>&1 | FileCheck \
 // RUN:   --check-prefix=WARN11 %s
@@ -128,6 +129,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NO-EXCEPT %s
 // RUN: %clang -### -nostdinc -ffp-model=strict -Ofast -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-EXCEPT %s
+// CHECK-NO-EXCEPT: "-cc1"
 // CHECK-NO-EXCEPT-NOT: "-ffp-exception-behavior=strict"
 
 // RUN: %clang -### -nostdinc -ffp-exception-behavior=strict -c %s 2>&1 \
