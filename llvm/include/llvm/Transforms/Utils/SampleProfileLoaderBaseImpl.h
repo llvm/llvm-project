@@ -408,6 +408,19 @@ SampleProfileLoaderBaseImpl<BT>::getInstWeightImpl(const InstructionT &Inst) {
     Discriminator = DIL->getBaseDiscriminator();
 
   ErrorOr<uint64_t> R = FS->findSamplesAt(LineOffset, Discriminator);
+  if constexpr (std::is_base_of_v<llvm::Instruction, InstructionT>) {
+    // If Inst is a direct function call and matches a sample, we should check
+    // if the sample contains call target count of the matching function, and
+    // use that count value instead of sample count, because sample count may
+    // contain superfluous numbers from other non-matching call targets as a
+    // result of merging profiles.
+    if (const CallInst *Call = dyn_cast<CallInst>(&Inst))
+      if (const Function *Callee = Call->getCalledFunction())
+        if (const uint64_t *CallTargetCount =
+                FS->findCallTargetAt(LineLocation(LineOffset, Discriminator),
+                                     Callee->getName(), Reader->getRemapper()))
+          R.get() = *CallTargetCount;
+  }
   if (R) {
     bool FirstMark =
         CoverageTracker.markSamplesUsed(FS, LineOffset, Discriminator, R.get());

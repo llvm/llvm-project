@@ -1617,13 +1617,12 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
       for (auto &I : *BB) {
         if (!isa<CallInst>(I) && !isa<InvokeInst>(I))
           continue;
-        const DebugLoc &DLoc = I.getDebugLoc();
-        const DILocation *DIL = DLoc;
-        const FunctionSamples *FS = findFunctionSamples(I);
-        Function *Callee = cast<CallBase>(I).getCalledFunction();
-        if (!Callee) {
+        if (!cast<CallBase>(I).getCalledFunction()) {
+          const DebugLoc &DLoc = I.getDebugLoc();
           if (!DLoc)
             continue;
+          const DILocation *DIL = DLoc;
+          const FunctionSamples *FS = findFunctionSamples(I);
           if (!FS)
             continue;
           auto CallSite = FunctionSamples::getCallSiteIdentifier(DIL);
@@ -1660,26 +1659,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
           else if (OverwriteExistingWeights)
             I.setMetadata(LLVMContext::MD_prof, nullptr);
         } else if (!isa<IntrinsicInst>(&I)) {
-          uint32_t BranchWeight = static_cast<uint32_t>(BlockWeights[BB]);
-          // If I is a direct call and we found it has a sample with a matching
-          // call target, we should use its count instead because it is more
-          // precise.
-          if (DLoc && FS) {
-            auto Callsite = FunctionSamples::getCallSiteIdentifier(DIL);
-            if (const uint64_t *CallTargetCount = FS->findCallTargetAt(
-                    Callsite, Callee->getName(), Reader->getRemapper())) {
-              BranchWeight = static_cast<uint32_t>(*CallTargetCount);
-              if (!FunctionSamples::ProfileIsCS) {
-                if (const FunctionSamples *InlinedCallee =
-                        FS->findFunctionSamplesAt(Callsite, Callee->getName(),
-                                                  Reader->getRemapper())) {
-                  BranchWeight += static_cast<uint32_t>(
-                      InlinedCallee->getHeadSamplesEstimate());
-                }
-              }
-            }
-          }
-          setBranchWeights(I, {BranchWeight});
+          setBranchWeights(I, {static_cast<uint32_t>(BlockWeights[BB])});
         }
       }
     } else if (OverwriteExistingWeights || ProfileSampleBlockAccurate) {
