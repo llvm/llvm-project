@@ -1,7 +1,8 @@
 #include "DumpPath.h"
 
-void saveLocationInfo(ASTContext &Context, const SourceRange &range,
+bool saveLocationInfo(ASTContext &Context, const SourceRange &range,
                       ordered_json &j) {
+    bool allGood = true;
     SourceManager &SM = Context.getSourceManager();
 
     SourceLocation b = range.getBegin();
@@ -17,6 +18,7 @@ void saveLocationInfo(ASTContext &Context, const SourceRange &range,
         j["file"] = "!!! begin loc invalid !!!";
         j["beginLine"] = -1;
         j["beginColumn"] = -1;
+        allGood = false;
     }
 
     /**
@@ -43,6 +45,7 @@ void saveLocationInfo(ASTContext &Context, const SourceRange &range,
     } else {
         j["endLine"] = -1;
         j["endColumn"] = -1;
+        allGood = false;
     }
 
     std::string content;
@@ -52,6 +55,7 @@ void saveLocationInfo(ASTContext &Context, const SourceRange &range,
         auto length = ce - cb;
         if (length < 0) {
             content = "!!! length < 0 !!!";
+            allGood = false;
         } else {
             if (length > 80) {
                 content = std::string(cb, 80);
@@ -62,6 +66,8 @@ void saveLocationInfo(ASTContext &Context, const SourceRange &range,
         }
     }
     j["content"] = content;
+
+    return allGood;
 }
 
 /**

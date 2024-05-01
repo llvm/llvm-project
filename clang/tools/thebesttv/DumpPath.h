@@ -2,5 +2,5 @@
 
 #include "utils.h"
 
-void saveLocationInfo(ASTContext &Context, const SourceRange &range,
+bool saveLocationInfo(ASTContext &Context, const SourceRange &range,
                       ordered_json &j);
