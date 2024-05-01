@@ -1103,27 +1103,8 @@ bool MicrosoftCXXABI::hasMostDerivedReturn(GlobalDecl GD) const {
   return isDeletingDtor(GD);
 }
 
-static bool fieldIsTrivialForMSVC(const FieldDecl *Field,
-                                  const ASTContext &Context) {
-  if (Field->getType()->isReferenceType())
-    return false;
-
-  const RecordType *RT =
-      Context.getBaseElementType(Field->getType())->getAs<RecordType>();
-  if (!RT)
-    return true;
-
-  CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
-
-  for (const FieldDecl *RDField : RD->fields())
-    if (!fieldIsTrivialForMSVC(RDField, Context))
-      return false;
-
-  return true;
-}
-
 static bool isTrivialForMSVC(const CXXRecordDecl *RD, QualType Ty,
-                             CodeGenModule &CGM, const ASTContext &Context) {
+                             CodeGenModule &CGM) {
   // On AArch64, HVAs that can be passed in registers can also be returned
   // in registers. (Note this is using the MSVC definition of an HVA; see
   // isPermittedToBeHomogeneousAggregate().)
@@ -1141,8 +1122,7 @@ static bool isTrivialForMSVC(const CXXRecordDecl *RD, QualType Ty,
   //   No base classes
   //   No virtual functions
   // Additionally, we need to ensure that there is a trivial copy assignment
-  // operator, a trivial destructor, no user-provided constructors and no
-  // non static data members of reference type.
+  // operator, a trivial destructor and no user-provided constructors.
   if (RD->hasProtectedFields() || RD->hasPrivateFields())
     return false;
   if (RD->getNumBases() > 0)
@@ -1162,9 +1142,6 @@ static bool isTrivialForMSVC(const CXXRecordDecl *RD, QualType Ty,
   }
   if (RD->hasNonTrivialDestructor())
     return false;
-  for (const FieldDecl *Field : RD->fields())
-    if (!fieldIsTrivialForMSVC(Field, Context))
-      return false;
   return true;
 }
 
@@ -1173,13 +1150,11 @@ bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
   if (!RD)
     return false;
 
+  bool isTrivialForABI = RD->canPassInRegisters() &&
+                         isTrivialForMSVC(RD, FI.getReturnType(), CGM);
+
   // MSVC always returns structs indirectly from C++ instance methods.
-  bool isIndirectReturn = FI.isInstanceMethod();
-  if (!isIndirectReturn) {
-    isIndirectReturn =
-        !(RD->canPassInRegisters() &&
-          isTrivialForMSVC(RD, FI.getReturnType(), CGM, getContext()));
-  }
+  bool isIndirectReturn = !isTrivialForABI || FI.isInstanceMethod();
 
   if (isIndirectReturn) {
     CharUnits Align = CGM.getContext().getTypeAlignInChars(FI.getReturnType());
