@@ -592,40 +592,39 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     return createStringError(errc::invalid_argument,
                              "string must be lowercase");
 
-  if (Arch.starts_with("rvi") || Arch.starts_with("rva") ||
-      Arch.starts_with("rvb") || Arch.starts_with("rvm")) {
+  // ISA string must begin with rv32, rv64, or a profile.
+  unsigned XLen = 0;
+  if (Arch.consume_front("rv32")) {
+    XLen = 32;
+  } else if (Arch.consume_front("rv64")) {
+    XLen = 64;
+  } else {
+    // Try parsing as a profile.
     const auto *FoundProfile =
         llvm::find_if(SupportedProfiles, [Arch](const RISCVProfile &Profile) {
           return Arch.starts_with(Profile.Name);
         });
 
-    if (FoundProfile == std::end(SupportedProfiles))
-      return createStringError(errc::invalid_argument, "unsupported profile");
-
-    std::string NewArch = FoundProfile->MArch.str();
-    StringRef ArchWithoutProfile = Arch.substr(FoundProfile->Name.size());
-    if (!ArchWithoutProfile.empty()) {
-      if (!ArchWithoutProfile.starts_with("_"))
-        return createStringError(
-            errc::invalid_argument,
-            "additional extensions must be after separator '_'");
-      NewArch += ArchWithoutProfile.str();
+    if (FoundProfile != std::end(SupportedProfiles)) {
+      std::string NewArch = FoundProfile->MArch.str();
+      StringRef ArchWithoutProfile = Arch.drop_front(FoundProfile->Name.size());
+      if (!ArchWithoutProfile.empty()) {
+        if (ArchWithoutProfile.front() != '_')
+          return createStringError(
+              errc::invalid_argument,
+              "additional extensions must be after separator '_'");
+        NewArch += ArchWithoutProfile.str();
+      }
+      return parseArchString(NewArch, EnableExperimentalExtension,
+                             ExperimentalExtensionVersionCheck, IgnoreUnknown);
     }
-    return parseArchString(NewArch, EnableExperimentalExtension,
-                           ExperimentalExtensionVersionCheck, IgnoreUnknown);
   }
-
-  // ISA string must begin with rv32 or rv64.
-  unsigned XLen = 0;
-  if (Arch.consume_front("rv32"))
-    XLen = 32;
-  else if (Arch.consume_front("rv64"))
-    XLen = 64;
 
   if (XLen == 0 || Arch.empty())
     return createStringError(
         errc::invalid_argument,
-        "string must begin with rv32{i,e,g} or rv64{i,e,g}");
+        "string must begin with rv32{i,e,g}, rv64{i,e,g}, or a supported "
+        "profile name");
 
   std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
   MapVector<std::string, RISCVISAUtils::ExtensionVersion,
