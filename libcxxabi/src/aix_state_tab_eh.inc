@@ -146,7 +146,7 @@ struct FSMEntry {
     // Address of the destructor function with 1 argument.
     void (*destructor)(void*);
     // Address of the destructor function with 2 arguments.
-    void (*destructor2)(void*, size_t);
+    void (*xlCDestructor)(void*, size_t);
     // The address of the catch block or cleanup code.
     void* landingPad;
   };
@@ -191,7 +191,7 @@ static void invoke_destructor(FSMEntry* fsmEntry, void* addr) {
   try {
     if (fsmEntry->elementCount == 1) {
       _LIBCXXABI_TRACE_STATETAB0("calling scalar destructor\n");
-      (*fsmEntry->destructor2)(addr, dtorArgument);
+      (*fsmEntry->xlCDestructor)(addr, dtorArgument);
       _LIBCXXABI_TRACE_STATETAB0("returned from scalar destructor\n");
     } else {
       _LIBCXXABI_TRACE_STATETAB0("calling vector destructor\n");
@@ -213,7 +213,7 @@ static void invoke_delete(FSMEntry* fsmEntry, void* addr) {
   try {
     _LIBCXXABI_TRACE_STATETAB0("..calling delete()\n");
     // 'destructor' holds a function pointer to delete().
-    (*fsmEntry->destructor2)(objectAddress, fsmEntry->elemSize);
+    (*fsmEntry->xlCDestructor)(objectAddress, fsmEntry->elemSize);
     _LIBCXXABI_TRACE_STATETAB0("..returned from delete()\n");
   } catch (...) {
     _LIBCXXABI_TRACE_STATETAB0("Uncaught exception in delete(), terminating\n");
