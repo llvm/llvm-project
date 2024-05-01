@@ -98,6 +98,9 @@ struct TransferReadPermutationLowering
     // TODO: support 0-d corner case.
     if (op.getTransferRank() == 0)
       return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
+    if (isa<vector::MaskOp>(op->getParentOp()))
+      return rewriter.notifyMatchFailure(
+          op, "Cannot expand transfer read inside a Mask Op");
 
     SmallVector<unsigned> permutation;
     AffineMap map = op.getPermutationMap();
@@ -173,6 +176,9 @@ struct TransferWritePermutationLowering
     // TODO: support 0-d corner case.
     if (op.getTransferRank() == 0)
       return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
+    if (isa<vector::MaskOp>(op->getParentOp()))
+      return rewriter.notifyMatchFailure(
+          op, "Cannot expand transfer write inside a Mask Op");
 
     SmallVector<unsigned> permutation;
     AffineMap map = op.getPermutationMap();
@@ -239,6 +245,9 @@ struct TransferWriteNonPermutationLowering
     // TODO: support 0-d corner case.
     if (op.getTransferRank() == 0)
       return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
+    if (isa<vector::MaskOp>(op->getParentOp()))
+      return rewriter.notifyMatchFailure(
+          op, "Cannot expand transfer write inside a Mask Op");
 
     SmallVector<unsigned> permutation;
     AffineMap map = op.getPermutationMap();

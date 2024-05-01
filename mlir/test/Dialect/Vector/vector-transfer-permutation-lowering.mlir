@@ -59,6 +59,37 @@ func.func @permutation_with_mask_transfer_write_scalable(%arg0: vector<4x[8]xi16
 
     return
 }
+
+
+#map = affine_map<(d0)[s0] -> (-d0 + s0, 4)>
+#map1 = affine_map<(d0, d1) -> (d0, 0, d1)>
+// CHECK-LABEL: func @masked_permutation_transfer_read
+//  CHECK-SAME:        %[[ARG_0:.*]]: tensor<?x1xf32>,
+//  CHECK-SAME:        %[[ARG_1:.*]]: vector<4x1xi1>
+//       CHECK: vector.transfer_read %[[ARG_0]]{{.*}}: tensor<?x1xf32>, vector<4x4x1xf32> } : vector<4x1xi1> -> vector<4x4x1xf32>
+func.func @masked_permutation_transfer_read(%arg0: tensor<?x1xf32>, %mask : vector<4x1xi1>) {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %3 = vector.mask %mask { vector.transfer_read %arg0[%c0, %c0], %cst {permutation_map = #map1} : tensor<?x1xf32>, vector<4x4x1xf32> } : vector<4x1xi1> -> vector<4x4x1xf32>
+  call @dostuff(%3) : (vector<4x4x1xf32>) -> ()
+  return
+}
+func.func private @dostuff(vector<4x4x1xf32>)
+
+
+// CHECK-LABEL: func @masked_permutation_transfer_write
+//  CHECK-SAME:        %[[ARG_0:.*]]: tensor<?x?xf32>,
+//  CHECK-SAME:        %[[ARG_1:.*]]: vector<16xf32>,
+//  CHECK-SAME:        %[[IDX:.*]]: index,
+//  CHECK-SAME:        %[[MASK:.*]]: vector<16xi1>
+//       CHECK:   %[[RES:.*]] = vector.mask %[[MASK]] { vector.transfer_write %[[ARG_1]], %[[ARG_0]][%[[IDX]], %[[IDX]]] {{.*}} vector<16xf32>, tensor<?x?xf32> } : vector<16xi1> -> tensor<?x?xf32>
+//       CHECK:   return %[[RES]]
+func.func @masked_permutation_transfer_write(%t: tensor<?x?xf32>, %val: vector<16xf32>, %idx: index, %m0: vector<16xi1>) -> tensor<?x?xf32> {
+  %r = vector.mask %m0 { vector.transfer_write %val, %t[%idx, %idx] {permutation_map = affine_map<(d0, d1) -> (d0)>} : vector<16xf32>, tensor<?x?xf32> } : vector<16xi1> -> tensor<?x?xf32>
+  return %r : tensor<?x?xf32>
+}
+
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %f = transform.structured.match ops{["func.func"]} in %module_op

@@ -100,11 +100,17 @@ LogicalResult TransferReadOfExtractSliceOpFolder::matchAndRewrite(
   SmallVector<Value> indices(readOp.getIndices().begin(),
                              readOp.getIndices().end());
   SmallVector<Value> sourceIndices;
+  // In case transfer_read is located inside a MaskOp we want to avoid creating
+  // more ops inside it.
+  if (isa<vector::MaskOp>(readOp->getParentOp()))
+    rewriter.setInsertionPoint(readOp->getParentOp());
   affine::resolveIndicesIntoOpWithOffsetsAndStrides(
       rewriter, readOp.getLoc(), extractSliceOp.getMixedOffsets(),
       extractSliceOp.getMixedStrides(), extractSliceOp.getDroppedDims(),
       indices, sourceIndices);
 
+  // Reset the insertion point.
+  rewriter.setInsertionPoint(readOp);
   rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
       readOp, readOp.getVectorType(), extractSliceOp.getSource(), sourceIndices,
       AffineMapAttr::get(expandDimsToRank(
