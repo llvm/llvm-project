@@ -575,10 +575,8 @@ SBStructuredData SBCommandInterpreter::GetTranscript() {
   LLDB_INSTRUMENT_VA(this);
 
   SBStructuredData data;
-  if (!IsValid())
-    return data;
-
-  data.m_impl_up->SetObjectSP(m_opaque_ptr->GetTranscript());
+  if (IsValid())
+    data.m_impl_up->SetObjectSP(m_opaque_ptr->GetTranscript());
   return data;
 }
 

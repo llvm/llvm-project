@@ -299,9 +299,9 @@ StructuredData::ArraySP StructuredData::Array::SplitString(llvm::StringRef s,
                                                            bool keepEmpty) {
   auto array_sp = std::make_shared<StructuredData::Array>();
 
-  // Count down from MaxSplit. When MaxSplit is -1, this will just split
+  // Count down from `maxSplit`. When `maxSplit` is -1, this will just split
   // "forever". This doesn't support splitting more than 2^31 times
-  // intentionally; if we ever want that we can make MaxSplit a 64-bit integer
+  // intentionally; if we ever want that we can make `maxSplit` a 64-bit integer
   // but that seems unlikely to be useful.
   while (maxSplit-- != 0) {
     size_t idx = s.find(separator);
