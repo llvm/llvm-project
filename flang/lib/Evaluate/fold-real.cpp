@@ -54,7 +54,7 @@ public:
       : array_{array}, maxAbs_{maxAbs}, rounding_{rounding} {};
   void operator()(
       Scalar<T> &element, const ConstantSubscripts &at, bool /*first*/) {
-    // Kahan summation of scaled elements:
+    // Summation of scaled elements:
     // Naively,
     //   NORM2(A(:)) = SQRT(SUM(A(:)**2))
     // For any T > 0, we have mathematically
@@ -76,24 +76,27 @@ public:
       auto item{array_.At(at)};
       auto scaled{item.Divide(scale).value};
       auto square{scaled.Multiply(scaled).value};
-      auto next{square.Add(correction_, rounding_)};
-      overflow_ |= next.flags.test(RealFlag::Overflow);
-      auto sum{element.Add(next.value, rounding_)};
-      overflow_ |= sum.flags.test(RealFlag::Overflow);
-      correction_ = sum.value.Subtract(element, rounding_)
-                        .value.Subtract(next.value, rounding_)
-                        .value;
-      element = sum.value;
+      if constexpr (useKahanSummation) {
+        auto next{square.Add(correction_, rounding_)};
+        overflow_ |= next.flags.test(RealFlag::Overflow);
+        auto sum{element.Add(next.value, rounding_)};
+        overflow_ |= sum.flags.test(RealFlag::Overflow);
+        correction_ = sum.value.Subtract(element, rounding_)
+                          .value.Subtract(next.value, rounding_)
+                          .value;
+        element = sum.value;
+      } else {
+        auto sum{element.Add(square, rounding_)};
+        overflow_ |= sum.flags.test(RealFlag::Overflow);
+        element = sum.value;
+      }
     }
   }
   bool overflow() const { return overflow_; }
   void Done(Scalar<T> &result) {
-    // result+correction == SUM((data(:)/maxAbs)**2)
-    // result = maxAbs * SQRT(result+correction)
-    auto corrected{result.Add(correction_, rounding_)};
-    overflow_ |= corrected.flags.test(RealFlag::Overflow);
-    correction_ = Scalar<T>{};
-    auto root{corrected.value.SQRT().value};
+    // incoming result = SUM((data(:)/maxAbs)**2)
+    // outgoing result = maxAbs * SQRT(result)
+    auto root{result.SQRT().value};
     auto product{root.Multiply(maxAbs_.At(maxAbsAt_))};
     maxAbs_.IncrementSubscripts(maxAbsAt_);
     overflow_ |= product.flags.test(RealFlag::Overflow);
