@@ -4,6 +4,7 @@
 # our goal is to disable the /Og flag while retaining the other optimizations from the /O1|/O2 set
 if(MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES Clang
     AND MSVC_VERSION VERSION_GREATER_EQUAL 1932
+    AND MSVC_VERSION VERSION_LESS 1939
     AND CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64")
 
   string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
