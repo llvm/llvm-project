@@ -1230,6 +1230,8 @@ define amdgpu_kernel void @flat_nontemporal_volatile_load(
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX12-WGP-NEXT:    flat_load_b32 v2, v[0:1] th:TH_LOAD_NT scope:SCOPE_SYS
+; GFX12-WGP-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v1, s1
@@ -1246,6 +1248,8 @@ define amdgpu_kernel void @flat_nontemporal_volatile_load(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX12-CU-NEXT:    flat_load_b32 v2, v[0:1] th:TH_LOAD_NT scope:SCOPE_SYS
+; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s1
