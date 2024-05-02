@@ -8634,8 +8634,8 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
   }
 
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::byte_sel)) {
-    assert(AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_in));
-    Inst.addOperand(Inst.getOperand(0));
+    if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_in))
+      Inst.addOperand(Inst.getOperand(0));
     addOptionalImmOperand(Inst, Operands, OptionalIdx,
                           AMDGPUOperand::ImmTyByteSel);
   }
