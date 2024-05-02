@@ -2270,11 +2270,14 @@ static Status ParseInternal(llvm::StringRef &format, Entry &parent_entry,
           if (error.Fail())
             return error;
 
-          auto [_, llvm_format] = llvm::StringRef(entry.string).split(':');
-          if (!LLVMFormatPattern.match(llvm_format)) {
-            error.SetErrorStringWithFormat("invalid llvm format: '%s'",
-                                           llvm_format.data());
-            return error;
+          llvm::StringRef entry_string(entry.string);
+          if (entry_string.contains(':')) {
+            auto [_, llvm_format] = entry_string.split(':');
+            if (!llvm_format.empty() && !LLVMFormatPattern.match(llvm_format)) {
+              error.SetErrorStringWithFormat("invalid llvm format: '%s'",
+                                             llvm_format.data());
+              return error;
+            }
           }
 
           if (verify_is_thread_id) {
