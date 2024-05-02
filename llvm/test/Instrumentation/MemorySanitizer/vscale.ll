@@ -173,7 +173,7 @@ define void @test_param(ptr %a, ptr %b) sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP6]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @fn_param(<vscale x 2 x float> [[TMP2]], ptr [[B]])
@@ -183,6 +183,63 @@ define void @test_param(ptr %a, ptr %b) sanitize_memory {
   call void @fn_param(<vscale x 2 x float> %1, ptr %b)
   ret void
 }
+
+define void @test_alloca1() sanitize_memory {
+; CHECK-LABEL: define void @test_alloca1(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[X:%.*]] = alloca <vscale x 64 x i1>, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP4]], i8 -1, i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = alloca <vscale x 64 x i1>, align 4
+  ret void
+}
+
+define void @test_alloca2() sanitize_memory {
+; CHECK-LABEL: define void @test_alloca2(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[X:%.*]] = alloca <vscale x 64 x double>, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 512
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP4]], i8 -1, i64 [[TMP1]], i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = alloca <vscale x 64 x double>, align 4
+  ret void
+}
+
+define void @test_alloca3() sanitize_memory {
+; CHECK-LABEL: define void @test_alloca3(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[X:%.*]] = alloca <vscale x 1 x i1>, align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP3]], i8 -1, i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = alloca <vscale x 1 x i1>, align 4
+  ret void
+}
+
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.
