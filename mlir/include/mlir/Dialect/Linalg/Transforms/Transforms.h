@@ -1165,19 +1165,42 @@ packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
 struct PackMatmulOptions {
   /// Minor block factors for packing relayout in the 'mnkOrder'.
   SmallVector<int64_t, 3> blockFactors;
+
   /// Order of packed dimensions (mb, nb, kb) - permutation of the default
   /// order.
   SmallVector<int64_t, 3> mnkOrder = {0, 1, 2};
+
   SmallVector<int64_t, 3> mnkPaddedSizesNextMultipleOf;
+
+  /// If true, allows packing of dimensions that only partially fit into the
+  /// block factors.
   bool allowPadding = true;
 };
-/// Function type which is used to control matmul block packing.
+
+/// Function type which is used to control matmul packing.
 /// It is expected to return valid packing configuration for each operation.
-/// Lack of options indicates no valid configuration could be assigned and
-/// will prevent any packing from occuring.
+/// Lack of packing options indicates that no valid configuration could be
+/// assigned and the operation will not be packed.
 using ControlPackMatmulFn =
     std::function<std::optional<PackMatmulOptions>(linalg::LinalgOp)>;
 
+/// Pack a matmul operation into blocked 4D layout.
+///
+/// Relayout a matmul operation into blocked layout with two levels of
+/// subdivision:
+///   - major 2D blocks - outer dimensions, consist of minor blocks
+///   - minor 2D blocks - inner dimensions, consist of scalar elements
+///
+/// A 2D matmul MxNxK gets reshaped into blocked 4D representation
+/// as: [MB][NB][mb][nb] += [MB][KB][mb][kb] * [NB][KB][kb][nb]
+/// where the (MB, NB, KB) dimensions represent the major blocks,
+/// and the (mb, nb, kb) are the minor blocks of their respective
+/// original 2D dimensions (M, N, K).
+///
+/// As a part of packing strategy, the RHS operand gets 'block transposed'
+/// i.e., the major blocks [KB][NB] get transposed to [NB][KB] layout.
+/// The minor blocks remain unchanged.
+/// The final result is unpacked back to the original layout.
 FailureOr<PackResult>
 packMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
              const ControlPackMatmulFn &controlPackMatmul);
