@@ -102,7 +102,7 @@ def FeatureVH : SubtargetFeature<"vh", "HasVH", "true",
 // This SubtargetFeature is special. It controls only whether codegen will turn
 // `llvm.readcyclecounter()` into an access to a PMUv3 System Register. The
 // `FEAT_PMUv3*` system registers are always available for assembly/disassembly.
-def FeaturePerfMon : Extension<"perfmon", "PerfMon",
+def FeaturePMUv3 : Extension<"pmuv3", "PMUv3",
   "Enable Code Generation for ARMv8 PMUv3 Performance Monitors extension (FEAT_PMUv3)">;
 
 def FeatureFullFP16 : Extension<"fullfp16", "FullFP16",

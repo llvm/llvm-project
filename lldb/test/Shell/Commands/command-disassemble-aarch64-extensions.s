@@ -33,7 +33,7 @@ fn:
   irg x0, x0                            // AEK_MTE
   cpyfp [x0]!, [x1]!, x2!               // AEK_MOPS
   pacia x0, x1                          // AEK_PAUTH
-  mrs x0, pmccntr_el0                   // AEK_PERFMON
+  mrs x0, pmccntr_el0                   // AEK_PMUV3
   cfp rctx, x0                          // AEK_PREDRES
   psb csync                             // AEK_SPE
   msr erxpfgctl_el1, x0                 // AEK_RAS
