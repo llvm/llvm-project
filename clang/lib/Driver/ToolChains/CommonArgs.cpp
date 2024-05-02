@@ -1197,7 +1197,15 @@ void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
   SmallString<256> DefaultLibPath =
       llvm::sys::path::parent_path(TC.getDriver().Dir);
   llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
-  CmdArgs.push_back(Args.MakeArgString("-L" + DefaultLibPath));
+  if (TC.getSanitizerArgs(Args).needsAsanRt()) {
+    SmallString<256> ASanLibPath[2];
+    ASanLibPath[0].assign((DefaultLibPath + "/../../asan").str());
+    ASanLibPath[1].assign((DefaultLibPath + "/asan").str());
+    for (auto Path : ASanLibPath)
+      if (llvm::sys::fs::exists(Path))
+        CmdArgs.push_back(Args.MakeArgString("-L" + Path));
+  } else
+    CmdArgs.push_back(Args.MakeArgString("-L" + DefaultLibPath));
 }
 
 void tools::addArchSpecificRPath(const ToolChain &TC, const ArgList &Args,
