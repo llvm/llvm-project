@@ -18,7 +18,6 @@
 namespace mlir {
 namespace sparse_tensor {
 
-
 //===----------------------------------------------------------------------===//
 /// A wrapper around `RankedTensorType`, which has three goals:
 ///
@@ -60,7 +59,6 @@ public:
   SparseTensorType(ShapedType stp, SparseTensorEncodingAttr enc)
       : SparseTensorType(
             RankedTensorType::get(stp.getShape(), stp.getElementType(), enc)) {}
-
 
   SparseTensorType &operator=(const SparseTensorType &) = delete;
   SparseTensorType(const SparseTensorType &) = default;
