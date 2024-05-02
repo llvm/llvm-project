@@ -1056,6 +1056,7 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
                                     SmallVector<Value *, 4>(GEP->indices()));
     cast<GetElementPtrInst>(NewSrc)->setIsInBounds(IsChainInBounds);
     auto NewGEP = Builder.CreateGEP(GEPType, NewSrc, NewGEPOffset);
+    cast<GetElementPtrInst>(NewGEP)->setIsInBounds(IsChainInBounds);
     GEP->replaceAllUsesWith(NewGEP);
     RecursivelyDeleteTriviallyDeadInstructions(GEP);
     return true;
@@ -1067,7 +1068,6 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
   cast<GetElementPtrInst>(NewSrc)->setIsInBounds(IsChainInBounds);
   auto NewGEP = Builder.CreateGEP(GEPType, NewSrc,
                                   SmallVector<Value *, 4>(PtrGEP->indices()));
-  cast<GetElementPtrInst>(NewGEP)->setIsInBounds(IsChainInBounds);
   cast<GetElementPtrInst>(NewGEP)->setIsInBounds(IsChainInBounds);
   GEP->replaceAllUsesWith(NewGEP);
   RecursivelyDeleteTriviallyDeadInstructions(GEP);

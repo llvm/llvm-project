@@ -57,7 +57,7 @@ define void @inboundsNonNegativeTypeShrink(ptr %in.ptr, i32 %in.idx1) {
 ; CHECK-NEXT:    [[IN_IDX1_NNEG:%.*]] = and i32 [[IN_IDX1]], 2147483647
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IN_IDX1_NNEG]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[IN_PTR]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 2048
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 2048
 ; CHECK-NEXT:    ret void
 ;
 entry:
