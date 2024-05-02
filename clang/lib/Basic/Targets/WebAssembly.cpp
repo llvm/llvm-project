@@ -45,20 +45,20 @@ bool WebAssemblyTargetInfo::setABI(const std::string &Name) {
 
 bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
-      .Case("simd128", SIMDLevel >= SIMD128)
-      .Case("relaxed-simd", SIMDLevel >= RelaxedSIMD)
-      .Case("half-precision", HasHalfPrecision)
-      .Case("nontrapping-fptoint", HasNontrappingFPToInt)
-      .Case("sign-ext", HasSignExt)
-      .Case("exception-handling", HasExceptionHandling)
-      .Case("bulk-memory", HasBulkMemory)
       .Case("atomics", HasAtomics)
-      .Case("mutable-globals", HasMutableGlobals)
-      .Case("multivalue", HasMultivalue)
-      .Case("tail-call", HasTailCall)
-      .Case("reference-types", HasReferenceTypes)
+      .Case("bulk-memory", HasBulkMemory)
+      .Case("exception-handling", HasExceptionHandling)
       .Case("extended-const", HasExtendedConst)
+      .Case("half-precision", HasHalfPrecision)
       .Case("multimemory", HasMultiMemory)
+      .Case("multivalue", HasMultivalue)
+      .Case("mutable-globals", HasMutableGlobals)
+      .Case("nontrapping-fptoint", HasNontrappingFPToInt)
+      .Case("reference-types", HasReferenceTypes)
+      .Case("relaxed-simd", SIMDLevel >= RelaxedSIMD)
+      .Case("sign-ext", HasSignExt)
+      .Case("simd128", SIMDLevel >= SIMD128)
+      .Case("tail-call", HasTailCall)
       .Default(false);
 }
 
@@ -74,34 +74,34 @@ void WebAssemblyTargetInfo::fillValidCPUList(
 void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
                                              MacroBuilder &Builder) const {
   defineCPUMacros(Builder, "wasm", /*Tuning=*/false);
-  if (SIMDLevel >= SIMD128)
-    Builder.defineMacro("__wasm_simd128__");
-  if (SIMDLevel >= RelaxedSIMD)
-    Builder.defineMacro("__wasm_relaxed_simd__");
-  if (HasNontrappingFPToInt)
-    Builder.defineMacro("__wasm_nontrapping_fptoint__");
-  if (HasSignExt)
-    Builder.defineMacro("__wasm_sign_ext__");
-  if (HasExceptionHandling)
-    Builder.defineMacro("__wasm_exception_handling__");
-  if (HasBulkMemory)
-    Builder.defineMacro("__wasm_bulk_memory__");
   if (HasAtomics)
     Builder.defineMacro("__wasm_atomics__");
-  if (HasMutableGlobals)
-    Builder.defineMacro("__wasm_mutable_globals__");
-  if (HasMultivalue)
-    Builder.defineMacro("__wasm_multivalue__");
-  if (HasTailCall)
-    Builder.defineMacro("__wasm_tail_call__");
-  if (HasReferenceTypes)
-    Builder.defineMacro("__wasm_reference_types__");
+  if (HasBulkMemory)
+    Builder.defineMacro("__wasm_bulk_memory__");
+  if (HasExceptionHandling)
+    Builder.defineMacro("__wasm_exception_handling__");
   if (HasExtendedConst)
     Builder.defineMacro("__wasm_extended_const__");
   if (HasMultiMemory)
     Builder.defineMacro("__wasm_multimemory__");
   if (HasHalfPrecision)
     Builder.defineMacro("__wasm_half_precision__");
+  if (HasMultivalue)
+    Builder.defineMacro("__wasm_multivalue__");
+  if (HasMutableGlobals)
+    Builder.defineMacro("__wasm_mutable_globals__");
+  if (HasNontrappingFPToInt)
+    Builder.defineMacro("__wasm_nontrapping_fptoint__");
+  if (HasReferenceTypes)
+    Builder.defineMacro("__wasm_reference_types__");
+  if (SIMDLevel >= RelaxedSIMD)
+    Builder.defineMacro("__wasm_relaxed_simd__");
+  if (HasSignExt)
+    Builder.defineMacro("__wasm_sign_ext__");
+  if (SIMDLevel >= SIMD128)
+    Builder.defineMacro("__wasm_simd128__");
+  if (HasTailCall)
+    Builder.defineMacro("__wasm_tail_call__");
 
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
@@ -159,11 +159,11 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     addGenericFeatures();
     Features["atomics"] = true;
     Features["bulk-memory"] = true;
+    Features["half-precision"] = true;
     Features["multimemory"] = true;
     Features["nontrapping-fptoint"] = true;
     Features["reference-types"] = true;
     Features["tail-call"] = true;
-    Features["half-precision"] = true;
     setSIMDLevel(Features, SIMD128, true);
   };
   if (CPU == "generic") {
@@ -178,36 +178,20 @@ bool WebAssemblyTargetInfo::initFeatureMap(
 bool WebAssemblyTargetInfo::handleTargetFeatures(
     std::vector<std::string> &Features, DiagnosticsEngine &Diags) {
   for (const auto &Feature : Features) {
-    if (Feature == "+simd128") {
-      SIMDLevel = std::max(SIMDLevel, SIMD128);
+    if (Feature == "+atomics") {
+      HasAtomics = true;
       continue;
     }
-    if (Feature == "-simd128") {
-      SIMDLevel = std::min(SIMDLevel, SIMDEnum(SIMD128 - 1));
+    if (Feature == "-atomics") {
+      HasAtomics = false;
       continue;
     }
-    if (Feature == "+relaxed-simd") {
-      SIMDLevel = std::max(SIMDLevel, RelaxedSIMD);
+    if (Feature == "+bulk-memory") {
+      HasBulkMemory = true;
       continue;
     }
-    if (Feature == "-relaxed-simd") {
-      SIMDLevel = std::min(SIMDLevel, SIMDEnum(RelaxedSIMD - 1));
-      continue;
-    }
-    if (Feature == "+nontrapping-fptoint") {
-      HasNontrappingFPToInt = true;
-      continue;
-    }
-    if (Feature == "-nontrapping-fptoint") {
-      HasNontrappingFPToInt = false;
-      continue;
-    }
-    if (Feature == "+sign-ext") {
-      HasSignExt = true;
-      continue;
-    }
-    if (Feature == "-sign-ext") {
-      HasSignExt = false;
+    if (Feature == "-bulk-memory") {
+      HasBulkMemory = false;
       continue;
     }
     if (Feature == "+exception-handling") {
@@ -218,12 +202,12 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
       HasExceptionHandling = false;
       continue;
     }
-    if (Feature == "+bulk-memory") {
-      HasBulkMemory = true;
+    if (Feature == "+extended-const") {
+      HasExtendedConst = true;
       continue;
     }
-    if (Feature == "-bulk-memory") {
-      HasBulkMemory = false;
+    if (Feature == "-extended-const") {
+      HasExtendedConst = false;
       continue;
     }
     if (Feature == "+half-precision") {
@@ -235,20 +219,12 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
       HasHalfPrecision = false;
       continue;
     }
-    if (Feature == "+atomics") {
-      HasAtomics = true;
+    if (Feature == "+multimemory") {
+      HasMultiMemory = true;
       continue;
     }
-    if (Feature == "-atomics") {
-      HasAtomics = false;
-      continue;
-    }
-    if (Feature == "+mutable-globals") {
-      HasMutableGlobals = true;
-      continue;
-    }
-    if (Feature == "-mutable-globals") {
-      HasMutableGlobals = false;
+    if (Feature == "-multimemory") {
+      HasMultiMemory = false;
       continue;
     }
     if (Feature == "+multivalue") {
@@ -259,12 +235,20 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
       HasMultivalue = false;
       continue;
     }
-    if (Feature == "+tail-call") {
-      HasTailCall = true;
+    if (Feature == "+mutable-globals") {
+      HasMutableGlobals = true;
       continue;
     }
-    if (Feature == "-tail-call") {
-      HasTailCall = false;
+    if (Feature == "-mutable-globals") {
+      HasMutableGlobals = false;
+      continue;
+    }
+    if (Feature == "+nontrapping-fptoint") {
+      HasNontrappingFPToInt = true;
+      continue;
+    }
+    if (Feature == "-nontrapping-fptoint") {
+      HasNontrappingFPToInt = false;
       continue;
     }
     if (Feature == "+reference-types") {
@@ -275,20 +259,36 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
       HasReferenceTypes = false;
       continue;
     }
-    if (Feature == "+extended-const") {
-      HasExtendedConst = true;
+    if (Feature == "+relaxed-simd") {
+      SIMDLevel = std::max(SIMDLevel, RelaxedSIMD);
       continue;
     }
-    if (Feature == "-extended-const") {
-      HasExtendedConst = false;
+    if (Feature == "-relaxed-simd") {
+      SIMDLevel = std::min(SIMDLevel, SIMDEnum(RelaxedSIMD - 1));
       continue;
     }
-    if (Feature == "+multimemory") {
-      HasMultiMemory = true;
+    if (Feature == "+sign-ext") {
+      HasSignExt = true;
       continue;
     }
-    if (Feature == "-multimemory") {
-      HasMultiMemory = false;
+    if (Feature == "-sign-ext") {
+      HasSignExt = false;
+      continue;
+    }
+    if (Feature == "+simd128") {
+      SIMDLevel = std::max(SIMDLevel, SIMD128);
+      continue;
+    }
+    if (Feature == "-simd128") {
+      SIMDLevel = std::min(SIMDLevel, SIMDEnum(SIMD128 - 1));
+      continue;
+    }
+    if (Feature == "+tail-call") {
+      HasTailCall = true;
+      continue;
+    }
+    if (Feature == "-tail-call") {
+      HasTailCall = false;
       continue;
     }
 
