@@ -415,31 +415,12 @@ CallInst *IRBuilderBase::getReductionIntrinsic(Intrinsic::ID ID, Value *Src) {
   return CreateCall(Decl, Ops);
 }
 
-CallInst *IRBuilderBase::getReductionIntrinsic(Intrinsic::ID ID, Value *Acc,
-                                               Value *Src, Value *Mask,
-                                               Value *EVL) {
-  Module *M = GetInsertBlock()->getParent()->getParent();
-  auto *SrcTy = cast<VectorType>(Src->getType());
-  EVL = CreateIntCast(EVL, getInt32Ty(), /*isSigned=*/false);
-  if (!Mask)
-    Mask = CreateVectorSplat(SrcTy->getElementCount(), getTrue());
-  Value *Ops[] = {Acc, Src, Mask, EVL};
-  Type *Tys[] = {SrcTy};
-  auto Decl = Intrinsic::getDeclaration(M, ID, Tys);
-  return CreateCall(Decl, Ops);
-}
-
 CallInst *IRBuilderBase::CreateFAddReduce(Value *Acc, Value *Src) {
   Module *M = GetInsertBlock()->getParent()->getParent();
   Value *Ops[] = {Acc, Src};
   auto Decl = Intrinsic::getDeclaration(M, Intrinsic::vector_reduce_fadd,
                                         {Src->getType()});
   return CreateCall(Decl, Ops);
-}
-
-CallInst *IRBuilderBase::CreateFAddReduce(Value *Acc, Value *Src, Value *EVL,
-                                          Value *Mask) {
-  return getReductionIntrinsic(Intrinsic::vp_reduce_fadd, Acc, Src, Mask, EVL);
 }
 
 CallInst *IRBuilderBase::CreateFMulReduce(Value *Acc, Value *Src) {
@@ -450,65 +431,24 @@ CallInst *IRBuilderBase::CreateFMulReduce(Value *Acc, Value *Src) {
   return CreateCall(Decl, Ops);
 }
 
-CallInst *IRBuilderBase::CreateFMulReduce(Value *Acc, Value *Src, Value *EVL,
-                                          Value *Mask) {
-  return getReductionIntrinsic(Intrinsic::vp_reduce_fmul, Acc, Src, Mask, EVL);
-}
-
 CallInst *IRBuilderBase::CreateAddReduce(Value *Src) {
   return getReductionIntrinsic(Intrinsic::vector_reduce_add, Src);
-}
-
-CallInst *IRBuilderBase::CreateAddReduce(Value *Src, Value *EVL, Value *Mask) {
-  auto *SrcTy = cast<VectorType>(Src->getType());
-  auto *EltTy = SrcTy->getElementType();
-  return getReductionIntrinsic(Intrinsic::vp_reduce_add,
-                               ConstantInt::get(EltTy, 0), Src, Mask, EVL);
 }
 
 CallInst *IRBuilderBase::CreateMulReduce(Value *Src) {
   return getReductionIntrinsic(Intrinsic::vector_reduce_mul, Src);
 }
 
-CallInst *IRBuilderBase::CreateMulReduce(Value *Src, Value *EVL, Value *Mask) {
-  auto *SrcTy = cast<VectorType>(Src->getType());
-  auto *EltTy = SrcTy->getElementType();
-  return getReductionIntrinsic(Intrinsic::vp_reduce_mul,
-                               ConstantInt::get(EltTy, 1), Src, Mask, EVL);
-}
-
 CallInst *IRBuilderBase::CreateAndReduce(Value *Src) {
   return getReductionIntrinsic(Intrinsic::vector_reduce_and, Src);
-}
-
-CallInst *IRBuilderBase::CreateAndReduce(Value *Src, Value *EVL, Value *Mask) {
-  auto *SrcTy = cast<VectorType>(Src->getType());
-  auto *EltTy = SrcTy->getElementType();
-  return getReductionIntrinsic(Intrinsic::vp_reduce_and,
-                               Constant::getAllOnesValue(EltTy), Src, Mask,
-                               EVL);
 }
 
 CallInst *IRBuilderBase::CreateOrReduce(Value *Src) {
   return getReductionIntrinsic(Intrinsic::vector_reduce_or, Src);
 }
 
-CallInst *IRBuilderBase::CreateOrReduce(Value *Src, Value *EVL, Value *Mask) {
-  auto *SrcTy = cast<VectorType>(Src->getType());
-  auto *EltTy = SrcTy->getElementType();
-  return getReductionIntrinsic(Intrinsic::vp_reduce_or,
-                               ConstantInt::get(EltTy, 0), Src, Mask, EVL);
-}
-
 CallInst *IRBuilderBase::CreateXorReduce(Value *Src) {
   return getReductionIntrinsic(Intrinsic::vector_reduce_xor, Src);
-}
-
-CallInst *IRBuilderBase::CreateXorReduce(Value *Src, Value *EVL, Value *Mask) {
-  auto *SrcTy = cast<VectorType>(Src->getType());
-  auto *EltTy = SrcTy->getElementType();
-  return getReductionIntrinsic(Intrinsic::vp_reduce_xor,
-                               ConstantInt::get(EltTy, 0), Src, Mask, EVL);
 }
 
 CallInst *IRBuilderBase::CreateIntMaxReduce(Value *Src, bool IsSigned) {
@@ -517,80 +457,18 @@ CallInst *IRBuilderBase::CreateIntMaxReduce(Value *Src, bool IsSigned) {
   return getReductionIntrinsic(ID, Src);
 }
 
-CallInst *IRBuilderBase::CreateIntMaxReduce(Value *Src, Value *EVL,
-                                            bool IsSigned, Value *Mask) {
-  auto *SrcTy = cast<VectorType>(Src->getType());
-  auto *EltTy = SrcTy->getElementType();
-  return getReductionIntrinsic(
-      IsSigned ? Intrinsic::vp_reduce_smax : Intrinsic::vp_reduce_umax,
-      IsSigned ? ConstantInt::get(EltTy, APInt::getSignedMinValue(
-                                             EltTy->getIntegerBitWidth()))
-               : ConstantInt::get(EltTy, 0),
-      Src, Mask, EVL);
-}
-
 CallInst *IRBuilderBase::CreateIntMinReduce(Value *Src, bool IsSigned) {
   auto ID =
       IsSigned ? Intrinsic::vector_reduce_smin : Intrinsic::vector_reduce_umin;
   return getReductionIntrinsic(ID, Src);
 }
 
-CallInst *IRBuilderBase::CreateIntMinReduce(Value *Src, Value *EVL,
-                                            bool IsSigned, Value *Mask) {
-  auto *SrcTy = cast<VectorType>(Src->getType());
-  auto *EltTy = SrcTy->getElementType();
-  return getReductionIntrinsic(
-      IsSigned ? Intrinsic::vp_reduce_smin : Intrinsic::vp_reduce_umin,
-      IsSigned ? ConstantInt::get(EltTy, APInt::getSignedMaxValue(
-                                             EltTy->getIntegerBitWidth()))
-               : Constant::getAllOnesValue(EltTy),
-      Src, Mask, EVL);
-}
-
 CallInst *IRBuilderBase::CreateFPMaxReduce(Value *Src) {
   return getReductionIntrinsic(Intrinsic::vector_reduce_fmax, Src);
 }
 
-CallInst *IRBuilderBase::CreateFPMaxReduce(Value *Src, Value *EVL,
-                                           Value *Mask) {
-  auto *SrcTy = cast<VectorType>(Src->getType());
-  auto *EltTy = SrcTy->getElementType();
-  FastMathFlags FMF = getFastMathFlags();
-  Value *Neutral;
-  if (FMF.noNaNs())
-    Neutral = FMF.noInfs()
-                  ? ConstantFP::get(
-                        EltTy, APFloat::getLargest(EltTy->getFltSemantics(),
-                                                   /*Negative=*/true))
-                  : ConstantFP::getInfinity(EltTy, true);
-  else
-    Neutral = ConstantFP::getQNaN(EltTy, /*Negative=*/true);
-
-  return getReductionIntrinsic(Intrinsic::vp_reduce_fmax, Neutral, Src, Mask,
-                               EVL);
-}
-
 CallInst *IRBuilderBase::CreateFPMinReduce(Value *Src) {
   return getReductionIntrinsic(Intrinsic::vector_reduce_fmin, Src);
-}
-
-CallInst *IRBuilderBase::CreateFPMinReduce(Value *Src, Value *EVL,
-                                           Value *Mask) {
-  auto *SrcTy = cast<VectorType>(Src->getType());
-  auto *EltTy = SrcTy->getElementType();
-  FastMathFlags FMF = getFastMathFlags();
-  Value *Neutral;
-  if (FMF.noNaNs())
-    Neutral = FMF.noInfs()
-                  ? ConstantFP::get(
-                        EltTy, APFloat::getLargest(EltTy->getFltSemantics(),
-                                                   /*Negative=*/false))
-                  : ConstantFP::getInfinity(EltTy, false);
-  else
-    Neutral = ConstantFP::getQNaN(EltTy, /*Negative=*/false);
-
-  return getReductionIntrinsic(Intrinsic::vp_reduce_fmin, Neutral, Src, Mask,
-                               EVL);
 }
 
 CallInst *IRBuilderBase::CreateFPMaximumReduce(Value *Src) {

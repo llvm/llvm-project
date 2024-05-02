@@ -395,9 +395,6 @@ Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src, unsigned Op,
 /// Fast-math-flags are propagated using the IRBuilder's setting.
 Value *createSimpleTargetReduction(IRBuilderBase &B, Value *Src,
                                    RecurKind RdxKind);
-Value *createSimpleTargetReduction(IRBuilderBase &B, Value *Src,
-                                   RecurKind RdxKind, Value *EVL,
-                                   Value *Mask = nullptr);
 Value *createSimpleTargetReduction(VectorBuilder &VB, Value *Src,
                                    const RecurrenceDescriptor &Desc);
 
@@ -420,9 +417,6 @@ Value *createTargetReduction(IRBuilderBase &B, const RecurrenceDescriptor &Desc,
 Value *createOrderedReduction(IRBuilderBase &B,
                               const RecurrenceDescriptor &Desc, Value *Src,
                               Value *Start);
-Value *createOrderedReduction(IRBuilderBase &B,
-                              const RecurrenceDescriptor &Desc, Value *Src,
-                              Value *Start, Value *EVL, Value *Mask = nullptr);
 Value *createOrderedReduction(VectorBuilder &VB,
                               const RecurrenceDescriptor &Desc, Value *Src,
                               Value *Start);

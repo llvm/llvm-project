@@ -1192,48 +1192,6 @@ Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,
   }
 }
 
-Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,
-                                         RecurKind RdxKind, Value *EVL,
-                                         Value *Mask) {
-  auto *SrcVecEltTy = cast<VectorType>(Src->getType())->getElementType();
-  switch (RdxKind) {
-  case RecurKind::Add:
-    return Builder.CreateAddReduce(Src, EVL, Mask);
-  case RecurKind::Mul:
-    return Builder.CreateMulReduce(Src, EVL, Mask);
-  case RecurKind::And:
-    return Builder.CreateAndReduce(Src, EVL, Mask);
-  case RecurKind::Or:
-    return Builder.CreateOrReduce(Src, EVL, Mask);
-  case RecurKind::Xor:
-    return Builder.CreateXorReduce(Src, EVL, Mask);
-  case RecurKind::FMulAdd:
-  case RecurKind::FAdd:
-    return Builder.CreateFAddReduce(ConstantFP::getNegativeZero(SrcVecEltTy),
-                                    Src, EVL, Mask);
-  case RecurKind::FMul:
-    return Builder.CreateFMulReduce(ConstantFP::get(SrcVecEltTy, 1.0), Src, EVL,
-                                    Mask);
-  case RecurKind::SMax:
-    return Builder.CreateIntMaxReduce(Src, EVL, true, Mask);
-  case RecurKind::SMin:
-    return Builder.CreateIntMinReduce(Src, EVL, true, Mask);
-  case RecurKind::UMax:
-    return Builder.CreateIntMaxReduce(Src, EVL, false, Mask);
-  case RecurKind::UMin:
-    return Builder.CreateIntMinReduce(Src, EVL, false, Mask);
-  case RecurKind::FMax:
-    return Builder.CreateFPMaxReduce(Src, EVL, Mask);
-  case RecurKind::FMin:
-    return Builder.CreateFPMinReduce(Src, EVL, Mask);
-  case RecurKind::FMinimum:
-  case RecurKind::FMaximum:
-    assert(0 && "FMaximum/FMinimum reduction VP intrinsic is not supported.");
-  default:
-    llvm_unreachable("Unhandled opcode");
-  }
-}
-
 Value *llvm::createSimpleTargetReduction(VectorBuilder &VBuilder, Value *Src,
                                          const RecurrenceDescriptor &Desc) {
   RecurKind Kind = Desc.getRecurrenceKind();
@@ -1273,20 +1231,6 @@ Value *llvm::createOrderedReduction(IRBuilderBase &B,
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
 
   return B.CreateFAddReduce(Start, Src);
-}
-
-Value *llvm::createOrderedReduction(IRBuilderBase &B,
-                                    const RecurrenceDescriptor &Desc,
-                                    Value *Src, Value *Start, Value *EVL,
-                                    Value *Mask) {
-  assert((Desc.getRecurrenceKind() == RecurKind::FAdd ||
-          Desc.getRecurrenceKind() == RecurKind::FMulAdd) &&
-         "Unexpected reduction kind");
-  assert(Src->getType()->isVectorTy() && "Expected a vector type");
-  assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
-  assert(EVL->getType()->isIntegerTy() && "Expected a integer type");
-
-  return B.CreateFAddReduce(Start, Src, EVL, Mask);
 }
 
 Value *llvm::createOrderedReduction(VectorBuilder &VBuilder,
