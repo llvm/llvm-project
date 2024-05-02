@@ -174,6 +174,7 @@ LANGOPT(PointerAuthKernelABIVersion, 1, 0, "controls whether the pointer auth ab
 LANGOPT(PointerAuthABIVersionEncoded, 1, 0, "controls whether the pointer auth abi version should be encoded in the IR")
 
 LANGOPT(DoubleSquareBracketAttributes, 1, 0, "'[[]]' attributes extension for all language standard modes")
+LANGOPT(ExperimentalLateParseAttributes, 1, 0, "experimental late parsing of attributes")
 
 COMPATIBLE_LANGOPT(RecoveryAST, 1, 1, "Preserve expressions in AST when encountering errors")
 COMPATIBLE_LANGOPT(RecoveryASTType, 1, 1, "Preserve the type in recovery expressions")
