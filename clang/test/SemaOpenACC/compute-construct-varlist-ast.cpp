@@ -56,8 +56,11 @@ void NormalUses(float *PointerParam) {
   // CHECK-NEXT: private clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'short[5]' lvalue Var{{.*}}'GlobalArray' 'short[5]'
   // CHECK-NEXT: ArraySectionExpr
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'float *' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'float *' lvalue ParmVar{{.*}} 'PointerParam' 'float *'
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var{{.*}}'Global' 'int'
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var{{.*}}'Global' 'int'
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
@@ -241,8 +244,10 @@ void TemplUses(T t, U u, T*PointerParam) {
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
   // CHECK-NEXT: private clause
   // CHECK-NEXT: ArraySectionExpr
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int *' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'
   // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}} 't' 'int'
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
@@ -290,6 +295,7 @@ struct S {
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
   // CHECK-NEXT: private clause
   // CHECK-NEXT: ArraySectionExpr{{.*}}
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int *' <ArrayToPointerDecay>
   // CHECK-NEXT: MemberExpr{{.*}} 'int[5]' lvalue ->ThisMemberArray
   // CHECK-NEXT: CXXThisExpr{{.*}} 'S *' implicit this
   // CHECK-NEXT: IntegerLiteral{{.*}}'int' 1
@@ -331,6 +337,7 @@ struct S {
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
   // CHECK-NEXT: private clause
   // CHECK-NEXT: ArraySectionExpr{{.*}}
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int *' <ArrayToPointerDecay>
   // CHECK-NEXT: MemberExpr{{.*}} 'int[5]' lvalue ->ThisMemberArray
   // CHECK-NEXT: CXXThisExpr{{.*}} 'S *' implicit this
   // CHECK-NEXT: IntegerLiteral{{.*}}'int' 1
@@ -372,6 +379,7 @@ void S::foo() {
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
   // CHECK-NEXT: private clause
   // CHECK-NEXT: ArraySectionExpr{{.*}}
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int *' <ArrayToPointerDecay>
   // CHECK-NEXT: MemberExpr{{.*}} 'int[5]' lvalue ->ThisMemberArray
   // CHECK-NEXT: CXXThisExpr{{.*}} 'S *' implicit this
   // CHECK-NEXT: IntegerLiteral{{.*}}'int' 1
@@ -522,6 +530,7 @@ struct STempl {
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
   // CHECK-NEXT: private clause
   // CHECK-NEXT: ArraySectionExpr{{.*}}
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int *' <ArrayToPointerDecay>
   // CHECK-NEXT: MemberExpr{{.*}} 'int[5]' lvalue ->ThisMemberArray
   // CHECK-NEXT: CXXThisExpr{{.*}} 'STempl<int> *' implicit this
   // CHECK-NEXT: IntegerLiteral{{.*}}'int' 1

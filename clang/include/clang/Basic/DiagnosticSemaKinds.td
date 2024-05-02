@@ -12291,8 +12291,8 @@ def warn_acc_if_self_conflict
               "evaluates to true">,
       InGroup<DiagGroup<"openacc-self-if-potential-conflict">>;
 def err_acc_int_expr_requires_integer
-    : Error<"OpenACC %select{clause|directive}0 '%1' requires expression of "
-            "integer type (%2 invalid)">;
+    : Error<"OpenACC %select{clause '%1'|directive '%2'|sub-array bound}0 "
+            "requires expression of integer type (%3 invalid)">;
 def err_acc_int_expr_incomplete_class_type
     : Error<"OpenACC integer expression has incomplete class type %0">;
 def err_acc_int_expr_explicit_conversion
@@ -12310,4 +12310,24 @@ def err_acc_num_gangs_num_args
 def err_acc_not_a_var_ref
     : Error<"OpenACC variable is not a valid variable name, sub-array, array "
             "element, or composite variable member">;
+def err_acc_typecheck_subarray_value
+    : Error<"OpenACC sub-array subscripted value is not an array or pointer">;
+def err_acc_subarray_function_type
+    : Error<"OpenACC sub-array cannot be of function type %0">;
+def err_acc_subarray_incomplete_type
+    : Error<"OpenACC sub-array base is of incomplete type %0">;
+def err_acc_subarray_no_length
+    : Error<"OpenACC sub-array length is unspecified and cannot be inferred "
+            "because the subscripted value is %select{not an array|an array of "
+            "unknown bound}0">;
+def err_acc_subarray_negative
+    : Error<"OpenACC sub-array %select{lower bound|length}0 evaluated to "
+            "negative value %1">;
+def err_acc_subarray_out_of_range
+    : Error<"OpenACC sub-array %select{lower bound|length}0 evaluated to a "
+            "value (%1) that would be out of the range of the subscripted "
+            "array size of %2">;
+def err_acc_subarray_base_plus_length_out_of_range
+    : Error<"OpenACC sub-array specified range [%0:%1] would be out of the "
+            "range of the subscripted array size of %2">;
 } // end of sema component.
