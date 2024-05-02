@@ -192,9 +192,8 @@ static StringRef getReferentString(const Reloc &r) {
   if (auto *isec = r.referent.dyn_cast<InputSection *>())
     return cast<CStringInputSection>(isec)->getStringRefAtOffset(r.addend);
   auto *sym = cast<Defined>(r.referent.get<Symbol *>());
-  if (isa<CStringInputSection>(sym->isec()))
-    return cast<CStringInputSection>(sym->isec())
-        ->getStringRefAtOffset(sym->value + r.addend);
+  if (auto *s = dyn_cast_or_null<CStringInputSection>(sym->isec()))
+    return s->getStringRefAtOffset(sym->value + r.addend);
 
   if (isa<ConcatInputSection>(sym->isec())) {
     auto &data = sym->isec()->data;
