@@ -369,11 +369,11 @@ macro(construct_compiler_rt_default_triple)
   endif()
 
   if ("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
-    set(cmd_prefix "")
+    set(option_prefix "")
     if (CMAKE_C_SIMULATE_ID MATCHES "MSVC")
-      set(cmd_prefix "/clang:")
+      set(option_prefix "/clang:")
     endif()
-    execute_process(COMMAND ${CMAKE_C_COMPILER} ${cmd_prefix}--target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE} ${cmd_prefix}-print-target-triple
+    execute_process(COMMAND ${CMAKE_C_COMPILER} ${option_prefix}--target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE} ${option_prefix}-print-target-triple
                     OUTPUT_VARIABLE COMPILER_RT_DEFAULT_TARGET_TRIPLE
                     OUTPUT_STRIP_TRAILING_WHITESPACE)
   endif()
