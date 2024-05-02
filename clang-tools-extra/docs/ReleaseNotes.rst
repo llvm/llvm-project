@@ -69,6 +69,9 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- The tweak for turning unscoped into scoped enums now removes redundant prefixes
+  from the enum values.
+
 Signature help
 ^^^^^^^^^^^^^^
 
