@@ -7962,8 +7962,8 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   SDValue Chain = DAG.getRoot();
   SmallVector<SDValue, 4> Opers;
   Opers.push_back(Chain);
-  for (unsigned i = 0, e = FPI.getNonMetadataArgCount(); i != e; ++i)
-    Opers.push_back(getValue(FPI.getArgOperand(i)));
+  for (unsigned I = 0, E = FPI.getNonMetadataArgCount(); I != E; ++I)
+    Opers.push_back(getValue(FPI.getArgOperand(I)));
 
   auto pushOutChain = [this](SDValue Result, fp::ExceptionBehavior EB) {
     assert(Result.getNode()->getNumValues() == 2);
