@@ -74,8 +74,6 @@ protected:
 
   CompilerTypeToDIE &GetForwardDeclCompilerTypeToDIE() override;
 
-  DIEToDIE &GetDeclarationDIEToDefinitionDIE() override;
-
   UniqueDWARFASTTypeMap &GetUniqueDWARFASTTypeMap() override;
 
   lldb::TypeSP

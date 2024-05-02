@@ -182,8 +182,6 @@ public:
   void FindFunctions(const RegularExpression &regex, bool include_inlines,
                      SymbolContextList &sc_list) override;
 
-  DWARFDIE FindDefinitionDIE(const DWARFDIE &die);
-
   void
   GetMangledNamesForFunction(const std::string &scope_qualified_name,
                              std::vector<ConstString> &mangled_names) override;
@@ -342,11 +340,6 @@ public:
 
   virtual CompilerTypeToDIE &GetForwardDeclCompilerTypeToDIE() {
     return m_forward_decl_compiler_type_to_die;
-  }
-
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *, DIERef> DIEToDIE;
-  virtual DIEToDIE &GetDeclarationDIEToDefinitionDIE() {
-    return m_die_to_def_die;
   }
 
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb::VariableSP>
@@ -547,9 +540,6 @@ protected:
   // A map from CompilerType to the struct/class/union/enum DIE (might be a
   // declaration or a definition) that is used to construct it.
   CompilerTypeToDIE m_forward_decl_compiler_type_to_die;
-  // A map from a struct/class/union/enum DIE (might be a declaration or a
-  // definition) to its definition DIE.
-  DIEToDIE m_die_to_def_die;
   llvm::DenseMap<dw_offset_t, std::unique_ptr<SupportFileList>>
       m_type_unit_support_files;
   std::vector<uint32_t> m_lldb_cu_to_dwarf_unit;

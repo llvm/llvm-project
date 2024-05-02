@@ -1631,126 +1631,40 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     return true;
   }
 
-  DWARFDIE dwarf_die = FindDefinitionDIE(GetDIE(die_it->getSecond()));
-  if (dwarf_die) {
-    // Once we start resolving this type, remove it from the forward
-    // declaration map in case anyone child members or other types require this
-    // type to get resolved. The type will get resolved when all of the calls
-    // to SymbolFileDWARF::ResolveClangOpaqueTypeDefinition are done.
-    // Need to get a new iterator because FindDefinitionDIE might add new
-    // entries into the map and invalidate previous iterator.
-    auto die_it = GetForwardDeclCompilerTypeToDIE().find(
-        compiler_type_no_qualifiers.GetOpaqueQualType());
-    if (die_it != GetForwardDeclCompilerTypeToDIE().end()) {
-      GetForwardDeclCompilerTypeToDIE().erase(die_it);
-    }
+  // Once we start resolving this type, remove it from the forward
+  // declaration map in case anyone child members or other types require this
+  // type to get resolved.
+  DWARFDIE dwarf_die = GetDIE(die_it->second);
+  GetForwardDeclCompilerTypeToDIE().erase(die_it);
+  // The DWARFASTParser might determine if this is a declaration or not with
+  // information other than DW_AT_declaration depending on the language.
+  bool is_forward_declaration = false;
+  bool found_def_die = false;
+  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
+    found_def_die =
+        dwarf_ast->FindDefinitionDIE(dwarf_die, is_forward_declaration);
+  if (!found_def_die)
+    return false;
 
-    Type *type = GetDIEToType().lookup(dwarf_die.GetDIE());
-
-    Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion);
-    if (log)
-      GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
-          log, "{0:x8}: {1} '{2}' resolving forward declaration...",
-          dwarf_die.GetID(), dwarf_die.GetTagAsCString(),
-          type->GetName().AsCString());
-    assert(compiler_type);
-    if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
-      return dwarf_ast->CompleteTypeFromDWARF(dwarf_die, type, compiler_type);
+  die_it = GetForwardDeclCompilerTypeToDIE().find(
+      compiler_type_no_qualifiers.GetOpaqueQualType());
+  if (die_it != GetForwardDeclCompilerTypeToDIE().end()) {
+    dwarf_die = GetDIE(die_it->getSecond());
+    GetForwardDeclCompilerTypeToDIE().erase(die_it);
   }
-  return false;
-}
 
-DWARFDIE SymbolFileDWARF::FindDefinitionDIE(const DWARFDIE &die) {
-  auto def_die_it = GetDeclarationDIEToDefinitionDIE().find(die.GetDIE());
-  if (def_die_it != GetDeclarationDIEToDefinitionDIE().end())
-    return GetDIE(def_die_it->getSecond());
+  Type *type = GetDIEToType().lookup(dwarf_die.GetDIE());
 
-  ParsedDWARFTypeAttributes attrs(die);
-  const dw_tag_t tag = die.Tag();
-  TypeSP type_sp;
-  Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
-  if (log) {
-    GetObjectFile()->GetModule()->LogMessage(
-        log,
-        "SymbolFileDWARF({0:p}) - {1:x16}: {2} type \"{3}\" is a "
-        "forward declaration DIE, trying to find definition DIE",
-        static_cast<void *>(this), die.GetOffset(), DW_TAG_value_to_name(tag),
-        attrs.name.GetCString());
-  }
-  // We haven't parse definition die for this type, starting to search for it.
-  // After we found the definition die, the GetDeclarationDIEToDefinitionDIE()
-  // map will have the new mapping from this declaration die to definition die.
-  if (attrs.class_language == eLanguageTypeObjC ||
-      attrs.class_language == eLanguageTypeObjC_plus_plus) {
-    if (!attrs.is_complete_objc_class &&
-        die.Supports_DW_AT_APPLE_objc_complete_type()) {
-      // We have a valid eSymbolTypeObjCClass class symbol whose name
-      // matches the current objective C class that we are trying to find
-      // and this DIE isn't the complete definition (we checked
-      // is_complete_objc_class above and know it is false), so the real
-      // definition is in here somewhere
-      type_sp = FindCompleteObjCDefinitionTypeForDIE(die, attrs.name, true);
-
-      if (!type_sp) {
-        SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
-        if (debug_map_symfile) {
-          // We weren't able to find a full declaration in this DWARF,
-          // see if we have a declaration anywhere else...
-          type_sp = debug_map_symfile->FindCompleteObjCDefinitionTypeForDIE(
-              die, attrs.name, true);
-        }
-      }
-
-      if (type_sp && log) {
-        GetObjectFile()->GetModule()->LogMessage(
-            log,
-            "SymbolFileDWARF({0:p}) - {1:x16}: {2} type "
-            "\"{3}\" is an "
-            "incomplete objc type, complete type is {4:x8}",
-            static_cast<void *>(this), die.GetOffset(),
-            DW_TAG_value_to_name(tag), attrs.name.GetCString(),
-            type_sp->GetID());
-      }
-    }
-  }
-  bool is_forward_declaration =
-      attrs.is_forward_declaration ||
-      (attrs.byte_size && *attrs.byte_size == 0 && attrs.name &&
-       !die.HasChildren() &&
-       SymbolFileDWARF::GetLanguage(*die.GetCU()) == eLanguageTypeObjC);
-  if (is_forward_declaration) {
-    type_sp = FindDefinitionTypeForDWARFDeclContext(die);
-    if (!type_sp) {
-      SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
-      if (debug_map_symfile) {
-        // We weren't able to find a full declaration in this DWARF, see
-        // if we have a declaration anywhere else...
-        type_sp = debug_map_symfile->FindDefinitionTypeForDWARFDeclContext(die);
-      }
-      if (type_sp && log) {
-        GetObjectFile()->GetModule()->LogMessage(
-            log,
-            "SymbolFileDWARF({0:p}) - {1:x16}: {2} type \"{3}\" is a "
-            "forward declaration, complete type is {4:x8}",
-            static_cast<void *>(this), die.GetOffset(),
-            DW_TAG_value_to_name(tag), attrs.name.GetCString(),
-            type_sp->GetID());
-      }
-    }
-  }
-  def_die_it = GetDeclarationDIEToDefinitionDIE().find(die.GetDIE());
-  if (def_die_it != GetDeclarationDIEToDefinitionDIE().end())
-    return GetDIE(def_die_it->getSecond());
-
-  if (log) {
-    GetObjectFile()->GetModule()->LogMessage(
-        log,
-        "SymbolFileDWARF({0:p}) - {1:x16}: {2} type \"{3}\" is a "
-        "forward declaration, unable to find definition DIE for it",
-        static_cast<void *>(this), die.GetOffset(), DW_TAG_value_to_name(tag),
-        attrs.name.GetCString());
-  }
-  return DWARFDIE();
+  Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion);
+  if (log)
+    GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
+        log, "{0:x8}: {1} '{2}' resolving forward declaration...",
+        dwarf_die.GetID(), dwarf_die.GetTagAsCString(),
+        type->GetName().AsCString());
+  assert(compiler_type);
+  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
+    return dwarf_ast->CompleteTypeFromDWARF(dwarf_die, type, compiler_type);
+  return true;
 }
 
 Type *SymbolFileDWARF::ResolveType(const DWARFDIE &die,

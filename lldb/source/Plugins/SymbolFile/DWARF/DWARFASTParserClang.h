@@ -108,6 +108,9 @@ public:
   lldb_private::ConstString GetDIEClassTemplateParams(
       const lldb_private::plugin::dwarf::DWARFDIE &die) override;
 
+  bool FindDefinitionDIE(const lldb_private::plugin::dwarf::DWARFDIE &die,
+                         bool &is_forward_declaration) override;
+
 protected:
   /// Protected typedefs and members.
   /// @{
@@ -245,6 +248,13 @@ protected:
   // module.
   lldb::ModuleSP
   GetModuleForType(const lldb_private::plugin::dwarf::DWARFDIE &die);
+
+  void PrepareContextToReceiveMembers(
+      lldb_private::TypeSystemClang &ast,
+      clang::DeclContext *decl_ctx,
+      const lldb_private::plugin::dwarf::DWARFDIE &decl_ctx_die,
+      const lldb_private::plugin::dwarf::DWARFDIE &die,
+      const char *type_name_cstr);
 
   static bool classof(const DWARFASTParser *Parser) {
     return Parser->GetKind() == Kind::DWARFASTParserClang;
