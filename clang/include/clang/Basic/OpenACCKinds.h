@@ -189,6 +189,10 @@ enum class OpenACCClauseKind {
   /// 'copy' clause, allowed on Compute and Combined Constructs, plus 'data' and
   /// 'declare'.
   Copy,
+  /// 'copy' clause alias 'pcopy'.  Preserved for diagnostic purposes.
+  PCopy,
+  /// 'copy' clause alias 'present_or_copy'.  Preserved for diagnostic purposes.
+  PresentOrCopy,
   /// 'use_device' clause, allowed on 'host_data' construct.
   UseDevice,
   /// 'attach' clause, allowed on Compute and Combined constructs, plus 'data'
@@ -309,6 +313,12 @@ inline StreamTy &printOpenACCClauseKind(StreamTy &Out, OpenACCClauseKind K) {
 
   case OpenACCClauseKind::Copy:
     return Out << "copy";
+
+  case OpenACCClauseKind::PCopy:
+    return Out << "pcopy";
+
+  case OpenACCClauseKind::PresentOrCopy:
+    return Out << "present_or_copy";
 
   case OpenACCClauseKind::UseDevice:
     return Out << "use_device";
