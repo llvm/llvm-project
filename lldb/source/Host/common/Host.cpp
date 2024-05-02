@@ -91,15 +91,37 @@ using namespace lldb_private;
 #if !defined(__APPLE__)
 #if !defined(_WIN32)
 #include <syslog.h>
-void Host::SystemLog(llvm::StringRef message) {
+void Host::SystemLog(SystemLogLevel log_level, llvm::StringRef message) {
   static llvm::once_flag g_openlog_once;
   llvm::call_once(g_openlog_once, [] {
     openlog("lldb", LOG_CONS | LOG_PID | LOG_NDELAY, LOG_USER);
   });
-  syslog(LOG_INFO, "%s", message.data());
+  int level = LOG_DEBUG;
+  switch (log_level) {
+  case eSystemLogInfo:
+    level = LOG_INFO;
+    break;
+  case eSystemLogWarning:
+    level = LOG_WARNING;
+    break;
+  case eSystemLogError:
+    level = LOG_ERR;
+    break;
+  }
+  syslog(level, "%s", message.data());
 }
 #else
-void Host::SystemLog(llvm::StringRef message) { llvm::errs() << message; }
+void Host::SystemLog(SystemLogLevel log_level, llvm::StringRef message) {
+  switch (log_level) {
+  case eSystemLogInfo:
+  case eSystemLogWarning:
+    llvm::outs() << message;
+    break;
+  case eSystemLogError:
+    llvm::errs() << message;
+    break;
+  }
+}
 #endif
 #endif
 
@@ -629,5 +651,5 @@ char SystemLogHandler::ID;
 SystemLogHandler::SystemLogHandler() {}
 
 void SystemLogHandler::Emit(llvm::StringRef message) {
-  Host::SystemLog(message);
+  Host::SystemLog(Host::eSystemLogInfo, message);
 }
