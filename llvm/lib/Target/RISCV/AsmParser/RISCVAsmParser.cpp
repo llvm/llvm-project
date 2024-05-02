@@ -51,6 +51,7 @@ STATISTIC(RISCVNumInstrsCompressed,
 
 static cl::opt<bool> AddBuildAttributes("riscv-add-build-attributes",
                                         cl::init(false));
+
 namespace llvm {
 extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
 } // namespace llvm
@@ -2831,8 +2832,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
           StringRef(Feature).starts_with("experimental-"))
         return Error(Loc, "Unexpected experimental extensions.");
       auto Ext = llvm::lower_bound(RISCVFeatureKV, Feature);
-      if (Ext == std::end(RISCVFeatureKV) || StringRef(Ext->Key) != Feature ||
-          !RISCVISAInfo::isSupportedExtension(Arch)) {
+      if (Ext == std::end(RISCVFeatureKV) || StringRef(Ext->Key) != Feature) {
         if (isDigit(Arch.back()))
           return Error(
               Loc,
