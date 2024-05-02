@@ -99,7 +99,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
   lldb::LanguageType language = m_expr_options.language;
   if (language == lldb::eLanguageTypeUnknown && frame)
     language = frame->GuessLanguage().AsLanguageType();
-  
+
   // Add a hint if object description was requested, but no description
   // function was implemented.
   auto maybe_add_hint = [&](llvm::StringRef output) {
