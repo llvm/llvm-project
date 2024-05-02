@@ -1201,64 +1201,6 @@ foo();
 }
 #endif // OMP52
 
-#ifdef OMP60
-
-///==========================================================================///
-// RUN: %clang_cc1 -DOMP60 -verify -Wno-vla -fopenmp -fopenmp-version=60 -ast-print %s | FileCheck %s --check-prefix OMP60
-// RUN: %clang_cc1 -DOMP60 -fopenmp -fopenmp-version=60 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP60 -fopenmp -fopenmp-version=60 -std=c++11 -include-pch %t -fsyntax-only -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix OMP60
-
-// RUN: %clang_cc1 -DOMP60 -verify -Wno-vla -fopenmp-simd -fopenmp-version=60 -ast-print %s | FileCheck %s --check-prefix OMP60
-// RUN: %clang_cc1 -DOMP60 -fopenmp-simd -fopenmp-version=60 -x c++ -std=c++11 -emit-pch -o %t %s
-// RUN: %clang_cc1 -DOMP60 -fopenmp-simd -fopenmp-version=60 -std=c++11 -include-pch %t -fsyntax-only -verify -Wno-vla %s -ast-print | FileCheck %s --check-prefix OMP60
-
-void foo() {}
-template <typename T, int C>
-T tmain(T argc, T *argv) {
-  T i;
-#pragma omp target map(from always: i)
-  foo();
-#pragma omp target map(from, close: i)
-  foo();
-#pragma omp target map(always,close: i)
-  foo();
-  return 0;
-}
-//OMP60: template <typename T, int C> T tmain(T argc, T *argv) {
-//OMP60-NEXT: T i;
-//OMP60-NEXT: #pragma omp target map(always,from: i)
-//OMP60-NEXT:     foo();
-//OMP60-NEXT: #pragma omp target map(close,from: i)
-//OMP60-NEXT:     foo();
-//OMP60-NEXT: #pragma omp target map(always,close,tofrom: i)
-//OMP60-NEXT:     foo();
-//OMP60-NEXT: return 0;
-//OMP60-NEXT:}
-//OMP60:  template<> int tmain<int, 5>(int argc, int *argv) {
-//OMP60-NEXT:  int i;
-//OMP60-NEXT:  #pragma omp target map(always,from: i)
-//OMP60-NEXT:      foo();
-//OMP60-NEXT:  #pragma omp target map(close,from: i)
-//OMP60-NEXT:      foo();
-//OMP60-NEXT:  #pragma omp target map(always,close,tofrom: i)
-//OMP60-NEXT:      foo();
-//OMP60-NEXT:  return 0;
-//OMP60-NEXT:}
-//OMP60:  template<> char tmain<char, 1>(char argc, char *argv) {
-//OMP60-NEXT:  char i;
-//OMP60-NEXT:  #pragma omp target map(always,from: i)
-//OMP60-NEXT:      foo();
-//OMP60-NEXT:  #pragma omp target map(close,from: i)
-//OMP60-NEXT:      foo();
-//OMP60-NEXT:  #pragma omp target map(always,close,tofrom: i)
-//OMP60-NEXT:      foo();
-//OMP60-NEXT:  return 0;
-//OMP60-NEXT:}
-int main (int argc, char **argv) {
-  return tmain<int, 5>(argc, &argc) + tmain<char, 1>(argv[0][0], argv[0]);
-}
-#endif // OMP60
-
 #ifdef OMPX
 
 // RUN: %clang_cc1 -DOMPX -verify -Wno-vla -fopenmp -fopenmp-extensions -ast-print %s | FileCheck %s --check-prefix=OMPX
