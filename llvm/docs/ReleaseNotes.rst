@@ -119,6 +119,7 @@ Changes to the RISC-V Backend
 * Added the CSR names from the Resumable Non-Maskable Interrupts (Smrnmi) extension.
 * llvm-objdump now prints disassembled opcode bytes in groups of 2 or 4 bytes to
   match GNU objdump. The bytes within the groups are in big endian order.
+* Added smstateen extension to -march. CSR names for smstateen were already supported.
 
 Changes to the WebAssembly Backend
 ----------------------------------
