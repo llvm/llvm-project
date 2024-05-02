@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef MLIR_DIALECT_TRANSFORM_PDLEXTENSION_PDLEXTENSION_H
+#define MLIR_DIALECT_TRANSFORM_PDLEXTENSION_PDLEXTENSION_H
+
 namespace mlir {
 class DialectRegistry;
 
@@ -14,3 +17,5 @@ namespace transform {
 void registerPDLExtension(DialectRegistry &dialectRegistry);
 } // namespace transform
 } // namespace mlir
+
+#endif // MLIR_DIALECT_TRANSFORM_PDLEXTENSION_PDLEXTENSION_H
