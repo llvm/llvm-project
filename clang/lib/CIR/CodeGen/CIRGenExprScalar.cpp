@@ -1156,12 +1156,8 @@ static mlir::Value buildPointerArithmetic(CIRGenFunction &CGF,
           CGF.getContext(), op.Opcode, expr->getLHS(), expr->getRHS()))
     llvm_unreachable("null pointer arithmetic extension is NYI");
 
-  if (UnimplementedFeature::dataLayoutGetIndexTypeSizeInBits()) {
-    // TODO(cir): original codegen zero/sign-extends the index to the same width
-    // as the pointer. Since CIR's pointer stride doesn't care about that, it's
-    // skiped here.
-    llvm_unreachable("target-specific pointer width is NYI");
-  }
+  // Differently from LLVM codegen, ABI bits for index sizes is handled during
+  // LLVM lowering.
 
   // If this is subtraction, negate the index.
   if (isSubtraction)

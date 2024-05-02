@@ -492,8 +492,7 @@ public:
       elementTy = mlir::IntegerType::get(elementTy.getContext(), 8,
                                          mlir::IntegerType::Signless);
 
-    // Zero-extend or sign-extend the pointer value according to
-    // whether the index is signed or not.
+    // Zero-extend, sign-extend or trunc the pointer value.
     auto index = adaptor.getStride();
     auto width = index.getType().cast<mlir::IntegerType>().getWidth();
     mlir::DataLayout LLVMLayout(
@@ -501,10 +500,31 @@ public:
     auto layoutWidth =
         LLVMLayout.getTypeIndexBitwidth(adaptor.getBase().getType());
     if (layoutWidth && width != *layoutWidth) {
+      // If the index comes from a subtraction, make sure the extension happens
+      // before it. To achieve that, look at unary minus, which already got
+      // lowered to "sub 0, x".
+      auto sub = dyn_cast<mlir::LLVM::SubOp>(index.getDefiningOp());
+      auto unary =
+          dyn_cast<mlir::cir::UnaryOp>(ptrStrideOp.getStride().getDefiningOp());
+      if (unary && unary.getKind() == mlir::cir::UnaryOpKind::Minus && sub)
+        index = index.getDefiningOp()->getOperand(1);
+
+      // Handle the cast
       auto llvmDstType = mlir::IntegerType::get(ctx, *layoutWidth);
       index = getLLVMIntCast(rewriter, index, llvmDstType,
                              ptrStrideOp.getStride().getType().isUnsigned(),
                              *layoutWidth);
+
+      // Rewrite the sub in front of extensions/trunc
+      if (sub) {
+        index = rewriter.create<mlir::LLVM::SubOp>(
+            index.getLoc(), index.getType(),
+            rewriter.create<mlir::LLVM::ConstantOp>(
+                index.getLoc(), index.getType(),
+                mlir::IntegerAttr::get(index.getType(), 0)),
+            index);
+        sub->erase();
+      }
     }
 
     rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
