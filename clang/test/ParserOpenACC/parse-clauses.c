@@ -534,24 +534,20 @@ void VarListClauses() {
 #pragma acc serial use_device(s.array[s.value : 5]), seq
   for(;;){}
 
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'no_create' not yet implemented, clause ignored}}
+  // expected-error@+2{{expected ','}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial no_create(s.array[s.value] s.array[s.value :5] ), seq
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'no_create' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial no_create(s.array[s.value : 5], s.value), seq
   for(;;){}
 
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'present' not yet implemented, clause ignored}}
+  // expected-error@+2{{expected ','}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial present(s.array[s.value] s.array[s.value :5] ), seq
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'present' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial present(s.array[s.value : 5], s.value), seq
   for(;;){}
