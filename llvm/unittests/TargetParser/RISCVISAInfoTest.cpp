@@ -20,7 +20,7 @@ bool operator==(const RISCVISAUtils::ExtensionVersion &A,
   return A.Major == B.Major && A.Minor == B.Minor;
 }
 
-TEST(ParseNormalizedArchString, RejectsUpperCase) {
+TEST(ParseNormalizedArchString, RejectsInvalidChars) {
   for (StringRef Input :
        {"RV32", "rV64", "rv32i2P0", "rv64i2p0_A2p0", "rv32e2.0"}) {
     EXPECT_EQ(
