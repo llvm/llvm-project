@@ -1173,11 +1173,12 @@ getUntiledConsumerFromSlice(tensor::InsertSliceOp candidateSliceOp) {
   return &operand;
 }
 
-/// Implementation of fusing consumer of a single slice by computing the
-/// slice of the consumer in-place for scf.for.
-static FailureOr<scf::SCFFuseConsumerOfSliceResult>
-tileAndFuseConsumerOfSliceSCFFor(RewriterBase &rewriter,
-                                 tensor::InsertSliceOp candidateSliceOp) {
+typedef struct helper1struct {
+  OpOperand *consumerOpOperand;
+};
+
+template <typename T>
+static helper1struct helper1(T candidateSliceOp) {
   // 1. Get the consumer of scf.for for the result yielded by
   // tensor.insert_slice.
   OpOperand *consumerOpOperand = getUntiledConsumerFromSlice(candidateSliceOp);
@@ -1190,377 +1191,443 @@ tileAndFuseConsumerOfSliceSCFFor(RewriterBase &rewriter,
   unsigned resultNumber =
       cast<OpResult>(consumerOpOperand->get()).getResultNumber();
 
-  auto forOp = candidateSliceOp->getParentOfType<scf::ForOp>();
+  if (std::is_same<T, tensor::InsertSliceOp>::value) {
+    auto forOp = candidateSliceOp->getParentOfType<scf::ForOp>();
 
-  OpBuilder::InsertionGuard g(rewriter);
-  rewriter.setInsertionPoint(candidateSliceOp);
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPoint(candidateSliceOp);
 
-  // 2. Check consumer is not using scf.for's output as init.
-  auto dstOp = cast<DestinationStyleOpInterface>(consumerOp);
-  SmallVector<Value> dpsInits =
-      llvm::map_to_vector(dstOp.getDpsInits(), [](Value v) { return v; });
-  if (llvm::is_contained(dpsInits, forOp.getResult(resultNumber))) {
-    return rewriter.notifyMatchFailure(
-        consumerOp,
-        "consumer op taking the result of scf.for as init is not supported");
+    // 2. Check consumer is not using scf.for's output as init.
+    auto dstOp = cast<DestinationStyleOpInterface>(consumerOp);
+    SmallVector<Value> dpsInits =
+        llvm::map_to_vector(dstOp.getDpsInits(), [](Value v) { return v; });
+    if (llvm::is_contained(dpsInits, forOp.getResult(resultNumber))) {
+      return rewriter.notifyMatchFailure(
+          consumerOp,
+          "consumer op taking the result of scf.for as init is not supported");
+    }
+
+    Location loc = forOp.getLoc();
+    SmallVector<Value> newOuts(forOp.getInits());
+    newOuts.append(dpsInits);
+
+    // 3. Create new scf.for op.
+    rewriter.setInsertionPoint(consumerOp);
+    auto newforOp = rewriter.create<scf::ForOp>(loc, forOp.getLowerBound(),
+                                                forOp.getUpperBound(),
+                                                forOp.getStep(), newOuts);
+    // 4. Move the loop body to the new op.
+    Block *loopBody = forOp.getBody();
+    Block *newLoopBody = newforOp.getBody();
+    rewriter.mergeBlocks(
+        loopBody, newLoopBody,
+        newLoopBody->getArguments().take_front(loopBody->getNumArguments()));
+
+    helper1struct ret;
+    ret.consumerOpOperand = consumerOpOperand;
+    ret.newLoop = newforOp;
+    return ret;
   }
 
-  Location loc = forOp.getLoc();
-  SmallVector<Value> newOuts(forOp.getInits());
-  newOuts.append(dpsInits);
+  /// Implementation of fusing consumer of a single slice by computing the
+  /// slice of the consumer in-place for scf.for.
+  static FailureOr<scf::SCFFuseConsumerOfSliceResult>
+  tileAndFuseConsumerOfSliceSCFFor(RewriterBase & rewriter,
+                                   tensor::InsertSliceOp candidateSliceOp) {
+    // 1. Get the consumer of scf.for for the result yielded by
+    // tensor.insert_slice.
+    OpOperand *consumerOpOperand =
+        getUntiledConsumerFromSlice(candidateSliceOp);
+    if (!consumerOpOperand) {
+      return rewriter.notifyMatchFailure(candidateSliceOp,
+                                         "could not fetch consumer to fuse");
+    }
+    Operation *consumerOp = consumerOpOperand->getOwner();
+    unsigned operandNumber = consumerOpOperand->getOperandNumber();
+    unsigned resultNumber =
+        cast<OpResult>(consumerOpOperand->get()).getResultNumber();
 
-  // 3. Create new scf.for op.
-  rewriter.setInsertionPoint(consumerOp);
-  auto newforOp = rewriter.create<scf::ForOp>(loc, forOp.getLowerBound(),
-                                              forOp.getUpperBound(),
-                                              forOp.getStep(), newOuts);
-  // 4. Move the loop body to the new op.
-  Block *loopBody = forOp.getBody();
-  Block *newLoopBody = newforOp.getBody();
-  rewriter.mergeBlocks(
-      loopBody, newLoopBody,
-      newLoopBody->getArguments().take_front(loopBody->getNumArguments()));
+    auto forOp = candidateSliceOp->getParentOfType<scf::ForOp>();
 
-  // 5.a. Clone consumer after the cloned tensor.insert_slice op.
-  rewriter.setInsertionPointAfter(candidateSliceOp);
-  auto newForOpBlockArgsForConsumerDest =
-      newLoopBody->getArguments().drop_front(loopBody->getNumArguments());
-  auto clonedConsumerOp = cast<TilingInterface>(cloneOpAndUpdateDestinationArgs(
-      rewriter, consumerOp, newForOpBlockArgsForConsumerDest));
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPoint(candidateSliceOp);
 
-  // 5.b. Replace all uses of the loop result with the result of the cloned
-  // tensor.insert_slice.
-  OpOperand &operandToReplace = clonedConsumerOp->getOpOperand(operandNumber);
-  rewriter.modifyOpInPlace(clonedConsumerOp, [&]() {
-    operandToReplace.set(candidateSliceOp.getResult());
-  });
+    // 2. Check consumer is not using scf.for's output as init.
+    auto dstOp = cast<DestinationStyleOpInterface>(consumerOp);
+    SmallVector<Value> dpsInits =
+        llvm::map_to_vector(dstOp.getDpsInits(), [](Value v) { return v; });
+    if (llvm::is_contained(dpsInits, forOp.getResult(resultNumber))) {
+      return rewriter.notifyMatchFailure(
+          consumerOp,
+          "consumer op taking the result of scf.for as init is not supported");
+    }
 
-  // 6 - Perform tiling of the cloned consumer.
-  rewriter.setInsertionPointAfter(clonedConsumerOp);
-  FailureOr<TilingResult> tileAndFuseResult =
-      tensor::replaceInsertSliceWithTiledConsumer(
-          rewriter,
-          cast<OffsetSizeAndStrideOpInterface>(candidateSliceOp.getOperation()),
-          clonedConsumerOp->getOpOperand(operandNumber));
-  if (failed(tileAndFuseResult)) {
-    return rewriter.notifyMatchFailure(clonedConsumerOp,
-                                       "failed to tile consumer op: ");
-  }
+    Location loc = forOp.getLoc();
+    SmallVector<Value> newOuts(forOp.getInits());
+    newOuts.append(dpsInits);
 
-  // 7 - Extract offset/sizes/strides required to create the tensor.insert_slice
-  // for each result of the consumer.
-  SmallVector<OpFoldResult> offsets = candidateSliceOp.getMixedOffsets();
-  SmallVector<OpFoldResult> sizes = candidateSliceOp.getMixedSizes();
-  SmallVector<OpFoldResult> strides = candidateSliceOp.getMixedStrides();
-  // 8. Check all insert stride is 1.
-  if (llvm::any_of(strides, [](OpFoldResult stride) {
-        return !isConstantIntValue(stride, 1);
-      })) {
-    return rewriter.notifyMatchFailure(
-        candidateSliceOp, "containingOp's result yield with stride");
-  }
-  // 9. Try to get iter domain position from input position.
-  SmallVector<OpFoldResult> iterDomainOffsets, iterDomainSizes;
-  rewriter.setInsertionPointAfter(clonedConsumerOp);
-  if (failed(clonedConsumerOp.getIterationDomainTileFromOperandTile(
-          rewriter, operandNumber, offsets, sizes, iterDomainOffsets,
-          iterDomainSizes))) {
-    return rewriter.notifyMatchFailure(
-        clonedConsumerOp, "can't get iter domain position from input position");
-  }
+    // 3. Create new scf.for op.
+    rewriter.setInsertionPoint(consumerOp);
+    auto newforOp = rewriter.create<scf::ForOp>(loc, forOp.getLowerBound(),
+                                                forOp.getUpperBound(),
+                                                forOp.getStep(), newOuts);
+    // 4. Move the loop body to the new op.
+    Block *loopBody = forOp.getBody();
+    Block *newLoopBody = newforOp.getBody();
+    rewriter.mergeBlocks(
+        loopBody, newLoopBody,
+        newLoopBody->getArguments().take_front(loopBody->getNumArguments()));
 
-  // 10. Try to fetch the offset and size for all results of the cloned
-  // consumer. This would then be used to form the corresponding
-  // tensor.insert_slice later.
-  unsigned totalNumResultsOfConsumer = clonedConsumerOp->getNumResults();
-  SmallVector<SmallVector<OpFoldResult>> resultOffsets(
-      totalNumResultsOfConsumer);
-  SmallVector<SmallVector<OpFoldResult>> resultSizes(totalNumResultsOfConsumer);
-  for (auto [idx, v] : llvm::enumerate(clonedConsumerOp->getResults())) {
-    if (failed(clonedConsumerOp.getResultTilePosition(
-            rewriter, idx, iterDomainOffsets, iterDomainSizes,
-            resultOffsets[idx], resultSizes[idx]))) {
+    // 5.a. Clone consumer after the cloned tensor.insert_slice op.
+    rewriter.setInsertionPointAfter(candidateSliceOp);
+    auto newForOpBlockArgsForConsumerDest =
+        newLoopBody->getArguments().drop_front(loopBody->getNumArguments());
+    auto clonedConsumerOp =
+        cast<TilingInterface>(cloneOpAndUpdateDestinationArgs(
+            rewriter, consumerOp, newForOpBlockArgsForConsumerDest));
+
+    // 5.b. Replace all uses of the loop result with the result of the cloned
+    // tensor.insert_slice.
+    OpOperand &operandToReplace = clonedConsumerOp->getOpOperand(operandNumber);
+    rewriter.modifyOpInPlace(clonedConsumerOp, [&]() {
+      operandToReplace.set(candidateSliceOp.getResult());
+    });
+
+    // 6 - Perform tiling of the cloned consumer.
+    rewriter.setInsertionPointAfter(clonedConsumerOp);
+    FailureOr<TilingResult> tileAndFuseResult =
+        tensor::replaceInsertSliceWithTiledConsumer(
+            rewriter,
+            cast<OffsetSizeAndStrideOpInterface>(
+                candidateSliceOp.getOperation()),
+            clonedConsumerOp->getOpOperand(operandNumber));
+    if (failed(tileAndFuseResult)) {
+      return rewriter.notifyMatchFailure(clonedConsumerOp,
+                                         "failed to tile consumer op: ");
+    }
+
+    // 7 - Extract offset/sizes/strides required to create the
+    // tensor.insert_slice for each result of the consumer.
+    SmallVector<OpFoldResult> offsets = candidateSliceOp.getMixedOffsets();
+    SmallVector<OpFoldResult> sizes = candidateSliceOp.getMixedSizes();
+    SmallVector<OpFoldResult> strides = candidateSliceOp.getMixedStrides();
+    // 8. Check all insert stride is 1.
+    if (llvm::any_of(strides, [](OpFoldResult stride) {
+          return !isConstantIntValue(stride, 1);
+        })) {
+      return rewriter.notifyMatchFailure(
+          candidateSliceOp, "containingOp's result yield with stride");
+    }
+    // 9. Try to get iter domain position from input position.
+    SmallVector<OpFoldResult> iterDomainOffsets, iterDomainSizes;
+    rewriter.setInsertionPointAfter(clonedConsumerOp);
+    if (failed(clonedConsumerOp.getIterationDomainTileFromOperandTile(
+            rewriter, operandNumber, offsets, sizes, iterDomainOffsets,
+            iterDomainSizes))) {
       return rewriter.notifyMatchFailure(
           clonedConsumerOp,
-          "can't get result domain position from iter domain position");
+          "can't get iter domain position from input position");
+    }
+
+    // 10. Try to fetch the offset and size for all results of the cloned
+    // consumer. This would then be used to form the corresponding
+    // tensor.insert_slice later.
+    unsigned totalNumResultsOfConsumer = clonedConsumerOp->getNumResults();
+    SmallVector<SmallVector<OpFoldResult>> resultOffsets(
+        totalNumResultsOfConsumer);
+    SmallVector<SmallVector<OpFoldResult>> resultSizes(
+        totalNumResultsOfConsumer);
+    for (auto [idx, v] : llvm::enumerate(clonedConsumerOp->getResults())) {
+      if (failed(clonedConsumerOp.getResultTilePosition(
+              rewriter, idx, iterDomainOffsets, iterDomainSizes,
+              resultOffsets[idx], resultSizes[idx]))) {
+        return rewriter.notifyMatchFailure(
+            clonedConsumerOp,
+            "can't get result domain position from iter domain position");
+      }
+    }
+
+    // 11. Fix terminator.
+    scf::YieldOp oldTerminatorOp =
+        cast<scf::YieldOp>(newforOp.getBody()->getTerminator());
+    SmallVector<Value> newYieldOperands(oldTerminatorOp.getResults());
+    rewriter.setInsertionPointAfter(oldTerminatorOp);
+    MutableArrayRef<BlockArgument> bbArgs = newforOp.getBody()->getArguments();
+    for (auto [idx, v] :
+         llvm::enumerate(tileAndFuseResult->tiledOps[0]->getResults())) {
+      SmallVector<OpFoldResult> strides(resultOffsets[idx].size(),
+                                        rewriter.getIndexAttr(1));
+      Value newInsertSliceOp = rewriter.create<tensor::InsertSliceOp>(
+          candidateSliceOp->getLoc(), v,
+          bbArgs[1 + forOp.getInits().size() + idx], resultOffsets[idx],
+          resultSizes[idx], strides);
+      newYieldOperands.push_back(newInsertSliceOp);
+    }
+    rewriter.create<scf::YieldOp>(loc, newYieldOperands);
+    rewriter.eraseOp(oldTerminatorOp);
+
+    // 12. Replace the result of scf.for and consumer op.
+    for (auto &&[oldResult, newResult] :
+         llvm::zip_first(forOp.getResults(), newforOp.getResults())) {
+      rewriter.replaceAllUsesWith(oldResult, newResult);
+    }
+
+    for (auto &&[index, oldValue] : llvm::enumerate(consumerOp->getResults())) {
+      rewriter.replaceAllUsesWith(
+          oldValue, newforOp->getResult(forOp.getInits().size() + index));
+    }
+
+    // 13. Need to erase the old scf.for and the cloned consumer op.
+    rewriter.eraseOp(forOp);
+    rewriter.eraseOp(clonedConsumerOp);
+
+    return scf::SCFFuseConsumerOfSliceResult{
+        consumerOp, tileAndFuseResult->tiledOps[0], {}};
+  }
+
+  /// Fetch the first untiled consumer of a scf.forall's result which is yielded
+  /// by a tensor.parallel_insert_slice.
+  static OpOperand *getUntiledConsumerFromSlice(
+      tensor::ParallelInsertSliceOp candidateSliceOp) {
+    // Step 1. Fetch the corresponding output
+    Value sliceDest = candidateSliceOp.getDest();
+    auto iterArg = cast<BlockArgument>(sliceDest);
+    Operation *containingOp = iterArg.getOwner()->getParentOp();
+    // Step 2. Check that the containing op is scf.forall.
+    auto forallOp = dyn_cast<scf::ForallOp>(containingOp);
+    if (!forallOp) {
+      return nullptr;
+    }
+    Value resultingValue =
+        forallOp.getTiedOpResult(forallOp.getTiedOpOperand(iterArg));
+    // Step 3. Check resulting value of scf.forall has exactly one use.
+    Value::use_range uses = resultingValue.getUses();
+    if (!llvm::hasSingleElement(uses)) {
+      return nullptr;
+    }
+
+    // Step 4. Get uses.
+    OpOperand &operand = (*resultingValue.getUses().begin());
+    Operation *consumerOp = operand.getOwner();
+    // TODO: We have to init result of consumer before scf.forall, use
+    //       DestinationStyleOpInterface to get result shape from init for now.
+    //       Add support for other op such as op has InferTypeOpInterface.
+    if (!isa<TilingInterface>(consumerOp) ||
+        !isa<DestinationStyleOpInterface>(consumerOp)) {
+      return nullptr;
+    }
+    if (containingOp->getBlock() != consumerOp->getBlock()) {
+      return nullptr;
+    }
+    return &operand;
+  }
+
+  /// Implementation of fusing consumer of a single slice by computing the
+  /// slice of the consumer in-place for scf.forall.
+  static FailureOr<scf::SCFFuseConsumerOfSliceResult>
+  tileAndFuseConsumerOfSliceSCFForall(
+      RewriterBase & rewriter, tensor::ParallelInsertSliceOp candidateSliceOp) {
+    // 1. Get the consumer of the dest.
+    OpOperand *consumerOpOperand =
+        getUntiledConsumerFromSlice(candidateSliceOp);
+    if (!consumerOpOperand) {
+      return rewriter.notifyMatchFailure(candidateSliceOp,
+                                         "could not fetch consumer to fuse");
+    }
+    Operation *consumerOp = consumerOpOperand->getOwner();
+    unsigned operandNumber = consumerOpOperand->getOperandNumber();
+    unsigned resultNumber =
+        cast<OpResult>(consumerOpOperand->get()).getResultNumber();
+
+    OpBuilder::InsertionGuard g(rewriter);
+    // Using candidateSliceOp->getParentOp() because we have the following case
+    // :- scf.forall.in_parallel {
+    //   tensor.parallel_insert_slice ...
+    // }
+    rewriter.setInsertionPoint(candidateSliceOp->getParentOp());
+
+    Operation *containingOp = candidateSliceOp->getParentOp()->getParentOp();
+    auto forallOp = cast<scf::ForallOp>(containingOp);
+
+    // 2. Check consumer is not using scf.forall's output as init.
+    auto dstOp = cast<DestinationStyleOpInterface>(consumerOp);
+    SmallVector<Value> dpsInits =
+        llvm::map_to_vector(dstOp.getDpsInits(), [](Value v) { return v; });
+    if (llvm::is_contained(dpsInits, forallOp.getResult(resultNumber))) {
+      return rewriter.notifyMatchFailure(consumerOp,
+                                         "consumer op taking the result of "
+                                         "scf.forall as init is not supported");
+    }
+
+    Location loc = forallOp.getLoc();
+    // 3. Create new scf.forall op.
+    SmallVector<Value> newOuts(forallOp.getOutputs());
+    newOuts.append(dpsInits);
+    rewriter.setInsertionPoint(consumerOp);
+    auto newforallOp = rewriter.create<scf::ForallOp>(
+        loc, forallOp.getMixedLowerBound(), forallOp.getMixedUpperBound(),
+        forallOp.getMixedStep(), newOuts, forallOp.getMapping());
+
+    // 4. Move the loop body to the new op.
+    rewriter.eraseOp(newforallOp.getTerminator());
+    Block *loopBody = forallOp.getBody();
+    Block *newLoopBody = newforallOp.getBody();
+    rewriter.mergeBlocks(
+        loopBody, newLoopBody,
+        newLoopBody->getArguments().take_front(loopBody->getNumArguments()));
+
+    // 5.a. Clone the consumer after the cloned tensor.parallel_insert_slice.
+    rewriter.setInsertionPointAfter(candidateSliceOp);
+    auto newForOpBlockArgsForConsumerDest =
+        newLoopBody->getArguments().drop_front(loopBody->getNumArguments());
+    auto clonedConsumerOp =
+        cast<TilingInterface>(cloneOpAndUpdateDestinationArgs(
+            rewriter, consumerOp, newForOpBlockArgsForConsumerDest));
+
+    // 5.b. Replace all uses of the scf.forall's result use in the consumer with
+    // the source of the cloned tensor.parallel_insert_slice.
+    OpOperand &operandToReplace = clonedConsumerOp->getOpOperand(operandNumber);
+    rewriter.modifyOpInPlace(clonedConsumerOp, [&]() {
+      operandToReplace.set(candidateSliceOp.getSource());
+    });
+
+    // 6. Perform tiling of the cloned consumer.
+    rewriter.setInsertionPoint(newforallOp.getTerminator());
+    FailureOr<TilingResult> tileAndFuseResult =
+        tensor::replaceInsertSliceWithTiledConsumer(
+            rewriter,
+            cast<OffsetSizeAndStrideOpInterface>(
+                candidateSliceOp.getOperation()),
+            clonedConsumerOp->getOpOperand(operandNumber));
+    if (failed(tileAndFuseResult)) {
+      return rewriter.notifyMatchFailure(clonedConsumerOp,
+                                         "failed to tile consumer op: ");
+    }
+
+    // 7. Extract offset/sizes/strides required to create the
+    // tensor.parallel_insert_slice for each result of the consumer.
+    SmallVector<OpFoldResult> offsets = candidateSliceOp.getMixedOffsets();
+    SmallVector<OpFoldResult> sizes = candidateSliceOp.getMixedSizes();
+    SmallVector<OpFoldResult> strides = candidateSliceOp.getMixedStrides();
+    // 8. Check all insert stride is 1.
+    if (llvm::any_of(strides, [](OpFoldResult stride) {
+          return !isConstantIntValue(stride, 1);
+        })) {
+      return rewriter.notifyMatchFailure(
+          candidateSliceOp, "containingOp's result yield with stride");
+    }
+    // 9. Try to get iter domain position from input position.
+    SmallVector<OpFoldResult> iterDomainOffsets, iterDomainSizes;
+    rewriter.setInsertionPointAfter(tileAndFuseResult->tiledOps[0]);
+    if (failed(clonedConsumerOp.getIterationDomainTileFromOperandTile(
+            rewriter, operandNumber, offsets, sizes, iterDomainOffsets,
+            iterDomainSizes))) {
+      return rewriter.notifyMatchFailure(
+          clonedConsumerOp,
+          "can't get iter domain position from input position");
+    }
+
+    // 10. Try to fetch the offset and size for all results of the cloned
+    // consumer. This would then be used to form the corresponding
+    // tensor.parallel_insert_slice later.
+    unsigned totalNumResultsOfConsumer = clonedConsumerOp->getNumResults();
+    SmallVector<SmallVector<OpFoldResult>> resultOffsets(
+        totalNumResultsOfConsumer);
+    SmallVector<SmallVector<OpFoldResult>> resultSizes(
+        totalNumResultsOfConsumer);
+    for (auto [idx, v] : llvm::enumerate(clonedConsumerOp->getResults())) {
+      if (failed(clonedConsumerOp.getResultTilePosition(
+              rewriter, idx, iterDomainOffsets, iterDomainSizes,
+              resultOffsets[idx], resultSizes[idx]))) {
+        return rewriter.notifyMatchFailure(
+            clonedConsumerOp,
+            "can't get result domain position from iter domain position");
+      }
+    }
+
+    // 11. Fix terminator.
+    scf::InParallelOp newTerminatorOp = newforallOp.getTerminator();
+    rewriter.setInsertionPointToStart(newTerminatorOp.getBody());
+    Location firstYieldOpLoc =
+        (*(newTerminatorOp.getYieldingOps().begin())).getLoc();
+    MutableArrayRef<BlockArgument> bbArgs =
+        newforallOp.getBody()->getArguments();
+    for (auto [idx, v] :
+         llvm::enumerate(tileAndFuseResult->tiledOps[0]->getResults())) {
+      SmallVector<OpFoldResult> strides(resultOffsets[idx].size(),
+                                        rewriter.getIndexAttr(1));
+      rewriter.create<tensor::ParallelInsertSliceOp>(
+          firstYieldOpLoc, v,
+          bbArgs[forallOp.getRank() + forallOp.getOutputs().size() + idx],
+          resultOffsets[idx], resultSizes[idx], strides);
+    }
+
+    // 12. Replace the result of scf.forall and consumer op.
+    for (auto &&[oldResult, newResult] :
+         llvm::zip_first(forallOp.getResults(), newforallOp.getResults())) {
+      rewriter.replaceAllUsesWith(oldResult, newResult);
+    }
+
+    for (auto &&[index, oldValue] : llvm::enumerate(consumerOp->getResults())) {
+      rewriter.replaceAllUsesWith(
+          oldValue,
+          newforallOp->getResult(forallOp.getOutputs().size() + index));
+    }
+
+    // 13. Need to erase the old scf.forall and cloned consumer.
+    rewriter.eraseOp(forallOp);
+    rewriter.eraseOp(clonedConsumerOp);
+
+    return scf::SCFFuseConsumerOfSliceResult{
+        consumerOp, tileAndFuseResult->tiledOps[0], {}};
+  }
+
+  /// Implementation of fusing consumer of a single slice by computing the
+  /// slice of the consumer in-place.
+  FailureOr<scf::SCFFuseConsumerOfSliceResult>
+  mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase & rewriter,
+                                        Operation * candidateSliceOp) {
+    if (auto sliceOp = dyn_cast<tensor::InsertSliceOp>(candidateSliceOp)) {
+      return tileAndFuseConsumerOfSliceSCFFor(rewriter, sliceOp);
+    } else if (auto sliceOp =
+                   dyn_cast<tensor::ParallelInsertSliceOp>(candidateSliceOp)) {
+      return tileAndFuseConsumerOfSliceSCFForall(rewriter, sliceOp);
+    } else {
+      return failure();
     }
   }
 
-  // 11. Fix terminator.
-  scf::YieldOp oldTerminatorOp =
-      cast<scf::YieldOp>(newforOp.getBody()->getTerminator());
-  SmallVector<Value> newYieldOperands(oldTerminatorOp.getResults());
-  rewriter.setInsertionPointAfter(oldTerminatorOp);
-  MutableArrayRef<BlockArgument> bbArgs = newforOp.getBody()->getArguments();
-  for (auto [idx, v] :
-       llvm::enumerate(tileAndFuseResult->tiledOps[0]->getResults())) {
-    SmallVector<OpFoldResult> strides(resultOffsets[idx].size(),
-                                      rewriter.getIndexAttr(1));
-    Value newInsertSliceOp = rewriter.create<tensor::InsertSliceOp>(
-        candidateSliceOp->getLoc(), v,
-        bbArgs[1 + forOp.getInits().size() + idx], resultOffsets[idx],
-        resultSizes[idx], strides);
-    newYieldOperands.push_back(newInsertSliceOp);
-  }
-  rewriter.create<scf::YieldOp>(loc, newYieldOperands);
-  rewriter.eraseOp(oldTerminatorOp);
+  //===----------------------------------------------------------------------===//
+  // lowerToLoopsUsingSCFForOp implementation.
+  //===----------------------------------------------------------------------===//
 
-  // 12. Replace the result of scf.for and consumer op.
-  for (auto &&[oldResult, newResult] :
-       llvm::zip_first(forOp.getResults(), newforOp.getResults())) {
-    rewriter.replaceAllUsesWith(oldResult, newResult);
-  }
-
-  for (auto &&[index, oldValue] : llvm::enumerate(consumerOp->getResults())) {
-    rewriter.replaceAllUsesWith(
-        oldValue, newforOp->getResult(forOp.getInits().size() + index));
-  }
-
-  // 13. Need to erase the old scf.for and the cloned consumer op.
-  rewriter.eraseOp(forOp);
-  rewriter.eraseOp(clonedConsumerOp);
-
-  return scf::SCFFuseConsumerOfSliceResult{
-      consumerOp, tileAndFuseResult->tiledOps[0], {}};
-}
-
-/// Fetch the first untiled consumer of a scf.forall's result which is yielded
-/// by a tensor.parallel_insert_slice.
-static OpOperand *
-getUntiledConsumerFromSlice(tensor::ParallelInsertSliceOp candidateSliceOp) {
-  // Step 1. Fetch the corresponding output
-  Value sliceDest = candidateSliceOp.getDest();
-  auto iterArg = cast<BlockArgument>(sliceDest);
-  Operation *containingOp = iterArg.getOwner()->getParentOp();
-  // Step 2. Check that the containing op is scf.forall.
-  auto forallOp = dyn_cast<scf::ForallOp>(containingOp);
-  if (!forallOp) {
-    return nullptr;
-  }
-  Value resultingValue =
-      forallOp.getTiedOpResult(forallOp.getTiedOpOperand(iterArg));
-  // Step 3. Check resulting value of scf.forall has exactly one use.
-  Value::use_range uses = resultingValue.getUses();
-  if (!llvm::hasSingleElement(uses)) {
-    return nullptr;
-  }
-
-  // Step 4. Get uses.
-  OpOperand &operand = (*resultingValue.getUses().begin());
-  Operation *consumerOp = operand.getOwner();
-  // TODO: We have to init result of consumer before scf.forall, use
-  //       DestinationStyleOpInterface to get result shape from init for now.
-  //       Add support for other op such as op has InferTypeOpInterface.
-  if (!isa<TilingInterface>(consumerOp) ||
-      !isa<DestinationStyleOpInterface>(consumerOp)) {
-    return nullptr;
-  }
-  if (containingOp->getBlock() != consumerOp->getBlock()) {
-    return nullptr;
-  }
-  return &operand;
-}
-
-/// Implementation of fusing consumer of a single slice by computing the
-/// slice of the consumer in-place for scf.forall.
-static FailureOr<scf::SCFFuseConsumerOfSliceResult>
-tileAndFuseConsumerOfSliceSCFForall(
-    RewriterBase &rewriter, tensor::ParallelInsertSliceOp candidateSliceOp) {
-  // 1. Get the consumer of the dest.
-  OpOperand *consumerOpOperand = getUntiledConsumerFromSlice(candidateSliceOp);
-  if (!consumerOpOperand) {
-    return rewriter.notifyMatchFailure(candidateSliceOp,
-                                       "could not fetch consumer to fuse");
-  }
-  Operation *consumerOp = consumerOpOperand->getOwner();
-  unsigned operandNumber = consumerOpOperand->getOperandNumber();
-  unsigned resultNumber =
-      cast<OpResult>(consumerOpOperand->get()).getResultNumber();
-
-  OpBuilder::InsertionGuard g(rewriter);
-  // Using candidateSliceOp->getParentOp() because we have the following case :-
-  // scf.forall.in_parallel {
-  //   tensor.parallel_insert_slice ...
-  // }
-  rewriter.setInsertionPoint(candidateSliceOp->getParentOp());
-
-  Operation *containingOp = candidateSliceOp->getParentOp()->getParentOp();
-  auto forallOp = cast<scf::ForallOp>(containingOp);
-
-  // 2. Check consumer is not using scf.forall's output as init.
-  auto dstOp = cast<DestinationStyleOpInterface>(consumerOp);
-  SmallVector<Value> dpsInits =
-      llvm::map_to_vector(dstOp.getDpsInits(), [](Value v) { return v; });
-  if (llvm::is_contained(dpsInits, forallOp.getResult(resultNumber))) {
-    return rewriter.notifyMatchFailure(
-        consumerOp,
-        "consumer op taking the result of scf.forall as init is not supported");
-  }
-
-  Location loc = forallOp.getLoc();
-  // 3. Create new scf.forall op.
-  SmallVector<Value> newOuts(forallOp.getOutputs());
-  newOuts.append(dpsInits);
-  rewriter.setInsertionPoint(consumerOp);
-  auto newforallOp = rewriter.create<scf::ForallOp>(
-      loc, forallOp.getMixedLowerBound(), forallOp.getMixedUpperBound(),
-      forallOp.getMixedStep(), newOuts, forallOp.getMapping());
-
-  // 4. Move the loop body to the new op.
-  rewriter.eraseOp(newforallOp.getTerminator());
-  Block *loopBody = forallOp.getBody();
-  Block *newLoopBody = newforallOp.getBody();
-  rewriter.mergeBlocks(
-      loopBody, newLoopBody,
-      newLoopBody->getArguments().take_front(loopBody->getNumArguments()));
-
-  // 5.a. Clone the consumer after the cloned tensor.parallel_insert_slice.
-  rewriter.setInsertionPointAfter(candidateSliceOp);
-  auto newForOpBlockArgsForConsumerDest =
-      newLoopBody->getArguments().drop_front(loopBody->getNumArguments());
-  auto clonedConsumerOp = cast<TilingInterface>(cloneOpAndUpdateDestinationArgs(
-      rewriter, consumerOp, newForOpBlockArgsForConsumerDest));
-
-  // 5.b. Replace all uses of the scf.forall's result use in the consumer with
-  // the source of the cloned tensor.parallel_insert_slice.
-  OpOperand &operandToReplace = clonedConsumerOp->getOpOperand(operandNumber);
-  rewriter.modifyOpInPlace(clonedConsumerOp, [&]() {
-    operandToReplace.set(candidateSliceOp.getSource());
-  });
-
-  // 6. Perform tiling of the cloned consumer.
-  rewriter.setInsertionPoint(newforallOp.getTerminator());
-  FailureOr<TilingResult> tileAndFuseResult =
-      tensor::replaceInsertSliceWithTiledConsumer(
-          rewriter,
-          cast<OffsetSizeAndStrideOpInterface>(candidateSliceOp.getOperation()),
-          clonedConsumerOp->getOpOperand(operandNumber));
-  if (failed(tileAndFuseResult)) {
-    return rewriter.notifyMatchFailure(clonedConsumerOp,
-                                       "failed to tile consumer op: ");
-  }
-
-  // 7. Extract offset/sizes/strides required to create the
-  // tensor.parallel_insert_slice for each result of the consumer.
-  SmallVector<OpFoldResult> offsets = candidateSliceOp.getMixedOffsets();
-  SmallVector<OpFoldResult> sizes = candidateSliceOp.getMixedSizes();
-  SmallVector<OpFoldResult> strides = candidateSliceOp.getMixedStrides();
-  // 8. Check all insert stride is 1.
-  if (llvm::any_of(strides, [](OpFoldResult stride) {
-        return !isConstantIntValue(stride, 1);
-      })) {
-    return rewriter.notifyMatchFailure(
-        candidateSliceOp, "containingOp's result yield with stride");
-  }
-  // 9. Try to get iter domain position from input position.
-  SmallVector<OpFoldResult> iterDomainOffsets, iterDomainSizes;
-  rewriter.setInsertionPointAfter(tileAndFuseResult->tiledOps[0]);
-  if (failed(clonedConsumerOp.getIterationDomainTileFromOperandTile(
-          rewriter, operandNumber, offsets, sizes, iterDomainOffsets,
-          iterDomainSizes))) {
-    return rewriter.notifyMatchFailure(
-        clonedConsumerOp, "can't get iter domain position from input position");
-  }
-
-  // 10. Try to fetch the offset and size for all results of the cloned
-  // consumer. This would then be used to form the corresponding
-  // tensor.parallel_insert_slice later.
-  unsigned totalNumResultsOfConsumer = clonedConsumerOp->getNumResults();
-  SmallVector<SmallVector<OpFoldResult>> resultOffsets(
-      totalNumResultsOfConsumer);
-  SmallVector<SmallVector<OpFoldResult>> resultSizes(totalNumResultsOfConsumer);
-  for (auto [idx, v] : llvm::enumerate(clonedConsumerOp->getResults())) {
-    if (failed(clonedConsumerOp.getResultTilePosition(
-            rewriter, idx, iterDomainOffsets, iterDomainSizes,
-            resultOffsets[idx], resultSizes[idx]))) {
+  FailureOr<SmallVector<scf::ForOp>> mlir::scf::lowerToLoopsUsingSCFForOp(
+      RewriterBase & rewriter, TilingInterface op) {
+    // TODO: Handle cases where the op has results if needed.
+    if (op->getNumResults() > 0) {
       return rewriter.notifyMatchFailure(
-          clonedConsumerOp,
-          "can't get result domain position from iter domain position");
+          op, "unable to lower to loops operations with return values");
     }
+
+    SmallVector<Range> domain = op.getIterationDomain(rewriter);
+    SmallVector<Value> ivs;
+    SmallVector<scf::ForOp> loops;
+    Location loc = op.getLoc();
+    for (auto loopRange : domain) {
+      Value offsetVal =
+          getValueOrCreateConstantIndexOp(rewriter, loc, loopRange.offset);
+      Value sizeVal =
+          getValueOrCreateConstantIndexOp(rewriter, loc, loopRange.size);
+      Value strideVal =
+          getValueOrCreateConstantIndexOp(rewriter, loc, loopRange.stride);
+      auto loop = rewriter.create<scf::ForOp>(op.getLoc(), offsetVal, sizeVal,
+                                              strideVal, ValueRange{});
+      loops.push_back(loop);
+      ivs.push_back(loop.getInductionVar());
+      rewriter.setInsertionPoint(loop.getBody()->getTerminator());
+    }
+    if (failed(op.generateScalarImplementation(rewriter, op.getLoc(), ivs))) {
+      return failure();
+    }
+    return loops;
   }
-
-  // 11. Fix terminator.
-  scf::InParallelOp newTerminatorOp = newforallOp.getTerminator();
-  rewriter.setInsertionPointToStart(newTerminatorOp.getBody());
-  Location firstYieldOpLoc =
-      (*(newTerminatorOp.getYieldingOps().begin())).getLoc();
-  MutableArrayRef<BlockArgument> bbArgs = newforallOp.getBody()->getArguments();
-  for (auto [idx, v] :
-       llvm::enumerate(tileAndFuseResult->tiledOps[0]->getResults())) {
-    SmallVector<OpFoldResult> strides(resultOffsets[idx].size(),
-                                      rewriter.getIndexAttr(1));
-    rewriter.create<tensor::ParallelInsertSliceOp>(
-        firstYieldOpLoc, v,
-        bbArgs[forallOp.getRank() + forallOp.getOutputs().size() + idx],
-        resultOffsets[idx], resultSizes[idx], strides);
-  }
-
-  // 12. Replace the result of scf.forall and consumer op.
-  for (auto &&[oldResult, newResult] :
-       llvm::zip_first(forallOp.getResults(), newforallOp.getResults())) {
-    rewriter.replaceAllUsesWith(oldResult, newResult);
-  }
-
-  for (auto &&[index, oldValue] : llvm::enumerate(consumerOp->getResults())) {
-    rewriter.replaceAllUsesWith(
-        oldValue, newforallOp->getResult(forallOp.getOutputs().size() + index));
-  }
-
-  // 13. Need to erase the old scf.forall and cloned consumer.
-  rewriter.eraseOp(forallOp);
-  rewriter.eraseOp(clonedConsumerOp);
-
-  return scf::SCFFuseConsumerOfSliceResult{
-      consumerOp, tileAndFuseResult->tiledOps[0], {}};
-}
-
-/// Implementation of fusing consumer of a single slice by computing the
-/// slice of the consumer in-place.
-FailureOr<scf::SCFFuseConsumerOfSliceResult>
-mlir::scf::tileAndFuseConsumerOfSlice(RewriterBase &rewriter,
-                                      Operation *candidateSliceOp) {
-  if (auto sliceOp = dyn_cast<tensor::InsertSliceOp>(candidateSliceOp)) {
-    return tileAndFuseConsumerOfSliceSCFFor(rewriter, sliceOp);
-  } else if (auto sliceOp =
-                 dyn_cast<tensor::ParallelInsertSliceOp>(candidateSliceOp)) {
-    return tileAndFuseConsumerOfSliceSCFForall(rewriter, sliceOp);
-  } else {
-    return failure();
-  }
-}
-
-//===----------------------------------------------------------------------===//
-// lowerToLoopsUsingSCFForOp implementation.
-//===----------------------------------------------------------------------===//
-
-FailureOr<SmallVector<scf::ForOp>>
-mlir::scf::lowerToLoopsUsingSCFForOp(RewriterBase &rewriter,
-                                     TilingInterface op) {
-  // TODO: Handle cases where the op has results if needed.
-  if (op->getNumResults() > 0) {
-    return rewriter.notifyMatchFailure(
-        op, "unable to lower to loops operations with return values");
-  }
-
-  SmallVector<Range> domain = op.getIterationDomain(rewriter);
-  SmallVector<Value> ivs;
-  SmallVector<scf::ForOp> loops;
-  Location loc = op.getLoc();
-  for (auto loopRange : domain) {
-    Value offsetVal =
-        getValueOrCreateConstantIndexOp(rewriter, loc, loopRange.offset);
-    Value sizeVal =
-        getValueOrCreateConstantIndexOp(rewriter, loc, loopRange.size);
-    Value strideVal =
-        getValueOrCreateConstantIndexOp(rewriter, loc, loopRange.stride);
-    auto loop = rewriter.create<scf::ForOp>(op.getLoc(), offsetVal, sizeVal,
-                                            strideVal, ValueRange{});
-    loops.push_back(loop);
-    ivs.push_back(loop.getInductionVar());
-    rewriter.setInsertionPoint(loop.getBody()->getTerminator());
-  }
-  if (failed(op.generateScalarImplementation(rewriter, op.getLoc(), ivs))) {
-    return failure();
-  }
-  return loops;
-}
