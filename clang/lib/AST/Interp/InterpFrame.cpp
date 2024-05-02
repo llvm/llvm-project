@@ -191,8 +191,11 @@ Frame *InterpFrame::getCaller() const {
 }
 
 SourceRange InterpFrame::getCallRange() const {
-  if (!Caller->Func)
-    return S.getRange(nullptr, {});
+  if (!Caller->Func) {
+    if (SourceRange NullRange = S.getRange(nullptr, {}); NullRange.isValid())
+      return NullRange;
+    return S.EvalLocation;
+  }
   return S.getRange(Caller->Func, RetPC - sizeof(uintptr_t));
 }
 
