@@ -754,8 +754,7 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       // sophisticated sanitation heuristics.
       {{{{"setproctitle"}}}, TR::Sink({{0}, 1}, MsgUncontrolledFormatString)},
       {{{{"setproctitle_fast"}}},
-       TR::Sink({{0}, 1}, MsgUncontrolledFormatString)}
-  };
+       TR::Sink({{0}, 1}, MsgUncontrolledFormatString)}};
 
   // `getenv` returns taint only in untrusted environments.
   if (TR::UntrustedEnv(C)) {
