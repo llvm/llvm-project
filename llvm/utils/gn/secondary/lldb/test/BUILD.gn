@@ -1,6 +1,7 @@
 import("//llvm/triples.gni")
 
 #import("//llvm/utils/gn/build/libs/xar/enable.gni")
+import("//llvm/utils/gn/build/libs/curl/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
@@ -90,6 +91,12 @@ write_lit_cfg("lit_api_site_cfg") {
     extra_values += [ "SHLIBDIR=" + rebase_path("$root_out_dir/bin", dir) ]
   } else {
     extra_values += [ "SHLIBDIR=" + rebase_path("$root_out_dir/lib", dir) ]
+  }
+
+  if (llvm_enable_libcurl) {
+    extra_values += [ "LLVM_ENABLE_CURL=1" ]
+  } else {
+    extra_values += [ "LLVM_ENABLE_CURL=0" ]  # Must be 0.
   }
 }
 
