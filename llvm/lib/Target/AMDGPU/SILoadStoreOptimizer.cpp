@@ -1397,8 +1397,7 @@ SILoadStoreOptimizer::mergeImagePair(CombineInfo &CI, CombineInfo &Paired,
 
   MachineInstr *New = MIB.addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  unsigned SubRegIdx0, SubRegIdx1;
-  std::tie(SubRegIdx0, SubRegIdx1) = getSubRegIdxs(CI, Paired);
+  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
 
   // Copy to the old destination registers.
   const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
@@ -1442,9 +1441,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSMemLoadImmPair(
   New.addImm(MergedOffset);
   New.addImm(CI.CPol).addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  std::pair<unsigned, unsigned> SubRegIdx = getSubRegIdxs(CI, Paired);
-  const unsigned SubRegIdx0 = std::get<0>(SubRegIdx);
-  const unsigned SubRegIdx1 = std::get<1>(SubRegIdx);
+  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
 
   // Copy to the old destination registers.
   const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
@@ -1497,9 +1494,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferLoadPair(
         .addImm(0)            // swz
         .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  std::pair<unsigned, unsigned> SubRegIdx = getSubRegIdxs(CI, Paired);
-  const unsigned SubRegIdx0 = std::get<0>(SubRegIdx);
-  const unsigned SubRegIdx1 = std::get<1>(SubRegIdx);
+  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
 
   // Copy to the old destination registers.
   const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
@@ -1556,9 +1551,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
           .addImm(0)            // swz
           .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  std::pair<unsigned, unsigned> SubRegIdx = getSubRegIdxs(CI, Paired);
-  const unsigned SubRegIdx0 = std::get<0>(SubRegIdx);
-  const unsigned SubRegIdx1 = std::get<1>(SubRegIdx);
+  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
 
   // Copy to the old destination registers.
   const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
@@ -1585,9 +1578,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferStorePair(
 
   const unsigned Opcode = getNewOpcode(CI, Paired);
 
-  std::pair<unsigned, unsigned> SubRegIdx = getSubRegIdxs(CI, Paired);
-  const unsigned SubRegIdx0 = std::get<0>(SubRegIdx);
-  const unsigned SubRegIdx1 = std::get<1>(SubRegIdx);
+  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
 
   // Copy to the new source register.
   const TargetRegisterClass *SuperRC = getTargetRegisterClass(CI, Paired);
@@ -1654,9 +1645,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeFlatLoadPair(
        .addImm(CI.CPol)
        .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  std::pair<unsigned, unsigned> SubRegIdx = getSubRegIdxs(CI, Paired);
-  const unsigned SubRegIdx0 = std::get<0>(SubRegIdx);
-  const unsigned SubRegIdx1 = std::get<1>(SubRegIdx);
+  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
 
   // Copy to the old destination registers.
   const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
@@ -1683,9 +1672,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeFlatStorePair(
 
   const unsigned Opcode = getNewOpcode(CI, Paired);
 
-  std::pair<unsigned, unsigned> SubRegIdx = getSubRegIdxs(CI, Paired);
-  const unsigned SubRegIdx0 = std::get<0>(SubRegIdx);
-  const unsigned SubRegIdx1 = std::get<1>(SubRegIdx);
+  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
 
   // Copy to the new source register.
   const TargetRegisterClass *SuperRC = getTargetRegisterClass(CI, Paired);
@@ -1876,7 +1863,7 @@ SILoadStoreOptimizer::getSubRegIdxs(const CombineInfo &CI,
     Idx1 = Idxs[CI.Width][Paired.Width - 1];
   }
 
-  return std::pair(Idx0, Idx1);
+  return {Idx0, Idx1};
 }
 
 const TargetRegisterClass *
@@ -1914,9 +1901,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferStorePair(
 
   const unsigned Opcode = getNewOpcode(CI, Paired);
 
-  std::pair<unsigned, unsigned> SubRegIdx = getSubRegIdxs(CI, Paired);
-  const unsigned SubRegIdx0 = std::get<0>(SubRegIdx);
-  const unsigned SubRegIdx1 = std::get<1>(SubRegIdx);
+  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
 
   // Copy to the new source register.
   const TargetRegisterClass *SuperRC = getTargetRegisterClass(CI, Paired);
@@ -2225,7 +2210,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
         MAddrNext.Base.HiSubReg != MAddr.Base.HiSubReg)
       continue;
 
-    InstsWCommonBase.push_back(std::pair(&MINext, MAddrNext.Offset));
+    InstsWCommonBase.emplace_back(&MINext, MAddrNext.Offset);
 
     int64_t Dist = MAddr.Offset - MAddrNext.Offset;
     TargetLoweringBase::AddrMode AM;
@@ -2252,16 +2237,16 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     updateBaseAndOffset(MI, Base, MAddr.Offset - AnchorAddr.Offset);
     LLVM_DEBUG(dbgs() << "  After promotion: "; MI.dump(););
 
-    for (auto P : InstsWCommonBase) {
+    for (auto [OtherMI, OtherOffset] : InstsWCommonBase) {
       TargetLoweringBase::AddrMode AM;
       AM.HasBaseReg = true;
-      AM.BaseOffs = P.second - AnchorAddr.Offset;
+      AM.BaseOffs = OtherOffset - AnchorAddr.Offset;
 
       if (TLI->isLegalGlobalAddressingMode(AM)) {
-        LLVM_DEBUG(dbgs() << "  Promote Offset(" << P.second;
-                   dbgs() << ")"; P.first->dump());
-        updateBaseAndOffset(*P.first, Base, P.second - AnchorAddr.Offset);
-        LLVM_DEBUG(dbgs() << "     After promotion: "; P.first->dump());
+        LLVM_DEBUG(dbgs() << "  Promote Offset(" << OtherOffset; dbgs() << ")";
+                   OtherMI->dump());
+        updateBaseAndOffset(*OtherMI, Base, OtherOffset - AnchorAddr.Offset);
+        LLVM_DEBUG(dbgs() << "     After promotion: "; OtherMI->dump());
       }
     }
     AnchorList.insert(AnchorInst);
@@ -2375,7 +2360,7 @@ SILoadStoreOptimizer::collectMergeableInsts(
     ++I;
   }
 
-  return std::pair(BlockI, Modified);
+  return {BlockI, Modified};
 }
 
 // Scan through looking for adjacent LDS operations with constant offsets from
