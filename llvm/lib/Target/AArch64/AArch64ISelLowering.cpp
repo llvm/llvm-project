@@ -16649,13 +16649,13 @@ bool AArch64TargetLowering::isLegalAddScalableImmediate(int64_t Imm) const {
 
   // inch|dech
   if (Imm % 8 == 0)
-    return std::labs(Imm / 8) <= 16;
+    return std::abs(Imm / 8) <= 16;
   // incw|decw
   if (Imm % 4 == 0)
-    return std::labs(Imm / 4) <= 16;
+    return std::abs(Imm / 4) <= 16;
   // incd|decd
   if (Imm % 2 == 0)
-    return std::labs(Imm / 2) <= 16;
+    return std::abs(Imm / 2) <= 16;
 
   return false;
 }
