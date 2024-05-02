@@ -129,6 +129,7 @@ DECLARE_REAL(char*, strchr, const char *str, int c)
 DECLARE_REAL(SIZE_T, strlen, const char *s)
 DECLARE_REAL(char*, strncpy, char *to, const char *from, uptr size)
 DECLARE_REAL(uptr, strnlen, const char *s, uptr maxlen)
+DECLARE_REAL(uptr, wcsnlen, const wchar_t *s, uptr maxlen)
 DECLARE_REAL(char*, strstr, const char *s1, const char *s2)
 
 #  if !SANITIZER_APPLE
