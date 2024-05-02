@@ -137,7 +137,10 @@ def TestTileAllocation
   let options = [
     Option<"dumpTileLiveRanges", "dump-tile-live-ranges",
            "bool", /*default=*/"false",
-           "Dump the live ranges of SME tiles (for debugging)">
+           "Dump the live ranges of SME tiles (for debugging)">,
+    Option<"tileCopiesOnly", "tile-copies-only", "bool", /*default=*/"false",
+           "Only insert tile copies needed for tile allocation "
+           "(but do not allocate any tiles)">
   ];
   let dependentDialects = ["func::FuncDialect", "arm_sme::ArmSMEDialect"];
 }

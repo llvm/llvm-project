@@ -575,7 +575,12 @@ struct TestTileAllocationPass
     : public arm_sme::impl::TestTileAllocationBase<TestTileAllocationPass> {
   using TestTileAllocationBase::TestTileAllocationBase;
   void runOnOperation() override {
-    if (failed(arm_sme::allocateSMETiles(getOperation(), dumpTileLiveRanges)))
+    FunctionOpInterface function = getOperation();
+    if (tileCopiesOnly) {
+      IRRewriter rewriter(function);
+      return insertCopiesAtBranches(rewriter, function);
+    }
+    if (failed(arm_sme::allocateSMETiles(function, dumpTileLiveRanges)))
       signalPassFailure();
   }
 };

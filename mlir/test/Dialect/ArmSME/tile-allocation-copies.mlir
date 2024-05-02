@@ -1,0 +1,82 @@
+// RUN: mlir-opt %s -test-arm-sme-tile-allocation=tile-copies-only -split-input-file | FileCheck %s
+
+// This file tests the inserting copies for the SME tile allocation. Copies are
+// inserted at `cf.br` ops (the predecessors to block arguments). Conditional
+// branches are split to prevent conflicts (see cond_br_with_backedge).
+
+// CHECK-LABEL: func.func @simple_branch(
+//  CHECK-SAME:   %[[TILE:.*]]: vector<[4]x[4]xf32>)
+//   %[[COPY:.*]] = arm_sme.copy_tile %[[TILE]] : vector<[4]x[4]xf32>
+//   cf.br ^bb1(%[[COPY]] : vector<[4]x[4]xf32>)
+// ^bb1(%[[BLOCK_ARG:.*]]: vector<[4]x[4]xf32>):
+
+func.func @simple_branch(%tile : vector<[4]x[4]xf32>) {
+  cf.br ^bb1(%tile: vector<[4]x[4]xf32>)
+^bb1(%blockArg: vector<[4]x[4]xf32>):
+  return
+}
+
+// -----
+
+// Note: The ^POINTLESS_SHIM_FOR_BB2 block is added as the cond_br splitting does
+// not check if it needs to insert a copy or not (there is no harm in the empty
+// block though -- it will fold away later).
+
+// CHECK-LABEL: func.func @cond_branch(
+//  CHECK-SAME:   %[[COND:.*]]: i1, %[[TILE:.*]]: vector<[4]x[4]xf32>
+//       CHECK:   cf.cond_br %[[COND]], ^[[BB1_COPIES:[[:alnum:]]+]], ^[[POINTLESS_SHIM_FOR_BB2:[[:alnum:]]+]]
+//       CHECK: ^[[POINTLESS_SHIM_FOR_BB2]]:
+//       CHECK:   cf.br ^[[BB2:.*]]
+//       CHECK: ^[[BB1_COPIES]]:
+//       CHECK:   arm_sme.copy_tile %[[TILE]] : vector<[4]x[4]xf32>
+//       CHECK:   cf.br ^[[BB1:.*]]
+func.func @cond_branch(%cond: i1, %tile: vector<[4]x[4]xf32>) {
+  cf.cond_br %cond, ^bb1(%tile: vector<[4]x[4]xf32>), ^bb2
+^bb1(%blockArg: vector<[4]x[4]xf32>):
+  return
+^bb2:
+  return
+}
+
+// -----
+
+// Reduction of a real world example that shows why we must split conditional branches.
+
+// CHECK-LABEL: @cond_branch_with_backedge(
+//  CHECK-SAME:    %{{[[:alnum:]]+}}: vector<[4]x[4]xf32>, %[[TILEB:[[:alnum:]]+]]: vector<[4]x[4]xf32>,
+//  CHECK-SAME:    %[[TILEC:[[:alnum:]]+]]: vector<[4]x[4]xf32>, %[[TILED:[[:alnum:]]+]]: vector<[4]x[4]xf32>,
+//       CHECK: ^bb1(%[[CURRENT_INDEX:.*]]: index, %[[ITER_TILE:.*]]: vector<[4]x[4]xf32>):
+//       CHECK:   %[[CONTINUE_LOOP:.*]] = arith.cmpi
+//       CHECK:   cf.cond_br %[[CONTINUE_LOOP]], ^[[BB2:[[:alnum:]]+]], ^[[BB3_COPIES:[[:alnum:]]+]]
+//       CHECK: ^[[BB3_COPIES]]:
+//  CHECK-NEXT:   arm_sme.copy_tile %[[ITER_TILE]] : vector<[4]x[4]xf32>
+//  CHECK-NEXT:   arm_sme.copy_tile %[[TILEB]] : vector<[4]x[4]xf32>
+//  CHECK-NEXT:   arm_sme.copy_tile %[[TILEC]] : vector<[4]x[4]xf32>
+//  CHECK-NEXT:   arm_sme.copy_tile %[[TILED]] : vector<[4]x[4]xf32>
+//  CHECK-NEXT:   cf.br ^[[BB3:[[:alnum:]]+]]
+//       CHECK: ^[[BB3]](%{{.*}}: vector<[4]x[4]xf32>):
+//  CHECK-NEXT:   return
+
+func.func @cond_branch_with_backedge(%tileA: vector<[4]x[4]xf32>, %tileB: vector<[4]x[4]xf32>, %tileC: vector<[4]x[4]xf32>, %tileD: vector<[4]x[4]xf32>, %slice: vector<[4]xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  // Live here: %tileA, %tileB, %tileC, %tileD
+  cf.br ^bb1(%c0, %tileA : index, vector<[4]x[4]xf32>)
+^bb1(%currentIndex: index, %iterTile: vector<[4]x[4]xf32>):
+  %continueLoop = arith.cmpi slt, %currentIndex, %c10 : index
+  // Live here: %iterTile, %tileB, %tileC, %tileD
+  // %iterTile dies at the `cf.cond_br`, but %tileB, %tileC, %tileD are live out (in the ^bb2 case).
+  // If we inserted the (four) `arm_sme.copy_tile` operations here we would run out of tiles.
+  // However, note that the copies are only needed if we take the ^bb3 path. So, if we add
+  // a new block along that path we can insert the copies without any conflicts.
+  cf.cond_br %continueLoop, ^bb2, ^bb3(%iterTile, %tileB, %tileC, %tileD : vector<[4]x[4]xf32>, vector<[4]x[4]xf32>, vector<[4]x[4]xf32>, vector<[4]x[4]xf32>)
+^bb2:
+  // Live here: %iterTile, %tileB, %tileC, %tileD
+  %nextTile = arm_sme.move_vector_to_tile_slice %slice, %iterTile, %currentIndex : vector<[4]xf32> into vector<[4]x[4]xf32>
+  %nextIndex = arith.addi %currentIndex, %c1 : index
+  cf.br ^bb1(%nextIndex, %nextTile : index, vector<[4]x[4]xf32>)
+^bb3(%finalTileA: vector<[4]x[4]xf32>, %finalTileB: vector<[4]x[4]xf32>, %finalTileC: vector<[4]x[4]xf32>, %finalTileD: vector<[4]x[4]xf32>):
+  // Live here: %finalTileA, %finalTileB, %finalTileC, %finalTileD
+  return
+}
