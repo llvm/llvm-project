@@ -773,9 +773,13 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
 
 bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
                               uint64_t Mispreds) {
+  bool IsReturn = false;
   auto handleAddress = [&](uint64_t &Addr, bool IsFrom) -> BinaryFunction * {
     if (BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr)) {
       Addr -= Func->getAddress();
+      if (Func->hasInstructions())
+        if (const MCInst *Inst = Func->getInstructionAtOffset(Addr))
+          IsReturn = BC->MIB->isReturn(*Inst);
 
       if (BAT)
         Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
@@ -792,6 +796,9 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
   };
 
   BinaryFunction *FromFunc = handleAddress(From, /*IsFrom=*/true);
+  // Ignore returns.
+  if (IsReturn)
+    return true;
   BinaryFunction *ToFunc = handleAddress(To, /*IsFrom=*/false);
   if (!FromFunc && !ToFunc)
     return false;
