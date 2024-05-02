@@ -104,8 +104,7 @@ void StorageLayout::foreachField(
         callback) const {
   const auto lvlTypes = enc.getLvlTypes();
   const Level lvlRank = enc.getLvlRank();
-  SmallVector<SparseTensorEncodingAttr::COOSegment> cooSegs =
-      enc.getCOOSegments();
+  SmallVector<COOSegment> cooSegs = enc.getCOOSegments();
   FieldIndex fieldIdx = kDataFieldStartingIdx;
 
   ArrayRef cooSegsRef = cooSegs;
@@ -951,7 +950,7 @@ Level mlir::sparse_tensor::SparseTensorEncodingAttr::getAoSCOOStart() const {
   return getLvlRank();
 }
 
-SmallVector<SparseTensorEncodingAttr::COOSegment>
+SmallVector<COOSegment>
 mlir::sparse_tensor::SparseTensorEncodingAttr::getCOOSegments() const {
   SmallVector<COOSegment> ret;
   if (getLvlRank() <= 1)

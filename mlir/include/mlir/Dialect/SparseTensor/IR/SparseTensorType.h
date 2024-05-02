@@ -356,7 +356,7 @@ public:
   RankedTensorType getCOOType(bool ordered) const;
 
   /// Returns a list of COO segments in the sparse tensor types.
-  SmallVector<SparseTensorEncodingAttr::COOSegment> getCOOSegments() const {
+  SmallVector<COOSegment> getCOOSegments() const {
     return getEncoding().getCOOSegments();
   }
 
