@@ -34,7 +34,6 @@ EvalEmitter::~EvalEmitter() {
 
 EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
                                             bool ConvertResultToRValue) {
-  S.setEvalLocation(E->getExprLoc());
   this->ConvertResultToRValue = ConvertResultToRValue;
   EvalResult.setSource(E);
 
