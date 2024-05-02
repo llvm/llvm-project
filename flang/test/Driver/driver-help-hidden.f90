@@ -143,6 +143,7 @@
 ! CHECK-NEXT: -o <file>               Write output to <file>
 ! CHECK-NEXT: -pedantic               Warn on language extensions
 ! CHECK-NEXT: -print-effective-triple Print the effective target triple
+! CHECK-NEXT: -print-resource-dir     Print the resource directory pathname
 ! CHECK-NEXT: -print-target-triple    Print the normalized target triple
 ! CHECK-NEXT: -pthread                Support POSIX threads in generated code
 ! CHECK-NEXT: -P                      Disable linemarker output in -E mode
