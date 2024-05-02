@@ -50,7 +50,15 @@ namespace {
 
 class AMDGPUAsmParser;
 
-enum RegisterKind { IS_UNKNOWN, IS_VGPR, IS_SGPR, IS_AGPR, IS_TTMP, IS_SPECIAL };
+enum RegisterKind {
+  IS_UNKNOWN,
+  IS_VGPR,
+  IS_SGPR,
+  IS_AGPR,
+  IS_TTMP,
+  IS_IDX_REG,
+  IS_SPECIAL
+};
 
 //===----------------------------------------------------------------------===//
 // Operand
@@ -2731,6 +2739,8 @@ static int getRegClass(RegisterKind Is, unsigned RegWidth) {
       case 1024:
         return AMDGPU::AReg_1024RegClassID;
     }
+  } else if (Is == IS_IDX_REG) {
+    return AMDGPU::IDX_REG_32RegClassID;
   }
   return -1;
 }
@@ -2865,18 +2875,13 @@ struct RegInfo {
 };
 
 static constexpr RegInfo RegularRegisters[] = {
-  {{"v"},    IS_VGPR},
-  {{"s"},    IS_SGPR},
-  {{"ttmp"}, IS_TTMP},
-  {{"acc"},  IS_AGPR},
-  {{"a"},    IS_AGPR},
+    {{"v"}, IS_VGPR},   {{"s"}, IS_SGPR}, {{"ttmp"}, IS_TTMP},
+    {{"acc"}, IS_AGPR}, {{"a"}, IS_AGPR}, {{"idx"}, IS_IDX_REG},
 };
 
 static bool isRegularReg(RegisterKind Kind) {
-  return Kind == IS_VGPR ||
-         Kind == IS_SGPR ||
-         Kind == IS_TTMP ||
-         Kind == IS_AGPR;
+  return Kind == IS_VGPR || Kind == IS_SGPR || Kind == IS_TTMP ||
+         Kind == IS_AGPR || Kind == IS_IDX_REG;
 }
 
 static const RegInfo* getRegularRegInfo(StringRef Str) {

@@ -188,6 +188,10 @@ def PRIVATE_RSRC_REG : SIReg<"private_rsrc", 0>;
 def FP_REG : SIReg<"fp", 0>;
 def SP_REG : SIReg<"sp", 0>;
 
+foreach Index = 0...3 in {
+  def IDX#Index : SIReg<"idx"#Index, Index>;
+}
+
 // Pseudo-register to represent the program-counter DWARF register.
 def PC_REG : SIReg<"pc", 0>, DwarfRegNum<[16, 16]> {
   // There is no physical register corresponding to a "program counter", but
@@ -457,6 +461,13 @@ def SGPR_512Regs : SIRegisterTuples<getSubRegs<16>.ret, SGPR_32, 105, 4, 16, "s"
 
 // SGPR 1024-bit registers
 def SGPR_1024Regs : SIRegisterTuples<getSubRegs<32>.ret, SGPR_32, 105, 4, 32, "s">;
+
+// GPR-Indexing registers
+def IDX_REG_32 : SIRegisterClass<"AMDGPU", [i32], 32,
+                            (add (sequence "IDX%u", 0, 3))> {
+  let isAllocatable = 0;
+  let DecoderMethod = "decodeOperand_IDX_REG";
+}
 
 // Trap handler TMP 32-bit registers
 def TTMP_32 : SIRegisterClass<"AMDGPU", [i32, f32, v2i16, v2f16, v2bf16], 32,

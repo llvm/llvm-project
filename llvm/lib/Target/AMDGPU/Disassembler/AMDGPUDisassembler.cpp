@@ -423,6 +423,15 @@ static DecodeStatus decodeOperand_VSrc_f64(MCInst &Inst, unsigned Imm,
                                       AMDGPU::OperandSemantics::FP64));
 }
 
+static DecodeStatus decodeOperand_IDX_REG(MCInst &Inst, unsigned Imm,
+                                          uint64_t Addr,
+                                          const MCDisassembler *Decoder) {
+  assert(Imm < (1 << 7) && "7-bit encoding");
+  auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(Inst,
+                    DAsm->createRegOperand(AMDGPU::IDX_REG_32RegClassID, Imm));
+}
+
 #define DECODE_SDWA(DecName) \
 DECODE_OPERAND(decodeSDWA##DecName, decodeSDWA##DecName)
 

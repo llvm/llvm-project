@@ -89,6 +89,11 @@ class SOP1_32R <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
   opName, (outs SReg_32:$sdst), (ins SReg_32:$src0),
   "$sdst, $src0", pattern>;
 
+// IDX_REG output and SReg_32 input
+class SOP1_IDX_32R <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
+  opName, (outs IDX_REG_32:$sdst), (ins SReg_32:$src0),
+  "$sdst, $src0", pattern>;
+
 // 32-bit input, no output.
 class SOP1_0_32 <string opName, list<dag> pattern = []> : SOP1_Pseudo <
   opName, (outs), (ins SSrc_b32:$src0),
@@ -580,8 +585,12 @@ def S_GET_BARRIER_STATE_M0 : SOP1_Pseudo <"s_get_barrier_state $sdst, m0", (outs
 }
 } // End hasSideEffects = 1
 
-let SubtargetPredicate = isGFX13Plus in
-def S_GET_SHADER_CYCLES_U64 : SOP1_64_0  <"s_get_shader_cycles_u64">;
+let SubtargetPredicate = isGFX13Plus in {
+  def S_GET_SHADER_CYCLES_U64 : SOP1_64_0<"s_get_shader_cycles_u64">;
+  let hasSideEffects = 1 in {
+    def S_SET_GPR_IDX_U32 : SOP1_IDX_32R<"s_set_gpr_idx_u32">;
+  }
+} // End SubtargetPredicate = isGFX13Plus
 
 //===----------------------------------------------------------------------===//
 // SOP2 Instructions
@@ -2077,6 +2086,7 @@ multiclass SOP1_Real_gfx13<bits<8> op, string name = !tolower(NAME)> {
 }
 
 defm S_GET_SHADER_CYCLES_U64 : SOP1_Real_gfx13<0x11>;
+defm S_SET_GPR_IDX_U32 : SOP1_Real_gfx13<0x6f>;
 
 //===----------------------------------------------------------------------===//
 //  SOP1 - GFX11, GFX12

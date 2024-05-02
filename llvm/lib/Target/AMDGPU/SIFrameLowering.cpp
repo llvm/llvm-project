@@ -849,7 +849,7 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     auto ScratchPerLane = ST.getMaxWaveScratchSize() / WaveLen;
     auto PerWaveScratch =
         (ScratchPerLane - WaveScratchStart) / NumWavesInWaveGroup;
-    PerWaveScratch = (PerWaveScratch / AlignUnit.value()) * AlignUnit.value();
+    PerWaveScratch = alignDown(PerWaveScratch, AlignUnit.value());
     Register FPReg = MFI->getFrameOffsetReg();
     assert(FPReg != AMDGPU::FP_REG);
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_GETREG_B32), FPReg)
