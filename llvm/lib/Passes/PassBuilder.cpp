@@ -93,6 +93,7 @@
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/SafeStack.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
