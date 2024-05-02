@@ -186,7 +186,6 @@ cc_binary(
 py_binary(
     name = "generate-sbapi-dwarf-enum",
     srcs = ["scripts/generate-sbapi-dwarf-enum.py"],
-    # main = "scripts/generate-sbapi-dwarf-enum.py",
 )
 
 genrule(
