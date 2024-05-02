@@ -1648,8 +1648,10 @@ public:
   void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr) {
     if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
         !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
-        !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile))
+        !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile)) {
+      auto AL = ApplyDebugLocation::CreateArtificial(*this);
       PGO.emitCounterSetOrIncrement(Builder, S, StepV);
+    }
     PGO.setCurrentStmt(S);
   }
 
