@@ -173,6 +173,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/assert-side-effect>` check by detecting side
   effect from calling a method with non-const reference parameters.
 
+- Improved :doc:`bugprone-casting-through-void
+  <clang-tidy/checks/bugprone/casting-through-void>` check by ignoring casts
+  where source is already a ``void``` pointer, making middle ``void`` pointer
+  casts bug-free.
+
 - Improved :doc:`bugprone-forwarding-reference-overload
   <clang-tidy/checks/bugprone/forwarding-reference-overload>`
   check to ignore deleted constructors which won't hide other overloads.
