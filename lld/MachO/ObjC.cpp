@@ -21,6 +21,8 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Support/TimeProfiler.h"
 
+#include <unordered_set>
+
 using namespace llvm;
 using namespace llvm::MachO;
 using namespace lld;
@@ -420,6 +422,7 @@ private:
   mergeCategoriesIntoSingleCategory(std::vector<InfoInputCategory> &categories);
 
   void eraseISec(ConcatInputSection *isec);
+  void removeRefsToErasedIsecs(std::unordered_set<InputSection *> erasedIsecs);
   void eraseMergedCategories();
 
   void generateCatListForNonErasedCategories(
@@ -460,7 +463,9 @@ private:
   Defined *tryGetDefinedAtIsecOffset(const ConcatInputSection *isec,
                                      uint32_t offset);
   void tryEraseDefinedAtIsecOffset(const ConcatInputSection *isec,
-                                   uint32_t offset);
+                                   uint32_t offset,
+                                   std::unordered_set<InputSection *> &erased);
+  void eraseSymbolAtIsecOffset(ConcatInputSection *isec, uint32_t offset);
 
   // Allocate a null-terminated StringRef backed by generatedSectionData
   StringRef newStringData(const char *str);
@@ -518,6 +523,8 @@ void ObjcCategoryMerger::collectSectionWriteInfoFromIsec(
 Symbol *
 ObjcCategoryMerger::tryGetSymbolAtIsecOffset(const ConcatInputSection *isec,
                                              uint32_t offset) {
+  if (!isec)
+    return nullptr;
   const Reloc *reloc = isec->getRelocAt(offset);
 
   if (!reloc)
@@ -536,7 +543,8 @@ ObjcCategoryMerger::tryGetDefinedAtIsecOffset(const ConcatInputSection *isec,
 // Given an ConcatInputSection or CStringInputSection and an offset, if there is
 // a symbol(Defined) at that offset, then erase the symbol (mark it not live)
 void ObjcCategoryMerger::tryEraseDefinedAtIsecOffset(
-    const ConcatInputSection *isec, uint32_t offset) {
+    const ConcatInputSection *isec, uint32_t offset,
+    std::unordered_set<InputSection *> &erased) {
   const Reloc *reloc = isec->getRelocAt(offset);
 
   if (!reloc)
@@ -546,9 +554,11 @@ void ObjcCategoryMerger::tryEraseDefinedAtIsecOffset(
   if (!sym)
     return;
 
-  if (auto *cisec = dyn_cast_or_null<ConcatInputSection>(sym->isec()))
+  if (auto *cisec = dyn_cast_or_null<ConcatInputSection>(sym->isec())) {
     eraseISec(cisec);
-  else if (auto *csisec = dyn_cast_or_null<CStringInputSection>(sym->isec())) {
+    erased.insert(cisec);
+  } else if (auto *csisec =
+                 dyn_cast_or_null<CStringInputSection>(sym->isec())) {
     uint32_t totalOffset = sym->value + reloc->addend;
     StringPiece &piece = csisec->getStringPiece(totalOffset);
     piece.live = false;
@@ -1168,25 +1178,65 @@ void ObjcCategoryMerger::eraseMergedCategories() {
   // the references to the ones we merged.
   generateCatListForNonErasedCategories(catListToErasedOffsets);
 
+  // We use erasedIsecs below to track erased sections so we can later remove
+  // references to it.
+  std::unordered_set<InputSection *> erasedIsecs;
+  erasedIsecs.reserve(categoryMap.size());
+
   // Erase the old method lists & names of the categories that were merged
   for (auto &mapEntry : categoryMap) {
     for (InfoInputCategory &catInfo : mapEntry.second) {
       if (!catInfo.wasMerged)
         continue;
 
+      erasedIsecs.insert(catInfo.catBodyIsec);
+      erasedIsecs.insert(catInfo.catListIsec);
+
       eraseISec(catInfo.catBodyIsec);
-      tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec, catLayout.nameOffset);
+      tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec, catLayout.nameOffset,
+                                  erasedIsecs);
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
-                                  catLayout.instanceMethodsOffset);
+                                  catLayout.instanceMethodsOffset, erasedIsecs);
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
-                                  catLayout.classMethodsOffset);
+                                  catLayout.classMethodsOffset, erasedIsecs);
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
-                                  catLayout.protocolsOffset);
+                                  catLayout.protocolsOffset, erasedIsecs);
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
-                                  catLayout.classPropsOffset);
+                                  catLayout.classPropsOffset, erasedIsecs);
       tryEraseDefinedAtIsecOffset(catInfo.catBodyIsec,
-                                  catLayout.instancePropsOffset);
+                                  catLayout.instancePropsOffset, erasedIsecs);
     }
+  }
+
+  removeRefsToErasedIsecs(erasedIsecs);
+}
+
+// The compiler may generate references to categories inside the addrsig
+// section. This function will erase these references.
+void ObjcCategoryMerger::removeRefsToErasedIsecs(
+    std::unordered_set<InputSection *> erasedIsecs) {
+  for (InputSection *isec : inputSections) {
+    if (isec->getName() != section_names::addrSig)
+      continue;
+
+    auto removeRelocs = [&erasedIsecs](Reloc &r) {
+      ConcatInputSection *isec = nullptr;
+      isec = dyn_cast_or_null<ConcatInputSection>(
+          r.referent.dyn_cast<InputSection *>());
+      if (!isec) {
+        Defined *sym =
+            dyn_cast_or_null<Defined>(r.referent.dyn_cast<Symbol *>());
+        if (sym)
+          isec = dyn_cast<ConcatInputSection>(sym->isec());
+      }
+      if (!isec)
+        return false;
+      return erasedIsecs.count(isec) > 0;
+    };
+
+    isec->relocs.erase(
+        std::remove_if(isec->relocs.begin(), isec->relocs.end(), removeRelocs),
+        isec->relocs.end());
   }
 }
 
