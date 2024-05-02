@@ -32,8 +32,8 @@
 
 #include "mlir/Dialect/OpenMP/Passes.h"
 
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/Debug.h"
@@ -74,9 +74,11 @@ public:
     // mlir::BoolAttr F = rewriter.getBoolAttr(false);
     omp::TaskOp taskOp = rewriter.create<omp::TaskOp>(
         op.getLoc(),
-        /*if_expr*/ op.getNowait() ?
-        rewriter.create<mlir::arith::ConstantOp>(op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1))
-        : rewriter.create<mlir::arith::ConstantOp>(op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 0)),
+        /*if_expr*/ op.getNowait()
+            ? rewriter.create<mlir::arith::ConstantOp>(
+                  op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1))
+            : rewriter.create<mlir::arith::ConstantOp>(
+                  op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 0)),
         /*final_expr*/ Value(),
         /*untied*/ UnitAttr(),
         /*mergeable*/ UnitAttr(),
