@@ -13,7 +13,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
@@ -23,6 +22,7 @@
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
+#include <clang/Analysis/FlowSensitive/AdornedCFG.h>
 #include <memory>
 #include <vector>
 
@@ -44,7 +44,7 @@ using ExpandedResultType =
 
 static std::optional<ExpandedResultType>
 analyzeFunction(const FunctionDecl &FuncDecl) {
-  using dataflow::ControlFlowContext;
+  using dataflow::AdornedCFG;
   using dataflow::DataflowAnalysisState;
   using llvm::Expected;
 
@@ -54,8 +54,8 @@ analyzeFunction(const FunctionDecl &FuncDecl) {
     return std::nullopt;
   }
 
-  Expected<ControlFlowContext> Context =
-      ControlFlowContext::build(FuncDecl, *FuncDecl.getBody(), ASTCtx);
+  Expected<AdornedCFG> Context =
+      AdornedCFG::build(FuncDecl, *FuncDecl.getBody(), ASTCtx);
   if (!Context)
     return std::nullopt;
 
@@ -74,7 +74,7 @@ analyzeFunction(const FunctionDecl &FuncDecl) {
                                       const State &S) mutable -> void {
     auto EltDiagnostics = Diagnoser.diagnose(ASTCtx, &Elt, S.Env);
     llvm::move(EltDiagnostics.first, std::back_inserter(Diagnostics.first));
-    llvm::move(EltDiagnostics.second, std::back_inserter(Diagnostics.second));
+    llvm::move(EltDiagnostics.second, std::back_inserter(Diagnostics.second)); 
   };
 
   Expected<DetailMaybeStates> BlockToOutputState =
