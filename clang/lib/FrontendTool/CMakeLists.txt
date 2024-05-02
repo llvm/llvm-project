@@ -12,6 +12,14 @@ set(link_libs
   clangRewriteFrontend
   )
 
+set(deps)
+
+if(CLANG_ENABLE_CIR)
+  list(APPEND link_libs
+    clangCIRFrontendAction
+    )
+endif()
+
 if(CLANG_ENABLE_ARCMT)
   list(APPEND link_libs
     clangARCMigrate
@@ -29,6 +37,7 @@ add_clang_library(clangFrontendTool
 
   DEPENDS
   ClangDriverOptions
+  ${deps}
 
   LINK_LIBS
   ${link_libs}
