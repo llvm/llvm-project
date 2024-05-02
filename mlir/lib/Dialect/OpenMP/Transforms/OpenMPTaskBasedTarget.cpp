@@ -33,6 +33,7 @@
 #include "mlir/Dialect/OpenMP/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/Debug.h"
@@ -68,8 +69,14 @@ public:
 
     // Step 1: Create a new task op and tack on the dependency from the 'depend'
     // clause on it.
+    Type i1Ty = rewriter.getI1Type();
+    // mlir::BoolAttr T = rewriter.getBoolAttr(true);
+    // mlir::BoolAttr F = rewriter.getBoolAttr(false);
     omp::TaskOp taskOp = rewriter.create<omp::TaskOp>(
-        op.getLoc(), /*if_expr*/ Value(),
+        op.getLoc(),
+        /*if_expr*/ op.getNowait() ?
+        rewriter.create<mlir::arith::ConstantOp>(op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1))
+        : rewriter.create<mlir::arith::ConstantOp>(op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 0)),
         /*final_expr*/ Value(),
         /*untied*/ UnitAttr(),
         /*mergeable*/ UnitAttr(),
@@ -100,9 +107,9 @@ public:
 static void
 populateOmpTaskBasedTargetRewritePatterns(RewritePatternSet &patterns) {
   patterns.add<OmpTaskBasedTargetRewritePattern<omp::TargetOp>,
-               OmpTaskBasedTargetRewritePattern<omp::EnterDataOp>,
-               OmpTaskBasedTargetRewritePattern<omp::UpdateDataOp>,
-               OmpTaskBasedTargetRewritePattern<omp::ExitDataOp>>(
+               OmpTaskBasedTargetRewritePattern<omp::TargetEnterDataOp>,
+               OmpTaskBasedTargetRewritePattern<omp::TargetUpdateOp>,
+               OmpTaskBasedTargetRewritePattern<omp::TargetExitDataOp>>(
       patterns.getContext());
 }
 

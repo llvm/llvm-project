@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIROpenMPTransforms
 
   LINK_LIBS PUBLIC
   MLIROpenMPDialect
+  MLIRArithDialect
   MLIRFuncDialect
   MLIRIR
   MLIRPass
