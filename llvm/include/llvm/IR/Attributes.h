@@ -224,7 +224,7 @@ public:
 
   /// Return the attribute's value as a ConstantRange. This requires the
   /// attribute to be a ConstantRange attribute.
-  ConstantRange getValueAsConstantRange() const;
+  const ConstantRange &getValueAsConstantRange() const;
 
   /// Returns the alignment field of an attribute as a byte alignment
   /// value.
@@ -265,7 +265,7 @@ public:
   FPClassTest getNoFPClass() const;
 
   /// Returns the value of the range attribute.
-  ConstantRange getRange() const;
+  const ConstantRange &getRange() const;
 
   /// The Attribute is converted to a string of equivalent mnemonic. This
   /// is, presumably, for writing out the mnemonics for the assembly writer.
