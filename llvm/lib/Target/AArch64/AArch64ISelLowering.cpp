@@ -15979,7 +15979,8 @@ bool AArch64TargetLowering::isLegalInterleavedAccessType(
 
   UseScalable = false;
 
-  if (!VecTy->isScalableTy() && !Subtarget->hasNEON())
+  if (!VecTy->isScalableTy() && !Subtarget->isNeonAvailable() &&
+      !Subtarget->useSVEForFixedLengthVectors())
     return false;
 
   if (VecTy->isScalableTy() && !Subtarget->hasSVEorSME())
@@ -16003,18 +16004,20 @@ bool AArch64TargetLowering::isLegalInterleavedAccessType(
   }
 
   unsigned VecSize = DL.getTypeSizeInBits(VecTy);
-  if (!Subtarget->isNeonAvailable() ||
-      (Subtarget->useSVEForFixedLengthVectors() &&
-       (VecSize % Subtarget->getMinSVEVectorSizeInBits() == 0 ||
-        (VecSize < Subtarget->getMinSVEVectorSizeInBits() &&
-         isPowerOf2_32(MinElts) && VecSize > 128)))) {
-    UseScalable = true;
-    return true;
+  if (Subtarget->useSVEForFixedLengthVectors()) {
+    unsigned MinSVEVectorSize =
+        std::max(Subtarget->getMinSVEVectorSizeInBits(), 128u);
+    if (VecSize % MinSVEVectorSize == 0 ||
+        (VecSize < MinSVEVectorSize && isPowerOf2_32(MinElts) &&
+         (!Subtarget->isNeonAvailable() || VecSize > 128))) {
+      UseScalable = true;
+      return true;
+    }
   }
 
   // Ensure the total vector size is 64 or a multiple of 128. Types larger than
   // 128 will be split into multiple interleaved accesses.
-  return VecSize == 64 || VecSize % 128 == 0;
+  return Subtarget->isNeonAvailable() && (VecSize == 64 || VecSize % 128 == 0);
 }
 
 static ScalableVectorType *getSVEContainerIRType(FixedVectorType *VTy) {
@@ -16105,8 +16108,7 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   // "legalize" wide vector types into multiple interleaved accesses as long as
   // the vector types are divisible by 128.
   bool UseScalable;
-  if (!Subtarget->hasNEON() ||
-      !isLegalInterleavedAccessType(VTy, DL, UseScalable))
+  if (!isLegalInterleavedAccessType(VTy, DL, UseScalable))
     return false;
 
   unsigned NumLoads = getNumInterleavedAccesses(VTy, DL, UseScalable);
@@ -16283,8 +16285,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
   // Skip if we do not have NEON and skip illegal vector types. We can
   // "legalize" wide vector types into multiple interleaved accesses as long as
   // the vector types are divisible by 128.
-  if (!Subtarget->hasNEON() ||
-      !isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
+  if (!isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
     return false;
 
   unsigned NumStores = getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
