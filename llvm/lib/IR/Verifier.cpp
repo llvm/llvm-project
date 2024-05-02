@@ -2141,7 +2141,8 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
           "Invalid value for 'nofpclass' test mask", V);
   }
   if (Attrs.hasAttribute(Attribute::Range)) {
-    auto CR = Attrs.getAttribute(Attribute::Range).getValueAsConstantRange();
+    const ConstantRange &CR =
+        Attrs.getAttribute(Attribute::Range).getValueAsConstantRange();
     Check(Ty->isIntOrIntVectorTy(CR.getBitWidth()),
           "Range bit width must match type bit width!", V);
   }
