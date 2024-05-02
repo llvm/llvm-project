@@ -179,11 +179,14 @@ LLVMTypeRef LLVMGetTypeAttributeValue(LLVMAttributeRef A) {
   return wrap(Attr.getValueAsType());
 }
 
-LLVMAttributeRef LLVMCreateConstantRangeAttribute(
-    LLVMContextRef C, unsigned KindID, unsigned NumBits, unsigned NumWords,
-    const uint64_t LowerWords[], const uint64_t UpperWords[]) {
+LLVMAttributeRef LLVMCreateConstantRangeAttribute(LLVMContextRef C,
+                                                  unsigned KindID,
+                                                  unsigned NumBits,
+                                                  const uint64_t LowerWords[],
+                                                  const uint64_t UpperWords[]) {
   auto &Ctx = *unwrap(C);
   auto AttrKind = (Attribute::AttrKind)KindID;
+  unsigned NumWords = (NumBits + 63) / 64;
   return wrap(Attribute::get(
       Ctx, AttrKind,
       ConstantRange(APInt(NumBits, ArrayRef(LowerWords, NumWords)),

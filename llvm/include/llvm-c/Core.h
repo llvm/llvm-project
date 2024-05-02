@@ -675,10 +675,15 @@ LLVMTypeRef LLVMGetTypeAttributeValue(LLVMAttributeRef A);
 
 /**
  * Create a ConstantRange attribute.
+ *
+ * LowerWords and UpperWords needs to be NumBits devided by 64 runded up
+ * elements long.
  */
-LLVMAttributeRef LLVMCreateConstantRangeAttribute(
-    LLVMContextRef C, unsigned KindID, unsigned NumBits, unsigned NumWords,
-    const uint64_t LowerWords[], const uint64_t UpperWords[]);
+LLVMAttributeRef LLVMCreateConstantRangeAttribute(LLVMContextRef C,
+                                                  unsigned KindID,
+                                                  unsigned NumBits,
+                                                  const uint64_t LowerWords[],
+                                                  const uint64_t UpperWords[]);
 
 /**
  * Create a string attribute.
