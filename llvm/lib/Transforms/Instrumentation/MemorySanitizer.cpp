@@ -4459,7 +4459,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     NextNodeIRBuilder IRB(InsPoint);
     const DataLayout &DL = F.getParent()->getDataLayout();
     TypeSize TS = DL.getTypeAllocSize(I.getAllocatedType());
-    Value *Len = IRB.CreateTypeSize(IRB.getInt32Ty(), TS);
+    Value *Len = IRB.CreateTypeSize(MS.IntptrTy, TS);
     if (I.isArrayAllocation())
       Len = IRB.CreateMul(Len,
                           IRB.CreateZExtOrTrunc(I.getArraySize(), MS.IntptrTy));

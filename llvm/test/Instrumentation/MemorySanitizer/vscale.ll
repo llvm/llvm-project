@@ -190,12 +190,12 @@ define void @test_alloca1() sanitize_memory {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[X:%.*]] = alloca <vscale x 64 x i1>, align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[X]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 4 [[TMP4]], i8 -1, i32 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP4]], i8 -1, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -209,12 +209,12 @@ define void @test_alloca2() sanitize_memory {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[X:%.*]] = alloca <vscale x 64 x double>, align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[TMP0]], 512
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 512
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[X]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 4 [[TMP4]], i8 -1, i32 [[TMP1]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP4]], i8 -1, i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -228,11 +228,11 @@ define void @test_alloca3() sanitize_memory {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[X:%.*]] = alloca <vscale x 1 x i1>, align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[X]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 87960930222080
 ; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 4 [[TMP3]], i8 -1, i32 [[TMP0]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP3]], i8 -1, i64 [[TMP0]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
