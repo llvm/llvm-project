@@ -18329,20 +18329,23 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 }
 
 void CodeGenFunction::AddAMDGCNAddressSpaceMMRA(llvm::Instruction *Inst,
-                                                const CallExpr *E, unsigned FirstASNameIdx) {
+                                                const CallExpr *E,
+                                                unsigned FirstASNameIdx) {
   constexpr const char *Tag = "opencl-fence-mem";
 
   LLVMContext &Ctx = Inst->getContext();
   SmallVector<MMRAMetadata::TagT, 3> MMRAs;
-  for(unsigned K = FirstASNameIdx; K < E->getNumArgs(); ++K) {
+  for (unsigned K = FirstASNameIdx; K < E->getNumArgs(); ++K) {
     llvm::Value *V = EmitScalarExpr(E->getArg(K));
     StringRef AS;
-    if(llvm::getConstantStringInfo(V, AS) && (AS == "local" || AS == "global" || AS == "image")) {
+    if (llvm::getConstantStringInfo(V, AS) &&
+        (AS == "local" || AS == "global" || AS == "image")) {
       MMRAs.push_back({Tag, AS});
       // TODO: Delete the resulting unused constant?
       continue;
     }
-    CGM.Error(E->getExprLoc(), "expected one of \"local\", \"global\" or \"image\"");
+    CGM.Error(E->getExprLoc(),
+              "expected one of \"local\", \"global\" or \"image\"");
   }
 
   llvm::unique(MMRAs);
@@ -19021,7 +19024,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(0)),
                             EmitScalarExpr(E->getArg(1)), AO, SSID);
     FenceInst *Fence = Builder.CreateFence(AO, SSID);
-    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_masked_fence && E->getNumArgs() > 2)
+    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_masked_fence &&
+        E->getNumArgs() > 2)
       AddAMDGCNAddressSpaceMMRA(Fence, E, 2);
     return Fence;
   }
