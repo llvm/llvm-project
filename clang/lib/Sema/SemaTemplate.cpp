@@ -10377,7 +10377,6 @@ Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
       // declarations should be undeduced at this point.
       if (!Context.hasSameType(Adjusted, Function->getType()))
         continue;
-      // FIXME: What if neither function is more constrained than the other?
       if (ConstraintSatisfaction Satisfaction;
           Method->getTrailingRequiresClause() &&
           (CheckFunctionConstraints(Method, Satisfaction,
