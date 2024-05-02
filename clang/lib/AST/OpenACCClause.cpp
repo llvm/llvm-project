@@ -144,6 +144,15 @@ OpenACCPrivateClause *OpenACCPrivateClause::Create(const ASTContext &C,
   return new (Mem) OpenACCPrivateClause(BeginLoc, LParenLoc, VarList, EndLoc);
 }
 
+OpenACCFirstPrivateClause *OpenACCFirstPrivateClause::Create(
+    const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+    ArrayRef<Expr *> VarList, SourceLocation EndLoc) {
+  void *Mem = C.Allocate(
+      OpenACCFirstPrivateClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem)
+      OpenACCFirstPrivateClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenACC clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -194,6 +203,14 @@ void OpenACCClausePrinter::VisitVectorLengthClause(
 
 void OpenACCClausePrinter::VisitPrivateClause(const OpenACCPrivateClause &C) {
   OS << "private(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitFirstPrivateClause(
+    const OpenACCFirstPrivateClause &C) {
+  OS << "firstprivate(";
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";

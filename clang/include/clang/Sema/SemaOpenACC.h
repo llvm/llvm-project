@@ -117,7 +117,8 @@ public:
     }
 
     ArrayRef<Expr *> getVarList() {
-      assert(ClauseKind == OpenACCClauseKind::Private &&
+      assert((ClauseKind == OpenACCClauseKind::Private ||
+              ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
       return std::get<VarListDetails>(Details).VarList;
     }
@@ -165,13 +166,15 @@ public:
     }
 
     void setVarListDetails(ArrayRef<Expr *> VarList) {
-      assert(ClauseKind == OpenACCClauseKind::Private &&
+      assert((ClauseKind == OpenACCClauseKind::Private ||
+              ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
       Details = VarListDetails{{VarList.begin(), VarList.end()}};
     }
 
     void setVarListDetails(llvm::SmallVector<Expr *> &&VarList) {
-      assert(ClauseKind == OpenACCClauseKind::Private &&
+      assert((ClauseKind == OpenACCClauseKind::Private ||
+              ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
       Details = VarListDetails{std::move(VarList)};
     }
