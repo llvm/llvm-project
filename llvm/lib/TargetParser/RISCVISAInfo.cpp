@@ -460,19 +460,18 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
 
     // Split Prefix into the extension name and the major version number
     // (the trailing digits of Prefix).
-    int TrailingDigits = 0;
-    StringRef ExtName = Prefix;
-    while (!ExtName.empty()) {
-      if (!isDigit(ExtName.back()))
+    size_t VersionStart = Prefix.size();
+    while (VersionStart != 0) {
+      if (!isDigit(Prefix[VersionStart - 1]))
         break;
-      ExtName = ExtName.drop_back(1);
-      TrailingDigits++;
+      --VersionStart;
     }
-    if (!TrailingDigits)
+    if (VersionStart == Prefix.size())
       return createStringError(errc::invalid_argument,
                                "extension lacks version in expected format");
 
-    StringRef MajorVersionStr = Prefix.take_back(TrailingDigits);
+    StringRef ExtName = Prefix.slice(0, VersionStart);
+    StringRef MajorVersionStr = Prefix.slice(VersionStart, StringRef::npos);
     if (MajorVersionStr.getAsInteger(10, MajorVersion))
       return createStringError(errc::invalid_argument,
                                "failed to parse major version number");
@@ -598,14 +597,14 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     XLen = 64;
   } else {
     // Try parsing as a profile.
-    const auto *FoundProfile =
-        llvm::find_if(SupportedProfiles, [Arch](const RISCVProfile &Profile) {
-          return Arch.starts_with(Profile.Name);
-        });
+    auto I = llvm::upper_bound(SupportedProfiles, Arch,
+                               [](StringRef Arch, const RISCVProfile &Profile) {
+                                 return Arch < Profile.Name;
+                               });
 
-    if (FoundProfile != std::end(SupportedProfiles)) {
-      std::string NewArch = FoundProfile->MArch.str();
-      StringRef ArchWithoutProfile = Arch.drop_front(FoundProfile->Name.size());
+    if (I != std::begin(SupportedProfiles) && Arch.starts_with((--I)->Name)) {
+      std::string NewArch = I->MArch.str();
+      StringRef ArchWithoutProfile = Arch.drop_front(I->Name.size());
       if (!ArchWithoutProfile.empty()) {
         if (ArchWithoutProfile.front() != '_')
           return createStringError(
