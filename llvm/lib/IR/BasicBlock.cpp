@@ -1009,9 +1009,9 @@ void BasicBlock::spliceDebugInfoImpl(BasicBlock::iterator Dest, BasicBlock *Src,
     // generate the iterator with begin() / getFirstInsertionPt(), it means
     // any trailing debug-info at the end of the block would "normally" have
     // been pushed in front of "First". Move it there now.
-    DbgMarker *FirstMarker = getMarker(First);
     DbgMarker *TrailingDbgRecords = getTrailingDbgRecords();
     if (TrailingDbgRecords) {
+      DbgMarker *FirstMarker = createMarker(First);
       FirstMarker->absorbDebugValues(*TrailingDbgRecords, true);
       TrailingDbgRecords->eraseFromParent();
       deleteTrailingDbgRecords();

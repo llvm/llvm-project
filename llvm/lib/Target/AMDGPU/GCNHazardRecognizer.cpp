@@ -2342,7 +2342,7 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
         case 8:
           NeedWaitStates = SMFMA16x16WritesVGPROverlappedSrcABWaitStates;
           break;
-        case 16: [[fallthrough]];
+        case 16:
         default:
           NeedWaitStates = SMFMA32x32WritesVGPROverlappedSrcABWaitStates;
         }
