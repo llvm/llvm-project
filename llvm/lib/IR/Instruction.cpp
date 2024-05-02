@@ -442,6 +442,8 @@ void Instruction::dropPoisonGeneratingFlags() {
 
   case Instruction::GetElementPtr:
     cast<GetElementPtrInst>(this)->setIsInBounds(false);
+    cast<GetElementPtrInst>(this)->setHasNoUnsignedSignedWrap(false);
+    cast<GetElementPtrInst>(this)->setHasNoUnsignedWrap(false);
     break;
 
   case Instruction::UIToFP:
@@ -658,9 +660,15 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
     if (isa<FPMathOperator>(this))
       copyFastMathFlags(FP->getFastMathFlags());
 
-  if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V))
-    if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
+  if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V)) {
+    if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this)) {
       DestGEP->setIsInBounds(SrcGEP->isInBounds() || DestGEP->isInBounds());
+      DestGEP->setHasNoUnsignedSignedWrap(SrcGEP->hasNoUnsignedSignedWrap() ||
+                                          DestGEP->hasNoUnsignedSignedWrap());
+      DestGEP->setHasNoUnsignedWrap(SrcGEP->hasNoUnsignedWrap() ||
+                                    DestGEP->hasNoUnsignedWrap());
+    }
+  }
 
   if (auto *NNI = dyn_cast<PossiblyNonNegInst>(V))
     if (isa<PossiblyNonNegInst>(this))
@@ -698,9 +706,15 @@ void Instruction::andIRFlags(const Value *V) {
     }
   }
 
-  if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V))
-    if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
+  if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V)) {
+    if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this)) {
       DestGEP->setIsInBounds(SrcGEP->isInBounds() && DestGEP->isInBounds());
+      DestGEP->setHasNoUnsignedSignedWrap(SrcGEP->hasNoUnsignedSignedWrap() &&
+                                          DestGEP->hasNoUnsignedSignedWrap());
+      DestGEP->setHasNoUnsignedWrap(SrcGEP->hasNoUnsignedWrap() &&
+                                    DestGEP->hasNoUnsignedWrap());
+    }
+  }
 
   if (auto *NNI = dyn_cast<PossiblyNonNegInst>(V))
     if (isa<PossiblyNonNegInst>(this))

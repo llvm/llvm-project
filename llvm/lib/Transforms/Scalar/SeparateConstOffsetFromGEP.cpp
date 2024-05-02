@@ -1104,6 +1104,9 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // possible. GEPs with inbounds are more friendly to alias analysis.
   bool GEPWasInBounds = GEP->isInBounds();
   GEP->setIsInBounds(false);
+  // TODO(gep_nowrap): Try to preserve these.
+  GEP->setHasNoUnsignedSignedWrap(false);
+  GEP->setHasNoUnsignedWrap(false);
 
   // Lowers a GEP to either GEPs with a single index or arithmetic operations.
   if (LowerGEP) {
@@ -1379,6 +1382,11 @@ void SeparateConstOffsetFromGEP::swapGEPOperand(GetElementPtrInst *First,
      Offset.ugt(ObjectSize)) {
     First->setIsInBounds(false);
     Second->setIsInBounds(false);
+    // TODO(gep_nowrap): Make flag preservation more precise.
+    First->setHasNoUnsignedSignedWrap(false);
+    Second->setHasNoUnsignedSignedWrap(false);
+    First->setHasNoUnsignedWrap(false);
+    Second->setHasNoUnsignedWrap(false);
   } else
     First->setIsInBounds(true);
 }

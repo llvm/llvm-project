@@ -316,3 +316,46 @@ define <2 x i32> @test_trunc_both_reversed_vector(<2 x i64> %a) {
   %res = trunc nsw nuw <2 x i64> %a to <2 x i32>
   ret <2 x i32> %res
 }
+
+define ptr @gep_nuw(ptr %p, i64 %idx) {
+; CHECK: %gep = getelementptr nuw i8, ptr %p, i64 %idx
+  %gep = getelementptr nuw i8, ptr %p, i64 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_inbounds_nuw(ptr %p, i64 %idx) {
+; CHECK: %gep = getelementptr inbounds nuw i8, ptr %p, i64 %idx
+  %gep = getelementptr inbounds nuw i8, ptr %p, i64 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_nusw(ptr %p, i64 %idx) {
+; CHECK: %gep = getelementptr nusw i8, ptr %p, i64 %idx
+  %gep = getelementptr nusw i8, ptr %p, i64 %idx
+  ret ptr %gep
+}
+
+; inbounds implies nusw, so the flag is not printed back.
+define ptr @gep_inbounds_nusw(ptr %p, i64 %idx) {
+; CHECK: %gep = getelementptr inbounds i8, ptr %p, i64 %idx
+  %gep = getelementptr inbounds nusw i8, ptr %p, i64 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_nusw_nuw(ptr %p, i64 %idx) {
+; CHECK: %gep = getelementptr nusw nuw i8, ptr %p, i64 %idx
+  %gep = getelementptr nusw nuw i8, ptr %p, i64 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_inbounds_nusw_nuw(ptr %p, i64 %idx) {
+; CHECK: %gep = getelementptr inbounds nuw i8, ptr %p, i64 %idx
+  %gep = getelementptr inbounds nusw nuw i8, ptr %p, i64 %idx
+  ret ptr %gep
+}
+
+define ptr @gep_nuw_nusw_inbounds(ptr %p, i64 %idx) {
+; CHECK: %gep = getelementptr inbounds nuw i8, ptr %p, i64 %idx
+  %gep = getelementptr nuw nusw inbounds i8, ptr %p, i64 %idx
+  ret ptr %gep
+}

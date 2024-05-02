@@ -1095,7 +1095,12 @@ public:
       I->setIsExact(ExactFlags.IsExact);
       break;
     case OperationType::GEPOp:
+      // TODO(gep_nowrap): Track nusw and nuw flags in VPlan. For now assume
+      // they need to be dropped.
       cast<GetElementPtrInst>(I)->setIsInBounds(GEPFlags.IsInBounds);
+      cast<GetElementPtrInst>(I)->setHasNoUnsignedSignedWrap(
+          GEPFlags.IsInBounds);
+      cast<GetElementPtrInst>(I)->setHasNoUnsignedWrap(false);
       break;
     case OperationType::FPMathOp:
       I->setHasAllowReassoc(FMFs.AllowReassoc);

@@ -524,6 +524,14 @@ enum PossiblyExactOperatorOptionalFlags { PEO_EXACT = 0 };
 /// PossiblyDisjointInst's SubclassOptionalData contents.
 enum PossiblyDisjointInstOptionalFlags { PDI_DISJOINT = 0 };
 
+/// GetElementPtrOptionalFlags - Flags for serializing
+/// GEPOperator's SubclassOptionalData contents.
+enum GetElementPtrOptionalFlags {
+  GEP_INBOUNDS = 0,
+  GEP_NUSW = 1,
+  GEP_NUW = 2,
+};
+
 /// Encoded AtomicOrdering values.
 enum AtomicOrderingCodes {
   ORDERING_NOTATOMIC = 0,

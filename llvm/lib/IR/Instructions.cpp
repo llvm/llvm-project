@@ -2047,8 +2047,24 @@ void GetElementPtrInst::setIsInBounds(bool B) {
   cast<GEPOperator>(this)->setIsInBounds(B);
 }
 
+void GetElementPtrInst::setHasNoUnsignedSignedWrap(bool B) {
+  cast<GEPOperator>(this)->setHasNoUnsignedSignedWrap(B);
+}
+
+void GetElementPtrInst::setHasNoUnsignedWrap(bool B) {
+  cast<GEPOperator>(this)->setHasNoUnsignedWrap(B);
+}
+
 bool GetElementPtrInst::isInBounds() const {
   return cast<GEPOperator>(this)->isInBounds();
+}
+
+bool GetElementPtrInst::hasNoUnsignedSignedWrap() const {
+  return cast<GEPOperator>(this)->hasNoUnsignedSignedWrap();
+}
+
+bool GetElementPtrInst::hasNoUnsignedWrap() const {
+  return cast<GEPOperator>(this)->hasNoUnsignedWrap();
 }
 
 bool GetElementPtrInst::accumulateConstantOffset(const DataLayout &DL,

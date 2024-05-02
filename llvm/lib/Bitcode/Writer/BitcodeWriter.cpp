@@ -2973,7 +2973,14 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     Code = bitc::FUNC_CODE_INST_GEP;
     AbbrevToUse = FUNCTION_INST_GEP_ABBREV;
     auto &GEPInst = cast<GetElementPtrInst>(I);
-    Vals.push_back(GEPInst.isInBounds());
+    uint64_t Flags = 0;
+    if (GEPInst.isInBounds())
+      Flags |= 1 << bitc::GEP_INBOUNDS;
+    if (GEPInst.hasNoUnsignedSignedWrap())
+      Flags |= 1 << bitc::GEP_NUSW;
+    if (GEPInst.hasNoUnsignedWrap())
+      Flags |= 1 << bitc::GEP_NUW;
+    Vals.push_back(Flags);
     Vals.push_back(VE.getTypeID(GEPInst.getSourceElementType()));
     for (unsigned i = 0, e = I.getNumOperands(); i != e; ++i)
       pushValueAndType(I.getOperand(i), InstID, Vals);
@@ -3871,7 +3878,7 @@ void ModuleBitcodeWriter::writeBlockInfo() {
   {
     auto Abbv = std::make_shared<BitCodeAbbrev>();
     Abbv->Add(BitCodeAbbrevOp(bitc::FUNC_CODE_INST_GEP));
-    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3));
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, // dest ty
                               Log2_32_Ceil(VE.getTypes().size() + 1)));
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));

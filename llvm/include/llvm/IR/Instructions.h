@@ -1171,8 +1171,22 @@ public:
   /// See LangRef.html for the meaning of inbounds on a getelementptr.
   void setIsInBounds(bool b = true);
 
+  /// Set or clear the nusw flag on this GEP instruction.
+  /// See LangRef.html for the meaning of nusw on a getelementptr.
+  void setHasNoUnsignedSignedWrap(bool B = true);
+
+  /// Set or clear the nuw flag on this GEP instruction.
+  /// See LangRef.html for the meaning of nuw on a getelementptr.
+  void setHasNoUnsignedWrap(bool B = true);
+
   /// Determine whether the GEP has the inbounds flag.
   bool isInBounds() const;
+
+  /// Determine whether the GEP has the nusw flag.
+  bool hasNoUnsignedSignedWrap() const;
+
+  /// Determine whether the GEP has the nuw flag.
+  bool hasNoUnsignedWrap() const;
 
   /// Accumulate the constant address offset of this GEP if possible.
   ///

@@ -44,6 +44,10 @@ static void reduceFlagsInModule(Oracle &O, ReducerWorkItem &WorkItem) {
       } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
         if (GEP->isInBounds() && !O.shouldKeep())
           GEP->setIsInBounds(false);
+        if (GEP->hasNoUnsignedSignedWrap() && !O.shouldKeep())
+          GEP->setHasNoUnsignedSignedWrap(false);
+        if (GEP->hasNoUnsignedWrap() && !O.shouldKeep())
+          GEP->setHasNoUnsignedWrap(false);
       } else if (auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
         FastMathFlags Flags = FPOp->getFastMathFlags();
 

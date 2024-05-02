@@ -405,11 +405,27 @@ class GEPOperator
 
   enum {
     IsInBounds = (1 << 0),
+    HasNoUnsignedSignedWrap = (1 << 1),
+    HasNoUnsignedWrap = (1 << 2),
   };
 
   void setIsInBounds(bool B) {
+    // Also set nusw when inbounds is set.
+    SubclassOptionalData = (SubclassOptionalData & ~IsInBounds) |
+                           (B * (IsInBounds | HasNoUnsignedSignedWrap));
+  }
+
+  void setHasNoUnsignedSignedWrap(bool B) {
+    // Also unset inbounds when nusw is unset.
+    if (B)
+      SubclassOptionalData |= HasNoUnsignedSignedWrap;
+    else
+      SubclassOptionalData &= ~(IsInBounds | HasNoUnsignedSignedWrap);
+  }
+
+  void setHasNoUnsignedWrap(bool B) {
     SubclassOptionalData =
-      (SubclassOptionalData & ~IsInBounds) | (B * IsInBounds);
+        (SubclassOptionalData & ~HasNoUnsignedWrap) | (B * HasNoUnsignedWrap);
   }
 
 public:
@@ -419,6 +435,14 @@ public:
   /// Test whether this is an inbounds GEP, as defined by LangRef.html.
   bool isInBounds() const {
     return SubclassOptionalData & IsInBounds;
+  }
+
+  bool hasNoUnsignedSignedWrap() const {
+    return SubclassOptionalData & HasNoUnsignedSignedWrap;
+  }
+
+  bool hasNoUnsignedWrap() const {
+    return SubclassOptionalData & HasNoUnsignedWrap;
   }
 
   /// Returns the offset of the index with an inrange attachment, or

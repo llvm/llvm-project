@@ -438,6 +438,12 @@ int FunctionComparator::cmpConstants(const Constant *L,
         return Res;
       if (int Res = cmpNumbers(GEPL->isInBounds(), GEPR->isInBounds()))
         return Res;
+      if (int Res = cmpNumbers(GEPL->hasNoUnsignedSignedWrap(),
+                               GEPR->hasNoUnsignedSignedWrap()))
+        return Res;
+      if (int Res =
+              cmpNumbers(GEPL->hasNoUnsignedWrap(), GEPR->hasNoUnsignedWrap()))
+        return Res;
 
       std::optional<ConstantRange> InRangeL = GEPL->getInRange();
       std::optional<ConstantRange> InRangeR = GEPR->getInRange();

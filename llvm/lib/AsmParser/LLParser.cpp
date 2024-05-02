@@ -8340,7 +8340,17 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
   Value *Val = nullptr;
   LocTy Loc, EltLoc;
 
-  bool InBounds = EatIfPresent(lltok::kw_inbounds);
+  bool InBounds = false, NUSW = false, NUW = false;
+  while (true) {
+    if (EatIfPresent(lltok::kw_inbounds))
+      InBounds = true;
+    else if (EatIfPresent(lltok::kw_nusw))
+      NUSW = true;
+    else if (EatIfPresent(lltok::kw_nuw))
+      NUW = true;
+    else
+      break;
+  }
 
   Type *Ty = nullptr;
   if (parseType(Ty) ||
@@ -8393,9 +8403,14 @@ int LLParser::parseGetElementPtr(Instruction *&Inst, PerFunctionState &PFS) {
 
   if (!GetElementPtrInst::getIndexedType(Ty, Indices))
     return error(Loc, "invalid getelementptr indices");
-  Inst = GetElementPtrInst::Create(Ty, Ptr, Indices);
+  GetElementPtrInst *GEP = GetElementPtrInst::Create(Ty, Ptr, Indices);
+  Inst = GEP;
   if (InBounds)
-    cast<GetElementPtrInst>(Inst)->setIsInBounds(true);
+    GEP->setIsInBounds(true);
+  if (NUSW)
+    GEP->setHasNoUnsignedSignedWrap(true);
+  if (NUW)
+    GEP->setHasNoUnsignedWrap(true);
   return AteExtraComma ? InstExtraComma : InstNormal;
 }
 
