@@ -988,7 +988,8 @@ VariableDescription::VariableDescription(lldb::SBValue v, bool format_hex,
       !raw_display_type_name.empty() ? raw_display_type_name : NO_TYPENAME;
 
   // Only format hex/default if there is no existing special format.
-  if (v.GetFormat() == lldb::eFormatDefault || v.GetFormat() == lldb::eFormatHex) {
+  if (v.GetFormat() == lldb::eFormatDefault ||
+      v.GetFormat() == lldb::eFormatHex) {
     if (format_hex)
       v.SetFormat(lldb::eFormatHex);
     else
