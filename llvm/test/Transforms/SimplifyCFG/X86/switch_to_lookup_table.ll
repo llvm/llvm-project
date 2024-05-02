@@ -2068,3 +2068,93 @@ cond.end:                                         ; preds = %entry, %cond.false
   %conv = sext i3 %cond to i8
   ret i8 %conv
 }
+
+define i32 @pr67843(i8 %0) {
+; CHECK-LABEL: @pr67843(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub nsw i8 [[TMP0:%.*]], -1
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = zext i8 [[SWITCH_TABLEIDX]] to i32
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i32 [[SWITCH_IDX_CAST]], 255
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = and i32 [[SWITCH_OFFSET]], 255
+; CHECK-NEXT:    ret i32 [[SWITCH_MASKED]]
+;
+start:
+  switch i8 %0, label %bb2 [
+  i8 0, label %bb5
+  i8 1, label %bb4
+  i8 -1, label %bb1
+  ]
+
+bb2:                                              ; preds = %start
+  unreachable
+
+bb4:                                              ; preds = %start
+  br label %bb5
+
+bb1:                                              ; preds = %start
+  br label %bb5
+
+bb5:                                              ; preds = %start, %bb1, %bb4
+  %.0 = phi i32 [ 255, %bb1 ], [ 1, %bb4 ], [ 0, %start ]
+  ret i32 %.0
+}
+
+define i32 @linearmap_masked_with_common_highbits(i8 %0) {
+; CHECK-LABEL: @linearmap_masked_with_common_highbits(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub nsw i8 [[TMP0:%.*]], -1
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = zext i8 [[SWITCH_TABLEIDX]] to i32
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add i32 [[SWITCH_IDX_CAST]], 511
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = and i32 [[SWITCH_OFFSET]], 255
+; CHECK-NEXT:    [[SWITCH_WITH_HIGH_BITS:%.*]] = or i32 [[SWITCH_MASKED]], 256
+; CHECK-NEXT:    ret i32 [[SWITCH_WITH_HIGH_BITS]]
+;
+start:
+  switch i8 %0, label %bb2 [
+  i8 0, label %bb5
+  i8 1, label %bb4
+  i8 -1, label %bb1
+  ]
+
+bb2:                                              ; preds = %start
+  unreachable
+
+bb4:                                              ; preds = %start
+  br label %bb5
+
+bb1:                                              ; preds = %start
+  br label %bb5
+
+bb5:                                              ; preds = %start, %bb1, %bb4
+  %.0 = phi i32 [ 511, %bb1 ], [ 257, %bb4 ], [ 256, %start ]
+  ret i32 %.0
+}
+
+define i32 @linearmap_masked_with_common_highbits_fail(i8 %0) {
+; CHECK-LABEL: @linearmap_masked_with_common_highbits_fail(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub nsw i8 [[TMP0:%.*]], -1
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x i32], ptr @switch.table.linearmap_masked_with_common_highbits_fail, i32 0, i8 [[SWITCH_TABLEIDX]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    ret i32 [[SWITCH_LOAD]]
+;
+start:
+  switch i8 %0, label %bb2 [
+  i8 0, label %bb5
+  i8 1, label %bb4
+  i8 -1, label %bb1
+  ]
+
+bb2:                                              ; preds = %start
+  unreachable
+
+bb4:                                              ; preds = %start
+  br label %bb5
+
+bb1:                                              ; preds = %start
+  br label %bb5
+
+bb5:                                              ; preds = %start, %bb1, %bb4
+  %.0 = phi i32 [ 1023, %bb1 ], [ 257, %bb4 ], [ 256, %start ]
+  ret i32 %.0
+}
