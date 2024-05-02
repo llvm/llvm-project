@@ -802,7 +802,7 @@ f32x4 relaxed_dot_bf16x8_add_f32_f32x4(u16x8 a, u16x8 b, f32x4 c) {
   // WEBASSEMBLY-NEXT: ret
 }
 
-float load_f16_f32(int *addr) {
+float load_f16_f32(short *addr) {
   return __builtin_wasm_loadf16_f32(addr);
   // WEBASSEMBLY: call float @llvm.wasm.loadf16.f32(ptr %{{.*}})
 }
