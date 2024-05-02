@@ -292,7 +292,7 @@ Response HandleFunction(Sema &SemaRef, const FunctionDecl *Function,
         if (TemplatePattern && FunctionPattern &&
             TemplatePattern->getTemplateDepth() ==
                 FunctionPattern->getTemplateDepth())
-          return Response::Done();
+          return Response::UseNextDecl(Function);
       }
 
     // If this function is a generic lambda specialization, we are done.

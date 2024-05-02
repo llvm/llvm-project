@@ -41,3 +41,27 @@ int main(int argc, const char * argv[]) {
     FindBlobs<double, int>();
     return 0;
 }
+
+template<typename T, typename U>
+concept D = sizeof(T) == sizeof(U);
+
+template<typename T>
+struct A
+{
+    template<typename U, typename V> requires D<U, V>
+    static void f();
+};
+
+template<typename T, typename U>
+struct B
+{
+    template<typename V>
+    struct C
+    {
+        friend void A<char>::f<T, U>();
+    };
+};
+
+template struct B<int, int>::C<short>;
+
+extern template void A<char>::f<int, int>(); // crash here
