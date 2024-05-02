@@ -9,11 +9,12 @@ RUN: perf2bolt %t.out --pa -p %p/Inputs/blarge_new_bat.preagg.txt -w %t.yaml -o 
 RUN:   2>&1 | FileCheck --check-prefix READ-BAT-CHECK %s
 RUN: FileCheck --input-file %t.yaml --check-prefix YAML-BAT-CHECK %s
 # Check that YAML converted from fdata matches YAML created directly with BAT.
-RUN: llvm-bolt %t.exe -data %t.fdata -w %t.yaml-fdata -o /dev/null
+RUN: llvm-bolt %t.exe -data %t.fdata -w %t.yaml-fdata -o /dev/null \
+RUN:   | FileCheck --check-prefix CHECK-BOLT-FDATA %s
 RUN: FileCheck --input-file %t.yaml-fdata --check-prefix YAML-BAT-CHECK %s
 
 # Test resulting YAML profile with the original binary (no-stale mode)
-RUN: llvm-bolt %t.exe -data %t.yaml -o %t.null -dyno-stats \
+RUN: llvm-bolt %t.exe -data %t.yaml -o %t.null -dyno-stats 2>&1 \
 RUN:   | FileCheck --check-prefix CHECK-BOLT-YAML %s
 
 WRITE-BAT-CHECK: BOLT-INFO: Wrote 5 BAT maps
@@ -63,7 +64,12 @@ YAML-BAT-CHECK-NEXT:   blocks:
 YAML-BAT-CHECK:        - bid:   1
 YAML-BAT-CHECK-NEXT:       insns: [[#]]
 YAML-BAT-CHECK-NEXT:       hash:  0xD70DC695320E0010
-YAML-BAT-CHECK-NEXT:       succ:  {{.*}} { bid: 2, cnt: [[#]] }
+YAML-BAT-CHECK-NEXT:       succ:  {{.*}} { bid: 2, cnt: [[#]]
 
 CHECK-BOLT-YAML:      pre-processing profile using YAML profile reader
 CHECK-BOLT-YAML-NEXT: 5 out of 16 functions in the binary (31.2%) have non-empty execution profile
+CHECK-BOLT-YAML-NOT: invalid (possibly stale) profile
+CHECK-BOLT-FDATA:      pre-processing profile using branch profile reader
+CHECK-BOLT-FDATA-NEXT: profile collection done on a binary already processed by BOLT
+CHECK-BOLT-FDATA-NEXT: 5 out of 16 functions in the binary (31.2%) have non-empty execution profile
+CHECK-BOLT-FDATA-NOT: invalid (possibly stale) profile

@@ -478,6 +478,13 @@ uint64_t BoltAddressTranslation::translate(uint64_t FuncAddress,
     return Offset;
 
   const MapTy &Map = Iter->second;
+  if (IsBranchSrc) {
+    // Try exact lookup first
+    auto KeyVal = Map.find(Offset);
+    if (KeyVal != Map.end())
+      if (KeyVal->second & BRANCHENTRY)
+        return KeyVal->second >> 1;
+  }
   auto KeyVal = Map.upper_bound(Offset);
   if (KeyVal == Map.begin())
     return Offset;
@@ -485,11 +492,21 @@ uint64_t BoltAddressTranslation::translate(uint64_t FuncAddress,
   --KeyVal;
 
   const uint32_t Val = KeyVal->second >> 1; // dropping BRANCHENTRY bit
-  // Branch source addresses are translated to the first instruction of the
-  // source BB to avoid accounting for modifications BOLT may have made in the
-  // BB regarding deletion/addition of instructions.
-  if (IsBranchSrc)
-    return Val;
+  if (IsBranchSrc) {
+    // Branch source addresses are translated to the first instruction of the
+    // source BB to avoid accounting for modifications BOLT may have made in the
+    // BB regarding deletion/addition of instructions.
+    const uint64_t ParentAddress = fetchParentAddress(FuncAddress);
+    const BBHashMapTy &BBHashMap =
+        getBBHashMap(ParentAddress ? ParentAddress : FuncAddress);
+    auto BBIt = BBHashMap.upper_bound(Val);
+    if (BBIt == BBHashMap.begin())
+      return Offset;
+
+    --BBIt;
+
+    return BBIt->first;
+  }
   return Offset - KeyVal->first + Val;
 }
 
