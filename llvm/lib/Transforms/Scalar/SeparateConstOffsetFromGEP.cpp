@@ -972,7 +972,7 @@ SeparateConstOffsetFromGEP::lowerToArithmetics(GetElementPtrInst *Variadic,
 
 bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
                                             TargetTransformInfo &TTI) {
-  Type *GEPType = GEP->getResultElementType();
+  Type *GEPType = GEP->getSourceElementType();
   // TODO: support reordering for non-trivial GEP chains
   if (GEPType->isAggregateType() || GEP->getNumIndices() != 1)
     return false;
@@ -980,13 +980,13 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
   auto PtrGEP = dyn_cast<GetElementPtrInst>(GEP->getPointerOperand());
   if (!PtrGEP)
     return false;
-  Type *PtrGEPType = PtrGEP->getResultElementType();
+  Type *PtrGEPType = PtrGEP->getSourceElementType();
   // TODO: support reordering for non-trivial GEP chains
   if (PtrGEPType->isAggregateType() || PtrGEP->getNumIndices() != 1)
     return false;
 
-  bool GEPIsPtr = GEPType->getScalarType()->isPointerTy();
-  bool PtrGEPIsPtr = PtrGEPType->getScalarType()->isPointerTy();
+  bool GEPIsPtr = GEPType->getScalarType()->isPtrOrPtrVectorTy();
+  bool PtrGEPIsPtr = PtrGEPType->getScalarType()->isPtrOrPtrVectorTy();
 
   if (GEPIsPtr != PtrGEPIsPtr)
     return false;
@@ -1016,8 +1016,11 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
       IsChainInBounds &= KnownPtrGEPIdx.isNonNegative();
     }
   }
-  TypeSize GEPSize = DL->getTypeSizeInBits(GEP->getSourceElementType());
-  TypeSize PtrGEPSize = DL->getTypeSizeInBits(PtrGEP->getSourceElementType());
+  TypeSize GEPSize = DL->getTypeSizeInBits(GEP->getIndexedType(
+      GEP->getSourceElementType(), GEP->indices().begin()->get()));
+  TypeSize PtrGEPSize = DL->getTypeSizeInBits(PtrGEP->getIndexedType(
+      PtrGEP->getSourceElementType(), PtrGEP->indices().begin()->get()));
+
   IRBuilder<> Builder(GEP);
   Builder.SetCurrentDebugLocation(GEP->getDebugLoc());
   if (GEPSize > PtrGEPSize) {
