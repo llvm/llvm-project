@@ -318,6 +318,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/avoid-return-with-void-value>` check by adding
   fix-its.
 
+- Improved :doc:`readability-const-return-type
+  <clang-tidy/checks/readability/const-return-type>` check to eliminate false
+  positives when returning types with const not at the top level.
+
 - Improved :doc:`readability-duplicate-include
   <clang-tidy/checks/readability/duplicate-include>` check by excluding include
   directives that form the filename using macro.
