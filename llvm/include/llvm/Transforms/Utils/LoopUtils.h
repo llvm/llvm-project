@@ -15,6 +15,7 @@
 
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/IR/VectorBuilder.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 namespace llvm {
@@ -397,6 +398,8 @@ Value *createSimpleTargetReduction(IRBuilderBase &B, Value *Src,
 Value *createSimpleTargetReduction(IRBuilderBase &B, Value *Src,
                                    RecurKind RdxKind, Value *EVL,
                                    Value *Mask = nullptr);
+Value *createSimpleTargetReduction(VectorBuilder &VB, Value *Src,
+                                   const RecurrenceDescriptor &Desc);
 
 /// Create a target reduction of the given vector \p Src for a reduction of the
 /// kind RecurKind::IAnyOf or RecurKind::FAnyOf. The reduction operation is
@@ -420,6 +423,9 @@ Value *createOrderedReduction(IRBuilderBase &B,
 Value *createOrderedReduction(IRBuilderBase &B,
                               const RecurrenceDescriptor &Desc, Value *Src,
                               Value *Start, Value *EVL, Value *Mask = nullptr);
+Value *createOrderedReduction(VectorBuilder &VB,
+                              const RecurrenceDescriptor &Desc, Value *Src,
+                              Value *Start);
 
 /// Get the intersection (logical and) of all of the potential IR flags
 /// of each scalar operation (VL) that will be converted into a vector (I).

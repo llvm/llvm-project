@@ -1758,13 +1758,17 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
   Value *Prev = State.get(getChainOp(), 0, /*IsScalar*/ true);
   Value *VecOp = State.get(getVecOp(), 0);
   Value *EVL = State.get(getEVL(), VPIteration(0, 0));
-  Value *Cond = getCondOp() ? State.get(getCondOp(), 0) : nullptr;
+
+  VectorBuilder VBuilder(Builder);
+  VBuilder.setEVL(EVL);
+  if (getCondOp())
+    VBuilder.setMask(State.get(getCondOp(), 0));
 
   Value *NewRed;
   if (IsOrdered) {
-    NewRed = createOrderedReduction(Builder, RdxDesc, VecOp, Prev, EVL, Cond);
+    NewRed = createOrderedReduction(VBuilder, RdxDesc, VecOp, Prev);
   } else {
-    NewRed = createSimpleTargetReduction(Builder, VecOp, Kind, EVL, Cond);
+    NewRed = createSimpleTargetReduction(VBuilder, VecOp, RdxDesc);
     if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind))
       NewRed = createMinMaxOp(Builder, Kind, NewRed, Prev);
     else
