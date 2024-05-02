@@ -5711,9 +5711,8 @@ static void replaceUsesOfNonProtoConstant(llvm::Constant *old,
   SmallVector<llvm::CallBase *> callSitesToBeRemovedFromParent;
 
   for (llvm::Value::use_iterator ui = old->use_begin(), ue = old->use_end();
-       ui != ue;) {
-    llvm::Value::use_iterator use = ui++; // Increment before the use is erased.
-    llvm::User *user = use->getUser();
+       ui != ue; ui++) {
+    llvm::User *user = ui->getUser();
 
     // Recognize and replace uses of bitcasts.  Most calls to
     // unprototyped functions will use bitcasts.
@@ -5727,7 +5726,7 @@ static void replaceUsesOfNonProtoConstant(llvm::Constant *old,
     llvm::CallBase *callSite = dyn_cast<llvm::CallBase>(user);
     if (!callSite)
       continue;
-    if (!callSite->isCallee(&*use))
+    if (!callSite->isCallee(&*ui))
       continue;
 
     // If the return types don't match exactly, then we can't
