@@ -427,8 +427,9 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
     pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
 
     // Add O2 optimizer pass pipeline.
-    fir::createDefaultFIROptimizerPassPipeline(
-        pm, MLIRToLLVMPassPipelineConfig(llvm::OptimizationLevel::O2));
+    MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+    fir::registerDefaultInlinerPass(config);
+    fir::createDefaultFIROptimizerPassPipeline(pm, config);
   }
 
   if (mlir::succeeded(pm.run(mlirModule))) {
