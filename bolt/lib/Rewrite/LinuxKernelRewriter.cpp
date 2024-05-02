@@ -1722,6 +1722,9 @@ Error LinuxKernelRewriter::readStaticKeysJumpTable() {
     if (!BC.MIB->getSize(*Inst))
       BC.MIB->setSize(*Inst, Size);
 
+    if (!BC.MIB->getOffset(*Inst))
+      BC.MIB->setOffset(*Inst, JumpAddress - BF->getAddress());
+
     if (opts::LongJumpLabels)
       BC.MIB->setSize(*Inst, 5);
   }
