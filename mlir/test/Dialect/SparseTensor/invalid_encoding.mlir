@@ -515,3 +515,16 @@ func.func private @sparse_csr(tensor<?x?xi32, #CSR_ImpVal>)
 
 // expected-error@+1 {{implicit value must be zero}}
 func.func private @sparse_csr(tensor<?x?xf32, #CSR_ImpVal>)
+
+// -----
+
+#CSR_OnlyOnes = #sparse_tensor.encoding<{
+  map = (d0, d1) -> (d0 : dense, d1 : compressed),
+  posWidth = 64,
+  crdWidth = 64,
+  explicitVal = #complex.number<:f32 1.0, 0.0>,
+  implicitVal = #complex.number<:f32 1.0, 0.0>
+}>
+
+// expected-error@+1 {{implicit value must be zero}}
+func.func private @sparse_csr(tensor<?x?xcomplex<f32>, #CSR_OnlyOnes>)
