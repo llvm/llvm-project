@@ -62,6 +62,11 @@ static cl::opt<bool>
                   cl::desc("dump Linux kernel PCI fixup table"),
                   cl::init(false), cl::Hidden, cl::cat(BoltCategory));
 
+static cl::opt<bool> DumpSMPLocks("dump-smp-locks",
+                                  cl::desc("dump Linux kernel SMP locks"),
+                                  cl::init(false), cl::Hidden,
+                                  cl::cat(BoltCategory));
+
 static cl::opt<bool> DumpStaticCalls("dump-static-calls",
                                      cl::desc("dump Linux kernel static calls"),
                                      cl::init(false), cl::Hidden,
@@ -119,19 +124,18 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ORCState &E) {
 namespace {
 
 class LinuxKernelRewriter final : public MetadataRewriter {
-  /// Linux Kernel special sections point to a specific instruction in many
-  /// cases. Unlike SDTMarkerInfo, these markers can come from different
-  /// sections.
-  struct LKInstructionMarkerInfo {
-    uint64_t SectionOffset;
-    int32_t PCRelativeOffset;
-    bool IsPCRelative;
-    StringRef SectionName;
+  /// Information required for updating metadata referencing an instruction.
+  struct InstructionFixup {
+    BinarySection &Section; // Section referencing the instruction.
+    uint64_t Offset;        // Offset in the section above.
+    BinaryFunction &BF;     // Function containing the instruction.
+    MCSymbol &Label;        // Label marking the instruction.
+    bool IsPCRelative;      // If the reference type is relative.
   };
+  std::vector<InstructionFixup> Fixups;
 
-  /// Map linux kernel program locations/instructions to their pointers in
-  /// special linux kernel sections
-  std::unordered_map<uint64_t, std::vector<LKInstructionMarkerInfo>> LKMarkers;
+  /// Size of an entry in .smp_locks section.
+  static constexpr size_t SMP_LOCKS_ENTRY_SIZE = 4;
 
   /// Linux ORC sections.
   ErrorOr<BinarySection &> ORCUnwindSection = std::errc::bad_address;
@@ -221,23 +225,20 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   ErrorOr<BinarySection &> PCIFixupSection = std::errc::bad_address;
   static constexpr size_t PCI_FIXUP_ENTRY_SIZE = 16;
 
-  /// Insert an LKMarker for a given code pointer \p PC from a non-code section
-  /// \p SectionName.
-  void insertLKMarker(uint64_t PC, uint64_t SectionOffset,
-                      int32_t PCRelativeOffset, bool IsPCRelative,
-                      StringRef SectionName);
-
   /// Process linux kernel special sections and their relocations.
   void processLKSections();
 
   /// Process __ksymtab and __ksymtab_gpl.
   void processLKKSymtab(bool IsGPL = false);
 
-  /// Process special linux kernel section, .smp_locks.
-  void processLKSMPLocks();
+  // Create relocations in sections requiring fixups.
+  //
+  // Make sure functions that will not be emitted are marked as such before this
+  // function is executed.
+  void processInstructionFixups();
 
-  /// Update LKMarkers' locations for the output binary.
-  void updateLKMarkers();
+  /// Process .smp_locks section.
+  Error processSMPLocks();
 
   /// Read ORC unwind information and annotate instructions.
   Error readORCTables();
@@ -282,16 +283,14 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   Error rewriteStaticKeysJumpTable();
   Error updateStaticKeysJumpTablePostEmit();
 
-  /// Mark instructions referenced by kernel metadata.
-  Error markInstructions();
-
 public:
   LinuxKernelRewriter(BinaryContext &BC)
       : MetadataRewriter("linux-kernel-rewriter", BC) {}
 
   Error preCFGInitializer() override {
     processLKSections();
-    if (Error E = markInstructions())
+
+    if (Error E = processSMPLocks())
       return E;
 
     if (Error E = readORCTables())
@@ -352,12 +351,12 @@ public:
     if (Error E = rewriteBugTable())
       return E;
 
+    processInstructionFixups();
+
     return Error::success();
   }
 
   Error postEmitFinalizer() override {
-    updateLKMarkers();
-
     if (Error E = updateStaticKeysJumpTablePostEmit())
       return E;
 
@@ -368,39 +367,9 @@ public:
   }
 };
 
-Error LinuxKernelRewriter::markInstructions() {
-  for (const uint64_t PC : llvm::make_first_range(LKMarkers)) {
-    BinaryFunction *BF = BC.getBinaryFunctionContainingAddress(PC);
-
-    if (!BF || !BC.shouldEmit(*BF))
-      continue;
-
-    const uint64_t Offset = PC - BF->getAddress();
-    MCInst *Inst = BF->getInstructionAtOffset(Offset);
-    if (!Inst)
-      return createStringError(errc::executable_format_error,
-                               "no instruction matches kernel marker offset");
-
-    BC.MIB->setOffset(*Inst, static_cast<uint32_t>(Offset));
-
-    BF->setHasSDTMarker(true);
-  }
-
-  return Error::success();
-}
-
-void LinuxKernelRewriter::insertLKMarker(uint64_t PC, uint64_t SectionOffset,
-                                         int32_t PCRelativeOffset,
-                                         bool IsPCRelative,
-                                         StringRef SectionName) {
-  LKMarkers[PC].emplace_back(LKInstructionMarkerInfo{
-      SectionOffset, PCRelativeOffset, IsPCRelative, SectionName});
-}
-
 void LinuxKernelRewriter::processLKSections() {
   processLKKSymtab();
   processLKKSymtab(true);
-  processLKSMPLocks();
 }
 
 /// Process __ksymtab[_gpl] sections of Linux Kernel.
@@ -439,79 +408,73 @@ void LinuxKernelRewriter::processLKKSymtab(bool IsGPL) {
 
 /// .smp_locks section contains PC-relative references to instructions with LOCK
 /// prefix. The prefix can be converted to NOP at boot time on non-SMP systems.
-void LinuxKernelRewriter::processLKSMPLocks() {
-  ErrorOr<BinarySection &> SectionOrError =
+Error LinuxKernelRewriter::processSMPLocks() {
+  ErrorOr<BinarySection &> SMPLocksSection =
       BC.getUniqueSectionByName(".smp_locks");
-  if (!SectionOrError)
-    return;
+  if (!SMPLocksSection)
+    return Error::success();
 
-  uint64_t SectionSize = SectionOrError->getSize();
-  const uint64_t SectionAddress = SectionOrError->getAddress();
-  assert((SectionSize % 4) == 0 &&
-         "The size of the .smp_locks section should be a multiple of 4");
+  const uint64_t SectionSize = SMPLocksSection->getSize();
+  const uint64_t SectionAddress = SMPLocksSection->getAddress();
+  if (SectionSize % SMP_LOCKS_ENTRY_SIZE)
+    return createStringError(errc::executable_format_error,
+                             "bad size of .smp_locks section");
 
-  for (uint64_t I = 0; I < SectionSize; I += 4) {
-    const uint64_t EntryAddress = SectionAddress + I;
-    ErrorOr<uint64_t> Offset = BC.getSignedValueAtAddress(EntryAddress, 4);
-    assert(Offset && "Reading valid PC-relative offset for a .smp_locks entry");
-    int32_t SignedOffset = *Offset;
-    uint64_t RefAddress = EntryAddress + SignedOffset;
+  DataExtractor DE = DataExtractor(SMPLocksSection->getContents(),
+                                   BC.AsmInfo->isLittleEndian(),
+                                   BC.AsmInfo->getCodePointerSize());
+  DataExtractor::Cursor Cursor(0);
+  while (Cursor && Cursor.tell() < SectionSize) {
+    const uint64_t Offset = Cursor.tell();
+    const uint64_t IP = SectionAddress + Offset + (int32_t)DE.getU32(Cursor);
 
-    BinaryFunction *ContainingBF =
-        BC.getBinaryFunctionContainingAddress(RefAddress);
-    if (!ContainingBF)
+    // Consume the status of the cursor.
+    if (!Cursor)
+      return createStringError(errc::executable_format_error,
+                               "error while reading .smp_locks: %s",
+                               toString(Cursor.takeError()).c_str());
+
+    if (opts::DumpSMPLocks)
+      BC.outs() << "SMP lock at 0x: " << Twine::utohexstr(IP) << '\n';
+
+    BinaryFunction *BF = BC.getBinaryFunctionContainingAddress(IP);
+    if (!BF || !BC.shouldEmit(*BF))
       continue;
 
-    insertLKMarker(RefAddress, I, SignedOffset, true, ".smp_locks");
+    MCInst *Inst = BF->getInstructionAtOffset(IP - BF->getAddress());
+    if (!Inst)
+      return createStringError(errc::executable_format_error,
+                               "no instruction matches lock at 0x%" PRIx64, IP);
+
+    // Check for duplicate entries.
+    if (BC.MIB->hasAnnotation(*Inst, "SMPLock"))
+      return createStringError(errc::executable_format_error,
+                               "duplicate SMP lock at 0x%" PRIx64, IP);
+
+    BC.MIB->addAnnotation(*Inst, "SMPLock", true);
+    MCSymbol *Label =
+        BC.MIB->getOrCreateInstLabel(*Inst, "__SMPLock_", BC.Ctx.get());
+
+    Fixups.push_back({*SMPLocksSection, Offset, *BF, *Label,
+                      /*IsPCRelative*/ true});
   }
+
+  const uint64_t NumEntries = SectionSize / SMP_LOCKS_ENTRY_SIZE;
+  BC.outs() << "BOLT-INFO: parsed " << NumEntries << " SMP lock entries\n";
+
+  return Error::success();
 }
 
-void LinuxKernelRewriter::updateLKMarkers() {
-  if (LKMarkers.size() == 0)
-    return;
-
-  std::unordered_map<std::string, uint64_t> PatchCounts;
-  for (std::pair<const uint64_t, std::vector<LKInstructionMarkerInfo>>
-           &LKMarkerInfoKV : LKMarkers) {
-    const uint64_t OriginalAddress = LKMarkerInfoKV.first;
-    const BinaryFunction *BF =
-        BC.getBinaryFunctionContainingAddress(OriginalAddress, false, true);
-    if (!BF)
+void LinuxKernelRewriter::processInstructionFixups() {
+  for (InstructionFixup &Fixup : Fixups) {
+    if (!BC.shouldEmit(Fixup.BF))
       continue;
 
-    uint64_t NewAddress = BF->translateInputToOutputAddress(OriginalAddress);
-    if (NewAddress == 0)
-      continue;
-
-    // Apply base address.
-    if (OriginalAddress >= 0xffffffff00000000 && NewAddress < 0xffffffff)
-      NewAddress = NewAddress + 0xffffffff00000000;
-
-    if (OriginalAddress == NewAddress)
-      continue;
-
-    for (LKInstructionMarkerInfo &LKMarkerInfo : LKMarkerInfoKV.second) {
-      StringRef SectionName = LKMarkerInfo.SectionName;
-      SimpleBinaryPatcher *LKPatcher;
-      ErrorOr<BinarySection &> BSec = BC.getUniqueSectionByName(SectionName);
-      assert(BSec && "missing section info for kernel section");
-      if (!BSec->getPatcher())
-        BSec->registerPatcher(std::make_unique<SimpleBinaryPatcher>());
-      LKPatcher = static_cast<SimpleBinaryPatcher *>(BSec->getPatcher());
-      PatchCounts[std::string(SectionName)]++;
-      if (LKMarkerInfo.IsPCRelative)
-        LKPatcher->addLE32Patch(LKMarkerInfo.SectionOffset,
-                                NewAddress - OriginalAddress +
-                                    LKMarkerInfo.PCRelativeOffset);
-      else
-        LKPatcher->addLE64Patch(LKMarkerInfo.SectionOffset, NewAddress);
-    }
+    Fixup.Section.addRelocation(Fixup.Offset, &Fixup.Label,
+                                Fixup.IsPCRelative ? ELF::R_X86_64_PC32
+                                                   : ELF::R_X86_64_64,
+                                /*Addend*/ 0);
   }
-  BC.outs() << "BOLT-INFO: patching linux kernel sections. Total patches per "
-               "section are as follows:\n";
-  for (const std::pair<const std::string, uint64_t> &KV : PatchCounts)
-    BC.outs() << "  Section: " << KV.first << ", patch-counts: " << KV.second
-              << '\n';
 }
 
 Error LinuxKernelRewriter::readORCTables() {
