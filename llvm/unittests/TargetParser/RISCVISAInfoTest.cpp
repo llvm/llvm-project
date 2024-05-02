@@ -46,6 +46,14 @@ TEST(ParseNormalizedArchString, RejectsMalformedInputs) {
   }
 }
 
+TEST(ParseNormalizedArchString, OnlyVersion) {
+  for (StringRef Input : {"rv64i2p0_1p0", "rv32i2p0_1p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "missing extension name");
+  }
+}
+
 TEST(ParseNormalizedArchString, AcceptsValidBaseISAsAndSetsXLen) {
   auto MaybeRV32I = RISCVISAInfo::parseNormalizedArchString("rv32i2p0");
   ASSERT_THAT_EXPECTED(MaybeRV32I, Succeeded());

@@ -476,6 +476,10 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
       return createStringError(errc::invalid_argument,
                                "extension lacks version in expected format");
 
+    if (VersionStart == 0)
+      return createStringError(errc::invalid_argument,
+                               "missing extension name");
+
     StringRef ExtName = Prefix.slice(0, VersionStart);
     StringRef MajorVersionStr = Prefix.slice(VersionStart, StringRef::npos);
     if (MajorVersionStr.getAsInteger(10, MajorVersion))
