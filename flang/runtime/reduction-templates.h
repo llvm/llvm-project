@@ -240,11 +240,10 @@ inline RT_API_ATTRS void PartialIntegerReduction(Descriptor &result,
       kind, terminator, result, x, dim, mask, terminator, intrinsic);
 }
 
-template <TypeCategory CAT, template <typename> class ACCUM>
+template <TypeCategory CAT, template <typename> class ACCUM, int MIN_KIND>
 struct PartialFloatingReductionHelper {
   template <int KIND> struct Functor {
-    static constexpr int Intermediate{
-        std::max(KIND, 8)}; // use at least "double" for intermediate results
+    static constexpr int Intermediate{std::max(KIND, MIN_KIND)};
     RT_API_ATTRS void operator()(Descriptor &result, const Descriptor &x,
         int dim, const Descriptor *mask, Terminator &terminator,
         const char *intrinsic) const {
@@ -260,7 +259,7 @@ struct PartialFloatingReductionHelper {
 
 template <template <typename> class INTEGER_ACCUM,
     template <typename> class REAL_ACCUM,
-    template <typename> class COMPLEX_ACCUM>
+    template <typename> class COMPLEX_ACCUM, int MIN_REAL_KIND>
 inline RT_API_ATTRS void TypedPartialNumericReduction(Descriptor &result,
     const Descriptor &x, int dim, const char *source, int line,
     const Descriptor *mask, const char *intrinsic) {
@@ -274,13 +273,13 @@ inline RT_API_ATTRS void TypedPartialNumericReduction(Descriptor &result,
     break;
   case TypeCategory::Real:
     ApplyFloatingPointKind<PartialFloatingReductionHelper<TypeCategory::Real,
-                               REAL_ACCUM>::template Functor,
+                               REAL_ACCUM, MIN_REAL_KIND>::template Functor,
         void>(catKind->second, terminator, result, x, dim, mask, terminator,
         intrinsic);
     break;
   case TypeCategory::Complex:
     ApplyFloatingPointKind<PartialFloatingReductionHelper<TypeCategory::Complex,
-                               COMPLEX_ACCUM>::template Functor,
+                               COMPLEX_ACCUM, MIN_REAL_KIND>::template Functor,
         void>(catKind->second, terminator, result, x, dim, mask, terminator,
         intrinsic);
     break;
