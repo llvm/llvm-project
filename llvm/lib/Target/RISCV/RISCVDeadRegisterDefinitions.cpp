@@ -14,6 +14,9 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveDebugVariables.h"
+#include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
@@ -32,6 +35,12 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addRequired<LiveIntervals>();
+    AU.addPreserved<LiveIntervals>();
+    AU.addRequired<LiveIntervals>();
+    AU.addPreserved<SlotIndexes>();
+    AU.addPreserved<LiveDebugVariables>();
+    AU.addPreserved<LiveStacks>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -53,6 +62,7 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
 
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  LiveIntervals &LIS = getAnalysis<LiveIntervals>();
   LLVM_DEBUG(dbgs() << "***** RISCVDeadRegisterDefinitions *****\n");
 
   bool MadeChange = false;
@@ -76,7 +86,8 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
           LLVM_DEBUG(dbgs() << "    Ignoring, def is tied operand.\n");
           continue;
         }
-        if (!MO.isDead())
+        Register Reg = MO.getReg();
+        if (!Reg.isVirtual() || !MO.isDead())
           continue;
         LLVM_DEBUG(dbgs() << "    Dead def operand #" << I << " in:\n      ";
                    MI.print(dbgs()));
@@ -85,6 +96,7 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
           LLVM_DEBUG(dbgs() << "    Ignoring, register is not a GPR.\n");
           continue;
         }
+        LIS.removeInterval(Reg);
         MO.setReg(RISCV::X0);
         LLVM_DEBUG(dbgs() << "    Replacing with zero register. New:\n      ";
                    MI.print(dbgs()));

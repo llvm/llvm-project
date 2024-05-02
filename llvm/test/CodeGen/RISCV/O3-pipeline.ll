@@ -143,6 +143,7 @@
 ; CHECK-NEXT:       Greedy Register Allocator
 ; CHECK-NEXT:       Virtual Register Rewriter
 ; CHECK-NEXT:       RISC-V Coalesce VSETVLI pass
+; CHECK-NEXT:       RISC-V Dead register definitions
 ; CHECK-NEXT:       Virtual Register Map
 ; CHECK-NEXT:       Live Register Matrix
 ; CHECK-NEXT:       Greedy Register Allocator
@@ -152,7 +153,6 @@
 ; CHECK-NEXT:       Machine Copy Propagation Pass
 ; CHECK-NEXT:       Machine Loop Invariant Code Motion
 ; CHECK-NEXT:       RISC-V Redundant Copy Elimination
-; CHECK-NEXT:       RISC-V Dead register definitions
 ; CHECK-NEXT:       Remove Redundant DEBUG_VALUE analysis
 ; CHECK-NEXT:       Fixup Statepoint Caller Saved
 ; CHECK-NEXT:       PostRA Machine Sink
