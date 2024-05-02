@@ -54,8 +54,9 @@ static bool validateFullTilesOnDims(TilingInterface tileOp,
     if (dim.value() >= static_cast<int64_t>(iterationDomain.size()))
       return false;
 
-    auto tileSize = getConstantIntValue(tiles[dim.index()]);
-    auto rangeOnDim = getConstantRange(iterationDomain[dim.value()]);
+    std::optional<int64_t> tileSize = getConstantIntValue(tiles[dim.index()]);
+    std::optional<int64_t> rangeOnDim =
+        getConstantRange(iterationDomain[dim.value()]);
 
     // If the tile factor or the range are non-constant, the tile size is
     // considered to be invalid.
@@ -95,7 +96,7 @@ linalg::packMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
   if (options->blockFactors.size() != 3)
     return rewriter.notifyMatchFailure(matmulOp, "require 3 tile factors");
 
-  auto mnkTiles =
+  SmallVector<OpFoldResult> mnkTiles =
       getAsOpFoldResult(rewriter.getI64ArrayAttr(options->blockFactors));
 
   SmallVector<int64_t, 3> dims{options->mnkOrder};
@@ -127,7 +128,7 @@ linalg::packMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
   // subdivision:
   //   - major 2D blocks - outer dimensions, consist of minor blocks
   //   - minor 2D blocks - inner dimensions, consist of scalar elements
-  auto packedCanonicalMatmul = packMatmulGreedily(
+  FailureOr<PackResult> packedCanonicalMatmul = packMatmulGreedily(
       rewriter, matmulOp, mnkTiles, options->mnkPaddedSizesNextMultipleOf,
       options->mnkOrder);
   if (failed(packedCanonicalMatmul))
@@ -156,7 +157,7 @@ linalg::packMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
   // Block transpose the packed matmul i.e., transpose the outer dimensions
   // layout of the RHS matrix. The inner dimensions (minor blocks) remain
   // unchanged.
-  auto packedMatmul =
+  FailureOr<PackTransposeResult> packedMatmul =
       packTranspose(rewriter, packedCanonicalMatmul->packOps[1],
                     packedCanonicalMatmul->packedLinalgOp,
                     /*maybeUnPackOp=*/nullptr, outerPerm, innerPerm);
@@ -177,7 +178,8 @@ struct PackMatmul : public OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy matmulOp,
                                 PatternRewriter &rewriter) const override {
-    auto packedMatmul = packMatmulOp(rewriter, matmulOp, controlFn);
+    FailureOr<PackResult> packedMatmul =
+        packMatmulOp(rewriter, matmulOp, controlFn);
     if (failed(packedMatmul))
       return failure();
     return success();
