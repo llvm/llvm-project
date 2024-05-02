@@ -27,8 +27,6 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Analysis/Analyses/CalledOnceCheck.h"
 #include "clang/Analysis/Analyses/Consumed.h"
@@ -2389,9 +2387,6 @@ public:
 
 #if FX_ANALYZER_ENABLED
 
-// Temporary debugging option
-#define FX_ANALYZER_VERIFY_DECL_LIST 1
-
 namespace FXAnalysis {
 
 #define tmp_assert(x)                                                          \
@@ -2696,7 +2691,6 @@ private:
 // ----------
 // State pertaining to a function whose AST is walked. Since there are
 // potentially a large number of these objects, it needs care about size.
-// TODO: EffectSet could be made much smaller.
 class PendingFunctionAnalysis {
   friend class CompleteFunctionAnalysis;
 
@@ -2763,23 +2757,20 @@ public:
   // ones are handled differently.
   void checkAddDiagnostic(bool Inferring, const Diagnostic &NewDiag) {
     if (!Inferring) {
-      if (DiagnosticsForExplicitFX == nullptr) {
+      if (DiagnosticsForExplicitFX == nullptr)
         DiagnosticsForExplicitFX = std::make_unique<SmallVector<Diagnostic>>();
-      }
       DiagnosticsForExplicitFX->push_back(NewDiag);
     } else {
       auto &Diag =
           InferrableEffectToFirstDiagnostic.getOrInsertDefault(NewDiag.Effect);
-      if (Diag.ID == DiagnosticID::None) {
+      if (Diag.ID == DiagnosticID::None)
         Diag = NewDiag;
-      }
     }
   }
 
   void addUnverifiedDirectCall(const Decl *D, SourceLocation CallLoc) {
-    if (UnverifiedDirectCalls == nullptr) {
+    if (UnverifiedDirectCalls == nullptr)
       UnverifiedDirectCalls = std::make_unique<SmallVector<DirectCall>>();
-    }
     UnverifiedDirectCalls->emplace_back(D, CallLoc);
   }
 
@@ -2946,9 +2937,6 @@ public:
   Analyzer(Sema &S) : Sem(S) {}
 
   void run(const TranslationUnitDecl &TU) {
-#if FX_ANALYZER_VERIFY_DECL_LIST
-    verifyRootDecls(TU);
-#endif
     // Gather all of the effects to be verified to see what operations need to
     // be checked, and to see which ones are inferrable.
     {
@@ -3700,78 +3688,6 @@ private:
 
     bool TraverseCXXTypeidExpr(CXXTypeidExpr *Node) { return Proceed; }
   };
-
-#if FX_ANALYZER_VERIFY_DECL_LIST
-  // Sema has accumulated CallablesWithEffectsToVerify. As a debug check, do our
-  // own AST traversal and see what we find.
-
-  using MatchFinder = ast_matchers::MatchFinder;
-  static constexpr StringRef Tag_Callable = "Callable";
-
-  // -----
-  // Called for every callable in the translation unit.
-  struct CallableFinderCallback : MatchFinder::MatchCallback {
-    Sema &Sem;
-
-    CallableFinderCallback(Sema &S) : Sem(S) {}
-
-    void run(const MatchFinder::MatchResult &Result) override {
-      if (auto *Callable = Result.Nodes.getNodeAs<Decl>(Tag_Callable)) {
-        if (const auto FX = functionEffectsForDecl(Callable); !FX.empty()) {
-          // Reuse this filtering method in Sema
-          Sem.maybeAddDeclWithEffects(Callable, FX);
-        }
-      }
-    }
-
-    static FunctionEffectsRef functionEffectsForDecl(const Decl *D) {
-      if (auto *FD = D->getAsFunction()) {
-        return FD->getFunctionEffects();
-      }
-      if (auto *BD = dyn_cast<BlockDecl>(D)) {
-        return BD->getFunctionEffects();
-      }
-      return {};
-    }
-
-    static void get(Sema &S, const TranslationUnitDecl &TU) {
-      MatchFinder CallableFinder;
-      CallableFinderCallback Callback(S);
-
-      using namespace clang::ast_matchers;
-
-      CallableFinder.addMatcher(
-          decl(forEachDescendant(
-              decl(anyOf(functionDecl(hasBody(anything())).bind(Tag_Callable),
-                         // objcMethodDecl(isDefinition()).bind(Tag_Callable),
-                         // // no, always unsafe
-                         blockDecl().bind(Tag_Callable))))),
-          &Callback);
-      // Matching LambdaExpr this way [a] doesn't seem to work (need to check
-      // for Stmt?) and [b] doesn't seem necessary, since the anonymous function
-      // is reached via the above.
-      // CallableFinder.addMatcher(stmt(forEachDescendant(stmt(lambdaExpr().bind(Tag_Callable)))),
-      // &Callback);
-
-      CallableFinder.match(TU, TU.getASTContext());
-    }
-  };
-
-  void verifyRootDecls(const TranslationUnitDecl &TU) const {
-    // If this weren't debug code, it would be good to find a way to move/swap
-    // instead of copying.
-    SmallVector<const Decl *> decls = Sem.DeclsWithEffectsToVerify;
-    Sem.DeclsWithEffectsToVerify.clear();
-
-    CallableFinderCallback::get(Sem, TU);
-
-    if constexpr (DebugLogLevel > 0) {
-      llvm::errs() << "\nFXAnalysis: Sema gathered " << decls.size()
-                   << " Decls; second AST pass found "
-                   << Sem.DeclsWithEffectsToVerify.size() << "\n";
-    }
-  }
-#endif
 };
 
 Analyzer::AnalysisMap::~AnalysisMap() {
