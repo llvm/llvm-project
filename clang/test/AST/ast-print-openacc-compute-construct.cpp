@@ -38,5 +38,9 @@ void foo() {
 // CHECK: #pragma acc parallel private(i, array[1], array, array[1:2])
 #pragma acc parallel private(i, array[1], array, array[1:2])
   while(true);
+
+// CHECK: #pragma acc parallel firstprivate(i, array[1], array, array[1:2])
+#pragma acc parallel firstprivate(i, array[1], array, array[1:2])
+  while(true);
 }
 

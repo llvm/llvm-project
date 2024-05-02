@@ -104,6 +104,16 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
     default:
       return false;
     }
+  case OpenACCClauseKind::FirstPrivate:
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Parallel:
+    case OpenACCDirectiveKind::Serial:
+    case OpenACCDirectiveKind::ParallelLoop:
+    case OpenACCDirectiveKind::SerialLoop:
+      return true;
+    default:
+      return false;
+    }
   case OpenACCClauseKind::Private:
     switch (DirectiveKind) {
     case OpenACCDirectiveKind::Parallel:
@@ -328,6 +338,21 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
     // it isn't apparent in the standard where this is justified.
 
     return OpenACCPrivateClause::Create(
+        getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
+        Clause.getVarList(), Clause.getEndLoc());
+  }
+  case OpenACCClauseKind::FirstPrivate: {
+    // Restrictions only properly implemented on 'compute' constructs, and
+    // 'compute' constructs are the only construct that can do anything with
+    // this yet, so skip/treat as unimplemented in this case.
+    if (!isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()))
+      break;
+
+    // ActOnVar ensured that everything is a valid variable reference, so there
+    // really isn't anything to do here. GCC does some duplicate-finding, though
+    // it isn't apparent in the standard where this is justified.
+
+    return OpenACCFirstPrivateClause::Create(
         getASTContext(), Clause.getBeginLoc(), Clause.getLParenLoc(),
         Clause.getVarList(), Clause.getEndLoc());
   }

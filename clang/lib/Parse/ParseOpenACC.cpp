@@ -926,7 +926,6 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     case OpenACCClauseKind::Device:
     case OpenACCClauseKind::DeviceResident:
     case OpenACCClauseKind::DevicePtr:
-    case OpenACCClauseKind::FirstPrivate:
     case OpenACCClauseKind::Host:
     case OpenACCClauseKind::Link:
     case OpenACCClauseKind::NoCreate:
@@ -934,6 +933,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     case OpenACCClauseKind::UseDevice:
       ParseOpenACCVarList();
       break;
+    case OpenACCClauseKind::FirstPrivate:
     case OpenACCClauseKind::Private:
       ParsedClause.setVarListDetails(ParseOpenACCVarList());
       break;

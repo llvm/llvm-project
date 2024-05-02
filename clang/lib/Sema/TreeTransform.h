@@ -11112,6 +11112,23 @@ class OpenACCClauseTransform final
   SemaOpenACC::OpenACCParsedClause &ParsedClause;
   OpenACCClause *NewClause = nullptr;
 
+  llvm::SmallVector<Expr *> VisitVarList(ArrayRef<Expr *> VarList) {
+    llvm::SmallVector<Expr *> InstantiatedVarList;
+    for (Expr *CurVar : VarList) {
+      ExprResult Res = Self.TransformExpr(CurVar);
+
+      if (!Res.isUsable())
+        continue;
+
+      Res = Self.getSema().OpenACC().ActOnVar(Res.get());
+
+      if (Res.isUsable())
+        InstantiatedVarList.push_back(Res.get());
+    }
+
+    return InstantiatedVarList;
+  }
+
 public:
   OpenACCClauseTransform(TreeTransform<Derived> &Self,
                          ArrayRef<const OpenACCClause *> ExistingClauses,
@@ -11206,22 +11223,20 @@ void OpenACCClauseTransform<Derived>::VisitNumGangsClause(
 template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitPrivateClause(
     const OpenACCPrivateClause &C) {
-  llvm::SmallVector<Expr *> InstantiatedVarList;
-
-  for (Expr *CurVar : C.getVarList()) {
-    ExprResult Res = Self.TransformExpr(CurVar);
-
-    if (!Res.isUsable())
-      return;
-
-    Res = Self.getSema().OpenACC().ActOnVar(Res.get());
-
-    if (Res.isUsable())
-      InstantiatedVarList.push_back(Res.get());
-  }
-  ParsedClause.setVarListDetails(std::move(InstantiatedVarList));
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()));
 
   NewClause = OpenACCPrivateClause::Create(
+      Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
+}
+
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitFirstPrivateClause(
+    const OpenACCFirstPrivateClause &C) {
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()));
+
+  NewClause = OpenACCFirstPrivateClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
       ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
       ParsedClause.getEndLoc());
