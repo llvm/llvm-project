@@ -160,340 +160,110 @@ define <8 x float> @f6(<8 x float> %a) {
 define half @f7(half %a) nounwind {
 ; X86-LABEL: f7:
 ; X86:       # %bb.0:
-; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    addss %xmm0, %xmm0
-; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    calll __truncsfhf2
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    addss %xmm0, %xmm0
-; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    calll __truncsfhf2
-; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    #ARITH_FENCE
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: f7:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    addss %xmm0, %xmm0
-; X64-NEXT:    callq __truncsfhf2@PLT
-; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    addss %xmm0, %xmm0
-; X64-NEXT:    callq __truncsfhf2@PLT
-; X64-NEXT:    popq %rax
+; X64-NEXT:    #ARITH_FENCE
 ; X64-NEXT:    retq
-  %b = fadd half %a, %a
-  %c = call half @llvm.arithmetic.fence.f16(half %b)
-  %d = fadd half %a, %a
-  %e = fadd half %b, %d
-  ret half %e
+  %b = call half @llvm.arithmetic.fence.f16(half %a)
+  ret half %b
 }
 
 define bfloat @f8(bfloat %a) nounwind {
 ; X86-LABEL: f8:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    addss %xmm0, %xmm0
-; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    calll __truncsfbf2
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    addss %xmm0, %xmm0
-; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    calll __truncsfbf2
-; X86-NEXT:    popl %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    #ARITH_FENCE
+; X86-NEXT:    pinsrw $0, %eax, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: f8:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    pextrw $0, %xmm0, %eax
-; X64-NEXT:    shll $16, %eax
-; X64-NEXT:    movd %eax, %xmm0
-; X64-NEXT:    addss %xmm0, %xmm0
-; X64-NEXT:    callq __truncsfbf2@PLT
-; X64-NEXT:    pextrw $0, %xmm0, %eax
-; X64-NEXT:    shll $16, %eax
-; X64-NEXT:    movd %eax, %xmm0
-; X64-NEXT:    addss %xmm0, %xmm0
-; X64-NEXT:    callq __truncsfbf2@PLT
-; X64-NEXT:    popq %rax
+; X64-NEXT:    #ARITH_FENCE
+; X64-NEXT:    pinsrw $0, %eax, %xmm0
 ; X64-NEXT:    retq
-  %b = fadd bfloat %a, %a
-  %c = call bfloat @llvm.arithmetic.fence.bf16(bfloat %b)
-  %d = fadd bfloat %a, %a
-  %e = fadd bfloat %b, %d
-  ret bfloat %e
+  %b = call bfloat @llvm.arithmetic.fence.bf16(bfloat %a)
+  ret bfloat %b
 }
 
 define <2 x half> @f9(<2 x half> %a) nounwind {
 ; X86-LABEL: f9:
 ; X86:       # %bb.0:
-; X86-NEXT:    subl $36, %esp
 ; X86-NEXT:    movdqa %xmm0, %xmm1
 ; X86-NEXT:    psrld $16, %xmm1
-; X86-NEXT:    movdqu %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    addss %xmm0, %xmm0
-; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    calll __truncsfhf2
-; X86-NEXT:    movups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    addss %xmm0, %xmm0
-; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    calll __truncsfhf2
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    addss %xmm0, %xmm0
-; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    calll __truncsfhf2
-; X86-NEXT:    movups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    addss %xmm0, %xmm0
-; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    calll __truncsfhf2
-; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
+; X86-NEXT:    #ARITH_FENCE
+; X86-NEXT:    #ARITH_FENCE
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; X86-NEXT:    addl $36, %esp
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: f9:
 ; X64:       # %bb.0:
-; X64-NEXT:    subq $40, %rsp
-; X64-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; X64-NEXT:    psrld $16, %xmm0
-; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    movd %xmm0, (%rsp) # 4-byte Folded Spill
-; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    addss %xmm0, %xmm0
-; X64-NEXT:    callq __truncsfhf2@PLT
-; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; X64-NEXT:    movss (%rsp), %xmm0 # 4-byte Reload
-; X64-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    addss %xmm0, %xmm0
-; X64-NEXT:    callq __truncsfhf2@PLT
-; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    addss %xmm0, %xmm0
-; X64-NEXT:    callq __truncsfhf2@PLT
-; X64-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; X64-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; X64-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    addss %xmm0, %xmm0
-; X64-NEXT:    callq __truncsfhf2@PLT
-; X64-NEXT:    punpcklwd (%rsp), %xmm0 # 16-byte Folded Reload
-; X64-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
-; X64-NEXT:    addq $40, %rsp
+; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    psrld $16, %xmm1
+; X64-NEXT:    #ARITH_FENCE
+; X64-NEXT:    #ARITH_FENCE
+; X64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; X64-NEXT:    retq
-  %b = fadd <2 x half> %a, %a
-  %c = call <2 x half> @llvm.arithmetic.fence.v2f16(<2 x half> %b)
-  %d = fadd <2 x half> %a, %a
-  %e = fadd <2 x half> %b, %d
-  ret <2 x half> %e
+  %b = call <2 x half> @llvm.arithmetic.fence.v2f16(<2 x half> %a)
+  ret <2 x half> %b
 }
 
 define <4 x bfloat> @f10(<4 x bfloat> %a) nounwind {
 ; X86-LABEL: f10:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $56, %esp
 ; X86-NEXT:    movdqa %xmm0, %xmm1
-; X86-NEXT:    movdqa %xmm0, %xmm2
-; X86-NEXT:    pextrw $0, %xmm0, %eax
+; X86-NEXT:    psrlq $48, %xmm1
+; X86-NEXT:    pextrw $0, %xmm1, %eax
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[1,1]
+; X86-NEXT:    pextrw $0, %xmm1, %edx
+; X86-NEXT:    pextrw $0, %xmm0, %ecx
 ; X86-NEXT:    psrld $16, %xmm0
 ; X86-NEXT:    pextrw $0, %xmm0, %esi
-; X86-NEXT:    psrlq $48, %xmm1
-; X86-NEXT:    pextrw $0, %xmm1, %edi
-; X86-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
-; X86-NEXT:    pextrw $0, %xmm2, %ecx
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    addss %xmm0, %xmm0
-; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    shll $16, %ecx
-; X86-NEXT:    movd %ecx, %xmm0
-; X86-NEXT:    addss %xmm0, %xmm0
-; X86-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    calll __truncsfbf2
-; X86-NEXT:    movups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Reload
-; X86-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    shll $16, %edi
-; X86-NEXT:    movd %edi, %xmm0
-; X86-NEXT:    addss %xmm0, %xmm0
-; X86-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    calll __truncsfbf2
-; X86-NEXT:    movups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Reload
-; X86-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    shll $16, %esi
-; X86-NEXT:    movd %esi, %xmm0
-; X86-NEXT:    addss %xmm0, %xmm0
-; X86-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    calll __truncsfbf2
-; X86-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 4-byte Reload
-; X86-NEXT:    # xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    movss %xmm1, (%esp)
-; X86-NEXT:    pextrw $0, %xmm0, %esi
-; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    pextrw $0, %xmm0, %edi
-; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    pextrw $0, %xmm0, %ebx
-; X86-NEXT:    calll __truncsfbf2
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    movd %eax, %xmm0
-; X86-NEXT:    addss %xmm0, %xmm0
-; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    shll $16, %ebx
-; X86-NEXT:    movd %ebx, %xmm0
-; X86-NEXT:    addss %xmm0, %xmm0
-; X86-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    calll __truncsfbf2
-; X86-NEXT:    movups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Reload
-; X86-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    shll $16, %edi
-; X86-NEXT:    movd %edi, %xmm0
-; X86-NEXT:    addss %xmm0, %xmm0
-; X86-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    calll __truncsfbf2
-; X86-NEXT:    movups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Reload
-; X86-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    movss %xmm0, (%esp)
-; X86-NEXT:    shll $16, %esi
-; X86-NEXT:    movd %esi, %xmm0
-; X86-NEXT:    addss %xmm0, %xmm0
-; X86-NEXT:    movss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    calll __truncsfbf2
-; X86-NEXT:    movups %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; X86-NEXT:    movd {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Folded Reload
-; X86-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    movd %xmm0, (%esp)
-; X86-NEXT:    calll __truncsfbf2
-; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm2 # 16-byte Reload
-; X86-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
-; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
-; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
+; X86-NEXT:    #ARITH_FENCE
+; X86-NEXT:    #ARITH_FENCE
+; X86-NEXT:    #ARITH_FENCE
+; X86-NEXT:    #ARITH_FENCE
+; X86-NEXT:    pinsrw $0, %eax, %xmm0
+; X86-NEXT:    pinsrw $0, %edx, %xmm1
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X86-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; X86-NEXT:    movdqa %xmm1, %xmm0
-; X86-NEXT:    addl $56, %esp
+; X86-NEXT:    pinsrw $0, %ecx, %xmm0
+; X86-NEXT:    pinsrw $0, %esi, %xmm2
+; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: f10:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbp
-; X64-NEXT:    pushq %r15
-; X64-NEXT:    pushq %r14
-; X64-NEXT:    pushq %rbx
-; X64-NEXT:    subq $56, %rsp
 ; X64-NEXT:    movdqa %xmm0, %xmm1
-; X64-NEXT:    psrld $16, %xmm1
-; X64-NEXT:    pextrw $0, %xmm1, %ebp
-; X64-NEXT:    pextrw $0, %xmm0, %r15d
+; X64-NEXT:    psrlq $48, %xmm1
+; X64-NEXT:    pextrw $0, %xmm1, %eax
 ; X64-NEXT:    movdqa %xmm0, %xmm1
 ; X64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm0[1,1]
-; X64-NEXT:    pextrw $0, %xmm1, %r14d
-; X64-NEXT:    psrlq $48, %xmm0
-; X64-NEXT:    pextrw $0, %xmm0, %eax
-; X64-NEXT:    shll $16, %eax
-; X64-NEXT:    movd %eax, %xmm0
-; X64-NEXT:    addss %xmm0, %xmm0
-; X64-NEXT:    callq __truncsfbf2@PLT
-; X64-NEXT:    pextrw $0, %xmm0, %ebx
-; X64-NEXT:    shll $16, %r14d
-; X64-NEXT:    movd %r14d, %xmm0
-; X64-NEXT:    addss %xmm0, %xmm0
-; X64-NEXT:    callq __truncsfbf2@PLT
-; X64-NEXT:    pextrw $0, %xmm0, %r14d
-; X64-NEXT:    shll $16, %r15d
-; X64-NEXT:    movd %r15d, %xmm0
-; X64-NEXT:    addss %xmm0, %xmm0
-; X64-NEXT:    callq __truncsfbf2@PLT
-; X64-NEXT:    pextrw $0, %xmm0, %r15d
-; X64-NEXT:    shll $16, %ebp
-; X64-NEXT:    movd %ebp, %xmm0
-; X64-NEXT:    addss %xmm0, %xmm0
-; X64-NEXT:    callq __truncsfbf2@PLT
-; X64-NEXT:    pextrw $0, %xmm0, %eax
-; X64-NEXT:    shll $16, %eax
-; X64-NEXT:    movd %eax, %xmm0
-; X64-NEXT:    addss %xmm0, %xmm0
-; X64-NEXT:    callq __truncsfbf2@PLT
-; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; X64-NEXT:    shll $16, %r15d
-; X64-NEXT:    movd %r15d, %xmm0
-; X64-NEXT:    addss %xmm0, %xmm0
-; X64-NEXT:    callq __truncsfbf2@PLT
-; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; X64-NEXT:    shll $16, %r14d
-; X64-NEXT:    movd %r14d, %xmm0
-; X64-NEXT:    addss %xmm0, %xmm0
-; X64-NEXT:    callq __truncsfbf2@PLT
-; X64-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; X64-NEXT:    shll $16, %ebx
-; X64-NEXT:    movd %ebx, %xmm0
-; X64-NEXT:    addss %xmm0, %xmm0
-; X64-NEXT:    callq __truncsfbf2@PLT
-; X64-NEXT:    movdqa (%rsp), %xmm1 # 16-byte Reload
+; X64-NEXT:    pextrw $0, %xmm1, %ecx
+; X64-NEXT:    pextrw $0, %xmm0, %edx
+; X64-NEXT:    psrld $16, %xmm0
+; X64-NEXT:    pextrw $0, %xmm0, %esi
+; X64-NEXT:    #ARITH_FENCE
+; X64-NEXT:    #ARITH_FENCE
+; X64-NEXT:    #ARITH_FENCE
+; X64-NEXT:    #ARITH_FENCE
+; X64-NEXT:    pinsrw $0, %eax, %xmm0
+; X64-NEXT:    pinsrw $0, %ecx, %xmm1
 ; X64-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X64-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
-; X64-NEXT:    punpcklwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; X64-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; X64-NEXT:    pinsrw $0, %edx, %xmm0
+; X64-NEXT:    pinsrw $0, %esi, %xmm2
+; X64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; X64-NEXT:    addq $56, %rsp
-; X64-NEXT:    popq %rbx
-; X64-NEXT:    popq %r14
-; X64-NEXT:    popq %r15
-; X64-NEXT:    popq %rbp
 ; X64-NEXT:    retq
-  %b = fadd <4 x bfloat> %a, %a
-  %c = call <4 x bfloat> @llvm.arithmetic.fence.v4bf16(<4 x bfloat> %b)
-  %d = fadd <4 x bfloat> %a, %a
-  %e = fadd <4 x bfloat> %b, %d
-  ret <4 x bfloat> %e
+  %b = call <4 x bfloat> @llvm.arithmetic.fence.v4bf16(<4 x bfloat> %a)
+  ret <4 x bfloat> %b
 }
 
 declare half @llvm.arithmetic.fence.f16(half)
