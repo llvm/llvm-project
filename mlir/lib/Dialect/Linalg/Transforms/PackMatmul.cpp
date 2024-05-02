@@ -123,6 +123,10 @@ linalg::packMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
   // The op is replaced, we need to set the insertion point after it.
   rewriter.setInsertionPointAfter(matmulOp);
 
+  // Pack the matmul operation into blocked layout with two levels of
+  // subdivision:
+  //   - major 2D blocks - outer dimensions, consist of minor blocks
+  //   - minor 2D blocks - inner dimensions, consist of scalar elements
   auto packedCanonicalMatmul = packMatmulGreedily(
       rewriter, matmulOp, mnkTiles, options->mnkPaddedSizesNextMultipleOf,
       options->mnkOrder);
@@ -149,6 +153,9 @@ linalg::packMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
     outerPerm = newOuterPerms;
   }
 
+  // Block transpose the packed matmul i.e., transpose the outer dimensions
+  // layout of the RHS matrix. The inner dimensions (minor blocks) remain
+  // unchanged.
   auto packedMatmul =
       packTranspose(rewriter, packedCanonicalMatmul->packOps[1],
                     packedCanonicalMatmul->packedLinalgOp,
