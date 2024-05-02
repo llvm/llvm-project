@@ -1281,7 +1281,6 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   SmallVector<omp::PrivateClauseOp> privatizerClones;
   SmallVector<llvm::Value *> privateVariables;
 
-
   // TODO: Perform appropriate actions according to the data-sharing
   // attribute (shared, private, firstprivate, ...) of variables.
   // Currently shared and private are supported.
@@ -1402,8 +1401,8 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
                       return &reductionDecl.getCleanupRegion();
                     });
     if (failed(inlineOmpRegionCleanup(
-            reductionCleanupRegions, privateReductionVariables, moduleTranslation,
-            builder, "omp.reduction.cleanup")))
+            reductionCleanupRegions, privateReductionVariables,
+            moduleTranslation, builder, "omp.reduction.cleanup")))
       bodyGenStatus = failure();
 
     SmallVector<Region *> privateCleanupRegions;
