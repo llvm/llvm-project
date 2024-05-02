@@ -69,6 +69,9 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- The tweak for turning unscoped into scoped enums now removes redundant prefixes
+  from the enum values.
+
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -172,6 +175,11 @@ Changes in existing checks
 - Improved :doc:`bugprone-assert-side-effect
   <clang-tidy/checks/bugprone/assert-side-effect>` check by detecting side
   effect from calling a method with non-const reference parameters.
+
+- Improved :doc:`bugprone-casting-through-void
+  <clang-tidy/checks/bugprone/casting-through-void>` check by ignoring casts
+  where source is already a ``void``` pointer, making middle ``void`` pointer
+  casts bug-free.
 
 - Improved :doc:`bugprone-forwarding-reference-overload
   <clang-tidy/checks/bugprone/forwarding-reference-overload>`
@@ -312,6 +320,10 @@ Changes in existing checks
 - Improved :doc:`readability-avoid-return-with-void-value
   <clang-tidy/checks/readability/avoid-return-with-void-value>` check by adding
   fix-its.
+
+- Improved :doc:`readability-const-return-type
+  <clang-tidy/checks/readability/const-return-type>` check to eliminate false
+  positives when returning types with const not at the top level.
 
 - Improved :doc:`readability-duplicate-include
   <clang-tidy/checks/readability/duplicate-include>` check by excluding include
