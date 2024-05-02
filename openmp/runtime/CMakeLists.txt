@@ -262,10 +262,6 @@ set(LIBOMP_TOOLS_DIR ${LIBOMP_BASE_DIR}/tools)
 set(LIBOMP_INC_DIR ${LIBOMP_SRC_DIR}/include)
 set(LIBOMP_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
-# Enabling Fortran if it is needed
-if(${LIBOMP_FORTRAN_MODULES})
-  enable_language(Fortran)
-endif()
 # Enable MASM Compiler if it is needed (Windows only)
 if(WIN32)
   enable_language(ASM_MASM)

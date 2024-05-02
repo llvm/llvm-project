@@ -85,6 +85,11 @@ else()
   set(CMAKE_CXX_EXTENSIONS NO)
 endif()
 
+# Enabling Fortran if it is needed
+if(${LIBOMP_FORTRAN_MODULES})
+  enable_language(Fortran)
+endif()
+
 # Check and set up common compiler flags.
 include(config-ix)
 include(HandleOpenMPOptions)
@@ -114,6 +119,21 @@ option(OPENMP_ENABLE_LIBOMP_PROFILING "Enable time profiling for libomp." OFF)
 # Header install location
 if(${OPENMP_STANDALONE_BUILD})
   set(LIBOMP_HEADERS_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}")
+  message("MK: CMAKE_Fortran_COMPILER_ID=${CMAKE_Fortran_COMPILER_ID}")
+  if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+    execute_process(
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      COMMAND ${CMAKE_Fortran_COMPILER} --print-resource-dir
+      RESULT_VARIABLE COMMAND_RETURN_CODE
+      OUTPUT_VARIABLE FORTRAN_COMPILER_RESOURCE_DIR
+    )
+    # TODO: This must not be hard-coded, but needs to come from Flang!
+    set(LIBOMP_MODULES_INSTALL_PATH "${FORTRAN_COMPILER_RESOURCE_DIR}")
+    message("MK: 1 LIBOMP_MODULES_INSTALL_PATH=${LIBOMP_MODULES_INSTALL_PATH}")
+  else()
+    set(LIBOMP_MODULES_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}")
+    message("MK: 2 LIBOMP_MODULES_INSTALL_PATH=${CMAKE_INSTALL_INCLUDEDIR}")
+  endif()
 else()
   include(GetClangResourceDir)
   get_clang_resource_dir(LIBOMP_HEADERS_INSTALL_PATH SUBDIR include)
