@@ -80,9 +80,6 @@ struct UnimplementedFeature {
   static bool buildDerivedToBaseCastForDevirt() { return false; }
   static bool emitFunctionEpilog() { return false; }
 
-  // Data layout
-  static bool dataLayoutGetIndexTypeSizeInBits() { return false; }
-
   // References related stuff
   static bool ARC() { return false; } // Automatic reference counting
 
