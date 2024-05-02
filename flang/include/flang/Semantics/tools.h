@@ -222,6 +222,23 @@ inline bool HasCUDAAttr(const Symbol &sym) {
   return false;
 }
 
+inline bool NeedCUDAAlloc(const Symbol &sym) {
+  bool inDeviceSubprogram{IsCUDADeviceContext(&sym.owner())};
+  if (const auto *details{
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
+    if (details->cudaDataAttr() &&
+        (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Managed ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Unified)) {
+      // Descriptor is allocated on host when in host context.
+      if (Fortran::semantics::IsAllocatable(sym))
+        return inDeviceSubprogram;
+      return true;
+    }
+  }
+  return false;
+}
+
 const Scope *FindCUDADeviceContext(const Scope *);
 std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *);
 

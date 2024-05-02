@@ -4033,6 +4033,21 @@ mlir::LogicalResult fir::CUDADeallocateOp::verify() {
   return mlir::success();
 }
 
+void fir::CUDAAllocOp::build(
+    mlir::OpBuilder &builder, mlir::OperationState &result, mlir::Type inType,
+    llvm::StringRef uniqName, llvm::StringRef bindcName,
+    fir::CUDADataAttributeAttr cudaAttr, mlir::ValueRange typeparams,
+    mlir::ValueRange shape, llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  mlir::StringAttr nameAttr =
+      uniqName.empty() ? mlir::StringAttr{} : builder.getStringAttr(uniqName);
+  mlir::StringAttr bindcAttr =
+      bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
+  build(builder, result, wrapAllocaResultType(inType),
+        mlir::TypeAttr::get(inType), nameAttr, bindcAttr, typeparams, shape,
+        cudaAttr);
+  result.addAttributes(attributes);
+}
+
 //===----------------------------------------------------------------------===//
 // FIROpsDialect
 //===----------------------------------------------------------------------===//
