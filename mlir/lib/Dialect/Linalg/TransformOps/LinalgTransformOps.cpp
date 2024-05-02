@@ -171,42 +171,43 @@ static DiagnosedSilenceableFailure unpackSingleIndexResultPayloadOperations(
   return DiagnosedSilenceableFailure::success();
 }
 
+/// When possible, converts each `OpFoldResult` in `mixedResult` to
+/// an integer if the value can be statically inferred.  If a result
+/// is a `Value` then it must be either a `ParamType` or a handle
+/// to an a constant like op.
 static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
     TransformState &state, TransformOpInterface &transformOp,
-    const SmallVectorImpl<OpFoldResult> &mixedResults,
-    SmallVectorImpl<int64_t> &reified) {
+    ArrayRef<OpFoldResult> mixedResults, SmallVectorImpl<int64_t> &reified) {
   for (OpFoldResult paramOrHandle : mixedResults) {
     if (isa<Attribute>(paramOrHandle)) {
       reified.push_back(
           cast<IntegerAttr>(paramOrHandle.get<Attribute>()).getInt());
       continue;
-    } else if (isa<Value>(paramOrHandle) &&
-               isa<ParamType>(paramOrHandle.get<Value>().getType())) {
+    } else if (isa<ParamType>(paramOrHandle.get<Value>().getType())) {
       ArrayRef<Attribute> params = state.getParams(paramOrHandle.get<Value>());
       if (params.size() != 1)
-        return transformOp.emitDefiniteFailure() << "expected a single param";
+        return transformOp.emitSilenceableError() << "expected a single param";
       reified.push_back(
           cast<IntegerAttr>(params.front()).getValue().getSExtValue());
       continue;
     }
 
-    auto paramOrHandlePayloads =
-        state.getPayloadOps(paramOrHandle.get<Value>());
-    if (!llvm::hasSingleElement(paramOrHandlePayloads))
-      return transformOp.emitDefiniteFailure()
+    auto payload = state.getPayloadOps(paramOrHandle.get<Value>());
+    if (!llvm::hasSingleElement(payload))
+      return transformOp.emitSilenceableError()
              << "requires param or handle that is mapped to 1 payload op";
 
-    Operation *paramOrHandlePayloadOp = *paramOrHandlePayloads.begin();
+    Operation *paramOrHandlePayloadOp = *payload.begin();
     if (paramOrHandlePayloadOp->getNumResults() != 1 ||
         !paramOrHandlePayloadOp->getResult(0).getType().isIndex()) {
-      return transformOp.emitDefiniteFailure()
+      return transformOp.emitSilenceableError()
              << "requires param or handle to be result of op with 1 index "
                 "result";
     }
 
     IntegerAttr attr;
     if (!matchPattern(paramOrHandlePayloadOp->getResult(0), m_Constant(&attr)))
-      return transformOp.emitDefiniteFailure()
+      return transformOp.emitSilenceableError()
              << "requires param or handle to be the result of a constant like "
                 "op";
 
@@ -1768,7 +1769,7 @@ void PadOp::getEffects(
 }
 
 SmallVector<OpFoldResult> PadOp::getMixedPadToMultipleOf() {
-  OpBuilder b(getContext());
+  Builder b(getContext());
   return getMixedValues(getStaticPadToMultipleOf(), getPadToMultipleOf(), b);
 }
 

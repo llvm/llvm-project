@@ -1056,6 +1056,7 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
     /// copy_back_op attribute value indicating that no copy back is desired.
     static constexpr StringRef kCopyOpNone = "none";
 
+    /// Returns a mix of dynamic `pad_to_multiple_of` and static `static_pad_to_multiple_of`.
     SmallVector<OpFoldResult> getMixedPadToMultipleOf();
 
     ::mlir::DiagnosedSilenceableFailure apply(
