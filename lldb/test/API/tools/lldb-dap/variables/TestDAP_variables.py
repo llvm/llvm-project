@@ -254,22 +254,18 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             "pt": {
                 "equals": {"type": "PointType"},
                 "startswith": {
-                    "result": (
-                        "{x:11, y:22, buffer:{...}}"
-                        if enableAutoVariableSummaries
-                        else "PointType @ 0x"
-                    )
+                    "result": "{x:11, y:22, buffer:{...}}"
+                    if enableAutoVariableSummaries
+                    else "PointType @ 0x"
                 },
                 "hasVariablesReference": True,
             },
             "pt.buffer": {
                 "equals": {"type": "int[16]"},
                 "startswith": {
-                    "result": (
-                        "{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...}"
-                        if enableAutoVariableSummaries
-                        else "int[16] @ 0x"
-                    )
+                    "result": "{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...}"
+                    if enableAutoVariableSummaries
+                    else "int[16] @ 0x"
                 },
                 "hasVariablesReference": True,
             },
@@ -532,11 +528,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 "watch": {
                     "equals": {"type": "PointType"},
                     "startswith": {
-                        "result": (
-                            "{x:11, y:22, buffer:{...}}"
-                            if enableAutoVariableSummaries
-                            else "PointType @ 0x"
-                        )
+                        "result": "{x:11, y:22, buffer:{...}}"
+                        if enableAutoVariableSummaries
+                        else "PointType @ 0x"
                     },
                     "missing": ["indexedVariables"],
                     "hasVariablesReference": True,
@@ -544,11 +538,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 "variables": {
                     "equals": {"type": "PointType"},
                     "startswith": {
-                        "result": (
-                            "{x:11, y:22, buffer:{...}}"
-                            if enableAutoVariableSummaries
-                            else "PointType @ 0x"
-                        )
+                        "result": "{x:11, y:22, buffer:{...}}"
+                        if enableAutoVariableSummaries
+                        else "PointType @ 0x"
                     },
                     "missing": ["indexedVariables"],
                     "hasVariablesReference": True,
