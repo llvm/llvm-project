@@ -1441,7 +1441,7 @@ def NonBlocking : TypeAttr {
                    GNU<"clang_nonblocking">];
 
   let Args = [ExprArgument<"Cond", /*optional*/1>];
-  let Documentation = [NonBlockingNonAllocatingDocs];
+  let Documentation = [NonBlockingDocs];
 }
 
 def NonAllocating : TypeAttr {
@@ -1449,7 +1449,7 @@ def NonAllocating : TypeAttr {
                    C23<"clang", "nonallocating">,
                    GNU<"clang_nonallocating">];
   let Args = [ExprArgument<"Cond", /*optional*/1>];
-  let Documentation = [NonBlockingNonAllocatingDocs];
+  let Documentation = [NonAllocatingDocs];
 }
 
 def Blocking : TypeAttr {
@@ -1457,14 +1457,14 @@ def Blocking : TypeAttr {
                    C23<"clang", "blocking">,
                    GNU<"clang_blocking">];
 
-  let Documentation = [NonBlockingNonAllocatingDocs];
+  let Documentation = [BlockingDocs];
 }
 
 def Allocating : TypeAttr {
   let Spellings = [CXX11<"clang", "allocating">,
                    C23<"clang", "allocating">,
                    GNU<"clang_allocating">];
-  let Documentation = [NonBlockingNonAllocatingDocs];
+  let Documentation = [AllocatingDocs];
 }
 
 // Similar to CUDA, OpenCL attributes do not receive a [[]] spelling because
