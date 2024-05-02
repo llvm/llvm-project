@@ -2095,10 +2095,16 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
   if (T->isRecordType()) {
     const CXXConstructorDecl *Ctor = E->getConstructor();
 
-    // Trivial zero initialization.
-    if (E->requiresZeroInitialization() && Ctor->isTrivial()) {
+    // Zero initialization.
+    if (E->requiresZeroInitialization()) {
       const Record *R = getRecord(E->getType());
-      return this->visitZeroRecordInitializer(R, E);
+
+      if (!this->visitZeroRecordInitializer(R, E))
+        return false;
+
+      // If the constructor is trivial anyway, we're done.
+      if (Ctor->isTrivial())
+        return true;
     }
 
     const Function *Func = getFunction(Ctor);
@@ -2481,10 +2487,12 @@ bool ByteCodeExprGen<Emitter>::VisitPackIndexingExpr(
   return this->delegate(E->getSelectedExpr());
 }
 
-template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
-  if (E->containsErrors())
-    return false;
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitRecoveryExpr(const RecoveryExpr *E) {
+  return this->emitError(E);
+}
 
+template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true,
                              /*NewInitializing=*/false);
   return this->Visit(E);
@@ -2492,9 +2500,6 @@ template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::delegate(const Expr *E) {
-  if (E->containsErrors())
-    return this->emitError(E);
-
   // We're basically doing:
   // OptionScope<Emitter> Scope(this, DicardResult, Initializing);
   // but that's unnecessary of course.
@@ -2502,9 +2507,6 @@ bool ByteCodeExprGen<Emitter>::delegate(const Expr *E) {
 }
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::visit(const Expr *E) {
-  if (E->containsErrors())
-    return this->emitError(E);
-
   if (E->getType()->isVoidType())
     return this->discard(E);
 
