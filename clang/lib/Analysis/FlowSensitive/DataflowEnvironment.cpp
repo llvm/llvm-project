@@ -350,17 +350,6 @@ public:
     return RecursiveASTVisitor<ResultObjectVisitor>::TraverseDecl(D);
   }
 
-  // Don't traverse expressions in unevaluated contexts, as we don't model
-  // fields that are only used in these.
-  // Note: The operand of the `noexcept` operator is an unevaluated operand, but
-  // nevertheless it appears in the Clang CFG, so we don't exclude it here.
-  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc) { return true; }
-  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc) { return true; }
-  bool TraverseCXXTypeidExpr(CXXTypeidExpr *) { return true; }
-  bool TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *) {
-    return true;
-  }
-
   bool TraverseBindingDecl(BindingDecl *BD) {
     // `RecursiveASTVisitor` doesn't traverse holding variables for
     // `BindingDecl`s by itself, so we need to tell it to.
