@@ -44,12 +44,11 @@
 # RUN: not ld.lld a.o b.o c.o diff_stack_align.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=STACK_ALIGN --implicit-check-not=error:
 # STACK_ALIGN: error: diff_stack_align.o:(.riscv.attributes) has stack_align=32 but a.o:(.riscv.attributes) has stack_align=16
 
-## merging atomic_abi values for A6C and A7 lead to an error.
+## RISC-V tag merging for atomic_abi values A6C and A7 lead to an error.
 # RUN: llvm-mc -filetype=obj -triple=riscv64  atomic_abi_A6C.s -o atomic_abi_A6C.o
 # RUN: llvm-mc -filetype=obj -triple=riscv64  atomic_abi_A7.s -o atomic_abi_A7.o
 # RUN: not ld.lld atomic_abi_A6C.o atomic_abi_A7.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ATOMIC_ABI_ERROR --implicit-check-not=error:
 # ATOMIC_ABI_ERROR: error: atomic_abi_A6C.o:(.riscv.attributes) has atomic_abi=1 but atomic_abi_A7.o:(.riscv.attributes) has atomic_abi=3
-
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64  atomic_abi_A6S.s -o atomic_abi_A6S.o
 # RUN: ld.lld atomic_abi_A6S.o atomic_abi_A6C.o -o atomic_abi_A6C_A6S
