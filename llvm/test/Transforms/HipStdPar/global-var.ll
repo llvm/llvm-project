@@ -1,3 +1,4 @@
+; REQUIRES: amdgpu-registered-target
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes=hipstdpar-select-accelerator-code \
 ; RUN: %s | FileCheck %s
 
