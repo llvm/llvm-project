@@ -34,6 +34,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
@@ -186,7 +187,7 @@ LLVMAttributeRef LLVMCreateConstantRangeAttribute(LLVMContextRef C,
                                                   const uint64_t UpperWords[]) {
   auto &Ctx = *unwrap(C);
   auto AttrKind = (Attribute::AttrKind)KindID;
-  unsigned NumWords = (NumBits + 63) / 64;
+  unsigned NumWords = divideCeil(NumBits, 64);
   return wrap(Attribute::get(
       Ctx, AttrKind,
       ConstantRange(APInt(NumBits, ArrayRef(LowerWords, NumWords)),
