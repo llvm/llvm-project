@@ -685,8 +685,8 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
     if (LHS.isSigned() == RHS.isSigned())
       return LHS + RHS;
 
-    unsigned width = std::max(LHS.getBitWidth(), RHS.getBitWidth()) + 1;
-    return llvm::APSInt(LHS.sext(width) + RHS.sext(width), /*Signed=*/true);
+    unsigned Width = std::max(LHS.getBitWidth(), RHS.getBitWidth()) + 1;
+    return llvm::APSInt(LHS.sext(Width) + RHS.sext(Width), /*Signed=*/true);
   };
 
   // If we know all 3 values, we can diagnose that the total value would be out
