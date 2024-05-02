@@ -16783,7 +16783,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
 
 #include "llvm/TargetParser/PPCTargetParser.def"
   auto GenAIXPPCBuiltinCpuExpr = [&](unsigned SupportMethod, unsigned FieldIdx,
-                                     unsigned CompOp,
+                                     unsigned Mask, CmpInst::Predicate CompOp,
                                      unsigned OpValue) -> Value * {
     if (SupportMethod == AIX_BUILTIN_PPC_FALSE)
       return llvm::ConstantInt::getFalse(ConvertType(E->getType()));
@@ -16791,24 +16791,45 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     if (SupportMethod == AIX_BUILTIN_PPC_TRUE)
       return llvm::ConstantInt::getTrue(ConvertType(E->getType()));
 
-    assert(SupportMethod <= USE_SYS_CONF && "Invalid value for SupportMethod.");
-    assert((CompOp == COMP_EQ) && "Only equal comparisons are supported.");
+    assert(SupportMethod <= SYS_CALL && "Invalid value for SupportMethod.");
 
-    llvm::Type *STy = llvm::StructType::get(PPC_SYSTEMCONFIG_TYPE);
-    llvm::Constant *SysConf =
-        CGM.CreateRuntimeVariable(STy, "_system_configuration");
+    llvm::Value *FieldValue = nullptr;
+    if (SupportMethod == USE_SYS_CONF) {
+      llvm::Type *STy = llvm::StructType::get(PPC_SYSTEMCONFIG_TYPE);
+      llvm::Constant *SysConf =
+          CGM.CreateRuntimeVariable(STy, "_system_configuration");
 
-    // Grab the appropriate field from _system_configuration.
-    llvm::Value *Idxs[] = {ConstantInt::get(Int32Ty, 0),
-                           ConstantInt::get(Int32Ty, FieldIdx)};
+      // Grab the appropriate field from _system_configuration.
+      llvm::Value *Idxs[] = {ConstantInt::get(Int32Ty, 0),
+                             ConstantInt::get(Int32Ty, FieldIdx)};
 
-    llvm::Value *FieldValue = Builder.CreateGEP(STy, SysConf, Idxs);
-    FieldValue = Builder.CreateAlignedLoad(Int32Ty, FieldValue,
-                                           CharUnits::fromQuantity(4));
-    assert(FieldValue->getType()->isIntegerTy(32) &&
-           "Only 32-bit integers are supported in GenAIXPPCBuiltinCpuExpr().");
-    return Builder.CreateICmp(ICmpInst::ICMP_EQ, FieldValue,
-                              ConstantInt::get(Int32Ty, OpValue));
+      FieldValue = Builder.CreateGEP(STy, SysConf, Idxs);
+      FieldValue = Builder.CreateAlignedLoad(Int32Ty, FieldValue,
+                                             CharUnits::fromQuantity(4));
+    } else if (SupportMethod == SYS_CALL) {
+      llvm::FunctionType *FTy =
+          llvm::FunctionType::get(Int64Ty, Int32Ty, false);
+      llvm::FunctionCallee Func =
+          CGM.CreateRuntimeFunction(FTy, "getsystemcfg");
+
+      FieldValue =
+          Builder.CreateCall(Func, {ConstantInt::get(Int32Ty, FieldIdx)});
+    }
+    assert(FieldValue &&
+           "SupportMethod value is not defined in PPCTargetParser.def.");
+
+    if (Mask)
+      FieldValue = Builder.CreateAnd(FieldValue, Mask);
+
+    llvm::Type *ValueType = FieldValue->getType();
+    bool IsValueType64Bit = ValueType->isIntegerTy(64);
+    assert(
+        (IsValueType64Bit || ValueType->isIntegerTy(32)) &&
+        "Only 32/64-bit integers are supported in GenAIXPPCBuiltinCpuExpr().");
+
+    return Builder.CreateICmp(
+        CompOp, FieldValue,
+        ConstantInt::get(IsValueType64Bit ? Int64Ty : Int32Ty, OpValue));
   };
 
   switch (BuiltinID) {
@@ -16820,15 +16841,18 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     llvm::Triple Triple = getTarget().getTriple();
 
     if (Triple.isOSAIX()) {
-      unsigned IsCpuSupport, FieldIdx, CompareOp, CpuIdValue;
-      typedef std::tuple<unsigned, unsigned, unsigned, unsigned> CPUType;
-      std::tie(IsCpuSupport, FieldIdx, CompareOp, CpuIdValue) =
+      unsigned SupportMethod, FieldIdx, CpuIdValue;
+      CmpInst::Predicate CompareOp;
+      typedef std::tuple<unsigned, unsigned, CmpInst::Predicate, unsigned>
+          CPUType;
+      std::tie(SupportMethod, FieldIdx, CompareOp, CpuIdValue) =
           static_cast<CPUType>(StringSwitch<CPUType>(CPUStr)
-#define PPC_AIX_CPU(NAME, SUPPORT_MAGIC, INDEX, COMPARE_OP, VALUE)             \
-  .Case(NAME, {SUPPORT_MAGIC, INDEX, COMPARE_OP, VALUE})
+#define PPC_AIX_CPU(NAME, SUPPORT_METHOD, INDEX, COMPARE_OP, VALUE)            \
+  .Case(NAME, {SUPPORT_METHOD, INDEX, COMPARE_OP, VALUE})
 #include "llvm/TargetParser/PPCTargetParser.def"
-          );
-      return GenAIXPPCBuiltinCpuExpr(IsCpuSupport, FieldIdx, CompareOp,
+                                   .Default({AIX_BUILTIN_PPC_FALSE, 0,
+                                             CmpInst::Predicate(), 0}));
+      return GenAIXPPCBuiltinCpuExpr(SupportMethod, FieldIdx, 0, CompareOp,
                                      CpuIdValue);
     }
 
@@ -16846,10 +16870,31 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
                                 llvm::ConstantInt::get(Int32Ty, NumCPUID));
   }
   case Builtin::BI__builtin_cpu_supports: {
-    unsigned FeatureWord;
-    unsigned BitMask;
+    llvm::Triple Triple = getTarget().getTriple();
     const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
     StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
+    if (Triple.isOSAIX()) {
+      unsigned SupportMethod, FieldIdx, Mask, Value;
+      CmpInst::Predicate CompOp;
+      typedef std::tuple<unsigned, unsigned, unsigned, CmpInst::Predicate,
+                         unsigned>
+          CPUSupportType;
+      std::tie(SupportMethod, FieldIdx, Mask, CompOp, Value) =
+          static_cast<CPUSupportType>(StringSwitch<CPUSupportType>(CPUStr)
+#define PPC_AIX_FEATURE(NAME, DESC, SUPPORT_METHOD, INDEX, MASK, COMP_OP,      \
+                        VALUE)                                                 \
+  .Case(NAME, {SUPPORT_METHOD, INDEX, MASK, COMP_OP, VALUE})
+#include "llvm/TargetParser/PPCTargetParser.def"
+                                          .Default({AIX_BUILTIN_PPC_FALSE, 0, 0,
+                                                    CmpInst::Predicate(), 0}));
+      return GenAIXPPCBuiltinCpuExpr(SupportMethod, FieldIdx, Mask, CompOp,
+                                     Value);
+    }
+
+    assert(Triple.isOSLinux() &&
+           "__builtin_cpu_supports() is only supported for AIX and Linux.");
+    unsigned FeatureWord;
+    unsigned BitMask;
     std::tie(FeatureWord, BitMask) =
         StringSwitch<std::pair<unsigned, unsigned>>(CPUStr)
 #define PPC_LNX_FEATURE(Name, Description, EnumName, Bitmask, FA_WORD)         \
