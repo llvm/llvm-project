@@ -4848,6 +4848,7 @@ cc_library(
         ":SparseTensorTransformOps",
         ":TensorTransformOps",
         ":TransformDebugExtension",
+        ":TransformIRDLExtension",
         ":TransformLoopExtension",
         ":TransformPDLExtension",
         ":UBToLLVM",
@@ -12069,6 +12070,45 @@ cc_library(
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":TransformPDLExtensionOpsIncGen",
+        "//llvm:Support",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TransformIRDLExtensionOpsIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-op-decls",
+            ],
+            "include/mlir/Dialect/Transform/IRDLExtension/IRDLExtensionOps.h.inc",
+        ),
+        (
+            [
+                "-gen-op-defs",
+            ],
+            "include/mlir/Dialect/Transform/IRDLExtension/IRDLExtensionOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Transform/IRDLExtension/IRDLExtensionOps.td",
+    deps = [":TransformPDLExtensionTdFiles"],
+)
+
+cc_library(
+    name = "TransformIRDLExtension",
+    srcs = glob(["lib/Dialect/Transform/IRDLExtension/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Transform/IRDLExtension/*.h"]),
+    deps = [
+        ":IR",
+        ":IRDLDialect",
+        ":IRDLInterfacesIncGen",
+        ":Rewrite",
+        ":SideEffectInterfaces",
+        ":Support",
+        ":TransformDialect",
+        ":TransformDialectInterfaces",
+        ":TransformIRDLExtensionOpsIncGen",
         "//llvm:Support",
     ],
 )
