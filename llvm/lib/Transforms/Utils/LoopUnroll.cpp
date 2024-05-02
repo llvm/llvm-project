@@ -243,9 +243,9 @@ public:
   DomTreeNode::const_iterator childIter() const { return ChildIter; }
 
   DomTreeNode *nextChild() {
-    DomTreeNode *child = *ChildIter;
+    DomTreeNode *Child = *ChildIter;
     ++ChildIter;
-    return child;
+    return Child;
   }
 
   DomTreeNode::const_iterator end() const { return EndIter; }
