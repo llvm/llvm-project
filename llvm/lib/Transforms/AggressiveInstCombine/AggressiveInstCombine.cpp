@@ -49,6 +49,11 @@ static cl::opt<unsigned> MaxInstrsToScan(
     "aggressive-instcombine-max-scan-instrs", cl::init(64), cl::Hidden,
     cl::desc("Max number of instructions to scan for aggressive instcombine."));
 
+static cl::opt<unsigned> StrNCmpInlineThreshold(
+    "strncmp-inline-threshold", cl::init(3), cl::Hidden,
+    cl::desc("The maximum length of a constant string for a builtin string cmp "
+             "call eligible for inlining. The default value is 3."));
+
 /// Match a pattern for a bitwise funnel/rotate operation that partially guards
 /// against undefined behavior by branching around the funnel-shift/rotation
 /// when the shift amount is 0.
@@ -914,11 +919,6 @@ static bool foldPatternedLoads(Instruction &I, const DataLayout &DL) {
   return true;
 }
 
-static cl::opt<unsigned> StrNCmpInlineThreshold(
-    "strncmp-inline-threshold", cl::init(3), cl::Hidden,
-    cl::desc("The maximum length of a constant string for a builtin string cmp "
-             "call eligible for inlining. The default value is 3."));
-
 namespace {
 class StrNCmpInliner {
 public:
@@ -929,7 +929,7 @@ public:
   bool optimizeStrNCmp();
 
 private:
-  bool inlineCompare(Value *LHS, StringRef RHS, uint64_t N, bool Swapped);
+  void inlineCompare(Value *LHS, StringRef RHS, uint64_t N, bool Swapped);
 
   CallInst *CI;
   LibFunc Func;
@@ -981,18 +981,19 @@ bool StrNCmpInliner::optimizeStrNCmp() {
     return false;
 
   StringRef Str1, Str2;
-  bool HasStr1 = getConstantStringInfo(Str1P, Str1, false);
-  bool HasStr2 = getConstantStringInfo(Str2P, Str2, false);
+  bool HasStr1 = getConstantStringInfo(Str1P, Str1, /*TrimAtNul=*/false);
+  bool HasStr2 = getConstantStringInfo(Str2P, Str2, /*TrimAtNul=*/false);
   if (HasStr1 == HasStr2)
     return false;
 
   // Note that '\0' and characters after it are not trimmed.
   StringRef Str = HasStr1 ? Str1 : Str2;
+  Value *StrP = HasStr1 ? Str2P : Str1P;
 
   size_t Idx = Str.find('\0');
   uint64_t N = Idx == StringRef::npos ? UINT64_MAX : Idx + 1;
   if (Func == LibFunc_strncmp) {
-    if (auto ConstInt = dyn_cast<ConstantInt>(CI->getArgOperand(2)))
+    if (auto *ConstInt = dyn_cast<ConstantInt>(CI->getArgOperand(2)))
       N = std::min(N, ConstInt->getZExtValue());
     else
       return false;
@@ -1001,15 +1002,13 @@ bool StrNCmpInliner::optimizeStrNCmp() {
   if (N > Str.size() || N < 2 || N > StrNCmpInlineThreshold)
     return false;
 
-  Value *StrP = HasStr1 ? Str2P : Str1P;
-
   // Cases where StrP has two or more dereferenceable bytes might be better
   // optimized elsewhere.
   bool CanBeNull = false, CanBeFreed = false;
   if (StrP->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed) > 1)
     return false;
-
-  return inlineCompare(StrP, Str, N, HasStr1);
+  inlineCompare(StrP, Str, N, HasStr1);
+  return true;
 }
 
 /// Convert
@@ -1046,7 +1045,7 @@ bool StrNCmpInliner::optimizeStrNCmp() {
 ///                ...                   |
 ///        BBSubs[N-1]    (sub) ---------+
 ///
-bool StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
+void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
                                    bool Swapped) {
   auto &Ctx = CI->getContext();
   IRBuilder<> B(Ctx);
@@ -1056,9 +1055,9 @@ bool StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
       SplitBlock(BBCI, CI, DTU, nullptr, nullptr, BBCI->getName() + ".tail");
 
   SmallVector<BasicBlock *> BBSubs;
-  for (uint64_t i = 0; i < N; ++i)
-    BBSubs.push_back(BasicBlock::Create(Ctx, "sub_" + std::to_string(i),
-                                        BBCI->getParent(), BBTail));
+  for (uint64_t I = 0; I < N; ++I)
+    BBSubs.push_back(
+        BasicBlock::Create(Ctx, "sub_" + Twine(I), BBCI->getParent(), BBTail));
   BasicBlock *BBNE = BasicBlock::Create(Ctx, "ne", BBCI->getParent(), BBTail);
 
   cast<BranchInst>(BBCI->getTerminator())->setSuccessor(0, BBSubs[0]);
@@ -1100,11 +1099,10 @@ bool StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
     Updates.push_back({DominatorTree::Delete, BBCI, BBTail});
     DTU->applyUpdates(Updates);
   }
-  return true;
 }
 
 static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
-                         TargetLibraryInfo &TLI, llvm::AssumptionCache &AC,
+                         TargetLibraryInfo &TLI, AssumptionCache &AC,
                          DominatorTree &DT, const DataLayout &DL,
                          bool &MadeCFGChange) {
 
