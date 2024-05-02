@@ -3527,16 +3527,23 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known.Zero.setBitsFrom(1);
     break;
   }
-  case ISD::SHL:
+  case ISD::SHL: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
-    Known = KnownBits::shl(Known, Known2);
+
+    bool NUW = Op->getFlags().hasNoUnsignedWrap();
+    bool NSW = Op->getFlags().hasNoSignedWrap();
+
+    bool ShAmtNonZero = Known2.isNonZero();
+
+    Known = KnownBits::shl(Known, Known2, NUW, NSW, ShAmtNonZero);
 
     // Minimum shift low bits are known zero.
     if (const APInt *ShMinAmt =
             getValidMinimumShiftAmountConstant(Op, DemandedElts))
       Known.Zero.setLowBits(ShMinAmt->getZExtValue());
     break;
+  }
   case ISD::SRL:
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
