@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z -frelaxed-template-template-args %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z %s
 
 // expected-note@temp_arg_template_cxx1z.cpp:* 1+{{}}
 
