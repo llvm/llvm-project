@@ -780,12 +780,11 @@ inline auto m_False() {
 
 struct CondCode_match {
   std::optional<ISD::CondCode> CCToMatch;
-  ISD::CondCode *BindCC;
+  ISD::CondCode *BindCC = nullptr;
 
-  explicit CondCode_match(ISD::CondCode CC) : CCToMatch(CC), BindCC(nullptr) {}
+  explicit CondCode_match(ISD::CondCode CC) : CCToMatch(CC) {}
 
-  explicit CondCode_match(ISD::CondCode *CC)
-      : CCToMatch(std::nullopt), BindCC(CC) {}
+  explicit CondCode_match(ISD::CondCode *CC) : BindCC(CC) {}
 
   template <typename MatchContext> bool match(const MatchContext &, SDValue N) {
     if (auto *CC = dyn_cast<CondCodeSDNode>(N.getNode())) {
