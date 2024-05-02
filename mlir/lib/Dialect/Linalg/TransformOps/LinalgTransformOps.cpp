@@ -171,6 +171,50 @@ static DiagnosedSilenceableFailure unpackSingleIndexResultPayloadOperations(
   return DiagnosedSilenceableFailure::success();
 }
 
+static DiagnosedSilenceableFailure reifyMixedParamAndHandleResults(
+    TransformState &state, TransformOpInterface &transformOp,
+    const SmallVectorImpl<OpFoldResult> &mixedResults,
+    SmallVectorImpl<int64_t> &reified) {
+  for (OpFoldResult paramOrHandle : mixedResults) {
+    if (isa<Attribute>(paramOrHandle)) {
+      reified.push_back(
+          cast<IntegerAttr>(paramOrHandle.get<Attribute>()).getInt());
+      continue;
+    } else if (isa<Value>(paramOrHandle) &&
+               isa<ParamType>(paramOrHandle.get<Value>().getType())) {
+      ArrayRef<Attribute> params = state.getParams(paramOrHandle.get<Value>());
+      if (params.size() != 1)
+        return transformOp.emitDefiniteFailure() << "expected a single param";
+      reified.push_back(
+          cast<IntegerAttr>(params.front()).getValue().getSExtValue());
+      continue;
+    }
+
+    auto paramOrHandlePayloads =
+        state.getPayloadOps(paramOrHandle.get<Value>());
+    if (!llvm::hasSingleElement(paramOrHandlePayloads))
+      return transformOp.emitDefiniteFailure()
+             << "requires param or handle that is mapped to 1 payload op";
+
+    Operation *paramOrHandlePayloadOp = *paramOrHandlePayloads.begin();
+    if (paramOrHandlePayloadOp->getNumResults() != 1 ||
+        !paramOrHandlePayloadOp->getResult(0).getType().isIndex()) {
+      return transformOp.emitDefiniteFailure()
+             << "requires param or handle to be result of op with 1 index "
+                "result";
+    }
+
+    IntegerAttr attr;
+    if (!matchPattern(paramOrHandlePayloadOp->getResult(0), m_Constant(&attr)))
+      return transformOp.emitDefiniteFailure()
+             << "requires param or handle to be the result of a constant like "
+                "op";
+
+    reified.push_back(attr.getInt());
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
 //===----------------------------------------------------------------------===//
 // Apply...PatternsOp
 //===----------------------------------------------------------------------===//
@@ -1798,6 +1842,7 @@ DiagnosedSilenceableFailure
 transform::PadOp::apply(transform::TransformRewriter &rewriter,
                         transform::TransformResults &results,
                         transform::TransformState &state) {
+  auto transformOp = cast<TransformOpInterface>(getOperation());
   SmallVector<Operation *> paddedOps, padOps, copyBackOps;
 
   for (Operation *target : state.getPayloadOps(getTarget())) {
@@ -1860,53 +1905,10 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
         extractFromIntegerArrayAttr<int64_t>(getPaddingDimensions());
 
     SmallVector<int64_t> padToMultipleOf;
-    // TODO: This should probably be a common utility function.
-    for (OpFoldResult sz : getMixedPadToMultipleOf()) {
-      if (sz.is<Attribute>()) {
-        auto attr = sz.get<Attribute>();
-        padToMultipleOf.push_back(cast<IntegerAttr>(attr).getInt());
-        continue;
-      } else if (sz.is<Value>() && isa<ParamType>(sz.get<Value>().getType())) {
-        ArrayRef<Attribute> params = state.getParams(sz.get<Value>());
-        if (params.size() != 1)
-          return emitSilenceableFailure(getLoc()) << "expected a single param";
-        padToMultipleOf.push_back(
-            cast<IntegerAttr>(params.front()).getValue().getSExtValue());
-        continue;
-      }
-
-      auto szPayloads = state.getPayloadOps(sz.get<Value>());
-      if (!llvm::hasSingleElement(szPayloads)) {
-        auto diag = this->emitOpError()
-                    << "requires " << kPadToMultipleOfKeyword
-                    << " handle that is mapped to 1 payload op";
-        diag.attachNote(sz.get<Value>().getLoc())
-            << "mapped to " << llvm::range_size(szPayloads) << " payload ops";
-        return DiagnosedSilenceableFailure::definiteFailure();
-      }
-
-      Operation *szPayloadOp = *szPayloads.begin();
-      if (szPayloadOp->getNumResults() != 1 ||
-          !szPayloadOp->getResult(0).getType().isIndex()) {
-        auto diag = this->emitOpError()
-                    << "requires " << kPadToMultipleOfKeyword
-                    << " to be result of op with 1 index result";
-        diag.attachNote(szPayloadOp->getLoc())
-            << kPadToMultipleOfKeyword << " payload op";
-        return DiagnosedSilenceableFailure::definiteFailure();
-      }
-
-      IntegerAttr attr;
-      if (!matchPattern(szPayloadOp->getResult(0), m_Constant(&attr))) {
-        auto diag = this->emitOpError()
-                    << "requires constant " << kPadToMultipleOfKeyword;
-        diag.attachNote(szPayloadOp->getLoc())
-            << kPadToMultipleOfKeyword << " payload op";
-        return DiagnosedSilenceableFailure::definiteFailure();
-      }
-
-      padToMultipleOf.push_back(attr.getInt());
-    }
+    DiagnosedSilenceableFailure status = reifyMixedParamAndHandleResults(
+        state, transformOp, getMixedPadToMultipleOf(), padToMultipleOf);
+    if (!status.succeeded())
+      return status;
     if (padToMultipleOf.empty())
       padToMultipleOf =
           SmallVector<int64_t>(options.paddingDimensions.size(), 1);
@@ -3362,49 +3364,12 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
   auto targets = state.getPayloadOps(getTarget());
   if (std::empty(targets))
     return DiagnosedSilenceableFailure::success();
-
+  auto transformOp = cast<TransformOpInterface>(getOperation());
   SmallVector<int64_t> vectorSizes;
-  for (OpFoldResult sz : getMixedVectorSizes()) {
-    if (sz.is<Attribute>()) {
-      auto attr = sz.get<Attribute>();
-      vectorSizes.push_back(cast<IntegerAttr>(attr).getInt());
-      continue;
-    } else if (sz.is<Value>() && isa<ParamType>(sz.get<Value>().getType())) {
-      ArrayRef<Attribute> params = state.getParams(sz.get<Value>());
-      if (params.size() != 1)
-        return emitSilenceableFailure(getLoc()) << "expected a single param";
-      vectorSizes.push_back(
-          cast<IntegerAttr>(params.front()).getValue().getSExtValue());
-      continue;
-    }
-
-    auto szPayloads = state.getPayloadOps(sz.get<Value>());
-    if (!llvm::hasSingleElement(szPayloads)) {
-      auto diag = this->emitOpError(
-          "requires vector size handle that is mapped to 1 payload op");
-      diag.attachNote(sz.get<Value>().getLoc())
-          << "mapped to " << llvm::range_size(szPayloads) << " payload ops";
-      return DiagnosedSilenceableFailure::definiteFailure();
-    }
-
-    Operation *szPayloadOp = *szPayloads.begin();
-    if (szPayloadOp->getNumResults() != 1 ||
-        !szPayloadOp->getResult(0).getType().isIndex()) {
-      auto diag = this->emitOpError(
-          "requires vector size payload op with 1 index result");
-      diag.attachNote(szPayloadOp->getLoc()) << "vector size payload op";
-      return DiagnosedSilenceableFailure::definiteFailure();
-    }
-
-    IntegerAttr attr;
-    if (!matchPattern(szPayloadOp->getResult(0), m_Constant(&attr))) {
-      auto diag = this->emitOpError("requires constant vector size");
-      diag.attachNote(szPayloadOp->getLoc()) << "vector size payload op";
-      return DiagnosedSilenceableFailure::definiteFailure();
-    }
-
-    vectorSizes.push_back(attr.getInt());
-  }
+  DiagnosedSilenceableFailure status = reifyMixedParamAndHandleResults(
+      state, transformOp, getMixedVectorSizes(), vectorSizes);
+  if (!status.succeeded())
+    return status;
 
   // TODO: Check that the correct number of vectorSizes was provided.
   for (Operation *target : targets) {
