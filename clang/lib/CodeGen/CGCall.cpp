@@ -5202,6 +5202,16 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           Val = Builder.CreateFreeze(Val);
         IRCallArgs[FirstIRArg] = Val;
 
+        // Emit lifetime markers for the temporary alloca.
+        llvm::TypeSize ByvalTempElementSize =
+            CGM.getDataLayout().getTypeAllocSize(Addr.getElementType());
+        llvm::Value *LifetimeSize =
+            EmitLifetimeStart(ByvalTempElementSize, Addr.getPointer());
+
+        // Add cleanup code to emit the end lifetime marker after the call.
+        if (LifetimeSize) // In case we disabled lifetime markers.
+          CallLifetimeEndAfterCall.emplace_back(Addr, LifetimeSize);
+
         I->copyInto(*this, Addr);
       } else {
         // We want to avoid creating an unnecessary temporary+copy here;
