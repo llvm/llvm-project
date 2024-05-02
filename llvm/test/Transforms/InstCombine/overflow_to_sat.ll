@@ -15,10 +15,7 @@ define i32 @uadd(i32 %x, i32 %y) {
 
 define i32 @uadd_comm(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_comm(
-; CHECK-NEXT:    [[AO:%.*]] = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i32, i1 } [[AO]], 1
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[O]], i32 -1, i32 [[A]]
+; CHECK-NEXT:    [[S:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
   %ao = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %x, i32 %y)
@@ -666,12 +663,7 @@ define i32 @sadd_i32(i32 %x, i32 %y) {
 
 define i32 @sadd_i32_no_extract(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sadd_i32_no_extract(
-; CHECK-NEXT:    [[AO:%.*]] = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    [[O:%.*]] = extractvalue { i32, i1 } [[AO]], 1
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 -2147483648, i32 2147483647
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[O]], i32 [[S]], i32 [[A]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %ao = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %x, i32 %y)

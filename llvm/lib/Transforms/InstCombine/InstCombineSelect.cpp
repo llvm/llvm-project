@@ -2075,12 +2075,23 @@ foldOverflowingAddSubSelect(SelectInst &SI, InstCombiner::BuilderTy &Builder) {
   Value *FalseVal = SI.getFalseValue();
 
   WithOverflowInst *II;
-  if (!match(CondVal, m_ExtractValue<1>(m_WithOverflowInst(II))) ||
-      !match(FalseVal, m_ExtractValue<0>(m_Specific(II))))
+  if (!match(CondVal, m_ExtractValue<1>(m_WithOverflowInst(II))))
     return nullptr;
 
   Value *X = II->getLHS();
   Value *Y = II->getRHS();
+  if (!match(FalseVal, m_ExtractValue<0>(m_Specific(II)))) {
+    // Commutative adds can get missed, so check for X and Y
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::uadd_with_overflow:
+    case Intrinsic::sadd_with_overflow:
+      if (!match(FalseVal, m_c_Add(m_Specific(X), m_Specific(Y))))
+        return nullptr;
+      break;
+    default:
+      return nullptr;
+    }
+  }
 
   auto IsSignedSaturateLimit = [&](Value *Limit, bool IsAdd) {
     Type *Ty = Limit->getType();
