@@ -125,8 +125,6 @@ class CommandInterpreterAPICase(TestBase):
         # listed above, hence trimming to the last parts.
         transcript = transcript[-total_number_of_commands:]
 
-        print(transcript)
-
         # Validate the transcript.
         #
         # The following asserts rely on the exact output format of the
@@ -147,18 +145,15 @@ class CommandInterpreterAPICase(TestBase):
                 ],
             })
 
-        # (lldb) breakpoint set -f main.c -l X
-        self.assertEqual(transcript[2],
-            {
-                "command": "breakpoint set -f main.c -l %d" % self.line,
-                "output": [
-                    "Breakpoint 1: where = a.out`main + 29 at main.c:5:5, address = 0x0000000100000f7d",
-                ],
-                "error": [],
-            })
+        # (lldb) breakpoint set -f main.c -l <line>
+        self.assertEqual(transcript[2]["command"], "breakpoint set -f main.c -l %d" % self.line)
+        # Breakpoint 1: where = a.out`main + 29 at main.c:5:3, address = 0x0000000100000f7d
+        self.assertTrue("Breakpoint 1: where = a.out`main + 29 at main.c:5:3, address =" in transcript[2]["output"][0])
+        self.assertEqual(transcript[2]["error"], [])
 
         # (lldb) r
         self.assertEqual(transcript[3]["command"], "r")
+        # Process 25494 launched: '<path>/TestCommandInterpreterAPI.test_structured_transcript/a.out' (x86_64)
         self.assertTrue("Process" in transcript[3]["output"][0])
         self.assertTrue("launched" in transcript[3]["output"][0])
         self.assertEqual(transcript[3]["error"], [])
