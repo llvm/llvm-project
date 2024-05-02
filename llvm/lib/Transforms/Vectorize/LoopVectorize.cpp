@@ -7450,7 +7450,8 @@ static void AddRuntimeUnrollDisableMetaData(Loop *L) {
 static void createAndCollectMergePhiForReduction(
     VPInstruction *RedResult,
     DenseMap<const RecurrenceDescriptor *, Value *> &ReductionResumeValues,
-    VPTransformState &State, Loop *OrigLoop, BasicBlock *LoopMiddleBlock) {
+    VPTransformState &State, Loop *OrigLoop, BasicBlock *LoopMiddleBlock,
+    bool VectorizingEpilogue) {
   if (!RedResult ||
       RedResult->getOpcode() != VPInstruction::ComputeReductionResult)
     return;
@@ -7463,6 +7464,9 @@ static void createAndCollectMergePhiForReduction(
       State.get(RedResult, VPIteration(State.UF - 1, VPLane::getFirstLane()));
   auto *ResumePhi =
       dyn_cast<PHINode>(PhiR->getStartValue()->getUnderlyingValue());
+  assert((!VectorizingEpilogue || ResumePhi) &&
+         "when vectorizing the epilogue loop, we need a resume phi from main "
+         "vector loop");
 
   // TODO: bc.merge.rdx should not be created here, instead it should be
   // modeled in VPlan.
@@ -7588,9 +7592,9 @@ LoopVectorizationPlanner::executePlan(
   auto *ExitVPBB =
       cast<VPBasicBlock>(BestVPlan.getVectorLoopRegion()->getSingleSuccessor());
   for (VPRecipeBase &R : *ExitVPBB) {
-    createAndCollectMergePhiForReduction(dyn_cast<VPInstruction>(&R),
-                                         ReductionResumeValues, State, OrigLoop,
-                                         State.CFG.VPBB2IRBB[ExitVPBB]);
+    createAndCollectMergePhiForReduction(
+        dyn_cast<VPInstruction>(&R), ReductionResumeValues, State, OrigLoop,
+        State.CFG.VPBB2IRBB[ExitVPBB], ExpandedSCEVs);
   }
 
   // 2.6. Maintain Loop Hints
