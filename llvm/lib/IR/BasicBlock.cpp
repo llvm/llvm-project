@@ -47,7 +47,7 @@ cl::opt<cl::boolOrDefault> PreserveInputDbgFormat(
 bool WriteNewDbgInfoFormatToBitcode /*set default value in cl::init() below*/;
 cl::opt<bool, true> WriteNewDbgInfoFormatToBitcode2(
     "write-experimental-debuginfo-iterators-to-bitcode", cl::Hidden,
-    cl::location(WriteNewDbgInfoFormatToBitcode), cl::init(true));
+    cl::location(WriteNewDbgInfoFormatToBitcode), cl::init(false));
 
 DbgMarker *BasicBlock::createMarker(Instruction *I) {
   assert(IsNewDbgInfoFormat &&
