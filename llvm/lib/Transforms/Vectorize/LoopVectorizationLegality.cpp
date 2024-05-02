@@ -837,10 +837,9 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
             if (Instruction *SI = dyn_cast<SelectInst>(V))
               Cmp = dyn_cast<CmpInst>(SI->getOperand(0));
           }
-          if (Cmp && !Cmp->hasOneUse()) {
-            RecurKind Kind = RedDes.getRecurrenceKind();
-            assert((Kind == RecurKind::IAnyOf || Kind == RecurKind::FAnyOf) &&
-                   "Unexpected type of recurrence");
+          RecurKind Kind = RedDes.getRecurrenceKind();
+          if (Cmp && !Cmp->hasOneUse() &&
+              (Kind == RecurKind::IAnyOf || Kind == RecurKind::FAnyOf)) {
             if (MultiCmpsRed.contains(Cmp))
               MultiCmpsRed[Cmp]++;
             else
