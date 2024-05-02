@@ -234,7 +234,7 @@ private:
   bool verifyExpression(Value *Ex, ValueSet &Valid);
   void extendExpression(Value *Ex, ValueSet &Valid, ValueSet &New);
   unsigned computeInitializerSize(Value *V);
-  unsigned computeExpressionCost(Value *V, ValueSet &Vs);
+  unsigned computeExpressionCost(Value *V, ValueSet &Vs, unsigned ExLoopDepth);
   void collectCandidateExpressions();
 
   void extractInductionVariables(Value *Ex, ValueVect &IVs);
@@ -534,8 +534,9 @@ void PrecomputeLoopExpressions::extendExpression(Value *Ex, ValueSet &Valid,
   }
 }
 
-unsigned PrecomputeLoopExpressions::computeExpressionCost(Value *V,
-                                                          ValueSet &Vs) {
+unsigned
+PrecomputeLoopExpressions::computeExpressionCost(Value *V, ValueSet &Vs,
+                                                 unsigned ExLoopDepth) {
   if (Vs.count(V))
     return 0;
   Vs.insert(V);
@@ -564,7 +565,14 @@ unsigned PrecomputeLoopExpressions::computeExpressionCost(Value *V,
     }
 
     for (unsigned i = 0, n = In->getNumOperands(); i < n; ++i) {
-      C += computeExpressionCost(In->getOperand(i), Vs);
+      Value *Op = In->getOperand(i);
+      unsigned OpLoopDepth =
+          isa<Instruction>(Op)
+              ? LI->getLoopDepth(cast<Instruction>(Op)->getParent())
+              : 0;
+      if (OpLoopDepth != ExLoopDepth)
+        continue;
+      C += computeExpressionCost(In->getOperand(i), Vs, ExLoopDepth);
     }
   }
 
@@ -637,7 +645,12 @@ void PrecomputeLoopExpressions::collectCandidateExpressions() {
   ValueSet Tmp;
   remove_if(IVEs, [&](Value *V) {
     Tmp.clear();
-    return IVInfos.count(V) || computeExpressionCost(V, Tmp) < MinCostThreshold;
+    unsigned LoopDepth =
+        isa<Instruction>(V)
+            ? LI->getLoopDepth(cast<Instruction>(V)->getParent())
+            : 0;
+    return IVInfos.count(V) ||
+           computeExpressionCost(V, Tmp, LoopDepth) < MinCostThreshold;
   });
 }
 
@@ -976,7 +989,11 @@ bool PrecomputeLoopExpressions::processCandidateExpressions() {
     // Some expressions can have enough of their subexpressions precomputed,
     // that they are no longer expensive.
     ValueSet Tmp;
-    if (computeExpressionCost(Ex, Tmp) < MinCostThreshold)
+    unsigned LoopDepth =
+        isa<Instruction>(Ex)
+            ? LI->getLoopDepth(cast<Instruction>(Ex)->getParent())
+            : 0;
+    if (computeExpressionCost(Ex, Tmp, LoopDepth) < MinCostThreshold)
       continue;
 
     IVs.clear();
@@ -1044,7 +1061,11 @@ AdjustedInit PrecomputeLoopExpressions::getInitializerForArray(Value *Ex,
     if (!Diff)
       continue;
 
-    unsigned C = computeExpressionCost(Diff, Tmp);
+    unsigned LoopDepth =
+        isa<Instruction>(Diff)
+            ? LI->getLoopDepth(cast<Instruction>(Diff)->getParent())
+            : 0;
+    unsigned C = computeExpressionCost(Diff, Tmp, LoopDepth);
     if (C < MinCost || (C == MinCost && D.Seq < MinSeq)) {
       MinCost = C;
       MinSeq = D.Seq;
