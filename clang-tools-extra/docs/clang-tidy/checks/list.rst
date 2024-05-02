@@ -120,7 +120,7 @@ Clang-Tidy Checks
    :doc:`bugprone-posix-return <bugprone/posix-return>`, "Yes"
    :doc:`bugprone-redundant-branch-condition <bugprone/redundant-branch-condition>`, "Yes"
    :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
-   :doc:`bugprone-return-const-ref-from-parameter <bugprone/return-const-ref-from-parameter>`
+   :doc:`bugprone-return-const-ref-from-parameter <bugprone/return-const-ref-from-parameter>`,
    :doc:`bugprone-shared-ptr-array-mismatch <bugprone/shared-ptr-array-mismatch>`, "Yes"
    :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
    :doc:`bugprone-signed-char-misuse <bugprone/signed-char-misuse>`,
