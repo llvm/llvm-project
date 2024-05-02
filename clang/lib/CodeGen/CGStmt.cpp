@@ -928,11 +928,8 @@ bool CodeGenFunction::checkIfLoopMustProgress(const Expr *ControllingExpression,
   bool CondIsTrue = CondIsConstInt && (!ControllingExpression ||
                                        Result.Val.getInt().getBoolValue());
 
-  if (getLangOpts().C99 && CondIsConstInt)
-    return false;
-
   // Loops with non-constant conditions must make progress in C11 and later.
-  if (getLangOpts().C11)
+  if (getLangOpts().C11 && !CondIsConstInt)
     return true;
 
   // [C++26][intro.progress] (DR)
