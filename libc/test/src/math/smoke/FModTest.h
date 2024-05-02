@@ -12,7 +12,7 @@
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/NearestIntegerOperations.h"
 #include "test/UnitTest/FEnvSafeTest.h"
-#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/FPTest.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/math_macros.h"

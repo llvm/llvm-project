@@ -13,7 +13,7 @@
 
 #include <stdio.h> // For EOF
 
-#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/FPTest.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcSScanfTest, SimpleStringConv) {

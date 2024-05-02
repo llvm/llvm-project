@@ -192,7 +192,8 @@ protected:
                          const char *LHSStr, const char *RHSStr,
                          internal::Location Loc);
 
-  template <typename Func> testutils::FunctionCaller *createCallable(Func f) {
+  template <typename Func>
+  testutils::FunctionCaller *createCallable(Func f) {
     struct Callable : public testutils::FunctionCaller {
       Func f;
       Callable(Func f) : f(f) {}
@@ -399,8 +400,9 @@ CString libc_make_test_file_path_func(const char *file_name);
         LIBC_NAMESPACE::testing::internal::Message()
 
 #define LIBC_TEST_BINOP_(COND, LHS, RHS, RET_OR_EMPTY)                         \
-  LIBC_TEST_SCAFFOLDING_(test(LIBC_NAMESPACE::testing::TestCond::COND, LHS,    \
-                              RHS, #LHS, #RHS, LIBC_TEST_LOC_()),              \
+  LIBC_TEST_SCAFFOLDING_(LIBC_NAMESPACE::testing::Test::test(                  \
+                             LIBC_NAMESPACE::testing::TestCond::COND, LHS,     \
+                             RHS, #LHS, #RHS, LIBC_TEST_LOC_()),               \
                          RET_OR_EMPTY)
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -473,9 +475,10 @@ CString libc_make_test_file_path_func(const char *file_name);
 // Custom matcher checks.
 
 #define LIBC_TEST_MATCH_(MATCHER, MATCH, MATCHER_STR, MATCH_STR, RET_OR_EMPTY) \
-  LIBC_TEST_SCAFFOLDING_(matchAndExplain(MATCHER, MATCH, MATCHER_STR,          \
-                                         MATCH_STR, LIBC_TEST_LOC_()),         \
-                         RET_OR_EMPTY)
+  LIBC_TEST_SCAFFOLDING_(                                                      \
+      LIBC_NAMESPACE::testing::Test::matchAndExplain(                          \
+          MATCHER, MATCH, MATCHER_STR, MATCH_STR, LIBC_TEST_LOC_()),           \
+      RET_OR_EMPTY)
 
 #define EXPECT_THAT(MATCH, MATCHER)                                            \
   LIBC_TEST_MATCH_(MATCHER, MATCH, #MATCHER, #MATCH, )

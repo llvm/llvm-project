@@ -10,29 +10,26 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/cosf.h"
-#include "test/UnitTest/FPMatcher.h"
-#include "test/UnitTest/Test.h"
+#include "test/UnitTest/FPTest.h"
 
 #include <errno.h>
 #include <stdint.h>
 
 using LlvmLibcCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-TEST_F(LlvmLibcCosfTest, SpecialNumbers) {
-  LIBC_NAMESPACE::libc_errno = 0;
+TEST_F(LlvmLibcCosfTest, SpecialNumbers) {  
+  EXPECT_NO_ERRNO_FP_EXCEPT(
+      EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cosf(aNaN)));
 
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::cosf(aNaN));
-  EXPECT_MATH_ERRNO(0);
+  EXPECT_NO_ERRNO_FP_EXCEPT_ALL_ROUNDING(
+      EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(0.0f)));
 
-  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, LIBC_NAMESPACE::cosf(0.0f));
-  EXPECT_MATH_ERRNO(0);
+  EXPECT_NO_ERRNO_FP_EXCEPT_ALL_ROUNDING(
+      EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::cosf(-0.0f)));
 
-  EXPECT_FP_EQ_ALL_ROUNDING(1.0f, LIBC_NAMESPACE::cosf(-0.0f));
-  EXPECT_MATH_ERRNO(0);
+  EXPECT_ERRNO_FP_EXCEPT_ALL_ROUNDING(
+      EDOM, FE_INVALID, EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cosf(inf)));
 
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::cosf(inf));
-  EXPECT_MATH_ERRNO(EDOM);
-
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::cosf(neg_inf));
-  EXPECT_MATH_ERRNO(EDOM);
+  EXPECT_ERRNO_FP_EXCEPT_ALL_ROUNDING(
+      EDOM, FE_INVALID, EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cosf(neg_inf)));
 }

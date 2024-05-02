@@ -10,7 +10,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/Hypot.h"
 #include "src/math/hypotf.h"
-#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/FPTest.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;

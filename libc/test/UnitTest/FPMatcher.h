@@ -61,59 +61,8 @@ template <TestCond C, typename T> FPMatcher<T, C> getMatcher(T expectedValue) {
   return FPMatcher<T, C>(expectedValue);
 }
 
-template <typename T> struct FPTest : public Test {
-  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
-  using StorageType = typename FPBits::StorageType;
-  static constexpr StorageType STORAGE_MAX =
-      LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
-  static constexpr T zero = FPBits::zero(Sign::POS).get_val();
-  static constexpr T neg_zero = FPBits::zero(Sign::NEG).get_val();
-  static constexpr T aNaN = FPBits::quiet_nan().get_val();
-  static constexpr T sNaN = FPBits::signaling_nan().get_val();
-  static constexpr T inf = FPBits::inf(Sign::POS).get_val();
-  static constexpr T neg_inf = FPBits::inf(Sign::NEG).get_val();
-  static constexpr T min_normal = FPBits::min_normal().get_val();
-  static constexpr T max_normal = FPBits::max_normal().get_val();
-  static constexpr T min_denormal = FPBits::min_subnormal().get_val();
-  static constexpr T max_denormal = FPBits::max_subnormal().get_val();
-
-  static constexpr int N_ROUNDING_MODES = 4;
-  static constexpr fputil::testing::RoundingMode ROUNDING_MODES[4] = {
-      fputil::testing::RoundingMode::Nearest,
-      fputil::testing::RoundingMode::Upward,
-      fputil::testing::RoundingMode::Downward,
-      fputil::testing::RoundingMode::TowardZero,
-  };
-};
-
 } // namespace testing
 } // namespace LIBC_NAMESPACE
-
-#define DECLARE_SPECIAL_CONSTANTS(T)                                           \
-  using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;                            \
-  using StorageType = typename FPBits::StorageType;                            \
-                                                                               \
-  static constexpr StorageType STORAGE_MAX =                                   \
-      LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();                 \
-  const T zero = FPBits::zero(Sign::POS).get_val();                            \
-  const T neg_zero = FPBits::zero(Sign::NEG).get_val();                        \
-  const T aNaN = FPBits::quiet_nan().get_val();                                \
-  const T sNaN = FPBits::signaling_nan().get_val();                            \
-  const T inf = FPBits::inf(Sign::POS).get_val();                              \
-  const T neg_inf = FPBits::inf(Sign::NEG).get_val();                          \
-  const T min_normal = FPBits::min_normal().get_val();                         \
-  const T max_normal = FPBits::max_normal(Sign::POS).get_val();                \
-  const T neg_max_normal = FPBits::max_normal(Sign::NEG).get_val();            \
-  const T min_denormal = FPBits::min_subnormal(Sign::POS).get_val();           \
-  const T neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();       \
-  const T max_denormal = FPBits::max_subnormal().get_val();                    \
-  static constexpr int UNKNOWN_MATH_ROUNDING_DIRECTION = 99;                   \
-  static constexpr LIBC_NAMESPACE::cpp::array<int, 6>                          \
-      MATH_ROUNDING_DIRECTIONS_INCLUDING_UNKNOWN = {                           \
-          FP_INT_UPWARD,     FP_INT_DOWNWARD,                                  \
-          FP_INT_TOWARDZERO, FP_INT_TONEARESTFROMZERO,                         \
-          FP_INT_TONEAREST,  UNKNOWN_MATH_ROUNDING_DIRECTION,                  \
-  };
 
 #define EXPECT_FP_EQ(expected, actual)                                         \
   EXPECT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \
@@ -188,35 +137,29 @@ template <typename T> struct FPTest : public Test {
     EXPECT_FP_EXCEPTION(expected_except);                                      \
   } while (0)
 
-#define EXPECT_FP_EQ_ALL_ROUNDING(expected, actual)                            \
-  do {                                                                         \
-    using namespace LIBC_NAMESPACE::fputil::testing;                           \
-    ForceRoundingMode __r1(RoundingMode::Nearest);                             \
-    if (__r1.success) {                                                        \
-      EXPECT_FP_EQ((expected), (actual));                                      \
-    }                                                                          \
-    ForceRoundingMode __r2(RoundingMode::Upward);                              \
-    if (__r2.success) {                                                        \
-      EXPECT_FP_EQ((expected), (actual));                                      \
-    }                                                                          \
-    ForceRoundingMode __r3(RoundingMode::Downward);                            \
-    if (__r3.success) {                                                        \
-      EXPECT_FP_EQ((expected), (actual));                                      \
-    }                                                                          \
-    ForceRoundingMode __r4(RoundingMode::TowardZero);                          \
-    if (__r4.success) {                                                        \
-      EXPECT_FP_EQ((expected), (actual));                                      \
-    }                                                                          \
-  } while (0)
-
-#define EXPECT_FP_EQ_ROUNDING_MODE(expected, actual, rounding_mode)            \
+#define FOR_ROUNDING_(rounding_mode, expr_or_statement)                        \
   do {                                                                         \
     using namespace LIBC_NAMESPACE::fputil::testing;                           \
     ForceRoundingMode __r((rounding_mode));                                    \
     if (__r.success) {                                                         \
-      EXPECT_FP_EQ((expected), (actual));                                      \
+      expr_or_statement;                                                       \
     }                                                                          \
   } while (0)
+
+#define FOR_ALL_ROUNDING_(expr_or_statement)                                   \
+  do {                                                                         \
+    using namespace LIBC_NAMESPACE::fputil::testing;                           \
+    FOR_ROUNDING_(RoundingMode::Nearest, expr_or_statement);                   \
+    FOR_ROUNDING_(RoundingMode::Upward, expr_or_statement);                    \
+    FOR_ROUNDING_(RoundingMode::Downward, expr_or_statement);                  \
+    FOR_ROUNDING_(RoundingMode::TowardZero, expr_or_statement);                \
+  } while (0)
+
+#define EXPECT_FP_EQ_ALL_ROUNDING(expected, actual)                            \
+  FOR_ALL_ROUNDING_(EXPECT_FP_EQ((expected), (actual)))
+
+#define EXPECT_FP_EQ_ROUNDING_MODE(expected, actual, rounding_mode)            \
+  FOR_ROUNDING_(rounding_mode, EXPECT_FP_EQ((expected), (actual)))
 
 #define EXPECT_FP_EQ_ROUNDING_NEAREST(expected, actual)                        \
   EXPECT_FP_EQ_ROUNDING_MODE((expected), (actual), RoundingMode::Nearest)

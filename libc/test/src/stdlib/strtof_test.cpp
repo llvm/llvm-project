@@ -10,7 +10,7 @@
 #include "src/errno/libc_errno.h"
 #include "src/stdlib/strtof.h"
 
-#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/FPTest.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 

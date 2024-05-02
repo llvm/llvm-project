@@ -58,6 +58,9 @@ template <typename T> struct Comparator {
 #endif
 };
 
+// TODO: this should check errno and not always need a return value to
+// also compare against. The FP and non-FP matching is redundant with
+// the other matchers pulled in through Test.h and FPMatcher.h.
 template <typename T> class ErrnoSetterMatcher : public Matcher<T> {
   Comparator<T> return_cmp;
   Comparator<int> errno_cmp;
@@ -183,5 +186,36 @@ static ErrnoSetterMatcherBuilder<RetT> returns(internal::Comparator<RetT> cmp) {
 
 } // namespace testing
 } // namespace LIBC_NAMESPACE
+
+// Used to check that `LIBC_NAMESPACE::libc_errno` was 0 or a specific
+// errno after executing `expr_or_statement` from a state where
+// `LIBC_NAMESPACE::libc_errno` was 0.
+//
+// Expects `expected` to be convertible to int type.
+//
+// Does not return the value of expr_or_statement, i.e., intended usage
+// is: `EXPECT_ERRNO(EDOM, EXPECT_EQ(..., ...));` or
+// ```
+// EXPECT_ERRNO(EDOM, {
+//   stmt;
+//   ...
+// });
+// ```
+//
+// TODO: this currently uses `ErrnoSetterMatcher` for the nice explanation on
+// failed errno matching. `ErrnoSetterMatcher` requires a return value to also
+// always check, so this code always checks 0 against 0 for the return value--
+// it is not actually checking the value of `expr_or_statement` per above doc
+// comments. When `ErrnoSetterMatcher` is changed to not always check return
+// values, change this also.
+#define EXPECT_ERRNO(expected, expr_or_statement)                              \
+  do {                                                                         \
+    LIBC_NAMESPACE::libc_errno = 0;                                            \
+    expr_or_statement;                                                         \
+    EXPECT_THAT(                                                               \
+        0, LIBC_NAMESPACE::testing::internal::ErrnoSetterMatcher<int>(         \
+               LIBC_NAMESPACE::testing::ErrnoSetterMatcher::EQ(0),             \
+               LIBC_NAMESPACE::testing::ErrnoSetterMatcher::EQ((expected))));  \
+  } while (0)
 
 #endif // LLVM_LIBC_TEST_ERRNOSETTERMATCHER_H

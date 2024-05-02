@@ -11,7 +11,7 @@
 #include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/fdim.h"
-#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/FPTest.h"
 #include "test/UnitTest/Test.h"
 
 using LlvmLibcFDimTest = FDimTestTemplate<double>;

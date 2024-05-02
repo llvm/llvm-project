@@ -10,7 +10,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/atan2f.h"
-#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/FPTest.h"
 #include "test/UnitTest/Test.h"
 
 using LlvmLibcAtan2fTest = LIBC_NAMESPACE::testing::FPTest<float>;

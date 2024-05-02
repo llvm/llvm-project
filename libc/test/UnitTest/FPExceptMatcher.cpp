@@ -10,6 +10,7 @@
 
 #include "test/UnitTest/Test.h"
 
+#include "hdr/fenv_macros.h"
 #include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include <memory>
@@ -35,7 +36,7 @@ static void sigfpeHandler(int sig) {
   siglongjmp(jumpBuffer, -1);
 }
 
-FPExceptMatcher::FPExceptMatcher(FunctionCaller *func) {
+FPExceptCallableMatcher::FPExceptCallableMatcher(FunctionCaller *func) {
   auto oldSIGFPEHandler = signal(SIGFPE, &sigfpeHandler);
   std::unique_ptr<FunctionCaller> funcUP(func);
 

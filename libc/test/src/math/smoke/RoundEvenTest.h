@@ -10,7 +10,7 @@
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDEVENTEST_H
 
 #include "test/UnitTest/FEnvSafeTest.h"
-#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/FPTest.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/math_macros.h"

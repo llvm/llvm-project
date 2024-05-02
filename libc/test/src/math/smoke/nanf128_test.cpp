@@ -10,7 +10,7 @@
 #include "src/__support/uint128.h"
 #include "src/math/nanf128.h"
 #include "test/UnitTest/FEnvSafeTest.h"
-#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/FPTest.h"
 #include "test/UnitTest/Test.h"
 
 class LlvmLibcNanf128Test : public LIBC_NAMESPACE::testing::FEnvSafeTest {
