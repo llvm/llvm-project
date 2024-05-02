@@ -209,10 +209,8 @@ Pointer InterpFrame::getLocalPointer(unsigned Offset) const {
 
 Pointer InterpFrame::getParamPointer(unsigned Off) {
   // Return the block if it was created previously.
-  auto Pt = Params.find(Off);
-  if (Pt != Params.end()) {
+  if (auto Pt = Params.find(Off); Pt != Params.end())
     return Pointer(reinterpret_cast<Block *>(Pt->second.get()));
-  }
 
   // Allocate memory to store the parameter and the block metadata.
   const auto &Desc = Func->getParamDescriptor(Off);
