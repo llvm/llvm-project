@@ -687,6 +687,23 @@ void SwiftASTManipulator::InsertError(swift::VarDecl *error_var,
   m_catch_stmt->setBody(body_stmt);
 }
 
+
+bool SwiftASTManipulator::IsExpressionResultNonCopyable() {
+  VariableInfo *result_var =
+      llvm::find_if(m_variables, [&](const VariableInfo &var) {
+        return var.GetName().str() == GetResultName();
+      });
+  if (result_var == m_variables.end())
+    return false;
+
+  swift::VarDecl *decl = result_var->GetDecl();
+  if (!decl)
+    return false;
+
+  swift::Type type = decl->getTypeInContext();
+  return type->isNoncopyable();
+}
+
 llvm::Error SwiftASTManipulator::FixupResultAfterTypeChecking() {
   if (!IsValid())
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
