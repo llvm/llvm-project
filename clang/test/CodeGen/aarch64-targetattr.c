@@ -102,14 +102,14 @@ void minusarch() {}
 // CHECK: attributes #5 = { {{.*}} "tune-cpu"="cortex-a710" }
 // CHECK: attributes #6 = { {{.*}} "target-cpu"="generic" }
 // CHECK: attributes #7 = { {{.*}} "tune-cpu"="generic" }
-// CHECK: attributes #8 = { {{.*}} "target-cpu"="neoverse-n1" "target-features"="+aes,+crc,+dotprod,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+spe,+ssbs" "tune-cpu"="cortex-a710" }
+// CHECK: attributes #8 = { {{.*}} "target-cpu"="neoverse-n1" "target-features"="+aes,+crc,+dotprod,+fp-armv8,+fullfp16,+lse,+neon,+ras,+rcpc,+rdm,+sha2,+profile,+ssbs" "tune-cpu"="cortex-a710" }
 // CHECK: attributes #9 = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+neon,+sve" "tune-cpu"="cortex-a710" }
-// CHECK: attributes #10 = { {{.*}} "target-cpu"="neoverse-v1" "target-features"="+aes,+bf16,+fcma,+crc,+dotprod,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jscvt,+lse,+neon,+pauth,+rng,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+spe,+ssbs,+sve,+sve2" }
-// CHECK: attributes #11 = { {{.*}} "target-cpu"="neoverse-v1" "target-features"="+aes,+bf16,+fcma,+crc,+dotprod,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jscvt,+lse,+neon,+pauth,+rng,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+spe,+ssbs,-sve" }
+// CHECK: attributes #10 = { {{.*}} "target-cpu"="neoverse-v1" "target-features"="+aes,+bf16,+fcma,+crc,+dotprod,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jscvt,+lse,+neon,+pauth,+rng,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+profile,+ssbs,+sve,+sve2" }
+// CHECK: attributes #11 = { {{.*}} "target-cpu"="neoverse-v1" "target-features"="+aes,+bf16,+fcma,+crc,+dotprod,+fp-armv8,+fp16fml,+fullfp16,+i8mm,+jscvt,+lse,+neon,+pauth,+rng,+ras,+rcpc,+rdm,+sha2,+sha3,+sm4,+profile,+ssbs,-sve" }
 // CHECK: attributes #12 = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+neon,+sve" }
 // CHECK: attributes #13 = { {{.*}} "target-features"="+fp-armv8,+fullfp16,+neon,+sve,-sve2" }
 // CHECK: attributes #14 = { {{.*}} "target-features"="+fullfp16" }
-// CHECK: attributes #15 = { {{.*}} "target-cpu"="neoverse-n1" "target-features"="+aes,+bf16,+fcma,+crc,+dotprod,+fp-armv8,+fullfp16,+i8mm,+jscvt,+lse,+neon,+pauth,+ras,+rcpc,+rdm,+sha2,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" "tune-cpu"="cortex-a710" }
-// CHECK: attributes #16 = { {{.*}} "branch-target-enforcement"="true" "guarded-control-stack"="true" {{.*}} "target-features"="+aes,+bf16,+fcma,+crc,+dotprod,+fp-armv8,+fullfp16,+i8mm,+jscvt,+lse,+neon,+pauth,+ras,+rcpc,+rdm,+sha2,+spe,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" "tune-cpu"="cortex-a710" }
+// CHECK: attributes #15 = { {{.*}} "target-cpu"="neoverse-n1" "target-features"="+aes,+bf16,+fcma,+crc,+dotprod,+fp-armv8,+fullfp16,+i8mm,+jscvt,+lse,+neon,+pauth,+ras,+rcpc,+rdm,+sha2,+profile,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" "tune-cpu"="cortex-a710" }
+// CHECK: attributes #16 = { {{.*}} "branch-target-enforcement"="true" "guarded-control-stack"="true" {{.*}} "target-features"="+aes,+bf16,+fcma,+crc,+dotprod,+fp-armv8,+fullfp16,+i8mm,+jscvt,+lse,+neon,+pauth,+ras,+rcpc,+rdm,+sha2,+profile,+ssbs,+sve,+sve2,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8.5a,+v8.6a,+v8a" "tune-cpu"="cortex-a710" }
 // CHECK: attributes #17 = { {{.*}} "target-features"="-neon" }
 // CHECK: attributes #18 = { {{.*}} "target-features"="-v9.3a" }

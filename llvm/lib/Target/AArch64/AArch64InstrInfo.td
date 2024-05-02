@@ -136,8 +136,8 @@ def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,
 def HasNoFullFP16    : Predicate<"!Subtarget->hasFullFP16()">;
 def HasFP16FML       : Predicate<"Subtarget->hasFP16FML()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFP16FML), "fp16fml">;
-def HasSPE           : Predicate<"Subtarget->hasSPE()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureSPE), "spe">;
+def HasProfile           : Predicate<"Subtarget->hasProfile()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureProfile), "profile">;
 def HasFuseAES       : Predicate<"Subtarget->hasFuseAES()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFuseAES),
                                  "fuse-aes">;
@@ -1165,7 +1165,7 @@ def : InstAlias<"bti",  (HINT 32)>, Requires<[HasBTI]>;
 def : InstAlias<"bti $op", (HINT btihint_op:$op)>, Requires<[HasBTI]>;
 
 // v8.2a Statistical Profiling extension
-def : InstAlias<"psb $op",  (HINT psbhint_op:$op)>, Requires<[HasSPE]>;
+def : InstAlias<"psb $op",  (HINT psbhint_op:$op)>, Requires<[HasProfile]>;
 
 // As far as LLVM is concerned this writes to the system's exclusive monitors.
 let mayLoad = 1, mayStore = 1 in

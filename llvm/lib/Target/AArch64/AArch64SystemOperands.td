@@ -1446,7 +1446,7 @@ def : RWSysReg<"UAO", 0b11, 0b000, 0b0100, 0b0010, 0b100>;
 
 // v8.2a "Statistical Profiling extension" registers
 //                            Op0    Op1     CRn     CRm    Op2
-let Requires = [{ {AArch64::FeatureSPE} }] in {
+let Requires = [{ {AArch64::FeatureProfile} }] in {
 def : RWSysReg<"PMBLIMITR_EL1", 0b11, 0b000, 0b1001, 0b1010, 0b000>;
 def : RWSysReg<"PMBPTR_EL1",    0b11, 0b000, 0b1001, 0b1010, 0b001>;
 def : RWSysReg<"PMBSR_EL1",     0b11, 0b000, 0b1001, 0b1010, 0b011>;

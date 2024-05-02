@@ -3709,7 +3709,7 @@ static const struct Extension {
     {"fp16fml", {AArch64::FeatureFP16FML}},
     {"i8mm", {AArch64::FeatureI8MM}},
     {"lor", {AArch64::FeatureLOR}},
-    {"profile", {AArch64::FeatureSPE}},
+    {"profile", {AArch64::FeatureProfile}},
     // "rdma" is the name documented by binutils for the feature, but
     // binutils also accepts incomplete prefixes of features, so "rdm"
     // works too. Support both spellings here.

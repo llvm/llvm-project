@@ -111,7 +111,7 @@ def FeatureFullFP16 : Extension<"fullfp16", "FullFP16",
 def FeatureFP16FML : Extension<"fp16fml", "FP16FML",
   "Enable FP16 FML instructions (FEAT_FHM)", [FeatureFullFP16]>;
 
-def FeatureSPE : Extension<"spe", "SPE",
+def FeatureProfile : Extension<"profile", "Profile",
   "Enable Statistical Profiling extension (FEAT_SPE)">;
 
 def FeaturePAN_RWV : SubtargetFeature<

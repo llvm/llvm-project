@@ -1,9 +1,9 @@
-// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+spe       < %s 2> %t | FileCheck %s
+// RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+profile       < %s 2> %t | FileCheck %s
 // RUN: FileCheck --check-prefix=ERROR %s < %t
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mcpu=neoverse-n1 < %s 2> %t | FileCheck %s
 // RUN: FileCheck --check-prefix=ERROR %s < %t
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding                   < %s 2> %t | FileCheck --check-prefix=NO_SPE_OUT %s
-// RUN: FileCheck --check-prefix=NO_SPE %s < %t
+// RUN: FileCheck --check-prefix=NO-PROFILE %s < %t
 
 // NO_SPE_OUT-NOT: msr
 // NO_SPE_OUT-NOT: mrs
@@ -11,7 +11,7 @@
 
   psb csync
 // CHECK: psb csync              // encoding: [0x3f,0x22,0x03,0xd5]
-// NO_SPE:  instruction requires: spe
+// NO-PROFILE:  instruction requires: profile
 
   msr pmblimitr_el1, x0
   msr pmbptr_el1, x0
@@ -35,17 +35,17 @@
 // CHECK:     msr PMSFCR_EL1, x0          // encoding: [0x80,0x99,0x18,0xd5]
 // CHECK:     msr PMSEVFR_EL1, x0         // encoding: [0xa0,0x99,0x18,0xd5]
 // CHECK:     msr PMSLATFR_EL1, x0        // encoding: [0xc0,0x99,0x18,0xd5]
-// NO_SPE: error: expected writable system register or pstate
-// NO_SPE: error: expected writable system register or pstate
-// NO_SPE: error: expected writable system register or pstate
-// NO_SPE: error: expected writable system register or pstate
-// NO_SPE: error: expected writable system register or pstate
-// NO_SPE: error: expected writable system register or pstate
-// NO_SPE: error: expected writable system register or pstate
-// NO_SPE: error: expected writable system register or pstate
-// NO_SPE: error: expected writable system register or pstate
-// NO_SPE: error: expected writable system register or pstate
-// NO_SPE: error: expected writable system register or pstate
+// NO-PROFILE: error: expected writable system register or pstate
+// NO-PROFILE: error: expected writable system register or pstate
+// NO-PROFILE: error: expected writable system register or pstate
+// NO-PROFILE: error: expected writable system register or pstate
+// NO-PROFILE: error: expected writable system register or pstate
+// NO-PROFILE: error: expected writable system register or pstate
+// NO-PROFILE: error: expected writable system register or pstate
+// NO-PROFILE: error: expected writable system register or pstate
+// NO-PROFILE: error: expected writable system register or pstate
+// NO-PROFILE: error: expected writable system register or pstate
+// NO-PROFILE: error: expected writable system register or pstate
 
 
 // Readonly system registers: writing to them gives an error
@@ -53,8 +53,8 @@
   msr pmsidr_el1, x0
 // ERROR: :[[@LINE-2]]:7: error: expected writable system register or pstate
 // ERROR: :[[@LINE-2]]:7: error: expected writable system register or pstate
-// NO_SPE: :[[@LINE-4]]:7: error: expected writable system register or pstate
-// NO_SPE: :[[@LINE-4]]:7: error: expected writable system register or pstate
+// NO-PROFILE: :[[@LINE-4]]:7: error: expected writable system register or pstate
+// NO-PROFILE: :[[@LINE-4]]:7: error: expected writable system register or pstate
 
 mrs x0, pmblimitr_el1
   mrs x0, pmbptr_el1
@@ -83,16 +83,16 @@ mrs x0, pmblimitr_el1
 // CHECK:    mrs x0, PMSEVFR_EL1         // encoding: [0xa0,0x99,0x38,0xd5]
 // CHECK:    mrs x0, PMSLATFR_EL1        // encoding: [0xc0,0x99,0x38,0xd5]
 // CHECK:    mrs x0, PMSIDR_EL1          // encoding: [0xe0,0x99,0x38,0xd5]
-// NO_SPE: error: expected readable system register
-// NO_SPE: error: expected readable system register
-// NO_SPE: error: expected readable system register
-// NO_SPE: error: expected readable system register
-// NO_SPE: error: expected readable system register
-// NO_SPE: error: expected readable system register
-// NO_SPE: error: expected readable system register
-// NO_SPE: error: expected readable system register
-// NO_SPE: error: expected readable system register
-// NO_SPE: error: expected readable system register
-// NO_SPE: error: expected readable system register
-// NO_SPE: error: expected readable system register
-// NO_SPE: error: expected readable system register
+// NO-PROFILE: error: expected readable system register
+// NO-PROFILE: error: expected readable system register
+// NO-PROFILE: error: expected readable system register
+// NO-PROFILE: error: expected readable system register
+// NO-PROFILE: error: expected readable system register
+// NO-PROFILE: error: expected readable system register
+// NO-PROFILE: error: expected readable system register
+// NO-PROFILE: error: expected readable system register
+// NO-PROFILE: error: expected readable system register
+// NO-PROFILE: error: expected readable system register
+// NO-PROFILE: error: expected readable system register
+// NO-PROFILE: error: expected readable system register
+// NO-PROFILE: error: expected readable system register

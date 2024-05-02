@@ -35,7 +35,7 @@ fn:
   pacia x0, x1                          // AEK_PAUTH
   mrs x0, pmccntr_el0                   // AEK_PMUV3
   cfp rctx, x0                          // AEK_PREDRES
-  psb csync                             // AEK_SPE
+  psb csync                             // AEK_PROFILE
   msr erxpfgctl_el1, x0                 // AEK_RAS
   ldaprb w0, [x0, #0]                   // AEK_RCPC
   stilp w26, w2, [x18]                  // AEK_RCPC3
