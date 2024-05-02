@@ -1887,6 +1887,15 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
       SplitBlockAndInsertIfThenElse(IfCondition, IfTerminator, &ThenTI,
                                     &ElseTI);
       Builder.SetInsertPoint(ElseTI);
+
+      if (Dependencies.size()) {
+        Function *TaskWaitFn =
+            getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_taskwait_deps_51);
+        Builder.CreateCall(TaskWaitFn, {Ident, ThreadID, Builder.getInt32(Dependencies.size()),
+                                        DepArray, ConstantInt::get(Builder.getInt32Ty(), 0),
+                                        ConstantPointerNull::get(PointerType::getUnqual(M.getContext())),
+                                        ConstantInt::get(Builder.getInt32Ty(), false)});
+      }
       Function *TaskBeginFn =
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_begin_if0);
       Function *TaskCompleteFn =
