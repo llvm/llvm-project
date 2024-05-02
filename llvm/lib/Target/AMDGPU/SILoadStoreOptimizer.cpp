@@ -229,10 +229,6 @@ private:
   void copyToDestRegs(CombineInfo &CI, CombineInfo &Paired,
                       MachineBasicBlock::iterator InsertBefore, int OpName,
                       Register DestReg) const;
-  void copyToDestRegs(CombineInfo &CI, CombineInfo &Paired,
-                      MachineBasicBlock::iterator InsertBefore, int OpName,
-                      Register DestReg, unsigned SubRegIdx0,
-                      unsigned SubRegIdx1) const;
   Register copyFromSrcRegs(CombineInfo &CI, CombineInfo &Paired,
                            MachineBasicBlock::iterator InsertBefore,
                            int OpName) const;
@@ -1207,10 +1203,11 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
 // Paired.
 void SILoadStoreOptimizer::copyToDestRegs(
     CombineInfo &CI, CombineInfo &Paired,
-    MachineBasicBlock::iterator InsertBefore, int OpName, Register DestReg,
-    unsigned SubRegIdx0, unsigned SubRegIdx1) const {
+    MachineBasicBlock::iterator InsertBefore, int OpName, Register DestReg) const {
   MachineBasicBlock *MBB = CI.I->getParent();
   DebugLoc DL = CI.I->getDebugLoc();
+
+  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
 
   // Copy to the old destination registers.
   const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
@@ -1223,15 +1220,6 @@ void SILoadStoreOptimizer::copyToDestRegs(
   BuildMI(*MBB, InsertBefore, DL, CopyDesc)
       .add(*Dest1)
       .addReg(DestReg, RegState::Kill, SubRegIdx1);
-}
-
-void SILoadStoreOptimizer::copyToDestRegs(
-    CombineInfo &CI, CombineInfo &Paired,
-    MachineBasicBlock::iterator InsertBefore, int OpName,
-    Register DestReg) const {
-  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
-  copyToDestRegs(CI, Paired, InsertBefore, OpName, DestReg, SubRegIdx0,
-                 SubRegIdx1);
 }
 
 // Return a register for the source of the merged store after copying the
@@ -1284,19 +1272,10 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
   // cases, like vectors of pointers.
   const auto *AddrReg = TII->getNamedOperand(*CI.I, AMDGPU::OpName::addr);
 
-  unsigned NewOffset0 = CI.Offset;
-  unsigned NewOffset1 = Paired.Offset;
+  unsigned NewOffset0 = std::min(CI.Offset, Paired.Offset);
+  unsigned NewOffset1 = std::max(CI.Offset, Paired.Offset);
   unsigned Opc =
       CI.UseST64 ? read2ST64Opcode(CI.EltSize) : read2Opcode(CI.EltSize);
-
-  unsigned SubRegIdx0 = (CI.EltSize == 4) ? AMDGPU::sub0 : AMDGPU::sub0_sub1;
-  unsigned SubRegIdx1 = (CI.EltSize == 4) ? AMDGPU::sub1 : AMDGPU::sub2_sub3;
-
-  if (NewOffset0 > NewOffset1) {
-    // Canonicalize the merged instruction so the smaller offset comes first.
-    std::swap(NewOffset0, NewOffset1);
-    std::swap(SubRegIdx0, SubRegIdx1);
-  }
 
   assert((isUInt<8>(NewOffset0) && isUInt<8>(NewOffset1)) &&
          (NewOffset0 != NewOffset1) && "Computed offset doesn't fit");
@@ -1334,8 +1313,7 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
           .addImm(0)                                 // gds
           .cloneMergedMemRefs({&*CI.I, &*Paired.I});
 
-  copyToDestRegs(CI, Paired, InsertBefore, AMDGPU::OpName::vdst, DestReg,
-                 SubRegIdx0, SubRegIdx1);
+  copyToDestRegs(CI, Paired, InsertBefore, AMDGPU::OpName::vdst, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
