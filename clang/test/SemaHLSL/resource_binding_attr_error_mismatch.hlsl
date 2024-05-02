@@ -28,8 +28,9 @@ RWBuffer<int> b : register(t2, space1);
 // NOT YET IMPLEMENTED : {{invalid register name prefix 'b' for register type 'Texture1DArray' (expected 't')}}
 // NOT YET IMPLEMENTED Texture1DArray T1DArray_t2 : register(b2);
 
-// NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'Texture2DArray' (expected 't')}}
+// NOT YET IMPLEMENTED : {{invalid register name prefix 'B' for register type 'Texture2DArray' (expected 't')}}
 // NOT YET IMPLEMENTED Texture2DArray T2DArray_b2 : register(B2);
+
 
 // NOT YET IMPLEMENTED : {{invalid register name prefix 'u' for register type 'Texture2DMSArray' (expected 't')}}
 // NOT YET IMPLEMENTED Texture2DMSArray<float4> msTextureArray : register(t2, space2);
