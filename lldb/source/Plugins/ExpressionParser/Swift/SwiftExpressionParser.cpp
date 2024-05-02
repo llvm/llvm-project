@@ -2041,8 +2041,9 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
         llvm::ArrayRef<std::string>());
 
     if (GenModule) {
-      swift::performLLVMOptimizations(IRGenOpts, GenModule.getModule(),
-                                      GenModule.getTargetMachine(), nullptr);
+      swift::performLLVMOptimizations(
+          IRGenOpts, m_swift_ast_ctx.GetDiagnosticEngine(), nullptr,
+          GenModule.getModule(), GenModule.getTargetMachine(), nullptr);
     }
     auto ContextAndModule = std::move(GenModule).release();
     m_llvm_context.reset(ContextAndModule.first);
