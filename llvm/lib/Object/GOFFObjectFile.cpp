@@ -154,6 +154,8 @@ GOFFObjectFile::GOFFObjectFile(MemoryBufferRef Object, Error &Err)
   SectionList.emplace_back(DummySection); // Dummy entry at index 0.
 
   for (auto &Rec : records(&Err)) {
+    if (Err)
+      return;
     uint8_t RecordType = Rec.getRecordType();
     const uint8_t *I = Rec.getContents().data();
 
