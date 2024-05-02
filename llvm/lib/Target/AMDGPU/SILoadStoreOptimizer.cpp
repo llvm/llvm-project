@@ -1224,7 +1224,7 @@ void SILoadStoreOptimizer::copyToDestRegs(
 }
 
 // Return a register for the source of the merged store after copying the
-// originalsource regs of CI and Paired into it.
+// original source regs of CI and Paired into it.
 Register
 SILoadStoreOptimizer::copyFromSrcRegs(CombineInfo &CI, CombineInfo &Paired,
                                       MachineBasicBlock::iterator InsertBefore,
