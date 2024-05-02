@@ -98,8 +98,6 @@ public:
 
   Context &getContext() const { return Ctx; }
 
-  void setEvalLocation(SourceLocation SL) { this->EvalLocation = SL; }
-
 private:
   /// AST Walker state.
   State &Parent;
@@ -117,8 +115,6 @@ public:
   Context &Ctx;
   /// The current frame.
   InterpFrame *Current = nullptr;
-  /// Source location of the evaluating expression
-  SourceLocation EvalLocation;
 };
 
 } // namespace interp
