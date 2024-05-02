@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/RISCVISAUtils.h"
+#include "llvm/ADT/StringExtras.h"
 #include <cassert>
 
 using namespace llvm;
@@ -35,7 +36,7 @@ enum RankFlags {
 // Get the rank for single-letter extension, lower value meaning higher
 // priority.
 static unsigned singleLetterExtensionRank(char Ext) {
-  assert(Ext >= 'a' && Ext <= 'z');
+  assert(isLower(Ext));
   switch (Ext) {
   case 'i':
     return 0;
