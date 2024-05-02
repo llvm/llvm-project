@@ -107,7 +107,7 @@ CppTypeFor<TypeCategory::Integer, 16> RTDEF(ProductInteger16)(
 CppTypeFor<TypeCategory::Real, 4> RTDEF(ProductReal4)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Real, 4>(x, source, line, dim, mask,
-      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 8>>{x},
+      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 4>>{x},
       "PRODUCT");
 }
 CppTypeFor<TypeCategory::Real, 8> RTDEF(ProductReal8)(const Descriptor &x,
@@ -137,7 +137,7 @@ void RTDEF(CppProductComplex4)(CppTypeFor<TypeCategory::Complex, 4> &result,
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
   result = GetTotalReduction<TypeCategory::Complex, 4>(x, source, line, dim,
-      mask, ComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 8>>{x},
+      mask, ComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 4>>{x},
       "PRODUCT");
 }
 void RTDEF(CppProductComplex8)(CppTypeFor<TypeCategory::Complex, 8> &result,
@@ -169,8 +169,8 @@ void RTDEF(CppProductComplex16)(CppTypeFor<TypeCategory::Complex, 16> &result,
 void RTDEF(ProductDim)(Descriptor &result, const Descriptor &x, int dim,
     const char *source, int line, const Descriptor *mask) {
   TypedPartialNumericReduction<NonComplexProductAccumulator,
-      NonComplexProductAccumulator, ComplexProductAccumulator>(
-      result, x, dim, source, line, mask, "PRODUCT");
+      NonComplexProductAccumulator, ComplexProductAccumulator,
+      /*MIN_REAL_KIND=*/4>(result, x, dim, source, line, mask, "PRODUCT");
 }
 
 RT_EXT_API_GROUP_END
