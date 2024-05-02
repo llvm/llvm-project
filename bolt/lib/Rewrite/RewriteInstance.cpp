@@ -1347,6 +1347,35 @@ void RewriteInstance::discoverFileObjects() {
 
   registerFragments();
   FileSymbols.clear();
+
+  discoverBOLTReserved();
+}
+
+void RewriteInstance::discoverBOLTReserved() {
+  BinaryData *StartBD = BC->getBinaryDataByName(getBOLTReservedStart());
+  BinaryData *EndBD = BC->getBinaryDataByName(getBOLTReservedEnd());
+  if (!StartBD != !EndBD) {
+    BC->errs() << "BOLT-ERROR: one of the symbols is missing from the binary: "
+               << getBOLTReservedStart() << ", " << getBOLTReservedEnd()
+               << '\n';
+    exit(1);
+  }
+
+  if (!StartBD)
+    return;
+
+  if (StartBD->getAddress() >= EndBD->getAddress()) {
+    BC->errs() << "BOLT-ERROR: invalid reserved space boundaries\n";
+    exit(1);
+  }
+  BC->BOLTReserved = AddressRange(StartBD->getAddress(), EndBD->getAddress());
+  BC->outs() << "BOLT-INFO: using reserved space for allocating new sections\n";
+
+  PHDRTableOffset = 0;
+  PHDRTableAddress = 0;
+  NewTextSegmentAddress = 0;
+  NewTextSegmentOffset = 0;
+  NextAvailableAddress = BC->BOLTReserved.start();
 }
 
 Error RewriteInstance::discoverRtFiniAddress() {
@@ -3616,32 +3645,6 @@ void RewriteInstance::updateMetadata() {
 
 void RewriteInstance::mapFileSections(BOLTLinker::SectionMapper MapSection) {
   BC->deregisterUnusedSections();
-
-  // Check if the input has a space reserved for BOLT.
-  BinaryData *StartBD = BC->getBinaryDataByName(getBOLTReservedStart());
-  BinaryData *EndBD = BC->getBinaryDataByName(getBOLTReservedEnd());
-  if (!StartBD != !EndBD) {
-    BC->errs() << "BOLT-ERROR: one of the symbols is missing from the binary: "
-               << getBOLTReservedStart() << ", " << getBOLTReservedEnd()
-               << '\n';
-    exit(1);
-  }
-
-  if (StartBD) {
-    if (StartBD->getAddress() >= EndBD->getAddress()) {
-      BC->errs() << "BOLT-ERROR: invalid reserved space boundaries\n";
-      exit(1);
-    }
-    BC->BOLTReserved = AddressRange(StartBD->getAddress(), EndBD->getAddress());
-    BC->outs()
-        << "BOLT-INFO: using reserved space for allocating new sections\n";
-
-    PHDRTableOffset = 0;
-    PHDRTableAddress = 0;
-    NewTextSegmentAddress = 0;
-    NewTextSegmentOffset = 0;
-    NextAvailableAddress = BC->BOLTReserved.start();
-  }
 
   // If no new .eh_frame was written, remove relocated original .eh_frame.
   BinarySection *RelocatedEHFrameSection =
