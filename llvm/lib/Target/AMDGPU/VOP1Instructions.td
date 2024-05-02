@@ -1105,8 +1105,8 @@ multiclass VOP1_Real_NO_DPP_OP_SEL_gfx1210_gfx13<bits<9> op> :
   VOP1_Real_NO_DPP_OP_SEL<GFX13Gen, op>;
 
 multiclass VOP1_Real_FULL_t16<GFXGen Gen, bits<9> op> :
-  VOP1_Real_FULL_with_name<Gen, op, !subst("_t16", "_fake16", NAME),
-                           !cast<VOP1_Pseudo>(!subst("_t16", "", NAME)#"_e32").Mnemonic>;
+  VOP1_Real_FULL_with_name<Gen, op, NAME,
+                           !cast<VOP1_Pseudo>(!subst("_fake16", "", NAME)#"_e32").Mnemonic>;
 
 multiclass VOP1_Real_FULL_t16_gfx1210_gfx13<bits<9> op> :
   VOP1_Real_FULL_t16<GFX12_10Gen, op>,
@@ -1187,24 +1187,24 @@ defm V_CVT_F16_F32_t16       : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x00a, "v_cv
 defm V_CVT_F32_F16_t16       : VOP1_Real_FULL_t16_gfx11_gfx12_gfx13<0x00b, "v_cvt_f32_f16">;
 
 defm V_TANH_F32              : VOP1_Real_FULL_gfx1210_gfx13<0x01e>;
-defm V_TANH_F16_t16          : VOP1_Real_FULL_t16_gfx1210_gfx13<0x01f>;
+defm V_TANH_F16_fake16       : VOP1_Real_FULL_t16_gfx1210_gfx13<0x01f>;
 defm V_PERMLANE16_SWAP_B32   : VOP1_Real_OpSelIsDPP_gfx1210_gfx13<0x049>;
-defm V_TANH_BF16_t16         : VOP1_Real_FULL_t16_gfx1210_gfx13<0x04a>;
+defm V_TANH_BF16_fake16      : VOP1_Real_FULL_t16_gfx1210_gfx13<0x04a>;
 defm V_PRNG_B32              : VOP1_Real_FULL_gfx1210_gfx13<0x04b>;
-defm V_CVT_F32_BF16_t16      : VOP1_Real_FULL_t16_gfx1210_gfx13<0x072>;
-defm V_SAT_PK_I4_I8_t16      : VOP1_Real_FULL_t16_gfx1210_gfx13<0x073>;
-defm V_SAT_PK_U4_U8_t16      : VOP1_Real_FULL_t16_gfx1210_gfx13<0x074>;
+defm V_CVT_F32_BF16_fake16   : VOP1_Real_FULL_t16_gfx1210_gfx13<0x072>;
+defm V_SAT_PK_I4_I8_fake16   : VOP1_Real_FULL_t16_gfx1210_gfx13<0x073>;
+defm V_SAT_PK_U4_U8_fake16   : VOP1_Real_FULL_t16_gfx1210_gfx13<0x074>;
 defm V_CVT_PK_F16_FP8        : VOP1_Real_NO_DPP_OP_SEL_gfx1210_gfx13<0x075>;
 defm V_CVT_PK_F16_BF8        : VOP1_Real_NO_DPP_OP_SEL_gfx1210_gfx13<0x076>;
 defm V_CVT_F16_FP8           : VOP1_Real_FULL_gfx1210_gfx13<0x077>;
 defm V_CVT_F16_BF8           : VOP1_Real_FULL_gfx1210_gfx13<0x078>;
-defm V_RCP_BF16_t16          : VOP1_Real_FULL_t16_gfx1210_gfx13<0x079>;
-defm V_SQRT_BF16_t16         : VOP1_Real_FULL_t16_gfx1210_gfx13<0x07a>;
-defm V_RSQ_BF16_t16          : VOP1_Real_FULL_t16_gfx1210_gfx13<0x07b>;
-defm V_LOG_BF16_t16          : VOP1_Real_FULL_t16_gfx1210_gfx13<0x07c>;
-defm V_EXP_BF16_t16          : VOP1_Real_FULL_t16_gfx1210_gfx13<0x07d>;
-defm V_SIN_BF16_t16          : VOP1_Real_FULL_t16_gfx1210_gfx13<0x07e>;
-defm V_COS_BF16_t16          : VOP1_Real_FULL_t16_gfx1210_gfx13<0x07f>;
+defm V_RCP_BF16_fake16       : VOP1_Real_FULL_t16_gfx1210_gfx13<0x079>;
+defm V_SQRT_BF16_fake16      : VOP1_Real_FULL_t16_gfx1210_gfx13<0x07a>;
+defm V_RSQ_BF16_fake16       : VOP1_Real_FULL_t16_gfx1210_gfx13<0x07b>;
+defm V_LOG_BF16_fake16       : VOP1_Real_FULL_t16_gfx1210_gfx13<0x07c>;
+defm V_EXP_BF16_fake16       : VOP1_Real_FULL_t16_gfx1210_gfx13<0x07d>;
+defm V_SIN_BF16_fake16       : VOP1_Real_FULL_t16_gfx1210_gfx13<0x07e>;
+defm V_COS_BF16_fake16       : VOP1_Real_FULL_t16_gfx1210_gfx13<0x07f>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.
