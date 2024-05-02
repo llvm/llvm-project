@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -25,6 +26,27 @@
 #include "gtest/gtest.h"
 
 using namespace llvm;
+
+extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
+extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
+extern bool WriteNewDbgInfoFormatToBitcode;
+extern cl::opt<bool> WriteNewDbgInfoFormat;
+
+// Backup all of the existing settings that may be modified when
+// PreserveInputDbgFormat=true, so that when the test is finished we return them
+// (and the "preserve" setting) to their original values.
+static auto SaveDbgInfoFormat() {
+  return make_scope_exit(
+      [OldPreserveInputDbgFormat = PreserveInputDbgFormat.getValue(),
+       OldUseNewDbgInfoFormat = UseNewDbgInfoFormat.getValue(),
+       OldWriteNewDbgInfoFormatToBitcode = WriteNewDbgInfoFormatToBitcode,
+       OldWriteNewDbgInfoFormat = WriteNewDbgInfoFormat.getValue()] {
+        PreserveInputDbgFormat = OldPreserveInputDbgFormat;
+        UseNewDbgInfoFormat = OldUseNewDbgInfoFormat;
+        WriteNewDbgInfoFormatToBitcode = OldWriteNewDbgInfoFormatToBitcode;
+        WriteNewDbgInfoFormat = OldWriteNewDbgInfoFormat;
+      });
+}
 
 TEST(Local, RecursivelyDeleteDeadPHINodes) {
   LLVMContext C;
@@ -116,6 +138,11 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
 
 TEST(Local, ReplaceDbgDeclare) {
   LLVMContext C;
+  // FIXME: PreserveInputDbgFormat is set to true because this test has
+  // been written to expect debug intrinsics rather than debug records; use the
+  // intrinsic format until we update the test checks.
+  auto SettingGuard = SaveDbgInfoFormat();
+  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
 
   // Original C source to get debug info for a local variable:
   // void f() { int x; }
@@ -493,6 +520,14 @@ struct SalvageDebugInfoTest : ::testing::Test {
   Function *F = nullptr;
 
   void SetUp() override {
+    // FIXME: PreserveInputDbgFormat is set to true because this test has
+    // been written to expect debug intrinsics rather than debug records; use
+    // the intrinsic format until we update the test checks. Note that the
+    // temporary setting of this flag only needs to cover the parsing step, not
+    // the test body itself.
+    auto SettingGuard = SaveDbgInfoFormat();
+    PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
+
     M = parseIR(C,
                 R"(
       define void @f() !dbg !8 {
@@ -591,6 +626,12 @@ TEST_F(SalvageDebugInfoTest, RecursiveBlockSimplification) {
 
 TEST(Local, wouldInstructionBeTriviallyDead) {
   LLVMContext Ctx;
+  // FIXME: PreserveInputDbgFormat is set to true because this test has
+  // been written to expect debug intrinsics rather than debug records.
+  // TODO: This test doesn't have a DbgRecord equivalent form so delete
+  // it when debug intrinsics are removed.
+  auto SettingGuard = SaveDbgInfoFormat();
+  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
   std::unique_ptr<Module> M = parseIR(Ctx,
                                       R"(
     define dso_local void @fun() local_unnamed_addr #0 !dbg !9 {
@@ -680,6 +721,11 @@ TEST(Local, ChangeToUnreachable) {
 
 TEST(Local, FindDbgUsers) {
   LLVMContext Ctx;
+  // FIXME: PreserveInputDbgFormat is set to true because this test has
+  // been written to expect debug intrinsics rather than debug records; use the
+  // intrinsic format until we update the test checks.
+  auto SettingGuard = SaveDbgInfoFormat();
+  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
   std::unique_ptr<Module> M = parseIR(Ctx,
                                       R"(
   define dso_local void @fun(ptr %a) #0 !dbg !11 {
@@ -768,9 +814,6 @@ TEST(Local, FindDbgRecords) {
   bool BrokenDebugInfo = true;
   verifyModule(*M, &errs(), &BrokenDebugInfo);
   ASSERT_FALSE(BrokenDebugInfo);
-  bool NewDbgInfoFormat = UseNewDbgInfoFormat;
-  UseNewDbgInfoFormat = true;
-  M->convertToNewDbgValues();
 
   Function &Fun = *cast<Function>(M->getNamedValue("fun"));
   Value *Arg = Fun.getArg(0);
@@ -790,13 +833,17 @@ TEST(Local, FindDbgRecords) {
   findDbgValues(Vals, Arg, &Records);
   EXPECT_EQ(Vals.size(), 0u);
   EXPECT_EQ(Records.size(), 1u);
-  UseNewDbgInfoFormat = NewDbgInfoFormat;
 }
 
 TEST(Local, ReplaceAllDbgUsesWith) {
   using namespace llvm::dwarf;
 
   LLVMContext Ctx;
+  // FIXME: PreserveInputDbgFormat is set to true because this test has
+  // been written to expect debug intrinsics rather than debug records; use the
+  // intrinsic format until we update the test checks.
+  auto SettingGuard = SaveDbgInfoFormat();
+  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
 
   // Note: The datalayout simulates Darwin/x86_64.
   std::unique_ptr<Module> M = parseIR(Ctx,
@@ -1345,6 +1392,11 @@ TEST(Local, ExpressionForConstant) {
 
 TEST(Local, ReplaceDbgVariableRecord) {
   LLVMContext C;
+  // FIXME: PreserveInputDbgFormat is set to true because this test has
+  // been written to expect debug intrinsics rather than debug records; use the
+  // intrinsic format until we update the test checks.
+  auto SettingGuard = SaveDbgInfoFormat();
+  PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
 
   // Test that RAUW also replaces the operands of DbgVariableRecord objects,
   // i.e. non-instruction stored debugging information.
