@@ -617,6 +617,8 @@ public:
 
   bool isVCSrc_v2f16() const { return isVCSrc_f16(); }
 
+  bool isVCSrc_v2b32() const { return isVCSrc_b64(); }
+
   bool isVSrc_b32() const {
     return isVCSrc_f32() || isLiteralImm(MVT::i32) || isExpr();
   }

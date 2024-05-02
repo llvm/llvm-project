@@ -670,6 +670,10 @@ TARGET_BUILTIN(__builtin_amdgcn_permlane_down, "iiiii", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_permlane_xor, "iiiii", "nc", "gfx12-10-insts")
 TARGET_BUILTIN(__builtin_amdgcn_permlane_idx_gen, "iiii", "nc", "gfx12-10-insts")
 
+TARGET_BUILTIN(__builtin_amdgcn_perm_pk16_b4_u4, "V2UiUiUiV2Ui", "nc", "gfx12-10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_perm_pk16_b6_u4, "V3UiUiULiV2Ui", "nc", "gfx12-10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_perm_pk16_b8_u4, "V4UiULiULiV2Ui", "nc", "gfx12-10-insts")
+
 // GFX1210 WMMA builtins
 TARGET_BUILTIN(__builtin_amdgcn_wmma_f64_16x16x4_f64, "V8dIbV2dIbV2dIsV8d", "nc", "gfx12-10-insts,wavefrontsize32")
 TARGET_BUILTIN(__builtin_amdgcn_wmma_f64_16x16x8_f64, "V8dIbV4dIbV4dIsV8d", "nc", "gfx12-10-insts,wavefrontsize32")
