@@ -950,6 +950,9 @@ void CGRecordLowering::calculateZeroInit() {
 // Verify accumulateBitfields computed the correct storage representations.
 void CGRecordLowering::checkBitfieldClipping(bool IsNonVirtualBaseType) const {
 #ifndef NDEBUG
+  if (Context.getLangOpts().DebuggerSupport)
+    return;
+
   auto ScissorOffset = calculateTailClippingOffset(IsNonVirtualBaseType);
   auto Tail = CharUnits::Zero();
   for (const auto &M : Members) {
@@ -1008,7 +1011,8 @@ void CGRecordLowering::insertPadding() {
     if (!Member->Data)
       continue;
     CharUnits Offset = Member->Offset;
-    assert(Offset >= Size);
+    if (!Context.getLangOpts().DebuggerSupport)
+      assert(Offset >= Size);
     // Insert padding if we need to.
     if (Offset !=
         Size.alignTo(Packed ? CharUnits::One() : getAlignment(Member->Data)))
@@ -1138,8 +1142,9 @@ CodeGenTypes::ComputeRecordLayout(const RecordDecl *D, llvm::StructType *Ty) {
   const ASTRecordLayout &Layout = getContext().getASTRecordLayout(D);
 
   uint64_t TypeSizeInBits = getContext().toBits(Layout.getSize());
-  assert(TypeSizeInBits == getDataLayout().getTypeAllocSizeInBits(Ty) &&
-         "Type size mismatch!");
+  if (!Context.getLangOpts().DebuggerSupport)
+    assert(TypeSizeInBits == getDataLayout().getTypeAllocSizeInBits(Ty) &&
+           "Type size mismatch!");
 
   if (BaseTy) {
     CharUnits NonVirtualSize  = Layout.getNonVirtualSize();
@@ -1147,9 +1152,10 @@ CodeGenTypes::ComputeRecordLayout(const RecordDecl *D, llvm::StructType *Ty) {
     uint64_t AlignedNonVirtualTypeSizeInBits =
       getContext().toBits(NonVirtualSize);
 
-    assert(AlignedNonVirtualTypeSizeInBits ==
-           getDataLayout().getTypeAllocSizeInBits(BaseTy) &&
-           "Type size mismatch!");
+    if (!Context.getLangOpts().DebuggerSupport)
+      assert(AlignedNonVirtualTypeSizeInBits ==
+             getDataLayout().getTypeAllocSizeInBits(BaseTy) &&
+             "Type size mismatch!");
   }
 
   // Verify that the LLVM and AST field offsets agree.
