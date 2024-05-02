@@ -1167,6 +1167,21 @@ void BinaryFunction::handleAArch64IndirectCall(MCInst &Instruction,
   }
 }
 
+const std::optional<MCInst>
+BinaryFunction::disassembleInstructionAtOffset(uint64_t Offset) const {
+  assert(CurrentState == State::Empty);
+  assert(Offset < MaxSize && "invalid offset");
+  ErrorOr<ArrayRef<unsigned char>> FunctionData = getData();
+  assert(FunctionData && "cannot get function as data");
+  MCInst Instr;
+  uint64_t InstrSize = 0;
+  const uint64_t InstrAddress = getAddress() + Offset;
+  if (BC.DisAsm->getInstruction(Instr, InstrSize, FunctionData->slice(Offset),
+                                 InstrAddress, nulls()))
+    return Instr;
+  return std::nullopt;
+}
+
 Error BinaryFunction::disassemble() {
   NamedRegionTimer T("disassemble", "Disassemble function", "buildfuncs",
                      "Build Binary Functions", opts::TimeBuild);
@@ -1281,7 +1296,6 @@ Error BinaryFunction::disassemble() {
             // Recursive call.
             TargetSymbol = getSymbol();
           } else {
-            HasInternalCalls = true;
             if (BC.isX86()) {
               // Dangerous old-style x86 PIC code. We may need to freeze this
               // function, so preserve the function as is for now.
@@ -1436,6 +1450,11 @@ add_instruction:
     Labels[Offset] = BC.Ctx->createNamedTempSymbol();
 
   clearList(Relocations);
+
+  if (!IsSimple) {
+    clearList(Instructions);
+    return createNonFatalBOLTError("");
+  }
 
   updateState(State::Disassembled);
 

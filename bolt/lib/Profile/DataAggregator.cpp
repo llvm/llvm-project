@@ -777,9 +777,15 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
   auto handleAddress = [&](uint64_t &Addr, bool IsFrom) -> BinaryFunction * {
     if (BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr)) {
       Addr -= Func->getAddress();
-      if (Func->hasInstructions())
-        if (const MCInst *Inst = Func->getInstructionAtOffset(Addr))
+      if (IsFrom) {
+        if (Func->hasInstructions()) {
+          if (MCInst *Inst = Func->getInstructionAtOffset(Addr))
+            IsReturn = BC->MIB->isReturn(*Inst);
+        } else if (std::optional<MCInst> Inst =
+                Func->disassembleInstructionAtOffset(Addr)) {
           IsReturn = BC->MIB->isReturn(*Inst);
+        }
+      }
 
       if (BAT)
         Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);

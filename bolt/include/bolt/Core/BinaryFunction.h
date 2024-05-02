@@ -361,9 +361,6 @@ private:
   /// True if another function body was merged into this one.
   bool HasFunctionsFoldedInto{false};
 
-  /// True if the function has internal calls.
-  bool HasInternalCalls{false};
-
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
 
@@ -933,6 +930,9 @@ public:
     return const_cast<BinaryFunction *>(this)->getInstructionAtOffset(Offset);
   }
 
+  const std::optional<MCInst>
+  disassembleInstructionAtOffset(uint64_t Offset) const;
+
   /// Return offset for the first instruction. If there is data at the
   /// beginning of a function then offset of the first instruction could
   /// be different from 0
@@ -1336,9 +1336,6 @@ public:
 
   /// Return true if other functions were folded into this one.
   bool hasFunctionsFoldedInto() const { return HasFunctionsFoldedInto; }
-
-  /// Return true if the function has internal calls.
-  bool hasInternalCalls() const { return HasInternalCalls; }
 
   /// If this function was folded, return the function it was folded into.
   BinaryFunction *getFoldedIntoFunction() const { return FoldedIntoFunction; }
