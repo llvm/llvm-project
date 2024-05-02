@@ -13,7 +13,7 @@ For example, it turns lines like
 
 .. code-block:: c++
 
-  return absl::StrFormat("The %s is %3d\n", description.c_str(), value);
+  return absl::StrFormat("The %s is %3d", description.c_str(), value);
 
 into:
 
