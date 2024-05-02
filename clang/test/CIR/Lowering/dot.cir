@@ -52,64 +52,64 @@ module {
   }
 }
 
-//      MLIR: module {
-// MLIR-NEXT:   llvm.func @dot(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: i32) -> f64
-// MLIR-NEXT:     %0 = llvm.mlir.constant(1 : index) : i64
-// MLIR-NEXT:     %1 = llvm.alloca %0 x !llvm.ptr {alignment = 8 : i64} : (i64) -> !llvm.ptr
-// MLIR-NEXT:     %2 = llvm.mlir.constant(1 : index) : i64
-// MLIR-NEXT:     %3 = llvm.alloca %2 x !llvm.ptr {alignment = 8 : i64} : (i64) -> !llvm.ptr
-// MLIR-NEXT:     %4 = llvm.mlir.constant(1 : index) : i64
-// MLIR-NEXT:     %5 = llvm.alloca %4 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
-// MLIR-NEXT:     %6 = llvm.mlir.constant(1 : index) : i64
-// MLIR-NEXT:     %7 = llvm.alloca %6 x f64 {alignment = 8 : i64} : (i64) -> !llvm.ptr
-// MLIR-NEXT:     %8 = llvm.mlir.constant(1 : index) : i64
-// MLIR-NEXT:     %9 = llvm.alloca %8 x f64 {alignment = 8 : i64} : (i64) -> !llvm.ptr
-// MLIR-NEXT:     llvm.store %arg0, %1 : !llvm.ptr, !llvm.ptr
-// MLIR-NEXT:     llvm.store %arg1, %3 : !llvm.ptr, !llvm.ptr
-// MLIR-NEXT:     llvm.store %arg2, %5 : i32, !llvm.ptr
-// MLIR-NEXT:     %10 = llvm.mlir.constant(0.000000e+00 : f64) : f64
-// MLIR-NEXT:     llvm.store %10, %9 : f64, !llvm.ptr
-// MLIR-NEXT:     llvm.br ^bb1
-// MLIR-NEXT:   ^bb1:  // pred: ^bb0
-// MLIR-NEXT:     %11 = llvm.mlir.constant(1 : index) : i64
-// MLIR-NEXT:     %12 = llvm.alloca %11 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
-// MLIR-NEXT:     %13 = llvm.mlir.constant(0 : i32) : i32
-// MLIR-NEXT:     llvm.store %13, %12 : i32, !llvm.ptr
-// MLIR-NEXT:     llvm.br ^bb2
-// MLIR-NEXT:   ^bb2:  // 2 preds: ^bb1, ^bb4
-// MLIR-NEXT:     %14 = llvm.load %12 : !llvm.ptr -> i32
-// MLIR-NEXT:     %15 = llvm.load %5 : !llvm.ptr -> i32
-// MLIR-NEXT:     %16 = llvm.icmp "slt" %14, %15 : i32
-// MLIR-NEXT:     %17 = llvm.zext %16 : i1 to i32
-// MLIR-NEXT:     %18 = llvm.mlir.constant(0 : i32) : i32
-// MLIR-NEXT:     %19 = llvm.icmp "ne" %17, %18 : i32
-// MLIR-NEXT:     llvm.cond_br %19, ^bb3, ^bb5
-// MLIR-NEXT:   ^bb3:  // pred: ^bb2
-// MLIR-NEXT:     %20 = llvm.load %1 : !llvm.ptr -> !llvm.ptr
-// MLIR-NEXT:     %21 = llvm.load %12 : !llvm.ptr -> i32
-// MLIR-NEXT:     %22 = llvm.getelementptr %20[%21] : (!llvm.ptr, i32) -> !llvm.ptr, f64
-// MLIR-NEXT:     %23 = llvm.load %22 : !llvm.ptr -> f64
-// MLIR-NEXT:     %24 = llvm.load %3 : !llvm.ptr -> !llvm.ptr
-// MLIR-NEXT:     %25 = llvm.load %12 : !llvm.ptr -> i32
-// MLIR-NEXT:     %26 = llvm.getelementptr %24[%25] : (!llvm.ptr, i32) -> !llvm.ptr, f64
-// MLIR-NEXT:     %27 = llvm.load %26 : !llvm.ptr -> f64
-// MLIR-NEXT:     %28 = llvm.fmul %23, %27  : f64
-// MLIR-NEXT:     %29 = llvm.load %9 : !llvm.ptr -> f64
-// MLIR-NEXT:     %30 = llvm.fadd %29, %28  : f64
-// MLIR-NEXT:     llvm.store %30, %9 : f64, !llvm.ptr
-// MLIR-NEXT:     llvm.br ^bb4
-// MLIR-NEXT:   ^bb4:  // pred: ^bb3
-// MLIR-NEXT:     %31 = llvm.load %12 : !llvm.ptr -> i32
-// MLIR-NEXT:     %32 = llvm.mlir.constant(1 : i32) : i32
-// MLIR-NEXT:     %33 = llvm.add %31, %32  : i32
-// MLIR-NEXT:     llvm.store %33, %12 : i32, !llvm.ptr
-// MLIR-NEXT:     llvm.br ^bb2
-// MLIR-NEXT:   ^bb5:  // pred: ^bb2
-// MLIR-NEXT:     llvm.br ^bb6
-// MLIR-NEXT:   ^bb6:  // pred: ^bb5
-// MLIR-NEXT:     %34 = llvm.load %9 : !llvm.ptr -> f64
-// MLIR-NEXT:     llvm.store %34, %7 : f64, !llvm.ptr
-// MLIR-NEXT:     %35 = llvm.load %7 : !llvm.ptr -> f64
-// MLIR-NEXT:     llvm.return %35 : f64
-// MLIR-NEXT:   }
-// MLIR-NEXT: }
+// MLIR-LABEL:   llvm.func @dot(
+// MLIR:           %[[VAL_3:.*]] = llvm.mlir.constant(1 : index) : i64
+// MLIR:           %[[VAL_4:.*]] = llvm.alloca %[[VAL_3]] x !llvm.ptr {alignment = 8 : i64} : (i64) -> !llvm.ptr
+// MLIR:           %[[VAL_5:.*]] = llvm.mlir.constant(1 : index) : i64
+// MLIR:           %[[VAL_6:.*]] = llvm.alloca %[[VAL_5]] x !llvm.ptr {alignment = 8 : i64} : (i64) -> !llvm.ptr
+// MLIR:           %[[VAL_7:.*]] = llvm.mlir.constant(1 : index) : i64
+// MLIR:           %[[VAL_8:.*]] = llvm.alloca %[[VAL_7]] x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
+// MLIR:           %[[VAL_9:.*]] = llvm.mlir.constant(1 : index) : i64
+// MLIR:           %[[VAL_10:.*]] = llvm.alloca %[[VAL_9]] x f64 {alignment = 8 : i64} : (i64) -> !llvm.ptr
+// MLIR:           %[[VAL_11:.*]] = llvm.mlir.constant(1 : index) : i64
+// MLIR:           %[[VAL_12:.*]] = llvm.alloca %[[VAL_11]] x f64 {alignment = 8 : i64} : (i64) -> !llvm.ptr
+// MLIR:           llvm.store {{.*}}, %[[VAL_4]] : !llvm.ptr, !llvm.ptr
+// MLIR:           llvm.store {{.*}}, %[[VAL_6]] : !llvm.ptr, !llvm.ptr
+// MLIR:           llvm.store {{.*}}, %[[VAL_8]] : i32, !llvm.ptr
+// MLIR:           %[[VAL_13:.*]] = llvm.mlir.constant(0.000000e+00 : f64) : f64
+// MLIR:           llvm.store %[[VAL_13]], %[[VAL_12]] : f64, !llvm.ptr
+// MLIR:           llvm.br ^bb1
+// MLIR:         ^bb1:
+// MLIR:           %[[VAL_14:.*]] = llvm.mlir.constant(1 : index) : i64
+// MLIR:           %[[VAL_15:.*]] = llvm.alloca %[[VAL_14]] x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
+// MLIR:           %[[VAL_16:.*]] = llvm.mlir.constant(0 : i32) : i32
+// MLIR:           llvm.store %[[VAL_16]], %[[VAL_15]] : i32, !llvm.ptr
+// MLIR:           llvm.br ^bb2
+// MLIR:         ^bb2:
+// MLIR:           %[[VAL_17:.*]] = llvm.load %[[VAL_15]] : !llvm.ptr -> i32
+// MLIR:           %[[VAL_18:.*]] = llvm.load %[[VAL_8]] : !llvm.ptr -> i32
+// MLIR:           %[[VAL_19:.*]] = llvm.icmp "slt" %[[VAL_17]], %[[VAL_18]] : i32
+// MLIR:           %[[VAL_20:.*]] = llvm.zext %[[VAL_19]] : i1 to i32
+// MLIR:           %[[VAL_21:.*]] = llvm.mlir.constant(0 : i32) : i32
+// MLIR:           %[[VAL_22:.*]] = llvm.icmp "ne" %[[VAL_20]], %[[VAL_21]] : i32
+// MLIR:           llvm.cond_br %[[VAL_22]], ^bb3, ^bb5
+// MLIR:         ^bb3:
+// MLIR:           %[[VAL_23:.*]] = llvm.load %[[VAL_4]] : !llvm.ptr -> !llvm.ptr
+// MLIR:           %[[VAL_24:.*]] = llvm.load %[[VAL_15]] : !llvm.ptr -> i32
+// MLIR:           %[[VAL_25:.*]] = llvm.sext %[[VAL_24]] : i32 to i64
+// MLIR:           %[[VAL_26:.*]] = llvm.getelementptr %[[VAL_23]]{{\[}}%[[VAL_25]]] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+// MLIR:           %[[VAL_27:.*]] = llvm.load %[[VAL_26]] : !llvm.ptr -> f64
+// MLIR:           %[[VAL_28:.*]] = llvm.load %[[VAL_6]] : !llvm.ptr -> !llvm.ptr
+// MLIR:           %[[VAL_29:.*]] = llvm.load %[[VAL_15]] : !llvm.ptr -> i32
+// MLIR:           %[[VAL_30:.*]] = llvm.sext %[[VAL_29]] : i32 to i64
+// MLIR:           %[[VAL_31:.*]] = llvm.getelementptr %[[VAL_28]]{{\[}}%[[VAL_30]]] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+// MLIR:           %[[VAL_32:.*]] = llvm.load %[[VAL_31]] : !llvm.ptr -> f64
+// MLIR:           %[[VAL_33:.*]] = llvm.fmul %[[VAL_27]], %[[VAL_32]]  : f64
+// MLIR:           %[[VAL_34:.*]] = llvm.load %[[VAL_12]] : !llvm.ptr -> f64
+// MLIR:           %[[VAL_35:.*]] = llvm.fadd %[[VAL_34]], %[[VAL_33]]  : f64
+// MLIR:           llvm.store %[[VAL_35]], %[[VAL_12]] : f64, !llvm.ptr
+// MLIR:           llvm.br ^bb4
+// MLIR:         ^bb4:
+// MLIR:           %[[VAL_36:.*]] = llvm.load %[[VAL_15]] : !llvm.ptr -> i32
+// MLIR:           %[[VAL_37:.*]] = llvm.mlir.constant(1 : i32) : i32
+// MLIR:           %[[VAL_38:.*]] = llvm.add %[[VAL_36]], %[[VAL_37]] : i32
+// MLIR:           llvm.store %[[VAL_38]], %[[VAL_15]] : i32, !llvm.ptr
+// MLIR:           llvm.br ^bb2
+// MLIR:         ^bb5:
+// MLIR:           llvm.br ^bb6
+// MLIR:         ^bb6:
+// MLIR:           %[[VAL_39:.*]] = llvm.load %[[VAL_12]] : !llvm.ptr -> f64
+// MLIR:           llvm.store %[[VAL_39]], %[[VAL_10]] : f64, !llvm.ptr
+// MLIR:           %[[VAL_40:.*]] = llvm.load %[[VAL_10]] : !llvm.ptr -> f64
+// MLIR:           llvm.return %[[VAL_40]] : f64
+// MLIR:         }
