@@ -120,11 +120,6 @@ static cl::opt<PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr(
                           "Mark cold functions with optnone.")));
 
 extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
-
-// Link builtin bitcodes after optimization
-cl::opt<bool> ClLinkBuiltinBitcodePostopt(
-    "link-builtin-bitcode-postopt", cl::Optional,
-    cl::desc("Link builtin bitcodes after optimization."));
 } // namespace llvm
 
 namespace {
@@ -1055,7 +1050,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   }
 
   // Link against bitcodes supplied via the -mlink-builtin-bitcode option
-  if (ClLinkBuiltinBitcodePostopt)
+  if (CodeGenOpts.LinkBitcodePostopt)
     MPM.addPass(LinkInModulesPass(BC, false));
 
   // Add a verifier pass if requested. We don't have to do this if the action
