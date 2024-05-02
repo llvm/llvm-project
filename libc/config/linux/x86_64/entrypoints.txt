@@ -560,12 +560,14 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.lroundf128
     libc.src.math.modff128
     libc.src.math.nanf128
+    libc.src.math.nearbyintf128
     libc.src.math.nextafterf128
     libc.src.math.nextdownf128
     libc.src.math.nextupf128
     libc.src.math.rintf128
     libc.src.math.roundevenf128
     libc.src.math.roundf128
+    libc.src.math.scalbnf128
     libc.src.math.sqrtf128
     libc.src.math.truncf128
     libc.src.math.ufromfpf128
