@@ -856,6 +856,22 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  if (SystemZ::FP128BitRegClass.contains(DestReg) &&
+      SystemZ::GR128BitRegClass.contains(SrcReg)) {
+    MCRegister DestRegHi = RI.getSubReg(DestReg, SystemZ::subreg_h64);
+    MCRegister DestRegLo = RI.getSubReg(DestReg, SystemZ::subreg_l64);
+    MCRegister SrcRegHi = RI.getSubReg(SrcReg, SystemZ::subreg_h64);
+    MCRegister SrcRegLo = RI.getSubReg(SrcReg, SystemZ::subreg_l64);
+
+    BuildMI(MBB, MBBI, DL, get(SystemZ::LDGR), DestRegHi)
+        .addReg(SrcRegHi)
+        .addReg(DestReg, RegState::ImplicitDefine);
+
+    BuildMI(MBB, MBBI, DL, get(SystemZ::LDGR), DestRegLo)
+        .addReg(SrcRegLo, getKillRegState(KillSrc));
+    return;
+  }
+
   // Move CC value from a GR32.
   if (DestReg == SystemZ::CC) {
     unsigned Opcode =
