@@ -614,6 +614,52 @@ ExtractDataMemberLocation(DWARFDIE const &die, DWARFFormValue const &form_value,
   return memberOffset.ResolveValue(nullptr).UInt();
 }
 
+static TypePayloadClang GetPtrAuthMofidierPayload(const DWARFDIE &die) {
+  // FIXME: Fully resolving the type here may affect performance.
+  // FIXME: Should we call attrs.type.Clear() and set resolve_state =
+  // Type::ResolveState::Full?
+  bool is_restricted_integral = false;
+  if (Type *res_type = die.GetDWARF()->ResolveType(die))
+    if (auto *ptr_type = (clang::Type *)res_type->GetForwardCompilerType()
+                             .GetOpaqueQualType())
+      is_restricted_integral = !ptr_type->isPointerType();
+  (void)is_restricted_integral;
+
+  auto getAttr = [&](llvm::dwarf::Attribute Attr, unsigned defaultValue = 0) {
+    return die.GetAttributeValueAsUnsigned(Attr, defaultValue);
+  };
+  const unsigned key = getAttr(DW_AT_LLVM_ptrauth_key);
+  const bool addr_disc = getAttr(DW_AT_LLVM_ptrauth_address_discriminated);
+  const unsigned extra = getAttr(DW_AT_LLVM_ptrauth_extra_discriminator);
+  const bool isapointer = getAttr(DW_AT_LLVM_ptrauth_isa_pointer);
+  const bool authenticates_null_values =
+      getAttr(DW_AT_LLVM_ptrauth_authenticates_null_values);
+  const unsigned authentication_mode_int = getAttr(
+      DW_AT_LLVM_ptrauth_authentication_mode,
+      static_cast<unsigned>(clang::PointerAuthenticationMode::SignAndAuth));
+
+  // FIXME: Support is_restricted_integral
+
+  clang::PointerAuthenticationMode authentication_mode =
+      clang::PointerAuthenticationMode::SignAndAuth;
+  if (authentication_mode_int >=
+          static_cast<unsigned>(clang::PointerAuthenticationMode::None) &&
+      authentication_mode_int <=
+          static_cast<unsigned>(
+              clang::PointerAuthenticationMode::SignAndAuth)) {
+    authentication_mode =
+        static_cast<clang::PointerAuthenticationMode>(authentication_mode_int);
+  } else {
+    die.GetDWARF()->GetObjectFile()->GetModule()->ReportError(
+        "[{0:x16}]: invalid pointer authentication mode method {1:x4}",
+        die.GetOffset(), authentication_mode_int);
+  }
+  auto ptr_auth = clang::PointerAuthQualifier::Create(
+      key, addr_disc, extra, authentication_mode, isapointer,
+      authenticates_null_values);
+  return TypePayloadClang(ptr_auth.getAsOpaqueValue());
+}
+
 lldb::TypeSP
 DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
                                        const DWARFDIE &die,
@@ -624,6 +670,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
   LanguageType cu_language = SymbolFileDWARF::GetLanguage(*die.GetCU());
   Type::ResolveState resolve_state = Type::ResolveState::Unresolved;
   Type::EncodingDataType encoding_data_type = Type::eEncodingIsUID;
+  TypePayloadClang payload(GetOwningClangModule(die));
   TypeSP type_sp;
   CompilerType clang_type;
 
@@ -721,6 +768,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
   case DW_TAG_volatile_type:
     encoding_data_type = Type::eEncodingIsVolatileUID;
     break;
+#if 0
   case DW_TAG_LLVM_ptrauth_type: {
     DWARFDIE ptr_die = die.GetReferencedDIE(DW_AT_type);
     // FIXME: Fully resolving the type here may affect performance.
@@ -764,8 +812,6 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
 
     // FIXME: Use these variables when PointerAuthQualifier is more complete
     // upstream.
-    (void)isapointer;
-    (void)authenticates_null_values;
     (void)is_restricted_integral;
     (void)authentication_mode;
 
@@ -780,6 +826,11 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
         CompilerType(m_ast.weak_from_this(), qual_type.getAsOpaquePtr());
     break;
   }
+#endif
+  case DW_TAG_LLVM_ptrauth_type:
+    encoding_data_type = Type::eEncodingIsLLVMPtrAuthUID;
+    payload = GetPtrAuthMofidierPayload(die);
+    break;
   case DW_TAG_atomic_type:
     encoding_data_type = Type::eEncodingIsAtomicUID;
     break;
@@ -889,8 +940,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
 
   type_sp = dwarf->MakeType(die.GetID(), attrs.name, attrs.byte_size, nullptr,
                             attrs.type.Reference().GetID(), encoding_data_type,
-                            &attrs.decl, clang_type, resolve_state,
-                            TypePayloadClang(GetOwningClangModule(die)));
+                            &attrs.decl, clang_type, resolve_state, payload);
 
   dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
   return type_sp;
@@ -1704,7 +1754,7 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
   return qualified_name;
 }
 
-// BEGIN SWIFT  
+// BEGIN SWIFT
 bool DWARFASTParserClang::IsSwiftInteropType(const DWARFDIE &die) {
   for (DWARFDIE die : die.children())
     if (die.Tag() == llvm::dwarf::DW_TAG_member &&

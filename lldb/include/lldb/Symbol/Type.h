@@ -401,7 +401,9 @@ public:
     /// This type is the type whose UID is m_encoding_uid as an atomic type.
     eEncodingIsAtomicUID,
     /// This type is the synthetic type whose UID is m_encoding_uid.
-    eEncodingIsSyntheticUID
+    eEncodingIsSyntheticUID,
+    /// This type is a signed pointer.
+    eEncodingIsLLVMPtrAuthUID
   };
 
   enum class ResolveState : unsigned char {
