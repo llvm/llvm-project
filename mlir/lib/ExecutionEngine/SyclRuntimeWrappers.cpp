@@ -90,7 +90,13 @@ static void *allocDeviceMemory(sycl::queue *queue, size_t size, bool isShared) {
 }
 
 static void deallocDeviceMemory(sycl::queue *queue, void *ptr) {
-  sycl::free(ptr, *queue);
+  if (queue == nullptr) {
+    queue = new sycl::queue(getDefaultContext(), getDefaultDevice());
+    sycl::free(ptr, *queue);
+    delete queue;
+  } else {
+    sycl::free(ptr, *queue);
+  }
 }
 
 static ze_module_handle_t loadModule(const void *data, size_t dataSize) {
