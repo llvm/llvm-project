@@ -16,16 +16,12 @@ define void @f1(ptr %ret, ptr %src) {
 ; Z13-NEXT:    stg %r0, 0(%r2)
 ; Z13-NEXT:    br %r14
 
-; BASE:	aghi	%r15, -176
 ; BASE: lpq	%r0, 0(%r3)
-; BASE-NEXT: stg	%r1, 168(%r15)
-; BASE-NEXT: stg	%r0, 160(%r15)
-; BASE-NEXT: ld	%f0, 160(%r15)
-; BASE-NEXT: ld	%f2, 168(%r15)
+; BASE-NEXT: ldgr	%f0, %r0
+; BASE-NEXT: ldgr	%f2, %r1
 ; BASE-NEXT: std	%f0, 0(%r2)
 ; BASE-NEXT: std	%f2, 8(%r2)
-; BASE-NEXT: aghi	%r15, 176
-
+; BASE-NEXT: br %r14
 
 ; SOFTFP-LABEL: f1:
 ; SOFTFP:       # %bb.0:
@@ -41,24 +37,17 @@ define void @f1(ptr %ret, ptr %src) {
 define void @f1_fpuse(ptr %ret, ptr %src) {
 ; CHECK-LABEL: f1_fpuse:
 ; CHECK:       # %bb.0:
-; BASE-NEXT: aghi	%r15, -176
-; BASE-NEXT: .cfi_def_cfa_offset 336
-
 ; CHECK-NEXT:	lpq	%r0, 0(%r3)
 
-; BASE-NEXT: stg %r1, 168(%r15)
-; BASE-NEXT: stg %r0, 160(%r15)
-; BASE-NEXT: ld	%f0, 160(%r15)
-; BASE-NEXT: ld	%f2, 168(%r15)
+; BASE-NEXT: ldgr	%f0, %r0
+; BASE-NEXT: ldgr	%f2, %r1
 
 ; Z13-NEXT: vlvgp %v0, %r0, %r1
 ; Z13-NEXT: vrepg %v2, %v0, 1
 
-
 ; CHECK-NEXT:	axbr	%f0, %f0
 ; CHECK-NEXT:	std	%f0, 0(%r2)
 ; CHECK-NEXT:	std	%f2, 8(%r2)
-; BASE-NEXT:	aghi	%r15, 176
 ; CHECK-NEXT:	br	%r14
 
 

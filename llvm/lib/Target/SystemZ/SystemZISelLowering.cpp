@@ -6253,35 +6253,17 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
 // legalization.
 static SDValue expandBitCastI128ToF128(SelectionDAG &DAG, SDValue Src,
                                        SDValue Chain, const SDLoc &SL) {
-  MachineFunction &MF = DAG.getMachineFunction();
-  const DataLayout &DL = DAG.getDataLayout();
-
-  assert(DL.isBigEndian());
-
-  Align F128Align = DL.getPrefTypeAlign(Type::getFP128Ty(*DAG.getContext()));
-  SDValue StackTemp = DAG.CreateStackTemporary(MVT::f128, F128Align.value());
-  int FI = cast<FrameIndexSDNode>(StackTemp)->getIndex();
-  Align A = MF.getFrameInfo().getObjectAlign(FI);
-
   SDValue Hi =
       DAG.getTargetExtractSubreg(SystemZ::subreg_h64, SL, MVT::i64, Src);
   SDValue Lo =
       DAG.getTargetExtractSubreg(SystemZ::subreg_l64, SL, MVT::i64, Src);
 
-  TypeSize Offset = MVT(MVT::i64).getStoreSize();
-  SDValue StackTempOffset = DAG.getObjectPtrOffset(SL, StackTemp, Offset);
+  Hi = DAG.getBitcast(MVT::f64, Hi);
+  Lo = DAG.getBitcast(MVT::f64, Lo);
 
-  MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(MF, FI);
-
-  SDValue StoreHi = DAG.getStore(Chain, SL, Lo, StackTempOffset, PtrInfo, A);
-  SDValue StoreLo =
-      DAG.getStore(Chain, SL, Hi, StackTemp, PtrInfo.getWithOffset(Offset),
-                   commonAlignment(A, Offset));
-
-  SDValue StoreChain =
-      DAG.getNode(ISD::TokenFactor, SL, MVT::Other, {StoreLo, StoreHi});
-
-  return DAG.getLoad(MVT::f128, SL, StoreChain, StackTemp, PtrInfo, A);
+  SDNode *Pair = DAG.getMachineNode(SystemZ::PAIR128, SL,
+                                    MVT::f128, Hi, Lo);
+  return SDValue(Pair, 0);
 }
 
 // Lower operations with invalid operand or result types (currently used
@@ -6314,7 +6296,7 @@ SystemZTargetLowering::LowerOperationWrapper(SDNode *N,
       // the stack usage after combining.
       SDValue Cast = expandBitCastI128ToF128(DAG, Res, Res.getValue(1), DL);
       Results.push_back(Cast);
-      Results.push_back(Cast.getValue(1));
+      Results.push_back(Res.getValue(1));
     }
 
     break;
