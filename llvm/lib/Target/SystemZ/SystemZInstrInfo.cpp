@@ -856,6 +856,22 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  if (SystemZ::FP128BitRegClass.contains(DestReg) &&
+      SystemZ::GR128BitRegClass.contains(SrcReg)) {
+    MCRegister DestRegHi = RI.getSubReg(DestReg, SystemZ::subreg_h64);
+    MCRegister DestRegLo = RI.getSubReg(DestReg, SystemZ::subreg_l64);
+    MCRegister SrcRegHi = RI.getSubReg(SrcReg, SystemZ::subreg_h64);
+    MCRegister SrcRegLo = RI.getSubReg(SrcReg, SystemZ::subreg_l64);
+
+    BuildMI(MBB, MBBI, DL, get(SystemZ::LDGR), DestRegHi)
+        .addReg(SrcRegHi)
+        .addReg(DestReg, RegState::ImplicitDefine);
+
+    BuildMI(MBB, MBBI, DL, get(SystemZ::LDGR), DestRegLo)
+        .addReg(SrcRegLo, getKillRegState(KillSrc));
+    return;
+  }
+
   // Move CC value from a GR32.
   if (DestReg == SystemZ::CC) {
     unsigned Opcode =
@@ -863,6 +879,31 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     BuildMI(MBB, MBBI, DL, get(Opcode))
       .addReg(SrcReg, getKillRegState(KillSrc))
       .addImm(3 << (SystemZ::IPM_CC - 16));
+    return;
+  }
+
+  if (SystemZ::GR128BitRegClass.contains(DestReg) &&
+      SystemZ::VR128BitRegClass.contains(SrcReg)) {
+    MCRegister DestH64 = RI.getSubReg(DestReg, SystemZ::subreg_h64);
+    MCRegister DestL64 = RI.getSubReg(DestReg, SystemZ::subreg_l64);
+
+    BuildMI(MBB, MBBI, DL, get(SystemZ::VLGVG), DestH64)
+        .addReg(SrcReg)
+        .addReg(SystemZ::NoRegister)
+        .addImm(0)
+        .addDef(DestReg, RegState::Implicit);
+    BuildMI(MBB, MBBI, DL, get(SystemZ::VLGVG), DestL64)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addReg(SystemZ::NoRegister)
+        .addImm(1);
+    return;
+  }
+
+  if (SystemZ::VR128BitRegClass.contains(DestReg) &&
+      SystemZ::GR128BitRegClass.contains(SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(SystemZ::VLVGP), DestReg)
+        .addReg(RI.getSubReg(SrcReg, SystemZ::subreg_h64))
+        .addReg(RI.getSubReg(SrcReg, SystemZ::subreg_l64));
     return;
   }
 
