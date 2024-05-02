@@ -85,6 +85,32 @@ define void @test_boring_case_2x2bit_mask(i64 %i, i64 %n) #0 {
     ret void
 }
 
+
+define void @test_partial_extract(i64 %i, i64 %n) #0 {
+; CHECK-SVE-LABEL: test_partial_extract:
+; CHECK-SVE:       // %bb.0:
+; CHECK-SVE-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SVE-NEXT:    punpklo p1.h, p0.b
+; CHECK-SVE-NEXT:    punpkhi p2.h, p0.b
+; CHECK-SVE-NEXT:    punpklo p0.h, p1.b
+; CHECK-SVE-NEXT:    punpklo p1.h, p2.b
+; CHECK-SVE-NEXT:    b use
+;
+; CHECK-SVE2p1-LABEL: test_partial_extract:
+; CHECK-SVE2p1:       // %bb.0:
+; CHECK-SVE2p1-NEXT:    whilelo p0.h, x0, x1
+; CHECK-SVE2p1-NEXT:    punpklo p1.h, p0.b
+; CHECK-SVE2p1-NEXT:    punpkhi p2.h, p0.b
+; CHECK-SVE2p1-NEXT:    punpklo p0.h, p1.b
+; CHECK-SVE2p1-NEXT:    punpklo p1.h, p2.b
+; CHECK-SVE2p1-NEXT:    b use
+    %r = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 %i, i64 %n)
+    %v0 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 0)
+    %v1 = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1.i64(<vscale x 8 x i1> %r, i64 4)
+    tail call void @use(<vscale x 2 x i1> %v0, <vscale x 2 x i1> %v1)
+    ret void
+}
+
 declare void @use(...)
 
 attributes #0 = { nounwind }

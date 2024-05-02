@@ -20570,6 +20570,11 @@ static SDValue tryCombineWhileLo(SDNode *N,
   if (OffLo != 0 || OffHi != HalfSize)
     return SDValue();
 
+  EVT HalfVec = Lo->getValueType(0);
+  if (HalfVec != Hi->getValueType(0) ||
+      HalfVec.getVectorMinNumElements() != HalfSize)
+    return SDValue();
+
   SelectionDAG &DAG = DCI.DAG;
   SDLoc DL(N);
   SDValue ID =
