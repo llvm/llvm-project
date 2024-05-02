@@ -294,6 +294,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   // the atomic operations in order to exploit SystemZ instructions.
   setOperationAction(ISD::ATOMIC_LOAD,     MVT::i128, Custom);
   setOperationAction(ISD::ATOMIC_STORE,    MVT::i128, Custom);
+  setOperationAction(ISD::ATOMIC_LOAD, MVT::f128, Custom);
 
   // Mark sign/zero extending atomic loads as legal, which will make
   // DAGCombiner fold extensions into atomic loads if possible.
@@ -935,9 +936,6 @@ bool SystemZTargetLowering::hasInlineStackProbe(const MachineFunction &MF) const
 
 TargetLowering::AtomicExpansionKind
 SystemZTargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
-  // Lower fp128 the same way as i128.
-  if (LI->getType()->isFP128Ty())
-    return AtomicExpansionKind::CastToInteger;
   return AtomicExpansionKind::None;
 }
 
@@ -4550,7 +4548,9 @@ SDValue SystemZTargetLowering::lowerATOMIC_FENCE(SDValue Op,
 SDValue SystemZTargetLowering::lowerATOMIC_LDST_I128(SDValue Op,
                                                      SelectionDAG &DAG) const {
   auto *Node = cast<AtomicSDNode>(Op.getNode());
-  assert(Node->getMemoryVT() == MVT::i128 && "Only custom lowering i128.");
+  assert(
+      (Node->getMemoryVT() == MVT::i128 || Node->getMemoryVT() == MVT::f128) &&
+      "Only custom lowering i128 or f128.");
   // Use same code to handle both legal and non-legal i128 types.
   SmallVector<SDValue, 2> Results;
   LowerOperationWrapper(Node, Results, DAG);
@@ -6249,6 +6249,26 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
   }
 }
 
+// Manually lower a bitcast to avoid introducing illegal types after type
+// legalization.
+static SDValue expandBitCastI128ToF128(SelectionDAG &DAG, SDValue Src,
+                                       SDValue Chain, const SDLoc &SL) {
+  SDValue Hi =
+      DAG.getTargetExtractSubreg(SystemZ::subreg_h64, SL, MVT::i64, Src);
+  SDValue Lo =
+      DAG.getTargetExtractSubreg(SystemZ::subreg_l64, SL, MVT::i64, Src);
+
+  Hi = DAG.getBitcast(MVT::f64, Hi);
+  Lo = DAG.getBitcast(MVT::f64, Lo);
+
+  SDNode *Pair = DAG.getMachineNode(
+      SystemZ::REG_SEQUENCE, SL, MVT::f128,
+      {DAG.getTargetConstant(SystemZ::FP128BitRegClassID, SL, MVT::i32), Lo,
+       DAG.getTargetConstant(SystemZ::subreg_l64, SL, MVT::i32), Hi,
+       DAG.getTargetConstant(SystemZ::subreg_h64, SL, MVT::i32)});
+  return SDValue(Pair, 0);
+}
+
 // Lower operations with invalid operand or result types (currently used
 // only for 128-bit integer types).
 void
@@ -6263,8 +6283,25 @@ SystemZTargetLowering::LowerOperationWrapper(SDNode *N,
     MachineMemOperand *MMO = cast<AtomicSDNode>(N)->getMemOperand();
     SDValue Res = DAG.getMemIntrinsicNode(SystemZISD::ATOMIC_LOAD_128,
                                           DL, Tys, Ops, MVT::i128, MMO);
-    Results.push_back(lowerGR128ToI128(DAG, Res));
-    Results.push_back(Res.getValue(1));
+
+    EVT VT = N->getValueType(0);
+
+    if (VT == MVT::i128 || isTypeLegal(MVT::i128)) {
+      SDValue Lowered = lowerGR128ToI128(DAG, Res);
+      Results.push_back(DAG.getBitcast(VT, Lowered));
+      Results.push_back(Res.getValue(1));
+    } else {
+      // For the f128 case, after type legalization, we cannot produce a bitcast
+      // with an illegal type (i.e. i128), so manually lower it.
+      //
+      // FIXME: Really v2i64 should be legal, and should be used in place of
+      // unttyped. Then we could emit the bitcast which will potentially fold
+      // into the use.
+      SDValue Cast = expandBitCastI128ToF128(DAG, Res, Res.getValue(1), DL);
+      Results.push_back(Cast);
+      Results.push_back(Res.getValue(1));
+    }
+
     break;
   }
   case ISD::ATOMIC_STORE: {
