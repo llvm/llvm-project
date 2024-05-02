@@ -351,6 +351,30 @@ public:
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
+class OpenACCCopyClause final
+    : public OpenACCClauseWithVarList,
+      public llvm::TrailingObjects<OpenACCCopyClause, Expr *> {
+
+  OpenACCCopyClause(OpenACCClauseKind Spelling, SourceLocation BeginLoc,
+                    SourceLocation LParenLoc, ArrayRef<Expr *> VarList,
+                    SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(Spelling, BeginLoc, LParenLoc, EndLoc) {
+    assert((Spelling == OpenACCClauseKind::Copy ||
+            Spelling == OpenACCClauseKind::PCopy ||
+            Spelling == OpenACCClauseKind::PresentOrCopy) &&
+           "Invalid clause kind for copy-clause");
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static OpenACCCopyClause *
+  Create(const ASTContext &C, OpenACCClauseKind Spelling,
+         SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
+
 template <class Impl> class OpenACCClauseVisitor {
   Impl &getDerived() { return static_cast<Impl &>(*this); }
 
@@ -367,6 +391,10 @@ public:
     switch (C->getClauseKind()) {
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   case OpenACCClauseKind::CLAUSE_NAME:                                         \
+    Visit##CLAUSE_NAME##Clause(*cast<OpenACC##CLAUSE_NAME##Clause>(C));        \
+    return;
+#define CLAUSE_ALIAS(ALIAS_NAME, CLAUSE_NAME)                                  \
+  case OpenACCClauseKind::ALIAS_NAME:                                          \
     Visit##CLAUSE_NAME##Clause(*cast<OpenACC##CLAUSE_NAME##Clause>(C));        \
     return;
 #include "clang/Basic/OpenACCClauses.def"

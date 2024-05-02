@@ -14,7 +14,16 @@
 // as used in Clang source (so `Default` instead of `default`).
 //
 // VISIT_CLAUSE(CLAUSE_NAME)
+//
+// CLAUSE_ALIAS(ALIAS_NAME, CLAUSE_NAME)
 
+#ifndef CLAUSE_ALIAS
+#define CLAUSE_ALIAS(ALIAS_NAME, CLAUSE_NAME)
+#endif
+
+VISIT_CLAUSE(Copy)
+CLAUSE_ALIAS(PCopy, Copy)
+CLAUSE_ALIAS(PresentOrCopy, Copy)
 VISIT_CLAUSE(Default)
 VISIT_CLAUSE(FirstPrivate)
 VISIT_CLAUSE(If)
@@ -27,3 +36,4 @@ VISIT_CLAUSE(Self)
 VISIT_CLAUSE(VectorLength)
 
 #undef VISIT_CLAUSE
+#undef CLAUSE_ALIAS
