@@ -1899,7 +1899,17 @@ def TileUsingForOp : Op<Transform_Dialect, "structured.tile_using_for",
                       $scalableSizes)>,
   ];
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    $target oilist(
+      `tile_sizes` custom<DynamicIndexList>(
+        $dynamic_sizes,
+        $static_sizes,
+        $scalable_sizes))
+      (`interchange` `=` $interchange^)?
+    attr-dict
+    `:` functional-type(operands, results)
+  }];
+
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
@@ -2162,7 +2172,16 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
 
   let results = (outs);
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    $target oilist(
+      `vector_sizes` custom<DynamicIndexList>(
+        $vector_sizes,
+        $static_vector_sizes,
+        $scalable_sizes))
+    attr-dict
+    `:` type($target)(`,`type($vector_sizes)^)? 
+  }];
+
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
