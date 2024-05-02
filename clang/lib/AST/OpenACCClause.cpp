@@ -186,6 +186,39 @@ OpenACCCopyClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
       OpenACCCopyClause(Spelling, BeginLoc, LParenLoc, VarList, EndLoc);
 }
 
+OpenACCCopyInClause *
+OpenACCCopyInClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
+                            SourceLocation BeginLoc, SourceLocation LParenLoc,
+                            bool IsReadOnly, ArrayRef<Expr *> VarList,
+                            SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(OpenACCCopyInClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCCopyInClause(Spelling, BeginLoc, LParenLoc,
+                                       IsReadOnly, VarList, EndLoc);
+}
+
+OpenACCCopyOutClause *
+OpenACCCopyOutClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
+                             SourceLocation BeginLoc, SourceLocation LParenLoc,
+                             bool IsZero, ArrayRef<Expr *> VarList,
+                             SourceLocation EndLoc) {
+  void *Mem = C.Allocate(
+      OpenACCCopyOutClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCCopyOutClause(Spelling, BeginLoc, LParenLoc, IsZero,
+                                        VarList, EndLoc);
+}
+
+OpenACCCreateClause *
+OpenACCCreateClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
+                            SourceLocation BeginLoc, SourceLocation LParenLoc,
+                            bool IsZero, ArrayRef<Expr *> VarList,
+                            SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(OpenACCCreateClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCCreateClause(Spelling, BeginLoc, LParenLoc, IsZero,
+                                       VarList, EndLoc);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenACC clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -265,6 +298,33 @@ void OpenACCClausePrinter::VisitPresentClause(const OpenACCPresentClause &C) {
 
 void OpenACCClausePrinter::VisitCopyClause(const OpenACCCopyClause &C) {
   OS << C.getClauseKind() << '(';
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitCopyInClause(const OpenACCCopyInClause &C) {
+  OS << C.getClauseKind() << '(';
+  if (C.isReadOnly())
+    OS << "readonly: ";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitCopyOutClause(const OpenACCCopyOutClause &C) {
+  OS << C.getClauseKind() << '(';
+  if (C.isZero())
+    OS << "zero: ";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitCreateClause(const OpenACCCreateClause &C) {
+  OS << C.getClauseKind() << '(';
+  if (C.isZero())
+    OS << "zero: ";
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";

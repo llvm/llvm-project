@@ -50,6 +50,8 @@ public:
 
     struct VarListDetails {
       SmallVector<Expr *> VarList;
+      bool IsReadOnly;
+      bool IsZero;
     };
 
     std::variant<std::monostate, DefaultDetails, ConditionDetails,
@@ -123,6 +125,15 @@ public:
               ClauseKind == OpenACCClauseKind::Copy ||
               ClauseKind == OpenACCClauseKind::PCopy ||
               ClauseKind == OpenACCClauseKind::PresentOrCopy ||
+              ClauseKind == OpenACCClauseKind::CopyIn ||
+              ClauseKind == OpenACCClauseKind::PCopyIn ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyIn ||
+              ClauseKind == OpenACCClauseKind::CopyOut ||
+              ClauseKind == OpenACCClauseKind::PCopyOut ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyOut ||
+              ClauseKind == OpenACCClauseKind::Create ||
+              ClauseKind == OpenACCClauseKind::PCreate ||
+              ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
       return std::get<VarListDetails>(Details).VarList;
@@ -130,6 +141,25 @@ public:
 
     ArrayRef<Expr *> getVarList() const {
       return const_cast<OpenACCParsedClause *>(this)->getVarList();
+    }
+
+    bool isReadOnly() const {
+      assert((ClauseKind == OpenACCClauseKind::CopyIn ||
+              ClauseKind == OpenACCClauseKind::PCopyIn ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyIn) &&
+             "Only copyin accepts 'readonly:' tag");
+      return std::get<VarListDetails>(Details).IsReadOnly;
+    }
+
+    bool isZero() const {
+      assert((ClauseKind == OpenACCClauseKind::CopyOut ||
+              ClauseKind == OpenACCClauseKind::PCopyOut ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyOut ||
+              ClauseKind == OpenACCClauseKind::Create ||
+              ClauseKind == OpenACCClauseKind::PCreate ||
+              ClauseKind == OpenACCClauseKind::PresentOrCreate) &&
+             "Only copyout/create accepts 'zero' tag");
+      return std::get<VarListDetails>(Details).IsZero;
     }
 
     void setLParenLoc(SourceLocation EndLoc) { LParenLoc = EndLoc; }
@@ -170,28 +200,71 @@ public:
       Details = IntExprDetails{std::move(IntExprs)};
     }
 
-    void setVarListDetails(ArrayRef<Expr *> VarList) {
+    void setVarListDetails(ArrayRef<Expr *> VarList, bool IsReadOnly,
+                           bool IsZero) {
       assert((ClauseKind == OpenACCClauseKind::Private ||
               ClauseKind == OpenACCClauseKind::NoCreate ||
               ClauseKind == OpenACCClauseKind::Present ||
               ClauseKind == OpenACCClauseKind::Copy ||
               ClauseKind == OpenACCClauseKind::PCopy ||
               ClauseKind == OpenACCClauseKind::PresentOrCopy ||
+              ClauseKind == OpenACCClauseKind::CopyIn ||
+              ClauseKind == OpenACCClauseKind::PCopyIn ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyIn ||
+              ClauseKind == OpenACCClauseKind::CopyOut ||
+              ClauseKind == OpenACCClauseKind::PCopyOut ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyOut ||
+              ClauseKind == OpenACCClauseKind::Create ||
+              ClauseKind == OpenACCClauseKind::PCreate ||
+              ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
-      Details = VarListDetails{{VarList.begin(), VarList.end()}};
+      assert((!IsReadOnly || ClauseKind == OpenACCClauseKind::CopyIn ||
+              ClauseKind == OpenACCClauseKind::PCopyIn ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyIn) &&
+             "readonly: tag only valid on copyin");
+      assert((!IsZero || ClauseKind == OpenACCClauseKind::CopyOut ||
+              ClauseKind == OpenACCClauseKind::PCopyOut ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyOut ||
+              ClauseKind == OpenACCClauseKind::Create ||
+              ClauseKind == OpenACCClauseKind::PCreate ||
+              ClauseKind == OpenACCClauseKind::PresentOrCreate) &&
+             "zero: tag only valid on copyout/create");
+      Details =
+          VarListDetails{{VarList.begin(), VarList.end()}, IsReadOnly, IsZero};
     }
 
-    void setVarListDetails(llvm::SmallVector<Expr *> &&VarList) {
+    void setVarListDetails(llvm::SmallVector<Expr *> &&VarList, bool IsReadOnly,
+                           bool IsZero) {
       assert((ClauseKind == OpenACCClauseKind::Private ||
               ClauseKind == OpenACCClauseKind::NoCreate ||
               ClauseKind == OpenACCClauseKind::Present ||
               ClauseKind == OpenACCClauseKind::Copy ||
               ClauseKind == OpenACCClauseKind::PCopy ||
               ClauseKind == OpenACCClauseKind::PresentOrCopy ||
+              ClauseKind == OpenACCClauseKind::CopyIn ||
+              ClauseKind == OpenACCClauseKind::PCopyIn ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyIn ||
+              ClauseKind == OpenACCClauseKind::CopyOut ||
+              ClauseKind == OpenACCClauseKind::PCopyOut ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyOut ||
+              ClauseKind == OpenACCClauseKind::Create ||
+              ClauseKind == OpenACCClauseKind::PCreate ||
+              ClauseKind == OpenACCClauseKind::PresentOrCreate ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
              "Parsed clause kind does not have a var-list");
-      Details = VarListDetails{std::move(VarList)};
+      assert((!IsReadOnly || ClauseKind == OpenACCClauseKind::CopyIn ||
+              ClauseKind == OpenACCClauseKind::PCopyIn ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyIn) &&
+             "readonly: tag only valid on copyin");
+      assert((!IsZero || ClauseKind == OpenACCClauseKind::CopyOut ||
+              ClauseKind == OpenACCClauseKind::PCopyOut ||
+              ClauseKind == OpenACCClauseKind::PresentOrCopyOut ||
+              ClauseKind == OpenACCClauseKind::Create ||
+              ClauseKind == OpenACCClauseKind::PCreate ||
+              ClauseKind == OpenACCClauseKind::PresentOrCreate) &&
+             "zero: tag only valid on copyout/create");
+      Details = VarListDetails{std::move(VarList), IsReadOnly, IsZero};
     }
   };
 
