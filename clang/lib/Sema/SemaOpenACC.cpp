@@ -16,6 +16,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/OpenACCKinds.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 
 using namespace clang;
@@ -367,13 +368,25 @@ ExprResult SemaOpenACC::ActOnIntExpr(OpenACCDirectiveKind DK,
   assert(((DK != OpenACCDirectiveKind::Invalid &&
            CK == OpenACCClauseKind::Invalid) ||
           (DK == OpenACCDirectiveKind::Invalid &&
-           CK != OpenACCClauseKind::Invalid)) &&
+           CK != OpenACCClauseKind::Invalid) ||
+          (DK == OpenACCDirectiveKind::Invalid &&
+           CK == OpenACCClauseKind::Invalid)) &&
          "Only one of directive or clause kind should be provided");
 
   class IntExprConverter : public Sema::ICEConvertDiagnoser {
     OpenACCDirectiveKind DirectiveKind;
     OpenACCClauseKind ClauseKind;
     Expr *IntExpr;
+
+    // gets the index into the diagnostics so we can use this for clauses,
+    // directives, and sub array.s
+    unsigned getDiagKind() const {
+      if (ClauseKind != OpenACCClauseKind::Invalid)
+        return 0;
+      if (DirectiveKind != OpenACCDirectiveKind::Invalid)
+        return 1;
+      return 2;
+    }
 
   public:
     IntExprConverter(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
@@ -390,12 +403,8 @@ ExprResult SemaOpenACC::ActOnIntExpr(OpenACCDirectiveKind DK,
     }
     SemaBase::SemaDiagnosticBuilder diagnoseNotInt(Sema &S, SourceLocation Loc,
                                                    QualType T) override {
-      if (ClauseKind != OpenACCClauseKind::Invalid)
-        return S.Diag(Loc, diag::err_acc_int_expr_requires_integer) <<
-               /*Clause=*/0 << ClauseKind << T;
-
-      return S.Diag(Loc, diag::err_acc_int_expr_requires_integer) <<
-             /*Directive=*/1 << DirectiveKind << T;
+      return S.Diag(Loc, diag::err_acc_int_expr_requires_integer)
+             << getDiagKind() << ClauseKind << DirectiveKind << T;
     }
 
     SemaBase::SemaDiagnosticBuilder
@@ -503,12 +512,211 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
                                               SourceLocation RBLoc) {
   ASTContext &Context = getASTContext();
 
-  // TODO OpenACC: We likely have to reproduce a lot of the same logic from the
-  // OMP version of this, but at the moment we don't have a good way to test it,
-  // so for now we'll just create the node.
+  // Handle placeholders.
+  if (Base->hasPlaceholderType() &&
+      !Base->hasPlaceholderType(BuiltinType::ArraySection)) {
+    ExprResult Result = SemaRef.CheckPlaceholderExpr(Base);
+    if (Result.isInvalid())
+      return ExprError();
+    Base = Result.get();
+  }
+  if (LowerBound && LowerBound->getType()->isNonOverloadPlaceholderType()) {
+    ExprResult Result = SemaRef.CheckPlaceholderExpr(LowerBound);
+    if (Result.isInvalid())
+      return ExprError();
+    Result = SemaRef.DefaultLvalueConversion(Result.get());
+    if (Result.isInvalid())
+      return ExprError();
+    LowerBound = Result.get();
+  }
+  if (Length && Length->getType()->isNonOverloadPlaceholderType()) {
+    ExprResult Result = SemaRef.CheckPlaceholderExpr(Length);
+    if (Result.isInvalid())
+      return ExprError();
+    Result = SemaRef.DefaultLvalueConversion(Result.get());
+    if (Result.isInvalid())
+      return ExprError();
+    Length = Result.get();
+  }
+
+  // Check the 'base' value, it must be an array or pointer type, and not to/of
+  // a function type.
+  QualType OriginalBaseTy = ArraySectionExpr::getBaseOriginalType(Base);
+  QualType ResultTy;
+  if (!Base->isTypeDependent()) {
+    if (OriginalBaseTy->isAnyPointerType()) {
+      ResultTy = OriginalBaseTy->getPointeeType();
+    } else if (OriginalBaseTy->isArrayType()) {
+      ResultTy = OriginalBaseTy->getAsArrayTypeUnsafe()->getElementType();
+    } else {
+      return ExprError(
+          Diag(Base->getExprLoc(), diag::err_acc_typecheck_subarray_value)
+          << Base->getSourceRange());
+    }
+
+    if (ResultTy->isFunctionType()) {
+      Diag(Base->getExprLoc(), diag::err_acc_subarray_function_type)
+          << ResultTy << Base->getSourceRange();
+      return ExprError();
+    }
+
+    if (SemaRef.RequireCompleteType(Base->getExprLoc(), ResultTy,
+                                    diag::err_acc_subarray_incomplete_type,
+                                    Base))
+      return ExprError();
+
+    if (!Base->hasPlaceholderType(BuiltinType::ArraySection)) {
+      ExprResult Result = SemaRef.DefaultFunctionArrayLvalueConversion(Base);
+      if (Result.isInvalid())
+        return ExprError();
+      Base = Result.get();
+    }
+  }
+
+  auto GetRecovery = [&](Expr *E, QualType Ty) {
+    ExprResult Recovery =
+        SemaRef.CreateRecoveryExpr(E->getBeginLoc(), E->getEndLoc(), E, Ty);
+    return Recovery.isUsable() ? Recovery.get() : nullptr;
+  };
+
+  // Ensure both of the expressions are int-exprs.
+  if (LowerBound && !LowerBound->isTypeDependent()) {
+    ExprResult LBRes =
+        ActOnIntExpr(OpenACCDirectiveKind::Invalid, OpenACCClauseKind::Invalid,
+                     LowerBound->getExprLoc(), LowerBound);
+
+    if (LBRes.isUsable())
+      LBRes = SemaRef.DefaultLvalueConversion(LBRes.get());
+    LowerBound =
+        LBRes.isUsable() ? LBRes.get() : GetRecovery(LowerBound, Context.IntTy);
+  }
+
+  if (Length && !Length->isTypeDependent()) {
+    ExprResult LenRes =
+        ActOnIntExpr(OpenACCDirectiveKind::Invalid, OpenACCClauseKind::Invalid,
+                     Length->getExprLoc(), Length);
+
+    if (LenRes.isUsable())
+      LenRes = SemaRef.DefaultLvalueConversion(LenRes.get());
+    Length =
+        LenRes.isUsable() ? LenRes.get() : GetRecovery(Length, Context.IntTy);
+  }
+
+  // Length is required if the base type is not an array of known bounds.
+  if (!Length && (OriginalBaseTy.isNull() ||
+                  (!OriginalBaseTy->isDependentType() &&
+                   !OriginalBaseTy->isConstantArrayType() &&
+                   !OriginalBaseTy->isDependentSizedArrayType()))) {
+    bool IsArray = !OriginalBaseTy.isNull() && OriginalBaseTy->isArrayType();
+    Diag(ColonLoc, diag::err_acc_subarray_no_length) << IsArray;
+    // Fill in a dummy 'length' so that when we instantiate this we don't
+    // double-diagnose here.
+    ExprResult Recovery = SemaRef.CreateRecoveryExpr(
+        ColonLoc, SourceLocation(), ArrayRef<Expr *>{std::nullopt},
+        Context.IntTy);
+    Length = Recovery.isUsable() ? Recovery.get() : nullptr;
+  }
+
+  // Check the values of each of the arguments, they cannot be negative(we
+  // assume), and if the array bound is known, must be within range. As we do
+  // so, do our best to continue with evaluation, we can set the
+  // value/expression to nullptr/nullopt if they are invalid, and treat them as
+  // not present for the rest of evaluation.
+
+  // We don't have to check for dependence, because the dependent size is
+  // represented as a different AST node.
+  std::optional<llvm::APSInt> BaseSize;
+  if (!OriginalBaseTy.isNull() && OriginalBaseTy->isConstantArrayType()) {
+    const auto *ArrayTy = Context.getAsConstantArrayType(OriginalBaseTy);
+    BaseSize = ArrayTy->getSize();
+  }
+
+  auto GetBoundValue = [&](Expr *E) -> std::optional<llvm::APSInt> {
+    if (!E || E->isInstantiationDependent())
+      return std::nullopt;
+
+    Expr::EvalResult Res;
+    if (!E->EvaluateAsInt(Res, Context))
+      return std::nullopt;
+    return Res.Val.getInt();
+  };
+
+  std::optional<llvm::APSInt> LowerBoundValue = GetBoundValue(LowerBound);
+  std::optional<llvm::APSInt> LengthValue = GetBoundValue(Length);
+
+  // Check lower bound for negative or out of range.
+  if (LowerBoundValue.has_value()) {
+    if (LowerBoundValue->isNegative()) {
+      Diag(LowerBound->getExprLoc(), diag::err_acc_subarray_negative)
+          << /*LowerBound=*/0 << toString(*LowerBoundValue, /*Radix=*/10);
+      LowerBoundValue.reset();
+      LowerBound = GetRecovery(LowerBound, LowerBound->getType());
+    } else if (BaseSize.has_value() &&
+               llvm::APSInt::compareValues(*LowerBoundValue, *BaseSize) >= 0) {
+      // Lower bound (start index) must be less than the size of the array.
+      Diag(LowerBound->getExprLoc(), diag::err_acc_subarray_out_of_range)
+          << /*LowerBound=*/0 << toString(*LowerBoundValue, /*Radix=*/10)
+          << toString(*BaseSize, /*Radix=*/10);
+      LowerBoundValue.reset();
+      LowerBound = GetRecovery(LowerBound, LowerBound->getType());
+    }
+  }
+
+  // Check length for negative or out of range.
+  if (LengthValue.has_value()) {
+    if (LengthValue->isNegative()) {
+      Diag(Length->getExprLoc(), diag::err_acc_subarray_negative)
+          << /*Length=*/1 << toString(*LengthValue, /*Radix=*/10);
+      LengthValue.reset();
+      Length = GetRecovery(Length, Length->getType());
+    } else if (BaseSize.has_value() &&
+               llvm::APSInt::compareValues(*LengthValue, *BaseSize) > 0) {
+      // Length must be lessthan or EQUAL to the size of the array.
+      Diag(Length->getExprLoc(), diag::err_acc_subarray_out_of_range)
+          << /*Length=*/1 << toString(*LengthValue, /*Radix=*/10)
+          << toString(*BaseSize, /*Radix=*/10);
+      LengthValue.reset();
+      Length = GetRecovery(Length, Length->getType());
+    }
+  }
+
+  // Adding two APSInts requires matching sign, so extract that here.
+  auto AddAPSInt = [](llvm::APSInt LHS, llvm::APSInt RHS) -> llvm::APSInt {
+    if (LHS.isSigned() == RHS.isSigned())
+      return LHS + RHS;
+
+    unsigned Width = std::max(LHS.getBitWidth(), RHS.getBitWidth()) + 1;
+    return llvm::APSInt(LHS.sext(Width) + RHS.sext(Width), /*Signed=*/true);
+  };
+
+  // If we know all 3 values, we can diagnose that the total value would be out
+  // of range.
+  if (BaseSize.has_value() && LowerBoundValue.has_value() &&
+      LengthValue.has_value() &&
+      llvm::APSInt::compareValues(AddAPSInt(*LowerBoundValue, *LengthValue),
+                                  *BaseSize) > 0) {
+    Diag(Base->getExprLoc(),
+         diag::err_acc_subarray_base_plus_length_out_of_range)
+        << toString(*LowerBoundValue, /*Radix=*/10)
+        << toString(*LengthValue, /*Radix=*/10)
+        << toString(*BaseSize, /*Radix=*/10);
+
+    LowerBoundValue.reset();
+    LowerBound = GetRecovery(LowerBound, LowerBound->getType());
+    LengthValue.reset();
+    Length = GetRecovery(Length, Length->getType());
+  }
+
+  // If any part of the expression is dependent, return a dependent sub-array.
+  QualType ArrayExprTy = Context.ArraySectionTy;
+  if (Base->isTypeDependent() ||
+      (LowerBound && LowerBound->isInstantiationDependent()) ||
+      (Length && Length->isInstantiationDependent()))
+    ArrayExprTy = Context.DependentTy;
+
   return new (Context)
-      ArraySectionExpr(Base, LowerBound, Length, Context.ArraySectionTy,
-                       VK_LValue, OK_Ordinary, ColonLoc, RBLoc);
+      ArraySectionExpr(Base, LowerBound, Length, ArrayExprTy, VK_LValue,
+                       OK_Ordinary, ColonLoc, RBLoc);
 }
 
 bool SemaOpenACC::ActOnStartStmtDirective(OpenACCDirectiveKind K,

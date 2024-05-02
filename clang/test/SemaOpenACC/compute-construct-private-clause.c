@@ -12,12 +12,12 @@ typedef struct IsComplete {
 
 int GlobalInt;
 float GlobalArray[5];
-void *GlobalPointer;
+short *GlobalPointer;
 Complete GlobalComposite;
 
-void uses(int IntParam, void *PointerParam, float ArrayParam[5], Complete CompositeParam) {
+void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete CompositeParam) {
   int LocalInt;
-  void *LocalPointer;
+  short *LocalPointer;
   float LocalArray[5];
   Complete LocalComposite;
 
@@ -35,17 +35,13 @@ void uses(int IntParam, void *PointerParam, float ArrayParam[5], Complete Compos
   while(1);
 #pragma acc parallel private(LocalArray)
   while(1);
-  // TODO OpenACC: Fix array sections, this should be allowed.
-  // expected-error@+1{{expected expression}}
 #pragma acc parallel private(LocalArray[:])
   while(1);
 #pragma acc parallel private(LocalArray[:5])
   while(1);
-  // TODO OpenACC: Fix array sections, this should be allowed.
-  // expected-error@+1{{expected expression}}
 #pragma acc parallel private(LocalArray[2:])
   while(1);
-#pragma acc parallel private(LocalArray[2:5])
+#pragma acc parallel private(LocalArray[2:1])
   while(1);
 #pragma acc parallel private(LocalArray[2])
   while(1);
@@ -103,40 +99,36 @@ void uses(int IntParam, void *PointerParam, float ArrayParam[5], Complete Compos
 #pragma acc parallel private(+GlobalInt)
   while(1);
 
-  // TODO OpenACC: Fix array sections, this should be allowed.
-  // expected-error@+1{{expected expression}}
+  // expected-error@+1{{OpenACC sub-array length is unspecified and cannot be inferred because the subscripted value is not an array}}
 #pragma acc parallel private(PointerParam[:])
   while(1);
 #pragma acc parallel private(PointerParam[:5])
   while(1);
 #pragma acc parallel private(PointerParam[:IntParam])
   while(1);
-  // TODO OpenACC: Fix array sections, this should be allowed.
-  // expected-error@+1{{expected expression}}
+  // expected-error@+1{{OpenACC sub-array length is unspecified and cannot be inferred because the subscripted value is not an array}}
 #pragma acc parallel private(PointerParam[2:])
   while(1);
 #pragma acc parallel private(PointerParam[2:5])
   while(1);
 #pragma acc parallel private(PointerParam[2])
   while(1);
-  // TODO OpenACC: Fix array sections, this should be allowed.
-  // expected-error@+1{{expected expression}}
 #pragma acc parallel private(ArrayParam[:])
   while(1);
 #pragma acc parallel private(ArrayParam[:5])
   while(1);
 #pragma acc parallel private(ArrayParam[:IntParam])
   while(1);
-  // TODO OpenACC: Fix array sections, this should be allowed.
-  // expected-error@+1{{expected expression}}
 #pragma acc parallel private(ArrayParam[2:])
   while(1);
+  // expected-error@+1{{OpenACC sub-array specified range [2:5] would be out of the range of the subscripted array size of 5}}
 #pragma acc parallel private(ArrayParam[2:5])
   while(1);
 #pragma acc parallel private(ArrayParam[2])
   while(1);
 
-  // expected-error@+1{{OpenACC sub-array is not allowed here}}
+  // expected-error@+2{{OpenACC sub-array specified range [2:5] would be out of the range of the subscripted array size of 5}}
+  // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
 #pragma acc parallel private((float*)ArrayParam[2:5])
   while(1);
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
