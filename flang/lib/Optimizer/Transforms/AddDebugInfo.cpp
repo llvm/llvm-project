@@ -15,6 +15,7 @@
 #include "flang/Common/Version.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/CodeGen/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -45,12 +46,43 @@ namespace fir {
 namespace {
 
 class AddDebugInfoPass : public fir::impl::AddDebugInfoBase<AddDebugInfoPass> {
+  void handleDeclareOp(fir::cg::XDeclareOp declOp,
+                       mlir::LLVM::DIFileAttr fileAttr,
+                       mlir::LLVM::DIScopeAttr scopeAttr,
+                       fir::DebugTypeGenerator &typeGen, uint32_t &argNo);
+
 public:
   AddDebugInfoPass(fir::AddDebugInfoOptions options) : Base(options) {}
   void runOnOperation() override;
 };
 
+static uint32_t getLineFromLoc(mlir::Location loc) {
+  uint32_t line = 1;
+  if (auto fileLoc = mlir::dyn_cast<mlir::FileLineColLoc>(loc))
+    line = fileLoc.getLine();
+  return line;
+}
+
 } // namespace
+
+void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
+                                       mlir::LLVM::DIFileAttr fileAttr,
+                                       mlir::LLVM::DIScopeAttr scopeAttr,
+                                       fir::DebugTypeGenerator &typeGen,
+                                       uint32_t &argNo) {
+  mlir::MLIRContext *context = &getContext();
+  mlir::OpBuilder builder(context);
+
+  bool isLocal = (declOp.getMemref().getDefiningOp() != nullptr);
+  auto tyAttr = typeGen.convertType(fir::unwrapRefType(declOp.getType()),
+                                    fileAttr, scopeAttr, declOp.getLoc());
+  auto result = fir::NameUniquer::deconstruct(declOp.getUniqName());
+  auto localVarAttr = mlir::LLVM::DILocalVariableAttr::get(
+      context, scopeAttr, mlir::StringAttr::get(context, result.second.name),
+      fileAttr, getLineFromLoc(declOp.getLoc()), isLocal ? 0 : argNo++,
+      /* alignInBits*/ 0, tyAttr);
+  declOp->setLoc(builder.getFusedLoc({declOp->getLoc()}, localVarAttr));
+}
 
 void AddDebugInfoPass::runOnOperation() {
   mlir::ModuleOp module = getOperation();
@@ -144,14 +176,16 @@ void AddDebugInfoPass::runOnOperation() {
       subprogramFlags =
           subprogramFlags | mlir::LLVM::DISubprogramFlags::Definition;
     }
-    unsigned line = 1;
-    if (auto funcLoc = mlir::dyn_cast<mlir::FileLineColLoc>(l))
-      line = funcLoc.getLine();
-
+    unsigned line = getLineFromLoc(l);
     auto spAttr = mlir::LLVM::DISubprogramAttr::get(
         context, id, compilationUnit, fileAttr, funcName, fullName,
         funcFileAttr, line, line, subprogramFlags, subTypeAttr);
     funcOp->setLoc(builder.getFusedLoc({funcOp->getLoc()}, spAttr));
+
+    uint32_t argNo = 1;
+    funcOp.walk([&](fir::cg::XDeclareOp declOp) {
+      handleDeclareOp(declOp, fileAttr, spAttr, typeGen, argNo);
+    });
   });
 }
 
