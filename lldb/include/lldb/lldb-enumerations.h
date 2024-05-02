@@ -1347,6 +1347,12 @@ enum DebuggerBroadcastBit {
   eBroadcastBitProgressCategory = (1 << 3),
 };
 
+enum Severity {
+  eSeverityError,
+  eSeverityWarning,
+  eSeverityInfo,
+};
+
 } // namespace lldb
 
 #endif // LLDB_LLDB_ENUMERATIONS_H
