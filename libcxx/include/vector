@@ -1534,7 +1534,9 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::erase(const_iterator __position) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-      __position != end(), "vector::erase(iterator) called with a non-dereferenceable iterator");
+      __position >= begin(), "vector::erase(iterator) called with an iterator outside of the container's control");
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+      __position < end(), "vector::erase(iterator) called with an iterator outside of the container's control");
   difference_type __ps = __position - cbegin();
   pointer __p          = this->__begin_ + __ps;
   this->__destruct_at_end(std::move(__p + 1, this->__end_, __p));
@@ -1544,6 +1546,10 @@ vector<_Tp, _Allocator>::erase(const_iterator __position) {
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::iterator
 vector<_Tp, _Allocator>::erase(const_iterator __first, const_iterator __last) {
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+      __first >= begin(), "vector::erase(first, last) called with an iterator range starting before 'begin()'");
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+      __last <= end(), "vector::erase(first, last) called with an iterator range finishing after 'end()'");
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "vector::erase(first, last) called with invalid range");
   pointer __p = this->__begin_ + (__first - begin());
   if (__first != __last) {
@@ -2902,8 +2908,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator<=(const vector<_Tp, _Allocator>& __x,
 template <class _Tp, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI constexpr __synth_three_way_result<_Tp>
 operator<=>(const vector<_Tp, _Allocator>& __x, const vector<_Tp, _Allocator>& __y) {
-  return std::lexicographical_compare_three_way(
-      __x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
+  return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
 }
 
 #endif // _LIBCPP_STD_VER <= 17
