@@ -17,13 +17,13 @@ define void @alloc_v4i8(ptr %st_ptr) nounwind {
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    add x20, sp, #28
 ; CHECK-NEXT:    bl def
-; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x20]
+; CHECK-NEXT:    ptrue p0.b, vl2
+; CHECK-NEXT:    ld2b { z0.b, z1.b }, p0/z, [x20]
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    mov z1.h, z0.h[2]
+; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    mov z2.b, z0.b[1]
 ; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    fmov w9, s1
+; CHECK-NEXT:    fmov w9, s2
 ; CHECK-NEXT:    stp w8, w9, [sp, #8]
 ; CHECK-NEXT:    ldr d0, [sp, #8]
 ; CHECK-NEXT:    st1b { z0.s }, p0, [x19]

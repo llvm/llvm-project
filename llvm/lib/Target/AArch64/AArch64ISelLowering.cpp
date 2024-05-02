@@ -16009,7 +16009,7 @@ bool AArch64TargetLowering::isLegalInterleavedAccessType(
         std::max(Subtarget->getMinSVEVectorSizeInBits(), 128u);
     if (VecSize % MinSVEVectorSize == 0 ||
         (VecSize < MinSVEVectorSize && isPowerOf2_32(MinElts) &&
-         VecSize > 128)) {
+         (!Subtarget->isNeonAvailable() || VecSize > 128))) {
       UseScalable = true;
       return true;
     }
