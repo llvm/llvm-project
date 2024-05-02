@@ -170,8 +170,7 @@ public:
 
   void checkFunctionCallABI(CodeGenModule &CGM, SourceLocation CallLoc,
                             const FunctionDecl *Caller,
-                            const FunctionDecl *Callee,
-                            const CallArgList &Args,
+                            const FunctionDecl *Callee, const CallArgList &Args,
                             QualType ReturnType) const override;
 
 private:
