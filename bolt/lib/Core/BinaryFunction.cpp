@@ -1281,7 +1281,6 @@ Error BinaryFunction::disassemble() {
             // Recursive call.
             TargetSymbol = getSymbol();
           } else {
-            HasInternalCalls = true;
             if (BC.isX86()) {
               // Dangerous old-style x86 PIC code. We may need to freeze this
               // function, so preserve the function as is for now.
@@ -1436,6 +1435,11 @@ add_instruction:
     Labels[Offset] = BC.Ctx->createNamedTempSymbol();
 
   clearList(Relocations);
+
+  if (!IsSimple) {
+    clearList(Instructions);
+    return createNonFatalBOLTError("");
+  }
 
   updateState(State::Disassembled);
 
