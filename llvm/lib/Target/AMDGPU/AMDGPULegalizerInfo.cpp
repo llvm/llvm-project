@@ -2090,7 +2090,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(
     return legalizeMul(Helper, MI);
   case TargetOpcode::G_CTLZ:
   case TargetOpcode::G_CTTZ:
-    return legalizeCTLZ_CTTZ(MI, MRI, B);
+    return legalizeCTLZ_CTTZ(Helper, MI, MRI, B);
   case TargetOpcode::G_INTRINSIC_FPTRUNC_ROUND:
     return legalizeFPTruncRound(MI, B);
   case TargetOpcode::G_STACKSAVE:
@@ -4072,7 +4072,8 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
 // Legalize ctlz/cttz to ffbh/ffbl instead of the default legalization to
 // ctlz/cttz_zero_undef. This allows us to fix up the result for the zero input
 // case with a single min instruction instead of a compare+select.
-bool AMDGPULegalizerInfo::legalizeCTLZ_CTTZ(MachineInstr &MI,
+bool AMDGPULegalizerInfo::legalizeCTLZ_CTTZ(LegalizerHelper &Helper, 
+                                            MachineInstr &MI,
                                             MachineRegisterInfo &MRI,
                                             MachineIRBuilder &B) const {
   Register Dst = MI.getOperand(0).getReg();
@@ -4084,8 +4085,13 @@ bool AMDGPULegalizerInfo::legalizeCTLZ_CTTZ(MachineInstr &MI,
                         ? AMDGPU::G_AMDGPU_FFBH_U32
                         : AMDGPU::G_AMDGPU_FFBL_B32;
   auto Tmp = B.buildInstr(NewOpc, {DstTy}, {Src});
-  B.buildUMin(Dst, Tmp, B.buildConstant(DstTy, SrcTy.getSizeInBits()));
-
+  
+  // min instruction can be omitted if the operand is known to be non-zero.
+  auto *KB = Helper.getKnownBits();
+  if (!KB->getKnownBits(Src).isNonZero()) {
+    B.buildUMin(Dst, Tmp, B.buildConstant(DstTy, SrcTy.getSizeInBits()));
+  }
+  
   MI.eraseFromParent();
   return true;
 }

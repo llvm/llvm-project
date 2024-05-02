@@ -3118,8 +3118,7 @@ SDValue AMDGPUTargetLowering::LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) cons
     if (!ZeroUndef) {
       // umin can be omitted if the operand is known to be non-zero.
       auto KB = DAG.computeKnownBits(Src);
-      auto const IsNonZero = KB.countMinPopulation() > 0u;
-      if (!IsNonZero) {
+      if (!KB.isNonZero()) {
         const SDValue ConstVal = DAG.getConstant(
             Op.getValueType().getScalarSizeInBits(), SL, MVT::i32);
         NewOpr = DAG.getNode(ISD::UMIN, SL, MVT::i32, NewOpr, ConstVal);
