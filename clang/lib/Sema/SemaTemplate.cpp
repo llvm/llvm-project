@@ -10312,23 +10312,27 @@ bool Sema::CheckFunctionTemplateSpecialization(
   return false;
 }
 
-static bool IsMoreConstrainedFunction(Sema &S, FunctionDecl *FD1,
-                                      FunctionDecl *FD2) {
+FunctionDecl *Sema::getMoreConstrainedFunction(FunctionDecl *FD1,
+                                               FunctionDecl *FD2) {
+  assert(!FD1->getDescribedTemplate() && !FD2->getDescribedTemplate() &&
+         "not for function templates");
+  FunctionDecl *F1 = FD1;
   if (FunctionDecl *MF = FD1->getInstantiatedFromMemberFunction())
-    FD1 = MF;
+    F1 = MF;
+  FunctionDecl *F2 = FD2;
   if (FunctionDecl *MF = FD2->getInstantiatedFromMemberFunction())
-    FD2 = MF;
+    F2 = MF;
   llvm::SmallVector<const Expr *, 3> AC1, AC2;
-  FD1->getAssociatedConstraints(AC1);
-  FD2->getAssociatedConstraints(AC2);
+  F1->getAssociatedConstraints(AC1);
+  F2->getAssociatedConstraints(AC2);
   bool AtLeastAsConstrained1, AtLeastAsConstrained2;
-  if (S.IsAtLeastAsConstrained(FD1, AC1, FD2, AC2, AtLeastAsConstrained1))
-    return false;
-  if (S.IsAtLeastAsConstrained(FD2, AC2, FD1, AC1, AtLeastAsConstrained2))
-    return false;
+  if (IsAtLeastAsConstrained(F1, AC1, F2, AC2, AtLeastAsConstrained1))
+    return nullptr;
+  if (IsAtLeastAsConstrained(F2, AC2, F1, AC1, AtLeastAsConstrained2))
+    return nullptr;
   if (AtLeastAsConstrained1 == AtLeastAsConstrained2)
-    return false;
-  return AtLeastAsConstrained1;
+    return nullptr;
+  return AtLeastAsConstrained1 ? FD1 : FD2;
 }
 
 /// Perform semantic analysis for the given non-template member
@@ -10358,34 +10362,53 @@ Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
   if (Previous.empty()) {
     // Nowhere to look anyway.
   } else if (FunctionDecl *Function = dyn_cast<FunctionDecl>(Member)) {
+    SmallVector<FunctionDecl *> Candidates;
+    bool Ambiguous = false;
     for (LookupResult::iterator I = Previous.begin(), E = Previous.end();
            I != E; ++I) {
-      NamedDecl *D = (*I)->getUnderlyingDecl();
-      if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(D)) {
-        QualType Adjusted = Function->getType();
-        if (!hasExplicitCallingConv(Adjusted))
-          Adjusted = adjustCCAndNoReturn(Adjusted, Method->getType());
-        if (!Context.hasSameType(Adjusted, Method->getType()))
-          continue;
-        if (Method->getTrailingRequiresClause()) {
-          ConstraintSatisfaction Satisfaction;
-          if (CheckFunctionConstraints(Method, Satisfaction,
-                                       /*UsageLoc=*/Member->getLocation(),
-                                       /*ForOverloadResolution=*/true) ||
-              !Satisfaction.IsSatisfied)
-            continue;
-          if (Instantiation &&
-              !IsMoreConstrainedFunction(*this, Method,
-                                         cast<CXXMethodDecl>(Instantiation)))
-            continue;
-        }
-        // This doesn't handle deduced return types, but both function
-        // declarations should be undeduced at this point.
+      CXXMethodDecl *Method =
+          dyn_cast<CXXMethodDecl>((*I)->getUnderlyingDecl());
+      if (!Method)
+        continue;
+      QualType Adjusted = Function->getType();
+      if (!hasExplicitCallingConv(Adjusted))
+        Adjusted = adjustCCAndNoReturn(Adjusted, Method->getType());
+      // This doesn't handle deduced return types, but both function
+      // declarations should be undeduced at this point.
+      if (!Context.hasSameType(Adjusted, Function->getType()))
+        continue;
+      // FIXME: What if neither function is more constrained than the other?
+      if (ConstraintSatisfaction Satisfaction;
+          Method->getTrailingRequiresClause() &&
+          (CheckFunctionConstraints(Method, Satisfaction,
+                                    /*UsageLoc=*/Member->getLocation(),
+                                    /*ForOverloadResolution=*/true) ||
+           !Satisfaction.IsSatisfied))
+        continue;
+      Candidates.push_back(Method);
+      FunctionDecl *MoreConstrained =
+          Instantiation ? getMoreConstrainedFunction(
+                              Method, cast<FunctionDecl>(Instantiation))
+                        : Method;
+      if (!MoreConstrained) {
+        Ambiguous = true;
+        continue;
+      }
+      if (MoreConstrained == Method) {
+        Ambiguous = false;
         FoundInstantiation = *I;
         Instantiation = Method;
         InstantiatedFrom = Method->getInstantiatedFromMemberFunction();
         MSInfo = Method->getMemberSpecializationInfo();
       }
+    }
+    if (Ambiguous) {
+      Diag(Member->getLocation(), diag::err_function_member_spec_ambiguous)
+          << Member;
+      for (FunctionDecl *Candidate : Candidates)
+        Diag(Candidate->getLocation(), diag::note_function_member_spec_matched)
+            << Candidate;
+      return true;
     }
   } else if (isa<VarDecl>(Member)) {
     VarDecl *PrevVar;
