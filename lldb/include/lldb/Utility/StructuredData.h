@@ -290,7 +290,8 @@ public:
 
     void GetDescription(lldb_private::Stream &s) const override;
 
-    /// Creates an Array of substrings by splitting a string around the occurrences of a separator character.
+    /// Creates an Array of substrings by splitting a string around the
+    /// occurrences of a separator character.
     ///
     /// Note:
     /// * This is almost the same API and implementation as `StringRef::split`.
@@ -304,15 +305,20 @@ public:
     ///   The character to split on.
     ///
     /// \param[in] maxSplit
-    ///   The maximum number of times the string is split. If \a maxSplit is >= 0, at most \a maxSplit splits are done and consequently <= \a maxSplit + 1 elements are returned.
+    ///   The maximum number of times the string is split. If \a maxSplit is >=
+    ///   0, at most \a maxSplit splits are done and consequently <= \a maxSplit
+    ///   + 1 elements are returned.
     ///
     /// \param[in] keepEmpty
-    ///   True if empty substrings should be returned. Empty substrings still count when considering \a maxSplit.
+    ///   True if empty substrings should be returned. Empty substrings still
+    ///   count when considering \a maxSplit.
     ///
     /// \return
-    ///   An array containing the substrings. If \a maxSplit == -1 and \a keepEmpty == true, then the concatination of the array forms the input string.
-    static ArraySP SplitString(llvm::StringRef s, char separator, int maxSplit = -1,
-                               bool keepEmpty = true);
+    ///   An array containing the substrings. If \a maxSplit == -1 and \a
+    ///   keepEmpty == true, then the concatination of the array forms the input
+    ///   string.
+    static ArraySP SplitString(llvm::StringRef s, char separator,
+                               int maxSplit = -1, bool keepEmpty = true);
 
   protected:
     typedef std::vector<ObjectSP> collection;
