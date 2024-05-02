@@ -3858,7 +3858,8 @@ static Expr *BuildFloatingLiteral(Sema &S, NumericLiteralParser &Literal,
   using llvm::APFloat;
   APFloat Val(Format);
 
-  APFloat::opStatus result = Literal.GetFloatValue(Val);
+  APFloat::opStatus result =
+      Literal.GetFloatValue(Val, S.CurFPFeatures.getRoundingMode());
 
   // Overflow is always an error, but underflow is only an error if
   // we underflowed to zero (APFloat reports denormals as underflow).
