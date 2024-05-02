@@ -19,19 +19,19 @@
 ; CHECK1: define amdgpu_kernel void @B(i1 %cond, ptr %dst)
 
 define internal void @HelperA() {
-    ret void
+  ret void
 }
 
 define internal void @HelperB() {
-    ret void
+  ret void
 }
 
 define amdgpu_kernel void @A() {
-    ret void
+  ret void
 }
 
 define amdgpu_kernel void @B(i1 %cond, ptr %dst) {
-    %addr = select i1 %cond, ptr @HelperA, ptr @HelperB
-    store ptr %addr, ptr %dst
-    ret void
+  %addr = select i1 %cond, ptr @HelperA, ptr @HelperB
+  store ptr %addr, ptr %dst
+  ret void
 }

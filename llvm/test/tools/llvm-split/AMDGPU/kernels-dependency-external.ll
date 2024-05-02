@@ -21,23 +21,23 @@
 ; CHECK2-NOT: define
 
 define void @ExternalHelper() {
-    ret void
+  ret void
 }
 
 define amdgpu_kernel void @A() {
-    call void @ExternalHelper()
-    ret void
+  call void @ExternalHelper()
+  ret void
 }
 
 define amdgpu_kernel void @B() {
-    call void @ExternalHelper()
-    ret void
+  call void @ExternalHelper()
+  ret void
 }
 
 define amdgpu_kernel void @C() {
-    ret void
+  ret void
 }
 
 define amdgpu_kernel void @D() {
-    ret void
+  ret void
 }

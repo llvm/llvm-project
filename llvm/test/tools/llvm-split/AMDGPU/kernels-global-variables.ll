@@ -28,17 +28,17 @@
 @bar = internal constant ptr undef
 
 define amdgpu_kernel void @A() {
-    store i32 42, ptr @foo
-    ret void
+  store i32 42, ptr @foo
+  ret void
 }
 
 define amdgpu_kernel void @B() {
-    store i32 42, ptr @foo
-    store i32 42, ptr @bar
-    ret void
+  store i32 42, ptr @foo
+  store i32 42, ptr @bar
+  ret void
 }
 
 define amdgpu_kernel void @C() {
-    store i32 42, ptr @bar
-    ret void
+  store i32 42, ptr @bar
+  ret void
 }

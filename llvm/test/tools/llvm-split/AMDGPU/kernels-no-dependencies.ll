@@ -23,17 +23,17 @@
 ; CHECK3-NOT: define
 
 define amdgpu_kernel void @A() {
-    ret void
+  ret void
 }
 
 define amdgpu_kernel void @B() {
-    ret void
+  ret void
 }
 
 define amdgpu_kernel void @C() {
-    ret void
+  ret void
 }
 
 define amdgpu_kernel void @D() {
-    ret void
+  ret void
 }

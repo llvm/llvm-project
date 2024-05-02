@@ -27,20 +27,20 @@
 ; CHECK2: declare amdgpu_kernel void @C()
 
 define internal void @HelperA() {
-    ret void
+  ret void
 }
 
 define amdgpu_kernel void @A() {
-    call void @HelperA()
-    ret void
+  call void @HelperA()
+  ret void
 }
 
 define amdgpu_kernel void @B(ptr %dst) {
-    store ptr @HelperA, ptr %dst
-    ret void
+  store ptr @HelperA, ptr %dst
+  ret void
 }
 
 define amdgpu_kernel void @C() {
-    call void @HelperA()
-    ret void
+  call void @HelperA()
+  ret void
 }

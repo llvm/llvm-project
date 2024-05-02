@@ -9,7 +9,7 @@
 ;
 ; Load balancing should work like this (current partition cost is in parens)
 ;
-; Initial        -> [P0(0), P1(0), P2(0)]
+; Initial    -> [P0(0), P1(0), P2(0)]
 ;
 ; A(6) goes in 2 -> [P2(6), P0(0), P1(0)]
 ; B(5) goes in 1 -> [P2(6), P1(5), P0(4)]
@@ -35,41 +35,41 @@
 ; CHECK2-NOT: define
 
 
-define amdgpu_kernel void @A() {
-    store i64 42, ptr undef
-    store i64 43, ptr undef
-    store i64 44, ptr undef
-    store i64 45, ptr undef
-    store i64 46, ptr undef
-    ret void
+define amdgpu_kernel void @A(ptr %x) {
+  store i64 42, ptr %x
+  store i64 43, ptr %x
+  store i64 44, ptr %x
+  store i64 45, ptr %x
+  store i64 46, ptr %x
+  ret void
 }
 
-define amdgpu_kernel void @B() {
-    store i64 42, ptr undef
-    store i64 43, ptr undef
-    store i64 44, ptr undef
-    store i64 45, ptr undef
-    ret void
+define amdgpu_kernel void @B(ptr %x) {
+  store i64 42, ptr %x
+  store i64 43, ptr %x
+  store i64 44, ptr %x
+  store i64 45, ptr %x
+  ret void
 }
 
-define amdgpu_kernel void @C() {
-    store i64 42, ptr undef
-    store i64 43, ptr undef
-    store i64 44, ptr undef
-    ret void
+define amdgpu_kernel void @C(ptr %x) {
+  store i64 42, ptr %x
+  store i64 43, ptr %x
+  store i64 44, ptr %x
+  ret void
 }
 
-define amdgpu_kernel void @D() {
-    store i64 42, ptr undef
-    store i64 43, ptr undef
-    ret void
+define amdgpu_kernel void @D(ptr %x) {
+  store i64 42, ptr %x
+  store i64 43, ptr %x
+  ret void
 }
 
-define amdgpu_kernel void @E() {
-    store i64 42, ptr undef
-    ret void
+define amdgpu_kernel void @E(ptr %x) {
+  store i64 42, ptr %x
+  ret void
 }
 
 define amdgpu_kernel void @F() {
-    ret void
+  ret void
 }

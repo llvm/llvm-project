@@ -50,49 +50,49 @@
 ; NOLARGEKERNELS-CHECK2: define amdgpu_kernel void @A
 
 define internal void @large2() {
-    store i32 42, ptr undef
-    call void @large2()
-    ret void
+  store i32 42, ptr undef
+  call void @large2()
+  ret void
 }
 
 define internal void @large1() {
-    call void @large1()
-    call void @large2()
-    ret void
+  call void @large1()
+  call void @large2()
+  ret void
 }
 
 define internal void @large0() {
-    call void @large0()
-    call void @large1()
-    call void @large2()
-    ret void
+  call void @large0()
+  call void @large1()
+  call void @large2()
+  ret void
 }
 
 define internal void @HelperA() {
-    call void @large0()
-    ret void
+  call void @large0()
+  ret void
 }
 
 define internal void @HelperB() {
-    call void @large0()
-    ret void
+  call void @large0()
+  ret void
 }
 
 define amdgpu_kernel void @A() {
-    call void @HelperA()
-    ret void
+  call void @HelperA()
+  ret void
 }
 
 define amdgpu_kernel void @B() {
-    call void @HelperB()
-    ret void
+  call void @HelperB()
+  ret void
 }
 
 define internal void @HelperC() {
-    ret void
+  ret void
 }
 
 define amdgpu_kernel void @C() {
-    call void @HelperC()
-    ret void
+  call void @HelperC()
+  ret void
 }

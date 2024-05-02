@@ -27,19 +27,19 @@
 @Perry = internal alias ptr(), ptr @PerryThePlatypus
 
 define internal void @PerryThePlatypus() {
-    ret void
+  ret void
 }
 
 define amdgpu_kernel void @A() {
-    ret void
+  ret void
 }
 
 define amdgpu_kernel void @B() {
-    call void @PerryThePlatypus()
-    ret void
+  call void @PerryThePlatypus()
+  ret void
 }
 
 define amdgpu_kernel void @C() {
-    call void @Perry()
-    ret void
+  call void @Perry()
+  ret void
 }

@@ -31,39 +31,39 @@
 ; CHECK2-NOT: define
 
 define internal void @HelperA(ptr %call) {
-    call void %call()
-    ret void
+  call void %call()
+  ret void
 }
 
 define internal void @HelperB(ptr %call) {
-    call void %call()
-    ret void
+  call void %call()
+  ret void
 }
 
 define internal void @HelperC() {
-    ret void
+  ret void
 }
 
 define internal void @HelperD() {
-    ret void
+  ret void
 }
 
 define amdgpu_kernel void @A(ptr %call) {
-    call void @HelperA(ptr %call)
-    ret void
+  call void @HelperA(ptr %call)
+  ret void
 }
 
 define amdgpu_kernel void @B(ptr %call) {
-    call void @HelperB(ptr %call)
-    ret void
+  call void @HelperB(ptr %call)
+  ret void
 }
 
 define amdgpu_kernel void @C() {
-    call void @HelperC()
-    ret void
+  call void @HelperC()
+  ret void
 }
 
 define amdgpu_kernel void @D() {
-    call void @HelperD()
-    ret void
+  call void @HelperD()
+  ret void
 }

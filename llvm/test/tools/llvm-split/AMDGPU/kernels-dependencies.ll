@@ -23,28 +23,28 @@
 
 
 define amdgpu_kernel void @A() {
-    call void @HelperA()
-    ret void
+  call void @HelperA()
+  ret void
 }
 
 define internal void @HelperA() {
-    ret void
+  ret void
 }
 
 define amdgpu_kernel void @B() {
-    call void @HelperB()
-    ret void
+  call void @HelperB()
+  ret void
 }
 
 define internal void @HelperB() {
-    ret void
+  ret void
 }
 
 define amdgpu_kernel void @C() {
-    call void @HelperC()
-    ret void
+  call void @HelperC()
+  ret void
 }
 
 define internal void @HelperC() {
-    ret void
+  ret void
 }

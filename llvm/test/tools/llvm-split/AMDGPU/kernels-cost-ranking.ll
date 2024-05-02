@@ -24,31 +24,31 @@
 
 
 define amdgpu_kernel void @A() {
-    call void @HelperA()
-    ret void
+  call void @HelperA()
+  ret void
 }
 
 define internal void @HelperA() {
-    ret void
+  ret void
 }
 
-define amdgpu_kernel void @B() {
-    store i64 42, ptr undef
-    store i64 43, ptr undef
-    store i64 44, ptr undef
-    call void @HelperB()
-    ret void
+define amdgpu_kernel void @B(ptr %x) {
+  store i64 42, ptr %x
+  store i64 43, ptr %x
+  store i64 44, ptr %x
+  call void @HelperB()
+  ret void
 }
 
 define internal void @HelperB() {
-    ret void
+  ret void
 }
 
 define amdgpu_kernel void @C() {
-    call void @HelperC()
-    ret void
+  call void @HelperC()
+  ret void
 }
 
 define internal void @HelperC() {
-    ret void
+  ret void
 }
