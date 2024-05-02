@@ -7,7 +7,6 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <future>
-#include <iostream>
 #include <stdlib.h>
 #include <thread>
 
