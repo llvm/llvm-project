@@ -140,11 +140,12 @@ static cl::opt<bool>
     ImportAllIndex("import-all-index",
                    cl::desc("Import all external functions in index."));
 
-/// Test-only option.
+/// This is a test-only option.
+/// If this option is enabled, the ThinLTO indexing step will import each
+/// function declaration as a fallback. In a real build this may increase ram
+/// usage of the indexing step unnecessarily.
 /// TODO: Implement selective import (based on combined summary analysis) to
 /// ensure the imported function has a use case in the postlink pipeline.
-/// Import each function declaration as a fallback in real build may grow map
-/// size unnecessarily in the indexing step.
 static cl::opt<bool> ImportDeclaration(
     "import-declaration", cl::init(false), cl::Hidden,
     cl::desc("If true, import function declaration as fallback if the function "
@@ -1070,8 +1071,6 @@ void llvm::ComputeCrossModuleImport(
     const auto &DefinedGVSummaries =
         ModuleToDefinedGVSummaries.lookup(ELI.first);
     for (auto &[EI, Type] : ELI.second) {
-      assert(Type == GlobalValueSummary::Definition &&
-             "Declaration type doesn't exist yet");
       // Find the copy defined in the exporting module so that we can mark the
       // values it references in that specific definition as exported.
       // Below we will add all references and called values, without regard to
@@ -1716,8 +1715,13 @@ Expected<bool> FunctionImporter::importFunctions(
         continue;
       auto GUID = F.getGUID();
       auto ImportType = maybeGetImportType(ImportGUIDs, GUID);
-      if (!ImportType)
+
+      if (!ImportType) {
+        LLVM_DEBUG(dbgs() << "Not importing function " << GUID << " "
+                          << F.getName() << " from "
+                          << SrcModule->getSourceFileName() << "\n");
         continue;
+      }
       const bool ImportDefinition =
           *ImportType == GlobalValueSummary::Definition;
       LLVM_DEBUG(dbgs() << (ImportDefinition ? "Is" : "Not")
