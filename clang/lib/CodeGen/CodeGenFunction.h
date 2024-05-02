@@ -4636,7 +4636,7 @@ public:
   llvm::Value *EmitRISCVBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                     ReturnValueSlot ReturnValue);
 
-  void AddAMDGCNAddressSpaceMMRA(llvm::Instruction *Inst, llvm::Value *ASMask);
+  void AddAMDGCNAddressSpaceMMRA(llvm::Instruction *Inst, const CallExpr *E, unsigned FirstASNameIdx);
   void ProcessOrderScopeAMDGCN(llvm::Value *Order, llvm::Value *Scope,
                                llvm::AtomicOrdering &AO,
                                llvm::SyncScope::ID &SSID);

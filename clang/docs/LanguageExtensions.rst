@@ -4434,38 +4434,32 @@ __builtin_amdgcn_masked_fence
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``__builtin_amdgcn_masked_fence`` emits a fence for one or more address
-spaces.
+spaces and takes the following arguments:
 
-* ``unsigned`` address space mask
 * ``unsigned`` atomic ordering, e.g. ``__ATOMIC_ACQUIRE``
 * ``const char *`` synchronization scope, e.g. ``workgroup``
+* Zero or more ``const char *`` address spaces.
 
-The address space mask is a bitmask and each bit corresponds
-to an OpenCL memory type:
+The address spaces arguments must be string literals with known values, such as:
 
-* ``0x1`` (first bit) is for local memory.
-* ``0x2`` (second bit) is for global memory.
-* ``0x4`` (third bit) is for image memory.
+* ``"local"``
+* ``"global"``
+* ``"image"``
 
-A bitmask of zero causes this fence to behave like
+If there are no address spaces specified, this fence behaves like
 ``__builtin_amdgcn_fence``.
-Different values can of course be OR'd together. Examples:
+
+Examples:
 
 .. code-block:: c++
 
-  // Fence local only
-  __builtin_amdgcn_masked_fence(0x1, __ATOMIC_SEQ_CST, "workgroup")
-
-  // Fence local & global
-  __builtin_amdgcn_masked_fence(0x3, __ATOMIC_SEQ_CST, "workgroup")
+  __builtin_amdgcn_masked_fence(__ATOMIC_SEQ_CST, "workgroup", "local")
+  __builtin_amdgcn_masked_fence(__ATOMIC_SEQ_CST, "workgroup", "local", "global")
 
 Note that this fence may affect more than just the address spaces
-specified. In some cases, the address space mask may
+specified; in some cases, the address space mask may
 be lost during optimization and a normal fence for all address
 spaces (``__builtin_amdgcn_fence``) will be emitted instead.
-This generally happens if the address space mask restricts an
-optimization, and the performance cost of skipping that optimization
-is greater than the cost of performing a more expensive fence operation.
 
 ARM/AArch64 Language Extensions
 -------------------------------

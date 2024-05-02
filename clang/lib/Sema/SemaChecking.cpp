@@ -5729,12 +5729,9 @@ bool Sema::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     ScopeIndex = 3;
     break;
   case AMDGPU::BI__builtin_amdgcn_fence:
+  case AMDGPU::BI__builtin_amdgcn_masked_fence:
     OrderIndex = 0;
     ScopeIndex = 1;
-    break;
-  case AMDGPU::BI__builtin_amdgcn_masked_fence:
-    OrderIndex = 1;
-    ScopeIndex = 2;
     break;
   default:
     return false;
