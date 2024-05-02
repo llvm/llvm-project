@@ -453,13 +453,11 @@ void VarListClauses() {
 #pragma acc serial copy(, seq
   for(;;){}
 
-  // expected-error@+2{{expected expression}}
-  // expected-warning@+1{{OpenACC clause 'copy' not yet implemented, clause ignored}}
+  // expected-error@+1{{expected expression}}
 #pragma acc serial copy()
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
+  // expected-error@+2{{expected expression}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(), seq
   for(;;){}
@@ -467,60 +465,58 @@ void VarListClauses() {
   struct Members s;
   struct HasMembersArray HasMem;
 
-  // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(s.array[s.value]), seq
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(s.array[s.value], s.array[s.value :5] ), seq
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(HasMem.MemArr[3].array[1]), seq
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(HasMem.MemArr[3].array[1:4]), seq
   for(;;){}
 
-  // expected-error@+3{{OpenACC sub-array is not allowed here}}
-  // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
+  // expected-error@+2{{OpenACC sub-array is not allowed here}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(HasMem.MemArr[1:3].array[1]), seq
   for(;;){}
 
-  // expected-error@+3{{OpenACC sub-array is not allowed here}}
-  // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
+  // expected-error@+2{{OpenACC sub-array is not allowed here}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(HasMem.MemArr[1:3].array[1:2]), seq
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(HasMem.MemArr[:]), seq
   for(;;){}
 
-  // expected-error@+3{{expected expression}}
-  // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
+  // expected-error@+2{{expected expression}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(HasMem.MemArr[::]), seq
   for(;;){}
 
-  // expected-error@+5{{expected expression}}
-  // expected-error@+4{{expected ']'}}
-  // expected-note@+3{{to match this '['}}
-  // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
+  // expected-error@+4{{expected expression}}
+  // expected-error@+3{{expected ']'}}
+  // expected-note@+2{{to match this '['}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(HasMem.MemArr[: :]), seq
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'copy' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial copy(HasMem.MemArr[3:]), seq
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC clause name 'pcopy' is a deprecated clause name and is now an alias for 'copy'}}
+#pragma acc serial pcopy(HasMem.MemArr[3:])
+  for(;;){}
+
+  // expected-warning@+1{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
+#pragma acc serial present_or_copy(HasMem.MemArr[3:])
   for(;;){}
 
   // expected-error@+3{{expected ','}}
