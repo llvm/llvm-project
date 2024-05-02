@@ -11147,51 +11147,6 @@ Attr *Sema::getImplicitCodeSegOrSectionAttrForFunction(const FunctionDecl *FD,
   return nullptr;
 }
 
-// Should only be called when getFunctionEffects() returns a non-empty set.
-// Decl should be a FunctionDecl or BlockDecl.
-void Sema::maybeAddDeclWithEffects(const Decl *D,
-                                   const FunctionEffectsRef &FX) {
-  if (!D->hasBody()) {
-    if (const auto *FD = D->getAsFunction()) {
-      if (!FD->willHaveBody()) {
-        return;
-      }
-    }
-  }
-
-  if (Diags.getIgnoreAllWarnings() ||
-      (Diags.getSuppressSystemWarnings() &&
-       SourceMgr.isInSystemHeader(D->getLocation())))
-    return;
-
-  if (hasUncompilableErrorOccurred())
-    return;
-
-  // For code in dependent contexts, we'll do this at instantiation time.
-  // Without this check, we would analyze the function based on placeholder
-  // template parameters, and potentially generate spurious diagnostics.
-  if (cast<DeclContext>(D)->isDependentContext())
-    return;
-
-  // Effects which are not inferrable (e.g. nonblocking(false) don't need
-  // to be verified later in the deferred pass. (If they do need to be
-  // verified, that can happen immediately at the call site, like TCB.)
-  if (llvm::none_of(FX.effects(), [](const FunctionEffect &E) {
-        return (E.flags() & FunctionEffect::FE_InferrableOnCallees) != 0;
-      }))
-    return;
-
-  addDeclWithEffects(D, FX);
-}
-
-void Sema::addDeclWithEffects(const Decl *D, const FunctionEffectsRef &FX) {
-  // Ignore any conditions when building the list of effects.
-  AllEffectsToVerify.insertIgnoringConditions(FX);
-
-  // Record the declaration for later analysis.
-  DeclsWithEffectsToVerify.push_back(D);
-}
-
 /// Determines if we can perform a correct type check for \p D as a
 /// redeclaration of \p PrevDecl. If not, we can generally still perform a
 /// best-effort check.
@@ -16008,11 +15963,6 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
       getCurLexicalContext()->getDeclKind() != Decl::ObjCCategoryImpl &&
       getCurLexicalContext()->getDeclKind() != Decl::ObjCImplementation)
     Diag(FD->getLocation(), diag::warn_function_def_in_objc_container);
-
-  if (const auto FX = FD->getCanonicalDecl()->getFunctionEffects();
-      !FX.empty()) {
-    maybeAddDeclWithEffects(FD, FX);
-  }
 
   return D;
 }

@@ -694,10 +694,6 @@ enum ASTRecordTypes {
   /// Record code for lexical and visible block for delayed namespace in
   /// reduced BMI.
   DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD = 68,
-
-  /// Record code for Sema's vector of functions/blocks with effects to
-  /// be verified.
-  DECLS_WITH_EFFECTS_TO_VERIFY = 69,
 };
 
 /// Record types used within a source manager block.

@@ -9435,8 +9435,6 @@ checkPointerTypesForAssignment(Sema &S, QualType LHSType, QualType RHSType,
       return Sema::IncompatibleFunctionPointer;
     return Sema::IncompatiblePointer;
   }
-  // #85415: This call to IsFunctionConversion appears to have inverted
-  // arguments: ltrans -> From, rtrans -> To
   if (!S.getLangOpts().CPlusPlus &&
       S.IsFunctionConversion(ltrans, rtrans, ltrans))
     return Sema::IncompatibleFunctionPointer;
@@ -16580,10 +16578,6 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
 
   BlockScopeInfo *BSI = cast<BlockScopeInfo>(FunctionScopes.back());
   BlockDecl *BD = BSI->TheDecl;
-
-  if (const auto FX = BD->getFunctionEffects(); !FX.empty()) {
-    maybeAddDeclWithEffects(BD, FX);
-  }
 
   if (BSI->HasImplicitReturnType)
     deduceClosureReturnType(*BSI);
