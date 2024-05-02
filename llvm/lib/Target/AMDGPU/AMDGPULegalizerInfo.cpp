@@ -4161,16 +4161,15 @@ bool AMDGPULegalizerInfo::legalizeCTLZ_ZERO_UNDEF(MachineInstr &MI,
                                                   MachineIRBuilder &B) const {
   Register Dst = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
-  LLT DstTy = MRI.getType(Dst);
   LLT SrcTy = MRI.getType(Src);
   TypeSize NumBits = SrcTy.getSizeInBits();
 
   assert(NumBits < 32u);
 
   auto ShiftAmt = B.buildConstant(S32, 32u - NumBits);
-  auto Tmp = B.buildAnyExt(S32, {Src}).getReg(0u);
-  Tmp = B.buildLShr(S32, {Tmp}, ShiftAmt).getReg(0u);
-  B.buildInstr(AMDGPU::G_AMDGPU_FFBH_U32, {Dst}, {Tmp});
+  auto Extend = B.buildAnyExt(S32, {Src}).getReg(0u);
+  auto Shift = B.buildLShr(S32, {Extend}, ShiftAmt).getReg(0u);
+  B.buildInstr(AMDGPU::G_AMDGPU_FFBH_U32, {Dst}, {Shift});
   MI.eraseFromParent();
   return true;
 }

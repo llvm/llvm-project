@@ -3127,9 +3127,9 @@ SDValue AMDGPUTargetLowering::lowerCTLZResults(SDValue Op,
   assert(isCtlzOpc(Opc));
   assert(ResultVT == Arg.getValueType());
 
-  auto const NumBits = ResultVT.getFixedSizeInBits();
-  auto NumExtBits = DAG.getConstant(32u - NumBits, SL, MVT::i32);
-  auto NewOp = SDValue();
+  const uint64_t NumBits = ResultVT.getFixedSizeInBits();
+  SDValue NumExtBits = DAG.getConstant(32u - NumBits, SL, MVT::i32);
+  SDValue NewOp;
 
   if (Opc == ISD::CTLZ_ZERO_UNDEF) {
     NewOp = DAG.getNode(ISD::ANY_EXTEND, SL, MVT::i32, Arg);
