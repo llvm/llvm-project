@@ -200,17 +200,15 @@ ListeningSocket::accept(std::chrono::milliseconds Timeout) {
   while (PollStatus == -1 && (Timeout.count() == -1 || ElapsedTime < Timeout)) {
     if (Timeout.count() != -1)
       RemainingTime -= ElapsedTime.count();
-    auto Start = std::chrono::steady_clock::now();
 
+    auto Start = std::chrono::steady_clock::now();
 #ifdef _WIN32
     PollStatus = WSAPoll(FDs, 2, RemainingTime);
 #else
     PollStatus = ::poll(FDs, 2, RemainingTime);
 #endif
     // If FD equals -1 then ListeningSocket::shutdown has been called and it is
-    // appropriate to return operation_canceled. ListeningSocket::shutdown
-    // copies FD's value to ObservedFD then sets FD to -1 before canceling
-    // ::poll by calling close on ObservedFD and writing to the pipe.
+    // appropriate to return operation_canceled
     if (FD.load() == -1)
       return llvm::make_error<StringError>(
           std::make_error_code(std::errc::operation_canceled),
