@@ -174,23 +174,19 @@ kern_return_t DNBArchMachARM64::GetGPRState(bool force) {
   if (DNBLogEnabledForAny(LOG_THREAD)) {
     uint64_t *x = &m_state.context.gpr.__x[0];
 
+    const char *log_str = "thread_get_state signed regs "
+                          "\n   fp=%16.16llx"
+                          "\n   lr=%16.16llx"
+                          "\n   sp=%16.16llx"
+                          "\n   pc=%16.16llx";
 #if defined(DEBUGSERVER_IS_ARM64E)
-    DNBLogThreaded("thread_get_state signed regs "
-                   "\n   fp=%16.16llx"
-                   "\n   lr=%16.16llx"
-                   "\n   sp=%16.16llx"
-                   "\n   pc=%16.16llx",
+    DNBLogThreaded(log_str,
                    reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_fp),
                    reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_lr),
                    reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_sp),
                    reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
 #else
-    DNBLogThreaded("thread_get_state signed regs "
-                   "\n   fp=%16.16llx"
-                   "\n   lr=%16.16llx"
-                   "\n   sp=%16.16llx"
-                   "\n   pc=%16.16llx",
-                   m_state.context.gpr.__fp, m_state.context.gpr.__lr,
+    DNBLogThreaded(log_str, m_state.context.gpr.__fp, m_state.context.gpr.__lr,
                    m_state.context.gpr.__sp, m_state.context.gpr.__pc);
 #endif
 
