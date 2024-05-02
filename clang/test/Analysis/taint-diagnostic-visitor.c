@@ -59,7 +59,7 @@ int taintDiagnosticPropagation(){
   char *cmd=getenv("CMD"); // expected-note {{Taint originated here}}
                            // expected-note@-1 {{Taint propagated to the return value}}
   if (cmd){ // expected-note {{Assuming 'cmd' is non-null}}
-	          // expected-note@-1 {{Taking true branch}}
+            // expected-note@-1 {{Taking true branch}}
     res = system(cmd); // expected-warning{{Untrusted data is passed to a system call}}
                        // expected-note@-1{{Untrusted data is passed to a system call}}
     return res;
@@ -99,7 +99,8 @@ void multipleTaintSources(void) {
                    // expected-note@-1 {{Taint propagated to the 2nd argument}}
   scanf ("%1023[^\n]", file); // expected-note {{Taint originated here}}
                    // expected-note@-1 {{Taint propagated to the 2nd argument}}
-  strcat(cmd, file);// expected-note {{Taint propagated to the 1st argument}}
+  strcat(cmd, file); // expected-note {{Taint propagated to the 1st argument}}
+  strcat(cmd, " "); // expected-note {{Taint propagated to the 1st argument}}
   system(cmd); // expected-warning {{Untrusted data is passed to a system call}}
                // expected-note@-1{{Untrusted data is passed to a system call}}
 }
