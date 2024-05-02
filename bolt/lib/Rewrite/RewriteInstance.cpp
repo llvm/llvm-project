@@ -3343,7 +3343,8 @@ void RewriteInstance::disassembleFunctions() {
 
     if (!Function.isSimple()) {
       assert((!BC->HasRelocations || Function.getSize() == 0 ||
-              Function.hasIndirectTargetToSplitFragment()) &&
+              Function.hasIndirectTargetToSplitFragment() ||
+              Function.hasInternalCalls()) &&
              "unexpected non-simple function in relocation mode");
       continue;
     }
