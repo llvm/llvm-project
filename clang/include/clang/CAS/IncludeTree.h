@@ -869,6 +869,11 @@ private:
 Expected<IntrusiveRefCntPtr<llvm::vfs::FileSystem>>
 createIncludeTreeFileSystem(IncludeTreeRoot &Root);
 
+/// Create the same IncludeTreeFileSystem but from IncludeTree::FileList.
+Expected<IntrusiveRefCntPtr<llvm::vfs::FileSystem>>
+createIncludeTreeFileSystem(llvm::cas::ObjectStore &CAS,
+                            IncludeTree::FileList &List);
+
 } // namespace cas
 } // namespace clang
 

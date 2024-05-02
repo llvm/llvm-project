@@ -5,8 +5,10 @@
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <system_error>
 
 using namespace clang;
 using namespace clang::cas;
@@ -293,4 +295,49 @@ TEST(IncludeTree, IncludeTreeFileListDuplicates) {
       }),
       llvm::Succeeded());
   EXPECT_EQ(I, Files.size());
+}
+
+TEST(IncludeTree, IncludeTreeFileSystemOverlay) {
+  std::shared_ptr<ObjectStore> DB = llvm::cas::createInMemoryCAS();
+  SmallVector<IncludeTree::FileList::FileEntry> Files;
+  for (unsigned I = 0; I < 10; ++I) {
+    std::optional<IncludeTree::File> File;
+    std::string Path = "/file" + std::to_string(I);
+    static constexpr StringRef Bytes = "123456789";
+    std::optional<ObjectRef> Content;
+    ASSERT_THAT_ERROR(
+        DB->storeFromString({}, Bytes.substr(0, I)).moveInto(Content),
+        llvm::Succeeded());
+    ASSERT_THAT_ERROR(
+        IncludeTree::File::create(*DB, Path, *Content).moveInto(File),
+        llvm::Succeeded());
+    Files.push_back({File->getRef(), I});
+  }
+  std::optional<IncludeTree::FileList> FileList;
+  ASSERT_THAT_ERROR(
+      IncludeTree::FileList::create(*DB, Files, {}).moveInto(FileList),
+      llvm::Succeeded());
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> IncludeTreeFS;
+  ASSERT_THAT_ERROR(
+      createIncludeTreeFileSystem(*DB, *FileList).moveInto(IncludeTreeFS),
+      llvm::Succeeded());
+
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  FS->setCurrentWorkingDirectory("/dir");
+  FS->addFile("file1", 0,  llvm::MemoryBuffer::getMemBuffer("str"));
+  FS->addFile("file2", 0,  llvm::MemoryBuffer::getMemBuffer("other"));
+
+  llvm::vfs::OverlayFileSystem OverlayFS(std::move(FS));
+  OverlayFS.pushOverlay(IncludeTreeFS);
+
+  std::error_code EC;
+  int NumFile = 0;
+  for (auto I = OverlayFS.dir_begin("/dir", EC);
+       !EC && I != llvm::vfs::directory_iterator(); I.increment(EC)) {
+    ASSERT_FALSE(EC);
+    ++NumFile;
+    std::string Path = "/dir/file" + std::to_string(NumFile);
+    ASSERT_EQ(I->path(), Path);
+  }
+  ASSERT_EQ(NumFile, 2);
 }

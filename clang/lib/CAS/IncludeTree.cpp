@@ -9,6 +9,7 @@
 #include "clang/CAS/IncludeTree.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 #include <utility>
@@ -1000,7 +1001,9 @@ public:
 
   llvm::vfs::directory_iterator dir_begin(const Twine &Dir,
                                           std::error_code &EC) override {
-    EC = llvm::errc::operation_not_permitted;
+    // Return no_such_file_or_directory so llvm::vfs::OverlayFileSystem can
+    // ignore this layer when iterating directories.
+    EC = llvm::errc::no_such_file_or_directory;
     return llvm::vfs::directory_iterator();
   }
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override {
@@ -1033,12 +1036,18 @@ cas::createIncludeTreeFileSystem(IncludeTreeRoot &Root) {
   if (!FileList)
     return FileList.takeError();
 
+  return createIncludeTreeFileSystem(Root.getCAS(), *FileList);
+}
+
+Expected<IntrusiveRefCntPtr<llvm::vfs::FileSystem>>
+cas::createIncludeTreeFileSystem(llvm::cas::ObjectStore &CAS,
+                                 IncludeTree::FileList &FileList) {
   // Map from FilenameRef to ContentsRef.
   llvm::DenseMap<ObjectRef, ObjectRef> SeenContents;
 
   IntrusiveRefCntPtr<IncludeTreeFileSystem> IncludeTreeFS =
-      new IncludeTreeFileSystem(Root.getCAS());
-  llvm::Error E = FileList->forEachFile(
+      new IncludeTreeFileSystem(CAS);
+  llvm::Error E = FileList.forEachFile(
       [&](IncludeTree::File File,
           IncludeTree::FileList::FileSizeTy Size) -> llvm::Error {
         auto InsertPair = SeenContents.insert(
