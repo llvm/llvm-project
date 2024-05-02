@@ -6184,15 +6184,17 @@ bool X86TTIImpl::areTypesABICompatible(const Function *Caller,
   // incompatible.
   const TargetMachine &TM = getTLI()->getTargetMachine();
 
-  if (TM.getSubtarget<X86Subtarget>(*Caller).useAVX512Regs() ==
+  // AVX512 supports the largest vector length, so no ABI compatible issue.
+  if (TM.getSubtarget<X86Subtarget>(*Caller).useAVX512Regs() &&
       TM.getSubtarget<X86Subtarget>(*Callee).useAVX512Regs())
     return true;
 
-  // Consider the arguments compatible if they aren't vectors or aggregates.
-  // FIXME: Look at the size of vectors.
-  // FIXME: Look at the element types of aggregates to see if there are vectors.
-  return llvm::none_of(Types,
-      [](Type *T) { return T->isVectorTy() || T->isAggregateType(); });
+  // Consider the arguments compatible iff they aren't large vectors or
+  // aggregates.
+  return llvm::none_of(Types, [this](Type *T) {
+    return (isa<FixedVectorType>(T) || T->isAggregateType()) &&
+           T->getPrimitiveSizeInBits() > getLoadStoreVecRegBitWidth(0);
+  });
 }
 
 X86TTIImpl::TTI::MemCmpExpansionOptions
