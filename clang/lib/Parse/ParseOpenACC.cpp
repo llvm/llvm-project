@@ -928,12 +928,12 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     case OpenACCClauseKind::DevicePtr:
     case OpenACCClauseKind::Host:
     case OpenACCClauseKind::Link:
-    case OpenACCClauseKind::NoCreate:
-    case OpenACCClauseKind::Present:
     case OpenACCClauseKind::UseDevice:
       ParseOpenACCVarList();
       break;
     case OpenACCClauseKind::FirstPrivate:
+    case OpenACCClauseKind::NoCreate:
+    case OpenACCClauseKind::Present:
     case OpenACCClauseKind::Private:
       ParsedClause.setVarListDetails(ParseOpenACCVarList());
       break;
