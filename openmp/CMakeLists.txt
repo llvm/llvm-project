@@ -95,12 +95,6 @@ else()
   set(CMAKE_CXX_EXTENSIONS NO)
 endif()
 
-if(SANITIZER_AMDGPU)
-  add_definitions(-DSANITIZER_AMDGPU=1)
-  # Check for COMGr package , ASan requires COMGr with minimum version 2.4
-  find_package(amd_comgr QUIET 2.4.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
-endif()
-
 if((CMAKE_BUILD_TYPE MATCHES Debug) AND (${LIBOMPTARGET_NVPTX_DEBUG}))
   if(SANITIZER_AMDGPU)
     set(OPENMP_LIBDIR_SUFFIX "-debug/asan")
