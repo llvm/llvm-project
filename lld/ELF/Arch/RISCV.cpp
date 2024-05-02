@@ -1103,7 +1103,7 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
       it->getSecond() = AtomicABI::A6C;
       return;
     case AtomicABI::A7:
-      error(toString(oldSection) + " has atomic_abi=" + Twine(oldTag) +
+      errorOrWarn(toString(oldSection) + " has atomic_abi=" + Twine(oldTag) +
             " but " + toString(newSection) +
             " has atomic_abi=" + Twine(newTag));
       return;
@@ -1125,7 +1125,7 @@ static void mergeAtomic(DenseMap<unsigned, unsigned>::iterator it,
       it->getSecond() = AtomicABI::A7;
       return;
     case AtomicABI::A6C:
-      error(toString(oldSection) + " has atomic_abi=" + Twine(oldTag) +
+      errorOrWarn(toString(oldSection) + " has atomic_abi=" + Twine(oldTag) +
             " but " + toString(newSection) +
             " has atomic_abi=" + Twine(newTag));
       return;
@@ -1190,11 +1190,10 @@ mergeAttributesSection(const SmallVector<InputSectionBase *, 0> &sections) {
       case llvm::RISCVAttrs::AttrType::ATOMIC_ABI:
         if (auto i = parser.getAttributeValue(tag.attr)) {
           auto r = merged.intAttr.try_emplace(tag.attr, *i);
-          if (r.second) {
+          if (r.second)
             firstAtomicAbi = sec;
-          } else {
+          else
             mergeAtomic(r.first, firstAtomicAbi, sec, r.first->getSecond(), *i);
-          }
         }
         continue;
       }
