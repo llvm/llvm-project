@@ -1819,6 +1819,10 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
   if (Size.isUndef())
     Size = UnknownVal();
 
+  // TODO: If Size is tainted and we cannot prove that it is within
+  // reasonable bounds, emit a warning that an attacker may
+  // provoke a memory exhaustion error.
+
   // Set the region's extent.
   State = setDynamicExtent(State, RetVal.getAsRegion(),
                            Size.castAs<DefinedOrUnknownSVal>(), SVB);
