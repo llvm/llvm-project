@@ -906,6 +906,19 @@ Experimental extensions
     ssqosid              1.0
     supm                 0.8
 
+Supported Profiles
+    rva20s64
+    rva20u64
+    rva22s64
+    rva22u64
+    rva23s64
+    rva23u64
+    rvb23s64
+    rvb23u64
+    rvi20u32
+    rvi20u64
+    rvm23u32
+
 Use -march to specify the target's extension.
 For example, clang -march=rv32i_v1p0)";
   // clang-format on
