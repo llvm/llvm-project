@@ -228,12 +228,27 @@ enum class OpenACCClauseKind {
   /// 'copyout' clause, allowed on Compute and Combined constructs, plus 'data',
   /// 'exit data', and 'declare'.
   CopyOut,
+  /// 'copyout' clause alias 'pcopyout'.  Preserved for diagnostic purposes.
+  PCopyOut,
+  /// 'copyout' clause alias 'present_or_copyout'.  Preserved for diagnostic
+  /// purposes.
+  PresentOrCopyOut,
   /// 'copyin' clause, allowed on Compute and Combined constructs, plus 'data',
   /// 'enter data', and 'declare'.
   CopyIn,
-  /// 'copyin' clause, allowed on Compute and Combined constructs, plus 'data',
+  /// 'copyin' clause alias 'pcopyin'.  Preserved for diagnostic purposes.
+  PCopyIn,
+  /// 'copyin' clause alias 'present_or_copyin'.  Preserved for diagnostic
+  /// purposes.
+  PresentOrCopyIn,
+  /// 'create' clause, allowed on Compute and Combined constructs, plus 'data',
   /// 'enter data', and 'declare'.
   Create,
+  /// 'create' clause alias 'pcreate'.  Preserved for diagnostic purposes.
+  PCreate,
+  /// 'create' clause alias 'present_or_create'.  Preserved for diagnostic
+  /// purposes.
+  PresentOrCreate,
   /// 'reduction' clause, allowed on Parallel, Serial, Loop, and the combined
   /// constructs.
   Reduction,
@@ -362,11 +377,29 @@ inline StreamTy &printOpenACCClauseKind(StreamTy &Out, OpenACCClauseKind K) {
   case OpenACCClauseKind::CopyOut:
     return Out << "copyout";
 
+  case OpenACCClauseKind::PCopyOut:
+    return Out << "pcopyout";
+
+  case OpenACCClauseKind::PresentOrCopyOut:
+    return Out << "present_or_copyout";
+
   case OpenACCClauseKind::CopyIn:
     return Out << "copyin";
 
+  case OpenACCClauseKind::PCopyIn:
+    return Out << "pcopyin";
+
+  case OpenACCClauseKind::PresentOrCopyIn:
+    return Out << "present_or_copyin";
+
   case OpenACCClauseKind::Create:
     return Out << "create";
+
+  case OpenACCClauseKind::PCreate:
+    return Out << "pcreate";
+
+  case OpenACCClauseKind::PresentOrCreate:
+    return Out << "present_or_create";
 
   case OpenACCClauseKind::Reduction:
     return Out << "reduction";
