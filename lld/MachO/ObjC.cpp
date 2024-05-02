@@ -196,10 +196,10 @@ static StringRef getReferentString(const Reloc &r) {
     return s->getStringRefAtOffset(sym->value + r.addend);
 
   if (isa<ConcatInputSection>(sym->isec())) {
-    auto &data = sym->isec()->data;
-    const char *pDataStart = reinterpret_cast<const char *>(data.data());
-    uint32_t len = strnlen(pDataStart + sym->value, data.size() - sym->value);
-    return StringRef(pDataStart + sym->value, len);
+    auto paddedData = sym->isec()->data.slice(sym->value);
+    uint32_t len = strnlen((const char *)paddedData.data(), paddedData.size());
+    auto strData = paddedData.slice(0, len);
+    return StringRef((const char *)strData.data(), strData.size());
   }
 
   llvm_unreachable("unknown reference section in getReferentString");
