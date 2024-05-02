@@ -137,8 +137,7 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
 
 static bool IsClassStructOrUnionType(lldb::SBType t) {
   return (t.GetTypeClass() & (lldb::eTypeClassUnion | lldb::eTypeClassStruct |
-                              lldb::eTypeClassUnion | lldb::eTypeClassArray)) !=
-         0;
+                              lldb::eTypeClassArray)) != 0;
 }
 
 /// Create a short summary for a container that contains the summary of its
