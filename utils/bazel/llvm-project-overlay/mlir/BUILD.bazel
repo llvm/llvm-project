@@ -6697,6 +6697,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":IR",
         ":InferTypeOpInterface",
         ":PolynomialAttributesIncGen",
@@ -11104,6 +11105,7 @@ cc_library(
         ":FuncTransforms",
         ":GPUDialect",
         ":IR",
+        ":IndexDialect",
         ":LinalgDialect",
         ":LinalgPassIncGen",
         ":LinalgStructuredOpsIncGen",
@@ -11115,6 +11117,7 @@ cc_library(
         ":MeshShardingInterface",
         ":MeshTransforms",
         ":Pass",
+        ":RuntimeVerifiableOpInterface",
         ":SCFDialect",
         ":SCFTransforms",
         ":SCFUtils",
@@ -12632,6 +12635,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ComplexDialect",
+        ":DialectUtils",
         ":IR",
         "//llvm:Support",
     ],

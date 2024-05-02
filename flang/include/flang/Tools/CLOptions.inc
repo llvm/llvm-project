@@ -104,7 +104,7 @@ void addNestedPassToOps(mlir::PassManager &pm, PassConstructor ctor) {
 void addNestedPassToAllTopLevelOperations(
     mlir::PassManager &pm, PassConstructor ctor) {
   addNestedPassToOps<mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
-      fir::GlobalOp>(pm, ctor);
+      mlir::omp::PrivateClauseOp, fir::GlobalOp>(pm, ctor);
 }
 
 void addNestedPassToAllTopLevelOperationsConditionally(mlir::PassManager &pm,
@@ -163,8 +163,8 @@ inline void addAVC(
 
 inline void addMemoryAllocationOpt(mlir::PassManager &pm) {
   addNestedPassConditionally<mlir::func::FuncOp>(pm, disableFirMao, [&]() {
-    return fir::createMemoryAllocationPass(
-        dynamicArrayStackToHeapAllocation, arrayStackAllocationThreshold);
+    return fir::createMemoryAllocationOpt(
+        {dynamicArrayStackToHeapAllocation, arrayStackAllocationThreshold});
   });
 }
 
@@ -253,12 +253,12 @@ inline void createDefaultFIROptimizerPassPipeline(
   }
 
   if (pc.LoopVersioning)
-    pm.addPass(fir::createLoopVersioningPass());
+    pm.addPass(fir::createLoopVersioning());
 
   pm.addPass(mlir::createCSEPass());
 
   if (pc.StackArrays)
-    pm.addPass(fir::createStackArraysPass());
+    pm.addPass(fir::createStackArrays());
   else
     fir::addMemoryAllocationOpt(pm);
 
@@ -271,7 +271,7 @@ inline void createDefaultFIROptimizerPassPipeline(
   pm.addPass(mlir::createCSEPass());
 
   // Polymorphic types
-  pm.addPass(fir::createPolymorphicOpConversionPass());
+  pm.addPass(fir::createPolymorphicOpConversion());
 
   if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
     pm.addPass(fir::createAliasTagsPass());

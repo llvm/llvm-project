@@ -11,7 +11,7 @@ define void @vector_deinterleave2_v4i32(<4 x i32> %a) {
   ; CHECK-NEXT:   [[SHUF:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[COPY]](<4 x s32>), [[DEF]], shufflemask(0, 2)
   ; CHECK-NEXT:   [[SHUF1:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[COPY]](<4 x s32>), [[DEF]], shufflemask(1, 3)
   ; CHECK-NEXT:   RET_ReallyLR
-    %res = call {<2 x i32>, <2 x i32>} @llvm.experimental.vector.deinterleave2.v4i32(<4 x i32> %a)
+    %res = call {<2 x i32>, <2 x i32>} @llvm.vector.deinterleave2.v4i32(<4 x i32> %a)
     ret void
 }
 
@@ -29,6 +29,6 @@ define void @vector_deinterleave2_v8f32(<8 x float> %a) {
   ; CHECK-NEXT:   [[SHUF:%[0-9]+]]:_(<4 x s32>) = G_SHUFFLE_VECTOR [[CONCAT_VECTORS]](<8 x s32>), [[DEF]], shufflemask(0, 2, 4, 6)
   ; CHECK-NEXT:   [[SHUF1:%[0-9]+]]:_(<4 x s32>) = G_SHUFFLE_VECTOR [[CONCAT_VECTORS]](<8 x s32>), [[DEF]], shufflemask(1, 3, 5, 7)
   ; CHECK-NEXT:   RET_ReallyLR
-    %res = call {<4 x float>, <4 x float>} @llvm.experimental.vector.deinterleave2.v8f32(<8 x float> %a)
+    %res = call {<4 x float>, <4 x float>} @llvm.vector.deinterleave2.v8f32(<8 x float> %a)
     ret void
 }
