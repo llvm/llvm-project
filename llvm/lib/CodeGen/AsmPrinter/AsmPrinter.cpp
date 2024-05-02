@@ -114,6 +114,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Support/VCSRevision.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
@@ -497,12 +498,15 @@ bool AsmPrinter::doInitialization(Module &M) {
     else
       FileName = M.getSourceFileName();
     if (MAI->hasFourStringsDotFile()) {
-#ifdef PACKAGE_VENDOR
       const char VerStr[] =
-          PACKAGE_VENDOR " " PACKAGE_NAME " version " PACKAGE_VERSION;
-#else
-      const char VerStr[] = PACKAGE_NAME " version " PACKAGE_VERSION;
+#ifdef PACKAGE_VENDOR
+          PACKAGE_VENDOR " "
 #endif
+          PACKAGE_NAME " version " PACKAGE_VERSION
+#ifdef LLVM_REVISION
+                         " (" LLVM_REVISION ")"
+#endif
+          ;
       // TODO: Add timestamp and description.
       OutStreamer->emitFileDirective(FileName, VerStr, "", "");
     } else {

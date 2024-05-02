@@ -1120,14 +1120,6 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
       return BinaryOperator::CreateAnd(Trunc, ConstantInt::get(Ty, Mask));
     }
 
-    if (match(Op0, m_Shl(m_Value(X), m_APInt(C1))) && C1->ult(BitWidth)) {
-      unsigned AmtSum = ShAmtC + C1->getZExtValue();
-      // Oversized shifts are simplified to zero in InstSimplify.
-      if (AmtSum < BitWidth)
-        // (X << C1) << C2 --> X << (C1 + C2)
-        return BinaryOperator::CreateShl(X, ConstantInt::get(Ty, AmtSum));
-    }
-
     // If we have an opposite shift by the same amount, we may be able to
     // reorder binops and shifts to eliminate math/logic.
     auto isSuitableBinOpcode = [](Instruction::BinaryOps BinOpcode) {
@@ -1392,14 +1384,6 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
         Value *Signbit = Builder.CreateLShr(X, ShAmtC);
         return BinaryOperator::CreateAnd(Signbit, X);
       }
-    }
-
-    // (X >>u C1) >>u C --> X >>u (C1 + C)
-    if (match(Op0, m_LShr(m_Value(X), m_APInt(C1)))) {
-      // Oversized shifts are simplified to zero in InstSimplify.
-      unsigned AmtSum = ShAmtC + C1->getZExtValue();
-      if (AmtSum < BitWidth)
-        return BinaryOperator::CreateLShr(X, ConstantInt::get(Ty, AmtSum));
     }
 
     Instruction *TruncSrc;

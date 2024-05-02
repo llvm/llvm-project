@@ -1490,11 +1490,19 @@ InstructionCost X86TTIImpl::getShuffleCost(
   if (Kind == TTI::SK_Transpose)
     Kind = TTI::SK_PermuteTwoSrc;
 
-  // For Broadcasts we are splatting the first element from the first input
-  // register, so only need to reference that input and all the output
-  // registers are the same.
-  if (Kind == TTI::SK_Broadcast)
+  if (Kind == TTI::SK_Broadcast) {
+    // For Broadcasts we are splatting the first element from the first input
+    // register, so only need to reference that input and all the output
+    // registers are the same.
     LT.first = 1;
+
+    // If we're broadcasting a load then AVX/AVX2 can do this for free.
+    using namespace PatternMatch;
+    if (!Args.empty() && match(Args[0], m_OneUse(m_Load(m_Value()))) &&
+        (ST->hasAVX2() ||
+         (ST->hasAVX() && LT.second.getScalarSizeInBits() >= 32)))
+      return TTI::TCC_Free;
+  }
 
   // Treat <X x bfloat> shuffles as <X x half>.
   if (LT.second.isVector() && LT.second.getScalarType() == MVT::bf16)
