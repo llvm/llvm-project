@@ -35,6 +35,20 @@ void NormalUses(float *PointerParam) {
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt
 
+#pragma acc parallel firstprivate(GlobalArray, PointerParam[Global])
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
+  // CHECK-NEXT: firstprivate clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'short[5]' lvalue Var{{.*}}'GlobalArray' 'short[5]'
+  // CHECK-NEXT: ArraySubscriptExpr{{.*}}'float' lvalue
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'float *' <LValueToRValue>
+  // CHECK-NEXT: DeclRefExpr{{.*}}'float *' lvalue ParmVar{{.*}}'PointerParam' 'float *'
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <LValueToRValue>
+  // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var{{.*}}'Global' 'int'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
 #pragma acc parallel private(GlobalArray) private(PointerParam[Global])
   while(true);
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
@@ -65,6 +79,22 @@ void NormalUses(float *PointerParam) {
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt
+
+#pragma acc parallel firstprivate(GlobalArray, PointerParam[Global : Global])
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
+  // CHECK-NEXT: firstprivate clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'short[5]' lvalue Var{{.*}}'GlobalArray' 'short[5]'
+  // CHECK-NEXT: ArraySectionExpr
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'float *' <LValueToRValue>
+  // CHECK-NEXT: DeclRefExpr{{.*}}'float *' lvalue ParmVar{{.*}} 'PointerParam' 'float *'
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <LValueToRValue>
+  // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var{{.*}}'Global' 'int'
+  // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <LValueToRValue>
+  // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var{{.*}}'Global' 'int'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
 }
 
 // This example is an error typically, but we want to make sure we're properly
@@ -79,6 +109,14 @@ void UnInstTempl() {
   while(true);
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
   // CHECK-NEXT: private clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'unsigned int' NonTypeTemplateParm{{.*}}'I' 'unsigned int'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+#pragma acc parallel firstprivate(I)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
+  // CHECK-NEXT: firstprivate clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'unsigned int' NonTypeTemplateParm{{.*}}'I' 'unsigned int'
   // CHECK-NEXT: WhileStmt
   // CHECK-NEXT: CXXBoolLiteralExpr
@@ -120,6 +158,16 @@ void TemplUses(T t, U u, T*PointerParam) {
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt
 
+#pragma acc parallel firstprivate(t, u)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
+  // CHECK-NEXT: firstprivate clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'T' lvalue ParmVar{{.*}} 't' 'T'
+  // CHECK-NEXT: DeclRefExpr{{.*}}'U' lvalue ParmVar{{.*}} 'u' 'U'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
 #pragma acc parallel private(t) private(u)
   while(true);
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
@@ -137,6 +185,18 @@ void TemplUses(T t, U u, T*PointerParam) {
   // CHECK-NEXT: private clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'T' lvalue ParmVar{{.*}} 't' 'T'
   // CHECK-NEXT: private clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'auto' lvalue NonTypeTemplateParm{{.*}} 'NTTP' 'auto &'
+  // CHECK-NEXT: DeclRefExpr{{.*}}'U' lvalue ParmVar{{.*}} 'u' 'U'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+#pragma acc parallel private(t) firstprivate(NTTP, u)
+  while(true);
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
+  // CHECK-NEXT: private clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'T' lvalue ParmVar{{.*}} 't' 'T'
+  // CHECK-NEXT: firstprivate clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'auto' lvalue NonTypeTemplateParm{{.*}} 'NTTP' 'auto &'
   // CHECK-NEXT: DeclRefExpr{{.*}}'U' lvalue ParmVar{{.*}} 'u' 'U'
   // CHECK-NEXT: WhileStmt
@@ -206,6 +266,15 @@ void TemplUses(T t, U u, T*PointerParam) {
   // CHECK-NEXT: CXXBoolLiteralExpr
   // CHECK-NEXT: NullStmt
 
+// #pragma acc parallel firstprivate(t, u)
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
+  // CHECK-NEXT: firstprivate clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}} 't' 'int'
+  // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
 // #pragma acc parallel private(t) private(u)
   // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
   // CHECK-NEXT: private clause
@@ -221,6 +290,19 @@ void TemplUses(T t, U u, T*PointerParam) {
   // CHECK-NEXT: private clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}} 't' 'int'
   // CHECK-NEXT: private clause
+  // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}}'const unsigned int' lvalue
+  // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} referenced 'auto &' depth 0 index 0 NTTP
+  // CHECK-NEXT: DeclRefExpr{{.*}}'const unsigned int' lvalue Var{{.*}} 'CEVar' 'const unsigned int'
+  // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'
+  // CHECK-NEXT: WhileStmt
+  // CHECK-NEXT: CXXBoolLiteralExpr
+  // CHECK-NEXT: NullStmt
+
+// #pragma acc parallel private(t) firstprivate(NTTP, u)
+  // CHECK-NEXT: OpenACCComputeConstruct{{.*}} parallel
+  // CHECK-NEXT: private clause
+  // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}} 't' 'int'
+  // CHECK-NEXT: firstprivate clause
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}}'const unsigned int' lvalue
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} referenced 'auto &' depth 0 index 0 NTTP
   // CHECK-NEXT: DeclRefExpr{{.*}}'const unsigned int' lvalue Var{{.*}} 'CEVar' 'const unsigned int'
