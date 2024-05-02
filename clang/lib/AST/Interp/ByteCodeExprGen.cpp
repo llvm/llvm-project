@@ -29,13 +29,9 @@ namespace interp {
 template <class Emitter> class DeclScope final : public VariableScope<Emitter> {
 public:
   DeclScope(ByteCodeExprGen<Emitter> *Ctx, const ValueDecl *VD)
-      : VariableScope<Emitter>(Ctx), Scope(Ctx->P, VD),
+      : VariableScope<Emitter>(Ctx, nullptr), Scope(Ctx->P, VD),
         OldGlobalDecl(Ctx->GlobalDecl) {
     Ctx->GlobalDecl = Context::shouldBeGloballyIndexed(VD);
-  }
-
-  void addExtended(const Scope::Local &Local) override {
-    return this->addLocal(Local);
   }
 
   ~DeclScope() { this->Ctx->GlobalDecl = OldGlobalDecl; }
@@ -85,8 +81,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     std::optional<PrimType> SubExprT = classify(SubExpr->getType());
     // Prepare storage for the result.
     if (!Initializing && !SubExprT) {
-      std::optional<unsigned> LocalIndex =
-          allocateLocal(SubExpr, /*IsExtended=*/false);
+      std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, CE))
@@ -362,8 +357,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     // We're creating a complex value here, so we need to
     // allocate storage for it.
     if (!Initializing) {
-      std::optional<unsigned> LocalIndex =
-          allocateLocal(CE, /*IsExtended=*/true);
+      std::optional<unsigned> LocalIndex = allocateLocal(CE);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, CE))
@@ -390,8 +384,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return this->discard(SubExpr);
 
     if (!Initializing) {
-      std::optional<unsigned> LocalIndex =
-          allocateLocal(CE, /*IsExtended=*/true);
+      std::optional<unsigned> LocalIndex = allocateLocal(CE);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, CE))
@@ -492,7 +485,7 @@ bool ByteCodeExprGen<Emitter>::VisitImaginaryLiteral(
     return true;
 
   if (!Initializing) {
-    std::optional<unsigned> LocalIndex = allocateLocal(E, /*IsExtended=*/false);
+    std::optional<unsigned> LocalIndex = allocateLocal(E);
     if (!LocalIndex)
       return false;
     if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -561,7 +554,7 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
 
     // We need a temporary variable holding our return value.
     if (!Initializing) {
-      std::optional<unsigned> ResultIndex = this->allocateLocal(BO, false);
+      std::optional<unsigned> ResultIndex = this->allocateLocal(BO);
       if (!this->emitGetPtrLocal(*ResultIndex, BO))
         return false;
     }
@@ -784,7 +777,7 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
   // Prepare storage for result.
   if (!Initializing) {
-    std::optional<unsigned> LocalIndex = allocateLocal(E, /*IsExtended=*/false);
+    std::optional<unsigned> LocalIndex = allocateLocal(E);
     if (!LocalIndex)
       return false;
     if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -1841,11 +1834,12 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitExprWithCleanups(
     const ExprWithCleanups *E) {
+  ExprScope<Emitter> ES(this);
   const Expr *SubExpr = E->getSubExpr();
 
   assert(E->getNumObjects() == 0 && "TODO: Implement cleanups");
 
-  return this->delegate(SubExpr);
+  return this->delegate(SubExpr) && ES.destroyLocals();
 }
 
 template <class Emitter>
@@ -1910,9 +1904,8 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
     return this->emitGetPtrLocal(LocalIndex, E);
   } else {
     const Expr *Inner = E->getSubExpr()->skipRValueSubobjectAdjustments();
-
     if (std::optional<unsigned> LocalIndex =
-            allocateLocal(Inner, /*IsExtended=*/true)) {
+            allocateLocal(Inner, E->getExtendingDecl())) {
       if (!this->emitGetPtrLocal(*LocalIndex, E))
         return false;
       return this->visitInitializer(SubExpr);
@@ -2119,8 +2112,7 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
     // to allocate a variable and call the constructor and destructor.
     if (DiscardResult) {
       assert(!Initializing);
-      std::optional<unsigned> LocalIndex =
-          allocateLocal(E, /*IsExtended=*/true);
+      std::optional<unsigned> LocalIndex = allocateLocal(E);
 
       if (!LocalIndex)
         return false;
@@ -2300,8 +2292,7 @@ bool ByteCodeExprGen<Emitter>::VisitCXXScalarValueInitExpr(
 
   if (const auto *CT = Ty->getAs<ComplexType>()) {
     if (!Initializing) {
-      std::optional<unsigned> LocalIndex =
-          allocateLocal(E, /*IsExtended=*/false);
+      std::optional<unsigned> LocalIndex = allocateLocal(E);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -2324,8 +2315,7 @@ bool ByteCodeExprGen<Emitter>::VisitCXXScalarValueInitExpr(
   if (const auto *VT = Ty->getAs<VectorType>()) {
     // FIXME: Code duplication with the _Complex case above.
     if (!Initializing) {
-      std::optional<unsigned> LocalIndex =
-          allocateLocal(E, /*IsExtended=*/false);
+      std::optional<unsigned> LocalIndex = allocateLocal(E);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -2517,7 +2507,7 @@ template <class Emitter> bool ByteCodeExprGen<Emitter>::visit(const Expr *E) {
   // Create local variable to hold the return value.
   if (!E->isGLValue() && !E->getType()->isAnyComplexType() &&
       !classify(E->getType())) {
-    std::optional<unsigned> LocalIndex = allocateLocal(E, /*IsExtended=*/true);
+    std::optional<unsigned> LocalIndex = allocateLocal(E);
     if (!LocalIndex)
       return false;
 
@@ -2771,7 +2761,8 @@ unsigned ByteCodeExprGen<Emitter>::allocateLocalPrimitive(DeclTy &&Src,
 
 template <class Emitter>
 std::optional<unsigned>
-ByteCodeExprGen<Emitter>::allocateLocal(DeclTy &&Src, bool IsExtended) {
+ByteCodeExprGen<Emitter>::allocateLocal(DeclTy &&Src,
+                                        const ValueDecl *ExtendingDecl) {
   // Make sure we don't accidentally register the same decl twice.
   if ([[maybe_unused]]  const auto *VD =
           dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
@@ -2804,7 +2795,10 @@ ByteCodeExprGen<Emitter>::allocateLocal(DeclTy &&Src, bool IsExtended) {
   Scope::Local Local = this->createLocal(D);
   if (Key)
     Locals.insert({Key, Local});
-  VarScope->add(Local, IsExtended);
+  if (ExtendingDecl)
+    VarScope->addExtended(Local, ExtendingDecl);
+  else
+    VarScope->add(Local, false);
   return Local.Offset;
 }
 
@@ -2839,14 +2833,14 @@ bool ByteCodeExprGen<Emitter>::visitExpr(const Expr *E) {
   if (E->getType()->isVoidType()) {
     if (!visit(E))
       return false;
-    return this->emitRetVoid(E);
+    return this->emitRetVoid(E) && RootScope.destroyLocals();
   }
 
   // Expressions with a primitive return type.
   if (std::optional<PrimType> T = classify(E)) {
     if (!visit(E))
       return false;
-    return this->emitRet(*T, E);
+    return this->emitRet(*T, E) && RootScope.destroyLocals();
   }
 
   // Expressions with a composite return type.
@@ -2867,7 +2861,7 @@ bool ByteCodeExprGen<Emitter>::visitExpr(const Expr *E) {
     return this->emitRetValue(E) && RootScope.destroyLocals();
   }
 
-  return false;
+  return RootScope.destroyLocals();
 }
 
 /// Toplevel visitDecl().
@@ -2958,7 +2952,7 @@ bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
 
     return !Init || initGlobal(*GlobalIndex);
   } else {
-    VariableScope<Emitter> LocalScope(this);
+    VariableScope<Emitter> LocalScope(this, VD);
     if (VarT) {
       unsigned Offset = this->allocateLocalPrimitive(
           VD, *VarT, VD->getType().isConstQualified());
@@ -2975,6 +2969,7 @@ bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
         return !Init || this->visitLocalInitializer(Init, *Offset);
       return false;
     }
+
     return true;
   }
 
@@ -3056,7 +3051,7 @@ bool ByteCodeExprGen<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
 
   // Non-primitive return type. Prepare storage.
   if (!Initializing && !ReturnT && !ReturnType->isVoidType()) {
-    std::optional<unsigned> LocalIndex = allocateLocal(E, /*IsExtended=*/false);
+    std::optional<unsigned> LocalIndex = allocateLocal(E);
     if (!LocalIndex)
       return false;
     if (!this->emitGetPtrLocal(*LocalIndex, E))
@@ -3470,8 +3465,7 @@ bool ByteCodeExprGen<Emitter>::VisitComplexUnaryOperator(
   std::optional<PrimType> ResT = classify(E);
   auto prepareResult = [=]() -> bool {
     if (!ResT && !Initializing) {
-      std::optional<unsigned> LocalIndex =
-          allocateLocal(SubExpr, /*IsExtended=*/false);
+      std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
       if (!LocalIndex)
         return false;
       return this->emitGetPtrLocal(*LocalIndex, E);
