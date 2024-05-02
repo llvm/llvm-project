@@ -62,3 +62,31 @@ S4 f4() {
   S4 x{ { global_i } };
   return func4(x);
 }
+
+// Pass and return an object with an explicitly deleted copy assignment operator (pass directly, return indirectly).
+// CHECK: define dso_local void @"?f5@@YA?AUS5@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.S5) align 4 {{.*}})
+// CHECK: call void @"?func5@@YA?AUS5@@U1@@Z"(ptr dead_on_unwind writable sret(%struct.S5) align 4 {{.*}}, i32 {{.*}})
+struct S5 {
+  S5& operator=(const S5&) = delete;
+  int i;
+};
+
+S5 func5(S5 x);
+S5 f5() {
+  S5 x{ 1 };
+  return func5(x);
+}
+
+// Pass and return an object with an explicitly defaulted copy assignment operator that is implicitly deleted (pass directly, return indirectly).
+// CHECK: define dso_local void @"?f6@@YA?AUS6@@XZ"(ptr dead_on_unwind noalias writable sret(%struct.S6) align 8 {{.*}})
+// CHECK: call void @"?func6@@YA?AUS6@@U1@@Z"(ptr dead_on_unwind writable sret(%struct.S6) align 8 {{.*}}, i64 {{.*}})
+struct S6 {
+  S6& operator=(const S6&) = default;
+  int& i;
+};
+
+S6 func6(S6 x);
+S6 f6() {
+  S6 x{ global_i };
+  return func6(x);
+}
