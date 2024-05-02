@@ -457,13 +457,19 @@ protected:
   QualType SavedKmpTaskTQTy;
   /// Saved kmp_task_t for taskloop-based directive.
   QualType SavedKmpTaskloopTQTy;
+
   /// Type typedef struct kmp_depend_info {
   ///    kmp_intptr_t               base_addr;
   ///    size_t                     len;
   ///    struct {
-  ///             bool                   in:1;
-  ///             bool                   out:1;
+  ///        unsigned in : 1;
+  ///        unsigned out : 1;
+  ///        unsigned mtx : 1;
+  ///        unsigned set : 1;
+  ///        unsigned unused : 3;
+  ///        unsigned all : 1;
   ///    } flags;
+  ///    kmp_dephash_entry_t * hashentry;
   /// } kmp_depend_info_t;
   QualType KmpDependInfoTy;
   /// Type typedef struct kmp_task_affinity_info {
@@ -622,6 +628,13 @@ protected:
   void emitDepobjElements(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
                           LValue PosLVal, const OMPTaskDataTy::DependData &Data,
                           Address DependenciesArray);
+
+  void emitDependData(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
+          llvm::PointerUnion<unsigned *, LValue *> Pos,
+         const OMPTaskDataTy::DependData &Data,
+         Address DependenciesArray,
+         bool depobj,
+         SourceLocation Loc);
 
 public:
   explicit CGOpenMPRuntime(CodeGenModule &CGM);

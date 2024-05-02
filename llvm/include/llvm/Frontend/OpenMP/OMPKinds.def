@@ -378,6 +378,7 @@ __OMP_RTL(__kmpc_task_reduction_init, false, VoidPtr, Int32, Int32, VoidPtr)
 __OMP_RTL(__kmpc_task_reduction_modifier_init, false, VoidPtr, VoidPtr, Int32,
           Int32, Int32, VoidPtr)
 __OMP_RTL(__kmpc_proxy_task_completed_ooo, false, Void, VoidPtr)
+__OMP_RTL(__kmpc_dephash_find, false, VoidPtr, IdentPtr, Int32, VoidPtr)
 
 __OMP_RTL(__kmpc_omp_wait_deps, false, Void, IdentPtr, Int32, Int32,
           /* kmp_depend_info_t */ VoidPtr, Int32, VoidPtr)

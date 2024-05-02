@@ -267,7 +267,7 @@ enum class OMPInteropType { Unknown, Target, TargetSync };
 enum class OMPAtomicCompareOp : unsigned { EQ, MIN, MAX };
 
 /// Fields ids in kmp_depend_info record.
-enum class RTLDependInfoFields { BaseAddr, Len, Flags };
+enum class RTLDependInfoFields { BaseAddr, Len, Flags, Dephash };
 
 /// Dependence kind for RTL.
 enum class RTLDependenceKindTy {

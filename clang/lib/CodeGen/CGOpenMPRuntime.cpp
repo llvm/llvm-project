@@ -4030,6 +4030,7 @@ static void getDependTypes(ASTContext &C, QualType &KmpDependInfoTy,
     addFieldToRecordDecl(C, KmpDependInfoRD, C.getIntPtrType());
     addFieldToRecordDecl(C, KmpDependInfoRD, C.getSizeType());
     addFieldToRecordDecl(C, KmpDependInfoRD, FlagsTy);
+    addFieldToRecordDecl(C, KmpDependInfoRD, C.VoidPtrTy);
     KmpDependInfoRD->completeDefinition();
     KmpDependInfoTy = C.getRecordType(KmpDependInfoRD);
   }
@@ -4062,10 +4063,12 @@ CGOpenMPRuntime::getDepobjElements(CodeGenFunction &CGF, LValue DepobjLVal,
   return std::make_pair(NumDeps, Base);
 }
 
-static void emitDependData(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
+void CGOpenMPRuntime::emitDependData(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
                            llvm::PointerUnion<unsigned *, LValue *> Pos,
                            const OMPTaskDataTy::DependData &Data,
-                           Address DependenciesArray) {
+                           Address DependenciesArray,
+                           bool depobj,
+                           SourceLocation Loc) {
   CodeGenModule &CGM = CGF.CGM;
   ASTContext &C = CGM.getContext();
   QualType FlagsTy;
@@ -4121,6 +4124,30 @@ static void emitDependData(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
     CGF.EmitStoreOfScalar(
         llvm::ConstantInt::get(LLVMFlagsTy, static_cast<unsigned int>(DepKind)),
         FlagsLVal);
+    // deps[i].dephash = NULL || findhash if depobj
+    LValue DephashLVal = CGF.EmitLValueForField(
+        Base, *std::next(KmpDependInfoRD->field_begin(),
+                         static_cast<unsigned int>(RTLDependInfoFields::Dephash)));
+    llvm::Value * Dephash;
+    if (depobj)
+    {
+        // Build kmp_dephash_entry * __kmpc_dephash_find(ident_t * loc, kmp_int32 gtid, kmp_intptr_t addr)
+        llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+        llvm::Value *UpLoc = emitUpdateLocation(CGF, Loc);
+        llvm::Value *ThreadID = getThreadID(CGF, Loc);
+        llvm::Value * DephashArgs[3] = { UpLoc, ThreadID, Addr } ;
+        Dephash = CGF.EmitRuntimeCall(
+                OMPBuilder.getOrCreateRuntimeFunction(
+                    CGM.getModule(), OMPRTL___kmpc_dephash_find),
+                DephashArgs);
+    }
+    else
+    {
+        Dephash = llvm::Constant::getNullValue(CGF.VoidPtrTy);
+    }
+    CGF.EmitStoreOfScalar(Dephash, DephashLVal);
+
+    // what is this ?
     if (unsigned *P = Pos.dyn_cast<unsigned *>()) {
       ++(*P);
     } else {
@@ -4306,7 +4333,7 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
         Dependencies[I].IteratorExpr)
       continue;
     emitDependData(CGF, KmpDependInfoTy, &Pos, Dependencies[I],
-                   DependenciesArray);
+                   DependenciesArray, false, Loc);
   }
   // Copy regular dependencies with iterators.
   LValue PosLVal = CGF.MakeAddrLValue(
@@ -4317,7 +4344,7 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
         !Dependencies[I].IteratorExpr)
       continue;
     emitDependData(CGF, KmpDependInfoTy, &PosLVal, Dependencies[I],
-                   DependenciesArray);
+                   DependenciesArray, false, Loc);
   }
   // Copy final depobj arrays without iterators.
   if (HasDepobjDeps) {
@@ -4413,10 +4440,11 @@ Address CGOpenMPRuntime::emitDepobjDependClause(
   } else {
     Pos = &Idx;
   }
-  emitDependData(CGF, KmpDependInfoTy, Pos, Dependencies, DependenciesArray);
+  emitDependData(CGF, KmpDependInfoTy, Pos, Dependencies, DependenciesArray, true, Loc);
   DependenciesArray = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
       CGF.Builder.CreateConstGEP(DependenciesArray, 1), CGF.VoidPtrTy,
       CGF.Int8Ty);
+
   return DependenciesArray;
 }
 
