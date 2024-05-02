@@ -488,23 +488,19 @@ public:
     auto ctx = elementTy.getContext();
 
     // void doesn't really have a layout to use in GEPs, make it i8 instead.
-    bool isVoid = false;
-    if (elementTy.isa<mlir::LLVM::LLVMVoidType>()) {
+    if (elementTy.isa<mlir::LLVM::LLVMVoidType>())
       elementTy = mlir::IntegerType::get(elementTy.getContext(), 8,
                                          mlir::IntegerType::Signless);
-      isVoid = true;
-    }
 
     // Zero-extend or sign-extend the pointer value according to
     // whether the index is signed or not.
-    // FIXME: generalize this logic when element type isn't void.
     auto index = adaptor.getStride();
     auto width = index.getType().cast<mlir::IntegerType>().getWidth();
     mlir::DataLayout LLVMLayout(
         index.getDefiningOp()->getParentOfType<mlir::ModuleOp>());
     auto layoutWidth =
         LLVMLayout.getTypeIndexBitwidth(adaptor.getBase().getType());
-    if (isVoid && layoutWidth && width < *layoutWidth) {
+    if (layoutWidth && width != *layoutWidth) {
       auto llvmDstType = mlir::IntegerType::get(ctx, *layoutWidth);
       index = getLLVMIntCast(rewriter, index, llvmDstType,
                              ptrStrideOp.getStride().getType().isUnsigned(),
