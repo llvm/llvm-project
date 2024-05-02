@@ -274,7 +274,11 @@ public:
 
 static bool onlyAllocateRVVReg(const TargetRegisterInfo &TRI,
                                const MachineRegisterInfo &MRI,
+<<<<<<< HEAD
                                const Register Reg) {
+=======
+                               const Register &Reg) {
+>>>>>>> d385111d54b9141fdf44044df49449012aa7060a
   const TargetRegisterClass *RC = MRI.getRegClass(Reg);
   return RISCVRegisterInfo::isRVVRegClass(RC);
 }

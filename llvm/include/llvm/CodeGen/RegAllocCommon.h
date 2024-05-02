@@ -26,6 +26,7 @@ typedef std::function<bool(const TargetRegisterInfo &TRI,
 static inline bool allocateAllRegClasses(const TargetRegisterInfo &,
                                          const MachineRegisterInfo &,
                                          const Register) {
+
   return true;
 }
 }

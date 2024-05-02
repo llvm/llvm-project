@@ -1,0 +1,146 @@
+//===- SIFixLiveRangePreWaveRA.cpp - Fix Phy-VGPR live-ranges -------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+/// \file
+/// This pass assumes that we have done register-allocation for per-thread 
+/// values. Therefore it needs to extend the live-ranges of those physical VGPRs
+/// so that they have correct interference with WWM/WQM values during the last
+/// register-allocation pass for those WWM/WQM values.
+//
+//===----------------------------------------------------------------------===//
+
+#include "AMDGPU.h"
+#include "GCNSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIMachineFunctionInfo.h"
+#include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
+#include "llvm/InitializePasses.h"
+
+using namespace llvm;
+
+#define DEBUG_TYPE "si-fix-live-range-pre-wave-ra"
+
+namespace {
+
+class SIFixLiveRangePreWaveRA : public MachineFunctionPass {
+private:
+  const SIInstrInfo *TII;
+  const SIRegisterInfo *TRI;
+  MachineRegisterInfo *MRI;
+  LiveIntervals *LIS;
+
+public:
+  static char ID;
+
+  SIFixLiveRangePreWaveRA() : MachineFunctionPass(ID) {
+    initializeSIFixLiveRangePreWaveRAPass(*PassRegistry::getPassRegistry());
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<LiveIntervals>();
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+private:
+
+};
+
+} // End anonymous namespace.
+
+INITIALIZE_PASS_BEGIN(SIFixLiveRangePreWaveRA, DEBUG_TYPE,
+                "SI Fix Live Range before Wave-RA", false, false)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervals)
+INITIALIZE_PASS_END(SIFixLiveRangePreWaveRA, DEBUG_TYPE,
+                "SI Fix Live Range before Wave-RA", false, false)
+
+char SIFixLiveRangePreWaveRA::ID = 0;
+
+char &llvm::SIFixLiveRangePreWaveRAID = SIFixLiveRangePreWaveRA::ID;
+
+FunctionPass *llvm::createSIFixLiveRangePreWaveRAPass() {
+  return new SIFixLiveRangePreWaveRA();
+}
+
+bool SIFixLiveRangePreWaveRA::runOnMachineFunction(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "SIFixLiveRangePreWaveRA: function " << MF.getName() << "\n");
+
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+
+  TII = ST.getInstrInfo();
+  TRI = &TII->getRegisterInfo();
+  MRI = &MF.getRegInfo();
+
+  LIS = &getAnalysis<LiveIntervals>();
+
+  RegClassInfo.runOnMachineFunction(MF);
+
+  bool ImplicitAdded = false;
+
+  for (unsigned i = 0, e = TRI->getNumRegUnits(); i != e; ++i) {
+	  auto LR = LIS.getRegUnit(i);
+	  
+	  if LR is empty means totally free
+		  Continue;
+
+	  DFS work DomTree and foreach every block ends with a divergent branch {
+		  IDP = Find its jump-target block(MBB);
+		  Assert(IDP is the immediate post-dominator);
+		  if (!LIS.isLiveInToMBB(LR, IDP)
+        continue;
+		  // add implicit defs and uses this LR inside the influence region
+		  find the influence-region between MBB and Its IDP;
+		
+		  for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
+		    for (MCPhysReg Reg : TRI->superregs_inclusive(*Root)) {
+		      // if a reg is either not-seen or reserved, not a concern for RA
+		      if (MRI->reg_empty(Reg) || MRI->isReserved(Reg))
+		        continue;
+		      // add implicit use if a def is inside the influence region
+		      bool useAdded = false;
+		      for (MachineOperand &MO : MRI->def_operands(Reg)) {
+				    const MachineInstr &MI = *MO.getParent();
+				    CurMBB = MI->getParent();
+				    If (InfluenceRegion.count(CurBB)) {
+					    MI add implicit use for Reg;
+					    useAdded = true;
+			      }
+			    }
+			    // add implicit def to branch in order to cap the liveness
+			    if (useAdd && !LIS.isLiveInToMBB(LR, fallthruBB) {
+			      if (reg is not n def of branch instruction) {
+			        add implicit-def to branch
+			        may want to merge implicit-def to make MIR concise
+			      }    
+		      }
+        }
+      } // end of if
+    } // end of block-loop
+
+    // clear cache, so this will be recomputed after we have added implicit defs and uses
+    removeRegUnit(i);
+  } // end of the unit-loop
+
+
+  // We use a reverse post-order traversal of the control-flow graph to
+  // guarantee that we visit definitions in dominance order. Since WWM
+  // expressions are guaranteed to never involve phi nodes, and we can only
+  // escape WWM through the special WWM instruction, this means that this is a
+  // perfect elimination order, so we can never do any better.
+  ReversePostOrderTraversal<MachineFunction*> RPOT(&MF);
+
+  for (MachineBasicBlock *MBB : RPOT) {
+  }
+
+  return ImplicitAdded;
+}

@@ -82,14 +82,22 @@ public:
 
 static bool onlyAllocateSGPRs(const TargetRegisterInfo &TRI,
                               const MachineRegisterInfo &MRI,
+<<<<<<< HEAD
                               const Register Reg) {
+=======
+                              const Register &Reg) {
+>>>>>>> d385111d54b9141fdf44044df49449012aa7060a
   const TargetRegisterClass *RC = MRI.getRegClass(Reg);
   return static_cast<const SIRegisterInfo &>(TRI).isSGPRClass(RC);
 }
 
 static bool onlyAllocateVGPRs(const TargetRegisterInfo &TRI,
                               const MachineRegisterInfo &MRI,
+<<<<<<< HEAD
                               const Register Reg) {
+=======
+                              const Register &Reg) {
+>>>>>>> d385111d54b9141fdf44044df49449012aa7060a
   const TargetRegisterClass *RC = MRI.getRegClass(Reg);
   return !static_cast<const SIRegisterInfo &>(TRI).isSGPRClass(RC);
 }
