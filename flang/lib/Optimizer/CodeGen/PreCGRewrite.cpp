@@ -12,8 +12,8 @@
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 
-#include "CGOps.h"
 #include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
+#include "flang/Optimizer/CodeGen/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -276,7 +276,29 @@ public:
   mlir::LogicalResult
   matchAndRewrite(fir::DeclareOp declareOp,
                   mlir::PatternRewriter &rewriter) const override {
-    rewriter.replaceOp(declareOp, declareOp.getMemref());
+    auto loc = declareOp.getLoc();
+    llvm::SmallVector<mlir::Value> shapeOpers;
+    llvm::SmallVector<mlir::Value> shiftOpers;
+    if (auto shapeVal = declareOp.getShape()) {
+      if (auto shapeOp = mlir::dyn_cast<fir::ShapeOp>(shapeVal.getDefiningOp()))
+        populateShape(shapeOpers, shapeOp);
+      else if (auto shiftOp =
+                   mlir::dyn_cast<fir::ShapeShiftOp>(shapeVal.getDefiningOp()))
+        populateShapeAndShift(shapeOpers, shiftOpers, shiftOp);
+      else if (auto shiftOp =
+                   mlir::dyn_cast<fir::ShiftOp>(shapeVal.getDefiningOp()))
+        populateShift(shiftOpers, shiftOp);
+      else
+        return mlir::failure();
+    }
+    // FIXME: Add FortranAttrs and CudaAttrs
+    auto xDeclOp = rewriter.create<fir::cg::XDeclareOp>(
+        loc, declareOp.getType(), declareOp.getMemref(), shapeOpers, shiftOpers,
+        declareOp.getTypeparams(), declareOp.getDummyScope(),
+        declareOp.getUniqName());
+    LLVM_DEBUG(llvm::dbgs()
+               << "rewriting " << declareOp << " to " << xDeclOp << '\n');
+    rewriter.replaceOp(declareOp, xDeclOp.getOperation()->getResults());
     return mlir::success();
   }
 };

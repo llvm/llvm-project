@@ -6,4 +6,4 @@ func.func @dummy_scope(%arg0: !fir.ref<f32>) {
   return
 }
 // CHECK-LABEL: func.func @dummy_scope(
-// CHECK-NEXT: return
+// CHECK: fircg.ext_declare

@@ -17,7 +17,8 @@ func.func private @bar(%arg0: !fir.ref<!fir.array<12x23xi32>>)
 
 // CHECK-LABEL: func.func @test(
 // CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.array<12x23xi32>>) {
-// CHECK-NEXT: fir.call @bar(%[[arg0]]) : (!fir.ref<!fir.array<12x23xi32>>) -> ()
+// CHECK: fircg.ext_declare
+
 
 func.func @useless_shape_with_duplicate_extent_operand(%arg0: !fir.ref<!fir.array<3x3xf32>>) {
   %c3 = arith.constant 3 : index
@@ -27,4 +28,4 @@ func.func @useless_shape_with_duplicate_extent_operand(%arg0: !fir.ref<!fir.arra
 }
 
 // CHECK-LABEL: func.func @useless_shape_with_duplicate_extent_operand(
-// CHECK-NEXT: return
+// CHECK: fircg.ext_declare
