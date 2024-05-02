@@ -2496,6 +2496,23 @@ void OpenACCClauseProfiler::VisitCopyClause(const OpenACCCopyClause &Clause) {
   for (auto *E : Clause.getVarList())
     Profiler.VisitStmt(E);
 }
+void OpenACCClauseProfiler::VisitCopyInClause(
+    const OpenACCCopyInClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitCopyOutClause(
+    const OpenACCCopyOutClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitCreateClause(
+    const OpenACCCreateClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
 
 void OpenACCClauseProfiler::VisitSelfClause(const OpenACCSelfClause &Clause) {
   if (Clause.hasConditionExpr())
