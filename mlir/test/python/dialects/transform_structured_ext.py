@@ -348,7 +348,7 @@ def testPadOpArgsParam(target):
     # CHECK-DAG: %[[P:.*]] = transform.param.constant 128
     # CHECK: transform.structured.pad
     # CHECK-DAG: pad_to_multiple_of [%[[P]], 2]
-    # CHECK-DAG: padding_dimensions = [1]
+    # CHECK-DAG: padding_dimensions = [0, 1]
 
 
 @run
