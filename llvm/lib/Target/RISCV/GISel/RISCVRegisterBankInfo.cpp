@@ -117,7 +117,9 @@ RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case RISCV::GPRNoX0RegClassID:
   case RISCV::GPRNoX0X2RegClassID:
   case RISCV::GPRJALRRegClassID:
+  case RISCV::GPRJALRNonX7RegClassID:
   case RISCV::GPRTCRegClassID:
+  case RISCV::GPRTCNonX7RegClassID:
   case RISCV::GPRC_and_GPRTCRegClassID:
   case RISCV::GPRCRegClassID:
   case RISCV::GPRC_and_SR07RegClassID:
