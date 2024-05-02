@@ -87,9 +87,9 @@ def err_expr_not_cce : Error<
   "call to 'size()'|call to 'data()'}0 is not a constant expression">;
 def ext_cce_narrowing : ExtWarn<
   "%select{case value|enumerator value|non-type template argument|"
-  "array size|explicit specifier argument|noexcept specifier argument}0 "
-  "%select{cannot be narrowed from type %2 to %3|"
-  "evaluates to %2, which cannot be narrowed to type %3}1">,
+  "array size|explicit specifier argument|noexcept specifier argument|"
+  "call to 'size()'|call to 'data()'}0 %select{cannot be narrowed from "
+  "type %2 to %3|evaluates to %2, which cannot be narrowed to type %3}1">,
   InGroup<CXX11Narrowing>, DefaultError, SFINAEFailure;
 def err_ice_not_integral : Error<
   "%select{integer|integral}1 constant expression must have "
@@ -307,6 +307,8 @@ def err_invalid_vector_long_long_decl_spec : Error <
   "POWER7 or later) to be enabled">;
 def err_invalid_vector_long_double_decl_spec : Error<
   "cannot use 'long double' with '__vector'">;
+def err_invalid_vector_complex_decl_spec : Error<
+  "cannot use '_Complex' with '__vector'">;
 def warn_vector_long_decl_spec_combination : Warning<
   "Use of 'long' with '__vector' is deprecated">, InGroup<Deprecated>;
 
@@ -3755,14 +3757,12 @@ def err_sme_definition_using_za_in_non_sme_target : Error<
 def err_sme_definition_using_zt0_in_non_sme2_target : Error<
   "function using ZT0 state requires 'sme2'">;
 def warn_sme_streaming_pass_return_vl_to_non_streaming : Warning<
-  "passing a VL-dependent argument to/from a function that has a different"
-  " streaming-mode. The streaming and non-streaming vector lengths may be"
-  " different">,
+  "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a function with a different"
+  " streaming-mode is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime">,
   InGroup<AArch64SMEAttributes>, DefaultIgnore;
 def warn_sme_locally_streaming_has_vl_args_returns : Warning<
-  "passing/returning a VL-dependent argument to/from a __arm_locally_streaming"
-  " function. The streaming and non-streaming vector"
-  " lengths may be different">,
+  "%select{returning|passing}0 a VL-dependent argument %select{from|to}0 a locally streaming function is undefined"
+  " behaviour when the streaming and non-streaming vector lengths are different at runtime">,
   InGroup<AArch64SMEAttributes>, DefaultIgnore;
 def err_conflicting_attributes_arm_state : Error<
   "conflicting attributes for state '%0'">;
@@ -9903,6 +9903,9 @@ def warn_format_invalid_annotation : Warning<
 def warn_format_P_no_precision : Warning<
   "using '%%P' format specifier without precision">,
   InGroup<Format>;
+def warn_format_P_with_objc_pointer : Warning<
+  "using '%%P' format specifier with an Objective-C pointer results in dumping runtime object structure, not object value">,
+  InGroup<Format>;
 def warn_printf_ignored_flag: Warning<
   "flag '%0' is ignored when flag '%1' is present">,
   InGroup<Format>;
@@ -9952,6 +9955,8 @@ def warn_ret_stack_addr_ref : Warning<
 def warn_ret_local_temp_addr_ref : Warning<
   "returning %select{address of|reference to}0 local temporary object">,
   InGroup<ReturnStackAddress>;
+def err_ret_local_temp_ref : Error<
+  "returning reference to local temporary object">;
 def warn_ret_addr_label : Warning<
   "returning address of label, which is local">,
   InGroup<ReturnStackAddress>;
@@ -10330,9 +10335,13 @@ def err_shufflevector_nonconstant_argument : Error<
 def err_shufflevector_argument_too_large : Error<
   "index for __builtin_shufflevector must be less than the total number "
   "of vector elements">;
+def err_shufflevector_minus_one_is_undefined_behavior_constexpr : Error<
+  "index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position %0 not permitted in a constexpr context.">;
 
 def err_convertvector_non_vector : Error<
   "first argument to __builtin_convertvector must be a vector">;
+def err_convertvector_constexpr_unsupported_vector_cast : Error<
+  "unsupported vector cast from %0 to %1 in a constant expression.">;
 def err_builtin_non_vector_type : Error<
   "%0 argument to %1 must be of vector type">;
 def err_convertvector_incompatible_vector : Error<
@@ -11163,7 +11172,7 @@ def err_omp_declare_mapper_redefinition : Error<
   "redefinition of user-defined mapper for type %0 with name %1">;
 def err_omp_invalid_mapper: Error<
   "cannot find a valid user-defined mapper for type %0 with name %1">;
-def err_omp_array_section_use : Error<"OpenMP array section is not allowed here">;
+def err_array_section_use : Error<"%select{OpenACC sub-array|OpenMP array section}0 is not allowed here">;
 def err_omp_array_shaping_use : Error<"OpenMP array shaping operation is not allowed here">;
 def err_omp_iterator_use : Error<"OpenMP iterator is not allowed here">;
 def err_omp_typecheck_section_value : Error<
@@ -12293,4 +12302,12 @@ def note_acc_int_expr_conversion
     : Note<"conversion to %select{integral|enumeration}0 type %1">;
 def err_acc_int_expr_multiple_conversions
     : Error<"multiple conversions from expression type %0 to an integral type">;
+def err_acc_num_gangs_num_args
+    : Error<"%select{no|too many}0 integer expression arguments provided to "
+            "OpenACC 'num_gangs' "
+            "%select{|clause: '%1' directive expects maximum of %2, %3 were "
+            "provided}0">;
+def err_acc_not_a_var_ref
+    : Error<"OpenACC variable is not a valid variable name, sub-array, array "
+            "element, or composite variable member">;
 } // end of sema component.

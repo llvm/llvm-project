@@ -217,6 +217,8 @@ enum {
   /// - OpIdx(ULEB128) - Operand index
   /// - Ty(1) - Expected type
   GIM_CheckType,
+  /// GIM_CheckType but InsnID is omitted and defaults to zero.
+  GIM_RootCheckType,
 
   /// Check the type of a pointer to any address space.
   /// - InsnID(ULEB128) - Instruction ID
@@ -229,6 +231,8 @@ enum {
   /// - OpIdx(ULEB128) - Operand index
   /// - RC(2) - Expected register bank (specified as a register class)
   GIM_CheckRegBankForClass,
+  /// GIM_CheckRegBankForClass but InsnID is omitted and defaults to zero.
+  GIM_RootCheckRegBankForClass,
 
   /// Check the operand matches a complex predicate
   /// - InsnID(ULEB128) - Instruction ID
@@ -278,9 +282,9 @@ enum {
   /// - OpIdx(ULEB128) - Operand index
   GIM_CheckIsImm,
 
-  /// Check if the specified operand is safe to fold into the current
-  /// instruction.
-  /// - InsnID(ULEB128) - Instruction ID
+  /// Checks if the matched instructions numbered [1, 1+N) can
+  /// be folded into the root (inst 0).
+  /// - Num(1)
   GIM_CheckIsSafeToFold,
 
   /// Check the specified operands are identical.
@@ -338,6 +342,8 @@ enum {
   /// - InsnID(ULEB128) - Instruction ID to define
   /// - Opcode(2) - The new opcode to use
   GIR_BuildMI,
+  /// GIR_BuildMI but InsnID is omitted and defaults to zero.
+  GIR_BuildRootMI,
 
   /// Builds a constant and stores its result in a TempReg.
   /// - TempRegID(ULEB128) - Temp Register to define.
@@ -349,6 +355,8 @@ enum {
   /// - OldInsnID(ULEB128) - Instruction ID to copy from
   /// - OpIdx(ULEB128) - The operand to copy
   GIR_Copy,
+  /// GIR_Copy but with both New/OldInsnIDs omitted and defaulting to zero.
+  GIR_RootToRootCopy,
 
   /// Copy an operand to the specified instruction or add a zero register if the
   /// operand is a zero immediate.
@@ -506,6 +514,9 @@ enum {
   /// description.
   /// - InsnID(ULEB128) - Instruction ID to modify
   GIR_ConstrainSelectedInstOperands,
+  /// GIR_ConstrainSelectedInstOperands but InsnID is omitted and defaults to
+  /// zero.
+  GIR_RootConstrainSelectedInstOperands,
 
   /// Merge all memory operands into instruction.
   /// - InsnID(ULEB128) - Instruction ID to modify
@@ -517,6 +528,9 @@ enum {
   /// Erase from parent.
   /// - InsnID(ULEB128) - Instruction ID to erase
   GIR_EraseFromParent,
+
+  /// Combines both a GIR_EraseFromParent 0 + GIR_Done
+  GIR_EraseRootFromParent_Done,
 
   /// Create a new temporary register that's not constrained.
   /// - TempRegID(ULEB128) - The temporary register ID to initialize.

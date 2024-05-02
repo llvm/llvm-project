@@ -75,8 +75,8 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
           NewRecipe = new VPWidenCallRecipe(
-              *CI, drop_end(Ingredient.operands()),
-              getVectorIntrinsicIDForCall(CI, &TLI), CI->getDebugLoc());
+              CI, Ingredient.operands(), getVectorIntrinsicIDForCall(CI, &TLI),
+              CI->getDebugLoc());
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
           NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
         } else if (auto *CI = dyn_cast<CastInst>(Inst)) {
@@ -468,13 +468,12 @@ static void removeDeadRecipes(VPlan &Plan) {
   }
 }
 
-static VPValue *createScalarIVSteps(VPlan &Plan,
-                                    InductionDescriptor::InductionKind Kind,
-                                    Instruction::BinaryOps InductionOpcode,
-                                    FPMathOperator *FPBinOp,
-                                    ScalarEvolution &SE, Instruction *TruncI,
-                                    VPValue *StartV, VPValue *Step,
-                                    VPBasicBlock::iterator IP) {
+static VPScalarIVStepsRecipe *
+createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
+                    Instruction::BinaryOps InductionOpcode,
+                    FPMathOperator *FPBinOp, ScalarEvolution &SE,
+                    Instruction *TruncI, VPValue *StartV, VPValue *Step,
+                    VPBasicBlock::iterator IP) {
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
   VPSingleDefRecipe *BaseIV = CanonicalIV;
@@ -516,6 +515,16 @@ static VPValue *createScalarIVSteps(VPlan &Plan,
   return Steps;
 }
 
+/// Return the header mask recipe of the VPlan, if there is one.
+static VPInstruction *getHeaderMask(VPlan &Plan) {
+  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  auto R = find_if(*HeaderVPBB, [](VPRecipeBase &R) {
+    using namespace llvm::VPlanPatternMatch;
+    return match(&R, m_VPInstruction<VPInstruction::HeaderMask>(m_VPValue()));
+  });
+  return R == HeaderVPBB->end() ? nullptr : cast<VPInstruction>(&*R);
+}
+
 /// Legalize VPWidenPointerInductionRecipe, by replacing it with a PtrAdd
 /// (IndStart, ScalarIVSteps (0, Step)) if only its scalar values are used, as
 /// VPWidenPointerInductionRecipe will generate vectors only. If some users
@@ -529,6 +538,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
   SmallVector<VPRecipeBase *> ToRemove;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   bool HasOnlyVectorVFs = !Plan.hasVF(ElementCount::getFixed(1));
+  bool HasOnlyScalarVFs = Plan.hasVF(ElementCount::getFixed(1));
   VPBasicBlock::iterator InsertPt = HeaderVPBB->getFirstNonPhi();
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
     // Replace wide pointer inductions which have only their scalars used by
@@ -541,16 +551,13 @@ static void legalizeAndOptimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       VPValue *StartV =
           Plan.getOrAddLiveIn(ConstantInt::get(ID.getStep()->getType(), 0));
       VPValue *StepV = PtrIV->getOperand(1);
-      VPRecipeBase *Steps =
-          createScalarIVSteps(Plan, InductionDescriptor::IK_IntInduction,
-                              Instruction::Add, nullptr, SE, nullptr, StartV,
-                              StepV, InsertPt)
-              ->getDefiningRecipe();
+      VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
+          Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
+          SE, nullptr, StartV, StepV, InsertPt);
 
-      auto *Recipe =
-          new VPInstruction(VPInstruction::PtrAdd,
-                            {PtrIV->getStartValue(), Steps->getVPSingleValue()},
-                            PtrIV->getDebugLoc(), "next.gep");
+      auto *Recipe = new VPInstruction(VPInstruction::PtrAdd,
+                                       {PtrIV->getStartValue(), Steps},
+                                       PtrIV->getDebugLoc(), "next.gep");
 
       Recipe->insertAfter(Steps);
       PtrIV->replaceAllUsesWith(Recipe);
@@ -562,13 +569,31 @@ static void legalizeAndOptimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
     auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
     if (!WideIV)
       continue;
+
+    VPInstruction *HeaderMask = nullptr;
+     if (WideIV->isCanonical() &&
+         WideIV->getScalarType() == Plan.getCanonicalIV()->getScalarType()) {
+       HeaderMask =  getHeaderMask(Plan);
+     }
     if (HasOnlyVectorVFs && none_of(WideIV->users(), [WideIV](VPUser *U) {
           return U->usesScalars(WideIV);
-        }))
+        })) {
+      if (HeaderMask)
+        HeaderMask->setOperand(0, WideIV);
       continue;
+    }
+
+if (HeaderMask) {
+if (!HasOnlyVectorVFs || any_of(WideIV->users(),
+                [WideIV](VPUser *U) {
+                  return !U->usesScalars(WideIV);
+                })) {
+        HeaderMask->setOperand(0, WideIV);
+}
+}
 
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-    VPValue *Steps = createScalarIVSteps(
+    VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
         Plan, ID.getKind(), ID.getInductionOpcode(),
         dyn_cast_or_null<FPMathOperator>(ID.getInductionBinOp()), SE,
         WideIV->getTruncInst(), WideIV->getStartValue(), WideIV->getStepValue(),
@@ -581,6 +606,14 @@ static void legalizeAndOptimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       WideIV->replaceUsesWithIf(Steps, [WideIV](VPUser &U, unsigned) {
         return U.usesScalars(WideIV);
       });
+/*    if (HeaderMask) {*/
+/*if (WideIV->getNumUsers() != 0)*/
+        /*HeaderMask->setOperand(0, WideIV);*/
+/*else if (vputils::onlyFirstLaneUsed(WideIV)) */
+        /*HeaderMask->setOperand(0, Steps);*/
+    //}
+
+
   }
 }
 
@@ -846,18 +879,19 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
 
 /// Try to simplify recipe \p R.
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
+  using namespace llvm::VPlanPatternMatch;
   // Try to remove redundant blend recipes.
   if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
     VPValue *Inc0 = Blend->getIncomingValue(0);
     for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
-      if (Inc0 != Blend->getIncomingValue(I))
+      if (Inc0 != Blend->getIncomingValue(I) &&
+          !match(Blend->getMask(I), m_False()))
         return;
     Blend->replaceAllUsesWith(Inc0);
     Blend->eraseFromParent();
     return;
   }
 
-  using namespace llvm::VPlanPatternMatch;
   VPValue *A;
   if (match(&R, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
     VPValue *Trunc = R.getVPSingleValue();
@@ -993,7 +1027,9 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       if (auto *VPW = dyn_cast<VPRecipeWithIRFlags>(&R))
         VPW->dropPoisonGeneratingFlags();
 
-      if (OldResSizeInBits != NewResSizeInBits) {
+      using namespace llvm::VPlanPatternMatch;
+      if (OldResSizeInBits != NewResSizeInBits &&
+          !match(&R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue()))) {
         // Extend result to original width.
         auto *Ext =
             new VPWidenCastRecipe(Instruction::ZExt, ResultVPV, OldResTy);
@@ -1002,8 +1038,9 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         Ext->setOperand(0, ResultVPV);
         assert(OldResSizeInBits > NewResSizeInBits && "Nothing to shrink?");
       } else
-        assert(cast<VPWidenRecipe>(&R)->getOpcode() == Instruction::ICmp &&
-               "Only ICmps should not need extending the result.");
+        assert(
+            match(&R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue())) &&
+            "Only ICmps should not need extending the result.");
 
       assert(!isa<VPWidenStoreRecipe>(&R) && "stores cannot be narrowed");
       if (isa<VPWidenLoadRecipe>(&R))
@@ -1164,32 +1201,35 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   return LaneMaskPhi;
 }
 
-/// Return the header mask recipe of the VPlan, if there is one.
-static VPInstruction *getHeaderMask(VPlan &Plan) {
-  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-  auto R = find_if(*HeaderVPBB, [](VPRecipeBase &R) {
-    using namespace llvm::VPlanPatternMatch;
-    return match(&R, m_VPInstruction<VPInstruction::HeaderMask>(m_VPValue()));
-  });
-  return R == HeaderVPBB->end() ? nullptr : cast<VPInstruction>(&*R);
-}
-
 static VPValue *getOrCreateWideCanonicalIV(VPlan &Plan,
-                                           VPRecipeBase *InsertPt) {
+                                           VPInstruction*HeaderMask) {
 
-  VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-  for (VPRecipeBase &R : HeaderVPBB->phis()) {
-    auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R);
-    if (!WideIV || !WideIV->isCanonical() ||
-        Plan.getCanonicalIV()->getScalarType() != WideIV->getScalarType())
-      continue;
-    return WideIV;
-    break;
+
+
+  if (auto *CanIV = dyn_cast<VPEVLBasedIVPHIRecipe>(HeaderMask->getOperand(0))) {
+    auto *IV = new VPWidenCanonicalIVRecipe(Plan.getCanonicalIV());
+    IV->setOperand(0, CanIV);
+    IV->insertBefore(HeaderMask);
+    return IV;
   }
 
+  if (auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(HeaderMask->getOperand(0))) {
+		VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+		for (VPRecipeBase &R : HeaderVPBB->phis()) {
+			auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R);
+			if (!WideIV || !WideIV->isCanonical() ||
+					Plan.getCanonicalIV()->getScalarType() != WideIV->getScalarType())
+				continue;
+			return WideIV;
+			break;
+		}
   auto *IV = new VPWidenCanonicalIVRecipe(Plan.getCanonicalIV());
-  IV->insertBefore(InsertPt);
+  IV->insertBefore(HeaderMask);
   return IV;
+
+    }
+    return HeaderMask->getOperand(0);
+
 }
 
 void VPlanTransforms::addActiveLaneMask(
@@ -1199,7 +1239,7 @@ void VPlanTransforms::addActiveLaneMask(
           UseActiveLaneMaskForControlFlow) &&
          "DataAndControlFlowWithoutRuntimeCheck implies "
          "UseActiveLaneMaskForControlFlow");
-  VPValue *HeaderMask = getHeaderMask(Plan);
+  VPInstruction *HeaderMask = getHeaderMask(Plan);
   assert(HeaderMask && "Active-lane-mask not needed?");
   VPSingleDefRecipe *LaneMask;
   if (UseActiveLaneMaskForControlFlow) {
@@ -1211,7 +1251,8 @@ void VPlanTransforms::addActiveLaneMask(
     B.setInsertPoint(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
     LaneMask = B.createNaryOp(
         VPInstruction::ActiveLaneMask,
-        {getOrCreateWideCanonicalIV(Plan, &*HeaderVPBB->getFirstNonPhi()),
+        { 
+        getOrCreateWideCanonicalIV(Plan, HeaderMask),
          Plan.getTripCount()},
         nullptr, "active.lane.mask");
   }

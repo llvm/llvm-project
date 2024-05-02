@@ -365,7 +365,8 @@ void RegDefsUses::setCallerSaved(const MachineInstr &MI) {
   // Add RA/RA_64 to Defs to prevent users of RA/RA_64 from going into
   // the delay slot. The reason is that RA/RA_64 must not be changed
   // in the delay slot so that the callee can return to the caller.
-  if (MI.definesRegister(Mips::RA) || MI.definesRegister(Mips::RA_64)) {
+  if (MI.definesRegister(Mips::RA, /*TRI=*/nullptr) ||
+      MI.definesRegister(Mips::RA_64, /*TRI=*/nullptr)) {
     Defs.set(Mips::RA);
     Defs.set(Mips::RA_64);
   }

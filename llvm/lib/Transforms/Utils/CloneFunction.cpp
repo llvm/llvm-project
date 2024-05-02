@@ -1131,6 +1131,9 @@ BasicBlock *llvm::DuplicateInstructionsInSplitBetween(
         if (I != ValueMapping.end())
           New->setOperand(i, I->second);
       }
+
+    // Remap debug variable operands.
+    remapDebugVariable(ValueMapping, New);
   }
 
   return NewBB;

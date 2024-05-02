@@ -53,62 +53,86 @@
 module {
 
   func.func @expand_dense(%arg0: tensor<12xf64>) -> tensor<3x4xf64> {
-    %0 = tensor.expand_shape %arg0 [[0, 1]] : tensor<12xf64> into tensor<3x4xf64>
+    %0 = tensor.expand_shape %arg0 [[0, 1]] output_shape [3, 4] : tensor<12xf64> into tensor<3x4xf64>
     return %0 : tensor<3x4xf64>
   }
 
   func.func @expand_from_sparse(%arg0: tensor<12xf64, #SparseVector>) -> tensor<3x4xf64> {
-    %0 = tensor.expand_shape %arg0 [[0, 1]] : tensor<12xf64, #SparseVector> into tensor<3x4xf64>
+    %0 = tensor.expand_shape %arg0 [[0, 1]] output_shape [3, 4] : tensor<12xf64, #SparseVector> into tensor<3x4xf64>
     return %0 : tensor<3x4xf64>
   }
 
   func.func @expand_to_sparse(%arg0: tensor<12xf64>) -> tensor<3x4xf64, #SparseMatrix> {
-    %0 = tensor.expand_shape %arg0 [[0, 1]] : tensor<12xf64> into tensor<3x4xf64, #SparseMatrix>
+    %0 = tensor.expand_shape %arg0 [[0, 1]] output_shape [3, 4] : tensor<12xf64> into tensor<3x4xf64, #SparseMatrix>
     return %0 : tensor<3x4xf64, #SparseMatrix>
   }
 
   func.func @expand_sparse2sparse(%arg0: tensor<12xf64, #SparseVector>) -> tensor<3x4xf64, #SparseMatrix> {
-    %0 = tensor.expand_shape %arg0 [[0, 1]] : tensor<12xf64, #SparseVector> into tensor<3x4xf64, #SparseMatrix>
+    %0 = tensor.expand_shape %arg0 [[0, 1]] output_shape [3, 4] : tensor<12xf64, #SparseVector> into tensor<3x4xf64, #SparseMatrix>
     return %0 : tensor<3x4xf64, #SparseMatrix>
   }
 
   func.func @expand_dense_3x2x2(%arg0: tensor<3x4xf64>) -> tensor<3x2x2xf64> {
-    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] : tensor<3x4xf64> into tensor<3x2x2xf64>
+    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [3, 2, 2] : tensor<3x4xf64> into tensor<3x2x2xf64>
     return %0 : tensor<3x2x2xf64>
   }
 
   func.func @expand_from_sparse_3x2x2(%arg0: tensor<3x4xf64, #SparseMatrix>) -> tensor<3x2x2xf64> {
-    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] : tensor<3x4xf64, #SparseMatrix> into tensor<3x2x2xf64>
+    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [3, 2, 2] : tensor<3x4xf64, #SparseMatrix> into tensor<3x2x2xf64>
     return %0 : tensor<3x2x2xf64>
   }
 
   func.func @expand_to_sparse_3x2x2(%arg0: tensor<3x4xf64>) -> tensor<3x2x2xf64, #Sparse3dTensor> {
-    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] : tensor<3x4xf64> into tensor<3x2x2xf64, #Sparse3dTensor>
+    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [3, 2, 2] : tensor<3x4xf64> into tensor<3x2x2xf64, #Sparse3dTensor>
     return %0 : tensor<3x2x2xf64, #Sparse3dTensor>
   }
 
   func.func @expand_sparse2sparse_3x2x2(%arg0: tensor<3x4xf64, #SparseMatrix>) -> tensor<3x2x2xf64, #Sparse3dTensor> {
-    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] : tensor<3x4xf64, #SparseMatrix> into tensor<3x2x2xf64, #Sparse3dTensor>
+    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [3, 2, 2] : tensor<3x4xf64, #SparseMatrix> into tensor<3x2x2xf64, #Sparse3dTensor>
     return %0 : tensor<3x2x2xf64, #Sparse3dTensor>
   }
 
   func.func @expand_dense_dyn(%arg0: tensor<?x?xf64>) -> tensor<?x2x?xf64> {
-    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] : tensor<?x?xf64> into tensor<?x2x?xf64>
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c2 = arith.constant 2 : index
+    %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf64>
+    %d1 = tensor.dim %arg0, %c1 : tensor<?x?xf64>
+    %d2 = arith.divui %d1, %c2 : index
+    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [%d0, 2, %d2]  : tensor<?x?xf64> into tensor<?x2x?xf64>
     return %0 : tensor<?x2x?xf64>
   }
 
   func.func @expand_from_sparse_dyn(%arg0: tensor<?x?xf64, #SparseMatrix>) -> tensor<?x2x?xf64> {
-    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] : tensor<?x?xf64, #SparseMatrix> into tensor<?x2x?xf64>
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c2 = arith.constant 2 : index
+    %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf64, #SparseMatrix>
+    %d1 = tensor.dim %arg0, %c1 : tensor<?x?xf64, #SparseMatrix>
+    %d2 = arith.divui %d1, %c2 : index
+    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [%d0, 2, %d2]  : tensor<?x?xf64, #SparseMatrix> into tensor<?x2x?xf64>
     return %0 : tensor<?x2x?xf64>
   }
 
   func.func @expand_to_sparse_dyn(%arg0: tensor<?x?xf64>) -> tensor<?x2x?xf64, #Sparse3dTensor> {
-    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] : tensor<?x?xf64> into tensor<?x2x?xf64, #Sparse3dTensor>
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c2 = arith.constant 2 : index
+    %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf64>
+    %d1 = tensor.dim %arg0, %c1 : tensor<?x?xf64>
+    %d2 = arith.divui %d1, %c2 : index
+    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [%d0, 2, %d2]  : tensor<?x?xf64> into tensor<?x2x?xf64, #Sparse3dTensor>
     return %0 : tensor<?x2x?xf64, #Sparse3dTensor>
   }
 
   func.func @expand_sparse2sparse_dyn(%arg0: tensor<?x?xf64, #SparseMatrix>) -> tensor<?x2x?xf64, #Sparse3dTensor> {
-    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] : tensor<?x?xf64, #SparseMatrix> into tensor<?x2x?xf64, #Sparse3dTensor>
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c2 = arith.constant 2 : index
+    %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf64, #SparseMatrix>
+    %d1 = tensor.dim %arg0, %c1 : tensor<?x?xf64, #SparseMatrix>
+    %d2 = arith.divui %d1, %c2 : index
+    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] output_shape [%d0, 2, %d2]  : tensor<?x?xf64, #SparseMatrix> into tensor<?x2x?xf64, #Sparse3dTensor>
     return %0 : tensor<?x2x?xf64, #Sparse3dTensor>
   }
 

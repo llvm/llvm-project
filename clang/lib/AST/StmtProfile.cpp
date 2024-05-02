@@ -1435,7 +1435,7 @@ void StmtProfiler::VisitMatrixSubscriptExpr(const MatrixSubscriptExpr *S) {
   VisitExpr(S);
 }
 
-void StmtProfiler::VisitOMPArraySectionExpr(const OMPArraySectionExpr *S) {
+void StmtProfiler::VisitArraySectionExpr(const ArraySectionExpr *S) {
   VisitExpr(S);
 }
 
@@ -2497,10 +2497,22 @@ void OpenACCClauseProfiler::VisitSelfClause(const OpenACCSelfClause &Clause) {
     Profiler.VisitStmt(Clause.getConditionExpr());
 }
 
+void OpenACCClauseProfiler::VisitNumGangsClause(
+    const OpenACCNumGangsClause &Clause) {
+  for (auto *E : Clause.getIntExprs())
+    Profiler.VisitStmt(E);
+}
+
 void OpenACCClauseProfiler::VisitNumWorkersClause(
     const OpenACCNumWorkersClause &Clause) {
   assert(Clause.hasIntExpr() && "num_workers clause requires a valid int expr");
   Profiler.VisitStmt(Clause.getIntExpr());
+}
+
+void OpenACCClauseProfiler::VisitPrivateClause(
+    const OpenACCPrivateClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
 }
 
 void OpenACCClauseProfiler::VisitVectorLengthClause(

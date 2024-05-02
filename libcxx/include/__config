@@ -1375,7 +1375,7 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_USING_IF_EXISTS
 #  endif
 
-#  if __has_cpp_attribute(nodiscard)
+#  if __has_cpp_attribute(__nodiscard__)
 #    define _LIBCPP_NODISCARD [[__nodiscard__]]
 #  else
 // We can't use GCC's [[gnu::warn_unused_result]] and
@@ -1384,27 +1384,13 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_NODISCARD
 #  endif
 
-// _LIBCPP_NODISCARD_EXT may be used to apply [[nodiscard]] to entities not
-// specified as such as an extension.
-#  if !defined(_LIBCPP_DISABLE_NODISCARD_EXT)
-#    define _LIBCPP_NODISCARD_EXT _LIBCPP_NODISCARD
-#  else
-#    define _LIBCPP_NODISCARD_EXT
-#  endif
-
-#  if _LIBCPP_STD_VER >= 20 || !defined(_LIBCPP_DISABLE_NODISCARD_EXT)
-#    define _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_NODISCARD
-#  else
-#    define _LIBCPP_NODISCARD_AFTER_CXX17
-#  endif
-
 #  if __has_attribute(__no_destroy__)
 #    define _LIBCPP_NO_DESTROY __attribute__((__no_destroy__))
 #  else
 #    define _LIBCPP_NO_DESTROY
 #  endif
 
-#  if __has_attribute(__diagnose_if__) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
+#  if __has_attribute(__diagnose_if__)
 #    define _LIBCPP_DIAGNOSE_WARNING(...) __attribute__((__diagnose_if__(__VA_ARGS__, "warning")))
 #  else
 #    define _LIBCPP_DIAGNOSE_WARNING(...)

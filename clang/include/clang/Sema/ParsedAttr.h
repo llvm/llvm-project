@@ -948,6 +948,7 @@ public:
   ParsedAttributes(AttributeFactory &factory) : pool(factory) {}
   ParsedAttributes(const ParsedAttributes &) = delete;
   ParsedAttributes &operator=(const ParsedAttributes &) = delete;
+  ParsedAttributes(ParsedAttributes &&G) = default;
 
   AttributePool &getPool() const { return pool; }
 
