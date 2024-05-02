@@ -429,9 +429,11 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
-  if (llvm::any_of(Arch, isupper))
+  // RISC-V ISA strings must be [a-z0-9_]
+  if (!llvm::all_of(
+          Arch, [](char C) { return isDigit(C) || isLower(C) || C == '_'; }))
     return createStringError(errc::invalid_argument,
-                             "string must be lowercase");
+                             "string may only contain [a-z0-9_]");
 
   // Must start with a valid base ISA name.
   unsigned XLen = 0;
@@ -473,6 +475,10 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
     if (VersionStart == Prefix.size())
       return createStringError(errc::invalid_argument,
                                "extension lacks version in expected format");
+
+    if (VersionStart == 0)
+      return createStringError(errc::invalid_argument,
+                               "missing extension name");
 
     StringRef ExtName = Prefix.slice(0, VersionStart);
     StringRef MajorVersionStr = Prefix.slice(VersionStart, StringRef::npos);
