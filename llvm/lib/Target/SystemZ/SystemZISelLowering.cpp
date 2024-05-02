@@ -6292,11 +6292,11 @@ SystemZTargetLowering::LowerOperationWrapper(SDNode *N,
       Results.push_back(Res.getValue(1));
     } else {
       // For the f128 case, after type legalization, we cannot produce a bitcast
-      // with an illegal type (i.e. i128), so introduce a stack store and reload
+      // with an illegal type (i.e. i128), so manually lower it.
       //
       // FIXME: Really v2i64 should be legal, and should be used in place of
-      // unttyped. Then we could emit the bitcast which will potentially avoid
-      // the stack usage after combining.
+      // unttyped. Then we could emit the bitcast which will potentially fold
+      // into the use.
       SDValue Cast = expandBitCastI128ToF128(DAG, Res, Res.getValue(1), DL);
       Results.push_back(Cast);
       Results.push_back(Res.getValue(1));

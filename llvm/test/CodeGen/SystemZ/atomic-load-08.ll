@@ -6,8 +6,8 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mattr=+soft-float | FileCheck -check-prefixes=SOFTFP %s
 
 ; FIXME: Without vector support, v2i64 should be legal and we should
-; introduce a simple bitcast instead of the stack temporary store and
-; reload
+; introduce a simple bitcast, which could fold into the store use
+; avoid the intermediate f registers.
 define void @f1(ptr %ret, ptr %src) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
