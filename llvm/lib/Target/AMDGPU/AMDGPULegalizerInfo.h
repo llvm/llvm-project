@@ -106,7 +106,7 @@ public:
                      bool UsePartialMad64_32,
                      bool SeparateOddAlignedProducts) const;
   bool legalizeMul(LegalizerHelper &Helper, MachineInstr &MI) const;
-  bool legalizeCTLZ_CTTZ(LegalizerHelper &Helper, MachineInstr &MI, 
+  bool legalizeCTLZ_CTTZ(LegalizerHelper &Helper, MachineInstr &MI,
                          MachineRegisterInfo &MRI, MachineIRBuilder &B) const;
 
   bool loadInputValue(Register DstReg, MachineIRBuilder &B,

@@ -4072,7 +4072,7 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
 // Legalize ctlz/cttz to ffbh/ffbl instead of the default legalization to
 // ctlz/cttz_zero_undef. This allows us to fix up the result for the zero input
 // case with a single min instruction instead of a compare+select.
-bool AMDGPULegalizerInfo::legalizeCTLZ_CTTZ(LegalizerHelper &Helper, 
+bool AMDGPULegalizerInfo::legalizeCTLZ_CTTZ(LegalizerHelper &Helper,
                                             MachineInstr &MI,
                                             MachineRegisterInfo &MRI,
                                             MachineIRBuilder &B) const {
