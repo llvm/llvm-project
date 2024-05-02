@@ -219,11 +219,19 @@ private:
   static unsigned getNewOpcode(const CombineInfo &CI, const CombineInfo &Paired);
   static std::pair<unsigned, unsigned> getSubRegIdxs(const CombineInfo &CI,
                                                      const CombineInfo &Paired);
-  const TargetRegisterClass *getTargetRegisterClass(const CombineInfo &CI,
-                                                    const CombineInfo &Paired);
+  const TargetRegisterClass *
+  getTargetRegisterClass(const CombineInfo &CI,
+                         const CombineInfo &Paired) const;
   const TargetRegisterClass *getDataRegClass(const MachineInstr &MI) const;
 
   CombineInfo *checkAndPrepareMerge(CombineInfo &CI, CombineInfo &Paired);
+
+  void copyToDestRegs(CombineInfo &CI, CombineInfo &Paired,
+                      MachineBasicBlock::iterator InsertBefore, int OpName,
+                      Register DestReg) const;
+  Register copyFromSrcRegs(CombineInfo &CI, CombineInfo &Paired,
+                           MachineBasicBlock::iterator InsertBefore,
+                           int OpName) const;
 
   unsigned read2Opcode(unsigned EltSize) const;
   unsigned read2ST64Opcode(unsigned EltSize) const;
@@ -1191,6 +1199,57 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
   return Where;
 }
 
+// Copy the merged load result from DestReg to the original dest regs of CI and
+// Paired.
+void SILoadStoreOptimizer::copyToDestRegs(
+    CombineInfo &CI, CombineInfo &Paired,
+    MachineBasicBlock::iterator InsertBefore, int OpName,
+    Register DestReg) const {
+  MachineBasicBlock *MBB = CI.I->getParent();
+  DebugLoc DL = CI.I->getDebugLoc();
+
+  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
+
+  // Copy to the old destination registers.
+  const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
+  const auto *Dest0 = TII->getNamedOperand(*CI.I, OpName);
+  const auto *Dest1 = TII->getNamedOperand(*Paired.I, OpName);
+
+  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
+      .add(*Dest0) // Copy to same destination including flags and sub reg.
+      .addReg(DestReg, 0, SubRegIdx0);
+  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
+      .add(*Dest1)
+      .addReg(DestReg, RegState::Kill, SubRegIdx1);
+}
+
+// Return a register for the source of the merged store after copying the
+// original source regs of CI and Paired into it.
+Register
+SILoadStoreOptimizer::copyFromSrcRegs(CombineInfo &CI, CombineInfo &Paired,
+                                      MachineBasicBlock::iterator InsertBefore,
+                                      int OpName) const {
+  MachineBasicBlock *MBB = CI.I->getParent();
+  DebugLoc DL = CI.I->getDebugLoc();
+
+  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
+
+  // Copy to the new source register.
+  const TargetRegisterClass *SuperRC = getTargetRegisterClass(CI, Paired);
+  Register SrcReg = MRI->createVirtualRegister(SuperRC);
+
+  const auto *Src0 = TII->getNamedOperand(*CI.I, OpName);
+  const auto *Src1 = TII->getNamedOperand(*Paired.I, OpName);
+
+  BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg)
+      .add(*Src0)
+      .addImm(SubRegIdx0)
+      .add(*Src1)
+      .addImm(SubRegIdx1);
+
+  return SrcReg;
+}
+
 unsigned SILoadStoreOptimizer::read2Opcode(unsigned EltSize) const {
   if (STM->ldsRequiresM0Init())
     return (EltSize == 4) ? AMDGPU::DS_READ2_B32 : AMDGPU::DS_READ2_B64;
@@ -1214,22 +1273,10 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
   // cases, like vectors of pointers.
   const auto *AddrReg = TII->getNamedOperand(*CI.I, AMDGPU::OpName::addr);
 
-  const auto *Dest0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdst);
-  const auto *Dest1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdst);
-
-  unsigned NewOffset0 = CI.Offset;
-  unsigned NewOffset1 = Paired.Offset;
+  unsigned NewOffset0 = std::min(CI.Offset, Paired.Offset);
+  unsigned NewOffset1 = std::max(CI.Offset, Paired.Offset);
   unsigned Opc =
       CI.UseST64 ? read2ST64Opcode(CI.EltSize) : read2Opcode(CI.EltSize);
-
-  unsigned SubRegIdx0 = (CI.EltSize == 4) ? AMDGPU::sub0 : AMDGPU::sub0_sub1;
-  unsigned SubRegIdx1 = (CI.EltSize == 4) ? AMDGPU::sub1 : AMDGPU::sub2_sub3;
-
-  if (NewOffset0 > NewOffset1) {
-    // Canonicalize the merged instruction so the smaller offset comes first.
-    std::swap(NewOffset0, NewOffset1);
-    std::swap(SubRegIdx0, SubRegIdx1);
-  }
 
   assert((isUInt<8>(NewOffset0) && isUInt<8>(NewOffset1)) &&
          (NewOffset0 != NewOffset1) && "Computed offset doesn't fit");
@@ -1267,17 +1314,7 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
           .addImm(0)                                 // gds
           .cloneMergedMemRefs({&*CI.I, &*Paired.I});
 
-  (void)Read2;
-
-  const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
-
-  // Copy to the old destination registers.
-  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
-      .add(*Dest0) // Copy to same destination including flags and sub reg.
-      .addReg(DestReg, 0, SubRegIdx0);
-  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
-      .add(*Dest1)
-      .addReg(DestReg, RegState::Kill, SubRegIdx1);
+  copyToDestRegs(CI, Paired, InsertBefore, AMDGPU::OpName::vdst, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1397,19 +1434,7 @@ SILoadStoreOptimizer::mergeImagePair(CombineInfo &CI, CombineInfo &Paired,
 
   MachineInstr *New = MIB.addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
-
-  // Copy to the old destination registers.
-  const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
-  const auto *Dest0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdata);
-  const auto *Dest1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdata);
-
-  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
-      .add(*Dest0) // Copy to same destination including flags and sub reg.
-      .addReg(DestReg, 0, SubRegIdx0);
-  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
-      .add(*Dest1)
-      .addReg(DestReg, RegState::Kill, SubRegIdx1);
+  copyToDestRegs(CI, Paired, InsertBefore, AMDGPU::OpName::vdata, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1441,19 +1466,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSMemLoadImmPair(
   New.addImm(MergedOffset);
   New.addImm(CI.CPol).addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
-
-  // Copy to the old destination registers.
-  const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
-  const auto *Dest0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::sdst);
-  const auto *Dest1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::sdst);
-
-  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
-      .add(*Dest0) // Copy to same destination including flags and sub reg.
-      .addReg(DestReg, 0, SubRegIdx0);
-  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
-      .add(*Dest1)
-      .addReg(DestReg, RegState::Kill, SubRegIdx1);
+  copyToDestRegs(CI, Paired, InsertBefore, AMDGPU::OpName::sdst, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1494,19 +1507,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferLoadPair(
         .addImm(0)            // swz
         .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
-
-  // Copy to the old destination registers.
-  const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
-  const auto *Dest0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdata);
-  const auto *Dest1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdata);
-
-  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
-      .add(*Dest0) // Copy to same destination including flags and sub reg.
-      .addReg(DestReg, 0, SubRegIdx0);
-  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
-      .add(*Dest1)
-      .addReg(DestReg, RegState::Kill, SubRegIdx1);
+  copyToDestRegs(CI, Paired, InsertBefore, AMDGPU::OpName::vdata, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1551,19 +1552,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
           .addImm(0)            // swz
           .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
-
-  // Copy to the old destination registers.
-  const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
-  const auto *Dest0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdata);
-  const auto *Dest1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdata);
-
-  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
-      .add(*Dest0) // Copy to same destination including flags and sub reg.
-      .addReg(DestReg, 0, SubRegIdx0);
-  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
-      .add(*Dest1)
-      .addReg(DestReg, RegState::Kill, SubRegIdx1);
+  copyToDestRegs(CI, Paired, InsertBefore, AMDGPU::OpName::vdata, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1578,20 +1567,8 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferStorePair(
 
   const unsigned Opcode = getNewOpcode(CI, Paired);
 
-  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
-
-  // Copy to the new source register.
-  const TargetRegisterClass *SuperRC = getTargetRegisterClass(CI, Paired);
-  Register SrcReg = MRI->createVirtualRegister(SuperRC);
-
-  const auto *Src0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdata);
-  const auto *Src1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdata);
-
-  BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg)
-      .add(*Src0)
-      .addImm(SubRegIdx0)
-      .add(*Src1)
-      .addImm(SubRegIdx1);
+  Register SrcReg =
+      copyFromSrcRegs(CI, Paired, InsertBefore, AMDGPU::OpName::vdata);
 
   auto MIB = BuildMI(*MBB, InsertBefore, DL, TII->get(Opcode))
                  .addReg(SrcReg, RegState::Kill);
@@ -1645,19 +1622,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeFlatLoadPair(
        .addImm(CI.CPol)
        .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
-  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
-
-  // Copy to the old destination registers.
-  const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
-  const auto *Dest0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdst);
-  const auto *Dest1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdst);
-
-  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
-      .add(*Dest0) // Copy to same destination including flags and sub reg.
-      .addReg(DestReg, 0, SubRegIdx0);
-  BuildMI(*MBB, InsertBefore, DL, CopyDesc)
-      .add(*Dest1)
-      .addReg(DestReg, RegState::Kill, SubRegIdx1);
+  copyToDestRegs(CI, Paired, InsertBefore, AMDGPU::OpName::vdst, DestReg);
 
   CI.I->eraseFromParent();
   Paired.I->eraseFromParent();
@@ -1672,20 +1637,8 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeFlatStorePair(
 
   const unsigned Opcode = getNewOpcode(CI, Paired);
 
-  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
-
-  // Copy to the new source register.
-  const TargetRegisterClass *SuperRC = getTargetRegisterClass(CI, Paired);
-  Register SrcReg = MRI->createVirtualRegister(SuperRC);
-
-  const auto *Src0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdata);
-  const auto *Src1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdata);
-
-  BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg)
-      .add(*Src0)
-      .addImm(SubRegIdx0)
-      .add(*Src1)
-      .addImm(SubRegIdx1);
+  Register SrcReg =
+      copyFromSrcRegs(CI, Paired, InsertBefore, AMDGPU::OpName::vdata);
 
   auto MIB = BuildMI(*MBB, InsertBefore, DL, TII->get(Opcode))
                  .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::vaddr))
@@ -1868,7 +1821,7 @@ SILoadStoreOptimizer::getSubRegIdxs(const CombineInfo &CI,
 
 const TargetRegisterClass *
 SILoadStoreOptimizer::getTargetRegisterClass(const CombineInfo &CI,
-                                             const CombineInfo &Paired) {
+                                             const CombineInfo &Paired) const {
   if (CI.InstClass == S_BUFFER_LOAD_IMM ||
       CI.InstClass == S_BUFFER_LOAD_SGPR_IMM || CI.InstClass == S_LOAD_IMM) {
     switch (CI.Width + Paired.Width) {
@@ -1901,20 +1854,8 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferStorePair(
 
   const unsigned Opcode = getNewOpcode(CI, Paired);
 
-  auto [SubRegIdx0, SubRegIdx1] = getSubRegIdxs(CI, Paired);
-
-  // Copy to the new source register.
-  const TargetRegisterClass *SuperRC = getTargetRegisterClass(CI, Paired);
-  Register SrcReg = MRI->createVirtualRegister(SuperRC);
-
-  const auto *Src0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdata);
-  const auto *Src1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdata);
-
-  BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg)
-      .add(*Src0)
-      .addImm(SubRegIdx0)
-      .add(*Src1)
-      .addImm(SubRegIdx1);
+  Register SrcReg =
+      copyFromSrcRegs(CI, Paired, InsertBefore, AMDGPU::OpName::vdata);
 
   auto MIB = BuildMI(*MBB, InsertBefore, DL, TII->get(Opcode))
                  .addReg(SrcReg, RegState::Kill);
