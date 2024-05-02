@@ -85,6 +85,7 @@ int main(int argc, char *argv[]) {
     depinfo1.base_addr = reinterpret_cast<intptr_t>(&depvar);
     depinfo1.flag = 3; // INOUT
     depinfo1.len = 4;
+    depinfo1.hashentry = NULL;
 
     __kmpc_omp_task_with_deps(nullptr, gtid, task1, 1, &depinfo1, 0, nullptr);
 
@@ -99,6 +100,7 @@ int main(int argc, char *argv[]) {
     depinfo2.base_addr = reinterpret_cast<intptr_t>(&depvar);
     depinfo2.flag = 3; // INOUT
     depinfo2.len = 4;
+    depinfo2.hashentry = NULL;
 
     __kmpc_omp_task_with_deps(nullptr, gtid, task2, 1, &depinfo2, 0, nullptr);
 
@@ -113,6 +115,7 @@ int main(int argc, char *argv[]) {
     depinfo3.base_addr = reinterpret_cast<intptr_t>(&depvar);
     depinfo3.flag = 3; // INOUT
     depinfo3.len = 4;
+    depinfo3.hashentry = NULL;
 
     __kmpc_omp_task_with_deps(nullptr, gtid, task3, 1, &depinfo3, 0, nullptr);
 

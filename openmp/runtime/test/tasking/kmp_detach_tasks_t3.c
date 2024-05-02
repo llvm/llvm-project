@@ -57,6 +57,7 @@ typedef struct DEP {
   size_t addr;
   size_t len;
   unsigned char flags;
+  void * dephash;
 } dep;
 
 typedef int(* task_entry_t)( int, ptask );
@@ -115,6 +116,7 @@ int main() {
       sdep.addr = (size_t)&nt;
       sdep.len = 0L;
       sdep.flags = 3;
+      sdep.dephash = NULL;
 
       __kmpc_omp_task_with_deps(NULL,gtid,task,1,&sdep,0,0);
       //__kmpc_omp_task(NULL, gtid, task);

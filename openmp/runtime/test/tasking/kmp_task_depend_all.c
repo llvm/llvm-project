@@ -44,6 +44,7 @@ typedef struct DEP {
   size_t addr;
   size_t len;
   unsigned char flags;
+  void * dephash;
 } dep;
 #define DEP_ALL_MEM 0x80
 typedef struct task {
@@ -186,9 +187,11 @@ int main()
       sdep[0].addr = (size_t)&i1;
       sdep[0].len = 0;   // not used
       sdep[0].flags = 1; // IN
+      sdep[0].dephash = NULL;
       sdep[1].addr = (size_t)&i2;
       sdep[1].len = 0;   // not used
       sdep[1].flags = 8; // INOUTSET
+      sdep[1].dephash = NULL;
       ptr->f_priv = t + 10; // init single first-private variable
       __kmpc_omp_task_with_deps(&loc, gtid, ptr, 2, sdep, 0, 0);
 
@@ -197,9 +200,11 @@ int main()
       sdep[0].addr = (size_t)&i1; // to be ignored
       sdep[0].len = 0;   // not used
       sdep[0].flags = 1; // IN
+      sdep[0].dephash = NULL;
       sdep[1].addr = 0;
       sdep[1].len = 0;   // not used
       sdep[1].flags = DEP_ALL_MEM; // omp_all_memory
+      sdep[1].dephash = NULL;
       ptr->f_priv = t + 20; // init single first-private variable
       __kmpc_omp_task_with_deps(&loc, gtid, ptr, 2, sdep, 0, 0);
 // compiler codegen end
@@ -251,6 +256,7 @@ int main()
       sdep[0].addr = (size_t)(-1); // omp_all_memory
       sdep[0].len = 0;   // not used
       sdep[0].flags = 2; // OUT
+      sdep[0].dephash = NULL;
       ptr->f_priv = t + 30; // init single first-private variable
       __kmpc_omp_task_with_deps(&loc, gtid, ptr, 1, sdep, 0, 0);
 
@@ -259,9 +265,11 @@ int main()
       sdep[0].addr = 0;
       sdep[0].len = 0;   // not used
       sdep[0].flags = DEP_ALL_MEM; // omp_all_memory
+      sdep[0].dephash = NULL;
       sdep[1].addr = (size_t)&i3; // to be ignored
       sdep[1].len = 0;   // not used
       sdep[1].flags = 4; // MUTEXINOUTSET
+      sdep[1].dephash = NULL;
       ptr->f_priv = t + 40; // init single first-private variable
       __kmpc_omp_task_with_deps(&loc, gtid, ptr, 2, sdep, 0, 0);
 // compiler codegen end

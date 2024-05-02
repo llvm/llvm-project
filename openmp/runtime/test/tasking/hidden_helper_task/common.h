@@ -33,6 +33,7 @@ typedef struct kmp_depend_info {
       unsigned all : 1;
 #endif
     } flags;
+    void *hashentry; /* kmp_dephash_entry_t * */
   };
 } kmp_depend_info_t;
 

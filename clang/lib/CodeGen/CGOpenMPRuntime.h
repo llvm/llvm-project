@@ -630,11 +630,10 @@ protected:
                           Address DependenciesArray);
 
   void emitDependData(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
-          llvm::PointerUnion<unsigned *, LValue *> Pos,
-         const OMPTaskDataTy::DependData &Data,
-         Address DependenciesArray,
-         bool depobj,
-         SourceLocation Loc);
+                      llvm::PointerUnion<unsigned *, LValue *> Pos,
+                      const OMPTaskDataTy::DependData &Data,
+                      Address DependenciesArray, bool depobj,
+                      SourceLocation Loc);
 
 public:
   explicit CGOpenMPRuntime(CodeGenModule &CGM);

@@ -155,9 +155,9 @@ static kmp_dephash_t *__kmp_dephash_create(kmp_info_t *thread,
 }
 
 static inline kmp_dephash_entry *__kmp_dephash_find(kmp_info_t *thread,
-                                             kmp_dephash_t **hash,
-                                             kmp_intptr_t addr) {
-  kmp_dephash_t * h = *hash;
+                                                    kmp_dephash_t **hash,
+                                                    kmp_intptr_t addr) {
+  kmp_dephash_t *h = *hash;
 
   if (h->nelements != 0 && h->nconflicts / h->size >= 1) {
     *hash = __kmp_dephash_extend(thread, h);
@@ -197,15 +197,16 @@ static inline kmp_dephash_entry *__kmp_dephash_find(kmp_info_t *thread,
   return entry;
 }
 
-/** return the hashmap entry for the given adress on the currently executing dependency context */
-kmp_dephash_entry * __kmpc_dephash_find(ident_t * loc_ref, kmp_int32 gtid, kmp_intptr_t addr)
-{
-    (void) loc_ref;
-    kmp_info_t * thread = __kmp_threads[gtid];
-    kmp_dephash_t ** hash = &thread->th.th_current_task->td_dephash;
-    if (*hash == NULL)
-        *hash = __kmp_dephash_create(thread, thread->th.th_current_task);
-    return __kmp_dephash_find(thread, hash, addr);
+/** return the hashmap entry for the given adress on the currently executing
+ * dependency context */
+kmp_dephash_entry *__kmpc_dephash_find(ident_t *loc_ref, kmp_int32 gtid,
+                                       kmp_intptr_t addr) {
+  (void)loc_ref;
+  kmp_info_t *thread = __kmp_threads[gtid];
+  kmp_dephash_t **hash = &thread->th.th_current_task->td_dephash;
+  if (*hash == NULL)
+    *hash = __kmp_dephash_create(thread, thread->th.th_current_task);
+  return __kmp_dephash_find(thread, hash, addr);
 }
 
 static kmp_depnode_list_t *__kmp_add_node(kmp_info_t *thread,
@@ -476,7 +477,9 @@ __kmp_process_deps(kmp_int32 gtid, kmp_depnode_t *node, kmp_dephash_t **hash,
     if (filter && dep->base_addr == 0)
       continue; // skip filtered entries
 
-    kmp_dephash_entry_t *info = dep->hashentry ? (kmp_dephash_entry_t *) dep->hashentry : __kmp_dephash_find(thread, hash, dep->base_addr);
+    kmp_dephash_entry_t *info =
+        dep->hashentry ? (kmp_dephash_entry_t *)dep->hashentry
+                       : __kmp_dephash_find(thread, hash, dep->base_addr);
     kmp_depnode_t *last_out = info->last_out;
     kmp_depnode_list_t *last_set = info->last_set;
     kmp_depnode_list_t *prev_set = info->prev_set;

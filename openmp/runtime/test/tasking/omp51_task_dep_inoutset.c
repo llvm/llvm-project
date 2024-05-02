@@ -41,6 +41,7 @@ typedef struct DEP {
   size_t addr;
   size_t len;
   unsigned char flags;
+  void * hashentry;
 } dep;
 typedef struct task {
   void** shareds;
@@ -168,9 +169,11 @@ int main()
       sdep[0].addr = (size_t)&i1;
       sdep[0].len = 0;   // not used
       sdep[0].flags = 1; // IN
+      sdep[0].hashentry = NULL;
       sdep[1].addr = (size_t)&i2;
       sdep[1].len = 0;   // not used
       sdep[1].flags = 8; // INOUTSET
+      sdep[1].hashentry = NULL;
       ptr->f_priv = t + 10; // init single first-private variable
       __kmpc_omp_task_with_deps(&loc, gtid, ptr, 2, sdep, 0, 0);
 

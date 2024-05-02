@@ -31,10 +31,12 @@ int main(void) {
       deps[0].addr = (size_t)&x;
       deps[0].len = 0;
       deps[0].flags = 2; // OUT
+      deps[0].hashentry = NULL;
 
       deps[1].addr = (size_t)&y;
       deps[1].len = 0;
       deps[1].flags = 2; // OUT
+      deps[1].hashentry = NULL;
 
       __kmpc_omp_task_with_deps(&loc, gtid, A, 2, deps, 0, 0);
 
@@ -43,10 +45,12 @@ int main(void) {
       deps[0].addr = (size_t)&x;
       deps[0].len = 0;
       deps[0].flags = 1; // IN
+      deps[0].hashentry = NULL;
 
       deps[1].addr = (size_t)&y;
       deps[1].len = 0;
       deps[1].flags = 1; // IN
+      deps[1].hashentry = NULL;
 
       __kmpc_omp_task_with_deps(&loc, gtid, B, 2, deps, 0, 0);
 

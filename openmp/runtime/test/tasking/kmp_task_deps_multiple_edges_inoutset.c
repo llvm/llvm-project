@@ -37,10 +37,12 @@ int main(void) {
       deps[0].addr = (size_t)&x;
       deps[0].len = 0;
       deps[0].flags = 8; // INOUTSET
+      deps[0].hashentry = NULL;
 
       deps[1].addr = (size_t)&y;
       deps[1].len = 0;
       deps[1].flags = 8; // INOUTSET
+      deps[1].hashentry = NULL;
 
       // A inoutset(x)
       A = __kmpc_omp_task_alloc(&loc, gtid, TIED, sizeof(kmp_task_t), 0, NULL);

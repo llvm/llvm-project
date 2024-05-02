@@ -2525,7 +2525,7 @@ typedef struct kmp_depend_info {
 #endif
     } flags;
   };
-  void * hashentry; /* kmp_dephash_entry_t * */
+  void *hashentry; /* kmp_dephash_entry_t * */
 } kmp_depend_info_t;
 
 // Internal structures to work with task dependencies:
@@ -2533,25 +2533,6 @@ struct kmp_depnode_list {
   kmp_depnode_t *node;
   kmp_depnode_list_t *next;
 };
-
-# if 0
-typedef struct  kmp_dependences_s
-{
-    // using more than 65,536 dependences isnt a good idea anyway
-    // TODO : decrease to 'uint8_t' ? >256 deps/task also sounds a bit suspicious
-    uint16_t ndeps;
-    uint16_t nout;
-    uint16_t nin;
-    uint16_t nmtxinoutset;
-    uint16_t ninoutset;
-    uint16_t ndepobj;
-
-    // followed in order by 'ndeps' x 'uintptr_t' with
-    //  'nout' of type 'out'
-    //  'nin' of type 'in'
-    //  [...]
-}               kmp_dependences_t;
-# endif
 
 // Max number of mutexinoutset dependencies per node
 #define MAX_MTX_DEPS 4
@@ -4287,7 +4268,8 @@ KMP_EXPORT kmp_int32 __kmpc_omp_task_with_deps(
     kmp_depend_info_t *noalias_dep_list);
 
 KMP_EXPORT kmp_base_depnode_t *__kmpc_task_get_depnode(kmp_task_t *task);
-KMP_EXPORT kmp_dephash_entry * __kmpc_dephash_find(ident_t * loc_ref, kmp_int32 gtid, kmp_intptr_t addr);
+KMP_EXPORT kmp_dephash_entry *
+__kmpc_dephash_find(ident_t *loc_ref, kmp_int32 gtid, kmp_intptr_t addr);
 
 KMP_EXPORT kmp_depnode_list_t *__kmpc_task_get_successors(kmp_task_t *task);
 

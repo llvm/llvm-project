@@ -9,6 +9,7 @@ typedef struct DEP {
   size_t addr;
   size_t len;
   unsigned char flags;
+  void * hashentry;
 } dep;
 
 typedef struct task {

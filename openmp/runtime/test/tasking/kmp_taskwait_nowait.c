@@ -12,6 +12,7 @@ typedef struct DEP {
   size_t addr;
   size_t len;
   unsigned char flags;
+  void * hashentry;
 } _dep;
 typedef struct ID {
   int reserved_1;
@@ -74,8 +75,10 @@ int main()
                                             sizeof(task_t), 0, NULL);
         sdep[0].addr = (size_t)&i2;
         sdep[0].flags = 1; // 1-in, 2-out, 3-inout, 4-mtx, 8-inoutset
+        sdep[0].hashentry = NULL;
         sdep[1].addr = (size_t)&i1;
         sdep[1].flags = 1; // in
+        sdep[1].hashentry = NULL;
         __kmpc_omp_task_with_deps(&loc, gtid, ptr, 2, sdep, 0, NULL);
       }
       printf("single done\n");
