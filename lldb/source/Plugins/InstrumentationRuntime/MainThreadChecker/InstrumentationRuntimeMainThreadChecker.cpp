@@ -9,7 +9,6 @@
 #include "InstrumentationRuntimeMainThreadChecker.h"
 
 #include "Plugins/Process/Utility/HistoryThread.h"
-#include "lldb/API/SBLanguages.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -30,6 +29,7 @@
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/NameLookup.h"
 #include "swift/ClangImporter/ClangImporter.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #endif // LLDB_ENABLE_SWIFT
 
 #include <memory>
@@ -227,7 +227,7 @@ InstrumentationRuntimeMainThreadChecker::RetrieveReportData(
 
 #ifdef LLDB_ENABLE_SWIFT
   if (responsible_frame) {
-    if (responsible_frame->GetLanguage().name == eLanguageNameSwift) {
+    if (responsible_frame->GetLanguage().name == llvm::dwarf::DW_LNAME_Swift) {
       std::string swiftApiName =
           TranslateObjCNameToSwiftName(className, selector, responsible_frame);
       if (swiftApiName != "")

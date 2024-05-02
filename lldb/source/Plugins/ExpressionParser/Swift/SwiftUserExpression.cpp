@@ -24,7 +24,6 @@
 #endif
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
-#include "lldb/API/SBLanguages.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionParser.h"
@@ -45,6 +44,7 @@
 #include "swift/AST/ASTContext.h"
 #include "swift/Demangling/Demangler.h"
 #include "swift/AST/GenericEnvironment.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 
 #include <map>
 #include <string>
@@ -98,7 +98,8 @@ void SwiftUserExpression::DidFinishExecuting() {
 static bool isSwiftLanguageSymbolContext(const SwiftUserExpression &expr,
                                          const SymbolContext &sym_ctx) {
   if (sym_ctx.comp_unit &&
-      (!expr.Language() || expr.Language().name == eLanguageNameSwift)) {
+      (!expr.Language() ||
+       expr.Language().name == llvm::dwarf::DW_LNAME_Swift)) {
     if (sym_ctx.comp_unit->GetLanguage() == lldb::eLanguageTypeSwift)
       return true;
   } else if (sym_ctx.symbol && !expr.Language()) {

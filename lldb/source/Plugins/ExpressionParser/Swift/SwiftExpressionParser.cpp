@@ -22,7 +22,6 @@
 #include "SwiftUserExpression.h"
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
-#include "lldb/API/SBLanguages.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -47,6 +46,7 @@
 #include "llvm-c/Analysis.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -101,7 +101,7 @@ SwiftExpressionParser::SwiftExpressionParser(
       m_expr(expr), m_swift_ast_ctx(swift_ast_ctx), m_exe_scope(exe_scope),
       m_local_variables(std::move(local_variables)),
       m_options(options) {
-  assert(expr.Language().name == eLanguageNameSwift);
+  assert(expr.Language().name == llvm::dwarf::DW_LNAME_Swift);
 
   // TODO: This code is copied from ClangExpressionParser.cpp.
   // Factor this out into common code.
