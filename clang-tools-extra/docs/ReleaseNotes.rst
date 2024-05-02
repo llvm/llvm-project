@@ -151,6 +151,11 @@ New checks
   Enforces consistent style for enumerators' initialization, covering three
   styles: none, first only, or all initialized explicitly.
 
+- New :doc:`readability-unnecessary-external-linkage
+  <clang-tidy/checks/readability/unnecessary-external-linkage>` check.
+
+  Detects variable and function can be marked as static.
+
 - New :doc:`readability-math-missing-parentheses
   <clang-tidy/checks/readability/math-missing-parentheses>` check.
 

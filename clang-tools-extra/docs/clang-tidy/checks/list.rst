@@ -390,6 +390,7 @@ Clang-Tidy Checks
    :doc:`readability-string-compare <readability/string-compare>`, "Yes"
    :doc:`readability-suspicious-call-argument <readability/suspicious-call-argument>`,
    :doc:`readability-uniqueptr-delete-release <readability/uniqueptr-delete-release>`, "Yes"
+   :doc:`readability-unnecessary-external-linkage <readability/unnecessary-external-linkage>`,
    :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
    :doc:`readability-use-anyofallof <readability/use-anyofallof>`,
    :doc:`readability-use-std-min-max <readability/use-std-min-max>`, "Yes"
