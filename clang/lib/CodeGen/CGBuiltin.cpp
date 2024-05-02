@@ -2661,7 +2661,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (OP.hasMathErrnoOverride())
       ErrnoOverriden = OP.getMathErrnoOverride();
   }
-  // True if 'atttibute__((optnone)) is used. This attibute overrides
+  // True if 'attribute__((optnone))' is used. This attribute overrides
   // fast-math which implies math-errno.
   bool OptNone = CurFuncDecl && CurFuncDecl->hasAttr<OptimizeNoneAttr>();
 
