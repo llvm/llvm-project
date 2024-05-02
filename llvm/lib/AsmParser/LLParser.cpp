@@ -4216,7 +4216,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
   case lltok::kw_extractelement: {
     unsigned Opc = Lex.getUIntVal();
     SmallVector<Constant*, 16> Elts;
-    bool InBounds = false;
+    bool InBounds = false, HasNUSW = false, HasNUW = false;
     bool HasInRange = false;
     APSInt InRangeStart;
     APSInt InRangeEnd;
@@ -4224,7 +4224,17 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
     Lex.Lex();
 
     if (Opc == Instruction::GetElementPtr) {
-      InBounds = EatIfPresent(lltok::kw_inbounds);
+      while (true) {
+        if (EatIfPresent(lltok::kw_inbounds))
+          InBounds = true;
+        else if (EatIfPresent(lltok::kw_nusw))
+          HasNUSW = true;
+        else if (EatIfPresent(lltok::kw_nuw))
+          HasNUW = true;
+        else
+          break;
+      }
+
       if (EatIfPresent(lltok::kw_inrange)) {
         if (parseToken(lltok::lparen, "expected '('"))
           return true;
@@ -4303,8 +4313,8 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
       if (!GetElementPtrInst::getIndexedType(Ty, Indices))
         return error(ID.Loc, "invalid getelementptr indices");
 
-      ID.ConstantVal = ConstantExpr::getGetElementPtr(Ty, Elts[0], Indices,
-                                                      InBounds, InRange);
+      ID.ConstantVal = ConstantExpr::getGetElementPtr(
+          Ty, Elts[0], Indices, InBounds, HasNUSW, HasNUW, InRange);
     } else if (Opc == Instruction::ShuffleVector) {
       if (Elts.size() != 3)
         return error(ID.Loc, "expected three operands to shufflevector");

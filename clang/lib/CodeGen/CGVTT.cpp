@@ -87,8 +87,10 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
      unsigned Offset = ComponentSize * AddressPoint.AddressPointIndex;
      llvm::ConstantRange InRange(llvm::APInt(32, -Offset, true),
                                  llvm::APInt(32, VTableSize - Offset, true));
+     // TODO(gep_nowrap): Set nuw as well.
      llvm::Constant *Init = llvm::ConstantExpr::getGetElementPtr(
-         VTable->getValueType(), VTable, Idxs, /*InBounds=*/true, InRange);
+         VTable->getValueType(), VTable, Idxs, /*InBounds=*/true, /*NUSW=*/true,
+         /*NUW=*/false, InRange);
 
      VTTComponents.push_back(Init);
   }

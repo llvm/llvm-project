@@ -1668,6 +1668,13 @@ static uint64_t getOptimizationFlags(const Value *V) {
       Flags |= 1 << bitc::TIO_NO_SIGNED_WRAP;
     if (TI->hasNoUnsignedWrap())
       Flags |= 1 << bitc::TIO_NO_UNSIGNED_WRAP;
+  } else if (const auto *GEP = dyn_cast<GEPOperator>(V)) {
+    if (GEP->isInBounds())
+      Flags |= 1 << bitc::GEP_INBOUNDS;
+    if (GEP->hasNoUnsignedSignedWrap())
+      Flags |= 1 << bitc::GEP_NUSW;
+    if (GEP->hasNoUnsignedWrap())
+      Flags |= 1 << bitc::GEP_NUW;
   }
 
   return Flags;
@@ -2779,12 +2786,11 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
         Code = bitc::CST_CODE_CE_GEP;
         const auto *GO = cast<GEPOperator>(C);
         Record.push_back(VE.getTypeID(GO->getSourceElementType()));
+        Record.push_back(getOptimizationFlags(GO));
         if (std::optional<ConstantRange> Range = GO->getInRange()) {
           Code = bitc::CST_CODE_CE_GEP_WITH_INRANGE;
-          Record.push_back(GO->isInBounds());
           emitConstantRange(Record, *Range);
-        } else if (GO->isInBounds())
-          Code = bitc::CST_CODE_CE_INBOUNDS_GEP;
+        }
         for (unsigned i = 0, e = CE->getNumOperands(); i != e; ++i) {
           Record.push_back(VE.getTypeID(C->getOperand(i)->getType()));
           Record.push_back(VE.getValueID(C->getOperand(i)));
@@ -2973,14 +2979,7 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     Code = bitc::FUNC_CODE_INST_GEP;
     AbbrevToUse = FUNCTION_INST_GEP_ABBREV;
     auto &GEPInst = cast<GetElementPtrInst>(I);
-    uint64_t Flags = 0;
-    if (GEPInst.isInBounds())
-      Flags |= 1 << bitc::GEP_INBOUNDS;
-    if (GEPInst.hasNoUnsignedSignedWrap())
-      Flags |= 1 << bitc::GEP_NUSW;
-    if (GEPInst.hasNoUnsignedWrap())
-      Flags |= 1 << bitc::GEP_NUW;
-    Vals.push_back(Flags);
+    Vals.push_back(getOptimizationFlags(&I));
     Vals.push_back(VE.getTypeID(GEPInst.getSourceElementType()));
     for (unsigned i = 0, e = I.getNumOperands(); i != e; ++i)
       pushValueAndType(I.getOperand(i), InstID, Vals);

@@ -359,3 +359,39 @@ define ptr @gep_nuw_nusw_inbounds(ptr %p, i64 %idx) {
   %gep = getelementptr nuw nusw inbounds i8, ptr %p, i64 %idx
   ret ptr %gep
 }
+
+define ptr @const_gep_nuw(ptr %p, i64 %idx) {
+; CHECK: ret ptr getelementptr nuw (i8, ptr @addr, i64 100)
+  ret ptr getelementptr nuw (i8, ptr @addr, i64 100)
+}
+
+define ptr @const_gep_inbounds_nuw(ptr %p, i64 %idx) {
+; CHECK: ret ptr getelementptr inbounds nuw (i8, ptr @addr, i64 100)
+  ret ptr getelementptr inbounds nuw (i8, ptr @addr, i64 100)
+}
+
+define ptr @const_gep_nusw(ptr %p, i64 %idx) {
+; CHECK: ret ptr getelementptr nusw (i8, ptr @addr, i64 100)
+  ret ptr getelementptr nusw (i8, ptr @addr, i64 100)
+}
+
+; inbounds implies nusw, so the flag is not printed back.
+define ptr @const_gep_inbounds_nusw(ptr %p, i64 %idx) {
+; CHECK: ret ptr getelementptr inbounds (i8, ptr @addr, i64 100)
+  ret ptr getelementptr inbounds nusw (i8, ptr @addr, i64 100)
+}
+
+define ptr @const_gep_nusw_nuw(ptr %p, i64 %idx) {
+; CHECK: ret ptr getelementptr nusw nuw (i8, ptr @addr, i64 100)
+  ret ptr getelementptr nusw nuw (i8, ptr @addr, i64 100)
+}
+
+define ptr @const_gep_inbounds_nusw_nuw(ptr %p, i64 %idx) {
+; CHECK: ret ptr getelementptr inbounds nuw (i8, ptr @addr, i64 100)
+  ret ptr getelementptr inbounds nusw nuw (i8, ptr @addr, i64 100)
+}
+
+define ptr @const_gep_nuw_nusw_inbounds(ptr %p, i64 %idx) {
+; CHECK: ret ptr getelementptr inbounds nuw (i8, ptr @addr, i64 100)
+  ret ptr getelementptr nuw nusw inbounds (i8, ptr @addr, i64 100)
+}

@@ -11351,6 +11351,10 @@ These rules are based on the assumption that no allocated object may cross
 the unsigned address space boundary, and no allocated object may be larger
 than half the pointer index type space.
 
+If ``inbounds`` is present on a ``getelementptr`` instruction, the ``nusw``
+attribute will be automatically set as well. For this reason, the ``nusw``
+will also not be printed in textual IR if ``inbounds`` is already present.
+
 If the ``inrange(Start, End)`` attribute is present, loading from or
 storing to any pointer derived from the ``getelementptr`` has undefined
 behavior if the load or store would access memory outside the half-open range

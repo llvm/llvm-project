@@ -1568,7 +1568,8 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
     assert(SrcTy || (Ops[0]->getType() == getOperand(0)->getType()));
     return ConstantExpr::getGetElementPtr(
         SrcTy ? SrcTy : GEPO->getSourceElementType(), Ops[0], Ops.slice(1),
-        GEPO->isInBounds(), GEPO->getInRange(), OnlyIfReducedTy);
+        GEPO->isInBounds(), GEPO->hasNoUnsignedSignedWrap(),
+        GEPO->hasNoUnsignedWrap(), GEPO->getInRange(), OnlyIfReducedTy);
   }
   case Instruction::ICmp:
   case Instruction::FCmp:
@@ -2349,6 +2350,7 @@ Constant *ConstantExpr::getCompare(unsigned short Predicate, Constant *C1,
 
 Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
                                          ArrayRef<Value *> Idxs, bool InBounds,
+                                         bool NUSW, bool NUW,
                                          std::optional<ConstantRange> InRange,
                                          Type *OnlyIfReducedTy) {
   assert(Ty && "Must specify element type");
@@ -2390,7 +2392,14 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
     ArgVec.push_back(Idx);
   }
 
-  unsigned SubClassOptionalData = InBounds ? GEPOperator::IsInBounds : 0;
+  unsigned SubClassOptionalData = 0;
+  if (InBounds)
+    SubClassOptionalData |=
+        GEPOperator::IsInBounds | GEPOperator::HasNoUnsignedSignedWrap;
+  if (NUSW)
+    SubClassOptionalData |= GEPOperator::HasNoUnsignedSignedWrap;
+  if (NUW)
+    SubClassOptionalData |= GEPOperator::HasNoUnsignedWrap;
   const ConstantExprKeyType Key(Instruction::GetElementPtr, ArgVec, 0,
                                 SubClassOptionalData, std::nullopt, Ty,
                                 InRange);
