@@ -869,7 +869,7 @@ def FeatureStdExtSscounterenw
 
 def FeatureStdExtSmstateen
     : RISCVExtension<"smstateen", 1, 0,
-                     "'Smstateen' (Machine-mode view of the state-enable extension.)">;
+                     "'Smstateen' (Machine-mode view of the state-enable extension)">;
 def FeatureStdExtSsstateen
     : RISCVExtension<"ssstateen", 1, 0,
                      "'Ssstateen' (Supervisor-mode view of the state-enable extension)">;
