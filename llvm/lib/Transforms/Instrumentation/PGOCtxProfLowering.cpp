@@ -9,6 +9,7 @@
 
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -59,7 +60,8 @@ class CtxInstrumentationLowerer final {
 
 public:
   CtxInstrumentationLowerer(Module &M, ModuleAnalysisManager &MAM);
-  void lowerFunction(Function &F);
+  // return true if lowering happened (i.e. a change was made)
+  bool lowerFunction(Function &F);
 };
 
 std::pair<uint32_t, uint32_t> getNrCountersAndCallsites(const Function &F) {
@@ -169,14 +171,15 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
 PreservedAnalyses PGOCtxProfLoweringPass::run(Module &M,
                                               ModuleAnalysisManager &MAM) {
   CtxInstrumentationLowerer Lowerer(M, MAM);
+  bool Changed = false;
   for (auto &F : M)
-    Lowerer.lowerFunction(F);
-  return PreservedAnalyses::none();
+    Changed |= Lowerer.lowerFunction(F);
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
-void CtxInstrumentationLowerer::lowerFunction(Function &F) {
+bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
   if (F.isDeclaration())
-    return;
+    return false;
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
@@ -259,7 +262,7 @@ void CtxInstrumentationLowerer::lowerFunction(Function &F) {
       return OptimizationRemarkMissed(DEBUG_TYPE, "Skip", &F)
              << "Function doesn't have instrumentation, skipping";
     });
-    return;
+    return false;
   }
 
   bool ContextWasReleased = false;
@@ -322,4 +325,5 @@ void CtxInstrumentationLowerer::lowerFunction(Function &F) {
         "[ctx_prof] An entrypoint was instrumented but it has no `ret` "
         "instructions above which to release the context: " +
         F.getName());
+  return true;
 }
