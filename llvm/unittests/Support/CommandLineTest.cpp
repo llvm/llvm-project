@@ -2329,4 +2329,33 @@ TEST(CommandLineTest, HelpWithEmptyCategory) {
   cl::ResetCommandLineParser();
 }
 
+class ValueStrTestParser : public cl::parser<const char *> {
+public:
+  ValueStrTestParser(cl::Option &O) : cl::parser<const char *>(O) {}
+
+  void initialize() {
+    cl::parser<const char *>::initialize();
+
+    this->addLiteralOption("default", "", "");
+    this->addLiteralOption("first_option", "1", "");
+    this->addLiteralOption("other_option", "2", "");
+    this->addLiteralOption("expected_option", "3", "");
+    this->addLiteralOption("another_option", "4", "");
+  }
+};
+
+TEST(CommandLineTest, ValueStr) {
+  cl::ResetCommandLineParser();
+
+  cl::opt<const char *, false, ValueStrTestParser> Option("option",
+                                                          cl::init("default"));
+  const char *args[] = {"prog", "-option=expected_option"};
+
+  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args), args, StringRef(),
+                                          &llvm::nulls()));
+
+  EXPECT_EQ(Option.ArgStr, "option");
+  EXPECT_EQ(Option.ValueStr, "expected_option");
+}
+
 } // anonymous namespace
