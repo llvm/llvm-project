@@ -191,10 +191,12 @@ void splitCondBranches(IRRewriter &rewriter, FunctionOpInterface function) {
                condBranch.getTrueDestOperands());
     insertJump(loc, newFalseBranch, condBranch.getFalseDest(),
                condBranch.getFalseDestOperands());
-    condBranch.getFalseDestOperandsMutable().clear();
-    condBranch.getTrueDestOperandsMutable().clear();
-    condBranch.setSuccessor(newTrueBranch, 0);
-    condBranch.setSuccessor(newFalseBranch, 1);
+    rewriter.modifyOpInPlace(condBranch, [&] {
+      condBranch.getFalseDestOperandsMutable().clear();
+      condBranch.getTrueDestOperandsMutable().clear();
+      condBranch.setSuccessor(newTrueBranch, 0);
+      condBranch.setSuccessor(newFalseBranch, 1);
+    });
   }
 }
 
@@ -211,7 +213,7 @@ void insertCopiesAtBranches(IRRewriter &rewriter,
       if (isValidSMETileVectorType(operand.get().getType())) {
         auto copy =
             rewriter.create<CopyTileOp>(terminator->getLoc(), operand.get());
-        operand.assign(copy);
+        rewriter.modifyOpInPlace(terminator, [&] { operand.assign(copy); });
       }
     }
   }
@@ -494,7 +496,8 @@ LogicalResult assignTileIdsAndResolveTrivialConflicts(
         if (auto tileOp = dyn_cast<ArmSMETileOpInterface>(user)) {
           // Ensure ArmSME ops that don't produce a value still get a tile ID.
           if (!hasTileResult(tileOp))
-            tileOp.setTileId(tileIdAttr);
+            rewriter.modifyOpInPlace(tileOp,
+                                     [&] { tileOp.setTileId(tileIdAttr); });
         }
       }
       auto copyOp = value.getDefiningOp<CopyTileOp>();
@@ -502,7 +505,7 @@ LogicalResult assignTileIdsAndResolveTrivialConflicts(
         // Fold redundant copies.
         rewriter.replaceAllUsesWith(copyOp, copyOp.getTile());
       } else if (auto tileOp = value.getDefiningOp<ArmSMETileOpInterface>()) {
-        tileOp.setTileId(tileIdAttr);
+        rewriter.modifyOpInPlace(tileOp, [&] { tileOp.setTileId(tileIdAttr); });
         // Rectify operand tile IDs with result tile IDs.
         OpOperand *tileOperand = getTileOpOperand(tileOp);
         if (!tileOperand || isAllocatedToSameTile(tileOperand->get()))
@@ -515,12 +518,15 @@ LogicalResult assignTileIdsAndResolveTrivialConflicts(
         // Cloning prevents a move/spill (though may require recomputation).
         rewriter.setInsertionPoint(tileOp);
         auto clonedOp = operandTileOp.clone();
-        clonedOp.setTileId(tileOp.getTileId());
+        rewriter.modifyOpInPlace(
+            clonedOp, [&] { clonedOp.setTileId(tileOp.getTileId()); });
         rewriter.insert(clonedOp);
-        if (copyOp)
+        if (copyOp) {
           rewriter.replaceAllUsesWith(copyOp, clonedOp->getResult(0));
-        else
-          tileOperand->assign(clonedOp->getResult(0));
+        } else {
+          rewriter.modifyOpInPlace(
+              tileOp, [&] { tileOperand->assign(clonedOp->getResult(0)); });
+        }
       } else if (auto blockArg = dyn_cast<BlockArgument>(value)) {
         // Validate block arguments.
         bool tileMismatch = false;
