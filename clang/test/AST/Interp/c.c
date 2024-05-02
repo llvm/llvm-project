@@ -263,3 +263,13 @@ const int *p = &b;
 const __int128 K = (__int128)(int*)0;
 const unsigned __int128 KU = (unsigned __int128)(int*)0;
 #endif
+
+
+int test3(void) {
+  int a[2];
+  a[0] = test3; // all-error {{incompatible pointer to integer conversion assigning to 'int' from 'int (void)'}}
+  return 0;
+}
+/// This tests that we have full type info, even for values we cannot read.
+int dummyarray[5];
+_Static_assert(&dummyarray[0] < &dummyarray[1], ""); // pedantic-warning {{GNU extension}}

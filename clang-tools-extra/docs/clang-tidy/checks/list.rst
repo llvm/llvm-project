@@ -120,7 +120,7 @@ Clang-Tidy Checks
    :doc:`bugprone-posix-return <bugprone/posix-return>`, "Yes"
    :doc:`bugprone-redundant-branch-condition <bugprone/redundant-branch-condition>`, "Yes"
    :doc:`bugprone-reserved-identifier <bugprone/reserved-identifier>`, "Yes"
-   :doc:`bugprone-return-const-ref-from-parameter <bugprone/return-const-ref-from-parameter>`
+   :doc:`bugprone-return-const-ref-from-parameter <bugprone/return-const-ref-from-parameter>`,
    :doc:`bugprone-shared-ptr-array-mismatch <bugprone/shared-ptr-array-mismatch>`, "Yes"
    :doc:`bugprone-signal-handler <bugprone/signal-handler>`,
    :doc:`bugprone-signed-char-misuse <bugprone/signed-char-misuse>`,
@@ -276,6 +276,7 @@ Clang-Tidy Checks
    :doc:`modernize-macro-to-enum <modernize/macro-to-enum>`, "Yes"
    :doc:`modernize-make-shared <modernize/make-shared>`, "Yes"
    :doc:`modernize-make-unique <modernize/make-unique>`, "Yes"
+   :doc:`modernize-min-max-use-initializer-list <modernize/min-max-use-initializer-list>`, "Yes"
    :doc:`modernize-pass-by-value <modernize/pass-by-value>`, "Yes"
    :doc:`modernize-raw-string-literal <modernize/raw-string-literal>`, "Yes"
    :doc:`modernize-redundant-void-arg <modernize/redundant-void-arg>`, "Yes"
@@ -363,6 +364,7 @@ Clang-Tidy Checks
    :doc:`readability-isolate-declaration <readability/isolate-declaration>`, "Yes"
    :doc:`readability-magic-numbers <readability/magic-numbers>`,
    :doc:`readability-make-member-function-const <readability/make-member-function-const>`, "Yes"
+   :doc:`readability-math-missing-parentheses <readability/math-missing-parentheses>`, "Yes"
    :doc:`readability-misleading-indentation <readability/misleading-indentation>`,
    :doc:`readability-misplaced-array-index <readability/misplaced-array-index>`, "Yes"
    :doc:`readability-named-parameter <readability/named-parameter>`, "Yes"
