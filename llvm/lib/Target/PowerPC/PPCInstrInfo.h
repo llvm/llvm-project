@@ -625,7 +625,7 @@ public:
                       const MachineRegisterInfo *MRI) const {
     return isSignOrZeroExtended(Reg, 0, MRI).second;
   }
-  void PromoteSignExtendedInstr32To64(const Register &Reg,
+  void PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
                                       MachineRegisterInfo *MRI,
                                       unsigned BinOpDepth,
                                       LiveVariables *LV) const;

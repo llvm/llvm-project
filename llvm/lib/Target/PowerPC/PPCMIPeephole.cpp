@@ -1058,7 +1058,7 @@ bool PPCMIPeephole::simplifyCode() {
           // of 'std', and 'lwz' instead of 'ld' when spilling, since the
           // register class is 32-bits. Consequently, the high 32-bit
           // information will be lost.
-          TII->PromoteSignExtendedInstr32To64(NarrowReg, MRI, 0, LV);
+          TII->PromoteInstr32To64ForEmliEXTSW(NarrowReg, MRI, 0, LV);
 
           LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
           Register TmpReg =

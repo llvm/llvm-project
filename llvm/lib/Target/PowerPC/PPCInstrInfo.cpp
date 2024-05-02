@@ -5235,9 +5235,9 @@ bool PPCInstrInfo::isTOCSaveMI(const MachineInstr &MI) const {
 // (e.g. AND) to avoid excessive cost.
 const unsigned MAX_BINOP_DEPTH = 1;
 
-// The `PromoteSignExtendedInstr32To64` function is recursive. The parameter
+// The `PromoteInstr32To64ForEmliEXTSW` function is recursive. The parameter
 // BinOpDepth  does not count all of the recursions. The parameter BinOpDepth is
-// incremented  only when `PromoteSignExtendedInstr32To64` calls itself more
+// incremented  only when `PromoteInstr32To64ForEmliEXTSW` calls itself more
 // than once. This is done to prevent exponential recursion. The function will
 // promote the instruction which defines the register `Reg` in the parameter
 // from a 32-bit to a 64-bit instruction if needed. Additionally, all the used
@@ -5249,7 +5249,7 @@ const unsigned MAX_BINOP_DEPTH = 1;
 // defined register may be used by other instructions; in such cases,
 //  we need to extract the 32-bit register used by other
 //  non-promoted 32-bit instructions from the promoted 64-bit register.
-void PPCInstrInfo::PromoteSignExtendedInstr32To64(const Register &Reg,
+void PPCInstrInfo::PromoteInstr32To64ForEmliEXTSW(const Register &Reg,
                                                   MachineRegisterInfo *MRI,
                                                   unsigned BinOpDepth,
                                                   LiveVariables *LV) const {
@@ -5258,22 +5258,27 @@ void PPCInstrInfo::PromoteSignExtendedInstr32To64(const Register &Reg,
     return;
 
   unsigned Opcode = MI->getOpcode();
-  bool IsPromotedInstr = false;
+  bool IsNonSignedExtInstrPromoted = false;
   int NewOpcode = -1;
 
-  auto SetNewOpcode = [&](int NewOpc) {
-    if (!IsPromotedInstr) {
+  auto CheckAndSetNewOpcode = [&](int NewOpc) {
+    if (!IsNonSignedExtInstrPromoted) {
       NewOpcode = NewOpc;
-      IsPromotedInstr = true;
+      IsNonSignedExtInstrPromoted = true;
     }
+  };
+
+  auto SetNewOpcode = [&](int NewOpc) {
+    NewOpcode = NewOpc;
+    IsNonSignedExtInstrPromoted = true;
   };
 
   switch (Opcode) {
   case PPC::OR:
-    SetNewOpcode(PPC::OR8);
+    CheckAndSetNewOpcode(PPC::OR8);
     [[fallthrough]];
   case PPC::ISEL:
-    SetNewOpcode(PPC::ISEL8);
+    CheckAndSetNewOpcode(PPC::ISEL8);
     [[fallthrough]];
   case PPC::OR8:
   case PPC::PHI:
@@ -5287,10 +5292,10 @@ void PPCInstrInfo::PromoteSignExtendedInstr32To64(const Register &Reg,
       for (unsigned I = 1; I < OperandEnd; I += OperandStride) {
         assert(MI->getOperand(I).isReg() && "Operand must be register");
         Register SrcReg = MI->getOperand(I).getReg();
-        PromoteSignExtendedInstr32To64(SrcReg, MRI, BinOpDepth + 1, LV);
+        PromoteInstr32To64ForEmliEXTSW(SrcReg, MRI, BinOpDepth + 1, LV);
       }
 
-      if (!IsPromotedInstr)
+      if (!IsNonSignedExtInstrPromoted)
         return;
     }
     break;
@@ -5298,7 +5303,7 @@ void PPCInstrInfo::PromoteSignExtendedInstr32To64(const Register &Reg,
     Register SrcReg = MI->getOperand(1).getReg();
     const MachineFunction *MF = MI->getMF();
     if (!MF->getSubtarget<PPCSubtarget>().isSVR4ABI()) {
-      PromoteSignExtendedInstr32To64(SrcReg, MRI, BinOpDepth, LV);
+      PromoteInstr32To64ForEmliEXTSW(SrcReg, MRI, BinOpDepth, LV);
       return;
     }
     // From here on everything is SVR4ABI
@@ -5306,46 +5311,46 @@ void PPCInstrInfo::PromoteSignExtendedInstr32To64(const Register &Reg,
       return;
 
     if (SrcReg != PPC::X3) {
-      PromoteSignExtendedInstr32To64(SrcReg, MRI, BinOpDepth, LV);
+      PromoteInstr32To64ForEmliEXTSW(SrcReg, MRI, BinOpDepth, LV);
       return;
     }
   }
     return;
   case PPC::ORI:
-    SetNewOpcode(PPC::ORI8);
+    CheckAndSetNewOpcode(PPC::ORI8);
     [[fallthrough]];
   case PPC::XORI:
-    SetNewOpcode(PPC::XORI8);
+    CheckAndSetNewOpcode(PPC::XORI8);
     [[fallthrough]];
   case PPC::ORIS:
-    SetNewOpcode(PPC::ORIS8);
+    CheckAndSetNewOpcode(PPC::ORIS8);
     [[fallthrough]];
   case PPC::XORIS:
-    SetNewOpcode(PPC::XORIS8);
+    CheckAndSetNewOpcode(PPC::XORIS8);
     [[fallthrough]];
   case PPC::ORI8:
   case PPC::XORI8:
   case PPC::ORIS8:
   case PPC::XORIS8: {
     Register SrcReg = MI->getOperand(1).getReg();
-    PromoteSignExtendedInstr32To64(SrcReg, MRI, BinOpDepth, LV);
+    PromoteInstr32To64ForEmliEXTSW(SrcReg, MRI, BinOpDepth, LV);
     // If Opcode is PPC::ORI8, PPC::XORI8, PPC::ORIS8, or PPC::XORIS8,
     // the instruction does not need to be promoted.
-    if (!IsPromotedInstr)
+    if (!IsNonSignedExtInstrPromoted)
       return;
     break;
   }
   case PPC::AND:
-    SetNewOpcode(PPC::AND8);
+    CheckAndSetNewOpcode(PPC::AND8);
     [[fallthrough]];
   case PPC::AND8: {
     if (BinOpDepth < MAX_BINOP_DEPTH) {
       Register SrcReg1 = MI->getOperand(1).getReg();
-      PromoteSignExtendedInstr32To64(SrcReg1, MRI, BinOpDepth, LV);
+      PromoteInstr32To64ForEmliEXTSW(SrcReg1, MRI, BinOpDepth, LV);
       Register SrcReg2 = MI->getOperand(2).getReg();
-      PromoteSignExtendedInstr32To64(SrcReg2, MRI, BinOpDepth, LV);
+      PromoteInstr32To64ForEmliEXTSW(SrcReg2, MRI, BinOpDepth, LV);
       // If Opcode is PPC::AND8, the instruction does not need to be promoted.
-      if (!IsPromotedInstr)
+      if (!IsNonSignedExtInstrPromoted)
         return;
     }
     break;
@@ -5376,14 +5381,14 @@ void PPCInstrInfo::PromoteSignExtendedInstr32To64(const Register &Reg,
       MI->getMF()->getSubtarget<PPCSubtarget>().getInstrInfo();
   if ((definedBySignExtendingOp(Reg, MRI) && !TII->isZExt32To64(Opcode) &&
        !isOpZeroOfSubwordPreincLoad(Opcode)) ||
-      IsPromotedInstr) {
+      IsNonSignedExtInstrPromoted) {
 
     const TargetRegisterClass *RC = MRI->getRegClass(Reg);
 
     if (RC == &PPC::G8RCRegClass || RC == &PPC::G8RC_and_G8RC_NOX0RegClass)
       return;
 
-    if (!IsPromotedInstr)
+    if (!IsNonSignedExtInstrPromoted)
       NewOpcode = PPC::get64BitInstrFromSignedExt32BitInstr(Opcode);
 
     assert(NewOpcode != -1 &&
