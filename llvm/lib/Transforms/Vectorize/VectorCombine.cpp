@@ -1762,8 +1762,10 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
         }))
       return false;
 
-    // Check the operator is one that we support.
-    if (isa<BinaryOperator>(Item[0].first)) {
+    // Check the operator is one that we support. We exclude div/rem in case
+    // they hit UB from poison lanes.
+    if (isa<BinaryOperator>(Item[0].first) &&
+        !cast<BinaryOperator>(Item[0].first)->isIntDivRem()) {
       Worklist.push_back(GenerateInstLaneVectorFromOperand(Item, 0));
       Worklist.push_back(GenerateInstLaneVectorFromOperand(Item, 1));
     } else if (isa<UnaryOperator>(Item[0].first)) {

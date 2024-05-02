@@ -486,6 +486,28 @@ define <8 x i8> @intrinsics_different(<8 x i8> %a, <8 x i8> %b) {
   ret <8 x i8> %r
 }
 
+; div and rem are currently excluded.
+define <8 x i8> @div(<8 x i8> %a, <8 x i8> %b) {
+; CHECK-LABEL: @div(
+; CHECK-NEXT:    [[AB:%.*]] = shufflevector <8 x i8> [[A:%.*]], <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[AT:%.*]] = shufflevector <8 x i8> [[A]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+; CHECK-NEXT:    [[BB:%.*]] = shufflevector <8 x i8> [[B:%.*]], <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[BT:%.*]] = shufflevector <8 x i8> [[B]], <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+; CHECK-NEXT:    [[ABT:%.*]] = udiv <4 x i8> [[AT]], [[BT]]
+; CHECK-NEXT:    [[ABB:%.*]] = udiv <4 x i8> [[AB]], [[BB]]
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i8> [[ABT]], <4 x i8> [[ABB]], <8 x i32> <i32 7, i32 poison, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    ret <8 x i8> [[R]]
+;
+  %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %at = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+  %bb = shufflevector <8 x i8> %b, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %bt = shufflevector <8 x i8> %b, <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+  %abt = udiv <4 x i8> %at, %bt
+  %abb = udiv <4 x i8> %ab, %bb
+  %r = shufflevector <4 x i8> %abt, <4 x i8> %abb, <8 x i32> <i32 7, i32 poison, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <8 x i8> %r
+}
+
 define void @v8f64interleave(i64 %0, ptr %1, ptr %x, double %z) {
 ; CHECK-LABEL: @v8f64interleave(
 ; CHECK-NEXT:  entry:
