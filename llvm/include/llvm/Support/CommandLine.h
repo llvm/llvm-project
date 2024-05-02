@@ -865,6 +865,7 @@ public:
 
     for (size_t i = 0, e = Values.size(); i != e; ++i)
       if (Values[i].Name == ArgVal) {
+        O.setValueStr(Values[i].Name);
         V = Values[i].V.getValue();
         return false;
       }
