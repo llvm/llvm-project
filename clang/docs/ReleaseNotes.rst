@@ -472,6 +472,9 @@ Bug Fixes in This Version
 - Clang now correctly generates overloads for bit-precise integer types for
   builtin operators in C++. Fixes #GH82998.
 
+- Fix crash when destructor definition is preceded with an equals sign.
+  Fixes (#GH89544).
+
 - When performing mixed arithmetic between ``_Complex`` floating-point types and integers,
   Clang now correctly promotes the integer to its corresponding real floating-point
   type only rather than to the complex type (e.g. ``_Complex float / int`` is now evaluated
@@ -739,10 +742,10 @@ AIX Support
 WebAssembly Support
 ^^^^^^^^^^^^^^^^^^^
 
-The -mcpu=generic configuration now enables multivalue and reference-types.These
-proposals are standardized and available in all major engines. Enabling
-multivalue here only enables the language feature but does not turn on the
-multivalue ABI (this enables non-ABI uses of multivalue, like exnref).
+The -mcpu=generic configuration now enables multivalue feature, which is
+standardized and available in all major engines. Enabling multivalue here only
+enables the language feature but does not turn on the multivalue ABI (this
+enables non-ABI uses of multivalue, like exnref).
 
 AVR Support
 ^^^^^^^^^^^

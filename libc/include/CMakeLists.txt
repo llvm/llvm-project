@@ -43,6 +43,10 @@ add_gen_header(
   DEPENDS
     .llvm-libc-macros.fcntl_macros
     .llvm-libc-types.mode_t
+    .llvm-libc-types.struct_flock
+    .llvm-libc-types.struct_flock64
+    .llvm-libc-types.off64_t
+    .llvm-libc-types.pid_t
     .llvm-libc-types.off_t
     .llvm_libc_common_h
 )
@@ -603,6 +607,9 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.mbstate_t
+    .llvm-libc-types.char8_t
+    .llvm-libc-types.char16_t
+    .llvm-libc-types.char32_t
 )
 
 add_gen_header(
