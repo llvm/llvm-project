@@ -1,5 +1,4 @@
 // General tests that ld invocations for z/OS are valid.
-// REQUIRES: per_target_runtime_dir
 
 // 1. General C link for executable
 // RUN: %clang -### --target=s390x-ibm-zos %s 2>&1 \

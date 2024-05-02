@@ -1,6 +1,5 @@
 // Test coverage ld flags.
-// REQUIRES: per_target_runtime_dir
-// 
+//
 // RUN: %clang -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fprofile-arcs \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \

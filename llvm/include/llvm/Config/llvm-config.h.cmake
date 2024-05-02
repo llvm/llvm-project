@@ -198,7 +198,4 @@
 /* Define if plugins enabled */
 #cmakedefine LLVM_ENABLE_PLUGINS
 
-/* Are we using a per-target directory tree for compiler-rt? */
-#cmakedefine01 LLVM_ENABLE_PER_TARGET_RUNTIME_DIR
-
 #endif

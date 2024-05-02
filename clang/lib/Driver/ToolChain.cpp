@@ -685,7 +685,8 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
       Path = P;
   }
   // Some targets default to the old layout.
-  if (getTriple().isOSAIX() || !LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
+  if (getTriple().isOSAIX() || getTriple().isPS() ||
+      getTriple().isWindowsMSVCEnvironment())
     Path.clear();
 
   // Check the filename for the old layout if the new one does not exist.

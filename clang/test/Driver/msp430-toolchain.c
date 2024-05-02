@@ -1,6 +1,5 @@
 // Splitting some tests into POS and NEG parts so the latter can validate
 // output fragments as large as possible for absence of some text.
-// REQUIRES: per_target_runtime_dir
 
 // Test for include paths and other cc1 flags
 
