@@ -42,18 +42,21 @@ void type_conversions()
 	// It's fine to remove a performance constraint.
 	void (*fp_plain)();
 
+	fp_plain = nullptr;
 	fp_plain = unannotated;
 	fp_plain = nonblocking;
 	fp_plain = nonallocating;
 
 	// Adding/spoofing nonblocking is unsafe.
 	void (*fp_nonblocking)() [[clang::nonblocking]];
+	fp_nonblocking = nullptr;
 	fp_nonblocking = nonblocking;
 	fp_nonblocking = unannotated; // expected-warning {{attribute 'nonblocking' should not be added via type conversion}}
 	fp_nonblocking = nonallocating; // expected-warning {{attribute 'nonblocking' should not be added via type conversion}}
 
 	// Adding/spoofing nonallocating is unsafe.
 	void (*fp_nonallocating)() [[clang::nonallocating]];
+	fp_nonallocating = nullptr;
 	fp_nonallocating = nonallocating;
 	fp_nonallocating = nonblocking; // no warning because nonblocking includes nonallocating fp_nonallocating = unannotated;
 	fp_nonallocating = unannotated; // expected-warning {{attribute 'nonallocating' should not be added via type conversion}}
