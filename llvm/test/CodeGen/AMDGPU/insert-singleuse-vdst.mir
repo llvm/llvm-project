@@ -60,9 +60,8 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 2
   ; CHECK-NEXT:   $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr2 = V_ADD_U32_e32 $vgpr0, $vgpr1, implicit $exec
   ; CHECK-NEXT:   $vgpr3 = V_ADD_U32_e32 $vgpr0, $vgpr2, implicit $exec
   ; CHECK-NEXT: {{  $}}
@@ -87,13 +86,10 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 4
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -160,16 +156,13 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr3, $vgpr5, $sgpr0, $sgpr2, $sgpr4, $sgpr5, $sgpr16, $sgpr17, $sgpr18, $sgpr19
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 274
   ; CHECK-NEXT:   $vgpr14 = V_MUL_F32_e32 $sgpr4, $vgpr3, implicit $exec, implicit $mode
   ; CHECK-NEXT:   $sgpr3 = S_MUL_F16 $sgpr0, $sgpr2, implicit $mode
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr15 = V_MUL_F32_e32 $sgpr5, $vgpr3, implicit $exec, implicit $mode
   ; CHECK-NEXT:   $vgpr17 = V_FMA_F32_e64 0, $sgpr16, 0, $vgpr5, 0, $vgpr14, 0, 0, implicit $exec, implicit $mode
   ; CHECK-NEXT:   $sgpr1 = S_ADD_F16 $sgpr0, 15360, implicit $mode
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr15 = V_FMA_F32_e64 0, $sgpr17, 0, $vgpr5, 0, $vgpr15, 0, 0, implicit $exec, implicit $mode
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr14 = V_FMA_F32_e64 0, $sgpr18, 0, $vgpr15, 0, $vgpr17, 0, 0, implicit $exec, implicit $mode
   ; CHECK-NEXT:   $vgpr15 = V_FMA_F32_e64 0, $sgpr19, 0, $vgpr14, 0, $vgpr17, 0, 0, implicit $exec, implicit $mode
   ; CHECK-NEXT:   $vgpr16 = V_LOG_F32_e32 $vgpr15, implicit $exec, implicit $mode
@@ -229,9 +222,8 @@ body: |
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 2
   ; CHECK-NEXT:   $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 $vgpr0, implicit $exec
   ; CHECK-NEXT:   $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
@@ -686,9 +678,8 @@ body: |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 2
   ; CHECK-NEXT:   $vgpr0_lo16 = V_MOV_B16_t16_e32 0, implicit $exec
-  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
   ; CHECK-NEXT:   $vgpr0_hi16 = V_MOV_B16_t16_e32 0, implicit $exec
   ; CHECK-NEXT:   $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
   ; CHECK-NEXT: {{  $}}
@@ -725,4 +716,525 @@ body: |
     $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
   bb.1:
     liveins: $vgpr1, $vgpr2
+...
+
+# Three single use producer instructions with non single use producer
+# instructions in between.
+---
+name: three_producers_with_two_skips
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: three_producers_with_two_skips
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 9361
+  ; CHECK-NEXT:   $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr5 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $vgpr2, $vgpr4
+  bb.0:
+    liveins: $vgpr0
+    $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr5 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  bb.1:
+    liveins: $vgpr2, $vgpr4
+...
+
+# Six single use producer instructions with non single use producer
+# instructions in between.
+---
+name: six_producers_with_four_skips
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: six_producers_with_four_skips
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 145
+  ; CHECK-NEXT:   $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 9362
+  ; CHECK-NEXT:   $vgpr5 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr6 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr7 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr8 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr9 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr10 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $vgpr2, $vgpr4, $vgpr7, $vgpr9
+  bb.0:
+    liveins: $vgpr0
+    $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr5 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr6 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr7 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr8 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr9 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr10 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  bb.1:
+    liveins: $vgpr2, $vgpr4, $vgpr7, $vgpr9
+...
+
+# Five single use producer instructions, followed by
+# four non single use producers, followed by
+# three single use producer instructions, followed by
+# two non single use producers, followed by
+# one single use producer instructions.
+---
+name: immediate_order
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: immediate_order
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 10693
+  ; CHECK-NEXT:   $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr5 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr6 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr7 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr8 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr9 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr10 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr11 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr12 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr13 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr14 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr15 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr13, $vgpr14
+  bb.0:
+    liveins: $vgpr0
+    $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr5 = V_MOV_B32_e32 $vgpr0, implicit $exec
+
+    $vgpr6 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr7 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr8 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr9 = V_MOV_B32_e32 $vgpr0, implicit $exec
+
+    $vgpr10 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr11 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr12 = V_MOV_B32_e32 $vgpr0, implicit $exec
+
+    $vgpr13 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr14 = V_MOV_B32_e32 $vgpr0, implicit $exec
+
+    $vgpr15 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  bb.1:
+    liveins: $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr13, $vgpr14
+...
+
+# Maximum number of single use producers that can be encoded in a single
+# instruction.
+---
+name: maximum_producers_single_instruction
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: maximum_producers_single_instruction
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 58255
+  ; CHECK-NEXT:   $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr5 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr6 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr7 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr8 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr9 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr10 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr11 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr12 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr13 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr14 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr15 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr16 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr17 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr18 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr19 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr20 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr21 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr22 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr23 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr24 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr25 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr26 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr27 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr28 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr29 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  bb.0:
+    liveins: $vgpr0
+    $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr5 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr6 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr7 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr8 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr9 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr10 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr11 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr12 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr13 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr14 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr15 = V_MOV_B32_e32 $vgpr0, implicit $exec
+
+    $vgpr16 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr17 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr18 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr19 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr20 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr21 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr22 = V_MOV_B32_e32 $vgpr0, implicit $exec
+
+    $vgpr23 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr24 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr25 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr26 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr27 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr28 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr29 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  bb.1:
+...
+
+# One more than the maximum number of single use producers that can be encoded
+# in a single instruction.
+---
+name: too_many_producers_single_instruction
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: too_many_producers_single_instruction
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
+  ; CHECK-NEXT:   $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 58255
+  ; CHECK-NEXT:   $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr5 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr6 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr7 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr8 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr9 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr10 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr11 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr12 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr13 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr14 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr15 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr16 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr17 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr18 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr19 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr20 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr21 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr22 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr23 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr24 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr25 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr26 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr27 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr28 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr29 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr30 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+
+
+
+  bb.0:
+    liveins: $vgpr0
+    $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr5 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr6 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr7 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr8 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr9 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr10 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr11 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr12 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr13 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr14 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr15 = V_MOV_B32_e32 $vgpr0, implicit $exec
+
+    $vgpr16 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr17 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr18 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr19 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr20 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr21 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr22 = V_MOV_B32_e32 $vgpr0, implicit $exec
+
+    $vgpr23 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr24 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr25 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr26 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr27 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr28 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr29 = V_MOV_B32_e32 $vgpr0, implicit $exec
+
+    $vgpr30 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  bb.1:
+...
+
+# Maximum distance between single use producers that can be encoded in a single
+# instruction.
+---
+name: maximum_skips_single_instruction
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: maximum_skips_single_instruction
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 15473
+  ; CHECK-NEXT:   $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr5 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr6 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr7 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr8 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr9 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr10 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr11 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr12 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr13 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr14 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr15 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr16 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15
+  bb.0:
+    liveins: $vgpr0
+    $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+
+    $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr5 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr6 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr7 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr8 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr9 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr10 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr11 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr12 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr13 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr14 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr15 = V_MOV_B32_e32 $vgpr0, implicit $exec
+
+    $vgpr16 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  bb.1:
+    liveins: $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15
+...
+
+# One more than the maximum distance between single use producers that can be
+# encoded in a single instruction.
+---
+name: too_many_skips_single_instruction
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: too_many_skips_single_instruction
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
+  ; CHECK-NEXT:   $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr5 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr6 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr7 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr8 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr9 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr10 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr11 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr12 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr13 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr14 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr15 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr16 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 1
+  ; CHECK-NEXT:   $vgpr17 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16
+  bb.0:
+    liveins: $vgpr0
+    $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+
+    $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr5 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr6 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr7 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr8 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr9 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr10 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr11 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr12 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr13 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr14 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr15 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr16 = V_MOV_B32_e32 $vgpr0, implicit $exec
+
+    $vgpr17 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  bb.1:
+    liveins: $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16
+...
+
+
+# Maximum possible encoding value with all bits of the immediate set
+---
+name: all_immediate_bits_set
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: all_immediate_bits_set
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_SINGLEUSE_VDST 65535
+  ; CHECK-NEXT:   $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr5 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr6 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr7 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr8 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr9 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr10 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr11 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr12 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr13 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr14 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr15 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr16 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr17 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr18 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr19 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr20 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr21 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr22 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr23 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr24 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr25 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr26 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr27 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr28 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr29 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr30 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr31 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr33 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr34 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr35 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr36 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr37 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr38 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr39 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr40 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr41 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr42 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT:   $vgpr43 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr30, $vgpr31, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36
+  bb.0:
+    liveins: $vgpr0
+    $vgpr1 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr5 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr6 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr7 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr8 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr9 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr10 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr11 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr12 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr13 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr14 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr15 = V_MOV_B32_e32 $vgpr0, implicit $exec
+
+    $vgpr16 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr17 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr18 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr19 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr20 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr21 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr22 = V_MOV_B32_e32 $vgpr0, implicit $exec
+
+    $vgpr23 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr24 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr25 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr26 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr27 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr28 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr29 = V_MOV_B32_e32 $vgpr0, implicit $exec
+
+    $vgpr30 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr31 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr32 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr33 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr34 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr35 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr36 = V_MOV_B32_e32 $vgpr0, implicit $exec
+
+    $vgpr37 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr38 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr39 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr40 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr41 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr42 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr43 = V_MOV_B32_e32 $vgpr0, implicit $exec
+  bb.1:
+    liveins: $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr30, $vgpr31, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36
+
 ...
