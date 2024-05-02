@@ -478,6 +478,17 @@ func.func @simple_arith.ceildivsi() -> (i32, i32, i32, i32, i32) {
 
 // -----
 
+// CHECK-LABEL: simple_arith.ceildivsi_i8
+func.func @simple_arith.ceildivsi_i8() -> (i8) {
+  %0 = arith.constant 7 : i8
+  %1 = arith.constant -128 : i8
+  // CHECK-NEXT: arith.constant -18
+  %2 = arith.ceildivsi %1, %0 : i8
+  return %2 : i8
+}
+
+// -----
+
 // CHECK-LABEL: func @simple_arith.ceildivui
 func.func @simple_arith.ceildivui() -> (i32, i32, i32, i32, i32) {
   // CHECK-DAG: [[C0:%.+]] = arith.constant 0
