@@ -691,8 +691,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
 
         break;
       }
-      case AMDGPU::V_WRITELANE_B32:
-      case AMDGPU::V_WRITELANE_PSEUDO_B64: {
+      case AMDGPU::V_WRITELANE_B32: {
         // Some architectures allow more than one constant bus access without
         // SGPR restriction
         if (ST.getConstantBusLimit(MI.getOpcode()) != 1)

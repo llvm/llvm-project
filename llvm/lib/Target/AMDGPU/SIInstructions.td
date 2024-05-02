@@ -288,41 +288,6 @@ def V_SUB_U64_PSEUDO : VPseudoInstSI <
 >;
 } // End usesCustomInserter = 1, Defs = [VCC]
 
-
-let usesCustomInserter = 1 in {
-  def V_READLANE_PSEUDO_B64 : VPseudoInstSI <
-  (outs SReg_64:$sdst), (ins VReg_64:$src0, SSrc_b32:$src1)>;
-
-  def V_READFIRSTLANE_PSEUDO_B64 : VPseudoInstSI <
-  (outs SReg_64:$sdst), (ins VReg_64:$src0)>;
-  
-  def V_WRITELANE_PSEUDO_B64 : VPseudoInstSI <
-  (outs VReg_64:$sdst), (ins SReg_64:$src0, SSrc_b32:$src1, VReg_64:$src2)> {
-    let UseNamedOperandTable = 1;
-  }
-} // End usesCustomInserter = 1
-
-class ReadLanePseudoPat <ValueType vt> : GCNPat <
-  (vt (int_amdgcn_readlane vt:$src0, i32:$src1)),
-  (V_READLANE_PSEUDO_B64 VReg_64:$src0, SSrc_b32:$src1)>;
-
-def : ReadLanePseudoPat<i64>;
-def : ReadLanePseudoPat<f64>;
-
-class WriteLanePseudoPat <ValueType vt> : GCNPat <
-  (vt (int_amdgcn_writelane vt:$src0, i32:$src1, vt:$src2)),
-  (V_WRITELANE_PSEUDO_B64 SReg_64:$src0, SSrc_b32:$src1, VReg_64:$src2)>;
-
-def : WriteLanePseudoPat<i64>;
-def : WriteLanePseudoPat<f64>;
-
-class ReadFirstLanePseudoPat <ValueType vt> : GCNPat <
-  (vt (int_amdgcn_readfirstlane vt:$src0)),
-  (V_READFIRSTLANE_PSEUDO_B64 VReg_64:$src0)>;
-
-def : ReadFirstLanePseudoPat<i64>;
-def : ReadFirstLanePseudoPat<f64>;
-
 let usesCustomInserter = 1, Defs = [SCC] in {
 def S_ADD_U64_PSEUDO : SPseudoInstSI <
   (outs SReg_64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1),
@@ -3440,7 +3405,7 @@ def : GCNPat<
 // FIXME: Should also do this for readlane, but tablegen crashes on
 // the ignored src1.
 def : GCNPat<
-  (i32 (int_amdgcn_readfirstlane (i32 imm:$src))),
+  (i32 (AMDGPUreadfirstlane (i32 imm:$src))),
   (S_MOV_B32 SReg_32:$src)
 >;
 

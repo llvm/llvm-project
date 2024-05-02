@@ -4822,111 +4822,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
   return RetBB;
 }
 
-static MachineBasicBlock *lowerPseudoLaneOp(MachineInstr &MI,
-                                            MachineBasicBlock *BB,
-                                            const GCNSubtarget &ST,
-                                            unsigned Opc) {
-  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-  const SIRegisterInfo *TRI = ST.getRegisterInfo();
-  const DebugLoc &DL = MI.getDebugLoc();
-  const SIInstrInfo *TII = ST.getInstrInfo();
-
-  MachineOperand &Dest = MI.getOperand(0);
-  MachineOperand &Src0 = MI.getOperand(1);
-
-  const TargetRegisterClass *Src0RC =
-      Src0.isReg() ? MRI.getRegClass(Src0.getReg()) : &AMDGPU::SReg_64RegClass;
-  const TargetRegisterClass *Src0SubRC =
-      TRI->getSubRegisterClass(Src0RC, AMDGPU::sub0);
-
-  Register DestSub0 = MRI.createVirtualRegister(
-      (Opc == AMDGPU::V_WRITELANE_PSEUDO_B64) ? &AMDGPU::VGPR_32RegClass
-                                              : &AMDGPU::SGPR_32RegClass);
-  Register DestSub1 = MRI.createVirtualRegister(
-      (Opc == AMDGPU::V_WRITELANE_PSEUDO_B64) ? &AMDGPU::VGPR_32RegClass
-                                              : &AMDGPU::SGPR_32RegClass);
-
-  MachineOperand SrcReg0Sub0 = TII->buildExtractSubRegOrImm(
-      MI, MRI, Src0, Src0RC, AMDGPU::sub0, Src0SubRC);
-
-  MachineOperand SrcReg0Sub1 = TII->buildExtractSubRegOrImm(
-      MI, MRI, Src0, Src0RC, AMDGPU::sub1, Src0SubRC);
-
-  MachineInstr *LoHalf, *HighHalf;
-  switch (Opc) {
-  case AMDGPU::V_READLANE_PSEUDO_B64: {
-    MachineOperand &Src1 = MI.getOperand(2);
-    auto IsKill = (Src1.isReg() && Src1.isKill());
-    if (IsKill)
-      Src1.setIsKill(false);
-    LoHalf = BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_READLANE_B32), DestSub0)
-                 .add(SrcReg0Sub0)
-                 .add(Src1);
-
-    if (IsKill)
-      Src1.setIsKill(true);
-    HighHalf = BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_READLANE_B32), DestSub1)
-                   .add(SrcReg0Sub1)
-                   .add(Src1);
-    break;
-  }
-  case AMDGPU::V_READFIRSTLANE_PSEUDO_B64: {
-    LoHalf =
-        BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), DestSub0)
-            .add(SrcReg0Sub0);
-    HighHalf =
-        BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), DestSub1)
-            .add(SrcReg0Sub1);
-    break;
-  }
-  case AMDGPU::V_WRITELANE_PSEUDO_B64: {
-    MachineOperand &Src1 = MI.getOperand(2);
-    MachineOperand &Src2 = MI.getOperand(3);
-    auto IsKill = (Src1.isReg() && Src1.isKill());
-
-    const TargetRegisterClass *Src2RC = MRI.getRegClass(Src2.getReg());
-    const TargetRegisterClass *Src2SubRC =
-        TRI->getSubRegisterClass(Src2RC, AMDGPU::sub0);
-
-    MachineOperand SrcReg2Sub0 = TII->buildExtractSubRegOrImm(
-        MI, MRI, Src2, Src2RC, AMDGPU::sub0, Src2SubRC);
-
-    MachineOperand SrcReg2Sub1 = TII->buildExtractSubRegOrImm(
-        MI, MRI, Src2, Src2RC, AMDGPU::sub1, Src2SubRC);
-
-    if (IsKill)
-      Src1.setIsKill(false);
-
-    LoHalf = BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_WRITELANE_B32), DestSub0)
-                 .add(SrcReg0Sub0)
-                 .add(Src1)
-                 .add(SrcReg2Sub0);
-
-    if (IsKill)
-      Src1.setIsKill(true);
-    HighHalf = BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_WRITELANE_B32), DestSub1)
-                   .add(SrcReg0Sub1)
-                   .add(Src1)
-                   .add(SrcReg2Sub1);
-    break;
-  }
-  default:
-    llvm_unreachable("should not occur");
-  }
-
-  BuildMI(*BB, MI, DL, TII->get(TargetOpcode::REG_SEQUENCE), Dest.getReg())
-      .addReg(DestSub0)
-      .addImm(AMDGPU::sub0)
-      .addReg(DestSub1)
-      .addImm(AMDGPU::sub1);
-
-  TII->legalizeOperands(*LoHalf);
-  TII->legalizeOperands(*HighHalf);
-
-  MI.eraseFromParent();
-  return BB;
-}
-
 MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   MachineInstr &MI, MachineBasicBlock *BB) const {
 
@@ -5170,10 +5065,6 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MI.eraseFromParent();
     return BB;
   }
-  case AMDGPU::V_READLANE_PSEUDO_B64:
-  case AMDGPU::V_READFIRSTLANE_PSEUDO_B64:
-  case AMDGPU::V_WRITELANE_PSEUDO_B64:
-    return lowerPseudoLaneOp(MI, BB, *getSubtarget(), MI.getOpcode());
   case AMDGPU::SI_INIT_M0: {
     BuildMI(*BB, MI.getIterator(), MI.getDebugLoc(),
             TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
@@ -6089,6 +5980,70 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
   return DAG.getNode(
       AMDGPUISD::SETCC, SL, VT, DAG.getZExtOrTrunc(Src, SL, MVT::i32),
       DAG.getConstant(0, SL, MVT::i32), DAG.getCondCode(ISD::SETNE));
+}
+
+static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
+                           SelectionDAG &DAG) {
+  auto VT = N->getValueType(0);
+  unsigned ValSize = VT.getSizeInBits();
+  unsigned IntrinsicID = N->getConstantOperandVal(0);
+  SDValue Src0 = N->getOperand(1);
+  SDLoc SL(N);
+  MVT IntVT = MVT::getIntegerVT(ValSize);
+
+  auto createLaneOp = [&](SDValue &Src0, SDValue &Src1, SDValue &Src2,
+                          MVT VT) -> SDValue {
+    return (Src2.getNode()
+                ? DAG.getNode(AMDGPUISD::WRITELANE, SL, VT, {Src0, Src1, Src2})
+            : Src1.getNode()
+                ? DAG.getNode(AMDGPUISD::READLANE, SL, VT, {Src0, Src1})
+                : DAG.getNode(AMDGPUISD::READFIRSTLANE, SL, VT, {Src0}));
+  };
+
+  SDValue Src1, Src2, Src0Valid, Src2Valid;
+  if (IntrinsicID == Intrinsic::amdgcn_readlane ||
+      IntrinsicID == Intrinsic::amdgcn_writelane) {
+    Src1 = N->getOperand(2);
+    if (IntrinsicID == Intrinsic::amdgcn_writelane)
+      Src2 = N->getOperand(3);
+  }
+
+  if (ValSize == 32) {
+    if (VT == MVT::i32)
+      // Already legal
+      return SDValue();
+    Src0Valid = DAG.getBitcast(IntVT, Src0);
+    if (Src2.getNode())
+      Src2Valid = DAG.getBitcast(IntVT, Src2);
+    auto LaneOp = createLaneOp(Src0Valid, Src1, Src2Valid, MVT::i32);
+    return DAG.getBitcast(VT, LaneOp);
+  }
+
+  if (ValSize < 32) {
+    auto InitBitCast = DAG.getBitcast(IntVT, Src0);
+    Src0Valid = DAG.getAnyExtOrTrunc(InitBitCast, SL, MVT::i32);
+    if (Src2.getNode()) {
+      auto Src2Cast = DAG.getBitcast(IntVT, Src2);
+      Src2Valid = DAG.getAnyExtOrTrunc(Src2Cast, SL, MVT::i32);
+    }
+    auto LaneOp = createLaneOp(Src0Valid, Src1, Src2Valid, MVT::i32);
+    auto Trunc = DAG.getAnyExtOrTrunc(LaneOp, SL, IntVT);
+    return DAG.getBitcast(VT, Trunc);
+  }
+
+  if ((ValSize % 32) == 0) {
+    MVT VecVT = MVT::getVectorVT(MVT::i32, ValSize / 32);
+    Src0Valid = DAG.getBitcast(VecVT, Src0);
+
+    if (Src2.getNode())
+      Src2Valid = DAG.getBitcast(VecVT, Src2);
+
+    auto LaneOp = createLaneOp(Src0Valid, Src1, Src2Valid, VecVT);
+    auto UnrolledLaneOp = DAG.UnrollVectorOp(LaneOp.getNode());
+    return DAG.getBitcast(VT, UnrolledLaneOp);
+  }
+
+  return SDValue();
 }
 
 void SITargetLowering::ReplaceNodeResults(SDNode *N,
@@ -8553,6 +8508,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_addrspacecast_nonnull:
     return lowerADDRSPACECAST(Op, DAG);
+  case Intrinsic::amdgcn_readlane:
+  case Intrinsic::amdgcn_readfirstlane:
+  case Intrinsic::amdgcn_writelane:
+    return lowerLaneOp(*this, Op.getNode(), DAG);
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))

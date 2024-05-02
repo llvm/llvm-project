@@ -243,7 +243,7 @@ def VOP_READFIRSTLANE : VOPProfile <[i32, i32, untyped, untyped]> {
 // FIXME: Specify SchedRW for READFIRSTLANE_B32
 // TODO: There is VOP3 encoding also
 def V_READFIRSTLANE_B32 : VOP1_Pseudo <"v_readfirstlane_b32", VOP_READFIRSTLANE,
-                                       getVOP1Pat<int_amdgcn_readfirstlane,
+                                       getVOP1Pat<AMDGPUreadfirstlane,
                                                   VOP_READFIRSTLANE>.ret, 1> {
   let isConvergent = 1;
 }
