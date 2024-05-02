@@ -153,6 +153,26 @@ OpenACCFirstPrivateClause *OpenACCFirstPrivateClause::Create(
       OpenACCFirstPrivateClause(BeginLoc, LParenLoc, VarList, EndLoc);
 }
 
+OpenACCNoCreateClause *OpenACCNoCreateClause::Create(const ASTContext &C,
+                                                     SourceLocation BeginLoc,
+                                                     SourceLocation LParenLoc,
+                                                     ArrayRef<Expr *> VarList,
+                                                     SourceLocation EndLoc) {
+  void *Mem = C.Allocate(
+      OpenACCNoCreateClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCNoCreateClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
+OpenACCPresentClause *OpenACCPresentClause::Create(const ASTContext &C,
+                                                   SourceLocation BeginLoc,
+                                                   SourceLocation LParenLoc,
+                                                   ArrayRef<Expr *> VarList,
+                                                   SourceLocation EndLoc) {
+  void *Mem = C.Allocate(
+      OpenACCPresentClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCPresentClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenACC clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -211,6 +231,20 @@ void OpenACCClausePrinter::VisitPrivateClause(const OpenACCPrivateClause &C) {
 void OpenACCClausePrinter::VisitFirstPrivateClause(
     const OpenACCFirstPrivateClause &C) {
   OS << "firstprivate(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitNoCreateClause(const OpenACCNoCreateClause &C) {
+  OS << "no_create(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitPresentClause(const OpenACCPresentClause &C) {
+  OS << "present(";
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";
