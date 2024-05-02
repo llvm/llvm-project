@@ -26,8 +26,12 @@
 #include <cinttypes>
 #include <sys/sysctl.h>
 
+#undef DEBUGSERVER_IS_ARM64E
 #if __has_feature(ptrauth_calls)
 #include <ptrauth.h>
+#if defined(__LP64__)
+#define DEBUGSERVER_IS_ARM64E 1
+#endif
 #endif
 
 // Break only in privileged or user mode
@@ -115,7 +119,7 @@ static uint64_t clear_pac_bits(uint64_t value) {
 uint64_t DNBArchMachARM64::GetPC(uint64_t failValue) {
   // Get program counter
   if (GetGPRState(false) == KERN_SUCCESS)
-#if __has_feature(ptrauth_calls) && defined(__LP64__)
+#if defined(DEBUGSERVER_IS_ARM64E)
     return clear_pac_bits(
         reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
 #else
@@ -147,7 +151,7 @@ kern_return_t DNBArchMachARM64::SetPC(uint64_t value) {
 uint64_t DNBArchMachARM64::GetSP(uint64_t failValue) {
   // Get stack pointer
   if (GetGPRState(false) == KERN_SUCCESS)
-#if __has_feature(ptrauth_calls) && defined(__LP64__)
+#if defined(DEBUGSERVER_IS_ARM64E)
     return clear_pac_bits(
         reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_sp));
 #else
@@ -169,25 +173,28 @@ kern_return_t DNBArchMachARM64::GetGPRState(bool force) {
                          (thread_state_t)&m_state.context.gpr, &count);
   if (DNBLogEnabledForAny(LOG_THREAD)) {
     uint64_t *x = &m_state.context.gpr.__x[0];
+
+#if defined(DEBUGSERVER_IS_ARM64E)
     DNBLogThreaded("thread_get_state signed regs "
                    "\n   fp=%16.16llx"
                    "\n   lr=%16.16llx"
                    "\n   sp=%16.16llx"
                    "\n   pc=%16.16llx",
-#if __has_feature(ptrauth_calls) && defined(__LP64__)
                    reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_fp),
                    reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_lr),
                    reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_sp),
-                   reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc)
+                   reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
 #else
-                   m_state.context.gpr.__fp,
-                   m_state.context.gpr.__lr, 
-                   m_state.context.gpr.__sp,
-                   m_state.context.gpr.__pc
+    DNBLogThreaded("thread_get_state signed regs "
+                   "\n   fp=%16.16llx"
+                   "\n   lr=%16.16llx"
+                   "\n   sp=%16.16llx"
+                   "\n   pc=%16.16llx",
+                   m_state.context.gpr.__fp, m_state.context.gpr.__lr,
+                   m_state.context.gpr.__sp, m_state.context.gpr.__pc);
 #endif
-    );
 
-#if __has_feature(ptrauth_calls) && defined(__LP64__)
+#if defined(DEBUGSERVER_IS_ARM64E)
     uint64_t log_fp = clear_pac_bits(
         reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_fp));
     uint64_t log_lr = clear_pac_bits(
@@ -661,7 +668,7 @@ kern_return_t DNBArchMachARM64::EnableHardwareSingleStep(bool enable) {
     return err.Status();
   }
 
-#if __has_feature(ptrauth_calls) && defined(__LP64__)
+#if defined(DEBUGSERVER_IS_ARM64E)
   uint64_t pc = clear_pac_bits(
       reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
 #else
@@ -2187,7 +2194,7 @@ bool DNBArchMachARM64::GetRegisterValue(uint32_t set, uint32_t reg,
     case e_regSetGPR:
       if (reg <= gpr_pc) {
         switch (reg) {
-#if __has_feature(ptrauth_calls) && defined(__LP64__)
+#if defined(DEBUGSERVER_IS_ARM64E)
         case gpr_pc:
           value->value.uint64 = clear_pac_bits(
               reinterpret_cast<uint64_t>(m_state.context.gpr.__opaque_pc));
