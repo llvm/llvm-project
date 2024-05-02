@@ -1612,15 +1612,7 @@ const llvm::fltSemantics &ASTContext::getFloatTypeSemantics(QualType T) const {
   case BuiltinType::Float16:
     return Target->getHalfFormat();
   case BuiltinType::Half:
-    // For HLSL, when the native half type is disabled, half will be treat as
-    // float.
-    if (getLangOpts().HLSL)
-      if (getLangOpts().NativeHalfType)
-        return Target->getHalfFormat();
-      else
-        return Target->getFloatFormat();
-    else
-      return Target->getHalfFormat();
+    return Target->getHalfFormat();
   case BuiltinType::Float:      return Target->getFloatFormat();
   case BuiltinType::Double:     return Target->getDoubleFormat();
   case BuiltinType::Ibm128:
