@@ -6261,7 +6261,11 @@ static SDValue expandBitCastI128ToF128(SelectionDAG &DAG, SDValue Src,
   Hi = DAG.getBitcast(MVT::f64, Hi);
   Lo = DAG.getBitcast(MVT::f64, Lo);
 
-  SDNode *Pair = DAG.getMachineNode(SystemZ::PAIR128, SL, MVT::f128, Hi, Lo);
+  SDNode *Pair = DAG.getMachineNode(
+      SystemZ::REG_SEQUENCE, SL, MVT::f128,
+      {DAG.getTargetConstant(SystemZ::FP128BitRegClassID, SL, MVT::i32), Lo,
+       DAG.getTargetConstant(SystemZ::subreg_l64, SL, MVT::i32), Hi,
+       DAG.getTargetConstant(SystemZ::subreg_h64, SL, MVT::i32)});
   return SDValue(Pair, 0);
 }
 
