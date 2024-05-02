@@ -157,6 +157,91 @@ define <8 x float> @f6(<8 x float> %a) {
   ret <8 x float> %3
 }
 
+define half @f7(half %a) nounwind {
+; X86-LABEL: f7:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    pextrw $0, %xmm0, %eax
+; X86-NEXT:    movw %ax, (%esp)
+; X86-NEXT:    calll __extendhfsf2
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    addss %xmm0, %xmm0
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll __truncsfhf2
+; X86-NEXT:    pextrw $0, %xmm0, %eax
+; X86-NEXT:    movw %ax, (%esp)
+; X86-NEXT:    calll __extendhfsf2
+; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    addss %xmm0, %xmm0
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll __truncsfhf2
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: f7:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    callq __extendhfsf2@PLT
+; X64-NEXT:    addss %xmm0, %xmm0
+; X64-NEXT:    callq __truncsfhf2@PLT
+; X64-NEXT:    callq __extendhfsf2@PLT
+; X64-NEXT:    addss %xmm0, %xmm0
+; X64-NEXT:    callq __truncsfhf2@PLT
+; X64-NEXT:    popq %rax
+; X64-NEXT:    retq
+  %1 = fadd fast half %a, %a
+  %t = call half @llvm.arithmetic.fence.f16(half %1)
+  %2 = fadd fast half %a, %a
+  %3 = fadd fast half %1, %2
+  ret half %3
+}
+
+define bfloat @f8(bfloat %a) nounwind {
+; X86-LABEL: f8:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    movd %eax, %xmm0
+; X86-NEXT:    addss %xmm0, %xmm0
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll __truncsfbf2
+; X86-NEXT:    pextrw $0, %xmm0, %eax
+; X86-NEXT:    shll $16, %eax
+; X86-NEXT:    movd %eax, %xmm0
+; X86-NEXT:    addss %xmm0, %xmm0
+; X86-NEXT:    movss %xmm0, (%esp)
+; X86-NEXT:    calll __truncsfbf2
+; X86-NEXT:    popl %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: f8:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    pextrw $0, %xmm0, %eax
+; X64-NEXT:    shll $16, %eax
+; X64-NEXT:    movd %eax, %xmm0
+; X64-NEXT:    addss %xmm0, %xmm0
+; X64-NEXT:    callq __truncsfbf2@PLT
+; X64-NEXT:    pextrw $0, %xmm0, %eax
+; X64-NEXT:    shll $16, %eax
+; X64-NEXT:    movd %eax, %xmm0
+; X64-NEXT:    addss %xmm0, %xmm0
+; X64-NEXT:    callq __truncsfbf2@PLT
+; X64-NEXT:    popq %rax
+; X64-NEXT:    retq
+  %1 = fadd fast bfloat %a, %a
+  %t = call bfloat @llvm.arithmetic.fence.bf16(bfloat %1)
+  %2 = fadd fast bfloat %a, %a
+  %3 = fadd fast bfloat %1, %2
+  ret bfloat %3
+}
+
+declare half @llvm.arithmetic.fence.f16(half)
+declare bfloat @llvm.arithmetic.fence.bf16(bfloat)
 declare float @llvm.arithmetic.fence.f32(float)
 declare double @llvm.arithmetic.fence.f64(double)
 declare <2 x float> @llvm.arithmetic.fence.v2f32(<2 x float>)
