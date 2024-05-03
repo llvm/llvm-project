@@ -2533,6 +2533,9 @@ public:
 
   uint64_t getTypeSize(mlir::Type type, mlir::Operation &op) const {
     mlir::DataLayout layout(op.getParentOfType<mlir::ModuleOp>());
+    // For LLVM purposes we treat void as u8.
+    if (isa<mlir::cir::VoidType>(type))
+      type = mlir::cir::IntType::get(type.getContext(), 8, /*isSigned=*/false);
     return llvm::divideCeil(layout.getTypeSizeInBits(type), 8);
   }
 
@@ -2552,16 +2555,21 @@ public:
 
     auto ptrTy = op.getLhs().getType().cast<mlir::cir::PointerType>();
     auto typeSize = getTypeSize(ptrTy.getPointee(), *op);
-    auto typeSizeVal = rewriter.create<mlir::LLVM::ConstantOp>(
-        op.getLoc(), llvmDstTy, mlir::IntegerAttr::get(llvmDstTy, typeSize));
 
-    if (dstTy.isUnsigned())
-      rewriter.replaceOpWithNewOp<mlir::LLVM::UDivOp>(op, llvmDstTy, diff,
-                                                      typeSizeVal);
-    else
-      rewriter.replaceOpWithNewOp<mlir::LLVM::SDivOp>(op, llvmDstTy, diff,
-                                                      typeSizeVal);
+    // Avoid silly division by 1.
+    auto resultVal = diff.getResult();
+    if (typeSize != 1) {
+      auto typeSizeVal = rewriter.create<mlir::LLVM::ConstantOp>(
+          op.getLoc(), llvmDstTy, mlir::IntegerAttr::get(llvmDstTy, typeSize));
 
+      if (dstTy.isUnsigned())
+        resultVal = rewriter.create<mlir::LLVM::UDivOp>(op.getLoc(), llvmDstTy,
+                                                        diff, typeSizeVal);
+      else
+        resultVal = rewriter.create<mlir::LLVM::SDivOp>(op.getLoc(), llvmDstTy,
+                                                        diff, typeSizeVal);
+    }
+    rewriter.replaceOp(op, resultVal);
     return mlir::success();
   }
 };
