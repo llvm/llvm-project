@@ -3,7 +3,7 @@
 ; RUN: llc -verify-machineinstrs -csky-no-aliases < %s -mtriple=csky -float-abi=hard -mattr=+hard-float -mattr=+2e3 -mattr=+fpuv2_sf -mattr=+fpuv2_df | FileCheck %s --check-prefix=CHECK-DF
 ; RUN: llc -verify-machineinstrs -csky-no-aliases < %s -mtriple=csky -float-abi=hard -mattr=+hard-float -mattr=+2e3 -mattr=+fpuv3_sf -mattr=+fpuv3_df | FileCheck %s --check-prefix=CHECK-DF2
 
-define double @load_I_d(double* nocapture readonly %a) local_unnamed_addr #0 {
+define double @load_I_d(ptr nocapture readonly %a) local_unnamed_addr #0 {
 ;
 ;
 ; CHECK-DF-LABEL: load_I_d:
@@ -16,14 +16,14 @@ define double @load_I_d(double* nocapture readonly %a) local_unnamed_addr #0 {
 ; CHECK-DF2-NEXT:    fld.64 vr0, (a0, 24)
 ; CHECK-DF2-NEXT:    rts16
 entry:
-  %arrayidx = getelementptr inbounds double, double* %a, i64 3
-  %0 = load double, double* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds double, ptr %a, i64 3
+  %0 = load double, ptr %arrayidx, align 4
   ret double %0
 }
 
 
 
-define double @load_R_d(double* nocapture readonly %a, i32 %b) local_unnamed_addr #0 {
+define double @load_R_d(ptr nocapture readonly %a, i32 %b) local_unnamed_addr #0 {
 ;
 ;
 ; CHECK-DF-LABEL: load_R_d:
@@ -37,12 +37,12 @@ define double @load_R_d(double* nocapture readonly %a, i32 %b) local_unnamed_add
 ; CHECK-DF2-NEXT:    rts16
 entry:
   %idxprom = sext i32 %b to i64
-  %arrayidx = getelementptr inbounds double, double* %a, i64 %idxprom
-  %0 = load double, double* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds double, ptr %a, i64 %idxprom
+  %0 = load double, ptr %arrayidx, align 4
   ret double %0
 }
 
-define double @store_I_d(double*  %a, double %b) local_unnamed_addr #0 {
+define double @store_I_d(ptr  %a, double %b) local_unnamed_addr #0 {
 ;
 ;
 ; CHECK-DF-LABEL: store_I_d:
@@ -68,12 +68,12 @@ define double @store_I_d(double*  %a, double %b) local_unnamed_addr #0 {
 ; CHECK-DF2-NEXT:  .LCPI2_0:
 ; CHECK-DF2-NEXT:    .quad 0x0000000000000000 # double 0
 entry:
-  %arrayidx = getelementptr inbounds double, double* %a, i64 3
-  store double %b, double* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds double, ptr %a, i64 3
+  store double %b, ptr %arrayidx, align 4
   ret double 0.0
 }
 
-define double @store_R_d(double*  %a, i32 %b, double %c) local_unnamed_addr #0 {
+define double @store_R_d(ptr  %a, i32 %b, double %c) local_unnamed_addr #0 {
 ;
 ;
 ; CHECK-DF-LABEL: store_R_d:
@@ -100,7 +100,7 @@ define double @store_R_d(double*  %a, i32 %b, double %c) local_unnamed_addr #0 {
 ; CHECK-DF2-NEXT:    .quad 0x0000000000000000 # double 0
 entry:
   %idxprom = sext i32 %b to i64
-  %arrayidx = getelementptr inbounds double, double* %a, i64 %idxprom
-  store double %c, double* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds double, ptr %a, i64 %idxprom
+  store double %c, ptr %arrayidx, align 4
   ret double 0.0
 }

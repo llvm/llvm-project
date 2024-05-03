@@ -255,7 +255,7 @@ static NOINLINE void clear_mallinfo(T *sret) {
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
 // Interceptors use NRVO and assume that sret will be pre-allocated in
 // caller frame.
-INTERCEPTOR(__sanitizer_struct_mallinfo, mallinfo) {
+INTERCEPTOR(__sanitizer_struct_mallinfo, mallinfo,) {
   __sanitizer_struct_mallinfo sret;
   clear_mallinfo(&sret);
   return sret;
@@ -1326,24 +1326,6 @@ static int setup_at_exit_wrapper(void(*f)(), void *arg, void *dso) {
   return res;
 }
 
-static void BeforeFork() {
-  StackDepotLockAll();
-  ChainedOriginDepotLockAll();
-}
-
-static void AfterFork() {
-  ChainedOriginDepotUnlockAll();
-  StackDepotUnlockAll();
-}
-
-INTERCEPTOR(int, fork, void) {
-  ENSURE_MSAN_INITED();
-  BeforeFork();
-  int pid = REAL(fork)();
-  AfterFork();
-  return pid;
-}
-
 // NetBSD ships with openpty(3) in -lutil, that needs to be prebuilt explicitly
 // with MSan.
 #if SANITIZER_LINUX
@@ -1780,6 +1762,8 @@ void InitializeInterceptors() {
   static int inited = 0;
   CHECK_EQ(inited, 0);
 
+  __interception::DoesNotSupportStaticLinking();
+
   new(interceptor_ctx()) InterceptorContext();
 
   InitializeCommonInterceptors();
@@ -1933,7 +1917,6 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(atexit);
   INTERCEPT_FUNCTION(__cxa_atexit);
   INTERCEPT_FUNCTION(shmat);
-  INTERCEPT_FUNCTION(fork);
   MSAN_MAYBE_INTERCEPT_OPENPTY;
   MSAN_MAYBE_INTERCEPT_FORKPTY;
 

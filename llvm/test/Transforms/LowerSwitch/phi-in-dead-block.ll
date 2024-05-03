@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=lowerswitch %s | FileCheck %s
+; RUN: opt -S -passes=lower-switch %s | FileCheck %s
 
 ; CHECK-LABEL: @phi_in_dead_block(
 ; CHECK-NOT: switch

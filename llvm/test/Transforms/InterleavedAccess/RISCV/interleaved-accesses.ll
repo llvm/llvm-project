@@ -364,15 +364,3 @@ define void @load_factor2_fp128(ptr %ptr) {
   %v1 = shufflevector <4 x fp128> %interleaved.vec, <4 x fp128> poison, <2 x i32> <i32 1, i32 3>
   ret void
 }
-
-
-
-
-
-
-
-
-
-
-
-

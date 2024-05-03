@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
 --- |
   define amdgpu_ps <4 x float> @exp_done_waitcnt(<4 x i32> inreg, <4 x
   i32> inreg, i32 inreg %w, float %v) #0 {

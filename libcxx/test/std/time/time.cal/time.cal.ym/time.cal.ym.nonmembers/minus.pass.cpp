@@ -46,11 +46,16 @@ constexpr bool test() {
   { // year_month - months
 
     year_month ym{year{1234}, std::chrono::November};
-    for (int i = 0; i <= 10; ++i) // TODO test wrap-around
-    {
+    for (int i = 0; i <= 10; ++i) {
       year_month ym1 = ym - months{i};
       assert(static_cast<int>(ym1.year()) == 1234);
       assert(ym1.month() == month(11 - i));
+    }
+    // Test the year wraps around.
+    for (int i = 12; i <= 15; ++i) {
+      year_month ym1 = ym - months{i};
+      assert(static_cast<int>(ym1.year()) == 1233);
+      assert(ym1.month() == month(11 - i + 12));
     }
   }
 

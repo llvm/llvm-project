@@ -6,7 +6,7 @@
   target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
   target triple = "aarch64-unknown-linux-gnu"
 
-  define void @indexed_2s(<2 x float> %shuf, <2 x float> %mu, <2 x float> %ad, <2 x float>* %ret) #0 {
+  define void @indexed_2s(<2 x float> %shuf, <2 x float> %mu, <2 x float> %ad, ptr %ret) #0 {
   entry:
     %shuffle = shufflevector <2 x float> %shuf, <2 x float> undef, <2 x i32> zeroinitializer
     br label %for.cond
@@ -14,11 +14,11 @@
   for.cond:                                         ; preds = %for.cond, %entry
     %mul = fmul <2 x float> %mu, %shuffle
     %add = fadd <2 x float> %mul, %ad
-    store <2 x float> %add, <2 x float>* %ret, align 16
+    store <2 x float> %add, ptr %ret, align 16
     br label %for.cond
   }
 
-  define void @indexed_2s_rev(<2 x float> %shuf, <2 x float> %mu, <2 x float> %ad, <2 x float>* %ret) #0 {
+  define void @indexed_2s_rev(<2 x float> %shuf, <2 x float> %mu, <2 x float> %ad, ptr %ret) #0 {
   entry:
     %shuffle = shufflevector <2 x float> %shuf, <2 x float> undef, <2 x i32> zeroinitializer
     br label %for.cond
@@ -26,11 +26,11 @@
   for.cond:                                         ; preds = %for.cond, %entry
     %mul = fmul <2 x float> %shuffle, %mu
     %add = fadd <2 x float> %mul, %ad
-    store <2 x float> %add, <2 x float>* %ret, align 16
+    store <2 x float> %add, ptr %ret, align 16
     br label %for.cond
   }
 
-  define void @indexed_2d(<2 x double> %shuf, <2 x double> %mu, <2 x double> %ad, <2 x double>* %ret) #0 {
+  define void @indexed_2d(<2 x double> %shuf, <2 x double> %mu, <2 x double> %ad, ptr %ret) #0 {
   entry:
     %shuffle = shufflevector <2 x double> %shuf, <2 x double> undef, <2 x i32> zeroinitializer
     br label %for.cond
@@ -38,11 +38,11 @@
   for.cond:                                         ; preds = %for.cond, %entry
     %mul = fmul <2 x double> %mu, %shuffle
     %add = fadd <2 x double> %mul, %ad
-    store <2 x double> %add, <2 x double>* %ret, align 16
+    store <2 x double> %add, ptr %ret, align 16
     br label %for.cond
   }
 
-  define void @indexed_4s(<4 x float> %shuf, <4 x float> %mu, <4 x float> %ad, <4 x float>* %ret) #0 {
+  define void @indexed_4s(<4 x float> %shuf, <4 x float> %mu, <4 x float> %ad, ptr %ret) #0 {
   entry:
     %shuffle = shufflevector <4 x float> %shuf, <4 x float> undef, <4 x i32> zeroinitializer
     br label %for.cond
@@ -50,11 +50,11 @@
   for.cond:                                         ; preds = %for.cond, %entry
     %mul = fmul <4 x float> %mu, %shuffle
     %add = fadd <4 x float> %mul, %ad
-    store <4 x float> %add, <4 x float>* %ret, align 16
+    store <4 x float> %add, ptr %ret, align 16
     br label %for.cond
   }
 
-  define void @indexed_4h(<4 x half> %shuf, <4 x half> %mu, <4 x half> %ad, <4 x half>* %ret) #0 {
+  define void @indexed_4h(<4 x half> %shuf, <4 x half> %mu, <4 x half> %ad, ptr %ret) #0 {
   entry:
     %shuffle = shufflevector <4 x half> %shuf, <4 x half> undef, <4 x i32> zeroinitializer
     br label %for.cond
@@ -62,11 +62,11 @@
   for.cond:
     %mul = fmul <4 x half> %mu, %shuffle
     %add = fadd <4 x half> %mul, %ad
-    store <4 x half> %add, <4 x half>* %ret, align 16
+    store <4 x half> %add, ptr %ret, align 16
     br label %for.cond
   }
 
-  define void @indexed_8h(<8 x half> %shuf, <8 x half> %mu, <8 x half> %ad, <8 x half>* %ret) #0 {
+  define void @indexed_8h(<8 x half> %shuf, <8 x half> %mu, <8 x half> %ad, ptr %ret) #0 {
   entry:
     %shuffle = shufflevector <8 x half> %shuf, <8 x half> undef, <8 x i32> zeroinitializer
     br label %for.cond
@@ -74,28 +74,28 @@
   for.cond:
     %mul = fmul <8 x half> %mu, %shuffle
     %add = fadd <8 x half> %mul, %ad
-    store <8 x half> %add, <8 x half>* %ret, align 16
+    store <8 x half> %add, ptr %ret, align 16
     br label %for.cond
   }
 
   define void @kill_state(<2 x float> %shuf, <2 x float> %mu, <2 x float> %ad,
-                          <2 x float>* %ret, <2 x float>* %ret2, float %f) #0 {
+                          ptr %ret, ptr %ret2, float %f) #0 {
   entry:
     %zero_elem = extractelement <2 x float> %shuf, i32 0
     %ins = insertelement <2 x float> undef, float %zero_elem, i32 0
     %shuffle = shufflevector <2 x float> %ins, <2 x float> undef, <2 x i32> zeroinitializer
     %ins2 = insertelement <2 x float> %ins, float %f, i32 1
-    store <2 x float> %ins2, <2 x float>* %ret2, align 8
+    store <2 x float> %ins2, ptr %ret2, align 8
     br label %for.cond
 
   for.cond:                                         ; preds = %for.cond, %entry
     %mul = fmul <2 x float> %mu, %shuffle
     %add = fadd <2 x float> %mul, %ad
-    store <2 x float> %add, <2 x float>* %ret, align 16
+    store <2 x float> %add, ptr %ret, align 16
     br label %for.cond
   }
 
-  define void @extracopy(<2 x float> %shuf, <2 x float> %mu, <2 x float> %ad, <2 x float>* %ret) #0 {
+  define void @extracopy(<2 x float> %shuf, <2 x float> %mu, <2 x float> %ad, ptr %ret) #0 {
     unreachable
   }
 

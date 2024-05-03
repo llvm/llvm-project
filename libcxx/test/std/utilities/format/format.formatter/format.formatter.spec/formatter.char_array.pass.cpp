@@ -21,6 +21,7 @@
 #include <cassert>
 #include <concepts>
 #include <iterator>
+#include <memory>
 #include <type_traits>
 
 #include "test_format_context.h"
@@ -50,8 +51,9 @@ struct Tester {
     std::formatter<Str, CharT> formatter;
     static_assert(std::semiregular<decltype(formatter)>);
 
-    auto it = formatter.parse(parse_ctx);
-    assert(it == fmt.end() - offset);
+    std::same_as<typename std::basic_string_view<CharT>::iterator> auto it = formatter.parse(parse_ctx);
+    // std::to_address works around LWG3989 and MSVC STL's iterator debugging mechanism.
+    assert(std::to_address(it) == std::to_address(fmt.end()) - offset);
 
     std::basic_string<CharT> result;
     auto out = std::back_inserter(result);

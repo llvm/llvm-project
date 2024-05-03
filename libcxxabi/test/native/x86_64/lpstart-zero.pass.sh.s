@@ -1,7 +1,8 @@
 # RUN: %{cxx} %{flags} %s %{link_flags} -no-pie -o %t.exe
-# RUN: %t.exe
+# RUN: %{exec} %t.exe
 
 # REQUIRES: linux && target={{x86_64-.+}}
+# UNSUPPORTED: target={{.+-android.*}}
 # UNSUPPORTED: no-exceptions
 
 ## Check that libc++abi works correctly when LPStart address is explicitly set
@@ -82,7 +83,7 @@ GCC_except_table0:
 	.byte	155                             # @TType Encoding = indirect pcrel sdata4
 	.uleb128 .Lttbase0-.Lttbaseref0
 .Lttbaseref0:
-	.byte	11                              # Call site Encoding = udata4
+	.byte	11                              # Call site Encoding = sdata4
 	.uleb128 .Lcst_end0-.Lcst_begin0
 .Lcst_begin0:
 	.long .Lfunc_begin0-.Lfunc_begin0    # >> Call Site 1 <<

@@ -117,6 +117,11 @@ multiple file formats.
  If specified, symbol and section names specified by other switches are treated
  as extended POSIX regular expression patterns.
 
+.. option:: --remove-symbol-prefix <prefix>
+
+Remove ``<prefix>`` from the start of every symbol name. No-op for symbols that do
+not start with ``<prefix>``.
+
 .. option:: --remove-section <section>, -R
 
  Remove the specified section from the output. Can be specified multiple times
@@ -304,6 +309,14 @@ them.
  Compress DWARF debug sections in the output, using the specified format.
  Supported formats are ``zlib`` and ``zstd``. Use ``zlib`` if ``<format>`` is omitted.
 
+.. option:: --compress-sections <section>=<format>
+
+ Compress or decompress sections matched by ``<section>`` using the specified
+ format. Supported formats are ``zlib`` and ``zstd``. Specify ``none`` for
+ decompression. When a section is matched by multiple options, the last one
+ wins. A wildcard ``<section>`` starting with '!' is disallowed.
+ Sections within a segment cannot be (de)compressed.
+
 .. option:: --decompress-debug-sections
 
  Decompress any compressed DWARF debug sections in the output.
@@ -323,6 +336,11 @@ them.
 .. option:: --extract-partition <name>
 
  Extract the named partition from the output.
+
+.. option:: --gap-fill <value>
+
+ For binary outputs, fill the gaps between sections with ``<value>`` instead
+ of zero. The value must be an unsigned 8-bit integer.
 
 .. option:: --globalize-symbol <symbol>
 
@@ -348,12 +366,12 @@ them.
 
 .. option:: --keep-global-symbol <symbol>, -G
 
- Make all symbols local in the output, except for symbols with the name
+ Mark all symbols local in the output, except for symbols with the name
  ``<symbol>``. Can be specified multiple times to ignore multiple symbols.
 
 .. option:: --keep-global-symbols <filename>
 
- Make all symbols local in the output, except for symbols named in the file
+ Mark all symbols local in the output, except for symbols named in the file
  ``<filename>``. In the file, each line represents a single symbol, with leading
  and trailing whitespace ignored, as is anything following a '#'. Can be
  specified multiple times to read names from multiple files.
@@ -377,7 +395,7 @@ them.
 
 .. option:: --localize-hidden
 
- Make all symbols with hidden or internal visibility local in the output.
+ Mark all symbols with hidden or internal visibility local in the output.
 
 .. option:: --localize-symbol <symbol>, -L
 
@@ -411,6 +429,11 @@ them.
  be the same as the value specified for :option:`--input-target` or the input
  file's format if that option is also unspecified.
 
+.. option:: --pad-to <address>
+
+ For binary outputs, pad the output to the load address ``<address>`` using a value
+ of zero or the value specified by :option:`--gap-fill`.
+
 .. option:: --prefix-alloc-sections <prefix>
 
  Add ``<prefix>`` to the front of the names of all allocatable sections in the
@@ -435,10 +458,32 @@ them.
  Set the type of section ``<section>`` to the integer ``<type>``. Can be
  specified multiple times to update multiple sections.
 
-.. option:: --set-start-addr <addr>
+.. option:: --set-start <addr>
 
  Set the start address of the output to ``<addr>``. Overrides any previously
  specified :option:`--change-start` or :option:`--adjust-start` options.
+
+.. option:: --set-symbol-visibility <symbol>=<visibility>
+
+ Change the visibility of a symbol to the specified value.
+
+.. option:: --set-symbols-visibility <filename>=<visibility>
+
+ Read a list of symbols from <filename> and change their visibility to the
+ specified value. Visibility values: default, internal, hidden, protected.
+
+.. option:: --skip-symbol <symbol>
+
+ Do not change the parameters of symbol ``<symbol>`` when executing other
+ options that can change the symbol's name, binding or visibility.
+
+.. option:: --skip-symbols <filename>
+
+ Do not change the parameters of symbols named in the file ``<filename>`` when
+ executing other options that can change the symbol's name, binding or
+ visibility. In the file, each line represents a single symbol, with leading
+ and trailing whitespace ignored, as is anything following a '#'.
+ Can be specified multiple times to read names from multiple files.
 
 .. option:: --split-dwo <dwo-file>
 
@@ -469,7 +514,7 @@ them.
 
 .. option:: --weaken-symbol <symbol>, -W
 
- Mark any global symbol named ``<symbol>`` as a weak symbol in the output. Can
+ Mark global symbols named ``<symbol>`` as weak symbols in the output. Can
  be specified multiple times to mark multiple symbols as weak.
 
 .. option:: --weaken-symbols <filename>
@@ -528,9 +573,18 @@ options. For GNU :program:`objcopy` compatibility, the values are all bfdnames.
 - `elf64-tradlittlemips`
 - `elf32-sparc`
 - `elf32-sparcel`
+- `elf32-hexagon`
+- `elf32-loongarch`
+- `elf64-loongarch`
+- `elf64-s390`
 
-Additionally, all targets except `binary` and `ihex` can have `-freebsd` as a
-suffix.
+The following formats are suppoprted by :program:`llvm-objcopy` for the
+:option:`--output-target` only:
+
+- `srec`
+
+Additionally, all targets except `binary`, `ihex`, and `srec` can have
+`-freebsd` as a suffix.
 
 BINARY INPUT AND OUTPUT
 -----------------------

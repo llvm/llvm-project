@@ -26,6 +26,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include <optional>
 
@@ -491,14 +493,13 @@ static StopInfoSP GetStopInfoForHardwareBP(Thread &thread, Target *target,
                                            uint64_t exc_sub_sub_code) {
   // Try hardware watchpoint.
   if (target) {
-    // LWP_TODO: We need to find the WatchpointResource that matches
-    // the address, and evaluate its Watchpoints.
-
     // The exc_sub_code indicates the data break address.
-    lldb::WatchpointSP wp_sp =
-        target->GetWatchpointList().FindByAddress((lldb::addr_t)exc_sub_code);
-    if (wp_sp && wp_sp->IsEnabled()) {
-      return StopInfo::CreateStopReasonWithWatchpointID(thread, wp_sp->GetID());
+    WatchpointResourceSP wp_rsrc_sp =
+        target->GetProcessSP()->GetWatchpointResourceList().FindByAddress(
+            (addr_t)exc_sub_code);
+    if (wp_rsrc_sp && wp_rsrc_sp->GetNumberOfConstituents() > 0) {
+      return StopInfo::CreateStopReasonWithWatchpointID(
+          thread, wp_rsrc_sp->GetConstituentAtIndex(0)->GetID());
     }
   }
 
@@ -597,6 +598,7 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
   if (exc_type == 0)
     return StopInfoSP();
 
+  bool not_stepping_but_got_singlestep_exception = false;
   uint32_t pc_decrement = 0;
   ExecutionContext exe_ctx(thread.shared_from_this());
   Target *target = exe_ctx.GetTargetPtr();
@@ -721,30 +723,8 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
         // is set
         is_actual_breakpoint = true;
         is_trace_if_actual_breakpoint_missing = true;
-#ifndef NDEBUG
-        if (thread.GetTemporaryResumeState() != eStateStepping) {
-          StreamString s;
-          s.Printf("CreateStopReasonWithMachException got EXC_BREAKPOINT [1,0] "
-                   "indicating trace event, but thread is not tracing, it has "
-                   "ResumeState %d",
-                   thread.GetTemporaryResumeState());
-          if (RegisterContextSP regctx = thread.GetRegisterContext()) {
-            if (const RegisterInfo *ri = regctx->GetRegisterInfoByName("esr")) {
-              uint32_t esr =
-                  (uint32_t)regctx->ReadRegisterAsUnsigned(ri, UINT32_MAX);
-              if (esr != UINT32_MAX) {
-                s.Printf(" esr value: 0x%" PRIx32, esr);
-              }
-            }
-          }
-          thread.GetProcess()->DumpPluginHistory(s);
-          llvm::report_fatal_error(s.GetData());
-          lldbassert(
-              false &&
-              "CreateStopReasonWithMachException got EXC_BREAKPOINT [1,0] "
-              "indicating trace event, but thread was not doing a step.");
-        }
-#endif
+        if (thread.GetTemporaryResumeState() != eStateStepping)
+          not_stepping_but_got_singlestep_exception = true;
       }
       if (exc_code == 0x102) // EXC_ARM_DA_DEBUG
       {
@@ -826,6 +806,56 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
     break;
   }
 
-  return StopInfoSP(new StopInfoMachException(thread, exc_type, exc_data_count,
-                                              exc_code, exc_sub_code));
+  return std::make_shared<StopInfoMachException>(
+      thread, exc_type, exc_data_count, exc_code, exc_sub_code,
+      not_stepping_but_got_singlestep_exception);
+}
+
+// Detect an unusual situation on Darwin where:
+//
+//   0. We did an instruction-step before this.
+//   1. We have a hardware breakpoint or watchpoint set.
+//   2. We resumed the process, but not with an instruction-step.
+//   3. The thread gets an "instruction-step completed" mach exception.
+//   4. The pc has not advanced - it is the same as before.
+//
+// This method returns true for that combination of events.
+bool StopInfoMachException::WasContinueInterrupted(Thread &thread) {
+  Log *log = GetLog(LLDBLog::Step);
+
+  // We got an instruction-step completed mach exception but we were not
+  // doing an instruction step on this thread.
+  if (!m_not_stepping_but_got_singlestep_exception)
+    return false;
+
+  RegisterContextSP reg_ctx_sp(thread.GetRegisterContext());
+  std::optional<addr_t> prev_pc = thread.GetPreviousFrameZeroPC();
+  if (!reg_ctx_sp || !prev_pc)
+    return false;
+
+  // The previous pc value and current pc value are the same.
+  if (*prev_pc != reg_ctx_sp->GetPC())
+    return false;
+
+  // We have a watchpoint -- this is the kernel bug.
+  ProcessSP process_sp = thread.GetProcess();
+  if (process_sp->GetWatchpointResourceList().GetSize()) {
+    LLDB_LOGF(log,
+              "Thread stopped with insn-step completed mach exception but "
+              "thread was not stepping; there is a hardware watchpoint set.");
+    return true;
+  }
+
+  // We have a hardware breakpoint -- this is the kernel bug.
+  auto &bp_site_list = process_sp->GetBreakpointSiteList();
+  for (auto &site : bp_site_list.Sites()) {
+    if (site->IsHardware() && site->IsEnabled()) {
+      LLDB_LOGF(log,
+                "Thread stopped with insn-step completed mach exception but "
+                "thread was not stepping; there is a hardware breakpoint set.");
+      return true;
+    }
+  }
+
+  return false;
 }

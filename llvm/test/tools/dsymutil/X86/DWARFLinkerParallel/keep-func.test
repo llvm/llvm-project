@@ -20,8 +20,8 @@ int main()
 $ clang++ -O2 -g main.cpp -c -o main.o
 $ clang++ main.o -o main.out
 
-RUN: dsymutil --linker llvm -oso-prepend-path %p/../../Inputs %p/../../Inputs/private/tmp/keep_func/main.out -o %t.omit.dSYM
-RUN: dsymutil --linker llvm -oso-prepend-path %p/../../Inputs %p/../../Inputs/private/tmp/keep_func/main.out -o %t.keep.dSYM -keep-function-for-static
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../../Inputs %p/../../Inputs/private/tmp/keep_func/main.out -o %t.omit.dSYM
+RUN: dsymutil --linker parallel -oso-prepend-path %p/../../Inputs %p/../../Inputs/private/tmp/keep_func/main.out -o %t.keep.dSYM -keep-function-for-static
 RUN: llvm-dwarfdump %t.omit.dSYM | FileCheck %s --check-prefix OMIT
 RUN: llvm-dwarfdump %t.keep.dSYM | FileCheck %s --check-prefix KEEP
 

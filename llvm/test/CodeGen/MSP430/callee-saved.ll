@@ -37,18 +37,18 @@ define void @foo() {
 ; CHECK: .cfi_offset r9, -14
 ; CHECK: .cfi_offset r10, -16
 
-  %t1 = load volatile float, float* @g
-  %t2 = load volatile float, float* @g
-  %t3 = load volatile float, float* @g
-  %t4 = load volatile float, float* @g
-  %t5 = load volatile float, float* @g
-  %t6 = load volatile float, float* @g
-  %t7 = load volatile float, float* @g
-  store volatile float %t1, float* @g
-  store volatile float %t2, float* @g
-  store volatile float %t3, float* @g
-  store volatile float %t4, float* @g
-  store volatile float %t5, float* @g
-  store volatile float %t6, float* @g
+  %t1 = load volatile float, ptr @g
+  %t2 = load volatile float, ptr @g
+  %t3 = load volatile float, ptr @g
+  %t4 = load volatile float, ptr @g
+  %t5 = load volatile float, ptr @g
+  %t6 = load volatile float, ptr @g
+  %t7 = load volatile float, ptr @g
+  store volatile float %t1, ptr @g
+  store volatile float %t2, ptr @g
+  store volatile float %t3, ptr @g
+  store volatile float %t4, ptr @g
+  store volatile float %t5, ptr @g
+  store volatile float %t6, ptr @g
   ret void
 }

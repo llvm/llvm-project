@@ -49,6 +49,18 @@
 ; CHECK-DAG: ![[DBG6]] = distinct !DIGlobalVariable(name: "g_66", {{.*}}
 ; CHECK: ![[G7:[0-9]+]] = !DIGlobalVariableExpression(var: ![[DBG7:[0-9]+]], expr: !DIExpression(DW_OP_constu, 70, DW_OP_stack_value))
 ; CHECK-DAG: ![[DBG7]] = distinct !DIGlobalVariable(name: "g_77", {{.*}}
+; CHECK:     = !DIGlobalVariableExpression(var: ![[DBG_FLOAT_UNDEF:.+]], expr: !DIExpression())
+; CHECK-DAG: ![[DBG_FLOAT_UNDEF]]  = distinct !DIGlobalVariable(name: "g_float_undef"
+
+; CHECK: ![[G8:[0-9]+]] = !DIGlobalVariableExpression(var: ![[DBG8:[0-9]+]], expr: !DIExpression(DW_OP_constu, 22136, DW_OP_stack_value))
+; CHECK-DAG: ![[DBG8]] = distinct !DIGlobalVariable(name: "g_88", {{.*}}
+; CHECK: ![[G9:[0-9]+]] = !DIGlobalVariableExpression(var: ![[DBG9:[0-9]+]], expr: !DIExpression(DW_OP_constu, 23726, DW_OP_stack_value))
+; CHECK-DAG: ![[DBG9]] = distinct !DIGlobalVariable(name: "g_99", {{.*}}
+
+; CHECK-DAG: ![[DBGA:[0-9]+]] = distinct !DIGlobalVariable(name: "g_i32_undef"
+; CHECK-DAG: ![[GA:[0-9]+]] = !DIGlobalVariableExpression(var: ![[DBGA]], expr: !DIExpression())
+; CHECK-DAG: ![[DBGB:[0-9]+]] = distinct !DIGlobalVariable(name: "g_ptr_undef"
+; CHECK-DAG: ![[GB:[0-9]+]] = !DIGlobalVariableExpression(var: ![[DBGB]], expr: !DIExpression())
 
 @g_1 = dso_local global i32 -4, align 4, !dbg !0
 @g_2 = dso_local global float 0x4011C28F60000000, align 4, !dbg !8
@@ -57,6 +69,8 @@
 @g_5 = dso_local global i8 1, align 1, !dbg !16
 @g_6 = dso_local global ptr null, align 8, !dbg !19
 @g_7 = dso_local global ptr null, align 8, !dbg !23
+@g_8 = dso_local global half 0xH4321, align 4, !dbg !86
+@g_9 = dso_local global bfloat 0xR3F80, align 4, !dbg !90
 @_ZL4g_11 = internal global i32 -5, align 4, !dbg !25
 @_ZL4g_22 = internal global float 0x4016333340000000, align 4, !dbg !27
 @_ZL4g_33 = internal global i8 98, align 1, !dbg !29
@@ -64,6 +78,11 @@
 @_ZL4g_55 = internal global i8 1, align 1, !dbg !33
 @_ZL4g_66 = internal global ptr null, align 8, !dbg !35
 @_ZL4g_77 = internal global ptr inttoptr (i64 70 to ptr), align 8, !dbg !37
+@g_float_undef = internal global float undef, align 4, !dbg !83
+@_ZL4g_88 = internal global half 0xH5678, align 4, !dbg !88
+@_ZL4g_99 = internal global bfloat 0xR5CAE, align 4, !dbg !92
+@g_i32_undef = internal global i32 undef, align 4, !dbg !95
+@g_ptr_undef = internal global ptr undef, align 8, !dbg !97
 
 define dso_local void @_Z3barv() !dbg !46 {
 entry:
@@ -83,6 +102,17 @@ entry:
   store ptr %5, ptr @g_6, align 8, !dbg !59
   %6 = load ptr, ptr @_ZL4g_77, align 8, !dbg !59
   store ptr %6, ptr @g_7, align 8, !dbg !59
+  %l = load float, ptr @g_float_undef, align 8, !dbg !59
+  store float %l, ptr @g_2, align 8, !dbg !59
+  %7 = load half, ptr @_ZL4g_88, align 4, !dbg !59
+  store half %7, ptr @g_8, align 4, !dbg !59
+  %8 = load bfloat, ptr @_ZL4g_99, align 4, !dbg !59
+  store bfloat %8, ptr @g_9, align 4, !dbg !59
+  %9 = load i32, ptr @g_i32_undef, align 4, !dbg !59
+  store i32 %9, ptr @g_1, align 4, !dbg !59
+  %10 = load ptr, ptr @g_ptr_undef, align 8, !dbg !59
+  store ptr %10, ptr @g_6, align 8, !dbg !59
+
   ret void, !dbg !59
 }
 
@@ -103,7 +133,7 @@ entry:
 !4 = !{!5}
 !5 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !6, size: 64)
 !6 = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)
-!7 = !{!0, !8, !10, !13, !16, !19, !23, !25, !27, !29, !31, !33, !35, !37}
+!7 = !{!0, !8, !10, !13, !16, !19, !23, !25, !27, !29, !31, !33, !35, !37, !83, !86, !88, !90, !92, !95, !97}
 !8 = !DIGlobalVariableExpression(var: !9, expr: !DIExpression())
 !9 = distinct !DIGlobalVariable(name: "g_2", scope: !2, file: !3, line: 2, type: !6, isLocal: false, isDefinition: true)
 !10 = !DIGlobalVariableExpression(var: !11, expr: !DIExpression())
@@ -152,3 +182,19 @@ entry:
 !80 = !DILocation(line: 29, column: 5, scope: !81)
 !81 = distinct !DILexicalBlock(scope: !77, file: !3, line: 28, column: 3)
 !82 = !DILocation(line: 31, column: 1, scope: !77)
+!83 = !DIGlobalVariableExpression(var: !84, expr: !DIExpression())
+!84 = distinct !DIGlobalVariable(name: "g_float_undef", linkageName: "g_float_undef", scope: !2, file: !3, line: 15, type: !6, isLocal: true, isDefinition: true)
+!85 = !DIBasicType(name: "float", size: 16, encoding: DW_ATE_float)
+!86 = !DIGlobalVariableExpression(var: !87, expr: !DIExpression())
+!87 = distinct !DIGlobalVariable(name: "g_8", scope: !2, file: !3, line: 2, type: !85, isLocal: false, isDefinition: true)
+!88 = !DIGlobalVariableExpression(var: !89, expr: !DIExpression())
+!89 = distinct !DIGlobalVariable(name: "g_88", linkageName: "_ZL4g_88", scope: !2, file: !3, line: 10, type: !85, isLocal: true, isDefinition: true)
+!90 = !DIGlobalVariableExpression(var: !91, expr: !DIExpression())
+!91 = distinct !DIGlobalVariable(name: "g_9", scope: !2, file: !3, line: 2, type: !85, isLocal: false, isDefinition: true)
+!92 = !DIGlobalVariableExpression(var: !93, expr: !DIExpression())
+!93 = distinct !DIGlobalVariable(name: "g_99", linkageName: "_ZL4g_99", scope: !2, file: !3, line: 10, type: !85, isLocal: true, isDefinition: true)
+
+!95 = !DIGlobalVariableExpression(var: !96, expr: !DIExpression())
+!96 = distinct !DIGlobalVariable(name: "g_i32_undef", linkageName: "g_i32_undef", scope: !2, file: !3, line: 9, type: !22, isLocal: true, isDefinition: true)
+!97 = !DIGlobalVariableExpression(var: !98, expr: !DIExpression())
+!98 = distinct !DIGlobalVariable(name: "g_ptr_undef", linkageName: "g_ptr_undef", scope: !2, file: !3, line: 14, type: !21, isLocal: true, isDefinition: true)

@@ -10,10 +10,11 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_ALIGNED_TAG_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_ALIGNED_TAG_H
 
-#include <__bit/bit_ceil.h>
 #include <__memory/assume_aligned.h>
+#include <__type_traits/remove_const.h>
 #include <cstddef>
 #include <experimental/__config>
+#include <experimental/__simd/traits.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 
@@ -30,15 +31,21 @@ struct element_aligned_tag {
   }
 };
 
+template <>
+inline constexpr bool is_simd_flag_type_v<element_aligned_tag> = true;
+
 struct vector_aligned_tag {
   template <class _Tp, class _Up = typename _Tp::value_type>
-  static constexpr size_t __alignment = std::__bit_ceil(sizeof(_Up) * _Tp::size());
+  static constexpr size_t __alignment = memory_alignment_v<_Tp, remove_const_t<_Up>>;
 
   template <class _Tp, class _Up>
   static _LIBCPP_HIDE_FROM_ABI constexpr _Up* __apply(_Up* __ptr) {
     return std::__assume_aligned<__alignment<_Tp, _Up>, _Up>(__ptr);
   }
 };
+
+template <>
+inline constexpr bool is_simd_flag_type_v<vector_aligned_tag> = true;
 
 template <size_t _Np>
 struct overaligned_tag {
@@ -50,6 +57,9 @@ struct overaligned_tag {
     return std::__assume_aligned<__alignment<_Tp, _Up>, _Up>(__ptr);
   }
 };
+
+template <size_t _Np>
+inline constexpr bool is_simd_flag_type_v<overaligned_tag<_Np>> = true;
 
 inline constexpr element_aligned_tag element_aligned{};
 

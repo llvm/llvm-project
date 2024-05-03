@@ -1,7 +1,7 @@
 # Chapter H: Reproducing Halide Schedule
 
 This chapter demonstrates how a schedule from the [Halide
-DSL](http://halide-lang.org) can be implemented using transform dialect for
+DSL](http://halide-lang.org) can be implemented using Transform dialect for
 structured ops.
 
 Note that the IR below is pseudo-code with types removed for brevity. It may
@@ -408,7 +408,7 @@ identical_ to the code with the full schedule. Therefore, we will only unroll
 the corresponding loops corresponding to `xi` and `ci` dimensions that actually
 get unrolled by Halide.
 
-As tiling in the transform dialect produces handles to the loops materialized by
+As tiling in the Transform dialect produces handles to the loops materialized by
 tiling, unrolling those loops is just a matter of chaining the corresponding
 transformation. Note that the inner loop must be unrolled first as unrolling the
 outer loop will invalidate the handles to the inner loop.
@@ -499,7 +499,7 @@ bufferization is directly available as a transform operation.
 
 One-shot bufferization itself does not produce buffer deallocations, which may
 lead to leaks. So we have to run the buffer deallocation pass pipeline to avoid
-them. Note that the transform dialect seamlessly runs named passes and pass
+them. Note that the Transform dialect seamlessly runs named passes and pass
 pipelines: if desired, one could replace complex `--pass-pipeline expressions`
 with operations. Note that we apply the pipeline to functions rather than entire
 module to avoid running it on the transform IR that is contained in the module.
@@ -583,10 +583,11 @@ LLVM IR and processed by the LLVM compiler to produce an executable or JITted.
 
 The generated code runs in ~420ms on an Intel processor with Skylake
 microarchitecture clocked at 2.0GHz. Given that the computation performs
-$5*80*100*128*(2*3*3*128 + 2) ~= 5.9 * 10^9$ floating point operations, it
-reaches ~14 GFlops. With 1 FMA unit available, the single-core performance of
-the test processor is 64 GFlops $16 * 2 * 2 * 10^9$, where 16 is the vector
-width), so only 22% of the theoretical peak is achieved.
+$`5 \cdot 80 \cdot 100 \cdot 128 \cdot (2 \cdot 3 \cdot 3 \cdot 128 + 2) \approx 5.9 * 10^9`$
+floating point operations, it reaches ~14 GFlops. With 1 FMA unit available,
+the single-core performance of the test processor is 64 GFlops
+($`16 \cdot 2 \cdot 2 \cdot 10^9`$, where 16 is the vector width), so only 
+22% of the theoretical peak is achieved.
 
 The code produced by Halide runs in ~120ms on the same processor, a 3.5x
 improvement and 77% of peak. Let us analyze the generated assembly to understand

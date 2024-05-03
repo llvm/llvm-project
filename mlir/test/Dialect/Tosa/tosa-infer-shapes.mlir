@@ -1,4 +1,4 @@
-// RUN: mlir-opt --split-input-file --tosa-infer-shapes %s | FileCheck %s
+// RUN: mlir-opt --split-input-file --tosa-infer-shapes --allow-unregistered-dialect %s | FileCheck %s
 
 // CHECK-LABEL: @test_return
 func.func @test_return(%arg0 : tensor<4xf32>) -> tensor<*xf32> {
@@ -94,7 +94,7 @@ func.func @test_unary_i32(%arg0 : tensor<4xi32>) -> () {
   %5 = tosa.reverse %arg0 { axis = 0 : i32 } : (tensor<4xi32>) -> tensor<?xi32>
 
   // CHECK: tosa.rescale %arg0 {{.+}} : (tensor<4xi32>) -> tensor<4xi16>
-  %6 = tosa.rescale %arg0 {input_zp = 243 : i32, output_zp = 252 : i32, multiplier = array<i32: 42, 43>, shift = array<i32: 14, 15>, scale32 = false, double_round = false, per_channel = false} : (tensor<4xi32>) -> tensor<*xi16>
+  %6 = tosa.rescale %arg0 {input_zp = 243 : i32, output_zp = 252 : i32, multiplier = array<i32: 42, 43>, shift = array<i8: 14, 15>, scale32 = false, double_round = false, per_channel = false} : (tensor<4xi32>) -> tensor<*xi16>
 
   // CHECK: tosa.identity %arg0 : (tensor<4xi32>) -> tensor<4xi32>
   %7 = tosa.identity %arg0 : (tensor<4xi32>) -> tensor<?xi32>
@@ -1177,6 +1177,97 @@ func.func @while_test(%arg0 : tensor<i32>, %arg1 : tensor<1xi32>) -> () {
 
 // -----
 
+// This test locks down a fix for a crash in the type inference process.
+// The relevant pattern is a while loop whose body contains a TOSA operation which is
+// consumed by a non-inferrable user in the same body.
+// Previously, this would trigger a crash due to how types are cached and then
+// reapplied to the operations in the loops body.
+
+// CHECK-LABEL: @while_dont_crash
+func.func @while_dont_crash(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
+  %0 = tosa.add %arg0, %arg0 : (tensor<i32>, tensor<i32>) -> tensor<*xi32>
+  // CHECK:      tosa.while_loop
+  // CHECK-SAME: (tensor<i32>) -> tensor<i32>
+  %1 = tosa.while_loop (%arg1 = %0) : (tensor<*xi32>) -> tensor<*xi32> {
+    %2 = "tosa.const"() <{value = dense<3> : tensor<i32>}> : () -> tensor<i32>
+    // CHECK:       tosa.greater_equal
+    // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i1>
+    %3 = tosa.greater_equal %2, %arg1 : (tensor<i32>, tensor<*xi32>) -> tensor<*xi1>
+    tosa.yield %3 : tensor<*xi1>
+  } do {
+  // CHECK:      ^bb0
+  // CHECK-SAME: tensor<i32>
+  ^bb0(%arg1: tensor<*xi32>):
+    // CHECK:     tosa.add
+    // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i32>
+    %3 = tosa.add %arg1, %arg1 : (tensor<*xi32>, tensor<*xi32>) -> tensor<*xi32>
+    // CHECK: %[[CAST:.+]] = tensor.cast %{{.*}} : tensor<i32> to tensor<*xi32>
+    // CHECK: "use"(%[[CAST]]) : (tensor<*xi32>) -> ()
+    "use"(%3) : (tensor<*xi32>) -> ()
+    tosa.yield %3 : tensor<*xi32>
+  }
+  // CHECK: tensor.cast
+  return %1 : tensor<*xi32>
+}
+
+// -----
+
+// This test locks down a fix for a crash in the type inference process.
+// The relevant pattern is a while loop whose body contains a TOSA operation which is
+// consumed by a non-inferrable user in the same body.
+
+// CHECK-LABEL: @while_dont_crash_nested
+func.func @while_dont_crash_nested(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
+  %0 = tosa.add %arg0, %arg0 : (tensor<i32>, tensor<i32>) -> tensor<*xi32>
+  // CHECK:      tosa.while_loop
+  // CHECK-SAME: (tensor<i32>) -> tensor<i32>
+  %1 = tosa.while_loop (%arg1 = %0) : (tensor<*xi32>) -> tensor<*xi32> {
+    %2 = "tosa.const"() <{value = dense<3> : tensor<i32>}> : () -> tensor<i32>
+    // CHECK:       tosa.greater_equal
+    // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i1>
+    %3 = tosa.greater_equal %2, %arg1 : (tensor<i32>, tensor<*xi32>) -> tensor<*xi1>
+    // CHECK:      tosa.yield
+    // CHECK-SAME: tensor<i1>
+    tosa.yield %3 : tensor<*xi1>
+  } do {
+  // CHECK:      ^bb0
+  // CHECK-SAME: tensor<i32>
+  ^bb0(%arg1: tensor<*xi32>):
+    // CHECK:      tosa.while_loop
+    // CHECK-SAME: (tensor<i32>) -> tensor<i32>
+    %1 = tosa.while_loop (%arg2 = %arg1) : (tensor<*xi32>) -> tensor<*xi32> {
+      %2 = "tosa.const"() <{value = dense<3> : tensor<i32>}> : () -> tensor<i32>
+      // CHECK:       tosa.greater_equal
+      // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i1>
+      %4 = tosa.greater_equal %2, %arg2 : (tensor<i32>, tensor<*xi32>) -> tensor<*xi1>
+      // CHECK:      tosa.yield
+      // CHECK-SAME: tensor<i1>
+      tosa.yield %4 : tensor<*xi1>
+    } do {
+    // CHECK:      ^bb0
+    // CHECK-SAME: tensor<i32>
+    ^bb0(%arg2: tensor<*xi32>):
+      // CHECK:     tosa.add
+      // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i32>
+      %4 = tosa.add %arg2, %arg2 : (tensor<*xi32>, tensor<*xi32>) -> tensor<*xi32>
+      // CHECK: %[[CAST:.+]] = tensor.cast %{{.*}} : tensor<i32> to tensor<*xi32>
+      // CHECK: "use"(%[[CAST]]) : (tensor<*xi32>) -> ()
+      "use"(%4) : (tensor<*xi32>) -> ()
+      // CHECK:      tosa.yield
+      // CHECK-SAME: tensor<i32>
+      tosa.yield %4 : tensor<*xi32>
+    }
+    // CHECK:      tosa.yield
+    // CHECK-SAME: tensor<i32>
+    tosa.yield %1 : tensor<*xi32>
+  }
+
+  // CHECK: tensor.cast
+  return %1 : tensor<*xi32>
+}
+
+// -----
+
 // CHECK-LABEL: @test_static_rfft2d
 func.func @test_static_rfft2d(%arg0: tensor<5x2x8xf32>) -> () {
   // CHECK: -> (tensor<5x2x5xf32>, tensor<5x2x5xf32>)
@@ -1307,17 +1398,5 @@ func.func @test_large_constant_permutation() {
   // Fail to infer the shape but not crash.
   // CHECK: (tensor<?x27xi64>, tensor<2xi32>) -> tensor<?x27xi64>
   %72 = tosa.transpose %14, %cst_26 : (tensor<?x27xi64>, tensor<2xi32>) -> tensor<?x27xi64>
-  return
-}
-
-// -----
-
-// CHECK-LABEL: test_rank0_transpose_perms
-// Fail to infer the shape but not crash.
-func.func @test_rank0_transpose_perms() {
-  %14 = tensor.empty() : tensor<5x27xi64>
-  %cst = tensor.empty() : tensor<i32>
-  // CHECK: tosa.transpose
-  %72 = tosa.transpose %14, %cst : (tensor<5x27xi64>, tensor<i32>) -> tensor<?x?xi64>
   return
 }

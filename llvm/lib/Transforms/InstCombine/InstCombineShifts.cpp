@@ -366,14 +366,14 @@ static Instruction *foldShiftOfShiftedBinOp(BinaryOperator &I,
 
   Type *Ty = I.getType();
 
-  // Find a matching one-use shift by constant. The fold is not valid if the sum
+  // Find a matching shift by constant. The fold is not valid if the sum
   // of the shift values equals or exceeds bitwidth.
-  // TODO: Remove the one-use check if the other logic operand (Y) is constant.
   Value *X, *Y;
-  auto matchFirstShift = [&](Value *V) {
-    APInt Threshold(Ty->getScalarSizeInBits(), Ty->getScalarSizeInBits());
-    return match(V,
-                 m_OneUse(m_BinOp(ShiftOpcode, m_Value(X), m_Constant(C0)))) &&
+  auto matchFirstShift = [&](Value *V, Value *W) {
+    unsigned Size = Ty->getScalarSizeInBits();
+    APInt Threshold(Size, Size);
+    return match(V, m_BinOp(ShiftOpcode, m_Value(X), m_Constant(C0))) &&
+           (V->hasOneUse() || match(W, m_ImmConstant())) &&
            match(ConstantExpr::getAdd(C0, C1),
                  m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, Threshold));
   };
@@ -382,9 +382,9 @@ static Instruction *foldShiftOfShiftedBinOp(BinaryOperator &I,
   // is not so we cannot reoder if we match operand(1) and need to keep the
   // operands in their original positions.
   bool FirstShiftIsOp1 = false;
-  if (matchFirstShift(BinInst->getOperand(0)))
+  if (matchFirstShift(BinInst->getOperand(0), BinInst->getOperand(1)))
     Y = BinInst->getOperand(1);
-  else if (matchFirstShift(BinInst->getOperand(1))) {
+  else if (matchFirstShift(BinInst->getOperand(1), BinInst->getOperand(0))) {
     Y = BinInst->getOperand(0);
     FirstShiftIsOp1 = BinInst->getOpcode() == Instruction::Sub;
   } else
@@ -437,9 +437,16 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
   Value *A;
   Constant *C, *C1;
   if (match(Op0, m_Constant(C)) &&
-      match(Op1, m_NUWAdd(m_Value(A), m_Constant(C1)))) {
+      match(Op1, m_NUWAddLike(m_Value(A), m_Constant(C1)))) {
     Value *NewC = Builder.CreateBinOp(I.getOpcode(), C, C1);
-    return BinaryOperator::Create(I.getOpcode(), NewC, A);
+    BinaryOperator *NewShiftOp = BinaryOperator::Create(I.getOpcode(), NewC, A);
+    if (I.getOpcode() == Instruction::Shl) {
+      NewShiftOp->setHasNoSignedWrap(I.hasNoSignedWrap());
+      NewShiftOp->setHasNoUnsignedWrap(I.hasNoUnsignedWrap());
+    } else {
+      NewShiftOp->setIsExact(I.isExact());
+    }
+    return NewShiftOp;
   }
 
   unsigned BitWidth = Ty->getScalarSizeInBits();
@@ -771,7 +778,7 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
   // (X / +DivC) >> (Width - 1) --> ext (X <= -DivC)
   // (X / -DivC) >> (Width - 1) --> ext (X >= +DivC)
   const APInt *DivC;
-  if (!IsLeftShift && match(C1, m_SpecificIntAllowUndef(TypeBits - 1)) &&
+  if (!IsLeftShift && match(C1, m_SpecificIntAllowPoison(TypeBits - 1)) &&
       match(Op0, m_SDiv(m_Value(X), m_APInt(DivC))) && !DivC->isZero() &&
       !DivC->isMinSignedValue()) {
     Constant *NegDivC = ConstantInt::get(Ty, -(*DivC));
@@ -1113,14 +1120,6 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
       return BinaryOperator::CreateAnd(Trunc, ConstantInt::get(Ty, Mask));
     }
 
-    if (match(Op0, m_Shl(m_Value(X), m_APInt(C1))) && C1->ult(BitWidth)) {
-      unsigned AmtSum = ShAmtC + C1->getZExtValue();
-      // Oversized shifts are simplified to zero in InstSimplify.
-      if (AmtSum < BitWidth)
-        // (X << C1) << C2 --> X << (C1 + C2)
-        return BinaryOperator::CreateShl(X, ConstantInt::get(Ty, AmtSum));
-    }
-
     // If we have an opposite shift by the same amount, we may be able to
     // reorder binops and shifts to eliminate math/logic.
     auto isSuitableBinOpcode = [](Instruction::BinaryOps BinOpcode) {
@@ -1199,6 +1198,12 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     return BinaryOperator::CreateAnd(Mask, X);
   }
 
+  // Transform  (-1 >> y) << y  to -1 << y
+  if (match(Op0, m_LShr(m_AllOnes(), m_Specific(Op1)))) {
+    Constant *AllOnes = ConstantInt::getAllOnesValue(Ty);
+    return BinaryOperator::CreateShl(AllOnes, Op1);
+  }
+
   Constant *C1;
   if (match(Op1, m_Constant(C1))) {
     Constant *C2;
@@ -1251,7 +1256,7 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
 
   // (iN (~X) u>> (N - 1)) --> zext (X > -1)
   if (match(Op0, m_OneUse(m_Not(m_Value(X)))) &&
-      match(Op1, m_SpecificIntAllowUndef(BitWidth - 1)))
+      match(Op1, m_SpecificIntAllowPoison(BitWidth - 1)))
     return new ZExtInst(Builder.CreateIsNotNeg(X, "isnotneg"), Ty);
 
   if (match(Op1, m_APInt(C))) {
@@ -1381,14 +1386,6 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
       }
     }
 
-    // (X >>u C1) >>u C --> X >>u (C1 + C)
-    if (match(Op0, m_LShr(m_Value(X), m_APInt(C1)))) {
-      // Oversized shifts are simplified to zero in InstSimplify.
-      unsigned AmtSum = ShAmtC + C1->getZExtValue();
-      if (AmtSum < BitWidth)
-        return BinaryOperator::CreateLShr(X, ConstantInt::get(Ty, AmtSum));
-    }
-
     Instruction *TruncSrc;
     if (match(Op0, m_OneUse(m_Trunc(m_Instruction(TruncSrc)))) &&
         match(TruncSrc, m_LShr(m_Value(X), m_APInt(C1)))) {
@@ -1484,6 +1481,12 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
     Constant *AllOnes = ConstantInt::getAllOnesValue(Ty);
     Value *Mask = Builder.CreateLShr(AllOnes, Op1);
     return BinaryOperator::CreateAnd(Mask, X);
+  }
+
+  // Transform  (-1 << y) >> y  to -1 >> y
+  if (match(Op0, m_Shl(m_AllOnes(), m_Specific(Op1)))) {
+    Constant *AllOnes = ConstantInt::getAllOnesValue(Ty);
+    return BinaryOperator::CreateLShr(AllOnes, Op1);
   }
 
   if (Instruction *Overflow = foldLShrOverflowBit(I))
@@ -1647,9 +1650,9 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
   // as the pattern to splat the lowest bit.
   // FIXME: iff X is already masked, we don't need the one-use check.
   Value *X;
-  if (match(Op1, m_SpecificIntAllowUndef(BitWidth - 1)) &&
+  if (match(Op1, m_SpecificIntAllowPoison(BitWidth - 1)) &&
       match(Op0, m_OneUse(m_Shl(m_Value(X),
-                                m_SpecificIntAllowUndef(BitWidth - 1))))) {
+                                m_SpecificIntAllowPoison(BitWidth - 1))))) {
     Constant *Mask = ConstantInt::get(Ty, 1);
     // Retain the knowledge about the ignored lanes.
     Mask = Constant::mergeUndefsWith(

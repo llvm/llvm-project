@@ -225,6 +225,8 @@ def DivOp : ComplexArithmeticOp<"div"> {
     %a = complex.div %b, %c : complex<f32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

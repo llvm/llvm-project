@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -triple x86_64-apple-macosx10.6.7 -verify %s
+// The following narrowing does not involve const references, so
+// -Wno-c++11-narrowing-const-reference does not suppress the errors.
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -triple x86_64-apple-macosx10.6.7 -Wno-c++11-narrowing-const-reference -verify %s
 
 // Verify that narrowing conversions in initializer lists cause errors in C++0x
 // mode.

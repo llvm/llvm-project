@@ -38,25 +38,30 @@ public:
 
   virtual ~SyntheticChildrenFrontEnd() = default;
 
-  virtual size_t CalculateNumChildren() = 0;
+  virtual llvm::Expected<uint32_t> CalculateNumChildren() = 0;
 
-  virtual size_t CalculateNumChildren(uint32_t max) {
+  virtual llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) {
     auto count = CalculateNumChildren();
-    return count <= max ? count : max;
+    if (!count)
+      return count;
+    return *count <= max ? *count : max;
   }
 
-  virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx) = 0;
+  uint32_t CalculateNumChildrenIgnoringErrors(uint32_t max = UINT32_MAX);
+
+  virtual lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) = 0;
 
   virtual size_t GetIndexOfChildWithName(ConstString name) = 0;
 
-  // this function is assumed to always succeed and it if fails, the front-end
-  // should know to deal with it in the correct way (most probably, by refusing
-  // to return any children) the return value of Update() should actually be
-  // interpreted as "ValueObjectSyntheticFilter cache is good/bad" if =true,
-  // ValueObjectSyntheticFilter is allowed to use the children it fetched
-  // previously and cached if =false, ValueObjectSyntheticFilter must throw
-  // away its cache, and query again for children
-  virtual bool Update() = 0;
+  /// This function is assumed to always succeed and if it fails, the front-end
+  /// should know to deal with it in the correct way (most probably, by refusing
+  /// to return any children). The return value of \ref Update should actually
+  /// be interpreted as "ValueObjectSyntheticFilter cache is good/bad". If this
+  /// function returns \ref lldb::ChildCacheState::eReuse, \ref
+  /// ValueObjectSyntheticFilter is allowed to use the children it fetched
+  /// previously and cached. Otherwise, \ref ValueObjectSyntheticFilter must
+  /// throw away its cache, and query again for children.
+  virtual lldb::ChildCacheState Update() = 0;
 
   // if this function returns false, then CalculateNumChildren() MUST return 0
   // since UI frontends might validly decide not to inquire for children given
@@ -108,15 +113,17 @@ public:
 
   ~SyntheticValueProviderFrontEnd() override = default;
 
-  size_t CalculateNumChildren() override { return 0; }
+  llvm::Expected<uint32_t> CalculateNumChildren() override { return 0; }
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override { return nullptr; }
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override { return nullptr; }
 
   size_t GetIndexOfChildWithName(ConstString name) override {
     return UINT32_MAX;
   }
 
-  bool Update() override { return false; }
+  lldb::ChildCacheState Update() override {
+    return lldb::ChildCacheState::eRefetch;
+  }
 
   bool MightHaveChildren() override { return false; }
 
@@ -319,16 +326,20 @@ public:
 
     ~FrontEnd() override = default;
 
-    size_t CalculateNumChildren() override { return filter->GetCount(); }
+    llvm::Expected<uint32_t> CalculateNumChildren() override {
+      return filter->GetCount();
+    }
 
-    lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
+    lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
       if (idx >= filter->GetCount())
         return lldb::ValueObjectSP();
       return m_backend.GetSyntheticExpressionPathChild(
           filter->GetExpressionPathAtIndex(idx), true);
     }
 
-    bool Update() override { return false; }
+    lldb::ChildCacheState Update() override {
+      return lldb::ChildCacheState::eRefetch;
+    }
 
     bool MightHaveChildren() override { return filter->GetCount() > 0; }
 
@@ -421,13 +432,13 @@ public:
 
     bool IsValid();
 
-    size_t CalculateNumChildren() override;
+    llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-    size_t CalculateNumChildren(uint32_t max) override;
+    llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
 
-    lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+    lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
-    bool Update() override;
+    lldb::ChildCacheState Update() override;
 
     bool MightHaveChildren() override;
 

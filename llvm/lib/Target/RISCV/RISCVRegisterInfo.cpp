@@ -30,6 +30,8 @@
 
 using namespace llvm;
 
+static cl::opt<bool> DisableCostPerUse("riscv-disable-cost-per-use",
+                                       cl::init(false), cl::Hidden);
 static cl::opt<bool>
     DisableRegAllocHints("riscv-disable-regalloc-hints", cl::Hidden,
                          cl::init(false),
@@ -63,21 +65,35 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (Subtarget.hasStdExtD())
       return CSR_XLEN_F64_Interrupt_SaveList;
     if (Subtarget.hasStdExtF())
-      return CSR_XLEN_F32_Interrupt_SaveList;
-    return CSR_Interrupt_SaveList;
+      return Subtarget.hasStdExtE() ? CSR_XLEN_F32_Interrupt_RVE_SaveList
+                                    : CSR_XLEN_F32_Interrupt_SaveList;
+    return Subtarget.hasStdExtE() ? CSR_Interrupt_RVE_SaveList
+                                  : CSR_Interrupt_SaveList;
   }
+
+  bool HasVectorCSR =
+      MF->getFunction().getCallingConv() == CallingConv::RISCV_VectorCall;
 
   switch (Subtarget.getTargetABI()) {
   default:
     llvm_unreachable("Unrecognized ABI");
+  case RISCVABI::ABI_ILP32E:
+  case RISCVABI::ABI_LP64E:
+    return CSR_ILP32E_LP64E_SaveList;
   case RISCVABI::ABI_ILP32:
   case RISCVABI::ABI_LP64:
+    if (HasVectorCSR)
+      return CSR_ILP32_LP64_V_SaveList;
     return CSR_ILP32_LP64_SaveList;
   case RISCVABI::ABI_ILP32F:
   case RISCVABI::ABI_LP64F:
+    if (HasVectorCSR)
+      return CSR_ILP32F_LP64F_V_SaveList;
     return CSR_ILP32F_LP64F_SaveList;
   case RISCVABI::ABI_ILP32D:
   case RISCVABI::ABI_LP64D:
+    if (HasVectorCSR)
+      return CSR_ILP32D_LP64D_V_SaveList;
     return CSR_ILP32D_LP64D_SaveList;
   }
 }
@@ -109,6 +125,11 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // beginning with 'x0' for instructions that take register pairs.
   markSuperRegs(Reserved, RISCV::DUMMY_REG_PAIR_WITH_X0);
 
+  // There are only 16 GPRs for RVE.
+  if (Subtarget.hasStdExtE())
+    for (MCPhysReg Reg = RISCV::X16; Reg <= RISCV::X31; Reg++)
+      markSuperRegs(Reserved, Reg);
+
   // V registers for code generation. We handle them manually.
   markSuperRegs(Reserved, RISCV::VL);
   markSuperRegs(Reserved, RISCV::VTYPE);
@@ -120,12 +141,18 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, RISCV::FRM);
   markSuperRegs(Reserved, RISCV::FFLAGS);
 
+  // SiFive VCIX state registers.
+  markSuperRegs(Reserved, RISCV::VCIX_STATE);
+
   if (MF.getFunction().getCallingConv() == CallingConv::GRAAL) {
-    if (Subtarget.isRVE())
+    if (Subtarget.hasStdExtE())
       report_fatal_error("Graal reserved registers do not exist in RVE");
     markSuperRegs(Reserved, RISCV::X23);
     markSuperRegs(Reserved, RISCV::X27);
   }
+
+  // Shadow stack pointer.
+  markSuperRegs(Reserved, RISCV::SSP);
 
   assert(checkAllSuperRegsMarked(Reserved));
   return Reserved;
@@ -138,40 +165,6 @@ bool RISCVRegisterInfo::isAsmClobberable(const MachineFunction &MF,
 
 const uint32_t *RISCVRegisterInfo::getNoPreservedMask() const {
   return CSR_NoRegs_RegMask;
-}
-
-// Frame indexes representing locations of CSRs which are given a fixed location
-// by save/restore libcalls or Zcmp Push/Pop.
-static const std::pair<unsigned, int> FixedCSRFIMap[] = {
-  {/*ra*/  RISCV::X1,   -1},
-  {/*s0*/  RISCV::X8,   -2},
-  {/*s1*/  RISCV::X9,   -3},
-  {/*s2*/  RISCV::X18,  -4},
-  {/*s3*/  RISCV::X19,  -5},
-  {/*s4*/  RISCV::X20,  -6},
-  {/*s5*/  RISCV::X21,  -7},
-  {/*s6*/  RISCV::X22,  -8},
-  {/*s7*/  RISCV::X23,  -9},
-  {/*s8*/  RISCV::X24,  -10},
-  {/*s9*/  RISCV::X25,  -11},
-  {/*s10*/ RISCV::X26,  -12},
-  {/*s11*/ RISCV::X27,  -13}
-};
-
-bool RISCVRegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
-                                             Register Reg,
-                                             int &FrameIdx) const {
-  const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
-  if (!RVFI->useSaveRestoreLibCalls(MF) && !RVFI->isPushable(MF))
-    return false;
-
-  const auto *FII =
-      llvm::find_if(FixedCSRFIMap, [&](auto P) { return P.first == Reg; });
-  if (FII == std::end(FixedCSRFIMap))
-    return false;
-
-  FrameIdx = FII->second;
-  return true;
 }
 
 void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
@@ -202,10 +195,29 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
     Register ScratchReg = DestReg;
     if (DestReg == SrcReg)
       ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    TII->getVLENFactoredAmount(MF, MBB, II, DL, ScratchReg, ScalableValue, Flag);
-    BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
-      .addReg(SrcReg).addReg(ScratchReg, RegState::Kill)
-      .setMIFlag(Flag);
+
+    assert(ScalableValue > 0 && "There is no need to get VLEN scaled value.");
+    assert(ScalableValue % 8 == 0 &&
+           "Reserve the stack by the multiple of one vector size.");
+    assert(isInt<32>(ScalableValue / 8) &&
+           "Expect the number of vector registers within 32-bits.");
+    uint32_t NumOfVReg = ScalableValue / 8;
+    BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), ScratchReg)
+        .setMIFlag(Flag);
+
+    if (ScalableAdjOpc == RISCV::ADD && ST.hasStdExtZba() &&
+        (NumOfVReg == 2 || NumOfVReg == 4 || NumOfVReg == 8)) {
+      unsigned Opc = NumOfVReg == 2 ? RISCV::SH1ADD :
+        (NumOfVReg == 4 ? RISCV::SH2ADD : RISCV::SH3ADD);
+      BuildMI(MBB, II, DL, TII->get(Opc), DestReg)
+          .addReg(ScratchReg, RegState::Kill).addReg(SrcReg)
+          .setMIFlag(Flag);
+    } else {
+      TII->mulImm(MF, MBB, II, DL, ScratchReg, NumOfVReg, Flag);
+      BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), DestReg)
+          .addReg(SrcReg).addReg(ScratchReg, RegState::Kill)
+          .setMIFlag(Flag);
+    }
     SrcReg = DestReg;
     KillSrcReg = true;
   }
@@ -246,6 +258,31 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // Use shNadd if doing so lets us materialize a 12 bit immediate with a single
+  // instruction.  This saves 1 instruction over the full lui/addi+add fallback
+  // path.  We avoid anything which can be done with a single lui as it might
+  // be compressible.  Note that the sh1add case is fully covered by the 2x addi
+  // case just above and is thus ommitted.
+  if (ST.hasStdExtZba() && (Val & 0xFFF) != 0) {
+    unsigned Opc = 0;
+    if (isShiftedInt<12, 3>(Val)) {
+      Opc = RISCV::SH3ADD;
+      Val = Val >> 3;
+    } else if (isShiftedInt<12, 2>(Val)) {
+      Opc = RISCV::SH2ADD;
+      Val = Val >> 2;
+    }
+    if (Opc) {
+      Register ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+      TII->movImm(MBB, II, DL, ScratchReg, Val, Flag);
+      BuildMI(MBB, II, DL, TII->get(Opc), DestReg)
+          .addReg(ScratchReg, RegState::Kill)
+          .addReg(SrcReg, getKillRegState(KillSrcReg))
+          .setMIFlag(Flag);
+      return;
+    }
+  }
+
   unsigned Opc = RISCV::ADD;
   if (Val < 0) {
     Val = -Val;
@@ -267,8 +304,9 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
   MachineBasicBlock &MBB = *II->getParent();
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
+  const TargetInstrInfo *TII = STI.getInstrInfo();
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
   auto ZvlssegInfo = RISCV::isRVVSpillForZvlsseg(II->getOpcode());
   unsigned NF = ZvlssegInfo->first;
@@ -300,9 +338,8 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
 
   Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   // Optimize for constant VLEN.
-  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
-  if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
-    const int64_t VLENB = STI.getRealMinVLen() / 8;
+  if (auto VLEN = STI.getRealVLen()) {
+    const int64_t VLENB = *VLEN / 8;
     int64_t Offset = VLENB * LMUL;
     STI.getInstrInfo()->movImm(MBB, II, DL, VL, Offset);
   } else {
@@ -344,8 +381,9 @@ void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
   MachineBasicBlock &MBB = *II->getParent();
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
+  const TargetInstrInfo *TII = STI.getInstrInfo();
+  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
   auto ZvlssegInfo = RISCV::isRVVSpillForZvlsseg(II->getOpcode());
   unsigned NF = ZvlssegInfo->first;
@@ -377,9 +415,8 @@ void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
 
   Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
   // Optimize for constant VLEN.
-  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
-  if (STI.getRealMinVLen() == STI.getRealMaxVLen()) {
-    const int64_t VLENB = STI.getRealMinVLen() / 8;
+  if (auto VLEN = STI.getRealVLen()) {
+    const int64_t VLENB = *VLEN / 8;
     int64_t Offset = VLENB * LMUL;
     STI.getInstrInfo()->movImm(MBB, II, DL, VL, Offset);
   } else {
@@ -447,29 +484,35 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   }
 
   if (!IsRVVSpill) {
-    if (MI.getOpcode() == RISCV::ADDI && !isInt<12>(Offset.getFixed())) {
+    int64_t Val = Offset.getFixed();
+    int64_t Lo12 = SignExtend64<12>(Val);
+    unsigned Opc = MI.getOpcode();
+    if (Opc == RISCV::ADDI && !isInt<12>(Val)) {
       // We chose to emit the canonical immediate sequence rather than folding
       // the offset into the using add under the theory that doing so doesn't
       // save dynamic instruction count and some target may fuse the canonical
       // 32 bit immediate sequence.  We still need to clear the portion of the
       // offset encoded in the immediate.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
+    } else if ((Opc == RISCV::PREFETCH_I || Opc == RISCV::PREFETCH_R ||
+                Opc == RISCV::PREFETCH_W) &&
+               (Lo12 & 0b11111) != 0) {
+      // Prefetch instructions require the offset to be 32 byte aligned.
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
+    } else if ((Opc == RISCV::PseudoRV32ZdinxLD ||
+                Opc == RISCV::PseudoRV32ZdinxSD) &&
+               Lo12 >= 2044) {
+      // This instruction will be split into 2 instructions. The second
+      // instruction will add 4 to the immediate. If that would overflow 12
+      // bits, we can't fold the offset.
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
     } else {
       // We can encode an add with 12 bit signed immediate in the immediate
       // operand of our user instruction.  As a result, the remaining
       // offset can by construction, at worst, a LUI and a ADD.
-      int64_t Val = Offset.getFixed();
-      int64_t Lo12 = SignExtend64<12>(Val);
-      if ((MI.getOpcode() == RISCV::PREFETCH_I ||
-           MI.getOpcode() == RISCV::PREFETCH_R ||
-           MI.getOpcode() == RISCV::PREFETCH_W) &&
-          (Lo12 & 0b11111) != 0)
-        MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
-      else {
-        MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo12);
-        Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo12,
-                                  Offset.getScalable());
-      }
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo12);
+      Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo12,
+                                Offset.getScalable());
     }
   }
 
@@ -564,20 +607,22 @@ bool RISCVRegisterInfo::needsFrameBaseReg(MachineInstr *MI,
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const RISCVFrameLowering *TFI = getFrameLowering(MF);
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  unsigned CalleeSavedSize = 0;
   Offset += getFrameIndexInstrOffset(MI, FIOperandNum);
 
-  // Estimate the stack size used to store callee saved registers(
-  // excludes reserved registers).
-  BitVector ReservedRegs = getReservedRegs(MF);
-  for (const MCPhysReg *R = MRI.getCalleeSavedRegs(); MCPhysReg Reg = *R; ++R) {
-    if (!ReservedRegs.test(Reg))
-      CalleeSavedSize += getSpillSize(*getMinimalPhysRegClass(Reg));
-  }
+  if (TFI->hasFP(MF) && !shouldRealignStack(MF)) {
+    // Estimate the stack size used to store callee saved registers(
+    // excludes reserved registers).
+    unsigned CalleeSavedSize = 0;
+    BitVector ReservedRegs = getReservedRegs(MF);
+    for (const MCPhysReg *R = MRI.getCalleeSavedRegs(); MCPhysReg Reg = *R;
+         ++R) {
+      if (!ReservedRegs.test(Reg))
+        CalleeSavedSize += getSpillSize(*getMinimalPhysRegClass(Reg));
+    }
 
-  int64_t MaxFPOffset = Offset - CalleeSavedSize;
-  if (TFI->hasFP(MF) && !shouldRealignStack(MF))
+    int64_t MaxFPOffset = Offset - CalleeSavedSize;
     return !isFrameOffsetLegal(MI, RISCV::X8, MaxFPOffset);
+  }
 
   // Assume 128 bytes spill slots size to estimate the maximum possible
   // offset relative to the stack pointer.
@@ -670,14 +715,23 @@ RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
   switch (Subtarget.getTargetABI()) {
   default:
     llvm_unreachable("Unrecognized ABI");
+  case RISCVABI::ABI_ILP32E:
+  case RISCVABI::ABI_LP64E:
+    return CSR_ILP32E_LP64E_RegMask;
   case RISCVABI::ABI_ILP32:
   case RISCVABI::ABI_LP64:
+    if (CC == CallingConv::RISCV_VectorCall)
+      return CSR_ILP32_LP64_V_RegMask;
     return CSR_ILP32_LP64_RegMask;
   case RISCVABI::ABI_ILP32F:
   case RISCVABI::ABI_LP64F:
+    if (CC == CallingConv::RISCV_VectorCall)
+      return CSR_ILP32F_LP64F_V_RegMask;
     return CSR_ILP32F_LP64F_RegMask;
   case RISCVABI::ABI_ILP32D:
   case RISCVABI::ABI_LP64D:
+    if (CC == CallingConv::RISCV_VectorCall)
+      return CSR_ILP32D_LP64D_V_RegMask;
     return CSR_ILP32D_LP64D_RegMask;
   }
 }
@@ -727,7 +781,10 @@ void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
 
 unsigned
 RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
-  return MF.getSubtarget<RISCVSubtarget>().hasStdExtCOrZca() ? 1 : 0;
+  return MF.getSubtarget<RISCVSubtarget>().hasStdExtCOrZca() &&
+                 !DisableCostPerUse
+             ? 1
+             : 0;
 }
 
 // Add two address hints to improve chances of being able to use a compressed
@@ -737,6 +794,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     SmallVectorImpl<MCPhysReg> &Hints, const MachineFunction &MF,
     const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
+  auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
   bool BaseImplRetVal = TargetRegisterInfo::getRegAllocationHints(
       VirtReg, Order, Hints, MF, VRM, Matrix);
@@ -751,8 +809,11 @@ bool RISCVRegisterInfo::getRegAllocationHints(
                         bool NeedGPRC) -> void {
     Register Reg = MO.getReg();
     Register PhysReg = Reg.isPhysical() ? Reg : Register(VRM->getPhys(Reg));
-    if (PhysReg && (!NeedGPRC || RISCV::GPRCRegClass.contains(PhysReg))) {
-      assert(!MO.getSubReg() && !VRRegMO.getSubReg() && "Unexpected subreg!");
+    // TODO: Support GPRPair subregisters? Need to be careful with even/odd
+    // registers. If the virtual register is an odd register of a pair and the
+    // physical register is even (or vice versa), we should not add the hint.
+    if (PhysReg && (!NeedGPRC || RISCV::GPRCRegClass.contains(PhysReg)) &&
+        !MO.getSubReg() && !VRRegMO.getSubReg()) {
       if (!MRI->isReserved(PhysReg) && !is_contained(Hints, PhysReg))
         TwoAddrHints.insert(PhysReg);
     }
@@ -760,7 +821,7 @@ bool RISCVRegisterInfo::getRegAllocationHints(
 
   // This is all of the compressible binary instructions. If an instruction
   // needs GPRC register class operands \p NeedGPRC will be set to true.
-  auto isCompressible = [](const MachineInstr &MI, bool &NeedGPRC) {
+  auto isCompressible = [&Subtarget](const MachineInstr &MI, bool &NeedGPRC) {
     NeedGPRC = false;
     switch (MI.getOpcode()) {
     default:
@@ -773,9 +834,16 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     case RISCV::SUBW:
       NeedGPRC = true;
       return true;
-    case RISCV::ANDI:
+    case RISCV::ANDI: {
       NeedGPRC = true;
-      return MI.getOperand(2).isImm() && isInt<6>(MI.getOperand(2).getImm());
+      if (!MI.getOperand(2).isImm())
+        return false;
+      int64_t Imm = MI.getOperand(2).getImm();
+      if (isInt<6>(Imm))
+        return true;
+      // c.zext.b
+      return Subtarget.hasStdExtZcb() && Imm == 255;
+    }
     case RISCV::SRAI:
     case RISCV::SRLI:
       NeedGPRC = true;
@@ -786,6 +854,24 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     case RISCV::ADDI:
     case RISCV::ADDIW:
       return MI.getOperand(2).isImm() && isInt<6>(MI.getOperand(2).getImm());
+    case RISCV::MUL:
+    case RISCV::SEXT_B:
+    case RISCV::SEXT_H:
+    case RISCV::ZEXT_H_RV32:
+    case RISCV::ZEXT_H_RV64:
+      // c.mul, c.sext.b, c.sext.h, c.zext.h
+      NeedGPRC = true;
+      return Subtarget.hasStdExtZcb();
+    case RISCV::ADD_UW:
+      // c.zext.w
+      NeedGPRC = true;
+      return Subtarget.hasStdExtZcb() && MI.getOperand(2).isReg() &&
+             MI.getOperand(2).getReg() == RISCV::X0;
+    case RISCV::XORI:
+      // c.not
+      NeedGPRC = true;
+      return Subtarget.hasStdExtZcb() && MI.getOperand(2).isImm() &&
+             MI.getOperand(2).getImm() == -1;
     }
   };
 
@@ -807,13 +893,15 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     bool NeedGPRC;
     if (isCompressible(MI, NeedGPRC)) {
       if (OpIdx == 0 && MI.getOperand(1).isReg()) {
-        if (!NeedGPRC || isCompressibleOpnd(MI.getOperand(2)))
+        if (!NeedGPRC || MI.getNumExplicitOperands() < 3 ||
+            MI.getOpcode() == RISCV::ADD_UW ||
+            isCompressibleOpnd(MI.getOperand(2)))
           tryAddHint(MO, MI.getOperand(1), NeedGPRC);
         if (MI.isCommutable() && MI.getOperand(2).isReg() &&
             (!NeedGPRC || isCompressibleOpnd(MI.getOperand(1))))
           tryAddHint(MO, MI.getOperand(2), NeedGPRC);
-      } else if (OpIdx == 1 &&
-                 (!NeedGPRC || isCompressibleOpnd(MI.getOperand(2)))) {
+      } else if (OpIdx == 1 && (!NeedGPRC || MI.getNumExplicitOperands() < 3 ||
+                                isCompressibleOpnd(MI.getOperand(2)))) {
         tryAddHint(MO, MI.getOperand(0), NeedGPRC);
       } else if (MI.isCommutable() && OpIdx == 2 &&
                  (!NeedGPRC || isCompressibleOpnd(MI.getOperand(1)))) {

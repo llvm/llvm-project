@@ -468,7 +468,7 @@ HoistPaddingAnalysis::getHoistedPackedTensorSizes(RewriterBase &rewriter,
     FailureOr<OpFoldResult> loopUb = affine::reifyIndexValueBound(
         rewriter, loc, presburger::BoundType::UB, forOp.getUpperBound(),
         /*stopCondition=*/
-        [&](Value v, std::optional<int64_t> d) {
+        [&](Value v, std::optional<int64_t> d, ValueBoundsConstraintSet &cstr) {
           if (v == forOp.getUpperBound())
             return false;
           // Compute a bound that is independent of any affine op results.
@@ -854,10 +854,10 @@ padThroughLoopIterArg(RewriterBase &rewriter, Value paddedValueBeforeHoisting,
   LLVM_DEBUG(DBGS() << "with result #"
                     << numOriginalForOpResults + iterArgNumber
                     << " of forOp, giving us: " << extracted << "\n");
-  rewriter.startRootUpdate(extracted);
+  rewriter.startOpModification(extracted);
   extracted.getSourceMutable().assign(
       newForOp.getResult(numOriginalForOpResults + iterArgNumber));
-  rewriter.finalizeRootUpdate(extracted);
+  rewriter.finalizeOpModification(extracted);
 
   LLVM_DEBUG(DBGS() << "replace uses of: " << paddedValueBeforeHoisting
                     << "\n");

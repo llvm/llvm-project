@@ -5,11 +5,11 @@ target triple = "msp430-unknown-linux-gnu"
 
 define msp430_intrcc void @foo() nounwind #0 {
 entry:
-	%fa = call i8* @llvm.frameaddress(i32 0)
-	store i8 0, i8* %fa
+	%fa = call ptr @llvm.frameaddress(i32 0)
+	store i8 0, ptr %fa
 	ret void
 }
 
-declare i8* @llvm.frameaddress(i32)
+declare ptr @llvm.frameaddress(i32)
 
 attributes #0 = { noinline nounwind optnone "interrupt"="2" }

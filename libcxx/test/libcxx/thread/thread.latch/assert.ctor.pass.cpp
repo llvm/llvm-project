@@ -18,7 +18,7 @@
 
 // REQUIRES: has-unix-headers
 // REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-// XFAIL: availability-verbose_abort-missing
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <latch>
 

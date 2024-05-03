@@ -1,17 +1,17 @@
 # RUN: llc -mtriple=aarch64 -mattr=+mte -run-pass=prologepilog %s -o - | FileCheck %s
 
 --- |
-  declare void @llvm.aarch64.settag(i8* nocapture writeonly, i64) argmemonly nounwind writeonly "target-features"="+mte"
+  declare void @llvm.aarch64.settag(ptr nocapture writeonly, i64) argmemonly nounwind writeonly "target-features"="+mte"
   define i32 @stg16_16_16_16_ret() "target-features"="+mte" {
   entry:
     %a = alloca i8, i32 16, align 16
     %b = alloca i8, i32 16, align 16
     %c = alloca i8, i32 16, align 16
     %d = alloca i8, i32 16, align 16
-    call void @llvm.aarch64.settag(i8* %a, i64 16)
-    call void @llvm.aarch64.settag(i8* %b, i64 16)
-    call void @llvm.aarch64.settag(i8* %c, i64 16)
-    call void @llvm.aarch64.settag(i8* %d, i64 16)
+    call void @llvm.aarch64.settag(ptr %a, i64 16)
+    call void @llvm.aarch64.settag(ptr %b, i64 16)
+    call void @llvm.aarch64.settag(ptr %c, i64 16)
+    call void @llvm.aarch64.settag(ptr %d, i64 16)
     ret i32 0
   }
 
@@ -19,9 +19,9 @@
   entry:
     %a = alloca i8, i32 16, align 16
     %b = alloca i8, i32 128, align 16
-    call void @llvm.aarch64.settag(i8* %a, i64 16)
-    store i8 42, i8* %a
-    call void @llvm.aarch64.settag(i8* %b, i64 128)
+    call void @llvm.aarch64.settag(ptr %a, i64 16)
+    store i8 42, ptr %a
+    call void @llvm.aarch64.settag(ptr %b, i64 128)
     ret void
   }
 

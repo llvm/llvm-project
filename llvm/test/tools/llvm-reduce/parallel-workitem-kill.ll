@@ -1,5 +1,5 @@
 ; REQUIRES: thread_support
-; RUN: llvm-reduce -j 4 %s -o %t --delta-passes=instructions --test %python --test-arg %S/Inputs/sleep-and-check-stores.py --test-arg 1 --test-arg 5
+; RUN: llvm-reduce -j 4 %s -o %t --abort-on-invalid-reduction --delta-passes=instructions --test %python --test-arg %S/Inputs/sleep-and-check-stores.py --test-arg 1 --test-arg 5
 ; RUN: FileCheck %s < %t
 
 ; CHECK: define void @foo

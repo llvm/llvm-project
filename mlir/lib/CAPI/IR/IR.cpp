@@ -28,6 +28,7 @@
 #include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Parser/Parser.h"
+#include "llvm/Support/ThreadPool.h"
 
 #include <cstddef>
 #include <memory>
@@ -613,12 +614,14 @@ void mlirOperationSetInherentAttributeByName(MlirOperation op,
 }
 
 intptr_t mlirOperationGetNumDiscardableAttributes(MlirOperation op) {
-  return static_cast<intptr_t>(unwrap(op)->getDiscardableAttrs().size());
+  return static_cast<intptr_t>(
+      llvm::range_size(unwrap(op)->getDiscardableAttrs()));
 }
 
 MlirNamedAttribute mlirOperationGetDiscardableAttribute(MlirOperation op,
                                                         intptr_t pos) {
-  NamedAttribute attr = unwrap(op)->getDiscardableAttrs()[pos];
+  NamedAttribute attr =
+      *std::next(unwrap(op)->getDiscardableAttrs().begin(), pos);
   return MlirNamedAttribute{wrap(attr.getName()), wrap(attr.getValue())};
 }
 
@@ -714,17 +717,34 @@ void mlirOperationMoveBefore(MlirOperation op, MlirOperation other) {
   return unwrap(op)->moveBefore(unwrap(other));
 }
 
+static mlir::WalkResult unwrap(MlirWalkResult result) {
+  switch (result) {
+  case MlirWalkResultAdvance:
+    return mlir::WalkResult::advance();
+
+  case MlirWalkResultInterrupt:
+    return mlir::WalkResult::interrupt();
+
+  case MlirWalkResultSkip:
+    return mlir::WalkResult::skip();
+  }
+}
+
 void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
                        void *userData, MlirWalkOrder walkOrder) {
   switch (walkOrder) {
 
   case MlirWalkPreOrder:
     unwrap(op)->walk<mlir::WalkOrder::PreOrder>(
-        [callback, userData](Operation *op) { callback(wrap(op), userData); });
+        [callback, userData](Operation *op) {
+          return unwrap(callback(wrap(op), userData));
+        });
     break;
   case MlirWalkPostOrder:
     unwrap(op)->walk<mlir::WalkOrder::PostOrder>(
-        [callback, userData](Operation *op) { callback(wrap(op), userData); });
+        [callback, userData](Operation *op) {
+          return unwrap(callback(wrap(op), userData));
+        });
   }
 }
 

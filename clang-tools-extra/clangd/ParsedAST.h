@@ -103,10 +103,8 @@ public:
   /// Tokens recorded while parsing the main file.
   /// (!) does not have tokens from the preamble.
   const syntax::TokenBuffer &getTokens() const { return Tokens; }
-  /// Returns the PramaIncludes from the preamble.
-  /// Might be null if AST is built without a preamble.
-  std::shared_ptr<const include_cleaner::PragmaIncludes>
-  getPragmaIncludes() const;
+  /// Returns the PramaIncludes for preamble + main file includes.
+  const include_cleaner::PragmaIncludes &getPragmaIncludes() const;
 
   /// Returns the version of the ParseInputs this AST was built from.
   llvm::StringRef version() const { return Version; }
@@ -129,7 +127,7 @@ private:
             std::unique_ptr<FrontendAction> Action, syntax::TokenBuffer Tokens,
             MainFileMacros Macros, std::vector<PragmaMark> Marks,
             std::vector<Decl *> LocalTopLevelDecls, std::vector<Diag> Diags,
-            IncludeStructure Includes);
+            IncludeStructure Includes, include_cleaner::PragmaIncludes PI);
   Path TUPath;
   std::string Version;
   // In-memory preambles must outlive the AST, it is important that this member
@@ -159,6 +157,7 @@ private:
   // top-level decls from the preamble.
   std::vector<Decl *> LocalTopLevelDecls;
   IncludeStructure Includes;
+  include_cleaner::PragmaIncludes PI;
   std::unique_ptr<HeuristicResolver> Resolver;
 };
 

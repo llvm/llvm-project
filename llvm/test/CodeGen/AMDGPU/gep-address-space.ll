@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs< %s | FileCheck --check-prefix=SI --check-prefix=CHECK %s
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs< %s | FileCheck --check-prefix=CI --check-prefix=CHECK %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs< %s | FileCheck --check-prefix=CI --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn -verify-machineinstrs< %s | FileCheck --check-prefix=SI --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs< %s | FileCheck --check-prefix=CI --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs< %s | FileCheck --check-prefix=CI --check-prefix=CHECK %s
 
 define amdgpu_kernel void @use_gep_address_space(ptr addrspace(3) %array) nounwind {
 ; CHECK-LABEL: {{^}}use_gep_address_space:

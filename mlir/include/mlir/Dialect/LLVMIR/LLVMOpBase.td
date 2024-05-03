@@ -67,6 +67,9 @@ class LLVM_PointerInAddressSpace<int addressSpace> : Type<
     # addressSpace # ")";
 }
 
+// Type constraint accepting an LLVM pointer type in address space 0.
+def LLVM_DefaultPointer : LLVM_PointerInAddressSpace<0>;
+
 // Type constraint accepting any LLVM structure type.
 def LLVM_AnyStruct : Type<CPred<"::llvm::isa<::mlir::LLVM::LLVMStructType>($_self)">,
                          "LLVM structure type">;
@@ -167,6 +170,10 @@ class LLVM_OpBase<Dialect dialect, string mnemonic, list<Trait> traits = []> :
   //   - $_float_attr - substituted by a call to a float attribute matcher;
   //   - $_var_attr - substituted by a call to a variable attribute matcher;
   //   - $_label_attr - substituted by a call to a label attribute matcher;
+  //   - $_roundingMode_attr - substituted by a call to a rounding mode
+  //     attribute matcher;
+  //   - $_fpExceptionBehavior_attr - substituted by a call to a FP exception
+  //     behavior attribute matcher;
   //   - $_resultType - substituted with the MLIR result type;
   //   - $_location - substituted with the MLIR location;
   //   - $_builder - substituted with the MLIR builder;

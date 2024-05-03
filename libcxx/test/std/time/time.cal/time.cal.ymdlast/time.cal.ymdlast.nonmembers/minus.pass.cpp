@@ -38,22 +38,27 @@ constexpr bool test() {
 
   { // year_month_day_last - years
 
-    year_month_day_last ym{year{1234}, month_day_last{December}};
+    year_month_day_last ymdl{year{1234}, month_day_last{December}};
     for (int i = 0; i <= 10; ++i) {
-      year_month_day_last ym1 = ym - years{i};
-      assert(static_cast<int>(ym1.year()) == 1234 - i);
-      assert(ym1.month() == December);
+      year_month_day_last ymdl1 = ymdl - years{i};
+      assert(static_cast<int>(ymdl1.year()) == 1234 - i);
+      assert(ymdl1.month() == December);
     }
   }
 
   { // year_month_day_last - months
 
-    // TODO test wrapping
-    year_month_day_last ym{year{1234}, month_day_last{December}};
+    year_month_day_last ymdl{year{1234}, month_day_last{December}};
     for (unsigned i = 0; i <= 10; ++i) {
-      year_month_day_last ym1 = ym - months{i};
-      assert(static_cast<int>(ym1.year()) == 1234);
-      assert(static_cast<unsigned>(ym1.month()) == 12U - i);
+      year_month_day_last ymdl1 = ymdl - months{i};
+      assert(static_cast<int>(ymdl1.year()) == 1234);
+      assert(static_cast<unsigned>(ymdl1.month()) == 12U - i);
+    }
+    // Test the year wraps around.
+    for (unsigned i = 12; i <= 15; ++i) {
+      year_month_day_last ymdl1 = ymdl - months{i};
+      assert(static_cast<int>(ymdl1.year()) == 1233);
+      assert(static_cast<unsigned>(ymdl1.month()) == 12U - i + 12);
     }
   }
 

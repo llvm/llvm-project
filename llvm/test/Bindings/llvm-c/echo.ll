@@ -299,6 +299,55 @@ entry:
   ret void
 }
 
+define void @test_fast_math_flags(i1 %c, float %a, float %b) {
+entry:
+  %select.f.1 = select i1 %c, float %a, float %b
+  %select.f.2 = select nsz i1 %c, float %a, float %b
+  %select.f.3 = select fast i1 %c, float %a, float %b
+  %select.f.4 = select nnan arcp afn i1 %c, float %a, float %b
+
+  br i1 %c, label %choose_a, label %choose_b
+
+choose_a:
+  br label %final
+
+choose_b:
+  br label %final
+
+final:
+  %phi.f.1 = phi float  [ %a, %choose_a ], [ %b, %choose_b ]
+  %phi.f.2 = phi nsz float [ %a, %choose_a ], [ %b, %choose_b ]
+  %phi.f.3 = phi fast float [ %a, %choose_a ], [ %b, %choose_b ]
+  %phi.f.4 = phi nnan arcp afn float [ %a, %choose_a ], [ %b, %choose_b ]
+  ret void
+}
+
+define float @test_fast_math_flags_call_inner(float %a) {
+  ret float %a
+}
+
+define void @test_fast_math_flags_call_outer(float %a) {
+  %a.1 = call float @test_fast_math_flags_call_inner(float %a)
+  %a.2 = call nsz float @test_fast_math_flags_call_inner(float %a)
+  %a.3 = call fast float @test_fast_math_flags_call_inner(float %a)
+  %a.4 = call nnan arcp afn float @test_fast_math_flags_call_inner(float %a)
+  ret void
+}
+
+define void @test_func_prefix_data_01() prefix i32 123 {
+  ret void
+}
+
+define void @test_func_prefix_data_02() prefix i64 2000 {
+  ret void
+}
+
+%func_prolog_struct = type <{ i8, i8, ptr }>
+
+define void @test_func_prologue_data_01() prologue %func_prolog_struct <{ i8 235, i8 8, ptr zeroinitializer}> {
+  ret void
+}
+
 !llvm.dbg.cu = !{!0, !2}
 !llvm.module.flags = !{!3}
 

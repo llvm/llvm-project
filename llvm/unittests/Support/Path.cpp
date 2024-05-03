@@ -190,6 +190,7 @@ TEST(Support, Path) {
   paths.push_back("c:\\foo\\");
   paths.push_back("c:\\foo/");
   paths.push_back("c:/foo\\bar");
+  paths.push_back(":");
 
   for (SmallVector<StringRef, 40>::const_iterator i = paths.begin(),
                                                   e = paths.end();
@@ -1754,6 +1755,28 @@ TEST_F(FileSystemTest, OpenFileForRead) {
   // however the expected behaviour will differ depending on the configuration
   // of the Windows file system.
 #endif
+}
+
+TEST_F(FileSystemTest, OpenDirectoryAsFileForRead) {
+  std::string Buf(5, '?');
+  Expected<fs::file_t> FD = fs::openNativeFileForRead(TestDirectory);
+#ifdef _WIN32
+  EXPECT_EQ(errorToErrorCode(FD.takeError()), errc::is_a_directory);
+#else
+  ASSERT_THAT_EXPECTED(FD, Succeeded());
+  auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+  Expected<size_t> BytesRead =
+      fs::readNativeFile(*FD, MutableArrayRef(&*Buf.begin(), Buf.size()));
+  EXPECT_EQ(errorToErrorCode(BytesRead.takeError()), errc::is_a_directory);
+#endif
+}
+
+TEST_F(FileSystemTest, OpenDirectoryAsFileForWrite) {
+  int FD;
+  std::error_code EC = fs::openFileForWrite(Twine(TestDirectory), FD);
+  if (!EC)
+    ::close(FD);
+  EXPECT_EQ(EC, errc::is_a_directory);
 }
 
 static void createFileWithData(const Twine &Path, bool ShouldExistBefore,

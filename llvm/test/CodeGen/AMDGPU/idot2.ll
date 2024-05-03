@@ -2855,7 +2855,7 @@ define amdgpu_kernel void @notsdot2_sext8(ptr addrspace(1) %src1,
 ; GFX10-DL-NEXT:    v_perm_b32 v1, v2, v2, 0xc0c0001
 ; GFX10-DL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-DL-NEXT:    v_mov_b32_e32 v2, s2
-; GFX10-DL-NEXT:    v_dot4c_i32_i8_e32 v2, v1, v0
+; GFX10-DL-NEXT:    v_dot4c_i32_i8 v2, v1, v0
 ; GFX10-DL-NEXT:    global_store_dword v3, v2, s[0:1]
 ; GFX10-DL-NEXT:    s_endpgm
                                           ptr addrspace(1) %src2,

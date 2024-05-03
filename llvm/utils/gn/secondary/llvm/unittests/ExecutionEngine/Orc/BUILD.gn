@@ -24,6 +24,7 @@ unittest("OrcJITTests") {
     "JITTargetMachineBuilderTest.cpp",
     "LazyCallThroughAndReexportsTest.cpp",
     "LookupAndRecordAddrsTest.cpp",
+    "MachOPlatformTest.cpp",
     "MapperJITLinkMemoryManagerTest.cpp",
     "MemoryMapperTest.cpp",
     "ObjectFormatsTest.cpp",
@@ -40,4 +41,9 @@ unittest("OrcJITTests") {
     "ThreadSafeModuleTest.cpp",
     "WrapperFunctionUtilsTest.cpp",
   ]
+
+  if (host_os != "mac" && host_os != "win") {
+    # Corresponds to export_executable_symbols() in cmake.
+    ldflags = [ "-rdynamic" ]
+  }
 }

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -verify %s -fexperimental-new-constant-interpreter
 // expected-no-diagnostics
 
 #include <limits.h>
@@ -94,3 +95,52 @@ static_assert(smul(17,22) == Result<int>{false, 374});
 static_assert(smul(INT_MAX / 22, 23) == Result<int>{true, -2049870757});
 static_assert(smul(INT_MIN / 22, -23) == Result<int>{true, -2049870757});
 
+template<typename T>
+struct CarryResult {
+  T CarryOut;
+  T Value;
+  constexpr bool operator==(const CarryResult<T> &Other) {
+    return CarryOut == Other.CarryOut && Value == Other.Value;
+  }
+};
+
+constexpr CarryResult<unsigned char> addcb(unsigned char lhs, unsigned char rhs, unsigned char carry) {
+  unsigned char carry_out{};
+  unsigned char sum{};
+  sum = __builtin_addcb(lhs, rhs, carry, &carry_out);
+  return {carry_out, sum};
+}
+
+static_assert(addcb(120, 10, 0) == CarryResult<unsigned char>{0, 130});
+static_assert(addcb(250, 10, 0) == CarryResult<unsigned char>{1, 4});
+static_assert(addcb(255, 255, 0) == CarryResult<unsigned char>{1, 254});
+static_assert(addcb(255, 255, 1) == CarryResult<unsigned char>{1, 255});
+static_assert(addcb(255, 0, 1) == CarryResult<unsigned char>{1, 0});
+static_assert(addcb(255, 1, 0) == CarryResult<unsigned char>{1, 0});
+static_assert(addcb(255, 1, 1) == CarryResult<unsigned char>{1, 1});
+// This is currently supported with the carry still producing a value of 1.
+// If support for carry outside of 0-1 is removed, change this test to check
+// that it is not supported.
+static_assert(addcb(255, 255, 2) == CarryResult<unsigned char>{1, 0});
+
+constexpr CarryResult<unsigned char> subcb(unsigned char lhs, unsigned char rhs, unsigned char carry) {
+  unsigned char carry_out{};
+  unsigned char sum{};
+  sum = __builtin_subcb(lhs, rhs, carry, &carry_out);
+  return {carry_out, sum};
+}
+
+static_assert(subcb(20, 10, 0) == CarryResult<unsigned char>{0, 10});
+static_assert(subcb(10, 10, 0) == CarryResult<unsigned char>{0, 0});
+static_assert(subcb(10, 15, 0) == CarryResult<unsigned char>{1, 251});
+// The carry is subtracted from the result
+static_assert(subcb(10, 15, 1) == CarryResult<unsigned char>{1, 250});
+static_assert(subcb(0, 0, 1) == CarryResult<unsigned char>{1, 255});
+static_assert(subcb(0, 1, 0) == CarryResult<unsigned char>{1, 255});
+static_assert(subcb(0, 1, 1) == CarryResult<unsigned char>{1, 254});
+static_assert(subcb(0, 255, 0) == CarryResult<unsigned char>{1, 1});
+static_assert(subcb(0, 255, 1) == CarryResult<unsigned char>{1, 0});
+// This is currently supported with the carry still producing a value of 1.
+// If support for carry outside of 0-1 is removed, change this test to check
+// that it is not supported.
+static_assert(subcb(0, 255, 2) == CarryResult<unsigned char>{1, 255});

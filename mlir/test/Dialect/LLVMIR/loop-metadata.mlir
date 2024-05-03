@@ -85,28 +85,35 @@ llvm.func @loop_annotation() {
 
 #di_file = #llvm.di_file<"metadata-loop.ll" in "/">
 
-// CHECK: #[[START_LOC:.*]] = loc("loop-metadata.mlir":42:4)
+// CHECK-DAG: #[[START_LOC:.*]] = loc("loop-metadata.mlir":42:4)
 #loc1 = loc("loop-metadata.mlir":42:4)
-// CHECK: #[[END_LOC:.*]] = loc("loop-metadata.mlir":52:4)
+// CHECK-DAG: #[[END_LOC:.*]] = loc("loop-metadata.mlir":52:4)
 #loc2 = loc("loop-metadata.mlir":52:4)
 
-#di_compile_unit = #llvm.di_compile_unit<sourceLanguage = DW_LANG_C, file = #di_file, isOptimized = false, emissionKind = None>
-// CHECK: #[[SUBPROGRAM:.*]] = #llvm.di_subprogram<
+#di_compile_unit = #llvm.di_compile_unit<id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #di_file, isOptimized = false, emissionKind = None>
+// CHECK-DAG: #[[SUBPROGRAM:.*]] = #llvm.di_subprogram<
 #di_subprogram = #llvm.di_subprogram<compileUnit = #di_compile_unit, scope = #di_file, name = "loop_locs", file = #di_file, subprogramFlags = Definition>
 
-// CHECK: #[[START_LOC_FUSED:.*]] = loc(fused<#[[SUBPROGRAM]]>[#[[START_LOC]]]
+// CHECK-DAG: #[[START_LOC_FUSED:.*]] = loc(fused<#[[SUBPROGRAM]]>[#[[START_LOC]]]
 #start_loc_fused = loc(fused<#di_subprogram>[#loc1])
-// CHECK: #[[END_LOC_FUSED:.*]] = loc(fused<#[[SUBPROGRAM]]>[#[[END_LOC]]]
+// CHECK-DAG: #[[END_LOC_FUSED:.*]] = loc(fused<#[[SUBPROGRAM]]>[#[[END_LOC]]]
 #end_loc_fused= loc(fused<#di_subprogram>[#loc2])
+
+// CHECK-DAG: #[[GROUP1:.*]] = #llvm.access_group<id = {{.*}}>
+// CHECK-DAG: #[[GROUP2:.*]] = #llvm.access_group<id = {{.*}}>
+#group1 = #llvm.access_group<id = distinct[0]<>>
+#group2 = #llvm.access_group<id = distinct[1]<>>
 
 // CHECK: #[[LOOP_ANNOT:.*]] = #llvm.loop_annotation<
 // CHECK-DAG: disableNonforced = false
 // CHECK-DAG: startLoc = #[[START_LOC_FUSED]]
 // CHECK-DAG: endLoc = #[[END_LOC_FUSED]]
+// CHECK-DAG: parallelAccesses = #[[GROUP1]], #[[GROUP2]]>
 #loopMD = #llvm.loop_annotation<disableNonforced = false,
         mustProgress = true,
         startLoc = #start_loc_fused,
-        endLoc = #end_loc_fused>
+        endLoc = #end_loc_fused,
+        parallelAccesses = #group1, #group2>
 
 // CHECK: llvm.func @loop_annotation_with_locs
 llvm.func @loop_annotation_with_locs() {

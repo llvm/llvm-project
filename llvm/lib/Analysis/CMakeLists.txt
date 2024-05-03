@@ -76,8 +76,6 @@ add_llvm_component_library(LLVMAnalysis
   InstructionPrecedenceTracking.cpp
   InstructionSimplify.cpp
   InteractiveModelRunner.cpp
-  Interval.cpp
-  IntervalPartition.cpp
   LazyBranchProbabilityInfo.cpp
   LazyBlockFrequencyInfo.cpp
   LazyCallGraph.cpp
@@ -141,7 +139,6 @@ add_llvm_component_library(LLVMAnalysis
   ValueLatticeUtils.cpp
   ValueTracking.cpp
   VectorUtils.cpp
-  VFABIDemangling.cpp
   ${GeneratedMLSources}
 
   ADDITIONAL_HEADER_DIRS

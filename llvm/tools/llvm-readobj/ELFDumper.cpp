@@ -49,6 +49,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/HexagonAttributeParser.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MSP430AttributeParser.h"
 #include "llvm/Support/MSP430Attributes.h"
@@ -57,8 +58,10 @@
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <array>
 #include <cinttypes>
 #include <cstddef>
 #include <cstdint>
@@ -72,6 +75,7 @@
 
 using namespace llvm;
 using namespace llvm::object;
+using namespace llvm::support;
 using namespace ELF;
 
 #define LLVM_READOBJ_ENUM_CASE(ns, enum)                                       \
@@ -281,7 +285,6 @@ protected:
 
   virtual void printRelRelaReloc(const Relocation<ELFT> &R,
                                  const RelSymbol<ELFT> &RelSym) = 0;
-  virtual void printRelrReloc(const Elf_Relr &R) = 0;
   virtual void printDynamicRelocHeader(unsigned Type, StringRef Name,
                                        const DynRegionInfo &Reg) {}
   void printReloc(const Relocation<ELFT> &R, unsigned RelIndex,
@@ -290,11 +293,10 @@ protected:
   void printDynamicRelocationsHelper();
   void printRelocationsHelper(const Elf_Shdr &Sec);
   void forEachRelocationDo(
-      const Elf_Shdr &Sec, bool RawRelr,
+      const Elf_Shdr &Sec,
       llvm::function_ref<void(const Relocation<ELFT> &, unsigned,
                               const Elf_Shdr &, const Elf_Shdr *)>
-          RelRelaFn,
-      llvm::function_ref<void(const Elf_Relr &)> RelrFn);
+          RelRelaFn);
 
   virtual void printSymtabMessage(const Elf_Shdr *Symtab, size_t Offset,
                                   bool NonVisibilityBitsUsed,
@@ -407,6 +409,7 @@ protected:
   std::string getStaticSymbolName(uint32_t Index) const;
   StringRef getDynamicString(uint64_t Value) const;
 
+  std::pair<Elf_Sym_Range, std::optional<StringRef>> getSymtabAndStrtab() const;
   void printSymbolsHelper(bool IsDynamic, bool ExtraSymInfo) const;
   std::string getDynamicEntry(uint64_t Type, uint64_t Value) const;
 
@@ -509,6 +512,28 @@ ELFDumper<ELFT>::getVersionTable(const Elf_Shdr &Sec, ArrayRef<Elf_Sym> *SymTab,
 }
 
 template <class ELFT>
+std::pair<typename ELFDumper<ELFT>::Elf_Sym_Range, std::optional<StringRef>>
+ELFDumper<ELFT>::getSymtabAndStrtab() const {
+  assert(DotSymtabSec);
+  Elf_Sym_Range Syms(nullptr, nullptr);
+  std::optional<StringRef> StrTable;
+  if (Expected<StringRef> StrTableOrErr =
+          Obj.getStringTableForSymtab(*DotSymtabSec))
+    StrTable = *StrTableOrErr;
+  else
+    reportUniqueWarning(
+        "unable to get the string table for the SHT_SYMTAB section: " +
+        toString(StrTableOrErr.takeError()));
+
+  if (Expected<Elf_Sym_Range> SymsOrErr = Obj.symbols(DotSymtabSec))
+    Syms = *SymsOrErr;
+  else
+    reportUniqueWarning("unable to read symbols from the SHT_SYMTAB section: " +
+                        toString(SymsOrErr.takeError()));
+  return {Syms, StrTable};
+}
+
+template <class ELFT>
 void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic,
                                          bool ExtraSymInfo) const {
   std::optional<StringRef> StrTable;
@@ -521,20 +546,7 @@ void ELFDumper<ELFT>::printSymbolsHelper(bool IsDynamic,
     Syms = dynamic_symbols();
     Entries = Syms.size();
   } else if (DotSymtabSec) {
-    if (Expected<StringRef> StrTableOrErr =
-            Obj.getStringTableForSymtab(*DotSymtabSec))
-      StrTable = *StrTableOrErr;
-    else
-      reportUniqueWarning(
-          "unable to get the string table for the SHT_SYMTAB section: " +
-          toString(StrTableOrErr.takeError()));
-
-    if (Expected<Elf_Sym_Range> SymsOrErr = Obj.symbols(DotSymtabSec))
-      Syms = *SymsOrErr;
-    else
-      reportUniqueWarning(
-          "unable to read symbols from the SHT_SYMTAB section: " +
-          toString(SymsOrErr.takeError()));
+    std::tie(Syms, StrTable) = getSymtabAndStrtab();
     Entries = DotSymtabSec->getEntityCount();
   }
   if (Syms.empty())
@@ -592,7 +604,7 @@ public:
   void printVersionDefinitionSection(const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printCGProfile() override;
-  void printBBAddrMaps() override;
+  void printBBAddrMaps(bool PrettyPGOAnalysis) override;
   void printAddrsig() override;
   void printNotes() override;
   void printELFLinkerOptions() override;
@@ -654,7 +666,7 @@ private:
   void printHashedSymbol(const Elf_Sym *Sym, unsigned SymIndex,
                          DataRegion<Elf_Word> ShndxTable, StringRef StrTable,
                          uint32_t Bucket);
-  void printRelrReloc(const Elf_Relr &R) override;
+  void printRelr(const Elf_Shdr &Sec);
   void printRelRelaReloc(const Relocation<ELFT> &R,
                          const RelSymbol<ELFT> &RelSym) override;
   void printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
@@ -703,7 +715,7 @@ public:
   void printVersionDefinitionSection(const Elf_Shdr *Sec) override;
   void printVersionDependencySection(const Elf_Shdr *Sec) override;
   void printCGProfile() override;
-  void printBBAddrMaps() override;
+  void printBBAddrMaps(bool PrettyPGOAnalysis) override;
   void printAddrsig() override;
   void printNotes() override;
   void printELFLinkerOptions() override;
@@ -719,7 +731,6 @@ public:
                                bool IsGnu) const override;
 
 private:
-  void printRelrReloc(const Elf_Relr &R) override;
   void printRelRelaReloc(const Relocation<ELFT> &R,
                          const RelSymbol<ELFT> &RelSym) override;
 
@@ -1083,6 +1094,7 @@ const EnumEntry<unsigned> ElfOSABI[] = {
   {"AROS",         "AROS",                 ELF::ELFOSABI_AROS},
   {"FenixOS",      "FenixOS",              ELF::ELFOSABI_FENIXOS},
   {"CloudABI",     "CloudABI",             ELF::ELFOSABI_CLOUDABI},
+  {"CUDA",         "NVIDIA - CUDA",        ELF::ELFOSABI_CUDA},
   {"Standalone",   "Standalone App",       ELF::ELFOSABI_STANDALONE}
 };
 
@@ -1093,7 +1105,8 @@ const EnumEntry<unsigned> AMDGPUElfOSABI[] = {
 };
 
 const EnumEntry<unsigned> ARMElfOSABI[] = {
-  {"ARM", "ARM", ELF::ELFOSABI_ARM}
+    {"ARM", "ARM", ELF::ELFOSABI_ARM},
+    {"ARM FDPIC", "ARM FDPIC", ELF::ELFOSABI_ARM_FDPIC},
 };
 
 const EnumEntry<unsigned> C6000ElfOSABI[] = {
@@ -1476,6 +1489,7 @@ static StringRef segmentTypeToString(unsigned Arch, unsigned Type) {
     LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_RANDOMIZE);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_WXNEEDED);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_NOBTCFI);
+    LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_SYSCALLS);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_OPENBSD_BOOTDATA);
   default:
     return "";
@@ -1500,7 +1514,7 @@ static std::string getGNUPtType(unsigned Arch, unsigned Type) {
     return Seg.str();
 
   // E.g. "PT_LOAD" -> "LOAD".
-  assert(Seg.startswith("PT_"));
+  assert(Seg.starts_with("PT_"));
   return Seg.drop_front(3).str();
 }
 
@@ -1556,140 +1570,102 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_MIPS_ARCH_64R6, "mips64r6")
 };
 
+// clang-format off
+#define AMDGPU_MACH_ENUM_ENTS                                                  \
+  ENUM_ENT(EF_AMDGPU_MACH_NONE, "none"),                                       \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_R600, "r600"),                                  \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_R630, "r630"),                                  \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_RS880, "rs880"),                                \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_RV670, "rv670"),                                \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_RV710, "rv710"),                                \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_RV730, "rv730"),                                \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_RV770, "rv770"),                                \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_CEDAR, "cedar"),                                \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_CYPRESS, "cypress"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_JUNIPER, "juniper"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_REDWOOD, "redwood"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_SUMO, "sumo"),                                  \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_BARTS, "barts"),                                \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_CAICOS, "caicos"),                              \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_CAYMAN, "cayman"),                              \
+  ENUM_ENT(EF_AMDGPU_MACH_R600_TURKS, "turks"),                                \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX600, "gfx600"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX601, "gfx601"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX602, "gfx602"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX700, "gfx700"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX701, "gfx701"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX702, "gfx702"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX703, "gfx703"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX704, "gfx704"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX705, "gfx705"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX801, "gfx801"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX802, "gfx802"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX803, "gfx803"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX805, "gfx805"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX810, "gfx810"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX900, "gfx900"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX902, "gfx902"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX904, "gfx904"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX906, "gfx906"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX908, "gfx908"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX909, "gfx909"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX90A, "gfx90a"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX90C, "gfx90c"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX940, "gfx940"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX941, "gfx941"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX942, "gfx942"),                            \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1010, "gfx1010"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1011, "gfx1011"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1012, "gfx1012"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1013, "gfx1013"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1030, "gfx1030"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1031, "gfx1031"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1032, "gfx1032"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1033, "gfx1033"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1034, "gfx1034"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1035, "gfx1035"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1036, "gfx1036"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1100, "gfx1100"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1101, "gfx1101"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1102, "gfx1102"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1103, "gfx1103"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1150, "gfx1150"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1151, "gfx1151"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic"),                \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic"),          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, "gfx10-3-generic"),          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic")
+// clang-format on
+
 const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion3[] = {
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_NONE),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_R600),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_R630),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RS880),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV670),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV710),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV730),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV770),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CEDAR),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CYPRESS),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_JUNIPER),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_REDWOOD),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_SUMO),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_BARTS),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CAICOS),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CAYMAN),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_TURKS),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX600),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX601),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX602),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX700),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX701),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX702),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX703),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX704),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX705),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX801),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX802),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX803),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX805),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX810),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX900),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX902),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX904),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX906),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX908),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX909),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90A),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90C),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX940),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX941),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX942),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1010),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1011),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1012),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1013),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1030),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1031),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1032),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1033),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1034),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1035),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1036),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1100),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1101),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1102),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1103),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1150),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1151),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1200),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1201),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_XNACK_V3),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_SRAMECC_V3),
+    AMDGPU_MACH_ENUM_ENTS,
+    ENUM_ENT(EF_AMDGPU_FEATURE_XNACK_V3, "xnack"),
+    ENUM_ENT(EF_AMDGPU_FEATURE_SRAMECC_V3, "sramecc"),
 };
 
 const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion4[] = {
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_NONE),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_R600),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_R630),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RS880),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV670),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV710),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV730),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_RV770),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CEDAR),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CYPRESS),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_JUNIPER),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_REDWOOD),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_SUMO),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_BARTS),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CAICOS),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_CAYMAN),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_R600_TURKS),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX600),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX601),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX602),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX700),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX701),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX702),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX703),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX704),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX705),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX801),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX802),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX803),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX805),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX810),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX900),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX902),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX904),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX906),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX908),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX909),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90A),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX90C),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX940),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX941),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX942),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1010),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1011),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1012),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1013),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1030),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1031),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1032),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1033),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1034),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1035),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1036),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1100),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1101),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1102),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1103),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1150),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1151),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1200),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_MACH_AMDGCN_GFX1201),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_XNACK_ANY_V4),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_XNACK_OFF_V4),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_XNACK_ON_V4),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_SRAMECC_ANY_V4),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_SRAMECC_OFF_V4),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AMDGPU_FEATURE_SRAMECC_ON_V4),
+    AMDGPU_MACH_ENUM_ENTS,
+    ENUM_ENT(EF_AMDGPU_FEATURE_XNACK_ANY_V4, "xnack"),
+    ENUM_ENT(EF_AMDGPU_FEATURE_XNACK_OFF_V4, "xnack-"),
+    ENUM_ENT(EF_AMDGPU_FEATURE_XNACK_ON_V4, "xnack+"),
+    ENUM_ENT(EF_AMDGPU_FEATURE_SRAMECC_ANY_V4, "sramecc"),
+    ENUM_ENT(EF_AMDGPU_FEATURE_SRAMECC_OFF_V4, "sramecc-"),
+    ENUM_ENT(EF_AMDGPU_FEATURE_SRAMECC_ON_V4, "sramecc+"),
+};
+
+const EnumEntry<unsigned> ElfHeaderNVPTXFlags[] = {
+    ENUM_ENT(EF_CUDA_SM20, "sm_20"), ENUM_ENT(EF_CUDA_SM21, "sm_21"),
+    ENUM_ENT(EF_CUDA_SM30, "sm_30"), ENUM_ENT(EF_CUDA_SM32, "sm_32"),
+    ENUM_ENT(EF_CUDA_SM35, "sm_35"), ENUM_ENT(EF_CUDA_SM37, "sm_37"),
+    ENUM_ENT(EF_CUDA_SM50, "sm_50"), ENUM_ENT(EF_CUDA_SM52, "sm_52"),
+    ENUM_ENT(EF_CUDA_SM53, "sm_53"), ENUM_ENT(EF_CUDA_SM60, "sm_60"),
+    ENUM_ENT(EF_CUDA_SM61, "sm_61"), ENUM_ENT(EF_CUDA_SM62, "sm_62"),
+    ENUM_ENT(EF_CUDA_SM70, "sm_70"), ENUM_ENT(EF_CUDA_SM72, "sm_72"),
+    ENUM_ENT(EF_CUDA_SM75, "sm_75"), ENUM_ENT(EF_CUDA_SM80, "sm_80"),
+    ENUM_ENT(EF_CUDA_SM86, "sm_86"), ENUM_ENT(EF_CUDA_SM87, "sm_87"),
+    ENUM_ENT(EF_CUDA_SM89, "sm_89"), ENUM_ENT(EF_CUDA_SM90, "sm_90"),
 };
 
 const EnumEntry<unsigned> ElfHeaderRISCVFlags[] = {
@@ -2858,14 +2834,15 @@ template <typename ELFT> void ELFDumper<ELFT>::printLoadName() {
 
 template <class ELFT> void ELFDumper<ELFT>::printArchSpecificInfo() {
   switch (Obj.getHeader().e_machine) {
+  case EM_HEXAGON:
+    printAttributes(ELF::SHT_HEXAGON_ATTRIBUTES,
+                    std::make_unique<HexagonAttributeParser>(&W),
+                    llvm::endianness::little);
+    break;
   case EM_ARM:
-    if (Obj.isLE())
-      printAttributes(ELF::SHT_ARM_ATTRIBUTES,
-                      std::make_unique<ARMAttributeParser>(&W),
-                      llvm::endianness::little);
-    else
-      reportUniqueWarning("attribute printing not implemented for big-endian "
-                          "ARM objects");
+    printAttributes(
+        ELF::SHT_ARM_ATTRIBUTES, std::make_unique<ARMAttributeParser>(&W),
+        Obj.isLE() ? llvm::endianness::little : llvm::endianness::big);
     break;
   case EM_RISCV:
     if (Obj.isLE())
@@ -3447,13 +3424,13 @@ template <class ELFT> void ELFDumper<ELFT>::printStackMap() const {
     return;
   }
 
-  if (Error E = StackMapParser<ELFT::TargetEndianness>::validateHeader(
-          *ContentOrErr)) {
+  if (Error E =
+          StackMapParser<ELFT::Endianness>::validateHeader(*ContentOrErr)) {
     Warn(std::move(E));
     return;
   }
 
-  prettyPrintStackMap(W, StackMapParser<ELFT::TargetEndianness>(*ContentOrErr));
+  prettyPrintStackMap(W, StackMapParser<ELFT::Endianness>(*ContentOrErr));
 }
 
 template <class ELFT>
@@ -3585,7 +3562,21 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
   if (e.e_version == ELF::EV_CURRENT)
     OS << " (current)";
   OS << "\n";
-  Str = enumToString(e.e_ident[ELF::EI_OSABI], ArrayRef(ElfOSABI));
+  auto OSABI = ArrayRef(ElfOSABI);
+  if (e.e_ident[ELF::EI_OSABI] >= ELF::ELFOSABI_FIRST_ARCH &&
+      e.e_ident[ELF::EI_OSABI] <= ELF::ELFOSABI_LAST_ARCH) {
+    switch (e.e_machine) {
+    case ELF::EM_ARM:
+      OSABI = ArrayRef(ARMElfOSABI);
+      break;
+    case ELF::EM_AMDGPU:
+      OSABI = ArrayRef(AMDGPUElfOSABI);
+      break;
+    default:
+      break;
+    }
+  }
+  Str = enumToString(e.e_ident[ELF::EI_OSABI], OSABI);
   printFields(OS, "OS/ABI:", Str);
   printFields(OS,
               "ABI Version:", std::to_string(e.e_ident[ELF::EI_ABIVERSION]));
@@ -3629,6 +3620,43 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
   else if (e.e_machine == EM_XTENSA)
     ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderXtensaFlags),
                           unsigned(ELF::EF_XTENSA_MACH));
+  else if (e.e_machine == EM_CUDA)
+    ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderNVPTXFlags),
+                          unsigned(ELF::EF_CUDA_SM));
+  else if (e.e_machine == EM_AMDGPU) {
+    switch (e.e_ident[ELF::EI_ABIVERSION]) {
+    default:
+      break;
+    case 0:
+      // ELFOSABI_AMDGPU_PAL, ELFOSABI_AMDGPU_MESA3D support *_V3 flags.
+      [[fallthrough]];
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
+      ElfFlags =
+          printFlags(e.e_flags, ArrayRef(ElfHeaderAMDGPUFlagsABIVersion3),
+                     unsigned(ELF::EF_AMDGPU_MACH));
+      break;
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V4:
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V5:
+      ElfFlags =
+          printFlags(e.e_flags, ArrayRef(ElfHeaderAMDGPUFlagsABIVersion4),
+                     unsigned(ELF::EF_AMDGPU_MACH),
+                     unsigned(ELF::EF_AMDGPU_FEATURE_XNACK_V4),
+                     unsigned(ELF::EF_AMDGPU_FEATURE_SRAMECC_V4));
+      break;
+    case ELF::ELFABIVERSION_AMDGPU_HSA_V6: {
+      ElfFlags =
+          printFlags(e.e_flags, ArrayRef(ElfHeaderAMDGPUFlagsABIVersion4),
+                     unsigned(ELF::EF_AMDGPU_MACH),
+                     unsigned(ELF::EF_AMDGPU_FEATURE_XNACK_V4),
+                     unsigned(ELF::EF_AMDGPU_FEATURE_SRAMECC_V4));
+      if (auto GenericV = e.e_flags & ELF::EF_AMDGPU_GENERIC_VERSION) {
+        ElfFlags +=
+            ", generic_v" +
+            to_string(GenericV >> ELF::EF_AMDGPU_GENERIC_VERSION_OFFSET);
+      }
+    } break;
+    }
+  }
   Str = "0x" + utohexstr(e.e_flags);
   if (!ElfFlags.empty())
     Str = Str + ", " + ElfFlags;
@@ -3769,11 +3797,6 @@ template <class ELFT> void GNUELFDumper<ELFT>::printGroupSections() {
 }
 
 template <class ELFT>
-void GNUELFDumper<ELFT>::printRelrReloc(const Elf_Relr &R) {
-  OS << to_string(format_hex_no_prefix(R, ELFT::Is64Bits ? 16 : 8)) << "\n";
-}
-
-template <class ELFT>
 void GNUELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
                                            const RelSymbol<ELFT> &RelSym) {
   // First two fields are bit width dependent. The rest of them are fixed width.
@@ -3819,22 +3842,11 @@ template <class ELFT>
 static void printRelocHeaderFields(formatted_raw_ostream &OS, unsigned SType,
                                    const typename ELFT::Ehdr &EHeader) {
   bool IsRela = SType == ELF::SHT_RELA || SType == ELF::SHT_ANDROID_RELA;
-  bool IsRelr =
-      SType == ELF::SHT_RELR || SType == ELF::SHT_ANDROID_RELR ||
-      (EHeader.e_machine == EM_AARCH64 && SType == ELF::SHT_AARCH64_AUTH_RELR);
   if (ELFT::Is64Bits)
-    OS << "    ";
+    OS << "    Offset             Info             Type               Symbol's "
+          "Value  Symbol's Name";
   else
-    OS << " ";
-  if (IsRelr && opts::RawRelr)
-    OS << "Data  ";
-  else
-    OS << "Offset";
-  if (ELFT::Is64Bits)
-    OS << "             Info             Type"
-       << "               Symbol's Value  Symbol's Name";
-  else
-    OS << "     Info    Type                Sym. Value  Symbol's Name";
+    OS << " Offset     Info    Type                Sym. Value  Symbol's Name";
   if (IsRela)
     OS << " + Addend";
   OS << "\n";
@@ -3861,6 +3873,12 @@ static bool isRelocationSec(const typename ELFT::Shdr &Sec,
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
+  auto PrintAsRelr = [&](const Elf_Shdr &Sec) {
+    return Sec.sh_type == ELF::SHT_RELR ||
+           Sec.sh_type == ELF::SHT_ANDROID_RELR ||
+           (this->Obj.getHeader().e_machine == EM_AARCH64 &&
+            Sec.sh_type == ELF::SHT_AARCH64_AUTH_RELR);
+  };
   auto GetEntriesNum = [&](const Elf_Shdr &Sec) -> Expected<size_t> {
     // Android's packed relocation section needs to be unpacked first
     // to get the actual number of entries.
@@ -3873,10 +3891,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
       return RelasOrErr->size();
     }
 
-    if (!opts::RawRelr &&
-        (Sec.sh_type == ELF::SHT_RELR || Sec.sh_type == ELF::SHT_ANDROID_RELR ||
-         (this->Obj.getHeader().e_machine == EM_AARCH64 &&
-          Sec.sh_type == ELF::SHT_AARCH64_AUTH_RELR))) {
+    if (PrintAsRelr(Sec)) {
       Expected<Elf_Relr_Range> RelrsOrErr = this->Obj.relrs(Sec);
       if (!RelrsOrErr)
         return RelrsOrErr.takeError();
@@ -3905,11 +3920,87 @@ template <class ELFT> void GNUELFDumper<ELFT>::printRelocations() {
     OS << "\nRelocation section '" << Name << "' at offset 0x"
        << utohexstr(Offset, /*LowerCase=*/true) << " contains " << EntriesNum
        << " entries:\n";
-    printRelocHeaderFields<ELFT>(OS, Sec.sh_type, this->Obj.getHeader());
-    this->printRelocationsHelper(Sec);
+
+    if (PrintAsRelr(Sec)) {
+      printRelr(Sec);
+    } else {
+      printRelocHeaderFields<ELFT>(OS, Sec.sh_type, this->Obj.getHeader());
+      this->printRelocationsHelper(Sec);
+    }
   }
   if (!HasRelocSections)
     OS << "\nThere are no relocations in this file.\n";
+}
+
+template <class ELFT> void GNUELFDumper<ELFT>::printRelr(const Elf_Shdr &Sec) {
+  Expected<Elf_Relr_Range> RangeOrErr = this->Obj.relrs(Sec);
+  if (!RangeOrErr) {
+    this->reportUniqueWarning("unable to read relocations from " +
+                              this->describe(Sec) + ": " +
+                              toString(RangeOrErr.takeError()));
+    return;
+  }
+  if (ELFT::Is64Bits)
+    OS << "Index: Entry            Address           Symbolic Address\n";
+  else
+    OS << "Index: Entry    Address   Symbolic Address\n";
+
+  // If .symtab is available, collect its defined symbols and sort them by
+  // st_value.
+  SmallVector<std::pair<uint64_t, std::string>, 0> Syms;
+  if (this->DotSymtabSec) {
+    Elf_Sym_Range Symtab;
+    std::optional<StringRef> Strtab;
+    std::tie(Symtab, Strtab) = this->getSymtabAndStrtab();
+    if (Symtab.size() && Strtab) {
+      for (auto [I, Sym] : enumerate(Symtab)) {
+        if (!Sym.st_shndx)
+          continue;
+        Syms.emplace_back(Sym.st_value,
+                          this->getFullSymbolName(Sym, I, ArrayRef<Elf_Word>(),
+                                                  *Strtab, false));
+      }
+    }
+  }
+  llvm::stable_sort(Syms);
+
+  typename ELFT::uint Base = 0;
+  size_t I = 0;
+  auto Print = [&](uint64_t Where) {
+    OS << format_hex_no_prefix(Where, ELFT::Is64Bits ? 16 : 8);
+    for (; I < Syms.size() && Syms[I].first <= Where; ++I)
+      ;
+    // Try symbolizing the address. Find the nearest symbol before or at the
+    // address and print the symbol and the address difference.
+    if (I) {
+      OS << "  " << Syms[I - 1].second;
+      if (Syms[I - 1].first < Where)
+        OS << " + 0x" << Twine::utohexstr(Where - Syms[I - 1].first);
+    }
+    OS << '\n';
+  };
+  for (auto [Index, R] : enumerate(*RangeOrErr)) {
+    typename ELFT::uint Entry = R;
+    OS << formatv("{0:4}:  ", Index)
+       << format_hex_no_prefix(Entry, ELFT::Is64Bits ? 16 : 8) << ' ';
+    if ((Entry & 1) == 0) {
+      Print(Entry);
+      Base = Entry + sizeof(typename ELFT::uint);
+    } else {
+      bool First = true;
+      for (auto Where = Base; Entry >>= 1;
+           Where += sizeof(typename ELFT::uint)) {
+        if (Entry & 1) {
+          if (First)
+            First = false;
+          else
+            OS.indent(ELFT::Is64Bits ? 24 : 16);
+          Print(Where);
+        }
+      }
+      Base += (CHAR_BIT * sizeof(Entry) - 1) * sizeof(typename ELFT::uint);
+    }
+  }
 }
 
 // Print the offset of a particular section from anyone of the ranges:
@@ -4791,10 +4882,8 @@ void ELFDumper<ELFT>::printDynamicReloc(const Relocation<ELFT> &R) {
 template <class ELFT>
 void ELFDumper<ELFT>::printRelocationsHelper(const Elf_Shdr &Sec) {
   this->forEachRelocationDo(
-      Sec, opts::RawRelr,
-      [&](const Relocation<ELFT> &R, unsigned Ndx, const Elf_Shdr &Sec,
-          const Elf_Shdr *SymTab) { printReloc(R, Ndx, Sec, SymTab); },
-      [&](const Elf_Relr &R) { printRelrReloc(R); });
+      Sec, [&](const Relocation<ELFT> &R, unsigned Ndx, const Elf_Shdr &Sec,
+               const Elf_Shdr *SymTab) { printReloc(R, Ndx, Sec, SymTab); });
 }
 
 template <class ELFT> void ELFDumper<ELFT>::printDynamicRelocationsHelper() {
@@ -5019,7 +5108,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
   OS << "GNUStyle::printCGProfile not implemented\n";
 }
 
-template <class ELFT> void GNUELFDumper<ELFT>::printBBAddrMaps() {
+template <class ELFT>
+void GNUELFDumper<ELFT>::printBBAddrMaps(bool /*PrettyPGOAnalysis*/) {
   OS << "GNUStyle::printBBAddrMaps not implemented\n";
 }
 
@@ -5080,6 +5170,73 @@ template <class ELFT> void GNUELFDumper<ELFT>::printAddrsig() {
   }
 }
 
+template <class ELFT>
+static bool printAArch64PAuthABICoreInfo(raw_ostream &OS, uint32_t DataSize,
+                                         ArrayRef<uint8_t> Desc) {
+  OS << "    AArch64 PAuth ABI core info: ";
+  // DataSize - size without padding, Desc.size() - size with padding
+  if (DataSize != 16) {
+    OS << format("<corrupted size: expected 16, got %d>", DataSize);
+    return false;
+  }
+
+  uint64_t Platform =
+      support::endian::read64<ELFT::Endianness>(Desc.data() + 0);
+  uint64_t Version = support::endian::read64<ELFT::Endianness>(Desc.data() + 8);
+
+  const char *PlatformDesc = [Platform]() {
+    switch (Platform) {
+    case AARCH64_PAUTH_PLATFORM_INVALID:
+      return "invalid";
+    case AARCH64_PAUTH_PLATFORM_BAREMETAL:
+      return "baremetal";
+    case AARCH64_PAUTH_PLATFORM_LLVM_LINUX:
+      return "llvm_linux";
+    default:
+      return "unknown";
+    }
+  }();
+
+  std::string VersionDesc = [Platform, Version]() -> std::string {
+    if (Platform != AARCH64_PAUTH_PLATFORM_LLVM_LINUX)
+      return "";
+    if (Version >= (1 << (AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST + 1)))
+      return "unknown";
+
+    std::array<StringRef, AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST + 1>
+        Flags;
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INTRINSICS] = "Intrinsics";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_CALLS] = "Calls";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_RETURNS] = "Returns";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_AUTHTRAPS] = "AuthTraps";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRADDRDISCR] =
+        "VTPtrAddressDiscrimination";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_VPTRTYPEDISCR] =
+        "VTPtrTypeDiscrimination";
+    Flags[AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI] = "InitFini";
+
+    static_assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INITFINI ==
+                      AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST,
+                  "Update when new enum items are defined");
+
+    std::string Desc;
+    for (uint32_t I = 0, End = Flags.size(); I < End; ++I) {
+      if (!(Version & (1ULL << I)))
+        Desc += '!';
+      Desc +=
+          Twine("PointerAuth" + Flags[I] + (I == End - 1 ? "" : ", ")).str();
+    }
+    return Desc;
+  }();
+
+  OS << format("platform 0x%" PRIx64 " (%s), version 0x%" PRIx64, Platform,
+               PlatformDesc, Version);
+  if (!VersionDesc.empty())
+    OS << format(" (%s)", VersionDesc.c_str());
+
+  return true;
+}
+
 template <typename ELFT>
 static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
                                   ArrayRef<uint8_t> Data) {
@@ -5121,7 +5278,7 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
       OS << format("<corrupt length: 0x%x>", DataSize);
       return OS.str();
     }
-    PrData = support::endian::read32<ELFT::TargetEndianness>(Data.data());
+    PrData = endian::read32<ELFT::Endianness>(Data.data());
     if (PrData == 0) {
       OS << "<None>";
       return OS.str();
@@ -5129,12 +5286,16 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
     if (Type == GNU_PROPERTY_AARCH64_FEATURE_1_AND) {
       DumpBit(GNU_PROPERTY_AARCH64_FEATURE_1_BTI, "BTI");
       DumpBit(GNU_PROPERTY_AARCH64_FEATURE_1_PAC, "PAC");
+      DumpBit(GNU_PROPERTY_AARCH64_FEATURE_1_GCS, "GCS");
     } else {
       DumpBit(GNU_PROPERTY_X86_FEATURE_1_IBT, "IBT");
       DumpBit(GNU_PROPERTY_X86_FEATURE_1_SHSTK, "SHSTK");
     }
     if (PrData)
       OS << format("<unknown flags: 0x%x>", PrData);
+    return OS.str();
+  case GNU_PROPERTY_AARCH64_FEATURE_PAUTH:
+    printAArch64PAuthABICoreInfo<ELFT>(OS, DataSize, Data);
     return OS.str();
   case GNU_PROPERTY_X86_FEATURE_2_NEEDED:
   case GNU_PROPERTY_X86_FEATURE_2_USED:
@@ -5144,7 +5305,7 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
       OS << format("<corrupt length: 0x%x>", DataSize);
       return OS.str();
     }
-    PrData = support::endian::read32<ELFT::TargetEndianness>(Data.data());
+    PrData = endian::read32<ELFT::Endianness>(Data.data());
     if (PrData == 0) {
       OS << "<None>";
       return OS.str();
@@ -5170,7 +5331,7 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
       OS << format("<corrupt length: 0x%x>", DataSize);
       return OS.str();
     }
-    PrData = support::endian::read32<ELFT::TargetEndianness>(Data.data());
+    PrData = endian::read32<ELFT::Endianness>(Data.data());
     if (PrData == 0) {
       OS << "<None>";
       return OS.str();
@@ -5338,31 +5499,6 @@ static bool printAndroidNote(raw_ostream &OS, uint32_t NoteType,
 }
 
 template <class ELFT>
-static bool printAArch64Note(raw_ostream &OS, uint32_t NoteType,
-                             ArrayRef<uint8_t> Desc) {
-  if (NoteType != NT_ARM_TYPE_PAUTH_ABI_TAG)
-    return false;
-
-  OS << "    AArch64 PAuth ABI tag: ";
-  if (Desc.size() < 16) {
-    OS << format("<corrupted size: expected at least 16, got %d>", Desc.size());
-    return false;
-  }
-
-  uint64_t Platform =
-      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 0);
-  uint64_t Version =
-      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 8);
-  OS << format("platform 0x%" PRIx64 ", version 0x%" PRIx64, Platform, Version);
-
-  if (Desc.size() > 16)
-    OS << ", additional info 0x"
-       << toHex(ArrayRef<uint8_t>(Desc.data() + 16, Desc.size() - 16));
-
-  return true;
-}
-
-template <class ELFT>
 void GNUELFDumper<ELFT>::printMemtag(
     const ArrayRef<std::pair<std::string, std::string>> DynamicEntries,
     const ArrayRef<uint8_t> AndroidNoteDesc,
@@ -5432,16 +5568,14 @@ getFreeBSDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc, bool IsCore) {
   case ELF::NT_FREEBSD_ABI_TAG:
     if (Desc.size() != 4)
       return std::nullopt;
-    return FreeBSDNote{
-        "ABI tag",
-        utostr(support::endian::read32<ELFT::TargetEndianness>(Desc.data()))};
+    return FreeBSDNote{"ABI tag",
+                       utostr(endian::read32<ELFT::Endianness>(Desc.data()))};
   case ELF::NT_FREEBSD_ARCH_TAG:
     return FreeBSDNote{"Arch tag", toStringRef(Desc).str()};
   case ELF::NT_FREEBSD_FEATURE_CTL: {
     if (Desc.size() != 4)
       return std::nullopt;
-    unsigned Value =
-        support::endian::read32<ELFT::TargetEndianness>(Desc.data());
+    unsigned Value = endian::read32<ELFT::Endianness>(Desc.data());
     std::string FlagsStr;
     raw_string_ostream OS(FlagsStr);
     printFlags(Value, ArrayRef(FreeBSDFeatureCtlFlags), OS);
@@ -5761,10 +5895,6 @@ const NoteType AndroidNoteTypes[] = {
      "NT_ANDROID_TYPE_MEMTAG (Android memory tagging information)"},
 };
 
-const NoteType ARMNoteTypes[] = {
-    {ELF::NT_ARM_TYPE_PAUTH_ABI_TAG, "NT_ARM_TYPE_PAUTH_ABI_TAG"},
-};
-
 const NoteType CoreNoteTypes[] = {
     {ELF::NT_PRSTATUS, "NT_PRSTATUS (prstatus structure)"},
     {ELF::NT_FPREGSET, "NT_FPREGSET (floating point registers)"},
@@ -5862,13 +5992,13 @@ StringRef getNoteTypeName(const typename ELFT::Note &Note, unsigned ELFType) {
       return FindNote(FreeBSDNoteTypes);
     }
   }
-  if (ELFType == ELF::ET_CORE && Name.startswith("NetBSD-CORE")) {
+  if (ELFType == ELF::ET_CORE && Name.starts_with("NetBSD-CORE")) {
     StringRef Result = FindNote(NetBSDCoreNoteTypes);
     if (!Result.empty())
       return Result;
     return FindNote(CoreNoteTypes);
   }
-  if (ELFType == ELF::ET_CORE && Name.startswith("OpenBSD")) {
+  if (ELFType == ELF::ET_CORE && Name.starts_with("OpenBSD")) {
     // OpenBSD also places the generic core notes in the OpenBSD namespace.
     StringRef Result = FindNote(OpenBSDCoreNoteTypes);
     if (!Result.empty())
@@ -5883,8 +6013,6 @@ StringRef getNoteTypeName(const typename ELFT::Note &Note, unsigned ELFType) {
     return FindNote(LLVMOMPOFFLOADNoteTypes);
   if (Name == "Android")
     return FindNote(AndroidNoteTypes);
-  if (Name == "ARM")
-    return FindNote(ARMNoteTypes);
 
   if (ELFType == ELF::ET_CORE)
     return FindNote(CoreNoteTypes);
@@ -6028,7 +6156,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
     } else if (Name == "CORE") {
       if (Type == ELF::NT_FILE) {
         DataExtractor DescExtractor(
-            Descriptor, ELFT::TargetEndianness == llvm::endianness::little,
+            Descriptor, ELFT::Endianness == llvm::endianness::little,
             sizeof(Elf_Addr));
         if (Expected<CoreNote> NoteOrErr = readCoreNote(DescExtractor)) {
           printCoreNote<ELFT>(OS, *NoteOrErr);
@@ -6039,9 +6167,6 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
       }
     } else if (Name == "Android") {
       if (printAndroidNote(OS, Type, Descriptor))
-        return Error::success();
-    } else if (Name == "ARM") {
-      if (printAArch64Note<ELFT>(OS, Type, Descriptor))
         return Error::success();
     }
     if (!Descriptor.empty()) {
@@ -6224,11 +6349,10 @@ void ELFDumper<ELFT>::printDependentLibsHelper(
 
 template <class ELFT>
 void ELFDumper<ELFT>::forEachRelocationDo(
-    const Elf_Shdr &Sec, bool RawRelr,
+    const Elf_Shdr &Sec,
     llvm::function_ref<void(const Relocation<ELFT> &, unsigned,
                             const Elf_Shdr &, const Elf_Shdr *)>
-        RelRelaFn,
-    llvm::function_ref<void(const Elf_Relr &)> RelrFn) {
+        RelRelaFn) {
   auto Warn = [&](Error &&E,
                   const Twine &Prefix = "unable to read relocations from") {
     this->reportUniqueWarning(Prefix + " " + describe(Sec) + ": " +
@@ -6278,11 +6402,6 @@ void ELFDumper<ELFT>::forEachRelocationDo(
     Expected<Elf_Relr_Range> RangeOrErr = Obj.relrs(Sec);
     if (!RangeOrErr) {
       Warn(RangeOrErr.takeError());
-      break;
-    }
-    if (RawRelr) {
-      for (const Elf_Relr &R : *RangeOrErr)
-        RelrFn(R);
       break;
     }
 
@@ -6594,9 +6713,8 @@ void ELFDumper<ELFT>::printRelocatableStackSizes(
     DataExtractor Data(Contents, Obj.isLE(), sizeof(Elf_Addr));
 
     forEachRelocationDo(
-        *RelocSec, /*RawRelr=*/false,
-        [&](const Relocation<ELFT> &R, unsigned Ndx, const Elf_Shdr &Sec,
-            const Elf_Shdr *SymTab) {
+        *RelocSec, [&](const Relocation<ELFT> &R, unsigned Ndx,
+                       const Elf_Shdr &Sec, const Elf_Shdr *SymTab) {
           if (!IsSupportedFn || !IsSupportedFn(R.Type)) {
             reportUniqueWarning(
                 describe(*RelocSec) +
@@ -6607,10 +6725,6 @@ void ELFDumper<ELFT>::printRelocatableStackSizes(
 
           this->printStackSize(R, *RelocSec, Ndx, SymTab, FunctionSec,
                                *StackSizesELFSec, Resolver, Data);
-        },
-        [](const Elf_Relr &) {
-          llvm_unreachable("can't get here, because we only support "
-                           "SHT_REL/SHT_RELA sections");
         });
   }
 }
@@ -6897,6 +7011,25 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
                      unsigned(ELF::EF_AMDGPU_FEATURE_XNACK_V4),
                      unsigned(ELF::EF_AMDGPU_FEATURE_SRAMECC_V4));
         break;
+      case ELF::ELFABIVERSION_AMDGPU_HSA_V6: {
+        std::optional<FlagEntry> VerFlagEntry;
+        // The string needs to remain alive from the moment we create a
+        // FlagEntry until printFlags is done.
+        std::string FlagStr;
+        if (auto VersionFlag = E.e_flags & ELF::EF_AMDGPU_GENERIC_VERSION) {
+          unsigned Version =
+              VersionFlag >> ELF::EF_AMDGPU_GENERIC_VERSION_OFFSET;
+          FlagStr = "EF_AMDGPU_GENERIC_VERSION_V" + std::to_string(Version);
+          VerFlagEntry = FlagEntry(FlagStr, VersionFlag);
+        }
+        W.printFlags(
+            "Flags", E.e_flags, ArrayRef(ElfHeaderAMDGPUFlagsABIVersion4),
+            unsigned(ELF::EF_AMDGPU_MACH),
+            unsigned(ELF::EF_AMDGPU_FEATURE_XNACK_V4),
+            unsigned(ELF::EF_AMDGPU_FEATURE_SRAMECC_V4),
+            VerFlagEntry ? ArrayRef(*VerFlagEntry) : ArrayRef<FlagEntry>());
+        break;
+      }
       }
     } else if (E.e_machine == EM_RISCV)
       W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderRISCVFlags));
@@ -6910,6 +7043,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
     else if (E.e_machine == EM_XTENSA)
       W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderXtensaFlags),
                    unsigned(ELF::EF_XTENSA_MACH));
+    else if (E.e_machine == EM_CUDA)
+      W.printFlags("Flags", E.e_flags, ArrayRef(ElfHeaderNVPTXFlags),
+                   unsigned(ELF::EF_CUDA_SM));
     else
       W.printFlags("Flags", E.e_flags);
     W.printNumber("HeaderSize", E.e_ehsize);
@@ -6976,11 +7112,6 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printRelocations() {
     unsigned SecNdx = &Sec - &cantFail(this->Obj.sections()).front();
     printRelocationSectionInfo(Sec, Name, SecNdx);
   }
-}
-
-template <class ELFT>
-void LLVMELFDumper<ELFT>::printRelrReloc(const Elf_Relr &R) {
-  W.startLine() << W.hex(R) << "\n";
 }
 
 template <class ELFT>
@@ -7486,12 +7617,12 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCGProfile() {
   }
 }
 
-template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
+template <class ELFT>
+void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
   bool IsRelocatable = this->Obj.getHeader().e_type == ELF::ET_REL;
   using Elf_Shdr = typename ELFT::Shdr;
   auto IsMatch = [](const Elf_Shdr &Sec) -> bool {
-    return Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP ||
-           Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP_V0;
+    return Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP;
   };
   Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>> SecRelocMapOrErr =
       this->Obj.getSectionAndRelocations(IsMatch);
@@ -7512,38 +7643,86 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
                                 this->describe(*Sec));
       continue;
     }
+    std::vector<PGOAnalysisMap> PGOAnalyses;
     Expected<std::vector<BBAddrMap>> BBAddrMapOrErr =
-        this->Obj.decodeBBAddrMap(*Sec, RelocSec);
+        this->Obj.decodeBBAddrMap(*Sec, RelocSec, &PGOAnalyses);
     if (!BBAddrMapOrErr) {
       this->reportUniqueWarning("unable to dump " + this->describe(*Sec) +
                                 ": " + toString(BBAddrMapOrErr.takeError()));
       continue;
     }
-    for (const BBAddrMap &AM : *BBAddrMapOrErr) {
+    for (const auto &[AM, PAM] : zip_equal(*BBAddrMapOrErr, PGOAnalyses)) {
       DictScope D(W, "Function");
-      W.printHex("At", AM.Addr);
+      W.printHex("At", AM.getFunctionAddress());
       SmallVector<uint32_t> FuncSymIndex =
-          this->getSymbolIndexesForFunctionAddress(AM.Addr, FunctionSec);
+          this->getSymbolIndexesForFunctionAddress(AM.getFunctionAddress(),
+                                                   FunctionSec);
       std::string FuncName = "<?>";
       if (FuncSymIndex.empty())
         this->reportUniqueWarning(
             "could not identify function symbol for address (0x" +
-            Twine::utohexstr(AM.Addr) + ") in " + this->describe(*Sec));
+            Twine::utohexstr(AM.getFunctionAddress()) + ") in " +
+            this->describe(*Sec));
       else
         FuncName = this->getStaticSymbolName(FuncSymIndex.front());
       W.printString("Name", FuncName);
+      {
+        ListScope BBRL(W, "BB Ranges");
+        for (const BBAddrMap::BBRangeEntry &BBR : AM.BBRanges) {
+          DictScope BBRD(W);
+          W.printHex("Base Address", BBR.BaseAddress);
+          ListScope BBEL(W, "BB Entries");
+          for (const BBAddrMap::BBEntry &BBE : BBR.BBEntries) {
+            DictScope BBED(W);
+            W.printNumber("ID", BBE.ID);
+            W.printHex("Offset", BBE.Offset);
+            W.printHex("Size", BBE.Size);
+            W.printBoolean("HasReturn", BBE.hasReturn());
+            W.printBoolean("HasTailCall", BBE.hasTailCall());
+            W.printBoolean("IsEHPad", BBE.isEHPad());
+            W.printBoolean("CanFallThrough", BBE.canFallThrough());
+            W.printBoolean("HasIndirectBranch", BBE.hasIndirectBranch());
+          }
+        }
+      }
 
-      ListScope L(W, "BB entries");
-      for (const BBAddrMap::BBEntry &BBE : AM.BBEntries) {
-        DictScope L(W);
-        W.printNumber("ID", BBE.ID);
-        W.printHex("Offset", BBE.Offset);
-        W.printHex("Size", BBE.Size);
-        W.printBoolean("HasReturn", BBE.hasReturn());
-        W.printBoolean("HasTailCall", BBE.hasTailCall());
-        W.printBoolean("IsEHPad", BBE.isEHPad());
-        W.printBoolean("CanFallThrough", BBE.canFallThrough());
-        W.printBoolean("HasIndirectBranch", BBE.hasIndirectBranch());
+      if (PAM.FeatEnable.hasPGOAnalysis()) {
+        DictScope PD(W, "PGO analyses");
+
+        if (PAM.FeatEnable.FuncEntryCount)
+          W.printNumber("FuncEntryCount", PAM.FuncEntryCount);
+
+        if (PAM.FeatEnable.hasPGOAnalysisBBData()) {
+          ListScope L(W, "PGO BB entries");
+          for (const PGOAnalysisMap::PGOBBEntry &PBBE : PAM.BBEntries) {
+            DictScope L(W);
+
+            if (PAM.FeatEnable.BBFreq) {
+              if (PrettyPGOAnalysis) {
+                std::string BlockFreqStr;
+                raw_string_ostream SS(BlockFreqStr);
+                printRelativeBlockFreq(SS, PAM.BBEntries.front().BlockFreq,
+                                       PBBE.BlockFreq);
+                W.printString("Frequency", BlockFreqStr);
+              } else {
+                W.printNumber("Frequency", PBBE.BlockFreq.getFrequency());
+              }
+            }
+
+            if (PAM.FeatEnable.BrProb) {
+              ListScope L(W, "Successors");
+              for (const auto &Succ : PBBE.Successors) {
+                DictScope L(W);
+                W.printNumber("ID", Succ.ID);
+                if (PrettyPGOAnalysis) {
+                  W.printObject("Probability", Succ.Prob);
+                } else {
+                  W.printHex("Probability", Succ.Prob.getNumerator());
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -7607,29 +7786,6 @@ static bool printAndroidNoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
     return false;
   for (const auto &KV : Props)
     W.printString(KV.first, KV.second);
-  return true;
-}
-
-template <class ELFT>
-static bool printAarch64NoteLLVMStyle(uint32_t NoteType, ArrayRef<uint8_t> Desc,
-                                      ScopedPrinter &W) {
-  if (NoteType != NT_ARM_TYPE_PAUTH_ABI_TAG)
-    return false;
-
-  if (Desc.size() < 16)
-    return false;
-
-  uint64_t platform =
-      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 0);
-  uint64_t version =
-      support::endian::read64<ELFT::TargetEndianness>(Desc.data() + 8);
-  W.printNumber("Platform", platform);
-  W.printNumber("Version", version);
-
-  if (Desc.size() > 16)
-    W.printString("Additional info",
-                  toHex(ArrayRef<uint8_t>(Desc.data() + 16, Desc.size() - 16)));
-
   return true;
 }
 
@@ -7757,7 +7913,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
     } else if (Name == "CORE") {
       if (Type == ELF::NT_FILE) {
         DataExtractor DescExtractor(
-            Descriptor, ELFT::TargetEndianness == llvm::endianness::little,
+            Descriptor, ELFT::Endianness == llvm::endianness::little,
             sizeof(Elf_Addr));
         if (Expected<CoreNote> N = readCoreNote(DescExtractor)) {
           printCoreNoteLLVMStyle(*N, W);
@@ -7768,9 +7924,6 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
       }
     } else if (Name == "Android") {
       if (printAndroidNoteLLVMStyle(Type, Descriptor, W))
-        return Error::success();
-    } else if (Name == "ARM") {
-      if (printAarch64NoteLLVMStyle<ELFT>(Type, Descriptor, W))
         return Error::success();
     }
     if (!Descriptor.empty()) {

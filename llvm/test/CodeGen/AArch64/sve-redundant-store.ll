@@ -15,7 +15,7 @@ define void @redundant_store(ptr nocapture %p, <vscale x 4 x i32> %v) {
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   store i32 1, ptr %p, align 4
-  store <vscale x 4 x i32> %v, <vscale x 4 x i32>* %p, align 16
+  store <vscale x 4 x i32> %v, ptr %p, align 16
   ret void
 }
 
@@ -35,8 +35,8 @@ entry:
 define void @keep_scalable_store(ptr writeonly %ptr, ptr %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: keep_scalable_store:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    ldp q2, q1, [x1]
+; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    stp q2, q1, [x0]
 ; CHECK-NEXT:    ret

@@ -37,19 +37,31 @@ static bool shouldTagGlobal(GlobalVariable &G) {
   // For now, don't instrument constant data, as it'll be in .rodata anyway. It
   // may be worth instrumenting these in future to stop them from being used as
   // gadgets.
-  if (G.getName().startswith("llvm.") || G.isThreadLocal() || G.isConstant()) {
+  if (G.getName().starts_with("llvm.") || G.isThreadLocal() || G.isConstant()) {
     Meta.Memtag = false;
     G.setSanitizerMetadata(Meta);
     return false;
   }
 
-  // Don't instrument function pointers that are going into various init arrays
-  // via `__attribute__((section(<foo>)))`:
-  // https://github.com/llvm/llvm-project/issues/69939
-  if (G.hasSection() &&
-      (G.getSection() == ".init" || G.getSection() == ".fini" ||
-       G.getSection() == ".init_array" || G.getSection() == ".fini_array" ||
-       G.getSection() == ".ctors" || G.getSection() == ".dtors")) {
+  // Globals can be placed implicitly or explicitly in sections. There's two
+  // different types of globals that meet this criteria that cause problems:
+  //  1. Function pointers that are going into various init arrays (either
+  //     explicitly through `__attribute__((section(<foo>)))` or implicitly
+  //     through `__attribute__((constructor)))`, such as ".(pre)init(_array)",
+  //     ".fini(_array)", ".ctors", and ".dtors". These function pointers end up
+  //     overaligned and overpadded, making iterating over them problematic, and
+  //     each function pointer is individually tagged (so the iteration over
+  //     them causes SIGSEGV/MTE[AS]ERR).
+  //  2. Global variables put into an explicit section, where the section's name
+  //     is a valid C-style identifier. The linker emits a `__start_<name>` and
+  //     `__stop_<na,e>` symbol for the section, so that you can iterate over
+  //     globals within this section. Unfortunately, again, these globals would
+  //     be tagged and so iteration causes SIGSEGV/MTE[AS]ERR.
+  //
+  // To mitigate both these cases, and because specifying a section is rare
+  // outside of these two cases, disable MTE protection for globals in any
+  // section.
+  if (G.hasSection()) {
     Meta.Memtag = false;
     G.setSanitizerMetadata(Meta);
     return false;

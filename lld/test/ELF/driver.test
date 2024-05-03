@@ -3,73 +3,63 @@
 # RUN: not ld.lld --unknown1 --unkn=own2 -m foo /no/such/file -lnosuchlib \
 # RUN:   2>&1 | FileCheck -check-prefix=UNKNOWN %s
 
-# UNKNOWN: unknown argument '--unknown1'
-# UNKNOWN: unknown argument '--unkn=own2'
-# UNKNOWN: unknown emulation: foo
-# UNKNOWN: cannot open /no/such/file
-# UNKNOWN: unable to find library -lnosuchlib
+# UNKNOWN: error: unknown argument '--unknown1'
+# UNKNOWN: error: unknown argument '--unkn=own2'
+# UNKNOWN: error: unknown emulation: foo
+# UNKNOWN: error: cannot open /no/such/file
+# UNKNOWN: error: unable to find library -lnosuchlib
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: not ld.lld %t -o /no/such/file 2>&1 | FileCheck -check-prefix=MISSING %s
-# MISSING: cannot open output file /no/such/file
+# MISSING: error: cannot open output file /no/such/file
 
 # RUN: ld.lld --help 2>&1 | FileCheck -check-prefix=HELP %s
 # HELP: USAGE:
 # HELP: : supported targets:{{.*}} elf
 
 # RUN: not ld.lld --versin 2>&1 | FileCheck -check-prefix=SPELLVERSION %s
-# SPELLVERSION: unknown argument '--versin', did you mean '--version'
+# SPELLVERSION: error: unknown argument '--versin', did you mean '--version'
 
 ## Attempt to link DSO with -r
 # RUN: ld.lld -shared %t -o %t.so
 # RUN: not ld.lld -r %t.so %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR %s
-# ERR: attempted static link of dynamic object
+# ERR: error: attempted static link of dynamic object
 
-## Attempt to use -r and -shared together
-# RUN: not ld.lld -r -shared %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR2 %s
-# ERR2: -r and -shared may not be used together
+# RUN: not ld.lld -r -shared -pie --export-dynamic %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR2 %s
+# ERR2: error: -r and -shared may not be used together
+# ERR2: error: -r and -pie may not be used together
+# ERR2: error: -r and --export-dynamic may not be used together
 
-## Attempt to use -r and --gdb-index together
-# RUN: not ld.lld -r --gdb-index %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR4 %s
-# ERR4: -r and --gdb-index may not be used together
+# RUN: not ld.lld -r --icf=all --gdb-index --debug-names %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR4 %s
+# ERR4: error: -r and --gdb-index may not be used together
+# ERR4: error: -r and --icf may not be used together
+# ERR4: error: -r and --debug-names may not be used together
 
-## Attempt to use -r and --icf together
-# RUN: not ld.lld -r --icf=all %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR5 %s
-# ERR5: -r and --icf may not be used together
-
-## Attempt to use -r and -pie together
-# RUN: not ld.lld -r -pie %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR6 %s
-# ERR6: -r and -pie may not be used together
-
-## Attempt to use -shared and -pie together
 # RUN: not ld.lld -shared -pie %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR7 %s
-# ERR7: -shared and -pie may not be used together
+# ERR7: error: -shared and -pie may not be used together
 
 ## "--output=foo" is equivalent to "-o foo".
 # RUN: not ld.lld %t --output=/no/such/file 2>&1 | FileCheck -check-prefix=ERR8 %s
-# ERR8: cannot open output file /no/such/file
+# ERR8: error: cannot open output file /no/such/file
 
 ## "-output=foo" is equivalent to "-o utput=foo".
 # RUN: not ld.lld %t -output=/no/such/file 2>&1 | FileCheck -check-prefix=ERR9 %s
-# ERR9: cannot open output file utput=/no/such/file
+# ERR9: error: cannot open output file utput=/no/such/file
 
-# RUN: ld.lld %t -z foo -o /dev/null 2>&1 | FileCheck -check-prefix=ERR10 %s
-# RUN: ld.lld %t -z foo -o /dev/null --version 2>&1 | FileCheck -check-prefix=ERR10 %s
+# RUN: ld.lld %t -z foo -o /dev/null 2>&1 | FileCheck -check-prefix=ERR10 %s --implicit-check-not=warning:
+# RUN: ld.lld %t -z foo -z rel -z rela -z max-page-size=1 -z common-page-size=1 -o /dev/null --version 2>&1 | \
+# RUN:   FileCheck -check-prefix=ERR10 %s --implicit-check-not=warning:
 # ERR10: warning: unknown -z value: foo
 
 ## Check we report "unknown -z value" error even with -v.
-# RUN: ld.lld %t -z foo -o /dev/null -v 2>&1 | FileCheck -check-prefix=ERR10 %s
+# RUN: ld.lld %t -z foo -z rel -o /dev/null -v 2>&1 | FileCheck -check-prefix=ERR10 %s --implicit-check-not=warning:
 
 ## Note: in GNU ld, --fatal-warning still leads to a warning.
 # RUN: not ld.lld %t -z foo --fatal-warnings 2>&1 | FileCheck --check-prefix=ERR10-FATAL %s
 # ERR10-FATAL: error: unknown -z value: foo
 
 # RUN: not ld.lld %t -z max-page-size 2>&1 | FileCheck -check-prefix=ERR11 %s
-# ERR11: unknown -z value: max-page-size
-
-## Attempt to use -r and --export-dynamic together
-# RUN: not ld.lld -r -export-dynamic %t -o /dev/null 2>&1 | FileCheck -check-prefix=ERR12 %s
-# ERR12: -r and --export-dynamic may not be used together
+# ERR11: error: invalid max-page-size:
 
 .globl _start
 _start:

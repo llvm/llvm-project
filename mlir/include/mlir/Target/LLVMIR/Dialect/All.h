@@ -22,11 +22,13 @@
 #include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMIRToLLVMTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/NVVM/LLVMIRToNVVMTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenACC/OpenACCToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/ROCDL/ROCDLToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/SPIRV/SPIRVToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/VCIX/VCIXToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/X86Vector/X86VectorToLLVMIRTranslation.h"
 
 namespace mlir {
@@ -47,6 +49,7 @@ static inline void registerAllToLLVMIRTranslations(DialectRegistry &registry) {
   registerOpenMPDialectTranslation(registry);
   registerROCDLDialectTranslation(registry);
   registerSPIRVDialectTranslation(registry);
+  registerVCIXDialectTranslation(registry);
   registerX86VectorDialectTranslation(registry);
 
   // Extension required for translating GPU offloading Ops.
@@ -74,6 +77,7 @@ registerAllGPUToLLVMIRTranslations(DialectRegistry &registry) {
 static inline void
 registerAllFromLLVMIRTranslations(DialectRegistry &registry) {
   registerLLVMDialectImport(registry);
+  registerNVVMDialectImport(registry);
 }
 } // namespace mlir
 

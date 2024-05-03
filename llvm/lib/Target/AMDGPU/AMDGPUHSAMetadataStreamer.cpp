@@ -494,6 +494,14 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
 
   Kern[".max_flat_workgroup_size"] =
       Kern.getDocument()->getNode(MFI.getMaxFlatWorkGroupSize());
+  unsigned NumWGX = MFI.getMaxNumWorkGroupsX();
+  unsigned NumWGY = MFI.getMaxNumWorkGroupsY();
+  unsigned NumWGZ = MFI.getMaxNumWorkGroupsZ();
+  if (NumWGX != 0 && NumWGY != 0 && NumWGZ != 0) {
+    Kern[".max_num_workgroups_x"] = Kern.getDocument()->getNode(NumWGX);
+    Kern[".max_num_workgroups_y"] = Kern.getDocument()->getNode(NumWGY);
+    Kern[".max_num_workgroups_z"] = Kern.getDocument()->getNode(NumWGZ);
+  }
   Kern[".sgpr_spill_count"] =
       Kern.getDocument()->getNode(MFI.getNumSpilledSGPRs());
   Kern[".vgpr_spill_count"] =
@@ -532,7 +540,8 @@ void MetadataStreamerMsgPackV4::emitKernel(const MachineFunction &MF,
       Func.getCallingConv() != CallingConv::SPIR_KERNEL)
     return;
 
-  auto CodeObjectVersion = AMDGPU::getCodeObjectVersion(*Func.getParent());
+  auto CodeObjectVersion =
+      AMDGPU::getAMDHSACodeObjectVersion(*Func.getParent());
   auto Kern = getHSAKernelProps(MF, ProgramInfo, CodeObjectVersion);
 
   auto Kernels =
@@ -646,7 +655,15 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
     Offset += 8; // Skipped.
   }
 
-  Offset += 72; // Reserved.
+  // Emit argument for hidden dynamic lds size
+  if (MFI.isDynamicLDSUsed()) {
+    emitKernelArg(DL, Int32Ty, Align(4), "hidden_dynamic_lds_size", Offset,
+                  Args);
+  } else {
+    Offset += 4; // skipped
+  }
+
+  Offset += 68; // Reserved.
 
   // hidden_private_base and hidden_shared_base are only when the subtarget has
   // ApertureRegs.
@@ -669,6 +686,16 @@ void MetadataStreamerMsgPackV5::emitKernelAttrs(const Function &Func,
     Kern[".uniform_work_group_size"] = Kern.getDocument()->getNode(1);
 }
 
+//===----------------------------------------------------------------------===//
+// HSAMetadataStreamerV6
+//===----------------------------------------------------------------------===//
+
+void MetadataStreamerMsgPackV6::emitVersion() {
+  auto Version = HSAMetadataDoc->getArrayNode();
+  Version.push_back(Version.getDocument()->getNode(VersionMajorV6));
+  Version.push_back(Version.getDocument()->getNode(VersionMinorV6));
+  getRootMetadata("amdhsa.version") = Version;
+}
 
 } // end namespace HSAMD
 } // end namespace AMDGPU

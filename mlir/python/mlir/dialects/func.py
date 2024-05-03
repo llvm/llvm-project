@@ -243,6 +243,9 @@ class FuncOp(FuncOp):
         return decorator
 
 
+func = FuncOp.from_py_func
+
+
 @_ods_cext.register_operation(_Dialect, replace=True)
 class CallOp(CallOp):
     """Specialization for the call op class."""

@@ -40,8 +40,11 @@ static const Expr *ignoreTransparentExprs(const Expr *E) {
 
   switch (E->getStmtClass()) {
   case Stmt::OpaqueValueExprClass:
-    E = cast<OpaqueValueExpr>(E)->getSourceExpr();
-    break;
+    if (const Expr *SE = cast<OpaqueValueExpr>(E)->getSourceExpr()) {
+      E = SE;
+      break;
+    }
+    return E;
   case Stmt::ExprWithCleanupsClass:
     E = cast<ExprWithCleanups>(E)->getSubExpr();
     break;
@@ -98,7 +101,6 @@ SVal Environment::getSVal(const EnvironmentEntry &Entry,
   case Stmt::CXXBindTemporaryExprClass:
   case Stmt::ExprWithCleanupsClass:
   case Stmt::GenericSelectionExprClass:
-  case Stmt::OpaqueValueExprClass:
   case Stmt::ConstantExprClass:
   case Stmt::ParenExprClass:
   case Stmt::SubstNonTypeTemplateParmExprClass:
@@ -193,7 +195,7 @@ EnvironmentManager::removeDeadBindings(Environment Env,
   // Iterate over the block-expr bindings.
   for (Environment::iterator I = Env.begin(), End = Env.end(); I != End; ++I) {
     const EnvironmentEntry &BlkExpr = I.getKey();
-    const SVal &X = I.getData();
+    SVal X = I.getData();
 
     const Expr *E = dyn_cast<Expr>(BlkExpr.getStmt());
     if (!E)

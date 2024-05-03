@@ -137,18 +137,33 @@ namespace {
 /// Post-process the DAG to create cluster edges between instrs that may
 /// be fused by the processor into a single operation.
 class MacroFusion : public ScheduleDAGMutation {
-  ShouldSchedulePredTy shouldScheduleAdjacent;
+  std::vector<MacroFusionPredTy> Predicates;
   bool FuseBlock;
   bool scheduleAdjacentImpl(ScheduleDAGInstrs &DAG, SUnit &AnchorSU);
 
 public:
-  MacroFusion(ShouldSchedulePredTy shouldScheduleAdjacent, bool FuseBlock)
-    : shouldScheduleAdjacent(shouldScheduleAdjacent), FuseBlock(FuseBlock) {}
+  MacroFusion(ArrayRef<MacroFusionPredTy> Predicates, bool FuseBlock)
+      : Predicates(Predicates.begin(), Predicates.end()), FuseBlock(FuseBlock) {
+  }
 
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
+
+  bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
+                              const TargetSubtargetInfo &STI,
+                              const MachineInstr *FirstMI,
+                              const MachineInstr &SecondMI);
 };
 
 } // end anonymous namespace
+
+bool MacroFusion::shouldScheduleAdjacent(const TargetInstrInfo &TII,
+                                         const TargetSubtargetInfo &STI,
+                                         const MachineInstr *FirstMI,
+                                         const MachineInstr &SecondMI) {
+  return llvm::any_of(Predicates, [&](MacroFusionPredTy Predicate) {
+    return Predicate(TII, STI, FirstMI, SecondMI);
+  });
+}
 
 void MacroFusion::apply(ScheduleDAGInstrs *DAG) {
   if (FuseBlock)
@@ -197,17 +212,9 @@ bool MacroFusion::scheduleAdjacentImpl(ScheduleDAGInstrs &DAG, SUnit &AnchorSU) 
 }
 
 std::unique_ptr<ScheduleDAGMutation>
-llvm::createMacroFusionDAGMutation(
-     ShouldSchedulePredTy shouldScheduleAdjacent) {
-  if(EnableMacroFusion)
-    return std::make_unique<MacroFusion>(shouldScheduleAdjacent, true);
-  return nullptr;
-}
-
-std::unique_ptr<ScheduleDAGMutation>
-llvm::createBranchMacroFusionDAGMutation(
-     ShouldSchedulePredTy shouldScheduleAdjacent) {
-  if(EnableMacroFusion)
-    return std::make_unique<MacroFusion>(shouldScheduleAdjacent, false);
+llvm::createMacroFusionDAGMutation(ArrayRef<MacroFusionPredTy> Predicates,
+                                   bool BranchOnly) {
+  if (EnableMacroFusion)
+    return std::make_unique<MacroFusion>(Predicates, !BranchOnly);
   return nullptr;
 }

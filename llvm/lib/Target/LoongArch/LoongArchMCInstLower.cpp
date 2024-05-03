@@ -95,6 +95,27 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
   case LoongArchII::MO_GD_PC_HI:
     Kind = LoongArchMCExpr::VK_LoongArch_TLS_GD_PC_HI20;
     break;
+  case LoongArchII::MO_CALL36:
+    Kind = LoongArchMCExpr::VK_LoongArch_CALL36;
+    break;
+  case LoongArchII::MO_DESC_PC_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_HI20;
+    break;
+  case LoongArchII::MO_DESC_PC_LO:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_LO12;
+    break;
+  case LoongArchII::MO_DESC64_PC_LO:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC64_PC_LO20;
+    break;
+  case LoongArchII::MO_DESC64_PC_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC64_PC_HI12;
+    break;
+  case LoongArchII::MO_DESC_LD:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC_LD;
+    break;
+  case LoongArchII::MO_DESC_CALL:
+    Kind = LoongArchMCExpr::VK_LoongArch_TLS_DESC_CALL;
+    break;
     // TODO: Handle more target-flags.
   }
 

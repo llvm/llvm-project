@@ -35,7 +35,7 @@ func.func @za_b() {
 
 func.func @za_b__out_of_tiles() {
   %za0_b = arm_sme.get_tile : vector<[16]x[16]xi8>
-  // expected-error@+1 {{ran out of SME virtual tiles!}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
   %next_tile = arm_sme.get_tile : vector<[16]x[16]xi8>
   return
 }
@@ -44,7 +44,7 @@ func.func @za_b__out_of_tiles() {
 
 func.func @za_b_overlapping_za_q() {
   %za0_b = arm_sme.get_tile : vector<[16]x[16]xi8>
-  // expected-error@+1 {{ran out of SME virtual tiles!}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
   %next_tile = arm_sme.get_tile : vector<[1]x[1]xi128>
   return
 }
@@ -79,7 +79,7 @@ func.func @za_h__out_of_tiles() {
   %za0_h = arm_sme.get_tile : vector<[8]x[8]xi16>
   // CHECK-NEXT: tile_id = 1
   %za1_h = arm_sme.get_tile : vector<[8]x[8]xi16>
-  // expected-error@+1 {{ran out of SME virtual tiles!}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
   %next_tile = arm_sme.get_tile : vector<[8]x[8]xi16>
   return
 }
@@ -136,7 +136,7 @@ func.func @za_h_overlapping_za_q() {
   %za10_q = arm_sme.get_tile : vector<[1]x[1]xi128>
   %za12_q = arm_sme.get_tile : vector<[1]x[1]xi128>
   %za14_q = arm_sme.get_tile : vector<[1]x[1]xi128>
-  // expected-error@+1 {{ran out of SME virtual tiles!}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
   %next_tile = arm_sme.get_tile : vector<[1]x[1]xi128>
   return
 }
@@ -174,7 +174,7 @@ func.func @za_s__out_of_tiles() {
   %za1_s = arm_sme.get_tile : vector<[4]x[4]xi32>
   %za2_s = arm_sme.get_tile : vector<[4]x[4]xi32>
   %za3_s = arm_sme.get_tile : vector<[4]x[4]xi32>
-  // expected-error@+1 {{ran out of SME virtual tiles!}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
   %next_tile = arm_sme.get_tile : vector<[4]x[4]xi32>
   return
 }
@@ -218,7 +218,7 @@ func.func @za_s_overlapping_za_q() {
   %za13_q = arm_sme.get_tile : vector<[1]x[1]xi128>
   %za14_q = arm_sme.get_tile : vector<[1]x[1]xi128>
   %za15_q = arm_sme.get_tile : vector<[1]x[1]xi128>
-  // expected-error@+1 {{ran out of SME virtual tiles!}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
   %next_tile = arm_sme.get_tile : vector<[1]x[1]xi128>
   return
 }
@@ -268,7 +268,7 @@ func.func @za_d__out_of_tiles() {
   %za5_d = arm_sme.get_tile : vector<[2]x[2]xi64>
   %za6_d = arm_sme.get_tile : vector<[2]x[2]xi64>
   %za7_d = arm_sme.get_tile : vector<[2]x[2]xi64>
-  // expected-error@+1 {{ran out of SME virtual tiles!}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
   %next_tile = arm_sme.get_tile : vector<[2]x[2]xi64>
   return
 }
@@ -291,7 +291,7 @@ func.func @za_d_overlapping_za_q() {
   %za13_q = arm_sme.get_tile : vector<[1]x[1]xi128>
   %za14_q = arm_sme.get_tile : vector<[1]x[1]xi128>
   %za15_q = arm_sme.get_tile : vector<[1]x[1]xi128>
-  // expected-error@+1 {{ran out of SME virtual tiles!}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
   %next_tile = arm_sme.get_tile : vector<[1]x[1]xi128>
   return
 }
@@ -365,7 +365,7 @@ func.func @za_q__out_of_tiles() {
   %za13_q = arm_sme.get_tile : vector<[1]x[1]xi128>
   %za14_q = arm_sme.get_tile : vector<[1]x[1]xi128>
   %za15_q = arm_sme.get_tile : vector<[1]x[1]xi128>
-  // expected-error@+1 {{ran out of SME virtual tiles!}}
+  // expected-warning @below {{failed to allocate SME virtual tile to operation, all tile operations will go through memory, expect degraded performance}}
   %next_tile = arm_sme.get_tile : vector<[1]x[1]xi128>
   return
 }

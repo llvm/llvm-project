@@ -65,7 +65,7 @@ A::C c1;
 struct A::C c2;
 struct S : public A::C {};
 struct A::undef; // expected-error {{no struct named 'undef' in namespace 'A'}}
-
+                 // expected-error@-1 {{forward declaration of struct cannot have a nested name specifier}}
 namespace A2 {
   typedef int INT;
   struct RC;
@@ -280,9 +280,11 @@ template<typename T>
 struct A {
 protected:
   struct B;
-  struct B::C; // expected-error {{requires a template parameter list}} \
-               // expected-error {{no struct named 'C'}} \
-    // expected-error{{non-friend class member 'C' cannot have a qualified name}}
+  struct B::C;
+  // expected-error@-1 {{requires a template parameter list}}
+  // expected-error@-2 {{no struct named 'C'}}
+  // expected-error@-3 {{non-friend class member 'C' cannot have a qualified name}}
+  // expected-error@-4 {{forward declaration of struct cannot have a nested name specifier}}
 };
 
 template<typename T>
@@ -292,6 +294,7 @@ protected:
 };
 template <typename T>
 struct A2<T>::B::C; // expected-error {{no struct named 'C'}}
+                    // expected-error@-1 {{forward declaration of struct cannot have a nested name specifier}}
 }
 
 namespace PR13033 {

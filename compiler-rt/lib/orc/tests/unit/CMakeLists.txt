@@ -5,6 +5,7 @@ set(UNITTEST_SOURCES
   endian_test.cpp
   error_test.cpp
   executor_address_test.cpp
+  executor_symbol_def_test.cpp
   extensible_rtti_test.cpp
   interval_map_test.cpp
   interval_set_test.cpp

@@ -13,10 +13,10 @@
 define i32 @f0(ptr %p) nounwind {
 ; LA32-ALIGNED-LABEL: f0:
 ; LA32-ALIGNED:       # %bb.0:
-; LA32-ALIGNED-NEXT:    ld.hu $a1, $a0, 0
-; LA32-ALIGNED-NEXT:    ld.hu $a0, $a0, 2
-; LA32-ALIGNED-NEXT:    slli.w $a0, $a0, 16
-; LA32-ALIGNED-NEXT:    or $a0, $a0, $a1
+; LA32-ALIGNED-NEXT:    ld.hu $a1, $a0, 2
+; LA32-ALIGNED-NEXT:    ld.hu $a0, $a0, 0
+; LA32-ALIGNED-NEXT:    slli.w $a1, $a1, 16
+; LA32-ALIGNED-NEXT:    or $a0, $a1, $a0
 ; LA32-ALIGNED-NEXT:    ret
 ;
 ; LA32-UNALIGNED-LABEL: f0:
@@ -31,10 +31,10 @@ define i32 @f0(ptr %p) nounwind {
 ;
 ; LA64-ALIGNED-LABEL: f0:
 ; LA64-ALIGNED:       # %bb.0:
-; LA64-ALIGNED-NEXT:    ld.hu $a1, $a0, 0
-; LA64-ALIGNED-NEXT:    ld.h $a0, $a0, 2
-; LA64-ALIGNED-NEXT:    slli.d $a0, $a0, 16
-; LA64-ALIGNED-NEXT:    or $a0, $a0, $a1
+; LA64-ALIGNED-NEXT:    ld.h $a1, $a0, 2
+; LA64-ALIGNED-NEXT:    ld.hu $a0, $a0, 0
+; LA64-ALIGNED-NEXT:    slli.d $a1, $a1, 16
+; LA64-ALIGNED-NEXT:    or $a0, $a1, $a0
 ; LA64-ALIGNED-NEXT:    ret
   %tmp = load i32, ptr %p, align 2
   ret i32 %tmp
@@ -62,10 +62,10 @@ define i64 @f1(ptr %p) nounwind {
 ;
 ; LA64-ALIGNED-LABEL: f1:
 ; LA64-ALIGNED:       # %bb.0:
-; LA64-ALIGNED-NEXT:    ld.wu $a1, $a0, 0
-; LA64-ALIGNED-NEXT:    ld.wu $a0, $a0, 4
-; LA64-ALIGNED-NEXT:    slli.d $a0, $a0, 32
-; LA64-ALIGNED-NEXT:    or $a0, $a0, $a1
+; LA64-ALIGNED-NEXT:    ld.wu $a1, $a0, 4
+; LA64-ALIGNED-NEXT:    ld.wu $a0, $a0, 0
+; LA64-ALIGNED-NEXT:    slli.d $a1, $a1, 32
+; LA64-ALIGNED-NEXT:    or $a0, $a1, $a0
 ; LA64-ALIGNED-NEXT:    ret
   %tmp = load i64, ptr %p, align 4
   ret i64 %tmp

@@ -28,13 +28,24 @@ class Value;
 namespace scf {
 
 class IfOp;
+class ForallOp;
 class ForOp;
 class ParallelOp;
+class WhileOp;
+
+/// Try converting scf.forall into a set of nested scf.for loops.
+/// The newly created scf.for ops will be returned through the `results`
+/// vector if provided.
+LogicalResult forallToForLoop(RewriterBase &rewriter, ForallOp forallOp,
+                              SmallVectorImpl<Operation *> *results = nullptr);
 
 /// Fuses all adjacent scf.parallel operations with identical bounds and step
 /// into one scf.parallel operations. Uses a naive aliasing and dependency
 /// analysis.
-void naivelyFuseParallelOps(Region &region);
+/// User can additionally customize alias checking with `mayAlias` hook.
+/// `mayAlias` must return false if 2 values are guaranteed to not alias.
+void naivelyFuseParallelOps(Region &region,
+                            llvm::function_ref<bool(Value, Value)> mayAlias);
 
 /// Rewrite a for loop with bounds/step that potentially do not divide evenly
 /// into a for loop where the step divides the iteration space evenly, followed
@@ -80,6 +91,11 @@ void naivelyFuseParallelOps(Region &region);
 /// unpeeled loop with the results of the newly generated scf.for.
 LogicalResult peelForLoopAndSimplifyBounds(RewriterBase &rewriter, ForOp forOp,
                                            scf::ForOp &partialIteration);
+
+/// Peel the first iteration out of the scf.for loop. If there is only one
+/// iteration, return the original loop.
+LogicalResult peelForLoopFirstIteration(RewriterBase &rewriter, ForOp forOp,
+                                        scf::ForOp &partialIteration);
 
 /// Tile a parallel loop of the form
 ///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
@@ -172,6 +188,52 @@ struct PipeliningOption {
 FailureOr<ForOp> pipelineForLoop(RewriterBase &rewriter, ForOp forOp,
                                  const PipeliningOption &options,
                                  bool *modifiedIR = nullptr);
+
+/// Create zero-trip-check around a `while` op and return the new loop op in the
+/// check. The while loop is rotated to avoid evaluating the condition twice
+///
+/// By default the check won't be created for do-while loop as it is not
+/// required. `forceCreateCheck` can force the creation.
+///
+/// It turns:
+///
+///   scf.while (%arg0 = %init) : (i32) -> i64 {
+///     %val = .., %arg0 : i64
+///     %cond = arith.cmpi .., %arg0 : i32
+///     scf.condition(%cond) %val : i64
+///   } do {
+///   ^bb0(%arg1: i64):
+///     %next = .., %arg1 : i32
+///     scf.yield %next : i32
+///   }
+///
+///  into:
+///
+///   %pre_val = .., %init : i64
+///   %pre_cond = arith.cmpi .., %init : i32
+///   scf.if %pre_cond -> i64 {
+///     %res = scf.while (%arg1 = %va0) : (i64) -> i64 {
+///       %next = .., %arg1 : i32
+///       %val = .., %next : i64
+///       %cond = arith.cmpi .., %next : i32
+///       scf.condition(%cond) %val : i64
+///     } do {
+///     ^bb0(%arg2: i64):
+///       %scf.yield %arg2 : i32
+///     }
+///     scf.yield %res : i64
+///   } else {
+///     scf.yield %pre_val : i64
+///   }
+FailureOr<WhileOp> wrapWhileLoopInZeroTripCheck(WhileOp whileOp,
+                                                RewriterBase &rewriter,
+                                                bool forceCreateCheck = false);
+
+/// Try to uplift `scf.while` op to `scf.for`.
+/// Uplifitng expects a specific ops pattern:
+///  * `before` block consisting of single arith.cmp op
+///  * `after` block containing arith.addi
+FailureOr<ForOp> upliftWhileToForLoop(RewriterBase &rewriter, WhileOp loop);
 
 } // namespace scf
 } // namespace mlir

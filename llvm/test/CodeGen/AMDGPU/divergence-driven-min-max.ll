@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: name:            uniform_imin
 ; GCN: S_MIN_I32

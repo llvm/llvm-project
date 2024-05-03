@@ -819,7 +819,7 @@ static Instruction *foldNoWrapAdd(BinaryOperator &Add,
   Value *X;
   const APInt *C1, *C2;
   if (match(Op1, m_APInt(C1)) &&
-      match(Op0, m_OneUse(m_ZExt(m_NUWAdd(m_Value(X), m_APInt(C2))))) &&
+      match(Op0, m_OneUse(m_ZExt(m_NUWAddLike(m_Value(X), m_APInt(C2))))) &&
       C1->isNegative() && C1->sge(-C2->sext(C1->getBitWidth()))) {
     Constant *NewC =
         ConstantInt::get(X->getType(), *C2 + C1->trunc(C2->getBitWidth()));
@@ -828,21 +828,23 @@ static Instruction *foldNoWrapAdd(BinaryOperator &Add,
 
   // More general combining of constants in the wide type.
   // (sext (X +nsw NarrowC)) + C --> (sext X) + (sext(NarrowC) + C)
+  // or (zext nneg (X +nsw NarrowC)) + C --> (sext X) + (sext(NarrowC) + C)
   Constant *NarrowC;
-  if (match(Op0, m_OneUse(m_SExt(m_NSWAdd(m_Value(X), m_Constant(NarrowC)))))) {
+  if (match(Op0, m_OneUse(m_SExtLike(
+                     m_NSWAddLike(m_Value(X), m_Constant(NarrowC)))))) {
     Value *WideC = Builder.CreateSExt(NarrowC, Ty);
     Value *NewC = Builder.CreateAdd(WideC, Op1C);
     Value *WideX = Builder.CreateSExt(X, Ty);
     return BinaryOperator::CreateAdd(WideX, NewC);
   }
   // (zext (X +nuw NarrowC)) + C --> (zext X) + (zext(NarrowC) + C)
-  if (match(Op0, m_OneUse(m_ZExt(m_NUWAdd(m_Value(X), m_Constant(NarrowC)))))) {
+  if (match(Op0,
+            m_OneUse(m_ZExt(m_NUWAddLike(m_Value(X), m_Constant(NarrowC)))))) {
     Value *WideC = Builder.CreateZExt(NarrowC, Ty);
     Value *NewC = Builder.CreateAdd(WideC, Op1C);
     Value *WideX = Builder.CreateZExt(X, Ty);
     return BinaryOperator::CreateAdd(WideX, NewC);
   }
-
   return nullptr;
 }
 
@@ -894,7 +896,7 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   const APInt *C;
   unsigned BitWidth = Ty->getScalarSizeInBits();
   if (match(Op0, m_OneUse(m_AShr(m_Value(X),
-                                 m_SpecificIntAllowUndef(BitWidth - 1)))) &&
+                                 m_SpecificIntAllowPoison(BitWidth - 1)))) &&
       match(Op1, m_One()))
     return new ZExtInst(Builder.CreateIsNotNeg(X, "isnotneg"), Ty);
 
@@ -986,7 +988,7 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   if (C->isOne()) {
     if (match(Op0, m_ZExt(m_Add(m_Value(X), m_AllOnes())))) {
       const SimplifyQuery Q = SQ.getWithInstruction(&Add);
-      if (llvm::isKnownNonZero(X, DL, 0, Q.AC, Q.CxtI, Q.DT))
+      if (llvm::isKnownNonZero(X, Q))
         return new ZExtInst(X, Ty);
     }
   }
@@ -1132,6 +1134,8 @@ static bool MulWillOverflow(APInt &C0, APInt &C1, bool IsSigned) {
 
 // Simplifies X % C0 + (( X / C0 ) % C1) * C0 to X % (C0 * C1), where (C0 * C1)
 // does not overflow.
+// Simplifies (X / C0) * C1 + (X % C0) * C2 to
+// (X / C0) * (C1 - C2 * C0) + X * C2
 Value *InstCombinerImpl::SimplifyAddWithRemainder(BinaryOperator &I) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   Value *X, *MulOpV;
@@ -1157,6 +1161,33 @@ Value *InstCombinerImpl::SimplifyAddWithRemainder(BinaryOperator &I) {
                         : Builder.CreateURem(X, NewDivisor, "urem");
       }
     }
+  }
+
+  // Match I = (X / C0) * C1 + (X % C0) * C2
+  Value *Div, *Rem;
+  APInt C1, C2;
+  if (!LHS->hasOneUse() || !MatchMul(LHS, Div, C1))
+    Div = LHS, C1 = APInt(I.getType()->getScalarSizeInBits(), 1);
+  if (!RHS->hasOneUse() || !MatchMul(RHS, Rem, C2))
+    Rem = RHS, C2 = APInt(I.getType()->getScalarSizeInBits(), 1);
+  if (match(Div, m_IRem(m_Value(), m_Value()))) {
+    std::swap(Div, Rem);
+    std::swap(C1, C2);
+  }
+  Value *DivOpV;
+  APInt DivOpC;
+  if (MatchRem(Rem, X, C0, IsSigned) &&
+      MatchDiv(Div, DivOpV, DivOpC, IsSigned) && X == DivOpV && C0 == DivOpC) {
+    APInt NewC = C1 - C2 * C0;
+    if (!NewC.isZero() && !Rem->hasOneUse())
+      return nullptr;
+    if (!isGuaranteedNotToBeUndef(X, &AC, &I, &DT))
+      return nullptr;
+    Value *MulXC2 = Builder.CreateMul(X, ConstantInt::get(X->getType(), C2));
+    if (NewC.isZero())
+      return MulXC2;
+    return Builder.CreateAdd(
+        Builder.CreateMul(Div, ConstantInt::get(X->getType(), NewC)), MulXC2);
   }
 
   return nullptr;
@@ -1654,7 +1685,7 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   // (A s>> (BW - 1)) + (zext (A s> 0)) --> (A s>> (BW - 1)) | (zext (A != 0))
   ICmpInst::Predicate Pred;
   uint64_t BitWidth = Ty->getScalarSizeInBits();
-  if (match(LHS, m_AShr(m_Value(A), m_SpecificIntAllowUndef(BitWidth - 1))) &&
+  if (match(LHS, m_AShr(m_Value(A), m_SpecificIntAllowPoison(BitWidth - 1))) &&
       match(RHS, m_OneUse(m_ZExt(
                      m_OneUse(m_ICmp(Pred, m_Specific(A), m_ZeroInt()))))) &&
       Pred == CmpInst::ICMP_SGT) {
@@ -1665,13 +1696,6 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
 
   if (Instruction *Ashr = foldAddToAshr(I))
     return Ashr;
-
-  // min(A, B) + max(A, B) => A + B.
-  if (match(&I, m_CombineOr(m_c_Add(m_SMax(m_Value(A), m_Value(B)),
-                                    m_c_SMin(m_Deferred(A), m_Deferred(B))),
-                            m_c_Add(m_UMax(m_Value(A), m_Value(B)),
-                                    m_c_UMin(m_Deferred(A), m_Deferred(B))))))
-    return BinaryOperator::CreateWithCopiedFlags(Instruction::Add, A, B, &I);
 
   // (~X) + (~Y) --> -2 - (X + Y)
   {
@@ -1685,10 +1709,13 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
       assert(NotLHS != nullptr && NotRHS != nullptr &&
              "isFreeToInvert desynced with getFreelyInverted");
       Value *LHSPlusRHS = Builder.CreateAdd(NotLHS, NotRHS);
-      return BinaryOperator::CreateSub(ConstantInt::get(RHS->getType(), -2),
-                                       LHSPlusRHS);
+      return BinaryOperator::CreateSub(
+          ConstantInt::getSigned(RHS->getType(), -2), LHSPlusRHS);
     }
   }
+
+  if (Instruction *R = tryFoldInstWithCtpopWithNot(&I))
+    return R;
 
   // TODO(jingyue): Consider willNotOverflowSignedAdd and
   // willNotOverflowUnsignedAdd to reduce the number of invocations of
@@ -1729,6 +1756,30 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return replaceInstUsesWith(
         I, Builder.CreateIntrinsic(Intrinsic::ctpop, {I.getType()},
                                    {Builder.CreateOr(A, B)}));
+
+  // Fold the log2_ceil idiom:
+  // zext(ctpop(A) >u/!= 1) + (ctlz(A, true) ^ (BW - 1))
+  // -->
+  // BW - ctlz(A - 1, false)
+  const APInt *XorC;
+  if (match(&I,
+            m_c_Add(
+                m_ZExt(m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Value(A)),
+                              m_One())),
+                m_OneUse(m_ZExtOrSelf(m_OneUse(m_Xor(
+                    m_OneUse(m_TruncOrSelf(m_OneUse(
+                        m_Intrinsic<Intrinsic::ctlz>(m_Deferred(A), m_One())))),
+                    m_APInt(XorC))))))) &&
+      (Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_NE) &&
+      *XorC == A->getType()->getScalarSizeInBits() - 1) {
+    Value *Sub = Builder.CreateAdd(A, Constant::getAllOnesValue(A->getType()));
+    Value *Ctlz = Builder.CreateIntrinsic(Intrinsic::ctlz, {A->getType()},
+                                          {Sub, Builder.getFalse()});
+    Value *Ret = Builder.CreateSub(
+        ConstantInt::get(A->getType(), A->getType()->getScalarSizeInBits()),
+        Ctlz, "", /*HasNUW*/ true, /*HasNSW*/ true);
+    return replaceInstUsesWith(I, Builder.CreateZExtOrTrunc(Ret, I.getType()));
+  }
 
   if (Instruction *Res = foldSquareSumInt(I))
     return Res;
@@ -1847,64 +1898,10 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
 
   // Check for (fadd double (sitofp x), y), see if we can merge this into an
   // integer add followed by a promotion.
+  if (Instruction *R = foldFBinOpOfIntCasts(I))
+    return R;
+
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
-  if (SIToFPInst *LHSConv = dyn_cast<SIToFPInst>(LHS)) {
-    Value *LHSIntVal = LHSConv->getOperand(0);
-    Type *FPType = LHSConv->getType();
-
-    // TODO: This check is overly conservative. In many cases known bits
-    // analysis can tell us that the result of the addition has less significant
-    // bits than the integer type can hold.
-    auto IsValidPromotion = [](Type *FTy, Type *ITy) {
-      Type *FScalarTy = FTy->getScalarType();
-      Type *IScalarTy = ITy->getScalarType();
-
-      // Do we have enough bits in the significand to represent the result of
-      // the integer addition?
-      unsigned MaxRepresentableBits =
-          APFloat::semanticsPrecision(FScalarTy->getFltSemantics());
-      return IScalarTy->getIntegerBitWidth() <= MaxRepresentableBits;
-    };
-
-    // (fadd double (sitofp x), fpcst) --> (sitofp (add int x, intcst))
-    // ... if the constant fits in the integer value.  This is useful for things
-    // like (double)(x & 1234) + 4.0 -> (double)((X & 1234)+4) which no longer
-    // requires a constant pool load, and generally allows the add to be better
-    // instcombined.
-    if (ConstantFP *CFP = dyn_cast<ConstantFP>(RHS))
-      if (IsValidPromotion(FPType, LHSIntVal->getType())) {
-        Constant *CI = ConstantFoldCastOperand(Instruction::FPToSI, CFP,
-                                               LHSIntVal->getType(), DL);
-        if (LHSConv->hasOneUse() &&
-            ConstantFoldCastOperand(Instruction::SIToFP, CI, I.getType(), DL) ==
-                CFP &&
-            willNotOverflowSignedAdd(LHSIntVal, CI, I)) {
-          // Insert the new integer add.
-          Value *NewAdd = Builder.CreateNSWAdd(LHSIntVal, CI, "addconv");
-          return new SIToFPInst(NewAdd, I.getType());
-        }
-      }
-
-    // (fadd double (sitofp x), (sitofp y)) --> (sitofp (add int x, y))
-    if (SIToFPInst *RHSConv = dyn_cast<SIToFPInst>(RHS)) {
-      Value *RHSIntVal = RHSConv->getOperand(0);
-      // It's enough to check LHS types only because we require int types to
-      // be the same for this transform.
-      if (IsValidPromotion(FPType, LHSIntVal->getType())) {
-        // Only do this if x/y have the same type, if at least one of them has a
-        // single use (so we don't increase the number of int->fp conversions),
-        // and if the integer add will not overflow.
-        if (LHSIntVal->getType() == RHSIntVal->getType() &&
-            (LHSConv->hasOneUse() || RHSConv->hasOneUse()) &&
-            willNotOverflowSignedAdd(LHSIntVal, RHSIntVal, I)) {
-          // Insert the new integer add.
-          Value *NewAdd = Builder.CreateNSWAdd(LHSIntVal, RHSIntVal, "addconv");
-          return new SIToFPInst(NewAdd, I.getType());
-        }
-      }
-    }
-  }
-
   // Handle specials cases for FAdd with selects feeding the operation
   if (Value *V = SimplifySelectsFeedingBinaryOp(I, LHS, RHS))
     return replaceInstUsesWith(I, V);
@@ -2004,43 +2001,30 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
   if (!GEP1)
     return nullptr;
 
-  if (GEP2) {
-    // (gep X, ...) - (gep X, ...)
-    //
-    // Avoid duplicating the arithmetic if there are more than one non-constant
-    // indices between the two GEPs and either GEP has a non-constant index and
-    // multiple users. If zero non-constant index, the result is a constant and
-    // there is no duplication. If one non-constant index, the result is an add
-    // or sub with a constant, which is no larger than the original code, and
-    // there's no duplicated arithmetic, even if either GEP has multiple
-    // users. If more than one non-constant indices combined, as long as the GEP
-    // with at least one non-constant index doesn't have multiple users, there
-    // is no duplication.
-    unsigned NumNonConstantIndices1 = GEP1->countNonConstantIndices();
-    unsigned NumNonConstantIndices2 = GEP2->countNonConstantIndices();
-    if (NumNonConstantIndices1 + NumNonConstantIndices2 > 1 &&
-        ((NumNonConstantIndices1 > 0 && !GEP1->hasOneUse()) ||
-         (NumNonConstantIndices2 > 0 && !GEP2->hasOneUse()))) {
-      return nullptr;
-    }
-  }
+  // To avoid duplicating the offset arithmetic, rewrite the GEP to use the
+  // computed offset. This may erase the original GEP, so be sure to cache the
+  // inbounds flag before emitting the offset.
+  // TODO: We should probably do this even if there is only one GEP.
+  bool RewriteGEPs = GEP2 != nullptr;
 
   // Emit the offset of the GEP and an intptr_t.
-  Value *Result = EmitGEPOffset(GEP1);
+  bool GEP1IsInBounds = GEP1->isInBounds();
+  Value *Result = EmitGEPOffset(GEP1, RewriteGEPs);
 
   // If this is a single inbounds GEP and the original sub was nuw,
   // then the final multiplication is also nuw.
   if (auto *I = dyn_cast<Instruction>(Result))
-    if (IsNUW && !GEP2 && !Swapped && GEP1->isInBounds() &&
+    if (IsNUW && !GEP2 && !Swapped && GEP1IsInBounds &&
         I->getOpcode() == Instruction::Mul)
       I->setHasNoUnsignedWrap();
 
   // If we have a 2nd GEP of the same base pointer, subtract the offsets.
   // If both GEPs are inbounds, then the subtract does not have signed overflow.
   if (GEP2) {
-    Value *Offset = EmitGEPOffset(GEP2);
+    bool GEP2IsInBounds = GEP2->isInBounds();
+    Value *Offset = EmitGEPOffset(GEP2, RewriteGEPs);
     Result = Builder.CreateSub(Result, Offset, "gepdiff", /* NUW */ false,
-                               GEP1->isInBounds() && GEP2->isInBounds());
+                               GEP1IsInBounds && GEP2IsInBounds);
   }
 
   // If we have p - gep(p, ...)  then we have to negate the result.
@@ -2313,8 +2297,10 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   if (match(Op0, m_APInt(Op0C))) {
     if (Op0C->isMask()) {
       // Turn this into a xor if LHS is 2^n-1 and the remaining bits are known
-      // zero.
-      KnownBits RHSKnown = computeKnownBits(Op1, 0, &I);
+      // zero. We don't use information from dominating conditions so this
+      // transform is easier to reverse if necessary.
+      KnownBits RHSKnown = llvm::computeKnownBits(
+          Op1, 0, SQ.getWithInstruction(&I).getWithoutDomCondCache());
       if ((*Op0C | RHSKnown.Zero).isAllOnes())
         return BinaryOperator::CreateXor(Op1, Op0);
     }
@@ -2428,6 +2414,24 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     }
   }
 
+  {
+    // (sub (xor X, (sext C)), (sext C)) => (select C, (neg X), X)
+    // (sub (sext C), (xor X, (sext C))) => (select C, X, (neg X))
+    Value *C, *X;
+    auto m_SubXorCmp = [&C, &X](Value *LHS, Value *RHS) {
+      return match(LHS, m_OneUse(m_c_Xor(m_Value(X), m_Specific(RHS)))) &&
+             match(RHS, m_SExt(m_Value(C))) &&
+             (C->getType()->getScalarSizeInBits() == 1);
+    };
+    if (m_SubXorCmp(Op0, Op1))
+      return SelectInst::Create(C, Builder.CreateNeg(X), X);
+    if (m_SubXorCmp(Op1, Op0))
+      return SelectInst::Create(C, X, Builder.CreateNeg(X));
+  }
+
+  if (Instruction *R = tryFoldInstWithCtpopWithNot(&I))
+    return R;
+
   if (Instruction *R = foldSubOfMinMax(I, Builder))
     return R;
 
@@ -2538,9 +2542,10 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     // sub (xor A, B), B  ; flip bits if negative and subtract -1 (add 1)
     // --> (A < 0) ? -A : A
     Value *IsNeg = Builder.CreateIsNeg(A);
-    // Copy the nuw/nsw flags from the sub to the negate.
-    Value *NegA = Builder.CreateNeg(A, "", I.hasNoUnsignedWrap(),
-                                    I.hasNoSignedWrap());
+    // Copy the nsw flags from the sub to the negate.
+    Value *NegA = I.hasNoUnsignedWrap()
+                      ? Constant::getNullValue(A->getType())
+                      : Builder.CreateNeg(A, "", I.hasNoSignedWrap());
     return SelectInst::Create(IsNeg, NegA, A);
   }
 
@@ -2763,6 +2768,16 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
       propagateSelectFMF(NewSel, P == X);
       return NewSel;
     }
+
+    // -(Cond ? X : C) --> Cond ? -X : -C
+    // -(Cond ? C : Y) --> Cond ? -C : -Y
+    if (match(X, m_ImmConstant()) || match(Y, m_ImmConstant())) {
+      Value *NegX = Builder.CreateFNegFMF(X, &I, X->getName() + ".neg");
+      Value *NegY = Builder.CreateFNegFMF(Y, &I, Y->getName() + ".neg");
+      SelectInst *NewSel = SelectInst::Create(Cond, NegX, NegY);
+      propagateSelectFMF(NewSel, /*CommonOperand=*/true);
+      return NewSel;
+    }
   }
 
   // fneg (copysign x, y) -> copysign x, (fneg y)
@@ -2809,6 +2824,9 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
   if (Instruction *X = foldFNegIntoConstant(I, DL))
     return X;
 
+  if (Instruction *R = foldFBinOpOfIntCasts(I))
+    return R;
+
   Value *X, *Y;
   Constant *C;
 
@@ -2819,7 +2837,8 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
   // Note that if this fsub was really an fneg, the fadd with -0.0 will get
   // killed later. We still limit that particular transform with 'hasOneUse'
   // because an fneg is assumed better/cheaper than a generic fsub.
-  if (I.hasNoSignedZeros() || cannotBeNegativeZero(Op0, SQ.DL, SQ.TLI)) {
+  if (I.hasNoSignedZeros() ||
+      cannotBeNegativeZero(Op0, 0, getSimplifyQuery().getWithInstruction(&I))) {
     if (match(Op1, m_OneUse(m_FSub(m_Value(X), m_Value(Y))))) {
       Value *NewSub = Builder.CreateFSubFMF(Y, X, &I);
       return BinaryOperator::CreateFAddFMF(Op0, NewSub, &I);

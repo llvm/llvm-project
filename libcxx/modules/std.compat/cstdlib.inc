@@ -16,16 +16,16 @@ export {
   // [support.start.term], start and termination
   using ::_Exit;
   using ::abort;
-  using ::at_quick_exit;
+  using ::at_quick_exit _LIBCPP_USING_IF_EXISTS;
   using ::atexit;
   using ::exit;
-  using ::quick_exit;
+  using ::quick_exit _LIBCPP_USING_IF_EXISTS;
 
   using ::getenv;
   using ::system;
 
   // [c.malloc], C library memory allocation
-  using ::aligned_alloc;
+  using ::aligned_alloc _LIBCPP_USING_IF_EXISTS;
   using ::calloc;
   using ::free;
   using ::malloc;

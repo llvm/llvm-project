@@ -1,11 +1,11 @@
 // REQUIRES: amdgpu-registered-target
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu \
-// RUN:   --offload-arch=gfx803 -nogpulib \
+// RUN:   --no-offload-new-driver --offload-arch=gfx803 -nogpulib \
 // RUN:   -x hip-cpp-output %s 2>&1 | FileCheck %s
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu \
-// RUN:   --offload-arch=gfx803 -nogpulib \
+// RUN:   --no-offload-new-driver --offload-arch=gfx803 -nogpulib \
 // RUN:   %s 2>&1 | FileCheck %s
 
 // CHECK: {{".*clang-offload-bundler.*"}} {{.*}}"-output=[[HOST_PP:.*hipi]]" "-output=[[DEV_PP:.*hipi]]" "-unbundle"
@@ -16,7 +16,7 @@
 // CHECK: {{".*ld.*"}} {{.*}}"[[HOST_O]]"
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu \
-// RUN:   --offload-arch=gfx803 -nogpulib -fgpu-rdc \
+// RUN:   --no-offload-new-driver --offload-arch=gfx803 -nogpulib -fgpu-rdc \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=RDC %s
 
 // RDC: {{".*clang-offload-bundler.*"}} {{.*}}"-output=[[HOST_PP:.*hipi]]" "-output=[[DEV_PP:.*hipi]]" "-unbundle"

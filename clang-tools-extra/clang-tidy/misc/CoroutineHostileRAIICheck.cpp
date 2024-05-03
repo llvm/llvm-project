@@ -56,7 +56,7 @@ AST_MATCHER_P(Stmt, forEachPrevStmt, ast_matchers::internal::Matcher<Stmt>,
 // Matches the expression awaited by the `co_await`.
 AST_MATCHER_P(CoawaitExpr, awaitable, ast_matchers::internal::Matcher<Expr>,
               InnerMatcher) {
-  if (Expr *E = Node.getCommonExpr())
+  if (Expr *E = Node.getOperand())
     return InnerMatcher.matches(*E, Finder, Builder);
   return false;
 }

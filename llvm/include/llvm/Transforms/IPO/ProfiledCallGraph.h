@@ -114,9 +114,8 @@ public:
           uint64_t CallsiteCount = 0;
           LineLocation Callsite = Callee->getCallSiteLoc();
           if (auto CallTargets = CallerSamples->findCallTargetMapAt(Callsite)) {
-            SampleRecord::CallTargetMap &TargetCounts = CallTargets.get();
-            auto It = TargetCounts.find(CalleeSamples->getFunction());
-            if (It != TargetCounts.end())
+            auto It = CallTargets->find(CalleeSamples->getFunction());
+            if (It != CallTargets->end())
               CallsiteCount = It->second;
           }
           Weight = std::max(CallsiteCount, CalleeEntryCount);

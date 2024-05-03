@@ -206,7 +206,7 @@ void RecordStreamer::flushSymverDirectives() {
     for (auto AliasName : Symver.second) {
       std::pair<StringRef, StringRef> Split = AliasName.split("@@@");
       SmallString<128> NewName;
-      if (!Split.second.empty() && !Split.second.startswith("@")) {
+      if (!Split.second.empty() && !Split.second.starts_with("@")) {
         // Special processing for "@@@" according
         // https://sourceware.org/binutils/docs/as/Symver.html
         const char *Separator = IsDefined ? "@@" : "@";

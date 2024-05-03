@@ -189,6 +189,9 @@ public:
   /// The bit vector denoting usage of each header search entry (true = used).
   llvm::BitVector SearchPathUsage;
 
+  /// The bit vector denoting usage of each VFS entry (true = used).
+  llvm::BitVector VFSUsage;
+
   /// Whether this module has been directly imported by the
   /// user.
   bool DirectlyImported = false;
@@ -459,7 +462,7 @@ public:
   serialization::DeclID BaseDeclID = 0;
 
   /// Remapping table for declaration IDs in this module.
-  ContinuousRangeMap<uint32_t, int, 2> DeclRemap;
+  ContinuousRangeMap<serialization::DeclID, int, 2> DeclRemap;
 
   /// Mapping from the module files that this module file depends on
   /// to the base declaration ID for that module as it is understood within this
@@ -471,7 +474,7 @@ public:
   llvm::DenseMap<ModuleFile *, serialization::DeclID> GlobalToLocalDeclIDs;
 
   /// Array of file-level DeclIDs sorted by file.
-  const serialization::DeclID *FileSortedDecls = nullptr;
+  const LocalDeclID *FileSortedDecls = nullptr;
   unsigned NumFileSortedDecls = 0;
 
   /// Array of category list location information within this

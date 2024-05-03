@@ -431,7 +431,7 @@ entry:
   ret i64 %ret
 }
 
-define i1 @_gep_phi1(ptr noundef %str1) {
+define i1 @_gep_phi1(ptr %str1) {
 ; CHECK-LABEL: @_gep_phi1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[STR1:%.*]], null
@@ -447,11 +447,10 @@ define i1 @_gep_phi1(ptr noundef %str1) {
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
 ; CHECK:       while.end.i:
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne ptr [[TEST_0_I]], [[STR1]]
 ; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT]]
 ; CHECK:       _Z3fooPKc.exit:
-; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i1 [ [[TMP2]], [[WHILE_END_I]] ], [ false, [[LOR_LHS_FALSE_I]] ], [ false, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i1 [[RETVAL_0_I]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = phi i1 [ true, [[WHILE_END_I]] ], [ false, [[LOR_LHS_FALSE_I]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i1 [[TOBOOL]]
 ;
 entry:
   %cmp.i = icmp eq ptr %str1, null
@@ -481,7 +480,7 @@ _Z3fooPKc.exit:
   ret i1 %tobool
 }
 
-define i1 @_gep_phi2(ptr noundef %str1, i64 %val2) {
+define i1 @_gep_phi2(ptr %str1, i64 %val2) {
 ; CHECK-LABEL: @_gep_phi2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[STR1:%.*]], null
@@ -497,12 +496,9 @@ define i1 @_gep_phi2(ptr noundef %str1, i64 %val2) {
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[CMP3_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
 ; CHECK:       while.end.i:
-; CHECK-NEXT:    [[SUB_PTR_LHS_CAST_I:%.*]] = ptrtoint ptr [[TEST_0_I]] to i64
-; CHECK-NEXT:    [[SUB_PTR_RHS_CAST_I:%.*]] = ptrtoint ptr [[STR1]] to i64
-; CHECK-NEXT:    [[SUB_PTR_SUB_I:%.*]] = sub i64 [[SUB_PTR_LHS_CAST_I]], [[SUB_PTR_RHS_CAST_I]]
 ; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT]]
 ; CHECK:       _Z3fooPKc.exit:
-; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ [[SUB_PTR_SUB_I]], [[WHILE_END_I]] ], [ 0, [[LOR_LHS_FALSE_I]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ 1, [[WHILE_END_I]] ], [ 0, [[LOR_LHS_FALSE_I]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[RETVAL_0_I]], [[VAL2:%.*]]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[TOBOOL]]

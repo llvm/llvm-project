@@ -18,7 +18,7 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 struct HypotfChecker : public virtual LIBC_NAMESPACE::testing::Test {
   using FloatType = float;
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
-  using UIntType = typename FPBits::UIntType;
+  using StorageType = typename FPBits::StorageType;
 
   uint64_t check(uint32_t start, uint32_t stop, mpfr::RoundingMode rounding) {
     // Range of the second input: [2^37, 2^48).
@@ -31,10 +31,10 @@ struct HypotfChecker : public virtual LIBC_NAMESPACE::testing::Test {
     uint32_t xbits = start;
     uint64_t failed = 0;
     do {
-      float x = float(FPBits(xbits));
+      float x = FPBits(xbits).get_val();
       uint32_t ybits = Y_START;
       do {
-        float y = float(FPBits(ybits));
+        float y = FPBits(ybits).get_val();
         bool correct = TEST_FP_EQ(LIBC_NAMESPACE::fputil::hypot(x, y),
                                   LIBC_NAMESPACE::hypotf(x, y));
         // Using MPFR will be much slower.

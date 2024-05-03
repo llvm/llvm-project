@@ -7,7 +7,7 @@
 target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
 target triple = "hexagon"
 ; Function Attrs: nofree norecurse nounwind writeonly
-define dso_local i32 @foo(half* nocapture %0, i32 %1) local_unnamed_addr #0 {
+define dso_local i32 @foo(ptr nocapture %0, i32 %1) local_unnamed_addr #0 {
   %3 = icmp sgt i32 %1, 0
   br i1 %3, label %4, label %22
 
@@ -16,23 +16,23 @@ define dso_local i32 @foo(half* nocapture %0, i32 %1) local_unnamed_addr #0 {
   br i1 %5, label %6, label %9
 
 6:                                                ; preds = %20, %4
-  %7 = phi half* [ %0, %4 ], [ %11, %20 ]
+  %7 = phi ptr [ %0, %4 ], [ %11, %20 ]
   %8 = phi i32 [ 0, %4 ], [ %10, %20 ]
   br label %23
 
 9:                                                ; preds = %4
   %10 = and i32 %1, -128
-  %11 = getelementptr half, half* %0, i32 %10
+  %11 = getelementptr half, ptr %0, i32 %10
   br label %12
 
 12:                                               ; preds = %12, %9
   %13 = phi i32 [ 0, %9 ], [ %18, %12 ]
-  %14 = getelementptr half, half* %0, i32 %13
-  %15 = bitcast half* %14 to <64 x half>*
-  store <64 x half> <half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170>, <64 x half>* %15, align 2
-  %16 = getelementptr half, half* %14, i32 64
-  %17 = bitcast half* %16 to <64 x half>*
-  store <64 x half> <half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170>, <64 x half>* %17, align 2
+  %14 = getelementptr half, ptr %0, i32 %13
+  %15 = bitcast ptr %14 to ptr
+  store <64 x half> <half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170>, ptr %15, align 2
+  %16 = getelementptr half, ptr %14, i32 64
+  %17 = bitcast ptr %16 to ptr
+  store <64 x half> <half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170, half 0xH4170>, ptr %17, align 2
   %18 = add i32 %13, 128
   %19 = icmp eq i32 %18, %10
   br i1 %19, label %20, label %12
@@ -45,12 +45,12 @@ define dso_local i32 @foo(half* nocapture %0, i32 %1) local_unnamed_addr #0 {
   ret i32 0
 
 23:                                               ; preds = %23, %6
-  %24 = phi half* [ %28, %23 ], [ %7, %6 ]
+  %24 = phi ptr [ %28, %23 ], [ %7, %6 ]
   %25 = phi i32 [ %26, %23 ], [ %8, %6 ]
-  store half 0xH4170, half* %24, align 2
+  store half 0xH4170, ptr %24, align 2
   %26 = add nuw nsw i32 %25, 1
   %27 = icmp eq i32 %26, %1
-  %28 = getelementptr half, half* %24, i32 1
+  %28 = getelementptr half, ptr %24, i32 1
   br i1 %27, label %22, label %23
 }
 

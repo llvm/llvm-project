@@ -109,7 +109,7 @@ define bfloat @flh_stack(bfloat %a) nounwind {
 ; RV32IZFBFMIN-NEXT:    fsw fs0, 8(sp) # 4-byte Folded Spill
 ; RV32IZFBFMIN-NEXT:    fmv.s fs0, fa0
 ; RV32IZFBFMIN-NEXT:    addi a0, sp, 4
-; RV32IZFBFMIN-NEXT:    call notdead@plt
+; RV32IZFBFMIN-NEXT:    call notdead
 ; RV32IZFBFMIN-NEXT:    flh fa5, 4(sp)
 ; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fs0
 ; RV32IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
@@ -127,7 +127,7 @@ define bfloat @flh_stack(bfloat %a) nounwind {
 ; RV64IZFBFMIN-NEXT:    fsw fs0, 4(sp) # 4-byte Folded Spill
 ; RV64IZFBFMIN-NEXT:    fmv.s fs0, fa0
 ; RV64IZFBFMIN-NEXT:    mv a0, sp
-; RV64IZFBFMIN-NEXT:    call notdead@plt
+; RV64IZFBFMIN-NEXT:    call notdead
 ; RV64IZFBFMIN-NEXT:    flh fa5, 0(sp)
 ; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa4, fs0
 ; RV64IZFBFMIN-NEXT:    fcvt.s.bf16 fa5, fa5
@@ -155,7 +155,7 @@ define dso_local void @fsh_stack(bfloat %a, bfloat %b) nounwind {
 ; RV32IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
 ; RV32IZFBFMIN-NEXT:    fsh fa5, 8(sp)
 ; RV32IZFBFMIN-NEXT:    addi a0, sp, 8
-; RV32IZFBFMIN-NEXT:    call notdead@plt
+; RV32IZFBFMIN-NEXT:    call notdead
 ; RV32IZFBFMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFBFMIN-NEXT:    addi sp, sp, 16
 ; RV32IZFBFMIN-NEXT:    ret
@@ -170,7 +170,7 @@ define dso_local void @fsh_stack(bfloat %a, bfloat %b) nounwind {
 ; RV64IZFBFMIN-NEXT:    fcvt.bf16.s fa5, fa5
 ; RV64IZFBFMIN-NEXT:    fsh fa5, 4(sp)
 ; RV64IZFBFMIN-NEXT:    addi a0, sp, 4
-; RV64IZFBFMIN-NEXT:    call notdead@plt
+; RV64IZFBFMIN-NEXT:    call notdead
 ; RV64IZFBFMIN-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IZFBFMIN-NEXT:    addi sp, sp, 16
 ; RV64IZFBFMIN-NEXT:    ret

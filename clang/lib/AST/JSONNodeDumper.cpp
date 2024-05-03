@@ -77,7 +77,7 @@ void JSONNodeDumper::Visit(const Type *T) {
     return;
 
   JOS.attribute("kind", (llvm::Twine(T->getTypeClassName()) + "Type").str());
-  JOS.attribute("type", createQualType(QualType(T, 0), /*Desugar*/ false));
+  JOS.attribute("type", createQualType(QualType(T, 0), /*Desugar=*/false));
   attributeOnlyIfTrue("containsErrors", T->containsErrors());
   attributeOnlyIfTrue("isDependent", T->isDependentType());
   attributeOnlyIfTrue("isInstantiationDependent",
@@ -94,6 +94,21 @@ void JSONNodeDumper::Visit(QualType T) {
   JOS.attribute("kind", "QualType");
   JOS.attribute("type", createQualType(T));
   JOS.attribute("qualifiers", T.split().Quals.getAsString());
+}
+
+void JSONNodeDumper::Visit(TypeLoc TL) {
+  if (TL.isNull())
+    return;
+  JOS.attribute("kind",
+                (llvm::Twine(TL.getTypeLocClass() == TypeLoc::Qualified
+                                 ? "Qualified"
+                                 : TL.getTypePtr()->getTypeClassName()) +
+                 "TypeLoc")
+                    .str());
+  JOS.attribute("type",
+                createQualType(QualType(TL.getType()), /*Desugar=*/false));
+  JOS.attributeObject("range",
+                      [TL, this] { writeSourceRange(TL.getSourceRange()); });
 }
 
 void JSONNodeDumper::Visit(const Decl *D) {
@@ -172,6 +187,8 @@ void JSONNodeDumper::Visit(const CXXCtorInitializer *Init) {
     llvm_unreachable("Unknown initializer type");
 }
 
+void JSONNodeDumper::Visit(const OpenACCClause *C) {}
+
 void JSONNodeDumper::Visit(const OMPClause *C) {}
 
 void JSONNodeDumper::Visit(const BlockDecl::Capture &C) {
@@ -221,6 +238,22 @@ void JSONNodeDumper::Visit(const APValue &Value, QualType Ty) {
   llvm::raw_string_ostream OS(Str);
   Value.printPretty(OS, Ctx, Ty);
   JOS.attribute("value", OS.str());
+}
+
+void JSONNodeDumper::Visit(const ConceptReference *CR) {
+  JOS.attribute("kind", "ConceptReference");
+  JOS.attribute("id", createPointerRepresentation(CR->getNamedConcept()));
+  if (const auto *Args = CR->getTemplateArgsAsWritten()) {
+    JOS.attributeArray("templateArgsAsWritten", [Args, this] {
+      for (const TemplateArgumentLoc &TAL : Args->arguments())
+        JOS.object(
+            [&TAL, this] { Visit(TAL.getArgument(), TAL.getSourceRange()); });
+    });
+  }
+  JOS.attributeObject("loc",
+                      [CR, this] { writeSourceLocation(CR->getLocation()); });
+  JOS.attributeObject("range",
+                      [CR, this] { writeSourceRange(CR->getSourceRange()); });
 }
 
 void JSONNodeDumper::writeIncludeStack(PresumedLoc Loc, bool JustFirst) {
@@ -664,7 +697,7 @@ void JSONNodeDumper::VisitArrayType(const ArrayType *AT) {
 void JSONNodeDumper::VisitConstantArrayType(const ConstantArrayType *CAT) {
   // FIXME: this should use ZExt instead of SExt, but JSON doesn't allow a
   // narrowing conversion to int64_t so it cannot be expressed.
-  JOS.attribute("size", CAT->getSize().getSExtValue());
+  JOS.attribute("size", CAT->getSExtSize());
   VisitArrayType(CAT);
 }
 
@@ -702,6 +735,9 @@ void JSONNodeDumper::VisitVectorType(const VectorType *VT) {
     break;
   case VectorKind::RVVFixedLengthData:
     JOS.attribute("vectorKind", "fixed-length rvv data vector");
+    break;
+  case VectorKind::RVVFixedLengthMask:
+    JOS.attribute("vectorKind", "fixed-length rvv mask vector");
     break;
   }
 }
@@ -930,7 +966,7 @@ void JSONNodeDumper::VisitFunctionDecl(const FunctionDecl *FD) {
     JOS.attribute("storageClass", VarDecl::getStorageClassSpecifierString(SC));
   attributeOnlyIfTrue("inline", FD->isInlineSpecified());
   attributeOnlyIfTrue("virtual", FD->isVirtualAsWritten());
-  attributeOnlyIfTrue("pure", FD->isPure());
+  attributeOnlyIfTrue("pure", FD->isPureVirtual());
   attributeOnlyIfTrue("explicitlyDeleted", FD->isDeletedAsWritten());
   attributeOnlyIfTrue("constexpr", FD->isConstexpr());
   attributeOnlyIfTrue("variadic", FD->isVariadic());
@@ -939,6 +975,9 @@ void JSONNodeDumper::VisitFunctionDecl(const FunctionDecl *FD) {
   if (FD->isDefaulted())
     JOS.attribute("explicitlyDefaulted",
                   FD->isDeleted() ? "deleted" : "default");
+
+  if (StringLiteral *Msg = FD->getDeletedMessage())
+    JOS.attribute("deletedMessage", Msg->getString());
 }
 
 void JSONNodeDumper::VisitEnumDecl(const EnumDecl *ED) {
@@ -1356,12 +1395,11 @@ void JSONNodeDumper::VisitCXXNewExpr(const CXXNewExpr *NE) {
   attributeOnlyIfTrue("isPlacement", NE->getNumPlacementArgs() != 0);
   switch (NE->getInitializationStyle()) {
   case CXXNewInitializationStyle::None:
-  case CXXNewInitializationStyle::Implicit:
     break;
-  case CXXNewInitializationStyle::Call:
+  case CXXNewInitializationStyle::Parens:
     JOS.attribute("initStyle", "call");
     break;
-  case CXXNewInitializationStyle::List:
+  case CXXNewInitializationStyle::Braces:
     JOS.attribute("initStyle", "list");
     break;
   }
@@ -1539,6 +1577,14 @@ void JSONNodeDumper::VisitMaterializeTemporaryExpr(
   }
 
   attributeOnlyIfTrue("boundToLValueRef", MTE->isBoundToLvalueReference());
+}
+
+void JSONNodeDumper::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node) {
+  attributeOnlyIfTrue("hasRewrittenInit", Node->hasRewrittenInit());
+}
+
+void JSONNodeDumper::VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node) {
+  attributeOnlyIfTrue("hasRewrittenInit", Node->hasRewrittenInit());
 }
 
 void JSONNodeDumper::VisitCXXDependentScopeMemberExpr(

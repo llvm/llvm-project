@@ -14,25 +14,32 @@ OtherStdcallExportName@4=CdeclInternalFunction
 CdeclExportName=StdcallInternalFunction@4
 
 ; CHECK:      Name type: noprefix
+; CHECK-NEXT: Export name: CdeclFunction
 ; CHECK-NEXT: Symbol: __imp__CdeclFunction
 ; CHECK-NEXT: Symbol: _CdeclFunction
 ; CHECK:      Name type: undecorate
+; CHECK-NEXT: Export name: StdcallFunction
 ; CHECK-NEXT: Symbol: __imp__StdcallFunction@4
 ; CHECK-NEXT: Symbol: _StdcallFunction@4
 ; CHECK:      Name type: undecorate
+; CHECK-NEXT: Export name: FastcallFunction
 ; CHECK-NEXT: Symbol: __imp_@FastcallFunction@4
 ; CHECK-NEXT: Symbol: @FastcallFunction@4
 ; CHECK:      Name type: name
+; CHECK-NEXT: Export name: ??_7exception@@6B@
 ; CHECK-NEXT: Symbol: __imp_??_7exception@@6B@
 ; CHECK-NEXT: Symbol: ??_7exception@@6B@
 ; CHECK-NM: W _StdcallAlias@4
 ; CHECK-NM: U _StdcallFunction@4
 ; CHECK:      Name type: undecorate
+; CHECK-NEXT: Export name: StdcallExportName
 ; CHECK-NEXT: Symbol: __imp__StdcallExportName@4{{$}}
 ; CHECK-NEXT: Symbol: _StdcallExportName@4{{$}}
 ; CHECK:      Name type: undecorate
+; CHECK-NEXT: Export name: OtherStdcallExportName
 ; CHECK-NEXT: Symbol: __imp__OtherStdcallExportName@4{{$}}
 ; CHECK-NEXT: Symbol: _OtherStdcallExportName@4{{$}}
 ; CHECK:      Name type: noprefix
+; CHECK-NEXT: Export name: CdeclExportName
 ; CHECK-NEXT: Symbol: __imp__CdeclExportName
 ; CHECK-NEXT: Symbol: _CdeclExportName

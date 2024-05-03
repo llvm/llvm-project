@@ -404,6 +404,12 @@ public:
   /// List of pass builder callbacks.
   std::vector<std::function<void(llvm::PassBuilder &)>> PassBuilderCallbacks;
 
+  /// List of global variables explicitly specified by the user as toc-data.
+  std::vector<std::string> TocDataVarsUserSpecified;
+
+  /// List of global variables that over-ride the toc-data default.
+  std::vector<std::string> NoTocDataVars;
+
   /// Path to allowlist file specifying which objects
   /// (files, functions) should exclusively be instrumented
   /// by sanitizer coverage pass.
@@ -493,6 +499,9 @@ public:
   bool hasProfileCSIRInstr() const {
     return getProfileInstr() == ProfileCSIRInstr;
   }
+
+  /// Check if any form of instrumentation is on.
+  bool hasProfileInstr() const { return getProfileInstr() != ProfileNone; }
 
   /// Check if Clang profile use is on.
   bool hasProfileClangUse() const {

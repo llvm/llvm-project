@@ -180,12 +180,12 @@ static bool isOffsetLegal(unsigned L) { return (L & 0xffff) == L; }
 /// Stores the FunctionHash (a.k.a. CFG Checksum) into \p FunctionHash.
 static bool parseMetadata(const StringRef &Input, uint64_t &FunctionHash,
                           uint32_t &Attributes) {
-  if (Input.startswith("!CFGChecksum:")) {
+  if (Input.starts_with("!CFGChecksum:")) {
     StringRef CFGInfo = Input.substr(strlen("!CFGChecksum:")).trim();
     return !CFGInfo.getAsInteger(10, FunctionHash);
   }
 
-  if (Input.startswith("!Attributes:")) {
+  if (Input.starts_with("!Attributes:")) {
     StringRef Attrib = Input.substr(strlen("!Attributes:")).trim();
     return !Attrib.getAsInteger(10, Attributes);
   }
@@ -503,7 +503,7 @@ ErrorOr<T> SampleProfileReaderBinary::readUnencodedNumber() {
   }
 
   using namespace support;
-  T Val = endian::readNext<T, llvm::endianness::little, unaligned>(Data);
+  T Val = endian::readNext<T, llvm::endianness::little>(Data);
   return Val;
 }
 

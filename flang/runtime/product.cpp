@@ -18,13 +18,15 @@
 namespace Fortran::runtime {
 template <typename INTERMEDIATE> class NonComplexProductAccumulator {
 public:
-  explicit NonComplexProductAccumulator(const Descriptor &array)
+  explicit RT_API_ATTRS NonComplexProductAccumulator(const Descriptor &array)
       : array_{array} {}
-  void Reinitialize() { product_ = 1; }
-  template <typename A> void GetResult(A *p, int /*zeroBasedDim*/ = -1) const {
+  RT_API_ATTRS void Reinitialize() { product_ = 1; }
+  template <typename A>
+  RT_API_ATTRS void GetResult(A *p, int /*zeroBasedDim*/ = -1) const {
     *p = static_cast<A>(product_);
   }
-  template <typename A> bool AccumulateAt(const SubscriptValue at[]) {
+  template <typename A>
+  RT_API_ATTRS bool AccumulateAt(const SubscriptValue at[]) {
     product_ *= *array_.Element<A>(at);
     return product_ != 0;
   }
@@ -34,16 +36,24 @@ private:
   INTERMEDIATE product_{1};
 };
 
+// Suppress the warnings about calling __host__-only std::complex operators,
+// defined in C++ STD header files, from __device__ code.
+RT_DIAG_PUSH
+RT_DIAG_DISABLE_CALL_HOST_FROM_DEVICE_WARN
+
 template <typename PART> class ComplexProductAccumulator {
 public:
-  explicit ComplexProductAccumulator(const Descriptor &array) : array_{array} {}
-  void Reinitialize() { product_ = std::complex<PART>{1, 0}; }
-  template <typename A> void GetResult(A *p, int /*zeroBasedDim*/ = -1) const {
+  explicit RT_API_ATTRS ComplexProductAccumulator(const Descriptor &array)
+      : array_{array} {}
+  RT_API_ATTRS void Reinitialize() { product_ = std::complex<PART>{1, 0}; }
+  template <typename A>
+  RT_API_ATTRS void GetResult(A *p, int /*zeroBasedDim*/ = -1) const {
     using ResultPart = typename A::value_type;
     *p = {static_cast<ResultPart>(product_.real()),
         static_cast<ResultPart>(product_.imag())};
   }
-  template <typename A> bool AccumulateAt(const SubscriptValue at[]) {
+  template <typename A>
+  RT_API_ATTRS bool AccumulateAt(const SubscriptValue at[]) {
     product_ *= *array_.Element<A>(at);
     return true;
   }
@@ -53,37 +63,37 @@ private:
   std::complex<PART> product_{1, 0};
 };
 
+RT_DIAG_POP
+
 extern "C" {
-CppTypeFor<TypeCategory::Integer, 1> RTNAME(ProductInteger1)(
-    const Descriptor &x, const char *source, int line, int dim,
-    const Descriptor *mask) {
+RT_EXT_API_GROUP_BEGIN
+
+CppTypeFor<TypeCategory::Integer, 1> RTDEF(ProductInteger1)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Integer, 1>(x, source, line, dim, mask,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x},
       "PRODUCT");
 }
-CppTypeFor<TypeCategory::Integer, 2> RTNAME(ProductInteger2)(
-    const Descriptor &x, const char *source, int line, int dim,
-    const Descriptor *mask) {
+CppTypeFor<TypeCategory::Integer, 2> RTDEF(ProductInteger2)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Integer, 2>(x, source, line, dim, mask,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x},
       "PRODUCT");
 }
-CppTypeFor<TypeCategory::Integer, 4> RTNAME(ProductInteger4)(
-    const Descriptor &x, const char *source, int line, int dim,
-    const Descriptor *mask) {
+CppTypeFor<TypeCategory::Integer, 4> RTDEF(ProductInteger4)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Integer, 4>(x, source, line, dim, mask,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x},
       "PRODUCT");
 }
-CppTypeFor<TypeCategory::Integer, 8> RTNAME(ProductInteger8)(
-    const Descriptor &x, const char *source, int line, int dim,
-    const Descriptor *mask) {
+CppTypeFor<TypeCategory::Integer, 8> RTDEF(ProductInteger8)(const Descriptor &x,
+    const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Integer, 8>(x, source, line, dim, mask,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Integer, 8>>{x},
       "PRODUCT");
 }
 #ifdef __SIZEOF_INT128__
-CppTypeFor<TypeCategory::Integer, 16> RTNAME(ProductInteger16)(
+CppTypeFor<TypeCategory::Integer, 16> RTDEF(ProductInteger16)(
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Integer, 16>(x, source, line, dim,
@@ -94,27 +104,28 @@ CppTypeFor<TypeCategory::Integer, 16> RTNAME(ProductInteger16)(
 #endif
 
 // TODO: real/complex(2 & 3)
-CppTypeFor<TypeCategory::Real, 4> RTNAME(ProductReal4)(const Descriptor &x,
+CppTypeFor<TypeCategory::Real, 4> RTDEF(ProductReal4)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Real, 4>(x, source, line, dim, mask,
-      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 8>>{x},
+      NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 4>>{x},
       "PRODUCT");
 }
-CppTypeFor<TypeCategory::Real, 8> RTNAME(ProductReal8)(const Descriptor &x,
+CppTypeFor<TypeCategory::Real, 8> RTDEF(ProductReal8)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Real, 8>(x, source, line, dim, mask,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 8>>{x},
       "PRODUCT");
 }
 #if LDBL_MANT_DIG == 64
-CppTypeFor<TypeCategory::Real, 10> RTNAME(ProductReal10)(const Descriptor &x,
+CppTypeFor<TypeCategory::Real, 10> RTDEF(ProductReal10)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Real, 10>(x, source, line, dim, mask,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 10>>{x},
       "PRODUCT");
 }
-#elif LDBL_MANT_DIG == 113
-CppTypeFor<TypeCategory::Real, 16> RTNAME(ProductReal16)(const Descriptor &x,
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CppTypeFor<TypeCategory::Real, 16> RTDEF(ProductReal16)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return GetTotalReduction<TypeCategory::Real, 16>(x, source, line, dim, mask,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 16>>{x},
@@ -122,14 +133,14 @@ CppTypeFor<TypeCategory::Real, 16> RTNAME(ProductReal16)(const Descriptor &x,
 }
 #endif
 
-void RTNAME(CppProductComplex4)(CppTypeFor<TypeCategory::Complex, 4> &result,
+void RTDEF(CppProductComplex4)(CppTypeFor<TypeCategory::Complex, 4> &result,
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
   result = GetTotalReduction<TypeCategory::Complex, 4>(x, source, line, dim,
-      mask, ComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 8>>{x},
+      mask, ComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 4>>{x},
       "PRODUCT");
 }
-void RTNAME(CppProductComplex8)(CppTypeFor<TypeCategory::Complex, 8> &result,
+void RTDEF(CppProductComplex8)(CppTypeFor<TypeCategory::Complex, 8> &result,
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
   result = GetTotalReduction<TypeCategory::Complex, 8>(x, source, line, dim,
@@ -137,15 +148,16 @@ void RTNAME(CppProductComplex8)(CppTypeFor<TypeCategory::Complex, 8> &result,
       "PRODUCT");
 }
 #if LDBL_MANT_DIG == 64
-void RTNAME(CppProductComplex10)(CppTypeFor<TypeCategory::Complex, 10> &result,
+void RTDEF(CppProductComplex10)(CppTypeFor<TypeCategory::Complex, 10> &result,
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
   result = GetTotalReduction<TypeCategory::Complex, 10>(x, source, line, dim,
       mask, ComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 10>>{x},
       "PRODUCT");
 }
-#elif LDBL_MANT_DIG == 113
-void RTNAME(CppProductComplex16)(CppTypeFor<TypeCategory::Complex, 16> &result,
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+void RTDEF(CppProductComplex16)(CppTypeFor<TypeCategory::Complex, 16> &result,
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
   result = GetTotalReduction<TypeCategory::Complex, 16>(x, source, line, dim,
@@ -154,11 +166,13 @@ void RTNAME(CppProductComplex16)(CppTypeFor<TypeCategory::Complex, 16> &result,
 }
 #endif
 
-void RTNAME(ProductDim)(Descriptor &result, const Descriptor &x, int dim,
+void RTDEF(ProductDim)(Descriptor &result, const Descriptor &x, int dim,
     const char *source, int line, const Descriptor *mask) {
   TypedPartialNumericReduction<NonComplexProductAccumulator,
-      NonComplexProductAccumulator, ComplexProductAccumulator>(
-      result, x, dim, source, line, mask, "PRODUCT");
+      NonComplexProductAccumulator, ComplexProductAccumulator,
+      /*MIN_REAL_KIND=*/4>(result, x, dim, source, line, mask, "PRODUCT");
 }
+
+RT_EXT_API_GROUP_END
 } // extern "C"
 } // namespace Fortran::runtime
