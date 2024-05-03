@@ -36,12 +36,12 @@ vgmul.vv v4, v8
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      24
-# CHECK-NEXT: Total Cycles:      38
+# CHECK-NEXT: Total Cycles:      45
 # CHECK-NEXT: Total uOps:        24
 
 # CHECK:      Dispatch Width:    4
-# CHECK-NEXT: uOps Per Cycle:    0.63
-# CHECK-NEXT: IPC:               0.63
+# CHECK-NEXT: uOps Per Cycle:    0.53
+# CHECK-NEXT: IPC:               0.53
 # CHECK-NEXT: Block RThroughput: 36.0
 
 # CHECK:      Instruction Info:
@@ -54,29 +54,29 @@ vgmul.vv v4, v8
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     4.00                        vghsh.vv	v4, v8, v12
-# CHECK-NEXT:  1      1     4.00                        vgmul.vv	v4, v8
+# CHECK-NEXT:  1      2     4.00                        vghsh.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     4.00                        vgmul.vv	v4, v8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     4.00                        vghsh.vv	v4, v8, v12
-# CHECK-NEXT:  1      1     4.00                        vgmul.vv	v4, v8
+# CHECK-NEXT:  1      2     4.00                        vghsh.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     4.00                        vgmul.vv	v4, v8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     0.50                        vghsh.vv	v4, v8, v12
-# CHECK-NEXT:  1      1     0.50                        vgmul.vv	v4, v8
+# CHECK-NEXT:  1      2     0.50                        vghsh.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     0.50                        vgmul.vv	v4, v8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     0.50                        vghsh.vv	v4, v8, v12
-# CHECK-NEXT:  1      1     0.50                        vgmul.vv	v4, v8
+# CHECK-NEXT:  1      2     0.50                        vghsh.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     0.50                        vgmul.vv	v4, v8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                        vghsh.vv	v4, v8, v12
-# CHECK-NEXT:  1      1     1.00                        vgmul.vv	v4, v8
+# CHECK-NEXT:  1      2     1.00                        vghsh.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     1.00                        vgmul.vv	v4, v8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     2.00                        vghsh.vv	v4, v8, v12
-# CHECK-NEXT:  1      1     2.00                        vgmul.vv	v4, v8
+# CHECK-NEXT:  1      2     2.00                        vghsh.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     2.00                        vgmul.vv	v4, v8
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     4.00                        vghsh.vv	v8, v16, v24
-# CHECK-NEXT:  1      1     4.00                        vgmul.vv	v8, v16
+# CHECK-NEXT:  1      2     4.00                        vghsh.vv	v8, v16, v24
+# CHECK-NEXT:  1      2     4.00                        vgmul.vv	v8, v16
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     2.00                        vghsh.vv	v4, v8, v12
-# CHECK-NEXT:  1      1     2.00                        vgmul.vv	v4, v8
+# CHECK-NEXT:  1      2     2.00                        vghsh.vv	v4, v8, v12
+# CHECK-NEXT:  1      2     2.00                        vgmul.vv	v4, v8
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SiFiveP600Div
@@ -98,7 +98,7 @@ vgmul.vv v4, v8
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT:  -      -      -      -     8.00    -      -      -      -      -      -     35.00  37.00   -      -      -
+# CHECK-NEXT:  -      -      -      -     8.00    -      -      -      -      -      -     36.00  36.00   -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
@@ -112,17 +112,17 @@ vgmul.vv v4, v8
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vghsh.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vgmul.vv	v4, v8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vghsh.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vghsh.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vgmul.vv	v4, v8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vghsh.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -     vghsh.vv	v4, v8, v12
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     vgmul.vv	v4, v8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vghsh.vv	v4, v8, v12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vgmul.vv	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vghsh.vv	v4, v8, v12
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vgmul.vv	v4, v8
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vghsh.vv	v8, v16, v24
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vgmul.vv	v8, v16
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vghsh.vv	v4, v8, v12
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     vgmul.vv	v4, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     vgmul.vv	v4, v8
