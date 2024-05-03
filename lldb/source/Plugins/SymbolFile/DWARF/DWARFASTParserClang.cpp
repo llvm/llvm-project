@@ -271,9 +271,8 @@ static void ForcefullyCompleteType(CompilerType type) {
 /// avoids completing the type if it is not immediately necessary. It only
 /// ensures we _can_ complete the type later.
 void DWARFASTParserClang::PrepareContextToReceiveMembers(
-    TypeSystemClang &ast, clang::DeclContext *decl_ctx,
-    const DWARFDIE &decl_ctx_die, const DWARFDIE &die,
-    const char *type_name_cstr) {
+    clang::DeclContext *decl_ctx, const DWARFDIE &decl_ctx_die,
+    const DWARFDIE &die, const char *type_name_cstr) {
   auto *tag_decl_ctx = clang::dyn_cast<clang::TagDecl>(decl_ctx);
   if (!tag_decl_ctx)
     return; // Non-tag context are always ready.
@@ -288,7 +287,7 @@ void DWARFASTParserClang::PrepareContextToReceiveMembers(
   // gmodules case), we can complete the type by doing a full import.
 
   // If this type was not imported from an external AST, there's nothing to do.
-  CompilerType type = ast.GetTypeForDecl(tag_decl_ctx);
+  CompilerType type = m_ast.GetTypeForDecl(tag_decl_ctx);
   ClangASTImporter &ast_importer = GetClangASTImporter();
   if (type && ast_importer.CanImport(type)) {
     auto qual_type = ClangUtil::GetQualType(type);
@@ -304,8 +303,7 @@ void DWARFASTParserClang::PrepareContextToReceiveMembers(
   // 1. Found the the definition DIE and start its definition with
   // TypeSystemClang::StartTagDeclarationDefinition.
   // 2. Unable to find it, then need to forcefully complete it.
-  bool is_forward_declaration = false;
-  FindDefinitionDIE(decl_ctx_die, is_forward_declaration);
+  FindDefinitionTypeForDIE(decl_ctx_die);
   if (tag_decl_ctx->isCompleteDefinition() || tag_decl_ctx->isBeingDefined())
     return;
   // We don't have a type definition and/or the import failed. We must
@@ -652,7 +650,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
     DWARFDIE decl_ctx_die;
     clang::DeclContext *decl_ctx =
         GetClangDeclContextContainingDIE(die, &decl_ctx_die);
-    PrepareContextToReceiveMembers(m_ast, decl_ctx, decl_ctx_die, die,
+    PrepareContextToReceiveMembers(decl_ctx, decl_ctx_die, die,
                                    attrs.name.GetCString());
 
     if (attrs.type.IsValid()) {
@@ -1669,17 +1667,17 @@ DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
   return qualified_name;
 }
 
-bool DWARFASTParserClang::FindDefinitionDIE(const DWARFDIE &die,
-                                            bool &is_forward_declaration) {
+lldb_private::Type *
+DWARFASTParserClang::FindDefinitionTypeForDIE(const DWARFDIE &die) {
+  SymbolFileDWARF *dwarf = die.GetDWARF();
   ParsedDWARFTypeAttributes attrs(die);
-  is_forward_declaration = IsForwardDeclaration(
+  bool is_forward_declaration = IsForwardDeclaration(
       die, attrs, SymbolFileDWARF::GetLanguage(*die.GetCU()));
   if (!is_forward_declaration)
-    return true;
+    return dwarf->GetDIEToType()[die.GetDIE()];
 
   const dw_tag_t tag = die.Tag();
   TypeSP type_sp;
-  SymbolFileDWARF *dwarf = die.GetDWARF();
   Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
   if (log) {
     dwarf->GetObjectFile()->GetModule()->LogMessage(
@@ -1745,10 +1743,8 @@ bool DWARFASTParserClang::FindDefinitionDIE(const DWARFDIE &die,
           attrs.name.GetCString(), type_sp->GetID());
     }
   }
-  if (type_sp)
-    return true;
 
-  if (log) {
+  if (!type_sp && log) {
     dwarf->GetObjectFile()->GetModule()->LogMessage(
         log,
         "SymbolFileDWARF({0:p}) - {1:x16}: {2} type \"{3}\" is a "
@@ -1756,7 +1752,7 @@ bool DWARFASTParserClang::FindDefinitionDIE(const DWARFDIE &die,
         static_cast<void *>(this), die.GetOffset(), DW_TAG_value_to_name(tag),
         attrs.name.GetCString());
   }
-  return false;
+  return type_sp.get();
 }
 
 TypeSP
@@ -1801,9 +1797,9 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
         LinkDeclContextToDIE(
             GetCachedClangDeclContextForDIE(unique_ast_entry_up->m_die), die);
         if (!attrs.is_forward_declaration) {
-          // If the parameter DIE is definition and the entry in the map is
-          // declaration, then we need to update the entry to point to the
-          // definition DIE.
+          // If the DIE being parsed in this function is a definition and the
+          // entry in the map is a declaration, then we need to update the entry
+          // to point to the definition DIE.
           if (unique_ast_entry_up->m_is_forward_declaration) {
             unique_ast_entry_up->m_die = die;
             unique_ast_entry_up->m_byte_size = byte_size;
@@ -1862,7 +1858,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   clang::DeclContext *decl_ctx =
       GetClangDeclContextContainingDIE(die, &decl_ctx_die);
 
-  PrepareContextToReceiveMembers(m_ast, decl_ctx, decl_ctx_die, die,
+  PrepareContextToReceiveMembers(decl_ctx, decl_ctx_die, die,
                                  attrs.name.GetCString());
 
   if (attrs.accessibility == eAccessNone && decl_ctx) {
@@ -1970,25 +1966,25 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
           GetClangASTImporter().SetRecordLayout(record_decl, layout);
         }
       }
-    }
-    // Start the definition if the class is not objective C since the
-    // underlying decls respond to isCompleteDefinition(). Objective
-    // C decls don't respond to isCompleteDefinition() so we can't
-    // start the declaration definition right away. For C++
-    // class/union/structs we want to start the definition in case the
-    // class is needed as the declaration context for a contained class
-    // or type without the need to complete that type..
+    } else {
+      // Start the definition if the class is not objective C since the
+      // underlying decls respond to isCompleteDefinition(). Objective
+      // C decls don't respond to isCompleteDefinition() so we can't
+      // start the declaration definition right away. For C++
+      // class/union/structs we want to start the definition in case the
+      // class is needed as the declaration context for a contained class
+      // or type without the need to complete that type..
 
-    if (attrs.class_language != eLanguageTypeObjC &&
-        attrs.class_language != eLanguageTypeObjC_plus_plus)
-      TypeSystemClang::StartTagDeclarationDefinition(clang_type);
+      if (attrs.class_language != eLanguageTypeObjC &&
+          attrs.class_language != eLanguageTypeObjC_plus_plus)
+        TypeSystemClang::StartTagDeclarationDefinition(clang_type);
+    }
   }
 
-  // Leave this as a forward declaration until we need to know the
-  // details of the type. lldb_private::Type will automatically call
-  // the SymbolFile virtual function
-  // "SymbolFileDWARF::CompleteType(Type *)" When the definition
-  // needs to be defined.
+  // If this is a declaration DIE, leave this as a forward declaration until we
+  // need to know the details of the type. lldb_private::Type will automatically
+  // call the SymbolFile virtual function "SymbolFileDWARF::CompleteType(Type
+  // *)" When the definition needs to be defined.
   assert(!dwarf->GetForwardDeclCompilerTypeToDIE().count(
              ClangUtil::RemoveFastQualifiers(clang_type).GetOpaqueQualType()) &&
          "Type already in the forward declaration map!");

@@ -60,11 +60,7 @@ public:
 
   virtual ConstString GetDIEClassTemplateParams(const DWARFDIE &die) = 0;
 
-  // Return true if we found the definition DIE for it. is_forward_declaration
-  // is set to true if the parameter die is a declaration.
-  virtual bool
-  FindDefinitionDIE(const lldb_private::plugin::dwarf::DWARFDIE &die,
-                    bool &is_forward_declaration) = 0;
+  virtual lldb_private::Type *FindDefinitionTypeForDIE(const DWARFDIE &die) = 0;
 
   static std::optional<SymbolFile::ArrayInfo>
   ParseChildArrayInfo(const DWARFDIE &parent_die,

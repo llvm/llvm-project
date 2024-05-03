@@ -1636,14 +1636,10 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   // type to get resolved.
   DWARFDIE dwarf_die = GetDIE(die_it->second);
   GetForwardDeclCompilerTypeToDIE().erase(die_it);
-  // The DWARFASTParser might determine if this is a declaration or not with
-  // information other than DW_AT_declaration depending on the language.
-  bool is_forward_declaration = false;
-  bool found_def_die = false;
+  Type *type = nullptr;
   if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
-    found_def_die =
-        dwarf_ast->FindDefinitionDIE(dwarf_die, is_forward_declaration);
-  if (!found_def_die)
+    type = dwarf_ast->FindDefinitionTypeForDIE(dwarf_die);
+  if (!type)
     return false;
 
   die_it = GetForwardDeclCompilerTypeToDIE().find(
@@ -1652,8 +1648,6 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     dwarf_die = GetDIE(die_it->getSecond());
     GetForwardDeclCompilerTypeToDIE().erase(die_it);
   }
-
-  Type *type = GetDIEToType().lookup(dwarf_die.GetDIE());
 
   Log *log = GetLog(DWARFLog::DebugInfo | DWARFLog::TypeCompletion);
   if (log)
