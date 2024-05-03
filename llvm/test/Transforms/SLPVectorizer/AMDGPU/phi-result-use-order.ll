@@ -90,3 +90,78 @@ bb1:
   %o3 = insertelement <4 x half> %o2, half %c3, i64 3
   ret <4 x half> %o3
 }
+
+
+define <4 x i8> @phisi8(i1 %cmp1, <4 x i8> %in1, <4 x i8> %in2)  {
+; CHECK-LABEL: @phisi8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[CMP1:%.*]], label [[BB1:%.*]], label [[BB0:%.*]]
+; CHECK:       bb0:
+; CHECK-NEXT:    br label [[BB1]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i8> [ [[IN1:%.*]], [[ENTRY:%.*]] ], [ [[IN2:%.*]], [[BB0]] ]
+; CHECK-NEXT:    ret <4 x i8> [[TMP0]]
+;
+entry:
+  %a0 = extractelement <4 x i8> %in1, i64 0
+  %a1 = extractelement <4 x i8> %in1, i64 1
+  %a2 = extractelement <4 x i8> %in1, i64 2
+  %a3 = extractelement <4 x i8> %in1, i64 3
+  br i1 %cmp1, label %bb1, label %bb0
+
+bb0:
+  %b0 = extractelement <4 x i8> %in2, i64 0
+  %b1 = extractelement <4 x i8> %in2, i64 1
+  %b2 = extractelement <4 x i8> %in2, i64 2
+  %b3 = extractelement <4 x i8> %in2, i64 3
+  br label %bb1
+
+bb1:
+  %c0 = phi i8 [ %a0, %entry ], [ %b0, %bb0 ]
+  %c1 = phi i8 [ %a1, %entry ], [ %b1, %bb0 ]
+  %c2 = phi i8 [ %a2, %entry ], [ %b2, %bb0 ]
+  %c3 = phi i8 [ %a3, %entry ], [ %b3, %bb0 ]
+
+  %o0 = insertelement <4 x i8> undef, i8 %c0, i64 0
+  %o1 = insertelement <4 x i8> %o0, i8 %c1, i64 1
+  %o2 = insertelement <4 x i8> %o1, i8 %c2, i64 2
+  %o3 = insertelement <4 x i8> %o2, i8 %c3, i64 3
+  ret <4 x i8> %o3
+}
+
+define <4 x i8> @phisi8_reverse(i1 %cmp1, <4 x i8> %in1, <4 x i8> %in2)  {
+; CHECK-LABEL: @phisi8_reverse(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[CMP1:%.*]], label [[BB1:%.*]], label [[BB0:%.*]]
+; CHECK:       bb0:
+; CHECK-NEXT:    br label [[BB1]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i8> [ [[IN1:%.*]], [[ENTRY:%.*]] ], [ [[IN2:%.*]], [[BB0]] ]
+; CHECK-NEXT:    ret <4 x i8> [[TMP0]]
+;
+entry:
+  %a0 = extractelement <4 x i8> %in1, i64 0
+  %a1 = extractelement <4 x i8> %in1, i64 1
+  %a2 = extractelement <4 x i8> %in1, i64 2
+  %a3 = extractelement <4 x i8> %in1, i64 3
+  br i1 %cmp1, label %bb1, label %bb0
+
+bb0:
+  %b0 = extractelement <4 x i8> %in2, i64 0
+  %b1 = extractelement <4 x i8> %in2, i64 1
+  %b2 = extractelement <4 x i8> %in2, i64 2
+  %b3 = extractelement <4 x i8> %in2, i64 3
+  br label %bb1
+
+bb1:
+  %c3 = phi i8 [ %a3, %entry ], [ %b3, %bb0 ]
+  %c2 = phi i8 [ %a2, %entry ], [ %b2, %bb0 ]
+  %c1 = phi i8 [ %a1, %entry ], [ %b1, %bb0 ]
+  %c0 = phi i8 [ %a0, %entry ], [ %b0, %bb0 ]
+
+  %o0 = insertelement <4 x i8> undef, i8 %c0, i64 0
+  %o1 = insertelement <4 x i8> %o0, i8 %c1, i64 1
+  %o2 = insertelement <4 x i8> %o1, i8 %c2, i64 2
+  %o3 = insertelement <4 x i8> %o2, i8 %c3, i64 3
+  ret <4 x i8> %o3
+}
