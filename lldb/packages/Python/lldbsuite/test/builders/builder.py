@@ -175,6 +175,9 @@ class Builder:
             return ["SWIFT_LIBS_DIR={}".format(configuration.swift_libs_dir)]
         return []
 
+    def getLLDBObjRoot(self):
+        return ["LLDB_OBJ_ROOT={}".format(configuration.lldb_obj_root)]
+
     def _getDebugInfoArgs(self, debug_info):
         if debug_info is None:
             return []
@@ -216,6 +219,7 @@ class Builder:
             self.getModuleCacheSpec(),
             self.getLibCxxArgs(),
             self.getLLDBSwiftLibs(),
+            self.getLLDBObjRoot(),
             self.getCmdLine(dictionary),
         ]
         command = list(itertools.chain(*command_parts))
