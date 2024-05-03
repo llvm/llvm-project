@@ -2346,10 +2346,8 @@ static bool BuiltinCpu(Sema &S, const TargetInfo &TI, CallExpr *TheCall,
   if (!SupportsBI(&TI) && SupportsBI(AuxTI))
     TheTI = AuxTI;
 
-  if (IsCPUSupports && !TheTI->supportsCpuSupports())
-    return S.Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
-           << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
-  if (!IsCPUSupports && !TheTI->supportsCpuIs())
+  if ((!IsCPUSupports && !TheTI->supportsCpuIs()) ||
+      (IsCPUSupports && !TheTI->supportsCpuSupports()))
     return S.Diag(TheCall->getBeginLoc(),
                   TI.getTriple().isOSAIX()
                       ? diag::err_builtin_aix_os_unsupported

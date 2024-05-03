@@ -421,10 +421,11 @@ func.func @simplify_expand_shape(
     %base: memref<?x?xf32, strided<[?,?], offset:?>>,
     %offset0: index, %offset1: index, %offset2: index,
     %size0: index, %size1: index, %size2: index,
-    %stride0: index, %stride1: index, %stride2: index)
+    %stride0: index, %stride1: index, %stride2: index,
+    %sz0: index, %sz1: index)
     -> memref<?x7x8x9x10x2x?x3xf32, strided<[?, ?, ?, ?, ?, ?, ?, ?], offset: ?>> {
 
-  %subview = memref.expand_shape %base[[0, 1, 2, 3],[4, 5, 6, 7]] :
+  %subview = memref.expand_shape %base [[0, 1, 2, 3],[4, 5, 6, 7]] output_shape [%sz0, 7, 8, 9, 10, 2, %sz1, 3] :
     memref<?x?xf32, strided<[?,?], offset: ?>> into
       memref<?x7x8x9x10x2x?x3xf32, strided<[?, ?, ?, ?, ?, ?, ?, ?], offset: ?>>
 
@@ -491,7 +492,7 @@ func.func @extract_strided_metadata_of_expand_shape_all_static(
        index, index, index, index, index,
        index, index, index, index, index) {
 
-  %expand_shape = memref.expand_shape %arg[[0, 1, 2], [3, 4]] :
+  %expand_shape = memref.expand_shape %arg[[0, 1, 2], [3, 4]] output_shape [3, 5, 2, 2, 2] :
     memref<30x4xi16> into memref<3x5x2x2x2xi16>
 
   %base, %offset, %sizes:5, %strides:5 = memref.extract_strided_metadata %expand_shape :
@@ -595,12 +596,13 @@ func.func @extract_strided_metadata_of_expand_shape_all_dynamic(
     %base: memref<?x?xf32, strided<[?,?], offset:?>>,
     %offset0: index, %offset1: index, %offset2: index,
     %size0: index, %size1: index, %size2: index,
-    %stride0: index, %stride1: index, %stride2: index)
+    %stride0: index, %stride1: index, %stride2: index,
+    %sz0: index, %sz1: index)
     -> (memref<f32>, index,
        index, index, index, index, index, index, index, index,
        index, index, index, index, index, index, index, index) {
 
-  %subview = memref.expand_shape %base[[0, 1, 2, 3],[4, 5, 6, 7]] :
+  %subview = memref.expand_shape %base[[0, 1, 2, 3],[4, 5, 6, 7]] output_shape [%sz0, 7, 8, 9, 10, 2, %sz1, 3] :
     memref<?x?xf32, strided<[?,?], offset: ?>> into
       memref<?x7x8x9x10x2x?x3xf32, strided<[?, ?, ?, ?, ?, ?, ?, ?], offset: ?>>
 
@@ -643,7 +645,7 @@ func.func @extract_strided_metadata_of_expand_shape_all_static_0_rank(
        index, index, index, index, index,
        index, index, index, index, index) {
 
-  %expand_shape = memref.expand_shape %arg[] :
+  %expand_shape = memref.expand_shape %arg[] output_shape [1, 1, 1, 1, 1] :
     memref<i16, strided<[], offset: ?>> into memref<1x1x1x1x1xi16, strided<[1,1,1,1,1], offset: ?>>
 
   %base, %offset, %sizes:5, %strides:5 = memref.extract_strided_metadata %expand_shape :
@@ -1456,6 +1458,7 @@ func.func @extract_strided_metadata_of_cast_w_csts(
       index, index,
       index, index
 }
+
 // -----
 
 // Check that we don't simplify extract_strided_metadata of
@@ -1497,6 +1500,7 @@ func.func @extract_strided_metadata_of_cast_unranked(
 
 
 // -----
+
 memref.global "private" @dynamicShmem : memref<0xf16,3>
 
 // CHECK-LABEL: func @zero_sized_memred

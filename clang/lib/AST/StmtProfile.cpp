@@ -2509,6 +2509,18 @@ void OpenACCClauseProfiler::VisitNumWorkersClause(
   Profiler.VisitStmt(Clause.getIntExpr());
 }
 
+void OpenACCClauseProfiler::VisitPrivateClause(
+    const OpenACCPrivateClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitFirstPrivateClause(
+    const OpenACCFirstPrivateClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
 void OpenACCClauseProfiler::VisitVectorLengthClause(
     const OpenACCVectorLengthClause &Clause) {
   assert(Clause.hasIntExpr() &&
