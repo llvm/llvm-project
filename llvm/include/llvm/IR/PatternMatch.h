@@ -1839,6 +1839,19 @@ template <typename Op_t> struct NNegZExt_match {
   }
 };
 
+template <typename Op_t, unsigned WrapFlags = 0> struct NoWrapTrunc_match {
+  Op_t Op;
+
+  NoWrapTrunc_match(const Op_t &OpMatch) : Op(OpMatch) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *I = dyn_cast<TruncInst>(V))
+      return (I->getNoWrapKind() & WrapFlags) == WrapFlags &&
+             Op.match(I->getOperand(0));
+    return false;
+  }
+};
+
 /// Matches BitCast.
 template <typename OpTy>
 inline CastOperator_match<OpTy, Instruction::BitCast>
@@ -1898,6 +1911,20 @@ m_IntToPtr(const OpTy &Op) {
 template <typename OpTy>
 inline CastOperator_match<OpTy, Instruction::Trunc> m_Trunc(const OpTy &Op) {
   return CastOperator_match<OpTy, Instruction::Trunc>(Op);
+}
+
+/// Matches trunc nuw.
+template <typename OpTy>
+inline NoWrapTrunc_match<OpTy, TruncInst::NoUnsignedWrap>
+m_NUWTrunc(const OpTy &Op) {
+  return NoWrapTrunc_match<OpTy, TruncInst::NoUnsignedWrap>(Op);
+}
+
+/// Matches trunc nsw.
+template <typename OpTy>
+inline NoWrapTrunc_match<OpTy, TruncInst::NoSignedWrap>
+m_NSWTrunc(const OpTy &Op) {
+  return NoWrapTrunc_match<OpTy, TruncInst::NoSignedWrap>(Op);
 }
 
 template <typename OpTy>
@@ -2513,7 +2540,7 @@ inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_CopySign(const Opnd0 &Op0,
 
 template <typename Opnd0>
 inline typename m_Intrinsic_Ty<Opnd0>::Ty m_VecReverse(const Opnd0 &Op0) {
-  return m_Intrinsic<Intrinsic::experimental_vector_reverse>(Op0);
+  return m_Intrinsic<Intrinsic::vector_reverse>(Op0);
 }
 
 //===----------------------------------------------------------------------===//
