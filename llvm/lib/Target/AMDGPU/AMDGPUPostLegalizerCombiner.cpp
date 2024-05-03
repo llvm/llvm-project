@@ -107,11 +107,10 @@ public:
 
   // Find the s_mul_u64 instructions where the higher bits are either
   // zero-extended or sign-extended.
-  bool matchCombine_s_mul_u64(MachineInstr &MI, unsigned &NewOpcode) const;
   // Replace the s_mul_u64 instructions with S_MUL_I64_I32_PSEUDO if the higher
   // 33 bits are sign extended and with S_MUL_U64_U32_PSEUDO if the higher 32
   // bits are zero extended.
-  void applyCombine_s_mul_u64(MachineInstr &MI, unsigned &NewOpcode) const;
+  bool matchCombine_s_mul_u64(MachineInstr &MI, unsigned &NewOpcode) const;
 
 private:
 #define GET_GICOMBINER_CLASS_MEMBERS
@@ -436,11 +435,6 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
     return true;
   }
   return false;
-}
-
-void AMDGPUPostLegalizerCombinerImpl::applyCombine_s_mul_u64(
-    MachineInstr &MI, unsigned &NewOpcode) const {
-  Helper.replaceOpcodeWith(MI, NewOpcode);
 }
 
 // Pass boilerplate
