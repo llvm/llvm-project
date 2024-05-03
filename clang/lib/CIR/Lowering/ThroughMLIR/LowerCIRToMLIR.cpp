@@ -709,6 +709,135 @@ public:
   }
 };
 
+static mlir::Value createIntCast(mlir::ConversionPatternRewriter &rewriter,
+                                 mlir::Value src, mlir::Type dstTy,
+                                 bool isSigned = false) {
+  auto srcTy = src.getType();
+  assert(isa<mlir::IntegerType>(srcTy));
+  assert(isa<mlir::IntegerType>(dstTy));
+
+  auto srcWidth = srcTy.cast<mlir::IntegerType>().getWidth();
+  auto dstWidth = dstTy.cast<mlir::IntegerType>().getWidth();
+  auto loc = src.getLoc();
+
+  if (dstWidth > srcWidth && isSigned)
+    return rewriter.create<mlir::arith::ExtSIOp>(loc, dstTy, src);
+  else if (dstWidth > srcWidth)
+    return rewriter.create<mlir::arith::ExtUIOp>(loc, dstTy, src);
+  else if (dstWidth < srcWidth)
+    return rewriter.create<mlir::arith::TruncIOp>(loc, dstTy, src);
+  else
+    return rewriter.create<mlir::arith::BitcastOp>(loc, dstTy, src);
+}
+
+class CIRCastOpLowering : public mlir::OpConversionPattern<mlir::cir::CastOp> {
+public:
+  using OpConversionPattern<mlir::cir::CastOp>::OpConversionPattern;
+
+  inline mlir::Type convertTy(mlir::Type ty) const {
+    return getTypeConverter()->convertType(ty);
+  }
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::CastOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    if (isa<mlir::cir::VectorType>(op.getSrc().getType()))
+      llvm_unreachable("CastOp lowering for vector type is not supported yet");
+    auto src = adaptor.getSrc();
+    auto dstType = op.getResult().getType();
+    using CIR = mlir::cir::CastKind;
+    switch (op.getKind()) {
+    case CIR::int_to_bool: {
+      auto zero = rewriter.create<mlir::cir::ConstantOp>(
+          src.getLoc(), op.getSrc().getType(),
+          mlir::cir::IntAttr::get(op.getSrc().getType(), 0));
+      rewriter.replaceOpWithNewOp<mlir::cir::CmpOp>(
+          op, mlir::cir::BoolType::get(getContext()), mlir::cir::CmpOpKind::ne,
+          op.getSrc(), zero);
+      return mlir::success();
+    }
+    case CIR::integral: {
+      auto newDstType = convertTy(dstType);
+      auto srcType = op.getSrc().getType();
+      mlir::cir::IntType srcIntType = srcType.cast<mlir::cir::IntType>();
+      auto newOp =
+          createIntCast(rewriter, src, newDstType, srcIntType.isSigned());
+      rewriter.replaceOp(op, newOp);
+      return mlir::success();
+    }
+    case CIR::floating: {
+      auto newDstType = convertTy(dstType);
+      auto srcTy = op.getSrc().getType();
+      auto dstTy = op.getResult().getType();
+
+      if (!dstTy.isa<mlir::cir::CIRFPTypeInterface>() ||
+          !srcTy.isa<mlir::cir::CIRFPTypeInterface>())
+        return op.emitError() << "NYI cast from " << srcTy << " to " << dstTy;
+
+      auto getFloatWidth = [](mlir::Type ty) -> unsigned {
+        return ty.cast<mlir::cir::CIRFPTypeInterface>().getWidth();
+      };
+
+      if (getFloatWidth(srcTy) > getFloatWidth(dstTy))
+        rewriter.replaceOpWithNewOp<mlir::arith::TruncFOp>(op, newDstType, src);
+      else
+        rewriter.replaceOpWithNewOp<mlir::arith::ExtFOp>(op, newDstType, src);
+      return mlir::success();
+    }
+    case CIR::float_to_bool: {
+      auto dstTy = op.getType().cast<mlir::cir::BoolType>();
+      auto newDstType = convertTy(dstTy);
+      auto kind = mlir::arith::CmpFPredicate::UNE;
+
+      // Check if float is not equal to zero.
+      auto zeroFloat = rewriter.create<mlir::arith::ConstantOp>(
+          op.getLoc(), src.getType(), mlir::FloatAttr::get(src.getType(), 0.0));
+
+      // Extend comparison result to either bool (C++) or int (C).
+      mlir::Value cmpResult = rewriter.create<mlir::arith::CmpFOp>(
+          op.getLoc(), kind, src, zeroFloat);
+      rewriter.replaceOpWithNewOp<mlir::arith::ExtUIOp>(op, newDstType,
+                                                        cmpResult);
+      return mlir::success();
+    }
+    case CIR::bool_to_int: {
+      auto dstTy = op.getType().cast<mlir::cir::IntType>();
+      auto newDstType = convertTy(dstTy).cast<mlir::IntegerType>();
+      auto newOp = createIntCast(rewriter, src, newDstType);
+      rewriter.replaceOp(op, newOp);
+      return mlir::success();
+    }
+    case CIR::bool_to_float: {
+      auto dstTy = op.getType();
+      auto newDstType = convertTy(dstTy);
+      rewriter.replaceOpWithNewOp<mlir::arith::UIToFPOp>(op, newDstType, src);
+      return mlir::success();
+    }
+    case CIR::int_to_float: {
+      auto dstTy = op.getType();
+      auto newDstType = convertTy(dstTy);
+      if (op.getSrc().getType().cast<mlir::cir::IntType>().isSigned())
+        rewriter.replaceOpWithNewOp<mlir::arith::SIToFPOp>(op, newDstType, src);
+      else
+        rewriter.replaceOpWithNewOp<mlir::arith::UIToFPOp>(op, newDstType, src);
+      return mlir::success();
+    }
+    case CIR::float_to_int: {
+      auto dstTy = op.getType();
+      auto newDstType = convertTy(dstTy);
+      if (op.getResult().getType().cast<mlir::cir::IntType>().isSigned())
+        rewriter.replaceOpWithNewOp<mlir::arith::FPToSIOp>(op, newDstType, src);
+      else
+        rewriter.replaceOpWithNewOp<mlir::arith::FPToUIOp>(op, newDstType, src);
+      return mlir::success();
+    }
+    default:
+      break;
+    }
+    return mlir::failure();
+  }
+};
+
 void populateCIRToMLIRConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRReturnLowering, CIRBrOpLowering>(patterns.getContext());
@@ -718,7 +847,8 @@ void populateCIRToMLIRConversionPatterns(mlir::RewritePatternSet &patterns,
                CIRStoreOpLowering, CIRAllocaOpLowering, CIRFuncOpLowering,
                CIRScopeOpLowering, CIRBrCondOpLowering, CIRTernaryOpLowering,
                CIRYieldOpLowering, CIRCosOpLowering, CIRGlobalOpLowering,
-               CIRGetGlobalOpLowering>(converter, patterns.getContext());
+               CIRGetGlobalOpLowering, CIRCastOpLowering>(
+      converter, patterns.getContext());
 }
 
 static mlir::TypeConverter prepareTypeConverter() {
