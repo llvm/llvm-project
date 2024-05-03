@@ -202,7 +202,6 @@ void AMDGPUPostLegalizerCombinerImpl::applySelectFCmpToFMinToFMaxLegacy(
     std::swap(X, Y);
   }
 
-  B.setInstrAndDebugLoc(MI);
   B.buildInstr(Opc, {MI.getOperand(0)}, {X, Y}, MI.getFlags());
 
   MI.eraseFromParent();
@@ -230,8 +229,6 @@ bool AMDGPUPostLegalizerCombinerImpl::matchUCharToFloat(
 
 void AMDGPUPostLegalizerCombinerImpl::applyUCharToFloat(
     MachineInstr &MI) const {
-  B.setInstrAndDebugLoc(MI);
-
   const LLT S32 = LLT::scalar(32);
 
   Register DstReg = MI.getOperand(0).getReg();
@@ -350,7 +347,6 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCvtF32UByteN(
 
 void AMDGPUPostLegalizerCombinerImpl::applyCvtF32UByteN(
     MachineInstr &MI, const CvtF32UByteMatchInfo &MatchInfo) const {
-  B.setInstrAndDebugLoc(MI);
   unsigned NewOpc = AMDGPU::G_AMDGPU_CVT_F32_UBYTE0 + MatchInfo.ShiftOffset / 8;
 
   const LLT S32 = LLT::scalar(32);
