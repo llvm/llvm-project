@@ -17,7 +17,7 @@ namespace dwarf {
 
 typedef uint32_t DRC_class; // Holds DRC_* class bitfields
 
-const char *DW_TAG_value_to_name(uint32_t val);
+llvm::StringRef DW_TAG_value_to_name(dw_tag_t tag);
 
 const char *DW_AT_value_to_name(uint32_t val);
 
