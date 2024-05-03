@@ -75,9 +75,8 @@ LLVM::CallOp createSPIRVBuiltinCall(Location loc,
 /// %c1 = llvm.mlir.constant(1: i32) : i32
 /// llvm.call spir_funccc @_Z7barrierj(%c1) : (i32) -> ()
 /// ```
-struct GPUBarrierConversion final
-    : public ConvertOpToLLVMPattern<gpu::BarrierOp> {
-  using ConvertOpToLLVMPattern<gpu::BarrierOp>::ConvertOpToLLVMPattern;
+struct GPUBarrierConversion final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(gpu::BarrierOp op, OpAdaptor adaptor,
@@ -114,7 +113,7 @@ struct GPUBarrierConversion final
 /// %c1 = llvm.mlir.constant(1: i32) : i32
 /// %0 = llvm.call spir_funccc @_Z12get_local_idj(%c1) : (i32) -> i64
 /// ```
-struct LaunchConfigConversion : public ConvertToLLVMPattern {
+struct LaunchConfigConversion : ConvertToLLVMPattern {
   LaunchConfigConversion(StringRef funcName, StringRef rootOpName,
                          MLIRContext *context,
                          const LLVMTypeConverter &typeConverter,
@@ -146,7 +145,7 @@ struct LaunchConfigConversion : public ConvertToLLVMPattern {
 };
 
 template <typename SourceOp>
-struct LaunchConfigOpConversion final : public LaunchConfigConversion {
+struct LaunchConfigOpConversion final : LaunchConfigConversion {
   static StringRef getFuncName();
 
   explicit LaunchConfigOpConversion(const LLVMTypeConverter &typeConverter,
@@ -198,9 +197,8 @@ StringRef LaunchConfigOpConversion<gpu::GlobalIdOp>::getFuncName() {
 /// %0 = llvm.call spir_funccc @_Z17sub_group_shuffledj(%value, %offset)
 ///     : (f64, i32) -> f64
 /// ```
-struct GPUShuffleConversion final
-    : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
-  using ConvertOpToLLVMPattern<gpu::ShuffleOp>::ConvertOpToLLVMPattern;
+struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   static StringRef getBaseName(gpu::ShuffleMode mode) {
     switch (mode) {
@@ -270,7 +268,7 @@ struct GPUShuffleConversion final
         moduleOp, funcName, {valueType, offsetType}, resultType);
 
     Location loc = op->getLoc();
-    SmallVector<Value, 2> args{adaptor.getValue(), adaptor.getOffset()};
+    std::array<Value, 2> args{adaptor.getValue(), adaptor.getOffset()};
     Value result =
         createSPIRVBuiltinCall(loc, rewriter, func, args).getResult();
     Value trueVal =
@@ -285,7 +283,7 @@ struct GPUShuffleConversion final
 //===----------------------------------------------------------------------===//
 
 struct GPUToLLVMSPVConversionPass final
-    : public impl::ConvertGpuOpsToLLVMSPVOpsBase<GPUToLLVMSPVConversionPass> {
+    : impl::ConvertGpuOpsToLLVMSPVOpsBase<GPUToLLVMSPVConversionPass> {
   using Base::Base;
 
   void runOnOperation() final {
