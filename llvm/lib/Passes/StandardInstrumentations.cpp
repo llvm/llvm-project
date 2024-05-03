@@ -1491,10 +1491,11 @@ void VerifyInstrumentation::registerCallbacks(
           if (auto *MF = unwrapIR<MachineFunction>(IR)) {
             if (DebugLogging)
               dbgs() << "Verifying machine function " << MF->getName() << '\n';
-            verifyMachineFunction(formatv("Broken module found after pass "
-                                          "\"{0}\", compilation aborted!",
-                                          P),
-                                  *MF);
+            verifyMachineFunction(
+                formatv("Broken machine function found after pass "
+                        "\"{0}\", compilation aborted!",
+                        P),
+                *MF);
           }
         }
       });
