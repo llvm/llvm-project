@@ -11816,6 +11816,14 @@ void ASTRecordReader::readOMPChildren(OMPChildren *Data) {
     Data->getChildren()[I] = readStmt();
 }
 
+SmallVector<Expr *> ASTRecordReader::readOpenACCVarList() {
+  unsigned NumVars = readInt();
+  llvm::SmallVector<Expr *> VarList;
+  for (unsigned I = 0; I < NumVars; ++I)
+    VarList.push_back(readSubExpr());
+  return VarList;
+}
+
 OpenACCClause *ASTRecordReader::readOpenACCClause() {
   OpenACCClauseKind ClauseKind = readEnum<OpenACCClauseKind>();
   SourceLocation BeginLoc = readSourceLocation();
@@ -11861,6 +11869,12 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCVectorLengthClause::Create(getContext(), BeginLoc, LParenLoc,
                                              IntExpr, EndLoc);
   }
+  case OpenACCClauseKind::Private: {
+    SourceLocation LParenLoc = readSourceLocation();
+    llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+    return OpenACCPrivateClause::Create(getContext(), BeginLoc, LParenLoc,
+                                        VarList, EndLoc);
+  }
   case OpenACCClauseKind::Finalize:
   case OpenACCClauseKind::IfPresent:
   case OpenACCClauseKind::Seq:
@@ -11882,7 +11896,6 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::Link:
   case OpenACCClauseKind::NoCreate:
   case OpenACCClauseKind::Present:
-  case OpenACCClauseKind::Private:
   case OpenACCClauseKind::CopyOut:
   case OpenACCClauseKind::CopyIn:
   case OpenACCClauseKind::Create:
