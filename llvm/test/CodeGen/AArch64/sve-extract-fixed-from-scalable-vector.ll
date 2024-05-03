@@ -307,11 +307,85 @@ define <4 x i64> @extract_v4i64_nxv8i64_0(<vscale x 8 x i64> %arg) {
   ret <4 x i64> %ext
 }
 
+define <4 x half> @extract_v4f16_nxv2f16_0(<vscale x 2 x half> %arg) {
+; CHECK-LABEL: extract_v4f16_nxv2f16_0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    cntd x8
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    addpl x9, sp, #6
+; CHECK-NEXT:    subs x8, x8, #4
+; CHECK-NEXT:    csel x8, xzr, x8, lo
+; CHECK-NEXT:    st1h { z0.d }, p0, [sp, #3, mul vl]
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    csel x8, x8, xzr, lo
+; CHECK-NEXT:    lsl x8, x8, #1
+; CHECK-NEXT:    ldr d0, [x9, x8]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %ext = call <4 x half> @llvm.vector.extract.v4f16.nxv2f16(<vscale x 2 x half> %arg, i64 0)
+  ret <4 x half> %ext
+}
 
-declare <2 x i64> @llvm.vector.extract.v2i64.nxv8i64(<vscale x 8 x i64>, i64)
-declare <4 x i64> @llvm.vector.extract.v4i64.nxv8i64(<vscale x 8 x i64>, i64)
+define <4 x half> @extract_v4f16_nxv2f16_4(<vscale x 2 x half> %arg) {
+; CHECK-LABEL: extract_v4f16_nxv2f16_4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    cntd x8
+; CHECK-NEXT:    mov w9, #4 // =0x4
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    subs x8, x8, #4
+; CHECK-NEXT:    csel x8, xzr, x8, lo
+; CHECK-NEXT:    st1h { z0.d }, p0, [sp, #3, mul vl]
+; CHECK-NEXT:    cmp x8, #4
+; CHECK-NEXT:    csel x8, x8, x9, lo
+; CHECK-NEXT:    addpl x9, sp, #6
+; CHECK-NEXT:    lsl x8, x8, #1
+; CHECK-NEXT:    ldr d0, [x9, x8]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %ext = call <4 x half> @llvm.vector.extract.v4f16.nxv2f16(<vscale x 2 x half> %arg, i64 4)
+  ret <4 x half> %ext
+}
+
+define <2 x half> @extract_v2f16_nxv4f16_2(<vscale x 4 x half> %arg) {
+; CHECK-LABEL: extract_v2f16_nxv4f16_2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.s, z0.s[3]
+; CHECK-NEXT:    mov z0.s, z0.s[2]
+; CHECK-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
+  %ext = call <2 x half> @llvm.vector.extract.v2f16.nxv4f16(<vscale x 4 x half> %arg, i64 2)
+  ret <2 x half> %ext
+}
+
+define <2 x half> @extract_v2f16_nxv4f16_6(<vscale x 4 x half> %arg) {
+; CHECK-LABEL: extract_v2f16_nxv4f16_6:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.s, z0.s[7]
+; CHECK-NEXT:    mov z0.s, z0.s[6]
+; CHECK-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
+  %ext = call <2 x half> @llvm.vector.extract.v2f16.nxv4f16(<vscale x 4 x half> %arg, i64 6)
+  ret <2 x half> %ext
+}
+
 declare <4 x float> @llvm.vector.extract.v4f32.nxv16f32(<vscale x 16 x float>, i64)
 declare <2 x float> @llvm.vector.extract.v2f32.nxv16f32(<vscale x 16 x float>, i64)
+declare <4 x half> @llvm.vector.extract.v4f16.nxv2f16(<vscale x 2 x half>, i64);
+declare <2 x half> @llvm.vector.extract.v2f16.nxv4f16(<vscale x 4 x half>, i64);
+declare <2 x i64> @llvm.vector.extract.v2i64.nxv8i64(<vscale x 8 x i64>, i64)
+declare <4 x i64> @llvm.vector.extract.v4i64.nxv8i64(<vscale x 8 x i64>, i64)
 declare <4 x i32> @llvm.vector.extract.v4i32.nxv16i32(<vscale x 16 x i32>, i64)
 declare <2 x i32> @llvm.vector.extract.v2i32.nxv16i32(<vscale x 16 x i32>, i64)
 declare <8 x i16> @llvm.vector.extract.v8i16.nxv32i16(<vscale x 32 x i16>, i64)
