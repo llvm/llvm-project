@@ -620,7 +620,7 @@ void MachineOutliner::findCandidates(
       // * End before the other starts
       // * Start after the other ends
       unsigned EndIdx = StartIdx + StringLen - 1;
-      if (CandidatesForRepeatedSeq.size() > 0 &&
+      if (!CandidatesForRepeatedSeq.empty() &&
           StartIdx <= CandidatesForRepeatedSeq.back().getEndIdx()) {
 #ifndef NDEBUG
         ++NumDiscarded;
