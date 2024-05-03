@@ -33,11 +33,11 @@ target triple = "x86_64-apple-macosx10.14.0"
 
 ; CHECK-NEXT: #dbg_value(i32 [[ADD1]]
 ; CHECK-SAME:      [[VAR_FROM_INLINE_ME:![0-9]+]]
-; CHECK-SAME:      !dbg [[LINE2]]
+; CHECK-SAME:      [[LINE2]]
 
 ; CHECK-NEXT: #dbg_value(i32 [[ADD1]]
 ; CHECK-SAME:      [[VAR2:![0-9]+]]
-; CHECK-SAME:     !dbg [[LINE4:![0-9]+]]
+; CHECK-SAME:     [[LINE4:![0-9]+]]
 
 
 ; - The DISubprogram for @foo.cold.1 has an empty DISubroutineType

@@ -146,7 +146,7 @@ attributes #0 = { nounwind readnone speculatable willreturn }
 ; IRDEBUG-NEXT:    ret void, !dbg [[DBG34:![0-9]+]]
 ;
 ;
-; IRDEBUG-LABEL: @outlined_ir_func_0(
+; IRDEBUG-LABEL: define {{.+}} @outlined_ir_func_0(
 ; IRDEBUG-NEXT:  newFuncRoot:
 ; IRDEBUG-NEXT:    br label [[ENTRY_TO_OUTLINE:%.*]]
 ; IRDEBUG:       entry_to_outline:

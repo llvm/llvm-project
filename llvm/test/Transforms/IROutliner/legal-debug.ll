@@ -124,7 +124,7 @@ attributes #0 = { nounwind readnone speculatable willreturn }
 ; CHECK-NEXT:    ret void, !dbg [[DBG34:![0-9]+]]
 ;
 ;
-; CHECK-LABEL: @outlined_ir_func_0(
+; CHECK-LABEL: define {{.+}} @outlined_ir_func_0(
 ; CHECK-NEXT:  newFuncRoot:
 ; CHECK-NEXT:    br label [[ENTRY_TO_OUTLINE:%.*]]
 ; CHECK:       entry_to_outline:

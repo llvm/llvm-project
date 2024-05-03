@@ -53,15 +53,15 @@ bb2:
 ; CHECK-LABEL: define void @bar
 ;
 ; CHECK:      #dbg_value(i32 %map, ![[MAPVAR:[0-9]+]],{{.*}}),
-; CHECK-SAME:           !dbg ![[UNKNOWN2:[0-9]+]]
+; CHECK-SAME:           ![[UNKNOWN2:[0-9]+]]
 ; CHECK-NEXT: store
 ; CHECK-NEXT: #dbg_value(ptr %map.addr, ![[MAPVAR]],
 ; CHECK-SAME:           !DIExpression(DW_OP_deref),
-; CHECK-SAME:           !dbg ![[UNKNOWN2]]
+; CHECK-SAME:           ![[UNKNOWN2]]
 ; CHECK-NEXT: call
 ; CHECK-NEXT: load
 ; CHECK-NEXT: #dbg_value(i32 %{{[0-9]+}}, ![[MAPVAR]],
-; CHECK-SAME:           !dbg ![[UNKNOWN2]]
+; CHECK-SAME:           ![[UNKNOWN2]]
 
 define void @bar(i32 %map) !dbg !20 {
 entry:

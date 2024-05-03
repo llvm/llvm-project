@@ -72,8 +72,7 @@ bb2:                                              ; preds = %bb1, %bb
 declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
 ; CHECK: attributes #0 = { nounwind ssp }
-; CHECK: attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #2 = { noinline nounwind ssp }
+; CHECK: attributes #1 = { noinline nounwind ssp }
 
 !llvm.dbg.cu = !{!3}
 !llvm.module.flags = !{!30}
