@@ -169,6 +169,10 @@ New checks
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- New alias :doc:`cert-int09-c <clang-tidy/checks/cert/int09-c>` to
+  :doc:`readability-enum-initial-value <clang-tidy/checks/readability/enum-initial-value>`
+  was added.
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
