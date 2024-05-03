@@ -104,7 +104,7 @@ void addNestedPassToOps(mlir::PassManager &pm, PassConstructor ctor) {
 void addNestedPassToAllTopLevelOperations(
     mlir::PassManager &pm, PassConstructor ctor) {
   addNestedPassToOps<mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
-      fir::GlobalOp>(pm, ctor);
+      mlir::omp::PrivateClauseOp, fir::GlobalOp>(pm, ctor);
 }
 
 void addNestedPassToAllTopLevelOperationsConditionally(mlir::PassManager &pm,
@@ -271,7 +271,7 @@ inline void createDefaultFIROptimizerPassPipeline(
   pm.addPass(mlir::createCSEPass());
 
   // Polymorphic types
-  pm.addPass(fir::createPolymorphicOpConversionPass());
+  pm.addPass(fir::createPolymorphicOpConversion());
 
   if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
     pm.addPass(fir::createAliasTagsPass());

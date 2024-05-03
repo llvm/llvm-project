@@ -483,8 +483,10 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
       IRB.CreateCall(IRG_SP, {Constant::getNullValue(IRB.getInt64Ty())});
   Base->setName("basetag");
   auto TargetTriple = Triple(M.getTargetTriple());
+  // This is not a stable ABI for now, so only allow in dev builds with API
+  // level 10000.
   if (ClRecordStackHistory == instr && TargetTriple.isAndroid() &&
-      TargetTriple.isAArch64() && !TargetTriple.isAndroidVersionLT(36)) {
+      TargetTriple.isAArch64() && !TargetTriple.isAndroidVersionLT(10000)) {
     constexpr int StackMteSlot = -3;
     constexpr uint64_t TagMask = 0xFULL << 56;
 

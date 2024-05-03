@@ -134,35 +134,67 @@ OpenACCNumGangsClause *OpenACCNumGangsClause::Create(const ASTContext &C,
   return new (Mem) OpenACCNumGangsClause(BeginLoc, LParenLoc, IntExprs, EndLoc);
 }
 
+OpenACCPrivateClause *OpenACCPrivateClause::Create(const ASTContext &C,
+                                                   SourceLocation BeginLoc,
+                                                   SourceLocation LParenLoc,
+                                                   ArrayRef<Expr *> VarList,
+                                                   SourceLocation EndLoc) {
+  void *Mem = C.Allocate(
+      OpenACCPrivateClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCPrivateClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenACC clauses printing methods
 //===----------------------------------------------------------------------===//
+
+void OpenACCClausePrinter::printExpr(const Expr *E) {
+  E->printPretty(OS, nullptr, Policy, 0);
+}
+
 void OpenACCClausePrinter::VisitDefaultClause(const OpenACCDefaultClause &C) {
   OS << "default(" << C.getDefaultClauseKind() << ")";
 }
 
 void OpenACCClausePrinter::VisitIfClause(const OpenACCIfClause &C) {
-  OS << "if(" << C.getConditionExpr() << ")";
+  OS << "if(";
+  printExpr(C.getConditionExpr());
+  OS << ")";
 }
 
 void OpenACCClausePrinter::VisitSelfClause(const OpenACCSelfClause &C) {
   OS << "self";
-  if (const Expr *CondExpr = C.getConditionExpr())
-    OS << "(" << CondExpr << ")";
+  if (const Expr *CondExpr = C.getConditionExpr()) {
+    OS << "(";
+    printExpr(CondExpr);
+    OS << ")";
+  }
 }
 
 void OpenACCClausePrinter::VisitNumGangsClause(const OpenACCNumGangsClause &C) {
   OS << "num_gangs(";
-  llvm::interleaveComma(C.getIntExprs(), OS);
+  llvm::interleaveComma(C.getIntExprs(), OS,
+                        [&](const Expr *E) { printExpr(E); });
   OS << ")";
 }
 
 void OpenACCClausePrinter::VisitNumWorkersClause(
     const OpenACCNumWorkersClause &C) {
-  OS << "num_workers(" << C.getIntExpr() << ")";
+  OS << "num_workers(";
+  printExpr(C.getIntExpr());
+  OS << ")";
 }
 
 void OpenACCClausePrinter::VisitVectorLengthClause(
     const OpenACCVectorLengthClause &C) {
-  OS << "vector_length(" << C.getIntExpr() << ")";
+  OS << "vector_length(";
+  printExpr(C.getIntExpr());
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitPrivateClause(const OpenACCPrivateClause &C) {
+  OS << "private(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
 }
