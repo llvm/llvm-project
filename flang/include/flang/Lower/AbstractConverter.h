@@ -219,6 +219,18 @@ public:
   /// function.
   virtual void bindHostAssocTuple(mlir::Value val) = 0;
 
+  /// Returns fir.dummy_scope operation's result value to be used
+  /// as dummy_scope operand of hlfir.declare operations for the dummy
+  /// arguments of this function.
+  virtual mlir::Value dummyArgsScopeValue() const = 0;
+
+  /// Returns true if the given symbol is a dummy argument of this function.
+  /// Note that it returns false for all the symbols after all the variables
+  /// are instantiated for this function, i.e. it can only be used reliably
+  /// during the instatiation of the variables.
+  virtual bool
+  isRegisteredDummySymbol(Fortran::semantics::SymbolRef symRef) const = 0;
+
   //===--------------------------------------------------------------------===//
   // Types
   //===--------------------------------------------------------------------===//
