@@ -1,10 +1,13 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -O3 -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -O3 -fmath-errno -ffp-contract=on -fno-rounding-math -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -ffast-math -ffp-contract=fast -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang -O3 -S -emit-llvm -Xclang -disable-llvm-passes %s -o - | FileCheck %s
-// RUN: %clang -O3 -ffp-model=fast -S -emit-llvm -Xclang -disable-llvm-passes %s -o - | FileCheck %s
-// RUN: %clang -O3 -ffp-model=precise -S -emit-llvm -Xclang -disable-llvm-passes %s -o - | FileCheck %s
+
+// precise mode
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fmath-errno -ffp-contract=on \
+// RUN: -fno-rounding-math -emit-llvm  -o - %s | FileCheck \
+// RUN: --check-prefix=CHECK-PRECISE %s
+
+// fast mode
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -ffast-math -ffp-contract=fast \
+// RUN: -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-FAST %s
 
 // Reproducer for issue #87758
 // The testcase below verifies that the "fast" flag are set on the calls.
@@ -16,12 +19,23 @@ char *rindex(const char *s, int c); // not a fp builtin
 
 #pragma float_control(push)
 #pragma float_control(precise, off)
-// CHECK-LABEL: define
-// CHECK-SAME:  float @fp_precise_off_libm_calls(
+// CHECK: define dso_local float @fp_precise_off_libm_calls(
 // CHECK: %{{.*}} = call fast float @llvm.sqrt.f32(
 // CHECK: %{{.*}} = call fast float @llvm.pow.f32(
 // CHECK: %{{.*}} = call fast float @llvm.fma.f32(
 // CHECK: %{{.*}} = call ptr @rindex(
+
+// CHECK-PRECISE: define dso_local float @fp_precise_off_libm_calls(
+// CHECK-PRECISE: %{{.*}} = call fast float @sqrtf(
+// CHECK-PRECISE: %{{.*}} = call fast float @powf(
+// CHECK-PRECISE: %{{.*}} = call fast float @llvm.fma.f32(
+// CHECK-PRECISE: %{{.*}} = call ptr @rindex(
+
+// CHECK-FAST: define dso_local nofpclass(nan inf) float @fp_precise_off_libm_calls(
+// CHECK-FAST: %{{.*}} = call fast float @llvm.sqrt.f32(
+// CHECK-FAST: %{{.*}} = call fast float @llvm.pow.f32(
+// CHECK-FAST: %{{.*}} = call fast float @llvm.fma.f32(
+// CHECK-FAST: %{{.*}} = call ptr @rindex(
 
 float fp_precise_off_libm_calls(float a, float b, float c, const char *d, char *e, unsigned char f) {
   a = sqrtf(a);
@@ -34,16 +48,23 @@ float fp_precise_off_libm_calls(float a, float b, float c, const char *d, char *
 
 #pragma float_control(push)
 #pragma float_control(precise, on)
-// CHECK-LABEL: define
-// CHECK-SAME:  float @fp_precise_on_libm_calls(
-// CHECK: %{{.*}} = call
-// CHECK-NOT: fast
-// CHECK-SAME: float @sqrtf(
-// CHECK: %{{.*}} = call
-// CHECK-NOT: fast
-// CHECK-SAME: float @powf(
+// CHECK: define dso_local float @fp_precise_on_libm_calls(
+// CHECK: %{{.*}} = call float @sqrtf(
+// CHECK: %{{.*}} = call float @powf(
 // CHECK: %{{.*}} = call float @llvm.fma.f32(
 // CHECK: %{{.*}} = call ptr @rindex(
+
+// CHECK-PRECISE: define dso_local float @fp_precise_on_libm_calls(
+// CHECK-PRECISE: %{{.*}} = call float @sqrtf(
+// CHECK-PRECISE: %{{.*}} = call float @powf(
+// CHECK-PRECISE: %{{.*}} = call float @llvm.fma.f32(
+// CHECK-PRECISE: %{{.*}} = call ptr @rindex(
+
+// CHECK-FAST: define dso_local nofpclass(nan inf) float @fp_precise_on_libm_calls(
+// CHECK-FAST: %{{.*}} = call nofpclass(nan inf) float @sqrtf(
+// CHECK-FAST: %{{.*}} = call nofpclass(nan inf) float @powf(
+// CHECK-FAST: %{{.*}} = call float @llvm.fma.f32(
+// CHECK-FAST: %{{.*}} = call ptr @rindex(
 
 float fp_precise_on_libm_calls(float a, float b, float c, const char *d, char *e, unsigned char f) {
   a = sqrtf(a);
