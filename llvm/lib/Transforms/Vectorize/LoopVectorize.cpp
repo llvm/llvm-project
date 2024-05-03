@@ -1571,13 +1571,7 @@ public:
   /// Returns true if VP intrinsics with explicit vector length support should
   /// be generated in the tail folded loop.
   bool foldTailWithEVL() const {
-    return getTailFoldingStyle() == TailFoldingStyle::DataWithEVL &&
-           // FIXME: remove this once vp_reverse is supported.
-           none_of(
-               WideningDecisions,
-               [](const std::pair<std::pair<Instruction *, ElementCount>,
-                                  std::pair<InstWidening, InstructionCost>>
-                      &Data) { return Data.second.first == CM_Widen_Reverse; });
+    return getTailFoldingStyle() == TailFoldingStyle::DataWithEVL;
   }
 
   /// Returns true if the Phi is part of an inloop reduction.
@@ -9388,12 +9382,18 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
   }
 }
 
+static Instruction *createReverseEVL(IRBuilderBase &Builder, Value *Operand,
+                                     Value *EVL, const Twine &Name) {
+  VectorType *ValTy = cast<VectorType>(Operand->getType());
+  Value *AllTrueMask =
+      Builder.CreateVectorSplat(ValTy->getElementCount(), Builder.getTrue());
+  return Builder.CreateIntrinsic(ValTy, Intrinsic::experimental_vp_reverse,
+                                 {Operand, AllTrueMask, EVL}, nullptr, Name);
+}
+
 void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
                           "explicit vector length.");
-  // FIXME: Support reverse loading after vp_reverse is added.
-  assert(!isReverse() && "Reverse loads are not implemented yet.");
-
   auto *LI = cast<LoadInst>(&Ingredient);
 
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
@@ -9406,9 +9406,15 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   CallInst *NewLI;
   Value *EVL = State.get(getEVL(), VPIteration(0, 0));
   Value *Addr = State.get(getAddr(), 0, !CreateGather);
-  Value *Mask = getMask()
-                    ? State.get(getMask(), 0)
-                    : Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  Value *Mask = nullptr;
+  if (VPValue *VPMask = getMask()) {
+    Mask = State.get(VPMask, 0);
+    if (isReverse())
+      Mask = createReverseEVL(Builder, Mask, EVL, "vp.reverse.mask");
+  } else {
+    Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  }
+
   if (CreateGather) {
     NewLI =
         Builder.CreateIntrinsic(DataTy, Intrinsic::vp_gather, {Addr, Mask, EVL},
@@ -9422,7 +9428,13 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   NewLI->addParamAttr(
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
   State.addMetadata(NewLI, LI);
-  State.set(this, NewLI, 0);
+  Instruction *Res = NewLI;
+  if (isReverse()) {
+    // Use cheap all-true mask for reverse rather than actual mask, it does not
+    // affect the result.
+    Res = createReverseEVL(Builder, Res, EVL, "vp.reverse");
+  }
+  State.set(this, Res, 0);
 }
 
 void VPWidenStoreRecipe::execute(VPTransformState &State) {
@@ -9468,9 +9480,6 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
 void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   assert(State.UF == 1 && "Expected only UF == 1 when vectorizing with "
                           "explicit vector length.");
-  // FIXME: Support reverse loading after vp_reverse is added.
-  assert(!isReverse() && "Reverse store are not implemented yet.");
-
   auto *SI = cast<StoreInst>(&Ingredient);
 
   VPValue *StoredValue = getStoredValue();
@@ -9483,10 +9492,19 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   CallInst *NewSI = nullptr;
   Value *StoredVal = State.get(StoredValue, 0);
   Value *EVL = State.get(getEVL(), VPIteration(0, 0));
-  // FIXME: Support reverse store after vp_reverse is added.
-  Value *Mask = getMask()
-                    ? State.get(getMask(), 0)
-                    : Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  if (isReverse()) {
+    // Use cheap all-true mask for reverse rather than actual mask, it does not
+    // affect the result.
+    StoredVal = createReverseEVL(Builder, StoredVal, EVL, "vp.reverse");
+  }
+  Value *Mask = nullptr;
+  if (VPValue *VPMask = getMask()) {
+    Mask = State.get(VPMask, 0);
+    if (isReverse())
+      Mask = createReverseEVL(Builder, Mask, EVL, "vp.reverse.mask");
+  } else {
+    Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
+  }
   Value *Addr = State.get(getAddr(), 0, !CreateScatter);
   if (CreateScatter) {
     NewSI = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),
