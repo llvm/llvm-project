@@ -315,7 +315,7 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
     RefCost = TripCount;
 
     int Index = getSubscriptIndex(L);
-    assert(Index >= 0 && "Cound not locate a valid Index");
+    assert(Index >= 0 && "Could not locate a valid Index");
 
     for (unsigned I = Index + 1; I < getNumSubscripts() - 1; ++I) {
       const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(getSubscript(I));

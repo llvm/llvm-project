@@ -23,17 +23,6 @@ package(
 
 licenses(["notice"])
 
-PRINTF_COPTS = [
-    "LIBC_COPT_STDIO_USE_SYSTEM_FILE",
-    "LIBC_COPT_PRINTF_DISABLE_WRITE_INT",
-]
-
-MEMORY_COPTS = [
-    # "LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE=0",
-    # "LIBC_COPT_MEMCPY_X86_USE_SOFTWARE_PREFETCHING",
-    # "LIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING",
-]
-
 # A flag to pick which `mpfr` to use for math tests.
 # Usage: `--@llvm-project//libc:mpfr=<disable|external|system>`.
 # Flag documentation: https://bazel.build/extending/config
@@ -129,6 +118,16 @@ libc_support_library(
 )
 
 ############################ Type Proxy Header Files ###########################
+
+libc_support_library(
+    name = "types_fenv_t",
+    hdrs = ["hdr/types/fenv_t.h"],
+)
+
+libc_support_library(
+    name = "types_fexcept_t",
+    hdrs = ["hdr/types/fexcept_t.h"],
+)
 
 libc_support_library(
     name = "types_sigset_t",
@@ -776,6 +775,7 @@ libc_support_library(
         ":errno",
         ":hdr_fenv_macros",
         ":hdr_math_macros",
+        ":types_fenv_t",
     ],
 )
 
@@ -1030,6 +1030,7 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
+        ":__support_macros_sanitizer",
     ],
 )
 
@@ -1131,6 +1132,17 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_fputil_fenv_impl",
+    ],
+)
+
+libc_function(
+    name = "fetestexceptflag",
+    srcs = ["src/fenv/fetestexceptflag.cpp"],
+    hdrs = ["src/fenv/fetestexceptflag.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fenv_impl",
+        ":types_fexcept_t",
     ],
 )
 
@@ -1251,6 +1263,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_fputil_fenv_impl",
+        ":types_fexcept_t",
     ],
 )
 
@@ -1261,6 +1274,7 @@ libc_function(
     deps = [
         ":__support_common",
         ":__support_fputil_fenv_impl",
+        ":types_fexcept_t",
     ],
 )
 
@@ -2396,7 +2410,6 @@ libc_support_library(
         "src/string/memory_utils/op_x86.h",
         "src/string/memory_utils/utils.h",
     ],
-    defines = MEMORY_COPTS,
     textual_hdrs = [
         "src/string/memory_utils/aarch64/inline_bcmp.h",
         "src/string/memory_utils/aarch64/inline_memcmp.h",
@@ -2974,6 +2987,7 @@ libc_function(
     hdrs = ["src/unistd/pipe.h"],
     deps = [
         ":__support_common",
+        ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
     ],
@@ -3001,6 +3015,7 @@ libc_function(
     }),
     deps = [
         ":__support_common",
+        ":__support_macros_sanitizer",
         ":__support_osutil_syscall",
         ":errno",
     ],
@@ -3164,7 +3179,6 @@ libc_function(
 libc_support_library(
     name = "printf_config",
     hdrs = ["src/stdio/printf_core/printf_config.h"],
-    defines = PRINTF_COPTS,
     deps = [
     ],
 )
@@ -3172,7 +3186,6 @@ libc_support_library(
 libc_support_library(
     name = "printf_core_structs",
     hdrs = ["src/stdio/printf_core/core_structs.h"],
-    defines = PRINTF_COPTS,
     deps = [
         ":__support_cpp_string_view",
         ":__support_fputil_fp_bits",
@@ -3183,7 +3196,6 @@ libc_support_library(
 libc_support_library(
     name = "printf_parser",
     hdrs = ["src/stdio/printf_core/parser.h"],
-    defines = PRINTF_COPTS,
     deps = [
         ":__support_arg_list",
         ":__support_common",
@@ -3204,7 +3216,7 @@ libc_support_library(
 libc_support_library(
     name = "printf_mock_parser",
     hdrs = ["src/stdio/printf_core/parser.h"],
-    defines = PRINTF_COPTS + ["LIBC_COPT_MOCK_ARG_LIST"],
+    local_defines = ["LIBC_COPT_MOCK_ARG_LIST"],
     deps = [
         ":__support_arg_list",
         ":__support_common",
@@ -3224,7 +3236,6 @@ libc_support_library(
     name = "printf_writer",
     srcs = ["src/stdio/printf_core/writer.cpp"],
     hdrs = ["src/stdio/printf_core/writer.h"],
-    defines = PRINTF_COPTS,
     deps = [
         ":__support_cpp_string_view",
         ":__support_macros_optimization",
@@ -3249,7 +3260,6 @@ libc_support_library(
         "src/stdio/printf_core/string_converter.h",
         "src/stdio/printf_core/write_int_converter.h",
     ],
-    defines = PRINTF_COPTS,
     deps = [
         ":__support_big_int",
         ":__support_common",
@@ -3273,7 +3283,6 @@ libc_support_library(
     name = "printf_main",
     srcs = ["src/stdio/printf_core/printf_main.cpp"],
     hdrs = ["src/stdio/printf_core/printf_main.h"],
-    defines = PRINTF_COPTS,
     deps = [
         ":__support_arg_list",
         ":printf_converter",
@@ -3286,7 +3295,6 @@ libc_support_library(
 libc_support_library(
     name = "vfprintf_internal",
     hdrs = ["src/stdio/printf_core/vfprintf_internal.h"],
-    defines = PRINTF_COPTS,
     deps = [
         ":__support_arg_list",
         ":__support_file_file",
@@ -3300,7 +3308,6 @@ libc_function(
     name = "sprintf",
     srcs = ["src/stdio/sprintf.cpp"],
     hdrs = ["src/stdio/sprintf.h"],
-    defines = PRINTF_COPTS,
     deps = [
         ":__support_arg_list",
         ":__support_cpp_limits",
@@ -3314,7 +3321,6 @@ libc_function(
     name = "snprintf",
     srcs = ["src/stdio/snprintf.cpp"],
     hdrs = ["src/stdio/snprintf.h"],
-    defines = PRINTF_COPTS,
     deps = [
         ":__support_arg_list",
         ":errno",
@@ -3327,7 +3333,6 @@ libc_function(
     name = "printf",
     srcs = ["src/stdio/printf.cpp"],
     hdrs = ["src/stdio/printf.h"],
-    defines = PRINTF_COPTS,
     deps = [
         ":__support_arg_list",
         ":__support_file_file",
@@ -3340,7 +3345,6 @@ libc_function(
     name = "fprintf",
     srcs = ["src/stdio/fprintf.cpp"],
     hdrs = ["src/stdio/fprintf.h"],
-    defines = PRINTF_COPTS,
     deps = [
         ":__support_arg_list",
         ":__support_file_file",
@@ -3353,7 +3357,6 @@ libc_function(
     name = "vsprintf",
     srcs = ["src/stdio/vsprintf.cpp"],
     hdrs = ["src/stdio/vsprintf.h"],
-    defines = PRINTF_COPTS,
     deps = [
         ":__support_arg_list",
         ":__support_cpp_limits",
@@ -3367,7 +3370,6 @@ libc_function(
     name = "vsnprintf",
     srcs = ["src/stdio/vsnprintf.cpp"],
     hdrs = ["src/stdio/vsnprintf.h"],
-    defines = PRINTF_COPTS,
     deps = [
         ":__support_arg_list",
         ":errno",
@@ -3380,7 +3382,6 @@ libc_function(
     name = "vprintf",
     srcs = ["src/stdio/vprintf.cpp"],
     hdrs = ["src/stdio/vprintf.h"],
-    defines = PRINTF_COPTS,
     deps = [
         ":__support_arg_list",
         ":__support_file_file",
@@ -3393,7 +3394,6 @@ libc_function(
     name = "vfprintf",
     srcs = ["src/stdio/vfprintf.cpp"],
     hdrs = ["src/stdio/vfprintf.h"],
-    defines = PRINTF_COPTS,
     deps = [
         ":__support_arg_list",
         ":__support_file_file",

@@ -1627,8 +1627,8 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitArraySubscriptExpr(cast<ArraySubscriptExpr>(E));
   case Expr::MatrixSubscriptExprClass:
     return EmitMatrixSubscriptExpr(cast<MatrixSubscriptExpr>(E));
-  case Expr::OMPArraySectionExprClass:
-    return EmitOMPArraySectionExpr(cast<OMPArraySectionExpr>(E));
+  case Expr::ArraySectionExprClass:
+    return EmitArraySectionExpr(cast<ArraySectionExpr>(E));
   case Expr::ExtVectorElementExprClass:
     return EmitExtVectorElementExpr(cast<ExtVectorElementExpr>(E));
   case Expr::CXXThisExprClass:
@@ -4369,8 +4369,8 @@ static Address emitOMPArraySectionBase(CodeGenFunction &CGF, const Expr *Base,
                                        QualType BaseTy, QualType ElTy,
                                        bool IsLowerBound) {
   LValue BaseLVal;
-  if (auto *ASE = dyn_cast<OMPArraySectionExpr>(Base->IgnoreParenImpCasts())) {
-    BaseLVal = CGF.EmitOMPArraySectionExpr(ASE, IsLowerBound);
+  if (auto *ASE = dyn_cast<ArraySectionExpr>(Base->IgnoreParenImpCasts())) {
+    BaseLVal = CGF.EmitArraySectionExpr(ASE, IsLowerBound);
     if (BaseTy->isArrayType()) {
       Address Addr = BaseLVal.getAddress(CGF);
       BaseInfo = BaseLVal.getBaseInfo();
@@ -4402,9 +4402,13 @@ static Address emitOMPArraySectionBase(CodeGenFunction &CGF, const Expr *Base,
   return CGF.EmitPointerWithAlignment(Base, &BaseInfo, &TBAAInfo);
 }
 
-LValue CodeGenFunction::EmitOMPArraySectionExpr(const OMPArraySectionExpr *E,
-                                                bool IsLowerBound) {
-  QualType BaseTy = OMPArraySectionExpr::getBaseOriginalType(E->getBase());
+LValue CodeGenFunction::EmitArraySectionExpr(const ArraySectionExpr *E,
+                                             bool IsLowerBound) {
+
+  assert(!E->isOpenACCArraySection() &&
+         "OpenACC Array section codegen not implemented");
+
+  QualType BaseTy = ArraySectionExpr::getBaseOriginalType(E->getBase());
   QualType ResultExprTy;
   if (auto *AT = getContext().getAsArrayType(BaseTy))
     ResultExprTy = AT->getElementType();
@@ -4710,7 +4714,7 @@ unsigned CodeGenFunction::getDebugInfoFIndex(const RecordDecl *Rec,
   for (auto *F : Rec->getDefinition()->fields()) {
     if (I == FieldIndex)
       break;
-    if (F->isUnnamedBitfield())
+    if (F->isUnnamedBitField())
       Skipped++;
     I++;
   }

@@ -2,12 +2,6 @@ include(ExternalProject)
 include(CompilerRTUtils)
 include(HandleCompilerRT)
 
-# CMP0114: ExternalProject step targets fully adopt their steps.
-# New in CMake 3.19: https://cmake.org/cmake/help/latest/policy/CMP0114.html
-if(POLICY CMP0114)
-  cmake_policy(SET CMP0114 OLD)
-endif()
-
 function(set_target_output_directories target output_dir)
   # For RUNTIME_OUTPUT_DIRECTORY variable, Multi-configuration generators
   # append a per-configuration subdirectory to the specified directory.
@@ -771,6 +765,7 @@ function(configure_compiler_rt_lit_site_cfg input output)
   get_compiler_rt_output_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} output_dir)
 
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_TEST_COMPILER ${COMPILER_RT_TEST_COMPILER})
+  string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_OUTPUT_DIR ${COMPILER_RT_OUTPUT_DIR})
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} COMPILER_RT_RESOLVED_LIBRARY_OUTPUT_DIR ${output_dir})
 
   configure_lit_site_cfg(${input} ${output})

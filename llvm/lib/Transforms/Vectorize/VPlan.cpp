@@ -1300,18 +1300,7 @@ void VPValue::replaceUsesWithIf(
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPValue::printAsOperand(raw_ostream &OS, VPSlotTracker &Tracker) const {
-  if (const Value *UV = getUnderlyingValue()) {
-    OS << "ir<";
-    UV->printAsOperand(OS, false);
-    OS << ">";
-    return;
-  }
-
-  unsigned Slot = Tracker.getSlot(this);
-  if (Slot == unsigned(-1))
-    OS << "<badref>";
-  else
-    OS << "vp<%" << Tracker.getSlot(this) << ">";
+  OS << Tracker.getOrCreateName(this);
 }
 
 void VPUser::printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const {
@@ -1373,32 +1362,88 @@ VPInterleavedAccessInfo::VPInterleavedAccessInfo(VPlan &Plan,
   visitRegion(Plan.getVectorLoopRegion(), Old2New, IAI);
 }
 
-void VPSlotTracker::assignSlot(const VPValue *V) {
-  if (V->getUnderlyingValue())
+void VPSlotTracker::assignName(const VPValue *V) {
+  assert(!VPValue2Name.contains(V) && "VPValue already has a name!");
+  auto *UV = V->getUnderlyingValue();
+  if (!UV) {
+    VPValue2Name[V] = (Twine("vp<%") + Twine(NextSlot) + ">").str();
+    NextSlot++;
     return;
-  assert(!Slots.contains(V) && "VPValue already has a slot!");
-  Slots[V] = NextSlot++;
+  }
+
+  // Use the name of the underlying Value, wrapped in "ir<>", and versioned by
+  // appending ".Number" to the name if there are multiple uses.
+  std::string Name;
+  raw_string_ostream S(Name);
+  UV->printAsOperand(S, false);
+  assert(!Name.empty() && "Name cannot be empty.");
+  std::string BaseName = (Twine("ir<") + Name + Twine(">")).str();
+
+  // First assign the base name for V.
+  const auto &[A, _] = VPValue2Name.insert({V, BaseName});
+  // Integer or FP constants with different types will result in he same string
+  // due to stripping types.
+  if (V->isLiveIn() && isa<ConstantInt, ConstantFP>(UV))
+    return;
+
+  // If it is already used by C > 0 other VPValues, increase the version counter
+  // C and use it for V.
+  const auto &[C, UseInserted] = BaseName2Version.insert({BaseName, 0});
+  if (!UseInserted) {
+    C->second++;
+    A->second = (BaseName + Twine(".") + Twine(C->second)).str();
+  }
 }
 
-void VPSlotTracker::assignSlots(const VPlan &Plan) {
+void VPSlotTracker::assignNames(const VPlan &Plan) {
   if (Plan.VFxUF.getNumUsers() > 0)
-    assignSlot(&Plan.VFxUF);
-  assignSlot(&Plan.VectorTripCount);
+    assignName(&Plan.VFxUF);
+  assignName(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)
-    assignSlot(Plan.BackedgeTakenCount);
-  assignSlots(Plan.getPreheader());
+    assignName(Plan.BackedgeTakenCount);
+  for (VPValue *LI : Plan.VPLiveInsToFree)
+    assignName(LI);
+  assignNames(Plan.getPreheader());
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<const VPBlockBase *>>
       RPOT(VPBlockDeepTraversalWrapper<const VPBlockBase *>(Plan.getEntry()));
   for (const VPBasicBlock *VPBB :
        VPBlockUtils::blocksOnly<const VPBasicBlock>(RPOT))
-    assignSlots(VPBB);
+    assignNames(VPBB);
 }
 
-void VPSlotTracker::assignSlots(const VPBasicBlock *VPBB) {
+void VPSlotTracker::assignNames(const VPBasicBlock *VPBB) {
   for (const VPRecipeBase &Recipe : *VPBB)
     for (VPValue *Def : Recipe.definedValues())
-      assignSlot(Def);
+      assignName(Def);
+}
+
+std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
+  std::string Name = VPValue2Name.lookup(V);
+  if (!Name.empty())
+    return Name;
+
+  // If no name was assigned, no VPlan was provided when creating the slot
+  // tracker or it is not reachable from the provided VPlan. This can happen,
+  // e.g. when trying to print a recipe that has not been inserted into a VPlan
+  // in a debugger.
+  // TODO: Update VPSlotTracker constructor to assign names to recipes &
+  // VPValues not associated with a VPlan, instead of constructing names ad-hoc
+  // here.
+  const VPRecipeBase *DefR = V->getDefiningRecipe();
+  (void)DefR;
+  assert((!DefR || !DefR->getParent() || !DefR->getParent()->getPlan()) &&
+         "VPValue defined by a recipe in a VPlan?");
+
+  // Use the underlying value's name, if there is one.
+  if (auto *UV = V->getUnderlyingValue()) {
+    std::string Name;
+    raw_string_ostream S(Name);
+    UV->printAsOperand(S, false);
+    return (Twine("ir<") + Name + ">").str();
+  }
+
+  return "<badref>";
 }
 
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {

@@ -1219,7 +1219,7 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
         // All the operands must must be equal to the specified type
         auto typeattr =
             dyn_cast<mlir::TypeAttr>(getFilterOperandTypes().value()[0]);
-        Type t = typeattr.getValue().cast<::mlir::Type>();
+        Type t = cast<::mlir::Type>(typeattr.getValue());
         if (!llvm::all_of(op->getOperandTypes(),
                           [&](Type operandType) { return operandType == t; }))
           return;
@@ -1234,7 +1234,7 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
         for (auto [attr, operandType] :
              llvm::zip_equal(getFilterOperandTypes().value(), operandTypes)) {
           auto typeattr = cast<mlir::TypeAttr>(attr);
-          Type type = typeattr.getValue().cast<::mlir::Type>();
+          Type type = cast<::mlir::Type>(typeattr.getValue());
 
           if (type != operandType)
             return;
@@ -2665,7 +2665,7 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
           if (auto attr = llvm::dyn_cast_if_present<Attribute>(ofr)) {
             if (scalableSizes[ofrIdx]) {
               auto val = b.create<arith::ConstantIndexOp>(
-                  getLoc(), attr.cast<IntegerAttr>().getInt());
+                  getLoc(), cast<IntegerAttr>(attr).getInt());
               Value vscale =
                   b.create<vector::VectorScaleOp>(getLoc(), b.getIndexType());
               sizes.push_back(
@@ -3307,6 +3307,21 @@ transform::HoistRedundantVectorTransfersOp::applyToOne(
 }
 
 //===----------------------------------------------------------------------===//
+// HoistRedundantVectorBroadcastsOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::HoistRedundantVectorBroadcastsOp::applyToOne(
+    transform::TransformRewriter &rewriter, mlir::Operation *target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  rewriter.setInsertionPoint(target);
+  linalg::hoistRedundantVectorBroadcasts(rewriter, target);
+  results.push_back(target);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConvertConv2DToImg2ColOp.
 //===----------------------------------------------------------------------===//
 
@@ -3397,6 +3412,32 @@ DiagnosedSilenceableFailure transform::TransposeConv2DOp::applyToOne(
   if (failed(maybeTransformed))
     return emitDefaultSilenceableFailure(target);
   // Handle to the new Conv2D operation with transposed filters
+  results.push_back(*maybeTransformed);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// TransposeMatmulOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::TransposeMatmulOp::applyToOne(
+    transform::TransformRewriter &rewriter, linalg::LinalgOp target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  rewriter.setInsertionPoint(target);
+  bool transposeLHS = getInputToTranspose() == TransposeMatmulInput::lhs;
+  auto maybeTransformed =
+      TypeSwitch<Operation *, FailureOr<Operation *>>(target)
+          .Case([&](linalg::MatmulOp op) {
+            return transposeMatmul(rewriter, op, transposeLHS);
+          })
+          .Case([&](linalg::BatchMatmulOp op) {
+            return transposeBatchMatmul(rewriter, op, transposeLHS);
+          })
+          .Default([&](Operation *op) { return failure(); });
+  if (failed(maybeTransformed))
+    return emitSilenceableFailure(target->getLoc()) << "not supported";
+  // Handle to the new Matmul operation with transposed filters
   results.push_back(*maybeTransformed);
   return DiagnosedSilenceableFailure::success();
 }

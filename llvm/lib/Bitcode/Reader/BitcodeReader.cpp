@@ -4319,7 +4319,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
   if (PreserveInputDbgFormat != cl::boolOrDefault::BOU_TRUE) {
     TheModule->IsNewDbgInfoFormat =
         UseNewDbgInfoFormat &&
-        LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_TRUE;
+        LoadBitcodeIntoNewDbgInfoFormat != cl::boolOrDefault::BOU_FALSE;
   }
 
   this->ValueTypeCallback = std::move(Callbacks.ValueType);
@@ -6454,6 +6454,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     case bitc::FUNC_CODE_DEBUG_RECORD_LABEL: {
       // DbgLabelRecords are placed after the Instructions that they are
       // attached to.
+      SeenDebugRecord = true;
       Instruction *Inst = getLastInstruction();
       if (!Inst)
         return error("Invalid dbg record: missing instruction");
@@ -7512,9 +7513,14 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       TheIndex.setFlags(Record[0]);
       break;
     }
-    case bitc::FS_VALUE_GUID: { // [valueid, refguid]
+    case bitc::FS_VALUE_GUID: { // [valueid, refguid_upper32, refguid_lower32]
       uint64_t ValueID = Record[0];
-      GlobalValue::GUID RefGUID = Record[1];
+      GlobalValue::GUID RefGUID;
+      if (Version >= 10) {
+        RefGUID = Record[1] << 32 | Record[2];
+      } else {
+        RefGUID = Record[1];
+      }
       ValueIdToValueInfoMap[ValueID] = std::make_tuple(
           TheIndex.getOrInsertValueInfo(RefGUID), RefGUID, RefGUID);
       break;

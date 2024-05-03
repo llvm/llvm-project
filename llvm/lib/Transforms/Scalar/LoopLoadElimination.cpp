@@ -126,8 +126,10 @@ struct StoreToLoadForwardingCandidate {
 
     // We don't need to check non-wrapping here because forward/backward
     // dependence wouldn't be valid if these weren't monotonic accesses.
-    auto *Dist = cast<SCEVConstant>(
+    auto *Dist = dyn_cast<SCEVConstant>(
         PSE.getSE()->getMinusSCEV(StorePtrSCEV, LoadPtrSCEV));
+    if (!Dist)
+      return false;
     const APInt &Val = Dist->getAPInt();
     return Val == TypeByteSize * StrideLoad;
   }

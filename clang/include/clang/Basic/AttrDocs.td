@@ -1604,39 +1604,39 @@ specifies availability for the current target platform, the availability
 attributes are ignored. Supported platforms are:
 
 ``ios``
-  Apple's iOS operating system. The minimum deployment target is specified 
-  as part of the ``-target *arch*-apple-ios*version*`` command line argument. 
-  Alternatively, it can be specified by the ``-mtargetos=ios*version*`` 
+  Apple's iOS operating system. The minimum deployment target is specified
+  as part of the ``-target *arch*-apple-ios*version*`` command line argument.
+  Alternatively, it can be specified by the ``-mtargetos=ios*version*``
   command-line argument.
 
 ``macos``
-  Apple's macOS operating system. The minimum deployment target is specified 
-  as part of the ``-target *arch*-apple-macos*version*`` command line argument. 
-  Alternatively, it can be specified by the ``-mtargetos=macos*version*`` 
-  command-line argument. ``macosx`` is supported for 
+  Apple's macOS operating system. The minimum deployment target is specified
+  as part of the ``-target *arch*-apple-macos*version*`` command line argument.
+  Alternatively, it can be specified by the ``-mtargetos=macos*version*``
+  command-line argument. ``macosx`` is supported for
   backward-compatibility reasons, but it is deprecated.
 
 ``tvos``
-  Apple's tvOS operating system. The minimum deployment target is specified 
-  as part of the ``-target *arch*-apple-tvos*version*`` command line argument. 
-  Alternatively, it can be specified by the ``-mtargetos=tvos*version*`` 
+  Apple's tvOS operating system. The minimum deployment target is specified
+  as part of the ``-target *arch*-apple-tvos*version*`` command line argument.
+  Alternatively, it can be specified by the ``-mtargetos=tvos*version*``
   command-line argument.
 
 ``watchos``
   Apple's watchOS operating system. The minimum deployment target is specified
-  as part of the ``-target *arch*-apple-watchos*version*`` command line argument. 
-  Alternatively, it can be specified by the ``-mtargetos=watchos*version*`` 
+  as part of the ``-target *arch*-apple-watchos*version*`` command line argument.
+  Alternatively, it can be specified by the ``-mtargetos=watchos*version*``
   command-line argument.
 
 ``visionos``
   Apple's visionOS operating system. The minimum deployment target is specified
-  as part of the ``-target *arch*-apple-visionos*version*`` command line argument. 
-  Alternatively, it can be specified by the ``-mtargetos=visionos*version*`` 
+  as part of the ``-target *arch*-apple-visionos*version*`` command line argument.
+  Alternatively, it can be specified by the ``-mtargetos=visionos*version*``
   command-line argument.
 
 ``driverkit``
   Apple's DriverKit userspace kernel extensions. The minimum deployment target
-  is specified as part of the ``-target *arch*-apple-driverkit*version*`` 
+  is specified as part of the ``-target *arch*-apple-driverkit*version*``
   command line argument.
 
 A declaration can typically be used even when deploying back to a platform
@@ -7522,7 +7522,7 @@ means that it can e.g no longer be part of an initializer expression.
 
       /* This may print something else than "6 * 7 = 42",
          if there is a non-weak definition of "ANSWER" in
-	 an object linked in */
+         an object linked in */
       printf("6 * 7 = %d\n", ANSWER);
 
       return 0;

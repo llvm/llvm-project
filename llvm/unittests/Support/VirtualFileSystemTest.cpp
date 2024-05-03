@@ -82,7 +82,7 @@ public:
   }
   // Map any symlink to "/symlink".
   std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const override {
+                              SmallVectorImpl<char> &Output) override {
     auto I = findEntry(Path);
     if (I == FilesAndDirs.end())
       return make_error_code(llvm::errc::no_such_file_or_directory);
@@ -101,7 +101,7 @@ public:
     std::map<std::string, vfs::Status>::iterator I;
     std::string Path;
     bool isInPath(StringRef S) {
-      if (Path.size() < S.size() && S.find(Path) == 0) {
+      if (Path.size() < S.size() && S.starts_with(Path)) {
         auto LastSep = S.find_last_of('/');
         if (LastSep == Path.size() || LastSep == Path.size() - 1)
           return true;
@@ -198,6 +198,21 @@ protected:
 class ErrorDummyFileSystem : public DummyFileSystem {
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override {
     return llvm::errc::no_such_file_or_directory;
+  }
+};
+
+/// A version of \c DummyFileSystem that aborts on \c status() to test that
+/// \c exists() is being used.
+class NoStatusDummyFileSystem : public DummyFileSystem {
+public:
+  ErrorOr<vfs::Status> status(const Twine &Path) override {
+    llvm::report_fatal_error(
+        "unexpected call to NoStatusDummyFileSystem::status");
+  }
+
+  bool exists(const Twine &Path) override {
+    auto Status = DummyFileSystem::status(Path);
+    return Status && Status->exists();
   }
 };
 
@@ -966,6 +981,30 @@ TEST(OverlayFileSystemTest, PrintOutput) {
             "    DummyFileSystem (RecursiveContents)\n"
             "    DummyFileSystem (RecursiveContents)\n",
             Output);
+}
+
+TEST(OverlayFileSystemTest, Exists) {
+  IntrusiveRefCntPtr<DummyFileSystem> Lower(new NoStatusDummyFileSystem());
+  IntrusiveRefCntPtr<DummyFileSystem> Upper(new NoStatusDummyFileSystem());
+  IntrusiveRefCntPtr<vfs::OverlayFileSystem> O(
+      new vfs::OverlayFileSystem(Lower));
+  O->pushOverlay(Upper);
+
+  Lower->addDirectory("/both");
+  Upper->addDirectory("/both");
+  Lower->addRegularFile("/both/lower_file");
+  Upper->addRegularFile("/both/upper_file");
+  Lower->addDirectory("/lower");
+  Upper->addDirectory("/upper");
+
+  EXPECT_TRUE(O->exists("/both"));
+  EXPECT_TRUE(O->exists("/both"));
+  EXPECT_TRUE(O->exists("/both/lower_file"));
+  EXPECT_TRUE(O->exists("/both/upper_file"));
+  EXPECT_TRUE(O->exists("/lower"));
+  EXPECT_TRUE(O->exists("/upper"));
+  EXPECT_FALSE(O->exists("/both/nope"));
+  EXPECT_FALSE(O->exists("/nope"));
 }
 
 TEST(ProxyFileSystemTest, Basic) {
@@ -3364,6 +3403,11 @@ TEST(RedirectingFileSystemTest, ExternalPaths) {
       SeenPaths.push_back(Dir.str());
       return ProxyFileSystem::dir_begin(Dir, EC);
     }
+
+    bool exists(const Twine &Path) override {
+      SeenPaths.push_back(Path.str());
+      return ProxyFileSystem::exists(Path);
+    }
   };
 
   std::error_code EC;
@@ -3394,4 +3438,125 @@ TEST(RedirectingFileSystemTest, ExternalPaths) {
   FS->dir_begin(".././g", EC);
 
   EXPECT_EQ(CheckFS->SeenPaths, Expected);
+}
+
+TEST(RedirectingFileSystemTest, Exists) {
+  IntrusiveRefCntPtr<DummyFileSystem> Dummy(new NoStatusDummyFileSystem());
+  auto YAML =
+    MemoryBuffer::getMemBuffer("{\n"
+                               "  'version': 0,\n"
+                               "  'roots': [\n"
+                               "    {\n"
+                               "      'type': 'directory-remap',\n"
+                               "      'name': '/dremap',\n"
+                               "      'external-contents': '/a',\n"
+                               "    },"
+                               "    {\n"
+                               "      'type': 'directory-remap',\n"
+                               "      'name': '/dmissing',\n"
+                               "      'external-contents': '/dmissing',\n"
+                               "    },"
+                               "    {\n"
+                               "      'type': 'directory',\n"
+                               "      'name': '/both',\n"
+                               "      'contents': [\n"
+                               "        {\n"
+                               "          'type': 'file',\n"
+                               "          'name': 'vfile',\n"
+                               "          'external-contents': '/c'\n"
+                               "        }\n"
+                               "      ]\n"
+                               "    },\n"
+                               "    {\n"
+                               "      'type': 'directory',\n"
+                               "      'name': '/vdir',\n"
+                               "      'contents': ["
+                               "        {\n"
+                               "          'type': 'directory-remap',\n"
+                               "          'name': 'dremap',\n"
+                               "          'external-contents': '/b'\n"
+                               "        },\n"
+                               "        {\n"
+                               "          'type': 'file',\n"
+                               "          'name': 'missing',\n"
+                               "          'external-contents': '/missing'\n"
+                               "        },\n"
+                               "        {\n"
+                               "          'type': 'file',\n"
+                               "          'name': 'vfile',\n"
+                               "          'external-contents': '/c'\n"
+                               "        }]\n"
+                               "    }]\n"
+                               "}");
+
+  Dummy->addDirectory("/a");
+  Dummy->addRegularFile("/a/foo");
+  Dummy->addDirectory("/b");
+  Dummy->addRegularFile("/c");
+  Dummy->addRegularFile("/both/foo");
+
+  auto Redirecting = vfs::RedirectingFileSystem::create(
+							std::move(YAML), nullptr, "", nullptr, Dummy);
+
+  EXPECT_TRUE(Redirecting->exists("/dremap"));
+  EXPECT_FALSE(Redirecting->exists("/dmissing"));
+  EXPECT_FALSE(Redirecting->exists("/unknown"));
+  EXPECT_TRUE(Redirecting->exists("/both"));
+  EXPECT_TRUE(Redirecting->exists("/both/foo"));
+  EXPECT_TRUE(Redirecting->exists("/both/vfile"));
+  EXPECT_TRUE(Redirecting->exists("/vdir"));
+  EXPECT_TRUE(Redirecting->exists("/vdir/dremap"));
+  EXPECT_FALSE(Redirecting->exists("/vdir/missing"));
+  EXPECT_TRUE(Redirecting->exists("/vdir/vfile"));
+  EXPECT_FALSE(Redirecting->exists("/vdir/unknown"));
+}
+
+TEST(RedirectingFileSystemTest, ExistsFallback) {
+  IntrusiveRefCntPtr<DummyFileSystem> Dummy(new NoStatusDummyFileSystem());
+  auto YAML =
+    MemoryBuffer::getMemBuffer("{\n"
+                               "  'version': 0,\n"
+                               "  'redirecting-with': 'fallback',\n"
+                               "  'roots': [\n"
+                               "    {\n"
+                               "      'type': 'file',\n"
+                               "      'name': '/fallback',\n"
+                               "      'external-contents': '/missing',\n"
+                               "    },"
+                               "  ]\n"
+                               "}");
+
+  Dummy->addRegularFile("/fallback");
+
+  auto Redirecting = vfs::RedirectingFileSystem::create(
+							std::move(YAML), nullptr, "", nullptr, Dummy);
+
+  EXPECT_TRUE(Redirecting->exists("/fallback"));
+  EXPECT_FALSE(Redirecting->exists("/missing"));
+}
+
+TEST(RedirectingFileSystemTest, ExistsRedirectOnly) {
+  IntrusiveRefCntPtr<DummyFileSystem> Dummy(new NoStatusDummyFileSystem());
+  auto YAML =
+    MemoryBuffer::getMemBuffer("{\n"
+                               "  'version': 0,\n"
+                               "  'redirecting-with': 'redirect-only',\n"
+                               "  'roots': [\n"
+                               "    {\n"
+                               "      'type': 'file',\n"
+                               "      'name': '/vfile',\n"
+                               "      'external-contents': '/a',\n"
+                               "    },"
+                               "  ]\n"
+                               "}");
+
+  Dummy->addRegularFile("/a");
+  Dummy->addRegularFile("/b");
+
+  auto Redirecting = vfs::RedirectingFileSystem::create(
+							std::move(YAML), nullptr, "", nullptr, Dummy);
+
+  EXPECT_FALSE(Redirecting->exists("/a"));
+  EXPECT_FALSE(Redirecting->exists("/b"));
+  EXPECT_TRUE(Redirecting->exists("/vfile"));
 }

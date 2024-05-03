@@ -163,13 +163,13 @@ define <2 x double> @fsub_nan_poison_op1(<2 x double> %x) {
   ret <2 x double> %r
 }
 
-; Vector with undef element
+; Vector with poison element
 
-define <2 x double> @frem_nan_undef_op0(<2 x double> %x) {
-; CHECK-LABEL: @frem_nan_undef_op0(
-; CHECK-NEXT:    ret <2 x double> <double 0xFFFF00000000DEAD, double 0x7FF8000000000000>
+define <2 x double> @frem_nan_poison_op0(<2 x double> %x) {
+; CHECK-LABEL: @frem_nan_poison_op0(
+; CHECK-NEXT:    ret <2 x double> <double 0xFFFF00000000DEAD, double poison>
 ;
-  %r = frem <2 x double> <double 0xFFFF00000000DEAD, double undef>, %x
+  %r = frem <2 x double> <double 0xFFFF00000000DEAD, double poison>, %x
   ret <2 x double> %r
 }
 
@@ -177,7 +177,8 @@ define <2 x double> @frem_nan_undef_op0(<2 x double> %x) {
 
 define <3 x double> @fadd_nan_poison_undef_op1(<3 x double> %x) {
 ; CHECK-LABEL: @fadd_nan_poison_undef_op1(
-; CHECK-NEXT:    ret <3 x double> <double 0xFFFF00000000DEAD, double poison, double 0x7FF8000000000000>
+; CHECK-NEXT:    [[R:%.*]] = fadd <3 x double> [[X:%.*]], <double 0xFFFF00000000DEAD, double poison, double undef>
+; CHECK-NEXT:    ret <3 x double> [[R]]
 ;
   %r = fadd <3 x double> %x, <double 0xFFFF00000000DEAD, double poison, double undef>
   ret <3 x double> %r

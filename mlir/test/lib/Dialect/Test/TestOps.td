@@ -1351,6 +1351,12 @@ def TestOpInPlaceFold : TEST_Op<"op_in_place_fold"> {
   let hasFolder = 1;
 }
 
+def TestOpInPlaceSelfFold : TEST_Op<"op_in_place_self_fold"> {
+  let arguments = (ins UnitAttr:$folded);
+  let results = (outs I32);
+  let hasFolder = 1;
+}
+
 // Test op that simply returns success.
 def TestOpInPlaceFoldSuccess : TEST_Op<"op_in_place_fold_success"> {
   let results = (outs Variadic<I1>);
@@ -2185,6 +2191,65 @@ def ForwardBufferOp : TEST_Op<"forward_buffer", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Test ValueBoundsOpInterface
+//===----------------------------------------------------------------------===//
+
+def ReifyBoundOp : TEST_Op<"reify_bound", [Pure]> {
+  let description = [{
+    Reify a bound for the given index-typed value or dimension size of a shaped
+    value. "LB", "EQ" and "UB" bounds are supported. If `scalable` is set, 
+    `vscale_min` and `vscale_max` must be provided, which allows computing
+    a bound in terms of "vector.vscale" for a given range of vscale.
+  }];
+
+  let arguments = (ins AnyType:$var,
+                       OptionalAttr<I64Attr>:$dim,
+                       DefaultValuedAttr<StrAttr, "\"EQ\"">:$type,
+                       UnitAttr:$constant,
+                       UnitAttr:$scalable,
+                       OptionalAttr<I64Attr>:$vscale_min,
+                       OptionalAttr<I64Attr>:$vscale_max);
+  let results = (outs Index:$result);
+
+  let extraClassDeclaration = [{
+    ::mlir::presburger::BoundType getBoundType();
+    ::mlir::ValueBoundsConstraintSet::Variable getVariable();
+  }];
+
+  let hasVerifier = 1;
+}
+
+def CompareOp : TEST_Op<"compare"> {
+  let description = [{
+    Compare `lhs` and `rhs`. A remark is emitted which indicates whether the
+    specified comparison operator was proven to hold. The remark also indicates
+    whether the opposite comparison operator was proven to hold.
+
+    `var_operands` must have exactly two operands: one for the LHS operand and
+    one for the RHS operand. If `lhs_map` is specified, as many operands as
+    `lhs_map` has inputs are expected instead of the first operand. If `rhs_map`
+    is specified, as many operands as `rhs_map` has inputs are expected instead
+    of the second operand.
+  }];
+
+  let arguments = (ins Variadic<Index>:$var_operands,
+                       DefaultValuedAttr<StrAttr, "\"EQ\"">:$cmp,
+                       OptionalAttr<AffineMapAttr>:$lhs_map,
+                       OptionalAttr<AffineMapAttr>:$rhs_map,
+                       UnitAttr:$compose);
+  let results = (outs);
+
+  let extraClassDeclaration = [{
+    ::mlir::ValueBoundsConstraintSet::ComparisonOperator
+        getComparisonOperator();
+    ::mlir::ValueBoundsConstraintSet::Variable getLhs();
+    ::mlir::ValueBoundsConstraintSet::Variable getRhs();
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // Test RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
 
@@ -2852,6 +2917,23 @@ def TestOpWithProperties : TEST_Op<"with_properties"> {
   );
 }
 
+def TestOpWithPropertiesAndAttr
+  : TEST_Op<"with_properties_and_attr"> {
+  let assemblyFormat = "$lhs prop-dict attr-dict";
+
+  let arguments = (ins I32Attr:$lhs, IntProperty<"int64_t">:$rhs);
+}
+
+def TestOpWithPropertiesAndInferredType
+  : TEST_Op<"with_properties_and_inferred_type", [
+    DeclareOpInterfaceMethods<InferTypeOpInterface>
+  ]> {
+  let assemblyFormat = "$lhs prop-dict attr-dict";
+
+  let arguments = (ins I32Attr:$lhs, IntProperty<"int64_t">:$rhs);
+  let results = (outs AnyType:$result);
+}
+
 // Demonstrate how to wrap an existing C++ class named MyPropStruct.
 def MyStructProperty : Property<"MyPropStruct"> {
   let convertToAttribute = "$_storage.asAttribute($_ctxt)";
@@ -2869,6 +2951,15 @@ def TestOpWithWrappedProperties : TEST_Op<"with_wrapped_properties"> {
 def TestOpUsingPropertyInCustom : TEST_Op<"using_property_in_custom"> {
   let assemblyFormat = "custom<UsingPropertyInCustom>($prop) attr-dict";
   let arguments = (ins ArrayProperty<"int64_t", 3>:$prop);
+}
+
+def TestOpUsingPropertyInCustomAndOther
+  : TEST_Op<"using_property_in_custom_and_other"> {
+  let assemblyFormat = "custom<UsingPropertyInCustom>($prop) prop-dict attr-dict";
+  let arguments = (ins
+    ArrayProperty<"int64_t", 3>:$prop,
+    IntProperty<"int64_t">:$other
+  );
 }
 
 def TestOpUsingPropertyRefInCustom : TEST_Op<"using_property_ref_in_custom"> {
