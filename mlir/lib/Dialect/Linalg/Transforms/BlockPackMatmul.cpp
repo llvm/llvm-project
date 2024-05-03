@@ -120,6 +120,8 @@ linalg::blockPackMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
                                        "expect packing full tiles only");
   }
 
+  bool isTransposedLhs = isa<linalg::MatmulTransposeAOp>(matmulOp) ||
+                         isa<linalg::BatchMatmulTransposeAOp>(matmulOp);
   bool isTransposedRhs = isa<linalg::MatmulTransposeBOp>(matmulOp) ||
                          isa<linalg::BatchMatmulTransposeBOp>(matmulOp);
 
@@ -141,32 +143,57 @@ linalg::blockPackMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
   assert(packedCanonicalMatmul->unPackOps.size() == 1 &&
          "failed matmul unpacking");
 
-  SmallVector<int64_t> innerPerm{1, 0};
-  SmallVector<int64_t> outerPerm{1, 0};
-  // No need to block transpose if the RHS matrix is already transposed.
-  if (isTransposedRhs)
-    outerPerm = {0, 1};
-
-  // Leave the batch dimension as is.
-  if (isBatchMatmulOp) {
+  auto applyBatchDim = [&](ArrayRef<int64_t> perms) -> SmallVector<int64_t> {
     // Account for the batch dimension.
-    SmallVector<int64_t> newOuterPerms{0};
+    SmallVector<int64_t> newPerms{0};
     // Offset all permutations.
-    for (auto perm : outerPerm)
-      newOuterPerms.push_back(++perm);
-    outerPerm = newOuterPerms;
+    for (auto perm : perms)
+      newPerms.push_back(++perm);
+    return newPerms;
+  };
+
+  // If needed, block transpose the packed matmul i.e., transpose the outer
+  // dimensions. The inner dimensions (minor blocks) remain unchanged.
+  if (isTransposedLhs) {
+    // The inner blocks' layout is already correctly enforced by the initial
+    // packing.
+    SmallVector<int64_t> lhsInnerPerm{0, 1};
+    // Only block transpose the outer dimensions for LHS matrix.
+    SmallVector<int64_t> lhsOuterPerm{1, 0};
+    // Leave the batch dimension as is.
+    if (isBatchMatmulOp)
+      lhsOuterPerm = applyBatchDim(lhsOuterPerm);
+
+    FailureOr<PackTransposeResult> packedMatmul =
+        packTranspose(rewriter, packedCanonicalMatmul->packOps[0],
+                      packedCanonicalMatmul->packedLinalgOp,
+                      /*maybeUnPackOp=*/nullptr, lhsOuterPerm, lhsInnerPerm);
+    if (failed(packedMatmul))
+      return failure();
+
+    packedCanonicalMatmul->packOps[0] = packedMatmul->transposedPackOp;
+    packedCanonicalMatmul->packedLinalgOp = packedMatmul->transposedLinalgOp;
   }
 
-  // Block transpose the packed matmul i.e., transpose the outer dimensions
-  // layout of the RHS matrix. The inner dimensions (minor blocks) remain
-  // unchanged.
+  // Transpose the layout of the inner dimension (minor blocks).
+  SmallVector<int64_t> rhsInnerPerm{1, 0};
+  // Block transpose the RHS matrix i.e., transpose the outer dimensions.
+  SmallVector<int64_t> rhsOuterPerm{1, 0};
+  // No need to block transpose if the RHS matrix is already transposed.
+  if (isTransposedRhs)
+    rhsOuterPerm = {0, 1};
+  // Leave the batch dimension as is.
+  if (isBatchMatmulOp)
+    rhsOuterPerm = applyBatchDim(rhsOuterPerm);
+
   FailureOr<PackTransposeResult> packedMatmul =
       packTranspose(rewriter, packedCanonicalMatmul->packOps[1],
                     packedCanonicalMatmul->packedLinalgOp,
-                    /*maybeUnPackOp=*/nullptr, outerPerm, innerPerm);
+                    /*maybeUnPackOp=*/nullptr, rhsOuterPerm, rhsInnerPerm);
   if (failed(packedMatmul))
     return failure();
 
+  packedCanonicalMatmul->packOps[1] = packedMatmul->transposedPackOp;
   packedCanonicalMatmul->packedLinalgOp = packedMatmul->transposedLinalgOp;
 
   return packedCanonicalMatmul;
