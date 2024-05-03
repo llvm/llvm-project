@@ -13,7 +13,7 @@
 # RUN: llvm-objdump --objc-meta-data --macho a64_file2_merge.exe | FileCheck %s --check-prefixes=MERGE_CATS
 
 
-MERGE_CATS:     __OBJC_$_CATEGORY_MyBaseClass_$_(Category02|Category03)
+MERGE_CATS:     __OBJC_$_CATEGORY_MyBaseClass(Category02|Category03)
 MERGE_CATS-NEXT:              name {{.*}} Category02|Category03
 MERGE_CATS:           instanceMethods
 MERGE_CATS-NEXT:           entsize 24
@@ -90,7 +90,7 @@ MERGE_CATS-NEXT:                 name {{.*}} MyProtocol03Prop
 MERGE_CATS-NEXT:            attributes {{.*}} Ti,R,D
 
 
-NO_MERGE_CATS-NOT: __OBJC_$_CATEGORY_MyBaseClass_$_(Category02|Category03)
+NO_MERGE_CATS-NOT: __OBJC_$_CATEGORY_MyBaseClass(Category02|Category03)
 NO_MERGE_CATS: __OBJC_$_CATEGORY_MyBaseClass_$_Category02
 NO_MERGE_CATS: instanceMethods
 NO_MERGE_CATS-NEXT: 24

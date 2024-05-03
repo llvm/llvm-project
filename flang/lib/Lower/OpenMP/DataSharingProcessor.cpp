@@ -302,21 +302,38 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
   }
 }
 
+void DataSharingProcessor::collectSymbolsInNestedRegions(
+    Fortran::lower::pft::Evaluation &eval,
+    Fortran::semantics::Symbol::Flag flag,
+    llvm::SetVector<const Fortran::semantics::Symbol *>
+        &symbolsInNestedRegions) {
+  for (Fortran::lower::pft::Evaluation &nestedEval :
+       eval.getNestedEvaluations()) {
+    if (nestedEval.hasNestedEvaluations()) {
+      if (nestedEval.isConstruct())
+        // Recursively look for OpenMP constructs within `nestedEval`'s region
+        collectSymbolsInNestedRegions(nestedEval, flag, symbolsInNestedRegions);
+      else
+        converter.collectSymbolSet(nestedEval, symbolsInNestedRegions, flag,
+                                   /*collectSymbols=*/true,
+                                   /*collectHostAssociatedSymbols=*/false);
+    }
+  }
+}
+
+// Collect symbols to be default privatized in two steps.
+// In step 1, collect all symbols in `eval` that match `flag` into
+// `defaultSymbols`. In step 2, for nested constructs (if any), if and only if
+// the nested construct is an OpenMP construct, collect those nested
+// symbols skipping host associated symbols into `symbolsInNestedRegions`.
+// Later, in current context, all symbols in the set
+// `defaultSymbols` - `symbolsInNestedRegions` will be privatized.
 void DataSharingProcessor::collectSymbols(
     Fortran::semantics::Symbol::Flag flag) {
   converter.collectSymbolSet(eval, defaultSymbols, flag,
                              /*collectSymbols=*/true,
                              /*collectHostAssociatedSymbols=*/true);
-  for (Fortran::lower::pft::Evaluation &e : eval.getNestedEvaluations()) {
-    if (e.hasNestedEvaluations())
-      converter.collectSymbolSet(e, symbolsInNestedRegions, flag,
-                                 /*collectSymbols=*/true,
-                                 /*collectHostAssociatedSymbols=*/false);
-    else
-      converter.collectSymbolSet(e, symbolsInParentRegions, flag,
-                                 /*collectSymbols=*/false,
-                                 /*collectHostAssociatedSymbols=*/true);
-  }
+  collectSymbolsInNestedRegions(eval, flag, symbolsInNestedRegions);
 }
 
 void DataSharingProcessor::collectDefaultSymbols() {
@@ -367,7 +384,6 @@ void DataSharingProcessor::defaultPrivatize(
         !sym->GetUltimate().has<Fortran::semantics::NamelistDetails>() &&
         !Fortran::semantics::IsImpliedDoIndex(sym->GetUltimate()) &&
         !symbolsInNestedRegions.contains(sym) &&
-        !symbolsInParentRegions.contains(sym) &&
         !privatizedSymbols.contains(sym))
       doPrivatize(sym, clauseOps, privateSyms);
   }
