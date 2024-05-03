@@ -3,41 +3,16 @@ name: PR sccache restore
 runs:
   using: "composite"
   steps:
-    - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1
-      id: artifact-url
+    - uses: ./.github/workflows/unprivileged-download-artifact
+      id: download-artifact
       with:
-        script: |
-          const data = await github.rest.actions.listArtifactsForRepo({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            name: 'sccache-pr' + context.issue.number
-          })
-
-          console.log(data.data.artifacts)
-
-          for (artifact of data.data.artifacts) {
-            if (artifact.expired) {
-              continue;
-            }
-            console.log(artifact)
-            const url = await github.rest.actions.downloadArtifact({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              artifact_id: artifact.id,
-              archive_format: "zip"
-            })
-            console.log(url.url)
-            return url.url
-          }
-          console.log("Could not find previous sccache for this PR.")
+        run-id: ${{ github.run_id }}
+        artifact-name: sccache-pr${{ github.event.pull_request.number }}
 
     - shell: bash
-      if: steps.artifact-url.outputs.result != ''
+      if: steps.download-artifact.outputs.filename != ''
       run: |
-        curl -L -o sccache-pr${{ github.event.number }}.zip ${{ steps.artifact-url.outputs.result }}
         # Is this the best way to clear the cache?
         rm -Rf .sccache/
-        unzip -d .sccache sccache-pr${{ github.event.number}}.zip
-        ls -ltr
-
-
+        unzip ${{ steps.download-artifact.outputs.filename }}
+        rm ${{ steps.download-artifact.outputs.filename }}

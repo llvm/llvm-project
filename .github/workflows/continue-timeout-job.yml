@@ -18,52 +18,53 @@ jobs:
     runs-on: ubuntu-22.04
     if: github.event.workflow_run.conclusion == 'failure'
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/workflows/unprivileged-download-artifact
+          sparse-checkout-cone-mode: false
+
+      - uses: ./.github/workflows/unprivileged-download-artifact
+        id: download-artifact
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          artifact-name: timeout
+
+      - shell: bash
+        if: steps.download-artifact.outputs.filename != ''
+        run: |
+          unzip ${{ steps.download-artifact.outputs.filename }}
+
       - name: "Restart Job"
+        if: steps.download-artifact.outputs.filename != ''
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1
         with:
           script: |
-            const data = await github.rest.actions.listWorkflowRunArtifacts({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: context.payload.workflow_run.id
-            })
-          
-            for (artifact of data.data.artifacts) {
-              if (artifact.name != 'timeout') {
-                continue;
+              var fs = require('fs');
+              const data = fs.readFileSync('./timeout');
+              console.log(data);
+              const json = JSON.parse(data);
+              console.log(json);
+              if (!json || !json.job_id) {
+                console.log("Could not parse timeout artifact");
+                return;
               }
+              const job_id = json.job_id
 
               // Delete the timeout artifact to prepare for the next run
               await github.rest.actions.deleteArtifact({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                artifact_id: artifact.id
+                artifact_id: ${{ steps.download-artifact.outputs.artifact-id }}
               })
 
-              const job_data = await github.rest.actions.listJobsForWorkflowRun({
+              // Restart the job
+              // This function does not exist even though it is in the document
+              //github.rest.actions.reRunJobForWorkflow({
+              await github.request('POST /repos/{owner}/{repo}/actions/jobs/{job_id}/rerun', {
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                run_id: context.payload.workflow_run.id 
-              });
-
-              for (job of job_data.data.jobs) {
-                console.log(job)
-                if (job.name != "Build") {
-                  continue;
-                }
-                if (job.conclusion == "success") {
-                  // IS this possible?
-                  return "success";
-                }
-          
-                // Restart the job
-                // This function does not exist even though it is in the document
-                //github.rest.actions.reRunJobForWorkflow({
-                await github.request('POST /repos/{owner}/{repo}/actions/jobs/{job_id}/rerun', {
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  job_id: job.id
-                })
-                return "timeout"
-              }
-            }
+                job_id: job_id
+              })
+              console.log("Restarted job: " + job_id);
+              return "timeout"

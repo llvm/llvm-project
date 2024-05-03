@@ -6,18 +6,26 @@ permissions:
 
 on:
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      # When a PR is closed, we still start this workflow, but then skip
+      # all the jobs, which makes it effectively a no-op.  The reason to
+      # do this is that it allows us to take advantage of concurrency groups
+      # to cancel in progress CI jobs whenever the PR is closed.
+      - closed
     branches:
       - main
 
 concurrency:
-  # Skip intermediate builds: always.
-  # Cancel intermediate builds: only if it is a pull request build.
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: True
 
 jobs:
   compute-projects:
     name: "Compute Projects to Test"
+    if: github.event.action != 'closed'
     runs-on: ubuntu-22.04
     outputs:
       projects: ${{ steps.vars.outputs.projects }}
@@ -34,6 +42,8 @@ jobs:
         uses: ./.github/workflows/compute-projects-to-test
 
   build-windows:
+    # If this job name is chagned, then we need to update the job-name
+    # paramater for the write-timeout-file step below.
     name: "Build"
     runs-on: windows-2022
     permissions:
@@ -94,6 +104,11 @@ jobs:
             -DCMAKE_C_COMPILER_LAUNCHER=sccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
             -S llvm
+
+      - name: Write Timeout File
+        uses: ./.github/workflows/write-timeout-file
+        with:
+          job-name: "Build"
 
       - name: Build
         shell: bash
