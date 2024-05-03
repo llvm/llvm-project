@@ -1306,11 +1306,11 @@ public:
       Elts.push_back(C);
       return true;
     };
+
     unsigned ArrayIndex = 0;
     for (unsigned i = 0; i < ILE->getNumInits(); ++i) {
       const Expr *Init = ILE->getInit(i);
-      if (auto *EmbedS =
-              dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
+      if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
         if (!EmbedS->doForEachDataElement(Emit, ArrayIndex,
                                           /*EmbedInit=*/true))
           return nullptr;

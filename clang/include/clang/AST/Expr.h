@@ -4857,9 +4857,7 @@ public:
   EmbedDataStorage *getData() const { return Data; }
 
   unsigned getStartingElementPos() const { return Begin; }
-  size_t getDataElementCount() const {
-    return NumOfElements;
-  }
+  size_t getDataElementCount() const { return NumOfElements; }
 
   template <bool Const>
   class ChildElementIter
@@ -4937,9 +4935,7 @@ public:
     return T->getStmtClass() == EmbedExprClass;
   }
 
-  ChildElementIter<false> begin() {
-    return ChildElementIter<false>(this);
-  }
+  ChildElementIter<false> begin() { return ChildElementIter<false>(this); }
 
   ChildElementIter<true> begin() const {
     return ChildElementIter<true>(const_cast<EmbedExpr *>(this));

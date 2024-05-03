@@ -2124,9 +2124,8 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
     if (maxElementsKnown && elementIndex == maxElements)
       break;
 
-    InitializedEntity ElementEntity =
-      InitializedEntity::InitializeElement(SemaRef.Context, StructuredIndex,
-                                           Entity);
+    InitializedEntity ElementEntity = InitializedEntity::InitializeElement(
+        SemaRef.Context, StructuredIndex, Entity);
 
     unsigned EmbedElementIndexBeforeInit = CurEmbedIndex;
     // Check this element.
@@ -2139,8 +2138,7 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
             elementIndex + CurEmbedIndex - EmbedElementIndexBeforeInit - 1;
       } else {
         auto Embed = cast<EmbedExpr>(Init);
-        elementIndex = elementIndex +
-                       Embed->getDataElementCount() -
+        elementIndex = elementIndex + Embed->getDataElementCount() -
                        EmbedElementIndexBeforeInit - 1;
       }
     }

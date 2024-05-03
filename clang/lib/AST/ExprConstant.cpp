@@ -11140,8 +11140,7 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
     NumEltsToInit = NumElts;
   } else {
     for (auto *Init : Args) {
-      if (auto *EmbedS =
-              dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
+      if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
         NumEltsToInit += EmbedS->getDataElementCount() - 1;
       }
     }
@@ -11189,8 +11188,7 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
     const Expr *Init = Index < Args.size() ? Args[Index] : ArrayFiller;
     if (ArrayIndex >= NumEltsToInit)
       break;
-    if (auto *EmbedS =
-            dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
+    if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
       if (!EmbedS->doForEachDataElement(Eval, ArrayIndex))
         return false;
     } else {
