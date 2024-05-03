@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DiagOutputUtils.h"
 #include "ASTUtils.h"
+#include "DiagOutputUtils.h"
 #include "PtrTypesSemantics.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/RecursiveASTVisitor.h"
