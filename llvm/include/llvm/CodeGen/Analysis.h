@@ -55,6 +55,19 @@ inline unsigned ComputeLinearIndex(Type *Ty,
   return ComputeLinearIndex(Ty, Indices.begin(), Indices.end(), CurIndex);
 }
 
+/// ComputeValueTypes - Given an LLVM IR type, compute a sequence of
+/// Types that represent all the individual underlying
+/// non-aggregate types that comprise it.
+///
+/// If Offsets is non-null, it points to a vector to be filled in
+/// with the in-memory offsets of each of the individual values.
+///
+void ComputeValueTypes(const TargetLowering &TLI, const DataLayout &DL,
+                       Type *Ty,
+                       SmallVectorImpl<Type *> &ValueTys,
+                       SmallVectorImpl<TypeSize> *Offsets = nullptr,
+                       TypeSize StartingOffset = TypeSize::getZero());
+
 /// ComputeValueVTs - Given an LLVM IR type, compute a sequence of
 /// EVTs that represent all the individual underlying
 /// non-aggregate types that comprise it.
