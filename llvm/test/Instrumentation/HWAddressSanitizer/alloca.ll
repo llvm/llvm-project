@@ -110,6 +110,24 @@ entry:
   ret void, !dbg !24
 }
 
+define void @test_vscale_alloca() sanitize_hwaddress {
+; DYNAMIC-SHADOW-LABEL: define void @test_vscale_alloca(
+; DYNAMIC-SHADOW-SAME: ) #[[ATTR0]] {
+; DYNAMIC-SHADOW-NEXT:    [[X:%.*]] = alloca <vscale x 4 x i64>, align 32
+; DYNAMIC-SHADOW-NEXT:    call void @use32(ptr nonnull [[X]])
+; DYNAMIC-SHADOW-NEXT:    ret void
+;
+; ZERO-BASED-SHADOW-LABEL: define void @test_vscale_alloca(
+; ZERO-BASED-SHADOW-SAME: ) #[[ATTR0]] {
+; ZERO-BASED-SHADOW-NEXT:    [[X:%.*]] = alloca <vscale x 4 x i64>, align 32
+; ZERO-BASED-SHADOW-NEXT:    call void @use32(ptr nonnull [[X]])
+; ZERO-BASED-SHADOW-NEXT:    ret void
+;
+  %x = alloca <vscale x 4 x i64>
+  call void @use32(ptr nonnull %x)
+  ret void
+}
+
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
