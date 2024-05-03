@@ -40094,7 +40094,19 @@ static SDValue combineBlendOfPermutes(MVT VT, SDValue N0, SDValue N1,
       }
     }
   }
+  assert(isBlendOrUndef(NewBlendMask) && "Bad blend");
   assert(isUndefOrInRange(NewPermuteMask, 0, NumElts) && "Bad permute");
+
+  // v16i6 shuffles can explode in complexity very easily, only accept them if
+  // the blend mask is the same in the 128-bit subvectors (or can widen to
+  // v8i32) and the permute can be widened as well.
+  if (VT == MVT::v16i16) {
+    if (!is128BitLaneRepeatedShuffleMask(VT, NewBlendMask) &&
+        !canWidenShuffleElements(NewBlendMask))
+      return SDValue();
+    if (!canWidenShuffleElements(NewPermuteMask))
+      return SDValue();
+  }
 
   SDValue NewBlend =
       DAG.getVectorShuffle(VT, DL, DAG.getBitcast(VT, Ops0[0]),
@@ -41856,14 +41868,12 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     break;
   }
   case X86ISD::BLENDI: {
-    if (VT.getScalarSizeInBits() >= 32) {
-      SmallVector<int, 16> BlendMask;
-      DecodeBLENDMask(NumElts, Op.getConstantOperandVal(2), BlendMask);
-      if (SDValue R = combineBlendOfPermutes(VT.getSimpleVT(), Op.getOperand(0),
-                                             Op.getOperand(1), BlendMask,
-                                             DemandedElts, TLO.DAG, SDLoc(Op)))
-        return TLO.CombineTo(Op, R);
-    }
+    SmallVector<int, 16> BlendMask;
+    DecodeBLENDMask(NumElts, Op.getConstantOperandVal(2), BlendMask);
+    if (SDValue R = combineBlendOfPermutes(VT.getSimpleVT(), Op.getOperand(0),
+                                           Op.getOperand(1), BlendMask,
+                                           DemandedElts, TLO.DAG, SDLoc(Op)))
+      return TLO.CombineTo(Op, R);
     break;
   }
   case X86ISD::BLENDV: {
