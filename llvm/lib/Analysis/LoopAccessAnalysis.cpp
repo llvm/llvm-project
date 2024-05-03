@@ -1805,20 +1805,20 @@ void MemoryDepChecker::mergeInStatus(VectorizationSafetyStatus S) {
 }
 
 /// Given a dependence-distance \p Dist between two
-/// memory accesses, that have the same stride whose absolute value is given
-/// in \p Stride, and that have the same type size \p TypeByteSize,
-/// in a loop whose takenCount is \p BackedgeTakenCount, check if it is
-/// possible to prove statically that the dependence distance is larger
-/// than the range that the accesses will travel through the execution of
-/// the loop. If so, return true; false otherwise. This is useful for
-/// example in loops such as the following (PR31098):
+/// memory accesses, that have strides in the same direction whose absolute
+/// value of the maximum stride is given in \p MaxStride, and that have the same
+/// type size \p TypeByteSize, in a loop whose takenCount is \p
+/// BackedgeTakenCount, check if it is possible to prove statically that the
+/// dependence distance is larger than the range that the accesses will travel
+/// through the execution of the loop. If so, return true; false otherwise. This
+/// is useful for example in loops such as the following (PR31098):
 ///     for (i = 0; i < D; ++i) {
 ///                = out[i];
 ///       out[i+D] =
 ///     }
 static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
                                      const SCEV &BackedgeTakenCount,
-                                     const SCEV &Dist, uint64_t Stride,
+                                     const SCEV &Dist, uint64_t MaxStride,
                                      uint64_t TypeByteSize) {
 
   // If we can prove that
@@ -1838,7 +1838,7 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
   // will be executed only if LoopCount >= VF, proving distance >= LoopCount
   // also guarantees that distance >= VF.
   //
-  const uint64_t ByteStride = Stride * TypeByteSize;
+  const uint64_t ByteStride = MaxStride * TypeByteSize;
   const SCEV *Step = SE.getConstant(BackedgeTakenCount.getType(), ByteStride);
   const SCEV *Product = SE.getMulExpr(&BackedgeTakenCount, Step);
 
@@ -2046,14 +2046,15 @@ MemoryDepChecker::Dependence::DepType MemoryDepChecker::isDependent(
 
   ScalarEvolution &SE = *PSE.getSE();
   auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
+  uint64_t MaxStride = std::max(StrideA, StrideB);
 
-  // If the distance between the acecsses is larger than their absolute stride
-  // multiplied by the backedge taken count, the accesses are independet, i.e.
-  // they are far enough appart that accesses won't access the same location
-  // across all loop ierations.
-  if (HasSameSize && CommonStride &&
+  // If the distance between the acecsses is larger than their maximum absolute
+  // stride multiplied by the backedge taken count, the accesses are independet,
+  // i.e. they are far enough appart that accesses won't access the same
+  // location across all loop ierations.
+  if (HasSameSize &&
       isSafeDependenceDistance(DL, SE, *(PSE.getBackedgeTakenCount()), *Dist,
-                               *CommonStride, TypeByteSize))
+                               MaxStride, TypeByteSize))
     return Dependence::NoDep;
 
   const SCEVConstant *C = dyn_cast<SCEVConstant>(Dist);
