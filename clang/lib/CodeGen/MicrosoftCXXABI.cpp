@@ -1122,7 +1122,8 @@ static bool isTrivialForMSVC(const CXXRecordDecl *RD, QualType Ty,
   //   No base classes
   //   No virtual functions
   // Additionally, we need to ensure that there is a trivial copy assignment
-  // operator, a trivial destructor and no user-provided constructors.
+  // operator, a trivial destructor, no user-provided constructors and no
+  // deleted copy assignment operator.
   if (RD->hasProtectedFields() || RD->hasPrivateFields())
     return false;
   if (RD->getNumBases() > 0)
