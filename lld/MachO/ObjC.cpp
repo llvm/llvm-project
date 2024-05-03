@@ -196,7 +196,7 @@ static StringRef getReferentString(const Reloc &r) {
     return s->getStringRefAtOffset(sym->value + r.addend);
 
   if (isa<ConcatInputSection>(sym->isec())) {
-    auto strData = sym->isec()->data.slice(sym->value);
+    auto strData = sym->isec()->data.slice(sym->value + r.addend);
     uint32_t len = strnlen((const char *)strData.data(), strData.size());
     return StringRef((const char *)strData.data(), len);
   }
