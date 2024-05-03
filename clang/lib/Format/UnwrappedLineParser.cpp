@@ -3201,10 +3201,11 @@ void UnwrappedLineParser::parseDoWhile() {
 void UnwrappedLineParser::parseLabel(bool LeftAlignLabel) {
   nextToken();
   unsigned OldLineLevel = Line->Level;
-  if (Line->Level > 1 || (!Line->InPPDirective && Line->Level > 0))
-    --Line->Level;
+
   if (LeftAlignLabel)
     Line->Level = 0;
+  else if (Line->Level > 1 || (!Line->InPPDirective && Line->Level > 0))
+    --Line->Level;
 
   if (!Style.IndentCaseBlocks && CommentsBeforeNextToken.empty() &&
       FormatTok->is(tok::l_brace)) {
