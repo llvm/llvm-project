@@ -122,3 +122,5 @@ define void @test_load_store_i32(ptr %a, ptr %b) sanitize_thread {
 
 declare void @foo() nounwind
 
+; CHECK: define internal void @tsan.module_ctor()
+; CHECK: call void @__tsan_init()
