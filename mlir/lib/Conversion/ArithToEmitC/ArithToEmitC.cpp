@@ -221,8 +221,8 @@ public:
     if (!dstType)
       return rewriter.notifyMatchFailure(castOp, "type conversion failed");
 
-    // Float-to-bool casts are not supported: any non-zero value must be mapped
-    // to true, which does not hold with rounding for values <= 0.5.
+    // Float-to-i1 casts are not supported: any value with 0 < value < 1 must be
+    // truncated to 0, whereas a boolean conversion would return true.
     if (!emitc::isSupportedIntegerType(dstType) || dstType.isInteger(1))
       return rewriter.notifyMatchFailure(castOp,
                                          "unsupported cast destination type");

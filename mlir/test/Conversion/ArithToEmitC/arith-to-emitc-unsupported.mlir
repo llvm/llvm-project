@@ -46,3 +46,20 @@ func.func @arith_cast_to_f16(%arg0: i32) -> f16 {
   %t = arith.sitofp %arg0 : i32 to f16
   return %t: f16
 }
+
+// -----
+
+func.func @arith_cast_fptosi_i1(%arg0: f32) -> i1 {
+  // expected-error @+1 {{failed to legalize operation 'arith.fptosi'}}
+  %t = arith.fptosi %arg0 : f32 to i1
+  return %t: i1
+}
+
+// -----
+
+func.func @arith_cast_fptoui_i1(%arg0: f32) -> i1 {
+  // expected-error @+1 {{failed to legalize operation 'arith.fptoui'}}
+  %t = arith.fptoui %arg0 : f32 to i1
+  return %t: i1
+}
+
