@@ -1199,22 +1199,22 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
   Status error;
 
   bool requires_upload = true;
-  llvm::ErrorOr<llvm::MD5::MD5Result> remote_md5 = CalculateMD5(destination);
-  if (std::error_code ec = remote_md5.getError()) {
-    LLDB_LOG(log, "[PutFile] couldn't get md5 sum of destination: {0}",
-             ec.message());
+  uint64_t dest_md5_low, dest_md5_high;
+  bool success = CalculateMD5(destination, dest_md5_low, dest_md5_high);
+  if (!success) {
+    LLDB_LOGF(log, "[PutFile] couldn't get md5 sum of destination");
   } else {
-    llvm::ErrorOr<llvm::MD5::MD5Result> local_md5 =
-        llvm::sys::fs::md5_contents(source.GetPath());
-    if (std::error_code ec = local_md5.getError()) {
-      LLDB_LOG(log, "[PutFile] couldn't get md5 sum of source: {0}",
-               ec.message());
+    auto local_md5 = llvm::sys::fs::md5_contents(source.GetPath());
+    if (!local_md5) {
+      LLDB_LOGF(log, "[PutFile] couldn't get md5 sum of source");
     } else {
+      const auto [local_md5_high, local_md5_low] = local_md5->words();
       LLDB_LOGF(log, "[PutFile] destination md5: %016" PRIx64 "%016" PRIx64,
-                remote_md5->high(), remote_md5->low());
+                dest_md5_high, dest_md5_low);
       LLDB_LOGF(log, "[PutFile]       local md5: %016" PRIx64 "%016" PRIx64,
-                local_md5->high(), local_md5->low());
-      requires_upload = *remote_md5 != *local_md5;
+                local_md5_high, local_md5_low);
+      requires_upload =
+          local_md5_high != dest_md5_high || local_md5_low != dest_md5_low;
     }
   }
 
@@ -1339,11 +1339,15 @@ lldb_private::Status Platform::RunShellCommand(
   return Status("unable to run a remote command without a platform");
 }
 
-llvm::ErrorOr<llvm::MD5::MD5Result>
-Platform::CalculateMD5(const FileSpec &file_spec) {
+bool Platform::CalculateMD5(const FileSpec &file_spec, uint64_t &low,
+                            uint64_t &high) {
   if (!IsHost())
-    return std::make_error_code(std::errc::not_supported);
-  return llvm::sys::fs::md5_contents(file_spec.GetPath());
+    return false;
+  auto Result = llvm::sys::fs::md5_contents(file_spec.GetPath());
+  if (!Result)
+    return false;
+  std::tie(high, low) = Result->words();
+  return true;
 }
 
 void Platform::SetLocalCacheDirectory(const char *local) {

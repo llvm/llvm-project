@@ -649,8 +649,8 @@ public:
 
   virtual std::string GetPlatformSpecificConnectionInformation() { return ""; }
 
-  virtual llvm::ErrorOr<llvm::MD5::MD5Result>
-  CalculateMD5(const FileSpec &file_spec);
+  virtual bool CalculateMD5(const FileSpec &file_spec, uint64_t &low,
+                            uint64_t &high);
 
   virtual uint32_t GetResumeCountForLaunchInfo(ProcessLaunchInfo &launch_info) {
     return 1;
