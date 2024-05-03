@@ -1238,8 +1238,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // however we prefer to unroll and specialize alignment below.
     if (TS.isScalable()) {
       Value *Size = IRB.CreateTypeSize(MS.IntptrTy, TS);
-      Value *RoundUp = IRB.CreateAdd(Size, ConstantInt::get(MS.IntptrTy, kOriginSize - 1));
-      Value *End = IRB.CreateUDiv(RoundUp, ConstantInt::get(MS.IntptrTy, kOriginSize));
+      Value *RoundUp =
+          IRB.CreateAdd(Size, ConstantInt::get(MS.IntptrTy, kOriginSize - 1));
+      Value *End =
+          IRB.CreateUDiv(RoundUp, ConstantInt::get(MS.IntptrTy, kOriginSize));
       auto [InsertPt, Index] =
         SplitBlockAndInsertSimpleForLoop(End, &*IRB.GetInsertPoint());
       IRB.SetInsertPoint(InsertPt);
