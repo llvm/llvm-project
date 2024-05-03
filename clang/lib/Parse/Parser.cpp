@@ -2701,15 +2701,24 @@ bool Parser::ParseModuleName(
     ConsumeToken();
 
     // P3034R1: Module Declarations Shouldn’t be Macros.
+    // The function-like macro are only replaced when a '(' follows.
+    // Therefore, if no '(' following, it's will not treated as a macro
+    // name, and it's a valid module name.
     const auto *MI = PP.getMacroInfo(Identifier.getIdentifierInfo());
-    if (!IsImport && MI) {
+    if (!IsImport && MI &&
+        (MI->isObjectLike() ||
+         (MI->isFunctionLike() && Tok.is(tok::l_paren)))) {
       HasMacroInModuleName = true;
-      if (MI->isFunctionLike())
+      SourceLocation StartLoc = Identifier.getLocation();
+      SourceLocation EndLoc = Identifier.getLocation();
+      if (MI->isFunctionLike()) {
         SkipUntil(tok::r_paren, tok::period, tok::colon,
                   StopAtSemi | StopBeforeMatch);
+        EndLoc = PrevTokLocation;
+      }
       Diag(Identifier, diag::err_module_decl_cannot_be_macros)
-          << Identifier.getLocation() << IsPartition << MI->isFunctionLike()
-          << Identifier.getIdentifierInfo();
+          << SourceRange(StartLoc, EndLoc) << IsPartition
+          << MI->isFunctionLike() << Identifier.getIdentifierInfo();
     } else if (!HasMacroInModuleName) {
       // Record this part of the module path.
       Path.push_back(std::make_pair(Identifier.getIdentifierInfo(),

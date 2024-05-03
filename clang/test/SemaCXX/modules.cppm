@@ -82,7 +82,7 @@ extern int n;
 static_assert(&n != p); // expected-error{{use of undeclared identifier 'p'}}
 
 //--- E.cppm
-export module foo; // expected-error {{the name of a module declaration cannot contains an object-like macro 'foo'}}
+export module foo; // expected-error {{the name of a module declaration cannot contains an object-like macro 'foo', and the macro will not expand}}
 static int m;
 int n;
 int use_a = a; // expected-error {{use of undeclared identifier 'a'}}
