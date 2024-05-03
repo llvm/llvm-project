@@ -4084,7 +4084,7 @@ SDValue SITargetLowering::lowerSET_ROUNDING(SDValue Op,
 
     // is_standard = value < 4;
     // table_index = is_standard ? value : (value - 4)
-    // MODE.fp_round = (bit_table >> table_index) & 0xf
+    // MODE.fp_round = (bit_table >> (table_index << 2)) & 0xf
 
     SDValue Four = DAG.getConstant(4, SL, MVT::i32);
     SDValue IsStandardValue =
