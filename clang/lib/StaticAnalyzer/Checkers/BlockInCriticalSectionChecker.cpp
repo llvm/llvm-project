@@ -149,26 +149,34 @@ class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
 private:
   const std::array<MutexDescriptor, 8> MutexDescriptors{
       MemberMutexDescriptor(
-          CallDescription(/*QualifiedName=*/{"std", "mutex", "lock"},
+          CallDescription(/*MatchAs=*/CDM::CXXMethod,
+                          /*QualifiedName=*/{"std", "mutex", "lock"},
                           /*RequiredArgs=*/0),
-          CallDescription({"std", "mutex", "unlock"}, 0)),
-      FirstArgMutexDescriptor(CallDescription({"pthread_mutex_lock"}, 1),
-                              CallDescription({"pthread_mutex_unlock"}, 1)),
-      FirstArgMutexDescriptor(CallDescription({"mtx_lock"}, 1),
-                              CallDescription({"mtx_unlock"}, 1)),
-      FirstArgMutexDescriptor(CallDescription({"pthread_mutex_trylock"}, 1),
-                              CallDescription({"pthread_mutex_unlock"}, 1)),
-      FirstArgMutexDescriptor(CallDescription({"mtx_trylock"}, 1),
-                              CallDescription({"mtx_unlock"}, 1)),
-      FirstArgMutexDescriptor(CallDescription({"mtx_timedlock"}, 1),
-                              CallDescription({"mtx_unlock"}, 1)),
+          CallDescription(CDM::CXXMethod, {"std", "mutex", "unlock"}, 0)),
+      FirstArgMutexDescriptor(
+          CallDescription(CDM::CLibrary, {"pthread_mutex_lock"}, 1),
+          CallDescription(CDM::CLibrary, {"pthread_mutex_unlock"}, 1)),
+      FirstArgMutexDescriptor(
+          CallDescription(CDM::CLibrary, {"mtx_lock"}, 1),
+          CallDescription(CDM::CLibrary, {"mtx_unlock"}, 1)),
+      FirstArgMutexDescriptor(
+          CallDescription(CDM::CLibrary, {"pthread_mutex_trylock"}, 1),
+          CallDescription(CDM::CLibrary, {"pthread_mutex_unlock"}, 1)),
+      FirstArgMutexDescriptor(
+          CallDescription(CDM::CLibrary, {"mtx_trylock"}, 1),
+          CallDescription(CDM::CLibrary, {"mtx_unlock"}, 1)),
+      FirstArgMutexDescriptor(
+          CallDescription(CDM::CLibrary, {"mtx_timedlock"}, 1),
+          CallDescription(CDM::CLibrary, {"mtx_unlock"}, 1)),
       RAIIMutexDescriptor("lock_guard"),
       RAIIMutexDescriptor("unique_lock")};
 
   const std::array<CallDescription, 5> BlockingFunctions{
-      ArrayRef{StringRef{"sleep"}}, ArrayRef{StringRef{"getc"}},
-      ArrayRef{StringRef{"fgets"}}, ArrayRef{StringRef{"read"}},
-      ArrayRef{StringRef{"recv"}}};
+      CallDescription(CDM::CLibrary, {"sleep"}),
+      CallDescription(CDM::CLibrary, {"getc"}),
+      CallDescription(CDM::CLibrary, {"fgets"}),
+      CallDescription(CDM::CLibrary, {"read"}),
+      CallDescription(CDM::CLibrary, {"recv"})};
 
   const BugType BlockInCritSectionBugType{
       this, "Call to blocking function in critical section", "Blocking Error"};
