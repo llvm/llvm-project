@@ -44,10 +44,10 @@ BAT-DUMP-NOT: 0x3b ->
 BAT-DUMP-CHECK-NEXT: 0x3d -> 0x3f hash: 0x6cfc5827a1003f
 BAT-DUMP-CHECK: NumBlocks: 5
 # Confirming it's translated to the basic block if it's a branch source
-RUN: llvm-bat-dump %t.out --translate=80007b:1 | FileCheck %s --check-prefix BAT-TRANS-CHECK-FROM
+RUN: llvm-bat-dump %t.out --translate=0x80007b:1 | FileCheck %s --check-prefix BAT-TRANS-CHECK-FROM
 BAT-TRANS-CHECK-FROM: 0x80007b -> usqrt + 0x32
 # Otherwise it's mapped to a preceding BAT entry
-RUN: llvm-bat-dump %t.out --translate=80007b:0 | FileCheck %s --check-prefix BAT-TRANS-CHECK-TO
+RUN: llvm-bat-dump %t.out --translate=0x80007b:0 | FileCheck %s --check-prefix BAT-TRANS-CHECK-TO
 BAT-TRANS-CHECK-TO: 0x80007b -> usqrt + 0x39
 
 YAML-BAT-CHECK:      functions:
