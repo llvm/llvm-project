@@ -679,26 +679,57 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
-/// Reads \p MI's MMRAs to parse the "opencl-fence-mem" MMRA.
-/// If this tag isn't present, or if it has no meaningful value, returns \p
+static std::array<std::pair<StringLiteral, SIAtomicAddrSpace>, 3> ASNames = {{
+    {"global", SIAtomicAddrSpace::GLOBAL},
+    {"local", SIAtomicAddrSpace::LDS},
+    {"image", SIAtomicAddrSpace::SCRATCH},
+}};
+
+void diagnoseUnknownMMRAASName(const MachineInstr &MI, StringRef AS) {
+  const MachineFunction *MF = MI.getMF();
+  const Function &Fn = MF->getFunction();
+  std::string Str;
+  raw_string_ostream OS(Str);
+  OS << "unknown address space '" << AS << "'; expected one of ";
+  bool IsFirst = true;
+  for (const auto &[Name, Val] : ASNames) {
+    if (IsFirst)
+      IsFirst = false;
+    else
+      OS << ", ";
+    OS << '\'' << Name << '\'';
+  }
+  DiagnosticInfoUnsupported BadTag(Fn, Str, MI.getDebugLoc(), DS_Warning);
+  Fn.getContext().diagnose(BadTag);
+}
+
+/// Reads \p MI's MMRAs to parse the "amdgpu-as" MMRA.
+/// If this tag isn't present, or if it has no meaningful values, returns \p
 /// Default. Otherwise returns all the address spaces concerned by the MMRA.
-static SIAtomicAddrSpace
-getOpenCLFenceAddrSpaceMMRA(const MachineInstr &MI, SIAtomicAddrSpace Default) {
-  static constexpr const char *Prefix = "opencl-fence-mem";
+static SIAtomicAddrSpace getFenceAddrSpaceMMRA(const MachineInstr &MI,
+                                               SIAtomicAddrSpace Default) {
+  static constexpr StringLiteral FenceASPrefix = "amdgpu-as";
 
   auto MMRA = MMRAMetadata(MI.getMMRAMetadata());
   if (!MMRA)
     return Default;
 
-  SIAtomicAddrSpace AS = SIAtomicAddrSpace::NONE;
-  if (MMRA.hasTag(Prefix, "global"))
-    AS |= SIAtomicAddrSpace::GLOBAL;
-  if (MMRA.hasTag(Prefix, "local"))
-    AS |= SIAtomicAddrSpace::LDS;
-  if (MMRA.hasTag(Prefix, "image"))
-    AS |= SIAtomicAddrSpace::SCRATCH;
+  SIAtomicAddrSpace Result = SIAtomicAddrSpace::NONE;
+  for (const auto &[Prefix, Suffix] : MMRA) {
+    if (Prefix != FenceASPrefix)
+      continue;
 
-  return (AS != SIAtomicAddrSpace::NONE) ? AS : Default;
+    auto It = find_if(ASNames, [Suffix = Suffix](auto &Pair) {
+      return Pair.first == Suffix;
+    });
+
+    if (It != ASNames.end())
+      Result |= It->second;
+    else
+      diagnoseUnknownMMRAASName(MI, Suffix);
+  }
+
+  return (Result != SIAtomicAddrSpace::NONE) ? Result : Default;
 }
 
 } // end namespace anonymous
@@ -2561,10 +2592,8 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
   // Refine fenced address space based on MMRAs.
   //
   // TODO: Should we support this MMRA on other atomic operations?
-  // Frontend doesn't directly emit those. Can optimizations merge
-  // an atomic load w/ a fence and give us, e.g. load acquire with this MMRA?
   auto OrderingAddrSpace =
-      getOpenCLFenceAddrSpaceMMRA(*MI, MOI.getOrderingAddrSpace());
+      getFenceAddrSpaceMMRA(*MI, MOI.getOrderingAddrSpace());
 
   if (MOI.isAtomic()) {
     if (MOI.getOrdering() == AtomicOrdering::Acquire)

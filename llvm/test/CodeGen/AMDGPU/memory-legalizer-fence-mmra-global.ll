@@ -60,7 +60,7 @@ define amdgpu_kernel void @workgroup_acquire_fence() {
 ; GFX11-CU:       ; %bb.0: ; %entry
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("workgroup") acquire, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("workgroup") acquire, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -109,7 +109,7 @@ define amdgpu_kernel void @workgroup_release_fence() {
 ; GFX11-CU:       ; %bb.0: ; %entry
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("workgroup") release, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("workgroup") release, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -162,7 +162,7 @@ define amdgpu_kernel void @workgroup_acq_rel_fence() {
 ; GFX11-CU:       ; %bb.0: ; %entry
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("workgroup") acq_rel, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("workgroup") acq_rel, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -215,7 +215,7 @@ define amdgpu_kernel void @workgroup_seq_cst_fence() {
 ; GFX11-CU:       ; %bb.0: ; %entry
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("workgroup") seq_cst, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("workgroup") seq_cst, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -268,7 +268,7 @@ define amdgpu_kernel void @workgroup_one_as_acquire_fence() {
 ; GFX11-CU:       ; %bb.0: ; %entry
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("workgroup-one-as") acquire, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("workgroup-one-as") acquire, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -317,7 +317,7 @@ define amdgpu_kernel void @workgroup_one_as_release_fence() {
 ; GFX11-CU:       ; %bb.0: ; %entry
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("workgroup-one-as") release, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("workgroup-one-as") release, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -370,7 +370,7 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel_fence() {
 ; GFX11-CU:       ; %bb.0: ; %entry
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("workgroup-one-as") acq_rel, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("workgroup-one-as") acq_rel, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -423,7 +423,7 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst_fence() {
 ; GFX11-CU:       ; %bb.0: ; %entry
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("workgroup-one-as") seq_cst, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("workgroup-one-as") seq_cst, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -486,7 +486,7 @@ define amdgpu_kernel void @agent_acquire_fence() {
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("agent") acquire, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("agent") acquire, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -537,7 +537,7 @@ define amdgpu_kernel void @agent_release_fence() {
 ; GFX11-CU:       ; %bb.0: ; %entry
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("agent") release, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("agent") release, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -602,7 +602,7 @@ define amdgpu_kernel void @agent_acq_rel_fence() {
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("agent") acq_rel, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("agent") acq_rel, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -667,7 +667,7 @@ define amdgpu_kernel void @agent_seq_cst_fence() {
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("agent") seq_cst, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("agent") seq_cst, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -730,7 +730,7 @@ define amdgpu_kernel void @agent_one_as_acquire_fence() {
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("agent-one-as") acquire, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("agent-one-as") acquire, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -781,7 +781,7 @@ define amdgpu_kernel void @agent_one_as_release_fence() {
 ; GFX11-CU:       ; %bb.0: ; %entry
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("agent-one-as") release, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("agent-one-as") release, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -846,7 +846,7 @@ define amdgpu_kernel void @agent_one_as_acq_rel_fence() {
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("agent-one-as") acq_rel, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("agent-one-as") acq_rel, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -911,7 +911,7 @@ define amdgpu_kernel void @agent_one_as_seq_cst_fence() {
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("agent-one-as") seq_cst, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("agent-one-as") seq_cst, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -976,7 +976,7 @@ define amdgpu_kernel void @system_acquire_fence() {
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence acquire, !mmra !{!"opencl-fence-mem", !"global"}
+  fence acquire, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -1029,7 +1029,7 @@ define amdgpu_kernel void @system_release_fence() {
 ; GFX11-CU:       ; %bb.0: ; %entry
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence release, !mmra !{!"opencl-fence-mem", !"global"}
+  fence release, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -1098,7 +1098,7 @@ define amdgpu_kernel void @system_acq_rel_fence() {
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence acq_rel, !mmra !{!"opencl-fence-mem", !"global"}
+  fence acq_rel, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -1167,7 +1167,7 @@ define amdgpu_kernel void @system_seq_cst_fence() {
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence seq_cst, !mmra !{!"opencl-fence-mem", !"global"}
+  fence seq_cst, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -1232,7 +1232,7 @@ define amdgpu_kernel void @system_one_as_acquire_fence() {
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("one-as") acquire, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("one-as") acquire, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -1285,7 +1285,7 @@ define amdgpu_kernel void @system_one_as_release_fence() {
 ; GFX11-CU:       ; %bb.0: ; %entry
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("one-as") release, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("one-as") release, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -1354,7 +1354,7 @@ define amdgpu_kernel void @system_one_as_acq_rel_fence() {
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("one-as") acq_rel, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("one-as") acq_rel, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }
 
@@ -1423,6 +1423,6 @@ define amdgpu_kernel void @system_one_as_seq_cst_fence() {
 ; GFX11-CU-NEXT:    buffer_gl0_inv
 ; GFX11-CU-NEXT:    s_endpgm
 entry:
-  fence syncscope("one-as") seq_cst, !mmra !{!"opencl-fence-mem", !"global"}
+  fence syncscope("one-as") seq_cst, !mmra !{!"amdgpu-as", !"global"}
   ret void
 }

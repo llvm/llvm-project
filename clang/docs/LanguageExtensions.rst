@@ -4419,26 +4419,11 @@ AMDGPU Language Extensions
 __builtin_amdgcn_fence
 ^^^^^^^^^^^^^^^^^^^^^^
 
-``__builtin_amdgcn_fence`` emits a fence for all address spaces
-and takes the following arguments:
+``__builtin_amdgcn_fence`` emits a fence.
 
 * ``unsigned`` atomic ordering, e.g. ``__ATOMIC_ACQUIRE``
 * ``const char *`` synchronization scope, e.g. ``workgroup``
-
-.. code-block:: c++
-
-  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup");
-  __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "agent");
-
-__builtin_amdgcn_masked_fence
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-``__builtin_amdgcn_masked_fence`` emits a fence for one or more address
-spaces and takes the following arguments:
-
-* ``unsigned`` atomic ordering, e.g. ``__ATOMIC_ACQUIRE``
-* ``const char *`` synchronization scope, e.g. ``workgroup``
-* Zero or more ``const char *`` address spaces.
+* Zero or more ``const char *`` address spaces names.
 
 The address spaces arguments must be string literals with known values, such as:
 
@@ -4446,20 +4431,23 @@ The address spaces arguments must be string literals with known values, such as:
 * ``"global"``
 * ``"image"``
 
-If there are no address spaces specified, this fence behaves like
-``__builtin_amdgcn_fence``.
+If one or more address space name are provided, the code generator will attempt
+to emit potentially faster instructions that only fence those address spaces.
+Emitting such instructions may not always be possible and the compiler is free
+to fence more aggressively.
 
-Examples:
+If no address spaces names are provided, all address spaces are fenced.
 
 .. code-block:: c++
 
-  __builtin_amdgcn_masked_fence(__ATOMIC_SEQ_CST, "workgroup", "local")
-  __builtin_amdgcn_masked_fence(__ATOMIC_SEQ_CST, "workgroup", "local", "global")
+  // Fence all address spaces.
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup");
+  __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "agent");
 
-Note that this fence may affect more than just the address spaces
-specified; in some cases, the address space mask may
-be lost during optimization and a normal fence for all address
-spaces (``__builtin_amdgcn_fence``) will be emitted instead.
+  // Fence only requested address spaces.
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local")
+  __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local", "global")
+
 
 ARM/AArch64 Language Extensions
 -------------------------------

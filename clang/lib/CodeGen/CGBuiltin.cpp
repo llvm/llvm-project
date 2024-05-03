@@ -18328,14 +18328,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   return nullptr;
 }
 
-void CodeGenFunction::AddAMDGCNAddressSpaceMMRA(llvm::Instruction *Inst,
-                                                const CallExpr *E,
-                                                unsigned FirstASNameIdx) {
-  constexpr const char *Tag = "opencl-fence-mem";
+void CodeGenFunction::AddAMDGCNFenceAddressSpaceMMRA(llvm::Instruction *Inst,
+                                                     const CallExpr *E) {
+  constexpr const char *Tag = "amdgpu-as";
 
   LLVMContext &Ctx = Inst->getContext();
   SmallVector<MMRAMetadata::TagT, 3> MMRAs;
-  for (unsigned K = FirstASNameIdx; K < E->getNumArgs(); ++K) {
+  for (unsigned K = 2; K < E->getNumArgs(); ++K) {
     llvm::Value *V = EmitScalarExpr(E->getArg(K));
     StringRef AS;
     if (llvm::getConstantStringInfo(V, AS) &&
@@ -19019,14 +19018,12 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::fshr, Src0->getType());
     return Builder.CreateCall(F, { Src0, Src1, Src2 });
   }
-  case AMDGPU::BI__builtin_amdgcn_fence:
-  case AMDGPU::BI__builtin_amdgcn_masked_fence: {
+  case AMDGPU::BI__builtin_amdgcn_fence: {
     ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(0)),
                             EmitScalarExpr(E->getArg(1)), AO, SSID);
     FenceInst *Fence = Builder.CreateFence(AO, SSID);
-    if (BuiltinID == AMDGPU::BI__builtin_amdgcn_masked_fence &&
-        E->getNumArgs() > 2)
-      AddAMDGCNAddressSpaceMMRA(Fence, E, 2);
+    if (E->getNumArgs() > 2)
+      AddAMDGCNFenceAddressSpaceMMRA(Fence, E);
     return Fence;
   }
   case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
