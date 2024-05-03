@@ -12337,4 +12337,7 @@ def warn_acc_deprecated_alias_name
     : Warning<"OpenACC clause name '%0' is a deprecated clause name and is "
               "now an alias for '%1'">,
       InGroup<DiagGroup<"openacc-deprecated-clause-alias">>;
+def err_acc_var_not_pointer_type
+    : Error<"expected pointer in '%0' clause, type is %1">;
+def note_acc_expected_pointer_var : Note<"expected variable of pointer type">;
 } // end of sema component.

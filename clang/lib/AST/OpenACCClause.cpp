@@ -156,6 +156,26 @@ OpenACCFirstPrivateClause *OpenACCFirstPrivateClause::Create(
       OpenACCFirstPrivateClause(BeginLoc, LParenLoc, VarList, EndLoc);
 }
 
+OpenACCAttachClause *OpenACCAttachClause::Create(const ASTContext &C,
+                                                 SourceLocation BeginLoc,
+                                                 SourceLocation LParenLoc,
+                                                 ArrayRef<Expr *> VarList,
+                                                 SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(OpenACCAttachClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCAttachClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
+OpenACCDevicePtrClause *OpenACCDevicePtrClause::Create(const ASTContext &C,
+                                                       SourceLocation BeginLoc,
+                                                       SourceLocation LParenLoc,
+                                                       ArrayRef<Expr *> VarList,
+                                                       SourceLocation EndLoc) {
+  void *Mem = C.Allocate(
+      OpenACCDevicePtrClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCDevicePtrClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
 OpenACCNoCreateClause *OpenACCNoCreateClause::Create(const ASTContext &C,
                                                      SourceLocation BeginLoc,
                                                      SourceLocation LParenLoc,
@@ -277,6 +297,21 @@ void OpenACCClausePrinter::VisitPrivateClause(const OpenACCPrivateClause &C) {
 void OpenACCClausePrinter::VisitFirstPrivateClause(
     const OpenACCFirstPrivateClause &C) {
   OS << "firstprivate(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitAttachClause(const OpenACCAttachClause &C) {
+  OS << "attach(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitDevicePtrClause(
+    const OpenACCDevicePtrClause &C) {
+  OS << "deviceptr(";
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";

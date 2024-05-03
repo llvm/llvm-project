@@ -548,26 +548,30 @@ void VarListClauses() {
 #pragma acc serial present(s.array[s.value : 5], s.value), seq
   for(;;){}
 
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'deviceptr' not yet implemented, clause ignored}}
+
+  void *IsPointer;
+  // expected-error@+5{{expected ','}}
+  // expected-error@+4{{expected pointer in 'deviceptr' clause, type is 'char'}}
+  // expected-error@+3{{OpenACC sub-array is not allowed here}}
+  // expected-note@+2{{expected variable of pointer type}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial deviceptr(s.array[s.value] s.array[s.value :5] ), seq
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'deviceptr' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial deviceptr(s.array[s.value : 5], s.value), seq
+#pragma acc serial deviceptr(IsPointer), seq
   for(;;){}
 
-  // expected-error@+3{{expected ','}}
-  // expected-warning@+2{{OpenACC clause 'attach' not yet implemented, clause ignored}}
+  // expected-error@+5{{expected ','}}
+  // expected-error@+4{{expected pointer in 'attach' clause, type is 'char'}}
+  // expected-error@+3{{OpenACC sub-array is not allowed here}}
+  // expected-note@+2{{expected variable of pointer type}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
 #pragma acc serial attach(s.array[s.value] s.array[s.value :5] ), seq
   for(;;){}
 
-  // expected-warning@+2{{OpenACC clause 'attach' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-#pragma acc serial attach(s.array[s.value : 5], s.value), seq
+#pragma acc serial attach(IsPointer), seq
   for(;;){}
 
   // expected-error@+3{{expected ','}}

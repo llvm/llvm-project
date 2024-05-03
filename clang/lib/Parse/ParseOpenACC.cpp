@@ -945,16 +945,20 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       // make sure we get the right differentiator.
       assert(DirKind == OpenACCDirectiveKind::Update);
       [[fallthrough]];
-    case OpenACCClauseKind::Attach:
     case OpenACCClauseKind::Delete:
     case OpenACCClauseKind::Detach:
     case OpenACCClauseKind::Device:
     case OpenACCClauseKind::DeviceResident:
-    case OpenACCClauseKind::DevicePtr:
     case OpenACCClauseKind::Host:
     case OpenACCClauseKind::Link:
     case OpenACCClauseKind::UseDevice:
       ParseOpenACCVarList();
+      break;
+    case OpenACCClauseKind::Attach:
+    case OpenACCClauseKind::DevicePtr:
+      // TODO: ERICH: Figure out how to limit to just ptrs?
+      ParsedClause.setVarListDetails(ParseOpenACCVarList(),
+                                     /*IsReadOnly=*/false, /*IsZero=*/false);
       break;
     case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::PCopy:
