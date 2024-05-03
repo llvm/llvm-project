@@ -9427,6 +9427,8 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
   }
 }
 
+/// Use all-true mask for reverse rather than actual mask, as it avoids a
+/// dependence w/o affecting the result.
 static Instruction *createReverseEVL(IRBuilderBase &Builder, Value *Operand,
                                      Value *EVL, const Twine &Name) {
   VectorType *ValTy = cast<VectorType>(Operand->getType());
@@ -9474,11 +9476,8 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
   State.addMetadata(NewLI, LI);
   Instruction *Res = NewLI;
-  if (isReverse()) {
-    // Use cheap all-true mask for reverse rather than actual mask, it does not
-    // affect the result.
+  if (isReverse())
     Res = createReverseEVL(Builder, Res, EVL, "vp.reverse");
-  }
   State.set(this, Res, 0);
 }
 
@@ -9537,11 +9536,8 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   CallInst *NewSI = nullptr;
   Value *StoredVal = State.get(StoredValue, 0);
   Value *EVL = State.get(getEVL(), VPIteration(0, 0));
-  if (isReverse()) {
-    // Use cheap all-true mask for reverse rather than actual mask, it does not
-    // affect the result.
+  if (isReverse())
     StoredVal = createReverseEVL(Builder, StoredVal, EVL, "vp.reverse");
-  }
   Value *Mask = nullptr;
   if (VPValue *VPMask = getMask()) {
     Mask = State.get(VPMask, 0);
