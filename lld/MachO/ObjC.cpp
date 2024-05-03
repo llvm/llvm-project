@@ -351,30 +351,28 @@ class ObjcCategoryMerger {
   // alignment as already used in existing (input) categories. To do this we
   // have InfoCategoryWriter which contains the various sections that the
   // generated categories will be written to.
-  template <typename T> struct InfoWriteSection {
+  struct InfoWriteSection {
     bool valid = false; // Data has been successfully collected from input
     uint32_t align = 0;
     Section *inputSection;
     Reloc relocTemplate;
-    T *outputSection;
+    OutputSection *outputSection;
   };
 
   struct InfoCategoryWriter {
-    InfoWriteSection<ConcatOutputSection> catListInfo;
-    InfoWriteSection<ConcatOutputSection> catBodyInfo;
-    InfoWriteSection<CStringSection> catNameInfo;
-    InfoWriteSection<ConcatOutputSection> catPtrListInfo;
+    InfoWriteSection catListInfo;
+    InfoWriteSection catBodyInfo;
+    InfoWriteSection catNameInfo;
+    InfoWriteSection catPtrListInfo;
   };
 
   // Information about a pointer list in the original categories (method lists,
   // protocol lists, etc)
   struct PointerListInfo {
-    PointerListInfo(const char *_categoryPrefix, uint32_t _categoryOffset,
-                    uint32_t _pointersPerStruct)
-        : categoryPrefix(_categoryPrefix), categoryOffset(_categoryOffset),
+    PointerListInfo(const char *_categoryPrefix, uint32_t _pointersPerStruct)
+        : categoryPrefix(_categoryPrefix),
           pointersPerStruct(_pointersPerStruct) {}
     const char *categoryPrefix;
-    uint32_t categoryOffset = 0;
 
     uint32_t pointersPerStruct = 0;
 
@@ -399,25 +397,16 @@ class ObjcCategoryMerger {
     // In case we generate new data, mark the new data as belonging to this file
     ObjFile *objFileForMergeData = nullptr;
 
-    PointerListInfo instanceMethods = {
-        objc::symbol_names::categoryInstanceMethods,
-        /*_categoryOffset=*/catLayout.instanceMethodsOffset,
-        /*pointersPerStruct=*/3};
-    PointerListInfo classMethods = {
-        objc::symbol_names::categoryClassMethods,
-        /*_categoryOffset=*/catLayout.classMethodsOffset,
-        /*pointersPerStruct=*/3};
+    PointerListInfo instanceMethods = {objc::symbol_names::instanceMethods,
+                                       /*pointersPerStruct=*/3};
+    PointerListInfo classMethods = {objc::symbol_names::categoryClassMethods,
+                                    /*pointersPerStruct=*/3};
     PointerListInfo protocols = {objc::symbol_names::categoryProtocols,
-                                 /*_categoryOffset=*/catLayout.protocolsOffset,
                                  /*pointersPerStruct=*/0};
-    PointerListInfo instanceProps = {
-        objc::symbol_names::listProprieties,
-        /*_categoryOffset=*/catLayout.instancePropsOffset,
-        /*pointersPerStruct=*/2};
-    PointerListInfo classProps = {
-        objc::symbol_names::klassPropList,
-        /*_categoryOffset=*/catLayout.classPropsOffset,
-        /*pointersPerStruct=*/2};
+    PointerListInfo instanceProps = {objc::symbol_names::listProprieties,
+                                     /*pointersPerStruct=*/2};
+    PointerListInfo classProps = {objc::symbol_names::klassPropList,
+                                  /*pointersPerStruct=*/2};
   };
 
 public:
@@ -436,9 +425,8 @@ private:
   void generateCatListForNonErasedCategories(
       std::map<ConcatInputSection *, std::set<uint64_t>>
           catListToErasedOffsets);
-  template <typename T>
   void collectSectionWriteInfoFromIsec(const InputSection *isec,
-                                       InfoWriteSection<T> &catWriteInfo);
+                                       InfoWriteSection &catWriteInfo);
   void collectCategoryWriterInfoFromCategory(const InfoInputCategory &catInfo);
   void parseCatInfoToExtInfo(const InfoInputCategory &catInfo,
                              ClassExtensionInfo &extInfo);
@@ -511,15 +499,12 @@ ObjcCategoryMerger::ObjcCategoryMerger(
       protocolListHeaderLayout(target->wordSize),
       allInputSections(_allInputSections) {}
 
-// This is a template so that it can be used both for CStringSection and
-// ConcatOutputSection
-template <typename T>
 void ObjcCategoryMerger::collectSectionWriteInfoFromIsec(
-    const InputSection *isec, InfoWriteSection<T> &catWriteInfo) {
+    const InputSection *isec, InfoWriteSection &catWriteInfo) {
 
   catWriteInfo.inputSection = const_cast<Section *>(&isec->section);
   catWriteInfo.align = isec->align;
-  catWriteInfo.outputSection = dyn_cast_or_null<T>(isec->parent);
+  catWriteInfo.outputSection = isec->parent;
 
   assert(catWriteInfo.outputSection &&
          "outputSection may not be null in collectSectionWriteInfoFromIsec.");
@@ -576,19 +561,19 @@ void ObjcCategoryMerger::collectCategoryWriterInfoFromCategory(
     const InfoInputCategory &catInfo) {
 
   if (!infoCategoryWriter.catListInfo.valid)
-    collectSectionWriteInfoFromIsec<ConcatOutputSection>(
-        catInfo.catListIsec, infoCategoryWriter.catListInfo);
+    collectSectionWriteInfoFromIsec(catInfo.catListIsec,
+                                    infoCategoryWriter.catListInfo);
   if (!infoCategoryWriter.catBodyInfo.valid)
-    collectSectionWriteInfoFromIsec<ConcatOutputSection>(
-        catInfo.catBodyIsec, infoCategoryWriter.catBodyInfo);
+    collectSectionWriteInfoFromIsec(catInfo.catBodyIsec,
+                                    infoCategoryWriter.catBodyInfo);
 
   if (!infoCategoryWriter.catNameInfo.valid) {
     lld::macho::Defined *catNameSym =
         tryGetDefinedAtIsecOffset(catInfo.catBodyIsec, catLayout.nameOffset);
     assert(catNameSym && "Category does not have a valid name Symbol");
 
-    collectSectionWriteInfoFromIsec<CStringSection>(
-        catNameSym->isec(), infoCategoryWriter.catNameInfo);
+    collectSectionWriteInfoFromIsec(catNameSym->isec(),
+                                    infoCategoryWriter.catNameInfo);
   }
 
   // Collect writer info from all the category lists (we're assuming they all
@@ -598,8 +583,8 @@ void ObjcCategoryMerger::collectCategoryWriterInfoFromCategory(
          off <= catLayout.classPropsOffset; off += target->wordSize) {
       if (Defined *ptrList =
               tryGetDefinedAtIsecOffset(catInfo.catBodyIsec, off)) {
-        collectSectionWriteInfoFromIsec<ConcatOutputSection>(
-            ptrList->isec(), infoCategoryWriter.catPtrListInfo);
+        collectSectionWriteInfoFromIsec(ptrList->isec(),
+                                        infoCategoryWriter.catPtrListInfo);
         // we've successfully collected data, so we can break
         break;
       }
