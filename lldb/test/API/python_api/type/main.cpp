@@ -28,6 +28,7 @@ public:
     union U {
     } u;
     static constexpr long static_constexpr_field = 47;
+    static constexpr bool static_constexpr_bool_field = true;
     static int static_mutable_field;
     Task(int i, Task *n):
         id(i),

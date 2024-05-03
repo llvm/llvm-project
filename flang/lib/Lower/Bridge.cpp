@@ -810,7 +810,7 @@ public:
                               bool collectSymbol) {
             if (collectSymbol && oriSymbol.test(flag))
               symbolSet.insert(&oriSymbol);
-            if (checkHostAssociatedSymbols)
+            else if (checkHostAssociatedSymbols)
               if (const auto *details{
                       oriSymbol
                           .detailsIf<Fortran::semantics::HostAssocDetails>()})

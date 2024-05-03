@@ -1521,19 +1521,6 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     };
   }
 
-  // Adjust the finalization stack, verify the adjustment, and call the
-  // finalize function a last time to finalize values between the pre-fini
-  // block and the exit block if we left the parallel "the normal way".
-  auto FiniInfo = FinalizationStack.pop_back_val();
-  (void)FiniInfo;
-  assert(FiniInfo.DK == OMPD_parallel &&
-         "Unexpected finalization stack state!");
-
-  Instruction *PRegPreFiniTI = PRegPreFiniBB->getTerminator();
-
-  InsertPointTy PreFiniIP(PRegPreFiniBB, PRegPreFiniTI->getIterator());
-  FiniCB(PreFiniIP);
-
   OI.OuterAllocaBB = OuterAllocaBlock;
   OI.EntryBB = PRegEntryBB;
   OI.ExitBB = PRegExitBB;
@@ -1657,6 +1644,19 @@ IRBuilder<>::InsertPoint OpenMPIRBuilder::createParallel(
     for (auto *BB : Blocks)
       dbgs() << " PBR: " << BB->getName() << "\n";
   });
+
+  // Adjust the finalization stack, verify the adjustment, and call the
+  // finalize function a last time to finalize values between the pre-fini
+  // block and the exit block if we left the parallel "the normal way".
+  auto FiniInfo = FinalizationStack.pop_back_val();
+  (void)FiniInfo;
+  assert(FiniInfo.DK == OMPD_parallel &&
+         "Unexpected finalization stack state!");
+
+  Instruction *PRegPreFiniTI = PRegPreFiniBB->getTerminator();
+
+  InsertPointTy PreFiniIP(PRegPreFiniBB, PRegPreFiniTI->getIterator());
+  FiniCB(PreFiniIP);
 
   // Register the outlined info.
   addOutlineInfo(std::move(OI));
