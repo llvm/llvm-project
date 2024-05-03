@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/DebugInfo.h"
+#include "../lib/IR/LLVMContextImpl.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/DIBuilder.h"
@@ -20,6 +21,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/Local.h"
+
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -349,7 +351,7 @@ TEST(MetadataTest, OrderingOfDbgVariableRecords) {
   UseNewDbgInfoFormat = OldDbgValueMode;
 }
 
-TEST(DIBuiler, CreateFile) {
+TEST(DIBuilder, CreateFile) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M(new Module("MyModule", Ctx));
   DIBuilder DIB(*M);
@@ -1182,6 +1184,54 @@ TEST(MetadataTest, DbgVariableRecordConversionRoutines) {
   EXPECT_EQ(DVI2->getExpression(), Expr2);
 
   UseNewDbgInfoFormat = false;
+}
+
+// Test that the hashing function for DISubprograms produce the same result
+// after replacing the temporary scope.
+TEST(DIBuilder, HashingDISubprogram) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = std::make_unique<Module>("MyModule", Ctx);
+  DIBuilder DIB(*M);
+
+  DIFile *F = DIB.createFile("main.c", "/");
+  DICompileUnit *CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C, F, "Test", false, "", 0);
+
+  llvm::TempDIType ForwardDeclaredType =
+      llvm::TempDIType(DIB.createReplaceableCompositeType(
+          llvm::dwarf::DW_TAG_structure_type, "MyType", CU, F, 0, 0, 8, 8, {},
+          "UniqueIdentifier"));
+
+  // The hashing function is different for declarations and definitions, so
+  // create one of each.
+  DISubprogram *Declaration =
+      DIB.createMethod(ForwardDeclaredType.get(), "MethodName", "LinkageName",
+                       F, 0, DIB.createSubroutineType({}));
+
+  DISubprogram *Definition = DIB.createFunction(
+      ForwardDeclaredType.get(), "MethodName", "LinkageName", F, 0,
+      DIB.createSubroutineType({}), 0, DINode::FlagZero,
+      llvm::DISubprogram::SPFlagDefinition, nullptr, Declaration);
+
+  // Produce the hash with the temporary scope.
+  unsigned HashDeclaration =
+      MDNodeKeyImpl<DISubprogram>(Declaration).getHashValue();
+  unsigned HashDefinition =
+      MDNodeKeyImpl<DISubprogram>(Definition).getHashValue();
+
+  // Instantiate the real scope and replace the temporary one with it.
+  DICompositeType *Type = DIB.createStructType(CU, "MyType", F, 0, 8, 8, {}, {},
+                                               {}, 0, {}, "UniqueIdentifier");
+  DIB.replaceTemporary(std::move(ForwardDeclaredType), Type);
+
+  // Now make sure the hashing is consistent.
+  unsigned HashDeclarationAfter =
+      MDNodeKeyImpl<DISubprogram>(Declaration).getHashValue();
+  unsigned HashDefinitionAfter =
+      MDNodeKeyImpl<DISubprogram>(Definition).getHashValue();
+
+  EXPECT_EQ(HashDeclaration, HashDeclarationAfter);
+  EXPECT_EQ(HashDefinition, HashDefinitionAfter);
 }
 
 } // end namespace

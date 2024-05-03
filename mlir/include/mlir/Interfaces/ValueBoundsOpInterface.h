@@ -15,6 +15,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ExtensibleRTTI.h"
 
 #include <queue>
@@ -111,6 +112,39 @@ protected:
 public:
   static char ID;
 
+  /// A variable that can be added to the constraint set as a "column". The
+  /// value bounds infrastructure can compute bounds for variables and compare
+  /// two variables.
+  ///
+  /// Internally, a variable is represented as an affine map and operands.
+  class Variable {
+  public:
+    /// Construct a variable for an index-typed attribute or SSA value.
+    Variable(OpFoldResult ofr);
+
+    /// Construct a variable for an index-typed SSA value.
+    Variable(Value indexValue);
+
+    /// Construct a variable for a dimension of a shaped value.
+    Variable(Value shapedValue, int64_t dim);
+
+    /// Construct a variable for an index-typed attribute/SSA value or for a
+    /// dimension of a shaped value. A non-null dimension must be provided if
+    /// and only if `ofr` is a shaped value.
+    Variable(OpFoldResult ofr, std::optional<int64_t> dim);
+
+    /// Construct a variable for a map and its operands.
+    Variable(AffineMap map, ArrayRef<Variable> mapOperands);
+    Variable(AffineMap map, ArrayRef<Value> mapOperands);
+
+    MLIRContext *getContext() const { return map.getContext(); }
+
+  private:
+    friend class ValueBoundsConstraintSet;
+    AffineMap map;
+    ValueDimList mapOperands;
+  };
+
   /// The stop condition when traversing the backward slice of a shaped value/
   /// index-type value. The traversal continues until the stop condition
   /// evaluates to "true" for a value.
@@ -121,35 +155,31 @@ public:
   using StopConditionFn = std::function<bool(
       Value, std::optional<int64_t> /*dim*/, ValueBoundsConstraintSet &cstr)>;
 
-  /// Compute a bound for the given index-typed value or shape dimension size.
-  /// The computed bound is stored in `resultMap`. The operands of the bound are
-  /// stored in `mapOperands`. An operand is either an index-type SSA value
-  /// or a shaped value and a dimension.
+  /// Compute a bound for the given variable. The computed bound is stored in
+  /// `resultMap`. The operands of the bound are stored in `mapOperands`. An
+  /// operand is either an index-type SSA value or a shaped value and a
+  /// dimension.
   ///
-  /// `dim` must be `nullopt` if and only if `value` is index-typed. The bound
-  /// is computed in terms of values/dimensions for which `stopCondition`
-  /// evaluates to "true". To that end, the backward slice (reverse use-def
-  /// chain) of the given value is visited in a worklist-driven manner and the
-  /// constraint set is populated according to `ValueBoundsOpInterface` for each
-  /// visited value.
+  /// The bound is computed in terms of values/dimensions for which
+  /// `stopCondition` evaluates to "true". To that end, the backward slice
+  /// (reverse use-def chain) of the given value is visited in a worklist-driven
+  /// manner and the constraint set is populated according to
+  /// `ValueBoundsOpInterface` for each visited value.
   ///
   /// By default, lower/equal bounds are closed and upper bounds are open. If
   /// `closedUB` is set to "true", upper bounds are also closed.
-  static LogicalResult computeBound(AffineMap &resultMap,
-                                    ValueDimList &mapOperands,
-                                    presburger::BoundType type, Value value,
-                                    std::optional<int64_t> dim,
-                                    StopConditionFn stopCondition,
-                                    bool closedUB = false);
+  static LogicalResult
+  computeBound(AffineMap &resultMap, ValueDimList &mapOperands,
+               presburger::BoundType type, const Variable &var,
+               StopConditionFn stopCondition, bool closedUB = false);
 
   /// Compute a bound in terms of the values/dimensions in `dependencies`. The
   /// computed bound consists of only constant terms and dependent values (or
   /// dimension sizes thereof).
   static LogicalResult
   computeDependentBound(AffineMap &resultMap, ValueDimList &mapOperands,
-                        presburger::BoundType type, Value value,
-                        std::optional<int64_t> dim, ValueDimList dependencies,
-                        bool closedUB = false);
+                        presburger::BoundType type, const Variable &var,
+                        ValueDimList dependencies, bool closedUB = false);
 
   /// Compute a bound in that is independent of all values in `independencies`.
   ///
@@ -161,13 +191,10 @@ public:
   /// appear in the computed bound.
   static LogicalResult
   computeIndependentBound(AffineMap &resultMap, ValueDimList &mapOperands,
-                          presburger::BoundType type, Value value,
-                          std::optional<int64_t> dim, ValueRange independencies,
-                          bool closedUB = false);
+                          presburger::BoundType type, const Variable &var,
+                          ValueRange independencies, bool closedUB = false);
 
-  /// Compute a constant bound for the given affine map, where dims and symbols
-  /// are bound to the given operands. The affine map must have exactly one
-  /// result.
+  /// Compute a constant bound for the given variable.
   ///
   /// This function traverses the backward slice of the given operands in a
   /// worklist-driven manner until `stopCondition` evaluates to "true". The
@@ -182,16 +209,9 @@ public:
   /// By default, lower/equal bounds are closed and upper bounds are open. If
   /// `closedUB` is set to "true", upper bounds are also closed.
   static FailureOr<int64_t>
-  computeConstantBound(presburger::BoundType type, Value value,
-                       std::optional<int64_t> dim = std::nullopt,
+  computeConstantBound(presburger::BoundType type, const Variable &var,
                        StopConditionFn stopCondition = nullptr,
                        bool closedUB = false);
-  static FailureOr<int64_t> computeConstantBound(
-      presburger::BoundType type, AffineMap map, ValueDimList mapOperands,
-      StopConditionFn stopCondition = nullptr, bool closedUB = false);
-  static FailureOr<int64_t> computeConstantBound(
-      presburger::BoundType type, AffineMap map, ArrayRef<Value> mapOperands,
-      StopConditionFn stopCondition = nullptr, bool closedUB = false);
 
   /// Compute a constant delta between the given two values. Return "failure"
   /// if a constant delta could not be determined.
@@ -221,9 +241,8 @@ public:
   /// proven. This could be because the specified relation does in fact not hold
   /// or because there is not enough information in the constraint set. In other
   /// words, if we do not know for sure, this function returns "false".
-  bool populateAndCompare(OpFoldResult lhs, std::optional<int64_t> lhsDim,
-                          ComparisonOperator cmp, OpFoldResult rhs,
-                          std::optional<int64_t> rhsDim);
+  bool populateAndCompare(const Variable &lhs, ComparisonOperator cmp,
+                          const Variable &rhs);
 
   /// Return "true" if "lhs cmp rhs" was proven to hold. Return "false" if the
   /// specified relation could not be proven. This could be because the
@@ -233,24 +252,12 @@ public:
   ///
   /// This function keeps traversing the backward slice of lhs/rhs until could
   /// prove the relation or until it ran out of IR.
-  static bool compare(OpFoldResult lhs, std::optional<int64_t> lhsDim,
-                      ComparisonOperator cmp, OpFoldResult rhs,
-                      std::optional<int64_t> rhsDim);
-  static bool compare(AffineMap lhs, ValueDimList lhsOperands,
-                      ComparisonOperator cmp, AffineMap rhs,
-                      ValueDimList rhsOperands);
-  static bool compare(AffineMap lhs, ArrayRef<Value> lhsOperands,
-                      ComparisonOperator cmp, AffineMap rhs,
-                      ArrayRef<Value> rhsOperands);
+  static bool compare(const Variable &lhs, ComparisonOperator cmp,
+                      const Variable &rhs);
 
-  /// Compute whether the given values/dimensions are equal. Return "failure" if
+  /// Compute whether the given variables are equal. Return "failure" if
   /// equality could not be determined.
-  ///
-  /// `dim1`/`dim2` must be `nullopt` if and only if `value1`/`value2` are
-  /// index-typed.
-  static FailureOr<bool> areEqual(OpFoldResult value1, OpFoldResult value2,
-                                  std::optional<int64_t> dim1 = std::nullopt,
-                                  std::optional<int64_t> dim2 = std::nullopt);
+  static FailureOr<bool> areEqual(const Variable &var1, const Variable &var2);
 
   /// Return "true" if the given slices are guaranteed to be overlapping.
   /// Return "false" if the given slices are guaranteed to be non-overlapping.
@@ -317,9 +324,6 @@ protected:
   ///
   /// This function does not analyze any IR and does not populate any additional
   /// constraints.
-  bool compareValueDims(OpFoldResult lhs, std::optional<int64_t> lhsDim,
-                        ComparisonOperator cmp, OpFoldResult rhs,
-                        std::optional<int64_t> rhsDim);
   bool comparePos(int64_t lhsPos, ComparisonOperator cmp, int64_t rhsPos);
 
   /// Given an affine map with a single result (and map operands), add a new
@@ -374,12 +378,15 @@ protected:
   /// constraint system. Return the position of the new column. Any operands
   /// that were not analyzed yet are put on the worklist.
   int64_t insert(AffineMap map, ValueDimList operands, bool isSymbol = true);
+  int64_t insert(const Variable &var, bool isSymbol = true);
 
   /// Project out the given column in the constraint set.
   void projectOut(int64_t pos);
 
   /// Project out all columns for which the condition holds.
   void projectOut(function_ref<bool(ValueDim)> condition);
+
+  void projectOutAnonymous(std::optional<int64_t> except = std::nullopt);
 
   /// Mapping of columns to values/shape dimensions.
   SmallVector<std::optional<ValueDim>> positionToValueDim;

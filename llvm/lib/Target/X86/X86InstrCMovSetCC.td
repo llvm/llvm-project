@@ -58,8 +58,8 @@ let SchedRW = [WriteCMOV.Folded, WriteCMOV.ReadAfterFold] in {
 }
 let SchedRW = [WriteCMOV, ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault],
     Predicates = [HasCMOV, HasCF, In64BitMode], mayStore = 1 in
-  def mr : ITy<0x40, MRMDestMemCC, t, (outs t.MemOperand:$dst),
-                (ins t.RegClass:$src1, ccode:$cond),
+  def mr : ITy<0x40, MRMDestMemCC, t, (outs),
+                (ins t.MemOperand:$dst, t.RegClass:$src1, ccode:$cond),
                 "cfcmov${cond}", unaryop_ndd_args, []>, UseEFLAGS, NF;
 }
 

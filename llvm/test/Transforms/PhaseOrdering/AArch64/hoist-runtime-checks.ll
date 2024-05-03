@@ -14,24 +14,50 @@ define i32 @read_only_loop_with_runtime_check(ptr noundef %array, i32 noundef %c
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[N]], -1
 ; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ult i32 [[TMP1]], [[COUNT]]
+; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label [[FOR_BODY_PREHEADER10:%.*]], label [[IF_THEN:%.*]]
+; CHECK:       for.body.preheader10:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 8
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY_PREHEADER13:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], 4294967288
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI11:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[ARRAY]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 16
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP4]] = add <4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP5]] = add <4 x i32> [[WIDE_LOAD12]], [[VEC_PHI11]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_PREHEADER13]]
+; CHECK:       for.body.preheader13:
+; CHECK-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER10]] ], [ [[N_VEC]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[SUM_07_PH:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER10]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[IF_END:%.*]] ]
+; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    ret i32 [[SUM_0_LCSSA]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[IF_END]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[ADD]], [[IF_END]] ]
-; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label [[IF_END]], label [[IF_THEN:%.*]]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[INDVARS_IV_PH]], [[FOR_BODY_PREHEADER13]] ]
+; CHECK-NEXT:    [[SUM_07:%.*]] = phi i32 [ [[ADD]], [[FOR_BODY]] ], [ [[SUM_07_PH]], [[FOR_BODY_PREHEADER13]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[ARRAY]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ADD]] = add nsw i32 [[TMP8]], [[SUM_07]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[TMP0]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    tail call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
-; CHECK:       if.end:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[ARRAY]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ADD]] = add nsw i32 [[TMP2]], [[SUM_07]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
 ;
 entry:
   %array.addr = alloca ptr, align 8
@@ -103,24 +129,50 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    [[DOTNOT_NOT:%.*]] = icmp ult i64 [[TMP0]], [[S_COERCE1]]
+; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label [[ENTRY:%.*]], label [[COND_FALSE_I:%.*]], !prof [[PROF4:![0-9]+]]
+; CHECK:       for.body.preheader8:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY_PREHEADER11:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N]], -8
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP3:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI9:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[S_COERCE0]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 16
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP3]] = add <4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP4]] = add <4 x i32> [[WIDE_LOAD10]], [[VEC_PHI9]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[SPAN_CHECKED_ACCESS_EXIT:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[ADD:%.*]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_PREHEADER11]]
+; CHECK:       for.body.preheader11:
+; CHECK-NEXT:    [[I_07_PH:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[N_VEC]], [[SPAN_CHECKED_ACCESS_EXIT]] ]
+; CHECK-NEXT:    [[RET_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD]], [[SPAN_CHECKED_ACCESS_EXIT]] ]
+; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
 ; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    [[RET_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[SPAN_CHECKED_ACCESS_EXIT:%.*]] ]
-; CHECK-NEXT:    ret i32 [[RET_0_LCSSA]]
+; CHECK-NEXT:    [[RET_0_LCSSA1:%.*]] = phi i32 [ 0, [[ENTRY1:%.*]] ], [ [[ADD]], [[SPAN_CHECKED_ACCESS_EXIT]] ], [ [[ADD1:%.*]], [[FOR_BODY1]] ]
+; CHECK-NEXT:    ret i32 [[RET_0_LCSSA1]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_07:%.*]] = phi i64 [ [[INC:%.*]], [[SPAN_CHECKED_ACCESS_EXIT]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[RET_06:%.*]] = phi i32 [ [[ADD]], [[SPAN_CHECKED_ACCESS_EXIT]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    br i1 [[DOTNOT_NOT]], label [[SPAN_CHECKED_ACCESS_EXIT]], label [[COND_FALSE_I:%.*]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    [[I_07:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY1]] ], [ [[I_07_PH]], [[FOR_BODY_PREHEADER11]] ]
+; CHECK-NEXT:    [[RET_06:%.*]] = phi i32 [ [[ADD1]], [[FOR_BODY1]] ], [ [[RET_0_LCSSA]], [[FOR_BODY_PREHEADER11]] ]
+; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds i32, ptr [[S_COERCE0]], i64 [[I_07]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX_I]], align 4
+; CHECK-NEXT:    [[ADD1]] = add nsw i32 [[TMP7]], [[RET_06]]
+; CHECK-NEXT:    [[INC]] = add nuw i64 [[I_07]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY1]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       cond.false.i:
 ; CHECK-NEXT:    tail call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
-; CHECK:       span_checked_access.exit:
-; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds i32, ptr [[S_COERCE0]], i64 [[I_07]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX_I]], align 4
-; CHECK-NEXT:    [[ADD]] = add nsw i32 [[TMP7]], [[RET_06]]
-; CHECK-NEXT:    [[INC]] = add nuw i64 [[I_07]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
 ;
 entry:
   %s = alloca %"class.std::__1::span", align 8
@@ -176,7 +228,7 @@ define hidden noundef nonnull align 4 dereferenceable(4) ptr @span_checked_acces
 ; CHECK-NEXT:    [[__SIZE__I:%.*]] = getelementptr inbounds i8, ptr [[THIS]], i64 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[__SIZE__I]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[TMP0]], [[__IDX]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[COND_END:%.*]], label [[COND_FALSE:%.*]], !prof [[PROF4]]
 ; CHECK:       cond.false:
 ; CHECK-NEXT:    tail call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -237,5 +289,11 @@ declare void @llvm.trap()
 
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 ;.
-; CHECK: [[PROF0]] = !{!"branch_weights", i32 2000, i32 1}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; CHECK: [[PROF4]] = !{!"branch_weights", i32 2000, i32 1}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META2]], [[META1]]}
 ;.

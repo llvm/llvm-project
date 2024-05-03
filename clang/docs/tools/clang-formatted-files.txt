@@ -123,6 +123,7 @@ clang/include/clang/Analysis/Analyses/CalledOnceCheck.h
 clang/include/clang/Analysis/Analyses/CFGReachabilityAnalysis.h
 clang/include/clang/Analysis/Analyses/ExprMutationAnalyzer.h
 clang/include/clang/Analysis/FlowSensitive/AdornedCFG.h
+clang/include/clang/Analysis/FlowSensitive/ASTOps.h
 clang/include/clang/Analysis/FlowSensitive/DataflowAnalysis.h
 clang/include/clang/Analysis/FlowSensitive/DataflowAnalysisContext.h
 clang/include/clang/Analysis/FlowSensitive/DataflowEnvironment.h
@@ -307,6 +308,7 @@ clang/lib/Analysis/CalledOnceCheck.cpp
 clang/lib/Analysis/CloneDetection.cpp
 clang/lib/Analysis/CodeInjector.cpp
 clang/lib/Analysis/FlowSensitive/AdornedCFG.cpp
+clang/lib/Analysis/FlowSensitive/ASTOps.cpp
 clang/lib/Analysis/FlowSensitive/DataflowAnalysisContext.cpp
 clang/lib/Analysis/FlowSensitive/DataflowEnvironment.cpp
 clang/lib/Analysis/FlowSensitive/DebugSupport.cpp

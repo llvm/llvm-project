@@ -112,7 +112,8 @@ bool LLVM::LoadOp::loadsFrom(const MemorySlot &slot) {
 
 bool LLVM::LoadOp::storesTo(const MemorySlot &slot) { return false; }
 
-Value LLVM::LoadOp::getStored(const MemorySlot &slot, RewriterBase &rewriter) {
+Value LLVM::LoadOp::getStored(const MemorySlot &slot, RewriterBase &rewriter,
+                              Value reachingDef, const DataLayout &dataLayout) {
   llvm_unreachable("getStored should not be called on LoadOp");
 }
 
@@ -122,37 +123,223 @@ bool LLVM::StoreOp::storesTo(const MemorySlot &slot) {
   return getAddr() == slot.ptr;
 }
 
-/// Checks that two types are the same or can be cast into one another.
-static bool areCastCompatible(const DataLayout &layout, Type lhs, Type rhs) {
-  return lhs == rhs || (!isa<LLVM::LLVMStructType, LLVM::LLVMArrayType>(lhs) &&
-                        !isa<LLVM::LLVMStructType, LLVM::LLVMArrayType>(rhs) &&
-                        layout.getTypeSize(lhs) == layout.getTypeSize(rhs));
+/// Checks if `type` can be used in any kind of conversion sequences.
+static bool isSupportedTypeForConversion(Type type) {
+  // Aggregate types are not bitcastable.
+  if (isa<LLVM::LLVMStructType, LLVM::LLVMArrayType>(type))
+    return false;
+
+  // LLVM vector types are only used for either pointers or target specific
+  // types. These types cannot be casted in the general case, thus the memory
+  // optimizations do not support them.
+  if (isa<LLVM::LLVMFixedVectorType, LLVM::LLVMScalableVectorType>(type))
+    return false;
+
+  // Scalable types are not supported.
+  if (auto vectorType = dyn_cast<VectorType>(type))
+    return !vectorType.isScalable();
+  return true;
 }
 
-/// Constructs operations that convert `inputValue` into a new value of type
-/// `targetType`. Assumes that this conversion is possible.
-static Value createConversionSequence(RewriterBase &rewriter, Location loc,
-                                      Value inputValue, Type targetType) {
-  if (inputValue.getType() == targetType)
-    return inputValue;
+/// Checks that `rhs` can be converted to `lhs` by a sequence of casts and
+/// truncations. Checks for narrowing or widening conversion compatibility
+/// depending on `narrowingConversion`.
+static bool areConversionCompatible(const DataLayout &layout, Type targetType,
+                                    Type srcType, bool narrowingConversion) {
+  if (targetType == srcType)
+    return true;
 
-  if (!isa<LLVM::LLVMPointerType>(targetType) &&
-      !isa<LLVM::LLVMPointerType>(inputValue.getType()))
-    return rewriter.createOrFold<LLVM::BitcastOp>(loc, targetType, inputValue);
+  if (!isSupportedTypeForConversion(targetType) ||
+      !isSupportedTypeForConversion(srcType))
+    return false;
 
-  if (!isa<LLVM::LLVMPointerType>(targetType))
-    return rewriter.createOrFold<LLVM::PtrToIntOp>(loc, targetType, inputValue);
+  uint64_t targetSize = layout.getTypeSize(targetType);
+  uint64_t srcSize = layout.getTypeSize(srcType);
 
-  if (!isa<LLVM::LLVMPointerType>(inputValue.getType()))
-    return rewriter.createOrFold<LLVM::IntToPtrOp>(loc, targetType, inputValue);
+  // Pointer casts will only be sane when the bitsize of both pointer types is
+  // the same.
+  if (isa<LLVM::LLVMPointerType>(targetType) &&
+      isa<LLVM::LLVMPointerType>(srcType))
+    return targetSize == srcSize;
 
-  return rewriter.createOrFold<LLVM::AddrSpaceCastOp>(loc, targetType,
-                                                      inputValue);
+  if (narrowingConversion)
+    return targetSize <= srcSize;
+  return targetSize >= srcSize;
 }
 
-Value LLVM::StoreOp::getStored(const MemorySlot &slot, RewriterBase &rewriter) {
-  return createConversionSequence(rewriter, getLoc(), getValue(),
-                                  slot.elemType);
+/// Checks if `dataLayout` describes a little endian layout.
+static bool isBigEndian(const DataLayout &dataLayout) {
+  auto endiannessStr = dyn_cast_or_null<StringAttr>(dataLayout.getEndianness());
+  return endiannessStr && endiannessStr == "big";
+}
+
+/// Converts a value to an integer type of the same size.
+/// Assumes that the type can be converted.
+static Value castToSameSizedInt(RewriterBase &rewriter, Location loc, Value val,
+                                const DataLayout &dataLayout) {
+  Type type = val.getType();
+  assert(isSupportedTypeForConversion(type) &&
+         "expected value to have a convertible type");
+
+  if (isa<IntegerType>(type))
+    return val;
+
+  uint64_t typeBitSize = dataLayout.getTypeSizeInBits(type);
+  IntegerType valueSizeInteger = rewriter.getIntegerType(typeBitSize);
+
+  if (isa<LLVM::LLVMPointerType>(type))
+    return rewriter.createOrFold<LLVM::PtrToIntOp>(loc, valueSizeInteger, val);
+  return rewriter.createOrFold<LLVM::BitcastOp>(loc, valueSizeInteger, val);
+}
+
+/// Converts a value with an integer type to `targetType`.
+static Value castIntValueToSameSizedType(RewriterBase &rewriter, Location loc,
+                                         Value val, Type targetType) {
+  assert(isa<IntegerType>(val.getType()) &&
+         "expected value to have an integer type");
+  assert(isSupportedTypeForConversion(targetType) &&
+         "expected the target type to be supported for conversions");
+  if (val.getType() == targetType)
+    return val;
+  if (isa<LLVM::LLVMPointerType>(targetType))
+    return rewriter.createOrFold<LLVM::IntToPtrOp>(loc, targetType, val);
+  return rewriter.createOrFold<LLVM::BitcastOp>(loc, targetType, val);
+}
+
+/// Constructs operations that convert `srcValue` into a new value of type
+/// `targetType`. Assumes the types have the same bitsize.
+static Value castSameSizedTypes(RewriterBase &rewriter, Location loc,
+                                Value srcValue, Type targetType,
+                                const DataLayout &dataLayout) {
+  Type srcType = srcValue.getType();
+  assert(areConversionCompatible(dataLayout, targetType, srcType,
+                                 /*narrowingConversion=*/true) &&
+         "expected that the compatibility was checked before");
+
+  // Nothing has to be done if the types are already the same.
+  if (srcType == targetType)
+    return srcValue;
+
+  // In the special case of casting one pointer to another, we want to generate
+  // an address space cast. Bitcasts of pointers are not allowed and using
+  // pointer to integer conversions are not equivalent due to the loss of
+  // provenance.
+  if (isa<LLVM::LLVMPointerType>(targetType) &&
+      isa<LLVM::LLVMPointerType>(srcType))
+    return rewriter.createOrFold<LLVM::AddrSpaceCastOp>(loc, targetType,
+                                                        srcValue);
+
+  // For all other castable types, casting through integers is necessary.
+  Value replacement = castToSameSizedInt(rewriter, loc, srcValue, dataLayout);
+  return castIntValueToSameSizedType(rewriter, loc, replacement, targetType);
+}
+
+/// Constructs operations that convert `srcValue` into a new value of type
+/// `targetType`. Performs bit-level extraction if the source type is larger
+/// than the target type. Assumes that this conversion is possible.
+static Value createExtractAndCast(RewriterBase &rewriter, Location loc,
+                                  Value srcValue, Type targetType,
+                                  const DataLayout &dataLayout) {
+  // Get the types of the source and target values.
+  Type srcType = srcValue.getType();
+  assert(areConversionCompatible(dataLayout, targetType, srcType,
+                                 /*narrowingConversion=*/true) &&
+         "expected that the compatibility was checked before");
+
+  uint64_t srcTypeSize = dataLayout.getTypeSizeInBits(srcType);
+  uint64_t targetTypeSize = dataLayout.getTypeSizeInBits(targetType);
+  if (srcTypeSize == targetTypeSize)
+    return castSameSizedTypes(rewriter, loc, srcValue, targetType, dataLayout);
+
+  // First, cast the value to a same-sized integer type.
+  Value replacement = castToSameSizedInt(rewriter, loc, srcValue, dataLayout);
+
+  // Truncate the integer if the size of the target is less than the value.
+  if (isBigEndian(dataLayout)) {
+    uint64_t shiftAmount = srcTypeSize - targetTypeSize;
+    auto shiftConstant = rewriter.create<LLVM::ConstantOp>(
+        loc, rewriter.getIntegerAttr(srcType, shiftAmount));
+    replacement =
+        rewriter.createOrFold<LLVM::LShrOp>(loc, srcValue, shiftConstant);
+  }
+
+  replacement = rewriter.create<LLVM::TruncOp>(
+      loc, rewriter.getIntegerType(targetTypeSize), replacement);
+
+  // Now cast the integer to the actual target type if required.
+  return castIntValueToSameSizedType(rewriter, loc, replacement, targetType);
+}
+
+/// Constructs operations that insert the bits of `srcValue` into the
+/// "beginning" of `reachingDef` (beginning is endianness dependent).
+/// Assumes that this conversion is possible.
+static Value createInsertAndCast(RewriterBase &rewriter, Location loc,
+                                 Value srcValue, Value reachingDef,
+                                 const DataLayout &dataLayout) {
+
+  assert(areConversionCompatible(dataLayout, reachingDef.getType(),
+                                 srcValue.getType(),
+                                 /*narrowingConversion=*/false) &&
+         "expected that the compatibility was checked before");
+  uint64_t valueTypeSize = dataLayout.getTypeSizeInBits(srcValue.getType());
+  uint64_t slotTypeSize = dataLayout.getTypeSizeInBits(reachingDef.getType());
+  if (slotTypeSize == valueTypeSize)
+    return castSameSizedTypes(rewriter, loc, srcValue, reachingDef.getType(),
+                              dataLayout);
+
+  // In the case where the store only overwrites parts of the memory,
+  // bit fiddling is required to construct the new value.
+
+  // First convert both values to integers of the same size.
+  Value defAsInt = castToSameSizedInt(rewriter, loc, reachingDef, dataLayout);
+  Value valueAsInt = castToSameSizedInt(rewriter, loc, srcValue, dataLayout);
+  // Extend the value to the size of the reaching definition.
+  valueAsInt =
+      rewriter.createOrFold<LLVM::ZExtOp>(loc, defAsInt.getType(), valueAsInt);
+  uint64_t sizeDifference = slotTypeSize - valueTypeSize;
+  if (isBigEndian(dataLayout)) {
+    // On big endian systems, a store to the base pointer overwrites the most
+    // significant bits. To accomodate for this, the stored value needs to be
+    // shifted into the according position.
+    Value bigEndianShift = rewriter.create<LLVM::ConstantOp>(
+        loc, rewriter.getIntegerAttr(defAsInt.getType(), sizeDifference));
+    valueAsInt =
+        rewriter.createOrFold<LLVM::ShlOp>(loc, valueAsInt, bigEndianShift);
+  }
+
+  // Construct the mask that is used to erase the bits that are overwritten by
+  // the store.
+  APInt maskValue;
+  if (isBigEndian(dataLayout)) {
+    // Build a mask that has the most significant bits set to zero.
+    // Note: This is the same as 2^sizeDifference - 1
+    maskValue = APInt::getAllOnes(sizeDifference).zext(slotTypeSize);
+  } else {
+    // Build a mask that has the least significant bits set to zero.
+    // Note: This is the same as -(2^valueTypeSize)
+    maskValue = APInt::getAllOnes(valueTypeSize).zext(slotTypeSize);
+    maskValue.flipAllBits();
+  }
+
+  // Mask out the affected bits ...
+  Value mask = rewriter.create<LLVM::ConstantOp>(
+      loc, rewriter.getIntegerAttr(defAsInt.getType(), maskValue));
+  Value masked = rewriter.createOrFold<LLVM::AndOp>(loc, defAsInt, mask);
+
+  // ... and combine the result with the new value.
+  Value combined = rewriter.createOrFold<LLVM::OrOp>(loc, masked, valueAsInt);
+
+  return castIntValueToSameSizedType(rewriter, loc, combined,
+                                     reachingDef.getType());
+}
+
+Value LLVM::StoreOp::getStored(const MemorySlot &slot, RewriterBase &rewriter,
+                               Value reachingDef,
+                               const DataLayout &dataLayout) {
+  assert(reachingDef && reachingDef.getType() == slot.elemType &&
+         "expected the reaching definition's type to match the slot's type");
+  return createInsertAndCast(rewriter, getLoc(), getValue(), reachingDef,
+                             dataLayout);
 }
 
 bool LLVM::LoadOp::canUsesBeRemoved(
@@ -164,20 +351,21 @@ bool LLVM::LoadOp::canUsesBeRemoved(
   Value blockingUse = (*blockingUses.begin())->get();
   // If the blocking use is the slot ptr itself, there will be enough
   // context to reconstruct the result of the load at removal time, so it can
-  // be removed (provided it loads the exact stored value and is not
-  // volatile).
+  // be removed (provided it is not volatile).
   return blockingUse == slot.ptr && getAddr() == slot.ptr &&
-         areCastCompatible(dataLayout, getResult().getType(), slot.elemType) &&
+         areConversionCompatible(dataLayout, getResult().getType(),
+                                 slot.elemType, /*narrowingConversion=*/true) &&
          !getVolatile_();
 }
 
 DeletionKind LLVM::LoadOp::removeBlockingUses(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    RewriterBase &rewriter, Value reachingDefinition) {
+    RewriterBase &rewriter, Value reachingDefinition,
+    const DataLayout &dataLayout) {
   // `canUsesBeRemoved` checked this blocking use must be the loaded slot
   // pointer.
-  Value newResult = createConversionSequence(
-      rewriter, getLoc(), reachingDefinition, getResult().getType());
+  Value newResult = createExtractAndCast(rewriter, getLoc(), reachingDefinition,
+                                         getResult().getType(), dataLayout);
   rewriter.replaceAllUsesWith(getResult(), newResult);
   return DeletionKind::Delete;
 }
@@ -194,13 +382,16 @@ bool LLVM::StoreOp::canUsesBeRemoved(
   // store OF the slot pointer, only INTO the slot pointer.
   return blockingUse == slot.ptr && getAddr() == slot.ptr &&
          getValue() != slot.ptr &&
-         areCastCompatible(dataLayout, slot.elemType, getValue().getType()) &&
+         areConversionCompatible(dataLayout, slot.elemType,
+                                 getValue().getType(),
+                                 /*narrowingConversion=*/false) &&
          !getVolatile_();
 }
 
 DeletionKind LLVM::StoreOp::removeBlockingUses(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    RewriterBase &rewriter, Value reachingDefinition) {
+    RewriterBase &rewriter, Value reachingDefinition,
+    const DataLayout &dataLayout) {
   return DeletionKind::Delete;
 }
 
@@ -229,7 +420,7 @@ LogicalResult LLVM::StoreOp::ensureOnlySafeAccesses(
 static Type getTypeAtIndex(const DestructurableMemorySlot &slot,
                            Attribute index) {
   auto subelementIndexMap =
-      slot.elemType.cast<DestructurableTypeInterface>().getSubelementIndexMap();
+      cast<DestructurableTypeInterface>(slot.elemType).getSubelementIndexMap();
   if (!subelementIndexMap)
     return {};
   assert(!subelementIndexMap->empty());
@@ -747,8 +938,9 @@ bool LLVM::MemsetOp::storesTo(const MemorySlot &slot) {
   return getDst() == slot.ptr;
 }
 
-Value LLVM::MemsetOp::getStored(const MemorySlot &slot,
-                                RewriterBase &rewriter) {
+Value LLVM::MemsetOp::getStored(const MemorySlot &slot, RewriterBase &rewriter,
+                                Value reachingDef,
+                                const DataLayout &dataLayout) {
   // TODO: Support non-integer types.
   return TypeSwitch<Type, Value>(slot.elemType)
       .Case([&](IntegerType intType) -> Value {
@@ -802,7 +994,8 @@ bool LLVM::MemsetOp::canUsesBeRemoved(
 
 DeletionKind LLVM::MemsetOp::removeBlockingUses(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    RewriterBase &rewriter, Value reachingDefinition) {
+    RewriterBase &rewriter, Value reachingDefinition,
+    const DataLayout &dataLayout) {
   return DeletionKind::Delete;
 }
 
@@ -822,8 +1015,7 @@ bool LLVM::MemsetOp::canRewire(const DestructurableMemorySlot &slot,
   if (getIsVolatile())
     return false;
 
-  if (!slot.elemType.cast<DestructurableTypeInterface>()
-           .getSubelementIndexMap())
+  if (!cast<DestructurableTypeInterface>(slot.elemType).getSubelementIndexMap())
     return false;
 
   if (!areAllIndicesI32(slot))
@@ -837,7 +1029,7 @@ DeletionKind LLVM::MemsetOp::rewire(const DestructurableMemorySlot &slot,
                                     RewriterBase &rewriter,
                                     const DataLayout &dataLayout) {
   std::optional<DenseMap<Attribute, Type>> types =
-      slot.elemType.cast<DestructurableTypeInterface>().getSubelementIndexMap();
+      cast<DestructurableTypeInterface>(slot.elemType).getSubelementIndexMap();
 
   IntegerAttr memsetLenAttr;
   bool successfulMatch =
@@ -956,8 +1148,7 @@ static bool memcpyCanRewire(MemcpyLike op, const DestructurableMemorySlot &slot,
   if (op.getIsVolatile())
     return false;
 
-  if (!slot.elemType.cast<DestructurableTypeInterface>()
-           .getSubelementIndexMap())
+  if (!cast<DestructurableTypeInterface>(slot.elemType).getSubelementIndexMap())
     return false;
 
   if (!areAllIndicesI32(slot))
@@ -1059,8 +1250,9 @@ bool LLVM::MemcpyOp::storesTo(const MemorySlot &slot) {
   return memcpyStoresTo(*this, slot);
 }
 
-Value LLVM::MemcpyOp::getStored(const MemorySlot &slot,
-                                RewriterBase &rewriter) {
+Value LLVM::MemcpyOp::getStored(const MemorySlot &slot, RewriterBase &rewriter,
+                                Value reachingDef,
+                                const DataLayout &dataLayout) {
   return memcpyGetStored(*this, slot, rewriter);
 }
 
@@ -1074,7 +1266,8 @@ bool LLVM::MemcpyOp::canUsesBeRemoved(
 
 DeletionKind LLVM::MemcpyOp::removeBlockingUses(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    RewriterBase &rewriter, Value reachingDefinition) {
+    RewriterBase &rewriter, Value reachingDefinition,
+    const DataLayout &dataLayout) {
   return memcpyRemoveBlockingUses(*this, slot, blockingUses, rewriter,
                                   reachingDefinition);
 }
@@ -1109,7 +1302,8 @@ bool LLVM::MemcpyInlineOp::storesTo(const MemorySlot &slot) {
 }
 
 Value LLVM::MemcpyInlineOp::getStored(const MemorySlot &slot,
-                                      RewriterBase &rewriter) {
+                                      RewriterBase &rewriter, Value reachingDef,
+                                      const DataLayout &dataLayout) {
   return memcpyGetStored(*this, slot, rewriter);
 }
 
@@ -1123,7 +1317,8 @@ bool LLVM::MemcpyInlineOp::canUsesBeRemoved(
 
 DeletionKind LLVM::MemcpyInlineOp::removeBlockingUses(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    RewriterBase &rewriter, Value reachingDefinition) {
+    RewriterBase &rewriter, Value reachingDefinition,
+    const DataLayout &dataLayout) {
   return memcpyRemoveBlockingUses(*this, slot, blockingUses, rewriter,
                                   reachingDefinition);
 }
@@ -1159,8 +1354,9 @@ bool LLVM::MemmoveOp::storesTo(const MemorySlot &slot) {
   return memcpyStoresTo(*this, slot);
 }
 
-Value LLVM::MemmoveOp::getStored(const MemorySlot &slot,
-                                 RewriterBase &rewriter) {
+Value LLVM::MemmoveOp::getStored(const MemorySlot &slot, RewriterBase &rewriter,
+                                 Value reachingDef,
+                                 const DataLayout &dataLayout) {
   return memcpyGetStored(*this, slot, rewriter);
 }
 
@@ -1174,7 +1370,8 @@ bool LLVM::MemmoveOp::canUsesBeRemoved(
 
 DeletionKind LLVM::MemmoveOp::removeBlockingUses(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    RewriterBase &rewriter, Value reachingDefinition) {
+    RewriterBase &rewriter, Value reachingDefinition,
+    const DataLayout &dataLayout) {
   return memcpyRemoveBlockingUses(*this, slot, blockingUses, rewriter,
                                   reachingDefinition);
 }

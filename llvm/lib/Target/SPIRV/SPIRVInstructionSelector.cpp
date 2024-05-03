@@ -145,7 +145,13 @@ private:
   bool selectAddrSpaceCast(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I) const;
 
+  bool selectAnyOrAll(Register ResVReg, const SPIRVType *ResType,
+                      MachineInstr &I, unsigned OpType) const;
+
   bool selectAll(Register ResVReg, const SPIRVType *ResType,
+                 MachineInstr &I) const;
+
+  bool selectAny(Register ResVReg, const SPIRVType *ResType,
                  MachineInstr &I) const;
 
   bool selectBitreverse(Register ResVReg, const SPIRVType *ResType,
@@ -162,6 +168,9 @@ private:
   bool selectICmp(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
   bool selectFCmp(Register ResVReg, const SPIRVType *ResType,
+                  MachineInstr &I) const;
+
+  bool selectFmix(Register ResVReg, const SPIRVType *ResType,
                   MachineInstr &I) const;
 
   void renderImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
@@ -284,14 +293,18 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
   // If it's not a GMIR instruction, we've selected it already.
   if (!isPreISelGenericOpcode(Opcode)) {
     if (Opcode == SPIRV::ASSIGN_TYPE) { // These pseudos aren't needed any more.
-      auto *Def = MRI->getVRegDef(I.getOperand(1).getReg());
+      Register DstReg = I.getOperand(0).getReg();
+      Register SrcReg = I.getOperand(1).getReg();
+      auto *Def = MRI->getVRegDef(SrcReg);
       if (isTypeFoldingSupported(Def->getOpcode())) {
+        if (MRI->getType(DstReg).isPointer())
+          MRI->setType(DstReg, LLT::scalar(32));
         bool Res = selectImpl(I, *CoverageInfo);
         assert(Res || Def->getOpcode() == TargetOpcode::G_CONSTANT);
         if (Res)
           return Res;
       }
-      MRI->replaceRegWith(I.getOperand(1).getReg(), I.getOperand(0).getReg());
+      MRI->replaceRegWith(SrcReg, DstReg);
       I.removeFromParent();
       return true;
     } else if (I.getNumDefs() == 1) {
@@ -633,6 +646,37 @@ bool SPIRVInstructionSelector::selectUnOp(Register ResVReg,
                                           const SPIRVType *ResType,
                                           MachineInstr &I,
                                           unsigned Opcode) const {
+  if (STI.isOpenCLEnv() && I.getOperand(1).isReg()) {
+    Register SrcReg = I.getOperand(1).getReg();
+    bool IsGV = false;
+    for (MachineRegisterInfo::def_instr_iterator DefIt =
+             MRI->def_instr_begin(SrcReg);
+         DefIt != MRI->def_instr_end(); DefIt = std::next(DefIt)) {
+      if ((*DefIt).getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
+        IsGV = true;
+        break;
+      }
+    }
+    if (IsGV) {
+      uint32_t SpecOpcode = 0;
+      switch (Opcode) {
+      case SPIRV::OpConvertPtrToU:
+        SpecOpcode = static_cast<uint32_t>(SPIRV::Opcode::ConvertPtrToU);
+        break;
+      case SPIRV::OpConvertUToPtr:
+        SpecOpcode = static_cast<uint32_t>(SPIRV::Opcode::ConvertUToPtr);
+        break;
+      }
+      if (SpecOpcode)
+        return BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                       TII.get(SPIRV::OpSpecConstantOp))
+            .addDef(ResVReg)
+            .addUse(GR.getSPIRVTypeID(ResType))
+            .addImm(SpecOpcode)
+            .addUse(SrcReg)
+            .constrainAllUses(TII, TRI, RBI);
+    }
+  }
   return selectUnOpWithSrc(ResVReg, ResType, I, I.getOperand(1).getReg(),
                            Opcode);
 }
@@ -1160,9 +1204,10 @@ static unsigned getBoolCmpOpcode(unsigned PredNum) {
   }
 }
 
-bool SPIRVInstructionSelector::selectAll(Register ResVReg,
-                                         const SPIRVType *ResType,
-                                         MachineInstr &I) const {
+bool SPIRVInstructionSelector::selectAnyOrAll(Register ResVReg,
+                                              const SPIRVType *ResType,
+                                              MachineInstr &I,
+                                              unsigned OpAnyOrAll) const {
   assert(I.getNumOperands() == 3);
   assert(I.getOperand(2).isReg());
   MachineBasicBlock &BB = *I.getParent();
@@ -1212,10 +1257,43 @@ bool SPIRVInstructionSelector::selectAll(Register ResVReg,
   if (!IsVectorTy)
     return true;
 
-  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpAll))
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(OpAnyOrAll))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(SpvBoolScalarTy))
       .addUse(NotEqualReg)
+      .constrainAllUses(TII, TRI, RBI);
+}
+
+bool SPIRVInstructionSelector::selectAll(Register ResVReg,
+                                         const SPIRVType *ResType,
+                                         MachineInstr &I) const {
+  return selectAnyOrAll(ResVReg, ResType, I, SPIRV::OpAll);
+}
+
+bool SPIRVInstructionSelector::selectAny(Register ResVReg,
+                                         const SPIRVType *ResType,
+                                         MachineInstr &I) const {
+  return selectAnyOrAll(ResVReg, ResType, I, SPIRV::OpAny);
+}
+
+bool SPIRVInstructionSelector::selectFmix(Register ResVReg,
+                                          const SPIRVType *ResType,
+                                          MachineInstr &I) const {
+
+  assert(I.getNumOperands() == 5);
+  assert(I.getOperand(2).isReg());
+  assert(I.getOperand(3).isReg());
+  assert(I.getOperand(4).isReg());
+  MachineBasicBlock &BB = *I.getParent();
+
+  return BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
+      .addImm(GL::FMix)
+      .addUse(I.getOperand(2).getReg())
+      .addUse(I.getOperand(3).getReg())
+      .addUse(I.getOperand(4).getReg())
       .constrainAllUses(TII, TRI, RBI);
 }
 
@@ -1540,8 +1618,18 @@ bool SPIRVInstructionSelector::selectIToF(Register ResVReg,
 bool SPIRVInstructionSelector::selectExt(Register ResVReg,
                                          const SPIRVType *ResType,
                                          MachineInstr &I, bool IsSigned) const {
-  if (GR.isScalarOrVectorOfType(I.getOperand(1).getReg(), SPIRV::OpTypeBool))
+  Register SrcReg = I.getOperand(1).getReg();
+  if (GR.isScalarOrVectorOfType(SrcReg, SPIRV::OpTypeBool))
     return selectSelect(ResVReg, ResType, I, IsSigned);
+
+  SPIRVType *SrcType = GR.getSPIRVTypeForVReg(SrcReg);
+  if (SrcType == ResType)
+    return BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                   TII.get(TargetOpcode::COPY))
+        .addDef(ResVReg)
+        .addUse(SrcReg)
+        .constrainAllUses(TII, TRI, RBI);
+
   unsigned Opcode = IsSigned ? SPIRV::OpSConvert : SPIRV::OpUConvert;
   return selectUnOp(ResVReg, ResType, I, Opcode);
 }
@@ -1575,11 +1663,16 @@ bool SPIRVInstructionSelector::selectIntToBool(Register IntReg,
 bool SPIRVInstructionSelector::selectTrunc(Register ResVReg,
                                            const SPIRVType *ResType,
                                            MachineInstr &I) const {
-  if (GR.isScalarOrVectorOfType(ResVReg, SPIRV::OpTypeBool)) {
-    Register IntReg = I.getOperand(1).getReg();
-    const SPIRVType *ArgType = GR.getSPIRVTypeForVReg(IntReg);
+  Register IntReg = I.getOperand(1).getReg();
+  const SPIRVType *ArgType = GR.getSPIRVTypeForVReg(IntReg);
+  if (GR.isScalarOrVectorOfType(ResVReg, SPIRV::OpTypeBool))
     return selectIntToBool(IntReg, ResVReg, I, ArgType, ResType);
-  }
+  if (ArgType == ResType)
+    return BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                   TII.get(TargetOpcode::COPY))
+        .addDef(ResVReg)
+        .addUse(IntReg)
+        .constrainAllUses(TII, TRI, RBI);
   bool IsSigned = GR.isScalarOrVectorSigned(ResType);
   unsigned Opcode = IsSigned ? SPIRV::OpSConvert : SPIRV::OpUConvert;
   return selectUnOp(ResVReg, ResType, I, Opcode);
@@ -1877,6 +1970,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectSpvThreadId(ResVReg, ResType, I);
   case Intrinsic::spv_all:
     return selectAll(ResVReg, ResType, I);
+  case Intrinsic::spv_any:
+    return selectAny(ResVReg, ResType, I);
+  case Intrinsic::spv_lerp:
+    return selectFmix(ResVReg, ResType, I);
   case Intrinsic::spv_lifetime_start:
   case Intrinsic::spv_lifetime_end: {
     unsigned Op = IID == Intrinsic::spv_lifetime_start ? SPIRV::OpLifetimeStart

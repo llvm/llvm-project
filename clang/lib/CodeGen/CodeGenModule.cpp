@@ -68,11 +68,12 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
+#include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/TargetParser/X86TargetParser.h"
+#include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include <optional>
 
 using namespace clang;
@@ -442,6 +443,11 @@ CodeGenModule::CodeGenModule(ASTContext &C,
       }
     ModuleNameHash = llvm::getUniqueInternalLinkagePostfix(Path);
   }
+
+  // Record mregparm value now so it is visible through all of codegen.
+  if (Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86)
+    getModule().addModuleFlag(llvm::Module::Error, "NumRegisterParameters",
+                              CodeGenOpts.NumRegisterParameters);
 }
 
 CodeGenModule::~CodeGenModule() {}
@@ -979,11 +985,6 @@ void CodeGenModule::Release() {
     for (auto *MD : ELFDependentLibraries)
       NMD->addOperand(MD);
   }
-
-  // Record mregparm value now so it is visible through rest of codegen.
-  if (Context.getTargetInfo().getTriple().getArch() == llvm::Triple::x86)
-    getModule().addModuleFlag(llvm::Module::Error, "NumRegisterParameters",
-                              CodeGenOpts.NumRegisterParameters);
 
   if (CodeGenOpts.DwarfVersion) {
     getModule().addModuleFlag(llvm::Module::Max, "Dwarf Version",
@@ -3952,8 +3953,20 @@ bool CodeGenModule::shouldEmitFunction(GlobalDecl GD) {
   // behavior may break ABI compatibility of the current unit.
   if (const Module *M = F->getOwningModule();
       M && M->getTopLevelModule()->isNamedModule() &&
-      getContext().getCurrentNamedModule() != M->getTopLevelModule())
-    return false;
+      getContext().getCurrentNamedModule() != M->getTopLevelModule()) {
+    // There are practices to mark template member function as always-inline
+    // and mark the template as extern explicit instantiation but not give
+    // the definition for member function. So we have to emit the function
+    // from explicitly instantiation with always-inline.
+    //
+    // See https://github.com/llvm/llvm-project/issues/86893 for details.
+    //
+    // TODO: Maybe it is better to give it a warning if we call a non-inline
+    // function from other module units which is marked as always-inline.
+    if (!F->isTemplateInstantiation() || !F->hasAttr<AlwaysInlineAttr>()) {
+      return false;
+    }
+  }
 
   if (F->hasAttr<NoInlineAttr>())
     return false;
@@ -4769,6 +4782,10 @@ CodeGenModule::CreateRuntimeFunction(llvm::FunctionType *FTy, StringRef Name,
         }
       }
       setDSOLocal(F);
+      // FIXME: We should use CodeGenModule::SetLLVMFunctionAttributes() instead
+      // of trying to approximate the attributes using the LLVM function
+      // signature. This requires revising the API of CreateRuntimeFunction().
+      markRegisterParameterAttributes(F);
     }
   }
 

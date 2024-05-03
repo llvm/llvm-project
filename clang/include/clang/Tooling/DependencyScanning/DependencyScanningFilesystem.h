@@ -365,6 +365,10 @@ public:
   /// false if not (i.e. this entry is not a file or its scan fails).
   bool ensureDirectiveTokensArePopulated(EntryRef Entry);
 
+  /// Check whether \p Path exists. By default checks cached result of \c
+  /// status(), and falls back on FS if unable to do so.
+  bool exists(const Twine &Path) override;
+
 private:
   /// For a filename that's not yet associated with any entry in the caches,
   /// uses the underlying filesystem to either look up the entry based in the
