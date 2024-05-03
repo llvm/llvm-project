@@ -156,22 +156,30 @@ may be
 No compression.
 .It Cm zlib
 The default compression level is 1 (fastest) as the debug info usually
-compresses well at that level. If you want to compress it more,
-you can specify
-.Fl O2
-to set the compression level to 6.
+compresses well at that level.
 .It Cm zstd
-The compression level is 5.
+Use the default compression level in zstd.
 .El
 .Pp
-.It Fl -compress-sections Ns = Ns Ar section-glob=[none|zlib|zstd]
+.It Fl -compress-sections Ns = Ns Ar section-glob={none,zlib,zstd}[:level]
 Compress output sections that match the glob and do not have the SHF_ALLOC flag.
+The compression level is
+.Cm level
+(if specified) or a default speed-focused level.
 This is like a generalized
 .Cm --compress-debug-sections.
 .It Fl -cref
 Output cross reference table. If
 .Fl Map
 is specified, print to the map file.
+.It Fl -debug-names
+Generate a merged
+.Li .debug_names
+section.
+.It Fl -default-script Ns = Ns Ar file , Fl dT Ar file
+In the absence of
+.Fl -script ,
+read this default linker script.
 .It Fl -defsym Ns = Ns Ar symbol Ns = Ns Ar expression
 Define a symbol alias.
 .Ar expression
@@ -759,6 +767,11 @@ is the default, linker will not report the missing property otherwise will be re
 .Pp
 .It Cm cet-report Ns = Ns Ar [none|warning|error]
 Specify how to report the missing GNU_PROPERTY_X86_FEATURE_1_IBT or GNU_PROPERTY_X86_FEATURE_1_SHSTK properties.
+.Cm none
+is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
+.Pp
+.It Cm pauth-report Ns = Ns Ar [none|warning|error]
+Specify how to report the missing GNU_PROPERTY_AARCH64_FEATURE_PAUTH property.
 .Cm none
 is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
 .Pp

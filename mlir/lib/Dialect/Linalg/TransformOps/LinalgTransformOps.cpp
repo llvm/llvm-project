@@ -1219,7 +1219,7 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
         // All the operands must must be equal to the specified type
         auto typeattr =
             dyn_cast<mlir::TypeAttr>(getFilterOperandTypes().value()[0]);
-        Type t = typeattr.getValue().cast<::mlir::Type>();
+        Type t = cast<::mlir::Type>(typeattr.getValue());
         if (!llvm::all_of(op->getOperandTypes(),
                           [&](Type operandType) { return operandType == t; }))
           return;
@@ -1234,7 +1234,7 @@ transform::MatchOp::apply(transform::TransformRewriter &rewriter,
         for (auto [attr, operandType] :
              llvm::zip_equal(getFilterOperandTypes().value(), operandTypes)) {
           auto typeattr = cast<mlir::TypeAttr>(attr);
-          Type type = typeattr.getValue().cast<::mlir::Type>();
+          Type type = cast<::mlir::Type>(typeattr.getValue());
 
           if (type != operandType)
             return;
@@ -2665,7 +2665,7 @@ transform::TileUsingForOp::apply(transform::TransformRewriter &rewriter,
           if (auto attr = llvm::dyn_cast_if_present<Attribute>(ofr)) {
             if (scalableSizes[ofrIdx]) {
               auto val = b.create<arith::ConstantIndexOp>(
-                  getLoc(), attr.cast<IntegerAttr>().getInt());
+                  getLoc(), cast<IntegerAttr>(attr).getInt());
               Value vscale =
                   b.create<vector::VectorScaleOp>(getLoc(), b.getIndexType());
               sizes.push_back(
@@ -3122,6 +3122,81 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
 //===----------------------------------------------------------------------===//
 // VectorizeOp
 //===----------------------------------------------------------------------===//
+
+static const StringLiteral kVectorSizesKeyword = "vector_sizes";
+
+ParseResult transform::VectorizeOp::parse(OpAsmParser &parser,
+                                          OperationState &result) {
+  OpAsmParser::UnresolvedOperand target;
+  SmallVector<OpAsmParser::UnresolvedOperand> dynamicSizes;
+  DenseI64ArrayAttr staticSizes;
+  SmallVector<Type> operandTypes;
+  llvm::SMLoc operandLoc;
+  DenseBoolArrayAttr scalableVals;
+
+  if (parser.parseOperand(target) || parser.getCurrentLocation(&operandLoc))
+    return ParseResult::failure();
+
+  if (succeeded(parser.parseOptionalKeyword(kVectorSizesKeyword))) {
+    if (failed(parseDynamicIndexList(parser, dynamicSizes, staticSizes,
+                                     scalableVals)))
+      return ParseResult::failure();
+  }
+
+  if (succeeded(parser.parseOptionalKeyword(
+          getVectorizeNdExtractAttrName(result.name))))
+    result.addAttribute(getVectorizeNdExtractAttrName(result.name),
+                        parser.getBuilder().getUnitAttr());
+
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonTypeList(operandTypes))
+    return ParseResult::failure();
+
+  if (operandTypes.size() != dynamicSizes.size() + 1) {
+    return parser.emitError(operandLoc)
+           << "expected " << dynamicSizes.size() + 1 << " operand type(s)";
+  }
+  if (parser.resolveOperand(target, operandTypes.front(), result.operands) ||
+      parser.resolveOperands(dynamicSizes, ArrayRef(operandTypes).drop_front(),
+                             operandLoc, result.operands)) {
+    return failure();
+  }
+
+  if (scalableVals)
+    result.addAttribute(getScalableSizesAttrName(result.name), scalableVals);
+  if (staticSizes)
+    result.addAttribute(getStaticVectorSizesAttrName(result.name), staticSizes);
+
+  return success();
+}
+
+void transform::VectorizeOp::print(OpAsmPrinter &p) {
+  p << ' ' << getTarget() << ' ';
+  if (!getMixedVectorSizes().empty()) {
+    p << kVectorSizesKeyword << ' ';
+    printDynamicIndexList(p, getOperation(), getVectorSizes(),
+                          getStaticVectorSizesAttr(),
+                          /*valueTypes=*/{}, getScalableSizesAttr(),
+                          OpAsmParser::Delimiter::Square);
+  }
+
+  if (getVectorizeNdExtract())
+    p << getVectorizeNdExtractAttrName() << ' ';
+
+  p.printOptionalAttrDict(
+      (*this)->getAttrs(),
+      /*elidedAttrs=*/{
+          getScalableSizesAttrName(getOperation()->getName()),
+          getStaticVectorSizesAttrName(getOperation()->getName())});
+  p << " : ";
+  p << getTarget().getType();
+  if (!getVectorSizes().empty()) {
+    p << ", ";
+    llvm::interleaveComma(getVectorSizes(), p,
+                          [&](Value operand) { p << operand.getType(); });
+  }
+}
+
 DiagnosedSilenceableFailure transform::VectorizeOp::apply(
     transform::TransformRewriter &rewriter,
     mlir::transform::TransformResults &transformResults,
@@ -3135,6 +3210,13 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
     if (sz.is<Attribute>()) {
       auto attr = sz.get<Attribute>();
       vectorSizes.push_back(cast<IntegerAttr>(attr).getInt());
+      continue;
+    } else if (sz.is<Value>() && isa<ParamType>(sz.get<Value>().getType())) {
+      ArrayRef<Attribute> params = state.getParams(sz.get<Value>());
+      if (params.size() != 1)
+        return emitSilenceableFailure(getLoc()) << "expected a single param";
+      vectorSizes.push_back(
+          cast<IntegerAttr>(params.front()).getValue().getSExtValue());
       continue;
     }
 
@@ -3225,6 +3307,21 @@ transform::HoistRedundantVectorTransfersOp::applyToOne(
 }
 
 //===----------------------------------------------------------------------===//
+// HoistRedundantVectorBroadcastsOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::HoistRedundantVectorBroadcastsOp::applyToOne(
+    transform::TransformRewriter &rewriter, mlir::Operation *target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  rewriter.setInsertionPoint(target);
+  linalg::hoistRedundantVectorBroadcasts(rewriter, target);
+  results.push_back(target);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConvertConv2DToImg2ColOp.
 //===----------------------------------------------------------------------===//
 
@@ -3269,22 +3366,24 @@ DiagnosedSilenceableFailure transform::FlattenElementwiseLinalgOp::applyToOne(
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   rewriter.setInsertionPoint(target);
-  if (!isElementwise(target)) {
-    failed(rewriter.notifyMatchFailure(
-        target, "only elementwise flattening is supported"));
-    return emitDefaultSilenceableFailure(target);
-  }
+  if (!isElementwise(target))
+    return mlir::emitSilenceableFailure(target->getLoc())
+           << "only elementwise flattening is supported";
+
   // If rank <= 1, do nothing
   if (target.getNumLoops() <= 1) {
     results.push_back(target);
     return DiagnosedSilenceableFailure::success();
   }
+
+  // Attempt to flatten all dims to one.
   ReassociationIndices reassociation(target.getNumLoops());
   std::iota(reassociation.begin(), reassociation.end(), 0);
   auto maybeFlattened =
       collapseOpIterationDims(target, reassociation, rewriter);
   if (failed(maybeFlattened))
-    return emitDefaultSilenceableFailure(target);
+    return mlir::emitSilenceableFailure(target->getLoc())
+           << "attempted to flatten, but failed";
   results.push_back(maybeFlattened->collapsedOp);
   rewriter.replaceOp(target, maybeFlattened->results);
   return DiagnosedSilenceableFailure::success();
@@ -3313,6 +3412,32 @@ DiagnosedSilenceableFailure transform::TransposeConv2DOp::applyToOne(
   if (failed(maybeTransformed))
     return emitDefaultSilenceableFailure(target);
   // Handle to the new Conv2D operation with transposed filters
+  results.push_back(*maybeTransformed);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// TransposeMatmulOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::TransposeMatmulOp::applyToOne(
+    transform::TransformRewriter &rewriter, linalg::LinalgOp target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  rewriter.setInsertionPoint(target);
+  bool transposeLHS = getInputToTranspose() == TransposeMatmulInput::lhs;
+  auto maybeTransformed =
+      TypeSwitch<Operation *, FailureOr<Operation *>>(target)
+          .Case([&](linalg::MatmulOp op) {
+            return transposeMatmul(rewriter, op, transposeLHS);
+          })
+          .Case([&](linalg::BatchMatmulOp op) {
+            return transposeBatchMatmul(rewriter, op, transposeLHS);
+          })
+          .Default([&](Operation *op) { return failure(); });
+  if (failed(maybeTransformed))
+    return emitSilenceableFailure(target->getLoc()) << "not supported";
+  // Handle to the new Matmul operation with transposed filters
   results.push_back(*maybeTransformed);
   return DiagnosedSilenceableFailure::success();
 }

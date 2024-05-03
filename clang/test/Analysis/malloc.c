@@ -740,6 +740,17 @@ void allocaFree(void) {
   free(p); // expected-warning {{Memory allocated by alloca() should not be deallocated}}
 }
 
+void allocaFreeBuiltin(void) {
+  int *p = __builtin_alloca(sizeof(int));
+  free(p); // expected-warning {{Memory allocated by alloca() should not be deallocated}}
+}
+
+void allocaFreeBuiltinAlign(void) {
+  int *p = __builtin_alloca_with_align(sizeof(int), 64);
+  free(p); // expected-warning {{Memory allocated by alloca() should not be deallocated}}
+}
+
+
 int* mallocEscapeRet(void) {
   int *p = malloc(12);
   return p; // no warning

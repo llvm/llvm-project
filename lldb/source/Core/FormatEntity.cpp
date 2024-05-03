@@ -1792,7 +1792,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     if (sc && sc->line_entry.IsValid()) {
       Module *module = sc->module_sp.get();
       if (module) {
-        if (DumpFile(s, sc->line_entry.file, (FileKind)entry.number))
+        if (DumpFile(s, sc->line_entry.GetFile(), (FileKind)entry.number))
           return true;
       }
     }

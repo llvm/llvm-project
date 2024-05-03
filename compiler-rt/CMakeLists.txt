@@ -36,6 +36,7 @@ include(SetPlatformToolchainTools)
 include(base-config-ix)
 include(CompilerRTUtils)
 include(CMakeDependentOption)
+include(GetDarwinLinkerVersion)
 
 option(COMPILER_RT_BUILD_BUILTINS "Build builtins" ON)
 mark_as_advanced(COMPILER_RT_BUILD_BUILTINS)
@@ -49,6 +50,8 @@ option(COMPILER_RT_BUILD_LIBFUZZER "Build libFuzzer" ON)
 mark_as_advanced(COMPILER_RT_BUILD_LIBFUZZER)
 option(COMPILER_RT_BUILD_PROFILE "Build profile runtime" ON)
 mark_as_advanced(COMPILER_RT_BUILD_PROFILE)
+option(COMPILER_RT_BUILD_CTX_PROFILE "Build ctx profile runtime" ON)
+mark_as_advanced(COMPILER_RT_BUILD_CTX_PROFILE)
 option(COMPILER_RT_BUILD_MEMPROF "Build memory profiling runtime" ON)
 mark_as_advanced(COMPILER_RT_BUILD_MEMPROF)
 option(COMPILER_RT_BUILD_XRAY_NO_PREINIT "Build xray with no preinit patching" OFF)
@@ -444,6 +447,15 @@ else()
   set(SANITIZER_USE_SYMBOLS FALSE)
 endif()
 
+# Get the linker version while configuring compiler-rt and explicitly pass it
+# in cflags during testing. This fixes the compiler/linker version mismatch
+# issue when running a clang built with a newer Xcode in an older Xcode
+set(COMPILER_RT_DARWIN_LINKER_VERSION)
+if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+  get_darwin_linker_version(COMPILER_RT_DARWIN_LINKER_VERSION)
+  message(STATUS "Host linker version: ${COMPILER_RT_DARWIN_LINKER_VERSION}")
+endif()
+
 # Build sanitizer runtimes with debug info.
 if(MSVC)
   # Use /Z7 instead of /Zi for the asan runtime. This avoids the LNK4099
@@ -573,6 +585,29 @@ string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " ${stdlib_flag}")
 # and linking of unittests.
 string(REPLACE " " ";" COMPILER_RT_UNITTEST_CFLAGS "${COMPILER_RT_TEST_COMPILER_CFLAGS}")
 set(COMPILER_RT_UNITTEST_LINK_FLAGS ${COMPILER_RT_UNITTEST_CFLAGS})
+
+option(COMPILER_RT_TEST_STANDALONE_BUILD_LIBS
+  "When set to ON and testing in a standalone build, test the runtime \
+  libraries built by this standalone build rather than the runtime libraries \
+  shipped with the compiler (used for testing). When set to OFF and testing \
+  in a standalone build, test the runtime libraries shipped with the compiler \
+  (used for testing). This option has no effect if the compiler and this \
+  build are configured to use the same runtime library path."
+  ON)
+if (COMPILER_RT_TEST_STANDALONE_BUILD_LIBS)
+  # Ensure that the unit tests can find the sanitizer headers prior to installation.
+  list(APPEND COMPILER_RT_UNITTEST_CFLAGS "-I${CMAKE_CURRENT_LIST_DIR}/include")
+  # Ensure that unit tests link against the just-built runtime libraries instead
+  # of the ones bundled with the compiler by overriding the resource directory.
+  #
+  if ("${COMPILER_RT_TEST_COMPILER_ID}" MATCHES "Clang")
+    list(APPEND COMPILER_RT_UNITTEST_LINK_FLAGS "-resource-dir=${COMPILER_RT_OUTPUT_DIR}")
+  endif()
+  get_compiler_rt_output_dir(${COMPILER_RT_DEFAULT_TARGET_ARCH} rtlib_dir)
+  if (NOT WIN32)
+    list(APPEND COMPILER_RT_UNITTEST_LINK_FLAGS "-Wl,-rpath,${rtlib_dir}")
+  endif()
+endif()
 
 if(COMPILER_RT_USE_LLVM_UNWINDER)
   # We're linking directly against the libunwind that we're building so don't

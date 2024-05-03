@@ -59,6 +59,7 @@ def ArgCastKind : ArgType { let Name = "CastKind"; }
 def ArgCallExpr : ArgType { let Name = "const CallExpr *"; }
 def ArgOffsetOfExpr : ArgType { let Name = "const OffsetOfExpr *"; }
 def ArgDeclRef : ArgType { let Name = "const DeclRefExpr *"; }
+def ArgDesc : ArgType { let Name = "const Descriptor *"; }
 def ArgCCI : ArgType { let Name = "const ComparisonCategoryInfo *"; }
 
 //===----------------------------------------------------------------------===//
@@ -272,6 +273,7 @@ def ZeroIntAPS : Opcode {
 // [] -> [Pointer]
 def Null : Opcode {
   let Types = [PtrTypeClass];
+  let Args = [ArgDesc];
   let HasGroup = 1;
 }
 
@@ -334,7 +336,7 @@ def GetPtrDerivedPop : Opcode {
 }
 
 // [Pointer] -> [Pointer]
-def GetPtrVirtBase : Opcode {
+def GetPtrVirtBasePop : Opcode {
   // RecordDecl of base class.
   let Args = [ArgRecordDecl];
 }
@@ -374,7 +376,11 @@ def ArrayElem : Opcode {
   let HasGroup = 1;
 }
 
-
+def CopyArray : Opcode {
+  let Args = [ArgUint32, ArgUint32, ArgUint32];
+  let Types = [AllTypeClass];
+  let HasGroup = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // Direct field accessors
@@ -530,6 +536,11 @@ def GetFnPtr : Opcode {
   let Args = [ArgFunction];
 }
 
+def GetIntPtr : Opcode {
+  let Types = [AluTypeClass];
+  let Args = [ArgDesc];
+  let HasGroup = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // Binary operators.
@@ -657,8 +668,22 @@ def CastFloatingIntegralAPS : Opcode {
 }
 
 def CastPointerIntegral : Opcode {
-  let Types = [AluTypeClass];
-  let Args = [];
+  let Types = [FixedSizeIntegralTypeClass];
+  let HasGroup = 1;
+}
+def CastPointerIntegralAP : Opcode {
+  let Types = [];
+  let HasGroup = 0;
+  let Args = [ArgUint32];
+}
+def CastPointerIntegralAPS : Opcode {
+  let Types = [];
+  let HasGroup = 0;
+  let Args = [ArgUint32];
+}
+
+def DecayPtr : Opcode {
+  let Types = [PtrTypeClass, PtrTypeClass];
   let HasGroup = 1;
 }
 
@@ -715,6 +740,8 @@ def InvalidDeclRef : Opcode {
   let Args = [ArgDeclRef];
 }
 
+def Assume : Opcode;
+
 def ArrayDecay : Opcode;
 
 def CheckNonNullArg : Opcode {
@@ -723,3 +750,8 @@ def CheckNonNullArg : Opcode {
 }
 
 def Memcpy : Opcode;
+
+//===----------------------------------------------------------------------===//
+// Debugging.
+//===----------------------------------------------------------------------===//
+def Dump : Opcode;

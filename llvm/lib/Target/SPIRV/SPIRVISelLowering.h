@@ -16,12 +16,16 @@
 
 #include "SPIRVGlobalRegistry.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include <set>
 
 namespace llvm {
 class SPIRVSubtarget;
 
 class SPIRVTargetLowering : public TargetLowering {
   const SPIRVSubtarget &STI;
+
+  // Record of already processed machine functions
+  mutable std::set<const MachineFunction *> ProcessedMF;
 
 public:
   explicit SPIRVTargetLowering(const TargetMachine &TM,

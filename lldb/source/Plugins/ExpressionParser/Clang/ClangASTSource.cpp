@@ -713,17 +713,18 @@ bool ClangASTSource::FindObjCMethodDeclsWithOrigin(
   Selector original_selector;
 
   if (decl_name.isObjCZeroArgSelector()) {
-    IdentifierInfo *ident = &original_ctx->Idents.get(decl_name.getAsString());
+    const IdentifierInfo *ident =
+        &original_ctx->Idents.get(decl_name.getAsString());
     original_selector = original_ctx->Selectors.getSelector(0, &ident);
   } else if (decl_name.isObjCOneArgSelector()) {
     const std::string &decl_name_string = decl_name.getAsString();
     std::string decl_name_string_without_colon(decl_name_string.c_str(),
                                                decl_name_string.length() - 1);
-    IdentifierInfo *ident =
+    const IdentifierInfo *ident =
         &original_ctx->Idents.get(decl_name_string_without_colon);
     original_selector = original_ctx->Selectors.getSelector(1, &ident);
   } else {
-    SmallVector<IdentifierInfo *, 4> idents;
+    SmallVector<const IdentifierInfo *, 4> idents;
 
     clang::Selector sel = decl_name.getObjCSelector();
 

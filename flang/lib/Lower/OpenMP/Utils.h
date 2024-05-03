@@ -34,6 +34,9 @@ struct OmpObjectList;
 } // namespace parser
 
 namespace lower {
+namespace pft {
+struct Evaluation;
+}
 
 class AbstractConverter;
 
@@ -51,9 +54,18 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
                 bool isVal = false);
 
+mlir::Type getLoopVarType(Fortran::lower::AbstractConverter &converter,
+                          std::size_t loopVarTypeSize);
+
+Fortran::semantics::Symbol *
+getIterationVariableSymbol(const Fortran::lower::pft::Evaluation &eval);
+
 void gatherFuncAndVarSyms(
     const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause);
+
+int64_t getCollapseValue(const List<Clause> &clauses);
+uint32_t getOpenMPVersion(mlir::ModuleOp mod);
 
 Fortran::semantics::Symbol *
 getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject);
@@ -61,10 +73,6 @@ getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject);
 void genObjectList(const ObjectList &objects,
                    Fortran::lower::AbstractConverter &converter,
                    llvm::SmallVectorImpl<mlir::Value> &operands);
-
-void genObjectList2(const Fortran::parser::OmpObjectList &objectList,
-                    Fortran::lower::AbstractConverter &converter,
-                    llvm::SmallVectorImpl<mlir::Value> &operands);
 
 } // namespace omp
 } // namespace lower

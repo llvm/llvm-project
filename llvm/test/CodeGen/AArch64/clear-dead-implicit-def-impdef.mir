@@ -3,6 +3,8 @@
 ---
 name:            func
 tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6

@@ -8,8 +8,10 @@
 
 #include "descriptor-io.h"
 #include "flang/Common/restorer.h"
+#include "flang/Runtime/freestanding-tools.h"
 
 namespace Fortran::runtime::io::descr {
+RT_OFFLOAD_API_GROUP_BEGIN
 
 // Defined formatted I/O (maybe)
 Fortran::common::optional<bool> DefinedFormattedIo(IoStatementState &io,
@@ -32,9 +34,9 @@ Fortran::common::optional<bool> DefinedFormattedIo(IoStatementState &io,
       ioType[1] = 'T';
       std::memcpy(ioType + 2, edit.ioType, edit.ioTypeChars);
     } else {
-      std::strcpy(
+      runtime::strcpy(
           ioType, io.mutableModes().inNamelist ? "NAMELIST" : "LISTDIRECTED");
-      ioTypeLen = std::strlen(ioType);
+      ioTypeLen = runtime::strlen(ioType);
     }
     StaticDescriptor<1, true> vListStatDesc;
     Descriptor &vListDesc{vListStatDesc.descriptor()};
@@ -150,4 +152,5 @@ bool DefinedUnformattedIo(IoStatementState &io, const Descriptor &descriptor,
   return handler.GetIoStat() == IostatOk;
 }
 
+RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime::io::descr

@@ -37,7 +37,7 @@ namespace omp {
 /// corresponding clause if it is present in the clause list. Otherwise, they
 /// will return `false` to signal that the clause was not found.
 ///
-/// The intended use is of this class is to move clause processing outside of
+/// The intended use of this class is to move clause processing outside of
 /// construct processing, since the same clauses can appear attached to
 /// different constructs and constructs can be combined, so that code
 /// duplication is minimized.
@@ -46,107 +46,103 @@ namespace omp {
 /// methods that relate to clauses that can impact the lowering of that
 /// construct.
 class ClauseProcessor {
-  using ClauseTy = Fortran::parser::OmpClause;
-
 public:
   ClauseProcessor(Fortran::lower::AbstractConverter &converter,
                   Fortran::semantics::SemanticsContext &semaCtx,
-                  const Fortran::parser::OmpClauseList &clauses)
-      : converter(converter), semaCtx(semaCtx), clauses2(clauses),
-        clauses(makeList(clauses, semaCtx)) {}
+                  const List<Clause> &clauses)
+      : converter(converter), semaCtx(semaCtx), clauses(clauses) {}
 
   // 'Unique' clauses: They can appear at most once in the clause list.
-  bool
-  processCollapse(mlir::Location currentLocation,
-                  Fortran::lower::pft::Evaluation &eval,
-                  llvm::SmallVectorImpl<mlir::Value> &lowerBound,
-                  llvm::SmallVectorImpl<mlir::Value> &upperBound,
-                  llvm::SmallVectorImpl<mlir::Value> &step,
-                  llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &iv,
-                  std::size_t &loopVarTypeSize) const;
+  bool processCollapse(
+      mlir::Location currentLocation, Fortran::lower::pft::Evaluation &eval,
+      mlir::omp::CollapseClauseOps &result,
+      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> &iv) const;
   bool processDefault() const;
   bool processDevice(Fortran::lower::StatementContext &stmtCtx,
-                     mlir::Value &result) const;
-  bool processDeviceType(mlir::omp::DeclareTargetDeviceType &result) const;
+                     mlir::omp::DeviceClauseOps &result) const;
+  bool processDeviceType(mlir::omp::DeviceTypeClauseOps &result) const;
   bool processFinal(Fortran::lower::StatementContext &stmtCtx,
-                    mlir::Value &result) const;
-  bool processHint(mlir::IntegerAttr &result) const;
-  bool processMergeable(mlir::UnitAttr &result) const;
-  bool processNowait(mlir::UnitAttr &result) const;
+                    mlir::omp::FinalClauseOps &result) const;
+  bool
+  processHasDeviceAddr(mlir::omp::HasDeviceAddrClauseOps &result,
+                       llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
+                       llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
+                       llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+                           &isDeviceSymbols) const;
+  bool processHint(mlir::omp::HintClauseOps &result) const;
+  bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
+  bool processNowait(mlir::omp::NowaitClauseOps &result) const;
   bool processNumTeams(Fortran::lower::StatementContext &stmtCtx,
-                       mlir::Value &result) const;
+                       mlir::omp::NumTeamsClauseOps &result) const;
   bool processNumThreads(Fortran::lower::StatementContext &stmtCtx,
-                         mlir::Value &result) const;
-  bool processOrdered(mlir::IntegerAttr &result) const;
+                         mlir::omp::NumThreadsClauseOps &result) const;
+  bool processOrdered(mlir::omp::OrderedClauseOps &result) const;
   bool processPriority(Fortran::lower::StatementContext &stmtCtx,
-                       mlir::Value &result) const;
-  bool processProcBind(mlir::omp::ClauseProcBindKindAttr &result) const;
-  bool processSafelen(mlir::IntegerAttr &result) const;
-  bool processSchedule(mlir::omp::ClauseScheduleKindAttr &valAttr,
-                       mlir::omp::ScheduleModifierAttr &modifierAttr,
-                       mlir::UnitAttr &simdModifierAttr) const;
-  bool processScheduleChunk(Fortran::lower::StatementContext &stmtCtx,
-                            mlir::Value &result) const;
-  bool processSimdlen(mlir::IntegerAttr &result) const;
+                       mlir::omp::PriorityClauseOps &result) const;
+  bool processProcBind(mlir::omp::ProcBindClauseOps &result) const;
+  bool processSafelen(mlir::omp::SafelenClauseOps &result) const;
+  bool processSchedule(Fortran::lower::StatementContext &stmtCtx,
+                       mlir::omp::ScheduleClauseOps &result) const;
+  bool processSimdlen(mlir::omp::SimdlenClauseOps &result) const;
   bool processThreadLimit(Fortran::lower::StatementContext &stmtCtx,
-                          mlir::Value &result) const;
-  bool processUntied(mlir::UnitAttr &result) const;
+                          mlir::omp::ThreadLimitClauseOps &result) const;
+  bool processUntied(mlir::omp::UntiedClauseOps &result) const;
 
   // 'Repeatable' clauses: They can appear multiple times in the clause list.
-  bool
-  processAllocate(llvm::SmallVectorImpl<mlir::Value> &allocatorOperands,
-                  llvm::SmallVectorImpl<mlir::Value> &allocateOperands) const;
+  bool processAllocate(mlir::omp::AllocateClauseOps &result) const;
   bool processCopyin() const;
-  bool processCopyPrivate(
-      mlir::Location currentLocation,
-      llvm::SmallVectorImpl<mlir::Value> &copyPrivateVars,
-      llvm::SmallVectorImpl<mlir::Attribute> &copyPrivateFuncs) const;
-  bool processDepend(llvm::SmallVectorImpl<mlir::Attribute> &dependTypeOperands,
-                     llvm::SmallVectorImpl<mlir::Value> &dependOperands) const;
+  bool processCopyprivate(mlir::Location currentLocation,
+                          mlir::omp::CopyprivateClauseOps &result) const;
+  bool processDepend(mlir::omp::DependClauseOps &result) const;
   bool
   processEnter(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
   bool processIf(omp::clause::If::DirectiveNameModifier directiveName,
-                 mlir::Value &result) const;
+                 mlir::omp::IfClauseOps &result) const;
+  bool
+  processIsDevicePtr(mlir::omp::IsDevicePtrClauseOps &result,
+                     llvm::SmallVectorImpl<mlir::Type> &isDeviceTypes,
+                     llvm::SmallVectorImpl<mlir::Location> &isDeviceLocs,
+                     llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
+                         &isDeviceSymbols) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
 
   // This method is used to process a map clause.
-  // The optional parameters - mapSymTypes, mapSymLocs & mapSymbols are used to
+  // The optional parameters - mapSymTypes, mapSymLocs & mapSyms are used to
   // store the original type, location and Fortran symbol for the map operands.
   // They may be used later on to create the block_arguments for some of the
   // target directives that require it.
-  bool processMap(mlir::Location currentLocation,
-                  const llvm::omp::Directive &directive,
-                  Fortran::lower::StatementContext &stmtCtx,
-                  llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-                  llvm::SmallVectorImpl<mlir::Type> *mapSymTypes = nullptr,
-                  llvm::SmallVectorImpl<mlir::Location> *mapSymLocs = nullptr,
-                  llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
-                      *mapSymbols = nullptr) const;
-  bool
-  processReduction(mlir::Location currentLocation,
-                   llvm::SmallVectorImpl<mlir::Value> &reductionVars,
-                   llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-                   llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
-                       *reductionSymbols = nullptr) const;
-  bool processSectionsReduction(mlir::Location currentLocation) const;
+  bool processMap(
+      mlir::Location currentLocation, Fortran::lower::StatementContext &stmtCtx,
+      mlir::omp::MapClauseOps &result,
+      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *mapSyms =
+          nullptr,
+      llvm::SmallVectorImpl<mlir::Location> *mapSymLocs = nullptr,
+      llvm::SmallVectorImpl<mlir::Type> *mapSymTypes = nullptr) const;
+  bool processReduction(
+      mlir::Location currentLocation, mlir::omp::ReductionClauseOps &result,
+      llvm::SmallVectorImpl<mlir::Type> *reductionTypes = nullptr,
+      llvm::SmallVectorImpl<const Fortran::semantics::Symbol *> *reductionSyms =
+          nullptr) const;
+  bool processSectionsReduction(mlir::Location currentLocation,
+                                mlir::omp::ReductionClauseOps &result) const;
   bool processTo(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
   bool
-  processUseDeviceAddr(llvm::SmallVectorImpl<mlir::Value> &operands,
+  processUseDeviceAddr(mlir::omp::UseDeviceClauseOps &result,
                        llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
                        llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
                        llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
-                           &useDeviceSymbols) const;
+                           &useDeviceSyms) const;
   bool
-  processUseDevicePtr(llvm::SmallVectorImpl<mlir::Value> &operands,
+  processUseDevicePtr(mlir::omp::UseDeviceClauseOps &result,
                       llvm::SmallVectorImpl<mlir::Type> &useDeviceTypes,
                       llvm::SmallVectorImpl<mlir::Location> &useDeviceLocs,
                       llvm::SmallVectorImpl<const Fortran::semantics::Symbol *>
-                          &useDeviceSymbols) const;
+                          &useDeviceSyms) const;
 
   template <typename T>
   bool processMotionClauses(Fortran::lower::StatementContext &stmtCtx,
-                            llvm::SmallVectorImpl<mlir::Value> &mapOperands);
+                            mlir::omp::MapClauseOps &result);
 
   // Call this method for these clauses that should be supported but are not
   // implemented yet. It triggers a compilation error if any of the given
@@ -157,7 +153,6 @@ public:
 
 private:
   using ClauseIterator = List<Clause>::const_iterator;
-  using ClauseIterator2 = std::list<ClauseTy>::const_iterator;
 
   /// Utility to find a clause within a range in the clause list.
   template <typename T>
@@ -183,14 +178,13 @@ private:
 
   Fortran::lower::AbstractConverter &converter;
   Fortran::semantics::SemanticsContext &semaCtx;
-  const Fortran::parser::OmpClauseList &clauses2;
   List<Clause> clauses;
 };
 
 template <typename T>
 bool ClauseProcessor::processMotionClauses(
     Fortran::lower::StatementContext &stmtCtx,
-    llvm::SmallVectorImpl<mlir::Value> &mapOperands) {
+    mlir::omp::MapClauseOps &result) {
   return findRepeatableClause<T>(
       [&](const T &clause, const Fortran::parser::CharBlock &source) {
         mlir::Location clauseLocation = converter.genLocation(source);
@@ -205,7 +199,8 @@ bool ClauseProcessor::processMotionClauses(
                 ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
                 : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
 
-        for (const omp::Object &object : clause.v) {
+        auto &objects = std::get<ObjectList>(clause.t);
+        for (const omp::Object &object : objects) {
           llvm::SmallVector<mlir::Value> bounds;
           std::stringstream asFortran;
           Fortran::lower::AddrAndBoundsInfo info =
@@ -231,7 +226,7 @@ bool ClauseProcessor::processMotionClauses(
                   mapTypeBits),
               mlir::omp::VariableCaptureKind::ByRef, symAddr.getType());
 
-          mapOperands.push_back(mapOp);
+          result.mapVars.push_back(mapOp);
         }
       });
 }
@@ -239,19 +234,17 @@ bool ClauseProcessor::processMotionClauses(
 template <typename... Ts>
 void ClauseProcessor::processTODO(mlir::Location currentLocation,
                                   llvm::omp::Directive directive) const {
-  auto checkUnhandledClause = [&](const auto *x) {
+  auto checkUnhandledClause = [&](llvm::omp::Clause id, const auto *x) {
     if (!x)
       return;
     TODO(currentLocation,
-         "Unhandled clause " +
-             llvm::StringRef(Fortran::parser::ParseTreeDumper::GetNodeName(*x))
-                 .upper() +
+         "Unhandled clause " + llvm::omp::getOpenMPClauseName(id).upper() +
              " in " + llvm::omp::getOpenMPDirectiveName(directive).upper() +
              " construct");
   };
 
-  for (ClauseIterator2 it = clauses2.v.begin(); it != clauses2.v.end(); ++it)
-    (checkUnhandledClause(std::get_if<Ts>(&it->u)), ...);
+  for (ClauseIterator it = clauses.begin(); it != clauses.end(); ++it)
+    (checkUnhandledClause(it->id, std::get_if<Ts>(&it->u)), ...);
 }
 
 template <typename T>

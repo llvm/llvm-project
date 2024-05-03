@@ -435,7 +435,7 @@ if(runtimes)
       list(APPEND extra_deps "flang-new")
     endif()
     foreach(dep opt llvm-link llvm-extract clang clang-offload-packager)
-      if(TARGET ${dep} AND OPENMP_ENABLE_LIBOMPTARGET)
+      if(TARGET ${dep})
         list(APPEND extra_deps ${dep})
       endif()
     endforeach()
@@ -531,7 +531,7 @@ if(runtimes)
       check_apple_target(${name} runtime)
 
       runtime_register_target(${name}
-        DEPENDS ${builtins_dep_name} ${hdrgen_deps}
+        DEPENDS ${builtins_dep_name} ${extra_deps}
         CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${libc_cmake_args}
         EXTRA_ARGS TARGET_TRIPLE ${name})
     endforeach()
@@ -559,6 +559,13 @@ if(runtimes)
     # We need to add the runtimes as a dependency because compiler-rt can be
     # built as part of runtimes and we need the profile runtime for PGO
     add_dependencies(clang-bootstrap-deps runtimes)
+    # The bootstrap build will attempt to configure the offload runtime
+    # before the openmp project which will error out due to failing to
+    # find libomp.so. We must add omp as a dependency before runtimes
+    # are configured.
+    if("openmp" IN_LIST LLVM_ENABLE_PROJECTS AND "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
+      add_dependencies(clang-bootstrap-deps omp)
+    endif()
   endif()
 
   if(LLVM_INCLUDE_TESTS)

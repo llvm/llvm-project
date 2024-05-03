@@ -11,14 +11,16 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
+#include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/CallInterfaces.h"
@@ -394,6 +396,13 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
   config.listener =
       static_cast<RewriterBase::Listener *>(rewriter.getListener());
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
+
+  config.maxIterations = getMaxIterations() == static_cast<uint64_t>(-1)
+                             ? GreedyRewriteConfig::kNoLimit
+                             : getMaxIterations();
+  config.maxNumRewrites = getMaxNumRewrites() == static_cast<uint64_t>(-1)
+                              ? GreedyRewriteConfig::kNoLimit
+                              : getMaxNumRewrites();
 
   // Apply patterns and CSE repetitively until a fixpoint is reached. If no CSE
   // was requested, apply the greedy pattern rewrite only once. (The greedy
@@ -819,26 +828,30 @@ bool transform::CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   assert(outputs.size() == 1 && "expected one output");
   return llvm::all_of(
       std::initializer_list<Type>{inputs.front(), outputs.front()},
-      [](Type ty) { return isa<transform::TransformHandleTypeInterface>(ty); });
+      llvm::IsaPred<transform::TransformHandleTypeInterface>);
 }
 
 //===----------------------------------------------------------------------===//
 // CollectMatchingOp
 //===----------------------------------------------------------------------===//
 
-/// Applies matcher operations from the given `block` assigning `op` as the
-/// payload of the block's first argument. Updates `state` accordingly. If any
-/// of the matcher produces a silenceable failure, discards it (printing the
-/// content to the debug output stream) and returns failure. If any of the
-/// matchers produces a definite failure, reports it and returns failure. If all
-/// matchers in the block succeed, populates `mappings` with the payload
-/// entities associated with the block terminator operands.
+/// Applies matcher operations from the given `block` using
+/// `blockArgumentMapping` to initialize block arguments. Updates `state`
+/// accordingly. If any of the matcher produces a silenceable failure, discards
+/// it (printing the content to the debug output stream) and returns failure. If
+/// any of the matchers produces a definite failure, reports it and returns
+/// failure. If all matchers in the block succeed, populates `mappings` with the
+/// payload entities associated with the block terminator operands. Note that
+/// `mappings` will be cleared before that.
 static DiagnosedSilenceableFailure
-matchBlock(Block &block, Operation *op, transform::TransformState &state,
+matchBlock(Block &block,
+           ArrayRef<SmallVector<transform::MappedValue>> blockArgumentMapping,
+           transform::TransformState &state,
            SmallVectorImpl<SmallVector<transform::MappedValue>> &mappings) {
   assert(block.getParent() && "cannot match using a detached block");
   auto matchScope = state.make_region_scope(*block.getParent());
-  if (failed(state.mapBlockArgument(block.getArgument(0), {op})))
+  if (failed(
+          state.mapBlockArguments(block.getArguments(), blockArgumentMapping)))
     return DiagnosedSilenceableFailure::definiteFailure();
 
   for (Operation &match : block.without_terminator()) {
@@ -858,6 +871,9 @@ matchBlock(Block &block, Operation *op, transform::TransformState &state,
   // Remember the values mapped to the terminator operands so we can
   // forward them to the action.
   ValueRange yieldedValues = block.getTerminator()->getOperands();
+  // Our contract with the caller is that the mappings will contain only the
+  // newly mapped values, clear the rest.
+  mappings.clear();
   transform::detail::prepareValueMappings(mappings, yieldedValues, state);
   return DiagnosedSilenceableFailure::success();
 }
@@ -907,8 +923,11 @@ transform::CollectMatchingOp::apply(transform::TransformRewriter &rewriter,
 
       // Try matching.
       SmallVector<SmallVector<MappedValue>> mappings;
-      DiagnosedSilenceableFailure diag =
-          matchBlock(matcher.getFunctionBody().front(), op, state, mappings);
+      SmallVector<transform::MappedValue> inputMapping({op});
+      DiagnosedSilenceableFailure diag = matchBlock(
+          matcher.getFunctionBody().front(),
+          ArrayRef<SmallVector<transform::MappedValue>>(inputMapping), state,
+          mappings);
       if (diag.isDefiniteFailure())
         return WalkResult::interrupt();
       if (diag.isSilenceableFailure()) {
@@ -993,6 +1012,9 @@ LogicalResult transform::CollectMatchingOp::verifySymbolUses(
 // ForeachMatchOp
 //===----------------------------------------------------------------------===//
 
+// This is fine because nothing is actually consumed by this op.
+bool transform::ForeachMatchOp::allowsRepeatedHandleOperands() { return true; }
+
 DiagnosedSilenceableFailure
 transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
                                  transform::TransformResults &results,
@@ -1020,6 +1042,20 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
     matchActionPairs.emplace_back(matcherSymbol, actionSymbol);
   }
 
+  DiagnosedSilenceableFailure overallDiag =
+      DiagnosedSilenceableFailure::success();
+
+  SmallVector<SmallVector<MappedValue>> matchInputMapping;
+  SmallVector<SmallVector<MappedValue>> matchOutputMapping;
+  SmallVector<SmallVector<MappedValue>> actionResultMapping;
+  // Explicitly add the mapping for the first block argument (the op being
+  // matched).
+  matchInputMapping.emplace_back();
+  transform::detail::prepareValueMappings(matchInputMapping,
+                                          getForwardedInputs(), state);
+  SmallVector<MappedValue> &firstMatchArgument = matchInputMapping.front();
+  actionResultMapping.resize(getForwardedOutputs().size());
+
   for (Operation *root : state.getPayloadOps(getRoot())) {
     WalkResult walkResult = root->walk([&](Operation *op) {
       // If getRestrictRoot is not present, skip over the root op itself so we
@@ -1034,11 +1070,14 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
         llvm::dbgs() << " @" << op << "\n";
       });
 
+      firstMatchArgument.clear();
+      firstMatchArgument.push_back(op);
+
       // Try all the match/action pairs until the first successful match.
       for (auto [matcher, action] : matchActionPairs) {
-        SmallVector<SmallVector<MappedValue>> mappings;
         DiagnosedSilenceableFailure diag =
-            matchBlock(matcher.getFunctionBody().front(), op, state, mappings);
+            matchBlock(matcher.getFunctionBody().front(), matchInputMapping,
+                       state, matchOutputMapping);
         if (diag.isDefiniteFailure())
           return WalkResult::interrupt();
         if (diag.isSilenceableFailure()) {
@@ -1048,18 +1087,39 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
         }
 
         auto scope = state.make_region_scope(action.getFunctionBody());
-        for (auto &&[arg, map] : llvm::zip_equal(
-                 action.getFunctionBody().front().getArguments(), mappings)) {
-          if (failed(state.mapBlockArgument(arg, map)))
-            return WalkResult::interrupt();
+        if (failed(state.mapBlockArguments(
+                action.getFunctionBody().front().getArguments(),
+                matchOutputMapping))) {
+          return WalkResult::interrupt();
         }
 
         for (Operation &transform :
              action.getFunctionBody().front().without_terminator()) {
           DiagnosedSilenceableFailure result =
               state.applyTransform(cast<TransformOpInterface>(transform));
-          if (failed(result.checkAndReport()))
+          if (result.isDefiniteFailure())
             return WalkResult::interrupt();
+          if (result.isSilenceableFailure()) {
+            if (overallDiag.succeeded()) {
+              overallDiag = emitSilenceableError() << "actions failed";
+            }
+            overallDiag.attachNote(action->getLoc())
+                << "failed action: " << result.getMessage();
+            overallDiag.attachNote(op->getLoc())
+                << "when applied to this matching payload";
+            (void)result.silence();
+            continue;
+          }
+        }
+        if (failed(detail::appendValueMappings(
+                MutableArrayRef<SmallVector<MappedValue>>(actionResultMapping),
+                action.getFunctionBody().front().getTerminator()->getOperands(),
+                state, getFlattenResults()))) {
+          emitDefiniteFailure()
+              << "action @" << action.getName()
+              << " has results associated with multiple payload entities, "
+                 "but flattening was not requested";
+          return WalkResult::interrupt();
         }
         break;
       }
@@ -1075,7 +1135,19 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
   // by actions, are invalidated.
   results.set(llvm::cast<OpResult>(getUpdated()),
               state.getPayloadOps(getRoot()));
-  return DiagnosedSilenceableFailure::success();
+  for (auto &&[result, mapping] :
+       llvm::zip_equal(getForwardedOutputs(), actionResultMapping)) {
+    results.setMappedValues(result, mapping);
+  }
+  return overallDiag;
+}
+
+void transform::ForeachMatchOp::getAsmResultNames(
+    OpAsmSetValueNameFn setNameFn) {
+  setNameFn(getUpdated(), "updated_root");
+  for (Value v : getForwardedOutputs()) {
+    setNameFn(v, "yielded");
+  }
 }
 
 void transform::ForeachMatchOp::getEffects(
@@ -1087,7 +1159,8 @@ void transform::ForeachMatchOp::getEffects(
   }
 
   consumesHandle(getRoot(), effects);
-  producesHandle(getUpdated(), effects);
+  onlyReadsHandle(getForwardedInputs(), effects);
+  producesHandle(getResults(), effects);
   modifiesPayload(effects);
 }
 
@@ -1203,6 +1276,7 @@ LogicalResult transform::ForeachMatchOp::verifySymbolUses(
       StringAttr::get(getContext(), TransformDialect::kArgConsumedAttrName);
   for (auto &&[matcher, action] :
        llvm::zip_equal(getMatchers(), getActions())) {
+    // Presence and typing.
     auto matcherSymbol = dyn_cast_or_null<FunctionOpInterface>(
         symbolTable.lookupNearestSymbolFrom(getOperation(),
                                             cast<SymbolRefAttr>(matcher)));
@@ -1229,8 +1303,41 @@ LogicalResult transform::ForeachMatchOp::verifySymbolUses(
       return failure();
     }
 
-    ArrayRef<Type> matcherResults = matcherSymbol.getResultTypes();
-    ArrayRef<Type> actionArguments = actionSymbol.getArgumentTypes();
+    // Input -> matcher forwarding.
+    TypeRange operandTypes = getOperandTypes();
+    TypeRange matcherArguments = matcherSymbol.getArgumentTypes();
+    if (operandTypes.size() != matcherArguments.size()) {
+      InFlightDiagnostic diag =
+          emitError() << "the number of operands (" << operandTypes.size()
+                      << ") doesn't match the number of matcher arguments ("
+                      << matcherArguments.size() << ") for " << matcher;
+      diag.attachNote(matcherSymbol->getLoc()) << "symbol declaration";
+      return diag;
+    }
+    for (auto &&[i, operand, argument] :
+         llvm::enumerate(operandTypes, matcherArguments)) {
+      if (matcherSymbol.getArgAttr(i, consumedAttr)) {
+        InFlightDiagnostic diag =
+            emitOpError()
+            << "does not expect matcher symbol to consume its operand #" << i;
+        diag.attachNote(matcherSymbol->getLoc()) << "symbol declaration";
+        return diag;
+      }
+
+      if (implementSameTransformInterface(operand, argument))
+        continue;
+
+      InFlightDiagnostic diag =
+          emitError()
+          << "mismatching type interfaces for operand and matcher argument #"
+          << i << " of matcher " << matcher;
+      diag.attachNote(matcherSymbol->getLoc()) << "symbol declaration";
+      return diag;
+    }
+
+    // Matcher -> action forwarding.
+    TypeRange matcherResults = matcherSymbol.getResultTypes();
+    TypeRange actionArguments = actionSymbol.getArgumentTypes();
     if (matcherResults.size() != actionArguments.size()) {
       return emitError() << "mismatching number of matcher results and "
                             "action arguments between "
@@ -1244,31 +1351,31 @@ LogicalResult transform::ForeachMatchOp::verifySymbolUses(
 
       return emitError() << "mismatching type interfaces for matcher result "
                             "and action argument #"
-                         << i;
+                         << i << "of matcher " << matcher << " and action "
+                         << action;
     }
 
-    if (!actionSymbol.getResultTypes().empty()) {
+    // Action -> result forwarding.
+    TypeRange actionResults = actionSymbol.getResultTypes();
+    auto resultTypes = TypeRange(getResultTypes()).drop_front();
+    if (actionResults.size() != resultTypes.size()) {
       InFlightDiagnostic diag =
-          emitError() << "action symbol is not expected to have results";
+          emitError() << "the number of action results ("
+                      << actionResults.size() << ") for " << action
+                      << " doesn't match the number of extra op results ("
+                      << resultTypes.size() << ")";
       diag.attachNote(actionSymbol->getLoc()) << "symbol declaration";
       return diag;
     }
+    for (auto &&[i, resultType, actionType] :
+         llvm::enumerate(resultTypes, actionResults)) {
+      if (implementSameTransformInterface(resultType, actionType))
+        continue;
 
-    if (matcherSymbol.getArgumentTypes().size() != 1 ||
-        !implementSameTransformInterface(matcherSymbol.getArgumentTypes()[0],
-                                         getRoot().getType())) {
       InFlightDiagnostic diag =
-          emitOpError() << "expects matcher symbol to have one argument with "
-                           "the same transform interface as the first operand";
-      diag.attachNote(matcherSymbol->getLoc()) << "symbol declaration";
-      return diag;
-    }
-
-    if (matcherSymbol.getArgAttr(0, consumedAttr)) {
-      InFlightDiagnostic diag =
-          emitOpError()
-          << "does not expect matcher symbol to consume its operand";
-      diag.attachNote(matcherSymbol->getLoc()) << "symbol declaration";
+          emitError() << "mismatching type interfaces for action result #" << i
+                      << " of action " << action << " and op result";
+      diag.attachNote(actionSymbol->getLoc()) << "symbol declaration";
       return diag;
     }
   }
@@ -1594,7 +1701,7 @@ transform::GetTypeOp::apply(transform::TransformRewriter &rewriter,
     }
     params.push_back(TypeAttr::get(type));
   }
-  results.setParams(getResult().cast<OpResult>(), params);
+  results.setParams(cast<OpResult>(getResult()), params);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -2196,14 +2303,14 @@ transform::NumAssociationsOp::apply(transform::TransformRewriter &rewriter,
             llvm_unreachable("unknown kind of transform dialect type");
             return 0;
           });
-  results.setParams(getNum().cast<OpResult>(),
+  results.setParams(cast<OpResult>(getNum()),
                     rewriter.getI64IntegerAttr(numAssociations));
   return DiagnosedSilenceableFailure::success();
 }
 
 LogicalResult transform::NumAssociationsOp::verify() {
   // Verify that the result type accepts an i64 attribute as payload.
-  auto resultType = getNum().getType().cast<TransformParamTypeInterface>();
+  auto resultType = cast<TransformParamTypeInterface>(getNum().getType());
   return resultType
       .checkPayload(getLoc(), {Builder(getContext()).getI64IntegerAttr(0)})
       .checkAndReport();
@@ -2614,21 +2721,37 @@ transform::PrintOp::apply(transform::TransformRewriter &rewriter,
   if (getName().has_value())
     llvm::outs() << *getName() << " ";
 
+  OpPrintingFlags printFlags;
+  if (getAssumeVerified().value_or(false))
+    printFlags.assumeVerified();
+  if (getUseLocalScope().value_or(false))
+    printFlags.useLocalScope();
+  if (getSkipRegions().value_or(false))
+    printFlags.skipRegions();
+
   if (!getTarget()) {
-    llvm::outs() << "top-level ]]]\n" << *state.getTopLevel() << "\n";
+    llvm::outs() << "top-level ]]]\n";
+    state.getTopLevel()->print(llvm::outs(), printFlags);
+    llvm::outs() << "\n";
     return DiagnosedSilenceableFailure::success();
   }
 
   llvm::outs() << "]]]\n";
-  for (Operation *target : state.getPayloadOps(getTarget()))
-    llvm::outs() << *target << "\n";
+  for (Operation *target : state.getPayloadOps(getTarget())) {
+    target->print(llvm::outs(), printFlags);
+    llvm::outs() << "\n";
+  }
 
   return DiagnosedSilenceableFailure::success();
 }
 
 void transform::PrintOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  onlyReadsHandle(getTarget(), effects);
+  // We don't really care about mutability here, but `getTarget` now
+  // unconditionally casts to a specific type before verification could run
+  // here.
+  if (!getTargetMutable().empty())
+    onlyReadsHandle(getTargetMutable()[0].get(), effects);
   onlyReadsPayload(effects);
 
   // There is no resource for stderr file descriptor, so just declare print

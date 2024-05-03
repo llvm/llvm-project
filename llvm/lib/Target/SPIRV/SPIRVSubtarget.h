@@ -37,8 +37,8 @@ class SPIRVTargetMachine;
 class SPIRVSubtarget : public SPIRVGenSubtargetInfo {
 private:
   const unsigned PointerSize;
-  uint32_t SPIRVVersion;
-  uint32_t OpenCLVersion;
+  VersionTuple SPIRVVersion;
+  VersionTuple OpenCLVersion;
 
   SmallSet<SPIRV::Extension::Extension, 4> AvailableExtensions;
   SmallSet<SPIRV::InstructionSet::InstructionSet, 4> AvailableExtInstSets;
@@ -81,9 +81,9 @@ public:
            TargetTriple.getArch() == Triple::spirv64;
   }
   bool isVulkanEnv() const { return TargetTriple.getArch() == Triple::spirv; }
-  uint32_t getSPIRVVersion() const { return SPIRVVersion; };
-  bool isAtLeastSPIRVVer(uint32_t VerToCompareTo) const;
-  bool isAtLeastOpenCLVer(uint32_t VerToCompareTo) const;
+  VersionTuple getSPIRVVersion() const { return SPIRVVersion; };
+  bool isAtLeastSPIRVVer(VersionTuple VerToCompareTo) const;
+  bool isAtLeastOpenCLVer(VersionTuple VerToCompareTo) const;
   // TODO: implement command line args or other ways to determine this.
   bool hasOpenCLFullProfile() const { return true; }
   bool hasOpenCLImageSupport() const { return true; }

@@ -186,11 +186,6 @@ void AArch64::ExtensionSet::enable(ArchExtKind E) {
   // Special cases for dependencies which vary depending on the base
   // architecture version.
   if (BaseArch) {
-    // +sve implies +f32mm if the base architecture is v8.6A+ or v9.1A+
-    // It isn't the case in general that sve implies both f64mm and f32mm
-    if (E == AEK_SVE && BaseArch->is_superset(ARMV8_6A))
-      enable(AEK_F32MM);
-
     // +fp16 implies +fp16fml for v8.4A+, but not v9.0-A+
     if (E == AEK_FP16 && BaseArch->is_superset(ARMV8_4A) &&
         !BaseArch->is_superset(ARMV9A))
