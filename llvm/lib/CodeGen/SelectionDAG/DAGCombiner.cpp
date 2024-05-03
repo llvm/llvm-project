@@ -8952,6 +8952,10 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
       if (ShiftAmtC % NarrowNumBits != 0)
         return SDValue();
 
+      // Make sure we aren't reading bits that are shifted in.
+      if (ShiftAmtC > WideVal.getScalarValueSizeInBits() - NarrowNumBits)
+        return SDValue();
+
       Offset = ShiftAmtC / NarrowNumBits;
       WideVal = WideVal.getOperand(0);
     }
