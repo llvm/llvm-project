@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DiagOutputUtils.h"
+#include "ASTUtils.h"
 #include "PtrTypesSemantics.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -90,6 +91,9 @@ public:
           const CXXRecordDecl *C = T->getAsCXXRecordDecl();
           if (!C)
             return false;
+          if (isRefCountedClass(C))
+            return false;
+
           bool AnyInconclusiveBase = false;
           const auto hasPublicRefInBase =
               [&AnyInconclusiveBase](const CXXBaseSpecifier *Base,
@@ -162,6 +166,19 @@ public:
       return true;
 
     return false;
+  }
+
+  static bool isRefCountedClass(const CXXRecordDecl* D) {
+    if (!D->getTemplateInstantiationPattern())
+      return false;
+    auto *NsDecl = D->getParent();
+    if (!NsDecl || !isa<NamespaceDecl>(NsDecl))
+      return false;
+    auto NamespaceName = safeGetName(NsDecl);
+    auto ClsNameStr = safeGetName(D);
+    StringRef ClsName = ClsNameStr; // FIXME: Make safeGetName return StringRef.
+    return NamespaceName == "WTF" && (ClsName.ends_with("RefCounted") ||
+        ClsName == "ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr");
   }
 
   void reportBug(const CXXRecordDecl *DerivedClass,
