@@ -313,6 +313,44 @@ public:
          ArrayRef<Expr *> VarList, SourceLocation EndLoc);
 };
 
+class OpenACCDevicePtrClause final
+    : public OpenACCClauseWithVarList,
+      public llvm::TrailingObjects<OpenACCDevicePtrClause, Expr *> {
+
+  OpenACCDevicePtrClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                         ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::DevicePtr, BeginLoc,
+                                 LParenLoc, EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static OpenACCDevicePtrClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
+
+class OpenACCAttachClause final
+    : public OpenACCClauseWithVarList,
+      public llvm::TrailingObjects<OpenACCAttachClause, Expr *> {
+
+  OpenACCAttachClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
+                      ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(OpenACCClauseKind::Attach, BeginLoc, LParenLoc,
+                                 EndLoc) {
+    std::uninitialized_copy(VarList.begin(), VarList.end(),
+                            getTrailingObjects<Expr *>());
+    setExprs(MutableArrayRef(getTrailingObjects<Expr *>(), VarList.size()));
+  }
+
+public:
+  static OpenACCAttachClause *
+  Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+};
+
 class OpenACCNoCreateClause final
     : public OpenACCClauseWithVarList,
       public llvm::TrailingObjects<OpenACCNoCreateClause, Expr *> {
