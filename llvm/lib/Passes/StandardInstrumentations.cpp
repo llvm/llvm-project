@@ -245,7 +245,8 @@ std::string getIRName(Any IR) {
     return C->getName();
 
   if (const auto *L = unwrapIR<Loop>(IR))
-    return L->getName().str();
+    return "loop %" + L->getName().str() + " in function " +
+           L->getHeader()->getParent()->getName().str();
 
   if (const auto *MF = unwrapIR<MachineFunction>(IR))
     return MF->getName().str();
