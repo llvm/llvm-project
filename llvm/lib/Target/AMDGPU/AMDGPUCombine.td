@@ -94,10 +94,8 @@ def fmed3_intrinsic_to_clamp : GICombineRule<
          [{ return matchFPMed3ToClamp(*${fmed3}, ${matchinfo}); }]),
   (apply [{ applyClamp(*${fmed3}, ${matchinfo}); }])>;
 
-def remove_fcanonicalize_matchinfo : GIDefMatchData<"Register">;
-
 def remove_fcanonicalize : GICombineRule<
-  (defs root:$fcanonicalize, remove_fcanonicalize_matchinfo:$matchinfo),
+  (defs root:$fcanonicalize, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_FCANONICALIZE):$fcanonicalize,
          [{ return matchRemoveFcanonicalize(*${fcanonicalize}, ${matchinfo}); }]),
   (apply [{ Helper.replaceSingleDefInstWithReg(*${fcanonicalize}, ${matchinfo}); }])>;
