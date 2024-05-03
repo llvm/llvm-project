@@ -1735,6 +1735,7 @@ public:
   bool LexHeaderName(Token &Result, bool AllowMacroExpansion = true);
 
   bool LexAfterModuleImport(Token &Result);
+  bool LexAfterModuleDecl(Token &Result);
   void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
 
   void makeModuleVisible(Module *M, SourceLocation Loc);
@@ -2936,6 +2937,9 @@ private:
   }
   static bool CLK_LexAfterModuleImport(Preprocessor &P, Token &Result) {
     return P.LexAfterModuleImport(Result);
+  }
+  static bool CLK_LexAfterModuleDecl(Preprocessor &P, Token &Result) {
+    return P.LexAfterModuleDecl(Result);
   }
 };
 

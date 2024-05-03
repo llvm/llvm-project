@@ -862,6 +862,14 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     ModuleImportExpectsIdentifier = true;
     CurLexerCallback = CLK_LexAfterModuleImport;
   }
+
+  if ((II.isModulesDecl() ||
+       Identifier.is(tok::kw_module)) &&
+      !InMacroArgs && !DisableMacroExpansion &&
+      (getLangOpts().Modules || getLangOpts().DebuggerSupport) &&
+      CurLexerCallback != CLK_CachingLexer) {
+    CurLexerCallback = CLK_LexAfterModuleDecl;
+  }
   return true;
 }
 
@@ -942,6 +950,7 @@ void Preprocessor::Lex(Token &Result) {
         } else if (Result.getIdentifierInfo() == getIdentifierInfo("module")) {
           TrackGMFState.handleModule(StdCXXImportSeqState.afterTopLevelSeq());
           ModuleDeclState.handleModule();
+          CurLexerCallback = CLK_LexAfterModuleDecl;
           break;
         }
       }
@@ -1326,6 +1335,42 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
     EnterTokens(Suffix);
     return false;
   }
+  return true;
+}
+
+/// Lex a token following the 'module' contextual keyword.
+///
+/// [cpp.module]/p2:
+/// The pp-tokens, if any, of a pp-module shall be of the form:
+///       pp-module-name pp-module-partition[opt] pp-tokens[opt]
+///
+/// where the pp-tokens (if any) shall not begin with a ( preprocessing token
+/// and the grammar non-terminals are defined as:
+///       pp-module-name:
+///             pp-module-name-qualifierp[opt] identifier
+///       pp-module-partition:
+///             : pp-module-name-qualifier[opt] identifier
+///       pp-module-name-qualifier:
+///             identifier .
+///             pp-module-name-qualifier identifier .
+/// No identifier in the pp-module-name or pp-module-partition shall currently
+/// be defined as an object-like macro.
+///
+/// [cpp.module]/p3:
+/// Any preprocessing tokens after the module preprocessing token in the module
+/// directive are processed just as in normal text.
+bool Preprocessor::LexAfterModuleDecl(Token &Result) {
+  // Figure out what kind of lexer we actually have.
+  recomputeCurLexerKind();
+  LexUnexpandedToken(Result);
+
+  // pp-module:
+  //    export[opt] module pp-tokens[opt] ; new-line
+  // Processe tokens just as in normal text, until we see a ';', this means the
+  // end of the module directive.
+  if (!Result.is(tok::semi))
+    CurLexerCallback = CLK_LexAfterModuleDecl;
+
   return true;
 }
 

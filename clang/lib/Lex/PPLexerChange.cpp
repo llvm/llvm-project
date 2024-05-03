@@ -161,7 +161,8 @@ void Preprocessor::EnterMacro(Token &Tok, SourceLocation ILEnd,
   PushIncludeMacroStack();
   CurDirLookup = nullptr;
   CurTokenLexer = std::move(TokLexer);
-  if (CurLexerCallback != CLK_LexAfterModuleImport)
+  if (CurLexerCallback != CLK_LexAfterModuleImport &&
+      CurLexerCallback != CLK_LexAfterModuleDecl)
     CurLexerCallback = CLK_TokenLexer;
 }
 
