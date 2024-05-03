@@ -48,6 +48,11 @@ C++ Specific Potentially Breaking Changes
 - Clang now diagnoses function/variable templates that shadow their own template parameters, e.g. ``template<class T> void T();``.
   This error can be disabled via `-Wno-strict-primary-template-shadow` for compatibility with previous versions of clang.
 
+- The behavior controlled by the `-frelaxed-template-template-args` flag is now
+  on by default, and the flag is deprecated. Until the flag is finally removed,
+  it's negative spelling can be used to obtain compatibility with previous
+  versions of clang.
+
 ABI Changes in This Version
 ---------------------------
 - Fixed Microsoft name mangling of implicitly defined variables used for thread
@@ -94,6 +99,17 @@ sections with improvements to Clang's support for those languages.
 
 C++ Language Changes
 --------------------
+- C++17 support is now completed, with the enablement of the
+  relaxed temlate template argument matching rules introduced in P0522,
+  which was retroactively applied as a defect report.
+  While the implementation already existed since Clang 4, it was turned off by
+  default, and was controlled with the `-frelaxed-template-template-args` flag.
+  In this release, we implement provisional wording for a core defect on
+  P0522 (CWG2398), which avoids the most serious compatibility issues caused
+  by it, allowing us to enable it by default in this release.
+  The flag is now deprecated, and will be removed in the next release, but can
+  still be used to turn it off and regain compatibility with previous versions
+  (#GH36505).
 - Implemented ``_BitInt`` literal suffixes ``__wb`` or ``__WB`` as a Clang extension with ``unsigned`` modifiers also allowed. (#GH85223).
 
 C++17 Feature Support
@@ -172,6 +188,9 @@ Resolutions to C++ Defect Reports
 
 - Clang now diagnoses declarative nested-name-specifiers with pack-index-specifiers.
   (`CWG2858: Declarative nested-name-specifiers and pack-index-specifiers <https://cplusplus.github.io/CWG/issues/2858.html>`_).
+
+- P0522 implementation is enabled by default in all language versions, and
+  provisional wording for CWG2398 is implemented.
 
 C Language Changes
 ------------------
