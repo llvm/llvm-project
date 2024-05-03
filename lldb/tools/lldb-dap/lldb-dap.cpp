@@ -688,6 +688,8 @@ void request_attach(const llvm::json::Object &request) {
   auto arguments = request.getObject("arguments");
   const lldb::pid_t pid =
       GetUnsigned(arguments, "pid", LLDB_INVALID_PROCESS_ID);
+  const auto port = GetUnsigned(arguments, "port", LLDB_INVALID_PORT_NUMBER);
+  llvm::StringRef hostname = GetString(arguments, "hostname");
   if (pid != LLDB_INVALID_PROCESS_ID)
     attach_info.SetProcessID(pid);
   const auto wait_for = GetBoolean(arguments, "waitFor", false);
@@ -749,7 +751,7 @@ void request_attach(const llvm::json::Object &request) {
     return;
   }
 
-  if (pid == LLDB_INVALID_PROCESS_ID && wait_for) {
+  if ((pid == LLDB_INVALID_PROCESS_ID || port == LLDB_INVALID_PORT_NUMBER) && wait_for) {
     char attach_msg[256];
     auto attach_msg_len = snprintf(attach_msg, sizeof(attach_msg),
                                    "Waiting to attach to \"%s\"...",
@@ -762,9 +764,35 @@ void request_attach(const llvm::json::Object &request) {
     // Disable async events so the attach will be successful when we return from
     // the launch call and the launch will happen synchronously
     g_dap.debugger.SetAsync(false);
-    if (core_file.empty())
-      g_dap.target.Attach(attach_info, error);
-    else
+    if (core_file.empty()) {
+      if ((pid != LLDB_INVALID_PROCESS_ID) &&
+          (port != LLDB_INVALID_PORT_NUMBER)) {
+        // If both pid and port numbers are specified.
+        error.SetErrorString("The user can't specify both pid and port");
+      } else if ((pid != LLDB_INVALID_PROCESS_ID) &&
+                 (port == LLDB_INVALID_PORT_NUMBER)) {
+        // If pid is specified and port is not.
+        g_dap.target.Attach(attach_info, error);
+      } else if ((port != LLDB_INVALID_PORT_NUMBER) && (port < UINT16_MAX) &&
+                 (pid == LLDB_INVALID_PROCESS_ID)) {
+        // If port is specified and pid is not.
+        lldb::SBListener listener = g_dap.debugger.GetListener();
+
+        // If the user hasn't provided the hostname property, default localhost
+        // being used.
+        std::string connect_url("connect://localhost:");
+
+        // If the user has provided hostname other than localhost.
+        if (!hostname.empty() && !hostname.starts_with("localhost")) {
+          connect_url = llvm::formatv("connect://{0}:", hostname.data());
+        }
+        connect_url += std::to_string(port);
+        g_dap.target.ConnectRemote(listener, connect_url.c_str(), "gdb-remote",
+                                   error);
+      } else {
+        error.SetErrorString("Invalid pid/port number specified");
+      }
+    } else
       g_dap.target.LoadCore(core_file.data(), error);
     // Reenable async events
     g_dap.debugger.SetAsync(true);
