@@ -10,6 +10,8 @@ add_clang_library(clangCIR
   CIRAsm.cpp
   CIRGenAtomic.cpp
   CIRGenBuiltin.cpp
+  CIRGenBuiltinAArch64.cpp
+  CIRGenBuiltinX86.cpp
   CIRGenCXX.cpp
   CIRGenCXXABI.cpp
   CIRGenCall.cpp

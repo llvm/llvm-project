@@ -655,6 +655,11 @@ public:
   mlir::Value buildScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);
 
+  // Target specific builtin emission
+  mlir::Value buildAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
+                                      llvm::Triple::ArchType Arch);
+  mlir::Value buildX86BuiltinExpr(unsigned BuiltinID, const CallExpr *E);
+
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
   // an ObjCMethodDecl.
   struct PrototypeWrapper {
