@@ -2232,7 +2232,7 @@ public:
       : VPSingleDefRecipe(
             VPDef::VPReductionEVLSC,
             ArrayRef<VPValue *>({R->getChainOp(), R->getVecOp(), EVL}),
-            R->getUnderlyingInstr()),
+            cast_or_null<Instruction>(R->getUnderlyingValue())),
         RdxDesc(R->getRecurrenceDescriptor()), IsOrdered(R->isOrdered()) {
     VPValue *CondOp = R->getCondOp();
     if (CondOp)
