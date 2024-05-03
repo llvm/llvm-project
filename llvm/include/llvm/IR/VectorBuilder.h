@@ -99,11 +99,11 @@ public:
                                  ArrayRef<Value *> VecOpArray,
                                  const Twine &Name = Twine());
 
-  // Emit a VP reduction intrinsic call for recurrence \p Kind.
-  // \p Kind        The kind of recurrence
-  // \p ValTy       The type of operand which the reduction operation is
-  //                performed.
-  // \p VecOpArray  The operand list.
+  /// Emit a VP reduction intrinsic call for recurrence kind.
+  /// \param Kind        The kind of recurrence
+  /// \param ValTy       The type of operand which the reduction operation is
+  ///                    performed.
+  /// \param VecOpArray  The operand list.
   Value *createSimpleTargetReduction(RecurKind Kind, Type *ValTy,
                                      ArrayRef<Value *> VecOpArray,
                                      const Twine &Name = Twine());
