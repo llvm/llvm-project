@@ -549,3 +549,330 @@ entry:
 
   ret float %add3
 }
+
+define i8 @reduction_v4i8(<4 x i8> %a) {
+; GCN-LABEL: @reduction_v4i8(
+; GCN-NEXT:  entry:
+; GCN-NEXT:    [[ELT0:%.*]] = extractelement <4 x i8> [[A:%.*]], i64 0
+; GCN-NEXT:    [[ELT1:%.*]] = extractelement <4 x i8> [[A]], i64 1
+; GCN-NEXT:    [[ELT2:%.*]] = extractelement <4 x i8> [[A]], i64 2
+; GCN-NEXT:    [[ELT3:%.*]] = extractelement <4 x i8> [[A]], i64 3
+; GCN-NEXT:    [[ADD1:%.*]] = add i8 [[ELT1]], [[ELT0]]
+; GCN-NEXT:    [[ADD2:%.*]] = add i8 [[ELT2]], [[ADD1]]
+; GCN-NEXT:    [[ADD3:%.*]] = add i8 [[ELT3]], [[ADD2]]
+; GCN-NEXT:    ret i8 [[ADD3]]
+;
+entry:
+  %elt0 = extractelement <4 x i8> %a, i64 0
+  %elt1 = extractelement <4 x i8> %a, i64 1
+  %elt2 = extractelement <4 x i8> %a, i64 2
+  %elt3 = extractelement <4 x i8> %a, i64 3
+
+  %add1 = add i8 %elt1, %elt0
+  %add2 = add i8 %elt2, %add1
+  %add3 = add i8 %elt3, %add2
+
+  ret i8 %add3
+}
+
+define i8 @reduction_v8i8(<8 x i8> %vec8) {
+; GCN-LABEL: @reduction_v8i8(
+; GCN-NEXT:  entry:
+; GCN-NEXT:    [[ELT0:%.*]] = extractelement <8 x i8> [[VEC8:%.*]], i64 0
+; GCN-NEXT:    [[ELT1:%.*]] = extractelement <8 x i8> [[VEC8]], i64 1
+; GCN-NEXT:    [[ELT2:%.*]] = extractelement <8 x i8> [[VEC8]], i64 2
+; GCN-NEXT:    [[ELT3:%.*]] = extractelement <8 x i8> [[VEC8]], i64 3
+; GCN-NEXT:    [[ELT4:%.*]] = extractelement <8 x i8> [[VEC8]], i64 4
+; GCN-NEXT:    [[ELT5:%.*]] = extractelement <8 x i8> [[VEC8]], i64 5
+; GCN-NEXT:    [[ELT6:%.*]] = extractelement <8 x i8> [[VEC8]], i64 6
+; GCN-NEXT:    [[ELT7:%.*]] = extractelement <8 x i8> [[VEC8]], i64 7
+; GCN-NEXT:    [[ADD1:%.*]] = add i8 [[ELT1]], [[ELT0]]
+; GCN-NEXT:    [[ADD2:%.*]] = add i8 [[ELT2]], [[ADD1]]
+; GCN-NEXT:    [[ADD3:%.*]] = add i8 [[ELT3]], [[ADD2]]
+; GCN-NEXT:    [[ADD4:%.*]] = add i8 [[ELT4]], [[ADD3]]
+; GCN-NEXT:    [[ADD5:%.*]] = add i8 [[ELT5]], [[ADD4]]
+; GCN-NEXT:    [[ADD6:%.*]] = add i8 [[ELT6]], [[ADD5]]
+; GCN-NEXT:    [[ADD7:%.*]] = add i8 [[ELT7]], [[ADD6]]
+; GCN-NEXT:    ret i8 [[ADD7]]
+;
+entry:
+  %elt0 = extractelement <8 x i8> %vec8, i64 0
+  %elt1 = extractelement <8 x i8> %vec8, i64 1
+  %elt2 = extractelement <8 x i8> %vec8, i64 2
+  %elt3 = extractelement <8 x i8> %vec8, i64 3
+  %elt4 = extractelement <8 x i8> %vec8, i64 4
+  %elt5 = extractelement <8 x i8> %vec8, i64 5
+  %elt6 = extractelement <8 x i8> %vec8, i64 6
+  %elt7 = extractelement <8 x i8> %vec8, i64 7
+
+  %add1 = add i8 %elt1, %elt0
+  %add2 = add i8 %elt2, %add1
+  %add3 = add i8 %elt3, %add2
+  %add4 = add i8 %elt4, %add3
+  %add5 = add i8 %elt5, %add4
+  %add6 = add i8 %elt6, %add5
+  %add7 = add i8 %elt7, %add6
+
+  ret i8 %add7
+}
+
+define i8 @reduction_umin_v4i8(<4 x i8> %vec4) {
+; GCN-LABEL: @reduction_umin_v4i8(
+; GCN-NEXT:  entry:
+; GCN-NEXT:    [[ELT0:%.*]] = extractelement <4 x i8> [[VEC4:%.*]], i64 0
+; GCN-NEXT:    [[ELT1:%.*]] = extractelement <4 x i8> [[VEC4]], i64 1
+; GCN-NEXT:    [[ELT2:%.*]] = extractelement <4 x i8> [[VEC4]], i64 2
+; GCN-NEXT:    [[ELT3:%.*]] = extractelement <4 x i8> [[VEC4]], i64 3
+; GCN-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[ELT1]], [[ELT0]]
+; GCN-NEXT:    [[MIN1:%.*]] = select i1 [[CMP1]], i8 [[ELT1]], i8 [[ELT0]]
+; GCN-NEXT:    [[CMP2:%.*]] = icmp ult i8 [[ELT2]], [[MIN1]]
+; GCN-NEXT:    [[MIN2:%.*]] = select i1 [[CMP2]], i8 [[ELT2]], i8 [[MIN1]]
+; GCN-NEXT:    [[CMP3:%.*]] = icmp ult i8 [[ELT3]], [[MIN2]]
+; GCN-NEXT:    [[MIN3:%.*]] = select i1 [[CMP3]], i8 [[ELT3]], i8 [[MIN2]]
+; GCN-NEXT:    ret i8 [[MIN3]]
+;
+entry:
+  %elt0 = extractelement <4 x i8> %vec4, i64 0
+  %elt1 = extractelement <4 x i8> %vec4, i64 1
+  %elt2 = extractelement <4 x i8> %vec4, i64 2
+  %elt3 = extractelement <4 x i8> %vec4, i64 3
+
+  %cmp1 = icmp ult i8 %elt1, %elt0
+  %min1 = select i1 %cmp1, i8 %elt1, i8 %elt0
+  %cmp2 = icmp ult i8 %elt2, %min1
+  %min2 = select i1 %cmp2, i8 %elt2, i8 %min1
+  %cmp3 = icmp ult i8 %elt3, %min2
+  %min3 = select i1 %cmp3, i8 %elt3, i8 %min2
+
+  ret i8 %min3
+}
+
+define i8 @reduction_icmp_v8i8(<8 x i8> %vec8) {
+; GCN-LABEL: @reduction_icmp_v8i8(
+; GCN-NEXT:  entry:
+; GCN-NEXT:    [[ELT0:%.*]] = extractelement <8 x i8> [[VEC8:%.*]], i64 0
+; GCN-NEXT:    [[ELT1:%.*]] = extractelement <8 x i8> [[VEC8]], i64 1
+; GCN-NEXT:    [[ELT2:%.*]] = extractelement <8 x i8> [[VEC8]], i64 2
+; GCN-NEXT:    [[ELT3:%.*]] = extractelement <8 x i8> [[VEC8]], i64 3
+; GCN-NEXT:    [[ELT4:%.*]] = extractelement <8 x i8> [[VEC8]], i64 4
+; GCN-NEXT:    [[ELT5:%.*]] = extractelement <8 x i8> [[VEC8]], i64 5
+; GCN-NEXT:    [[ELT6:%.*]] = extractelement <8 x i8> [[VEC8]], i64 6
+; GCN-NEXT:    [[ELT7:%.*]] = extractelement <8 x i8> [[VEC8]], i64 7
+; GCN-NEXT:    [[CMP0:%.*]] = icmp ult i8 [[ELT1]], [[ELT0]]
+; GCN-NEXT:    [[MIN1:%.*]] = select i1 [[CMP0]], i8 [[ELT1]], i8 [[ELT0]]
+; GCN-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[ELT2]], [[MIN1]]
+; GCN-NEXT:    [[MIN2:%.*]] = select i1 [[CMP1]], i8 [[ELT2]], i8 [[MIN1]]
+; GCN-NEXT:    [[CMP2:%.*]] = icmp ult i8 [[ELT3]], [[MIN2]]
+; GCN-NEXT:    [[MIN3:%.*]] = select i1 [[CMP2]], i8 [[ELT3]], i8 [[MIN2]]
+; GCN-NEXT:    [[CMP3:%.*]] = icmp ult i8 [[ELT4]], [[MIN3]]
+; GCN-NEXT:    [[MIN4:%.*]] = select i1 [[CMP3]], i8 [[ELT4]], i8 [[MIN3]]
+; GCN-NEXT:    [[CMP4:%.*]] = icmp ult i8 [[ELT5]], [[MIN4]]
+; GCN-NEXT:    [[MIN5:%.*]] = select i1 [[CMP4]], i8 [[ELT5]], i8 [[MIN4]]
+; GCN-NEXT:    [[CMP5:%.*]] = icmp ult i8 [[ELT6]], [[MIN5]]
+; GCN-NEXT:    [[MIN6:%.*]] = select i1 [[CMP5]], i8 [[ELT6]], i8 [[MIN5]]
+; GCN-NEXT:    [[CMP6:%.*]] = icmp ult i8 [[ELT7]], [[MIN6]]
+; GCN-NEXT:    [[MIN7:%.*]] = select i1 [[CMP6]], i8 [[ELT7]], i8 [[MIN6]]
+; GCN-NEXT:    ret i8 [[MIN7]]
+;
+entry:
+  %elt0 = extractelement <8 x i8> %vec8, i64 0
+  %elt1 = extractelement <8 x i8> %vec8, i64 1
+  %elt2 = extractelement <8 x i8> %vec8, i64 2
+  %elt3 = extractelement <8 x i8> %vec8, i64 3
+  %elt4 = extractelement <8 x i8> %vec8, i64 4
+  %elt5 = extractelement <8 x i8> %vec8, i64 5
+  %elt6 = extractelement <8 x i8> %vec8, i64 6
+  %elt7 = extractelement <8 x i8> %vec8, i64 7
+
+  %cmp0 = icmp ult i8 %elt1, %elt0
+  %min1 = select i1 %cmp0, i8 %elt1, i8 %elt0
+  %cmp1 = icmp ult i8 %elt2, %min1
+  %min2 = select i1 %cmp1, i8 %elt2, i8 %min1
+  %cmp2 = icmp ult i8 %elt3, %min2
+  %min3 = select i1 %cmp2, i8 %elt3, i8 %min2
+
+  %cmp3 = icmp ult i8 %elt4, %min3
+  %min4 = select i1 %cmp3, i8 %elt4, i8 %min3
+  %cmp4 = icmp ult i8 %elt5, %min4
+  %min5 = select i1 %cmp4, i8 %elt5, i8 %min4
+
+  %cmp5 = icmp ult i8 %elt6, %min5
+  %min6 = select i1 %cmp5, i8 %elt6, i8 %min5
+  %cmp6 = icmp ult i8 %elt7, %min6
+  %min7 = select i1 %cmp6, i8 %elt7, i8 %min6
+
+  ret i8 %min7
+}
+
+define i8 @reduction_smin_v16i8(<16 x i8> %vec16) {
+; GCN-LABEL: @reduction_smin_v16i8(
+; GCN-NEXT:  entry:
+; GCN-NEXT:    [[ELT0:%.*]] = extractelement <16 x i8> [[VEC16:%.*]], i64 0
+; GCN-NEXT:    [[ELT1:%.*]] = extractelement <16 x i8> [[VEC16]], i64 1
+; GCN-NEXT:    [[ELT2:%.*]] = extractelement <16 x i8> [[VEC16]], i64 2
+; GCN-NEXT:    [[ELT3:%.*]] = extractelement <16 x i8> [[VEC16]], i64 3
+; GCN-NEXT:    [[ELT4:%.*]] = extractelement <16 x i8> [[VEC16]], i64 4
+; GCN-NEXT:    [[ELT5:%.*]] = extractelement <16 x i8> [[VEC16]], i64 5
+; GCN-NEXT:    [[ELT6:%.*]] = extractelement <16 x i8> [[VEC16]], i64 6
+; GCN-NEXT:    [[ELT7:%.*]] = extractelement <16 x i8> [[VEC16]], i64 7
+; GCN-NEXT:    [[ELT8:%.*]] = extractelement <16 x i8> [[VEC16]], i64 8
+; GCN-NEXT:    [[ELT9:%.*]] = extractelement <16 x i8> [[VEC16]], i64 9
+; GCN-NEXT:    [[ELT10:%.*]] = extractelement <16 x i8> [[VEC16]], i64 10
+; GCN-NEXT:    [[ELT11:%.*]] = extractelement <16 x i8> [[VEC16]], i64 11
+; GCN-NEXT:    [[ELT12:%.*]] = extractelement <16 x i8> [[VEC16]], i64 12
+; GCN-NEXT:    [[ELT13:%.*]] = extractelement <16 x i8> [[VEC16]], i64 13
+; GCN-NEXT:    [[ELT14:%.*]] = extractelement <16 x i8> [[VEC16]], i64 14
+; GCN-NEXT:    [[ELT15:%.*]] = extractelement <16 x i8> [[VEC16]], i64 15
+; GCN-NEXT:    [[CMP0:%.*]] = icmp slt i8 [[ELT1]], [[ELT0]]
+; GCN-NEXT:    [[MIN1:%.*]] = select i1 [[CMP0]], i8 [[ELT1]], i8 [[ELT0]]
+; GCN-NEXT:    [[CMP1:%.*]] = icmp slt i8 [[ELT2]], [[MIN1]]
+; GCN-NEXT:    [[MIN2:%.*]] = select i1 [[CMP1]], i8 [[ELT2]], i8 [[MIN1]]
+; GCN-NEXT:    [[CMP2:%.*]] = icmp slt i8 [[ELT3]], [[MIN2]]
+; GCN-NEXT:    [[MIN3:%.*]] = select i1 [[CMP2]], i8 [[ELT3]], i8 [[MIN2]]
+; GCN-NEXT:    [[CMP3:%.*]] = icmp slt i8 [[ELT4]], [[MIN3]]
+; GCN-NEXT:    [[MIN4:%.*]] = select i1 [[CMP3]], i8 [[ELT4]], i8 [[MIN3]]
+; GCN-NEXT:    [[CMP4:%.*]] = icmp slt i8 [[ELT5]], [[MIN4]]
+; GCN-NEXT:    [[MIN5:%.*]] = select i1 [[CMP4]], i8 [[ELT5]], i8 [[MIN4]]
+; GCN-NEXT:    [[CMP5:%.*]] = icmp slt i8 [[ELT6]], [[MIN5]]
+; GCN-NEXT:    [[MIN6:%.*]] = select i1 [[CMP5]], i8 [[ELT6]], i8 [[MIN5]]
+; GCN-NEXT:    [[CMP6:%.*]] = icmp slt i8 [[ELT7]], [[MIN6]]
+; GCN-NEXT:    [[MIN7:%.*]] = select i1 [[CMP6]], i8 [[ELT7]], i8 [[MIN6]]
+; GCN-NEXT:    [[CMP7:%.*]] = icmp slt i8 [[ELT8]], [[MIN7]]
+; GCN-NEXT:    [[MIN8:%.*]] = select i1 [[CMP7]], i8 [[ELT8]], i8 [[MIN7]]
+; GCN-NEXT:    [[CMP8:%.*]] = icmp slt i8 [[ELT9]], [[MIN8]]
+; GCN-NEXT:    [[MIN9:%.*]] = select i1 [[CMP8]], i8 [[ELT9]], i8 [[MIN8]]
+; GCN-NEXT:    [[CMP9:%.*]] = icmp slt i8 [[ELT10]], [[MIN9]]
+; GCN-NEXT:    [[MIN10:%.*]] = select i1 [[CMP9]], i8 [[ELT10]], i8 [[MIN9]]
+; GCN-NEXT:    [[CMP10:%.*]] = icmp slt i8 [[ELT11]], [[MIN10]]
+; GCN-NEXT:    [[MIN11:%.*]] = select i1 [[CMP10]], i8 [[ELT11]], i8 [[MIN10]]
+; GCN-NEXT:    [[CMP11:%.*]] = icmp slt i8 [[ELT12]], [[MIN11]]
+; GCN-NEXT:    [[MIN12:%.*]] = select i1 [[CMP11]], i8 [[ELT12]], i8 [[MIN11]]
+; GCN-NEXT:    [[CMP12:%.*]] = icmp slt i8 [[ELT13]], [[MIN12]]
+; GCN-NEXT:    [[MIN13:%.*]] = select i1 [[CMP12]], i8 [[ELT13]], i8 [[MIN12]]
+; GCN-NEXT:    [[CMP13:%.*]] = icmp slt i8 [[ELT14]], [[MIN13]]
+; GCN-NEXT:    [[MIN14:%.*]] = select i1 [[CMP13]], i8 [[ELT14]], i8 [[MIN13]]
+; GCN-NEXT:    [[CMP14:%.*]] = icmp slt i8 [[ELT15]], [[MIN14]]
+; GCN-NEXT:    [[MIN15:%.*]] = select i1 [[CMP14]], i8 [[ELT15]], i8 [[MIN14]]
+; GCN-NEXT:    ret i8 [[MIN15]]
+;
+entry:
+  %elt0 = extractelement <16 x i8> %vec16, i64 0
+  %elt1 = extractelement <16 x i8> %vec16, i64 1
+  %elt2 = extractelement <16 x i8> %vec16, i64 2
+  %elt3 = extractelement <16 x i8> %vec16, i64 3
+  %elt4 = extractelement <16 x i8> %vec16, i64 4
+  %elt5 = extractelement <16 x i8> %vec16, i64 5
+  %elt6 = extractelement <16 x i8> %vec16, i64 6
+  %elt7 = extractelement <16 x i8> %vec16, i64 7
+
+  %elt8 = extractelement <16 x i8> %vec16, i64 8
+  %elt9 = extractelement <16 x i8> %vec16, i64 9
+  %elt10 = extractelement <16 x i8> %vec16, i64 10
+  %elt11 = extractelement <16 x i8> %vec16, i64 11
+  %elt12 = extractelement <16 x i8> %vec16, i64 12
+  %elt13 = extractelement <16 x i8> %vec16, i64 13
+  %elt14 = extractelement <16 x i8> %vec16, i64 14
+  %elt15 = extractelement <16 x i8> %vec16, i64 15
+
+  %cmp0 = icmp slt i8 %elt1, %elt0
+  %min1 = select i1 %cmp0, i8 %elt1, i8 %elt0
+  %cmp1 = icmp slt i8 %elt2, %min1
+  %min2 = select i1 %cmp1, i8 %elt2, i8 %min1
+  %cmp2 = icmp slt i8 %elt3, %min2
+  %min3 = select i1 %cmp2, i8 %elt3, i8 %min2
+
+  %cmp3 = icmp slt i8 %elt4, %min3
+  %min4 = select i1 %cmp3, i8 %elt4, i8 %min3
+  %cmp4 = icmp slt i8 %elt5, %min4
+  %min5 = select i1 %cmp4, i8 %elt5, i8 %min4
+
+  %cmp5 = icmp slt i8 %elt6, %min5
+  %min6 = select i1 %cmp5, i8 %elt6, i8 %min5
+  %cmp6 = icmp slt i8 %elt7, %min6
+  %min7 = select i1 %cmp6, i8 %elt7, i8 %min6
+
+  %cmp7 = icmp slt i8 %elt8, %min7
+  %min8 = select i1 %cmp7, i8 %elt8, i8 %min7
+  %cmp8 = icmp slt i8 %elt9, %min8
+  %min9 = select i1 %cmp8, i8 %elt9, i8 %min8
+
+  %cmp9 = icmp slt i8 %elt10, %min9
+  %min10 = select i1 %cmp9, i8 %elt10, i8 %min9
+  %cmp10 = icmp slt i8 %elt11, %min10
+  %min11 = select i1 %cmp10, i8 %elt11, i8 %min10
+
+  %cmp11 = icmp slt i8 %elt12, %min11
+  %min12 = select i1 %cmp11, i8 %elt12, i8 %min11
+  %cmp12 = icmp slt i8 %elt13, %min12
+  %min13 = select i1 %cmp12, i8 %elt13, i8 %min12
+
+  %cmp13 = icmp slt i8 %elt14, %min13
+  %min14 = select i1 %cmp13, i8 %elt14, i8 %min13
+  %cmp14 = icmp slt i8 %elt15, %min14
+  %min15 = select i1 %cmp14, i8 %elt15, i8 %min14
+
+
+  ret i8 %min15
+}
+
+define i8 @reduction_umax_v4i8(<4 x i8> %vec4) {
+; GCN-LABEL: @reduction_umax_v4i8(
+; GCN-NEXT:  entry:
+; GCN-NEXT:    [[ELT0:%.*]] = extractelement <4 x i8> [[VEC4:%.*]], i64 0
+; GCN-NEXT:    [[ELT1:%.*]] = extractelement <4 x i8> [[VEC4]], i64 1
+; GCN-NEXT:    [[ELT2:%.*]] = extractelement <4 x i8> [[VEC4]], i64 2
+; GCN-NEXT:    [[ELT3:%.*]] = extractelement <4 x i8> [[VEC4]], i64 3
+; GCN-NEXT:    [[CMP1:%.*]] = icmp ugt i8 [[ELT1]], [[ELT0]]
+; GCN-NEXT:    [[MAX1:%.*]] = select i1 [[CMP1]], i8 [[ELT1]], i8 [[ELT0]]
+; GCN-NEXT:    [[CMP2:%.*]] = icmp ugt i8 [[ELT2]], [[MAX1]]
+; GCN-NEXT:    [[MAX2:%.*]] = select i1 [[CMP2]], i8 [[ELT2]], i8 [[MAX1]]
+; GCN-NEXT:    [[CMP3:%.*]] = icmp ugt i8 [[ELT3]], [[MAX2]]
+; GCN-NEXT:    [[MAX3:%.*]] = select i1 [[CMP3]], i8 [[ELT3]], i8 [[MAX2]]
+; GCN-NEXT:    ret i8 [[MAX3]]
+;
+entry:
+  %elt0 = extractelement <4 x i8> %vec4, i64 0
+  %elt1 = extractelement <4 x i8> %vec4, i64 1
+  %elt2 = extractelement <4 x i8> %vec4, i64 2
+  %elt3 = extractelement <4 x i8> %vec4, i64 3
+
+  %cmp1 = icmp ugt i8 %elt1, %elt0
+  %max1 = select i1 %cmp1, i8 %elt1, i8 %elt0
+  %cmp2 = icmp ugt i8 %elt2, %max1
+  %max2 = select i1 %cmp2, i8 %elt2, i8 %max1
+  %cmp3 = icmp ugt i8 %elt3, %max2
+  %max3 = select i1 %cmp3, i8 %elt3, i8 %max2
+
+  ret i8 %max3
+}
+
+define i8 @reduction_smax_v4i8(<4 x i8> %vec4) {
+; GCN-LABEL: @reduction_smax_v4i8(
+; GCN-NEXT:  entry:
+; GCN-NEXT:    [[ELT0:%.*]] = extractelement <4 x i8> [[VEC4:%.*]], i64 0
+; GCN-NEXT:    [[ELT1:%.*]] = extractelement <4 x i8> [[VEC4]], i64 1
+; GCN-NEXT:    [[ELT2:%.*]] = extractelement <4 x i8> [[VEC4]], i64 2
+; GCN-NEXT:    [[ELT3:%.*]] = extractelement <4 x i8> [[VEC4]], i64 3
+; GCN-NEXT:    [[CMP1:%.*]] = icmp sgt i8 [[ELT1]], [[ELT0]]
+; GCN-NEXT:    [[MAX1:%.*]] = select i1 [[CMP1]], i8 [[ELT1]], i8 [[ELT0]]
+; GCN-NEXT:    [[CMP2:%.*]] = icmp sgt i8 [[ELT2]], [[MAX1]]
+; GCN-NEXT:    [[MAX2:%.*]] = select i1 [[CMP2]], i8 [[ELT2]], i8 [[MAX1]]
+; GCN-NEXT:    [[CMP3:%.*]] = icmp sgt i8 [[ELT3]], [[MAX2]]
+; GCN-NEXT:    [[MAX3:%.*]] = select i1 [[CMP3]], i8 [[ELT3]], i8 [[MAX2]]
+; GCN-NEXT:    ret i8 [[MAX3]]
+;
+entry:
+  %elt0 = extractelement <4 x i8> %vec4, i64 0
+  %elt1 = extractelement <4 x i8> %vec4, i64 1
+  %elt2 = extractelement <4 x i8> %vec4, i64 2
+  %elt3 = extractelement <4 x i8> %vec4, i64 3
+
+  %cmp1 = icmp sgt i8 %elt1, %elt0
+  %max1 = select i1 %cmp1, i8 %elt1, i8 %elt0
+  %cmp2 = icmp sgt i8 %elt2, %max1
+  %max2 = select i1 %cmp2, i8 %elt2, i8 %max1
+  %cmp3 = icmp sgt i8 %elt3, %max2
+  %max3 = select i1 %cmp3, i8 %elt3, i8 %max2
+
+  ret i8 %max3
+}
