@@ -258,12 +258,9 @@ void Driver::setResourceDirectory() {
     ResourceDir = GetResourcesPath(ClangExecutable, CLANG_RESOURCE_DIR);
     break;
   case FlangMode:
-    // TODO: Is there a better way to add the "../include/flang/" component?
-    SmallString<64> customResourcePathReleativeToDriver{};
-    llvm::sys::path::append(customResourcePathReleativeToDriver, "..",
-                            "include", "flang");
+    SmallString<64> customResourcePathRelativeToDriver{".."};
     ResourceDir =
-        GetResourcesPath(ClangExecutable, customResourcePathReleativeToDriver);
+        GetResourcesPath(ClangExecutable, customResourcePathRelativeToDriver);
     break;
   }
 }
