@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// UNSUPPORTED: libcpp-has-no-incomplete-debugging
 // XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // <debugging>
@@ -23,7 +24,7 @@ void test() {
   static_assert(noexcept(std::is_debugger_present()));
 
   std::same_as<bool> decltype(auto) isDebuggerPresent = std::is_debugger_present();
-  assert(isDebuggerPresent == false);
+  assert(!isDebuggerPresent);
 }
 
 int main(int, char**) {
