@@ -25,11 +25,13 @@ void func() {
   }
 
   for (int i = 0; i < 10; ++i) {
+    // expected-error@+2{{expected expression}}
     // expected-warning@+1{{OpenACC construct 'cache' not yet implemented, pragma ignored}}
     #pragma acc cache()
   }
 
   for (int i = 0; i < 10; ++i) {
+    // expected-error@+3{{expected expression}}
     // expected-error@+2{{invalid OpenACC clause 'clause'}}
     // expected-warning@+1{{OpenACC construct 'cache' not yet implemented, pragma ignored}}
     #pragma acc cache() clause-list
