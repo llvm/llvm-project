@@ -100,6 +100,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_extended_const__");
   if (HasMultiMemory)
     Builder.defineMacro("__wasm_multimemory__");
+  if (HasHalfPrecision)
+    Builder.defineMacro("__wasm_half_precision__");
 
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
