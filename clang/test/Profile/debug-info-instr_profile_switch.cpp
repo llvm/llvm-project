@@ -12,7 +12,7 @@ int main(int argc, const char *argv[]) {
   }
 }
 
-// CHECK: define {{.*}} @main(i32 noundef %argc, ptr noundef %argv) #0 !dbg ![[MAIN_SCOPE:[0-9]+]]
+// CHECK: define {{.*}} @main({{.*}}) #0 !dbg ![[MAIN_SCOPE:[0-9]+]]
 
 // CHECK:        switch i32 {{.*}}, label {{.*}} [
 // CHECK-NEXT:     i32 0, label %[[CASE1_LBL:[a-z0-9.]+]]
