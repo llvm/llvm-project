@@ -3665,9 +3665,6 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
       ExtraBits.EffectsHaveConditions = true;
       auto *DestConds = getTrailingObjects<FunctionEffectCondition>();
       std::copy(SrcConds.begin(), SrcConds.end(), DestConds);
-
-      assert(isCanonicalUnqualified()); // TODO: because I don't understand this
-                                        // yet...
       addDependence(TypeDependence::DependentInstantiation);
     }
   }
@@ -5201,33 +5198,6 @@ bool FunctionEffect::canInferOnFunction(const Decl &Callee) const {
   }
     return true;
 
-#if 0
-    // This is the type-sugar implementation of "denied" effects.
-    // Do any of the callee's Decls have type sugar for blocking or allocating?
-    for (const Decl *D : Callee.redecls()) {
-      QualType QT;
-      if (auto *FD = D->getAsFunction()) {
-        QT = FD->getType();
-      } else if (auto *BD = dyn_cast<BlockDecl>(D)) {
-        if (auto *TSI = BD->getSignatureAsWritten())
-          QT = TSI->getType();
-        else
-          continue;
-      } else
-        continue;
-
-      // c.f. Sema::getCallingConvAttributedType
-      const AttributedType *AT = QT->getAs<AttributedType>();
-      while (AT) {
-        if (AT->getAttrKind() == attr::Allocating)
-          return false;
-        if (kind() == Kind::NonBlocking && AT->getAttrKind() == attr::Blocking)
-          return false;
-        AT = AT->getModifiedType()->getAs<AttributedType>();
-      }
-    }
-    return true;
-#endif
   case Kind::Allocating:
   case Kind::Blocking:
     return false;
