@@ -76,6 +76,9 @@ OpenACCClause::child_range OpenACCClause::children() {
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   case OpenACCClauseKind::CLAUSE_NAME:                                         \
     return cast<OpenACC##CLAUSE_NAME##Clause>(this)->children();
+#define CLAUSE_ALIAS(ALIAS_NAME, CLAUSE_NAME)                                  \
+  case OpenACCClauseKind::ALIAS_NAME:                                          \
+    return cast<OpenACC##CLAUSE_NAME##Clause>(this)->children();
 
 #include "clang/Basic/OpenACCClauses.def"
   }
@@ -144,6 +147,45 @@ OpenACCPrivateClause *OpenACCPrivateClause::Create(const ASTContext &C,
   return new (Mem) OpenACCPrivateClause(BeginLoc, LParenLoc, VarList, EndLoc);
 }
 
+OpenACCFirstPrivateClause *OpenACCFirstPrivateClause::Create(
+    const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+    ArrayRef<Expr *> VarList, SourceLocation EndLoc) {
+  void *Mem = C.Allocate(
+      OpenACCFirstPrivateClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem)
+      OpenACCFirstPrivateClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
+OpenACCNoCreateClause *OpenACCNoCreateClause::Create(const ASTContext &C,
+                                                     SourceLocation BeginLoc,
+                                                     SourceLocation LParenLoc,
+                                                     ArrayRef<Expr *> VarList,
+                                                     SourceLocation EndLoc) {
+  void *Mem = C.Allocate(
+      OpenACCNoCreateClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCNoCreateClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
+OpenACCPresentClause *OpenACCPresentClause::Create(const ASTContext &C,
+                                                   SourceLocation BeginLoc,
+                                                   SourceLocation LParenLoc,
+                                                   ArrayRef<Expr *> VarList,
+                                                   SourceLocation EndLoc) {
+  void *Mem = C.Allocate(
+      OpenACCPresentClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCPresentClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
+OpenACCCopyClause *
+OpenACCCopyClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
+                          SourceLocation BeginLoc, SourceLocation LParenLoc,
+                          ArrayRef<Expr *> VarList, SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(OpenACCCopyClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem)
+      OpenACCCopyClause(Spelling, BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenACC clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -194,6 +236,35 @@ void OpenACCClausePrinter::VisitVectorLengthClause(
 
 void OpenACCClausePrinter::VisitPrivateClause(const OpenACCPrivateClause &C) {
   OS << "private(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitFirstPrivateClause(
+    const OpenACCFirstPrivateClause &C) {
+  OS << "firstprivate(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitNoCreateClause(const OpenACCNoCreateClause &C) {
+  OS << "no_create(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitPresentClause(const OpenACCPresentClause &C) {
+  OS << "present(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitCopyClause(const OpenACCCopyClause &C) {
+  OS << C.getClauseKind() << '(';
   llvm::interleaveComma(C.getVarList(), OS,
                         [&](const Expr *E) { printExpr(E); });
   OS << ")";

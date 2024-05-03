@@ -2121,10 +2121,11 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   assert(ISD && "Invalid opcode");
 
   // TODO: Allow non-throughput costs that aren't binary.
-  auto AdjustCost = [&CostKind](InstructionCost Cost) -> InstructionCost {
+  auto AdjustCost = [&CostKind](InstructionCost Cost,
+                                InstructionCost N = 1) -> InstructionCost {
     if (CostKind != TTI::TCK_RecipThroughput)
-      return Cost == 0 ? 0 : 1;
-    return Cost;
+      return Cost == 0 ? 0 : N;
+    return Cost * N;
   };
 
   // The cost tables include both specific, custom (non-legal) src/dst type
@@ -3004,53 +3005,53 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     if (ST->hasBWI())
       if (const auto *Entry = ConvertCostTableLookup(
               AVX512BWConversionTbl, ISD, LTDest.second, LTSrc.second))
-        return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+        return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
 
     if (ST->hasDQI())
       if (const auto *Entry = ConvertCostTableLookup(
               AVX512DQConversionTbl, ISD, LTDest.second, LTSrc.second))
-        return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+        return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
 
     if (ST->hasAVX512())
       if (const auto *Entry = ConvertCostTableLookup(
               AVX512FConversionTbl, ISD, LTDest.second, LTSrc.second))
-        return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+        return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
   }
 
   if (ST->hasBWI())
     if (const auto *Entry = ConvertCostTableLookup(AVX512BWVLConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
 
   if (ST->hasDQI())
     if (const auto *Entry = ConvertCostTableLookup(AVX512DQVLConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
 
   if (ST->hasAVX512())
     if (const auto *Entry = ConvertCostTableLookup(AVX512VLConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
 
   if (ST->hasAVX2())
     if (const auto *Entry = ConvertCostTableLookup(AVX2ConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
 
   if (ST->hasAVX())
     if (const auto *Entry = ConvertCostTableLookup(AVXConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
 
   if (ST->hasSSE41())
     if (const auto *Entry = ConvertCostTableLookup(SSE41ConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
 
   if (ST->hasSSE2())
     if (const auto *Entry = ConvertCostTableLookup(SSE2ConversionTbl, ISD,
                                                    LTDest.second, LTSrc.second))
-      return AdjustCost(std::max(LTSrc.first, LTDest.first) * Entry->Cost);
+      return AdjustCost(Entry->Cost, std::max(LTSrc.first, LTDest.first));
 
   // Fallback, for i8/i16 sitofp/uitofp cases we need to extend to i32 for
   // sitofp.

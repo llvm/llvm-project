@@ -2492,6 +2492,11 @@ void OpenACCClauseProfiler::VisitIfClause(const OpenACCIfClause &Clause) {
   Profiler.VisitStmt(Clause.getConditionExpr());
 }
 
+void OpenACCClauseProfiler::VisitCopyClause(const OpenACCCopyClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
 void OpenACCClauseProfiler::VisitSelfClause(const OpenACCSelfClause &Clause) {
   if (Clause.hasConditionExpr())
     Profiler.VisitStmt(Clause.getConditionExpr());
@@ -2511,6 +2516,24 @@ void OpenACCClauseProfiler::VisitNumWorkersClause(
 
 void OpenACCClauseProfiler::VisitPrivateClause(
     const OpenACCPrivateClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitFirstPrivateClause(
+    const OpenACCFirstPrivateClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitNoCreateClause(
+    const OpenACCNoCreateClause &Clause) {
+  for (auto *E : Clause.getVarList())
+    Profiler.VisitStmt(E);
+}
+
+void OpenACCClauseProfiler::VisitPresentClause(
+    const OpenACCPresentClause &Clause) {
   for (auto *E : Clause.getVarList())
     Profiler.VisitStmt(E);
 }

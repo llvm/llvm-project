@@ -295,6 +295,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD,     MVT::i128, Custom);
   setOperationAction(ISD::ATOMIC_STORE,    MVT::i128, Custom);
   setOperationAction(ISD::ATOMIC_LOAD, MVT::f128, Custom);
+  setOperationAction(ISD::ATOMIC_STORE, MVT::f128, Custom);
 
   // Mark sign/zero extending atomic loads as legal, which will make
   // DAGCombiner fold extensions into atomic loads if possible.
@@ -941,9 +942,6 @@ SystemZTargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
 
 TargetLowering::AtomicExpansionKind
 SystemZTargetLowering::shouldCastAtomicStoreInIR(StoreInst *SI) const {
-  // Lower fp128 the same way as i128.
-  if (SI->getValueOperand()->getType()->isFP128Ty())
-    return AtomicExpansionKind::CastToInteger;
   return AtomicExpansionKind::None;
 }
 
@@ -6269,6 +6267,26 @@ static SDValue expandBitCastI128ToF128(SelectionDAG &DAG, SDValue Src,
   return SDValue(Pair, 0);
 }
 
+static std::pair<SDValue, SDValue>
+expandBitCastF128ToI128Parts(SelectionDAG &DAG, SDValue Src, const SDLoc &SL) {
+  SDValue LoFP =
+      DAG.getTargetExtractSubreg(SystemZ::subreg_l64, SL, MVT::f64, Src);
+  SDValue HiFP =
+      DAG.getTargetExtractSubreg(SystemZ::subreg_h64, SL, MVT::f64, Src);
+  SDValue Lo = DAG.getNode(ISD::BITCAST, SL, MVT::i64, LoFP);
+  SDValue Hi = DAG.getNode(ISD::BITCAST, SL, MVT::i64, HiFP);
+
+  return {Hi, Lo};
+}
+
+static SDValue expandBitCastF128ToI128(SelectionDAG &DAG, SDValue Src,
+                                       const SDLoc &SL) {
+
+  auto [Hi, Lo] = expandBitCastF128ToI128Parts(DAG, Src, SL);
+  SDNode *Pair = DAG.getMachineNode(SystemZ::PAIR128, SL, MVT::Untyped, Hi, Lo);
+  return SDValue(Pair, 0);
+}
+
 // Lower operations with invalid operand or result types (currently used
 // only for 128-bit integer types).
 void
@@ -6307,8 +6325,17 @@ SystemZTargetLowering::LowerOperationWrapper(SDNode *N,
   case ISD::ATOMIC_STORE: {
     SDLoc DL(N);
     SDVTList Tys = DAG.getVTList(MVT::Other);
-    SDValue Ops[] = {N->getOperand(0), lowerI128ToGR128(DAG, N->getOperand(1)),
-                     N->getOperand(2)};
+    SDValue Val = N->getOperand(1);
+    EVT VT = Val.getValueType();
+
+    if (VT == MVT::i128 || isTypeLegal(MVT::i128)) {
+      Val = DAG.getBitcast(MVT::i128, Val);
+      Val = lowerI128ToGR128(DAG, Val);
+    } else {
+      Val = expandBitCastF128ToI128(DAG, Val, DL);
+    }
+
+    SDValue Ops[] = {N->getOperand(0), Val, N->getOperand(2)};
     MachineMemOperand *MMO = cast<AtomicSDNode>(N)->getMemOperand();
     SDValue Res = DAG.getMemIntrinsicNode(SystemZISD::ATOMIC_STORE_128,
                                           DL, Tys, Ops, MVT::i128, MMO);
@@ -6351,15 +6378,12 @@ SystemZTargetLowering::LowerOperationWrapper(SDNode *N,
         Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, VecBC,
                          DAG.getConstant(0, DL, MVT::i32));
       } else {
+        // FIXME: Assert should be moved into expandBitCastF128ToI128Parts
         assert(getRepRegClassFor(MVT::f128) == &SystemZ::FP128BitRegClass &&
                "Unrecognized register class for f128.");
-        SDValue LoFP = DAG.getTargetExtractSubreg(SystemZ::subreg_l64,
-                                                  DL, MVT::f64, Src);
-        SDValue HiFP = DAG.getTargetExtractSubreg(SystemZ::subreg_h64,
-                                                  DL, MVT::f64, Src);
-        Lo = DAG.getNode(ISD::BITCAST, DL, MVT::i64, LoFP);
-        Hi = DAG.getNode(ISD::BITCAST, DL, MVT::i64, HiFP);
+        std::tie(Hi, Lo) = expandBitCastF128ToI128Parts(DAG, Src, DL);
       }
+
       Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i128, Lo, Hi));
     }
     break;
