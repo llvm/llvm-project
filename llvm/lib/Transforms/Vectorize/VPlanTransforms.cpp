@@ -1341,8 +1341,6 @@ void VPlanTransforms::addExplicitVectorLength(VPlan &Plan) {
       auto *MemR = dyn_cast<VPWidenMemoryRecipe>(U);
       if (!MemR)
         continue;
-      assert(!MemR->isReverse() &&
-             "Reversed memory operations not supported yet.");
       VPValue *OrigMask = MemR->getMask();
       assert(OrigMask && "Unmasked widen memory recipe when folding tail");
       VPValue *NewMask = HeaderMask == OrigMask ? nullptr : OrigMask;
