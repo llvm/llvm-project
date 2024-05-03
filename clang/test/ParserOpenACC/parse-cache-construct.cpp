@@ -74,12 +74,12 @@ void use() {
   for (int i = 0; i < 10; ++i) {
     // expected-error@+2{{OpenACC sub-array is not allowed here}}
     // expected-warning@+1{{OpenACC construct 'cache' not yet implemented, pragma ignored}}
-    #pragma acc cache(Arrs.MemArr[3:4].array[1:4])
+    #pragma acc cache(Arrs.MemArr[2:1].array[1:4])
   }
   for (int i = 0; i < 10; ++i) {
     // expected-error@+2{{OpenACC sub-array is not allowed here}}
     // expected-warning@+1{{OpenACC construct 'cache' not yet implemented, pragma ignored}}
-    #pragma acc cache(Arrs.MemArr[3:4].array[4])
+    #pragma acc cache(Arrs.MemArr[2:1].array[4])
   }
   for (int i = 0; i < 10; ++i) {
     // expected-error@+3{{expected ']'}}
@@ -88,7 +88,7 @@ void use() {
     #pragma acc cache(Arrs.MemArr[3:4:].array[4])
   }
   for (int i = 0; i < 10; ++i) {
-    // expected-error@+2{{expected expression}}
+    // expected-error@+2{{OpenACC sub-array is not allowed here}}
     // expected-warning@+1{{OpenACC construct 'cache' not yet implemented, pragma ignored}}
     #pragma acc cache(Arrs.MemArr[:].array[4])
   }
@@ -105,7 +105,7 @@ void use() {
     #pragma acc cache(Arrs.MemArr[: :].array[4])
   }
   for (int i = 0; i < 10; ++i) {
-    // expected-error@+2{{expected expression}}
+    // expected-error@+2{{OpenACC sub-array is not allowed here}}
     // expected-warning@+1{{OpenACC construct 'cache' not yet implemented, pragma ignored}}
     #pragma acc cache(Arrs.MemArr[3:].array[4])
   }
