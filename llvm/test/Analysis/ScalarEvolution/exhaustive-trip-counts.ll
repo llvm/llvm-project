@@ -27,14 +27,14 @@ for.cond.cleanup:
   ret void
 }
 
-
+; Do not compute exhaustive trip count based on FP libcalls, as their exact
+; return value may not be specified.
 define i64 @test_fp_libcall() {
 ; CHECK-LABEL: 'test_fp_libcall'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_fp_libcall
-; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 90
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 90
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 90
-; CHECK-NEXT:  Loop %loop: Trip multiple is 91
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ;
 entry:
   br label %loop
@@ -52,13 +52,14 @@ exit:
   ret i64 %iv
 }
 
+; Do not compute exhaustive trip count based on FP constant folding resulting
+; in NaN values, as we don't specify which NaN exactly is returned.
 define i64 @test_nan_sign() {
 ; CHECK-LABEL: 'test_nan_sign'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_nan_sign
-; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 46
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 46
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 46
-; CHECK-NEXT:  Loop %loop: Trip multiple is 47
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ;
 entry:
   br label %loop
