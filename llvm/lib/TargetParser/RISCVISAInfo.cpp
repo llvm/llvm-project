@@ -98,6 +98,10 @@ void llvm::riscvExtensionsHelp(StringMap<StringRef> DescMap) {
     PrintExtension(E.first, Version, DescMap["experimental-" + E.first]);
   }
 
+  outs() << "\nSupported Profiles\n";
+  for (const auto &P : SupportedProfiles)
+    outs().indent(4) << P.Name << "\n";
+
   outs() << "\nUse -march to specify the target's extension.\n"
             "For example, clang -march=rv32i_v1p0\n";
 }
@@ -425,9 +429,11 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
-  if (llvm::any_of(Arch, isupper))
+  // RISC-V ISA strings must be [a-z0-9_]
+  if (!llvm::all_of(
+          Arch, [](char C) { return isDigit(C) || isLower(C) || C == '_'; }))
     return createStringError(errc::invalid_argument,
-                             "string must be lowercase");
+                             "string may only contain [a-z0-9_]");
 
   // Must start with a valid base ISA name.
   unsigned XLen = 0;
@@ -460,22 +466,30 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
 
     // Split Prefix into the extension name and the major version number
     // (the trailing digits of Prefix).
-    int TrailingDigits = 0;
-    StringRef ExtName = Prefix;
-    while (!ExtName.empty()) {
-      if (!isDigit(ExtName.back()))
+    size_t VersionStart = Prefix.size();
+    while (VersionStart != 0) {
+      if (!isDigit(Prefix[VersionStart - 1]))
         break;
-      ExtName = ExtName.drop_back(1);
-      TrailingDigits++;
+      --VersionStart;
     }
-    if (!TrailingDigits)
+    if (VersionStart == Prefix.size())
       return createStringError(errc::invalid_argument,
                                "extension lacks version in expected format");
 
-    StringRef MajorVersionStr = Prefix.take_back(TrailingDigits);
+    if (VersionStart == 0)
+      return createStringError(errc::invalid_argument,
+                               "missing extension name");
+
+    StringRef ExtName = Prefix.slice(0, VersionStart);
+    StringRef MajorVersionStr = Prefix.slice(VersionStart, StringRef::npos);
     if (MajorVersionStr.getAsInteger(10, MajorVersion))
       return createStringError(errc::invalid_argument,
                                "failed to parse major version number");
+
+    if (ExtName[0] == 'z' && (ExtName.size() == 1 || isDigit(ExtName[1])))
+      return createStringError(errc::invalid_argument,
+                               "'z' must be followed by a letter");
+
     ISAInfo->addExtension(ExtName, {MajorVersion, MinorVersion});
   }
   ISAInfo->updateImpliedLengths();
@@ -585,10 +599,11 @@ llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                               bool ExperimentalExtensionVersionCheck,
                               bool IgnoreUnknown) {
-  // RISC-V ISA strings must be lowercase.
-  if (llvm::any_of(Arch, isupper))
+  // RISC-V ISA strings must be [a-z0-9_]
+  if (!llvm::all_of(
+          Arch, [](char C) { return isDigit(C) || isLower(C) || C == '_'; }))
     return createStringError(errc::invalid_argument,
-                             "string must be lowercase");
+                             "string may only contain [a-z0-9_]");
 
   // ISA string must begin with rv32, rv64, or a profile.
   unsigned XLen = 0;
@@ -598,14 +613,14 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
     XLen = 64;
   } else {
     // Try parsing as a profile.
-    const auto *FoundProfile =
-        llvm::find_if(SupportedProfiles, [Arch](const RISCVProfile &Profile) {
-          return Arch.starts_with(Profile.Name);
-        });
+    auto I = llvm::upper_bound(SupportedProfiles, Arch,
+                               [](StringRef Arch, const RISCVProfile &Profile) {
+                                 return Arch < Profile.Name;
+                               });
 
-    if (FoundProfile != std::end(SupportedProfiles)) {
-      std::string NewArch = FoundProfile->MArch.str();
-      StringRef ArchWithoutProfile = Arch.drop_front(FoundProfile->Name.size());
+    if (I != std::begin(SupportedProfiles) && Arch.starts_with((--I)->Name)) {
+      std::string NewArch = I->MArch.str();
+      StringRef ArchWithoutProfile = Arch.drop_front(I->Name.size());
       if (!ArchWithoutProfile.empty()) {
         if (ArchWithoutProfile.front() != '_')
           return createStringError(
