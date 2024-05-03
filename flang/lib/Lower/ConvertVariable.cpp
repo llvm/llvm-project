@@ -389,13 +389,13 @@ static mlir::Value genDefaultInitializerValue(
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Type scalarType = symTy;
   fir::SequenceType sequenceType;
-  if (auto ty = symTy.dyn_cast<fir::SequenceType>()) {
+  if (auto ty = mlir::dyn_cast<fir::SequenceType>(symTy)) {
     sequenceType = ty;
     scalarType = ty.getEleTy();
   }
   // Build a scalar default value of the symbol type, looping through the
   // components to build each component initial value.
-  auto recTy = scalarType.cast<fir::RecordType>();
+  auto recTy = mlir::cast<fir::RecordType>(scalarType);
   mlir::Value initialValue = builder.create<fir::UndefOp>(loc, scalarType);
   const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType();
   assert(declTy && "var with default initialization must have a type");
@@ -493,11 +493,11 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   // with a tensor mlir type. This optimization currently only supports
   // Fortran arrays of integer, real, complex, or logical. The tensor
   // type does not support nested structures.
-  if (symTy.isa<fir::SequenceType>() &&
+  if (mlir::isa<fir::SequenceType>(symTy) &&
       !Fortran::semantics::IsAllocatableOrPointer(sym)) {
-    mlir::Type eleTy = symTy.cast<fir::SequenceType>().getEleTy();
-    if (eleTy.isa<mlir::IntegerType, mlir::FloatType, fir::ComplexType,
-                  fir::LogicalType>()) {
+    mlir::Type eleTy = mlir::cast<fir::SequenceType>(symTy).getEleTy();
+    if (mlir::isa<mlir::IntegerType, mlir::FloatType, fir::ComplexType,
+                  fir::LogicalType>(eleTy)) {
       const auto *details =
           sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
       if (details->init()) {
@@ -692,6 +692,22 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
   // assumed-size (possible with cray pointee).
   if (ultimateSymbol.test(Fortran::semantics::Symbol::Flag::CrayPointee))
     return builder.create<fir::ZeroOp>(loc, fir::ReferenceType::get(ty));
+
+  if (Fortran::semantics::NeedCUDAAlloc(ultimateSymbol)) {
+    fir::CUDADataAttributeAttr cudaAttr =
+        Fortran::lower::translateSymbolCUDADataAttribute(builder.getContext(),
+                                                         ultimateSymbol);
+    llvm::SmallVector<mlir::Value> indices;
+    llvm::SmallVector<mlir::Value> elidedShape =
+        fir::factory::elideExtentsAlreadyInType(ty, shape);
+    llvm::SmallVector<mlir::Value> elidedLenParams =
+        fir::factory::elideLengthsAlreadyInType(ty, lenParams);
+    auto idxTy = builder.getIndexType();
+    for (mlir::Value sh : elidedShape)
+      indices.push_back(builder.createConvert(loc, idxTy, sh));
+    return builder.create<fir::CUDAAllocOp>(loc, ty, nm, symNm, cudaAttr,
+                                            lenParams, indices);
+  }
 
   // Let the builder do all the heavy lifting.
   if (!Fortran::semantics::IsProcedurePointer(ultimateSymbol))
@@ -916,15 +932,29 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
       break;
     case VariableCleanUp::Deallocate:
       auto *converterPtr = &converter;
-      converter.getFctCtx().attachCleanup([converterPtr, loc, exv]() {
+      auto *sym = &var.getSymbol();
+      converter.getFctCtx().attachCleanup([converterPtr, loc, exv, sym]() {
         const fir::MutableBoxValue *mutableBox =
             exv.getBoxOf<fir::MutableBoxValue>();
         assert(mutableBox &&
                "trying to deallocate entity not lowered as allocatable");
         Fortran::lower::genDeallocateIfAllocated(*converterPtr, *mutableBox,
-                                                 loc);
+                                                 loc, sym);
       });
     }
+  }
+  if (Fortran::semantics::NeedCUDAAlloc(var.getSymbol())) {
+    auto *builder = &converter.getFirOpBuilder();
+    mlir::Location loc = converter.getCurrentLocation();
+    fir::ExtendedValue exv =
+        converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
+    auto *sym = &var.getSymbol();
+    converter.getFctCtx().attachCleanup([builder, loc, exv, sym]() {
+      fir::CUDADataAttributeAttr cudaAttr =
+          Fortran::lower::translateSymbolCUDADataAttribute(
+              builder->getContext(), *sym);
+      builder->create<fir::CUDAFreeOp>(loc, fir::getBase(exv), cudaAttr);
+    });
   }
 }
 
@@ -1291,7 +1321,7 @@ static void finalizeCommonBlockDefinition(
     fir::GlobalOp global,
     const Fortran::semantics::MutableSymbolVector &cmnBlkMems) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  mlir::TupleType commonTy = global.getType().cast<mlir::TupleType>();
+  mlir::TupleType commonTy = mlir::cast<mlir::TupleType>(global.getType());
   auto initFunc = [&](fir::FirOpBuilder &builder) {
     mlir::IndexType idxTy = builder.getIndexType();
     mlir::Value cb = builder.create<fir::ZeroOp>(loc, commonTy);
@@ -1406,7 +1436,7 @@ static bool lowerToBoxValue(const Fortran::semantics::Symbol &sym,
                             mlir::Value dummyArg,
                             Fortran::lower::AbstractConverter &converter) {
   // Only dummy arguments coming as fir.box can be tracked in an BoxValue.
-  if (!dummyArg || !dummyArg.getType().isa<fir::BaseBoxType>())
+  if (!dummyArg || !mlir::isa<fir::BaseBoxType>(dummyArg.getType()))
     return false;
   // Non contiguous arrays must be tracked in an BoxValue.
   if (sym.Rank() > 0 && !Fortran::evaluate::IsSimplyContiguous(
@@ -1904,7 +1934,7 @@ void Fortran::lower::mapSymbolAttributes(
           // Do not keep scalar characters as fir.box (even when optional).
           // Lowering and FIR is not meant to deal with scalar characters as
           // fir.box outside of calls.
-          auto boxTy = dummyArg.getType().dyn_cast<fir::BaseBoxType>();
+          auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(dummyArg.getType());
           mlir::Type refTy = builder.getRefType(boxTy.getEleTy());
           mlir::Type lenType = builder.getCharacterLengthType();
           mlir::Value addr, len;
@@ -1983,8 +2013,8 @@ void Fortran::lower::mapSymbolAttributes(
       // a non pointer/allocatable symbol to be mapped to a MutableBox.
       mlir::Type ty = converter.genType(var);
       bool isPolymorphic = false;
-      if (auto boxTy = ty.dyn_cast<fir::BaseBoxType>()) {
-        isPolymorphic = ty.isa<fir::ClassType>();
+      if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty)) {
+        isPolymorphic = mlir::isa<fir::ClassType>(ty);
         ty = boxTy.getEleTy();
       }
       Fortran::lower::genDeclareSymbol(
@@ -2091,7 +2121,7 @@ void Fortran::lower::mapSymbolAttributes(
   mlir::Value addr = preAlloc;
 
   if (arg)
-    if (auto boxTy = arg.getType().dyn_cast<fir::BaseBoxType>()) {
+    if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(arg.getType())) {
       // Contiguous assumed shape that can be tracked without a fir.box.
       mlir::Type refTy = builder.getRefType(boxTy.getEleTy());
       addr = builder.create<fir::BoxAddrOp>(loc, refTy, arg);
@@ -2133,7 +2163,7 @@ void Fortran::lower::mapSymbolAttributes(
       } else if (!len) {
         // Assumed length fir.box (possible for contiguous assumed shapes).
         // Read length from box.
-        assert(arg && arg.getType().isa<fir::BoxType>() &&
+        assert(arg && mlir::isa<fir::BoxType>(arg.getType()) &&
                "must be character dummy fir.box");
         len = charHelp.readLengthFromBox(arg);
       }

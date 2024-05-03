@@ -4,7 +4,9 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+zba -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64ZBA,RV64ZBANOZBB
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+zba,+zbb -verify-machineinstrs < %s \
-; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64ZBA,RV64ZBAZBB
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64ZBA,RV64ZBAZBB,RV64ZBAZBBNOZBS
+; RUN: llc -mtriple=riscv64 -mattr=+m,+zba,+zbb,+zbs -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s -check-prefixes=CHECK,RV64ZBA,RV64ZBAZBB,RV64ZBAZBBZBS
 
 define i64 @slliuw(i64 %a) nounwind {
 ; RV64I-LABEL: slliuw:
@@ -641,31 +643,52 @@ define i64 @mul96(i64 %a) {
 }
 
 define i64 @mul119(i64 %a) {
-; CHECK-LABEL: mul119:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 119
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: mul119:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 119
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul119:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh3add a1, a0, a0
+; RV64ZBA-NEXT:    slli a0, a0, 7
+; RV64ZBA-NEXT:    sub a0, a0, a1
+; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 119
   ret i64 %c
 }
 
 define i64 @mul123(i64 %a) {
-; CHECK-LABEL: mul123:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 123
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: mul123:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 123
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul123:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh2add a1, a0, a0
+; RV64ZBA-NEXT:    slli a0, a0, 7
+; RV64ZBA-NEXT:    sub a0, a0, a1
+; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 123
   ret i64 %c
 }
 
 define i64 @mul125(i64 %a) {
-; CHECK-LABEL: mul125:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a1, 125
-; CHECK-NEXT:    mul a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: mul125:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, 125
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBA-LABEL: mul125:
+; RV64ZBA:       # %bb.0:
+; RV64ZBA-NEXT:    sh1add a1, a0, a0
+; RV64ZBA-NEXT:    slli a0, a0, 7
+; RV64ZBA-NEXT:    sub a0, a0, a1
+; RV64ZBA-NEXT:    ret
   %c = mul i64 %a, 125
   ret i64 %c
 }
@@ -830,7 +853,6 @@ define i64 @zext_mul288(i32 signext %a) {
 }
 
 ; We can't use slli.uw becaues the shift amount is more than 31.
-; FIXME: The zext.w is unneeded.
 define i64 @zext_mul12884901888(i32 signext %a) {
 ; RV64I-LABEL: zext_mul12884901888:
 ; RV64I:       # %bb.0:
@@ -843,7 +865,6 @@ define i64 @zext_mul12884901888(i32 signext %a) {
 ;
 ; RV64ZBA-LABEL: zext_mul12884901888:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    andi a0, a0, -1
 ; RV64ZBA-NEXT:    sh1add a0, a0, a0
 ; RV64ZBA-NEXT:    slli a0, a0, 32
 ; RV64ZBA-NEXT:    ret
@@ -853,7 +874,6 @@ define i64 @zext_mul12884901888(i32 signext %a) {
 }
 
 ; We can't use slli.uw becaues the shift amount is more than 31.
-; FIXME: The zext.w is unneeded.
 define i64 @zext_mul21474836480(i32 signext %a) {
 ; RV64I-LABEL: zext_mul21474836480:
 ; RV64I:       # %bb.0:
@@ -866,7 +886,6 @@ define i64 @zext_mul21474836480(i32 signext %a) {
 ;
 ; RV64ZBA-LABEL: zext_mul21474836480:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    andi a0, a0, -1
 ; RV64ZBA-NEXT:    sh2add a0, a0, a0
 ; RV64ZBA-NEXT:    slli a0, a0, 32
 ; RV64ZBA-NEXT:    ret
@@ -876,7 +895,6 @@ define i64 @zext_mul21474836480(i32 signext %a) {
 }
 
 ; We can't use slli.uw becaues the shift amount is more than 31.
-; FIXME: The zext.w is unneeded.
 define i64 @zext_mul38654705664(i32 signext %a) {
 ; RV64I-LABEL: zext_mul38654705664:
 ; RV64I:       # %bb.0:
@@ -889,7 +907,6 @@ define i64 @zext_mul38654705664(i32 signext %a) {
 ;
 ; RV64ZBA-LABEL: zext_mul38654705664:
 ; RV64ZBA:       # %bb.0:
-; RV64ZBA-NEXT:    andi a0, a0, -1
 ; RV64ZBA-NEXT:    sh3add a0, a0, a0
 ; RV64ZBA-NEXT:    slli a0, a0, 32
 ; RV64ZBA-NEXT:    ret
@@ -2718,3 +2735,121 @@ define i64 @mul_neg8(i64 %a) {
   %c = mul i64 %a, -8
   ret i64 %c
 }
+
+define i64 @bext_mul12(i32 %1, i32 %2) {
+; RV64I-LABEL: bext_mul12:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    srlw a0, a0, a1
+; RV64I-NEXT:    andi a0, a0, 1
+; RV64I-NEXT:    li a1, 12
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBANOZBB-LABEL: bext_mul12:
+; RV64ZBANOZBB:       # %bb.0: # %entry
+; RV64ZBANOZBB-NEXT:    srlw a0, a0, a1
+; RV64ZBANOZBB-NEXT:    andi a0, a0, 1
+; RV64ZBANOZBB-NEXT:    sh1add a0, a0, a0
+; RV64ZBANOZBB-NEXT:    slli a0, a0, 2
+; RV64ZBANOZBB-NEXT:    ret
+;
+; RV64ZBAZBBNOZBS-LABEL: bext_mul12:
+; RV64ZBAZBBNOZBS:       # %bb.0: # %entry
+; RV64ZBAZBBNOZBS-NEXT:    srlw a0, a0, a1
+; RV64ZBAZBBNOZBS-NEXT:    andi a0, a0, 1
+; RV64ZBAZBBNOZBS-NEXT:    sh1add a0, a0, a0
+; RV64ZBAZBBNOZBS-NEXT:    slli a0, a0, 2
+; RV64ZBAZBBNOZBS-NEXT:    ret
+;
+; RV64ZBAZBBZBS-LABEL: bext_mul12:
+; RV64ZBAZBBZBS:       # %bb.0: # %entry
+; RV64ZBAZBBZBS-NEXT:    bext a0, a0, a1
+; RV64ZBAZBBZBS-NEXT:    sh1add a0, a0, a0
+; RV64ZBAZBBZBS-NEXT:    slli a0, a0, 2
+; RV64ZBAZBBZBS-NEXT:    ret
+entry:
+  %3 = lshr i32 %1, %2
+  %4 = and i32 %3, 1
+  %5 = zext nneg i32 %4 to i64
+  %6 = mul i64 %5, 12
+  ret i64 %6
+}
+
+define i64 @bext_mul45(i32 %1, i32 %2) {
+; RV64I-LABEL: bext_mul45:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    srlw a0, a0, a1
+; RV64I-NEXT:    andi a0, a0, 1
+; RV64I-NEXT:    li a1, 45
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBANOZBB-LABEL: bext_mul45:
+; RV64ZBANOZBB:       # %bb.0: # %entry
+; RV64ZBANOZBB-NEXT:    srlw a0, a0, a1
+; RV64ZBANOZBB-NEXT:    andi a0, a0, 1
+; RV64ZBANOZBB-NEXT:    sh2add a0, a0, a0
+; RV64ZBANOZBB-NEXT:    sh3add a0, a0, a0
+; RV64ZBANOZBB-NEXT:    ret
+;
+; RV64ZBAZBBNOZBS-LABEL: bext_mul45:
+; RV64ZBAZBBNOZBS:       # %bb.0: # %entry
+; RV64ZBAZBBNOZBS-NEXT:    srlw a0, a0, a1
+; RV64ZBAZBBNOZBS-NEXT:    andi a0, a0, 1
+; RV64ZBAZBBNOZBS-NEXT:    sh2add a0, a0, a0
+; RV64ZBAZBBNOZBS-NEXT:    sh3add a0, a0, a0
+; RV64ZBAZBBNOZBS-NEXT:    ret
+;
+; RV64ZBAZBBZBS-LABEL: bext_mul45:
+; RV64ZBAZBBZBS:       # %bb.0: # %entry
+; RV64ZBAZBBZBS-NEXT:    bext a0, a0, a1
+; RV64ZBAZBBZBS-NEXT:    sh2add a0, a0, a0
+; RV64ZBAZBBZBS-NEXT:    sh3add a0, a0, a0
+; RV64ZBAZBBZBS-NEXT:    ret
+entry:
+  %3 = lshr i32 %1, %2
+  %4 = and i32 %3, 1
+  %5 = zext nneg i32 %4 to i64
+  %6 = mul i64 %5, 45
+  ret i64 %6
+}
+
+define i64 @bext_mul132(i32 %1, i32 %2) {
+; RV64I-LABEL: bext_mul132:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    srlw a0, a0, a1
+; RV64I-NEXT:    andi a0, a0, 1
+; RV64I-NEXT:    li a1, 132
+; RV64I-NEXT:    mul a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBANOZBB-LABEL: bext_mul132:
+; RV64ZBANOZBB:       # %bb.0: # %entry
+; RV64ZBANOZBB-NEXT:    srlw a0, a0, a1
+; RV64ZBANOZBB-NEXT:    andi a0, a0, 1
+; RV64ZBANOZBB-NEXT:    slli a1, a0, 7
+; RV64ZBANOZBB-NEXT:    sh2add a0, a0, a1
+; RV64ZBANOZBB-NEXT:    ret
+;
+; RV64ZBAZBBNOZBS-LABEL: bext_mul132:
+; RV64ZBAZBBNOZBS:       # %bb.0: # %entry
+; RV64ZBAZBBNOZBS-NEXT:    srlw a0, a0, a1
+; RV64ZBAZBBNOZBS-NEXT:    andi a0, a0, 1
+; RV64ZBAZBBNOZBS-NEXT:    slli a1, a0, 7
+; RV64ZBAZBBNOZBS-NEXT:    sh2add a0, a0, a1
+; RV64ZBAZBBNOZBS-NEXT:    ret
+;
+; RV64ZBAZBBZBS-LABEL: bext_mul132:
+; RV64ZBAZBBZBS:       # %bb.0: # %entry
+; RV64ZBAZBBZBS-NEXT:    bext a0, a0, a1
+; RV64ZBAZBBZBS-NEXT:    slli a1, a0, 7
+; RV64ZBAZBBZBS-NEXT:    sh2add a0, a0, a1
+; RV64ZBAZBBZBS-NEXT:    ret
+entry:
+  %3 = lshr i32 %1, %2
+  %4 = and i32 %3, 1
+  %5 = zext nneg i32 %4 to i64
+  %6 = mul i64 %5, 132
+  ret i64 %6
+}
+

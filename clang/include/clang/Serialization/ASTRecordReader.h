@@ -136,7 +136,7 @@ public:
   /// Reads a declaration with the given local ID in the given module.
   ///
   /// \returns The requested declaration, casted to the given return type.
-  template <typename T> T *GetLocalDeclAs(serialization::LocalDeclID LocalID) {
+  template <typename T> T *GetLocalDeclAs(LocalDeclID LocalID) {
     return cast_or_null<T>(Reader->GetLocalDecl(*F, LocalID));
   }
 
@@ -182,9 +182,7 @@ public:
   /// Reads a declaration ID from the given position in this record.
   ///
   /// \returns The declaration ID read from the record, adjusted to a global ID.
-  serialization::GlobalDeclID readDeclID() {
-    return Reader->ReadDeclID(*F, Record, Idx);
-  }
+  GlobalDeclID readDeclID() { return Reader->ReadDeclID(*F, Record, Idx); }
 
   /// Reads a declaration from the given position in a record in the
   /// given module, advancing Idx.
@@ -270,6 +268,9 @@ public:
 
   /// Read an OpenMP children, advancing Idx.
   void readOMPChildren(OMPChildren *Data);
+
+  /// Read a list of Exprs used for a var-list.
+  llvm::SmallVector<Expr *> readOpenACCVarList();
 
   /// Read an OpenACC clause, advancing Idx.
   OpenACCClause *readOpenACCClause();
