@@ -20,11 +20,12 @@ bool operator==(const RISCVISAUtils::ExtensionVersion &A,
   return A.Major == B.Major && A.Minor == B.Minor;
 }
 
-TEST(ParseNormalizedArchString, RejectsUpperCase) {
-  for (StringRef Input : {"RV32", "rV64", "rv32i2P0", "rv64i2p0_A2p0"}) {
+TEST(ParseNormalizedArchString, RejectsInvalidChars) {
+  for (StringRef Input :
+       {"RV32", "rV64", "rv32i2P0", "rv64i2p0_A2p0", "rv32e2.0"}) {
     EXPECT_EQ(
         toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
-        "string must be lowercase");
+        "string may only contain [a-z0-9_]");
   }
 }
 
@@ -37,11 +38,19 @@ TEST(ParseNormalizedArchString, RejectsInvalidBaseISA) {
 }
 
 TEST(ParseNormalizedArchString, RejectsMalformedInputs) {
-  for (StringRef Input : {"rv64i2p0_", "rv32i2p0__a2p0", "rv32e2.0", "rv64e2p",
-                          "rv32i", "rv64ip1"}) {
+  for (StringRef Input :
+       {"rv64i2p0_", "rv32i2p0__a2p0", "rv64e2p", "rv32i", "rv64ip1"}) {
     EXPECT_EQ(
         toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
         "extension lacks version in expected format");
+  }
+}
+
+TEST(ParseNormalizedArchString, OnlyVersion) {
+  for (StringRef Input : {"rv64i2p0_1p0", "rv32i2p0_1p0"}) {
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseNormalizedArchString(Input).takeError()),
+        "missing extension name");
   }
 }
 
@@ -844,6 +853,7 @@ R"(All available -march extensions for RISC-V
     shvstvecd            1.0
     smaia                1.0
     smepmp               1.0
+    smstateen            1.0
     ssaia                1.0
     ssccptr              1.0
     sscofpmf             1.0
@@ -905,6 +915,19 @@ Experimental extensions
     sspm                 0.8
     ssqosid              1.0
     supm                 0.8
+
+Supported Profiles
+    rva20s64
+    rva20u64
+    rva22s64
+    rva22u64
+    rva23s64
+    rva23u64
+    rvb23s64
+    rvb23u64
+    rvi20u32
+    rvi20u64
+    rvm23u32
 
 Use -march to specify the target's extension.
 For example, clang -march=rv32i_v1p0)";

@@ -1,17 +1,38 @@
-; Test long double atomic stores. The atomic store is converted to i128 by
-; the AtomicExpand pass.
+; Test long double atomic stores. The atomic store is converted to i128
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck -check-prefixes=CHECK,BASE %s
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck -check-prefixes=CHECK,Z13 %s
 
+; TODO: Is it worth testing softfp with vector?
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mattr=+soft-float | FileCheck -check-prefixes=SOFTFP %s
+
+
+; FIXME: With legal 128-bit operation to bitcast, the base code would
+; be the same as z13
 define void @f1(ptr %dst, ptr %src) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lg %r1, 8(%r3)
-; CHECK-NEXT:    lg %r0, 0(%r3)
-; CHECK-NEXT:    stpq %r0, 0(%r2)
-; CHECK-NEXT:    bcr 1{{[45]}}, %r0
-; CHECK-NEXT:    br %r14
+; Z13-NEXT:    lg %r1, 8(%r3)
+; Z13-NEXT:    lg %r0, 0(%r3)
+; Z13-NEXT:    stpq %r0, 0(%r2)
+; Z13-NEXT:    bcr 1{{[45]}}, %r0
+; Z13-NEXT:    br %r14
+
+; BASE-NEXT: ld	%f0, 0(%r3)
+; BASE-NEXT: ld	%f2, 8(%r3)
+; BASE-NEXT: lgdr	%r1, %f2
+; BASE-NEXT: lgdr	%r0, %f0
+; BASE-NEXT: stpq	%r0, 0(%r2)
+; BASE-NEXT: bcr	15, %r0
+; BASE-NEXT: br	%r14
+
+; SOFTFP-LABEL: f1:
+; SOFTFP:       # %bb.0:
+; SOFTFP-NEXT:    lg %r1, 8(%r3)
+; SOFTFP-NEXT:    lg %r0, 0(%r3)
+; SOFTFP-NEXT:    stpq %r0, 0(%r2)
+; SOFTFP-NEXT:    bcr 1{{[45]}}, %r0
+; SOFTFP-NEXT:    br %r14
   %val = load fp128, ptr %src, align 8
   store atomic fp128 %val, ptr %dst seq_cst, align 16
   ret void
@@ -34,6 +55,26 @@ define void @f1_fpsrc(ptr %dst, ptr %src) {
 ; CHECK-NEXT: stpq	%r0, 0(%r2)
 ; CHECK-NEXT: bcr	1{{[45]}}, %r0
 ; CHECK-NEXT: br	%r14
+
+; SOFTFP-LABEL: f1_fpsrc:
+; SOFTFP: lg	%r0, 8(%r3)
+; SOFTFP-NEXT: lg	%r1, 0(%r3)
+; SOFTFP-NEXT:	lgr	%r13, %r2
+; SOFTFP-NEXT:	stg	%r0, 168(%r15)
+; SOFTFP-NEXT:	stg	%r1, 160(%r15)
+; SOFTFP-NEXT:	stg	%r0, 184(%r15)
+; SOFTFP-NEXT:	la	%r2, 192(%r15)
+; SOFTFP-NEXT:	la	%r3, 176(%r15)
+; SOFTFP-NEXT:	la	%r4, 160(%r15)
+; SOFTFP-NEXT:	stg	%r1, 176(%r15)
+; SOFTFP-NEXT:	brasl	%r14, __addtf3@PLT
+; SOFTFP-NEXT:	lg	%r1, 200(%r15)
+; SOFTFP-NEXT:	lg	%r0, 192(%r15)
+; SOFTFP-NEXT:	stpq	%r0, 0(%r13)
+; SOFTFP-NEXT:	bcr	1{{[45]}}, %r0
+; SOFTFP-NEXT:	lmg	%r13, %r15, 312(%r15)
+; SOFTFP-NEXT:	br	%r14
+
   %val = load fp128, ptr %src, align 8
   %add = fadd fp128 %val, %val
   store atomic fp128 %add, ptr %dst seq_cst, align 16
