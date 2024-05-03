@@ -148,7 +148,7 @@ VoidTask silly_task() {
   co_await std::suspend_always();
 }
 
-// CHECK: cir.func coroutine @_Z10silly_taskv() -> ![[VoidTask]] {{.*}} {
+// CHECK: cir.func coroutine @_Z10silly_taskv() -> ![[VoidTask]] extra{{.*}}{
 
 // Allocate promise.
 
@@ -274,7 +274,7 @@ folly::coro::Task<int> byRef(const std::string& s) {
 }
 
 // FIXME: this could be less redundant than two allocas + reloads
-// CHECK: cir.func coroutine @_Z5byRefRKSt6string(%arg0: !cir.ptr<![[StdString]]>
+// CHECK: cir.func coroutine @_Z5byRefRKSt6string(%arg0: !cir.ptr<![[StdString]]> {{.*}}22 extra{{.*}}{
 // CHECK: %[[#AllocaParam:]] = cir.alloca !cir.ptr<![[StdString]]>, {{.*}} ["s", init]
 // CHECK: %[[#AllocaFnUse:]] = cir.alloca !cir.ptr<![[StdString]]>, {{.*}} ["s", init]
 
@@ -291,7 +291,7 @@ folly::coro::Task<void> silly_coro() {
 // Make sure we properly handle OnFallthrough coro body sub stmt and
 // check there are not multiple co_returns emitted.
 
-// CHECK: cir.func coroutine @_Z10silly_corov()
+// CHECK: cir.func coroutine @_Z10silly_corov() {{.*}}22 extra{{.*}}{
 // CHECK: cir.await(init, ready : {
 // CHECK: cir.call @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv
 // CHECK-NOT: cir.call @_ZN5folly4coro4TaskIvE12promise_type11return_voidEv
@@ -303,7 +303,7 @@ folly::coro::Task<int> go1() {
   co_return co_await task;
 }
 
-// CHECK: cir.func coroutine @_Z3go1v()
+// CHECK: cir.func coroutine @_Z3go1v() {{.*}}22 extra{{.*}}{
 // CHECK: %[[#IntTaskAddr:]] = cir.alloca ![[IntTask]], !cir.ptr<![[IntTask]]>, ["task", init]
 
 // CHECK:   cir.await(init, ready : {
@@ -338,8 +338,8 @@ folly::coro::Task<int> go1_lambda() {
   co_return co_await task;
 }
 
-// CHECK: cir.func coroutine lambda internal private @_ZZ10go1_lambdavENK3$_0clEv
-// CHECK: cir.func coroutine @_Z10go1_lambdav()
+// CHECK: cir.func coroutine lambda internal private @_ZZ10go1_lambdavENK3$_0clEv{{.*}}22 extra{{.*}}{
+// CHECK: cir.func coroutine @_Z10go1_lambdav() {{.*}}22 extra{{.*}}{
 
 folly::coro::Task<int> go4() {
   auto* fn = +[](int const& i) -> folly::coro::Task<int> { co_return i; };
@@ -347,7 +347,7 @@ folly::coro::Task<int> go4() {
   co_return co_await std::move(task);
 }
 
-// CHECK: cir.func coroutine @_Z3go4v()
+// CHECK: cir.func coroutine @_Z3go4v() {{.*}}22 extra{{.*}}{
 
 // CHECK:   cir.await(init, ready : {
 // CHECK:   }, suspend : {

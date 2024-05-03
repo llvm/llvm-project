@@ -2025,6 +2025,9 @@ bool cir::FuncOp::isDeclaration() {
 void cir::FuncOp::print(OpAsmPrinter &p) {
   p << ' ';
 
+  // When adding a specific keyword here, do not forget to omit it in
+  // printFunctionAttributes below or there will be a syntax error when
+  // parsing
   if (getBuiltin())
     p << "builtin ";
 
@@ -2058,10 +2061,19 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   function_interface_impl::printFunctionAttributes(
       p, *this,
       // These are all omitted since they are custom printed already.
-      {getSymVisibilityAttrName(), getAliaseeAttrName(),
-       getFunctionTypeAttrName(), getLinkageAttrName(), getBuiltinAttrName(),
-       getNoProtoAttrName(), getGlobalCtorAttrName(), getGlobalDtorAttrName(),
-       getExtraAttrsAttrName()});
+      {
+          getAliaseeAttrName(),
+          getBuiltinAttrName(),
+          getCoroutineAttrName(),
+          getExtraAttrsAttrName(),
+          getFunctionTypeAttrName(),
+          getGlobalCtorAttrName(),
+          getGlobalDtorAttrName(),
+          getLambdaAttrName(),
+          getLinkageAttrName(),
+          getNoProtoAttrName(),
+          getSymVisibilityAttrName(),
+      });
 
   if (auto aliaseeName = getAliasee()) {
     p << " alias(";
