@@ -63,7 +63,7 @@ Value *VectorBuilder::createVectorInstruction(unsigned Opcode, Type *ReturnTy,
 Value *VectorBuilder::createSimpleTargetReduction(RecurKind Kind, Type *ValTy,
                                                   ArrayRef<Value *> InstOpArray,
                                                   const Twine &Name) {
-  auto getForRecurKind = [](RecurKind Kind) {
+  auto GetForRecurKind = [](RecurKind Kind) {
     switch (Kind) {
     case RecurKind::Add:
       return Intrinsic::vp_reduce_add;
@@ -96,7 +96,7 @@ Value *VectorBuilder::createSimpleTargetReduction(RecurKind Kind, Type *ValTy,
       return Intrinsic::not_intrinsic;
     }
   };
-  auto VPID = getForRecurKind(Kind);
+  auto VPID = GetForRecurKind(Kind);
   if (VPID == Intrinsic::not_intrinsic)
     return returnWithError<Value *>("No VPIntrinsic for this reduction");
   return createVectorInstructionImpl(VPID, ValTy, InstOpArray, Name);
