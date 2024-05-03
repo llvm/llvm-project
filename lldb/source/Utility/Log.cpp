@@ -443,11 +443,12 @@ void RotatingLogHandler::Dump(llvm::raw_ostream &stream) const {
 TeeLogHandler::TeeLogHandler(std::shared_ptr<LogHandler> first_log_handler,
                              std::shared_ptr<LogHandler> second_log_handler)
     : m_first_log_handler(first_log_handler),
-      m_second_log_handler(second_log_handler) {}
+      m_second_log_handler(second_log_handler) {
+  assert(m_first_log_handler && "first log handler must be valid");
+  assert(m_second_log_handler && "second log handler must be valid");
+}
 
 void TeeLogHandler::Emit(llvm::StringRef message) {
-  if (m_first_log_handler)
-    m_first_log_handler->Emit(message);
-  if (m_second_log_handler)
-    m_second_log_handler->Emit(message);
+  m_first_log_handler->Emit(message);
+  m_second_log_handler->Emit(message);
 }

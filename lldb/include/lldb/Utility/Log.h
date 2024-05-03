@@ -112,6 +112,7 @@ private:
   static char ID;
 };
 
+/// A T-style log handler that multiplexes messages to two log handlers.
 class TeeLogHandler : public LogHandler {
 public:
   TeeLogHandler(std::shared_ptr<LogHandler> first_log_handler,
