@@ -26739,6 +26739,8 @@ specified by C standard:
 Other values may be used to represent additional rounding modes, supported by a
 target. These values are target-specific.
 
+.. _int_set_rounding:
+
 '``llvm.set.rounding``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
