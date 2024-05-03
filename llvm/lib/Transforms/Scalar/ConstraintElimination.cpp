@@ -916,6 +916,45 @@ void State::addInfoForInductions(BasicBlock &BB) {
       !SE.isSCEVable(PN->getType()))
     return;
 
+  auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(PN));
+  BasicBlock *LoopPred = L->getLoopPredecessor();
+  if (!AR || AR->getLoop() != L || !LoopPred)
+    return;
+
+  // If SCEV provides relevant range information, we push those facts
+  // to the worklist relatively to the header node itself (and not its
+  // successor).
+  auto UnsignedRange = SE.getUnsignedRange(AR);
+  auto SignedRange = SE.getSignedRange(AR);
+  DomTreeNode *DTNHeader = DT.getNode(&BB);
+
+  // The range can wrap thus we take Min/Max instead of Lower/Upper
+  auto UnsignedMin = UnsignedRange.getUnsignedMin();
+  auto UnsignedMax = UnsignedRange.getUnsignedMax();
+  if (!UnsignedMax.isMaxValue()) {
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTNHeader, CmpInst::ICMP_ULE, PN,
+        Constant::getIntegerValue(PN->getType(), UnsignedMax)));
+  }
+  if (!UnsignedMin.isMinValue()) {
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTNHeader, CmpInst::ICMP_UGE, PN,
+        Constant::getIntegerValue(PN->getType(), UnsignedMin)));
+  }
+
+  auto SignedMin = SignedRange.getSignedMin();
+  auto SignedMax = SignedRange.getSignedMax();
+  if (!SignedMax.isMaxSignedValue()) {
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTNHeader, CmpInst::ICMP_SLE, PN,
+        Constant::getIntegerValue(PN->getType(), SignedMax)));
+  }
+  if (!SignedMin.isMinSignedValue()) {
+    WorkList.push_back(FactOrCheck::getConditionFact(
+        DTNHeader, CmpInst::ICMP_SGE, PN,
+        Constant::getIntegerValue(PN->getType(), SignedMin)));
+  }
+
   BasicBlock *InLoopSucc = nullptr;
   if (Pred == CmpInst::ICMP_NE)
     InLoopSucc = cast<BranchInst>(BB.getTerminator())->getSuccessor(0);
@@ -925,11 +964,6 @@ void State::addInfoForInductions(BasicBlock &BB) {
     return;
 
   if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB) || InLoopSucc == &BB)
-    return;
-
-  auto *AR = dyn_cast_or_null<SCEVAddRecExpr>(SE.getSCEV(PN));
-  BasicBlock *LoopPred = L->getLoopPredecessor();
-  if (!AR || AR->getLoop() != L || !LoopPred)
     return;
 
   const SCEV *StartSCEV = AR->getStart();

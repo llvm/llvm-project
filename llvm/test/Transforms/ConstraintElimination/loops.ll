@@ -107,15 +107,12 @@ define i32 @loop_header_dom_successors_flipped(i32 %y, i1 %c) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP_HEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.header:
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[X_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i32 [[X]], 10
-; CHECK-NEXT:    br i1 [[C_1]], label [[EXIT]], label [[LOOP_LATCH]]
+; CHECK-NEXT:    br i1 true, label [[EXIT]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i32 [[X]], 11
-; CHECK-NEXT:    call void @use(i1 [[C_2]])
-; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i32 [[X]], 11
-; CHECK-NEXT:    call void @use(i1 [[C_3]])
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[X_NEXT]] = add i32 [[X]], 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
