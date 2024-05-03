@@ -159,12 +159,14 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     addGenericFeatures();
     Features["atomics"] = true;
     Features["bulk-memory"] = true;
+    Features["exception-handling"] = true;
+    Features["extended-const"] = true;
     Features["half-precision"] = true;
     Features["multimemory"] = true;
     Features["nontrapping-fptoint"] = true;
     Features["reference-types"] = true;
     Features["tail-call"] = true;
-    setSIMDLevel(Features, SIMD128, true);
+    setSIMDLevel(Features, RelaxedSIMD, true);
   };
   if (CPU == "generic") {
     addGenericFeatures();
