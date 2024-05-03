@@ -174,7 +174,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MINGW-X86-64 %s
 //
 // CHECK-MINGW-X86-64: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-MINGW-X86-64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-windows-gnu{{/|\\\\}}libclang_rt.profile.a"
+// CHECK-MINGW-X86-64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}windows{{/|\\\\}}libclang_rt.profile-x86_64.a"
 
 // Test instrumented profiling dependent-lib flags
 //
