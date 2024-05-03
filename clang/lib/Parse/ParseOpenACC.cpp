@@ -102,6 +102,8 @@ OpenACCClauseKind getOpenACCClauseKind(Token Tok) {
       .Case("create", OpenACCClauseKind::Create)
       .Case("collapse", OpenACCClauseKind::Collapse)
       .Case("copy", OpenACCClauseKind::Copy)
+      .Case("pcopy", OpenACCClauseKind::PCopy)
+      .Case("present_or_copy", OpenACCClauseKind::PresentOrCopy)
       .Case("copyin", OpenACCClauseKind::CopyIn)
       .Case("copyout", OpenACCClauseKind::CopyOut)
       .Case("default", OpenACCClauseKind::Default)
@@ -489,6 +491,8 @@ ClauseParensKind getClauseParensKind(OpenACCDirectiveKind DirKind,
   case OpenACCClauseKind::If:
   case OpenACCClauseKind::Create:
   case OpenACCClauseKind::Copy:
+  case OpenACCClauseKind::PCopy:
+  case OpenACCClauseKind::PresentOrCopy:
   case OpenACCClauseKind::CopyIn:
   case OpenACCClauseKind::CopyOut:
   case OpenACCClauseKind::UseDevice:
@@ -920,20 +924,22 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       assert(DirKind == OpenACCDirectiveKind::Update);
       [[fallthrough]];
     case OpenACCClauseKind::Attach:
-    case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::Delete:
     case OpenACCClauseKind::Detach:
     case OpenACCClauseKind::Device:
     case OpenACCClauseKind::DeviceResident:
     case OpenACCClauseKind::DevicePtr:
-    case OpenACCClauseKind::FirstPrivate:
     case OpenACCClauseKind::Host:
     case OpenACCClauseKind::Link:
-    case OpenACCClauseKind::NoCreate:
-    case OpenACCClauseKind::Present:
     case OpenACCClauseKind::UseDevice:
       ParseOpenACCVarList();
       break;
+    case OpenACCClauseKind::Copy:
+    case OpenACCClauseKind::PCopy:
+    case OpenACCClauseKind::PresentOrCopy:
+    case OpenACCClauseKind::FirstPrivate:
+    case OpenACCClauseKind::NoCreate:
+    case OpenACCClauseKind::Present:
     case OpenACCClauseKind::Private:
       ParsedClause.setVarListDetails(ParseOpenACCVarList());
       break;

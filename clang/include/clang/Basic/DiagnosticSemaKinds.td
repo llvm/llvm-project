@@ -12333,4 +12333,8 @@ def err_acc_subarray_out_of_range
 def err_acc_subarray_base_plus_length_out_of_range
     : Error<"OpenACC sub-array specified range [%0:%1] would be out of the "
             "range of the subscripted array size of %2">;
+def warn_acc_deprecated_alias_name
+    : Warning<"OpenACC clause name '%0' is a deprecated clause name and is "
+              "now an alias for '%1'">,
+      InGroup<DiagGroup<"openacc-deprecated-clause-alias">>;
 } // end of sema component.
