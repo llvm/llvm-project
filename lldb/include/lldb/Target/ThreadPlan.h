@@ -302,7 +302,8 @@ public:
     eKindStepInRange,
     eKindRunToAddress,
     eKindStepThrough,
-    eKindStepUntil
+    eKindStepUntil,
+    eKindSingleThreadTimeout,
   };
 
   virtual ~ThreadPlan();
@@ -483,6 +484,8 @@ public:
     return m_takes_iteration_count;
   }
 
+  virtual lldb::StateType GetPlanRunState() = 0;
+
 protected:
   // Constructors and Destructors
   ThreadPlan(ThreadPlanKind kind, const char *name, Thread &thread,
@@ -521,8 +524,6 @@ protected:
   void SetStopInfo(lldb::StopInfoSP stop_reason_sp) {
     GetThread().SetStopInfo(stop_reason_sp);
   }
-
-  virtual lldb::StateType GetPlanRunState() = 0;
 
   bool IsUsuallyUnexplainedStopReason(lldb::StopReason);
 
@@ -590,6 +591,7 @@ public:
   const Status &GetStatus() { return m_status; }
 
 protected:
+  friend class ThreadPlanSingleThreadTimeout;
   bool DoPlanExplainsStop(Event *event_ptr) override;
 
   lldb::StateType GetPlanRunState() override;

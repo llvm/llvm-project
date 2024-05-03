@@ -59,6 +59,7 @@ add_lldb_library(lldbTarget
   ThreadPlanCallUserExpression.cpp
   ThreadPlanPython.cpp
   ThreadPlanRunToAddress.cpp
+  ThreadPlanSingleThreadTimeout.cpp
   ThreadPlanShouldStopHere.cpp
   ThreadPlanStepInRange.cpp
   ThreadPlanStepInstruction.cpp
