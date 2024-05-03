@@ -4076,34 +4076,54 @@ SDValue SITargetLowering::lowerSET_ROUNDING(SDValue Op,
     NewMode = DAG.getConstant(
         AMDGPU::decodeFltRoundToHWConversionTable(ClampedVal), SL, MVT::i32);
   } else {
-    SDValue BitTable =
-        DAG.getConstant(AMDGPU::FltRoundToHWConversionTable, SL, MVT::i64);
-
+    // If we know the input can only be one of the supported standard modes in
+    // the range 0-3, we can use a simplified mapping to hardware values.
+    KnownBits KB = DAG.computeKnownBits(NewMode);
+    const bool UseReducedTable = KB.countMinLeadingZeros() >= 30;
     // The supported standard values are 0-3. The extended values start at 8. We
     // need to offset by 4 if the value is in the extended range.
 
-    // is_standard = value < 4;
-    // table_index = is_standard ? value : (value - 4)
-    // MODE.fp_round = (bit_table >> (table_index << 2)) & 0xf
+    if (UseReducedTable) {
+      // Truncate to the low 32-bits.
+      SDValue BitTable = DAG.getConstant(
+          AMDGPU::FltRoundToHWConversionTable & 0xffff, SL, MVT::i32);
 
-    SDValue Four = DAG.getConstant(4, SL, MVT::i32);
-    SDValue IsStandardValue =
-        DAG.getSetCC(SL, MVT::i1, NewMode, Four, ISD::SETULT);
-    SDValue OffsetEnum = DAG.getNode(ISD::SUB, SL, MVT::i32, NewMode, Four);
-    SDValue IndexVal = DAG.getNode(ISD::SELECT, SL, MVT::i32, IsStandardValue,
-                                   NewMode, OffsetEnum);
+      SDValue Two = DAG.getConstant(2, SL, MVT::i32);
+      SDValue RoundModeTimesNumBits =
+          DAG.getNode(ISD::SHL, SL, MVT::i32, NewMode, Two);
 
-    SDValue Two = DAG.getConstant(2, SL, MVT::i32);
-    SDValue RoundModeTimesNumBits =
-        DAG.getNode(ISD::SHL, SL, MVT::i32, IndexVal, Two);
+      NewMode =
+          DAG.getNode(ISD::SRL, SL, MVT::i32, BitTable, RoundModeTimesNumBits);
 
-    SDValue TableValue =
-        DAG.getNode(ISD::SRL, SL, MVT::i64, BitTable, RoundModeTimesNumBits);
-    SDValue TruncTable = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, TableValue);
+      // TODO: SimplifyDemandedBits on the setreg source here can likely reduce
+      // the table extracted bits into inline immediates.
+    } else {
+      // is_standard = value < 4;
+      // table_index = is_standard ? value : (value - 4)
+      // MODE.fp_round = (bit_table >> (table_index << 2)) & 0xf
+      SDValue BitTable =
+          DAG.getConstant(AMDGPU::FltRoundToHWConversionTable, SL, MVT::i64);
 
-    // No need to mask out the high bits since the setreg will ignore them
-    // anyway.
-    NewMode = TruncTable;
+      SDValue Four = DAG.getConstant(4, SL, MVT::i32);
+      SDValue IsStandardValue =
+          DAG.getSetCC(SL, MVT::i1, NewMode, Four, ISD::SETULT);
+      SDValue OffsetEnum = DAG.getNode(ISD::SUB, SL, MVT::i32, NewMode, Four);
+
+      SDValue IndexVal = DAG.getNode(ISD::SELECT, SL, MVT::i32, IsStandardValue,
+                                     NewMode, OffsetEnum);
+
+      SDValue Two = DAG.getConstant(2, SL, MVT::i32);
+      SDValue RoundModeTimesNumBits =
+          DAG.getNode(ISD::SHL, SL, MVT::i32, IndexVal, Two);
+
+      SDValue TableValue =
+          DAG.getNode(ISD::SRL, SL, MVT::i64, BitTable, RoundModeTimesNumBits);
+      SDValue TruncTable = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, TableValue);
+
+      // No need to mask out the high bits since the setreg will ignore them
+      // anyway.
+      NewMode = TruncTable;
+    }
 
     // Insert a readfirstlane in case the value is a VGPR. We could do this
     // earlier and keep more operations scalar, but that interferes with
