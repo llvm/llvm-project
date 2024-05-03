@@ -149,12 +149,7 @@ extern const uint64_t FltRoundConversionTable;
 extern const uint64_t FltRoundToHWConversionTable;
 
 /// Read the hardware rounding mode equivalent of a AMDGPUFltRounds value.
-constexpr uint32_t decodeFltRoundToHWConversionTable(uint32_t FltRounds) {
-  uint32_t IndexVal = FltRounds;
-  if (IndexVal > TowardNegative)
-    IndexVal -= ExtendedFltRoundOffset;
-  return (FltRoundToHWConversionTable >> (IndexVal << 2)) & 0xf;
-}
+uint32_t decodeFltRoundToHWConversionTable(uint32_t FltRounds);
 
 } // end namespace AMDGPU
 
