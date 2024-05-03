@@ -1443,8 +1443,8 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
       converter.bindSymbol(*arg, hlfir::translateToExtendedValue(
                                      loc, firOpBuilder, hlfir::Entity{prv},
                                      /*contiguousHint=*/
-                                     std::holds_alternative<fir::ArrayBoxValue>(
-                                         hostExV.matchee()))
+                                     Fortran::evaluate::IsSimplyContiguous(
+                                         *arg, converter.getFoldingContext()))
                                      .first);
     }
 

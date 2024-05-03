@@ -444,7 +444,8 @@ void DataSharingProcessor::doPrivatize(
           hlfir::translateToExtendedValue(
               symLoc, firOpBuilder, hlfir::Entity{allocRegion.getArgument(0)},
               /*contiguousHint=*/
-              std::holds_alternative<fir::ArrayBoxValue>(symExV.matchee()))
+              Fortran::evaluate::IsSimplyContiguous(
+                  *sym, converter.getFoldingContext()))
               .first;
 
       symTable->addSymbol(*sym, localExV);
