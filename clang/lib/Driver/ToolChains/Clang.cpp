@@ -6225,6 +6225,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  // Don't warn about compiler-rt layout options.
+  Args.ClaimAllArgs(options::OPT_frtlib_per_target);
+  Args.ClaimAllArgs(options::OPT_fno_rtlib_per_target);
+
   // Warn about ignored options to clang.
   for (const Arg *A :
        Args.filtered(options::OPT_clang_ignored_gcc_optimization_f_Group)) {

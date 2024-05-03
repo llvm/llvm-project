@@ -5541,6 +5541,12 @@ def fno_rtlib_defaultlib : Flag<["-"], "fno-rtlib-defaultlib">,
                       Visibility<[ClangOption, CLOption]>,
                       Group<f_Group>,
                       HelpText<"On Windows, do not emit /defaultlib: directives to link compiler-rt libraries">;
+def frtlib_per_target :
+  Flag<["-"], "frtlib-per-target">, Visibility<[ClangOption, CLOption]>, Group<f_Group>,
+  HelpText<"Compiler-rt libraries are in per-target directories">;
+def fno_rtlib_per_target :
+  Flag<["-"], "fno-rtlib-per-target">, Visibility<[ClangOption, CLOption]>, Group<f_Group>,
+  HelpText<"Compiler-rt libraries are in one directory and have target-specific names">;
 def offload_add_rpath: Flag<["--"], "offload-add-rpath">,
   Flags<[NoArgumentUnused]>,
   Alias<frtlib_add_rpath>;

@@ -799,6 +799,21 @@
 // CHECK-CFI-STATS-WIN64: "--linker-option=/include:__sanitizer_stats_register"
 
 // RUN: not %clang -fsanitize=cfi -fsanitize-stats -### %s 2>&1 \
+// RUN:     --target=x86_64-pc-windows \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     -frtlib-per-target \
+// RUN:   | FileCheck --check-prefix=CHECK-CFI-STATS-RTLIB %s -DSUFFIX=
+// RUN: not %clang -fsanitize=cfi -fsanitize-stats -### %s 2>&1 \
+// RUN:     --target=x86_64-pc-windows \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     -fno-rtlib-per-target \
+// RUN:   | FileCheck --check-prefix=CHECK-CFI-STATS-RTLIB %s -DSUFFIX=-x86_64
+// CHECK-CFI-STATS-RTLIB: "--dependent-lib=clang_rt.stats_client[[SUFFIX]].lib"
+// CHECK-CFI-STATS-RTLIB: "--dependent-lib=clang_rt.stats[[SUFFIX]].lib"
+
+// RUN: not %clang -fsanitize=cfi -fsanitize-stats -### %s 2>&1 \
 // RUN:     --target=i686-pc-windows \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CFI-STATS-WIN32 %s
