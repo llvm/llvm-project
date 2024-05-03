@@ -79,3 +79,16 @@ float V7 = []() -> float {
   0x0.000001p0F);
 }();
 // CHECK: @V7 = {{.*}} float 1.000000e+00
+
+template<float V> struct L {
+  constexpr L() : value(V) {}
+  float value;
+};
+
+#pragma STDC FENV_ROUND FE_DOWNWARD
+L<0.1F> val_d;
+// CHECK: @val_d = {{.*}} { float 0x3FB9999980000000 }
+
+#pragma STDC FENV_ROUND FE_UPWARD
+L<0.1F> val_u;
+// CHECK: @val_u = {{.*}} { float 0x3FB99999A0000000 }
