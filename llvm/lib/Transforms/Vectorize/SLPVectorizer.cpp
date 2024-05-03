@@ -7934,6 +7934,33 @@ void BoUpSLP::transformNodes() {
       }
       break;
     }
+    case Instruction::Store: {
+      Type *ScalarTy =
+          cast<StoreInst>(E.getMainOp())->getValueOperand()->getType();
+      auto *VecTy = FixedVectorType::get(ScalarTy, E.Scalars.size());
+      Align CommonAlignment = computeCommonAlignment<StoreInst>(E.Scalars);
+      // Check if profitable to represent consecutive load + reverse as strided
+      // load with stride -1.
+      if (isReverseOrder(E.ReorderIndices) &&
+          TTI->isLegalStridedLoadStore(VecTy, CommonAlignment)) {
+        SmallVector<int> Mask;
+        inversePermutation(E.ReorderIndices, Mask);
+        auto *BaseSI = cast<StoreInst>(E.Scalars.back());
+        InstructionCost OriginalVecCost =
+            TTI->getMemoryOpCost(Instruction::Store, VecTy, BaseSI->getAlign(),
+                                 BaseSI->getPointerAddressSpace(), CostKind,
+                                 TTI::OperandValueInfo()) +
+            ::getShuffleCost(*TTI, TTI::SK_Reverse, VecTy, Mask, CostKind);
+        InstructionCost StridedCost = TTI->getStridedMemoryOpCost(
+            Instruction::Store, VecTy, BaseSI->getPointerOperand(),
+            /*VariableMask=*/false, CommonAlignment, CostKind, BaseSI);
+        if (StridedCost < OriginalVecCost)
+          // Strided load is more profitable than consecutive load + reverse -
+          // transform the node to strided load.
+          E.State = TreeEntry::StridedVectorize;
+      }
+      break;
+    }
     default:
       break;
     }
@@ -9466,11 +9493,22 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         cast<StoreInst>(IsReorder ? VL[E->ReorderIndices.front()] : VL0);
     auto GetVectorCost = [=](InstructionCost CommonCost) {
       // We know that we can merge the stores. Calculate the cost.
-      TTI::OperandValueInfo OpInfo = getOperandInfo(E->getOperand(0));
-      return TTI->getMemoryOpCost(Instruction::Store, VecTy, BaseSI->getAlign(),
-                                  BaseSI->getPointerAddressSpace(), CostKind,
-                                  OpInfo) +
-             CommonCost;
+      InstructionCost VecStCost;
+      if (E->State == TreeEntry::StridedVectorize) {
+        Align CommonAlignment =
+            computeCommonAlignment<StoreInst>(UniqueValues.getArrayRef());
+        VecStCost = TTI->getStridedMemoryOpCost(
+            Instruction::Store, VecTy, BaseSI->getPointerOperand(),
+            /*VariableMask=*/false, CommonAlignment, CostKind);
+      } else {
+        assert(E->State == TreeEntry::Vectorize &&
+               "Expected either strided or consecutive stores.");
+        TTI::OperandValueInfo OpInfo = getOperandInfo(E->getOperand(0));
+        VecStCost = TTI->getMemoryOpCost(
+            Instruction::Store, VecTy, BaseSI->getAlign(),
+            BaseSI->getPointerAddressSpace(), CostKind, OpInfo);
+      }
+      return VecStCost + CommonCost;
     };
     SmallVector<Value *> PointerOps(VL.size());
     for (auto [I, V] : enumerate(VL)) {
@@ -12398,7 +12436,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
   bool IsReverseOrder = isReverseOrder(E->ReorderIndices);
   auto FinalShuffle = [&](Value *V, const TreeEntry *E, VectorType *VecTy) {
     ShuffleInstructionBuilder ShuffleBuilder(ScalarTy, Builder, *this);
-    if (E->getOpcode() == Instruction::Store) {
+    if (E->getOpcode() == Instruction::Store &&
+        E->State == TreeEntry::Vectorize) {
       ArrayRef<int> Mask =
           ArrayRef(reinterpret_cast<const int *>(E->ReorderIndices.begin()),
                    E->ReorderIndices.size());
@@ -12986,8 +13025,27 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
       VecValue = FinalShuffle(VecValue, E, VecTy);
 
       Value *Ptr = SI->getPointerOperand();
-      StoreInst *ST =
-          Builder.CreateAlignedStore(VecValue, Ptr, SI->getAlign());
+      Instruction *ST;
+      if (E->State == TreeEntry::Vectorize) {
+        ST = Builder.CreateAlignedStore(VecValue, Ptr, SI->getAlign());
+      } else {
+        assert(E->State == TreeEntry::StridedVectorize &&
+               "Expected either strided or conseutive stores.");
+        Align CommonAlignment = computeCommonAlignment<StoreInst>(E->Scalars);
+        Type *StrideTy = DL->getIndexType(SI->getPointerOperandType());
+        auto *Inst = Builder.CreateIntrinsic(
+            Intrinsic::experimental_vp_strided_store,
+            {VecTy, Ptr->getType(), StrideTy},
+            {VecValue, Ptr,
+             ConstantInt::get(
+                 StrideTy, -static_cast<int>(DL->getTypeAllocSize(ScalarTy))),
+             Builder.getAllOnesMask(VecTy->getElementCount()),
+             Builder.getInt32(E->Scalars.size())});
+        Inst->addParamAttr(
+            /*ArgNo=*/1,
+            Attribute::getWithAlignment(Inst->getContext(), CommonAlignment));
+        ST = Inst;
+      }
 
       Value *V = propagateMetadata(ST, E->Scalars);
 
