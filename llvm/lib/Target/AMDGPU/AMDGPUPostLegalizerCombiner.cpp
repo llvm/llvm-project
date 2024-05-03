@@ -66,8 +66,6 @@ public:
   struct FMinFMaxLegacyInfo {
     Register LHS;
     Register RHS;
-    Register True;
-    Register False;
     CmpInst::Predicate Pred;
   };
 
@@ -172,75 +170,40 @@ bool AMDGPUPostLegalizerCombinerImpl::matchFMinFMaxLegacy(
                 m_GFCmp(m_Pred(Info.Pred), m_Reg(Info.LHS), m_Reg(Info.RHS))))
     return false;
 
-  Info.True = MI.getOperand(2).getReg();
-  Info.False = MI.getOperand(3).getReg();
+  Register True = MI.getOperand(2).getReg();
+  Register False = MI.getOperand(3).getReg();
 
   // TODO: Handle case where the the selected value is an fneg and the compared
   // constant is the negation of the selected value.
-  if (!(Info.LHS == Info.True && Info.RHS == Info.False) &&
-      !(Info.LHS == Info.False && Info.RHS == Info.True))
+  if ((Info.LHS != True || Info.RHS != False) &&
+      (Info.LHS != False || Info.RHS != True))
     return false;
 
-  switch (Info.Pred) {
-  case CmpInst::FCMP_FALSE:
-  case CmpInst::FCMP_OEQ:
-  case CmpInst::FCMP_ONE:
-  case CmpInst::FCMP_ORD:
-  case CmpInst::FCMP_UNO:
-  case CmpInst::FCMP_UEQ:
-  case CmpInst::FCMP_UNE:
-  case CmpInst::FCMP_TRUE:
-    return false;
-  default:
-    return true;
-  }
+  // Invert the predicate if necessary so that the apply function can assume
+  // that the select operands are the same as the fcmp operands.
+  // (select (fcmp P, L, R), R, L) -> (select (fcmp !P, L, R), L, R)
+  if (Info.LHS != True)
+    Info.Pred = CmpInst::getInversePredicate(Info.Pred);
+
+  // Only match </<=/>=/> not ==/!= etc.
+  return Info.Pred != CmpInst::getSwappedPredicate(Info.Pred);
 }
 
 void AMDGPUPostLegalizerCombinerImpl::applySelectFCmpToFMinToFMaxLegacy(
     MachineInstr &MI, const FMinFMaxLegacyInfo &Info) const {
-  B.setInstrAndDebugLoc(MI);
-  auto buildNewInst = [&MI, this](unsigned Opc, Register X, Register Y) {
-    B.buildInstr(Opc, {MI.getOperand(0)}, {X, Y}, MI.getFlags());
-  };
-
-  switch (Info.Pred) {
-  case CmpInst::FCMP_ULT:
-  case CmpInst::FCMP_ULE:
-    if (Info.LHS == Info.True)
-      buildNewInst(AMDGPU::G_AMDGPU_FMIN_LEGACY, Info.RHS, Info.LHS);
-    else
-      buildNewInst(AMDGPU::G_AMDGPU_FMAX_LEGACY, Info.LHS, Info.RHS);
-    break;
-  case CmpInst::FCMP_OLE:
-  case CmpInst::FCMP_OLT: {
+  unsigned Opc = (Info.Pred & CmpInst::FCMP_OGT) ? AMDGPU::G_AMDGPU_FMAX_LEGACY
+                                                 : AMDGPU::G_AMDGPU_FMIN_LEGACY;
+  Register X = Info.LHS;
+  Register Y = Info.RHS;
+  if (Info.Pred == CmpInst::getUnorderedPredicate(Info.Pred)) {
     // We need to permute the operands to get the correct NaN behavior. The
     // selected operand is the second one based on the failing compare with NaN,
     // so permute it based on the compare type the hardware uses.
-    if (Info.LHS == Info.True)
-      buildNewInst(AMDGPU::G_AMDGPU_FMIN_LEGACY, Info.LHS, Info.RHS);
-    else
-      buildNewInst(AMDGPU::G_AMDGPU_FMAX_LEGACY, Info.RHS, Info.LHS);
-    break;
+    std::swap(X, Y);
   }
-  case CmpInst::FCMP_UGE:
-  case CmpInst::FCMP_UGT: {
-    if (Info.LHS == Info.True)
-      buildNewInst(AMDGPU::G_AMDGPU_FMAX_LEGACY, Info.RHS, Info.LHS);
-    else
-      buildNewInst(AMDGPU::G_AMDGPU_FMIN_LEGACY, Info.LHS, Info.RHS);
-    break;
-  }
-  case CmpInst::FCMP_OGT:
-  case CmpInst::FCMP_OGE: {
-    if (Info.LHS == Info.True)
-      buildNewInst(AMDGPU::G_AMDGPU_FMAX_LEGACY, Info.LHS, Info.RHS);
-    else
-      buildNewInst(AMDGPU::G_AMDGPU_FMIN_LEGACY, Info.RHS, Info.LHS);
-    break;
-  }
-  default:
-    llvm_unreachable("predicate should not have matched");
-  }
+
+  B.setInstrAndDebugLoc(MI);
+  B.buildInstr(Opc, {MI.getOperand(0)}, {X, Y}, MI.getFlags());
 
   MI.eraseFromParent();
 }
