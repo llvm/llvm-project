@@ -317,9 +317,8 @@ TEST(Attributes, ConstantRangeAttributeCAPI) {
     const uint64_t LowerWords[] = {0};
     const uint64_t UpperWords[] = {42};
 
-    auto Range =
-        ConstantRange(APInt(NumBits, ArrayRef<uint64_t>(LowerWords, 1)),
-                      APInt(NumBits, ArrayRef<uint64_t>(UpperWords, 1)));
+    ConstantRange Range(APInt(NumBits, ArrayRef(LowerWords)),
+                        APInt(NumBits, ArrayRef(UpperWords)));
 
     Attribute RangeAttr = Attribute::get(C, Attribute::Range, Range);
     auto OutAttr = unwrap(LLVMCreateConstantRangeAttribute(
@@ -331,9 +330,8 @@ TEST(Attributes, ConstantRangeAttributeCAPI) {
     const uint64_t LowerWords[] = {1, 1};
     const uint64_t UpperWords[] = {42, 42};
 
-    auto Range =
-        ConstantRange(APInt(NumBits, ArrayRef<uint64_t>(LowerWords, 2)),
-                      APInt(NumBits, ArrayRef<uint64_t>(UpperWords, 2)));
+    ConstantRange Range(APInt(NumBits, ArrayRef(LowerWords)),
+                        APInt(NumBits, ArrayRef(UpperWords)));
 
     Attribute RangeAttr = Attribute::get(C, Attribute::Range, Range);
     auto OutAttr = unwrap(LLVMCreateConstantRangeAttribute(
