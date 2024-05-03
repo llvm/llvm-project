@@ -108,7 +108,6 @@ static void EmitARMTargetDef(RecordKeeper &RK, raw_ostream &OS) {
      << "#undef EMIT_EXTENSIONS\n"
      << "#endif // EMIT_EXTENSIONS\n"
      << "\n";
-
 }
 
 static TableGen::Emitter::Opt
