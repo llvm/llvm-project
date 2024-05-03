@@ -453,6 +453,24 @@ namespace N3 {
       this->A::operator=(*this);
     }
   };
+
+  template<typename T>
+  struct C {
+    template<typename U>
+    void operator=(int);
+
+    void not_instantiated() {
+      operator=<int>(0);
+      C::operator=<int>(0);
+      this->operator=<int>(0);
+      this->C::operator=<int>(0);
+
+      operator=(*this);
+      C::operator=(*this);
+      this->operator=(*this);
+      this->C::operator=(*this);
+    }
+  };
 } // namespace N3
 
 namespace N4 {
