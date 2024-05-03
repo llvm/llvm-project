@@ -557,7 +557,7 @@ guidelines.
 
 ## Guidelines for reviewers
 
- * Do not ask contributors to implement non-splat vector support in code
+ * Do not ask new contributors to implement non-splat vector support in code
    reviews. If you think non-splat vector support for a fold is both
    worthwhile and policy-compliant (that is, the handling would not result in
    any appreciable increase in code complexity), implement it yourself in a
