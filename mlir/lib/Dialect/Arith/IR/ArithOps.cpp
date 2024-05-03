@@ -702,10 +702,12 @@ OpFoldResult arith::CeilDivSIOp::fold(FoldAdaptor adaptor) {
           return signedCeilNonnegInputs(a, b, overflowOrDiv0);
         }
 
+        // No folding happens if any of the intermediate arithmetic operations
+        // overflows.
         bool overflowNegA = false;
         bool overflowNegB = false;
-        bool overflowNegDiv = false;
         bool overflowDiv = false;
+        bool overflowNegRes = false;
         if (!aGtZero && !bGtZero) {
           // Both negative, return ceil(-a, -b).
           APInt posA = zero.ssub_ov(a, overflowNegA);
@@ -718,16 +720,16 @@ OpFoldResult arith::CeilDivSIOp::fold(FoldAdaptor adaptor) {
           // A is negative, b is positive, return - ( -a / b).
           APInt posA = zero.ssub_ov(a, overflowNegA);
           APInt div = posA.sdiv_ov(b, overflowDiv);
-          APInt res = zero.ssub_ov(div, overflowNegDiv);
-          overflowOrDiv0 = (overflowNegA || overflowDiv || overflowNegDiv);
+          APInt res = zero.ssub_ov(div, overflowNegRes);
+          overflowOrDiv0 = (overflowNegA || overflowDiv || overflowNegRes);
           return res;
         }
         // A is positive, b is negative, return - (a / -b).
         APInt posB = zero.ssub_ov(b, overflowNegB);
         APInt div = a.sdiv_ov(posB, overflowDiv);
-        APInt res = zero.ssub_ov(div, overflowNegDiv);
+        APInt res = zero.ssub_ov(div, overflowNegRes);
 
-        overflowOrDiv0 = (overflowNegB || overflowDiv || overflowNegDiv);
+        overflowOrDiv0 = (overflowNegB || overflowDiv || overflowNegRes);
         return res;
       });
 
