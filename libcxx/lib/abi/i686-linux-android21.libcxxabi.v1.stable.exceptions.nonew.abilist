@@ -544,7 +544,6 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk110__time_putC2ERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk110__time_putD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk110__time_putD2Ev', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk110breakpointEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk110ctype_base5alnumE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt6__ndk110ctype_base5alphaE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt6__ndk110ctype_base5blankE', 'size': 4, 'type': 'OBJECT'}
@@ -600,6 +599,7 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk111timed_mutexC2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk111timed_mutexD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk111timed_mutexD2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt6__ndk112__breakpointEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk112__do_nothingEPv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk112__get_sp_mutEPKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk112__next_primeEj', 'type': 'FUNC'}
@@ -1221,7 +1221,6 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk123__cxx_atomic_notify_oneEPVKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk123__libcpp_atomic_monitorEPVKNS_17__cxx_atomic_implIiNS_22__cxx_atomic_base_implIiEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk123__libcpp_atomic_monitorEPVKv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk123breakpoint_if_debuggingEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk125notify_all_at_thread_exitERNS_18condition_variableENS_11unique_lockINS_5mutexEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk131__arrive_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseEh', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk132__destroy_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseE', 'type': 'FUNC'}
