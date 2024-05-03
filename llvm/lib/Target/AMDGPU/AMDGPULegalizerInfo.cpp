@@ -4085,13 +4085,10 @@ bool AMDGPULegalizerInfo::legalizeCTLZ_CTTZ(LegalizerHelper &Helper,
                         ? AMDGPU::G_AMDGPU_FFBH_U32
                         : AMDGPU::G_AMDGPU_FFBL_B32;
   auto Tmp = B.buildInstr(NewOpc, {DstTy}, {Src});
-  
   // min instruction can be omitted if the operand is known to be non-zero.
   auto *KB = Helper.getKnownBits();
-  if (!KB->getKnownBits(Src).isNonZero()) {
+  if (!KB->getKnownBits(Src).isNonZero())
     B.buildUMin(Dst, Tmp, B.buildConstant(DstTy, SrcTy.getSizeInBits()));
-  }
-  
   MI.eraseFromParent();
   return true;
 }
