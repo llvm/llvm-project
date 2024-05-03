@@ -2283,7 +2283,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
                 UnwrapWholeSymbolOrComponentDataRef(actualForDummy[*dimArg])}) {
           if (IsOptional(*whole) || IsAllocatableOrObjectPointer(whole)) {
             if (context.languageFeatures().ShouldWarn(
-                    common::UsageWarning::DimMustBePresent)) {
+                    common::UsageWarning::OptionalMustBePresent)) {
               if (rank == Rank::scalarIfDim || arrayRank.value_or(-1) == 1) {
                 messages.Say(
                     "The actual argument for DIM= is optional, pointer, or allocatable, and it is assumed to be present and equal to 1 at execution time"_warn_en_US);
@@ -2741,16 +2741,21 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
           context.messages().Say(at,
               "FPTR= argument to C_F_POINTER() may not have a deferred type parameter"_err_en_US);
         } else if (type->category() == TypeCategory::Derived) {
-          if (type->IsUnlimitedPolymorphic()) {
-            context.messages().Say(at,
-                "FPTR= argument to C_F_POINTER() should not be unlimited polymorphic"_warn_en_US);
-          } else if (!type->GetDerivedTypeSpec().typeSymbol().attrs().test(
-                         semantics::Attr::BIND_C)) {
-            context.messages().Say(at,
-                "FPTR= argument to C_F_POINTER() should not have a derived type that is not BIND(C)"_warn_en_US);
+          if (context.languageFeatures().ShouldWarn(
+                  common::UsageWarning::Interoperability)) {
+            if (type->IsUnlimitedPolymorphic()) {
+              context.messages().Say(at,
+                  "FPTR= argument to C_F_POINTER() should not be unlimited polymorphic"_warn_en_US);
+            } else if (!type->GetDerivedTypeSpec().typeSymbol().attrs().test(
+                           semantics::Attr::BIND_C)) {
+              context.messages().Say(at,
+                  "FPTR= argument to C_F_POINTER() should not have a derived type that is not BIND(C)"_warn_en_US);
+            }
           }
         } else if (!IsInteroperableIntrinsicType(
-                       *type, &context.languageFeatures())) {
+                       *type, &context.languageFeatures()) &&
+            context.languageFeatures().ShouldWarn(
+                common::UsageWarning::Interoperability)) {
           context.messages().Say(at,
               "FPTR= argument to C_F_POINTER() should not have the non-interoperable intrinsic type %s"_warn_en_US,
               type->AsFortran());
@@ -2850,7 +2855,9 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
         context.messages().Say(arguments[0]->sourceLocation(),
             "C_LOC() argument may not be zero-length character"_err_en_US);
       } else if (typeAndShape->type().category() != TypeCategory::Derived &&
-          !IsInteroperableIntrinsicType(typeAndShape->type())) {
+          !IsInteroperableIntrinsicType(typeAndShape->type()) &&
+          context.languageFeatures().ShouldWarn(
+              common::UsageWarning::Interoperability)) {
         context.messages().Say(arguments[0]->sourceLocation(),
             "C_LOC() argument has non-interoperable intrinsic type, kind, or length"_warn_en_US);
       }
