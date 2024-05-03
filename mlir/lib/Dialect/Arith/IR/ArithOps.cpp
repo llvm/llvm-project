@@ -657,7 +657,8 @@ OpFoldResult arith::CeilDivSIOp::fold(FoldAdaptor adaptor) {
         // the quotient down. In essense, Ceil Division with one of the values
         // negative works like a floorDivision with negated quotient.
         // Mathematically, -1 * (abs(a)-1/abs(b) + 1) + 1, which after factoring
-        // out -1 yields -1 * [abs(a)-1/abs(b) + 1 - 1]. This is implemented below.
+        // out -1 yields -1 * [abs(a)-1/abs(b) + 1 - 1]. This is implemented
+        // below.
         APInt posA = aGtZero ? a : zero.ssub_ov(a, overflowOrDiv0);
         APInt posB = bGtZero ? b : zero.ssub_ov(b, overflowOrDiv0);
         APInt div = signedCeilNonnegInputs(posA, posB, overflowOrDiv0);
@@ -2261,12 +2262,12 @@ OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
 
   // Constant-fold constant operands over non-splat constant condition.
   // select %cst_vec, %cst0, %cst1 => %cst2
-  if (auto cond =
-          llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getCondition())) {
-    if (auto lhs =
-            llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getTrueValue())) {
-      if (auto rhs =
-              llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getFalseValue())) {
+  if (auto cond = llvm::dyn_cast_if_present<DenseElementsAttr>(
+          adaptor.getCondition())) {
+    if (auto lhs = llvm::dyn_cast_if_present<DenseElementsAttr>(
+            adaptor.getTrueValue())) {
+      if (auto rhs = llvm::dyn_cast_if_present<DenseElementsAttr>(
+              adaptor.getFalseValue())) {
         SmallVector<Attribute> results;
         results.reserve(static_cast<size_t>(cond.getNumElements()));
         auto condVals = llvm::make_range(cond.value_begin<BoolAttr>(),
@@ -2521,7 +2522,7 @@ Value mlir::arith::getReductionOp(AtomicRMWKind op, OpBuilder &builder,
     return builder.create<arith::MaximumFOp>(loc, lhs, rhs);
   case AtomicRMWKind::minimumf:
     return builder.create<arith::MinimumFOp>(loc, lhs, rhs);
-   case AtomicRMWKind::maxnumf:
+  case AtomicRMWKind::maxnumf:
     return builder.create<arith::MaxNumFOp>(loc, lhs, rhs);
   case AtomicRMWKind::minnumf:
     return builder.create<arith::MinNumFOp>(loc, lhs, rhs);
