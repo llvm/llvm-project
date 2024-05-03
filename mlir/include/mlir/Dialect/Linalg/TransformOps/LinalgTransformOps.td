@@ -2027,17 +2027,13 @@ def TileUsingForallOp :
   let assemblyFormat = [{
     $target oilist(
         `num_threads` custom<PackedOrDynamicIndexList>($packed_num_threads,
-                                                       type($packed_num_threads),
                                                        $num_threads,
-                                                       type($num_threads),
                                                        $static_num_threads) |
          `tile_sizes` custom<PackedOrDynamicIndexList>($packed_tile_sizes,
-                                                       type($packed_tile_sizes),
                                                        $tile_sizes,
-                                                       type($tile_sizes),
                                                        $static_tile_sizes))
     (`(` `mapping` `=` $mapping^ `)`)? attr-dict
-    `:` functional-type($target, results)
+    `:` functional-type(operands, results)
   }];
   let hasVerifier = 1;
 
