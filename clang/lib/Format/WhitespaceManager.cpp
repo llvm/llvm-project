@@ -131,6 +131,7 @@ void WhitespaceManager::calculateLineBreakInformation() {
   for (unsigned I = 1, e = Changes.size(); I != e; ++I) {
     auto &C = Changes[I];
     auto &P = Changes[I - 1];
+    auto &PrevTokLength = P.TokenLength;
     SourceLocation OriginalWhitespaceStart =
         C.OriginalWhitespaceRange.getBegin();
     SourceLocation PreviousOriginalWhitespaceEnd =
@@ -169,21 +170,23 @@ void WhitespaceManager::calculateLineBreakInformation() {
     // line of the token.
     auto NewlinePos = Text.find_first_of('\n');
     if (NewlinePos == StringRef::npos) {
-      P.TokenLength = OriginalWhitespaceStartOffset -
+      PrevTokLength = OriginalWhitespaceStartOffset -
                       PreviousOriginalWhitespaceEndOffset +
                       C.PreviousLinePostfix.size() + P.CurrentLinePrefix.size();
+      if (!P.IsInsideToken)
+        PrevTokLength = std::min(PrevTokLength, P.Tok->ColumnWidth);
     } else {
-      P.TokenLength = NewlinePos + P.CurrentLinePrefix.size();
+      PrevTokLength = NewlinePos + P.CurrentLinePrefix.size();
     }
 
     // If there are multiple changes in this token, sum up all the changes until
     // the end of the line.
     if (P.IsInsideToken && P.NewlinesBefore == 0)
-      LastOutsideTokenChange->TokenLength += P.TokenLength + P.Spaces;
+      LastOutsideTokenChange->TokenLength += PrevTokLength + P.Spaces;
     else
       LastOutsideTokenChange = &P;
 
-    C.PreviousEndOfTokenColumn = P.StartOfTokenColumn + P.TokenLength;
+    C.PreviousEndOfTokenColumn = P.StartOfTokenColumn + PrevTokLength;
 
     P.IsTrailingComment =
         (C.NewlinesBefore > 0 || C.Tok->is(tok::eof) ||

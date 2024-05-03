@@ -460,9 +460,9 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
   // must use intrinsics to interleave.
   if (VecTy->isScalableTy()) {
     VectorType *WideVecTy = VectorType::getDoubleElementsVectorType(VecTy);
-    return Builder.CreateIntrinsic(
-        WideVecTy, Intrinsic::experimental_vector_interleave2, Vals,
-        /*FMFSource=*/nullptr, Name);
+    return Builder.CreateIntrinsic(WideVecTy, Intrinsic::vector_interleave2,
+                                   Vals,
+                                   /*FMFSource=*/nullptr, Name);
   }
 
   // Fixed length. Start by concatenating all vectors into a wide vector.
@@ -2517,9 +2517,8 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
       SmallVector<Value *, 2> Ops = {BlockInMaskPart, BlockInMaskPart};
       auto *MaskTy =
           VectorType::get(Builder.getInt1Ty(), VF.getKnownMinValue() * 2, true);
-      return Builder.CreateIntrinsic(
-          MaskTy, Intrinsic::experimental_vector_interleave2, Ops,
-          /*FMFSource=*/nullptr, "interleaved.mask");
+      return Builder.CreateIntrinsic(MaskTy, Intrinsic::vector_interleave2, Ops,
+                                     /*FMFSource=*/nullptr, "interleaved.mask");
     }
 
     if (!BlockInMask)
@@ -2571,7 +2570,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
         // Scalable vectors cannot use arbitrary shufflevectors (only splats),
         // so must use intrinsics to deinterleave.
         Value *DI = Builder.CreateIntrinsic(
-            Intrinsic::experimental_vector_deinterleave2, VecTy, NewLoads[Part],
+            Intrinsic::vector_deinterleave2, VecTy, NewLoads[Part],
             /*FMFSource=*/nullptr, "strided.vec");
         unsigned J = 0;
         for (unsigned I = 0; I < InterleaveFactor; ++I) {
@@ -6877,11 +6876,15 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     // In cases of scalarized and predicated instructions, there will be VF
     // predicated blocks in the vectorized loop. Each branch around these
     // blocks requires also an extract of its vector compare i1 element.
+    // Note that the conditional branch from the loop latch will be replaced by
+    // a single branch controlling the loop, so there is no extra overhead from
+    // scalarization.
     bool ScalarPredicatedBB = false;
     BranchInst *BI = cast<BranchInst>(I);
     if (VF.isVector() && BI->isConditional() &&
         (PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(0)) ||
-         PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(1))))
+         PredicatedBBsAfterVectorization[VF].count(BI->getSuccessor(1))) &&
+        BI->getParent() != TheLoop->getLoopLatch())
       ScalarPredicatedBB = true;
 
     if (ScalarPredicatedBB) {
@@ -7447,7 +7450,8 @@ static void AddRuntimeUnrollDisableMetaData(Loop *L) {
 static void createAndCollectMergePhiForReduction(
     VPInstruction *RedResult,
     DenseMap<const RecurrenceDescriptor *, Value *> &ReductionResumeValues,
-    VPTransformState &State, Loop *OrigLoop, BasicBlock *LoopMiddleBlock) {
+    VPTransformState &State, Loop *OrigLoop, BasicBlock *LoopMiddleBlock,
+    bool VectorizingEpilogue) {
   if (!RedResult ||
       RedResult->getOpcode() != VPInstruction::ComputeReductionResult)
     return;
@@ -7460,6 +7464,9 @@ static void createAndCollectMergePhiForReduction(
       State.get(RedResult, VPIteration(State.UF - 1, VPLane::getFirstLane()));
   auto *ResumePhi =
       dyn_cast<PHINode>(PhiR->getStartValue()->getUnderlyingValue());
+  assert((!VectorizingEpilogue || ResumePhi) &&
+         "when vectorizing the epilogue loop, we need a resume phi from main "
+         "vector loop");
 
   // TODO: bc.merge.rdx should not be created here, instead it should be
   // modeled in VPlan.
@@ -7585,9 +7592,9 @@ LoopVectorizationPlanner::executePlan(
   auto *ExitVPBB =
       cast<VPBasicBlock>(BestVPlan.getVectorLoopRegion()->getSingleSuccessor());
   for (VPRecipeBase &R : *ExitVPBB) {
-    createAndCollectMergePhiForReduction(dyn_cast<VPInstruction>(&R),
-                                         ReductionResumeValues, State, OrigLoop,
-                                         State.CFG.VPBB2IRBB[ExitVPBB]);
+    createAndCollectMergePhiForReduction(
+        dyn_cast<VPInstruction>(&R), ReductionResumeValues, State, OrigLoop,
+        State.CFG.VPBB2IRBB[ExitVPBB], ExpandedSCEVs);
   }
 
   // 2.6. Maintain Loop Hints
@@ -8269,6 +8276,7 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
     return nullptr;
 
   SmallVector<VPValue *, 4> Ops(Operands.take_front(CI->arg_size()));
+  Ops.push_back(Operands.back());
 
   // Is it beneficial to perform intrinsic call compared to lib call?
   bool ShouldUseVectorIntrinsic =
@@ -8279,7 +8287,7 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
                 },
                 Range);
   if (ShouldUseVectorIntrinsic)
-    return new VPWidenCallRecipe(*CI, make_range(Ops.begin(), Ops.end()), ID,
+    return new VPWidenCallRecipe(CI, make_range(Ops.begin(), Ops.end()), ID,
                                  CI->getDebugLoc());
 
   Function *Variant = nullptr;
@@ -8332,7 +8340,7 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
       Ops.insert(Ops.begin() + *MaskPos, Mask);
     }
 
-    return new VPWidenCallRecipe(*CI, make_range(Ops.begin(), Ops.end()),
+    return new VPWidenCallRecipe(CI, make_range(Ops.begin(), Ops.end()),
                                  Intrinsic::not_intrinsic, CI->getDebugLoc(),
                                  Variant);
   }
