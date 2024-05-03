@@ -27,6 +27,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_CAS_ENABLE_REMOTE_CACHE
   LLVM_TOOL_LLVM_DRIVER_BUILD
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
+  LLVM_APPEND_VC_REV
   )
 
 configure_lit_site_cfg(
