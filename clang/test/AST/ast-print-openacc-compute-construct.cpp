@@ -2,7 +2,9 @@
 
 void foo() {
   int i;
+  int *iPtr;
   float array[5];
+  float *arrayPtr[5];
 // CHECK: #pragma acc parallel default(none)
 // CHECK-NEXT: while (true)
 #pragma acc parallel default(none)
@@ -64,6 +66,14 @@ void foo() {
 
 // CHECK: #pragma acc parallel create(i, array[1], array, array[1:2]) pcreate(zero: i, array[1], array, array[1:2]) present_or_create(i, array[1], array, array[1:2])
 #pragma acc parallel create(i, array[1], array, array[1:2]) pcreate(zero: i, array[1], array, array[1:2]) present_or_create(i, array[1], array, array[1:2])
+  while(true);
+
+  // CHECK: #pragma acc serial attach(iPtr, arrayPtr[0])
+#pragma acc serial attach(iPtr, arrayPtr[0])
+  while(true);
+
+  // CHECK: #pragma acc kernels deviceptr(iPtr, arrayPtr[0])
+#pragma acc kernels deviceptr(iPtr, arrayPtr[0])
   while(true);
 }
 
