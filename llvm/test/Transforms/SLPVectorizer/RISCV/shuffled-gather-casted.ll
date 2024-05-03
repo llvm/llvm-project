@@ -9,7 +9,7 @@ define i32 @test(ptr %p) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> <i16 0, i16 poison, i16 0, i16 0>, i16 [[D_0]], i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i16> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i16> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i16> [[TMP0]] to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP0]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, <4 x i32> <i32 4, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <4 x i32> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP5]], <4 x i16> [[TMP2]], <4 x i16> <i16 0, i16 2, i16 0, i16 0>
