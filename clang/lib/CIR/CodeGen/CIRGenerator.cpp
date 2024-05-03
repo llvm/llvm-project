@@ -12,12 +12,32 @@
 
 #include "CIRGenModule.h"
 
+#include "clang/AST/DeclGroup.h"
 #include "clang/CIR/CIRGenerator.h"
 
 using namespace cir;
 using namespace clang;
 
+void CIRGenerator::anchor() {}
+
+CIRGenerator::CIRGenerator(clang::DiagnosticsEngine &diags,
+                           llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> vfs,
+                           const CodeGenOptions &CGO)
+    : Diags(diags), fs(std::move(vfs)), codeGenOpts{CGO},
+      HandlingTopLevelDecls(0) {}
+CIRGenerator::~CIRGenerator() {}
+
+void CIRGenerator::Initialize(ASTContext &astCtx) {
+  using namespace llvm;
+
+  this->astCtx = &astCtx;
+
+  CGM = std::make_unique<CIRGenModule>(*mlirCtx.get(), astCtx, codeGenOpts,
+                                       Diags);
+}
+
 bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef D) {
+
   for (DeclGroupRef::iterator I = D.begin(), E = D.end(); I != E; ++I) {
     CGM->buildTopLevelDecl(*I);
   }

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_CIR_CODEGENTYPECACHE_H
-#define LLVM_CLANG_LIB_CIR_CODEGENTYPECACHE_H
+#ifndef LLVM_CLANG_LIB_CIR_CIRGENTYPECACHE_H
+#define LLVM_CLANG_LIB_CIR_CIRGENTYPECACHE_H
 
 namespace cir {
 
@@ -20,9 +20,8 @@ namespace cir {
 /// constructor and then copied around into new CIRGenFunction's.
 struct CIRGenTypeCache {
   CIRGenTypeCache() {}
-
 };
 
 } // namespace cir
 
-#endif
+#endif // LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENTYPECACHE_H

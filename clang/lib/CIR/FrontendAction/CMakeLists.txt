@@ -7,6 +7,9 @@ add_clang_library(clangCIRFrontendAction
   CIRGenAction.cpp
 
   LINK_LIBS
+  clangAST
+  clangFrontend
+  clangCIR
   MLIRCIR
   MLIRIR
   )

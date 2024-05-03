@@ -10,14 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_LIB_CODEGEN_CIRGENMODULE_H
-#define LLVM_CLANG_LIB_CODEGEN_CIRGENMODULE_H
+#ifndef LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENMODULE_H
+#define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENMODULE_H
 
 #include "CIRGenTypeCache.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Diagnostic.h"
+
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 
 using namespace clang;
@@ -37,6 +39,25 @@ public:
                clang::DiagnosticsEngine &Diags);
 
   ~CIRGenModule();
+
+private:
+  /// Hold Clang AST information.
+  clang::ASTContext &astCtx;
+
+  const clang::LangOptions &langOpts;
+
+  const clang::CodeGenOptions &codeGenOpts;
+
+  /// A "module" matches a c/cpp source file: containing a list of functions.
+  mlir::ModuleOp theModule;
+
+  clang::DiagnosticsEngine &Diags;
+
+  const clang::TargetInfo &target;
+
+public:
   void buildTopLevelDecl(clang::Decl *decl);
 };
-#endif // LLVM_CLANG_LIB_CODEGEN_CIRGENMODULE_H
+} // namespace cir
+
+#endif // LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENMODULE_H

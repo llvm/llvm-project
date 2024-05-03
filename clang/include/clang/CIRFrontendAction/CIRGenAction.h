@@ -18,6 +18,7 @@ template <typename T> class OwningOpRef;
 } // namespace mlir
 
 namespace cir {
+class CIRGenConsumer;
 
 class CIRGenAction : public clang::ASTFrontendAction {
 public:
@@ -37,16 +38,14 @@ private:
 protected:
   CIRGenAction(OutputType action, mlir::MLIRContext *mlirContext = nullptr);
 
-  void foo() {
-
-  }
-
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &CI,
                     llvm::StringRef InFile) override;
 
 public:
   ~CIRGenAction() override;
+
+  CIRGenConsumer *cgConsumer;
   OutputType action;
 };
 

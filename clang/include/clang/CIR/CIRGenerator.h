@@ -16,10 +16,41 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/DeclGroup.h"
+#include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/Diagnostic.h"
 
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/Support/VirtualFileSystem.h"
+
+#include <memory>
+
+namespace mlir {
+class MLIRContext;
+} // namespace mlir
 namespace cir {
+class CIRGenModule;
+
 class CIRGenerator : public clang::ASTConsumer {
+  virtual void anchor();
+  clang::DiagnosticsEngine &Diags;
+  clang::ASTContext *astCtx;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+      fs; // Only used for debug info.
+
+  const clang::CodeGenOptions codeGenOpts; // Intentionally copied in.
+
+  unsigned HandlingTopLevelDecls;
+
+protected:
+  std::unique_ptr<mlir::MLIRContext> mlirCtx;
+  std::unique_ptr<CIRGenModule> CGM;
+
 public:
+  CIRGenerator(clang::DiagnosticsEngine &diags,
+               llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+               const clang::CodeGenOptions &CGO);
+  ~CIRGenerator();
+  void Initialize(clang::ASTContext &Context) override;
   bool HandleTopLevelDecl(clang::DeclGroupRef D) override;
 };
 
