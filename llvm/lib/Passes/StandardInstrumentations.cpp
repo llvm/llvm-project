@@ -1486,6 +1486,12 @@ void VerifyInstrumentation::registerCallbacks(
                                          "\"{0}\", compilation aborted!",
                                          P));
           }
+
+          // TODO: Use complete MachineVerifierPass.
+          if (auto *MF = unwrapIR<MachineFunction>(IR)) {
+            dbgs() << "Verifying machine function " << MF->getName() << '\n';
+            verifyMachineFunction("", *MF);
+          }
         }
       });
 }

@@ -1,0 +1,10 @@
+# RUN: llc -mtriple=x86_64-pc-linux-gnu -x mir -passes=no-op-machine-function -filetype=null < %s 2>&1 | FileCheck %s
+
+# CHECK: Verifying machine function f
+
+---
+name: f
+body: |
+  bb.0:
+    RET 0
+...
