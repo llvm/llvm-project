@@ -53,6 +53,8 @@ C++ Specific Potentially Breaking Changes
   it's negative spelling can be used to obtain compatibility with previous
   versions of clang.
 
+- Clang now rejects pointer to member from parenthesized expression in unevaluated context such as ``decltype(&(foo::bar))``. (#GH40906).
+
 ABI Changes in This Version
 ---------------------------
 - Fixed Microsoft name mangling of implicitly defined variables used for thread
