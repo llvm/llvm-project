@@ -807,6 +807,11 @@ public:
                                              CostKind);
   }
 
+  bool hasScalarizationOverhead(ArrayRef<Value *> VL,
+                                std::pair<bool, bool> &ScalarizationKind) {
+    return false;
+  }
+
   /// Estimate the overhead of scalarizing an instructions unique
   /// non-constant operands. The (potentially vector) types to use for each of
   /// argument are passes via Tys.

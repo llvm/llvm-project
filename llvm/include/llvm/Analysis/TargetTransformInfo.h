@@ -891,6 +891,11 @@ public:
                                            bool Insert, bool Extract,
                                            TTI::TargetCostKind CostKind) const;
 
+  /// Whether or not there is any target-specific condition that imposes an
+  /// overhead for scalarization
+  bool hasScalarizationOverhead(ArrayRef<Value *> VL,
+                                std::pair<bool, bool> &ScalarizationKind) const;
+
   /// Estimate the overhead of scalarizing an instructions unique
   /// non-constant operands. The (potentially vector) types to use for each of
   /// argument are passes via Tys.
@@ -1921,6 +1926,10 @@ public:
   getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
                                    ArrayRef<Type *> Tys,
                                    TargetCostKind CostKind) = 0;
+
+  virtual bool
+  hasScalarizationOverhead(ArrayRef<Value *> VL,
+                           std::pair<bool, bool> &ScalarizationKind) = 0;
   virtual bool supportsEfficientVectorElementLoadStore() = 0;
   virtual bool supportsTailCalls() = 0;
   virtual bool supportsTailCallFor(const CallBase *CB) = 0;
@@ -2456,6 +2465,13 @@ public:
     return Impl.getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
                                          CostKind);
   }
+
+  bool
+  hasScalarizationOverhead(ArrayRef<Value *> VL,
+                           std::pair<bool, bool> &ScalarizationKind) override {
+    return Impl.hasScalarizationOverhead(VL, ScalarizationKind);
+  }
+
   InstructionCost
   getOperandsScalarizationOverhead(ArrayRef<const Value *> Args,
                                    ArrayRef<Type *> Tys,
