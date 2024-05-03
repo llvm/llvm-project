@@ -159,11 +159,11 @@ def LinalgBlockPackMatmul : Pass<"linalg-block-pack-matmul"> {
     The minor blocks remain unchanged.
     The final result is unpacked back to the original layout.
 
-    Given a matmul operation:
+    For example, given a matmul operation:
     ```mlir
       %res = linalg.matmul ins(%A, %B) outs(%C)
     ```
-    the traformation can be represented as:
+    the transformation result can be represented as:
     ```mlir
       %A_packed = pack %A : 2D -> 4D
       %B_packed = pack %B : 2D -> 4D #block_transposed

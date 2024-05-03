@@ -1197,9 +1197,8 @@ using ControlPackMatmulFn =
 /// and the (mb, nb, kb) are the minor blocks of their respective
 /// original 2D dimensions (M, N, K).
 ///
-/// As a part of packing strategy, the RHS operand gets 'block transposed'
-/// i.e., the major blocks [KB][NB] get transposed to [NB][KB] layout.
-/// The minor blocks remain unchanged.
+/// The RHS operand gets 'block transposed' i.e., the major blocks [KB][NB]
+/// get transposed to [NB][KB] layout. The minor blocks remain unchanged.
 /// The final result is unpacked back to the original layout.
 FailureOr<PackResult>
 blockPackMatmulOp(RewriterBase &rewriter, linalg::LinalgOp matmulOp,
