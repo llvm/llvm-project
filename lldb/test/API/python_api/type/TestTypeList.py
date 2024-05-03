@@ -52,6 +52,19 @@ class TypeAndTypeListTestCase(TestBase):
         self.DebugSBValue(value)
         self.assertEqual(value.GetValueAsSigned(), 47)
 
+        static_constexpr_bool_field = task_type.GetStaticFieldWithName(
+            "static_constexpr_bool_field"
+        )
+        self.assertTrue(static_constexpr_bool_field)
+        self.assertEqual(
+            static_constexpr_bool_field.GetName(), "static_constexpr_bool_field"
+        )
+        self.assertEqual(static_constexpr_bool_field.GetType().GetName(), "const bool")
+
+        value = static_constexpr_bool_field.GetConstantValue(self.target())
+        self.DebugSBValue(value)
+        self.assertEqual(value.GetValueAsUnsigned(), 1)
+
         static_mutable_field = task_type.GetStaticFieldWithName("static_mutable_field")
         self.assertTrue(static_mutable_field)
         self.assertEqual(static_mutable_field.GetName(), "static_mutable_field")
