@@ -48,10 +48,9 @@ static cl::opt<std::string> InputFilename(cl::Positional,
                                           cl::Required,
                                           cl::cat(BatDumpCategory));
 
-static cl::list<uint64_t> Translate("translate",
-                                    cl::desc("translate addresses using BAT"),
-                                    cl::value_desc("addr"),
-                                    cl::cat(BatDumpCategory));
+static cl::list<std::string>
+    Translate("translate", cl::desc("translate addresses using BAT"),
+              cl::value_desc("addr[:is_from]"), cl::cat(BatDumpCategory));
 
 static cl::opt<bool> DumpAll("dump-all", cl::desc("dump all BAT tables"),
                              cl::cat(BatDumpCategory));
@@ -138,7 +137,19 @@ void dumpBATFor(llvm::object::ELFObjectFileBase *InputFile) {
     }
 
     outs() << "Translating addresses according to parsed BAT tables:\n";
-    for (uint64_t Address : opts::Translate) {
+    for (StringRef AddrSpec : opts::Translate) {
+      const auto &[AddrString, IsFromString] = AddrSpec.split(':');
+      uint64_t Address = 0;
+      if (!to_integer(AddrString, Address)) {
+        errs() << "BOLT-ERROR: can't parse address " << AddrString << '\n';
+        exit(1);
+      }
+      bool IsFrom = false;
+      if (!IsFromString.empty() && !to_integer(IsFromString, IsFrom)) {
+        errs() << "BOLT-ERROR: can't parse IsFrom spec " << IsFromString
+               << ", use 0 or 1\n";
+        exit(1);
+      }
       auto FI = FunctionsMap.upper_bound(Address);
       if (FI == FunctionsMap.begin()) {
         outs() << "No function symbol found for 0x" << Twine::utohexstr(Address)
@@ -149,7 +160,7 @@ void dumpBATFor(llvm::object::ELFObjectFileBase *InputFile) {
       outs() << "0x" << Twine::utohexstr(Address) << " -> " << FI->second
              << " + 0x"
              << Twine::utohexstr(
-                    BAT.translate(FI->first, Address - FI->first, false))
+                    BAT.translate(FI->first, Address - FI->first, IsFrom))
              << "\n";
     }
   }

@@ -9,8 +9,7 @@ RUN: perf2bolt %t.out --pa -p %p/Inputs/blarge_new_bat.preagg.txt -w %t.yaml -o 
 RUN:   2>&1 | FileCheck --check-prefix READ-BAT-CHECK %s
 RUN: FileCheck --input-file %t.yaml --check-prefix YAML-BAT-CHECK %s
 # Check that YAML converted from fdata matches YAML created directly with BAT.
-RUN: llvm-bolt %t.exe -data %t.fdata -w %t.yaml-fdata -o /dev/null \
-RUN:   | FileCheck --check-prefix CHECK-BOLT-FDATA %s
+RUN: llvm-bolt %t.exe -data %t.fdata -w %t.yaml-fdata -o /dev/null
 RUN: FileCheck --input-file %t.yaml-fdata --check-prefix YAML-BAT-CHECK %s
 
 # Test resulting YAML profile with the original binary (no-stale mode)
@@ -24,6 +23,32 @@ WRITE-BAT-CHECK: BOLT-INFO: BAT section size (bytes): 384
 READ-BAT-CHECK-NOT: BOLT-ERROR: unable to save profile in YAML format for input file processed by BOLT
 READ-BAT-CHECK: BOLT-INFO: Parsed 5 BAT entries
 READ-BAT-CHECK: PERF2BOLT: read 79 aggregated LBR entries
+
+# Check handling of a branch not in BAT (added by BOLT)
+RUN: FileCheck --input-file %p/Inputs/blarge_new_bat.preagg.txt --check-prefix PREAGG-CHECK %s
+# The branch
+PREAGG-CHECK: B 80007b 80004c 483 1
+RUN: llvm-objdump %t.out -d --start-address=0x80007b --stop-address=0x80007d \
+RUN:   | FileCheck %s --check-prefix OBJDUMP-CHECK
+OBJDUMP-CHECK: jmp
+# Confirming it's not in BAT
+RUN: llvm-bat-dump %t.out --dump-all | FileCheck %s --check-prefix BAT-DUMP-CHECK
+BAT-DUMP-CHECK: Function Address: 0x800040, hash: 0x99e67ed32a203023
+# Containing basic block
+BAT-DUMP-CHECK: 0x34 -> 0x32 hash: 0x6c36179f229b0032
+# Branch entry just above
+BAT-DUMP-CHECK-NEXT: 0x37 -> 0x35 (branch)
+# No entry for that offset
+BAT-DUMP-NOT: 0x3b ->
+# Basic block below
+BAT-DUMP-CHECK-NEXT: 0x3d -> 0x3f hash: 0x6cfc5827a1003f
+BAT-DUMP-CHECK: NumBlocks: 5
+# Confirming it's translated to the basic block if it's a branch source
+RUN: llvm-bat-dump %t.out --translate=80007b:1 | FileCheck %s --check-prefix BAT-TRANS-CHECK-FROM
+BAT-TRANS-CHECK-FROM: 0x80007b -> usqrt + 0x32
+# Otherwise it's mapped to a preceding BAT entry
+RUN: llvm-bat-dump %t.out --translate=80007b:0 | FileCheck %s --check-prefix BAT-TRANS-CHECK-TO
+BAT-TRANS-CHECK-TO: 0x80007b -> usqrt + 0x39
 
 YAML-BAT-CHECK:      functions:
 # Function not covered by BAT - has insns in basic block
@@ -68,8 +93,3 @@ YAML-BAT-CHECK-NEXT:       succ:  {{.*}} { bid: 2, cnt: [[#]] }
 
 CHECK-BOLT-YAML:      pre-processing profile using YAML profile reader
 CHECK-BOLT-YAML-NEXT: 5 out of 16 functions in the binary (31.2%) have non-empty execution profile
-
-CHECK-BOLT-FDATA:      pre-processing profile using branch profile reader
-CHECK-BOLT-FDATA-NEXT: profile collection done on a binary already processed by BOLT
-CHECK-BOLT-FDATA-NEXT: 5 out of 16 functions in the binary (31.2%) have non-empty execution profile
-CHECK-BOLT-FDATA-NOT: invalid (possibly stale) profile
