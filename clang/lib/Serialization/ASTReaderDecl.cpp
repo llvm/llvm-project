@@ -805,9 +805,7 @@ void ASTDeclReader::VisitEnumDecl(EnumDecl *ED) {
 
   // If this is a definition subject to the ODR, and we already have a
   // definition, merge this one into it.
-  if (ED->isCompleteDefinition() &&
-      Reader.getContext().getLangOpts().Modules &&
-      Reader.getContext().getLangOpts().CPlusPlus) {
+  if (ED->isCompleteDefinition() && Reader.getContext().getLangOpts().Modules) {
     EnumDecl *&OldDef = Reader.EnumDefinitions[ED->getCanonicalDecl()];
     if (!OldDef) {
       // This is the first time we've seen an imported definition. Look for a
@@ -3304,8 +3302,7 @@ DeclContext *ASTDeclReader::getPrimaryContextForMerging(ASTReader &Reader,
     return RD->getDefinition();
 
   if (auto *ED = dyn_cast<EnumDecl>(DC))
-    return ED->getASTContext().getLangOpts().CPlusPlus? ED->getDefinition()
-                                                      : nullptr;
+    return ED->getDefinition();
 
   if (auto *OID = dyn_cast<ObjCInterfaceDecl>(DC))
     return OID->getDefinition();
