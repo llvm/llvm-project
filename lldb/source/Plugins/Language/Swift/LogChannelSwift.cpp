@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LogChannelSwift.h"
+#include "lldb/Host/Host.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Version/Version.h"
 
@@ -49,7 +50,12 @@ char StringLogHandler::ID;
 void LogChannelSwift::Initialize() {
   Log::Register("swift", g_channel);
 
-  auto log_handler_sp = std::make_shared<StringLogHandler>(g_swift_log_buffer);
+  auto string_log_handler_sp =
+      std::make_shared<StringLogHandler>(g_swift_log_buffer);
+  auto system_log_handler_sp = std::make_shared<SystemLogHandler>();
+  auto log_handler_sp = std::make_shared<TeeLogHandler>(string_log_handler_sp,
+                                                        system_log_handler_sp);
+
   Log::EnableLogChannel(log_handler_sp, 0, "swift", {"health"}, llvm::nulls());
   if (Log *log = GetSwiftHealthLog())
     log->Printf(
