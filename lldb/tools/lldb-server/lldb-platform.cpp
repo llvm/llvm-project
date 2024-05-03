@@ -284,6 +284,8 @@ int main_platform(int argc, char *argv[]) {
 
   GDBRemoteCommunicationServerPlatform platform(
       acceptor_up->GetSocketProtocol(), acceptor_up->GetSocketScheme());
+  if (port_offset > 0)
+    platform.SetPortOffset(port_offset);
 
   do {
     const bool children_inherit_accept_socket = true;
@@ -305,6 +307,7 @@ int main_platform(int argc, char *argv[]) {
       }
 #endif
       // TODO: Clean up portmap for Windows when children die
+      // See https://github.com/llvm/llvm-project/issues/90923
 
       // After collecting zombie ports, get the next available
       GDBRemoteCommunicationServerPlatform::PortMap portmap_for_child;
@@ -313,6 +316,7 @@ int main_platform(int argc, char *argv[]) {
       if (available_port)
         portmap_for_child.AllowPort(*available_port);
       else {
+        llvm::consumeError(available_port.takeError());
         fprintf(stderr,
                 "no available gdbserver port for connection - dropping...\n");
         delete conn;
