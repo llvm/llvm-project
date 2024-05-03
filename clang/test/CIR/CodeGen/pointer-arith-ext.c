@@ -22,8 +22,14 @@ void *f2_0(void *a, int b) { return &a[b]; }
 void *f2_1(void *a, int b) { return (a += b); }
 void *f3(int a, void *b) { return a + b; }
 
-// FIXME: currently crashes
-// void *f3_1(int a, void *b) { return (a += b); }
+void *f3_1(int a, void *b) { return (a += b); }
+// CIR-LABEL: @f3_1
+// CIR: %[[NEW_PTR:.*]] = cir.ptr_stride
+// CIR: cir.cast(ptr_to_int, %[[NEW_PTR]] : !cir.ptr<!void>), !s32i
+
+// LLVM-LABEL: @f3_1
+// LLVM: %[[NEW_PTR:.*]] = getelementptr
+// LLVM: ptrtoint ptr %[[NEW_PTR]] to i32
 
 void *f4(void *a, int b) { return a - b; }
 // CIR-LABEL: f4
@@ -39,5 +45,15 @@ void *f4(void *a, int b) { return a - b; }
 // LLVM: %[[SUB:.*]] = sub i64 0, %[[STRIDE]]
 // LLVM: getelementptr i8, ptr %[[PTR]], i64 %[[SUB]]
 
-// Same as f4, just make sure it does not crash.
+// Similar to f4, just make sure it does not crash.
 void *f4_1(void *a, int b) { return (a -= b); }
+
+// FIXME: add support for the remaining ones.
+// FP f5(FP a, int b) { return a + b; }
+// FP f5_1(FP a, int b) { return (a += b); }
+// FP f6(int a, FP b) { return a + b; }
+// FP f6_1(int a, FP b) { return (a += b); }
+// FP f7(FP a, int b) { return a - b; }
+// FP f7_1(FP a, int b) { return (a -= b); }
+// void f8(void *a, int b) { return *(a + b); }
+// void f8_1(void *a, int b) { return a[b]; }

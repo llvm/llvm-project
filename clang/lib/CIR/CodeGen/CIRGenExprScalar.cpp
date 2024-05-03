@@ -979,9 +979,18 @@ public:
       return Src;
     }
 
-    assert(!SrcTy.isa<::mlir::cir::PointerType>() &&
-           !DstTy.isa<::mlir::cir::PointerType>() &&
-           "Internal error: pointer conversions are handled elsewhere");
+    // Handle pointer conversions next: pointers can only be converted to/from
+    // other pointers and integers. Check for pointer types in terms of LLVM, as
+    // some native types (like Obj-C id) may map to a pointer type.
+    if (auto DstPT = dyn_cast<mlir::cir::PointerType>(DstTy)) {
+      llvm_unreachable("NYI");
+    }
+
+    if (isa<mlir::cir::PointerType>(SrcTy)) {
+      // Must be an ptr to int cast.
+      assert(isa<mlir::cir::IntType>(DstTy) && "not ptr->int?");
+      return Builder.createPtrToInt(Src, DstTy);
+    }
 
     // A scalar can be splatted to an extended vector of the same element type
     if (DstType->isExtVectorType() && !SrcType->isVectorType()) {
