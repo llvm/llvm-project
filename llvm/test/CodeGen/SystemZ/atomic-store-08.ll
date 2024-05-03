@@ -6,9 +6,6 @@
 ; TODO: Is it worth testing softfp with vector?
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mattr=+soft-float | FileCheck -check-prefixes=SOFTFP %s
 
-; TODO: Test soft float
-; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck -check-prefixes=CHECK,BASE %s
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck -check-prefixes=CHECK,Z13 %s
 
 ; FIXME: With legal 128-bit operation to bitcast, the base code would
 ; be the same as z13
