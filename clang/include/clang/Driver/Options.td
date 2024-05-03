@@ -3971,7 +3971,7 @@ def funroll_loops : Flag<["-"], "funroll-loops">, Group<f_Group>,
 def fno_unroll_loops : Flag<["-"], "fno-unroll-loops">, Group<f_Group>,
   HelpText<"Turn off loop unroller">, Visibility<[ClangOption, CC1Option]>;
 def ffinite_loops: Flag<["-"],  "ffinite-loops">, Group<f_Group>,
-  HelpText<"Assume all loops are finite.">, Visibility<[ClangOption, CC1Option]>;
+  HelpText<"Assume all non-trivial loops are finite.">, Visibility<[ClangOption, CC1Option]>;
 def fno_finite_loops: Flag<["-"], "fno-finite-loops">, Group<f_Group>,
   HelpText<"Do not assume that any loop is finite.">,
   Visibility<[ClangOption, CC1Option]>;
