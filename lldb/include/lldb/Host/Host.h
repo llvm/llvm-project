@@ -87,15 +87,8 @@ public:
   StartMonitoringChildProcess(const MonitorChildProcessCallback &callback,
                               lldb::pid_t pid);
 
-  /// System log level.
-  enum SystemLogLevel {
-    eSystemLogInfo,
-    eSystemLogWarning,
-    eSystemLogError,
-  };
-
   /// Emit the given message to the operating system log.
-  static void SystemLog(SystemLogLevel log_level, llvm::StringRef message);
+  static void SystemLog(lldb::Severity severity, llvm::StringRef message);
 
   /// Get the process ID for the calling process.
   ///
