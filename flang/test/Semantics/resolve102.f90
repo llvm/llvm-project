@@ -106,3 +106,16 @@ contains
     g = size(arr)
   end function
 end
+
+module genericInSpec
+  interface int
+    procedure ifunc
+  end interface
+ contains
+  function ifunc(x)
+    integer a(int(kind(1))) ! generic is ok with most compilers
+    integer(size(a)), intent(in) :: x
+    ifunc = x
+  end
+end
+

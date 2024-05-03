@@ -33,7 +33,8 @@ svuint32_t incompat_sve_sm(svbool_t pg, svuint32_t a, int16_t b) __arm_streaming
   return __builtin_sve_svld1_gather_u32base_index_u32(pg, a, b);
 }
 
-// expected-warning@+1 {{passing/returning a VL-dependent argument to/from a __arm_locally_streaming function. The streaming and non-streaming vector lengths may be different}}
+// expected-warning@+2 {{returning a VL-dependent argument from a locally streaming function is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime}}
+// expected-warning@+1 {{passing a VL-dependent argument to a locally streaming function is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime}}
 __arm_locally_streaming svuint32_t incompat_sve_ls(svbool_t pg, svuint32_t a, int64_t b) {
   // expected-warning@+1 {{builtin call has undefined behaviour when called from a streaming function}}
   return __builtin_sve_svld1_gather_u32base_index_u32(pg, a, b);
@@ -49,7 +50,8 @@ svuint32_t incompat_sve2_sm(svbool_t pg, svuint32_t a, int64_t b) __arm_streamin
   return __builtin_sve_svldnt1_gather_u32base_index_u32(pg, a, b);
 }
 
-// expected-warning@+1 {{passing/returning a VL-dependent argument to/from a __arm_locally_streaming function. The streaming and non-streaming vector lengths may be different}}
+// expected-warning@+2 {{returning a VL-dependent argument from a locally streaming function is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime}}
+// expected-warning@+1 {{passing a VL-dependent argument to a locally streaming function is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime}}
 __arm_locally_streaming svuint32_t incompat_sve2_ls(svbool_t pg, svuint32_t a, int64_t b) {
   // expected-warning@+1 {{builtin call has undefined behaviour when called from a streaming function}}
   return __builtin_sve_svldnt1_gather_u32base_index_u32(pg, a, b);
@@ -70,7 +72,8 @@ svfloat64_t streaming_caller_sve(svbool_t pg, svfloat64_t a, float64_t b) __arm_
   return svadd_n_f64_m(pg, a, b);
 }
 
-// expected-warning@+1 {{passing/returning a VL-dependent argument to/from a __arm_locally_streaming function. The streaming and non-streaming vector lengths may be different}}
+// expected-warning@+2 {{returning a VL-dependent argument from a locally streaming function is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime}}
+// expected-warning@+1 {{passing a VL-dependent argument to a locally streaming function is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime}}
 __arm_locally_streaming svfloat64_t locally_streaming_caller_sve(svbool_t pg, svfloat64_t a, float64_t b) {
   // expected-no-warning
   return svadd_n_f64_m(pg, a, b);
@@ -86,7 +89,8 @@ svint16_t streaming_caller_sve2(svint16_t op1, svint16_t op2) __arm_streaming {
   return svmul_lane_s16(op1, op2, 0);
 }
 
-// expected-warning@+1 {{passing/returning a VL-dependent argument to/from a __arm_locally_streaming function. The streaming and non-streaming vector lengths may be different}}
+// expected-warning@+2 {{returning a VL-dependent argument from a locally streaming function is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime}}
+// expected-warning@+1 {{passing a VL-dependent argument to a locally streaming function is undefined behaviour when the streaming and non-streaming vector lengths are different at runtime}}
 __arm_locally_streaming svint16_t locally_streaming_caller_sve2(svint16_t op1, svint16_t op2) {
   // expected-no-warning
   return svmul_lane_s16(op1, op2, 0);

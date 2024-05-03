@@ -816,29 +816,9 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
     }
 
     if (GEPsInBounds || CmpInst::isEquality(Cond)) {
-      auto EmitGEPOffsetAndRewrite = [&](GEPOperator *GEP) {
-        IRBuilderBase::InsertPointGuard Guard(Builder);
-        auto *Inst = dyn_cast<Instruction>(GEP);
-        if (Inst)
-          Builder.SetInsertPoint(Inst);
-
-        Value *Offset = EmitGEPOffset(GEP);
-        // If a non-trivial GEP has other uses, rewrite it to avoid duplicating
-        // the offset arithmetic.
-        if (Inst && !GEP->hasOneUse() && !GEP->hasAllConstantIndices() &&
-            !GEP->getSourceElementType()->isIntegerTy(8)) {
-          replaceInstUsesWith(*Inst,
-                              Builder.CreateGEP(Builder.getInt8Ty(),
-                                                GEP->getPointerOperand(),
-                                                Offset, "", GEPsInBounds));
-          eraseInstFromFunction(*Inst);
-        }
-        return Offset;
-      };
-
       // ((gep Ptr, OFFSET1) cmp (gep Ptr, OFFSET2)  --->  (OFFSET1 cmp OFFSET2)
-      Value *L = EmitGEPOffsetAndRewrite(GEPLHS);
-      Value *R = EmitGEPOffsetAndRewrite(GEPRHS);
+      Value *L = EmitGEPOffset(GEPLHS, /*RewriteGEP=*/true);
+      Value *R = EmitGEPOffset(GEPRHS, /*RewriteGEP=*/true);
       return new ICmpInst(ICmpInst::getSignedPredicate(Cond), L, R);
     }
   }
@@ -1499,19 +1479,29 @@ Instruction *InstCombinerImpl::foldICmpTruncConstant(ICmpInst &Cmp,
   return nullptr;
 }
 
-/// Fold icmp (trunc X), (trunc Y).
-/// Fold icmp (trunc X), (zext Y).
+/// Fold icmp (trunc nuw/nsw X), (trunc nuw/nsw Y).
+/// Fold icmp (trunc nuw/nsw X), (zext/sext Y).
 Instruction *
 InstCombinerImpl::foldICmpTruncWithTruncOrExt(ICmpInst &Cmp,
                                               const SimplifyQuery &Q) {
-  if (Cmp.isSigned())
-    return nullptr;
-
   Value *X, *Y;
   ICmpInst::Predicate Pred;
-  bool YIsZext = false;
+  bool YIsSExt = false;
   // Try to match icmp (trunc X), (trunc Y)
   if (match(&Cmp, m_ICmp(Pred, m_Trunc(m_Value(X)), m_Trunc(m_Value(Y))))) {
+    unsigned NoWrapFlags = cast<TruncInst>(Cmp.getOperand(0))->getNoWrapKind() &
+                           cast<TruncInst>(Cmp.getOperand(1))->getNoWrapKind();
+    if (Cmp.isSigned()) {
+      // For signed comparisons, both truncs must be nsw.
+      if (!(NoWrapFlags & TruncInst::NoSignedWrap))
+        return nullptr;
+    } else {
+      // For unsigned and equality comparisons, either both must be nuw or
+      // both must be nsw, we don't care which.
+      if (!NoWrapFlags)
+        return nullptr;
+    }
+
     if (X->getType() != Y->getType() &&
         (!Cmp.getOperand(0)->hasOneUse() || !Cmp.getOperand(1)->hasOneUse()))
       return nullptr;
@@ -1521,12 +1511,19 @@ InstCombinerImpl::foldICmpTruncWithTruncOrExt(ICmpInst &Cmp,
       Pred = Cmp.getSwappedPredicate(Pred);
     }
   }
-  // Try to match icmp (trunc X), (zext Y)
-  else if (match(&Cmp, m_c_ICmp(Pred, m_Trunc(m_Value(X)),
-                                m_OneUse(m_ZExt(m_Value(Y))))))
-
-    YIsZext = true;
-  else
+  // Try to match icmp (trunc nuw X), (zext Y)
+  else if (!Cmp.isSigned() &&
+           match(&Cmp, m_c_ICmp(Pred, m_NUWTrunc(m_Value(X)),
+                                m_OneUse(m_ZExt(m_Value(Y)))))) {
+    // Can fold trunc nuw + zext for unsigned and equality predicates.
+  }
+  // Try to match icmp (trunc nsw X), (sext Y)
+  else if (match(&Cmp, m_c_ICmp(Pred, m_NSWTrunc(m_Value(X)),
+                                m_OneUse(m_ZExtOrSExt(m_Value(Y)))))) {
+    // Can fold trunc nsw + zext/sext for all predicates.
+    YIsSExt =
+        isa<SExtInst>(Cmp.getOperand(0)) || isa<SExtInst>(Cmp.getOperand(1));
+  } else
     return nullptr;
 
   Type *TruncTy = Cmp.getOperand(0)->getType();
@@ -1538,19 +1535,7 @@ InstCombinerImpl::foldICmpTruncWithTruncOrExt(ICmpInst &Cmp,
       !isDesirableIntType(X->getType()->getScalarSizeInBits()))
     return nullptr;
 
-  // Check if the trunc is unneeded.
-  KnownBits KnownX = llvm::computeKnownBits(X, /*Depth*/ 0, Q);
-  if (KnownX.countMaxActiveBits() > TruncBits)
-    return nullptr;
-
-  if (!YIsZext) {
-    // If Y is also a trunc, make sure it is unneeded.
-    KnownBits KnownY = llvm::computeKnownBits(Y, /*Depth*/ 0, Q);
-    if (KnownY.countMaxActiveBits() > TruncBits)
-      return nullptr;
-  }
-
-  Value *NewY = Builder.CreateZExtOrTrunc(Y, X->getType());
+  Value *NewY = Builder.CreateIntCast(Y, X->getType(), YIsSExt);
   return new ICmpInst(Pred, X, NewY);
 }
 
@@ -6909,8 +6894,8 @@ static Instruction *foldVectorCmp(CmpInst &Cmp,
     if (auto *I = dyn_cast<Instruction>(V))
       I->copyIRFlags(&Cmp);
     Module *M = Cmp.getModule();
-    Function *F = Intrinsic::getDeclaration(
-        M, Intrinsic::experimental_vector_reverse, V->getType());
+    Function *F =
+        Intrinsic::getDeclaration(M, Intrinsic::vector_reverse, V->getType());
     return CallInst::Create(F, V);
   };
 
@@ -8052,6 +8037,8 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
                  m_Select(m_Value(), m_Value(X), m_FNeg(m_Deferred(X)))) ||
            match(LHSI, m_Select(m_Value(), m_FNeg(m_Value(X)), m_Deferred(X)))))
         return replaceOperand(I, 0, X);
+      if (Instruction *NV = FoldOpIntoSelect(I, cast<SelectInst>(LHSI)))
+        return NV;
       break;
     case Instruction::PHI:
       if (Instruction *NV = foldOpIntoPhi(I, cast<PHINode>(LHSI)))

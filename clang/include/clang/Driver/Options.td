@@ -807,8 +807,12 @@ def gcc_install_dir_EQ : Joined<["--"], "gcc-install-dir=">,
   "Note: executables (e.g. ld) used by the compiler are not overridden by the selected GCC installation">;
 def gcc_toolchain : Joined<["--"], "gcc-toolchain=">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, FlangOption]>,
-  HelpText<"Specify a directory where Clang can find 'include' and 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
-  "Clang will use the GCC installation with the largest version">;
+  HelpText<
+    "Specify a directory where Clang can find 'include' and 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
+    "Clang will use the GCC installation with the largest version">,
+  HelpTextForVariants<[FlangOption],
+    "Specify a directory where Flang can find 'lib{,32,64}/gcc{,-cross}/$triple/$version'. "
+    "Flang will use the GCC installation with the largest version">;
 def gcc_triple_EQ : Joined<["--"], "gcc-triple=">,
   HelpText<"Search for the GCC installation with the specified triple.">;
 def CC : Flag<["-"], "CC">, Visibility<[ClangOption, CC1Option]>,
@@ -1603,6 +1607,13 @@ def fasynchronous_unwind_tables : Flag<["-"], "fasynchronous-unwind-tables">, Gr
 defm double_square_bracket_attributes : BoolFOption<"double-square-bracket-attributes",
   LangOpts<"DoubleSquareBracketAttributes">, DefaultTrue, PosFlag<SetTrue>,
  NegFlag<SetFalse>>;
+
+defm experimental_late_parse_attributes : BoolFOption<"experimental-late-parse-attributes",
+  LangOpts<"ExperimentalLateParseAttributes">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption], "Disable">,
+  BothFlags<[], [ClangOption, CC1Option],
+          " experimental late parsing of attributes">>;
 
 defm autolink : BoolFOption<"autolink",
   CodeGenOpts<"Autolink">, DefaultTrue,
@@ -2611,6 +2622,11 @@ defm protect_parens : BoolFOption<"protect-parens",
           "floating-point expressions are evaluated">,
   NegFlag<SetFalse>>;
 
+defm daz_ftz : SimpleMFlag<"daz-ftz",
+  "Globally set", "Do not globally set",
+  " the denormals-are-zero (DAZ) and flush-to-zero (FTZ) bits in the "
+  "floating-point control register on program startup">;
+
 def ffor_scope : Flag<["-"], "ffor-scope">, Group<f_Group>;
 def fno_for_scope : Flag<["-"], "fno-for-scope">, Group<f_Group>;
 
@@ -2877,6 +2893,17 @@ def flax_vector_conversions : Flag<["-"], "flax-vector-conversions">, Group<f_Gr
 def flimited_precision_EQ : Joined<["-"], "flimited-precision=">, Group<f_Group>;
 def fapple_link_rtlib : Flag<["-"], "fapple-link-rtlib">, Group<f_Group>,
   HelpText<"Force linking the clang builtins runtime library">;
+
+/// ClangIR-specific options - BEGIN
+defm clangir : BoolFOption<"clangir",
+  FrontendOpts<"UseClangIRPipeline">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use the ClangIR pipeline to compile">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Use the AST -> LLVM pipeline to compile">,
+  BothFlags<[], [ClangOption, CC1Option], "">>;
+def emit_cir : Flag<["-"], "emit-cir">, Visibility<[CC1Option]>,
+  Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR">;
+/// ClangIR-specific options - END
+
 def flto_EQ : Joined<["-"], "flto=">,
   Visibility<[ClangOption, CLOption, CC1Option, FC1Option, FlangOption]>,
   Group<f_Group>,
@@ -3356,10 +3383,10 @@ defm application_extension : BoolFOption<"application-extension",
           "Restrict code to those available for App Extensions">,
   NegFlag<SetFalse>>;
 defm relaxed_template_template_args : BoolFOption<"relaxed-template-template-args",
-  LangOpts<"RelaxedTemplateTemplateArgs">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Enable C++17 relaxed template template argument matching">,
-  NegFlag<SetFalse>>;
+  LangOpts<"RelaxedTemplateTemplateArgs">, DefaultTrue,
+  PosFlag<SetTrue, [], [], "Enable">,
+  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+  BothFlags<[], [ClangOption], " C++17 relaxed template template argument matching">>;
 defm sized_deallocation : BoolFOption<"sized-deallocation",
   LangOpts<"SizedDeallocation">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -4868,32 +4895,34 @@ def mharden_sls_EQ : Joined<["-"], "mharden-sls=">, Group<m_Group>,
            " blr(ARM/AArch64), comdat(ARM/AArch64), nocomdat(ARM/AArch64),"
            " return(X86), indirect-jmp(X86)">;
 
-def msimd128 : Flag<["-"], "msimd128">, Group<m_wasm_Features_Group>;
-def mno_simd128 : Flag<["-"], "mno-simd128">, Group<m_wasm_Features_Group>;
-def mrelaxed_simd : Flag<["-"], "mrelaxed-simd">, Group<m_wasm_Features_Group>;
-def mno_relaxed_simd : Flag<["-"], "mno-relaxed-simd">, Group<m_wasm_Features_Group>;
-def mnontrapping_fptoint : Flag<["-"], "mnontrapping-fptoint">, Group<m_wasm_Features_Group>;
-def mno_nontrapping_fptoint : Flag<["-"], "mno-nontrapping-fptoint">, Group<m_wasm_Features_Group>;
-def msign_ext : Flag<["-"], "msign-ext">, Group<m_wasm_Features_Group>;
-def mno_sign_ext : Flag<["-"], "mno-sign-ext">, Group<m_wasm_Features_Group>;
-def mexception_handing : Flag<["-"], "mexception-handling">, Group<m_wasm_Features_Group>;
-def mno_exception_handing : Flag<["-"], "mno-exception-handling">, Group<m_wasm_Features_Group>;
 def matomics : Flag<["-"], "matomics">, Group<m_wasm_Features_Group>;
 def mno_atomics : Flag<["-"], "mno-atomics">, Group<m_wasm_Features_Group>;
 def mbulk_memory : Flag<["-"], "mbulk-memory">, Group<m_wasm_Features_Group>;
 def mno_bulk_memory : Flag<["-"], "mno-bulk-memory">, Group<m_wasm_Features_Group>;
-def mmutable_globals : Flag<["-"], "mmutable-globals">, Group<m_wasm_Features_Group>;
-def mno_mutable_globals : Flag<["-"], "mno-mutable-globals">, Group<m_wasm_Features_Group>;
-def mmultivalue : Flag<["-"], "mmultivalue">, Group<m_wasm_Features_Group>;
-def mno_multivalue : Flag<["-"], "mno-multivalue">, Group<m_wasm_Features_Group>;
-def mtail_call : Flag<["-"], "mtail-call">, Group<m_wasm_Features_Group>;
-def mno_tail_call : Flag<["-"], "mno-tail-call">, Group<m_wasm_Features_Group>;
-def mreference_types : Flag<["-"], "mreference-types">, Group<m_wasm_Features_Group>;
-def mno_reference_types : Flag<["-"], "mno-reference-types">, Group<m_wasm_Features_Group>;
+def mexception_handing : Flag<["-"], "mexception-handling">, Group<m_wasm_Features_Group>;
+def mno_exception_handing : Flag<["-"], "mno-exception-handling">, Group<m_wasm_Features_Group>;
 def mextended_const : Flag<["-"], "mextended-const">, Group<m_wasm_Features_Group>;
 def mno_extended_const : Flag<["-"], "mno-extended-const">, Group<m_wasm_Features_Group>;
+def mhalf_precision : Flag<["-"], "mhalf-precision">, Group<m_wasm_Features_Group>;
+def mno_half_precision : Flag<["-"], "mno-half-precision">, Group<m_wasm_Features_Group>;
 def mmultimemory : Flag<["-"], "mmultimemory">, Group<m_wasm_Features_Group>;
 def mno_multimemory : Flag<["-"], "mno-multimemory">, Group<m_wasm_Features_Group>;
+def mmultivalue : Flag<["-"], "mmultivalue">, Group<m_wasm_Features_Group>;
+def mno_multivalue : Flag<["-"], "mno-multivalue">, Group<m_wasm_Features_Group>;
+def mmutable_globals : Flag<["-"], "mmutable-globals">, Group<m_wasm_Features_Group>;
+def mno_mutable_globals : Flag<["-"], "mno-mutable-globals">, Group<m_wasm_Features_Group>;
+def mnontrapping_fptoint : Flag<["-"], "mnontrapping-fptoint">, Group<m_wasm_Features_Group>;
+def mno_nontrapping_fptoint : Flag<["-"], "mno-nontrapping-fptoint">, Group<m_wasm_Features_Group>;
+def mreference_types : Flag<["-"], "mreference-types">, Group<m_wasm_Features_Group>;
+def mno_reference_types : Flag<["-"], "mno-reference-types">, Group<m_wasm_Features_Group>;
+def mrelaxed_simd : Flag<["-"], "mrelaxed-simd">, Group<m_wasm_Features_Group>;
+def mno_relaxed_simd : Flag<["-"], "mno-relaxed-simd">, Group<m_wasm_Features_Group>;
+def msign_ext : Flag<["-"], "msign-ext">, Group<m_wasm_Features_Group>;
+def mno_sign_ext : Flag<["-"], "mno-sign-ext">, Group<m_wasm_Features_Group>;
+def msimd128 : Flag<["-"], "msimd128">, Group<m_wasm_Features_Group>;
+def mno_simd128 : Flag<["-"], "mno-simd128">, Group<m_wasm_Features_Group>;
+def mtail_call : Flag<["-"], "mtail-call">, Group<m_wasm_Features_Group>;
+def mno_tail_call : Flag<["-"], "mno-tail-call">, Group<m_wasm_Features_Group>;
 def mexec_model_EQ : Joined<["-"], "mexec-model=">, Group<m_wasm_Features_Driver_Group>,
                      Values<"command,reactor">,
                      HelpText<"Execution model (WebAssembly only)">,
@@ -5034,6 +5063,12 @@ defm regnames : BoolMOption<"regnames",
 def maix_small_local_exec_tls : Flag<["-"], "maix-small-local-exec-tls">,
   Group<m_ppc_Features_Group>,
   HelpText<"Produce a faster access sequence for local-exec TLS variables "
+           "where the offset from the TLS base is encoded as an "
+           "immediate operand (AIX 64-bit only). "
+           "This access sequence is not used for variables larger than 32KB.">;
+def maix_small_local_dynamic_tls : Flag<["-"], "maix-small-local-dynamic-tls">,
+  Group<m_ppc_Features_Group>,
+  HelpText<"Produce a faster access sequence for local-dynamic TLS variables "
            "where the offset from the TLS base is encoded as an "
            "immediate operand (AIX 64-bit only). "
            "This access sequence is not used for variables larger than 32KB.">;
@@ -5498,6 +5533,14 @@ def fno_rtlib_add_rpath: Flag<["-"], "fno-rtlib-add-rpath">,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Do not add -rpath with architecture-specific resource directory to the linker flags. "
   "When --hip-link is specified, do not add -rpath with HIP runtime library directory to the linker flags">;
+def frtlib_defaultlib : Flag<["-"], "frtlib-defaultlib">,
+                      Visibility<[ClangOption, CLOption]>,
+                      Group<f_Group>,
+                      HelpText<"On Windows, emit /defaultlib: directives to link compiler-rt libraries (default)">;
+def fno_rtlib_defaultlib : Flag<["-"], "fno-rtlib-defaultlib">,
+                      Visibility<[ClangOption, CLOption]>,
+                      Group<f_Group>,
+                      HelpText<"On Windows, do not emit /defaultlib: directives to link compiler-rt libraries">;
 def offload_add_rpath: Flag<["--"], "offload-add-rpath">,
   Flags<[NoArgumentUnused]>,
   Alias<frtlib_add_rpath>;
@@ -6563,12 +6606,6 @@ def J : JoinedOrSeparate<["-"], "J">,
   Flags<[RenderJoined]>, Visibility<[FlangOption, FC1Option]>,
   Group<gfortran_Group>,
   Alias<module_dir>;
-
-let Visibility = [FlangOption] in {
-def no_fortran_main : Flag<["-"], "fno-fortran-main">,
-  Visibility<[FlangOption]>, Group<f_Group>,
-  HelpText<"Do not include Fortran_main.a (provided by Flang) when linking">;
-} // let Visibility = [ FlangOption ]
 
 //===----------------------------------------------------------------------===//
 // FC1 Options

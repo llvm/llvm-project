@@ -1020,10 +1020,12 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
                         ContextDirectiveAsFortran());
                   else if (GetContext().directive ==
                       llvm::omp::Directive::OMPD_declare_target)
-                    context_.Say(name->source,
-                        "The entity with PARAMETER attribute is used in a %s "
-                        "directive"_warn_en_US,
-                        ContextDirectiveAsFortran());
+                    if (context_.ShouldWarn(
+                            common::UsageWarning::OpenMPUsage)) {
+                      context_.Say(name->source,
+                          "The entity with PARAMETER attribute is used in a %s directive"_warn_en_US,
+                          ContextDirectiveAsFortran());
+                    }
                 } else if (FindCommonBlockContaining(*name->symbol)) {
                   context_.Say(name->source,
                       "A variable in a %s directive cannot be an element of a "
@@ -1190,7 +1192,7 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetWithClause &x) {
       context_.Say(x.source,
           "If the DECLARE TARGET directive has a clause, it must contain at lease one ENTER clause or LINK clause"_err_en_US);
     }
-    if (toClause) {
+    if (toClause && context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
       context_.Say(toClause->source,
           "The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead."_warn_en_US);
     }
@@ -2471,11 +2473,11 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Shared &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_shared);
-  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v);
+  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "SHARED");
 }
 void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_private);
-  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v);
+  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "PRIVATE");
   CheckIntentInPointer(x.v, llvm::omp::Clause::OMPC_private);
 }
 
@@ -2513,7 +2515,8 @@ bool OmpStructureChecker::IsDataRefTypeParamInquiry(
 }
 
 void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
-    const parser::CharBlock &source, const parser::OmpObjectList &objList) {
+    const parser::CharBlock &source, const parser::OmpObjectList &objList,
+    llvm::StringRef clause) {
   for (const auto &ompObject : objList.v) {
     common::visit(
         common::visitors{
@@ -2539,7 +2542,8 @@ void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
                     context_.Say(source,
                         "A variable that is part of another variable (as an "
                         "array or structure element) cannot appear in a "
-                        "PRIVATE or SHARED clause"_err_en_US);
+                        "%s clause"_err_en_US,
+                        clause.data());
                   }
                 }
               }
@@ -2552,6 +2556,8 @@ void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_firstprivate);
+
+  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "FIRSTPRIVATE");
   CheckIsLoopIvPartOfClause(llvmOmpClause::OMPC_firstprivate, x.v);
 
   SymbolSourceMap currSymbols;
@@ -2888,6 +2894,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyprivate &x) {
 void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_lastprivate);
 
+  CheckIsVarPartOfAnotherVar(GetContext().clauseSource, x.v, "LASTPRIVATE");
+
   DirectivesClauseTriple dirClauseTriple;
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
@@ -2958,9 +2966,11 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDevicePtr &x) {
       if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
         if (name->symbol) {
           if (!(IsBuiltinCPtr(*(name->symbol)))) {
-            context_.Say(itr->second->source,
-                "Use of non-C_PTR type '%s' in USE_DEVICE_PTR is deprecated, use USE_DEVICE_ADDR instead"_warn_en_US,
-                name->ToString());
+            if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
+              context_.Say(itr->second->source,
+                  "Use of non-C_PTR type '%s' in USE_DEVICE_PTR is deprecated, use USE_DEVICE_ADDR instead"_warn_en_US,
+                  name->ToString());
+            }
           } else {
             useDevicePtrNameList.push_back(*name);
           }
@@ -3017,16 +3027,20 @@ void OmpStructureChecker::Enter(const parser::OmpClause::IsDevicePtr &x) {
             "Variable '%s' in IS_DEVICE_PTR clause must be of type C_PTR"_err_en_US,
             source.ToString());
       } else if (!(IsDummy(*symbol))) {
-        context_.Say(itr->second->source,
-            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument. "
-            "This semantic check is deprecated from OpenMP 5.2 and later."_warn_en_US,
-            source.ToString());
+        if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
+          context_.Say(itr->second->source,
+              "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument. "
+              "This semantic check is deprecated from OpenMP 5.2 and later."_warn_en_US,
+              source.ToString());
+        }
       } else if (IsAllocatableOrPointer(*symbol) || IsValue(*symbol)) {
-        context_.Say(itr->second->source,
-            "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument "
-            "that does not have the ALLOCATABLE, POINTER or VALUE attribute. "
-            "This semantic check is deprecated from OpenMP 5.2 and later."_warn_en_US,
-            source.ToString());
+        if (context_.ShouldWarn(common::UsageWarning::OpenMPUsage)) {
+          context_.Say(itr->second->source,
+              "Variable '%s' in IS_DEVICE_PTR clause must be a dummy argument "
+              "that does not have the ALLOCATABLE, POINTER or VALUE attribute. "
+              "This semantic check is deprecated from OpenMP 5.2 and later."_warn_en_US,
+              source.ToString());
+        }
       }
     }
   }
