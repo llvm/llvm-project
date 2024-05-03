@@ -984,8 +984,6 @@ static void genParallelClauses(
 
   if (processReduction) {
     cp.processReduction(loc, clauseOps, &reductionTypes, &reductionSyms);
-    if (ReductionProcessor::doReductionByRef(clauseOps.reductionVars))
-      clauseOps.reductionByRefAttr = converter.getFirOpBuilder().getUnitAttr();
   }
 }
 
@@ -1173,16 +1171,12 @@ static void genWsloopClauses(
     mlir::Location loc, mlir::omp::WsloopClauseOps &clauseOps,
     llvm::SmallVectorImpl<mlir::Type> &reductionTypes,
     llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) {
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processNowait(clauseOps);
   cp.processOrdered(clauseOps);
   cp.processReduction(loc, clauseOps, &reductionTypes, &reductionSyms);
   cp.processSchedule(stmtCtx, clauseOps);
   // TODO Support delayed privatization.
-
-  if (ReductionProcessor::doReductionByRef(clauseOps.reductionVars))
-    clauseOps.reductionByRefAttr = firOpBuilder.getUnitAttr();
 
   cp.processTODO<clause::Allocate, clause::Linear, clause::Order>(
       loc, llvm::omp::Directive::OMPD_do);

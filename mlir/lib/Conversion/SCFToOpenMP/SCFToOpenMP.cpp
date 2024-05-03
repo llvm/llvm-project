@@ -449,6 +449,7 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
         /* allocate_vars = */ llvm::SmallVector<Value>{},
         /* allocators_vars = */ llvm::SmallVector<Value>{},
         /* reduction_vars = */ llvm::SmallVector<Value>{},
+        /* reduction_vars_isbyref = */ DenseBoolArrayAttr{},
         /* reductions = */ ArrayAttr{},
         /* proc_bind_val = */ omp::ClauseProcBindKindAttr{},
         /* private_vars = */ ValueRange(),
@@ -467,6 +468,10 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
           wsloopOp.setReductionsAttr(
               ArrayAttr::get(rewriter.getContext(), reductionDeclSymbols));
           wsloopOp.getReductionVarsMutable().append(reductionVariables);
+          llvm::SmallVector<bool> byRefVec;
+          byRefVec.resize(reductionVariables.size(), false);
+          wsloopOp.setReductionVarsByref(
+              DenseBoolArrayAttr::get(rewriter.getContext(), byRefVec));
         }
         rewriter.create<omp::TerminatorOp>(loc); // omp.parallel terminator.
 
