@@ -727,8 +727,11 @@ static void addSanitizers(const Triple &TargetTriple,
                                          DestructorKind));
       }
     };
-    ASanPass(SanitizerKind::Address, false);
-    ASanPass(SanitizerKind::KernelAddress, true);
+    // Don't slow down already slow `ProfileIRInstr` binary.
+    if (!CodeGenOpts.hasProfileIRInstr()) {
+      ASanPass(SanitizerKind::Address, false);
+      ASanPass(SanitizerKind::KernelAddress, true);
+    }
 
     auto HWASanPass = [&](SanitizerMask Mask, bool CompileKernel) {
       if (LangOpts.Sanitize.has(Mask)) {
@@ -738,8 +741,11 @@ static void addSanitizers(const Triple &TargetTriple,
              /*DisableOptimization=*/CodeGenOpts.OptimizationLevel == 0}));
       }
     };
-    HWASanPass(SanitizerKind::HWAddress, false);
-    HWASanPass(SanitizerKind::KernelHWAddress, true);
+    // Don't slow down already slow `ProfileIRInstr` binary.
+    if (!CodeGenOpts.hasProfileIRInstr()) {
+      HWASanPass(SanitizerKind::HWAddress, false);
+      HWASanPass(SanitizerKind::KernelHWAddress, true);
+    }
 
     if (LangOpts.Sanitize.has(SanitizerKind::DataFlow)) {
       MPM.addPass(DataFlowSanitizerPass(LangOpts.NoSanitizeFiles));
