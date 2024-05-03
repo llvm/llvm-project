@@ -321,10 +321,6 @@ public:
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
 
-  /// DEPRECATED: We used to only support one Destroy callback. Now that we
-  /// support Add and Remove, you should only remove Destroy callbacks that
-  /// you Add-ed. Use Add and Remove instead.
-  ///
   /// Clear all previously added callbacks and only add the given one.
   LLDB_DEPRECATED_FIXME("Use AddDestroyCallback and RemoveDestroyCallback",
                         "AddDestroyCallback")

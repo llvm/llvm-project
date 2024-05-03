@@ -752,15 +752,19 @@ void Debugger::HandleDestroyCallback() {
   //   happens to invoke the said callbacks first, before they get removed.
   //   In this case, the callbacks gets invoked, and the removal return false.
   //
-  // In the removal case, because the order of the container (`unordered_map`)
-  // is random, it's wise to not depend on the order and instead implement
-  // logic inside the callbacks to decide if their work should be skipped.
+  // In the removal case, because the order of the container is random, it's
+  // wise to not depend on the order and instead implement logic inside the
+  // callbacks to decide if their work should be skipped.
   while (m_destroy_callback_and_baton.size()) {
     auto iter = m_destroy_callback_and_baton.begin();
-    const auto &callback = iter->second.first;
-    const auto &baton = iter->second.second;
+    const lldb::destroy_callback_token_t &token = iter->first;
+    const lldb_private::DebuggerDestroyCallback &callback = iter->second.first;
+    void *const &baton = iter->second.second;
     callback(user_id, baton);
-    m_destroy_callback_and_baton.erase(iter);
+    // Using `token` to erase, because elements may have been added/removed, and
+    // that will cause error "invalid iterator access!" if `iter` is used
+    // instead.
+    m_destroy_callback_and_baton.erase(token);
   }
 }
 
@@ -1450,10 +1454,9 @@ void Debugger::SetDestroyCallback(
 lldb::destroy_callback_token_t Debugger::AddDestroyCallback(
     lldb_private::DebuggerDestroyCallback destroy_callback, void *baton) {
   std::lock_guard<std::recursive_mutex> guard(m_destroy_callback_mutex);
-  const auto token = m_destroy_callback_next_token++;
-  m_destroy_callback_and_baton.emplace(
-      std::piecewise_construct, std::forward_as_tuple(token),
-      std::forward_as_tuple(destroy_callback, baton));
+  const lldb::destroy_callback_token_t token = m_destroy_callback_next_token++;
+  m_destroy_callback_and_baton.try_emplace(
+      token, std::forward_as_tuple(destroy_callback, baton));
   return token;
 }
 
