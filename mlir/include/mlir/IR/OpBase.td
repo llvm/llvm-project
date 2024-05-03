@@ -79,8 +79,6 @@ def Idempotent : NativeOpTrait<"IsIdempotent">;
 def Involution : NativeOpTrait<"IsInvolution">;
 // Op behaves like a constant.
 def ConstantLike : NativeOpTrait<"ConstantLike">;
-// Op contains a region with parallel execution semantics
-def HasParallelRegion : NativeOpTrait<"HasParallelRegion">;
 // Op is isolated from above.
 def IsolatedFromAbove : NativeOpTrait<"IsIsolatedFromAbove">;
 // Op results are float or vectors/tensors thereof.
