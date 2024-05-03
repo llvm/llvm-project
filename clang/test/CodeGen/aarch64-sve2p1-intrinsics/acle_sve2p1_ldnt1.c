@@ -622,29 +622,23 @@ svfloat64x4_t test_svldnt1_f64_x4(svcount_t pn, const float64_t *base) ATTR
 
 // CHECK-LABEL: @test_svldnt1_vnum_u8_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], i64 16)
-// CHECK-NEXT:    ret <vscale x 32 x i8> [[TMP7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], i64 16)
+// CHECK-NEXT:    ret <vscale x 32 x i8> [[TMP5]]
 //
 // CPP-CHECK-LABEL: @_Z23test_svldnt1_vnum_u8_x2u11__SVCount_tPKhl(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], i64 16)
-// CPP-CHECK-NEXT:    ret <vscale x 32 x i8> [[TMP7]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], i64 16)
+// CPP-CHECK-NEXT:    ret <vscale x 32 x i8> [[TMP5]]
 //
 svuint8x2_t test_svldnt1_vnum_u8_x2(svcount_t pn, const uint8_t *base, int64_t vnum) ATTR
 {
@@ -653,29 +647,23 @@ svuint8x2_t test_svldnt1_vnum_u8_x2(svcount_t pn, const uint8_t *base, int64_t v
 
 // CHECK-LABEL: @test_svldnt1_vnum_u16_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], i64 8)
-// CHECK-NEXT:    ret <vscale x 16 x i16> [[TMP7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 8 x i16>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], i64 8)
+// CHECK-NEXT:    ret <vscale x 16 x i16> [[TMP5]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svldnt1_vnum_u16_x2u11__SVCount_tPKtl(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], i64 8)
-// CPP-CHECK-NEXT:    ret <vscale x 16 x i16> [[TMP7]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 8 x i16>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], i64 8)
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i16> [[TMP5]]
 //
 svuint16x2_t test_svldnt1_vnum_u16_x2(svcount_t pn, const uint16_t *base, int64_t vnum) ATTR
 {
@@ -684,29 +672,23 @@ svuint16x2_t test_svldnt1_vnum_u16_x2(svcount_t pn, const uint16_t *base, int64_
 
 // CHECK-LABEL: @test_svldnt1_vnum_u32_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP5]], <vscale x 4 x i32> [[TMP6]], i64 4)
-// CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP3]], <vscale x 4 x i32> [[TMP4]], i64 4)
+// CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP5]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svldnt1_vnum_u32_x2u11__SVCount_tPKjl(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP5]], <vscale x 4 x i32> [[TMP6]], i64 4)
-// CPP-CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP7]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP3]], <vscale x 4 x i32> [[TMP4]], i64 4)
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP5]]
 //
 svuint32x2_t test_svldnt1_vnum_u32_x2(svcount_t pn, const uint32_t *base, int64_t vnum) ATTR
 {
@@ -715,29 +697,23 @@ svuint32x2_t test_svldnt1_vnum_u32_x2(svcount_t pn, const uint32_t *base, int64_
 
 // CHECK-LABEL: @test_svldnt1_vnum_u64_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP5]], <vscale x 2 x i64> [[TMP6]], i64 2)
-// CHECK-NEXT:    ret <vscale x 4 x i64> [[TMP7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP3]], <vscale x 2 x i64> [[TMP4]], i64 2)
+// CHECK-NEXT:    ret <vscale x 4 x i64> [[TMP5]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svldnt1_vnum_u64_x2u11__SVCount_tPKml(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP5]], <vscale x 2 x i64> [[TMP6]], i64 2)
-// CPP-CHECK-NEXT:    ret <vscale x 4 x i64> [[TMP7]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP3]], <vscale x 2 x i64> [[TMP4]], i64 2)
+// CPP-CHECK-NEXT:    ret <vscale x 4 x i64> [[TMP5]]
 //
 svuint64x2_t test_svldnt1_vnum_u64_x2(svcount_t pn, const uint64_t *base, int64_t vnum) ATTR
 {
@@ -746,37 +722,31 @@ svuint64x2_t test_svldnt1_vnum_u64_x2(svcount_t pn, const uint64_t *base, int64_
 
 // CHECK-LABEL: @test_svldnt1_vnum_u8_x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], i64 16)
-// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 2
-// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP7]], <vscale x 16 x i8> [[TMP8]], i64 32)
-// CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 3
-// CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP9]], <vscale x 16 x i8> [[TMP10]], i64 48)
-// CHECK-NEXT:    ret <vscale x 64 x i8> [[TMP11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], i64 16)
+// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 2
+// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], i64 32)
+// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 3
+// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP7]], <vscale x 16 x i8> [[TMP8]], i64 48)
+// CHECK-NEXT:    ret <vscale x 64 x i8> [[TMP9]]
 //
 // CPP-CHECK-LABEL: @_Z23test_svldnt1_vnum_u8_x4u11__SVCount_tPKhl(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 2
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP7]], <vscale x 16 x i8> [[TMP8]], i64 32)
-// CPP-CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 3
-// CPP-CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP9]], <vscale x 16 x i8> [[TMP10]], i64 48)
-// CPP-CHECK-NEXT:    ret <vscale x 64 x i8> [[TMP11]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], i64 16)
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 2
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], i64 32)
+// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 3
+// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP7]], <vscale x 16 x i8> [[TMP8]], i64 48)
+// CPP-CHECK-NEXT:    ret <vscale x 64 x i8> [[TMP9]]
 //
 svuint8x4_t test_svldnt1_vnum_u8_x4(svcount_t pn, const uint8_t *base, int64_t vnum) ATTR
 {
@@ -785,37 +755,31 @@ svuint8x4_t test_svldnt1_vnum_u8_x4(svcount_t pn, const uint8_t *base, int64_t v
 
 // CHECK-LABEL: @test_svldnt1_vnum_u16_x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], i64 8)
-// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 2
-// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP7]], <vscale x 8 x i16> [[TMP8]], i64 16)
-// CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 3
-// CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP9]], <vscale x 8 x i16> [[TMP10]], i64 24)
-// CHECK-NEXT:    ret <vscale x 32 x i16> [[TMP11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 8 x i16>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], i64 8)
+// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 2
+// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], i64 16)
+// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 3
+// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP7]], <vscale x 8 x i16> [[TMP8]], i64 24)
+// CHECK-NEXT:    ret <vscale x 32 x i16> [[TMP9]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svldnt1_vnum_u16_x4u11__SVCount_tPKtl(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 2
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP7]], <vscale x 8 x i16> [[TMP8]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 3
-// CPP-CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP9]], <vscale x 8 x i16> [[TMP10]], i64 24)
-// CPP-CHECK-NEXT:    ret <vscale x 32 x i16> [[TMP11]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 8 x i16>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], i64 8)
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 2
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], i64 16)
+// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 3
+// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP7]], <vscale x 8 x i16> [[TMP8]], i64 24)
+// CPP-CHECK-NEXT:    ret <vscale x 32 x i16> [[TMP9]]
 //
 svuint16x4_t test_svldnt1_vnum_u16_x4(svcount_t pn, const uint16_t *base, int64_t vnum) ATTR
 {
@@ -824,37 +788,31 @@ svuint16x4_t test_svldnt1_vnum_u16_x4(svcount_t pn, const uint16_t *base, int64_
 
 // CHECK-LABEL: @test_svldnt1_vnum_u32_x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP5]], <vscale x 4 x i32> [[TMP6]], i64 4)
-// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 2
-// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP7]], <vscale x 4 x i32> [[TMP8]], i64 8)
-// CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 3
-// CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP9]], <vscale x 4 x i32> [[TMP10]], i64 12)
-// CHECK-NEXT:    ret <vscale x 16 x i32> [[TMP11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP3]], <vscale x 4 x i32> [[TMP4]], i64 4)
+// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 2
+// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP5]], <vscale x 4 x i32> [[TMP6]], i64 8)
+// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 3
+// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP7]], <vscale x 4 x i32> [[TMP8]], i64 12)
+// CHECK-NEXT:    ret <vscale x 16 x i32> [[TMP9]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svldnt1_vnum_u32_x4u11__SVCount_tPKjl(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP5]], <vscale x 4 x i32> [[TMP6]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 2
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP7]], <vscale x 4 x i32> [[TMP8]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 3
-// CPP-CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP9]], <vscale x 4 x i32> [[TMP10]], i64 12)
-// CPP-CHECK-NEXT:    ret <vscale x 16 x i32> [[TMP11]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP3]], <vscale x 4 x i32> [[TMP4]], i64 4)
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 2
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP5]], <vscale x 4 x i32> [[TMP6]], i64 8)
+// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 3
+// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP7]], <vscale x 4 x i32> [[TMP8]], i64 12)
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i32> [[TMP9]]
 //
 svuint32x4_t test_svldnt1_vnum_u32_x4(svcount_t pn, const uint32_t *base, int64_t vnum) ATTR
 {
@@ -863,37 +821,31 @@ svuint32x4_t test_svldnt1_vnum_u32_x4(svcount_t pn, const uint32_t *base, int64_
 
 // CHECK-LABEL: @test_svldnt1_vnum_u64_x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP5]], <vscale x 2 x i64> [[TMP6]], i64 2)
-// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 2
-// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP7]], <vscale x 2 x i64> [[TMP8]], i64 4)
-// CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 3
-// CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP9]], <vscale x 2 x i64> [[TMP10]], i64 6)
-// CHECK-NEXT:    ret <vscale x 8 x i64> [[TMP11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP3]], <vscale x 2 x i64> [[TMP4]], i64 2)
+// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 2
+// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP5]], <vscale x 2 x i64> [[TMP6]], i64 4)
+// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 3
+// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP7]], <vscale x 2 x i64> [[TMP8]], i64 6)
+// CHECK-NEXT:    ret <vscale x 8 x i64> [[TMP9]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svldnt1_vnum_u64_x4u11__SVCount_tPKml(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP5]], <vscale x 2 x i64> [[TMP6]], i64 2)
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 2
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP7]], <vscale x 2 x i64> [[TMP8]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 3
-// CPP-CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP9]], <vscale x 2 x i64> [[TMP10]], i64 6)
-// CPP-CHECK-NEXT:    ret <vscale x 8 x i64> [[TMP11]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP3]], <vscale x 2 x i64> [[TMP4]], i64 2)
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 2
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP5]], <vscale x 2 x i64> [[TMP6]], i64 4)
+// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 3
+// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP7]], <vscale x 2 x i64> [[TMP8]], i64 6)
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i64> [[TMP9]]
 //
 svuint64x4_t test_svldnt1_vnum_u64_x4(svcount_t pn, const uint64_t *base, int64_t vnum) ATTR
 {
@@ -902,29 +854,23 @@ svuint64x4_t test_svldnt1_vnum_u64_x4(svcount_t pn, const uint64_t *base, int64_
 
 // CHECK-LABEL: @test_svldnt1_vnum_s8_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], i64 16)
-// CHECK-NEXT:    ret <vscale x 32 x i8> [[TMP7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], i64 16)
+// CHECK-NEXT:    ret <vscale x 32 x i8> [[TMP5]]
 //
 // CPP-CHECK-LABEL: @_Z23test_svldnt1_vnum_s8_x2u11__SVCount_tPKal(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], i64 16)
-// CPP-CHECK-NEXT:    ret <vscale x 32 x i8> [[TMP7]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> poison, <vscale x 16 x i8> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x i8> @llvm.vector.insert.nxv32i8.nxv16i8(<vscale x 32 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], i64 16)
+// CPP-CHECK-NEXT:    ret <vscale x 32 x i8> [[TMP5]]
 //
 svint8x2_t test_svldnt1_vnum_s8_x2(svcount_t pn, const int8_t *base, int64_t vnum) ATTR
 {
@@ -933,29 +879,23 @@ svint8x2_t test_svldnt1_vnum_s8_x2(svcount_t pn, const int8_t *base, int64_t vnu
 
 // CHECK-LABEL: @test_svldnt1_vnum_s16_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], i64 8)
-// CHECK-NEXT:    ret <vscale x 16 x i16> [[TMP7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 8 x i16>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], i64 8)
+// CHECK-NEXT:    ret <vscale x 16 x i16> [[TMP5]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svldnt1_vnum_s16_x2u11__SVCount_tPKsl(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], i64 8)
-// CPP-CHECK-NEXT:    ret <vscale x 16 x i16> [[TMP7]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 8 x i16>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], i64 8)
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i16> [[TMP5]]
 //
 svint16x2_t test_svldnt1_vnum_s16_x2(svcount_t pn, const int16_t *base, int64_t vnum) ATTR
 {
@@ -964,29 +904,23 @@ svint16x2_t test_svldnt1_vnum_s16_x2(svcount_t pn, const int16_t *base, int64_t 
 
 // CHECK-LABEL: @test_svldnt1_vnum_s32_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP5]], <vscale x 4 x i32> [[TMP6]], i64 4)
-// CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP3]], <vscale x 4 x i32> [[TMP4]], i64 4)
+// CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP5]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svldnt1_vnum_s32_x2u11__SVCount_tPKil(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP5]], <vscale x 4 x i32> [[TMP6]], i64 4)
-// CPP-CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP7]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP3]], <vscale x 4 x i32> [[TMP4]], i64 4)
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i32> [[TMP5]]
 //
 svint32x2_t test_svldnt1_vnum_s32_x2(svcount_t pn, const int32_t *base, int64_t vnum) ATTR
 {
@@ -995,29 +929,23 @@ svint32x2_t test_svldnt1_vnum_s32_x2(svcount_t pn, const int32_t *base, int64_t 
 
 // CHECK-LABEL: @test_svldnt1_vnum_s64_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP5]], <vscale x 2 x i64> [[TMP6]], i64 2)
-// CHECK-NEXT:    ret <vscale x 4 x i64> [[TMP7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP3]], <vscale x 2 x i64> [[TMP4]], i64 2)
+// CHECK-NEXT:    ret <vscale x 4 x i64> [[TMP5]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svldnt1_vnum_s64_x2u11__SVCount_tPKll(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP5]], <vscale x 2 x i64> [[TMP6]], i64 2)
-// CPP-CHECK-NEXT:    ret <vscale x 4 x i64> [[TMP7]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> poison, <vscale x 2 x i64> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 4 x i64> @llvm.vector.insert.nxv4i64.nxv2i64(<vscale x 4 x i64> [[TMP3]], <vscale x 2 x i64> [[TMP4]], i64 2)
+// CPP-CHECK-NEXT:    ret <vscale x 4 x i64> [[TMP5]]
 //
 svint64x2_t test_svldnt1_vnum_s64_x2(svcount_t pn, const int64_t *base, int64_t vnum) ATTR
 {
@@ -1026,37 +954,31 @@ svint64x2_t test_svldnt1_vnum_s64_x2(svcount_t pn, const int64_t *base, int64_t 
 
 // CHECK-LABEL: @test_svldnt1_vnum_s8_x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], i64 16)
-// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 2
-// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP7]], <vscale x 16 x i8> [[TMP8]], i64 32)
-// CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 3
-// CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP9]], <vscale x 16 x i8> [[TMP10]], i64 48)
-// CHECK-NEXT:    ret <vscale x 64 x i8> [[TMP11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], i64 16)
+// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 2
+// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], i64 32)
+// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 3
+// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP7]], <vscale x 16 x i8> [[TMP8]], i64 48)
+// CHECK-NEXT:    ret <vscale x 64 x i8> [[TMP9]]
 //
 // CPP-CHECK-LABEL: @_Z23test_svldnt1_vnum_s8_x4u11__SVCount_tPKal(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 2
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP7]], <vscale x 16 x i8> [[TMP8]], i64 32)
-// CPP-CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP3]], 3
-// CPP-CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP9]], <vscale x 16 x i8> [[TMP10]], i64 48)
-// CPP-CHECK-NEXT:    ret <vscale x 64 x i8> [[TMP11]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv16i8(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> poison, <vscale x 16 x i8> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP3]], <vscale x 16 x i8> [[TMP4]], i64 16)
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 2
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP5]], <vscale x 16 x i8> [[TMP6]], i64 32)
+// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], 3
+// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 64 x i8> @llvm.vector.insert.nxv64i8.nxv16i8(<vscale x 64 x i8> [[TMP7]], <vscale x 16 x i8> [[TMP8]], i64 48)
+// CPP-CHECK-NEXT:    ret <vscale x 64 x i8> [[TMP9]]
 //
 svint8x4_t test_svldnt1_vnum_s8_x4(svcount_t pn, const int8_t *base, int64_t vnum) ATTR
 {
@@ -1065,37 +987,31 @@ svint8x4_t test_svldnt1_vnum_s8_x4(svcount_t pn, const int8_t *base, int64_t vnu
 
 // CHECK-LABEL: @test_svldnt1_vnum_s16_x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], i64 8)
-// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 2
-// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP7]], <vscale x 8 x i16> [[TMP8]], i64 16)
-// CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 3
-// CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP9]], <vscale x 8 x i16> [[TMP10]], i64 24)
-// CHECK-NEXT:    ret <vscale x 32 x i16> [[TMP11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 8 x i16>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], i64 8)
+// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 2
+// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], i64 16)
+// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 3
+// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP7]], <vscale x 8 x i16> [[TMP8]], i64 24)
+// CHECK-NEXT:    ret <vscale x 32 x i16> [[TMP9]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svldnt1_vnum_s16_x4u11__SVCount_tPKsl(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 2
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP7]], <vscale x 8 x i16> [[TMP8]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP3]], 3
-// CPP-CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP9]], <vscale x 8 x i16> [[TMP10]], i64 24)
-// CPP-CHECK-NEXT:    ret <vscale x 32 x i16> [[TMP11]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 8 x i16>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv8i16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> poison, <vscale x 8 x i16> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP3]], <vscale x 8 x i16> [[TMP4]], i64 8)
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 2
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP5]], <vscale x 8 x i16> [[TMP6]], i64 16)
+// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } [[TMP1]], 3
+// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 32 x i16> @llvm.vector.insert.nxv32i16.nxv8i16(<vscale x 32 x i16> [[TMP7]], <vscale x 8 x i16> [[TMP8]], i64 24)
+// CPP-CHECK-NEXT:    ret <vscale x 32 x i16> [[TMP9]]
 //
 svint16x4_t test_svldnt1_vnum_s16_x4(svcount_t pn, const int16_t *base, int64_t vnum) ATTR
 {
@@ -1104,37 +1020,31 @@ svint16x4_t test_svldnt1_vnum_s16_x4(svcount_t pn, const int16_t *base, int64_t 
 
 // CHECK-LABEL: @test_svldnt1_vnum_s32_x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP5]], <vscale x 4 x i32> [[TMP6]], i64 4)
-// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 2
-// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP7]], <vscale x 4 x i32> [[TMP8]], i64 8)
-// CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 3
-// CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP9]], <vscale x 4 x i32> [[TMP10]], i64 12)
-// CHECK-NEXT:    ret <vscale x 16 x i32> [[TMP11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP3]], <vscale x 4 x i32> [[TMP4]], i64 4)
+// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 2
+// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP5]], <vscale x 4 x i32> [[TMP6]], i64 8)
+// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 3
+// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP7]], <vscale x 4 x i32> [[TMP8]], i64 12)
+// CHECK-NEXT:    ret <vscale x 16 x i32> [[TMP9]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svldnt1_vnum_s32_x4u11__SVCount_tPKil(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP5]], <vscale x 4 x i32> [[TMP6]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 2
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP7]], <vscale x 4 x i32> [[TMP8]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP3]], 3
-// CPP-CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP9]], <vscale x 4 x i32> [[TMP10]], i64 12)
-// CPP-CHECK-NEXT:    ret <vscale x 16 x i32> [[TMP11]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv4i32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> poison, <vscale x 4 x i32> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP3]], <vscale x 4 x i32> [[TMP4]], i64 4)
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 2
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP5]], <vscale x 4 x i32> [[TMP6]], i64 8)
+// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[TMP1]], 3
+// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 16 x i32> @llvm.vector.insert.nxv16i32.nxv4i32(<vscale x 16 x i32> [[TMP7]], <vscale x 4 x i32> [[TMP8]], i64 12)
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i32> [[TMP9]]
 //
 svint32x4_t test_svldnt1_vnum_s32_x4(svcount_t pn, const int32_t *base, int64_t vnum) ATTR
 {
@@ -1143,37 +1053,31 @@ svint32x4_t test_svldnt1_vnum_s32_x4(svcount_t pn, const int32_t *base, int64_t 
 
 // CHECK-LABEL: @test_svldnt1_vnum_s64_x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP5]], <vscale x 2 x i64> [[TMP6]], i64 2)
-// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 2
-// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP7]], <vscale x 2 x i64> [[TMP8]], i64 4)
-// CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 3
-// CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP9]], <vscale x 2 x i64> [[TMP10]], i64 6)
-// CHECK-NEXT:    ret <vscale x 8 x i64> [[TMP11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP3]], <vscale x 2 x i64> [[TMP4]], i64 2)
+// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 2
+// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP5]], <vscale x 2 x i64> [[TMP6]], i64 4)
+// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 3
+// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP7]], <vscale x 2 x i64> [[TMP8]], i64 6)
+// CHECK-NEXT:    ret <vscale x 8 x i64> [[TMP9]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svldnt1_vnum_s64_x4u11__SVCount_tPKll(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP5]], <vscale x 2 x i64> [[TMP6]], i64 2)
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 2
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP7]], <vscale x 2 x i64> [[TMP8]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP3]], 3
-// CPP-CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP9]], <vscale x 2 x i64> [[TMP10]], i64 6)
-// CPP-CHECK-NEXT:    ret <vscale x 8 x i64> [[TMP11]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv2i64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> poison, <vscale x 2 x i64> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP3]], <vscale x 2 x i64> [[TMP4]], i64 2)
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 2
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP5]], <vscale x 2 x i64> [[TMP6]], i64 4)
+// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } [[TMP1]], 3
+// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 8 x i64> @llvm.vector.insert.nxv8i64.nxv2i64(<vscale x 8 x i64> [[TMP7]], <vscale x 2 x i64> [[TMP8]], i64 6)
+// CPP-CHECK-NEXT:    ret <vscale x 8 x i64> [[TMP9]]
 //
 svint64x4_t test_svldnt1_vnum_s64_x4(svcount_t pn, const int64_t *base, int64_t vnum) ATTR
 {
@@ -1182,29 +1086,23 @@ svint64x4_t test_svldnt1_vnum_s64_x4(svcount_t pn, const int64_t *base, int64_t 
 
 // CHECK-LABEL: @test_svldnt1_vnum_f16_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv8f16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> poison, <vscale x 8 x half> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> [[TMP5]], <vscale x 8 x half> [[TMP6]], i64 8)
-// CHECK-NEXT:    ret <vscale x 16 x half> [[TMP7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 8 x half>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv8f16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> poison, <vscale x 8 x half> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> [[TMP3]], <vscale x 8 x half> [[TMP4]], i64 8)
+// CHECK-NEXT:    ret <vscale x 16 x half> [[TMP5]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svldnt1_vnum_f16_x2u11__SVCount_tPKDhl(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv8f16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> poison, <vscale x 8 x half> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> [[TMP5]], <vscale x 8 x half> [[TMP6]], i64 8)
-// CPP-CHECK-NEXT:    ret <vscale x 16 x half> [[TMP7]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 8 x half>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv8f16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> poison, <vscale x 8 x half> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x half> @llvm.vector.insert.nxv16f16.nxv8f16(<vscale x 16 x half> [[TMP3]], <vscale x 8 x half> [[TMP4]], i64 8)
+// CPP-CHECK-NEXT:    ret <vscale x 16 x half> [[TMP5]]
 //
 svfloat16x2_t test_svldnt1_vnum_f16_x2(svcount_t pn, const float16_t *base, int64_t vnum) ATTR
 {
@@ -1213,29 +1111,23 @@ svfloat16x2_t test_svldnt1_vnum_f16_x2(svcount_t pn, const float16_t *base, int6
 
 // CHECK-LABEL: @test_svldnt1_vnum_f32_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv4f32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> poison, <vscale x 4 x float> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> [[TMP5]], <vscale x 4 x float> [[TMP6]], i64 4)
-// CHECK-NEXT:    ret <vscale x 8 x float> [[TMP7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 4 x float>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv4f32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> poison, <vscale x 4 x float> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> [[TMP3]], <vscale x 4 x float> [[TMP4]], i64 4)
+// CHECK-NEXT:    ret <vscale x 8 x float> [[TMP5]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svldnt1_vnum_f32_x2u11__SVCount_tPKfl(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv4f32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> poison, <vscale x 4 x float> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> [[TMP5]], <vscale x 4 x float> [[TMP6]], i64 4)
-// CPP-CHECK-NEXT:    ret <vscale x 8 x float> [[TMP7]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 4 x float>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv4f32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> poison, <vscale x 4 x float> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x float> @llvm.vector.insert.nxv8f32.nxv4f32(<vscale x 8 x float> [[TMP3]], <vscale x 4 x float> [[TMP4]], i64 4)
+// CPP-CHECK-NEXT:    ret <vscale x 8 x float> [[TMP5]]
 //
 svfloat32x2_t test_svldnt1_vnum_f32_x2(svcount_t pn, const float32_t *base, int64_t vnum) ATTR
 {
@@ -1244,29 +1136,23 @@ svfloat32x2_t test_svldnt1_vnum_f32_x2(svcount_t pn, const float32_t *base, int6
 
 // CHECK-LABEL: @test_svldnt1_vnum_f64_x2(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv2f64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> poison, <vscale x 2 x double> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> [[TMP5]], <vscale x 2 x double> [[TMP6]], i64 2)
-// CHECK-NEXT:    ret <vscale x 4 x double> [[TMP7]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 2 x double>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv2f64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> poison, <vscale x 2 x double> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> [[TMP3]], <vscale x 2 x double> [[TMP4]], i64 2)
+// CHECK-NEXT:    ret <vscale x 4 x double> [[TMP5]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svldnt1_vnum_f64_x2u11__SVCount_tPKdl(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv2f64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> poison, <vscale x 2 x double> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> [[TMP5]], <vscale x 2 x double> [[TMP6]], i64 2)
-// CPP-CHECK-NEXT:    ret <vscale x 4 x double> [[TMP7]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 2 x double>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv2f64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> poison, <vscale x 2 x double> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 4 x double> @llvm.vector.insert.nxv4f64.nxv2f64(<vscale x 4 x double> [[TMP3]], <vscale x 2 x double> [[TMP4]], i64 2)
+// CPP-CHECK-NEXT:    ret <vscale x 4 x double> [[TMP5]]
 //
 svfloat64x2_t test_svldnt1_vnum_f64_x2(svcount_t pn, const float64_t *base, int64_t vnum) ATTR
 {
@@ -1275,37 +1161,31 @@ svfloat64x2_t test_svldnt1_vnum_f64_x2(svcount_t pn, const float64_t *base, int6
 
 // CHECK-LABEL: @test_svldnt1_vnum_f16_x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv8f16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> poison, <vscale x 8 x half> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP5]], <vscale x 8 x half> [[TMP6]], i64 8)
-// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]], 2
-// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP7]], <vscale x 8 x half> [[TMP8]], i64 16)
-// CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]], 3
-// CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP9]], <vscale x 8 x half> [[TMP10]], i64 24)
-// CHECK-NEXT:    ret <vscale x 32 x half> [[TMP11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 8 x half>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv8f16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> poison, <vscale x 8 x half> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP3]], <vscale x 8 x half> [[TMP4]], i64 8)
+// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], 2
+// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP5]], <vscale x 8 x half> [[TMP6]], i64 16)
+// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], 3
+// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP7]], <vscale x 8 x half> [[TMP8]], i64 24)
+// CHECK-NEXT:    ret <vscale x 32 x half> [[TMP9]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svldnt1_vnum_f16_x4u11__SVCount_tPKDhl(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv8f16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> poison, <vscale x 8 x half> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP5]], <vscale x 8 x half> [[TMP6]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]], 2
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP7]], <vscale x 8 x half> [[TMP8]], i64 16)
-// CPP-CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP3]], 3
-// CPP-CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP9]], <vscale x 8 x half> [[TMP10]], i64 24)
-// CPP-CHECK-NEXT:    ret <vscale x 32 x half> [[TMP11]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 8 x half>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv8f16(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> poison, <vscale x 8 x half> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP3]], <vscale x 8 x half> [[TMP4]], i64 8)
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], 2
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP5]], <vscale x 8 x half> [[TMP6]], i64 16)
+// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } [[TMP1]], 3
+// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 32 x half> @llvm.vector.insert.nxv32f16.nxv8f16(<vscale x 32 x half> [[TMP7]], <vscale x 8 x half> [[TMP8]], i64 24)
+// CPP-CHECK-NEXT:    ret <vscale x 32 x half> [[TMP9]]
 //
 svfloat16x4_t test_svldnt1_vnum_f16_x4(svcount_t pn, const float16_t *base, int64_t vnum) ATTR
 {
@@ -1314,37 +1194,31 @@ svfloat16x4_t test_svldnt1_vnum_f16_x4(svcount_t pn, const float16_t *base, int6
 
 // CHECK-LABEL: @test_svldnt1_vnum_f32_x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv4f32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> poison, <vscale x 4 x float> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP5]], <vscale x 4 x float> [[TMP6]], i64 4)
-// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]], 2
-// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP7]], <vscale x 4 x float> [[TMP8]], i64 8)
-// CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]], 3
-// CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP9]], <vscale x 4 x float> [[TMP10]], i64 12)
-// CHECK-NEXT:    ret <vscale x 16 x float> [[TMP11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 4 x float>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv4f32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> poison, <vscale x 4 x float> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP3]], <vscale x 4 x float> [[TMP4]], i64 4)
+// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], 2
+// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP5]], <vscale x 4 x float> [[TMP6]], i64 8)
+// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], 3
+// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP7]], <vscale x 4 x float> [[TMP8]], i64 12)
+// CHECK-NEXT:    ret <vscale x 16 x float> [[TMP9]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svldnt1_vnum_f32_x4u11__SVCount_tPKfl(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv4f32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> poison, <vscale x 4 x float> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP5]], <vscale x 4 x float> [[TMP6]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]], 2
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP7]], <vscale x 4 x float> [[TMP8]], i64 8)
-// CPP-CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP3]], 3
-// CPP-CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP9]], <vscale x 4 x float> [[TMP10]], i64 12)
-// CPP-CHECK-NEXT:    ret <vscale x 16 x float> [[TMP11]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 4 x float>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv4f32(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> poison, <vscale x 4 x float> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP3]], <vscale x 4 x float> [[TMP4]], i64 4)
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], 2
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP5]], <vscale x 4 x float> [[TMP6]], i64 8)
+// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP1]], 3
+// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 16 x float> @llvm.vector.insert.nxv16f32.nxv4f32(<vscale x 16 x float> [[TMP7]], <vscale x 4 x float> [[TMP8]], i64 12)
+// CPP-CHECK-NEXT:    ret <vscale x 16 x float> [[TMP9]]
 //
 svfloat32x4_t test_svldnt1_vnum_f32_x4(svcount_t pn, const float32_t *base, int64_t vnum) ATTR
 {
@@ -1353,37 +1227,31 @@ svfloat32x4_t test_svldnt1_vnum_f32_x4(svcount_t pn, const float32_t *base, int6
 
 // CHECK-LABEL: @test_svldnt1_vnum_f64_x4(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv2f64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]], 0
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> poison, <vscale x 2 x double> [[TMP4]], i64 0)
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]], 1
-// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP5]], <vscale x 2 x double> [[TMP6]], i64 2)
-// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]], 2
-// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP7]], <vscale x 2 x double> [[TMP8]], i64 4)
-// CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]], 3
-// CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP9]], <vscale x 2 x double> [[TMP10]], i64 6)
-// CHECK-NEXT:    ret <vscale x 8 x double> [[TMP11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 2 x double>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv2f64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], 0
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> poison, <vscale x 2 x double> [[TMP2]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], 1
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP3]], <vscale x 2 x double> [[TMP4]], i64 2)
+// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], 2
+// CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP5]], <vscale x 2 x double> [[TMP6]], i64 4)
+// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], 3
+// CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP7]], <vscale x 2 x double> [[TMP8]], i64 6)
+// CHECK-NEXT:    ret <vscale x 8 x double> [[TMP9]]
 //
 // CPP-CHECK-LABEL: @_Z24test_svldnt1_vnum_f64_x4u11__SVCount_tPKdl(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[VNUM:%.*]], 4
-// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[TMP1]], [[TMP0]]
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv2f64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP2]])
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]], 0
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> poison, <vscale x 2 x double> [[TMP4]], i64 0)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]], 1
-// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP5]], <vscale x 2 x double> [[TMP6]], i64 2)
-// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]], 2
-// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP7]], <vscale x 2 x double> [[TMP8]], i64 4)
-// CPP-CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP3]], 3
-// CPP-CHECK-NEXT:    [[TMP11:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP9]], <vscale x 2 x double> [[TMP10]], i64 6)
-// CPP-CHECK-NEXT:    ret <vscale x 8 x double> [[TMP11]]
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <vscale x 2 x double>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv2f64(target("aarch64.svcount") [[PN:%.*]], ptr [[TMP0]])
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], 0
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> poison, <vscale x 2 x double> [[TMP2]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], 1
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP3]], <vscale x 2 x double> [[TMP4]], i64 2)
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], 2
+// CPP-CHECK-NEXT:    [[TMP7:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP5]], <vscale x 2 x double> [[TMP6]], i64 4)
+// CPP-CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } [[TMP1]], 3
+// CPP-CHECK-NEXT:    [[TMP9:%.*]] = tail call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nxv2f64(<vscale x 8 x double> [[TMP7]], <vscale x 2 x double> [[TMP8]], i64 6)
+// CPP-CHECK-NEXT:    ret <vscale x 8 x double> [[TMP9]]
 //
 svfloat64x4_t test_svldnt1_vnum_f64_x4(svcount_t pn, const float64_t *base, int64_t vnum) ATTR
 {

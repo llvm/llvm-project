@@ -289,20 +289,17 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
 
   // parse the input Fortran
   parsing.Parse(llvm::outs());
+  parsing.messages().Emit(llvm::errs(), parsing.allCooked());
   if (!parsing.consumedWholeFile()) {
-    parsing.messages().Emit(llvm::errs(), parsing.allCooked());
     parsing.EmitMessage(llvm::errs(), parsing.finalRestingPlace(),
                         "parser FAIL (final position)",
                         "error: ", llvm::raw_ostream::RED);
     return mlir::failure();
-  } else if ((!parsing.messages().empty() &&
-              (parsing.messages().AnyFatalError())) ||
-             !parsing.parseTree().has_value()) {
-    parsing.messages().Emit(llvm::errs(), parsing.allCooked());
+  }
+  if ((!parsing.messages().empty() && (parsing.messages().AnyFatalError())) ||
+      !parsing.parseTree().has_value()) {
     llvm::errs() << programPrefix << "could not parse " << path << '\n';
     return mlir::failure();
-  } else {
-    semanticsContext.messages().Annex(std::move(parsing.messages()));
   }
 
   // run semantics

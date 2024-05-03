@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
   }
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
-      MemoryBuffer::getFileOrSTDIN(Input, /*IsText=*/true);
+      MemoryBuffer::getFileOrSTDIN(Input);
   if (!Buf)
     return 1;
 

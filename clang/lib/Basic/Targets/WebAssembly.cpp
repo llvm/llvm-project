@@ -100,8 +100,6 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_extended_const__");
   if (HasMultiMemory)
     Builder.defineMacro("__wasm_multimemory__");
-  if (HasHalfPrecision)
-    Builder.defineMacro("__wasm_half_precision__");
 
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
@@ -150,26 +148,20 @@ void WebAssemblyTargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
 bool WebAssemblyTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
-  auto addGenericFeatures = [&]() {
-    Features["multivalue"] = true;
-    Features["mutable-globals"] = true;
-    Features["sign-ext"] = true;
-  };
-  auto addBleedingEdgeFeatures = [&]() {
-    addGenericFeatures();
+  if (CPU == "bleeding-edge") {
     Features["atomics"] = true;
     Features["bulk-memory"] = true;
     Features["multimemory"] = true;
+    Features["mutable-globals"] = true;
     Features["nontrapping-fptoint"] = true;
     Features["reference-types"] = true;
+    Features["sign-ext"] = true;
     Features["tail-call"] = true;
     Features["half-precision"] = true;
     setSIMDLevel(Features, SIMD128, true);
-  };
-  if (CPU == "generic") {
-    addGenericFeatures();
-  } else if (CPU == "bleeding-edge") {
-    addBleedingEdgeFeatures();
+  } else if (CPU == "generic") {
+    Features["mutable-globals"] = true;
+    Features["sign-ext"] = true;
   }
 
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);

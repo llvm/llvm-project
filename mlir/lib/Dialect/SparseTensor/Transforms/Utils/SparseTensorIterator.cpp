@@ -95,9 +95,8 @@ public:
   ValueRange getLvlBuffers() const override { return {}; }
 
   ValuePair peekRangeAt(OpBuilder &b, Location l, ValueRange batchPrefix,
-                        ValueRange parentPos, Value inPadZone) const override {
+                        ValueRange parentPos) const override {
     assert(parentPos.size() == 1 && "Dense level can not be non-unique.");
-    assert(!inPadZone && "Not implemented");
     Value p = parentPos.front();
     Value posLo = MULI(p, lvlSize);
     return {posLo, lvlSize};
@@ -116,8 +115,7 @@ public:
   ValueRange getLvlBuffers() const override { return {}; }
 
   ValuePair peekRangeAt(OpBuilder &b, Location l, ValueRange,
-                        ValueRange parentPos, Value inPadZone) const override {
-    assert(!inPadZone && "Not implemented");
+                        ValueRange parentPos) const override {
     assert(parentPos.size() == 1 && "Dense level can not be non-unique.");
     // No need to linearize the position for non-annotated tensors.
     return {C_IDX(0), lvlSize};
@@ -131,42 +129,18 @@ public:
       : SparseLevel(tid, lvl, lt, lvlSize, {posBuffer, crdBuffer}) {}
 
   ValuePair peekRangeAt(OpBuilder &b, Location l, ValueRange batchPrefix,
-                        ValueRange parentPos, Value inPadZone) const override {
+                        ValueRange parentPos) const override {
 
     assert(parentPos.size() == 1 &&
            "compressed level must be the first non-unique level.");
+    Value p = parentPos.front();
 
-    auto loadRange = [&b, l, parentPos, batchPrefix, this]() -> ValuePair {
-      Value p = parentPos.front();
-      SmallVector<Value> memCrd(batchPrefix);
-      memCrd.push_back(p);
-      Value pLo = genIndexLoad(b, l, getPosBuf(), memCrd);
-      memCrd.back() = ADDI(p, C_IDX(1));
-      Value pHi = genIndexLoad(b, l, getPosBuf(), memCrd);
-      return {pLo, pHi};
-    };
-
-    if (inPadZone == nullptr)
-      return loadRange();
-
-    SmallVector<Type, 2> types{b.getIndexType(), b.getIndexType()};
-    scf::IfOp posRangeIf = b.create<scf::IfOp>(l, types, inPadZone, true);
-    // True branch, returns a "fake" empty range [0, 0) if parent
-    // iterator is in pad zone.
-    b.setInsertionPointToStart(posRangeIf.thenBlock());
-
-    SmallVector<Value, 2> emptyRange{C_IDX(0), C_IDX(0)};
-    b.create<scf::YieldOp>(l, emptyRange);
-
-    // False branch, returns the actual range.
-    b.setInsertionPointToStart(posRangeIf.elseBlock());
-    auto [pLo, pHi] = loadRange();
-    SmallVector<Value, 2> loadedRange{pLo, pHi};
-    b.create<scf::YieldOp>(l, loadedRange);
-
-    b.setInsertionPointAfter(posRangeIf);
-    ValueRange posRange = posRangeIf.getResults();
-    return {posRange.front(), posRange.back()};
+    SmallVector<Value> memCrd(batchPrefix);
+    memCrd.push_back(p);
+    Value pLo = genIndexLoad(b, l, getPosBuf(), memCrd);
+    memCrd.back() = ADDI(p, C_IDX(1));
+    Value pHi = genIndexLoad(b, l, getPosBuf(), memCrd);
+    return {pLo, pHi};
   }
 };
 
@@ -177,10 +151,9 @@ public:
       : SparseLevel(tid, lvl, lt, lvlSize, {posBuffer, crdBuffer}) {}
 
   ValuePair peekRangeAt(OpBuilder &b, Location l, ValueRange batchPrefix,
-                        ValueRange parentPos, Value inPadZone) const override {
+                        ValueRange parentPos) const override {
     assert(parentPos.size() == 1 &&
            "loose-compressed level must be the first non-unique level.");
-    assert(!inPadZone && "Not implemented");
     SmallVector<Value> memCrd(batchPrefix);
     Value p = parentPos.front();
     p = MULI(p, C_IDX(2));
@@ -199,9 +172,8 @@ public:
       : SparseLevel(tid, lvl, lt, lvlSize, {crdBuffer}) {}
 
   ValuePair peekRangeAt(OpBuilder &b, Location l, ValueRange batchPrefix,
-                        ValueRange parentPos, Value inPadZone) const override {
+                        ValueRange parentPos) const override {
     assert(parentPos.size() == 1 || parentPos.size() == 2);
-    assert(!inPadZone && "Not implemented");
     Value p = parentPos.front();
     Value segHi = parentPos.size() == 2 ? parentPos.back() : nullptr;
 
@@ -219,10 +191,9 @@ public:
       : SparseLevel(tid, lvl, lt, lvlSize, {crdBuffer}) {}
 
   ValuePair peekRangeAt(OpBuilder &b, Location l, ValueRange batchPrefix,
-                        ValueRange parentPos, Value inPadZone) const override {
+                        ValueRange parentPos) const override {
     assert(parentPos.size() == 1 && isUnique() &&
            "n:m level can not be non-unique.");
-    assert(!inPadZone && "Not implemented");
     // Each n:m blk has exactly n specified elements.
     auto n = getN(lt);
     Value posLo = MULI(parentPos.front(), C_IDX(n));
@@ -354,7 +325,23 @@ public:
   };
 
   void genInitImpl(OpBuilder &b, Location l,
-                   const SparseIterator *parent) override;
+                   const SparseIterator *parent) override {
+
+    if (isBatchIterator() && batchCrds.size() <= stl.lvl)
+      batchCrds.resize(stl.lvl + 1, nullptr);
+
+    Value c0 = C_IDX(0);
+    ValueRange pPos = c0;
+    // If the parent iterator is a batch iterator, we also start from 0 (but
+    // on a different batch).
+    if (parent && !parent->isBatchIterator())
+      pPos = parent->getCurPosition();
+
+    ValueRange batchPrefix = parent ? parent->getBatchCrds() : ValueRange{};
+    std::tie(posLo, posHi) = stl.peekRangeAt(b, l, batchPrefix, pPos);
+    // Seek to the lowest position.
+    seek(posLo);
+  }
 
   ValuePair genForCond(OpBuilder &b, Location l) override {
     if (randomAccessible())
@@ -475,56 +462,11 @@ public:
   Value posHi;
 };
 
-// A util base-iterator that delegates all methods to the wrapped iterator.
-class SimpleWrapIterator : public SparseIterator {
-public:
-  SimpleWrapIterator(std::unique_ptr<SparseIterator> &&wrap, IterKind kind,
-                     unsigned extraCursorVal = 0)
-      : SparseIterator(kind, *wrap, extraCursorVal), wrap(std::move(wrap)) {}
-
-  SmallVector<Type> getCursorValTypes(OpBuilder &b) const override {
-    return wrap->getCursorValTypes(b);
-  }
-  bool isBatchIterator() const override { return wrap->isBatchIterator(); }
-  bool randomAccessible() const override { return wrap->randomAccessible(); };
-  bool iteratableByFor() const override { return wrap->iteratableByFor(); };
-
-  SmallVector<Value> serialize() const override { return wrap->serialize(); };
-  void deserialize(ValueRange vs) override { wrap->deserialize(vs); };
-  ValueRange getCurPosition() const override { return wrap->getCurPosition(); }
-  void genInitImpl(OpBuilder &b, Location l,
-                   const SparseIterator *parent) override {
-    wrap->genInit(b, l, parent);
-  }
-  Value genNotEndImpl(OpBuilder &b, Location l) override {
-    return wrap->genNotEndImpl(b, l);
-  }
-  ValueRange forwardImpl(OpBuilder &b, Location l) override {
-    return wrap->forward(b, l);
-  };
-  Value upperBound(OpBuilder &b, Location l) const override {
-    return wrap->upperBound(b, l);
-  };
-
-  Value derefImpl(OpBuilder &b, Location l) override {
-    return wrap->derefImpl(b, l);
-  }
-
-  void locateImpl(OpBuilder &b, Location l, Value crd) override {
-    return wrap->locate(b, l, crd);
-  }
-
-  SparseIterator &getWrappedIterator() const { return *wrap; }
-
-protected:
-  std::unique_ptr<SparseIterator> wrap;
-};
-
 //
 // A filter iterator wrapped from another iterator. The filter iterator update
 // the wrapped iterator *in-place*.
 //
-class FilterIterator : public SimpleWrapIterator {
+class FilterIterator : public SparseIterator {
   // Coorindate translation between crd loaded from the wrap iterator and the
   // filter iterator.
   Value fromWrapCrd(OpBuilder &b, Location l, Value wrapCrd) const {
@@ -545,8 +487,8 @@ public:
   // when crd always < size.
   FilterIterator(std::unique_ptr<SparseIterator> &&wrap, Value offset,
                  Value stride, Value size)
-      : SimpleWrapIterator(std::move(wrap), IterKind::kFilter), offset(offset),
-        stride(stride), size(size) {}
+      : SparseIterator(IterKind::kFilter, *wrap), offset(offset),
+        stride(stride), size(size), wrap(std::move(wrap)) {}
 
   // For LLVM-style RTTI.
   static bool classof(const SparseIterator *from) {
@@ -556,9 +498,18 @@ public:
   std::string getDebugInterfacePrefix() const override {
     return std::string("filter<") + wrap->getDebugInterfacePrefix() + ">";
   }
+  SmallVector<Type> getCursorValTypes(OpBuilder &b) const override {
+    return wrap->getCursorValTypes(b);
+  }
 
+  bool isBatchIterator() const override { return wrap->isBatchIterator(); }
+  bool randomAccessible() const override { return wrap->randomAccessible(); };
   bool iteratableByFor() const override { return randomAccessible(); };
   Value upperBound(OpBuilder &b, Location l) const override { return size; };
+
+  SmallVector<Value> serialize() const override { return wrap->serialize(); };
+  void deserialize(ValueRange vs) override { wrap->deserialize(vs); };
+  ValueRange getCurPosition() const override { return wrap->getCurPosition(); }
 
   void genInitImpl(OpBuilder &b, Location l,
                    const SparseIterator *parent) override {
@@ -590,74 +541,7 @@ public:
   ValueRange forwardImpl(OpBuilder &b, Location l) override;
 
   Value offset, stride, size;
-};
-
-//
-// A pad iterator wrapped from another iterator. The pad iterator updates
-// the wrapped iterator *in-place*.
-//
-class PadIterator : public SimpleWrapIterator {
-
-public:
-  PadIterator(std::unique_ptr<SparseIterator> &&wrap, Value padLow,
-              Value padHigh)
-      : SimpleWrapIterator(std::move(wrap), IterKind::kPad,
-                           wrap->randomAccessible() ? 1 : 0),
-        padLow(padLow), padHigh(padHigh) {}
-
-  // For LLVM-style RTTI.
-  static bool classof(const SparseIterator *from) {
-    return from->kind == IterKind::kPad;
-  }
-
-  std::string getDebugInterfacePrefix() const override {
-    return std::string("pad<") + wrap->getDebugInterfacePrefix() + ">";
-  }
-
-  // Returns a pair of values for *upper*, *lower* bound respectively.
-  ValuePair genForCond(OpBuilder &b, Location l) override {
-    if (randomAccessible())
-      return {getCrd(), upperBound(b, l)};
-    return wrap->genForCond(b, l);
-  }
-
-  // For padded dense iterator, we append a `inPadZone: bool` in addition to
-  // values used by the wrapped iterator.
-  ValueRange getCurPosition() const override { return getCursor(); }
-
-  SmallVector<Type> getCursorValTypes(OpBuilder &b) const override {
-    SmallVector<Type> ret = wrap->getCursorValTypes(b);
-    // Need an extra boolean value `inPadZone` for padded dense iterator.
-    if (randomAccessible())
-      ret.push_back(b.getI1Type());
-
-    return ret;
-  }
-
-  // The upper bound after padding becomes `size + padLow + padHigh`.
-  Value upperBound(OpBuilder &b, Location l) const override {
-    return ADDI(ADDI(wrap->upperBound(b, l), padLow), padHigh);
-  };
-
-  // The pad_coord = coord + pad_lo
-  Value derefImpl(OpBuilder &b, Location l) override {
-    updateCrd(ADDI(wrap->deref(b, l), padLow));
-    return getCrd();
-  }
-
-  void locateImpl(OpBuilder &b, Location l, Value crd) override {
-    assert(randomAccessible());
-    wrap->locate(b, l, SUBI(crd, padLow));
-
-    // inPadZone = crd < padLow || crd >= size + padLow.
-    Value inPadLow = CMPI(ult, crd, padLow);
-    Value inPadHigh = CMPI(uge, crd, ADDI(wrap->upperBound(b, l), padLow));
-    getMutCursorVals().back() = ORI(inPadLow, inPadHigh);
-
-    updateCrd(crd);
-  }
-
-  Value padLow, padHigh;
+  std::unique_ptr<SparseIterator> wrap;
 };
 
 class NonEmptySubSectIterator : public SparseIterator {
@@ -1269,33 +1153,6 @@ ValueRange NonEmptySubSectIterator::inflateSubSectTree(
   return p->inflateSubSectTree(b, l, reduc, visitDenseSubSect);
 }
 
-void TrivialIterator::genInitImpl(OpBuilder &b, Location l,
-                                  const SparseIterator *parent) {
-
-  if (isBatchIterator() && batchCrds.size() <= stl.lvl)
-    batchCrds.resize(stl.lvl + 1, nullptr);
-
-  Value c0 = C_IDX(0);
-  ValueRange pPos = c0;
-  Value inPadZone = nullptr;
-  // If the parent iterator is a batch iterator, we also start from 0 (but
-  // on a different batch).
-  if (parent && !parent->isBatchIterator()) {
-    pPos = parent->getCurPosition();
-    if (llvm::isa<PadIterator>(parent) && parent->randomAccessible()) {
-      // A padded dense iterator create "sparse" padded zone, which need to be
-      // handled specially.
-      inPadZone = pPos.back();
-      pPos = pPos.drop_back();
-    }
-  }
-
-  ValueRange batchPrefix = parent ? parent->getBatchCrds() : ValueRange{};
-  std::tie(posLo, posHi) = stl.peekRangeAt(b, l, batchPrefix, pPos, inPadZone);
-  // Seek to the lowest position.
-  seek(posLo);
-}
-
 void NonEmptySubSectIterator::genInitImpl(OpBuilder &b, Location l,
                                           const SparseIterator *) {
   Value c0 = C_IDX(0);
@@ -1551,19 +1408,10 @@ sparse_tensor::makeSlicedLevelIterator(std::unique_ptr<SparseIterator> &&sit,
   return ret;
 }
 
-std::unique_ptr<SparseIterator>
-sparse_tensor::makePaddedIterator(std::unique_ptr<SparseIterator> &&sit,
-                                  Value padLow, Value padHigh,
-                                  SparseEmitStrategy strategy) {
-  auto ret = std::make_unique<PadIterator>(std::move(sit), padLow, padHigh);
-  ret->setSparseEmitStrategy(strategy);
-  return ret;
-}
-
 static const SparseIterator *tryUnwrapFilter(const SparseIterator *it) {
   auto *filter = llvm::dyn_cast_or_null<FilterIterator>(it);
   if (filter)
-    return &filter->getWrappedIterator();
+    return filter->wrap.get();
   return it;
 }
 

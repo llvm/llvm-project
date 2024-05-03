@@ -8,6 +8,5 @@ add_mlir_dialect_library(MLIRArithUtils
   MLIRArithDialect
   MLIRComplexDialect
   MLIRDialect
-  MLIRDialectUtils
   MLIRIR
   )

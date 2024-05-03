@@ -498,15 +498,9 @@ static Value genTensorLoad(CodegenEnv &env, OpBuilder &builder, ExprId exp) {
   Value val = env.exp(exp).val;
   if (val)
     return val;
-  // Get tensor operand.
-  linalg::GenericOp op = env.op();
-  Location loc = op.getLoc();
-  OpOperand *t = &op->getOpOperand(env.exp(exp).tensor);
-  // Fold binary-valued tensor into explicit value.
-  const auto stt = getSparseTensorType(t->get());
-  if (auto explVal = stt.getExplicitVal())
-    return genValFromAttr(builder, loc, explVal);
   // Load during insertion.
+  linalg::GenericOp op = env.op();
+  OpOperand *t = &op->getOpOperand(env.exp(exp).tensor);
   if (env.isSparseOutput(t)) {
     if (env.isCustomReduc())
       return genInsertionLoadReduce(env, builder, t);
@@ -515,7 +509,7 @@ static Value genTensorLoad(CodegenEnv &env, OpBuilder &builder, ExprId exp) {
   // Actual load.
   SmallVector<Value> args;
   Value ptr = genSubscript(env, builder, t, args);
-  return builder.create<memref::LoadOp>(loc, ptr, args);
+  return builder.create<memref::LoadOp>(op.getLoc(), ptr, args);
 }
 
 /// Generates a store on a dense or sparse tensor.

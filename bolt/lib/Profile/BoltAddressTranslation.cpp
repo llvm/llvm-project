@@ -481,9 +481,8 @@ uint64_t BoltAddressTranslation::translate(uint64_t FuncAddress,
   if (IsBranchSrc) {
     // Try exact lookup first
     auto KeyVal = Map.find(Offset);
-    if (KeyVal != Map.end())
-      if (KeyVal->second & BRANCHENTRY)
-        return KeyVal->second >> 1;
+    if (KeyVal != Map.end() && KeyVal->second & BRANCHENTRY)
+      return KeyVal->second >> 1;
   }
   auto KeyVal = Map.upper_bound(Offset);
   if (KeyVal == Map.begin())

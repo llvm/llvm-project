@@ -709,6 +709,10 @@ set(LLVM_LIB_FUZZING_ENGINE "" CACHE PATH
 option(LLVM_USE_SPLIT_DWARF
   "Use -gsplit-dwarf when compiling llvm and --gdb-index when linking." OFF)
 
+# Facebook T92898286
+option(LLVM_TEST_BOLT "Enable BOLT testing in non-BOLT tests that use clang" OFF)
+# End Facebook T92898286
+
 # Define an option controlling whether we should build for 32-bit on 64-bit
 # platforms, where supported.
 if( CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT (WIN32 OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX"))
@@ -1156,11 +1160,6 @@ if (CMAKE_SYSTEM_NAME MATCHES "OS390")
   add_compile_definitions(_OPEN_SYS_FILE_EXT) # Needed for EBCDIC I/O.
   add_compile_definitions(_EXT) # Needed for file data.
   add_compile_definitions(_UNIX03_THREADS) # Multithreading support.
-  # Need to build LLVM as ASCII application.
-  # This can't be a global setting because other projects may
-  # need to be built in EBCDIC mode.
-  append("-fzos-le-char-mode=ascii" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
-  append("-m64" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
 endif()
 
 # Build with _FILE_OFFSET_BITS=64 on Solaris to match g++ >= 9.

@@ -63,8 +63,7 @@ add_custom_command(OUTPUT ${dfsan_abilist_filename}
                    COMMAND
                     ${CMAKE_COMMAND} -E make_directory ${dfsan_abilist_dir}
                    COMMAND
-                    ${CMAKE_COMMAND} -E cat
-                         ${CMAKE_CURRENT_SOURCE_DIR}/done_abilist.txt
+                     cat ${CMAKE_CURRENT_SOURCE_DIR}/done_abilist.txt
                          ${CMAKE_CURRENT_SOURCE_DIR}/libc_ubuntu1404_abilist.txt
                          > ${dfsan_abilist_filename}
                    DEPENDS done_abilist.txt libc_ubuntu1404_abilist.txt)

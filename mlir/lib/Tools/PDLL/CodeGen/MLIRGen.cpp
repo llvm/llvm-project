@@ -337,13 +337,13 @@ Value CodeGen::genNonInitializerVar(const ast::VariableDecl *varDecl,
   // Generate a value based on the type of the variable.
   ast::Type type = varDecl->getType();
   Type mlirType = genType(type);
-  if (isa<ast::ValueType>(type))
+  if (type.isa<ast::ValueType>())
     return builder.create<pdl::OperandOp>(loc, mlirType, getTypeConstraint());
-  if (isa<ast::TypeType>(type))
+  if (type.isa<ast::TypeType>())
     return builder.create<pdl::TypeOp>(loc, mlirType, /*type=*/TypeAttr());
-  if (isa<ast::AttributeType>(type))
+  if (type.isa<ast::AttributeType>())
     return builder.create<pdl::AttributeOp>(loc, getTypeConstraint());
-  if (ast::OperationType opType = dyn_cast<ast::OperationType>(type)) {
+  if (ast::OperationType opType = type.dyn_cast<ast::OperationType>()) {
     Value operands = builder.create<pdl::OperandsOp>(
         loc, pdl::RangeType::get(builder.getType<pdl::ValueType>()),
         /*type=*/Value());
@@ -354,12 +354,12 @@ Value CodeGen::genNonInitializerVar(const ast::VariableDecl *varDecl,
         loc, opType.getName(), operands, std::nullopt, ValueRange(), results);
   }
 
-  if (ast::RangeType rangeTy = dyn_cast<ast::RangeType>(type)) {
+  if (ast::RangeType rangeTy = type.dyn_cast<ast::RangeType>()) {
     ast::Type eleTy = rangeTy.getElementType();
-    if (isa<ast::ValueType>(eleTy))
+    if (eleTy.isa<ast::ValueType>())
       return builder.create<pdl::OperandsOp>(loc, mlirType,
                                              getTypeConstraint());
-    if (isa<ast::TypeType>(eleTy))
+    if (eleTy.isa<ast::TypeType>())
       return builder.create<pdl::TypesOp>(loc, mlirType, /*types=*/ArrayAttr());
   }
 
@@ -440,7 +440,7 @@ Value CodeGen::genExprImpl(const ast::MemberAccessExpr *expr) {
   ast::Type parentType = expr->getParentExpr()->getType();
 
   // Handle operation based member access.
-  if (ast::OperationType opType = dyn_cast<ast::OperationType>(parentType)) {
+  if (ast::OperationType opType = parentType.dyn_cast<ast::OperationType>()) {
     if (isa<ast::AllResultsMemberAccessExpr>(expr)) {
       Type mlirType = genType(expr->getType());
       if (isa<pdl::ValueType>(mlirType))
@@ -480,7 +480,7 @@ Value CodeGen::genExprImpl(const ast::MemberAccessExpr *expr) {
   }
 
   // Handle tuple based member access.
-  if (auto tupleType = dyn_cast<ast::TupleType>(parentType)) {
+  if (auto tupleType = parentType.dyn_cast<ast::TupleType>()) {
     auto elementNames = tupleType.getElementNames();
 
     // The index is either a numeric index, or a name.
@@ -581,14 +581,14 @@ CodeGen::genConstraintOrRewriteCall(const T *decl, Location loc,
   if (!cstBody) {
     ast::Type declResultType = decl->getResultType();
     SmallVector<Type> resultTypes;
-    if (ast::TupleType tupleType = dyn_cast<ast::TupleType>(declResultType)) {
+    if (ast::TupleType tupleType = declResultType.dyn_cast<ast::TupleType>()) {
       for (ast::Type type : tupleType.getElementTypes())
         resultTypes.push_back(genType(type));
     } else {
       resultTypes.push_back(genType(declResultType));
     }
-    PDLOpT pdlOp = builder.create<PDLOpT>(loc, resultTypes,
-                                          decl->getName().getName(), inputs);
+    PDLOpT pdlOp = builder.create<PDLOpT>(
+        loc, resultTypes, decl->getName().getName(), inputs);
     if (isNegated && std::is_same_v<PDLOpT, pdl::ApplyNativeConstraintOp>)
       cast<pdl::ApplyNativeConstraintOp>(pdlOp).setIsNegated(true);
     return pdlOp->getResults();

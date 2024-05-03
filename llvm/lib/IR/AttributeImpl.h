@@ -121,8 +121,8 @@ public:
   static void Profile(FoldingSetNodeID &ID, Attribute::AttrKind Kind,
                       const ConstantRange &CR) {
     ID.AddInteger(Kind);
-    CR.getLower().Profile(ID);
-    CR.getUpper().Profile(ID);
+    ID.AddInteger(CR.getLower());
+    ID.AddInteger(CR.getUpper());
   }
 };
 

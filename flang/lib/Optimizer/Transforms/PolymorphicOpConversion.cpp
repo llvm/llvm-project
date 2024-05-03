@@ -29,6 +29,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/CommandLine.h"
+#include <mutex>
 
 namespace fir {
 #define GEN_PASS_DEF_POLYMORPHICOPCONVERSION
@@ -47,8 +48,9 @@ class SelectTypeConv : public OpConversionPattern<fir::SelectTypeOp> {
 public:
   using OpConversionPattern<fir::SelectTypeOp>::OpConversionPattern;
 
-  SelectTypeConv(mlir::MLIRContext *ctx)
-      : mlir::OpConversionPattern<fir::SelectTypeOp>(ctx) {}
+  SelectTypeConv(mlir::MLIRContext *ctx, std::mutex *moduleMutex)
+      : mlir::OpConversionPattern<fir::SelectTypeOp>(ctx),
+        moduleMutex(moduleMutex) {}
 
   mlir::LogicalResult
   matchAndRewrite(fir::SelectTypeOp selectType, OpAdaptor adaptor,
@@ -70,6 +72,9 @@ private:
 
   llvm::SmallSet<llvm::StringRef, 4> collectAncestors(fir::TypeInfoOp dt,
                                                       mlir::ModuleOp mod) const;
+
+  // Mutex used to guard insertion of mlir::func::FuncOp in the module.
+  std::mutex *moduleMutex;
 };
 
 /// Lower `fir.dispatch` operation. A virtual call to a method in a dispatch
@@ -218,18 +223,19 @@ class PolymorphicOpConversion
     : public fir::impl::PolymorphicOpConversionBase<PolymorphicOpConversion> {
 public:
   mlir::LogicalResult initialize(mlir::MLIRContext *ctx) override {
+    moduleMutex = new std::mutex();
     return mlir::success();
   }
 
   void runOnOperation() override {
     auto *context = &getContext();
-    mlir::ModuleOp mod = getOperation();
+    auto mod = getOperation()->getParentOfType<ModuleOp>();
     mlir::RewritePatternSet patterns(context);
 
     BindingTables bindingTables;
     buildBindingTables(bindingTables, mod);
 
-    patterns.insert<SelectTypeConv>(context);
+    patterns.insert<SelectTypeConv>(context, moduleMutex);
     patterns.insert<DispatchOpConv>(context, bindingTables);
     mlir::ConversionTarget target(*context);
     target.addLegalDialect<mlir::affine::AffineDialect,
@@ -247,6 +253,9 @@ public:
       signalPassFailure();
     }
   }
+
+private:
+  std::mutex *moduleMutex;
 };
 } // namespace
 
@@ -399,6 +408,7 @@ mlir::LogicalResult SelectTypeConv::genTypeLadderStep(
     {
       // Since conversion is done in parallel for each fir.select_type
       // operation, the runtime function insertion must be threadsafe.
+      std::lock_guard<std::mutex> lock(*moduleMutex);
       callee =
           fir::createFuncOp(rewriter.getUnknownLoc(), mod, fctName,
                             rewriter.getFunctionType({descNoneTy, typeDescTy},
@@ -460,4 +470,8 @@ SelectTypeConv::collectAncestors(fir::TypeInfoOp dt, mlir::ModuleOp mod) const {
     assert(dt && "parent type info not generated");
   }
   return ancestors;
+}
+
+std::unique_ptr<mlir::Pass> fir::createPolymorphicOpConversionPass() {
+  return std::make_unique<PolymorphicOpConversion>();
 }

@@ -198,8 +198,14 @@ private:
   /// A trace is region of code executed between two LBR entries supplied in
   /// execution order.
   ///
+  /// Return true if the trace is valid, false otherwise.
+  bool
+  recordTrace(BinaryFunction &BF, const LBREntry &First, const LBREntry &Second,
+              uint64_t Count,
+              SmallVector<std::pair<uint64_t, uint64_t>, 16> &Branches) const;
+
   /// Return a vector of offsets corresponding to a trace in a function
-  /// if the trace is valid, std::nullopt otherwise.
+  /// (see recordTrace() above).
   std::optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
   getFallthroughsInTrace(BinaryFunction &BF, const LBREntry &First,
                          const LBREntry &Second, uint64_t Count = 1) const;

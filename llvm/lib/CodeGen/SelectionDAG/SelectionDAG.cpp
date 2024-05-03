@@ -5231,13 +5231,13 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   return true;
 }
 
-bool SelectionDAG::isADDLike(SDValue Op, bool NoWrap) const {
+bool SelectionDAG::isADDLike(SDValue Op) const {
   unsigned Opcode = Op.getOpcode();
   if (Opcode == ISD::OR)
     return Op->getFlags().hasDisjoint() ||
            haveNoCommonBitsSet(Op.getOperand(0), Op.getOperand(1));
   if (Opcode == ISD::XOR)
-    return !NoWrap && isMinSignedConstant(Op.getOperand(1));
+    return isMinSignedConstant(Op.getOperand(1));
   return false;
 }
 

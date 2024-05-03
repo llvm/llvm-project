@@ -122,7 +122,7 @@ public:
   }
 
   /// Add a pass-config modifier.
-  ObjectLinkingLayer &addPlugin(std::shared_ptr<Plugin> P) {
+  ObjectLinkingLayer &addPlugin(std::unique_ptr<Plugin> P) {
     std::lock_guard<std::mutex> Lock(LayerMutex);
     Plugins.push_back(std::move(P));
     return *this;
@@ -181,8 +181,11 @@ public:
 private:
   using FinalizedAlloc = jitlink::JITLinkMemoryManager::FinalizedAlloc;
 
-  Error recordFinalizedAlloc(MaterializationResponsibility &MR,
-                             FinalizedAlloc FA);
+  void modifyPassConfig(MaterializationResponsibility &MR,
+                        jitlink::LinkGraph &G,
+                        jitlink::PassConfiguration &PassConfig);
+  void notifyLoaded(MaterializationResponsibility &MR);
+  Error notifyEmitted(MaterializationResponsibility &MR, FinalizedAlloc FA);
 
   Error handleRemoveResources(JITDylib &JD, ResourceKey K) override;
   void handleTransferResources(JITDylib &JD, ResourceKey DstKey,
@@ -195,7 +198,7 @@ private:
   bool AutoClaimObjectSymbols = false;
   ReturnObjectBufferFunction ReturnObjectBuffer;
   DenseMap<ResourceKey, std::vector<FinalizedAlloc>> Allocs;
-  std::vector<std::shared_ptr<Plugin>> Plugins;
+  std::vector<std::unique_ptr<Plugin>> Plugins;
 };
 
 class EHFrameRegistrationPlugin : public ObjectLinkingLayer::Plugin {

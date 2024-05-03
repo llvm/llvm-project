@@ -361,9 +361,6 @@ private:
   /// True if another function body was merged into this one.
   bool HasFunctionsFoldedInto{false};
 
-  /// True if the function has internal calls.
-  bool HasInternalCalls{false};
-
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
 
@@ -1336,9 +1333,6 @@ public:
 
   /// Return true if other functions were folded into this one.
   bool hasFunctionsFoldedInto() const { return HasFunctionsFoldedInto; }
-
-  /// Return true if the function has internal calls.
-  bool hasInternalCalls() const { return HasInternalCalls; }
 
   /// If this function was folded, return the function it was folded into.
   BinaryFunction *getFoldedIntoFunction() const { return FoldedIntoFunction; }

@@ -118,8 +118,7 @@ TEST(ParseArchString, RejectsUpperCase) {
 TEST(ParseArchString, RejectsInvalidBaseISA) {
   for (StringRef Input : {"rv32", "rv64", "rv65i"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "string must begin with rv32{i,e,g}, rv64{i,e,g}, or a supported "
-              "profile name");
+              "string must begin with rv32{i,e,g} or rv64{i,e,g}");
   }
 
   for (StringRef Input : {"rv32j", "rv32_i"}) {
@@ -134,8 +133,7 @@ TEST(ParseArchString, RejectsInvalidBaseISA) {
 TEST(ParseArchString, RejectsUnsupportedBaseISA) {
   for (StringRef Input : {"rv128i", "rv128g"}) {
     EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "string must begin with rv32{i,e,g}, rv64{i,e,g}, or a supported "
-              "profile name");
+              "string must begin with rv32{i,e,g} or rv64{i,e,g}");
   }
 }
 

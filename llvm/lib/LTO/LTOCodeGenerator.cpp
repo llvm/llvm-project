@@ -572,9 +572,6 @@ bool LTOCodeGenerator::optimize() {
   if (!this->determineTarget())
     return false;
 
-  // libLTO parses options late, so re-set them here.
-  Context.setDiscardValueNames(LTODiscardValueNames);
-
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
       Context, RemarksFilename, RemarksPasses, RemarksFormat,
       RemarksWithHotness, RemarksHotnessThreshold);

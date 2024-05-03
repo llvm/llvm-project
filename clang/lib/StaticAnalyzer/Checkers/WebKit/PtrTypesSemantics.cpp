@@ -311,7 +311,7 @@ public:
   bool VisitUnaryOperator(const UnaryOperator *UO) {
     // Operator '*' and '!' are allowed as long as the operand is trivial.
     auto op = UO->getOpcode();
-    if (op == UO_Deref || op == UO_AddrOf || op == UO_LNot || op == UO_Not)
+    if (op == UO_Deref || op == UO_AddrOf || op == UO_LNot)
       return Visit(UO->getSubExpr());
 
     if (UO->isIncrementOp() || UO->isDecrementOp()) {
@@ -329,16 +329,6 @@ public:
   bool VisitBinaryOperator(const BinaryOperator *BO) {
     // Binary operators are trivial if their operands are trivial.
     return Visit(BO->getLHS()) && Visit(BO->getRHS());
-  }
-
-  bool VisitCompoundAssignOperator(const CompoundAssignOperator *CAO) {
-    // Compound assignment operator such as |= is trivial if its
-    // subexpresssions are trivial.
-    return VisitChildren(CAO);
-  }
-
-  bool VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
-    return VisitChildren(ASE);
   }
 
   bool VisitConditionalOperator(const ConditionalOperator *CO) {
@@ -368,16 +358,6 @@ public:
       return true;
 
     return TrivialFunctionAnalysis::isTrivialImpl(Callee, Cache);
-  }
-
-  bool
-  VisitSubstNonTypeTemplateParmExpr(const SubstNonTypeTemplateParmExpr *E) {
-    // Non-type template paramter is compile time constant and trivial.
-    return true;
-  }
-
-  bool VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E) {
-    return VisitChildren(E);
   }
 
   bool VisitPredefinedExpr(const PredefinedExpr *E) {
@@ -483,7 +463,6 @@ public:
   bool VisitFixedPointLiteral(const FixedPointLiteral *E) { return true; }
   bool VisitCharacterLiteral(const CharacterLiteral *E) { return true; }
   bool VisitStringLiteral(const StringLiteral *E) { return true; }
-  bool VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E) { return true; }
 
   bool VisitConstantExpr(const ConstantExpr *CE) {
     // Constant expressions are trivial.

@@ -775,9 +775,7 @@ class FeatureListAction : public PluginParseTreeAction {
     }
   }
 
-  bool beginSourceFileAction() override {
-    return runPrescan() && runParse(/*emitMessages=*/true);
-  }
+  bool beginSourceFileAction() override { return runPrescan() && runParse(); }
 };
 
 static FrontendPluginRegistry::Add<FeatureListAction> X(

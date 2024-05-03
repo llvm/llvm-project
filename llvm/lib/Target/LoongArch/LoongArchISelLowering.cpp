@@ -903,24 +903,6 @@ SDValue LoongArchTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
   return LowerCallTo(CLI).first;
 }
 
-SDValue LoongArchTargetLowering::getTLSDescAddr(GlobalAddressSDNode *N,
-                                                SelectionDAG &DAG, unsigned Opc,
-                                                bool Large) const {
-  SDLoc DL(N);
-  EVT Ty = getPointerTy(DAG.getDataLayout());
-  const GlobalValue *GV = N->getGlobal();
-
-  // This is not actually used, but is necessary for successfully matching the
-  // PseudoLA_*_LARGE nodes.
-  SDValue Tmp = DAG.getConstant(0, DL, Ty);
-
-  // Use a PC-relative addressing mode to access the global dynamic GOT address.
-  // This generates the pattern (PseudoLA_TLS_DESC_PC{,LARGE} sym).
-  SDValue Addr = DAG.getTargetGlobalAddress(GV, DL, Ty, 0, 0);
-  return Large ? SDValue(DAG.getMachineNode(Opc, DL, Ty, Tmp, Addr), 0)
-               : SDValue(DAG.getMachineNode(Opc, DL, Ty, Addr), 0);
-}
-
 SDValue
 LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
                                                SelectionDAG &DAG) const {
@@ -934,46 +916,42 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   assert(N->getOffset() == 0 && "unexpected offset in global node");
 
-  bool IsDesc = DAG.getTarget().useTLSDESC();
-
+  SDValue Addr;
   switch (getTargetMachine().getTLSModel(N->getGlobal())) {
   case TLSModel::GeneralDynamic:
     // In this model, application code calls the dynamic linker function
     // __tls_get_addr to locate TLS offsets into the dynamic thread vector at
     // runtime.
-    if (!IsDesc)
-      return getDynamicTLSAddr(N, DAG,
-                               Large ? LoongArch::PseudoLA_TLS_GD_LARGE
-                                     : LoongArch::PseudoLA_TLS_GD,
-                               Large);
+    Addr = getDynamicTLSAddr(N, DAG,
+                             Large ? LoongArch::PseudoLA_TLS_GD_LARGE
+                                   : LoongArch::PseudoLA_TLS_GD,
+                             Large);
     break;
   case TLSModel::LocalDynamic:
     // Same as GeneralDynamic, except for assembly modifiers and relocation
     // records.
-    if (!IsDesc)
-      return getDynamicTLSAddr(N, DAG,
-                               Large ? LoongArch::PseudoLA_TLS_LD_LARGE
-                                     : LoongArch::PseudoLA_TLS_LD,
-                               Large);
+    Addr = getDynamicTLSAddr(N, DAG,
+                             Large ? LoongArch::PseudoLA_TLS_LD_LARGE
+                                   : LoongArch::PseudoLA_TLS_LD,
+                             Large);
     break;
   case TLSModel::InitialExec:
     // This model uses the GOT to resolve TLS offsets.
-    return getStaticTLSAddr(N, DAG,
+    Addr = getStaticTLSAddr(N, DAG,
                             Large ? LoongArch::PseudoLA_TLS_IE_LARGE
                                   : LoongArch::PseudoLA_TLS_IE,
                             Large);
+    break;
   case TLSModel::LocalExec:
     // This model is used when static linking as the TLS offsets are resolved
     // during program linking.
     //
     // This node doesn't need an extra argument for the large code model.
-    return getStaticTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_LE);
+    Addr = getStaticTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_LE);
+    break;
   }
 
-  return getTLSDescAddr(N, DAG,
-                        Large ? LoongArch::PseudoLA_TLS_DESC_PC_LARGE
-                              : LoongArch::PseudoLA_TLS_DESC_PC,
-                        Large);
+  return Addr;
 }
 
 template <unsigned N>
@@ -4950,8 +4928,7 @@ bool LoongArchTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
   return TargetLowering::isZExtFree(Val, VT2);
 }
 
-bool LoongArchTargetLowering::isSExtCheaperThanZExt(EVT SrcVT,
-                                                    EVT DstVT) const {
+bool LoongArchTargetLowering::isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const {
   return Subtarget.is64Bit() && SrcVT == MVT::i32 && DstVT == MVT::i64;
 }
 

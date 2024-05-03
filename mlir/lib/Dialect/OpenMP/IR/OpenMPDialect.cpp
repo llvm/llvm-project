@@ -2258,8 +2258,7 @@ void PrivateClauseOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 LogicalResult PrivateClauseOp::verify() {
   Type symType = getType();
 
-  auto verifyTerminator = [&](Operation *terminator,
-                              bool yieldsValue) -> LogicalResult {
+  auto verifyTerminator = [&](Operation *terminator) -> LogicalResult {
     if (!terminator->getBlock()->getSuccessors().empty())
       return success();
 
@@ -2269,14 +2268,6 @@ LogicalResult PrivateClauseOp::verify() {
 
     YieldOp yieldOp = llvm::cast<YieldOp>(terminator);
     TypeRange yieldedTypes = yieldOp.getResults().getTypes();
-
-    if (!yieldsValue) {
-      if (yieldedTypes.empty())
-        return success();
-
-      return mlir::emitError(terminator->getLoc())
-             << "Did not expect any values to be yielded.";
-    }
 
     if (yieldedTypes.size() == 1 && yieldedTypes.front() == symType)
       return success();
@@ -2294,8 +2285,7 @@ LogicalResult PrivateClauseOp::verify() {
   };
 
   auto verifyRegion = [&](Region &region, unsigned expectedNumArgs,
-                          StringRef regionName,
-                          bool yieldsValue) -> LogicalResult {
+                          StringRef regionName) -> LogicalResult {
     assert(!region.empty());
 
     if (region.getNumArguments() != expectedNumArgs)
@@ -2309,15 +2299,14 @@ LogicalResult PrivateClauseOp::verify() {
       if (!block.mightHaveTerminator())
         continue;
 
-      if (failed(verifyTerminator(block.getTerminator(), yieldsValue)))
+      if (failed(verifyTerminator(block.getTerminator())))
         return failure();
     }
 
     return success();
   };
 
-  if (failed(verifyRegion(getAllocRegion(), /*expectedNumArgs=*/1, "alloc",
-                          /*yieldsValue=*/true)))
+  if (failed(verifyRegion(getAllocRegion(), /*expectedNumArgs=*/1, "alloc")))
     return failure();
 
   DataSharingClauseType dsType = getDataSharingType();
@@ -2330,13 +2319,7 @@ LogicalResult PrivateClauseOp::verify() {
         "`firstprivate` clauses require both `alloc` and `copy` regions.");
 
   if (dsType == DataSharingClauseType::FirstPrivate &&
-      failed(verifyRegion(getCopyRegion(), /*expectedNumArgs=*/2, "copy",
-                          /*yieldsValue=*/true)))
-    return failure();
-
-  if (!getDeallocRegion().empty() &&
-      failed(verifyRegion(getDeallocRegion(), /*expectedNumArgs=*/1, "dealloc",
-                          /*yieldsValue=*/false)))
+      failed(verifyRegion(getCopyRegion(), /*expectedNumArgs=*/2, "copy")))
     return failure();
 
   return success();

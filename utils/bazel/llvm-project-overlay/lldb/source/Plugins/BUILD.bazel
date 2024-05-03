@@ -202,7 +202,6 @@ cc_library(
         "//lldb:SymbolHeaders",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
-        "//llvm:BinaryFormat",
         "//llvm:Core",
         "//llvm:ExecutionEngine",
         "//llvm:IPO",

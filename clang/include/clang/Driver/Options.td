@@ -1608,13 +1608,6 @@ defm double_square_bracket_attributes : BoolFOption<"double-square-bracket-attri
   LangOpts<"DoubleSquareBracketAttributes">, DefaultTrue, PosFlag<SetTrue>,
  NegFlag<SetFalse>>;
 
-defm experimental_late_parse_attributes : BoolFOption<"experimental-late-parse-attributes",
-  LangOpts<"ExperimentalLateParseAttributes">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Enable">,
-  NegFlag<SetFalse, [], [ClangOption], "Disable">,
-  BothFlags<[], [ClangOption, CC1Option],
-          " experimental late parsing of attributes">>;
-
 defm autolink : BoolFOption<"autolink",
   CodeGenOpts<"Autolink">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
@@ -5440,6 +5433,10 @@ def pg : Flag<["-"], "pg">, HelpText<"Enable mcount instrumentation">,
   MarshallingInfoFlag<CodeGenOpts<"InstrumentForProfiling">>;
 def pipe : Flag<["-", "--"], "pipe">,
   HelpText<"Use pipes between commands, when possible">;
+// Facebook T92898286
+def post_link_optimize : Flag<["--"], "post-link-optimize">,
+  HelpText<"Apply post-link optimizations using BOLT">;
+// End Facebook T92898286
 def prebind__all__twolevel__modules : Flag<["-"], "prebind_all_twolevel_modules">;
 def prebind : Flag<["-"], "prebind">;
 def preload : Flag<["-"], "preload">;

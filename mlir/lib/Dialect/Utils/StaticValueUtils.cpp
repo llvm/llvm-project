@@ -180,8 +180,9 @@ SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
 
 /// Decompose a vector of mixed static or dynamic values into the corresponding
 /// pair of arrays. This is the inverse function of `getMixedValues`.
-std::pair<SmallVector<int64_t>, SmallVector<Value>>
-decomposeMixedValues(const SmallVectorImpl<OpFoldResult> &mixedValues) {
+std::pair<ArrayAttr, SmallVector<Value>>
+decomposeMixedValues(Builder &b,
+                     const SmallVectorImpl<OpFoldResult> &mixedValues) {
   SmallVector<int64_t> staticValues;
   SmallVector<Value> dynamicValues;
   for (const auto &it : mixedValues) {
@@ -192,7 +193,7 @@ decomposeMixedValues(const SmallVectorImpl<OpFoldResult> &mixedValues) {
       dynamicValues.push_back(it.get<Value>());
     }
   }
-  return {staticValues, dynamicValues};
+  return {b.getI64ArrayAttr(staticValues), dynamicValues};
 }
 
 /// Helper to sort `values` according to matching `keys`.

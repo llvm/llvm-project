@@ -35,23 +35,11 @@ struct LegalityQuery;
 class MachineRegisterInfo;
 namespace GISelAddressing {
 /// Helper struct to store a base, index and offset that forms an address
-class BaseIndexOffset {
-private:
+struct BaseIndexOffset {
   Register BaseReg;
   Register IndexReg;
-  std::optional<int64_t> Offset;
-
-public:
-  BaseIndexOffset() = default;
-  Register getBase() { return BaseReg; }
-  Register getBase() const { return BaseReg; }
-  Register getIndex() { return IndexReg; }
-  Register getIndex() const { return IndexReg; }
-  void setBase(Register NewBase) { BaseReg = NewBase; }
-  void setIndex(Register NewIndex) { IndexReg = NewIndex; }
-  void setOffset(std::optional<int64_t> NewOff) { Offset = NewOff; }
-  bool hasValidOffset() const { return Offset.has_value(); }
-  int64_t getOffset() const { return *Offset; }
+  int64_t Offset = 0;
+  bool IsIndexSignExt = false;
 };
 
 /// Returns a BaseIndexOffset which describes the pointer in \p Ptr.
@@ -101,7 +89,7 @@ private:
     // order stores are writing to incremeneting consecutive addresses. So when
     // we walk the block in reverse order, the next eligible store must write to
     // an offset one store width lower than CurrentLowestOffset.
-    int64_t CurrentLowestOffset;
+    uint64_t CurrentLowestOffset;
     SmallVector<GStore *> Stores;
     // A vector of MachineInstr/unsigned pairs to denote potential aliases that
     // need to be checked before the candidate is considered safe to merge. The

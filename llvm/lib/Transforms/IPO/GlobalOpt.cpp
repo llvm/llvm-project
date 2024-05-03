@@ -87,7 +87,6 @@ STATISTIC(NumNestRemoved   , "Number of nest attributes removed");
 STATISTIC(NumAliasesResolved, "Number of global aliases resolved");
 STATISTIC(NumAliasesRemoved, "Number of global aliases eliminated");
 STATISTIC(NumCXXDtorsRemoved, "Number of global C++ destructors removed");
-STATISTIC(NumAtExitRemoved, "Number of atexit handlers removed");
 STATISTIC(NumInternalFunc, "Number of internal functions");
 STATISTIC(NumColdCC, "Number of functions marked coldcc");
 STATISTIC(NumIFuncsResolved, "Number of statically resolved IFuncs");
@@ -2329,19 +2328,18 @@ OptimizeGlobalAliases(Module &M,
 }
 
 static Function *
-FindAtExitLibFunc(Module &M,
-                  function_ref<TargetLibraryInfo &(Function &)> GetTLI,
-                  LibFunc Func) {
+FindCXAAtExit(Module &M, function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
   // Hack to get a default TLI before we have actual Function.
   auto FuncIter = M.begin();
   if (FuncIter == M.end())
     return nullptr;
   auto *TLI = &GetTLI(*FuncIter);
 
-  if (!TLI->has(Func))
+  LibFunc F = LibFunc_cxa_atexit;
+  if (!TLI->has(F))
     return nullptr;
 
-  Function *Fn = M.getFunction(TLI->getName(Func));
+  Function *Fn = M.getFunction(TLI->getName(F));
   if (!Fn)
     return nullptr;
 
@@ -2349,18 +2347,17 @@ FindAtExitLibFunc(Module &M,
   TLI = &GetTLI(*Fn);
 
   // Make sure that the function has the correct prototype.
-  LibFunc F;
-  if (!TLI->getLibFunc(*Fn, F) || F != Func)
+  if (!TLI->getLibFunc(*Fn, F) || F != LibFunc_cxa_atexit)
     return nullptr;
 
   return Fn;
 }
 
-/// Returns whether the given function is an empty C++ destructor or atexit
-/// handler and can therefore be eliminated. Note that we assume that other
-/// optimization passes have already simplified the code so we simply check for
-/// 'ret'.
-static bool IsEmptyAtExitFunction(const Function &Fn) {
+/// Returns whether the given function is an empty C++ destructor and can
+/// therefore be eliminated.
+/// Note that we assume that other optimization passes have already simplified
+/// the code so we simply check for 'ret'.
+static bool cxxDtorIsEmpty(const Function &Fn) {
   // FIXME: We could eliminate C++ destructors if they're readonly/readnone and
   // nounwind, but that doesn't seem worth doing.
   if (Fn.isDeclaration())
@@ -2376,7 +2373,7 @@ static bool IsEmptyAtExitFunction(const Function &Fn) {
   return false;
 }
 
-static bool OptimizeEmptyGlobalAtExitDtors(Function *CXAAtExitFn, bool isCXX) {
+static bool OptimizeEmptyGlobalCXXDtors(Function *CXAAtExitFn) {
   /// Itanium C++ ABI p3.3.5:
   ///
   ///   After constructing a global (or local static) object, that will require
@@ -2389,8 +2386,8 @@ static bool OptimizeEmptyGlobalAtExitDtors(Function *CXAAtExitFn, bool isCXX) {
   ///   registered before this one. It returns zero if registration is
   ///   successful, nonzero on failure.
 
-  // This pass will look for calls to __cxa_atexit or atexit where the function
-  // is trivial and remove them.
+  // This pass will look for calls to __cxa_atexit where the function is trivial
+  // and remove them.
   bool Changed = false;
 
   for (User *U : llvm::make_early_inc_range(CXAAtExitFn->users())) {
@@ -2403,17 +2400,14 @@ static bool OptimizeEmptyGlobalAtExitDtors(Function *CXAAtExitFn, bool isCXX) {
 
     Function *DtorFn =
       dyn_cast<Function>(CI->getArgOperand(0)->stripPointerCasts());
-    if (!DtorFn || !IsEmptyAtExitFunction(*DtorFn))
+    if (!DtorFn || !cxxDtorIsEmpty(*DtorFn))
       continue;
 
     // Just remove the call.
     CI->replaceAllUsesWith(Constant::getNullValue(CI->getType()));
     CI->eraseFromParent();
 
-    if (isCXX)
-      ++NumCXXDtorsRemoved;
-    else
-      ++NumAtExitRemoved;
+    ++NumCXXDtorsRemoved;
 
     Changed |= true;
   }
@@ -2531,12 +2525,9 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
 
     // Try to remove trivial global destructors if they are not removed
     // already.
-    if (Function *CXAAtExitFn =
-            FindAtExitLibFunc(M, GetTLI, LibFunc_cxa_atexit))
-      LocalChange |= OptimizeEmptyGlobalAtExitDtors(CXAAtExitFn, true);
-
-    if (Function *AtExitFn = FindAtExitLibFunc(M, GetTLI, LibFunc_atexit))
-      LocalChange |= OptimizeEmptyGlobalAtExitDtors(AtExitFn, false);
+    Function *CXAAtExitFn = FindCXAAtExit(M, GetTLI);
+    if (CXAAtExitFn)
+      LocalChange |= OptimizeEmptyGlobalCXXDtors(CXAAtExitFn);
 
     // Optimize IFuncs whose callee's are statically known.
     LocalChange |= OptimizeStaticIFuncs(M);

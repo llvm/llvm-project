@@ -124,10 +124,7 @@ static void emitRISCVProfiles(RecordKeeper &Records, raw_ostream &OS) {
 
   OS << "static constexpr RISCVProfile SupportedProfiles[] = {\n";
 
-  auto Profiles = Records.getAllDerivedDefinitions("RISCVProfile");
-  llvm::sort(Profiles, LessRecordFieldName());
-
-  for (const Record *Rec : Profiles) {
+  for (const Record *Rec : Records.getAllDerivedDefinitions("RISCVProfile")) {
     OS.indent(4) << "{\"" << Rec->getValueAsString("Name") << "\",\"";
     printMArch(OS, Rec->getValueAsListOfDefs("Implies"));
     OS << "\"},\n";

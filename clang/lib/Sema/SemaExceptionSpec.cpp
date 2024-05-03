@@ -258,14 +258,13 @@ Sema::UpdateExceptionSpec(FunctionDecl *FD,
 }
 
 static bool exceptionSpecNotKnownYet(const FunctionDecl *FD) {
-  ExceptionSpecificationType EST =
-      FD->getType()->castAs<FunctionProtoType>()->getExceptionSpecType();
-  if (EST == EST_Unparsed)
-    return true;
-  else if (EST != EST_Unevaluated)
+  auto *MD = dyn_cast<CXXMethodDecl>(FD);
+  if (!MD)
     return false;
-  const DeclContext *DC = FD->getLexicalDeclContext();
-  return DC->isRecord() && cast<RecordDecl>(DC)->isBeingDefined();
+
+  auto EST = MD->getType()->castAs<FunctionProtoType>()->getExceptionSpecType();
+  return EST == EST_Unparsed ||
+         (EST == EST_Unevaluated && MD->getParent()->isBeingDefined());
 }
 
 static bool CheckEquivalentExceptionSpecImpl(

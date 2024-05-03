@@ -95,8 +95,7 @@ static std::vector<StringRef> getSearchPaths(opt::InputArgList *Args,
 
 // Opens a file. Path has to be resolved already. (used for def file)
 std::unique_ptr<MemoryBuffer> openFile(const Twine &Path) {
-  ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MB =
-      MemoryBuffer::getFile(Path, /*IsText=*/true);
+  ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MB = MemoryBuffer::getFile(Path);
 
   if (std::error_code EC = MB.getError()) {
     llvm::errs() << "cannot open file " << Path << ": " << EC.message() << "\n";

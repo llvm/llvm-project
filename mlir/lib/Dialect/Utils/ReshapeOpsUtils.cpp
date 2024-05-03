@@ -168,7 +168,7 @@ ArrayAttr mlir::getReassociationIndicesAttribute(
 }
 
 SmallVector<ReassociationIndices, 2> mlir::convertReassociationMapsToIndices(
-    ArrayRef<ReassociationExprs> reassociationExprs) {
+    OpBuilder &b, ArrayRef<ReassociationExprs> reassociationExprs) {
   SmallVector<ReassociationIndices, 2> reassociationIndices;
   for (const auto &exprs : reassociationExprs) {
     ReassociationIndices indices;
@@ -230,17 +230,24 @@ LogicalResult mlir::reshapeLikeShapesAreCompatible(
     ArrayRef<ReassociationIndices> reassociationMaps, bool isExpandingReshape) {
   unsigned expandedDimStart = 0;
   for (const auto &map : llvm::enumerate(reassociationMaps)) {
-    bool foundDynamicShape = false;
+    std::optional<int64_t> dynamicShape;
     int64_t linearizedStaticShape = 1;
-
     for (const auto &dim : llvm::enumerate(
              expandedShape.slice(expandedDimStart, map.value().size()))) {
-      if (ShapedType::isDynamic(dim.value()))
-        foundDynamicShape = true;
-      else
+      if (ShapedType::isDynamic(dim.value())) {
+        if (isExpandingReshape && dynamicShape) {
+          return emitError("invalid to have a single dimension (" +
+                           Twine(map.index()) +
+                           ") expanded into multiple dynamic dims (" +
+                           Twine(expandedDimStart + dynamicShape.value()) +
+                           "," + Twine(expandedDimStart + dim.index()) + ")");
+        }
+        dynamicShape = dim.index();
+      } else {
         linearizedStaticShape *= dim.value();
+      }
     }
-    if (foundDynamicShape) {
+    if (dynamicShape) {
       if (!ShapedType::isDynamic(collapsedShape[map.index()])) {
         return emitError(
             "expected dimension " + Twine(map.index()) +

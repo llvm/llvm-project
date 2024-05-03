@@ -548,12 +548,11 @@ struct OpWithBodyGenInfo {
           mlir::Operation *)>;
 
   OpWithBodyGenInfo(Fortran::lower::AbstractConverter &converter,
-                    Fortran::lower::SymMap &symTable,
                     Fortran::semantics::SemanticsContext &semaCtx,
                     mlir::Location loc, Fortran::lower::pft::Evaluation &eval,
                     llvm::omp::Directive dir)
-      : converter(converter), symTable(symTable), semaCtx(semaCtx), loc(loc),
-        eval(eval), dir(dir) {}
+      : converter(converter), semaCtx(semaCtx), loc(loc), eval(eval), dir(dir) {
+  }
 
   OpWithBodyGenInfo &setGenNested(bool value) {
     genNested = value;
@@ -590,8 +589,6 @@ struct OpWithBodyGenInfo {
 
   /// [inout] converter to use for the clauses.
   Fortran::lower::AbstractConverter &converter;
-  /// [in] Symbol table
-  Fortran::lower::SymMap &symTable;
   /// [in] Semantics context
   Fortran::semantics::SemanticsContext &semaCtx;
   /// [in] location in source code.
@@ -767,7 +764,6 @@ static void createBodyOfOp(mlir::Operation &op, OpWithBodyGenInfo &info) {
 
 static void genBodyOfTargetDataOp(
     Fortran::lower::AbstractConverter &converter,
-    Fortran::lower::SymMap &symTable,
     Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval, bool genNested,
     mlir::omp::TargetDataOp &dataOp, llvm::ArrayRef<mlir::Type> useDeviceTypes,
@@ -834,7 +830,6 @@ static void genBodyOfTargetDataOp(
 // all the symbols present in mapSymbols as block arguments to this block.
 static void
 genBodyOfTargetOp(Fortran::lower::AbstractConverter &converter,
-                  Fortran::lower::SymMap &symTable,
                   Fortran::semantics::SemanticsContext &semaCtx,
                   Fortran::lower::pft::Evaluation &eval, bool genNested,
                   mlir::omp::TargetOp &targetOp,
@@ -1272,7 +1267,6 @@ static void genWsloopClauses(
 
 static mlir::omp::BarrierOp
 genBarrierOp(Fortran::lower::AbstractConverter &converter,
-             Fortran::lower::SymMap &symTable,
              Fortran::semantics::SemanticsContext &semaCtx,
              Fortran::lower::pft::Evaluation &eval, mlir::Location loc) {
   return converter.getFirOpBuilder().create<mlir::omp::BarrierOp>(loc);
@@ -1280,7 +1274,6 @@ genBarrierOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::CriticalOp
 genCriticalOp(Fortran::lower::AbstractConverter &converter,
-              Fortran::lower::SymMap &symTable,
               Fortran::semantics::SemanticsContext &semaCtx,
               Fortran::lower::pft::Evaluation &eval, bool genNested,
               mlir::Location loc, const List<Clause> &clauses,
@@ -1305,7 +1298,7 @@ genCriticalOp(Fortran::lower::AbstractConverter &converter,
   }
 
   return genOpWithBody<mlir::omp::CriticalOp>(
-      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+      OpWithBodyGenInfo(converter, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_critical)
           .setGenNested(genNested),
       nameAttr);
@@ -1313,7 +1306,6 @@ genCriticalOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::DistributeOp
 genDistributeOp(Fortran::lower::AbstractConverter &converter,
-                Fortran::lower::SymMap &symTable,
                 Fortran::semantics::SemanticsContext &semaCtx,
                 Fortran::lower::pft::Evaluation &eval, bool genNested,
                 mlir::Location loc, const List<Clause> &clauses) {
@@ -1323,7 +1315,6 @@ genDistributeOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::FlushOp
 genFlushOp(Fortran::lower::AbstractConverter &converter,
-           Fortran::lower::SymMap &symTable,
            Fortran::semantics::SemanticsContext &semaCtx,
            Fortran::lower::pft::Evaluation &eval, mlir::Location loc,
            const ObjectList &objects, const List<Clause> &clauses) {
@@ -1336,19 +1327,17 @@ genFlushOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::MasterOp
 genMasterOp(Fortran::lower::AbstractConverter &converter,
-            Fortran::lower::SymMap &symTable,
             Fortran::semantics::SemanticsContext &semaCtx,
             Fortran::lower::pft::Evaluation &eval, bool genNested,
             mlir::Location loc) {
   return genOpWithBody<mlir::omp::MasterOp>(
-      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+      OpWithBodyGenInfo(converter, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_master)
           .setGenNested(genNested));
 }
 
 static mlir::omp::OrderedOp
 genOrderedOp(Fortran::lower::AbstractConverter &converter,
-             Fortran::lower::SymMap &symTable,
              Fortran::semantics::SemanticsContext &semaCtx,
              Fortran::lower::pft::Evaluation &eval, mlir::Location loc,
              const List<Clause> &clauses) {
@@ -1358,7 +1347,6 @@ genOrderedOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::OrderedRegionOp
 genOrderedRegionOp(Fortran::lower::AbstractConverter &converter,
-                   Fortran::lower::SymMap &symTable,
                    Fortran::semantics::SemanticsContext &semaCtx,
                    Fortran::lower::pft::Evaluation &eval, bool genNested,
                    mlir::Location loc, const List<Clause> &clauses) {
@@ -1366,7 +1354,7 @@ genOrderedRegionOp(Fortran::lower::AbstractConverter &converter,
   genOrderedRegionClauses(converter, semaCtx, clauses, loc, clauseOps);
 
   return genOpWithBody<mlir::omp::OrderedRegionOp>(
-      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+      OpWithBodyGenInfo(converter, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_ordered)
           .setGenNested(genNested),
       clauseOps);
@@ -1395,7 +1383,7 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
   };
 
   OpWithBodyGenInfo genInfo =
-      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+      OpWithBodyGenInfo(converter, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_parallel)
           .setGenNested(genNested)
           .setOuterCombined(outerCombined)
@@ -1452,14 +1440,13 @@ genParallelOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::SectionOp
 genSectionOp(Fortran::lower::AbstractConverter &converter,
-             Fortran::lower::SymMap &symTable,
              Fortran::semantics::SemanticsContext &semaCtx,
              Fortran::lower::pft::Evaluation &eval, bool genNested,
              mlir::Location loc, const List<Clause> &clauses) {
   // Currently only private/firstprivate clause is handled, and
   // all privatization is done within `omp.section` operations.
   return genOpWithBody<mlir::omp::SectionOp>(
-      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+      OpWithBodyGenInfo(converter, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_section)
           .setGenNested(genNested)
           .setClauses(&clauses));
@@ -1467,12 +1454,11 @@ genSectionOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::SectionsOp
 genSectionsOp(Fortran::lower::AbstractConverter &converter,
-              Fortran::lower::SymMap &symTable,
               Fortran::semantics::SemanticsContext &semaCtx,
               Fortran::lower::pft::Evaluation &eval, mlir::Location loc,
               const mlir::omp::SectionsClauseOps &clauseOps) {
   return genOpWithBody<mlir::omp::SectionsOp>(
-      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+      OpWithBodyGenInfo(converter, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_sections)
           .setGenNested(false),
       clauseOps);
@@ -1480,7 +1466,6 @@ genSectionsOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::SimdOp
 genSimdOp(Fortran::lower::AbstractConverter &converter,
-          Fortran::lower::SymMap &symTable,
           Fortran::semantics::SemanticsContext &semaCtx,
           Fortran::lower::pft::Evaluation &eval, mlir::Location loc,
           const List<Clause> &clauses) {
@@ -1514,8 +1499,8 @@ genSimdOp(Fortran::lower::AbstractConverter &converter,
   };
 
   createBodyOfOp(*loopOp,
-                 OpWithBodyGenInfo(converter, symTable, semaCtx, loc,
-                                   *nestedEval, llvm::omp::Directive::OMPD_simd)
+                 OpWithBodyGenInfo(converter, semaCtx, loc, *nestedEval,
+                                   llvm::omp::Directive::OMPD_simd)
                      .setClauses(&clauses)
                      .setDataSharingProcessor(&dsp)
                      .setGenRegionEntryCb(ivCallback));
@@ -1525,7 +1510,6 @@ genSimdOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::SingleOp
 genSingleOp(Fortran::lower::AbstractConverter &converter,
-            Fortran::lower::SymMap &symTable,
             Fortran::semantics::SemanticsContext &semaCtx,
             Fortran::lower::pft::Evaluation &eval, bool genNested,
             mlir::Location loc, const List<Clause> &clauses) {
@@ -1533,7 +1517,7 @@ genSingleOp(Fortran::lower::AbstractConverter &converter,
   genSingleClauses(converter, semaCtx, clauses, loc, clauseOps);
 
   return genOpWithBody<mlir::omp::SingleOp>(
-      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+      OpWithBodyGenInfo(converter, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_single)
           .setGenNested(genNested)
           .setClauses(&clauses),
@@ -1542,7 +1526,6 @@ genSingleOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::TargetOp
 genTargetOp(Fortran::lower::AbstractConverter &converter,
-            Fortran::lower::SymMap &symTable,
             Fortran::semantics::SemanticsContext &semaCtx,
             Fortran::lower::pft::Evaluation &eval, bool genNested,
             mlir::Location loc, const List<Clause> &clauses,
@@ -1652,14 +1635,13 @@ genTargetOp(Fortran::lower::AbstractConverter &converter,
   Fortran::lower::pft::visitAllSymbols(eval, captureImplicitMap);
 
   auto targetOp = firOpBuilder.create<mlir::omp::TargetOp>(loc, clauseOps);
-  genBodyOfTargetOp(converter, symTable, semaCtx, eval, genNested, targetOp,
-                    mapSyms, mapLocs, mapTypes, loc);
+  genBodyOfTargetOp(converter, semaCtx, eval, genNested, targetOp, mapSyms,
+                    mapLocs, mapTypes, loc);
   return targetOp;
 }
 
 static mlir::omp::TargetDataOp
 genTargetDataOp(Fortran::lower::AbstractConverter &converter,
-                Fortran::lower::SymMap &symTable,
                 Fortran::semantics::SemanticsContext &semaCtx,
                 Fortran::lower::pft::Evaluation &eval, bool genNested,
                 mlir::Location loc, const List<Clause> &clauses) {
@@ -1674,16 +1656,14 @@ genTargetDataOp(Fortran::lower::AbstractConverter &converter,
   auto targetDataOp =
       converter.getFirOpBuilder().create<mlir::omp::TargetDataOp>(loc,
                                                                   clauseOps);
-  genBodyOfTargetDataOp(converter, symTable, semaCtx, eval, genNested,
-                        targetDataOp, useDeviceTypes, useDeviceLocs,
-                        useDeviceSyms, loc);
+  genBodyOfTargetDataOp(converter, semaCtx, eval, genNested, targetDataOp,
+                        useDeviceTypes, useDeviceLocs, useDeviceSyms, loc);
   return targetDataOp;
 }
 
 template <typename OpTy>
 static OpTy
 genTargetEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
-                               Fortran::lower::SymMap &symTable,
                                Fortran::semantics::SemanticsContext &semaCtx,
                                mlir::Location loc,
                                const List<Clause> &clauses) {
@@ -1711,7 +1691,6 @@ genTargetEnterExitUpdateDataOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::TaskOp
 genTaskOp(Fortran::lower::AbstractConverter &converter,
-          Fortran::lower::SymMap &symTable,
           Fortran::semantics::SemanticsContext &semaCtx,
           Fortran::lower::pft::Evaluation &eval, bool genNested,
           mlir::Location loc, const List<Clause> &clauses) {
@@ -1720,7 +1699,7 @@ genTaskOp(Fortran::lower::AbstractConverter &converter,
   genTaskClauses(converter, semaCtx, stmtCtx, clauses, loc, clauseOps);
 
   return genOpWithBody<mlir::omp::TaskOp>(
-      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+      OpWithBodyGenInfo(converter, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_task)
           .setGenNested(genNested)
           .setClauses(&clauses),
@@ -1729,7 +1708,6 @@ genTaskOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::TaskgroupOp
 genTaskgroupOp(Fortran::lower::AbstractConverter &converter,
-               Fortran::lower::SymMap &symTable,
                Fortran::semantics::SemanticsContext &semaCtx,
                Fortran::lower::pft::Evaluation &eval, bool genNested,
                mlir::Location loc, const List<Clause> &clauses) {
@@ -1737,7 +1715,7 @@ genTaskgroupOp(Fortran::lower::AbstractConverter &converter,
   genTaskgroupClauses(converter, semaCtx, clauses, loc, clauseOps);
 
   return genOpWithBody<mlir::omp::TaskgroupOp>(
-      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+      OpWithBodyGenInfo(converter, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_taskgroup)
           .setGenNested(genNested)
           .setClauses(&clauses),
@@ -1746,7 +1724,6 @@ genTaskgroupOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::TaskloopOp
 genTaskloopOp(Fortran::lower::AbstractConverter &converter,
-              Fortran::lower::SymMap &symTable,
               Fortran::semantics::SemanticsContext &semaCtx,
               Fortran::lower::pft::Evaluation &eval, mlir::Location loc,
               const List<Clause> &clauses) {
@@ -1755,7 +1732,6 @@ genTaskloopOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::TaskwaitOp
 genTaskwaitOp(Fortran::lower::AbstractConverter &converter,
-              Fortran::lower::SymMap &symTable,
               Fortran::semantics::SemanticsContext &semaCtx,
               Fortran::lower::pft::Evaluation &eval, mlir::Location loc,
               const List<Clause> &clauses) {
@@ -1767,7 +1743,6 @@ genTaskwaitOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::TaskyieldOp
 genTaskyieldOp(Fortran::lower::AbstractConverter &converter,
-               Fortran::lower::SymMap &symTable,
                Fortran::semantics::SemanticsContext &semaCtx,
                Fortran::lower::pft::Evaluation &eval, mlir::Location loc) {
   return converter.getFirOpBuilder().create<mlir::omp::TaskyieldOp>(loc);
@@ -1775,7 +1750,6 @@ genTaskyieldOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::TeamsOp
 genTeamsOp(Fortran::lower::AbstractConverter &converter,
-           Fortran::lower::SymMap &symTable,
            Fortran::semantics::SemanticsContext &semaCtx,
            Fortran::lower::pft::Evaluation &eval, bool genNested,
            mlir::Location loc, const List<Clause> &clauses,
@@ -1785,7 +1759,7 @@ genTeamsOp(Fortran::lower::AbstractConverter &converter,
   genTeamsClauses(converter, semaCtx, stmtCtx, clauses, loc, clauseOps);
 
   return genOpWithBody<mlir::omp::TeamsOp>(
-      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+      OpWithBodyGenInfo(converter, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_teams)
           .setGenNested(genNested)
           .setOuterCombined(outerCombined)
@@ -1795,7 +1769,6 @@ genTeamsOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::WsloopOp
 genWsloopOp(Fortran::lower::AbstractConverter &converter,
-            Fortran::lower::SymMap &symTable,
             Fortran::semantics::SemanticsContext &semaCtx,
             Fortran::lower::pft::Evaluation &eval, mlir::Location loc,
             const List<Clause> &clauses) {
@@ -1834,8 +1807,8 @@ genWsloopOp(Fortran::lower::AbstractConverter &converter,
   };
 
   createBodyOfOp(*loopOp,
-                 OpWithBodyGenInfo(converter, symTable, semaCtx, loc,
-                                   *nestedEval, llvm::omp::Directive::OMPD_do)
+                 OpWithBodyGenInfo(converter, semaCtx, loc, *nestedEval,
+                                   llvm::omp::Directive::OMPD_do)
                      .setClauses(&clauses)
                      .setDataSharingProcessor(&dsp)
                      .setReductions(&reductionSyms, &reductionTypes)
@@ -1849,7 +1822,6 @@ genWsloopOp(Fortran::lower::AbstractConverter &converter,
 
 static void
 genCompositeDistributeParallelDo(Fortran::lower::AbstractConverter &converter,
-                                 Fortran::lower::SymMap &symTable,
                                  Fortran::semantics::SemanticsContext &semaCtx,
                                  Fortran::lower::pft::Evaluation &eval,
                                  const List<Clause> &clauses,
@@ -1859,7 +1831,6 @@ genCompositeDistributeParallelDo(Fortran::lower::AbstractConverter &converter,
 
 static void genCompositeDistributeParallelDoSimd(
     Fortran::lower::AbstractConverter &converter,
-    Fortran::lower::SymMap &symTable,
     Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::pft::Evaluation &eval, const List<Clause> &clauses,
     mlir::Location loc) {
@@ -1868,7 +1839,6 @@ static void genCompositeDistributeParallelDoSimd(
 
 static void
 genCompositeDistributeSimd(Fortran::lower::AbstractConverter &converter,
-                           Fortran::lower::SymMap &symTable,
                            Fortran::semantics::SemanticsContext &semaCtx,
                            Fortran::lower::pft::Evaluation &eval,
                            const List<Clause> &clauses, mlir::Location loc) {
@@ -1876,7 +1846,6 @@ genCompositeDistributeSimd(Fortran::lower::AbstractConverter &converter,
 }
 
 static void genCompositeDoSimd(Fortran::lower::AbstractConverter &converter,
-                               Fortran::lower::SymMap &symTable,
                                Fortran::semantics::SemanticsContext &semaCtx,
                                Fortran::lower::pft::Evaluation &eval,
                                const List<Clause> &clauses,
@@ -1893,12 +1862,11 @@ static void genCompositeDoSimd(Fortran::lower::AbstractConverter &converter,
   // When support for vectorization is enabled, then we need to add handling of
   // if clause. Currently if clause can be skipped because we always assume
   // SIMD length = 1.
-  genWsloopOp(converter, symTable, semaCtx, eval, loc, clauses);
+  genWsloopOp(converter, semaCtx, eval, loc, clauses);
 }
 
 static void
 genCompositeTaskloopSimd(Fortran::lower::AbstractConverter &converter,
-                         Fortran::lower::SymMap &symTable,
                          Fortran::semantics::SemanticsContext &semaCtx,
                          Fortran::lower::pft::Evaluation &eval,
                          const List<Clause> &clauses, mlir::Location loc) {
@@ -2019,32 +1987,32 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   default:
     break;
   case llvm::omp::Directive::OMPD_barrier:
-    genBarrierOp(converter, symTable, semaCtx, eval, currentLocation);
+    genBarrierOp(converter, semaCtx, eval, currentLocation);
     break;
   case llvm::omp::Directive::OMPD_taskwait:
-    genTaskwaitOp(converter, symTable, semaCtx, eval, currentLocation, clauses);
+    genTaskwaitOp(converter, semaCtx, eval, currentLocation, clauses);
     break;
   case llvm::omp::Directive::OMPD_taskyield:
-    genTaskyieldOp(converter, symTable, semaCtx, eval, currentLocation);
+    genTaskyieldOp(converter, semaCtx, eval, currentLocation);
     break;
   case llvm::omp::Directive::OMPD_target_data:
-    genTargetDataOp(converter, symTable, semaCtx, eval, /*genNested=*/true,
+    genTargetDataOp(converter, semaCtx, eval, /*genNested=*/true,
                     currentLocation, clauses);
     break;
   case llvm::omp::Directive::OMPD_target_enter_data:
     genTargetEnterExitUpdateDataOp<mlir::omp::TargetEnterDataOp>(
-        converter, symTable, semaCtx, currentLocation, clauses);
+        converter, semaCtx, currentLocation, clauses);
     break;
   case llvm::omp::Directive::OMPD_target_exit_data:
     genTargetEnterExitUpdateDataOp<mlir::omp::TargetExitDataOp>(
-        converter, symTable, semaCtx, currentLocation, clauses);
+        converter, semaCtx, currentLocation, clauses);
     break;
   case llvm::omp::Directive::OMPD_target_update:
     genTargetEnterExitUpdateDataOp<mlir::omp::TargetUpdateOp>(
-        converter, symTable, semaCtx, currentLocation, clauses);
+        converter, semaCtx, currentLocation, clauses);
     break;
   case llvm::omp::Directive::OMPD_ordered:
-    genOrderedOp(converter, symTable, semaCtx, eval, currentLocation, clauses);
+    genOrderedOp(converter, semaCtx, eval, currentLocation, clauses);
     break;
   }
 }
@@ -2068,8 +2036,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                             [&](auto &&s) { return makeClause(s.v, semaCtx); })
                  : List<Clause>{};
   mlir::Location currentLocation = converter.genLocation(verbatim.source);
-  genFlushOp(converter, symTable, semaCtx, eval, currentLocation, objects,
-             clauses);
+  genFlushOp(converter, semaCtx, eval, currentLocation, objects, clauses);
 }
 
 static void
@@ -2222,13 +2189,12 @@ genOMP(Fortran::lower::AbstractConverter &converter,
     switch (leafDir) {
     case llvm::omp::Directive::OMPD_master:
       // 2.16 MASTER construct.
-      genMasterOp(converter, symTable, semaCtx, eval, genNested,
-                  currentLocation);
+      genMasterOp(converter, semaCtx, eval, genNested, currentLocation);
       break;
     case llvm::omp::Directive::OMPD_ordered:
       // 2.17.9 ORDERED construct.
-      genOrderedRegionOp(converter, symTable, semaCtx, eval, genNested,
-                         currentLocation, clauses);
+      genOrderedRegionOp(converter, semaCtx, eval, genNested, currentLocation,
+                         clauses);
       break;
     case llvm::omp::Directive::OMPD_parallel:
       // 2.6 PARALLEL construct.
@@ -2237,43 +2203,41 @@ genOMP(Fortran::lower::AbstractConverter &converter,
       break;
     case llvm::omp::Directive::OMPD_single:
       // 2.8.2 SINGLE construct.
-      genSingleOp(converter, symTable, semaCtx, eval, genNested,
-                  currentLocation, clauses);
+      genSingleOp(converter, semaCtx, eval, genNested, currentLocation,
+                  clauses);
       break;
     case llvm::omp::Directive::OMPD_target:
       // 2.12.5 TARGET construct.
-      genTargetOp(converter, symTable, semaCtx, eval, genNested,
-                  currentLocation, clauses, outerCombined);
+      genTargetOp(converter, semaCtx, eval, genNested, currentLocation, clauses,
+                  outerCombined);
       break;
     case llvm::omp::Directive::OMPD_target_data:
       // 2.12.2 TARGET DATA construct.
-      genTargetDataOp(converter, symTable, semaCtx, eval, genNested,
-                      currentLocation, clauses);
+      genTargetDataOp(converter, semaCtx, eval, genNested, currentLocation,
+                      clauses);
       break;
     case llvm::omp::Directive::OMPD_task:
       // 2.10.1 TASK construct.
-      genTaskOp(converter, symTable, semaCtx, eval, genNested, currentLocation,
-                clauses);
+      genTaskOp(converter, semaCtx, eval, genNested, currentLocation, clauses);
       break;
     case llvm::omp::Directive::OMPD_taskgroup:
       // 2.17.6 TASKGROUP construct.
-      genTaskgroupOp(converter, symTable, semaCtx, eval, genNested,
-                     currentLocation, clauses);
+      genTaskgroupOp(converter, semaCtx, eval, genNested, currentLocation,
+                     clauses);
       break;
     case llvm::omp::Directive::OMPD_teams:
       // 2.7 TEAMS construct.
       // FIXME Pass the outerCombined argument or rename it to better describe
       // what it represents if it must always be `false` in this context.
-      genTeamsOp(converter, symTable, semaCtx, eval, genNested, currentLocation,
-                 clauses);
+      genTeamsOp(converter, semaCtx, eval, genNested, currentLocation, clauses);
       break;
     case llvm::omp::Directive::OMPD_workshare:
       // 2.8.3 WORKSHARE construct.
       // FIXME: Workshare is not a commonly used OpenMP construct, an
       // implementation for this feature will come later. For the codes
       // that use this construct, add a single construct for now.
-      genSingleOp(converter, symTable, semaCtx, eval, genNested,
-                  currentLocation, clauses);
+      genSingleOp(converter, semaCtx, eval, genNested, currentLocation,
+                  clauses);
       break;
     default:
       llvm_unreachable("Unexpected block construct");
@@ -2295,8 +2259,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
       makeClauses(std::get<Fortran::parser::OmpClauseList>(cd.t), semaCtx);
   const auto &name = std::get<std::optional<Fortran::parser::Name>>(cd.t);
   mlir::Location currentLocation = converter.getCurrentLocation();
-  genCriticalOp(converter, symTable, semaCtx, eval, /*genNested=*/true,
-                currentLocation, clauses, name);
+  genCriticalOp(converter, semaCtx, eval, /*genNested=*/true, currentLocation,
+                clauses, name);
 }
 
 static void
@@ -2342,27 +2306,26 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       switch (leafDir) {
       case llvm::omp::Directive::OMPD_distribute_parallel_do:
         // 2.9.4.3 DISTRIBUTE PARALLEL Worksharing-Loop construct.
-        genCompositeDistributeParallelDo(converter, symTable, semaCtx, eval,
-                                         clauses, currentLocation);
+        genCompositeDistributeParallelDo(converter, semaCtx, eval, clauses,
+                                         currentLocation);
         break;
       case llvm::omp::Directive::OMPD_distribute_parallel_do_simd:
         // 2.9.4.4 DISTRIBUTE PARALLEL Worksharing-Loop SIMD construct.
-        genCompositeDistributeParallelDoSimd(converter, symTable, semaCtx, eval,
-                                             clauses, currentLocation);
+        genCompositeDistributeParallelDoSimd(converter, semaCtx, eval, clauses,
+                                             currentLocation);
         break;
       case llvm::omp::Directive::OMPD_distribute_simd:
         // 2.9.4.2 DISTRIBUTE SIMD construct.
-        genCompositeDistributeSimd(converter, symTable, semaCtx, eval, clauses,
+        genCompositeDistributeSimd(converter, semaCtx, eval, clauses,
                                    currentLocation);
         break;
       case llvm::omp::Directive::OMPD_do_simd:
         // 2.9.3.2 Worksharing-Loop SIMD construct.
-        genCompositeDoSimd(converter, symTable, semaCtx, eval, clauses,
-                           currentLocation);
+        genCompositeDoSimd(converter, semaCtx, eval, clauses, currentLocation);
         break;
       case llvm::omp::Directive::OMPD_taskloop_simd:
         // 2.10.3 TASKLOOP SIMD construct.
-        genCompositeTaskloopSimd(converter, symTable, semaCtx, eval, clauses,
+        genCompositeTaskloopSimd(converter, semaCtx, eval, clauses,
                                  currentLocation);
         break;
       default:
@@ -2373,13 +2336,12 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       switch (leafDir) {
       case llvm::omp::Directive::OMPD_distribute:
         // 2.9.4.1 DISTRIBUTE construct.
-        genDistributeOp(converter, symTable, semaCtx, eval, genNested,
-                        currentLocation, clauses);
+        genDistributeOp(converter, semaCtx, eval, genNested, currentLocation,
+                        clauses);
         break;
       case llvm::omp::Directive::OMPD_do:
         // 2.9.2 Worksharing-Loop construct.
-        genWsloopOp(converter, symTable, semaCtx, eval, currentLocation,
-                    clauses);
+        genWsloopOp(converter, semaCtx, eval, currentLocation, clauses);
         break;
       case llvm::omp::Directive::OMPD_parallel:
         // 2.6 PARALLEL construct.
@@ -2393,17 +2355,16 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
         break;
       case llvm::omp::Directive::OMPD_simd:
         // 2.9.3.1 SIMD construct.
-        genSimdOp(converter, symTable, semaCtx, eval, currentLocation, clauses);
+        genSimdOp(converter, semaCtx, eval, currentLocation, clauses);
         break;
       case llvm::omp::Directive::OMPD_target:
         // 2.12.5 TARGET construct.
-        genTargetOp(converter, symTable, semaCtx, eval, genNested,
-                    currentLocation, clauses, /*outerCombined=*/true);
+        genTargetOp(converter, semaCtx, eval, genNested, currentLocation,
+                    clauses, /*outerCombined=*/true);
         break;
       case llvm::omp::Directive::OMPD_taskloop:
         // 2.10.2 TASKLOOP construct.
-        genTaskloopOp(converter, symTable, semaCtx, eval, currentLocation,
-                      clauses);
+        genTaskloopOp(converter, semaCtx, eval, currentLocation, clauses);
         break;
       case llvm::omp::Directive::OMPD_teams:
         // 2.7 TEAMS construct.
@@ -2411,8 +2372,8 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
         // combined construct in this constext (e.g. target teams distribute).
         // Maybe rename the argument if it represents something else or
         // initialize it properly.
-        genTeamsOp(converter, symTable, semaCtx, eval, genNested,
-                   currentLocation, clauses, /*outerCombined=*/true);
+        genTeamsOp(converter, semaCtx, eval, genNested, currentLocation,
+                   clauses, /*outerCombined=*/true);
         break;
       case llvm::omp::Directive::OMPD_loop:
       case llvm::omp::Directive::OMPD_masked:
@@ -2474,7 +2435,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   }
 
   // SECTIONS construct.
-  genSectionsOp(converter, symTable, semaCtx, eval, currentLocation, clauseOps);
+  genSectionsOp(converter, semaCtx, eval, currentLocation, clauseOps);
 
   // Generate nested SECTION operations recursively.
   const auto &sectionBlocks =
@@ -2484,8 +2445,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   for (const auto &[nblock, neval] :
        llvm::zip(sectionBlocks.v, eval.getNestedEvaluations())) {
     symTable.pushScope();
-    genSectionOp(converter, symTable, semaCtx, neval, /*genNested=*/true,
-                 currentLocation, clauses);
+    genSectionOp(converter, semaCtx, neval, /*genNested=*/true, currentLocation,
+                 clauses);
     symTable.popScope();
     firOpBuilder.restoreInsertionPoint(ip);
   }

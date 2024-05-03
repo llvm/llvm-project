@@ -35,8 +35,7 @@ static Expr<T> FoldTransformationalBessel(
       }
       return Expr<T>{Constant<T>{
           std::move(results), ConstantSubscripts{std::max(n2 - n1 + 1, 0)}}};
-    } else if (context.languageFeatures().ShouldWarn(
-                   common::UsageWarning::FoldingFailure)) {
+    } else {
       context.messages().Say(
           "%s(integer(kind=4), real(kind=%d)) cannot be folded on host"_warn_en_US,
           name, T::kind);
@@ -55,7 +54,7 @@ public:
       : array_{array}, maxAbs_{maxAbs}, rounding_{rounding} {};
   void operator()(
       Scalar<T> &element, const ConstantSubscripts &at, bool /*first*/) {
-    // Summation of scaled elements:
+    // Kahan summation of scaled elements:
     // Naively,
     //   NORM2(A(:)) = SQRT(SUM(A(:)**2))
     // For any T > 0, we have mathematically
@@ -77,27 +76,24 @@ public:
       auto item{array_.At(at)};
       auto scaled{item.Divide(scale).value};
       auto square{scaled.Multiply(scaled).value};
-      if constexpr (useKahanSummation) {
-        auto next{square.Add(correction_, rounding_)};
-        overflow_ |= next.flags.test(RealFlag::Overflow);
-        auto sum{element.Add(next.value, rounding_)};
-        overflow_ |= sum.flags.test(RealFlag::Overflow);
-        correction_ = sum.value.Subtract(element, rounding_)
-                          .value.Subtract(next.value, rounding_)
-                          .value;
-        element = sum.value;
-      } else {
-        auto sum{element.Add(square, rounding_)};
-        overflow_ |= sum.flags.test(RealFlag::Overflow);
-        element = sum.value;
-      }
+      auto next{square.Add(correction_, rounding_)};
+      overflow_ |= next.flags.test(RealFlag::Overflow);
+      auto sum{element.Add(next.value, rounding_)};
+      overflow_ |= sum.flags.test(RealFlag::Overflow);
+      correction_ = sum.value.Subtract(element, rounding_)
+                        .value.Subtract(next.value, rounding_)
+                        .value;
+      element = sum.value;
     }
   }
   bool overflow() const { return overflow_; }
   void Done(Scalar<T> &result) {
-    // incoming result = SUM((data(:)/maxAbs)**2)
-    // outgoing result = maxAbs * SQRT(result)
-    auto root{result.SQRT().value};
+    // result+correction == SUM((data(:)/maxAbs)**2)
+    // result = maxAbs * SQRT(result+correction)
+    auto corrected{result.Add(correction_, rounding_)};
+    overflow_ |= corrected.flags.test(RealFlag::Overflow);
+    correction_ = Scalar<T>{};
+    auto root{corrected.value.SQRT().value};
     auto product{root.Multiply(maxAbs_.At(maxAbsAt_))};
     maxAbs_.IncrementSubscripts(maxAbsAt_);
     overflow_ |= product.flags.test(RealFlag::Overflow);
@@ -131,9 +127,7 @@ static Expr<Type<TypeCategory::Real, KIND>> FoldNorm2(FoldingContext &context,
         context.targetCharacteristics().roundingMode()};
     Constant<T> result{DoReduction<T>(arrayAndMask->array, arrayAndMask->mask,
         dim, identity, norm2Accumulator)};
-    if (norm2Accumulator.overflow() &&
-        context.languageFeatures().ShouldWarn(
-            common::UsageWarning::FoldingException)) {
+    if (norm2Accumulator.overflow()) {
       context.messages().Say(
           "NORM2() of REAL(%d) data overflowed"_warn_en_US, KIND);
     }
@@ -165,8 +159,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     if (auto callable{GetHostRuntimeWrapper<T, T>(name)}) {
       return FoldElementalIntrinsic<T, T>(
           context, std::move(funcRef), *callable);
-    } else if (context.languageFeatures().ShouldWarn(
-                   common::UsageWarning::FoldingFailure)) {
+    } else {
       context.messages().Say(
           "%s(real(kind=%d)) cannot be folded on host"_warn_en_US, name, KIND);
     }
@@ -179,8 +172,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     if (auto callable{GetHostRuntimeWrapper<T, T, T>(localName)}) {
       return FoldElementalIntrinsic<T, T, T>(
           context, std::move(funcRef), *callable);
-    } else if (context.languageFeatures().ShouldWarn(
-                   common::UsageWarning::FoldingFailure)) {
+    } else {
       context.messages().Say(
           "%s(real(kind=%d), real(kind%d)) cannot be folded on host"_warn_en_US,
           name, KIND, KIND);
@@ -191,8 +183,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
       if (auto callable{GetHostRuntimeWrapper<T, Int4, T>(name)}) {
         return FoldElementalIntrinsic<T, Int4, T>(
             context, std::move(funcRef), *callable);
-      } else if (context.languageFeatures().ShouldWarn(
-                     common::UsageWarning::FoldingFailure)) {
+      } else {
         context.messages().Say(
             "%s(integer(kind=4), real(kind=%d)) cannot be folded on host"_warn_en_US,
             name, KIND);
@@ -210,9 +201,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           ScalarFunc<T, ComplexT>([&name, &context](
                                       const Scalar<ComplexT> &z) -> Scalar<T> {
             ValueWithRealFlags<Scalar<T>> y{z.ABS()};
-            if (y.flags.test(RealFlag::Overflow) &&
-                context.languageFeatures().ShouldWarn(
-                    common::UsageWarning::FoldingException)) {
+            if (y.flags.test(RealFlag::Overflow)) {
               context.messages().Say(
                   "complex ABS intrinsic folding overflow"_warn_en_US, name);
             }
@@ -234,9 +223,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
         ScalarFunc<T, T>(
             [&name, &context, mode](const Scalar<T> &x) -> Scalar<T> {
               ValueWithRealFlags<Scalar<T>> y{x.ToWholeNumber(mode)};
-              if (y.flags.test(RealFlag::Overflow) &&
-                  context.languageFeatures().ShouldWarn(
-                      common::UsageWarning::FoldingException)) {
+              if (y.flags.test(RealFlag::Overflow)) {
                 context.messages().Say(
                     "%s intrinsic folding overflow"_warn_en_US, name);
               }
@@ -247,9 +234,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
         ScalarFunc<T, T, T>([&context](const Scalar<T> &x,
                                 const Scalar<T> &y) -> Scalar<T> {
           ValueWithRealFlags<Scalar<T>> result{x.DIM(y)};
-          if (result.flags.test(RealFlag::Overflow) &&
-              context.languageFeatures().ShouldWarn(
-                  common::UsageWarning::FoldingException)) {
+          if (result.flags.test(RealFlag::Overflow)) {
             context.messages().Say("DIM intrinsic folding overflow"_warn_en_US);
           }
           return result.value;
@@ -281,9 +266,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
         ScalarFunc<T, T, T>(
             [&](const Scalar<T> &x, const Scalar<T> &y) -> Scalar<T> {
               ValueWithRealFlags<Scalar<T>> result{x.HYPOT(y)};
-              if (result.flags.test(RealFlag::Overflow) &&
-                  context.languageFeatures().ShouldWarn(
-                      common::UsageWarning::FoldingException)) {
+              if (result.flags.test(RealFlag::Overflow)) {
                 context.messages().Say(
                     "HYPOT intrinsic folding overflow"_warn_en_US);
               }
@@ -307,9 +290,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
         ScalarFunc<T, T, T>(
             [&context](const Scalar<T> &x, const Scalar<T> &y) -> Scalar<T> {
               auto result{x.MOD(y)};
-              if (result.flags.test(RealFlag::DivideByZero) &&
-                  context.languageFeatures().ShouldWarn(
-                      common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
+              if (result.flags.test(RealFlag::DivideByZero)) {
                 context.messages().Say(
                     "second argument to MOD must not be zero"_warn_en_US);
               }
@@ -321,9 +302,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
         ScalarFunc<T, T, T>(
             [&context](const Scalar<T> &x, const Scalar<T> &y) -> Scalar<T> {
               auto result{x.MODULO(y)};
-              if (result.flags.test(RealFlag::DivideByZero) &&
-                  context.languageFeatures().ShouldWarn(
-                      common::UsageWarning::FoldingAvoidsRuntimeCrash)) {
+              if (result.flags.test(RealFlag::DivideByZero)) {
                 context.messages().Say(
                     "second argument to MODULO must not be zero"_warn_en_US);
               }
@@ -337,22 +316,17 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
             return FoldElementalIntrinsic<T, T, TS>(context, std::move(funcRef),
                 ScalarFunc<T, T, TS>([&](const Scalar<T> &x,
                                          const Scalar<TS> &s) -> Scalar<T> {
-                  if (s.IsZero() &&
-                      context.languageFeatures().ShouldWarn(
-                          common::UsageWarning::FoldingValueChecks)) {
+                  if (s.IsZero()) {
                     context.messages().Say(
                         "NEAREST: S argument is zero"_warn_en_US);
                   }
                   auto result{x.NEAREST(!s.IsNegative())};
-                  if (context.languageFeatures().ShouldWarn(
-                          common::UsageWarning::FoldingException)) {
-                    if (result.flags.test(RealFlag::Overflow)) {
-                      context.messages().Say(
-                          "NEAREST intrinsic folding overflow"_warn_en_US);
-                    } else if (result.flags.test(RealFlag::InvalidArgument)) {
-                      context.messages().Say(
-                          "NEAREST intrinsic folding: bad argument"_warn_en_US);
-                    }
+                  if (result.flags.test(RealFlag::Overflow)) {
+                    context.messages().Say(
+                        "NEAREST intrinsic folding overflow"_warn_en_US);
+                  } else if (result.flags.test(RealFlag::InvalidArgument)) {
+                    context.messages().Say(
+                        "NEAREST intrinsic folding: bad argument"_warn_en_US);
                   }
                   return result.value;
                 }));
@@ -388,9 +362,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
                                                            template
 #endif
                                                            SCALE(y)};
-                      if (result.flags.test(RealFlag::Overflow) &&
-                          context.languageFeatures().ShouldWarn(
-                              common::UsageWarning::FoldingException)) {
+                      if (result.flags.test(RealFlag::Overflow)) {
                         context.messages().Say(
                             "SCALE intrinsic folding overflow"_warn_en_US);
                       }
@@ -440,11 +412,8 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
                   bool upward{true};
                   switch (x.Compare(Scalar<T>::Convert(y).value)) {
                   case Relation::Unordered:
-                    if (context.languageFeatures().ShouldWarn(
-                            common::UsageWarning::FoldingValueChecks)) {
-                      context.messages().Say(
-                          "IEEE_NEXT_AFTER intrinsic folding: bad argument"_warn_en_US);
-                    }
+                    context.messages().Say(
+                        "IEEE_NEXT_AFTER intrinsic folding: bad argument"_warn_en_US);
                     return x;
                   case Relation::Equal:
                     return x;
@@ -456,9 +425,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
                     break;
                   }
                   auto result{x.NEAREST(upward)};
-                  if (result.flags.test(RealFlag::Overflow) &&
-                      context.languageFeatures().ShouldWarn(
-                          common::UsageWarning::FoldingException)) {
+                  if (result.flags.test(RealFlag::Overflow)) {
                     context.messages().Say(
                         "IEEE_NEXT_AFTER intrinsic folding overflow"_warn_en_US);
                   }
@@ -474,15 +441,12 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
         ScalarFunc<T, T>([&](const Scalar<T> &x) -> Scalar<T> {
           auto result{x.NEAREST(upward)};
-          if (context.languageFeatures().ShouldWarn(
-                  common::UsageWarning::FoldingException)) {
-            if (result.flags.test(RealFlag::Overflow)) {
-              context.messages().Say(
-                  "%s intrinsic folding overflow"_warn_en_US, iName);
-            } else if (result.flags.test(RealFlag::InvalidArgument)) {
-              context.messages().Say(
-                  "%s intrinsic folding: bad argument"_warn_en_US, iName);
-            }
+          if (result.flags.test(RealFlag::Overflow)) {
+            context.messages().Say(
+                "%s intrinsic folding overflow"_warn_en_US, iName);
+          } else if (result.flags.test(RealFlag::InvalidArgument)) {
+            context.messages().Say(
+                "%s intrinsic folding: bad argument"_warn_en_US, iName);
           }
           return result.value;
         }));

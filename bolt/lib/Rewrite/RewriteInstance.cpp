@@ -1063,11 +1063,6 @@ void RewriteInstance::discoverFileObjects() {
       continue;
     }
 
-    if (SymName == getBOLTReservedStart() || SymName == getBOLTReservedEnd()) {
-      registerName(SymbolSize);
-      continue;
-    }
-
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: considering symbol " << UniqueName
                       << " for function\n");
 
@@ -3343,8 +3338,7 @@ void RewriteInstance::disassembleFunctions() {
 
     if (!Function.isSimple()) {
       assert((!BC->HasRelocations || Function.getSize() == 0 ||
-              Function.hasIndirectTargetToSplitFragment() ||
-              Function.hasInternalCalls()) &&
+              Function.hasIndirectTargetToSplitFragment()) &&
              "unexpected non-simple function in relocation mode");
       continue;
     }
@@ -3618,26 +3612,6 @@ void RewriteInstance::updateMetadata() {
 void RewriteInstance::mapFileSections(BOLTLinker::SectionMapper MapSection) {
   BC->deregisterUnusedSections();
 
-  // Check if the input has a space reserved for BOLT.
-  BinaryData *StartBD = BC->getBinaryDataByName(getBOLTReservedStart());
-  BinaryData *EndBD = BC->getBinaryDataByName(getBOLTReservedEnd());
-  if (!StartBD != !EndBD) {
-    BC->errs() << "BOLT-ERROR: one of the symbols is missing from the binary: "
-               << getBOLTReservedStart() << ", " << getBOLTReservedEnd()
-               << '\n';
-    exit(1);
-  }
-
-  if (StartBD) {
-    PHDRTableOffset = 0;
-    PHDRTableAddress = 0;
-    NewTextSegmentAddress = 0;
-    NewTextSegmentOffset = 0;
-    NextAvailableAddress = StartBD->getAddress();
-    BC->outs()
-        << "BOLT-INFO: using reserved space for allocating new sections\n";
-  }
-
   // If no new .eh_frame was written, remove relocated original .eh_frame.
   BinarySection *RelocatedEHFrameSection =
       getSection(".relocated" + getEHFrameSectionName());
@@ -3657,18 +3631,6 @@ void RewriteInstance::mapFileSections(BOLTLinker::SectionMapper MapSection) {
 
   // Map the rest of the sections.
   mapAllocatableSections(MapSection);
-
-  if (StartBD) {
-    const uint64_t ReservedSpace = EndBD->getAddress() - StartBD->getAddress();
-    const uint64_t AllocatedSize = NextAvailableAddress - StartBD->getAddress();
-    if (ReservedSpace < AllocatedSize) {
-      BC->errs() << "BOLT-ERROR: reserved space (" << ReservedSpace << " byte"
-                 << (ReservedSpace == 1 ? "" : "s")
-                 << ") is smaller than required for new allocations ("
-                 << AllocatedSize << " bytes)\n";
-      exit(1);
-    }
-  }
 }
 
 std::vector<BinarySection *> RewriteInstance::getCodeSections() {
@@ -3910,7 +3872,7 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
   // Add the new text section aggregating all existing code sections.
   // This is pseudo-section that serves a purpose of creating a corresponding
   // entry in section header table.
-  const uint64_t NewTextSectionSize =
+  int64_t NewTextSectionSize =
       NextAvailableAddress - NewTextSectionStartAddress;
   if (NewTextSectionSize) {
     const unsigned Flags = BinarySection::getFlags(/*IsReadOnly=*/true,
@@ -3993,7 +3955,7 @@ void RewriteInstance::mapAllocatableSections(
       if (PHDRTableAddress) {
         // Segment size includes the size of the PHDR area.
         NewTextSegmentSize = NextAvailableAddress - PHDRTableAddress;
-      } else if (NewTextSegmentAddress) {
+      } else {
         // Existing PHDR table would be updated.
         NewTextSegmentSize = NextAvailableAddress - NewTextSegmentAddress;
       }
@@ -4032,7 +3994,7 @@ void RewriteInstance::patchELFPHDRTable() {
     assert(!PHDRTableAddress && "unexpected address for program header table");
     PHDRTableOffset = Obj.getHeader().e_phoff;
     if (NewWritableSegmentSize) {
-      BC->errs() << "BOLT-ERROR: unable to add writable segment\n";
+      BC->errs() << "Unable to add writable segment with UseGnuStack option\n";
       exit(1);
     }
   }
@@ -4042,13 +4004,12 @@ void RewriteInstance::patchELFPHDRTable() {
   if (!NewWritableSegmentSize) {
     if (PHDRTableAddress)
       NewTextSegmentSize = NextAvailableAddress - PHDRTableAddress;
-    else if (NewTextSegmentAddress)
+    else
       NewTextSegmentSize = NextAvailableAddress - NewTextSegmentAddress;
   } else {
     NewWritableSegmentSize = NextAvailableAddress - NewWritableSegmentAddress;
   }
 
-  const uint64_t SavedPos = OS.tell();
   OS.seek(PHDRTableOffset);
 
   auto createNewTextPhdr = [&]() {
@@ -4077,10 +4038,8 @@ void RewriteInstance::patchELFPHDRTable() {
   };
 
   auto writeNewSegmentPhdrs = [&]() {
-    if (PHDRTableAddress || NewTextSegmentSize) {
-      ELF64LE::Phdr NewPhdr = createNewTextPhdr();
-      OS.write(reinterpret_cast<const char *>(&NewPhdr), sizeof(NewPhdr));
-    }
+    ELF64LE::Phdr NewTextPhdr = createNewTextPhdr();
+    OS.write(reinterpret_cast<const char *>(&NewTextPhdr), sizeof(NewTextPhdr));
 
     if (NewWritableSegmentSize) {
       ELF64LEPhdrTy NewPhdr;
@@ -4153,8 +4112,6 @@ void RewriteInstance::patchELFPHDRTable() {
         << "BOLT-ERROR: could not find PT_GNU_STACK program header to modify\n";
     exit(1);
   }
-
-  OS.seek(SavedPos);
 }
 
 namespace {
@@ -4180,8 +4137,9 @@ void RewriteInstance::rewriteNoteSections() {
   const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
   raw_fd_ostream &OS = Out->os();
 
-  uint64_t NextAvailableOffset = std::max(
-      getFileOffsetForAddress(NextAvailableAddress), FirstNonAllocatableOffset);
+  uint64_t NextAvailableOffset = getFileOffsetForAddress(NextAvailableAddress);
+  assert(NextAvailableOffset >= FirstNonAllocatableOffset &&
+         "next available offset calculation failure");
   OS.seek(NextAvailableOffset);
 
   // Copy over non-allocatable section contents and update file offsets.
@@ -4920,7 +4878,7 @@ void RewriteInstance::updateELFSymbolTable(
       ++NumHotDataSymsUpdated;
     }
 
-    if (*SymbolName == "_end" && NextAvailableAddress > Symbol.st_value)
+    if (*SymbolName == "_end")
       updateSymbolValue(*SymbolName, NextAvailableAddress);
 
     if (IsDynSym)
@@ -5033,6 +4991,13 @@ void RewriteInstance::patchELFSymTabs(ELFObjectFile<ELFT> *File) {
   // we can properly update the symbol table based on new section indices.
   std::vector<uint32_t> NewSectionIndex;
   getOutputSections(File, NewSectionIndex);
+
+  // Set pointer at the end of the output file, so we can pwrite old symbol
+  // tables if we need to.
+  uint64_t NextAvailableOffset = getFileOffsetForAddress(NextAvailableAddress);
+  assert(NextAvailableOffset >= FirstNonAllocatableOffset &&
+         "next available offset calculation failure");
+  Out->os().seek(NextAvailableOffset);
 
   // Update dynamic symbol table.
   const ELFShdrTy *DynSymSection = nullptr;
@@ -5598,10 +5563,10 @@ void RewriteInstance::rewriteFile() {
   auto Streamer = BC->createStreamer(OS);
   // Make sure output stream has enough reserved space, otherwise
   // pwrite() will fail.
-  uint64_t Offset = std::max(getFileOffsetForAddress(NextAvailableAddress),
-                             FirstNonAllocatableOffset);
-  Offset = OS.seek(Offset);
-  assert((Offset != (uint64_t)-1) && "Error resizing output file");
+  uint64_t Offset = OS.seek(getFileOffsetForAddress(NextAvailableAddress));
+  (void)Offset;
+  assert(Offset == getFileOffsetForAddress(NextAvailableAddress) &&
+         "error resizing output file");
 
   // Overwrite functions with fixed output address. This is mostly used by
   // non-relocation mode, with one exception: injected functions are covered
@@ -5833,7 +5798,7 @@ void RewriteInstance::writeEHFrameHeader() {
   std::vector<char> NewEHFrameHdr = CFIRdWrt->generateEHFrameHeader(
       RelocatedEHFrame, NewEHFrame, EHFrameHdrOutputAddress, FailedAddresses);
 
-  Out->os().seek(EHFrameHdrFileOffset);
+  assert(Out->os().tell() == EHFrameHdrFileOffset && "offset mismatch");
   Out->os().write(NewEHFrameHdr.data(), NewEHFrameHdr.size());
 
   const unsigned Flags = BinarySection::getFlags(/*IsReadOnly=*/true,
@@ -5852,15 +5817,6 @@ void RewriteInstance::writeEHFrameHeader() {
   EHFrameHdrSec.setOutputName(getEHFrameHdrSectionName());
 
   NextAvailableAddress += EHFrameHdrSec.getOutputSize();
-
-  if (const BinaryData *ReservedEnd =
-          BC->getBinaryDataByName(getBOLTReservedEnd())) {
-    if (NextAvailableAddress > ReservedEnd->getAddress()) {
-      BC->errs() << "BOLT-ERROR: unable to fit " << getEHFrameHdrSectionName()
-                 << " into reserved space\n";
-      exit(1);
-    }
-  }
 
   // Merge new .eh_frame with the relocated original so that gdb can locate all
   // FDEs.

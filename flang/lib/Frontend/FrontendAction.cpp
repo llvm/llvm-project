@@ -153,7 +153,7 @@ bool FrontendAction::runPrescan() {
   return !reportFatalScanningErrors();
 }
 
-bool FrontendAction::runParse(bool emitMessages) {
+bool FrontendAction::runParse() {
   CompilerInstance &ci = this->getInstance();
 
   // Parse. In case of failure, report and return.
@@ -163,11 +163,9 @@ bool FrontendAction::runParse(bool emitMessages) {
     return false;
   }
 
-  if (emitMessages) {
-    // Report any non-fatal diagnostics from getParsing now rather than
-    // combining them with messages from semantics.
-    ci.getParsing().messages().Emit(llvm::errs(), ci.getAllCookedSources());
-  }
+  // Report the diagnostics from getParsing
+  ci.getParsing().messages().Emit(llvm::errs(), ci.getAllCookedSources());
+
   return true;
 }
 
@@ -176,14 +174,10 @@ bool FrontendAction::runSemanticChecks() {
   std::optional<parser::Program> &parseTree{ci.getParsing().parseTree()};
   assert(parseTree && "Cannot run semantic checks without a parse tree!");
 
-  // Transfer any pending non-fatal messages from parsing to semantics
-  // so that they are merged and all printed in order.
-  auto &semanticsCtx{ci.getSemanticsContext()};
-  semanticsCtx.messages().Annex(std::move(ci.getParsing().messages()));
-
   // Prepare semantics
   ci.setSemantics(std::make_unique<Fortran::semantics::Semantics>(
-      semanticsCtx, *parseTree, ci.getInvocation().getDebugModuleDir()));
+      ci.getSemanticsContext(), *parseTree,
+      ci.getInvocation().getDebugModuleDir()));
   auto &semantics = ci.getSemantics();
 
   // Run semantic checks
@@ -193,7 +187,7 @@ bool FrontendAction::runSemanticChecks() {
     return false;
   }
 
-  // Report the diagnostics from parsing and the semantic checks
+  // Report the diagnostics from the semantic checks
   semantics.EmitMessages(ci.getSemaOutputStream());
 
   return true;
